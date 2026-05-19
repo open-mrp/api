@@ -129,6 +129,50 @@ func requireStatus(t *testing.T, expected, actual int, body []byte) {
 	}
 }
 
+const bogusE2EJSONField = "__bogus_e2e_field__"
+const bogusE2EQueryParam = "__bogus_e2e_query__"
+
+// assertJSONUnknownFieldRejected asserts a JSON body with only bogusE2EJSONField was rejected with 400.
+func assertJSONUnknownFieldRejected(t *testing.T, method, path string, statusCode int, body []byte) {
+	t.Helper()
+	skipOnNonClientError(t, path, statusCode)
+
+	assert.Equal(t, 400, statusCode,
+		"%s %s with unknown field should return 400, got %d: %s",
+		method, path, statusCode, string(body))
+
+	if statusCode != 400 {
+		return
+	}
+
+	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
+	code := errObj["code"]
+	assert.True(t, code == "parameter_unknown" || code == "validation_failed",
+		"%s %s: error.code should be parameter_unknown or validation_failed, got %v", method, path, code)
+	if code == "parameter_unknown" {
+		assert.Equal(t, bogusE2EJSONField, errObj["param"],
+			"%s %s: error.param should name the unknown field", method, path)
+	}
+}
+
+// assertUnknownQueryParamRejected asserts an undeclared query parameter was rejected with 400.
+func assertUnknownQueryParamRejected(t *testing.T, path string, statusCode int, body []byte) {
+	t.Helper()
+	skipOnNonClientError(t, path, statusCode)
+
+	assert.Equal(t, 400, statusCode,
+		"GET %s with unknown query param should return 400, got %d: %s",
+		path, statusCode, string(body))
+
+	if statusCode != 400 {
+		return
+	}
+
+	errObj := requireErrorResponse(t, body, "parameter_unknown", "invalid_request_error")
+	assert.Equal(t, bogusE2EQueryParam, errObj["param"],
+		"GET %s: error.param should name the unknown query parameter", path)
+}
+
 // skipOnNonClientError skips the test if the endpoint returned 401/403,
 // which means it requires a different auth method (e.g. cookie auth).
 func skipOnNonClientError(t *testing.T, path string, statusCode int) {

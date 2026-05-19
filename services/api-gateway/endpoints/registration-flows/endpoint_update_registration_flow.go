@@ -15,7 +15,7 @@ type UpdateRegistrationFlowRequest struct {
 	// Registration flow ID.
 	RegistrationFlowID string `path:"id" validate:"required"`
 	// Display name.
-	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
 	// Customer group IDs.
 	CustomerGroupIDs []string `json:"customer_group_ids,omitempty"`
 	// Payment term IDs.

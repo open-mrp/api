@@ -12,6 +12,7 @@ import (
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -161,10 +162,7 @@ func (m *unitGroupSvcImpl) UpdateUnitGroup(ctx context.Context, req *UpdateUnitG
 		Includes:   appctx.GetRequestedIncludeKeys(ctx),
 	}
 
-	if req.Notes != nil {
-		pbReq.UpdateNotes = true
-		pbReq.Notes = req.Notes
-	}
+	pbReq.Notes = patch.StringFieldPtrToProto(req.Notes)
 
 	if req.AssociatedUnits != nil {
 		pbReq.UpdateUnitConversions = true

@@ -16,9 +16,9 @@ type UpdateRoleRequest struct {
 	// Role ID.
 	RoleID string `path:"id" validate:"required"`
 	// Display name.
-	Name *string `json:"name" nullable:"false" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
 	// Permissions in `<domain>:<action>` format. Replaces all existing permissions; omit to leave unchanged.
-	Permissions *[]string `json:"permissions" nullable:"false"`
+	Permissions *[]string `json:"permissions,omitempty"`
 }
 
 var sampleUpdateRoleName = "Updated Manager"

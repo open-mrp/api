@@ -73,7 +73,6 @@ func collectWithVisited(typ reflect.Type, prefix string, out map[string]bool, de
 	defer func() { delete(visited, typ) }()
 
 	for sf := range typ.Fields() {
-		sf := sf
 		if !sf.IsExported() {
 			continue
 		}

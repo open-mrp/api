@@ -16,11 +16,11 @@ type UpdateUserRequest struct {
 	// User ID.
 	UserID string `path:"id" validate:"required"`
 	// Display name.
-	Name *string `json:"name" nullable:"false" validate:"omitempty,max=255"`
+	Name *string `json:"name" validate:"omitempty,max=255"`
 	// Profile image URL.
-	ImageUrl *string `json:"image_url" nullable:"false" validate:"omitempty,max=2083"`
+	ImageUrl *string `json:"image_url" validate:"omitempty,max=2083"`
 	// Email verification timestamp. Set to null to mark as unverified.
-	EmailVerified *time.Time `json:"email_verified" nullable:"false"`
+	EmailVerified *time.Time `json:"email_verified"`
 }
 
 var sampleUpdateUserName = apiresource.SampleUserName

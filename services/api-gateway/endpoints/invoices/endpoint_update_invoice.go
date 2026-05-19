@@ -15,13 +15,13 @@ type UpdateInvoiceRequest struct {
 	// Invoice ID.
 	InvoiceID string `path:"id" validate:"required"`
 	// Note to attach to the invoice.
-	Note *string `json:"note,omitempty" nullable:"false"`
+	Note *string `json:"note,omitempty"`
 	// Whether the invoice has been sent.
-	HasBeenSent *bool `json:"has_been_sent,omitempty" nullable:"false"`
+	HasBeenSent *bool `json:"has_been_sent,omitempty"`
 	// Whether the invoice has been sent via EDI.
-	IsEdiSent *bool `json:"is_edi_sent,omitempty" nullable:"false"`
+	IsEdiSent *bool `json:"is_edi_sent,omitempty"`
 	// Whether the invoice has been paid in full.
-	IsPaidInFull *bool `json:"is_paid_in_full,omitempty" nullable:"false"`
+	IsPaidInFull *bool `json:"is_paid_in_full,omitempty"`
 }
 
 var sampleUpdateInvoiceNote = "Payment received via wire transfer"

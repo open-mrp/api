@@ -31,6 +31,7 @@ import (
 	"strings"
 
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 	"github.com/go-playground/validator/v10"
 	"github.com/shopspring/decimal"
 )
@@ -61,6 +62,7 @@ var (
 var validate = validator.New()
 
 func init() {
+	patch.RegisterValidator(validate)
 	_ = validate.RegisterValidation("password", validatePassword)
 	_ = validate.RegisterValidation("username", validateUsername)
 	_ = validate.RegisterValidation("identifier", validateUsernameOrEmail)
@@ -420,7 +422,6 @@ func getFieldMetadata(fieldErr validator.FieldError, structValue any) fieldMetad
 	rt := rv.Type()
 
 	for field := range rt.Fields() {
-		field := field
 		if field.Name == fieldName {
 			if jsonTag := field.Tag.Get("json"); jsonTag != "" {
 				jsonName := strings.Split(jsonTag, ",")[0]

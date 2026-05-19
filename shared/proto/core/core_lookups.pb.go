@@ -2466,12 +2466,11 @@ type UpdateUnitGroupRequest struct {
 	state                 protoimpl.MessageState      `protogen:"open.v1"`
 	Id                    string                      `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name                  *string                     `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
-	Notes                 *string                     `protobuf:"bytes,3,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
-	UpdateNotes           bool                        `protobuf:"varint,4,opt,name=update_notes,json=updateNotes,proto3" json:"update_notes,omitempty"`
-	BaseUnitId            *string                     `protobuf:"bytes,5,opt,name=base_unit_id,json=baseUnitId,proto3,oneof" json:"base_unit_id,omitempty"`
-	UnitConversions       []*CreateUnitGroupUnitParam `protobuf:"bytes,6,rep,name=unit_conversions,json=unitConversions,proto3" json:"unit_conversions,omitempty"`
-	UpdateUnitConversions bool                        `protobuf:"varint,7,opt,name=update_unit_conversions,json=updateUnitConversions,proto3" json:"update_unit_conversions,omitempty"`
-	Includes              []string                    `protobuf:"bytes,8,rep,name=includes,proto3" json:"includes,omitempty"`
+	Notes                 *StringPatch                `protobuf:"bytes,3,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
+	BaseUnitId            *string                     `protobuf:"bytes,4,opt,name=base_unit_id,json=baseUnitId,proto3,oneof" json:"base_unit_id,omitempty"`
+	UnitConversions       []*CreateUnitGroupUnitParam `protobuf:"bytes,5,rep,name=unit_conversions,json=unitConversions,proto3" json:"unit_conversions,omitempty"`
+	UpdateUnitConversions bool                        `protobuf:"varint,6,opt,name=update_unit_conversions,json=updateUnitConversions,proto3" json:"update_unit_conversions,omitempty"`
+	Includes              []string                    `protobuf:"bytes,7,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -2520,18 +2519,11 @@ func (x *UpdateUnitGroupRequest) GetName() string {
 	return ""
 }
 
-func (x *UpdateUnitGroupRequest) GetNotes() string {
-	if x != nil && x.Notes != nil {
-		return *x.Notes
-	}
-	return ""
-}
-
-func (x *UpdateUnitGroupRequest) GetUpdateNotes() bool {
+func (x *UpdateUnitGroupRequest) GetNotes() *StringPatch {
 	if x != nil {
-		return x.UpdateNotes
+		return x.Notes
 	}
-	return false
+	return nil
 }
 
 func (x *UpdateUnitGroupRequest) GetBaseUnitId() string {
@@ -9442,7 +9434,7 @@ var File_core_core_lookups_proto protoreflect.FileDescriptor
 
 const file_core_core_lookups_proto_rawDesc = "" +
 	"\n" +
-	"\x17core/core_lookups.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a core/core_identity_context.proto\x1a\x19core/core_analytics.proto\x1a!core/core_accounts_carriers.proto\x1a\x18core/core_invoices.proto\"\x83\x01\n" +
+	"\x17core/core_lookups.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15core/core_patch.proto\x1a core/core_identity_context.proto\x1a\x19core/core_analytics.proto\x1a!core/core_accounts_carriers.proto\x1a\x18core/core_invoices.proto\"\x83\x01\n" +
 	"\x18ListProductTypesResponse\x12:\n" +
 	"\rproduct_types\x18\x01 \x03(\v2\x15.core.ProductTypeInfoR\fproductTypes\x12+\n" +
 	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"7\n" +
@@ -9672,17 +9664,16 @@ const file_core_core_lookups_proto_rawDesc = "" +
 	"\x06_notes\"M\n" +
 	"\x17CreateUnitGroupResponse\x122\n" +
 	"\n" +
-	"unit_group\x18\x01 \x01(\v2\x13.core.UnitGroupInfoR\tunitGroup\"\xe9\x02\n" +
+	"unit_group\x18\x01 \x01(\v2\x13.core.UnitGroupInfoR\tunitGroup\"\xd9\x02\n" +
 	"\x16UpdateUnitGroupRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
-	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x19\n" +
-	"\x05notes\x18\x03 \x01(\tH\x01R\x05notes\x88\x01\x01\x12!\n" +
-	"\fupdate_notes\x18\x04 \x01(\bR\vupdateNotes\x12%\n" +
-	"\fbase_unit_id\x18\x05 \x01(\tH\x02R\n" +
+	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12,\n" +
+	"\x05notes\x18\x03 \x01(\v2\x11.core.StringPatchH\x01R\x05notes\x88\x01\x01\x12%\n" +
+	"\fbase_unit_id\x18\x04 \x01(\tH\x02R\n" +
 	"baseUnitId\x88\x01\x01\x12I\n" +
-	"\x10unit_conversions\x18\x06 \x03(\v2\x1e.core.CreateUnitGroupUnitParamR\x0funitConversions\x126\n" +
-	"\x17update_unit_conversions\x18\a \x01(\bR\x15updateUnitConversions\x12\x1a\n" +
-	"\bincludes\x18\b \x03(\tR\bincludesB\a\n" +
+	"\x10unit_conversions\x18\x05 \x03(\v2\x1e.core.CreateUnitGroupUnitParamR\x0funitConversions\x126\n" +
+	"\x17update_unit_conversions\x18\x06 \x01(\bR\x15updateUnitConversions\x12\x1a\n" +
+	"\bincludes\x18\a \x03(\tR\bincludesB\a\n" +
 	"\x05_nameB\b\n" +
 	"\x06_notesB\x0f\n" +
 	"\r_base_unit_id\"M\n" +
@@ -10553,7 +10544,8 @@ var file_core_core_lookups_proto_goTypes = []any{
 	(*QuantityInfo)(nil),                        // 152: core.QuantityInfo
 	(*timestamppb.Timestamp)(nil),               // 153: google.protobuf.Timestamp
 	(*UnitInfo)(nil),                            // 154: core.UnitInfo
-	(*ItemInfo)(nil),                            // 155: core.ItemInfo
+	(*StringPatch)(nil),                         // 155: core.StringPatch
+	(*ItemInfo)(nil),                            // 156: core.ItemInfo
 }
 var file_core_core_lookups_proto_depIdxs = []int32{
 	149, // 0: core.ListProductTypesResponse.product_types:type_name -> core.ProductTypeInfo
@@ -10594,104 +10586,105 @@ var file_core_core_lookups_proto_depIdxs = []int32{
 	30,  // 35: core.GetUnitGroupResponse.unit_group:type_name -> core.UnitGroupInfo
 	36,  // 36: core.CreateUnitGroupRequest.unit_conversions:type_name -> core.CreateUnitGroupUnitParam
 	30,  // 37: core.CreateUnitGroupResponse.unit_group:type_name -> core.UnitGroupInfo
-	36,  // 38: core.UpdateUnitGroupRequest.unit_conversions:type_name -> core.CreateUnitGroupUnitParam
-	30,  // 39: core.UpdateUnitGroupResponse.unit_group:type_name -> core.UnitGroupInfo
-	31,  // 40: core.UpsertUnitGroupUnitResponse.unit_group_unit:type_name -> core.UnitGroupUnitInfo
-	31,  // 41: core.ListUnitGroupUnitsResponse.unit_group_units:type_name -> core.UnitGroupUnitInfo
-	31,  // 42: core.GetUnitGroupUnitResponse.unit_group_unit:type_name -> core.UnitGroupUnitInfo
-	147, // 43: core.ValidateUnitsRequest.unit_map:type_name -> core.ValidateUnitsRequest.UnitMapEntry
-	148, // 44: core.ValidateUnitsResponse.units:type_name -> core.ValidateUnitsResponse.UnitsEntry
-	53,  // 45: core.TransactionInfo.allocations:type_name -> core.TransactionAllocationInfo
-	153, // 46: core.TransactionInfo.created_at:type_name -> google.protobuf.Timestamp
-	153, // 47: core.TransactionInfo.updated_at:type_name -> google.protobuf.Timestamp
-	153, // 48: core.TransactionInfo.customer_created_at:type_name -> google.protobuf.Timestamp
-	153, // 49: core.TransactionInfo.customer_updated_at:type_name -> google.protobuf.Timestamp
-	153, // 50: core.TransactionInfo.responsible_user_created_at:type_name -> google.protobuf.Timestamp
-	153, // 51: core.TransactionInfo.responsible_user_updated_at:type_name -> google.protobuf.Timestamp
-	153, // 52: core.TransactionSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
-	153, // 53: core.TransactionSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
-	153, // 54: core.TransactionSummaryInfo.customer_created_at:type_name -> google.protobuf.Timestamp
-	153, // 55: core.TransactionSummaryInfo.customer_updated_at:type_name -> google.protobuf.Timestamp
-	153, // 56: core.TransactionAllocationInfo.created_at:type_name -> google.protobuf.Timestamp
-	153, // 57: core.TransactionAllocationInfo.updated_at:type_name -> google.protobuf.Timestamp
-	153, // 58: core.ListTransactionsRequest.start_date:type_name -> google.protobuf.Timestamp
-	153, // 59: core.ListTransactionsRequest.end_date:type_name -> google.protobuf.Timestamp
-	52,  // 60: core.ListTransactionsResponse.transactions:type_name -> core.TransactionSummaryInfo
-	150, // 61: core.ListTransactionsResponse.page_info:type_name -> core.PageInfo
-	51,  // 62: core.GetTransactionResponse.transaction:type_name -> core.TransactionInfo
-	51,  // 63: core.CreateTransactionResponse.transaction:type_name -> core.TransactionInfo
-	51,  // 64: core.UpdateTransactionResponse.transaction:type_name -> core.TransactionInfo
-	51,  // 65: core.DeleteTransactionResponse.transaction:type_name -> core.TransactionInfo
-	51,  // 66: core.ListAccountTransactionsResponse.transactions:type_name -> core.TransactionInfo
-	150, // 67: core.ListAccountTransactionsResponse.page_info:type_name -> core.PageInfo
-	153, // 68: core.ListSettlementsRequest.start_date:type_name -> google.protobuf.Timestamp
-	153, // 69: core.ListSettlementsRequest.end_date:type_name -> google.protobuf.Timestamp
-	78,  // 70: core.ListSettlementsResponse.settlements:type_name -> core.SettlementSummaryInfo
-	150, // 71: core.ListSettlementsResponse.page_info:type_name -> core.PageInfo
-	77,  // 72: core.GetSettlementResponse.settlement:type_name -> core.SettlementInfo
-	71,  // 73: core.CreateSettlementRequest.allocations:type_name -> core.CreateSettlementAllocationParam
-	77,  // 74: core.CreateSettlementResponse.settlement:type_name -> core.SettlementInfo
-	77,  // 75: core.UpdateSettlementResponse.settlement:type_name -> core.SettlementInfo
-	77,  // 76: core.DeleteSettlementResponse.settlement:type_name -> core.SettlementInfo
-	53,  // 77: core.SettlementInfo.allocations:type_name -> core.TransactionAllocationInfo
-	153, // 78: core.SettlementInfo.created_at:type_name -> google.protobuf.Timestamp
-	153, // 79: core.SettlementInfo.updated_at:type_name -> google.protobuf.Timestamp
-	153, // 80: core.SettlementSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
-	153, // 81: core.SettlementSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
-	153, // 82: core.ListAllocationEntriesRequest.start_date:type_name -> google.protobuf.Timestamp
-	153, // 83: core.ListAllocationEntriesRequest.end_date:type_name -> google.protobuf.Timestamp
-	81,  // 84: core.ListAllocationEntriesResponse.entries:type_name -> core.AllocationEntryInfo
-	150, // 85: core.ListAllocationEntriesResponse.page_info:type_name -> core.PageInfo
-	153, // 86: core.AllocationEntryInfo.created_at:type_name -> google.protobuf.Timestamp
-	53,  // 87: core.UpdateTransactionAllocationResponse.allocation:type_name -> core.TransactionAllocationInfo
-	153, // 88: core.ListOpenCreditsRequest.start_date:type_name -> google.protobuf.Timestamp
-	153, // 89: core.ListOpenCreditsRequest.end_date:type_name -> google.protobuf.Timestamp
-	88,  // 90: core.ListOpenCreditsResponse.entries:type_name -> core.OpenCreditEntryInfo
-	150, // 91: core.ListOpenCreditsResponse.page_info:type_name -> core.PageInfo
-	89,  // 92: core.OpenCreditEntryInfo.invoice_allocations:type_name -> core.OpenCreditInvoiceAllocationInfo
-	153, // 93: core.OpenCreditEntryInfo.created_at:type_name -> google.protobuf.Timestamp
-	153, // 94: core.UserInfo.email_verified_at:type_name -> google.protobuf.Timestamp
-	153, // 95: core.UserInfo.created_at:type_name -> google.protobuf.Timestamp
-	153, // 96: core.UserInfo.updated_at:type_name -> google.protobuf.Timestamp
-	90,  // 97: core.GetUserResponse.user:type_name -> core.UserInfo
-	153, // 98: core.UpdateUserRequest.email_verified_at:type_name -> google.protobuf.Timestamp
-	90,  // 99: core.UpdateUserResponse.user:type_name -> core.UserInfo
-	0,   // 100: core.CheckDuplicateRequest.type:type_name -> core.DuplicateCheckType
-	1,   // 101: core.EmailRecordRequest.type:type_name -> core.EmailRecordType
-	109, // 102: core.ListCatalogProductLinesResponse.product_lines:type_name -> core.CatalogProductLineProto
-	150, // 103: core.ListCatalogProductLinesResponse.page_info:type_name -> core.PageInfo
-	112, // 104: core.ListCatalogProductsResponse.categories:type_name -> core.CatalogCategoryProto
-	150, // 105: core.ListCatalogProductsResponse.page_info:type_name -> core.PageInfo
-	113, // 106: core.CatalogCategoryProto.products:type_name -> core.CatalogProductProto
-	114, // 107: core.CatalogCategoryProto.properties:type_name -> core.CatalogPropertyProto
-	115, // 108: core.CatalogProductProto.attributes:type_name -> core.CatalogAttributeProto
-	153, // 109: core.DCLocationProto.created_at:type_name -> google.protobuf.Timestamp
-	153, // 110: core.DCLocationProto.updated_at:type_name -> google.protobuf.Timestamp
-	120, // 111: core.ListDCLocationsResponse.dc_locations:type_name -> core.DCLocationProto
-	150, // 112: core.ListDCLocationsResponse.page_info:type_name -> core.PageInfo
-	120, // 113: core.GetDCLocationResponse.dc_location:type_name -> core.DCLocationProto
-	120, // 114: core.CreateDCLocationResponse.dc_location:type_name -> core.DCLocationProto
-	120, // 115: core.UpdateDCLocationResponse.dc_location:type_name -> core.DCLocationProto
-	153, // 116: core.EDIRunProto.completed_at:type_name -> google.protobuf.Timestamp
-	153, // 117: core.EDIRunProto.created_at:type_name -> google.protobuf.Timestamp
-	153, // 118: core.EDIRunProto.updated_at:type_name -> google.protobuf.Timestamp
-	130, // 119: core.ListEDIRunsResponse.edi_runs:type_name -> core.EDIRunProto
-	150, // 120: core.ListEDIRunsResponse.page_info:type_name -> core.PageInfo
-	130, // 121: core.GetEDIRunResponse.edi_run:type_name -> core.EDIRunProto
-	155, // 122: core.InventoryItemProto.item:type_name -> core.ItemInfo
-	136, // 123: core.ListInventoriesResponse.items:type_name -> core.InventoryItemProto
-	150, // 124: core.ListInventoriesResponse.page_info:type_name -> core.PageInfo
-	139, // 125: core.AnalyzeWeeksOfSalesResponse.items:type_name -> core.WeeksOfSalesItemProto
-	141, // 126: core.BulkReconcileItemsRequest.data:type_name -> core.BulkReconcileItemInput
-	143, // 127: core.BulkReconcileItemsResponse.reconciled_items:type_name -> core.ReconciledItemProto
-	144, // 128: core.BulkReconcileItemsResponse.skipped_items:type_name -> core.SkippedItemProto
-	145, // 129: core.BulkReconcileItemsResponse.errors:type_name -> core.ReconcileErrorProto
-	154, // 130: core.ValidateUnitsResponse.UnitsEntry.value:type_name -> core.UnitInfo
-	131, // [131:131] is the sub-list for method output_type
-	131, // [131:131] is the sub-list for method input_type
-	131, // [131:131] is the sub-list for extension type_name
-	131, // [131:131] is the sub-list for extension extendee
-	0,   // [0:131] is the sub-list for field type_name
+	155, // 38: core.UpdateUnitGroupRequest.notes:type_name -> core.StringPatch
+	36,  // 39: core.UpdateUnitGroupRequest.unit_conversions:type_name -> core.CreateUnitGroupUnitParam
+	30,  // 40: core.UpdateUnitGroupResponse.unit_group:type_name -> core.UnitGroupInfo
+	31,  // 41: core.UpsertUnitGroupUnitResponse.unit_group_unit:type_name -> core.UnitGroupUnitInfo
+	31,  // 42: core.ListUnitGroupUnitsResponse.unit_group_units:type_name -> core.UnitGroupUnitInfo
+	31,  // 43: core.GetUnitGroupUnitResponse.unit_group_unit:type_name -> core.UnitGroupUnitInfo
+	147, // 44: core.ValidateUnitsRequest.unit_map:type_name -> core.ValidateUnitsRequest.UnitMapEntry
+	148, // 45: core.ValidateUnitsResponse.units:type_name -> core.ValidateUnitsResponse.UnitsEntry
+	53,  // 46: core.TransactionInfo.allocations:type_name -> core.TransactionAllocationInfo
+	153, // 47: core.TransactionInfo.created_at:type_name -> google.protobuf.Timestamp
+	153, // 48: core.TransactionInfo.updated_at:type_name -> google.protobuf.Timestamp
+	153, // 49: core.TransactionInfo.customer_created_at:type_name -> google.protobuf.Timestamp
+	153, // 50: core.TransactionInfo.customer_updated_at:type_name -> google.protobuf.Timestamp
+	153, // 51: core.TransactionInfo.responsible_user_created_at:type_name -> google.protobuf.Timestamp
+	153, // 52: core.TransactionInfo.responsible_user_updated_at:type_name -> google.protobuf.Timestamp
+	153, // 53: core.TransactionSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
+	153, // 54: core.TransactionSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	153, // 55: core.TransactionSummaryInfo.customer_created_at:type_name -> google.protobuf.Timestamp
+	153, // 56: core.TransactionSummaryInfo.customer_updated_at:type_name -> google.protobuf.Timestamp
+	153, // 57: core.TransactionAllocationInfo.created_at:type_name -> google.protobuf.Timestamp
+	153, // 58: core.TransactionAllocationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	153, // 59: core.ListTransactionsRequest.start_date:type_name -> google.protobuf.Timestamp
+	153, // 60: core.ListTransactionsRequest.end_date:type_name -> google.protobuf.Timestamp
+	52,  // 61: core.ListTransactionsResponse.transactions:type_name -> core.TransactionSummaryInfo
+	150, // 62: core.ListTransactionsResponse.page_info:type_name -> core.PageInfo
+	51,  // 63: core.GetTransactionResponse.transaction:type_name -> core.TransactionInfo
+	51,  // 64: core.CreateTransactionResponse.transaction:type_name -> core.TransactionInfo
+	51,  // 65: core.UpdateTransactionResponse.transaction:type_name -> core.TransactionInfo
+	51,  // 66: core.DeleteTransactionResponse.transaction:type_name -> core.TransactionInfo
+	51,  // 67: core.ListAccountTransactionsResponse.transactions:type_name -> core.TransactionInfo
+	150, // 68: core.ListAccountTransactionsResponse.page_info:type_name -> core.PageInfo
+	153, // 69: core.ListSettlementsRequest.start_date:type_name -> google.protobuf.Timestamp
+	153, // 70: core.ListSettlementsRequest.end_date:type_name -> google.protobuf.Timestamp
+	78,  // 71: core.ListSettlementsResponse.settlements:type_name -> core.SettlementSummaryInfo
+	150, // 72: core.ListSettlementsResponse.page_info:type_name -> core.PageInfo
+	77,  // 73: core.GetSettlementResponse.settlement:type_name -> core.SettlementInfo
+	71,  // 74: core.CreateSettlementRequest.allocations:type_name -> core.CreateSettlementAllocationParam
+	77,  // 75: core.CreateSettlementResponse.settlement:type_name -> core.SettlementInfo
+	77,  // 76: core.UpdateSettlementResponse.settlement:type_name -> core.SettlementInfo
+	77,  // 77: core.DeleteSettlementResponse.settlement:type_name -> core.SettlementInfo
+	53,  // 78: core.SettlementInfo.allocations:type_name -> core.TransactionAllocationInfo
+	153, // 79: core.SettlementInfo.created_at:type_name -> google.protobuf.Timestamp
+	153, // 80: core.SettlementInfo.updated_at:type_name -> google.protobuf.Timestamp
+	153, // 81: core.SettlementSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
+	153, // 82: core.SettlementSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	153, // 83: core.ListAllocationEntriesRequest.start_date:type_name -> google.protobuf.Timestamp
+	153, // 84: core.ListAllocationEntriesRequest.end_date:type_name -> google.protobuf.Timestamp
+	81,  // 85: core.ListAllocationEntriesResponse.entries:type_name -> core.AllocationEntryInfo
+	150, // 86: core.ListAllocationEntriesResponse.page_info:type_name -> core.PageInfo
+	153, // 87: core.AllocationEntryInfo.created_at:type_name -> google.protobuf.Timestamp
+	53,  // 88: core.UpdateTransactionAllocationResponse.allocation:type_name -> core.TransactionAllocationInfo
+	153, // 89: core.ListOpenCreditsRequest.start_date:type_name -> google.protobuf.Timestamp
+	153, // 90: core.ListOpenCreditsRequest.end_date:type_name -> google.protobuf.Timestamp
+	88,  // 91: core.ListOpenCreditsResponse.entries:type_name -> core.OpenCreditEntryInfo
+	150, // 92: core.ListOpenCreditsResponse.page_info:type_name -> core.PageInfo
+	89,  // 93: core.OpenCreditEntryInfo.invoice_allocations:type_name -> core.OpenCreditInvoiceAllocationInfo
+	153, // 94: core.OpenCreditEntryInfo.created_at:type_name -> google.protobuf.Timestamp
+	153, // 95: core.UserInfo.email_verified_at:type_name -> google.protobuf.Timestamp
+	153, // 96: core.UserInfo.created_at:type_name -> google.protobuf.Timestamp
+	153, // 97: core.UserInfo.updated_at:type_name -> google.protobuf.Timestamp
+	90,  // 98: core.GetUserResponse.user:type_name -> core.UserInfo
+	153, // 99: core.UpdateUserRequest.email_verified_at:type_name -> google.protobuf.Timestamp
+	90,  // 100: core.UpdateUserResponse.user:type_name -> core.UserInfo
+	0,   // 101: core.CheckDuplicateRequest.type:type_name -> core.DuplicateCheckType
+	1,   // 102: core.EmailRecordRequest.type:type_name -> core.EmailRecordType
+	109, // 103: core.ListCatalogProductLinesResponse.product_lines:type_name -> core.CatalogProductLineProto
+	150, // 104: core.ListCatalogProductLinesResponse.page_info:type_name -> core.PageInfo
+	112, // 105: core.ListCatalogProductsResponse.categories:type_name -> core.CatalogCategoryProto
+	150, // 106: core.ListCatalogProductsResponse.page_info:type_name -> core.PageInfo
+	113, // 107: core.CatalogCategoryProto.products:type_name -> core.CatalogProductProto
+	114, // 108: core.CatalogCategoryProto.properties:type_name -> core.CatalogPropertyProto
+	115, // 109: core.CatalogProductProto.attributes:type_name -> core.CatalogAttributeProto
+	153, // 110: core.DCLocationProto.created_at:type_name -> google.protobuf.Timestamp
+	153, // 111: core.DCLocationProto.updated_at:type_name -> google.protobuf.Timestamp
+	120, // 112: core.ListDCLocationsResponse.dc_locations:type_name -> core.DCLocationProto
+	150, // 113: core.ListDCLocationsResponse.page_info:type_name -> core.PageInfo
+	120, // 114: core.GetDCLocationResponse.dc_location:type_name -> core.DCLocationProto
+	120, // 115: core.CreateDCLocationResponse.dc_location:type_name -> core.DCLocationProto
+	120, // 116: core.UpdateDCLocationResponse.dc_location:type_name -> core.DCLocationProto
+	153, // 117: core.EDIRunProto.completed_at:type_name -> google.protobuf.Timestamp
+	153, // 118: core.EDIRunProto.created_at:type_name -> google.protobuf.Timestamp
+	153, // 119: core.EDIRunProto.updated_at:type_name -> google.protobuf.Timestamp
+	130, // 120: core.ListEDIRunsResponse.edi_runs:type_name -> core.EDIRunProto
+	150, // 121: core.ListEDIRunsResponse.page_info:type_name -> core.PageInfo
+	130, // 122: core.GetEDIRunResponse.edi_run:type_name -> core.EDIRunProto
+	156, // 123: core.InventoryItemProto.item:type_name -> core.ItemInfo
+	136, // 124: core.ListInventoriesResponse.items:type_name -> core.InventoryItemProto
+	150, // 125: core.ListInventoriesResponse.page_info:type_name -> core.PageInfo
+	139, // 126: core.AnalyzeWeeksOfSalesResponse.items:type_name -> core.WeeksOfSalesItemProto
+	141, // 127: core.BulkReconcileItemsRequest.data:type_name -> core.BulkReconcileItemInput
+	143, // 128: core.BulkReconcileItemsResponse.reconciled_items:type_name -> core.ReconciledItemProto
+	144, // 129: core.BulkReconcileItemsResponse.skipped_items:type_name -> core.SkippedItemProto
+	145, // 130: core.BulkReconcileItemsResponse.errors:type_name -> core.ReconcileErrorProto
+	154, // 131: core.ValidateUnitsResponse.UnitsEntry.value:type_name -> core.UnitInfo
+	132, // [132:132] is the sub-list for method output_type
+	132, // [132:132] is the sub-list for method input_type
+	132, // [132:132] is the sub-list for extension type_name
+	132, // [132:132] is the sub-list for extension extendee
+	0,   // [0:132] is the sub-list for field type_name
 }
 
 func init() { file_core_core_lookups_proto_init() }
@@ -10699,6 +10692,7 @@ func file_core_core_lookups_proto_init() {
 	if File_core_core_lookups_proto != nil {
 		return
 	}
+	file_core_core_patch_proto_init()
 	file_core_core_identity_context_proto_init()
 	file_core_core_analytics_proto_init()
 	file_core_core_accounts_carriers_proto_init()

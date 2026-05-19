@@ -613,19 +613,10 @@ func (s *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, params domai
 				}
 			}
 
-			// Backfill unchanged nullable fields with existing values.
-			// Since the SQL uses direct assignment (no COALESCE) for these fields,
-			// we must provide the existing value when the field was not sent.
-			// ClearRoleID=true means the client explicitly set role_id to null.
-			if !params.ClearRoleID && params.RoleID == nil {
-				params.RoleID = old.RoleID
-			}
-			if !params.ClearDepartmentID && params.DepartmentID == nil {
-				params.DepartmentID = old.DepartmentID
-			}
+			roleID := params.RoleID.StringPtrAfterBackfill(old.RoleID)
+			departmentID := params.DepartmentID.StringPtrAfterBackfill(old.DepartmentID)
 
-			// Update account user role and department.
-			if apiErr := txAccountUserRepo.Update(txCtx, params.AccountUserID, params.RoleID, params.DepartmentID); apiErr != nil {
+			if apiErr := txAccountUserRepo.Update(txCtx, params.AccountUserID, roleID, departmentID); apiErr != nil {
 				return apiErr
 			}
 

@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 )
 
 // UpdateUnitGroupRequest is a request to partially update a unit group.
@@ -16,13 +17,13 @@ type UpdateUnitGroupRequest struct {
 	// Unit group ID.
 	UnitGroupID string `path:"id" validate:"required"`
 	// Display name.
-	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
 	// Notes. Set to null to clear.
-	Notes *string `json:"notes,omitempty" nullable:"true"`
+	Notes *patch.Field[string] `json:"notes,omitempty"`
 	// Base unit ID.
-	BaseUnitID *string `json:"base_unit_id,omitempty" nullable:"false" validate:"omitempty"`
+	BaseUnitID *string `json:"base_unit_id,omitempty" validate:"omitempty"`
 	// Upserts associated units when provided. Existing units not in the list are preserved.
-	AssociatedUnits *[]CreateUnitGroupUnitParam `json:"associated_units,omitempty" nullable:"false"`
+	AssociatedUnits *[]CreateUnitGroupUnitParam `json:"associated_units,omitempty"`
 }
 
 var sampleUpdateUnitGroupName = "Weight Units (Updated)"

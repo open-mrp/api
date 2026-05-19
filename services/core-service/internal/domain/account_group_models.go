@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/augno/api/shared/pagination"
+	"github.com/augno/api/shared/patch"
 )
 
 type AccountGroup struct {
@@ -45,7 +46,7 @@ type UpdateAccountGroupParams struct {
 	AccountID            string
 	AccountGroupID       string
 	Name                 *string
-	Description          *string
+	Description          patch.Field[string]
 	CommissionPolicyCode *string
 	FreightPolicyCode    *string
 }

@@ -16,17 +16,17 @@ type UpdateUnitRequest struct {
 	// Unit ID.
 	UnitID string `path:"id" validate:"required"`
 	// Display name of the unit.
-	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
 	// Short abbreviation for the unit.
-	Abbreviation *string `json:"abbreviation,omitempty" nullable:"false" validate:"omitempty"`
+	Abbreviation *string `json:"abbreviation,omitempty" validate:"omitempty"`
 	// Conversion ratio numerator, as a decimal string.
-	RatioNumerator *string `json:"ratio_numerator,omitempty" nullable:"false" format:"decimal"`
+	RatioNumerator *string `json:"ratio_numerator,omitempty" format:"decimal"`
 	// Conversion ratio denominator, as a decimal string. Must not be zero.
-	RatioDenominator *string `json:"ratio_denominator,omitempty" nullable:"false" validate:"omitempty,nonzero_decimal" format:"decimal"`
+	RatioDenominator *string `json:"ratio_denominator,omitempty" validate:"omitempty,nonzero_decimal" format:"decimal"`
 	// Conversion offset numerator, as a decimal string.
-	OffsetNumerator *string `json:"offset_numerator,omitempty" nullable:"false" format:"decimal"`
+	OffsetNumerator *string `json:"offset_numerator,omitempty" format:"decimal"`
 	// Conversion offset denominator, as a decimal string. Must not be zero.
-	OffsetDenominator *string `json:"offset_denominator,omitempty" nullable:"false" validate:"omitempty,nonzero_decimal" format:"decimal"`
+	OffsetDenominator *string `json:"offset_denominator,omitempty" validate:"omitempty,nonzero_decimal" format:"decimal"`
 }
 
 var sampleUpdateUnitRequest = &UpdateUnitRequest{

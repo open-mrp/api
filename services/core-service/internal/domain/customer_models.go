@@ -5,6 +5,7 @@ import (
 
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/pagination"
+	"github.com/augno/api/shared/patch"
 )
 
 // Customer represents a full customer record from the database.
@@ -233,29 +234,28 @@ type UpdateCustomerParams struct {
 	CustomerAccountID        string
 	Name                     *string
 	Number                   *string
-	Note                     *string
-	Email                    *string
-	Phone                    *string
-	URL                      *string
+	Note                     patch.Field[string]
+	Email                    patch.Field[string]
+	Phone                    patch.Field[string]
+	URL                      patch.Field[string]
 	StatusCode               *string
 	IsEdiEnabled             *bool
 	CommissionPolicy         *constants.CommissionPolicy
 	FreightPolicy            *constants.FreightPolicy
 	DefaultCarrierID         *string
-	DefaultServiceLevelID    *string
+	DefaultServiceLevelID    patch.Field[string]
 	DefaultPaymentTermID     *string
 	DefaultShippingTermID    *string
 	DefaultPriorityCode      *string
-	DefaultSalesRepID        *string
-	BillToAddressID          *string
-	ShipToAddressID          *string
+	DefaultSalesRepID        patch.Field[string]
+	BillToAddressID          patch.Field[string]
+	ShipToAddressID          patch.Field[string]
 	CustomerPriceGroupIDs    []string
 	HasCustomerPriceGroupIDs bool
 	CustomerTypeGroupID      *string
 	CarrierBillingType       *string
-	CarrierBillingAccount    *string
-	CreditLimitValue         *string
-	CreditLimitUnitID        *string
+	CarrierBillingAccount    patch.Field[string]
+	CreditLimit              patch.Field[patch.QuantityInput]
 	CreditLimitID            *string
 	Includes                 []string
 }

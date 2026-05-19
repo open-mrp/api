@@ -8,6 +8,7 @@ import (
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/contracts"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 	pb "github.com/augno/api/shared/proto/core"
 
 	"google.golang.org/grpc"
@@ -1205,15 +1206,12 @@ func (h *gRPCHandler) UpdateShippingTerm(ctx context.Context, req *pb.UpdateShip
 	defer finalizeIdempotency()
 
 	params := domain.UpdateShippingTermParams{
-		ShippingTermID:                 req.Id,
-		Name:                           req.Name,
-		FlatRate:                       protoQuantityInputToDomain(req.FlatRate),
-		MinimumOrderValue:              protoQuantityInputToDomain(req.MinimumOrderValue),
-		FreeShippingServiceLevelIDs:    req.FreeShippingServiceLevelIds,
-		HasFreeShippingServiceLevelIDs: req.HasFreeShippingServiceLevelIds,
-		HasFlatRate:                    req.HasFlatRate,
-		HasMinimumOrderValue:           req.HasMinimumOrderValue,
-		Includes:                       req.Includes,
+		ShippingTermID:              req.Id,
+		Name:                        req.Name,
+		FlatRate:                    quantityPatchToDomain(req.FlatRate),
+		MinimumOrderValue:           quantityPatchToDomain(req.MinimumOrderValue),
+		FreeShippingServiceLevelIDs: stringListPatchToSliceField(req.FreeShippingServiceLevelIds),
+		Includes:                    req.Includes,
 	}
 	if req.Type != nil {
 		t := constants.ShippingTermType(*req.Type)
@@ -1462,7 +1460,7 @@ func (h *gRPCHandler) UpdateAccountGroup(ctx context.Context, req *pb.UpdateAcco
 	params := domain.UpdateAccountGroupParams{
 		AccountGroupID:       req.Id,
 		Name:                 req.Name,
-		Description:          req.Description,
+		Description:          patch.StringFieldFromProto(req.Description),
 		CommissionPolicyCode: req.CommissionPolicy,
 		FreightPolicyCode:    req.FreightPolicy,
 	}
@@ -1648,11 +1646,11 @@ func (h *gRPCHandler) UpdateAddress(ctx context.Context, req *pb.UpdateAddressRe
 	params := domain.UpdateAddressParams{
 		AddressID:   req.Id,
 		Name:        req.Name,
-		Phone:       req.Phone,
-		Email:       req.Email,
+		Phone:       patch.StringFieldFromProto(req.Phone),
+		Email:       patch.StringFieldFromProto(req.Email),
 		IsDropShip:  req.IsDropShip,
 		StreetLine1: req.StreetLine_1,
-		StreetLine2: req.StreetLine_2,
+		StreetLine2: patch.StringFieldFromProto(req.StreetLine_2),
 		Locality:    req.Locality,
 		State:       req.State,
 		PostalCode:  req.PostalCode,

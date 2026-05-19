@@ -191,14 +191,14 @@ func createAddressRequestToProto(a *apirequest.AddressInput) *pb.CreateSupplierA
 	}
 	return &pb.CreateSupplierAddressInput{
 		Name:         a.Name,
-		Phone:        a.Phone,
-		Email:        a.Email,
+		Phone:        a.Phone.Ptr(),
+		Email:        a.Email.Ptr(),
 		IsDropShip:   addressTypeToDropShip(a.Type),
-		StreetLine_1: a.StreetLine1,
-		StreetLine_2: a.StreetLine2,
-		Locality:     a.Locality,
-		State:        a.State,
-		PostalCode:   a.PostalCode,
+		StreetLine_1: a.StreetLine1.Ptr(),
+		StreetLine_2: a.StreetLine2.Ptr(),
+		Locality:     a.Locality.Ptr(),
+		State:        a.State.Ptr(),
+		PostalCode:   a.PostalCode.Ptr(),
 		Country:      a.Country,
 	}
 }

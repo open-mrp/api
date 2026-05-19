@@ -206,8 +206,8 @@ func (m *propertySvcImpl) GetAttribute(ctx context.Context, req *RetrieveAttribu
 
 func (m *propertySvcImpl) CreateAttribute(ctx context.Context, req *CreateAttributeRequest) (*apiresource.Attribute, *apierror.APIError) {
 	var colorCode constants.Color
-	if req.ColorCode != nil {
-		colorCode = *req.ColorCode
+	if c, ok := req.ColorCode.Value(); ok {
+		colorCode = c
 	} else {
 		colorCode = randomColor()
 	}

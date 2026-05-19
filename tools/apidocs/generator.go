@@ -14,6 +14,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	"github.com/augno/api/shared/contracts"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 )
 
 func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOnly bool, transforms []Transform, version string) {
@@ -570,7 +571,7 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 			if part == "required" {
 				hasRequiredInJSON = true
 			}
-			if part == "omitempty" {
+			if part == "omitempty" || part == "omitzero" {
 				hasOmitempty = true
 			}
 		}
@@ -578,20 +579,27 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 		validateTag := f.Tag.Get("validate")
 		hasRequiredInValidate := strings.Contains(validateTag, "required")
 
-		// Detect NullableInput[T] wrapper types via the OpenAPINullableInner interface.
-		// These are treated as nullable pointers to the inner type for schema generation.
-		isNullableWrapper := false
+		// patch.Field[T] and patch.Nullable[T] unwrap to the inner type for OpenAPI.
+		isPatchField := patch.IsFieldType(f.Type)
+		isNullableInput := patch.IsNullableType(f.Type)
 		fieldType := f.Type
-		if fieldType.Kind() == reflect.Struct {
-			if m, ok := fieldType.MethodByName("OpenAPINullableInner"); ok && m.Type.NumIn() == 1 && m.Type.NumOut() == 1 {
-				innerType := reflect.New(fieldType).Elem().MethodByName("OpenAPINullableInner").Call(nil)[0].Interface().(reflect.Type)
+		if isPatchField {
+			if innerType := patch.FieldElemType(f.Type); innerType != nil {
 				fieldType = innerType
-				isNullableWrapper = true
+			}
+		} else if isNullableInput {
+			if innerType := patch.NullableElemType(f.Type); innerType != nil {
+				fieldType = innerType
 			}
 		}
 
-		isPointer := f.Type.Kind() == reflect.Pointer || isNullableWrapper
-		isRequired := hasRequiredInJSON || hasRequiredInValidate || !(isPointer && hasOmitempty)
+		isOptionalPointer := f.Type.Kind() == reflect.Pointer && hasOmitempty
+		var isRequired bool
+		if isPatchField || isNullableInput {
+			isRequired = hasRequiredInJSON || hasRequiredInValidate
+		} else {
+			isRequired = hasRequiredInJSON || hasRequiredInValidate || !(f.Type.Kind() == reflect.Pointer && hasOmitempty)
+		}
 
 		if isRequired {
 			schema.Required = append(schema.Required, name)
@@ -599,25 +607,19 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 
 		fieldSchema := Schema{
 			Description: typeDoc.Fields[f.Name],
-			Nullable:    isPointer,
 		}
-
-		if isNullableWrapper {
+		switch {
+		case isPatchField:
+			fieldSchema.Nullable = true
 			fieldSchema.XNullableClear = true
-		}
-
-		// Allow explicitly overriding nullable inference (e.g. pointer + omitempty
-		// for request fields that are optional-but-not-"nullable" in the docs).
-		//
-		// Any non-empty value overrides the pointer-based default.
-		if nullableTag := strings.ToLower(strings.TrimSpace(f.Tag.Get("nullable"))); nullableTag != "" {
-			switch nullableTag {
-			case "false", "0", "no":
-				fieldSchema.Nullable = false
-			case "true", "1", "yes":
-				fieldSchema.Nullable = true
-				fieldSchema.XNullableClear = true
-			}
+		case isNullableInput:
+			fieldSchema.Nullable = true
+		case f.Type.Kind() == reflect.Pointer && !hasOmitempty:
+			// Response-style nullable fields: present in JSON as value or null.
+			fieldSchema.Nullable = true
+		case isOptionalPointer:
+			// Optional input pointers: omit to leave unchanged; explicit null is rejected at runtime.
+			fieldSchema.Nullable = false
 		}
 
 		// Add Stainless pagination annotations for List types
@@ -656,7 +658,7 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 			fieldSchema.Format = formatVal
 		}
 
-		if !isNullableWrapper {
+		if !isPatchField && !isNullableInput {
 			fieldType = f.Type
 		}
 		if fieldType.Kind() == reflect.Pointer {
@@ -702,9 +704,7 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 			if fieldType.PkgPath() == "encoding/json" && fieldType.Name() == "RawMessage" {
 				fieldSchema.Type = "object"
 				// Absent values are nil RawMessage, which encode as JSON null.
-				if strings.TrimSpace(f.Tag.Get("nullable")) == "" {
-					fieldSchema.Nullable = true
-				}
+				fieldSchema.Nullable = true
 				const jsonValueHint = " Encoded as a JSON value (object, array, string, number, boolean, or null), not a JSON-encoded string."
 				desc := fieldSchema.Description
 				if desc == "" {

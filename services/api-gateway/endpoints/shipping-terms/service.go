@@ -7,9 +7,11 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	ownerutil "github.com/augno/api/services/api-gateway/internal/owner"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -106,16 +108,16 @@ func (m *shippingTermSvcImpl) CreateShippingTerm(ctx context.Context, req *Creat
 		FreeShippingServiceLevelIds: req.FreeShippingServiceLevelIDs,
 		Includes:                    appctx.GetRequestedIncludeKeys(ctx),
 	}
-	if req.FlatRate != nil {
+	if q, ok := req.FlatRate.Value(); ok {
 		pbReq.FlatRate = &pb.QuantityInput{
-			Value:  req.FlatRate.Value,
-			UnitId: req.FlatRate.UnitID,
+			Value:  q.Value,
+			UnitId: q.UnitID,
 		}
 	}
-	if req.MinimumOrderValue != nil {
+	if q, ok := req.MinimumOrderValue.Value(); ok {
 		pbReq.MinimumOrderValue = &pb.QuantityInput{
-			Value:  req.MinimumOrderValue.Value,
-			UnitId: req.MinimumOrderValue.UnitID,
+			Value:  q.Value,
+			UnitId: q.UnitID,
 		}
 	}
 
@@ -143,32 +145,9 @@ func (m *shippingTermSvcImpl) UpdateShippingTerm(ctx context.Context, req *Updat
 		t := string(*req.Type)
 		pbReq.Type = &t
 	}
-	if req.FlatRate.IsSet() {
-		pbReq.HasFlatRate = true
-		if !req.FlatRate.IsNull() {
-			v := req.FlatRate.Value()
-			pbReq.FlatRate = &pb.QuantityInput{
-				Value:  v.Value,
-				UnitId: v.UnitID,
-			}
-		}
-	}
-	if req.MinimumOrderValue.IsSet() {
-		pbReq.HasMinimumOrderValue = true
-		if !req.MinimumOrderValue.IsNull() {
-			v := req.MinimumOrderValue.Value()
-			pbReq.MinimumOrderValue = &pb.QuantityInput{
-				Value:  v.Value,
-				UnitId: v.UnitID,
-			}
-		}
-	}
-	if req.FreeShippingServiceLevelIDs.IsSet() {
-		pbReq.HasFreeShippingServiceLevelIds = true
-		if !req.FreeShippingServiceLevelIDs.IsNull() {
-			pbReq.FreeShippingServiceLevelIds = *req.FreeShippingServiceLevelIDs.Value()
-		}
-	}
+	pbReq.FlatRate = apirequest.QuantityFieldPtrToProto(req.FlatRate)
+	pbReq.MinimumOrderValue = apirequest.QuantityFieldPtrToProto(req.MinimumOrderValue)
+	pbReq.FreeShippingServiceLevelIds = patch.StringListSliceFieldPtrToProto(req.FreeShippingServiceLevelIDs)
 
 	resp, apiErr := grpcutil.CallRPC(ctx, shippingTermSvcTracer, "service.shipping_terms.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateShippingTermResponse, error) {

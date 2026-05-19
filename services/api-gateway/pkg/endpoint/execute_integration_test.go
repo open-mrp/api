@@ -610,7 +610,7 @@ func TestExecute_JSON_nullOnNullableFalse_returns400(t *testing.T) {
 	t.Parallel()
 
 	type nullDisallow struct {
-		Title *string `json:"title,omitempty" nullable:"false"`
+		Title *string `json:"title,omitempty"`
 	}
 
 	ep := &APIEndpoint[*nullDisallow, *stubResponse]{

@@ -5,17 +5,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 )
 
 // RejectExplicitJSONNulls returns an invalid_format API error when the JSON body
-// contains an explicit null or a blank string for any pointer field tagged
-// nullable:"false". Absent keys are allowed (PATCH semantics). It only inspects
-// top-level object keys; nested objects are not walked.
+// contains an explicit null or a blank string for optional pointer fields
+// (json omitempty). Absent keys are allowed (PATCH semantics).
 //
-// Tag nullable:"false" is shared with the OpenAPI generator; keep it in sync.
+// patch.Field values accept null (clear). Response-style pointers without
+// omitempty are not checked here.
 func RejectExplicitJSONNulls(body []byte, v any) *apierror.APIError {
 	body = bytes.TrimSpace(body)
 	if len(body) == 0 || body[0] != '{' {
@@ -63,7 +65,14 @@ func rejectExplicitNullsInStruct(rv reflect.Value, rt reflect.Type, raw map[stri
 			continue
 		}
 
-		if strings.ToLower(strings.TrimSpace(sf.Tag.Get("nullable"))) != "false" {
+		if patch.IsFieldType(sf.Type) || patch.IsNullableType(sf.Type) {
+			continue
+		}
+		if sf.Type.Kind() == reflect.Pointer && patch.IsFieldType(sf.Type.Elem()) {
+			continue
+		}
+
+		if sf.Type.Kind() != reflect.Pointer || !jsonTagHasOmitempty(sf.Tag.Get("json")) {
 			continue
 		}
 
@@ -83,87 +92,13 @@ func rejectExplicitNullsInStruct(rv reflect.Value, rt reflect.Type, raw map[stri
 		if parsed == nil {
 			return apierror.NewInvalidFormatError(fmt.Sprintf("Field '%s' cannot be null.", jsonName), jsonName)
 		}
-		if str, ok := parsed.(string); ok && strings.TrimSpace(str) == "" {
-			return apierror.NewInvalidFormatError(fmt.Sprintf("Field '%s' must not be blank.", jsonName), jsonName)
+		if sf.Type.Elem().Kind() == reflect.String {
+			if str, ok := parsed.(string); ok && strings.TrimSpace(str) == "" {
+				return apierror.NewInvalidFormatError(fmt.Sprintf("Field '%s' must not be blank.", jsonName), jsonName)
+			}
 		}
 	}
 	return nil
-}
-
-// ApplyExplicitNulls sets nullable:"true" *string fields to ptr("") when the
-// JSON body contains an explicit null for that field. This lets downstream code
-// distinguish "field absent" (nil) from "field explicitly null" (ptr("")).
-// It must be called after JSON decoding and before RejectExplicitJSONNulls.
-func ApplyExplicitNulls(body []byte, v any) {
-	body = bytes.TrimSpace(body)
-	if len(body) == 0 || body[0] != '{' {
-		return
-	}
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(body, &raw); err != nil {
-		return
-	}
-	rv := reflect.ValueOf(v)
-	if rv.Kind() == reflect.Pointer {
-		if rv.IsNil() {
-			return
-		}
-		rv = rv.Elem()
-	}
-	if rv.Kind() != reflect.Struct {
-		return
-	}
-	applyExplicitNullsInStruct(rv, rv.Type(), raw)
-}
-
-func applyExplicitNullsInStruct(rv reflect.Value, rt reflect.Type, raw map[string]json.RawMessage) {
-	for i := 0; i < rt.NumField(); i++ {
-		sf := rt.Field(i)
-		if sf.PkgPath != "" {
-			continue
-		}
-
-		if sf.Anonymous {
-			switch {
-			case sf.Type.Kind() == reflect.Struct:
-				applyExplicitNullsInStruct(rv.Field(i), sf.Type, raw)
-			case sf.Type.Kind() == reflect.Pointer && sf.Type.Elem().Kind() == reflect.Struct:
-				fv := rv.Field(i)
-				if fv.IsNil() {
-					continue
-				}
-				applyExplicitNullsInStruct(fv.Elem(), sf.Type.Elem(), raw)
-			}
-			continue
-		}
-
-		if strings.ToLower(strings.TrimSpace(sf.Tag.Get("nullable"))) != "true" {
-			continue
-		}
-
-		// Only handle *string fields.
-		if sf.Type.Kind() != reflect.Pointer || sf.Type.Elem().Kind() != reflect.String {
-			continue
-		}
-
-		jsonName := jsonFieldNameFromTag(sf.Tag.Get("json"))
-		if jsonName == "" || jsonName == "-" {
-			continue
-		}
-
-		rm, ok := raw[jsonName]
-		if !ok {
-			continue
-		}
-		var parsed any
-		if err := json.Unmarshal(rm, &parsed); err != nil {
-			continue
-		}
-		if parsed == nil {
-			empty := ""
-			rv.Field(i).Set(reflect.ValueOf(&empty))
-		}
-	}
 }
 
 // ApplySlicePresenceFlags sets boolean "Has" companion fields to true when the
@@ -195,7 +130,6 @@ func ApplySlicePresenceFlags(body []byte, v any) {
 	}
 	rt := rv.Type()
 	for sf := range rt.Fields() {
-		sf := sf
 		if sf.PkgPath != "" || sf.Type.Kind() != reflect.Slice {
 			continue
 		}
@@ -209,13 +143,19 @@ func ApplySlicePresenceFlags(body []byte, v any) {
 			continue
 		}
 
-		// Look for a companion "Has" + field name boolean.
 		hasFld, ok := rt.FieldByName("Has" + sf.Name)
 		if !ok || hasFld.Type.Kind() != reflect.Bool {
 			continue
 		}
 		rv.FieldByName("Has" + sf.Name).SetBool(true)
 	}
+}
+
+func jsonTagHasOmitempty(tag string) bool {
+	if tag == "" || tag == "-" {
+		return false
+	}
+	return slices.Contains(strings.Split(tag, ",")[1:], "omitempty")
 }
 
 func jsonFieldNameFromTag(tag string) string {

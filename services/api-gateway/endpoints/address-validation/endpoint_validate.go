@@ -15,7 +15,7 @@ type ValidateAddressRequest struct {
 	// First line of the street address.
 	AddressLine1 string `json:"address_line_1" validate:"required"`
 	// Second line of the street address.
-	AddressLine2 *string `json:"address_line_2,omitempty" nullable:"false"`
+	AddressLine2 *string `json:"address_line_2,omitempty"`
 	// City or locality.
 	City string `json:"city" validate:"required"`
 	// State or administrative area.

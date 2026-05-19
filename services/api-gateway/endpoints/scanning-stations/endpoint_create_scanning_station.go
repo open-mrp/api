@@ -16,7 +16,7 @@ type CreateScanningStationRequest struct {
 	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
 	// Notes.
-	Notes *string `json:"notes,omitempty" nullable:"false"`
+	Notes *string `json:"notes,omitempty"`
 	// Scanning station type.
 	Type constants.ScanningStationType `json:"type" validate:"required"`
 	// Operator requirement behavior for this station.
@@ -24,9 +24,9 @@ type CreateScanningStationRequest struct {
 	// Department ID.
 	DepartmentID string `json:"department_id" validate:"required"`
 	// Label size code.
-	LabelSizeCode *constants.LabelSizeCode `json:"label_size,omitempty" nullable:"false"`
+	LabelSizeCode *constants.LabelSizeCode `json:"label_size,omitempty"`
 	// Label type code.
-	LabelTypeCode *constants.LabelTypeCode `json:"label_type,omitempty" nullable:"false"`
+	LabelTypeCode *constants.LabelTypeCode `json:"label_type,omitempty"`
 }
 
 var sampleLabelSizeCode = constants.LabelSizeCodeOneByOne

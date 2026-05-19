@@ -6,6 +6,7 @@ import (
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/contracts"
+	"github.com/augno/api/shared/patch"
 	pb "github.com/augno/api/shared/proto/core"
 
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -411,29 +412,28 @@ func (h *gRPCHandler) UpdateCustomer(ctx context.Context, req *pb.UpdateCustomer
 		CustomerAccountID:        req.Id,
 		Name:                     req.Name,
 		Number:                   req.Number,
-		Note:                     req.Note,
-		Email:                    req.Email,
-		Phone:                    req.Phone,
-		URL:                      req.Url,
+		Note:                     patch.StringFieldFromProto(req.Note),
+		Email:                    patch.StringFieldFromProto(req.Email),
+		Phone:                    patch.StringFieldFromProto(req.Phone),
+		URL:                      patch.StringFieldFromProto(req.Url),
 		StatusCode:               req.StatusCode,
 		IsEdiEnabled:             req.IsEdiEnabled,
 		CommissionPolicy:         optStringToCommissionPolicy(req.CommissionPolicy),
 		FreightPolicy:            optStringToFreightPolicy(req.FreightPolicy),
 		DefaultCarrierID:         req.DefaultCarrierId,
-		DefaultServiceLevelID:    req.DefaultServiceLevelId,
+		DefaultServiceLevelID:    patch.StringFieldFromProto(req.DefaultServiceLevelId),
 		DefaultPaymentTermID:     req.DefaultPaymentTermId,
 		DefaultShippingTermID:    req.DefaultShippingTermId,
 		DefaultPriorityCode:      req.DefaultPriorityCode,
-		DefaultSalesRepID:        req.DefaultSalesRepId,
-		BillToAddressID:          req.BillToAddressId,
-		ShipToAddressID:          req.ShipToAddressId,
+		DefaultSalesRepID:        patch.StringFieldFromProto(req.DefaultSalesRepId),
+		BillToAddressID:          patch.StringFieldFromProto(req.BillToAddressId),
+		ShipToAddressID:          patch.StringFieldFromProto(req.ShipToAddressId),
 		CustomerPriceGroupIDs:    req.CustomerPriceGroupIds,
 		HasCustomerPriceGroupIDs: req.HasCustomerPriceGroupIds,
 		CustomerTypeGroupID:      req.CustomerTypeGroupId,
 		CarrierBillingType:       req.CarrierBillingType,
-		CarrierBillingAccount:    req.CarrierBillingAccount,
-		CreditLimitValue:         req.CreditLimitValue,
-		CreditLimitUnitID:        req.CreditLimitUnitId,
+		CarrierBillingAccount:    patch.StringFieldFromProto(req.CarrierBillingAccount),
+		CreditLimit:              patch.QuantityFieldFromProto(req.CreditLimit),
 		Includes:                 req.Includes,
 	}
 

@@ -32,7 +32,7 @@ var File_core_core_proto protoreflect.FileDescriptor
 
 const file_core_core_proto_rawDesc = "" +
 	"\n" +
-	"\x0fcore/core.proto\x12\x04core\x1a\x1bgoogle/protobuf/empty.proto\x1a core/core_identity_context.proto\x1a\x19core/core_analytics.proto\x1a\x1ecore/core_account_groups.proto\x1a!core/core_accounts_carriers.proto\x1a\x15core/core_items.proto\x1a\x1bcore/core_consumption.proto\x1a!core/core_users_territories.proto\x1a\x18core/core_invoices.proto\x1a\x17core/core_lookups.proto2\x99\xd4\x01\n" +
+	"\x0fcore/core.proto\x12\x04core\x1a\x1bgoogle/protobuf/empty.proto\x1a\x15core/core_patch.proto\x1a core/core_identity_context.proto\x1a\x19core/core_analytics.proto\x1a\x1ecore/core_account_groups.proto\x1a!core/core_accounts_carriers.proto\x1a\x15core/core_items.proto\x1a\x1bcore/core_consumption.proto\x1a!core/core_users_territories.proto\x1a\x18core/core_invoices.proto\x1a\x17core/core_lookups.proto2\x99\xd4\x01\n" +
 	"\vCoreService\x12T\n" +
 	"\x11GetAccountContext\x12\x1e.core.GetAccountContextRequest\x1a\x1f.core.GetAccountContextResponse\x12]\n" +
 	"\x14GetUserAccountAccess\x12!.core.GetUserAccountAccessRequest\x1a\".core.GetUserAccountAccessResponse\x12W\n" +
@@ -378,7 +378,8 @@ const file_core_core_proto_rawDesc = "" +
 	"\fGetTerritory\x12\x19.core.GetTerritoryRequest\x1a\x1a.core.GetTerritoryResponse\x12N\n" +
 	"\x0fCreateTerritory\x12\x1c.core.CreateTerritoryRequest\x1a\x1d.core.CreateTerritoryResponse\x12N\n" +
 	"\x0fUpdateTerritory\x12\x1c.core.UpdateTerritoryRequest\x1a\x1d.core.UpdateTerritoryResponse\x12G\n" +
-	"\x0fDeleteTerritory\x12\x1c.core.DeleteTerritoryRequest\x1a\x16.google.protobuf.EmptyB\x18Z\x16shared/proto/core;coreP\x01P\x02P\x03P\x04P\x05P\x06P\aP\bP\tb\x06proto3"
+	"\x0fDeleteTerritory\x12\x1c.core.DeleteTerritoryRequest\x1a\x16.google.protobuf.EmptyB\x18Z\x16shared/proto/core;coreP\x01P\x02P\x03P\x04P\x05P\x06P\aP\bP\tP\n" +
+	"b\x06proto3"
 
 var file_core_core_proto_goTypes = []any{
 	(*GetAccountContextRequest)(nil),                       // 0: core.GetAccountContextRequest
@@ -1646,6 +1647,7 @@ func file_core_core_proto_init() {
 	if File_core_core_proto != nil {
 		return
 	}
+	file_core_core_patch_proto_init()
 	file_core_core_identity_context_proto_init()
 	file_core_core_analytics_proto_init()
 	file_core_core_account_groups_proto_init()

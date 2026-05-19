@@ -15,6 +15,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/messaging"
 	"github.com/augno/api/shared/pagination"
+	"github.com/augno/api/shared/patch"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -603,10 +604,8 @@ func (s *ProductSvcTestSuite) TestUpdateProduct_PartialUpdate_OnlyTouchesProvide
 		Update(gomock.Any(), gomock.AssignableToTypeOf(domain.UpdateProductParams{})).
 		DoAndReturn(func(_ context.Context, params domain.UpdateProductParams) (*domain.ProductFull, *apierror.APIError) {
 			s.Nil(params.SKU)
-			s.Nil(params.Description)
-			s.False(params.UpdateDescription)
-			s.Nil(params.Notes)
-			s.False(params.UpdateNotes)
+			s.True(params.Description.IsUnset())
+			s.True(params.Notes.IsUnset())
 			s.NotNil(params.IsPortalReady)
 			s.False(*params.IsPortalReady)
 			return s.existingProduct("it_1", "OLD-SKU"), nil
@@ -689,21 +688,16 @@ func (s *ProductSvcTestSuite) TestUpdateProduct_UpdateDescriptionFlagSemantics_E
 	s.productRepo.EXPECT().
 		Update(gomock.Any(), gomock.AssignableToTypeOf(domain.UpdateProductParams{})).
 		DoAndReturn(func(_ context.Context, params domain.UpdateProductParams) (*domain.ProductFull, *apierror.APIError) {
-			// UpdateDescription=true + nil ptr means "set to NULL"
-			s.True(params.UpdateDescription)
-			s.Nil(params.Description)
-			// Notes was omitted → flag false
-			s.False(params.UpdateNotes)
-			s.Nil(params.Notes)
+			s.True(params.Description.IsClear())
+			s.True(params.Notes.IsUnset())
 			return s.existingProduct("it_1", "OLD"), nil
 		}).
 		Times(1)
 	s.expectCacheSuccess()
 
 	result, err := s.productSvc.UpdateProduct(ctx, domain.UpdateProductParams{
-		ProductID:         "it_1",
-		Description:       nil,
-		UpdateDescription: true,
+		ProductID:   "it_1",
+		Description: patch.Clear[string](),
 	})
 
 	s.Nil(err)

@@ -15,17 +15,17 @@ type UpdateTransactionRequest struct {
 	// Transaction ID.
 	TransactionID string `path:"id" validate:"required"`
 	// Transaction number.
-	Number *string `json:"number" nullable:"false" validate:"omitempty,max=255"`
+	Number *string `json:"number" validate:"omitempty,max=255"`
 	// Note.
-	Note *string `json:"note" nullable:"false"`
+	Note *string `json:"note"`
 	// Amount as a decimal string.
-	Amount *string `json:"amount" nullable:"false"`
+	Amount *string `json:"amount"`
 	// Transaction method code.
-	TransactionMethodCode *string `json:"method" nullable:"false" validate:"omitempty,max=255"`
+	TransactionMethodCode *string `json:"method" validate:"omitempty,max=255"`
 	// Adjustment type code.
-	AdjustmentTypeCode *string `json:"adjustment_type" nullable:"false" validate:"omitempty,max=255"`
+	AdjustmentTypeCode *string `json:"adjustment_type" validate:"omitempty,max=255"`
 	// Responsible user ID.
-	ResponsibleUserID *string `json:"responsible_user_id" nullable:"false" validate:"omitempty"`
+	ResponsibleUserID *string `json:"responsible_user_id" validate:"omitempty"`
 	// Set to true to clear the responsible user.
 	ClearResponsibleUser bool `json:"clear_responsible_user"`
 	// Set to true to clear the transaction method.
@@ -33,7 +33,7 @@ type UpdateTransactionRequest struct {
 	// Set to true to clear the adjustment type.
 	ClearAdjustmentType bool `json:"clear_adjustment_type"`
 	// Allocation status.
-	IsFullyAllocated *bool `json:"is_fully_allocated" nullable:"false"`
+	IsFullyAllocated *bool `json:"is_fully_allocated"`
 }
 
 var sampleUpdateTransactionNote = "Updated payment note"

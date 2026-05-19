@@ -3,6 +3,7 @@ package domain
 import (
 	"time"
 
+	"github.com/augno/api/shared/patch"
 	"github.com/augno/api/shared/pagination"
 )
 
@@ -29,14 +30,20 @@ type CreatePartParams struct {
 }
 
 type UpdatePartParams struct {
-	AccountID         string
-	PartID            string
-	SKU               *string
-	Description       *string
-	UpdateDescription bool
-	Notes             *string
-	UpdateNotes       bool
-	Includes          []string
+	AccountID   string
+	PartID      string
+	SKU         *string
+	Description patch.Field[string]
+	Notes       patch.Field[string]
+	Includes    []string
+}
+
+type PartUpdateItemParams struct {
+	AccountID   string
+	ItemID      string
+	SKU         *string
+	Description patch.Field[string]
+	Notes       patch.Field[string]
 }
 
 type DeletePartParams struct {

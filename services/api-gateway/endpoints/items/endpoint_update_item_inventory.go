@@ -16,17 +16,17 @@ type UpdateItemInventoryRequest struct {
 	// Item ID.
 	ItemID string `path:"id" validate:"required"`
 	// Quantity change to apply.
-	QuantityChange *float64 `json:"quantity_change,omitempty" nullable:"false"`
+	QuantityChange *float64 `json:"quantity_change,omitempty"`
 	// How quantity_change is applied: adjust adds to current inventory; reconcile sets inventory to the exact value.
-	Operation *constants.InventoryUpdateOperation `json:"operation,omitempty" nullable:"false"`
+	Operation *constants.InventoryUpdateOperation `json:"operation,omitempty"`
 	// Customer ID.
-	CustomerID *string `json:"customer_id,omitempty" nullable:"false" validate:"omitempty"`
+	CustomerID *string `json:"customer_id,omitempty" validate:"omitempty"`
 	// Location ID.
-	LocationID *string `json:"location_id,omitempty" nullable:"false" validate:"omitempty"`
+	LocationID *string `json:"location_id,omitempty" validate:"omitempty"`
 	// Lot number.
-	LotNumber *string `json:"lot_number,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	LotNumber *string `json:"lot_number,omitempty" validate:"omitempty,max=255"`
 	// Unit ID for the quantity change.
-	UnitID *string `json:"unit_id,omitempty" nullable:"false" validate:"omitempty"`
+	UnitID *string `json:"unit_id,omitempty" validate:"omitempty"`
 }
 
 var sampleUpdateItemInventoryRequest = &UpdateItemInventoryRequest{

@@ -165,7 +165,6 @@ func collectExpandableNamespaces(resource any) map[string]bool {
 	rt := rv.Type()
 	ns := make(map[string]bool)
 	for ft := range rt.Fields() {
-		ft := ft
 		if ft.Tag.Get("expandable") == "true" {
 			prefix := rt.Name() + "." + ft.Name
 			// For pointer fields the namespace is "Type.Field.SubField".
@@ -275,7 +274,6 @@ func validateStubFields(t *testing.T, path string, rv reflect.Value) {
 // resolveJSONNameFromType resolves the JSON tag name for a field by type.
 func resolveJSONNameFromType(rt reflect.Type, fieldName string) string {
 	for f := range rt.Fields() {
-		f := f
 		if f.Name == fieldName {
 			tag := f.Tag.Get("json")
 			if tag != "" {
@@ -293,7 +291,6 @@ func resolveJSONName(resource any, fieldName string) string {
 	}
 	rt := rv.Type()
 	for f := range rt.Fields() {
-		f := f
 		if f.Name == fieldName {
 			tag := f.Tag.Get("json")
 			if tag != "" {

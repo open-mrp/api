@@ -18,11 +18,11 @@ type CreateUnitGroupUnitRequest struct {
 	// Unit ID.
 	UnitID string `json:"unit_id" validate:"required"`
 	// Discount percentage.
-	DiscountPercentage *float64 `json:"discount_percentage,omitempty" default:"1" nullable:"false"`
+	DiscountPercentage *float64 `json:"discount_percentage,omitempty" default:"1"`
 	// Fixed discount amount.
-	DiscountFixed *float64 `json:"discount_fixed,omitempty" default:"0" nullable:"false"`
+	DiscountFixed *float64 `json:"discount_fixed,omitempty" default:"0"`
 	// Customer portal visibility.
-	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility,omitempty" default:"visible" nullable:"false"`
+	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility,omitempty" default:"visible"`
 }
 
 var sampleCreateUnitGroupUnitDiscountPct = float64(1)

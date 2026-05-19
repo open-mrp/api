@@ -11,6 +11,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
+	"github.com/augno/api/shared/patch"
 )
 
 func TestMain(m *testing.M) {
@@ -36,13 +37,31 @@ type PointersStruct struct {
 	Nested *NestedStruct `json:"nested"`
 }
 
-type OptionalPointerWithNullableOverrideStruct struct {
-	Optional *string `json:"optional,omitempty" nullable:"false"`
+type OptionalPointerStruct struct {
+	Optional *string `json:"optional,omitempty"`
 }
 
-type NullableClearStruct struct {
-	CarrierID *string `json:"carrier_id,omitempty" nullable:"true"`
-	Name      *string `json:"name,omitempty"`
+type ResponseNullableStruct struct {
+	Description *string `json:"description"`
+}
+
+type patchQuantityInput struct {
+	Value  float64 `json:"value"`
+	UnitID string  `json:"unit_id"`
+}
+
+// PatchFieldStruct exercises patch.Field[T] OpenAPI generation.
+type PatchFieldStruct struct {
+	Name        *string                          `json:"name,omitempty"`
+	Description *patch.Field[string]             `json:"description"`
+	FlatRate    *patch.Field[patchQuantityInput] `json:"flat_rate"`
+	Tags        *patch.Field[[]string]           `json:"tags,omitempty"`
+}
+
+// NullableInputStruct exercises patch.Nullable[T] OpenAPI generation.
+type NullableInputStruct struct {
+	Optional    *string                `json:"optional,omitempty"`
+	Description patch.Nullable[string] `json:"description,omitzero"`
 }
 
 type TestSchemaStruct struct {
@@ -202,24 +221,21 @@ func TestGenerateSchema(t *testing.T) {
 		t.Errorf("expected AllOf[0].Ref to be '#/components/schemas/NestedStruct', got '%s'", ptrSchema.Properties["nested"].AllOf[0].Ref)
 	}
 
-	// Test explicit nullable override for optional pointers (pointer + omitempty)
-	optType := reflect.TypeOf(OptionalPointerWithNullableOverrideStruct{})
+	// Optional input pointers (omitempty) are not nullable in OpenAPI.
+	optType := reflect.TypeOf(OptionalPointerStruct{})
 	optSchema := generateSchema(optType, components, reader)
 	if optSchema.Properties["optional"].Nullable {
-		t.Error("expected optional pointer field 'optional' to not be nullable when nullable override is false")
+		t.Error("expected optional pointer field 'optional' to not be nullable")
 	}
 
-	// Test nullable:"true" sets both Nullable and XNullableClear
-	clearType := reflect.TypeOf(NullableClearStruct{})
-	clearSchema := generateSchema(clearType, components, reader)
-	if !clearSchema.Properties["carrier_id"].Nullable {
-		t.Error("expected carrier_id to be nullable when nullable:\"true\"")
+	// Response-style pointers without omitempty are nullable.
+	respType := reflect.TypeOf(ResponseNullableStruct{})
+	respSchema := generateSchema(respType, components, reader)
+	if !respSchema.Properties["description"].Nullable {
+		t.Error("expected response pointer field 'description' to be nullable")
 	}
-	if !clearSchema.Properties["carrier_id"].XNullableClear {
-		t.Error("expected carrier_id to have x-nullable-clear when nullable:\"true\"")
-	}
-	if clearSchema.Properties["name"].XNullableClear {
-		t.Error("expected name to not have x-nullable-clear without nullable:\"true\" tag")
+	if respSchema.Properties["description"].XNullableClear {
+		t.Error("expected response pointer without x-nullable-clear")
 	}
 
 	// Test DocumentedType
@@ -257,6 +273,80 @@ func TestGenerateSchema(t *testing.T) {
 	}
 	if exampleNullField.Nullable != true {
 		t.Errorf("expected property 'raw' to be nullable, got %v", exampleNullField.Nullable)
+	}
+
+	patchType := reflect.TypeOf(PatchFieldStruct{})
+	patchSchema := generateSchema(patchType, components, reader)
+
+	for _, req := range patchSchema.Required {
+		if req == "flat_rate" || req == "tags" || req == "description" {
+			t.Errorf("patch.Field property %q must not be required", req)
+		}
+	}
+
+	desc, ok := patchSchema.Properties["description"]
+	if !ok {
+		t.Fatal("expected property 'description'")
+	}
+	if desc.Type != "string" {
+		t.Errorf("expected description type string, got %q", desc.Type)
+	}
+	if !desc.Nullable || !desc.XNullableClear {
+		t.Error("expected description to be nullable with x-nullable-clear")
+	}
+
+	flat, ok := patchSchema.Properties["flat_rate"]
+	if !ok {
+		t.Fatal("expected property 'flat_rate'")
+	}
+	if !flat.Nullable || !flat.XNullableClear {
+		t.Error("expected flat_rate to be nullable with x-nullable-clear")
+	}
+	if len(flat.AllOf) == 0 || flat.AllOf[0].Ref != "#/components/schemas/patchQuantityInput" {
+		t.Errorf("expected flat_rate to reference patchQuantityInput, got %+v", flat.AllOf)
+	}
+
+	tags, ok := patchSchema.Properties["tags"]
+	if !ok {
+		t.Fatal("expected property 'tags'")
+	}
+	if tags.Type != "array" || tags.Items == nil || tags.Items.Type != "string" {
+		t.Errorf("expected tags type array of string, got %+v", tags)
+	}
+	if !tags.Nullable || !tags.XNullableClear {
+		t.Error("expected tags to be nullable with x-nullable-clear")
+	}
+
+	if _, ok := components.Schemas["Field"]; ok {
+		t.Error("patch.Field must not appear as a component schema name")
+	}
+	if _, ok := components.Schemas["patch_Field_string"]; ok {
+		t.Error("patch.Field must not leak into component schema names")
+	}
+
+	nullableType := reflect.TypeOf(NullableInputStruct{})
+	nullableSchema := generateSchema(nullableType, components, reader)
+
+	opt, ok := nullableSchema.Properties["optional"]
+	if !ok {
+		t.Fatal("expected property 'optional'")
+	}
+	if opt.Nullable {
+		t.Error("expected optional *string with omitempty to not be nullable")
+	}
+
+	descNullable, ok := nullableSchema.Properties["description"]
+	if !ok {
+		t.Fatal("expected property 'description'")
+	}
+	if descNullable.Type != "string" {
+		t.Errorf("expected description type string, got %q", descNullable.Type)
+	}
+	if !descNullable.Nullable {
+		t.Error("expected Nullable[string] to be nullable")
+	}
+	if descNullable.XNullableClear {
+		t.Error("expected Nullable[string] without x-nullable-clear")
 	}
 }
 

@@ -279,18 +279,14 @@ func (s *locationSvcImpl) UpdateLocation(ctx context.Context, params domain.Upda
 				return apiErr
 			}
 
-			// Backfill ParentID with existing value when not provided.
-			// ptr("") is the sentinel for "clear"; nil means "not sent".
-			if params.ParentID == nil {
-				params.ParentID = old.ParentID
-			}
+			params.ParentID = params.ParentID.BackfillUnsetPtr(old.ParentID)
 
-			// Validate parent exists if provided (skip validation for clear sentinel).
-			if params.ParentID != nil && *params.ParentID != "" {
-				if *params.ParentID == params.LocationID {
+			if params.ParentID.IsSet() {
+				parentID, _ := params.ParentID.Value()
+				if parentID == params.LocationID {
 					return apierror.NewValidationErrorWithParam("A location cannot be its own parent.", "parent_id")
 				}
-				inAccount, apiErr := txRepo.IsInAccount(txCtx, params.AccountID, *params.ParentID)
+				inAccount, apiErr := txRepo.IsInAccount(txCtx, params.AccountID, parentID)
 				if apiErr != nil {
 					return apiErr
 				}
@@ -299,9 +295,12 @@ func (s *locationSvcImpl) UpdateLocation(ctx context.Context, params domain.Upda
 				}
 			}
 
-			// Validate all child IDs exist in account
-			if params.UpdateChildren {
-				for _, childID := range params.ChildIDs {
+			if params.ChildIDs.WasProvided() {
+				childIDs := []string{}
+				if params.ChildIDs.IsSet() {
+					childIDs, _ = params.ChildIDs.Value()
+				}
+				for _, childID := range childIDs {
 					inAccount, apiErr := txRepo.IsInAccount(txCtx, params.AccountID, childID)
 					if apiErr != nil {
 						return apiErr

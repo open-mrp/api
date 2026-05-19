@@ -3,6 +3,7 @@ package domain
 import (
 	"time"
 
+	"github.com/augno/api/shared/patch"
 	"github.com/augno/api/shared/pagination"
 )
 
@@ -73,7 +74,7 @@ type UpdateUnitGroupParams struct {
 	AccountID       string
 	UnitGroupID     string
 	Name            *string
-	Notes           **string
+	Notes           patch.Field[string]
 	BaseUnitID      *string
 	UnitConversions *[]CreateUnitGroupUnitParams
 	Includes        []string

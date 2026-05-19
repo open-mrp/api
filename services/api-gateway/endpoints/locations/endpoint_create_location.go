@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 )
 
 // Request to create a location.
@@ -18,9 +19,9 @@ type CreateLocationRequest struct {
 	// Location type code.
 	TypeCode constants.LocationTypeCode `json:"type" validate:"required"`
 	// Parent location ID. Null for top-level locations.
-	ParentID *string `json:"parent_id,omitempty" validate:"omitempty"`
+	ParentID patch.Nullable[string] `json:"parent_id,omitzero"`
 	// IDs of child locations to attach.
-	ChildIDs *[]string `json:"child_ids,omitempty"`
+	ChildIDs patch.Nullable[[]string] `json:"child_ids,omitzero"`
 }
 
 var sampleCreateLocationRequest = &CreateLocationRequest{

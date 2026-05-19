@@ -16,9 +16,9 @@ type UpdateProductionRunRequest struct {
 	// Production run ID.
 	ProductionRunID string `path:"id" validate:"required"`
 	// Production run number.
-	Number *string `json:"number" nullable:"false" validate:"omitempty,max=255"`
+	Number *string `json:"number" validate:"omitempty,max=255"`
 	// Responsible user ID.
-	ResponsibleUserID *string `json:"responsible_user_id" nullable:"false" validate:"omitempty"`
+	ResponsibleUserID *string `json:"responsible_user_id" validate:"omitempty"`
 }
 
 var sampleUpdateProductionRunNumber = "PR-00042"

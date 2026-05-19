@@ -19,7 +19,7 @@ type CreateAPIKeyRequest struct {
 	// Human-readable name for the API key.
 	Name string `json:"name" validate:"required,max=255"`
 	// Expiration timestamp. If not set, the key does not expire.
-	ExpiresAt *time.Time `json:"expires_at,omitempty" nullable:"false"`
+	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 }
 
 var sampleCreateAPIKeyRequest = &CreateAPIKeyRequest{

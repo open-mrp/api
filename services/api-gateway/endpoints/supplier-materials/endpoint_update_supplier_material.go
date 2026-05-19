@@ -17,11 +17,11 @@ type UpdateSupplierMaterialRequest struct {
 	// Supplier material ID.
 	MaterialID string `path:"id" validate:"required"`
 	// Supplier part number for this material.
-	SupplierPartNumber *string `json:"supplier_part_number,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	SupplierPartNumber *string `json:"supplier_part_number,omitempty" validate:"omitempty,max=255"`
 	// Supplier description for this material.
-	SupplierDescription *string `json:"supplier_description,omitempty" nullable:"true" validate:"omitempty,max=255"`
+	SupplierDescription *string `json:"supplier_description,omitempty" validate:"omitempty,max=255"`
 	// Active status.
-	IsActive *bool `json:"is_active,omitempty" nullable:"false"`
+	IsActive *bool `json:"is_active,omitempty"`
 }
 
 var sampleUpdateSupplierPartNumber = "SUP-PART-002"

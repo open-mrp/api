@@ -9,6 +9,9 @@ import (
 const (
 	stepField = iota
 	stepDerefNilPtrStruct
+
+	// maxBindPlanStructDepth caps struct nesting during plan construction.
+	maxBindPlanStructDepth = 32
 )
 
 type walkStep struct {
@@ -49,17 +52,92 @@ func planFor(dst any) (*bindPlan, error) {
 	return plan, nil
 }
 
+func fieldHasBindTag(sf reflect.StructField) bool {
+	tag := sf.Tag
+	return tag.Get("query") != "" || tag.Get("path") != "" ||
+		tag.Get("header") != "" || tag.Get("cookie") != ""
+}
+
 func bindTagOnStruct(sf reflect.StructTag) bool {
 	return sf.Get("query") != "" || sf.Get("path") != "" || sf.Get("header") != ""
 }
 
-// buildBindPlan mirrors walkStruct in handler.go — same recurse / leaf distinction.
+// structTypeHasBindDescendant reports whether rt contains a query/path/header/cookie
+// bind tag on any reachable field (same recurse rules as buildBindPlan, without leaves).
+func structTypeHasBindDescendant(rt reflect.Type) bool {
+	visiting := make(map[reflect.Type]struct{})
+	return structTypeHasBindDescendantAt(rt, visiting, 0)
+}
+
+func structTypeHasBindDescendantAt(rt reflect.Type, visiting map[reflect.Type]struct{}, depth int) bool {
+	if depth > maxBindPlanStructDepth {
+		return false
+	}
+	if _, ok := visiting[rt]; ok {
+		return false
+	}
+	visiting[rt] = struct{}{}
+	defer delete(visiting, rt)
+
+	for sf := range rt.Fields() {
+		if sf.PkgPath != "" {
+			continue
+		}
+		if fieldHasBindTag(sf) {
+			return true
+		}
+
+		ft := sf.Type
+		if sf.Anonymous {
+			switch {
+			case ft.Kind() == reflect.Struct:
+				if structTypeHasBindDescendantAt(ft, visiting, depth+1) {
+					return true
+				}
+			case ft.Kind() == reflect.Pointer && ft.Elem().Kind() == reflect.Struct:
+				if structTypeHasBindDescendantAt(ft.Elem(), visiting, depth+1) {
+					return true
+				}
+			}
+			continue
+		}
+		if ft.Kind() == reflect.Struct {
+			if structTypeHasBindDescendantAt(ft, visiting, depth+1) {
+				return true
+			}
+			continue
+		}
+		if ft.Kind() == reflect.Pointer && ft.Elem().Kind() == reflect.Struct {
+			if bindTagOnStruct(sf.Tag) {
+				return true
+			}
+			if structTypeHasBindDescendantAt(ft.Elem(), visiting, depth+1) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// buildBindPlan walks the request struct type and records bindable leaves. Recursion
+// is pruned into subtrees with no bind tags, capped by maxBindPlanStructDepth, and
+// cycle-safe via a per-path visiting set.
 func buildBindPlan(root reflect.Type) *bindPlan {
 	allowedQuery := make(map[string]struct{})
 	var fields []bindField
+	visiting := make(map[reflect.Type]struct{})
 
-	var walk func(rt reflect.Type, prefix []walkStep)
-	walk = func(rt reflect.Type, prefix []walkStep) {
+	var walk func(rt reflect.Type, prefix []walkStep, depth int)
+	walk = func(rt reflect.Type, prefix []walkStep, depth int) {
+		if depth > maxBindPlanStructDepth {
+			return
+		}
+		if _, ok := visiting[rt]; ok {
+			return
+		}
+		visiting[rt] = struct{}{}
+		defer delete(visiting, rt)
+
 		for i := 0; i < rt.NumField(); i++ {
 			sf := rt.Field(i)
 			if sf.PkgPath != "" {
@@ -75,19 +153,26 @@ func buildBindPlan(root reflect.Type) *bindPlan {
 
 				switch {
 				case ft.Kind() == reflect.Struct:
-					walk(ft, next)
+					if structTypeHasBindDescendant(ft) {
+						walk(ft, next, depth+1)
+					}
 				case ft.Kind() == reflect.Pointer && ft.Elem().Kind() == reflect.Struct:
-					next = append(next, walkStep{kind: byte(stepDerefNilPtrStruct)})
-					walk(ft.Elem(), next)
+					if structTypeHasBindDescendant(ft.Elem()) {
+						next = append(next, walkStep{kind: byte(stepDerefNilPtrStruct)})
+						walk(ft.Elem(), next, depth+1)
+					}
 				default:
 					addLeaf(sf, ft, cloneSteps(prefix), i, allowedQuery, &fields)
 				}
 				continue
 			}
 			if ft.Kind() == reflect.Struct {
+				if !structTypeHasBindDescendant(ft) {
+					continue
+				}
 				next := cloneSteps(prefix)
 				next = append(next, walkStep{kind: byte(stepField), idx: i})
-				walk(ft, next)
+				walk(ft, next, depth+1)
 				continue
 			}
 
@@ -96,13 +181,16 @@ func buildBindPlan(root reflect.Type) *bindPlan {
 					addLeaf(sf, ft, cloneSteps(prefix), i, allowedQuery, &fields)
 					continue
 				}
+				if !structTypeHasBindDescendant(ft.Elem()) {
+					continue
+				}
 
 				next := cloneSteps(prefix)
 				next = append(next,
 					walkStep{kind: byte(stepField), idx: i},
 					walkStep{kind: byte(stepDerefNilPtrStruct)},
 				)
-				walk(ft.Elem(), next)
+				walk(ft.Elem(), next, depth+1)
 				continue
 			}
 
@@ -110,7 +198,7 @@ func buildBindPlan(root reflect.Type) *bindPlan {
 		}
 	}
 
-	walk(root, nil)
+	walk(root, nil, 0)
 
 	return &bindPlan{fields: fields, allowedQuery: allowedQuery}
 }

@@ -18,11 +18,11 @@ type CreateAccountGroupRequest struct {
 	// Account group type.
 	Type constants.AccountGroupType `json:"type" validate:"required"`
 	// Commission policy.
-	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy,omitempty" default:"commission_exempt" nullable:"false"`
+	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy,omitempty" default:"commission_exempt"`
 	// Freight policy.
-	FreightPolicy *constants.FreightPolicy `json:"freight_policy,omitempty" default:"billed_freight" nullable:"false"`
+	FreightPolicy *constants.FreightPolicy `json:"freight_policy,omitempty" default:"billed_freight"`
 	// Description.
-	Description *string `json:"description,omitempty" nullable:"false"`
+	Description *string `json:"description,omitempty"`
 }
 
 var sampleCreateAccountGroupRequest = &CreateAccountGroupRequest{

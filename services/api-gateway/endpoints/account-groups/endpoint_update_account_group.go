@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 )
 
 // Request to partially update an account group.
@@ -16,13 +17,13 @@ type UpdateAccountGroupRequest struct {
 	// Account group ID.
 	AccountGroupID string `path:"id" validate:"required"`
 	// Display name.
-	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
 	// Description.
-	Description *string `json:"description,omitempty" nullable:"true"`
+	Description *patch.Field[string] `json:"description"`
 	// Commission policy.
-	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy,omitempty" nullable:"false"`
+	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy,omitempty"`
 	// Freight policy.
-	FreightPolicy *constants.FreightPolicy `json:"freight_policy,omitempty" nullable:"false"`
+	FreightPolicy *constants.FreightPolicy `json:"freight_policy,omitempty"`
 }
 
 var sampleUpdateAccountGroupRequest = &UpdateAccountGroupRequest{

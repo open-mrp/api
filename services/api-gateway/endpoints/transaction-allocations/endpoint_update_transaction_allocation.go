@@ -15,7 +15,7 @@ type UpdateTransactionAllocationRequest struct {
 	// Transaction allocation ID.
 	AllocationID string `path:"id" validate:"required"`
 	// Allocation amount as a decimal string.
-	Amount *string `json:"amount" nullable:"false"`
+	Amount *string `json:"amount"`
 }
 
 var sampleUpdateTransactionAllocationAmount = "150.00"

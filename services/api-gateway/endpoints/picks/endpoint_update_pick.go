@@ -16,9 +16,9 @@ type UpdatePickRequest struct {
 	// Pick ID.
 	PickID string `path:"id" validate:"required"`
 	// Pick number.
-	Number *string `json:"number,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	Number *string `json:"number,omitempty" validate:"omitempty,max=255"`
 	// Timestamp when the pick was finished. Pass an empty string to clear.
-	FinishedAt *string `json:"finished_at,omitempty" nullable:"true"`
+	FinishedAt *string `json:"finished_at,omitempty"`
 }
 
 var sampleUpdatePickNumber = "PCK-2025-0042"

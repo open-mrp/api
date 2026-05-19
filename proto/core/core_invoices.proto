@@ -4,6 +4,7 @@ syntax = "proto3";
 package core;
 
 import "google/protobuf/timestamp.proto";
+import "core/core_patch.proto";
 import "core/core_identity_context.proto";
 import "core/core_analytics.proto";
 import "core/core_accounts_carriers.proto";
@@ -256,11 +257,9 @@ message CreatePartResponse {
 message UpdatePartRequest {
   string id = 1;
   optional string sku = 2;
-  optional string description = 3;
-  bool update_description = 4;
-  optional string notes = 5;
-  bool update_notes = 6;
-  repeated string includes = 7;
+  optional StringPatch description = 3;
+  optional StringPatch notes = 4;
+  repeated string includes = 5;
 }
 message UpdatePartResponse {
   PartInfo part = 1;
@@ -394,14 +393,12 @@ message CreateProductResponse {
 message UpdateProductRequest {
   string id = 1;
   optional string sku = 2;
-  optional string description = 3;
-  bool update_description = 4;
-  optional string notes = 5;
-  bool update_notes = 6;
-  optional bool is_portal_ready = 7;
+  optional StringPatch description = 3;
+  optional StringPatch notes = 4;
+  optional bool is_portal_ready = 5;
   // Updated unit price. Same currency-vs-non-currency rule as on create.
-  optional CreateRateInput unit_price = 8;
-  repeated string includes = 9;
+  optional CreateRateInput unit_price = 6;
+  repeated string includes = 7;
 }
 message UpdateProductResponse {
   ProductFullInfo product = 1;

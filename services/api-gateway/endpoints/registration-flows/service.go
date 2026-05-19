@@ -183,11 +183,11 @@ func (m *registrationFlowSvcImpl) RegisterCustomer(ctx context.Context, req *Reg
 
 	if req.Address != nil {
 		pbReq.Address = &pb.RegisterCustomerAddressInput{
-			StreetLine_1: derefStr(req.Address.StreetLine1),
-			StreetLine_2: req.Address.StreetLine2,
-			Locality:     derefStr(req.Address.Locality),
-			State:        derefStr(req.Address.State),
-			PostalCode:   derefStr(req.Address.PostalCode),
+			StreetLine_1: derefStr(req.Address.StreetLine1.Ptr()),
+			StreetLine_2: req.Address.StreetLine2.Ptr(),
+			Locality:     derefStr(req.Address.Locality.Ptr()),
+			State:        derefStr(req.Address.State.Ptr()),
+			PostalCode:   derefStr(req.Address.PostalCode.Ptr()),
 			Country:      req.Address.Country,
 			Name:         &req.Address.Name,
 		}

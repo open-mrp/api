@@ -136,7 +136,6 @@ func collectJSONFieldNames(dst any) []string {
 			return
 		}
 		for sf := range rt.Fields() {
-			sf := sf
 			if sf.PkgPath != "" { // unexported
 				continue
 			}

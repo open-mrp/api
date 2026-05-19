@@ -10,6 +10,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 )
 
 // UpdateProductRequest is the request to partially update a product.
@@ -17,15 +18,15 @@ type UpdateProductRequest struct {
 	// Product ID.
 	ProductID string `path:"id" validate:"required"`
 	// SKU.
-	SKU *string `json:"sku,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	SKU *string `json:"sku,omitempty" validate:"omitempty,max=255"`
 	// Description.
-	Description *string `json:"description,omitempty" nullable:"true"`
+	Description *patch.Field[string] `json:"description"`
 	// Notes.
-	Notes *string `json:"notes,omitempty" nullable:"true"`
+	Notes *patch.Field[string] `json:"notes"`
 	// Whether visible in the customer portal.
-	PortalVisibility *constants.CustomerPortalVisibility `json:"portal_visibility,omitempty" nullable:"false"`
+	PortalVisibility *constants.CustomerPortalVisibility `json:"portal_visibility,omitempty"`
 	// Updated unit price. Numerator must be a currency unit; denominator must not be.
-	UnitPrice *apirequest.RateInput `json:"unit_price,omitempty"`
+	UnitPrice patch.Nullable[apirequest.RateInput] `json:"unit_price,omitzero"`
 }
 
 var sampleUpdateProductSKU = "SKU-002"

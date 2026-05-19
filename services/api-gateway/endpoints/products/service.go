@@ -14,6 +14,7 @@ import (
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -135,15 +136,15 @@ func (m *productSvcImpl) CreateProduct(ctx context.Context, req *CreateProductRe
 
 	pbReq := &pb.CreateProductRequest{
 		Sku:             req.SKU,
-		Description:     req.Description,
-		Notes:           req.Notes,
+		Description:     req.Description.Ptr(),
+		Notes:           req.Notes.Ptr(),
 		ProductTypeCode: string(req.ProductTypeCode),
 		ProductLineId:   req.ProductLineID,
 		CategoryId:      req.CategoryID,
 		IsPortalReady:   isPortalReady,
-		UnitPrice:       rateInputToProto(req.UnitPrice),
-		UnitCost:        rateInputToProto(req.UnitCost),
-		BurnRate:        rateInputToProto(req.BurnRate),
+		UnitPrice:       rateInputToProto(req.UnitPrice.Ptr()),
+		UnitCost:        rateInputToProto(req.UnitCost.Ptr()),
+		BurnRate:        rateInputToProto(req.BurnRate.Ptr()),
 		AttributeIds:    req.AttributeIDs,
 		Includes:        appctx.GetRequestedIncludeKeys(ctx),
 	}
@@ -168,32 +169,14 @@ func (m *productSvcImpl) UpdateProduct(ctx context.Context, req *UpdateProductRe
 		isPortalReady = &v
 	}
 
-	// ApplyExplicitNulls converts an explicit JSON null for a nullable:"true"
-	// *string field into &"" (pointer to empty string). The core service uses
-	// UpdateDescription/UpdateNotes=true with a nil pointer to clear the column,
-	// so we translate &"" → nil here before forwarding.
-	description := req.Description
-	updateDescription := description != nil
-	if description != nil && *description == "" {
-		description = nil
-	}
-
-	notes := req.Notes
-	updateNotes := notes != nil
-	if notes != nil && *notes == "" {
-		notes = nil
-	}
-
 	pbReq := &pb.UpdateProductRequest{
-		Id:                req.ProductID,
-		Sku:               req.SKU,
-		Description:       description,
-		UpdateDescription: updateDescription,
-		Notes:             notes,
-		UpdateNotes:       updateNotes,
-		IsPortalReady:     isPortalReady,
-		UnitPrice:         rateInputToProto(req.UnitPrice),
-		Includes:          appctx.GetRequestedIncludeKeys(ctx),
+		Id:            req.ProductID,
+		Sku:           req.SKU,
+		Description:   patch.StringFieldPtrToProto(req.Description),
+		Notes:         patch.StringFieldPtrToProto(req.Notes),
+		IsPortalReady: isPortalReady,
+		UnitPrice:     rateInputToProto(req.UnitPrice.Ptr()),
+		Includes:      appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productSvcTracer, "service.products.update", domain.ServiceName,

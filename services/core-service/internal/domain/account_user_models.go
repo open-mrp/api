@@ -5,6 +5,7 @@ import (
 
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/pagination"
+	"github.com/augno/api/shared/patch"
 )
 
 // AccountUserDetail is an enriched account user model with joined user, role,
@@ -81,9 +82,7 @@ type UpdateAccountUserParams struct {
 	Name                    *string
 	Email                   *string
 	Username                *string
-	RoleID                  *string
-	ClearRoleID             bool
-	DepartmentID            *string
-	ClearDepartmentID       bool
+	RoleID                  patch.Field[string]
+	DepartmentID            patch.Field[string]
 	NotificationPreferences []NotificationPreferenceItem
 }

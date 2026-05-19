@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 )
 
 // Request to create an attribute.
@@ -18,7 +19,7 @@ type CreateAttributeRequest struct {
 	// Attribute value.
 	Value string `json:"value" validate:"required"`
 	// Color code. Randomly assigned if not provided.
-	ColorCode *constants.Color `json:"color,omitempty"`
+	ColorCode patch.Nullable[constants.Color] `json:"color,omitzero"`
 	// Display order. Defaults to last position if not provided.
 	SortOrder *int32 `json:"sort_order" validate:"omitempty,min=1"`
 }
@@ -30,7 +31,7 @@ var (
 
 var sampleCreateAttributeRequest = &CreateAttributeRequest{
 	Value:     "Red",
-	ColorCode: &sampleCreateAttributeColor,
+	ColorCode: patch.SetNullable(sampleCreateAttributeColor),
 	SortOrder: &sampleCreateAttributeSortOrder,
 }
 

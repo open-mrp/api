@@ -2923,19 +2923,16 @@ func (x *CreateShippingTermResponse) GetShippingTerm() *ShippingTermInfo {
 }
 
 type UpdateShippingTermRequest struct {
-	state                          protoimpl.MessageState `protogen:"open.v1"`
-	Id                             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name                           *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
-	Type                           *string                `protobuf:"bytes,3,opt,name=type,proto3,oneof" json:"type,omitempty"`
-	FlatRate                       *QuantityInput         `protobuf:"bytes,4,opt,name=flat_rate,json=flatRate,proto3,oneof" json:"flat_rate,omitempty"`
-	MinimumOrderValue              *QuantityInput         `protobuf:"bytes,5,opt,name=minimum_order_value,json=minimumOrderValue,proto3,oneof" json:"minimum_order_value,omitempty"`
-	FreeShippingServiceLevelIds    []string               `protobuf:"bytes,6,rep,name=free_shipping_service_level_ids,json=freeShippingServiceLevelIds,proto3" json:"free_shipping_service_level_ids,omitempty"`
-	HasFreeShippingServiceLevelIds bool                   `protobuf:"varint,7,opt,name=has_free_shipping_service_level_ids,json=hasFreeShippingServiceLevelIds,proto3" json:"has_free_shipping_service_level_ids,omitempty"`
-	HasFlatRate                    bool                   `protobuf:"varint,8,opt,name=has_flat_rate,json=hasFlatRate,proto3" json:"has_flat_rate,omitempty"`
-	HasMinimumOrderValue           bool                   `protobuf:"varint,9,opt,name=has_minimum_order_value,json=hasMinimumOrderValue,proto3" json:"has_minimum_order_value,omitempty"`
-	Includes                       []string               `protobuf:"bytes,10,rep,name=includes,proto3" json:"includes,omitempty"`
-	unknownFields                  protoimpl.UnknownFields
-	sizeCache                      protoimpl.SizeCache
+	state                       protoimpl.MessageState `protogen:"open.v1"`
+	Id                          string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name                        *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	Type                        *string                `protobuf:"bytes,3,opt,name=type,proto3,oneof" json:"type,omitempty"`
+	FlatRate                    *QuantityPatch         `protobuf:"bytes,4,opt,name=flat_rate,json=flatRate,proto3,oneof" json:"flat_rate,omitempty"`
+	MinimumOrderValue           *QuantityPatch         `protobuf:"bytes,5,opt,name=minimum_order_value,json=minimumOrderValue,proto3,oneof" json:"minimum_order_value,omitempty"`
+	FreeShippingServiceLevelIds *StringListPatch       `protobuf:"bytes,6,opt,name=free_shipping_service_level_ids,json=freeShippingServiceLevelIds,proto3,oneof" json:"free_shipping_service_level_ids,omitempty"`
+	Includes                    []string               `protobuf:"bytes,7,rep,name=includes,proto3" json:"includes,omitempty"`
+	unknownFields               protoimpl.UnknownFields
+	sizeCache                   protoimpl.SizeCache
 }
 
 func (x *UpdateShippingTermRequest) Reset() {
@@ -2989,46 +2986,25 @@ func (x *UpdateShippingTermRequest) GetType() string {
 	return ""
 }
 
-func (x *UpdateShippingTermRequest) GetFlatRate() *QuantityInput {
+func (x *UpdateShippingTermRequest) GetFlatRate() *QuantityPatch {
 	if x != nil {
 		return x.FlatRate
 	}
 	return nil
 }
 
-func (x *UpdateShippingTermRequest) GetMinimumOrderValue() *QuantityInput {
+func (x *UpdateShippingTermRequest) GetMinimumOrderValue() *QuantityPatch {
 	if x != nil {
 		return x.MinimumOrderValue
 	}
 	return nil
 }
 
-func (x *UpdateShippingTermRequest) GetFreeShippingServiceLevelIds() []string {
+func (x *UpdateShippingTermRequest) GetFreeShippingServiceLevelIds() *StringListPatch {
 	if x != nil {
 		return x.FreeShippingServiceLevelIds
 	}
 	return nil
-}
-
-func (x *UpdateShippingTermRequest) GetHasFreeShippingServiceLevelIds() bool {
-	if x != nil {
-		return x.HasFreeShippingServiceLevelIds
-	}
-	return false
-}
-
-func (x *UpdateShippingTermRequest) GetHasFlatRate() bool {
-	if x != nil {
-		return x.HasFlatRate
-	}
-	return false
-}
-
-func (x *UpdateShippingTermRequest) GetHasMinimumOrderValue() bool {
-	if x != nil {
-		return x.HasMinimumOrderValue
-	}
-	return false
 }
 
 func (x *UpdateShippingTermRequest) GetIncludes() []string {
@@ -3714,11 +3690,11 @@ type UpdateAddressRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name          *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
-	Phone         *string                `protobuf:"bytes,3,opt,name=phone,proto3,oneof" json:"phone,omitempty"`
-	Email         *string                `protobuf:"bytes,4,opt,name=email,proto3,oneof" json:"email,omitempty"`
+	Phone         *StringPatch           `protobuf:"bytes,3,opt,name=phone,proto3,oneof" json:"phone,omitempty"`
+	Email         *StringPatch           `protobuf:"bytes,4,opt,name=email,proto3,oneof" json:"email,omitempty"`
 	IsDropShip    *bool                  `protobuf:"varint,5,opt,name=is_drop_ship,json=isDropShip,proto3,oneof" json:"is_drop_ship,omitempty"`
 	StreetLine_1  *string                `protobuf:"bytes,6,opt,name=street_line_1,json=streetLine1,proto3,oneof" json:"street_line_1,omitempty"`
-	StreetLine_2  *string                `protobuf:"bytes,7,opt,name=street_line_2,json=streetLine2,proto3,oneof" json:"street_line_2,omitempty"`
+	StreetLine_2  *StringPatch           `protobuf:"bytes,7,opt,name=street_line_2,json=streetLine2,proto3,oneof" json:"street_line_2,omitempty"`
 	Locality      *string                `protobuf:"bytes,8,opt,name=locality,proto3,oneof" json:"locality,omitempty"`
 	State         *string                `protobuf:"bytes,9,opt,name=state,proto3,oneof" json:"state,omitempty"`
 	PostalCode    *string                `protobuf:"bytes,10,opt,name=postal_code,json=postalCode,proto3,oneof" json:"postal_code,omitempty"`
@@ -3771,18 +3747,18 @@ func (x *UpdateAddressRequest) GetName() string {
 	return ""
 }
 
-func (x *UpdateAddressRequest) GetPhone() string {
-	if x != nil && x.Phone != nil {
-		return *x.Phone
+func (x *UpdateAddressRequest) GetPhone() *StringPatch {
+	if x != nil {
+		return x.Phone
 	}
-	return ""
+	return nil
 }
 
-func (x *UpdateAddressRequest) GetEmail() string {
-	if x != nil && x.Email != nil {
-		return *x.Email
+func (x *UpdateAddressRequest) GetEmail() *StringPatch {
+	if x != nil {
+		return x.Email
 	}
-	return ""
+	return nil
 }
 
 func (x *UpdateAddressRequest) GetIsDropShip() bool {
@@ -3799,11 +3775,11 @@ func (x *UpdateAddressRequest) GetStreetLine_1() string {
 	return ""
 }
 
-func (x *UpdateAddressRequest) GetStreetLine_2() string {
-	if x != nil && x.StreetLine_2 != nil {
-		return *x.StreetLine_2
+func (x *UpdateAddressRequest) GetStreetLine_2() *StringPatch {
+	if x != nil {
+		return x.StreetLine_2
 	}
-	return ""
+	return nil
 }
 
 func (x *UpdateAddressRequest) GetLocality() string {
@@ -4714,7 +4690,7 @@ var File_core_core_analytics_proto protoreflect.FileDescriptor
 
 const file_core_core_analytics_proto_rawDesc = "" +
 	"\n" +
-	"\x19core/core_analytics.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a!core/core_accounts_carriers.proto\x1a core/core_identity_context.proto\"j\n" +
+	"\x19core/core_analytics.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15core/core_patch.proto\x1a!core/core_accounts_carriers.proto\x1a core/core_identity_context.proto\"j\n" +
 	"\x12QuarterlyDataProto\x12\x0e\n" +
 	"\x02q1\x18\x01 \x01(\x01R\x02q1\x12\x0e\n" +
 	"\x02q2\x18\x02 \x01(\x01R\x02q2\x12\x0e\n" +
@@ -4956,24 +4932,21 @@ const file_core_core_analytics_proto_rawDesc = "" +
 	"_flat_rateB\x16\n" +
 	"\x14_minimum_order_value\"Y\n" +
 	"\x1aCreateShippingTermResponse\x12;\n" +
-	"\rshipping_term\x18\x01 \x01(\v2\x16.core.ShippingTermInfoR\fshippingTerm\"\xa0\x04\n" +
+	"\rshipping_term\x18\x01 \x01(\v2\x16.core.ShippingTermInfoR\fshippingTerm\"\xb8\x03\n" +
 	"\x19UpdateShippingTermRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x17\n" +
 	"\x04type\x18\x03 \x01(\tH\x01R\x04type\x88\x01\x01\x125\n" +
-	"\tflat_rate\x18\x04 \x01(\v2\x13.core.QuantityInputH\x02R\bflatRate\x88\x01\x01\x12H\n" +
-	"\x13minimum_order_value\x18\x05 \x01(\v2\x13.core.QuantityInputH\x03R\x11minimumOrderValue\x88\x01\x01\x12D\n" +
-	"\x1ffree_shipping_service_level_ids\x18\x06 \x03(\tR\x1bfreeShippingServiceLevelIds\x12K\n" +
-	"#has_free_shipping_service_level_ids\x18\a \x01(\bR\x1ehasFreeShippingServiceLevelIds\x12\"\n" +
-	"\rhas_flat_rate\x18\b \x01(\bR\vhasFlatRate\x125\n" +
-	"\x17has_minimum_order_value\x18\t \x01(\bR\x14hasMinimumOrderValue\x12\x1a\n" +
-	"\bincludes\x18\n" +
-	" \x03(\tR\bincludesB\a\n" +
+	"\tflat_rate\x18\x04 \x01(\v2\x13.core.QuantityPatchH\x02R\bflatRate\x88\x01\x01\x12H\n" +
+	"\x13minimum_order_value\x18\x05 \x01(\v2\x13.core.QuantityPatchH\x03R\x11minimumOrderValue\x88\x01\x01\x12`\n" +
+	"\x1ffree_shipping_service_level_ids\x18\x06 \x01(\v2\x15.core.StringListPatchH\x04R\x1bfreeShippingServiceLevelIds\x88\x01\x01\x12\x1a\n" +
+	"\bincludes\x18\a \x03(\tR\bincludesB\a\n" +
 	"\x05_nameB\a\n" +
 	"\x05_typeB\f\n" +
 	"\n" +
 	"_flat_rateB\x16\n" +
-	"\x14_minimum_order_value\"Y\n" +
+	"\x14_minimum_order_valueB\"\n" +
+	" _free_shipping_service_level_ids\"Y\n" +
 	"\x1aUpdateShippingTermResponse\x12;\n" +
 	"\rshipping_term\x18\x01 \x01(\v2\x16.core.ShippingTermInfoR\fshippingTerm\"+\n" +
 	"\x19DeleteShippingTermRequest\x12\x0e\n" +
@@ -5052,16 +5025,16 @@ const file_core_core_analytics_proto_rawDesc = "" +
 	"\x06_stateB\x0e\n" +
 	"\f_postal_code\"D\n" +
 	"\x15CreateAddressResponse\x12+\n" +
-	"\aaddress\x18\x01 \x01(\v2\x11.core.AddressInfoR\aaddress\"\xf4\x03\n" +
+	"\aaddress\x18\x01 \x01(\v2\x11.core.AddressInfoR\aaddress\"\xad\x04\n" +
 	"\x14UpdateAddressRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
-	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x19\n" +
-	"\x05phone\x18\x03 \x01(\tH\x01R\x05phone\x88\x01\x01\x12\x19\n" +
-	"\x05email\x18\x04 \x01(\tH\x02R\x05email\x88\x01\x01\x12%\n" +
+	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12,\n" +
+	"\x05phone\x18\x03 \x01(\v2\x11.core.StringPatchH\x01R\x05phone\x88\x01\x01\x12,\n" +
+	"\x05email\x18\x04 \x01(\v2\x11.core.StringPatchH\x02R\x05email\x88\x01\x01\x12%\n" +
 	"\fis_drop_ship\x18\x05 \x01(\bH\x03R\n" +
 	"isDropShip\x88\x01\x01\x12'\n" +
-	"\rstreet_line_1\x18\x06 \x01(\tH\x04R\vstreetLine1\x88\x01\x01\x12'\n" +
-	"\rstreet_line_2\x18\a \x01(\tH\x05R\vstreetLine2\x88\x01\x01\x12\x1f\n" +
+	"\rstreet_line_1\x18\x06 \x01(\tH\x04R\vstreetLine1\x88\x01\x01\x12:\n" +
+	"\rstreet_line_2\x18\a \x01(\v2\x11.core.StringPatchH\x05R\vstreetLine2\x88\x01\x01\x12\x1f\n" +
 	"\blocality\x18\b \x01(\tH\x06R\blocality\x88\x01\x01\x12\x19\n" +
 	"\x05state\x18\t \x01(\tH\aR\x05state\x88\x01\x01\x12$\n" +
 	"\vpostal_code\x18\n" +
@@ -5247,6 +5220,9 @@ var file_core_core_analytics_proto_goTypes = []any{
 	(*PageInfo)(nil),                         // 77: core.PageInfo
 	(*UnitInfo)(nil),                         // 78: core.UnitInfo
 	(*ServiceLevelInfo)(nil),                 // 79: core.ServiceLevelInfo
+	(*QuantityPatch)(nil),                    // 80: core.QuantityPatch
+	(*StringListPatch)(nil),                  // 81: core.StringListPatch
+	(*StringPatch)(nil),                      // 82: core.StringPatch
 }
 var file_core_core_analytics_proto_depIdxs = []int32{
 	73, // 0: core.AnalyzeQuarterlyOrdersResponse.data:type_name -> core.AnalyzeQuarterlyOrdersResponse.DataEntry
@@ -5309,31 +5285,35 @@ var file_core_core_analytics_proto_depIdxs = []int32{
 	42, // 57: core.CreateShippingTermRequest.flat_rate:type_name -> core.QuantityInput
 	42, // 58: core.CreateShippingTermRequest.minimum_order_value:type_name -> core.QuantityInput
 	37, // 59: core.CreateShippingTermResponse.shipping_term:type_name -> core.ShippingTermInfo
-	42, // 60: core.UpdateShippingTermRequest.flat_rate:type_name -> core.QuantityInput
-	42, // 61: core.UpdateShippingTermRequest.minimum_order_value:type_name -> core.QuantityInput
-	37, // 62: core.UpdateShippingTermResponse.shipping_term:type_name -> core.ShippingTermInfo
-	49, // 63: core.AddressInfo.geolocation:type_name -> core.GeolocationInfo
-	76, // 64: core.AddressInfo.created_at:type_name -> google.protobuf.Timestamp
-	76, // 65: core.AddressInfo.updated_at:type_name -> google.protobuf.Timestamp
-	50, // 66: core.GetAddressResponse.address:type_name -> core.AddressInfo
-	50, // 67: core.ListAddressesResponse.addresses:type_name -> core.AddressInfo
-	77, // 68: core.ListAddressesResponse.page_info:type_name -> core.PageInfo
-	50, // 69: core.CreateAddressResponse.address:type_name -> core.AddressInfo
-	50, // 70: core.UpdateAddressResponse.address:type_name -> core.AddressInfo
-	61, // 71: core.AutocompleteAddressResponse.suggestions:type_name -> core.AddressSuggestion
-	64, // 72: core.GetAddressDetailsResponse.address:type_name -> core.AddressComponentsInfo
-	64, // 73: core.ValidateAddressResponse.components:type_name -> core.AddressComponentsInfo
-	76, // 74: core.AccountStatusInfo.created_at:type_name -> google.protobuf.Timestamp
-	76, // 75: core.AccountStatusInfo.updated_at:type_name -> google.protobuf.Timestamp
-	68, // 76: core.ListAccountStatusesResponse.account_statuses:type_name -> core.AccountStatusInfo
-	77, // 77: core.ListAccountStatusesResponse.page_info:type_name -> core.PageInfo
-	68, // 78: core.GetAccountStatusResponse.account_status:type_name -> core.AccountStatusInfo
-	0,  // 79: core.AnalyzeQuarterlyOrdersResponse.DataEntry.value:type_name -> core.QuarterlyDataProto
-	80, // [80:80] is the sub-list for method output_type
-	80, // [80:80] is the sub-list for method input_type
-	80, // [80:80] is the sub-list for extension type_name
-	80, // [80:80] is the sub-list for extension extendee
-	0,  // [0:80] is the sub-list for field type_name
+	80, // 60: core.UpdateShippingTermRequest.flat_rate:type_name -> core.QuantityPatch
+	80, // 61: core.UpdateShippingTermRequest.minimum_order_value:type_name -> core.QuantityPatch
+	81, // 62: core.UpdateShippingTermRequest.free_shipping_service_level_ids:type_name -> core.StringListPatch
+	37, // 63: core.UpdateShippingTermResponse.shipping_term:type_name -> core.ShippingTermInfo
+	49, // 64: core.AddressInfo.geolocation:type_name -> core.GeolocationInfo
+	76, // 65: core.AddressInfo.created_at:type_name -> google.protobuf.Timestamp
+	76, // 66: core.AddressInfo.updated_at:type_name -> google.protobuf.Timestamp
+	50, // 67: core.GetAddressResponse.address:type_name -> core.AddressInfo
+	50, // 68: core.ListAddressesResponse.addresses:type_name -> core.AddressInfo
+	77, // 69: core.ListAddressesResponse.page_info:type_name -> core.PageInfo
+	50, // 70: core.CreateAddressResponse.address:type_name -> core.AddressInfo
+	82, // 71: core.UpdateAddressRequest.phone:type_name -> core.StringPatch
+	82, // 72: core.UpdateAddressRequest.email:type_name -> core.StringPatch
+	82, // 73: core.UpdateAddressRequest.street_line_2:type_name -> core.StringPatch
+	50, // 74: core.UpdateAddressResponse.address:type_name -> core.AddressInfo
+	61, // 75: core.AutocompleteAddressResponse.suggestions:type_name -> core.AddressSuggestion
+	64, // 76: core.GetAddressDetailsResponse.address:type_name -> core.AddressComponentsInfo
+	64, // 77: core.ValidateAddressResponse.components:type_name -> core.AddressComponentsInfo
+	76, // 78: core.AccountStatusInfo.created_at:type_name -> google.protobuf.Timestamp
+	76, // 79: core.AccountStatusInfo.updated_at:type_name -> google.protobuf.Timestamp
+	68, // 80: core.ListAccountStatusesResponse.account_statuses:type_name -> core.AccountStatusInfo
+	77, // 81: core.ListAccountStatusesResponse.page_info:type_name -> core.PageInfo
+	68, // 82: core.GetAccountStatusResponse.account_status:type_name -> core.AccountStatusInfo
+	0,  // 83: core.AnalyzeQuarterlyOrdersResponse.DataEntry.value:type_name -> core.QuarterlyDataProto
+	84, // [84:84] is the sub-list for method output_type
+	84, // [84:84] is the sub-list for method input_type
+	84, // [84:84] is the sub-list for extension type_name
+	84, // [84:84] is the sub-list for extension extendee
+	0,  // [0:84] is the sub-list for field type_name
 }
 
 func init() { file_core_core_analytics_proto_init() }
@@ -5341,6 +5321,7 @@ func file_core_core_analytics_proto_init() {
 	if File_core_core_analytics_proto != nil {
 		return
 	}
+	file_core_core_patch_proto_init()
 	file_core_core_accounts_carriers_proto_init()
 	file_core_core_identity_context_proto_init()
 	file_core_core_analytics_proto_msgTypes[21].OneofWrappers = []any{}

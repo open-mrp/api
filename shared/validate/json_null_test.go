@@ -4,176 +4,85 @@ import (
 	"testing"
 
 	"github.com/augno/api/shared/constants"
+	"github.com/augno/api/shared/patch"
 )
 
-type patchNullableFalse struct {
-	Name             *string                     `json:"name,omitempty" nullable:"false"`
+type patchOptionalPointer struct {
+	Name             *string                     `json:"name,omitempty"`
 	Description      *string                     `json:"description,omitempty"`
-	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy,omitempty" nullable:"false"`
+	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy,omitempty"`
+	Note             *patch.Field[string]        `json:"note"`
 }
 
-func TestRejectExplicitJSONNulls_rejectsNullForNullableFalse(t *testing.T) {
+func TestRejectExplicitJSONNulls_rejectsNullForOptionalPointer(t *testing.T) {
 	t.Parallel()
 	body := []byte(`{"name": null}`)
-	var req patchNullableFalse
+	var req patchOptionalPointer
 	if err := RejectExplicitJSONNulls(body, &req); err == nil {
 		t.Fatal("expected error for name: null")
 	}
 }
 
-func TestRejectExplicitJSONNulls_allowsOmittedNullableFalse(t *testing.T) {
+func TestRejectExplicitJSONNulls_allowsOmittedOptionalPointer(t *testing.T) {
 	t.Parallel()
 	body := []byte(`{}`)
-	var req patchNullableFalse
+	var req patchOptionalPointer
 	if err := RejectExplicitJSONNulls(body, &req); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
-func TestRejectExplicitJSONNulls_allowsValueForNullableFalse(t *testing.T) {
+func TestRejectExplicitJSONNulls_allowsValueForOptionalPointer(t *testing.T) {
 	t.Parallel()
 	body := []byte(`{"name": "Retail"}`)
-	var req patchNullableFalse
+	var req patchOptionalPointer
 	if err := RejectExplicitJSONNulls(body, &req); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
-func TestRejectExplicitJSONNulls_allowsNullForUntaggedField(t *testing.T) {
+func TestRejectExplicitJSONNulls_rejectsNullForOptionalPointerWithoutTag(t *testing.T) {
 	t.Parallel()
 	body := []byte(`{"description": null}`)
-	var req patchNullableFalse
+	var req patchOptionalPointer
+	if err := RejectExplicitJSONNulls(body, &req); err == nil {
+		t.Fatal("expected error for description: null")
+	}
+}
+
+func TestRejectExplicitJSONNulls_allowsNullForPatchField(t *testing.T) {
+	t.Parallel()
+	body := []byte(`{"note": null}`)
+	var req patchOptionalPointer
 	if err := RejectExplicitJSONNulls(body, &req); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
-func TestRejectExplicitJSONNulls_rejectsEmptyStringForNullableFalse(t *testing.T) {
+func TestRejectExplicitJSONNulls_rejectsEmptyStringForOptionalPointer(t *testing.T) {
 	t.Parallel()
 	body := []byte(`{"name": ""}`)
-	var req patchNullableFalse
+	var req patchOptionalPointer
 	if err := RejectExplicitJSONNulls(body, &req); err == nil {
 		t.Fatal("expected error for name: empty string")
 	}
 }
 
-func TestRejectExplicitJSONNulls_rejectsWhitespaceOnlyForNullableFalse(t *testing.T) {
+func TestRejectExplicitJSONNulls_rejectsWhitespaceOnlyForOptionalPointer(t *testing.T) {
 	t.Parallel()
 	body := []byte(`{"name": "   "}`)
-	var req patchNullableFalse
+	var req patchOptionalPointer
 	if err := RejectExplicitJSONNulls(body, &req); err == nil {
 		t.Fatal("expected error for name: whitespace-only string")
-	}
-}
-
-func TestRejectExplicitJSONNulls_allowsBlankForUntaggedField(t *testing.T) {
-	t.Parallel()
-	body := []byte(`{"description": ""}`)
-	var req patchNullableFalse
-	if err := RejectExplicitJSONNulls(body, &req); err != nil {
-		t.Fatalf("unexpected error for untagged blank field: %v", err)
 	}
 }
 
 func TestRejectExplicitJSONNulls_commissionPolicyNull(t *testing.T) {
 	t.Parallel()
 	body := []byte(`{"commission_policy": null}`)
-	var req patchNullableFalse
+	var req patchOptionalPointer
 	if err := RejectExplicitJSONNulls(body, &req); err == nil {
 		t.Fatal("expected error")
-	}
-}
-
-// --- ApplyExplicitNulls tests ---
-
-type PatchNullableTrue struct {
-	CarrierID *string `json:"carrier_id,omitempty" nullable:"true"`
-	Name      *string `json:"name,omitempty"`
-	PolicyID  *string `json:"policy_id,omitempty" nullable:"false"`
-	Count     *int    `json:"count,omitempty" nullable:"true"`
-}
-
-type patchNullableTrue = PatchNullableTrue
-
-func TestApplyExplicitNulls_setsEmptyStringForExplicitNull(t *testing.T) {
-	t.Parallel()
-	body := []byte(`{"carrier_id": null}`)
-	var req patchNullableTrue
-	ApplyExplicitNulls(body, &req)
-	if req.CarrierID == nil {
-		t.Fatal("expected CarrierID to be set to empty string, got nil")
-	}
-	if *req.CarrierID != "" {
-		t.Fatalf("expected empty string, got %q", *req.CarrierID)
-	}
-}
-
-func TestApplyExplicitNulls_leavesAbsentFieldNil(t *testing.T) {
-	t.Parallel()
-	body := []byte(`{}`)
-	var req patchNullableTrue
-	ApplyExplicitNulls(body, &req)
-	if req.CarrierID != nil {
-		t.Fatalf("expected CarrierID to remain nil, got %q", *req.CarrierID)
-	}
-}
-
-func TestApplyExplicitNulls_preservesProvidedValue(t *testing.T) {
-	t.Parallel()
-	body := []byte(`{"carrier_id": "cr_123"}`)
-	val := "cr_123"
-	req := patchNullableTrue{CarrierID: &val}
-	ApplyExplicitNulls(body, &req)
-	if req.CarrierID == nil || *req.CarrierID != "cr_123" {
-		t.Fatalf("expected cr_123, got %v", req.CarrierID)
-	}
-}
-
-func TestApplyExplicitNulls_doesNotTouchUntaggedField(t *testing.T) {
-	t.Parallel()
-	body := []byte(`{"name": null}`)
-	var req patchNullableTrue
-	ApplyExplicitNulls(body, &req)
-	if req.Name != nil {
-		t.Fatalf("expected Name to remain nil, got %q", *req.Name)
-	}
-}
-
-func TestApplyExplicitNulls_doesNotTouchNullableFalseField(t *testing.T) {
-	t.Parallel()
-	body := []byte(`{"policy_id": null}`)
-	var req patchNullableTrue
-	ApplyExplicitNulls(body, &req)
-	if req.PolicyID != nil {
-		t.Fatalf("expected PolicyID to remain nil, got %q", *req.PolicyID)
-	}
-}
-
-func TestApplyExplicitNulls_ignoresNonStringPointerTypes(t *testing.T) {
-	t.Parallel()
-	body := []byte(`{"count": null}`)
-	var req patchNullableTrue
-	ApplyExplicitNulls(body, &req)
-	if req.Count != nil {
-		t.Fatal("expected Count to remain nil")
-	}
-}
-
-type patchNullableEmbedded struct {
-	PatchNullableTrue
-	ExtraID *string `json:"extra_id,omitempty" nullable:"true"`
-}
-
-func TestApplyExplicitNulls_handlesEmbeddedStructs(t *testing.T) {
-	t.Parallel()
-	body := []byte(`{"carrier_id": null, "extra_id": null}`)
-	var req patchNullableEmbedded
-	ApplyExplicitNulls(body, &req)
-	if req.CarrierID == nil || *req.CarrierID != "" {
-		t.Fatal("expected embedded CarrierID to be empty string")
-	}
-	if req.ExtraID == nil || *req.ExtraID != "" {
-		t.Fatal("expected ExtraID to be empty string")
 	}
 }
 

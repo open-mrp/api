@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -119,7 +120,7 @@ func (m *scanningStationSvcImpl) UpdateScanningStation(ctx context.Context, req 
 	pbReq := &pb.UpdateScanningStationRequest{
 		Id:            req.ScanningStationID,
 		Name:          req.Name,
-		Notes:         req.Notes,
+		Notes:         patch.StringFieldPtrToProto(req.Notes),
 		LabelSizeCode: req.LabelSizeCode.StringPtr(),
 		LabelTypeCode: req.LabelTypeCode.StringPtr(),
 		OperatorRequirement: func() *string {

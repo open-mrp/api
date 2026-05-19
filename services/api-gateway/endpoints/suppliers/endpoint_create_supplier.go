@@ -9,6 +9,7 @@ import (
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 )
 
 // CreateSupplierRequest is the request to create a supplier.
@@ -36,10 +37,10 @@ var sampleCreateSupplierRequest = &CreateSupplierRequest{
 	Note:   &sampleCreateSupplierNote,
 	BillToAddress: &apirequest.AddressInput{
 		Name:        apiresource.SampleSupplierName,
-		StreetLine1: &sampleCreateSupplierStreetLine1,
-		Locality:    &sampleCreateSupplierLocality,
-		State:       &sampleCreateSupplierState,
-		PostalCode:  &sampleCreateSupplierPostalCode,
+		StreetLine1: patch.PtrNullable(&sampleCreateSupplierStreetLine1),
+		Locality:    patch.PtrNullable(&sampleCreateSupplierLocality),
+		State:       patch.PtrNullable(&sampleCreateSupplierState),
+		PostalCode:  patch.PtrNullable(&sampleCreateSupplierPostalCode),
 		Country:     "US",
 	},
 }

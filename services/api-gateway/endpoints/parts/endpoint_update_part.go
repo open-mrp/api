@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 )
 
 // Request to partially update a part.
@@ -16,18 +17,18 @@ type UpdatePartRequest struct {
 	// Part ID.
 	ItemID string `path:"id" validate:"required"`
 	// SKU.
-	SKU *string `json:"sku,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	SKU *string `json:"sku,omitempty" validate:"omitempty,max=255"`
 	// Description.
-	Description *string `json:"description" nullable:"true"`
+	Description *patch.Field[string] `json:"description,omitempty"`
 	// Notes.
-	Notes *string `json:"notes" nullable:"true"`
+	Notes *patch.Field[string] `json:"notes,omitempty"`
 }
 
 var sampleUpdatePartSKU = apiresource.SamplePartSKU
 var sampleUpdatePartDescription = "Deep groove ball bearing, 20x47x14mm"
 var sampleUpdatePartRequest = &UpdatePartRequest{
 	SKU:         &sampleUpdatePartSKU,
-	Description: &sampleUpdatePartDescription,
+	Description: patch.Ptr(patch.Set(sampleUpdatePartDescription)),
 }
 
 func (*UpdatePartRequest) SchemaExample() any {

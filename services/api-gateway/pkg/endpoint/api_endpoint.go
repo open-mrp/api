@@ -18,6 +18,7 @@ import (
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 	"github.com/augno/api/shared/redact"
 	"github.com/augno/api/shared/tracing"
 	"github.com/augno/api/shared/validate"
@@ -203,7 +204,7 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Buffer JSON bodies once for decode, nullable:"false" validation, and optional request logging.
+	// Buffer JSON bodies once for decode, null validation, and optional request logging.
 	var jsonBodyBytes []byte
 	if !e.Extras.SkipRequestBodyParsing && httptransport.ShouldDecodeBody(r) {
 		const maxJSONBodyBytes = 1 << 20 // 1 MiB
@@ -268,7 +269,7 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 			return
 		}
 
-		validate.ApplyExplicitNulls(bytesForNull, any(req))
+		patch.ApplyPtrFieldNulls(bytesForNull, any(req))
 		validate.ApplySlicePresenceFlags(bytesForNull, any(req))
 
 		if apiErr := validate.RejectExplicitJSONNulls(bytesForNull, any(req)); apiErr != nil {

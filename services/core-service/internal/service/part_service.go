@@ -419,7 +419,6 @@ func (s *partSvcImpl) UpdatePart(ctx context.Context, params domain.UpdatePartPa
 		var result *domain.Part
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *partSvcImpl) *apierror.APIError {
 			txPartRepo := txSvc.repos.NewPartRepo()
-			txItemRepo := txSvc.repos.NewItemRepo()
 
 			// Fetch the part before update for audit diff.
 			old, apiErr := txPartRepo.Get(txCtx, domain.GetPartParams{AccountID: params.AccountID, PartID: params.PartID})
@@ -439,15 +438,17 @@ func (s *partSvcImpl) UpdatePart(ctx context.Context, params domain.UpdatePartPa
 				}
 			}
 
-			// Update item fields (sku, description, notes).
-			if apiErr := txItemRepo.Update(txCtx, domain.UpdateItemParams{
-				AccountID:         params.AccountID,
-				ItemID:            old.ItemID,
-				SKU:               params.SKU,
-				Description:       params.Description,
-				UpdateDescription: params.UpdateDescription,
-				Notes:             params.Notes,
-				UpdateNotes:       params.UpdateNotes,
+			if old.Item != nil {
+				params.Description = params.Description.BackfillUnsetPtr(old.Item.Description)
+				params.Notes = params.Notes.BackfillUnsetPtr(old.Item.Notes)
+			}
+
+			if apiErr := txPartRepo.UpdateItem(txCtx, domain.PartUpdateItemParams{
+				AccountID:   params.AccountID,
+				ItemID:      old.ItemID,
+				SKU:         params.SKU,
+				Description: params.Description,
+				Notes:       params.Notes,
 			}); apiErr != nil {
 				return apiErr
 			}

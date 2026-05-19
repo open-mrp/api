@@ -90,6 +90,11 @@ const (
 	SeedAPIKeyID       = "apky_pajbskcck3cabxajdh8h8"
 	SeedAccountUserID  = "acus_s83fjhyfmqen"
 
+	// Batches, sales targets, integrations (seeded in 0014_e2e_extras.sql)
+	SeedBatchID              = "bt_01seedbatch1_0000000"
+	SeedSalesTargetID        = "tg_01seedtarget1_000000"
+	SeedAccountIntegrationID = "acin_01seedintegration1"
+
 	// Priorities
 	SeedPriorityID   = "pi_01seednormal0000000000"
 	SeedPriorityCode = "normal"
@@ -198,6 +203,7 @@ var pathParamSeeds = map[string]string{
 	"agent_id":           SeedAgentConfigID,
 	"line_id":            SeedSalesOrderLineID,
 	"receiving_order_id": SeedReceivingOrderID,
+	"target_id":          SeedSalesTargetID,
 	// session_id is excluded from test discovery (excludedPaths in spec.go)
 }
 
@@ -229,9 +235,11 @@ var pathSpecificIDSeeds = map[string]string{
 	"/v1/finance/transactions/":                                          SeedTransactionID,
 	"/v1/identity/account-users/":                                        SeedAccountUserID,
 	"/v1/identity/accounts/":                                             SeedAccountID,
+	"/v1/identity/integrations/":                                         SeedAccountIntegrationID,
 	"/v1/identity/roles/":                                                SeedSalesRepRoleID, // account-owned so owner.account include populates
 	"/v1/identity/users/":                                                SeedUserID,
 	"/v1/operations/carriers/{carrier_id}/service-levels/":               SeedServiceLevelID,
+	"/v1/operations/batches/":                                            SeedBatchID,
 	"/v1/operations/carriers/":                                           SeedCarrierID,
 	"/v1/operations/dc-locations/":                                       SeedDCLocationID,
 	"/v1/operations/departments/":                                        SeedDepartmentID,
@@ -313,4 +321,16 @@ var nullableFieldSeeds = map[string]string{
 	"phone": "555-000-9999",
 	"url":   "https://e2e-nullable.test.augno.com",
 	"note":  "e2e nullable test note",
+
+	// Clearable text fields (generic PATCH test)
+	"description": "e2e nullable description",
+	"notes":         "e2e nullable notes",
+	"street_line_2": "Suite 100",
+
+	// Reference IDs for location/customer clear tests
+	"parent_id": "sglc_01seedknitting000",
+	// bill_to_address_id and ship_to_address_id are intentionally excluded: the
+	// generic nullable-clear test clears them on shared seed customers, suppliers,
+	// and orders while TestIncludes_PopulateNestedResources reads those same
+	// resources in parallel. Per-resource CRUD tests cover clearing these fields.
 }

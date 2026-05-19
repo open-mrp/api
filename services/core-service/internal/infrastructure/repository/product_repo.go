@@ -13,6 +13,7 @@ import (
 	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/pagination"
+	"github.com/augno/api/shared/patch"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -660,13 +661,11 @@ func (r *productRepoImpl) Update(ctx context.Context, params domain.UpdateProduc
 	}
 
 	_, err := r.queries.ProductUpdateItem(ctx, sqlc.ProductUpdateItemParams{
-		Sku:               toNullString(params.SKU),
-		UpdateDescription: params.UpdateDescription,
-		Description:       toNullString(params.Description),
-		UpdateNotes:       params.UpdateNotes,
-		Notes:             toNullString(params.Notes),
-		ID:                existing.ItemID,
-		AccountID:         params.AccountID,
+		Sku:         toNullString(params.SKU),
+		Description: patch.StringToNullString(params.Description),
+		Notes:       patch.StringToNullString(params.Notes),
+		ID:          existing.ItemID,
+		AccountID:   params.AccountID,
 	})
 	if apiErr = db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

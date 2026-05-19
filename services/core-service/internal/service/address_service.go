@@ -300,6 +300,8 @@ func (s *addressSvcImpl) UpdateAddress(ctx context.Context, params domain.Update
 				return apiErr
 			}
 
+			streetLine2Field := params.StreetLine2
+
 			// Check if core geo fields changed
 			coreGeoChanged := false
 			if params.StreetLine1 != nil && (existing.Geolocation.StreetLine1 == nil || *params.StreetLine1 != *existing.Geolocation.StreetLine1) {
@@ -333,6 +335,7 @@ func (s *addressSvcImpl) UpdateAddress(ctx context.Context, params domain.Update
 
 				// Clear google_place_id on geo change
 				clearGeoParams := params
+				clearGeoParams.StreetLine2 = streetLine2Field.BackfillUnsetPtr(existing.Geolocation.StreetLine2)
 				// Build the update params with cleared google_place_id
 				// by ensuring we send all geo fields to the update
 
@@ -346,7 +349,7 @@ func (s *addressSvcImpl) UpdateAddress(ctx context.Context, params domain.Update
 					// Build create params from existing + updates
 					createParams := domain.CreateAddressParams{
 						StreetLine1: coalesceStringPtr(params.StreetLine1, existing.Geolocation.StreetLine1),
-						StreetLine2: coalesceStringPtr(params.StreetLine2, existing.Geolocation.StreetLine2),
+						StreetLine2: streetLine2Field.StringPtrAfterBackfill(existing.Geolocation.StreetLine2),
 						Locality:    coalesceStringPtr(params.Locality, existing.Geolocation.Locality),
 						State:       coalesceStringPtr(params.State, existing.Geolocation.State),
 						PostalCode:  coalesceStringPtr(params.PostalCode, existing.Geolocation.PostalCode),
@@ -368,19 +371,22 @@ func (s *addressSvcImpl) UpdateAddress(ctx context.Context, params domain.Update
 				}
 			} else {
 				// Only metadata changed, but still update line2 on geolocation
-				if params.StreetLine2 != nil {
+				if streetLine2Field.WasProvided() {
 					geoID, apiErr := txRepo.GetGeolocationIDByAddressID(txCtx, params.AddressID)
 					if apiErr != nil {
 						return apiErr
 					}
 					geoUpdateParams := domain.UpdateAddressParams{
-						StreetLine2: params.StreetLine2,
+						StreetLine2: streetLine2Field,
 					}
 					if apiErr := txRepo.UpdateGeolocation(txCtx, geoID, geoUpdateParams); apiErr != nil {
 						return apiErr
 					}
 				}
 			}
+
+			params.Phone = params.Phone.BackfillUnsetPtr(existing.Phone)
+			params.Email = params.Email.BackfillUnsetPtr(existing.Email)
 
 			// Update address metadata
 			updated, apiErr := txRepo.Update(txCtx, params)

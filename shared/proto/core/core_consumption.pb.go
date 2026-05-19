@@ -1757,7 +1757,7 @@ type UpdateScanningStationRequest struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
 	Id                  string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name                *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
-	Notes               *string                `protobuf:"bytes,3,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
+	Notes               *StringPatch           `protobuf:"bytes,3,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
 	LabelSizeCode       *string                `protobuf:"bytes,4,opt,name=label_size_code,json=labelSizeCode,proto3,oneof" json:"label_size_code,omitempty"`
 	LabelTypeCode       *string                `protobuf:"bytes,5,opt,name=label_type_code,json=labelTypeCode,proto3,oneof" json:"label_type_code,omitempty"`
 	OperatorRequirement *string                `protobuf:"bytes,6,opt,name=operator_requirement,json=operatorRequirement,proto3,oneof" json:"operator_requirement,omitempty"`
@@ -1810,11 +1810,11 @@ func (x *UpdateScanningStationRequest) GetName() string {
 	return ""
 }
 
-func (x *UpdateScanningStationRequest) GetNotes() string {
-	if x != nil && x.Notes != nil {
-		return *x.Notes
+func (x *UpdateScanningStationRequest) GetNotes() *StringPatch {
+	if x != nil {
+		return x.Notes
 	}
-	return ""
+	return nil
 }
 
 func (x *UpdateScanningStationRequest) GetLabelSizeCode() string {
@@ -2566,16 +2566,15 @@ func (x *CreateLocationResponse) GetLocation() *LocationInfo {
 }
 
 type UpdateLocationRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name           *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
-	TypeCode       *string                `protobuf:"bytes,3,opt,name=type_code,json=typeCode,proto3,oneof" json:"type_code,omitempty"`
-	ParentId       *string                `protobuf:"bytes,4,opt,name=parent_id,json=parentId,proto3,oneof" json:"parent_id,omitempty"`
-	ChildIds       []string               `protobuf:"bytes,6,rep,name=child_ids,json=childIds,proto3" json:"child_ids,omitempty"`
-	UpdateChildren bool                   `protobuf:"varint,7,opt,name=update_children,json=updateChildren,proto3" json:"update_children,omitempty"`
-	Includes       []string               `protobuf:"bytes,8,rep,name=includes,proto3" json:"includes,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	TypeCode      *string                `protobuf:"bytes,3,opt,name=type_code,json=typeCode,proto3,oneof" json:"type_code,omitempty"`
+	ParentId      *StringPatch           `protobuf:"bytes,4,opt,name=parent_id,json=parentId,proto3,oneof" json:"parent_id,omitempty"`
+	ChildIds      *StringListPatch       `protobuf:"bytes,6,opt,name=child_ids,json=childIds,proto3,oneof" json:"child_ids,omitempty"`
+	Includes      []string               `protobuf:"bytes,7,rep,name=includes,proto3" json:"includes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateLocationRequest) Reset() {
@@ -2629,25 +2628,18 @@ func (x *UpdateLocationRequest) GetTypeCode() string {
 	return ""
 }
 
-func (x *UpdateLocationRequest) GetParentId() string {
-	if x != nil && x.ParentId != nil {
-		return *x.ParentId
-	}
-	return ""
-}
-
-func (x *UpdateLocationRequest) GetChildIds() []string {
+func (x *UpdateLocationRequest) GetParentId() *StringPatch {
 	if x != nil {
-		return x.ChildIds
+		return x.ParentId
 	}
 	return nil
 }
 
-func (x *UpdateLocationRequest) GetUpdateChildren() bool {
+func (x *UpdateLocationRequest) GetChildIds() *StringListPatch {
 	if x != nil {
-		return x.UpdateChildren
+		return x.ChildIds
 	}
-	return false
+	return nil
 }
 
 func (x *UpdateLocationRequest) GetIncludes() []string {
@@ -5150,7 +5142,7 @@ var File_core_core_consumption_proto protoreflect.FileDescriptor
 
 const file_core_core_consumption_proto_rawDesc = "" +
 	"\n" +
-	"\x1bcore/core_consumption.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a core/core_identity_context.proto\x1a\x15core/core_items.proto\"\xef\x02\n" +
+	"\x1bcore/core_consumption.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15core/core_patch.proto\x1a core/core_identity_context.proto\x1a\x15core/core_items.proto\"\xef\x02\n" +
 	"\x18CreateConsumptionRequest\x12,\n" +
 	"\x12production_step_id\x18\x01 \x01(\tR\x10productionStepId\x12\x17\n" +
 	"\aitem_id\x18\x02 \x01(\tR\x06itemId\x12%\n" +
@@ -5362,11 +5354,11 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\x10_label_size_codeB\x12\n" +
 	"\x10_label_type_code\"e\n" +
 	"\x1dCreateScanningStationResponse\x12D\n" +
-	"\x10scanning_station\x18\x01 \x01(\v2\x19.core.ScanningStationInfoR\x0fscanningStation\"\xe4\x02\n" +
+	"\x10scanning_station\x18\x01 \x01(\v2\x19.core.ScanningStationInfoR\x0fscanningStation\"\xf7\x02\n" +
 	"\x1cUpdateScanningStationRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
-	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x19\n" +
-	"\x05notes\x18\x03 \x01(\tH\x01R\x05notes\x88\x01\x01\x12+\n" +
+	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12,\n" +
+	"\x05notes\x18\x03 \x01(\v2\x11.core.StringPatchH\x01R\x05notes\x88\x01\x01\x12+\n" +
 	"\x0flabel_size_code\x18\x04 \x01(\tH\x02R\rlabelSizeCode\x88\x01\x01\x12+\n" +
 	"\x0flabel_type_code\x18\x05 \x01(\tH\x03R\rlabelTypeCode\x88\x01\x01\x126\n" +
 	"\x14operator_requirement\x18\x06 \x01(\tH\x04R\x13operatorRequirement\x88\x01\x01\x12\x1a\n" +
@@ -5437,20 +5429,21 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\n" +
 	"_parent_id\"H\n" +
 	"\x16CreateLocationResponse\x12.\n" +
-	"\blocation\x18\x01 \x01(\v2\x12.core.LocationInfoR\blocation\"\x8b\x02\n" +
+	"\blocation\x18\x01 \x01(\v2\x12.core.LocationInfoR\blocation\"\x9f\x02\n" +
 	"\x15UpdateLocationRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12 \n" +
-	"\ttype_code\x18\x03 \x01(\tH\x01R\btypeCode\x88\x01\x01\x12 \n" +
-	"\tparent_id\x18\x04 \x01(\tH\x02R\bparentId\x88\x01\x01\x12\x1b\n" +
-	"\tchild_ids\x18\x06 \x03(\tR\bchildIds\x12'\n" +
-	"\x0fupdate_children\x18\a \x01(\bR\x0eupdateChildren\x12\x1a\n" +
-	"\bincludes\x18\b \x03(\tR\bincludesB\a\n" +
+	"\ttype_code\x18\x03 \x01(\tH\x01R\btypeCode\x88\x01\x01\x123\n" +
+	"\tparent_id\x18\x04 \x01(\v2\x11.core.StringPatchH\x02R\bparentId\x88\x01\x01\x127\n" +
+	"\tchild_ids\x18\x06 \x01(\v2\x15.core.StringListPatchH\x03R\bchildIds\x88\x01\x01\x12\x1a\n" +
+	"\bincludes\x18\a \x03(\tR\bincludesB\a\n" +
 	"\x05_nameB\f\n" +
 	"\n" +
 	"_type_codeB\f\n" +
 	"\n" +
-	"_parent_id\"H\n" +
+	"_parent_idB\f\n" +
+	"\n" +
+	"_child_ids\"H\n" +
 	"\x16UpdateLocationResponse\x12.\n" +
 	"\blocation\x18\x01 \x01(\v2\x12.core.LocationInfoR\blocation\"'\n" +
 	"\x15DeleteLocationRequest\x12\x0e\n" +
@@ -5778,7 +5771,9 @@ var file_core_core_consumption_proto_goTypes = []any{
 	(*ConsumptionInfo)(nil),                                // 77: core.ConsumptionInfo
 	(*timestamppb.Timestamp)(nil),                          // 78: google.protobuf.Timestamp
 	(*PageInfo)(nil),                                       // 79: core.PageInfo
-	(*CustomerAddressProto)(nil),                           // 80: core.CustomerAddressProto
+	(*StringPatch)(nil),                                    // 80: core.StringPatch
+	(*StringListPatch)(nil),                                // 81: core.StringListPatch
+	(*CustomerAddressProto)(nil),                           // 82: core.CustomerAddressProto
 }
 var file_core_core_consumption_proto_depIdxs = []int32{
 	77, // 0: core.CreateConsumptionResponse.consumption:type_name -> core.ConsumptionInfo
@@ -5815,58 +5810,61 @@ var file_core_core_consumption_proto_depIdxs = []int32{
 	79, // 31: core.ListScanningStationsResponse.page_info:type_name -> core.PageInfo
 	15, // 32: core.GetScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
 	15, // 33: core.CreateScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
-	15, // 34: core.UpdateScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
-	26, // 35: core.LocationInfo.children:type_name -> core.LocationChildInfo
-	78, // 36: core.LocationInfo.created_at:type_name -> google.protobuf.Timestamp
-	78, // 37: core.LocationInfo.updated_at:type_name -> google.protobuf.Timestamp
-	78, // 38: core.LocationTypeInfo.created_at:type_name -> google.protobuf.Timestamp
-	78, // 39: core.LocationTypeInfo.updated_at:type_name -> google.protobuf.Timestamp
-	27, // 40: core.ListLocationsResponse.locations:type_name -> core.LocationInfo
-	79, // 41: core.ListLocationsResponse.page_info:type_name -> core.PageInfo
-	27, // 42: core.GetLocationResponse.location:type_name -> core.LocationInfo
-	27, // 43: core.CreateLocationResponse.location:type_name -> core.LocationInfo
-	27, // 44: core.UpdateLocationResponse.location:type_name -> core.LocationInfo
-	28, // 45: core.ListLocationTypesResponse.location_types:type_name -> core.LocationTypeInfo
-	79, // 46: core.ListLocationTypesResponse.page_info:type_name -> core.PageInfo
-	28, // 47: core.GetLocationTypeResponse.location_type:type_name -> core.LocationTypeInfo
-	78, // 48: core.SupplierSummaryProto.created_at:type_name -> google.protobuf.Timestamp
-	80, // 49: core.SupplierProto.bill_to_address:type_name -> core.CustomerAddressProto
-	80, // 50: core.SupplierProto.ship_to_address:type_name -> core.CustomerAddressProto
-	78, // 51: core.SupplierProto.created_at:type_name -> google.protobuf.Timestamp
-	78, // 52: core.SupplierProto.updated_at:type_name -> google.protobuf.Timestamp
-	78, // 53: core.ListSuppliersRequest.start_date:type_name -> google.protobuf.Timestamp
-	78, // 54: core.ListSuppliersRequest.end_date:type_name -> google.protobuf.Timestamp
-	42, // 55: core.ListSuppliersResponse.suppliers:type_name -> core.SupplierSummaryProto
-	79, // 56: core.ListSuppliersResponse.page_info:type_name -> core.PageInfo
-	43, // 57: core.GetSupplierResponse.supplier:type_name -> core.SupplierProto
-	44, // 58: core.CreateSupplierRequest.bill_to_address:type_name -> core.CreateSupplierAddressInput
-	44, // 59: core.CreateSupplierRequest.ship_to_address:type_name -> core.CreateSupplierAddressInput
-	43, // 60: core.CreateSupplierResponse.supplier:type_name -> core.SupplierProto
-	43, // 61: core.UpdateSupplierResponse.supplier:type_name -> core.SupplierProto
-	43, // 62: core.DeleteSupplierResponse.supplier:type_name -> core.SupplierProto
-	78, // 63: core.SysPropertyInfo.created_at:type_name -> google.protobuf.Timestamp
-	78, // 64: core.SysPropertyInfo.updated_at:type_name -> google.protobuf.Timestamp
-	56, // 65: core.ListSysPropertiesResponse.sys_properties:type_name -> core.SysPropertyInfo
-	79, // 66: core.ListSysPropertiesResponse.page_info:type_name -> core.PageInfo
-	56, // 67: core.GetSysPropertyResponse.sys_property:type_name -> core.SysPropertyInfo
-	56, // 68: core.UpdateSysPropertyResponse.sys_property:type_name -> core.SysPropertyInfo
-	78, // 69: core.TenancyRoleProto.created_at:type_name -> google.protobuf.Timestamp
-	78, // 70: core.TenancyRoleProto.updated_at:type_name -> google.protobuf.Timestamp
-	66, // 71: core.TenancyAccountPlanProto.limits:type_name -> core.TenancyAccountPlanLimitProto
-	76, // 72: core.TenancyAccountPlanProto.features:type_name -> core.TenancyAccountPlanProto.FeaturesEntry
-	65, // 73: core.TenancyCurrentAccountProto.role:type_name -> core.TenancyRoleProto
-	67, // 74: core.TenancyCurrentAccountProto.account_plan:type_name -> core.TenancyAccountPlanProto
-	78, // 75: core.TenancyPendingRegistrationProto.created_at:type_name -> google.protobuf.Timestamp
-	68, // 76: core.GetTenancyResponse.current_account:type_name -> core.TenancyCurrentAccountProto
-	69, // 77: core.GetTenancyResponse.owner_account:type_name -> core.TenancyAccountSummaryProto
-	69, // 78: core.GetTenancyResponse.sandboxes:type_name -> core.TenancyAccountSummaryProto
-	70, // 79: core.GetTenancyResponse.other_accounts:type_name -> core.TenancyOtherAccountProto
-	71, // 80: core.GetTenancyResponse.pending_registration:type_name -> core.TenancyPendingRegistrationProto
-	81, // [81:81] is the sub-list for method output_type
-	81, // [81:81] is the sub-list for method input_type
-	81, // [81:81] is the sub-list for extension type_name
-	81, // [81:81] is the sub-list for extension extendee
-	0,  // [0:81] is the sub-list for field type_name
+	80, // 34: core.UpdateScanningStationRequest.notes:type_name -> core.StringPatch
+	15, // 35: core.UpdateScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
+	26, // 36: core.LocationInfo.children:type_name -> core.LocationChildInfo
+	78, // 37: core.LocationInfo.created_at:type_name -> google.protobuf.Timestamp
+	78, // 38: core.LocationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	78, // 39: core.LocationTypeInfo.created_at:type_name -> google.protobuf.Timestamp
+	78, // 40: core.LocationTypeInfo.updated_at:type_name -> google.protobuf.Timestamp
+	27, // 41: core.ListLocationsResponse.locations:type_name -> core.LocationInfo
+	79, // 42: core.ListLocationsResponse.page_info:type_name -> core.PageInfo
+	27, // 43: core.GetLocationResponse.location:type_name -> core.LocationInfo
+	27, // 44: core.CreateLocationResponse.location:type_name -> core.LocationInfo
+	80, // 45: core.UpdateLocationRequest.parent_id:type_name -> core.StringPatch
+	81, // 46: core.UpdateLocationRequest.child_ids:type_name -> core.StringListPatch
+	27, // 47: core.UpdateLocationResponse.location:type_name -> core.LocationInfo
+	28, // 48: core.ListLocationTypesResponse.location_types:type_name -> core.LocationTypeInfo
+	79, // 49: core.ListLocationTypesResponse.page_info:type_name -> core.PageInfo
+	28, // 50: core.GetLocationTypeResponse.location_type:type_name -> core.LocationTypeInfo
+	78, // 51: core.SupplierSummaryProto.created_at:type_name -> google.protobuf.Timestamp
+	82, // 52: core.SupplierProto.bill_to_address:type_name -> core.CustomerAddressProto
+	82, // 53: core.SupplierProto.ship_to_address:type_name -> core.CustomerAddressProto
+	78, // 54: core.SupplierProto.created_at:type_name -> google.protobuf.Timestamp
+	78, // 55: core.SupplierProto.updated_at:type_name -> google.protobuf.Timestamp
+	78, // 56: core.ListSuppliersRequest.start_date:type_name -> google.protobuf.Timestamp
+	78, // 57: core.ListSuppliersRequest.end_date:type_name -> google.protobuf.Timestamp
+	42, // 58: core.ListSuppliersResponse.suppliers:type_name -> core.SupplierSummaryProto
+	79, // 59: core.ListSuppliersResponse.page_info:type_name -> core.PageInfo
+	43, // 60: core.GetSupplierResponse.supplier:type_name -> core.SupplierProto
+	44, // 61: core.CreateSupplierRequest.bill_to_address:type_name -> core.CreateSupplierAddressInput
+	44, // 62: core.CreateSupplierRequest.ship_to_address:type_name -> core.CreateSupplierAddressInput
+	43, // 63: core.CreateSupplierResponse.supplier:type_name -> core.SupplierProto
+	43, // 64: core.UpdateSupplierResponse.supplier:type_name -> core.SupplierProto
+	43, // 65: core.DeleteSupplierResponse.supplier:type_name -> core.SupplierProto
+	78, // 66: core.SysPropertyInfo.created_at:type_name -> google.protobuf.Timestamp
+	78, // 67: core.SysPropertyInfo.updated_at:type_name -> google.protobuf.Timestamp
+	56, // 68: core.ListSysPropertiesResponse.sys_properties:type_name -> core.SysPropertyInfo
+	79, // 69: core.ListSysPropertiesResponse.page_info:type_name -> core.PageInfo
+	56, // 70: core.GetSysPropertyResponse.sys_property:type_name -> core.SysPropertyInfo
+	56, // 71: core.UpdateSysPropertyResponse.sys_property:type_name -> core.SysPropertyInfo
+	78, // 72: core.TenancyRoleProto.created_at:type_name -> google.protobuf.Timestamp
+	78, // 73: core.TenancyRoleProto.updated_at:type_name -> google.protobuf.Timestamp
+	66, // 74: core.TenancyAccountPlanProto.limits:type_name -> core.TenancyAccountPlanLimitProto
+	76, // 75: core.TenancyAccountPlanProto.features:type_name -> core.TenancyAccountPlanProto.FeaturesEntry
+	65, // 76: core.TenancyCurrentAccountProto.role:type_name -> core.TenancyRoleProto
+	67, // 77: core.TenancyCurrentAccountProto.account_plan:type_name -> core.TenancyAccountPlanProto
+	78, // 78: core.TenancyPendingRegistrationProto.created_at:type_name -> google.protobuf.Timestamp
+	68, // 79: core.GetTenancyResponse.current_account:type_name -> core.TenancyCurrentAccountProto
+	69, // 80: core.GetTenancyResponse.owner_account:type_name -> core.TenancyAccountSummaryProto
+	69, // 81: core.GetTenancyResponse.sandboxes:type_name -> core.TenancyAccountSummaryProto
+	70, // 82: core.GetTenancyResponse.other_accounts:type_name -> core.TenancyOtherAccountProto
+	71, // 83: core.GetTenancyResponse.pending_registration:type_name -> core.TenancyPendingRegistrationProto
+	84, // [84:84] is the sub-list for method output_type
+	84, // [84:84] is the sub-list for method input_type
+	84, // [84:84] is the sub-list for extension type_name
+	84, // [84:84] is the sub-list for extension extendee
+	0,  // [0:84] is the sub-list for field type_name
 }
 
 func init() { file_core_core_consumption_proto_init() }
@@ -5874,6 +5872,7 @@ func file_core_core_consumption_proto_init() {
 	if File_core_core_consumption_proto != nil {
 		return
 	}
+	file_core_core_patch_proto_init()
 	file_core_core_identity_context_proto_init()
 	file_core_core_items_proto_init()
 	file_core_core_consumption_proto_msgTypes[0].OneofWrappers = []any{}

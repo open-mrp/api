@@ -465,7 +465,7 @@ type UpdateAccountGroupRequest struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	Id               string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name             *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
-	Description      *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	Description      *StringPatch           `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	CommissionPolicy *string                `protobuf:"bytes,4,opt,name=commission_policy,json=commissionPolicy,proto3,oneof" json:"commission_policy,omitempty"`
 	FreightPolicy    *string                `protobuf:"bytes,5,opt,name=freight_policy,json=freightPolicy,proto3,oneof" json:"freight_policy,omitempty"`
 	unknownFields    protoimpl.UnknownFields
@@ -516,11 +516,11 @@ func (x *UpdateAccountGroupRequest) GetName() string {
 	return ""
 }
 
-func (x *UpdateAccountGroupRequest) GetDescription() string {
-	if x != nil && x.Description != nil {
-		return *x.Description
+func (x *UpdateAccountGroupRequest) GetDescription() *StringPatch {
+	if x != nil {
+		return x.Description
 	}
-	return ""
+	return nil
 }
 
 func (x *UpdateAccountGroupRequest) GetCommissionPolicy() string {
@@ -1239,13 +1239,11 @@ type UpdateAccountUserRequest struct {
 	Name          *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
 	Email         *string                `protobuf:"bytes,3,opt,name=email,proto3,oneof" json:"email,omitempty"`
 	Username      *string                `protobuf:"bytes,4,opt,name=username,proto3,oneof" json:"username,omitempty"`
-	RoleId        *string                `protobuf:"bytes,5,opt,name=role_id,json=roleId,proto3,oneof" json:"role_id,omitempty"`
-	DepartmentId  *string                `protobuf:"bytes,6,opt,name=department_id,json=departmentId,proto3,oneof" json:"department_id,omitempty"`
+	RoleId        *StringPatch           `protobuf:"bytes,5,opt,name=role_id,json=roleId,proto3,oneof" json:"role_id,omitempty"`
+	DepartmentId  *StringPatch           `protobuf:"bytes,6,opt,name=department_id,json=departmentId,proto3,oneof" json:"department_id,omitempty"`
 	// When non-empty, replaces the toggle state of the listed preferences.
 	NotificationPreferences []*NotificationPreferenceItem `protobuf:"bytes,7,rep,name=notification_preferences,json=notificationPreferences,proto3" json:"notification_preferences,omitempty"`
 	Includes                []string                      `protobuf:"bytes,8,rep,name=includes,proto3" json:"includes,omitempty"`
-	ClearRoleId             bool                          `protobuf:"varint,9,opt,name=clear_role_id,json=clearRoleId,proto3" json:"clear_role_id,omitempty"`
-	ClearDepartmentId       bool                          `protobuf:"varint,10,opt,name=clear_department_id,json=clearDepartmentId,proto3" json:"clear_department_id,omitempty"`
 	unknownFields           protoimpl.UnknownFields
 	sizeCache               protoimpl.SizeCache
 }
@@ -1308,18 +1306,18 @@ func (x *UpdateAccountUserRequest) GetUsername() string {
 	return ""
 }
 
-func (x *UpdateAccountUserRequest) GetRoleId() string {
-	if x != nil && x.RoleId != nil {
-		return *x.RoleId
+func (x *UpdateAccountUserRequest) GetRoleId() *StringPatch {
+	if x != nil {
+		return x.RoleId
 	}
-	return ""
+	return nil
 }
 
-func (x *UpdateAccountUserRequest) GetDepartmentId() string {
-	if x != nil && x.DepartmentId != nil {
-		return *x.DepartmentId
+func (x *UpdateAccountUserRequest) GetDepartmentId() *StringPatch {
+	if x != nil {
+		return x.DepartmentId
 	}
-	return ""
+	return nil
 }
 
 func (x *UpdateAccountUserRequest) GetNotificationPreferences() []*NotificationPreferenceItem {
@@ -1334,20 +1332,6 @@ func (x *UpdateAccountUserRequest) GetIncludes() []string {
 		return x.Includes
 	}
 	return nil
-}
-
-func (x *UpdateAccountUserRequest) GetClearRoleId() bool {
-	if x != nil {
-		return x.ClearRoleId
-	}
-	return false
-}
-
-func (x *UpdateAccountUserRequest) GetClearDepartmentId() bool {
-	if x != nil {
-		return x.ClearDepartmentId
-	}
-	return false
 }
 
 type UpdateAccountUserResponse struct {
@@ -4910,7 +4894,7 @@ var File_core_core_account_groups_proto protoreflect.FileDescriptor
 
 const file_core_core_account_groups_proto_rawDesc = "" +
 	"\n" +
-	"\x1ecore/core_account_groups.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a core/core_identity_context.proto\"\x9b\x03\n" +
+	"\x1ecore/core_account_groups.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15core/core_patch.proto\x1a core/core_identity_context.proto\"\x9b\x03\n" +
 	"\x10AccountGroupInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12%\n" +
@@ -4948,11 +4932,11 @@ const file_core_core_account_groups_proto_rawDesc = "" +
 	"\vdescription\x18\x05 \x01(\tH\x00R\vdescription\x88\x01\x01B\x0e\n" +
 	"\f_description\"Y\n" +
 	"\x1aCreateAccountGroupResponse\x12;\n" +
-	"\raccount_group\x18\x01 \x01(\v2\x16.core.AccountGroupInfoR\faccountGroup\"\x8b\x02\n" +
+	"\raccount_group\x18\x01 \x01(\v2\x16.core.AccountGroupInfoR\faccountGroup\"\x9e\x02\n" +
 	"\x19UpdateAccountGroupRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
-	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12%\n" +
-	"\vdescription\x18\x03 \x01(\tH\x01R\vdescription\x88\x01\x01\x120\n" +
+	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x128\n" +
+	"\vdescription\x18\x03 \x01(\v2\x11.core.StringPatchH\x01R\vdescription\x88\x01\x01\x120\n" +
 	"\x11commission_policy\x18\x04 \x01(\tH\x02R\x10commissionPolicy\x88\x01\x01\x12*\n" +
 	"\x0efreight_policy\x18\x05 \x01(\tH\x03R\rfreightPolicy\x88\x01\x01B\a\n" +
 	"\x05_nameB\x0e\n" +
@@ -5043,19 +5027,16 @@ const file_core_core_account_groups_proto_rawDesc = "" +
 	"\b_role_idB\x10\n" +
 	"\x0e_department_idJ\x04\b\a\x10\bR\fis_sales_rep\"W\n" +
 	"\x19CreateAccountUserResponse\x12:\n" +
-	"\faccount_user\x18\x01 \x01(\v2\x17.core.AccountUserDetailR\vaccountUser\"\xea\x03\n" +
+	"\faccount_user\x18\x01 \x01(\v2\x17.core.AccountUserDetailR\vaccountUser\"\xbc\x03\n" +
 	"\x18UpdateAccountUserRequest\x12&\n" +
 	"\x0faccount_user_id\x18\x01 \x01(\tR\raccountUserId\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x19\n" +
 	"\x05email\x18\x03 \x01(\tH\x01R\x05email\x88\x01\x01\x12\x1f\n" +
-	"\busername\x18\x04 \x01(\tH\x02R\busername\x88\x01\x01\x12\x1c\n" +
-	"\arole_id\x18\x05 \x01(\tH\x03R\x06roleId\x88\x01\x01\x12(\n" +
-	"\rdepartment_id\x18\x06 \x01(\tH\x04R\fdepartmentId\x88\x01\x01\x12[\n" +
+	"\busername\x18\x04 \x01(\tH\x02R\busername\x88\x01\x01\x12/\n" +
+	"\arole_id\x18\x05 \x01(\v2\x11.core.StringPatchH\x03R\x06roleId\x88\x01\x01\x12;\n" +
+	"\rdepartment_id\x18\x06 \x01(\v2\x11.core.StringPatchH\x04R\fdepartmentId\x88\x01\x01\x12[\n" +
 	"\x18notification_preferences\x18\a \x03(\v2 .core.NotificationPreferenceItemR\x17notificationPreferences\x12\x1a\n" +
-	"\bincludes\x18\b \x03(\tR\bincludes\x12\"\n" +
-	"\rclear_role_id\x18\t \x01(\bR\vclearRoleId\x12.\n" +
-	"\x13clear_department_id\x18\n" +
-	" \x01(\bR\x11clearDepartmentIdB\a\n" +
+	"\bincludes\x18\b \x03(\tR\bincludesB\a\n" +
 	"\x05_nameB\b\n" +
 	"\x06_emailB\v\n" +
 	"\t_usernameB\n" +
@@ -5457,6 +5438,7 @@ var file_core_core_account_groups_proto_goTypes = []any{
 	(*GetStripeStatusRequest)(nil),                      // 78: core.GetStripeStatusRequest
 	(*timestamppb.Timestamp)(nil),                       // 79: google.protobuf.Timestamp
 	(*PageInfo)(nil),                                    // 80: core.PageInfo
+	(*StringPatch)(nil),                                 // 81: core.StringPatch
 }
 var file_core_core_account_groups_proto_depIdxs = []int32{
 	79, // 0: core.AccountGroupInfo.created_at:type_name -> google.protobuf.Timestamp
@@ -5465,78 +5447,81 @@ var file_core_core_account_groups_proto_depIdxs = []int32{
 	80, // 3: core.ListAccountGroupsResponse.page_info:type_name -> core.PageInfo
 	0,  // 4: core.GetAccountGroupResponse.account_group:type_name -> core.AccountGroupInfo
 	0,  // 5: core.CreateAccountGroupResponse.account_group:type_name -> core.AccountGroupInfo
-	0,  // 6: core.UpdateAccountGroupResponse.account_group:type_name -> core.AccountGroupInfo
-	79, // 7: core.AccountUserDetail.last_used_at:type_name -> google.protobuf.Timestamp
-	79, // 8: core.AccountUserDetail.created_at:type_name -> google.protobuf.Timestamp
-	79, // 9: core.AccountUserDetail.updated_at:type_name -> google.protobuf.Timestamp
-	79, // 10: core.AccountUserDetail.department_created_at:type_name -> google.protobuf.Timestamp
-	79, // 11: core.AccountUserDetail.department_updated_at:type_name -> google.protobuf.Timestamp
-	10, // 12: core.ListAccountUsersResponse.account_users:type_name -> core.AccountUserDetail
-	80, // 13: core.ListAccountUsersResponse.page_info:type_name -> core.PageInfo
-	10, // 14: core.GetAccountUserResponse.account_user:type_name -> core.AccountUserDetail
-	15, // 15: core.CreateAccountUserRequest.notification_preferences:type_name -> core.NotificationPreferenceItem
-	10, // 16: core.CreateAccountUserResponse.account_user:type_name -> core.AccountUserDetail
-	15, // 17: core.UpdateAccountUserRequest.notification_preferences:type_name -> core.NotificationPreferenceItem
-	10, // 18: core.UpdateAccountUserResponse.account_user:type_name -> core.AccountUserDetail
-	22, // 19: core.ListSalesTargetsResponse.sales_targets:type_name -> core.SalesTargetProto
-	22, // 20: core.CreateSalesTargetResponse.sales_target:type_name -> core.SalesTargetProto
-	22, // 21: core.UpsertSalesTargetResponse.sales_target:type_name -> core.SalesTargetProto
-	30, // 22: core.AccountPriceInfo.recipient_account:type_name -> core.AccountPriceRecipientInfo
-	31, // 23: core.AccountPriceInfo.product_line:type_name -> core.AccountPriceProductLineInfo
-	32, // 24: core.AccountPriceInfo.rate:type_name -> core.AccountPriceRateInfo
-	34, // 25: core.AccountPriceInfo.categories:type_name -> core.AccountPriceCategoryInfo
-	35, // 26: core.AccountPriceInfo.attributes:type_name -> core.AccountPriceAttributeInfo
-	79, // 27: core.AccountPriceInfo.created_at:type_name -> google.protobuf.Timestamp
-	79, // 28: core.AccountPriceInfo.updated_at:type_name -> google.protobuf.Timestamp
-	79, // 29: core.AccountPriceRecipientInfo.created_at:type_name -> google.protobuf.Timestamp
-	79, // 30: core.AccountPriceRecipientInfo.updated_at:type_name -> google.protobuf.Timestamp
-	79, // 31: core.AccountPriceProductLineInfo.created_at:type_name -> google.protobuf.Timestamp
-	79, // 32: core.AccountPriceProductLineInfo.updated_at:type_name -> google.protobuf.Timestamp
-	33, // 33: core.AccountPriceRateInfo.numerator_unit:type_name -> core.AccountPriceUnitInfo
-	33, // 34: core.AccountPriceRateInfo.denominator_unit:type_name -> core.AccountPriceUnitInfo
-	79, // 35: core.AccountPriceRateInfo.created_at:type_name -> google.protobuf.Timestamp
-	79, // 36: core.AccountPriceRateInfo.updated_at:type_name -> google.protobuf.Timestamp
-	79, // 37: core.AccountPriceUnitInfo.created_at:type_name -> google.protobuf.Timestamp
-	79, // 38: core.AccountPriceUnitInfo.updated_at:type_name -> google.protobuf.Timestamp
-	79, // 39: core.AccountPriceCategoryInfo.created_at:type_name -> google.protobuf.Timestamp
-	79, // 40: core.AccountPriceCategoryInfo.updated_at:type_name -> google.protobuf.Timestamp
-	79, // 41: core.AccountPriceAttributeInfo.created_at:type_name -> google.protobuf.Timestamp
-	79, // 42: core.AccountPriceAttributeInfo.updated_at:type_name -> google.protobuf.Timestamp
-	29, // 43: core.ListAccountPricesResponse.account_prices:type_name -> core.AccountPriceInfo
-	80, // 44: core.ListAccountPricesResponse.page_info:type_name -> core.PageInfo
-	29, // 45: core.GetAccountPriceResponse.account_price:type_name -> core.AccountPriceInfo
-	29, // 46: core.CreateAccountPriceResponse.account_price:type_name -> core.AccountPriceInfo
-	43, // 47: core.UpdateAccountPriceRequest.category_ids:type_name -> core.AccountPriceIDList
-	43, // 48: core.UpdateAccountPriceRequest.attribute_ids:type_name -> core.AccountPriceIDList
-	29, // 49: core.UpdateAccountPriceResponse.account_price:type_name -> core.AccountPriceInfo
-	47, // 50: core.AccountGroupProductLineAccessInfo.product_lines:type_name -> core.ProductLineAccessInfo
-	79, // 51: core.AccountGroupProductLineAccessInfo.created_at:type_name -> google.protobuf.Timestamp
-	79, // 52: core.AccountGroupProductLineAccessInfo.updated_at:type_name -> google.protobuf.Timestamp
-	46, // 53: core.ListAccountGroupProductLineAccessResponse.items:type_name -> core.AccountGroupProductLineAccessInfo
-	80, // 54: core.ListAccountGroupProductLineAccessResponse.page_info:type_name -> core.PageInfo
-	46, // 55: core.GetAccountGroupProductLineAccessResponse.item:type_name -> core.AccountGroupProductLineAccessInfo
-	46, // 56: core.CreateAccountGroupProductLineAccessResponse.item:type_name -> core.AccountGroupProductLineAccessInfo
-	46, // 57: core.UpdateAccountGroupProductLineAccessResponse.item:type_name -> core.AccountGroupProductLineAccessInfo
-	47, // 58: core.CustomerProductLineAccessInfo.product_lines:type_name -> core.ProductLineAccessInfo
-	79, // 59: core.CustomerProductLineAccessInfo.created_at:type_name -> google.protobuf.Timestamp
-	79, // 60: core.CustomerProductLineAccessInfo.updated_at:type_name -> google.protobuf.Timestamp
-	57, // 61: core.ListCustomerProductLineAccessResponse.items:type_name -> core.CustomerProductLineAccessInfo
-	80, // 62: core.ListCustomerProductLineAccessResponse.page_info:type_name -> core.PageInfo
-	57, // 63: core.GetCustomerProductLineAccessResponse.item:type_name -> core.CustomerProductLineAccessInfo
-	57, // 64: core.CreateCustomerProductLineAccessResponse.item:type_name -> core.CustomerProductLineAccessInfo
-	57, // 65: core.UpdateCustomerProductLineAccessResponse.item:type_name -> core.CustomerProductLineAccessInfo
-	79, // 66: core.AccountIntegrationInfo.created_at:type_name -> google.protobuf.Timestamp
-	79, // 67: core.AccountIntegrationInfo.updated_at:type_name -> google.protobuf.Timestamp
-	67, // 68: core.ListAccountIntegrationsResponse.account_integrations:type_name -> core.AccountIntegrationInfo
-	80, // 69: core.ListAccountIntegrationsResponse.page_info:type_name -> core.PageInfo
-	67, // 70: core.CreateAccountIntegrationResponse.account_integration:type_name -> core.AccountIntegrationInfo
-	67, // 71: core.UpdateAccountIntegrationResponse.account_integration:type_name -> core.AccountIntegrationInfo
-	67, // 72: core.DeleteAccountIntegrationResponse.account_integration:type_name -> core.AccountIntegrationInfo
-	73, // [73:73] is the sub-list for method output_type
-	73, // [73:73] is the sub-list for method input_type
-	73, // [73:73] is the sub-list for extension type_name
-	73, // [73:73] is the sub-list for extension extendee
-	0,  // [0:73] is the sub-list for field type_name
+	81, // 6: core.UpdateAccountGroupRequest.description:type_name -> core.StringPatch
+	0,  // 7: core.UpdateAccountGroupResponse.account_group:type_name -> core.AccountGroupInfo
+	79, // 8: core.AccountUserDetail.last_used_at:type_name -> google.protobuf.Timestamp
+	79, // 9: core.AccountUserDetail.created_at:type_name -> google.protobuf.Timestamp
+	79, // 10: core.AccountUserDetail.updated_at:type_name -> google.protobuf.Timestamp
+	79, // 11: core.AccountUserDetail.department_created_at:type_name -> google.protobuf.Timestamp
+	79, // 12: core.AccountUserDetail.department_updated_at:type_name -> google.protobuf.Timestamp
+	10, // 13: core.ListAccountUsersResponse.account_users:type_name -> core.AccountUserDetail
+	80, // 14: core.ListAccountUsersResponse.page_info:type_name -> core.PageInfo
+	10, // 15: core.GetAccountUserResponse.account_user:type_name -> core.AccountUserDetail
+	15, // 16: core.CreateAccountUserRequest.notification_preferences:type_name -> core.NotificationPreferenceItem
+	10, // 17: core.CreateAccountUserResponse.account_user:type_name -> core.AccountUserDetail
+	81, // 18: core.UpdateAccountUserRequest.role_id:type_name -> core.StringPatch
+	81, // 19: core.UpdateAccountUserRequest.department_id:type_name -> core.StringPatch
+	15, // 20: core.UpdateAccountUserRequest.notification_preferences:type_name -> core.NotificationPreferenceItem
+	10, // 21: core.UpdateAccountUserResponse.account_user:type_name -> core.AccountUserDetail
+	22, // 22: core.ListSalesTargetsResponse.sales_targets:type_name -> core.SalesTargetProto
+	22, // 23: core.CreateSalesTargetResponse.sales_target:type_name -> core.SalesTargetProto
+	22, // 24: core.UpsertSalesTargetResponse.sales_target:type_name -> core.SalesTargetProto
+	30, // 25: core.AccountPriceInfo.recipient_account:type_name -> core.AccountPriceRecipientInfo
+	31, // 26: core.AccountPriceInfo.product_line:type_name -> core.AccountPriceProductLineInfo
+	32, // 27: core.AccountPriceInfo.rate:type_name -> core.AccountPriceRateInfo
+	34, // 28: core.AccountPriceInfo.categories:type_name -> core.AccountPriceCategoryInfo
+	35, // 29: core.AccountPriceInfo.attributes:type_name -> core.AccountPriceAttributeInfo
+	79, // 30: core.AccountPriceInfo.created_at:type_name -> google.protobuf.Timestamp
+	79, // 31: core.AccountPriceInfo.updated_at:type_name -> google.protobuf.Timestamp
+	79, // 32: core.AccountPriceRecipientInfo.created_at:type_name -> google.protobuf.Timestamp
+	79, // 33: core.AccountPriceRecipientInfo.updated_at:type_name -> google.protobuf.Timestamp
+	79, // 34: core.AccountPriceProductLineInfo.created_at:type_name -> google.protobuf.Timestamp
+	79, // 35: core.AccountPriceProductLineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	33, // 36: core.AccountPriceRateInfo.numerator_unit:type_name -> core.AccountPriceUnitInfo
+	33, // 37: core.AccountPriceRateInfo.denominator_unit:type_name -> core.AccountPriceUnitInfo
+	79, // 38: core.AccountPriceRateInfo.created_at:type_name -> google.protobuf.Timestamp
+	79, // 39: core.AccountPriceRateInfo.updated_at:type_name -> google.protobuf.Timestamp
+	79, // 40: core.AccountPriceUnitInfo.created_at:type_name -> google.protobuf.Timestamp
+	79, // 41: core.AccountPriceUnitInfo.updated_at:type_name -> google.protobuf.Timestamp
+	79, // 42: core.AccountPriceCategoryInfo.created_at:type_name -> google.protobuf.Timestamp
+	79, // 43: core.AccountPriceCategoryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	79, // 44: core.AccountPriceAttributeInfo.created_at:type_name -> google.protobuf.Timestamp
+	79, // 45: core.AccountPriceAttributeInfo.updated_at:type_name -> google.protobuf.Timestamp
+	29, // 46: core.ListAccountPricesResponse.account_prices:type_name -> core.AccountPriceInfo
+	80, // 47: core.ListAccountPricesResponse.page_info:type_name -> core.PageInfo
+	29, // 48: core.GetAccountPriceResponse.account_price:type_name -> core.AccountPriceInfo
+	29, // 49: core.CreateAccountPriceResponse.account_price:type_name -> core.AccountPriceInfo
+	43, // 50: core.UpdateAccountPriceRequest.category_ids:type_name -> core.AccountPriceIDList
+	43, // 51: core.UpdateAccountPriceRequest.attribute_ids:type_name -> core.AccountPriceIDList
+	29, // 52: core.UpdateAccountPriceResponse.account_price:type_name -> core.AccountPriceInfo
+	47, // 53: core.AccountGroupProductLineAccessInfo.product_lines:type_name -> core.ProductLineAccessInfo
+	79, // 54: core.AccountGroupProductLineAccessInfo.created_at:type_name -> google.protobuf.Timestamp
+	79, // 55: core.AccountGroupProductLineAccessInfo.updated_at:type_name -> google.protobuf.Timestamp
+	46, // 56: core.ListAccountGroupProductLineAccessResponse.items:type_name -> core.AccountGroupProductLineAccessInfo
+	80, // 57: core.ListAccountGroupProductLineAccessResponse.page_info:type_name -> core.PageInfo
+	46, // 58: core.GetAccountGroupProductLineAccessResponse.item:type_name -> core.AccountGroupProductLineAccessInfo
+	46, // 59: core.CreateAccountGroupProductLineAccessResponse.item:type_name -> core.AccountGroupProductLineAccessInfo
+	46, // 60: core.UpdateAccountGroupProductLineAccessResponse.item:type_name -> core.AccountGroupProductLineAccessInfo
+	47, // 61: core.CustomerProductLineAccessInfo.product_lines:type_name -> core.ProductLineAccessInfo
+	79, // 62: core.CustomerProductLineAccessInfo.created_at:type_name -> google.protobuf.Timestamp
+	79, // 63: core.CustomerProductLineAccessInfo.updated_at:type_name -> google.protobuf.Timestamp
+	57, // 64: core.ListCustomerProductLineAccessResponse.items:type_name -> core.CustomerProductLineAccessInfo
+	80, // 65: core.ListCustomerProductLineAccessResponse.page_info:type_name -> core.PageInfo
+	57, // 66: core.GetCustomerProductLineAccessResponse.item:type_name -> core.CustomerProductLineAccessInfo
+	57, // 67: core.CreateCustomerProductLineAccessResponse.item:type_name -> core.CustomerProductLineAccessInfo
+	57, // 68: core.UpdateCustomerProductLineAccessResponse.item:type_name -> core.CustomerProductLineAccessInfo
+	79, // 69: core.AccountIntegrationInfo.created_at:type_name -> google.protobuf.Timestamp
+	79, // 70: core.AccountIntegrationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	67, // 71: core.ListAccountIntegrationsResponse.account_integrations:type_name -> core.AccountIntegrationInfo
+	80, // 72: core.ListAccountIntegrationsResponse.page_info:type_name -> core.PageInfo
+	67, // 73: core.CreateAccountIntegrationResponse.account_integration:type_name -> core.AccountIntegrationInfo
+	67, // 74: core.UpdateAccountIntegrationResponse.account_integration:type_name -> core.AccountIntegrationInfo
+	67, // 75: core.DeleteAccountIntegrationResponse.account_integration:type_name -> core.AccountIntegrationInfo
+	76, // [76:76] is the sub-list for method output_type
+	76, // [76:76] is the sub-list for method input_type
+	76, // [76:76] is the sub-list for extension type_name
+	76, // [76:76] is the sub-list for extension extendee
+	0,  // [0:76] is the sub-list for field type_name
 }
 
 func init() { file_core_core_account_groups_proto_init() }
@@ -5544,6 +5529,7 @@ func file_core_core_account_groups_proto_init() {
 	if File_core_core_account_groups_proto != nil {
 		return
 	}
+	file_core_core_patch_proto_init()
 	file_core_core_identity_context_proto_init()
 	file_core_core_account_groups_proto_msgTypes[0].OneofWrappers = []any{}
 	file_core_core_account_groups_proto_msgTypes[1].OneofWrappers = []any{}

@@ -20,7 +20,7 @@ type CreateCarrierRequest struct {
 	// Carrier account number. Required for UPS and USPS carriers.
 	AccountNumber *string `json:"account_number" validate:"omitempty,max=255"`
 	// Whether this carrier will be available for customers to select in the customer portal.
-	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility,omitempty" default:"visible" nullable:"false"`
+	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility,omitempty" default:"visible"`
 }
 
 var sampleCreateCarrierCode = constants.CarrierCodeFedEx

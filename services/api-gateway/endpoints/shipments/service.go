@@ -355,13 +355,13 @@ func (m *shipmentSvcImpl) DeleteShipmentLine(ctx context.Context, req *DeleteShi
 func addressInputToProto(a apirequest.AddressInput) *pb.AddressInput {
 	return &pb.AddressInput{
 		Name:    a.Name,
-		Street1: derefStr(a.StreetLine1),
-		Street2: a.StreetLine2,
-		City:    derefStr(a.Locality),
-		State:   derefStr(a.State),
-		Zip:     derefStr(a.PostalCode),
+		Street1: derefStr(a.StreetLine1.Ptr()),
+		Street2: a.StreetLine2.Ptr(),
+		City:    derefStr(a.Locality.Ptr()),
+		State:   derefStr(a.State.Ptr()),
+		Zip:     derefStr(a.PostalCode.Ptr()),
 		Country: a.Country,
-		Phone:   a.Phone,
-		Email:   a.Email,
+		Phone:   a.Phone.Ptr(),
+		Email:   a.Email.Ptr(),
 	}
 }

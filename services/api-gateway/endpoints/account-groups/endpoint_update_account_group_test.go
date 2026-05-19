@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/augno/api/shared/patch"
 	"github.com/augno/api/shared/validate"
 )
 
@@ -23,6 +24,13 @@ func TestUpdateAccountGroupRequest_JSON_descriptionNullAccepted(t *testing.T) {
 	if err := validate.RejectExplicitJSONNulls(body, &req); err != nil {
 		t.Fatalf("expected description: null to be accepted, got error: %v", err)
 	}
+	if err := json.Unmarshal(body, &req); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	patch.ApplyPtrFieldNulls(body, &req)
+	if req.Description == nil || !req.Description.IsClear() {
+		t.Fatalf("expected Description clear, got %+v", req.Description)
+	}
 }
 
 func TestUpdateAccountGroupRequest_JSON_descriptionStringOK(t *testing.T) {
@@ -32,8 +40,12 @@ func TestUpdateAccountGroupRequest_JSON_descriptionStringOK(t *testing.T) {
 	if err := json.Unmarshal([]byte(body), &req); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if req.Description == nil || *req.Description != "Some description" {
-		t.Fatalf("unexpected Description: %+v", req.Description)
+	if req.Description == nil || !req.Description.IsSet() {
+		t.Fatalf("expected Description set, got %+v", req.Description)
+	}
+	val, _ := req.Description.Value()
+	if val != "Some description" {
+		t.Fatalf("unexpected Description: %q", val)
 	}
 }
 

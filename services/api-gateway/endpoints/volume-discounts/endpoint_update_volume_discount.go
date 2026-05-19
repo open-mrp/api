@@ -13,15 +13,15 @@ import (
 // Volume discount tier to upsert.
 type UpdateVolumeDiscountTierInput struct {
 	// Existing tier ID. Omit for new tiers.
-	ID *string `json:"id,omitempty" nullable:"false" validate:"omitempty"`
+	ID *string `json:"id,omitempty" validate:"omitempty"`
 	// Display name.
-	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
 	// Discount percentage as a decimal string.
-	DiscountPercentage *string `json:"discount_percentage,omitempty" nullable:"false" format:"decimal"`
+	DiscountPercentage *string `json:"discount_percentage,omitempty" format:"decimal"`
 	// Quantity threshold as a decimal string.
-	Threshold *string `json:"threshold,omitempty" nullable:"false" format:"decimal"`
+	Threshold *string `json:"threshold,omitempty" format:"decimal"`
 	// Parent tier ID for tier chaining.
-	ParentTierID *string `json:"parent_tier_id,omitempty" nullable:"true" validate:"omitempty"`
+	ParentTierID *string `json:"parent_tier_id,omitempty" validate:"omitempty"`
 }
 
 // Request to partially update a volume discount.
@@ -29,7 +29,7 @@ type UpdateVolumeDiscountRequest struct {
 	// Volume discount ID.
 	VolumeDiscountID string `path:"id" validate:"required"`
 	// Display name.
-	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
 	// Tiers (upsert semantics).
 	Tiers []UpdateVolumeDiscountTierInput `json:"tiers,omitempty"`
 	// Account group IDs to set as customer groups.

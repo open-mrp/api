@@ -1134,8 +1134,8 @@ INSERT INTO item (
 -- name: ProductUpdateItem :execresult
 UPDATE item SET
     sku = COALESCE(sqlc.narg('sku'), sku),
-    description = CASE WHEN sqlc.arg('update_description') = true THEN sqlc.narg('description') ELSE description END,
-    notes = CASE WHEN sqlc.arg('update_notes') = true THEN sqlc.narg('notes') ELSE notes END,
+    description = sqlc.narg('description'),
+    notes = sqlc.narg('notes'),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id')

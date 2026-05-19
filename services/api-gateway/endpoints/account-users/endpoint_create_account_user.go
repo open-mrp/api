@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 )
 
 // Request to create an account user.
@@ -23,9 +24,9 @@ type CreateAccountUserRequest struct {
 	// Must be 8–72 chars and include upper, lower, number, and special character.
 	Password *string `json:"password" validate:"omitempty,password" sensitive:"true"` // #nosec G117 -- API request field for user password input
 	// Role assigned to the user.
-	RoleID *string `json:"role_id,omitempty" validate:"omitempty"`
+	RoleID patch.Nullable[string] `json:"role_id,omitzero"`
 	// Department assigned to the user.
-	DepartmentID *string `json:"department_id,omitempty" validate:"omitempty"`
+	DepartmentID patch.Nullable[string] `json:"department_id,omitzero"`
 	// Notification preferences for the user (external targets only).
 	Preferences []NotificationPreferenceItem `json:"preferences,omitempty"`
 }
@@ -40,7 +41,7 @@ var sampleCreateAccountUserRequest = &CreateAccountUserRequest{
 	Email:    &sampleCreateAccountUserEmail,
 	Username: &sampleCreateAccountUserUsername,
 	Password: &sampleCreateAccountUserPassword,
-	RoleID:   &sampleCreateAccountUserRoleID,
+	RoleID:   patch.PtrNullable(&sampleCreateAccountUserRoleID),
 	Preferences: []NotificationPreferenceItem{
 		{NotificationTypeCode: constants.AccountRelationNotificationTypeOrderAcknowledgement, Enabled: true},
 	},

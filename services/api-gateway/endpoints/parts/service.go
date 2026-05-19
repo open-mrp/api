@@ -12,6 +12,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -116,12 +117,12 @@ func (m *partSvcImpl) GetPart(ctx context.Context, req *RetrievePartRequest) (*a
 func (m *partSvcImpl) CreatePart(ctx context.Context, req *CreatePartRequest) (*apiresource.Part, *apierror.APIError) {
 	pbReq := &pb.CreatePartRequest{
 		Sku:          req.SKU,
-		Description:  req.Description,
-		Notes:        req.Notes,
+		Description:  req.Description.Ptr(),
+		Notes:        req.Notes.Ptr(),
 		CategoryId:   req.CategoryID,
-		UnitPrice:    rateInputToProto(req.UnitPrice),
-		UnitCost:     rateInputToProto(req.UnitCost),
-		BurnRate:     rateInputToProto(req.BurnRate),
+		UnitPrice:    rateInputToProto(req.UnitPrice.Ptr()),
+		UnitCost:     rateInputToProto(req.UnitCost.Ptr()),
+		BurnRate:     rateInputToProto(req.BurnRate.Ptr()),
 		AttributeIds: req.AttributeIDs,
 		Includes:     appctx.GetRequestedIncludeKeys(ctx),
 	}
@@ -141,19 +142,11 @@ func (m *partSvcImpl) CreatePart(ctx context.Context, req *CreatePartRequest) (*
 
 func (m *partSvcImpl) UpdatePart(ctx context.Context, req *UpdatePartRequest) (*apiresource.Part, *apierror.APIError) {
 	pbReq := &pb.UpdatePartRequest{
-		Id:       req.ItemID,
-		Sku:      req.SKU,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
-	}
-
-	if req.Description != nil {
-		pbReq.UpdateDescription = true
-		pbReq.Description = req.Description
-	}
-
-	if req.Notes != nil {
-		pbReq.UpdateNotes = true
-		pbReq.Notes = req.Notes
+		Id:          req.ItemID,
+		Sku:         req.SKU,
+		Description: patch.StringFieldPtrToProto(req.Description),
+		Notes:       patch.StringFieldPtrToProto(req.Notes),
+		Includes:    appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, partSvcTracer, "service.parts.update", domain.ServiceName,

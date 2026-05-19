@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -95,11 +96,11 @@ func (m *locationSvcImpl) CreateLocation(ctx context.Context, req *CreateLocatio
 	pbReq := &pb.CreateLocationRequest{
 		Name:     req.Name,
 		TypeCode: string(req.TypeCode),
-		ParentId: req.ParentID,
+		ParentId: req.ParentID.Ptr(),
 		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
-	if req.ChildIDs != nil {
-		pbReq.ChildIds = *req.ChildIDs
+	if childIDs := req.ChildIDs.Ptr(); childIDs != nil {
+		pbReq.ChildIds = *childIDs
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, locationSvcTracer, "service.locations.create", domain.ServiceName,
@@ -120,15 +121,10 @@ func (m *locationSvcImpl) UpdateLocation(ctx context.Context, req *UpdateLocatio
 		Id:       req.LocationID,
 		Name:     req.Name,
 		TypeCode: req.TypeCode.StringPtr(),
-		ParentId: req.ParentID,
+		ParentId: patch.StringFieldPtrToProto(req.ParentID),
 		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
-	if req.ChildIDs.IsSet() {
-		pbReq.UpdateChildren = true
-		if !req.ChildIDs.IsNull() {
-			pbReq.ChildIds = *req.ChildIDs.Value()
-		}
-	}
+	pbReq.ChildIds = patch.StringListSliceFieldPtrToProto(req.ChildIDs)
 
 	resp, apiErr := grpcutil.CallRPC(ctx, locationSvcTracer, "service.locations.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateLocationResponse, error) {

@@ -10,6 +10,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -104,14 +105,14 @@ func (m *addressSvcImpl) GetAddress(ctx context.Context, req *RetrieveAddressReq
 func (m *addressSvcImpl) CreateAddress(ctx context.Context, req *apirequest.AddressInput) (*apiresource.Address, *apierror.APIError) {
 	pbReq := &pb.CreateAddressRequest{
 		Name:         req.Name,
-		Phone:        req.Phone,
-		Email:        req.Email,
+		Phone:        req.Phone.Ptr(),
+		Email:        req.Email.Ptr(),
 		IsDropShip:   addressTypeToDropShip(req.Type),
-		StreetLine_1: req.StreetLine1,
-		StreetLine_2: req.StreetLine2,
-		Locality:     req.Locality,
-		State:        req.State,
-		PostalCode:   req.PostalCode,
+		StreetLine_1: req.StreetLine1.Ptr(),
+		StreetLine_2: req.StreetLine2.Ptr(),
+		Locality:     req.Locality.Ptr(),
+		State:        req.State.Ptr(),
+		PostalCode:   req.PostalCode.Ptr(),
 		Country:      req.Country,
 	}
 
@@ -132,11 +133,11 @@ func (m *addressSvcImpl) UpdateAddress(ctx context.Context, req *UpdateAddressRe
 	pbReq := &pb.UpdateAddressRequest{
 		Id:           req.AddressID,
 		Name:         req.Name,
-		Phone:        req.Phone,
-		Email:        req.Email,
+		Phone:        patch.StringFieldPtrToProto(req.Phone),
+		Email:        patch.StringFieldPtrToProto(req.Email),
 		IsDropShip:   addressTypeToDropShipPtr(req.Type),
 		StreetLine_1: req.StreetLine1,
-		StreetLine_2: req.StreetLine2,
+		StreetLine_2: patch.StringFieldPtrToProto(req.StreetLine2),
 		Locality:     req.Locality,
 		State:        req.State,
 		PostalCode:   req.PostalCode,

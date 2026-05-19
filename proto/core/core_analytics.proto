@@ -4,6 +4,7 @@ syntax = "proto3";
 package core;
 
 import "google/protobuf/timestamp.proto";
+import "core/core_patch.proto";
 import "core/core_accounts_carriers.proto";
 import "core/core_identity_context.proto";
 option go_package = "shared/proto/core;core";
@@ -260,13 +261,10 @@ message UpdateShippingTermRequest {
   string id = 1;
   optional string name = 2;
   optional string type = 3;
-  optional QuantityInput flat_rate = 4;
-  optional QuantityInput minimum_order_value = 5;
-  repeated string free_shipping_service_level_ids = 6;
-  bool has_free_shipping_service_level_ids = 7;
-  bool has_flat_rate = 8;
-  bool has_minimum_order_value = 9;
-  repeated string includes = 10;
+  optional QuantityPatch flat_rate = 4;
+  optional QuantityPatch minimum_order_value = 5;
+  optional StringListPatch free_shipping_service_level_ids = 6;
+  repeated string includes = 7;
 }
 message UpdateShippingTermResponse {
   ShippingTermInfo shipping_term = 1;
@@ -330,11 +328,11 @@ message CreateAddressResponse {
 message UpdateAddressRequest {
   string id = 1;
   optional string name = 2;
-  optional string phone = 3;
-  optional string email = 4;
+  optional StringPatch phone = 3;
+  optional StringPatch email = 4;
   optional bool is_drop_ship = 5;
   optional string street_line_1 = 6;
-  optional string street_line_2 = 7;
+  optional StringPatch street_line_2 = 7;
   optional string locality = 8;
   optional string state = 9;
   optional string postal_code = 10;

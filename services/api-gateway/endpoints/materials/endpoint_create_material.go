@@ -10,6 +10,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 )
 
 // QuantityInputRequest is a quantity value and unit.
@@ -25,22 +26,22 @@ type CreateMaterialRequest struct {
 	// SKU code.
 	SKU string `json:"sku" validate:"required,max=255"`
 	// Description.
-	Description *string `json:"description,omitempty"`
+	Description patch.Nullable[string] `json:"description,omitzero"`
 	// Notes.
-	Notes *string `json:"notes,omitempty"`
+	Notes patch.Nullable[string] `json:"notes,omitzero"`
 	// Category ID.
 	CategoryID string `json:"category_id" validate:"required"`
 	// Order point quantity.
-	OrderPoint *QuantityInputRequest `json:"order_point,omitempty"`
+	OrderPoint patch.Nullable[QuantityInputRequest] `json:"order_point,omitzero"`
 	// Lead time quantity.
-	LeadTime *QuantityInputRequest `json:"lead_time,omitempty"`
+	LeadTime patch.Nullable[QuantityInputRequest] `json:"lead_time,omitzero"`
 	// Initial unit price. When set, numerator must be a currency unit and
 	// denominator must not be.
-	UnitPrice *apirequest.RateInput `json:"unit_price,omitempty"`
+	UnitPrice patch.Nullable[apirequest.RateInput] `json:"unit_price,omitzero"`
 	// Initial unit cost. Same currency rule as unit_price.
-	UnitCost *apirequest.RateInput `json:"unit_cost,omitempty"`
+	UnitCost patch.Nullable[apirequest.RateInput] `json:"unit_cost,omitzero"`
 	// Initial burn rate (waste / scrap). No currency requirement.
-	BurnRate *apirequest.RateInput `json:"burn_rate,omitempty"`
+	BurnRate patch.Nullable[apirequest.RateInput] `json:"burn_rate,omitzero"`
 	// Attribute IDs to connect to the material at creation time.
 	AttributeIDs []string `json:"attribute_ids,omitempty"`
 }

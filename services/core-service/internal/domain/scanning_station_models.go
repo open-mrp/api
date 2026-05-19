@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/augno/api/shared/constants"
+	"github.com/augno/api/shared/patch"
 	"github.com/augno/api/shared/pagination"
 )
 
@@ -68,7 +69,7 @@ type UpdateScanningStationParams struct {
 	AccountID           string
 	ScanningStationID   string
 	Name                *string
-	Notes               *string
+	Notes               patch.Field[string]
 	LabelSizeCode       *string
 	LabelTypeCode       *string
 	OperatorRequirement *constants.OperatorRequirement

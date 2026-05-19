@@ -51,9 +51,6 @@ func TestSandboxMedTestSuite(t *testing.T) {
 	suite.Run(t, new(SandboxMedTestSuite))
 }
 
-//go:fix inline
-func int32Ptr(v int32) *int32 { return new(v) }
-
 func (suite *SandboxMedTestSuite) TestCreate_Success() {
 	ctx := context.Background()
 	ownerAccountID := "ac_owner123"
@@ -74,7 +71,7 @@ func (suite *SandboxMedTestSuite) TestCreate_Success() {
 
 	suite.accountRepo.EXPECT().
 		GetSandboxLimit(gomock.Any(), ownerAccountID).
-		Return(int32Ptr(3), nil).
+		Return(new(int32(3)), nil).
 		Times(1)
 
 	suite.sandboxAccountRepo.EXPECT().
@@ -162,7 +159,7 @@ func (suite *SandboxMedTestSuite) TestCreate_CopiesOwnerPlanCode() {
 
 	suite.accountRepo.EXPECT().
 		GetSandboxLimit(gomock.Any(), ownerAccountID).
-		Return(int32Ptr(999), nil).
+		Return(new(int32(999)), nil).
 		Times(1)
 
 	suite.sandboxAccountRepo.EXPECT().
@@ -284,7 +281,7 @@ func (suite *SandboxMedTestSuite) TestCreate_MaxSandboxesReached() {
 
 	suite.accountRepo.EXPECT().
 		GetSandboxLimit(gomock.Any(), ownerAccountID).
-		Return(int32Ptr(3), nil).
+		Return(new(int32(3)), nil).
 		Times(1)
 
 	suite.sandboxAccountRepo.EXPECT().
@@ -485,7 +482,7 @@ func (suite *SandboxMedTestSuite) TestCreate_LimitOfOneReached() {
 
 	suite.accountRepo.EXPECT().
 		GetSandboxLimit(gomock.Any(), ownerAccountID).
-		Return(int32Ptr(1), nil).
+		Return(new(int32(1)), nil).
 		Times(1)
 
 	suite.sandboxAccountRepo.EXPECT().

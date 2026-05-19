@@ -16,9 +16,9 @@ type UpdateCarrierRequest struct {
 	// Carrier ID.
 	CarrierID string `path:"id" validate:"required"`
 	// Display name.
-	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
 	// Whether this carrier will be available for customers to select in the customer portal.
-	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility,omitempty" nullable:"false"`
+	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility,omitempty"`
 }
 
 var sampleUpdateCarrierName = "FedEx Express"

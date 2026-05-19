@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 )
 
 // Request to partially update an address.
@@ -16,25 +17,25 @@ type UpdateAddressRequest struct {
 	// Address ID.
 	AddressID string `path:"id" validate:"required"`
 	// Display name of the address.
-	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
 	// Phone number associated with the address.
-	Phone *string `json:"phone,omitempty" nullable:"true" validate:"omitempty,max=255"`
+	Phone *patch.Field[string] `json:"phone,omitempty" validate:"omitempty,max=255"`
 	// Email address associated with the address.
-	Email *string `json:"email,omitempty" nullable:"true" validate:"omitempty,max=255"`
+	Email *patch.Field[string] `json:"email,omitempty" validate:"omitempty,max=255"`
 	// Address type.
-	Type *constants.AddressType `json:"type,omitempty" nullable:"false"`
+	Type *constants.AddressType `json:"type,omitempty"`
 	// First line of the street address.
-	StreetLine1 *string `json:"street_line_1,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	StreetLine1 *string `json:"street_line_1,omitempty" validate:"omitempty,max=255"`
 	// Second line of the street address.
-	StreetLine2 *string `json:"street_line_2,omitempty" nullable:"true" validate:"omitempty,max=255"`
+	StreetLine2 *patch.Field[string] `json:"street_line_2,omitempty" validate:"omitempty,max=255"`
 	// City or locality.
-	Locality *string `json:"locality,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	Locality *string `json:"locality,omitempty" validate:"omitempty,max=255"`
 	// State or administrative area.
-	State *string `json:"state,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	State *string `json:"state,omitempty" validate:"omitempty,max=255"`
 	// Postal or ZIP code.
-	PostalCode *string `json:"postal_code,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	PostalCode *string `json:"postal_code,omitempty" validate:"omitempty,max=255"`
 	// Two-letter country code.
-	Country *string `json:"country,omitempty" nullable:"false" validate:"omitempty,max=2"`
+	Country *string `json:"country,omitempty" validate:"omitempty,max=2"`
 }
 
 var sampleUpdateName = "Warehouse"

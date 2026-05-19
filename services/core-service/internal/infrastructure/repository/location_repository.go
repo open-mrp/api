@@ -11,6 +11,7 @@ import (
 	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/pagination"
+	"github.com/augno/api/shared/patch"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -269,7 +270,7 @@ func (r *locationRepoImpl) Update(ctx context.Context, params domain.UpdateLocat
 		AccountID:               params.AccountID,
 		Name:                    toNullString(params.Name),
 		StorageLocationTypeCode: toNullString(params.TypeCode),
-		ParentID:                toNullString(params.ParentID),
+		ParentID:                patch.StringToNullString(params.ParentID),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -283,9 +284,7 @@ func (r *locationRepoImpl) Update(ctx context.Context, params domain.UpdateLocat
 		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Location not found."))
 	}
 
-	// Replace children if explicitly provided (mirrors Prisma set behavior).
-	if params.UpdateChildren {
-		// Disconnect all existing children.
+	if params.ChildIDs.WasProvided() {
 		if err := r.queries.DisconnectLocationChildren(ctx, sqlc.DisconnectLocationChildrenParams{
 			ParentID:  gosql.NullString{String: params.LocationID, Valid: true},
 			AccountID: params.AccountID,
@@ -294,8 +293,8 @@ func (r *locationRepoImpl) Update(ctx context.Context, params domain.UpdateLocat
 				return nil, tracing.Trace(span, apiErr)
 			}
 		}
-		// Connect the specified children.
-		for _, childID := range params.ChildIDs {
+		childIDs, _ := params.ChildIDs.Value()
+		for _, childID := range childIDs {
 			if err := r.queries.ConnectLocationChildren(ctx, sqlc.ConnectLocationChildrenParams{
 				ParentID:  gosql.NullString{String: params.LocationID, Valid: true},
 				ChildID:   childID,

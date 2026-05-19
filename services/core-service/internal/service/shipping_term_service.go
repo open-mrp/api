@@ -285,56 +285,56 @@ func (s *shippingTermSvcImpl) UpdateShippingTerm(ctx context.Context, params dom
 				return apierror.NewAuthorizationError("Default shipping term cannot be updated.")
 			}
 
-			// Handle flat rate quantity upsert/delete
-			if params.FlatRate != nil {
+			switch {
+			case params.FlatRate.IsUnset():
 				if shippingTerm.FlatRate != nil {
-					// Update existing quantity
-					if apiErr := txRepo.UpdateQuantity(txCtx, shippingTerm.FlatRate.ID, params.FlatRate.Value, params.FlatRate.UnitID); apiErr != nil {
+					params.FlatRateID = &shippingTerm.FlatRate.ID
+				}
+			case params.FlatRate.IsClear():
+				// FlatRateID stays nil to clear the column.
+			case params.FlatRate.IsSet():
+				qv, _ := params.FlatRate.Value()
+				if shippingTerm.FlatRate != nil {
+					if apiErr := txRepo.UpdateQuantity(txCtx, shippingTerm.FlatRate.ID, qv.Value, qv.UnitID); apiErr != nil {
 						return apiErr
 					}
 					params.FlatRateID = &shippingTerm.FlatRate.ID
 				} else {
-					// Create new quantity
 					flatRateID, apiErr := id.GenID(id.QuantityIDPrefix, nil)
 					if apiErr != nil {
 						return apiErr
 					}
-					if apiErr := txRepo.InsertQuantity(txCtx, flatRateID, params.FlatRate.Value, params.FlatRate.UnitID); apiErr != nil {
+					if apiErr := txRepo.InsertQuantity(txCtx, flatRateID, qv.Value, qv.UnitID); apiErr != nil {
 						return apiErr
 					}
 					params.FlatRateID = &flatRateID
 				}
-			} else if params.HasFlatRate {
-				// Explicitly sent null — clear the flat rate (params.FlatRateID stays nil → SQL sets column to NULL)
-			} else if shippingTerm.FlatRate != nil {
-				// Not provided at all — keep existing flat rate ID
-				params.FlatRateID = &shippingTerm.FlatRate.ID
 			}
 
-			// Handle minimum order quantity upsert/delete
-			if params.MinimumOrderValue != nil {
+			switch {
+			case params.MinimumOrderValue.IsUnset():
 				if shippingTerm.MinimumOrderValue != nil {
-					// Update existing quantity
-					if apiErr := txRepo.UpdateQuantity(txCtx, shippingTerm.MinimumOrderValue.ID, params.MinimumOrderValue.Value, params.MinimumOrderValue.UnitID); apiErr != nil {
+					params.MinimumOrderID = &shippingTerm.MinimumOrderValue.ID
+				}
+			case params.MinimumOrderValue.IsClear():
+				// MinimumOrderID stays nil to clear the column.
+			case params.MinimumOrderValue.IsSet():
+				qv, _ := params.MinimumOrderValue.Value()
+				if shippingTerm.MinimumOrderValue != nil {
+					if apiErr := txRepo.UpdateQuantity(txCtx, shippingTerm.MinimumOrderValue.ID, qv.Value, qv.UnitID); apiErr != nil {
 						return apiErr
 					}
 					params.MinimumOrderID = &shippingTerm.MinimumOrderValue.ID
 				} else {
-					// Create new quantity
 					minimumOrderID, apiErr := id.GenID(id.QuantityIDPrefix, nil)
 					if apiErr != nil {
 						return apiErr
 					}
-					if apiErr := txRepo.InsertQuantity(txCtx, minimumOrderID, params.MinimumOrderValue.Value, params.MinimumOrderValue.UnitID); apiErr != nil {
+					if apiErr := txRepo.InsertQuantity(txCtx, minimumOrderID, qv.Value, qv.UnitID); apiErr != nil {
 						return apiErr
 					}
 					params.MinimumOrderID = &minimumOrderID
 				}
-			} else if params.HasMinimumOrderValue {
-				// Explicitly sent null — clear the minimum order value (params.MinimumOrderID stays nil → SQL sets column to NULL)
-			} else if shippingTerm.MinimumOrderValue != nil {
-				// Not provided at all — keep existing minimum order ID
-				params.MinimumOrderID = &shippingTerm.MinimumOrderValue.ID
 			}
 
 			// Update shipping term
@@ -342,18 +342,20 @@ func (s *shippingTermSvcImpl) UpdateShippingTerm(ctx context.Context, params dom
 				return apiErr
 			}
 
-			// Sync free shipping rules (delete all + re-insert)
-			if params.HasFreeShippingServiceLevelIDs {
+			if params.FreeShippingServiceLevelIDs.WasProvided() {
 				if apiErr := txRepo.DeleteFreeShippingRulesByShippingTermID(txCtx, params.ShippingTermID); apiErr != nil {
 					return apiErr
 				}
-				for _, serviceLevelID := range params.FreeShippingServiceLevelIDs {
-					ruleID, apiErr := id.GenID(id.FreeShippingRuleIDPrefix, nil)
-					if apiErr != nil {
-						return apiErr
-					}
-					if apiErr := txRepo.InsertFreeShippingRule(txCtx, ruleID, params.ShippingTermID, serviceLevelID); apiErr != nil {
-						return apiErr
+				if params.FreeShippingServiceLevelIDs.IsSet() {
+					serviceLevelIDs, _ := params.FreeShippingServiceLevelIDs.Value()
+					for _, serviceLevelID := range serviceLevelIDs {
+						ruleID, apiErr := id.GenID(id.FreeShippingRuleIDPrefix, nil)
+						if apiErr != nil {
+							return apiErr
+						}
+						if apiErr := txRepo.InsertFreeShippingRule(txCtx, ruleID, params.ShippingTermID, serviceLevelID); apiErr != nil {
+							return apiErr
+						}
 					}
 				}
 			}

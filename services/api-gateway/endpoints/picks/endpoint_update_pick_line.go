@@ -17,7 +17,7 @@ type UpdatePickLineRequest struct {
 	// Pick line ID.
 	PickLineID string `path:"id" validate:"required"`
 	// Quantity value to set for this line.
-	QuantityValue *string `json:"quantity_value,omitempty" nullable:"false"`
+	QuantityValue *string `json:"quantity_value,omitempty"`
 }
 
 var sampleUpdatePickLineQuantityValue = "10.000000000000000000000000000000"

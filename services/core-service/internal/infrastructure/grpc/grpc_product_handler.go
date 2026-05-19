@@ -5,6 +5,7 @@ import (
 
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/shared/contracts"
+	"github.com/augno/api/shared/patch"
 	pb "github.com/augno/api/shared/proto/core"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -189,15 +190,13 @@ func (h *gRPCHandler) UpdateProduct(ctx context.Context, req *pb.UpdateProductRe
 	defer finalizeIdempotency()
 
 	params := domain.UpdateProductParams{
-		ProductID:         req.Id,
-		SKU:               req.Sku,
-		Description:       req.Description,
-		UpdateDescription: req.UpdateDescription,
-		Notes:             req.Notes,
-		UpdateNotes:       req.UpdateNotes,
-		IsPortalReady:     req.IsPortalReady,
-		UnitPrice:         protoToCreateRateInput(req.UnitPrice),
-		Includes:          req.Includes,
+		ProductID:     req.Id,
+		SKU:           req.Sku,
+		Description:   patch.StringFieldFromProto(req.Description),
+		Notes:         patch.StringFieldFromProto(req.Notes),
+		IsPortalReady: req.IsPortalReady,
+		UnitPrice:     protoToCreateRateInput(req.UnitPrice),
+		Includes:      req.Includes,
 	}
 
 	product, apiErr := h.productSvc.UpdateProduct(ctx, params)

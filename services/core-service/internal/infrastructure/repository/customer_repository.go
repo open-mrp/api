@@ -14,6 +14,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/pagination"
+	"github.com/augno/api/shared/patch"
 	"github.com/augno/api/shared/safeconv"
 	"github.com/augno/api/shared/tracing"
 )
@@ -978,21 +979,21 @@ func (r *customerRepoImpl) Update(ctx context.Context, relationID string, params
 		Alias:                    stringToNullString(params.Name),
 		ExternalNumber:           stringToNullString(params.Number),
 		IsEdiEnabled:             isEdiEnabled,
-		Notes:                    stringToNullString(params.Note),
+		Notes:                    patch.StringToNullString(params.Note),
 		CommissionStatusCode:     commissionStatus,
 		FreightStatusCode:        freightStatus,
 		DefaultCarrierID:         stringToNullString(params.DefaultCarrierID),
-		DefaultCarrierOptionID:   stringToNullString(params.DefaultServiceLevelID),
-		DefaultSalesRepID:        stringToNullString(params.DefaultSalesRepID),
+		DefaultCarrierOptionID:   patch.StringToNullString(params.DefaultServiceLevelID),
+		DefaultSalesRepID:        patch.StringToNullString(params.DefaultSalesRepID),
 		AccountStatusCode:        stringToNullString(params.StatusCode),
 		PaymentTermID:            stringToNullString(params.DefaultPaymentTermID),
 		AccountGroupID:           stringToNullString(params.CustomerTypeGroupID),
 		PriorityCode:             stringToNullString(params.DefaultPriorityCode),
 		ShippingTermID:           stringToNullString(params.DefaultShippingTermID),
 		CarrierBillingType:       stringToNullString(params.CarrierBillingType),
-		CarrierBillingAccount:    stringToNullString(params.CarrierBillingAccount),
-		DefaultBillingAddressID:  stringToNullString(params.BillToAddressID),
-		DefaultShippingAddressID: stringToNullString(params.ShipToAddressID),
+		CarrierBillingAccount:    patch.StringToNullString(params.CarrierBillingAccount),
+		DefaultBillingAddressID:  patch.StringToNullString(params.BillToAddressID),
+		DefaultShippingAddressID: patch.StringToNullString(params.ShipToAddressID),
 		CreditLimitID:            stringToNullString(params.CreditLimitID),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {

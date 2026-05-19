@@ -263,6 +263,16 @@ WHERE p.id = sqlc.arg('part_id')
 AND i.account_id = sqlc.arg('account_id')
 AND i.deleted_at IS NULL;
 
+-- name: PartUpdateItem :execresult
+UPDATE item SET
+    sku = COALESCE(sqlc.narg('sku'), sku),
+    description = sqlc.narg('description'),
+    notes = sqlc.narg('notes'),
+    updated_at = NOW(3)
+WHERE id = sqlc.arg('id')
+AND account_id = sqlc.arg('account_id')
+AND deleted_at IS NULL;
+
 -- name: TouchPartUpdatedAt :exec
 UPDATE part SET updated_at = NOW(3)
 WHERE id = sqlc.arg('part_id');

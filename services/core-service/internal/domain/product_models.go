@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/augno/api/shared/pagination"
+	"github.com/augno/api/shared/patch"
 )
 
 // ProductFull represents a product entity, which extends an Item with product-specific fields.
@@ -92,16 +93,14 @@ type CreateProductParams struct {
 
 // UpdateProductParams holds parameters for partially updating a product.
 type UpdateProductParams struct {
-	AccountID         string
-	ProductID         string
-	SKU               *string
-	Description       *string
-	UpdateDescription bool
-	Notes             *string
-	UpdateNotes       bool
-	IsPortalReady     *bool
-	UnitPrice         *CreateRateParams
-	Includes          []string
+	AccountID     string
+	ProductID     string
+	SKU           *string
+	Description   patch.Field[string]
+	Notes         patch.Field[string]
+	IsPortalReady *bool
+	UnitPrice     *CreateRateParams
+	Includes      []string
 }
 
 // DeleteProductParams holds parameters for soft-deleting a product.

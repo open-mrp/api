@@ -4,6 +4,7 @@ syntax = "proto3";
 package core;
 
 import "google/protobuf/timestamp.proto";
+import "core/core_patch.proto";
 import "core/core_identity_context.proto";
 option go_package = "shared/proto/core;core";
 
@@ -47,7 +48,7 @@ message CreateAccountGroupResponse {
 message UpdateAccountGroupRequest {
   string id = 1;
   optional string name = 2;
-  optional string description = 3;
+  optional StringPatch description = 3;
   optional string commission_policy = 4;
   optional string freight_policy = 5;
 }
@@ -120,13 +121,11 @@ message UpdateAccountUserRequest {
   optional string name = 2;
   optional string email = 3;
   optional string username = 4;
-  optional string role_id = 5;
-  optional string department_id = 6;
+  optional StringPatch role_id = 5;
+  optional StringPatch department_id = 6;
   // When non-empty, replaces the toggle state of the listed preferences.
   repeated NotificationPreferenceItem notification_preferences = 7;
   repeated string includes = 8;
-  bool clear_role_id = 9;
-  bool clear_department_id = 10;
 }
 message UpdateAccountUserResponse {
   AccountUserDetail account_user = 1;

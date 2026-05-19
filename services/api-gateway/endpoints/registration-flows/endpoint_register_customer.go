@@ -9,6 +9,7 @@ import (
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 )
 
 // Request to register a new or existing customer.
@@ -46,10 +47,10 @@ var sampleRegisterCustomerRequest = &RegisterCustomerRequest{
 	Phone:              new("+15551234567"),
 	Address: &apirequest.AddressInput{
 		Name:        "Headquarters",
-		StreetLine1: &sampleRegisterStreetLine1,
-		Locality:    &sampleRegisterLocality,
-		State:       &sampleRegisterState,
-		PostalCode:  &sampleRegisterPostalCode,
+		StreetLine1: patch.PtrNullable(&sampleRegisterStreetLine1),
+		Locality:    patch.PtrNullable(&sampleRegisterLocality),
+		State:       patch.PtrNullable(&sampleRegisterState),
+		PostalCode:  patch.PtrNullable(&sampleRegisterPostalCode),
 		Country:     "US",
 	},
 	PaymentTermID:  new("pt_01abc"),

@@ -15,7 +15,7 @@ type UpdateCustomerProductLineAccessRequest struct {
 	// Customer ID.
 	CustomerID string `path:"customer_id" validate:"required"`
 	// Product line IDs to grant access to.
-	ProductLineIDs *[]string `json:"product_line_ids,omitempty" nullable:"false"`
+	ProductLineIDs *[]string `json:"product_line_ids,omitempty"`
 }
 
 var sampleUpdateCustomerProductLineAccessRequest = &UpdateCustomerProductLineAccessRequest{

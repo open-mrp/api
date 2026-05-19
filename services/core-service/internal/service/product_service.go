@@ -527,6 +527,11 @@ func (s *productSvcImpl) UpdateProduct(ctx context.Context, params domain.Update
 				return apiErr
 			}
 
+			if old.Item != nil {
+				params.Description = params.Description.BackfillUnsetPtr(old.Item.Description)
+				params.Notes = params.Notes.BackfillUnsetPtr(old.Item.Notes)
+			}
+
 			// Check SKU uniqueness if being updated.
 			if params.SKU != nil {
 				exists, apiErr := txItemRepo.CheckSKUExists(txCtx, params.AccountID, *params.SKU, old.ItemID)

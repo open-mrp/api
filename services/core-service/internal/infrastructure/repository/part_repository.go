@@ -10,6 +10,7 @@ import (
 	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 	"github.com/augno/api/shared/pagination"
 	"github.com/augno/api/shared/tracing"
 )
@@ -387,6 +388,23 @@ func (r *partRepoImpl) InsertRate(ctx context.Context, id, value, numeratorUnitI
 		return tracing.Trace(span, apiErr)
 	}
 
+	return nil
+}
+
+func (r *partRepoImpl) UpdateItem(ctx context.Context, params domain.PartUpdateItemParams) *apierror.APIError {
+	ctx, span := partRepoTracer.Start(ctx, "repository.part.update_item")
+	defer span.End()
+
+	_, err := r.queries.PartUpdateItem(ctx, sqlc.PartUpdateItemParams{
+		Sku:         toNullString(params.SKU),
+		Description: patch.StringToNullString(params.Description),
+		Notes:       patch.StringToNullString(params.Notes),
+		ID:          params.ItemID,
+		AccountID:   params.AccountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
 	return nil
 }
 

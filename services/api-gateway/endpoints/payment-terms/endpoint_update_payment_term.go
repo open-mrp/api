@@ -16,7 +16,7 @@ type UpdatePaymentTermRequest struct {
 	// Payment term ID.
 	PaymentTermID string `path:"id" validate:"required"`
 	// Display name.
-	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
 }
 
 var sampleUpdatePaymentTermRequest = &UpdatePaymentTermRequest{

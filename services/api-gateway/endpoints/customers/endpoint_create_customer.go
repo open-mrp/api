@@ -10,6 +10,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 )
 
 // Request to create a customer.
@@ -17,45 +18,45 @@ type CreateCustomerRequest struct {
 	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
 	// Customer number. Auto-generated if omitted.
-	Number *string `json:"number,omitempty" validate:"omitempty,max=255" nullable:"false"`
+	Number *string `json:"number,omitempty" validate:"omitempty,max=255"`
 	// Note.
-	Note *string `json:"note,omitempty" nullable:"false"`
+	Note *string `json:"note,omitempty"`
 	// Email address.
-	Email *string `json:"email,omitempty" validate:"omitempty,max=255" nullable:"false"`
+	Email *string `json:"email,omitempty" validate:"omitempty,max=255"`
 	// Phone number.
-	Phone *string `json:"phone,omitempty" validate:"omitempty,max=255" nullable:"false"`
+	Phone *string `json:"phone,omitempty" validate:"omitempty,max=255"`
 	// Website URL.
-	URL *string `json:"url,omitempty" validate:"omitempty,max=255" nullable:"false"`
+	URL *string `json:"url,omitempty" validate:"omitempty,max=255"`
 	// Account status code.
-	StatusCode *constants.AccountStatusCode `json:"status,omitempty" default:"normal" nullable:"false"`
+	StatusCode *constants.AccountStatusCode `json:"status,omitempty" default:"normal"`
 	// EDI status.
-	EDIStatus *constants.EDIStatus `json:"edi_status,omitempty" nullable:"false" default:"disabled"`
+	EDIStatus *constants.EDIStatus `json:"edi_status,omitempty" default:"disabled"`
 	// Commission policy.
-	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy,omitempty" default:"commission_exempt" nullable:"false"`
+	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy,omitempty" default:"commission_exempt"`
 	// Freight policy.
-	FreightPolicy *constants.FreightPolicy `json:"freight_policy,omitempty" default:"billed_freight" nullable:"false"`
+	FreightPolicy *constants.FreightPolicy `json:"freight_policy,omitempty" default:"billed_freight"`
 	// Default carrier ID.
 	DefaultCarrierID string `json:"default_carrier_id" validate:"required"`
 	// Default service level ID.
-	DefaultServiceLevelID *string `json:"default_service_level_id,omitempty" validate:"omitempty" nullable:"false"`
+	DefaultServiceLevelID *string `json:"default_service_level_id,omitempty" validate:"omitempty"`
 	// Default payment term ID.
 	DefaultPaymentTermID string `json:"default_payment_term_id" validate:"required"`
 	// Default shipping term ID.
 	DefaultShippingTermID string `json:"default_shipping_term_id" validate:"required"`
 	// Default priority code.
-	DefaultPriorityCode *constants.PriorityCode `json:"default_priority,omitempty" default:"normal" nullable:"false"`
+	DefaultPriorityCode *constants.PriorityCode `json:"default_priority,omitempty" default:"normal"`
 	// The ID of the account user to assign as the default sales rep.
-	DefaultSalesRepID *string `json:"default_sales_rep_id,omitempty" validate:"omitempty" nullable:"false"`
+	DefaultSalesRepID *string `json:"default_sales_rep_id,omitempty" validate:"omitempty"`
 	// Price group IDs.
-	CustomerPriceGroupIDs []string `json:"customer_price_group_ids,omitempty" nullable:"false"`
+	CustomerPriceGroupIDs []string `json:"customer_price_group_ids,omitempty"`
 	// Customer type group ID.
 	CustomerTypeGroupID string `json:"customer_type_group_id" validate:"required"`
 	// Carrier billing type.
-	CarrierBillingType *constants.CarrierBillingType `json:"carrier_billing_type,omitempty" nullable:"false" default:"sender"`
+	CarrierBillingType *constants.CarrierBillingType `json:"carrier_billing_type,omitempty" default:"sender"`
 	// Carrier billing account number.
-	CarrierBillingAccount *string `json:"carrier_billing_account,omitempty" validate:"omitempty,max=255" nullable:"false"`
+	CarrierBillingAccount *string `json:"carrier_billing_account,omitempty" validate:"omitempty,max=255"`
 	// Credit limit.
-	CreditLimit *apirequest.QuantityInput `json:"credit_limit,omitempty" nullable:"false"`
+	CreditLimit *apirequest.QuantityInput `json:"credit_limit,omitempty"`
 	// Bill-to address.
 	BillToAddress apirequest.AddressInput `json:"bill_to_address" validate:"required"`
 	// Ship-to address.
@@ -76,18 +77,18 @@ var sampleCreateCustomerRequest = &CreateCustomerRequest{
 	CustomerTypeGroupID:   apiresource.SampleAccountGroupID,
 	BillToAddress: apirequest.AddressInput{
 		Name:        apiresource.SampleCustomerName,
-		StreetLine1: &sampleCreateCustomerStreetLine1,
-		Locality:    &sampleCreateCustomerLocality,
-		State:       &sampleCreateCustomerState,
-		PostalCode:  &sampleCreateCustomerPostalCode,
+		StreetLine1: patch.PtrNullable(&sampleCreateCustomerStreetLine1),
+		Locality:    patch.PtrNullable(&sampleCreateCustomerLocality),
+		State:       patch.PtrNullable(&sampleCreateCustomerState),
+		PostalCode:  patch.PtrNullable(&sampleCreateCustomerPostalCode),
 		Country:     "US",
 	},
 	ShipToAddress: apirequest.AddressInput{
 		Name:        apiresource.SampleCustomerName,
-		StreetLine1: &sampleCreateCustomerStreetLine1,
-		Locality:    &sampleCreateCustomerLocality,
-		State:       &sampleCreateCustomerState,
-		PostalCode:  &sampleCreateCustomerPostalCode,
+		StreetLine1: patch.PtrNullable(&sampleCreateCustomerStreetLine1),
+		Locality:    patch.PtrNullable(&sampleCreateCustomerLocality),
+		State:       patch.PtrNullable(&sampleCreateCustomerState),
+		PostalCode:  patch.PtrNullable(&sampleCreateCustomerPostalCode),
 		Country:     "US",
 	},
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 	"github.com/augno/api/shared/pagination"
 	"github.com/augno/api/shared/tracing"
 )
@@ -398,18 +399,13 @@ func (r *unitGroupRepoImpl) Update(ctx context.Context, params domain.UpdateUnit
 	ctx, span := unitGroupRepoTracer.Start(ctx, "repository.unit_group.update")
 	defer span.End()
 
-	updateNotes := params.Notes != nil
-	var notesVal gosql.NullString
-	if updateNotes {
-		notesVal = toNullString(*params.Notes)
-	}
-
+	updateNotes := params.Notes.WasProvided()
 	result, err := r.queries.UpdateUnitGroup(ctx, sqlc.UpdateUnitGroupParams{
 		ID:          params.UnitGroupID,
 		AccountID:   gosql.NullString{String: params.AccountID, Valid: true},
 		Name:        toNullString(params.Name),
 		UpdateNotes: updateNotes,
-		Notes:       notesVal,
+		Notes:       patch.StringToNullString(params.Notes),
 		BaseUnitID:  toNullString(params.BaseUnitID),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {

@@ -16,9 +16,9 @@ type UpdateSessionRequest struct {
 	// Session ID.
 	SessionID string `json:"-" path:"session_id" validate:"required"`
 	// Step to advance the session to.
-	Step *constants.RegistrationStep `json:"step,omitempty" nullable:"false"`
+	Step *constants.RegistrationStep `json:"step,omitempty"`
 	// Session data to merge into the existing session.
-	SessionData *UpdateSessionDataRequest `json:"session_data,omitempty" nullable:"false"`
+	SessionData *UpdateSessionDataRequest `json:"session_data,omitempty"`
 }
 
 var sampleUpdateSessionRequest = &UpdateSessionRequest{
@@ -36,21 +36,21 @@ func (*UpdateSessionRequest) SchemaExample() any {
 // Mutable form data for a session update.
 type UpdateSessionDataRequest struct {
 	// Display name for the user.
-	UserName *string `json:"user_name,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	UserName *string `json:"user_name,omitempty" validate:"omitempty,max=255"`
 	// Display name for the account.
-	AccountName *string `json:"account_name,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	AccountName *string `json:"account_name,omitempty" validate:"omitempty,max=255"`
 	// Billing address line 1.
-	BillingAddressLine1 *string `json:"billing_address_line1,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	BillingAddressLine1 *string `json:"billing_address_line1,omitempty" validate:"omitempty,max=255"`
 	// Billing address line 2.
-	BillingAddressLine2 *string `json:"billing_address_line2,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	BillingAddressLine2 *string `json:"billing_address_line2,omitempty" validate:"omitempty,max=255"`
 	// Billing address city.
-	BillingAddressCity *string `json:"billing_address_city,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	BillingAddressCity *string `json:"billing_address_city,omitempty" validate:"omitempty,max=255"`
 	// Billing address state.
-	BillingAddressState *string `json:"billing_address_state,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	BillingAddressState *string `json:"billing_address_state,omitempty" validate:"omitempty,max=255"`
 	// Billing address postal code.
-	BillingAddressPostalCode *string `json:"billing_address_postal_code,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	BillingAddressPostalCode *string `json:"billing_address_postal_code,omitempty" validate:"omitempty,max=255"`
 	// Billing address country.
-	BillingAddressCountry *string `json:"billing_address_country,omitempty" nullable:"false" validate:"omitempty,max=2"`
+	BillingAddressCountry *string `json:"billing_address_country,omitempty" validate:"omitempty,max=2"`
 }
 
 // Partially updates a registration session's step and form data; omitted fields are left unchanged.

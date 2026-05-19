@@ -201,13 +201,14 @@ func (r *accountUserRepoImpl) List(ctx context.Context, params domain.ListAccoun
 	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.list")
 	defer span.End()
 
-	queryLike := accountUserQueryLike(params.Query)
+	searchQuery, queryLike := buildAccountUserSearchParams(params.Query)
 
 	countResult, err := r.queries.CountAccountUsersFiltered(ctx, sqlc.CountAccountUsersFilteredParams{
 		AccountID:      params.AccountID,
 		IncludeRemoved: params.IncludeRemoved,
 		RoleType:       db.NullStringPtr(params.RoleType),
-		Query:          db.NullStringPtr(params.Query),
+		Query:          searchQuery,
+		Query_2:        searchQuery,
 		QueryLike:      queryLike,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -218,7 +219,8 @@ func (r *accountUserRepoImpl) List(ctx context.Context, params domain.ListAccoun
 		AccountID:      params.AccountID,
 		IncludeRemoved: params.IncludeRemoved,
 		RoleType:       db.NullStringPtr(params.RoleType),
-		Query:          db.NullStringPtr(params.Query),
+		Query:          searchQuery,
+		Query_2:        searchQuery,
 		QueryLike:      queryLike,
 		Limit:          params.Limit + 1,
 	}
@@ -240,6 +242,7 @@ func (r *accountUserRepoImpl) List(ctx context.Context, params domain.ListAccoun
 				IncludeRemoved:  base.IncludeRemoved,
 				RoleType:        base.RoleType,
 				Query:           base.Query,
+				Query_2:         base.Query_2,
 				QueryLike:       base.QueryLike,
 				CursorCreatedAt: cur.OccurredAt,
 				CursorID:        cur.ID,
@@ -259,6 +262,7 @@ func (r *accountUserRepoImpl) List(ctx context.Context, params domain.ListAccoun
 				IncludeRemoved:  base.IncludeRemoved,
 				RoleType:        base.RoleType,
 				Query:           base.Query,
+				Query_2:         base.Query_2,
 				QueryLike:       base.QueryLike,
 				CursorCreatedAt: sql.NullTime{Time: cur.OccurredAt, Valid: true},
 				CursorID:        sql.NullString{String: cur.ID, Valid: true},
@@ -296,6 +300,22 @@ func (r *accountUserRepoImpl) List(ctx context.Context, params domain.ListAccoun
 	}, nil
 }
 
+func buildAccountUserSearchParams(query *string) (sql.NullString, any) {
+	if query == nil || *query == "" {
+		return sql.NullString{}, nil
+	}
+	ft := db.NewFulltextSearch(query)
+	queryLike := accountUserQueryLike(query)
+	if ft.Fulltext.Valid {
+		return ft.Fulltext, queryLike
+	}
+	if ft.Like.Valid {
+		// LIKE-only (short query): use a non-null guard so username/email LIKE runs.
+		return sql.NullString{String: "", Valid: true}, queryLike
+	}
+	return sql.NullString{}, nil
+}
+
 func accountUserQueryLike(query *string) any {
 	if query == nil {
 		return nil
@@ -303,7 +323,7 @@ func accountUserQueryLike(query *string) any {
 	if *query == "" {
 		return nil
 	}
-	return *query
+	return db.EscapeLike(*query)
 }
 
 func accountUserDetailCreatedAt(d *domain.AccountUserDetail) time.Time { return d.CreatedAt }

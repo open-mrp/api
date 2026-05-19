@@ -8,6 +8,7 @@ syntax = "proto3";
 package core;
 
 import "google/protobuf/empty.proto";
+import public "core/core_patch.proto";
 import public "core/core_identity_context.proto";
 import public "core/core_analytics.proto";
 import public "core/core_account_groups.proto";

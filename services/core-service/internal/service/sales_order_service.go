@@ -19,6 +19,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/idempotency"
+	"github.com/augno/api/shared/patch"
 	"github.com/augno/api/shared/messaging"
 	"github.com/augno/api/shared/tracing"
 )
@@ -576,7 +577,7 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 					AccountID:   params.AccountID,
 					AddressID:   existing.BillingAddressID,
 					StreetLine1: params.BillToStreetLine1,
-					StreetLine2: params.BillToStreetLine2,
+					StreetLine2: patch.SetPtr(params.BillToStreetLine2),
 					Locality:    params.BillToLocality,
 					State:       params.BillToState,
 					PostalCode:  params.BillToPostalCode,
@@ -610,7 +611,7 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 					AccountID:   params.AccountID,
 					AddressID:   existing.ShippingAddressID,
 					StreetLine1: params.ShipToStreetLine1,
-					StreetLine2: params.ShipToStreetLine2,
+					StreetLine2: patch.SetPtr(params.ShipToStreetLine2),
 					Locality:    params.ShipToLocality,
 					State:       params.ShipToState,
 					PostalCode:  params.ShipToPostalCode,

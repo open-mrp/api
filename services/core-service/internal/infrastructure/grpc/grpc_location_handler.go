@@ -5,6 +5,7 @@ import (
 
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/shared/contracts"
+	"github.com/augno/api/shared/patch"
 	pb "github.com/augno/api/shared/proto/core"
 
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -144,13 +145,12 @@ func (h *gRPCHandler) UpdateLocation(ctx context.Context, req *pb.UpdateLocation
 	defer finalizeIdempotency()
 
 	params := domain.UpdateLocationParams{
-		LocationID:     req.Id,
-		Name:           req.Name,
-		TypeCode:       req.TypeCode,
-		ParentID:       req.ParentId,
-		ChildIDs:       req.ChildIds,
-		UpdateChildren: req.UpdateChildren,
-		Includes:       req.Includes,
+		LocationID: req.Id,
+		Name:       req.Name,
+		TypeCode:   req.TypeCode,
+		ParentID:   patch.StringFieldFromProto(req.ParentId),
+		ChildIDs:   stringListPatchToSliceField(req.ChildIds),
+		Includes:   req.Includes,
 	}
 
 	sl, apiErr := h.locationSvc.UpdateLocation(ctx, params)

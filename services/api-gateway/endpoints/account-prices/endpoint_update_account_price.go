@@ -16,19 +16,19 @@ type UpdateAccountPriceRequest struct {
 	// Account price ID.
 	AccountPriceID string `path:"id" validate:"required"`
 	// Recipient account ID.
-	RecipientAccountID *string `json:"recipient_account_id,omitempty" nullable:"false" validate:"omitempty"`
+	RecipientAccountID *string `json:"recipient_account_id,omitempty" validate:"omitempty"`
 	// Product line ID.
-	ProductLineID *string `json:"product_line_id,omitempty" nullable:"false" validate:"omitempty"`
+	ProductLineID *string `json:"product_line_id,omitempty" validate:"omitempty"`
 	// Rate value as a decimal string.
-	RateValue *string `json:"rate_value,omitempty" nullable:"false"`
+	RateValue *string `json:"rate_value,omitempty"`
 	// Rate numerator unit ID.
-	RateNumeratorUnitID *string `json:"rate_numerator_unit_id,omitempty" nullable:"false" validate:"omitempty"`
+	RateNumeratorUnitID *string `json:"rate_numerator_unit_id,omitempty" validate:"omitempty"`
 	// Rate denominator unit ID.
-	RateDenominatorUnitID *string `json:"rate_denominator_unit_id,omitempty" nullable:"false" validate:"omitempty"`
+	RateDenominatorUnitID *string `json:"rate_denominator_unit_id,omitempty" validate:"omitempty"`
 	// Item category IDs to constrain this price to. Replaces existing categories.
-	CategoryIDs *[]string `json:"category_ids,omitempty" nullable:"false"`
+	CategoryIDs *[]string `json:"category_ids,omitempty"`
 	// Attribute IDs to constrain this price to. Replaces existing attributes.
-	AttributeIDs *[]string `json:"attribute_ids,omitempty" nullable:"false"`
+	AttributeIDs *[]string `json:"attribute_ids,omitempty"`
 }
 
 var sampleUpdateAccountPriceRequest = &UpdateAccountPriceRequest{

@@ -18,13 +18,13 @@ type UpdateServiceLevelRequest struct {
 	// Service level ID.
 	ServiceLevelID string `path:"id" validate:"required"`
 	// Display name.
-	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
 	// Service level code.
-	Code *string `json:"code,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	Code *string `json:"code,omitempty" validate:"omitempty,max=255"`
 	// Whether this service level will be available for customers to select in the customer portal.
-	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility,omitempty" nullable:"false"`
+	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility,omitempty"`
 	// Default service levels are the default-selected service level for that carrier.
-	IsDefault *bool `json:"is_default,omitempty" nullable:"false"`
+	IsDefault *bool `json:"is_default,omitempty"`
 }
 
 var sampleUpdateServiceLevelName = "Express Shipping"

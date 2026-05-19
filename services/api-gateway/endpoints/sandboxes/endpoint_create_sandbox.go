@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 )
 
 // Request to create a sandbox.
@@ -16,14 +17,14 @@ type CreateSandboxRequest struct {
 	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
 	// Controls whether the sandbox is blank or seeded with sample data.
-	Mode *constants.SandboxMode `json:"mode,omitempty" validate:"omitempty" default:"blank"`
+	Mode patch.Nullable[constants.SandboxMode] `json:"mode,omitzero" default:"blank"`
 }
 
 var sampleSandboxMode = constants.SandboxModeBlank
 
 var sampleCreateSandboxRequest = &CreateSandboxRequest{
 	Name: "Integration Testing",
-	Mode: &sampleSandboxMode,
+	Mode: patch.SetNullable(sampleSandboxMode),
 }
 
 func (*CreateSandboxRequest) SchemaExample() any {

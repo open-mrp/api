@@ -16,7 +16,7 @@ type UpdatePropertyRequest struct {
 	// Property ID.
 	PropertyID string `path:"id" validate:"required"`
 	// Name.
-	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
 }
 
 var sampleUpdatePropertyRequest = &UpdatePropertyRequest{

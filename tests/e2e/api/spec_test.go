@@ -268,6 +268,12 @@ var excludedUpdateOperations = map[string]bool{
 	"update-carrier-option": true,
 }
 
+// excludedCreateOperations are operationIDs omitted from POST body write tests.
+var excludedCreateOperations = map[string]bool{}
+
+// excludedPutOperations are operationIDs omitted from PUT body write tests.
+var excludedPutOperations = map[string]bool{}
+
 // isExcludedFromPagination returns true if the path or operationID should be
 // excluded from pagination tests.
 func isExcludedFromPagination(path, operationID string) bool {
@@ -333,6 +339,18 @@ func LoadListEndpoints() ([]ListEndpointSpec, error) {
 	return endpoints, nil
 }
 
+// BodyEndpointSpec describes a POST or PUT endpoint with a JSON request body.
+type BodyEndpointSpec struct {
+	Path        string
+	OperationID string
+	PathParams  []string
+}
+
+// ResolvePath replaces path parameters with seed data values.
+func (e *BodyEndpointSpec) ResolvePath() (string, bool) {
+	return resolveEndpointPath(e.Path, e.PathParams)
+}
+
 // UpdateEndpointSpec describes a single update (PATCH) endpoint extracted from the OpenAPI spec.
 type UpdateEndpointSpec struct {
 	Path                string
@@ -343,19 +361,23 @@ type UpdateEndpointSpec struct {
 
 // ResolvePath replaces path parameters with seed data values.
 func (e *UpdateEndpointSpec) ResolvePath() (string, bool) {
-	if len(e.PathParams) == 0 {
-		return e.Path, true
+	return resolveEndpointPath(e.Path, e.PathParams)
+}
+
+func resolveEndpointPath(path string, pathParams []string) (string, bool) {
+	if len(pathParams) == 0 {
+		return path, true
 	}
 
-	resolved := e.Path
-	for _, param := range e.PathParams {
+	resolved := path
+	for _, param := range pathParams {
 		var seedVal string
 		if param == "id" {
 			// Use longest prefix match to avoid shorter prefixes
 			// incorrectly matching nested resource paths.
 			var bestPrefix string
 			for prefix, val := range pathSpecificIDSeeds {
-				if strings.HasPrefix(e.Path, prefix) && len(prefix) > len(bestPrefix) {
+				if strings.HasPrefix(path, prefix) && len(prefix) > len(bestPrefix) {
 					bestPrefix = prefix
 					seedVal = val
 				}
@@ -431,6 +453,57 @@ func LoadUpdateEndpoints() ([]UpdateEndpointSpec, error) {
 						ep.NullableClearFields = append(ep.NullableClearFields, name)
 					}
 				}
+			}
+		}
+
+		endpoints = append(endpoints, ep)
+	}
+
+	return endpoints, nil
+}
+
+// LoadBodyEndpoints parses the OpenAPI spec and returns POST or PUT endpoints with JSON bodies.
+func LoadBodyEndpoints(httpMethod string, excluded map[string]bool) ([]BodyEndpointSpec, error) {
+	specPath := findSpecPath()
+
+	data, err := os.ReadFile(specPath)
+	if err != nil {
+		return nil, fmt.Errorf("reading OpenAPI spec at %s: %w", specPath, err)
+	}
+
+	var spec openAPISpec
+	if err := json.Unmarshal(data, &spec); err != nil {
+		return nil, fmt.Errorf("parsing OpenAPI spec: %w", err)
+	}
+
+	var endpoints []BodyEndpointSpec
+	for path, methods := range spec.Paths {
+		if isExcludedPath(path) {
+			continue
+		}
+
+		op, ok := methods[httpMethod]
+		if !ok {
+			continue
+		}
+		if excluded[op.OperationID] {
+			continue
+		}
+		if op.RequestBody == nil {
+			continue
+		}
+		if _, ok := op.RequestBody.Content["application/json"]; !ok {
+			continue
+		}
+
+		ep := BodyEndpointSpec{
+			Path:        path,
+			OperationID: op.OperationID,
+		}
+
+		for _, p := range op.Parameters {
+			if p.In == "path" {
+				ep.PathParams = append(ep.PathParams, p.Name)
 			}
 		}
 

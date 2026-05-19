@@ -71,16 +71,16 @@ func (m *sandboxSvcImpl) ListSandboxes(ctx context.Context, req *apiresource.Pag
 }
 
 func (m *sandboxSvcImpl) CreateSandbox(ctx context.Context, req *CreateSandboxRequest) (*apiresource.Sandbox, *apierror.APIError) {
-	var mode pb.SandboxMode
-	if req.Mode != nil && *req.Mode == constants.SandboxModeSeeded {
-		mode = pb.SandboxMode_SANDBOX_MODE_SEEDED
+	var pbMode pb.SandboxMode
+	if m, ok := req.Mode.Value(); ok && m == constants.SandboxModeSeeded {
+		pbMode = pb.SandboxMode_SANDBOX_MODE_SEEDED
 	} else {
-		mode = pb.SandboxMode_SANDBOX_MODE_BLANK
+		pbMode = pb.SandboxMode_SANDBOX_MODE_BLANK
 	}
 
 	pbReq := &pb.CreateSandboxRequest{
 		Name:     req.Name,
-		Mode:     mode,
+		Mode:     pbMode,
 		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 

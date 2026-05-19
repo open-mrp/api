@@ -17,7 +17,7 @@ type UpdateReceivingOrderLineRequest struct {
 	// Receiving order line ID.
 	LineID string `path:"id" validate:"required"`
 	// Quantity value to set for this line.
-	QuantityValue *string `json:"quantity_value,omitempty" nullable:"false"`
+	QuantityValue *string `json:"quantity_value,omitempty"`
 }
 
 var sampleUpdateReceivingOrderLineQuantityValue = "50"

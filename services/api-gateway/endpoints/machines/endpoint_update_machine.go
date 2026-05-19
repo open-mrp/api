@@ -15,11 +15,11 @@ type UpdateMachineRequest struct {
 	// Machine ID.
 	MachineID string `path:"id" validate:"required"`
 	// Display name.
-	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
 	// Serial number.
-	SerialNumber *string `json:"serial_number,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	SerialNumber *string `json:"serial_number,omitempty" validate:"omitempty,max=255"`
 	// Notes.
-	Notes *string `json:"notes,omitempty" nullable:"false"`
+	Notes *string `json:"notes,omitempty"`
 }
 
 var sampleUpdateMachineName = "Updated CNC Router"

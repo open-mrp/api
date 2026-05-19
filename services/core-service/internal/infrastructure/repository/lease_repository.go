@@ -27,7 +27,7 @@ func (r *leaseRepoImpl) Acquire(ctx context.Context, name, holder string, ttl ti
 	result, err := r.queries.AcquireTaskLease(ctx, sqlc.AcquireTaskLeaseParams{
 		Name:    name,
 		Holder:  holder,
-		Column3: int64(ttl / time.Second),
+		DATEADD: int64(ttl / time.Second),
 	})
 	if err != nil {
 		span.RecordError(err)
@@ -48,7 +48,7 @@ func (r *leaseRepoImpl) Renew(ctx context.Context, name, holder string, ttl time
 	result, err := r.queries.RenewTaskLease(ctx, sqlc.RenewTaskLeaseParams{
 		Name:    name,
 		Holder:  holder,
-		Column1: int64(ttl / time.Second),
+		DATEADD: int64(ttl / time.Second),
 	})
 	if err != nil {
 		span.RecordError(err)

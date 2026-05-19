@@ -15,7 +15,7 @@ type UpdateAccountGroupProductLineAccessRequest struct {
 	// Account group ID.
 	AccountGroupID string `path:"account_group_id" validate:"required"`
 	// Product line IDs to grant access to.
-	ProductLineIDs *[]string `json:"product_line_ids,omitempty" nullable:"false"`
+	ProductLineIDs *[]string `json:"product_line_ids,omitempty"`
 }
 
 var sampleUpdateAccountGroupProductLineAccessRequest = &UpdateAccountGroupProductLineAccessRequest{

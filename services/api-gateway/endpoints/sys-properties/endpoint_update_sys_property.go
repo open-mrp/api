@@ -15,7 +15,7 @@ type UpdateSysPropertyRequest struct {
 	// System property ID.
 	SysPropertyID string `path:"id" validate:"required"`
 	// Counter value.
-	Value *int32 `json:"value,omitempty" nullable:"false"`
+	Value *int32 `json:"value,omitempty"`
 }
 
 var sampleUpdateSysPropertyValue int32 = 30

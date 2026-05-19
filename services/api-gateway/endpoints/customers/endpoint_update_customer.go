@@ -10,6 +10,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 )
 
 // Request to partially update a customer.
@@ -17,51 +18,51 @@ type UpdateCustomerRequest struct {
 	// Customer ID.
 	CustomerID string `path:"id" validate:"required"`
 	// Customer name.
-	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
 	// Customer number.
-	Number *string `json:"number,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	Number *string `json:"number,omitempty" validate:"omitempty,max=255"`
 	// Note.
-	Note *string `json:"note,omitempty" nullable:"true"`
+	Note *patch.Field[string] `json:"note,omitempty"`
 	// Account status code.
-	StatusCode *constants.AccountStatusCode `json:"status,omitempty" nullable:"false"`
+	StatusCode *constants.AccountStatusCode `json:"status,omitempty"`
 	// Email address. Send null to clear.
-	Email *string `json:"email,omitempty" validate:"omitempty,max=255" nullable:"true"`
+	Email *patch.Field[string] `json:"email,omitempty" validate:"omitempty,max=255"`
 	// Phone number. Send null to clear.
-	Phone *string `json:"phone,omitempty" validate:"omitempty,max=255" nullable:"true"`
+	Phone *patch.Field[string] `json:"phone,omitempty" validate:"omitempty,max=255"`
 	// Website URL. Send null to clear.
-	URL *string `json:"url,omitempty" validate:"omitempty,max=255" nullable:"true"`
+	URL *patch.Field[string] `json:"url,omitempty" validate:"omitempty,max=255"`
 	// EDI status.
-	EDIStatus *constants.EDIStatus `json:"edi_status,omitempty" nullable:"false"`
+	EDIStatus *constants.EDIStatus `json:"edi_status,omitempty"`
 	// Commission policy.
-	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy,omitempty" nullable:"false"`
+	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy,omitempty"`
 	// Freight policy.
-	FreightPolicy *constants.FreightPolicy `json:"freight_policy,omitempty" nullable:"false"`
+	FreightPolicy *constants.FreightPolicy `json:"freight_policy,omitempty"`
 	// Default carrier ID.
-	DefaultCarrierID *string `json:"default_carrier_id,omitempty" nullable:"false" validate:"omitempty"`
+	DefaultCarrierID *string `json:"default_carrier_id,omitempty" validate:"omitempty"`
 	// Default service level ID.
-	DefaultServiceLevelID *string `json:"default_service_level_id,omitempty" nullable:"true" validate:"omitempty"`
+	DefaultServiceLevelID *patch.Field[string] `json:"default_service_level_id,omitempty" validate:"omitempty"`
 	// Default payment term ID.
-	DefaultPaymentTermID *string `json:"default_payment_term_id,omitempty" nullable:"false" validate:"omitempty"`
+	DefaultPaymentTermID *string `json:"default_payment_term_id,omitempty" validate:"omitempty"`
 	// Default shipping term ID.
-	DefaultShippingTermID *string `json:"default_shipping_term_id,omitempty" nullable:"false" validate:"omitempty"`
+	DefaultShippingTermID *string `json:"default_shipping_term_id,omitempty" validate:"omitempty"`
 	// Default priority code.
-	DefaultPriorityCode *constants.PriorityCode `json:"default_priority,omitempty" nullable:"false"`
+	DefaultPriorityCode *constants.PriorityCode `json:"default_priority,omitempty"`
 	// The ID of the account user to assign as the default sales rep.
-	DefaultSalesRepID *string `json:"default_sales_rep_id,omitempty" nullable:"true" validate:"omitempty"`
+	DefaultSalesRepID *patch.Field[string] `json:"default_sales_rep_id,omitempty" validate:"omitempty"`
 	// Bill-to address ID.
-	BillToAddressID *string `json:"bill_to_address_id,omitempty" nullable:"true" validate:"omitempty"`
+	BillToAddressID *patch.Field[string] `json:"bill_to_address_id,omitempty" validate:"omitempty"`
 	// Ship-to address ID.
-	ShipToAddressID *string `json:"ship_to_address_id,omitempty" nullable:"true" validate:"omitempty"`
+	ShipToAddressID *patch.Field[string] `json:"ship_to_address_id,omitempty" validate:"omitempty"`
 	// Price group IDs. Replaces all existing price groups when provided.
-	CustomerPriceGroupIDs *[]string `json:"customer_price_group_ids,omitempty" nullable:"false"`
+	CustomerPriceGroupIDs *[]string `json:"customer_price_group_ids,omitempty"`
 	// Customer type group ID.
-	CustomerTypeGroupID *string `json:"customer_type_group_id,omitempty" nullable:"false" validate:"omitempty"`
+	CustomerTypeGroupID *string `json:"customer_type_group_id,omitempty" validate:"omitempty"`
 	// Carrier billing type.
-	CarrierBillingType *constants.CarrierBillingType `json:"carrier_billing_type,omitempty" nullable:"false"`
+	CarrierBillingType *constants.CarrierBillingType `json:"carrier_billing_type,omitempty"`
 	// Carrier billing account number.
-	CarrierBillingAccount *string `json:"carrier_billing_account,omitempty" nullable:"true" validate:"omitempty,max=255"`
+	CarrierBillingAccount *patch.Field[string] `json:"carrier_billing_account,omitempty" validate:"omitempty,max=255"`
 	// Credit limit. Send null to clear.
-	CreditLimit apirequest.NullableInput[apirequest.QuantityInput] `json:"credit_limit"`
+	CreditLimit *patch.Field[apirequest.QuantityInput] `json:"credit_limit,omitempty"`
 }
 
 var sampleUpdateCustomerName = "Acme Corp Updated"
@@ -70,7 +71,7 @@ var sampleUpdateCustomerDefaultCarrierID = apiresource.SampleCarrierID
 var sampleUpdateCustomerFreightPolicy = constants.FreightPolicyBilled
 var sampleUpdateCustomerRequest = &UpdateCustomerRequest{
 	Name:             &sampleUpdateCustomerName,
-	Note:             &sampleUpdateCustomerNote,
+	Note:             new(patch.Set(sampleUpdateCustomerNote)),
 	DefaultCarrierID: &sampleUpdateCustomerDefaultCarrierID,
 	FreightPolicy:    &sampleUpdateCustomerFreightPolicy,
 }

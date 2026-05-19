@@ -11,6 +11,7 @@ import (
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -374,37 +375,31 @@ func (m *customerSvcImpl) UpdateCustomer(ctx context.Context, req *UpdateCustome
 		Id:                       req.CustomerID,
 		Name:                     req.Name,
 		Number:                   req.Number,
-		Note:                     req.Note,
-		Email:                    req.Email,
-		Phone:                    req.Phone,
-		Url:                      req.URL,
+		Note:                     patch.StringFieldPtrToProto(req.Note),
+		Email:                    patch.StringFieldPtrToProto(req.Email),
+		Phone:                    patch.StringFieldPtrToProto(req.Phone),
+		Url:                      patch.StringFieldPtrToProto(req.URL),
 		StatusCode:               optAccountStatusCodeToStringPtr(req.StatusCode),
 		IsEdiEnabled:             ediStatusToBoolPtr(req.EDIStatus),
 		CommissionPolicy:         optCommissionPolicyToStringPtr(req.CommissionPolicy),
 		FreightPolicy:            optFreightPolicyToStringPtr(req.FreightPolicy),
 		DefaultCarrierId:         req.DefaultCarrierID,
-		DefaultServiceLevelId:    req.DefaultServiceLevelID,
+		DefaultServiceLevelId:    patch.StringFieldPtrToProto(req.DefaultServiceLevelID),
 		DefaultPaymentTermId:     req.DefaultPaymentTermID,
 		DefaultShippingTermId:    req.DefaultShippingTermID,
 		DefaultPriorityCode:      optPriorityCodeToStringPtr(req.DefaultPriorityCode),
-		DefaultSalesRepId:        req.DefaultSalesRepID,
-		BillToAddressId:          req.BillToAddressID,
-		ShipToAddressId:          req.ShipToAddressID,
+		DefaultSalesRepId:        patch.StringFieldPtrToProto(req.DefaultSalesRepID),
+		BillToAddressId:          patch.StringFieldPtrToProto(req.BillToAddressID),
+		ShipToAddressId:          patch.StringFieldPtrToProto(req.ShipToAddressID),
 		CustomerPriceGroupIds:    derefStringSlice(req.CustomerPriceGroupIDs),
 		CustomerTypeGroupId:      req.CustomerTypeGroupID,
 		CarrierBillingType:       optCarrierBillingTypeToStringPtr(req.CarrierBillingType),
-		CarrierBillingAccount:    req.CarrierBillingAccount,
+		CarrierBillingAccount:    patch.StringFieldPtrToProto(req.CarrierBillingAccount),
 		HasCustomerPriceGroupIds: req.CustomerPriceGroupIDs != nil,
 		Includes:                 appctx.GetRequestedIncludeKeys(ctx),
 	}
 
-	if req.CreditLimit.IsNull() {
-		empty := ""
-		pbReq.CreditLimitValue = &empty
-	} else if v := req.CreditLimit.Value(); v != nil {
-		pbReq.CreditLimitValue = &v.Value
-		pbReq.CreditLimitUnitId = &v.UnitID
-	}
+	pbReq.CreditLimit = apirequest.QuantityFieldPtrToProto(req.CreditLimit)
 
 	resp, apiErr := grpcutil.CallRPC(ctx, customerSvcTracer, "service.customers.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateCustomerResponse, error) {
@@ -425,14 +420,14 @@ func addressInputToCustomerProto(a *apirequest.AddressInput) *pb.CreateCustomerA
 	}
 	return &pb.CreateCustomerAddressInput{
 		Name:         a.Name,
-		Phone:        a.Phone,
-		Email:        a.Email,
+		Phone:        a.Phone.Ptr(),
+		Email:        a.Email.Ptr(),
 		IsDropShip:   addressTypeToDropShip(a.Type),
-		StreetLine_1: a.StreetLine1,
-		StreetLine_2: a.StreetLine2,
-		Locality:     a.Locality,
-		State:        a.State,
-		PostalCode:   a.PostalCode,
+		StreetLine_1: a.StreetLine1.Ptr(),
+		StreetLine_2: a.StreetLine2.Ptr(),
+		Locality:     a.Locality.Ptr(),
+		State:        a.State.Ptr(),
+		PostalCode:   a.PostalCode.Ptr(),
 		Country:      a.Country,
 	}
 }

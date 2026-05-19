@@ -104,20 +104,20 @@ func (m *materialSvcImpl) GetMaterial(ctx context.Context, req *RetrieveMaterial
 func (m *materialSvcImpl) CreateMaterial(ctx context.Context, req *CreateMaterialRequest) (*apiresource.Material, *apierror.APIError) {
 	pbReq := &pb.CreateMaterialRequest{
 		Sku:          req.SKU,
-		Description:  req.Description,
-		Notes:        req.Notes,
+		Description:  req.Description.Ptr(),
+		Notes:        req.Notes.Ptr(),
 		CategoryId:   req.CategoryID,
-		UnitPrice:    rateInputToProto(req.UnitPrice),
-		UnitCost:     rateInputToProto(req.UnitCost),
-		BurnRate:     rateInputToProto(req.BurnRate),
+		UnitPrice:    rateInputToProto(req.UnitPrice.Ptr()),
+		UnitCost:     rateInputToProto(req.UnitCost.Ptr()),
+		BurnRate:     rateInputToProto(req.BurnRate.Ptr()),
 		AttributeIds: req.AttributeIDs,
 		Includes:     appctx.GetRequestedIncludeKeys(ctx),
 	}
-	if req.OrderPoint != nil {
-		pbReq.OrderPoint = &pb.QuantityInput{Value: req.OrderPoint.Value, UnitId: req.OrderPoint.UnitID}
+	if q, ok := req.OrderPoint.Value(); ok {
+		pbReq.OrderPoint = &pb.QuantityInput{Value: q.Value, UnitId: q.UnitID}
 	}
-	if req.LeadTime != nil {
-		pbReq.LeadTime = &pb.QuantityInput{Value: req.LeadTime.Value, UnitId: req.LeadTime.UnitID}
+	if q, ok := req.LeadTime.Value(); ok {
+		pbReq.LeadTime = &pb.QuantityInput{Value: q.Value, UnitId: q.UnitID}
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, materialSvcTracer, "service.materials.create", domain.ServiceName,
@@ -139,7 +139,7 @@ func (m *materialSvcImpl) UpdateMaterial(ctx context.Context, req *UpdateMateria
 		UpdateDescription: req.Description != nil,
 		Notes:             req.Notes,
 		UpdateNotes:       req.Notes != nil,
-		UnitCost:          rateInputToProto(req.UnitCost),
+		UnitCost:          rateInputToProto(req.UnitCost.Ptr()),
 		Includes:          appctx.GetRequestedIncludeKeys(ctx),
 	}
 	if req.OrderPoint != nil {

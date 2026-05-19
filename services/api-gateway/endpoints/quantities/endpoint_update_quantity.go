@@ -16,13 +16,13 @@ type UpdateQuantityRequest struct {
 	// Quantity ID.
 	QuantityID string `path:"id" validate:"required"`
 	// Decimal value.
-	Value *string `json:"value,omitempty" nullable:"false"`
+	Value *string `json:"value,omitempty"`
 	// Unit ID.
-	UnitID *string `json:"unit_id,omitempty" nullable:"false" validate:"omitempty"`
+	UnitID *string `json:"unit_id,omitempty" validate:"omitempty"`
 	// Owner resource ID.
-	ObjectID *string `json:"object_id,omitempty" nullable:"false" validate:"omitempty"`
+	ObjectID *string `json:"object_id,omitempty" validate:"omitempty"`
 	// Owner resource type (e.g. "item", "production_step").
-	ObjectType *string `json:"object_type,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	ObjectType *string `json:"object_type,omitempty" validate:"omitempty,max=255"`
 }
 
 var sampleUpdateQuantityValue = "50.000000000000000000000000000000"

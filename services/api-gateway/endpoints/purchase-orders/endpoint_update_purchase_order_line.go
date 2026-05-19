@@ -17,29 +17,29 @@ type UpdatePurchaseOrderLineRequest struct {
 	// Purchase order line ID.
 	PurchaseOrderLineID string `path:"line_id" validate:"required"`
 	// Product ID.
-	ProductID *string `json:"product_id,omitempty" nullable:"true" validate:"omitempty"`
+	ProductID *string `json:"product_id,omitempty" validate:"omitempty"`
 	// Item ID.
-	ItemID *string `json:"item_id,omitempty" nullable:"true" validate:"omitempty"`
+	ItemID *string `json:"item_id,omitempty" validate:"omitempty"`
 	// Product SKU.
-	ProductSKU *string `json:"product_sku,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	ProductSKU *string `json:"product_sku,omitempty" validate:"omitempty,max=255"`
 	// Product description.
-	ProductDescription *string `json:"product_description,omitempty" nullable:"false"`
+	ProductDescription *string `json:"product_description,omitempty"`
 	// Quantity value.
-	QuantityValue *string `json:"quantity_value,omitempty" nullable:"false" format:"decimal"`
+	QuantityValue *string `json:"quantity_value,omitempty" format:"decimal"`
 	// Quantity unit ID.
-	QuantityUnitID *string `json:"quantity_unit_id,omitempty" nullable:"false" validate:"omitempty"`
+	QuantityUnitID *string `json:"quantity_unit_id,omitempty" validate:"omitempty"`
 	// Unit price value.
-	UnitPriceValue *string `json:"unit_price_value,omitempty" nullable:"false" format:"decimal"`
+	UnitPriceValue *string `json:"unit_price_value,omitempty" format:"decimal"`
 	// Unit price numerator unit ID.
-	UnitPriceNumeratorUnitID *string `json:"unit_price_numerator_unit_id,omitempty" nullable:"false" validate:"omitempty"`
+	UnitPriceNumeratorUnitID *string `json:"unit_price_numerator_unit_id,omitempty" validate:"omitempty"`
 	// Unit price denominator unit ID.
-	UnitPriceDenominatorUnitID *string `json:"unit_price_denominator_unit_id,omitempty" nullable:"false" validate:"omitempty"`
+	UnitPriceDenominatorUnitID *string `json:"unit_price_denominator_unit_id,omitempty" validate:"omitempty"`
 	// Unit cost value.
-	UnitCostValue *string `json:"unit_cost_value,omitempty" nullable:"false" format:"decimal"`
+	UnitCostValue *string `json:"unit_cost_value,omitempty" format:"decimal"`
 	// Unit cost numerator unit ID.
-	UnitCostNumeratorUnitID *string `json:"unit_cost_numerator_unit_id,omitempty" nullable:"false" validate:"omitempty"`
+	UnitCostNumeratorUnitID *string `json:"unit_cost_numerator_unit_id,omitempty" validate:"omitempty"`
 	// Unit cost denominator unit ID.
-	UnitCostDenominatorUnitID *string `json:"unit_cost_denominator_unit_id,omitempty" nullable:"false" validate:"omitempty"`
+	UnitCostDenominatorUnitID *string `json:"unit_cost_denominator_unit_id,omitempty" validate:"omitempty"`
 }
 
 var sampleUpdatePOLineProductID = apiresource.SampleProductID

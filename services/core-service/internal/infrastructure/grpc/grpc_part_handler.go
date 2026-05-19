@@ -5,6 +5,7 @@ import (
 
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/shared/contracts"
+	"github.com/augno/api/shared/patch"
 	pb "github.com/augno/api/shared/proto/core"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -156,13 +157,11 @@ func (h *gRPCHandler) UpdatePart(ctx context.Context, req *pb.UpdatePartRequest)
 	defer finalizeIdempotency()
 
 	params := domain.UpdatePartParams{
-		PartID:            req.Id,
-		SKU:               req.Sku,
-		Description:       req.Description,
-		UpdateDescription: req.UpdateDescription,
-		Notes:             req.Notes,
-		UpdateNotes:       req.UpdateNotes,
-		Includes:          req.Includes,
+		PartID:      req.Id,
+		SKU:         req.Sku,
+		Description: patch.StringFieldFromProto(req.Description),
+		Notes:       patch.StringFieldFromProto(req.Notes),
+		Includes:    req.Includes,
 	}
 
 	part, apiErr := h.partSvc.UpdatePart(ctx, params)

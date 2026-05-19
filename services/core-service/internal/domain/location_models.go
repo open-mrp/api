@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/augno/api/shared/pagination"
+	"github.com/augno/api/shared/patch"
 )
 
 // Location represents a location within an account.
@@ -69,14 +70,13 @@ type CreateLocationParams struct {
 
 // UpdateLocationParams contains the parameters for updating a location.
 type UpdateLocationParams struct {
-	AccountID      string
-	LocationID     string
-	Name           *string
-	TypeCode       *string
-	ParentID       *string
-	ChildIDs       []string
-	UpdateChildren bool
-	Includes       []string
+	AccountID  string
+	LocationID string
+	Name       *string
+	TypeCode   *string
+	ParentID   patch.Field[string]
+	ChildIDs   patch.Field[[]string]
+	Includes   []string
 }
 
 // DeleteLocationParams contains the parameters for deleting a location.

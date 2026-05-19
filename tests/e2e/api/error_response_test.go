@@ -5,6 +5,8 @@ package api_test
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -88,22 +90,76 @@ func TestUpdateEndpoints_UnknownFieldRejected(t *testing.T) {
 			}
 
 			statusCode, body, err := apiClient.Patch(path, map[string]any{
-				"__bogus_e2e_field__": "should_be_rejected",
+				bogusE2EJSONField: "should_be_rejected",
 			}, newIdempotencyKey())
 			require.NoError(t, err, "PATCH %s failed", path)
-			skipOnNonClientError(t, path, statusCode)
+			assertJSONUnknownFieldRejected(t, http.MethodPatch, path, statusCode, body)
+		})
+	}
+}
 
-			assert.Equal(t, 400, statusCode,
-				"PATCH %s with unknown field should return 400, got %d: %s",
-				path, statusCode, string(body))
-
-			if statusCode == 400 {
-				// Most endpoints return "parameter_unknown" but some return "validation_failed".
-				errObj := requireErrorResponse(t, body, "", "invalid_request_error")
-				code := errObj["code"]
-				assert.True(t, code == "parameter_unknown" || code == "validation_failed",
-					"PATCH %s: error.code should be parameter_unknown or validation_failed, got %v", path, code)
+// TestCreateEndpoints_UnknownFieldRejected validates that POST endpoints reject
+// requests with unknown fields in the JSON body.
+func TestCreateEndpoints_UnknownFieldRejected(t *testing.T) {
+	t.Parallel()
+	for _, ep := range createEndpoints {
+		t.Run(ep.OperationID, func(t *testing.T) {
+			t.Parallel()
+			path, ok := ep.ResolvePath()
+			if !ok {
+				t.Skipf("Cannot resolve path params for %s", ep.Path)
+				return
 			}
+
+			statusCode, body, err := apiClient.Post(path, map[string]any{
+				bogusE2EJSONField: "should_be_rejected",
+			}, newIdempotencyKey())
+			require.NoError(t, err, "POST %s failed", path)
+			assertJSONUnknownFieldRejected(t, http.MethodPost, path, statusCode, body)
+		})
+	}
+}
+
+// TestPutEndpoints_UnknownFieldRejected validates that PUT endpoints reject
+// requests with unknown fields in the JSON body.
+func TestPutEndpoints_UnknownFieldRejected(t *testing.T) {
+	t.Parallel()
+	for _, ep := range putEndpoints {
+		t.Run(ep.OperationID, func(t *testing.T) {
+			t.Parallel()
+			path, ok := ep.ResolvePath()
+			if !ok {
+				t.Skipf("Cannot resolve path params for %s", ep.Path)
+				return
+			}
+
+			statusCode, body, err := apiClient.Put(path, map[string]any{
+				bogusE2EJSONField: "should_be_rejected",
+			})
+			require.NoError(t, err, "PUT %s failed", path)
+			assertJSONUnknownFieldRejected(t, http.MethodPut, path, statusCode, body)
+		})
+	}
+}
+
+// TestListEndpoints_UnknownQueryParamRejected validates that list GET endpoints
+// reject undeclared query parameters.
+func TestListEndpoints_UnknownQueryParamRejected(t *testing.T) {
+	t.Parallel()
+	for _, ep := range listEndpoints {
+		t.Run(ep.OperationID, func(t *testing.T) {
+			t.Parallel()
+			path, ok := ep.ResolvePath()
+			if !ok {
+				t.Skipf("Cannot resolve path params for %s", ep.Path)
+				return
+			}
+
+			statusCode, body, err := apiClient.GetListRaw(path, url.Values{
+				bogusE2EQueryParam: {"should_be_rejected"},
+			})
+			require.NoError(t, err, "GET %s failed", path)
+			assertUnknownQueryParamRejected(t, path, statusCode, body)
 		})
 	}
 }

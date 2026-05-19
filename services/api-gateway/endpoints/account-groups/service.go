@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -123,7 +124,7 @@ func (m *accountGroupSvcImpl) UpdateAccountGroup(ctx context.Context, req *Updat
 	pbReq := &pb.UpdateAccountGroupRequest{
 		Id:               req.AccountGroupID,
 		Name:             req.Name,
-		Description:      req.Description,
+		Description:      patch.StringFieldPtrToProto(req.Description),
 		CommissionPolicy: req.CommissionPolicy.StringPtr(),
 		FreightPolicy:    req.FreightPolicy.StringPtr(),
 	}

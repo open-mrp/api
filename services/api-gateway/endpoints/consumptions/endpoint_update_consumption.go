@@ -18,17 +18,17 @@ type UpdateConsumptionRequest struct {
 	// Consumption ID.
 	ConsumptionID string `path:"id" validate:"required"`
 	// Item ID.
-	ItemID *string `json:"item_id,omitempty" nullable:"false" validate:"omitempty"`
+	ItemID *string `json:"item_id,omitempty" validate:"omitempty"`
 	// Consumed quantity value.
-	QuantityValue *string `json:"quantity_value,omitempty" nullable:"false"`
+	QuantityValue *string `json:"quantity_value,omitempty"`
 	// Consumed quantity unit ID.
-	QuantityUnitID *string `json:"quantity_unit_id,omitempty" nullable:"false" validate:"omitempty"`
+	QuantityUnitID *string `json:"quantity_unit_id,omitempty" validate:"omitempty"`
 	// Waste quantity value.
-	WasteQuantityValue *string `json:"waste_quantity_value,omitempty" nullable:"false"`
+	WasteQuantityValue *string `json:"waste_quantity_value,omitempty"`
 	// Waste quantity unit ID.
-	WasteQuantityUnitID *string `json:"waste_quantity_unit_id,omitempty" nullable:"false" validate:"omitempty"`
+	WasteQuantityUnitID *string `json:"waste_quantity_unit_id,omitempty" validate:"omitempty"`
 	// Instructions for how this material is consumed.
-	Instructions *string `json:"instructions,omitempty" nullable:"true"`
+	Instructions *string `json:"instructions,omitempty"`
 }
 
 var sampleUpdateConsumptionRequest = &UpdateConsumptionRequest{

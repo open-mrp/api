@@ -16,13 +16,13 @@ type UpdateProductLineRequest struct {
 	// Product line ID.
 	ProductLineID string `path:"id" validate:"required"`
 	// Display name.
-	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
 	// Commission policy of products in this product line.
-	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy,omitempty" nullable:"false"`
+	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy,omitempty"`
 	// Freight policy for all items in this product line.
-	FreightPolicy *constants.FreightPolicy `json:"freight_policy,omitempty" nullable:"false"`
+	FreightPolicy *constants.FreightPolicy `json:"freight_policy,omitempty"`
 	// Unit group ID associated with this product line. This unit group dictates the units that products in this product line may be purchased in.
-	UnitGroupID *string `json:"unit_group_id,omitempty" nullable:"false" validate:"omitempty"`
+	UnitGroupID *string `json:"unit_group_id,omitempty" validate:"omitempty"`
 }
 
 var sampleUpdateProductLineName = "Updated Product Line"

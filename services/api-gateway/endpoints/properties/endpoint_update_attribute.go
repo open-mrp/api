@@ -18,11 +18,11 @@ type UpdateAttributeRequest struct {
 	// Attribute ID.
 	AttributeID string `path:"id" validate:"required"`
 	// Attribute value.
-	Value *string `json:"value,omitempty" nullable:"false"`
+	Value *string `json:"value,omitempty"`
 	// Color code.
-	ColorCode *constants.Color `json:"color,omitempty" nullable:"false"`
+	ColorCode *constants.Color `json:"color,omitempty"`
 	// Display order. Must be a positive integer.
-	SortOrder *int32 `json:"sort_order,omitempty" nullable:"false" validate:"omitempty,min=1"`
+	SortOrder *int32 `json:"sort_order,omitempty" validate:"omitempty,min=1"`
 }
 
 var sampleUpdateAttributeRequest = &UpdateAttributeRequest{

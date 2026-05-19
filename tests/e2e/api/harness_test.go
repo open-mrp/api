@@ -21,6 +21,8 @@ var (
 	apiClient       *Client
 	listEndpoints   []ListEndpointSpec
 	updateEndpoints []UpdateEndpointSpec
+	createEndpoints []BodyEndpointSpec
+	putEndpoints    []BodyEndpointSpec
 )
 
 func TestMain(m *testing.M) {
@@ -64,6 +66,18 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Failed to load update endpoints: %v", err)
 	}
 	log.Printf("Discovered %d update endpoints from OpenAPI spec", len(updateEndpoints))
+
+	createEndpoints, err = LoadBodyEndpoints("post", excludedCreateOperations)
+	if err != nil {
+		log.Fatalf("Failed to load create endpoints: %v", err)
+	}
+	log.Printf("Discovered %d create endpoints from OpenAPI spec", len(createEndpoints))
+
+	putEndpoints, err = LoadBodyEndpoints("put", excludedPutOperations)
+	if err != nil {
+		log.Fatalf("Failed to load put endpoints: %v", err)
+	}
+	log.Printf("Discovered %d put endpoints from OpenAPI spec", len(putEndpoints))
 
 	os.Exit(m.Run())
 }

@@ -315,6 +315,8 @@ func (s *unitGroupSvcImpl) UpdateUnitGroup(ctx context.Context, params domain.Up
 				}
 			}
 
+			params.Notes = params.Notes.BackfillUnsetPtr(existing.Notes)
+
 			updated, apiErr := txRepo.Update(txCtx, params)
 			if apiErr != nil {
 				return apiErr

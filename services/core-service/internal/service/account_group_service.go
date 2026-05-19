@@ -239,13 +239,7 @@ func (s *accountGroupSvcImpl) UpdateAccountGroup(ctx context.Context, params dom
 				return apiErr
 			}
 
-			// Backfill unchanged nullable fields with existing values.
-			// Since the SQL uses direct assignment (no COALESCE) for description,
-			// we must provide the existing value when the field was not sent.
-			// ptr("") is the sentinel meaning "explicitly set to NULL"; nil means "not provided".
-			if params.Description == nil {
-				params.Description = old.Description
-			}
+			params.Description = params.Description.BackfillUnsetPtr(old.Description)
 
 			if params.Name != nil {
 				exists, apiErr := txRepo.ExistsByName(txCtx, params.AccountID, *params.Name, &params.AccountGroupID)

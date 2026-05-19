@@ -390,11 +390,10 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 				return apiErr
 			}
 
-			// Validate that the sales rep account user ID belongs to this account.
-			// ptr("") means clear, nil means not provided, ptr("value") means update.
-			if params.DefaultSalesRepID != nil && *params.DefaultSalesRepID != "" {
+			if params.DefaultSalesRepID.IsSet() {
+				repID, _ := params.DefaultSalesRepID.Value()
 				txAccountUserRepo := txSvc.repos.NewAccountUserRepo()
-				_, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, params.OwnerAccountID, *params.DefaultSalesRepID, nil)
+				_, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, params.OwnerAccountID, repID, nil)
 				if apiErr != nil {
 					if apiErr.Code != apierror.ErrorCodeResourceNotFound {
 						return apiErr
@@ -403,56 +402,39 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 				}
 			}
 
-			// Backfill unchanged nullable fields with existing values.
-			// Since the SQL uses direct assignment (no COALESCE) for these fields,
-			// we must provide the existing value when the field was not sent.
 			if params.DefaultCarrierID == nil {
 				params.DefaultCarrierID = old.DefaultCarrierID
 			}
-			if params.DefaultServiceLevelID == nil {
-				params.DefaultServiceLevelID = old.DefaultServiceLevelID
-			}
+			params.DefaultServiceLevelID = params.DefaultServiceLevelID.BackfillUnsetPtr(old.DefaultServiceLevelID)
 			if params.DefaultPaymentTermID == nil {
 				params.DefaultPaymentTermID = old.DefaultPaymentTermID
 			}
 			if params.DefaultShippingTermID == nil {
 				params.DefaultShippingTermID = old.DefaultShippingTermID
 			}
-			if params.DefaultSalesRepID == nil {
-				params.DefaultSalesRepID = old.DefaultSalesRepID
-			}
+			params.DefaultSalesRepID = params.DefaultSalesRepID.BackfillUnsetPtr(old.DefaultSalesRepID)
 			if params.CustomerTypeGroupID == nil {
 				params.CustomerTypeGroupID = old.TypeGroupID
 			}
-			if params.Note == nil {
-				params.Note = old.Note
-			}
-			if params.CarrierBillingAccount == nil {
-				params.CarrierBillingAccount = old.CarrierBillingAccount
-			}
-			if params.BillToAddressID == nil && old.BillToAddressID != nil {
-				params.BillToAddressID = old.BillToAddressID
-			}
-			if params.ShipToAddressID == nil && old.ShipToAddressID != nil {
-				params.ShipToAddressID = old.ShipToAddressID
-			}
+			params.Note = params.Note.BackfillUnsetPtr(old.Note)
+			params.CarrierBillingAccount = params.CarrierBillingAccount.BackfillUnsetPtr(old.CarrierBillingAccount)
+			params.BillToAddressID = params.BillToAddressID.BackfillUnsetPtr(old.BillToAddressID)
+			params.ShipToAddressID = params.ShipToAddressID.BackfillUnsetPtr(old.ShipToAddressID)
 
-			// Handle credit limit quantity lifecycle.
-			if params.CreditLimitValue == nil && params.CreditLimitUnitID == nil {
-				// Not provided — preserve existing credit limit.
+			switch {
+			case params.CreditLimit.IsUnset():
 				params.CreditLimitID = old.CreditLimitID
-			} else if params.CreditLimitValue != nil && *params.CreditLimitValue == "" {
-				// Explicitly cleared — delete old quantity if it exists.
+			case params.CreditLimit.IsClear():
 				if old.CreditLimitID != nil {
 					if apiErr := txCustomerRepo.DeleteCreditLimitQuantity(txCtx, *old.CreditLimitID); apiErr != nil {
 						return apiErr
 					}
 				}
 				params.CreditLimitID = nil
-			} else if params.CreditLimitValue != nil && params.CreditLimitUnitID != nil {
-				// Setting or updating credit limit.
+			case params.CreditLimit.IsSet():
+				qv, _ := params.CreditLimit.Value()
 				if old.CreditLimitID != nil {
-					if apiErr := txCustomerRepo.UpdateCreditLimitQuantity(txCtx, *old.CreditLimitID, *params.CreditLimitValue, *params.CreditLimitUnitID); apiErr != nil {
+					if apiErr := txCustomerRepo.UpdateCreditLimitQuantity(txCtx, *old.CreditLimitID, qv.Value, qv.UnitID); apiErr != nil {
 						return apiErr
 					}
 					params.CreditLimitID = old.CreditLimitID
@@ -461,7 +443,7 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 					if apiErr != nil {
 						return apiErr
 					}
-					if apiErr := txCustomerRepo.InsertCreditLimitQuantity(txCtx, creditLimitQtyID, *params.CreditLimitValue, *params.CreditLimitUnitID); apiErr != nil {
+					if apiErr := txCustomerRepo.InsertCreditLimitQuantity(txCtx, creditLimitQtyID, qv.Value, qv.UnitID); apiErr != nil {
 						return apiErr
 					}
 					params.CreditLimitID = &creditLimitQtyID
@@ -490,14 +472,15 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 				return apiErr
 			}
 
-			// Link billing/shipping addresses to the customer account.
-			if params.BillToAddressID != nil && *params.BillToAddressID != "" {
-				if apiErr := ensureAccountAddressLink(txCtx, txCustomerRepo, params.CustomerAccountID, *params.BillToAddressID); apiErr != nil {
+			if params.BillToAddressID.IsSet() {
+				addrID, _ := params.BillToAddressID.Value()
+				if apiErr := ensureAccountAddressLink(txCtx, txCustomerRepo, params.CustomerAccountID, addrID); apiErr != nil {
 					return apiErr
 				}
 			}
-			if params.ShipToAddressID != nil && *params.ShipToAddressID != "" {
-				if apiErr := ensureAccountAddressLink(txCtx, txCustomerRepo, params.CustomerAccountID, *params.ShipToAddressID); apiErr != nil {
+			if params.ShipToAddressID.IsSet() {
+				addrID, _ := params.ShipToAddressID.Value()
+				if apiErr := ensureAccountAddressLink(txCtx, txCustomerRepo, params.CustomerAccountID, addrID); apiErr != nil {
 					return apiErr
 				}
 			}
@@ -509,20 +492,11 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 				}
 			}
 
-			// Update account branding (email, phone, url) if any provided.
-			// Backfill unchanged fields with existing values since the SQL
-			// uses direct assignment (no COALESCE) for these fields.
-			if params.Email != nil || params.Phone != nil || params.URL != nil {
-				if params.Email == nil {
-					params.Email = old.Email
-				}
-				if params.Phone == nil {
-					params.Phone = old.Phone
-				}
-				if params.URL == nil {
-					params.URL = old.URL
-				}
-				if apiErr := txCustomerRepo.UpdateBranding(txCtx, params.CustomerAccountID, params.Email, params.Phone, params.URL); apiErr != nil {
+			if params.Email.WasProvided() || params.Phone.WasProvided() || params.URL.WasProvided() {
+				email := params.Email.StringPtrAfterBackfill(old.Email)
+				phone := params.Phone.StringPtrAfterBackfill(old.Phone)
+				url := params.URL.StringPtrAfterBackfill(old.URL)
+				if apiErr := txCustomerRepo.UpdateBranding(txCtx, params.CustomerAccountID, email, phone, url); apiErr != nil {
 					return apiErr
 				}
 			}

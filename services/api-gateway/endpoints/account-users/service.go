@@ -10,6 +10,7 @@ import (
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -96,8 +97,8 @@ func (m *accountUserSvcImpl) CreateAccountUser(ctx context.Context, req *CreateA
 		Email:                   req.Email,
 		Username:                req.Username,
 		Password:                req.Password,
-		RoleId:                  req.RoleID,
-		DepartmentId:            req.DepartmentID,
+		RoleId:                  req.RoleID.Ptr(),
+		DepartmentId:            req.DepartmentID.Ptr(),
 		NotificationPreferences: toProtoNotificationPrefs(req.Preferences),
 	}
 
@@ -114,27 +115,13 @@ func (m *accountUserSvcImpl) CreateAccountUser(ctx context.Context, req *CreateA
 }
 
 func (m *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, req *UpdateAccountUserRequest) (*apiresource.AccountUser, *apierror.APIError) {
-	// ApplyExplicitNulls sets nullable:"true" fields to &"" when the client sends null.
-	// Translate &"" → nil and set the Clear* flag so the core service can distinguish
-	// "not provided" (keep old value) from "explicitly cleared" (set to null).
-	clearRoleID := req.RoleID != nil && *req.RoleID == ""
-	if clearRoleID {
-		req.RoleID = nil
-	}
-	clearDepartmentID := req.DepartmentID != nil && *req.DepartmentID == ""
-	if clearDepartmentID {
-		req.DepartmentID = nil
-	}
-
 	pbReq := &pb.UpdateAccountUserRequest{
 		AccountUserId:           req.AccountUserID,
 		Name:                    req.Name,
 		Email:                   req.Email,
 		Username:                req.Username,
-		RoleId:                  req.RoleID,
-		ClearRoleId:             clearRoleID,
-		DepartmentId:            req.DepartmentID,
-		ClearDepartmentId:       clearDepartmentID,
+		RoleId:                  patch.StringFieldPtrToProto(req.RoleID),
+		DepartmentId:            patch.StringFieldPtrToProto(req.DepartmentID),
 		NotificationPreferences: toProtoNotificationPrefs(req.Preferences),
 		Includes:                appctx.GetRequestedIncludeKeys(ctx),
 	}

@@ -16,21 +16,21 @@ type UpdateAgentRequest struct {
 	// Agent definition ID.
 	AgentDefinitionID string `path:"id" validate:"required"`
 	// Display name.
-	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
 	// URL-friendly identifier.
-	Slug *string `json:"slug,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	Slug *string `json:"slug,omitempty" validate:"omitempty,max=255"`
 	// Description of what the agent does.
-	Description *string `json:"description,omitempty" nullable:"true"`
+	Description *string `json:"description,omitempty"`
 	// Category code (e.g. "order_processing").
-	CategoryCode *string `json:"category_code,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	CategoryCode *string `json:"category_code,omitempty" validate:"omitempty,max=255"`
 	// Trigger type: "manual", "scheduled", or "event".
-	TriggerType *constants.AgentTriggerType `json:"trigger_type,omitempty" nullable:"false"`
+	TriggerType *constants.AgentTriggerType `json:"trigger_type,omitempty"`
 	// Agent-level configuration controlling LLM behavior and trigger settings.
-	Config *ConfigInput `json:"config,omitempty" nullable:"false"`
+	Config *ConfigInput `json:"config,omitempty"`
 	// Tools to attach. Replaces the existing tool set when provided.
-	Tools *[]ToolInput `json:"tools,omitempty" nullable:"false"`
+	Tools *[]ToolInput `json:"tools,omitempty"`
 	// Role ID defining agent permissions.
-	RoleID *string `json:"role_id,omitempty" nullable:"true" validate:"omitempty"`
+	RoleID *string `json:"role_id,omitempty" validate:"omitempty"`
 }
 
 var sampleUpdateAgentRequest = &UpdateAgentRequest{

@@ -10,11 +10,12 @@ import (
 	"github.com/augno/api/services/agent-service/internal/domain"
 	agentdb "github.com/augno/api/services/agent-service/internal/infrastructure/db"
 	"github.com/augno/api/services/agent-service/internal/infrastructure/sqlc"
+	agentpagination "github.com/augno/api/services/agent-service/internal/pagination"
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/contracts"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/messaging"
+	"github.com/augno/api/shared/pagination"
 	pb "github.com/augno/api/shared/proto/agent"
 	"github.com/augno/api/shared/safeconv"
 	"github.com/augno/api/shared/tracing"
@@ -693,6 +694,11 @@ func (h *agentHandler) ListRuns(ctx context.Context, req *pb.ListRunsRequest) (*
 		search = pgtype.Text{String: req.GetQuery(), Valid: true}
 	}
 
+	cursorID, cursorDir, apiErr := agentpagination.ParseOptionalStringCursor(req.Cursor)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
 	params := sqlc.ListAgentRunsByAccountFilteredParams{
 		AccountID:         accountID,
 		FilterStatus:      req.StatusCode != "",
@@ -701,11 +707,9 @@ func (h *agentHandler) ListRuns(ctx context.Context, req *pb.ListRunsRequest) (*
 		AgentDefinitionID: req.AgentDefinitionId,
 		FilterQuery:       filterQuery,
 		Search:            search,
-		HasCursor:         req.Cursor != nil && *req.Cursor != "",
+		HasCursor:         cursorID != "",
+		CursorID:          cursorID,
 		Lim:               limit + 1,
-	}
-	if req.Cursor != nil && *req.Cursor != "" {
-		params.CursorID = *req.Cursor
 	}
 
 	runRepo := h.repos.NewAgentRunRepo()
@@ -714,10 +718,13 @@ func (h *agentHandler) ListRuns(ctx context.Context, req *pb.ListRunsRequest) (*
 		return nil, contracts.ConvertAPIErrorToGRPC(runsErr)
 	}
 
-	hasNextPage := len(runs) > int(limit)
-	if hasNextPage {
-		runs = runs[:limit]
-	}
+	runs, pageInfo := pagination.BuildPageString(
+		runs,
+		limit,
+		cursorDir,
+		func(r sqlc.AgentRun) time.Time { return r.CreatedAt.Time },
+		func(r sqlc.AgentRun) string { return r.ID },
+	)
 
 	// Treat `foo.bar` requests as implying `foo` — the parent resource must be
 	// attached for the nested include to survive the api-gateway's collapse.
@@ -771,21 +778,9 @@ func (h *agentHandler) ListRuns(ctx context.Context, req *pb.ListRunsRequest) (*
 		}
 	}
 
-	var nextCursor *string
-	if hasNextPage && len(runs) > 0 {
-		lastID := runs[len(runs)-1].ID
-		nextCursor = &lastID
-	}
-
-	hasPrevPage := req.Cursor != nil && *req.Cursor != ""
-
 	return &pb.ListRunsResponse{
-		Runs: pbRuns,
-		PageInfo: &pb.PageInfo{
-			NextCursor:  nextCursor,
-			HasNextPage: hasNextPage,
-			HasPrevPage: hasPrevPage,
-		},
+		Runs:     pbRuns,
+		PageInfo: agentpagination.ToProtoPageInfo(pageInfo),
 	}, nil
 }
 
@@ -824,14 +819,17 @@ func (h *agentHandler) ListTokenUsage(ctx context.Context, req *pb.ListTokenUsag
 
 	sinceDate := time.Now().AddDate(0, 0, -int(days))
 
+	cursorID, cursorDir, apiErr := agentpagination.ParseOptionalStringCursor(req.Cursor)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
 	params := sqlc.ListAgentTokenUsageByAccountParams{
 		AccountID: accountID,
 		SinceDate: agentdb.PgDate(sinceDate),
-		HasCursor: req.Cursor != nil && *req.Cursor != "",
+		HasCursor: cursorID != "",
+		CursorID:  cursorID,
 		Lim:       limit + 1,
-	}
-	if req.Cursor != nil && *req.Cursor != "" {
-		params.CursorID = *req.Cursor
 	}
 
 	tokenUsageRepo := h.repos.NewAgentTokenUsageRepo()
@@ -840,10 +838,13 @@ func (h *agentHandler) ListTokenUsage(ctx context.Context, req *pb.ListTokenUsag
 		return nil, contracts.ConvertAPIErrorToGRPC(repoErr)
 	}
 
-	hasNextPage := len(rows) > int(limit)
-	if hasNextPage {
-		rows = rows[:limit]
-	}
+	rows, pageInfo := pagination.BuildPageString(
+		rows,
+		limit,
+		cursorDir,
+		func(r sqlc.AgentTokenUsage) time.Time { return r.Date.Time },
+		func(r sqlc.AgentTokenUsage) string { return r.ID },
+	)
 
 	pbUsage := make([]*pb.AgentTokenUsageInfo, len(rows))
 	for i := range rows {
@@ -859,21 +860,9 @@ func (h *agentHandler) ListTokenUsage(ctx context.Context, req *pb.ListTokenUsag
 		}
 	}
 
-	var nextCursor *string
-	if hasNextPage && len(rows) > 0 {
-		lastID := rows[len(rows)-1].ID
-		nextCursor = &lastID
-	}
-
-	hasPrevPage := req.Cursor != nil && *req.Cursor != ""
-
 	return &pb.ListTokenUsageResponse{
-		Usage: pbUsage,
-		PageInfo: &pb.PageInfo{
-			NextCursor:  nextCursor,
-			HasNextPage: hasNextPage,
-			HasPrevPage: hasPrevPage,
-		},
+		Usage:    pbUsage,
+		PageInfo: agentpagination.ToProtoPageInfo(pageInfo),
 	}, nil
 }
 
@@ -931,10 +920,9 @@ func (h *agentHandler) ListAgentMemories(ctx context.Context, req *pb.ListAgentM
 		search = pgtype.Text{String: req.GetQuery(), Valid: true}
 	}
 
-	if req.Cursor != nil && *req.Cursor != "" {
-		if !strings.HasPrefix(*req.Cursor, string(id.AgentMemoryIDPrefix)+"_") {
-			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewParameterInvalidError("Invalid pagination cursor.", "cursor"))
-		}
+	cursorID, cursorDir, apiErr := agentpagination.ParseOptionalStringCursor(req.Cursor)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
 	params := sqlc.ListAgentMemoriesByAccountCursorParams{
@@ -945,11 +933,9 @@ func (h *agentHandler) ListAgentMemories(ctx context.Context, req *pb.ListAgentM
 		EntityType:       pgtype.Text{String: req.EntityType, Valid: req.EntityType != ""},
 		FilterQuery:      filterQuery,
 		Search:           search,
-		HasCursor:        req.Cursor != nil && *req.Cursor != "",
+		HasCursor:        cursorID != "",
+		CursorID:         cursorID,
 		Lim:              limit + 1,
-	}
-	if req.Cursor != nil && *req.Cursor != "" {
-		params.CursorID = *req.Cursor
 	}
 
 	rows, repoErr := memoryRepo.ListByAccountCursor(ctx, params)
@@ -957,31 +943,22 @@ func (h *agentHandler) ListAgentMemories(ctx context.Context, req *pb.ListAgentM
 		return nil, contracts.ConvertAPIErrorToGRPC(repoErr)
 	}
 
-	hasNextPage := len(rows) > int(limit)
-	if hasNextPage {
-		rows = rows[:limit]
-	}
+	rows, pageInfo := pagination.BuildPageString(
+		rows,
+		limit,
+		cursorDir,
+		func(m sqlc.AgentMemory) time.Time { return m.CreatedAt.Time },
+		func(m sqlc.AgentMemory) string { return m.ID },
+	)
 
 	pbMemories := make([]*pb.AgentMemoryInfo, len(rows))
 	for i := range rows {
 		pbMemories[i] = sqlcMemoryToProto(&rows[i])
 	}
 
-	var nextCursor *string
-	if hasNextPage && len(rows) > 0 {
-		lastID := rows[len(rows)-1].ID
-		nextCursor = &lastID
-	}
-
-	hasPrevPage := req.Cursor != nil && *req.Cursor != ""
-
 	return &pb.ListAgentMemoriesResponse{
 		Memories: pbMemories,
-		PageInfo: &pb.PageInfo{
-			NextCursor:  nextCursor,
-			HasNextPage: hasNextPage,
-			HasPrevPage: hasPrevPage,
-		},
+		PageInfo: agentpagination.ToProtoPageInfo(pageInfo),
 	}, nil
 }
 
@@ -1345,11 +1322,9 @@ func (h *agentHandler) ListAgentAlerts(ctx context.Context, req *pb.ListAgentAle
 
 	alertRepo := h.repos.NewAgentAlertRepo()
 
-	hasCursor := req.Cursor != nil && *req.Cursor != ""
-	if hasCursor {
-		if _, apiErr := alertRepo.GetByID(ctx, *req.Cursor); apiErr != nil {
-			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationError("Invalid pagination cursor."))
-		}
+	cursorID, cursorDir, apiErr := agentpagination.ParseOptionalStringCursor(req.Cursor)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
 	params := sqlc.ListAgentAlertsByAccountCursorParams{
@@ -1360,42 +1335,31 @@ func (h *agentHandler) ListAgentAlerts(ctx context.Context, req *pb.ListAgentAle
 		StatusCode:     req.StatusCode,
 		FilterQuery:    filterQuery,
 		Search:         search,
-		HasCursor:      hasCursor,
+		HasCursor:      cursorID != "",
+		CursorID:       cursorID,
 		Lim:            limit + 1,
-	}
-	if hasCursor {
-		params.CursorID = *req.Cursor
 	}
 	rows, repoErr := alertRepo.ListByAccountCursor(ctx, params)
 	if repoErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(repoErr)
 	}
 
-	hasNextPage := len(rows) > int(limit)
-	if hasNextPage {
-		rows = rows[:limit]
-	}
+	rows, pageInfo := pagination.BuildPageString(
+		rows,
+		limit,
+		cursorDir,
+		func(a sqlc.ListAgentAlertsByAccountCursorRow) time.Time { return a.CreatedAt.Time },
+		func(a sqlc.ListAgentAlertsByAccountCursorRow) string { return a.ID },
+	)
 
 	pbAlerts := make([]*pb.AgentAlertInfo, len(rows))
 	for i := range rows {
 		pbAlerts[i] = sqlcListAlertRowToProto(&rows[i])
 	}
 
-	var nextCursor *string
-	if hasNextPage && len(rows) > 0 {
-		lastID := rows[len(rows)-1].ID
-		nextCursor = &lastID
-	}
-
-	hasPrevPage := req.Cursor != nil && *req.Cursor != ""
-
 	return &pb.ListAgentAlertsResponse{
-		Alerts: pbAlerts,
-		PageInfo: &pb.PageInfo{
-			NextCursor:  nextCursor,
-			HasNextPage: hasNextPage,
-			HasPrevPage: hasPrevPage,
-		},
+		Alerts:   pbAlerts,
+		PageInfo: agentpagination.ToProtoPageInfo(pageInfo),
 	}, nil
 }
 

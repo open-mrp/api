@@ -6,10 +6,10 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 )
 
 // Request to partially update a location.
@@ -17,13 +17,13 @@ type UpdateLocationRequest struct {
 	// Location ID.
 	LocationID string `path:"id" validate:"required"`
 	// Display name.
-	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
 	// Location type code.
-	TypeCode *constants.LocationTypeCode `json:"type,omitempty" nullable:"false"`
+	TypeCode *constants.LocationTypeCode `json:"type,omitempty"`
 	// Parent location ID. Send null to clear.
-	ParentID *string `json:"parent_id,omitempty" nullable:"true" validate:"omitempty"`
+	ParentID *patch.Field[string] `json:"parent_id,omitempty" validate:"omitempty"`
 	// Child location IDs. Replaces all current children when provided. Send null to clear.
-	ChildIDs apirequest.NullableInput[[]string] `json:"child_ids"`
+	ChildIDs *patch.Field[[]string] `json:"child_ids,omitempty"`
 }
 
 var sampleUpdateName = "Warehouse B"

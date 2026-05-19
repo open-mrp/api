@@ -935,6 +935,7 @@ type PartRepo interface {
 	InsertRate(ctx context.Context, id, value, numeratorUnitID, denominatorUnitID string) *apierror.APIError
 	InsertItem(ctx context.Context, itemID string, params CreatePartParams, unitValueID, burnRateID, unitCostID string) *apierror.APIError
 	TouchUpdatedAt(ctx context.Context, partID string) *apierror.APIError
+	UpdateItem(ctx context.Context, params PartUpdateItemParams) *apierror.APIError
 }
 
 type PermissionGroupRepo interface {

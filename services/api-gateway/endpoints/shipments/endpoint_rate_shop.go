@@ -9,6 +9,7 @@ import (
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 )
 
 // Request to rate shop across carriers.
@@ -41,18 +42,18 @@ var (
 var sampleRateShopRequest = &RateShopRequest{
 	FromAddress: apirequest.AddressInput{
 		Name:        "Origin Warehouse",
-		StreetLine1: &sampleRateShopFromStreetLine1,
-		Locality:    &sampleRateShopFromLocality,
-		State:       &sampleRateShopFromState,
-		PostalCode:  &sampleRateShopFromPostalCode,
+		StreetLine1: patch.PtrNullable(&sampleRateShopFromStreetLine1),
+		Locality:    patch.PtrNullable(&sampleRateShopFromLocality),
+		State:       patch.PtrNullable(&sampleRateShopFromState),
+		PostalCode:  patch.PtrNullable(&sampleRateShopFromPostalCode),
 		Country:     apiresource.SampleAddressCountry,
 	},
 	ToAddress: apirequest.AddressInput{
 		Name:        "Destination",
-		StreetLine1: &sampleRateShopToStreetLine1,
-		Locality:    &sampleRateShopToLocality,
-		State:       &sampleRateShopToState,
-		PostalCode:  &sampleRateShopToPostalCode,
+		StreetLine1: patch.PtrNullable(&sampleRateShopToStreetLine1),
+		Locality:    patch.PtrNullable(&sampleRateShopToLocality),
+		State:       patch.PtrNullable(&sampleRateShopToState),
+		PostalCode:  patch.PtrNullable(&sampleRateShopToPostalCode),
 		Country:     "US",
 	},
 	Parcels: []ParcelInput{

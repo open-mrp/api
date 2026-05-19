@@ -15,13 +15,13 @@ type UpdateProductionStepRequest struct {
 	// Production step ID.
 	ProductionStepID string `path:"id" validate:"required"`
 	// Display name.
-	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
 	// Leveling factor as a decimal string.
-	LevelingFactor *string `json:"leveling_factor,omitempty" nullable:"false"`
+	LevelingFactor *string `json:"leveling_factor,omitempty"`
 	// Allowances as a decimal string.
-	Allowances *string `json:"allowances,omitempty" nullable:"false"`
+	Allowances *string `json:"allowances,omitempty"`
 	// Scanning station ID.
-	ScanningStationID *string `json:"scanning_station_id,omitempty" nullable:"false" validate:"omitempty"`
+	ScanningStationID *string `json:"scanning_station_id,omitempty" validate:"omitempty"`
 }
 
 var sampleUpdateProductionStepName = "Assembly Step A"

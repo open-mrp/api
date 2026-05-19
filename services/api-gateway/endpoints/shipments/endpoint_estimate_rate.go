@@ -9,6 +9,7 @@ import (
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/patch"
 )
 
 // Parcel for rate estimation.
@@ -59,18 +60,18 @@ var sampleEstimateRateRequest = &EstimateRateRequest{
 	ServiceLevelID: apiresource.SampleServiceLevelID,
 	FromAddress: apirequest.AddressInput{
 		Name:        "Origin Warehouse",
-		StreetLine1: &sampleEstimateFromStreetLine1,
-		Locality:    &sampleEstimateFromLocality,
-		State:       &sampleEstimateFromState,
-		PostalCode:  &sampleEstimateFromPostalCode,
+		StreetLine1: patch.PtrNullable(&sampleEstimateFromStreetLine1),
+		Locality:    patch.PtrNullable(&sampleEstimateFromLocality),
+		State:       patch.PtrNullable(&sampleEstimateFromState),
+		PostalCode:  patch.PtrNullable(&sampleEstimateFromPostalCode),
 		Country:     apiresource.SampleAddressCountry,
 	},
 	ToAddress: apirequest.AddressInput{
 		Name:        "Destination",
-		StreetLine1: &sampleEstimateToStreetLine1,
-		Locality:    &sampleEstimateToLocality,
-		State:       &sampleEstimateToState,
-		PostalCode:  &sampleEstimateToPostalCode,
+		StreetLine1: patch.PtrNullable(&sampleEstimateToStreetLine1),
+		Locality:    patch.PtrNullable(&sampleEstimateToLocality),
+		State:       patch.PtrNullable(&sampleEstimateToState),
+		PostalCode:  patch.PtrNullable(&sampleEstimateToPostalCode),
 		Country:     "US",
 	},
 	Parcels: []ParcelInput{

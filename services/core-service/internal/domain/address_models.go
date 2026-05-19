@@ -3,6 +3,7 @@ package domain
 import (
 	"time"
 
+	"github.com/augno/api/shared/patch"
 	"github.com/augno/api/shared/pagination"
 )
 
@@ -73,11 +74,11 @@ type UpdateAddressParams struct {
 	AccountID   string
 	AddressID   string
 	Name        *string
-	Phone       *string
-	Email       *string
+	Phone       patch.Field[string]
+	Email       patch.Field[string]
 	IsDropShip  *bool
 	StreetLine1 *string
-	StreetLine2 *string
+	StreetLine2 patch.Field[string]
 	Locality    *string
 	State       *string
 	PostalCode  *string

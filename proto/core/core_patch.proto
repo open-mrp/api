@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+// PATCH field wrappers shared across CoreService update RPCs.
+package core;
+
+option go_package = "shared/proto/core;core";
+
+// Parent message field absent → no change.
+// Present with clear=true → set column to NULL.
+// Present with clear=false and value set → update.
+message StringPatch {
+  bool clear = 1;
+  optional string value = 2;
+}
+
+message StringListPatch {
+  bool clear = 1;
+  repeated string value = 2;
+}
+
+// Quantity patch uses flat value/unit_id fields to avoid import cycles with QuantityInput.
+message QuantityPatch {
+  bool clear = 1;
+  optional string value = 2;
+  optional string unit_id = 3;
+}

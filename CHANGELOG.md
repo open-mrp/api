@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.8](https://github.com/Augno/api/compare/v0.17.7...v0.17.8) (2026-05-19)
+
+
+### Bug Fixes
+
+* list items filter 'initial_only' broken ([#251](https://github.com/Augno/api/issues/251)) ([85787c0](https://github.com/Augno/api/commit/85787c057424231d99f17b443626d511700d4be1))
+
 ## [0.17.7](https://github.com/Augno/api/compare/v0.17.6...v0.17.7) (2026-05-19)
 
 

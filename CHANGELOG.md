@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.7](https://github.com/Augno/api/compare/v0.17.6...v0.17.7) (2026-05-19)
+
+
+### Bug Fixes
+
+* patch nullable fields ([#249](https://github.com/Augno/api/issues/249)) ([a05d111](https://github.com/Augno/api/commit/a05d111a3ab802bf0e3eed361edcf1d2d93285ee))
+
 ## [0.17.6](https://github.com/Augno/api/compare/v0.17.5...v0.17.6) (2026-05-18)
 
 

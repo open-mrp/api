@@ -8,6 +8,7 @@ type OpenAPI struct {
 	Paths      map[string]map[string]Operation `json:"paths"`
 	Components Components                      `json:"components"`
 	Tags       []Tag                           `json:"tags,omitempty"`
+	Security   []map[string][]string           `json:"security,omitempty"`
 }
 
 type Info struct {
@@ -98,5 +99,14 @@ type Schema struct {
 }
 
 type Components struct {
-	Schemas map[string]Schema `json:"schemas"`
+	Schemas         map[string]Schema             `json:"schemas"`
+	SecuritySchemes map[string]SecuritySchemeSpec `json:"securitySchemes,omitempty"`
+}
+
+// SecuritySchemeSpec is a subset of OpenAPI 3 Security Scheme Object used for codegen.
+type SecuritySchemeSpec struct {
+	Type   string `json:"type"`
+	Scheme string `json:"scheme,omitempty"` // http: bearer, basic, …
+	In     string `json:"in,omitempty"`     // apiKey: cookie, header, query
+	Name   string `json:"name,omitempty"`   // apiKey: header / query parameter name
 }

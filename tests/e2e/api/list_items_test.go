@@ -208,6 +208,38 @@ func TestListItems_FilterByCategoryWithPagination(t *testing.T) {
 	assert.NotEqual(t, id1, id2, "Cursor pages should return different items")
 }
 
+// fetchProductionStepInStepIDs returns parent step IDs from GET /production-steps/{id}?include=in_steps.
+// _parent_child_production_steps stores parent→child as (A,B); in_steps are rows where this step is B.
+func fetchProductionStepInStepIDs(t *testing.T, productionStepID string) []string {
+	t.Helper()
+	path := "/v1/operations/production-steps/" + productionStepID
+	status, body, err := apiClient.GetListRaw(path, url.Values{"include": {"in_steps"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	root := parseJSON(body)
+	inSteps := jsonObject(root, "in_steps")
+	require.NotNil(t, inSteps, "expected in_steps when include=in_steps")
+	rawData, ok := inSteps["data"]
+	if !ok || rawData == nil {
+		return nil
+	}
+	arr, ok := rawData.([]any)
+	if !ok {
+		return nil
+	}
+	var ids []string
+	for _, el := range arr {
+		obj, ok := el.(map[string]any)
+		if !ok {
+			continue
+		}
+		if id := jsonField(obj, "id"); id != "" {
+			ids = append(ids, id)
+		}
+	}
+	return ids
+}
+
 func collectPagedItemSKUs(t *testing.T, baseParams url.Values) map[string]struct{} {
 	t.Helper()
 	skus := map[string]struct{}{}
@@ -234,6 +266,18 @@ func collectPagedItemSKUs(t *testing.T, baseParams url.Values) map[string]struct
 
 func TestListItems_SubassemblyFilterInitialOnly_ReturnsInitialPartsOnly(t *testing.T) {
 	t.Parallel()
+
+	// Prove seeded edges match API semantics (A=parent, B=child). If rows were swapped so tests on SKUs
+	// still accidentally lined up, parent/child via in_steps would disagree with shared/db/seed/0009_production.sql comments.
+	sewParents := fetchProductionStepInStepIDs(t, SeedSewLargeProductionStepID)
+	assert.Contains(t, sewParents, SeedProductionStepID, "Sew Large Sock must list Knit Large Sock as in_step")
+	knitParents := fetchProductionStepInStepIDs(t, SeedProductionStepID)
+	assert.Empty(t, knitParents, "Knit Large Sock must have no in_steps (graph root)")
+
+	washSmParents := fetchProductionStepInStepIDs(t, SeedWashSmallProductionStepID)
+	assert.Contains(t, washSmParents, SeedKnitSmallProductionStepID, "Wash Small Sock must list Knit Small Sock as in_step")
+	knitSmParents := fetchProductionStepInStepIDs(t, SeedKnitSmallProductionStepID)
+	assert.Empty(t, knitSmParents, "Knit Small Sock must have no in_steps (graph root)")
 
 	allSKUs := collectPagedItemSKUs(t, url.Values{
 		"types":              {"part"},

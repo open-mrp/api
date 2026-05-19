@@ -29,12 +29,13 @@ INSERT INTO _parent_child_production_steps (A, B) VALUES (?, ?)
 `
 
 type ConnectStepsParams struct {
-	SourceID string
 	TargetID string
+	SourceID string
 }
 
+// Prisma _parent_child_production_steps: A = downstream step, B = upstream (parent) step (flow B → A).
 func (q *Queries) ConnectSteps(ctx context.Context, arg ConnectStepsParams) error {
-	_, err := q.db.ExecContext(ctx, connectSteps, arg.SourceID, arg.TargetID)
+	_, err := q.db.ExecContext(ctx, connectSteps, arg.TargetID, arg.SourceID)
 	return err
 }
 
@@ -44,20 +45,20 @@ VALUES (?, ?)
 `
 
 type ConnectStepsIdempotentParams struct {
-	SourceID string
 	TargetID string
+	SourceID string
 }
 
 // Inserts a step connection, ignoring if it already exists.
 func (q *Queries) ConnectStepsIdempotent(ctx context.Context, arg ConnectStepsIdempotentParams) error {
-	_, err := q.db.ExecContext(ctx, connectStepsIdempotent, arg.SourceID, arg.TargetID)
+	_, err := q.db.ExecContext(ctx, connectStepsIdempotent, arg.TargetID, arg.SourceID)
 	return err
 }
 
 const findDownstreamStepByItem = `-- name: FindDownstreamStepByItem :one
 SELECT ps.id
 FROM production_step ps
-JOIN _parent_child_production_steps pcps ON pcps.A = ? AND pcps.B = ps.id
+JOIN _parent_child_production_steps pcps ON pcps.B = ? AND pcps.A = ps.id
 JOIN production p ON p.production_step_id = ps.id
 WHERE ps.account_id = ?
 AND p.item_id = ?
@@ -80,13 +81,13 @@ func (q *Queries) FindDownstreamStepByItem(ctx context.Context, arg FindDownstre
 const findSourceStepsByConsumption = `-- name: FindSourceStepsByConsumption :many
 SELECT ps.id
 FROM production_step ps
-JOIN _parent_child_production_steps pcps ON pcps.A = ps.id
-WHERE pcps.B = ?
+JOIN _parent_child_production_steps pcps ON pcps.B = ps.id
+WHERE pcps.A = ?
 AND ps.account_id = ?
 AND EXISTS (
     SELECT 1 FROM consumption c
     WHERE c.id = ?
-    AND c.production_step_id = pcps.B
+    AND c.production_step_id = pcps.A
 )
 `
 
@@ -201,12 +202,12 @@ WHERE A = ? AND B = ?
 `
 
 type FlowDisconnectStepsParams struct {
-	SourceID string
 	TargetID string
+	SourceID string
 }
 
 func (q *Queries) FlowDisconnectSteps(ctx context.Context, arg FlowDisconnectStepsParams) error {
-	_, err := q.db.ExecContext(ctx, flowDisconnectSteps, arg.SourceID, arg.TargetID)
+	_, err := q.db.ExecContext(ctx, flowDisconnectSteps, arg.TargetID, arg.SourceID)
 	return err
 }
 
@@ -224,9 +225,9 @@ func (q *Queries) FlowGetProducedItemIDByStep(ctx context.Context, stepID sql.Nu
 }
 
 const getAllStepEdgesForAccount = `-- name: GetAllStepEdgesForAccount :many
-SELECT pcps.A AS parent_step_id, pcps.B AS child_step_id
+SELECT pcps.B AS parent_step_id, pcps.A AS child_step_id
 FROM _parent_child_production_steps pcps
-JOIN production_step ps ON pcps.A = ps.id
+JOIN production_step ps ON pcps.B = ps.id
 WHERE ps.account_id = ?
 `
 
@@ -235,7 +236,7 @@ type GetAllStepEdgesForAccountRow struct {
 	ChildStepID  string
 }
 
-// Gets the full parent→child graph for an account's production steps.
+// Parent→child graph: upstream parent is B, downstream child is A.
 func (q *Queries) GetAllStepEdgesForAccount(ctx context.Context, accountID string) ([]GetAllStepEdgesForAccountRow, error) {
 	rows, err := q.db.QueryContext(ctx, getAllStepEdgesForAccount, accountID)
 	if err != nil {

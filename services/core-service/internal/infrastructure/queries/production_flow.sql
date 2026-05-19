@@ -34,41 +34,42 @@ DELETE FROM _parent_child_production_steps
 WHERE A = sqlc.arg('step_id') OR B = sqlc.arg('step_id');
 
 -- name: ConnectSteps :exec
-INSERT INTO _parent_child_production_steps (A, B) VALUES (sqlc.arg('source_id'), sqlc.arg('target_id'));
+-- Prisma _parent_child_production_steps: A = downstream step, B = upstream (parent) step (flow B → A).
+INSERT INTO _parent_child_production_steps (A, B) VALUES (sqlc.arg('target_id'), sqlc.arg('source_id'));
 
 -- name: FlowDisconnectSteps :exec
 DELETE FROM _parent_child_production_steps
-WHERE A = sqlc.arg('source_id') AND B = sqlc.arg('target_id');
+WHERE A = sqlc.arg('target_id') AND B = sqlc.arg('source_id');
 
 -- name: FindSourceStepsByConsumption :many
 SELECT ps.id
 FROM production_step ps
-JOIN _parent_child_production_steps pcps ON pcps.A = ps.id
-WHERE pcps.B = sqlc.arg('target_step_id')
+JOIN _parent_child_production_steps pcps ON pcps.B = ps.id
+WHERE pcps.A = sqlc.arg('target_step_id')
 AND ps.account_id = sqlc.arg('account_id')
 AND EXISTS (
     SELECT 1 FROM consumption c
     WHERE c.id = sqlc.arg('consumption_id')
-    AND c.production_step_id = pcps.B
+    AND c.production_step_id = pcps.A
 );
 
 -- name: FindDownstreamStepByItem :one
 SELECT ps.id
 FROM production_step ps
-JOIN _parent_child_production_steps pcps ON pcps.A = sqlc.arg('source_step_id') AND pcps.B = ps.id
+JOIN _parent_child_production_steps pcps ON pcps.B = sqlc.arg('source_step_id') AND pcps.A = ps.id
 JOIN production p ON p.production_step_id = ps.id
 WHERE ps.account_id = sqlc.arg('account_id')
 AND p.item_id = sqlc.arg('item_id')
 LIMIT 1;
 
 -- name: GetAllStepEdgesForAccount :many
--- Gets the full parent→child graph for an account's production steps.
-SELECT pcps.A AS parent_step_id, pcps.B AS child_step_id
+-- Parent→child graph: upstream parent is B, downstream child is A.
+SELECT pcps.B AS parent_step_id, pcps.A AS child_step_id
 FROM _parent_child_production_steps pcps
-JOIN production_step ps ON pcps.A = ps.id
+JOIN production_step ps ON pcps.B = ps.id
 WHERE ps.account_id = sqlc.arg('account_id');
 
 -- name: ConnectStepsIdempotent :exec
 -- Inserts a step connection, ignoring if it already exists.
 INSERT IGNORE INTO _parent_child_production_steps (A, B)
-VALUES (sqlc.arg('source_id'), sqlc.arg('target_id'));
+VALUES (sqlc.arg('target_id'), sqlc.arg('source_id'));

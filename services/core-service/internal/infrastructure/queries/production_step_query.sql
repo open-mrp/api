@@ -60,16 +60,18 @@ WHERE c.production_step_id = sqlc.arg('production_step_id')
 AND i.item_type_code = 'part';
 
 -- name: IsLastProductionStep :one
+-- A = downstream; leaf steps have no outgoing edge where they are the upstream B.
 SELECT CASE
     WHEN NOT EXISTS (
-        SELECT 1 FROM _parent_child_production_steps WHERE A = sqlc.arg('id')
+        SELECT 1 FROM _parent_child_production_steps WHERE B = sqlc.arg('id')
     ) THEN 1
     ELSE 0
 END AS is_last;
 
 -- name: IsInputOfProductionStep :one
+-- Row (A,B) = (downstream, upstream); current receives from input when A = current and B = input.
 SELECT COUNT(*) FROM _parent_child_production_steps
-WHERE B = sqlc.arg('current_step_id') AND A = sqlc.arg('input_step_id');
+WHERE A = sqlc.arg('current_step_id') AND B = sqlc.arg('input_step_id');
 
 -- name: FindProducedItemIDByStep :one
 SELECT p.item_id FROM production p
@@ -114,8 +116,8 @@ AND p.item_id = sqlc.arg('item_id')
 LIMIT 1;
 
 -- name: GetProductionStepChildSteps :many
-SELECT B AS child_step_id FROM _parent_child_production_steps
-WHERE A = sqlc.arg('parent_step_id');
+SELECT A AS child_step_id FROM _parent_child_production_steps
+WHERE B = sqlc.arg('parent_step_id');
 
 -- name: GetProductionStepScanningStationID :one
 SELECT scanning_station_id FROM production_step
@@ -372,16 +374,18 @@ WHERE ps.id = sqlc.arg('id')
 AND ps.account_id = sqlc.arg('account_id');
 
 -- name: GetProductionStepInputSteps :many
-SELECT pcps.A AS id, ps.name
-FROM _parent_child_production_steps pcps
-JOIN production_step ps ON ps.id = pcps.A
-WHERE pcps.B = sqlc.arg('step_id');
-
--- name: GetProductionStepOutputSteps :many
+-- Upstream parents of step are B where this step is downstream A.
 SELECT pcps.B AS id, ps.name
 FROM _parent_child_production_steps pcps
 JOIN production_step ps ON ps.id = pcps.B
 WHERE pcps.A = sqlc.arg('step_id');
+
+-- name: GetProductionStepOutputSteps :many
+-- Downstream children are A where this step is upstream B.
+SELECT pcps.A AS id, ps.name
+FROM _parent_child_production_steps pcps
+JOIN production_step ps ON ps.id = pcps.A
+WHERE pcps.B = sqlc.arg('step_id');
 
 -- name: GetProductionStepMachines :many
 SELECT m.id, m.name FROM machine m

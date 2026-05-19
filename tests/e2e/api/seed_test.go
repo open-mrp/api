@@ -58,8 +58,11 @@ const (
 	SeedProductionStepID = "prs_01k0a51qxceydax5036pegvzzy"
 	// Sew Large Sock — has inbound graph edge (Knit) and a seeded machine; used for GET/PATCH /production-steps/{id}.
 	SeedSewLargeProductionStepID = "prs_01k0a56yc1e8wag6wexn4pp8t9"
-	SeedMaterialID               = "ml_01seedyrn1mat000000"
-	SeedMaterialItemID           = "it_01seedyrn1item00000"
+	// Small sock line — edges Knit Small → Wash Small in shared/db/seed/0009_production.sql
+	SeedKnitSmallProductionStepID = "prs_01k0a575j3fqr97khk36v114nj"
+	SeedWashSmallProductionStepID = "prs_01k0a57f3dfsmtzc8txbq43eth"
+	SeedMaterialID                = "ml_01seedyrn1mat000000"
+	SeedMaterialItemID            = "it_01seedyrn1item00000"
 	// item_category_id on SeedMaterialItemID (yarn materials in 0007_items.sql), not SeedItemCategoryID (socks).
 	SeedMaterialCategoryID = "itcg_01seedyarn0000000"
 	SeedPartID             = "pt_01seedlknpart000000"

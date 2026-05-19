@@ -33,8 +33,23 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 		Paths: make(map[string]map[string]Operation),
 		Components: Components{
 			Schemas: make(map[string]Schema),
+			SecuritySchemes: map[string]SecuritySchemeSpec{
+				"BearerAuth": {
+					Type:   "http",
+					Scheme: "bearer",
+				},
+				"AugnoApiKey": {
+					Type: "apiKey",
+					In:   "header",
+					Name: "X-Augno-API-Key",
+				},
+			},
 		},
 		Tags: []Tag{},
+		Security: []map[string][]string{
+			{"BearerAuth": {}},
+			{"AugnoApiKey": {}},
+		},
 	}
 
 	tagNames := make(map[string]bool)
@@ -156,12 +171,14 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 							if desc == "" {
 								desc = fmt.Sprintf("Path parameter: %s for %s", pathParam, title)
 							}
+							paramSchema := generateSchema(f.Type, &spec.Components, docReader)
 							operation.Parameters = append(operation.Parameters, Parameter{
 								Name:        pathParam,
 								In:          "path",
 								Description: desc,
 								Required:    true,
-								Schema:      generateSchema(f.Type, &spec.Components, docReader),
+								Schema:      paramSchema,
+								Example:     pathParameterExample(reqType, f, pathParam, route, paramSchema),
 							})
 						}
 
@@ -593,18 +610,12 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 			}
 		}
 
-		// JSON omitempty omits the key for pointers, slices, and maps (not plain scalars or structs).
-		omitemptySkippableKind := f.Type.Kind() == reflect.Pointer ||
-			f.Type.Kind() == reflect.Slice ||
-			f.Type.Kind() == reflect.Map
-		canOmitWithOmitempty := hasOmitempty && omitemptySkippableKind
-
 		isOptionalPointer := f.Type.Kind() == reflect.Pointer && hasOmitempty
 		var isRequired bool
 		if isPatchField || isNullableInput {
 			isRequired = hasRequiredInJSON || hasRequiredInValidate
 		} else {
-			isRequired = hasRequiredInJSON || hasRequiredInValidate || !canOmitWithOmitempty
+			isRequired = hasRequiredInJSON || hasRequiredInValidate || !(f.Type.Kind() == reflect.Pointer && hasOmitempty)
 		}
 
 		if isRequired {

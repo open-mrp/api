@@ -73,13 +73,5 @@ crash.log
 # cache
 .cache/
 
-# migration verification working directory
-.migration-verify/logs/
-.migration-verify/queue/
-.audit-verify/logs/
-.audit-verify/queue/
-.delete-verify/logs/
-.delete-verify/queue/
-.endpoint-verify/
-.auth-pattern-verify/
-.nullable-tags-verify/
+# builds
+stainless/builds/

@@ -423,8 +423,8 @@ func (q *Queries) GetProductionStep(ctx context.Context, arg GetProductionStepPa
 }
 
 const getProductionStepChildSteps = `-- name: GetProductionStepChildSteps :many
-SELECT B AS child_step_id FROM _parent_child_production_steps
-WHERE A = ?
+SELECT A AS child_step_id FROM _parent_child_production_steps
+WHERE B = ?
 `
 
 func (q *Queries) GetProductionStepChildSteps(ctx context.Context, parentStepID string) ([]string, error) {
@@ -703,10 +703,10 @@ func (q *Queries) GetProductionStepFull(ctx context.Context, arg GetProductionSt
 }
 
 const getProductionStepInputSteps = `-- name: GetProductionStepInputSteps :many
-SELECT pcps.A AS id, ps.name
+SELECT pcps.B AS id, ps.name
 FROM _parent_child_production_steps pcps
-JOIN production_step ps ON ps.id = pcps.A
-WHERE pcps.B = ?
+JOIN production_step ps ON ps.id = pcps.B
+WHERE pcps.A = ?
 `
 
 type GetProductionStepInputStepsRow struct {
@@ -714,6 +714,7 @@ type GetProductionStepInputStepsRow struct {
 	Name string
 }
 
+// Upstream parents of step are B where this step is downstream A.
 func (q *Queries) GetProductionStepInputSteps(ctx context.Context, stepID string) ([]GetProductionStepInputStepsRow, error) {
 	rows, err := q.db.QueryContext(ctx, getProductionStepInputSteps, stepID)
 	if err != nil {
@@ -771,10 +772,10 @@ func (q *Queries) GetProductionStepMachines(ctx context.Context, productionStepI
 }
 
 const getProductionStepOutputSteps = `-- name: GetProductionStepOutputSteps :many
-SELECT pcps.B AS id, ps.name
+SELECT pcps.A AS id, ps.name
 FROM _parent_child_production_steps pcps
-JOIN production_step ps ON ps.id = pcps.B
-WHERE pcps.A = ?
+JOIN production_step ps ON ps.id = pcps.A
+WHERE pcps.B = ?
 `
 
 type GetProductionStepOutputStepsRow struct {
@@ -782,6 +783,7 @@ type GetProductionStepOutputStepsRow struct {
 	Name string
 }
 
+// Downstream children are A where this step is upstream B.
 func (q *Queries) GetProductionStepOutputSteps(ctx context.Context, stepID string) ([]GetProductionStepOutputStepsRow, error) {
 	rows, err := q.db.QueryContext(ctx, getProductionStepOutputSteps, stepID)
 	if err != nil {
@@ -959,7 +961,7 @@ func (q *Queries) InsertRateForProductionStep(ctx context.Context, arg InsertRat
 
 const isInputOfProductionStep = `-- name: IsInputOfProductionStep :one
 SELECT COUNT(*) FROM _parent_child_production_steps
-WHERE B = ? AND A = ?
+WHERE A = ? AND B = ?
 `
 
 type IsInputOfProductionStepParams struct {
@@ -967,6 +969,7 @@ type IsInputOfProductionStepParams struct {
 	InputStepID   string
 }
 
+// Row (A,B) = (downstream, upstream); current receives from input when A = current and B = input.
 func (q *Queries) IsInputOfProductionStep(ctx context.Context, arg IsInputOfProductionStepParams) (int64, error) {
 	row := q.db.QueryRowContext(ctx, isInputOfProductionStep, arg.CurrentStepID, arg.InputStepID)
 	var count int64
@@ -977,12 +980,13 @@ func (q *Queries) IsInputOfProductionStep(ctx context.Context, arg IsInputOfProd
 const isLastProductionStep = `-- name: IsLastProductionStep :one
 SELECT CASE
     WHEN NOT EXISTS (
-        SELECT 1 FROM _parent_child_production_steps WHERE A = ?
+        SELECT 1 FROM _parent_child_production_steps WHERE B = ?
     ) THEN 1
     ELSE 0
 END AS is_last
 `
 
+// A = downstream; leaf steps have no outgoing edge where they are the upstream B.
 func (q *Queries) IsLastProductionStep(ctx context.Context, id string) (int32, error) {
 	row := q.db.QueryRowContext(ctx, isLastProductionStep, id)
 	var is_last int32

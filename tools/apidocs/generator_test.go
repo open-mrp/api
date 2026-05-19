@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/patch"
@@ -389,6 +390,14 @@ func (e *MockEndpoint) GetHandler() http.HandlerFunc {
 	return nil
 }
 
+type retrieveAPIKeyMockEndpoint struct {
+	apiendpoint.APIEndpoint[retrieveAPIKeyPathRequest, TestResponse]
+}
+
+func (e *retrieveAPIKeyMockEndpoint) GetHandler() http.HandlerFunc {
+	return nil
+}
+
 func TestGenerate_FullAssembly(t *testing.T) {
 	t.Parallel()
 	tempDir, err := os.MkdirTemp("", "apidocs-assembly-test")
@@ -436,6 +445,21 @@ func TestGenerate_FullAssembly(t *testing.T) {
 		t.Fatalf("failed to unmarshal spec: %v", err)
 	}
 
+	components := spec["components"].(map[string]any)
+	schemesAny, ok := components["securitySchemes"].(map[string]any)
+	if !ok {
+		t.Fatal("expected components.securitySchemes in spec")
+	}
+	if _, ok := schemesAny["BearerAuth"]; !ok {
+		t.Error("expected BearerAuth security scheme")
+	}
+	if _, ok := schemesAny["AugnoApiKey"]; !ok {
+		t.Error("expected AugnoApiKey security scheme")
+	}
+	if sec, ok := spec["security"].([]any); !ok || len(sec) != 2 {
+		t.Fatalf("expected top-level security with 2 alternatives, got %v", spec["security"])
+	}
+
 	paths := spec["paths"].(map[string]any)
 	if len(paths) != 2 {
 		t.Errorf("expected 2 paths, got %d", len(paths))
@@ -454,7 +478,6 @@ func TestGenerate_FullAssembly(t *testing.T) {
 	}
 
 	// Verify APIErrorResponse schema is still present in components for documentation
-	components := spec["components"].(map[string]any)
 	schemas := components["schemas"].(map[string]any)
 	if _, ok := schemas["APIErrorResponse"]; !ok {
 		t.Error("expected APIErrorResponse schema to be present in components")
@@ -666,5 +689,97 @@ func TestGenerateSchema_ListAndPageInfoUseDocComments(t *testing.T) {
 	}
 	if got := pageInfoSchema.Properties["has_prev_page"].Description; got != "Whether results exist before this page." {
 		t.Errorf("has_prev_page description = %q", got)
+	}
+}
+
+type retrieveItemPathRequest struct {
+	ItemID string `path:"id" validate:"required"`
+}
+
+func (*retrieveItemPathRequest) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(&retrieveItemPathRequest{
+		ItemID: apiresource.SampleItemID,
+	})
+}
+
+type retrieveAPIKeyPathRequest struct {
+	APIKeyID string `path:"id" validate:"required"`
+}
+
+func TestPathParameterExample(t *testing.T) {
+	t.Parallel()
+
+	itemReqType := reflect.TypeOf(retrieveItemPathRequest{})
+	itemField, _ := itemReqType.FieldByName("ItemID")
+	itemExample := pathParameterExample(itemReqType, itemField, "id", "/v1/catalog/items/{id}", Schema{Type: "string"})
+	if itemExample != apiresource.SampleItemID {
+		t.Errorf("SchemaExample path param: got %v, want %s", itemExample, apiresource.SampleItemID)
+	}
+
+	keyReqType := reflect.TypeOf(retrieveAPIKeyPathRequest{})
+	keyField, _ := keyReqType.FieldByName("APIKeyID")
+	keyExample := pathParameterExample(keyReqType, keyField, "id", "/v1/auth/api-keys/{id}", Schema{Type: "string"})
+	if keyExample != apiresource.SampleAPIKeyID {
+		t.Errorf("field name path param: got %v, want %s", keyExample, apiresource.SampleAPIKeyID)
+	}
+
+	attrField := reflect.StructField{Name: "AttributeID", Type: reflect.TypeOf("")}
+	attrExample := pathParameterExample(reflect.TypeOf(struct{}{}), attrField, "attribute_id", "/v1/catalog/items/{id}/attributes/{attribute_id}", Schema{Type: "string"})
+	if attrExample != apiresource.SampleAttributeID {
+		t.Errorf("named path param: got %v, want %s", attrExample, apiresource.SampleAttributeID)
+	}
+}
+
+func TestGenerate_PathParameterExamples(t *testing.T) {
+	t.Parallel()
+	tempDir, err := os.MkdirTemp("", "apidocs-path-param-test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	outputPath := filepath.Join(tempDir, "spec.json")
+	groups := []apiendpoint.APIEndpointGroup{
+		{
+			Title: "API Keys",
+			Endpoints: []apiendpoint.APIEndpointer{
+				&retrieveAPIKeyMockEndpoint{
+					APIEndpoint: apiendpoint.APIEndpoint[retrieveAPIKeyPathRequest, TestResponse]{
+						Title:  "Retrieve API Key",
+						Method: "GET",
+						Route:  "/v1/auth/api-keys/{id}",
+						Public: true,
+					},
+				},
+			},
+		},
+	}
+	generate(groups, outputPath, false, nil, "1.0.0")
+
+	data, err := os.ReadFile(outputPath)
+	if err != nil {
+		t.Fatalf("failed to read spec: %v", err)
+	}
+	var spec map[string]any
+	if err := json.Unmarshal(data, &spec); err != nil {
+		t.Fatalf("failed to unmarshal spec: %v", err)
+	}
+
+	paths := spec["paths"].(map[string]any)
+	op := paths["/v1/auth/api-keys/{id}"].(map[string]any)["get"].(map[string]any)
+	params := op["parameters"].([]any)
+	var idParam map[string]any
+	for _, p := range params {
+		pm := p.(map[string]any)
+		if pm["in"] == "path" && pm["name"] == "id" {
+			idParam = pm
+			break
+		}
+	}
+	if idParam == nil {
+		t.Fatal("expected path parameter id")
+	}
+	if idParam["example"] != apiresource.SampleAPIKeyID {
+		t.Errorf("path param example = %v, want %s", idParam["example"], apiresource.SampleAPIKeyID)
 	}
 }

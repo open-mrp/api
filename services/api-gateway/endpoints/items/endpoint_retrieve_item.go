@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
@@ -14,6 +15,12 @@ import (
 type RetrieveItemRequest struct {
 	// Item ID.
 	ItemID string `path:"id" validate:"required"`
+}
+
+func (*RetrieveItemRequest) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(&RetrieveItemRequest{
+		ItemID: apiresource.SampleItemID,
+	})
 }
 
 // Returns an item by ID.

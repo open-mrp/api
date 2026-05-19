@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.9](https://github.com/Augno/api/compare/v0.17.8...v0.17.9) (2026-05-19)
+
+
+### Bug Fixes
+
+* issue with listing parts ([#253](https://github.com/Augno/api/issues/253)) ([e765359](https://github.com/Augno/api/commit/e76535954307ad17eb97d7a84bd28faf79722081))
+
 ## [0.17.8](https://github.com/Augno/api/compare/v0.17.7...v0.17.8) (2026-05-19)
 
 

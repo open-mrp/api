@@ -10,8 +10,8 @@ import (
 	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
 	"github.com/augno/api/shared/pagination"
+	"github.com/augno/api/shared/patch"
 	"github.com/augno/api/shared/tracing"
 )
 

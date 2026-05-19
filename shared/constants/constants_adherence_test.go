@@ -164,7 +164,6 @@ var typeRegistry = map[string]any{
 	"ItemTypeCode":                    ItemTypeCode(""),
 	"InventoryActionType":             InventoryActionType(""),
 	"InventoryUpdateOperation":        InventoryUpdateOperation(""),
-	"ItemMatchMode":                   ItemMatchMode(""),
 	"ToolSlug":                        ToolSlug(""),
 	"PriorityCode":                    PriorityCode(""),
 	"PaymentTermStatus":               PaymentTermStatus(""),

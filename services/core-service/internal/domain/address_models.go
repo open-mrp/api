@@ -3,8 +3,8 @@ package domain
 import (
 	"time"
 
-	"github.com/augno/api/shared/patch"
 	"github.com/augno/api/shared/pagination"
+	"github.com/augno/api/shared/patch"
 )
 
 // Geolocation represents a geographic location.

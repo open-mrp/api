@@ -19,8 +19,8 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/idempotency"
-	"github.com/augno/api/shared/patch"
 	"github.com/augno/api/shared/messaging"
+	"github.com/augno/api/shared/patch"
 	"github.com/augno/api/shared/tracing"
 )
 

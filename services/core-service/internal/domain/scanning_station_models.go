@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/patch"
 	"github.com/augno/api/shared/pagination"
+	"github.com/augno/api/shared/patch"
 )
 
 type ScanningStation struct {

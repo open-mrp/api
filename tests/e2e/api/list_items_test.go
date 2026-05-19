@@ -208,21 +208,15 @@ func TestListItems_FilterByCategoryWithPagination(t *testing.T) {
 	assert.NotEqual(t, id1, id2, "Cursor pages should return different items")
 }
 
-func TestListItems_SubassemblyFilterInitialOnly_ReturnsInitialPartsOnly(t *testing.T) {
-	t.Parallel()
-
-	// Collect every item returned by the filter across all cursor pages.
+func collectPagedItemSKUs(t *testing.T, baseParams url.Values) map[string]struct{} {
+	t.Helper()
 	skus := map[string]struct{}{}
 	var nextPageURL *string
 	for {
 		var list *ListResponse
 		var err error
 		if nextPageURL == nil {
-			list, _, err = apiClient.GetList(itemsPath, url.Values{
-				"types[]":            {"part"},
-				"subassembly_filter": {"initial_only"},
-				"limit":              {"500"},
-			})
+			list, _, err = apiClient.GetList(itemsPath, baseParams)
 		} else {
 			list, _, err = apiClient.GetListFromPageURL(nextPageURL)
 		}
@@ -235,11 +229,33 @@ func TestListItems_SubassemblyFilterInitialOnly_ReturnsInitialPartsOnly(t *testi
 		}
 		nextPageURL = list.PageInfo.NextPageURL
 	}
+	return skus
+}
 
-	// LKN and SKN are root-step items (Knit Large / Knit Small are at the start of their BOM chains).
-	assert.Contains(t, skus, SeedLknItemSKU, "LKN (Large Knitted Sock) must appear in initial_only results")
-	assert.Contains(t, skus, SeedSknItemSKU, "SKN (Small Knitted Sock) must appear in initial_only results")
+func TestListItems_SubassemblyFilterInitialOnly_ReturnsInitialPartsOnly(t *testing.T) {
+	t.Parallel()
 
-	// LSN is produced by Sew Large Sock, which is downstream of Knit Large Sock, so it must not appear.
-	assert.NotContains(t, skus, SeedLsnItemSKU, "LSN (Large Sewn Sock) must NOT appear: it is downstream of Knit Large Sock")
+	allSKUs := collectPagedItemSKUs(t, url.Values{
+		"types":              {"part"},
+		"subassembly_filter": {"all"},
+		"limit":              {"500"},
+	})
+	require.Contains(t, allSKUs, SeedLknItemSKU, "seed baseline (all) must include LKN")
+	require.Contains(t, allSKUs, SeedSknItemSKU, "seed baseline (all) must include SKN")
+	require.Contains(t, allSKUs, SeedLsnItemSKU, "seed baseline (all) must include downstream part LSN")
+
+	initialSKUs := collectPagedItemSKUs(t, url.Values{
+		"types":              {"part"},
+		"subassembly_filter": {"initial_only"},
+		"limit":              {"500"},
+	})
+
+	assert.Contains(t, initialSKUs, SeedLknItemSKU, "LKN (Large Knitted Sock) must appear in initial_only results")
+	assert.Contains(t, initialSKUs, SeedSknItemSKU, "SKN (Small Knitted Sock) must appear in initial_only results")
+	assert.NotContains(t, initialSKUs, SeedLsnItemSKU, "LSN (Large Sewn Sock) must NOT appear: produced downstream of root knit step")
+
+	for sku := range initialSKUs {
+		assert.Contains(t, allSKUs, sku, "initial_only result SKU %q must exist in unfiltered part list", sku)
+	}
+	assert.Less(t, len(initialSKUs), len(allSKUs), "initial_only must return strictly fewer parts than subassembly_filter=all when downstream parts exist")
 }

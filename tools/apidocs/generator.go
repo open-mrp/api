@@ -593,12 +593,18 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 			}
 		}
 
+		// JSON omitempty omits the key for pointers, slices, and maps (not plain scalars or structs).
+		omitemptySkippableKind := f.Type.Kind() == reflect.Pointer ||
+			f.Type.Kind() == reflect.Slice ||
+			f.Type.Kind() == reflect.Map
+		canOmitWithOmitempty := hasOmitempty && omitemptySkippableKind
+
 		isOptionalPointer := f.Type.Kind() == reflect.Pointer && hasOmitempty
 		var isRequired bool
 		if isPatchField || isNullableInput {
 			isRequired = hasRequiredInJSON || hasRequiredInValidate
 		} else {
-			isRequired = hasRequiredInJSON || hasRequiredInValidate || !(f.Type.Kind() == reflect.Pointer && hasOmitempty)
+			isRequired = hasRequiredInJSON || hasRequiredInValidate || !canOmitWithOmitempty
 		}
 
 		if isRequired {

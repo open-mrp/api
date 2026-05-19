@@ -323,7 +323,7 @@ var nullableFieldSeeds = map[string]string{
 	"note":  "e2e nullable test note",
 
 	// Clearable text fields (generic PATCH test)
-	"description": "e2e nullable description",
+	"description":   "e2e nullable description",
 	"notes":         "e2e nullable notes",
 	"street_line_2": "Suite 100",
 

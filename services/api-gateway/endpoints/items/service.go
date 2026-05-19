@@ -61,7 +61,6 @@ func NewItemSvc(config *ItemSvcConfig) ItemSvc {
 }
 
 func (m *itemSvcImpl) ListItems(ctx context.Context, req *ListItemsRequest) (*apiresource.List[apiresource.Item], *apierror.APIError) {
-	isExactMatch := req.MatchMode != nil && *req.MatchMode == constants.ItemMatchModeExact
 	onlyInitialSubassemblies := req.SubassemblyFilter != nil &&
 		*req.SubassemblyFilter == constants.SubassemblyFilterInitialOnly
 
@@ -73,7 +72,7 @@ func (m *itemSvcImpl) ListItems(ctx context.Context, req *ListItemsRequest) (*ap
 		CategoryIds:              req.CategoryIDs,
 		AttributeIds:             req.AttributeIDs,
 		SupplierId:               req.SupplierID,
-		IsExactMatch:             isExactMatch,
+		IsExactMatch:             false,
 		OnlyInitialSubassemblies: onlyInitialSubassemblies,
 		Includes:                 appctx.GetRequestedIncludeKeys(ctx),
 		ProductLineIds:           req.ProductLineIDs,

@@ -94,7 +94,6 @@ func (m *DeliveryStatus) StringPtr() *string            { return stringPtrEnum(m
 func (m *ItemTypeCode) StringPtr() *string              { return stringPtrEnum(m) }
 func (m *InventoryActionType) StringPtr() *string       { return stringPtrEnum(m) }
 func (o *InventoryUpdateOperation) StringPtr() *string  { return stringPtrEnum(o) }
-func (m *ItemMatchMode) StringPtr() *string             { return stringPtrEnum(m) }
 func (m *PriorityCode) StringPtr() *string              { return stringPtrEnum(m) }
 func (s *PaymentTermStatus) StringPtr() *string         { return stringPtrEnum(s) }
 func (s *SupplierMaterialStatus) StringPtr() *string    { return stringPtrEnum(s) }

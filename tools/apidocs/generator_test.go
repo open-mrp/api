@@ -41,6 +41,12 @@ type OptionalPointerStruct struct {
 	Optional *string `json:"optional,omitempty"`
 }
 
+// OptionalSliceStruct exercises slice + omitempty (must not appear in schema Required).
+type OptionalSliceStruct struct {
+	OptionalIDs []string `json:"optional_ids,omitempty"`
+	Name        string   `json:"name" validate:"required"`
+}
+
 type ResponseNullableStruct struct {
 	Description *string `json:"description"`
 }
@@ -226,6 +232,23 @@ func TestGenerateSchema(t *testing.T) {
 	optSchema := generateSchema(optType, components, reader)
 	if optSchema.Properties["optional"].Nullable {
 		t.Error("expected optional pointer field 'optional' to not be nullable")
+	}
+
+	optSliceType := reflect.TypeOf(OptionalSliceStruct{})
+	optSliceSchema := generateSchema(optSliceType, components, reader)
+	for _, req := range optSliceSchema.Required {
+		if req == "optional_ids" {
+			t.Error("expected slice field with omitempty 'optional_ids' to not be required in OpenAPI")
+		}
+	}
+	var sawNameRequired bool
+	for _, req := range optSliceSchema.Required {
+		if req == "name" {
+			sawNameRequired = true
+		}
+	}
+	if !sawNameRequired {
+		t.Error("expected validate-required field 'name' to be required")
 	}
 
 	// Response-style pointers without omitempty are nullable.

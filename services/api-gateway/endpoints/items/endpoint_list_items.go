@@ -26,8 +26,6 @@ type ListItemsRequest struct {
 	StartDate *time.Time `query:"start_date"`
 	// Filter items created on or before this date.
 	EndDate *time.Time `query:"end_date"`
-	// How the search query is matched against items (default: partial).
-	MatchMode *constants.ItemMatchMode `query:"match_mode" default:"partial"`
 	// Which subassemblies to include when listing (default: all).
 	SubassemblyFilter *constants.SubassemblyFilter `query:"subassembly_filter" default:"all"`
 	// Filter by product line IDs (only items whose product belongs to one of these lines).

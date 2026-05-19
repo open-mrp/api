@@ -19,6 +19,15 @@ type ListUsageRequest struct {
 	Cursor *string `query:"cursor"`
 }
 
+func (*ListUsageRequest) SchemaExample() any {
+	cur := apiresource.SampleAgentTokenUsageID
+	return map[string]any{
+		"days":   int64(30),
+		"limit":  int64(100),
+		"cursor": cur,
+	}
+}
+
 // Returns a paginated list of daily agent token usage records for the current account.
 type ListUsageEndpoint struct{}
 

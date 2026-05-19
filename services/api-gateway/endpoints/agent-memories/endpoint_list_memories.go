@@ -5,7 +5,9 @@ import (
 	"net/http"
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/contracts"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -16,6 +18,22 @@ type ListMemoriesRequest struct {
 	Category *string `query:"category"`
 	// Entity type filter (e.g. "customer", "product").
 	EntityType *string `query:"entity_type"`
+}
+
+var _ contracts.DocumentedType = (*ListMemoriesRequest)(nil)
+
+func (*ListMemoriesRequest) SchemaExample() any {
+	category := "preference"
+	entityType := "customer"
+	m := apiexample.ValidateAndMarshalToMap(&ListMemoriesRequest{
+		PaginationRequest: apiresource.PaginationRequest{},
+		Category:          &category,
+		EntityType:        &entityType,
+	})
+	for k, v := range (&apiresource.PaginationRequest{}).SchemaExample().(map[string]any) {
+		m[k] = v
+	}
+	return m
 }
 
 // Returns a paginated list of agent memories.

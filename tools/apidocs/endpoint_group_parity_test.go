@@ -9,7 +9,7 @@ import (
 
 // TestEndpointGroupParity guards against silent drift between the runtime
 // router (services/api-gateway/internal/router/init_groups.go) and the
-// OpenAPI spec generator (tools/apidocs/main.go). Both files maintain a
+// OpenAPI spec generator (tools/apidocs/endpoint_groups.go). Both files maintain a
 // list of httpgroup.*EndpointGroup constructions, and any group that the
 // router serves but the generator omits will silently disappear from the
 // public/internal OpenAPI spec — and therefore from the generated SDK and
@@ -22,7 +22,7 @@ import (
 func TestEndpointGroupParity(t *testing.T) {
 	const (
 		routerFile  = "../../services/api-gateway/internal/router/init_groups.go"
-		apidocsFile = "main.go"
+		apidocsFile = "endpoint_groups.go"
 	)
 
 	routerGroups, err := extractEndpointGroups(routerFile)
@@ -45,12 +45,12 @@ func TestEndpointGroupParity(t *testing.T) {
 	missingFromRouter := setDiff(apidocsGroups, routerGroups)
 
 	if len(missingFromApidocs) > 0 {
-		t.Errorf("groups registered in router but missing from OpenAPI spec generator (tools/apidocs/main.go): %v\n"+
-			"Add them to tools/apidocs/main.go so they appear in the generated spec.", missingFromApidocs)
+		t.Errorf("groups registered in router but missing from OpenAPI spec generator (tools/apidocs/endpoint_groups.go): %v\n"+
+			"Add them to tools/apidocs/endpoint_groups.go so they appear in the generated spec.", missingFromApidocs)
 	}
 	if len(missingFromRouter) > 0 {
-		t.Errorf("groups in OpenAPI spec generator (tools/apidocs/main.go) but not registered in router: %v\n"+
-			"Either remove them from tools/apidocs/main.go or register them in services/api-gateway/internal/router/init_groups.go.", missingFromRouter)
+		t.Errorf("groups in OpenAPI spec generator (tools/apidocs/endpoint_groups.go) but not registered in router: %v\n"+
+			"Either remove them from tools/apidocs/endpoint_groups.go or register them in services/api-gateway/internal/router/init_groups.go.", missingFromRouter)
 	}
 }
 

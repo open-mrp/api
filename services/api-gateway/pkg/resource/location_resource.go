@@ -50,6 +50,7 @@ func (*LocationType) SchemaExample() any {
 // ---------------------------------------------------------------------------
 
 const SampleLocationID = "lc_01gf7a8200er3ar3pkfrb6kk30"
+const SampleLocationChildID = "lc_01gf7a8200er3ar3pkfrb6kk32"
 const SampleLocationName = "Warehouse A"
 
 // Location resource.
@@ -79,7 +80,7 @@ var SampleLocation = &Location{
 	TypeCode: SampleLocationTypeCode,
 	Parent:   nil,
 	Children: NewList([]Location{
-		{ID: "lc_01gf7a8200er3ar3pkfrb6kk32", Object: constants.ObjectTypeLocation, Name: "Shelf A1", TypeCode: SampleLocationTypeCode},
+		{ID: SampleLocationChildID, Object: constants.ObjectTypeLocation, Name: "Shelf A1", TypeCode: SampleLocationTypeCode},
 	}, PageInfo{}),
 	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),

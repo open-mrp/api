@@ -41,7 +41,7 @@ var routeSegmentToSampleID = map[string]string{
 	"priorities":              apiresource.SamplePriorityID,
 	"adjustment-types":        apiresource.SampleAdjustmentTypeID,
 	"account-statuses":        apiresource.SampleAccountStatusID,
-	"locations":               apiresource.SampleLocationID,
+	"location-types":          apiresource.SampleLocationTypeID,
 	"batches":                 apiresource.SampleBatchID,
 	"supplier-materials":      apiresource.SampleSupplierMaterialID,
 	"parts":                   apiresource.SamplePartID,
@@ -63,11 +63,13 @@ var routeSegmentToSampleID = map[string]string{
 	"agents":                  apiresource.SampleAgentDefinitionID,
 	"agent-alerts":            apiresource.SampleAgentAlertID,
 	"agent-runs":              apiresource.SampleAgentRunID,
+	"memories":                apiresource.SampleAgentMemoryID,
 	"agent-memories":          apiresource.SampleAgentMemoryID,
 	"audit-events":            apiresource.SampleAuditEventID,
 	"request-logs":            apiresource.SampleRequestLogID,
 	"email-logs":              apiresource.SampleEmailLogID,
 	"settlements":             apiresource.SampleSettlementID,
+	"transactions":            apiresource.SampleTransactionDetailID,
 	"transaction-allocations": apiresource.SampleAllocationEntryID,
 	"volume-discounts":        apiresource.SampleVolumeDiscountID,
 	"registration-flows":      apiresource.SampleRegistrationFlowID,
@@ -81,6 +83,7 @@ var routeSegmentToSampleID = map[string]string{
 	"service-levels":          apiresource.SampleServiceLevelID,
 	"inventory-change-logs":   apiresource.SampleInventoryChangeLogID,
 	"sales-order-statuses":    apiresource.SampleSalesOrderStatusID,
+	"edi-runs":                apiresource.SampleEDIRunID,
 }
 
 // pathParamToSampleID maps non-generic path parameter names to sample IDs.
@@ -95,6 +98,8 @@ var pathParamToSampleID = map[string]string{
 	"shipment_id":        apiresource.SampleShipmentDetailID,
 	"account_group_id":   apiresource.SampleAccountGroupID,
 	"session_id":         apiresource.SampleRegistrationSessionID,
+	"carrier_id":         apiresource.SampleCarrierID,
+	"slug":               apiresource.SampleAccountPortalSlug,
 	"place_id":           "ChIJN1gggt_t2Z44AR4PVM_67p73Y",
 }
 
@@ -102,7 +107,6 @@ var pathParamToSampleID = map[string]string{
 // not follow the Sample{FieldName} constant naming convention.
 var fieldNameSampleIDs = map[string]string{
 	"APIKeyID":             apiresource.SampleAPIKeyID,
-	"ItemID":               apiresource.SampleItemID,
 	"UserID":               apiresource.SampleUserID,
 	"AccountID":            apiresource.SampleAccountID,
 	"CustomerID":           apiresource.SampleCustomerID,
@@ -154,6 +158,7 @@ var fieldNameSampleIDs = map[string]string{
 	"QuantityID":           apiresource.SampleQuantityID,
 	"PermissionGroupID":    apiresource.SamplePermissionGroupID,
 	"ChildAccountID":       apiresource.SampleCustomerID,
+	"AssociatedUnitID":     apiresource.SampleUnitID,
 	"LineID":               apiresource.SampleSalesOrderLineDetailID,
 	"PlaceID":              "ChIJN1gggt_t2Z44AR4PVM_67p73Y",
 	"ID":                   "", // resolved from route segment when path param is "id"
@@ -203,18 +208,31 @@ func pathValueFromSchemaExample(reqType reflect.Type, field reflect.StructField)
 	if !ok {
 		return nil
 	}
-	if val, ok := m[field.Name]; ok && val != nil {
-		return val
+	if val, ok := m[field.Name]; ok {
+		return normalizePathExampleValue(val)
 	}
 	if jsonTag := field.Tag.Get("json"); jsonTag != "" {
 		key := strings.Split(jsonTag, ",")[0]
 		if key != "" && key != "-" {
-			if val, ok := m[key]; ok && val != nil {
-				return val
+			if val, ok := m[key]; ok {
+				return normalizePathExampleValue(val)
 			}
 		}
 	}
 	return nil
+}
+
+func normalizePathExampleValue(val any) any {
+	if val == nil {
+		return nil
+	}
+	if s, ok := val.(string); ok {
+		if s == "" {
+			return nil
+		}
+		return s
+	}
+	return val
 }
 
 func sampleIDFromFieldName(fieldName string) string {

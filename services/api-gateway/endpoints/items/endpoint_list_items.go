@@ -2,12 +2,14 @@ package itemep
 
 import (
 	"context"
+	"maps"
 	"net/http"
 	"time"
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
+	"github.com/augno/api/shared/contracts"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -32,6 +34,16 @@ type ListItemsRequest struct {
 	ProductLineIDs []string `query:"product_line_ids"`
 	// Filter by customer account IDs (only items whose product line is accessible to any of these customers).
 	CustomerIDs []string `query:"customer_ids"`
+}
+
+var _ contracts.DocumentedType = (*ListItemsRequest)(nil)
+
+// SchemaExample aligns list filters with SampleItem for OpenAPI documentation.
+func (*ListItemsRequest) SchemaExample() any {
+	base := (&apiresource.PaginationRequest{}).SchemaExample().(map[string]any)
+	out := maps.Clone(base)
+	out["types"] = []any{string(constants.ItemTypeCodeProduct)}
+	return out
 }
 
 // Returns a paginated list of items.

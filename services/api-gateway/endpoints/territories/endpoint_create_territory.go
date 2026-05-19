@@ -34,7 +34,7 @@ var sampleCreateTerritoryRequest = &CreateTerritoryRequest{
 	State:        "NY",
 	StartZipcode: &sampleCreateStartZipcode,
 	EndZipcode:   &sampleCreateEndZipcode,
-	SalesRepID:   "au_01jm4r6700f8nwq3v5hx2d9ktp",
+	SalesRepID:   apiresource.SampleAccountUserID,
 }
 
 func (*CreateTerritoryRequest) SchemaExample() any {

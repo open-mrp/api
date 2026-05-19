@@ -255,3 +255,21 @@ type ReconcileErrorResult struct {
 	// Error message.
 	Error string `json:"error" validate:"required"`
 }
+
+var SampleBulkReconcileItemsResponse = &BulkReconcileItemsResponse{
+	Object: constants.ObjectTypeBulkReconcileItemsResponse,
+	ReconciledItems: NewList([]ReconciledItemResult{
+		{
+			ItemID:           SampleItemID,
+			SKU:              SampleItemSKU,
+			PreviousQuantity: 10,
+			NewQuantity:      12,
+		},
+	}, PageInfo{}),
+	SkippedItems: NewList([]SkippedItemResult{}, PageInfo{}),
+	Errors:       NewList([]ReconcileErrorResult{}, PageInfo{}),
+}
+
+func (*BulkReconcileItemsResponse) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleBulkReconcileItemsResponse)
+}

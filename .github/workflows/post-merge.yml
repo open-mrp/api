@@ -1,40 +1,29 @@
 name: Post-Merge Validation
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
+    inputs:
+      run_gosec:
+        description: Run gosec full scan
+        type: boolean
+        default: true
+      run_smoke:
+        description: Run SQL prepare smoke tests
+        type: boolean
+        default: true
+      run_e2e:
+        description: Run E2E tests
+        type: boolean
+        default: true
+      e2e_full_suite:
+        description: Run full E2E suite (vs. tests selected from diff vs. main)
+        type: boolean
+        default: true
 
 jobs:
-  changes:
-    name: Detect Changes
-    runs-on: ubuntu-latest
-    outputs:
-      go: ${{ steps.filter.outputs.go }}
-      e2e: ${{ steps.filter.outputs.e2e }}
-    steps:
-      - uses: actions/checkout@v5
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            go:
-              - '**/*.go'
-              - 'go.mod'
-              - 'go.sum'
-              - 'tools/tool-versions'
-              - 'shared/db/migrations/**'
-            e2e:
-              - 'services/**'
-              - 'shared/**'
-              - 'tests/e2e/**'
-              - 'docker-compose.e2e.yml'
-              - 'infra/production/docker/Dockerfile'
-              - 'tools/apidocs/**'
-
   gosec-full:
     name: Gosec (Full Scan)
-    needs: [changes]
-    if: needs.changes.outputs.go == 'true'
+    if: inputs.run_gosec
     runs-on: ubuntu-latest
     env:
       CGO_ENABLED: 0
@@ -67,8 +56,7 @@ jobs:
 
   smoke-test:
     name: SQL Prepare Smoke Tests
-    needs: [changes]
-    if: needs.changes.outputs.go == 'true'
+    if: inputs.run_smoke
     runs-on: ubuntu-latest
     env:
       GOTOOLCHAIN: local
@@ -149,8 +137,7 @@ jobs:
 
   e2e:
     name: E2E
-    needs: [changes]
-    if: needs.changes.outputs.e2e == 'true'
+    if: inputs.run_e2e
     runs-on: ubuntu-latest
     env:
       GOTOOLCHAIN: local
@@ -158,6 +145,8 @@ jobs:
       COMPOSE_DOCKER_CLI_BUILD: 1
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -223,8 +212,12 @@ jobs:
       - name: Select E2E tests
         id: e2e_select
         run: |
-          RUN_REGEX=$(./scripts/select-e2e-tests.sh "${{ github.event.before }}" "${{ github.sha }}")
-          echo "run_regex=${RUN_REGEX}" >> "$GITHUB_OUTPUT"
+          if [[ "${{ inputs.e2e_full_suite }}" == "true" ]]; then
+            echo "run_regex=.*" >> "$GITHUB_OUTPUT"
+          else
+            RUN_REGEX=$(./scripts/select-e2e-tests.sh origin/main HEAD)
+            echo "run_regex=${RUN_REGEX}" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Run E2E tests
         run: ./scripts/run-e2e-tests.sh 300s "${{ steps.e2e_select.outputs.run_regex }}"

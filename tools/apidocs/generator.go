@@ -17,7 +17,7 @@ import (
 	"github.com/augno/api/shared/patch"
 )
 
-func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOnly bool, transforms []Transform, version string) {
+func buildOpenAPIDocument(groups []apiendpoint.APIEndpointGroup, publicOnly bool, transforms []Transform, version string) (map[string]any, error) {
 	docReader := NewDocReader()
 	spec := OpenAPI{
 		OpenAPI: "3.0.0",
@@ -150,7 +150,7 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 								Description: desc,
 								Required:    strings.Contains(f.Tag.Get("validate"), "required"),
 								Schema:      paramSchema,
-								Example:     parameterExample(paramSchema),
+								Example:     queryParameterExample(reqType, f, paramSchema),
 							})
 						}
 						if cookie := f.Tag.Get("cookie"); cookie != "" {
@@ -327,11 +327,11 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 	// Marshal to generic map for transforms
 	b, err := json.Marshal(spec)
 	if err != nil {
-		log.Fatalf("Error marshaling spec for transforms: %v", err)
+		return nil, fmt.Errorf("marshal spec for transforms: %w", err)
 	}
 	var data any
 	if err := json.Unmarshal(b, &data); err != nil {
-		log.Fatalf("Error unmarshaling spec for transforms: %v", err)
+		return nil, fmt.Errorf("unmarshal spec for transforms: %w", err)
 	}
 
 	// Apply transforms
@@ -341,7 +341,19 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 	applyPropertyOrders(data, propertyOrders)
 	applyExampleOrders(data, propertyOrders)
 
-	// Use json.Marshal + json.Indent so orderedJSONMap.MarshalJSON is properly indented
+	root, ok := data.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("open api document root is %T, want object", data)
+	}
+	return root, nil
+}
+
+func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOnly bool, transforms []Transform, version string) {
+	data, err := buildOpenAPIDocument(groups, publicOnly, transforms, version)
+	if err != nil {
+		log.Fatalf("Error building OpenAPI document: %v", err)
+	}
+
 	compact, err := json.Marshal(data)
 	if err != nil {
 		log.Fatalf("Error marshaling spec: %v", err)
@@ -361,10 +373,13 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 		log.Fatalf("Error writing spec to %s: %v", outputPath, err)
 	}
 
-	// Count total endpoints
 	totalEndpoints := 0
-	for _, methods := range spec.Paths {
-		totalEndpoints += len(methods)
+	if paths, ok := data["paths"].(map[string]any); ok {
+		for _, methods := range paths {
+			if mm, ok := methods.(map[string]any); ok {
+				totalEndpoints += len(mm)
+			}
+		}
 	}
 
 	specType := "internal"
@@ -454,16 +469,12 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 		return Schema{Type: "array", Items: &itemSchema}
 	}
 
-	routeStr := ""
-	if len(route) > 0 {
-		routeStr = route[0]
-	}
-
 	var example any
 	typeName := getCleanTypeName(origT)
 
-	// Special handling for List types: use the route for the URL field in the example
-	if strings.HasPrefix(typeName, "List_") && routeStr != "" {
+	// Special handling for List types: populate list body examples even when the schema is
+	// first registered without a route (e.g. nested expandable List fields).
+	if strings.HasPrefix(typeName, "List_") {
 		// Extract the item type from List[T] by finding the "data" field
 		var itemExample any
 		if t.Kind() == reflect.Struct {
@@ -613,6 +624,9 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 		isOptionalPointer := f.Type.Kind() == reflect.Pointer && hasOmitempty
 		var isRequired bool
 		if isPatchField || isNullableInput {
+			isRequired = hasRequiredInJSON || hasRequiredInValidate
+		} else if f.Type.Kind() == reflect.Slice && hasOmitempty {
+			// Slices use omitempty semantics like pointers; empty slice is omitted from JSON.
 			isRequired = hasRequiredInJSON || hasRequiredInValidate
 		} else {
 			isRequired = hasRequiredInJSON || hasRequiredInValidate || !(f.Type.Kind() == reflect.Pointer && hasOmitempty)

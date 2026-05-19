@@ -1,3 +1,5 @@
+-- Parent/child step links: _parent_child_production_steps has A=downstream, B=upstream (see docs/patterns/production-step-graph-patterns.md).
+
 -- name: GetProductionStep :one
 SELECT
     ps.id,

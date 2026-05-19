@@ -52,6 +52,23 @@ type UnitGroupUnit struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
+const SampleUnitGroupUnitID = "ugu_01jm4r6700f8nwq3v5hx2d9ktp"
+
+var SampleUnitGroupUnit = &UnitGroupUnit{
+	ID:                       SampleUnitGroupUnitID,
+	Object:                   constants.ObjectTypeUnitGroupUnit,
+	Unit:                     SampleUnit,
+	DiscountPercentage:       1,
+	DiscountFixed:            0,
+	CustomerPortalVisibility: constants.CustomerPortalVisibilityVisible,
+	CreatedAt:                timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:                timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+}
+
+func (*UnitGroupUnit) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleUnitGroupUnit)
+}
+
 var SampleUnitGroup = &UnitGroup{
 	ID:        SampleUnitGroupID,
 	Object:    constants.ObjectTypeUnitGroup,

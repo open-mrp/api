@@ -149,6 +149,12 @@ func (*MyResource) SchemaExample() any {
 }
 ```
 
+Shared documentation fixtures live under `services/api-gateway/pkg/resource/` as `Sample*` constants (IDs and names) and `Sample<Resource>` values. Use those constants for every foreign key and identifier that appears in OpenAPI examples so path parameters, query filters, request bodies, and response payloads describe one coherent scenario.
+
+Request types that submit JSON bodies should implement `contracts.DocumentedType` with `SchemaExample()` built from `apiexample.ValidateAndMarshalToMap`. Prefer required JSON fields only; omit optional filters unless they clarify the docs example. Do not introduce ad hoc type IDs in samples—always reference `apiresource.Sample*` IDs—so examples stay consistent with the response graph for that resource family.
+
+When adding a new resource, add `Sample*ID` and `Sample*` in `pkg/resource` first, wire endpoint request samples to those constants, then rely on the OpenAPI generator (`tools/apidocs`) for path/query examples where applicable.
+
 ## List Responses
 
 Paginated list endpoints return a `List[T]` wrapper. The same `List[T]` type is used for both top-level paginated list endpoints and for embedded sub-resource arrays; for embedded lists, `page_info` is typically empty.

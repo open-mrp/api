@@ -10,7 +10,6 @@ import (
 
 const SampleSettlementID = "sl_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleSettlementSummaryID = "sl_01jm4r6700f8nwq3v5hx2d9ktp"
-const SampleTransactionAllocationID2 = "txal_01jm4r67aab8nwq3v5hx2d9ktp"
 
 // Settlement with expandable allocations.
 type Settlement struct {
@@ -112,7 +111,7 @@ type TransactionAllocation struct {
 }
 
 var SampleTransactionAllocation2 = &TransactionAllocation{
-	ID:     SampleTransactionAllocationID2,
+	ID:     SampleAllocationEntryID,
 	Object: constants.ObjectTypeTransactionAllocation,
 	Amount: &Quantity{
 		ID:           SampleQuantityID,

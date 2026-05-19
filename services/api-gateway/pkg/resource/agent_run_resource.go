@@ -84,7 +84,7 @@ var SampleAgentRunStep = &AgentRunStep{
 	Title:     "Run triggered",
 	Content:   new("Process order #1234"),
 	Sequence:  0,
-	Actor:     &Actor{ID: "us_01jm4r6700f8nwq3v5hx2d9ktp", Object: constants.ObjectTypeActor, Type: constants.ActorTypeUser, Name: new("Jane Doe")},
+	Actor:     SampleActor,
 	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 }
 

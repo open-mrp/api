@@ -78,8 +78,10 @@ type AgentDefinitionTool struct {
 	RequireReview bool `json:"require_review"`
 }
 
+const SampleToolGroupID = "tgrp_01k0b1seed0product000000"
+
 var SampleToolGroup = &ToolGroup{
-	ID:          "tgrp_01k0b1seed0product000000",
+	ID:          SampleToolGroupID,
 	Object:      constants.ObjectTypeToolGroup,
 	Name:        "Product Tools",
 	Description: "Tools for searching and managing products.",

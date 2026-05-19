@@ -332,5 +332,6 @@ For deeper dives, review the following docs:
 - `docs/patterns/config-patterns.md` — Config struct conventions (WithDefaults, validate, constructor pattern)
 - `docs/patterns/canonical-log-patterns.md` — Canonical log lines, interceptor chain, tracing fields
 - `docs/patterns/e2e-test-patterns.md` — E2E test conventions (CRUD lifecycle, field assertions, omitted fields, expandable fields, helpers, checklist)
+- `docs/patterns/production-step-graph-patterns.md` — `_parent_child_production_steps`: **`A` = downstream, `B` = upstream** (Prisma-aligned); flow SQL and seeds must stay consistent
 - `docs/patterns/main-delegates-to-run-pattern.md` — main() → Run() delegation pattern
 - `docs/api-migration-instructions.md` — Dashboard API → Go API migration context

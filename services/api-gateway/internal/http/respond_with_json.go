@@ -97,3 +97,10 @@ func RespondWithFile(ctx context.Context, w http.ResponseWriter, code int, fd *F
 		log.Printf("Error writing file response: %s", err)
 	}
 }
+
+func (*FileDownload) SchemaExample() any {
+	return map[string]any{
+		"content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		"filename":     "export.xlsx",
+	}
+}

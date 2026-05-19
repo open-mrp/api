@@ -26,3 +26,4 @@ rather than:
 
 8. New endpoints should be added to the openapi spec generator.
 9. Sensitive HTTP request or response fields that must not appear verbatim in persisted request logs should be tagged `sensitive:"true"` on the corresponding struct field (`shared/redact` redacts logged JSON at the gateway). Omit entire request-log rows via `Extras.SkipRequestLogging` when logging the request is unacceptable.
+10. **`_parent_child_production_steps` column order is fixed**: **`A` = downstream step, `B` = upstream (parent)**; matches Prisma/dashboard. Never revert queries or seeds to “`A` = parent.” See `docs/patterns/production-step-graph-patterns.md`.

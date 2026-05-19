@@ -128,6 +128,10 @@ CREATE TABLE `_item_categories_quantity_discounts` (
 --
 -- Table structure for table `_parent_child_production_steps`
 --
+-- Semantics (Prisma / dashboard; do not invert in application SQL):
+--   A = downstream production_step id (later in the flow)
+--   B = upstream production_step id (feeds into A); edge direction B -> A
+-- See docs/patterns/production-step-graph-patterns.md
 
 DROP TABLE IF EXISTS `_parent_child_production_steps`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;

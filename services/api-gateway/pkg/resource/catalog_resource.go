@@ -64,17 +64,17 @@ type CatalogAttribute struct {
 }
 
 var SampleCatalogProductLine = &CatalogProductLine{
-	ID:     "pl_01jm4r6700e3kxb9w2nqh7g5fp",
+	ID:     SampleProductLineID,
 	Object: constants.ObjectTypeCatalogProductLine,
 	Name:   "Industrial Fasteners",
 }
 
 var SampleCatalogAttribute = &CatalogAttribute{
-	ID:     "at_01jm4r6700e3kxb9w2nqh7g5fp",
+	ID:     SampleAttributeID,
 	Object: constants.ObjectTypeCatalogAttribute,
 	Name:   "Red",
 	Property: &CatalogProperty{
-		ID:     "pr_01jm4r6700e3kxb9w2nqh7g5fp",
+		ID:     SamplePropertyID,
 		Object: constants.ObjectTypeCatalogProperty,
 		Name:   "Color",
 	},
@@ -83,22 +83,22 @@ var SampleCatalogAttribute = &CatalogAttribute{
 var SampleCatalogProduct = &CatalogProduct{
 	Object: constants.ObjectTypeCatalogProduct,
 	Item: &Item{
-		ID:     "it_01jm4r6700e3kxb9w2nqh7g5fp",
+		ID:     SampleItemID,
 		Object: constants.ObjectTypeItem,
-		SKU:    "WDG-001",
+		SKU:    SampleItemSKU,
 	},
 	Description: "Hex Bolt M10x30 Zinc",
 	Attributes:  NewList([]CatalogAttribute{*SampleCatalogAttribute}, PageInfo{}),
 }
 
 var SampleCatalogProperty = &CatalogProperty{
-	ID:     "pr_01jm4r6700e3kxb9w2nqh7g5fp",
+	ID:     SamplePropertyID,
 	Object: constants.ObjectTypeCatalogProperty,
 	Name:   "Color",
 }
 
 var SampleCatalogCategory = &CatalogCategory{
-	ID:         "ic_01jm4r6700e3kxb9w2nqh7g5fp",
+	ID:         SampleItemCategoryID,
 	Object:     constants.ObjectTypeCatalogCategory,
 	Name:       "Finished Goods",
 	Properties: NewList([]CatalogProperty{*SampleCatalogProperty}, PageInfo{}),

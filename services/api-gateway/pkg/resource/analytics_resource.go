@@ -15,11 +15,6 @@ type AnalyzeSalesResponse struct {
 	Data []SalesEntry `json:"data" validate:"required"`
 }
 
-// SchemaExample returns an example of AnalyzeSalesResponse for documentation.
-func (*AnalyzeSalesResponse) SchemaExample() any {
-	return nil
-}
-
 // SalesEntry represents a single sales transaction entry for analytics.
 type SalesEntry struct {
 	// Unique identifier for this entry.

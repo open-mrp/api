@@ -1,6 +1,9 @@
 package apiresource
 
-import "github.com/augno/api/shared/constants"
+import (
+	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	"github.com/augno/api/shared/constants"
+)
 
 // Item with on-hand inventory quantity.
 type InventoryItem struct {
@@ -26,5 +29,16 @@ type ListInventoriesResponse struct {
 
 // SchemaExample returns an example of ListInventoriesResponse for documentation.
 func (*ListInventoriesResponse) SchemaExample() any {
-	return nil
+	return apiexample.ValidateAndMarshalToMap(&ListInventoriesResponse{
+		Object:   constants.ObjectTypeList,
+		PageInfo: PageInfo{},
+		Data: []InventoryItem{
+			{
+				Object:   constants.ObjectTypeInventoryItem,
+				Item:     *SampleItem,
+				Quantity: SampleQuantity,
+			},
+		},
+		Count: 1,
+	})
 }

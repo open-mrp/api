@@ -1,3 +1,5 @@
+-- _parent_child_production_steps: A = downstream, B = upstream. initial_only requires NOT EXISTS edge where this step is A (no upstream parent). docs/patterns/production-step-graph-patterns.md
+
 -- name: ListItemsForward :many
 SELECT
     i.id,

@@ -185,15 +185,15 @@ type FrequentlyOrderedProduct struct {
 var SampleFrequentlyOrderedProduct = &FrequentlyOrderedProduct{
 	Object: constants.ObjectTypeFrequentlyOrderedProduct,
 	Item: &Item{
-		ID:     "it_01jm4r6700e3kxb9w2nqh7g5fp",
+		ID:     SampleItemID,
 		Object: constants.ObjectTypeItem,
-		SKU:    "HB-M10X30-ZN",
+		SKU:    SampleItemSKU,
 	},
 	Unit: &Unit{
-		ID:           "un_01jm4r6700e3kxb9w2nqh7g5fp",
+		ID:           SampleUnitID,
 		Object:       constants.ObjectTypeUnit,
-		Name:         "Case",
-		Abbreviation: "cs",
+		Name:         SampleUnitName,
+		Abbreviation: SampleUnitAbbreviation,
 	},
 	OrderCount: 42,
 }

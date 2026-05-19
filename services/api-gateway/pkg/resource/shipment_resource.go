@@ -190,6 +190,34 @@ type EstimateRateResult struct {
 	Rate float64 `json:"rate" validate:"required"`
 }
 
+var SampleEstimateRateResult = &EstimateRateResult{
+	Object: constants.ObjectTypeEstimateRateResult,
+	Rate:   42.5,
+}
+
+func (*EstimateRateResult) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleEstimateRateResult)
+}
+
+var sampleRateShopEstimatedDays int32 = 3
+
+var SampleRateShopOption = &RateShopOption{
+	Object:        constants.ObjectTypeRateShopOption,
+	Carrier:       SampleCarrier,
+	ServiceLevel:  SampleServiceLevel,
+	Rate:          12.34,
+	EstimatedDays: &sampleRateShopEstimatedDays,
+}
+
+var SampleRateShopResult = &RateShopResult{
+	Object:  constants.ObjectTypeRateShopResult,
+	Options: NewList([]RateShopOption{*SampleRateShopOption}, PageInfo{}),
+}
+
+func (*RateShopResult) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleRateShopResult)
+}
+
 // --- Sample Data ---
 
 var sampleShipmentNote = "Handle with care"

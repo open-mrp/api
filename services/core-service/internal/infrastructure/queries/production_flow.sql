@@ -1,3 +1,6 @@
+-- Production step DAG edges: table _parent_child_production_steps(A,B) uses A=downstream, B=upstream (Prisma).
+-- ConnectSteps persists (target_id, source_id). Do not reinterpret as A=parent. docs/patterns/production-step-graph-patterns.md
+
 -- name: GetConsumptionPartItemIDs :many
 SELECT ci.id AS item_id
 FROM consumption c

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.11](https://github.com/Augno/api/compare/v0.17.10...v0.17.11) (2026-05-20)
+
+
+### Bug Fixes
+
+* new CI/CD process to gen sdks ([#257](https://github.com/Augno/api/issues/257)) ([095b080](https://github.com/Augno/api/commit/095b080c5738d4b2a7d4690280498156f79857a7))
+
 ## [0.17.10](https://github.com/Augno/api/compare/v0.17.9...v0.17.10) (2026-05-19)
 
 

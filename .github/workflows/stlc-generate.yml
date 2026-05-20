@@ -17,11 +17,6 @@ on:
         required: false
         type: boolean
         default: false
-      dispatch_internal_sdk:
-        description: Dispatch api-release to internal-sdk after success (requires CROSS_REPO_PAT secret).
-        required: false
-        type: boolean
-        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -80,20 +75,3 @@ jobs:
     secrets:
       STLC_READ_TOKEN: ${{ secrets.STLC_READ_TOKEN }}
       SDK_WRITE_TOKEN: ${{ secrets.SDK_WRITE_TOKEN }}
-
-  trigger-internal-sdk-release:
-    name: Trigger internal-sdk release
-    needs: generate
-    if: |
-      github.event_name == 'workflow_dispatch' &&
-      github.event.inputs.dispatch_internal_sdk == true &&
-      needs.generate.result == 'success'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Dispatch api-release to internal-sdk
-        uses: peter-evans/repository-dispatch@v3
-        with:
-          token: ${{ secrets.CROSS_REPO_PAT }}
-          repository: Augno/internal-sdk
-          event-type: api-release
-          client-payload: '{"api_version": "${{ github.event.inputs.api_version || github.sha }}"}'

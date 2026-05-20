@@ -249,22 +249,3 @@ jobs:
           repository: ${{ matrix.consumer }}
           event-type: api-release
           client-payload: '{"api_version": "${{ needs.release-please.outputs.tag_name }}"}'
-
-  notify-internal-sdk:
-    name: Notify internal-sdk
-    needs: [release-please, deploy, publish-openapi-specs, generate-sdks]
-    if: |
-      needs.release-please.outputs.release_created == 'true' &&
-      needs.deploy.result == 'success' &&
-      needs.publish-openapi-specs.result == 'success' &&
-      needs.generate-sdks.outputs.internal_spec_changed == 'true'
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - name: Dispatch api-release
-        uses: peter-evans/repository-dispatch@v3
-        with:
-          token: ${{ secrets.CROSS_REPO_PAT }}
-          repository: Augno/internal-sdk
-          event-type: api-release
-          client-payload: '{"api_version": "${{ needs.release-please.outputs.tag_name }}"}'

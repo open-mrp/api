@@ -112,9 +112,9 @@ TypeScript codegen overwrites `pnpm-lock.yaml` using merged templates from `stlc
 
 | When | SDK branch | PR / merge |
 | --- | --- | --- |
-| After **release-please** tag, **deploy** succeeds, and **OpenAPI** is published to S3 | `bot/sdk-sync-<tag>` on each SDK repo | Bot opens PR → **`main`**; merge then run SDK release (npm) as today |
+| After **release-please** tag, **deploy** succeeds, and **OpenAPI** is published to S3 | `bot/sdk-sync-<tag>` on each SDK repo | Bot opens PR → **`main`**; merge triggers SDK release (npm) |
 
-`internal-sdk` must have [`.github/workflows/release.yml`](https://github.com/augno/internal-sdk/blob/main/.github/workflows/release.yml) (release-please on `main` + npm publish). Required repo secrets on **`augno/internal-sdk`**: `RELEASE_PLEASE_TOKEN`, `AUGNO_NPM_TOKEN` (or `NPM_TOKEN`). The `api-release` dispatch from the API repo re-triggers release-please after deploy; merging the SDK PR updates **`main`** and can trigger the same.
+[`internal-sdk`](https://github.com/augno/internal-sdk) publishes via [changesets](https://github.com/changesets/changesets) on push to **`main`** ([`.github/workflows/release.yml`](https://github.com/augno/internal-sdk/blob/main/.github/workflows/release.yml)). Merging the stlc SDK PR is what updates **`main`** and kicks off versioning/publish — there is no separate `api-release` dispatch to `internal-sdk`.
 
 Production flow (keeps SDKs aligned with what is deployed):
 
@@ -122,10 +122,10 @@ Production flow (keeps SDKs aligned with what is deployed):
 2. Terraform → build/push images → deploy to EKS.
 3. `publish-openapi-specs` uploads specs to S3 and uploads **`specs/`** as a workflow artifact for the next job.
 4. **`generate-sdks`** and **`notify-consumers`** run in parallel after step 3:
-   - `generate-sdks` downloads that artifact, runs **`stlc build --push`** on branch **`bot/sdk-sync-<tag>`**, and opens SDK PRs into **`main`**.
-   - `notify-consumers` dispatches `api-release` to dashboard, public-docs, and openapi-spec. **`notify-internal-sdk`** runs only when the internal OpenAPI spec changed (same comparison as above).
+   - `generate-sdks` downloads that artifact, runs **`stlc build --push`** on branch **`bot/sdk-sync-<tag>`**, and opens SDK PRs into **`main`** (skipped when the spec matches the S3 baseline).
+   - `notify-consumers` dispatches `api-release` to dashboard, public-docs, and openapi-spec so those repos sync from S3.
 
-**Timing:** Consumer repos sync from the deployed API and S3-published OpenAPI specs; they do not wait for SDK PRs. Downstream npm/GitHub Packages SDK versions may not update until those SDK PRs are **merged** and SDK release workflows publish.
+**Timing:** Consumer repos sync from the deployed API and S3-published OpenAPI specs; they do not wait for SDK PRs. Downstream npm/GitHub Packages SDK versions may not update until those SDK PRs are **merged** and each SDK repo's release workflow publishes.
 
 When `stlc build` fails, the release job runs **Print STLC failure report** (`stlc status`, `stlc diagnostics`, `stlc show`, and the latest `builds/*.json` manifest) in the job log and Actions step summary.
 
@@ -142,17 +142,17 @@ Add these secrets on **`augno/api`** (Settings → Secrets and variables → Act
 
 Authorize both tokens for SSO if your org requires it.
 
-The API release workflow regenerates SDKs and dispatches `api-release` to consumers in parallel after deploy and OpenAPI publish. `internal-sdk` receives both the stlc push (SDK PR) and the dispatch (re-triggers its release workflow).
+The API release workflow regenerates SDKs and dispatches `api-release` to spec consumers in parallel after deploy and OpenAPI publish. SDK repos (`internal-sdk`, `typescript-sdk`) are updated only via stlc PRs.
 
 ### internal-sdk release checklist
 
-1. **`augno/internal-sdk` secrets:** `RELEASE_PLEASE_TOKEN`, `AUGNO_NPM_TOKEN` (or `NPM_TOKEN`) — verify with **Actions → Release Doctor**.
-2. **`release.yml` on `main`** — release-please opens/merges a release PR or tags; `publish-npm` runs when `release_created` is true.
-3. **Conventional commit from stlc** — `fix(sdk): sync with deployed API v…` so release-please cuts a patch release (plain `chore` commits do not bump).
+1. **Merge the stlc PR** on [`augno/internal-sdk`](https://github.com/augno/internal-sdk) into **`main`**.
+2. **`release.yml` on `main`** — changesets opens a version PR or publishes when changesets are present.
+3. **Add a changeset** in the SDK PR when the release should bump npm (stlc sync commits alone may not include one).
 
 ### Publishing packages
 
-`stlc build --push` updates SDK **git** repos only. GitHub Packages / npm publish still requires `release-please` + publish workflows on each SDK repo (see `internal-sdk`’s `release-please-config.json`).
+`stlc build --push` updates SDK **git** repos only. GitHub Packages / npm publish still requires each SDK repo's release workflow (changesets on `internal-sdk`).
 
 ## Parity check
 

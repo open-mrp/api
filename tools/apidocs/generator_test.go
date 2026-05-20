@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"os"
@@ -783,6 +784,51 @@ func TestGenerate_PathParameterExamples(t *testing.T) {
 	}
 	if idParam["example"] != apiresource.SampleAPIKeyID {
 		t.Errorf("path param example = %v, want %s", idParam["example"], apiresource.SampleAPIKeyID)
+	}
+}
+
+// TestOpenAPIGenerationDeterministic ensures consecutive generations produce identical
+// spec bytes. CI compares release specs to the S3 baseline with cmp; this test guards
+// that the generator itself is stable. Path/method maps are sorted by encoding/json;
+// schema properties use struct field order (PropertyOrder / orderedJSONMap).
+func TestOpenAPIGenerationDeterministic(t *testing.T) {
+	t.Parallel()
+
+	groups := openAPIEndpointGroups()
+	const version = "determinism-test"
+
+	for _, tc := range []struct {
+		name       string
+		publicOnly bool
+	}{
+		{name: "internal", publicOnly: false},
+		{name: "public", publicOnly: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			doc1, err := buildOpenAPIDocument(groups, tc.publicOnly, nil, version)
+			if err != nil {
+				t.Fatalf("first buildOpenAPIDocument: %v", err)
+			}
+			out1, err := formatOpenAPIJSON(doc1)
+			if err != nil {
+				t.Fatalf("first formatOpenAPIJSON: %v", err)
+			}
+
+			doc2, err := buildOpenAPIDocument(groups, tc.publicOnly, nil, version)
+			if err != nil {
+				t.Fatalf("second buildOpenAPIDocument: %v", err)
+			}
+			out2, err := formatOpenAPIJSON(doc2)
+			if err != nil {
+				t.Fatalf("second formatOpenAPIJSON: %v", err)
+			}
+
+			if !bytes.Equal(out1, out2) {
+				t.Fatalf("%s spec differs between consecutive generations (%d vs %d bytes)", tc.name, len(out1), len(out2))
+			}
+		})
 	}
 }
 

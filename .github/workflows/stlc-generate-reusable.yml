@@ -31,6 +31,13 @@ on:
         required: false
         type: string
         default: ""
+    outputs:
+      internal_spec_changed:
+        description: Whether internal_openapi_spec.json differs from the S3 baseline (always true when no artifact baseline)
+        value: ${{ jobs.spec-changes.outputs.internal }}
+      public_spec_changed:
+        description: Whether public_openapi_spec.json differs from the S3 baseline (always true when no artifact baseline)
+        value: ${{ jobs.spec-changes.outputs.public }}
     secrets:
       STLC_READ_TOKEN:
         required: true
@@ -45,21 +52,25 @@ env:
   STLC_TARGETS: typescript
 
 jobs:
-  generate:
-    name: Generate ${{ matrix.sdk }}
+  spec-changes:
+    name: Compare OpenAPI specs to S3 baseline
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - sdk: internal
-            workspace: stainless/internal
-            pr_repo: Augno/internal-sdk
-          - sdk: public
-            workspace: stainless/public
-            pr_repo: Augno/typescript-sdk
+    outputs:
+      internal: ${{ steps.internal.outputs.changed }}
+      public: ${{ steps.public.outputs.changed }}
     steps:
+      - name: Assume internal spec changed (manual run)
+        if: inputs.openapi_specs_artifact == ''
+        id: internal
+        run: echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Assume public spec changed (manual run)
+        if: inputs.openapi_specs_artifact == ''
+        id: public
+        run: echo "changed=true" >> "$GITHUB_OUTPUT"
+
       - name: Checkout repository
+        if: inputs.openapi_specs_artifact != ''
         uses: actions/checkout@v5
         with:
           persist-credentials: false
@@ -71,23 +82,71 @@ jobs:
           name: ${{ inputs.openapi_specs_artifact }}
           path: specs
 
+      - name: Compare internal OpenAPI spec
+        if: inputs.openapi_specs_artifact != ''
+        id: internal
+        run: ./scripts/sdk-openapi-spec-changed.sh internal
+
+      - name: Compare public OpenAPI spec
+        if: inputs.openapi_specs_artifact != ''
+        id: public
+        run: ./scripts/sdk-openapi-spec-changed.sh public
+
+  generate:
+    name: Generate ${{ matrix.sdk }}
+    needs: spec-changes
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - sdk: internal
+            workspace: stainless/internal
+            pr_repo: Augno/internal-sdk
+            spec_changed: ${{ needs.spec-changes.outputs.internal }}
+          - sdk: public
+            workspace: stainless/public
+            pr_repo: Augno/typescript-sdk
+            spec_changed: ${{ needs.spec-changes.outputs.public }}
+    steps:
+      - name: Skip SDK generation (OpenAPI spec unchanged)
+        if: matrix.spec_changed != 'true'
+        run: |
+          echo "Skipping ${{ matrix.sdk }} SDK: OpenAPI spec matches the S3 baseline published before this release."
+
+      - name: Checkout repository
+        if: matrix.spec_changed == 'true'
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Download release OpenAPI specs
+        if: matrix.spec_changed == 'true' && inputs.openapi_specs_artifact != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.openapi_specs_artifact }}
+          path: specs
+
       - name: Set up Go
+        if: matrix.spec_changed == 'true' && inputs.openapi_specs_artifact == ''
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
           cache-dependency-path: go.sum
 
       - name: Generate OpenAPI specifications
-        if: inputs.openapi_specs_artifact == ''
+        if: matrix.spec_changed == 'true' && inputs.openapi_specs_artifact == ''
         run: make openapi-quiet
 
       - name: Setup stlc
+        if: matrix.spec_changed == 'true'
         uses: ./.github/actions/setup-stlc
         with:
           github-org: ${{ env.STLC_GITHUB_ORG }}
           stlc-read-token: ${{ secrets.STLC_READ_TOKEN }}
 
       - name: Configure auth for stlc to push to SDK repos
+        if: matrix.spec_changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.SDK_WRITE_TOKEN }}
         run: |
@@ -96,6 +155,7 @@ jobs:
           gh auth setup-git
 
       - name: Generate SDK and push
+        if: matrix.spec_changed == 'true'
         id: build
         env:
           API_VERSION: ${{ inputs.api_version }}
@@ -119,7 +179,7 @@ jobs:
             "${commit_args[@]}"
 
       - name: Open pull request on SDK repo
-        if: success() && inputs.open_pr
+        if: matrix.spec_changed == 'true' && success() && inputs.open_pr
         env:
           GH_TOKEN: ${{ secrets.SDK_WRITE_TOKEN }}
         run: |
@@ -166,7 +226,7 @@ jobs:
           exit 1
 
       - name: Print STLC failure report
-        if: failure() && steps.build.outcome == 'failure'
+        if: matrix.spec_changed == 'true' && failure() && steps.build.outcome == 'failure'
         uses: ./.github/actions/stlc-failure-report
         with:
           workspace: ${{ matrix.workspace }}

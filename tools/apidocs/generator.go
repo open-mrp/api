@@ -348,21 +348,31 @@ func buildOpenAPIDocument(groups []apiendpoint.APIEndpointGroup, publicOnly bool
 	return root, nil
 }
 
+// formatOpenAPIJSON marshals an OpenAPI document the same way generate() writes specs/.
+// encoding/json sorts map keys (paths, methods, schema names), so endpoint registration
+// order does not affect bytes on disk—only route paths and schema content do.
+func formatOpenAPIJSON(data map[string]any) ([]byte, error) {
+	compact, err := json.Marshal(data)
+	if err != nil {
+		return nil, fmt.Errorf("marshal spec: %w", err)
+	}
+	var indented bytes.Buffer
+	if err := json.Indent(&indented, compact, "", "  "); err != nil {
+		return nil, fmt.Errorf("indent spec: %w", err)
+	}
+	return indented.Bytes(), nil
+}
+
 func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOnly bool, transforms []Transform, version string) {
 	data, err := buildOpenAPIDocument(groups, publicOnly, transforms, version)
 	if err != nil {
 		log.Fatalf("Error building OpenAPI document: %v", err)
 	}
 
-	compact, err := json.Marshal(data)
+	output, err := formatOpenAPIJSON(data)
 	if err != nil {
-		log.Fatalf("Error marshaling spec: %v", err)
+		log.Fatalf("Error formatting spec: %v", err)
 	}
-	var indented bytes.Buffer
-	if err := json.Indent(&indented, compact, "", "  "); err != nil {
-		log.Fatalf("Error indenting spec: %v", err)
-	}
-	output := indented.Bytes()
 
 	if err := os.MkdirAll(filepath.Dir(outputPath), 0750); err != nil {
 		log.Fatalf("Error creating directory for spec: %v", err)

@@ -180,6 +180,12 @@ jobs:
           go mod tidy
           cd tools && go mod tidy
 
+      - name: Snapshot OpenAPI specs on S3 (SDK baseline)
+        run: |
+          mkdir -p specs/.sdk-baseline
+          aws s3 cp s3://augno-public-openapi-specs/openapi.json specs/.sdk-baseline/public_openapi_spec.json 2>/dev/null || true
+          aws s3 cp s3://augno-private-openapi-specs/openapi.json specs/.sdk-baseline/internal_openapi_spec.json 2>/dev/null || true
+
       - name: Generate OpenAPI Specs
         run: make openapi
 
@@ -232,7 +238,6 @@ jobs:
       fail-fast: false
       matrix:
         consumer:
-          - Augno/internal-sdk
           - Augno/public-docs
           - Augno/openapi-spec
           - Augno/dashboard
@@ -242,5 +247,24 @@ jobs:
         with:
           token: ${{ secrets.CROSS_REPO_PAT }}
           repository: ${{ matrix.consumer }}
+          event-type: api-release
+          client-payload: '{"api_version": "${{ needs.release-please.outputs.tag_name }}"}'
+
+  notify-internal-sdk:
+    name: Notify internal-sdk
+    needs: [release-please, deploy, publish-openapi-specs, generate-sdks]
+    if: |
+      needs.release-please.outputs.release_created == 'true' &&
+      needs.deploy.result == 'success' &&
+      needs.publish-openapi-specs.result == 'success' &&
+      needs.generate-sdks.outputs.internal_spec_changed == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Dispatch api-release
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.CROSS_REPO_PAT }}
+          repository: Augno/internal-sdk
           event-type: api-release
           client-payload: '{"api_version": "${{ needs.release-please.outputs.tag_name }}"}'

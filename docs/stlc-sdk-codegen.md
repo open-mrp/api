@@ -101,8 +101,8 @@ So after edits under **`stlc-main/packages/sdk-codegen/`**, rebuild the worker c
 
 SDK generation runs **only** from [`.github/workflows/release.yml`](../.github/workflows/release.yml) **`generate-sdks`** after **`publish-openapi-specs`** succeeds:
 
-1. **`publish-openapi-specs`** runs `make openapi` (same as S3 upload), then uploads the **`specs/`** tree as workflow artifact **`release-openapi-specs`**.
-2. **`generate-sdks`** calls [`stlc-generate-reusable.yml`](../.github/workflows/stlc-generate-reusable.yml), which **downloads that artifact** (so SDKs match the specs just published to S3), runs **`stlc build --push`**, pushes to **`bot/sdk-sync-<tag>`** on each SDK repo, and **opens (or reuses) a PR** into **`main`** on [`Augno/internal-sdk`](https://github.com/Augno/internal-sdk) and [`Augno/typescript-sdk`](https://github.com/Augno/typescript-sdk).
+1. **`publish-openapi-specs`** snapshots the current S3 **`openapi.json`** files into **`specs/.sdk-baseline/`** (before overwrite), runs `make openapi`, uploads to S3, then uploads the full **`specs/`** tree (including baseline) as workflow artifact **`release-openapi-specs`**.
+2. **`generate-sdks`** calls [`stlc-generate-reusable.yml`](../.github/workflows/stlc-generate-reusable.yml), which **compares** each release spec to its S3 baseline via [`scripts/sdk-openapi-spec-changed.sh`](../scripts/sdk-openapi-spec-changed.sh). When **`internal_openapi_spec.json`** or **`public_openapi_spec.json`** is unchanged, that SDK’s **`stlc build --push`**, branch push, and PR are **skipped** (no empty **`bot/sdk-sync-<tag>`** branch). When changed, it downloads the artifact, runs **`stlc build --push`**, pushes to **`bot/sdk-sync-<tag>`**, and **opens (or reuses) a PR** into **`main`** on [`Augno/internal-sdk`](https://github.com/Augno/internal-sdk) and [`Augno/typescript-sdk`](https://github.com/Augno/typescript-sdk).
 
 [`stlc-generate.yml`](../.github/workflows/stlc-generate.yml) is **manual-only** (`workflow_dispatch`); it regenerates specs in the job (`make openapi-quiet`) unless you extend it to consume an artifact.
 
@@ -123,7 +123,7 @@ Production flow (keeps SDKs aligned with what is deployed):
 3. `publish-openapi-specs` uploads specs to S3 and uploads **`specs/`** as a workflow artifact for the next job.
 4. **`generate-sdks`** and **`notify-consumers`** run in parallel after step 3:
    - `generate-sdks` downloads that artifact, runs **`stlc build --push`** on branch **`bot/sdk-sync-<tag>`**, and opens SDK PRs into **`main`**.
-   - `notify-consumers` dispatches `api-release` to each consumer repo (dashboard, public-docs, openapi-spec, internal-sdk).
+   - `notify-consumers` dispatches `api-release` to dashboard, public-docs, and openapi-spec. **`notify-internal-sdk`** runs only when the internal OpenAPI spec changed (same comparison as above).
 
 **Timing:** Consumer repos sync from the deployed API and S3-published OpenAPI specs; they do not wait for SDK PRs. Downstream npm/GitHub Packages SDK versions may not update until those SDK PRs are **merged** and SDK release workflows publish.
 

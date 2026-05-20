@@ -36,11 +36,8 @@ func TestIncludes_PopulateNestedResources(t *testing.T) {
 		t.Run(ep.OperationID, func(t *testing.T) {
 			t.Parallel()
 
-			path, ok := ep.ResolvePath()
-			if !ok {
-				t.Skipf("Cannot resolve path params for %s", ep.Path)
-				return
-			}
+			path, query, ok := resolveGetScenario(ep)
+			require.True(t, ok, "resolveGetScenario(%s) operationId=%s", ep.Path, ep.OperationID)
 
 			for _, include := range ep.IncludeEnum {
 				include := include
@@ -52,7 +49,7 @@ func TestIncludes_PopulateNestedResources(t *testing.T) {
 						return
 					}
 
-					status, body, err := apiClient.GetListRaw(path, url.Values{"include": {include}})
+					status, body, err := apiClient.GetListRaw(path, withIncludeQuery(query, include))
 					require.NoError(t, err, "GET %s?include=%s failed", path, include)
 					requireStatus(t, 200, status, body)
 
@@ -132,6 +129,34 @@ func assertIncludePopulatedOnObject(t *testing.T, obj map[string]any, include, p
 	}
 }
 
+func assertIncludeCollapsedWithoutRequest(t *testing.T, resp map[string]any, include string) {
+	t.Helper()
+
+	if obj, _ := resp["object"].(string); obj == "list" {
+		assertIncludeCollapsedOnList(t, resp, include)
+		return
+	}
+	if err := checkIncludeCollapsed(resp, include); err != nil {
+		t.Errorf("%s", err)
+	}
+}
+
+func assertIncludeCollapsedOnList(t *testing.T, resp map[string]any, include string) {
+	t.Helper()
+
+	rawItems, ok := resp["data"].([]any)
+	require.True(t, ok, "list response must have a data array")
+	require.NotEmpty(t, rawItems, "list response data should contain at least one item (seeded)")
+
+	for i, raw := range rawItems {
+		item, ok := raw.(map[string]any)
+		require.Truef(t, ok, "data[%d] should be an object", i)
+		if err := checkIncludeCollapsed(item, include); err != nil {
+			t.Errorf("data[%d]: %s", i, err)
+		}
+	}
+}
+
 // checkIncludePopulated navigates the dot-separated include path through the
 // given JSON object and returns an error describing the first place it fails
 // the populated-stub contract.
@@ -141,6 +166,14 @@ func checkIncludePopulated(obj map[string]any, include string) error {
 		return nil
 	}
 	return includePath(obj, parts, 0, include)
+}
+
+func checkIncludeCollapsed(obj map[string]any, include string) error {
+	parts := strings.Split(include, ".")
+	if len(parts) == 0 || (len(parts) == 1 && parts[0] == "") {
+		return nil
+	}
+	return collapsedIncludePath(obj, parts, 0, include)
 }
 
 // includePath walks `parts` starting at index `i`. When the current value is a
@@ -248,6 +281,48 @@ func validateIncludeValue(include string, v any) error {
 	}
 }
 
+func collapsedIncludePath(cur any, parts []string, i int, fullInclude string) error {
+	curMap, ok := cur.(map[string]any)
+	if !ok {
+		return fmt.Errorf("navigating %q: parent at segment %d is not an object", fullInclude, i)
+	}
+	if objType, _ := curMap["object"].(string); objType == "list" {
+		data, ok := curMap["data"].([]any)
+		if !ok {
+			return fmt.Errorf("include %q: list.data is not an array", fullInclude)
+		}
+		for idx, raw := range data {
+			item, ok := raw.(map[string]any)
+			if !ok {
+				return fmt.Errorf("include %q: data[%d] is not an object", fullInclude, idx)
+			}
+			if err := collapsedIncludePath(item, parts, i, fullInclude); err != nil {
+				return fmt.Errorf("include %q: data[%d]: %v", fullInclude, idx, err)
+			}
+		}
+		return nil
+	}
+
+	part := parts[i]
+	v, present := curMap[part]
+	if !present {
+		return fmt.Errorf("include %q: key %q missing from response", fullInclude, part)
+	}
+
+	if i == len(parts)-1 {
+		if v != nil {
+			return fmt.Errorf("include %q: %q should be null when not requested", fullInclude, part)
+		}
+		return nil
+	}
+
+	if v == nil {
+		return nil
+	}
+
+	return collapsedIncludePath(v, parts, i+1, fullInclude)
+}
+
 // IncludeGetEndpoint is a GET endpoint whose OpenAPI parameters declare a
 // non-empty include[] enum.
 type IncludeGetEndpoint struct {
@@ -258,6 +333,11 @@ type IncludeGetEndpoint struct {
 	ExampleRoute string
 }
 
+type includeGetScenario struct {
+	pathValues map[string]string
+	query      url.Values
+}
+
 // HasParam reports whether the endpoint accepts a given query parameter.
 // Implemented to make IncludeGetEndpoint compatible with ResolvePath via a
 // local adapter.
@@ -265,6 +345,8 @@ func (e *IncludeGetEndpoint) ResolvePath() (string, bool) {
 	adapter := ListEndpointSpec{Path: e.Path, OperationID: e.OperationID, PathParams: e.PathParams}
 	return adapter.ResolvePath()
 }
+
+var includeGetScenarioByOperationID = map[string]includeGetScenario{}
 
 // excludedIncludePaths lists path prefixes skipped by the includes coverage
 // test because the standard e2e API key can't exercise them (internal-admin-
@@ -330,6 +412,58 @@ func loadIncludeGetEndpoints() ([]IncludeGetEndpoint, error) {
 		})
 	}
 	return out, nil
+}
+
+func substituteIncludePath(path string, pathParams []string, vals map[string]string) (string, bool) {
+	if len(pathParams) == 0 {
+		return path, true
+	}
+	if len(vals) == 0 {
+		return "", false
+	}
+	resolved := path
+	for _, name := range pathParams {
+		v, ok := vals[name]
+		if !ok || v == "" {
+			return "", false
+		}
+		resolved = strings.ReplaceAll(resolved, "{"+name+"}", v)
+	}
+	return resolved, true
+}
+
+func cloneQuery(v url.Values) url.Values {
+	if len(v) == 0 {
+		return nil
+	}
+	out := make(url.Values, len(v))
+	for key, vals := range v {
+		out[key] = append([]string(nil), vals...)
+	}
+	return out
+}
+
+func withIncludeQuery(base url.Values, include string) url.Values {
+	out := cloneQuery(base)
+	if out == nil {
+		out = url.Values{}
+	}
+	out["include"] = []string{include}
+	return out
+}
+
+func resolveGetScenario(ep IncludeGetEndpoint) (string, url.Values, bool) {
+	scenario, ok := includeGetScenarioByOperationID[ep.OperationID]
+	if !ok {
+		path, resolved := ep.ResolvePath()
+		return path, nil, resolved
+	}
+	if scenario.pathValues == nil {
+		path, resolved := ep.ResolvePath()
+		return path, cloneQuery(scenario.query), resolved
+	}
+	path, resolved := substituteIncludePath(ep.Path, ep.PathParams, scenario.pathValues)
+	return path, cloneQuery(scenario.query), resolved
 }
 
 // IncludePutEndpoint is a PUT endpoint whose OpenAPI parameters declare include[]
@@ -399,21 +533,7 @@ func loadIncludePutEndpoints() ([]IncludePutEndpoint, error) {
 }
 
 func substituteIncludePutPath(ep IncludePutEndpoint, vals map[string]string) (string, bool) {
-	if len(ep.PathParams) == 0 {
-		return ep.Path, true
-	}
-	if len(vals) == 0 {
-		return "", false
-	}
-	path := ep.Path
-	for _, name := range ep.PathParams {
-		v, ok := vals[name]
-		if !ok || v == "" {
-			return "", false
-		}
-		path = strings.ReplaceAll(path, "{"+name+"}", v)
-	}
-	return path, true
+	return substituteIncludePath(ep.Path, ep.PathParams, vals)
 }
 
 func resolvePutScenarioPath(ep IncludePutEndpoint, pathValues map[string]string) (string, bool) {
@@ -428,6 +548,212 @@ func extractRootObjectTyped(root map[string]any, wantObject string) []map[string
 		return []map[string]any{root}
 	}
 	return nil
+}
+
+func splitOptOutKey(key string) (operationID, include string, ok bool) {
+	parts := strings.SplitN(key, "::", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return "", "", false
+	}
+	return parts[0], parts[1], true
+}
+
+func isTaggedOptOutReason(reason string) bool {
+	for _, prefix := range []string{"seed-gap:", "bug:", "schema:"} {
+		if strings.HasPrefix(reason, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func lookupIncludeGetEndpoint(endpoints []IncludeGetEndpoint, operationID string) (IncludeGetEndpoint, bool) {
+	for _, ep := range endpoints {
+		if ep.OperationID == operationID {
+			return ep, true
+		}
+	}
+	return IncludeGetEndpoint{}, false
+}
+
+func lookupIncludePutEndpoint(endpoints []IncludePutEndpoint, operationID string) (IncludePutEndpoint, bool) {
+	for _, ep := range endpoints {
+		if ep.OperationID == operationID {
+			return ep, true
+		}
+	}
+	return IncludePutEndpoint{}, false
+}
+
+func endpointDeclaresInclude(includes []string, include string) bool {
+	for _, candidate := range includes {
+		if candidate == include {
+			return true
+		}
+	}
+	return false
+}
+
+func executeIncludeOptOutProbe(t *testing.T, operationID, include string) bool {
+	t.Helper()
+
+	getEndpoints, err := loadIncludeGetEndpoints()
+	require.NoError(t, err, "load include-supporting GET endpoints")
+
+	if ep, ok := lookupIncludeGetEndpoint(getEndpoints, operationID); ok {
+		path, query, resolved := resolveGetScenario(ep)
+		require.True(t, resolved, "resolveGetScenario(%s) operationId=%s", ep.Path, ep.OperationID)
+		status, body, err := apiClient.GetListRaw(path, withIncludeQuery(query, include))
+		require.NoError(t, err, "GET %s?include=%s failed", path, include)
+		if status != 200 {
+			return false
+		}
+		got := parseJSON(body)
+		require.NotNil(t, got, "response should be valid JSON")
+		return checkIncludePopulated(got, include) == nil
+	}
+
+	putEndpoints, err := loadIncludePutEndpoints()
+	require.NoError(t, err, "load include-supporting PUT endpoints")
+
+	if ep, ok := lookupIncludePutEndpoint(putEndpoints, operationID); ok {
+		scenario, hasScenario := includesPutScenarioByOperationID[ep.OperationID]
+		require.True(t, hasScenario, "register includesPutScenarioByOperationID[%q]", ep.OperationID)
+		path, resolved := resolvePutScenarioPath(ep, scenario.pathValues)
+		require.True(t, resolved, "resolvePutScenarioPath(%s) operationId=%s", ep.Path, ep.OperationID)
+		status, body, err := apiClient.PutRaw(path, url.Values{"include": {include}}, scenario.buildBody(path))
+		require.NoError(t, err, "PUT %s?include=%s failed", path, include)
+		if status != 200 {
+			return false
+		}
+		got := parseJSON(body)
+		require.NotNil(t, got, "response should be valid JSON")
+
+		targets := scenario.extractTargets(got)
+		require.NotEmpty(t, targets, "%s (%s): no extraction targets in response", ep.OperationID, include)
+		for _, tgt := range targets {
+			if checkIncludePopulated(tgt, include) == nil {
+				return true
+			}
+		}
+		return false
+	}
+
+	t.Fatalf("opt-out %q references unknown include operation", optOutKey(operationID, include))
+	return false
+}
+
+func TestIncludes_GetFixtureCoverage(t *testing.T) {
+	t.Parallel()
+
+	endpoints, err := loadIncludeGetEndpoints()
+	require.NoError(t, err, "load include-supporting GET endpoints")
+
+	var unresolved []string
+	for _, ep := range endpoints {
+		path, _, ok := resolveGetScenario(ep)
+		if !ok || path == "" {
+			unresolved = append(unresolved, fmt.Sprintf("%s %s", ep.OperationID, ep.Path))
+		}
+	}
+
+	require.Empty(t, unresolved,
+		"every GET include endpoint must resolve to a seeded fixture path; add seed mappings or includeGetScenarioByOperationID entries:\n%s",
+		strings.Join(unresolved, "\n"))
+}
+
+func TestIncludes_PutFixtureCoverage(t *testing.T) {
+	t.Parallel()
+
+	endpoints, err := loadIncludePutEndpoints()
+	require.NoError(t, err, "load include-supporting PUT endpoints")
+
+	var missing []string
+	for _, ep := range endpoints {
+		if _, ok := includesPutScenarioByOperationID[ep.OperationID]; !ok {
+			missing = append(missing, fmt.Sprintf("%s %s", ep.OperationID, ep.Path))
+		}
+	}
+
+	require.Empty(t, missing,
+		"every PUT include endpoint must have a seeded scenario in includesPutScenarioByOperationID:\n%s",
+		strings.Join(missing, "\n"))
+}
+
+func TestIncludes_ExpandableFieldsCollapseWithoutInclude(t *testing.T) {
+	t.Parallel()
+
+	endpoints, err := loadIncludeGetEndpoints()
+	require.NoError(t, err, "load include-supporting GET endpoints")
+	require.NotEmpty(t, endpoints, "spec contained no GET endpoints with include[] enums")
+
+	for _, ep := range endpoints {
+		ep := ep
+
+		t.Run(ep.OperationID, func(t *testing.T) {
+			t.Parallel()
+
+			path, query, ok := resolveGetScenario(ep)
+			require.True(t, ok, "resolveGetScenario(%s) operationId=%s", ep.Path, ep.OperationID)
+
+			status, body, err := apiClient.GetListRaw(path, query)
+			require.NoError(t, err, "GET %s failed", path)
+			requireStatus(t, 200, status, body)
+
+			got := parseJSON(body)
+			require.NotNil(t, got, "response should be valid JSON")
+
+			for _, include := range ep.IncludeEnum {
+				assertIncludeCollapsedWithoutRequest(t, got, include)
+			}
+		})
+	}
+}
+
+func TestIncludes_OptOutMetadata(t *testing.T) {
+	t.Parallel()
+
+	getEndpoints, err := loadIncludeGetEndpoints()
+	require.NoError(t, err, "load include-supporting GET endpoints")
+	putEndpoints, err := loadIncludePutEndpoints()
+	require.NoError(t, err, "load include-supporting PUT endpoints")
+
+	for key, reason := range includesOptOut {
+		operationID, include, ok := splitOptOutKey(key)
+		require.Truef(t, ok, "invalid opt-out key format: %q", key)
+		require.Truef(t, isTaggedOptOutReason(reason),
+			"opt-out %q must start with one of seed-gap:, bug:, schema:, got %q", key, reason)
+
+		if ep, ok := lookupIncludeGetEndpoint(getEndpoints, operationID); ok {
+			require.Truef(t, endpointDeclaresInclude(ep.IncludeEnum, include),
+				"GET opt-out %q references include %q that is not declared by operation %q", key, include, operationID)
+			continue
+		}
+		if ep, ok := lookupIncludePutEndpoint(putEndpoints, operationID); ok {
+			require.Truef(t, endpointDeclaresInclude(ep.IncludeEnum, include),
+				"PUT opt-out %q references include %q that is not declared by operation %q", key, include, operationID)
+			continue
+		}
+
+		t.Fatalf("opt-out %q references unknown include operation %q", key, operationID)
+	}
+}
+
+func TestIncludes_OptOutsRemainNecessary(t *testing.T) {
+	t.Parallel()
+
+	for key := range includesOptOut {
+		key := key
+		t.Run(key, func(t *testing.T) {
+			t.Parallel()
+
+			operationID, include, ok := splitOptOutKey(key)
+			require.Truef(t, ok, "invalid opt-out key format: %q", key)
+			if executeIncludeOptOutProbe(t, operationID, include) {
+				t.Fatalf("opt-out %q is stale: the include now populates successfully and the opt-out should be removed", key)
+			}
+		})
+	}
 }
 
 // putIncludeScenario wires a PUT+include[] walker to seeded fixtures that can

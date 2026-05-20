@@ -214,6 +214,30 @@ func (s *ProductSvcTestSuite) expectCacheError() {
 		Times(1)
 }
 
+func (s *ProductSvcTestSuite) expectAttachAttributes(itemID string) {
+	s.itemRepo.EXPECT().
+		Get(gomock.Any(), gomock.AssignableToTypeOf(domain.GetItemParams{})).
+		DoAndReturn(func(_ context.Context, params domain.GetItemParams) (*domain.Item, *apierror.APIError) {
+			s.Equal("ac_test123", params.AccountID)
+			s.Equal(itemID, params.ItemID)
+			s.Equal([]string{"attributes"}, params.Includes)
+			return &domain.Item{ID: itemID}, nil
+		}).
+		Times(1)
+}
+
+func (s *ProductSvcTestSuite) expectAttachAttributesForCreatedItem() {
+	s.itemRepo.EXPECT().
+		Get(gomock.Any(), gomock.AssignableToTypeOf(domain.GetItemParams{})).
+		DoAndReturn(func(_ context.Context, params domain.GetItemParams) (*domain.Item, *apierror.APIError) {
+			s.Equal("ac_test123", params.AccountID)
+			s.NotEmpty(params.ItemID)
+			s.Equal([]string{"attributes"}, params.Includes)
+			return &domain.Item{ID: params.ItemID}, nil
+		}).
+		Times(1)
+}
+
 // =============================================================================
 // CreateProduct
 // =============================================================================
@@ -316,6 +340,7 @@ func (s *ProductSvcTestSuite) TestCreateProduct_Success() {
 		}).
 		Times(1)
 
+	s.expectAttachAttributesForCreatedItem()
 	s.expectCacheSuccess()
 
 	result, err := s.productSvc.CreateProduct(ctx, domain.CreateProductParams{
@@ -353,6 +378,7 @@ func (s *ProductSvcTestSuite) TestCreateProduct_DefaultsRatesToZero() {
 		Times(1)
 	s.inventoryMutRepo.EXPECT().CreateInventoryLog(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 	s.inventoryMutRepo.EXPECT().CreateInventoryChangeLog(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	s.expectAttachAttributesForCreatedItem()
 	s.expectCacheSuccess()
 
 	result, err := s.productSvc.CreateProduct(ctx, domain.CreateProductParams{
@@ -415,6 +441,7 @@ func (s *ProductSvcTestSuite) TestCreateProduct_SkipsBlankAttributeIDs() {
 
 	s.inventoryMutRepo.EXPECT().CreateInventoryLog(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 	s.inventoryMutRepo.EXPECT().CreateInventoryChangeLog(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	s.expectAttachAttributesForCreatedItem()
 	s.expectCacheSuccess()
 
 	result, err := s.productSvc.CreateProduct(ctx, domain.CreateProductParams{
@@ -611,6 +638,7 @@ func (s *ProductSvcTestSuite) TestUpdateProduct_PartialUpdate_OnlyTouchesProvide
 			return s.existingProduct("it_1", "OLD-SKU"), nil
 		}).
 		Times(1)
+	s.expectAttachAttributes("it_1")
 	s.expectCacheSuccess()
 
 	falseVal := false
@@ -640,6 +668,7 @@ func (s *ProductSvcTestSuite) TestUpdateProduct_SKUChange_ChecksUniquenessExclud
 		Update(gomock.Any(), gomock.Any()).
 		Return(s.existingProduct("it_1", "NEW-SKU"), nil).
 		Times(1)
+	s.expectAttachAttributes("it_1")
 	s.expectCacheSuccess()
 
 	result, err := s.productSvc.UpdateProduct(ctx, domain.UpdateProductParams{
@@ -693,6 +722,7 @@ func (s *ProductSvcTestSuite) TestUpdateProduct_UpdateDescriptionFlagSemantics_E
 			return s.existingProduct("it_1", "OLD"), nil
 		}).
 		Times(1)
+	s.expectAttachAttributes("it_1")
 	s.expectCacheSuccess()
 
 	result, err := s.productSvc.UpdateProduct(ctx, domain.UpdateProductParams{
@@ -792,6 +822,7 @@ func (s *ProductSvcTestSuite) TestUpdateProduct_UnitPrice_UpdatesRate() {
 		Update(gomock.Any(), gomock.AssignableToTypeOf(domain.UpdateProductParams{})).
 		Return(s.existingProductWithRateIDs("it_1", "SKU"), nil).
 		Times(1)
+	s.expectAttachAttributes("it_1")
 	s.expectCacheSuccess()
 
 	result, err := s.productSvc.UpdateProduct(ctx, domain.UpdateProductParams{
@@ -944,6 +975,7 @@ func (s *ProductSvcTestSuite) TestChangeProductLine_Success() {
 			return updated, nil
 		}).
 		Times(1)
+	s.expectAttachAttributes("it_1")
 	s.expectCacheSuccess()
 
 	result, err := s.productSvc.ChangeProductProductLine(ctx, domain.ChangeProductProductLineParams{

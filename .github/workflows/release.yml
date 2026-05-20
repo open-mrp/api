@@ -219,43 +219,28 @@ jobs:
       SDK_WRITE_TOKEN: ${{ secrets.SDK_WRITE_TOKEN }}
 
   notify-consumers:
-    name: Notify Consumer Repos
-    # Fires after SDK branches are pushed and PRs are opened; npm packages may not be published until those PRs merge.
-    needs: [release-please, generate-sdks]
+    name: Notify ${{ matrix.consumer }}
+    # Runs in parallel with generate-sdks; consumers sync from deployed API / S3 specs, not from SDK PRs.
+    needs: [release-please, deploy, publish-openapi-specs]
     if: |
       needs.release-please.outputs.release_created == 'true' &&
-      needs.generate-sdks.result == 'success'
+      needs.deploy.result == 'success' &&
+      needs.publish-openapi-specs.result == 'success'
     runs-on: ubuntu-latest
     environment: production
+    strategy:
+      fail-fast: false
+      matrix:
+        consumer:
+          - Augno/internal-sdk
+          - Augno/public-docs
+          - Augno/openapi-spec
+          - Augno/dashboard
     steps:
-      - name: Dispatch to internal-sdk
+      - name: Dispatch api-release
         uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.CROSS_REPO_PAT }}
-          repository: Augno/internal-sdk
-          event-type: api-release
-          client-payload: '{"api_version": "${{ needs.release-please.outputs.tag_name }}"}'
-
-      - name: Dispatch to public-docs
-        uses: peter-evans/repository-dispatch@v3
-        with:
-          token: ${{ secrets.CROSS_REPO_PAT }}
-          repository: Augno/public-docs
-          event-type: api-release
-          client-payload: '{"api_version": "${{ needs.release-please.outputs.tag_name }}"}'
-
-      - name: Dispatch to openapi-spec
-        uses: peter-evans/repository-dispatch@v3
-        with:
-          token: ${{ secrets.CROSS_REPO_PAT }}
-          repository: Augno/openapi-spec
-          event-type: api-release
-          client-payload: '{"api_version": "${{ needs.release-please.outputs.tag_name }}"}'
-
-      - name: Dispatch to dashboard
-        uses: peter-evans/repository-dispatch@v3
-        with:
-          token: ${{ secrets.CROSS_REPO_PAT }}
-          repository: Augno/dashboard
+          repository: ${{ matrix.consumer }}
           event-type: api-release
           client-payload: '{"api_version": "${{ needs.release-please.outputs.tag_name }}"}'

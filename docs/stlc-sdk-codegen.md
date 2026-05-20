@@ -121,10 +121,11 @@ Production flow (keeps SDKs aligned with what is deployed):
 1. Release-please creates an API version tag on `main`.
 2. Terraform → build/push images → deploy to EKS.
 3. `publish-openapi-specs` uploads specs to S3 and uploads **`specs/`** as a workflow artifact for the next job.
-4. `generate-sdks` downloads that artifact, runs **`stlc build --push`** on branch **`bot/sdk-sync-<tag>`**, and opens SDK PRs into **`main`**.
-5. `notify-consumers` dispatches `api-release` to consumers (see note below).
+4. **`generate-sdks`** and **`notify-consumers`** run in parallel after step 3:
+   - `generate-sdks` downloads that artifact, runs **`stlc build --push`** on branch **`bot/sdk-sync-<tag>`**, and opens SDK PRs into **`main`**.
+   - `notify-consumers` dispatches `api-release` to each consumer repo (dashboard, public-docs, openapi-spec, internal-sdk).
 
-**`notify-consumers` timing:** This step runs after SDK branches are pushed and PRs are opened. Downstream npm/GitHub Packages versions may not update until those SDK PRs are **merged** and SDK release workflows publish.
+**Timing:** Consumer repos sync from the deployed API and S3-published OpenAPI specs; they do not wait for SDK PRs. Downstream npm/GitHub Packages SDK versions may not update until those SDK PRs are **merged** and SDK release workflows publish.
 
 When `stlc build` fails, the release job runs **Print STLC failure report** (`stlc status`, `stlc diagnostics`, `stlc show`, and the latest `builds/*.json` manifest) in the job log and Actions step summary.
 
@@ -141,7 +142,7 @@ Add these secrets on **`augno/api`** (Settings → Secrets and variables → Act
 
 Authorize both tokens for SSO if your org requires it.
 
-The API release workflow regenerates SDKs after deploy, then dispatches `api-release` to `dashboard`, `public-docs`, and `openapi-spec`. `internal-sdk` is updated by the stlc push; the dispatch re-triggers its release workflow.
+The API release workflow regenerates SDKs and dispatches `api-release` to consumers in parallel after deploy and OpenAPI publish. `internal-sdk` receives both the stlc push (SDK PR) and the dispatch (re-triggers its release workflow).
 
 ### internal-sdk release checklist
 

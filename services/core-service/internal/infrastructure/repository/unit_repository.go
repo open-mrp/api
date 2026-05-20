@@ -144,7 +144,6 @@ func (r *unitRepoImpl) List(ctx context.Context, params domain.ListUnitsParams) 
 				IncludeUnitGroupFilter: includeGroupFilter,
 				UnitGroupIds:           unitGroupIDs,
 				SearchQuery:            ft.Fulltext,
-				SearchQuery_2:          ft.Fulltext,
 				LikeQuery:              ft.Like,
 				CursorCreatedAt:        cur.OccurredAt,
 				CursorID:               cur.ID,
@@ -168,7 +167,6 @@ func (r *unitRepoImpl) List(ctx context.Context, params domain.ListUnitsParams) 
 			IncludeUnitGroupFilter: includeGroupFilter,
 			UnitGroupIds:           unitGroupIDs,
 			SearchQuery:            ft.Fulltext,
-			SearchQuery_2:          ft.Fulltext,
 			LikeQuery:              ft.Like,
 			CursorCreatedAt:        gosql.NullTime{Time: cur.OccurredAt, Valid: true},
 			CursorID:               gosql.NullString{String: cur.ID, Valid: true},
@@ -192,7 +190,6 @@ func (r *unitRepoImpl) List(ctx context.Context, params domain.ListUnitsParams) 
 		IncludeUnitGroupFilter: includeGroupFilter,
 		UnitGroupIds:           unitGroupIDs,
 		SearchQuery:            ft.Fulltext,
-		SearchQuery_2:          ft.Fulltext,
 		LikeQuery:              ft.Like,
 		Limit:                  params.Limit + 1,
 	})

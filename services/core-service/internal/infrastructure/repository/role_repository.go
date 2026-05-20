@@ -107,7 +107,6 @@ func (r *roleRepoImpl) List(ctx context.Context, params domain.ListRolesParams) 
 			rows, err := r.queries.ListRolesBackward(ctx, sqlc.ListRolesBackwardParams{
 				AccountID:             db.NullString(params.AccountID),
 				SearchQuery:           searchQuery,
-				SearchQuery_2:         searchQuery,
 				IncludeRoleTypeFilter: includeRoleTypeFilter,
 				RoleTypeCodes:         params.RoleTypes,
 				CursorCreatedAt:       cur.OccurredAt,
@@ -129,7 +128,6 @@ func (r *roleRepoImpl) List(ctx context.Context, params domain.ListRolesParams) 
 		rows, err := r.queries.ListRolesForward(ctx, sqlc.ListRolesForwardParams{
 			AccountID:             db.NullString(params.AccountID),
 			SearchQuery:           searchQuery,
-			SearchQuery_2:         searchQuery,
 			IncludeRoleTypeFilter: includeRoleTypeFilter,
 			RoleTypeCodes:         params.RoleTypes,
 			CursorCreatedAt:       gosql.NullTime{Time: cur.OccurredAt, Valid: true},
@@ -151,7 +149,6 @@ func (r *roleRepoImpl) List(ctx context.Context, params domain.ListRolesParams) 
 	rows, err := r.queries.ListRolesForward(ctx, sqlc.ListRolesForwardParams{
 		AccountID:             db.NullString(params.AccountID),
 		SearchQuery:           searchQuery,
-		SearchQuery_2:         searchQuery,
 		IncludeRoleTypeFilter: includeRoleTypeFilter,
 		RoleTypeCodes:         params.RoleTypes,
 		Limit:                 params.Limit + 1,

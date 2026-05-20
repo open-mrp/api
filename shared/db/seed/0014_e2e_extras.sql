@@ -608,3 +608,80 @@ UPDATE inventory_change_log
        updated_at = '2099-12-31 23:59:58.000'
  WHERE id = 'ivcl_01seedwls000000000';
 
+-- ============================================================
+-- CATALOG SEARCH RANK FIXTURES (e2e GET ...?q=621 SKU tier order)
+-- Tier: exact < token < prefix < loose substring (see shared/db/catalog_search.go)
+-- created_at: loose oldest ... exact newest so ties sort predictably with DESC recency.
+-- ============================================================
+
+INSERT IGNORE INTO rate (id, value, numerator_unit_id, denominator_unit_id, created_at, updated_at) VALUES
+    ('rt_e2e621rank_pt_lo_uv', 0, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_e2e621rank_pt_lo_uc', 0, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_e2e621rank_pt_lo_br', 0, 'un_01seedpair000000000', 'day', NOW(), NOW()),
+    ('rt_e2e621rank_pt_pf_uv', 0, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_e2e621rank_pt_pf_uc', 0, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_e2e621rank_pt_pf_br', 0, 'un_01seedpair000000000', 'day', NOW(), NOW()),
+    ('rt_e2e621rank_pt_tk_uv', 0, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_e2e621rank_pt_tk_uc', 0, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_e2e621rank_pt_tk_br', 0, 'un_01seedpair000000000', 'day', NOW(), NOW()),
+    ('rt_e2e621rank_pt_ex_uv', 0, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_e2e621rank_pt_ex_uc', 0, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_e2e621rank_pt_ex_br', 0, 'un_01seedpair000000000', 'day', NOW(), NOW()),
+    ('rt_e2e621rank_ml_lo_uv', 0, 'dollar', 'un_01seedpound00000000', NOW(), NOW()),
+    ('rt_e2e621rank_ml_lo_uc', 6, 'dollar', 'un_01seedpound00000000', NOW(), NOW()),
+    ('rt_e2e621rank_ml_lo_br', 0, 'un_01seedpound00000000', 'day', NOW(), NOW()),
+    ('rt_e2e621rank_ml_pf_uv', 0, 'dollar', 'un_01seedpound00000000', NOW(), NOW()),
+    ('rt_e2e621rank_ml_pf_uc', 6, 'dollar', 'un_01seedpound00000000', NOW(), NOW()),
+    ('rt_e2e621rank_ml_pf_br', 0, 'un_01seedpound00000000', 'day', NOW(), NOW()),
+    ('rt_e2e621rank_ml_tk_uv', 0, 'dollar', 'un_01seedpound00000000', NOW(), NOW()),
+    ('rt_e2e621rank_ml_tk_uc', 6, 'dollar', 'un_01seedpound00000000', NOW(), NOW()),
+    ('rt_e2e621rank_ml_tk_br', 0, 'un_01seedpound00000000', 'day', NOW(), NOW()),
+    ('rt_e2e621rank_pd_lo_uv', 10, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_e2e621rank_pd_lo_uc', 7, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_e2e621rank_pd_lo_br', 1, 'un_01seedpair000000000', 'day', NOW(), NOW()),
+    ('rt_e2e621rank_pd_pf_uv', 10, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_e2e621rank_pd_pf_uc', 7, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_e2e621rank_pd_pf_br', 1, 'un_01seedpair000000000', 'day', NOW(), NOW()),
+    ('rt_e2e621rank_pd_tk_uv', 10, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_e2e621rank_pd_tk_uc', 7, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_e2e621rank_pd_tk_br', 1, 'un_01seedpair000000000', 'day', NOW(), NOW());
+
+INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
+    ('qu_e2e621rank_ml_op1', 100, 'un_01seedpound00000000', NOW(), NOW()),
+    ('qu_e2e621rank_ml_lt1', 14, 'day', NOW(), NOW()),
+    ('qu_e2e621rank_ml_op2', 100, 'un_01seedpound00000000', NOW(), NOW()),
+    ('qu_e2e621rank_ml_lt2', 14, 'day', NOW(), NOW()),
+    ('qu_e2e621rank_ml_op3', 100, 'un_01seedpound00000000', NOW(), NOW()),
+    ('qu_e2e621rank_ml_lt3', 14, 'day', NOW(), NOW());
+
+INSERT IGNORE INTO item (id, sku, description, unit_value_id, unit_cost_id, burn_rate_id, account_id, item_type_code, item_category_id, created_at, updated_at) VALUES
+    ('it_e2e621rank_pt_lo0', 'rkpt47562183', 'e2e catalog search rank fixture', 'rt_e2e621rank_pt_lo_uv', 'rt_e2e621rank_pt_lo_uc', 'rt_e2e621rank_pt_lo_br', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'part', 'itcg_01seedsocks000000', '2020-01-01 00:00:00.000', '2020-01-01 00:00:00.000'),
+    ('it_e2e621rank_pt_pf0', '621rkpt8f3a', 'e2e catalog search rank fixture', 'rt_e2e621rank_pt_pf_uv', 'rt_e2e621rank_pt_pf_uc', 'rt_e2e621rank_pt_pf_br', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'part', 'itcg_01seedsocks000000', '2020-01-02 00:00:00.000', '2020-01-02 00:00:00.000'),
+    ('it_e2e621rank_pt_tk0', 'rkpt7f3a 621', 'e2e catalog search rank fixture', 'rt_e2e621rank_pt_tk_uv', 'rt_e2e621rank_pt_tk_uc', 'rt_e2e621rank_pt_tk_br', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'part', 'itcg_01seedsocks000000', '2020-01-03 00:00:00.000', '2020-01-03 00:00:00.000'),
+    ('it_e2e621rank_pt_ex0', '621', 'e2e catalog search rank fixture', 'rt_e2e621rank_pt_ex_uv', 'rt_e2e621rank_pt_ex_uc', 'rt_e2e621rank_pt_ex_br', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'part', 'itcg_01seedsocks000000', '2020-01-04 00:00:00.000', '2020-01-04 00:00:00.000'),
+    ('it_e2e621rank_ml_lo0', 'rkmt47562183', 'e2e catalog search rank fixture', 'rt_e2e621rank_ml_lo_uv', 'rt_e2e621rank_ml_lo_uc', 'rt_e2e621rank_ml_lo_br', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'material', 'itcg_01seedyarn0000000', '2020-01-01 00:00:00.000', '2020-01-01 00:00:00.000'),
+    ('it_e2e621rank_ml_pf0', '621rkmt8f3a', 'e2e catalog search rank fixture', 'rt_e2e621rank_ml_pf_uv', 'rt_e2e621rank_ml_pf_uc', 'rt_e2e621rank_ml_pf_br', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'material', 'itcg_01seedyarn0000000', '2020-01-02 00:00:00.000', '2020-01-02 00:00:00.000'),
+    ('it_e2e621rank_ml_tk0', 'rkmt9b2c 621', 'e2e catalog search rank fixture', 'rt_e2e621rank_ml_tk_uv', 'rt_e2e621rank_ml_tk_uc', 'rt_e2e621rank_ml_tk_br', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'material', 'itcg_01seedyarn0000000', '2020-01-03 00:00:00.000', '2020-01-03 00:00:00.000'),
+    ('it_e2e621rank_pd_lo0', 'rkrpd56214z', 'e2e catalog search rank fixture', 'rt_e2e621rank_pd_lo_uv', 'rt_e2e621rank_pd_lo_uc', 'rt_e2e621rank_pd_lo_br', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'product', 'itcg_01seedsocks000000', '2020-01-01 00:00:00.000', '2020-01-01 00:00:00.000'),
+    ('it_e2e621rank_pd_pf0', '621rkrp9pfx', 'e2e catalog search rank fixture', 'rt_e2e621rank_pd_pf_uv', 'rt_e2e621rank_pd_pf_uc', 'rt_e2e621rank_pd_pf_br', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'product', 'itcg_01seedsocks000000', '2020-01-02 00:00:00.000', '2020-01-02 00:00:00.000'),
+    ('it_e2e621rank_pd_tk0', 'rkrpd4e1f 621', 'e2e catalog search rank fixture', 'rt_e2e621rank_pd_tk_uv', 'rt_e2e621rank_pd_tk_uc', 'rt_e2e621rank_pd_tk_br', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'product', 'itcg_01seedsocks000000', '2020-01-03 00:00:00.000', '2020-01-03 00:00:00.000');
+
+INSERT IGNORE INTO part (id, item_id, created_at, updated_at) VALUES
+    ('pt_e2e621rank_pt_lo0', 'it_e2e621rank_pt_lo0', '2020-01-01 00:00:00.000', '2020-01-01 00:00:00.000'),
+    ('pt_e2e621rank_pt_pf0', 'it_e2e621rank_pt_pf0', '2020-01-02 00:00:00.000', '2020-01-02 00:00:00.000'),
+    ('pt_e2e621rank_pt_tk0', 'it_e2e621rank_pt_tk0', '2020-01-03 00:00:00.000', '2020-01-03 00:00:00.000'),
+    ('pt_e2e621rank_pt_ex0', 'it_e2e621rank_pt_ex0', '2020-01-04 00:00:00.000', '2020-01-04 00:00:00.000');
+
+INSERT IGNORE INTO material (id, item_id, order_point_id, lead_time_id, created_at, updated_at) VALUES
+    ('ml_e2e621rank_ml_lo0', 'it_e2e621rank_ml_lo0', 'qu_e2e621rank_ml_op1', 'qu_e2e621rank_ml_lt1', '2020-01-01 00:00:00.000', '2020-01-01 00:00:00.000'),
+    ('ml_e2e621rank_ml_pf0', 'it_e2e621rank_ml_pf0', 'qu_e2e621rank_ml_op2', 'qu_e2e621rank_ml_lt2', '2020-01-02 00:00:00.000', '2020-01-02 00:00:00.000'),
+    ('ml_e2e621rank_ml_tk0', 'it_e2e621rank_ml_tk0', 'qu_e2e621rank_ml_op3', 'qu_e2e621rank_ml_lt3', '2020-01-03 00:00:00.000', '2020-01-03 00:00:00.000');
+
+INSERT IGNORE INTO product (id, item_id, product_type_code, product_line_id, created_at, updated_at) VALUES
+    ('pd_e2e621rank_pd_lo0', 'it_e2e621rank_pd_lo0', 'sale', 'pdln_01k0a735ype5e8nrhv1n5dhq1q', '2020-01-01 00:00:00.000', '2020-01-01 00:00:00.000'),
+    ('pd_e2e621rank_pd_pf0', 'it_e2e621rank_pd_pf0', 'sale', 'pdln_01k0a735ype5e8nrhv1n5dhq1q', '2020-01-02 00:00:00.000', '2020-01-02 00:00:00.000'),
+    ('pd_e2e621rank_pd_tk0', 'it_e2e621rank_pd_tk0', 'sale', 'pdln_01k0a735ype5e8nrhv1n5dhq1q', '2020-01-03 00:00:00.000', '2020-01-03 00:00:00.000');
+
+UPDATE product SET is_portal_ready = 1
+ WHERE id IN ('pd_e2e621rank_pd_lo0', 'pd_e2e621rank_pd_pf0', 'pd_e2e621rank_pd_tk0');
+

@@ -208,7 +208,6 @@ func (r *accountUserRepoImpl) List(ctx context.Context, params domain.ListAccoun
 		IncludeRemoved: params.IncludeRemoved,
 		RoleType:       db.NullStringPtr(params.RoleType),
 		Query:          searchQuery,
-		Query_2:        searchQuery,
 		QueryLike:      queryLike,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -220,7 +219,6 @@ func (r *accountUserRepoImpl) List(ctx context.Context, params domain.ListAccoun
 		IncludeRemoved: params.IncludeRemoved,
 		RoleType:       db.NullStringPtr(params.RoleType),
 		Query:          searchQuery,
-		Query_2:        searchQuery,
 		QueryLike:      queryLike,
 		Limit:          params.Limit + 1,
 	}
@@ -242,7 +240,6 @@ func (r *accountUserRepoImpl) List(ctx context.Context, params domain.ListAccoun
 				IncludeRemoved:  base.IncludeRemoved,
 				RoleType:        base.RoleType,
 				Query:           base.Query,
-				Query_2:         base.Query_2,
 				QueryLike:       base.QueryLike,
 				CursorCreatedAt: cur.OccurredAt,
 				CursorID:        cur.ID,
@@ -262,7 +259,6 @@ func (r *accountUserRepoImpl) List(ctx context.Context, params domain.ListAccoun
 				IncludeRemoved:  base.IncludeRemoved,
 				RoleType:        base.RoleType,
 				Query:           base.Query,
-				Query_2:         base.Query_2,
 				QueryLike:       base.QueryLike,
 				CursorCreatedAt: sql.NullTime{Time: cur.OccurredAt, Valid: true},
 				CursorID:        sql.NullString{String: cur.ID, Valid: true},

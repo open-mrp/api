@@ -1,5 +1,0 @@
-{
-  "openapi_spec": "../specs/internal_openapi_spec.json",
-  "stainless_config": "stainless.yml",
-  "output_path": "../.."
-}

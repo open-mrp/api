@@ -550,17 +550,23 @@ AND (
         ))
         OR (sqlc.narg('cursor_match_tier') IS NOT NULL AND (
             (CASE
-                WHEN sqlc.narg('search_exact') IS NULL THEN 0
-                WHEN i.sku = sqlc.narg('search_exact') THEN 0
-                WHEN sqlc.narg('search_prefix') IS NOT NULL AND i.sku LIKE sqlc.narg('search_prefix') THEN 1
-                ELSE 2
+                WHEN CAST(sqlc.narg('search_exact') AS CHAR) IS NULL THEN 0
+                WHEN i.sku COLLATE utf8mb4_general_ci = CAST(sqlc.narg('search_exact') AS CHAR) THEN 0
+                WHEN i.sku COLLATE utf8mb4_general_ci LIKE CONCAT('% ', CAST(sqlc.narg('search_exact') AS CHAR), ' %')
+                    OR i.sku COLLATE utf8mb4_general_ci LIKE CONCAT(CAST(sqlc.narg('search_exact') AS CHAR), ' %')
+                    OR i.sku COLLATE utf8mb4_general_ci LIKE CONCAT('% ', CAST(sqlc.narg('search_exact') AS CHAR)) THEN 1
+                WHEN sqlc.narg('search_prefix') IS NOT NULL AND i.sku COLLATE utf8mb4_general_ci LIKE sqlc.narg('search_prefix') THEN 2
+                ELSE 3
             END) > CAST(sqlc.narg('cursor_match_tier') AS SIGNED)
             OR (
                 (CASE
-                    WHEN sqlc.narg('search_exact') IS NULL THEN 0
-                    WHEN i.sku = sqlc.narg('search_exact') THEN 0
-                    WHEN sqlc.narg('search_prefix') IS NOT NULL AND i.sku LIKE sqlc.narg('search_prefix') THEN 1
-                    ELSE 2
+                    WHEN CAST(sqlc.narg('search_exact') AS CHAR) IS NULL THEN 0
+                    WHEN i.sku COLLATE utf8mb4_general_ci = CAST(sqlc.narg('search_exact') AS CHAR) THEN 0
+                    WHEN i.sku COLLATE utf8mb4_general_ci LIKE CONCAT('% ', CAST(sqlc.narg('search_exact') AS CHAR), ' %')
+                        OR i.sku COLLATE utf8mb4_general_ci LIKE CONCAT(CAST(sqlc.narg('search_exact') AS CHAR), ' %')
+                        OR i.sku COLLATE utf8mb4_general_ci LIKE CONCAT('% ', CAST(sqlc.narg('search_exact') AS CHAR)) THEN 1
+                    WHEN sqlc.narg('search_prefix') IS NOT NULL AND i.sku COLLATE utf8mb4_general_ci LIKE sqlc.narg('search_prefix') THEN 2
+                    ELSE 3
                 END) = CAST(sqlc.narg('cursor_match_tier') AS SIGNED)
                 AND (
                     p.created_at < sqlc.narg('cursor_created_at')
@@ -572,10 +578,13 @@ AND (
 )
 ORDER BY
     CASE
-        WHEN sqlc.narg('search_exact') IS NULL THEN 0
-        WHEN i.sku = sqlc.narg('search_exact') THEN 0
-        WHEN sqlc.narg('search_prefix') IS NOT NULL AND i.sku LIKE sqlc.narg('search_prefix') THEN 1
-        ELSE 2
+        WHEN CAST(sqlc.narg('search_exact') AS CHAR) IS NULL THEN 0
+        WHEN i.sku COLLATE utf8mb4_general_ci = CAST(sqlc.narg('search_exact') AS CHAR) THEN 0
+        WHEN i.sku COLLATE utf8mb4_general_ci LIKE CONCAT('% ', CAST(sqlc.narg('search_exact') AS CHAR), ' %')
+            OR i.sku COLLATE utf8mb4_general_ci LIKE CONCAT(CAST(sqlc.narg('search_exact') AS CHAR), ' %')
+            OR i.sku COLLATE utf8mb4_general_ci LIKE CONCAT('% ', CAST(sqlc.narg('search_exact') AS CHAR)) THEN 1
+        WHEN sqlc.narg('search_prefix') IS NOT NULL AND i.sku COLLATE utf8mb4_general_ci LIKE sqlc.narg('search_prefix') THEN 2
+        ELSE 3
     END ASC,
     p.created_at DESC,
     p.id DESC
@@ -689,17 +698,23 @@ AND (
     ))
     OR (sqlc.narg('cursor_match_tier') IS NOT NULL AND (
         (CASE
-            WHEN sqlc.narg('search_exact') IS NULL THEN 0
-            WHEN i.sku = sqlc.narg('search_exact') THEN 0
-            WHEN sqlc.narg('search_prefix') IS NOT NULL AND i.sku LIKE sqlc.narg('search_prefix') THEN 1
-            ELSE 2
+            WHEN CAST(sqlc.narg('search_exact') AS CHAR) IS NULL THEN 0
+            WHEN i.sku COLLATE utf8mb4_general_ci = CAST(sqlc.narg('search_exact') AS CHAR) THEN 0
+            WHEN i.sku COLLATE utf8mb4_general_ci LIKE CONCAT('% ', CAST(sqlc.narg('search_exact') AS CHAR), ' %')
+                OR i.sku COLLATE utf8mb4_general_ci LIKE CONCAT(CAST(sqlc.narg('search_exact') AS CHAR), ' %')
+                OR i.sku COLLATE utf8mb4_general_ci LIKE CONCAT('% ', CAST(sqlc.narg('search_exact') AS CHAR)) THEN 1
+            WHEN sqlc.narg('search_prefix') IS NOT NULL AND i.sku COLLATE utf8mb4_general_ci LIKE sqlc.narg('search_prefix') THEN 2
+            ELSE 3
         END) < CAST(sqlc.narg('cursor_match_tier') AS SIGNED)
         OR (
             (CASE
-                WHEN sqlc.narg('search_exact') IS NULL THEN 0
-                WHEN i.sku = sqlc.narg('search_exact') THEN 0
-                WHEN sqlc.narg('search_prefix') IS NOT NULL AND i.sku LIKE sqlc.narg('search_prefix') THEN 1
-                ELSE 2
+                WHEN CAST(sqlc.narg('search_exact') AS CHAR) IS NULL THEN 0
+                WHEN i.sku COLLATE utf8mb4_general_ci = CAST(sqlc.narg('search_exact') AS CHAR) THEN 0
+                WHEN i.sku COLLATE utf8mb4_general_ci LIKE CONCAT('% ', CAST(sqlc.narg('search_exact') AS CHAR), ' %')
+                    OR i.sku COLLATE utf8mb4_general_ci LIKE CONCAT(CAST(sqlc.narg('search_exact') AS CHAR), ' %')
+                    OR i.sku COLLATE utf8mb4_general_ci LIKE CONCAT('% ', CAST(sqlc.narg('search_exact') AS CHAR)) THEN 1
+                WHEN sqlc.narg('search_prefix') IS NOT NULL AND i.sku COLLATE utf8mb4_general_ci LIKE sqlc.narg('search_prefix') THEN 2
+                ELSE 3
             END) = CAST(sqlc.narg('cursor_match_tier') AS SIGNED)
             AND (
                 p.created_at > sqlc.arg('cursor_created_at')
@@ -710,10 +725,13 @@ AND (
 )
 ORDER BY
     CASE
-        WHEN sqlc.narg('search_exact') IS NULL THEN 0
-        WHEN i.sku = sqlc.narg('search_exact') THEN 0
-        WHEN sqlc.narg('search_prefix') IS NOT NULL AND i.sku LIKE sqlc.narg('search_prefix') THEN 1
-        ELSE 2
+        WHEN CAST(sqlc.narg('search_exact') AS CHAR) IS NULL THEN 0
+        WHEN i.sku COLLATE utf8mb4_general_ci = CAST(sqlc.narg('search_exact') AS CHAR) THEN 0
+        WHEN i.sku COLLATE utf8mb4_general_ci LIKE CONCAT('% ', CAST(sqlc.narg('search_exact') AS CHAR), ' %')
+            OR i.sku COLLATE utf8mb4_general_ci LIKE CONCAT(CAST(sqlc.narg('search_exact') AS CHAR), ' %')
+            OR i.sku COLLATE utf8mb4_general_ci LIKE CONCAT('% ', CAST(sqlc.narg('search_exact') AS CHAR)) THEN 1
+        WHEN sqlc.narg('search_prefix') IS NOT NULL AND i.sku COLLATE utf8mb4_general_ci LIKE sqlc.narg('search_prefix') THEN 2
+        ELSE 3
     END DESC,
     p.created_at ASC,
     p.id ASC
@@ -1237,10 +1255,13 @@ AND (
 )
 ORDER BY
     CASE
-        WHEN sqlc.narg('search_exact') IS NULL THEN 0
-        WHEN i.sku = sqlc.narg('search_exact') THEN 0
-        WHEN sqlc.narg('search_prefix') IS NOT NULL AND i.sku LIKE sqlc.narg('search_prefix') THEN 1
-        ELSE 2
+        WHEN CAST(sqlc.narg('search_exact') AS CHAR) IS NULL THEN 0
+        WHEN i.sku COLLATE utf8mb4_general_ci = CAST(sqlc.narg('search_exact') AS CHAR) THEN 0
+        WHEN i.sku COLLATE utf8mb4_general_ci LIKE CONCAT('% ', CAST(sqlc.narg('search_exact') AS CHAR), ' %')
+            OR i.sku COLLATE utf8mb4_general_ci LIKE CONCAT(CAST(sqlc.narg('search_exact') AS CHAR), ' %')
+            OR i.sku COLLATE utf8mb4_general_ci LIKE CONCAT('% ', CAST(sqlc.narg('search_exact') AS CHAR)) THEN 1
+        WHEN sqlc.narg('search_prefix') IS NOT NULL AND i.sku COLLATE utf8mb4_general_ci LIKE sqlc.narg('search_prefix') THEN 2
+        ELSE 3
     END ASC,
     p.created_at DESC,
     p.id DESC;

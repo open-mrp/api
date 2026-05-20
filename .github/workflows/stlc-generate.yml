@@ -1,0 +1,99 @@
+name: Generate SDKs with stlc (manual)
+
+# Release-driven SDK generation runs from release.yml (published OpenAPI artifact + PRs to SDK repos).
+# This workflow is for ad-hoc / emergency runs; it regenerates specs in the job (no S3/artifact) unless you add that flow later.
+on:
+  workflow_dispatch:
+    inputs:
+      api_version:
+        description: Optional API version label for commit/PR messages (e.g. v0.17.10). Defaults to v<.release-please-manifest.json>.
+        required: false
+      sdk_branch:
+        description: Branch to push on each SDK repo (and PR head if open_pr is true)
+        required: false
+        default: bot/stlc-workflow-dispatch
+      open_pr:
+        description: Open PRs from sdk_branch into main on each SDK repo
+        required: false
+        type: boolean
+        default: false
+      dispatch_internal_sdk:
+        description: Dispatch api-release to internal-sdk after success (requires CROSS_REPO_PAT secret).
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  STLC_GITHUB_ORG: sdk-gen
+  STLC_TARGETS: typescript
+
+jobs:
+  resolve:
+    name: Resolve API version
+    runs-on: ubuntu-latest
+    outputs:
+      api_version: ${{ steps.msg.outputs.api_version }}
+      commit_msg: ${{ steps.msg.outputs.commit_msg }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Resolve API version for SDK commit
+        id: msg
+        env:
+          API_VERSION_INPUT: ${{ github.event.inputs.api_version || '' }}
+        run: |
+          if [ -n "$API_VERSION_INPUT" ]; then
+            api_version="$API_VERSION_INPUT"
+          else
+            manifest_version=$(jq -r '."."' .release-please-manifest.json)
+            api_version="v${manifest_version}"
+          fi
+          case "$api_version" in
+            v*) ;;
+            *) api_version="v${api_version}" ;;
+          esac
+          commit_msg="fix(sdk): sync with deployed API ${api_version}"
+          echo "api_version=${api_version}" >> "$GITHUB_OUTPUT"
+          {
+            echo "commit_msg<<MSG_EOF"
+            echo "$commit_msg"
+            echo "MSG_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+  generate:
+    name: Generate SDKs
+    needs: resolve
+    uses: ./.github/workflows/stlc-generate-reusable.yml
+    with:
+      api_version: ${{ needs.resolve.outputs.api_version }}
+      sdk_branch: ${{ github.event.inputs.sdk_branch }}
+      openapi_specs_artifact: ""
+      open_pr: ${{ github.event.inputs.open_pr }}
+      pr_base_branch: main
+      commit_message: ${{ needs.resolve.outputs.commit_msg }}
+    secrets:
+      STLC_READ_TOKEN: ${{ secrets.STLC_READ_TOKEN }}
+      SDK_WRITE_TOKEN: ${{ secrets.SDK_WRITE_TOKEN }}
+
+  trigger-internal-sdk-release:
+    name: Trigger internal-sdk release
+    needs: generate
+    if: |
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.dispatch_internal_sdk == true &&
+      needs.generate.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch api-release to internal-sdk
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.CROSS_REPO_PAT }}
+          repository: Augno/internal-sdk
+          event-type: api-release
+          client-payload: '{"api_version": "${{ github.event.inputs.api_version || github.sha }}"}'

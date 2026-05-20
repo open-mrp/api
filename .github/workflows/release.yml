@@ -73,7 +73,15 @@ jobs:
     strategy:
       matrix:
         service:
-          [api-gateway, auth-service, core-service, platform-service, notification-service, billing-service, agent-service]
+          [
+            api-gateway,
+            auth-service,
+            core-service,
+            platform-service,
+            notification-service,
+            billing-service,
+            agent-service,
+          ]
     permissions:
       id-token: write
       contents: read
@@ -185,17 +193,38 @@ jobs:
           aws s3 cp specs/internal_openapi_spec.json s3://augno-private-openapi-specs/openapi.json
           aws s3 cp specs/internal_openapi_spec.json s3://augno-private-openapi-specs/${{ steps.api-version.outputs.api_version }}.json
 
-      # - name: Upload to Stainless
-      #   uses: stainless-api/upload-openapi-spec-action@v1
-      #   with:
-      #     input_path: specs/public_openapi_spec.json
-      #     project_name: augno
-      #     stainless_api_key: ${{ secrets.STAINLESS_API_KEY }}
+      - name: Upload OpenAPI specs for SDK generation
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-openapi-specs
+          path: specs
+          if-no-files-found: error
+
+  generate-sdks:
+    name: Generate SDKs with stlc
+    needs: [release-please, deploy, publish-openapi-specs]
+    if: |
+      needs.release-please.outputs.release_created == 'true' &&
+      needs.deploy.result == 'success' &&
+      needs.publish-openapi-specs.result == 'success'
+    uses: ./.github/workflows/stlc-generate-reusable.yml
+    with:
+      api_version: ${{ needs.release-please.outputs.tag_name }}
+      sdk_branch: bot/sdk-sync-${{ needs.release-please.outputs.tag_name }}
+      openapi_specs_artifact: release-openapi-specs
+      open_pr: true
+      pr_base_branch: main
+    secrets:
+      STLC_READ_TOKEN: ${{ secrets.STLC_READ_TOKEN }}
+      SDK_WRITE_TOKEN: ${{ secrets.SDK_WRITE_TOKEN }}
 
   notify-consumers:
     name: Notify Consumer Repos
-    needs: [release-please, publish-openapi-specs]
-    if: needs.release-please.outputs.release_created == 'true'
+    # Fires after SDK branches are pushed and PRs are opened; npm packages may not be published until those PRs merge.
+    needs: [release-please, generate-sdks]
+    if: |
+      needs.release-please.outputs.release_created == 'true' &&
+      needs.generate-sdks.result == 'success'
     runs-on: ubuntu-latest
     environment: production
     steps:

@@ -1,0 +1,52 @@
+name: 'STLC failure report'
+description: 'Print stlc status, diagnostics, show report, and latest build manifest when a build fails.'
+
+inputs:
+  workspace:
+    description: 'STLC workspace path (e.g. stainless/internal).'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Print STLC failure report
+      shell: bash
+      env:
+        WORKSPACE: ${{ inputs.workspace }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      run: |
+        report_file="/tmp/stlc-failure-report-${WORKSPACE//\//-}.md"
+        : > "$report_file"
+
+        append_section() {
+          local title="$1"
+          shift
+          {
+            echo "### ${title}"
+            echo '```'
+            "$@" 2>&1 || true
+            echo '```'
+            echo ""
+          } | tee -a "$report_file"
+        }
+
+        echo "## STLC failure report (\`${WORKSPACE}\`)" >> "$GITHUB_STEP_SUMMARY"
+        echo "" >> "$GITHUB_STEP_SUMMARY"
+
+        append_section "stlc status" stlc status --workspace "$WORKSPACE"
+        append_section "stlc diagnostics" bash -c 'latest="$(ls -t "$1"/builds/*.json 2>/dev/null | head -1)"; if [ -n "$latest" ]; then stlc diagnostics "$latest"; else echo "(no build manifest under $1/builds/)"; fi' _ "$WORKSPACE"
+        append_section "stlc diagnostics (json)" bash -c 'latest="$(ls -t "$1"/builds/*.json 2>/dev/null | head -1)"; if [ -n "$latest" ]; then stlc diagnostics "$latest" --format=json; else echo "(no build manifest under $1/builds/)"; fi' _ "$WORKSPACE"
+        append_section "stlc show" stlc show --workspace "$WORKSPACE" --renderer=markdown --workflow-run-url "$RUN_URL"
+        append_section "stlc show (json)" stlc show --workspace "$WORKSPACE" --workflow-run-url "$RUN_URL" --format=json
+
+        if compgen -G "${WORKSPACE}/builds/"'*.json' > /dev/null; then
+          latest_manifest="$(ls -t "${WORKSPACE}"/builds/*.json | head -1)"
+          append_section "Latest build manifest (${latest_manifest})" cat "$latest_manifest"
+        else
+          append_section "Latest build manifest" echo "(no manifest found under ${WORKSPACE}/builds/)"
+        fi
+
+        cat "$report_file" >> "$GITHUB_STEP_SUMMARY"
+        echo ""
+        echo "================ STLC failure report (${WORKSPACE}) ================"
+        cat "$report_file"

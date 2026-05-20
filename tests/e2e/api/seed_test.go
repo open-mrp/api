@@ -36,6 +36,19 @@ const (
 	SeedPropertyName     = "Color"
 	SeedAttributeID      = "at_01seedbeige00000000"
 
+	// Catalog search rank fixtures (shared/db/seed/0014_e2e_extras.sql; list ?q=621).
+	SeedSearchRankQuery             = "621"
+	SeedPartSearchRankExactSKU      = "621"
+	SeedPartSearchRankTokenSKU      = "rkpt7f3a 621"
+	SeedPartSearchRankPrefixSKU     = "621rkpt8f3a"
+	SeedPartSearchRankLooseSKU      = "rkpt47562183"
+	SeedMaterialSearchRankTokenSKU  = "rkmt9b2c 621"
+	SeedMaterialSearchRankPrefixSKU = "621rkmt8f3a"
+	SeedMaterialSearchRankLooseSKU  = "rkmt47562183"
+	SeedProductSearchRankTokenSKU   = "rkrpd4e1f 621"
+	SeedProductSearchRankPrefixSKU  = "621rkrp9pfx"
+	SeedProductSearchRankLooseSKU   = "rkrpd56214z"
+
 	itemsPath = "/v1/catalog/items"
 
 	// Units

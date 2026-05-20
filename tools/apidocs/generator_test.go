@@ -13,6 +13,8 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/patch"
+
+	invoiceep "github.com/augno/api/services/api-gateway/endpoints/invoices"
 )
 
 func TestMain(m *testing.M) {
@@ -781,5 +783,104 @@ func TestGenerate_PathParameterExamples(t *testing.T) {
 	}
 	if idParam["example"] != apiresource.SampleAPIKeyID {
 		t.Errorf("path param example = %v, want %s", idParam["example"], apiresource.SampleAPIKeyID)
+	}
+}
+
+func TestUpdateInvoiceRequestExampleMatchesNullableFlags(t *testing.T) {
+	t.Parallel()
+	components := &Components{Schemas: make(map[string]Schema)}
+	schema := generateSchema(reflect.TypeFor[invoiceep.UpdateInvoiceRequest](), components, NewDocReader())
+	assertExampleNullFieldsMarkedNullable(t, schema.Example, schema.Properties)
+	assertOptionalBooleanExampleDefaults(t, schema.Example, schema)
+
+	doc, err := buildOpenAPIDocument(openAPIEndpointGroups(), false, nil, "1.0.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	componentsMap, _ := doc["components"].(map[string]any)
+	schemas, _ := componentsMap["schemas"].(map[string]any)
+	raw, _ := schemas["UpdateInvoiceRequest"].(map[string]any)
+	props := schemaPropertiesFromDoc(raw["properties"])
+	assertExampleNullFieldsMarkedNullable(t, raw["example"], props)
+	assertOptionalBooleanExampleDefaults(t, raw["example"], schemaFromDoc(raw))
+}
+
+func schemaPropertiesFromDoc(raw any) map[string]Schema {
+	out := make(map[string]Schema)
+	switch p := raw.(type) {
+	case map[string]any:
+		for name, propRaw := range p {
+			propMap, _ := propRaw.(map[string]any)
+			out[name] = Schema{Nullable: propMap["nullable"] == true}
+		}
+	case orderedJSONMap:
+		for name, propRaw := range p.values {
+			propMap, _ := propRaw.(map[string]any)
+			out[name] = Schema{Nullable: propMap["nullable"] == true}
+		}
+	}
+	return out
+}
+
+func assertExampleNullFieldsMarkedNullable(t *testing.T, example any, properties map[string]Schema) {
+	t.Helper()
+	ex, ok := example.(map[string]any)
+	if !ok {
+		if ojm, ok := example.(orderedJSONMap); ok {
+			ex = ojm.values
+		} else {
+			t.Fatalf("example type %T", example)
+		}
+	}
+	for name, val := range ex {
+		if isJSONNullish(val) && !properties[name].Nullable {
+			t.Errorf("example has null for %q but property is not nullable", name)
+		}
+	}
+}
+
+func schemaFromDoc(raw map[string]any) Schema {
+	schema := Schema{Type: "object", Properties: schemaPropertiesFromDoc(raw["properties"])}
+	if req, ok := raw["required"].([]any); ok {
+		for _, r := range req {
+			if name, ok := r.(string); ok {
+				schema.Required = append(schema.Required, name)
+			}
+		}
+	}
+	return schema
+}
+
+func assertOptionalBooleanExampleDefaults(t *testing.T, example any, schema Schema) {
+	t.Helper()
+	ex, ok := example.(map[string]any)
+	if !ok {
+		if ojm, ok := example.(orderedJSONMap); ok {
+			ex = ojm.values
+		} else {
+			t.Fatalf("example type %T", example)
+		}
+	}
+
+	required := make(map[string]struct{}, len(schema.Required))
+	for _, name := range schema.Required {
+		required[name] = struct{}{}
+	}
+
+	for name, prop := range schema.Properties {
+		if prop.Type != "boolean" || prop.Nullable {
+			continue
+		}
+		if _, isRequired := required[name]; isRequired {
+			continue
+		}
+		val, exists := ex[name]
+		if !exists {
+			t.Errorf("expected optional boolean %q to appear in example", name)
+			continue
+		}
+		if isJSONNullish(val) {
+			t.Errorf("expected optional boolean %q example to avoid null", name)
+		}
 	}
 }

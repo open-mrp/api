@@ -58,9 +58,14 @@ func derefValue(v reflect.Value) reflect.Value {
 }
 
 func jsonExampleFromValue(v reflect.Value) any {
-	v = derefValue(v)
 	if !v.IsValid() {
 		return nil
+	}
+	if v.Kind() == reflect.Pointer {
+		if v.IsNil() {
+			return nil
+		}
+		return jsonExampleFromValue(v.Elem())
 	}
 	switch v.Kind() {
 	case reflect.Struct:

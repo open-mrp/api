@@ -1,4 +1,4 @@
-.PHONY: help dev sqlc proto buf-lint db-dump test test-verbose test-sql-prepare-smoke install-tools docs mocks lint gosec gosec-fast govet static-check check-format jaeger-tracing connect-minikube connect-eks version validate-openapi-specs httpie local-db local-db-down local-db-nuke seed-core seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook open-tracing e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns openapi openapi-quiet
+.PHONY: help dev sqlc proto buf-lint db-dump test test-verbose test-sql-prepare-smoke install-tools docs mocks lint gosec gosec-fast govet static-check check-format jaeger-tracing connect-minikube connect-eks version validate-openapi-specs httpie local-db local-db-down local-db-nuke seed-core seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook open-tracing e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns openapi openapi-quiet install-stlc stlc-internal-sdk stlc-public-typescript-sdk stlc-sdks
 
 # Include .env file if it exists (optional for CI)
 -include .env
@@ -64,6 +64,22 @@ httpie: ## Generate HTTPie workspace file
 
 validate-openapi-specs: ## Validate OpenAPI specifications with vacuum
 	@./scripts/validate-openapi-specs.sh
+
+# --- STLC (Stainless CLI) ----------------------------------------------------
+# Forks: github.com/sdk-gen/stlc, sdk-gen/stlc-typescript — see docs/stlc-sdk-codegen.md.
+# Optional: STLC_BUILD_EXTRA='--commit "chore: regenerate SDK"'
+install-stlc: ## Install stlc + stlc-typescript from sdk-gen (uses gh auth token if STLC_READ_TOKEN unset)
+	@./scripts/install-stlc.sh
+
+stlc-internal-sdk: ## SDK: augno/internal-sdk from stainless/internal
+	@command -v stlc >/dev/null 2>&1 || { printf '%s\n' 'stlc not on PATH — install per docs/stlc-sdk-codegen.md' >&2; exit 127; }
+	stlc build --workspace stainless/internal --targets typescript $(STLC_BUILD_EXTRA)
+
+stlc-public-typescript-sdk: ## SDK: augno/typescript-sdk (@augno/sdk) from stainless/public
+	@command -v stlc >/dev/null 2>&1 || { printf '%s\n' 'stlc not on PATH — install per docs/stlc-sdk-codegen.md' >&2; exit 127; }
+	stlc build --workspace stainless/public --targets typescript $(STLC_BUILD_EXTRA)
+
+stlc-sdks: stlc-internal-sdk stlc-public-typescript-sdk ## Regenerate both TS SDK workspaces
 
 sqlc: ## Generate code from SQL queries using sqlc. Usage: make sqlc [services]
 	@$(SQLC_SCRIPT) $(ARGS)

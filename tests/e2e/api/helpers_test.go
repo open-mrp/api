@@ -121,6 +121,38 @@ func assertEmptyListData(t *testing.T, data []json.RawMessage, msgAndArgs ...int
 	assert.Fail(t, fmt.Sprintf("%s\n\ngot %d items:\n%s", prefix, len(data), formatListDataForLog(data)))
 }
 
+// assertSearchRankOrder asserts each expected SKU appears in list order (by first occurrence
+// index in list.Data). skuFromRow should return the comparable SKU for each row (top-level
+// or nested under include=item).
+func assertSearchRankOrder(t *testing.T, list []json.RawMessage, expectedSKUs []string, skuFromRow func(map[string]any) string) {
+	t.Helper()
+	indexBySKU := make(map[string]int)
+	for i, raw := range list {
+		var row map[string]any
+		require.NoError(t, json.Unmarshal(raw, &row))
+		sku := skuFromRow(row)
+		if sku == "" {
+			continue
+		}
+		if _, ok := indexBySKU[sku]; !ok {
+			indexBySKU[sku] = i
+		}
+	}
+	var prevIdx int
+	var havePrev bool
+	var prevSKU string
+	for _, want := range expectedSKUs {
+		idx, ok := indexBySKU[want]
+		require.True(t, ok, "expected SKU %q in list (checked %d rows):\n%s", want, len(list), formatListDataForLog(list))
+		if havePrev {
+			assert.Less(t, prevIdx, idx, "SKU %q should sort before %q", prevSKU, want)
+		}
+		prevIdx = idx
+		prevSKU = want
+		havePrev = true
+	}
+}
+
 // requireStatus asserts the HTTP status code matches and includes the body in the error message.
 func requireStatus(t *testing.T, expected, actual int, body []byte) {
 	t.Helper()

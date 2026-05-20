@@ -1,0 +1,157 @@
+name: Generate SDKs (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      api_version:
+        description: Deployed API release tag (e.g. v0.17.10)
+        required: true
+        type: string
+      sdk_branch:
+        description: Branch on each SDK repo to push (e.g. bot/sdk-sync-v0.17.10)
+        required: true
+        type: string
+      openapi_specs_artifact:
+        description: Name of workflow artifact containing specs/ (empty = run make openapi-quiet in this job)
+        required: false
+        type: string
+        default: ""
+      open_pr:
+        description: Open a GitHub PR from sdk_branch into pr_base_branch on each SDK repo
+        required: false
+        type: boolean
+        default: false
+      pr_base_branch:
+        description: Base branch for SDK pull requests
+        required: false
+        type: string
+        default: main
+      commit_message:
+        description: Optional override for the stlc git commit message
+        required: false
+        type: string
+        default: ""
+    secrets:
+      STLC_READ_TOKEN:
+        required: true
+      SDK_WRITE_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  STLC_GITHUB_ORG: sdk-gen
+  STLC_TARGETS: typescript
+
+jobs:
+  generate:
+    name: Generate ${{ matrix.sdk }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - sdk: internal
+            workspace: stainless/internal
+            pr_repo: Augno/internal-sdk
+          - sdk: public
+            workspace: stainless/public
+            pr_repo: Augno/typescript-sdk
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Download release OpenAPI specs
+        if: inputs.openapi_specs_artifact != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.openapi_specs_artifact }}
+          path: specs
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Generate OpenAPI specifications
+        if: inputs.openapi_specs_artifact == ''
+        run: make openapi-quiet
+
+      - name: Setup stlc
+        uses: ./.github/actions/setup-stlc
+        with:
+          github-org: ${{ env.STLC_GITHUB_ORG }}
+          stlc-read-token: ${{ secrets.STLC_READ_TOKEN }}
+
+      - name: Configure auth for stlc to push to SDK repos
+        env:
+          GH_TOKEN: ${{ secrets.SDK_WRITE_TOKEN }}
+        run: |
+          git config --global user.name "stlc-bot"
+          git config --global user.email "stlc-bot@users.noreply.github.com"
+          gh auth setup-git
+
+      - name: Generate SDK and push
+        id: build
+        env:
+          API_VERSION: ${{ inputs.api_version }}
+          BRANCH: ${{ inputs.sdk_branch }}
+          COMMIT_MSG: ${{ inputs.commit_message }}
+          GH_TOKEN: ${{ secrets.SDK_WRITE_TOKEN }}
+        run: |
+          echo "Building ${{ matrix.workspace }} to branch: $BRANCH (API ${API_VERSION})"
+          if [ -n "$COMMIT_MSG" ]; then
+            commit_message="$COMMIT_MSG"
+          else
+            commit_message="fix(sdk): sync with deployed API ${API_VERSION}"
+          fi
+          commit_args=(--commit "$commit_message")
+          env -u CI -u GITHUB_ACTIONS stlc build \
+            --workspace "${{ matrix.workspace }}" \
+            --branch "$BRANCH" \
+            --output "/tmp/sdk-output/${{ matrix.sdk }}" \
+            --push \
+            --targets "$STLC_TARGETS" \
+            "${commit_args[@]}"
+
+      - name: Open pull request on SDK repo
+        if: success() && inputs.open_pr
+        env:
+          GH_TOKEN: ${{ secrets.SDK_WRITE_TOKEN }}
+        run: |
+          set -euo pipefail
+          repo="${{ matrix.pr_repo }}"
+          branch="${{ inputs.sdk_branch }}"
+          base="${{ inputs.pr_base_branch }}"
+          tag="${{ inputs.api_version }}"
+          open_count=$(gh pr list --repo "$repo" --head "$branch" --state open --json number -q 'length')
+          if [ "${open_count:-0}" -gt 0 ]; then
+            echo "An open PR already exists for $repo from head $branch; skipping create."
+            exit 0
+          fi
+          body_file="$(mktemp)"
+          {
+            echo "Automated SDK sync from [Augno/api](https://github.com/Augno/api) release **${tag}**."
+            echo ""
+            if [ -n "${{ inputs.openapi_specs_artifact }}" ]; then
+              echo "OpenAPI specs come from the **Publish OpenAPI Specs** job in the same release workflow (artifact \`${{ inputs.openapi_specs_artifact }}\`)."
+            else
+              echo "OpenAPI specs were generated in this job with \`make openapi-quiet\`."
+            fi
+            echo ""
+            echo "Review, merge, then run your SDK release process (e.g. release-please / npm publish)."
+          } > "$body_file"
+          gh pr create --repo "$repo" --base "$base" --head "$branch" \
+            --title "fix(sdk): sync with deployed API ${tag}" \
+            --body-file "$body_file"
+          rm -f "$body_file"
+
+      - name: Print STLC failure report
+        if: failure() && steps.build.outcome == 'failure'
+        uses: ./.github/actions/stlc-failure-report
+        with:
+          workspace: ${{ matrix.workspace }}

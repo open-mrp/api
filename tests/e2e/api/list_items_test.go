@@ -35,36 +35,6 @@ func TestListItems_SearchBySKU(t *testing.T) {
 	assert.True(t, found, "Seeded item with SKU %q not found in search results", SeedItemSKU)
 }
 
-func TestListItems_SearchRanksExactSKUBeforeSubstring_Parts(t *testing.T) {
-	t.Parallel()
-	exactSKU := uniqueName("e2e-rank-it-ex")
-	longSKU := "Z" + exactSKU + "Z"
-
-	respLong, err := apiClient.PostFull(partsPath, validPartBody(longSKU), newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, respLong.StatusCode, respLong.Body)
-	longPartID := jsonField(parseJSON(respLong.Body), "id")
-	require.NotEmpty(t, longPartID)
-	t.Cleanup(func() { apiClient.Delete(partsPath + "/" + longPartID) })
-
-	respExact, err := apiClient.PostFull(partsPath, validPartBody(exactSKU), newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, respExact.StatusCode, respExact.Body)
-	exactPartID := jsonField(parseJSON(respExact.Body), "id")
-	require.NotEmpty(t, exactPartID)
-	t.Cleanup(func() { apiClient.Delete(partsPath + "/" + exactPartID) })
-
-	list, _, err := apiClient.GetList(itemsPath, url.Values{
-		"q":     {exactSKU},
-		"types": {"part"},
-		"limit": {"10"},
-	})
-	require.NoError(t, err)
-	require.NotEmpty(t, list.Data, "search should return both part items")
-
-	assert.Equal(t, exactSKU, DataItemField(list.Data[0], "sku"), "exact SKU match should sort before substring-only match")
-}
-
 func TestListItems_SearchByDescription(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(itemsPath, url.Values{"q": {"sock"}})

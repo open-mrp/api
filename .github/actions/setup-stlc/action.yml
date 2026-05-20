@@ -1,0 +1,42 @@
+name: "Setup stlc"
+description: "Install the stlc CLI and stlc-typescript for TypeScript SDK generation in CI."
+
+inputs:
+  github-org:
+    description: "GitHub org that hosts the stlc and stlc-typescript forks."
+    required: false
+    default: "sdk-gen"
+  stlc-read-token:
+    description: "PAT with Contents:Read on <github-org>/stlc and <github-org>/stlc-typescript."
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: "24"
+
+    - name: Install pnpm
+      shell: bash
+      run: npm install -g pnpm
+
+    - name: Install stlc
+      shell: bash
+      env:
+        STLC_GITHUB_ORG: ${{ inputs.github-org }}
+        STLC_READ_TOKEN: ${{ inputs.stlc-read-token }}
+      run: |
+        git_config_key="url.https://x-access-token:${STLC_READ_TOKEN}@github.com/${STLC_GITHUB_ORG}/.insteadOf"
+        cleanup_stlc_auth() { git config --global --unset-all "$git_config_key" || true; }
+        trap cleanup_stlc_auth EXIT
+        git config --global --add "$git_config_key" "https://github.com/${STLC_GITHUB_ORG}/"
+
+        npm install -g \
+          "git+https://x-access-token:${STLC_READ_TOKEN}@github.com/${STLC_GITHUB_ORG}/stlc.git" \
+          "git+https://x-access-token:${STLC_READ_TOKEN}@github.com/${STLC_GITHUB_ORG}/stlc-typescript.git"
+
+    - name: Check stlc CLI is callable
+      shell: bash
+      run: stlc --help >/dev/null && echo "stlc is callable"

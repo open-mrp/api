@@ -74,4 +74,5 @@ crash.log
 .cache/
 
 # builds
-stainless/builds/
+stainless/internal/builds/
+stainless/public/builds/

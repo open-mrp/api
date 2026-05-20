@@ -24,15 +24,27 @@ func TestCatalogSearchRank(t *testing.T) {
 	if g, w := CatalogSearchRank("622", cs), int32(0); g != w {
 		t.Fatalf("exact sku: got %d want %d", g, w)
 	}
-	if g, w := CatalogSearchRank("6220", cs), int32(1); g != w {
+	if g, w := CatalogSearchRank("Greige 622", cs), int32(1); g != w {
+		t.Fatalf("token sku: got %d want %d", g, w)
+	}
+	if g, w := CatalogSearchRank("6220", cs), int32(2); g != w {
 		t.Fatalf("prefix sku: got %d want %d", g, w)
 	}
-	if g, w := CatalogSearchRank("x622x", cs), int32(2); g != w {
+	if g, w := CatalogSearchRank("x622x", cs), int32(3); g != w {
 		t.Fatalf("substring only: got %d want %d", g, w)
 	}
 	empty := NewCatalogSearch(nil)
 	if g, w := CatalogSearchRank("anything", empty), int32(0); g != w {
 		t.Fatalf("no search: got %d want %d", g, w)
+	}
+}
+
+func TestCatalogSearchRank_LoosePartial621(t *testing.T) {
+	t.Parallel()
+	q := "621"
+	cs := NewCatalogSearch(&q)
+	if g, w := CatalogSearchRank("56214", cs), int32(3); g != w {
+		t.Fatalf("loose partial: got %d want %d", g, w)
 	}
 }
 

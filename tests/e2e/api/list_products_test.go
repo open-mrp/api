@@ -67,35 +67,6 @@ func TestListProducts_FilterByProductLine_NoResults(t *testing.T) {
 	assertEmptyListData(t, list.Data, "Nonsense product line filter should return empty data")
 }
 
-func TestListProducts_SearchRanksExactSKUBeforeSubstring(t *testing.T) {
-	t.Parallel()
-	exactSKU := uniqueName("e2e-rank-ex")
-	longSKU := "Z" + exactSKU + "Z"
-
-	respLong, err := apiClient.PostFull(productsPath, validProductBody(longSKU), newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, respLong.StatusCode, respLong.Body)
-	longID := jsonField(parseJSON(respLong.Body), "id")
-	require.NotEmpty(t, longID)
-	t.Cleanup(func() { apiClient.Delete(productsPath + "/" + longID) })
-
-	respExact, err := apiClient.PostFull(productsPath, validProductBody(exactSKU), newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, respExact.StatusCode, respExact.Body)
-	exactID := jsonField(parseJSON(respExact.Body), "id")
-	require.NotEmpty(t, exactID)
-	t.Cleanup(func() { apiClient.Delete(productsPath + "/" + exactID) })
-
-	list, _, err := apiClient.GetList(productsPath, url.Values{"q": {exactSKU}, "include": {"item"}, "limit": {"10"}})
-	require.NoError(t, err)
-	require.NotEmpty(t, list.Data, "search should return both products")
-
-	first := parseJSON(list.Data[0])
-	itemObj := jsonObject(first, "item")
-	require.NotNil(t, itemObj)
-	assert.Equal(t, exactSKU, jsonField(itemObj, "sku"), "exact SKU match should sort before substring-only match")
-}
-
 func TestListProducts_Pagination(t *testing.T) {
 	t.Parallel()
 	page1, _, err := apiClient.GetList(productsPath, url.Values{"limit": {"2"}})

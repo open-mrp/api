@@ -184,9 +184,9 @@ func (r *outboxEnqueuerRepoImpl) MarkFailed(ctx context.Context, id int64, error
 	defer span.End()
 
 	err := r.queries.MarkOutboxMessageFailed(ctx, sqlc.MarkOutboxMessageFailedParams{
-		ID:        id,
 		LastError: db.NullString(errorMsg),
-		DATEADD:   retryDelaySecs,
+		Column2:   retryDelaySecs,
+		ID:        id,
 	})
 	if err != nil {
 		span.RecordError(err)

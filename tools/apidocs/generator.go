@@ -782,7 +782,7 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 		// This is independent of the Go type so we don't miss nullable badges when
 		// the API chooses to return null even for non-pointer fields.
 		if exampleMap != nil {
-			if val, exists := exampleMap[name]; exists && val == nil {
+			if val, exists := exampleMap[name]; exists && isJSONNullish(val) {
 				fieldSchema.Nullable = true
 				// Keep nullable-enum null-inclusion consistent with the updated flag.
 				// Only append nil if not already present (the block above may have added it).
@@ -800,13 +800,60 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 	// struct (including fields that are marked as `path` or otherwise not part
 	// of the JSON payload). Filter object examples down to schema properties so
 	// `requestBody.example` never includes invalid keys.
-	schema.Example = filterExampleToSchemaProperties(schema.Example, schema)
+	schema.Example = fillOptionalBooleanExampleDefaults(
+		filterExampleToSchemaProperties(schema.Example, schema),
+		schema,
+	)
 
 	if len(schema.Properties) == 0 && schema.AdditionalProperties == nil && len(schema.AllOf) == 0 {
 		schema.XStainlessEmptyObject = true
 	}
 
 	return schema
+}
+
+// fillOptionalBooleanExampleDefaults adds `false` for optional, non-nullable boolean
+// properties missing from an object example. STLC uses `null` in generated SDK tests
+// for example-absent optional params; without an explicit boolean example value those
+// tests fail TypeScript lint (`null` is not assignable to `boolean | undefined`).
+func fillOptionalBooleanExampleDefaults(example any, schema Schema) any {
+	if schema.Type != "object" || len(schema.Properties) == 0 {
+		return example
+	}
+
+	required := make(map[string]struct{}, len(schema.Required))
+	for _, name := range schema.Required {
+		required[name] = struct{}{}
+	}
+
+	ex, ok := example.(map[string]any)
+	if !ok {
+		if example == nil {
+			ex = make(map[string]any)
+		} else {
+			return example
+		}
+	}
+
+	filled := make(map[string]any, len(ex)+len(schema.Properties))
+	for k, v := range ex {
+		filled[k] = v
+	}
+
+	for name, prop := range schema.Properties {
+		if prop.Type != "boolean" || prop.Nullable {
+			continue
+		}
+		if _, isRequired := required[name]; isRequired {
+			continue
+		}
+		if _, exists := filled[name]; exists {
+			continue
+		}
+		filled[name] = false
+	}
+
+	return filled
 }
 
 func filterExampleToSchemaProperties(example any, schema Schema) any {
@@ -846,6 +893,19 @@ func filterExampleToSchemaProperties(example any, schema Schema) any {
 	}
 
 	return example
+}
+
+func isJSONNullish(v any) bool {
+	if v == nil {
+		return true
+	}
+	rv := reflect.ValueOf(v)
+	switch rv.Kind() {
+	case reflect.Pointer, reflect.Slice, reflect.Map, reflect.Interface, reflect.Chan, reflect.Func:
+		return rv.IsNil()
+	default:
+		return false
+	}
 }
 
 func getEnumValuesForStringType(t reflect.Type) []any {

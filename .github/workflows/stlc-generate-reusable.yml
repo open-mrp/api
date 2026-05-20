@@ -59,16 +59,6 @@ jobs:
       internal: ${{ steps.internal.outputs.changed }}
       public: ${{ steps.public.outputs.changed }}
     steps:
-      - name: Assume internal spec changed (manual run)
-        if: inputs.openapi_specs_artifact == ''
-        id: internal
-        run: echo "changed=true" >> "$GITHUB_OUTPUT"
-
-      - name: Assume public spec changed (manual run)
-        if: inputs.openapi_specs_artifact == ''
-        id: public
-        run: echo "changed=true" >> "$GITHUB_OUTPUT"
-
       - name: Checkout repository
         if: inputs.openapi_specs_artifact != ''
         uses: actions/checkout@v5
@@ -83,14 +73,24 @@ jobs:
           path: specs
 
       - name: Compare internal OpenAPI spec
-        if: inputs.openapi_specs_artifact != ''
         id: internal
-        run: ./scripts/sdk-openapi-spec-changed.sh internal
+        run: |
+          if [ -z "${{ inputs.openapi_specs_artifact }}" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Manual run: assuming internal spec changed."
+            exit 0
+          fi
+          ./scripts/sdk-openapi-spec-changed.sh internal
 
       - name: Compare public OpenAPI spec
-        if: inputs.openapi_specs_artifact != ''
         id: public
-        run: ./scripts/sdk-openapi-spec-changed.sh public
+        run: |
+          if [ -z "${{ inputs.openapi_specs_artifact }}" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Manual run: assuming public spec changed."
+            exit 0
+          fi
+          ./scripts/sdk-openapi-spec-changed.sh public
 
   generate:
     name: Generate ${{ matrix.sdk }}

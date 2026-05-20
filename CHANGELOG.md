@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.12](https://github.com/Augno/api/compare/v0.17.11...v0.17.12) (2026-05-20)
+
+
+### Bug Fixes
+
+* include failures on non-GET requests ([#265](https://github.com/Augno/api/issues/265)) ([9ab23b9](https://github.com/Augno/api/commit/9ab23b9f3df62dfc7532798184e9ace018b94ac2))
+
 ## [0.17.11](https://github.com/Augno/api/compare/v0.17.10...v0.17.11) (2026-05-20)
 
 

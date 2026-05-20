@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.17.13](https://github.com/Augno/api/compare/v0.17.12...v0.17.13) (2026-05-20)
+
+
+### Bug Fixes
+
+* better test coverage on includes fields; CD to parallelize SDK release and consumer notification ([#267](https://github.com/Augno/api/issues/267)) ([145947b](https://github.com/Augno/api/commit/145947b0b4e3aa0a3a23fc99ee0f349c95650199))
+* more efficient CD by checking for changes in openapi spec before release ([#269](https://github.com/Augno/api/issues/269)) ([131b694](https://github.com/Augno/api/commit/131b69455b32c6d6b12068a7b27b4b7fcab96ad9))
+* release ([#270](https://github.com/Augno/api/issues/270)) ([ca4d049](https://github.com/Augno/api/commit/ca4d0496aad882791ef3fd072d7fc8ed2b9faf6c))
+
 ## [0.17.12](https://github.com/Augno/api/compare/v0.17.11...v0.17.12) (2026-05-20)
 
 

@@ -1288,17 +1288,25 @@ func (s *ProductSvcTestSuite) TestValidateProducts_Success_PreservesKeys() {
 	s.productRepo.EXPECT().
 		ValidateProducts(gomock.Any(), gomock.AssignableToTypeOf(domain.ValidateProductsParams{})).
 		DoAndReturn(func(_ context.Context, params domain.ValidateProductsParams) (*domain.ValidateProductsResult, *apierror.APIError) {
-			// Service must forward SKUs unchanged (case preservation; repo handles case-insensitive match).
 			s.Equal("ac_test123", params.AccountID)
 			s.Equal("SKU-1", params.ProductsMap["rowA"])
 			s.Equal("SKU-2", params.ProductsMap["rowB"])
+			s.Empty(params.Includes)
 			return &domain.ValidateProductsResult{
 				Products: map[string]*domain.ProductFull{
-					"rowA": {ID: "prod_1", Item: &domain.Item{SKU: "SKU-1"}},
-					// rowB missing on purpose to cover the "partial match" contract.
+					"rowA": {ID: "prod_1", Item: &domain.Item{ID: "it_1", SKU: "SKU-1"}},
 				},
 			}, nil
 		}).
+		Times(1)
+
+	s.itemRepo.EXPECT().
+		Get(gomock.Any(), domain.GetItemParams{
+			AccountID: "ac_test123",
+			ItemID:    "it_1",
+			Includes:  []string{"attributes"},
+		}).
+		Return(&domain.Item{ID: "it_1"}, nil).
 		Times(1)
 
 	result, err := s.productSvc.ValidateProducts(ctx, domain.ValidateProductsParams{ProductsMap: input})

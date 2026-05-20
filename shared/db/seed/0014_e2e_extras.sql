@@ -685,3 +685,54 @@ INSERT IGNORE INTO product (id, item_id, product_type_code, product_line_id, cre
 UPDATE product SET is_portal_ready = 1
  WHERE id IN ('pd_e2e621rank_pd_lo0', 'pd_e2e621rank_pd_pf0', 'pd_e2e621rank_pd_tk0');
 
+-- ============================================================
+-- PUT ?include[]= meta walker fixtures (estimate SO/PO + disposable catalog rows)
+-- ============================================================
+
+UPDATE sales_order
+SET
+    carrier_option_id = COALESCE(carrier_option_id, 'crop_01seedground000000'),
+    order_discount_id = COALESCE(order_discount_id, 'ords_01seedpct10discount')
+WHERE id = 'or_01k0a8bs2yfhev5begay245wez';
+
+INSERT IGNORE INTO rate (id, value, numerator_unit_id, denominator_unit_id, created_at, updated_at) VALUES
+    ('rt_01seed_putinc_chg_uv00', 0, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_01seed_putinc_chg_uc00', 0, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_01seed_putinc_chg_br00', 0, 'un_01seedpair000000000', 'day', NOW(), NOW()),
+    ('rt_01seed_putinc_att_uv00', 0, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_01seed_putinc_att_uc00', 0, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_01seed_putinc_att_br00', 0, 'un_01seedpair000000000', 'day', NOW(), NOW()),
+    ('rt_01seed_putinc_pln_uv00', 0, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_01seed_putinc_pln_uc00', 0, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_01seed_putinc_pln_br00', 0, 'un_01seedpair000000000', 'day', NOW(), NOW());
+
+INSERT IGNORE INTO item (id, sku, description, unit_value_id, unit_cost_id, burn_rate_id, account_id, item_type_code, item_category_id, created_at, updated_at) VALUES
+    ('it_01seed_putinc_chgcat00', 'PUTINC-CATCHG', 'e2e put-include change category walker', 'rt_01seed_putinc_chg_uv00', 'rt_01seed_putinc_chg_uc00', 'rt_01seed_putinc_chg_br00', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'product', 'itcg_01seedsocks000000', NOW(), NOW()),
+    ('it_01seed_putinc_attradd0', 'PUTINC-ATTR', 'e2e put-include add-attribute walker', 'rt_01seed_putinc_att_uv00', 'rt_01seed_putinc_att_uc00', 'rt_01seed_putinc_att_br00', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'product', 'itcg_01seedsocks000000', NOW(), NOW()),
+    ('it_01seed_putinc_chprdln_it', 'PUTINC-PRDPL', 'e2e put-include change product line walker', 'rt_01seed_putinc_pln_uv00', 'rt_01seed_putinc_pln_uc00', 'rt_01seed_putinc_pln_br00', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'product', 'itcg_01seedsocks000000', NOW(), NOW());
+
+INSERT IGNORE INTO product (id, item_id, product_type_code, product_line_id, created_at, updated_at) VALUES
+    ('pd_01seed_putinc_chprdln0', 'it_01seed_putinc_chprdln_it', 'sale', 'pdln_01k0a735ype5e8nrhv1n5dhq1q', NOW(), NOW());
+
+INSERT IGNORE INTO _item_attributes (A, B) VALUES
+    ('at_01seedbeige00000000', 'it_01seed_putinc_chgcat00'),
+    ('at_01seedbeige00000000', 'it_01seed_putinc_chprdln_it');
+
+INSERT IGNORE INTO _item_categories_properties (A, B) VALUES
+    ('itcg_01seedshipping000', 'pp_01k0a7ntn1ez6aw8x850femxeh');
+
+INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
+    ('qu_01seedputinc_polqty00', 6, 'un_01seedpound00000000', NOW(), NOW());
+
+INSERT IGNORE INTO rate (id, value, numerator_unit_id, denominator_unit_id, created_at, updated_at) VALUES
+    ('rt_01seedputinc_pol_pri', '5.75', 'dollar', 'un_01seedpound00000000', NOW(), NOW()),
+    ('rt_01seedputinc_pol_cst', '4.05', 'dollar', 'un_01seedpound00000000', NOW(), NOW());
+
+INSERT IGNORE INTO sales_order (id, number, sales_order_status_code, sales_order_type_code, priority_code, carrier_id, carrier_option_id, billing_address_id, shipping_address_id, buyer_account_id, seller_account_id, owner_account_id, payment_term_id, shipping_term_id, created_at, updated_at) VALUES
+    ('or_01seed_putinc_po_es00', 'PO-E2EPUTINC', 'estimate', 'purchase_order', 'normal', 'delivery', 'crop_01seedground000000', 'ad_01k09wnac0e1ar211e0sy0ba4g', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01seedsupplier_acct0', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'pytm_01seednet3000000', 'prepaid_billed', NOW(), NOW());
+
+INSERT IGNORE INTO sales_order_line (id, product_sku, product_description, product_id, item_id, sales_order_id, quantity_id, unit_price_id, unit_cost_id, created_at, updated_at) VALUES
+    ('orln_01seedputinc_pol1_000', 'YRN-PINC', 'Yarn PO for put-include walker', NULL, 'it_01seedyrn1item00000', 'or_01seed_putinc_po_es00', 'qu_01seedputinc_polqty00', 'rt_01seedputinc_pol_pri', 'rt_01seedputinc_pol_cst', NOW(), NOW());
+
+INSERT IGNORE INTO order_email_contact (id, sales_order_id, account_user_id, notification_type_code, created_at, updated_at) VALUES
+    ('oec_01seed_putinc_po_subm', 'or_01seed_putinc_po_es00', 'acus_s83fjhyfmqen', 'purchaseOrderSubmission', NOW(), NOW());

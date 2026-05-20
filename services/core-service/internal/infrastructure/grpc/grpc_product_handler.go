@@ -259,6 +259,7 @@ func (h *gRPCHandler) ValidateProducts(ctx context.Context, req *pb.ValidateProd
 
 	params := domain.ValidateProductsParams{
 		ProductsMap: req.ProductsMap,
+		Includes:    req.Includes,
 	}
 
 	result, apiErr := h.productSvc.ValidateProducts(ctx, params)

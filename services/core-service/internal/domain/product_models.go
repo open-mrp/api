@@ -121,6 +121,7 @@ type ChangeProductProductLineParams struct {
 type ValidateProductsParams struct {
 	AccountID   string
 	ProductsMap map[string]string // key -> SKU
+	Includes    []string
 }
 
 // ValidateProductsResult contains matched products keyed by the original map key.

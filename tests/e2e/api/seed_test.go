@@ -32,6 +32,16 @@ const (
 	SeedItemCategoryName = "Socks"
 	SeedProductID        = "pd_01k0a65nx2e2crfxrvryyxnmdh"
 	SeedProductTypeID    = "pdtp_01seedsale00000000"
+
+	// PUT include walkers (tests/e2e/api/meta_includes_test.go): isolated fixtures for mutate-then-include coverage.
+	SeedIncludePutAlternateItemCategoryID      = "itcg_01seedshipping000"
+	SeedIncludePutProductLineChangeTargetID    = "pdln_01gf7a8200ef99y3gj77z4q25z"
+	SeedIncludePutChangeCategoryItemID         = "it_01seed_putinc_chgcat00"
+	SeedIncludePutAddAttributeItemID           = "it_01seed_putinc_attradd0"
+	SeedIncludePutChangeProductLineSaleID      = "pd_01seed_putinc_chprdln0"
+	SeedIncludePutChangeProductLineItemID      = "it_01seed_putinc_chprdln_it"
+	SeedIncludePutEstimateSalesOrderID         = "or_01k0a8bs2yfhev5begay245wez"
+	SeedIncludePutEstimatePurchaseOrderID      = "or_01seed_putinc_po_es00"
 	SeedPropertyID       = "pp_01k0a7ntn1ez6aw8x850femxeh"
 	SeedPropertyName     = "Color"
 	SeedAttributeID      = "at_01seedbeige00000000"
@@ -200,6 +210,8 @@ const (
 var pathParamSeeds = map[string]string{
 	"property_id":        SeedPropertyID,
 	"product_line_id":    SeedProductLineID,
+	"category_id":        SeedItemCategoryID, // PUT change-item-category (/items/{id}/category/{category_id})
+	"attribute_id":       SeedAttributeID,    // PUT add-item-attribute (/items/{id}/attributes/{attribute_id})
 	"item_category_id":   SeedItemCategoryID,
 	"unit_group_id":      SeedUnitGroupID,
 	"department_id":      SeedDepartmentID,

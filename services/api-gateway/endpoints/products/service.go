@@ -233,6 +233,7 @@ func (m *productSvcImpl) ChangeProductProductLine(ctx context.Context, req *Chan
 func (m *productSvcImpl) ValidateProducts(ctx context.Context, req *ValidateProductsRequest) (*apiresource.ValidateProductsResponse, *apierror.APIError) {
 	pbReq := &pb.ValidateProductsRequest{
 		ProductsMap: req.ProductsMap,
+		Includes:    appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productSvcTracer, "service.products.validate", domain.ServiceName,

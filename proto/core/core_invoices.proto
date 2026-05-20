@@ -419,6 +419,7 @@ message ChangeProductProductLineResponse {
 }
 message ValidateProductsRequest {
   map<string, string> products_map = 1;
+  repeated string includes = 2;
 }
 message ValidateProductsResponse {
   map<string, ProductFullInfo> products = 1;

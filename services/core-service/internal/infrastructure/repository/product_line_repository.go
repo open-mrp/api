@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
-	"slices"
+	"strings"
 	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -317,7 +317,19 @@ func (r *productLineRepoImpl) GetUnitGroup(ctx context.Context, unitGroupID stri
 		UpdatedAt:  row.UpdatedAt,
 	}
 
-	wantsBaseUnit := slices.Contains(includes, "product_line.unit_group.base_unit") || slices.Contains(includes, "unit_group.base_unit")
+	// Includes may nest further (e.g. product_line.unit_group.associated_units.unit).
+	incCoversFragment := func(fragments ...string) bool {
+		for _, inc := range includes {
+			for _, frag := range fragments {
+				if inc == frag || strings.HasPrefix(inc, frag+".") {
+					return true
+				}
+			}
+		}
+		return false
+	}
+
+	wantsBaseUnit := incCoversFragment("product_line.unit_group.base_unit", "unit_group.base_unit")
 	if wantsBaseUnit && ug.BaseUnitID != "" {
 		unitRows, err := r.queries.GetUnitsByIDs(ctx, []string{ug.BaseUnitID})
 		if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -329,7 +341,7 @@ func (r *productLineRepoImpl) GetUnitGroup(ctx context.Context, unitGroupID stri
 		}
 	}
 
-	wantsAssociatedUnits := slices.Contains(includes, "product_line.unit_group.associated_units") || slices.Contains(includes, "unit_group.associated_units")
+	wantsAssociatedUnits := incCoversFragment("product_line.unit_group.associated_units", "unit_group.associated_units")
 	if wantsAssociatedUnits {
 		ugUnitRows, err := r.queries.ListUnitGroupUnitsByUnitGroupIDs(ctx, []string{ug.ID})
 		if apiErr := db.MapSQLError(err); apiErr != nil {

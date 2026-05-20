@@ -145,10 +145,25 @@ jobs:
             echo ""
             echo "Review, merge, then run your SDK release process (e.g. release-please / npm publish)."
           } > "$body_file"
+          set +e
           gh pr create --repo "$repo" --base "$base" --head "$branch" \
             --title "fix(sdk): sync with deployed API ${tag}" \
-            --body-file "$body_file"
-          rm -f "$body_file"
+            --body-file "$body_file" >pr_create.log 2>&1
+          pr_rc=$?
+          set -e
+          if [ "$pr_rc" -eq 0 ]; then
+            cat pr_create.log
+            rm -f "$body_file" pr_create.log
+            exit 0
+          fi
+          err=$(cat pr_create.log)
+          rm -f pr_create.log "$body_file"
+          if echo "$err" | grep -qi 'no commits between'; then
+            echo "Skipping PR: $repo has no commits between $base and $branch (SDK already matches release)."
+            exit 0
+          fi
+          echo "$err" >&2
+          exit 1
 
       - name: Print STLC failure report
         if: failure() && steps.build.outcome == 'failure'

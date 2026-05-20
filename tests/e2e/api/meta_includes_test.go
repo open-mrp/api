@@ -12,7 +12,6 @@ import (
 )
 
 // TestIncludes_PopulateNestedResources enumerates every GET endpoint that
-// declares an `include[]` enum in the OpenAPI spec and verifies each declared
 // include value actually materializes a populated nested resource when
 // requested. This is the safety net that catches bugs where an include is
 // advertised but the backend never fetches / attaches the nested data.
@@ -331,4 +330,308 @@ func loadIncludeGetEndpoints() ([]IncludeGetEndpoint, error) {
 		})
 	}
 	return out, nil
+}
+
+// IncludePutEndpoint is a PUT endpoint whose OpenAPI parameters declare include[]
+// with a non-empty enum (subset of expandable fields on the JSON response root
+// or a caller-provided extractor).
+type IncludePutEndpoint struct {
+	Path         string
+	OperationID  string
+	PathParams   []string
+	IncludeEnum  []string
+	ExampleRoute string
+}
+
+// ResolvePath mirrors IncludeGetEndpoint: substitute seeded path IDs.
+func (e *IncludePutEndpoint) ResolvePath() (string, bool) {
+	adapter := ListEndpointSpec{Path: e.Path, OperationID: e.OperationID, PathParams: e.PathParams}
+	return adapter.ResolvePath()
+}
+
+// loadIncludePutEndpoints parses the OpenAPI spec and returns every PUT
+// endpoint whose include[] query parameter declares an enum.
+func loadIncludePutEndpoints() ([]IncludePutEndpoint, error) {
+	spec, err := LoadFullSpec()
+	if err != nil {
+		return nil, err
+	}
+
+	var out []IncludePutEndpoint
+	for path, methods := range spec.Paths {
+		if isExcludedPath(path) || isExcludedFromIncludes(path) {
+			continue
+		}
+		op, ok := methods["put"]
+		if !ok {
+			continue
+		}
+
+		var includeEnum []string
+		var pathParams []string
+		for _, p := range op.Parameters {
+			if p.In == "path" {
+				pathParams = append(pathParams, p.Name)
+				continue
+			}
+			if p.In != "query" || p.Name != "include[]" || p.Schema == nil {
+				continue
+			}
+			if p.Schema.Items != nil && len(p.Schema.Items.Enum) > 0 {
+				for _, v := range p.Schema.Items.Enum {
+					if s, ok := v.(string); ok {
+						includeEnum = append(includeEnum, s)
+					}
+				}
+			}
+		}
+		if len(includeEnum) == 0 {
+			continue
+		}
+		out = append(out, IncludePutEndpoint{
+			Path:        path,
+			OperationID: op.OperationID,
+			PathParams:  pathParams,
+			IncludeEnum: includeEnum,
+		})
+	}
+	return out, nil
+}
+
+func substituteIncludePutPath(ep IncludePutEndpoint, vals map[string]string) (string, bool) {
+	if len(ep.PathParams) == 0 {
+		return ep.Path, true
+	}
+	if len(vals) == 0 {
+		return "", false
+	}
+	path := ep.Path
+	for _, name := range ep.PathParams {
+		v, ok := vals[name]
+		if !ok || v == "" {
+			return "", false
+		}
+		path = strings.ReplaceAll(path, "{"+name+"}", v)
+	}
+	return path, true
+}
+
+func resolvePutScenarioPath(ep IncludePutEndpoint, pathValues map[string]string) (string, bool) {
+	if pathValues == nil {
+		return ep.ResolvePath()
+	}
+	return substituteIncludePutPath(ep, pathValues)
+}
+
+func extractRootObjectTyped(root map[string]any, wantObject string) []map[string]any {
+	if jsonField(root, "object") == wantObject {
+		return []map[string]any{root}
+	}
+	return nil
+}
+
+// putIncludeScenario wires a PUT+include[] walker to seeded fixtures that can
+// tolerate the mutation safely (often idempotent repeats to the same path).
+type putIncludeScenario struct {
+	pathValues              map[string]string
+	buildBody               func(resolvedPath string) map[string]any
+	extractTargets          func(root map[string]any) []map[string]any
+	disableParallelIncludes bool
+	resetBetweenIncludes    func(t *testing.T, index int, path string)
+}
+
+func validateProductsPutBody(_ string) map[string]any {
+	return map[string]any{
+		"products_map": map[string]string{"0": SeedItemSKU},
+	}
+}
+
+func extractValidateProductsRoots(root map[string]any) []map[string]any {
+	pm, ok := root["products"].(map[string]any)
+	if !ok {
+		return nil
+	}
+	var out []map[string]any
+	for _, raw := range pm {
+		m, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		if jsonField(m, "object") == "product" {
+			out = append(out, m)
+		}
+	}
+	return out
+}
+
+// includesPutScenarioByOperationID maps OpenAPI operationId values to seeded PUT flows.
+var includesPutScenarioByOperationID = map[string]putIncludeScenario{
+	"validate-products": {
+		buildBody:      validateProductsPutBody,
+		extractTargets: extractValidateProductsRoots,
+	},
+	"add-item-attribute": {
+		pathValues: map[string]string{
+			"id":           SeedIncludePutAddAttributeItemID,
+			"attribute_id": SeedAttributeID,
+		},
+		buildBody: func(_ string) map[string]any { return map[string]any{} },
+		extractTargets: func(root map[string]any) []map[string]any {
+			return extractRootObjectTyped(root, "item")
+		},
+	},
+	"change-item-category": {
+		pathValues: map[string]string{
+			"id":          SeedIncludePutChangeCategoryItemID,
+			"category_id": SeedIncludePutAlternateItemCategoryID,
+		},
+		buildBody: func(_ string) map[string]any { return map[string]any{} },
+		extractTargets: func(root map[string]any) []map[string]any {
+			return extractRootObjectTyped(root, "item")
+		},
+	},
+	"change-product-product-line": {
+		pathValues: map[string]string{
+			"id":              SeedIncludePutChangeProductLineSaleID,
+			"product_line_id": SeedIncludePutProductLineChangeTargetID,
+		},
+		buildBody: func(_ string) map[string]any { return map[string]any{} },
+		extractTargets: func(root map[string]any) []map[string]any {
+			return extractRootObjectTyped(root, "product")
+		},
+	},
+	"change-sales-order-status": {
+		pathValues: map[string]string{
+			"id": SeedIncludePutEstimateSalesOrderID,
+		},
+		buildBody: func(_ string) map[string]any {
+			return map[string]any{"status_change": "issue", "send_email": false}
+		},
+		extractTargets: func(root map[string]any) []map[string]any {
+			return extractRootObjectTyped(root, "sales_order")
+		},
+		disableParallelIncludes: true,
+		resetBetweenIncludes: func(t *testing.T, index int, path string) {
+			if index == 0 {
+				return
+			}
+			st, body, err := apiClient.Put(path, map[string]any{"status_change": "unissue", "send_email": false})
+			require.NoError(t, err)
+			requireStatus(t, 200, st, body)
+		},
+	},
+	"change-purchase-order-status": {
+		pathValues: map[string]string{
+			"id": SeedIncludePutEstimatePurchaseOrderID,
+		},
+		buildBody: func(_ string) map[string]any {
+			return map[string]any{"status_change": "issue", "send_email": false}
+		},
+		extractTargets: func(root map[string]any) []map[string]any {
+			return extractRootObjectTyped(root, "purchase_order")
+		},
+		disableParallelIncludes: true,
+		resetBetweenIncludes: func(t *testing.T, index int, path string) {
+			if index == 0 {
+				return
+			}
+			st, body, err := apiClient.Put(path, map[string]any{"status_change": "unissue", "send_email": false})
+			require.NoError(t, err)
+			requireStatus(t, 200, st, body)
+		},
+	},
+	"update-agent-status": {
+		pathValues: map[string]string{
+			"id": SeedCustomAgentDefinitionID,
+		},
+		buildBody: func(_ string) map[string]any {
+			return map[string]any{"status_code": "active"}
+		},
+		extractTargets: func(root map[string]any) []map[string]any {
+			return extractRootObjectTyped(root, "agent_definition")
+		},
+	},
+}
+
+// TestIncludes_PutPopulateNestedResources is the PUT counterpart of
+// TestIncludes_PopulateNestedResources: it discovers PUT endpoints with include[]
+// enums from OpenAPI and asserts each declared include materializes populated
+// nested resources on extraction targets.
+func TestIncludes_PutPopulateNestedResources(t *testing.T) {
+	t.Parallel()
+
+	endpoints, err := loadIncludePutEndpoints()
+	require.NoError(t, err, "load include-supporting PUT endpoints")
+	require.NotEmpty(t, endpoints, "spec contained no PUT endpoints with include[] enums")
+
+	for _, ep := range endpoints {
+		ep := ep
+
+		scenario, ok := includesPutScenarioByOperationID[ep.OperationID]
+		require.Truef(t, ok, "register includesPutScenarioByOperationID[\"%s\"]", ep.OperationID)
+
+		path, resolved := resolvePutScenarioPath(ep, scenario.pathValues)
+		require.True(t, resolved, "resolvePutScenarioPath(%s) operationId=%s", ep.Path, ep.OperationID)
+
+		body := scenario.buildBody(path)
+
+		t.Run(ep.OperationID, func(t *testing.T) {
+			t.Parallel()
+
+			includeEnum := ep.IncludeEnum
+
+			runOne := func(t *testing.T, include string) {
+				t.Helper()
+
+				if reason, skip := includesOptOut[optOutKey(ep.OperationID, include)]; skip {
+					t.Skipf("opt-out: %s", reason)
+					return
+				}
+
+				status, respBody, err := apiClient.PutRaw(path, url.Values{"include": {include}}, body)
+				require.NoError(t, err, "PUT %s?include=%s failed", path, include)
+				requireStatus(t, 200, status, respBody)
+
+				got := parseJSON(respBody)
+				require.NotNil(t, got, "response should be valid JSON")
+
+				targets := scenario.extractTargets(got)
+				require.NotEmpty(t, targets, "%s (%s): no extraction targets in response", ep.OperationID, include)
+
+				var populatedCount int
+				var lastPopErr string
+				for i, tgt := range targets {
+					if incErr := checkIncludePopulated(tgt, include); incErr != nil {
+						lastPopErr = fmt.Sprintf("candidate[%d]: %v", i, incErr)
+						continue
+					}
+					populatedCount++
+				}
+				require.Positive(t, populatedCount,
+					"%s?include=%s: none of %d response object(s) had include populated (%s)",
+					path, include, len(targets), lastPopErr)
+			}
+
+			if scenario.disableParallelIncludes {
+				for i := range includeEnum {
+					if scenario.resetBetweenIncludes != nil {
+						scenario.resetBetweenIncludes(t, i, path)
+					}
+					inc := includeEnum[i]
+					t.Run(inc, func(t *testing.T) {
+						runOne(t, inc)
+					})
+				}
+				return
+			}
+
+			for _, include := range includeEnum {
+				include := include
+				t.Run(include, func(t *testing.T) {
+					t.Parallel()
+					runOne(t, include)
+				})
+			}
+		})
+	}
 }

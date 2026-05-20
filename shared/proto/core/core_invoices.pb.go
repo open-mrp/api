@@ -4424,6 +4424,7 @@ func (x *ChangeProductProductLineResponse) GetProduct() *ProductFullInfo {
 type ValidateProductsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProductsMap   map[string]string      `protobuf:"bytes,1,rep,name=products_map,json=productsMap,proto3" json:"products_map,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Includes      []string               `protobuf:"bytes,2,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4461,6 +4462,13 @@ func (*ValidateProductsRequest) Descriptor() ([]byte, []int) {
 func (x *ValidateProductsRequest) GetProductsMap() map[string]string {
 	if x != nil {
 		return x.ProductsMap
+	}
+	return nil
+}
+
+func (x *ValidateProductsRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
 	}
 	return nil
 }
@@ -5751,9 +5759,10 @@ const file_core_core_invoices_proto_rawDesc = "" +
 	"\x0fproduct_line_id\x18\x02 \x01(\tR\rproductLineId\x12\x1a\n" +
 	"\bincludes\x18\x03 \x03(\tR\bincludes\"S\n" +
 	" ChangeProductProductLineResponse\x12/\n" +
-	"\aproduct\x18\x01 \x01(\v2\x15.core.ProductFullInfoR\aproduct\"\xac\x01\n" +
+	"\aproduct\x18\x01 \x01(\v2\x15.core.ProductFullInfoR\aproduct\"\xc8\x01\n" +
 	"\x17ValidateProductsRequest\x12Q\n" +
-	"\fproducts_map\x18\x01 \x03(\v2..core.ValidateProductsRequest.ProductsMapEntryR\vproductsMap\x1a>\n" +
+	"\fproducts_map\x18\x01 \x03(\v2..core.ValidateProductsRequest.ProductsMapEntryR\vproductsMap\x12\x1a\n" +
+	"\bincludes\x18\x02 \x03(\tR\bincludes\x1a>\n" +
 	"\x10ProductsMapEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xb8\x01\n" +

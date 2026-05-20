@@ -320,6 +320,60 @@ func (c *Client) Put(path string, body any) (int, []byte, error) {
 	return c.Do(http.MethodPut, path, body, "")
 }
 
+// PutRaw performs PUT with optional query params (same pattern as GET with query encoding).
+func (c *Client) PutRaw(path string, params url.Values, body any) (int, []byte, error) {
+	u := c.baseURL + path
+	if len(params) > 0 {
+		u += "?" + params.Encode()
+	}
+
+	for attempt := 0; attempt <= c.retries; attempt++ {
+		var bodyReader io.Reader
+		if body != nil {
+			b, err := json.Marshal(body)
+			if err != nil {
+				return 0, nil, fmt.Errorf("marshalling request body: %w", err)
+			}
+			bodyReader = bytes.NewReader(b)
+		}
+
+		req, err := http.NewRequest(http.MethodPut, u, bodyReader)
+		if err != nil {
+			return 0, nil, fmt.Errorf("creating request: %w", err)
+		}
+
+		req.Header.Set("Authorization", "Bearer "+c.apiKey)
+		req.Header.Set("Augno-Account", c.accountID)
+		req.Header.Set("Augno-Version", c.apiVersion)
+		req.Header.Set("Accept", "application/json")
+		if body != nil {
+			req.Header.Set("Content-Type", "application/json")
+		}
+
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			return 0, nil, err
+		}
+
+		respBody, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			return resp.StatusCode, nil, fmt.Errorf("reading response body: %w", err)
+		}
+
+		if attempt < c.retries {
+			if resp.StatusCode == http.StatusTooManyRequests || isTransientServerError(resp.StatusCode, respBody) {
+				time.Sleep(time.Duration(attempt+1) * time.Second)
+				continue
+			}
+		}
+
+		return resp.StatusCode, respBody, nil
+	}
+
+	return 0, nil, fmt.Errorf("exhausted retries for PUT %s", u)
+}
+
 // Delete performs an authenticated DELETE request.
 func (c *Client) Delete(path string) (int, []byte, error) {
 	return c.Do(http.MethodDelete, path, nil, "")

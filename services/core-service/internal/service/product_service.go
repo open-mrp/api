@@ -464,6 +464,10 @@ func (s *productSvcImpl) CreateProduct(ctx context.Context, params domain.Create
 				return apiErr
 			}
 
+			if apiErr := txSvc.attachProductIncludes(txCtx, result, params.AccountID, params.Includes); apiErr != nil {
+				return apiErr
+			}
+
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
 		})
 
@@ -573,6 +577,10 @@ func (s *productSvcImpl) UpdateProduct(ctx context.Context, params domain.Update
 				ResourceID:   updated.ID,
 				Changes:      changes,
 			}); apiErr != nil {
+				return apiErr
+			}
+
+			if apiErr := txSvc.attachProductIncludes(txCtx, result, params.AccountID, params.Includes); apiErr != nil {
 				return apiErr
 			}
 
@@ -721,6 +729,10 @@ func (s *productSvcImpl) ChangeProductProductLine(ctx context.Context, params do
 				return apiErr
 			}
 
+			if apiErr := txSvc.attachProductIncludes(txCtx, result, params.AccountID, params.Includes); apiErr != nil {
+				return apiErr
+			}
+
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
 		})
 
@@ -765,7 +777,18 @@ func (s *productSvcImpl) ValidateProducts(ctx context.Context, params domain.Val
 
 	params.AccountID = identity.Target.AccountID
 
-	return s.repos.NewProductRepo().ValidateProducts(ctx, params)
+	result, apiErr := s.repos.NewProductRepo().ValidateProducts(ctx, params)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	for _, p := range result.Products {
+		if apiErr := s.attachProductIncludes(ctx, p, params.AccountID, params.Includes); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+
+	return result, nil
 }
 
 // checkProductReadPermission checks the appropriate read permission based on the identity context.

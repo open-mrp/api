@@ -3,7 +3,9 @@
 package api_test
 
 import (
+	"fmt"
 	"net/url"
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -236,6 +238,204 @@ func TestProducts_ListIncludeProductLineUnitGroup(t *testing.T) {
 	ug := jsonObject(pl, "unit_group")
 	require.NotNil(t, ug, "unit_group should be present inside product_line on list items with ?include=product_line.unit_group")
 	assert.Equal(t, "unit_group", jsonField(ug, "object"))
+}
+
+// ──────────────────────────────────────────────
+// Product — Validate (bulk SKU resolution)
+// ──────────────────────────────────────────────
+
+const productsValidatePath = "/v1/catalog/products/actions/validate"
+
+var productValidateIncludes = []string{
+	"product_line",
+	"product_line.unit_group",
+	"product_line.unit_group.base_unit",
+	"product_line.unit_group.associated_units",
+	"product_line.unit_group.associated_units.unit",
+	"item",
+	"item.category",
+	"item.category.unit_group",
+	"item.category.unit_group.base_unit",
+	"item.category.unit_group.associated_units",
+	"item.category.unit_group.associated_units.unit",
+	"item.unit_value",
+	"item.unit_cost",
+	"item.burn_rate",
+	"item.attributes",
+}
+
+func productValidateIncludeQueryValues() url.Values {
+	v := url.Values{}
+	for _, inc := range productValidateIncludes {
+		v.Add("include", inc)
+	}
+	return v
+}
+
+func validatedProduct(m map[string]any, rowKey string) map[string]any {
+	products, ok := m["products"].(map[string]any)
+	if !ok {
+		return nil
+	}
+	raw, ok := products[rowKey]
+	if !ok {
+		return nil
+	}
+	p, ok := raw.(map[string]any)
+	if !ok {
+		return nil
+	}
+	return p
+}
+
+func associatedUnitFingerprintsFromUnitGroup(ug map[string]any) []string {
+	if ug == nil {
+		return nil
+	}
+	list := jsonObject(ug, "associated_units")
+	if list == nil {
+		return nil
+	}
+	data, ok := list["data"].([]any)
+	if !ok {
+		return nil
+	}
+	out := make([]string, 0, len(data))
+	for _, raw := range data {
+		row, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		unitID := ""
+		if ut := jsonObject(row, "unit"); ut != nil {
+			unitID = jsonField(ut, "id")
+		}
+		fp := fmt.Sprintf("%s|%s|%s|%s",
+			jsonField(row, "id"),
+			jsonField(row, "discount_percentage"),
+			jsonField(row, "discount_fixed"),
+			unitID,
+		)
+		out = append(out, fp)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func categoryAssociatedUnitFingerprints(product map[string]any) []string {
+	item := jsonObject(product, "item")
+	cat := jsonObject(item, "category")
+	return associatedUnitFingerprintsFromUnitGroup(jsonObject(cat, "unit_group"))
+}
+
+func productLineAssociatedUnitFingerprints(product map[string]any) []string {
+	pl := jsonObject(product, "product_line")
+	return associatedUnitFingerprintsFromUnitGroup(jsonObject(pl, "unit_group"))
+}
+
+func TestProducts_ValidateProducts_KnownSKU(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.PutRaw(productsValidatePath, url.Values{"include": {"item"}}, map[string]any{
+		"products_map": map[string]string{"0": "SCK-001"},
+	})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	got := parseJSON(body)
+	require.Equal(t, "map", jsonField(got, "object"))
+	p := validatedProduct(got, "0")
+	require.NotNil(t, p, "products[0] should be present")
+	assert.Equal(t, "product", jsonField(p, "object"))
+	item := jsonObject(p, "item")
+	require.NotNil(t, item)
+	assert.Equal(t, "SCK-001", jsonField(item, "sku"))
+}
+
+func TestProducts_ValidateProducts_IncludeCategoryUnitGroupAssociatedUnits(t *testing.T) {
+	t.Parallel()
+
+	status, body, err := apiClient.PutRaw(
+		productsValidatePath,
+		productValidateIncludeQueryValues(),
+		map[string]any{"products_map": map[string]string{"0": "SCK-001"}},
+	)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	got := parseJSON(body)
+	p := validatedProduct(got, "0")
+	require.NotNil(t, p)
+	assertIncludePopulated(t, p, "item.category.unit_group.associated_units")
+}
+
+func TestProducts_ValidateProducts_IncludeProductLineUnitGroupAssociatedUnits(t *testing.T) {
+	t.Parallel()
+
+	status, body, err := apiClient.PutRaw(
+		productsValidatePath,
+		productValidateIncludeQueryValues(),
+		map[string]any{"products_map": map[string]string{"0": "SCK-001"}},
+	)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	got := parseJSON(body)
+	p := validatedProduct(got, "0")
+	require.NotNil(t, p)
+	pl := jsonObject(p, "product_line")
+	require.NotNil(t, pl, "product_line should be populated with portal includes")
+
+	ug := jsonObject(pl, "unit_group")
+	require.NotNil(t, ug, "product_line.unit_group should be present")
+	assert.NotEmpty(t, jsonField(ug, "id"))
+
+	assoc := jsonObject(ug, "associated_units")
+	require.NotNil(t, assoc, "associated_units should be present")
+	assert.Equal(t, "list", jsonField(assoc, "object"))
+	data, ok := assoc["data"].([]any)
+	require.True(t, ok)
+	assert.GreaterOrEqual(t, len(data), 1, "seed Socks product line unit group should have conversions")
+}
+
+func TestProducts_ValidateProducts_ParityWithGet(t *testing.T) {
+	t.Parallel()
+
+	q := productValidateIncludeQueryValues()
+	refStatus, refBody, err := apiClient.GetListRaw(productsPath+"/"+SeedProductID, q)
+	require.NoError(t, err)
+	requireStatus(t, 200, refStatus, refBody)
+
+	reference := parseJSON(refBody)
+	require.NotNil(t, reference)
+
+	itemRef := jsonObject(reference, "item")
+	require.NotNil(t, itemRef)
+	sku := jsonField(itemRef, "sku")
+	require.NotEmpty(t, sku)
+
+	valStatus, valBody, err := apiClient.PutRaw(
+		productsValidatePath,
+		q,
+		map[string]any{"products_map": map[string]string{"0": sku}},
+	)
+	require.NoError(t, err)
+	requireStatus(t, 200, valStatus, valBody)
+
+	validated := parseJSON(valBody)
+	p := validatedProduct(validated, "0")
+	require.NotNil(t, p)
+
+	assert.Equal(t,
+		categoryAssociatedUnitFingerprints(reference),
+		categoryAssociatedUnitFingerprints(p),
+		"category unit_group associated_units should match GET for the same SKU and includes")
+
+	if jsonObject(reference, "product_line") != nil {
+		assert.Equal(t,
+			productLineAssociatedUnitFingerprints(reference),
+			productLineAssociatedUnitFingerprints(p),
+			"product_line unit_group associated_units should match GET for the same SKU and includes")
+	}
 }
 
 // ──────────────────────────────────────────────

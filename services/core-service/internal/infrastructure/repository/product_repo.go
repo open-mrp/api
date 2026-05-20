@@ -710,21 +710,13 @@ func (r *productRepoImpl) ChangeProductLine(ctx context.Context, params domain.C
 	ctx, span := productRepoTracer.Start(ctx, "repository.product.change_product_line")
 	defer span.End()
 
-	result, err := r.queries.ChangeProductLineByID(ctx, sqlc.ChangeProductLineByIDParams{
+	_, err := r.queries.ChangeProductLineByID(ctx, sqlc.ChangeProductLineByIDParams{
 		ProductLineID: gosql.NullString{String: params.ProductLineID, Valid: true},
 		ID:            params.ProductID,
 		AccountID:     params.AccountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected."))
-	}
-	if rowsAffected == 0 {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Product not found."))
 	}
 
 	return r.Get(ctx, domain.GetProductFullParams{AccountID: params.AccountID, ProductID: params.ProductID, Includes: params.Includes})
@@ -760,6 +752,14 @@ func (r *productRepoImpl) ValidateProducts(ctx context.Context, params domain.Va
 		if product, ok := skuToProduct[strings.ToLower(sku)]; ok {
 			products[key] = product
 		}
+	}
+
+	productSlice := make([]*domain.ProductFull, 0, len(products))
+	for _, p := range products {
+		productSlice = append(productSlice, p)
+	}
+	if apiErr := applyProductStitches(ctx, r.queries, productSlice, params.Includes); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
 	return &domain.ValidateProductsResult{Products: products}, nil

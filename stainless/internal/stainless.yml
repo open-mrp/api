@@ -36,18 +36,11 @@ client_settings:
     bearer_token:
       type: string
       nullable: true
+      read_env: AUGNO_API_KEY
       auth:
         security_scheme: BearerAuth
         role: value
-      description: "Bearer access token from session authentication"
-    augno_api_key:
-      type: string
-      nullable: true
-      read_env: AUGNO_API_KEY
-      auth:
-        security_scheme: AugnoApiKey
-        role: value
-      description: "API key (X-Augno-API-Key)"
+      description: "API key sent as a Bearer token. Omit for cookie-based user sessions (dashboard)."
     augno_account_id:
       type: string
       nullable: true

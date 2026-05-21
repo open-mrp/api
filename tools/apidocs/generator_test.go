@@ -456,8 +456,8 @@ func TestGenerate_FullAssembly(t *testing.T) {
 	if _, ok := schemesAny["BearerAuth"]; !ok {
 		t.Error("expected BearerAuth security scheme")
 	}
-	if _, ok := schemesAny["AugnoApiKey"]; !ok {
-		t.Error("expected AugnoApiKey security scheme")
+	if _, ok := schemesAny["AugnoApiKey"]; ok {
+		t.Error("did not expect AugnoApiKey security scheme")
 	}
 	if sec, ok := spec["security"].([]any); !ok || len(sec) != 2 {
 		t.Fatalf("expected top-level security with 2 alternatives, got %v", spec["security"])

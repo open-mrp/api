@@ -38,17 +38,13 @@ func buildOpenAPIDocument(groups []apiendpoint.APIEndpointGroup, publicOnly bool
 					Type:   "http",
 					Scheme: "bearer",
 				},
-				"AugnoApiKey": {
-					Type: "apiKey",
-					In:   "header",
-					Name: "X-Augno-API-Key",
-				},
 			},
 		},
 		Tags: []Tag{},
+		// BearerAuth for API keys; empty alternative allows cookie-based user sessions without Authorization.
 		Security: []map[string][]string{
 			{"BearerAuth": {}},
-			{"AugnoApiKey": {}},
+			{},
 		},
 	}
 

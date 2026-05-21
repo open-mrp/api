@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.0](https://github.com/Augno/api/compare/v0.17.15...v0.18.0) (2026-05-21)
+
+
+### Features
+
+* enhance CI workflow to detect Terraform changes before applying ([#276](https://github.com/Augno/api/issues/276)) ([1578cba](https://github.com/Augno/api/commit/1578cbac480d5f836ee0cfa03dd0c2947cd2337f))
+
 ## [0.17.15](https://github.com/Augno/api/compare/v0.17.14...v0.17.15) (2026-05-21)
 
 

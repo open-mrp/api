@@ -243,10 +243,8 @@ jobs:
     uses: ./.github/workflows/stlc-generate-reusable.yml
     with:
       api_version: ${{ needs.release-please.outputs.tag_name }}
-      sdk_branch: bot/sdk-sync-${{ needs.release-please.outputs.tag_name }}
+      push_branch: main
       openapi_specs_artifact: release-openapi-specs
-      open_pr: true
-      pr_base_branch: main
     secrets:
       STLC_READ_TOKEN: ${{ secrets.STLC_READ_TOKEN }}
       SDK_WRITE_TOKEN: ${{ secrets.SDK_WRITE_TOKEN }}

@@ -1,6 +1,6 @@
 name: Generate SDKs with stlc (manual)
 
-# Release-driven SDK generation runs from release.yml (published OpenAPI artifact + PRs to SDK repos).
+# Release-driven SDK generation runs from release.yml (published OpenAPI artifact + direct push to SDK main).
 # This workflow is for ad-hoc / emergency runs; it regenerates specs in the job (no S3/artifact) unless you add that flow later.
 on:
   workflow_dispatch:
@@ -8,12 +8,12 @@ on:
       api_version:
         description: Optional API version label for commit/PR messages (e.g. v0.17.10). Defaults to v<.release-please-manifest.json>.
         required: false
-      sdk_branch:
+      push_branch:
         description: Branch to push on each SDK repo (and PR head if open_pr is true)
         required: false
-        default: bot/stlc-workflow-dispatch
+        default: main
       open_pr:
-        description: Open PRs from sdk_branch into main on each SDK repo
+        description: Open PRs from push_branch into main instead of pushing directly
         required: false
         type: boolean
         default: false
@@ -67,7 +67,7 @@ jobs:
     uses: ./.github/workflows/stlc-generate-reusable.yml
     with:
       api_version: ${{ needs.resolve.outputs.api_version }}
-      sdk_branch: ${{ github.event.inputs.sdk_branch }}
+      push_branch: ${{ github.event.inputs.push_branch }}
       openapi_specs_artifact: ""
       open_pr: ${{ github.event.inputs.open_pr }}
       pr_base_branch: main

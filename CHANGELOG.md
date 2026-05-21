@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.3](https://github.com/Augno/api/compare/v0.18.2...v0.18.3) (2026-05-21)
+
+
+### Bug Fixes
+
+* working on improving release workflow to deploy only what changed. ([#282](https://github.com/Augno/api/issues/282)) ([b8406ee](https://github.com/Augno/api/commit/b8406eed14a3ea3c9740613d6ce29eca2973b8ad))
+
 ## [0.18.2](https://github.com/Augno/api/compare/v0.18.1...v0.18.2) (2026-05-21)
 
 

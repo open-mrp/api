@@ -1,7 +1,7 @@
 name: Generate SDKs with stlc (manual)
 
-# Release-driven SDK generation runs from release.yml (published OpenAPI artifact + direct push to SDK main).
-# This workflow is for ad-hoc / emergency runs; it regenerates specs in the job (no S3/artifact) unless you add that flow later.
+# Release-driven SDK generation runs from release.yml (specs from S3 after publish-openapi-specs).
+# This workflow is for ad-hoc / emergency runs; it regenerates specs in the job with make openapi-quiet.
 on:
   workflow_dispatch:
     inputs:
@@ -68,7 +68,7 @@ jobs:
     with:
       api_version: ${{ needs.resolve.outputs.api_version }}
       push_branch: ${{ github.event.inputs.push_branch }}
-      openapi_specs_artifact: ""
+      openapi_specs_source: generate
       open_pr: ${{ github.event.inputs.open_pr }}
       pr_base_branch: main
       commit_message: ${{ needs.resolve.outputs.commit_msg }}

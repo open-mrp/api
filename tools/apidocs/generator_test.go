@@ -788,8 +788,8 @@ func TestGenerate_PathParameterExamples(t *testing.T) {
 }
 
 // TestOpenAPIGenerationDeterministic ensures consecutive generations produce identical
-// spec bytes. CI compares release specs to the S3 baseline with cmp; this test guards
-// that the generator itself is stable. Path/method maps are sorted by encoding/json;
+// spec bytes. CI compares generated release specs to a pre-upload snapshot of S3 openapi.json with cmp;
+// this test guards that the generator itself is stable. Path/method maps are sorted by encoding/json;
 // schema properties use struct field order (PropertyOrder / orderedJSONMap).
 func TestOpenAPIGenerationDeterministic(t *testing.T) {
 	t.Parallel()

@@ -1,6 +1,6 @@
 name: Generate SDKs (reusable)
 
-on:
+'on':
   workflow_call:
     inputs:
       api_version:
@@ -12,11 +12,11 @@ on:
         required: false
         type: string
         default: main
-      openapi_specs_artifact:
-        description: Name of workflow artifact containing specs/ (empty = run make openapi-quiet in this job)
+      openapi_specs_source:
+        description: "s3 — download specs from release S3 buckets; generate — run make openapi-quiet in this job (manual)"
         required: false
         type: string
-        default: ""
+        default: generate
       open_pr:
         description: Open a PR from push_branch into pr_base_branch instead of pushing directly (manual runs only)
         required: false
@@ -32,12 +32,22 @@ on:
         required: false
         type: string
         default: ""
+      openapi_internal_gate:
+        description: >-
+          Release path only. Set to true or false from publish-openapi-specs (compare before S3 upload). Empty = derive in this workflow.
+        required: false
+        type: string
+      openapi_public_gate:
+        description: >-
+          Release path only. Set to true or false from publish-openapi-specs (compare before S3 upload). Empty = derive in this workflow.
+        required: false
+        type: string
     outputs:
-      internal_spec_changed:
-        description: Whether internal_openapi_spec.json differs from the S3 baseline (always true when no artifact baseline)
+      internal_spec_changed_flag:
+        description: Whether internal_openapi_spec.json changed vs baseline (true always when openapi_specs_source is generate)
         value: ${{ jobs.spec-changes.outputs.internal }}
-      public_spec_changed:
-        description: Whether public_openapi_spec.json differs from the S3 baseline (always true when no artifact baseline)
+      public_spec_changed_flag:
+        description: Whether public_openapi_spec.json changed vs baseline (true always when openapi_specs_source is generate)
         value: ${{ jobs.spec-changes.outputs.public }}
     secrets:
       STLC_READ_TOKEN:
@@ -47,6 +57,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 env:
   STLC_GITHUB_ORG: sdk-gen
@@ -54,44 +65,33 @@ env:
 
 jobs:
   spec-changes:
-    name: Compare OpenAPI specs to S3 baseline
+    name: Resolve OpenAPI spec changed flags
     runs-on: ubuntu-latest
     outputs:
-      internal: ${{ steps.internal.outputs.changed }}
-      public: ${{ steps.public.outputs.changed }}
+      internal: ${{ steps.resolve.outputs.internal }}
+      public: ${{ steps.resolve.outputs.public }}
     steps:
-      - name: Checkout repository
-        if: inputs.openapi_specs_artifact != ''
-        uses: actions/checkout@v5
-        with:
-          persist-credentials: false
-
-      - name: Download release OpenAPI specs
-        if: inputs.openapi_specs_artifact != ''
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ inputs.openapi_specs_artifact }}
-          path: specs
-
-      - name: Compare internal OpenAPI spec
-        id: internal
+      - name: Resolve from caller or default to regenerated
+        id: resolve
+        env:
+          INT_FLAG: ${{ inputs.openapi_internal_gate }}
+          PUB_FLAG: ${{ inputs.openapi_public_gate }}
         run: |
-          if [ -z "${{ inputs.openapi_specs_artifact }}" ]; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "Manual run: assuming internal spec changed."
+          if [ -n "$INT_FLAG" ] && [ -n "$PUB_FLAG" ]; then
+            echo "internal=$INT_FLAG" >> "$GITHUB_OUTPUT"
+            echo "public=$PUB_FLAG" >> "$GITHUB_OUTPUT"
+            echo "Release path: flags from publish-openapi-specs (pre-upload vs S3 baseline)."
             exit 0
           fi
-          ./scripts/sdk-openapi-spec-changed.sh internal
-
-      - name: Compare public OpenAPI spec
-        id: public
-        run: |
-          if [ -z "${{ inputs.openapi_specs_artifact }}" ]; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "Manual run: assuming public spec changed."
+          if [ "${{ inputs.openapi_specs_source }}" != "s3" ]; then
+            echo "internal=true" >> "$GITHUB_OUTPUT"
+            echo "public=true" >> "$GITHUB_OUTPUT"
+            echo "Manual or generate path: assuming both specs changed."
             exit 0
           fi
-          ./scripts/sdk-openapi-spec-changed.sh public
+          echo "internal=true" >> "$GITHUB_OUTPUT"
+          echo "public=true" >> "$GITHUB_OUTPUT"
+          echo "S3 specs source without caller flags; assuming both changed."
 
   generate:
     name: Generate ${{ matrix.sdk }}
@@ -115,7 +115,7 @@ jobs:
       - name: Skip SDK generation (OpenAPI spec unchanged)
         if: matrix.spec_changed != 'true'
         run: |
-          echo "Skipping ${{ matrix.sdk }} SDK: OpenAPI spec matches the S3 baseline published before this release."
+          echo "Skipping ${{ matrix.sdk }} SDK: OpenAPI spec matches S3 openapi.json recorded before upload in this release."
 
       - name: Checkout repository
         if: matrix.spec_changed == 'true'
@@ -123,22 +123,29 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Download release OpenAPI specs
-        if: matrix.spec_changed == 'true' && inputs.openapi_specs_artifact != ''
-        uses: actions/download-artifact@v4
+      - name: Configure AWS Credentials
+        if: matrix.spec_changed == 'true' && inputs.openapi_specs_source == 's3'
+        uses: aws-actions/configure-aws-credentials@v6
         with:
-          name: ${{ inputs.openapi_specs_artifact }}
-          path: specs
+          role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/github-action-role
+          aws-region: us-east-2
+
+      - name: Download OpenAPI specs from S3
+        if: matrix.spec_changed == 'true' && inputs.openapi_specs_source == 's3'
+        run: |
+          mkdir -p specs
+          ./scripts/fetch-openapi-spec-s3.sh internal specs/internal_openapi_spec.json current
+          ./scripts/fetch-openapi-spec-s3.sh public specs/public_openapi_spec.json current
 
       - name: Set up Go
-        if: matrix.spec_changed == 'true' && inputs.openapi_specs_artifact == ''
+        if: matrix.spec_changed == 'true' && inputs.openapi_specs_source == 'generate'
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
           cache-dependency-path: go.sum
 
       - name: Generate OpenAPI specifications
-        if: matrix.spec_changed == 'true' && inputs.openapi_specs_artifact == ''
+        if: matrix.spec_changed == 'true' && inputs.openapi_specs_source == 'generate'
         run: make openapi-quiet
 
       - name: Setup stlc
@@ -265,8 +272,8 @@ jobs:
           {
             echo "Automated SDK sync from [Augno/api](https://github.com/Augno/api) release **${tag}**."
             echo ""
-            if [ -n "${{ inputs.openapi_specs_artifact }}" ]; then
-              echo "OpenAPI specs come from the **Publish OpenAPI Specs** job in the same release workflow (artifact \`${{ inputs.openapi_specs_artifact }}\`)."
+            if [ "${{ inputs.openapi_specs_source }}" = "s3" ]; then
+              echo "OpenAPI specs were downloaded from the release S3 buckets (\`augno-*-openapi-specs/openapi.json\`)."
             else
               echo "OpenAPI specs were generated in this job with \`make openapi-quiet\`."
             fi

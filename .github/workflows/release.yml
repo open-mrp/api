@@ -25,29 +25,65 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-  terraform-changes:
-    name: Detect Terraform Changes
+  detect-changes:
+    name: Detect Release Changes
     needs: release-please
     if: needs.release-please.outputs.release_created == 'true'
     runs-on: ubuntu-latest
     outputs:
-      changed: ${{ steps.detect.outputs.changed }}
+      previous_tag: ${{ steps.detect.outputs.previous_tag }}
+      current_ref: ${{ steps.detect.outputs.current_ref }}
+      build_services_json: ${{ steps.detect.outputs.build_services_json }}
+      build_services_csv: ${{ steps.detect.outputs.build_services_csv }}
+      build_matrix_json: ${{ steps.detect.outputs.build_matrix_json }}
+      has_build_services: ${{ steps.detect.outputs.has_build_services }}
+      deploy_services_json: ${{ steps.detect.outputs.deploy_services_json }}
+      deploy_services_csv: ${{ steps.detect.outputs.deploy_services_csv }}
+      has_deploy_services: ${{ steps.detect.outputs.has_deploy_services }}
+      terraform_changed: ${{ steps.detect.outputs.terraform_changed }}
+      config_changed: ${{ steps.detect.outputs.config_changed }}
+      platform_changed: ${{ steps.detect.outputs.platform_changed }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
-      - name: Detect terraform changes since last release
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Detect release changes since last release
         id: detect
-        run: ./scripts/terraform-release-changed.sh "${{ needs.release-please.outputs.tag_name }}"
+        run: go run ./cmd/detect-release-changes --current-tag "${{ needs.release-please.outputs.tag_name }}"
+
+      - name: Summarize release selection
+        run: |
+          PREVIOUS_TAG="${{ steps.detect.outputs.previous_tag }}"
+          if [ -z "$PREVIOUS_TAG" ]; then
+            PREVIOUS_TAG="(none)"
+          fi
+
+          {
+            echo "## Release selection"
+            echo ""
+            echo "- Previous tag: ${PREVIOUS_TAG}"
+            echo "- Current ref: ${{ steps.detect.outputs.current_ref }}"
+            echo "- Build services: ${{ steps.detect.outputs.build_services_json }}"
+            echo "- Deploy services: ${{ steps.detect.outputs.deploy_services_json }}"
+            echo "- Terraform changed: ${{ steps.detect.outputs.terraform_changed }}"
+            echo "- Config changed: ${{ steps.detect.outputs.config_changed }}"
+            echo "- Platform changed: ${{ steps.detect.outputs.platform_changed }}"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   terraform:
     name: Terraform Apply
-    needs: [release-please, terraform-changes]
+    needs: [release-please, detect-changes]
     if: |
       needs.release-please.outputs.release_created == 'true' &&
-      needs.terraform-changes.outputs.changed == 'true'
+      needs.detect-changes.outputs.terraform_changed == 'true'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -86,24 +122,16 @@ jobs:
 
   build-push:
     name: Build and Push
-    needs: [release-please, terraform-changes, terraform]
+    needs: [release-please, detect-changes, terraform]
     if: |
       always() &&
       needs.release-please.outputs.release_created == 'true' &&
+      needs.detect-changes.outputs.has_build_services == 'true' &&
       (needs.terraform.result == 'success' || needs.terraform.result == 'skipped')
     runs-on: ubuntu-latest
     strategy:
-      matrix:
-        service:
-          [
-            api-gateway,
-            auth-service,
-            core-service,
-            platform-service,
-            notification-service,
-            billing-service,
-            agent-service,
-          ]
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect-changes.outputs.build_matrix_json) }}
     permissions:
       id-token: write
       contents: read
@@ -141,12 +169,12 @@ jobs:
 
   deploy:
     name: Deploy to EKS
-    needs: [release-please, terraform-changes, terraform, build-push]
+    needs: [release-please, detect-changes, terraform, build-push]
     if: |
       always() &&
       needs.release-please.outputs.release_created == 'true' &&
       (needs.terraform.result == 'success' || needs.terraform.result == 'skipped') &&
-      needs.build-push.result == 'success'
+      (needs.build-push.result == 'success' || needs.build-push.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -167,6 +195,11 @@ jobs:
           AWS_REGION: "us-east-2"
           CLUSTER_NAME: "augno-prod"
           IMAGE_TAG: ${{ needs.release-please.outputs.tag_name }}
+          DEPLOY_SERVICES: ${{ needs.detect-changes.outputs.deploy_services_csv }}
+          BUILD_SERVICES: ${{ needs.detect-changes.outputs.build_services_csv }}
+          APPLY_PLATFORM: ${{ needs.detect-changes.outputs.platform_changed }}
+          APPLY_CONFIG: ${{ needs.detect-changes.outputs.config_changed }}
+          CONFIG_CHANGED: ${{ needs.detect-changes.outputs.config_changed }}
 
   publish-openapi-specs:
     name: Publish OpenAPI Specs
@@ -179,6 +212,9 @@ jobs:
     permissions:
       id-token: write
       contents: read
+    outputs:
+      internal_spec_changed: ${{ steps.compare-internal.outputs.changed }}
+      public_spec_changed: ${{ steps.compare-public.outputs.changed }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v5
@@ -206,14 +242,22 @@ jobs:
           go mod tidy
           cd tools && go mod tidy
 
-      - name: Snapshot OpenAPI specs on S3 (SDK baseline)
+      - name: Snapshot current OpenAPI specs from S3 (pre-upload baseline)
         run: |
-          mkdir -p specs/.sdk-baseline
-          aws s3 cp s3://augno-public-openapi-specs/openapi.json specs/.sdk-baseline/public_openapi_spec.json 2>/dev/null || true
-          aws s3 cp s3://augno-private-openapi-specs/openapi.json specs/.sdk-baseline/internal_openapi_spec.json 2>/dev/null || true
+          mkdir -p specs/sdk-baseline
+          aws s3 cp s3://augno-public-openapi-specs/openapi.json specs/sdk-baseline/public_openapi_spec.json 2>/dev/null || true
+          aws s3 cp s3://augno-private-openapi-specs/openapi.json specs/sdk-baseline/internal_openapi_spec.json 2>/dev/null || true
 
       - name: Generate OpenAPI Specs
         run: make openapi
+
+      - name: Compare internal OpenAPI spec to S3 baseline
+        id: compare-internal
+        run: ./scripts/sdk-openapi-spec-changed.sh internal
+
+      - name: Compare public OpenAPI spec to S3 baseline
+        id: compare-public
+        run: ./scripts/sdk-openapi-spec-changed.sh public
 
       - name: Upload Public Spec to S3
         run: |
@@ -225,13 +269,6 @@ jobs:
           aws s3 cp specs/internal_openapi_spec.json s3://augno-private-openapi-specs/openapi.json
           aws s3 cp specs/internal_openapi_spec.json s3://augno-private-openapi-specs/${{ steps.api-version.outputs.api_version }}.json
 
-      - name: Upload OpenAPI specs for SDK generation
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-openapi-specs
-          path: specs
-          if-no-files-found: error
-
   generate-sdks:
     name: Generate SDKs with stlc
     needs: [release-please, deploy, publish-openapi-specs]
@@ -240,11 +277,16 @@ jobs:
       needs.release-please.outputs.release_created == 'true' &&
       needs.deploy.result == 'success' &&
       needs.publish-openapi-specs.result == 'success'
+    permissions:
+      id-token: write
+      contents: read
     uses: ./.github/workflows/stlc-generate-reusable.yml
     with:
       api_version: ${{ needs.release-please.outputs.tag_name }}
       push_branch: main
-      openapi_specs_artifact: release-openapi-specs
+      openapi_specs_source: s3
+      openapi_internal_gate: ${{ needs.publish-openapi-specs.outputs.internal_spec_changed }}
+      openapi_public_gate: ${{ needs.publish-openapi-specs.outputs.public_spec_changed }}
     secrets:
       STLC_READ_TOKEN: ${{ secrets.STLC_READ_TOKEN }}
       SDK_WRITE_TOKEN: ${{ secrets.SDK_WRITE_TOKEN }}

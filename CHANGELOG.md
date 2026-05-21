@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.2](https://github.com/Augno/api/compare/v0.18.1...v0.18.2) (2026-05-21)
+
+
+### Bug Fixes
+
+* simplify sdk release process ([#280](https://github.com/Augno/api/issues/280)) ([3766aed](https://github.com/Augno/api/commit/3766aed82ba7bf60798b0d8085fba95fe3feb8bf))
+
 ## [0.18.1](https://github.com/Augno/api/compare/v0.18.0...v0.18.1) (2026-05-21)
 
 

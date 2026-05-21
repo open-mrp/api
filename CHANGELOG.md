@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.15](https://github.com/Augno/api/compare/v0.17.14...v0.17.15) (2026-05-21)
+
+
+### Bug Fixes
+
+* cd workflow to create release in typescript sdk ([#274](https://github.com/Augno/api/issues/274)) ([7b99f8b](https://github.com/Augno/api/commit/7b99f8bf01cb103e3aa6dc5a3007c8b6fff1049e))
+
 ## [0.17.14](https://github.com/Augno/api/compare/v0.17.13...v0.17.14) (2026-05-21)
 
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.18.4](https://github.com/Augno/api/compare/v0.18.3...v0.18.4) (2026-05-21)
+
+
+### Bug Fixes
+
+* auth types in sdks ([#285](https://github.com/Augno/api/issues/285)) ([0527c50](https://github.com/Augno/api/commit/0527c50a5323615b9736b8a894025abb6781a8b9))
+* don't notify dashboard about release ([e5d0cb4](https://github.com/Augno/api/commit/e5d0cb4b63214637269d512a7ff6224661bc228f))
+
 ## [0.18.3](https://github.com/Augno/api/compare/v0.18.2...v0.18.3) (2026-05-21)
 
 

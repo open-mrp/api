@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.17.14](https://github.com/Augno/api/compare/v0.17.13...v0.17.14) (2026-05-21)
+
+
+### Bug Fixes
+
+* mark some endpoints as public ([#273](https://github.com/Augno/api/issues/273)) ([a9725a2](https://github.com/Augno/api/commit/a9725a24def83a46dbc303f76ba58bfd39943917))
+* remove old release notification for internal sdk ([#271](https://github.com/Augno/api/issues/271)) ([22e86f0](https://github.com/Augno/api/commit/22e86f022ff1a45bbeab082e08cf27f0d53cf2ba))
+
 ## [0.17.13](https://github.com/Augno/api/compare/v0.17.12...v0.17.13) (2026-05-20)
 
 

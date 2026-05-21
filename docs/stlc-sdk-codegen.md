@@ -102,7 +102,7 @@ So after edits under **`stlc-main/packages/sdk-codegen/`**, rebuild the worker c
 SDK generation runs **only** from [`.github/workflows/release.yml`](../.github/workflows/release.yml) **`generate-sdks`** after **`publish-openapi-specs`** succeeds:
 
 1. **`publish-openapi-specs`** snapshots the current S3 **`openapi.json`** files into **`specs/.sdk-baseline/`** (before overwrite), runs `make openapi`, uploads to S3, then uploads the full **`specs/`** tree (including baseline) as workflow artifact **`release-openapi-specs`**.
-2. **`generate-sdks`** calls [`stlc-generate-reusable.yml`](../.github/workflows/stlc-generate-reusable.yml), which **compares** each release spec to its S3 baseline via [`scripts/sdk-openapi-spec-changed.sh`](../scripts/sdk-openapi-spec-changed.sh). When **`internal_openapi_spec.json`** or **`public_openapi_spec.json`** is unchanged, that SDK’s **`stlc build --push`**, branch push, and PR are **skipped** (no empty **`bot/sdk-sync-<tag>`** branch). When changed, it downloads the artifact, runs **`stlc build --push`**, pushes to **`bot/sdk-sync-<tag>`**, and **opens (or reuses) a PR** into **`main`** on [`Augno/internal-sdk`](https://github.com/Augno/internal-sdk) and [`Augno/typescript-sdk`](https://github.com/Augno/typescript-sdk).
+2. **`generate-sdks`** calls [`stlc-generate-reusable.yml`](../.github/workflows/stlc-generate-reusable.yml), which **compares** each release spec to its S3 baseline via [`scripts/sdk-openapi-spec-changed.sh`](../scripts/sdk-openapi-spec-changed.sh). When **`internal_openapi_spec.json`** or **`public_openapi_spec.json`** is unchanged, that SDK’s **`stlc build --push`**, branch push, and PR are **skipped** (no empty **`bot/sdk-sync-<tag>`** branch). When changed, it downloads the artifact, runs **`stlc build --push`**, commits a **[changesets](https://github.com/changesets/changesets)** entry under **`.changeset/sync-api-<tag>.md`** (so npm/GitHub Packages releases fire after merge), pushes to **`bot/sdk-sync-<tag>`**, and **opens (or reuses) a PR** into **`main`** on [`Augno/internal-sdk`](https://github.com/Augno/internal-sdk) and [`Augno/typescript-sdk`](https://github.com/Augno/typescript-sdk).
 
 [`stlc-generate.yml`](../.github/workflows/stlc-generate.yml) is **manual-only** (`workflow_dispatch`); it regenerates specs in the job (`make openapi-quiet`) unless you extend it to consume an artifact.
 
@@ -114,7 +114,7 @@ TypeScript codegen overwrites `pnpm-lock.yaml` using merged templates from `stlc
 | --- | --- | --- |
 | After **release-please** tag, **deploy** succeeds, and **OpenAPI** is published to S3 | `bot/sdk-sync-<tag>` on each SDK repo | Bot opens PR → **`main`**; merge triggers SDK release (npm) |
 
-[`internal-sdk`](https://github.com/augno/internal-sdk) publishes via [changesets](https://github.com/changesets/changesets) on push to **`main`** ([`.github/workflows/release.yml`](https://github.com/augno/internal-sdk/blob/main/.github/workflows/release.yml)). Merging the stlc SDK PR is what updates **`main`** and kicks off versioning/publish — there is no separate `api-release` dispatch to `internal-sdk`.
+[`internal-sdk`](https://github.com/augno/internal-sdk) and [`typescript-sdk`](https://github.com/augno/typescript-sdk) publish via [changesets](https://github.com/changesets/changesets) on push to **`main`**. Merging the stlc SDK PR updates **`main`** and kicks off versioning/publish — there is no separate `api-release` dispatch to those repos. The reusable **`generate-sdks`** job adds a `.changeset/sync-api-<tag>.md` patch-level changeset after each successful codegen push so the SDK repo does not rely on manual changeset authoring for routine API syncs.
 
 Production flow (keeps SDKs aligned with what is deployed):
 
@@ -122,7 +122,7 @@ Production flow (keeps SDKs aligned with what is deployed):
 2. Terraform → build/push images → deploy to EKS.
 3. `publish-openapi-specs` uploads specs to S3 and uploads **`specs/`** as a workflow artifact for the next job.
 4. **`generate-sdks`** and **`notify-consumers`** run in parallel after step 3:
-   - `generate-sdks` downloads that artifact, runs **`stlc build --push`** on branch **`bot/sdk-sync-<tag>`**, and opens SDK PRs into **`main`** (skipped when the spec matches the S3 baseline).
+   - `generate-sdks` downloads that artifact, runs **`stlc build --push`** on branch **`bot/sdk-sync-<tag>`**, adds the automated changeset commit, and opens SDK PRs into **`main`** (skipped when the spec matches the S3 baseline).
    - `notify-consumers` dispatches `api-release` to dashboard, public-docs, and openapi-spec so those repos sync from S3.
 
 **Timing:** Consumer repos sync from the deployed API and S3-published OpenAPI specs; they do not wait for SDK PRs. Downstream npm/GitHub Packages SDK versions may not update until those SDK PRs are **merged** and each SDK repo's release workflow publishes.
@@ -144,15 +144,19 @@ Authorize both tokens for SSO if your org requires it.
 
 The API release workflow regenerates SDKs and dispatches `api-release` to spec consumers in parallel after deploy and OpenAPI publish. SDK repos (`internal-sdk`, `typescript-sdk`) are updated only via stlc PRs.
 
-### internal-sdk release checklist
+### SDK release checklist (`internal-sdk`, `typescript-sdk`)
 
-1. **Merge the stlc PR** on [`augno/internal-sdk`](https://github.com/augno/internal-sdk) into **`main`**.
-2. **`release.yml` on `main`** — changesets opens a version PR or publishes when changesets are present.
-3. **Add a changeset** in the SDK PR when the release should bump npm (stlc sync commits alone may not include one).
+1. **Merge the stlc PR** (`fix(sdk): sync with deployed API <tag>`) into **`main`** — including the automated `.changeset/sync-api-<tag>.md` commit from **`generate-sdks`**.
+2. **`release.yml` on `main`** — Changesets opens **chore: version packages** or publishes when pending changesets exist.
+3. **Merge the version PR** when opened — that completes the GitHub Packages publish for `@augno/internal-sdk` / `@augno/sdk`.
 
 ### Publishing packages
 
-`stlc build --push` updates SDK **git** repos only. GitHub Packages / npm publish still requires each SDK repo's release workflow (changesets on `internal-sdk`).
+`stlc build --push` updates SDK **git** repos only; GitHub Packages publish still runs in each SDK repo via Changesets **`release.yml`**. Local **`make stlc-*`** runs do **not** add automation changesets — add a manual `.changeset/*.md` before opening a PR if you need a version bump outside the API release pipeline.
+
+### Recovering missed publishes (before automation landed)
+
+If **`main`** contains API sync commits but **no** pending changesets (historical drift), merge or cherry-pick the pending Changesets **version** branch/PR that bumps `package.json` / changelog (for example **`changeset-release/main`** on `typescript-sdk`), or add a `.changeset/*.md` and let **`release.yml`** open **chore: version packages**.
 
 ## Parity check
 

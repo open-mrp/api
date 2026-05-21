@@ -103,10 +103,12 @@ jobs:
           - sdk: internal
             workspace: stainless/internal
             pr_repo: Augno/internal-sdk
+            package_name: "@augno/internal-sdk"
             spec_changed: ${{ needs.spec-changes.outputs.internal }}
           - sdk: public
             workspace: stainless/public
             pr_repo: Augno/typescript-sdk
+            package_name: "@augno/sdk"
             spec_changed: ${{ needs.spec-changes.outputs.public }}
     steps:
       - name: Skip SDK generation (OpenAPI spec unchanged)
@@ -178,6 +180,38 @@ jobs:
             --targets "$STLC_TARGETS" \
             "${commit_args[@]}"
 
+      - name: Add changeset for npm release (changesets)
+        if: matrix.spec_changed == 'true' && steps.build.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.SDK_WRITE_TOKEN }}
+          API_VERSION: ${{ inputs.api_version }}
+          BRANCH: ${{ inputs.sdk_branch }}
+          PKG_NAME: ${{ matrix.package_name }}
+          REPO: ${{ matrix.pr_repo }}
+        run: |
+          set -euo pipefail
+          safe_ver="${API_VERSION//\//-}"
+          work="$(mktemp -d)"
+          cd "$work"
+          gh repo clone "$REPO" sdk-repo -- --branch "$BRANCH" --single-branch
+          cd sdk-repo
+          mkdir -p .changeset
+          cs_file=".changeset/sync-api-${safe_ver}.md"
+          if [ -f "$cs_file" ]; then
+            echo "Changeset already exists ($cs_file); skipping commit."
+            exit 0
+          fi
+          {
+            echo "---"
+            echo "'${PKG_NAME}': patch"
+            echo "---"
+            echo ""
+            echo "Sync SDK with deployed Augno API ${API_VERSION}."
+          } >"$cs_file"
+          git add "$cs_file"
+          git commit -m "chore(sdk): add changeset for API ${API_VERSION}"
+          git push origin "HEAD:${BRANCH}"
+
       - name: Open pull request on SDK repo
         if: matrix.spec_changed == 'true' && success() && inputs.open_pr
         env:
@@ -203,7 +237,7 @@ jobs:
               echo "OpenAPI specs were generated in this job with \`make openapi-quiet\`."
             fi
             echo ""
-            echo "Review, merge, then run your SDK release process (e.g. release-please / npm publish)."
+            echo "Review and merge this PR. The SDK repo's Changesets release workflow will open **chore: version packages** when needed; merge that PR to publish to GitHub Packages."
           } > "$body_file"
           set +e
           gh pr create --repo "$repo" --base "$base" --head "$branch" \

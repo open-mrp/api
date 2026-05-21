@@ -88,6 +88,7 @@ jobs:
     name: Build and Push
     needs: [release-please, terraform-changes, terraform]
     if: |
+      always() &&
       needs.release-please.outputs.release_created == 'true' &&
       (needs.terraform.result == 'success' || needs.terraform.result == 'skipped')
     runs-on: ubuntu-latest
@@ -142,6 +143,7 @@ jobs:
     name: Deploy to EKS
     needs: [release-please, terraform-changes, terraform, build-push]
     if: |
+      always() &&
       needs.release-please.outputs.release_created == 'true' &&
       (needs.terraform.result == 'success' || needs.terraform.result == 'skipped') &&
       needs.build-push.result == 'success'
@@ -169,7 +171,10 @@ jobs:
   publish-openapi-specs:
     name: Publish OpenAPI Specs
     needs: [release-please, deploy]
-    if: needs.release-please.outputs.release_created == 'true' && needs.deploy.result == 'success'
+    if: |
+      always() &&
+      needs.release-please.outputs.release_created == 'true' &&
+      needs.deploy.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -231,6 +236,7 @@ jobs:
     name: Generate SDKs with stlc
     needs: [release-please, deploy, publish-openapi-specs]
     if: |
+      always() &&
       needs.release-please.outputs.release_created == 'true' &&
       needs.deploy.result == 'success' &&
       needs.publish-openapi-specs.result == 'success'
@@ -250,6 +256,7 @@ jobs:
     # Runs in parallel with generate-sdks; consumers sync from deployed API / S3 specs, not from SDK PRs.
     needs: [release-please, deploy, publish-openapi-specs]
     if: |
+      always() &&
       needs.release-please.outputs.release_created == 'true' &&
       needs.deploy.result == 'success' &&
       needs.publish-openapi-specs.result == 'success'

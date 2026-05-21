@@ -308,7 +308,6 @@ jobs:
         consumer:
           - Augno/public-docs
           - Augno/openapi-spec
-          - Augno/dashboard
     steps:
       - name: Dispatch api-release
         uses: peter-evans/repository-dispatch@v3

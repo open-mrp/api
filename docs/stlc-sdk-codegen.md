@@ -125,7 +125,7 @@ Production flow (keeps SDKs aligned with what is deployed):
 
 4. **`generate-sdks`** and **`notify-consumers`** run in parallel after step 3:
    - `generate-sdks` downloads specs from S3 when needed, runs **`stlc build --push`** to **`main`**, and amends the commit with the automated changeset (skipped per SDK when that spec matched S3 **`openapi.json`** before upload).
-   - `notify-consumers` dispatches `api-release` to dashboard, public-docs, and openapi-spec so those repos sync from S3 (same buckets as [`fetch-openapi-spec-s3.sh`](../scripts/fetch-openapi-spec-s3.sh)).
+   - `notify-consumers` dispatches `api-release` to public-docs and openapi-spec so those repos sync from S3 (same buckets as [`fetch-openapi-spec-s3.sh`](../scripts/fetch-openapi-spec-s3.sh)).
 
 **Timing:** Consumer repos sync from the deployed API and S3-published OpenAPI specs; they do not wait for SDK publishes. Downstream npm/GitHub Packages SDK versions update after the Changesets **version packages** PR on each SDK repo is **merged** (only when the OpenAPI spec actually changed for that SDK).
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.1](https://github.com/Augno/api/compare/v0.18.0...v0.18.1) (2026-05-21)
+
+
+### Bug Fixes
+
+* issue with terraform skip causing entire release to skip ([#278](https://github.com/Augno/api/issues/278)) ([60bd5d2](https://github.com/Augno/api/commit/60bd5d2f9d346b9c48915b55b382d6cd78560d58))
+
 ## [0.18.0](https://github.com/Augno/api/compare/v0.17.15...v0.18.0) (2026-05-21)
 
 

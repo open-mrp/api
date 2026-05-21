@@ -25,10 +25,29 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-  terraform:
-    name: Terraform Apply
+  terraform-changes:
+    name: Detect Terraform Changes
     needs: release-please
     if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.detect.outputs.changed }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Detect terraform changes since last release
+        id: detect
+        run: ./scripts/terraform-release-changed.sh "${{ needs.release-please.outputs.tag_name }}"
+
+  terraform:
+    name: Terraform Apply
+    needs: [release-please, terraform-changes]
+    if: |
+      needs.release-please.outputs.release_created == 'true' &&
+      needs.terraform-changes.outputs.changed == 'true'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -67,8 +86,10 @@ jobs:
 
   build-push:
     name: Build and Push
-    needs: [release-please, terraform]
-    if: needs.release-please.outputs.release_created == 'true'
+    needs: [release-please, terraform-changes, terraform]
+    if: |
+      needs.release-please.outputs.release_created == 'true' &&
+      (needs.terraform.result == 'success' || needs.terraform.result == 'skipped')
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -119,10 +140,10 @@ jobs:
 
   deploy:
     name: Deploy to EKS
-    needs: [release-please, terraform, build-push]
+    needs: [release-please, terraform-changes, terraform, build-push]
     if: |
       needs.release-please.outputs.release_created == 'true' &&
-      needs.terraform.result == 'success' &&
+      (needs.terraform.result == 'success' || needs.terraform.result == 'skipped') &&
       needs.build-push.result == 'success'
     runs-on: ubuntu-latest
     permissions:

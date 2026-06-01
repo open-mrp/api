@@ -26,6 +26,8 @@ type AccountGroup struct {
 	// Freight policy.
 	FreightPolicy constants.FreightPolicy `json:"freight_policy" validate:"required"`
 	// Account group type.
+	//
+	// The type `pricing_group` indicates this account group is utilized for pricing rules. For example, you may have a 'Preferred' price group that receives a special discount rate. The type `type_group` indicates the account group is utilized to categorize a set of accounts. For example, you may have a group of accounts that are 'Consumers' or 'Distributors'.
 	Type constants.AccountGroupType `json:"type" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

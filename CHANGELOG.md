@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.6](https://github.com/Augno/api/compare/v0.18.5...v0.18.6) (2026-06-01)
+
+
+### Bug Fixes
+
+* unique name error on SDK build for a couple of endpoints ([a281cb6](https://github.com/Augno/api/commit/a281cb6c1a64511a80cdefcaa58fda46dcfc4709))
+
 ## [0.18.5](https://github.com/Augno/api/compare/v0.18.4...v0.18.5) (2026-06-01)
 
 

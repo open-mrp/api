@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.7](https://github.com/Augno/api/compare/v0.18.6...v0.18.7) (2026-06-01)
+
+
+### Bug Fixes
+
+* add clarification on AccountGroup type field usage ([5f0b9d0](https://github.com/Augno/api/commit/5f0b9d0285a84522b108c962a5c7c42cebb68e7a))
+
 ## [0.18.6](https://github.com/Augno/api/compare/v0.18.5...v0.18.6) (2026-06-01)
 
 

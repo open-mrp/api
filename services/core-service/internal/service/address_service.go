@@ -137,6 +137,38 @@ func (s *addressSvcImpl) GetAddress(ctx context.Context, params domain.GetAddres
 	return s.repos.NewAddressRepo().Get(ctx, params)
 }
 
+// BatchGetAddressesByIDs returns addresses matching the input IDs that the
+// caller's account is authorized to read. Addresses are always account-scoped
+// via the account_address junction.
+func (s *addressSvcImpl) BatchGetAddressesByIDs(ctx context.Context, ids []string) ([]*domain.Address, *apierror.APIError) {
+	ctx, span := addressSvcTracer.Start(ctx, "service.address.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := checkAddressReadPermission(identity); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+	if identity.IsExternalTarget() {
+		meds := s.mediators()
+		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	return s.repos.NewAddressRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
+}
+
 func (s *addressSvcImpl) CreateAddress(ctx context.Context, params domain.CreateAddressParams) (*domain.Address, *apierror.APIError) {
 	ctx, span := addressSvcTracer.Start(ctx, "service.address.create")
 	defer span.End()

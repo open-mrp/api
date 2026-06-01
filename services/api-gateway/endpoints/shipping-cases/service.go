@@ -7,6 +7,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -62,7 +63,9 @@ func (m *shippingCaseSvcImpl) GetShippingCase(ctx context.Context, req *Retrieve
 		return nil, apiErr
 	}
 
-	result := ShippingCasePresenter(resp.ShippingCase)
+	meta := resourcekit.GetLoadMeta(ctx)
+	result := shippingCaseFromProto(resp.ShippingCase)
+	stashShippingCaseMeta(meta, resp.ShippingCase)
 	return &result, nil
 }
 
@@ -85,7 +88,9 @@ func (m *shippingCaseSvcImpl) UpdateShippingCase(ctx context.Context, req *Updat
 		return nil, apiErr
 	}
 
-	result := ShippingCasePresenter(resp.ShippingCase)
+	meta := resourcekit.GetLoadMeta(ctx)
+	result := shippingCaseFromProto(resp.ShippingCase)
+	stashShippingCaseMeta(meta, resp.ShippingCase)
 	return &result, nil
 }
 
@@ -124,4 +129,103 @@ func (m *shippingCaseSvcImpl) GetShippingCaseLabel(ctx context.Context, req *Get
 		Object: constants.ObjectTypeShippingCaseLabelURL,
 		URL:    resp.Url,
 	}, nil
+}
+
+func shippingCaseFromProto(sc *pb.ShippingCaseInfo) apiresource.ShippingCase {
+	if sc == nil {
+		return apiresource.ShippingCase{}
+	}
+
+	result := apiresource.ShippingCase{
+		ID:             sc.Id,
+		Object:         constants.ObjectTypeShippingCase,
+		Number:         sc.Number,
+		SSCC:           sc.Sscc,
+		TrackingNumber: sc.TrackingNumber,
+		CreatedAt:      grpcutil.TimestampToTime(sc.CreatedAt),
+		UpdatedAt:      grpcutil.TimestampToTime(sc.UpdatedAt),
+	}
+
+	if sc.ShippedAt != nil {
+		t := grpcutil.TimestampToTime(sc.ShippedAt)
+		result.ShippedAt = &t
+	}
+
+	return result
+}
+
+func stashShippingCaseMeta(meta *resourcekit.LoadMeta, sc *pb.ShippingCaseInfo) {
+	if sc == nil {
+		return
+	}
+
+	carrier := &apiresource.Carrier{
+		ID:     sc.CarrierId,
+		Object: constants.ObjectTypeCarrier,
+		Name:   sc.CarrierName,
+	}
+	if sc.CarrierIsPortalEnabled != nil && *sc.CarrierIsPortalEnabled {
+		carrier.CustomerPortalVisibility = constants.CustomerPortalVisibilityVisible
+	} else {
+		carrier.CustomerPortalVisibility = constants.CustomerPortalVisibilityHidden
+	}
+	if sc.CarrierCreatedAt != nil {
+		carrier.CreatedAt = sc.CarrierCreatedAt.AsTime()
+	}
+	if sc.CarrierUpdatedAt != nil {
+		carrier.UpdatedAt = sc.CarrierUpdatedAt.AsTime()
+	}
+	meta.Set(constants.ObjectTypeShippingCase, sc.Id, "carrier", carrier)
+
+	meta.Set(constants.ObjectTypeShippingCase, sc.Id, "shipment", &apiresource.ShipmentDetail{
+		ID:     sc.ShipmentId,
+		Object: constants.ObjectTypeShipment,
+		Number: sc.GetShipmentNumber(),
+		Status: apiresource.ShipmentStatus{
+			Code: sc.GetShipmentStatusCode(),
+			Name: sc.GetShipmentStatusName(),
+		},
+		CreatedAt: grpcutil.TimestampToTime(sc.ShipmentCreatedAt),
+		UpdatedAt: grpcutil.TimestampToTime(sc.ShipmentUpdatedAt),
+	})
+
+	meta.Set(constants.ObjectTypeShippingCase, sc.Id, "freight_amount", &apiresource.Quantity{
+		ID:           sc.FreightAmountId,
+		Object:       constants.ObjectTypeQuantity,
+		Value:        sc.FreightAmountValue,
+		DisplayValue: apiresource.FormatDisplayValue(sc.FreightAmountValue, sc.FreightAmountUnitAbbreviation, sc.FreightAmountUnitType),
+		Unit: &apiresource.Unit{
+			ID:                sc.FreightAmountUnitId,
+			Object:            constants.ObjectTypeUnit,
+			Name:              sc.FreightAmountUnitName,
+			Abbreviation:      sc.FreightAmountUnitAbbreviation,
+			Type:              constants.UnitType(sc.FreightAmountUnitType),
+			RatioNumerator:    sc.FreightAmountUnitRatioNumerator,
+			RatioDenominator:  sc.FreightAmountUnitRatioDenominator,
+			OffsetNumerator:   sc.FreightAmountUnitOffsetNumerator,
+			OffsetDenominator: sc.FreightAmountUnitOffsetDenominator,
+			CreatedAt:         grpcutil.TimestampToTime(sc.FreightAmountUnitCreatedAt),
+			UpdatedAt:         grpcutil.TimestampToTime(sc.FreightAmountUnitUpdatedAt),
+		},
+	})
+
+	meta.Set(constants.ObjectTypeShippingCase, sc.Id, "freight_weight", &apiresource.Quantity{
+		ID:           sc.FreightWeightId,
+		Object:       constants.ObjectTypeQuantity,
+		Value:        sc.FreightWeightValue,
+		DisplayValue: apiresource.FormatDisplayValue(sc.FreightWeightValue, sc.FreightWeightUnitAbbreviation, sc.FreightWeightUnitType),
+		Unit: &apiresource.Unit{
+			ID:                sc.FreightWeightUnitId,
+			Object:            constants.ObjectTypeUnit,
+			Name:              sc.FreightWeightUnitName,
+			Abbreviation:      sc.FreightWeightUnitAbbreviation,
+			Type:              constants.UnitType(sc.FreightWeightUnitType),
+			RatioNumerator:    sc.FreightWeightUnitRatioNumerator,
+			RatioDenominator:  sc.FreightWeightUnitRatioDenominator,
+			OffsetNumerator:   sc.FreightWeightUnitOffsetNumerator,
+			OffsetDenominator: sc.FreightWeightUnitOffsetDenominator,
+			CreatedAt:         grpcutil.TimestampToTime(sc.FreightWeightUnitCreatedAt),
+			UpdatedAt:         grpcutil.TimestampToTime(sc.FreightWeightUnitUpdatedAt),
+		},
+	})
 }

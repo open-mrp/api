@@ -208,6 +208,30 @@ func (r *partRepoImpl) Get(ctx context.Context, params domain.GetPartParams) (*d
 	return part, nil
 }
 
+func (r *partRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.Part, *apierror.APIError) {
+	ctx, span := partRepoTracer.Start(ctx, "repository.part.get_by_ids")
+	defer span.End()
+
+	rows, err := r.queries.GetPartsByIDs(ctx, sqlc.GetPartsByIDsParams{
+		Ids:       ids,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	parts := make([]*domain.Part, len(rows))
+	for i, row := range rows {
+		parts[i] = &domain.Part{
+			ID:        row.ID,
+			ItemID:    row.ItemID,
+			CreatedAt: row.CreatedAt,
+			UpdatedAt: row.UpdatedAt,
+		}
+	}
+	return parts, nil
+}
+
 func (r *partRepoImpl) List(ctx context.Context, params domain.ListPartsParams) (*domain.ListPartsResult, *apierror.APIError) {
 	ctx, span := partRepoTracer.Start(ctx, "repository.part.list")
 	defer span.End()

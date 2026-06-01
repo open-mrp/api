@@ -7,9 +7,8 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
-	ownerutil "github.com/augno/api/services/api-gateway/internal/owner"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -76,47 +75,35 @@ func (m *roleSvcImpl) ListRoles(ctx context.Context, req *ListRolesRequest) (*ap
 		Limit:         req.Limit,
 		Query:         query,
 		RoleTypeCodes: roleTypeCodesToStrings(req.RoleType),
-		Includes:      appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, roleSvcTracer, "service.roles.list", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListRolesResponse, error) {
 			return m.coreClient.ListRoles(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
 
-	var ownerAccount *apiresource.Account
-	for _, r := range resp.Roles {
-		if r.AccountId != "" {
-			ownerAccount = ownerutil.ResolveOwnerAccount(ctx, m.coreClient, stringPtrIfNotEmpty(r.AccountId))
-			break
+	ids := make([]string, len(resp.Roles))
+	for i, r := range resp.Roles {
+		ids[i] = r.Id
+	}
+	loaded, apiErr := resourceloaders.LoadRoles(ctx, ids)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	roles := make([]apiresource.Role, 0, len(ids))
+	for _, id := range ids {
+		if v, ok := loaded[id]; ok {
+			roles = append(roles, *(v.(*apiresource.Role)))
 		}
 	}
-
-	return RoleListPresenter(ctx, resp, ownerAccount), nil
+	return apiresource.NewList(roles, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
 
 func (m *roleSvcImpl) GetRole(ctx context.Context, req *RetrieveRoleRequest) (*apiresource.Role, *apierror.APIError) {
-	pbReq := &pb.GetRoleRequest{
-		Id:       req.RoleID,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
-	}
-
-	resp, apiErr := grpcutil.CallRPC(ctx, roleSvcTracer, "service.roles.get", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetRoleResponse, error) {
-			return m.coreClient.GetRole(ctx, pbReq, opts...)
-		})
-
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, stringPtrIfNotEmpty(resp.Role.AccountId))
-	result := RolePresenter(resp.Role, ownerAccount)
-	return &result, nil
+	return loadRoleByID(ctx, req.RoleID)
 }
 
 func (m *roleSvcImpl) CreateRole(ctx context.Context, req *CreateRoleRequest) (*apiresource.Role, *apierror.APIError) {
@@ -128,21 +115,17 @@ func (m *roleSvcImpl) CreateRole(ctx context.Context, req *CreateRoleRequest) (*
 	pbReq := &pb.CreateRoleRequest{
 		Name:        req.Name,
 		Permissions: pbPerms,
-		Includes:    appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, roleSvcTracer, "service.roles.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateRoleResponse, error) {
 			return m.coreClient.CreateRole(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
 
-	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, stringPtrIfNotEmpty(resp.Role.AccountId))
-	result := RolePresenter(resp.Role, ownerAccount)
-	return &result, nil
+	return loadRoleByID(ctx, resp.Role.Id)
 }
 
 func (m *roleSvcImpl) UpdateRole(ctx context.Context, req *UpdateRoleRequest) (*apiresource.Role, *apierror.APIError) {
@@ -152,9 +135,8 @@ func (m *roleSvcImpl) UpdateRole(ctx context.Context, req *UpdateRoleRequest) (*
 	}
 
 	pbReq := &pb.UpdateRoleRequest{
-		Id:       req.RoleID,
-		Name:     name,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
+		Id:   req.RoleID,
+		Name: name,
 	}
 
 	if req.Permissions != nil {
@@ -170,14 +152,11 @@ func (m *roleSvcImpl) UpdateRole(ctx context.Context, req *UpdateRoleRequest) (*
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateRoleResponse, error) {
 			return m.coreClient.UpdateRole(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
 
-	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, stringPtrIfNotEmpty(resp.Role.AccountId))
-	result := RolePresenter(resp.Role, ownerAccount)
-	return &result, nil
+	return loadRoleByID(ctx, resp.Role.Id)
 }
 
 func (m *roleSvcImpl) DeleteRole(ctx context.Context, req *DeleteRoleRequest) (*apiresource.EmptyResource, *apierror.APIError) {
@@ -195,6 +174,18 @@ func (m *roleSvcImpl) DeleteRole(ctx context.Context, req *DeleteRoleRequest) (*
 	}
 
 	return &apiresource.EmptyResource{}, nil
+}
+
+func loadRoleByID(ctx context.Context, id string) (*apiresource.Role, *apierror.APIError) {
+	loaded, apiErr := resourceloaders.LoadRoles(ctx, []string{id})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	v, ok := loaded[id]
+	if !ok {
+		return nil, apierror.NewResourceNotFoundError("Role not found.")
+	}
+	return v.(*apiresource.Role), nil
 }
 
 // parsePermissionStrings converts `<domain>:<action>` strings (e.g. "customers:create")

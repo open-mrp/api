@@ -17,6 +17,13 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/infrastructure/publisher"
 	"github.com/augno/api/services/api-gateway/internal/infrastructure/repository"
 	"github.com/augno/api/services/api-gateway/internal/infrastructure/sqlc"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
+
+	// resourceregistry's init() registers the resourcekit Definitions for
+	// every resource the include resolver handles. Blank-imported so the
+	// init runs at startup; the loaders rely on SetCoreClient being called
+	// (a few lines below).
+	_ "github.com/augno/api/services/api-gateway/internal/resourceregistry"
 	"github.com/augno/api/services/api-gateway/internal/router"
 	"github.com/augno/api/services/api-gateway/internal/ws"
 	"github.com/augno/api/shared/db"
@@ -120,6 +127,15 @@ func Run(
 		return err
 	}
 
+	// Hand the core client to the resourcekit loaders. The
+	// resourceregistry package is blank-imported below to fire its init()
+	// definitions; the loaders rely on this client being set before any
+	// HTTP request runs.
+	resourceloaders.SetCoreClient(coreClient.Client)
+	resourceloaders.SetCoreSalesClient(coreClient.Sales)
+	resourceloaders.SetFulfillmentClient(coreClient.Fulfillment)
+	resourceloaders.SetAuthClient(authClient.Client)
+
 	// Billing Service
 	billingClient, err := grpcclient.NewBillingServiceClientWithURL(cfg.BillingServiceURI)
 	if err != nil {
@@ -156,19 +172,25 @@ func Run(
 		return err
 	}
 
+	// Wire the agent client into the resourcekit loaders for agent-* resources.
+	resourceloaders.SetAgentClient(agentClient.Client)
+
+	// Wire the logging client into the resourcekit loaders for request-log resources.
+	resourceloaders.SetLoggingClient(platformClient.LoggingClient)
+
 	// Initialize the request log publisher.
 	reqLogPublisher := publisher.NewRequestLogOutboxPublisher(repository.NewOutboxRepo(queries), cfg.FrontendURL, cfg.PlatformMode)
 
 	// Initialize the main router.
-	mainBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "main ", authClient, coreClient, billingClient, platformClient, agentClient, reqLogPublisher, stdout)
+	mainBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "main ", authClient, coreClient, billingClient, platformClient, agentClient, reqLogPublisher, stdout, cfg.TrustedProxyHops)
 	mainRouter := router.NewMainRouter(mainBaseCfg)
 
 	// Initialize the auth router.
-	authBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "auth ", authClient, coreClient, billingClient, platformClient, agentClient, reqLogPublisher, stdout)
+	authBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "auth ", authClient, coreClient, billingClient, platformClient, agentClient, reqLogPublisher, stdout, cfg.TrustedProxyHops)
 	authRouter := router.NewAuthRouter(authBaseCfg)
 
 	// Initialize the webhook router (no auth, minimal middleware).
-	webhookBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "webhook ", authClient, coreClient, billingClient, platformClient, agentClient, reqLogPublisher, stdout)
+	webhookBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "webhook ", authClient, coreClient, billingClient, platformClient, agentClient, reqLogPublisher, stdout, cfg.TrustedProxyHops)
 	webhookRouter := router.NewWebhookRouter(webhookBaseCfg)
 
 	// Initialize WebSocket hub and event consumer.

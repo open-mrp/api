@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -188,6 +189,88 @@ func (q *Queries) GetOrderDiscount(ctx context.Context, arg GetOrderDiscountPara
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getOrderDiscountsByIDs = `-- name: GetOrderDiscountsByIDs :many
+SELECT
+    od.id,
+    od.name,
+    od.code,
+    od.percentage,
+    od.value,
+    od.discount_type_code,
+    od.account_id,
+    (SELECT COUNT(*) FROM sales_order so WHERE so.order_discount_id = od.id) AS order_count,
+    od.created_at,
+    od.updated_at
+FROM order_discount od
+WHERE od.id IN (/*SLICE:ids*/?)
+AND od.account_id = ?
+`
+
+type GetOrderDiscountsByIDsParams struct {
+	Ids       []string
+	AccountID string
+}
+
+type GetOrderDiscountsByIDsRow struct {
+	ID               string
+	Name             string
+	Code             string
+	Percentage       float64
+	Value            float64
+	DiscountTypeCode string
+	AccountID        string
+	OrderCount       int64
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+}
+
+// Returns order discounts matching the given IDs that belong to the caller's
+// account. Order discounts are always account-scoped.
+func (q *Queries) GetOrderDiscountsByIDs(ctx context.Context, arg GetOrderDiscountsByIDsParams) ([]GetOrderDiscountsByIDsRow, error) {
+	query := getOrderDiscountsByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetOrderDiscountsByIDsRow
+	for rows.Next() {
+		var i GetOrderDiscountsByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Code,
+			&i.Percentage,
+			&i.Value,
+			&i.DiscountTypeCode,
+			&i.AccountID,
+			&i.OrderCount,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const insertOrderDiscount = `-- name: InsertOrderDiscount :exec

@@ -71,6 +71,7 @@ type AgentArtifactRepo interface {
 type AgentMemoryRepo interface {
 	Insert(ctx context.Context, params sqlc.InsertAgentMemoryParams) *apierror.APIError
 	GetByID(ctx context.Context, id string) (*sqlc.AgentMemory, *apierror.APIError)
+	GetByIDs(ctx context.Context, accountID string, ids []string) ([]sqlc.AgentMemory, *apierror.APIError)
 	ListByAccount(ctx context.Context, accountID string, limit int32) ([]sqlc.AgentMemory, *apierror.APIError)
 	ListByEntity(ctx context.Context, accountID, entityType, entityID string, limit int32) ([]sqlc.AgentMemory, *apierror.APIError)
 	ListAccountMemories(ctx context.Context, accountID, entityID string, limit int32) ([]sqlc.AgentMemory, *apierror.APIError)

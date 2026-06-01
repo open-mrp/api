@@ -28,6 +28,7 @@ func (e *RetrieveInventoryChangeLogEndpoint) Materialize() *apiendpoint.APIEndpo
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeInventoryChangeLog,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveInventoryChangeLogRequest) (*apiresource.InventoryChangeLog, *apierror.APIError) {
 			return svc.(InventoryChangeLogSvc).GetInventoryChangeLog
 		},

@@ -682,6 +682,44 @@ func (r *itemRepoImpl) Get(ctx context.Context, params domain.GetItemParams) (*d
 	return item, nil
 }
 
+func mapGetItemsByIDsRow(row sqlc.GetItemsByIDsRow) *domain.Item {
+	return mapItemBaseRow(
+		row.ID, row.Sku, row.Description, row.Notes,
+		row.ItemTypeCode, row.ItemCategoryID, row.CategoryName, row.ItemCategoryTypeCode, row.CategoryUnitGroupID,
+		row.UnitValueID, row.UnitCostID, row.BurnRateID, row.AccountID,
+		row.IsDirty, row.CreatedAt, row.UpdatedAt, row.CategoryCreatedAt, row.CategoryUpdatedAt,
+	)
+}
+
+func (r *itemRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.Item, *apierror.APIError) {
+	ctx, span := itemRepoTracer.Start(ctx, "repository.item.get_by_ids")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.GetItemsByIDs(ctx, sqlc.GetItemsByIDsParams{
+		Ids:       ids,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	items := make([]*domain.Item, len(rows))
+	for i, row := range rows {
+		items[i] = mapGetItemsByIDsRow(row)
+	}
+
+	allIncludes := []string{"unit_value", "unit_cost", "burn_rate", "attributes"}
+	if apiErr := applyItemStitches(ctx, r.queries, items, allIncludes); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return items, nil
+}
+
 func (r *itemRepoImpl) GetInventory(ctx context.Context, accountID, itemID string) (*domain.ItemInventory, *apierror.APIError) {
 	ctx, span := itemRepoTracer.Start(ctx, "repository.item.get_inventory")
 	defer span.End()

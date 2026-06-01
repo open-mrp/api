@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleSupplierMaterialID = "suml_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleSupplierMaterialID = "suml_01e05d8a2821bf791bd30d537f"
 
 // Supplier material resource.
 type SupplierMaterial struct {

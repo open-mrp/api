@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleProductLineID = "pl_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleProductLineID = "pl_01996357326a0d3f7b129542ea"
 const SampleProductLineName = "Industrial Fasteners"
 
 // Product line resource.

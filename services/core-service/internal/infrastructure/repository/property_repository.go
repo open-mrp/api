@@ -66,6 +66,38 @@ func buildPropertySearchParams(query *string) gosql.NullString {
 	return gosql.NullString{String: "%" + db.EscapeLike(*query) + "%", Valid: true}
 }
 
+func mapGetPropertiesByIDsRow(row sqlc.GetPropertiesByIDsRow) *domain.Property {
+	return &domain.Property{
+		ID:        row.ID,
+		Name:      row.Name,
+		AccountID: row.AccountID,
+		IsPublic:  row.IsPublic,
+		CreatedAt: row.CreatedAt,
+		UpdatedAt: row.UpdatedAt,
+	}
+}
+
+func (r *propertyRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.Property, *apierror.APIError) {
+	ctx, span := propertyRepoTracer.Start(ctx, "repository.property.get_by_ids")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := r.queries.GetPropertiesByIDs(ctx, sqlc.GetPropertiesByIDsParams{
+		Ids:       ids,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make([]*domain.Property, len(rows))
+	for i, row := range rows {
+		out[i] = mapGetPropertiesByIDsRow(row)
+	}
+	return out, nil
+}
+
 func (r *propertyRepoImpl) List(ctx context.Context, params domain.ListPropertiesParams) (*domain.ListPropertiesResult, *apierror.APIError) {
 	ctx, span := propertyRepoTracer.Start(ctx, "repository.property.list")
 	defer span.End()

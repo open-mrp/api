@@ -53,13 +53,15 @@ type APIKeyCreateInput struct {
 }
 
 type APIKeyRotateInput struct {
-	AccountMode  constants.AccountMode
-	APIKeyTypeID string
-	ExpiresAt    *time.Time
+	AccountMode    constants.AccountMode
+	APIKeyTypeID   string
+	OwnerAccountID string
+	ExpiresAt      *time.Time
 }
 
 type APIKeyRevokeInput struct {
-	APIKeyTypeID string
+	APIKeyTypeID   string
+	OwnerAccountID string
 }
 
 type APIKeyListInput struct {
@@ -95,10 +97,15 @@ type APIKeyMed interface {
 	Create(ctx context.Context, input APIKeyCreateInput) (string, *apikey.APIKey, *apierror.APIError)
 
 	// Rotate revokes the specified API key and creates a replacement.
+	//
+	// Scoped to OwnerAccountID: returns a not-found error if the key does not
+	// exist for the requested owner. The replacement inherits the same owner
+	// and role.
 	Rotate(ctx context.Context, input APIKeyRotateInput) (string, *apikey.APIKey, *apierror.APIError)
 
-	// Revoke revokes an API key by its type ID.
-	Revoke(ctx context.Context, apiKeyTypeID string) *apierror.APIError
+	// Revoke revokes an API key by its type ID. Scoped to ownerAccountID;
+	// returns a not-found error if the key does not exist for the given owner.
+	Revoke(ctx context.Context, apiKeyTypeID string, ownerAccountID string) *apierror.APIError
 
 	// List returns a paginated list of API keys for the given owner account and filters.
 	List(ctx context.Context, input APIKeyListInput) (*ListAPIKeysResult, *apierror.APIError)

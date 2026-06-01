@@ -30,6 +30,7 @@ func (e *RetrieveProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeProductionRun,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveProductionRunRequest) (*apiresource.ProductionRunDetail, *apierror.APIError) {
 			return svc.(ProductionRunSvc).GetProductionRun
 		},

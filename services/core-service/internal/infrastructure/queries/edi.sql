@@ -91,6 +91,22 @@ DELETE FROM dc_location
 WHERE id = sqlc.arg('id')
 AND owner_account_id = sqlc.arg('owner_account_id');
 
+-- name: GetDCLocationsByIDs :many
+-- Returns DC locations matching the given IDs that belong to the caller's
+-- account. Used by the api-gateway resourcekit resolver.
+SELECT
+    dcl.id,
+    dcl.location,
+    dcl.account_id,
+    a.name AS customer_name,
+    dcl.owner_account_id,
+    dcl.created_at,
+    dcl.updated_at
+FROM dc_location dcl
+LEFT JOIN account a ON a.id = dcl.account_id
+WHERE dcl.id IN (sqlc.slice('ids'))
+AND dcl.owner_account_id = sqlc.arg('owner_account_id');
+
 -- name: ListEDIRunsForward :many
 SELECT
     er.id,
@@ -152,4 +168,18 @@ SELECT
     er.updated_at
 FROM edi_run er
 WHERE er.id = sqlc.arg('id')
+AND er.account_id = sqlc.arg('account_id');
+
+-- name: GetEDIRunsByIDs :many
+-- Returns EDI runs matching the given IDs that belong to the caller's
+-- account. Used by the api-gateway resourcekit resolver.
+SELECT
+    er.id,
+    er.completed_at,
+    er.has_succeeded,
+    er.account_id,
+    er.created_at,
+    er.updated_at
+FROM edi_run er
+WHERE er.id IN (sqlc.slice('ids'))
 AND er.account_id = sqlc.arg('account_id');

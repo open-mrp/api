@@ -459,3 +459,22 @@ func (s *locationSvcImpl) GetLocationType(ctx context.Context, params domain.Get
 
 	return s.repos.NewLocationRepo().GetType(ctx, params.Identifier)
 }
+
+func (s *locationSvcImpl) BatchGetLocationsByIDs(ctx context.Context, ids []string) ([]*domain.Location, *apierror.APIError) {
+	ctx, span := locationSvcTracer.Start(ctx, "service.location.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainLocations, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return s.repos.NewLocationRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
+}

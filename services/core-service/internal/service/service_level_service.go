@@ -394,6 +394,9 @@ func (s *serviceLevelSvcImpl) DeleteServiceLevel(ctx context.Context, carrierID,
 	if *existing.AccountID != accountID {
 		return tracing.Trace(span, apierror.NewAuthorizationError("This service level is owned by another account and cannot be deleted."))
 	}
+	if existing.IsDefault {
+		return tracing.Trace(span, apierror.NewValidationError("Default service levels cannot be deleted."))
+	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *serviceLevelSvcImpl) *apierror.APIError {
 		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeServiceLevel, existing.ID, existing); apiErr != nil {

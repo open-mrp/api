@@ -83,6 +83,62 @@ func mapGetLocationRow(row sqlc.GetLocationRow) *domain.Location {
 	)
 }
 
+func mapGetLocationsByIDsRow(row sqlc.GetLocationsByIDsRow) *domain.Location {
+	return mapLocationRow(
+		row.ID, row.Name, row.TypeCode,
+		row.ParentID, row.ParentName, row.ParentTypeCode,
+		row.CreatedAt, row.UpdatedAt,
+	)
+}
+
+func (r *locationRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.Location, *apierror.APIError) {
+	ctx, span := locationRepoTracer.Start(ctx, "repository.location.get_by_ids")
+	defer span.End()
+
+	rows, err := r.queries.GetLocationsByIDs(ctx, sqlc.GetLocationsByIDsParams{
+		Ids:       ids,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	locations := make([]*domain.Location, len(rows))
+	parentIDs := make([]gosql.NullString, 0, len(rows))
+	for i, row := range rows {
+		locations[i] = mapGetLocationsByIDsRow(row)
+		parentIDs = append(parentIDs, gosql.NullString{String: row.ID, Valid: true})
+	}
+
+	if len(parentIDs) > 0 {
+		childRows, err := r.queries.ListLocationChildrenByParentIDs(ctx, sqlc.ListLocationChildrenByParentIDsParams{
+			ParentIds: parentIDs,
+			AccountID: accountID,
+		})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+
+		childrenByParent := make(map[string][]domain.LocationChild)
+		for _, cr := range childRows {
+			if cr.ParentID.Valid {
+				childrenByParent[cr.ParentID.String] = append(childrenByParent[cr.ParentID.String], domain.LocationChild{
+					ID:       cr.ID,
+					Name:     cr.Name,
+					TypeCode: cr.TypeCode,
+				})
+			}
+		}
+		for _, loc := range locations {
+			if children, ok := childrenByParent[loc.ID]; ok {
+				loc.Children = children
+			}
+		}
+	}
+
+	return locations, nil
+}
+
 func buildLocationSearchParams(query *string) gosql.NullString {
 	if query == nil || *query == "" {
 		return gosql.NullString{}

@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleCarrierID = "cr_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleCarrierID = "cr_01784fd54c9ba197bb4e42f0e6"
 const SampleCarrierName = "FedEx"
 
 // Carrier resource.

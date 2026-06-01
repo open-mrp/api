@@ -27,6 +27,7 @@ func (e *ListSalesOrderStatusesEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeSalesOrderStatus,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListSalesOrderStatusesRequest) (*apiresource.List[apiresource.SalesOrderStatus], *apierror.APIError) {
 			return svc.(SalesOrderStatusSvc).ListSalesOrderStatuses
 		},

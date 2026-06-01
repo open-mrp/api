@@ -51,6 +51,26 @@ func scanningStationToProto(ss *domain.ScanningStation) *pb.ScanningStationInfo 
 	return info
 }
 
+func (h *gRPCHandler) BatchGetScanningStationsByIDs(ctx context.Context, req *pb.BatchGetScanningStationsByIDsRequest) (*pb.BatchGetScanningStationsByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	stations, apiErr := h.scanningStationSvc.BatchGetScanningStationsByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	pbStations := make([]*pb.ScanningStationInfo, len(stations))
+	for i, ss := range stations {
+		pbStations[i] = scanningStationToProto(ss)
+	}
+
+	return &pb.BatchGetScanningStationsByIDsResponse{
+		ScanningStations: pbStations,
+	}, nil
+}
+
 func (h *gRPCHandler) ListScanningStations(ctx context.Context, req *pb.ListScanningStationsRequest) (*pb.ListScanningStationsResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

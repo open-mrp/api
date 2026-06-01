@@ -32,6 +32,7 @@ func (e *ListRolesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRolesReq
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListRolesRequest) (*apiresource.List[apiresource.Role], *apierror.APIError) {
 			return svc.(RoleSvc).ListRoles
 		},
+		ObjectType: constants.ObjectTypeRole,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeRole,
 			Fields:     []string{"owner", "owner.account", "permissions"},

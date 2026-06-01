@@ -39,6 +39,7 @@ func (e *ShipShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*ShipShipm
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeShipment,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ShipShipmentRequest) (*apiresource.ShipmentDetail, *apierror.APIError) {
 			return svc.(ShipmentSvc).ShipShipment
 		},

@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -22,6 +23,7 @@ func (e *CreateAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*apireque
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeAddress,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apirequest.AddressInput) (*apiresource.Address, *apierror.APIError) {
 			return svc.(AddressSvc).CreateAddress
 		},

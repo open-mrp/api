@@ -90,6 +90,7 @@ SELECT
 FROM account_relation
 INNER JOIN account_user ON account_relation.owner_account_id = account_user.account_id
 WHERE account_relation.counterparty_account_id = ?
+  AND account_relation.owner_account_id = ?
   AND account_user.user_id = ?
   AND (account_user.status_code = 'active' OR account_user.status_code IS NULL)
 LIMIT 1
@@ -97,6 +98,7 @@ LIMIT 1
 
 type FindAccountRelationByCounterpartyAccountIDAndUserIDParams struct {
 	CounterpartyAccountID string
+	OwnerAccountID        string
 	UserID                string
 }
 
@@ -108,7 +110,7 @@ type FindAccountRelationByCounterpartyAccountIDAndUserIDRow struct {
 }
 
 func (q *Queries) FindAccountRelationByCounterpartyAccountIDAndUserID(ctx context.Context, arg FindAccountRelationByCounterpartyAccountIDAndUserIDParams) (FindAccountRelationByCounterpartyAccountIDAndUserIDRow, error) {
-	row := q.db.QueryRowContext(ctx, findAccountRelationByCounterpartyAccountIDAndUserID, arg.CounterpartyAccountID, arg.UserID)
+	row := q.db.QueryRowContext(ctx, findAccountRelationByCounterpartyAccountIDAndUserID, arg.CounterpartyAccountID, arg.OwnerAccountID, arg.UserID)
 	var i FindAccountRelationByCounterpartyAccountIDAndUserIDRow
 	err := row.Scan(
 		&i.ID,

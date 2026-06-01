@@ -1,0 +1,157 @@
+package resourceloaders
+
+import (
+	"context"
+	"strconv"
+
+	"github.com/augno/api/services/api-gateway/internal/domain"
+	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
+	"github.com/augno/api/shared/constants"
+	"github.com/augno/api/shared/db"
+	apierror "github.com/augno/api/shared/errors"
+	pb "github.com/augno/api/shared/proto/core"
+	"github.com/augno/api/shared/tracing"
+	"google.golang.org/grpc"
+)
+
+var productLineLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.product_line")
+
+// LoadProductLines fetches product lines by ID via BatchGetProductLinesByIDs.
+// Stashes owner_account_id and the pre-built UnitGroup in LoadMeta for SubField closures.
+func LoadProductLines(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	resp, apiErr := grpcutil.CallRPC(ctx, productLineLoaderTracer, "loader.product_lines.batch_get", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.BatchGetProductLinesByIDsResponse, error) {
+			return coreClient.BatchGetProductLinesByIDs(ctx, &pb.BatchGetProductLinesByIDsRequest{Ids: ids}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	meta := resourcekit.GetLoadMeta(ctx)
+	out := make(map[string]any, len(resp.ProductLines))
+	for _, pl := range resp.ProductLines {
+		out[pl.Id] = productLineFromProto(pl)
+
+		var accountID string
+		if pl.AccountId != nil {
+			accountID = *pl.AccountId
+		}
+		meta.Set(constants.ObjectTypeProductLine, pl.Id, "owner_account_id", accountID)
+
+		// Pre-build the UnitGroup from the proto and stash it for the
+		// unit_group SubField's Populate. This preserves backward
+		// compat: requesting ?include[]=unit_group returns the full
+		// UnitGroup with BaseUnit and AssociatedUnits inline.
+		if pl.UnitGroup != nil {
+			ug := buildUnitGroupFromProto(pl.UnitGroup)
+			meta.Set(constants.ObjectTypeProductLine, pl.Id, "unit_group", ug)
+			stashUnitGroupMeta(meta, ug)
+		}
+	}
+	return out, nil
+}
+
+func productLineFromProto(pl *pb.ProductLineInfo) *apiresource.ProductLine {
+	return &apiresource.ProductLine{
+		ID:               pl.Id,
+		Object:           constants.ObjectTypeProductLine,
+		Name:             pl.Name,
+		Description:      pl.Description,
+		Notes:            pl.Notes,
+		CommissionPolicy: constants.CommissionPolicy(pl.CommissionPolicy),
+		FreightPolicy:    constants.FreightPolicy(pl.FreightPolicy),
+		CreatedAt:        grpcutil.TimestampToTime(pl.CreatedAt),
+		UpdatedAt:        grpcutil.TimestampToTime(pl.UpdatedAt),
+	}
+}
+
+func stashUnitGroupMeta(meta *resourcekit.LoadMeta, ug *apiresource.UnitGroup) {
+	if ug.BaseUnit != nil {
+		meta.Set(constants.ObjectTypeUnitGroup, ug.ID, "base_unit_id", ug.BaseUnit.ID)
+	}
+	if ug.AssociatedUnits != nil {
+		meta.Set(constants.ObjectTypeUnitGroup, ug.ID, "associated_units_data", ug.AssociatedUnits.Data)
+		for i := range ug.AssociatedUnits.Data {
+			if ug.AssociatedUnits.Data[i].Unit != nil {
+				meta.Set(constants.ObjectTypeUnitGroupUnit, ug.AssociatedUnits.Data[i].ID, "unit_id", ug.AssociatedUnits.Data[i].Unit.ID)
+			}
+		}
+	}
+}
+
+func buildUnitGroupFromProto(ug *pb.ItemCategoryUnitGroupInfo) *apiresource.UnitGroup {
+	result := &apiresource.UnitGroup{
+		ID:        ug.Id,
+		Object:    constants.ObjectTypeUnitGroup,
+		Name:      ug.Name,
+		Type:      constants.UnitType(ug.Type),
+		CreatedAt: grpcutil.TimestampToTime(ug.CreatedAt),
+		UpdatedAt: grpcutil.TimestampToTime(ug.UpdatedAt),
+	}
+	if ug.BaseUnit != nil {
+		u := ug.BaseUnit
+		mapped := apiresource.Unit{
+			ID:                u.Id,
+			Object:            constants.ObjectTypeUnit,
+			Name:              u.Name,
+			Abbreviation:      u.Abbreviation,
+			Type:              constants.UnitType(u.Type),
+			RatioNumerator:    db.TrimDecimal(u.RatioNumerator),
+			RatioDenominator:  db.TrimDecimal(u.RatioDenominator),
+			OffsetNumerator:   db.TrimDecimal(u.OffsetNumerator),
+			OffsetDenominator: db.TrimDecimal(u.OffsetDenominator),
+			IsBaseUnit:        u.IsBaseUnit,
+			CreatedAt:         grpcutil.TimestampToTime(u.CreatedAt),
+			UpdatedAt:         grpcutil.TimestampToTime(u.UpdatedAt),
+		}
+		result.BaseUnit = &mapped
+	}
+	if len(ug.AssociatedUnits) > 0 {
+		items := make([]apiresource.UnitGroupUnit, 0, len(ug.AssociatedUnits))
+		for _, au := range ug.AssociatedUnits {
+			if au == nil {
+				continue
+			}
+			discountPct, _ := strconv.ParseFloat(au.DiscountPercentage, 64)
+			discountFixed, _ := strconv.ParseFloat(au.DiscountFixed, 64)
+			visibility := constants.CustomerPortalVisibilityHidden
+			if au.IsVisible {
+				visibility = constants.CustomerPortalVisibilityVisible
+			}
+			ugu := apiresource.UnitGroupUnit{
+				ID:                       au.Id,
+				Object:                   constants.ObjectTypeUnitGroupUnit,
+				DiscountPercentage:       discountPct,
+				DiscountFixed:            discountFixed,
+				CustomerPortalVisibility: visibility,
+				CreatedAt:                grpcutil.TimestampToTime(au.CreatedAt),
+				UpdatedAt:                grpcutil.TimestampToTime(au.UpdatedAt),
+			}
+			if au.Unit != nil {
+				u := au.Unit
+				mapped := apiresource.Unit{
+					ID:                u.Id,
+					Object:            constants.ObjectTypeUnit,
+					Name:              u.Name,
+					Abbreviation:      u.Abbreviation,
+					Type:              constants.UnitType(u.Type),
+					RatioNumerator:    db.TrimDecimal(u.RatioNumerator),
+					RatioDenominator:  db.TrimDecimal(u.RatioDenominator),
+					OffsetNumerator:   db.TrimDecimal(u.OffsetNumerator),
+					OffsetDenominator: db.TrimDecimal(u.OffsetDenominator),
+					IsBaseUnit:        u.IsBaseUnit,
+					CreatedAt:         grpcutil.TimestampToTime(u.CreatedAt),
+					UpdatedAt:         grpcutil.TimestampToTime(u.UpdatedAt),
+				}
+				ugu.Unit = &mapped
+			}
+			items = append(items, ugu)
+		}
+		result.AssociatedUnits = apiresource.NewList(items, apiresource.PageInfo{})
+	}
+	return result
+}

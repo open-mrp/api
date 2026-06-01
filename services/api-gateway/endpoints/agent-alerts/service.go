@@ -4,11 +4,16 @@ import (
 	"context"
 	"fmt"
 
+	"encoding/json"
+
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/agent"
+	"github.com/augno/api/shared/timeutil"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
 )
@@ -68,7 +73,19 @@ func (m *agentAlertSvcImpl) ListAlerts(ctx context.Context, req *ListAlertsReque
 		return nil, rpcErr
 	}
 
-	return AgentAlertListPresenter(ctx, resp), nil
+	meta := resourcekit.GetLoadMeta(ctx)
+	alerts := make([]apiresource.AgentAlert, len(resp.Alerts))
+	for i, a := range resp.Alerts {
+		alerts[i] = agentAlertFromProto(a)
+		stashAgentAlertMeta(meta, a)
+	}
+
+	pageInfo := apiresource.PageInfo{}
+	if resp.PageInfo != nil {
+		pageInfo = grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)
+	}
+
+	return apiresource.NewList(alerts, pageInfo), nil
 }
 
 func (m *agentAlertSvcImpl) GetAlert(ctx context.Context, req *RetrieveAlertRequest) (*apiresource.AgentAlert, *apierror.APIError) {
@@ -84,7 +101,9 @@ func (m *agentAlertSvcImpl) GetAlert(ctx context.Context, req *RetrieveAlertRequ
 		return nil, rpcErr
 	}
 
-	result := AgentAlertPresenter(resp.Alert)
+	meta := resourcekit.GetLoadMeta(ctx)
+	result := agentAlertFromProto(resp.Alert)
+	stashAgentAlertMeta(meta, resp.Alert)
 	return &result, nil
 }
 
@@ -101,6 +120,90 @@ func (m *agentAlertSvcImpl) AcknowledgeAlert(ctx context.Context, req *Acknowled
 		return nil, rpcErr
 	}
 
-	result := AgentAlertPresenter(resp.Alert)
+	meta := resourcekit.GetLoadMeta(ctx)
+	result := agentAlertFromProto(resp.Alert)
+	stashAgentAlertMeta(meta, resp.Alert)
 	return &result, nil
+}
+
+func agentAlertFromProto(a *pb.AgentAlertInfo) apiresource.AgentAlert {
+	if a == nil {
+		return apiresource.AgentAlert{}
+	}
+
+	alert := apiresource.AgentAlert{
+		ID:        a.Id,
+		Object:    constants.ObjectTypeAgentAlert,
+		Severity:  constants.AgentAlertSeverity(a.SeverityCode),
+		Status:    constants.AgentAlertStatus(a.StatusCode),
+		Title:     a.Title,
+		Message:   ptrStringOrNil(a.Message),
+		CreatedAt: timeutil.TimestampToTime(a.CreatedAt),
+		UpdatedAt: timeutil.TimestampToTime(a.UpdatedAt),
+	}
+
+	if a.AcknowledgedAt != "" {
+		t := timeutil.TimestampToTime(a.AcknowledgedAt)
+		alert.AcknowledgedAt = &t
+	}
+	if a.AcknowledgedBy != "" {
+		alert.AcknowledgedBy = apiresource.NewActor(
+			a.AcknowledgedBy,
+			constants.ActorType(a.AcknowledgedByActorType),
+			ptrStringOrNil(a.AcknowledgedByActorName),
+			nil,
+		)
+	}
+	if a.MetadataJson != "" && a.MetadataJson != "{}" {
+		alert.Metadata = json.RawMessage(a.MetadataJson)
+	}
+
+	return alert
+}
+
+func stashAgentAlertMeta(meta *resourcekit.LoadMeta, a *pb.AgentAlertInfo) {
+	if a == nil {
+		return
+	}
+
+	if a.AgentRunId != "" {
+		run := &apiresource.AgentRun{
+			ID:          a.AgentRunId,
+			Object:      constants.ObjectTypeAgentRun,
+			Status:      constants.AgentRunStatus(a.GetRunStatusCode()),
+			TriggerType: constants.AgentTriggerType(a.GetRunTriggerType()),
+			CreatedAt:   timeutil.TimestampToTime(a.GetRunCreatedAt()),
+			UpdatedAt:   timeutil.TimestampToTime(a.GetRunUpdatedAt()),
+		}
+		meta.Set(constants.ObjectTypeAgentAlert, a.Id, "run", run)
+	}
+
+	if a.AgentActionId != "" {
+		action := &apiresource.AgentAction{
+			ID:        a.AgentActionId,
+			Object:    constants.ObjectTypeAgentAction,
+			ToolSlug:  constants.ToolSlug(a.GetActionToolSlug()),
+			Status:    constants.AgentActionStatus(a.GetActionStatusCode()),
+			CreatedAt: timeutil.TimestampToTime(a.GetActionCreatedAt()),
+			UpdatedAt: timeutil.TimestampToTime(a.GetActionUpdatedAt()),
+		}
+		if a.AgentRunId != "" {
+			action.Run = &apiresource.AgentRun{
+				ID:          a.AgentRunId,
+				Object:      constants.ObjectTypeAgentRun,
+				Status:      constants.AgentRunStatus(a.GetRunStatusCode()),
+				TriggerType: constants.AgentTriggerType(a.GetRunTriggerType()),
+				CreatedAt:   timeutil.TimestampToTime(a.GetRunCreatedAt()),
+				UpdatedAt:   timeutil.TimestampToTime(a.GetRunUpdatedAt()),
+			}
+		}
+		meta.Set(constants.ObjectTypeAgentAlert, a.Id, "action", action)
+	}
+}
+
+func ptrStringOrNil(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }

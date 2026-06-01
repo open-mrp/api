@@ -57,6 +57,7 @@ func (e *CreateScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeScanningStation,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateScanningStationRequest) (*apiresource.ScanningStation, *apierror.APIError) {
 			return svc.(ScanningStationSvc).CreateScanningStation
 		},

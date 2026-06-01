@@ -405,3 +405,45 @@ func (r *unitRepoImpl) Delete(ctx context.Context, params domain.DeleteUnitParam
 
 	return nil
 }
+
+func (r *unitRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.Unit, *apierror.APIError) {
+	ctx, span := unitRepoTracer.Start(ctx, "repository.unit.get_by_ids")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := r.queries.GetUnitsByIDsScoped(ctx, sqlc.GetUnitsByIDsScopedParams{
+		Ids:       ids,
+		AccountID: gosql.NullString{String: accountID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make([]*domain.Unit, len(rows))
+	for i, row := range rows {
+		out[i] = mapGetUnitsByIDsScopedRow(row)
+	}
+	return out, nil
+}
+
+func mapGetUnitsByIDsScopedRow(row sqlc.GetUnitsByIDsScopedRow) *domain.Unit {
+	var accountID *string
+	if row.AccountID.Valid {
+		accountID = &row.AccountID.String
+	}
+	return &domain.Unit{
+		ID:                row.ID,
+		Name:              row.Name,
+		Abbreviation:      row.Abbreviation,
+		UnitDimensionCode: row.UnitDimensionCode,
+		RatioNumerator:    row.RatioNumerator,
+		RatioDenominator:  row.RatioDenominator,
+		OffsetNumerator:   row.OffsetNumerator,
+		OffsetDenominator: row.OffsetDenominator,
+		IsBaseUnit:        row.IsBaseUnit,
+		AccountID:         accountID,
+		CreatedAt:         row.CreatedAt,
+		UpdatedAt:         row.UpdatedAt,
+	}
+}

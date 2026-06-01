@@ -63,6 +63,7 @@ func (e *CreatePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePartR
 		LocationFunc: func(resp *apiresource.Part) string {
 			return "/v1/catalog/parts/" + resp.ID
 		},
+		ObjectType: constants.ObjectTypePart,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypePart,
 			Fields:     []string{"item", "item.category", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},

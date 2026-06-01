@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleAccountStatusID = "acss_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleAccountStatusID = "acss_01004f532c58d60514b685cb27"
 
 var SampleAccountStatusCode = constants.AccountStatusCodeNormal
 

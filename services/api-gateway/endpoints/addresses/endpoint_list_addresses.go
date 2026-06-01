@@ -29,6 +29,7 @@ func (e *ListAddressesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAddr
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeAddress,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAddressesRequest) (*apiresource.List[apiresource.Address], *apierror.APIError) {
 			return svc.(AddressSvc).ListAddresses
 		},

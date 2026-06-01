@@ -8,6 +8,8 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -60,7 +62,7 @@ func (s *supplierMaterialSvcImpl) ListSupplierMaterials(ctx context.Context, req
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	return materialep.SupplierMaterialListPresenter(ctx, resp), nil
+	return supplierMaterialListFromProto(ctx, resp), nil
 }
 
 func (s *supplierMaterialSvcImpl) GetSupplierMaterial(ctx context.Context, req *RetrieveSupplierMaterialRequest) (*apiresource.SupplierMaterial, *apierror.APIError) {
@@ -75,12 +77,12 @@ func (s *supplierMaterialSvcImpl) GetSupplierMaterial(ctx context.Context, req *
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	result := materialep.SupplierMaterialPresenter(resp.SupplierMaterial)
+	result := supplierMaterialFromProto(resp.SupplierMaterial)
+	stashSupplierMaterialMeta(ctx, resp.SupplierMaterial, &result)
 	return &result, nil
 }
 
 func (s *supplierMaterialSvcImpl) CreateSupplierMaterial(ctx context.Context, req *CreateSupplierMaterialRequest) (*apiresource.SupplierMaterial, *apierror.APIError) {
-	// Default is_active to true when not provided, matching legacy dashboard behavior.
 	isActive := true
 	if req.IsActive != nil {
 		isActive = *req.IsActive
@@ -100,7 +102,8 @@ func (s *supplierMaterialSvcImpl) CreateSupplierMaterial(ctx context.Context, re
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	result := materialep.SupplierMaterialPresenter(resp.SupplierMaterial)
+	result := supplierMaterialFromProto(resp.SupplierMaterial)
+	stashSupplierMaterialMeta(ctx, resp.SupplierMaterial, &result)
 	return &result, nil
 }
 
@@ -120,7 +123,8 @@ func (s *supplierMaterialSvcImpl) UpdateSupplierMaterial(ctx context.Context, re
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	result := materialep.SupplierMaterialPresenter(resp.SupplierMaterial)
+	result := supplierMaterialFromProto(resp.SupplierMaterial)
+	stashSupplierMaterialMeta(ctx, resp.SupplierMaterial, &result)
 	return &result, nil
 }
 
@@ -136,6 +140,56 @@ func (s *supplierMaterialSvcImpl) DeleteSupplierMaterial(ctx context.Context, re
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	result := materialep.SupplierMaterialPresenter(resp.SupplierMaterial)
+	result := supplierMaterialFromProto(resp.SupplierMaterial)
+	stashSupplierMaterialMeta(ctx, resp.SupplierMaterial, &result)
 	return &result, nil
+}
+
+func supplierMaterialFromProto(sm *pb.SupplierMaterialInfo) apiresource.SupplierMaterial {
+	if sm == nil {
+		return apiresource.SupplierMaterial{}
+	}
+	itemID := ""
+	if sm.Material != nil {
+		itemID = sm.Material.Id
+	}
+	return apiresource.SupplierMaterial{
+		ID:                  itemID,
+		Object:              constants.ObjectTypeSupplierMaterial,
+		SupplierPartNumber:  sm.SupplierPartNumber,
+		SupplierDescription: sm.SupplierDescription,
+		Status: func() constants.SupplierMaterialStatus {
+			if sm.IsActive {
+				return constants.SupplierMaterialStatusActive
+			}
+			return constants.SupplierMaterialStatusInactive
+		}(),
+		CreatedAt: grpcutil.TimestampToTime(sm.CreatedAt),
+		UpdatedAt: grpcutil.TimestampToTime(sm.UpdatedAt),
+	}
+}
+
+func stashSupplierMaterialMeta(ctx context.Context, sm *pb.SupplierMaterialInfo, d *apiresource.SupplierMaterial) {
+	if sm == nil || sm.Material == nil {
+		return
+	}
+	m := materialep.MaterialPresenter(sm.Material)
+	m.Item = nil
+	meta := resourcekit.GetLoadMeta(ctx)
+	meta.Set(constants.ObjectTypeSupplierMaterial, d.ID, "material", &m)
+	if sm.Material.ItemId != "" {
+		meta.Set(constants.ObjectTypeMaterial, m.ID, "item_id", sm.Material.ItemId)
+	}
+}
+
+func supplierMaterialListFromProto(ctx context.Context, resp *pb.ListSupplierMaterialsResponse) *apiresource.List[apiresource.SupplierMaterial] {
+	if resp == nil {
+		return apiresource.NewList[apiresource.SupplierMaterial](nil, apiresource.PageInfo{})
+	}
+	items := make([]apiresource.SupplierMaterial, len(resp.SupplierMaterials))
+	for i, sm := range resp.SupplierMaterials {
+		items[i] = supplierMaterialFromProto(sm)
+		stashSupplierMaterialMeta(ctx, sm, &items[i])
+	}
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

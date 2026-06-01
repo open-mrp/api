@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
-# Download an OpenAPI spec from the release S3 buckets.
+# Download a release artifact from the release S3 buckets.
 #
-# Usage: fetch-openapi-spec-s3.sh <internal|public> <dest-path> [current|previous]
-#   current  — latest openapi.json (default)
+# Usage: fetch-openapi-spec-s3.sh <internal|public> <dest-path> [current|previous] [openapi|stainless]
+#   current  — latest artifact (default)
 #   previous — the object version immediately before the latest (requires bucket versioning)
+#   openapi  — openapi.json (default)
+#   stainless — stainless.yml
 set -euo pipefail
 
-sdk="${1:?usage: fetch-openapi-spec-s3.sh <internal|public> <dest-path> [current|previous]}"
-dest="${2:?usage: fetch-openapi-spec-s3.sh <internal|public> <dest-path> [current|previous]}"
+sdk="${1:?usage: fetch-openapi-spec-s3.sh <internal|public> <dest-path> [current|previous] [openapi|stainless]}"
+dest="${2:?usage: fetch-openapi-spec-s3.sh <internal|public> <dest-path> [current|previous] [openapi|stainless]}"
 which="${3:-current}"
+artifact="${4:-openapi}"
 
 case "$sdk" in
   internal)
@@ -23,7 +26,18 @@ case "$sdk" in
     ;;
 esac
 
-key="openapi.json"
+case "$artifact" in
+  openapi)
+    key="openapi.json"
+    ;;
+  stainless)
+    key="stainless.yml"
+    ;;
+  *)
+    echo "unknown artifact: $artifact (expected openapi or stainless)" >&2
+    exit 1
+    ;;
+esac
 mkdir -p "$(dirname "$dest")"
 
 case "$which" in

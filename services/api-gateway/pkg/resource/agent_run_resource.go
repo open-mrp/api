@@ -9,9 +9,9 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleAgentRunID = "agrn_01jm4r6700f8nwq3v5hx2d9ktp"
-const SampleAgentActionID = "agax_01jm4r6700f8nwq3v5hx2d9ktp"
-const SampleAgentRunStepID = "agrnev_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleAgentRunID = "agrn_01502aa6da9bbdbaa595915fa4"
+const SampleAgentActionID = "agax_018eddea543007633706d37109"
+const SampleAgentRunStepID = "agrnev_01148232974cd53b3ef1b6d437"
 
 // Agent run resource.
 type AgentRun struct {

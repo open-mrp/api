@@ -24,7 +24,7 @@ func TestAgentDefinitionPresenter(t *testing.T) {
 		Tools: []*pb.AgentDefinitionToolInfo{
 			{
 				Id:               "agdftl_01abc",
-				ToolId:           "tdef_01k0b1seed0searchproduct0",
+				ToolId:           "tdef_01f0c4d04780ace864e6cc3a74",
 				DisplayName:      "Search Products",
 				Description:      "Search for products by keyword or phrase",
 				ConfigSchemaJson: `{}`,
@@ -42,14 +42,8 @@ func TestAgentDefinitionPresenter(t *testing.T) {
 		UpdatedAt: now,
 	}
 
-	role := &ResolvedRole{
-		Name:        "Admin",
-		RoleType:    "admin",
-		Permissions: map[string]bool{"customer:read": true},
-	}
-
-	result := AgentDefinitionPresenter(def, role)
-	resourcetest.ValidateResourceStruct(t, "AgentDefinition", result)
+	result := AgentDefinitionPresenter(def)
+	resourcetest.ValidateExpandableStubs(t, "AgentDefinition", result)
 }
 
 func TestAgentDefinitionPresenter_NoRole(t *testing.T) {
@@ -72,8 +66,8 @@ func TestAgentDefinitionPresenter_NoRole(t *testing.T) {
 		UpdatedAt: now,
 	}
 
-	result := AgentDefinitionPresenter(def, nil)
-	resourcetest.ValidateResourceStruct(t, "AgentDefinition(NoRole)", result)
+	result := AgentDefinitionPresenter(def)
+	resourcetest.ValidateExpandableStubs(t, "AgentDefinition(NoRole)", result)
 }
 
 func TestAgentTokenUsagePresenter(t *testing.T) {

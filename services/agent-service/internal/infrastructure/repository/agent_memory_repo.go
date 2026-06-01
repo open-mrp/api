@@ -81,6 +81,22 @@ func (r *agentMemoryRepoImpl) ListAccountMemories(ctx context.Context, accountID
 	return rows, nil
 }
 
+func (r *agentMemoryRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]sqlc.AgentMemory, *apierror.APIError) {
+	ctx, span := tracing.StartSpan(ctx, memoryRepoTracer, "repository.agent_memory.get_by_ids")
+	defer span.End()
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := r.queries.GetAgentMemoriesByIDs(ctx, sqlc.GetAgentMemoriesByIDsParams{
+		Ids:       ids,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return rows, nil
+}
+
 func (r *agentMemoryRepoImpl) Update(ctx context.Context, params sqlc.UpdateAgentMemoryParams) *apierror.APIError {
 	ctx, span := tracing.StartSpan(ctx, memoryRepoTracer, "repository.agent_memory.update")
 	defer span.End()

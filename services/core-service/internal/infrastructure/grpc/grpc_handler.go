@@ -391,7 +391,11 @@ func (h *gRPCHandler) GetAccountRelation(ctx context.Context, req *pb.GetAccount
 
 	switch lookup := req.Lookup.(type) {
 	case *pb.GetAccountRelationRequest_UserId:
-		relation, apiErr = h.accountSvc.GetAccountRelationByUserID(ctx, req.OwnerAccountId, lookup.UserId)
+		actorAccountID := ""
+		if req.ActorAccountId != nil {
+			actorAccountID = *req.ActorAccountId
+		}
+		relation, apiErr = h.accountSvc.GetAccountRelationByUserID(ctx, req.OwnerAccountId, actorAccountID, lookup.UserId)
 	case *pb.GetAccountRelationRequest_ApiKeyId:
 		relation, apiErr = h.accountSvc.GetAccountRelationByAPIKeyID(ctx, req.OwnerAccountId, lookup.ApiKeyId)
 	default:
@@ -531,6 +535,36 @@ func (h *gRPCHandler) GetSandbox(ctx context.Context, req *pb.GetSandboxRequest)
 	return &pb.GetSandboxResponse{
 		Sandbox: sandboxToProto(sandbox),
 	}, nil
+}
+
+func (h *gRPCHandler) BatchGetSandboxesByIDs(ctx context.Context, req *pb.BatchGetSandboxesByIDsRequest) (*pb.BatchGetSandboxesByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	sandboxes, apiErr := h.sandboxSvc.BatchGetSandboxesByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	pbSandboxes := make([]*pb.SandboxInfo, len(sandboxes))
+	for i, s := range sandboxes {
+		pbSandboxes[i] = sandboxToProtoFlat(s)
+	}
+	return &pb.BatchGetSandboxesByIDsResponse{Sandboxes: pbSandboxes}, nil
+}
+
+// sandboxToProtoFlat returns the minimal SandboxInfo for V2 batch reads: it
+// always populates owner_account_id (the FK) so the api-gateway resolver can
+// stash it in LoadMeta, but never the denormalized owner_account_* fields
+// (those are filled by the Account loader when ?include[]=owner_account).
+func sandboxToProtoFlat(s *domain.SandboxAccount) *pb.SandboxInfo {
+	ownID := s.OwnerAccountID
+	return &pb.SandboxInfo{
+		Id:             s.TypeID,
+		Name:           s.Name,
+		CreatedAt:      timestamppb.New(s.CreatedAt),
+		UpdatedAt:      timestamppb.New(s.UpdatedAt),
+		OwnerAccountId: &ownID,
+	}
 }
 
 func (h *gRPCHandler) DeleteSandbox(ctx context.Context, req *pb.DeleteSandboxRequest) (*emptypb.Empty, error) {
@@ -873,6 +907,21 @@ func (h *gRPCHandler) ValidateUnits(ctx context.Context, req *pb.ValidateUnitsRe
 	}, nil
 }
 
+func (h *gRPCHandler) BatchGetUnitsByIDs(ctx context.Context, req *pb.BatchGetUnitsByIDsRequest) (*pb.BatchGetUnitsByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	units, apiErr := h.unitSvc.BatchGetUnitsByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	pbUnits := make([]*pb.UnitInfo, len(units))
+	for i, u := range units {
+		pbUnits[i] = unitToProto(u)
+	}
+	return &pb.BatchGetUnitsByIDsResponse{Units: pbUnits}, nil
+}
+
 func (h *gRPCHandler) SearchProducts(ctx context.Context, req *pb.SearchProductsRequest) (*pb.SearchProductsResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
@@ -1005,6 +1054,21 @@ func (h *gRPCHandler) GetPaymentTerm(ctx context.Context, req *pb.GetPaymentTerm
 	return &pb.GetPaymentTermResponse{
 		PaymentTerm: paymentTermToProto(paymentTerm),
 	}, nil
+}
+
+func (h *gRPCHandler) BatchGetPaymentTermsByIDs(ctx context.Context, req *pb.BatchGetPaymentTermsByIDsRequest) (*pb.BatchGetPaymentTermsByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	paymentTerms, apiErr := h.paymentTermSvc.BatchGetPaymentTermsByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	pbTerms := make([]*pb.PaymentTermInfo, len(paymentTerms))
+	for i, pt := range paymentTerms {
+		pbTerms[i] = paymentTermToProto(pt)
+	}
+	return &pb.BatchGetPaymentTermsByIDsResponse{PaymentTerms: pbTerms}, nil
 }
 
 func (h *gRPCHandler) CreatePaymentTerm(ctx context.Context, req *pb.CreatePaymentTermRequest) (*pb.CreatePaymentTermResponse, error) {
@@ -1244,6 +1308,21 @@ func (h *gRPCHandler) DeleteShippingTerm(ctx context.Context, req *pb.DeleteShip
 	return &emptypb.Empty{}, nil
 }
 
+func (h *gRPCHandler) BatchGetShippingTermsByIDs(ctx context.Context, req *pb.BatchGetShippingTermsByIDsRequest) (*pb.BatchGetShippingTermsByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	shippingTerms, apiErr := h.shippingTermSvc.BatchGetShippingTermsByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	pbTerms := make([]*pb.ShippingTermInfo, len(shippingTerms))
+	for i, st := range shippingTerms {
+		pbTerms[i] = shippingTermToProto(st)
+	}
+	return &pb.BatchGetShippingTermsByIDsResponse{ShippingTerms: pbTerms}, nil
+}
+
 func accountStatusToProto(as *domain.AccountStatus) *pb.AccountStatusInfo {
 	return &pb.AccountStatusInfo{
 		Id:        as.ID,
@@ -1301,6 +1380,21 @@ func (h *gRPCHandler) GetAccountStatus(ctx context.Context, req *pb.GetAccountSt
 	}, nil
 }
 
+func (h *gRPCHandler) BatchGetAccountStatusesByIDs(ctx context.Context, req *pb.BatchGetAccountStatusesByIDsRequest) (*pb.BatchGetAccountStatusesByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	statuses, apiErr := h.accountStatusSvc.BatchGetAccountStatusesByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	pbStatuses := make([]*pb.AccountStatusInfo, len(statuses))
+	for i, as := range statuses {
+		pbStatuses[i] = accountStatusToProto(as)
+	}
+	return &pb.BatchGetAccountStatusesByIDsResponse{AccountStatuses: pbStatuses}, nil
+}
+
 func priorityToProto(p *domain.Priority) *pb.PriorityInfo {
 	return &pb.PriorityInfo{
 		Id:        p.ID,
@@ -1356,6 +1450,22 @@ func (h *gRPCHandler) GetPriority(ctx context.Context, req *pb.GetPriorityReques
 	return &pb.GetPriorityResponse{
 		Priority: priorityToProto(priority),
 	}, nil
+}
+
+func (h *gRPCHandler) BatchGetPrioritiesByIDs(ctx context.Context, req *pb.BatchGetPrioritiesByIDsRequest) (*pb.BatchGetPrioritiesByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	priorities, apiErr := h.prioritySvc.BatchGetPrioritiesByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	pbPriorities := make([]*pb.PriorityInfo, len(priorities))
+	for i, p := range priorities {
+		pbPriorities[i] = priorityToProto(p)
+	}
+	return &pb.BatchGetPrioritiesByIDsResponse{Priorities: pbPriorities}, nil
 }
 
 func accountGroupToProto(ag *domain.AccountGroup) *pb.AccountGroupInfo {
@@ -1421,6 +1531,21 @@ func (h *gRPCHandler) GetAccountGroup(ctx context.Context, req *pb.GetAccountGro
 	return &pb.GetAccountGroupResponse{
 		AccountGroup: accountGroupToProto(accountGroup),
 	}, nil
+}
+
+func (h *gRPCHandler) BatchGetAccountGroupsByIDs(ctx context.Context, req *pb.BatchGetAccountGroupsByIDsRequest) (*pb.BatchGetAccountGroupsByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	accountGroups, apiErr := h.accountGroupSvc.BatchGetAccountGroupsByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	pbGroups := make([]*pb.AccountGroupInfo, len(accountGroups))
+	for i, ag := range accountGroups {
+		pbGroups[i] = accountGroupToProto(ag)
+	}
+	return &pb.BatchGetAccountGroupsByIDsResponse{AccountGroups: pbGroups}, nil
 }
 
 func (h *gRPCHandler) CreateAccountGroup(ctx context.Context, req *pb.CreateAccountGroupRequest) (*pb.CreateAccountGroupResponse, error) {
@@ -1569,6 +1694,21 @@ func (h *gRPCHandler) GetAddress(ctx context.Context, req *pb.GetAddressRequest)
 	return &pb.GetAddressResponse{
 		Address: addressToProto(address),
 	}, nil
+}
+
+func (h *gRPCHandler) BatchGetAddressesByIDs(ctx context.Context, req *pb.BatchGetAddressesByIDsRequest) (*pb.BatchGetAddressesByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	addresses, apiErr := h.addressSvc.BatchGetAddressesByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	pbAddresses := make([]*pb.AddressInfo, len(addresses))
+	for i, a := range addresses {
+		pbAddresses[i] = addressToProto(a)
+	}
+	return &pb.BatchGetAddressesByIDsResponse{Addresses: pbAddresses}, nil
 }
 
 func (h *gRPCHandler) ListAddresses(ctx context.Context, req *pb.ListAddressesRequest) (*pb.ListAddressesResponse, error) {
@@ -1775,6 +1915,21 @@ func (h *gRPCHandler) ListAccountIntegrations(ctx context.Context, req *pb.ListA
 	}, nil
 }
 
+func (h *gRPCHandler) BatchGetAccountIntegrationsByIDs(ctx context.Context, req *pb.BatchGetAccountIntegrationsByIDsRequest) (*pb.BatchGetAccountIntegrationsByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	integrations, apiErr := h.accountIntegrationSvc.BatchGetAccountIntegrationsByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	pbIntegrations := make([]*pb.AccountIntegrationInfo, len(integrations))
+	for i, ai := range integrations {
+		pbIntegrations[i] = accountIntegrationToProto(ai)
+	}
+	return &pb.BatchGetAccountIntegrationsByIDsResponse{AccountIntegrations: pbIntegrations}, nil
+}
+
 func (h *gRPCHandler) CreateAccountIntegration(ctx context.Context, req *pb.CreateAccountIntegrationRequest) (*pb.CreateAccountIntegrationResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
@@ -1927,6 +2082,38 @@ func (h *gRPCHandler) ListAdjustmentTypes(ctx context.Context, req *pb.ListAdjus
 			HasPrevPage: result.PageInfo.HasPrevPage,
 		},
 	}, nil
+}
+
+func (h *gRPCHandler) BatchGetAdjustmentTypesByIDs(ctx context.Context, req *pb.BatchGetAdjustmentTypesByIDsRequest) (*pb.BatchGetAdjustmentTypesByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	adjustmentTypes, apiErr := h.adjustmentTypeSvc.BatchGetAdjustmentTypesByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	pbAdjustmentTypes := make([]*pb.AdjustmentTypeInfo, len(adjustmentTypes))
+	for i, at := range adjustmentTypes {
+		pbAdjustmentTypes[i] = adjustmentTypeToProto(at)
+	}
+	return &pb.BatchGetAdjustmentTypesByIDsResponse{AdjustmentTypes: pbAdjustmentTypes}, nil
+}
+
+func (h *gRPCHandler) BatchGetAccountsByIDs(ctx context.Context, req *pb.BatchGetAccountsByIDsRequest) (*pb.BatchGetAccountsByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	accounts, apiErr := h.accountSvc.BatchGetAccountsByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	pbAccounts := make([]*pb.AccountInfo, len(accounts))
+	for i, a := range accounts {
+		pbAccounts[i] = accountToProto(a)
+	}
+	return &pb.BatchGetAccountsByIDsResponse{Accounts: pbAccounts}, nil
 }
 
 func (h *gRPCHandler) GetAccount(ctx context.Context, req *pb.GetAccountRequest) (*pb.GetAccountResponse, error) {
@@ -2137,6 +2324,26 @@ func (h *gRPCHandler) ListPermissionGroups(ctx context.Context, req *pb.ListPerm
 	}, nil
 }
 
+func (h *gRPCHandler) BatchGetPermissionGroupsByIDs(ctx context.Context, req *pb.BatchGetPermissionGroupsByIDsRequest) (*pb.BatchGetPermissionGroupsByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	groups, apiErr := h.permissionGroupSvc.BatchGetPermissionGroupsByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	pbGroups := make([]*pb.PermissionGroupInfo, len(groups))
+	for i, pg := range groups {
+		pbGroups[i] = permissionGroupToProto(pg)
+	}
+
+	return &pb.BatchGetPermissionGroupsByIDsResponse{
+		PermissionGroups: pbGroups,
+	}, nil
+}
+
 // Product Type handlers
 
 func productTypeToProto(pt *domain.ProductType) *pb.ProductTypeInfo {
@@ -2194,6 +2401,21 @@ func (h *gRPCHandler) GetProductType(ctx context.Context, req *pb.GetProductType
 	return &pb.GetProductTypeResponse{
 		ProductType: productTypeToProto(productType),
 	}, nil
+}
+
+func (h *gRPCHandler) BatchGetProductTypesByIDs(ctx context.Context, req *pb.BatchGetProductTypesByIDsRequest) (*pb.BatchGetProductTypesByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	productTypes, apiErr := h.productTypeSvc.BatchGetProductTypesByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	pbProductTypes := make([]*pb.ProductTypeInfo, len(productTypes))
+	for i, pt := range productTypes {
+		pbProductTypes[i] = productTypeToProto(pt)
+	}
+	return &pb.BatchGetProductTypesByIDsResponse{ProductTypes: pbProductTypes}, nil
 }
 
 func (h *gRPCHandler) CreateProductType(ctx context.Context, req *pb.CreateProductTypeRequest) (*pb.CreateProductTypeResponse, error) {

@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -21,6 +22,7 @@ func (e *CreateBillingPortalSessionEndpoint) Materialize() *apiendpoint.APIEndpo
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeBillingPortalSessionResponse,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.EmptyResource) (*apiresource.BillingPortalSessionResponse, *apierror.APIError) {
 			return svc.(BillingSvc).CreateBillingPortalSession
 		},

@@ -1,7 +1,6 @@
 package productlineep
 
 import (
-	"context"
 	"strconv"
 
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
@@ -103,17 +102,4 @@ func ProductLinePresenter(pl *pb.ProductLineInfo, ownerAccount *apiresource.Acco
 	}
 
 	return result
-}
-
-func ProductLineListPresenter(ctx context.Context, resp *pb.ListProductLinesResponse, ownerAccount *apiresource.Account) *apiresource.List[apiresource.ProductLine] {
-	if resp == nil {
-		return apiresource.NewList[apiresource.ProductLine](nil, apiresource.PageInfo{})
-	}
-
-	productLines := make([]apiresource.ProductLine, len(resp.ProductLines))
-	for i, pl := range resp.ProductLines {
-		productLines[i] = ProductLinePresenter(pl, ownerAccount)
-	}
-
-	return apiresource.NewList(productLines, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

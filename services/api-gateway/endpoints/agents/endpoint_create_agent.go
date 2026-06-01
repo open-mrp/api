@@ -136,6 +136,7 @@ func (e *CreateAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAgen
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeAgentDefinition,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateAgentRequest) (*apiresource.AgentDefinition, *apierror.APIError) {
 			return svc.(AgentSvc).CreateAgent
 		},

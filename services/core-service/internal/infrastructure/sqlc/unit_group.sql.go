@@ -332,6 +332,115 @@ func (q *Queries) GetUnitGroupUnitBase(ctx context.Context, arg GetUnitGroupUnit
 	return i, err
 }
 
+const getUnitGroupUnitsByIDsScoped = `-- name: GetUnitGroupUnitsByIDsScoped :many
+SELECT
+    ugu.id,
+    ugu.unit_id,
+    ugu.unit_group_id,
+    ugu.discount_percentage,
+    ugu.discount_fixed,
+    ugu.is_visible,
+    ugu.created_at,
+    ugu.updated_at,
+    u.name AS unit_name,
+    u.abbreviation AS unit_abbreviation,
+    u.unit_dimension_code AS unit_type,
+    u.ratio_numerator AS unit_ratio_numerator,
+    u.ratio_denominator AS unit_ratio_denominator,
+    u.offset_numerator AS unit_offset_numerator,
+    u.offset_denominator AS unit_offset_denominator,
+    u.is_base_unit AS unit_is_base_unit,
+    u.created_at AS unit_created_at,
+    u.updated_at AS unit_updated_at,
+    u.account_id AS unit_account_id
+FROM unit_group_unit ugu
+JOIN unit u ON ugu.unit_id = u.id
+JOIN unit_group ug ON ugu.unit_group_id = ug.id
+WHERE ugu.id IN (/*SLICE:ids*/?)
+AND (ug.account_id = ? OR ug.account_id IS NULL)
+`
+
+type GetUnitGroupUnitsByIDsScopedParams struct {
+	Ids       []string
+	AccountID sql.NullString
+}
+
+type GetUnitGroupUnitsByIDsScopedRow struct {
+	ID                    string
+	UnitID                string
+	UnitGroupID           string
+	DiscountPercentage    string
+	DiscountFixed         string
+	IsVisible             bool
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+	UnitName              string
+	UnitAbbreviation      string
+	UnitType              string
+	UnitRatioNumerator    string
+	UnitRatioDenominator  string
+	UnitOffsetNumerator   string
+	UnitOffsetDenominator string
+	UnitIsBaseUnit        bool
+	UnitCreatedAt         time.Time
+	UnitUpdatedAt         time.Time
+	UnitAccountID         sql.NullString
+}
+
+func (q *Queries) GetUnitGroupUnitsByIDsScoped(ctx context.Context, arg GetUnitGroupUnitsByIDsScopedParams) ([]GetUnitGroupUnitsByIDsScopedRow, error) {
+	query := getUnitGroupUnitsByIDsScoped
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetUnitGroupUnitsByIDsScopedRow
+	for rows.Next() {
+		var i GetUnitGroupUnitsByIDsScopedRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UnitID,
+			&i.UnitGroupID,
+			&i.DiscountPercentage,
+			&i.DiscountFixed,
+			&i.IsVisible,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.UnitName,
+			&i.UnitAbbreviation,
+			&i.UnitType,
+			&i.UnitRatioNumerator,
+			&i.UnitRatioDenominator,
+			&i.UnitOffsetNumerator,
+			&i.UnitOffsetDenominator,
+			&i.UnitIsBaseUnit,
+			&i.UnitCreatedAt,
+			&i.UnitUpdatedAt,
+			&i.UnitAccountID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUnitGroupsByIDs = `-- name: GetUnitGroupsByIDs :many
 SELECT
     ug.id,
@@ -377,6 +486,114 @@ func (q *Queries) GetUnitGroupsByIDs(ctx context.Context, ids []string) ([]GetUn
 			&i.Name,
 			&i.UnitTypeCode,
 			&i.BaseUnitID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getUnitGroupsByIDsScoped = `-- name: GetUnitGroupsByIDsScoped :many
+SELECT
+    ug.id,
+    ug.name,
+    ug.notes,
+    ug.unit_type_code,
+    ug.base_unit_id,
+    u.name AS base_unit_name,
+    u.abbreviation AS base_unit_abbreviation,
+    u.unit_dimension_code AS base_unit_type,
+    u.ratio_numerator AS base_unit_ratio_numerator,
+    u.ratio_denominator AS base_unit_ratio_denominator,
+    u.offset_numerator AS base_unit_offset_numerator,
+    u.offset_denominator AS base_unit_offset_denominator,
+    u.is_base_unit AS base_unit_is_base_unit,
+    u.created_at AS base_unit_created_at,
+    u.updated_at AS base_unit_updated_at,
+    u.account_id AS base_unit_account_id,
+    ug.account_id,
+    ug.created_at,
+    ug.updated_at
+FROM unit_group ug
+JOIN unit u ON ug.base_unit_id = u.id
+WHERE ug.id IN (/*SLICE:ids*/?)
+AND (ug.account_id = ? OR ug.account_id IS NULL)
+`
+
+type GetUnitGroupsByIDsScopedParams struct {
+	Ids       []string
+	AccountID sql.NullString
+}
+
+type GetUnitGroupsByIDsScopedRow struct {
+	ID                        string
+	Name                      string
+	Notes                     sql.NullString
+	UnitTypeCode              string
+	BaseUnitID                string
+	BaseUnitName              string
+	BaseUnitAbbreviation      string
+	BaseUnitType              string
+	BaseUnitRatioNumerator    string
+	BaseUnitRatioDenominator  string
+	BaseUnitOffsetNumerator   string
+	BaseUnitOffsetDenominator string
+	BaseUnitIsBaseUnit        bool
+	BaseUnitCreatedAt         time.Time
+	BaseUnitUpdatedAt         time.Time
+	BaseUnitAccountID         sql.NullString
+	AccountID                 sql.NullString
+	CreatedAt                 time.Time
+	UpdatedAt                 time.Time
+}
+
+func (q *Queries) GetUnitGroupsByIDsScoped(ctx context.Context, arg GetUnitGroupsByIDsScopedParams) ([]GetUnitGroupsByIDsScopedRow, error) {
+	query := getUnitGroupsByIDsScoped
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetUnitGroupsByIDsScopedRow
+	for rows.Next() {
+		var i GetUnitGroupsByIDsScopedRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Notes,
+			&i.UnitTypeCode,
+			&i.BaseUnitID,
+			&i.BaseUnitName,
+			&i.BaseUnitAbbreviation,
+			&i.BaseUnitType,
+			&i.BaseUnitRatioNumerator,
+			&i.BaseUnitRatioDenominator,
+			&i.BaseUnitOffsetNumerator,
+			&i.BaseUnitOffsetDenominator,
+			&i.BaseUnitIsBaseUnit,
+			&i.BaseUnitCreatedAt,
+			&i.BaseUnitUpdatedAt,
+			&i.BaseUnitAccountID,
+			&i.AccountID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

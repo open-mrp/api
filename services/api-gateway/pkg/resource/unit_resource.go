@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleUnitID = "un_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleUnitID = "un_01966263f74a5a0cae356000a1"
 const SampleUnitName = "Kilogram"
 const SampleUnitAbbreviation = "kg"
 

@@ -15,15 +15,11 @@ type RequestLogsEndpointGroup struct {
 
 type RequestLogsEndpointGroupConfig struct {
 	PlatformClient *grpcclient.PlatformServiceClient
-	CoreClient     *grpcclient.CoreServiceClient
 }
 
 func (c *RequestLogsEndpointGroupConfig) validate() error {
 	if c.PlatformClient == nil {
 		return fmt.Errorf("request logs endpoint group: platform client is required")
-	}
-	if c.CoreClient == nil {
-		return fmt.Errorf("request logs endpoint group: core client is required")
 	}
 	return nil
 }
@@ -35,7 +31,6 @@ func (*RequestLogsEndpointGroup) Materialize(config *RequestLogsEndpointGroupCon
 
 	requestLogSvc := requestlogep.NewRequestLogSvc(&requestlogep.RequestLogSvcConfig{
 		LoggingClient: config.PlatformClient.LoggingClient,
-		CoreClient:    config.CoreClient.Client,
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{

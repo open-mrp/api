@@ -408,3 +408,22 @@ func (s *departmentSvcImpl) DeleteDepartment(ctx context.Context, departmentID s
 
 	return nil
 }
+
+func (s *departmentSvcImpl) BatchGetDepartmentsByIDs(ctx context.Context, ids []string) ([]*domain.Department, *apierror.APIError) {
+	ctx, span := departmentSvcTracer.Start(ctx, "service.department.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainDepartments, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return s.repos.NewDepartmentRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
+}

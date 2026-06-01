@@ -103,6 +103,46 @@ func mapGetMachineRow(row sqlc.GetMachineRow) *domain.Machine {
 	return m
 }
 
+func mapGetMachinesByIDsRow(row sqlc.GetMachinesByIDsRow) *domain.Machine {
+	m := &domain.Machine{
+		ID:                  row.ID,
+		Name:                row.Name,
+		SerialNumber:        row.SerialNumber,
+		DepartmentID:        &row.DepartmentID,
+		DepartmentName:      &row.DepartmentName,
+		DepartmentCreatedAt: &row.DepartmentCreatedAt,
+		DepartmentUpdatedAt: &row.DepartmentUpdatedAt,
+		CreatedAt:           row.CreatedAt,
+		UpdatedAt:           row.UpdatedAt,
+	}
+	if row.Notes.Valid {
+		m.Notes = &row.Notes.String
+	}
+	if row.ProductionStepID.Valid {
+		m.ProductionStepID = &row.ProductionStepID.String
+	}
+	return m
+}
+
+func (r *machineRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.Machine, *apierror.APIError) {
+	ctx, span := machineRepoTracer.Start(ctx, "repository.machine.get_by_ids")
+	defer span.End()
+
+	rows, err := r.queries.GetMachinesByIDs(ctx, sqlc.GetMachinesByIDsParams{
+		Ids:       ids,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	machines := make([]*domain.Machine, len(rows))
+	for i, row := range rows {
+		machines[i] = mapGetMachinesByIDsRow(row)
+	}
+	return machines, nil
+}
+
 func (r *machineRepoImpl) List(ctx context.Context, params domain.ListMachinesParams) (*domain.ListMachinesResult, *apierror.APIError) {
 	ctx, span := machineRepoTracer.Start(ctx, "repository.machine.list")
 	defer span.End()

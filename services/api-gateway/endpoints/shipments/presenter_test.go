@@ -50,7 +50,7 @@ func TestShipmentPresenter(t *testing.T) {
 		UpdatedAt:                   now,
 	}
 
-	result := ShipmentPresenter(info)
+	result := shipmentDetailFromProtoFull(info)
 	resourcetest.ValidateExpandableStubs(t, "ShipmentDetail", result)
 }
 
@@ -88,7 +88,7 @@ func TestShipmentSummaryPresenter(t *testing.T) {
 		UpdatedAt:                   now,
 	}
 
-	result := ShipmentSummaryPresenter(info)
+	result := shipmentSummaryFromProto(info)
 	resourcetest.ValidateExpandableStubs(t, "ShipmentSummary", result)
 }
 
@@ -107,6 +107,6 @@ func TestShippingCaseDetailPresenter(t *testing.T) {
 		UpdatedAt:              now,
 	}
 
-	result := ShippingCaseDetailPresenter(info)
+	result := shippingCaseDetailFromProto(info)
 	resourcetest.ValidateExpandableStubs(t, "ShippingCaseDetail", result)
 }

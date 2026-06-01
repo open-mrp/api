@@ -30,6 +30,7 @@ func (e *ListAdjustmentTypesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Li
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAdjustmentTypesRequest) (*apiresource.List[apiresource.AdjustmentType], *apierror.APIError) {
 			return svc.(TransactionSvc).ListAdjustmentTypes
 		},
+		ObjectType: constants.ObjectTypeAdjustmentType,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAdjustmentType,
 			Fields:     []string{"owner"},

@@ -6,8 +6,8 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/patch"
@@ -62,7 +62,6 @@ func (m *accountUserSvcImpl) ListAccountUsers(ctx context.Context, req *ListAcco
 		Query:          req.Query,
 		RoleType:       req.RoleType.StringPtr(),
 		IncludeRemoved: removedScopeIncludesRemoved(req.RemovedScope),
-		Includes:       appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, accountUserSvcTracer, "service.account_users.list", domain.ServiceName,
@@ -73,22 +72,25 @@ func (m *accountUserSvcImpl) ListAccountUsers(ctx context.Context, req *ListAcco
 		return nil, apiErr
 	}
 
-	return AccountUserListPresenter(ctx, resp), nil
-}
-
-func (m *accountUserSvcImpl) GetAccountUser(ctx context.Context, req *RetrieveAccountUserRequest) (*apiresource.AccountUser, *apierror.APIError) {
-	pbReq := &pb.GetAccountUserRequest{AccountUserId: req.AccountUserID, Includes: appctx.GetRequestedIncludeKeys(ctx)}
-
-	resp, apiErr := grpcutil.CallRPC(ctx, accountUserSvcTracer, "service.account_users.get", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetAccountUserResponse, error) {
-			return m.coreClient.GetAccountUser(ctx, pbReq, opts...)
-		})
+	ids := make([]string, len(resp.AccountUsers))
+	for i, au := range resp.AccountUsers {
+		ids[i] = au.Id
+	}
+	loaded, apiErr := resourceloaders.LoadAccountUsers(ctx, ids)
 	if apiErr != nil {
 		return nil, apiErr
 	}
+	users := make([]apiresource.AccountUser, 0, len(ids))
+	for _, id := range ids {
+		if v, ok := loaded[id]; ok {
+			users = append(users, *(v.(*apiresource.AccountUser)))
+		}
+	}
+	return apiresource.NewList(users, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
+}
 
-	result := AccountUserPresenter(resp.AccountUser)
-	return &result, nil
+func (m *accountUserSvcImpl) GetAccountUser(ctx context.Context, req *RetrieveAccountUserRequest) (*apiresource.AccountUser, *apierror.APIError) {
+	return loadAccountUserByID(ctx, req.AccountUserID)
 }
 
 func (m *accountUserSvcImpl) CreateAccountUser(ctx context.Context, req *CreateAccountUserRequest) (*apiresource.AccountUser, *apierror.APIError) {
@@ -110,8 +112,7 @@ func (m *accountUserSvcImpl) CreateAccountUser(ctx context.Context, req *CreateA
 		return nil, apiErr
 	}
 
-	result := AccountUserPresenter(resp.AccountUser)
-	return &result, nil
+	return loadAccountUserByID(ctx, resp.AccountUser.Id)
 }
 
 func (m *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, req *UpdateAccountUserRequest) (*apiresource.AccountUser, *apierror.APIError) {
@@ -123,7 +124,6 @@ func (m *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, req *UpdateA
 		RoleId:                  patch.StringFieldPtrToProto(req.RoleID),
 		DepartmentId:            patch.StringFieldPtrToProto(req.DepartmentID),
 		NotificationPreferences: toProtoNotificationPrefs(req.Preferences),
-		Includes:                appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, accountUserSvcTracer, "service.account_users.update", domain.ServiceName,
@@ -134,8 +134,7 @@ func (m *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, req *UpdateA
 		return nil, apiErr
 	}
 
-	result := AccountUserPresenter(resp.AccountUser)
-	return &result, nil
+	return loadAccountUserByID(ctx, resp.AccountUser.Id)
 }
 
 func (m *accountUserSvcImpl) ActivateAccountUser(ctx context.Context, req *ActivateAccountUserRequest) (*apiresource.EmptyResource, *apierror.APIError) {
@@ -165,6 +164,18 @@ func (m *accountUserSvcImpl) transitionAccountUserStatus(ctx context.Context, ac
 	}
 
 	return &apiresource.EmptyResource{}, nil
+}
+
+func loadAccountUserByID(ctx context.Context, id string) (*apiresource.AccountUser, *apierror.APIError) {
+	loaded, apiErr := resourceloaders.LoadAccountUsers(ctx, []string{id})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	v, ok := loaded[id]
+	if !ok {
+		return nil, apierror.NewResourceNotFoundError("Account user not found.")
+	}
+	return v.(*apiresource.AccountUser), nil
 }
 
 func toProtoNotificationPrefs(in []NotificationPreferenceItem) []*pb.NotificationPreferenceItem {

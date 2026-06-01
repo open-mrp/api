@@ -92,6 +92,7 @@ func (e *UpdateCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateC
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeCustomer,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateCustomerRequest) (*apiresource.Customer, *apierror.APIError) {
 			return svc.(CustomerSvc).UpdateCustomer
 		},

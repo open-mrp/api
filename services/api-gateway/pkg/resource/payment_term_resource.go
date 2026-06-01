@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SamplePaymentTermID = "pytm_01jm4r6700f8nwq3v5hx2d9ktp"
+const SamplePaymentTermID = "pytm_018694d6601ea771cd1b52e890"
 const SamplePaymentTermName = "Net 30"
 
 // Payment term resource.
@@ -41,4 +41,28 @@ var SamplePaymentTerm = &PaymentTerm{
 
 func (*PaymentTerm) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SamplePaymentTerm)
+}
+
+func ExpandablePaymentTermStub(id, name string, status constants.PaymentTermStatus, ts time.Time) *PaymentTerm {
+	if id == "" {
+		id = SamplePaymentTermID
+	}
+	if name == "" {
+		name = SamplePaymentTermName
+	}
+	if status == "" {
+		status = constants.PaymentTermStatusActive
+	}
+	if ts.IsZero() {
+		ts = time.Unix(0, 0).UTC()
+	}
+	return &PaymentTerm{
+		ID:        id,
+		Object:    constants.ObjectTypePaymentTerm,
+		Name:      name,
+		Status:    status,
+		Owner:     SystemOwner(),
+		CreatedAt: ts,
+		UpdatedAt: ts,
+	}
 }

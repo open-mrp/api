@@ -337,14 +337,44 @@ func (r *apiKeyRepoImpl) FindByTypeID(ctx context.Context, typeID string, includ
 	return mapBaseRow(&row), nil
 }
 
-func (r *apiKeyRepoImpl) Revoke(ctx context.Context, typeID string) *apierror.APIError {
+func (r *apiKeyRepoImpl) GetByIDs(ctx context.Context, ownerAccountID string, ids []string) ([]*apikey.APIKey, *apierror.APIError) {
+	ctx, span := apiKeyRepoTracer.Start(ctx, "repository.api_key.get_by_ids")
+	defer span.End()
+
+	rows, err := r.db.GetAPIKeysByIDs(ctx, sqlc.GetAPIKeysByIDsParams{
+		Ids:            ids,
+		OwnerAccountID: ownerAccountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	keys := make([]*apikey.APIKey, len(rows))
+	for i, row := range rows {
+		keys[i] = mapBaseRow(&row)
+	}
+	return keys, nil
+}
+
+func (r *apiKeyRepoImpl) Revoke(ctx context.Context, typeID string, ownerAccountID string) *apierror.APIError {
 	ctx, span := apiKeyRepoTracer.Start(ctx, "repository.api_key.revoke")
 	defer span.End()
 
-	err := r.db.RevokeAPIKeyByTypeID(ctx, typeID)
+	result, err := r.db.RevokeAPIKeyByTypeID(ctx, sqlc.RevokeAPIKeyByTypeIDParams{
+		TypeID:         typeID,
+		OwnerAccountID: ownerAccountID,
+	})
 
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return tracing.Trace(span, apierror.NewInternalError(err, "failed to read rows affected"))
+	}
+	if rows == 0 {
+		return tracing.Trace(span, apierror.NewResourceNotFoundError("API key not found."))
 	}
 
 	return nil

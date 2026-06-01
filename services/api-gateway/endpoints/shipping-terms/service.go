@@ -6,10 +6,9 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
-	ownerutil "github.com/augno/api/services/api-gateway/internal/owner"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/patch"
 	pb "github.com/augno/api/shared/proto/core"
@@ -55,10 +54,9 @@ func NewShippingTermSvc(config *ShippingTermSvcConfig) ShippingTermSvc {
 
 func (m *shippingTermSvcImpl) ListShippingTerms(ctx context.Context, req *ListShippingTermsRequest) (*apiresource.List[apiresource.ShippingTerm], *apierror.APIError) {
 	pbReq := &pb.ListShippingTermsRequest{
-		Cursor:   req.Cursor,
-		Limit:    req.Limit,
-		Query:    req.Query,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
+		Cursor: req.Cursor,
+		Limit:  req.Limit,
+		Query:  req.Query,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, shippingTermSvcTracer, "service.shipping_terms.list", domain.ServiceName,
@@ -70,35 +68,25 @@ func (m *shippingTermSvcImpl) ListShippingTerms(ctx context.Context, req *ListSh
 		return nil, apiErr
 	}
 
-	var ownerAccount *apiresource.Account
-	for _, st := range resp.ShippingTerms {
-		if st.AccountId != nil {
-			ownerAccount = ownerutil.ResolveOwnerAccount(ctx, m.coreClient, st.AccountId)
-			break
-		}
+	ids := make([]string, len(resp.ShippingTerms))
+	for i, st := range resp.ShippingTerms {
+		ids[i] = st.Id
 	}
-
-	return ShippingTermListPresenter(ctx, resp, ownerAccount), nil
-}
-
-func (m *shippingTermSvcImpl) GetShippingTerm(ctx context.Context, req *RetrieveShippingTermRequest) (*apiresource.ShippingTerm, *apierror.APIError) {
-	pbReq := &pb.GetShippingTermRequest{
-		Id:       req.ShippingTermID,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
-	}
-
-	resp, apiErr := grpcutil.CallRPC(ctx, shippingTermSvcTracer, "service.shipping_terms.get", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetShippingTermResponse, error) {
-			return m.coreClient.GetShippingTerm(ctx, pbReq, opts...)
-		})
-
+	loaded, apiErr := resourceloaders.LoadShippingTerms(ctx, ids)
 	if apiErr != nil {
 		return nil, apiErr
 	}
+	items := make([]apiresource.ShippingTerm, 0, len(ids))
+	for _, id := range ids {
+		if v, ok := loaded[id]; ok {
+			items = append(items, *(v.(*apiresource.ShippingTerm)))
+		}
+	}
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
+}
 
-	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.ShippingTerm.AccountId)
-	result := ShippingTermPresenter(resp.ShippingTerm, ownerAccount)
-	return &result, nil
+func (m *shippingTermSvcImpl) GetShippingTerm(ctx context.Context, req *RetrieveShippingTermRequest) (*apiresource.ShippingTerm, *apierror.APIError) {
+	return loadShippingTermByID(ctx, req.ShippingTermID)
 }
 
 func (m *shippingTermSvcImpl) CreateShippingTerm(ctx context.Context, req *CreateShippingTermRequest) (*apiresource.ShippingTerm, *apierror.APIError) {
@@ -106,7 +94,6 @@ func (m *shippingTermSvcImpl) CreateShippingTerm(ctx context.Context, req *Creat
 		Name:                        req.Name,
 		Type:                        string(req.Type),
 		FreeShippingServiceLevelIds: req.FreeShippingServiceLevelIDs,
-		Includes:                    appctx.GetRequestedIncludeKeys(ctx),
 	}
 	if q, ok := req.FlatRate.Value(); ok {
 		pbReq.FlatRate = &pb.QuantityInput{
@@ -130,16 +117,13 @@ func (m *shippingTermSvcImpl) CreateShippingTerm(ctx context.Context, req *Creat
 		return nil, apiErr
 	}
 
-	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.ShippingTerm.AccountId)
-	result := ShippingTermPresenter(resp.ShippingTerm, ownerAccount)
-	return &result, nil
+	return loadShippingTermByID(ctx, resp.ShippingTerm.Id)
 }
 
 func (m *shippingTermSvcImpl) UpdateShippingTerm(ctx context.Context, req *UpdateShippingTermRequest) (*apiresource.ShippingTerm, *apierror.APIError) {
 	pbReq := &pb.UpdateShippingTermRequest{
-		Id:       req.ShippingTermID,
-		Name:     req.Name,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
+		Id:   req.ShippingTermID,
+		Name: req.Name,
 	}
 	if req.Type != nil {
 		t := string(*req.Type)
@@ -158,9 +142,7 @@ func (m *shippingTermSvcImpl) UpdateShippingTerm(ctx context.Context, req *Updat
 		return nil, apiErr
 	}
 
-	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.ShippingTerm.AccountId)
-	result := ShippingTermPresenter(resp.ShippingTerm, ownerAccount)
-	return &result, nil
+	return loadShippingTermByID(ctx, resp.ShippingTerm.Id)
 }
 
 func (m *shippingTermSvcImpl) DeleteShippingTerm(ctx context.Context, req *DeleteShippingTermRequest) (*apiresource.EmptyResource, *apierror.APIError) {
@@ -178,4 +160,16 @@ func (m *shippingTermSvcImpl) DeleteShippingTerm(ctx context.Context, req *Delet
 	}
 
 	return &apiresource.EmptyResource{}, nil
+}
+
+func loadShippingTermByID(ctx context.Context, id string) (*apiresource.ShippingTerm, *apierror.APIError) {
+	loaded, apiErr := resourceloaders.LoadShippingTerms(ctx, []string{id})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	v, ok := loaded[id]
+	if !ok {
+		return nil, apierror.NewResourceNotFoundError("Shipping term not found.")
+	}
+	return v.(*apiresource.ShippingTerm), nil
 }

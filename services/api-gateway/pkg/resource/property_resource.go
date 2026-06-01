@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SamplePropertyID = "pp_01jm4r6700f8nwq3v5hx2d9ktp"
+const SamplePropertyID = "pp_01e21344878064372f69e67093"
 const SamplePropertyName = "Color"
 
 // Property that groups attributes.

@@ -7,6 +7,8 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -62,7 +64,9 @@ func (m *accountSvcImpl) GetAccount(ctx context.Context, req *RetrieveAccountReq
 		return nil, apiErr
 	}
 
-	result := AccountPresenter(resp.Account)
+	meta := resourcekit.GetLoadMeta(ctx)
+	result := accountFromProto(resp.Account)
+	stashAccountMeta(meta, resp.Account)
 	return &result, nil
 }
 
@@ -80,7 +84,7 @@ func (m *accountSvcImpl) GetAccountBySlug(ctx context.Context, req *RetrieveAcco
 		return nil, apiErr
 	}
 
-	result := PublicAccountPresenter(resp.Account)
+	result := publicAccountFromProto(resp.Account)
 	return &result, nil
 }
 
@@ -107,7 +111,9 @@ func (m *accountSvcImpl) UpdateAccount(ctx context.Context, req *UpdateAccountRe
 		return nil, apiErr
 	}
 
-	result := AccountPresenter(resp.Account)
+	meta := resourcekit.GetLoadMeta(ctx)
+	result := accountFromProto(resp.Account)
+	stashAccountMeta(meta, resp.Account)
 	return &result, nil
 }
 
@@ -149,4 +155,66 @@ func (m *accountSvcImpl) GetAccountLogoURL(ctx context.Context, req *GetAccountL
 	return &apiresource.AccountLogoURL{
 		URL: resp.Url,
 	}, nil
+}
+
+func accountFromProto(a *pb.AccountInfo) apiresource.Account {
+	if a == nil {
+		return apiresource.Account{}
+	}
+
+	return apiresource.Account{
+		ID:        a.Id,
+		Object:    constants.ObjectTypeAccount,
+		Name:      a.Name,
+		CreatedAt: grpcutil.TimestampToTime(a.CreatedAt),
+		UpdatedAt: grpcutil.TimestampToTime(a.UpdatedAt),
+	}
+}
+
+func stashAccountMeta(meta *resourcekit.LoadMeta, a *pb.AccountInfo) {
+	if a == nil {
+		return
+	}
+
+	if a.Branding != nil {
+		meta.Set(constants.ObjectTypeAccount, a.Id, "branding", &apiresource.AccountBranding{
+			ID:              a.Branding.Id,
+			Object:          constants.ObjectTypeAccountBranding,
+			SupportEmail:    a.Branding.SupportEmail,
+			PhoneNumber:     a.Branding.PhoneNumber,
+			LogoURL:         a.Branding.LogoUrl,
+			FacebookHandle:  a.Branding.FacebookHandle,
+			InstagramHandle: a.Branding.InstagramHandle,
+			LinkedInHandle:  a.Branding.LinkedinHandle,
+			TwitterHandle:   a.Branding.TwitterHandle,
+			WebsiteURL:      a.Branding.WebsiteUrl,
+			CreatedAt:       grpcutil.TimestampToTime(a.Branding.CreatedAt),
+			UpdatedAt:       grpcutil.TimestampToTime(a.Branding.UpdatedAt),
+		})
+	}
+
+	if a.Portal != nil {
+		meta.Set(constants.ObjectTypeAccount, a.Id, "portal", &apiresource.AccountPortal{
+			ID:        a.Portal.Id,
+			Object:    constants.ObjectTypeAccountPortal,
+			Slug:      a.Portal.Slug,
+			CreatedAt: grpcutil.TimestampToTime(a.Portal.CreatedAt),
+			UpdatedAt: grpcutil.TimestampToTime(a.Portal.UpdatedAt),
+		})
+	}
+}
+
+func publicAccountFromProto(a *pb.PublicAccountInfo) apiresource.PublicAccount {
+	if a == nil {
+		return apiresource.PublicAccount{}
+	}
+
+	return apiresource.PublicAccount{
+		ID:           a.Id,
+		Object:       constants.ObjectTypePublicAccount,
+		Name:         a.Name,
+		Slug:         a.Slug,
+		SupportEmail: a.SupportEmail,
+		LogoURL:      a.LogoUrl,
+	}
 }

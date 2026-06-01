@@ -125,6 +125,80 @@ func (q *Queries) DeleteItemCategoryProperty(ctx context.Context, arg DeleteItem
 	return err
 }
 
+const getItemCategoriesByIDs = `-- name: GetItemCategoriesByIDs :many
+SELECT
+    ic.id,
+    ic.name,
+    ic.notes,
+    ic.item_category_type_code,
+    ic.unit_group_id,
+    ic.account_id,
+    ic.created_at,
+    ic.updated_at
+FROM item_category ic
+WHERE ic.id IN (/*SLICE:ids*/?)
+AND (ic.account_id = ? OR ic.account_id IS NULL)
+`
+
+type GetItemCategoriesByIDsParams struct {
+	Ids       []string
+	AccountID sql.NullString
+}
+
+type GetItemCategoriesByIDsRow struct {
+	ID                   string
+	Name                 string
+	Notes                sql.NullString
+	ItemCategoryTypeCode string
+	UnitGroupID          string
+	AccountID            sql.NullString
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+}
+
+func (q *Queries) GetItemCategoriesByIDs(ctx context.Context, arg GetItemCategoriesByIDsParams) ([]GetItemCategoriesByIDsRow, error) {
+	query := getItemCategoriesByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetItemCategoriesByIDsRow
+	for rows.Next() {
+		var i GetItemCategoriesByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Notes,
+			&i.ItemCategoryTypeCode,
+			&i.UnitGroupID,
+			&i.AccountID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getItemCategory = `-- name: GetItemCategory :one
 SELECT
     ic.id,

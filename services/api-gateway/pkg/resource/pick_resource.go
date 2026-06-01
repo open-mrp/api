@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SamplePickDetailID = "pk_01jm4r6700f8nwq3v5hx2d9ktp"
+const SamplePickDetailID = "pk_016452192feb7952d8393f0105"
 const SamplePickNumber = "PK-001"
 
 // PickDetail is a full pick resource.

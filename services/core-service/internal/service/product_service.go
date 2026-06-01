@@ -132,7 +132,7 @@ func (s *productSvcImpl) ListProductsFull(ctx context.Context, params domain.Lis
 
 	if identity.IsExternalTarget() {
 		meds := s.mediators()
-		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 	}
@@ -173,7 +173,7 @@ func (s *productSvcImpl) ExportProducts(ctx context.Context, params domain.Expor
 	}
 	if identity.IsExternalTarget() {
 		meds := s.mediators()
-		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 	}
@@ -183,6 +183,8 @@ func (s *productSvcImpl) ExportProducts(ctx context.Context, params domain.Expor
 		if actorAccountID != nil {
 			params.CustomerIDs = []string{*actorAccountID}
 		}
+		isPortalReady := true
+		params.IsPortalReady = &isPortalReady
 	}
 
 	params.AccountID = identity.Target.AccountID
@@ -213,7 +215,7 @@ func (s *productSvcImpl) GetProduct(ctx context.Context, params domain.GetProduc
 
 	if identity.IsExternalTarget() {
 		meds := s.mediators()
-		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 	}
@@ -353,7 +355,7 @@ func (s *productSvcImpl) CreateProduct(ctx context.Context, params domain.Create
 				return apiErr
 			}
 			if exists {
-				return apierror.NewConflictErrorWithParam("An item with this SKU already exists.", "sku")
+				return apierror.NewConflictErrorWithParam(fmt.Sprintf("An item with the SKU '%s' already exists.", params.SKU), "sku")
 			}
 
 			// Get base unit for rates from category.
@@ -543,7 +545,7 @@ func (s *productSvcImpl) UpdateProduct(ctx context.Context, params domain.Update
 					return apiErr
 				}
 				if exists {
-					return apierror.NewConflictErrorWithParam("An item with this SKU already exists.", "sku")
+					return apierror.NewConflictErrorWithParam(fmt.Sprintf("An item with the SKU '%s' already exists.", *params.SKU), "sku")
 				}
 			}
 
@@ -770,7 +772,7 @@ func (s *productSvcImpl) ValidateProducts(ctx context.Context, params domain.Val
 
 	if identity.IsExternalTarget() {
 		meds := s.mediators()
-		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 	}
@@ -789,6 +791,31 @@ func (s *productSvcImpl) ValidateProducts(ctx context.Context, params domain.Val
 	}
 
 	return result, nil
+}
+
+func (s *productSvcImpl) BatchGetProductsByIDs(ctx context.Context, ids []string) ([]*domain.ProductFull, *apierror.APIError) {
+	ctx, span := productSvcTracer.Start(ctx, "service.product.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	meds := s.mediators()
+	if apiErr := authorizeCatalogBatchRead(ctx, identity, span, meds, func() *apierror.APIError {
+		return checkProductReadPermission(identity)
+	}); apiErr != nil {
+		return nil, apiErr
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	products, apiErr := s.repos.NewProductRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return products, nil
 }
 
 // checkProductReadPermission checks the appropriate read permission based on the identity context.

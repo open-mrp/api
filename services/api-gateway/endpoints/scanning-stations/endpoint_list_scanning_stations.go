@@ -27,6 +27,7 @@ func (e *ListScanningStationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*L
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeScanningStation,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListScanningStationsRequest) (*apiresource.List[apiresource.ScanningStation], *apierror.APIError) {
 			return svc.(ScanningStationSvc).ListScanningStations
 		},

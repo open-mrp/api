@@ -27,6 +27,7 @@ func (e *ListPropertiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPro
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeProperty,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeProperty,
 			Fields:     []string{"attributes"},

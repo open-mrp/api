@@ -6,8 +6,8 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/patch"
 	pb "github.com/augno/api/shared/proto/core"
@@ -55,41 +55,38 @@ func NewLocationSvc(config *LocationSvcConfig) LocationSvc {
 
 func (m *locationSvcImpl) ListLocations(ctx context.Context, req *ListLocationsRequest) (*apiresource.List[apiresource.Location], *apierror.APIError) {
 	pbReq := &pb.ListLocationsRequest{
-		Cursor:   req.Cursor,
-		Limit:    req.Limit,
-		Query:    req.Query,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
+		Cursor: req.Cursor,
+		Limit:  req.Limit,
+		Query:  req.Query,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, locationSvcTracer, "service.locations.list", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListLocationsResponse, error) {
 			return m.coreClient.ListLocations(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
 
-	return LocationListPresenter(ctx, resp), nil
+	ids := make([]string, len(resp.Locations))
+	for i, loc := range resp.Locations {
+		ids[i] = loc.Id
+	}
+	loaded, apiErr := resourceloaders.LoadLocations(ctx, ids)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	locations := make([]apiresource.Location, 0, len(ids))
+	for _, id := range ids {
+		if v, ok := loaded[id]; ok {
+			locations = append(locations, *(v.(*apiresource.Location)))
+		}
+	}
+	return apiresource.NewList(locations, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
 
 func (m *locationSvcImpl) GetLocation(ctx context.Context, req *RetrieveLocationRequest) (*apiresource.Location, *apierror.APIError) {
-	pbReq := &pb.GetLocationRequest{
-		Id:       req.LocationID,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
-	}
-
-	resp, apiErr := grpcutil.CallRPC(ctx, locationSvcTracer, "service.locations.get", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetLocationResponse, error) {
-			return m.coreClient.GetLocation(ctx, pbReq, opts...)
-		})
-
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	result := LocationPresenter(resp.Location)
-	return &result, nil
+	return loadLocationByID(ctx, req.LocationID)
 }
 
 func (m *locationSvcImpl) CreateLocation(ctx context.Context, req *CreateLocationRequest) (*apiresource.Location, *apierror.APIError) {
@@ -97,7 +94,6 @@ func (m *locationSvcImpl) CreateLocation(ctx context.Context, req *CreateLocatio
 		Name:     req.Name,
 		TypeCode: string(req.TypeCode),
 		ParentId: req.ParentID.Ptr(),
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 	if childIDs := req.ChildIDs.Ptr(); childIDs != nil {
 		pbReq.ChildIds = *childIDs
@@ -107,13 +103,11 @@ func (m *locationSvcImpl) CreateLocation(ctx context.Context, req *CreateLocatio
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateLocationResponse, error) {
 			return m.coreClient.CreateLocation(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
 
-	result := LocationPresenter(resp.Location)
-	return &result, nil
+	return loadLocationByID(ctx, resp.Location.Id)
 }
 
 func (m *locationSvcImpl) UpdateLocation(ctx context.Context, req *UpdateLocationRequest) (*apiresource.Location, *apierror.APIError) {
@@ -122,7 +116,6 @@ func (m *locationSvcImpl) UpdateLocation(ctx context.Context, req *UpdateLocatio
 		Name:     req.Name,
 		TypeCode: req.TypeCode.StringPtr(),
 		ParentId: patch.StringFieldPtrToProto(req.ParentID),
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 	pbReq.ChildIds = patch.StringListSliceFieldPtrToProto(req.ChildIDs)
 
@@ -130,13 +123,11 @@ func (m *locationSvcImpl) UpdateLocation(ctx context.Context, req *UpdateLocatio
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateLocationResponse, error) {
 			return m.coreClient.UpdateLocation(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
 
-	result := LocationPresenter(resp.Location)
-	return &result, nil
+	return loadLocationByID(ctx, resp.Location.Id)
 }
 
 func (m *locationSvcImpl) DeleteLocation(ctx context.Context, req *DeleteLocationRequest) (*apiresource.EmptyResource, *apierror.APIError) {
@@ -154,6 +145,18 @@ func (m *locationSvcImpl) DeleteLocation(ctx context.Context, req *DeleteLocatio
 	}
 
 	return &apiresource.EmptyResource{}, nil
+}
+
+func loadLocationByID(ctx context.Context, id string) (*apiresource.Location, *apierror.APIError) {
+	loaded, apiErr := resourceloaders.LoadLocations(ctx, []string{id})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	v, ok := loaded[id]
+	if !ok {
+		return nil, apierror.NewResourceNotFoundError("Location not found.")
+	}
+	return v.(*apiresource.Location), nil
 }
 
 func (m *locationSvcImpl) ListLocationTypes(ctx context.Context, req *ListLocationTypesRequest) (*apiresource.List[apiresource.LocationType], *apierror.APIError) {

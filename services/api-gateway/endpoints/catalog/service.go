@@ -62,7 +62,7 @@ func (m *catalogSvcImpl) ListCatalogProductLines(ctx context.Context, req *ListC
 		return nil, apiErr
 	}
 
-	return CatalogProductLineListPresenter(ctx, resp), nil
+	return catalogProductLineListFromProto(ctx, resp), nil
 }
 
 func (m *catalogSvcImpl) ListCatalogProducts(ctx context.Context, req *ListCatalogProductsRequest) (*apiresource.List[apiresource.CatalogCategory], *apierror.APIError) {
@@ -130,4 +130,21 @@ func (m *catalogSvcImpl) ListCatalogProducts(ctx context.Context, req *ListCatal
 	}
 
 	return apiresource.NewList(categories, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
+}
+
+func catalogProductLineListFromProto(ctx context.Context, resp *pb.ListCatalogProductLinesResponse) *apiresource.List[apiresource.CatalogProductLine] {
+	if resp == nil {
+		return apiresource.NewList[apiresource.CatalogProductLine](nil, apiresource.PageInfo{})
+	}
+
+	items := make([]apiresource.CatalogProductLine, len(resp.ProductLines))
+	for i, pl := range resp.ProductLines {
+		items[i] = apiresource.CatalogProductLine{
+			ID:     pl.Id,
+			Object: constants.ObjectTypeCatalogProductLine,
+			Name:   pl.Name,
+		}
+	}
+
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

@@ -6,9 +6,8 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
-	ownerutil "github.com/augno/api/services/api-gateway/internal/owner"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -56,11 +55,10 @@ func NewItemCategorySvc(config *ItemCategorySvcConfig) ItemCategorySvc {
 
 func (m *itemCategorySvcImpl) ListItemCategories(ctx context.Context, req *ListItemCategoriesRequest) (*apiresource.List[apiresource.ItemCategory], *apierror.APIError) {
 	pbReq := &pb.ListItemCategoriesRequest{
-		Cursor:   req.Cursor,
-		Limit:    req.Limit,
-		Query:    req.Query,
-		Type:     req.Type.StringPtr(),
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
+		Cursor: req.Cursor,
+		Limit:  req.Limit,
+		Query:  req.Query,
+		Type:   req.Type.StringPtr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, itemCategorySvcTracer, "service.item-categories.list", domain.ServiceName,
@@ -72,35 +70,25 @@ func (m *itemCategorySvcImpl) ListItemCategories(ctx context.Context, req *ListI
 		return nil, apiErr
 	}
 
-	var ownerAccount *apiresource.Account
-	for _, ic := range resp.ItemCategories {
-		if ic.AccountId != nil {
-			ownerAccount = ownerutil.ResolveOwnerAccount(ctx, m.coreClient, ic.AccountId)
-			break
-		}
+	ids := make([]string, len(resp.ItemCategories))
+	for i, ic := range resp.ItemCategories {
+		ids[i] = ic.Id
 	}
-
-	return ItemCategoryListPresenter(ctx, resp, ownerAccount), nil
-}
-
-func (m *itemCategorySvcImpl) GetItemCategory(ctx context.Context, req *RetrieveItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError) {
-	pbReq := &pb.GetItemCategoryRequest{
-		Id:       req.ItemCategoryID,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
-	}
-
-	resp, apiErr := grpcutil.CallRPC(ctx, itemCategorySvcTracer, "service.item-categories.get", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetItemCategoryResponse, error) {
-			return m.coreClient.GetItemCategory(ctx, pbReq, opts...)
-		})
-
+	loaded, apiErr := resourceloaders.LoadItemCategories(ctx, ids)
 	if apiErr != nil {
 		return nil, apiErr
 	}
+	items := make([]apiresource.ItemCategory, 0, len(ids))
+	for _, id := range ids {
+		if v, ok := loaded[id]; ok {
+			items = append(items, *(v.(*apiresource.ItemCategory)))
+		}
+	}
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
+}
 
-	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.ItemCategory.AccountId)
-	result := ItemCategoryPresenter(resp.ItemCategory, ownerAccount)
-	return &result, nil
+func (m *itemCategorySvcImpl) GetItemCategory(ctx context.Context, req *RetrieveItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError) {
+	return loadItemCategoryByID(ctx, req.ItemCategoryID)
 }
 
 func (m *itemCategorySvcImpl) CreateItemCategory(ctx context.Context, req *CreateItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError) {
@@ -108,7 +96,6 @@ func (m *itemCategorySvcImpl) CreateItemCategory(ctx context.Context, req *Creat
 		Name:        req.Name,
 		Type:        string(req.Type),
 		UnitGroupId: req.UnitGroupID,
-		Includes:    appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, itemCategorySvcTracer, "service.item-categories.create", domain.ServiceName,
@@ -120,17 +107,14 @@ func (m *itemCategorySvcImpl) CreateItemCategory(ctx context.Context, req *Creat
 		return nil, apiErr
 	}
 
-	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.ItemCategory.AccountId)
-	result := ItemCategoryPresenter(resp.ItemCategory, ownerAccount)
-	return &result, nil
+	return loadItemCategoryByID(ctx, resp.ItemCategory.Id)
 }
 
 func (m *itemCategorySvcImpl) UpdateItemCategory(ctx context.Context, req *UpdateItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError) {
 	pbReq := &pb.UpdateItemCategoryRequest{
-		Id:       req.ItemCategoryID,
-		Name:     req.Name,
-		Notes:    req.Notes,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
+		Id:    req.ItemCategoryID,
+		Name:  req.Name,
+		Notes: req.Notes,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, itemCategorySvcTracer, "service.item-categories.update", domain.ServiceName,
@@ -142,9 +126,7 @@ func (m *itemCategorySvcImpl) UpdateItemCategory(ctx context.Context, req *Updat
 		return nil, apiErr
 	}
 
-	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.ItemCategory.AccountId)
-	result := ItemCategoryPresenter(resp.ItemCategory, ownerAccount)
-	return &result, nil
+	return loadItemCategoryByID(ctx, resp.ItemCategory.Id)
 }
 
 func (m *itemCategorySvcImpl) DeleteItemCategory(ctx context.Context, req *DeleteItemCategoryRequest) (*apiresource.EmptyResource, *apierror.APIError) {
@@ -216,4 +198,16 @@ func (m *itemCategorySvcImpl) ChangeItemCategoryUnitGroup(ctx context.Context, r
 	}
 
 	return &apiresource.EmptyResource{}, nil
+}
+
+func loadItemCategoryByID(ctx context.Context, id string) (*apiresource.ItemCategory, *apierror.APIError) {
+	loaded, apiErr := resourceloaders.LoadItemCategories(ctx, []string{id})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	v, ok := loaded[id]
+	if !ok {
+		return nil, apierror.NewResourceNotFoundError("Item category not found.")
+	}
+	return v.(*apiresource.ItemCategory), nil
 }

@@ -183,6 +183,42 @@ func (r *orderDiscountRepoImpl) List(ctx context.Context, params domain.ListOrde
 	return &domain.ListOrderDiscountsResult{OrderDiscounts: result, PageInfo: pageInfo}, nil
 }
 
+func mapGetOrderDiscountsByIDsRow(row sqlc.GetOrderDiscountsByIDsRow) *domain.OrderDiscount {
+	return &domain.OrderDiscount{
+		ID:               row.ID,
+		Name:             row.Name,
+		Code:             row.Code,
+		Percentage:       floatToDecimalString(row.Percentage),
+		Amount:           floatToDecimalString(row.Value),
+		DiscountTypeCode: row.DiscountTypeCode,
+		AccountID:        row.AccountID,
+		OrderCount:       safeconv.Int64ToInt32(row.OrderCount),
+		CreatedAt:        row.CreatedAt,
+		UpdatedAt:        row.UpdatedAt,
+	}
+}
+
+func (r *orderDiscountRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.OrderDiscount, *apierror.APIError) {
+	ctx, span := orderDiscountRepoTracer.Start(ctx, "repository.order_discount.get_by_ids")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := r.queries.GetOrderDiscountsByIDs(ctx, sqlc.GetOrderDiscountsByIDsParams{
+		Ids:       ids,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make([]*domain.OrderDiscount, len(rows))
+	for i, row := range rows {
+		out[i] = mapGetOrderDiscountsByIDsRow(row)
+	}
+	return out, nil
+}
+
 func (r *orderDiscountRepoImpl) Get(ctx context.Context, params domain.GetOrderDiscountParams) (*domain.OrderDiscount, *apierror.APIError) {
 	ctx, span := orderDiscountRepoTracer.Start(ctx, "repository.order_discount.get")
 	defer span.End()

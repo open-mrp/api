@@ -27,6 +27,7 @@ func (e *ListPrioritiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPri
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypePriority,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListPrioritiesRequest) (*apiresource.List[apiresource.Priority], *apierror.APIError) {
 			return svc.(PrioritySvc).ListPriorities
 		},

@@ -386,3 +386,63 @@ func (r *ediRepoImpl) GetEDIRun(ctx context.Context, accountID, ediRunID string)
 
 	return mapGetEDIRunRow(row), nil
 }
+
+func (r *ediRepoImpl) GetDCLocationsByIDs(ctx context.Context, ownerAccountID string, ids []string) ([]*domain.DCLocation, *apierror.APIError) {
+	ctx, span := ediRepoTracer.Start(ctx, "repository.edi.get_dc_locations_by_ids")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := r.queries.GetDCLocationsByIDs(ctx, sqlc.GetDCLocationsByIDsParams{
+		Ids:            ids,
+		OwnerAccountID: ownerAccountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make([]*domain.DCLocation, len(rows))
+	for i, row := range rows {
+		loc := &domain.DCLocation{
+			ID:             row.ID,
+			Location:       row.Location,
+			AccountID:      row.AccountID,
+			OwnerAccountID: row.OwnerAccountID,
+			CreatedAt:      row.CreatedAt,
+			UpdatedAt:      row.UpdatedAt,
+		}
+		if row.CustomerName.Valid {
+			loc.CustomerName = row.CustomerName.String
+		}
+		out[i] = loc
+	}
+	return out, nil
+}
+
+func (r *ediRepoImpl) GetEDIRunsByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.EDIRun, *apierror.APIError) {
+	ctx, span := ediRepoTracer.Start(ctx, "repository.edi.get_edi_runs_by_ids")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := r.queries.GetEDIRunsByIDs(ctx, sqlc.GetEDIRunsByIDsParams{
+		Ids:       ids,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make([]*domain.EDIRun, len(rows))
+	for i, row := range rows {
+		out[i] = &domain.EDIRun{
+			ID:           row.ID,
+			CompletedAt:  row.CompletedAt,
+			HasSucceeded: row.HasSucceeded,
+			AccountID:    row.AccountID,
+			CreatedAt:    row.CreatedAt,
+			UpdatedAt:    row.UpdatedAt,
+		}
+	}
+	return out, nil
+}

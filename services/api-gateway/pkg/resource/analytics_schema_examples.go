@@ -17,7 +17,7 @@ func sampleSalesEntry() SalesEntry {
 	inv := analyticsExampleTime()
 	srep := SampleAccountUserID
 	return SalesEntry{
-		ID:                "sale_analytics_doc_01jm4r6700f8nwq3v5hx2d9ktp",
+		ID:                "sale_analytics_doc_01061c4dc0d10772b6f05d1446",
 		IssuedAt:          &t,
 		OrderNumber:       SampleSalesOrderNumber,
 		OrderID:           SampleSalesOrderDetailID,
@@ -216,7 +216,7 @@ func (*AnalyzeMaterialsResponse) SchemaExample() any {
 		Object: constants.ObjectTypeList,
 		Data: []MaterialAnalyticsEntry{
 			{
-				ID:                  "mat_analytics_01jm4r6700f8nwq3v5hx2d9ktp",
+				ID:                  "mat_analytics_018f61eaea85de4fc0ee224c0d",
 				ItemID:              SampleMaterialID,
 				Sku:                 SampleItemSKU,
 				QuantityInInventory: SampleQuantity,

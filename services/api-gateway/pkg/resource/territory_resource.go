@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleTerritoryID = "te_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleTerritoryID = "te_0132f802e5603f7d356fac79d1"
 
 // Sales rep territory assignment.
 type Territory struct {

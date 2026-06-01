@@ -53,6 +53,9 @@ service AuthService {
   // Returns a single API key's metadata by ID.
   rpc GetAPIKey(GetAPIKeyRequest) returns (GetAPIKeyResponse);
 
+  // Returns API keys matching the given IDs for the caller's target account.
+  rpc BatchGetAPIKeysByIDs(BatchGetAPIKeysByIDsRequest) returns (BatchGetAPIKeysByIDsResponse);
+
   // Returns a sandbox API key for API docs, reusing or creating as needed.
   rpc GetOrCreateDocAPIKey(GetOrCreateDocAPIKeyRequest) returns (GetOrCreateDocAPIKeyResponse);
 
@@ -289,6 +292,14 @@ message GetAPIKeyRequest {
 
 message GetAPIKeyResponse {
   APIKeyInfo api_key = 1;
+}
+
+message BatchGetAPIKeysByIDsRequest {
+  repeated string ids = 1;
+}
+
+message BatchGetAPIKeysByIDsResponse {
+  repeated APIKeyInfo api_keys = 1;
 }
 
 message APIKeyInfo {

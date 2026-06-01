@@ -47,6 +47,7 @@ func (e *UpdateProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeProductLine,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateProductLineRequest) (*apiresource.ProductLine, *apierror.APIError) {
 			return svc.(ProductLineSvc).UpdateProductLine
 		},

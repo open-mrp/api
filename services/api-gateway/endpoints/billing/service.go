@@ -86,7 +86,7 @@ func (m *billingSvcImpl) GetAccountUsage(ctx context.Context, _ *apiresource.Emp
 		return nil, apiErr
 	}
 
-	result := AccountUsagePresenter(resp)
+	result := accountUsageFromProto(resp)
 
 	// Fetch spending cap from core-service to include in agent spend info.
 	identity, ok := appctx.GetIdentityFromContext(ctx)
@@ -121,7 +121,7 @@ func (m *billingSvcImpl) GetPricingPlans(ctx context.Context, req *apiresource.P
 		return nil, apiErr
 	}
 
-	return PricingPlansListPresenter(ctx, resp), nil
+	return pricingPlansListFromProto(ctx, resp), nil
 }
 
 func (m *billingSvcImpl) GetPlanChangePreview(ctx context.Context, req *GetPlanProrationRequest) (*apiresource.PlanChangeProration, *apierror.APIError) {
@@ -136,7 +136,7 @@ func (m *billingSvcImpl) GetPlanChangePreview(ctx context.Context, req *GetPlanP
 		return nil, apiErr
 	}
 
-	return PlanChangePreviewPresenter(resp), nil
+	return planChangePreviewFromProto(resp), nil
 }
 
 func (m *billingSvcImpl) EnsureBillingCustomer(ctx context.Context, _ *apiresource.EmptyResource) (*apiresource.EnsureBillingCustomerResponse, *apierror.APIError) {
@@ -191,7 +191,7 @@ func (m *billingSvcImpl) SwitchPlan(ctx context.Context, req *SwitchPlanRequest)
 		return nil, apiErr
 	}
 
-	return SwitchPlanPresenter(resp), nil
+	return switchPlanFromProto(resp), nil
 }
 
 func (m *billingSvcImpl) GetSpendingCap(ctx context.Context, _ *apiresource.EmptyResource) (*apiresource.SpendingCapResponse, *apierror.APIError) {
@@ -233,4 +233,171 @@ func (m *billingSvcImpl) SetSpendingCap(ctx context.Context, req *SetSpendingCap
 		Object:   constants.ObjectTypeSpendingCapResponse,
 		CapCents: resp.CapCents,
 	}, nil
+}
+
+func pricingPlanFromProto(p *pb.PricingPlan) apiresource.PricingPlan {
+	if p == nil {
+		return apiresource.PricingPlan{}
+	}
+
+	limitSlice := make([]apiresource.PlanLimit, len(p.Limits))
+	for i, l := range p.Limits {
+		var value *int
+		if l.Value != nil {
+			v := int(*l.Value)
+			value = &v
+		}
+		limitSlice[i] = apiresource.PlanLimit{
+			Object: constants.ObjectTypePlanLimit,
+			Key:    l.Key,
+			Value:  value,
+		}
+	}
+
+	var pricePerMonth *float64
+	if p.PricePerMonth != nil {
+		pricePerMonth = p.PricePerMonth
+	}
+
+	var seatMinimum *int
+	if p.SeatMinimum != nil {
+		v := int(*p.SeatMinimum)
+		seatMinimum = &v
+	}
+
+	var includesPreviousPlan *string
+	if p.IncludesPreviousPlan != nil {
+		includesPreviousPlan = p.IncludesPreviousPlan
+	}
+
+	return apiresource.PricingPlan{
+		ID:                   p.Id,
+		Object:               constants.ObjectTypePricingPlan,
+		Name:                 p.Name,
+		PlanTypeCode:         constants.PublicPlanCode(p.PlanTypeCode),
+		PricePerSeat:         p.PricePerSeat,
+		PricePerMonth:        pricePerMonth,
+		SeatMinimum:          seatMinimum,
+		Limits:               apiresource.NewList(limitSlice, apiresource.PageInfo{}),
+		DisplayFeatures:      p.DisplayFeatures,
+		DisplayOrder:         int(p.DisplayOrder),
+		IsHighlighted:        p.IsHighlighted,
+		ButtonText:           p.ButtonText,
+		IncludesPreviousPlan: includesPreviousPlan,
+	}
+}
+
+func pricingPlansListFromProto(ctx context.Context, resp *pb.ListPricingPlansResponse) *apiresource.List[apiresource.PricingPlan] {
+	if resp == nil {
+		return apiresource.NewList([]apiresource.PricingPlan{}, apiresource.PageInfo{})
+	}
+
+	plans := make([]apiresource.PricingPlan, len(resp.Plans))
+	for i, p := range resp.Plans {
+		plans[i] = pricingPlanFromProto(p)
+	}
+
+	return apiresource.NewList(plans, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
+}
+
+func usageItemFromProto(item *pb.UsageItem) apiresource.UsageItem {
+	if item == nil {
+		return apiresource.UsageItem{}
+	}
+	ui := apiresource.UsageItem{
+		Object:  constants.ObjectTypeUsageItem,
+		Current: int(item.Current),
+	}
+	if item.Limit != nil {
+		v := int(*item.Limit)
+		ui.Limit = &v
+	}
+	return ui
+}
+
+func planChangePreviewFromProto(resp *pb.PreviewPlanChangeResponse) *apiresource.PlanChangeProration {
+	if resp == nil || resp.Preview == nil {
+		return &apiresource.PlanChangeProration{}
+	}
+
+	p := resp.Preview
+	lineItems := make([]apiresource.PlanChangeLineItem, len(p.LineItems))
+	for i, li := range p.LineItems {
+		lineItems[i] = apiresource.PlanChangeLineItem{
+			Object:      constants.ObjectTypePlanChangeLineItem,
+			Description: li.Description,
+			Amount:      li.Amount,
+		}
+	}
+
+	return &apiresource.PlanChangeProration{
+		Object:                     constants.ObjectTypePlanChangeProration,
+		NetAmount:                  p.NetAmount,
+		FormattedNetAmount:         p.FormattedNetAmount,
+		MonthlyBillAmount:          p.MonthlyBillAmount,
+		FormattedMonthlyBillAmount: p.FormattedMonthlyBillAmount,
+		LineItems:                  apiresource.NewList(lineItems, apiresource.PageInfo{}),
+		IsEstimate:                 p.IsEstimate,
+	}
+}
+
+func switchPlanFromProto(resp *pb.SwitchPlanResponse) *apiresource.SwitchPlanResponse {
+	if resp == nil {
+		return &apiresource.SwitchPlanResponse{}
+	}
+
+	return &apiresource.SwitchPlanResponse{
+		Object:   constants.ObjectTypeSwitchPlanResponse,
+		Success:  resp.Success,
+		IntentID: resp.IntentId,
+	}
+}
+
+func accountUsageFromProto(resp *pb.GetAccountUsageResponse) *apiresource.AccountUsageResponse {
+	if resp == nil {
+		return &apiresource.AccountUsageResponse{}
+	}
+
+	result := &apiresource.AccountUsageResponse{
+		Object:    constants.ObjectTypeAccountUsageResponse,
+		Seats:     usageItemFromProto(resp.Seats),
+		Invoices:  usageItemFromProto(resp.Invoices),
+		Batches:   usageItemFromProto(resp.Batches),
+		Sandboxes: usageItemFromProto(resp.Sandboxes),
+	}
+
+	if resp.Subscription != nil {
+		result.Subscription = &apiresource.SubscriptionInfo{
+			Object:           constants.ObjectTypeSubscriptionInfo,
+			ServicingStatus:  resp.Subscription.ServicingStatus,
+			CollectionStatus: resp.Subscription.CollectionStatus,
+		}
+	}
+
+	result.AgentSpend = &apiresource.AgentSpendInfo{
+		Object:              constants.ObjectTypeAgentSpendInfo,
+		EstimatedSpendCents: resp.EstimatedAgentSpendCents,
+	}
+
+	if resp.AgentTokenDetail != nil {
+		d := resp.AgentTokenDetail
+		billingPeriodEnd := ""
+		if d.BillingPeriodEnd != nil {
+			billingPeriodEnd = d.BillingPeriodEnd.AsTime().UTC().Format("2006-01-02T15:04:05Z")
+		}
+		result.AgentTokenDetail = &apiresource.AgentTokenDetail{
+			Object:                      constants.ObjectTypeAgentTokenDetail,
+			IncludedTokens:              d.IncludedTokens,
+			UsedTokens:                  d.UsedTokens,
+			InputTokens:                 d.InputTokens,
+			OutputTokens:                d.OutputTokens,
+			AdditionalTokensPurchased:   d.AdditionalTokensPurchased,
+			TotalAvailable:              d.TotalAvailable,
+			CurrentPeriodCost:           d.CurrentPeriodCost,
+			BillingPeriodEnd:            billingPeriodEnd,
+			OverageCostPerMillionTokens: d.OverageCostPerMillionTokens,
+		}
+	}
+
+	return result
 }

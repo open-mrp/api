@@ -76,7 +76,9 @@ func optOutKey(operationID, include string) string {
 //	seed-gap: nested resource isn't in the seed data; add it.
 //	bug:      backend doesn't attach the nested resource when requested.
 //	schema:   the relationship isn't representable in the current schema.
-var includesOptOut = map[string]string{}
+var includesOptOut = map[string]string{
+	"retrieve-settlement::responsible_user": "bug: settlement stores user ID not account_user ID; loader cannot resolve",
+}
 
 // assertIncludePopulated navigates the response to the JSON path described by
 // the include key and asserts that the value is present and non-empty.

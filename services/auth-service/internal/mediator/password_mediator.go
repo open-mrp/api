@@ -70,8 +70,11 @@ func NewPasswordMed(config *PasswordMedConfig) domain.PasswordMed {
 // Validate validates the identifier/password combination and returns the associated user.
 //
 //  1. Look up the user by identifier (email or user ID).
-//  2. If the user has no stored password hash, send a password reset email (when an
-//     email is on file) and return a validation error prompting the user to reset.
+//  2. If the user has no stored password hash, silently send a password reset email
+//     (when an email is on file) and return the generic invalid-credentials error so
+//     that the response is indistinguishable from a missing user or wrong password.
+//     This preserves recovery for legitimate passwordless users without leaking
+//     account state to unauthenticated callers.
 //  3. Compare the provided password against the stored hash.
 //  4. Return the user if the password matches; return an authentication error otherwise.
 func (s *passwordMedImpl) Validate(ctx context.Context, identifier, password string) (*types.User, *apierror.APIError) {
@@ -94,7 +97,7 @@ func (s *passwordMedImpl) Validate(ctx context.Context, identifier, password str
 				return nil, tracing.Trace(span, err)
 			}
 		}
-		return nil, tracing.Trace(span, apierror.NewValidationError("You need to reset your password. We've sent a password reset email."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError(pwdutil.ErrInvalidCredentials))
 	}
 
 	match, err := pwdutil.CompareHashAndPassword(ctx, *user.HashedPassword, password)

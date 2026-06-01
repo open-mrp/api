@@ -116,7 +116,7 @@ func TestRequestLogs_ListPagination(t *testing.T) {
 
 	page2, _, err := apiClient.GetListFromPageURL(list.PageInfo.NextPageURL)
 	require.NoError(t, err)
-	require.Len(t, page2.Data, 1)
+	requirePageLen(t, page2.Data, 1)
 
 	page2ID := DataItemField(page2.Data[0], "id")
 	assert.NotEqual(t, page1ID, page2ID, "Page 2 should return a different item")

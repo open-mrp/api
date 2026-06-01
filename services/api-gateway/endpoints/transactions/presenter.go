@@ -14,6 +14,9 @@ func TransactionDetailPresenter(d *pb.TransactionInfo) apiresource.TransactionDe
 		return apiresource.TransactionDetail{}
 	}
 
+	createdAt := grpcutil.TimestampToTime(d.CreatedAt)
+	updatedAt := grpcutil.TimestampToTime(d.UpdatedAt)
+
 	tx := apiresource.TransactionDetail{
 		ID:               d.Id,
 		Object:           constants.ObjectTypeTransaction,
@@ -21,8 +24,8 @@ func TransactionDetailPresenter(d *pb.TransactionInfo) apiresource.TransactionDe
 		IsFullyAllocated: d.IsFullyAllocated,
 		StripePaymentID:  d.StripePaymentId,
 		AllocationCount:  d.AllocationCount,
-		CreatedAt:        grpcutil.TimestampToTime(d.CreatedAt),
-		UpdatedAt:        grpcutil.TimestampToTime(d.UpdatedAt),
+		CreatedAt:        createdAt,
+		UpdatedAt:        updatedAt,
 	}
 
 	tx.Amount = &apiresource.Quantity{
@@ -30,10 +33,7 @@ func TransactionDetailPresenter(d *pb.TransactionInfo) apiresource.TransactionDe
 		Object:       constants.ObjectTypeQuantity,
 		Value:        d.AmountValue,
 		DisplayValue: apiresource.FormatDisplayValue(d.AmountValue, d.AmountUnitAbbreviation, string(constants.UnitTypeCurrency)),
-		Unit: &apiresource.Unit{
-			ID:     d.AmountUnitId,
-			Object: constants.ObjectTypeUnit,
-		},
+		Unit:         apiresource.ExpandableUnitStub(d.AmountUnitId, "", d.AmountUnitAbbreviation, string(constants.UnitTypeCurrency), createdAt),
 	}
 
 	if d.CustomerId != nil {
@@ -60,6 +60,12 @@ func TransactionDetailPresenter(d *pb.TransactionInfo) apiresource.TransactionDe
 			customer.CommissionPolicy = constants.CommissionPolicy(*d.CustomerCommissionPolicy)
 		} else {
 			customer.CommissionPolicy = constants.CommissionPolicyApplied
+		}
+		if customer.CreatedAt.IsZero() {
+			customer.CreatedAt = createdAt
+		}
+		if customer.UpdatedAt.IsZero() {
+			customer.UpdatedAt = updatedAt
 		}
 		tx.Customer = customer
 	}
@@ -104,8 +110,11 @@ func TransactionDetailPresenter(d *pb.TransactionInfo) apiresource.TransactionDe
 
 	if d.AdjustmentTypeId != nil {
 		tx.AdjustmentType = &apiresource.AdjustmentType{
-			ID:     *d.AdjustmentTypeId,
-			Object: constants.ObjectTypeAdjustmentType,
+			ID:        *d.AdjustmentTypeId,
+			Object:    constants.ObjectTypeAdjustmentType,
+			Owner:     apiresource.SystemOwner(),
+			CreatedAt: createdAt,
+			UpdatedAt: updatedAt,
 		}
 		if d.AdjustmentTypeName != nil {
 			tx.AdjustmentType.Name = *d.AdjustmentTypeName
@@ -131,14 +140,17 @@ func TransactionSummaryPresenter(d *pb.TransactionSummaryInfo) apiresource.Trans
 		return apiresource.TransactionSummary{}
 	}
 
+	createdAt := grpcutil.TimestampToTime(d.CreatedAt)
+	updatedAt := grpcutil.TimestampToTime(d.UpdatedAt)
+
 	ts := apiresource.TransactionSummary{
 		ID:               d.Id,
 		Object:           constants.ObjectTypeTransactionSummary,
 		Number:           d.Number,
 		IsFullyAllocated: d.IsFullyAllocated,
 		AllocationCount:  d.AllocationCount,
-		CreatedAt:        grpcutil.TimestampToTime(d.CreatedAt),
-		UpdatedAt:        grpcutil.TimestampToTime(d.UpdatedAt),
+		CreatedAt:        createdAt,
+		UpdatedAt:        updatedAt,
 	}
 
 	ts.Amount = &apiresource.Quantity{
@@ -146,10 +158,7 @@ func TransactionSummaryPresenter(d *pb.TransactionSummaryInfo) apiresource.Trans
 		Object:       constants.ObjectTypeQuantity,
 		Value:        d.AmountValue,
 		DisplayValue: apiresource.FormatDisplayValue(d.AmountValue, d.AmountUnitAbbreviation, string(constants.UnitTypeCurrency)),
-		Unit: &apiresource.Unit{
-			ID:     d.AmountUnitId,
-			Object: constants.ObjectTypeUnit,
-		},
+		Unit:         apiresource.ExpandableUnitStub(d.AmountUnitId, "", d.AmountUnitAbbreviation, string(constants.UnitTypeCurrency), createdAt),
 	}
 
 	if d.CustomerId != nil {
@@ -177,6 +186,12 @@ func TransactionSummaryPresenter(d *pb.TransactionSummaryInfo) apiresource.Trans
 		} else {
 			customer.CommissionPolicy = constants.CommissionPolicyApplied
 		}
+		if customer.CreatedAt.IsZero() {
+			customer.CreatedAt = createdAt
+		}
+		if customer.UpdatedAt.IsZero() {
+			customer.UpdatedAt = updatedAt
+		}
 		ts.Customer = customer
 	}
 
@@ -202,8 +217,11 @@ func TransactionSummaryPresenter(d *pb.TransactionSummaryInfo) apiresource.Trans
 
 	if d.AdjustmentTypeId != nil {
 		ts.AdjustmentType = &apiresource.AdjustmentType{
-			ID:     *d.AdjustmentTypeId,
-			Object: constants.ObjectTypeAdjustmentType,
+			ID:        *d.AdjustmentTypeId,
+			Object:    constants.ObjectTypeAdjustmentType,
+			Owner:     apiresource.SystemOwner(),
+			CreatedAt: createdAt,
+			UpdatedAt: updatedAt,
 		}
 		if d.AdjustmentTypeName != nil {
 			ts.AdjustmentType.Name = *d.AdjustmentTypeName
@@ -229,28 +247,11 @@ func TransactionAllocationPresenter(a *pb.TransactionAllocationInfo) apiresource
 			Object:       constants.ObjectTypeQuantity,
 			Value:        a.AmountValue,
 			DisplayValue: apiresource.FormatDisplayValue(a.AmountValue, a.AmountUnitAbbreviation, string(constants.UnitTypeCurrency)),
-			Unit: &apiresource.Unit{
-				ID:     a.AmountUnitId,
-				Object: constants.ObjectTypeUnit,
-			},
+			Unit:         apiresource.ExpandableUnitStub(a.AmountUnitId, "", a.AmountUnitAbbreviation, string(constants.UnitTypeCurrency), grpcutil.TimestampToTime(a.CreatedAt)),
 		},
-		Note: a.Note,
-		Transaction: &apiresource.TransactionDetail{
-			ID:     a.TransactionId,
-			Object: constants.ObjectTypeTransaction,
-		},
+		Note:      a.Note,
 		CreatedAt: grpcutil.TimestampToTime(a.CreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(a.UpdatedAt),
-	}
-
-	if a.InvoiceId != nil {
-		alloc.Invoice = &apiresource.InvoiceSummary{
-			ID:     *a.InvoiceId,
-			Object: constants.ObjectTypeInvoiceSummary,
-		}
-		if a.InvoiceNumber != nil {
-			alloc.Invoice.Number = *a.InvoiceNumber
-		}
 	}
 
 	return alloc

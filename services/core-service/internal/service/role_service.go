@@ -470,6 +470,48 @@ func (s *roleSvcImpl) DeleteRole(ctx context.Context, roleID string) *apierror.A
 	return nil
 }
 
+func (s *roleSvcImpl) BatchGetRolesByIDs(ctx context.Context, ids []string) ([]*domain.RoleWithPermissions, *apierror.APIError) {
+	ctx, span := roleSvcTracer.Start(ctx, "service.role.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainRoles, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	roles, apiErr := s.repos.NewRoleRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	roleIDs := make([]string, len(roles))
+	for i, r := range roles {
+		roleIDs[i] = r.ID
+	}
+
+	permsByRole, apiErr := s.repos.NewRolePermissionRepo().ListByRoleIDs(ctx, roleIDs)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	result := make([]*domain.RoleWithPermissions, len(roles))
+	for i, r := range roles {
+		result[i] = &domain.RoleWithPermissions{
+			Role:        *r,
+			Permissions: permsByRole[r.ID],
+		}
+	}
+
+	return result, nil
+}
+
 // permissionSummary is a lightweight, stable representation of a role permission
 // used for audit diff comparison. It excludes metadata fields (ID, RoleID,
 // timestamps) that change on every delete+recreate cycle.

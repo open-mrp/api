@@ -149,6 +149,13 @@ message AddChildAccountResponse {
 message RemoveChildAccountRequest {
   string child_account_id = 1;
 }
+// Batched read for the api-gateway resourcekit resolver. IDs are relation_ids.
+message BatchGetChildAccountsByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetChildAccountsByIDsResponse {
+  repeated ChildAccountProto items = 1;
+}
 message BatchQuantityInfo {
   string id = 1;
   string measure = 2;

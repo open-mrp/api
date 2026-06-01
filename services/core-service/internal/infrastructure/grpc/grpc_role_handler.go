@@ -148,6 +148,26 @@ func (h *gRPCHandler) DeleteRole(ctx context.Context, req *pb.DeleteRoleRequest)
 	return &emptypb.Empty{}, nil
 }
 
+func (h *gRPCHandler) BatchGetRolesByIDs(ctx context.Context, req *pb.BatchGetRolesByIDsRequest) (*pb.BatchGetRolesByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	results, apiErr := h.roleSvc.BatchGetRolesByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	roles := make([]*pb.RoleDetail, len(results))
+	for i, rwp := range results {
+		roles[i] = roleWithPermissionsToProto(rwp)
+	}
+
+	return &pb.BatchGetRolesByIDsResponse{
+		Roles: roles,
+	}, nil
+}
+
 func roleWithPermissionsToProto(rwp *domain.RoleWithPermissions) *pb.RoleDetail {
 	if rwp == nil {
 		return nil

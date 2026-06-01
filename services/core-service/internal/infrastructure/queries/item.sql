@@ -501,6 +501,32 @@ WHERE i.id = sqlc.arg('id')
 AND i.account_id = sqlc.arg('account_id')
 AND i.deleted_at IS NULL;
 
+-- name: GetItemsByIDs :many
+SELECT
+    i.id,
+    i.sku,
+    i.description,
+    i.notes,
+    i.item_type_code,
+    i.item_category_id,
+    i.unit_value_id,
+    i.unit_cost_id,
+    i.burn_rate_id,
+    i.account_id,
+    i.is_dirty,
+    i.created_at,
+    i.updated_at,
+    ic.name AS category_name,
+    ic.item_category_type_code,
+    ic.unit_group_id AS category_unit_group_id,
+    ic.created_at AS category_created_at,
+    ic.updated_at AS category_updated_at
+FROM item i
+JOIN item_category ic ON ic.id = i.item_category_id
+WHERE i.id IN (sqlc.slice('ids'))
+AND i.account_id = sqlc.arg('account_id')
+AND i.deleted_at IS NULL;
+
 -- name: ListItemsForwardBase :many
 SELECT
     i.id,

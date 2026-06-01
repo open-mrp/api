@@ -116,6 +116,21 @@ func (h *gRPCHandler) GetDCLocation(ctx context.Context, req *pb.GetDCLocationRe
 	}, nil
 }
 
+func (h *gRPCHandler) BatchGetDCLocationsByIDs(ctx context.Context, req *pb.BatchGetDCLocationsByIDsRequest) (*pb.BatchGetDCLocationsByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	locs, apiErr := h.ediSvc.BatchGetDCLocationsByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	pbLocs := make([]*pb.DCLocationProto, len(locs))
+	for i, l := range locs {
+		pbLocs[i] = dcLocationToProto(l)
+	}
+	return &pb.BatchGetDCLocationsByIDsResponse{DcLocations: pbLocs}, nil
+}
+
 func (h *gRPCHandler) CreateDCLocation(ctx context.Context, req *pb.CreateDCLocationRequest) (*pb.CreateDCLocationResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
@@ -226,4 +241,19 @@ func (h *gRPCHandler) GetEDIRun(ctx context.Context, req *pb.GetEDIRunRequest) (
 	return &pb.GetEDIRunResponse{
 		EdiRun: ediRunToProto(run),
 	}, nil
+}
+
+func (h *gRPCHandler) BatchGetEDIRunsByIDs(ctx context.Context, req *pb.BatchGetEDIRunsByIDsRequest) (*pb.BatchGetEDIRunsByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	runs, apiErr := h.ediSvc.BatchGetEDIRunsByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	pbRuns := make([]*pb.EDIRunProto, len(runs))
+	for i, r := range runs {
+		pbRuns[i] = ediRunToProto(r)
+	}
+	return &pb.BatchGetEDIRunsByIDsResponse{EdiRuns: pbRuns}, nil
 }

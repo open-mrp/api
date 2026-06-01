@@ -396,6 +396,56 @@ func (s *ediSvcImpl) GetEDIRun(ctx context.Context, ediRunID string) (*domain.ED
 	return s.repos.NewEDIRepo().GetEDIRun(ctx, identity.Target.AccountID, ediRunID)
 }
 
+// BatchGetDCLocationsByIDs returns DC locations matching the input IDs that
+// the caller's account is authorized to read.
+func (s *ediSvcImpl) BatchGetDCLocationsByIDs(ctx context.Context, ids []string) ([]*domain.DCLocation, *apierror.APIError) {
+	ctx, span := ediSvcTracer.Start(ctx, "service.edi.batch_get_dc_locations_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainEdiRuns, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	return s.repos.NewEDIRepo().GetDCLocationsByIDs(ctx, identity.Target.AccountID, ids)
+}
+
+// BatchGetEDIRunsByIDs returns EDI runs matching the input IDs that the
+// caller's account is authorized to read.
+func (s *ediSvcImpl) BatchGetEDIRunsByIDs(ctx context.Context, ids []string) ([]*domain.EDIRun, *apierror.APIError) {
+	ctx, span := ediSvcTracer.Start(ctx, "service.edi.batch_get_edi_runs_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainEdiRuns, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	return s.repos.NewEDIRepo().GetEDIRunsByIDs(ctx, identity.Target.AccountID, ids)
+}
+
 // ---------------------------------------------------------------------------
 // EDI Action methods
 // ---------------------------------------------------------------------------

@@ -140,6 +140,27 @@ func (r *paymentTermRepoImpl) Get(ctx context.Context, params domain.GetPaymentT
 	return mapPaymentTermRow(row), nil
 }
 
+func (r *paymentTermRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.PaymentTerm, *apierror.APIError) {
+	ctx, span := paymentTermRepoTracer.Start(ctx, "repository.payment_term.get_by_ids")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := r.queries.GetPaymentTermsByIDs(ctx, sqlc.GetPaymentTermsByIDsParams{
+		Ids:       ids,
+		AccountID: gosql.NullString{String: accountID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make([]*domain.PaymentTerm, len(rows))
+	for i, row := range rows {
+		out[i] = mapPaymentTermRow(row)
+	}
+	return out, nil
+}
+
 func (r *paymentTermRepoImpl) Create(ctx context.Context, id string, params domain.CreatePaymentTermParams) (*domain.PaymentTerm, *apierror.APIError) {
 	ctx, span := paymentTermRepoTracer.Start(ctx, "repository.payment_term.create")
 	defer span.End()

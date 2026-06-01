@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -193,6 +194,183 @@ func (q *Queries) GetShippingTerm(ctx context.Context, arg GetShippingTermParams
 		&i.MinimumOrderUnitUpdatedAt,
 	)
 	return i, err
+}
+
+const getShippingTermsByIDs = `-- name: GetShippingTermsByIDs :many
+SELECT
+    st.id,
+    st.name,
+    st.is_freight_exempt,
+    st.is_carrier_rate,
+    st.account_id,
+    st.flat_rate_id,
+    st.minimum_order_id,
+    st.created_at,
+    st.updated_at,
+    fr.id AS flat_rate_quantity_id,
+    fr.value AS flat_rate_value,
+    fr.unit_id AS flat_rate_unit_id,
+    fr.created_at AS flat_rate_quantity_created_at,
+    fr.updated_at AS flat_rate_quantity_updated_at,
+    fr_u.name AS flat_rate_unit_name,
+    fr_u.abbreviation AS flat_rate_unit_abbreviation,
+    fr_u.unit_dimension_code AS flat_rate_unit_type,
+    fr_u.ratio_numerator AS flat_rate_unit_ratio_numerator,
+    fr_u.ratio_denominator AS flat_rate_unit_ratio_denominator,
+    fr_u.offset_numerator AS flat_rate_unit_offset_numerator,
+    fr_u.offset_denominator AS flat_rate_unit_offset_denominator,
+    fr_u.is_base_unit AS flat_rate_unit_is_base_unit,
+    fr_u.account_id AS flat_rate_unit_account_id,
+    fr_u.created_at AS flat_rate_unit_created_at,
+    fr_u.updated_at AS flat_rate_unit_updated_at,
+    mo.id AS minimum_order_quantity_id,
+    mo.value AS minimum_order_value,
+    mo.unit_id AS minimum_order_unit_id,
+    mo.created_at AS minimum_order_quantity_created_at,
+    mo.updated_at AS minimum_order_quantity_updated_at,
+    mo_u.name AS minimum_order_unit_name,
+    mo_u.abbreviation AS minimum_order_unit_abbreviation,
+    mo_u.unit_dimension_code AS minimum_order_unit_type,
+    mo_u.ratio_numerator AS minimum_order_unit_ratio_numerator,
+    mo_u.ratio_denominator AS minimum_order_unit_ratio_denominator,
+    mo_u.offset_numerator AS minimum_order_unit_offset_numerator,
+    mo_u.offset_denominator AS minimum_order_unit_offset_denominator,
+    mo_u.is_base_unit AS minimum_order_unit_is_base_unit,
+    mo_u.account_id AS minimum_order_unit_account_id,
+    mo_u.created_at AS minimum_order_unit_created_at,
+    mo_u.updated_at AS minimum_order_unit_updated_at
+FROM shipping_term st
+LEFT JOIN quantity fr ON st.flat_rate_id = fr.id
+LEFT JOIN unit fr_u ON fr.unit_id = fr_u.id
+LEFT JOIN quantity mo ON st.minimum_order_id = mo.id
+LEFT JOIN unit mo_u ON mo.unit_id = mo_u.id
+WHERE st.id IN (/*SLICE:ids*/?)
+AND (st.account_id = ? OR st.account_id IS NULL)
+`
+
+type GetShippingTermsByIDsParams struct {
+	Ids       []string
+	AccountID sql.NullString
+}
+
+type GetShippingTermsByIDsRow struct {
+	ID                                string
+	Name                              string
+	IsFreightExempt                   bool
+	IsCarrierRate                     bool
+	AccountID                         sql.NullString
+	FlatRateID                        sql.NullString
+	MinimumOrderID                    sql.NullString
+	CreatedAt                         time.Time
+	UpdatedAt                         time.Time
+	FlatRateQuantityID                sql.NullString
+	FlatRateValue                     sql.NullString
+	FlatRateUnitID                    sql.NullString
+	FlatRateQuantityCreatedAt         sql.NullTime
+	FlatRateQuantityUpdatedAt         sql.NullTime
+	FlatRateUnitName                  sql.NullString
+	FlatRateUnitAbbreviation          sql.NullString
+	FlatRateUnitType                  sql.NullString
+	FlatRateUnitRatioNumerator        sql.NullString
+	FlatRateUnitRatioDenominator      sql.NullString
+	FlatRateUnitOffsetNumerator       sql.NullString
+	FlatRateUnitOffsetDenominator     sql.NullString
+	FlatRateUnitIsBaseUnit            sql.NullBool
+	FlatRateUnitAccountID             sql.NullString
+	FlatRateUnitCreatedAt             sql.NullTime
+	FlatRateUnitUpdatedAt             sql.NullTime
+	MinimumOrderQuantityID            sql.NullString
+	MinimumOrderValue                 sql.NullString
+	MinimumOrderUnitID                sql.NullString
+	MinimumOrderQuantityCreatedAt     sql.NullTime
+	MinimumOrderQuantityUpdatedAt     sql.NullTime
+	MinimumOrderUnitName              sql.NullString
+	MinimumOrderUnitAbbreviation      sql.NullString
+	MinimumOrderUnitType              sql.NullString
+	MinimumOrderUnitRatioNumerator    sql.NullString
+	MinimumOrderUnitRatioDenominator  sql.NullString
+	MinimumOrderUnitOffsetNumerator   sql.NullString
+	MinimumOrderUnitOffsetDenominator sql.NullString
+	MinimumOrderUnitIsBaseUnit        sql.NullBool
+	MinimumOrderUnitAccountID         sql.NullString
+	MinimumOrderUnitCreatedAt         sql.NullTime
+	MinimumOrderUnitUpdatedAt         sql.NullTime
+}
+
+func (q *Queries) GetShippingTermsByIDs(ctx context.Context, arg GetShippingTermsByIDsParams) ([]GetShippingTermsByIDsRow, error) {
+	query := getShippingTermsByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetShippingTermsByIDsRow
+	for rows.Next() {
+		var i GetShippingTermsByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.IsFreightExempt,
+			&i.IsCarrierRate,
+			&i.AccountID,
+			&i.FlatRateID,
+			&i.MinimumOrderID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.FlatRateQuantityID,
+			&i.FlatRateValue,
+			&i.FlatRateUnitID,
+			&i.FlatRateQuantityCreatedAt,
+			&i.FlatRateQuantityUpdatedAt,
+			&i.FlatRateUnitName,
+			&i.FlatRateUnitAbbreviation,
+			&i.FlatRateUnitType,
+			&i.FlatRateUnitRatioNumerator,
+			&i.FlatRateUnitRatioDenominator,
+			&i.FlatRateUnitOffsetNumerator,
+			&i.FlatRateUnitOffsetDenominator,
+			&i.FlatRateUnitIsBaseUnit,
+			&i.FlatRateUnitAccountID,
+			&i.FlatRateUnitCreatedAt,
+			&i.FlatRateUnitUpdatedAt,
+			&i.MinimumOrderQuantityID,
+			&i.MinimumOrderValue,
+			&i.MinimumOrderUnitID,
+			&i.MinimumOrderQuantityCreatedAt,
+			&i.MinimumOrderQuantityUpdatedAt,
+			&i.MinimumOrderUnitName,
+			&i.MinimumOrderUnitAbbreviation,
+			&i.MinimumOrderUnitType,
+			&i.MinimumOrderUnitRatioNumerator,
+			&i.MinimumOrderUnitRatioDenominator,
+			&i.MinimumOrderUnitOffsetNumerator,
+			&i.MinimumOrderUnitOffsetDenominator,
+			&i.MinimumOrderUnitIsBaseUnit,
+			&i.MinimumOrderUnitAccountID,
+			&i.MinimumOrderUnitCreatedAt,
+			&i.MinimumOrderUnitUpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const insertFreeShippingRule = `-- name: InsertFreeShippingRule :exec

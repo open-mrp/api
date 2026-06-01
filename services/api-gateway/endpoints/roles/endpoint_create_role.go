@@ -49,6 +49,7 @@ func (e *CreateRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateRoleR
 		LocationFunc: func(resp *apiresource.Role) string {
 			return "/v1/identity/roles/" + resp.ID
 		},
+		ObjectType: constants.ObjectTypeRole,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeRole,
 			Fields:     []string{"owner", "owner.account", "permissions"},

@@ -53,6 +53,7 @@ func (e *CreateTerritoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Create
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeTerritory,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateTerritoryRequest) (*apiresource.Territory, *apierror.APIError) {
 			return svc.(TerritorySvc).CreateTerritory
 		},

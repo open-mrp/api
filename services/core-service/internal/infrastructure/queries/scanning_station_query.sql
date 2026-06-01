@@ -150,3 +150,24 @@ LIMIT 1;
 -- name: GetScanningStationType :one
 SELECT scanning_station_type_code FROM scanning_station
 WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id');
+
+-- name: GetScanningStationsByIDs :many
+SELECT
+    ss.id,
+    ss.name,
+    ss.notes,
+    ss.scanning_station_type_code,
+    ss.label_size_code,
+    ss.label_type_code,
+    ss.material_check_required,
+    ss.department_id,
+    d.name AS department_name,
+    d.created_at AS department_created_at,
+    d.updated_at AS department_updated_at,
+    ss.account_id,
+    ss.created_at,
+    ss.updated_at
+FROM scanning_station ss
+LEFT JOIN department d ON d.id = ss.department_id
+WHERE ss.id IN (sqlc.slice('ids'))
+AND ss.account_id = sqlc.arg('account_id');

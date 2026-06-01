@@ -21,7 +21,7 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 	middlewareLogger := log.New(config.LogWriter, config.LogPrefix, config.LogFlags)
 	requestLogSaver := middleware.NewRequestLogSaver(config.RequestLogPublisher)
 	loggingMiddleware := func(next http.HandlerFunc) http.HandlerFunc {
-		return middleware.LoggingMiddleware(middlewareLogger, next, requestLogSaver, r)
+		return middleware.LoggingMiddleware(middlewareLogger, next, requestLogSaver, r, config.TrustedProxyHops)
 	}
 	authMiddlewareConfig := &middleware.AuthMiddlewareConfig{
 		AuthClient: config.AuthClient,
@@ -32,10 +32,11 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 
 	// Middlewares
 	r.AddMiddleware(middleware.TracingMiddleware())
+	r.AddMiddleware(middleware.IPBlockMiddleware(config.TrustedProxyHops))
 	r.AddMiddleware(middleware.PlatformMiddleware(config.PlatformMode))
 	r.AddMiddleware(loggingMiddleware)
 	r.AddMiddleware(middleware.CORSMiddleware())
-	r.AddMiddleware(middleware.RateLimitMiddleware())
+	r.AddMiddleware(middleware.RateLimitMiddleware(config.TrustedProxyHops))
 	r.AddMiddleware(middleware.AuthMiddleware(authMiddlewareConfig))
 	r.AddMiddleware(middleware.SubscriptionMiddleware())
 	r.AddMiddleware(middleware.SandboxBillingMiddleware())
@@ -485,7 +486,6 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 	// Request Logs
 	requestLogsGroup := (&httpgroup.RequestLogsEndpointGroup{}).Materialize(&httpgroup.RequestLogsEndpointGroupConfig{
 		PlatformClient: config.PlatformClient,
-		CoreClient:     config.CoreClient,
 	})
 	if requestLogsGroup != nil {
 		registry.RegisterGroup(requestLogsGroup.APIEndpointGroup)
@@ -715,12 +715,13 @@ func (r *router) InitWebhookEndpointGroups(config WebhookRouterConfig) {
 	middlewareLogger := log.New(config.LogWriter, config.LogPrefix, config.LogFlags)
 	requestLogSaver := middleware.NewRequestLogSaver(config.RequestLogPublisher)
 	loggingMiddleware := func(next http.HandlerFunc) http.HandlerFunc {
-		return middleware.LoggingMiddleware(middlewareLogger, next, requestLogSaver, r)
+		return middleware.LoggingMiddleware(middlewareLogger, next, requestLogSaver, r, config.TrustedProxyHops)
 	}
 
 	r.AddMiddleware(middleware.TracingMiddleware())
+	r.AddMiddleware(middleware.IPBlockMiddleware(config.TrustedProxyHops))
 	r.AddMiddleware(middleware.PlatformMiddleware(config.PlatformMode))
-	r.AddMiddleware(middleware.RateLimitMiddlewareWithConfig(100, time.Second))
+	r.AddMiddleware(middleware.RateLimitMiddlewareWithConfig(100, time.Second, config.TrustedProxyHops))
 	r.AddMiddleware(loggingMiddleware)
 	r.AddMiddleware(middleware.RecoverMiddleware())
 
@@ -746,7 +747,7 @@ func (r *router) InitAuthEndpointGroups(config AuthRouterConfig) {
 	middlewareLogger := log.New(config.LogWriter, config.LogPrefix, config.LogFlags)
 	requestLogSaver := middleware.NewRequestLogSaver(config.RequestLogPublisher)
 	loggingMiddleware := func(next http.HandlerFunc) http.HandlerFunc {
-		return middleware.LoggingMiddleware(middlewareLogger, next, requestLogSaver, r)
+		return middleware.LoggingMiddleware(middlewareLogger, next, requestLogSaver, r, config.TrustedProxyHops)
 	}
 	idempotencyMiddlewareConfig := &middleware.IdempotencyMiddlewareConfig{
 		PlatformClient: config.PlatformClient,
@@ -754,10 +755,11 @@ func (r *router) InitAuthEndpointGroups(config AuthRouterConfig) {
 
 	// Middlewares
 	r.AddMiddleware(middleware.TracingMiddleware())
+	r.AddMiddleware(middleware.IPBlockMiddleware(config.TrustedProxyHops))
 	r.AddMiddleware(middleware.PlatformMiddleware(config.PlatformMode))
 	r.AddMiddleware(loggingMiddleware)
 	r.AddMiddleware(middleware.CORSMiddleware())
-	r.AddMiddleware(middleware.RateLimitMiddleware())
+	r.AddMiddleware(middleware.RateLimitMiddleware(config.TrustedProxyHops))
 	r.AddMiddleware(middleware.AuthSecurityMiddleware())
 	r.AddMiddleware(middleware.VersionMiddleware())
 	r.AddMiddleware(middleware.IdempotencyMiddleware(idempotencyMiddlewareConfig))
@@ -775,7 +777,6 @@ func (r *router) InitAuthEndpointGroups(config AuthRouterConfig) {
 	// API Keys
 	apiKeysGroup := (&httpgroup.APIKeysEndpointGroup{}).Materialize(&httpgroup.APIKeysEndpointGroupConfig{
 		AuthClient: config.AuthClient,
-		CoreClient: config.CoreClient,
 	})
 	if apiKeysGroup != nil {
 		registry.RegisterGroup(apiKeysGroup.APIEndpointGroup)

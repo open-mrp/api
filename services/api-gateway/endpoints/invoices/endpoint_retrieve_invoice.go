@@ -14,8 +14,6 @@ import (
 type RetrieveInvoiceRequest struct {
 	// Invoice ID.
 	InvoiceID string `path:"id" validate:"required"`
-	// Sub-resources to include in the response.
-	Includes []string `include:"true"`
 }
 
 // Returns an invoice by ID.
@@ -30,6 +28,7 @@ func (e *RetrieveInvoiceEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrie
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeInvoice,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveInvoiceRequest) (*apiresource.Invoice, *apierror.APIError) {
 			return svc.(InvoiceSvc).GetInvoice
 		},

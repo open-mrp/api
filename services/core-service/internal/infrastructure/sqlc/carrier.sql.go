@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -104,6 +105,90 @@ func (q *Queries) GetCarrier(ctx context.Context, arg GetCarrierParams) (GetCarr
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getCarriersByIDs = `-- name: GetCarriersByIDs :many
+SELECT
+    carrier.id,
+    carrier.name,
+    carrier.code,
+    carrier.shippo_carrier_account_id,
+    carrier.account_number,
+    carrier.is_portal_enabled,
+    carrier.account_id,
+    carrier.deleted_at,
+    carrier.created_at,
+    carrier.updated_at
+FROM carrier
+WHERE carrier.id IN (/*SLICE:ids*/?)
+AND (carrier.account_id = ? OR carrier.account_id IS NULL)
+AND carrier.deleted_at IS NULL
+`
+
+type GetCarriersByIDsParams struct {
+	Ids       []string
+	AccountID sql.NullString
+}
+
+type GetCarriersByIDsRow struct {
+	ID                     string
+	Name                   string
+	Code                   sql.NullString
+	ShippoCarrierAccountID sql.NullString
+	AccountNumber          sql.NullString
+	IsPortalEnabled        bool
+	AccountID              sql.NullString
+	DeletedAt              sql.NullTime
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
+}
+
+// Returns carriers matching the given IDs that the caller's account is
+// authorized to read (their own account plus system carriers with NULL
+// account_id). Used by BatchGetCarriersByIDs.
+func (q *Queries) GetCarriersByIDs(ctx context.Context, arg GetCarriersByIDsParams) ([]GetCarriersByIDsRow, error) {
+	query := getCarriersByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetCarriersByIDsRow
+	for rows.Next() {
+		var i GetCarriersByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Code,
+			&i.ShippoCarrierAccountID,
+			&i.AccountNumber,
+			&i.IsPortalEnabled,
+			&i.AccountID,
+			&i.DeletedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const insertCarrier = `-- name: InsertCarrier :exec

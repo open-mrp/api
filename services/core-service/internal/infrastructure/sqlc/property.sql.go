@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -82,6 +83,74 @@ type DeletePropertyAttributesParams struct {
 func (q *Queries) DeletePropertyAttributes(ctx context.Context, arg DeletePropertyAttributesParams) error {
 	_, err := q.db.ExecContext(ctx, deletePropertyAttributes, arg.PropertyID, arg.AccountID)
 	return err
+}
+
+const getPropertiesByIDs = `-- name: GetPropertiesByIDs :many
+SELECT
+    property.id,
+    property.name,
+    property.account_id,
+    property.is_public,
+    property.created_at,
+    property.updated_at
+FROM property
+WHERE property.id IN (/*SLICE:ids*/?)
+AND property.account_id = ?
+`
+
+type GetPropertiesByIDsParams struct {
+	Ids       []string
+	AccountID string
+}
+
+type GetPropertiesByIDsRow struct {
+	ID        string
+	Name      string
+	AccountID string
+	IsPublic  bool
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func (q *Queries) GetPropertiesByIDs(ctx context.Context, arg GetPropertiesByIDsParams) ([]GetPropertiesByIDsRow, error) {
+	query := getPropertiesByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPropertiesByIDsRow
+	for rows.Next() {
+		var i GetPropertiesByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.AccountID,
+			&i.IsPublic,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getProperty = `-- name: GetProperty :one

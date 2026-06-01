@@ -7,6 +7,7 @@ import (
 
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
 	pb "github.com/augno/api/shared/proto/agent"
 	"github.com/augno/api/shared/timeutil"
@@ -25,10 +26,38 @@ func unmarshalConfig(configJSON string) *apiresource.AgentDefinitionConfig {
 	return &cfg
 }
 
-func AgentDefinitionPresenter(a *pb.AgentDefinitionInfo, roleInfo *ResolvedRole) apiresource.AgentDefinition {
+func AgentDefinitionPresenter(a *pb.AgentDefinitionInfo) apiresource.AgentDefinition {
 	if a == nil {
 		return apiresource.AgentDefinition{}
 	}
+
+	accountStatus := constants.AgentAccountStatusInactive
+	if a.AccountStatus != nil {
+		accountStatus = constants.AgentAccountStatus(a.AccountStatus.StatusCode)
+	}
+
+	return apiresource.AgentDefinition{
+		ID:             a.Id,
+		Object:         constants.ObjectTypeAgentDefinition,
+		Name:           a.Name,
+		Slug:           a.Slug,
+		Description:    &a.Description,
+		DefinitionType: constants.AgentDefinitionType(a.DefinitionType),
+		CategoryCode:   a.CategoryCode,
+		TriggerType:    constants.AgentTriggerType(a.TriggerType),
+		IsEditable:     a.IsEditable,
+		AccountStatus:  accountStatus,
+		CreatedAt:      timeutil.TimestampToTime(a.CreatedAt),
+		UpdatedAt:      timeutil.TimestampToTime(a.UpdatedAt),
+	}
+}
+
+func StashAgentDefinitionMeta(meta *resourcekit.LoadMeta, a *pb.AgentDefinitionInfo, roleInfo *ResolvedRole) {
+	if a == nil {
+		return
+	}
+
+	meta.Set(constants.ObjectTypeAgentDefinition, a.Id, "config", unmarshalConfig(a.ConfigJson))
 
 	toolItems := make([]apiresource.AgentDefinitionTool, len(a.Tools))
 	for i, t := range a.Tools {
@@ -49,18 +78,22 @@ func AgentDefinitionPresenter(a *pb.AgentDefinitionInfo, roleInfo *ResolvedRole)
 			RequireReview: t.RequireReview,
 		}
 	}
-	tools := apiresource.NewList(toolItems, apiresource.PageInfo{})
+	meta.Set(constants.ObjectTypeAgentDefinition, a.Id, "tools", apiresource.NewList(toolItems, apiresource.PageInfo{}))
 
-	var role *apiresource.Role
-	if a.RoleId != "" && roleInfo != nil {
-		role = &apiresource.Role{
-			ID:       a.RoleId,
-			Object:   constants.ObjectTypeRole,
-			Name:     roleInfo.Name,
-			TypeCode: constants.RoleType(roleInfo.RoleType),
-			Owner:    apiresource.SystemOwner(),
+	if a.RoleId != "" {
+		roleName := a.GetRoleName()
+		roleType := constants.RoleType(a.GetRoleTypeCode())
+		if roleInfo != nil {
+			roleName = roleInfo.Name
+			roleType = constants.RoleType(roleInfo.RoleType)
 		}
-		if roleInfo.Permissions != nil {
+		role := apiresource.ExpandableRoleStub(
+			a.RoleId,
+			roleName,
+			roleType,
+			timeutil.TimestampToTime(a.CreatedAt),
+		)
+		if roleInfo != nil && roleInfo.Permissions != nil {
 			perms := make([]string, 0, len(roleInfo.Permissions))
 			for p := range roleInfo.Permissions {
 				perms = append(perms, p)
@@ -68,29 +101,7 @@ func AgentDefinitionPresenter(a *pb.AgentDefinitionInfo, roleInfo *ResolvedRole)
 			sort.Strings(perms)
 			role.Permissions = &perms
 		}
-	}
-
-	accountStatus := constants.AgentAccountStatusInactive
-	if a.AccountStatus != nil {
-		accountStatus = constants.AgentAccountStatus(a.AccountStatus.StatusCode)
-	}
-
-	return apiresource.AgentDefinition{
-		ID:             a.Id,
-		Object:         constants.ObjectTypeAgentDefinition,
-		Name:           a.Name,
-		Slug:           a.Slug,
-		Description:    &a.Description,
-		DefinitionType: constants.AgentDefinitionType(a.DefinitionType),
-		CategoryCode:   a.CategoryCode,
-		TriggerType:    constants.AgentTriggerType(a.TriggerType),
-		IsEditable:     a.IsEditable,
-		Role:           role,
-		Config:         unmarshalConfig(a.ConfigJson),
-		Tools:          tools,
-		AccountStatus:  accountStatus,
-		CreatedAt:      timeutil.TimestampToTime(a.CreatedAt),
-		UpdatedAt:      timeutil.TimestampToTime(a.UpdatedAt),
+		meta.Set(constants.ObjectTypeAgentDefinition, a.Id, "role", role)
 	}
 }
 
@@ -99,13 +110,15 @@ func AgentDefinitionListPresenter(ctx context.Context, resp *pb.ListAgentDefinit
 		return apiresource.NewList[apiresource.AgentDefinition](nil, apiresource.PageInfo{})
 	}
 
+	meta := resourcekit.GetLoadMeta(ctx)
 	agents := make([]apiresource.AgentDefinition, len(resp.Agents))
 	for i, a := range resp.Agents {
 		var roleInfo *ResolvedRole
 		if roleResolver != nil {
 			roleInfo = roleResolver(a.RoleId)
 		}
-		agents[i] = AgentDefinitionPresenter(a, roleInfo)
+		agents[i] = AgentDefinitionPresenter(a)
+		StashAgentDefinitionMeta(meta, a, roleInfo)
 	}
 
 	return apiresource.NewList(agents, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))

@@ -115,6 +115,15 @@ func mapGetAddressRow(row sqlc.GetAddressRow) *domain.Address {
 	)
 }
 
+func mapGetAddressesByIDsRow(row sqlc.GetAddressesByIDsRow) *domain.Address {
+	return mapAddressRow(
+		row.ID, row.Name, row.Phone, row.Email, row.IsDropShip,
+		row.CreatedAt, row.UpdatedAt,
+		row.GeolocationID, row.StreetLine1, row.StreetLine2, row.Locality, row.State, row.PostalCode,
+		row.Country, row.GooglePlaceID, row.Latitude, row.Longitude,
+	)
+}
+
 func buildAddressSearchParams(query *string) gosql.NullString {
 	if query == nil || *query == "" {
 		return gosql.NullString{}
@@ -212,6 +221,27 @@ func (r *addressRepoImpl) Get(ctx context.Context, params domain.GetAddressParam
 	}
 
 	return mapGetAddressRow(row), nil
+}
+
+func (r *addressRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.Address, *apierror.APIError) {
+	ctx, span := addressRepoTracer.Start(ctx, "repository.address.get_by_ids")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := r.queries.GetAddressesByIDs(ctx, sqlc.GetAddressesByIDsParams{
+		Ids:       ids,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make([]*domain.Address, len(rows))
+	for i, row := range rows {
+		out[i] = mapGetAddressesByIDsRow(row)
+	}
+	return out, nil
 }
 
 func (r *addressRepoImpl) Create(ctx context.Context, addressID, geolocationID, accountAddressID string, params domain.CreateAddressParams) (*domain.Address, *apierror.APIError) {

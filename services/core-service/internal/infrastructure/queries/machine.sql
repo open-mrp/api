@@ -117,6 +117,24 @@ JOIN department d ON d.id = m.department_id
 WHERE m.id = sqlc.arg('id')
 AND d.account_id = sqlc.arg('account_id');
 
+-- name: GetMachinesByIDs :many
+SELECT
+    m.id,
+    m.name,
+    m.serial_number,
+    m.notes,
+    m.department_id,
+    d.name AS department_name,
+    d.created_at AS department_created_at,
+    d.updated_at AS department_updated_at,
+    m.production_step_id,
+    m.created_at,
+    m.updated_at
+FROM machine m
+JOIN department d ON d.id = m.department_id
+WHERE m.id IN (sqlc.slice('ids'))
+AND d.account_id = sqlc.arg('account_id');
+
 -- name: CountMachinesByName :one
 SELECT COUNT(*) FROM machine m
 JOIN department d ON d.id = m.department_id

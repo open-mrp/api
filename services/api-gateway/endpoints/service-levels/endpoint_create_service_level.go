@@ -47,6 +47,7 @@ func (e *CreateServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeServiceLevel,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateServiceLevelRequest) (*apiresource.ServiceLevel, *apierror.APIError) {
 			return svc.(ServiceLevelSvc).CreateServiceLevel
 		},

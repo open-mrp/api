@@ -52,6 +52,7 @@ func (e *UpdateConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeConsumption,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateConsumptionRequest) (*apiresource.Consumption, *apierror.APIError) {
 			return svc.(ConsumptionSvc).UpdateConsumption
 		},

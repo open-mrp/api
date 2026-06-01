@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -156,6 +157,79 @@ func (q *Queries) GetAccountIntegrationCredentials(ctx context.Context, arg GetA
 	var i GetAccountIntegrationCredentialsRow
 	err := row.Scan(&i.CredentialsV2, &i.IsActive)
 	return i, err
+}
+
+const getAccountIntegrationsByIDs = `-- name: GetAccountIntegrationsByIDs :many
+SELECT
+    account_integration.id,
+    account_integration.account_id,
+    account_integration.integration_code,
+    account_integration.name,
+    account_integration.is_active,
+    account_integration.created_at,
+    account_integration.updated_at
+FROM account_integration
+WHERE account_integration.id IN (/*SLICE:ids*/?)
+AND account_integration.account_id = ?
+`
+
+type GetAccountIntegrationsByIDsParams struct {
+	Ids       []string
+	AccountID string
+}
+
+type GetAccountIntegrationsByIDsRow struct {
+	ID              string
+	AccountID       string
+	IntegrationCode string
+	Name            string
+	IsActive        bool
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+}
+
+// Returns account integrations matching the given IDs that belong to the
+// caller's account. Account integrations are always account-scoped.
+func (q *Queries) GetAccountIntegrationsByIDs(ctx context.Context, arg GetAccountIntegrationsByIDsParams) ([]GetAccountIntegrationsByIDsRow, error) {
+	query := getAccountIntegrationsByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAccountIntegrationsByIDsRow
+	for rows.Next() {
+		var i GetAccountIntegrationsByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.AccountID,
+			&i.IntegrationCode,
+			&i.Name,
+			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const insertAccountIntegration = `-- name: InsertAccountIntegration :exec

@@ -49,6 +49,7 @@ func (e *UpdateScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeScanningStation,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateScanningStationRequest) (*apiresource.ScanningStation, *apierror.APIError) {
 			return svc.(ScanningStationSvc).UpdateScanningStation
 		},

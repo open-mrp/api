@@ -6,6 +6,7 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
@@ -45,10 +46,7 @@ func NewAccountGroupSvc(config *AccountGroupSvcConfig) AccountGroupSvc {
 	if err := config.validate(); err != nil {
 		panic(err)
 	}
-
-	return &accountGroupSvcImpl{
-		coreClient: config.CoreClient,
-	}
+	return &accountGroupSvcImpl{coreClient: config.CoreClient}
 }
 
 func (m *accountGroupSvcImpl) ListAccountGroups(ctx context.Context, req *ListAccountGroupsRequest) (*apiresource.List[apiresource.AccountGroup], *apierror.APIError) {
@@ -58,35 +56,32 @@ func (m *accountGroupSvcImpl) ListAccountGroups(ctx context.Context, req *ListAc
 		Query:  req.Query,
 		Type:   req.Type.StringPtr(),
 	}
-
 	resp, apiErr := grpcutil.CallRPC(ctx, accountGroupSvcTracer, "service.account_groups.list", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListAccountGroupsResponse, error) {
 			return m.coreClient.ListAccountGroups(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
-	return AccountGroupListPresenter(ctx, resp), nil
+	ids := make([]string, len(resp.AccountGroups))
+	for i, ag := range resp.AccountGroups {
+		ids[i] = ag.Id
+	}
+	loaded, apiErr := resourceloaders.LoadAccountGroups(ctx, ids)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	items := make([]apiresource.AccountGroup, 0, len(ids))
+	for _, id := range ids {
+		if v, ok := loaded[id]; ok {
+			items = append(items, *(v.(*apiresource.AccountGroup)))
+		}
+	}
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
 
 func (m *accountGroupSvcImpl) GetAccountGroup(ctx context.Context, req *RetrieveAccountGroupRequest) (*apiresource.AccountGroup, *apierror.APIError) {
-	pbReq := &pb.GetAccountGroupRequest{
-		Id: req.AccountGroupID,
-	}
-
-	resp, apiErr := grpcutil.CallRPC(ctx, accountGroupSvcTracer, "service.account_groups.get", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetAccountGroupResponse, error) {
-			return m.coreClient.GetAccountGroup(ctx, pbReq, opts...)
-		})
-
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	result := AccountGroupPresenter(resp.AccountGroup)
-	return &result, nil
+	return loadAccountGroupByID(ctx, req.AccountGroupID)
 }
 
 func (m *accountGroupSvcImpl) CreateAccountGroup(ctx context.Context, req *CreateAccountGroupRequest) (*apiresource.AccountGroup, *apierror.APIError) {
@@ -98,7 +93,6 @@ func (m *accountGroupSvcImpl) CreateAccountGroup(ctx context.Context, req *Creat
 	if req.FreightPolicy != nil {
 		freightPolicy = *req.FreightPolicy
 	}
-
 	pbReq := &pb.CreateAccountGroupRequest{
 		Name:             req.Name,
 		Type:             string(req.Type),
@@ -106,18 +100,14 @@ func (m *accountGroupSvcImpl) CreateAccountGroup(ctx context.Context, req *Creat
 		FreightPolicy:    string(freightPolicy),
 		Description:      req.Description,
 	}
-
 	resp, apiErr := grpcutil.CallRPC(ctx, accountGroupSvcTracer, "service.account_groups.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateAccountGroupResponse, error) {
 			return m.coreClient.CreateAccountGroup(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
-	result := AccountGroupPresenter(resp.AccountGroup)
-	return &result, nil
+	return loadAccountGroupByID(ctx, resp.AccountGroup.Id)
 }
 
 func (m *accountGroupSvcImpl) UpdateAccountGroup(ctx context.Context, req *UpdateAccountGroupRequest) (*apiresource.AccountGroup, *apierror.APIError) {
@@ -128,33 +118,38 @@ func (m *accountGroupSvcImpl) UpdateAccountGroup(ctx context.Context, req *Updat
 		CommissionPolicy: req.CommissionPolicy.StringPtr(),
 		FreightPolicy:    req.FreightPolicy.StringPtr(),
 	}
-
 	resp, apiErr := grpcutil.CallRPC(ctx, accountGroupSvcTracer, "service.account_groups.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateAccountGroupResponse, error) {
 			return m.coreClient.UpdateAccountGroup(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
-	result := AccountGroupPresenter(resp.AccountGroup)
-	return &result, nil
+	return loadAccountGroupByID(ctx, resp.AccountGroup.Id)
 }
 
 func (m *accountGroupSvcImpl) DeleteAccountGroup(ctx context.Context, req *DeleteAccountGroupRequest) (*apiresource.EmptyResource, *apierror.APIError) {
-	pbReq := &pb.DeleteAccountGroupRequest{
-		Id: req.AccountGroupID,
-	}
-
+	pbReq := &pb.DeleteAccountGroupRequest{Id: req.AccountGroupID}
 	_, apiErr := grpcutil.CallRPC(ctx, accountGroupSvcTracer, "service.account_groups.delete", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 			return m.coreClient.DeleteAccountGroup(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
 	return &apiresource.EmptyResource{}, nil
+}
+
+// loadAccountGroupByID wraps the single-ID load pattern used after every
+// mutation and for the retrieve endpoint.
+func loadAccountGroupByID(ctx context.Context, id string) (*apiresource.AccountGroup, *apierror.APIError) {
+	loaded, apiErr := resourceloaders.LoadAccountGroups(ctx, []string{id})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	v, ok := loaded[id]
+	if !ok {
+		return nil, apierror.NewResourceNotFoundError("Account group not found.")
+	}
+	return v.(*apiresource.AccountGroup), nil
 }

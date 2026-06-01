@@ -60,6 +60,7 @@ func (e *ListCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCust
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeCustomer,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListCustomersRequest) (*apiresource.List[apiresource.Customer], *apierror.APIError) {
 			return svc.(CustomerSvc).ListCustomers
 		},

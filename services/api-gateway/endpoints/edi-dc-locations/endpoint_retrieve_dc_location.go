@@ -28,12 +28,9 @@ func (e *RetrieveDCLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeDCLocation,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveDCLocationRequest) (*apiresource.DCLocation, *apierror.APIError) {
 			return svc.(EDIDCLocationSvc).GetDCLocation
 		},
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeDCLocation,
-			Fields:     []string{"customer"},
-		}),
 	})
 }

@@ -188,3 +188,23 @@ func (h *gRPCHandler) DeletePart(ctx context.Context, req *pb.DeletePartRequest)
 		Part: partToProto(part),
 	}, nil
 }
+
+func (h *gRPCHandler) BatchGetPartsByIDs(ctx context.Context, req *pb.BatchGetPartsByIDsRequest) (*pb.BatchGetPartsByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	parts, apiErr := h.partSvc.BatchGetPartsByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	pbParts := make([]*pb.PartInfo, len(parts))
+	for i, p := range parts {
+		pbParts[i] = partToProto(p)
+	}
+
+	return &pb.BatchGetPartsByIDsResponse{
+		Parts: pbParts,
+	}, nil
+}

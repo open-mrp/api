@@ -75,7 +75,6 @@ func openAPIEndpointGroups() []apiendpoint.APIEndpointGroup {
 		}).APIEndpointGroup,
 		*(&httpgroup.APIKeysEndpointGroup{}).Materialize(&httpgroup.APIKeysEndpointGroupConfig{
 			AuthClient: authClient,
-			CoreClient: coreClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.TenancyEndpointGroup{}).Materialize(&httpgroup.TenancyEndpointGroupConfig{
 			CoreClient: coreClient,
@@ -98,7 +97,6 @@ func openAPIEndpointGroups() []apiendpoint.APIEndpointGroup {
 		}).APIEndpointGroup,
 		*(&httpgroup.RequestLogsEndpointGroup{}).Materialize(&httpgroup.RequestLogsEndpointGroupConfig{
 			PlatformClient: platformClient,
-			CoreClient:     coreClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.AuditEventsEndpointGroup{}).Materialize(&httpgroup.AuditEventsEndpointGroupConfig{
 			PlatformClient: platformClient,

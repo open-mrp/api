@@ -361,6 +361,64 @@ func TestAuditEvents_IncludeChanges(t *testing.T) {
 	assert.True(t, ok, "changes should be present with ?include=changes")
 }
 
+func TestAuditEvents_IncludeMetadata(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(auditEventsPath, url.Values{"limit": {"1"}})
+	require.NoError(t, err)
+	if len(list.Data) == 0 {
+		t.Skip("No audit events available")
+	}
+	eventID := DataItemField(list.Data[0], "id")
+
+	getStatus, getBody, err := apiClient.GetListRaw(auditEventsPath+"/"+eventID, url.Values{"include": {"metadata"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, getStatus, getBody)
+
+	got := parseJSON(getBody)
+	assert.Contains(t, got, "metadata", "metadata key should be present with ?include=metadata")
+}
+
+func TestAuditEvents_IncludeRequest(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(auditEventsPath, url.Values{
+		"include": {"request"},
+		"limit":   {"25"},
+	})
+	require.NoError(t, err)
+
+	for _, item := range list.Data {
+		m := parseJSON(item)
+		req := jsonObject(m, "request")
+		if req == nil {
+			continue
+		}
+		assert.Equal(t, "request_log", jsonField(req, "object"),
+			"request sub-resource object type should be request_log")
+		assert.NotEmpty(t, jsonField(req, "id"), "request sub-resource should have an id")
+		return
+	}
+	t.Skip("No audit events with a request_id found in the first 25 events")
+}
+
+func TestAuditEvents_ExpandableFieldsNullWithoutInclude(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(auditEventsPath, url.Values{"limit": {"1"}})
+	require.NoError(t, err)
+	if len(list.Data) == 0 {
+		t.Skip("No audit events available")
+	}
+	eventID := DataItemField(list.Data[0], "id")
+
+	getStatus, getBody, err := apiClient.GetListRaw(auditEventsPath+"/"+eventID, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, getStatus, getBody)
+
+	got := parseJSON(getBody)
+	assert.Nil(t, got["actor"], "actor should be null without ?include=actor")
+	assert.Nil(t, got["changes"], "changes should be null without ?include=changes")
+	assert.Nil(t, got["request"], "request should be null without ?include=request")
+}
+
 func TestAuditEvents_IncludeActor(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(auditEventsPath, url.Values{"limit": {"1"}})

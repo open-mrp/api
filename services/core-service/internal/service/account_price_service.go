@@ -103,7 +103,7 @@ func (s *accountPriceSvcImpl) ListAccountPrices(ctx context.Context, params doma
 
 	if identity.IsExternalTarget() {
 		meds := s.mediators()
-		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 	}
@@ -148,7 +148,7 @@ func (s *accountPriceSvcImpl) GetAccountPrice(ctx context.Context, accountPriceI
 
 	if identity.IsExternalTarget() {
 		meds := s.mediators()
-		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 	}

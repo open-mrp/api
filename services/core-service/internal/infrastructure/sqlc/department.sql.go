@@ -151,6 +151,77 @@ func (q *Queries) GetDepartmentsByIDs(ctx context.Context, ids []string) ([]GetD
 	return items, nil
 }
 
+const getDepartmentsFullByIDs = `-- name: GetDepartmentsFullByIDs :many
+SELECT
+    d.id,
+    d.name,
+    d.notes,
+    d.location_id,
+    d.account_id,
+    d.created_at,
+    d.updated_at
+FROM department d
+WHERE d.id IN (/*SLICE:ids*/?)
+AND d.account_id = ?
+`
+
+type GetDepartmentsFullByIDsParams struct {
+	Ids       []string
+	AccountID string
+}
+
+type GetDepartmentsFullByIDsRow struct {
+	ID         string
+	Name       string
+	Notes      sql.NullString
+	LocationID sql.NullString
+	AccountID  string
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
+func (q *Queries) GetDepartmentsFullByIDs(ctx context.Context, arg GetDepartmentsFullByIDsParams) ([]GetDepartmentsFullByIDsRow, error) {
+	query := getDepartmentsFullByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetDepartmentsFullByIDsRow
+	for rows.Next() {
+		var i GetDepartmentsFullByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Notes,
+			&i.LocationID,
+			&i.AccountID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const insertDepartment = `-- name: InsertDepartment :exec
 INSERT INTO department (
     id,
@@ -417,8 +488,72 @@ func (q *Queries) ListMachinesByDepartmentID(ctx context.Context, arg ListMachin
 	return items, nil
 }
 
+const listMachinesByDepartmentIDs = `-- name: ListMachinesByDepartmentIDs :many
+SELECT m.id, m.name, m.serial_number, m.department_id, m.created_at, m.updated_at
+FROM machine m
+JOIN department d ON d.id = m.department_id
+WHERE m.department_id IN (/*SLICE:department_ids*/?)
+AND d.account_id = ?
+ORDER BY m.name ASC
+`
+
+type ListMachinesByDepartmentIDsParams struct {
+	DepartmentIds []string
+	AccountID     string
+}
+
+type ListMachinesByDepartmentIDsRow struct {
+	ID           string
+	Name         string
+	SerialNumber string
+	DepartmentID string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
+func (q *Queries) ListMachinesByDepartmentIDs(ctx context.Context, arg ListMachinesByDepartmentIDsParams) ([]ListMachinesByDepartmentIDsRow, error) {
+	query := listMachinesByDepartmentIDs
+	var queryParams []interface{}
+	if len(arg.DepartmentIds) > 0 {
+		for _, v := range arg.DepartmentIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:department_ids*/?", strings.Repeat(",?", len(arg.DepartmentIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:department_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListMachinesByDepartmentIDsRow
+	for rows.Next() {
+		var i ListMachinesByDepartmentIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.SerialNumber,
+			&i.DepartmentID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listScanningStationsByDepartmentID = `-- name: ListScanningStationsByDepartmentID :many
-SELECT id, name, scanning_station_type_code, created_at, updated_at
+SELECT id, name, scanning_station_type_code, material_check_required, created_at, updated_at
 FROM scanning_station
 WHERE department_id = ?
 AND account_id = ?
@@ -434,6 +569,7 @@ type ListScanningStationsByDepartmentIDRow struct {
 	ID                      string
 	Name                    string
 	ScanningStationTypeCode string
+	MaterialCheckRequired   bool
 	CreatedAt               time.Time
 	UpdatedAt               time.Time
 }
@@ -451,6 +587,72 @@ func (q *Queries) ListScanningStationsByDepartmentID(ctx context.Context, arg Li
 			&i.ID,
 			&i.Name,
 			&i.ScanningStationTypeCode,
+			&i.MaterialCheckRequired,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listScanningStationsByDepartmentIDs = `-- name: ListScanningStationsByDepartmentIDs :many
+SELECT id, name, scanning_station_type_code, material_check_required, department_id, created_at, updated_at
+FROM scanning_station
+WHERE department_id IN (/*SLICE:department_ids*/?)
+AND account_id = ?
+ORDER BY name ASC
+`
+
+type ListScanningStationsByDepartmentIDsParams struct {
+	DepartmentIds []string
+	AccountID     string
+}
+
+type ListScanningStationsByDepartmentIDsRow struct {
+	ID                      string
+	Name                    string
+	ScanningStationTypeCode string
+	MaterialCheckRequired   bool
+	DepartmentID            string
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
+}
+
+func (q *Queries) ListScanningStationsByDepartmentIDs(ctx context.Context, arg ListScanningStationsByDepartmentIDsParams) ([]ListScanningStationsByDepartmentIDsRow, error) {
+	query := listScanningStationsByDepartmentIDs
+	var queryParams []interface{}
+	if len(arg.DepartmentIds) > 0 {
+		for _, v := range arg.DepartmentIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:department_ids*/?", strings.Repeat(",?", len(arg.DepartmentIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:department_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListScanningStationsByDepartmentIDsRow
+	for rows.Next() {
+		var i ListScanningStationsByDepartmentIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.ScanningStationTypeCode,
+			&i.MaterialCheckRequired,
+			&i.DepartmentID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

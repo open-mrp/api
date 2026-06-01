@@ -6,8 +6,8 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -50,12 +50,23 @@ func NewMachineSvc(config *MachineSvcConfig) MachineSvc {
 	}
 }
 
+func loadMachineByID(ctx context.Context, id string) (*apiresource.Machine, *apierror.APIError) {
+	loaded, apiErr := resourceloaders.LoadMachines(ctx, []string{id})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	v, ok := loaded[id]
+	if !ok {
+		return nil, apierror.NewResourceNotFoundError("Machine not found.")
+	}
+	return v.(*apiresource.Machine), nil
+}
+
 func (m *machineSvcImpl) ListMachines(ctx context.Context, req *ListMachinesRequest) (*apiresource.List[apiresource.Machine], *apierror.APIError) {
 	pbReq := &pb.ListMachinesRequest{
-		Cursor:   req.Cursor,
-		Limit:    req.Limit,
-		Query:    req.Query,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
+		Cursor: req.Cursor,
+		Limit:  req.Limit,
+		Query:  req.Query,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, machineSvcTracer, "service.machines.list", domain.ServiceName,
@@ -67,26 +78,28 @@ func (m *machineSvcImpl) ListMachines(ctx context.Context, req *ListMachinesRequ
 		return nil, apiErr
 	}
 
-	return MachineListPresenter(ctx, resp), nil
-}
-
-func (m *machineSvcImpl) GetMachine(ctx context.Context, req *RetrieveMachineRequest) (*apiresource.Machine, *apierror.APIError) {
-	pbReq := &pb.GetMachineRequest{
-		Id:       req.MachineID,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
+	ids := make([]string, len(resp.Machines))
+	for i, machine := range resp.Machines {
+		ids[i] = machine.Id
 	}
 
-	resp, apiErr := grpcutil.CallRPC(ctx, machineSvcTracer, "service.machines.get", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetMachineResponse, error) {
-			return m.coreClient.GetMachine(ctx, pbReq, opts...)
-		})
-
+	loaded, apiErr := resourceloaders.LoadMachines(ctx, ids)
 	if apiErr != nil {
 		return nil, apiErr
 	}
 
-	result := MachinePresenter(resp.Machine)
-	return &result, nil
+	machines := make([]apiresource.Machine, 0, len(resp.Machines))
+	for _, id := range ids {
+		if v, ok := loaded[id]; ok {
+			machines = append(machines, *v.(*apiresource.Machine))
+		}
+	}
+
+	return apiresource.NewList(machines, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
+}
+
+func (m *machineSvcImpl) GetMachine(ctx context.Context, req *RetrieveMachineRequest) (*apiresource.Machine, *apierror.APIError) {
+	return loadMachineByID(ctx, req.MachineID)
 }
 
 func (m *machineSvcImpl) CreateMachine(ctx context.Context, req *CreateMachineRequest) (*apiresource.Machine, *apierror.APIError) {
@@ -95,7 +108,6 @@ func (m *machineSvcImpl) CreateMachine(ctx context.Context, req *CreateMachineRe
 		SerialNumber: req.SerialNumber,
 		Notes:        req.Notes,
 		DepartmentId: req.DepartmentID,
-		Includes:     appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, machineSvcTracer, "service.machines.create", domain.ServiceName,
@@ -107,8 +119,7 @@ func (m *machineSvcImpl) CreateMachine(ctx context.Context, req *CreateMachineRe
 		return nil, apiErr
 	}
 
-	result := MachinePresenter(resp.Machine)
-	return &result, nil
+	return loadMachineByID(ctx, resp.Machine.Id)
 }
 
 func (m *machineSvcImpl) UpdateMachine(ctx context.Context, req *UpdateMachineRequest) (*apiresource.Machine, *apierror.APIError) {
@@ -117,7 +128,6 @@ func (m *machineSvcImpl) UpdateMachine(ctx context.Context, req *UpdateMachineRe
 		Name:         req.Name,
 		SerialNumber: req.SerialNumber,
 		Notes:        req.Notes,
-		Includes:     appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, machineSvcTracer, "service.machines.update", domain.ServiceName,
@@ -129,8 +139,7 @@ func (m *machineSvcImpl) UpdateMachine(ctx context.Context, req *UpdateMachineRe
 		return nil, apiErr
 	}
 
-	result := MachinePresenter(resp.Machine)
-	return &result, nil
+	return loadMachineByID(ctx, resp.Machine.Id)
 }
 
 func (m *machineSvcImpl) DeleteMachine(ctx context.Context, req *DeleteMachineRequest) (*apiresource.EmptyResource, *apierror.APIError) {

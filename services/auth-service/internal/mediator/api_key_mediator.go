@@ -169,19 +169,14 @@ func (s *apiKeyMedImpl) Create(ctx context.Context, input domain.APIKeyCreateInp
 
 // Revoke revokes an API key by its type ID.
 //
-// 1. Verify the API key exists by looking it up.
-// 2. Mark the API key as revoked in the repository.
-func (s *apiKeyMedImpl) Revoke(ctx context.Context, apiKeyTypeID string) *apierror.APIError {
+// Scoped to ownerAccountID: returns a not-found error if the key does not
+// exist for the given owner. This enforces tenant boundaries at the
+// persistence layer as a backstop to service-layer ownership checks.
+func (s *apiKeyMedImpl) Revoke(ctx context.Context, apiKeyTypeID string, ownerAccountID string) *apierror.APIError {
 	ctx, span := apiKeyMedTracer.Start(ctx, "mediator.api_key.revoke")
 	defer span.End()
 
-	apiKeyRepo := s.repos.NewAPIKeyRepo()
-
-	if _, apiErr := apiKeyRepo.FindByTypeID(ctx, apiKeyTypeID, nil); apiErr != nil {
-		return apiErr
-	}
-
-	return apiKeyRepo.Revoke(ctx, apiKeyTypeID)
+	return s.repos.NewAPIKeyRepo().Revoke(ctx, apiKeyTypeID, ownerAccountID)
 }
 
 // Rotate revokes the specified API key and creates a replacement with the same name,
@@ -201,7 +196,11 @@ func (s *apiKeyMedImpl) Rotate(ctx context.Context, input domain.APIKeyRotateInp
 		return "", nil, apiErr
 	}
 
-	if apiErr := apiKeyRepo.Revoke(ctx, input.APIKeyTypeID); apiErr != nil {
+	if oldKey.OwnerAccountID != input.OwnerAccountID {
+		return "", nil, apierror.NewResourceNotFoundError("API key not found.")
+	}
+
+	if apiErr := apiKeyRepo.Revoke(ctx, input.APIKeyTypeID, input.OwnerAccountID); apiErr != nil {
 		return "", nil, apiErr
 	}
 

@@ -11,8 +11,7 @@ import (
 )
 
 type RetrievePickRequest struct {
-	PickID   string   `path:"id" validate:"required"`
-	Includes []string `query:"include"`
+	PickID string `path:"id" validate:"required"`
 }
 
 // Returns a pick by ID.
@@ -27,6 +26,7 @@ func (e *RetrievePickEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveP
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypePick,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrievePickRequest) (*apiresource.PickDetail, *apierror.APIError) {
 			return svc.(PickSvc).GetPick
 		},

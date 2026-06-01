@@ -37,6 +37,7 @@ func (e *CreatePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypePaymentTerm,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreatePaymentTermRequest) (*apiresource.PaymentTerm, *apierror.APIError) {
 			return svc.(PaymentTermSvc).CreatePaymentTerm
 		},

@@ -630,6 +630,37 @@ func (r *productRepoImpl) Get(ctx context.Context, params domain.GetProductFullP
 	return p, nil
 }
 
+func (r *productRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.ProductFull, *apierror.APIError) {
+	ctx, span := productRepoTracer.Start(ctx, "repository.product.get_by_ids")
+	defer span.End()
+
+	rows, err := r.queries.GetProductsByIDs(ctx, sqlc.GetProductsByIDsParams{
+		Ids:       ids,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	products := make([]*domain.ProductFull, len(rows))
+	for i, row := range rows {
+		var plID *string
+		if row.ProductLineID.Valid {
+			plID = &row.ProductLineID.String
+		}
+		products[i] = &domain.ProductFull{
+			ID:              row.ID,
+			ProductTypeCode: row.ProductTypeCode,
+			IsPortalReady:   row.IsPortalReady,
+			ProductLineID:   plID,
+			ItemID:          row.ItemID,
+			CreatedAt:       row.CreatedAt,
+			UpdatedAt:       row.UpdatedAt,
+		}
+	}
+	return products, nil
+}
+
 func (r *productRepoImpl) Create(ctx context.Context, productID, itemID string, params domain.CreateProductParams) (*domain.ProductFull, *apierror.APIError) {
 	ctx, span := productRepoTracer.Start(ctx, "repository.product.create")
 	defer span.End()
@@ -861,6 +892,7 @@ func (r *productRepoImpl) Export(ctx context.Context, params domain.ExportProduc
 		CategoryIds:              categoryIDs,
 		IncludeAttributeFilter:   includeAttributeFilter,
 		AttributeIds:             attributeIDs,
+		IsPortalReady:            toNullBool(params.IsPortalReady),
 		StartDate:                startDate,
 		EndDate:                  endDate,
 	})

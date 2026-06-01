@@ -39,6 +39,7 @@ func (e *MergeCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*MergeCu
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeCustomer,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *MergeCustomersRequest) (*apiresource.Customer, *apierror.APIError) {
 			return svc.(CustomerSvc).MergeCustomers
 		},

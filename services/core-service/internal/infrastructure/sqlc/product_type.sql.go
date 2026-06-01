@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -83,6 +84,59 @@ func (q *Queries) GetProductType(ctx context.Context, arg GetProductTypeParams) 
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getProductTypesByIDs = `-- name: GetProductTypesByIDs :many
+SELECT
+    product_type.id,
+    product_type.name,
+    product_type.code,
+    product_type.created_at,
+    product_type.updated_at
+FROM product_type
+WHERE product_type.id IN (/*SLICE:ids*/?)
+`
+
+// Returns product types matching the given IDs. ProductType is a system-only
+// lookup (no account scoping); the api-gateway resolver uses this to populate
+// ProductType references on items/products.
+func (q *Queries) GetProductTypesByIDs(ctx context.Context, ids []string) ([]ProductType, error) {
+	query := getProductTypesByIDs
+	var queryParams []interface{}
+	if len(ids) > 0 {
+		for _, v := range ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ProductType
+	for rows.Next() {
+		var i ProductType
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Code,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const insertProductType = `-- name: InsertProductType :exec

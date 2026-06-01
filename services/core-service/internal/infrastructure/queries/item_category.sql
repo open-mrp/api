@@ -153,6 +153,20 @@ SELECT COUNT(*) FROM property
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
 
+-- name: GetItemCategoriesByIDs :many
+SELECT
+    ic.id,
+    ic.name,
+    ic.notes,
+    ic.item_category_type_code,
+    ic.unit_group_id,
+    ic.account_id,
+    ic.created_at,
+    ic.updated_at
+FROM item_category ic
+WHERE ic.id IN (sqlc.slice('ids'))
+AND (ic.account_id = sqlc.arg('account_id') OR ic.account_id IS NULL);
+
 -- name: GetUnitGroupForCategory :one
 SELECT
     ug.id,

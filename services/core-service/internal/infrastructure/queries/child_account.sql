@@ -84,6 +84,23 @@ LEFT JOIN account_branding ab ON ab.owner_account_id = ar.counterparty_account_i
 WHERE ar.owner_account_id = sqlc.arg('owner_account_id')
   AND ar.counterparty_account_id = sqlc.arg('counterparty_account_id');
 
+-- name: GetChildAccountsByRelationIDs :many
+-- Returns child account relations matching the given relation IDs that belong
+-- to the caller's account. Used by the api-gateway resourcekit resolver.
+SELECT
+    ar.id AS relation_id,
+    ar.counterparty_account_id AS account_id,
+    a.name AS account_name,
+    ar.external_number,
+    ab.support_email AS email,
+    ar.created_at,
+    ar.updated_at
+FROM account_relation ar
+INNER JOIN account a ON a.id = ar.counterparty_account_id
+LEFT JOIN account_branding ab ON ab.owner_account_id = ar.counterparty_account_id
+WHERE ar.id IN (sqlc.slice('ids'))
+  AND ar.owner_account_id = sqlc.arg('owner_account_id');
+
 -- name: ListChildAccountsByParentRelationIDs :many
 SELECT
     ar.parent_account_relation_id AS parent_relation_id,

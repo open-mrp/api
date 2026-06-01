@@ -7,6 +7,8 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -62,6 +64,32 @@ func (m *quantitySvcImpl) UpdateQuantity(ctx context.Context, req *UpdateQuantit
 		return nil, apiErr
 	}
 
-	result := QuantityPresenter(resp.Quantity)
+	meta := resourcekit.GetLoadMeta(ctx)
+	result := quantityFromProto(resp.Quantity)
+	stashQuantityMeta(meta, resp.Quantity)
 	return &result, nil
+}
+
+func quantityFromProto(q *pb.QuantityInfo) apiresource.Quantity {
+	if q == nil {
+		return apiresource.Quantity{}
+	}
+
+	norm := apiresource.NormalizeQuantityValue(q.Value, q.UnitType)
+	return apiresource.Quantity{
+		ID:           q.Id,
+		Object:       constants.ObjectTypeQuantity,
+		Value:        norm,
+		DisplayValue: apiresource.FormatDisplayValue(norm, q.UnitAbbreviation, q.UnitType),
+	}
+}
+
+func stashQuantityMeta(meta *resourcekit.LoadMeta, q *pb.QuantityInfo) {
+	if q == nil {
+		return
+	}
+	unit := UnitFromQuantityInfo(q)
+	if unit != nil {
+		meta.Set(constants.ObjectTypeQuantity, q.Id, "unit", unit)
+	}
 }

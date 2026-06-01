@@ -276,3 +276,23 @@ func (h *gRPCHandler) ValidateProducts(ctx context.Context, req *pb.ValidateProd
 		Products: pbProducts,
 	}, nil
 }
+
+func (h *gRPCHandler) BatchGetProductsByIDs(ctx context.Context, req *pb.BatchGetProductsByIDsRequest) (*pb.BatchGetProductsByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	products, apiErr := h.productSvc.BatchGetProductsByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	pbProducts := make([]*pb.ProductFullInfo, len(products))
+	for i, p := range products {
+		pbProducts[i] = productFullToProto(p)
+	}
+
+	return &pb.BatchGetProductsByIDsResponse{
+		Products: pbProducts,
+	}, nil
+}

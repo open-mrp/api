@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleSalesOrderStatusID = "orss_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleSalesOrderStatusID = "orss_017a18cc8a4e6dfbc61f11f5a3"
 
 var SampleSalesOrderStatusCode = constants.SalesOrderStatusCodeEstimate
 

@@ -28,7 +28,7 @@ func TestLoggingMiddleware_CapturesAPIVersion(t *testing.T) {
 
 	handler := LoggingMiddleware(logger, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-	}, saver, nil)
+	}, saver, nil, 0)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
 	req.Header.Set(header.VersionHeader, "1.0.forge-preview.1")
@@ -54,7 +54,7 @@ func TestLoggingMiddleware_CapturesAPIVersionEvenIfInvalid(t *testing.T) {
 
 	handler := LoggingMiddleware(logger, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-	}, saver, nil)
+	}, saver, nil, 0)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
 	// Set an invalid version - should still be captured for logging
@@ -82,7 +82,7 @@ func TestLoggingMiddleware_NoAPIVersionWhenHeaderMissing(t *testing.T) {
 
 	handler := LoggingMiddleware(logger, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-	}, saver, nil)
+	}, saver, nil, 0)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
 	// No version header set
@@ -111,7 +111,7 @@ func TestLoggingMiddleware_RequestLogInContext(t *testing.T) {
 			capturedRL = rl
 		}
 		w.WriteHeader(http.StatusOK)
-	}, saver, nil)
+	}, saver, nil, 0)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
 	req.Header.Set(header.VersionHeader, "1.0.forge-preview.1")
@@ -145,7 +145,7 @@ func TestLoggingMiddleware_RedactsSensitiveResponseFields(t *testing.T) {
 		rl.SensitiveResponseFields = map[string]bool{"api_key_secret": true}
 		w.WriteHeader(http.StatusCreated)
 		_, _ = w.Write([]byte(`{"api_key_secret":"aug_sk_prod_secret","object":"created_api_key","api_key_info":{"id":"apke_123","object":"api_key"}}`))
-	}, saver, nil)
+	}, saver, nil, 0)
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/test", nil)
 	rr := httptest.NewRecorder()
@@ -174,7 +174,7 @@ func TestLoggingMiddleware_RedactFailure_omitsResponseJSON(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		// Not valid JSON as a single top-level value → RedactJSON returns nil → omit stored response.
 		_, _ = w.Write([]byte(`not-json`))
-	}, saver, nil)
+	}, saver, nil, 0)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
 	rr := httptest.NewRecorder()
@@ -208,7 +208,7 @@ func TestLoggingMiddleware_PublicEndpoint_WithPublicRoute(t *testing.T) {
 
 	handler := LoggingMiddleware(logger, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-	}, saver, router)
+	}, saver, router, 0)
 
 	req := httptest.NewRequest(http.MethodGet, "/v1/invoices", nil)
 	rr := httptest.NewRecorder()
@@ -229,7 +229,7 @@ func TestLoggingMiddleware_PublicEndpoint_NoRouter(t *testing.T) {
 
 	handler := LoggingMiddleware(logger, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-	}, saver, nil)
+	}, saver, nil, 0)
 
 	req := httptest.NewRequest(http.MethodGet, "/unknown", nil)
 	rr := httptest.NewRecorder()

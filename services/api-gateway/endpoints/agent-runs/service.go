@@ -7,7 +7,6 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/agent"
@@ -40,6 +39,8 @@ type agentRunSvcImpl struct {
 }
 
 var runSvcTracer = tracing.GetTracer("api-gateway.endpoints.agent_runs.service")
+
+var agentRunIncludes = []string{"actions", "definition", "steps", "definition.config", "definition.tools", "definition.role"}
 
 func (c *AgentRunSvcConfig) validate() error {
 	if c.AgentClient == nil {
@@ -76,7 +77,7 @@ func (m *agentRunSvcImpl) ListRuns(ctx context.Context, req *ListRunsRequest) (*
 	pbReq := &pb.ListRunsRequest{
 		Limit:    req.Limit,
 		Cursor:   req.Cursor,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
+		Includes: agentRunIncludes,
 	}
 	if req.Query != nil {
 		pbReq.Query = req.Query
@@ -103,6 +104,7 @@ func (m *agentRunSvcImpl) ListRuns(ctx context.Context, req *ListRunsRequest) (*
 			roleInfo = m.resolveRole(ctx, r.Definition.RoleId)
 		}
 		runs[i] = AgentRunPresenterWithRole(r, roleInfo)
+		stashAgentRunMeta(ctx, &runs[i], r, roleInfo)
 	}
 	return apiresource.NewList(runs, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
@@ -110,7 +112,7 @@ func (m *agentRunSvcImpl) ListRuns(ctx context.Context, req *ListRunsRequest) (*
 func (m *agentRunSvcImpl) GetRun(ctx context.Context, req *RetrieveRunRequest) (*apiresource.AgentRun, *apierror.APIError) {
 	pbReq := &pb.GetRunRequest{
 		AgentRunId: req.AgentRunID,
-		Includes:   appctx.GetRequestedIncludeKeys(ctx),
+		Includes:   agentRunIncludes,
 	}
 
 	resp, rpcErr := grpcutil.CallRPC(ctx, runSvcTracer, "service.agent_runs.get", domain.ServiceName,
@@ -127,6 +129,7 @@ func (m *agentRunSvcImpl) GetRun(ctx context.Context, req *RetrieveRunRequest) (
 	}
 
 	result := AgentRunPresenterWithRole(resp.Run, roleInfo)
+	stashAgentRunMeta(ctx, &result, resp.Run, roleInfo)
 	return &result, nil
 }
 

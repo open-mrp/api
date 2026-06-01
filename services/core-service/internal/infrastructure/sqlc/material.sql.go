@@ -593,6 +593,104 @@ func (q *Queries) GetMaterialByItemID(ctx context.Context, arg GetMaterialByItem
 	return i, err
 }
 
+const getMaterialsByIDs = `-- name: GetMaterialsByIDs :many
+SELECT
+    m.id,
+    m.item_id,
+    m.order_point_id,
+    m.lead_time_id,
+    m.created_at,
+    m.updated_at,
+    op.value AS order_point_value,
+    op.unit_id AS order_point_unit_id,
+    op_u.abbreviation AS order_point_unit_abbreviation,
+    op_u.unit_dimension_code AS order_point_unit_type,
+    lt.value AS lead_time_value,
+    lt.unit_id AS lead_time_unit_id,
+    lt_u.abbreviation AS lead_time_unit_abbreviation,
+    lt_u.unit_dimension_code AS lead_time_unit_type
+FROM material m
+JOIN item i ON i.id = m.item_id
+JOIN quantity op ON op.id = m.order_point_id
+JOIN unit op_u ON op_u.id = op.unit_id
+JOIN quantity lt ON lt.id = m.lead_time_id
+JOIN unit lt_u ON lt_u.id = lt.unit_id
+WHERE m.id IN (/*SLICE:ids*/?)
+AND i.account_id = ?
+AND i.deleted_at IS NULL
+`
+
+type GetMaterialsByIDsParams struct {
+	Ids       []string
+	AccountID string
+}
+
+type GetMaterialsByIDsRow struct {
+	ID                         string
+	ItemID                     string
+	OrderPointID               string
+	LeadTimeID                 string
+	CreatedAt                  time.Time
+	UpdatedAt                  time.Time
+	OrderPointValue            string
+	OrderPointUnitID           string
+	OrderPointUnitAbbreviation string
+	OrderPointUnitType         string
+	LeadTimeValue              string
+	LeadTimeUnitID             string
+	LeadTimeUnitAbbreviation   string
+	LeadTimeUnitType           string
+}
+
+func (q *Queries) GetMaterialsByIDs(ctx context.Context, arg GetMaterialsByIDsParams) ([]GetMaterialsByIDsRow, error) {
+	query := getMaterialsByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetMaterialsByIDsRow
+	for rows.Next() {
+		var i GetMaterialsByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ItemID,
+			&i.OrderPointID,
+			&i.LeadTimeID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.OrderPointValue,
+			&i.OrderPointUnitID,
+			&i.OrderPointUnitAbbreviation,
+			&i.OrderPointUnitType,
+			&i.LeadTimeValue,
+			&i.LeadTimeUnitID,
+			&i.LeadTimeUnitAbbreviation,
+			&i.LeadTimeUnitType,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listMaterialsBackwardBase = `-- name: ListMaterialsBackwardBase :many
 SELECT
     m.id,

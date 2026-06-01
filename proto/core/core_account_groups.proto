@@ -58,6 +58,13 @@ message UpdateAccountGroupResponse {
 message DeleteAccountGroupRequest {
   string id = 1;
 }
+// Batched read for the api-gateway resourcekit resolver.
+message BatchGetAccountGroupsByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetAccountGroupsByIDsResponse {
+  repeated AccountGroupInfo account_groups = 1;
+}
 message AccountUserDetail {
   string id = 1;
   string user_id = 2;
@@ -129,6 +136,13 @@ message UpdateAccountUserRequest {
 }
 message UpdateAccountUserResponse {
   AccountUserDetail account_user = 1;
+}
+// Batched read for the api-gateway resourcekit resolver.
+message BatchGetAccountUsersByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetAccountUsersByIDsResponse {
+  repeated AccountUserDetail account_users = 1;
 }
 message UpdateAccountUserStatusRequest {
   string account_user_id = 1;
@@ -338,6 +352,13 @@ message UpdateAccountGroupProductLineAccessResponse {
 message DeleteAccountGroupProductLineAccessRequest {
   string account_group_id = 1;
 }
+// Batched read for the api-gateway resourcekit resolver. IDs are account_group_ids.
+message BatchGetAccountGroupProductLineAccessByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetAccountGroupProductLineAccessByIDsResponse {
+  repeated AccountGroupProductLineAccessInfo items = 1;
+}
 message CustomerProductLineAccessInfo {
   string customer_id = 1;
   string customer_name = 2;
@@ -378,6 +399,13 @@ message UpdateCustomerProductLineAccessResponse {
 message DeleteCustomerProductLineAccessRequest {
   string customer_id = 1;
 }
+// Batched read for the api-gateway resourcekit resolver. IDs are customer_ids.
+message BatchGetCustomerProductLineAccessByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetCustomerProductLineAccessByIDsResponse {
+  repeated CustomerProductLineAccessInfo items = 1;
+}
 message AccountIntegrationInfo {
   string id = 1;
   string name = 2;
@@ -417,6 +445,13 @@ message DeleteAccountIntegrationRequest {
 }
 message DeleteAccountIntegrationResponse {
   AccountIntegrationInfo account_integration = 1;
+}
+// Batched read for the api-gateway resourcekit resolver.
+message BatchGetAccountIntegrationsByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetAccountIntegrationsByIDsResponse {
+  repeated AccountIntegrationInfo account_integrations = 1;
 }
 message GetStripePublishableKeyRequest {}
 message GetStripePublishableKeyResponse {

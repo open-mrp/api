@@ -28,3 +28,9 @@ staticcheck.conf
 release-please-config.json
 .github
 .cspell.json
+
+# Editor atomic-save temp files
+**/*.tmp.*
+**/.!*!*
+**/.#*
+**/#*#

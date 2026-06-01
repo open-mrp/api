@@ -957,6 +957,21 @@ AND item_id IN (
     SELECT id FROM item WHERE account_id = sqlc.arg('account_id') AND deleted_at IS NULL
 );
 
+-- name: GetProductsByIDs :many
+SELECT
+    p.id,
+    p.product_type_code,
+    p.is_portal_ready,
+    p.product_line_id,
+    p.item_id,
+    p.created_at,
+    p.updated_at
+FROM product p
+JOIN item i ON i.id = p.item_id
+WHERE p.id IN (sqlc.slice('ids'))
+AND i.account_id = sqlc.arg('account_id')
+AND i.deleted_at IS NULL;
+
 -- name: FindProductsBySKUs :many
 SELECT
     p.id,
@@ -1245,6 +1260,10 @@ AND (
     )
 )
 AND p.product_type_code = 'sale'
+AND (
+    sqlc.narg('is_portal_ready') IS NULL
+    OR p.is_portal_ready = sqlc.narg('is_portal_ready')
+)
 AND (
     sqlc.narg('start_date') IS NULL
     OR i.created_at >= sqlc.narg('start_date')

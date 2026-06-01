@@ -76,9 +76,7 @@ jobs:
       - name: Get changed packages
         id: pkgs
         run: |
-          PKGS=$(git diff --name-only origin/main...HEAD -- '*.go' \
-            | grep -v -E '(^|/)sqlc/|(/|^)proto/|(/|^)tools/|^tests/' \
-            | xargs -I{} dirname {} | sort -u | sed 's|^|./|' | paste -sd ' ')
+          PKGS=$(./scripts/select-changed-packages.sh origin/main)
           echo "pkgs=${PKGS:-}" >> "$GITHUB_OUTPUT"
 
       - name: Run gosec (fast rules)
@@ -120,9 +118,7 @@ jobs:
       - name: Get changed packages
         id: pkgs
         run: |
-          PKGS=$(git diff --name-only origin/main...HEAD -- '*.go' \
-            | grep -v -E '(^|/)sqlc/|(/|^)proto/|(/|^)tools/|^tests/' \
-            | xargs -I{} dirname {} | sort -u | sed 's|^|./|' | paste -sd ' ')
+          PKGS=$(./scripts/select-changed-packages.sh origin/main)
           echo "pkgs=${PKGS:-}" >> "$GITHUB_OUTPUT"
 
       - name: Run staticcheck
@@ -150,9 +146,7 @@ jobs:
       - name: Get changed packages
         id: pkgs
         run: |
-          PKGS=$(git diff --name-only origin/main...HEAD -- '*.go' \
-            | grep -v -E '(^|/)sqlc/|(/|^)proto/|(/|^)tools/|^tests/' \
-            | xargs -I{} dirname {} | sort -u | sed 's|^|./|' | paste -sd ' ')
+          PKGS=$(./scripts/select-changed-packages.sh origin/main)
           echo "pkgs=${PKGS:-}" >> "$GITHUB_OUTPUT"
 
       - name: Run govet

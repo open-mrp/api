@@ -125,3 +125,21 @@ func (r *accountStatusRepoImpl) Get(ctx context.Context, identifier string) (*do
 
 	return mapAccountStatusRow(row), nil
 }
+
+func (r *accountStatusRepoImpl) GetByIDs(ctx context.Context, ids []string) ([]*domain.AccountStatus, *apierror.APIError) {
+	ctx, span := accountStatusRepoTracer.Start(ctx, "repository.account_status.get_by_ids")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := r.queries.GetAccountStatusesByIDs(ctx, ids)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make([]*domain.AccountStatus, len(rows))
+	for i, row := range rows {
+		out[i] = mapAccountStatusRow(row)
+	}
+	return out, nil
+}

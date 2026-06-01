@@ -8,9 +8,9 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/export"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	httptransport "github.com/augno/api/services/api-gateway/internal/http"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -69,7 +69,6 @@ func (m *materialSvcImpl) ListMaterials(ctx context.Context, req *ListMaterialsR
 		Query:        req.Query,
 		CategoryIds:  req.CategoryIDs,
 		AttributeIds: req.AttributeIDs,
-		Includes:     appctx.GetRequestedIncludeKeys(ctx),
 	}
 	if req.StartDate != nil {
 		pbReq.StartDate = timestamppb.New(*req.StartDate)
@@ -85,20 +84,26 @@ func (m *materialSvcImpl) ListMaterials(ctx context.Context, req *ListMaterialsR
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	return MaterialListPresenter(ctx, resp), nil
-}
 
-func (m *materialSvcImpl) GetMaterial(ctx context.Context, req *RetrieveMaterialRequest) (*apiresource.Material, *apierror.APIError) {
-	pbReq := &pb.GetMaterialRequest{Id: req.ItemID, Includes: appctx.GetRequestedIncludeKeys(ctx)}
-	resp, apiErr := grpcutil.CallRPC(ctx, materialSvcTracer, "service.materials.get", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetMaterialResponse, error) {
-			return m.coreClient.GetMaterial(ctx, pbReq, opts...)
-		})
+	ids := make([]string, len(resp.Materials))
+	for i, mat := range resp.Materials {
+		ids[i] = mat.Id
+	}
+	loaded, apiErr := resourceloaders.LoadMaterials(ctx, ids)
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	result := MaterialPresenter(resp.Material)
-	return &result, nil
+	materials := make([]apiresource.Material, 0, len(ids))
+	for _, id := range ids {
+		if v, ok := loaded[id]; ok {
+			materials = append(materials, *(v.(*apiresource.Material)))
+		}
+	}
+	return apiresource.NewList(materials, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
+}
+
+func (m *materialSvcImpl) GetMaterial(ctx context.Context, req *RetrieveMaterialRequest) (*apiresource.Material, *apierror.APIError) {
+	return loadMaterialByID(ctx, req.ItemID)
 }
 
 func (m *materialSvcImpl) CreateMaterial(ctx context.Context, req *CreateMaterialRequest) (*apiresource.Material, *apierror.APIError) {
@@ -111,7 +116,6 @@ func (m *materialSvcImpl) CreateMaterial(ctx context.Context, req *CreateMateria
 		UnitCost:     rateInputToProto(req.UnitCost.Ptr()),
 		BurnRate:     rateInputToProto(req.BurnRate.Ptr()),
 		AttributeIds: req.AttributeIDs,
-		Includes:     appctx.GetRequestedIncludeKeys(ctx),
 	}
 	if q, ok := req.OrderPoint.Value(); ok {
 		pbReq.OrderPoint = &pb.QuantityInput{Value: q.Value, UnitId: q.UnitID}
@@ -127,8 +131,7 @@ func (m *materialSvcImpl) CreateMaterial(ctx context.Context, req *CreateMateria
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	result := MaterialPresenter(resp.Material)
-	return &result, nil
+	return loadMaterialByID(ctx, resp.Material.Id)
 }
 
 func (m *materialSvcImpl) UpdateMaterial(ctx context.Context, req *UpdateMaterialRequest) (*apiresource.Material, *apierror.APIError) {
@@ -140,7 +143,6 @@ func (m *materialSvcImpl) UpdateMaterial(ctx context.Context, req *UpdateMateria
 		Notes:             req.Notes,
 		UpdateNotes:       req.Notes != nil,
 		UnitCost:          rateInputToProto(req.UnitCost.Ptr()),
-		Includes:          appctx.GetRequestedIncludeKeys(ctx),
 	}
 	if req.OrderPoint != nil {
 		pbReq.OrderPoint = &pb.QuantityInput{Value: req.OrderPoint.Value, UnitId: req.OrderPoint.UnitID}
@@ -156,8 +158,7 @@ func (m *materialSvcImpl) UpdateMaterial(ctx context.Context, req *UpdateMateria
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	result := MaterialPresenter(resp.Material)
-	return &result, nil
+	return loadMaterialByID(ctx, resp.Material.Id)
 }
 
 func (m *materialSvcImpl) DeleteMaterial(ctx context.Context, req *DeleteMaterialRequest) (*apiresource.Material, *apierror.APIError) {
@@ -209,4 +210,16 @@ func (m *materialSvcImpl) ExportMaterials(ctx context.Context, req *ExportMateri
 		Filename:    "materials.xlsx",
 		Body:        body,
 	}, nil
+}
+
+func loadMaterialByID(ctx context.Context, id string) (*apiresource.Material, *apierror.APIError) {
+	loaded, apiErr := resourceloaders.LoadMaterials(ctx, []string{id})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	v, ok := loaded[id]
+	if !ok {
+		return nil, apierror.NewResourceNotFoundError("Material not found.")
+	}
+	return v.(*apiresource.Material), nil
 }

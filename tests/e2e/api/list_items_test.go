@@ -103,13 +103,13 @@ func TestListItems_Pagination(t *testing.T) {
 	t.Parallel()
 	page1, _, err := apiClient.GetList(itemsPath, url.Values{"limit": {"1"}})
 	require.NoError(t, err)
-	require.Len(t, page1.Data, 1)
+	requirePageLen(t, page1.Data, 1)
 	require.True(t, page1.PageInfo.HasNextPage, "seeded catalog should have more than one item for pagination")
 	require.NotNil(t, page1.PageInfo.NextPageURL)
 
 	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
 	require.NoError(t, err)
-	require.Len(t, page2.Data, 1)
+	requirePageLen(t, page2.Data, 1)
 
 	id1 := DataItemField(page1.Data[0], "id")
 	id2 := DataItemField(page2.Data[0], "id")
@@ -161,7 +161,7 @@ func TestListItems_FilterByCategoryWithPagination(t *testing.T) {
 		"limit":        {"1"},
 	})
 	require.NoError(t, err)
-	require.Len(t, page1.Data, 1, "First page with category filter should have exactly 1 item")
+	requirePageLen(t, page1.Data, 1)
 
 	if !page1.PageInfo.HasNextPage || page1.PageInfo.NextPageURL == nil {
 		// Only one item in the category — still confirms the filter worked.
@@ -171,7 +171,7 @@ func TestListItems_FilterByCategoryWithPagination(t *testing.T) {
 	// Page 2: follows next_page_url — verifies filters persist across pages.
 	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
 	require.NoError(t, err)
-	require.Len(t, page2.Data, 1, "Second page with category filter should have exactly 1 item")
+	requirePageLen(t, page2.Data, 1)
 
 	id1 := DataItemField(page1.Data[0], "id")
 	id2 := DataItemField(page2.Data[0], "id")

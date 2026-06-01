@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -142,6 +143,93 @@ func (q *Queries) GetCarrierOption(ctx context.Context, arg GetCarrierOptionPara
 	return i, err
 }
 
+const getCarrierOptionsByIDs = `-- name: GetCarrierOptionsByIDs :many
+SELECT
+    carrier_option.id,
+    carrier_option.name,
+    carrier_option.code,
+    carrier_option.service_level_token,
+    carrier_option.is_portal_enabled,
+    carrier_option.is_default,
+    carrier_option.carrier_id,
+    carrier_option.account_id,
+    carrier_option.created_at,
+    carrier_option.updated_at
+FROM carrier_option
+INNER JOIN carrier c ON c.id = carrier_option.carrier_id
+WHERE carrier_option.id IN (/*SLICE:ids*/?)
+AND (carrier_option.account_id = ? OR carrier_option.account_id IS NULL)
+AND (c.account_id = ? OR c.account_id IS NULL)
+AND c.deleted_at IS NULL
+`
+
+type GetCarrierOptionsByIDsParams struct {
+	Ids       []string
+	AccountID sql.NullString
+}
+
+type GetCarrierOptionsByIDsRow struct {
+	ID                string
+	Name              string
+	Code              string
+	ServiceLevelToken sql.NullString
+	IsPortalEnabled   bool
+	IsDefault         bool
+	CarrierID         string
+	AccountID         sql.NullString
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+// Returns carrier_options (service levels) matching the given IDs that the
+// caller's account is authorized to read (the option's own account_id
+// scoping plus the parent carrier's account scoping).
+func (q *Queries) GetCarrierOptionsByIDs(ctx context.Context, arg GetCarrierOptionsByIDsParams) ([]GetCarrierOptionsByIDsRow, error) {
+	query := getCarrierOptionsByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetCarrierOptionsByIDsRow
+	for rows.Next() {
+		var i GetCarrierOptionsByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Code,
+			&i.ServiceLevelToken,
+			&i.IsPortalEnabled,
+			&i.IsDefault,
+			&i.CarrierID,
+			&i.AccountID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const insertCarrierOption = `-- name: InsertCarrierOption :exec
 INSERT INTO carrier_option (
     id,
@@ -191,6 +279,71 @@ func (q *Queries) InsertCarrierOption(ctx context.Context, arg InsertCarrierOpti
 		arg.AccountID,
 	)
 	return err
+}
+
+const listCarrierOptionIDsForCarriers = `-- name: ListCarrierOptionIDsForCarriers :many
+SELECT
+    carrier_option.id,
+    carrier_option.carrier_id
+FROM carrier_option
+INNER JOIN carrier c ON c.id = carrier_option.carrier_id
+WHERE carrier_option.carrier_id IN (/*SLICE:carrier_ids*/?)
+AND (carrier_option.account_id = ? OR carrier_option.account_id IS NULL)
+AND (c.account_id = ? OR c.account_id IS NULL)
+AND c.deleted_at IS NULL
+ORDER BY carrier_option.carrier_id, carrier_option.created_at ASC, carrier_option.id ASC
+`
+
+type ListCarrierOptionIDsForCarriersParams struct {
+	CarrierIds []string
+	AccountID  sql.NullString
+}
+
+type ListCarrierOptionIDsForCarriersRow struct {
+	ID        string
+	CarrierID string
+}
+
+// Returns all carrier_option IDs for the given carriers, deterministically
+// ordered. The api-gateway groups results by carrier_id and truncates to
+// `service_levels_limit` per carrier in Go (sqlc's MySQL engine has limited
+// CTE / window-function support, so per-group truncation is done client-side).
+// Authorization: the parent carrier must be the caller's own or a system
+// carrier; only options visible to the caller's account (or system options)
+// are returned.
+func (q *Queries) ListCarrierOptionIDsForCarriers(ctx context.Context, arg ListCarrierOptionIDsForCarriersParams) ([]ListCarrierOptionIDsForCarriersRow, error) {
+	query := listCarrierOptionIDsForCarriers
+	var queryParams []interface{}
+	if len(arg.CarrierIds) > 0 {
+		for _, v := range arg.CarrierIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:carrier_ids*/?", strings.Repeat(",?", len(arg.CarrierIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:carrier_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCarrierOptionIDsForCarriersRow
+	for rows.Next() {
+		var i ListCarrierOptionIDsForCarriersRow
+		if err := rows.Scan(&i.ID, &i.CarrierID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listCarrierOptionsBackward = `-- name: ListCarrierOptionsBackward :many

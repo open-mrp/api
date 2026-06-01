@@ -50,6 +50,7 @@ func (e *UpdatePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePartR
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdatePartRequest) (*apiresource.Part, *apierror.APIError) {
 			return svc.(PartSvc).UpdatePart
 		},
+		ObjectType: constants.ObjectTypePart,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypePart,
 			Fields:     []string{"item", "item.category", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},

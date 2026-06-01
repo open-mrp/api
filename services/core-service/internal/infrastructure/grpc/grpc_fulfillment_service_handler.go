@@ -150,3 +150,23 @@ func (h *fulfillmentGRPCHandler) DeleteMachine(ctx context.Context, req *pb.Dele
 
 	return &emptypb.Empty{}, nil
 }
+
+func (h *fulfillmentGRPCHandler) BatchGetMachinesByIDs(ctx context.Context, req *pb.BatchGetMachinesByIDsRequest) (*pb.BatchGetMachinesByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	machines, apiErr := h.machineSvc.BatchGetMachinesByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	protos := make([]*pb.MachineInfo, len(machines))
+	for i, m := range machines {
+		protos[i] = machineToProto(m)
+	}
+
+	return &pb.BatchGetMachinesByIDsResponse{
+		Machines: protos,
+	}, nil
+}

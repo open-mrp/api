@@ -50,6 +50,7 @@ func (e *UpdateRateEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateRateR
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeRate,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateRateRequest) (*apiresource.Rate, *apierror.APIError) {
 			return svc.(RateSvc).UpdateRate
 		},

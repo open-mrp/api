@@ -68,6 +68,21 @@ func (h *gRPCHandler) AddChildAccount(ctx context.Context, req *pb.AddChildAccou
 	}, nil
 }
 
+func (h *gRPCHandler) BatchGetChildAccountsByIDs(ctx context.Context, req *pb.BatchGetChildAccountsByIDsRequest) (*pb.BatchGetChildAccountsByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	items, apiErr := h.childAccountSvc.BatchGetChildAccountsByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	pbItems := make([]*pb.ChildAccountProto, len(items))
+	for i, ca := range items {
+		pbItems[i] = childAccountToProto(ca)
+	}
+	return &pb.BatchGetChildAccountsByIDsResponse{Items: pbItems}, nil
+}
+
 func (h *gRPCHandler) RemoveChildAccount(ctx context.Context, req *pb.RemoveChildAccountRequest) (*emptypb.Empty, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

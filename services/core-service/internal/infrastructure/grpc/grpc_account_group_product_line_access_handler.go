@@ -65,6 +65,21 @@ func (h *gRPCHandler) ListAccountGroupProductLineAccess(ctx context.Context, req
 	}, nil
 }
 
+func (h *gRPCHandler) BatchGetAccountGroupProductLineAccessByIDs(ctx context.Context, req *pb.BatchGetAccountGroupProductLineAccessByIDsRequest) (*pb.BatchGetAccountGroupProductLineAccessByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	items, apiErr := h.accountGroupProductLineAccessSvc.BatchGetAccountGroupProductLineAccessByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	pbItems := make([]*pb.AccountGroupProductLineAccessInfo, len(items))
+	for i, it := range items {
+		pbItems[i] = accountGroupProductLineAccessToProto(it)
+	}
+	return &pb.BatchGetAccountGroupProductLineAccessByIDsResponse{Items: pbItems}, nil
+}
+
 func (h *gRPCHandler) GetAccountGroupProductLineAccess(ctx context.Context, req *pb.GetAccountGroupProductLineAccessRequest) (*pb.GetAccountGroupProductLineAccessResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

@@ -9,7 +9,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleAgentMemoryID = "agmm_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleAgentMemoryID = "agmm_018731bdaf4ab04bd5bff1b65c"
 
 // Agent memory resource.
 type AgentMemory struct {

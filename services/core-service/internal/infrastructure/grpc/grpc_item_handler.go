@@ -245,6 +245,26 @@ func (h *gRPCHandler) GetItem(ctx context.Context, req *pb.GetItemRequest) (*pb.
 	}, nil
 }
 
+func (h *gRPCHandler) BatchGetItemsByIDs(ctx context.Context, req *pb.BatchGetItemsByIDsRequest) (*pb.BatchGetItemsByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	items, apiErr := h.itemSvc.BatchGetItemsByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	pbItems := make([]*pb.ItemInfo, len(items))
+	for i, item := range items {
+		pbItems[i] = itemToProto(item)
+	}
+
+	return &pb.BatchGetItemsByIDsResponse{
+		Items: pbItems,
+	}, nil
+}
+
 func (h *gRPCHandler) GetItemInventory(ctx context.Context, req *pb.GetItemInventoryRequest) (*pb.GetItemInventoryResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

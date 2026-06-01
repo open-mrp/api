@@ -43,6 +43,7 @@ func (e *CreateAccountIntegrationEndpoint) Materialize() *apiendpoint.APIEndpoin
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeAccountIntegration,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateAccountIntegrationRequest) (*apiresource.AccountIntegration, *apierror.APIError) {
 			return svc.(AccountIntegrationSvc).CreateAccountIntegration
 		},

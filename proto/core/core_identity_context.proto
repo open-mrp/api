@@ -47,12 +47,18 @@ message AccountUserAccess {
   optional google.protobuf.Timestamp last_used_at = 6;
 }
 message GetAccountRelationRequest {
+  // Despite the name, this is the target account the caller wants to act on.
   string owner_account_id = 1;
   oneof lookup {
     string user_id = 2;
     // Database row ID, not prefixed type ID.
     int64 api_key_id = 3;
   }
+  // When set on a user_id lookup, constrains owner-side matches so the relation's
+  // owner_account_id must equal this actor account. Without it, owner-side relations
+  // are not returned for user lookups. Ignored for api_key_id lookups (the API key
+  // already binds the owner account via its own JOIN).
+  optional string actor_account_id = 4;
 }
 message GetAccountRelationResponse {
   bool has_relation = 1;
@@ -202,6 +208,12 @@ message UpdateRoleResponse {
 message DeleteRoleRequest {
   string id = 1;
 }
+message BatchGetRolesByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetRolesByIDsResponse {
+  repeated RoleDetail roles = 1;
+}
 message ListSandboxAccountsRequest {
   optional string cursor = 1;
   int32 limit = 2;
@@ -240,6 +252,13 @@ message GetSandboxResponse {
 }
 message DeleteSandboxRequest {
   string id = 1;
+}
+// Batched read for the api-gateway resourcekit resolver.
+message BatchGetSandboxesByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetSandboxesByIDsResponse {
+  repeated SandboxInfo sandboxes = 1;
 }
 message SandboxInfo {
   string id = 1;
@@ -339,6 +358,13 @@ message UpdateUnitResponse {
 }
 message DeleteUnitRequest {
   string id = 1;
+}
+// Batched read for the api-gateway resourcekit resolver.
+message BatchGetUnitsByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetUnitsByIDsResponse {
+  repeated UnitInfo units = 1;
 }
 message UpdateAgentSpendingCapRequest {
   optional int64 cap_cents = 1;

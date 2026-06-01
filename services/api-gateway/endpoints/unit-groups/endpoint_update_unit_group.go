@@ -49,6 +49,7 @@ func (e *UpdateUnitGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*Update
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeUnitGroup,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateUnitGroupRequest) (*apiresource.UnitGroup, *apierror.APIError) {
 			return svc.(UnitGroupSvc).UpdateUnitGroup
 		},

@@ -28,6 +28,7 @@ func (e *RetrieveAlertEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrieve
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeAgentAlert,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAlertRequest) (*apiresource.AgentAlert, *apierror.APIError) {
 			return svc.(AgentAlertSvc).GetAlert
 		},

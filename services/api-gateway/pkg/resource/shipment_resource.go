@@ -8,9 +8,9 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleShipmentDetailID = "sh_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleShipmentDetailID = "sh_018b3a946651bfb6572b06b2b2"
 const SampleShipmentNumber = "SH-001"
-const SampleShipmentLineID = "shln_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleShipmentLineID = "shln_0133b6c3c807bf9c73581424c7"
 
 // Shipment status sub-resource.
 type ShipmentStatus struct {
@@ -270,6 +270,29 @@ var SampleShipmentSummary = &ShipmentSummary{
 
 func (*ShipmentSummary) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleShipmentSummary)
+}
+
+func ExpandableShipmentStub(id, number string, ts time.Time) *ShipmentDetail {
+	if id == "" {
+		id = SampleShipmentDetailID
+	}
+	if number == "" {
+		number = SampleShipmentNumber
+	}
+	if ts.IsZero() {
+		ts = time.Unix(0, 0).UTC()
+	}
+	return &ShipmentDetail{
+		ID:     id,
+		Object: constants.ObjectTypeShipment,
+		Number: number,
+		Status: ShipmentStatus{
+			Code: string(constants.ShipmentStatusPacked),
+			Name: "Packed",
+		},
+		CreatedAt: ts,
+		UpdatedAt: ts,
+	}
 }
 
 var SampleShipmentLine = &ShipmentLine{

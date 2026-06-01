@@ -67,6 +67,7 @@ func (e *CreateMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateM
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeMaterial,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateMaterialRequest) (*apiresource.Material, *apierror.APIError) {
 			return svc.(MaterialSvc).CreateMaterial
 		},

@@ -28,6 +28,7 @@ func (e *RetrieveAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retriev
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeAPIKey,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAPIKeyRequest) (*apiresource.APIKey, *apierror.APIError) {
 			return svc.(APIKeySvc).GetAPIKey
 		},

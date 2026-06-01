@@ -282,6 +282,64 @@ func (r *scanningStationRepoImpl) attachSubResources(ctx context.Context, ss *do
 	return nil
 }
 
+func mapGetScanningStationsByIDsRow(row sqlc.GetScanningStationsByIDsRow) *domain.ScanningStation {
+	ss := &domain.ScanningStation{
+		ID:                  row.ID,
+		Name:                row.Name,
+		Type:                constants.ScanningStationType(row.ScanningStationTypeCode),
+		OperatorRequirement: boolToOperatorRequirement(row.MaterialCheckRequired),
+		DepartmentID:        row.DepartmentID,
+		AccountID:           row.AccountID,
+		CreatedAt:           row.CreatedAt,
+		UpdatedAt:           row.UpdatedAt,
+	}
+	if row.Notes.Valid {
+		ss.Notes = &row.Notes.String
+	}
+	if row.LabelSizeCode.Valid {
+		ss.LabelSizeCode = &row.LabelSizeCode.String
+	}
+	if row.LabelTypeCode.Valid {
+		ss.LabelTypeCode = &row.LabelTypeCode.String
+	}
+	if row.DepartmentName.Valid {
+		ss.DepartmentName = row.DepartmentName.String
+	}
+	if row.DepartmentCreatedAt.Valid {
+		ss.DepartmentCreatedAt = &row.DepartmentCreatedAt.Time
+	}
+	if row.DepartmentUpdatedAt.Valid {
+		ss.DepartmentUpdatedAt = &row.DepartmentUpdatedAt.Time
+	}
+	return ss
+}
+
+func (r *scanningStationRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.ScanningStation, *apierror.APIError) {
+	ctx, span := scanningStationRepoTracer.Start(ctx, "repository.scanning_station.get_by_ids")
+	defer span.End()
+
+	rows, err := r.queries.GetScanningStationsByIDs(ctx, sqlc.GetScanningStationsByIDsParams{
+		Ids:       ids,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	stations := make([]*domain.ScanningStation, len(rows))
+	for i, row := range rows {
+		stations[i] = mapGetScanningStationsByIDsRow(row)
+	}
+
+	for _, ss := range stations {
+		if apiErr := r.attachSubResources(ctx, ss); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+
+	return stations, nil
+}
+
 func (r *scanningStationRepoImpl) Create(ctx context.Context, id string, params domain.CreateScanningStationParams) (*domain.ScanningStation, *apierror.APIError) {
 	ctx, span := scanningStationRepoTracer.Start(ctx, "repository.scanning_station.create")
 	defer span.End()

@@ -29,6 +29,7 @@ func (e *ListItemCategoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Lis
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeItemCategory,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListItemCategoriesRequest) (*apiresource.List[apiresource.ItemCategory], *apierror.APIError) {
 			return svc.(ItemCategorySvc).ListItemCategories
 		},

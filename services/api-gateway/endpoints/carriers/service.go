@@ -6,9 +6,8 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
-	ownerutil "github.com/augno/api/services/api-gateway/internal/owner"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -55,12 +54,16 @@ func NewCarrierSvc(config *CarrierSvcConfig) CarrierSvc {
 	}
 }
 
+// ListCarriers returns a paginated list of carriers. The existing
+// ListCarriers gRPC is used purely for pagination + filtering; the returned
+// carrier IDs are then handed to LoadCarriers so each item is built via the
+// resourcekit loader (clean apiresource + LoadMeta populated). The V2
+// include resolver runs in APIEndpoint.Execute against the resulting list.
 func (m *carrierSvcImpl) ListCarriers(ctx context.Context, req *ListCarriersRequest) (*apiresource.List[apiresource.Carrier], *apierror.APIError) {
 	pbReq := &pb.ListCarriersRequest{
-		Cursor:   req.Cursor,
-		Limit:    req.Limit,
-		Query:    req.Query,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
+		Cursor: req.Cursor,
+		Limit:  req.Limit,
+		Query:  req.Query,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, carrierSvcTracer, "service.carriers.list", domain.ServiceName,
@@ -72,35 +75,30 @@ func (m *carrierSvcImpl) ListCarriers(ctx context.Context, req *ListCarriersRequ
 		return nil, apiErr
 	}
 
-	var ownerAccount *apiresource.Account
-	for _, c := range resp.Carriers {
-		if c.AccountId != nil {
-			ownerAccount = ownerutil.ResolveOwnerAccount(ctx, m.coreClient, c.AccountId)
-			break
-		}
+	ids := make([]string, len(resp.Carriers))
+	for i, c := range resp.Carriers {
+		ids[i] = c.Id
 	}
-
-	return CarrierListPresenter(ctx, resp, ownerAccount), nil
-}
-
-func (m *carrierSvcImpl) GetCarrier(ctx context.Context, req *RetrieveCarrierRequest) (*apiresource.Carrier, *apierror.APIError) {
-	pbReq := &pb.GetCarrierRequest{
-		Id:       req.CarrierID,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
-	}
-
-	resp, apiErr := grpcutil.CallRPC(ctx, carrierSvcTracer, "service.carriers.get", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetCarrierResponse, error) {
-			return m.coreClient.GetCarrier(ctx, pbReq, opts...)
-		})
-
+	loaded, apiErr := resourceloaders.LoadCarriers(ctx, ids)
 	if apiErr != nil {
 		return nil, apiErr
 	}
+	carriers := make([]apiresource.Carrier, 0, len(ids))
+	for _, id := range ids {
+		if v, ok := loaded[id]; ok {
+			carriers = append(carriers, *(v.(*apiresource.Carrier)))
+		}
+	}
+	return apiresource.NewList(carriers, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
+}
 
-	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.Carrier.AccountId)
-	result := CarrierPresenter(resp.Carrier, ownerAccount)
-	return &result, nil
+// GetCarrier returns a carrier by ID using the resourcekit loader. The
+// returned carrier is a clean *apiresource.Carrier with sub-resources left
+// nil; APIEndpoint.Execute runs the include resolver afterwards to populate
+// owner / owner.account / service_levels per the client's ?include[]=
+// params (filtered by the endpoint's per-route allow-list).
+func (m *carrierSvcImpl) GetCarrier(ctx context.Context, req *RetrieveCarrierRequest) (*apiresource.Carrier, *apierror.APIError) {
+	return loadCarrierByID(ctx, req.CarrierID)
 }
 
 func (m *carrierSvcImpl) CreateCarrier(ctx context.Context, req *CreateCarrierRequest) (*apiresource.Carrier, *apierror.APIError) {
@@ -120,7 +118,6 @@ func (m *carrierSvcImpl) CreateCarrier(ctx context.Context, req *CreateCarrierRe
 		Code:            code,
 		AccountNumber:   req.AccountNumber,
 		IsPortalEnabled: isPortalEnabled,
-		Includes:        appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, carrierSvcTracer, "service.carriers.create", domain.ServiceName,
@@ -132,9 +129,7 @@ func (m *carrierSvcImpl) CreateCarrier(ctx context.Context, req *CreateCarrierRe
 		return nil, apiErr
 	}
 
-	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.Carrier.AccountId)
-	result := CarrierPresenter(resp.Carrier, ownerAccount)
-	return &result, nil
+	return loadCarrierByID(ctx, resp.Carrier.Id)
 }
 
 func (m *carrierSvcImpl) UpdateCarrier(ctx context.Context, req *UpdateCarrierRequest) (*apiresource.Carrier, *apierror.APIError) {
@@ -148,7 +143,6 @@ func (m *carrierSvcImpl) UpdateCarrier(ctx context.Context, req *UpdateCarrierRe
 		Id:              req.CarrierID,
 		Name:            req.Name,
 		IsPortalEnabled: isPortalEnabled,
-		Includes:        appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, carrierSvcTracer, "service.carriers.update", domain.ServiceName,
@@ -160,9 +154,23 @@ func (m *carrierSvcImpl) UpdateCarrier(ctx context.Context, req *UpdateCarrierRe
 		return nil, apiErr
 	}
 
-	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.Carrier.AccountId)
-	result := CarrierPresenter(resp.Carrier, ownerAccount)
-	return &result, nil
+	return loadCarrierByID(ctx, resp.Carrier.Id)
+}
+
+// loadCarrierByID wraps the single-ID load pattern used after every
+// mutation. The mutation RPC returns a CarrierInfo whose ID is the only
+// thing we care about; the resourcekit loader fetches the fresh apiresource
+// with LoadMeta so the include resolver can populate sub-resources.
+func loadCarrierByID(ctx context.Context, id string) (*apiresource.Carrier, *apierror.APIError) {
+	loaded, apiErr := resourceloaders.LoadCarriers(ctx, []string{id})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	v, ok := loaded[id]
+	if !ok {
+		return nil, apierror.NewResourceNotFoundError("Carrier not found.")
+	}
+	return v.(*apiresource.Carrier), nil
 }
 
 func (m *carrierSvcImpl) DeleteCarrier(ctx context.Context, req *DeleteCarrierRequest) (*apiresource.EmptyResource, *apierror.APIError) {
@@ -232,7 +240,5 @@ func (m *carrierSvcImpl) SyncOptions(ctx context.Context, req *SyncOptionsReques
 		return nil, apiErr
 	}
 
-	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.Carrier.AccountId)
-	result := CarrierPresenter(resp.Carrier, ownerAccount)
-	return &result, nil
+	return loadCarrierByID(ctx, resp.Carrier.Id)
 }

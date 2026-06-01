@@ -178,6 +178,26 @@ func (h *gRPCHandler) DeleteLocation(ctx context.Context, req *pb.DeleteLocation
 	return &emptypb.Empty{}, nil
 }
 
+func (h *gRPCHandler) BatchGetLocationsByIDs(ctx context.Context, req *pb.BatchGetLocationsByIDsRequest) (*pb.BatchGetLocationsByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	results, apiErr := h.locationSvc.BatchGetLocationsByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	locations := make([]*pb.LocationInfo, len(results))
+	for i, loc := range results {
+		locations[i] = locationToProto(loc)
+	}
+
+	return &pb.BatchGetLocationsByIDsResponse{
+		Locations: locations,
+	}, nil
+}
+
 func (h *gRPCHandler) GetLocationType(ctx context.Context, req *pb.GetLocationTypeRequest) (*pb.GetLocationTypeResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

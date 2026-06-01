@@ -8,10 +8,10 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleAccountID = "ac_01gf7a8200eaj8fke1xvw4h50x"
+const SampleAccountID = "ac_01148680966698341a9c0976db"
 const SampleAccountName = "Acme Inc."
-const SampleAccountBrandingID = "abr_01gf7a8200eaj8fke1xvw4h50x"
-const SampleAccountPortalID = "apo_01gf7a8200eaj8fke1xvw4h50x"
+const SampleAccountBrandingID = "abr_01fa710842028837ac3ca9d590"
+const SampleAccountPortalID = "apo_0167f0d01165cbb56b55bc01fa"
 const SampleAccountPortalSlug = "acme"
 
 // Account with optional branding and portal sub-resources.
@@ -46,6 +46,25 @@ var SampleAccount = &Account{
 
 func (*Account) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleAccount)
+}
+
+func ExpandableAccountStub(id, name string, ts time.Time) *Account {
+	if id == "" {
+		id = SampleAccountID
+	}
+	if name == "" {
+		name = SampleAccountName
+	}
+	if ts.IsZero() {
+		ts = time.Unix(0, 0).UTC()
+	}
+	return &Account{
+		ID:        id,
+		Object:    constants.ObjectTypeAccount,
+		Name:      name,
+		CreatedAt: ts,
+		UpdatedAt: ts,
+	}
 }
 
 // Branding metadata for an account.

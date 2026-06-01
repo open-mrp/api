@@ -33,11 +33,12 @@ func departmentToProto(d *domain.Department) *pb.DepartmentInfo {
 	stations := make([]*pb.LightScanningStationInfo, len(d.ScanningStations))
 	for i, s := range d.ScanningStations {
 		stations[i] = &pb.LightScanningStationInfo{
-			Id:        s.ID,
-			Name:      s.Name,
-			Type:      s.Type,
-			CreatedAt: timestamppb.New(s.CreatedAt),
-			UpdatedAt: timestamppb.New(s.UpdatedAt),
+			Id:                  s.ID,
+			Name:                s.Name,
+			Type:                s.Type,
+			OperatorRequirement: s.OperatorRequirement,
+			CreatedAt:           timestamppb.New(s.CreatedAt),
+			UpdatedAt:           timestamppb.New(s.UpdatedAt),
 		}
 	}
 	info.ScanningStations = stations
@@ -168,4 +169,24 @@ func (h *gRPCHandler) DeleteDepartment(ctx context.Context, req *pb.DeleteDepart
 	}
 
 	return &emptypb.Empty{}, nil
+}
+
+func (h *gRPCHandler) BatchGetDepartmentsByIDs(ctx context.Context, req *pb.BatchGetDepartmentsByIDsRequest) (*pb.BatchGetDepartmentsByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	departments, apiErr := h.departmentSvc.BatchGetDepartmentsByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	pbDepts := make([]*pb.DepartmentInfo, len(departments))
+	for i, d := range departments {
+		pbDepts[i] = departmentToProto(d)
+	}
+
+	return &pb.BatchGetDepartmentsByIDsResponse{
+		Departments: pbDepts,
+	}, nil
 }

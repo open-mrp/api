@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleDCLocationID = "dclo_01gf7a8200er3ar3pkfrb6kk30"
+const SampleDCLocationID = "dclo_0191ce9223b21dc31c9ee09b3e"
 
 // Customer sub-resource on a DC location.
 type DCLocationCustomer struct {
@@ -57,7 +57,7 @@ func (*DCLocation) SchemaExample() any {
 // EDI Run
 // ---------------------------------------------------------------------------
 
-const SampleEDIRunID = "edru_01gf7a8200er3ar3pkfrb6kk30"
+const SampleEDIRunID = "edru_016aa43a99df34b744f6e2b878"
 
 // EDI run resource.
 type EDIRun struct {

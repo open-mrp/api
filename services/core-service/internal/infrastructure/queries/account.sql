@@ -222,6 +222,37 @@ LEFT JOIN account_branding ab ON ab.owner_account_id = a.id
 LEFT JOIN account_portal ap ON ap.owner_account_id = a.id
 WHERE a.id = sqlc.arg('account_id');
 
+-- name: GetAccountsByIDs :many
+-- Returns accounts matching the given IDs. Caller authorization is enforced
+-- in the service layer (see accountSvcImpl.BatchGetAccountsByIDs), which
+-- filters to IDs the caller is allowed to read.
+SELECT
+    a.id,
+    a.name,
+    a.default_billing_address_id,
+    a.default_shipping_address_id,
+    a.created_at,
+    a.updated_at,
+    ab.id AS branding_id,
+    ab.support_email AS branding_support_email,
+    ab.phone_number AS branding_phone_number,
+    ab.logo_url AS branding_logo_url,
+    ab.facebook_handle AS branding_facebook_handle,
+    ab.instagram_handle AS branding_instagram_handle,
+    ab.linkedin_handle AS branding_linkedin_handle,
+    ab.twitter_handle AS branding_twitter_handle,
+    ab.website_url AS branding_website_url,
+    ab.created_at AS branding_created_at,
+    ab.updated_at AS branding_updated_at,
+    ap.id AS portal_id,
+    ap.slug AS portal_slug,
+    ap.created_at AS portal_created_at,
+    ap.updated_at AS portal_updated_at
+FROM account a
+LEFT JOIN account_branding ab ON ab.owner_account_id = a.id
+LEFT JOIN account_portal ap ON ap.owner_account_id = a.id
+WHERE a.id IN (sqlc.slice('ids'));
+
 -- name: GetPublicAccountBySlug :one
 SELECT
     a.id,

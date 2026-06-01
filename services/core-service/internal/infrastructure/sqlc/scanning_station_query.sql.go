@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -167,6 +168,99 @@ func (q *Queries) GetScanningStationType(ctx context.Context, arg GetScanningSta
 	var scanning_station_type_code string
 	err := row.Scan(&scanning_station_type_code)
 	return scanning_station_type_code, err
+}
+
+const getScanningStationsByIDs = `-- name: GetScanningStationsByIDs :many
+SELECT
+    ss.id,
+    ss.name,
+    ss.notes,
+    ss.scanning_station_type_code,
+    ss.label_size_code,
+    ss.label_type_code,
+    ss.material_check_required,
+    ss.department_id,
+    d.name AS department_name,
+    d.created_at AS department_created_at,
+    d.updated_at AS department_updated_at,
+    ss.account_id,
+    ss.created_at,
+    ss.updated_at
+FROM scanning_station ss
+LEFT JOIN department d ON d.id = ss.department_id
+WHERE ss.id IN (/*SLICE:ids*/?)
+AND ss.account_id = ?
+`
+
+type GetScanningStationsByIDsParams struct {
+	Ids       []string
+	AccountID string
+}
+
+type GetScanningStationsByIDsRow struct {
+	ID                      string
+	Name                    string
+	Notes                   sql.NullString
+	ScanningStationTypeCode string
+	LabelSizeCode           sql.NullString
+	LabelTypeCode           sql.NullString
+	MaterialCheckRequired   bool
+	DepartmentID            string
+	DepartmentName          sql.NullString
+	DepartmentCreatedAt     sql.NullTime
+	DepartmentUpdatedAt     sql.NullTime
+	AccountID               string
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
+}
+
+func (q *Queries) GetScanningStationsByIDs(ctx context.Context, arg GetScanningStationsByIDsParams) ([]GetScanningStationsByIDsRow, error) {
+	query := getScanningStationsByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetScanningStationsByIDsRow
+	for rows.Next() {
+		var i GetScanningStationsByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Notes,
+			&i.ScanningStationTypeCode,
+			&i.LabelSizeCode,
+			&i.LabelTypeCode,
+			&i.MaterialCheckRequired,
+			&i.DepartmentID,
+			&i.DepartmentName,
+			&i.DepartmentCreatedAt,
+			&i.DepartmentUpdatedAt,
+			&i.AccountID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const insertScanningStation = `-- name: InsertScanningStation :exec

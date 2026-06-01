@@ -357,6 +357,55 @@ func (r *accountRepoImpl) GetByID(ctx context.Context, accountID string) (*domai
 	return account, nil
 }
 
+func (r *accountRepoImpl) GetByIDs(ctx context.Context, ids []string) ([]*domain.Account, *apierror.APIError) {
+	ctx, span := accountRepoTracer.Start(ctx, "repository.account.get_by_ids")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := r.queries.GetAccountsByIDs(ctx, ids)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make([]*domain.Account, len(rows))
+	for i, row := range rows {
+		account := &domain.Account{
+			ID:                       row.ID,
+			Name:                     row.Name,
+			DefaultBillingAddressID:  db.StringFromNullString(row.DefaultBillingAddressID),
+			DefaultShippingAddressID: db.StringFromNullString(row.DefaultShippingAddressID),
+			CreatedAt:                row.CreatedAt,
+			UpdatedAt:                row.UpdatedAt,
+		}
+		if row.BrandingID.Valid {
+			account.Branding = &domain.AccountBranding{
+				ID:              row.BrandingID.String,
+				SupportEmail:    db.StringFromNullString(row.BrandingSupportEmail),
+				PhoneNumber:     db.StringFromNullString(row.BrandingPhoneNumber),
+				LogoURL:         db.StringFromNullString(row.BrandingLogoUrl),
+				FacebookHandle:  db.StringFromNullString(row.BrandingFacebookHandle),
+				InstagramHandle: db.StringFromNullString(row.BrandingInstagramHandle),
+				LinkedInHandle:  db.StringFromNullString(row.BrandingLinkedinHandle),
+				TwitterHandle:   db.StringFromNullString(row.BrandingTwitterHandle),
+				WebsiteURL:      db.StringFromNullString(row.BrandingWebsiteUrl),
+				CreatedAt:       row.BrandingCreatedAt.Time,
+				UpdatedAt:       row.BrandingUpdatedAt.Time,
+			}
+		}
+		if row.PortalID.Valid {
+			account.Portal = &domain.AccountPortal{
+				ID:        row.PortalID.String,
+				Slug:      row.PortalSlug.String,
+				CreatedAt: row.PortalCreatedAt.Time,
+				UpdatedAt: row.PortalUpdatedAt.Time,
+			}
+		}
+		out[i] = account
+	}
+	return out, nil
+}
+
 func (r *accountRepoImpl) GetBySlug(ctx context.Context, slug string) (*domain.PublicAccountBySlug, *apierror.APIError) {
 	ctx, span := accountRepoTracer.Start(ctx, "repository.account.get_by_slug")
 	defer span.End()

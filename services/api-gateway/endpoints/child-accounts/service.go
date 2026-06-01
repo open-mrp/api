@@ -6,6 +6,7 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -41,10 +42,7 @@ func NewChildAccountSvc(config *ChildAccountSvcConfig) ChildAccountSvc {
 	if err := config.validate(); err != nil {
 		panic(err)
 	}
-
-	return &childAccountSvcImpl{
-		coreClient: config.CoreClient,
-	}
+	return &childAccountSvcImpl{coreClient: config.CoreClient}
 }
 
 func (m *childAccountSvcImpl) ListChildAccounts(ctx context.Context, req *ListChildAccountsRequest) (*apiresource.List[apiresource.ChildAccount], *apierror.APIError) {
@@ -53,50 +51,69 @@ func (m *childAccountSvcImpl) ListChildAccounts(ctx context.Context, req *ListCh
 		Limit:  req.Limit,
 		Query:  req.Query,
 	}
-
 	resp, apiErr := grpcutil.CallRPC(ctx, childAccountSvcTracer, "service.child-accounts.list", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListChildAccountsResponse, error) {
 			return m.coreClient.ListChildAccounts(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
-	return ChildAccountListPresenter(ctx, resp), nil
+	ids := make([]string, len(resp.Items))
+	for i, ca := range resp.Items {
+		ids[i] = ca.RelationId
+	}
+	loaded, apiErr := resourceloaders.LoadChildAccounts(ctx, ids)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	items := make([]apiresource.ChildAccount, 0, len(ids))
+	for _, id := range ids {
+		if v, ok := loaded[id]; ok {
+			items = append(items, *(v.(*apiresource.ChildAccount)))
+		}
+	}
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
 
 func (m *childAccountSvcImpl) AddChildAccount(ctx context.Context, req *AddChildAccountRequest) (*apiresource.ChildAccount, *apierror.APIError) {
 	pbReq := &pb.AddChildAccountRequest{
 		ChildAccountId: req.ChildAccountID,
 	}
-
 	resp, apiErr := grpcutil.CallRPC(ctx, childAccountSvcTracer, "service.child-accounts.add", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.AddChildAccountResponse, error) {
 			return m.coreClient.AddChildAccount(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
-	result := ChildAccountPresenter(resp.ChildAccount)
-	return &result, nil
+	return loadChildAccountByRelationID(ctx, resp.ChildAccount.RelationId)
 }
 
 func (m *childAccountSvcImpl) RemoveChildAccount(ctx context.Context, req *RemoveChildAccountRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 	pbReq := &pb.RemoveChildAccountRequest{
 		ChildAccountId: req.ChildAccountID,
 	}
-
 	_, apiErr := grpcutil.CallRPC(ctx, childAccountSvcTracer, "service.child-accounts.remove", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 			return m.coreClient.RemoveChildAccount(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
 	return &apiresource.EmptyResource{}, nil
+}
+
+// loadChildAccountByRelationID wraps the single-ID load pattern used after
+// Add. Note: the BatchGet RPC keys by relation_id (account_relation.id), not
+// by counterparty_account_id.
+func loadChildAccountByRelationID(ctx context.Context, relationID string) (*apiresource.ChildAccount, *apierror.APIError) {
+	loaded, apiErr := resourceloaders.LoadChildAccounts(ctx, []string{relationID})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	v, ok := loaded[relationID]
+	if !ok {
+		return nil, apierror.NewResourceNotFoundError("Child account not found.")
+	}
+	return v.(*apiresource.ChildAccount), nil
 }

@@ -740,7 +740,8 @@ func (s *accountUserSvcImpl) UpdateAccountUserStatus(ctx context.Context, accoun
 	}
 
 	// Resolve current state. Handle "already removed" like the old delete handler did.
-	accountUser, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, accountID, accountUserID, nil)
+	// Include "role" so RoleType is always populated for the admin-lock guard below.
+	accountUser, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, accountID, accountUserID, []string{"role"})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeAccountUser, accountUserID)
@@ -883,7 +884,8 @@ func (s *accountUserSvcImpl) UpdateAccountUserPassword(ctx context.Context, acco
 	}
 
 	// Verify that the target account user belongs to the requester's account.
-	targetAccountUser, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, identity.Target.AccountID, accountUserID, nil)
+	// Include "role" so RoleType is populated for the scanner-role check below.
+	targetAccountUser, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, identity.Target.AccountID, accountUserID, []string{"role"})
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
@@ -953,6 +955,25 @@ func (s *accountUserSvcImpl) checkSeatLimit(ctx context.Context, accountID strin
 	}
 
 	return nil
+}
+
+func (s *accountUserSvcImpl) BatchGetAccountUsersByIDs(ctx context.Context, ids []string) ([]*domain.AccountUserDetail, *apierror.APIError) {
+	ctx, span := accountUserSvcTracer.Start(ctx, "service.account_user.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainTeamUsers, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return s.repos.NewAccountUserRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
 }
 
 func stringOrDefault(s *string, def string) string {

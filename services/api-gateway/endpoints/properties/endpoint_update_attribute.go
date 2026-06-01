@@ -45,6 +45,7 @@ func (e *UpdateAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Update
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeAttribute,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAttributeRequest) (*apiresource.Attribute, *apierror.APIError) {
 			return svc.(PropertySvc).UpdateAttribute
 		},

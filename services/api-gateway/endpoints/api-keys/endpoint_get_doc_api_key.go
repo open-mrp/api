@@ -21,6 +21,7 @@ func (e *GetDocAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresour
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		ObjectType:        constants.ObjectTypeCreatedAPIKey,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.EmptyResource) (*apiresource.CreatedAPIKey, *apierror.APIError) {
 			return func(ctx context.Context, _ *apiresource.EmptyResource) (*apiresource.CreatedAPIKey, *apierror.APIError) {
 				return svc.(APIKeySvc).GetOrCreateDocAPIKey(ctx)

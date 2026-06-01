@@ -7,7 +7,8 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/appctx"
+	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -51,7 +52,7 @@ func (m *emailLogSvcImpl) ListEmailLogs(ctx context.Context, req *ListEmailLogsR
 		Cursor:   req.Cursor,
 		Limit:    req.Limit,
 		Query:    req.Query,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
+		Includes: []string{"sent_by"},
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, emailLogSvcTracer, "service.email_logs.list", domain.ServiceName,
@@ -63,13 +64,24 @@ func (m *emailLogSvcImpl) ListEmailLogs(ctx context.Context, req *ListEmailLogsR
 		return nil, apiErr
 	}
 
-	return EmailLogListPresenter(ctx, resp), nil
+	if resp == nil {
+		return apiresource.NewList[apiresource.EmailLog](nil, apiresource.PageInfo{}), nil
+	}
+
+	meta := resourcekit.GetLoadMeta(ctx)
+	emailLogs := make([]apiresource.EmailLog, len(resp.EmailLogs))
+	for i, el := range resp.EmailLogs {
+		emailLogs[i] = emailLogFromProto(el)
+		stashEmailLogMeta(meta, el)
+	}
+
+	return apiresource.NewList(emailLogs, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
 
 func (m *emailLogSvcImpl) GetEmailLog(ctx context.Context, req *RetrieveEmailLogRequest) (*apiresource.EmailLog, *apierror.APIError) {
 	pbReq := &pb.GetEmailLogRequest{
 		Id:       req.EmailLogID,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
+		Includes: []string{"sent_by"},
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, emailLogSvcTracer, "service.email_logs.get", domain.ServiceName,
@@ -81,6 +93,51 @@ func (m *emailLogSvcImpl) GetEmailLog(ctx context.Context, req *RetrieveEmailLog
 		return nil, apiErr
 	}
 
-	result := EmailLogPresenter(resp.EmailLog)
+	meta := resourcekit.GetLoadMeta(ctx)
+	result := emailLogFromProto(resp.EmailLog)
+	stashEmailLogMeta(meta, resp.EmailLog)
 	return &result, nil
+}
+
+func emailLogFromProto(el *pb.EmailLogInfo) apiresource.EmailLog {
+	if el == nil {
+		return apiresource.EmailLog{}
+	}
+
+	result := apiresource.EmailLog{
+		ID:         el.Id,
+		Object:     constants.ObjectTypeEmailLog,
+		SendStatus: emailSendStatus(el.HasSent),
+		Recipients: el.Recipients,
+		Subject:    el.Subject,
+		Filename:   el.Filename,
+		CreatedAt:  grpcutil.TimestampToTime(el.CreatedAt),
+		UpdatedAt:  grpcutil.TimestampToTime(el.UpdatedAt),
+	}
+
+	if result.Recipients == nil {
+		result.Recipients = []string{}
+	}
+
+	return result
+}
+
+func stashEmailLogMeta(meta *resourcekit.LoadMeta, el *pb.EmailLogInfo) {
+	if el == nil || el.SentBy == nil || el.SentBy.Id == "" {
+		return
+	}
+	actor := apiresource.NewActor(
+		el.SentBy.Id,
+		constants.ActorType(el.SentBy.ActorType),
+		el.SentBy.Name,
+		el.SentBy.Handle,
+	)
+	meta.Set(constants.ObjectTypeEmailLog, el.Id, "sent_by", actor)
+}
+
+func emailSendStatus(hasSent bool) constants.EmailSendStatus {
+	if hasSent {
+		return constants.EmailSendStatusSent
+	}
+	return constants.EmailSendStatusPending
 }

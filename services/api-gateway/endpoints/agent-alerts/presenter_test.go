@@ -29,6 +29,6 @@ func TestAgentAlertPresenter(t *testing.T) {
 		UpdatedAt:               now,
 	}
 
-	result := AgentAlertPresenter(alert)
+	result := agentAlertFromProto(alert)
 	resourcetest.ValidateResourceStruct(t, "AgentAlert", result)
 }

@@ -28,6 +28,7 @@ func (e *RetrieveMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrie
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeMachine,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveMachineRequest) (*apiresource.Machine, *apierror.APIError) {
 			return svc.(MachineSvc).GetMachine
 		},

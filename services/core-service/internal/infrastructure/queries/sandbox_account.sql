@@ -126,6 +126,17 @@ AND (
     OR account.name LIKE sqlc.narg('search_query')
 );
 
+-- name: GetSandboxAccountsByTypeIDs :many
+-- Returns sandbox accounts matching the given type IDs that belong to the
+-- caller's owner account. Used by the api-gateway resourcekit resolver.
+SELECT
+    sandbox_account.*,
+    account.name
+FROM sandbox_account
+JOIN account ON sandbox_account.account_id = account.id
+WHERE sandbox_account.type_id IN (sqlc.slice('type_ids'))
+AND sandbox_account.owner_account_id = sqlc.arg('owner_account_id');
+
 -- name: DeleteSandboxAccountByID :exec
 DELETE FROM sandbox_account WHERE id = ?;
 

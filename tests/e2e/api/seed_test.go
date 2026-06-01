@@ -326,21 +326,24 @@ var nullableFieldSeeds = map[string]string{
 	"default_carrier_id":       SeedCarrierID,
 	"default_payment_term_id":  SeedPaymentTermID,
 	"default_shipping_term_id": SeedShippingTermID,
-	"default_sales_rep_id":     SeedAccountUserID,
 	"customer_type_group_id":   SeedCustomerGroupID,
 
 	// Common reference IDs used across multiple endpoints
 	"carrier_id":       SeedCarrierID,
 	"payment_term_id":  SeedPaymentTermID,
 	"shipping_term_id": SeedShippingTermID,
-	"sales_rep_id":     SeedAccountUserID,
 	// order_discount_id is intentionally excluded: the generic nullable-clear
 	// test clears it on the shared seed sales order (SeedSalesOrderID), which
 	// races with TestIncludes_PopulateNestedResources/retrieve-sales-order/order_discount
 	// running in parallel and reading that same order. The include test is the
 	// primary coverage for order_discount being populated on a sales order.
-	"role_id":             SeedAdminRoleID,
-	"department_id":       SeedDepartmentID,
+	//
+	// Fields that surface as expandable sub-resources in the GET response
+	// (e.g. role_id → role, default_sales_rep_id → defaults.sales_rep,
+	// parent_id → parent) are excluded: the generic restore reads nil from
+	// the response (the flat ID field doesn't exist) and leaves the field
+	// cleared, racing with include tests that expect the seed value. These
+	// are covered by per-resource CRUD tests.
 	"scanning_station_id": SeedScanningStationID,
 	"product_line_id":     SeedProductLineID,
 
@@ -351,12 +354,13 @@ var nullableFieldSeeds = map[string]string{
 	"note":  "e2e nullable test note",
 
 	// Clearable text fields (generic PATCH test)
-	"description":   "e2e nullable description",
-	"notes":         "e2e nullable notes",
 	"street_line_2": "Suite 100",
+	// description and notes are intentionally excluded: the product PATCH
+	// cascades both to the item table via ProductUpdateItem, but the product
+	// GET response surfaces them on the expandable item sub-resource (not at
+	// the top level), so the generic restore reads nil and leaves the item's
+	// values dirty. Per-resource CRUD tests cover nullable-clear for these.
 
-	// Reference IDs for location/customer clear tests
-	"parent_id": "sglc_01seedknitting000",
 	// bill_to_address_id and ship_to_address_id are intentionally excluded: the
 	// generic nullable-clear test clears them on shared seed customers, suppliers,
 	// and orders while TestIncludes_PopulateNestedResources reads those same

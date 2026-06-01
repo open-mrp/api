@@ -166,6 +166,103 @@ func (s *carrierSvcImpl) ListCarriers(ctx context.Context, params domain.ListCar
 	return result, nil
 }
 
+// BatchGetCarriersByIDs returns multiple carriers by ID with the same account
+// scoping rules as GetCarrier. When serviceLevelsLimit > 0, each returned
+// carrier is annotated with a preview of up to that many service_level IDs
+// plus a has_more flag (these are populated as fields on the returned domain
+// Carrier so the gRPC handler can mirror them into CarrierInfo).
+func (s *carrierSvcImpl) BatchGetCarriersByIDs(ctx context.Context, ids []string, serviceLevelsLimit int32) ([]*domain.Carrier, *apierror.APIError) {
+	ctx, span := carrierSvcTracer.Start(ctx, "service.carrier.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := checkCarrierReadPermission(identity); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+	if identity.IsExternalTarget() {
+		meds := s.mediators()
+		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	carrierRepo := s.repos.NewCarrierRepo()
+	carriers, apiErr := carrierRepo.GetByIDs(ctx, identity.Target.AccountID, ids)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if serviceLevelsLimit <= 0 || len(carriers) == 0 {
+		return carriers, nil
+	}
+
+	carrierIDs := make([]string, len(carriers))
+	for i, c := range carriers {
+		carrierIDs[i] = c.ID
+	}
+	idsByCarrier, apiErr := carrierRepo.ListOptionIDsForCarriers(ctx, identity.Target.AccountID, carrierIDs)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	limit := int(serviceLevelsLimit)
+	for _, c := range carriers {
+		all := idsByCarrier[c.ID]
+		if len(all) > limit {
+			c.ServiceLevelIDsPreview = append([]string(nil), all[:limit]...)
+			c.ServiceLevelsHasMore = true
+		} else {
+			c.ServiceLevelIDsPreview = append([]string(nil), all...)
+			c.ServiceLevelsHasMore = false
+		}
+	}
+	return carriers, nil
+}
+
+// BatchGetServiceLevelsByIDs returns service levels by ID, authorization
+// follows the parent carrier's account scope (the repo enforces this via the
+// inner JOIN on `carrier`).
+func (s *carrierSvcImpl) BatchGetServiceLevelsByIDs(ctx context.Context, ids []string) ([]*domain.ServiceLevel, *apierror.APIError) {
+	ctx, span := carrierSvcTracer.Start(ctx, "service.carrier.batch_get_service_levels_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := checkCarrierReadPermission(identity); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+	if identity.IsExternalTarget() {
+		meds := s.mediators()
+		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	carrierRepo := s.repos.NewCarrierRepo()
+	return carrierRepo.GetOptionsByIDs(ctx, identity.Target.AccountID, ids)
+}
+
 func (s *carrierSvcImpl) GetCarrier(ctx context.Context, params domain.GetCarrierParams) (*domain.Carrier, *apierror.APIError) {
 	ctx, span := carrierSvcTracer.Start(ctx, "service.carrier.get")
 	defer span.End()

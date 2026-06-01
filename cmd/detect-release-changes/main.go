@@ -119,7 +119,7 @@ func previousReleaseTag(ctx context.Context, repoRoot, currentTag string) (strin
 }
 
 func currentRefForTag(ctx context.Context, repoRoot, currentTag string) (string, error) {
-	cmd := exec.CommandContext(ctx, "git", "rev-parse", "-q", currentTag)
+	cmd := exec.CommandContext(ctx, "git", "rev-parse", "-q", currentTag) // #nosec G204 -- args are controlled
 	cmd.Dir = repoRoot
 	if err := cmd.Run(); err == nil {
 		return currentTag, nil
@@ -150,7 +150,7 @@ func buildDependencyMap(ctx context.Context, repoRoot string) (map[string][]stri
 
 	for _, service := range releasechanges.ServiceNames {
 		args := []string{"list", "-deps", "-f", "{{.Dir}}", "./services/" + service + "/cmd/..."}
-		cmd := exec.CommandContext(ctx, "go", args...)
+		cmd := exec.CommandContext(ctx, "go", args...) // #nosec G204 -- args are controlled
 		cmd.Dir = repoRoot
 		cmd.Env = append(os.Environ(), "GOTOOLCHAIN=local")
 
@@ -279,11 +279,12 @@ func writeOutputs(out outputs) error {
 		buffer.WriteByte('\n')
 	}
 
-	return os.WriteFile(outputPath, buffer.Bytes(), 0o644)
+	cleanPath := filepath.Clean(outputPath)
+	return os.WriteFile(cleanPath, buffer.Bytes(), 0o600) // #nosec G306,G703 -- CI output file, path from GITHUB_OUTPUT env var
 }
 
 func gitOutput(ctx context.Context, repoRoot string, args ...string) (string, error) {
-	cmd := exec.CommandContext(ctx, "git", args...)
+	cmd := exec.CommandContext(ctx, "git", args...) // #nosec G204 -- args are controlled
 	cmd.Dir = repoRoot
 	output, err := cmd.CombinedOutput()
 	if err != nil {

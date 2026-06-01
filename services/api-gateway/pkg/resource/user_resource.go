@@ -8,11 +8,11 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleUserID = "us_01gf7a8200e9pvbd6bgyq395ae"
+const SampleUserID = "us_0151164dcaea4cbded27b50aae"
 const SampleUserUsername = "jdoe"
 const SampleUserEmail = "jdoe@augno.com"
 const SampleUserName = "John Doe"
-const SampleUserImageUrl = "https://cdn.augno.com/avatars/us_01gf7a8200e9pvbd6bgyq395ae.jpg"
+const SampleUserImageUrl = "https://cdn.augno.com/avatars/us_0151164dcaea4cbded27b50aae.jpg"
 const SampleUserPassword = "QgS7Z8Hhj3&1"     // #nosec G101 -- sample data for API docs
 const SampleNewUserPassword = "50iR2X0r@bvIH" // #nosec G101 -- sample data for API docs
 

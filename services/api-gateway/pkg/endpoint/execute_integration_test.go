@@ -280,6 +280,7 @@ func TestExecute_headerSchemeInvalid_reportsParameterInvalid(t *testing.T) {
 
 func TestExecute_invalidIncludeValue_viaExecute_returns400(t *testing.T) {
 	t.Parallel()
+	registerV2Fixture(t)
 
 	type emptyQ struct{}
 
@@ -287,7 +288,8 @@ func TestExecute_invalidIncludeValue_viaExecute_returns400(t *testing.T) {
 		Method:            http.MethodGet,
 		Route:             "/v1/things",
 		SuccessStatusCode: http.StatusOK,
-		IncludeConfig:     roleConfig(),
+		ObjectType:        v2OTCarrier,
+		IncludeConfig:     v2OwnerIncludeConfig,
 		ServiceHandler: func(svc any) func(context.Context, *emptyQ) (*stubResponse, *apierror.APIError) {
 			return func(context.Context, *emptyQ) (*stubResponse, *apierror.APIError) {
 				t.Fatal("handler must not run")
@@ -304,38 +306,6 @@ func TestExecute_invalidIncludeValue_viaExecute_returns400(t *testing.T) {
 
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("want 400 got %d: %s", w.Code, w.Body.String())
-	}
-}
-
-func TestExecute_validInclude_passesIncludeSetToHandlerContext(t *testing.T) {
-	t.Parallel()
-
-	type emptyQ struct{}
-
-	ep := &APIEndpoint[*emptyQ, *stubResponse]{
-		Method:            http.MethodGet,
-		Route:             "/v1/things",
-		SuccessStatusCode: http.StatusOK,
-		IncludeConfig:     roleConfig(),
-		ServiceHandler: func(svc any) func(context.Context, *emptyQ) (*stubResponse, *apierror.APIError) {
-			return func(ctx context.Context, _ *emptyQ) (*stubResponse, *apierror.APIError) {
-				inc := appctx.GetRequestedIncludes(ctx)
-				if inc == nil || !inc["role"] {
-					t.Fatalf("includes=%#v", inc)
-				}
-				return &stubResponse{ID: "th_1"}, nil
-			}
-		},
-	}
-	bindHandler(ep)
-
-	r := httptest.NewRequest(http.MethodGet, "/v1/things?include[]=role", nil)
-	w := httptest.NewRecorder()
-
-	ep.Execute(w, r)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("got %d", w.Code)
 	}
 }
 
@@ -901,149 +871,6 @@ func TestExecute_fileDownloadResponse(t *testing.T) {
 	}
 	if w.Body.String() != "a,b,c\n1,2,3" {
 		t.Fatalf("body=%q", w.Body.String())
-	}
-}
-
-type expandableRoleNested struct {
-	ID     string               `json:"id" validate:"required"`
-	Object constants.ObjectType `json:"object" validate:"required"`
-	Name   string               `json:"name" validate:"required"`
-}
-
-type includeExpandResp struct {
-	ID     string                `json:"id"`
-	Object constants.ObjectType  `json:"object"`
-	Name   string                `json:"name"`
-	Role   *expandableRoleNested `json:"role" expandable:"true"`
-}
-
-func TestExecute_includeTransform_collapsesUnrequestedRole(t *testing.T) {
-	t.Parallel()
-
-	roleStub := expandableRoleNested{
-		ID:     "rl_1",
-		Object: constants.ObjectTypeRole,
-		Name:   "Admin",
-	}
-	ep := &APIEndpoint[*stubRequest, *includeExpandResp]{
-		Method:            http.MethodGet,
-		Route:             "/v1/things",
-		SuccessStatusCode: http.StatusOK,
-		IncludeConfig:     roleConfig(),
-		ServiceHandler: func(svc any) func(context.Context, *stubRequest) (*includeExpandResp, *apierror.APIError) {
-			return func(context.Context, *stubRequest) (*includeExpandResp, *apierror.APIError) {
-				return &includeExpandResp{
-					ID:     "apk_1",
-					Object: constants.ObjectTypeAPIKey,
-					Name:   "Key",
-					Role:   &roleStub,
-				}, nil
-			}
-		},
-	}
-	bindHandler(ep)
-
-	r := httptest.NewRequest(http.MethodGet, "/v1/things", nil)
-	w := httptest.NewRecorder()
-
-	ep.Execute(w, r)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("code=%d body=%s", w.Code, w.Body.String())
-	}
-	var decoded map[string]any
-	if err := json.Unmarshal(w.Body.Bytes(), &decoded); err != nil {
-		t.Fatal(err)
-	}
-	if decoded["role"] != nil {
-		t.Fatalf("expected unrequested role collapsed to null, got %#v", decoded["role"])
-	}
-}
-
-func TestExecute_includeTransform_expandsRequestedRole(t *testing.T) {
-	t.Parallel()
-
-	roleStub := expandableRoleNested{
-		ID:     "rl_1",
-		Object: constants.ObjectTypeRole,
-		Name:   "Admin",
-	}
-	ep := &APIEndpoint[*stubRequest, *includeExpandResp]{
-		Method:            http.MethodGet,
-		Route:             "/v1/things",
-		SuccessStatusCode: http.StatusOK,
-		IncludeConfig:     roleConfig(),
-		ServiceHandler: func(svc any) func(context.Context, *stubRequest) (*includeExpandResp, *apierror.APIError) {
-			return func(context.Context, *stubRequest) (*includeExpandResp, *apierror.APIError) {
-				return &includeExpandResp{
-					ID:     "apk_1",
-					Object: constants.ObjectTypeAPIKey,
-					Name:   "Key",
-					Role:   &roleStub,
-				}, nil
-			}
-		},
-	}
-	bindHandler(ep)
-
-	r := httptest.NewRequest(http.MethodGet, "/v1/things?include[]=role", nil)
-	w := httptest.NewRecorder()
-
-	ep.Execute(w, r)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("code=%d body=%s", w.Code, w.Body.String())
-	}
-	var decoded map[string]any
-	if err := json.Unmarshal(w.Body.Bytes(), &decoded); err != nil {
-		t.Fatal(err)
-	}
-	role, ok := decoded["role"].(map[string]any)
-	if !ok {
-		t.Fatalf("role missing")
-	}
-	if role["name"] != "Admin" {
-		t.Fatalf("want expanded role %+v", role)
-	}
-}
-
-func TestExecute_includeTransform_invalidExpandableStub_returns500(t *testing.T) {
-	t.Parallel()
-
-	roleIncomplete := expandableRoleNested{
-		ID:     "rl_bad",
-		Object: constants.ObjectTypeRole,
-		Name:   "", // violates validate:"required" when include forces validation
-	}
-	ep := &APIEndpoint[*stubRequest, *includeExpandResp]{
-		Method:            http.MethodGet,
-		Route:             "/v1/things",
-		SuccessStatusCode: http.StatusOK,
-		IncludeConfig:     roleConfig(),
-		ServiceHandler: func(svc any) func(context.Context, *stubRequest) (*includeExpandResp, *apierror.APIError) {
-			return func(context.Context, *stubRequest) (*includeExpandResp, *apierror.APIError) {
-				return &includeExpandResp{
-					ID:     "apk_1",
-					Object: constants.ObjectTypeAPIKey,
-					Name:   "Key",
-					Role:   &roleIncomplete,
-				}, nil
-			}
-		},
-	}
-	bindHandler(ep)
-
-	r := httptest.NewRequest(http.MethodGet, "/v1/things?include[]=role", nil)
-	w := httptest.NewRecorder()
-
-	ep.Execute(w, r)
-
-	if w.Code != http.StatusInternalServerError {
-		t.Fatalf("want 500 got %d body=%s", w.Code, w.Body.String())
-	}
-	env := decodeErrEnvelope(t, w)
-	if env.Error.Code != apierror.ErrorCodeInternalError {
-		t.Fatalf("code=%v", env.Error.Code)
 	}
 }
 

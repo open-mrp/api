@@ -70,6 +70,7 @@ func (e *CreateUnitGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*Create
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeUnitGroup,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateUnitGroupRequest) (*apiresource.UnitGroup, *apierror.APIError) {
 			return svc.(UnitGroupSvc).CreateUnitGroup
 		},

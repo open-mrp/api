@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleAttributeID = "at_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleAttributeID = "at_01c9493ec0c46bb0ed12708ae4"
 const SampleAttributeValue = "Premium"
 
 // Value option within a property.

@@ -37,6 +37,7 @@ func (e *CreatePropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateP
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeProperty,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeProperty,
 			Fields:     []string{"attributes"},

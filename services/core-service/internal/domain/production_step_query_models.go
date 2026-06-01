@@ -1,6 +1,10 @@
 package domain
 
-import "github.com/shopspring/decimal"
+import (
+	"time"
+
+	"github.com/shopspring/decimal"
+)
 
 // ProductionStepDetail is the full production step with its production and consumptions.
 type ProductionStepDetail struct {
@@ -24,6 +28,8 @@ type StepConsumption struct {
 	Quantity      BatchQuantity
 	WasteQuantity BatchQuantity
 	Instructions  *string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 // NextStepQuantitiesResult holds the result of calculating quantities for the next production step.

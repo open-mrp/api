@@ -31,7 +31,10 @@ type APIKeyRepo interface {
 	FindByTypeID(ctx context.Context, typeID string, includes []string) (*apikey.APIKey, *apierror.APIError)
 	Touch(ctx context.Context, apiKeyID int64) *apierror.APIError
 	Create(ctx context.Context, apiKey *apikey.APIKey) (int64, *apierror.APIError)
-	Revoke(ctx context.Context, typeID string) *apierror.APIError
+	GetByIDs(ctx context.Context, ownerAccountID string, ids []string) ([]*apikey.APIKey, *apierror.APIError)
+	// Revoke marks an API key as revoked. Scoped to ownerAccountID; returns a
+	// not-found error if the key does not exist for the given owner.
+	Revoke(ctx context.Context, typeID string, ownerAccountID string) *apierror.APIError
 	List(ctx context.Context, input APIKeyListRepoInput) (*APIKeyListRepoResult, *apierror.APIError)
 }
 
@@ -118,7 +121,11 @@ type RegistrationSessionRepo interface {
 }
 
 type RegistrationQueueRepo interface {
-	Create(ctx context.Context, email, name, planCode, registrationSessionID string) *apierror.APIError
+	// Create inserts a registration queue entry for the session, deduplicating
+	// on registration_session_id. The returned bool is true only when this call
+	// actually inserted a new row (so callers can suppress follow-on side
+	// effects like alert emails on retries).
+	Create(ctx context.Context, email, name, planCode, registrationSessionID string) (bool, *apierror.APIError)
 }
 
 type IdempotencyKeyRepo interface {

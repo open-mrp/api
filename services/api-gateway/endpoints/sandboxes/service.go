@@ -6,8 +6,8 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -44,30 +44,41 @@ func NewSandboxSvc(config *SandboxSvcConfig) SandboxSvc {
 	if err := config.validate(); err != nil {
 		panic(err)
 	}
-
-	return &sandboxSvcImpl{
-		coreClient: config.CoreClient,
-	}
+	return &sandboxSvcImpl{coreClient: config.CoreClient}
 }
 
 func (m *sandboxSvcImpl) ListSandboxes(ctx context.Context, req *apiresource.PaginationRequest) (*apiresource.List[apiresource.Sandbox], *apierror.APIError) {
 	pbReq := &pb.ListSandboxAccountsRequest{
-		Cursor:   req.Cursor,
-		Limit:    req.Limit,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
-		Query:    req.Query,
+		Cursor: req.Cursor,
+		Limit:  req.Limit,
+		Query:  req.Query,
 	}
-
 	resp, apiErr := grpcutil.CallRPC(ctx, sandboxSvcTracer, "service.sandboxes.list", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListSandboxAccountsResponse, error) {
 			return m.coreClient.ListSandboxAccounts(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
+	ids := make([]string, len(resp.Sandboxes))
+	for i, s := range resp.Sandboxes {
+		ids[i] = s.Id
+	}
+	loaded, apiErr := resourceloaders.LoadSandboxes(ctx, ids)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	items := make([]apiresource.Sandbox, 0, len(ids))
+	for _, id := range ids {
+		if v, ok := loaded[id]; ok {
+			items = append(items, *(v.(*apiresource.Sandbox)))
+		}
+	}
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
+}
 
-	return SandboxListPresenter(ctx, resp), nil
+func (m *sandboxSvcImpl) GetSandbox(ctx context.Context, req *RetrieveSandboxRequest) (*apiresource.Sandbox, *apierror.APIError) {
+	return loadSandboxByID(ctx, req.SandboxID)
 }
 
 func (m *sandboxSvcImpl) CreateSandbox(ctx context.Context, req *CreateSandboxRequest) (*apiresource.Sandbox, *apierror.APIError) {
@@ -77,58 +88,42 @@ func (m *sandboxSvcImpl) CreateSandbox(ctx context.Context, req *CreateSandboxRe
 	} else {
 		pbMode = pb.SandboxMode_SANDBOX_MODE_BLANK
 	}
-
 	pbReq := &pb.CreateSandboxRequest{
-		Name:     req.Name,
-		Mode:     pbMode,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
+		Name: req.Name,
+		Mode: pbMode,
 	}
-
 	resp, apiErr := grpcutil.CallRPC(ctx, sandboxSvcTracer, "service.sandboxes.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateSandboxResponse, error) {
 			return m.coreClient.CreateSandbox(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
-	result := SandboxPresenter(resp.Sandbox)
-	return &result, nil
-}
-
-func (m *sandboxSvcImpl) GetSandbox(ctx context.Context, req *RetrieveSandboxRequest) (*apiresource.Sandbox, *apierror.APIError) {
-	pbReq := &pb.GetSandboxRequest{
-		Id:       req.SandboxID,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
-	}
-
-	resp, apiErr := grpcutil.CallRPC(ctx, sandboxSvcTracer, "service.sandboxes.get", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetSandboxResponse, error) {
-			return m.coreClient.GetSandbox(ctx, pbReq, opts...)
-		})
-
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	result := SandboxPresenter(resp.Sandbox)
-	return &result, nil
+	return loadSandboxByID(ctx, resp.Sandbox.Id)
 }
 
 func (m *sandboxSvcImpl) DeleteSandbox(ctx context.Context, req *DeleteSandboxRequest) (*apiresource.EmptyResource, *apierror.APIError) {
-	pbReq := &pb.DeleteSandboxRequest{
-		Id: req.SandboxID,
-	}
-
+	pbReq := &pb.DeleteSandboxRequest{Id: req.SandboxID}
 	_, apiErr := grpcutil.CallRPC(ctx, sandboxSvcTracer, "service.sandboxes.delete", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 			return m.coreClient.DeleteSandbox(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
 	return &apiresource.EmptyResource{}, nil
+}
+
+// loadSandboxByID wraps the single-ID load pattern used after every mutation
+// and for the retrieve endpoint.
+func loadSandboxByID(ctx context.Context, id string) (*apiresource.Sandbox, *apierror.APIError) {
+	loaded, apiErr := resourceloaders.LoadSandboxes(ctx, []string{id})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	v, ok := loaded[id]
+	if !ok {
+		return nil, apierror.NewResourceNotFoundError("Sandbox not found.")
+	}
+	return v.(*apiresource.Sandbox), nil
 }

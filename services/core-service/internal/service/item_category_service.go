@@ -95,6 +95,50 @@ func loadItemCategoryFullTx(ctx context.Context, txRepo domain.ItemCategoryRepo,
 	return full, nil
 }
 
+func (s *itemCategorySvcImpl) BatchGetItemCategoriesByIDs(ctx context.Context, ids []string) ([]*domain.ItemCategoryFull, *apierror.APIError) {
+	ctx, span := itemCategorySvcTracer.Start(ctx, "service.item_category.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	meds := s.mediators()
+	if apiErr := authorizeCatalogBatchRead(ctx, identity, span, meds, func() *apierror.APIError {
+		return identity.CheckHasPermission(types.PermissionDomainCategories, types.ActionRead)
+	}); apiErr != nil {
+		return nil, apiErr
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	repo := s.repos.NewItemCategoryRepo()
+
+	categories, apiErr := repo.GetByIDs(ctx, identity.Target.AccountID, ids)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	allIncludes := []string{"unit_group", "unit_group.base_unit", "unit_group.associated_units", "unit_group.associated_units.unit"}
+
+	for _, cat := range categories {
+		properties, apiErr := repo.GetProperties(ctx, cat.ID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		cat.Properties = properties
+
+		unitGroup, apiErr := repo.GetUnitGroup(ctx, cat.UnitGroupID, allIncludes)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		cat.UnitGroup = unitGroup
+	}
+
+	return categories, nil
+}
+
 func (s *itemCategorySvcImpl) ListItemCategories(ctx context.Context, params domain.ListItemCategoriesParams) (*domain.ListItemCategoriesResult, *apierror.APIError) {
 	ctx, span := itemCategorySvcTracer.Start(ctx, "service.item_category.list")
 	defer span.End()

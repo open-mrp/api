@@ -351,6 +351,26 @@ LEFT JOIN role r ON au.role_id = r.id
 LEFT JOIN department d ON au.department_id = d.id
 WHERE au.account_id = ? AND au.id = ?;
 
+-- name: GetAccountUserDetailsByIDs :many
+SELECT
+    au.id,
+    au.user_id,
+    u.name,
+    u.email,
+    u.username,
+    u.image_url,
+    u.email_verified,
+    au.role_id,
+    au.department_id,
+    au.status_code,
+    au.last_used_at,
+    au.created_at,
+    au.updated_at
+FROM account_user au
+JOIN `user` u ON au.user_id = u.id
+WHERE au.id IN (sqlc.slice('ids'))
+AND au.account_id = sqlc.arg('account_id');
+
 -- name: InsertAccountUser :exec
 INSERT INTO account_user (id, account_id, user_id, role_id, department_id, status_code, created_at, updated_at)
 VALUES (?, ?, ?, ?, ?, ?, NOW(3), NOW(3));

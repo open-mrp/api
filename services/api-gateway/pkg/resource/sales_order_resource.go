@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleSalesOrderDetailID = "or_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleSalesOrderDetailID = "or_01d5034136c3ccc048abecc312"
 const SampleSalesOrderNumber = "SO-001"
 
 // Sales order type sub-resource.
@@ -199,4 +199,34 @@ var SampleSalesOrderSummary = &SalesOrderSummary{
 
 func (*SalesOrderSummary) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleSalesOrderSummary)
+}
+
+func ExpandableSalesOrderStub(id, number string, ts time.Time) *SalesOrderDetail {
+	if id == "" {
+		id = SampleSalesOrderDetailID
+	}
+	if number == "" {
+		number = SampleSalesOrderNumber
+	}
+	if ts.IsZero() {
+		ts = time.Unix(0, 0).UTC()
+	}
+	return &SalesOrderDetail{
+		ID:     id,
+		Object: constants.ObjectTypeSalesOrder,
+		Number: number,
+		Status: &SalesOrderStatusDetail{
+			Code:   string(constants.SalesOrderStatusCodeIssued),
+			Object: constants.ObjectTypeSalesOrderStatus,
+			Name:   "Issued",
+		},
+		Type: &SalesOrderType{
+			Code:   "standard",
+			Object: constants.ObjectTypeSalesOrderType,
+			Name:   "Standard",
+		},
+		Priority:  ExpandablePriorityStub("", constants.PriorityCodeNormal, SamplePriorityName, ts),
+		CreatedAt: ts,
+		UpdatedAt: ts,
+	}
 }

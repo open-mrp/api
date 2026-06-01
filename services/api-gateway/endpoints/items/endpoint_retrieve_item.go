@@ -31,6 +31,7 @@ func (e *RetrieveItemEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveI
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveItemRequest) (*apiresource.Item, *apierror.APIError) {
 			return svc.(ItemSvc).GetItem
 		},
+		ObjectType: constants.ObjectTypeItem,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeItem,
 			Fields:     []string{"category", "unit_value", "unit_cost", "burn_rate", "attributes", "category.unit_group", "category.properties", "category.unit_group.base_unit", "category.unit_group.associated_units", "category.unit_group.associated_units.unit"},

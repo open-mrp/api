@@ -132,6 +132,21 @@ func (h *salesGRPCHandler) GetOrderDiscount(ctx context.Context, req *pb.GetOrde
 	}, nil
 }
 
+func (h *salesGRPCHandler) BatchGetOrderDiscountsByIDs(ctx context.Context, req *pb.BatchGetOrderDiscountsByIDsRequest) (*pb.BatchGetOrderDiscountsByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	discounts, apiErr := h.orderDiscountSvc.BatchGetOrderDiscountsByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	pbDiscounts := make([]*pb.OrderDiscountInfo, len(discounts))
+	for i, d := range discounts {
+		pbDiscounts[i] = orderDiscountToProto(d)
+	}
+	return &pb.BatchGetOrderDiscountsByIDsResponse{OrderDiscounts: pbDiscounts}, nil
+}
+
 func (h *salesGRPCHandler) CreateOrderDiscount(ctx context.Context, req *pb.CreateOrderDiscountRequest) (*pb.CreateOrderDiscountResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
@@ -926,4 +941,19 @@ func protoToEmailContactInputs(in []*pb.SalesOrderEmailContactInput) []domain.Sa
 		out[i] = domain.SalesOrderEmailContactInput{AccountUserID: c.AccountUserId}
 	}
 	return out
+}
+
+func (h *salesGRPCHandler) BatchGetSalesOrderStatusesByIDs(ctx context.Context, req *pb.BatchGetSalesOrderStatusesByIDsRequest) (*pb.BatchGetSalesOrderStatusesByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	statuses, apiErr := h.salesOrderStatusSvc.BatchGetSalesOrderStatusesByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	pbStatuses := make([]*pb.SalesOrderStatusInfo, len(statuses))
+	for i, s := range statuses {
+		pbStatuses[i] = salesOrderStatusToProto(s)
+	}
+	return &pb.BatchGetSalesOrderStatusesByIDsResponse{SalesOrderStatuses: pbStatuses}, nil
 }

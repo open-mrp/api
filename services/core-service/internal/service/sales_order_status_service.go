@@ -52,3 +52,20 @@ func (s *salesOrderStatusSvcImpl) ListSalesOrderStatuses(ctx context.Context, pa
 
 	return s.repos.NewSalesOrderStatusRepo().List(ctx, params)
 }
+
+func (s *salesOrderStatusSvcImpl) BatchGetSalesOrderStatusesByIDs(ctx context.Context, ids []string) ([]*domain.SalesOrderStatus, *apierror.APIError) {
+	ctx, span := salesOrderStatusSvcTracer.Start(ctx, "service.sales_order_status.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsAuthenticated(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	return s.repos.NewSalesOrderStatusRepo().GetByIDs(ctx, ids)
+}

@@ -113,6 +113,24 @@ DELETE FROM account_group
 WHERE id = sqlc.arg('id')
 AND owner_account_id = sqlc.arg('owner_account_id');
 
+-- name: GetAccountGroupsByIDs :many
+-- Returns account groups matching the given IDs that belong to the caller's
+-- account. Account groups are always account-owned (no system rows).
+SELECT
+    account_group.id,
+    account_group.owner_account_id,
+    account_group.name,
+    account_group.description,
+    account_group.commission_status_code,
+    account_group.freight_status_code,
+    account_group.account_group_type_code,
+    account_group.registration_flow_id,
+    account_group.created_at,
+    account_group.updated_at
+FROM account_group
+WHERE account_group.id IN (sqlc.slice('ids'))
+AND account_group.owner_account_id = sqlc.arg('owner_account_id');
+
 -- name: CountAccountGroupUsageInAccountRelation :one
 SELECT COUNT(*)
 FROM account_relation

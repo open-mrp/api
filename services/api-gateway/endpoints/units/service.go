@@ -6,7 +6,7 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
-	ownerutil "github.com/augno/api/services/api-gateway/internal/owner"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -75,34 +75,25 @@ func (m *unitSvcImpl) ListUnits(ctx context.Context, req *ListUnitsRequest) (*ap
 		return nil, apiErr
 	}
 
-	var ownerAccount *apiresource.Account
-	for _, u := range resp.Units {
-		if u.AccountId != nil {
-			ownerAccount = ownerutil.ResolveOwnerAccount(ctx, m.coreClient, u.AccountId)
-			break
-		}
+	ids := make([]string, len(resp.Units))
+	for i, u := range resp.Units {
+		ids[i] = u.Id
 	}
-
-	return UnitListPresenter(ctx, resp, ownerAccount), nil
-}
-
-func (m *unitSvcImpl) GetUnit(ctx context.Context, req *RetrieveUnitRequest) (*apiresource.Unit, *apierror.APIError) {
-	pbReq := &pb.GetUnitRequest{
-		Id: req.UnitID,
-	}
-
-	resp, apiErr := grpcutil.CallRPC(ctx, unitSvcTracer, "service.units.get", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetUnitResponse, error) {
-			return m.coreClient.GetUnit(ctx, pbReq, opts...)
-		})
-
+	loaded, apiErr := resourceloaders.LoadUnits(ctx, ids)
 	if apiErr != nil {
 		return nil, apiErr
 	}
+	items := make([]apiresource.Unit, 0, len(ids))
+	for _, id := range ids {
+		if v, ok := loaded[id]; ok {
+			items = append(items, *(v.(*apiresource.Unit)))
+		}
+	}
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
+}
 
-	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.Unit.AccountId)
-	result := UnitPresenter(resp.Unit, ownerAccount)
-	return &result, nil
+func (m *unitSvcImpl) GetUnit(ctx context.Context, req *RetrieveUnitRequest) (*apiresource.Unit, *apierror.APIError) {
+	return loadUnitByID(ctx, req.UnitID)
 }
 
 func (m *unitSvcImpl) CreateUnit(ctx context.Context, req *CreateUnitRequest) (*apiresource.Unit, *apierror.APIError) {
@@ -126,9 +117,7 @@ func (m *unitSvcImpl) CreateUnit(ctx context.Context, req *CreateUnitRequest) (*
 		return nil, apiErr
 	}
 
-	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.Unit.AccountId)
-	result := UnitPresenter(resp.Unit, ownerAccount)
-	return &result, nil
+	return loadUnitByID(ctx, resp.Unit.Id)
 }
 
 func (m *unitSvcImpl) UpdateUnit(ctx context.Context, req *UpdateUnitRequest) (*apiresource.Unit, *apierror.APIError) {
@@ -151,9 +140,7 @@ func (m *unitSvcImpl) UpdateUnit(ctx context.Context, req *UpdateUnitRequest) (*
 		return nil, apiErr
 	}
 
-	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.Unit.AccountId)
-	result := UnitPresenter(resp.Unit, ownerAccount)
-	return &result, nil
+	return loadUnitByID(ctx, resp.Unit.Id)
 }
 
 func (m *unitSvcImpl) DeleteUnit(ctx context.Context, req *DeleteUnitRequest) (*apiresource.EmptyResource, *apierror.APIError) {
@@ -188,4 +175,18 @@ func (m *unitSvcImpl) ValidateUnits(ctx context.Context, req *ValidateUnitsReque
 	}
 
 	return ValidateUnitsPresenter(resp), nil
+}
+
+// loadUnitByID wraps the single-ID load pattern used after every
+// mutation and for the retrieve endpoint.
+func loadUnitByID(ctx context.Context, id string) (*apiresource.Unit, *apierror.APIError) {
+	loaded, apiErr := resourceloaders.LoadUnits(ctx, []string{id})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	v, ok := loaded[id]
+	if !ok {
+		return nil, apierror.NewResourceNotFoundError("Unit not found.")
+	}
+	return v.(*apiresource.Unit), nil
 }

@@ -682,3 +682,54 @@ func (r *accountUserRepoImpl) MarkUsedByAccountAndUser(ctx context.Context, acco
 
 	return nil
 }
+
+func (r *accountUserRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.AccountUserDetail, *apierror.APIError) {
+	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.get_by_ids")
+	defer span.End()
+
+	rows, err := r.queries.GetAccountUserDetailsByIDs(ctx, sqlc.GetAccountUserDetailsByIDsParams{
+		Ids:       ids,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	items := make([]*domain.AccountUserDetail, len(rows))
+	for i, row := range rows {
+		au := &domain.AccountUserDetail{
+			ID:         row.ID,
+			UserID:     row.UserID,
+			StatusCode: constants.AccountUserStatus(row.StatusCode),
+			CreatedAt:  row.CreatedAt,
+			UpdatedAt:  row.UpdatedAt,
+		}
+		if row.Name.Valid {
+			au.Name = &row.Name.String
+		}
+		if row.Email.Valid {
+			au.Email = &row.Email.String
+		}
+		if row.Username.Valid {
+			au.Username = &row.Username.String
+		}
+		if row.ImageUrl.Valid {
+			au.ImageURL = &row.ImageUrl.String
+		}
+		if row.EmailVerified.Valid {
+			au.EmailVerified = true
+		}
+		if row.RoleID.Valid {
+			au.RoleID = &row.RoleID.String
+		}
+		if row.DepartmentID.Valid {
+			au.DepartmentID = &row.DepartmentID.String
+		}
+		if row.LastUsedAt.Valid {
+			au.LastUsedAt = &row.LastUsedAt.Time
+		}
+		items[i] = au
+	}
+
+	return items, nil
+}

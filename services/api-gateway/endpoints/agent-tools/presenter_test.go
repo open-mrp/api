@@ -10,13 +10,13 @@ import (
 func TestAvailableToolPresenter(t *testing.T) {
 	t.Parallel()
 	tool := &pb.AvailableToolInfo{
-		Id:               "tdef_01k0b1seed0searchproduct0",
+		Id:               "tdef_01f0c4d04780ace864e6cc3a74",
 		DisplayName:      "Search Products",
 		Description:      "Search for products by keyword or phrase",
 		ConfigSchemaJson: `{}`,
 		Category:         "built_in",
 	}
 
-	result := AvailableToolPresenter(tool)
+	result := availableToolFromProto(tool)
 	resourcetest.ValidateResourceStruct(t, "AvailableTool", result)
 }

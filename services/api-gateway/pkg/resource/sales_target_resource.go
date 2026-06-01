@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleSalesTargetID = "ta_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleSalesTargetID = "ta_0139fc283170d6e226c81719af"
 
 // Sales target for an account user.
 type SalesTarget struct {

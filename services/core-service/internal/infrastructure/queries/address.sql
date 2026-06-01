@@ -112,6 +112,34 @@ JOIN account_address aa ON aa.address_id = a.id
 WHERE a.id = sqlc.arg('id')
 AND aa.account_id = sqlc.arg('account_id');
 
+-- name: GetAddressesByIDs :many
+-- Returns addresses matching the given IDs that belong to the caller's
+-- account, via the account_address junction. Addresses are always
+-- account-scoped (no system rows).
+SELECT
+    a.id,
+    a.name,
+    a.phone,
+    a.email,
+    a.is_drop_ship,
+    a.created_at,
+    a.updated_at,
+    g.id AS geolocation_id,
+    g.street_line_1,
+    g.street_line_2,
+    g.locality,
+    g.state,
+    g.postal_code,
+    g.country,
+    g.google_place_id,
+    g.latitude,
+    g.longitude
+FROM address a
+JOIN geolocation g ON a.geolocation_id = g.id
+JOIN account_address aa ON aa.address_id = a.id
+WHERE a.id IN (sqlc.slice('ids'))
+AND aa.account_id = sqlc.arg('account_id');
+
 -- name: InsertGeolocation :exec
 INSERT INTO geolocation (
     id,

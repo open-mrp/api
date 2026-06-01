@@ -571,7 +571,7 @@ func (suite *APIKeyMedTestSuite) TestRotate_HasRedactedValue() {
 		Times(1)
 
 	suite.apiKeyRepo.EXPECT().
-		Revoke(gomock.Any(), apiKeyTypeID).
+		Revoke(gomock.Any(), apiKeyTypeID, ownerAccountID).
 		Return(nil).
 		Times(1)
 
@@ -593,8 +593,9 @@ func (suite *APIKeyMedTestSuite) TestRotate_HasRedactedValue() {
 		Times(1)
 
 	_, rotatedModel, err := suite.apiKeyMed.Rotate(ctx, domain.APIKeyRotateInput{
-		AccountMode:  constants.AccountModeSandbox,
-		APIKeyTypeID: apiKeyTypeID,
+		AccountMode:    constants.AccountModeSandbox,
+		APIKeyTypeID:   apiKeyTypeID,
+		OwnerAccountID: ownerAccountID,
 	})
 
 	suite.Nil(err)
@@ -630,7 +631,7 @@ func (suite *APIKeyMedTestSuite) TestRotate_RevokesOldKey() {
 		Times(1)
 
 	suite.apiKeyRepo.EXPECT().
-		Revoke(gomock.Any(), apiKeyTypeID).
+		Revoke(gomock.Any(), apiKeyTypeID, oldKey.OwnerAccountID).
 		Return(nil).
 		Times(1)
 
@@ -655,8 +656,9 @@ func (suite *APIKeyMedTestSuite) TestRotate_RevokesOldKey() {
 		Times(1)
 
 	fullKey, newKey, err := suite.apiKeyMed.Rotate(ctx, domain.APIKeyRotateInput{
-		AccountMode:  constants.AccountModeSandbox,
-		APIKeyTypeID: apiKeyTypeID,
+		AccountMode:    constants.AccountModeSandbox,
+		APIKeyTypeID:   apiKeyTypeID,
+		OwnerAccountID: oldKey.OwnerAccountID,
 	})
 
 	suite.Nil(err)

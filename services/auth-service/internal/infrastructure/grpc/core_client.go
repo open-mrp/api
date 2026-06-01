@@ -97,15 +97,20 @@ func (c *AuthCoreClient) GetUserAccountAccess(ctx context.Context, userID, accou
 	}, true, nil
 }
 
-func (c *AuthCoreClient) GetAccountRelationByUserID(ctx context.Context, ownerAccountID, userID string) (*domain.AuthAccountRelation, bool, *apierror.APIError) {
+func (c *AuthCoreClient) GetAccountRelationByUserID(ctx context.Context, targetAccountID, actorAccountID, userID string) (*domain.AuthAccountRelation, bool, *apierror.APIError) {
 	ctx = prepareCtx(ctx)
+
+	req := &pb.GetAccountRelationRequest{
+		OwnerAccountId: targetAccountID,
+		Lookup:         &pb.GetAccountRelationRequest_UserId{UserId: userID},
+	}
+	if actorAccountID != "" {
+		req.ActorAccountId = &actorAccountID
+	}
 
 	resp, apiErr := rpc.CallRPC(ctx, coreClientTracer, "core_client.get_account_relation_by_user_id", coreServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetAccountRelationResponse, error) {
-			return c.client.GetAccountRelation(ctx, &pb.GetAccountRelationRequest{
-				OwnerAccountId: ownerAccountID,
-				Lookup:         &pb.GetAccountRelationRequest_UserId{UserId: userID},
-			}, opts...)
+			return c.client.GetAccountRelation(ctx, req, opts...)
 		})
 	if apiErr != nil {
 		return nil, false, apiErr
@@ -124,6 +129,7 @@ func (c *AuthCoreClient) GetAccountRelationByUserID(ctx context.Context, ownerAc
 		ID:                      resp.Relation.Id,
 		CounterpartyAccountID:   resp.Relation.CounterpartyAccountId,
 		AccountRelationRoleCode: roleCode,
+		IsOwnerSide:             resp.Relation.IsOwnerSide,
 	}, true, nil
 }
 

@@ -44,6 +44,6 @@ func TestInvoiceSummaryPresenter(t *testing.T) {
 		UpdatedAt:                now,
 	}
 
-	result := InvoiceSummaryPresenter(info)
+	result := invoiceSummaryFromProto(info)
 	resourcetest.ValidateExpandableStubs(t, "InvoiceSummary", result)
 }

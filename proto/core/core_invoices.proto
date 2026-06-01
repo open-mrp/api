@@ -139,6 +139,13 @@ message DeleteMaterialRequest {
 message DeleteMaterialResponse {
   MaterialInfo material = 1;
 }
+message BatchGetMaterialsByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetMaterialsByIDsResponse {
+  repeated MaterialInfo materials = 1;
+}
+
 message SupplierMaterialInfo {
   string id = 1;
   string material_id = 2;
@@ -270,6 +277,12 @@ message DeletePartRequest {
 message DeletePartResponse {
   PartInfo part = 1;
 }
+message BatchGetPartsByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetPartsByIDsResponse {
+  repeated PartInfo parts = 1;
+}
 message PermissionInfo {
   string id = 1;
   string code = 2;
@@ -288,6 +301,14 @@ message PermissionGroupInfo {
   google.protobuf.Timestamp created_at = 6;
   google.protobuf.Timestamp updated_at = 7;
 }
+message BatchGetPermissionGroupsByIDsRequest {
+  repeated string ids = 1;
+}
+
+message BatchGetPermissionGroupsByIDsResponse {
+  repeated PermissionGroupInfo permission_groups = 1;
+}
+
 message ListPermissionGroupsRequest {
   optional string cursor = 1;
   int32 limit = 2;
@@ -318,6 +339,14 @@ message GetPriorityRequest {
 }
 message GetPriorityResponse {
   PriorityInfo priority = 1;
+}
+// Batched read for the api-gateway resourcekit resolver. Priority is a
+// system-wide resource (no account scoping); returns whichever IDs match.
+message BatchGetPrioritiesByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetPrioritiesByIDsResponse {
+  repeated PriorityInfo priorities = 1;
 }
 message ProductFullInfo {
   string id = 1;
@@ -424,6 +453,12 @@ message ValidateProductsRequest {
 message ValidateProductsResponse {
   map<string, ProductFullInfo> products = 1;
 }
+message BatchGetProductsByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetProductsByIDsResponse {
+  repeated ProductFullInfo products = 1;
+}
 message ProductLineInfo {
   string id = 1;
   string name = 2;
@@ -477,6 +512,13 @@ message UpdateProductLineResponse {
 }
 message DeleteProductLineRequest {
   string id = 1;
+}
+// Batched read for the api-gateway resourcekit resolver.
+message BatchGetProductLinesByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetProductLinesByIDsResponse {
+  repeated ProductLineInfo product_lines = 1;
 }
 message ProductTypeInfo {
   string id = 1;

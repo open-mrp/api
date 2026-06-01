@@ -8,8 +8,61 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
+
+const getPrioritiesByIDs = `-- name: GetPrioritiesByIDs :many
+SELECT
+    priority.id,
+    priority.name,
+    priority.code,
+    priority.created_at,
+    priority.updated_at
+FROM priority
+WHERE priority.id IN (/*SLICE:ids*/?)
+`
+
+// Returns priorities matching the given IDs. Priorities are system-wide
+// (no account scoping), so no per-caller filter applies.
+func (q *Queries) GetPrioritiesByIDs(ctx context.Context, ids []string) ([]Priority, error) {
+	query := getPrioritiesByIDs
+	var queryParams []interface{}
+	if len(ids) > 0 {
+		for _, v := range ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Priority
+	for rows.Next() {
+		var i Priority
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Code,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
 
 const getPriority = `-- name: GetPriority :one
 SELECT

@@ -363,6 +363,70 @@ func (q *Queries) GetPartBase(ctx context.Context, arg GetPartBaseParams) (GetPa
 	return i, err
 }
 
+const getPartsByIDs = `-- name: GetPartsByIDs :many
+SELECT
+    p.id,
+    p.item_id,
+    p.created_at,
+    p.updated_at
+FROM part p
+JOIN item i ON i.id = p.item_id
+WHERE p.id IN (/*SLICE:ids*/?)
+AND i.account_id = ?
+AND i.deleted_at IS NULL
+`
+
+type GetPartsByIDsParams struct {
+	Ids       []string
+	AccountID string
+}
+
+type GetPartsByIDsRow struct {
+	ID        string
+	ItemID    string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func (q *Queries) GetPartsByIDs(ctx context.Context, arg GetPartsByIDsParams) ([]GetPartsByIDsRow, error) {
+	query := getPartsByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPartsByIDsRow
+	for rows.Next() {
+		var i GetPartsByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ItemID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const insertItemForPart = `-- name: InsertItemForPart :exec
 INSERT INTO item (
     id, sku, description, notes, unit_value_id, burn_rate_id,

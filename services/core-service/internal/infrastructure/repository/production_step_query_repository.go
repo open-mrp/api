@@ -121,6 +121,8 @@ func mapStepConsumptionRow(row sqlc.GetProductionStepConsumptionsRow) (*domain.S
 			},
 		},
 		Instructions: instructions,
+		CreatedAt:    row.CreatedAt,
+		UpdatedAt:    row.UpdatedAt,
 	}, nil
 }
 

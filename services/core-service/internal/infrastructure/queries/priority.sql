@@ -46,3 +46,15 @@ SELECT
     priority.updated_at
 FROM priority
 WHERE priority.id = sqlc.arg('id') OR priority.code = sqlc.arg('code');
+
+-- name: GetPrioritiesByIDs :many
+-- Returns priorities matching the given IDs. Priorities are system-wide
+-- (no account scoping), so no per-caller filter applies.
+SELECT
+    priority.id,
+    priority.name,
+    priority.code,
+    priority.created_at,
+    priority.updated_at
+FROM priority
+WHERE priority.id IN (sqlc.slice('ids'));

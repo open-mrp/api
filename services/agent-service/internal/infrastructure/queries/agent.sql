@@ -345,6 +345,13 @@ WHERE id = $1 AND account_id = $9;
 -- name: DeleteAgentMemory :exec
 DELETE FROM agent_memory WHERE id = $1 AND account_id = $2;
 
+-- name: GetAgentMemoriesByIDs :many
+-- Returns agent memories matching the given IDs that belong to the caller's
+-- account. Used by the api-gateway resourcekit resolver.
+SELECT * FROM agent_memory
+WHERE id = ANY(@ids::text[])
+  AND account_id = @account_id;
+
 -- name: ListAgentMemoriesByAccountCursor :many
 SELECT am.* FROM agent_memory am
 WHERE am.account_id = @account_id

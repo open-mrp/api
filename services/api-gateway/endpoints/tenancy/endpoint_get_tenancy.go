@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -24,6 +25,7 @@ func (e *GetTenancyEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetTenancyR
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeTenancy,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetTenancyRequest) (*apiresource.Tenancy, *apierror.APIError) {
 			return svc.(TenancySvc).GetTenancy
 		},

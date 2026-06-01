@@ -52,15 +52,16 @@ func (e *ListRequestLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRe
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *ListRequestLogsRequest) (*apiresource.List[apiresource.RequestLog], *apierror.APIError) {
+			return svc.(RequestLogSvc).ListRequestLogs
+		},
+		ObjectType: constants.ObjectTypeRequestLog,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeRequestLog,
 			Fields:     []string{"account", "actor", "actor.role"},
 		}),
 		Extras: apiendpoint.APIEndpointExtras{
 			SkipRequestLogging: true,
-		},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *ListRequestLogsRequest) (*apiresource.List[apiresource.RequestLog], *apierror.APIError) {
-			return svc.(RequestLogSvc).ListRequestLogs
 		},
 	})
 }

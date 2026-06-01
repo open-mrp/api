@@ -32,7 +32,7 @@ type Role struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-const SampleRoleID = "rl_01gf7a8200er3ar3pkfrb6kk29"
+const SampleRoleID = "rl_01c16d2eb637c0d1f3a372937c"
 const SampleRoleName = "Admin"
 
 var SampleRolePermissions = []string{"customers:create", "customers:read", "customers:update", "customers:delete"}
@@ -50,4 +50,29 @@ var SampleRole = &Role{
 
 func (*Role) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleRole)
+}
+
+// TODO: This is unacceptable. We should only send valid data back not make stuff up.
+func ExpandableRoleStub(id, name string, typeCode constants.RoleType, ts time.Time) *Role {
+	if id == "" {
+		id = SampleRoleID
+	}
+	if name == "" {
+		name = SampleRoleName
+	}
+	if typeCode == "" {
+		typeCode = constants.RoleTypeAdmin
+	}
+	if ts.IsZero() {
+		ts = time.Unix(0, 0).UTC()
+	}
+	return &Role{
+		ID:        id,
+		Object:    constants.ObjectTypeRole,
+		Name:      name,
+		TypeCode:  typeCode,
+		Owner:     SystemOwner(),
+		CreatedAt: ts,
+		UpdatedAt: ts,
+	}
 }

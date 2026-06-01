@@ -28,6 +28,7 @@ func (e *RetrieveItemInventoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeItemInventory,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveItemInventoryRequest) (*apiresource.ItemInventory, *apierror.APIError) {
 			return svc.(ItemSvc).GetItemInventory
 		},

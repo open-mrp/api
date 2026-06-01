@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleInventoryChangeLogID = "icl_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleInventoryChangeLogID = "icl_01424a802cb48a96f94196f4f1"
 
 // InventoryChangeLog is an inventory change log entry.
 type InventoryChangeLog struct {

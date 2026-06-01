@@ -164,10 +164,13 @@ func (s *accountSvcImpl) GetRoleInfo(ctx context.Context, roleID string) (*domai
 
 // GetAccountRelationByUserID finds the account relation linking a user to a target account.
 //
-// 1. Query by owner account (counterparty-side: e.g. customer user targeting merchant).
-// 2. If not found, query by counterparty account (owner-side: e.g. merchant user targeting customer).
-// 3. If neither found, return nil without an error.
-func (s *accountSvcImpl) GetAccountRelationByUserID(ctx context.Context, targetAccountID, userID string) (*domain.AccountRelation, *apierror.APIError) {
+//  1. Query by owner account (counterparty-side: e.g. customer user targeting merchant).
+//  2. If actorAccountID is set, query by counterparty account constrained to that owner
+//     (owner-side: e.g. merchant user in actor account targeting customer counterparty).
+//     Without actorAccountID, the owner-side fallback is skipped so a user cannot match
+//     via membership in an arbitrary account that happens to own a relation to the target.
+//  3. If neither found, return nil without an error.
+func (s *accountSvcImpl) GetAccountRelationByUserID(ctx context.Context, targetAccountID, actorAccountID, userID string) (*domain.AccountRelation, *apierror.APIError) {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_account_relation_by_user_id")
 	defer span.End()
 
@@ -182,8 +185,13 @@ func (s *accountSvcImpl) GetAccountRelationByUserID(ctx context.Context, targetA
 		return relation, nil
 	}
 
-	// Try owner-side (target is the counterparty, user belongs to the relation owner).
-	relation, apiErr = s.accountRelationRepo.FindByCounterpartyAccountAndUserID(ctx, targetAccountID, userID)
+	// Owner-side requires a verified actor account; the relation's owner must equal it.
+	if actorAccountID == "" {
+		return nil, nil
+	}
+
+	// Try owner-side (target is the counterparty, user belongs to the actor account that owns the relation).
+	relation, apiErr = s.accountRelationRepo.FindByCounterpartyAccountAndUserID(ctx, targetAccountID, actorAccountID, userID)
 	if apiErr != nil {
 		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
 			return nil, nil
@@ -822,6 +830,45 @@ func (s *accountSvcImpl) GetAccount(ctx context.Context, accountID string) (*dom
 	}
 
 	return s.accountRepo.GetByID(ctx, accountID)
+}
+
+// BatchGetAccountsByIDs returns accounts matching the input IDs that the
+// caller is authorized to read. Authorization mirrors GetAccount: the caller
+// can only access their own account. IDs that do not match the caller's
+// target account are silently dropped (matching the "missing IDs are absent"
+// loader contract used by the api-gateway resourcekit resolver).
+func (s *accountSvcImpl) BatchGetAccountsByIDs(ctx context.Context, ids []string) ([]*domain.Account, *apierror.APIError) {
+	ctx, span := accountSvcTracer.Start(ctx, "service.account.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainAccount, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+
+	// Authorization: the caller can only read their own account. Filter the
+	// input IDs to just the target account ID; everything else is silently
+	// dropped (the resolver treats absence as "field stays nil").
+	allowed := make([]string, 0, 1)
+	for _, id := range ids {
+		if id == identity.Target.AccountID {
+			allowed = append(allowed, id)
+			break
+		}
+	}
+	if len(allowed) == 0 {
+		return nil, nil
+	}
+	return s.accountRepo.GetByIDs(ctx, allowed)
 }
 
 // GetAccountBySlug returns a minimal public account by portal slug (unauthenticated).

@@ -58,6 +58,32 @@ func NewItemSvc(config *ItemSvcConfig) domain.ItemSvc {
 	}
 }
 
+func (s *itemSvcImpl) BatchGetItemsByIDs(ctx context.Context, ids []string) ([]*domain.Item, *apierror.APIError) {
+	ctx, span := itemSvcTracer.Start(ctx, "service.item.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	meds := s.mediators()
+	if apiErr := authorizeCatalogBatchRead(ctx, identity, span, meds, func() *apierror.APIError {
+		return identity.CheckHasPermission(types.PermissionDomainItems, types.ActionRead)
+	}); apiErr != nil {
+		return nil, apiErr
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	items, apiErr := s.repos.NewItemRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return items, nil
+}
+
 // ListItems returns a paginated list of items for the caller's account.
 func (s *itemSvcImpl) ListItems(ctx context.Context, params domain.ListItemsParams) (*domain.ListItemsResult, *apierror.APIError) {
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.list")
@@ -1158,6 +1184,12 @@ func (s *itemSvcImpl) BulkCreateItems(ctx context.Context, params domain.BulkCre
 
 	accountID := identity.Target.AccountID
 
+	// The duplicate-SKU path in bulkCreateSingleItem updates an existing item in
+	// place. That is an update-class mutation, so it must additionally require
+	// items:update; otherwise a create-only actor could modify existing catalog
+	// records by submitting bulk-create rows with existing SKUs.
+	canUpdateItems := identity.CheckHasPermission(types.PermissionDomainItems, types.ActionUpdate) == nil
+
 	// Validate item type.
 	switch params.Type {
 	case "product", "material", "part":
@@ -1184,7 +1216,7 @@ func (s *itemSvcImpl) BulkCreateItems(ctx context.Context, params domain.BulkCre
 		results := make([]domain.BulkCreateItemResult, len(params.Items))
 
 		for i, input := range params.Items {
-			results[i] = s.bulkCreateSingleItem(ctx, accountID, params.Type, input)
+			results[i] = s.bulkCreateSingleItem(ctx, accountID, params.Type, input, canUpdateItems)
 		}
 
 		cacheErr := s.withTx(ctx, func(txCtx context.Context, txSvc *itemSvcImpl) *apierror.APIError {
@@ -1301,7 +1333,7 @@ func (s *itemSvcImpl) bulkUpsertExistingItem(ctx context.Context, accountID, ite
 
 // bulkCreateSingleItem creates a single item within a bulk operation.
 // Errors are captured in the result rather than propagated.
-func (s *itemSvcImpl) bulkCreateSingleItem(ctx context.Context, accountID, itemType string, input domain.BulkCreateItemInput) domain.BulkCreateItemResult {
+func (s *itemSvcImpl) bulkCreateSingleItem(ctx context.Context, accountID, itemType string, input domain.BulkCreateItemInput, canUpdateItems bool) domain.BulkCreateItemResult {
 	errResult := func(sku string, msg string) domain.BulkCreateItemResult {
 		return domain.BulkCreateItemResult{SKU: sku, Success: false, Error: &msg}
 	}
@@ -1313,6 +1345,12 @@ func (s *itemSvcImpl) bulkCreateSingleItem(ctx context.Context, accountID, itemT
 		return errResult(input.SKU, "Failed to look up existing SKU.")
 	}
 	if existingItemID != nil && existingRateID != nil {
+		// The upsert path mutates an existing item; gate it on items:update so
+		// a create-only actor cannot modify existing catalog records by passing
+		// an existing SKU.
+		if !canUpdateItems {
+			return errResult(input.SKU, "You do not have permission to update an existing item with this SKU.")
+		}
 		if apiErr := s.bulkUpsertExistingItem(ctx, accountID, *existingItemID, *existingRateID, input); apiErr != nil {
 			return errResult(input.SKU, apiErr.PublicMessage)
 		}

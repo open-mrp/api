@@ -7,6 +7,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -62,7 +63,7 @@ func (m *userSvcImpl) GetUser(ctx context.Context, req *RetrieveUserRequest) (*a
 		return nil, apiErr
 	}
 
-	result := UserPresenter(resp.User)
+	result := userFromProto(resp.User)
 	return &result, nil
 }
 
@@ -85,7 +86,7 @@ func (m *userSvcImpl) UpdateUser(ctx context.Context, req *UpdateUserRequest) (*
 		return nil, apiErr
 	}
 
-	result := UserPresenter(resp.User)
+	result := userFromProto(resp.User)
 	return &result, nil
 }
 
@@ -127,4 +128,24 @@ func (m *userSvcImpl) GetUserPhotoURL(ctx context.Context, req *GetUserPhotoURLR
 	return &apiresource.UserPhotoURL{
 		URL: resp.Url,
 	}, nil
+}
+
+func userFromProto(u *pb.UserInfo) apiresource.User {
+	if u == nil {
+		return apiresource.User{}
+	}
+
+	user := apiresource.User{
+		ID:              u.Id,
+		Object:          constants.ObjectTypeUser,
+		Email:           u.Email,
+		Name:            u.Name,
+		Username:        u.Username,
+		ImageUrl:        u.ImageUrl,
+		EmailVerifiedAt: grpcutil.TimestampToTimePtr(u.EmailVerifiedAt),
+		CreatedAt:       grpcutil.TimestampToTime(u.CreatedAt),
+		UpdatedAt:       grpcutil.TimestampToTime(u.UpdatedAt),
+	}
+
+	return user
 }

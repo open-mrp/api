@@ -142,6 +142,7 @@ func (e *CreateSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Creat
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeSalesOrder,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateSalesOrderRequest) (*apiresource.SalesOrderDetail, *apierror.APIError) {
 			return svc.(SalesOrderSvc).CreateSalesOrder
 		},

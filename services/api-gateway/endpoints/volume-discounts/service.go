@@ -7,7 +7,8 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/appctx"
+	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -55,7 +56,7 @@ func (m *volumeDiscountSvcImpl) ListVolumeDiscounts(ctx context.Context, req *Li
 		Cursor:   req.Cursor,
 		Limit:    req.Limit,
 		Query:    req.Query,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
+		Includes: volumeDiscountIncludes,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, volumeDiscountSvcTracer, "service.volume_discounts.list", domain.ServiceName,
@@ -67,13 +68,13 @@ func (m *volumeDiscountSvcImpl) ListVolumeDiscounts(ctx context.Context, req *Li
 		return nil, apiErr
 	}
 
-	return VolumeDiscountListPresenter(ctx, resp), nil
+	return volumeDiscountListFromProto(ctx, resp), nil
 }
 
 func (m *volumeDiscountSvcImpl) GetVolumeDiscount(ctx context.Context, req *RetrieveVolumeDiscountRequest) (*apiresource.VolumeDiscount, *apierror.APIError) {
 	pbReq := &pb.GetVolumeDiscountRequest{
 		Id:       req.VolumeDiscountID,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
+		Includes: volumeDiscountIncludes,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, volumeDiscountSvcTracer, "service.volume_discounts.get", domain.ServiceName,
@@ -85,7 +86,9 @@ func (m *volumeDiscountSvcImpl) GetVolumeDiscount(ctx context.Context, req *Retr
 		return nil, apiErr
 	}
 
-	result := VolumeDiscountPresenter(resp.VolumeDiscount)
+	meta := resourcekit.GetLoadMeta(ctx)
+	result := volumeDiscountFromProto(resp.VolumeDiscount)
+	stashVolumeDiscountMeta(meta, resp.VolumeDiscount)
 	return &result, nil
 }
 
@@ -108,7 +111,7 @@ func (m *volumeDiscountSvcImpl) CreateVolumeDiscount(ctx context.Context, req *C
 		CategoryIds:      req.CategoryIDs,
 		AttributeIds:     req.AttributeIDs,
 		UnitIds:          req.UnitIDs,
-		Includes:         appctx.GetRequestedIncludeKeys(ctx),
+		Includes:         volumeDiscountIncludes,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, volumeDiscountSvcTracer, "service.volume_discounts.create", domain.ServiceName,
@@ -120,7 +123,9 @@ func (m *volumeDiscountSvcImpl) CreateVolumeDiscount(ctx context.Context, req *C
 		return nil, apiErr
 	}
 
-	result := VolumeDiscountPresenter(resp.VolumeDiscount)
+	meta := resourcekit.GetLoadMeta(ctx)
+	result := volumeDiscountFromProto(resp.VolumeDiscount)
+	stashVolumeDiscountMeta(meta, resp.VolumeDiscount)
 	return &result, nil
 }
 
@@ -151,7 +156,7 @@ func (m *volumeDiscountSvcImpl) UpdateVolumeDiscount(ctx context.Context, req *U
 		HasCategories:     req.HasCategories,
 		HasAttributes:     req.HasAttributes,
 		HasUnits:          req.HasUnits,
-		Includes:          appctx.GetRequestedIncludeKeys(ctx),
+		Includes:          volumeDiscountIncludes,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, volumeDiscountSvcTracer, "service.volume_discounts.update", domain.ServiceName,
@@ -163,7 +168,9 @@ func (m *volumeDiscountSvcImpl) UpdateVolumeDiscount(ctx context.Context, req *U
 		return nil, apiErr
 	}
 
-	result := VolumeDiscountPresenter(resp.VolumeDiscount)
+	meta := resourcekit.GetLoadMeta(ctx)
+	result := volumeDiscountFromProto(resp.VolumeDiscount)
+	stashVolumeDiscountMeta(meta, resp.VolumeDiscount)
 	return &result, nil
 }
 
@@ -182,4 +189,147 @@ func (m *volumeDiscountSvcImpl) DeleteVolumeDiscount(ctx context.Context, req *D
 	}
 
 	return &apiresource.EmptyResource{}, nil
+}
+
+var volumeDiscountIncludes = []string{"customer_groups", "product_lines", "categories", "attributes", "acceptable_units"}
+
+func volumeDiscountFromProto(d *pb.VolumeDiscountInfo) apiresource.VolumeDiscount {
+	if d == nil {
+		return apiresource.VolumeDiscount{}
+	}
+
+	tiers := make([]apiresource.VolumeDiscountTier, len(d.Tiers))
+	for i, t := range d.Tiers {
+		tiers[i] = apiresource.VolumeDiscountTier{
+			ID:                 t.Id,
+			Object:             constants.ObjectTypeVolumeDiscountTier,
+			Name:               t.Name,
+			DiscountPercentage: t.DiscountPercentage,
+			Threshold:          t.Threshold,
+			CreatedAt:          grpcutil.TimestampToTime(t.CreatedAt),
+			UpdatedAt:          grpcutil.TimestampToTime(t.UpdatedAt),
+		}
+	}
+
+	return apiresource.VolumeDiscount{
+		ID:        d.Id,
+		Object:    constants.ObjectTypeVolumeDiscount,
+		Name:      d.Name,
+		Tiers:     apiresource.NewList(tiers, apiresource.PageInfo{}),
+		CreatedAt: grpcutil.TimestampToTime(d.CreatedAt),
+		UpdatedAt: grpcutil.TimestampToTime(d.UpdatedAt),
+	}
+}
+
+func stashVolumeDiscountMeta(meta *resourcekit.LoadMeta, d *pb.VolumeDiscountInfo) {
+	if d == nil {
+		return
+	}
+
+	customerGroups := make([]apiresource.AccountGroup, len(d.CustomerGroups))
+	for i, cg := range d.CustomerGroups {
+		customerGroups[i] = apiresource.AccountGroup{
+			ID:        cg.AccountGroupId,
+			Object:    constants.ObjectTypeAccountGroup,
+			Name:      cg.Name,
+			CreatedAt: grpcutil.TimestampToTime(cg.CreatedAt),
+			UpdatedAt: grpcutil.TimestampToTime(cg.UpdatedAt),
+		}
+		if cg.CommissionPolicy != nil {
+			customerGroups[i].CommissionPolicy = constants.CommissionPolicy(*cg.CommissionPolicy)
+		}
+		if cg.FreightPolicy != nil {
+			customerGroups[i].FreightPolicy = constants.FreightPolicy(*cg.FreightPolicy)
+		}
+		if cg.Type != nil {
+			customerGroups[i].Type = constants.AccountGroupType(*cg.Type)
+		}
+	}
+	meta.Set(constants.ObjectTypeVolumeDiscount, d.Id, "customer_groups",
+		apiresource.NewList(customerGroups, apiresource.PageInfo{}))
+
+	productLines := make([]apiresource.ProductLine, len(d.ProductLines))
+	for i, pl := range d.ProductLines {
+		productLines[i] = apiresource.ProductLine{
+			ID:        pl.Id,
+			Object:    constants.ObjectTypeProductLine,
+			Name:      pl.Name,
+			CreatedAt: grpcutil.TimestampToTime(pl.CreatedAt),
+			UpdatedAt: grpcutil.TimestampToTime(pl.UpdatedAt),
+		}
+		if pl.CommissionPolicy != nil {
+			productLines[i].CommissionPolicy = constants.CommissionPolicy(*pl.CommissionPolicy)
+		}
+		if pl.FreightPolicy != nil {
+			productLines[i].FreightPolicy = constants.FreightPolicy(*pl.FreightPolicy)
+		}
+	}
+	meta.Set(constants.ObjectTypeVolumeDiscount, d.Id, "product_lines",
+		apiresource.NewList(productLines, apiresource.PageInfo{}))
+
+	categories := make([]apiresource.ItemCategory, len(d.Categories))
+	for i, cat := range d.Categories {
+		categories[i] = apiresource.ItemCategory{
+			ID:        cat.Id,
+			Object:    constants.ObjectTypeItemCategory,
+			Name:      cat.Name,
+			CreatedAt: grpcutil.TimestampToTime(cat.CreatedAt),
+			UpdatedAt: grpcutil.TimestampToTime(cat.UpdatedAt),
+		}
+		if cat.Type != nil {
+			categories[i].Type = constants.ItemCategoryType(*cat.Type)
+		}
+	}
+	meta.Set(constants.ObjectTypeVolumeDiscount, d.Id, "categories",
+		apiresource.NewList(categories, apiresource.PageInfo{}))
+
+	attributes := make([]apiresource.Attribute, len(d.Attributes))
+	for i, attr := range d.Attributes {
+		attributes[i] = apiresource.Attribute{
+			ID:        attr.Id,
+			Object:    constants.ObjectTypeAttribute,
+			Value:     attr.Name,
+			CreatedAt: grpcutil.TimestampToTime(attr.CreatedAt),
+			UpdatedAt: grpcutil.TimestampToTime(attr.UpdatedAt),
+		}
+		if attr.ColorCode != nil {
+			attributes[i].ColorCode = constants.Color(*attr.ColorCode)
+		}
+	}
+	meta.Set(constants.ObjectTypeVolumeDiscount, d.Id, "attributes",
+		apiresource.NewList(attributes, apiresource.PageInfo{}))
+
+	units := make([]apiresource.Unit, len(d.AcceptableUnits))
+	for i, u := range d.AcceptableUnits {
+		units[i] = apiresource.Unit{
+			ID:                u.Id,
+			Object:            constants.ObjectTypeUnit,
+			Name:              u.Name,
+			Abbreviation:      u.Abbreviation,
+			Type:              constants.UnitType(u.Type),
+			RatioNumerator:    u.RatioNumerator,
+			RatioDenominator:  u.RatioDenominator,
+			OffsetNumerator:   u.OffsetNumerator,
+			OffsetDenominator: u.OffsetDenominator,
+			CreatedAt:         grpcutil.TimestampToTime(u.CreatedAt),
+			UpdatedAt:         grpcutil.TimestampToTime(u.UpdatedAt),
+		}
+	}
+	meta.Set(constants.ObjectTypeVolumeDiscount, d.Id, "acceptable_units",
+		apiresource.NewList(units, apiresource.PageInfo{}))
+}
+
+func volumeDiscountListFromProto(ctx context.Context, resp *pb.ListVolumeDiscountsResponse) *apiresource.List[apiresource.VolumeDiscount] {
+	if resp == nil {
+		return apiresource.NewList[apiresource.VolumeDiscount](nil, apiresource.PageInfo{})
+	}
+
+	meta := resourcekit.GetLoadMeta(ctx)
+	discounts := make([]apiresource.VolumeDiscount, len(resp.VolumeDiscounts))
+	for i, d := range resp.VolumeDiscounts {
+		discounts[i] = volumeDiscountFromProto(d)
+		stashVolumeDiscountMeta(meta, d)
+	}
+
+	return apiresource.NewList(discounts, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

@@ -9,66 +9,6 @@ import (
 	pb "github.com/augno/api/shared/proto/core"
 )
 
-func LocationPresenter(sl *pb.LocationInfo) apiresource.Location {
-	if sl == nil {
-		return apiresource.Location{}
-	}
-
-	result := apiresource.Location{
-		ID:        sl.Id,
-		Object:    constants.ObjectTypeLocation,
-		Name:      sl.Name,
-		TypeCode:  constants.LocationTypeCode(sl.TypeCode),
-		CreatedAt: grpcutil.TimestampToTime(sl.CreatedAt),
-		UpdatedAt: grpcutil.TimestampToTime(sl.UpdatedAt),
-	}
-
-	if sl.ParentId != nil && *sl.ParentId != "" {
-		parentName := ""
-		if sl.ParentName != nil {
-			parentName = *sl.ParentName
-		}
-		var parentTypeCode constants.LocationTypeCode
-		if sl.ParentTypeCode != nil {
-			parentTypeCode = constants.LocationTypeCode(*sl.ParentTypeCode)
-		}
-		result.Parent = &apiresource.Location{
-			ID:       *sl.ParentId,
-			Object:   constants.ObjectTypeLocation,
-			Name:     parentName,
-			TypeCode: parentTypeCode,
-		}
-	}
-
-	if sl.Children != nil {
-		children := make([]apiresource.Location, len(sl.Children))
-		for i, c := range sl.Children {
-			children[i] = apiresource.Location{
-				ID:       c.Id,
-				Object:   constants.ObjectTypeLocation,
-				Name:     c.Name,
-				TypeCode: constants.LocationTypeCode(c.TypeCode),
-			}
-		}
-		result.Children = apiresource.NewList(children, apiresource.PageInfo{})
-	}
-
-	return result
-}
-
-func LocationListPresenter(ctx context.Context, resp *pb.ListLocationsResponse) *apiresource.List[apiresource.Location] {
-	if resp == nil {
-		return apiresource.NewList[apiresource.Location](nil, apiresource.PageInfo{})
-	}
-
-	locations := make([]apiresource.Location, len(resp.Locations))
-	for i, sl := range resp.Locations {
-		locations[i] = LocationPresenter(sl)
-	}
-
-	return apiresource.NewList(locations, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
-}
-
 func LocationTypePresenter(slt *pb.LocationTypeInfo) apiresource.LocationType {
 	if slt == nil {
 		return apiresource.LocationType{}

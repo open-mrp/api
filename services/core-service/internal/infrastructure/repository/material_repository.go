@@ -387,6 +387,44 @@ func (r *materialRepoImpl) GetByID(ctx context.Context, params domain.GetMateria
 	return material, nil
 }
 
+func (r *materialRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.Material, *apierror.APIError) {
+	ctx, span := materialRepoTracer.Start(ctx, "repository.material.get_by_ids")
+	defer span.End()
+
+	rows, err := r.queries.GetMaterialsByIDs(ctx, sqlc.GetMaterialsByIDsParams{
+		Ids:       ids,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	materials := make([]*domain.Material, len(rows))
+	for i, row := range rows {
+		materials[i] = &domain.Material{
+			ID:     row.ID,
+			ItemID: row.ItemID,
+			OrderPoint: &domain.Quantity{
+				ID:               row.OrderPointID,
+				Value:            row.OrderPointValue,
+				UnitID:           row.OrderPointUnitID,
+				UnitAbbreviation: row.OrderPointUnitAbbreviation,
+				UnitType:         row.OrderPointUnitType,
+			},
+			LeadTime: &domain.Quantity{
+				ID:               row.LeadTimeID,
+				Value:            row.LeadTimeValue,
+				UnitID:           row.LeadTimeUnitID,
+				UnitAbbreviation: row.LeadTimeUnitAbbreviation,
+				UnitType:         row.LeadTimeUnitType,
+			},
+			CreatedAt: row.CreatedAt,
+			UpdatedAt: row.UpdatedAt,
+		}
+	}
+	return materials, nil
+}
+
 func (r *materialRepoImpl) GetByItemID(ctx context.Context, accountID, itemID string) (*domain.Material, *apierror.APIError) {
 	ctx, span := materialRepoTracer.Start(ctx, "repository.material.get_by_item_id")
 	defer span.End()

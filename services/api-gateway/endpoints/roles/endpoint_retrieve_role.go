@@ -31,6 +31,7 @@ func (e *RetrieveRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveR
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveRoleRequest) (*apiresource.Role, *apierror.APIError) {
 			return svc.(RoleSvc).GetRole
 		},
+		ObjectType: constants.ObjectTypeRole,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeRole,
 			Fields:     []string{"owner", "owner.account", "permissions"},

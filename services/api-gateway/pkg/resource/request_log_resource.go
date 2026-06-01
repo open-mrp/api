@@ -9,7 +9,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleRequestLogID = "rq_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleRequestLogID = "rq_01304bffe90e8cce9690cbefd4"
 const SampleRequestLogHost = "https://api.augno.com"
 const SampleRequestLogPath = "/v1/core/sandboxes"
 const SampleRequestLogQueryJSON = `{"limit":10}`

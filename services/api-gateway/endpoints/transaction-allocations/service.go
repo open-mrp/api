@@ -7,6 +7,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -78,7 +79,7 @@ func (m *transactionAllocationSvcImpl) ListAllocationEntries(ctx context.Context
 		return nil, apiErr
 	}
 
-	return AllocationEntryListPresenter(ctx, resp), nil
+	return allocationEntryListFromProto(ctx, resp), nil
 }
 
 func (m *transactionAllocationSvcImpl) UpdateTransactionAllocation(ctx context.Context, req *UpdateTransactionAllocationRequest) (*apiresource.TransactionAllocation, *apierror.APIError) {
@@ -96,7 +97,7 @@ func (m *transactionAllocationSvcImpl) UpdateTransactionAllocation(ctx context.C
 		return nil, apiErr
 	}
 
-	result := TransactionAllocationPresenter(resp.Allocation)
+	result := transactionAllocationFromProto(resp.Allocation)
 	return &result, nil
 }
 
@@ -151,5 +152,144 @@ func (m *transactionAllocationSvcImpl) ListOpenCredits(ctx context.Context, req 
 		return nil, apiErr
 	}
 
-	return OpenCreditListPresenter(ctx, resp), nil
+	return openCreditListFromProto(ctx, resp), nil
+}
+
+func allocationEntryFromProto(d *pb.AllocationEntryInfo) apiresource.AllocationEntry {
+	if d == nil {
+		return apiresource.AllocationEntry{}
+	}
+
+	return apiresource.AllocationEntry{
+		ID:            d.Id,
+		Object:        constants.ObjectTypeAllocationEntry,
+		Amount:        d.AmountValue,
+		DisplayAmount: apiresource.FormatDisplayValue(d.AmountValue, d.AmountUnitAbbr, string(constants.UnitTypeCurrency)),
+		Customer: &apiresource.AllocationCustomer{
+			Name:   d.CustomerName,
+			Number: d.CustomerNumber,
+		},
+		Transaction: &apiresource.AllocationTransaction{
+			ID:             d.TransactionId,
+			Object:         constants.ObjectTypeTransaction,
+			Type:           d.TransactionType,
+			Method:         d.TransactionMethod,
+			AdjustmentType: d.AdjustmentType,
+		},
+		Invoice: &apiresource.AllocationInvoice{
+			ID:     d.InvoiceId,
+			Object: constants.ObjectTypeInvoiceSummary,
+			Number: d.InvoiceNumber,
+		},
+		Note:      d.Note,
+		CreatedAt: grpcutil.TimestampToTime(d.CreatedAt),
+	}
+}
+
+func allocationEntryListFromProto(ctx context.Context, resp *pb.ListAllocationEntriesResponse) *apiresource.List[apiresource.AllocationEntry] {
+	if resp == nil {
+		return apiresource.NewList[apiresource.AllocationEntry](nil, apiresource.PageInfo{})
+	}
+
+	entries := make([]apiresource.AllocationEntry, len(resp.Entries))
+	for i, d := range resp.Entries {
+		entries[i] = allocationEntryFromProto(d)
+	}
+
+	return apiresource.NewList(entries, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
+}
+
+func transactionAllocationFromProto(a *pb.TransactionAllocationInfo) apiresource.TransactionAllocation {
+	if a == nil {
+		return apiresource.TransactionAllocation{}
+	}
+
+	alloc := apiresource.TransactionAllocation{
+		ID:     a.Id,
+		Object: constants.ObjectTypeTransactionAllocation,
+		Amount: &apiresource.Quantity{
+			ID:           a.AmountId,
+			Object:       constants.ObjectTypeQuantity,
+			Value:        a.AmountValue,
+			DisplayValue: apiresource.FormatDisplayValue(a.AmountValue, a.AmountUnitAbbreviation, string(constants.UnitTypeCurrency)),
+			Unit: &apiresource.Unit{
+				ID:     a.AmountUnitId,
+				Object: constants.ObjectTypeUnit,
+			},
+		},
+		Note: a.Note,
+		Transaction: &apiresource.TransactionDetail{
+			ID:     a.TransactionId,
+			Object: constants.ObjectTypeTransaction,
+		},
+		CreatedAt: grpcutil.TimestampToTime(a.CreatedAt),
+		UpdatedAt: grpcutil.TimestampToTime(a.UpdatedAt),
+	}
+
+	if a.InvoiceId != nil && *a.InvoiceId != "" {
+		invoiceNumber := ""
+		if a.InvoiceNumber != nil {
+			invoiceNumber = *a.InvoiceNumber
+		}
+		alloc.Invoice = &apiresource.InvoiceSummary{
+			ID:     *a.InvoiceId,
+			Object: constants.ObjectTypeInvoiceSummary,
+			Number: invoiceNumber,
+		}
+	}
+
+	return alloc
+}
+
+func openCreditEntryFromProto(d *pb.OpenCreditEntryInfo) apiresource.OpenCreditEntry {
+	if d == nil {
+		return apiresource.OpenCreditEntry{}
+	}
+
+	allocations := make([]apiresource.InvoiceAllocationEntry, len(d.InvoiceAllocations))
+	for i, a := range d.InvoiceAllocations {
+		allocations[i] = apiresource.InvoiceAllocationEntry{
+			InvoiceNumber: a.InvoiceNumber,
+			Amount:        a.Amount,
+		}
+	}
+
+	return apiresource.OpenCreditEntry{
+		ID:              d.Id,
+		Object:          constants.ObjectTypeOpenCreditEntry,
+		Number:          d.Number,
+		OriginalAmount:  d.OriginalAmount,
+		AllocatedAmount: d.AllocatedAmount,
+		LeftoverAmount:  d.LeftoverAmount,
+		Customer: &apiresource.AllocationCustomer{
+			Name:   d.CustomerName,
+			Number: d.CustomerNumber,
+		},
+		TransactionType:     d.TransactionType,
+		TransactionMethod:   d.TransactionMethod,
+		AdjustmentType:      d.AdjustmentType,
+		ResponsibleUserName: d.ResponsibleUserName,
+		Note:                d.Note,
+		StripePaymentID:     d.StripePaymentId,
+		InvoiceAllocations:  allocations,
+		CreatedAt:           grpcutil.TimestampToTime(d.CreatedAt),
+	}
+}
+
+func openCreditListFromProto(ctx context.Context, resp *pb.ListOpenCreditsResponse) *apiresource.List[apiresource.OpenCreditEntry] {
+	if resp == nil {
+		return apiresource.NewList[apiresource.OpenCreditEntry](nil, apiresource.PageInfo{})
+	}
+
+	entries := make([]apiresource.OpenCreditEntry, len(resp.Entries))
+	for i, d := range resp.Entries {
+		entries[i] = openCreditEntryFromProto(d)
+	}
+
+	var pi apiresource.PageInfo
+	if resp.PageInfo != nil {
+		pi = grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)
+	}
+
+	return apiresource.NewList(entries, pi)
 }

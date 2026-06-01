@@ -6,9 +6,8 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
-	ownerutil "github.com/augno/api/services/api-gateway/internal/owner"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -53,10 +52,9 @@ func NewProductLineSvc(config *ProductLineSvcConfig) ProductLineSvc {
 
 func (m *productLineSvcImpl) ListProductLines(ctx context.Context, req *ListProductLinesRequest) (*apiresource.List[apiresource.ProductLine], *apierror.APIError) {
 	pbReq := &pb.ListProductLinesRequest{
-		Cursor:   req.Cursor,
-		Limit:    req.Limit,
-		Query:    req.Query,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
+		Cursor: req.Cursor,
+		Limit:  req.Limit,
+		Query:  req.Query,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productLineSvcTracer, "service.product-lines.list", domain.ServiceName,
@@ -68,40 +66,25 @@ func (m *productLineSvcImpl) ListProductLines(ctx context.Context, req *ListProd
 		return nil, apiErr
 	}
 
-	var ownerAccount *apiresource.Account
-	if appctx.IsIncludeRequested(ctx, "owner") || appctx.IsIncludeRequested(ctx, "owner.account") {
-		for _, pl := range resp.ProductLines {
-			if pl.AccountId != nil {
-				ownerAccount = ownerutil.ResolveOwnerAccount(ctx, m.coreClient, pl.AccountId)
-				break
-			}
-		}
+	ids := make([]string, len(resp.ProductLines))
+	for i, pl := range resp.ProductLines {
+		ids[i] = pl.Id
 	}
-
-	return ProductLineListPresenter(ctx, resp, ownerAccount), nil
-}
-
-func (m *productLineSvcImpl) GetProductLine(ctx context.Context, req *RetrieveProductLineRequest) (*apiresource.ProductLine, *apierror.APIError) {
-	pbReq := &pb.GetProductLineRequest{
-		Id:       req.ProductLineID,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
-	}
-
-	resp, apiErr := grpcutil.CallRPC(ctx, productLineSvcTracer, "service.product-lines.get", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetProductLineResponse, error) {
-			return m.coreClient.GetProductLine(ctx, pbReq, opts...)
-		})
-
+	loaded, apiErr := resourceloaders.LoadProductLines(ctx, ids)
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
-	var ownerAccount *apiresource.Account
-	if appctx.IsIncludeRequested(ctx, "owner") || appctx.IsIncludeRequested(ctx, "owner.account") {
-		ownerAccount = ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.ProductLine.AccountId)
+	items := make([]apiresource.ProductLine, 0, len(ids))
+	for _, id := range ids {
+		if v, ok := loaded[id]; ok {
+			items = append(items, *(v.(*apiresource.ProductLine)))
+		}
 	}
-	result := ProductLinePresenter(resp.ProductLine, ownerAccount)
-	return &result, nil
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
+}
+
+func (m *productLineSvcImpl) GetProductLine(ctx context.Context, req *RetrieveProductLineRequest) (*apiresource.ProductLine, *apierror.APIError) {
+	return loadProductLineByID(ctx, req.ProductLineID)
 }
 
 func (m *productLineSvcImpl) CreateProductLine(ctx context.Context, req *CreateProductLineRequest) (*apiresource.ProductLine, *apierror.APIError) {
@@ -110,7 +93,6 @@ func (m *productLineSvcImpl) CreateProductLine(ctx context.Context, req *CreateP
 		UnitGroupId:      req.UnitGroupID,
 		CommissionPolicy: string(req.CommissionPolicy),
 		FreightPolicy:    string(req.FreightPolicy),
-		Includes:         appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productLineSvcTracer, "service.product-lines.create", domain.ServiceName,
@@ -122,12 +104,7 @@ func (m *productLineSvcImpl) CreateProductLine(ctx context.Context, req *CreateP
 		return nil, apiErr
 	}
 
-	var ownerAccount *apiresource.Account
-	if appctx.IsIncludeRequested(ctx, "owner") || appctx.IsIncludeRequested(ctx, "owner.account") {
-		ownerAccount = ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.ProductLine.AccountId)
-	}
-	result := ProductLinePresenter(resp.ProductLine, ownerAccount)
-	return &result, nil
+	return loadProductLineByID(ctx, resp.ProductLine.Id)
 }
 
 func (m *productLineSvcImpl) UpdateProductLine(ctx context.Context, req *UpdateProductLineRequest) (*apiresource.ProductLine, *apierror.APIError) {
@@ -135,7 +112,6 @@ func (m *productLineSvcImpl) UpdateProductLine(ctx context.Context, req *UpdateP
 		Id:          req.ProductLineID,
 		Name:        req.Name,
 		UnitGroupId: req.UnitGroupID,
-		Includes:    appctx.GetRequestedIncludeKeys(ctx),
 	}
 	if req.CommissionPolicy != nil {
 		s := string(*req.CommissionPolicy)
@@ -155,12 +131,7 @@ func (m *productLineSvcImpl) UpdateProductLine(ctx context.Context, req *UpdateP
 		return nil, apiErr
 	}
 
-	var ownerAccount *apiresource.Account
-	if appctx.IsIncludeRequested(ctx, "owner") || appctx.IsIncludeRequested(ctx, "owner.account") {
-		ownerAccount = ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.ProductLine.AccountId)
-	}
-	result := ProductLinePresenter(resp.ProductLine, ownerAccount)
-	return &result, nil
+	return loadProductLineByID(ctx, resp.ProductLine.Id)
 }
 
 func (m *productLineSvcImpl) DeleteProductLine(ctx context.Context, req *DeleteProductLineRequest) (*apiresource.EmptyResource, *apierror.APIError) {
@@ -178,4 +149,18 @@ func (m *productLineSvcImpl) DeleteProductLine(ctx context.Context, req *DeleteP
 	}
 
 	return &apiresource.EmptyResource{}, nil
+}
+
+// loadProductLineByID wraps the single-ID load pattern used after every
+// mutation and for the retrieve endpoint.
+func loadProductLineByID(ctx context.Context, id string) (*apiresource.ProductLine, *apierror.APIError) {
+	loaded, apiErr := resourceloaders.LoadProductLines(ctx, []string{id})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	v, ok := loaded[id]
+	if !ok {
+		return nil, apierror.NewResourceNotFoundError("Product line not found.")
+	}
+	return v.(*apiresource.ProductLine), nil
 }

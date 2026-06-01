@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SamplePurchaseOrderLineDetailID = "poln_01jm4r6700f8nwq3v5hx2d9ktp"
+const SamplePurchaseOrderLineDetailID = "poln_01466ec5a2737c7b871e2a756f"
 
 // Full purchase order line resource.
 type PurchaseOrderLineDetail struct {

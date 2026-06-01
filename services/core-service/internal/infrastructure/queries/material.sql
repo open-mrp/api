@@ -271,6 +271,32 @@ WHERE m.id = sqlc.arg('id')
 AND i.account_id = sqlc.arg('account_id')
 AND i.deleted_at IS NULL;
 
+-- name: GetMaterialsByIDs :many
+SELECT
+    m.id,
+    m.item_id,
+    m.order_point_id,
+    m.lead_time_id,
+    m.created_at,
+    m.updated_at,
+    op.value AS order_point_value,
+    op.unit_id AS order_point_unit_id,
+    op_u.abbreviation AS order_point_unit_abbreviation,
+    op_u.unit_dimension_code AS order_point_unit_type,
+    lt.value AS lead_time_value,
+    lt.unit_id AS lead_time_unit_id,
+    lt_u.abbreviation AS lead_time_unit_abbreviation,
+    lt_u.unit_dimension_code AS lead_time_unit_type
+FROM material m
+JOIN item i ON i.id = m.item_id
+JOIN quantity op ON op.id = m.order_point_id
+JOIN unit op_u ON op_u.id = op.unit_id
+JOIN quantity lt ON lt.id = m.lead_time_id
+JOIN unit lt_u ON lt_u.id = lt.unit_id
+WHERE m.id IN (sqlc.slice('ids'))
+AND i.account_id = sqlc.arg('account_id')
+AND i.deleted_at IS NULL;
+
 -- name: GetMaterialByItemID :one
 SELECT
     m.id,

@@ -1,8 +1,6 @@
 package productep
 
 import (
-	"context"
-
 	itemep "github.com/augno/api/services/api-gateway/endpoints/items"
 	productlineep "github.com/augno/api/services/api-gateway/endpoints/product-lines"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
@@ -40,19 +38,6 @@ func ProductPresenter(proto *pb.ProductFullInfo) apiresource.Product {
 	}
 
 	return result
-}
-
-func ProductListPresenter(ctx context.Context, resp *pb.ListProductsFullResponse) *apiresource.List[apiresource.Product] {
-	if resp == nil {
-		return apiresource.NewList[apiresource.Product](nil, apiresource.PageInfo{})
-	}
-
-	products := make([]apiresource.Product, len(resp.Products))
-	for i, p := range resp.Products {
-		products[i] = ProductPresenter(p)
-	}
-
-	return apiresource.NewList(products, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }
 
 func ValidateProductsPresenter(resp *pb.ValidateProductsResponse) *apiresource.ValidateProductsResponse {

@@ -116,6 +116,31 @@ func (s *paymentTermSvcImpl) GetPaymentTerm(ctx context.Context, paymentTermID s
 	})
 }
 
+// BatchGetPaymentTermsByIDs returns payment terms matching the input IDs that
+// the caller's account is authorized to read (account-scoped plus system terms).
+func (s *paymentTermSvcImpl) BatchGetPaymentTermsByIDs(ctx context.Context, ids []string) ([]*domain.PaymentTerm, *apierror.APIError) {
+	ctx, span := paymentTermSvcTracer.Start(ctx, "service.payment_term.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainPaymentTerms, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	return s.repos.NewPaymentTermRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
+}
+
 func (s *paymentTermSvcImpl) CreatePaymentTerm(ctx context.Context, params domain.CreatePaymentTermParams) (*domain.PaymentTerm, *apierror.APIError) {
 	ctx, span := paymentTermSvcTracer.Start(ctx, "service.payment_term.create")
 	defer span.End()

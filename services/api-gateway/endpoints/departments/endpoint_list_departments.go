@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -29,5 +30,10 @@ func (e *ListDepartmentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListDe
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListDepartmentsRequest) (*apiresource.List[apiresource.Department], *apierror.APIError) {
 			return svc.(DepartmentSvc).ListDepartments
 		},
+		ObjectType: constants.ObjectTypeDepartment,
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeDepartment,
+			Fields:     []string{"location", "scanning_stations", "machines"},
+		}),
 	})
 }

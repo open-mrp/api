@@ -8,6 +8,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -65,7 +66,16 @@ func (m *salesTargetSvcImpl) ListSalesTargets(ctx context.Context, req *ListSale
 		return nil, apiErr
 	}
 
-	return SalesTargetListPresenter(resp), nil
+	if resp == nil {
+		return apiresource.NewList[apiresource.SalesTarget](nil, apiresource.PageInfo{}), nil
+	}
+
+	targets := make([]apiresource.SalesTarget, len(resp.SalesTargets))
+	for i, st := range resp.SalesTargets {
+		targets[i] = salesTargetFromProto(st)
+	}
+
+	return apiresource.NewList(targets, apiresource.PageInfo{}), nil
 }
 
 func (m *salesTargetSvcImpl) CreateSalesTarget(ctx context.Context, req *CreateSalesTargetRequest) (*apiresource.SalesTarget, *apierror.APIError) {
@@ -85,7 +95,7 @@ func (m *salesTargetSvcImpl) CreateSalesTarget(ctx context.Context, req *CreateS
 		return nil, apiErr
 	}
 
-	result := SalesTargetPresenter(resp.SalesTarget)
+	result := salesTargetFromProto(resp.SalesTarget)
 	return &result, nil
 }
 
@@ -107,6 +117,39 @@ func (m *salesTargetSvcImpl) UpsertSalesTarget(ctx context.Context, req *UpsertS
 		return nil, apiErr
 	}
 
-	result := SalesTargetPresenter(resp.SalesTarget)
+	result := salesTargetFromProto(resp.SalesTarget)
 	return &result, nil
+}
+
+func salesTargetFromProto(st *pb.SalesTargetProto) apiresource.SalesTarget {
+	if st == nil {
+		return apiresource.SalesTarget{}
+	}
+
+	startAt, _ := time.Parse(time.RFC3339, st.StartDate)
+	endAt, _ := time.Parse(time.RFC3339, st.EndDate)
+	createdAt, _ := time.Parse(time.RFC3339, st.CreatedAt)
+	updatedAt, _ := time.Parse(time.RFC3339, st.UpdatedAt)
+
+	return apiresource.SalesTarget{
+		ID:     st.Id,
+		Object: constants.ObjectTypeSalesTarget,
+		SalesRep: &apiresource.User{
+			ID:     st.SalesRepId,
+			Object: constants.ObjectTypeUser,
+		},
+		Amount: &apiresource.Quantity{
+			ID:     st.AmountId,
+			Object: constants.ObjectTypeQuantity,
+			Value:  st.AmountValue,
+			Unit: &apiresource.Unit{
+				ID:     st.AmountUnitId,
+				Object: constants.ObjectTypeUnit,
+			},
+		},
+		StartAt:   startAt,
+		EndAt:     endAt,
+		CreatedAt: createdAt,
+		UpdatedAt: updatedAt,
+	}
 }

@@ -625,7 +625,7 @@ func TestRoles_ListCursorPagination(t *testing.T) {
 	t.Parallel()
 	page1, _, err := apiClient.GetList(rolesPath, url.Values{"limit": {"1"}})
 	require.NoError(t, err)
-	require.Len(t, page1.Data, 1)
+	requirePageLen(t, page1.Data, 1)
 
 	if !page1.PageInfo.HasNextPage {
 		t.Skip("Not enough roles for pagination test")
@@ -638,7 +638,7 @@ func TestRoles_ListCursorPagination(t *testing.T) {
 
 	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
 	require.NoError(t, err)
-	require.Len(t, page2.Data, 1)
+	requirePageLen(t, page2.Data, 1)
 
 	page2ID := DataItemField(page2.Data[0], "id")
 	assert.NotEqual(t, page1ID, page2ID, "Page 2 should return a different item than page 1")

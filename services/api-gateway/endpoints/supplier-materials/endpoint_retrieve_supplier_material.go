@@ -30,6 +30,7 @@ func (e *RetrieveSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoin
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeSupplierMaterial,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveSupplierMaterialRequest) (*apiresource.SupplierMaterial, *apierror.APIError) {
 			return svc.(SupplierMaterialSvc).GetSupplierMaterial
 		},

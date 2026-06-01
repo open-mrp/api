@@ -53,6 +53,25 @@ func buildRoleSearchQuery(query *string) gosql.NullString {
 	return gosql.NullString{String: sanitized + "*", Valid: true}
 }
 
+func (r *roleRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.Role, *apierror.APIError) {
+	ctx, span := roleRepoTracer.Start(ctx, "repository.role.get_by_ids")
+	defer span.End()
+
+	rows, err := r.queries.GetRolesFullByIDs(ctx, sqlc.GetRolesFullByIDsParams{
+		Ids:       ids,
+		AccountID: db.NullString(accountID),
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	roles := make([]*domain.Role, len(rows))
+	for i, row := range rows {
+		roles[i] = mapRoleRow(row)
+	}
+	return roles, nil
+}
+
 func (r *roleRepoImpl) GetByID(ctx context.Context, roleID string) (*domain.RoleInfo, *apierror.APIError) {
 	ctx, span := roleRepoTracer.Start(ctx, "repository.role.get_by_id")
 	defer span.End()

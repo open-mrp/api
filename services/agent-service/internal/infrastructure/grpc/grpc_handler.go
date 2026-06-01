@@ -995,6 +995,32 @@ func (h *agentHandler) GetAgentMemory(ctx context.Context, req *pb.GetAgentMemor
 	return &pb.GetAgentMemoryResponse{Memory: sqlcMemoryToProto(memory)}, nil
 }
 
+func (h *agentHandler) BatchGetAgentMemoriesByIDs(ctx context.Context, req *pb.BatchGetAgentMemoriesByIDsRequest) (*pb.BatchGetAgentMemoriesByIDsResponse, error) {
+	ctx, span := tracing.StartSpan(ctx, handlerTracer, "grpc.batch_get_agent_memories_by_ids")
+	defer span.End()
+
+	if err := h.checkPlanAccess(ctx); err != nil {
+		return nil, err
+	}
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "request is required")
+	}
+	accountID, err := getAccountIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	memoryRepo := h.repos.NewAgentMemoryRepo()
+	rows, apiErr := memoryRepo.GetByIDs(ctx, accountID, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	pbMemories := make([]*pb.AgentMemoryInfo, len(rows))
+	for i := range rows {
+		pbMemories[i] = sqlcMemoryToProto(&rows[i])
+	}
+	return &pb.BatchGetAgentMemoriesByIDsResponse{Memories: pbMemories}, nil
+}
+
 func (h *agentHandler) CreateAgentMemory(ctx context.Context, req *pb.CreateAgentMemoryRequest) (*pb.CreateAgentMemoryResponse, error) {
 	ctx, span := tracing.StartSpan(ctx, handlerTracer, "grpc.create_agent_memory")
 	defer span.End()

@@ -4,18 +4,30 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/augno/api/services/api-gateway/internal/cookie"
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	"github.com/augno/api/services/api-gateway/internal/middleware"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/appctx"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/auth"
 	corepb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
+)
+
+// Identifier-based throttle for failed login attempts. This sits on top of the
+// IP-based RateLimitMiddleware so that an attacker rotating source addresses
+// cannot brute-force a single account. Limits are per gateway pod.
+const (
+	loginFailureLimit  = 10
+	loginFailureWindow = 5 * time.Minute
 )
 
 const (
@@ -40,8 +52,9 @@ type AuthSvcConfig struct {
 }
 
 type authSvcImpl struct {
-	authClient pb.AuthServiceClient
-	coreClient corepb.CoreServiceClient
+	authClient          pb.AuthServiceClient
+	coreClient          corepb.CoreServiceClient
+	loginFailureLimiter *middleware.RateLimiter
 }
 
 var authSvcTracer = tracing.GetTracer("api-gateway.endpoints.auth.service")
@@ -62,12 +75,25 @@ func NewAuthSvc(config *AuthSvcConfig) AuthSvc {
 	}
 
 	return &authSvcImpl{
-		authClient: config.AuthClient,
-		coreClient: config.CoreClient,
+		authClient:          config.AuthClient,
+		coreClient:          config.CoreClient,
+		loginFailureLimiter: middleware.NewRateLimiter(loginFailureLimit, loginFailureWindow),
 	}
 }
 
+// loginThrottleKey normalizes an identifier so that case and surrounding
+// whitespace do not let an attacker fan their attempts across multiple
+// rate-limit buckets for the same account.
+func loginThrottleKey(identifier string) string {
+	return "login:" + strings.ToLower(strings.TrimSpace(identifier))
+}
+
 func (m *authSvcImpl) Login(ctx context.Context, req *LoginRequest) (*apiresource.User, *apierror.APIError) {
+	throttleKey := loginThrottleKey(req.Identifier)
+	if allowed, _ := m.loginFailureLimiter.Check(throttleKey); !allowed {
+		return nil, apierror.NewRateLimitExceededError("Too many failed login attempts for this account. Please try again later.")
+	}
+
 	resp, apiErr := grpcutil.CallRPC(ctx, authSvcTracer, "service.auth.login", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.LoginResponse, error) {
 			return m.authClient.Login(ctx, &pb.LoginRequest{
@@ -77,12 +103,13 @@ func (m *authSvcImpl) Login(ctx context.Context, req *LoginRequest) (*apiresourc
 		})
 
 	if apiErr != nil {
+		m.loginFailureLimiter.RecordFailure(throttleKey)
 		return nil, apiErr
 	}
 
 	appctx.AddCookies(ctx, cookie.MakeAuthCookies(ctx, resp.AccessToken, resp.RefreshToken))
 
-	presented := UserPresenter(resp.User)
+	presented := userFromAuthProto(resp.User)
 	return &presented, nil
 }
 
@@ -103,7 +130,7 @@ func (m *authSvcImpl) Register(ctx context.Context, req *RegisterRequest) (*apir
 
 	appctx.AddCookies(ctx, cookie.MakeAuthCookies(ctx, resp.AccessToken, resp.RefreshToken))
 
-	presented := UserPresenter(resp.User)
+	presented := userFromAuthProto(resp.User)
 	return &presented, nil
 }
 
@@ -121,7 +148,7 @@ func (m *authSvcImpl) MagicLogin(ctx context.Context, req *MagicLoginRequest) (*
 
 	appctx.AddCookies(ctx, cookie.MakeAuthCookies(ctx, resp.AccessToken, resp.RefreshToken))
 
-	presented := UserPresenter(resp.User)
+	presented := userFromAuthProto(resp.User)
 	return &presented, nil
 }
 
@@ -224,4 +251,22 @@ func (m *authSvcImpl) UpdateScannerPassword(ctx context.Context, req *UpdateScan
 	}
 
 	return &apiresource.EmptyResource{}, nil
+}
+
+func userFromAuthProto(user *pb.User) apiresource.User {
+	if user == nil {
+		return apiresource.User{}
+	}
+
+	return apiresource.User{
+		ID:              user.Id,
+		Object:          constants.ObjectTypeUser,
+		Email:           user.Email,
+		Name:            user.Name,
+		Username:        user.Username,
+		ImageUrl:        user.ImageUrl,
+		EmailVerifiedAt: grpcutil.TimestampToTimePtr(user.EmailVerified),
+		CreatedAt:       grpcutil.TimestampToTime(user.CreatedAt),
+		UpdatedAt:       grpcutil.TimestampToTime(user.UpdatedAt),
+	}
 }

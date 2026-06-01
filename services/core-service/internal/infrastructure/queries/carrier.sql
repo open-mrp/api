@@ -118,3 +118,23 @@ SELECT COUNT(*) FROM carrier
 WHERE name = ? AND (account_id = ? OR account_id IS NULL)
 AND deleted_at IS NULL
 AND (sqlc.narg('exclude_id') IS NULL OR id != sqlc.narg('exclude_id'));
+
+-- name: GetCarriersByIDs :many
+-- Returns carriers matching the given IDs that the caller's account is
+-- authorized to read (their own account plus system carriers with NULL
+-- account_id). Used by BatchGetCarriersByIDs.
+SELECT
+    carrier.id,
+    carrier.name,
+    carrier.code,
+    carrier.shippo_carrier_account_id,
+    carrier.account_number,
+    carrier.is_portal_enabled,
+    carrier.account_id,
+    carrier.deleted_at,
+    carrier.created_at,
+    carrier.updated_at
+FROM carrier
+WHERE carrier.id IN (sqlc.slice('ids'))
+AND (carrier.account_id = sqlc.arg('account_id') OR carrier.account_id IS NULL)
+AND carrier.deleted_at IS NULL;

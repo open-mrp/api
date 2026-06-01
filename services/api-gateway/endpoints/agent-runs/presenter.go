@@ -3,11 +3,13 @@ package agentrunep
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 
 	agentep "github.com/augno/api/services/api-gateway/endpoints/agents"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
 	pb "github.com/augno/api/shared/proto/agent"
 	"github.com/augno/api/shared/timeutil"
@@ -45,12 +47,22 @@ func AgentRunPresenterWithRole(r *pb.AgentRunInfo, role *resolvedRole) apiresour
 		run.Output = json.RawMessage(r.Output)
 	}
 
+	return run
+}
+
+func stashAgentRunMeta(ctx context.Context, run *apiresource.AgentRun, r *pb.AgentRunInfo, role *resolvedRole) {
+	if r == nil {
+		return
+	}
+
+	meta := resourcekit.GetLoadMeta(ctx)
+
 	if len(r.Actions) > 0 {
 		actions := make([]apiresource.AgentAction, len(r.Actions))
 		for i, a := range r.Actions {
-			actions[i] = AgentActionPresenter(a, r.Id)
+			actions[i] = agentActionPresenter(a, r.Id, timeutil.TimestampToTime(r.CreatedAt), timeutil.TimestampToTime(r.UpdatedAt))
 		}
-		run.Actions = apiresource.NewList(actions, apiresource.PageInfo{})
+		meta.Set(constants.ObjectTypeAgentRun, run.ID, "actions", apiresource.NewList(actions, apiresource.PageInfo{}))
 	}
 
 	if r.Definition != nil {
@@ -61,8 +73,9 @@ func AgentRunPresenterWithRole(r *pb.AgentRunInfo, role *resolvedRole) apiresour
 				RoleType: role.RoleType,
 			}
 		}
-		def := agentep.AgentDefinitionPresenter(r.Definition, agentRole)
-		run.Definition = &def
+		def := agentep.AgentDefinitionPresenter(r.Definition)
+		meta.Set(constants.ObjectTypeAgentRun, run.ID, "definition", &def)
+		agentep.StashAgentDefinitionMeta(meta, r.Definition, agentRole)
 	}
 
 	if len(r.Steps) > 0 {
@@ -70,10 +83,8 @@ func AgentRunPresenterWithRole(r *pb.AgentRunInfo, role *resolvedRole) apiresour
 		for i, s := range r.Steps {
 			steps[i] = AgentRunStepPresenter(s)
 		}
-		run.Steps = apiresource.NewList(steps, apiresource.PageInfo{})
+		meta.Set(constants.ObjectTypeAgentRun, run.ID, "steps", apiresource.NewList(steps, apiresource.PageInfo{}))
 	}
-
-	return run
 }
 
 func AgentRunStepPresenter(s *pb.AgentRunStepInfo) apiresource.AgentRunStep {
@@ -105,6 +116,10 @@ func AgentRunStepPresenter(s *pb.AgentRunStepInfo) apiresource.AgentRunStep {
 }
 
 func AgentActionPresenter(a *pb.AgentActionInfo, agentRunID string) apiresource.AgentAction {
+	return agentActionPresenter(a, agentRunID, time.Time{}, time.Time{})
+}
+
+func agentActionPresenter(a *pb.AgentActionInfo, agentRunID string, runCreatedAt, runUpdatedAt time.Time) apiresource.AgentAction {
 	if a == nil {
 		return apiresource.AgentAction{}
 	}
@@ -113,10 +128,20 @@ func AgentActionPresenter(a *pb.AgentActionInfo, agentRunID string) apiresource.
 	if runID == "" {
 		runID = agentRunID
 	}
+	if runCreatedAt.IsZero() {
+		runCreatedAt = timeutil.TimestampToTime(a.CreatedAt)
+	}
+	if runUpdatedAt.IsZero() {
+		runUpdatedAt = timeutil.TimestampToTime(a.UpdatedAt)
+	}
 
 	run := &apiresource.AgentRun{
-		ID:     runID,
-		Object: constants.ObjectTypeAgentRun,
+		ID:          runID,
+		Object:      constants.ObjectTypeAgentRun,
+		Status:      constants.AgentRunStatusPending,
+		TriggerType: constants.AgentTriggerTypeManual,
+		CreatedAt:   runCreatedAt,
+		UpdatedAt:   runUpdatedAt,
 	}
 	if a.RunStatusCode != nil {
 		run.Status = constants.AgentRunStatus(*a.RunStatusCode)

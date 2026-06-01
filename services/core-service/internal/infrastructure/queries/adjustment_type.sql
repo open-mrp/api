@@ -36,3 +36,13 @@ AND (
 )
 ORDER BY adjustment_type.created_at ASC, adjustment_type.id ASC
 LIMIT ?;
+
+-- name: GetAdjustmentTypesByIDs :many
+SELECT
+    adjustment_type.id,
+    adjustment_type.name,
+    adjustment_type.code,
+    adjustment_type.created_at,
+    adjustment_type.updated_at
+FROM adjustment_type
+WHERE adjustment_type.id IN (sqlc.slice('ids'));

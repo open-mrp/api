@@ -25,6 +25,9 @@ service CoreFulfillmentService {
 
   // DeleteMachine deletes a machine by its ID.
   rpc DeleteMachine(DeleteMachineRequest) returns (google.protobuf.Empty);
+
+  // BatchGetMachinesByIDs returns machines by their IDs for include resolution.
+  rpc BatchGetMachinesByIDs(BatchGetMachinesByIDsRequest) returns (BatchGetMachinesByIDsResponse);
 }
 
 // MachineInfo represents a machine resource returned by the core-service.
@@ -88,4 +91,12 @@ message UpdateMachineResponse {
 
 message DeleteMachineRequest {
   string id = 1;
+}
+
+message BatchGetMachinesByIDsRequest {
+  repeated string ids = 1;
+}
+
+message BatchGetMachinesByIDsResponse {
+  repeated MachineInfo machines = 1;
 }

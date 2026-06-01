@@ -11,7 +11,6 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/header"
 	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/redact"
 )
@@ -91,23 +90,19 @@ func TestExecute_SuccessResponse_SetsLocationHeader(t *testing.T) {
 	}
 }
 
-func TestParseIncludeParams_SplitsCommaSeparatedIncludeArrayValues(t *testing.T) {
+func TestCollectIncludeQueryValues_SplitsCommaSeparatedIncludeArrayValues(t *testing.T) {
 	t.Parallel()
-	ep := &APIEndpoint[*stubRequest, *stubResponse]{
-		IncludeConfig: IncludesFor(IncludesParams{
-			ObjectType: constants.ObjectTypeAuditEvent,
-			Fields:     []string{"actor", "changes"},
-		}),
-	}
 
 	r := httptest.NewRequest(http.MethodGet, "/v1/core/audit-events?include[]=actor,changes", nil)
-	requested, apiErr := ep.parseIncludeParams(r)
-	if apiErr != nil {
-		t.Fatalf("expected no error, got: %v", apiErr)
-	}
+	values := collectIncludeQueryValues(r)
 
-	if !requested["actor"] || !requested["changes"] {
-		t.Fatalf("expected actor and changes to be requested, got: %#v", requested)
+	expected := map[string]bool{"actor": true, "changes": true}
+	got := make(map[string]bool, len(values))
+	for _, v := range values {
+		got[v] = true
+	}
+	if len(got) != len(expected) || !got["actor"] || !got["changes"] {
+		t.Fatalf("expected actor and changes, got: %v", values)
 	}
 }
 
@@ -255,22 +250,18 @@ func TestExecute_populatesSensitiveResponseFieldsOnRequestLog(t *testing.T) {
 	}
 }
 
-func TestParseIncludeParams_MergesIncludeAndIncludeArrayFormats(t *testing.T) {
+func TestCollectIncludeQueryValues_MergesIncludeAndIncludeArrayFormats(t *testing.T) {
 	t.Parallel()
-	ep := &APIEndpoint[*stubRequest, *stubResponse]{
-		IncludeConfig: IncludesFor(IncludesParams{
-			ObjectType: constants.ObjectTypeAuditEvent,
-			Fields:     []string{"actor", "changes"},
-		}),
-	}
 
 	r := httptest.NewRequest(http.MethodGet, "/v1/core/audit-events?include=actor&include[]=changes", nil)
-	requested, apiErr := ep.parseIncludeParams(r)
-	if apiErr != nil {
-		t.Fatalf("expected no error, got: %v", apiErr)
-	}
+	values := collectIncludeQueryValues(r)
 
-	if !requested["actor"] || !requested["changes"] {
-		t.Fatalf("expected actor and changes to be requested, got: %#v", requested)
+	expected := map[string]bool{"actor": true, "changes": true}
+	got := make(map[string]bool, len(values))
+	for _, v := range values {
+		got[v] = true
+	}
+	if len(got) != len(expected) || !got["actor"] || !got["changes"] {
+		t.Fatalf("expected actor and changes, got: %v", values)
 	}
 }

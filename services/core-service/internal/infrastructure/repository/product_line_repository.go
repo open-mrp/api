@@ -356,3 +356,60 @@ func (r *productLineRepoImpl) GetUnitGroup(ctx context.Context, unitGroupID stri
 
 	return ug, nil
 }
+
+func (r *productLineRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.ProductLineFull, *apierror.APIError) {
+	ctx, span := productLineRepoTracer.Start(ctx, "repository.product_line.get_by_ids")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := r.queries.GetProductLinesByIDsScoped(ctx, sqlc.GetProductLinesByIDsScopedParams{
+		Ids:       ids,
+		AccountID: gosql.NullString{String: accountID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make([]*domain.ProductLineFull, len(rows))
+	for i, row := range rows {
+		out[i] = mapGetProductLinesByIDsScopedRow(row)
+	}
+	// Stitch unit group data — always include base_unit and associated_units
+	// so the API gateway's SubField resolver has everything it needs.
+	for _, pl := range out {
+		ug, apiErr := r.GetUnitGroup(ctx, pl.UnitGroupID, []string{"unit_group.base_unit", "unit_group.associated_units"})
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		pl.UnitGroup = ug
+	}
+	return out, nil
+}
+
+func mapGetProductLinesByIDsScopedRow(row sqlc.GetProductLinesByIDsScopedRow) *domain.ProductLineFull {
+	var accountID *string
+	if row.AccountID.Valid {
+		accountID = &row.AccountID.String
+	}
+	var description *string
+	if row.Description.Valid {
+		description = &row.Description.String
+	}
+	var notes *string
+	if row.Notes.Valid {
+		notes = &row.Notes.String
+	}
+	return &domain.ProductLineFull{
+		ID:               row.ID,
+		Name:             row.Name,
+		Description:      description,
+		Notes:            notes,
+		CommissionPolicy: constants.CommissionPolicyFromBool(row.IsCommissionExempt),
+		FreightPolicy:    constants.FreightPolicyFromBool(row.IsFreightExempt),
+		UnitGroupID:      row.UnitGroupID,
+		AccountID:        accountID,
+		CreatedAt:        row.CreatedAt,
+		UpdatedAt:        row.UpdatedAt,
+	}
+}

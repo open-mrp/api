@@ -29,6 +29,7 @@ func (e *ListTerritoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListTe
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeTerritory,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListTerritoriesRequest) (*apiresource.List[apiresource.Territory], *apierror.APIError) {
 			return svc.(TerritorySvc).ListTerritories
 		},

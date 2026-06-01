@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleDepartmentID = "dp_01gf7a8200er3ar3pkfrb6kk30"
+const SampleDepartmentID = "dp_01791c25ab59da4704cba61874"
 const SampleDepartmentName = "Fabrication"
 
 // ---------------------------------------------------------------------------

@@ -86,6 +86,7 @@ func TestAgentRunPresenter(t *testing.T) {
 
 	result := AgentRunPresenter(run)
 	resourcetest.ValidateResourceStruct(t, "AgentRun", result)
+	resourcetest.ValidateExpandableStubs(t, "AgentRun", result)
 }
 
 func TestAgentActionPresenter(t *testing.T) {

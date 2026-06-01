@@ -508,7 +508,8 @@ AND account_id = sqlc.arg('account_id');
 -- name: GetProductionFlowStep :one
 -- Fetches a production step with all fields needed for flow display.
 SELECT
-    ps.id, ps.name, ps.scanning_station_id, ps.department_id,
+    ps.id, ps.name, ps.notes, ps.created_at, ps.updated_at,
+    ps.scanning_station_id, ps.department_id,
     ps.allowances, ps.leveling_factor,
     p.id AS production_id, pi.id AS produced_item_id, pi.sku AS produced_item_sku,
     pq.id AS produced_quantity_id, pq.value AS produced_quantity_value,

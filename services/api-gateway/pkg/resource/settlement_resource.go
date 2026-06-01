@@ -8,8 +8,8 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleSettlementID = "sl_01jm4r6700f8nwq3v5hx2d9ktp"
-const SampleSettlementSummaryID = "sl_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleSettlementID = "sl_014f3f9af18ff1c8ded3205149"
+const SampleSettlementSummaryID = "sl_01b853556dc1a635122ebbb761"
 
 // Settlement with expandable allocations.
 type Settlement struct {

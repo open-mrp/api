@@ -6,6 +6,7 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/agent"
@@ -42,9 +43,7 @@ func NewAgentMemorySvc(config *AgentMemorySvcConfig) AgentMemorySvc {
 	if err := config.validate(); err != nil {
 		panic(err)
 	}
-	return &agentMemorySvcImpl{
-		agentClient: config.AgentClient,
-	}
+	return &agentMemorySvcImpl{agentClient: config.AgentClient}
 }
 
 func (m *agentMemorySvcImpl) ListMemories(ctx context.Context, req *ListMemoriesRequest) (*apiresource.List[apiresource.AgentMemory], *apierror.APIError) {
@@ -61,7 +60,6 @@ func (m *agentMemorySvcImpl) ListMemories(ctx context.Context, req *ListMemories
 	if req.EntityType != nil {
 		pbReq.EntityType = *req.EntityType
 	}
-
 	resp, rpcErr := grpcutil.CallRPC(ctx, memorySvcTracer, "service.agent_memories.list", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListAgentMemoriesResponse, error) {
 			return m.agentClient.ListAgentMemories(ctx, pbReq, opts...)
@@ -69,25 +67,29 @@ func (m *agentMemorySvcImpl) ListMemories(ctx context.Context, req *ListMemories
 	if rpcErr != nil {
 		return nil, rpcErr
 	}
-
-	return AgentMemoryListPresenter(ctx, resp), nil
+	ids := make([]string, len(resp.Memories))
+	for i, mem := range resp.Memories {
+		ids[i] = mem.Id
+	}
+	loaded, apiErr := resourceloaders.LoadAgentMemories(ctx, ids)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	items := make([]apiresource.AgentMemory, 0, len(ids))
+	for _, id := range ids {
+		if v, ok := loaded[id]; ok {
+			items = append(items, *(v.(*apiresource.AgentMemory)))
+		}
+	}
+	pageInfo := apiresource.PageInfo{}
+	if resp.PageInfo != nil {
+		pageInfo = grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)
+	}
+	return apiresource.NewList(items, pageInfo), nil
 }
 
 func (m *agentMemorySvcImpl) GetMemory(ctx context.Context, req *RetrieveMemoryRequest) (*apiresource.AgentMemory, *apierror.APIError) {
-	pbReq := &pb.GetAgentMemoryRequest{
-		Id: req.ID,
-	}
-
-	resp, rpcErr := grpcutil.CallRPC(ctx, memorySvcTracer, "service.agent_memories.get", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetAgentMemoryResponse, error) {
-			return m.agentClient.GetAgentMemory(ctx, pbReq, opts...)
-		})
-	if rpcErr != nil {
-		return nil, rpcErr
-	}
-
-	result := AgentMemoryPresenter(resp.Memory)
-	return &result, nil
+	return loadMemoryByID(ctx, req.ID)
 }
 
 func (m *agentMemorySvcImpl) CreateMemory(ctx context.Context, req *CreateMemoryRequest) (*apiresource.AgentMemory, *apierror.APIError) {
@@ -108,7 +110,6 @@ func (m *agentMemorySvcImpl) CreateMemory(ctx context.Context, req *CreateMemory
 	if req.ExpiresAt != nil {
 		pbReq.ExpiresAt = *req.ExpiresAt
 	}
-
 	resp, rpcErr := grpcutil.CallRPC(ctx, memorySvcTracer, "service.agent_memories.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateAgentMemoryResponse, error) {
 			return m.agentClient.CreateAgentMemory(ctx, pbReq, opts...)
@@ -116,9 +117,7 @@ func (m *agentMemorySvcImpl) CreateMemory(ctx context.Context, req *CreateMemory
 	if rpcErr != nil {
 		return nil, rpcErr
 	}
-
-	result := AgentMemoryPresenter(resp.Memory)
-	return &result, nil
+	return loadMemoryByID(ctx, resp.Memory.Id)
 }
 
 func (m *agentMemorySvcImpl) UpdateMemory(ctx context.Context, req *UpdateMemoryRequest) (*apiresource.AgentMemory, *apierror.APIError) {
@@ -140,7 +139,6 @@ func (m *agentMemorySvcImpl) UpdateMemory(ctx context.Context, req *UpdateMemory
 	if req.ExpiresAt != nil {
 		pbReq.ExpiresAt = *req.ExpiresAt
 	}
-
 	resp, rpcErr := grpcutil.CallRPC(ctx, memorySvcTracer, "service.agent_memories.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateAgentMemoryResponse, error) {
 			return m.agentClient.UpdateAgentMemory(ctx, pbReq, opts...)
@@ -148,16 +146,11 @@ func (m *agentMemorySvcImpl) UpdateMemory(ctx context.Context, req *UpdateMemory
 	if rpcErr != nil {
 		return nil, rpcErr
 	}
-
-	result := AgentMemoryPresenter(resp.Memory)
-	return &result, nil
+	return loadMemoryByID(ctx, resp.Memory.Id)
 }
 
 func (m *agentMemorySvcImpl) DeleteMemory(ctx context.Context, req *DeleteMemoryRequest) (*apiresource.EmptyResource, *apierror.APIError) {
-	pbReq := &pb.DeleteAgentMemoryRequest{
-		Id: req.ID,
-	}
-
+	pbReq := &pb.DeleteAgentMemoryRequest{Id: req.ID}
 	_, rpcErr := grpcutil.CallRPC(ctx, memorySvcTracer, "service.agent_memories.delete", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.DeleteAgentMemoryResponse, error) {
 			return m.agentClient.DeleteAgentMemory(ctx, pbReq, opts...)
@@ -165,6 +158,19 @@ func (m *agentMemorySvcImpl) DeleteMemory(ctx context.Context, req *DeleteMemory
 	if rpcErr != nil {
 		return nil, rpcErr
 	}
-
 	return &apiresource.EmptyResource{}, nil
+}
+
+// loadMemoryByID wraps the single-ID load pattern used after mutations and
+// for the retrieve endpoint.
+func loadMemoryByID(ctx context.Context, id string) (*apiresource.AgentMemory, *apierror.APIError) {
+	loaded, apiErr := resourceloaders.LoadAgentMemories(ctx, []string{id})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	v, ok := loaded[id]
+	if !ok {
+		return nil, apierror.NewResourceNotFoundError("Agent memory not found.")
+	}
+	return v.(*apiresource.AgentMemory), nil
 }

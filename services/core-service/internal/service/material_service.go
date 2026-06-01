@@ -284,7 +284,7 @@ func (s *materialSvcImpl) CreateMaterial(ctx context.Context, params domain.Crea
 				return apiErr
 			}
 			if exists {
-				return apierror.NewConflictErrorWithParam("An item with this SKU already exists.", "sku")
+				return apierror.NewConflictErrorWithParam(fmt.Sprintf("An item with the SKU '%s' already exists.", params.SKU), "sku")
 			}
 
 			// Get base unit for rates from category.
@@ -506,7 +506,7 @@ func (s *materialSvcImpl) UpdateMaterial(ctx context.Context, params domain.Upda
 					return apiErr
 				}
 				if exists {
-					return apierror.NewConflictErrorWithParam("An item with this SKU already exists.", "sku")
+					return apierror.NewConflictErrorWithParam(fmt.Sprintf("An item with the SKU '%s' already exists.", *params.SKU), "sku")
 				}
 			}
 
@@ -670,6 +670,31 @@ func (s *materialSvcImpl) DeleteMaterial(ctx context.Context, materialID string)
 
 // checkMaterialReadPermission checks the appropriate read permission based on the identity context.
 // Internal actors need materials:read for their own account, or customers:read / suppliers:read for external accounts.
+func (s *materialSvcImpl) BatchGetMaterialsByIDs(ctx context.Context, ids []string) ([]*domain.Material, *apierror.APIError) {
+	ctx, span := materialSvcTracer.Start(ctx, "service.material.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := checkMaterialReadPermission(identity); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+
+	materials, apiErr := s.repos.NewMaterialRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return materials, nil
+}
+
 func checkMaterialReadPermission(identity *types.Identity) *apierror.APIError {
 	if !identity.IsInternalActor() {
 		return nil

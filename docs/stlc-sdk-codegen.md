@@ -101,7 +101,7 @@ So after edits under **`stlc-main/packages/sdk-codegen/`**, rebuild the worker c
 
 SDK generation runs **only** from [`.github/workflows/release.yml`](../.github/workflows/release.yml) **`generate-sdks`** after **`publish-openapi-specs`** succeeds:
 
-1. **`publish-openapi-specs`** downloads **`openapi.json`** from each bucket into **`specs/sdk-baseline/`** (pre-upload baseline), runs **`make openapi`**, compares with [`scripts/sdk-openapi-spec-changed.sh`](../scripts/sdk-openapi-spec-changed.sh) for internal and public, then uploads **`openapi.json`** (and versioned copies) to **`augno-public-openapi-specs`** and **`augno-private-openapi-specs`**. Job outputs **`internal_spec_changed`** and **`public_spec_changed`** gate SDK generation.
+1. **`publish-openapi-specs`** downloads **`openapi.json`** from each bucket into **`specs/sdk-baseline/`** (pre-upload baseline), runs **`make openapi`**, compares with [`scripts/sdk-openapi-spec-changed.sh`](../scripts/sdk-openapi-spec-changed.sh) for internal and public, then uploads **`openapi.json`** and **`stainless.yml`** (plus versioned copies) to **`augno-public-openapi-specs`** and **`augno-private-openapi-specs`**. Job outputs **`internal_spec_changed`** and **`public_spec_changed`** gate SDK generation.
 
 2. **`generate-sdks`** calls [`stlc-generate-reusable.yml`](../.github/workflows/stlc-generate-reusable.yml) with **`openapi_specs_source: s3`** and inputs **`openapi_internal_gate`** / **`openapi_public_gate`** (from **`internal_spec_changed`** / **`public_spec_changed`** on **`publish-openapi-specs`**). When a flag is **`false`**, that SDK’s **`stlc build --push`** and changeset amend are **skipped**. When **`true`**, it downloads the published specs from S3, runs **`stlc build --push`** to **`main`**, amends that commit with **`.changeset/sync-api-<tag>.md`**, and pushes to [`Augno/internal-sdk`](https://github.com/Augno/internal-sdk) and [`Augno/typescript-sdk`](https://github.com/Augno/typescript-sdk). Each SDK repo’s Changesets workflow then opens **chore: version packages** on **`main`**—one merge to publish.
 
@@ -125,7 +125,7 @@ Production flow (keeps SDKs aligned with what is deployed):
 
 4. **`generate-sdks`** and **`notify-consumers`** run in parallel after step 3:
    - `generate-sdks` downloads specs from S3 when needed, runs **`stlc build --push`** to **`main`**, and amends the commit with the automated changeset (skipped per SDK when that spec matched S3 **`openapi.json`** before upload).
-   - `notify-consumers` dispatches `api-release` to public-docs and openapi-spec so those repos sync from S3 (same buckets as [`fetch-openapi-spec-s3.sh`](../scripts/fetch-openapi-spec-s3.sh)).
+   - `notify-consumers` dispatches `api-release` to public-docs and openapi-spec so those repos sync from S3 (same buckets as [`fetch-openapi-spec-s3.sh`](../scripts/fetch-openapi-spec-s3.sh); pass **`stainless`** as the fourth argument to fetch **`stainless.yml`**).
 
 **Timing:** Consumer repos sync from the deployed API and S3-published OpenAPI specs; they do not wait for SDK publishes. Downstream npm/GitHub Packages SDK versions update after the Changesets **version packages** PR on each SDK repo is **merged** (only when the OpenAPI spec actually changed for that SDK).
 

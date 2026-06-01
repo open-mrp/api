@@ -243,7 +243,7 @@ func (s *partSvcImpl) CreatePart(ctx context.Context, params domain.CreatePartPa
 				return apiErr
 			}
 			if exists {
-				return apierror.NewConflictErrorWithParam("An item with this SKU already exists.", "sku")
+				return apierror.NewConflictErrorWithParam(fmt.Sprintf("An item with the SKU '%s' already exists.", params.SKU), "sku")
 			}
 
 			// Get base unit for rates from category.
@@ -434,7 +434,7 @@ func (s *partSvcImpl) UpdatePart(ctx context.Context, params domain.UpdatePartPa
 					return apiErr
 				}
 				if exists {
-					return apierror.NewConflictErrorWithParam("An item with this SKU already exists.", "sku")
+					return apierror.NewConflictErrorWithParam(fmt.Sprintf("An item with the SKU '%s' already exists.", *params.SKU), "sku")
 				}
 			}
 
@@ -566,6 +566,31 @@ func (s *partSvcImpl) DeletePart(ctx context.Context, partID string) (*domain.Pa
 	}
 
 	return part, nil
+}
+
+func (s *partSvcImpl) BatchGetPartsByIDs(ctx context.Context, ids []string) ([]*domain.Part, *apierror.APIError) {
+	ctx, span := partSvcTracer.Start(ctx, "service.part.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := checkPartReadPermission(identity); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+
+	parts, apiErr := s.repos.NewPartRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return parts, nil
 }
 
 // checkPartReadPermission checks the appropriate read permission based on the identity context.

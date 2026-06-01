@@ -59,6 +59,18 @@ WHERE p.id = sqlc.arg('part_id')
 AND i.account_id = sqlc.arg('account_id')
 AND i.deleted_at IS NULL;
 
+-- name: GetPartsByIDs :many
+SELECT
+    p.id,
+    p.item_id,
+    p.created_at,
+    p.updated_at
+FROM part p
+JOIN item i ON i.id = p.item_id
+WHERE p.id IN (sqlc.slice('ids'))
+AND i.account_id = sqlc.arg('account_id')
+AND i.deleted_at IS NULL;
+
 -- name: GetPartAttributes :many
 SELECT
     a.id,

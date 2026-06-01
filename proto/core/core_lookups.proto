@@ -39,6 +39,13 @@ message UpdateProductTypeResponse {
 message DeleteProductTypeRequest {
   string id = 1;
 }
+// Batched read for the api-gateway resourcekit resolver.
+message BatchGetProductTypesByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetProductTypesByIDsResponse {
+  repeated ProductTypeInfo product_types = 1;
+}
 message GetProductionFlowRequest {
   string item_id = 1;
 }
@@ -60,6 +67,9 @@ message ProductionFlowStepInfo {
   optional RateInfo overhead_rate = 12;
   optional string department_id = 13;
   repeated string machine_ids = 14;
+  optional string notes = 15;
+  google.protobuf.Timestamp created_at = 16;
+  google.protobuf.Timestamp updated_at = 17;
 }
 message ProductionFlowProductionInfo {
   string id = 1;
@@ -74,6 +84,8 @@ message ProductionFlowConsumptionInfo {
   QuantityInfo quantity = 4;
   QuantityInfo waste_quantity = 5;
   optional string instructions = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
 }
 message ConnectProductionStepsRequest {
   string source_production_step_id = 1;
@@ -255,6 +267,20 @@ message GetUnitGroupUnitRequest {
 }
 message GetUnitGroupUnitResponse {
   UnitGroupUnitInfo unit_group_unit = 1;
+}
+// Batched read for the api-gateway resourcekit resolver.
+message BatchGetUnitGroupsByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetUnitGroupsByIDsResponse {
+  repeated UnitGroupInfo unit_groups = 1;
+}
+// Batched read for the api-gateway resourcekit resolver.
+message BatchGetUnitGroupUnitsByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetUnitGroupUnitsByIDsResponse {
+  repeated UnitGroupUnitInfo unit_group_units = 1;
 }
 message ValidateUnitsRequest {
   map<string, string> unit_map = 1;
@@ -736,6 +762,13 @@ message UpdateDCLocationResponse {
 message DeleteDCLocationRequest {
   string id = 1;
 }
+// Batched read for the api-gateway resourcekit resolver.
+message BatchGetDCLocationsByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetDCLocationsByIDsResponse {
+  repeated DCLocationProto dc_locations = 1;
+}
 message EDIRunProto {
   string id = 1;
   optional google.protobuf.Timestamp completed_at = 2;
@@ -758,6 +791,13 @@ message GetEDIRunRequest {
 }
 message GetEDIRunResponse {
   EDIRunProto edi_run = 1;
+}
+// Batched read for the api-gateway resourcekit resolver.
+message BatchGetEDIRunsByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetEDIRunsByIDsResponse {
+  repeated EDIRunProto edi_runs = 1;
 }
 message ListInventoriesRequest {
   optional string cursor = 1;

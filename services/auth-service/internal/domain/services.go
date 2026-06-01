@@ -341,4 +341,6 @@ type APIKeySvc interface {
 	//   - If cursor is non-nil, results begin after the provided cursor.
 	//   - limit controls the maximum number of results returned.
 	ListAPIKeys(ctx context.Context, cursor *string, limit int32, query *string, statuses []constants.APIKeyStatus, includes []string) (*ListAPIKeysResult, *apierror.APIError)
+
+	BatchGetAPIKeysByIDs(ctx context.Context, ids []string) ([]*apikey.APIKey, *apierror.APIError)
 }

@@ -184,6 +184,26 @@ func (h *gRPCHandler) UpdateTerritory(ctx context.Context, req *pb.UpdateTerrito
 	}, nil
 }
 
+func (h *gRPCHandler) BatchGetTerritoriesByIDs(ctx context.Context, req *pb.BatchGetTerritoriesByIDsRequest) (*pb.BatchGetTerritoriesByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	territories, apiErr := h.territorySvc.BatchGetTerritoriesByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	result := make([]*pb.TerritoryInfo, len(territories))
+	for i, t := range territories {
+		result[i] = territoryToProto(t)
+	}
+
+	return &pb.BatchGetTerritoriesByIDsResponse{
+		Territories: result,
+	}, nil
+}
+
 func (h *gRPCHandler) DeleteTerritory(ctx context.Context, req *pb.DeleteTerritoryRequest) (*emptypb.Empty, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

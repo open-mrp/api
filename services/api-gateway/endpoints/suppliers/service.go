@@ -8,7 +8,7 @@ import (
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/appctx"
+	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -36,6 +36,8 @@ type supplierSvcImpl struct {
 }
 
 var supplierSvcTracer = tracing.GetTracer("api-gateway.endpoints.suppliers.service")
+
+var supplierIncludes = []string{"bill_to_address", "ship_to_address"}
 
 func (c *SupplierSvcConfig) validate() error {
 	if c.CoreClient == nil {
@@ -75,13 +77,13 @@ func (s *supplierSvcImpl) ListSuppliers(ctx context.Context, req *ListSuppliersR
 		return nil, apiErr
 	}
 
-	return SupplierListPresenter(ctx, resp), nil
+	return supplierListFromProto(ctx, resp), nil
 }
 
 func (s *supplierSvcImpl) GetSupplier(ctx context.Context, req *RetrieveSupplierRequest) (*apiresource.SupplierDetail, *apierror.APIError) {
 	pbReq := &pb.GetSupplierRequest{
 		Id:       req.SupplierID,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
+		Includes: supplierIncludes,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, supplierSvcTracer, "service.suppliers.get", domain.ServiceName,
@@ -93,7 +95,8 @@ func (s *supplierSvcImpl) GetSupplier(ctx context.Context, req *RetrieveSupplier
 		return nil, apiErr
 	}
 
-	result := SupplierPresenter(resp.Supplier)
+	result := supplierDetailFromProto(resp.Supplier)
+	stashSupplierMeta(ctx, resp.Supplier, &result)
 	return &result, nil
 }
 
@@ -102,7 +105,7 @@ func (s *supplierSvcImpl) CreateSupplier(ctx context.Context, req *CreateSupplie
 		Name:     req.Name,
 		Number:   req.Number,
 		Note:     req.Note,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
+		Includes: supplierIncludes,
 	}
 
 	if req.BillToAddress != nil {
@@ -121,7 +124,8 @@ func (s *supplierSvcImpl) CreateSupplier(ctx context.Context, req *CreateSupplie
 		return nil, apiErr
 	}
 
-	result := SupplierPresenter(resp.Supplier)
+	result := supplierDetailFromProto(resp.Supplier)
+	stashSupplierMeta(ctx, resp.Supplier, &result)
 	return &result, nil
 }
 
@@ -134,7 +138,7 @@ func (s *supplierSvcImpl) UpdateSupplier(ctx context.Context, req *UpdateSupplie
 		UpdateNote:      req.UpdateNote,
 		BillToAddressId: req.BillToAddressID,
 		ShipToAddressId: req.ShipToAddressID,
-		Includes:        appctx.GetRequestedIncludeKeys(ctx),
+		Includes:        supplierIncludes,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, supplierSvcTracer, "service.suppliers.update", domain.ServiceName,
@@ -146,7 +150,8 @@ func (s *supplierSvcImpl) UpdateSupplier(ctx context.Context, req *UpdateSupplie
 		return nil, apiErr
 	}
 
-	result := SupplierPresenter(resp.Supplier)
+	result := supplierDetailFromProto(resp.Supplier)
+	stashSupplierMeta(ctx, resp.Supplier, &result)
 	return &result, nil
 }
 
@@ -164,7 +169,8 @@ func (s *supplierSvcImpl) DeleteSupplier(ctx context.Context, req *DeleteSupplie
 		return nil, apiErr
 	}
 
-	result := SupplierPresenter(resp.Supplier)
+	result := supplierDetailFromProto(resp.Supplier)
+	stashSupplierMeta(ctx, resp.Supplier, &result)
 	return &result, nil
 }
 
@@ -203,20 +209,9 @@ func createAddressRequestToProto(a *apirequest.AddressInput) *pb.CreateSupplierA
 	}
 }
 
-// SupplierPresenter converts a SupplierProto to a SupplierDetail API resource.
-func SupplierPresenter(s *pb.SupplierProto) apiresource.SupplierDetail {
+func supplierDetailFromProto(s *pb.SupplierProto) apiresource.SupplierDetail {
 	if s == nil {
 		return apiresource.SupplierDetail{}
-	}
-
-	var billToAddress *apiresource.Address
-	if s.BillToAddress != nil {
-		billToAddress = addressProtoToResource(s.BillToAddress)
-	}
-
-	var shipToAddress *apiresource.Address
-	if s.ShipToAddress != nil {
-		shipToAddress = addressProtoToResource(s.ShipToAddress)
 	}
 
 	return apiresource.SupplierDetail{
@@ -225,16 +220,26 @@ func SupplierPresenter(s *pb.SupplierProto) apiresource.SupplierDetail {
 		Name:          s.Name,
 		Number:        s.Number,
 		Note:          s.Note,
-		BillToAddress: billToAddress,
-		ShipToAddress: shipToAddress,
 		MaterialCount: s.MaterialCount,
 		CreatedAt:     grpcutil.TimestampToTime(s.CreatedAt),
 		UpdatedAt:     grpcutil.TimestampToTime(s.UpdatedAt),
 	}
 }
 
-// SupplierSummaryPresenter converts a SupplierSummaryProto to a SupplierSummary API resource.
-func SupplierSummaryPresenter(s *pb.SupplierSummaryProto) apiresource.SupplierSummary {
+func stashSupplierMeta(ctx context.Context, s *pb.SupplierProto, d *apiresource.SupplierDetail) {
+	if s == nil {
+		return
+	}
+	meta := resourcekit.GetLoadMeta(ctx)
+	if s.BillToAddress != nil {
+		meta.Set(constants.ObjectTypeSupplier, d.ID, "bill_to_address", addressProtoToResource(s.BillToAddress))
+	}
+	if s.ShipToAddress != nil {
+		meta.Set(constants.ObjectTypeSupplier, d.ID, "ship_to_address", addressProtoToResource(s.ShipToAddress))
+	}
+}
+
+func supplierSummaryFromProto(s *pb.SupplierSummaryProto) apiresource.SupplierSummary {
 	if s == nil {
 		return apiresource.SupplierSummary{}
 	}
@@ -249,15 +254,14 @@ func SupplierSummaryPresenter(s *pb.SupplierSummaryProto) apiresource.SupplierSu
 	}
 }
 
-// SupplierListPresenter converts a ListSuppliersResponse to a list of SupplierSummary API resources.
-func SupplierListPresenter(ctx context.Context, resp *pb.ListSuppliersResponse) *apiresource.List[apiresource.SupplierSummary] {
+func supplierListFromProto(ctx context.Context, resp *pb.ListSuppliersResponse) *apiresource.List[apiresource.SupplierSummary] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.SupplierSummary](nil, apiresource.PageInfo{})
 	}
 
 	items := make([]apiresource.SupplierSummary, len(resp.Suppliers))
 	for i, s := range resp.Suppliers {
-		items[i] = SupplierSummaryPresenter(s)
+		items[i] = supplierSummaryFromProto(s)
 	}
 
 	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))

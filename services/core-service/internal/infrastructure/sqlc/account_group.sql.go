@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -189,6 +190,88 @@ func (q *Queries) GetAccountGroup(ctx context.Context, arg GetAccountGroupParams
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getAccountGroupsByIDs = `-- name: GetAccountGroupsByIDs :many
+SELECT
+    account_group.id,
+    account_group.owner_account_id,
+    account_group.name,
+    account_group.description,
+    account_group.commission_status_code,
+    account_group.freight_status_code,
+    account_group.account_group_type_code,
+    account_group.registration_flow_id,
+    account_group.created_at,
+    account_group.updated_at
+FROM account_group
+WHERE account_group.id IN (/*SLICE:ids*/?)
+AND account_group.owner_account_id = ?
+`
+
+type GetAccountGroupsByIDsParams struct {
+	Ids            []string
+	OwnerAccountID string
+}
+
+type GetAccountGroupsByIDsRow struct {
+	ID                   string
+	OwnerAccountID       string
+	Name                 string
+	Description          sql.NullString
+	CommissionStatusCode string
+	FreightStatusCode    string
+	AccountGroupTypeCode string
+	RegistrationFlowID   sql.NullString
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+}
+
+// Returns account groups matching the given IDs that belong to the caller's
+// account. Account groups are always account-owned (no system rows).
+func (q *Queries) GetAccountGroupsByIDs(ctx context.Context, arg GetAccountGroupsByIDsParams) ([]GetAccountGroupsByIDsRow, error) {
+	query := getAccountGroupsByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.OwnerAccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAccountGroupsByIDsRow
+	for rows.Next() {
+		var i GetAccountGroupsByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.OwnerAccountID,
+			&i.Name,
+			&i.Description,
+			&i.CommissionStatusCode,
+			&i.FreightStatusCode,
+			&i.AccountGroupTypeCode,
+			&i.RegistrationFlowID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const insertAccountGroup = `-- name: InsertAccountGroup :exec

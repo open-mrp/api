@@ -266,7 +266,8 @@ func (q *Queries) FindStepIDByScanningStationAndItem(ctx context.Context, arg Fi
 
 const getProductionFlowStep = `-- name: GetProductionFlowStep :one
 SELECT
-    ps.id, ps.name, ps.scanning_station_id, ps.department_id,
+    ps.id, ps.name, ps.notes, ps.created_at, ps.updated_at,
+    ps.scanning_station_id, ps.department_id,
     ps.allowances, ps.leveling_factor,
     p.id AS production_id, pi.id AS produced_item_id, pi.sku AS produced_item_sku,
     pq.id AS produced_quantity_id, pq.value AS produced_quantity_value,
@@ -304,6 +305,9 @@ type GetProductionFlowStepParams struct {
 type GetProductionFlowStepRow struct {
 	ID                       string
 	Name                     string
+	Notes                    sql.NullString
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
 	ScanningStationID        sql.NullString
 	DepartmentID             sql.NullString
 	Allowances               string
@@ -337,6 +341,9 @@ func (q *Queries) GetProductionFlowStep(ctx context.Context, arg GetProductionFl
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.Notes,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 		&i.ScanningStationID,
 		&i.DepartmentID,
 		&i.Allowances,

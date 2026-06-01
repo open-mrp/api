@@ -114,7 +114,7 @@ func (m *registrationMedImpl) CreateSession(ctx context.Context, input domain.Cr
 					return nil, tracing.Trace(span, updateErr)
 				}
 			}
-			m.sendVerificationEmail(ctx, input.Email, existingSession.VerificationToken, false)
+			m.sendVerificationEmail(ctx, input.Email, existingSession.VerificationToken, isExistingUser)
 			return &domain.CreateRegistrationSessionResult{
 				SessionID: existingSession.TypeID,
 			}, nil
@@ -170,6 +170,7 @@ func (m *registrationMedImpl) ResendVerificationEmail(ctx context.Context, sessi
 	defer span.End()
 
 	regSessionRepo := m.repos.NewRegistrationSessionRepo()
+	userRepo := m.repos.NewUserRepo()
 
 	session, err := regSessionRepo.GetByTypeID(ctx, sessionID)
 	if err != nil {
@@ -194,7 +195,8 @@ func (m *registrationMedImpl) ResendVerificationEmail(ctx context.Context, sessi
 		return tracing.Trace(span, updateErr)
 	}
 
-	m.sendVerificationEmail(ctx, session.Email, newToken, false)
+	existingUser, _ := userRepo.Find(ctx, session.Email)
+	m.sendVerificationEmail(ctx, session.Email, newToken, existingUser != nil)
 
 	return nil
 }
@@ -263,16 +265,17 @@ func (m *registrationMedImpl) VerifyToken(ctx context.Context, token string) (*d
 	return result, nil
 }
 
-// CreateUserForSession creates or resolves a user for the registration session and returns
+// CreateUserForSession creates a new user for the registration session and returns
 // the user ID with auth tokens.
 //
-// 1. Look up the session by type ID and validate it is not completed and email is verified.
-// 2. If the session already has a user, generate tokens for the existing user (idempotent).
-// 3. Check if a user already exists with the session's email; reuse if so.
-// 4. Otherwise, hash the password and create a new user record.
-// 5. Associate the user with the session and update session data with the user name.
-// 6. Advance the session step to account_details.
-// 7. Generate and return an access token and refresh token.
+//  1. Look up the session by type ID and validate it is not completed and email is verified.
+//  2. If the session already has a user, generate tokens for the existing user (idempotent).
+//  3. Reject if an account already exists for the session's email — pre-existing
+//     accounts must authenticate via login, not by holding a verified session id.
+//  4. Hash the password and create a new user record.
+//  5. Associate the user with the session and update session data with the user name.
+//  6. Advance the session step to account_details.
+//  7. Generate and return an access token and refresh token.
 //
 // Side effects:
 //   - May create a new user record.
@@ -283,6 +286,7 @@ func (m *registrationMedImpl) CreateUserForSession(ctx context.Context, input do
 	defer span.End()
 
 	regSessionRepo := m.repos.NewRegistrationSessionRepo()
+	userRepo := m.repos.NewUserRepo()
 
 	session, err := regSessionRepo.GetByTypeID(ctx, input.SessionID)
 	if err != nil {
@@ -297,7 +301,7 @@ func (m *registrationMedImpl) CreateUserForSession(ctx context.Context, input do
 		return nil, tracing.Trace(span, apierror.NewValidationError("Email must be verified before creating user."))
 	}
 
-	// If user already exists on session, generate tokens and return
+	// Idempotent retry: if this session already minted a user, return tokens for it.
 	if session.UserID != nil {
 		accessToken, tokenErr := m.userMed.GenAuthAccessToken(ctx, *session.UserID)
 		if tokenErr != nil {
@@ -316,33 +320,31 @@ func (m *registrationMedImpl) CreateUserForSession(ctx context.Context, input do
 		}, nil
 	}
 
-	// Check if a user already exists with this email
-	userRepo := m.repos.NewUserRepo()
+	// New-user path only. Reject if an account already exists for this email —
+	// pre-existing accounts must authenticate via login, since the session id
+	// holder is not proven to be that user.
 	existingUser, findErr := userRepo.Find(ctx, session.Email)
 	if findErr != nil && !apierror.IsNotFound(findErr) {
 		return nil, tracing.Trace(span, findErr)
 	}
-
-	var userID string
 	if existingUser != nil {
-		userID = existingUser.ID
-	} else {
-		// Hash password and create user
-		hashedPassword, hashErr := pwdutil.HashPassword(ctx, input.Password)
-		if hashErr != nil {
-			return nil, tracing.Trace(span, hashErr)
-		}
+		return nil, tracing.Trace(span, apierror.NewValidationError("An account with this email already exists. Please log in."))
+	}
 
-		newUserID, genErr := id.GenID(id.UserIDPrefix, nil)
-		if genErr != nil {
-			return nil, tracing.Trace(span, genErr)
-		}
-		userID = newUserID
+	// Hash password and create user
+	hashedPassword, hashErr := pwdutil.HashPassword(ctx, input.Password)
+	if hashErr != nil {
+		return nil, tracing.Trace(span, hashErr)
+	}
 
-		_, createErr := userRepo.Create(ctx, userID, session.Email, input.Name, hashedPassword)
-		if createErr != nil {
-			return nil, tracing.Trace(span, createErr)
-		}
+	newUserID, genErr := id.GenID(id.UserIDPrefix, nil)
+	if genErr != nil {
+		return nil, tracing.Trace(span, genErr)
+	}
+	userID := newUserID
+
+	if _, createErr := userRepo.Create(ctx, userID, session.Email, input.Name, hashedPassword); createErr != nil {
+		return nil, tracing.Trace(span, createErr)
 	}
 
 	// Update session with user ID and name

@@ -36,6 +36,7 @@ func (e *ListMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMate
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeMaterial,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListMaterialsRequest) (*apiresource.List[apiresource.Material], *apierror.APIError) {
 			return svc.(MaterialSvc).ListMaterials
 		},

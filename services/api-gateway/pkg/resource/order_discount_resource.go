@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleOrderDiscountID = "ords_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleOrderDiscountID = "ords_01121c5e2f6937a6b896daad3a"
 
 // Order discount resource.
 type OrderDiscount struct {

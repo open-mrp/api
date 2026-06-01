@@ -157,7 +157,7 @@ func TestCarriers_ListPagination(t *testing.T) {
 	t.Parallel()
 	list1, _, err := apiClient.GetList(carriersPath, url.Values{"limit": {"1"}})
 	require.NoError(t, err)
-	assert.Len(t, list1.Data, 1)
+	requirePageLen(t, list1.Data, 1)
 
 	if !list1.PageInfo.HasNextPage {
 		t.Skip("Not enough data for pagination test")
@@ -168,7 +168,7 @@ func TestCarriers_ListPagination(t *testing.T) {
 
 	list2, _, err := apiClient.GetListFromPageURL(list1.PageInfo.NextPageURL)
 	require.NoError(t, err)
-	assert.Len(t, list2.Data, 1)
+	requirePageLen(t, list2.Data, 1)
 
 	id1 := DataItemField(list1.Data[0], "id")
 	id2 := DataItemField(list2.Data[0], "id")
@@ -263,6 +263,29 @@ func TestCarriers_UpdateValidation_EmptyName(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
+}
+
+// TestCarriers_RetrieveRejectsUnknownInclude guards the per-endpoint
+// allow-list. Even though the resourcekit registry might know how to walk
+// arbitrary deeper paths, this endpoint declares
+// IncludeConfig.Fields = {"owner", "owner.account", "service_levels"} and
+// anything else (typos, deep paths, sibling resources) MUST 400. Without
+// this guard a client could probe the whole graph via the include
+// parameter.
+func TestCarriers_RetrieveRejectsUnknownInclude(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.GetListRaw(carriersPath+"/"+SeedCarrierID, url.Values{"include[]": {"customer"}})
+	require.NoError(t, err)
+	assert.Equal(t, 400, status, "unknown include must be 400, got %d: %s", status, string(body))
+}
+
+func TestCarriers_RetrieveRejectsDeepInclude(t *testing.T) {
+	t.Parallel()
+	// owner.account.branding is reachable in the registry graph in principle,
+	// but not in the carrier endpoint's allow-list, so it must be rejected.
+	status, body, err := apiClient.GetListRaw(carriersPath+"/"+SeedCarrierID, url.Values{"include[]": {"owner.account.branding"}})
+	require.NoError(t, err)
+	assert.Equal(t, 400, status, "deep include outside allow-list must be 400, got %d: %s", status, string(body))
 }
 
 func TestCarriers_IncludeOwner(t *testing.T) {

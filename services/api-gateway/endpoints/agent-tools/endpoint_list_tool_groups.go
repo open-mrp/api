@@ -26,6 +26,7 @@ func (e *ListToolGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListToo
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeToolGroup,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeToolGroup,
 			Fields:     []string{"tools"},

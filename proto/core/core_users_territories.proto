@@ -108,6 +108,13 @@ message DeleteTerritoryRequest {
   string account_id = 1;
   string id = 2;
 }
+// Batched read for the api-gateway resourcekit resolver.
+message BatchGetTerritoriesByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetTerritoriesByIDsResponse {
+  repeated TerritoryInfo territories = 1;
+}
 message RegistrationFlowOptionInfo {
   string id = 1;
   string name = 2;
@@ -238,6 +245,13 @@ message UpdateDepartmentResponse {
 }
 message DeleteDepartmentRequest {
   string id = 1;
+}
+// Batched read for the api-gateway resourcekit resolver.
+message BatchGetDepartmentsByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetDepartmentsByIDsResponse {
+  repeated DepartmentInfo departments = 1;
 }
 // Fields are populated based on the actor type (currently only users send emails).
 message EmailLogActor {

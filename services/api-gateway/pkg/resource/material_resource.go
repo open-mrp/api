@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleMaterialID = "ml_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleMaterialID = "ml_014613b8f7959a091d8cc0cef4"
 
 // Material with order point and lead time.
 type Material struct {

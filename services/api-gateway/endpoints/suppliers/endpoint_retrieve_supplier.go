@@ -28,6 +28,7 @@ func (e *RetrieveSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeSupplier,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveSupplierRequest) (*apiresource.SupplierDetail, *apierror.APIError) {
 			return svc.(SupplierSvc).GetSupplier
 		},

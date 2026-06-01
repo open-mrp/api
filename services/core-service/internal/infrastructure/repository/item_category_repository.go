@@ -104,6 +104,50 @@ func mapGetItemCategoryRow(row sqlc.GetItemCategoryRow) *domain.ItemCategoryFull
 	}
 }
 
+func mapGetItemCategoriesByIDsRow(row sqlc.GetItemCategoriesByIDsRow) *domain.ItemCategoryFull {
+	var accountID *string
+	if row.AccountID.Valid {
+		accountID = &row.AccountID.String
+	}
+	var notes *string
+	if row.Notes.Valid {
+		notes = &row.Notes.String
+	}
+	return &domain.ItemCategoryFull{
+		ID:                   row.ID,
+		Name:                 row.Name,
+		Notes:                notes,
+		ItemCategoryTypeCode: row.ItemCategoryTypeCode,
+		UnitGroupID:          row.UnitGroupID,
+		AccountID:            accountID,
+		CreatedAt:            row.CreatedAt,
+		UpdatedAt:            row.UpdatedAt,
+	}
+}
+
+func (r *itemCategoryRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.ItemCategoryFull, *apierror.APIError) {
+	ctx, span := itemCategoryRepoTracer.Start(ctx, "repository.item_category.get_by_ids")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.GetItemCategoriesByIDs(ctx, sqlc.GetItemCategoriesByIDsParams{
+		Ids:       ids,
+		AccountID: gosql.NullString{String: accountID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	items := make([]*domain.ItemCategoryFull, len(rows))
+	for i, row := range rows {
+		items[i] = mapGetItemCategoriesByIDsRow(row)
+	}
+	return items, nil
+}
+
 func (r *itemCategoryRepoImpl) List(ctx context.Context, params domain.ListItemCategoriesParams) (*domain.ListItemCategoriesResult, *apierror.APIError) {
 	ctx, span := itemCategoryRepoTracer.Start(ctx, "repository.item_category.list")
 	defer span.End()

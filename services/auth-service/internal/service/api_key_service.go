@@ -305,9 +305,13 @@ func (s *apiKeySvcImpl) RevokeAPIKey(ctx context.Context, input domain.RevokeAPI
 				return apiErr
 			}
 
+			if old.OwnerAccountID != identity.Target.AccountID {
+				return apierror.NewResourceNotFoundError("API key not found.")
+			}
+
 			// Revoke the API key. The doc API key row is intentionally kept so that
 			// Resolve() sees the revocation and refuses to auto-regenerate.
-			if revokeErr := txMeds.APIKey.Revoke(txCtx, input.APIKeyID); revokeErr != nil {
+			if revokeErr := txMeds.APIKey.Revoke(txCtx, input.APIKeyID, identity.Target.AccountID); revokeErr != nil {
 				return revokeErr
 			}
 
@@ -391,11 +395,16 @@ func (s *apiKeySvcImpl) RotateAPIKey(ctx context.Context, input domain.RotateAPI
 				return apiErr
 			}
 
+			if oldKey.OwnerAccountID != identity.Target.AccountID {
+				return apierror.NewResourceNotFoundError("API key not found.")
+			}
+
 			// Rotate the API key
 			secret, apiKey, rotateErr := txMeds.APIKey.Rotate(txCtx, domain.APIKeyRotateInput{
-				AccountMode:  identity.AccountMode,
-				APIKeyTypeID: input.APIKeyID,
-				ExpiresAt:    input.ExpiresAt,
+				AccountMode:    identity.AccountMode,
+				APIKeyTypeID:   input.APIKeyID,
+				OwnerAccountID: identity.Target.AccountID,
+				ExpiresAt:      input.ExpiresAt,
 			})
 			if rotateErr != nil {
 				return rotateErr
@@ -458,4 +467,22 @@ func (s *apiKeySvcImpl) RotateAPIKey(ctx context.Context, input domain.RotateAPI
 	default:
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint.String()))
 	}
+}
+
+func (s *apiKeySvcImpl) BatchGetAPIKeysByIDs(ctx context.Context, ids []string) ([]*apikey.APIKey, *apierror.APIError) {
+	ctx, span := apiKeySvcTracer.Start(ctx, "service.api_key.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+
+	if apiErr := identity.CheckAPIKeyAccess(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	ownerAccountID := identity.Target.AccountID
+
+	return s.repos.NewAPIKeyRepo().GetByIDs(ctx, ownerAccountID, ids)
 }

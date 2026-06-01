@@ -988,6 +988,112 @@ func (q *Queries) GetItemTrends(ctx context.Context, arg GetItemTrendsParams) ([
 	return items, nil
 }
 
+const getItemsByIDs = `-- name: GetItemsByIDs :many
+SELECT
+    i.id,
+    i.sku,
+    i.description,
+    i.notes,
+    i.item_type_code,
+    i.item_category_id,
+    i.unit_value_id,
+    i.unit_cost_id,
+    i.burn_rate_id,
+    i.account_id,
+    i.is_dirty,
+    i.created_at,
+    i.updated_at,
+    ic.name AS category_name,
+    ic.item_category_type_code,
+    ic.unit_group_id AS category_unit_group_id,
+    ic.created_at AS category_created_at,
+    ic.updated_at AS category_updated_at
+FROM item i
+JOIN item_category ic ON ic.id = i.item_category_id
+WHERE i.id IN (/*SLICE:ids*/?)
+AND i.account_id = ?
+AND i.deleted_at IS NULL
+`
+
+type GetItemsByIDsParams struct {
+	Ids       []string
+	AccountID string
+}
+
+type GetItemsByIDsRow struct {
+	ID                   string
+	Sku                  string
+	Description          sql.NullString
+	Notes                sql.NullString
+	ItemTypeCode         string
+	ItemCategoryID       string
+	UnitValueID          string
+	UnitCostID           string
+	BurnRateID           string
+	AccountID            string
+	IsDirty              bool
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+	CategoryName         string
+	ItemCategoryTypeCode string
+	CategoryUnitGroupID  string
+	CategoryCreatedAt    time.Time
+	CategoryUpdatedAt    time.Time
+}
+
+func (q *Queries) GetItemsByIDs(ctx context.Context, arg GetItemsByIDsParams) ([]GetItemsByIDsRow, error) {
+	query := getItemsByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetItemsByIDsRow
+	for rows.Next() {
+		var i GetItemsByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Sku,
+			&i.Description,
+			&i.Notes,
+			&i.ItemTypeCode,
+			&i.ItemCategoryID,
+			&i.UnitValueID,
+			&i.UnitCostID,
+			&i.BurnRateID,
+			&i.AccountID,
+			&i.IsDirty,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.CategoryName,
+			&i.ItemCategoryTypeCode,
+			&i.CategoryUnitGroupID,
+			&i.CategoryCreatedAt,
+			&i.CategoryUpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listItemsBackward = `-- name: ListItemsBackward :many
 SELECT
     i.id,

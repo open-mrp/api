@@ -28,6 +28,7 @@ func (e *RetrievePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypePaymentTerm,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrievePaymentTermRequest) (*apiresource.PaymentTerm, *apierror.APIError) {
 			return svc.(PaymentTermSvc).GetPaymentTerm
 		},

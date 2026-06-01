@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleEmailLogID = "eml_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleEmailLogID = "eml_017b80707ada92dddff8a2c3a0"
 
 // Email log entry.
 type EmailLog struct {

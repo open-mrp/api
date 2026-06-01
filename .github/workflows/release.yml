@@ -259,15 +259,21 @@ jobs:
         id: compare-public
         run: ./scripts/sdk-openapi-spec-changed.sh public
 
-      - name: Upload Public Spec to S3
+      - name: Upload Public Release Artifacts to S3
         run: |
-          aws s3 cp specs/public_openapi_spec.json s3://augno-public-openapi-specs/openapi.json
-          aws s3 cp specs/public_openapi_spec.json s3://augno-public-openapi-specs/${{ steps.api-version.outputs.api_version }}.json
+          api_version="${{ steps.api-version.outputs.api_version }}"
+          aws s3 cp specs/public_openapi_spec.json "s3://augno-public-openapi-specs/openapi.json"
+          aws s3 cp specs/public_openapi_spec.json "s3://augno-public-openapi-specs/${api_version}.json"
+          aws s3 cp stainless/public/stainless.yml "s3://augno-public-openapi-specs/stainless.yml"
+          aws s3 cp stainless/public/stainless.yml "s3://augno-public-openapi-specs/${api_version}-stainless.yml"
 
-      - name: Upload Private Spec to S3
+      - name: Upload Private Release Artifacts to S3
         run: |
-          aws s3 cp specs/internal_openapi_spec.json s3://augno-private-openapi-specs/openapi.json
-          aws s3 cp specs/internal_openapi_spec.json s3://augno-private-openapi-specs/${{ steps.api-version.outputs.api_version }}.json
+          api_version="${{ steps.api-version.outputs.api_version }}"
+          aws s3 cp specs/internal_openapi_spec.json "s3://augno-private-openapi-specs/openapi.json"
+          aws s3 cp specs/internal_openapi_spec.json "s3://augno-private-openapi-specs/${api_version}.json"
+          aws s3 cp stainless/internal/stainless.yml "s3://augno-private-openapi-specs/stainless.yml"
+          aws s3 cp stainless/internal/stainless.yml "s3://augno-private-openapi-specs/${api_version}-stainless.yml"
 
   generate-sdks:
     name: Generate SDKs with stlc

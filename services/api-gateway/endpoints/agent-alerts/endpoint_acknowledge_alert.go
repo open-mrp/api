@@ -28,6 +28,7 @@ func (e *AcknowledgeAlertEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ackno
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeAgentAlert,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AcknowledgeAlertRequest) (*apiresource.AgentAlert, *apierror.APIError) {
 			return svc.(AgentAlertSvc).AcknowledgeAlert
 		},

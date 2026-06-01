@@ -21,6 +21,10 @@ type BaseConfig struct {
 	PlatformClient      *grpcclient.PlatformServiceClient
 	AgentClient         *grpcclient.AgentServiceClient
 	RequestLogPublisher domain.RequestLogPublisher
+	// TrustedProxyHops is the number of reverse-proxy hops in front of this
+	// service whose X-Forwarded-For entries can be trusted. See
+	// header.GetClientIP for details. Defaults to 0 (XFF is not trusted).
+	TrustedProxyHops int
 }
 
 type MainRouterConfig struct {
@@ -53,6 +57,7 @@ func (c *BaseConfig) WithDefaults() *BaseConfig {
 		PlatformClient:      c.PlatformClient,
 		AgentClient:         c.AgentClient,
 		RequestLogPublisher: c.RequestLogPublisher,
+		TrustedProxyHops:    c.TrustedProxyHops,
 	}
 }
 
@@ -116,6 +121,7 @@ func BuildBaseConfig(
 	agentClient *grpcclient.AgentServiceClient,
 	reqLogPublisher domain.RequestLogPublisher,
 	logWriter io.Writer,
+	trustedProxyHops int,
 ) *BaseConfig {
 	return &BaseConfig{
 		PlatformMode:        platformMode,
@@ -128,5 +134,6 @@ func BuildBaseConfig(
 		PlatformClient:      platformClient,
 		AgentClient:         agentClient,
 		RequestLogPublisher: reqLogPublisher,
+		TrustedProxyHops:    trustedProxyHops,
 	}
 }

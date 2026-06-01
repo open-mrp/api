@@ -125,6 +125,21 @@ func (h *gRPCHandler) UpdateProperty(ctx context.Context, req *pb.UpdateProperty
 	}, nil
 }
 
+func (h *gRPCHandler) BatchGetPropertiesByIDs(ctx context.Context, req *pb.BatchGetPropertiesByIDsRequest) (*pb.BatchGetPropertiesByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	properties, apiErr := h.propertySvc.BatchGetPropertiesByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	pbProps := make([]*pb.PropertyInfo, len(properties))
+	for i, p := range properties {
+		pbProps[i] = propertyToProto(p)
+	}
+	return &pb.BatchGetPropertiesByIDsResponse{Properties: pbProps}, nil
+}
+
 func (h *gRPCHandler) DeleteProperty(ctx context.Context, req *pb.DeletePropertyRequest) (*emptypb.Empty, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

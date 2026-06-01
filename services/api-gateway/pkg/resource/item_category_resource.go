@@ -8,9 +8,9 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleItemCategoryID = "ic_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleItemCategoryID = "ic_01ae7bd7bfd21ca0ab81e1357e"
 const SampleItemCategoryName = "Electronics"
-const SampleUnitGroupID = "ug_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleUnitGroupID = "ug_01aad07abb8e41fd392d2d7013"
 const SampleUnitGroupName = "Weight"
 
 // ItemCategory resource.

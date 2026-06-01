@@ -2596,6 +2596,7 @@ CREATE TABLE `registration_queue` (
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
+  UNIQUE KEY `registration_queue_session_id_key` (`registration_session_id`),
   KEY `registration_queue_email_idx` (`email`),
   KEY `registration_queue_plan_code_idx` (`plan_code`),
   KEY `registration_queue_contacted_idx` (`contacted`)

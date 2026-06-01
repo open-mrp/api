@@ -40,6 +40,7 @@ func (e *TriggerRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*TriggerRunR
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeAgentRun,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *TriggerRunRequest) (*apiresource.AgentRun, *apierror.APIError) {
 			return svc.(AgentRunSvc).TriggerAgentRun
 		},

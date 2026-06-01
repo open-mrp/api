@@ -41,6 +41,7 @@ func (e *UpdateItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeItemCategory,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError) {
 			return svc.(ItemCategorySvc).UpdateItemCategory
 		},

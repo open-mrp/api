@@ -44,6 +44,11 @@ type SandboxSvc interface {
 	// At least one sandbox must remain per production account. Account-scoped data
 	// is purged asynchronously via an outbox message.
 	DeleteSandbox(ctx context.Context, sandboxTypeID string) *apierror.APIError
+
+	// BatchGetSandboxesByIDs returns sandbox accounts matching the input type IDs
+	// that the caller's account is authorized to read. Used by the api-gateway
+	// resourcekit include resolver.
+	BatchGetSandboxesByIDs(ctx context.Context, typeIDs []string) ([]*SandboxAccount, *apierror.APIError)
 }
 
 type UnitSvc interface {
@@ -69,6 +74,9 @@ type UnitSvc interface {
 	// ValidateUnits validates unit abbreviations and returns matching units.
 	// Performs case-insensitive matching against both account and system units.
 	ValidateUnits(ctx context.Context, params ValidateUnitsParams) (*ValidateUnitsResult, *apierror.APIError)
+
+	// BatchGetUnitsByIDs returns units by ID for the api-gateway include resolver.
+	BatchGetUnitsByIDs(ctx context.Context, ids []string) ([]*Unit, *apierror.APIError)
 }
 
 type UnitGroupSvc interface {
@@ -105,6 +113,12 @@ type UnitGroupSvc interface {
 
 	// GetUnitGroupUnit returns a single unit conversion by ID.
 	GetUnitGroupUnit(ctx context.Context, params GetUnitGroupUnitParams) (*UnitGroupUnit, *apierror.APIError)
+
+	// BatchGetUnitGroupsByIDs returns unit groups by ID for the api-gateway include resolver.
+	BatchGetUnitGroupsByIDs(ctx context.Context, ids []string) ([]*UnitGroupFull, *apierror.APIError)
+
+	// BatchGetUnitGroupUnitsByIDs returns unit group units by ID for the api-gateway include resolver.
+	BatchGetUnitGroupUnitsByIDs(ctx context.Context, ids []string) ([]*UnitGroupUnit, *apierror.APIError)
 }
 
 type PaymentTermSvc interface {
@@ -115,6 +129,11 @@ type PaymentTermSvc interface {
 	// GetPaymentTerm returns a single payment term by ID. The payment term must
 	// belong to the caller's account or be a default (global) payment term.
 	GetPaymentTerm(ctx context.Context, paymentTermID string) (*PaymentTerm, *apierror.APIError)
+
+	// BatchGetPaymentTermsByIDs returns payment terms by ID for the api-gateway
+	// include resolver. Authorization matches GetPaymentTerm (caller's account
+	// + system terms).
+	BatchGetPaymentTermsByIDs(ctx context.Context, ids []string) ([]*PaymentTerm, *apierror.APIError)
 
 	// CreatePaymentTerm creates a new account-owned payment term.
 	CreatePaymentTerm(ctx context.Context, params CreatePaymentTermParams) (*PaymentTerm, *apierror.APIError)
@@ -147,6 +166,10 @@ type ShippingTermSvc interface {
 	// DeleteShippingTerm deletes an account-owned shipping term. Default shipping
 	// terms cannot be deleted.
 	DeleteShippingTerm(ctx context.Context, shippingTermID string) *apierror.APIError
+
+	// BatchGetShippingTermsByIDs returns shipping terms matching the given IDs
+	// that the caller's account is authorized to read.
+	BatchGetShippingTermsByIDs(ctx context.Context, ids []string) ([]*ShippingTerm, *apierror.APIError)
 }
 
 type AccountGroupSvc interface {
@@ -164,6 +187,11 @@ type AccountGroupSvc interface {
 
 	// DeleteAccountGroup deletes an account group.
 	DeleteAccountGroup(ctx context.Context, accountGroupID string) *apierror.APIError
+
+	// BatchGetAccountGroupsByIDs returns account groups matching the input IDs
+	// that the caller's account is authorized to read. Used by the api-gateway
+	// resourcekit include resolver.
+	BatchGetAccountGroupsByIDs(ctx context.Context, ids []string) ([]*AccountGroup, *apierror.APIError)
 }
 
 type AccountGroupProductLineAccessSvc interface {
@@ -181,6 +209,10 @@ type AccountGroupProductLineAccessSvc interface {
 
 	// DeleteAccountGroupProductLineAccess removes all product line access for an account group.
 	DeleteAccountGroupProductLineAccess(ctx context.Context, accountGroupID string) *apierror.APIError
+
+	// BatchGetAccountGroupProductLineAccessByIDs returns access records for the
+	// given account_group_ids. Used by the api-gateway resourcekit resolver.
+	BatchGetAccountGroupProductLineAccessByIDs(ctx context.Context, accountGroupIDs []string) ([]*AccountGroupProductLineAccess, *apierror.APIError)
 }
 
 type CustomerProductLineAccessSvc interface {
@@ -198,6 +230,10 @@ type CustomerProductLineAccessSvc interface {
 
 	// DeleteCustomerProductLineAccess removes all product line access for a customer.
 	DeleteCustomerProductLineAccess(ctx context.Context, customerID string) *apierror.APIError
+
+	// BatchGetCustomerProductLineAccessByIDs returns access records for the
+	// given customer_ids. Used by the api-gateway resourcekit resolver.
+	BatchGetCustomerProductLineAccessByIDs(ctx context.Context, customerIDs []string) ([]*CustomerProductLineAccess, *apierror.APIError)
 }
 
 type AddressSvc interface {
@@ -215,6 +251,11 @@ type AddressSvc interface {
 
 	// DeleteAddress deletes an address from an account.
 	DeleteAddress(ctx context.Context, params DeleteAddressParams) *apierror.APIError
+
+	// BatchGetAddressesByIDs returns addresses matching the input IDs that the
+	// caller's account is authorized to read. Used by the api-gateway
+	// resourcekit include resolver.
+	BatchGetAddressesByIDs(ctx context.Context, ids []string) ([]*Address, *apierror.APIError)
 }
 
 type AddressValidationSvc interface {
@@ -234,6 +275,10 @@ type AccountStatusSvc interface {
 
 	// GetAccountStatus returns a single account status by ID or code.
 	GetAccountStatus(ctx context.Context, identifier string) (*AccountStatus, *apierror.APIError)
+
+	// BatchGetAccountStatusesByIDs returns account statuses by ID for the
+	// api-gateway include resolver.
+	BatchGetAccountStatusesByIDs(ctx context.Context, ids []string) ([]*AccountStatus, *apierror.APIError)
 }
 
 type PrioritySvc interface {
@@ -242,6 +287,10 @@ type PrioritySvc interface {
 
 	// GetPriority returns a single priority by ID or code.
 	GetPriority(ctx context.Context, identifier string) (*Priority, *apierror.APIError)
+
+	// BatchGetPrioritiesByIDs returns priorities by ID for the api-gateway
+	// include resolver. Priorities are system-wide, no per-caller scoping.
+	BatchGetPrioritiesByIDs(ctx context.Context, ids []string) ([]*Priority, *apierror.APIError)
 }
 
 type AccountUserSvc interface {
@@ -262,6 +311,9 @@ type AccountUserSvc interface {
 
 	// UpdateAccountUserPassword updates the password for a scanner-role account user.
 	UpdateAccountUserPassword(ctx context.Context, accountUserID, requesterPassword, newPassword string) *apierror.APIError
+
+	// BatchGetAccountUsersByIDs returns account users matching the given IDs.
+	BatchGetAccountUsersByIDs(ctx context.Context, ids []string) ([]*AccountUserDetail, *apierror.APIError)
 }
 
 type SalesTargetSvc interface {
@@ -278,6 +330,9 @@ type SalesTargetSvc interface {
 type AdjustmentTypeSvc interface {
 	// ListAdjustmentTypes returns a paginated list of adjustment types.
 	ListAdjustmentTypes(ctx context.Context, params ListAdjustmentTypesParams) (*ListAdjustmentTypesResult, *apierror.APIError)
+	// BatchGetAdjustmentTypesByIDs returns adjustment types by ID for the
+	// api-gateway include resolver.
+	BatchGetAdjustmentTypesByIDs(ctx context.Context, ids []string) ([]*AdjustmentType, *apierror.APIError)
 }
 
 type AccountPriceSvc interface {
@@ -318,6 +373,11 @@ type AccountIntegrationSvc interface {
 
 	// HasStripeIntegration returns whether the account has a Stripe integration.
 	HasStripeIntegration(ctx context.Context) (bool, *apierror.APIError)
+
+	// BatchGetAccountIntegrationsByIDs returns account integrations matching
+	// the input IDs that the caller's account is authorized to read. Used by
+	// the api-gateway resourcekit include resolver.
+	BatchGetAccountIntegrationsByIDs(ctx context.Context, ids []string) ([]*AccountIntegration, *apierror.APIError)
 }
 
 type PropertySvc interface {
@@ -335,6 +395,10 @@ type PropertySvc interface {
 
 	// DeleteProperty deletes a property and cascades to its attributes.
 	DeleteProperty(ctx context.Context, propertyID string) *apierror.APIError
+
+	// BatchGetPropertiesByIDs returns properties matching the input IDs that
+	// belong to the caller's account. Always populates attributes.
+	BatchGetPropertiesByIDs(ctx context.Context, ids []string) ([]*Property, *apierror.APIError)
 }
 
 type AttributeSvc interface {
@@ -343,6 +407,10 @@ type AttributeSvc interface {
 
 	// GetAttribute returns a single attribute by ID within a property.
 	GetAttribute(ctx context.Context, propertyID, attributeID string) (*Attribute, *apierror.APIError)
+
+	// BatchGetAttributesByIDs returns attributes matching the input IDs that
+	// belong to the caller's account.
+	BatchGetAttributesByIDs(ctx context.Context, ids []string) ([]*Attribute, *apierror.APIError)
 
 	// CreateAttribute creates a new attribute under a property.
 	CreateAttribute(ctx context.Context, params CreateAttributeParams) (*Attribute, *apierror.APIError)
@@ -360,6 +428,17 @@ type CarrierSvc interface {
 
 	// GetCarrier returns a single carrier by ID.
 	GetCarrier(ctx context.Context, params GetCarrierParams) (*Carrier, *apierror.APIError)
+
+	// BatchGetCarriersByIDs returns carriers by ID for the api-gateway include
+	// resolver. Authorization matches GetCarrier (caller's own account + system
+	// carriers). When serviceLevelsLimit > 0, each returned carrier carries a
+	// preview of up to N service_level IDs plus a has_more flag.
+	BatchGetCarriersByIDs(ctx context.Context, ids []string, serviceLevelsLimit int32) ([]*Carrier, *apierror.APIError)
+
+	// BatchGetServiceLevelsByIDs returns service levels by ID for the
+	// api-gateway include resolver. Authorization follows the parent carrier's
+	// account scope.
+	BatchGetServiceLevelsByIDs(ctx context.Context, ids []string) ([]*ServiceLevel, *apierror.APIError)
 
 	// CreateCarrier creates a new carrier, optionally registering with Shippo.
 	CreateCarrier(ctx context.Context, params CreateCarrierParams) (*Carrier, *apierror.APIError)
@@ -425,6 +504,9 @@ type ProductSvc interface {
 
 	// ValidateProducts validates a map of SKUs and returns matching products.
 	ValidateProducts(ctx context.Context, params ValidateProductsParams) (*ValidateProductsResult, *apierror.APIError)
+
+	// BatchGetProductsByIDs returns products by their IDs for include resolution.
+	BatchGetProductsByIDs(ctx context.Context, ids []string) ([]*ProductFull, *apierror.APIError)
 }
 
 type ItemSvc interface {
@@ -468,6 +550,10 @@ type ItemSvc interface {
 	// BulkReconcileItems reconciles inventory for multiple items by SKU.
 	BulkReconcileItems(ctx context.Context, params BulkReconcileItemsParams) (*BulkReconcileItemsResult, *apierror.APIError)
 
+	// BatchGetItemsByIDs returns items by ID for the api-gateway include resolver.
+	// Always populates rates and attributes.
+	BatchGetItemsByIDs(ctx context.Context, ids []string) ([]*Item, *apierror.APIError)
+
 	// ListInventories returns all items with their on-hand inventory quantities.
 	ListInventories(ctx context.Context, params ListInventoriesParams) (*ListInventoriesResult, *apierror.APIError)
 }
@@ -487,8 +573,10 @@ type AccountSvc interface {
 	// GetRoleInfo returns a role's name and type code.
 	GetRoleInfo(ctx context.Context, roleID string) (*RoleInfo, *apierror.APIError)
 
-	// GetAccountRelationByUserID returns the relationship between the owner account and the account implied by the user.
-	GetAccountRelationByUserID(ctx context.Context, ownerAccountID, userID string) (*AccountRelation, *apierror.APIError)
+	// GetAccountRelationByUserID returns the relationship between the target account and the account implied by the user.
+	// actorAccountID is required for owner-side matches (the relation's owner_account_id must equal it);
+	// pass "" to skip the owner-side fallback entirely.
+	GetAccountRelationByUserID(ctx context.Context, targetAccountID, actorAccountID, userID string) (*AccountRelation, *apierror.APIError)
 
 	// GetAccountRelationByAPIKeyID returns the relationship between the owner account and the account implied by the API key.
 	GetAccountRelationByAPIKeyID(ctx context.Context, ownerAccountID string, apiKeyID int64) (*AccountRelation, *apierror.APIError)
@@ -525,6 +613,11 @@ type AccountSvc interface {
 
 	// GetAccount returns the full account with optional branding and portal sub-resources.
 	GetAccount(ctx context.Context, accountID string) (*Account, *apierror.APIError)
+
+	// BatchGetAccountsByIDs returns accounts matching the given IDs that the
+	// caller is authorized to read. Used by the api-gateway include resolver
+	// for owner.account expansion across many parent resources.
+	BatchGetAccountsByIDs(ctx context.Context, ids []string) ([]*Account, *apierror.APIError)
 
 	// GetAccountBySlug returns a minimal public account by portal slug (unauthenticated).
 	GetAccountBySlug(ctx context.Context, slug string) (*PublicAccountBySlug, *apierror.APIError)
@@ -623,6 +716,10 @@ type ChildAccountSvc interface {
 
 	// RemoveChildAccount removes a child account relationship from the target account.
 	RemoveChildAccount(ctx context.Context, childAccountID string) *apierror.APIError
+
+	// BatchGetChildAccountsByIDs returns child account relations matching the
+	// input relation IDs. Used by the api-gateway resourcekit include resolver.
+	BatchGetChildAccountsByIDs(ctx context.Context, relationIDs []string) ([]*ChildAccount, *apierror.APIError)
 }
 
 type ItemCategorySvc interface {
@@ -649,6 +746,10 @@ type ItemCategorySvc interface {
 
 	// ChangeItemCategoryUnitGroup changes the unit group of an item category.
 	ChangeItemCategoryUnitGroup(ctx context.Context, params ChangeItemCategoryUnitGroupParams) *apierror.APIError
+
+	// BatchGetItemCategoriesByIDs returns item categories by ID for the api-gateway
+	// include resolver. Always populates properties and unit group with full tree.
+	BatchGetItemCategoriesByIDs(ctx context.Context, ids []string) ([]*ItemCategoryFull, *apierror.APIError)
 }
 
 type ProductLineSvc interface {
@@ -666,6 +767,9 @@ type ProductLineSvc interface {
 
 	// DeleteProductLine deletes a product line. Default product lines cannot be deleted.
 	DeleteProductLine(ctx context.Context, productLineID string) *apierror.APIError
+
+	// BatchGetProductLinesByIDs returns product lines by ID for the api-gateway include resolver.
+	BatchGetProductLinesByIDs(ctx context.Context, ids []string) ([]*ProductLineFull, *apierror.APIError)
 }
 
 type ConsumptionSvc interface {
@@ -748,6 +852,9 @@ type MachineSvc interface {
 
 	// DeleteMachine deletes a machine.
 	DeleteMachine(ctx context.Context, machineID string) *apierror.APIError
+
+	// BatchGetMachinesByIDs returns machines by their IDs for include resolution.
+	BatchGetMachinesByIDs(ctx context.Context, ids []string) ([]*Machine, *apierror.APIError)
 }
 
 type DepartmentSvc interface {
@@ -765,6 +872,9 @@ type DepartmentSvc interface {
 
 	// DeleteDepartment deletes a department.
 	DeleteDepartment(ctx context.Context, departmentID string) *apierror.APIError
+
+	// BatchGetDepartmentsByIDs returns departments matching the given IDs.
+	BatchGetDepartmentsByIDs(ctx context.Context, ids []string) ([]*Department, *apierror.APIError)
 }
 
 type DeliverySvc interface {
@@ -869,6 +979,10 @@ type SalesOrderStatusSvc interface {
 	// ListSalesOrderStatuses returns a paginated list of sales order statuses.
 	// These are global lookup values.
 	ListSalesOrderStatuses(ctx context.Context, params ListSalesOrderStatusesParams) (*ListSalesOrderStatusesResult, *apierror.APIError)
+
+	// BatchGetSalesOrderStatusesByIDs returns statuses by ID for the
+	// api-gateway include resolver.
+	BatchGetSalesOrderStatusesByIDs(ctx context.Context, ids []string) ([]*SalesOrderStatus, *apierror.APIError)
 }
 
 type OrderDiscountSvc interface {
@@ -890,6 +1004,11 @@ type OrderDiscountSvc interface {
 	// FindOrderDiscountByCode finds an order discount by its code.
 	// Supports both internal and customer actors.
 	FindOrderDiscountByCode(ctx context.Context, params FindOrderDiscountByCodeParams) (*OrderDiscount, *apierror.APIError)
+
+	// BatchGetOrderDiscountsByIDs returns order discounts matching the input IDs
+	// that the caller's account is authorized to read. Used by the api-gateway
+	// resourcekit include resolver.
+	BatchGetOrderDiscountsByIDs(ctx context.Context, ids []string) ([]*OrderDiscount, *apierror.APIError)
 }
 
 type VolumeDiscountSvc interface {
@@ -990,6 +1109,9 @@ type PartSvc interface {
 
 	// DeletePart soft-deletes a part by its item ID.
 	DeletePart(ctx context.Context, itemID string) (*Part, *apierror.APIError)
+
+	// BatchGetPartsByIDs returns parts by their IDs for include resolution.
+	BatchGetPartsByIDs(ctx context.Context, ids []string) ([]*Part, *apierror.APIError)
 }
 
 type MaterialSvc interface {
@@ -1010,6 +1132,9 @@ type MaterialSvc interface {
 
 	// DeleteMaterial soft-deletes a material by its item ID.
 	DeleteMaterial(ctx context.Context, itemID string) (*Material, *apierror.APIError)
+
+	// BatchGetMaterialsByIDs returns materials by their IDs for include resolution.
+	BatchGetMaterialsByIDs(ctx context.Context, ids []string) ([]*Material, *apierror.APIError)
 }
 
 type SupplierMaterialSvc interface {
@@ -1033,6 +1158,9 @@ type PermissionGroupSvc interface {
 	// ListPermissionGroups returns a paginated list of permission groups
 	// with their nested permissions. Permission groups are global (not account-scoped).
 	ListPermissionGroups(ctx context.Context, params ListPermissionGroupsParams) (*ListPermissionGroupsResult, *apierror.APIError)
+
+	// BatchGetPermissionGroupsByIDs returns permission groups by their IDs for include resolution.
+	BatchGetPermissionGroupsByIDs(ctx context.Context, ids []string) ([]*PermissionGroup, *apierror.APIError)
 }
 
 type PickSvc interface {
@@ -1113,6 +1241,10 @@ type ProductTypeSvc interface {
 
 	// DeleteProductType deletes a product type by ID.
 	DeleteProductType(ctx context.Context, id string) *apierror.APIError
+
+	// BatchGetProductTypesByIDs returns product types matching the input IDs.
+	// Used by the api-gateway resourcekit include resolver.
+	BatchGetProductTypesByIDs(ctx context.Context, ids []string) ([]*ProductType, *apierror.APIError)
 }
 
 type ProductionRunSvc interface {
@@ -1202,6 +1334,14 @@ type EDISvc interface {
 
 	// ResubmitInvoice resubmits an invoice via EDI.
 	ResubmitInvoice(ctx context.Context, invoiceID string) *apierror.APIError
+
+	// BatchGetDCLocationsByIDs returns DC locations matching the input IDs.
+	// Used by the api-gateway resourcekit include resolver.
+	BatchGetDCLocationsByIDs(ctx context.Context, ids []string) ([]*DCLocation, *apierror.APIError)
+
+	// BatchGetEDIRunsByIDs returns EDI runs matching the input IDs.
+	// Used by the api-gateway resourcekit include resolver.
+	BatchGetEDIRunsByIDs(ctx context.Context, ids []string) ([]*EDIRun, *apierror.APIError)
 }
 
 type RegistrationFlowSvc interface {
@@ -1217,6 +1357,7 @@ type RegistrationFlowSvc interface {
 type ScanningStationSvc interface {
 	ListScanningStations(ctx context.Context, params ListScanningStationsParams) (*ListScanningStationsResult, *apierror.APIError)
 	GetScanningStation(ctx context.Context, params GetScanningStationParams) (*ScanningStation, *apierror.APIError)
+	BatchGetScanningStationsByIDs(ctx context.Context, ids []string) ([]*ScanningStation, *apierror.APIError)
 	CreateScanningStation(ctx context.Context, params CreateScanningStationParams) (*ScanningStation, *apierror.APIError)
 	UpdateScanningStation(ctx context.Context, params UpdateScanningStationParams) (*ScanningStation, *apierror.APIError)
 	DeleteScanningStation(ctx context.Context, scanningStationID string) *apierror.APIError
@@ -1231,6 +1372,7 @@ type LocationSvc interface {
 	DeleteLocation(ctx context.Context, params DeleteLocationParams) *apierror.APIError
 	ListLocationTypes(ctx context.Context, params ListLocationTypesParams) (*ListLocationTypesResult, *apierror.APIError)
 	GetLocationType(ctx context.Context, params GetLocationTypeParams) (*LocationType, *apierror.APIError)
+	BatchGetLocationsByIDs(ctx context.Context, ids []string) ([]*Location, *apierror.APIError)
 }
 
 type SupplierSvc interface {
@@ -1248,6 +1390,10 @@ type SysPropertySvc interface {
 	GetSysPropertyValue(ctx context.Context, code string) (*SysPropertyValue, *apierror.APIError)
 	GetLatestSysPropertyValue(ctx context.Context, typeCode constants.SysPropertyTypeCode) (string, *apierror.APIError)
 	UpdateSysProperty(ctx context.Context, params UpdateSysPropertyParams) (*SysProperty, *apierror.APIError)
+
+	// BatchGetSysPropertiesByIDs returns sys properties matching the input IDs.
+	// Used by the api-gateway resourcekit include resolver.
+	BatchGetSysPropertiesByIDs(ctx context.Context, ids []string) ([]*SysProperty, *apierror.APIError)
 }
 
 type TenancySvc interface {
@@ -1263,6 +1409,7 @@ type TerritorySvc interface {
 	CreateTerritory(ctx context.Context, params CreateTerritoryParams) (*Territory, *apierror.APIError)
 	UpdateTerritory(ctx context.Context, params UpdateTerritoryParams) (*Territory, *apierror.APIError)
 	DeleteTerritory(ctx context.Context, params DeleteTerritoryParams) *apierror.APIError
+	BatchGetTerritoriesByIDs(ctx context.Context, ids []string) ([]*Territory, *apierror.APIError)
 }
 
 type ShippingCaseSvc interface {
@@ -1297,6 +1444,7 @@ type RoleSvc interface {
 	CreateRole(ctx context.Context, params CreateRoleParams) (*RoleWithPermissions, *apierror.APIError)
 	UpdateRole(ctx context.Context, params UpdateRoleParams) (*RoleWithPermissions, *apierror.APIError)
 	DeleteRole(ctx context.Context, roleID string) *apierror.APIError
+	BatchGetRolesByIDs(ctx context.Context, ids []string) ([]*RoleWithPermissions, *apierror.APIError)
 }
 
 type StripeWebhookSvc interface {

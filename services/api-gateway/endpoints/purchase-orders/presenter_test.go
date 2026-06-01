@@ -32,7 +32,7 @@ func TestPurchaseOrderSummaryPresenter(t *testing.T) {
 		UpdatedAt:            now,
 	}
 
-	result := PurchaseOrderSummaryPresenter(info)
+	result := purchaseOrderSummaryFromProto(info)
 	resourcetest.ValidateExpandableStubs(t, "PurchaseOrderSummary", result)
 }
 
@@ -90,6 +90,6 @@ func TestPurchaseOrderDetailPresenter(t *testing.T) {
 		UpdatedAt:                   now,
 	}
 
-	result := PurchaseOrderDetailPresenter(info)
+	result := purchaseOrderDetailFromProto(info)
 	resourcetest.ValidateExpandableStubs(t, "PurchaseOrderDetail", result)
 }

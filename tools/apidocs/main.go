@@ -59,4 +59,5 @@ func main() {
 
 	generate(groups, "specs/public_openapi_spec.json", true, transforms, ver)
 	generate(groups, "specs/internal_openapi_spec.json", false, transforms, ver)
+	generateStainlessConfigs(groups, ver)
 }

@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -680,6 +681,96 @@ func (q *Queries) GetAccountUserDetailByAccountAndID(ctx context.Context, arg Ge
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getAccountUserDetailsByIDs = `-- name: GetAccountUserDetailsByIDs :many
+SELECT
+    au.id,
+    au.user_id,
+    u.name,
+    u.email,
+    u.username,
+    u.image_url,
+    u.email_verified,
+    au.role_id,
+    au.department_id,
+    au.status_code,
+    au.last_used_at,
+    au.created_at,
+    au.updated_at
+FROM account_user au
+JOIN ` + "`" + `user` + "`" + ` u ON au.user_id = u.id
+WHERE au.id IN (/*SLICE:ids*/?)
+AND au.account_id = ?
+`
+
+type GetAccountUserDetailsByIDsParams struct {
+	Ids       []string
+	AccountID string
+}
+
+type GetAccountUserDetailsByIDsRow struct {
+	ID            string
+	UserID        string
+	Name          sql.NullString
+	Email         sql.NullString
+	Username      sql.NullString
+	ImageUrl      sql.NullString
+	EmailVerified sql.NullTime
+	RoleID        sql.NullString
+	DepartmentID  sql.NullString
+	StatusCode    string
+	LastUsedAt    sql.NullTime
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+func (q *Queries) GetAccountUserDetailsByIDs(ctx context.Context, arg GetAccountUserDetailsByIDsParams) ([]GetAccountUserDetailsByIDsRow, error) {
+	query := getAccountUserDetailsByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAccountUserDetailsByIDsRow
+	for rows.Next() {
+		var i GetAccountUserDetailsByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Name,
+			&i.Email,
+			&i.Username,
+			&i.ImageUrl,
+			&i.EmailVerified,
+			&i.RoleID,
+			&i.DepartmentID,
+			&i.StatusCode,
+			&i.LastUsedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getAdminRoleID = `-- name: GetAdminRoleID :one

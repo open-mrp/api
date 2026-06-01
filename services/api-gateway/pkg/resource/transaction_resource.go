@@ -8,9 +8,9 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleTransactionDetailID = "tx_01jm4r6700f8nwq3v5hx2d9ktp"
-const SampleTransactionMethodID = "txmd_01jm4r6700f8nwq3v5hx2d9ktp"
-const SampleTransactionTypeID = "txtp_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleTransactionDetailID = "tx_01fc4d4f2b2ee1fa6b6d87257a"
+const SampleTransactionMethodID = "txmd_011b68c574f7c84504fc256ca7"
+const SampleTransactionTypeID = "txtp_01552974c3952ed8178ad671b8"
 
 // Transaction type resource.
 type TransactionType struct {

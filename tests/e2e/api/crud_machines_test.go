@@ -19,7 +19,7 @@ func TestMachines_CRUD(t *testing.T) {
 	serialNumber := uniqueName("SN")
 
 	// CREATE
-	createResp, err := apiClient.PostFull(machinesPath, map[string]any{
+	createResp, err := apiClient.PostFull(machinesPath+"?include=department", map[string]any{
 		"name":          name,
 		"serial_number": serialNumber,
 		"notes":         "test machine notes",
@@ -85,7 +85,7 @@ func TestMachines_CreateAndUpdateAllFields(t *testing.T) {
 	// ── CREATE with all fields ──
 	name := uniqueName("e2e-mc-allf")
 	serial := uniqueName("SN-ALLF")
-	createResp, err := apiClient.PostFull(machinesPath, map[string]any{
+	createResp, err := apiClient.PostFull(machinesPath+"?include=department", map[string]any{
 		"name":          name,
 		"serial_number": serial,
 		"notes":         "Create notes",
@@ -115,7 +115,7 @@ func TestMachines_CreateAndUpdateAllFields(t *testing.T) {
 	// ── UPDATE with different values ──
 	updatedName := uniqueName("e2e-mc-allf-u")
 	updatedSerial := uniqueName("SN-ALLF-U")
-	patchStatus, patchBody, err := apiClient.Patch(machinesPath+"/"+id, map[string]any{
+	patchStatus, patchBody, err := apiClient.Patch(machinesPath+"/"+id+"?include=department", map[string]any{
 		"name":          updatedName,
 		"serial_number": updatedSerial,
 		"notes":         "Updated notes",
@@ -154,13 +154,13 @@ func TestMachines_ListPagination(t *testing.T) {
 	t.Parallel()
 	page1, _, err := apiClient.GetList(machinesPath, url.Values{"limit": {"1"}})
 	require.NoError(t, err)
-	require.Len(t, page1.Data, 1)
+	requirePageLen(t, page1.Data, 1)
 	require.True(t, page1.PageInfo.HasNextPage, "should have a next page")
 	require.NotNil(t, page1.PageInfo.NextPageURL)
 
 	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
 	require.NoError(t, err)
-	require.Len(t, page2.Data, 1)
+	requirePageLen(t, page2.Data, 1)
 
 	id1 := DataItemField(page1.Data[0], "id")
 	id2 := DataItemField(page2.Data[0], "id")
@@ -273,7 +273,7 @@ func TestMachines_OmittedFields(t *testing.T) {
 	t.Run("CreateWithOnlyRequiredFields", func(t *testing.T) {
 		name := uniqueName("e2e-mc-omit")
 		serial := uniqueName("SN-OMIT")
-		status, body, err := apiClient.Post(machinesPath, map[string]any{
+		status, body, err := apiClient.Post(machinesPath+"?include=department", map[string]any{
 			"name":          name,
 			"serial_number": serial,
 			"department_id": SeedDepartmentID,
@@ -301,7 +301,7 @@ func TestMachines_OmittedFields(t *testing.T) {
 	t.Run("UpdatePreservesOmittedFields", func(t *testing.T) {
 		name := uniqueName("e2e-mc-pres")
 		serial := uniqueName("SN-PRES")
-		createStatus, createBody, err := apiClient.Post(machinesPath, map[string]any{
+		createStatus, createBody, err := apiClient.Post(machinesPath+"?include=department", map[string]any{
 			"name":          name,
 			"serial_number": serial,
 			"notes":         "Original notes",
@@ -317,7 +317,7 @@ func TestMachines_OmittedFields(t *testing.T) {
 		origCreatedAt := jsonField(created, "created_at")
 
 		// Update ONLY notes
-		patchStatus, patchBody, err := apiClient.Patch(machinesPath+"/"+id, map[string]any{
+		patchStatus, patchBody, err := apiClient.Patch(machinesPath+"/"+id+"?include=department", map[string]any{
 			"notes": "Changed notes",
 		}, newIdempotencyKey())
 		require.NoError(t, err)

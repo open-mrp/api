@@ -33,6 +33,7 @@ func (e *ListAgentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAgentsR
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeAgentDefinition,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAgentsRequest) (*apiresource.List[apiresource.AgentDefinition], *apierror.APIError) {
 			return svc.(AgentSvc).ListAgents
 		},

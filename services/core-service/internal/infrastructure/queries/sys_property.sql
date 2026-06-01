@@ -62,6 +62,23 @@ JOIN sys_property_type spt ON sp.sys_property_type_code = spt.code
 WHERE sp.id = sqlc.arg('id')
 AND sp.account_id = sqlc.arg('account_id');
 
+-- name: GetSysPropertiesByIDs :many
+-- Returns sys properties matching the given IDs that belong to the caller's
+-- account. Used by the api-gateway resourcekit resolver.
+SELECT
+    sp.id,
+    sp.sys_property_type_code AS type_code,
+    sp.value,
+    sp.account_id,
+    sp.created_at,
+    sp.updated_at,
+    spt.id AS type_id,
+    spt.name AS type_name
+FROM sys_property sp
+JOIN sys_property_type spt ON sp.sys_property_type_code = spt.code
+WHERE sp.id IN (sqlc.slice('ids'))
+AND sp.account_id = sqlc.arg('account_id');
+
 -- name: GetSysPropertyByTypeCode :one
 SELECT
     sp.id,

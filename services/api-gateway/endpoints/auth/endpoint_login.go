@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -38,6 +39,7 @@ func (e *LoginEndpoint) Materialize() *apiendpoint.APIEndpoint[*LoginRequest, *a
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		ObjectType:        constants.ObjectTypeUser,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *LoginRequest) (*apiresource.User, *apierror.APIError) {
 			return svc.(AuthSvc).Login
 		},

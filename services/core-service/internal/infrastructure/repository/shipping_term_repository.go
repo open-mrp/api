@@ -336,6 +336,90 @@ func mapGetShippingTermRow(row sqlc.GetShippingTermRow) *domain.ShippingTerm {
 	}
 }
 
+func flatRateColsFromByIDsRow(row sqlc.GetShippingTermsByIDsRow) qtyJoinCols {
+	return qtyJoinCols{
+		QtyID:                 row.FlatRateQuantityID,
+		Value:                 row.FlatRateValue,
+		UnitID:                row.FlatRateUnitID,
+		QtyCreatedAt:          row.FlatRateQuantityCreatedAt,
+		QtyUpdatedAt:          row.FlatRateQuantityUpdatedAt,
+		UnitName:              row.FlatRateUnitName,
+		UnitAbbreviation:      row.FlatRateUnitAbbreviation,
+		UnitType:              row.FlatRateUnitType,
+		UnitRatioNumerator:    row.FlatRateUnitRatioNumerator,
+		UnitRatioDenominator:  row.FlatRateUnitRatioDenominator,
+		UnitOffsetNumerator:   row.FlatRateUnitOffsetNumerator,
+		UnitOffsetDenominator: row.FlatRateUnitOffsetDenominator,
+		UnitIsBaseUnit:        row.FlatRateUnitIsBaseUnit,
+		UnitAccountID:         row.FlatRateUnitAccountID,
+		UnitCreatedAt:         row.FlatRateUnitCreatedAt,
+		UnitUpdatedAt:         row.FlatRateUnitUpdatedAt,
+	}
+}
+
+func minimumOrderColsFromByIDsRow(row sqlc.GetShippingTermsByIDsRow) qtyJoinCols {
+	return qtyJoinCols{
+		QtyID:                 row.MinimumOrderQuantityID,
+		Value:                 row.MinimumOrderValue,
+		UnitID:                row.MinimumOrderUnitID,
+		QtyCreatedAt:          row.MinimumOrderQuantityCreatedAt,
+		QtyUpdatedAt:          row.MinimumOrderQuantityUpdatedAt,
+		UnitName:              row.MinimumOrderUnitName,
+		UnitAbbreviation:      row.MinimumOrderUnitAbbreviation,
+		UnitType:              row.MinimumOrderUnitType,
+		UnitRatioNumerator:    row.MinimumOrderUnitRatioNumerator,
+		UnitRatioDenominator:  row.MinimumOrderUnitRatioDenominator,
+		UnitOffsetNumerator:   row.MinimumOrderUnitOffsetNumerator,
+		UnitOffsetDenominator: row.MinimumOrderUnitOffsetDenominator,
+		UnitIsBaseUnit:        row.MinimumOrderUnitIsBaseUnit,
+		UnitAccountID:         row.MinimumOrderUnitAccountID,
+		UnitCreatedAt:         row.MinimumOrderUnitCreatedAt,
+		UnitUpdatedAt:         row.MinimumOrderUnitUpdatedAt,
+	}
+}
+
+func mapByIDsShippingTermRow(row sqlc.GetShippingTermsByIDsRow) *domain.ShippingTerm {
+	var accountID *string
+	if row.AccountID.Valid {
+		accountID = &row.AccountID.String
+	}
+	return &domain.ShippingTerm{
+		ID:                row.ID,
+		Name:              row.Name,
+		Type:              shippingTermTypeFromBooleans(row.IsFreightExempt, row.IsCarrierRate),
+		FlatRate:          mapShippingTermQuantityFromCols(flatRateColsFromByIDsRow(row)),
+		MinimumOrderValue: mapShippingTermQuantityFromCols(minimumOrderColsFromByIDsRow(row)),
+		AccountID:         accountID,
+		CreatedAt:         row.CreatedAt,
+		UpdatedAt:         row.UpdatedAt,
+	}
+}
+
+func (r *shippingTermRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.ShippingTerm, *apierror.APIError) {
+	ctx, span := shippingTermRepoTracer.Start(ctx, "repository.shipping_term.get_by_ids")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := r.queries.GetShippingTermsByIDs(ctx, sqlc.GetShippingTermsByIDsParams{
+		Ids:       ids,
+		AccountID: gosql.NullString{String: accountID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make([]*domain.ShippingTerm, len(rows))
+	for i, row := range rows {
+		st := mapByIDsShippingTermRow(row)
+		if apiErr := r.loadFreeShippingRules(ctx, st); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		out[i] = st
+	}
+	return out, nil
+}
+
 func (r *shippingTermRepoImpl) loadFreeShippingRules(ctx context.Context, st *domain.ShippingTerm) *apierror.APIError {
 	opts, err := r.queries.ListFreeShippingCarrierOptionsByShippingTermID(ctx, st.ID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {

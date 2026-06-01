@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleRateID = "ra_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleRateID = "ra_015aa0a9522cf222024fd21d1a"
 const SampleRateValue = "25.500000000000000000000000000000"
 
 // Rate resource.

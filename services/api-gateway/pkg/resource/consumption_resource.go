@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleConsumptionID = "cp_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleConsumptionID = "cp_0152c5d4330f178ebe1158f910"
 
 // Material consumed by a production step.
 type Consumption struct {

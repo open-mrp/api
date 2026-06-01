@@ -43,6 +43,7 @@ func (e *CreateItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeItemCategory,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError) {
 			return svc.(ItemCategorySvc).CreateItemCategory
 		},

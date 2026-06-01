@@ -54,6 +54,7 @@ func (e *CreateConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeConsumption,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateConsumptionRequest) (*apiresource.Consumption, *apierror.APIError) {
 			return svc.(ConsumptionSvc).CreateConsumption
 		},

@@ -26,6 +26,12 @@ message ListAdjustmentTypesResponse {
   repeated AdjustmentTypeInfo adjustment_types = 1;
   PageInfo page_info = 2;
 }
+message BatchGetAdjustmentTypesByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetAdjustmentTypesByIDsResponse {
+  repeated AdjustmentTypeInfo adjustment_types = 1;
+}
 message AccountInfo {
   string id = 1;
   string name = 2;
@@ -196,6 +202,30 @@ message DeleteAttributeRequest {
   string property_id = 1;
   string id = 2;
 }
+message BatchGetAttributesByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetAttributesByIDsResponse {
+  repeated AttributeInfo attributes = 1;
+}
+message BatchGetPropertiesByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetPropertiesByIDsResponse {
+  repeated PropertyInfo properties = 1;
+}
+message BatchGetItemCategoriesByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetItemCategoriesByIDsResponse {
+  repeated ItemCategoryInfo item_categories = 1;
+}
+message BatchGetItemsByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetItemsByIDsResponse {
+  repeated ItemInfo items = 1;
+}
 message CarrierInfo {
   string id = 1;
   string name = 2;
@@ -210,6 +240,15 @@ message CarrierInfo {
   repeated ServiceLevelInfo service_levels = 11;
   // The account ID that owns this carrier. Null for system carriers.
   optional string account_id = 12;
+  // Service-level IDs preview (capped by BatchGetCarriersByIDsRequest.service_levels_limit).
+  // Used by the api-gateway include resolver to fetch full service levels via
+  // BatchGetServiceLevelsByIDs. Empty when service_levels_limit is 0 or
+  // the carrier has no service levels.
+  repeated string service_level_ids_preview = 13;
+  // True when the carrier has more service levels than service_level_ids_preview
+  // contains. The api-gateway uses this to populate the include's next_page_url
+  // pointing at GET /v1/operations/carriers/{id}/service-levels.
+  bool service_levels_has_more = 14;
 }
 message ServiceLevelInfo {
   string id = 1;
@@ -240,6 +279,37 @@ message GetCarrierRequest {
 }
 message GetCarrierResponse {
   CarrierInfo carrier = 1;
+}
+// BatchGetCarriersByIDs returns the carriers matching the given IDs that the
+// caller's account is authorized to read (their own account plus system
+// carriers). Missing IDs are simply absent from the response. Used by the
+// api-gateway resourcekit include resolver — never expose this RPC's surface
+// directly to clients.
+message BatchGetCarriersByIDsRequest {
+  repeated string ids = 1;
+  // Cap on service_level_ids_preview returned per carrier. 0 means "do not
+  // populate previews"; clients that need them must pass a positive value.
+  int32 service_levels_limit = 2;
+}
+message BatchGetCarriersByIDsResponse {
+  repeated CarrierInfo carriers = 1;
+}
+// BatchGetServiceLevelsByIDs returns service levels matching the given IDs
+// that the caller's account is authorized to read. Authorization follows the
+// parent carrier (the SL inherits its carrier's account scoping).
+message BatchGetServiceLevelsByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetServiceLevelsByIDsResponse {
+  repeated ServiceLevelInfo service_levels = 1;
+}
+// BatchGetAccountsByIDs returns accounts matching the given IDs that the
+// caller has an affiliation with (per existing GetAccount authorization).
+message BatchGetAccountsByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetAccountsByIDsResponse {
+  repeated AccountInfo accounts = 1;
 }
 message CreateCarrierRequest {
   string name = 1;

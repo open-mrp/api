@@ -407,7 +407,7 @@ func TestValidateCredential_UserToken_UserAccountAccessNotFound(t *testing.T) {
 	}, nil)
 	coreClient.EXPECT().GetUserAccountAccess(gomock.Any(), userID, targetAccountID).
 		Return(nil, false, nil)
-	coreClient.EXPECT().GetAccountRelationByUserID(gomock.Any(), targetAccountID, userID).
+	coreClient.EXPECT().GetAccountRelationByUserID(gomock.Any(), targetAccountID, "", userID).
 		Return(nil, false, nil)
 
 	med := &userMedImpl{
@@ -481,5 +481,149 @@ func TestValidateCredential_UserToken_ActorAccountHeader_RequiresAccountUser(t *
 	}
 	if err.PublicMessage != ErrActorAccountRequiresMember {
 		t.Fatalf("expected actor account requires member message, got %s", err.PublicMessage)
+	}
+}
+
+// TestValidateCredential_UserToken_OwnerSideRelationConstrainedToActorAccount confirms that the
+// owner-side relation lookup is bound to the validated actor account. A user who belongs to
+// account A (which owns a relation to C) should be able to act on target C *only* when their
+// supplied actor account is A. The mediator must forward the actor account to core-service so
+// the relation can be matched against owner_account_id = actor_account_id.
+func TestValidateCredential_UserToken_OwnerSideRelationConstrainedToActorAccount(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repoFactory := factorymock.NewMockRepoFactory(ctrl)
+	userRepo := repositorymock.NewMockUserRepo(ctrl)
+	repoFactory.EXPECT().NewUserRepo().Return(userRepo)
+
+	apiKeyMed := mediatormock.NewMockAPIKeyMed(ctrl)
+	coreClient := clientmock.NewMockAuthCoreClient(ctrl)
+
+	userID := "user-1"
+	actorAccountID := "acct-A"
+	targetAccountID := "acct-C"
+	name := "Merchant User"
+	userModel := &types.User{ID: userID, Name: &name}
+
+	validToken, encErr := token.EncodeJWT(context.Background(), testutil.JWTSecret, userID, time.Hour, token.JWTTypeAccess)
+	if encErr != nil {
+		t.Fatalf("failed to encode test token: %v", encErr)
+	}
+
+	roleType := "manager"
+	roleID := "role-99"
+	userRepo.EXPECT().Find(gomock.Any(), userID).Return(userModel, nil)
+	coreClient.EXPECT().GetAccountContext(gomock.Any(), actorAccountID).Return(&domain.AccountContext{
+		AccountID:   actorAccountID,
+		AccountMode: constants.AccountModeProduction,
+	}, nil)
+	coreClient.EXPECT().GetUserAccountAccess(gomock.Any(), userID, actorAccountID).Return(&domain.AccountUserAccess{
+		AccountUserID: "acu-1",
+		AccountID:     actorAccountID,
+		RoleID:        &roleID,
+		RoleType:      &roleType,
+		Permissions:   map[string]bool{"product_line:read": true},
+	}, true, nil)
+	coreClient.EXPECT().MarkAccountUserUsed(gomock.Any(), "acu-1").Return(nil).AnyTimes()
+	// The owner-side lookup MUST be called with actorAccountID — passing anything else
+	// would let a user keep account B's permissions while targeting C via an A→C relation.
+	coreClient.EXPECT().GetAccountRelationByUserID(gomock.Any(), targetAccountID, actorAccountID, userID).Return(&domain.AuthAccountRelation{
+		ID:                      "rel-A-C",
+		CounterpartyAccountID:   targetAccountID,
+		AccountRelationRoleCode: types.IdentityRelationTypeCustomer,
+		IsOwnerSide:             true,
+	}, true, nil)
+
+	med := &userMedImpl{
+		repos:      repoFactory,
+		apiKeyMed:  apiKeyMed,
+		coreClient: coreClient,
+		jwtSecret:  testutil.JWTSecret,
+	}
+
+	identity, err := med.ValidateCredential(context.Background(), validToken, &targetAccountID, &actorAccountID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if identity == nil {
+		t.Fatal("expected identity, got nil")
+	}
+	if identity.Target == nil || identity.Target.AccountID != targetAccountID {
+		t.Fatalf("expected target account %s, got %+v", targetAccountID, identity.Target)
+	}
+	if identity.Target.RelationType == nil || *identity.Target.RelationType != types.IdentityRelationTypeCustomer {
+		t.Fatalf("expected target relation type customer, got %+v", identity.Target.RelationType)
+	}
+	// Actor permissions must remain intact — owner-side keeps the merchant's own role/perms
+	// because the SQL constraint guaranteed the relation's owner == actor account.
+	if identity.Actor == nil || identity.Actor.AccountID == nil || *identity.Actor.AccountID != actorAccountID {
+		t.Fatalf("expected actor account %s, got %+v", actorAccountID, identity.Actor)
+	}
+	if !identity.Actor.Permissions["product_line:read"] {
+		t.Fatalf("expected actor permissions to be preserved on owner-side, got %+v", identity.Actor.Permissions)
+	}
+}
+
+// TestValidateCredential_UserToken_NoActorAccountRejectsOwnerSide guards the no-Augno-Actor-Account
+// path. Without a validated actor account, an owner-side relation has no actor permissions to bind
+// to and the related-user identity builder would incorrectly attribute Actor.AccountID to the
+// counterparty — so we reject the request. The mediator passes "" as actorAccountID, which causes
+// core-service to skip the owner-side fallback; this test additionally asserts the defense-in-depth
+// rejection if a relation ever leaks through.
+func TestValidateCredential_UserToken_NoActorAccountRejectsOwnerSide(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repoFactory := factorymock.NewMockRepoFactory(ctrl)
+	userRepo := repositorymock.NewMockUserRepo(ctrl)
+	repoFactory.EXPECT().NewUserRepo().Return(userRepo)
+
+	apiKeyMed := mediatormock.NewMockAPIKeyMed(ctrl)
+	coreClient := clientmock.NewMockAuthCoreClient(ctrl)
+
+	userID := "user-1"
+	targetAccountID := "acct-C"
+	name := "Merchant User"
+	userModel := &types.User{ID: userID, Name: &name}
+
+	validToken, encErr := token.EncodeJWT(context.Background(), testutil.JWTSecret, userID, time.Hour, token.JWTTypeAccess)
+	if encErr != nil {
+		t.Fatalf("failed to encode test token: %v", encErr)
+	}
+
+	userRepo.EXPECT().Find(gomock.Any(), userID).Return(userModel, nil)
+	coreClient.EXPECT().GetAccountContext(gomock.Any(), targetAccountID).Return(&domain.AccountContext{
+		AccountID:   targetAccountID,
+		AccountMode: constants.AccountModeProduction,
+	}, nil)
+	coreClient.EXPECT().GetUserAccountAccess(gomock.Any(), userID, targetAccountID).Return(nil, false, nil)
+	// Mediator must pass "" for actor when no Augno-Actor-Account header is present.
+	// Simulate the defense-in-depth path: core-service returns an owner-side relation anyway.
+	coreClient.EXPECT().GetAccountRelationByUserID(gomock.Any(), targetAccountID, "", userID).Return(&domain.AuthAccountRelation{
+		ID:                      "rel-A-C",
+		CounterpartyAccountID:   targetAccountID,
+		AccountRelationRoleCode: types.IdentityRelationTypeCustomer,
+		IsOwnerSide:             true,
+	}, true, nil)
+
+	med := &userMedImpl{
+		repos:      repoFactory,
+		apiKeyMed:  apiKeyMed,
+		coreClient: coreClient,
+		jwtSecret:  testutil.JWTSecret,
+	}
+
+	identity, err := med.ValidateCredential(context.Background(), validToken, &targetAccountID, nil)
+	if err == nil {
+		t.Fatal("expected error for owner-side relation without actor account, got nil")
+	}
+	if identity != nil {
+		t.Fatalf("expected nil identity on error, got %+v", identity)
+	}
+	if err.Code != apierror.ErrorCodeInsufficientPerms {
+		t.Fatalf("expected insufficient_permissions error code, got %s", err.Code)
 	}
 }

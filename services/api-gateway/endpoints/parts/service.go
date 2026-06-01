@@ -8,9 +8,9 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/export"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	httptransport "github.com/augno/api/services/api-gateway/internal/http"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/patch"
 	pb "github.com/augno/api/shared/proto/core"
@@ -73,7 +73,6 @@ func (m *partSvcImpl) ListParts(ctx context.Context, req *ListPartsRequest) (*ap
 		Query:        req.Query,
 		CategoryIds:  req.CategoryIDs,
 		AttributeIds: req.AttributeIDs,
-		Includes:     appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	if req.StartDate != nil {
@@ -87,31 +86,29 @@ func (m *partSvcImpl) ListParts(ctx context.Context, req *ListPartsRequest) (*ap
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListPartsResponse, error) {
 			return m.coreClient.ListParts(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
 
-	return PartListPresenter(ctx, resp), nil
+	ids := make([]string, len(resp.Parts))
+	for i, p := range resp.Parts {
+		ids[i] = p.Id
+	}
+	loaded, apiErr := resourceloaders.LoadParts(ctx, ids)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	parts := make([]apiresource.Part, 0, len(ids))
+	for _, id := range ids {
+		if v, ok := loaded[id]; ok {
+			parts = append(parts, *(v.(*apiresource.Part)))
+		}
+	}
+	return apiresource.NewList(parts, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
 
 func (m *partSvcImpl) GetPart(ctx context.Context, req *RetrievePartRequest) (*apiresource.Part, *apierror.APIError) {
-	pbReq := &pb.GetPartRequest{
-		Id:       req.ItemID,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
-	}
-
-	resp, apiErr := grpcutil.CallRPC(ctx, partSvcTracer, "service.parts.get", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetPartResponse, error) {
-			return m.coreClient.GetPart(ctx, pbReq, opts...)
-		})
-
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	result := PartPresenter(resp.Part)
-	return &result, nil
+	return loadPartByID(ctx, req.ItemID)
 }
 
 func (m *partSvcImpl) CreatePart(ctx context.Context, req *CreatePartRequest) (*apiresource.Part, *apierror.APIError) {
@@ -124,20 +121,17 @@ func (m *partSvcImpl) CreatePart(ctx context.Context, req *CreatePartRequest) (*
 		UnitCost:     rateInputToProto(req.UnitCost.Ptr()),
 		BurnRate:     rateInputToProto(req.BurnRate.Ptr()),
 		AttributeIds: req.AttributeIDs,
-		Includes:     appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, partSvcTracer, "service.parts.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreatePartResponse, error) {
 			return m.coreClient.CreatePart(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
 
-	result := PartPresenter(resp.Part)
-	return &result, nil
+	return loadPartByID(ctx, resp.Part.Id)
 }
 
 func (m *partSvcImpl) UpdatePart(ctx context.Context, req *UpdatePartRequest) (*apiresource.Part, *apierror.APIError) {
@@ -146,20 +140,17 @@ func (m *partSvcImpl) UpdatePart(ctx context.Context, req *UpdatePartRequest) (*
 		Sku:         req.SKU,
 		Description: patch.StringFieldPtrToProto(req.Description),
 		Notes:       patch.StringFieldPtrToProto(req.Notes),
-		Includes:    appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, partSvcTracer, "service.parts.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdatePartResponse, error) {
 			return m.coreClient.UpdatePart(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
 
-	result := PartPresenter(resp.Part)
-	return &result, nil
+	return loadPartByID(ctx, resp.Part.Id)
 }
 
 func (m *partSvcImpl) DeletePart(ctx context.Context, req *DeletePartRequest) (*apiresource.Part, *apierror.APIError) {
@@ -216,4 +207,16 @@ func (m *partSvcImpl) ExportParts(ctx context.Context, req *ExportPartsRequest) 
 		Filename:    "parts.xlsx",
 		Body:        body,
 	}, nil
+}
+
+func loadPartByID(ctx context.Context, id string) (*apiresource.Part, *apierror.APIError) {
+	loaded, apiErr := resourceloaders.LoadParts(ctx, []string{id})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	v, ok := loaded[id]
+	if !ok {
+		return nil, apierror.NewResourceNotFoundError("Part not found.")
+	}
+	return v.(*apiresource.Part), nil
 }

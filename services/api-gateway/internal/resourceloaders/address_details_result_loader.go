@@ -1,0 +1,13 @@
+package resourceloaders
+
+import (
+	"context"
+
+	apierror "github.com/augno/api/shared/errors"
+)
+
+func LoadAddressDetailsResults(_ context.Context, _ []string) (map[string]any, *apierror.APIError) {
+	return nil, apierror.NewInvariantViolationError(
+		"LoadAddressDetailsResults should not be called — address details results are not used as expandable sub-resources",
+	)
+}

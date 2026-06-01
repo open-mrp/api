@@ -1,5 +1,7 @@
 package domain
 
+import "time"
+
 // StepEdge represents a parent→child edge in the production step graph.
 type StepEdge struct {
 	ParentStepID string `audit:"parent_step_id"`
@@ -11,6 +13,7 @@ type StepEdge struct {
 type ProductionFlowStep struct {
 	ID                string
 	Name              string
+	Notes             *string
 	Production        StepProduction
 	Consumptions      []StepConsumption
 	InStepIDs         []string
@@ -23,6 +26,8 @@ type ProductionFlowStep struct {
 	LaborRate         *FlowRate
 	LaborTime         *FlowRate
 	OverheadRate      *FlowRate
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 // FlowRate represents a rate value with numerator and denominator unit references.

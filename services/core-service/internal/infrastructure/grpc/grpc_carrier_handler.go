@@ -71,6 +71,41 @@ func (h *gRPCHandler) ListCarriers(ctx context.Context, req *pb.ListCarriersRequ
 	}, nil
 }
 
+func (h *gRPCHandler) BatchGetCarriersByIDs(ctx context.Context, req *pb.BatchGetCarriersByIDsRequest) (*pb.BatchGetCarriersByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	carriers, apiErr := h.carrierSvc.BatchGetCarriersByIDs(ctx, req.Ids, req.ServiceLevelsLimit)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	pbCarriers := make([]*pb.CarrierInfo, len(carriers))
+	for i, c := range carriers {
+		info := carrierToProto(c)
+		info.ServiceLevelIdsPreview = c.ServiceLevelIDsPreview
+		info.ServiceLevelsHasMore = c.ServiceLevelsHasMore
+		pbCarriers[i] = info
+	}
+	return &pb.BatchGetCarriersByIDsResponse{Carriers: pbCarriers}, nil
+}
+
+func (h *gRPCHandler) BatchGetServiceLevelsByIDs(ctx context.Context, req *pb.BatchGetServiceLevelsByIDsRequest) (*pb.BatchGetServiceLevelsByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	levels, apiErr := h.carrierSvc.BatchGetServiceLevelsByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	pbLevels := make([]*pb.ServiceLevelInfo, len(levels))
+	for i, l := range levels {
+		pbLevels[i] = serviceLevelToProto(l)
+	}
+	return &pb.BatchGetServiceLevelsByIDsResponse{ServiceLevels: pbLevels}, nil
+}
+
 func (h *gRPCHandler) GetCarrier(ctx context.Context, req *pb.GetCarrierRequest) (*pb.GetCarrierResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

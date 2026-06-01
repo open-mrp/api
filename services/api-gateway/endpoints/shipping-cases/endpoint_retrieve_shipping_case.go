@@ -28,6 +28,7 @@ func (e *RetrieveShippingCaseEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeShippingCase,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveShippingCaseRequest) (*apiresource.ShippingCase, *apierror.APIError) {
 			return svc.(ShippingCaseSvc).GetShippingCase
 		},

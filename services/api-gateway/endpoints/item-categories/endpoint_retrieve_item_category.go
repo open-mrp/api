@@ -28,6 +28,7 @@ func (e *RetrieveItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeItemCategory,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError) {
 			return svc.(ItemCategorySvc).GetItemCategory
 		},

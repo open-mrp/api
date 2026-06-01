@@ -30,8 +30,7 @@ func (*AuditEventsEndpointGroup) Materialize(config *AuditEventsEndpointGroupCon
 	}
 
 	auditEventSvc := auditeventep.NewAuditEventSvc(&auditeventep.AuditEventSvcConfig{
-		AuditClient:   config.PlatformClient.AuditClient,
-		LoggingClient: config.PlatformClient.LoggingClient,
+		AuditClient: config.PlatformClient.AuditClient,
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{

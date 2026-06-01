@@ -354,6 +354,92 @@ func (q *Queries) GetUnitsByIDs(ctx context.Context, ids []string) ([]GetUnitsBy
 	return items, nil
 }
 
+const getUnitsByIDsScoped = `-- name: GetUnitsByIDsScoped :many
+SELECT
+    unit.id,
+    unit.name,
+    unit.abbreviation,
+    unit.unit_dimension_code,
+    unit.ratio_numerator,
+    unit.ratio_denominator,
+    unit.offset_numerator,
+    unit.offset_denominator,
+    unit.is_base_unit,
+    unit.account_id,
+    unit.created_at,
+    unit.updated_at
+FROM unit
+WHERE unit.id IN (/*SLICE:ids*/?)
+AND (unit.account_id = ? OR unit.account_id IS NULL)
+`
+
+type GetUnitsByIDsScopedParams struct {
+	Ids       []string
+	AccountID sql.NullString
+}
+
+type GetUnitsByIDsScopedRow struct {
+	ID                string
+	Name              string
+	Abbreviation      string
+	UnitDimensionCode string
+	RatioNumerator    string
+	RatioDenominator  string
+	OffsetNumerator   string
+	OffsetDenominator string
+	IsBaseUnit        bool
+	AccountID         sql.NullString
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+func (q *Queries) GetUnitsByIDsScoped(ctx context.Context, arg GetUnitsByIDsScopedParams) ([]GetUnitsByIDsScopedRow, error) {
+	query := getUnitsByIDsScoped
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetUnitsByIDsScopedRow
+	for rows.Next() {
+		var i GetUnitsByIDsScopedRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Abbreviation,
+			&i.UnitDimensionCode,
+			&i.RatioNumerator,
+			&i.RatioDenominator,
+			&i.OffsetNumerator,
+			&i.OffsetDenominator,
+			&i.IsBaseUnit,
+			&i.AccountID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const insertUnit = `-- name: InsertUnit :exec
 INSERT INTO unit (
     id,

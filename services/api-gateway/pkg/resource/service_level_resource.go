@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleServiceLevelID = "crop_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleServiceLevelID = "crop_01cfaf03f104e90ef9680e2a30"
 const SampleServiceLevelName = "FedEx Ground"
 
 // Shipping service level for a carrier.

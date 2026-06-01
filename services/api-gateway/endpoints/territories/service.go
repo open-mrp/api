@@ -6,8 +6,8 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -50,13 +50,24 @@ func NewTerritorySvc(config *TerritorySvcConfig) TerritorySvc {
 	}
 }
 
+func loadTerritoryByID(ctx context.Context, id string) (*apiresource.Territory, *apierror.APIError) {
+	loaded, apiErr := resourceloaders.LoadTerritories(ctx, []string{id})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	v, ok := loaded[id]
+	if !ok {
+		return nil, apierror.NewResourceNotFoundError("Territory not found.")
+	}
+	return v.(*apiresource.Territory), nil
+}
+
 func (m *territorySvcImpl) ListTerritories(ctx context.Context, req *ListTerritoriesRequest) (*apiresource.List[apiresource.Territory], *apierror.APIError) {
 	pbReq := &pb.ListTerritoriesRequest{
 		AccountId: req.AccountID,
 		Cursor:    req.Cursor,
 		Limit:     req.Limit,
 		Query:     req.Query,
-		Includes:  appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, territorySvcTracer, "service.territories.list", domain.ServiceName,
@@ -68,17 +79,33 @@ func (m *territorySvcImpl) ListTerritories(ctx context.Context, req *ListTerrito
 		return nil, apiErr
 	}
 
-	return TerritoryListPresenter(ctx, resp), nil
+	ids := make([]string, len(resp.Territories))
+	for i, t := range resp.Territories {
+		ids[i] = t.Id
+	}
+
+	loaded, apiErr := resourceloaders.LoadTerritories(ctx, ids)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	territories := make([]apiresource.Territory, 0, len(resp.Territories))
+	for _, id := range ids {
+		if v, ok := loaded[id]; ok {
+			territories = append(territories, *v.(*apiresource.Territory))
+		}
+	}
+
+	return apiresource.NewList(territories, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
 
 func (m *territorySvcImpl) GetTerritory(ctx context.Context, req *RetrieveTerritoryRequest) (*apiresource.Territory, *apierror.APIError) {
 	pbReq := &pb.GetTerritoryRequest{
 		AccountId: req.AccountID,
 		Id:        req.TerritoryID,
-		Includes:  appctx.GetRequestedIncludeKeys(ctx),
 	}
 
-	resp, apiErr := grpcutil.CallRPC(ctx, territorySvcTracer, "service.territories.get", domain.ServiceName,
+	_, apiErr := grpcutil.CallRPC(ctx, territorySvcTracer, "service.territories.get", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetTerritoryResponse, error) {
 			return m.coreClient.GetTerritory(ctx, pbReq, opts...)
 		})
@@ -87,8 +114,7 @@ func (m *territorySvcImpl) GetTerritory(ctx context.Context, req *RetrieveTerrit
 		return nil, apiErr
 	}
 
-	result := TerritoryPresenter(resp.Territory)
-	return &result, nil
+	return loadTerritoryByID(ctx, req.TerritoryID)
 }
 
 func (m *territorySvcImpl) CreateTerritory(ctx context.Context, req *CreateTerritoryRequest) (*apiresource.Territory, *apierror.APIError) {
@@ -99,7 +125,6 @@ func (m *territorySvcImpl) CreateTerritory(ctx context.Context, req *CreateTerri
 		EndZipcode:    req.EndZipcode,
 		SalesRepId:    req.SalesRepID,
 		ProductLineId: req.ProductLineID,
-		Includes:      appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, territorySvcTracer, "service.territories.create", domain.ServiceName,
@@ -111,8 +136,7 @@ func (m *territorySvcImpl) CreateTerritory(ctx context.Context, req *CreateTerri
 		return nil, apiErr
 	}
 
-	result := TerritoryPresenter(resp.Territory)
-	return &result, nil
+	return loadTerritoryByID(ctx, resp.Territory.Id)
 }
 
 func (m *territorySvcImpl) UpdateTerritory(ctx context.Context, req *UpdateTerritoryRequest) (*apiresource.Territory, *apierror.APIError) {
@@ -127,7 +151,6 @@ func (m *territorySvcImpl) UpdateTerritory(ctx context.Context, req *UpdateTerri
 		ClearProductLine:  derefBool(req.ClearProductLine),
 		ClearStartZipcode: derefBool(req.ClearStartZipcode),
 		ClearEndZipcode:   derefBool(req.ClearEndZipcode),
-		Includes:          appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, territorySvcTracer, "service.territories.update", domain.ServiceName,
@@ -139,8 +162,7 @@ func (m *territorySvcImpl) UpdateTerritory(ctx context.Context, req *UpdateTerri
 		return nil, apiErr
 	}
 
-	result := TerritoryPresenter(resp.Territory)
-	return &result, nil
+	return loadTerritoryByID(ctx, resp.Territory.Id)
 }
 
 func (m *territorySvcImpl) DeleteTerritory(ctx context.Context, req *DeleteTerritoryRequest) (*apiresource.EmptyResource, *apierror.APIError) {

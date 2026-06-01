@@ -185,3 +185,18 @@ func (h *gRPCHandler) DeleteProductLine(ctx context.Context, req *pb.DeleteProdu
 
 	return &emptypb.Empty{}, nil
 }
+
+func (h *gRPCHandler) BatchGetProductLinesByIDs(ctx context.Context, req *pb.BatchGetProductLinesByIDsRequest) (*pb.BatchGetProductLinesByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	productLines, apiErr := h.productLineSvc.BatchGetProductLinesByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	pbProductLines := make([]*pb.ProductLineInfo, len(productLines))
+	for i, pl := range productLines {
+		pbProductLines[i] = productLineFullToProto(pl)
+	}
+	return &pb.BatchGetProductLinesByIDsResponse{ProductLines: pbProductLines}, nil
+}

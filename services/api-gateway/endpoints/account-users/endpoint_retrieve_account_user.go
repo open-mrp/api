@@ -31,6 +31,7 @@ func (e *RetrieveAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAccountUserRequest) (*apiresource.AccountUser, *apierror.APIError) {
 			return svc.(AccountUserSvc).GetAccountUser
 		},
+		ObjectType: constants.ObjectTypeAccountUser,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAccountUser,
 			Fields:     []string{"role", "department"},

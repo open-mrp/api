@@ -146,6 +146,36 @@ func (r *sysPropertyRepoImpl) Get(ctx context.Context, accountID, id string) (*d
 	return mapSPGetRow(row), nil
 }
 
+func (r *sysPropertyRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.SysProperty, *apierror.APIError) {
+	ctx, span := sysPropertyRepoTracer.Start(ctx, "repository.sys_property.get_by_ids")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := r.queries.GetSysPropertiesByIDs(ctx, sqlc.GetSysPropertiesByIDsParams{
+		Ids:       ids,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make([]*domain.SysProperty, len(rows))
+	for i, row := range rows {
+		out[i] = &domain.SysProperty{
+			ID:        row.ID,
+			TypeID:    row.TypeID,
+			TypeCode:  constants.SysPropertyTypeCode(row.TypeCode),
+			TypeName:  row.TypeName,
+			Value:     row.Value,
+			AccountID: row.AccountID,
+			CreatedAt: row.CreatedAt,
+			UpdatedAt: row.UpdatedAt,
+		}
+	}
+	return out, nil
+}
+
 func (r *sysPropertyRepoImpl) GetByTypeCode(ctx context.Context, accountID string, typeCode constants.SysPropertyTypeCode) (*domain.SysProperty, *apierror.APIError) {
 	ctx, span := sysPropertyRepoTracer.Start(ctx, "repository.sys_property.get_by_type_code")
 	defer span.End()

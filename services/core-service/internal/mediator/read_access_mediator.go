@@ -44,10 +44,28 @@ func (m *readAccessMedImpl) CheckReadAccess(ctx context.Context, actorAccountID,
 		return nil
 	}
 
+	hasRelation, apiErr := m.repos.NewAccountRelationRepo().HasRelation(ctx, actorAccountID, targetAccountID)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	if !hasRelation {
+		return tracing.Trace(span, apierror.NewAuthorizationError("You cannot access this account."))
+	}
+
+	return nil
+}
+
+func (m *readAccessMedImpl) CheckCounterpartyReadAccess(ctx context.Context, actorAccountID, targetAccountID string) *apierror.APIError {
+	ctx, span := readAccessMedTracer.Start(ctx, "mediator.read_access.check_counterparty")
+	defer span.End()
+
+	if actorAccountID == targetAccountID {
+		return nil
+	}
+
 	repo := m.repos.NewAccountRelationRepo()
 
-	// Check both directions: actor as owner (merchant→customer) or actor as
-	// counterparty (customer→merchant).
 	hasRelation, apiErr := repo.HasRelation(ctx, actorAccountID, targetAccountID)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)

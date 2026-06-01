@@ -42,6 +42,7 @@ func (e *UpdatePickEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePickR
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypePick,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdatePickRequest) (*apiresource.PickDetail, *apierror.APIError) {
 			return svc.(PickSvc).UpdatePick
 		},

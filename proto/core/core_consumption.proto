@@ -115,6 +115,7 @@ message LightScanningStationInfo {
   string type = 3;
   google.protobuf.Timestamp created_at = 4;
   google.protobuf.Timestamp updated_at = 5;
+  string operator_requirement = 6;
 }
 message LightProductionStepInfo {
   string id = 1;
@@ -188,6 +189,12 @@ message DeleteScanningStationRequest {
 message ConnectProductionStepsByScanningStationRequest {
   string id = 1;
   string name = 2;
+}
+message BatchGetScanningStationsByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetScanningStationsByIDsResponse {
+  repeated ScanningStationInfo scanning_stations = 1;
 }
 message LocationChildInfo {
   string id = 1;
@@ -268,6 +275,13 @@ message GetLocationTypeRequest {
 }
 message GetLocationTypeResponse {
   LocationTypeInfo location_type = 1;
+}
+// Batched read for the api-gateway resourcekit resolver.
+message BatchGetLocationsByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetLocationsByIDsResponse {
+  repeated LocationInfo locations = 1;
 }
 message SupplierSummaryProto {
   string id = 1;
@@ -389,6 +403,13 @@ message GetLatestSysPropertyValueRequest {
 }
 message GetLatestSysPropertyValueResponse {
   int32 value = 1;
+}
+// Batched read for the api-gateway resourcekit resolver.
+message BatchGetSysPropertiesByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetSysPropertiesByIDsResponse {
+  repeated SysPropertyInfo sys_properties = 1;
 }
 message TenancyRoleProto {
   string id = 1;

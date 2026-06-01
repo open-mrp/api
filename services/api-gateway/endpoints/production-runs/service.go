@@ -4,9 +4,12 @@ import (
 	"context"
 	"fmt"
 
+	batchep "github.com/augno/api/services/api-gateway/endpoints/batches"
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -72,7 +75,7 @@ func (m *productionRunSvcImpl) ListProductionRuns(ctx context.Context, req *List
 		return nil, apiErr
 	}
 
-	return ProductionRunListPresenter(ctx, resp), nil
+	return productionRunListFromProto(ctx, resp), nil
 }
 
 func (m *productionRunSvcImpl) GetProductionRun(ctx context.Context, req *RetrieveProductionRunRequest) (*apiresource.ProductionRunDetail, *apierror.APIError) {
@@ -89,7 +92,9 @@ func (m *productionRunSvcImpl) GetProductionRun(ctx context.Context, req *Retrie
 		return nil, apiErr
 	}
 
-	result := ProductionRunDetailPresenter(resp.ProductionRun)
+	meta := resourcekit.GetLoadMeta(ctx)
+	result := productionRunDetailFromProto(resp.ProductionRun)
+	stashProductionRunDetailMeta(meta, resp.ProductionRun)
 	return &result, nil
 }
 
@@ -106,7 +111,9 @@ func (m *productionRunSvcImpl) CreateProductionRun(ctx context.Context, req *Cre
 		return nil, apiErr
 	}
 
-	result := ProductionRunDetailPresenter(resp.ProductionRun)
+	meta := resourcekit.GetLoadMeta(ctx)
+	result := productionRunDetailFromProto(resp.ProductionRun)
+	stashProductionRunDetailMeta(meta, resp.ProductionRun)
 	return &result, nil
 }
 
@@ -125,7 +132,9 @@ func (m *productionRunSvcImpl) UpdateProductionRun(ctx context.Context, req *Upd
 		return nil, apiErr
 	}
 
-	result := ProductionRunDetailPresenter(resp.ProductionRun)
+	meta := resourcekit.GetLoadMeta(ctx)
+	result := productionRunDetailFromProto(resp.ProductionRun)
+	stashProductionRunDetailMeta(meta, resp.ProductionRun)
 	return &result, nil
 }
 
@@ -172,7 +181,7 @@ func (m *productionRunSvcImpl) AddBatchesToProductionRun(ctx context.Context, re
 		return nil, apiErr
 	}
 
-	return AddBatchesPresenter(resp), nil
+	return addBatchesFromProto(resp), nil
 }
 
 func (m *productionRunSvcImpl) ListBatchesByProductionRun(ctx context.Context, req *ListBatchesByProductionRunRequest) (*apiresource.List[apiresource.Batch], *apierror.APIError) {
@@ -195,5 +204,95 @@ func (m *productionRunSvcImpl) ListBatchesByProductionRun(ctx context.Context, r
 		return nil, apiErr
 	}
 
-	return ListBatchesPresenter(ctx, resp), nil
+	return listBatchesFromProto(ctx, resp), nil
+}
+
+func productionRunSummaryFromProto(info *pb.ProductionRunSummaryInfo) apiresource.ProductionRunSummary {
+	s := apiresource.ProductionRunSummary{
+		ID:         info.Id,
+		Object:     constants.ObjectTypeProductionRun,
+		Number:     info.Number,
+		BatchCount: info.BatchCount,
+		CreatedAt:  grpcutil.TimestampToTime(info.CreatedAt),
+		UpdatedAt:  grpcutil.TimestampToTime(info.UpdatedAt),
+	}
+
+	if info.ResponsibleUserId != "" {
+		s.ResponsibleUser = &apiresource.AccountUser{
+			ID:        info.ResponsibleUserId,
+			Object:    constants.ObjectTypeAccountUser,
+			Name:      info.ResponsibleUserName,
+			Status:    constants.AccountUserStatus(info.GetResponsibleUserStatusCode()),
+			CreatedAt: grpcutil.TimestampToTime(info.ResponsibleUserCreatedAt),
+			UpdatedAt: grpcutil.TimestampToTime(info.ResponsibleUserUpdatedAt),
+		}
+	}
+
+	s.StartedAt = grpcutil.TimestampToTimePtr(info.StartedAt)
+	s.CompletedAt = grpcutil.TimestampToTimePtr(info.CompletedAt)
+
+	return s
+}
+
+func productionRunListFromProto(ctx context.Context, resp *pb.ListProductionRunsResponse) *apiresource.List[apiresource.ProductionRunSummary] {
+	runs := make([]apiresource.ProductionRunSummary, len(resp.ProductionRuns))
+	for i, pr := range resp.ProductionRuns {
+		runs[i] = productionRunSummaryFromProto(pr)
+	}
+
+	return apiresource.NewList(runs, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
+}
+
+func productionRunDetailFromProto(info *pb.ProductionRunInfo) apiresource.ProductionRunDetail {
+	d := apiresource.ProductionRunDetail{
+		ID:         info.Id,
+		Object:     constants.ObjectTypeProductionRun,
+		Number:     info.Number,
+		BatchCount: info.BatchCount,
+		CreatedAt:  grpcutil.TimestampToTime(info.CreatedAt),
+		UpdatedAt:  grpcutil.TimestampToTime(info.UpdatedAt),
+	}
+
+	d.StartedAt = grpcutil.TimestampToTimePtr(info.StartedAt)
+	d.CompletedAt = grpcutil.TimestampToTimePtr(info.CompletedAt)
+
+	return d
+}
+
+func stashProductionRunDetailMeta(meta *resourcekit.LoadMeta, info *pb.ProductionRunInfo) {
+	if info == nil || info.ResponsibleUserId == "" {
+		return
+	}
+	user := &apiresource.AccountUser{
+		ID:        info.ResponsibleUserId,
+		Object:    constants.ObjectTypeAccountUser,
+		Name:      info.ResponsibleUserName,
+		Status:    constants.AccountUserStatus(info.GetResponsibleUserStatusCode()),
+		CreatedAt: grpcutil.TimestampToTime(info.ResponsibleUserCreatedAt),
+		UpdatedAt: grpcutil.TimestampToTime(info.ResponsibleUserUpdatedAt),
+	}
+	meta.Set(constants.ObjectTypeProductionRun, info.Id, "responsible_user", user)
+}
+
+func addBatchesFromProto(resp *pb.AddBatchesToProductionRunResponse) *apiresource.List[apiresource.Batch] {
+	batches := make([]apiresource.Batch, len(resp.Batches))
+	for i, b := range resp.Batches {
+		batches[i] = batchep.BaseBatchPresenter(b)
+	}
+
+	return apiresource.NewList(batches, apiresource.PageInfo{})
+}
+
+func listBatchesFromProto(ctx context.Context, resp *pb.ListBatchesByProductionRunResponse) *apiresource.List[apiresource.Batch] {
+	batches := make([]apiresource.Batch, len(resp.Batches))
+	for i, b := range resp.Batches {
+		batches[i] = batchep.BatchPresenter(b)
+	}
+
+	var pi apiresource.PageInfo
+	if resp.PageInfo != nil {
+		pi = grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)
+	}
+
+	return apiresource.NewList(batches, pi)
 }

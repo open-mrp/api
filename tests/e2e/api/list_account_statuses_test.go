@@ -77,7 +77,7 @@ func TestListAccountStatuses_PaginationCursor(t *testing.T) {
 	// Page 1
 	page1, _, err := apiClient.GetList(accountStatusesPath, url.Values{"limit": {"1"}})
 	require.NoError(t, err)
-	require.Len(t, page1.Data, 1)
+	requirePageLen(t, page1.Data, 1)
 	require.NotNil(t, page1.PageInfo.NextPageURL, "Page 1 should have next_page_url")
 
 	page1ID := DataItemField(page1.Data[0], "id")
@@ -86,7 +86,7 @@ func TestListAccountStatuses_PaginationCursor(t *testing.T) {
 	// Page 2
 	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
 	require.NoError(t, err)
-	require.Len(t, page2.Data, 1)
+	requirePageLen(t, page2.Data, 1)
 
 	page2ID := DataItemField(page2.Data[0], "id")
 	assert.NotEmpty(t, page2ID)
@@ -98,14 +98,14 @@ func TestListAccountStatuses_PrevPageURL(t *testing.T) {
 
 	page1, _, err := apiClient.GetList(accountStatusesPath, url.Values{"limit": {"1"}})
 	require.NoError(t, err)
-	require.Len(t, page1.Data, 1)
+	requirePageLen(t, page1.Data, 1)
 	require.NotNil(t, page1.PageInfo.NextPageURL)
 
 	page1ID := DataItemField(page1.Data[0], "id")
 
 	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
 	require.NoError(t, err)
-	require.Len(t, page2.Data, 1)
+	requirePageLen(t, page2.Data, 1)
 	assert.True(t, page2.PageInfo.HasPrevPage, "Page 2 should have has_prev_page=true")
 	require.NotNil(t, page2.PageInfo.PreviousPageURL, "Page 2 should have previous_page_url")
 

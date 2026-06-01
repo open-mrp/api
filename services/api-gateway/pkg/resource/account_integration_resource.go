@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleAccountIntegrationID = "ai_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleAccountIntegrationID = "ai_0177772eae113431f64d473124"
 const SampleAccountIntegrationName = "My Stripe Integration"
 
 // Third-party integration connected to an account.

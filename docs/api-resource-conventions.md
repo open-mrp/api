@@ -139,7 +139,7 @@ Every resource must have a `SchemaExample()` method and a package-level `Sample<
 
 ```go
 var SampleMyResource = &MyResource{
-    ID:     "mr_01jm4r6700f8nwq3v5hx2d9ktp",
+    ID:     "mr_01c5620523e2beec24813bed34",
     Object: constants.ObjectTypeMyResource,
     // ... populate all required fields
 }

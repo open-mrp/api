@@ -8,10 +8,10 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleCustomerID = "ac_01gf7a8200er3ar3pkfrb6kk29"
+const SampleCustomerID = "ac_0170df1ac58e4d24c66fc89f5f"
 const SampleCustomerName = "Acme Inc."
 const SampleCustomerNumber = "100042"
-const SampleCustomerRelationID = "acre_01gf7a8200er3ar3pkfrb6kk30"
+const SampleCustomerRelationID = "acre_0153f41078e241b7487172c749"
 
 // Customer account.
 type Customer struct {

@@ -120,11 +120,12 @@ func (r *departmentRepoImpl) attachSubResources(ctx context.Context, dept *domai
 	dept.ScanningStations = make([]domain.DepartmentScanningStation, len(stations))
 	for i, s := range stations {
 		dept.ScanningStations[i] = domain.DepartmentScanningStation{
-			ID:        s.ID,
-			Name:      s.Name,
-			Type:      s.ScanningStationTypeCode,
-			CreatedAt: s.CreatedAt,
-			UpdatedAt: s.UpdatedAt,
+			ID:                  s.ID,
+			Name:                s.Name,
+			Type:                s.ScanningStationTypeCode,
+			OperatorRequirement: string(boolToOperatorRequirement(s.MaterialCheckRequired)),
+			CreatedAt:           s.CreatedAt,
+			UpdatedAt:           s.UpdatedAt,
 		}
 	}
 
@@ -147,6 +148,85 @@ func (r *departmentRepoImpl) attachSubResources(ctx context.Context, dept *domai
 	}
 
 	return nil
+}
+
+func (r *departmentRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.Department, *apierror.APIError) {
+	ctx, span := departmentRepoTracer.Start(ctx, "repository.department.get_by_ids")
+	defer span.End()
+
+	rows, err := r.queries.GetDepartmentsFullByIDs(ctx, sqlc.GetDepartmentsFullByIDsParams{
+		Ids:       ids,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	deptIDs := make([]string, len(rows))
+	departments := make([]*domain.Department, len(rows))
+	for i, row := range rows {
+		dept := &domain.Department{
+			ID:        row.ID,
+			Name:      row.Name,
+			AccountID: row.AccountID,
+			CreatedAt: row.CreatedAt,
+			UpdatedAt: row.UpdatedAt,
+		}
+		if row.Notes.Valid {
+			dept.Notes = &row.Notes.String
+		}
+		if row.LocationID.Valid {
+			dept.LocationID = &row.LocationID.String
+		}
+		departments[i] = dept
+		deptIDs[i] = row.ID
+	}
+
+	if len(deptIDs) > 0 {
+		stationRows, err := r.queries.ListScanningStationsByDepartmentIDs(ctx, sqlc.ListScanningStationsByDepartmentIDsParams{
+			DepartmentIds: deptIDs,
+			AccountID:     accountID,
+		})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		stationsByDept := make(map[string][]domain.DepartmentScanningStation, len(deptIDs))
+		for _, s := range stationRows {
+			stationsByDept[s.DepartmentID] = append(stationsByDept[s.DepartmentID], domain.DepartmentScanningStation{
+				ID:                  s.ID,
+				Name:                s.Name,
+				Type:                s.ScanningStationTypeCode,
+				OperatorRequirement: string(boolToOperatorRequirement(s.MaterialCheckRequired)),
+				CreatedAt:           s.CreatedAt,
+				UpdatedAt:           s.UpdatedAt,
+			})
+		}
+
+		machineRows, err := r.queries.ListMachinesByDepartmentIDs(ctx, sqlc.ListMachinesByDepartmentIDsParams{
+			DepartmentIds: deptIDs,
+			AccountID:     accountID,
+		})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		machinesByDept := make(map[string][]domain.DepartmentMachine, len(deptIDs))
+		for _, m := range machineRows {
+			machinesByDept[m.DepartmentID] = append(machinesByDept[m.DepartmentID], domain.DepartmentMachine{
+				ID:           m.ID,
+				Name:         m.Name,
+				SerialNumber: m.SerialNumber,
+				CreatedAt:    m.CreatedAt,
+				UpdatedAt:    m.UpdatedAt,
+			})
+		}
+
+		for _, dept := range departments {
+			dept.ScanningStations = stationsByDept[dept.ID]
+			dept.Machines = machinesByDept[dept.ID]
+		}
+	}
+
+	return departments, nil
 }
 
 func (r *departmentRepoImpl) List(ctx context.Context, params domain.ListDepartmentsParams) (*domain.ListDepartmentsResult, *apierror.APIError) {

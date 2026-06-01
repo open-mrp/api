@@ -18,6 +18,13 @@ type Carrier struct {
 	ServiceLevels          []*ServiceLevel
 	CreatedAt              time.Time
 	UpdatedAt              time.Time
+
+	// Populated only by BatchGetCarriersByIDs when a positive
+	// service_levels_limit was requested. Not persisted; transient on the
+	// response path so the gRPC layer can mirror them into CarrierInfo's
+	// service_level_ids_preview / service_levels_has_more fields.
+	ServiceLevelIDsPreview []string `audit:"-"`
+	ServiceLevelsHasMore   bool     `audit:"-"`
 }
 
 type ListCarriersParams struct {

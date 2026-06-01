@@ -28,6 +28,7 @@ func (e *CancelRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*CancelRunReq
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeAgentRun,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CancelRunRequest) (*apiresource.AgentRun, *apierror.APIError) {
 			return svc.(AgentRunSvc).CancelAgentRun
 		},

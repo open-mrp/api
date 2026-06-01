@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleAdjustmentTypeID = "adjt_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleAdjustmentTypeID = "adjt_01200338b135dc51aba62d4bf8"
 const SampleAdjustmentTypeName = "Discount"
 const SampleAdjustmentTypeCode = string(constants.AdjustmentTypeDiscount)
 

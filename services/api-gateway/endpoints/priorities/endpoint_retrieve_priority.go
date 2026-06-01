@@ -28,6 +28,7 @@ func (e *RetrievePriorityEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypePriority,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrievePriorityRequest) (*apiresource.Priority, *apierror.APIError) {
 			return svc.(PrioritySvc).GetPriority
 		},

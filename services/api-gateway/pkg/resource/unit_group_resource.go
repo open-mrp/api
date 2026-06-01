@@ -52,7 +52,7 @@ type UnitGroupUnit struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-const SampleUnitGroupUnitID = "ugu_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleUnitGroupUnitID = "ugu_01d75e0598ed09be56fd39fab5"
 
 var SampleUnitGroupUnit = &UnitGroupUnit{
 	ID:                       SampleUnitGroupUnitID,

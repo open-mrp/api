@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleAccountPriceID = "acpr_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleAccountPriceID = "acpr_01dfc47cc46b1e0b66ca8eec0a"
 
 // Customer-specific price for a product line.
 type AccountPrice struct {

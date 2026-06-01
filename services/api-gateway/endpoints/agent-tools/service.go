@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 
+	"encoding/json"
+
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/appctx"
+	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 
 	pb "github.com/augno/api/shared/proto/agent"
@@ -61,7 +64,12 @@ func (m *agentToolSvcImpl) ListTools(ctx context.Context, req *ListToolsRequest)
 		return nil, rpcErr
 	}
 
-	return AvailableToolListPresenter(resp), nil
+	tools := make([]apiresource.AvailableTool, len(resp.Tools))
+	for i, t := range resp.Tools {
+		tools[i] = availableToolFromProto(t)
+	}
+
+	return apiresource.NewList(tools, apiresource.PageInfo{}), nil
 }
 
 func (m *agentToolSvcImpl) ListToolGroups(ctx context.Context, req *ListToolGroupsRequest) (*apiresource.List[apiresource.ToolGroup], *apierror.APIError) {
@@ -79,7 +87,66 @@ func (m *agentToolSvcImpl) ListToolGroups(ctx context.Context, req *ListToolGrou
 		return nil, rpcErr
 	}
 
-	includes := appctx.GetRequestedIncludeKeys(ctx)
+	meta := resourcekit.GetLoadMeta(ctx)
 
-	return ToolGroupListPresenter(resp, includes), nil
+	toolsByGroup := make(map[string][]apiresource.AvailableTool, len(resp.Groups))
+	for _, t := range resp.Tools {
+		toolsByGroup[t.GroupId] = append(toolsByGroup[t.GroupId], availableToolFromProto(t))
+	}
+
+	groups := make([]apiresource.ToolGroup, len(resp.Groups))
+	for i, g := range resp.Groups {
+		groups[i] = toolGroupFromProto(g)
+		tools := toolsByGroup[g.Id]
+		if tools == nil {
+			tools = []apiresource.AvailableTool{}
+		}
+		meta.Set(constants.ObjectTypeToolGroup, g.Id, "tools", apiresource.NewList(tools, apiresource.PageInfo{}))
+	}
+
+	return apiresource.NewList(groups, apiresource.PageInfo{}), nil
+}
+
+func availableToolFromProto(t *pb.AvailableToolInfo) apiresource.AvailableTool {
+	if t == nil {
+		return apiresource.AvailableTool{}
+	}
+
+	perms := t.RequiredPermissions
+	if perms == nil {
+		perms = []string{}
+	}
+
+	return apiresource.AvailableTool{
+		ID:                  t.Id,
+		Object:              constants.ObjectTypeAvailableTool,
+		Name:                t.DisplayName,
+		Description:         &t.Description,
+		ConfigSchema:        json.RawMessage(t.ConfigSchemaJson),
+		Category:            t.Category,
+		RequiredPermissions: perms,
+	}
+}
+
+func stringPtrOrNil(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+func toolGroupFromProto(g *pb.ToolGroupInfo) apiresource.ToolGroup {
+	if g == nil {
+		return apiresource.ToolGroup{}
+	}
+
+	return apiresource.ToolGroup{
+		ID:          g.Id,
+		Object:      constants.ObjectTypeToolGroup,
+		Name:        g.Name,
+		Description: stringPtrOrNil(g.Description),
+		Slug:        g.Slug,
+		Icon:        g.Icon,
+		SortOrder:   g.SortOrder,
+	}
 }

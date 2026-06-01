@@ -76,6 +76,7 @@ jobs:
         env:
           INT_FLAG: ${{ inputs.openapi_internal_gate }}
           PUB_FLAG: ${{ inputs.openapi_public_gate }}
+          OPENAPI_SPECS_SOURCE: ${{ inputs.openapi_specs_source }}
         run: |
           if [ -n "$INT_FLAG" ] && [ -n "$PUB_FLAG" ]; then
             echo "internal=$INT_FLAG" >> "$GITHUB_OUTPUT"
@@ -83,7 +84,7 @@ jobs:
             echo "Release path: flags from publish-openapi-specs (pre-upload vs S3 baseline)."
             exit 0
           fi
-          if [ "${{ inputs.openapi_specs_source }}" != "s3" ]; then
+          if [ "$OPENAPI_SPECS_SOURCE" != "s3" ]; then
             echo "internal=true" >> "$GITHUB_OUTPUT"
             echo "public=true" >> "$GITHUB_OUTPUT"
             echo "Manual or generate path: assuming both specs changed."
@@ -257,12 +258,33 @@ jobs:
         if: matrix.spec_changed == 'true' && success() && inputs.open_pr
         env:
           GH_TOKEN: ${{ secrets.SDK_WRITE_TOKEN }}
+          REPO: ${{ matrix.pr_repo }}
+          BRANCH: ${{ inputs.push_branch }}
+          BASE: ${{ inputs.pr_base_branch }}
+          TAG: ${{ inputs.api_version }}
+          OPENAPI_SPECS_SOURCE: ${{ inputs.openapi_specs_source }}
         run: |
           set -euo pipefail
-          repo="${{ matrix.pr_repo }}"
-          branch="${{ inputs.push_branch }}"
-          base="${{ inputs.pr_base_branch }}"
-          tag="${{ inputs.api_version }}"
+          repo="$REPO"
+          branch="$BRANCH"
+          base="$BASE"
+          tag="$TAG"
+
+          branch_pattern='^[A-Za-z0-9._/-]+$'
+          tag_pattern='^v[0-9A-Za-z._-]+$'
+          if ! [[ "$branch" =~ $branch_pattern ]]; then
+            echo "Invalid push_branch: $branch" >&2
+            exit 1
+          fi
+          if ! [[ "$base" =~ $branch_pattern ]]; then
+            echo "Invalid pr_base_branch: $base" >&2
+            exit 1
+          fi
+          if ! [[ "$tag" =~ $tag_pattern ]]; then
+            echo "Invalid api_version: $tag" >&2
+            exit 1
+          fi
+
           open_count=$(gh pr list --repo "$repo" --head "$branch" --state open --json number -q 'length')
           if [ "${open_count:-0}" -gt 0 ]; then
             echo "An open PR already exists for $repo from head $branch; skipping create."
@@ -272,7 +294,7 @@ jobs:
           {
             echo "Automated SDK sync from [Augno/api](https://github.com/Augno/api) release **${tag}**."
             echo ""
-            if [ "${{ inputs.openapi_specs_source }}" = "s3" ]; then
+            if [ "$OPENAPI_SPECS_SOURCE" = "s3" ]; then
               echo "OpenAPI specs were downloaded from the release S3 buckets (\`augno-*-openapi-specs/openapi.json\`)."
             else
               echo "OpenAPI specs were generated in this job with \`make openapi-quiet\`."
@@ -280,7 +302,7 @@ jobs:
             echo ""
             echo "Review and merge this PR. The SDK repo's Changesets release workflow will open **chore: version packages** when needed; merge that PR to publish to GitHub Packages."
             echo ""
-            echo "Release automation pushes directly to \`${{ inputs.push_branch }}\` instead; use \`open_pr\` only for manual workflow_dispatch runs."
+            echo "Release automation pushes directly to \`${branch}\` instead; use \`open_pr\` only for manual workflow_dispatch runs."
           } > "$body_file"
           set +e
           gh pr create --repo "$repo" --base "$base" --head "$branch" \

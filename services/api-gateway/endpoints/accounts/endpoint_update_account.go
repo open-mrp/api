@@ -57,6 +57,7 @@ func (e *UpdateAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAc
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeAccount,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAccountRequest) (*apiresource.Account, *apierror.APIError) {
 			return svc.(AccountSvc).UpdateAccount
 		},

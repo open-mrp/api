@@ -111,6 +111,21 @@ DELETE FROM account_integration
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
 
+-- name: GetAccountIntegrationsByIDs :many
+-- Returns account integrations matching the given IDs that belong to the
+-- caller's account. Account integrations are always account-scoped.
+SELECT
+    account_integration.id,
+    account_integration.account_id,
+    account_integration.integration_code,
+    account_integration.name,
+    account_integration.is_active,
+    account_integration.created_at,
+    account_integration.updated_at
+FROM account_integration
+WHERE account_integration.id IN (sqlc.slice('ids'))
+AND account_integration.account_id = sqlc.arg('account_id');
+
 -- name: GetAccountIntegrationCredentials :one
 SELECT
     account_integration.credentials_v2,

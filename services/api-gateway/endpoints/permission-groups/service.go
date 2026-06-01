@@ -6,6 +6,7 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -60,5 +61,22 @@ func (m *permissionGroupSvcImpl) ListPermissionGroups(ctx context.Context, req *
 		return nil, apiErr
 	}
 
-	return PermissionGroupListPresenter(ctx, resp), nil
+	ids := make([]string, len(resp.PermissionGroups))
+	for i, pg := range resp.PermissionGroups {
+		ids[i] = pg.Id
+	}
+
+	loaded, apiErr := resourceloaders.LoadPermissionGroups(ctx, ids)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	groups := make([]apiresource.PermissionGroup, 0, len(resp.PermissionGroups))
+	for _, id := range ids {
+		if v, ok := loaded[id]; ok {
+			groups = append(groups, *v.(*apiresource.PermissionGroup))
+		}
+	}
+
+	return apiresource.NewList(groups, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }

@@ -121,6 +121,7 @@ type openAPIParam struct {
 
 // fullOpenAPISpec holds the fully-parsed spec for schema validation.
 var fullOpenAPISpec *openAPISpec
+var publicOpenAPISpec *openAPISpec
 
 // LoadFullSpec loads and caches the complete OpenAPI spec (including schemas).
 func LoadFullSpec() (*openAPISpec, error) {
@@ -140,6 +141,26 @@ func LoadFullSpec() (*openAPISpec, error) {
 	}
 
 	fullOpenAPISpec = &spec
+	return &spec, nil
+}
+
+// LoadPublicSpec loads and caches the public OpenAPI spec.
+func LoadPublicSpec() (*openAPISpec, error) {
+	if publicOpenAPISpec != nil {
+		return publicOpenAPISpec, nil
+	}
+
+	data, err := os.ReadFile(findPublicSpecPath())
+	if err != nil {
+		return nil, fmt.Errorf("reading public OpenAPI spec: %w", err)
+	}
+
+	var spec openAPISpec
+	if err := json.Unmarshal(data, &spec); err != nil {
+		return nil, fmt.Errorf("parsing public OpenAPI spec: %w", err)
+	}
+
+	publicOpenAPISpec = &spec
 	return &spec, nil
 }
 
@@ -518,4 +539,10 @@ func findSpecPath() string {
 	_, filename, _, _ := runtime.Caller(0)
 	repoRoot := filepath.Join(filepath.Dir(filename), "..", "..", "..")
 	return filepath.Join(repoRoot, "specs", "internal_openapi_spec.json")
+}
+
+func findPublicSpecPath() string {
+	_, filename, _, _ := runtime.Caller(0)
+	repoRoot := filepath.Join(filepath.Dir(filename), "..", "..", "..")
+	return filepath.Join(repoRoot, "specs", "public_openapi_spec.json")
 }

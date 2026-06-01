@@ -8,8 +8,8 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleVolumeDiscountID = "quds_01jm4r6700f8nwq3v5hx2d9ktp"
-const SampleVolumeDiscountTierID = "qudstr_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleVolumeDiscountID = "quds_01b64658b647f3c5266b8f6ae1"
+const SampleVolumeDiscountTierID = "qudstr_01576d26526ad625c3dd0725a9"
 
 // Volume discount with tiered pricing.
 type VolumeDiscount struct {

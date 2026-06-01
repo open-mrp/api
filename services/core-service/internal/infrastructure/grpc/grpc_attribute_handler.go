@@ -124,6 +124,21 @@ func (h *gRPCHandler) UpdateAttribute(ctx context.Context, req *pb.UpdateAttribu
 	}, nil
 }
 
+func (h *gRPCHandler) BatchGetAttributesByIDs(ctx context.Context, req *pb.BatchGetAttributesByIDsRequest) (*pb.BatchGetAttributesByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	attributes, apiErr := h.attributeSvc.BatchGetAttributesByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	pbAttrs := make([]*pb.AttributeInfo, len(attributes))
+	for i, a := range attributes {
+		pbAttrs[i] = attributeToProto(a)
+	}
+	return &pb.BatchGetAttributesByIDsResponse{Attributes: pbAttrs}, nil
+}
+
 func (h *gRPCHandler) DeleteAttribute(ctx context.Context, req *pb.DeleteAttributeRequest) (*emptypb.Empty, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

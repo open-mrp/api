@@ -3,12 +3,13 @@ package inventorychangelogep
 import (
 	"testing"
 
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/services/api-gateway/pkg/resource/resourcetest"
 	pb "github.com/augno/api/shared/proto/core"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func TestInventoryChangeLogPresenter(t *testing.T) {
+func TestInventoryChangeLogFromProto(t *testing.T) {
 	t.Parallel()
 	userName := "John Doe"
 	stationName := "Station A"
@@ -38,7 +39,29 @@ func TestInventoryChangeLogPresenter(t *testing.T) {
 		UpdatedAt:                timestamppb.Now(),
 	}
 
-	result := InventoryChangeLogPresenter(icl)
+	result := inventoryChangeLogFromProto(icl)
+	result.Item = &apiresource.Item{
+		ID:           icl.ItemId,
+		Object:       "item",
+		SKU:          icl.ItemSku,
+		ItemTypeCode: "product",
+	}
+	result.Quantity = &apiresource.Quantity{
+		ID:           icl.QuantityId,
+		Object:       "quantity",
+		Value:        icl.QuantityValue,
+		DisplayValue: apiresource.FormatDisplayValue(icl.QuantityValue, icl.QuantityUnitAbbreviation, icl.QuantityUnitType),
+	}
+	result.ResponsibleUser = &apiresource.User{
+		ID:     userID,
+		Object: "user",
+	}
+	result.ResponsibleScanningStation = &apiresource.ScanningStation{
+		ID:     stationID,
+		Object: "scanning_station",
+		Name:   stationName,
+		Type:   "init_batch",
+	}
 	resourcetest.ValidateResourceStruct(t, "InventoryChangeLog", result)
 	resourcetest.ValidateExpandableStubs(t, "InventoryChangeLog", result)
 }

@@ -58,6 +58,7 @@ func (e *UpdateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAccountUserRequest) (*apiresource.AccountUser, *apierror.APIError) {
 			return svc.(AccountUserSvc).UpdateAccountUser
 		},
+		ObjectType: constants.ObjectTypeAccountUser,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAccountUser,
 			Fields:     []string{"role", "department"},

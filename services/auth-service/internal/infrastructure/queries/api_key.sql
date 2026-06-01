@@ -105,8 +105,27 @@ AND (
 ORDER BY api_key.created_at ASC, api_key.id ASC
 LIMIT ?;
 
--- name: RevokeAPIKeyByTypeID :exec
-UPDATE api_key SET revoked_at = NOW(3), updated_at = NOW(3) WHERE type_id = ?;
+-- name: GetAPIKeysByIDs :many
+SELECT
+    api_key.id,
+    api_key.type_id,
+    api_key.key_id,
+    api_key.name,
+    api_key.secret_hash,
+    api_key.redacted_value,
+    api_key.owner_account_id,
+    api_key.role_id,
+    api_key.created_at,
+    api_key.updated_at,
+    api_key.last_used_at,
+    api_key.expires_at,
+    api_key.revoked_at
+FROM api_key
+WHERE api_key.type_id IN (sqlc.slice('ids'))
+AND api_key.owner_account_id = sqlc.arg('owner_account_id');
+
+-- name: RevokeAPIKeyByTypeID :execresult
+UPDATE api_key SET revoked_at = NOW(3), updated_at = NOW(3) WHERE type_id = ? AND owner_account_id = ?;
 
 -- name: TouchAPIKeyByID :exec
 UPDATE api_key SET last_used_at = NOW(3), updated_at = NOW(3) WHERE id = ?;

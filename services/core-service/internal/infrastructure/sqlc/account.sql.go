@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -431,6 +432,117 @@ func (q *Queries) GetAccountPortalSlugByAccountID(ctx context.Context, ownerAcco
 	var slug string
 	err := row.Scan(&slug)
 	return slug, err
+}
+
+const getAccountsByIDs = `-- name: GetAccountsByIDs :many
+SELECT
+    a.id,
+    a.name,
+    a.default_billing_address_id,
+    a.default_shipping_address_id,
+    a.created_at,
+    a.updated_at,
+    ab.id AS branding_id,
+    ab.support_email AS branding_support_email,
+    ab.phone_number AS branding_phone_number,
+    ab.logo_url AS branding_logo_url,
+    ab.facebook_handle AS branding_facebook_handle,
+    ab.instagram_handle AS branding_instagram_handle,
+    ab.linkedin_handle AS branding_linkedin_handle,
+    ab.twitter_handle AS branding_twitter_handle,
+    ab.website_url AS branding_website_url,
+    ab.created_at AS branding_created_at,
+    ab.updated_at AS branding_updated_at,
+    ap.id AS portal_id,
+    ap.slug AS portal_slug,
+    ap.created_at AS portal_created_at,
+    ap.updated_at AS portal_updated_at
+FROM account a
+LEFT JOIN account_branding ab ON ab.owner_account_id = a.id
+LEFT JOIN account_portal ap ON ap.owner_account_id = a.id
+WHERE a.id IN (/*SLICE:ids*/?)
+`
+
+type GetAccountsByIDsRow struct {
+	ID                       string
+	Name                     string
+	DefaultBillingAddressID  sql.NullString
+	DefaultShippingAddressID sql.NullString
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
+	BrandingID               sql.NullString
+	BrandingSupportEmail     sql.NullString
+	BrandingPhoneNumber      sql.NullString
+	BrandingLogoUrl          sql.NullString
+	BrandingFacebookHandle   sql.NullString
+	BrandingInstagramHandle  sql.NullString
+	BrandingLinkedinHandle   sql.NullString
+	BrandingTwitterHandle    sql.NullString
+	BrandingWebsiteUrl       sql.NullString
+	BrandingCreatedAt        sql.NullTime
+	BrandingUpdatedAt        sql.NullTime
+	PortalID                 sql.NullString
+	PortalSlug               sql.NullString
+	PortalCreatedAt          sql.NullTime
+	PortalUpdatedAt          sql.NullTime
+}
+
+// Returns accounts matching the given IDs. Caller authorization is enforced
+// in the service layer (see accountSvcImpl.BatchGetAccountsByIDs), which
+// filters to IDs the caller is allowed to read.
+func (q *Queries) GetAccountsByIDs(ctx context.Context, ids []string) ([]GetAccountsByIDsRow, error) {
+	query := getAccountsByIDs
+	var queryParams []interface{}
+	if len(ids) > 0 {
+		for _, v := range ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAccountsByIDsRow
+	for rows.Next() {
+		var i GetAccountsByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.DefaultBillingAddressID,
+			&i.DefaultShippingAddressID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.BrandingID,
+			&i.BrandingSupportEmail,
+			&i.BrandingPhoneNumber,
+			&i.BrandingLogoUrl,
+			&i.BrandingFacebookHandle,
+			&i.BrandingInstagramHandle,
+			&i.BrandingLinkedinHandle,
+			&i.BrandingTwitterHandle,
+			&i.BrandingWebsiteUrl,
+			&i.BrandingCreatedAt,
+			&i.BrandingUpdatedAt,
+			&i.PortalID,
+			&i.PortalSlug,
+			&i.PortalCreatedAt,
+			&i.PortalUpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getAgentSpendingCap = `-- name: GetAgentSpendingCap :one

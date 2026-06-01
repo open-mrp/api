@@ -1,0 +1,5 @@
+# Editor atomic-save temp files (vim, Cursor, etc.) must not trigger live updates.
+**/*.tmp.*
+**/.!*!*
+**/.#*
+**/#*#

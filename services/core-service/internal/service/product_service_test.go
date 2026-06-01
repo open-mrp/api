@@ -1114,9 +1114,9 @@ func (s *ProductSvcTestSuite) TestListProductsFull_InternalActor_PassesParamsThr
 func (s *ProductSvcTestSuite) TestListProductsFull_CustomerActor_OverridesCustomerIDsAndPortalReady() {
 	ctx := customerProductIdentityCtx("ac_customer", "ac_owner")
 
-	// External target → ReadAccess check must fire.
+	// External target → counterparty read-access check must fire.
 	s.readAccessMed.EXPECT().
-		CheckReadAccess(gomock.Any(), "ac_customer", "ac_owner").
+		CheckCounterpartyReadAccess(gomock.Any(), "ac_customer", "ac_owner").
 		Return(nil).
 		Times(1)
 
@@ -1181,7 +1181,7 @@ func (s *ProductSvcTestSuite) TestListProductsFull_ExternalTarget_ReadAccessDeni
 	ctx := customerProductIdentityCtx("ac_customer", "ac_owner")
 
 	s.readAccessMed.EXPECT().
-		CheckReadAccess(gomock.Any(), "ac_customer", "ac_owner").
+		CheckCounterpartyReadAccess(gomock.Any(), "ac_customer", "ac_owner").
 		Return(apierror.NewAuthorizationError("no access")).
 		Times(1)
 
@@ -1227,6 +1227,60 @@ func (s *ProductSvcTestSuite) TestListProductsFull_AttachesAttributesAndUnitGrou
 	s.Equal(attrs, result.Products[0].Item.Attributes)
 	s.NotNil(result.Products[0].ProductLine.UnitGroup)
 	s.Equal("Mass", result.Products[0].ProductLine.UnitGroup.Name)
+}
+
+// =============================================================================
+// ExportProducts
+// =============================================================================
+
+func (s *ProductSvcTestSuite) TestExportProducts_InternalActor_PassesParamsThrough() {
+	ctx := internalProductIdentityCtx("ac_test123")
+
+	customerIDs := []string{"ac_a", "ac_b"}
+	s.productRepo.EXPECT().
+		Export(gomock.Any(), gomock.AssignableToTypeOf(domain.ExportProductsParams{})).
+		DoAndReturn(func(_ context.Context, params domain.ExportProductsParams) ([]*domain.ProductFull, *apierror.APIError) {
+			s.Equal("ac_test123", params.AccountID)
+			s.Equal(customerIDs, params.CustomerIDs)
+			s.Nil(params.IsPortalReady)
+			return []*domain.ProductFull{}, nil
+		}).
+		Times(1)
+
+	result, err := s.productSvc.ExportProducts(ctx, domain.ExportProductsParams{
+		CustomerIDs: customerIDs,
+	})
+
+	s.Nil(err)
+	s.NotNil(result)
+}
+
+func (s *ProductSvcTestSuite) TestExportProducts_CustomerActor_OverridesCustomerIDsAndPortalReady() {
+	ctx := customerProductIdentityCtx("ac_customer", "ac_owner")
+
+	s.readAccessMed.EXPECT().
+		CheckCounterpartyReadAccess(gomock.Any(), "ac_customer", "ac_owner").
+		Return(nil).
+		Times(1)
+
+	s.productRepo.EXPECT().
+		Export(gomock.Any(), gomock.AssignableToTypeOf(domain.ExportProductsParams{})).
+		DoAndReturn(func(_ context.Context, params domain.ExportProductsParams) ([]*domain.ProductFull, *apierror.APIError) {
+			// Customer must not be able to widen scope or see non-portal products.
+			s.Equal([]string{"ac_customer"}, params.CustomerIDs)
+			s.NotNil(params.IsPortalReady)
+			s.True(*params.IsPortalReady)
+			s.Equal("ac_owner", params.AccountID)
+			return []*domain.ProductFull{}, nil
+		}).
+		Times(1)
+
+	result, err := s.productSvc.ExportProducts(ctx, domain.ExportProductsParams{
+		CustomerIDs: []string{"ac_other_customer"}, // must be overridden
+	})
+
+	s.Nil(err)
+	s.NotNil(result)
 }
 
 // =============================================================================
@@ -1279,11 +1333,11 @@ func (s *ProductSvcTestSuite) TestGetProduct_MissingTargetAccount_AuthError() {
 	s.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
 }
 
-func (s *ProductSvcTestSuite) TestGetProduct_ExternalTarget_ChecksReadAccess() {
+func (s *ProductSvcTestSuite) TestGetProduct_ExternalTarget_ChecksCounterpartyReadAccess() {
 	ctx := customerProductIdentityCtx("ac_customer", "ac_owner")
 
 	s.readAccessMed.EXPECT().
-		CheckReadAccess(gomock.Any(), "ac_customer", "ac_owner").
+		CheckCounterpartyReadAccess(gomock.Any(), "ac_customer", "ac_owner").
 		Return(apierror.NewAuthorizationError("no access")).
 		Times(1)
 
@@ -1371,11 +1425,11 @@ func (s *ProductSvcTestSuite) TestValidateProducts_MissingTargetAccount_AuthErro
 	s.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
 }
 
-func (s *ProductSvcTestSuite) TestValidateProducts_ExternalTarget_ChecksReadAccess() {
+func (s *ProductSvcTestSuite) TestValidateProducts_ExternalTarget_ChecksCounterpartyReadAccess() {
 	ctx := customerProductIdentityCtx("ac_customer", "ac_owner")
 
 	s.readAccessMed.EXPECT().
-		CheckReadAccess(gomock.Any(), "ac_customer", "ac_owner").
+		CheckCounterpartyReadAccess(gomock.Any(), "ac_customer", "ac_owner").
 		Return(apierror.NewAuthorizationError("no access")).
 		Times(1)
 

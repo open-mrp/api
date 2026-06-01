@@ -171,6 +171,59 @@ SELECT
 FROM unit_group ug
 WHERE ug.id IN (sqlc.slice('ids'));
 
+-- name: GetUnitGroupsByIDsScoped :many
+SELECT
+    ug.id,
+    ug.name,
+    ug.notes,
+    ug.unit_type_code,
+    ug.base_unit_id,
+    u.name AS base_unit_name,
+    u.abbreviation AS base_unit_abbreviation,
+    u.unit_dimension_code AS base_unit_type,
+    u.ratio_numerator AS base_unit_ratio_numerator,
+    u.ratio_denominator AS base_unit_ratio_denominator,
+    u.offset_numerator AS base_unit_offset_numerator,
+    u.offset_denominator AS base_unit_offset_denominator,
+    u.is_base_unit AS base_unit_is_base_unit,
+    u.created_at AS base_unit_created_at,
+    u.updated_at AS base_unit_updated_at,
+    u.account_id AS base_unit_account_id,
+    ug.account_id,
+    ug.created_at,
+    ug.updated_at
+FROM unit_group ug
+JOIN unit u ON ug.base_unit_id = u.id
+WHERE ug.id IN (sqlc.slice('ids'))
+AND (ug.account_id = sqlc.arg('account_id') OR ug.account_id IS NULL);
+
+-- name: GetUnitGroupUnitsByIDsScoped :many
+SELECT
+    ugu.id,
+    ugu.unit_id,
+    ugu.unit_group_id,
+    ugu.discount_percentage,
+    ugu.discount_fixed,
+    ugu.is_visible,
+    ugu.created_at,
+    ugu.updated_at,
+    u.name AS unit_name,
+    u.abbreviation AS unit_abbreviation,
+    u.unit_dimension_code AS unit_type,
+    u.ratio_numerator AS unit_ratio_numerator,
+    u.ratio_denominator AS unit_ratio_denominator,
+    u.offset_numerator AS unit_offset_numerator,
+    u.offset_denominator AS unit_offset_denominator,
+    u.is_base_unit AS unit_is_base_unit,
+    u.created_at AS unit_created_at,
+    u.updated_at AS unit_updated_at,
+    u.account_id AS unit_account_id
+FROM unit_group_unit ugu
+JOIN unit u ON ugu.unit_id = u.id
+JOIN unit_group ug ON ugu.unit_group_id = ug.id
+WHERE ugu.id IN (sqlc.slice('ids'))
+AND (ug.account_id = sqlc.arg('account_id') OR ug.account_id IS NULL);
+
 -- name: ListUnitGroupUnitsByUnitGroupIDs :many
 SELECT
     ugu.id,

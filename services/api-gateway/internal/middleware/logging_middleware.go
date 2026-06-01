@@ -67,7 +67,7 @@ func findRouteTemplate(router any, method, path string) routeMatch {
 	return routeMatch{}
 }
 
-func LoggingMiddleware(logger *log.Logger, next http.HandlerFunc, saver saver, router any) http.HandlerFunc {
+func LoggingMiddleware(logger *log.Logger, next http.HandlerFunc, saver saver, router any, trustedProxyHops int) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now().UTC()
 
@@ -78,7 +78,7 @@ func LoggingMiddleware(logger *log.Logger, next http.HandlerFunc, saver saver, r
 		}
 
 		userAgent := r.UserAgent()
-		clientIP := header.GetClientIP(r)
+		clientIP := header.GetClientIP(r, trustedProxyHops)
 
 		normalizedRoute := r.URL.Path
 		publicEndpoint := true

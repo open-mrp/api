@@ -81,6 +81,61 @@ func (rl *RateLimiter) IsAllowed(key string) (bool, int, int) {
 	return false, retryAfterSeconds, 0
 }
 
+// Check reports whether the given key is currently within the rate limit
+// without recording a new attempt. Pair with RecordFailure to throttle only
+// specific outcomes (e.g. failed login attempts) instead of every request.
+func (rl *RateLimiter) Check(key string) (bool, int) {
+	rl.mutex.RLock()
+	defer rl.mutex.RUnlock()
+
+	now := time.Now().UTC()
+	cutoff := now.Add(-rl.window)
+
+	var validCount int
+	for _, reqTime := range rl.requests[key] {
+		if reqTime.After(cutoff) {
+			validCount++
+		}
+	}
+
+	if validCount < rl.limit {
+		return true, 0
+	}
+
+	// Use a violation count that grows with every overflow attempt so callers
+	// that have not yet incremented violations still see a meaningful backoff.
+	violations := rl.violations[key]
+	if violations <= 0 {
+		violations = validCount - rl.limit + 1
+	}
+	delay := rl.calculateBackoffDelay(violations)
+	return false, int(delay.Seconds())
+}
+
+// RecordFailure records a single failed attempt for the given key, advancing
+// the rate limit window and (when the limit is exceeded) the backoff state.
+func (rl *RateLimiter) RecordFailure(key string) {
+	rl.mutex.Lock()
+	defer rl.mutex.Unlock()
+
+	now := time.Now().UTC()
+	cutoff := now.Add(-rl.window)
+
+	var validRequests []time.Time
+	for _, reqTime := range rl.requests[key] {
+		if reqTime.After(cutoff) {
+			validRequests = append(validRequests, reqTime)
+		}
+	}
+	validRequests = append(validRequests, now)
+	rl.requests[key] = validRequests
+
+	if len(validRequests) > rl.limit {
+		rl.violations[key]++
+		rl.lastViolation[key] = now
+	}
+}
+
 // GetResetAfterSeconds returns the number of seconds until the rate limit resets for a given key.
 func (rl *RateLimiter) GetResetAfterSeconds(key string) int {
 	rl.mutex.RLock()
@@ -127,15 +182,15 @@ func getGlobalRateLimiter() *RateLimiter {
 	return globalRateLimiter
 }
 
-func RateLimitMiddleware() func(http.HandlerFunc) http.HandlerFunc {
-	return rateLimitMiddleware(getGlobalRateLimiter())
+func RateLimitMiddleware(trustedProxyHops int) func(http.HandlerFunc) http.HandlerFunc {
+	return rateLimitMiddleware(getGlobalRateLimiter(), trustedProxyHops)
 }
 
-func RateLimitMiddlewareWithConfig(limit int, window time.Duration) func(http.HandlerFunc) http.HandlerFunc {
-	return rateLimitMiddleware(NewRateLimiter(limit, window))
+func RateLimitMiddlewareWithConfig(limit int, window time.Duration, trustedProxyHops int) func(http.HandlerFunc) http.HandlerFunc {
+	return rateLimitMiddleware(NewRateLimiter(limit, window), trustedProxyHops)
 }
 
-func rateLimitMiddleware(rateLimiter *RateLimiter) func(http.HandlerFunc) http.HandlerFunc {
+func rateLimitMiddleware(rateLimiter *RateLimiter, trustedProxyHops int) func(http.HandlerFunc) http.HandlerFunc {
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
 			// Skip rate limiting for health checks and test mode.
@@ -148,7 +203,7 @@ func rateLimitMiddleware(rateLimiter *RateLimiter) func(http.HandlerFunc) http.H
 				return
 			}
 
-			clientIP := header.GetClientIP(r)
+			clientIP := header.GetClientIP(r, trustedProxyHops)
 
 			allowed, retryAfterSeconds, remaining := rateLimiter.IsAllowed(clientIP.String())
 

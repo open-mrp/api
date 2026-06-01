@@ -8,9 +8,11 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleInvoiceID = "iv_01jm4r6700f8nwq3v5hx2d9ktp"
-const SampleInvoiceLineID = "ivln_01jm4r6700f8nwq3v5hx2d9ktp"
-const SampleInvoiceAllocationID = "txal_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleInvoiceID = "iv_018b5949ada8abca36358bbea9"
+const SampleInvoiceLineID = "ivln_01999b9fa867e396ec797aab95"
+
+// Same allocation row as SampleAllocationEntryID (invoice example embeds that entry).
+const SampleInvoiceAllocationID = SampleAllocationEntryID
 
 // Lightweight invoice for list views.
 type InvoiceSummary struct {

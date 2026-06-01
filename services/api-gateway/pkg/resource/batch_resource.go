@@ -12,11 +12,11 @@ import (
 // Sample IDs
 // ---------------------------------------------------------------------------
 
-const SampleBatchID = "bt_01jm4r6700f8nwq3v5hx2d9ktp"
-const SampleScanningStationID = "scst_01jm4r6700f8nwq3v5hx2d9ktp"
-const SampleProductionStepID = "prst_01jm4r6700f8nwq3v5hx2d9ktp"
-const SampleProductionRunID = "prru_01jm4r6700f8nwq3v5hx2d9ktp"
-const SampleMachineID = "mc_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleBatchID = "bt_017313a7df2d7ac8d895809747"
+const SampleScanningStationID = "scst_0129335dd6286056a97024fcc1"
+const SampleProductionStepID = "prst_0159474175bb59f4b1990404ee"
+const SampleProductionRunID = "prru_0141c28081df4faac0fe726c41"
+const SampleMachineID = "mc_0177d18f55a1615f783d3bf8d0"
 
 // ---------------------------------------------------------------------------
 

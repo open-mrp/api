@@ -36,3 +36,14 @@ AND (
 )
 ORDER BY sales_order_status.created_at ASC, sales_order_status.id ASC
 LIMIT ?;
+
+-- name: GetSalesOrderStatusesByIDs :many
+-- System-wide resource; no per-caller scoping.
+SELECT
+    sales_order_status.id,
+    sales_order_status.code,
+    sales_order_status.name,
+    sales_order_status.created_at,
+    sales_order_status.updated_at
+FROM sales_order_status
+WHERE sales_order_status.id IN (sqlc.slice('ids'));

@@ -170,6 +170,39 @@ func (r *accountRelationRepoImpl) GetChildAccountDetail(ctx context.Context, own
 	}, nil
 }
 
+func (r *accountRelationRepoImpl) GetChildAccountsByRelationIDs(ctx context.Context, ownerAccountID string, relationIDs []string) ([]*domain.ChildAccount, *apierror.APIError) {
+	ctx, span := childAccountRepoTracer.Start(ctx, "repository.child_account.get_by_relation_ids")
+	defer span.End()
+
+	if len(relationIDs) == 0 {
+		return nil, nil
+	}
+	rows, err := r.queries.GetChildAccountsByRelationIDs(ctx, sqlc.GetChildAccountsByRelationIDsParams{
+		Ids:            relationIDs,
+		OwnerAccountID: ownerAccountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make([]*domain.ChildAccount, len(rows))
+	for i, row := range rows {
+		var email *string
+		if row.Email.Valid {
+			email = &row.Email.String
+		}
+		out[i] = &domain.ChildAccount{
+			RelationID:     row.RelationID,
+			AccountID:      row.AccountID,
+			AccountName:    row.AccountName,
+			ExternalNumber: row.ExternalNumber,
+			Email:          email,
+			CreatedAt:      row.CreatedAt,
+			UpdatedAt:      row.UpdatedAt,
+		}
+	}
+	return out, nil
+}
+
 func (r *accountRelationRepoImpl) SetParentRelation(ctx context.Context, ownerAccountID, childRelationID, parentRelationID string) *apierror.APIError {
 	ctx, span := childAccountRepoTracer.Start(ctx, "repository.child_account.set_parent_relation")
 	defer span.End()

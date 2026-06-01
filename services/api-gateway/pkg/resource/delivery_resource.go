@@ -8,9 +8,9 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleDeliveryID = "dlv_01jm4r6700f8nwq3v5hx2d9ktp"
-const SampleDeliveryLineID = "dlvl_01jm4r6700f8nwq3v5hx2d9ktp"
-const SampleLotID = "lot_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleDeliveryID = "dlv_0143cbea89e0f17c3d19828a3a"
+const SampleDeliveryLineID = "dlvl_011663287f82d3a595acc18bcd"
+const SampleLotID = "lot_01efb5e19625fdc035bb0670df"
 
 // Lot sub-resource.
 type Lot struct {

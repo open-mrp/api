@@ -259,6 +259,36 @@ func (s *sandboxSvcImpl) GetSandbox(ctx context.Context, sandboxTypeID string, i
 	return sandbox, nil
 }
 
+// BatchGetSandboxesByIDs returns sandbox accounts matching the input type IDs
+// that the caller's production account owns. The api-gateway resolver pipes
+// the result back to the registered loader, which then resolves the
+// owner_account include via the Account loader.
+func (s *sandboxSvcImpl) BatchGetSandboxesByIDs(ctx context.Context, typeIDs []string) ([]*domain.SandboxAccount, *apierror.APIError) {
+	ctx, span := sandboxSvcTracer.Start(ctx, "service.sandbox.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckNotSandboxMode(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainSandbox, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+	if len(typeIDs) == 0 {
+		return nil, nil
+	}
+	return s.repos.NewSandboxAccountRepo().GetByTypeIDs(ctx, identity.Target.AccountID, typeIDs)
+}
+
 // DeleteSandbox removes a sandbox account and enqueues a purge message for async data cleanup.
 //
 // 1. Extract and validate the caller's identity, actor type, sandbox:delete permission, and non-sandbox mode.

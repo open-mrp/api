@@ -127,6 +127,31 @@ func (s *orderDiscountSvcImpl) GetOrderDiscount(ctx context.Context, orderDiscou
 	})
 }
 
+// BatchGetOrderDiscountsByIDs returns order discounts matching the input IDs
+// that the caller's account is authorized to read. Account-scoped.
+func (s *orderDiscountSvcImpl) BatchGetOrderDiscountsByIDs(ctx context.Context, ids []string) ([]*domain.OrderDiscount, *apierror.APIError) {
+	ctx, span := orderDiscountSvcTracer.Start(ctx, "service.order_discount.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainDiscounts, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	return s.repos.NewOrderDiscountRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
+}
+
 func (s *orderDiscountSvcImpl) CreateOrderDiscount(ctx context.Context, params domain.CreateOrderDiscountParams) (*domain.OrderDiscount, *apierror.APIError) {
 	ctx, span := orderDiscountSvcTracer.Start(ctx, "service.order_discount.create")
 	defer span.End()

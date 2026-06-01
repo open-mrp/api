@@ -17,6 +17,10 @@ type IncludeField struct {
 // the include query parameter.
 type IncludeConfig struct {
 	Fields []IncludeField
+	// ExtractRoots overrides the default root extraction for non-standard
+	// response shapes (e.g. map-typed responses). When nil, the reflective
+	// default handles *Resource and *List[Resource] shapes.
+	ExtractRoots func(any) []any
 }
 
 // AllowedKeys returns the set of valid include parameter values.

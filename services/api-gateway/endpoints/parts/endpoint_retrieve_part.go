@@ -31,6 +31,7 @@ func (e *RetrievePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveP
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrievePartRequest) (*apiresource.Part, *apierror.APIError) {
 			return svc.(PartSvc).GetPart
 		},
+		ObjectType: constants.ObjectTypePart,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypePart,
 			Fields:     []string{"item", "item.category", "item.category.properties", "item.category.unit_group", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},

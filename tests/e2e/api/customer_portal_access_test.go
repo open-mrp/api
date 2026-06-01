@@ -3,6 +3,7 @@
 package api_test
 
 import (
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -59,6 +60,45 @@ func TestCustomerPortalAccess_GetProductLine(t *testing.T) {
 	assert.Equal(t, SeedProductLineID, jsonField(parsed, "id"))
 }
 
+func TestCustomerPortalAccess_ListProducts(t *testing.T) {
+	t.Parallel()
+	client := getCustomerPortalClient()
+
+	status, body, err := client.GetListRaw("/v1/catalog/products", url.Values{
+		"include": {"product_line,item,item.category,item.unit_value,item.attributes"},
+		"q":       {"SCK-001"},
+	})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	parsed := parseJSON(body)
+	assert.Equal(t, "list", jsonField(parsed, "object"))
+	data := parsed["data"].([]any)
+	require.NotEmpty(t, data, "customer should see portal-ready products from accessible product lines")
+
+	first := data[0].(map[string]any)
+	assert.Equal(t, "product", jsonField(first, "object"))
+	assert.NotNil(t, jsonField(first, "product_line"))
+	assert.NotNil(t, jsonField(first, "item"))
+}
+
+func TestCustomerPortalAccess_GetProduct(t *testing.T) {
+	t.Parallel()
+	client := getCustomerPortalClient()
+
+	status, body, err := client.GetListRaw("/v1/catalog/products/"+SeedProductID, url.Values{
+		"include": {"product_line,item,item.category,item.unit_value,item.attributes"},
+	})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	parsed := parseJSON(body)
+	assert.Equal(t, "product", jsonField(parsed, "object"))
+	assert.Equal(t, SeedProductID, jsonField(parsed, "id"))
+	assert.NotNil(t, jsonField(parsed, "product_line"))
+	assert.NotNil(t, jsonField(parsed, "item"))
+}
+
 func TestCustomerPortalAccess_ListUnitGroups(t *testing.T) {
 	t.Parallel()
 	client := getCustomerPortalClient()
@@ -82,6 +122,24 @@ func TestCustomerPortalAccess_GetUnitGroup(t *testing.T) {
 	parsed := parseJSON(body)
 	assert.Equal(t, "unit_group", jsonField(parsed, "object"))
 	assert.Equal(t, SeedUnitGroupID, jsonField(parsed, "id"))
+}
+
+func TestCustomerPortalAccess_GetUnitGroupWithIncludes(t *testing.T) {
+	t.Parallel()
+	client := getCustomerPortalClient()
+
+	status, body, err := client.GetListRaw("/v1/catalog/unit-groups/currency_group", url.Values{
+		"include": {"owner,base_unit,associated_units"},
+	})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	parsed := parseJSON(body)
+	assert.Equal(t, "unit_group", jsonField(parsed, "object"))
+	assert.Equal(t, "currency_group", jsonField(parsed, "id"))
+	assert.NotNil(t, jsonField(parsed, "owner"))
+	assert.NotNil(t, jsonField(parsed, "base_unit"))
+	assert.NotNil(t, jsonField(parsed, "associated_units"))
 }
 
 func TestCustomerPortalAccess_ListUnitGroupUnits(t *testing.T) {

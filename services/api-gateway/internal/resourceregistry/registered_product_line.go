@@ -1,0 +1,83 @@
+package resourceregistry
+
+import (
+	"context"
+
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
+	"github.com/augno/api/shared/constants"
+)
+
+func init() {
+	resourcekit.Register(&resourcekit.Definition{
+		ObjectType: constants.ObjectTypeProductLine,
+		Load:       resourceloaders.LoadProductLines,
+		Subs: []resourcekit.SubField{
+			{Key: "owner", Populate: populateOwnerOnProductLine},
+			{
+				Key:         "owner.account",
+				Target:      constants.ObjectTypeAccount,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractIDs:  extractOwnerAccountIDFromProductLine,
+				Populate:    populateOwnerAccountOnProductLine,
+			},
+			{
+				Key:         "unit_group",
+				Target:      constants.ObjectTypeUnitGroup,
+				ExtractRefs: extractUnitGroupRefsFromProductLine,
+				Populate:    populateUnitGroupOnProductLine,
+			},
+		},
+	})
+}
+
+func populateOwnerOnProductLine(ctx context.Context, parent any, _ map[string]any) {
+	pl := parent.(*apiresource.ProductLine)
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeProductLine, pl.ID, "owner_account_id")
+	pl.Owner = buildOwnerShell(id)
+}
+
+func extractOwnerAccountIDFromProductLine(ctx context.Context, parent any) []string {
+	pl := parent.(*apiresource.ProductLine)
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeProductLine, pl.ID, "owner_account_id")
+	if id == "" {
+		return nil
+	}
+	return []string{id}
+}
+
+func populateOwnerAccountOnProductLine(ctx context.Context, parent any, loaded map[string]any) {
+	pl := parent.(*apiresource.ProductLine)
+	if pl.Owner == nil {
+		return
+	}
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeProductLine, pl.ID, "owner_account_id")
+	if id == "" {
+		return
+	}
+	if v, ok := loaded[id]; ok {
+		pl.Owner.Account = v.(*apiresource.Account)
+	}
+}
+
+func extractUnitGroupRefsFromProductLine(_ context.Context, parent any) []any {
+	pl := parent.(*apiresource.ProductLine)
+	if pl.UnitGroup == nil {
+		return nil
+	}
+	return []any{pl.UnitGroup}
+}
+
+func populateUnitGroupOnProductLine(ctx context.Context, parent any, _ map[string]any) {
+	pl := parent.(*apiresource.ProductLine)
+	v, ok := resourcekit.GetLoadMeta(ctx).
+		Get(constants.ObjectTypeProductLine, pl.ID, "unit_group")
+	if !ok || v == nil {
+		return
+	}
+	pl.UnitGroup = v.(*apiresource.UnitGroup)
+}

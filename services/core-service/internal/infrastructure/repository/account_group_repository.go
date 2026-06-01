@@ -86,6 +86,14 @@ func mapGetAccountGroupRow(row sqlc.GetAccountGroupRow) *domain.AccountGroup {
 	)
 }
 
+func mapGetAccountGroupsByIDsRow(row sqlc.GetAccountGroupsByIDsRow) *domain.AccountGroup {
+	return mapAccountGroupRow(
+		row.ID, row.OwnerAccountID, row.Name, row.Description,
+		row.CommissionStatusCode, row.FreightStatusCode, row.AccountGroupTypeCode,
+		row.RegistrationFlowID, row.CreatedAt, row.UpdatedAt,
+	)
+}
+
 func (r *accountGroupRepoImpl) List(ctx context.Context, params domain.ListAccountGroupsParams) (*domain.ListAccountGroupsResult, *apierror.APIError) {
 	ctx, span := accountGroupRepoTracer.Start(ctx, "repository.account_group.list")
 	defer span.End()
@@ -159,6 +167,27 @@ func (r *accountGroupRepoImpl) List(ctx context.Context, params domain.ListAccou
 	}
 	result, pageInfo := pagination.BuildPageString(groups, params.Limit, cursorDir, accountGroupCreatedAt, accountGroupID)
 	return &domain.ListAccountGroupsResult{AccountGroups: result, PageInfo: pageInfo}, nil
+}
+
+func (r *accountGroupRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.AccountGroup, *apierror.APIError) {
+	ctx, span := accountGroupRepoTracer.Start(ctx, "repository.account_group.get_by_ids")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := r.queries.GetAccountGroupsByIDs(ctx, sqlc.GetAccountGroupsByIDsParams{
+		Ids:            ids,
+		OwnerAccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make([]*domain.AccountGroup, len(rows))
+	for i, row := range rows {
+		out[i] = mapGetAccountGroupsByIDsRow(row)
+	}
+	return out, nil
 }
 
 func (r *accountGroupRepoImpl) Get(ctx context.Context, accountID, id string) (*domain.AccountGroup, *apierror.APIError) {

@@ -32,6 +32,7 @@ const (
 	envDBURL              = "DB_URL"
 	envRabbitMQURI        = "RABBITMQ_URI"
 	envFrontendURL        = "FRONTEND_URL"
+	envTrustedProxyHops   = "TRUSTED_PROXY_HOPS"
 )
 
 // config represents the configuration for the API gateway.
@@ -66,6 +67,13 @@ type config struct {
 	// FrontendURL (optional) is the base URL of the frontend application, used to build
 	// request log links in error responses. When empty, request_log_url will be null.
 	FrontendURL string
+
+	// TrustedProxyHops (optional; default: 0) specifies how many reverse-proxy
+	// hops sit in front of this service. Each trusted proxy is expected to
+	// append the IP it observed as the TCP source to X-Forwarded-For. When set
+	// to 0 the X-Forwarded-For header is ignored entirely. In production behind
+	// AWS ALB this should be 1.
+	TrustedProxyHops int
 }
 
 // withDefaults sets the default values for the configuration.
@@ -85,6 +93,11 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		port = p
 	}
 
+	trustedProxyHops := 0
+	if h, err := strconv.Atoi(env.GetEnv(envTrustedProxyHops, getenv)); err == nil {
+		trustedProxyHops = h
+	}
+
 	return &config{
 		PlatformMode:       platformMode,
 		Port:               port,
@@ -96,6 +109,7 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		DBURI:              env.GetEnv(envDBURL, getenv),
 		RabbitMQURI:        cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
 		FrontendURL:        env.GetEnv(envFrontendURL, getenv),
+		TrustedProxyHops:   trustedProxyHops,
 	}
 }
 
@@ -109,6 +123,9 @@ func (c *config) validate() error {
 	}
 	if !c.PlatformMode.IsValid() {
 		return fmt.Errorf("api-gateway: the provided platform mode is invalid: %s", c.PlatformMode)
+	}
+	if c.TrustedProxyHops < 0 {
+		return fmt.Errorf("api-gateway: trusted proxy hops must be non-negative, got %d", c.TrustedProxyHops)
 	}
 	return nil
 }

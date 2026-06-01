@@ -68,3 +68,20 @@ func (s *accountStatusSvcImpl) GetAccountStatus(ctx context.Context, identifier 
 
 	return s.repos.NewAccountStatusRepo().Get(ctx, identifier)
 }
+
+func (s *accountStatusSvcImpl) BatchGetAccountStatusesByIDs(ctx context.Context, ids []string) ([]*domain.AccountStatus, *apierror.APIError) {
+	ctx, span := accountStatusSvcTracer.Start(ctx, "service.account_status.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	return s.repos.NewAccountStatusRepo().GetByIDs(ctx, ids)
+}

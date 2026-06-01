@@ -195,3 +195,23 @@ func accountUserDetailToProto(d *domain.AccountUserDetail) *pb.AccountUserDetail
 
 	return proto
 }
+
+func (h *gRPCHandler) BatchGetAccountUsersByIDs(ctx context.Context, req *pb.BatchGetAccountUsersByIDsRequest) (*pb.BatchGetAccountUsersByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	users, apiErr := h.accountUserSvc.BatchGetAccountUsersByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	pbUsers := make([]*pb.AccountUserDetail, len(users))
+	for i, u := range users {
+		pbUsers[i] = accountUserDetailToProto(u)
+	}
+
+	return &pb.BatchGetAccountUsersByIDsResponse{
+		AccountUsers: pbUsers,
+	}, nil
+}

@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/appctx"
+	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/agent"
 	corepb "github.com/augno/api/shared/proto/core"
@@ -37,6 +37,7 @@ type agentSvcImpl struct {
 }
 
 var agentSvcTracer = tracing.GetTracer("api-gateway.endpoints.agents.service")
+var agentIncludes = []string{"config", "tools", "role"}
 
 func (c *AgentSvcConfig) validate() error {
 	if c.AgentClient == nil {
@@ -70,11 +71,9 @@ func (m *agentSvcImpl) resolveRole(ctx context.Context, roleID string) *Resolved
 		Name:     resp.Name,
 		RoleType: resp.RoleTypeCode,
 	}
-	if appctx.IsIncludeRequested(ctx, "role.permissions") {
-		permResp, permErr := m.coreClient.GetRolePermissions(ctx, &corepb.GetRolePermissionsRequest{RoleId: roleID})
-		if permErr == nil {
-			resolved.Permissions = permResp.Permissions
-		}
+	permResp, permErr := m.coreClient.GetRolePermissions(ctx, &corepb.GetRolePermissionsRequest{RoleId: roleID})
+	if permErr == nil {
+		resolved.Permissions = permResp.Permissions
 	}
 	return resolved
 }
@@ -121,7 +120,7 @@ func (m *agentSvcImpl) CreateAgent(ctx context.Context, req *CreateAgentRequest)
 		TriggerType:  string(req.TriggerType),
 		ConfigJson:   configJSON,
 		Tools:        tools,
-		Includes:     appctx.GetRequestedIncludeKeys(ctx),
+		Includes:     agentIncludes,
 		RoleId:       req.RoleID,
 	}
 
@@ -133,7 +132,9 @@ func (m *agentSvcImpl) CreateAgent(ctx context.Context, req *CreateAgentRequest)
 		return nil, rpcErr
 	}
 
-	result := AgentDefinitionPresenter(resp.Agent, m.resolveRole(ctx, resp.Agent.GetRoleId()))
+	meta := resourcekit.GetLoadMeta(ctx)
+	result := AgentDefinitionPresenter(resp.Agent)
+	StashAgentDefinitionMeta(meta, resp.Agent, m.resolveRole(ctx, resp.Agent.GetRoleId()))
 	return &result, nil
 }
 
@@ -154,7 +155,7 @@ func (m *agentSvcImpl) ListAgents(ctx context.Context, req *ListAgentsRequest) (
 	}
 
 	pbReq := &pb.ListAgentDefinitionsRequest{
-		Includes:        appctx.GetRequestedIncludeKeys(ctx),
+		Includes:        agentIncludes,
 		Statuses:        statuses,
 		DefinitionTypes: definitionTypes,
 		TriggerTypes:    triggerTypes,
@@ -179,7 +180,7 @@ func (m *agentSvcImpl) ListAgents(ctx context.Context, req *ListAgentsRequest) (
 func (m *agentSvcImpl) GetAgent(ctx context.Context, req *RetrieveAgentRequest) (*apiresource.AgentDefinition, *apierror.APIError) {
 	pbReq := &pb.GetAgentDefinitionRequest{
 		AgentDefinitionId: req.AgentDefinitionID,
-		Includes:          appctx.GetRequestedIncludeKeys(ctx),
+		Includes:          agentIncludes,
 	}
 
 	resp, rpcErr := grpcutil.CallRPC(ctx, agentSvcTracer, "service.agents.get", domain.ServiceName,
@@ -190,7 +191,9 @@ func (m *agentSvcImpl) GetAgent(ctx context.Context, req *RetrieveAgentRequest) 
 		return nil, rpcErr
 	}
 
-	result := AgentDefinitionPresenter(resp.Agent, m.resolveRole(ctx, resp.Agent.GetRoleId()))
+	meta := resourcekit.GetLoadMeta(ctx)
+	result := AgentDefinitionPresenter(resp.Agent)
+	StashAgentDefinitionMeta(meta, resp.Agent, m.resolveRole(ctx, resp.Agent.GetRoleId()))
 	return &result, nil
 }
 
@@ -203,7 +206,7 @@ func (m *agentSvcImpl) UpdateAgent(ctx context.Context, req *UpdateAgentRequest)
 		CategoryCode:      req.CategoryCode,
 		TriggerType:       req.TriggerType.StringPtr(),
 		RoleId:            req.RoleID,
-		Includes:          appctx.GetRequestedIncludeKeys(ctx),
+		Includes:          agentIncludes,
 	}
 
 	if req.Config != nil {
@@ -241,7 +244,9 @@ func (m *agentSvcImpl) UpdateAgent(ctx context.Context, req *UpdateAgentRequest)
 		return nil, rpcErr
 	}
 
-	result := AgentDefinitionPresenter(resp.Agent, m.resolveRole(ctx, resp.Agent.GetRoleId()))
+	meta := resourcekit.GetLoadMeta(ctx)
+	result := AgentDefinitionPresenter(resp.Agent)
+	StashAgentDefinitionMeta(meta, resp.Agent, m.resolveRole(ctx, resp.Agent.GetRoleId()))
 	return &result, nil
 }
 

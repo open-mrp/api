@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/contracts"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -48,6 +49,7 @@ func (e *ListMemoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMemor
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeAgentMemory,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListMemoriesRequest) (*apiresource.List[apiresource.AgentMemory], *apierror.APIError) {
 			return svc.(AgentMemorySvc).ListMemories
 		},

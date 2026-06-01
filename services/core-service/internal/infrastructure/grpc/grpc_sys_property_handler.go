@@ -75,6 +75,21 @@ func (h *gRPCHandler) GetSysProperty(ctx context.Context, req *pb.GetSysProperty
 	}, nil
 }
 
+func (h *gRPCHandler) BatchGetSysPropertiesByIDs(ctx context.Context, req *pb.BatchGetSysPropertiesByIDsRequest) (*pb.BatchGetSysPropertiesByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	items, apiErr := h.sysPropertySvc.BatchGetSysPropertiesByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	pbItems := make([]*pb.SysPropertyInfo, len(items))
+	for i, sp := range items {
+		pbItems[i] = sysPropertyToProto(sp)
+	}
+	return &pb.BatchGetSysPropertiesByIDsResponse{SysProperties: pbItems}, nil
+}
+
 func (h *gRPCHandler) UpdateSysProperty(ctx context.Context, req *pb.UpdateSysPropertyRequest) (*pb.UpdateSysPropertyResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

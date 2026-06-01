@@ -35,14 +35,30 @@ func (e *ValidateProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Valid
 		Route:             "/v1/catalog/products/actions/validate",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
+		ObjectType:        constants.ObjectTypeProduct,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ValidateProductsRequest) (*apiresource.ValidateProductsResponse, *apierror.APIError) {
 			return svc.(ProductSvc).ValidateProducts
 		},
-		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType: constants.ObjectTypeProduct,
-			Fields:     []string{"product_line", "product_line.unit_group", "product_line.unit_group.base_unit", "product_line.unit_group.associated_units", "product_line.unit_group.associated_units.unit", "item", "item.category", "item.category.properties", "item.category.unit_group", "item.category.unit_group.base_unit", "item.category.unit_group.associated_units", "item.category.unit_group.associated_units.unit", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
-		}),
+		IncludeConfig: validateProductsIncludeConfig(),
 	})
+}
+
+func validateProductsIncludeConfig() *apiendpoint.IncludeConfig {
+	cfg := apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+		ObjectType: constants.ObjectTypeProduct,
+		Fields:     []string{"product_line", "product_line.unit_group", "product_line.unit_group.base_unit", "product_line.unit_group.associated_units", "product_line.unit_group.associated_units.unit", "item", "item.category", "item.category.properties", "item.category.unit_group", "item.category.unit_group.base_unit", "item.category.unit_group.associated_units", "item.category.unit_group.associated_units.unit", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
+	})
+	cfg.ExtractRoots = func(resp any) []any {
+		vpr := resp.(*apiresource.ValidateProductsResponse)
+		roots := make([]any, 0, len(vpr.Products))
+		for _, p := range vpr.Products {
+			if p != nil {
+				roots = append(roots, p)
+			}
+		}
+		return roots
+	}
+	return cfg
 }

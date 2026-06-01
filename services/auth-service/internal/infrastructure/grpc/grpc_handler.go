@@ -279,6 +279,26 @@ func (h *gRPCHandler) GetAPIKey(ctx context.Context, req *pb.GetAPIKeyRequest) (
 	}, nil
 }
 
+func (h *gRPCHandler) BatchGetAPIKeysByIDs(ctx context.Context, req *pb.BatchGetAPIKeysByIDsRequest) (*pb.BatchGetAPIKeysByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	keys, apiErr := h.apiKeySvc.BatchGetAPIKeysByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	pbKeys := make([]*pb.APIKeyInfo, len(keys))
+	for i, key := range keys {
+		pbKeys[i] = key.ToProto()
+	}
+
+	return &pb.BatchGetAPIKeysByIDsResponse{
+		ApiKeys: pbKeys,
+	}, nil
+}
+
 func (h *gRPCHandler) RevokeAPIKey(ctx context.Context, req *pb.RevokeAPIKeyRequest) (*emptypb.Empty, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

@@ -55,6 +55,7 @@ type ExportProductsParams struct {
 	AttributeIDs   []string
 	StartDate      *time.Time
 	EndDate        *time.Time
+	IsPortalReady  *bool
 }
 
 // GetProductFullParams holds parameters for retrieving a single product.

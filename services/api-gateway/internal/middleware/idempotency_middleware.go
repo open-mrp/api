@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"maps"
 	"net/http"
@@ -37,6 +39,13 @@ const cookieTTLSeconds = 300 // 5 minutes
 var idempotencyMiddlewareTracer = tracing.GetTracer("api-gateway.idempotency_middleware")
 
 const maxIdempotencyResponseSize = 1024 * 64
+
+// maxIdempotencyRequestBodySize bounds the request body buffered by the
+// idempotency middleware so an unauthenticated client cannot exhaust gateway
+// memory by sending a very large body with an Idempotency-Key header. The
+// limit matches the per-endpoint JSON body cap in apiendpoint, so any request
+// that would have been accepted downstream is still accepted here.
+const maxIdempotencyRequestBodySize = 1 << 20 // 1 MiB
 
 // idempotencyStoreTimeout bounds the synchronous gRPC call that persists the
 // response body and releases the idempotency lock. It must be long enough to
@@ -194,7 +203,11 @@ func IdempotencyMiddleware(config *IdempotencyMiddlewareConfig) func(http.Handle
 			// Identity may not be set depending on the endpoint, so we will handle unset identities as unauthorized
 			identity, _ := appctx.GetIdentityFromContext(r.Context())
 
-			bodyBytes, r := readAndRestoreBody(r)
+			bodyBytes, r, bodyErr := readAndRestoreBody(w, r)
+			if bodyErr != nil {
+				httptransport.RespondWithAPIError(ctx, w, bodyErr)
+				return
+			}
 			params := readAndRestoreParams(r)
 
 			normalizedRoute := r.URL.Path
@@ -359,22 +372,37 @@ func IdempotencyMiddleware(config *IdempotencyMiddlewareConfig) func(http.Handle
 	}
 }
 
-func readAndRestoreBody(r *http.Request) ([]byte, *http.Request) {
+// readAndRestoreBody buffers r.Body so it can be hashed for idempotency and
+// then restores it for downstream handlers. The read is capped at
+// maxIdempotencyRequestBodySize via http.MaxBytesReader; if the body exceeds
+// that cap, the returned APIError is non-nil and the caller must abort the
+// request rather than continue with a truncated body.
+func readAndRestoreBody(w http.ResponseWriter, r *http.Request) ([]byte, *http.Request, *apierror.APIError) {
 	if r.Body == nil {
-		return nil, r
+		return nil, r, nil
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, maxIdempotencyRequestBodySize)
 	bodyBytes, err := io.ReadAll(r.Body)
 	_ = r.Body.Close()
 
-	if err != nil || len(bodyBytes) == 0 {
-		r.Body = io.NopCloser(bytes.NewReader([]byte{}))
-		return nil, r
+	if err != nil {
+		if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
+			return nil, r, apierror.NewValidationError(
+				fmt.Sprintf("Request body exceeds the maximum allowed size of %d bytes.", maxIdempotencyRequestBodySize),
+			)
+		}
+		r.Body = io.NopCloser(bytes.NewReader(nil))
+		return nil, r, nil
+	}
+
+	if len(bodyBytes) == 0 {
+		r.Body = io.NopCloser(bytes.NewReader(nil))
+		return nil, r, nil
 	}
 
 	r.Body = io.NopCloser(bytes.NewReader(bodyBytes))
-
-	return bodyBytes, r
+	return bodyBytes, r, nil
 }
 
 func readAndRestoreParams(r *http.Request) map[string]string {

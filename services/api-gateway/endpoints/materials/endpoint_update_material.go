@@ -52,6 +52,7 @@ func (e *UpdateMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateM
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeMaterial,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateMaterialRequest) (*apiresource.Material, *apierror.APIError) {
 			return svc.(MaterialSvc).UpdateMaterial
 		},

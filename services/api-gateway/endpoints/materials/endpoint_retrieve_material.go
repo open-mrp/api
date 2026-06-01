@@ -28,6 +28,7 @@ func (e *RetrieveMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeMaterial,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveMaterialRequest) (*apiresource.Material, *apierror.APIError) {
 			return svc.(MaterialSvc).GetMaterial
 		},

@@ -28,7 +28,7 @@ func (r *inboxRepoImpl) PurgeProcessed(ctx context.Context, retentionHours int, 
 	defer span.End()
 
 	result, err := r.queries.PurgeProcessedInboxMessages(ctx, sqlc.PurgeProcessedInboxMessagesParams{
-		DATESUB: retentionHours,
+		Column1: retentionHours,
 		Limit:   limit,
 	})
 	if err != nil {

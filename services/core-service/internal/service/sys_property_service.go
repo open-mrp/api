@@ -112,6 +112,31 @@ func (s *sysPropertySvcImpl) GetSysProperty(ctx context.Context, sysPropertyID s
 	return s.repos.NewSysPropertyRepo().Get(ctx, identity.Target.AccountID, sysPropertyID)
 }
 
+// BatchGetSysPropertiesByIDs returns sys properties matching the input IDs.
+// Account-scoped via the caller's identity.
+func (s *sysPropertySvcImpl) BatchGetSysPropertiesByIDs(ctx context.Context, ids []string) ([]*domain.SysProperty, *apierror.APIError) {
+	ctx, span := sysPropertySvcTracer.Start(ctx, "service.sys_property.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainSystemProperties, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	return s.repos.NewSysPropertyRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
+}
+
 func (s *sysPropertySvcImpl) UpdateSysProperty(ctx context.Context, params domain.UpdateSysPropertyParams) (*domain.SysProperty, *apierror.APIError) {
 	ctx, span := sysPropertySvcTracer.Start(ctx, "service.sys_property.update")
 	defer span.End()

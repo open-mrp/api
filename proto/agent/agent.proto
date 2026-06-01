@@ -62,6 +62,9 @@ service AgentService {
   // DeleteAgentMemory deletes an agent memory.
   rpc DeleteAgentMemory(DeleteAgentMemoryRequest) returns (DeleteAgentMemoryResponse);
 
+  // Returns agent memories by ID for the api-gateway include resolver.
+  rpc BatchGetAgentMemoriesByIDs(BatchGetAgentMemoriesByIDsRequest) returns (BatchGetAgentMemoriesByIDsResponse);
+
   // ListAgentAlerts returns a paginated list of agent alerts for an account.
   rpc ListAgentAlerts(ListAgentAlertsRequest) returns (ListAgentAlertsResponse);
 
@@ -453,6 +456,15 @@ message UpdateAgentMemoryResponse {
 
 message DeleteAgentMemoryRequest {
   string id = 1;
+}
+
+// Batched read for the api-gateway resourcekit resolver.
+message BatchGetAgentMemoriesByIDsRequest {
+  repeated string ids = 1;
+}
+
+message BatchGetAgentMemoriesByIDsResponse {
+  repeated AgentMemoryInfo memories = 1;
 }
 
 message DeleteAgentMemoryResponse {

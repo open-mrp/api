@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SamplePickLineDetailID = "pkln_01jm4r6700f8nwq3v5hx2d9ktp"
+const SamplePickLineDetailID = "pkln_0170b1525f1c9843b22d914426"
 
 // PickLineDetail is a pick line resource.
 type PickLineDetail struct {

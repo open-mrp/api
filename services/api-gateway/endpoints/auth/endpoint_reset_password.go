@@ -13,7 +13,7 @@ import (
 // Request to reset a user's password.
 type ResetPasswordRequest struct {
 	// Password reset token.
-	Token string `json:"token" validate:"required"`
+	Token string `json:"token" validate:"required" sensitive:"true"` // #nosec G117 - Struct field, not a hardcoded credential
 	// New password.
 	Password string `json:"password" validate:"required,password" sensitive:"true"` // #nosec G117 - Struct field, not a hardcoded credential
 }

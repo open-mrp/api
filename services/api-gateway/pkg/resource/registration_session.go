@@ -8,9 +8,9 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleRegistrationSessionID = "rgfw_01gf7a8200eaj8fke1xvw4h50x"
+const SampleRegistrationSessionID = "rgfw_01011dbade766ab524553afb10"
 const SampleCheckoutSessionID = "cs_test_a1VnbGQ4ZTFRdGRqUWpYR3h6OG"
-const SampleAddressID = "ad_01gf7a8200eaj8fke1xvw4h50x"
+const SampleAddressID = "ad_012c2e4aeeb20f56c1a3d06cc7"
 const SampleAddressLine1 = "123 Main Street"
 const SampleAddressLine2 = "Suite 100"
 const SampleAddressCity = "San Francisco"

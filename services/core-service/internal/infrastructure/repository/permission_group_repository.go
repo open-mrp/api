@@ -57,6 +57,27 @@ func mapPermissionRow(row sqlc.ListPermissionsByGroupCodesRow) *domain.Permissio
 	}
 }
 
+func (r *permissionGroupRepoImpl) GetByIDs(ctx context.Context, ids []string) ([]*domain.PermissionGroup, *apierror.APIError) {
+	ctx, span := permissionGroupRepoTracer.Start(ctx, "repository.permission_group.get_by_ids")
+	defer span.End()
+
+	rows, err := r.queries.GetPermissionGroupsByIDs(ctx, ids)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	groups := make([]*domain.PermissionGroup, len(rows))
+	for i, row := range rows {
+		groups[i] = mapPermissionGroupRow(row)
+	}
+
+	if apiErr := r.loadPermissions(ctx, groups); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return groups, nil
+}
+
 func (r *permissionGroupRepoImpl) List(ctx context.Context, params domain.ListPermissionGroupsParams) (*domain.ListPermissionGroupsResult, *apierror.APIError) {
 	ctx, span := permissionGroupRepoTracer.Start(ctx, "repository.permission_group.list")
 	defer span.End()

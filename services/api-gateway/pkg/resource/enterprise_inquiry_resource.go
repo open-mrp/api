@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleEnterpriseInquiryID = "enir_01gf7a8200eaj8fke1xvw4h50x"
+const SampleEnterpriseInquiryID = "enir_01ec571c64ecd75aaf4662fcd4"
 
 // Enterprise plan upgrade request.
 type EnterpriseInquiry struct {

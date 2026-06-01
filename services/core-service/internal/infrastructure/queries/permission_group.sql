@@ -39,6 +39,17 @@ AND (
 ORDER BY permission_group.created_at ASC, permission_group.id ASC
 LIMIT ?;
 
+-- name: GetPermissionGroupsByIDs :many
+SELECT
+    permission_group.id,
+    permission_group.code,
+    permission_group.name,
+    permission_group.description,
+    permission_group.created_at,
+    permission_group.updated_at
+FROM permission_group
+WHERE permission_group.id IN (sqlc.slice('ids'));
+
 -- name: ListPermissionsByGroupCodes :many
 SELECT
     permission.id,

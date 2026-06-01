@@ -359,8 +359,7 @@ func (suite *PasswordMedTestSuite) TestValidate_NoHashedPassword_WithEmail_Sends
 
 	suite.Nil(result)
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorTypeInvalidRequest, apiErr.Type)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.ErrorCodeInvalidCredentials, apiErr.Code)
 }
 
 func (suite *PasswordMedTestSuite) TestValidate_NoHashedPassword_WithoutEmail_NoEmailSent() {
@@ -387,8 +386,7 @@ func (suite *PasswordMedTestSuite) TestValidate_NoHashedPassword_WithoutEmail_No
 
 	suite.Nil(result)
 	suite.NotNil(apiErr)
-	suite.Equal(apierror.ErrorTypeInvalidRequest, apiErr.Type)
-	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal(apierror.ErrorCodeInvalidCredentials, apiErr.Code)
 }
 
 func (suite *PasswordMedTestSuite) TestValidate_PasswordMismatch() {

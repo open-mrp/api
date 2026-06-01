@@ -57,6 +57,26 @@ func (s *adjustmentTypeSvcImpl) ListAdjustmentTypes(ctx context.Context, params 
 	return s.repos.NewAdjustmentTypeRepo().List(ctx, params)
 }
 
+func (s *adjustmentTypeSvcImpl) BatchGetAdjustmentTypesByIDs(ctx context.Context, ids []string) ([]*domain.AdjustmentType, *apierror.APIError) {
+	ctx, span := adjustmentTypeSvcTracer.Start(ctx, "service.adjustment_type.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainAdjustmentTypes, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	return s.repos.NewAdjustmentTypeRepo().GetByIDs(ctx, ids)
+}
+
 // checkAdjustmentTypeReadPermission checks the appropriate read permission.
 // Adjustment types are system-wide data; internal actors need adjustment_types:read.
 // Non-internal actors (customer/supplier) do not carry role-based permissions and are

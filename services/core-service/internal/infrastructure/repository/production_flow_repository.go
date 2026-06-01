@@ -199,11 +199,19 @@ func (r *productionFlowRepoImpl) GetFlowStep(ctx context.Context, accountID, ste
 		return nil, tracing.Trace(span, apiErr)
 	}
 
+	var notes *string
+	if row.Notes.Valid {
+		notes = &row.Notes.String
+	}
+
 	step := &domain.ProductionFlowStep{
 		ID:             row.ID,
 		Name:           row.Name,
+		Notes:          notes,
 		LevelingFactor: row.LevelingFactor,
 		Allowances:     row.Allowances,
+		CreatedAt:      row.CreatedAt,
+		UpdatedAt:      row.UpdatedAt,
 		Production: domain.StepProduction{
 			ID: row.ProductionID,
 			ProducedItem: domain.LightItem{

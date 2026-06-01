@@ -27,12 +27,14 @@ func (e *ChangeItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cha
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/items/{id}/category/{category_id}",
+		SDKMethodKey:      "change_category",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ChangeItemCategoryRequest) (*apiresource.Item, *apierror.APIError) {
 			return svc.(ItemSvc).ChangeItemCategory
 		},
+		ObjectType: constants.ObjectTypeItem,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeItem,
 			Fields:     []string{"category", "unit_value", "unit_cost", "burn_rate", "attributes", "category.unit_group", "category.properties", "category.unit_group.base_unit", "category.unit_group.associated_units", "category.unit_group.associated_units.unit"},

@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleAgentTokenUsageID = "agtk_01gf7a8200er3ar3pkfrb6kk29" // #nosec G101 -- sample ID, not a credential
+const SampleAgentTokenUsageID = "agtk_017f89e51168bae2dc06684fa2" // #nosec G101 -- sample ID, not a credential
 
 // Daily agent token usage record.
 type AgentTokenUsage struct {

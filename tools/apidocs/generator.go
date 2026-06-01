@@ -17,7 +17,39 @@ import (
 	"github.com/augno/api/shared/patch"
 )
 
-func buildOpenAPIDocument(groups []apiendpoint.APIEndpointGroup, publicOnly bool, transforms []Transform, version string) (map[string]any, error) {
+func endpointSpecField(e apiendpoint.APIEndpointer) reflect.Value {
+	val := reflect.ValueOf(e)
+	if val.Kind() == reflect.Pointer {
+		val = val.Elem()
+	}
+
+	specField := val.FieldByName("APIEndpoint")
+	if !specField.IsValid() {
+		specField = val
+	}
+
+	return specField
+}
+
+func endpointRequestHasJSONFields(reqType reflect.Type) bool {
+	if reqType.Kind() == reflect.Pointer {
+		reqType = reqType.Elem()
+	}
+	if reqType.Kind() != reflect.Struct {
+		return false
+	}
+
+	for _, f := range flattenStructFields(reqType) {
+		jsonTag := f.Tag.Get("json")
+		if jsonTag != "" && jsonTag != "-" {
+			return true
+		}
+	}
+
+	return false
+}
+
+func buildOpenAPISpec(groups []apiendpoint.APIEndpointGroup, publicOnly bool, version string) (OpenAPI, map[string][]string, error) {
 	docReader := NewDocReader()
 	spec := OpenAPI{
 		OpenAPI: "3.0.0",
@@ -55,15 +87,7 @@ func buildOpenAPIDocument(groups []apiendpoint.APIEndpointGroup, publicOnly bool
 		groupPathMap := make(map[string]map[string]Operation)
 
 		for _, e := range group.Endpoints {
-			val := reflect.ValueOf(e)
-			if val.Kind() == reflect.Pointer {
-				val = val.Elem()
-			}
-
-			specField := val.FieldByName("APIEndpoint")
-			if !specField.IsValid() {
-				specField = val
-			}
+			specField := endpointSpecField(e)
 
 			isPublic := specField.FieldByName("Public").Bool()
 			if publicOnly && !isPublic {
@@ -108,8 +132,7 @@ func buildOpenAPIDocument(groups []apiendpoint.APIEndpointGroup, publicOnly bool
 				reqType = reqType.Elem()
 			}
 			{
-
-				hasJSONFields := false
+				hasJSONFields := endpointRequestHasJSONFields(reqType)
 				if reqType.Kind() == reflect.Struct {
 					for _, f := range flattenStructFields(reqType) {
 						// Handle Parameters
@@ -176,12 +199,6 @@ func buildOpenAPIDocument(groups []apiendpoint.APIEndpointGroup, publicOnly bool
 								Schema:      paramSchema,
 								Example:     pathParameterExample(reqType, f, pathParam, route, paramSchema),
 							})
-						}
-
-						// Check if it has JSON fields for the request body
-						jsonTag := f.Tag.Get("json")
-						if jsonTag != "" && jsonTag != "-" {
-							hasJSONFields = true
 						}
 					}
 				}
@@ -319,6 +336,15 @@ func buildOpenAPIDocument(groups []apiendpoint.APIEndpointGroup, publicOnly bool
 
 	// Collect property orders before marshaling (PropertyOrder is json:"-")
 	propertyOrders := collectPropertyOrders(spec.Components.Schemas)
+
+	return spec, propertyOrders, nil
+}
+
+func buildOpenAPIDocument(groups []apiendpoint.APIEndpointGroup, publicOnly bool, transforms []Transform, version string) (map[string]any, error) {
+	spec, propertyOrders, err := buildOpenAPISpec(groups, publicOnly, version)
+	if err != nil {
+		return nil, err
+	}
 
 	// Marshal to generic map for transforms
 	b, err := json.Marshal(spec)

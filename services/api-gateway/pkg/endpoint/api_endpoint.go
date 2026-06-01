@@ -15,6 +15,7 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/header"
 	httptransport "github.com/augno/api/services/api-gateway/internal/http"
+	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
@@ -40,9 +41,11 @@ Defines the details of a specific API operation. This will be used to generate t
 Consequently, consider this public data.
 */
 type APIEndpoint[TReq, TResp any] struct {
-	Title             string                                    `json:"title" yaml:"title"`
-	Method            string                                    `json:"method" yaml:"method"`
-	Route             string                                    `json:"route" yaml:"route"`
+	Title  string `json:"title" yaml:"title"`
+	Method string `json:"method" yaml:"method"`
+	Route  string `json:"route" yaml:"route"`
+	// SDKMethodKey overrides the generated Stainless method key for this endpoint. When empty, codegen derives the key from the route + method.
+	SDKMethodKey      string                                    `json:"sdk_method_key,omitempty" yaml:"sdk_method_key,omitempty"`
 	ContentType       string                                    `json:"content_type" yaml:"content_type"`
 	SuccessStatusCode int                                       `json:"success_status_code" yaml:"success_status_code"`
 	Public            bool                                      `json:"-" yaml:"-"`
@@ -50,13 +53,11 @@ type APIEndpoint[TReq, TResp any] struct {
 	ServiceHandler    func(svc any) ServiceHandler[TReq, TResp] `json:"-" yaml:"-"`
 	Extras            APIEndpointExtras                         `json:"-" yaml:"-"`
 	MinVersion        *version.APIVersion                       `json:"-" yaml:"-"`
-	// ObjectType identifies the API resource type this endpoint operates on.
-	// Used for version transformations. Only endpoints with an ObjectType get transformations applied.
+	// ObjectType identifies the API resource type this endpoint operates on. Used for version transformations. Only endpoints with an ObjectType get transformations applied.
 	ObjectType constants.ObjectType `json:"-" yaml:"-"`
 	// LocationFunc returns the Location header value for 201 Created responses.
 	LocationFunc func(TResp) string `json:"-" yaml:"-"`
-	// IncludeConfig declares which sub-objects can be expanded via the include
-	// query parameter. When nil, no include support is provided (zero overhead).
+	// IncludeConfig declares which sub-objects can be expanded via the include query parameter. When nil, no include support is provided (zero overhead).
 	IncludeConfig *IncludeConfig `json:"-" yaml:"-"`
 
 	group               *APIEndpointGroup
@@ -66,9 +67,7 @@ type APIEndpoint[TReq, TResp any] struct {
 	sensitiveOnce       sync.Once
 	httpHandler         http.HandlerFunc
 	boundServiceHandler ServiceHandler[TReq, TResp]
-	// EndpointType is the reflect.Type of the concrete *XxxEndpoint struct that
-	// produced this APIEndpoint. It is used by the OpenAPI generator to resolve
-	// the operation description from the Go doc comment on that struct.
+	// EndpointType is the reflect.Type of the concrete *XxxEndpoint struct that produced this APIEndpoint. It is used by the OpenAPI generator to resolve the operation description from the Go doc comment on that struct.
 	EndpointType reflect.Type
 
 	sensitiveReqPaths  map[string]bool
@@ -125,8 +124,7 @@ func (e *APIEndpoint[TReq, TResp]) WithMiddleware(mw func(http.HandlerFunc) http
 	return e
 }
 
-// From calls source.Materialize() and sets EndpointType so the OpenAPI generator can attach
-// the wrapper type's Go doc to the route.
+// From calls source.Materialize() and sets EndpointType so the OpenAPI generator can attach the wrapper type's Go doc to the route.
 func From[TReq, TResp any, T interface {
 	Materialize() *APIEndpoint[TReq, TResp]
 }](source T) *APIEndpoint[TReq, TResp] {
@@ -192,16 +190,22 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 	var req TReq
 	req = httptransport.AllocIfPtr(req)
 
-	if err := httptransport.BindIncomingRequest(r, any(req), e.IncludeConfig != nil); err != nil {
+	includesEnabled := e.IncludeConfig != nil
+	if err := httptransport.BindIncomingRequest(r, any(req), includesEnabled); err != nil {
 		recordAndRespondAPIError(ctx, w, span, "incoming_request_binding", coercePlainExecuteError(err))
 		return
 	}
 
-	// Parse and validate include parameters
-	requestedIncludes, apiErr := e.parseIncludeParams(r)
-	if apiErr != nil {
-		recordAndRespondAPIError(ctx, w, span, "include_validation", apiErr)
-		return
+	var (
+		includeTree *resourcekit.IncludeNode
+		apiErr      *apierror.APIError
+	)
+	if includesEnabled {
+		includeTree, apiErr = e.parseIncludeTree(r)
+		if apiErr != nil {
+			recordAndRespondAPIError(ctx, w, span, "include_validation", apiErr)
+			return
+		}
 	}
 
 	// Buffer JSON bodies once for decode, null validation, and optional request logging.
@@ -265,6 +269,12 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 		}
 
 		if err := httptransport.DecodeJSONInto(any(req), r, true); err != nil {
+			if errors.Is(err, patch.ErrExplicitNull) {
+				if name, ok := patch.ExplicitNullField(bytesForNull, any(req)); ok {
+					recordAndRespondAPIError(ctx, w, span, "json_decode", apierror.NewInvalidFormatError(fmt.Sprintf("Field '%s' cannot be null.", name), name))
+					return
+				}
+			}
 			recordAndRespondAPIError(ctx, w, span, "json_decode", coercePlainExecuteError(err))
 			return
 		}
@@ -295,8 +305,9 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if requestedIncludes != nil {
-		ctx = appctx.WithRequestedIncludes(ctx, requestedIncludes)
+	if includesEnabled {
+		ctx = resourcekit.WithLoadCache(ctx)
+		ctx = resourcekit.WithLoadMeta(ctx)
 	}
 
 	ctx, responseMeta := appctx.WithHTTPResponseMetadata(ctx)
@@ -304,11 +315,7 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 
 	resp, err := e.boundServiceHandler(ctx, req)
 
-	// If the client disconnected during processing, report a 499
-	// ("the client closed the connection before the server could respond") regardless of
-	// what error (if any) the handler returned. There's no point sending a
-	// response body — the client is gone — but we still write the status so the
-	// logging middleware records the correct code.
+	// If the client disconnected during processing, report a 499 ("the client closed the connection before the server could respond") regardless of what error (if any) the handler returned. There's no point sending a response body — the client is gone — but we still write the status so the logging middleware records the correct code.
 	if r.Context().Err() == context.Canceled {
 		recordAndRespondAPIError(ctx, w, span, "client_closed", apierror.NewClientClosedRequestError("Client closed the connection."))
 		return
@@ -342,17 +349,24 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Apply include transform: collapse unexpanded sub-objects to {id, object}.
-	if e.IncludeConfig != nil {
-		e.respondWithIncludeTransform(ctx, w, resp, requestedIncludes, respondOpts...)
-		return
+	if includesEnabled && e.ObjectType != "" {
+		var roots []any
+		if e.IncludeConfig.ExtractRoots != nil {
+			roots = e.IncludeConfig.ExtractRoots(any(resp))
+		} else {
+			roots = extractIncludeRoots(any(resp))
+		}
+		if len(roots) > 0 && includeTree.HasChildren() {
+			if apiErr := resourcekit.ResolveIncludes(ctx, roots, e.ObjectType, includeTree); apiErr != nil {
+				recordAndRespondAPIError(ctx, w, span, "include_resolution", apiErr)
+				return
+			}
+		}
 	}
 	httptransport.RespondWithJSON(ctx, w, e.SuccessStatusCode, resp, respondOpts...)
 }
 
-// transformRequestBody reads the request body, applies version transformations to upgrade
-// the request from an older version format to the latest format, and returns a new request
-// with the transformed body.
+// transformRequestBody reads the request body, applies version transformations to upgrade the request from an older version format to the latest format, and returns a new request with the transformed body.
 func (e *APIEndpoint[TReq, TResp]) transformRequestBody(r *http.Request, from, to version.APIVersion) (*http.Request, error) {
 	// Read the original body
 	body, err := io.ReadAll(r.Body)
@@ -393,12 +407,8 @@ func (e *APIEndpoint[TReq, TResp]) transformRequestBody(r *http.Request, from, t
 	return r, nil
 }
 
-// parseIncludeParams extracts and validates the include query parameter from the
-// request. It supports both array-style (?include[]=role) and comma-separated
-// (?include=role,account) formats. Returns a set of requested include keys and
-// an error if any values are invalid or include is used on an endpoint without
-// IncludeConfig.
-func (e *APIEndpoint[TReq, TResp]) parseIncludeParams(r *http.Request) (map[string]bool, *apierror.APIError) {
+// collectIncludeQueryValues extracts raw include keys from `?include[]=` and `?include=` query params. Both array-style and comma-separated values are supported.
+func collectIncludeQueryValues(r *http.Request) []string {
 	q := r.URL.Query()
 	var raw []string
 	if vals, ok := q["include[]"]; ok {
@@ -419,64 +429,79 @@ func (e *APIEndpoint[TReq, TResp]) parseIncludeParams(r *http.Request) (map[stri
 			}
 		}
 	}
+	return raw
+}
 
+func (e *APIEndpoint[TReq, TResp]) parseIncludeTree(r *http.Request) (*resourcekit.IncludeNode, *apierror.APIError) {
+	raw := collectIncludeQueryValues(r)
 	if len(raw) == 0 {
-		return nil, nil
+		return resourcekit.NewIncludeTree(), nil
 	}
-
 	if e.IncludeConfig == nil {
 		return nil, apierror.NewParameterInvalidError(
 			"This endpoint does not support the include parameter.",
 			"include[]",
 		)
 	}
-
-	allowed := make(map[string]bool, len(e.IncludeConfig.Fields))
-	for _, f := range e.IncludeConfig.Fields {
-		allowed[f.Key] = true
+	if e.ObjectType != "" {
+		if def := resourcekit.Lookup(e.ObjectType); def == nil {
+			return nil, apierror.NewInvariantViolationError(fmt.Sprintf(
+				"No resourcekit.Definition registered for %s",
+				e.ObjectType,
+			))
+		}
 	}
-
-	requested := make(map[string]bool, len(raw))
+	allowed := e.IncludeConfig.AllowedKeys()
+	allowedSet := make(map[string]bool, len(allowed))
+	for _, k := range allowed {
+		allowedSet[k] = true
+	}
 	for _, v := range raw {
-		if !allowed[v] {
+		if !allowedSet[v] {
 			return nil, apierror.NewParameterInvalidError(
 				fmt.Sprintf("Invalid include value '%s'. Allowed values: %s",
-					v, strings.Join(e.IncludeConfig.AllowedKeys(), ", ")),
+					v, strings.Join(allowed, ", ")),
 				"include[]",
 			)
 		}
-		requested[v] = true
 	}
-
-	return requested, nil
+	return resourcekit.ParseIncludeTree(raw), nil
 }
 
-// respondWithIncludeTransform marshals the response to a generic map, applies
-// the include collapse transform, and writes the result as JSON.
-func (e *APIEndpoint[TReq, TResp]) respondWithIncludeTransform(ctx context.Context, w http.ResponseWriter, resp TResp, requested map[string]bool, opts ...httptransport.RespondOption) {
-	// Validate that included expandable stubs have required fields populated.
-	// Returns 500 rather than serving invalid data to the client.
-	if err := ValidateExpandableFields(resp, requested, e.IncludeConfig); err != nil {
-		apiErr := apierror.NewInvariantViolationError(err.Error())
-		httptransport.RespondWithAPIError(ctx, w, apiErr)
-		return
+// extractIncludeRoots reflects on `resp` to find the resource pointers the resolver should walk. Handles two shapes: a `*Resource` returned directly, or a `*List[Resource]` (or `*List[*Resource]`) whose `Data` slice holds the roots. Slice elements must be addressable so the resolver can mutate them in place; values returned by handlers via `apiresource.NewList` already meet that requirement.
+func extractIncludeRoots(resp any) []any {
+	if resp == nil {
+		return nil
 	}
-
-	raw, err := json.Marshal(resp)
-	if err != nil {
-		httptransport.RespondWithJSON(ctx, w, e.SuccessStatusCode, resp, opts...)
-		return
+	v := reflect.ValueOf(resp)
+	if !v.IsValid() {
+		return nil
 	}
-
-	var data map[string]any
-	if err := json.Unmarshal(raw, &data); err != nil {
-		httptransport.RespondWithJSON(ctx, w, e.SuccessStatusCode, resp, opts...)
-		return
+	if v.Kind() != reflect.Pointer || v.IsNil() {
+		return nil
 	}
-
-	transformed := CollapseUnexpanded(data, e.IncludeConfig, requested)
-
-	httptransport.RespondWithJSON(ctx, w, e.SuccessStatusCode, transformed, opts...)
+	elem := v.Elem()
+	if elem.Kind() != reflect.Struct {
+		return nil
+	}
+	if dataField := elem.FieldByName("Data"); dataField.IsValid() && dataField.Kind() == reflect.Slice {
+		roots := make([]any, 0, dataField.Len())
+		for i := 0; i < dataField.Len(); i++ {
+			item := dataField.Index(i)
+			switch item.Kind() {
+			case reflect.Pointer:
+				if !item.IsNil() {
+					roots = append(roots, item.Interface())
+				}
+			default:
+				if item.CanAddr() {
+					roots = append(roots, item.Addr().Interface())
+				}
+			}
+		}
+		return roots
+	}
+	return []any{resp}
 }
 
 type APIEndpointer interface {

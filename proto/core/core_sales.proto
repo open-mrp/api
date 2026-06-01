@@ -29,8 +29,14 @@ service CoreSalesService {
   // FindOrderDiscountByCode looks up an order discount by its unique code.
   rpc FindOrderDiscountByCode(FindOrderDiscountByCodeRequest) returns (FindOrderDiscountByCodeResponse);
 
+  // Returns order discounts by ID for the api-gateway include resolver.
+  rpc BatchGetOrderDiscountsByIDs(BatchGetOrderDiscountsByIDsRequest) returns (BatchGetOrderDiscountsByIDsResponse);
+
   // ListSalesOrderStatuses returns a paginated list of sales order statuses.
   rpc ListSalesOrderStatuses(ListSalesOrderStatusesRequest) returns (ListSalesOrderStatusesResponse);
+
+  // Returns sales order statuses by ID for the api-gateway include resolver.
+  rpc BatchGetSalesOrderStatusesByIDs(BatchGetSalesOrderStatusesByIDsRequest) returns (BatchGetSalesOrderStatusesByIDsResponse);
 
   // ListSalesOrders returns a paginated list of sales orders.
   rpc ListSalesOrders(ListSalesOrdersRequest) returns (ListSalesOrdersResponse);
@@ -171,6 +177,14 @@ message FindOrderDiscountByCodeResponse {
   OrderDiscountInfo order_discount = 1;
 }
 
+// Batched read for the api-gateway resourcekit resolver.
+message BatchGetOrderDiscountsByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetOrderDiscountsByIDsResponse {
+  repeated OrderDiscountInfo order_discounts = 1;
+}
+
 message ListSalesOrderStatusesRequest {
   optional string cursor = 1;
   int32 limit = 2;
@@ -180,6 +194,14 @@ message ListSalesOrderStatusesRequest {
 message ListSalesOrderStatusesResponse {
   repeated SalesOrderStatusInfo sales_order_statuses = 1;
   PageInfo page_info = 2;
+}
+
+// Batched read for the api-gateway resourcekit resolver.
+message BatchGetSalesOrderStatusesByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetSalesOrderStatusesByIDsResponse {
+  repeated SalesOrderStatusInfo sales_order_statuses = 1;
 }
 
 // SalesOrderSummaryInfo represents a sales order in list views.

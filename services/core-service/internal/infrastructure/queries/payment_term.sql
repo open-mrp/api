@@ -80,6 +80,20 @@ DELETE FROM payment_term
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
 
+-- name: GetPaymentTermsByIDs :many
+-- Returns payment terms matching the given IDs that the caller's account is
+-- authorized to read (their own account plus system payment terms).
+SELECT
+    payment_term.id,
+    payment_term.is_active,
+    payment_term.name,
+    payment_term.account_id,
+    payment_term.created_at,
+    payment_term.updated_at
+FROM payment_term
+WHERE payment_term.id IN (sqlc.slice('ids'))
+AND (payment_term.account_id = sqlc.arg('account_id') OR payment_term.account_id IS NULL);
+
 -- name: CountPaymentTermsByName :one
 SELECT COUNT(*) FROM payment_term
 WHERE name = ? AND (account_id = ? OR account_id IS NULL)

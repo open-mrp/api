@@ -29,6 +29,7 @@ func (e *ListUnitGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListUni
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeUnitGroup,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListUnitGroupsRequest) (*apiresource.List[apiresource.UnitGroup], *apierror.APIError) {
 			return svc.(UnitGroupSvc).ListUnitGroups
 		},

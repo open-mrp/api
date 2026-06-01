@@ -57,6 +57,7 @@ func (e *UpdateTerritoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Update
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeTerritory,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateTerritoryRequest) (*apiresource.Territory, *apierror.APIError) {
 			return svc.(TerritorySvc).UpdateTerritory
 		},

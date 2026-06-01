@@ -8,6 +8,7 @@ import (
 	pb "github.com/augno/api/shared/proto/core"
 
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func productionFlowStepToProto(step *domain.ProductionFlowStep) *pb.ProductionFlowStepInfo {
@@ -18,11 +19,14 @@ func productionFlowStepToProto(step *domain.ProductionFlowStep) *pb.ProductionFl
 	info := &pb.ProductionFlowStepInfo{
 		Id:             step.ID,
 		Name:           step.Name,
+		Notes:          step.Notes,
 		InStepIds:      step.InStepIDs,
 		OutStepIds:     step.OutStepIDs,
 		LevelingFactor: step.LevelingFactor,
 		Allowances:     step.Allowances,
 		MachineIds:     step.MachineIDs,
+		CreatedAt:      timestamppb.New(step.CreatedAt),
+		UpdatedAt:      timestamppb.New(step.UpdatedAt),
 	}
 
 	if step.ScanningStationID != nil {
@@ -34,40 +38,24 @@ func productionFlowStepToProto(step *domain.ProductionFlowStep) *pb.ProductionFl
 
 	// Production info
 	info.Production = &pb.ProductionFlowProductionInfo{
-		Id:      step.Production.ID,
-		ItemId:  step.Production.ProducedItem.ID,
-		ItemSku: step.Production.ProducedItem.SKU,
-		Quantity: &pb.QuantityInfo{
-			Id:               step.Production.Quantity.ID,
-			Value:            step.Production.Quantity.Measure.String(),
-			UnitId:           step.Production.Quantity.Unit.ID,
-			UnitAbbreviation: step.Production.Quantity.Unit.Abbreviation,
-			UnitType:         step.Production.Quantity.Unit.Type,
-		},
+		Id:       step.Production.ID,
+		ItemId:   step.Production.ProducedItem.ID,
+		ItemSku:  step.Production.ProducedItem.SKU,
+		Quantity: productionFlowQuantityToProto(step.Production.Quantity),
 	}
 
 	// Consumptions
 	consumptions := make([]*pb.ProductionFlowConsumptionInfo, 0, len(step.Consumptions))
 	for _, c := range step.Consumptions {
 		ci := &pb.ProductionFlowConsumptionInfo{
-			Id:      c.ID,
-			ItemId:  c.ConsumedItem.ID,
-			ItemSku: c.ConsumedItem.SKU,
-			Quantity: &pb.QuantityInfo{
-				Id:               c.Quantity.ID,
-				Value:            c.Quantity.Measure.String(),
-				UnitId:           c.Quantity.Unit.ID,
-				UnitAbbreviation: c.Quantity.Unit.Abbreviation,
-				UnitType:         c.Quantity.Unit.Type,
-			},
-			WasteQuantity: &pb.QuantityInfo{
-				Id:               c.WasteQuantity.ID,
-				Value:            c.WasteQuantity.Measure.String(),
-				UnitId:           c.WasteQuantity.Unit.ID,
-				UnitAbbreviation: c.WasteQuantity.Unit.Abbreviation,
-				UnitType:         c.WasteQuantity.Unit.Type,
-			},
-			Instructions: c.Instructions,
+			Id:            c.ID,
+			ItemId:        c.ConsumedItem.ID,
+			ItemSku:       c.ConsumedItem.SKU,
+			Quantity:      productionFlowQuantityToProto(c.Quantity),
+			WasteQuantity: productionFlowQuantityToProto(c.WasteQuantity),
+			Instructions:  c.Instructions,
+			CreatedAt:     timestamppb.New(c.CreatedAt),
+			UpdatedAt:     timestamppb.New(c.UpdatedAt),
 		}
 		consumptions = append(consumptions, ci)
 	}
@@ -75,31 +63,42 @@ func productionFlowStepToProto(step *domain.ProductionFlowStep) *pb.ProductionFl
 
 	// Rates
 	if step.LaborRate != nil {
-		info.LaborRate = &pb.RateInfo{
-			Id:                step.LaborRate.ID,
-			Value:             step.LaborRate.Value,
-			NumeratorUnitId:   step.LaborRate.NumeratorUnitID,
-			DenominatorUnitId: step.LaborRate.DenominatorUnitID,
-		}
+		info.LaborRate = flowRateToProto(step.LaborRate)
 	}
 	if step.LaborTime != nil {
-		info.LaborTime = &pb.RateInfo{
-			Id:                step.LaborTime.ID,
-			Value:             step.LaborTime.Value,
-			NumeratorUnitId:   step.LaborTime.NumeratorUnitID,
-			DenominatorUnitId: step.LaborTime.DenominatorUnitID,
-		}
+		info.LaborTime = flowRateToProto(step.LaborTime)
 	}
 	if step.OverheadRate != nil {
-		info.OverheadRate = &pb.RateInfo{
-			Id:                step.OverheadRate.ID,
-			Value:             step.OverheadRate.Value,
-			NumeratorUnitId:   step.OverheadRate.NumeratorUnitID,
-			DenominatorUnitId: step.OverheadRate.DenominatorUnitID,
-		}
+		info.OverheadRate = flowRateToProto(step.OverheadRate)
 	}
 
 	return info
+}
+
+func productionFlowQuantityToProto(q domain.BatchQuantity) *pb.QuantityInfo {
+	return &pb.QuantityInfo{
+		Id:               q.ID,
+		Value:            q.Measure.String(),
+		UnitId:           q.Unit.ID,
+		UnitName:         q.Unit.Name,
+		UnitAbbreviation: q.Unit.Abbreviation,
+		UnitType:         q.Unit.Type,
+		CreatedAt:        timestamppb.New(q.Unit.CreatedAt),
+		UpdatedAt:        timestamppb.New(q.Unit.UpdatedAt),
+		UnitDetail:       lightUnitToProto(&q.Unit),
+	}
+}
+
+func flowRateToProto(r *domain.FlowRate) *pb.RateInfo {
+	if r == nil {
+		return nil
+	}
+	return &pb.RateInfo{
+		Id:                r.ID,
+		Value:             r.Value,
+		NumeratorUnitId:   r.NumeratorUnitID,
+		DenominatorUnitId: r.DenominatorUnitID,
+	}
 }
 
 func (h *gRPCHandler) GetProductionFlow(ctx context.Context, req *pb.GetProductionFlowRequest) (*pb.GetProductionFlowResponse, error) {

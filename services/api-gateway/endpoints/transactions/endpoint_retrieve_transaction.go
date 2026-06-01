@@ -33,6 +33,7 @@ func (e *RetrieveTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveTransactionRequest) (*apiresource.TransactionDetail, *apierror.APIError) {
 			return svc.(TransactionSvc).GetTransaction
 		},
+		ObjectType: constants.ObjectTypeTransaction,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeTransaction,
 			Fields:     []string{"allocations", "customer", "responsible_user"},

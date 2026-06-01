@@ -321,6 +321,35 @@ func (r *sandboxAccountRepoImpl) FindByTypeID(ctx context.Context, typeID string
 	}, nil
 }
 
+func (r *sandboxAccountRepoImpl) GetByTypeIDs(ctx context.Context, ownerAccountID string, typeIDs []string) ([]*domain.SandboxAccount, *apierror.APIError) {
+	ctx, span := sandboxAccountRepoTracer.Start(ctx, "repository.sandbox_account.get_by_type_ids")
+	defer span.End()
+
+	if len(typeIDs) == 0 {
+		return nil, nil
+	}
+	rows, err := r.queries.GetSandboxAccountsByTypeIDs(ctx, sqlc.GetSandboxAccountsByTypeIDsParams{
+		TypeIds:        typeIDs,
+		OwnerAccountID: ownerAccountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make([]*domain.SandboxAccount, len(rows))
+	for i, row := range rows {
+		out[i] = &domain.SandboxAccount{
+			ID:             row.ID,
+			TypeID:         row.TypeID,
+			OwnerAccountID: row.OwnerAccountID,
+			AccountID:      row.AccountID,
+			Name:           row.Name,
+			CreatedAt:      row.CreatedAt,
+			UpdatedAt:      row.UpdatedAt,
+		}
+	}
+	return out, nil
+}
+
 func (r *sandboxAccountRepoImpl) DeleteByID(ctx context.Context, id int64) *apierror.APIError {
 	ctx, span := sandboxAccountRepoTracer.Start(ctx, "repository.sandbox_account.delete_by_id")
 	defer span.End()

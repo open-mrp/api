@@ -39,6 +39,7 @@ func (e *UpdateAgentStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeAgentDefinition,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAgentStatusRequest) (*apiresource.AgentDefinition, *apierror.APIError) {
 			return svc.(AgentSvc).UpdateAgentStatus
 		},

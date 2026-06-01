@@ -120,3 +120,27 @@ func (r *salesOrderStatusRepoImpl) List(ctx context.Context, params domain.ListS
 	result, pageInfo := pagination.BuildPageString(statuses, params.Limit, cursorDir, salesOrderStatusCreatedAt, salesOrderStatusID)
 	return &domain.ListSalesOrderStatusesResult{SalesOrderStatuses: result, PageInfo: pageInfo}, nil
 }
+
+func (r *salesOrderStatusRepoImpl) GetByIDs(ctx context.Context, ids []string) ([]*domain.SalesOrderStatus, *apierror.APIError) {
+	ctx, span := salesOrderStatusRepoTracer.Start(ctx, "repository.sales_order_status.get_by_ids")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := r.queries.GetSalesOrderStatusesByIDs(ctx, ids)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make([]*domain.SalesOrderStatus, len(rows))
+	for i, row := range rows {
+		out[i] = &domain.SalesOrderStatus{
+			ID:        row.ID,
+			Code:      row.Code,
+			Name:      row.Name,
+			CreatedAt: row.CreatedAt,
+			UpdatedAt: row.UpdatedAt,
+		}
+	}
+	return out, nil
+}

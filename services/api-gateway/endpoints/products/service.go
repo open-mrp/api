@@ -9,9 +9,10 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/export"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	httptransport "github.com/augno/api/services/api-gateway/internal/http"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/appctx"
+	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/patch"
@@ -20,6 +21,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
+
+var validateProductIncludes = []string{"product_line", "item", "item.category", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"}
 
 func rateInputToProto(r *apirequest.RateInput) *pb.CreateRateInput {
 	if r == nil {
@@ -88,7 +91,6 @@ func (m *productSvcImpl) ListProducts(ctx context.Context, req *ListProductsRequ
 		CategoryIds:    req.CategoryIDs,
 		AttributeIds:   req.AttributeIDs,
 		IsPortalReady:  portalVisibilityToReadyPtr(req.PortalVisibility),
-		Includes:       appctx.GetRequestedIncludeKeys(ctx),
 	}
 	if req.StartDate != nil {
 		pbReq.StartDate = timestamppb.New(*req.StartDate)
@@ -101,31 +103,29 @@ func (m *productSvcImpl) ListProducts(ctx context.Context, req *ListProductsRequ
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListProductsFullResponse, error) {
 			return m.coreClient.ListProductsFull(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
 
-	return ProductListPresenter(ctx, resp), nil
+	ids := make([]string, len(resp.Products))
+	for i, p := range resp.Products {
+		ids[i] = p.Id
+	}
+	loaded, apiErr := resourceloaders.LoadProducts(ctx, ids)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	products := make([]apiresource.Product, 0, len(ids))
+	for _, id := range ids {
+		if v, ok := loaded[id]; ok {
+			products = append(products, *(v.(*apiresource.Product)))
+		}
+	}
+	return apiresource.NewList(products, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
 
 func (m *productSvcImpl) GetProduct(ctx context.Context, req *RetrieveProductRequest) (*apiresource.Product, *apierror.APIError) {
-	pbReq := &pb.GetProductRequest{
-		Id:       req.ProductID,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
-	}
-
-	resp, apiErr := grpcutil.CallRPC(ctx, productSvcTracer, "service.products.get", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetProductResponse, error) {
-			return m.coreClient.GetProduct(ctx, pbReq, opts...)
-		})
-
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	result := ProductPresenter(resp.Product)
-	return &result, nil
+	return loadProductByID(ctx, req.ProductID)
 }
 
 func (m *productSvcImpl) CreateProduct(ctx context.Context, req *CreateProductRequest) (*apiresource.Product, *apierror.APIError) {
@@ -146,20 +146,17 @@ func (m *productSvcImpl) CreateProduct(ctx context.Context, req *CreateProductRe
 		UnitCost:        rateInputToProto(req.UnitCost.Ptr()),
 		BurnRate:        rateInputToProto(req.BurnRate.Ptr()),
 		AttributeIds:    req.AttributeIDs,
-		Includes:        appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productSvcTracer, "service.products.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateProductResponse, error) {
 			return m.coreClient.CreateProduct(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
 
-	result := ProductPresenter(resp.Product)
-	return &result, nil
+	return loadProductByID(ctx, resp.Product.Id)
 }
 
 func (m *productSvcImpl) UpdateProduct(ctx context.Context, req *UpdateProductRequest) (*apiresource.Product, *apierror.APIError) {
@@ -176,20 +173,17 @@ func (m *productSvcImpl) UpdateProduct(ctx context.Context, req *UpdateProductRe
 		Notes:         patch.StringFieldPtrToProto(req.Notes),
 		IsPortalReady: isPortalReady,
 		UnitPrice:     rateInputToProto(req.UnitPrice.Ptr()),
-		Includes:      appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productSvcTracer, "service.products.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateProductResponse, error) {
 			return m.coreClient.UpdateProduct(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
 
-	result := ProductPresenter(resp.Product)
-	return &result, nil
+	return loadProductByID(ctx, resp.Product.Id)
 }
 
 func (m *productSvcImpl) DeleteProduct(ctx context.Context, req *DeleteProductRequest) (*apiresource.Product, *apierror.APIError) {
@@ -207,6 +201,7 @@ func (m *productSvcImpl) DeleteProduct(ctx context.Context, req *DeleteProductRe
 	}
 
 	result := ProductPresenter(resp.Product)
+	stashProductMeta(ctx, resp.Product)
 	return &result, nil
 }
 
@@ -214,26 +209,23 @@ func (m *productSvcImpl) ChangeProductProductLine(ctx context.Context, req *Chan
 	pbReq := &pb.ChangeProductProductLineRequest{
 		Id:            req.ProductID,
 		ProductLineId: req.ProductLineID,
-		Includes:      appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productSvcTracer, "service.products.change-product-line", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ChangeProductProductLineResponse, error) {
 			return m.coreClient.ChangeProductProductLine(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
 
-	result := ProductPresenter(resp.Product)
-	return &result, nil
+	return loadProductByID(ctx, resp.Product.Id)
 }
 
 func (m *productSvcImpl) ValidateProducts(ctx context.Context, req *ValidateProductsRequest) (*apiresource.ValidateProductsResponse, *apierror.APIError) {
 	pbReq := &pb.ValidateProductsRequest{
 		ProductsMap: req.ProductsMap,
-		Includes:    appctx.GetRequestedIncludeKeys(ctx),
+		Includes:    validateProductIncludes,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productSvcTracer, "service.products.validate", domain.ServiceName,
@@ -245,7 +237,20 @@ func (m *productSvcImpl) ValidateProducts(ctx context.Context, req *ValidateProd
 		return nil, apiErr
 	}
 
-	return ValidateProductsPresenter(resp), nil
+	meta := resourcekit.GetLoadMeta(ctx)
+	for _, proto := range resp.Products {
+		meta.Set(constants.ObjectTypeProduct, proto.Id, "item_id", proto.ItemId)
+		if proto.ProductLineId != nil {
+			meta.Set(constants.ObjectTypeProduct, proto.Id, "product_line_id", *proto.ProductLineId)
+		}
+	}
+
+	result := ValidateProductsPresenter(resp)
+	for _, p := range result.Products {
+		p.Item = nil
+		p.ProductLine = nil
+	}
+	return result, nil
 }
 
 func (m *productSvcImpl) ExportProducts(ctx context.Context, req *ExportProductsRequest) (*httptransport.FileDownload, *apierror.APIError) {
@@ -290,4 +295,27 @@ func (m *productSvcImpl) ExportProducts(ctx context.Context, req *ExportProducts
 		Filename:    filename,
 		Body:        body,
 	}, nil
+}
+
+func stashProductMeta(ctx context.Context, p *pb.ProductFullInfo) {
+	if p == nil {
+		return
+	}
+	meta := resourcekit.GetLoadMeta(ctx)
+	meta.Set(constants.ObjectTypeProduct, p.Id, "item_id", p.ItemId)
+	if p.ProductLineId != nil {
+		meta.Set(constants.ObjectTypeProduct, p.Id, "product_line_id", *p.ProductLineId)
+	}
+}
+
+func loadProductByID(ctx context.Context, id string) (*apiresource.Product, *apierror.APIError) {
+	loaded, apiErr := resourceloaders.LoadProducts(ctx, []string{id})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	v, ok := loaded[id]
+	if !ok {
+		return nil, apierror.NewResourceNotFoundError("Product not found.")
+	}
+	return v.(*apiresource.Product), nil
 }

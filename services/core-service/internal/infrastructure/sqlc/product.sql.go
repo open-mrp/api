@@ -152,6 +152,10 @@ AND (
 AND p.product_type_code = 'sale'
 AND (
     ? IS NULL
+    OR p.is_portal_ready = ?
+)
+AND (
+    ? IS NULL
     OR i.created_at >= ?
 )
 AND (
@@ -183,6 +187,7 @@ type ExportProductsWithFiltersParams struct {
 	CategoryIds              []string
 	IncludeAttributeFilter   interface{}
 	AttributeIds             []string
+	IsPortalReady            sql.NullBool
 	StartDate                sql.NullTime
 	EndDate                  sql.NullTime
 	SearchExact              interface{}
@@ -282,6 +287,8 @@ func (q *Queries) ExportProductsWithFilters(ctx context.Context, arg ExportProdu
 	} else {
 		query = strings.Replace(query, "/*SLICE:attribute_ids*/?", "NULL", 1)
 	}
+	queryParams = append(queryParams, arg.IsPortalReady)
+	queryParams = append(queryParams, arg.IsPortalReady)
 	queryParams = append(queryParams, arg.StartDate)
 	queryParams = append(queryParams, arg.StartDate)
 	queryParams = append(queryParams, arg.EndDate)
@@ -1284,6 +1291,79 @@ func (q *Queries) GetProductByIDBase(ctx context.Context, arg GetProductByIDBase
 		&i.ProductTypeUpdatedAt,
 	)
 	return i, err
+}
+
+const getProductsByIDs = `-- name: GetProductsByIDs :many
+SELECT
+    p.id,
+    p.product_type_code,
+    p.is_portal_ready,
+    p.product_line_id,
+    p.item_id,
+    p.created_at,
+    p.updated_at
+FROM product p
+JOIN item i ON i.id = p.item_id
+WHERE p.id IN (/*SLICE:ids*/?)
+AND i.account_id = ?
+AND i.deleted_at IS NULL
+`
+
+type GetProductsByIDsParams struct {
+	Ids       []string
+	AccountID string
+}
+
+type GetProductsByIDsRow struct {
+	ID              string
+	ProductTypeCode string
+	IsPortalReady   bool
+	ProductLineID   sql.NullString
+	ItemID          string
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+}
+
+func (q *Queries) GetProductsByIDs(ctx context.Context, arg GetProductsByIDsParams) ([]GetProductsByIDsRow, error) {
+	query := getProductsByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetProductsByIDsRow
+	for rows.Next() {
+		var i GetProductsByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProductTypeCode,
+			&i.IsPortalReady,
+			&i.ProductLineID,
+			&i.ItemID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const insertProduct = `-- name: InsertProduct :exec

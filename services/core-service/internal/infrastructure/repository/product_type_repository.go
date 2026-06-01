@@ -135,6 +135,24 @@ func (r *productTypeRepoImpl) Get(ctx context.Context, identifier string) (*doma
 	return mapProductType(row), nil
 }
 
+func (r *productTypeRepoImpl) GetByIDs(ctx context.Context, ids []string) ([]*domain.ProductType, *apierror.APIError) {
+	ctx, span := productTypeRepoTracer.Start(ctx, "repository.product_type.get_by_ids")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := r.queries.GetProductTypesByIDs(ctx, ids)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make([]*domain.ProductType, len(rows))
+	for i, row := range rows {
+		out[i] = mapProductType(row)
+	}
+	return out, nil
+}
+
 func (r *productTypeRepoImpl) Create(ctx context.Context, id string, params domain.CreateProductTypeParams) (*domain.ProductType, *apierror.APIError) {
 	ctx, span := productTypeRepoTracer.Start(ctx, "repository.product_type.create")
 	defer span.End()

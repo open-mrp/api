@@ -78,6 +78,32 @@ FROM storage_location
 WHERE parent_id = sqlc.arg('parent_id')
 AND account_id = sqlc.arg('account_id');
 
+-- name: GetLocationsByIDs :many
+SELECT
+    sl.id,
+    sl.name,
+    sl.storage_location_type_code AS type_code,
+    sl.parent_id,
+    p.name AS parent_name,
+    p.storage_location_type_code AS parent_type_code,
+    sl.created_at,
+    sl.updated_at
+FROM storage_location sl
+LEFT JOIN storage_location p ON p.id = sl.parent_id
+WHERE sl.id IN (sqlc.slice('ids'))
+AND sl.account_id = sqlc.arg('account_id');
+
+-- name: ListLocationChildrenByParentIDs :many
+SELECT
+    sl.id,
+    sl.name,
+    sl.storage_location_type_code AS type_code,
+    sl.parent_id
+FROM storage_location sl
+WHERE sl.parent_id IN (sqlc.slice('parent_ids'))
+AND sl.account_id = sqlc.arg('account_id')
+ORDER BY sl.name ASC;
+
 -- name: InsertLocation :exec
 INSERT INTO storage_location (
     id,

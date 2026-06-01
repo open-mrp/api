@@ -110,3 +110,21 @@ func (r *adjustmentTypeRepoImpl) List(ctx context.Context, params domain.ListAdj
 	result, pageInfo := pagination.BuildPageString(adjustmentTypes, params.Limit, cursorDir, adjustmentTypeCreatedAt, adjustmentTypeID)
 	return &domain.ListAdjustmentTypesResult{AdjustmentTypes: result, PageInfo: pageInfo}, nil
 }
+
+func (r *adjustmentTypeRepoImpl) GetByIDs(ctx context.Context, ids []string) ([]*domain.AdjustmentType, *apierror.APIError) {
+	ctx, span := adjustmentTypeRepoTracer.Start(ctx, "repository.adjustment_type.get_by_ids")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := r.queries.GetAdjustmentTypesByIDs(ctx, ids)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make([]*domain.AdjustmentType, len(rows))
+	for i, row := range rows {
+		out[i] = mapAdjustmentTypeRow(row)
+	}
+	return out, nil
+}

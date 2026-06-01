@@ -8,8 +8,8 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleReceivingOrderID = "rcor_01jm4r6700f8nwq3v5hx2d9ktp"
-const SampleReceivingOrderLineID = "rcorln_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleReceivingOrderID = "rcor_016911ec6c634a298b3dc1798e"
+const SampleReceivingOrderLineID = "rcorln_01f2aca124f3f5add7c94d5e4f"
 
 // Receiving order summary for list views.
 type ReceivingOrderSummary struct {

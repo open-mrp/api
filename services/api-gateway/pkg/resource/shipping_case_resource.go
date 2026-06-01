@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleShippingCaseID = "shcs_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleShippingCaseID = "shcs_01207a101ea1475c687a39cf76"
 
 // Physical shipping case within a shipment.
 type ShippingCase struct {

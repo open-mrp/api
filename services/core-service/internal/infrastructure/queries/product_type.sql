@@ -73,6 +73,19 @@ WHERE id = sqlc.arg('id');
 DELETE FROM product_type
 WHERE id = sqlc.arg('id');
 
+-- name: GetProductTypesByIDs :many
+-- Returns product types matching the given IDs. ProductType is a system-only
+-- lookup (no account scoping); the api-gateway resolver uses this to populate
+-- ProductType references on items/products.
+SELECT
+    product_type.id,
+    product_type.name,
+    product_type.code,
+    product_type.created_at,
+    product_type.updated_at
+FROM product_type
+WHERE product_type.id IN (sqlc.slice('ids'));
+
 -- name: CountProductTypesByName :one
 SELECT COUNT(*) FROM product_type
 WHERE name = ?

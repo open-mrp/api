@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -196,6 +197,75 @@ func (q *Queries) FindSandboxAccountWithOwnerByTypeID(ctx context.Context, typeI
 		&i.OwnerAccountUpdatedAt,
 	)
 	return i, err
+}
+
+const getSandboxAccountsByTypeIDs = `-- name: GetSandboxAccountsByTypeIDs :many
+SELECT
+    sandbox_account.id, sandbox_account.type_id, sandbox_account.created_at, sandbox_account.updated_at, sandbox_account.owner_account_id, sandbox_account.account_id,
+    account.name
+FROM sandbox_account
+JOIN account ON sandbox_account.account_id = account.id
+WHERE sandbox_account.type_id IN (/*SLICE:type_ids*/?)
+AND sandbox_account.owner_account_id = ?
+`
+
+type GetSandboxAccountsByTypeIDsParams struct {
+	TypeIds        []string
+	OwnerAccountID string
+}
+
+type GetSandboxAccountsByTypeIDsRow struct {
+	ID             int64
+	TypeID         string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	OwnerAccountID string
+	AccountID      string
+	Name           string
+}
+
+// Returns sandbox accounts matching the given type IDs that belong to the
+// caller's owner account. Used by the api-gateway resourcekit resolver.
+func (q *Queries) GetSandboxAccountsByTypeIDs(ctx context.Context, arg GetSandboxAccountsByTypeIDsParams) ([]GetSandboxAccountsByTypeIDsRow, error) {
+	query := getSandboxAccountsByTypeIDs
+	var queryParams []interface{}
+	if len(arg.TypeIds) > 0 {
+		for _, v := range arg.TypeIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:type_ids*/?", strings.Repeat(",?", len(arg.TypeIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:type_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.OwnerAccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetSandboxAccountsByTypeIDsRow
+	for rows.Next() {
+		var i GetSandboxAccountsByTypeIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TypeID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.OwnerAccountID,
+			&i.AccountID,
+			&i.Name,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listSandboxAccountsBackward = `-- name: ListSandboxAccountsBackward :many

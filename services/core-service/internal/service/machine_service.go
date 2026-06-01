@@ -73,6 +73,25 @@ func (s *machineSvcImpl) withTx(ctx context.Context, fn func(context.Context, *m
 	})
 }
 
+func (s *machineSvcImpl) BatchGetMachinesByIDs(ctx context.Context, ids []string) ([]*domain.Machine, *apierror.APIError) {
+	ctx, span := machineSvcTracer.Start(ctx, "service.machine.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainMachines, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return s.repos.NewMachineRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
+}
+
 func (s *machineSvcImpl) ListMachines(ctx context.Context, params domain.ListMachinesParams) (*domain.ListMachinesResult, *apierror.APIError) {
 	ctx, span := machineSvcTracer.Start(ctx, "service.machine.list")
 	defer span.End()

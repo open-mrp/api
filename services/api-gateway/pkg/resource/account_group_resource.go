@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleAccountGroupID = "acgp_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleAccountGroupID = "acgp_018e88072d1320808dc979cfac"
 const SampleAccountGroupName = "Wholesale Customers"
 
 // Account group resource.

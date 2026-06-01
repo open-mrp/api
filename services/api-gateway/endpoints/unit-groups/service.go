@@ -7,9 +7,8 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
-	ownerutil "github.com/augno/api/services/api-gateway/internal/owner"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/patch"
@@ -61,11 +60,10 @@ func NewUnitGroupSvc(config *UnitGroupSvcConfig) UnitGroupSvc {
 
 func (m *unitGroupSvcImpl) ListUnitGroups(ctx context.Context, req *ListUnitGroupsRequest) (*apiresource.List[apiresource.UnitGroup], *apierror.APIError) {
 	pbReq := &pb.ListUnitGroupsRequest{
-		Cursor:   req.Cursor,
-		Limit:    req.Limit,
-		Query:    req.Query,
-		Type:     req.Type.StringPtr(),
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
+		Cursor: req.Cursor,
+		Limit:  req.Limit,
+		Query:  req.Query,
+		Type:   req.Type.StringPtr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, unitGroupSvcTracer, "service.unit_groups.list", domain.ServiceName,
@@ -77,35 +75,25 @@ func (m *unitGroupSvcImpl) ListUnitGroups(ctx context.Context, req *ListUnitGrou
 		return nil, apiErr
 	}
 
-	var ownerAccount *apiresource.Account
-	for _, ug := range resp.UnitGroups {
-		if ug.AccountId != nil {
-			ownerAccount = ownerutil.ResolveOwnerAccount(ctx, m.coreClient, ug.AccountId)
-			break
-		}
+	ids := make([]string, len(resp.UnitGroups))
+	for i, ug := range resp.UnitGroups {
+		ids[i] = ug.Id
 	}
-
-	return UnitGroupListPresenter(ctx, resp, ownerAccount), nil
-}
-
-func (m *unitGroupSvcImpl) GetUnitGroup(ctx context.Context, req *RetrieveUnitGroupRequest) (*apiresource.UnitGroup, *apierror.APIError) {
-	pbReq := &pb.GetUnitGroupRequest{
-		Id:       req.UnitGroupID,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
-	}
-
-	resp, apiErr := grpcutil.CallRPC(ctx, unitGroupSvcTracer, "service.unit_groups.get", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetUnitGroupResponse, error) {
-			return m.coreClient.GetUnitGroup(ctx, pbReq, opts...)
-		})
-
+	loaded, apiErr := resourceloaders.LoadUnitGroups(ctx, ids)
 	if apiErr != nil {
 		return nil, apiErr
 	}
+	items := make([]apiresource.UnitGroup, 0, len(ids))
+	for _, id := range ids {
+		if v, ok := loaded[id]; ok {
+			items = append(items, *(v.(*apiresource.UnitGroup)))
+		}
+	}
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
+}
 
-	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.UnitGroup.AccountId)
-	result := UnitGroupPresenter(resp.UnitGroup, ownerAccount)
-	return &result, nil
+func (m *unitGroupSvcImpl) GetUnitGroup(ctx context.Context, req *RetrieveUnitGroupRequest) (*apiresource.UnitGroup, *apierror.APIError) {
+	return loadUnitGroupByID(ctx, req.UnitGroupID)
 }
 
 func (m *unitGroupSvcImpl) CreateUnitGroup(ctx context.Context, req *CreateUnitGroupRequest) (*apiresource.UnitGroup, *apierror.APIError) {
@@ -137,7 +125,6 @@ func (m *unitGroupSvcImpl) CreateUnitGroup(ctx context.Context, req *CreateUnitG
 		Type:            string(req.Type),
 		BaseUnitId:      req.BaseUnitID,
 		UnitConversions: associatedUnits,
-		Includes:        appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, unitGroupSvcTracer, "service.unit_groups.create", domain.ServiceName,
@@ -149,9 +136,7 @@ func (m *unitGroupSvcImpl) CreateUnitGroup(ctx context.Context, req *CreateUnitG
 		return nil, apiErr
 	}
 
-	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.UnitGroup.AccountId)
-	result := UnitGroupPresenter(resp.UnitGroup, ownerAccount)
-	return &result, nil
+	return loadUnitGroupByID(ctx, resp.UnitGroup.Id)
 }
 
 func (m *unitGroupSvcImpl) UpdateUnitGroup(ctx context.Context, req *UpdateUnitGroupRequest) (*apiresource.UnitGroup, *apierror.APIError) {
@@ -159,7 +144,6 @@ func (m *unitGroupSvcImpl) UpdateUnitGroup(ctx context.Context, req *UpdateUnitG
 		Id:         req.UnitGroupID,
 		Name:       req.Name,
 		BaseUnitId: req.BaseUnitID,
-		Includes:   appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	pbReq.Notes = patch.StringFieldPtrToProto(req.Notes)
@@ -199,9 +183,7 @@ func (m *unitGroupSvcImpl) UpdateUnitGroup(ctx context.Context, req *UpdateUnitG
 		return nil, apiErr
 	}
 
-	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.UnitGroup.AccountId)
-	result := UnitGroupPresenter(resp.UnitGroup, ownerAccount)
-	return &result, nil
+	return loadUnitGroupByID(ctx, resp.UnitGroup.Id)
 }
 
 func (m *unitGroupSvcImpl) DeleteUnitGroup(ctx context.Context, req *DeleteUnitGroupRequest) (*apiresource.EmptyResource, *apierror.APIError) {
@@ -241,7 +223,6 @@ func (m *unitGroupSvcImpl) CreateUnitGroupUnit(ctx context.Context, req *CreateU
 		DiscountPercentage: discountPct,
 		DiscountFixed:      discountFixed,
 		IsVisible:          isVisible,
-		Includes:           appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, unitGroupSvcTracer, "service.unit_groups.create_unit", domain.ServiceName,
@@ -253,15 +234,13 @@ func (m *unitGroupSvcImpl) CreateUnitGroupUnit(ctx context.Context, req *CreateU
 		return nil, apiErr
 	}
 
-	result := UnitGroupUnitPresenter(resp.UnitGroupUnit)
-	return &result, nil
+	return loadUnitGroupUnitByID(ctx, resp.UnitGroupUnit.Id)
 }
 
 func (m *unitGroupSvcImpl) UpdateUnitGroupUnit(ctx context.Context, req *UpdateUnitGroupUnitRequest) (*apiresource.UnitGroupUnit, *apierror.APIError) {
 	pbReq := &pb.UpsertUnitGroupUnitRequest{
 		UnitGroupId:     req.UnitGroupID,
 		UnitGroupUnitId: req.AssociatedUnitID,
-		Includes:        appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	if req.UnitID != nil {
@@ -286,8 +265,7 @@ func (m *unitGroupSvcImpl) UpdateUnitGroupUnit(ctx context.Context, req *UpdateU
 		return nil, apiErr
 	}
 
-	result := UnitGroupUnitPresenter(resp.UnitGroupUnit)
-	return &result, nil
+	return loadUnitGroupUnitByID(ctx, resp.UnitGroupUnit.Id)
 }
 
 func (m *unitGroupSvcImpl) DeleteUnitGroupUnit(ctx context.Context, req *DeleteUnitGroupUnitRequest) (*apiresource.EmptyResource, *apierror.APIError) {
@@ -311,7 +289,6 @@ func (m *unitGroupSvcImpl) DeleteUnitGroupUnit(ctx context.Context, req *DeleteU
 func (m *unitGroupSvcImpl) ListUnitGroupUnits(ctx context.Context, req *ListUnitGroupUnitsRequest) (*apiresource.List[apiresource.UnitGroupUnit], *apierror.APIError) {
 	pbReq := &pb.ListUnitGroupUnitsRequest{
 		UnitGroupId: req.UnitGroupID,
-		Includes:    appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, unitGroupSvcTracer, "service.unit_groups.list_units", domain.ServiceName,
@@ -323,25 +300,51 @@ func (m *unitGroupSvcImpl) ListUnitGroupUnits(ctx context.Context, req *ListUnit
 		return nil, apiErr
 	}
 
-	return UnitGroupUnitListPresenter(ctx, resp), nil
-}
-
-func (m *unitGroupSvcImpl) GetUnitGroupUnit(ctx context.Context, req *RetrieveUnitGroupUnitRequest) (*apiresource.UnitGroupUnit, *apierror.APIError) {
-	pbReq := &pb.GetUnitGroupUnitRequest{
-		UnitGroupId:     req.UnitGroupID,
-		UnitGroupUnitId: req.UnitGroupUnitID,
-		Includes:        appctx.GetRequestedIncludeKeys(ctx),
+	ids := make([]string, len(resp.UnitGroupUnits))
+	for i, u := range resp.UnitGroupUnits {
+		ids[i] = u.Id
 	}
-
-	resp, apiErr := grpcutil.CallRPC(ctx, unitGroupSvcTracer, "service.unit_groups.get_unit", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetUnitGroupUnitResponse, error) {
-			return m.coreClient.GetUnitGroupUnit(ctx, pbReq, opts...)
-		})
-
+	loaded, apiErr := resourceloaders.LoadUnitGroupUnits(ctx, ids)
 	if apiErr != nil {
 		return nil, apiErr
 	}
+	items := make([]apiresource.UnitGroupUnit, 0, len(ids))
+	for _, id := range ids {
+		if v, ok := loaded[id]; ok {
+			items = append(items, *(v.(*apiresource.UnitGroupUnit)))
+		}
+	}
+	return apiresource.NewList(items, apiresource.PageInfo{}), nil
+}
 
-	result := UnitGroupUnitPresenter(resp.UnitGroupUnit)
-	return &result, nil
+func (m *unitGroupSvcImpl) GetUnitGroupUnit(ctx context.Context, req *RetrieveUnitGroupUnitRequest) (*apiresource.UnitGroupUnit, *apierror.APIError) {
+	return loadUnitGroupUnitByID(ctx, req.UnitGroupUnitID)
+}
+
+// loadUnitGroupByID wraps the single-ID load pattern used after every
+// mutation and for the retrieve endpoint.
+func loadUnitGroupByID(ctx context.Context, id string) (*apiresource.UnitGroup, *apierror.APIError) {
+	loaded, apiErr := resourceloaders.LoadUnitGroups(ctx, []string{id})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	v, ok := loaded[id]
+	if !ok {
+		return nil, apierror.NewResourceNotFoundError("Unit group not found.")
+	}
+	return v.(*apiresource.UnitGroup), nil
+}
+
+// loadUnitGroupUnitByID wraps the single-ID load pattern used after every
+// mutation and for the retrieve endpoint.
+func loadUnitGroupUnitByID(ctx context.Context, id string) (*apiresource.UnitGroupUnit, *apierror.APIError) {
+	loaded, apiErr := resourceloaders.LoadUnitGroupUnits(ctx, []string{id})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	v, ok := loaded[id]
+	if !ok {
+		return nil, apierror.NewResourceNotFoundError("Unit group unit not found.")
+	}
+	return v.(*apiresource.UnitGroupUnit), nil
 }

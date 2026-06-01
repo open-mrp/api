@@ -66,6 +66,7 @@ type AccountUserAccess struct {
 
 type AccountRelation struct {
 	ID                    string
+	OwnerAccountID        string
 	CounterpartyAccountID string
 	RoleCode              string
 	// IsOwnerSide is true when the caller's account is the owner of the relation

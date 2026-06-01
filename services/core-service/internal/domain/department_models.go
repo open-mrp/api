@@ -8,11 +8,12 @@ import (
 
 // DepartmentScanningStation is a scanning station sub-resource attached to a department.
 type DepartmentScanningStation struct {
-	ID        string
-	Name      string
-	Type      string
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID                  string
+	Name                string
+	Type                string
+	OperatorRequirement string
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
 
 // DepartmentMachine is a machine sub-resource attached to a department.

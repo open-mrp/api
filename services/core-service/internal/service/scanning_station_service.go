@@ -73,6 +73,29 @@ func (s *scanningStationSvcImpl) withTx(ctx context.Context, fn func(context.Con
 	})
 }
 
+func (s *scanningStationSvcImpl) BatchGetScanningStationsByIDs(ctx context.Context, ids []string) ([]*domain.ScanningStation, *apierror.APIError) {
+	ctx, span := scanningStationSvcTracer.Start(ctx, "service.scanning_station.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainScanningStations, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	return s.repos.NewScanningStationRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
+}
+
 func (s *scanningStationSvcImpl) ListScanningStations(ctx context.Context, params domain.ListScanningStationsParams) (*domain.ListScanningStationsResult, *apierror.APIError) {
 	ctx, span := scanningStationSvcTracer.Start(ctx, "service.scanning_station.list")
 	defer span.End()

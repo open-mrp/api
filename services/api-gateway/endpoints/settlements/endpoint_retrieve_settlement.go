@@ -30,12 +30,13 @@ func (e *RetrieveSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeSettlement,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveSettlementRequest) (*apiresource.Settlement, *apierror.APIError) {
 			return svc.(SettlementSvc).GetSettlement
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeSettlement,
-			Fields:     []string{"allocations"},
+			Fields:     []string{"responsible_user", "allocations"},
 		}),
 	})
 }

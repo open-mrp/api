@@ -31,7 +31,7 @@ func TestPricingPlanPresenter(t *testing.T) {
 		IncludesPreviousPlan: &includesPrev,
 	}
 
-	result := PricingPlanPresenter(plan)
+	result := pricingPlanFromProto(plan)
 	resourcetest.ValidateResourceStruct(t, "PricingPlan", result)
 }
 
@@ -50,7 +50,7 @@ func TestPlanChangePreviewPresenter(t *testing.T) {
 		},
 	}
 
-	result := PlanChangePreviewPresenter(resp)
+	result := planChangePreviewFromProto(resp)
 	resourcetest.ValidateResourceStruct(t, "PlanChangeProration", result)
 }
 
@@ -70,7 +70,7 @@ func TestAccountUsagePresenter(t *testing.T) {
 		EstimatedAgentSpendCents: 4500,
 	}
 
-	result := AccountUsagePresenter(resp)
+	result := accountUsageFromProto(resp)
 	resourcetest.ValidateResourceStruct(t, "AccountUsageResponse", result)
 }
 
@@ -83,6 +83,6 @@ func TestSwitchPlanPresenter(t *testing.T) {
 		IntentId: &intentID,
 	}
 
-	result := SwitchPlanPresenter(resp)
+	result := switchPlanFromProto(resp)
 	resourcetest.ValidateResourceStruct(t, "SwitchPlanResponse", result)
 }

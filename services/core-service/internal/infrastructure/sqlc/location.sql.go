@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -180,6 +181,81 @@ func (q *Queries) GetLocationType(ctx context.Context, arg GetLocationTypeParams
 	return i, err
 }
 
+const getLocationsByIDs = `-- name: GetLocationsByIDs :many
+SELECT
+    sl.id,
+    sl.name,
+    sl.storage_location_type_code AS type_code,
+    sl.parent_id,
+    p.name AS parent_name,
+    p.storage_location_type_code AS parent_type_code,
+    sl.created_at,
+    sl.updated_at
+FROM storage_location sl
+LEFT JOIN storage_location p ON p.id = sl.parent_id
+WHERE sl.id IN (/*SLICE:ids*/?)
+AND sl.account_id = ?
+`
+
+type GetLocationsByIDsParams struct {
+	Ids       []string
+	AccountID string
+}
+
+type GetLocationsByIDsRow struct {
+	ID             string
+	Name           string
+	TypeCode       string
+	ParentID       sql.NullString
+	ParentName     sql.NullString
+	ParentTypeCode sql.NullString
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+func (q *Queries) GetLocationsByIDs(ctx context.Context, arg GetLocationsByIDsParams) ([]GetLocationsByIDsRow, error) {
+	query := getLocationsByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetLocationsByIDsRow
+	for rows.Next() {
+		var i GetLocationsByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.TypeCode,
+			&i.ParentID,
+			&i.ParentName,
+			&i.ParentTypeCode,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const insertLocation = `-- name: InsertLocation :exec
 INSERT INTO storage_location (
     id,
@@ -251,6 +327,69 @@ func (q *Queries) ListLocationChildren(ctx context.Context, arg ListLocationChil
 	for rows.Next() {
 		var i ListLocationChildrenRow
 		if err := rows.Scan(&i.ID, &i.Name, &i.TypeCode); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listLocationChildrenByParentIDs = `-- name: ListLocationChildrenByParentIDs :many
+SELECT
+    sl.id,
+    sl.name,
+    sl.storage_location_type_code AS type_code,
+    sl.parent_id
+FROM storage_location sl
+WHERE sl.parent_id IN (/*SLICE:parent_ids*/?)
+AND sl.account_id = ?
+ORDER BY sl.name ASC
+`
+
+type ListLocationChildrenByParentIDsParams struct {
+	ParentIds []sql.NullString
+	AccountID string
+}
+
+type ListLocationChildrenByParentIDsRow struct {
+	ID       string
+	Name     string
+	TypeCode string
+	ParentID sql.NullString
+}
+
+func (q *Queries) ListLocationChildrenByParentIDs(ctx context.Context, arg ListLocationChildrenByParentIDsParams) ([]ListLocationChildrenByParentIDsRow, error) {
+	query := listLocationChildrenByParentIDs
+	var queryParams []interface{}
+	if len(arg.ParentIds) > 0 {
+		for _, v := range arg.ParentIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:parent_ids*/?", strings.Repeat(",?", len(arg.ParentIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:parent_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListLocationChildrenByParentIDsRow
+	for rows.Next() {
+		var i ListLocationChildrenByParentIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.TypeCode,
+			&i.ParentID,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

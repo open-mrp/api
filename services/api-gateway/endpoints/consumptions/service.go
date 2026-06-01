@@ -7,7 +7,8 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/appctx"
+	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -52,7 +53,7 @@ func (m *consumptionSvcImpl) GetConsumption(ctx context.Context, req *RetrieveCo
 	pbReq := &pb.GetConsumptionRequest{
 		ProductionStepId: req.ProductionStepID,
 		Id:               req.ConsumptionID,
-		Includes:         appctx.GetRequestedIncludeKeys(ctx),
+		Includes:         consumptionIncludes,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, consumptionSvcTracer, "service.consumptions.get", domain.ServiceName,
@@ -64,7 +65,9 @@ func (m *consumptionSvcImpl) GetConsumption(ctx context.Context, req *RetrieveCo
 		return nil, apiErr
 	}
 
-	result := ConsumptionPresenter(resp.Consumption)
+	meta := resourcekit.GetLoadMeta(ctx)
+	result := consumptionFromProto(resp.Consumption)
+	stashConsumptionMeta(meta, resp.Consumption)
 	return &result, nil
 }
 
@@ -77,7 +80,7 @@ func (m *consumptionSvcImpl) CreateConsumption(ctx context.Context, req *CreateC
 		WasteQuantityValue:  req.WasteQuantityValue,
 		WasteQuantityUnitId: req.WasteQuantityUnitID,
 		Instructions:        req.Instructions,
-		Includes:            appctx.GetRequestedIncludeKeys(ctx),
+		Includes:            consumptionIncludes,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, consumptionSvcTracer, "service.consumptions.create", domain.ServiceName,
@@ -89,7 +92,9 @@ func (m *consumptionSvcImpl) CreateConsumption(ctx context.Context, req *CreateC
 		return nil, apiErr
 	}
 
-	result := ConsumptionPresenter(resp.Consumption)
+	meta := resourcekit.GetLoadMeta(ctx)
+	result := consumptionFromProto(resp.Consumption)
+	stashConsumptionMeta(meta, resp.Consumption)
 	return &result, nil
 }
 
@@ -103,7 +108,7 @@ func (m *consumptionSvcImpl) UpdateConsumption(ctx context.Context, req *UpdateC
 		WasteQuantityValue:  req.WasteQuantityValue,
 		WasteQuantityUnitId: req.WasteQuantityUnitID,
 		Instructions:        req.Instructions,
-		Includes:            appctx.GetRequestedIncludeKeys(ctx),
+		Includes:            consumptionIncludes,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, consumptionSvcTracer, "service.consumptions.update", domain.ServiceName,
@@ -115,7 +120,9 @@ func (m *consumptionSvcImpl) UpdateConsumption(ctx context.Context, req *UpdateC
 		return nil, apiErr
 	}
 
-	result := ConsumptionPresenter(resp.Consumption)
+	meta := resourcekit.GetLoadMeta(ctx)
+	result := consumptionFromProto(resp.Consumption)
+	stashConsumptionMeta(meta, resp.Consumption)
 	return &result, nil
 }
 
@@ -134,6 +141,61 @@ func (m *consumptionSvcImpl) DeleteConsumption(ctx context.Context, req *DeleteC
 		return nil, apiErr
 	}
 
-	result := ConsumptionPresenter(resp.Consumption)
+	meta := resourcekit.GetLoadMeta(ctx)
+	result := consumptionFromProto(resp.Consumption)
+	stashConsumptionMeta(meta, resp.Consumption)
 	return &result, nil
+}
+
+var consumptionIncludes = []string{"consumed_item"}
+
+func consumptionQuantityFromProto(q *pb.QuantityInfo) *apiresource.Quantity {
+	if q == nil {
+		return nil
+	}
+	norm := apiresource.NormalizeQuantityValue(q.Value, q.UnitType)
+	return &apiresource.Quantity{
+		ID:           q.Id,
+		Object:       constants.ObjectTypeQuantity,
+		Value:        norm,
+		DisplayValue: apiresource.FormatDisplayValue(norm, q.UnitAbbreviation, q.UnitType),
+	}
+}
+
+func consumptionFromProto(c *pb.ConsumptionInfo) apiresource.Consumption {
+	if c == nil {
+		return apiresource.Consumption{}
+	}
+
+	return apiresource.Consumption{
+		ID:            c.Id,
+		Object:        constants.ObjectTypeConsumption,
+		Quantity:      consumptionQuantityFromProto(c.Quantity),
+		WasteQuantity: consumptionQuantityFromProto(c.WasteQuantity),
+		Instructions:  c.Instructions,
+		CreatedAt:     grpcutil.TimestampToTime(c.CreatedAt),
+		UpdatedAt:     grpcutil.TimestampToTime(c.UpdatedAt),
+	}
+}
+
+func stashConsumptionMeta(meta *resourcekit.LoadMeta, c *pb.ConsumptionInfo) {
+	if c == nil {
+		return
+	}
+
+	if c.ItemId != "" {
+		itemType := constants.ItemTypeCode(c.ItemTypeCode)
+		if !itemType.IsValid() {
+			itemType = constants.ItemTypeCodeProduct
+		}
+		meta.Set(constants.ObjectTypeConsumption, c.Id, "consumed_item", &apiresource.Item{
+			ID:           c.ItemId,
+			Object:       constants.ObjectTypeItem,
+			SKU:          c.ItemSku,
+			Description:  c.ItemDescription,
+			ItemTypeCode: itemType,
+			CreatedAt:    grpcutil.TimestampToTime(c.CreatedAt),
+			UpdatedAt:    grpcutil.TimestampToTime(c.UpdatedAt),
+		})
+	}
 }

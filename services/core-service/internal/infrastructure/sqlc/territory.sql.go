@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -94,6 +95,113 @@ func (q *Queries) FindSalesRepByZipcode(ctx context.Context, arg FindSalesRepByZ
 	var sales_rep_id string
 	err := row.Scan(&sales_rep_id)
 	return sales_rep_id, err
+}
+
+const getTerritoriesByIDs = `-- name: GetTerritoriesByIDs :many
+SELECT
+    t.id,
+    t.state,
+    t.start_zipcode,
+    t.end_zipcode,
+    t.sales_rep_id,
+    t.product_line_id,
+    t.created_at,
+    t.updated_at,
+    u.name AS sales_rep_name,
+    u.email AS sales_rep_email,
+    au.status_code AS sales_rep_status,
+    au.created_at AS sales_rep_created_at,
+    au.updated_at AS sales_rep_updated_at,
+    pl.name AS product_line_name,
+    pl.is_commission_exempt AS product_line_is_commission_exempt,
+    pl.is_freight_exempt AS product_line_is_freight_exempt,
+    pl.created_at AS product_line_created_at,
+    pl.updated_at AS product_line_updated_at
+FROM territory t
+JOIN account_user au ON au.id = t.sales_rep_id
+JOIN user u ON u.id = au.user_id
+LEFT JOIN product_line pl ON pl.id = t.product_line_id
+WHERE t.id IN (/*SLICE:ids*/?)
+AND t.account_id = ?
+`
+
+type GetTerritoriesByIDsParams struct {
+	Ids       []string
+	AccountID string
+}
+
+type GetTerritoriesByIDsRow struct {
+	ID                            string
+	State                         string
+	StartZipcode                  sql.NullInt32
+	EndZipcode                    sql.NullInt32
+	SalesRepID                    string
+	ProductLineID                 sql.NullString
+	CreatedAt                     time.Time
+	UpdatedAt                     time.Time
+	SalesRepName                  sql.NullString
+	SalesRepEmail                 sql.NullString
+	SalesRepStatus                string
+	SalesRepCreatedAt             time.Time
+	SalesRepUpdatedAt             time.Time
+	ProductLineName               sql.NullString
+	ProductLineIsCommissionExempt sql.NullBool
+	ProductLineIsFreightExempt    sql.NullBool
+	ProductLineCreatedAt          sql.NullTime
+	ProductLineUpdatedAt          sql.NullTime
+}
+
+func (q *Queries) GetTerritoriesByIDs(ctx context.Context, arg GetTerritoriesByIDsParams) ([]GetTerritoriesByIDsRow, error) {
+	query := getTerritoriesByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTerritoriesByIDsRow
+	for rows.Next() {
+		var i GetTerritoriesByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.State,
+			&i.StartZipcode,
+			&i.EndZipcode,
+			&i.SalesRepID,
+			&i.ProductLineID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.SalesRepName,
+			&i.SalesRepEmail,
+			&i.SalesRepStatus,
+			&i.SalesRepCreatedAt,
+			&i.SalesRepUpdatedAt,
+			&i.ProductLineName,
+			&i.ProductLineIsCommissionExempt,
+			&i.ProductLineIsFreightExempt,
+			&i.ProductLineCreatedAt,
+			&i.ProductLineUpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getTerritory = `-- name: GetTerritory :one

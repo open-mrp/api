@@ -35,5 +35,6 @@ func (e *RetrieveLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 			ObjectType: constants.ObjectTypeLocation,
 			Fields:     []string{"parent", "children"},
 		}),
+		ObjectType: constants.ObjectTypeLocation,
 	})
 }

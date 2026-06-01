@@ -28,6 +28,7 @@ func (e *RetrieveUnitGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retr
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeUnitGroup,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveUnitGroupRequest) (*apiresource.UnitGroup, *apierror.APIError) {
 			return svc.(UnitGroupSvc).GetUnitGroup
 		},

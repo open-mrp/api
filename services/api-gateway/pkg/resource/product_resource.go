@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleProductID = "pd_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleProductID = "pd_013c29ab3f1518d0004094c316"
 
 // Product with expandable item, product line, and product type.
 type Product struct {

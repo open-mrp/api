@@ -9,7 +9,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleAuditEventID = "ae_01gq7s3f2m0y9h2t7z1w7q3v9k"
+const SampleAuditEventID = "ae_01b1c07dc3085bbd84111edcbd"
 
 const SampleAuditEventAction = constants.AuditActionUpdate
 const SampleAuditEventResourceType = constants.ObjectTypeUser
@@ -21,6 +21,8 @@ const SampleAuditEventMetadataReason = `{"reason":"operator override"}`
 
 // Field-level before/after transition recorded during a mutation.
 type AuditFieldChange struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=audit_field_change"`
 	// Name of the changed field.
 	Field string `json:"field" validate:"required"`
 	// Previous value as a JSON fragment. Null for creation events.
@@ -68,6 +70,7 @@ var SampleAuditEvent = &AuditEvent{
 	Actor:        SampleActor,
 	Changes: NewList([]AuditFieldChange{
 		{
+			Object:   constants.ObjectTypeAuditFieldChange,
 			Field:    "email",
 			OldValue: json.RawMessage(`"old@example.com"`),
 			NewValue: json.RawMessage(`"new@example.com"`),

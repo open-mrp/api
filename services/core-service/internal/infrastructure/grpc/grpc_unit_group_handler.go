@@ -299,3 +299,33 @@ func (h *gRPCHandler) GetUnitGroupUnit(ctx context.Context, req *pb.GetUnitGroup
 		UnitGroupUnit: unitGroupUnitToProto(result),
 	}, nil
 }
+
+func (h *gRPCHandler) BatchGetUnitGroupsByIDs(ctx context.Context, req *pb.BatchGetUnitGroupsByIDsRequest) (*pb.BatchGetUnitGroupsByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	unitGroups, apiErr := h.unitGroupSvc.BatchGetUnitGroupsByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	pbUnitGroups := make([]*pb.UnitGroupInfo, len(unitGroups))
+	for i, ug := range unitGroups {
+		pbUnitGroups[i] = unitGroupToProto(ug)
+	}
+	return &pb.BatchGetUnitGroupsByIDsResponse{UnitGroups: pbUnitGroups}, nil
+}
+
+func (h *gRPCHandler) BatchGetUnitGroupUnitsByIDs(ctx context.Context, req *pb.BatchGetUnitGroupUnitsByIDsRequest) (*pb.BatchGetUnitGroupUnitsByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	units, apiErr := h.unitGroupSvc.BatchGetUnitGroupUnitsByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	pbUnits := make([]*pb.UnitGroupUnitInfo, len(units))
+	for i, u := range units {
+		pbUnits[i] = unitGroupUnitToProto(u)
+	}
+	return &pb.BatchGetUnitGroupUnitsByIDsResponse{UnitGroupUnits: pbUnits}, nil
+}

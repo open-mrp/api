@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -141,6 +142,83 @@ func (q *Queries) CheckDuplicateTransactionNumber(ctx context.Context, arg Check
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const getSysPropertiesByIDs = `-- name: GetSysPropertiesByIDs :many
+SELECT
+    sp.id,
+    sp.sys_property_type_code AS type_code,
+    sp.value,
+    sp.account_id,
+    sp.created_at,
+    sp.updated_at,
+    spt.id AS type_id,
+    spt.name AS type_name
+FROM sys_property sp
+JOIN sys_property_type spt ON sp.sys_property_type_code = spt.code
+WHERE sp.id IN (/*SLICE:ids*/?)
+AND sp.account_id = ?
+`
+
+type GetSysPropertiesByIDsParams struct {
+	Ids       []string
+	AccountID string
+}
+
+type GetSysPropertiesByIDsRow struct {
+	ID        string
+	TypeCode  string
+	Value     int32
+	AccountID string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	TypeID    string
+	TypeName  string
+}
+
+// Returns sys properties matching the given IDs that belong to the caller's
+// account. Used by the api-gateway resourcekit resolver.
+func (q *Queries) GetSysPropertiesByIDs(ctx context.Context, arg GetSysPropertiesByIDsParams) ([]GetSysPropertiesByIDsRow, error) {
+	query := getSysPropertiesByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetSysPropertiesByIDsRow
+	for rows.Next() {
+		var i GetSysPropertiesByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TypeCode,
+			&i.Value,
+			&i.AccountID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.TypeID,
+			&i.TypeName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getSysProperty = `-- name: GetSysProperty :one

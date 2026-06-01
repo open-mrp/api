@@ -217,10 +217,12 @@ func (suite *SalesOrderSvcTestSuite) expectCacheError() {
 		Times(1)
 }
 
-// expectReadAccessAllowed stubs ReadAccessMed.CheckReadAccess to allow access.
+// expectReadAccessAllowed stubs ReadAccessMed.CheckCounterpartyReadAccess to allow access.
+// Sales-order portal endpoints use the counterparty check because customers read
+// data on the vendor's account (the relation row is stored vendor→customer).
 func (suite *SalesOrderSvcTestSuite) expectReadAccessAllowed(actorAccountID, targetAccountID string) {
 	suite.readAccessMed.EXPECT().
-		CheckReadAccess(gomock.Any(), actorAccountID, targetAccountID).
+		CheckCounterpartyReadAccess(gomock.Any(), actorAccountID, targetAccountID).
 		Return(nil).
 		Times(1)
 }

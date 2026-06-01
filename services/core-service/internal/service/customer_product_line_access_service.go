@@ -120,6 +120,45 @@ func (s *customerProductLineAccessSvcImpl) GetCustomerProductLineAccess(ctx cont
 	return s.repos.NewCustomerProductLineAccessRepo().Get(ctx, identity.Target.AccountID, customerID)
 }
 
+// BatchGetCustomerProductLineAccessByIDs returns access records for each given
+// customer_id. Loop over Get (same approach as AccountGroupProductLineAccess
+// — the underlying SQL shape is awkward to batch and include-resolution
+// batch sizes are small).
+func (s *customerProductLineAccessSvcImpl) BatchGetCustomerProductLineAccessByIDs(ctx context.Context, customerIDs []string) ([]*domain.CustomerProductLineAccess, *apierror.APIError) {
+	ctx, span := customerProductLineAccessSvcTracer.Start(ctx, "service.customer_product_line_access.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainProductLineAccess, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+	if len(customerIDs) == 0 {
+		return nil, nil
+	}
+	repo := s.repos.NewCustomerProductLineAccessRepo()
+	out := make([]*domain.CustomerProductLineAccess, 0, len(customerIDs))
+	for _, id := range customerIDs {
+		access, apiErr := repo.Get(ctx, identity.Target.AccountID, id)
+		if apiErr != nil {
+			if apierror.IsNotFound(apiErr) {
+				continue
+			}
+			return nil, tracing.Trace(span, apiErr)
+		}
+		out = append(out, access)
+	}
+	return out, nil
+}
+
 func (s *customerProductLineAccessSvcImpl) CreateCustomerProductLineAccess(ctx context.Context, params domain.CreateCustomerProductLineAccessParams) (*domain.CustomerProductLineAccess, *apierror.APIError) {
 	ctx, span := customerProductLineAccessSvcTracer.Start(ctx, "service.customer_product_line_access.create")
 	defer span.End()

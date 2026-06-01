@@ -14,8 +14,6 @@ import (
 type RetrievePurchaseOrderRequest struct {
 	// Purchase order ID.
 	PurchaseOrderID string `path:"id" validate:"required"`
-	// Fields to include in the response.
-	Includes []string `query:"include"`
 }
 
 // Returns a purchase order by ID.
@@ -30,6 +28,7 @@ func (e *RetrievePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypePurchaseOrder,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrievePurchaseOrderRequest) (*apiresource.PurchaseOrderDetail, *apierror.APIError) {
 			return svc.(PurchaseOrderSvc).GetPurchaseOrder
 		},

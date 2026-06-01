@@ -217,6 +217,11 @@ func walkSchemaValue(
 
 	obj, ok := value.(map[string]any)
 	if !ok {
+		// Free-form schemas (type "object" with no properties/required)
+		// represent json.RawMessage or similar — accept any JSON type.
+		if len(resolved.Properties) == 0 && len(resolved.Required) == 0 {
+			return
+		}
 		assert.Fail(t, fmt.Sprintf("%s: expected object, got %T", path, value))
 		return
 	}
@@ -341,19 +346,22 @@ func pickSchemaForObjectType(index map[string][]*openAPISchema, objectType strin
 
 	bestIdx := 0
 	bestScore := -1
-	bestRequired := -1
+	bestMissing := len(obj) + 1
 
 	for i, candidate := range candidates {
 		score := 0
+		missing := 0
 		for _, req := range candidate.Required {
 			if _, ok := obj[req]; ok {
 				score++
+			} else {
+				missing++
 			}
 		}
-		if score > bestScore || (score == bestScore && len(candidate.Required) > bestRequired) {
+		if missing < bestMissing || (missing == bestMissing && score > bestScore) {
 			bestIdx = i
 			bestScore = score
-			bestRequired = len(candidate.Required)
+			bestMissing = missing
 		}
 	}
 

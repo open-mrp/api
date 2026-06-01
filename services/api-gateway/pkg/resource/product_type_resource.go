@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleProductTypeID = "prty_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleProductTypeID = "prty_01ddca85eedfb6b101a3c2f379"
 const SampleProductTypeName = "Sale"
 const SampleProductTypeCode = "sale"
 

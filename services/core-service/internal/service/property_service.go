@@ -72,6 +72,36 @@ func (s *propertySvcImpl) withTx(ctx context.Context, fn func(context.Context, *
 	})
 }
 
+func (s *propertySvcImpl) BatchGetPropertiesByIDs(ctx context.Context, ids []string) ([]*domain.Property, *apierror.APIError) {
+	ctx, span := propertySvcTracer.Start(ctx, "service.property.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	meds := s.mediators()
+	if apiErr := authorizeCatalogBatchRead(ctx, identity, span, meds, func() *apierror.APIError {
+		return identity.CheckHasPermission(types.PermissionDomainProperties, types.ActionRead)
+	}); apiErr != nil {
+		return nil, apiErr
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	properties, apiErr := s.repos.NewPropertyRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if err := s.populatePropertyAttributes(ctx, identity.Target.AccountID, properties); err != nil {
+		return nil, tracing.Trace(span, err)
+	}
+
+	return properties, nil
+}
+
 func (s *propertySvcImpl) ListProperties(ctx context.Context, params domain.ListPropertiesParams, includes []string) (*domain.ListPropertiesResult, *apierror.APIError) {
 	ctx, span := propertySvcTracer.Start(ctx, "service.property.list")
 	defer span.End()

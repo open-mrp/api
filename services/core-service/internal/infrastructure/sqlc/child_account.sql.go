@@ -78,6 +78,81 @@ func (q *Queries) GetChildAccountDetail(ctx context.Context, arg GetChildAccount
 	return i, err
 }
 
+const getChildAccountsByRelationIDs = `-- name: GetChildAccountsByRelationIDs :many
+SELECT
+    ar.id AS relation_id,
+    ar.counterparty_account_id AS account_id,
+    a.name AS account_name,
+    ar.external_number,
+    ab.support_email AS email,
+    ar.created_at,
+    ar.updated_at
+FROM account_relation ar
+INNER JOIN account a ON a.id = ar.counterparty_account_id
+LEFT JOIN account_branding ab ON ab.owner_account_id = ar.counterparty_account_id
+WHERE ar.id IN (/*SLICE:ids*/?)
+  AND ar.owner_account_id = ?
+`
+
+type GetChildAccountsByRelationIDsParams struct {
+	Ids            []string
+	OwnerAccountID string
+}
+
+type GetChildAccountsByRelationIDsRow struct {
+	RelationID     string
+	AccountID      string
+	AccountName    string
+	ExternalNumber string
+	Email          sql.NullString
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+// Returns child account relations matching the given relation IDs that belong
+// to the caller's account. Used by the api-gateway resourcekit resolver.
+func (q *Queries) GetChildAccountsByRelationIDs(ctx context.Context, arg GetChildAccountsByRelationIDsParams) ([]GetChildAccountsByRelationIDsRow, error) {
+	query := getChildAccountsByRelationIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.OwnerAccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetChildAccountsByRelationIDsRow
+	for rows.Next() {
+		var i GetChildAccountsByRelationIDsRow
+		if err := rows.Scan(
+			&i.RelationID,
+			&i.AccountID,
+			&i.AccountName,
+			&i.ExternalNumber,
+			&i.Email,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getParentAccountRelationID = `-- name: GetParentAccountRelationID :one
 SELECT parent_account_relation_id
 FROM account_relation

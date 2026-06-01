@@ -36,7 +36,7 @@ type AccountUser struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-const SampleAccountUserID = "acus_01gf7a8200er3ar3pkfrb6kk29"
+const SampleAccountUserID = "acus_01ea9983ddb41dacc44ecf997c"
 
 var sampleAccountUserName = "John Doe"
 var sampleAccountUserEmail = "john@augno.com"

@@ -28,6 +28,7 @@ func (e *RetrieveAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrieve
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeAgentDefinition,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAgentRequest) (*apiresource.AgentDefinition, *apierror.APIError) {
 			return svc.(AgentSvc).GetAgent
 		},

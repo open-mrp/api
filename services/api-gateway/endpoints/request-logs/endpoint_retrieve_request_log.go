@@ -31,6 +31,7 @@ func (e *RetrieveRequestLogEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveRequestLogRequest) (*apiresource.RequestLog, *apierror.APIError) {
 			return svc.(RequestLogSvc).GetRequestLog
 		},
+		ObjectType: constants.ObjectTypeRequestLog,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeRequestLog,
 			Fields:     []string{"account", "actor", "actor.role", "actor.role.permissions", "query_params", "request_body", "response_body"},

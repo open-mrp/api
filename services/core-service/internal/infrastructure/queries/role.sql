@@ -4,6 +4,12 @@ SELECT id, name, role_type_code FROM role WHERE id = ?;
 -- name: GetRolesByIDs :many
 SELECT id, name, role_type_code FROM role WHERE id IN (sqlc.slice('ids'));
 
+-- name: GetRolesFullByIDs :many
+SELECT id, name, role_type_code, account_id, created_at, updated_at
+FROM role
+WHERE id IN (sqlc.slice('ids'))
+AND (account_id = sqlc.arg('account_id') OR account_id IS NULL);
+
 -- name: FindRoleByTypeCode :one
 SELECT id, name, role_type_code
 FROM role

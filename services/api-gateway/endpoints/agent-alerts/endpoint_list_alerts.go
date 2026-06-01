@@ -31,6 +31,7 @@ func (e *ListAlertsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAlertsR
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeAgentAlert,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAlertsRequest) (*apiresource.List[apiresource.AgentAlert], *apierror.APIError) {
 			return svc.(AgentAlertSvc).ListAlerts
 		},

@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleItemID = "it_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleItemID = "it_0131e386ac683e8c29a71f6f1f"
 const SampleItemSKU = "ALM-2024-1001"
 
 // Item is an inventory item (product, material, or part).
@@ -39,6 +39,26 @@ type Item struct {
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
+}
+
+func ExpandableItemStub(id, sku string, ts time.Time) *Item {
+	if id == "" {
+		id = "it_unknown"
+	}
+	if sku == "" {
+		sku = "ITEM"
+	}
+	if ts.IsZero() {
+		ts = time.Unix(0, 0).UTC()
+	}
+	return &Item{
+		ID:           id,
+		Object:       constants.ObjectTypeItem,
+		SKU:          sku,
+		ItemTypeCode: constants.ItemTypeCodeProduct,
+		CreatedAt:    ts,
+		UpdatedAt:    ts,
+	}
 }
 
 var sampleDescription = "6061-T6 aluminum sheet, 4ft x 8ft, 0.125in thick"

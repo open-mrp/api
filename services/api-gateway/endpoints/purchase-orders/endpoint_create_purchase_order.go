@@ -125,6 +125,7 @@ func (e *CreatePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cr
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypePurchaseOrder,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreatePurchaseOrderRequest) (*apiresource.PurchaseOrderDetail, *apierror.APIError) {
 			return svc.(PurchaseOrderSvc).CreatePurchaseOrder
 		},

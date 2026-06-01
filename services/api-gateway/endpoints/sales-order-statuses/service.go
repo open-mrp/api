@@ -6,6 +6,7 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -38,27 +39,31 @@ func NewSalesOrderStatusSvc(config *SalesOrderStatusSvcConfig) SalesOrderStatusS
 	if err := config.validate(); err != nil {
 		panic(err)
 	}
-
-	return &salesOrderStatusSvcImpl{
-		coreClient: config.CoreClient,
-	}
+	return &salesOrderStatusSvcImpl{coreClient: config.CoreClient}
 }
 
 func (m *salesOrderStatusSvcImpl) ListSalesOrderStatuses(ctx context.Context, req *ListSalesOrderStatusesRequest) (*apiresource.List[apiresource.SalesOrderStatus], *apierror.APIError) {
-	pbReq := &pb.ListSalesOrderStatusesRequest{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
-	}
-
+	pbReq := &pb.ListSalesOrderStatusesRequest{Cursor: req.Cursor, Limit: req.Limit, Query: req.Query}
 	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderStatusSvcTracer, "service.sales_order_statuses.list", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListSalesOrderStatusesResponse, error) {
 			return m.coreClient.ListSalesOrderStatuses(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
-	return SalesOrderStatusListPresenter(ctx, resp), nil
+	ids := make([]string, len(resp.SalesOrderStatuses))
+	for i, s := range resp.SalesOrderStatuses {
+		ids[i] = s.Id
+	}
+	loaded, apiErr := resourceloaders.LoadSalesOrderStatuses(ctx, ids)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	items := make([]apiresource.SalesOrderStatus, 0, len(ids))
+	for _, id := range ids {
+		if v, ok := loaded[id]; ok {
+			items = append(items, *(v.(*apiresource.SalesOrderStatus)))
+		}
+	}
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }

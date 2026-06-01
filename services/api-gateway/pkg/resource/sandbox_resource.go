@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleSandboxID = "sbac_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleSandboxID = "sbac_01ebd87c707b138806f060b9ae"
 const SampleSandboxName = "Integration Testing"
 
 // Sandbox account for isolated testing.

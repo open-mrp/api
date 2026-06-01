@@ -9,7 +9,7 @@ import (
 	"github.com/augno/api/shared/constants"
 )
 
-const SampleQuantityID = "qty_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleQuantityID = "qty_015a85becc1a6afdfb1afc27ff"
 
 // Value with an associated unit.
 type Quantity struct {

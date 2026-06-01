@@ -7,6 +7,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -61,7 +62,7 @@ func (m *addressValidationSvcImpl) AutocompleteAddress(ctx context.Context, req 
 		return nil, apiErr
 	}
 
-	return SuggestionListPresenter(resp), nil
+	return suggestionListFromProto(resp), nil
 }
 
 func (m *addressValidationSvcImpl) GetAddressDetails(ctx context.Context, req *RetrieveAddressDetailsRequest) (*apiresource.AddressDetailsResult, *apierror.APIError) {
@@ -79,7 +80,7 @@ func (m *addressValidationSvcImpl) GetAddressDetails(ctx context.Context, req *R
 		return nil, apiErr
 	}
 
-	return AddressDetailsPresenter(resp), nil
+	return addressDetailsFromProto(resp), nil
 }
 
 func (m *addressValidationSvcImpl) ValidateAddress(ctx context.Context, req *ValidateAddressRequest) (*apiresource.ValidatedAddress, *apierror.APIError) {
@@ -101,5 +102,84 @@ func (m *addressValidationSvcImpl) ValidateAddress(ctx context.Context, req *Val
 		return nil, apiErr
 	}
 
-	return ValidatedAddressPresenter(resp), nil
+	return validatedAddressFromProto(resp), nil
+}
+
+func suggestionFromProto(s *pb.AddressSuggestion) apiresource.AddressSuggestion {
+	if s == nil {
+		return apiresource.AddressSuggestion{}
+	}
+	return apiresource.AddressSuggestion{
+		ID:            s.Id,
+		Object:        constants.ObjectTypeAddressSuggestion,
+		Description:   s.Description,
+		MainText:      s.MainText,
+		SecondaryText: s.SecondaryText,
+	}
+}
+
+func suggestionListFromProto(resp *pb.AutocompleteAddressResponse) *apiresource.List[apiresource.AddressSuggestion] {
+	if resp == nil {
+		return apiresource.NewList[apiresource.AddressSuggestion](nil, apiresource.PageInfo{})
+	}
+
+	suggestions := make([]apiresource.AddressSuggestion, len(resp.Suggestions))
+	for i, s := range resp.Suggestions {
+		suggestions[i] = suggestionFromProto(s)
+	}
+
+	return apiresource.NewList(suggestions, apiresource.PageInfo{})
+}
+
+func addressComponentsFromProto(c *pb.AddressComponentsInfo) *apiresource.AddressComponents {
+	if c == nil {
+		return nil
+	}
+	return &apiresource.AddressComponents{
+		Object:       constants.ObjectTypeAddressComponents,
+		AddressLine1: c.AddressLine_1,
+		AddressLine2: c.AddressLine_2,
+		City:         c.City,
+		State:        c.State,
+		PostalCode:   c.PostalCode,
+		Country:      c.Country,
+		CountryCode:  c.CountryCode,
+	}
+}
+
+func addressDetailsFromProto(resp *pb.GetAddressDetailsResponse) *apiresource.AddressDetailsResult {
+	if resp == nil {
+		return nil
+	}
+	return &apiresource.AddressDetailsResult{
+		Object:           constants.ObjectTypeAddressDetailsResult,
+		Address:          addressComponentsFromProto(resp.Address),
+		FormattedAddress: resp.FormattedAddress,
+	}
+}
+
+func validatedAddressFromProto(resp *pb.ValidateAddressResponse) *apiresource.ValidatedAddress {
+	if resp == nil {
+		return nil
+	}
+
+	validationMessages := resp.ValidationMessages
+	if validationMessages == nil {
+		validationMessages = []string{}
+	}
+
+	return &apiresource.ValidatedAddress{
+		Object:             constants.ObjectTypeValidatedAddress,
+		Status:             addressValidationStatus(resp.IsValid),
+		FormattedAddress:   resp.FormattedAddress,
+		Components:         addressComponentsFromProto(resp.Components),
+		ValidationMessages: validationMessages,
+	}
+}
+
+func addressValidationStatus(isValid bool) constants.AddressValidationStatus {
+	if isValid {
+		return constants.AddressValidationStatusValid
+	}
+	return constants.AddressValidationStatusInvalid
 }

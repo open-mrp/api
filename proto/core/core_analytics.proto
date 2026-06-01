@@ -198,6 +198,13 @@ message UpdatePaymentTermResponse {
 message DeletePaymentTermRequest {
   string id = 1;
 }
+// Batched read for the api-gateway resourcekit resolver.
+message BatchGetPaymentTermsByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetPaymentTermsByIDsResponse {
+  repeated PaymentTermInfo payment_terms = 1;
+}
 message QuantityInfo {
   string id = 1;
   string value = 2;
@@ -272,6 +279,12 @@ message UpdateShippingTermResponse {
 message DeleteShippingTermRequest {
   string id = 1;
 }
+message BatchGetShippingTermsByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetShippingTermsByIDsResponse {
+  repeated ShippingTermInfo shipping_terms = 1;
+}
 message GeolocationInfo {
   string id = 1;
   optional string street_line_1 = 2;
@@ -344,6 +357,13 @@ message UpdateAddressResponse {
 message DeleteAddressRequest {
   string id = 1;
 }
+// Batched read for the api-gateway resourcekit resolver.
+message BatchGetAddressesByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetAddressesByIDsResponse {
+  repeated AddressInfo addresses = 1;
+}
 message AutocompleteAddressRequest {
   string input = 1;
   optional string session_token = 2;
@@ -409,4 +429,11 @@ message GetAccountStatusRequest {
 }
 message GetAccountStatusResponse {
   AccountStatusInfo account_status = 1;
+}
+// Batched read for the api-gateway resourcekit resolver.
+message BatchGetAccountStatusesByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetAccountStatusesByIDsResponse {
+  repeated AccountStatusInfo account_statuses = 1;
 }

@@ -46,3 +46,14 @@ SELECT
     account_status.updated_at
 FROM account_status
 WHERE account_status.id = sqlc.arg('id') OR account_status.code = sqlc.arg('code');
+
+-- name: GetAccountStatusesByIDs :many
+-- System-wide resource; no per-caller scoping.
+SELECT
+    account_status.id,
+    account_status.code,
+    account_status.name,
+    account_status.created_at,
+    account_status.updated_at
+FROM account_status
+WHERE account_status.id IN (sqlc.slice('ids'));

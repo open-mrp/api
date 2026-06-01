@@ -67,6 +67,32 @@ func (s *childAccountSvcImpl) withTx(ctx context.Context, fn func(context.Contex
 	})
 }
 
+// BatchGetChildAccountsByIDs returns child account relations matching the
+// input relation IDs that the caller's account is authorized to read.
+// Used by the api-gateway resourcekit include resolver.
+func (s *childAccountSvcImpl) BatchGetChildAccountsByIDs(ctx context.Context, relationIDs []string) ([]*domain.ChildAccount, *apierror.APIError) {
+	ctx, span := childAccountSvcTracer.Start(ctx, "service.child_account.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainCustomers, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+	if len(relationIDs) == 0 {
+		return nil, nil
+	}
+	return s.repos.NewAccountRelationRepo().GetChildAccountsByRelationIDs(ctx, identity.Target.AccountID, relationIDs)
+}
+
 // ListChildAccounts returns a paginated list of child accounts for the target account (parent).
 func (s *childAccountSvcImpl) ListChildAccounts(ctx context.Context, cursor *string, limit int32, query *string) (*domain.ListChildAccountsResult, *apierror.APIError) {
 	ctx, span := childAccountSvcTracer.Start(ctx, "service.child_account.list")

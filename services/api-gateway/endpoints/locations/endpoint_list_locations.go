@@ -34,5 +34,6 @@ func (e *ListLocationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListLoca
 			ObjectType: constants.ObjectTypeLocation,
 			Fields:     []string{"parent", "children"},
 		}),
+		ObjectType: constants.ObjectTypeLocation,
 	})
 }

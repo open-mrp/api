@@ -272,7 +272,7 @@ func (h *billingHandler) CreateBillingPortalSession(ctx context.Context, req *pb
 	if !ok || identity == nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
 	}
-	if !identity.IsInternalUser() && !identity.IsAdmin() {
+	if !identity.IsInternalUser() || !identity.IsAdmin() {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
 	}
 	if identity.Target == nil {
@@ -299,7 +299,7 @@ func (h *billingHandler) RequestEnterpriseUpgrade(ctx context.Context, req *pb.R
 	if !ok || identity == nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
 	}
-	if !identity.IsInternalUser() && !identity.IsAdmin() {
+	if !identity.IsInternalUser() || !identity.IsAdmin() {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
 	}
 	if identity.Target == nil {
@@ -343,7 +343,7 @@ func (h *billingHandler) EnsureBillingCustomer(ctx context.Context, req *pb.Ensu
 		if !ok || identity == nil {
 			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
 		}
-		if !identity.IsInternalUser() && !identity.IsAdmin() {
+		if !identity.IsInternalUser() || !identity.IsAdmin() {
 			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
 		}
 		if identity.Target == nil {
@@ -380,7 +380,7 @@ func (h *billingHandler) SwitchPlan(ctx context.Context, req *pb.SwitchPlanReque
 	if !ok || identity == nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
 	}
-	if !identity.IsInternalUser() && !identity.IsAdmin() {
+	if !identity.IsInternalUser() || !identity.IsAdmin() {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
 	}
 	if identity.Target == nil {
@@ -411,7 +411,7 @@ func (h *billingHandler) PreviewPlanChange(ctx context.Context, req *pb.PreviewP
 	if !ok || identity == nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
 	}
-	if !identity.IsInternalUser() && !identity.IsAdmin() {
+	if !identity.IsInternalUser() || !identity.IsAdmin() {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
 	}
 	if identity.Target == nil {

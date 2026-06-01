@@ -28,6 +28,7 @@ func (e *RetrieveSandboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrie
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeSandbox,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveSandboxRequest) (*apiresource.Sandbox, *apierror.APIError) {
 			return svc.(SandboxSvc).GetSandbox
 		},

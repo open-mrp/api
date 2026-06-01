@@ -75,8 +75,10 @@ type AuthCoreClient interface {
 	// GetUserAccountAccess returns the user's role/permissions for an account
 	GetUserAccountAccess(ctx context.Context, userID, accountID string) (*AccountUserAccess, bool, *apierror.APIError)
 
-	// GetAccountRelationByUserID returns the relationship between accounts based on user
-	GetAccountRelationByUserID(ctx context.Context, ownerAccountID, userID string) (*AuthAccountRelation, bool, *apierror.APIError)
+	// GetAccountRelationByUserID returns the relationship between accounts based on user.
+	// actorAccountID is required to unlock owner-side matches (the relation's owner_account_id
+	// must equal it); pass "" when no actor account has been validated to skip owner-side.
+	GetAccountRelationByUserID(ctx context.Context, targetAccountID, actorAccountID, userID string) (*AuthAccountRelation, bool, *apierror.APIError)
 
 	// GetAccountRelationByAPIKeyID returns the relationship between accounts based on API key
 	GetAccountRelationByAPIKeyID(ctx context.Context, ownerAccountID string, apiKeyID int64) (*AuthAccountRelation, bool, *apierror.APIError)

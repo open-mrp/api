@@ -7,6 +7,8 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -63,6 +65,56 @@ func (m *rateSvcImpl) UpdateRate(ctx context.Context, req *UpdateRateRequest) (*
 		return nil, apiErr
 	}
 
-	result := RatePresenter(resp.Rate)
+	meta := resourcekit.GetLoadMeta(ctx)
+	result := rateFromProto(resp.Rate)
+	stashRateMeta(meta, resp.Rate)
 	return &result, nil
+}
+
+func rateFromProto(r *pb.RateInfo) apiresource.Rate {
+	if r == nil {
+		return apiresource.Rate{}
+	}
+	normalizedValue := apiresource.NormalizeRateValue(r.Value)
+
+	return apiresource.Rate{
+		ID:           r.Id,
+		Object:       constants.ObjectTypeRate,
+		Value:        normalizedValue,
+		DisplayValue: apiresource.FormatRateDisplayValue(normalizedValue, r.NumeratorUnitAbbreviation, r.NumeratorUnitType, r.DenominatorUnitAbbreviation),
+		CreatedAt:    grpcutil.TimestampToTime(r.CreatedAt),
+		UpdatedAt:    grpcutil.TimestampToTime(r.UpdatedAt),
+	}
+}
+
+func stashRateMeta(meta *resourcekit.LoadMeta, r *pb.RateInfo) {
+	if r == nil {
+		return
+	}
+	meta.Set(constants.ObjectTypeRate, r.Id, "numerator_unit", &apiresource.Unit{
+		ID:                r.NumeratorUnitId,
+		Object:            constants.ObjectTypeUnit,
+		Name:              r.NumeratorUnitName,
+		Abbreviation:      r.NumeratorUnitAbbreviation,
+		Type:              constants.UnitType(r.NumeratorUnitType),
+		RatioNumerator:    r.NumeratorUnitRatioNumerator,
+		RatioDenominator:  r.NumeratorUnitRatioDenominator,
+		OffsetNumerator:   r.NumeratorUnitOffsetNumerator,
+		OffsetDenominator: r.NumeratorUnitOffsetDenominator,
+		CreatedAt:         grpcutil.TimestampToTime(r.NumeratorUnitCreatedAt),
+		UpdatedAt:         grpcutil.TimestampToTime(r.NumeratorUnitUpdatedAt),
+	})
+	meta.Set(constants.ObjectTypeRate, r.Id, "denominator_unit", &apiresource.Unit{
+		ID:                r.DenominatorUnitId,
+		Object:            constants.ObjectTypeUnit,
+		Name:              r.DenominatorUnitName,
+		Abbreviation:      r.DenominatorUnitAbbreviation,
+		Type:              constants.UnitType(r.DenominatorUnitType),
+		RatioNumerator:    r.DenominatorUnitRatioNumerator,
+		RatioDenominator:  r.DenominatorUnitRatioDenominator,
+		OffsetNumerator:   r.DenominatorUnitOffsetNumerator,
+		OffsetDenominator: r.DenominatorUnitOffsetDenominator,
+		CreatedAt:         grpcutil.TimestampToTime(r.DenominatorUnitCreatedAt),
+		UpdatedAt:         grpcutil.TimestampToTime(r.DenominatorUnitUpdatedAt),
+	})
 }

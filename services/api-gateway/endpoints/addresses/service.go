@@ -6,6 +6,7 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -58,10 +59,7 @@ func NewAddressSvc(config *AddressSvcConfig) AddressSvc {
 	if err := config.validate(); err != nil {
 		panic(err)
 	}
-
-	return &addressSvcImpl{
-		coreClient: config.CoreClient,
-	}
+	return &addressSvcImpl{coreClient: config.CoreClient}
 }
 
 func (m *addressSvcImpl) ListAddresses(ctx context.Context, req *ListAddressesRequest) (*apiresource.List[apiresource.Address], *apierror.APIError) {
@@ -71,35 +69,32 @@ func (m *addressSvcImpl) ListAddresses(ctx context.Context, req *ListAddressesRe
 		Query:    req.Query,
 		DropShip: addressTypeToDropShipPtr(req.Type),
 	}
-
 	resp, apiErr := grpcutil.CallRPC(ctx, addressSvcTracer, "service.addresses.list", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListAddressesResponse, error) {
 			return m.coreClient.ListAddresses(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
-	return AddressListPresenter(ctx, resp), nil
+	ids := make([]string, len(resp.Addresses))
+	for i, a := range resp.Addresses {
+		ids[i] = a.Id
+	}
+	loaded, apiErr := resourceloaders.LoadAddresses(ctx, ids)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	items := make([]apiresource.Address, 0, len(ids))
+	for _, id := range ids {
+		if v, ok := loaded[id]; ok {
+			items = append(items, *(v.(*apiresource.Address)))
+		}
+	}
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
 
 func (m *addressSvcImpl) GetAddress(ctx context.Context, req *RetrieveAddressRequest) (*apiresource.Address, *apierror.APIError) {
-	pbReq := &pb.GetAddressRequest{
-		Id: req.AddressID,
-	}
-
-	resp, apiErr := grpcutil.CallRPC(ctx, addressSvcTracer, "service.addresses.get", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetAddressResponse, error) {
-			return m.coreClient.GetAddress(ctx, pbReq, opts...)
-		})
-
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	result := AddressPresenter(resp.Address)
-	return &result, nil
+	return loadAddressByID(ctx, req.AddressID)
 }
 
 func (m *addressSvcImpl) CreateAddress(ctx context.Context, req *apirequest.AddressInput) (*apiresource.Address, *apierror.APIError) {
@@ -115,18 +110,14 @@ func (m *addressSvcImpl) CreateAddress(ctx context.Context, req *apirequest.Addr
 		PostalCode:   req.PostalCode.Ptr(),
 		Country:      req.Country,
 	}
-
 	resp, apiErr := grpcutil.CallRPC(ctx, addressSvcTracer, "service.addresses.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateAddressResponse, error) {
 			return m.coreClient.CreateAddress(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
-	result := AddressPresenter(resp.Address)
-	return &result, nil
+	return loadAddressByID(ctx, resp.Address.Id)
 }
 
 func (m *addressSvcImpl) UpdateAddress(ctx context.Context, req *UpdateAddressRequest) (*apiresource.Address, *apierror.APIError) {
@@ -143,33 +134,38 @@ func (m *addressSvcImpl) UpdateAddress(ctx context.Context, req *UpdateAddressRe
 		PostalCode:   req.PostalCode,
 		Country:      req.Country,
 	}
-
 	resp, apiErr := grpcutil.CallRPC(ctx, addressSvcTracer, "service.addresses.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateAddressResponse, error) {
 			return m.coreClient.UpdateAddress(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
-	result := AddressPresenter(resp.Address)
-	return &result, nil
+	return loadAddressByID(ctx, resp.Address.Id)
 }
 
 func (m *addressSvcImpl) DeleteAddress(ctx context.Context, req *DeleteAddressRequest) (*apiresource.EmptyResource, *apierror.APIError) {
-	pbReq := &pb.DeleteAddressRequest{
-		Id: req.AddressID,
-	}
-
+	pbReq := &pb.DeleteAddressRequest{Id: req.AddressID}
 	_, apiErr := grpcutil.CallRPC(ctx, addressSvcTracer, "service.addresses.delete", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 			return m.coreClient.DeleteAddress(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
 	return &apiresource.EmptyResource{}, nil
+}
+
+// loadAddressByID wraps the single-ID load pattern used after every mutation
+// and for the retrieve endpoint.
+func loadAddressByID(ctx context.Context, id string) (*apiresource.Address, *apierror.APIError) {
+	loaded, apiErr := resourceloaders.LoadAddresses(ctx, []string{id})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	v, ok := loaded[id]
+	if !ok {
+		return nil, apierror.NewResourceNotFoundError("Address not found.")
+	}
+	return v.(*apiresource.Address), nil
 }

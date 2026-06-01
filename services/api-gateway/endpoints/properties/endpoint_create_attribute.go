@@ -51,6 +51,7 @@ func (e *CreateAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Create
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeAttribute,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateAttributeRequest) (*apiresource.Attribute, *apierror.APIError) {
 			return svc.(PropertySvc).CreateAttribute
 		},

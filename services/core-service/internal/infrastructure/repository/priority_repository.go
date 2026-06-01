@@ -126,3 +126,21 @@ func (r *priorityRepoImpl) Get(ctx context.Context, identifier string) (*domain.
 
 	return mapPriorityRow(row), nil
 }
+
+func (r *priorityRepoImpl) GetByIDs(ctx context.Context, ids []string) ([]*domain.Priority, *apierror.APIError) {
+	ctx, span := priorityRepoTracer.Start(ctx, "repository.priority.get_by_ids")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := r.queries.GetPrioritiesByIDs(ctx, ids)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make([]*domain.Priority, len(rows))
+	for i, row := range rows {
+		out[i] = mapPriorityRow(row)
+	}
+	return out, nil
+}

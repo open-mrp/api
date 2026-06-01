@@ -96,6 +96,41 @@ func mapListByPropertyIDsRow(row sqlc.ListAttributesByPropertyIDsRow) *domain.At
 	}
 }
 
+func mapGetAttributesByIDsRow(row sqlc.GetAttributesByIDsRow) *domain.Attribute {
+	return &domain.Attribute{
+		ID:         row.ID,
+		Value:      row.Text,
+		PropertyID: row.PropertyID,
+		AccountID:  row.AccountID,
+		ColorCode:  row.ColorCode,
+		SortOrder:  row.Order,
+		IsPublic:   row.IsPublic,
+		CreatedAt:  row.CreatedAt,
+		UpdatedAt:  row.UpdatedAt,
+	}
+}
+
+func (r *attributeRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.Attribute, *apierror.APIError) {
+	ctx, span := attributeRepoTracer.Start(ctx, "repository.attribute.get_by_ids")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := r.queries.GetAttributesByIDs(ctx, sqlc.GetAttributesByIDsParams{
+		Ids:       ids,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make([]*domain.Attribute, len(rows))
+	for i, row := range rows {
+		out[i] = mapGetAttributesByIDsRow(row)
+	}
+	return out, nil
+}
+
 func (r *attributeRepoImpl) ListByPropertyIDs(ctx context.Context, accountID string, propertyIDs []string) ([]*domain.Attribute, *apierror.APIError) {
 	ctx, span := attributeRepoTracer.Start(ctx, "repository.attribute.list_by_property_ids")
 	defer span.End()

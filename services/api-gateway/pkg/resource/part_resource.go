@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SamplePartID = "pt_02kn5s7811g9qwce7cizr4e0mq"
+const SamplePartID = "pt_018d7bab53e864351f4c693a21"
 const SamplePartSKU = "BRG-6204-2RS"
 
 // Part resource.

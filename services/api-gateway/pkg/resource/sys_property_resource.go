@@ -8,8 +8,8 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleSysPropertyID = "sypp_01jm4r6700f8nwq3v5hx2d9ktp"
-const SampleSysPropertyTypeID = "sypptp_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleSysPropertyID = "sypp_01d8fd3a8b1a8e4c41be55ab5a"
+const SampleSysPropertyTypeID = "sypptp_0197d530307d69870d9b6fc97f"
 const SampleSysPropertyTypeName = "Transaction Number"
 const SampleSysPropertyTypeCode = "transaction_number"
 const SampleSysPropertyValueInt int32 = 42

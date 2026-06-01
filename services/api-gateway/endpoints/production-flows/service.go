@@ -60,7 +60,7 @@ func (m *productionFlowSvcImpl) GetProductionFlow(ctx context.Context, req *GetP
 		return nil, apiErr
 	}
 
-	result := ProductionFlowPresenter(resp.Steps)
+	result := ProductionFlowPresenter(ctx, resp.Steps)
 	return result, nil
 }
 

@@ -335,6 +335,37 @@ func (r *territoryRepoImpl) Delete(ctx context.Context, params domain.DeleteTerr
 	return nil
 }
 
+func mapGetTerritoriesByIDsRow(row sqlc.GetTerritoriesByIDsRow) *domain.Territory {
+	return mapTerritoryRow(
+		row.ID, row.State, row.StartZipcode, row.EndZipcode,
+		row.SalesRepID, row.ProductLineID, row.CreatedAt, row.UpdatedAt,
+		row.SalesRepName, row.SalesRepEmail,
+		row.SalesRepStatus, row.SalesRepCreatedAt, row.SalesRepUpdatedAt,
+		row.ProductLineName, row.ProductLineIsCommissionExempt, row.ProductLineIsFreightExempt,
+		row.ProductLineCreatedAt, row.ProductLineUpdatedAt,
+		[]string{"sales_rep", "product_line"},
+	)
+}
+
+func (r *territoryRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.Territory, *apierror.APIError) {
+	ctx, span := territoryRepoTracer.Start(ctx, "repository.territory.get_by_ids")
+	defer span.End()
+
+	rows, err := r.queries.GetTerritoriesByIDs(ctx, sqlc.GetTerritoriesByIDsParams{
+		Ids:       ids,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	territories := make([]*domain.Territory, len(rows))
+	for i, row := range rows {
+		territories[i] = mapGetTerritoriesByIDsRow(row)
+	}
+	return territories, nil
+}
+
 func (r *territoryRepoImpl) IsInAccount(ctx context.Context, accountID, territoryID string) (bool, *apierror.APIError) {
 	ctx, span := territoryRepoTracer.Start(ctx, "repository.territory.is_in_account")
 	defer span.End()

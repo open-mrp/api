@@ -1,16 +1,19 @@
 package apiresource
 
 import (
+	"time"
+
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	"github.com/augno/api/shared/constants"
+	"github.com/augno/api/shared/timeutil"
 )
 
 // ProductionFlow is the production flow graph for an item.
 type ProductionFlow struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=production_flow"`
-	// Steps in the production flow graph.
-	Steps *List[ProductionFlowStep] `json:"steps" validate:"required"`
+	// Steps in the production flow graph. Expandable via include[]=steps.
+	Steps *List[ProductionFlowStep] `json:"steps" expandable:"true"`
 }
 
 // ProductionFlowStep is a step in the production flow.
@@ -21,6 +24,8 @@ type ProductionFlowStep struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=production_step"`
 	// Production step name.
 	Name string `json:"name" validate:"required"`
+	// Notes.
+	Notes *string `json:"notes"`
 	// Production output for this step. Expandable via include[]=steps.production.
 	Production *ProductionFlowProduction `json:"production" expandable:"true"`
 	// Consumptions (inputs) for this step. Expandable via include[]=steps.consumptions.
@@ -45,6 +50,10 @@ type ProductionFlowStep struct {
 	LaborTime *Rate `json:"labor_time"`
 	// Overhead rate.
 	OverheadRate *Rate `json:"overhead_rate"`
+	// Creation timestamp.
+	CreatedAt time.Time `json:"created_at" validate:"required"`
+	// Last updated timestamp.
+	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
 // ProductionFlowProduction is the production output of a flow step.
@@ -57,6 +66,10 @@ type ProductionFlowProduction struct {
 	ProducedItem *Item `json:"produced_item" expandable:"true"`
 	// Produced quantity.
 	Quantity *Quantity `json:"quantity" validate:"required"`
+	// Creation timestamp.
+	CreatedAt time.Time `json:"created_at" validate:"required"`
+	// Last updated timestamp.
+	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
 // ProductionFlowConsumption is a consumption input of a flow step.
@@ -73,6 +86,10 @@ type ProductionFlowConsumption struct {
 	WasteQuantity *Quantity `json:"waste_quantity" validate:"required"`
 	// Consumption instructions.
 	Instructions *string `json:"instructions"`
+	// Creation timestamp.
+	CreatedAt time.Time `json:"created_at" validate:"required"`
+	// Last updated timestamp.
+	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
 // --- Sample data ---
@@ -80,10 +97,12 @@ type ProductionFlowConsumption struct {
 var sampleFlowInstructions = "Mix with water before adding"
 
 var SampleProductionFlowProduction = &ProductionFlowProduction{
-	ID:           "pn_01jm4r6700f8nwq3v5hx2d9ktp",
+	ID:           SampleProductionID,
 	Object:       constants.ObjectTypeProduction,
 	ProducedItem: SampleItem,
 	Quantity:     SampleQuantity,
+	CreatedAt:    timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:    timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 var SampleProductionFlowConsumption = ProductionFlowConsumption{
@@ -93,6 +112,8 @@ var SampleProductionFlowConsumption = ProductionFlowConsumption{
 	Quantity:      SampleQuantity,
 	WasteQuantity: SampleQuantity,
 	Instructions:  &sampleFlowInstructions,
+	CreatedAt:     timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:     timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 var SampleProductionFlowStep = ProductionFlowStep{
@@ -110,6 +131,8 @@ var SampleProductionFlowStep = ProductionFlowStep{
 	LaborRate:      SampleRate,
 	LaborTime:      SampleRate,
 	OverheadRate:   SampleRate,
+	CreatedAt:      timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:      timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 var SampleProductionFlow = &ProductionFlow{

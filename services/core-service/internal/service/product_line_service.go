@@ -431,3 +431,36 @@ func (s *productLineSvcImpl) DeleteProductLine(ctx context.Context, productLineI
 
 	return nil
 }
+
+func (s *productLineSvcImpl) BatchGetProductLinesByIDs(ctx context.Context, ids []string) ([]*domain.ProductLineFull, *apierror.APIError) {
+	ctx, span := productLineSvcTracer.Start(ctx, "service.product_line.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+	if identity.IsInternalActor() {
+		if apiErr := identity.CheckHasPermission(types.PermissionDomainProductLines, types.ActionRead); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	} else if !identity.IsCustomerUser() && !identity.IsSupplierUser() {
+		return nil, tracing.Trace(span, apierror.NewAuthorizationError("You do not have access to this resource."))
+	}
+	if identity.IsExternalTarget() {
+		meds := s.mediators()
+		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	return s.repos.NewProductLineRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
+}

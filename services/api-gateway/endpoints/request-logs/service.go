@@ -2,17 +2,16 @@ package requestlogep
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"slices"
-	"strings"
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	httptransport "github.com/augno/api/services/api-gateway/internal/http"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/appctx"
+	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
-	corepb "github.com/augno/api/shared/proto/core"
 	pb "github.com/augno/api/shared/proto/platform"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -26,12 +25,10 @@ type RequestLogSvc interface {
 
 type RequestLogSvcConfig struct {
 	LoggingClient pb.LoggingServiceClient
-	CoreClient    corepb.CoreServiceClient
 }
 
 type requestLogSvcImpl struct {
 	loggingClient pb.LoggingServiceClient
-	coreClient    corepb.CoreServiceClient
 }
 
 var requestLogSvcTracer = tracing.GetTracer("api-gateway.endpoints.request_logs.service")
@@ -39,9 +36,6 @@ var requestLogSvcTracer = tracing.GetTracer("api-gateway.endpoints.request_logs.
 func (c *RequestLogSvcConfig) validate() error {
 	if c.LoggingClient == nil {
 		return fmt.Errorf("request log endpoint service: logging client is required")
-	}
-	if c.CoreClient == nil {
-		return fmt.Errorf("request log endpoint service: core client is required")
 	}
 	return nil
 }
@@ -53,19 +47,7 @@ func NewRequestLogSvc(config *RequestLogSvcConfig) RequestLogSvc {
 
 	return &requestLogSvcImpl{
 		loggingClient: config.LoggingClient,
-		coreClient:    config.CoreClient,
 	}
-}
-
-func (m *requestLogSvcImpl) resolveRolePermissions(ctx context.Context, roleID *string) map[string]bool {
-	if roleID == nil || !appctx.IsIncludeRequested(ctx, "actor.role.permissions") {
-		return nil
-	}
-	resp, err := m.coreClient.GetRolePermissions(ctx, &corepb.GetRolePermissionsRequest{RoleId: *roleID})
-	if err != nil {
-		return nil
-	}
-	return resp.Permissions
 }
 
 func requireInternalAdmin(ctx context.Context) *apierror.APIError {
@@ -83,8 +65,6 @@ func (m *requestLogSvcImpl) ListRequestLogs(ctx context.Context, req *ListReques
 	if apiErr := requireInternalAdmin(ctx); apiErr != nil {
 		return nil, apiErr
 	}
-
-	requestedIncludes := expandedRequestLogIncludeKeys(appctx.GetRequestedIncludeKeys(ctx))
 
 	methods := make([]string, len(req.Methods))
 	for i, m := range req.Methods {
@@ -115,7 +95,7 @@ func (m *requestLogSvcImpl) ListRequestLogs(ctx context.Context, req *ListReques
 		IdempotencyKey:   req.IdempotencyKey,
 		Cursor:           req.Cursor,
 		Limit:            req.Limit,
-		Includes:         requestedIncludes,
+		Includes:         []string{"account", "actor"},
 	}
 
 	if req.StartDate != nil && !req.StartDate.IsZero() {
@@ -134,9 +114,18 @@ func (m *requestLogSvcImpl) ListRequestLogs(ctx context.Context, req *ListReques
 		return nil, apiErr
 	}
 
-	return RequestLogListPresenter(ctx, resp, func(roleID *string) map[string]bool {
-		return m.resolveRolePermissions(ctx, roleID)
-	}), nil
+	if resp == nil {
+		return apiresource.NewList[apiresource.RequestLog](nil, apiresource.PageInfo{}), nil
+	}
+
+	meta := resourcekit.GetLoadMeta(ctx)
+	logs := make([]apiresource.RequestLog, len(resp.RequestLogs))
+	for i, rl := range resp.RequestLogs {
+		logs[i] = requestLogFromProto(rl)
+		stashRequestLogMeta(ctx, meta, rl)
+	}
+
+	return apiresource.NewList(logs, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
 
 func (m *requestLogSvcImpl) GetRequestLog(ctx context.Context, req *RetrieveRequestLogRequest) (*apiresource.RequestLog, *apierror.APIError) {
@@ -144,11 +133,9 @@ func (m *requestLogSvcImpl) GetRequestLog(ctx context.Context, req *RetrieveRequ
 		return nil, apiErr
 	}
 
-	requestedIncludes := expandedRequestLogIncludeKeys(appctx.GetRequestedIncludeKeys(ctx))
-
 	pbReq := &pb.GetRequestLogRequest{
 		Id:       req.ID,
-		Includes: requestedIncludes,
+		Includes: []string{"account", "actor", "query_params", "request_body", "response_body"},
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, requestLogSvcTracer, "service.request_logs.get", domain.ServiceName,
@@ -160,33 +147,96 @@ func (m *requestLogSvcImpl) GetRequestLog(ctx context.Context, req *RetrieveRequ
 		return nil, apiErr
 	}
 
-	var roleID *string
-	if resp.RequestLog != nil && resp.RequestLog.Actor != nil {
-		roleID = resp.RequestLog.Actor.RoleId
-	}
-	perms := m.resolveRolePermissions(ctx, roleID)
-	result := RequestLogPresenter(resp.RequestLog, perms)
+	meta := resourcekit.GetLoadMeta(ctx)
+	result := requestLogFromProto(resp.RequestLog)
+	stashRequestLogMeta(ctx, meta, resp.RequestLog)
 	return &result, nil
 }
 
-func expandedRequestLogIncludeKeys(includes []string) []string {
-	if includes == nil {
-		return nil
+func requestLogFromProto(rl *pb.RequestLogInfo) apiresource.RequestLog {
+	if rl == nil {
+		return apiresource.RequestLog{}
 	}
 
-	expanded := make(map[string]bool, len(includes))
-	for _, include := range includes {
-		expanded[include] = true
-		parts := strings.Split(include, ".")
-		for i := 1; i < len(parts); i++ {
-			expanded[strings.Join(parts[:i], ".")] = true
+	return apiresource.RequestLog{
+		ID:              rl.Id,
+		Object:          constants.ObjectTypeRequestLog,
+		Method:          rl.Method,
+		Host:            rl.Host,
+		Path:            rl.Path,
+		NormalizedRoute: rl.NormalizedRoute,
+		StatusCode:      rl.StatusCode,
+		LatencyUs:       rl.LatencyUs,
+		APIVersion:      rl.ApiVersion,
+		ClientIP:        rl.ClientIp,
+		UserAgent:       rl.UserAgent,
+		Referrer:        rl.Referrer,
+		ErrorCode:       rl.ErrorCode,
+		ErrorMessage:    rl.ErrorMessage,
+		OccurredAt:      grpcutil.TimestampToTime(rl.OccurredAt),
+		CreatedAt:       grpcutil.TimestampToTime(rl.CreatedAt),
+		IdempotencyKey:  rl.IdempotencyKey,
+	}
+}
+
+func stashRequestLogMeta(ctx context.Context, meta *resourcekit.LoadMeta, rl *pb.RequestLogInfo) {
+	if rl == nil {
+		return
+	}
+
+	if rl.AccountId != nil && rl.AccountName != nil {
+		account := &apiresource.Account{
+			ID:     *rl.AccountId,
+			Object: constants.ObjectTypeAccount,
+			Name:   *rl.AccountName,
+		}
+		if rl.AccountCreatedAt != nil {
+			account.CreatedAt = rl.AccountCreatedAt.AsTime()
+		}
+		if rl.AccountUpdatedAt != nil {
+			account.UpdatedAt = rl.AccountUpdatedAt.AsTime()
+		}
+		meta.Set(constants.ObjectTypeRequestLog, rl.Id, "account", account)
+	}
+
+	if rl.Actor != nil {
+		actorType := constants.ActorType(rl.Actor.ActorType)
+		var handle *string
+		switch actorType {
+		case constants.ActorTypeAPIKey:
+			handle = rl.Actor.RedactedValue
+		case constants.ActorTypeUser:
+			handle = rl.Actor.Email
+		}
+		actor := apiresource.NewActor(rl.Actor.Id, actorType, rl.Actor.Name, handle)
+		resourcekit.PreheatCache(ctx, constants.ObjectTypeActor, actor.ID, actor)
+		meta.Set(constants.ObjectTypeRequestLog, rl.Id, "actor_id", actor.ID)
+		if rl.Actor.RoleId != nil {
+			meta.Set(constants.ObjectTypeActor, actor.ID, "role_id", *rl.Actor.RoleId)
 		}
 	}
 
-	keys := make([]string, 0, len(expanded))
-	for key := range expanded {
-		keys = append(keys, key)
+	if rl.QueryJson != nil {
+		meta.Set(constants.ObjectTypeRequestLog, rl.Id, "query_params", rawMessageFromString(*rl.QueryJson))
 	}
-	slices.Sort(keys)
-	return keys
+	if rl.BodyJson != nil {
+		meta.Set(constants.ObjectTypeRequestLog, rl.Id, "request_body", rawMessageFromString(*rl.BodyJson))
+	}
+	if rl.ResponseJson != nil {
+		meta.Set(constants.ObjectTypeRequestLog, rl.Id, "response_body", rawMessageFromString(*rl.ResponseJson))
+	}
+}
+
+func rawMessageFromString(s string) json.RawMessage {
+	if s == "" {
+		return nil
+	}
+	if json.Valid([]byte(s)) {
+		return json.RawMessage(s)
+	}
+	encoded, err := json.Marshal(s)
+	if err != nil {
+		return nil
+	}
+	return json.RawMessage(encoded)
 }

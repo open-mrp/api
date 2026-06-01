@@ -8,9 +8,10 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SamplePurchaseOrderDetailID = "po_01jm4r6700f8nwq3v5hx2d9ktp"
+const SamplePurchaseOrderDetailID = "po_0169aa3a722b081b117ac0e44f"
+const SampleEmailContactID = "ec_01758010d10f5629ce3880a4ab"
 const SamplePurchaseOrderNumber = "PO-001"
-const SampleSupplierID = "ac_02kn5s7811g9qwce7cizr4e0mq"
+const SampleSupplierID = "ac_0177902104bccac5fbb173cd96"
 const SampleSupplierName = "Acme Supplies Inc."
 const SampleSupplierNumber = "SUP-001"
 
@@ -48,7 +49,7 @@ type EmailContact struct {
 }
 
 var SampleEmailContact = &EmailContact{
-	ID:     "ec_01jm4r6700f8nwq3v5hx2d9ktp",
+	ID:     SampleEmailContactID,
 	Object: constants.ObjectTypeEmailContact,
 	AccountUser: &AccountUser{
 		ID:     SampleAccountUserID,

@@ -8,8 +8,8 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -59,10 +59,9 @@ func NewPropertySvc(config *PropertySvcConfig) PropertySvc {
 
 func (m *propertySvcImpl) ListProperties(ctx context.Context, req *ListPropertiesRequest) (*apiresource.List[apiresource.Property], *apierror.APIError) {
 	pbReq := &pb.ListPropertiesRequest{
-		Cursor:   req.Cursor,
-		Limit:    req.Limit,
-		Query:    req.Query,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
+		Cursor: req.Cursor,
+		Limit:  req.Limit,
+		Query:  req.Query,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, propertySvcTracer, "service.properties.list", domain.ServiceName,
@@ -74,37 +73,30 @@ func (m *propertySvcImpl) ListProperties(ctx context.Context, req *ListPropertie
 		return nil, apiErr
 	}
 
-	includes := appctx.GetRequestedIncludeKeys(ctx)
-	return PropertyListPresenter(ctx, resp, includes), nil
-}
-
-func (m *propertySvcImpl) GetProperty(ctx context.Context, req *RetrievePropertyRequest) (*apiresource.Property, *apierror.APIError) {
-	pbReq := &pb.GetPropertyRequest{
-		Id:       req.PropertyID,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
+	ids := make([]string, len(resp.Properties))
+	for i, p := range resp.Properties {
+		ids[i] = p.Id
 	}
-
-	resp, apiErr := grpcutil.CallRPC(ctx, propertySvcTracer, "service.properties.get", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetPropertyResponse, error) {
-			return m.coreClient.GetProperty(ctx, pbReq, opts...)
-		})
-
+	loaded, apiErr := resourceloaders.LoadProperties(ctx, ids)
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
-	includes := make(map[string]bool)
-	for _, k := range appctx.GetRequestedIncludeKeys(ctx) {
-		includes[k] = true
+	items := make([]apiresource.Property, 0, len(ids))
+	for _, id := range ids {
+		if v, ok := loaded[id]; ok {
+			items = append(items, *(v.(*apiresource.Property)))
+		}
 	}
-	result := PropertyPresenter(resp.Property, includes)
-	return &result, nil
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
+}
+
+func (m *propertySvcImpl) GetProperty(ctx context.Context, req *RetrievePropertyRequest) (*apiresource.Property, *apierror.APIError) {
+	return loadPropertyByID(ctx, req.PropertyID)
 }
 
 func (m *propertySvcImpl) CreateProperty(ctx context.Context, req *CreatePropertyRequest) (*apiresource.Property, *apierror.APIError) {
 	pbReq := &pb.CreatePropertyRequest{
-		Name:     req.Name,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
+		Name: req.Name,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, propertySvcTracer, "service.properties.create", domain.ServiceName,
@@ -116,19 +108,13 @@ func (m *propertySvcImpl) CreateProperty(ctx context.Context, req *CreatePropert
 		return nil, apiErr
 	}
 
-	includes := make(map[string]bool)
-	for _, k := range appctx.GetRequestedIncludeKeys(ctx) {
-		includes[k] = true
-	}
-	result := PropertyPresenter(resp.Property, includes)
-	return &result, nil
+	return loadPropertyByID(ctx, resp.Property.Id)
 }
 
 func (m *propertySvcImpl) UpdateProperty(ctx context.Context, req *UpdatePropertyRequest) (*apiresource.Property, *apierror.APIError) {
 	pbReq := &pb.UpdatePropertyRequest{
-		Id:       req.PropertyID,
-		Name:     req.Name,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
+		Id:   req.PropertyID,
+		Name: req.Name,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, propertySvcTracer, "service.properties.update", domain.ServiceName,
@@ -140,12 +126,7 @@ func (m *propertySvcImpl) UpdateProperty(ctx context.Context, req *UpdatePropert
 		return nil, apiErr
 	}
 
-	includes := make(map[string]bool)
-	for _, k := range appctx.GetRequestedIncludeKeys(ctx) {
-		includes[k] = true
-	}
-	result := PropertyPresenter(resp.Property, includes)
-	return &result, nil
+	return loadPropertyByID(ctx, resp.Property.Id)
 }
 
 func (m *propertySvcImpl) DeleteProperty(ctx context.Context, req *DeletePropertyRequest) (*apiresource.EmptyResource, *apierror.APIError) {
@@ -182,26 +163,25 @@ func (m *propertySvcImpl) ListAttributes(ctx context.Context, req *ListAttribute
 		return nil, apiErr
 	}
 
-	return AttributeListPresenter(ctx, resp), nil
-}
-
-func (m *propertySvcImpl) GetAttribute(ctx context.Context, req *RetrieveAttributeRequest) (*apiresource.Attribute, *apierror.APIError) {
-	pbReq := &pb.GetAttributeRequest{
-		PropertyId: req.PropertyID,
-		Id:         req.AttributeID,
+	ids := make([]string, len(resp.Attributes))
+	for i, a := range resp.Attributes {
+		ids[i] = a.Id
 	}
-
-	resp, apiErr := grpcutil.CallRPC(ctx, propertySvcTracer, "service.attributes.get", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetAttributeResponse, error) {
-			return m.coreClient.GetAttribute(ctx, pbReq, opts...)
-		})
-
+	loaded, apiErr := resourceloaders.LoadAttributes(ctx, ids)
 	if apiErr != nil {
 		return nil, apiErr
 	}
+	items := make([]apiresource.Attribute, 0, len(ids))
+	for _, id := range ids {
+		if v, ok := loaded[id]; ok {
+			items = append(items, *(v.(*apiresource.Attribute)))
+		}
+	}
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
+}
 
-	result := AttributePresenter(resp.Attribute)
-	return &result, nil
+func (m *propertySvcImpl) GetAttribute(ctx context.Context, req *RetrieveAttributeRequest) (*apiresource.Attribute, *apierror.APIError) {
+	return loadAttributeByID(ctx, req.AttributeID)
 }
 
 func (m *propertySvcImpl) CreateAttribute(ctx context.Context, req *CreateAttributeRequest) (*apiresource.Attribute, *apierror.APIError) {
@@ -233,8 +213,7 @@ func (m *propertySvcImpl) CreateAttribute(ctx context.Context, req *CreateAttrib
 		return nil, apiErr
 	}
 
-	result := AttributePresenter(resp.Attribute)
-	return &result, nil
+	return loadAttributeByID(ctx, resp.Attribute.Id)
 }
 
 func (m *propertySvcImpl) UpdateAttribute(ctx context.Context, req *UpdateAttributeRequest) (*apiresource.Attribute, *apierror.APIError) {
@@ -261,8 +240,7 @@ func (m *propertySvcImpl) UpdateAttribute(ctx context.Context, req *UpdateAttrib
 		return nil, apiErr
 	}
 
-	result := AttributePresenter(resp.Attribute)
-	return &result, nil
+	return loadAttributeByID(ctx, resp.Attribute.Id)
 }
 
 func (m *propertySvcImpl) DeleteAttribute(ctx context.Context, req *DeleteAttributeRequest) (*apiresource.EmptyResource, *apierror.APIError) {
@@ -300,4 +278,28 @@ func randomColor() constants.Color {
 	_, _ = rand.Read(b[:])
 	idx := binary.LittleEndian.Uint64(b[:]) % uint64(len(assignableColors))
 	return assignableColors[idx]
+}
+
+func loadPropertyByID(ctx context.Context, id string) (*apiresource.Property, *apierror.APIError) {
+	loaded, apiErr := resourceloaders.LoadProperties(ctx, []string{id})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	v, ok := loaded[id]
+	if !ok {
+		return nil, apierror.NewResourceNotFoundError("Property not found.")
+	}
+	return v.(*apiresource.Property), nil
+}
+
+func loadAttributeByID(ctx context.Context, id string) (*apiresource.Attribute, *apierror.APIError) {
+	loaded, apiErr := resourceloaders.LoadAttributes(ctx, []string{id})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	v, ok := loaded[id]
+	if !ok {
+		return nil, apierror.NewResourceNotFoundError("Attribute not found.")
+	}
+	return v.(*apiresource.Attribute), nil
 }

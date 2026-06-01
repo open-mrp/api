@@ -123,6 +123,83 @@ func (q *Queries) GetAttribute(ctx context.Context, arg GetAttributeParams) (Get
 	return i, err
 }
 
+const getAttributesByIDs = `-- name: GetAttributesByIDs :many
+SELECT
+    attribute.id,
+    attribute.text,
+    attribute.property_id,
+    attribute.account_id,
+    attribute.color_code,
+    attribute.` + "`" + `order` + "`" + `,
+    attribute.is_public,
+    attribute.created_at,
+    attribute.updated_at
+FROM attribute
+WHERE attribute.id IN (/*SLICE:ids*/?)
+AND attribute.account_id = ?
+`
+
+type GetAttributesByIDsParams struct {
+	Ids       []string
+	AccountID string
+}
+
+type GetAttributesByIDsRow struct {
+	ID         string
+	Text       string
+	PropertyID string
+	AccountID  string
+	ColorCode  string
+	Order      int32
+	IsPublic   bool
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
+func (q *Queries) GetAttributesByIDs(ctx context.Context, arg GetAttributesByIDsParams) ([]GetAttributesByIDsRow, error) {
+	query := getAttributesByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAttributesByIDsRow
+	for rows.Next() {
+		var i GetAttributesByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Text,
+			&i.PropertyID,
+			&i.AccountID,
+			&i.ColorCode,
+			&i.Order,
+			&i.IsPublic,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const insertAttribute = `-- name: InsertAttribute :exec
 INSERT INTO attribute (
     id,

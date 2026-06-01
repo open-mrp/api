@@ -73,6 +73,29 @@ func (s *territorySvcImpl) withTx(ctx context.Context, fn func(context.Context, 
 	})
 }
 
+func (s *territorySvcImpl) BatchGetTerritoriesByIDs(ctx context.Context, ids []string) ([]*domain.Territory, *apierror.APIError) {
+	ctx, span := territorySvcTracer.Start(ctx, "service.territory.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainTerritories, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	return s.repos.NewTerritoryRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
+}
+
 func (s *territorySvcImpl) ListTerritories(ctx context.Context, params domain.ListTerritoriesParams) (*domain.ListTerritoriesResult, *apierror.APIError) {
 	ctx, span := territorySvcTracer.Start(ctx, "service.territory.list")
 	defer span.End()

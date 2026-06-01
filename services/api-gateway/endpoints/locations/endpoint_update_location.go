@@ -55,5 +55,6 @@ func (e *UpdateLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateL
 			ObjectType: constants.ObjectTypeLocation,
 			Fields:     []string{"parent", "children"},
 		}),
+		ObjectType: constants.ObjectTypeLocation,
 	})
 }

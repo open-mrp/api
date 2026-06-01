@@ -86,6 +86,18 @@ DELETE FROM property
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
 
+-- name: GetPropertiesByIDs :many
+SELECT
+    property.id,
+    property.name,
+    property.account_id,
+    property.is_public,
+    property.created_at,
+    property.updated_at
+FROM property
+WHERE property.id IN (sqlc.slice('ids'))
+AND property.account_id = sqlc.arg('account_id');
+
 -- name: CountPropertiesByName :one
 SELECT COUNT(*) FROM property
 WHERE name = sqlc.arg('name') AND account_id = sqlc.arg('account_id')

@@ -9,6 +9,7 @@ import (
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	httptransport "github.com/augno/api/services/api-gateway/internal/http"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -70,7 +71,7 @@ func (m *receivableSvcImpl) ListReceivables(ctx context.Context, req *ListReceiv
 		return nil, apiErr
 	}
 
-	return ReceivableEntryListPresenter(ctx, resp), nil
+	return receivableEntryListFromProto(ctx, resp), nil
 }
 
 func (m *receivableSvcImpl) ListReceivablesByCustomer(ctx context.Context, req *ListReceivablesByCustomerRequest) (*apiresource.List[apiresource.ReceivableEntry], *apierror.APIError) {
@@ -94,7 +95,7 @@ func (m *receivableSvcImpl) ListReceivablesByCustomer(ctx context.Context, req *
 		return nil, apiErr
 	}
 
-	return ReceivableEntryListPresenter(ctx, resp), nil
+	return receivableEntryListFromProto(ctx, resp), nil
 }
 
 func (m *receivableSvcImpl) ExportReceivablesByCustomer(ctx context.Context, req *ExportReceivablesByCustomerRequest) (*httptransport.FileDownload, *apierror.APIError) {
@@ -148,4 +149,46 @@ func (m *receivableSvcImpl) EmailReceivablesForCustomer(ctx context.Context, req
 	}
 
 	return &apiresource.EmptyResource{}, nil
+}
+
+func receivableEntryFromProto(e *pb.ReceivableEntryProto) apiresource.ReceivableEntry {
+	if e == nil {
+		return apiresource.ReceivableEntry{}
+	}
+
+	return apiresource.ReceivableEntry{
+		Object:           constants.ObjectTypeReceivableEntry,
+		PONumber:         e.PoNumber,
+		InvoicedAt:       grpcutil.TimestampToTime(e.InvoicedAt),
+		RemainingBalance: e.RemainingBalance,
+		IsPaidInFull:     e.IsPaidInFull,
+		Invoice: &apiresource.Invoice{
+			ID:     e.InvoiceId,
+			Object: constants.ObjectTypeInvoice,
+			Number: e.InvoiceNumber,
+		},
+		Customer: &apiresource.Customer{
+			ID:     e.CustomerId,
+			Object: constants.ObjectTypeCustomer,
+			Name:   e.CustomerName,
+			Number: e.CustomerNumber,
+		},
+	}
+}
+
+func receivableEntryListFromProto(ctx context.Context, resp interface {
+	GetReceivables() []*pb.ReceivableEntryProto
+	GetPageInfo() *pb.PageInfo
+}) *apiresource.List[apiresource.ReceivableEntry] {
+	if resp == nil {
+		return apiresource.NewList[apiresource.ReceivableEntry](nil, apiresource.PageInfo{})
+	}
+
+	receivables := resp.GetReceivables()
+	items := make([]apiresource.ReceivableEntry, len(receivables))
+	for i, e := range receivables {
+		items[i] = receivableEntryFromProto(e)
+	}
+
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.GetPageInfo()))
 }

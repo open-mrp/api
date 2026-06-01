@@ -14,8 +14,6 @@ import (
 type RetrieveShipmentRequest struct {
 	// Shipment ID.
 	ShipmentID string `path:"id" validate:"required"`
-	// Related resources to include.
-	Includes []string `query:"include"`
 }
 
 // Returns a shipment by ID.
@@ -30,6 +28,7 @@ func (e *RetrieveShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeShipment,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveShipmentRequest) (*apiresource.ShipmentDetail, *apierror.APIError) {
 			return svc.(ShipmentSvc).GetShipment
 		},

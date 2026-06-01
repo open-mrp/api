@@ -28,6 +28,7 @@ func (e *RetrieveCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrie
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeCarrier,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveCarrierRequest) (*apiresource.Carrier, *apierror.APIError) {
 			return svc.(CarrierSvc).GetCarrier
 		},

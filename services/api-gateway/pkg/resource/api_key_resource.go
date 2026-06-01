@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleAPIKeyID = "apke_01jm4r6700e3kxb9w2nqh7g5fp"     // #nosec G101 - sample data for API docs
+const SampleAPIKeyID = "apke_01fba3a7db3996e3b3b1a07e00"     // #nosec G101 - sample data for API docs
 const SampleAPIKeyName = "Production API Key"                // #nosec G101 - sample data for API docs
 const SampleTestAPIKeyRedactedValue = "aug_sk_test_****kuIb" // #nosec G101 - sample data for API docs
 const SampleProdAPIKeyRedactedValue = "aug_sk_prod_****hjt4" // #nosec G101 - sample data for API docs

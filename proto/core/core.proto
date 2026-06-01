@@ -25,6 +25,11 @@ service CoreService {
   // Returns account metadata (sandbox status, parent account, mode) for identity resolution.
   rpc GetAccountContext(GetAccountContextRequest) returns (GetAccountContextResponse);
 
+  // Returns accounts by ID for the api-gateway include resolver. Authorization
+  // follows the same affiliation check as GetAccount. Internal — not exposed
+  // to clients.
+  rpc BatchGetAccountsByIDs(BatchGetAccountsByIDsRequest) returns (BatchGetAccountsByIDsResponse);
+
   // Checks user access to an account and returns their role/permissions.
   rpc GetUserAccountAccess(GetUserAccountAccessRequest) returns (GetUserAccountAccessResponse);
 
@@ -61,6 +66,9 @@ service CoreService {
   // Deletes a sandbox and purges account-scoped data asynchronously; rejects if last sandbox.
   rpc DeleteSandbox(DeleteSandboxRequest) returns (google.protobuf.Empty);
 
+  // Returns sandboxes by ID for the api-gateway include resolver.
+  rpc BatchGetSandboxesByIDs(BatchGetSandboxesByIDsRequest) returns (BatchGetSandboxesByIDsResponse);
+
   // Updates subscription fields (plan, status, Stripe ID, period end) from billing webhooks.
   rpc UpdateAccountSubscription(UpdateAccountSubscriptionRequest) returns (google.protobuf.Empty);
 
@@ -91,6 +99,9 @@ service CoreService {
   // Deletes an account-owned unit and cascades to unit_group_unit associations.
   rpc DeleteUnit(DeleteUnitRequest) returns (google.protobuf.Empty);
 
+  // Returns units by ID for the api-gateway include resolver.
+  rpc BatchGetUnitsByIDs(BatchGetUnitsByIDsRequest) returns (BatchGetUnitsByIDsResponse);
+
   // Searches sale-type products by SKU pattern (used by agent-service).
   rpc SearchProducts(SearchProductsRequest) returns (SearchProductsResponse);
 
@@ -115,6 +126,9 @@ service CoreService {
   // Deletes an account-owned payment term; default terms cannot be deleted.
   rpc DeletePaymentTerm(DeletePaymentTermRequest) returns (google.protobuf.Empty);
 
+  // Returns payment terms by ID for the api-gateway include resolver.
+  rpc BatchGetPaymentTermsByIDs(BatchGetPaymentTermsByIDsRequest) returns (BatchGetPaymentTermsByIDsResponse);
+
   // Returns a paginated list of shipping terms (account-specific and default).
   rpc ListShippingTerms(ListShippingTermsRequest) returns (ListShippingTermsResponse);
 
@@ -129,6 +143,9 @@ service CoreService {
 
   // Deletes an account-owned shipping term; default terms cannot be deleted.
   rpc DeleteShippingTerm(DeleteShippingTermRequest) returns (google.protobuf.Empty);
+
+  // Returns shipping terms by ID for the api-gateway include resolver.
+  rpc BatchGetShippingTermsByIDs(BatchGetShippingTermsByIDsRequest) returns (BatchGetShippingTermsByIDsResponse);
 
   // Returns a single address by ID within an account.
   rpc GetAddress(GetAddressRequest) returns (GetAddressResponse);
@@ -145,6 +162,9 @@ service CoreService {
   // Deletes an address from an account.
   rpc DeleteAddress(DeleteAddressRequest) returns (google.protobuf.Empty);
 
+  // Returns addresses by ID for the api-gateway include resolver.
+  rpc BatchGetAddressesByIDs(BatchGetAddressesByIDsRequest) returns (BatchGetAddressesByIDsResponse);
+
   // Returns address autocomplete suggestions from Google Places.
   rpc AutocompleteAddress(AutocompleteAddressRequest) returns (AutocompleteAddressResponse);
 
@@ -159,6 +179,9 @@ service CoreService {
 
   // Returns a single account status by ID.
   rpc GetAccountStatus(GetAccountStatusRequest) returns (GetAccountStatusResponse);
+
+  // Returns account statuses by ID for the api-gateway include resolver.
+  rpc BatchGetAccountStatusesByIDs(BatchGetAccountStatusesByIDsRequest) returns (BatchGetAccountStatusesByIDsResponse);
 
   // Returns a paginated list of account groups with filtering by type and search.
   rpc ListAccountGroups(ListAccountGroupsRequest) returns (ListAccountGroupsResponse);
@@ -175,6 +198,9 @@ service CoreService {
   // Deletes an account group.
   rpc DeleteAccountGroup(DeleteAccountGroupRequest) returns (google.protobuf.Empty);
 
+  // Returns account groups by ID for the api-gateway include resolver.
+  rpc BatchGetAccountGroupsByIDs(BatchGetAccountGroupsByIDsRequest) returns (BatchGetAccountGroupsByIDsResponse);
+
   // Returns product line access records grouped by account group.
   rpc ListAccountGroupProductLineAccess(ListAccountGroupProductLineAccessRequest) returns (ListAccountGroupProductLineAccessResponse);
 
@@ -190,6 +216,9 @@ service CoreService {
   // Removes all product line access for an account group.
   rpc DeleteAccountGroupProductLineAccess(DeleteAccountGroupProductLineAccessRequest) returns (google.protobuf.Empty);
 
+  // Returns account-group → product-line access records by account_group_id for the api-gateway include resolver.
+  rpc BatchGetAccountGroupProductLineAccessByIDs(BatchGetAccountGroupProductLineAccessByIDsRequest) returns (BatchGetAccountGroupProductLineAccessByIDsResponse);
+
   // Returns product line access records grouped by customer.
   rpc ListCustomerProductLineAccess(ListCustomerProductLineAccessRequest) returns (ListCustomerProductLineAccessResponse);
 
@@ -204,6 +233,9 @@ service CoreService {
 
   // Removes all product line access for a customer.
   rpc DeleteCustomerProductLineAccess(DeleteCustomerProductLineAccessRequest) returns (google.protobuf.Empty);
+
+  // Returns customer → product-line access records by customer_id for the api-gateway include resolver.
+  rpc BatchGetCustomerProductLineAccessByIDs(BatchGetCustomerProductLineAccessByIDsRequest) returns (BatchGetCustomerProductLineAccessByIDsResponse);
 
   // Returns a paginated list of account users for the target account.
   rpc ListAccountUsers(ListAccountUsersRequest) returns (ListAccountUsersResponse);
@@ -222,6 +254,9 @@ service CoreService {
 
   // Updates the password for an account user (scanner-role targets only).
   rpc UpdateAccountUserPassword(UpdateAccountUserPasswordRequest) returns (google.protobuf.Empty);
+
+  // Batched read for the api-gateway resourcekit resolver.
+  rpc BatchGetAccountUsersByIDs(BatchGetAccountUsersByIDsRequest) returns (BatchGetAccountUsersByIDsResponse);
 
   // Returns a paginated list of sales targets for an account user.
   rpc ListSalesTargets(ListSalesTargetsRequest) returns (ListSalesTargetsResponse);
@@ -259,6 +294,9 @@ service CoreService {
   // Deletes an account integration and returns the deleted resource.
   rpc DeleteAccountIntegration(DeleteAccountIntegrationRequest) returns (DeleteAccountIntegrationResponse);
 
+  // Returns account integrations by ID for the api-gateway include resolver.
+  rpc BatchGetAccountIntegrationsByIDs(BatchGetAccountIntegrationsByIDsRequest) returns (BatchGetAccountIntegrationsByIDsResponse);
+
   // Returns the Stripe publishable key for the caller's account.
   rpc GetStripePublishableKey(GetStripePublishableKeyRequest) returns (GetStripePublishableKeyResponse);
 
@@ -267,6 +305,9 @@ service CoreService {
 
   // Returns a paginated list of adjustment types.
   rpc ListAdjustmentTypes(ListAdjustmentTypesRequest) returns (ListAdjustmentTypesResponse);
+
+  // Returns adjustment types matching the given IDs.
+  rpc BatchGetAdjustmentTypesByIDs(BatchGetAdjustmentTypesByIDsRequest) returns (BatchGetAdjustmentTypesByIDsResponse);
 
   // Returns full account details including branding and portal sub-resources.
   rpc GetAccount(GetAccountRequest) returns (GetAccountResponse);
@@ -313,11 +354,32 @@ service CoreService {
   // Deletes an attribute.
   rpc DeleteAttribute(DeleteAttributeRequest) returns (google.protobuf.Empty);
 
+  // Returns attributes by ID for the api-gateway include resolver. Authorization
+  // follows the same account scope as GetAttribute. Internal — not exposed to clients.
+  rpc BatchGetAttributesByIDs(BatchGetAttributesByIDsRequest) returns (BatchGetAttributesByIDsResponse);
+
+  // Returns properties by ID for the api-gateway include resolver. Always
+  // populates attributes on each property. Internal — not exposed to clients.
+  rpc BatchGetPropertiesByIDs(BatchGetPropertiesByIDsRequest) returns (BatchGetPropertiesByIDsResponse);
+
+  // Returns item categories by ID for the api-gateway include resolver. Always
+  // populates properties and unit group (with base unit and associated units).
+  // Internal — not exposed to clients.
+  rpc BatchGetItemCategoriesByIDs(BatchGetItemCategoriesByIDsRequest) returns (BatchGetItemCategoriesByIDsResponse);
+
+  // Returns items by ID for the api-gateway include resolver. Always
+  // populates rates and attributes. Internal — not exposed to clients.
+  rpc BatchGetItemsByIDs(BatchGetItemsByIDsRequest) returns (BatchGetItemsByIDsResponse);
+
   // Returns a paginated list of carriers visible to the caller's account.
   rpc ListCarriers(ListCarriersRequest) returns (ListCarriersResponse);
 
   // Returns a single carrier by ID.
   rpc GetCarrier(GetCarrierRequest) returns (GetCarrierResponse);
+
+  // Returns carriers by ID for the api-gateway include resolver. Authorization
+  // follows the same account scope as GetCarrier. Internal — not exposed to clients.
+  rpc BatchGetCarriersByIDs(BatchGetCarriersByIDsRequest) returns (BatchGetCarriersByIDsResponse);
 
   // Creates a new carrier, optionally registering with Shippo.
   rpc CreateCarrier(CreateCarrierRequest) returns (CreateCarrierResponse);
@@ -342,6 +404,10 @@ service CoreService {
 
   // Returns a single service level by ID.
   rpc GetServiceLevel(GetServiceLevelRequest) returns (GetServiceLevelResponse);
+
+  // Returns service levels by ID for the api-gateway include resolver.
+  // Authorization follows the parent carrier's account scope.
+  rpc BatchGetServiceLevelsByIDs(BatchGetServiceLevelsByIDsRequest) returns (BatchGetServiceLevelsByIDsResponse);
 
   // Creates a new service level.
   rpc CreateServiceLevel(CreateServiceLevelRequest) returns (CreateServiceLevelResponse);
@@ -396,6 +462,9 @@ service CoreService {
   // Removes a child account from the target (parent) account.
   rpc RemoveChildAccount(RemoveChildAccountRequest) returns (google.protobuf.Empty);
 
+  // Returns child accounts by relation ID for the api-gateway include resolver.
+  rpc BatchGetChildAccountsByIDs(BatchGetChildAccountsByIDsRequest) returns (BatchGetChildAccountsByIDsResponse);
+
   // Returns the production flow graph for a batch.
   rpc GetBatchFlow(GetBatchFlowRequest) returns (GetBatchFlowResponse);
   // Returns batches for a scanning station.
@@ -445,12 +514,15 @@ service CoreService {
   rpc ChangeProductProductLine(ChangeProductProductLineRequest) returns (ChangeProductProductLineResponse);
   // Validates SKUs and returns matching products.
   rpc ValidateProducts(ValidateProductsRequest) returns (ValidateProductsResponse);
+  rpc BatchGetProductsByIDs(BatchGetProductsByIDsRequest) returns (BatchGetProductsByIDsResponse);
 
   rpc ListProductLines(ListProductLinesRequest) returns (ListProductLinesResponse);
   rpc GetProductLine(GetProductLineRequest) returns (GetProductLineResponse);
   rpc CreateProductLine(CreateProductLineRequest) returns (CreateProductLineResponse);
   rpc UpdateProductLine(UpdateProductLineRequest) returns (UpdateProductLineResponse);
   rpc DeleteProductLine(DeleteProductLineRequest) returns (google.protobuf.Empty);
+  // Returns product lines by ID for the api-gateway include resolver.
+  rpc BatchGetProductLinesByIDs(BatchGetProductLinesByIDsRequest) returns (BatchGetProductLinesByIDsResponse);
 
   rpc GetConsumption(GetConsumptionRequest) returns (GetConsumptionResponse);
   rpc CreateConsumption(CreateConsumptionRequest) returns (CreateConsumptionResponse);
@@ -499,6 +571,7 @@ service CoreService {
   rpc CreateDepartment(CreateDepartmentRequest) returns (CreateDepartmentResponse);
   rpc UpdateDepartment(UpdateDepartmentRequest) returns (UpdateDepartmentResponse);
   rpc DeleteDepartment(DeleteDepartmentRequest) returns (google.protobuf.Empty);
+  rpc BatchGetDepartmentsByIDs(BatchGetDepartmentsByIDsRequest) returns (BatchGetDepartmentsByIDsResponse);
 
   rpc ListEmailLogs(ListEmailLogsRequest) returns (ListEmailLogsResponse);
   rpc GetEmailLog(GetEmailLogRequest) returns (GetEmailLogResponse);
@@ -522,6 +595,7 @@ service CoreService {
   rpc CreateMaterial(CreateMaterialRequest) returns (CreateMaterialResponse);
   rpc UpdateMaterial(UpdateMaterialRequest) returns (UpdateMaterialResponse);
   rpc DeleteMaterial(DeleteMaterialRequest) returns (DeleteMaterialResponse);
+  rpc BatchGetMaterialsByIDs(BatchGetMaterialsByIDsRequest) returns (BatchGetMaterialsByIDsResponse);
 
   // Supplier Materials
   rpc ListSupplierMaterials(ListSupplierMaterialsRequest) returns (ListSupplierMaterialsResponse);
@@ -538,13 +612,18 @@ service CoreService {
   rpc ExportParts(ExportPartsRequest) returns (ExportPartsResponse);
   rpc UpdatePart(UpdatePartRequest) returns (UpdatePartResponse);
   rpc DeletePart(DeletePartRequest) returns (DeletePartResponse);
+  rpc BatchGetPartsByIDs(BatchGetPartsByIDsRequest) returns (BatchGetPartsByIDsResponse);
 
   // Permission Groups
   rpc ListPermissionGroups(ListPermissionGroupsRequest) returns (ListPermissionGroupsResponse);
+  rpc BatchGetPermissionGroupsByIDs(BatchGetPermissionGroupsByIDsRequest) returns (BatchGetPermissionGroupsByIDsResponse);
 
   // Priorities are global lookup values (not account-scoped).
   rpc ListPriorities(ListPrioritiesRequest) returns (ListPrioritiesResponse);
   rpc GetPriority(GetPriorityRequest) returns (GetPriorityResponse);
+
+  // Returns priorities by ID for the api-gateway include resolver.
+  rpc BatchGetPrioritiesByIDs(BatchGetPrioritiesByIDsRequest) returns (BatchGetPrioritiesByIDsResponse);
 
   // Product Types (global, not account-scoped)
 
@@ -553,6 +632,9 @@ service CoreService {
   rpc CreateProductType(CreateProductTypeRequest) returns (CreateProductTypeResponse);
   rpc UpdateProductType(UpdateProductTypeRequest) returns (UpdateProductTypeResponse);
   rpc DeleteProductType(DeleteProductTypeRequest) returns (google.protobuf.Empty);
+
+  // Returns product types by ID for the api-gateway include resolver.
+  rpc BatchGetProductTypesByIDs(BatchGetProductTypesByIDsRequest) returns (BatchGetProductTypesByIDsResponse);
 
   // Quantities
 
@@ -585,6 +667,10 @@ service CoreService {
   rpc DeleteUnitGroupUnit(DeleteUnitGroupUnitRequest) returns (google.protobuf.Empty);
   rpc ListUnitGroupUnits(ListUnitGroupUnitsRequest) returns (ListUnitGroupUnitsResponse);
   rpc GetUnitGroupUnit(GetUnitGroupUnitRequest) returns (GetUnitGroupUnitResponse);
+  // Returns unit groups by ID for the api-gateway include resolver.
+  rpc BatchGetUnitGroupsByIDs(BatchGetUnitGroupsByIDsRequest) returns (BatchGetUnitGroupsByIDsResponse);
+  // Returns unit group units by ID for the api-gateway include resolver.
+  rpc BatchGetUnitGroupUnitsByIDs(BatchGetUnitGroupUnitsByIDsRequest) returns (BatchGetUnitGroupUnitsByIDsResponse);
   // Validates unit abbreviations and returns matching units.
   rpc ValidateUnits(ValidateUnitsRequest) returns (ValidateUnitsResponse);
 
@@ -650,10 +736,16 @@ service CoreService {
   rpc UpdateDCLocation(UpdateDCLocationRequest) returns (UpdateDCLocationResponse);
   rpc DeleteDCLocation(DeleteDCLocationRequest) returns (google.protobuf.Empty);
 
+  // Returns DC locations by ID for the api-gateway include resolver.
+  rpc BatchGetDCLocationsByIDs(BatchGetDCLocationsByIDsRequest) returns (BatchGetDCLocationsByIDsResponse);
+
   // EDI Runs
 
   rpc ListEDIRuns(ListEDIRunsRequest) returns (ListEDIRunsResponse);
   rpc GetEDIRun(GetEDIRunRequest) returns (GetEDIRunResponse);
+
+  // Returns EDI runs by ID for the api-gateway include resolver.
+  rpc BatchGetEDIRunsByIDs(BatchGetEDIRunsByIDsRequest) returns (BatchGetEDIRunsByIDsResponse);
 
   // Roles
 
@@ -662,6 +754,7 @@ service CoreService {
   rpc CreateRole(CreateRoleRequest) returns (CreateRoleResponse);
   rpc UpdateRole(UpdateRoleRequest) returns (UpdateRoleResponse);
   rpc DeleteRole(DeleteRoleRequest) returns (google.protobuf.Empty);
+  rpc BatchGetRolesByIDs(BatchGetRolesByIDsRequest) returns (BatchGetRolesByIDsResponse);
 
   // Registration Flows
 
@@ -682,6 +775,7 @@ service CoreService {
   rpc UpdateScanningStation(UpdateScanningStationRequest) returns (UpdateScanningStationResponse);
   rpc DeleteScanningStation(DeleteScanningStationRequest) returns (google.protobuf.Empty);
   rpc ConnectProductionStepsByScanningStation(ConnectProductionStepsByScanningStationRequest) returns (google.protobuf.Empty);
+  rpc BatchGetScanningStationsByIDs(BatchGetScanningStationsByIDsRequest) returns (BatchGetScanningStationsByIDsResponse);
 
   // Locations
 
@@ -692,6 +786,7 @@ service CoreService {
   rpc DeleteLocation(DeleteLocationRequest) returns (google.protobuf.Empty);
   rpc ListLocationTypes(ListLocationTypesRequest) returns (ListLocationTypesResponse);
   rpc GetLocationType(GetLocationTypeRequest) returns (GetLocationTypeResponse);
+  rpc BatchGetLocationsByIDs(BatchGetLocationsByIDsRequest) returns (BatchGetLocationsByIDsResponse);
 
   // Suppliers
 
@@ -710,6 +805,9 @@ service CoreService {
   // Returns the latest value for a system property.
   rpc GetLatestSysPropertyValue(GetLatestSysPropertyValueRequest) returns (GetLatestSysPropertyValueResponse);
 
+  // Returns sys properties by ID for the api-gateway include resolver.
+  rpc BatchGetSysPropertiesByIDs(BatchGetSysPropertiesByIDsRequest) returns (BatchGetSysPropertiesByIDsResponse);
+
   // Tenancy
 
   rpc GetTenancy(GetTenancyRequest) returns (GetTenancyResponse);
@@ -726,4 +824,5 @@ service CoreService {
   rpc CreateTerritory(CreateTerritoryRequest) returns (CreateTerritoryResponse);
   rpc UpdateTerritory(UpdateTerritoryRequest) returns (UpdateTerritoryResponse);
   rpc DeleteTerritory(DeleteTerritoryRequest) returns (google.protobuf.Empty);
+  rpc BatchGetTerritoriesByIDs(BatchGetTerritoriesByIDsRequest) returns (BatchGetTerritoriesByIDsResponse);
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -43,10 +44,7 @@ func NewOrderDiscountSvc(config *OrderDiscountSvcConfig) OrderDiscountSvc {
 	if err := config.validate(); err != nil {
 		panic(err)
 	}
-
-	return &orderDiscountSvcImpl{
-		coreClient: config.CoreClient,
-	}
+	return &orderDiscountSvcImpl{coreClient: config.CoreClient}
 }
 
 func (m *orderDiscountSvcImpl) ListOrderDiscounts(ctx context.Context, req *ListOrderDiscountsRequest) (*apiresource.List[apiresource.OrderDiscount], *apierror.APIError) {
@@ -55,35 +53,32 @@ func (m *orderDiscountSvcImpl) ListOrderDiscounts(ctx context.Context, req *List
 		Limit:  req.Limit,
 		Query:  req.Query,
 	}
-
 	resp, apiErr := grpcutil.CallRPC(ctx, orderDiscountSvcTracer, "service.order_discounts.list", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListOrderDiscountsResponse, error) {
 			return m.coreClient.ListOrderDiscounts(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
-	return OrderDiscountListPresenter(ctx, resp), nil
+	ids := make([]string, len(resp.OrderDiscounts))
+	for i, d := range resp.OrderDiscounts {
+		ids[i] = d.Id
+	}
+	loaded, apiErr := resourceloaders.LoadOrderDiscounts(ctx, ids)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	items := make([]apiresource.OrderDiscount, 0, len(ids))
+	for _, id := range ids {
+		if v, ok := loaded[id]; ok {
+			items = append(items, *(v.(*apiresource.OrderDiscount)))
+		}
+	}
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
 
 func (m *orderDiscountSvcImpl) GetOrderDiscount(ctx context.Context, req *RetrieveOrderDiscountRequest) (*apiresource.OrderDiscount, *apierror.APIError) {
-	pbReq := &pb.GetOrderDiscountRequest{
-		Id: req.OrderDiscountID,
-	}
-
-	resp, apiErr := grpcutil.CallRPC(ctx, orderDiscountSvcTracer, "service.order_discounts.get", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetOrderDiscountResponse, error) {
-			return m.coreClient.GetOrderDiscount(ctx, pbReq, opts...)
-		})
-
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	result := OrderDiscountPresenter(resp.OrderDiscount)
-	return &result, nil
+	return loadOrderDiscountByID(ctx, req.OrderDiscountID)
 }
 
 func (m *orderDiscountSvcImpl) CreateOrderDiscount(ctx context.Context, req *CreateOrderDiscountRequest) (*apiresource.OrderDiscount, *apierror.APIError) {
@@ -94,18 +89,14 @@ func (m *orderDiscountSvcImpl) CreateOrderDiscount(ctx context.Context, req *Cre
 		Amount:       req.Amount,
 		DiscountType: req.DiscountType,
 	}
-
 	resp, apiErr := grpcutil.CallRPC(ctx, orderDiscountSvcTracer, "service.order_discounts.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateOrderDiscountResponse, error) {
 			return m.coreClient.CreateOrderDiscount(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
-	result := OrderDiscountPresenter(resp.OrderDiscount)
-	return &result, nil
+	return loadOrderDiscountByID(ctx, resp.OrderDiscount.Id)
 }
 
 func (m *orderDiscountSvcImpl) UpdateOrderDiscount(ctx context.Context, req *UpdateOrderDiscountRequest) (*apiresource.OrderDiscount, *apierror.APIError) {
@@ -117,36 +108,29 @@ func (m *orderDiscountSvcImpl) UpdateOrderDiscount(ctx context.Context, req *Upd
 		Amount:       req.Amount,
 		DiscountType: req.DiscountType,
 	}
-
 	resp, apiErr := grpcutil.CallRPC(ctx, orderDiscountSvcTracer, "service.order_discounts.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateOrderDiscountResponse, error) {
 			return m.coreClient.UpdateOrderDiscount(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
-	result := OrderDiscountPresenter(resp.OrderDiscount)
-	return &result, nil
+	return loadOrderDiscountByID(ctx, resp.OrderDiscount.Id)
 }
 
 func (m *orderDiscountSvcImpl) DeleteOrderDiscount(ctx context.Context, req *DeleteOrderDiscountRequest) (*apiresource.OrderDiscount, *apierror.APIError) {
-	pbReq := &pb.DeleteOrderDiscountRequest{
-		Id: req.OrderDiscountID,
-	}
-
+	// Delete returns the deleted resource. The legacy DeleteOrderDiscount RPC
+	// returns the resource pre-delete, so we map directly from its response
+	// rather than running through LoadOrderDiscounts (the row no longer exists).
+	pbReq := &pb.DeleteOrderDiscountRequest{Id: req.OrderDiscountID}
 	resp, apiErr := grpcutil.CallRPC(ctx, orderDiscountSvcTracer, "service.order_discounts.delete", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.DeleteOrderDiscountResponse, error) {
 			return m.coreClient.DeleteOrderDiscount(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
-	result := OrderDiscountPresenter(resp.OrderDiscount)
-	return &result, nil
+	return resourceloaders.OrderDiscountFromProto(resp.OrderDiscount), nil
 }
 
 func (m *orderDiscountSvcImpl) FindOrderDiscountByCode(ctx context.Context, req *FindOrderDiscountByCodeRequest) (*apiresource.OrderDiscount, *apierror.APIError) {
@@ -155,16 +139,26 @@ func (m *orderDiscountSvcImpl) FindOrderDiscountByCode(ctx context.Context, req 
 		BuyerAccountId: req.BuyerAccountID,
 		SalesOrderId:   req.SalesOrderID,
 	}
-
 	resp, apiErr := grpcutil.CallRPC(ctx, orderDiscountSvcTracer, "service.order_discounts.find_by_code", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.FindOrderDiscountByCodeResponse, error) {
 			return m.coreClient.FindOrderDiscountByCode(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
+	return loadOrderDiscountByID(ctx, resp.OrderDiscount.Id)
+}
 
-	result := OrderDiscountPresenter(resp.OrderDiscount)
-	return &result, nil
+// loadOrderDiscountByID wraps the single-ID load pattern used after mutations
+// and for the retrieve / find-by-code endpoints.
+func loadOrderDiscountByID(ctx context.Context, id string) (*apiresource.OrderDiscount, *apierror.APIError) {
+	loaded, apiErr := resourceloaders.LoadOrderDiscounts(ctx, []string{id})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	v, ok := loaded[id]
+	if !ok {
+		return nil, apierror.NewResourceNotFoundError("Order discount not found.")
+	}
+	return v.(*apiresource.OrderDiscount), nil
 }

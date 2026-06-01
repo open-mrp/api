@@ -98,6 +98,13 @@ func (s *unitGroupSvcImpl) ListUnitGroups(ctx context.Context, params domain.Lis
 		return nil, tracing.Trace(span, apierror.NewAuthorizationError("You do not have access to this resource."))
 	}
 
+	if identity.IsExternalTarget() {
+		meds := s.mediators()
+		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+
 	params.AccountID = identity.Target.AccountID
 
 	return s.repos.NewUnitGroupRepo().List(ctx, params)
@@ -126,6 +133,13 @@ func (s *unitGroupSvcImpl) GetUnitGroup(ctx context.Context, params domain.GetUn
 		}
 	} else if !identity.IsCustomerUser() && !identity.IsSupplierUser() {
 		return nil, tracing.Trace(span, apierror.NewAuthorizationError("You do not have access to this resource."))
+	}
+
+	if identity.IsExternalTarget() {
+		meds := s.mediators()
+		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 	}
 
 	params.AccountID = identity.Target.AccountID
@@ -676,6 +690,13 @@ func (s *unitGroupSvcImpl) ListUnitGroupUnits(ctx context.Context, unitGroupID s
 		return nil, tracing.Trace(span, apierror.NewAuthorizationError("You do not have access to this resource."))
 	}
 
+	if identity.IsExternalTarget() {
+		meds := s.mediators()
+		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+
 	// Verify unit group exists
 	_, apiErr := s.repos.NewUnitGroupRepo().Get(ctx, domain.GetUnitGroupParams{
 		AccountID:   identity.Target.AccountID,
@@ -713,6 +734,13 @@ func (s *unitGroupSvcImpl) GetUnitGroupUnit(ctx context.Context, params domain.G
 		return nil, tracing.Trace(span, apierror.NewAuthorizationError("You do not have access to this resource."))
 	}
 
+	if identity.IsExternalTarget() {
+		meds := s.mediators()
+		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+
 	params.AccountID = identity.Target.AccountID
 
 	// Verify unit group exists
@@ -739,4 +767,70 @@ func (s *unitGroupSvcImpl) validateUnitConversionTypes(ctx context.Context, acco
 		}
 	}
 	return nil
+}
+
+func (s *unitGroupSvcImpl) BatchGetUnitGroupsByIDs(ctx context.Context, ids []string) ([]*domain.UnitGroupFull, *apierror.APIError) {
+	ctx, span := unitGroupSvcTracer.Start(ctx, "service.unit_group.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+	if identity.IsInternalActor() {
+		if apiErr := identity.CheckHasPermission(types.PermissionDomainUnitGroups, types.ActionRead); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	} else if !identity.IsCustomerUser() && !identity.IsSupplierUser() {
+		return nil, tracing.Trace(span, apierror.NewAuthorizationError("You do not have access to this resource."))
+	}
+	if identity.IsExternalTarget() {
+		meds := s.mediators()
+		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	return s.repos.NewUnitGroupRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
+}
+
+func (s *unitGroupSvcImpl) BatchGetUnitGroupUnitsByIDs(ctx context.Context, ids []string) ([]*domain.UnitGroupUnit, *apierror.APIError) {
+	ctx, span := unitGroupSvcTracer.Start(ctx, "service.unit_group.batch_get_unit_group_units_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+	if identity.IsInternalActor() {
+		if apiErr := identity.CheckHasPermission(types.PermissionDomainUnitGroups, types.ActionRead); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	} else if !identity.IsCustomerUser() && !identity.IsSupplierUser() {
+		return nil, tracing.Trace(span, apierror.NewAuthorizationError("You do not have access to this resource."))
+	}
+	if identity.IsExternalTarget() {
+		meds := s.mediators()
+		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	return s.repos.NewUnitGroupRepo().GetUnitGroupUnitsByIDs(ctx, identity.Target.AccountID, ids)
 }

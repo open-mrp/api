@@ -14,8 +14,6 @@ import (
 type RetrieveSalesOrderRequest struct {
 	// Sales order ID.
 	SalesOrderID string `path:"id" validate:"required"`
-	// Fields to include in the response.
-	Includes []string `query:"include"`
 }
 
 // Returns a sales order by ID.
@@ -30,6 +28,7 @@ func (e *RetrieveSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeSalesOrder,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveSalesOrderRequest) (*apiresource.SalesOrderDetail, *apierror.APIError) {
 			return svc.(SalesOrderSvc).GetSalesOrder
 		},

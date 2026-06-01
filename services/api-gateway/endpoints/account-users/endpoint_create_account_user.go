@@ -69,6 +69,7 @@ func (e *CreateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		LocationFunc: func(resp *apiresource.AccountUser) string {
 			return "/v1/identity/account-users/" + resp.ID
 		},
+		ObjectType: constants.ObjectTypeAccountUser,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAccountUser,
 			Fields:     []string{"role", "department"},

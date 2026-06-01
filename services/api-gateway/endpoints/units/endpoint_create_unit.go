@@ -55,6 +55,7 @@ func (e *CreateUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateUnitR
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeUnit,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateUnitRequest) (*apiresource.Unit, *apierror.APIError) {
 			return svc.(UnitSvc).CreateUnit
 		},

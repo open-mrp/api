@@ -220,13 +220,13 @@ func TestAddresses_ListPagination(t *testing.T) {
 	t.Parallel()
 	page1, _, err := apiClient.GetList(addressesPath, url.Values{"limit": {"1"}})
 	require.NoError(t, err)
-	require.Len(t, page1.Data, 1)
+	requirePageLen(t, page1.Data, 1)
 	require.True(t, page1.PageInfo.HasNextPage, "should have a next page")
 	require.NotNil(t, page1.PageInfo.NextPageURL)
 
 	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
 	require.NoError(t, err)
-	require.Len(t, page2.Data, 1)
+	requirePageLen(t, page2.Data, 1)
 
 	id1 := DataItemField(page1.Data[0], "id")
 	id2 := DataItemField(page2.Data[0], "id")
@@ -349,7 +349,18 @@ func TestAddresses_CreateValidation_EmptyName(t *testing.T) {
 		"country": "US",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.True(t, status == 400 || status == 422,
+
+	// Defensive cleanup: if the server unexpectedly accepts the request,
+	// delete the address so it doesn't pollute list-endpoint contract tests.
+	if status == 201 {
+		if created := parseJSON(body); created != nil {
+			if id := jsonField(created, "id"); id != "" {
+				apiClient.Delete(addressesPath + "/" + id)
+			}
+		}
+	}
+
+	require.True(t, status == 400 || status == 422,
 		"Empty name should return 400 or 422, got %d: %s", status, string(body))
 }
 
@@ -359,7 +370,18 @@ func TestAddresses_CreateValidation_MissingCountry(t *testing.T) {
 		"name": uniqueName("e2e-addr-nocountry"),
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	assert.True(t, status == 400 || status == 422,
+
+	// Defensive cleanup: if the server unexpectedly accepts the request,
+	// delete the address so it doesn't pollute list-endpoint contract tests.
+	if status == 201 {
+		if created := parseJSON(body); created != nil {
+			if id := jsonField(created, "id"); id != "" {
+				apiClient.Delete(addressesPath + "/" + id)
+			}
+		}
+	}
+
+	require.True(t, status == 400 || status == 422,
 		"Missing country should return 400 or 422, got %d: %s", status, string(body))
 }
 

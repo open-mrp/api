@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SamplePriorityID = "pi_01jm4r6700f8nwq3v5hx2d9ktp"
+const SamplePriorityID = "pi_01fc435701244bb3978bfb77ff"
 const SamplePriorityCode = constants.PriorityCodeNormal
 const SamplePriorityName = "Normal"
 
@@ -28,6 +28,30 @@ type Priority struct {
 	CreatedAt time.Time `json:"created_at"`
 	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+func ExpandablePriorityStub(id string, code constants.PriorityCode, name string, ts time.Time) *Priority {
+	if id == "" {
+		id = SamplePriorityID
+	}
+	if code == "" {
+		code = constants.PriorityCodeNormal
+	}
+	if name == "" {
+		name = SamplePriorityName
+	}
+	if ts.IsZero() {
+		ts = time.Unix(0, 0).UTC()
+	}
+	return &Priority{
+		ID:        id,
+		Object:    constants.ObjectTypePriority,
+		Code:      code,
+		Name:      name,
+		Owner:     SystemOwner(),
+		CreatedAt: ts,
+		UpdatedAt: ts,
+	}
 }
 
 var SamplePriority = &Priority{

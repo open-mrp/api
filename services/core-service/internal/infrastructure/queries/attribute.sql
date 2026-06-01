@@ -119,6 +119,21 @@ WHERE attribute.property_id IN (sqlc.slice('property_ids'))
 AND attribute.account_id = sqlc.arg('account_id')
 ORDER BY attribute.`order` ASC, attribute.created_at DESC;
 
+-- name: GetAttributesByIDs :many
+SELECT
+    attribute.id,
+    attribute.text,
+    attribute.property_id,
+    attribute.account_id,
+    attribute.color_code,
+    attribute.`order`,
+    attribute.is_public,
+    attribute.created_at,
+    attribute.updated_at
+FROM attribute
+WHERE attribute.id IN (sqlc.slice('ids'))
+AND attribute.account_id = sqlc.arg('account_id');
+
 -- name: CountAttributesByTextInAccount :one
 SELECT COUNT(*) FROM attribute
 WHERE text = sqlc.arg('text') AND account_id = sqlc.arg('account_id')

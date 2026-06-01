@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -71,6 +72,80 @@ func (q *Queries) GetDCLocation(ctx context.Context, arg GetDCLocationParams) (G
 	return i, err
 }
 
+const getDCLocationsByIDs = `-- name: GetDCLocationsByIDs :many
+SELECT
+    dcl.id,
+    dcl.location,
+    dcl.account_id,
+    a.name AS customer_name,
+    dcl.owner_account_id,
+    dcl.created_at,
+    dcl.updated_at
+FROM dc_location dcl
+LEFT JOIN account a ON a.id = dcl.account_id
+WHERE dcl.id IN (/*SLICE:ids*/?)
+AND dcl.owner_account_id = ?
+`
+
+type GetDCLocationsByIDsParams struct {
+	Ids            []string
+	OwnerAccountID string
+}
+
+type GetDCLocationsByIDsRow struct {
+	ID             string
+	Location       string
+	AccountID      string
+	CustomerName   sql.NullString
+	OwnerAccountID string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+// Returns DC locations matching the given IDs that belong to the caller's
+// account. Used by the api-gateway resourcekit resolver.
+func (q *Queries) GetDCLocationsByIDs(ctx context.Context, arg GetDCLocationsByIDsParams) ([]GetDCLocationsByIDsRow, error) {
+	query := getDCLocationsByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.OwnerAccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetDCLocationsByIDsRow
+	for rows.Next() {
+		var i GetDCLocationsByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Location,
+			&i.AccountID,
+			&i.CustomerName,
+			&i.OwnerAccountID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getEDIRun = `-- name: GetEDIRun :one
 SELECT
     er.id,
@@ -110,6 +185,76 @@ func (q *Queries) GetEDIRun(ctx context.Context, arg GetEDIRunParams) (GetEDIRun
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getEDIRunsByIDs = `-- name: GetEDIRunsByIDs :many
+SELECT
+    er.id,
+    er.completed_at,
+    er.has_succeeded,
+    er.account_id,
+    er.created_at,
+    er.updated_at
+FROM edi_run er
+WHERE er.id IN (/*SLICE:ids*/?)
+AND er.account_id = ?
+`
+
+type GetEDIRunsByIDsParams struct {
+	Ids       []string
+	AccountID string
+}
+
+type GetEDIRunsByIDsRow struct {
+	ID           string
+	CompletedAt  time.Time
+	HasSucceeded bool
+	AccountID    string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
+// Returns EDI runs matching the given IDs that belong to the caller's
+// account. Used by the api-gateway resourcekit resolver.
+func (q *Queries) GetEDIRunsByIDs(ctx context.Context, arg GetEDIRunsByIDsParams) ([]GetEDIRunsByIDsRow, error) {
+	query := getEDIRunsByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetEDIRunsByIDsRow
+	for rows.Next() {
+		var i GetEDIRunsByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CompletedAt,
+			&i.HasSucceeded,
+			&i.AccountID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const insertDCLocation = `-- name: InsertDCLocation :exec

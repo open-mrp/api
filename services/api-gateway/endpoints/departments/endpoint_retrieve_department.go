@@ -31,6 +31,7 @@ func (e *RetrieveDepartmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveDepartmentRequest) (*apiresource.Department, *apierror.APIError) {
 			return svc.(DepartmentSvc).GetDepartment
 		},
+		ObjectType: constants.ObjectTypeDepartment,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeDepartment,
 			Fields:     []string{"location", "scanning_stations", "machines"},

@@ -162,6 +162,59 @@ func (q *Queries) GetRolesByIDs(ctx context.Context, ids []string) ([]GetRolesBy
 	return items, nil
 }
 
+const getRolesFullByIDs = `-- name: GetRolesFullByIDs :many
+SELECT id, name, role_type_code, account_id, created_at, updated_at
+FROM role
+WHERE id IN (/*SLICE:ids*/?)
+AND (account_id = ? OR account_id IS NULL)
+`
+
+type GetRolesFullByIDsParams struct {
+	Ids       []string
+	AccountID sql.NullString
+}
+
+func (q *Queries) GetRolesFullByIDs(ctx context.Context, arg GetRolesFullByIDsParams) ([]Role, error) {
+	query := getRolesFullByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Role
+	for rows.Next() {
+		var i Role
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.RoleTypeCode,
+			&i.AccountID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const insertRole = `-- name: InsertRole :exec
 INSERT INTO role (id, name, role_type_code, account_id, created_at, updated_at)
 VALUES (?, ?, ?, ?, NOW(3), NOW(3))

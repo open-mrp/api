@@ -140,6 +140,89 @@ func (s *APIKeySvcTestSuite) TestRotateAPIKey_Success_NoDocAPIKey() {
 	s.Equal("apke_new123", result.APIKey.TypeID)
 }
 
+// TestRevokeAPIKey_CrossTenant_ReturnsNotFound asserts that a caller targeting
+// account A cannot revoke an API key owned by account B; the service must
+// return resource_not_found without leaking the key's existence or invoking
+// the revoke mediator.
+func (s *APIKeySvcTestSuite) TestRevokeAPIKey_CrossTenant_ReturnsNotFound() {
+	ctx := s.newAdminCtx()
+
+	idempotencyKey := &domain.IdempotencyKey{
+		TypeID:        "idk_revoke_cross",
+		RecoveryPoint: domain.RecoveryPointStarted,
+	}
+
+	s.idempotencyMed.EXPECT().
+		UpsertIdempotencyKey(gomock.Any(), gomock.Any()).
+		Return(idempotencyKey, nil)
+
+	// The key exists, but its owner is a different account than the caller's target.
+	s.apiKeyRepo.EXPECT().
+		FindByTypeID(gomock.Any(), testAPIKeyTypeID, gomock.Nil()).
+		Return(&apikey.APIKey{
+			TypeID:         testAPIKeyTypeID,
+			OwnerAccountID: "acct_otherTenant",
+		}, nil).
+		Times(1)
+
+	// APIKey.Revoke must not be invoked when the ownership check fails.
+	// No expectation set; the mock will fail the test if it is called.
+
+	s.idempotencyMed.EXPECT().
+		CacheErrorResponse(gomock.Any(), idempotencyKey.TypeID, gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ string, apiErr *apierror.APIError) *apierror.APIError {
+			return apiErr
+		})
+
+	apiErr := s.svc.RevokeAPIKey(ctx, domain.RevokeAPIKeyInput{
+		APIKeyID: testAPIKeyTypeID,
+	})
+
+	s.Require().NotNil(apiErr)
+	s.Equal(apierror.ErrorCodeResourceNotFound, apiErr.Code)
+}
+
+// TestRotateAPIKey_CrossTenant_ReturnsNotFound asserts that a caller targeting
+// account A cannot rotate an API key owned by account B; the service must
+// return resource_not_found without invoking the rotate mediator (which would
+// return a fresh secret for the victim key).
+func (s *APIKeySvcTestSuite) TestRotateAPIKey_CrossTenant_ReturnsNotFound() {
+	ctx := s.newAdminCtx()
+
+	idempotencyKey := &domain.IdempotencyKey{
+		TypeID:        "idk_rotate_cross",
+		RecoveryPoint: domain.RecoveryPointStarted,
+	}
+
+	s.idempotencyMed.EXPECT().
+		UpsertIdempotencyKey(gomock.Any(), gomock.Any()).
+		Return(idempotencyKey, nil)
+
+	s.apiKeyRepo.EXPECT().
+		FindByTypeID(gomock.Any(), testAPIKeyTypeID, gomock.Nil()).
+		Return(&apikey.APIKey{
+			TypeID:         testAPIKeyTypeID,
+			OwnerAccountID: "acct_otherTenant",
+		}, nil).
+		Times(1)
+
+	// APIKey.Rotate and DocAPIKey.SyncRotatedAPIKey must not be invoked.
+
+	s.idempotencyMed.EXPECT().
+		CacheErrorResponse(gomock.Any(), idempotencyKey.TypeID, gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ string, apiErr *apierror.APIError) *apierror.APIError {
+			return apiErr
+		})
+
+	result, apiErr := s.svc.RotateAPIKey(ctx, domain.RotateAPIKeyInput{
+		APIKeyID: testAPIKeyTypeID,
+	})
+
+	s.Nil(result)
+	s.Require().NotNil(apiErr)
+	s.Equal(apierror.ErrorCodeResourceNotFound, apiErr.Code)
+}
+
 func (s *APIKeySvcTestSuite) TestRotateAPIKey_SyncDocAPIKeyError() {
 	ctx := s.newAdminCtx()
 

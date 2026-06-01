@@ -6,7 +6,7 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
-	ownerutil "github.com/augno/api/services/api-gateway/internal/owner"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
@@ -45,10 +45,7 @@ func NewServiceLevelSvc(config *ServiceLevelSvcConfig) ServiceLevelSvc {
 	if err := config.validate(); err != nil {
 		panic(err)
 	}
-
-	return &serviceLevelSvcImpl{
-		coreClient: config.CoreClient,
-	}
+	return &serviceLevelSvcImpl{coreClient: config.CoreClient}
 }
 
 func (m *serviceLevelSvcImpl) ListServiceLevels(ctx context.Context, req *ListServiceLevelsRequest) (*apiresource.List[apiresource.ServiceLevel], *apierror.APIError) {
@@ -58,45 +55,32 @@ func (m *serviceLevelSvcImpl) ListServiceLevels(ctx context.Context, req *ListSe
 		Limit:     req.Limit,
 		Query:     req.Query,
 	}
-
 	resp, apiErr := grpcutil.CallRPC(ctx, serviceLevelSvcTracer, "service.service_levels.list", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListServiceLevelsResponse, error) {
 			return m.coreClient.ListServiceLevels(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
-	var ownerAccount *apiresource.Account
-	for _, sl := range resp.ServiceLevels {
-		if sl.AccountId != nil {
-			ownerAccount = ownerutil.ResolveOwnerAccount(ctx, m.coreClient, sl.AccountId)
-			break
+	ids := make([]string, len(resp.ServiceLevels))
+	for i, sl := range resp.ServiceLevels {
+		ids[i] = sl.Id
+	}
+	loaded, apiErr := resourceloaders.LoadServiceLevels(ctx, ids)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	items := make([]apiresource.ServiceLevel, 0, len(ids))
+	for _, id := range ids {
+		if v, ok := loaded[id]; ok {
+			items = append(items, *(v.(*apiresource.ServiceLevel)))
 		}
 	}
-
-	return ServiceLevelListPresenter(ctx, resp, ownerAccount), nil
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
 
 func (m *serviceLevelSvcImpl) GetServiceLevel(ctx context.Context, req *RetrieveServiceLevelRequest) (*apiresource.ServiceLevel, *apierror.APIError) {
-	pbReq := &pb.GetServiceLevelRequest{
-		CarrierId: req.CarrierID,
-		Id:        req.ServiceLevelID,
-	}
-
-	resp, apiErr := grpcutil.CallRPC(ctx, serviceLevelSvcTracer, "service.service_levels.get", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetServiceLevelResponse, error) {
-			return m.coreClient.GetServiceLevel(ctx, pbReq, opts...)
-		})
-
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.ServiceLevel.AccountId)
-	result := ServiceLevelPresenter(resp.ServiceLevel, ownerAccount)
-	return &result, nil
+	return loadServiceLevelByID(ctx, req.ServiceLevelID)
 }
 
 func (m *serviceLevelSvcImpl) CreateServiceLevel(ctx context.Context, req *CreateServiceLevelRequest) (*apiresource.ServiceLevel, *apierror.APIError) {
@@ -104,7 +88,6 @@ func (m *serviceLevelSvcImpl) CreateServiceLevel(ctx context.Context, req *Creat
 	if req.CustomerPortalVisibility != nil {
 		isPortalEnabled = *req.CustomerPortalVisibility == constants.CustomerPortalVisibilityVisible
 	}
-
 	pbReq := &pb.CreateServiceLevelRequest{
 		CarrierId:       req.CarrierID,
 		Name:            req.Name,
@@ -112,19 +95,14 @@ func (m *serviceLevelSvcImpl) CreateServiceLevel(ctx context.Context, req *Creat
 		IsPortalEnabled: isPortalEnabled,
 		IsDefault:       req.IsDefault,
 	}
-
 	resp, apiErr := grpcutil.CallRPC(ctx, serviceLevelSvcTracer, "service.service_levels.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateServiceLevelResponse, error) {
 			return m.coreClient.CreateServiceLevel(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
-	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.ServiceLevel.AccountId)
-	result := ServiceLevelPresenter(resp.ServiceLevel, ownerAccount)
-	return &result, nil
+	return loadServiceLevelByID(ctx, resp.ServiceLevel.Id)
 }
 
 func (m *serviceLevelSvcImpl) UpdateServiceLevel(ctx context.Context, req *UpdateServiceLevelRequest) (*apiresource.ServiceLevel, *apierror.APIError) {
@@ -133,7 +111,6 @@ func (m *serviceLevelSvcImpl) UpdateServiceLevel(ctx context.Context, req *Updat
 		v := *req.CustomerPortalVisibility == constants.CustomerPortalVisibilityVisible
 		isPortalEnabled = &v
 	}
-
 	pbReq := &pb.UpdateServiceLevelRequest{
 		CarrierId:       req.CarrierID,
 		Id:              req.ServiceLevelID,
@@ -142,35 +119,40 @@ func (m *serviceLevelSvcImpl) UpdateServiceLevel(ctx context.Context, req *Updat
 		IsPortalEnabled: isPortalEnabled,
 		IsDefault:       req.IsDefault,
 	}
-
 	resp, apiErr := grpcutil.CallRPC(ctx, serviceLevelSvcTracer, "service.service_levels.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateServiceLevelResponse, error) {
 			return m.coreClient.UpdateServiceLevel(ctx, pbReq, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
-	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.ServiceLevel.AccountId)
-	result := ServiceLevelPresenter(resp.ServiceLevel, ownerAccount)
-	return &result, nil
+	return loadServiceLevelByID(ctx, resp.ServiceLevel.Id)
 }
 
 func (m *serviceLevelSvcImpl) DeleteServiceLevel(ctx context.Context, req *DeleteServiceLevelRequest) (*apiresource.EmptyResource, *apierror.APIError) {
-	pbReq := &pb.DeleteServiceLevelRequest{
-		CarrierId: req.CarrierID,
-		Id:        req.ServiceLevelID,
-	}
-
 	_, apiErr := grpcutil.CallRPC(ctx, serviceLevelSvcTracer, "service.service_levels.delete", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-			return m.coreClient.DeleteServiceLevel(ctx, pbReq, opts...)
+			return m.coreClient.DeleteServiceLevel(ctx, &pb.DeleteServiceLevelRequest{
+				CarrierId: req.CarrierID,
+				Id:        req.ServiceLevelID,
+			}, opts...)
 		})
-
 	if apiErr != nil {
 		return nil, apiErr
 	}
-
 	return &apiresource.EmptyResource{}, nil
+}
+
+// loadServiceLevelByID wraps the single-ID load used after mutations + on
+// retrieve. Same pattern as carriers/payment-terms.
+func loadServiceLevelByID(ctx context.Context, id string) (*apiresource.ServiceLevel, *apierror.APIError) {
+	loaded, apiErr := resourceloaders.LoadServiceLevels(ctx, []string{id})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	v, ok := loaded[id]
+	if !ok {
+		return nil, apierror.NewResourceNotFoundError("Service level not found.")
+	}
+	return v.(*apiresource.ServiceLevel), nil
 }

@@ -46,6 +46,7 @@ func (e *CreateAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeAccountGroup,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateAccountGroupRequest) (*apiresource.AccountGroup, *apierror.APIError) {
 			return svc.(AccountGroupSvc).CreateAccountGroup
 		},

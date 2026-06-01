@@ -1,6 +1,15 @@
 # Load the restart_process extension
 load('ext://restart_process', 'docker_build_with_restart')
 
+# Go services run precompiled static binaries; only sync build artifacts on live update.
+# Shared source changes are picked up by local compile resources, which rewrite build/*.
+EDITOR_TEMP_IGNORE = [
+  '**/*.tmp.*',
+  '**/.!*!*',
+  '**/.#*',
+  '**/#*#',
+]
+
 ### K8s Config ###
 
 k8s_yaml('./infra/development/kubernetes/config/secrets.yaml')
@@ -45,11 +54,10 @@ docker_build_with_restart(
   dockerfile='./infra/development/docker/api-gateway.Dockerfile',
   only=[
     './build/api-gateway',
-    './shared',
   ],
+  ignore=EDITOR_TEMP_IGNORE,
   live_update=[
     sync('./build', '/app/build'),
-    sync('./shared', '/app/shared'),
   ],
 )
 
@@ -74,11 +82,10 @@ docker_build_with_restart(
   dockerfile='./infra/development/docker/auth-service.Dockerfile',
   only=[
     './build/auth-service',
-    './shared',
   ],
+  ignore=EDITOR_TEMP_IGNORE,
   live_update=[
     sync('./build', '/app/build'),
-    sync('./shared', '/app/shared'),
   ],
 )
 
@@ -107,11 +114,10 @@ docker_build_with_restart(
   dockerfile='./infra/development/docker/core-service.Dockerfile',
   only=[
     './build/core-service',
-    './shared',
   ],
+  ignore=EDITOR_TEMP_IGNORE,
   live_update=[
     sync('./build', '/app/build'),
-    sync('./shared', '/app/shared'),
   ],
 )
 
@@ -140,11 +146,10 @@ docker_build_with_restart(
   dockerfile='./infra/development/docker/notification-service.Dockerfile',
   only=[
     './build/notification-service',
-    './shared',
   ],
+  ignore=EDITOR_TEMP_IGNORE,
   live_update=[
     sync('./build', '/app/build'),
-    sync('./shared', '/app/shared'),
   ],
 )
 
@@ -173,11 +178,10 @@ docker_build_with_restart(
   dockerfile='./infra/development/docker/platform-service.Dockerfile',
   only=[
     './build/platform-service',
-    './shared',
   ],
+  ignore=EDITOR_TEMP_IGNORE,
   live_update=[
     sync('./build', '/app/build'),
-    sync('./shared', '/app/shared'),
   ],
 )
 
@@ -205,11 +209,10 @@ docker_build_with_restart(
   dockerfile='./infra/development/docker/billing-service.Dockerfile',
   only=[
     './build/billing-service',
-    './shared',
   ],
+  ignore=EDITOR_TEMP_IGNORE,
   live_update=[
     sync('./build', '/app/build'),
-    sync('./shared', '/app/shared'),
   ],
 )
 
@@ -238,11 +241,10 @@ docker_build_with_restart(
   dockerfile='./infra/development/docker/agent-service.Dockerfile',
   only=[
     './build/agent-service',
-    './shared',
   ],
+  ignore=EDITOR_TEMP_IGNORE,
   live_update=[
     sync('./build', '/app/build'),
-    sync('./shared', '/app/shared'),
   ],
 )
 

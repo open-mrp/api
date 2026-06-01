@@ -4,12 +4,14 @@ import (
 	"context"
 
 	itemep "github.com/augno/api/services/api-gateway/endpoints/items"
+	quantityep "github.com/augno/api/services/api-gateway/endpoints/quantities"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	pb "github.com/augno/api/shared/proto/core"
 )
 
+// TODO: this kind of work around where we send back various forms of quantities and do a unit from a quantity should be migrated to use a standard object no matter what. If the user does not request a sub-object, we should not send it. There should be exactly one quantity protobuf that is similar to our apiresource for quantity and this should be true for all objects. That way we only have to define them once and each has one way of being turned into a presenter and the presenters can be reused and drilled down e.g. the unit presenter would be used here with the quantity.
 func materialQuantityPresenter(q *pb.QuantityInfo) *apiresource.Quantity {
 	if q == nil {
 		return nil
@@ -27,10 +29,7 @@ func materialQuantityPresenter(q *pb.QuantityInfo) *apiresource.Quantity {
 		Object:       constants.ObjectTypeQuantity,
 		Value:        normalized,
 		DisplayValue: apiresource.FormatDisplayValue(normalized, q.UnitAbbreviation, q.UnitType),
-		Unit: &apiresource.Unit{
-			ID:     q.UnitId,
-			Object: constants.ObjectTypeUnit,
-		},
+		Unit:         quantityep.UnitFromQuantityInfo(q),
 	}
 }
 
@@ -52,17 +51,6 @@ func MaterialPresenter(m *pb.MaterialInfo) apiresource.Material {
 		CreatedAt:  grpcutil.TimestampToTime(m.CreatedAt),
 		UpdatedAt:  grpcutil.TimestampToTime(m.UpdatedAt),
 	}
-}
-
-func MaterialListPresenter(ctx context.Context, resp *pb.ListMaterialsResponse) *apiresource.List[apiresource.Material] {
-	if resp == nil {
-		return apiresource.NewList[apiresource.Material](nil, apiresource.PageInfo{})
-	}
-	materials := make([]apiresource.Material, len(resp.Materials))
-	for i, m := range resp.Materials {
-		materials[i] = MaterialPresenter(m)
-	}
-	return apiresource.NewList(materials, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }
 
 func SupplierMaterialPresenter(sm *pb.SupplierMaterialInfo) apiresource.SupplierMaterial {

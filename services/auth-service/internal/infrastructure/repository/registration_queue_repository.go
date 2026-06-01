@@ -20,11 +20,11 @@ func NewRegistrationQueueRepo(db *sqlc.Queries) domain.RegistrationQueueRepo {
 	return &registrationQueueRepoImpl{db: db}
 }
 
-func (r *registrationQueueRepoImpl) Create(ctx context.Context, email, name, planCode, registrationSessionID string) *apierror.APIError {
+func (r *registrationQueueRepoImpl) Create(ctx context.Context, email, name, planCode, registrationSessionID string) (bool, *apierror.APIError) {
 	ctx, span := registrationQueueRepoTracer.Start(ctx, "repository.registration_queue.create")
 	defer span.End()
 
-	err := r.db.CreateRegistrationQueueEntry(ctx, sqlc.CreateRegistrationQueueEntryParams{
+	rowsAffected, err := r.db.CreateRegistrationQueueEntry(ctx, sqlc.CreateRegistrationQueueEntryParams{
 		Email:                 email,
 		Name:                  name,
 		PlanCode:              planCode,
@@ -32,8 +32,8 @@ func (r *registrationQueueRepoImpl) Create(ctx context.Context, email, name, pla
 	})
 
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return tracing.Trace(span, apiErr)
+		return false, tracing.Trace(span, apiErr)
 	}
 
-	return nil
+	return rowsAffected > 0, nil
 }

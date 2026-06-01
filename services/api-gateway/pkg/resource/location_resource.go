@@ -12,7 +12,7 @@ import (
 // LocationType — location type resource
 // ---------------------------------------------------------------------------
 
-const SampleLocationTypeID = "lc_01gf7a8200er3ar3pkfrb6kk31"
+const SampleLocationTypeID = "lc_01e69cd3745a1bc0dd485986c0"
 const SampleLocationTypeCode = constants.LocationTypeCodeBuilding
 const SampleLocationTypeName = "Building"
 
@@ -49,8 +49,8 @@ func (*LocationType) SchemaExample() any {
 // Location — location resource
 // ---------------------------------------------------------------------------
 
-const SampleLocationID = "lc_01gf7a8200er3ar3pkfrb6kk30"
-const SampleLocationChildID = "lc_01gf7a8200er3ar3pkfrb6kk32"
+const SampleLocationID = "lc_014d187d99b31926f0c74af9d8"
+const SampleLocationChildID = "lc_0132c4db1e220da9bc596cc4c9"
 const SampleLocationName = "Warehouse A"
 
 // Location resource.

@@ -55,5 +55,6 @@ func (e *CreateLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateL
 			ObjectType: constants.ObjectTypeLocation,
 			Fields:     []string{"parent", "children"},
 		}),
+		ObjectType: constants.ObjectTypeLocation,
 	})
 }

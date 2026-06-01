@@ -8,8 +8,8 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SamplePermissionID = "perm_01jm4r6700f8nwq3v5hx2d9ktp"
-const SamplePermissionGroupID = "pg_01jm4r6700f8nwq3v5hx2d9ktq"
+const SamplePermissionID = "perm_012ef15fedb7ecb0b8fbc034c2"
+const SamplePermissionGroupID = "pg_01d4698b58ad018c0c72681e46"
 
 // Permission within a permission group.
 type Permission struct {

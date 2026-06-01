@@ -111,6 +111,28 @@ func (s *productTypeSvcImpl) GetProductType(ctx context.Context, identifier stri
 	return s.repos.NewProductTypeRepo().Get(ctx, identifier)
 }
 
+// BatchGetProductTypesByIDs returns product types matching the input IDs.
+// ProductType is a system-only lookup so no account scoping is required.
+func (s *productTypeSvcImpl) BatchGetProductTypesByIDs(ctx context.Context, ids []string) ([]*domain.ProductType, *apierror.APIError) {
+	ctx, span := productTypeSvcTracer.Start(ctx, "service.product_type.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainProductTypes, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	return s.repos.NewProductTypeRepo().GetByIDs(ctx, ids)
+}
+
 func (s *productTypeSvcImpl) CreateProductType(ctx context.Context, params domain.CreateProductTypeParams) (*domain.ProductType, *apierror.APIError) {
 	ctx, span := productTypeSvcTracer.Start(ctx, "service.product_type.create")
 	defer span.End()

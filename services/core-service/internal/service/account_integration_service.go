@@ -112,6 +112,32 @@ func (s *accountIntegrationSvcImpl) ListAccountIntegrations(ctx context.Context,
 	return s.repos.NewAccountIntegrationRepo().List(ctx, params)
 }
 
+// BatchGetAccountIntegrationsByIDs returns account integrations matching the
+// input IDs that the caller's account is authorized to read. Mirrors the
+// admin-only access check from List.
+func (s *accountIntegrationSvcImpl) BatchGetAccountIntegrationsByIDs(ctx context.Context, ids []string) ([]*domain.AccountIntegration, *apierror.APIError) {
+	ctx, span := accountIntegrationSvcTracer.Start(ctx, "service.account_integration.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckIsAdmin(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	return s.repos.NewAccountIntegrationRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
+}
+
 func (s *accountIntegrationSvcImpl) CreateAccountIntegration(ctx context.Context, params domain.CreateAccountIntegrationParams) (*domain.AccountIntegration, *apierror.APIError) {
 	ctx, span := accountIntegrationSvcTracer.Start(ctx, "service.account_integration.create")
 	defer span.End()
@@ -475,7 +501,7 @@ func (s *accountIntegrationSvcImpl) GetStripePublishableKey(ctx context.Context)
 
 	if identity.IsExternalTarget() {
 		meds := s.mediators()
-		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
 			return "", tracing.Trace(span, apiErr)
 		}
 	}
@@ -523,7 +549,7 @@ func (s *accountIntegrationSvcImpl) HasStripeIntegration(ctx context.Context) (b
 	// Customer actor read access check
 	if identity.IsExternalTarget() {
 		meds := s.mediators()
-		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
 			return false, tracing.Trace(span, apiErr)
 		}
 	}

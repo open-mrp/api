@@ -43,6 +43,7 @@ func (e *ContinueRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*ContinueRu
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeAgentRun,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ContinueRunRequest) (*apiresource.AgentRun, *apierror.APIError) {
 			return svc.(AgentRunSvc).ContinueAgentRun
 		},

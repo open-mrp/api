@@ -8,8 +8,8 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/export"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	httptransport "github.com/augno/api/services/api-gateway/internal/http"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -74,7 +74,6 @@ func (m *itemSvcImpl) ListItems(ctx context.Context, req *ListItemsRequest) (*ap
 		SupplierId:               req.SupplierID,
 		IsExactMatch:             false,
 		OnlyInitialSubassemblies: onlyInitialSubassemblies,
-		Includes:                 appctx.GetRequestedIncludeKeys(ctx),
 		ProductLineIds:           req.ProductLineIDs,
 		CustomerIds:              req.CustomerIDs,
 	}
@@ -95,26 +94,25 @@ func (m *itemSvcImpl) ListItems(ctx context.Context, req *ListItemsRequest) (*ap
 		return nil, apiErr
 	}
 
-	return ItemListPresenter(ctx, resp), nil
-}
-
-func (m *itemSvcImpl) GetItem(ctx context.Context, req *RetrieveItemRequest) (*apiresource.Item, *apierror.APIError) {
-	pbReq := &pb.GetItemRequest{
-		Id:       req.ItemID,
-		Includes: appctx.GetRequestedIncludeKeys(ctx),
+	ids := make([]string, len(resp.Items))
+	for i, item := range resp.Items {
+		ids[i] = item.Id
 	}
-
-	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.get", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetItemResponse, error) {
-			return m.coreClient.GetItem(ctx, pbReq, opts...)
-		})
-
+	loaded, apiErr := resourceloaders.LoadItems(ctx, ids)
 	if apiErr != nil {
 		return nil, apiErr
 	}
+	items := make([]apiresource.Item, 0, len(ids))
+	for _, id := range ids {
+		if v, ok := loaded[id]; ok {
+			items = append(items, *(v.(*apiresource.Item)))
+		}
+	}
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
+}
 
-	result := ItemPresenter(resp.Item)
-	return &result, nil
+func (m *itemSvcImpl) GetItem(ctx context.Context, req *RetrieveItemRequest) (*apiresource.Item, *apierror.APIError) {
+	return loadItemByID(ctx, req.ItemID)
 }
 
 func (m *itemSvcImpl) GetItemInventory(ctx context.Context, req *RetrieveItemInventoryRequest) (*apiresource.ItemInventory, *apierror.APIError) {
@@ -131,7 +129,7 @@ func (m *itemSvcImpl) GetItemInventory(ctx context.Context, req *RetrieveItemInv
 		return nil, apiErr
 	}
 
-	return ItemInventoryPresenter(resp), nil
+	return ItemInventoryPresenter(ctx, resp), nil
 }
 
 func (m *itemSvcImpl) GetItemCosts(ctx context.Context, req *GetItemCostsRequest) (*apiresource.ItemCosts, *apierror.APIError) {
@@ -197,7 +195,6 @@ func (m *itemSvcImpl) AddItemAttribute(ctx context.Context, req *AddItemAttribut
 	pbReq := &pb.AddItemAttributeRequest{
 		ItemId:      req.ItemID,
 		AttributeId: req.AttributeID,
-		Includes:    appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.add_attribute", domain.ServiceName,
@@ -209,15 +206,13 @@ func (m *itemSvcImpl) AddItemAttribute(ctx context.Context, req *AddItemAttribut
 		return nil, apiErr
 	}
 
-	result := ItemPresenter(resp.Item)
-	return &result, nil
+	return loadItemByID(ctx, resp.Item.Id)
 }
 
 func (m *itemSvcImpl) RemoveItemAttribute(ctx context.Context, req *RemoveItemAttributeRequest) (*apiresource.Item, *apierror.APIError) {
 	pbReq := &pb.RemoveItemAttributeRequest{
 		ItemId:      req.ItemID,
 		AttributeId: req.AttributeID,
-		Includes:    appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.remove_attribute", domain.ServiceName,
@@ -229,15 +224,13 @@ func (m *itemSvcImpl) RemoveItemAttribute(ctx context.Context, req *RemoveItemAt
 		return nil, apiErr
 	}
 
-	result := ItemPresenter(resp.Item)
-	return &result, nil
+	return loadItemByID(ctx, resp.Item.Id)
 }
 
 func (m *itemSvcImpl) ChangeItemCategory(ctx context.Context, req *ChangeItemCategoryRequest) (*apiresource.Item, *apierror.APIError) {
 	pbReq := &pb.ChangeItemCategoryRequest{
 		ItemId:     req.ItemID,
 		CategoryId: req.CategoryID,
-		Includes:   appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.change_category", domain.ServiceName,
@@ -249,8 +242,7 @@ func (m *itemSvcImpl) ChangeItemCategory(ctx context.Context, req *ChangeItemCat
 		return nil, apiErr
 	}
 
-	result := ItemPresenter(resp.Item)
-	return &result, nil
+	return loadItemByID(ctx, resp.Item.Id)
 }
 
 func (m *itemSvcImpl) UpdateItemInventory(ctx context.Context, req *UpdateItemInventoryRequest) (*apiresource.EmptyResource, *apierror.APIError) {
@@ -352,4 +344,16 @@ func (m *itemSvcImpl) BulkReconcileItems(ctx context.Context, req *BulkReconcile
 	}
 
 	return BulkReconcileItemsPresenter(resp), nil
+}
+
+func loadItemByID(ctx context.Context, id string) (*apiresource.Item, *apierror.APIError) {
+	loaded, apiErr := resourceloaders.LoadItems(ctx, []string{id})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	v, ok := loaded[id]
+	if !ok {
+		return nil, apierror.NewResourceNotFoundError("Item not found.")
+	}
+	return v.(*apiresource.Item), nil
 }

@@ -675,13 +675,22 @@ func (s *registrationSessionSvcImpl) CompleteRegistration(ctx context.Context, s
 func (s *registrationSessionSvcImpl) handleRegistrationLimitHit(ctx context.Context, session *domain.RegistrationSession) {
 	limits := constants.GetRegistrationLimits(constants.PlanCode(session.PlanCode))
 
-	// Best-effort: insert into registration_queue
-	if queueErr := s.repos.NewRegistrationQueueRepo().Create(ctx, session.Email, session.SessionData.AccountName, session.PlanCode, session.TypeID); queueErr != nil {
+	// Best-effort: insert into registration_queue. A unique constraint on
+	// registration_session_id makes this a no-op on retries; we use the
+	// "inserted" signal to suppress duplicate admin alerts for the same
+	// session so a caller cannot spam the queue/outbox by varying the
+	// idempotency key.
+	inserted, queueErr := s.repos.NewRegistrationQueueRepo().Create(ctx, session.Email, session.SessionData.AccountName, session.PlanCode, session.TypeID)
+	if queueErr != nil {
 		slog.ErrorContext(ctx, "failed to insert registration queue entry",
 			"error", queueErr.PublicMessage,
 			"email", session.Email,
 			"plan_code", session.PlanCode,
 		)
+		return
+	}
+	if !inserted {
+		return
 	}
 
 	// Best-effort: send admin alert email

@@ -49,6 +49,7 @@ func (e *CreateCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateCa
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeCarrier,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateCarrierRequest) (*apiresource.Carrier, *apierror.APIError) {
 			return svc.(CarrierSvc).CreateCarrier
 		},

@@ -8,8 +8,68 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
+
+const getSalesOrderStatusesByIDs = `-- name: GetSalesOrderStatusesByIDs :many
+SELECT
+    sales_order_status.id,
+    sales_order_status.code,
+    sales_order_status.name,
+    sales_order_status.created_at,
+    sales_order_status.updated_at
+FROM sales_order_status
+WHERE sales_order_status.id IN (/*SLICE:ids*/?)
+`
+
+type GetSalesOrderStatusesByIDsRow struct {
+	ID        string
+	Code      string
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// System-wide resource; no per-caller scoping.
+func (q *Queries) GetSalesOrderStatusesByIDs(ctx context.Context, ids []string) ([]GetSalesOrderStatusesByIDsRow, error) {
+	query := getSalesOrderStatusesByIDs
+	var queryParams []interface{}
+	if len(ids) > 0 {
+		for _, v := range ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetSalesOrderStatusesByIDsRow
+	for rows.Next() {
+		var i GetSalesOrderStatusesByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Code,
+			&i.Name,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
 
 const listSalesOrderStatusesBackward = `-- name: ListSalesOrderStatusesBackward :many
 SELECT

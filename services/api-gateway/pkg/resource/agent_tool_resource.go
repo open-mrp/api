@@ -16,7 +16,7 @@ type ToolGroup struct {
 	// Display name.
 	Name string `json:"name" validate:"required"`
 	// Description.
-	Description string `json:"description"`
+	Description *string `json:"description"`
 	// URL-friendly slug.
 	Slug string `json:"slug" validate:"required"`
 	// Icon identifier (e.g. a Material Icon name).
@@ -78,13 +78,13 @@ type AgentDefinitionTool struct {
 	RequireReview bool `json:"require_review"`
 }
 
-const SampleToolGroupID = "tgrp_01k0b1seed0product000000"
+const SampleToolGroupID = "tgrp_01556abdc283b09ccd1f97dcb5"
 
 var SampleToolGroup = &ToolGroup{
 	ID:          SampleToolGroupID,
 	Object:      constants.ObjectTypeToolGroup,
 	Name:        "Product Tools",
-	Description: "Tools for searching and managing products.",
+	Description: new("Tools for searching and managing products."),
 	Slug:        "product_tools",
 	Icon:        "inventory",
 	SortOrder:   1,

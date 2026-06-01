@@ -48,27 +48,7 @@ func ValidateResourceStruct(t *testing.T, name string, resource any) {
 		return
 	}
 
-	// Build a set of expandable field namespaces so we can skip validation
-	// errors from nested expandable sub-resource structs. The go-playground
-	// validator recurses into non-nil struct pointer fields, but expandable
-	// sub-resources are deliberately partial (ID + object only).
-	expandableNS := collectExpandableNamespaces(resource)
-
-	err := validate.Struct(resource)
-	if err != nil {
-		validationErrors, ok := err.(validator.ValidationErrors)
-		if !ok {
-			t.Errorf("%s: unexpected validation error: %v", name, err)
-			return
-		}
-		for _, fe := range validationErrors {
-			if isInsideExpandable(fe.Namespace(), expandableNS) {
-				continue
-			}
-			jsonName := resolveJSONName(resource, fe.StructField())
-			t.Errorf("%s: field %s (json:%q) failed %q validation", name, fe.StructField(), jsonName, fe.Tag())
-		}
-	}
+	validateStructRequiredFields(t, name, resource)
 
 	rv := reflect.ValueOf(resource)
 	if rv.Kind() == reflect.Pointer {
@@ -128,6 +108,32 @@ func ValidateResourceStruct(t *testing.T, name string, resource any) {
 			if fv.Kind() == reflect.Struct && (hasValidateTags(fv.Type()) || hasJSONTags(fv.Type())) {
 				ValidateResourceStruct(t, fmt.Sprintf("%s.%s", name, ft.Name), fv.Interface())
 			}
+		}
+	}
+}
+
+func validateStructRequiredFields(t *testing.T, name string, resource any) {
+	t.Helper()
+
+	// Build a set of expandable field namespaces so we can skip validation
+	// errors from nested expandable sub-resource structs. The go-playground
+	// validator recurses into non-nil struct pointer fields, but expandable
+	// sub-resources are deliberately partial (ID + object only).
+	expandableNS := collectExpandableNamespaces(resource)
+
+	err := validate.Struct(resource)
+	if err != nil {
+		validationErrors, ok := err.(validator.ValidationErrors)
+		if !ok {
+			t.Errorf("%s: unexpected validation error: %v", name, err)
+			return
+		}
+		for _, fe := range validationErrors {
+			if isInsideExpandable(fe.Namespace(), expandableNS) {
+				continue
+			}
+			jsonName := resolveJSONName(resource, fe.StructField())
+			t.Errorf("%s: field %s (json:%q) failed %q validation", name, fe.StructField(), jsonName, fe.Tag())
 		}
 	}
 }
@@ -234,6 +240,62 @@ func ValidateExpandableStubs(t *testing.T, name string, resource any) {
 					validateStubFields(t, fmt.Sprintf("%s.%s[%d]", name, ft.Name, j), elem)
 				}
 			}
+		}
+	}
+}
+
+// ValidatePopulatedExpandableFields recursively validates non-nil expandable
+// fields that are expected to be fully populated resources rather than stubs.
+// It reuses ValidateResourceStruct for the nested resource itself, then
+// descends into that nested resource's own expandable fields.
+func ValidatePopulatedExpandableFields(t *testing.T, name string, resource any) {
+	t.Helper()
+	if resource == nil {
+		return
+	}
+	rv := reflect.ValueOf(resource)
+	if rv.Kind() == reflect.Pointer {
+		if rv.IsNil() {
+			return
+		}
+		rv = rv.Elem()
+	}
+	if rv.Kind() != reflect.Struct {
+		return
+	}
+
+	rt := rv.Type()
+	for i := 0; i < rv.NumField(); i++ {
+		fv := rv.Field(i)
+		ft := rt.Field(i)
+		if ft.Tag.Get("expandable") != "true" || !ft.IsExported() {
+			continue
+		}
+		validatePopulatedExpandableValue(t, fmt.Sprintf("%s.%s", name, ft.Name), fv)
+	}
+}
+
+func validatePopulatedExpandableValue(t *testing.T, path string, v reflect.Value) {
+	t.Helper()
+
+	if !v.IsValid() {
+		return
+	}
+
+	switch v.Kind() {
+	case reflect.Pointer:
+		if v.IsNil() {
+			return
+		}
+		validatePopulatedExpandableValue(t, path, v.Elem())
+	case reflect.Struct:
+		if hasValidateTags(v.Type()) || hasJSONTags(v.Type()) {
+			validateStructRequiredFields(t, path, v.Interface())
+			ValidatePopulatedExpandableFields(t, path, v.Interface())
+		}
+	case reflect.Slice:
+		for i := 0; i < v.Len(); i++ {
+			validatePopulatedExpandableValue(t, fmt.Sprintf("%s[%d]", path, i), v.Index(i))
 		}
 	}
 }

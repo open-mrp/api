@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -107,6 +108,90 @@ func (q *Queries) GetMachine(ctx context.Context, arg GetMachineParams) (GetMach
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getMachinesByIDs = `-- name: GetMachinesByIDs :many
+SELECT
+    m.id,
+    m.name,
+    m.serial_number,
+    m.notes,
+    m.department_id,
+    d.name AS department_name,
+    d.created_at AS department_created_at,
+    d.updated_at AS department_updated_at,
+    m.production_step_id,
+    m.created_at,
+    m.updated_at
+FROM machine m
+JOIN department d ON d.id = m.department_id
+WHERE m.id IN (/*SLICE:ids*/?)
+AND d.account_id = ?
+`
+
+type GetMachinesByIDsParams struct {
+	Ids       []string
+	AccountID string
+}
+
+type GetMachinesByIDsRow struct {
+	ID                  string
+	Name                string
+	SerialNumber        string
+	Notes               sql.NullString
+	DepartmentID        string
+	DepartmentName      string
+	DepartmentCreatedAt time.Time
+	DepartmentUpdatedAt time.Time
+	ProductionStepID    sql.NullString
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+}
+
+func (q *Queries) GetMachinesByIDs(ctx context.Context, arg GetMachinesByIDsParams) ([]GetMachinesByIDsRow, error) {
+	query := getMachinesByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetMachinesByIDsRow
+	for rows.Next() {
+		var i GetMachinesByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.SerialNumber,
+			&i.Notes,
+			&i.DepartmentID,
+			&i.DepartmentName,
+			&i.DepartmentCreatedAt,
+			&i.DepartmentUpdatedAt,
+			&i.ProductionStepID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const insertMachine = `-- name: InsertMachine :exec

@@ -28,6 +28,7 @@ func (e *RetrieveProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeProductLine,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveProductLineRequest) (*apiresource.ProductLine, *apierror.APIError) {
 			return svc.(ProductLineSvc).GetProductLine
 		},

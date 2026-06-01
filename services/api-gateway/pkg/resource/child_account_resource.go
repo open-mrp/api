@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleChildAccountRelationID = "acre_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleChildAccountRelationID = "acre_011409c39cc78dc5655c8846bd"
 const SampleChildAccountExternalNumber = "CUST-001"
 
 // Child customer account in a parent-child relationship.

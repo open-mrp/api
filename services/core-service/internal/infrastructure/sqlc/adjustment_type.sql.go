@@ -8,8 +8,59 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
+
+const getAdjustmentTypesByIDs = `-- name: GetAdjustmentTypesByIDs :many
+SELECT
+    adjustment_type.id,
+    adjustment_type.name,
+    adjustment_type.code,
+    adjustment_type.created_at,
+    adjustment_type.updated_at
+FROM adjustment_type
+WHERE adjustment_type.id IN (/*SLICE:ids*/?)
+`
+
+func (q *Queries) GetAdjustmentTypesByIDs(ctx context.Context, ids []string) ([]AdjustmentType, error) {
+	query := getAdjustmentTypesByIDs
+	var queryParams []interface{}
+	if len(ids) > 0 {
+		for _, v := range ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AdjustmentType
+	for rows.Next() {
+		var i AdjustmentType
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Code,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
 
 const listAdjustmentTypesBackward = `-- name: ListAdjustmentTypesBackward :many
 SELECT

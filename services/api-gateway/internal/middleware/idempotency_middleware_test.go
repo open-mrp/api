@@ -1,6 +1,11 @@
 package middleware
 
 import (
+	"bytes"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/augno/api/shared/idempotency"
@@ -102,6 +107,50 @@ func TestIsTransientStatusCode(t *testing.T) {
 		if got != tt.expected {
 			t.Errorf("isTransientStatusCode(%d) = %v, want %v", tt.code, got, tt.expected)
 		}
+	}
+}
+
+func TestReadAndRestoreBody_RejectsOversizedBody(t *testing.T) {
+	t.Parallel()
+
+	body := bytes.Repeat([]byte("a"), maxIdempotencyRequestBodySize+1)
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/actions/login", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+
+	got, _, apiErr := readAndRestoreBody(w, req)
+
+	if apiErr == nil {
+		t.Fatalf("expected APIError for oversized body, got nil")
+	}
+	if got != nil {
+		t.Errorf("expected nil body bytes when over the limit, got %d bytes", len(got))
+	}
+	if !strings.Contains(apiErr.PublicMessage, "exceeds the maximum allowed size") {
+		t.Errorf("unexpected public message: %q", apiErr.PublicMessage)
+	}
+}
+
+func TestReadAndRestoreBody_AllowsBodyAtLimit(t *testing.T) {
+	t.Parallel()
+
+	body := bytes.Repeat([]byte("b"), maxIdempotencyRequestBodySize)
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/actions/login", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+
+	got, gotReq, apiErr := readAndRestoreBody(w, req)
+	if apiErr != nil {
+		t.Fatalf("unexpected APIError at the size limit: %v", apiErr)
+	}
+	if len(got) != maxIdempotencyRequestBodySize {
+		t.Errorf("expected %d bytes returned, got %d", maxIdempotencyRequestBodySize, len(got))
+	}
+
+	restored, err := io.ReadAll(gotReq.Body)
+	if err != nil {
+		t.Fatalf("failed to read restored body: %v", err)
+	}
+	if len(restored) != maxIdempotencyRequestBodySize {
+		t.Errorf("expected restored body of %d bytes, got %d", maxIdempotencyRequestBodySize, len(restored))
 	}
 }
 

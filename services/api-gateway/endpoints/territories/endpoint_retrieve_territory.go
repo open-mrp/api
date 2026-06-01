@@ -30,6 +30,7 @@ func (e *RetrieveTerritoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retr
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeTerritory,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveTerritoryRequest) (*apiresource.Territory, *apierror.APIError) {
 			return svc.(TerritorySvc).GetTerritory
 		},

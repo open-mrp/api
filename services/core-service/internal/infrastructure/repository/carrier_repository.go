@@ -223,6 +223,62 @@ func (r *carrierRepoImpl) Get(ctx context.Context, params domain.GetCarrierParam
 	return mapGetCarrierRow(row), nil
 }
 
+func (r *carrierRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.Carrier, *apierror.APIError) {
+	ctx, span := carrierRepoTracer.Start(ctx, "repository.carrier.get_by_ids")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := r.queries.GetCarriersByIDs(ctx, sqlc.GetCarriersByIDsParams{
+		Ids:       ids,
+		AccountID: gosql.NullString{String: accountID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make([]*domain.Carrier, len(rows))
+	for i, row := range rows {
+		out[i] = mapGetCarriersByIDsRow(row)
+	}
+	return out, nil
+}
+
+func mapGetCarriersByIDsRow(row sqlc.GetCarriersByIDsRow) *domain.Carrier {
+	var accountID *string
+	if row.AccountID.Valid {
+		accountID = &row.AccountID.String
+	}
+	var code *string
+	if row.Code.Valid {
+		code = &row.Code.String
+	}
+	var shippoID *string
+	if row.ShippoCarrierAccountID.Valid {
+		shippoID = &row.ShippoCarrierAccountID.String
+	}
+	var accountNumber *string
+	if row.AccountNumber.Valid {
+		accountNumber = &row.AccountNumber.String
+	}
+	var deletedAt *time.Time
+	if row.DeletedAt.Valid {
+		deletedAt = &row.DeletedAt.Time
+	}
+	return &domain.Carrier{
+		ID:                     row.ID,
+		Name:                   row.Name,
+		Code:                   code,
+		ShippoCarrierAccountID: shippoID,
+		AccountNumber:          accountNumber,
+		IsPortalEnabled:        row.IsPortalEnabled,
+		AccountID:              accountID,
+		DeletedAt:              deletedAt,
+		CreatedAt:              row.CreatedAt,
+		UpdatedAt:              row.UpdatedAt,
+	}
+}
+
 func (r *carrierRepoImpl) Create(ctx context.Context, id string, params domain.CreateCarrierParams) (*domain.Carrier, *apierror.APIError) {
 	ctx, span := carrierRepoTracer.Start(ctx, "repository.carrier.create")
 	defer span.End()
@@ -324,6 +380,71 @@ func (r *carrierRepoImpl) ExistsByName(ctx context.Context, accountID, name stri
 		return false, tracing.Trace(span, apiErr)
 	}
 	return count > 0, nil
+}
+
+func (r *carrierRepoImpl) ListOptionIDsForCarriers(ctx context.Context, accountID string, carrierIDs []string) (map[string][]string, *apierror.APIError) {
+	ctx, span := carrierRepoTracer.Start(ctx, "repository.carrier.list_option_ids_for_carriers")
+	defer span.End()
+
+	if len(carrierIDs) == 0 {
+		return nil, nil
+	}
+	rows, err := r.queries.ListCarrierOptionIDsForCarriers(ctx, sqlc.ListCarrierOptionIDsForCarriersParams{
+		CarrierIds: carrierIDs,
+		AccountID:  gosql.NullString{String: accountID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make(map[string][]string, len(carrierIDs))
+	for _, row := range rows {
+		out[row.CarrierID] = append(out[row.CarrierID], row.ID)
+	}
+	return out, nil
+}
+
+func (r *carrierRepoImpl) GetOptionsByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.ServiceLevel, *apierror.APIError) {
+	ctx, span := carrierRepoTracer.Start(ctx, "repository.carrier.get_options_by_ids")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := r.queries.GetCarrierOptionsByIDs(ctx, sqlc.GetCarrierOptionsByIDsParams{
+		Ids:       ids,
+		AccountID: gosql.NullString{String: accountID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make([]*domain.ServiceLevel, len(rows))
+	for i, row := range rows {
+		out[i] = mapServiceLevelByIDRow(row)
+	}
+	return out, nil
+}
+
+func mapServiceLevelByIDRow(row sqlc.GetCarrierOptionsByIDsRow) *domain.ServiceLevel {
+	var accountID *string
+	if row.AccountID.Valid {
+		accountID = &row.AccountID.String
+	}
+	var serviceLevelToken *string
+	if row.ServiceLevelToken.Valid {
+		serviceLevelToken = &row.ServiceLevelToken.String
+	}
+	return &domain.ServiceLevel{
+		ID:                row.ID,
+		Name:              row.Name,
+		Code:              row.Code,
+		ServiceLevelToken: serviceLevelToken,
+		IsPortalEnabled:   row.IsPortalEnabled,
+		IsDefault:         row.IsDefault,
+		CarrierID:         row.CarrierID,
+		AccountID:         accountID,
+		CreatedAt:         row.CreatedAt,
+		UpdatedAt:         row.UpdatedAt,
+	}
 }
 
 func (r *carrierRepoImpl) ListOptionsByCarrierID(ctx context.Context, accountID, carrierID string) ([]*domain.ServiceLevel, *apierror.APIError) {

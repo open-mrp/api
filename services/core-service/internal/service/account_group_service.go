@@ -113,6 +113,32 @@ func (s *accountGroupSvcImpl) GetAccountGroup(ctx context.Context, accountGroupI
 	return s.repos.NewAccountGroupRepo().Get(ctx, identity.Target.AccountID, accountGroupID)
 }
 
+// BatchGetAccountGroupsByIDs returns account groups matching the input IDs that
+// the caller's account is authorized to read. Account groups are always
+// account-scoped (no system rows).
+func (s *accountGroupSvcImpl) BatchGetAccountGroupsByIDs(ctx context.Context, ids []string) ([]*domain.AccountGroup, *apierror.APIError) {
+	ctx, span := accountGroupSvcTracer.Start(ctx, "service.account_group.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainCustomerGroups, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	return s.repos.NewAccountGroupRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
+}
+
 func (s *accountGroupSvcImpl) CreateAccountGroup(ctx context.Context, params domain.CreateAccountGroupParams) (*domain.AccountGroup, *apierror.APIError) {
 	ctx, span := accountGroupSvcTracer.Start(ctx, "service.account_group.create")
 	defer span.End()

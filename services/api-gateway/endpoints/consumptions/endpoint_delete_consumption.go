@@ -30,6 +30,7 @@ func (e *DeleteConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeConsumption,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteConsumptionRequest) (*apiresource.Consumption, *apierror.APIError) {
 			return svc.(ConsumptionSvc).DeleteConsumption
 		},

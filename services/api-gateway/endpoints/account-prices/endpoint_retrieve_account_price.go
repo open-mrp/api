@@ -28,6 +28,7 @@ func (e *RetrieveAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeAccountPrice,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAccountPriceRequest) (*apiresource.AccountPrice, *apierror.APIError) {
 			return svc.(AccountPriceSvc).GetAccountPrice
 		},

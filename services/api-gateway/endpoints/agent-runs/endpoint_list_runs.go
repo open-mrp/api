@@ -31,6 +31,7 @@ func (e *ListRunsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRunsReque
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeAgentRun,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListRunsRequest) (*apiresource.List[apiresource.AgentRun], *apierror.APIError) {
 			return svc.(AgentRunSvc).ListRuns
 		},

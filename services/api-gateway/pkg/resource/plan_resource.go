@@ -5,9 +5,9 @@ import (
 	"github.com/augno/api/shared/constants"
 )
 
-const SamplePlanTypeIDFree = "pl_01gf7a8200eaj8fke1xvw4h50x"
-const SamplePlanTypeIDStarter = "pl_01gf7a8200er3ar3pkfrb6kk29"
-const SamplePlanTypeIDPro = "pl_01gf7a8200e9pvbd6bgyq395ae"
+const SamplePlanTypeIDFree = "pl_01a37c6fc1b84e2050c2518509"
+const SamplePlanTypeIDStarter = "pl_01870ed11cf9334f89ad9a4c15"
+const SamplePlanTypeIDPro = "pl_01963a15f27a743b231dd9479b"
 
 // Resource limit for a pricing plan.
 type PlanLimit struct {

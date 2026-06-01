@@ -7,6 +7,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -67,7 +68,7 @@ func (m *registrationFlowSvcImpl) ListRegistrationFlows(ctx context.Context, req
 		return nil, apiErr
 	}
 
-	return RegistrationFlowListPresenter(ctx, resp), nil
+	return registrationFlowListFromProto(ctx, resp), nil
 }
 
 func (m *registrationFlowSvcImpl) GetRegistrationFlow(ctx context.Context, req *RetrieveRegistrationFlowRequest) (*apiresource.RegistrationFlow, *apierror.APIError) {
@@ -84,7 +85,7 @@ func (m *registrationFlowSvcImpl) GetRegistrationFlow(ctx context.Context, req *
 		return nil, apiErr
 	}
 
-	result := RegistrationFlowPresenter(resp.RegistrationFlow)
+	result := registrationFlowFromProto(resp.RegistrationFlow)
 	return &result, nil
 }
 
@@ -105,7 +106,7 @@ func (m *registrationFlowSvcImpl) CreateRegistrationFlow(ctx context.Context, re
 		return nil, apiErr
 	}
 
-	result := RegistrationFlowPresenter(resp.RegistrationFlow)
+	result := registrationFlowFromProto(resp.RegistrationFlow)
 	return &result, nil
 }
 
@@ -130,7 +131,7 @@ func (m *registrationFlowSvcImpl) UpdateRegistrationFlow(ctx context.Context, re
 		return nil, apiErr
 	}
 
-	result := RegistrationFlowPresenter(resp.RegistrationFlow)
+	result := registrationFlowFromProto(resp.RegistrationFlow)
 	return &result, nil
 }
 
@@ -165,7 +166,7 @@ func (m *registrationFlowSvcImpl) GetRegistrationFlowBySlug(ctx context.Context,
 		return nil, apiErr
 	}
 
-	result := RegistrationFlowPresenter(resp.RegistrationFlow)
+	result := registrationFlowFromProto(resp.RegistrationFlow)
 	return &result, nil
 }
 
@@ -210,4 +211,61 @@ func derefStr(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+func registrationFlowOptionFromProto(opt *pb.RegistrationFlowOptionInfo) apiresource.RegistrationFlowOption {
+	if opt == nil {
+		return apiresource.RegistrationFlowOption{}
+	}
+
+	return apiresource.RegistrationFlowOption{
+		ID:     opt.Id,
+		Object: constants.ObjectTypeRegistrationFlowOption,
+		Name:   opt.Name,
+	}
+}
+
+func registrationFlowFromProto(rf *pb.RegistrationFlowInfo) apiresource.RegistrationFlow {
+	if rf == nil {
+		return apiresource.RegistrationFlow{}
+	}
+
+	customerGroupOptions := make([]apiresource.RegistrationFlowOption, len(rf.CustomerGroupOptions))
+	for i, opt := range rf.CustomerGroupOptions {
+		customerGroupOptions[i] = registrationFlowOptionFromProto(opt)
+	}
+
+	paymentTermOptions := make([]apiresource.RegistrationFlowOption, len(rf.PaymentTermOptions))
+	for i, opt := range rf.PaymentTermOptions {
+		paymentTermOptions[i] = registrationFlowOptionFromProto(opt)
+	}
+
+	shippingTermOptions := make([]apiresource.RegistrationFlowOption, len(rf.ShippingTermOptions))
+	for i, opt := range rf.ShippingTermOptions {
+		shippingTermOptions[i] = registrationFlowOptionFromProto(opt)
+	}
+
+	return apiresource.RegistrationFlow{
+		ID:                   rf.Id,
+		Object:               constants.ObjectTypeRegistrationFlow,
+		Name:                 rf.Name,
+		CustomerGroupOptions: apiresource.NewList(customerGroupOptions, apiresource.PageInfo{}),
+		PaymentTermOptions:   apiresource.NewList(paymentTermOptions, apiresource.PageInfo{}),
+		ShippingTermOptions:  apiresource.NewList(shippingTermOptions, apiresource.PageInfo{}),
+		CreatedAt:            grpcutil.TimestampToTime(rf.CreatedAt),
+		UpdatedAt:            grpcutil.TimestampToTime(rf.UpdatedAt),
+	}
+}
+
+func registrationFlowListFromProto(ctx context.Context, resp *pb.ListRegistrationFlowsResponse) *apiresource.List[apiresource.RegistrationFlow] {
+	if resp == nil {
+		return apiresource.NewList[apiresource.RegistrationFlow](nil, apiresource.PageInfo{})
+	}
+
+	registrationFlows := make([]apiresource.RegistrationFlow, len(resp.RegistrationFlows))
+	for i, rf := range resp.RegistrationFlows {
+		registrationFlows[i] = registrationFlowFromProto(rf)
+	}
+
+	return apiresource.NewList(registrationFlows, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

@@ -245,6 +245,26 @@ func (h *gRPCHandler) DeleteMaterial(ctx context.Context, req *pb.DeleteMaterial
 	}, nil
 }
 
+func (h *gRPCHandler) BatchGetMaterialsByIDs(ctx context.Context, req *pb.BatchGetMaterialsByIDsRequest) (*pb.BatchGetMaterialsByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	materials, apiErr := h.materialSvc.BatchGetMaterialsByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	pbMaterials := make([]*pb.MaterialInfo, len(materials))
+	for i, m := range materials {
+		pbMaterials[i] = materialToProto(m)
+	}
+
+	return &pb.BatchGetMaterialsByIDsResponse{
+		Materials: pbMaterials,
+	}, nil
+}
+
 // Supplier material handlers
 
 func (h *gRPCHandler) ListSupplierMaterials(ctx context.Context, req *pb.ListSupplierMaterialsRequest) (*pb.ListSupplierMaterialsResponse, error) {

@@ -64,6 +64,22 @@ SELECT
 FROM product_line pl
 WHERE pl.id IN (sqlc.slice('ids'));
 
+-- name: GetProductLinesByIDsScoped :many
+SELECT
+    pl.id,
+    pl.name,
+    pl.description,
+    pl.notes,
+    pl.is_commission_exempt,
+    pl.is_freight_exempt,
+    pl.unit_group_id,
+    pl.account_id,
+    pl.created_at,
+    pl.updated_at
+FROM product_line pl
+WHERE pl.id IN (sqlc.slice('ids'))
+AND (pl.account_id = sqlc.arg('account_id') OR pl.account_id IS NULL);
+
 -- name: GetProductLine :one
 SELECT
     pl.id,

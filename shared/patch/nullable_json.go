@@ -7,7 +7,10 @@ import (
 )
 
 // ErrExplicitNull is returned when JSON null is sent for a Nullable field.
-var ErrExplicitNull = errors.New("patch: explicit null is not allowed")
+// The message is consumer-facing: UnmarshalJSON cannot know the field's JSON
+// key, so callers that have the request body should use ExplicitNullField to
+// build a parameter-specific message instead of surfacing this text directly.
+var ErrExplicitNull = errors.New("this field cannot be null")
 
 // IsZero reports whether the field is unset so encoding/json omitempty omits it.
 func (n Nullable[T]) IsZero() bool {

@@ -154,13 +154,13 @@ func TestScanningStations_ListPagination(t *testing.T) {
 	t.Parallel()
 	page1, _, err := apiClient.GetList(scanningStationsPath, url.Values{"limit": {"1"}})
 	require.NoError(t, err)
-	require.Len(t, page1.Data, 1)
+	requirePageLen(t, page1.Data, 1)
 	require.True(t, page1.PageInfo.HasNextPage, "should have a next page")
 	require.NotNil(t, page1.PageInfo.NextPageURL)
 
 	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
 	require.NoError(t, err)
-	require.Len(t, page2.Data, 1)
+	requirePageLen(t, page2.Data, 1)
 
 	id1 := DataItemField(page1.Data[0], "id")
 	id2 := DataItemField(page2.Data[0], "id")

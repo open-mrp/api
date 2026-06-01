@@ -22,6 +22,7 @@ func (e *ListSandboxesEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresou
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeSandbox,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeSandbox,
 			Fields:     []string{"owner_account"},

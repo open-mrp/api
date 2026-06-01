@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -80,6 +81,67 @@ func (q *Queries) GetPaymentTerm(ctx context.Context, arg GetPaymentTermParams) 
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getPaymentTermsByIDs = `-- name: GetPaymentTermsByIDs :many
+SELECT
+    payment_term.id,
+    payment_term.is_active,
+    payment_term.name,
+    payment_term.account_id,
+    payment_term.created_at,
+    payment_term.updated_at
+FROM payment_term
+WHERE payment_term.id IN (/*SLICE:ids*/?)
+AND (payment_term.account_id = ? OR payment_term.account_id IS NULL)
+`
+
+type GetPaymentTermsByIDsParams struct {
+	Ids       []string
+	AccountID sql.NullString
+}
+
+// Returns payment terms matching the given IDs that the caller's account is
+// authorized to read (their own account plus system payment terms).
+func (q *Queries) GetPaymentTermsByIDs(ctx context.Context, arg GetPaymentTermsByIDsParams) ([]PaymentTerm, error) {
+	query := getPaymentTermsByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PaymentTerm
+	for rows.Next() {
+		var i PaymentTerm
+		if err := rows.Scan(
+			&i.ID,
+			&i.IsActive,
+			&i.Name,
+			&i.AccountID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const insertPaymentTerm = `-- name: InsertPaymentTerm :exec

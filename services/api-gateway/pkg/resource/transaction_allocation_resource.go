@@ -8,8 +8,8 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleAllocationEntryID = "txal_01jm4r6700f8nwq3v5hx2d9ktp"
-const SampleOpenCreditEntryID = "txn_01jm4r6700f8nwq3v5hx2d9ktp" // #nosec G101 -- sample ID, not a credential
+const SampleAllocationEntryID = "txal_016cc92c2d9c0b12801e3160e0"
+const SampleOpenCreditEntryID = "txn_0102a8419c19035a1062bfd5b1" // #nosec G101 -- sample ID, not a credential
 
 // Transaction allocation entry in list views.
 type AllocationEntry struct {

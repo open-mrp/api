@@ -42,6 +42,7 @@ func (e *ListProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Li
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeProductionStep,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListProductionStepsRequest) (*apiresource.List[apiresource.ProductionStep], *apierror.APIError) {
 			return svc.(ProductionStepSvc).ListProductionSteps
 		},

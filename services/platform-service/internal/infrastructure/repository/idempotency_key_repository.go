@@ -35,7 +35,7 @@ func (r *idempotencyKeyRepoImpl) SetResponse(ctx context.Context, params domain.
 			ResponseCode:    sql.NullInt32{Int32: int32(params.StatusCode), Valid: true}, // #nosec G115 - HTTP status code
 			ResponseBody:    db.NullableRawMessage(params.Body),
 			ResponseHeaders: db.NullableRawMessage(params.Headers),
-			DATEADD:         *params.TTLSeconds,
+			Column4:         *params.TTLSeconds,
 			RecoveryPoint:   params.RecoveryPoint,
 		})
 	} else {

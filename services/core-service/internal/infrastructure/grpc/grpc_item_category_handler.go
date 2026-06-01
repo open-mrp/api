@@ -213,6 +213,26 @@ func (h *gRPCHandler) RemoveItemCategoryProperty(ctx context.Context, req *pb.Re
 	return &emptypb.Empty{}, nil
 }
 
+func (h *gRPCHandler) BatchGetItemCategoriesByIDs(ctx context.Context, req *pb.BatchGetItemCategoriesByIDsRequest) (*pb.BatchGetItemCategoriesByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	categories, apiErr := h.itemCategorySvc.BatchGetItemCategoriesByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	pbItems := make([]*pb.ItemCategoryInfo, len(categories))
+	for i, ic := range categories {
+		pbItems[i] = itemCategoryFullToProto(ic)
+	}
+
+	return &pb.BatchGetItemCategoriesByIDsResponse{
+		ItemCategories: pbItems,
+	}, nil
+}
+
 func (h *gRPCHandler) ChangeItemCategoryUnitGroup(ctx context.Context, req *pb.ChangeItemCategoryUnitGroupRequest) (*emptypb.Empty, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

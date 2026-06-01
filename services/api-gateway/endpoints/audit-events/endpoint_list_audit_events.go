@@ -42,6 +42,7 @@ func (e *ListAuditEventsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAu
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeAuditEvent,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAuditEvent,
 			Fields:     []string{"actor", "changes", "metadata", "request"},

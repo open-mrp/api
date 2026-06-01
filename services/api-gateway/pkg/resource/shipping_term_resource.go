@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleShippingTermID = "shtm_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleShippingTermID = "shtm_014341ab4bb5bf94d5b6936f86"
 const SampleShippingTermName = "Prepaid"
 
 // ShippingTerm resource.

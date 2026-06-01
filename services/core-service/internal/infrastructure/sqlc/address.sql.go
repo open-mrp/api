@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -196,6 +197,112 @@ func (q *Queries) GetAddress(ctx context.Context, arg GetAddressParams) (GetAddr
 		&i.Longitude,
 	)
 	return i, err
+}
+
+const getAddressesByIDs = `-- name: GetAddressesByIDs :many
+SELECT
+    a.id,
+    a.name,
+    a.phone,
+    a.email,
+    a.is_drop_ship,
+    a.created_at,
+    a.updated_at,
+    g.id AS geolocation_id,
+    g.street_line_1,
+    g.street_line_2,
+    g.locality,
+    g.state,
+    g.postal_code,
+    g.country,
+    g.google_place_id,
+    g.latitude,
+    g.longitude
+FROM address a
+JOIN geolocation g ON a.geolocation_id = g.id
+JOIN account_address aa ON aa.address_id = a.id
+WHERE a.id IN (/*SLICE:ids*/?)
+AND aa.account_id = ?
+`
+
+type GetAddressesByIDsParams struct {
+	Ids       []string
+	AccountID string
+}
+
+type GetAddressesByIDsRow struct {
+	ID            string
+	Name          string
+	Phone         sql.NullString
+	Email         sql.NullString
+	IsDropShip    bool
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	GeolocationID string
+	StreetLine1   sql.NullString
+	StreetLine2   sql.NullString
+	Locality      sql.NullString
+	State         sql.NullString
+	PostalCode    sql.NullString
+	Country       string
+	GooglePlaceID sql.NullString
+	Latitude      sql.NullFloat64
+	Longitude     sql.NullFloat64
+}
+
+// Returns addresses matching the given IDs that belong to the caller's
+// account, via the account_address junction. Addresses are always
+// account-scoped (no system rows).
+func (q *Queries) GetAddressesByIDs(ctx context.Context, arg GetAddressesByIDsParams) ([]GetAddressesByIDsRow, error) {
+	query := getAddressesByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAddressesByIDsRow
+	for rows.Next() {
+		var i GetAddressesByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Phone,
+			&i.Email,
+			&i.IsDropShip,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.GeolocationID,
+			&i.StreetLine1,
+			&i.StreetLine2,
+			&i.Locality,
+			&i.State,
+			&i.PostalCode,
+			&i.Country,
+			&i.GooglePlaceID,
+			&i.Latitude,
+			&i.Longitude,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getGeolocationIDByAddressID = `-- name: GetGeolocationIDByAddressID :one

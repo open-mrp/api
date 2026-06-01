@@ -60,6 +60,7 @@ func (e *UpdateAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAd
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeAddress,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAddressRequest) (*apiresource.Address, *apierror.APIError) {
 			return svc.(AddressSvc).UpdateAddress
 		},

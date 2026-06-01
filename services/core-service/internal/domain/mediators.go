@@ -33,10 +33,21 @@ type IdempotencyMed interface {
 }
 
 type ReadAccessMed interface {
-	// CheckReadAccess verifies that the actor account has read access to the
-	// target account. Same-account access is always allowed. Cross-account
-	// access requires an account_relation record.
+	// CheckReadAccess verifies that the actor account has owner-side read access
+	// to the target account. Same-account access is always allowed. Cross-account
+	// access requires an account_relation row in the actor→target direction
+	// (the actor is the owner of the relation). Use this for endpoints that
+	// expose the owner's view of a counterparty account (e.g. a merchant
+	// reading data scoped to one of their customers).
 	CheckReadAccess(ctx context.Context, actorAccountID, targetAccountID string) *apierror.APIError
+
+	// CheckCounterpartyReadAccess verifies access in either direction. It is
+	// intended for customer/supplier portal endpoints where the counterparty
+	// (e.g. a customer) reads data on the owner's account (e.g. a vendor),
+	// and the account_relation row is stored owner→counterparty.
+	// Only use this on endpoints that explicitly scope returned data to the
+	// counterparty — otherwise it leaks cross-tenant data.
+	CheckCounterpartyReadAccess(ctx context.Context, actorAccountID, targetAccountID string) *apierror.APIError
 }
 
 type EditAccessMed interface {

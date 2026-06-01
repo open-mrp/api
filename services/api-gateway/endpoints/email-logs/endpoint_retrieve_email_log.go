@@ -28,12 +28,13 @@ func (e *RetrieveEmailLogEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveEmailLogRequest) (*apiresource.EmailLog, *apierror.APIError) {
+			return svc.(EmailLogSvc).GetEmailLog
+		},
+		ObjectType: constants.ObjectTypeEmailLog,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeEmailLog,
 			Fields:     []string{"sent_by"},
 		}),
-		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveEmailLogRequest) (*apiresource.EmailLog, *apierror.APIError) {
-			return svc.(EmailLogSvc).GetEmailLog
-		},
 	})
 }

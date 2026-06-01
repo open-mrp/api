@@ -25,6 +25,7 @@ func (e *ChangeItemCategoryUnitGroupEndpoint) Materialize() *apiendpoint.APIEndp
 		Title:             "Change Item Category Unit Group",
 		Method:            http.MethodPut,
 		Route:             "/v1/catalog/item-categories/{id}/unit-groups/{unit_group_id}",
+		SDKMethodKey:      "change_unit_group",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,

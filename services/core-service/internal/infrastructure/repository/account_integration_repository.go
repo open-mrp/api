@@ -157,6 +157,35 @@ func (r *accountIntegrationRepoImpl) Get(ctx context.Context, accountID, id stri
 	}, nil
 }
 
+func (r *accountIntegrationRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.AccountIntegration, *apierror.APIError) {
+	ctx, span := accountIntegrationRepoTracer.Start(ctx, "repository.account_integration.get_by_ids")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := r.queries.GetAccountIntegrationsByIDs(ctx, sqlc.GetAccountIntegrationsByIDsParams{
+		Ids:       ids,
+		AccountID: accountID,
+	})
+	if err != nil {
+		return nil, tracing.Trace(span, db.MapSQLError(err))
+	}
+	out := make([]*domain.AccountIntegration, len(rows))
+	for i, row := range rows {
+		out[i] = &domain.AccountIntegration{
+			ID:              row.ID,
+			AccountID:       row.AccountID,
+			IntegrationCode: constants.IntegrationCode(row.IntegrationCode),
+			Name:            row.Name,
+			IsActive:        row.IsActive,
+			CreatedAt:       row.CreatedAt,
+			UpdatedAt:       row.UpdatedAt,
+		}
+	}
+	return out, nil
+}
+
 func (r *accountIntegrationRepoImpl) FindByCode(ctx context.Context, accountID string, code constants.IntegrationCode) (*domain.AccountIntegration, *apierror.APIError) {
 	ctx, span := accountIntegrationRepoTracer.Start(ctx, "repository.account_integration.find_by_code")
 	defer span.End()

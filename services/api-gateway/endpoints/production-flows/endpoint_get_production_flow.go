@@ -28,6 +28,7 @@ func (e *GetProductionFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetP
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeProductionFlow,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetProductionFlowRequest) (*apiresource.ProductionFlow, *apierror.APIError) {
 			return svc.(ProductionFlowSvc).GetProductionFlow
 		},

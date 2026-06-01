@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.8](https://github.com/Augno/api/compare/v0.18.7...v0.18.8) (2026-06-01)
+
+
+### Bug Fixes
+
+* burn rate based on inventory changes; improved sdk gen paths for objects based on domain root; improved openapi examples for next_page_url ([#290](https://github.com/Augno/api/issues/290)) ([b2c6ae3](https://github.com/Augno/api/commit/b2c6ae376d81ab221b68c0ada8d15e0abeff1048))
+
 ## [0.18.7](https://github.com/Augno/api/compare/v0.18.6...v0.18.7) (2026-06-01)
 
 

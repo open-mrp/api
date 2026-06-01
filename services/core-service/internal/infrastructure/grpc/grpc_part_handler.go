@@ -39,7 +39,6 @@ func (h *gRPCHandler) CreatePart(ctx context.Context, req *pb.CreatePartRequest)
 		CategoryID:   req.CategoryId,
 		UnitPrice:    protoToCreateRateInput(req.UnitPrice),
 		UnitCost:     protoToCreateRateInput(req.UnitCost),
-		BurnRate:     protoToCreateRateInput(req.BurnRate),
 		AttributeIDs: req.AttributeIds,
 		Includes:     req.Includes,
 	}

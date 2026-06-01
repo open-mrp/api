@@ -166,7 +166,6 @@ func (h *gRPCHandler) CreateProduct(ctx context.Context, req *pb.CreateProductRe
 	}
 	params.UnitPrice = protoToCreateRateInput(req.UnitPrice)
 	params.UnitCost = protoToCreateRateInput(req.UnitCost)
-	params.BurnRate = protoToCreateRateInput(req.BurnRate)
 	if len(req.AttributeIds) > 0 {
 		params.AttributeIDs = req.AttributeIds
 	}

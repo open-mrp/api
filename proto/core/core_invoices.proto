@@ -108,11 +108,11 @@ message CreateMaterialRequest {
   optional CreateRateInput unit_price = 7;
   // Initial unit cost. Same currency-vs-non-currency rule as unit_price.
   optional CreateRateInput unit_cost = 8;
-  // Initial burn rate (waste / scrap). No currency requirement.
-  optional CreateRateInput burn_rate = 9;
   // Attribute IDs to connect to the item at creation time.
   repeated string attribute_ids = 10;
   repeated string includes = 11;
+  reserved 9;
+  reserved "burn_rate";
 }
 message CreateMaterialResponse {
   MaterialInfo material = 1;
@@ -252,11 +252,11 @@ message CreatePartRequest {
   optional CreateRateInput unit_price = 5;
   // Initial unit cost. Same currency-vs-non-currency rule as unit_price.
   optional CreateRateInput unit_cost = 6;
-  // Initial burn rate (waste / scrap). No currency requirement.
-  optional CreateRateInput burn_rate = 7;
   // Attribute IDs to connect to the item at creation time.
   repeated string attribute_ids = 8;
   repeated string includes = 9;
+  reserved 7;
+  reserved "burn_rate";
 }
 message CreatePartResponse {
   PartInfo part = 1;
@@ -410,11 +410,11 @@ message CreateProductRequest {
   optional CreateRateInput unit_price = 8;
   // Initial unit cost. Same currency-vs-non-currency rule as unit_price.
   optional CreateRateInput unit_cost = 9;
-  // Initial burn rate (waste / scrap). No currency requirement.
-  optional CreateRateInput burn_rate = 10;
   // Attribute IDs to connect to the item at creation time.
   repeated string attribute_ids = 11;
   repeated string includes = 12;
+  reserved 10;
+  reserved "burn_rate";
 }
 message CreateProductResponse {
   ProductFullInfo product = 1;

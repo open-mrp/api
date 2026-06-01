@@ -163,6 +163,7 @@ type ItemRepo interface {
 	UpdateMaterialOrderPointUnit(ctx context.Context, accountID, itemID, newUnitID string) *apierror.APIError
 	UpdateConsumptionProductionQuantityUnits(ctx context.Context, accountID, itemID, newUnitID string) *apierror.APIError
 	GetCategoryBaseUnitID(ctx context.Context, categoryID string) (string, *apierror.APIError)
+	ListConsumptionChangeLogsForBurnRate(ctx context.Context, accountID, itemID string) ([]BurnRateConsumptionLog, *apierror.APIError)
 	FetchItemsBySKU(ctx context.Context, accountID string, skus []string) ([]ItemSKUInfo, *apierror.APIError)
 	// FindBySKU returns the existing item's ID and its unit_value rate ID for the
 	// given SKU within the account. Returns (nil, nil, nil) when no match exists.

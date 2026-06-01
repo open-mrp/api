@@ -654,7 +654,7 @@ func TestGenerateSchema_ListAndPageInfoUseDocComments(t *testing.T) {
 	components := &Components{Schemas: make(map[string]Schema)}
 
 	listType := reflect.TypeOf(apiresource.List[listDocCommentItem]{})
-	listSchema := generateSchema(listType, components, reader, "/v1/example")
+	listSchema := generateSchema(listType, components, reader)
 
 	if want := "List represents a paginated list of resources."; listSchema.Description != want {
 		t.Errorf("List schema description = %q; want %q", listSchema.Description, want)

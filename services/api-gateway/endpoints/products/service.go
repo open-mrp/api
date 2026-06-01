@@ -144,7 +144,6 @@ func (m *productSvcImpl) CreateProduct(ctx context.Context, req *CreateProductRe
 		IsPortalReady:   isPortalReady,
 		UnitPrice:       rateInputToProto(req.UnitPrice.Ptr()),
 		UnitCost:        rateInputToProto(req.UnitCost.Ptr()),
-		BurnRate:        rateInputToProto(req.BurnRate.Ptr()),
 		AttributeIds:    req.AttributeIDs,
 	}
 

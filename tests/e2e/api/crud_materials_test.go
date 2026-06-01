@@ -29,11 +29,6 @@ func materialFullCreateBody(sku string) map[string]any {
 		"numerator_unit_id":   currencyUnitID,
 		"denominator_unit_id": nonCurrencyUnitID,
 	}
-	body["burn_rate"] = map[string]any{
-		"value":               "0.15",
-		"numerator_unit_id":   nonCurrencyUnitID,
-		"denominator_unit_id": nonCurrencyUnitID,
-	}
 	return body
 }
 
@@ -639,8 +634,8 @@ func TestMaterials_IncludeItem(t *testing.T) {
 	assertNilField(t, item, "attributes")
 }
 
-// materialWithRatesID creates a material with unit_price, unit_cost, and burn_rate,
-// registers cleanup, and returns its ID. Used by include tests that need rate data.
+// materialWithRatesID creates a material with unit_price and unit_cost set, registers
+// cleanup, and returns its ID. Used by include tests that need rate data.
 func materialWithRatesID(t *testing.T) string {
 	t.Helper()
 	body := validMaterialBody(uniqueName("e2e-mat-inc"))
@@ -652,11 +647,6 @@ func materialWithRatesID(t *testing.T) string {
 	body["unit_cost"] = map[string]any{
 		"value":               "1.00",
 		"numerator_unit_id":   currencyUnitID,
-		"denominator_unit_id": nonCurrencyUnitID,
-	}
-	body["burn_rate"] = map[string]any{
-		"value":               "0.05",
-		"numerator_unit_id":   nonCurrencyUnitID,
 		"denominator_unit_id": nonCurrencyUnitID,
 	}
 	created := createAndCleanup(t, materialsPath, body)
@@ -940,11 +930,6 @@ func TestMaterials_List_IncludeItemBurnRate(t *testing.T) {
 	t.Parallel()
 	sku := uniqueName("e2e-mat-lbr")
 	body := validMaterialBody(sku)
-	body["burn_rate"] = map[string]any{
-		"value":               "0.20",
-		"numerator_unit_id":   nonCurrencyUnitID,
-		"denominator_unit_id": nonCurrencyUnitID,
-	}
 	created := createAndCleanup(t, materialsPath, body)
 	createdID := jsonField(created, "id")
 

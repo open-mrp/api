@@ -119,7 +119,6 @@ func (m *partSvcImpl) CreatePart(ctx context.Context, req *CreatePartRequest) (*
 		CategoryId:   req.CategoryID,
 		UnitPrice:    rateInputToProto(req.UnitPrice.Ptr()),
 		UnitCost:     rateInputToProto(req.UnitCost.Ptr()),
-		BurnRate:     rateInputToProto(req.BurnRate.Ptr()),
 		AttributeIds: req.AttributeIDs,
 	}
 

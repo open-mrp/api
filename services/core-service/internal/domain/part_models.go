@@ -24,7 +24,6 @@ type CreatePartParams struct {
 	CategoryID   string
 	UnitPrice    *CreateRateParams
 	UnitCost     *CreateRateParams
-	BurnRate     *CreateRateParams
 	AttributeIDs []string
 	Includes     []string
 }

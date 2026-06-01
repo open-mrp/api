@@ -66,7 +66,6 @@ type CreateMaterialParams struct {
 	LeadTime        *QuantityInput
 	UnitPrice       *CreateRateParams
 	UnitCost        *CreateRateParams
-	BurnRate        *CreateRateParams
 	AttributeIDs    []string
 	Includes        []string
 }

@@ -12,7 +12,7 @@ import (
 )
 
 const fetchPhysicalInventoryForItem = `-- name: FetchPhysicalInventoryForItem :one
-SELECT
+SELECT CAST(
     COALESCE(
         (SELECT SUM(CAST(q.value AS DECIMAL(65,30)))
          FROM inventory_receipt ir
@@ -27,7 +27,8 @@ SELECT
          WHERE ii.item_id = ?
          AND ii.account_id = ?
          AND ii.status_code = 'open'), 0
-    ) AS physical_inventory
+    )
+AS DECIMAL(65,30)) AS physical_inventory
 `
 
 type FetchPhysicalInventoryForItemParams struct {
@@ -35,7 +36,7 @@ type FetchPhysicalInventoryForItemParams struct {
 	OwnerAccountID string
 }
 
-func (q *Queries) FetchPhysicalInventoryForItem(ctx context.Context, arg FetchPhysicalInventoryForItemParams) (int32, error) {
+func (q *Queries) FetchPhysicalInventoryForItem(ctx context.Context, arg FetchPhysicalInventoryForItemParams) (string, error) {
 	row := q.db.QueryRowContext(ctx, fetchPhysicalInventoryForItem,
 		arg.ItemID,
 		arg.OwnerAccountID,
@@ -43,7 +44,7 @@ func (q *Queries) FetchPhysicalInventoryForItem(ctx context.Context, arg FetchPh
 		arg.ItemID,
 		arg.OwnerAccountID,
 	)
-	var physical_inventory int32
+	var physical_inventory string
 	err := row.Scan(&physical_inventory)
 	return physical_inventory, err
 }

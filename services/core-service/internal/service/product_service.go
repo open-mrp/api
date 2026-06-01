@@ -6,6 +6,7 @@ import (
 
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/core-service/internal/domain"
+	"github.com/augno/api/services/core-service/internal/mediator"
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/audit"
 	"github.com/augno/api/shared/constants"
@@ -231,6 +232,10 @@ func (s *productSvcImpl) GetProduct(ctx context.Context, params domain.GetProduc
 		return nil, tracing.Trace(span, apiErr)
 	}
 
+	if product != nil && product.Item != nil {
+		mediator.RefreshItemBurnRateAfterGet(ctx, s.repos, s.mediators(), identity.Target.AccountID, product.Item, params.Includes)
+	}
+
 	return product, nil
 }
 
@@ -395,13 +400,9 @@ func (s *productSvcImpl) CreateProduct(ctx context.Context, params domain.Create
 				return apiErr
 			}
 
-			burnValue, burnNum, burnDen := "0", baseUnitID, baseUnitID
-			if params.BurnRate != nil {
-				burnValue = params.BurnRate.Value
-				burnNum = params.BurnRate.NumeratorUnitID
-				burnDen = params.BurnRate.DenominatorUnitID
-			}
-			if apiErr := txProductRepo.InsertRate(txCtx, burnRateRateID, burnValue, burnNum, burnDen); apiErr != nil {
+			// Burn rate is always initialized to "0" per day; it is recomputed
+			// from inventory history by the burn-rate mediator.
+			if apiErr := txProductRepo.InsertRate(txCtx, burnRateRateID, "0", baseUnitID, "day"); apiErr != nil {
 				return apiErr
 			}
 

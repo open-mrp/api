@@ -375,3 +375,10 @@ type BulkCreateProductionStepResult struct {
 	ProductionStepID *string
 	Action           string // "created", "updated", or "skipped"
 }
+
+// BurnRateConsumptionLog is a single negative consumption entry used to compute burn rate.
+type BurnRateConsumptionLog struct {
+	Value     string
+	UnitID    string
+	CreatedAt time.Time
+}

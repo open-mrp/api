@@ -1169,6 +1169,29 @@ func (r *itemRepoImpl) ClearItemDirtyFlag(ctx context.Context, accountID, itemID
 	return nil
 }
 
+func (r *itemRepoImpl) ListConsumptionChangeLogsForBurnRate(ctx context.Context, accountID, itemID string) ([]domain.BurnRateConsumptionLog, *apierror.APIError) {
+	ctx, span := itemRepoTracer.Start(ctx, "repository.item.list_consumption_change_logs_for_burn_rate")
+	defer span.End()
+
+	rows, err := r.queries.ListConsumptionChangeLogsForBurnRate(ctx, sqlc.ListConsumptionChangeLogsForBurnRateParams{
+		ItemID:    itemID,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	logs := make([]domain.BurnRateConsumptionLog, len(rows))
+	for i, row := range rows {
+		logs[i] = domain.BurnRateConsumptionLog{
+			Value:     row.Value,
+			UnitID:    row.UnitID,
+			CreatedAt: row.CreatedAt,
+		}
+	}
+	return logs, nil
+}
+
 func (r *itemRepoImpl) FetchItemsBySKU(ctx context.Context, accountID string, skus []string) ([]domain.ItemSKUInfo, *apierror.APIError) {
 	ctx, span := itemRepoTracer.Start(ctx, "repository.item.fetch_items_by_sku")
 	defer span.End()

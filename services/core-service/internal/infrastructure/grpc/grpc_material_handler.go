@@ -177,7 +177,6 @@ func (h *gRPCHandler) CreateMaterial(ctx context.Context, req *pb.CreateMaterial
 		LeadTime:     protoToQuantityInput(req.LeadTime),
 		UnitPrice:    protoToCreateRateInput(req.UnitPrice),
 		UnitCost:     protoToCreateRateInput(req.UnitCost),
-		BurnRate:     protoToCreateRateInput(req.BurnRate),
 		AttributeIDs: req.AttributeIds,
 		Includes:     req.Includes,
 	}

@@ -236,3 +236,17 @@ AND (
     OR icl.created_at <= sqlc.narg('end_date')
 )
 ORDER BY icl.created_at DESC, icl.id DESC;
+
+-- name: ListConsumptionChangeLogsForBurnRate :many
+SELECT
+    q.value,
+    q.unit_id,
+    icl.created_at
+FROM inventory_change_log icl
+JOIN quantity q ON q.id = icl.quantity_id
+WHERE icl.item_id = sqlc.arg('item_id')
+AND icl.account_id = sqlc.arg('account_id')
+AND icl.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+AND icl.action_type_code IN ('scan', 'user_correction')
+AND CAST(q.value AS DECIMAL(65,30)) < 0
+ORDER BY icl.created_at ASC;

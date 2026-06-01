@@ -42,10 +42,7 @@ type StringCursor struct {
 }
 
 func encodeCursorPayload(v any) string {
-	b, _ := json.Marshal(v)
-	payload := base64.RawURLEncoding.EncodeToString(b)
-	sig := base64.RawURLEncoding.EncodeToString(crypto.HMACSHA256(cursorKey, []byte(payload)))
-	return payload + "." + sig
+	return signCursorPayload(cursorKey, v)
 }
 
 func decodeCursorPayload(s string) ([]byte, error) {

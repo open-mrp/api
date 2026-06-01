@@ -59,12 +59,6 @@ func TestMaterials_Create_WithValidRates(t *testing.T) {
 		"numerator_unit_id":   currencyUnitID,
 		"denominator_unit_id": nonCurrencyUnitID,
 	}
-	// burn_rate has no currency requirement — both sides can be non-currency.
-	body["burn_rate"] = map[string]any{
-		"value":               "0.10",
-		"numerator_unit_id":   nonCurrencyUnitID,
-		"denominator_unit_id": nonCurrencyUnitID,
-	}
 
 	resp, err := apiClient.PostFull(materialsPath, body, newIdempotencyKey())
 	require.NoError(t, err)

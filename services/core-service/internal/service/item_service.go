@@ -10,6 +10,7 @@ import (
 
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/core-service/internal/domain"
+	"github.com/augno/api/services/core-service/internal/mediator"
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/audit"
 	"github.com/augno/api/shared/constants"
@@ -1064,17 +1065,13 @@ func (s *itemSvcImpl) UpdateItemInventory(ctx context.Context, params domain.Upd
 				unitID = *params.UnitID
 			}
 
-			// Calculate delta and final quantity based on reconcile mode.
-			var delta, finalQty decimal.Decimal
+			// Calculate delta based on reconcile mode.
+			var delta decimal.Decimal
 			currentQty := decimal.NewFromFloat(currentPhysical)
 			if reconcile {
-				// Reconcile: set inventory to the exact value.
-				finalQty = quantityChange
 				delta = quantityChange.Sub(currentQty)
 			} else {
-				// Adjust: add the quantity change to current inventory.
 				delta = quantityChange
-				finalQty = currentQty.Add(quantityChange)
 			}
 
 			// Skip if no change and not reconciling.
@@ -1120,25 +1117,17 @@ func (s *itemSvcImpl) UpdateItemInventory(ctx context.Context, params domain.Upd
 				}
 			}
 
-			// Create inventory log (point-in-time snapshot).
-			if apiErr := invMutRepo.CreateInventoryLog(txCtx, domain.CreateInventoryLogParams{
-				AccountID: accountID,
-				ItemID:    params.ItemID,
-				Measure:   finalQty,
-				UnitID:    unitID,
-			}); apiErr != nil {
-				return apiErr
-			}
-
-			// Create inventory change log (audit trail).
-			if apiErr := invMutRepo.CreateInventoryChangeLog(txCtx, domain.CreateInventoryChangeLogParams{
-				AccountID:         accountID,
-				ItemID:            params.ItemID,
-				Measure:           delta,
-				UnitID:            unitID,
-				ActionType:        "user_correction",
-				ResponsibleUserID: responsibleUserID,
-			}); apiErr != nil {
+			if apiErr := mediator.RecordInventoryAuditTrail(
+				txCtx,
+				txSvc.repos,
+				accountID,
+				params.ItemID,
+				delta,
+				unitID,
+				"user_correction",
+				nil,
+				responsibleUserID,
+			); apiErr != nil {
 				return apiErr
 			}
 
@@ -1417,7 +1406,7 @@ func (s *itemSvcImpl) bulkCreateProduct(ctx context.Context, accountID, itemID, 
 		if apiErr := txProductRepo.InsertRate(txCtx, unitCostRateID, "0", baseUnitID, baseUnitID); apiErr != nil {
 			return apiErr
 		}
-		if apiErr := txProductRepo.InsertRate(txCtx, burnRateRateID, "0", baseUnitID, baseUnitID); apiErr != nil {
+		if apiErr := txProductRepo.InsertRate(txCtx, burnRateRateID, "0", baseUnitID, "day"); apiErr != nil {
 			return apiErr
 		}
 
@@ -1511,7 +1500,7 @@ func (s *itemSvcImpl) bulkCreateMaterial(ctx context.Context, accountID, itemID,
 		if apiErr := txMaterialRepo.InsertRate(txCtx, unitCostRateID, "0", baseUnitID, baseUnitID); apiErr != nil {
 			return apiErr
 		}
-		if apiErr := txMaterialRepo.InsertRate(txCtx, burnRateRateID, "0", baseUnitID, baseUnitID); apiErr != nil {
+		if apiErr := txMaterialRepo.InsertRate(txCtx, burnRateRateID, "0", baseUnitID, "day"); apiErr != nil {
 			return apiErr
 		}
 
@@ -1581,7 +1570,7 @@ func (s *itemSvcImpl) bulkCreatePart(ctx context.Context, accountID, itemID, uni
 		if apiErr := txPartRepo.InsertRate(txCtx, unitCostRateID, "0", baseUnitID, baseUnitID); apiErr != nil {
 			return apiErr
 		}
-		if apiErr := txPartRepo.InsertRate(txCtx, burnRateRateID, "0", baseUnitID, baseUnitID); apiErr != nil {
+		if apiErr := txPartRepo.InsertRate(txCtx, burnRateRateID, "0", baseUnitID, "day"); apiErr != nil {
 			return apiErr
 		}
 
@@ -1789,22 +1778,19 @@ func (s *itemSvcImpl) BulkReconcileItems(ctx context.Context, params domain.Bulk
 						}
 					}
 
-					// Create inventory log
-					logMeasure := decimal.NewFromFloat(newQty)
-					if apiErr := invMutRepo.CreateInventoryLog(txCtx, domain.CreateInventoryLogParams{
-						AccountID: accountID, ItemID: item.ItemID, Measure: logMeasure, UnitID: unitID,
-					}); apiErr != nil {
-						result.Errors = append(result.Errors, domain.ReconcileError{SKU: d.SKU, Error: "Failed to create log"})
-						continue
-					}
-
-					// Create change log
 					changeMeasure := decimal.NewFromFloat(delta)
-					if apiErr := invMutRepo.CreateInventoryChangeLog(txCtx, domain.CreateInventoryChangeLogParams{
-						AccountID: accountID, ItemID: item.ItemID, Measure: changeMeasure, UnitID: unitID,
-						ActionType: "user_correction", ResponsibleUserID: params.ResponsibleUserID,
-					}); apiErr != nil {
-						result.Errors = append(result.Errors, domain.ReconcileError{SKU: d.SKU, Error: "Failed to create change log"})
+					if apiErr := mediator.RecordInventoryAuditTrail(
+						txCtx,
+						txSvc.repos,
+						accountID,
+						item.ItemID,
+						changeMeasure,
+						unitID,
+						"user_correction",
+						nil,
+						params.ResponsibleUserID,
+					); apiErr != nil {
+						result.Errors = append(result.Errors, domain.ReconcileError{SKU: d.SKU, Error: "Failed to record inventory audit trail"})
 						continue
 					}
 

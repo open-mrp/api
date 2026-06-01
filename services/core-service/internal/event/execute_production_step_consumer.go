@@ -110,7 +110,6 @@ func (c *ExecuteProductionStepConsumer) handleMessage(ctx context.Context, msg a
 func (c *ExecuteProductionStepConsumer) executeProductionStep(ctx context.Context, accountID string, evt domain.ExecuteProductionStepEvent) error {
 	stepRepo := c.repos.NewProductionStepQueryRepo()
 	unitConvRepo := c.repos.NewUnitConversionRepo()
-	inventoryRepo := c.repos.NewInventoryMutationRepo()
 
 	// 1. Fetch the production step.
 	step, apiErr := stepRepo.Find(ctx, accountID, evt.ProductionStepID)
@@ -153,7 +152,7 @@ func (c *ExecuteProductionStepConsumer) executeProductionStep(ctx context.Contex
 		producedUnitID := step.Production.Quantity.Unit.ID
 
 		// Create inventory receipt for the produced item (positive = receipt).
-		apiErr = inventoryRepo.UpdateInventory(ctx, domain.InventoryUpdateParams{
+		apiErr = c.updateInventoryWithAudit(ctx, accountID, domain.InventoryUpdateParams{
 			AccountID:         accountID,
 			ItemID:            step.Production.ProducedItem.ID,
 			Measure:           producedMeasure,
@@ -194,7 +193,7 @@ func (c *ExecuteProductionStepConsumer) executeProductionStep(ctx context.Contex
 			}
 		} else {
 			// No produced batch — direct inventory update.
-			apiErr = inventoryRepo.UpdateInventory(ctx, domain.InventoryUpdateParams{
+			apiErr = c.updateInventoryWithAudit(ctx, accountID, domain.InventoryUpdateParams{
 				AccountID:         accountID,
 				ItemID:            consumption.ConsumedItem.ID,
 				Measure:           consumedMeasure,
@@ -294,8 +293,6 @@ func (c *ExecuteProductionStepConsumer) handleConsumptionWithOrder(
 	consumedMeasure decimal.Decimal,
 	consumedUnitID string,
 ) error {
-	inventoryRepo := c.repos.NewInventoryMutationRepo()
-
 	// BFS to find productionRunID.
 	productionRunID, err := c.bfsForProductionRunID(ctx, *evt.ProducedBatchID)
 	if err != nil {
@@ -304,7 +301,7 @@ func (c *ExecuteProductionStepConsumer) handleConsumptionWithOrder(
 
 	if productionRunID == "" {
 		// No production run found — direct inventory update.
-		apiErr := inventoryRepo.UpdateInventory(ctx, domain.InventoryUpdateParams{
+		apiErr := c.updateInventoryWithAudit(ctx, accountID, domain.InventoryUpdateParams{
 			AccountID:         accountID,
 			ItemID:            consumption.ConsumedItem.ID,
 			Measure:           consumedMeasure,
@@ -329,7 +326,7 @@ func (c *ExecuteProductionStepConsumer) handleConsumptionWithOrder(
 
 	if orderID == nil {
 		// No order — direct inventory update.
-		apiErr = inventoryRepo.UpdateInventory(ctx, domain.InventoryUpdateParams{
+		apiErr = c.updateInventoryWithAudit(ctx, accountID, domain.InventoryUpdateParams{
 			AccountID:         accountID,
 			ItemID:            consumption.ConsumedItem.ID,
 			Measure:           consumedMeasure,
@@ -362,7 +359,7 @@ func (c *ExecuteProductionStepConsumer) handleConsumptionWithOrder(
 	// If there's remaining quantity not covered by reservations, update inventory directly.
 	if result != nil && result.RemainingMeasure.GreaterThan(decimal.Zero) {
 		remaining := result.RemainingMeasure.Neg() // Negate for consumption.
-		apiErr = inventoryRepo.UpdateInventory(ctx, domain.InventoryUpdateParams{
+		apiErr = c.updateInventoryWithAudit(ctx, accountID, domain.InventoryUpdateParams{
 			AccountID:         accountID,
 			ItemID:            consumption.ConsumedItem.ID,
 			Measure:           remaining,

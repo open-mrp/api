@@ -1,6 +1,9 @@
 package apiresource
 
-import "github.com/augno/api/shared/contracts"
+import (
+	"github.com/augno/api/shared/contracts"
+	"github.com/augno/api/shared/pagination"
+)
 
 // PaginationRequest is the standard request type for paginated list endpoints.
 // Embed this in a custom request struct if the endpoint needs additional query parameters.
@@ -19,7 +22,7 @@ var _ contracts.DocumentedType = (*PaginationRequest)(nil)
 func (*PaginationRequest) SchemaExample() any {
 	q := "6061"
 	return map[string]any{
-		"cursor": SampleItemID,
+		"cursor": pagination.EncodeDocumentationStringCursor(SampleAnalyticsPeriodStart, SampleItemID),
 		"limit":  int64(100),
 		"q":      q,
 	}

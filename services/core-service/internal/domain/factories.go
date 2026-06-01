@@ -105,6 +105,7 @@ type Mediators struct {
 	ReadAccess     ReadAccessMed
 	EditAccess     EditAccessMed
 	ProductionFlow ProductionFlowMed
+	BurnRate       BurnRateMed
 }
 
 // MediatorFactory builds mediators bound to a given repository factory (e.g., per transaction).

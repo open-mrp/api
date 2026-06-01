@@ -295,6 +295,55 @@ func (q *Queries) ListAllInventoryChangeLogs(ctx context.Context, arg ListAllInv
 	return items, nil
 }
 
+const listConsumptionChangeLogsForBurnRate = `-- name: ListConsumptionChangeLogsForBurnRate :many
+SELECT
+    q.value,
+    q.unit_id,
+    icl.created_at
+FROM inventory_change_log icl
+JOIN quantity q ON q.id = icl.quantity_id
+WHERE icl.item_id = ?
+AND icl.account_id = ?
+AND icl.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+AND icl.action_type_code IN ('scan', 'user_correction')
+AND CAST(q.value AS DECIMAL(65,30)) < 0
+ORDER BY icl.created_at ASC
+`
+
+type ListConsumptionChangeLogsForBurnRateParams struct {
+	ItemID    string
+	AccountID string
+}
+
+type ListConsumptionChangeLogsForBurnRateRow struct {
+	Value     string
+	UnitID    string
+	CreatedAt time.Time
+}
+
+func (q *Queries) ListConsumptionChangeLogsForBurnRate(ctx context.Context, arg ListConsumptionChangeLogsForBurnRateParams) ([]ListConsumptionChangeLogsForBurnRateRow, error) {
+	rows, err := q.db.QueryContext(ctx, listConsumptionChangeLogsForBurnRate, arg.ItemID, arg.AccountID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListConsumptionChangeLogsForBurnRateRow
+	for rows.Next() {
+		var i ListConsumptionChangeLogsForBurnRateRow
+		if err := rows.Scan(&i.Value, &i.UnitID, &i.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listInventoryChangeLogsBackward = `-- name: ListInventoryChangeLogsBackward :many
 SELECT
     icl.id,

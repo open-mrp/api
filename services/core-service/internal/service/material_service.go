@@ -8,6 +8,7 @@ import (
 
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/core-service/internal/domain"
+	"github.com/augno/api/services/core-service/internal/mediator"
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/audit"
 	"github.com/augno/api/shared/constants"
@@ -172,11 +173,18 @@ func (s *materialSvcImpl) GetMaterial(ctx context.Context, params domain.GetMate
 		}
 	}
 
-	return s.repos.NewMaterialRepo().GetByID(ctx, domain.GetMaterialParams{
+	material, apiErr := s.repos.NewMaterialRepo().GetByID(ctx, domain.GetMaterialParams{
 		AccountID:  identity.Target.AccountID,
 		MaterialID: params.MaterialID,
 		Includes:   params.Includes,
 	})
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if material != nil && material.Item != nil {
+		mediator.RefreshItemBurnRateAfterGet(ctx, s.repos, s.mediators(), identity.Target.AccountID, material.Item, params.Includes)
+	}
+	return material, nil
 }
 
 // CreateMaterial creates a new material with its associated item, rates, and quantities, with idempotency support.
@@ -324,13 +332,9 @@ func (s *materialSvcImpl) CreateMaterial(ctx context.Context, params domain.Crea
 				return apiErr
 			}
 
-			burnValue, burnNum, burnDen := "0", baseUnitID, baseUnitID
-			if params.BurnRate != nil {
-				burnValue = params.BurnRate.Value
-				burnNum = params.BurnRate.NumeratorUnitID
-				burnDen = params.BurnRate.DenominatorUnitID
-			}
-			if apiErr := txMaterialRepo.InsertRate(txCtx, burnRateRateID, burnValue, burnNum, burnDen); apiErr != nil {
+			// Burn rate is always initialized to "0" per day; it is recomputed
+			// from inventory history by the burn-rate mediator.
+			if apiErr := txMaterialRepo.InsertRate(txCtx, burnRateRateID, "0", baseUnitID, "day"); apiErr != nil {
 				return apiErr
 			}
 

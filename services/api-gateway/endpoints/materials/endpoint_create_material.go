@@ -40,8 +40,6 @@ type CreateMaterialRequest struct {
 	UnitPrice patch.Nullable[apirequest.RateInput] `json:"unit_price,omitzero"`
 	// Initial unit cost. Same currency rule as unit_price.
 	UnitCost patch.Nullable[apirequest.RateInput] `json:"unit_cost,omitzero"`
-	// Initial burn rate (waste / scrap). No currency requirement.
-	BurnRate patch.Nullable[apirequest.RateInput] `json:"burn_rate,omitzero"`
 	// Attribute IDs to connect to the material at creation time.
 	AttributeIDs []string `json:"attribute_ids,omitempty"`
 }

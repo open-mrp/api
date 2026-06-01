@@ -273,14 +273,18 @@ func buildOpenAPISpec(groups []apiendpoint.APIEndpointGroup, publicOnly bool, ve
 			schemaName := getCleanTypeName(respType)
 			if schemaName != "" && schemaName != "EmptyResource" {
 				if _, ok := spec.Components.Schemas[schemaName]; !ok {
-					spec.Components.Schemas[schemaName] = generateSchema(respType, &spec.Components, docReader, route)
+					spec.Components.Schemas[schemaName] = generateSchema(respType, &spec.Components, docReader)
+				}
+				responseExample := spec.Components.Schemas[schemaName].Example
+				if strings.HasPrefix(schemaName, "List_") && route != "" {
+					responseExample = buildListSchemaExample(&spec.Components, docReader, respType, route, origReqType)
 				}
 				operation.Responses[successStatusCodeStr] = Response{
 					Description: "Successful response for " + title,
 					Content: map[string]MediaConfig{
 						"application/json": {
 							Schema:  Schema{Ref: "#/components/schemas/" + schemaName},
-							Example: spec.Components.Schemas[schemaName].Example,
+							Example: responseExample,
 						},
 					},
 				}
@@ -460,7 +464,7 @@ func getCleanTypeName(t reflect.Type) string {
 	return name
 }
 
-func generateSchema(t reflect.Type, components *Components, docReader *DocReader, route ...string) Schema {
+func generateSchema(t reflect.Type, components *Components, docReader *DocReader) Schema {
 	origT := t
 	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
@@ -504,68 +508,10 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 	var example any
 	typeName := getCleanTypeName(origT)
 
-	// Special handling for List types: populate list body examples even when the schema is
-	// first registered without a route (e.g. nested expandable List fields).
+	// List component schemas are used for nested expandable lists (no route). Paginated
+	// list endpoints attach route-aware examples on each operation response instead.
 	if strings.HasPrefix(typeName, "List_") {
-		// Extract the item type from List[T] by finding the "data" field
-		var itemExample any
-		if t.Kind() == reflect.Struct {
-			for i := 0; i < t.NumField(); i++ {
-				f := t.Field(i)
-				jsonTag := f.Tag.Get("json")
-				if jsonTag == "data" || strings.HasPrefix(jsonTag, "data,") {
-					// Found the data field, get its element type
-					elemType := f.Type
-					if elemType.Kind() == reflect.Slice {
-						elemType = elemType.Elem()
-						if elemType.Kind() == reflect.Pointer {
-							elemType = elemType.Elem()
-						}
-						// First try to get example from already-generated schema
-						itemTypeName := getCleanTypeName(elemType)
-						if itemTypeName != "" {
-							if existingSchema, ok := components.Schemas[itemTypeName]; ok && existingSchema.Example != nil {
-								itemExample = existingSchema.Example
-							}
-						}
-						// If not found, try to get it from DocumentedType
-						if itemExample == nil && reflect.PointerTo(elemType).Implements(reflect.TypeFor[contracts.DocumentedType]()) {
-							v := reflect.New(elemType).Interface().(contracts.DocumentedType)
-							func() {
-								defer func() { recover() }()
-								itemExample = v.SchemaExample()
-							}()
-						}
-					}
-					break
-				}
-			}
-		}
-		// Create a List example with the route as the URL
-		dataArray := []any{}
-		var nextCursor *string
-		if itemExample != nil {
-			// Convert to map if it's not already
-			if itemMap, ok := itemExample.(map[string]any); ok {
-				dataArray = []any{itemMap}
-				if id, ok := itemMap["id"].(string); ok {
-					nextCursor = &id
-				}
-			} else {
-				dataArray = []any{itemExample}
-			}
-		}
-
-		example = map[string]any{
-			"object": "list",
-			"page_info": map[string]any{
-				"next_page_url":     nextCursor,
-				"previous_page_url": nil,
-				"has_next_page":     true,
-				"has_prev_page":     false,
-			},
-			"data": dataArray,
-		}
+		example = buildListSchemaExample(components, docReader, t, "", nil)
 	} else if reflect.PointerTo(t).Implements(reflect.TypeFor[contracts.DocumentedType]()) {
 		v := reflect.New(t).Interface().(contracts.DocumentedType)
 		func() {

@@ -70,11 +70,6 @@ func TestParts_Create_WithValidRates(t *testing.T) {
 		"numerator_unit_id":   currencyUnitID,
 		"denominator_unit_id": nonCurrencyUnitID,
 	}
-	body["burn_rate"] = map[string]any{
-		"value":               "0.05",
-		"numerator_unit_id":   nonCurrencyUnitID,
-		"denominator_unit_id": nonCurrencyUnitID,
-	}
 
 	resp, err := apiClient.PostFull(partsPath, body, newIdempotencyKey())
 	require.NoError(t, err)

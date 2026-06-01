@@ -75,6 +75,12 @@ type ProductionFlowMed interface {
 	FindDownstreamStepByItem(ctx context.Context, productionStepID, itemID, accountID string) (*string, *apierror.APIError)
 }
 
+type BurnRateMed interface {
+	// RecalculateFromHistory updates the item's burn_rate from consumption change logs
+	// over the last 30 days. No-op when there is insufficient history.
+	RecalculateFromHistory(ctx context.Context, accountID, itemID string) *apierror.APIError
+}
+
 type SandboxMed interface {
 	// Create creates a new sandbox account for the owner and grants the
 	// specified user admin access.

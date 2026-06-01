@@ -272,8 +272,8 @@ func (s *ProductSvcTestSuite) TestCreateProduct_Success() {
 		Return(map[string]string{"un_usd": "currency", "un_each": "discrete"}, nil).
 		Times(2)
 
-	// Caller-supplied rate inputs flow through to InsertRate verbatim. burn_rate
-	// has no currency requirement so it can use any unit IDs.
+	// Caller-supplied unit_price/unit_cost flow through to InsertRate verbatim.
+	// Burn rate is always initialized to "0" per day and recomputed later.
 	s.productRepo.EXPECT().
 		InsertRate(gomock.Any(), gomock.Any(), "1.50", "un_usd", "un_each").
 		Return(nil).
@@ -283,7 +283,7 @@ func (s *ProductSvcTestSuite) TestCreateProduct_Success() {
 		Return(nil).
 		Times(1)
 	s.productRepo.EXPECT().
-		InsertRate(gomock.Any(), gomock.Any(), "0.10", "un_each", "un_each").
+		InsertRate(gomock.Any(), gomock.Any(), "0", "un_base", "day").
 		Return(nil).
 		Times(1)
 
@@ -350,7 +350,6 @@ func (s *ProductSvcTestSuite) TestCreateProduct_Success() {
 		IsPortalReady:   true,
 		UnitPrice:       &domain.CreateRateParams{Value: "1.50", NumeratorUnitID: "un_usd", DenominatorUnitID: "un_each"},
 		UnitCost:        &domain.CreateRateParams{Value: "0.75", NumeratorUnitID: "un_usd", DenominatorUnitID: "un_each"},
-		BurnRate:        &domain.CreateRateParams{Value: "0.10", NumeratorUnitID: "un_each", DenominatorUnitID: "un_each"},
 		AttributeIDs:    []string{"attr_red", "attr_large"},
 	})
 
@@ -366,8 +365,9 @@ func (s *ProductSvcTestSuite) TestCreateProduct_DefaultsRatesToZero() {
 	s.itemRepo.EXPECT().CheckSKUExists(gomock.Any(), "ac_test123", "SKU-X", "").Return(false, nil).Times(1)
 	s.itemRepo.EXPECT().GetCategoryBaseUnitID(gomock.Any(), "cat_123").Return("un_base", nil).Times(1)
 
-	// All three rates must be created with "0" when caller omits them.
-	s.productRepo.EXPECT().InsertRate(gomock.Any(), gomock.Any(), "0", "un_base", "un_base").Return(nil).Times(3)
+	// unit_value and unit_cost default to zero; burn_rate defaults to zero per day.
+	s.productRepo.EXPECT().InsertRate(gomock.Any(), gomock.Any(), "0", "un_base", "un_base").Return(nil).Times(2)
+	s.productRepo.EXPECT().InsertRate(gomock.Any(), gomock.Any(), "0", "un_base", "day").Return(nil).Times(1)
 
 	s.productRepo.EXPECT().InsertItem(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 	s.productRepo.EXPECT().
@@ -421,7 +421,8 @@ func (s *ProductSvcTestSuite) TestCreateProduct_SkipsBlankAttributeIDs() {
 	s.expectIdempotencyStarted()
 	s.itemRepo.EXPECT().CheckSKUExists(gomock.Any(), "ac_test123", "SKU-A", "").Return(false, nil).Times(1)
 	s.itemRepo.EXPECT().GetCategoryBaseUnitID(gomock.Any(), "cat_123").Return("un_base", nil).Times(1)
-	s.productRepo.EXPECT().InsertRate(gomock.Any(), gomock.Any(), gomock.Any(), "un_base", "un_base").Return(nil).Times(3)
+	s.productRepo.EXPECT().InsertRate(gomock.Any(), gomock.Any(), gomock.Any(), "un_base", "un_base").Return(nil).Times(2)
+	s.productRepo.EXPECT().InsertRate(gomock.Any(), gomock.Any(), gomock.Any(), "un_base", "day").Return(nil).Times(1)
 	s.productRepo.EXPECT().InsertItem(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 	s.productRepo.EXPECT().
 		Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).

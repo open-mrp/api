@@ -114,7 +114,6 @@ func (m *materialSvcImpl) CreateMaterial(ctx context.Context, req *CreateMateria
 		CategoryId:   req.CategoryID,
 		UnitPrice:    rateInputToProto(req.UnitPrice.Ptr()),
 		UnitCost:     rateInputToProto(req.UnitCost.Ptr()),
-		BurnRate:     rateInputToProto(req.BurnRate.Ptr()),
 		AttributeIds: req.AttributeIDs,
 	}
 	if q, ok := req.OrderPoint.Value(); ok {

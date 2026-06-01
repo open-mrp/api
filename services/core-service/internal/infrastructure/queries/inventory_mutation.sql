@@ -79,7 +79,7 @@ INSERT INTO inventory_change_log (
 );
 
 -- name: FetchPhysicalInventoryForItem :one
-SELECT
+SELECT CAST(
     COALESCE(
         (SELECT SUM(CAST(q.value AS DECIMAL(65,30)))
          FROM inventory_receipt ir
@@ -94,7 +94,8 @@ SELECT
          WHERE ii.item_id = sqlc.arg('item_id')
          AND ii.account_id = sqlc.arg('owner_account_id')
          AND ii.status_code = 'open'), 0
-    ) AS physical_inventory;
+    )
+AS DECIMAL(65,30)) AS physical_inventory;
 
 -- name: GetBatchSecondsAndWaste :one
 SELECT

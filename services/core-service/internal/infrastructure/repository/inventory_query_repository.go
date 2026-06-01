@@ -86,5 +86,10 @@ func (r *inventoryQueryRepoImpl) FetchPhysicalInventory(ctx context.Context, ite
 		return 0, tracing.Trace(span, apiErr)
 	}
 
-	return float64(physicalInv), nil
+	measure, parseErr := decimal.NewFromString(physicalInv)
+	if parseErr != nil {
+		return 0, tracing.Trace(span, apierror.NewInternalError(parseErr, "Invalid physical inventory value."))
+	}
+	f, _ := measure.Float64()
+	return f, nil
 }

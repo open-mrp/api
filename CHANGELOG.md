@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.5](https://github.com/Augno/api/compare/v0.18.4...v0.18.5) (2026-06-01)
+
+
+### Bug Fixes
+
+* sub-resource include performance ([#286](https://github.com/Augno/api/issues/286)) ([e6e3d70](https://github.com/Augno/api/commit/e6e3d7070e654303c6a8a16698b31df34c3152cf))
+
 ## [0.18.4](https://github.com/Augno/api/compare/v0.18.3...v0.18.4) (2026-05-21)
 
 

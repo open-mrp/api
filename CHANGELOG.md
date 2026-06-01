@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.9](https://github.com/Augno/api/compare/v0.18.8...v0.18.9) (2026-06-01)
+
+
+### Bug Fixes
+
+* specify npm registry in stainless.yml configuration ([5ebc7bb](https://github.com/Augno/api/commit/5ebc7bb07eb0c8e8f527e2fb926add9077f5848d))
+
 ## [0.18.8](https://github.com/Augno/api/compare/v0.18.7...v0.18.8) (2026-06-01)
 
 

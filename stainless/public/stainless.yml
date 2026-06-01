@@ -9,7 +9,8 @@ targets:
     staging_repo: augno/typescript-sdk
     production_repo: augno/typescript-sdk
     publish:
-      npm: true
+      npm:
+        registry: npmjs
 environments:
   production: https://api.augno.com
   local: http://localhost:8081

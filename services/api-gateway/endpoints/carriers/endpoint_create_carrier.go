@@ -19,7 +19,9 @@ type CreateCarrierRequest struct {
 	Code *constants.CarrierCode `json:"code"`
 	// Carrier account number. Required for UPS and USPS carriers.
 	AccountNumber *string `json:"account_number" validate:"omitempty,max=255"`
-	// Whether this carrier will be available for customers to select in the customer portal.
+	// Carrier visibility in the customer portal.
+	//
+	// If `visible`, this carrier will be available for your customers to utilize when they go to checkout. If `hidden`, this carrier will not be an option on checkout.
 	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility,omitempty" default:"visible"`
 }
 

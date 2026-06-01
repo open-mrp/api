@@ -17,7 +17,9 @@ type UpdateCarrierRequest struct {
 	CarrierID string `path:"id" validate:"required"`
 	// Display name.
 	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
-	// Whether this carrier will be available for customers to select in the customer portal.
+	// Carrier visibility in the customer portal.
+	//
+	// If `visible`, this carrier will be available for your customers to utilize when they go to checkout. If `hidden`, this carrier will not be an option on checkout.
 	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility,omitempty"`
 }
 

@@ -211,6 +211,62 @@ func TestGenerateStainlessConfigBuildsAPIKeyMethodsForPublicAndInternal(t *testi
 	}
 }
 
+func TestDedupeModelsClaimsFirstOccurrenceParentBeforeChild(t *testing.T) {
+	t.Parallel()
+
+	root := newStainlessNode()
+	auth := root.child("auth")
+	apiKeys := auth.child("api_keys")
+	apiKeys.addModels([]string{"Account", "PageInfo", "APIKey"})
+	apiKeys.child("actions").addModels([]string{"Account", "RotateAPIKeyRequest"})
+
+	sandboxes := root.child("core").child("sandboxes")
+	sandboxes.addModels([]string{"Account", "PageInfo", "Sandbox"})
+
+	dedupeModels(root)
+
+	// Parent claims shared aliases before the child and before later resources.
+	if _, ok := apiKeys.models["account"]; !ok {
+		t.Fatal("api_keys should retain account")
+	}
+	if _, ok := apiKeys.models["page_info"]; !ok {
+		t.Fatal("api_keys should retain page_info")
+	}
+	if _, ok := apiKeys.subresources["actions"].models["account"]; ok {
+		t.Fatal("actions should have dropped duplicate account")
+	}
+	if _, ok := apiKeys.subresources["actions"].models["rotate_api_key_request"]; !ok {
+		t.Fatal("actions should retain its unique rotate_api_key_request")
+	}
+	if _, ok := sandboxes.models["account"]; ok {
+		t.Fatal("sandboxes should have dropped duplicate account")
+	}
+	if _, ok := sandboxes.models["page_info"]; ok {
+		t.Fatal("sandboxes should have dropped duplicate page_info")
+	}
+	if _, ok := sandboxes.models["sandbox"]; !ok {
+		t.Fatal("sandboxes should retain its unique sandbox")
+	}
+
+	// Every alias must be declared exactly once across the whole tree.
+	counts := make(map[string]int)
+	var walk func(n *stainlessNode)
+	walk = func(n *stainlessNode) {
+		for alias := range n.models {
+			counts[alias]++
+		}
+		for _, name := range n.subresourceOrder {
+			walk(n.subresources[name])
+		}
+	}
+	walk(root)
+	for alias, count := range counts {
+		if count != 1 {
+			t.Fatalf("alias %q declared %d times; want exactly 1", alias, count)
+		}
+	}
+}
+
 func TestRewriteStainlessResourcesReplacesOnlyResourcesNode(t *testing.T) {
 	t.Parallel()
 

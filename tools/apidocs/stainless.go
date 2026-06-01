@@ -83,6 +83,34 @@ func (n *stainlessNode) addModels(refs []string) {
 	}
 }
 
+// dedupeModels enforces that each model alias is declared exactly once across
+// the whole resource tree. Endpoints collect their full transitive schema
+// closure, so shared schemas (Account, Owner, PageInfo, ...) would otherwise be
+// declared under every resource that references them. Stainless treats model
+// names as global, and duplicate declarations fail the build with
+// Model/DuplicateName. We claim each alias at the first node that references it
+// — walking parents before children in declaration order — and drop the
+// declaration from every later node.
+func dedupeModels(root *stainlessNode) {
+	claimed := make(map[string]bool)
+
+	var walk func(n *stainlessNode)
+	walk = func(n *stainlessNode) {
+		for alias := range n.models {
+			if claimed[alias] {
+				delete(n.models, alias)
+				continue
+			}
+			claimed[alias] = true
+		}
+		for _, name := range n.subresourceOrder {
+			walk(n.subresources[name])
+		}
+	}
+
+	walk(root)
+}
+
 func generateStainlessConfigs(groups []apiendpoint.APIEndpointGroup, version string) {
 	workspaces := []struct {
 		outputPath string
@@ -121,6 +149,8 @@ func generateStainlessConfig(groups []apiendpoint.APIEndpointGroup, outputPath s
 		}
 		node.addModels(meta.modelSchemaRefs)
 	}
+
+	dedupeModels(root)
 
 	if err := rewriteStainlessResources(outputPath, root); err != nil {
 		return err

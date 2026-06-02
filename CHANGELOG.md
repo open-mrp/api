@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.19.0](https://github.com/Augno/api/compare/v0.18.10...v0.19.0) (2026-06-02)
+
+
+### Features
+
+* enhance tenancy service with user authentication check and improve request log queries ([9435b06](https://github.com/Augno/api/commit/9435b061b297dc75cacc6ad618ab0921320f5186))
+
+
+### Bug Fixes
+
+* add new indexing keys to database migration scripts for improved query performance ([5d5fd51](https://github.com/Augno/api/commit/5d5fd515e142cf2fdea08a3c299eeb16d2ca3330))
+
+
+### Code Refactoring
+
+* remove unnecessary keys from database migration scripts for improved clarity and performance ([2747293](https://github.com/Augno/api/commit/274729363a8e2d8d9b1a691a22f5e20f7b0504d7))
+
 ## [0.18.10](https://github.com/Augno/api/compare/v0.18.9...v0.18.10) (2026-06-02)
 
 

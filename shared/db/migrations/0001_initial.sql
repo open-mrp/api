@@ -460,6 +460,7 @@ CREATE TABLE `account_plan` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_plan_type_id_key` (`type_id`),
   KEY `account_plan_plan_type_code_effective_at_idx` (`plan_type_code`,`effective_at`),
+  KEY `account_plan_is_publicly_visible_created_at_id_idx` (`is_publicly_visible`,`created_at` DESC,`id` DESC),
   FULLTEXT KEY `account_plan_name_idx` (`name`)
 ) ENGINE=InnoDB AUTO_INCREMENT=31 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -884,6 +885,9 @@ CREATE TABLE `api_key` (
   UNIQUE KEY `api_key_secret_hash_key` (`secret_hash`),
   KEY `api_key_owner_account_id_idx` (`owner_account_id`),
   KEY `api_key_role_id_idx` (`role_id`),
+  KEY `api_key_owner_account_id_revoked_at_created_at_id_idx` (`owner_account_id`,`revoked_at`,`created_at` DESC,`id` DESC),
+  KEY `api_key_owner_account_id_expires_at_created_at_id_idx` (`owner_account_id`,`expires_at`,`created_at` DESC,`id` DESC),
+  KEY `api_key_owner_account_id_created_at_id_idx` (`owner_account_id`,`created_at` DESC,`id` DESC),
   FULLTEXT KEY `api_key_name_idx` (`name`)
 ) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -2648,7 +2652,8 @@ CREATE TABLE `registration_session` (
   UNIQUE KEY `registration_session_account_id_key` (`account_id`),
   KEY `registration_session_user_id_idx` (`user_id`),
   KEY `registration_session_email_idx` (`email`),
-  KEY `registration_session_stripe_customer_id_idx` (`stripe_customer_id`)
+  KEY `registration_session_stripe_customer_id_idx` (`stripe_customer_id`),
+  KEY `registration_session_user_id_completed_at_created_at_id_idx` (`user_id`,`completed_at`,`created_at` DESC,`id` DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -3433,7 +3438,8 @@ CREATE TABLE `token_pack_purchase` (
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
   KEY `token_pack_purchase_account_id_idx` (`account_id`),
-  KEY `token_pack_purchase_status_idx` (`status`)
+  KEY `token_pack_purchase_status_idx` (`status`),
+  KEY `token_pack_purchase_account_id_status_idx` (`account_id`,`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -3684,7 +3690,7 @@ CREATE TABLE `user` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-06-02 12:30:06
+-- Dump completed on 2026-06-02 12:33:11
 
 -- +goose Down
 

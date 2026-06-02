@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.2](https://github.com/Augno/api/compare/v0.19.1...v0.19.2) (2026-06-02)
+
+
+### Bug Fixes
+
+* update Tiltfile paths for service builds and enhance request log queries for account-user resolution ([30e78bd](https://github.com/Augno/api/commit/30e78bde34db86dcbf6d305e6070185598228229))
+
 ## [0.19.1](https://github.com/Augno/api/compare/v0.19.0...v0.19.1) (2026-06-02)
 
 

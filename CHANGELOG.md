@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.10](https://github.com/Augno/api/compare/v0.18.9...v0.18.10) (2026-06-02)
+
+
+### Code Refactoring
+
+* update resource includes across multiple services to use resourcekit.FilterIncludes for improved performance and consistency ([#293](https://github.com/Augno/api/issues/293)) ([6c886e9](https://github.com/Augno/api/commit/6c886e9b5940559916ad338ff8af9cfb97f7773b))
+
 ## [0.18.9](https://github.com/Augno/api/compare/v0.18.8...v0.18.9) (2026-06-01)
 
 

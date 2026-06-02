@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.1](https://github.com/Augno/api/compare/v0.19.0...v0.19.1) (2026-06-02)
+
+
+### Bug Fixes
+
+* implement account-agnostic user authentication checks in tenancy service ([14a0904](https://github.com/Augno/api/commit/14a0904a017a6eb7ae16b4c38bd1d70cf04d5e12))
+
 ## [0.19.0](https://github.com/Augno/api/compare/v0.18.10...v0.19.0) (2026-06-02)
 
 

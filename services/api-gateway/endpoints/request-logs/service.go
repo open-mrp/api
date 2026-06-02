@@ -95,7 +95,7 @@ func (m *requestLogSvcImpl) ListRequestLogs(ctx context.Context, req *ListReques
 		IdempotencyKey:   req.IdempotencyKey,
 		Cursor:           req.Cursor,
 		Limit:            req.Limit,
-		Includes:         []string{"account", "actor"},
+		Includes:         resourcekit.FilterIncludes(ctx, "account", "actor", "actor.role"),
 	}
 
 	if req.StartDate != nil && !req.StartDate.IsZero() {
@@ -135,7 +135,7 @@ func (m *requestLogSvcImpl) GetRequestLog(ctx context.Context, req *RetrieveRequ
 
 	pbReq := &pb.GetRequestLogRequest{
 		Id:       req.ID,
-		Includes: []string{"account", "actor", "query_params", "request_body", "response_body"},
+		Includes: resourcekit.FilterIncludes(ctx, "account", "actor", "actor.role", "query_params", "request_body", "response_body"),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, requestLogSvcTracer, "service.request_logs.get", domain.ServiceName,

@@ -10,6 +10,7 @@ import (
 	"github.com/augno/api/shared/tracing"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/keepalive"
@@ -30,6 +31,15 @@ const (
 	defaultMaxCallRecvMsgSize = 100 * 1024 * 1024
 	// defaultMaxCallSendMsgSize is the maximum message size the client can send (100 MB)
 	defaultMaxCallSendMsgSize = 100 * 1024 * 1024
+	// defaultReconnectMaxDelay caps how long a subchannel waits between reconnect
+	// attempts. grpc-go's default is 120s, which means that after a server process
+	// restarts (e.g. a Tilt in-place hot reload via docker_build_with_restart), a
+	// client whose connection broke can sit in TRANSIENT_FAILURE backoff for up to
+	// two minutes before retrying — returning "connection refused" the whole time —
+	// even though the server is already healthy again. Capping the max delay makes
+	// clients reconnect within seconds. This matters most for the circular
+	// auth-service <-> core-service dependency.
+	defaultReconnectMaxDelay = 5 * time.Second
 )
 
 // GRPCClientConn is an active connection to a gRPC server.
@@ -119,6 +129,15 @@ func NewGRPCClientConn(target GRPCConnTarget, config *GRPCClientConfig) (*GRPCCl
 		tracing.DialOptionsWithTracing(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithKeepaliveParams(config.KeepaliveParams),
+		grpc.WithConnectParams(grpc.ConnectParams{
+			Backoff: backoff.Config{
+				BaseDelay:  backoff.DefaultConfig.BaseDelay,
+				Multiplier: backoff.DefaultConfig.Multiplier,
+				Jitter:     backoff.DefaultConfig.Jitter,
+				MaxDelay:   defaultReconnectMaxDelay,
+			},
+			MinConnectTimeout: defaultKeepaliveTimeout,
+		}),
 		grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(defaultMaxCallRecvMsgSize),
 			grpc.MaxCallSendMsgSize(defaultMaxCallSendMsgSize),

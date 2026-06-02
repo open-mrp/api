@@ -88,7 +88,7 @@ func (m *settlementSvcImpl) ListSettlements(ctx context.Context, req *ListSettle
 func (m *settlementSvcImpl) GetSettlement(ctx context.Context, req *RetrieveSettlementRequest) (*apiresource.Settlement, *apierror.APIError) {
 	pbReq := &pb.GetSettlementRequest{
 		Id:       req.SettlementID,
-		Includes: settlementIncludes,
+		Includes: resourcekit.FilterIncludes(ctx, settlementIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, settlementSvcTracer, "service.settlements.get", domain.ServiceName,

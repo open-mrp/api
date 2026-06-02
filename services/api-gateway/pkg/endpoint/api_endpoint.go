@@ -206,6 +206,10 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 			recordAndRespondAPIError(ctx, w, span, "include_validation", apiErr)
 			return
 		}
+		// Expose the requested includes to the service handler so it can forward
+		// only what the client asked for to the backend, rather than over-fetching
+		// a fixed set.
+		ctx = resourcekit.WithRequestedIncludes(ctx, includeTree.Flatten())
 	}
 
 	// Buffer JSON bodies once for decode, null validation, and optional request logging.

@@ -307,22 +307,37 @@ func TestParts_ListSearchNoResults(t *testing.T) {
 func TestParts_ListFilterByCategoryID(t *testing.T) {
 	t.Parallel()
 
+	// Create a part we own (in SeedItemCategoryID) and assert the filter returns it
+	// with item.category populated. We deliberately do NOT iterate over every part in
+	// the shared filtered list: other parallel tests create and then delete parts in
+	// this same category, so a part can be present in the list snapshot but have its
+	// item soft-deleted by the time the include loader runs, leaving item nil.
+	created := createAndCleanup(t, partsPath, validPartBody(uniqueName("e2e-part-catfilt")))
+	createdID := jsonField(created, "id")
+	require.NotEmpty(t, createdID)
+
 	list, status, err := apiClient.GetList(partsPath, url.Values{
 		"category_ids": {SeedItemCategoryID},
 		"include":      {"item.category"},
 	})
 	require.NoError(t, err)
 	require.Equal(t, 200, status)
-	require.NotEmpty(t, list.Data)
 
+	var found map[string]any
 	for _, raw := range list.Data {
 		part := parseJSON(raw)
-		item := jsonObject(part, "item")
-		require.NotNil(t, item)
-		cat := jsonObject(item, "category")
-		require.NotNil(t, cat)
-		assert.Equal(t, SeedItemCategoryID, jsonField(cat, "id"))
+		if jsonField(part, "id") == createdID {
+			found = part
+			break
+		}
 	}
+	require.NotNil(t, found, "category filter should include the part we created in SeedItemCategoryID")
+
+	item := jsonObject(found, "item")
+	require.NotNil(t, item, "item should be populated via include=item.category")
+	cat := jsonObject(item, "category")
+	require.NotNil(t, cat, "item.category should be populated via include=item.category")
+	assert.Equal(t, SeedItemCategoryID, jsonField(cat, "id"))
 }
 
 func TestParts_ListFilterByAttributeID(t *testing.T) {

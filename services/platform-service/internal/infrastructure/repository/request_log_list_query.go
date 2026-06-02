@@ -68,25 +68,19 @@ func buildListQuery(
 	args = append(args, includeQueryJSON, includeRequestBody, includeResponseBody)
 
 	switch mode {
-	case queryModeFull:
-		// Full mode joins everything upfront because actor_name filters over
-		// u.name / ak.name and role / account data may be requested.
-		inner.WriteString(
-			", u.email AS user_email, u.name AS user_name, " +
-				"ak.type_id AS api_key_type_id, ak.redacted_value AS api_key_redacted_value, ak.name AS api_key_name, " +
-				"au.role_id AS user_role_id, r_user.name AS user_role_name, r_user.role_type_code AS user_role_type_code, " +
-				"r_key.id AS api_key_role_id, r_key.name AS api_key_role_name, r_key.role_type_code AS api_key_role_type_code, " +
-				"a.name AS account_name, a.created_at AS account_created_at, a.updated_at AS account_updated_at, ik.idempotency_key",
-		)
+	case queryModeActor, queryModeFull:
+		// Both actor and full mode wrap the inner block in a derived table (see
+		// the wrapper below). The inner block selects only the rl.* base columns
+		// and joins account_user — the single table referenced by a WHERE
+		// predicate (the ActorIDs filter) and the actor_id COALESCE. Keeping the
+		// expensive user / api_key / role / account / idempotency_key joins out
+		// of the inner block lets the WHERE + ORDER BY + LIMIT run against
+		// request_log alone, so MySQL/Vitess uses the
+		// (target_account_id, occurred_at DESC, id DESC) index and LIMITs before
+		// any enrichment join happens.
 		inner.WriteString(
 			" FROM request_log rl" +
-				" LEFT JOIN `user` u ON rl.actor_id = u.id AND rl.identity_type = 'user'" +
-				" LEFT JOIN api_key ak ON rl.actor_id = ak.type_id AND rl.identity_type = 'api_key'" +
-				" LEFT JOIN account_user au ON au.user_id = rl.actor_id AND au.account_id = rl.target_account_id AND rl.identity_type = 'user'" +
-				" LEFT JOIN role r_user ON au.role_id = r_user.id" +
-				" LEFT JOIN role r_key ON ak.role_id = r_key.id" +
-				" LEFT JOIN account a ON rl.target_account_id = a.id" +
-				" LEFT JOIN idempotency_key ik ON rl.idempotency_key_id = ik.type_id",
+				" LEFT JOIN account_user au ON au.user_id = rl.actor_id AND au.account_id = rl.target_account_id AND rl.identity_type = 'user'",
 		)
 	case queryModeBase:
 		// Base mode still pulls idempotency_key via a LEFT JOIN; that join is
@@ -96,13 +90,6 @@ func buildListQuery(
 			" FROM request_log rl" +
 				" LEFT JOIN account_user au ON au.user_id = rl.actor_id AND au.account_id = rl.target_account_id AND rl.identity_type = 'user'" +
 				" LEFT JOIN idempotency_key ik ON rl.idempotency_key_id = ik.type_id",
-		)
-	case queryModeActor:
-		// Actor mode selects only the rl.* columns inside the derived table.
-		// The outer query joins user + api_key to the already-LIMIT'd set.
-		inner.WriteString(
-			" FROM request_log rl" +
-				" LEFT JOIN account_user au ON au.user_id = rl.actor_id AND au.account_id = rl.target_account_id AND rl.identity_type = 'user'",
 		)
 	}
 
@@ -222,25 +209,33 @@ func buildListQuery(
 	}
 	args = append(args, limit)
 
-	if mode != queryModeActor {
+	if mode == queryModeBase {
 		return inner.String(), args
 	}
 
-	// Actor mode: wrap the inner block as a derived table so MySQL/Vitess
-	// picks up the (target_account_id, occurred_at DESC, id DESC) index, runs
-	// the LIMIT, *then* nested-loop joins user + api_key on only the matching
-	// rows.
+	// Actor and full mode: wrap the inner block as a derived table so
+	// MySQL/Vitess picks up the (target_account_id, occurred_at DESC, id DESC)
+	// index, runs the LIMIT, *then* nested-loop joins the enrichment tables on
+	// only the (≤ limit) matching rows. Without this the optimizer filesorts the
+	// whole target_account_id partition before the LIMIT, which times out on a
+	// large request_log table.
+	//
+	// The derived table exposes actor_id as COALESCE(au.id, rl.actor_id): for a
+	// user actor that resolved an account_user row it is that row's id, so the
+	// outer account_user join keys on au.id; for an api_key actor it stays the
+	// raw actor_id, which the api_key join keys on via ak.type_id.
 	var outer strings.Builder
-	outer.WriteString(
-		"SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route, " +
-			"rl.query_json, rl.status_code, rl.latency_us, rl.api_version, rl.actor_id, " +
-			"rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent, " +
-			"rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at, " +
-			"rl.idempotency_key_id, rl.request_body_json, rl.response_body_json, rl.target_account_id, " +
-			"u.email AS user_email, u.name AS user_name, " +
-			"ak.type_id AS api_key_type_id, ak.redacted_value AS api_key_redacted_value, ak.name AS api_key_name" +
-			" FROM (",
-	)
+	outer.WriteString("SELECT " + derivedRequestLogRLColumns + ", ")
+	outer.WriteString("u.email AS user_email, u.name AS user_name, ")
+	outer.WriteString("ak.type_id AS api_key_type_id, ak.redacted_value AS api_key_redacted_value, ak.name AS api_key_name")
+	if mode == queryModeFull {
+		outer.WriteString(
+			", au.role_id AS user_role_id, r_user.name AS user_role_name, r_user.role_type_code AS user_role_type_code, " +
+				"r_key.id AS api_key_role_id, r_key.name AS api_key_role_name, r_key.role_type_code AS api_key_role_type_code, " +
+				"a.name AS account_name, a.created_at AS account_created_at, a.updated_at AS account_updated_at, ik.idempotency_key",
+		)
+	}
+	outer.WriteString(" FROM (")
 	outer.WriteString(inner.String())
 	outer.WriteString(
 		") rl" +
@@ -248,6 +243,14 @@ func buildListQuery(
 			" LEFT JOIN `user` u ON au.user_id = u.id AND rl.identity_type = 'user'" +
 			" LEFT JOIN api_key ak ON rl.actor_id = ak.type_id AND rl.identity_type = 'api_key'",
 	)
+	if mode == queryModeFull {
+		outer.WriteString(
+			" LEFT JOIN role r_user ON au.role_id = r_user.id" +
+				" LEFT JOIN role r_key ON ak.role_id = r_key.id" +
+				" LEFT JOIN account a ON rl.target_account_id = a.id" +
+				" LEFT JOIN idempotency_key ik ON rl.idempotency_key_id = ik.type_id",
+		)
+	}
 	if dir == pagination.DirectionBackward {
 		outer.WriteString(" ORDER BY rl.occurred_at ASC, rl.id ASC")
 	} else {
@@ -255,6 +258,16 @@ func buildListQuery(
 	}
 	return outer.String(), args
 }
+
+// derivedRequestLogRLColumns is the rl.* projection the actor/full outer query
+// selects from the derived table. It mirrors requestLogRLBaseColumns column-for
+// -column (the JSON columns are already COALESCE'd inside the derived table, so
+// here they are plain rl.<alias> references).
+const derivedRequestLogRLColumns = "rl.id, rl.method, rl.host, rl.path, rl.normalized_route, " +
+	"rl.query_json, rl.status_code, rl.latency_us, rl.api_version, rl.actor_id, " +
+	"rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent, " +
+	"rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at, " +
+	"rl.idempotency_key_id, rl.request_body_json, rl.response_body_json, rl.target_account_id"
 
 // placeholders returns "?, ?, ?, ..." with n placeholders.
 func placeholders(n int) string {

@@ -75,7 +75,7 @@ func (m *auditEventSvcImpl) ListAuditEvents(ctx context.Context, req *ListAuditE
 		Query:         req.Query,
 		Cursor:        req.Cursor,
 		Limit:         req.Limit,
-		Includes:      []string{"actor", "changes", "metadata"},
+		Includes:      resourcekit.FilterIncludes(ctx, "actor", "changes", "metadata"),
 	}
 
 	if req.StartDate != nil && !req.StartDate.IsZero() {
@@ -128,7 +128,7 @@ func (m *auditEventSvcImpl) GetAuditEvent(ctx context.Context, req *RetrieveAudi
 
 	pbReq := &pb.GetAuditEventRequest{
 		Id:       req.ID,
-		Includes: []string{"actor", "changes", "metadata"},
+		Includes: resourcekit.FilterIncludes(ctx, "actor", "changes", "metadata"),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, auditEventSvcTracer, "service.audit_events.get", domain.ServiceName,

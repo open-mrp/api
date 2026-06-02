@@ -120,7 +120,7 @@ func (m *agentSvcImpl) CreateAgent(ctx context.Context, req *CreateAgentRequest)
 		TriggerType:  string(req.TriggerType),
 		ConfigJson:   configJSON,
 		Tools:        tools,
-		Includes:     agentIncludes,
+		Includes:     resourcekit.FilterIncludes(ctx, agentIncludes...),
 		RoleId:       req.RoleID,
 	}
 
@@ -155,7 +155,7 @@ func (m *agentSvcImpl) ListAgents(ctx context.Context, req *ListAgentsRequest) (
 	}
 
 	pbReq := &pb.ListAgentDefinitionsRequest{
-		Includes:        agentIncludes,
+		Includes:        resourcekit.FilterIncludes(ctx, agentIncludes...),
 		Statuses:        statuses,
 		DefinitionTypes: definitionTypes,
 		TriggerTypes:    triggerTypes,
@@ -180,7 +180,7 @@ func (m *agentSvcImpl) ListAgents(ctx context.Context, req *ListAgentsRequest) (
 func (m *agentSvcImpl) GetAgent(ctx context.Context, req *RetrieveAgentRequest) (*apiresource.AgentDefinition, *apierror.APIError) {
 	pbReq := &pb.GetAgentDefinitionRequest{
 		AgentDefinitionId: req.AgentDefinitionID,
-		Includes:          agentIncludes,
+		Includes:          resourcekit.FilterIncludes(ctx, agentIncludes...),
 	}
 
 	resp, rpcErr := grpcutil.CallRPC(ctx, agentSvcTracer, "service.agents.get", domain.ServiceName,
@@ -206,7 +206,7 @@ func (m *agentSvcImpl) UpdateAgent(ctx context.Context, req *UpdateAgentRequest)
 		CategoryCode:      req.CategoryCode,
 		TriggerType:       req.TriggerType.StringPtr(),
 		RoleId:            req.RoleID,
-		Includes:          agentIncludes,
+		Includes:          resourcekit.FilterIncludes(ctx, agentIncludes...),
 	}
 
 	if req.Config != nil {

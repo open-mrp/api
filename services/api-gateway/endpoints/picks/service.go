@@ -105,7 +105,7 @@ func (m *pickSvcImpl) ListPicks(ctx context.Context, req *ListPicksRequest) (*ap
 }
 
 func (m *pickSvcImpl) GetPick(ctx context.Context, req *RetrievePickRequest) (*apiresource.PickDetail, *apierror.APIError) {
-	pbReq := &pb.GetPickRequest{Id: req.PickID, Includes: pickDetailIncludes}
+	pbReq := &pb.GetPickRequest{Id: req.PickID, Includes: resourcekit.FilterIncludes(ctx, pickDetailIncludes...)}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, pickEpSvcTracer, "service.picks.get", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetPickResponse, error) {
@@ -121,7 +121,7 @@ func (m *pickSvcImpl) GetPick(ctx context.Context, req *RetrievePickRequest) (*a
 }
 
 func (m *pickSvcImpl) UpdatePick(ctx context.Context, req *UpdatePickRequest) (*apiresource.PickDetail, *apierror.APIError) {
-	pbReq := &pb.UpdatePickRequest{Id: req.PickID, Includes: pickDetailIncludes}
+	pbReq := &pb.UpdatePickRequest{Id: req.PickID, Includes: resourcekit.FilterIncludes(ctx, pickDetailIncludes...)}
 	if req.Number != nil {
 		pbReq.Number = req.Number
 	}

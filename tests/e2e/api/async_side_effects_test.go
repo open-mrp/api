@@ -5,6 +5,7 @@ package api_test
 import (
 	"fmt"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -505,6 +506,47 @@ func TestAccountUsers_RequestLogs(t *testing.T) {
 	t.Cleanup(func() { apiClient.Delete(accountUsersPath + "/" + id) })
 
 	expectRequestLog(t, "POST", "201", accountUsersPath)
+}
+
+// TestAccountUsers_WelcomeEmailLog verifies that creating an account user with an
+// email address records a welcome email in the originating (actor) account's email
+// log. The welcome email is published to the outbox inside the create transaction,
+// then flows through RabbitMQ → notification-service → the email_log table, scoped
+// to the actor account. Before that scoping was wired up the log was written with an
+// empty account_id and never surfaced in any account's email-log list, so this test
+// is a regression guard: the seed data contains no "Welcome" subjects, so the only
+// way a match appears is the user-creation side effect landing on this account.
+func TestAccountUsers_WelcomeEmailLog(t *testing.T) {
+	t.Parallel()
+	name := uniqueName("e2e-acuser-welcome")
+	email := name + "@e2e-test.augno.com"
+
+	status, body, err := apiClient.Post(accountUsersPath, map[string]any{
+		"name":    name,
+		"email":   email,
+		"role_id": SeedAdminRoleID,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, body)
+	id := jsonField(parseJSON(body), "id")
+	t.Cleanup(func() { apiClient.Delete(accountUsersPath + "/" + id) })
+
+	// Poll the email-log list (scoped to the requesting account) until the welcome
+	// email surfaces. A match proves the log was scoped to the actor account.
+	eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
+		list, _, err := apiClient.GetList(emailLogsPath, url.Values{"q": {"Welcome"}})
+		if err != nil {
+			return err
+		}
+		for _, item := range list.Data {
+			if strings.Contains(DataItemField(item, "subject"), "Welcome") {
+				assert.Equal(t, "sent", DataItemField(item, "send_status"),
+					"welcome email log should be marked sent")
+				return nil
+			}
+		}
+		return fmt.Errorf("no welcome email log scoped to the actor account yet")
+	})
 }
 
 // ── Addresses ──────────────────────────────────

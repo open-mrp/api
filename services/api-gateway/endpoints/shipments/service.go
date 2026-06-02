@@ -102,7 +102,7 @@ func (m *shipmentSvcImpl) ListShipments(ctx context.Context, req *ListShipmentsR
 func (m *shipmentSvcImpl) GetShipment(ctx context.Context, req *RetrieveShipmentRequest) (*apiresource.ShipmentDetail, *apierror.APIError) {
 	pbReq := &pb.GetShipmentRequest{
 		Id:       req.ShipmentID,
-		Includes: shipmentIncludes,
+		Includes: resourcekit.FilterIncludes(ctx, shipmentIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, shipmentSvcTracer, "service.shipments.get", domain.ServiceName,
@@ -127,7 +127,7 @@ func (m *shipmentSvcImpl) UpdateShipment(ctx context.Context, req *UpdateShipmen
 		MasterTrackingNumber: req.MasterTrackingNumber,
 		CarrierId:            req.CarrierID,
 		ServiceLevelId:       req.ServiceLevelID,
-		Includes:             shipmentIncludes,
+		Includes:             resourcekit.FilterIncludes(ctx, shipmentIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, shipmentSvcTracer, "service.shipments.update", domain.ServiceName,
@@ -165,7 +165,7 @@ func (m *shipmentSvcImpl) ShipShipment(ctx context.Context, req *ShipShipmentReq
 	pbReq := &pb.ShipShipmentRequest{
 		Id:            req.ShipmentID,
 		EmailCustomer: req.EmailCustomer,
-		Includes:      shipmentIncludes,
+		Includes:      resourcekit.FilterIncludes(ctx, shipmentIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, shipmentSvcTracer, "service.shipments.ship", domain.ServiceName,

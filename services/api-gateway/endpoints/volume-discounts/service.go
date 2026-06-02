@@ -56,7 +56,7 @@ func (m *volumeDiscountSvcImpl) ListVolumeDiscounts(ctx context.Context, req *Li
 		Cursor:   req.Cursor,
 		Limit:    req.Limit,
 		Query:    req.Query,
-		Includes: volumeDiscountIncludes,
+		Includes: resourcekit.FilterIncludes(ctx, volumeDiscountIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, volumeDiscountSvcTracer, "service.volume_discounts.list", domain.ServiceName,
@@ -74,7 +74,7 @@ func (m *volumeDiscountSvcImpl) ListVolumeDiscounts(ctx context.Context, req *Li
 func (m *volumeDiscountSvcImpl) GetVolumeDiscount(ctx context.Context, req *RetrieveVolumeDiscountRequest) (*apiresource.VolumeDiscount, *apierror.APIError) {
 	pbReq := &pb.GetVolumeDiscountRequest{
 		Id:       req.VolumeDiscountID,
-		Includes: volumeDiscountIncludes,
+		Includes: resourcekit.FilterIncludes(ctx, volumeDiscountIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, volumeDiscountSvcTracer, "service.volume_discounts.get", domain.ServiceName,
@@ -111,7 +111,7 @@ func (m *volumeDiscountSvcImpl) CreateVolumeDiscount(ctx context.Context, req *C
 		CategoryIds:      req.CategoryIDs,
 		AttributeIds:     req.AttributeIDs,
 		UnitIds:          req.UnitIDs,
-		Includes:         volumeDiscountIncludes,
+		Includes:         resourcekit.FilterIncludes(ctx, volumeDiscountIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, volumeDiscountSvcTracer, "service.volume_discounts.create", domain.ServiceName,
@@ -156,7 +156,7 @@ func (m *volumeDiscountSvcImpl) UpdateVolumeDiscount(ctx context.Context, req *U
 		HasCategories:     req.HasCategories,
 		HasAttributes:     req.HasAttributes,
 		HasUnits:          req.HasUnits,
-		Includes:          volumeDiscountIncludes,
+		Includes:          resourcekit.FilterIncludes(ctx, volumeDiscountIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, volumeDiscountSvcTracer, "service.volume_discounts.update", domain.ServiceName,

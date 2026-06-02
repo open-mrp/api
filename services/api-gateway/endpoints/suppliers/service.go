@@ -83,7 +83,7 @@ func (s *supplierSvcImpl) ListSuppliers(ctx context.Context, req *ListSuppliersR
 func (s *supplierSvcImpl) GetSupplier(ctx context.Context, req *RetrieveSupplierRequest) (*apiresource.SupplierDetail, *apierror.APIError) {
 	pbReq := &pb.GetSupplierRequest{
 		Id:       req.SupplierID,
-		Includes: supplierIncludes,
+		Includes: resourcekit.FilterIncludes(ctx, supplierIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, supplierSvcTracer, "service.suppliers.get", domain.ServiceName,
@@ -105,7 +105,7 @@ func (s *supplierSvcImpl) CreateSupplier(ctx context.Context, req *CreateSupplie
 		Name:     req.Name,
 		Number:   req.Number,
 		Note:     req.Note,
-		Includes: supplierIncludes,
+		Includes: resourcekit.FilterIncludes(ctx, supplierIncludes...),
 	}
 
 	if req.BillToAddress != nil {
@@ -138,7 +138,7 @@ func (s *supplierSvcImpl) UpdateSupplier(ctx context.Context, req *UpdateSupplie
 		UpdateNote:      req.UpdateNote,
 		BillToAddressId: req.BillToAddressID,
 		ShipToAddressId: req.ShipToAddressID,
-		Includes:        supplierIncludes,
+		Includes:        resourcekit.FilterIncludes(ctx, supplierIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, supplierSvcTracer, "service.suppliers.update", domain.ServiceName,

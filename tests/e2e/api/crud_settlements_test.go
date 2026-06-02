@@ -28,6 +28,7 @@ func TestSettlements_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 
 	got := parseJSON(body)
 	assert.Nil(t, got["allocations"], "allocations should be null without ?include=allocations")
+	assert.Nil(t, got["responsible_user"], "responsible_user should be null without ?include=responsible_user")
 }
 
 func TestSettlements_IncludeAllocations(t *testing.T) {

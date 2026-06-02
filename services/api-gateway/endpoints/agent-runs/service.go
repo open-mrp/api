@@ -7,6 +7,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/agent"
@@ -77,7 +78,7 @@ func (m *agentRunSvcImpl) ListRuns(ctx context.Context, req *ListRunsRequest) (*
 	pbReq := &pb.ListRunsRequest{
 		Limit:    req.Limit,
 		Cursor:   req.Cursor,
-		Includes: agentRunIncludes,
+		Includes: resourcekit.FilterIncludes(ctx, agentRunIncludes...),
 	}
 	if req.Query != nil {
 		pbReq.Query = req.Query
@@ -112,7 +113,7 @@ func (m *agentRunSvcImpl) ListRuns(ctx context.Context, req *ListRunsRequest) (*
 func (m *agentRunSvcImpl) GetRun(ctx context.Context, req *RetrieveRunRequest) (*apiresource.AgentRun, *apierror.APIError) {
 	pbReq := &pb.GetRunRequest{
 		AgentRunId: req.AgentRunID,
-		Includes:   agentRunIncludes,
+		Includes:   resourcekit.FilterIncludes(ctx, agentRunIncludes...),
 	}
 
 	resp, rpcErr := grpcutil.CallRPC(ctx, runSvcTracer, "service.agent_runs.get", domain.ServiceName,

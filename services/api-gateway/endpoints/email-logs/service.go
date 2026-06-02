@@ -52,7 +52,7 @@ func (m *emailLogSvcImpl) ListEmailLogs(ctx context.Context, req *ListEmailLogsR
 		Cursor:   req.Cursor,
 		Limit:    req.Limit,
 		Query:    req.Query,
-		Includes: []string{"sent_by"},
+		Includes: resourcekit.FilterIncludes(ctx, "sent_by"),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, emailLogSvcTracer, "service.email_logs.list", domain.ServiceName,
@@ -81,7 +81,7 @@ func (m *emailLogSvcImpl) ListEmailLogs(ctx context.Context, req *ListEmailLogsR
 func (m *emailLogSvcImpl) GetEmailLog(ctx context.Context, req *RetrieveEmailLogRequest) (*apiresource.EmailLog, *apierror.APIError) {
 	pbReq := &pb.GetEmailLogRequest{
 		Id:       req.EmailLogID,
-		Includes: []string{"sent_by"},
+		Includes: resourcekit.FilterIncludes(ctx, "sent_by"),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, emailLogSvcTracer, "service.email_logs.get", domain.ServiceName,

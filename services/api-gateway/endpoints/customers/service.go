@@ -174,7 +174,7 @@ func (m *customerSvcImpl) ListCustomers(ctx context.Context, req *ListCustomersR
 		City:                  req.City,
 		State:                 req.State,
 		PostalCode:            req.PostalCode,
-		Includes:              customerIncludes,
+		Includes:              resourcekit.FilterIncludes(ctx, customerIncludes...),
 	}
 
 	if req.StartDate != nil {
@@ -207,7 +207,7 @@ func (m *customerSvcImpl) ListCustomers(ctx context.Context, req *ListCustomersR
 func (m *customerSvcImpl) GetCustomer(ctx context.Context, req *RetrieveCustomerRequest) (*apiresource.Customer, *apierror.APIError) {
 	pbReq := &pb.GetCustomerRequest{
 		Id:       req.CustomerID,
-		Includes: customerIncludes,
+		Includes: resourcekit.FilterIncludes(ctx, customerIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, customerSvcTracer, "service.customers.get", domain.ServiceName,
@@ -268,7 +268,7 @@ func (m *customerSvcImpl) CreateCustomer(ctx context.Context, req *CreateCustome
 		CustomerTypeGroupId:   &req.CustomerTypeGroupID,
 		CarrierBillingType:    optCarrierBillingTypeToStringPtr(req.CarrierBillingType),
 		CarrierBillingAccount: req.CarrierBillingAccount,
-		Includes:              customerIncludes,
+		Includes:              resourcekit.FilterIncludes(ctx, customerIncludes...),
 	}
 
 	if req.CreditLimit != nil {
@@ -371,7 +371,7 @@ func (m *customerSvcImpl) MergeCustomers(ctx context.Context, req *MergeCustomer
 	pbReq := &pb.MergeCustomersRequest{
 		TargetCustomerId:  req.CustomerID,
 		SourceCustomerIds: req.SourceCustomerIDs,
-		Includes:          customerIncludes,
+		Includes:          resourcekit.FilterIncludes(ctx, customerIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, customerSvcTracer, "service.customers.merge", domain.ServiceName,
@@ -414,7 +414,7 @@ func (m *customerSvcImpl) UpdateCustomer(ctx context.Context, req *UpdateCustome
 		CarrierBillingType:       optCarrierBillingTypeToStringPtr(req.CarrierBillingType),
 		CarrierBillingAccount:    patch.StringFieldPtrToProto(req.CarrierBillingAccount),
 		HasCustomerPriceGroupIds: req.CustomerPriceGroupIDs != nil,
-		Includes:                 customerIncludes,
+		Includes:                 resourcekit.FilterIncludes(ctx, customerIncludes...),
 	}
 
 	pbReq.CreditLimit = apirequest.QuantityFieldPtrToProto(req.CreditLimit)

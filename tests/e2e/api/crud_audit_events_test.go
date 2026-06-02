@@ -416,6 +416,7 @@ func TestAuditEvents_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 	got := parseJSON(getBody)
 	assert.Nil(t, got["actor"], "actor should be null without ?include=actor")
 	assert.Nil(t, got["changes"], "changes should be null without ?include=changes")
+	assert.Nil(t, got["metadata"], "metadata should be null without ?include=metadata")
 	assert.Nil(t, got["request"], "request should be null without ?include=request")
 }
 

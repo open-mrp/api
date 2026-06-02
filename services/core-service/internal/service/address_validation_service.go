@@ -120,7 +120,8 @@ func (s *addressValidationSvcImpl) GetPlaceDetails(ctx context.Context, placeID 
 		return nil, tracing.Trace(span, apierror.NewInternalError(fmt.Errorf("google maps api key not configured"), "Address service not configured."))
 	}
 
-	url := fmt.Sprintf("%s/places/%s?fields=addressComponents,formattedAddress", placesBaseURL, placeID)
+	placeResource := normalizePlaceResourceName(placeID)
+	url := fmt.Sprintf("%s/%s?fields=addressComponents,formattedAddress,postalAddress", placesBaseURL, placeResource)
 	if sessionToken != nil {
 		url += "&sessionToken=" + *sessionToken
 	}
@@ -144,6 +145,7 @@ func (s *addressValidationSvcImpl) GetPlaceDetails(ctx context.Context, placeID 
 	var data struct {
 		AddressComponents []addressComponent `json:"addressComponents"`
 		FormattedAddress  string             `json:"formattedAddress"`
+		PostalAddress     *postalAddress     `json:"postalAddress"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
@@ -151,6 +153,7 @@ func (s *addressValidationSvcImpl) GetPlaceDetails(ctx context.Context, placeID 
 	}
 
 	components := parseAddressComponents(data.AddressComponents)
+	applyPostalAddressFallback(components, data.PostalAddress)
 
 	return &domain.AddressDetailsResult{
 		Address:          components,
@@ -333,54 +336,6 @@ func (s *addressValidationSvcImpl) ValidateAddress(ctx context.Context, addressL
 }
 
 var unitDesignatorRegex = regexp.MustCompile(`(?i)^(.+),?\s+((?:Suite|Ste|Apt|Apartment|Unit|Bldg|Building|Fl|Floor|Rm|Room|Dept|Department|#)\s*\S+.*)$`)
-
-type addressComponent struct {
-	ShortText string   `json:"shortText"`
-	Types     []string `json:"types"`
-}
-
-func parseAddressComponents(components []addressComponent) *domain.AddressComponents {
-	result := &domain.AddressComponents{}
-
-	var streetNumber, route, subpremise string
-
-	for _, c := range components {
-		for _, t := range c.Types {
-			switch t {
-			case "street_number":
-				streetNumber = c.ShortText
-			case "route":
-				route = c.ShortText
-			case "subpremise":
-				subpremise = c.ShortText
-			case "locality":
-				result.City = c.ShortText
-			case "administrative_area_level_1":
-				result.State = c.ShortText
-			case "postal_code":
-				result.PostalCode = c.ShortText
-			case "country":
-				result.Country = c.ShortText
-				result.CountryCode = c.ShortText
-			}
-		}
-	}
-
-	parts := []string{}
-	if streetNumber != "" {
-		parts = append(parts, streetNumber)
-	}
-	if route != "" {
-		parts = append(parts, route)
-	}
-	result.AddressLine1 = strings.Join(parts, " ")
-
-	if subpremise != "" {
-		result.AddressLine2 = &subpremise
-	}
-
-	return result
-}
 
 func getRegionCode(country string) string {
 	countryMap := map[string]string{

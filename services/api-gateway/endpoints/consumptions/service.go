@@ -53,7 +53,7 @@ func (m *consumptionSvcImpl) GetConsumption(ctx context.Context, req *RetrieveCo
 	pbReq := &pb.GetConsumptionRequest{
 		ProductionStepId: req.ProductionStepID,
 		Id:               req.ConsumptionID,
-		Includes:         consumptionIncludes,
+		Includes:         resourcekit.FilterIncludes(ctx, consumptionIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, consumptionSvcTracer, "service.consumptions.get", domain.ServiceName,
@@ -80,7 +80,7 @@ func (m *consumptionSvcImpl) CreateConsumption(ctx context.Context, req *CreateC
 		WasteQuantityValue:  req.WasteQuantityValue,
 		WasteQuantityUnitId: req.WasteQuantityUnitID,
 		Instructions:        req.Instructions,
-		Includes:            consumptionIncludes,
+		Includes:            resourcekit.FilterIncludes(ctx, consumptionIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, consumptionSvcTracer, "service.consumptions.create", domain.ServiceName,
@@ -108,7 +108,7 @@ func (m *consumptionSvcImpl) UpdateConsumption(ctx context.Context, req *UpdateC
 		WasteQuantityValue:  req.WasteQuantityValue,
 		WasteQuantityUnitId: req.WasteQuantityUnitID,
 		Instructions:        req.Instructions,
-		Includes:            consumptionIncludes,
+		Includes:            resourcekit.FilterIncludes(ctx, consumptionIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, consumptionSvcTracer, "service.consumptions.update", domain.ServiceName,

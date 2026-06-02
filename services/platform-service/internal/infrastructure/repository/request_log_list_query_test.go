@@ -130,23 +130,38 @@ func TestBuildListQuery_IdempotencyKeyUsesExistsOnLinkedRow(t *testing.T) {
 	}
 }
 
-func TestBuildListQuery_FullModeInlinesAllJoinsWithoutDerivedTable(t *testing.T) {
+// Full mode must wrap in a derived table just like actor mode so the
+// WHERE + ORDER BY + LIMIT run against request_log (using the
+// target_account_id/occurred_at/id index) before the enrichment joins. The
+// flat join-everything-then-LIMIT shape filesorts the whole account partition
+// and times out on a large request_log table.
+func TestBuildListQuery_FullModeWrapsInDerivedTableWithAllJoins(t *testing.T) {
 	sql, _ := buildListQuery(queryModeFull, pagination.DirectionForward, "acc_1", emptyFilter(), false, false, false, nil, 101)
 
-	if strings.Contains(sql, " FROM (") {
-		t.Errorf("full mode should not wrap in derived table; SQL:\n%s", sql)
+	mustContain(t, sql, " FROM (")
+	mustContain(t, sql, ") rl")
+
+	// The LIMIT must live inside the derived table, ahead of the enrichment
+	// joins, so it is applied before any nested-loop join.
+	derivedTable := sql[strings.Index(sql, "FROM (")+len("FROM (") : strings.Index(sql, ") rl")]
+	mustContain(t, derivedTable, "ORDER BY rl.occurred_at DESC, rl.id DESC LIMIT ?")
+	for _, joined := range []string{"LEFT JOIN role r_user", "LEFT JOIN account a", "LEFT JOIN idempotency_key ik"} {
+		if strings.Contains(derivedTable, joined) {
+			t.Errorf("enrichment join %q leaked into the derived table; SQL:\n%s", joined, sql)
+		}
 	}
 
 	required := []string{
-		"LEFT JOIN `user` u",
-		"LEFT JOIN api_key ak",
-		"LEFT JOIN account_user au",
-		"LEFT JOIN role r_user",
-		"LEFT JOIN role r_key",
-		"LEFT JOIN account a",
+		"LEFT JOIN `user` u ON au.user_id = u.id AND rl.identity_type = 'user'",
+		"LEFT JOIN api_key ak ON rl.actor_id = ak.type_id AND rl.identity_type = 'api_key'",
+		"LEFT JOIN account_user au ON au.id = rl.actor_id AND au.account_id = rl.target_account_id AND rl.identity_type = 'user'",
+		"LEFT JOIN role r_user ON au.role_id = r_user.id",
+		"LEFT JOIN role r_key ON ak.role_id = r_key.id",
+		"LEFT JOIN account a ON rl.target_account_id = a.id",
 		"a.created_at AS account_created_at",
 		"a.updated_at AS account_updated_at",
-		"LEFT JOIN idempotency_key ik",
+		"au.role_id AS user_role_id",
+		"LEFT JOIN idempotency_key ik ON rl.idempotency_key_id = ik.type_id",
 	}
 	for _, r := range required {
 		mustContain(t, sql, r)

@@ -1,4 +1,4 @@
-.PHONY: help dev sqlc proto buf-lint db-dump test test-verbose test-sql-prepare-smoke install-tools docs mocks lint gosec gosec-fast govet static-check check-format jaeger-tracing connect-minikube connect-eks version validate-openapi-specs httpie local-db local-db-down local-db-nuke seed-core seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook open-tracing e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns openapi openapi-quiet install-stlc stlc-internal-sdk stlc-public-typescript-sdk stlc-sdks
+.PHONY: help dev sqlc proto buf-lint db-dump test test-verbose test-sql-prepare-smoke install-tools docs mocks lint gosec gosec-fast govet static-check check-format jaeger-tracing connect-minikube connect-eks version validate-openapi-specs httpie local-db local-db-down local-db-nuke seed-core seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook view-otel e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns openapi openapi-quiet install-stlc stlc-internal-sdk stlc-public-typescript-sdk stlc-sdks
 
 # Include .env file if it exists (optional for CI)
 -include .env
@@ -232,7 +232,7 @@ check-format: ## Check formatting
 		exit 1; \
 	fi
 
-open-tracing: ## Open Jaeger UI via port-forward
+view-otel: ## Open Jaeger UI via port-forward
 	@echo "Opening Jaeger UI at http://localhost:16686"
 	kubectl port-forward svc/jaeger 16686:16686
 

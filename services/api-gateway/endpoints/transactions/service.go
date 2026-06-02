@@ -97,7 +97,7 @@ func (m *transactionSvcImpl) ListTransactions(ctx context.Context, req *ListTran
 func (m *transactionSvcImpl) GetTransaction(ctx context.Context, req *RetrieveTransactionRequest) (*apiresource.TransactionDetail, *apierror.APIError) {
 	pbReq := &pb.GetTransactionRequest{
 		Id:       req.TransactionID,
-		Includes: []string{"allocations"},
+		Includes: resourcekit.FilterIncludes(ctx, "allocations"),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, transactionSvcTracer, "service.transactions.get", domain.ServiceName,

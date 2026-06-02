@@ -119,7 +119,7 @@ func (m *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, req *ListSalesO
 func (m *salesOrderSvcImpl) GetSalesOrder(ctx context.Context, req *RetrieveSalesOrderRequest) (*apiresource.SalesOrderDetail, *apierror.APIError) {
 	pbReq := &pb.GetSalesOrderRequest{
 		Id:       req.SalesOrderID,
-		Includes: salesOrderIncludes,
+		Includes: resourcekit.FilterIncludes(ctx, salesOrderIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.get", domain.ServiceName,
@@ -187,7 +187,7 @@ func (m *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, req *CreateSal
 		Lines:                        lines,
 		AcknowledgementEmailContacts: toSalesOrderEmailContactInputs(req.AcknowledgementEmailContacts),
 		InvoiceEmailContacts:         toSalesOrderEmailContactInputs(req.InvoiceEmailContacts),
-		Includes:                     salesOrderIncludes,
+		Includes:                     resourcekit.FilterIncludes(ctx, salesOrderIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.create", domain.ServiceName,
@@ -233,7 +233,7 @@ func (m *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, req *UpdateSal
 		ShipToCountry:                req.ShipToCountry,
 		AcknowledgementEmailContacts: toSalesOrderEmailContactList(req.AcknowledgementEmailContacts),
 		InvoiceEmailContacts:         toSalesOrderEmailContactList(req.InvoiceEmailContacts),
-		Includes:                     salesOrderIncludes,
+		Includes:                     resourcekit.FilterIncludes(ctx, salesOrderIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.update", domain.ServiceName,
@@ -282,7 +282,7 @@ func (m *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, req *Cha
 		Id:           req.SalesOrderID,
 		StatusChange: req.StatusChange,
 		SendEmail:    req.SendEmail,
-		Includes:     salesOrderIncludes,
+		Includes:     resourcekit.FilterIncludes(ctx, salesOrderIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.change_status", domain.ServiceName,

@@ -103,7 +103,7 @@ func (m *invoiceSvcImpl) ListInvoices(ctx context.Context, req *ListInvoicesRequ
 func (m *invoiceSvcImpl) GetInvoice(ctx context.Context, req *RetrieveInvoiceRequest) (*apiresource.Invoice, *apierror.APIError) {
 	pbReq := &pb.GetInvoiceRequest{
 		Id:       req.InvoiceID,
-		Includes: invoiceIncludes,
+		Includes: resourcekit.FilterIncludes(ctx, invoiceIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, invoiceSvcTracer, "service.invoices.get", domain.ServiceName,

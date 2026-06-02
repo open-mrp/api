@@ -11,10 +11,10 @@ import (
 // listElementTypesUsingInt64Cursor are list item types whose backends paginate with
 // pagination.Cursor (internal_id int64) rather than pagination.StringCursor.
 var listElementTypesUsingInt64Cursor = map[string]struct{}{
-	"APIKey":                {},
-	"Sandbox":               {},
-	"PricingPlan":           {},
-	"RegistrationSession":   {},
+	"APIKey":              {},
+	"Sandbox":             {},
+	"PricingPlan":         {},
+	"RegistrationSession": {},
 }
 
 func documentationNextCursor(itemTypeName string, itemMap map[string]any) string {

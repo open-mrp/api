@@ -98,7 +98,7 @@ func (m *purchaseOrderSvcImpl) ListPurchaseOrders(ctx context.Context, req *List
 func (m *purchaseOrderSvcImpl) GetPurchaseOrder(ctx context.Context, req *RetrievePurchaseOrderRequest) (*apiresource.PurchaseOrderDetail, *apierror.APIError) {
 	pbReq := &pb.GetPurchaseOrderRequest{
 		Id:       req.PurchaseOrderID,
-		Includes: purchaseOrderIncludes,
+		Includes: resourcekit.FilterIncludes(ctx, purchaseOrderIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, purchaseOrderEpSvcTracer, "service.purchase_orders.get", domain.ServiceName,
@@ -161,7 +161,7 @@ func (m *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, req *Cre
 		Lines:                 lines,
 		ContactAccountUserIds: req.ContactAccountUserIDs,
 		PromisedAt:            req.PromisedAt,
-		Includes:              purchaseOrderIncludes,
+		Includes:              resourcekit.FilterIncludes(ctx, purchaseOrderIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, purchaseOrderEpSvcTracer, "service.purchase_orders.create", domain.ServiceName,
@@ -187,7 +187,7 @@ func (m *purchaseOrderSvcImpl) UpdatePurchaseOrder(ctx context.Context, req *Upd
 		ShippingAddressId:     req.ShippingAddressID,
 		PromisedAt:            req.PromisedAt,
 		ContactAccountUserIds: req.ContactAccountUserIDs,
-		Includes:              purchaseOrderIncludes,
+		Includes:              resourcekit.FilterIncludes(ctx, purchaseOrderIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, purchaseOrderEpSvcTracer, "service.purchase_orders.update", domain.ServiceName,
@@ -236,7 +236,7 @@ func (m *purchaseOrderSvcImpl) ChangePurchaseOrderStatus(ctx context.Context, re
 		Id:           req.PurchaseOrderID,
 		StatusChange: req.StatusChange,
 		SendEmail:    req.SendEmail,
-		Includes:     purchaseOrderIncludes,
+		Includes:     resourcekit.FilterIncludes(ctx, purchaseOrderIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, purchaseOrderEpSvcTracer, "service.purchase_orders.change_status", domain.ServiceName,

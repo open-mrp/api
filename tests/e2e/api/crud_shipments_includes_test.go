@@ -29,6 +29,8 @@ func TestShipments_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 	assert.Nil(t, got["shipping_cases"], "shipping_cases should be null without ?include=shipping_cases")
 	assert.Nil(t, got["sales_order"], "sales_order should be null without ?include=sales_order")
 	assert.Nil(t, got["customer"], "customer should be null without ?include=customer")
+	assert.Nil(t, got["carrier"], "carrier should be null without ?include=carrier")
+	assert.Nil(t, got["service_level"], "service_level should be null without ?include=service_level")
 	assert.Nil(t, got["shipping_address"], "shipping_address should be null without ?include=shipping_address")
 	assert.Nil(t, got["shipped_by"], "shipped_by should be null without ?include=shipped_by")
 	assert.Nil(t, got["invoice"], "invoice should be null without ?include=invoice")

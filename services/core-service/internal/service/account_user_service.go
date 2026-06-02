@@ -464,6 +464,11 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 					Subject:    subject,
 					TemplateID: constants.EmailTemplateNewUserWelcome,
 					Params:     emailParams,
+					// Scope the audit log to the originating (actor) account so the
+					// sender can confirm the email went out, even when creating a
+					// user for another account (external target).
+					AccountID: identity.ActorAccountID(),
+					SentByID:  &identity.Actor.ID,
 				}); apiErr != nil {
 					return apiErr
 				}

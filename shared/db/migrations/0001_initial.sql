@@ -128,10 +128,6 @@ CREATE TABLE `_item_categories_quantity_discounts` (
 --
 -- Table structure for table `_parent_child_production_steps`
 --
--- Semantics (Prisma / dashboard; do not invert in application SQL):
---   A = downstream production_step id (later in the flow)
---   B = upstream production_step id (feeds into A); edge direction B -> A
--- See docs/patterns/production-step-graph-patterns.md
 
 DROP TABLE IF EXISTS `_parent_child_production_steps`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -464,8 +460,9 @@ CREATE TABLE `account_plan` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_plan_type_id_key` (`type_id`),
   KEY `account_plan_plan_type_code_effective_at_idx` (`plan_type_code`,`effective_at`),
+  KEY `account_plan_is_publicly_visible_created_at_id_idx` (`is_publicly_visible`,`created_at` DESC,`id` DESC),
   FULLTEXT KEY `account_plan_name_idx` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=31 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -484,7 +481,7 @@ CREATE TABLE `account_plan_feature` (
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_plan_feature_account_plan_id_key_key` (`account_plan_id`,`key`)
-) ENGINE=InnoDB AUTO_INCREMENT=73 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=91 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -503,7 +500,7 @@ CREATE TABLE `account_plan_limit` (
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_plan_limit_account_plan_id_key_key` (`account_plan_id`,`key`)
-) ENGINE=InnoDB AUTO_INCREMENT=97 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=121 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -544,7 +541,8 @@ CREATE TABLE `account_price` (
   UNIQUE KEY `account_price_unit_value_id_key` (`unit_value_id`),
   KEY `account_price_recipient_account_id_idx` (`recipient_account_id`),
   KEY `account_price_owner_account_id_idx` (`owner_account_id`),
-  KEY `account_price_product_line_id_idx` (`product_line_id`)
+  KEY `account_price_product_line_id_idx` (`product_line_id`),
+  KEY `account_price_owner_recipient_created_idx` (`owner_account_id`,`recipient_account_id`,`created_at` DESC,`id` DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -638,6 +636,10 @@ CREATE TABLE `account_relation` (
   KEY `account_relation_payment_term_id_idx` (`payment_term_id`),
   KEY `account_relation_default_billing_address_id_idx` (`default_billing_address_id`),
   KEY `account_relation_default_shipping_address_id_idx` (`default_shipping_address_id`),
+  KEY `account_relation_owner_role_created_idx` (`owner_account_id`,`account_relation_role_code`,`created_at` DESC,`counterparty_account_id` DESC),
+  KEY `account_relation_owner_role_status_created_idx` (`owner_account_id`,`account_relation_role_code`(50),`account_status_code`,`created_at` DESC,`counterparty_account_id` DESC),
+  KEY `account_relation_owner_role_group_created_idx` (`owner_account_id`,`account_relation_role_code`(50),`account_group_id`,`created_at` DESC,`counterparty_account_id` DESC),
+  KEY `account_relation_owner_role_rep_created_idx` (`owner_account_id`,`account_relation_role_code`(50),`default_sales_rep_id`,`created_at` DESC,`counterparty_account_id` DESC),
   FULLTEXT KEY `account_relation_alias_idx` (`alias`),
   FULLTEXT KEY `account_relation_notes_idx` (`notes`),
   FULLTEXT KEY `account_relation_alias_notes_idx` (`alias`,`notes`)
@@ -762,7 +764,8 @@ CREATE TABLE `account_user` (
   KEY `account_user_department_id_idx` (`department_id`),
   KEY `account_user_role_id_idx` (`role_id`),
   KEY `account_user_account_id_idx` (`account_id`),
-  KEY `account_user_status_code_idx` (`status_code`)
+  KEY `account_user_status_code_idx` (`status_code`),
+  KEY `account_user_account_id_status_code_created_at_id_idx` (`account_id`,`status_code`,`created_at` DESC,`id` DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -882,8 +885,11 @@ CREATE TABLE `api_key` (
   UNIQUE KEY `api_key_secret_hash_key` (`secret_hash`),
   KEY `api_key_owner_account_id_idx` (`owner_account_id`),
   KEY `api_key_role_id_idx` (`role_id`),
+  KEY `api_key_owner_account_id_revoked_at_created_at_id_idx` (`owner_account_id`,`revoked_at`,`created_at` DESC,`id` DESC),
+  KEY `api_key_owner_account_id_expires_at_created_at_id_idx` (`owner_account_id`,`expires_at`,`created_at` DESC,`id` DESC),
+  KEY `api_key_owner_account_id_created_at_id_idx` (`owner_account_id`,`created_at` DESC,`id` DESC),
   FULLTEXT KEY `api_key_name_idx` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -942,8 +948,12 @@ CREATE TABLE `audit_event` (
   KEY `audit_event_actor_idx` (`actor_id`,`occurred_at`),
   KEY `audit_event_account_idx` (`account_id`,`occurred_at` DESC,`type_id` DESC),
   KEY `audit_event_occurred_at_idx` (`occurred_at`),
-  KEY `audit_event_action_idx` (`action`)
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  KEY `audit_event_action_idx` (`action`),
+  KEY `audit_event_account_id_resource_id_occurred_at_type_id_idx` (`account_id`,`resource_id`,`occurred_at` DESC,`type_id` DESC),
+  KEY `audit_event_account_id_action_occurred_at_type_id_idx` (`account_id`,`action`,`occurred_at` DESC,`type_id` DESC),
+  KEY `audit_event_account_id_resource_type_occurred_at_type_id_idx` (`account_id`,`resource_type`,`occurred_at` DESC,`type_id` DESC),
+  KEY `audit_event_account_id_actor_id_occurred_at_type_id_idx` (`account_id`,`actor_id`,`occurred_at` DESC,`type_id` DESC)
+) ENGINE=InnoDB AUTO_INCREMENT=31 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -981,7 +991,8 @@ CREATE TABLE `batch` (
   KEY `batch_production_step_id_idx` (`production_step_id`),
   KEY `batch_account_id_scanned_at_idx` (`account_id`,`scanned_at`),
   KEY `batch_created_at_idx` (`created_at`),
-  KEY `batch_production_run_id_idx` (`production_run_id`)
+  KEY `batch_production_run_id_idx` (`production_run_id`),
+  KEY `batch_account_id_scanning_station_id_scanned_at_id_idx` (`account_id`,`scanning_station_id`,`scanned_at` DESC,`id` DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -1149,7 +1160,7 @@ CREATE TABLE `deleted_record` (
   PRIMARY KEY (`id`),
   KEY `deleted_record_resource_type_resource_id_idx` (`resource_type`,`resource_id`),
   KEY `deleted_record_deleted_at_idx` (`deleted_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1173,6 +1184,7 @@ CREATE TABLE `delivery` (
   KEY `delivery_sales_order_id_idx` (`sales_order_id`),
   KEY `delivery_account_id_idx` (`account_id`),
   KEY `delivery_delivery_status_code_idx` (`delivery_status_code`),
+  KEY `delivery_account_id_delivery_status_code_created_at_id_idx` (`account_id`,`delivery_status_code`,`created_at` DESC,`id` DESC),
   FULLTEXT KEY `delivery_number_idx` (`number`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -1263,7 +1275,7 @@ CREATE TABLE `doc_api_key` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `doc_api_key_type_id_key` (`type_id`),
   UNIQUE KEY `doc_api_key_api_key_id_key` (`api_key_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1282,7 +1294,8 @@ CREATE TABLE `edi_run` (
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `failures` json DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `edi_run_account_id_idx` (`account_id`)
+  KEY `edi_run_account_id_idx` (`account_id`),
+  KEY `edi_run_account_id_has_succeeded_completed_at_id_idx` (`account_id`,`has_succeeded`,`completed_at` DESC,`id` DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -1449,7 +1462,7 @@ CREATE TABLE `idempotency_key` (
   KEY `idempotency_key_target_account_id_idx` (`target_account_id`),
   KEY `idempotency_key_lock_expires_at_idx` (`lock_expires_at`),
   KEY `idempotency_key_expires_at_idx` (`expires_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=84 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1504,7 +1517,10 @@ CREATE TABLE `inventory_change_log` (
   KEY `inventory_change_log_responsible_user_id_idx` (`responsible_user_id`),
   KEY `inventory_change_log_scanning_station_id_idx` (`scanning_station_id`),
   KEY `inventory_change_log_account_id_idx` (`account_id`),
-  KEY `inventory_change_log_created_at_idx` (`created_at`)
+  KEY `inventory_change_log_created_at_idx` (`created_at`),
+  KEY `inventory_change_log_account_id_item_id_created_at_id_idx` (`account_id`,`item_id`,`created_at` DESC,`id` DESC),
+  KEY `inventory_change_log_acct_action_type_code_created_idx` (`account_id`,`action_type_code`,`created_at` DESC,`id` DESC),
+  KEY `inventory_change_log_acct_resp_user_created_idx` (`account_id`,`responsible_user_id`,`created_at` DESC,`id` DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -1948,7 +1964,7 @@ CREATE TABLE `message_inbox` (
   KEY `message_inbox_processed_at_idx` (`processed_at`),
   KEY `message_inbox_request_id_idx` (`request_id`),
   KEY `message_inbox_parent_message_id_idx` (`parent_message_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=143 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=429 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1987,7 +2003,7 @@ CREATE TABLE `message_outbox` (
   KEY `message_outbox_status_published_at_idx` (`status`,`published_at`,`id`),
   KEY `message_outbox_request_id_idx` (`request_id`),
   KEY `message_outbox_parent_message_id_idx` (`parent_message_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=143 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=640 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2393,6 +2409,7 @@ CREATE TABLE `production_step` (
   KEY `production_step_department_id_idx` (`department_id`),
   KEY `production_step_scanning_station_id_idx` (`scanning_station_id`),
   KEY `production_step_account_id_idx` (`account_id`),
+  KEY `production_step_account_id_scanning_station_id_created_at_id_idx` (`account_id`,`scanning_station_id`,`created_at` DESC,`id` DESC),
   FULLTEXT KEY `production_step_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -2635,7 +2652,8 @@ CREATE TABLE `registration_session` (
   UNIQUE KEY `registration_session_account_id_key` (`account_id`),
   KEY `registration_session_user_id_idx` (`user_id`),
   KEY `registration_session_email_idx` (`email`),
-  KEY `registration_session_stripe_customer_id_idx` (`stripe_customer_id`)
+  KEY `registration_session_stripe_customer_id_idx` (`stripe_customer_id`),
+  KEY `registration_session_user_id_completed_at_created_at_id_idx` (`user_id`,`completed_at`,`created_at` DESC,`id` DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -2686,7 +2704,12 @@ CREATE TABLE `request_log` (
   KEY `request_log_idempotency_key_id_idx` (`idempotency_key_id`),
   KEY `request_log_target_account_id_occurred_at_id_idx` (`target_account_id`,`occurred_at` DESC,`id` DESC),
   KEY `request_log_target_account_id_identity_type_occurred_at_id_idx` (`target_account_id`,`identity_type`,`occurred_at` DESC,`id` DESC),
-  KEY `request_log_occurred_at_idx` (`occurred_at`)
+  KEY `request_log_occurred_at_idx` (`occurred_at`),
+  KEY `request_log_target_account_id_actor_id_occurred_at_id_idx` (`target_account_id`,`actor_id`,`occurred_at` DESC,`id` DESC),
+  KEY `request_log_client_ip_string_occurred_at_idx` (`client_ip_string`,`occurred_at` DESC),
+  KEY `request_log_target_account_id_error_code_occurred_at_id_idx` (`target_account_id`,`error_code`,`occurred_at` DESC,`id` DESC),
+  KEY `request_log_target_acct_normalized_route_occurred_at_idx` (`target_account_id`,`normalized_route`(128),`occurred_at` DESC,`id` DESC),
+  KEY `request_log_target_account_id_status_code_occurred_at_id_idx` (`target_account_id`,`status_code`,`occurred_at` DESC,`id` DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -2810,6 +2833,11 @@ CREATE TABLE `sales_order` (
   KEY `sales_order_sales_order_status_code_idx` (`sales_order_status_code`),
   KEY `sales_order_priority_code_idx` (`priority_code`),
   KEY `sales_order_owner_account_id_seller_account_id_sales_order_t_idx` (`owner_account_id`,`seller_account_id`,`sales_order_type_code`),
+  KEY `sales_order_owner_status_created_idx` (`owner_account_id`,`sales_order_status_code`,`created_at` DESC,`id` DESC),
+  KEY `sales_order_owner_buyer_created_idx` (`owner_account_id`,`buyer_account_id`,`created_at` DESC,`id` DESC),
+  KEY `sales_order_owner_sales_rep_created_idx` (`owner_account_id`,`sales_rep_id`,`created_at` DESC,`id` DESC),
+  KEY `sales_order_owner_type_status_created_idx` (`owner_account_id`,`sales_order_type_code`(50),`sales_order_status_code`,`created_at` DESC,`id` DESC),
+  KEY `sales_order_owner_type_seller_created_idx` (`owner_account_id`,`sales_order_type_code`(50),`seller_account_id`,`created_at` DESC,`id` DESC),
   FULLTEXT KEY `sales_order_number_idx` (`number`),
   FULLTEXT KEY `sales_order_customer_po_number_idx` (`customer_po_number`),
   FULLTEXT KEY `sales_order_number_customer_po_number_idx` (`number`,`customer_po_number`)
@@ -2907,7 +2935,7 @@ CREATE TABLE `sandbox_account` (
   UNIQUE KEY `sandbox_account_type_id_key` (`type_id`),
   UNIQUE KEY `sandbox_account_account_id_key` (`account_id`),
   KEY `sandbox_account_owner_account_id_idx` (`owner_account_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2990,7 +3018,7 @@ CREATE TABLE `service_idempotency_key` (
   KEY `service_idempotency_key_idempotency_key_idx` (`idempotency_key`),
   KEY `service_idempotency_key_lock_expires_at_idx` (`lock_expires_at`),
   KEY `service_idempotency_key_expires_at_idx` (`expires_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=80 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -3052,6 +3080,7 @@ CREATE TABLE `shipment` (
   KEY `shipment_shipment_status_code_idx` (`shipment_status_code`),
   KEY `shipment_account_id_idx` (`account_id`),
   KEY `shipment_created_at_idx` (`created_at`),
+  KEY `shipment_account_id_shipment_status_code_created_at_id_idx` (`account_id`,`shipment_status_code`,`created_at` DESC,`id` DESC),
   FULLTEXT KEY `shipment_number_idx` (`number`),
   FULLTEXT KEY `shipment_note_idx` (`note`),
   FULLTEXT KEY `shipment_bill_of_lading_idx` (`bill_of_lading`),
@@ -3207,6 +3236,7 @@ CREATE TABLE `storage_location` (
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
+  UNIQUE KEY `storage_location_name_account_id_key` (`name`,`account_id`),
   KEY `storage_location_account_id_idx` (`account_id`),
   KEY `storage_location_address_id_idx` (`address_id`),
   KEY `storage_location_storage_location_type_code_idx` (`storage_location_type_code`),
@@ -3408,7 +3438,8 @@ CREATE TABLE `token_pack_purchase` (
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
   KEY `token_pack_purchase_account_id_idx` (`account_id`),
-  KEY `token_pack_purchase_status_idx` (`status`)
+  KEY `token_pack_purchase_status_idx` (`status`),
+  KEY `token_pack_purchase_account_id_status_idx` (`account_id`,`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -3446,6 +3477,10 @@ CREATE TABLE `transaction` (
   KEY `transaction_amount_id_idx` (`amount_id`),
   KEY `transaction_stripe_payment_id_idx` (`stripe_payment_id`),
   KEY `transaction_account_id_created_at_idx` (`account_id`,`created_at`),
+  KEY `transaction_account_id_transaction_type_code_created_at_id_idx` (`account_id`,`transaction_type_code`,`created_at` DESC,`id` DESC),
+  KEY `transaction_account_id_customer_account_id_created_at_id_idx` (`account_id`,`customer_account_id`,`created_at` DESC,`id` DESC),
+  KEY `transaction_account_id_transaction_method_code_created_at_id_idx` (`account_id`,`transaction_method_code`,`created_at` DESC,`id` DESC),
+  KEY `transaction_account_id_adjustment_type_code_created_at_id_idx` (`account_id`,`adjustment_type_code`,`created_at` DESC,`id` DESC),
   FULLTEXT KEY `transaction_number_idx` (`number`),
   FULLTEXT KEY `transaction_note_idx` (`note`),
   FULLTEXT KEY `transaction_number_note_idx` (`number`,`note`)
@@ -3474,7 +3509,8 @@ CREATE TABLE `transaction_allocation` (
   KEY `transaction_allocation_transaction_id_idx` (`transaction_id`),
   KEY `transaction_allocation_amount_id_idx` (`amount_id`),
   KEY `transaction_allocation_invoice_id_idx` (`invoice_id`),
-  KEY `transaction_allocation_created_at_idx` (`created_at`)
+  KEY `transaction_allocation_created_at_idx` (`created_at`),
+  KEY `transaction_allocation_transaction_id_created_at_id_idx` (`transaction_id`,`created_at` DESC,`id` DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -3654,7 +3690,7 @@ CREATE TABLE `user` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-05-15 11:18:29
+-- Dump completed on 2026-06-02 12:14:04
 
 -- +goose Down
 

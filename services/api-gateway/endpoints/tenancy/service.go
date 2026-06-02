@@ -51,11 +51,19 @@ func NewTenancySvc(config *TenancySvcConfig) TenancySvc {
 func (m *tenancySvcImpl) GetTenancy(ctx context.Context, req *GetTenancyRequest) (*apiresource.Tenancy, *apierror.APIError) {
 	identity, _ := appctx.GetIdentityFromContext(ctx)
 
-	pbReq := &pb.GetTenancyRequest{}
-	if identity != nil && identity.Actor != nil {
-		pbReq.UserId = identity.Actor.ID
+	// Tenancy is the current user's account membership, so it requires an
+	// authenticated user - mirror GetCurrentUser. Without this guard an
+	// unauthenticated request would send an empty UserId and the core service
+	// returns 200 with a null current_account instead of 401, which prevents
+	// clients from knowing they need to refresh/re-authenticate.
+	if apiErr := identity.CheckIsUser(); apiErr != nil {
+		return nil, apiErr
 	}
-	if identity != nil && identity.Target != nil && identity.Target.AccountID != "" {
+
+	pbReq := &pb.GetTenancyRequest{
+		UserId: identity.Actor.ID,
+	}
+	if identity.Target != nil && identity.Target.AccountID != "" {
 		pbReq.TargetAccountId = &identity.Target.AccountID
 	}
 

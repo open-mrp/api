@@ -297,6 +297,7 @@
         "subresources",
         "svctest",
         "syspropertyep",
+        "tenancyep",
         "testutil",
         "textutil",
         "tgrp",

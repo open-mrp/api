@@ -50,6 +50,15 @@ LEFT JOIN account_user au ON au.user_id = rl.actor_id
 LEFT JOIN idempotency_key ik ON rl.idempotency_key_id = ik.type_id
 WHERE rl.id = ? AND rl.target_account_id = ?;
 
+-- name: ResolveAccountUserActorIDs :many
+-- Maps account_user ids (the actor id the API exposes for user actors) to the
+-- user_id stored in request_log.actor_id. The list query filters on the indexed
+-- rl.actor_id column directly, so callers translate the exposed account_user id
+-- back to user_id before building the filter — see request_log_list_query.go.
+SELECT id, user_id
+FROM account_user
+WHERE account_id = ? AND id IN (sqlc.slice('ids'));
+
 -- name: DeleteExpiredRequestLogs :execresult
 DELETE FROM request_log
 WHERE occurred_at < DATE_SUB(NOW(3), INTERVAL 7 YEAR)

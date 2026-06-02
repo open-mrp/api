@@ -143,7 +143,14 @@ func buildListQuery(
 		}
 	}
 	if len(f.ActorIDs) > 0 {
-		inner.WriteString(" AND COALESCE(au.id, rl.actor_id) IN (")
+		// Filter on the bare rl.actor_id column so the predicate is sargable and
+		// can use the (target_account_id, actor_id, occurred_at DESC, id DESC)
+		// index. Callers pass actor ids already resolved to rl.actor_id values
+		// (account_user.id translated to user_id) — see resolveActorIDFilter.
+		// A non-sargable COALESCE(au.id, rl.actor_id) here forced a full
+		// target_account_id partition scan whenever the actor had no matching
+		// rows (the ORDER BY + LIMIT never short-circuits on zero matches).
+		inner.WriteString(" AND rl.actor_id IN (")
 		inner.WriteString(placeholders(len(f.ActorIDs)))
 		inner.WriteString(")")
 		for _, id := range f.ActorIDs {

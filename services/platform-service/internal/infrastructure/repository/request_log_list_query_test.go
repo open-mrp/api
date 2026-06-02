@@ -185,7 +185,7 @@ func TestBuildListQuery_SliceFiltersExpandToMatchingPlaceholderCounts(t *testing
 	mustContain(t, sql, "rl.status_code IN (?, ?, ?)")
 	mustContain(t, sql, "rl.error_code IN (?)")
 	mustContain(t, sql, "rl.account_id IN (?, ?)")
-	mustContain(t, sql, "COALESCE(au.id, rl.actor_id) IN (?, ?, ?)")
+	mustContain(t, sql, "rl.actor_id IN (?, ?, ?)")
 	mustContain(t, sql, "rl.identity_type IN (?)")
 	mustContain(t, sql, "rl.normalized_route IN (?, ?)")
 	mustContain(t, sql, "rl.host IN (?)")

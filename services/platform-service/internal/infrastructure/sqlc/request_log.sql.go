@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 
 	"github.com/augno/api/shared/db"
@@ -381,4 +382,58 @@ func (q *Queries) FindRequestLogByID(ctx context.Context, arg FindRequestLogByID
 		&i.IdempotencyKey,
 	)
 	return i, err
+}
+
+const resolveAccountUserActorIDs = `-- name: ResolveAccountUserActorIDs :many
+SELECT id, user_id
+FROM account_user
+WHERE account_id = ? AND id IN (/*SLICE:ids*/?)
+`
+
+type ResolveAccountUserActorIDsParams struct {
+	AccountID string
+	Ids       []string
+}
+
+type ResolveAccountUserActorIDsRow struct {
+	ID     string
+	UserID string
+}
+
+// Maps account_user ids (the actor id the API exposes for user actors) to the
+// user_id stored in request_log.actor_id. The list query filters on the indexed
+// rl.actor_id column directly, so callers translate the exposed account_user id
+// back to user_id before building the filter — see request_log_list_query.go.
+func (q *Queries) ResolveAccountUserActorIDs(ctx context.Context, arg ResolveAccountUserActorIDsParams) ([]ResolveAccountUserActorIDsRow, error) {
+	query := resolveAccountUserActorIDs
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ResolveAccountUserActorIDsRow
+	for rows.Next() {
+		var i ResolveAccountUserActorIDsRow
+		if err := rows.Scan(&i.ID, &i.UserID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

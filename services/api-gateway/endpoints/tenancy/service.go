@@ -51,12 +51,15 @@ func NewTenancySvc(config *TenancySvcConfig) TenancySvc {
 func (m *tenancySvcImpl) GetTenancy(ctx context.Context, req *GetTenancyRequest) (*apiresource.Tenancy, *apierror.APIError) {
 	identity, _ := appctx.GetIdentityFromContext(ctx)
 
-	// Tenancy is the current user's account membership, so it requires an
-	// authenticated user - mirror GetCurrentUser. Without this guard an
-	// unauthenticated request would send an empty UserId and the core service
-	// returns 200 with a null current_account instead of 401, which prevents
-	// clients from knowing they need to refresh/re-authenticate.
-	if apiErr := identity.CheckIsUser(); apiErr != nil {
+	// Tenancy is account-agnostic: it is how a freshly authenticated user
+	// discovers which accounts they can access, so it is called before any
+	// account is selected (no Augno-Account header) and the identity has no
+	// actor account yet. Require an authenticated user but NOT an assigned
+	// account - CheckIsUser would 403 here because IsActorSet demands an actor
+	// account. Without any guard an unauthenticated request would send an empty
+	// UserId and the core service returns 200 with a null current_account
+	// instead of 401, hiding from clients that they need to re-authenticate.
+	if apiErr := identity.CheckHasUserActor(); apiErr != nil {
 		return nil, apiErr
 	}
 

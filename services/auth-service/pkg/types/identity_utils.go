@@ -19,6 +19,21 @@ func (i *Identity) CheckIsUser() *apierror.APIError {
 	return nil
 }
 
+// CheckHasUserActor checks that the identity is an authenticated user, without
+// requiring an assigned account. Use this for account-agnostic user endpoints
+// (e.g. tenancy discovery) where the user may not yet have selected an account.
+func (i *Identity) CheckHasUserActor() *apierror.APIError {
+	if apiErr := i.CheckIsAuthenticated(); apiErr != nil {
+		return apiErr
+	}
+
+	if !i.HasUserActor() {
+		return apierror.NewAuthorizationError("You must be a user to access this resource.")
+	}
+
+	return nil
+}
+
 // CheckIsAPIKey checks that the identity is an API key
 func (i *Identity) CheckIsAPIKey() *apierror.APIError {
 	if apiErr := i.CheckIsAuthenticated(); apiErr != nil {

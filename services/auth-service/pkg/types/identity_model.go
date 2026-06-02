@@ -73,6 +73,14 @@ func (i *Identity) IsUser() bool {
 	return i.IsActorSet() && i.Type == IdentityActorTypeUser
 }
 
+// HasUserActor checks that the identity is an authenticated user with a valid
+// actor ID, regardless of whether an account is assigned. Unlike IsUser, this
+// does not require an actor account, so it suits account-agnostic user
+// endpoints (e.g. tenancy discovery, called before an account is selected).
+func (i *Identity) HasUserActor() bool {
+	return i.IsAuthenticated() && i.Type == IdentityActorTypeUser && i.Actor != nil && i.Actor.ID != ""
+}
+
 // IsInternalActor checks that the identity has a valid actor of type internal, regardless of target account.
 func (i *Identity) IsInternalActor() bool {
 	return i.IsActorSet() && i.Actor.RelationType == IdentityRelationTypeInternal

@@ -55,9 +55,14 @@ WHERE rl.id = ? AND rl.target_account_id = ?;
 -- user_id stored in request_log.actor_id. The list query filters on the indexed
 -- rl.actor_id column directly, so callers translate the exposed account_user id
 -- back to user_id before building the filter — see request_log_list_query.go.
+--
+-- Resolution is by the account_user primary key alone (it is globally unique), NOT
+-- scoped to the viewed account: the actor picker may surface an account_user from a
+-- different account than the one whose logs are being viewed, and the list query
+-- already constrains rl.target_account_id, so an unscoped lookup cannot leak data.
 SELECT id, user_id
 FROM account_user
-WHERE account_id = ? AND id IN (sqlc.slice('ids'));
+WHERE id IN (sqlc.slice('ids'));
 
 -- name: DeleteExpiredRequestLogs :execresult
 DELETE FROM request_log

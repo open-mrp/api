@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/augno/api/services/platform-service/internal/domain"
@@ -12,7 +11,6 @@ import (
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/pagination"
 	"github.com/augno/api/shared/tracing"
 )
@@ -158,7 +156,7 @@ func (r *requestLogRepoImpl) List(ctx context.Context, targetAccountID string, f
 		dir = decoded.Direction
 	}
 
-	resolvedActorIDs, err := r.resolveActorIDFilter(ctx, targetAccountID, filter.ActorIDs)
+	resolvedActorIDs, err := r.resolveActorIDFilter(ctx, filter.ActorIDs)
 	if err != nil {
 		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to resolve actor filter."))
 	}
@@ -203,28 +201,27 @@ func (r *requestLogRepoImpl) List(ctx context.Context, targetAccountID string, f
 // COALESCE(au.id, rl.actor_id) projection), but request_log.actor_id stores the
 // underlying user_id, so account_user ids are mapped back to user_id here. API
 // key actor ids are already stored as-is (rl.actor_id == api_key type_id) and
-// pass through unchanged, as do any account_user ids not found for this account
-// — those simply match no rows, which is correct (that actor has no logs here).
-func (r *requestLogRepoImpl) resolveActorIDFilter(ctx context.Context, targetAccountID string, actorIDs []string) ([]string, error) {
+// pass through unchanged.
+//
+// The mapping is by account_user.id (a globally-unique primary key), NOT scoped to
+// the viewed account: the dashboard actor picker can surface an account_user that
+// belongs to a different account than the one whose logs are being viewed (e.g. an
+// internal/admin actor, or a team list scoped to another account). Scoping the
+// lookup to the viewed account left those ids unresolved, so the raw account_user
+// id was passed through and matched no rows.
+//
+// Translation is attempted for EVERY supplied id, not just ids carrying the acus_
+// type prefix: account_user / user ids are not guaranteed to be prefixed type ids
+// (UUID-keyed identity records exist), so a prefix gate silently skipped the
+// translation and filtered the raw account_user id against rl.actor_id — matching
+// nothing. Ids that are not account_user ids (api_key type_ids, or ids already
+// equal to a user_id) match no account_user row and pass through unchanged.
+func (r *requestLogRepoImpl) resolveActorIDFilter(ctx context.Context, actorIDs []string) ([]string, error) {
 	if len(actorIDs) == 0 {
 		return actorIDs, nil
 	}
 
-	auPrefix := string(id.AccountUserIDPrefix) + "_"
-	var auIDs []string
-	for _, a := range actorIDs {
-		if strings.HasPrefix(a, auPrefix) {
-			auIDs = append(auIDs, a)
-		}
-	}
-	if len(auIDs) == 0 {
-		return actorIDs, nil
-	}
-
-	rows, err := r.db.ResolveAccountUserActorIDs(ctx, sqlc.ResolveAccountUserActorIDsParams{
-		AccountID: targetAccountID,
-		Ids:       auIDs,
-	})
+	rows, err := r.db.ResolveAccountUserActorIDs(ctx, actorIDs)
 	if err != nil {
 		return nil, err
 	}

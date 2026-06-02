@@ -57,7 +57,7 @@ docker_build_with_restart(
   ],
   ignore=EDITOR_TEMP_IGNORE,
   live_update=[
-    sync('./build', '/app/build'),
+    sync('./build/api-gateway', '/app/build/api-gateway'),
   ],
 )
 
@@ -85,7 +85,7 @@ docker_build_with_restart(
   ],
   ignore=EDITOR_TEMP_IGNORE,
   live_update=[
-    sync('./build', '/app/build'),
+    sync('./build/auth-service', '/app/build/auth-service'),
   ],
 )
 
@@ -117,7 +117,7 @@ docker_build_with_restart(
   ],
   ignore=EDITOR_TEMP_IGNORE,
   live_update=[
-    sync('./build', '/app/build'),
+    sync('./build/core-service', '/app/build/core-service'),
   ],
 )
 
@@ -149,7 +149,7 @@ docker_build_with_restart(
   ],
   ignore=EDITOR_TEMP_IGNORE,
   live_update=[
-    sync('./build', '/app/build'),
+    sync('./build/notification-service', '/app/build/notification-service'),
   ],
 )
 
@@ -181,7 +181,7 @@ docker_build_with_restart(
   ],
   ignore=EDITOR_TEMP_IGNORE,
   live_update=[
-    sync('./build', '/app/build'),
+    sync('./build/platform-service', '/app/build/platform-service'),
   ],
 )
 
@@ -212,7 +212,7 @@ docker_build_with_restart(
   ],
   ignore=EDITOR_TEMP_IGNORE,
   live_update=[
-    sync('./build', '/app/build'),
+    sync('./build/billing-service', '/app/build/billing-service'),
   ],
 )
 
@@ -244,7 +244,7 @@ docker_build_with_restart(
   ],
   ignore=EDITOR_TEMP_IGNORE,
   live_update=[
-    sync('./build', '/app/build'),
+    sync('./build/agent-service', '/app/build/agent-service'),
   ],
 )
 

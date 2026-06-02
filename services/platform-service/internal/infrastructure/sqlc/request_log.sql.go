@@ -387,13 +387,8 @@ func (q *Queries) FindRequestLogByID(ctx context.Context, arg FindRequestLogByID
 const resolveAccountUserActorIDs = `-- name: ResolveAccountUserActorIDs :many
 SELECT id, user_id
 FROM account_user
-WHERE account_id = ? AND id IN (/*SLICE:ids*/?)
+WHERE id IN (/*SLICE:ids*/?)
 `
-
-type ResolveAccountUserActorIDsParams struct {
-	AccountID string
-	Ids       []string
-}
 
 type ResolveAccountUserActorIDsRow struct {
 	ID     string
@@ -404,15 +399,19 @@ type ResolveAccountUserActorIDsRow struct {
 // user_id stored in request_log.actor_id. The list query filters on the indexed
 // rl.actor_id column directly, so callers translate the exposed account_user id
 // back to user_id before building the filter — see request_log_list_query.go.
-func (q *Queries) ResolveAccountUserActorIDs(ctx context.Context, arg ResolveAccountUserActorIDsParams) ([]ResolveAccountUserActorIDsRow, error) {
+//
+// Resolution is by the account_user primary key alone (it is globally unique), NOT
+// scoped to the viewed account: the actor picker may surface an account_user from a
+// different account than the one whose logs are being viewed, and the list query
+// already constrains rl.target_account_id, so an unscoped lookup cannot leak data.
+func (q *Queries) ResolveAccountUserActorIDs(ctx context.Context, ids []string) ([]ResolveAccountUserActorIDsRow, error) {
 	query := resolveAccountUserActorIDs
 	var queryParams []interface{}
-	queryParams = append(queryParams, arg.AccountID)
-	if len(arg.Ids) > 0 {
-		for _, v := range arg.Ids {
+	if len(ids) > 0 {
+		for _, v := range ids {
 			queryParams = append(queryParams, v)
 		}
-		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(ids))[1:], 1)
 	} else {
 		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
 	}

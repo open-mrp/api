@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.19.3](https://github.com/Augno/api/compare/v0.19.2...v0.19.3) (2026-06-03)
+
+
+### Bug Fixes
+
+* add Cache-Control and Pragma to CORS headers for enhanced request handling ([03768f8](https://github.com/Augno/api/commit/03768f8b22a450bb35c98eb14feab8b98bcefc8c))
+* add User-Agent to CORS headers for improved request handling ([2d64d59](https://github.com/Augno/api/commit/2d64d59e99e70cb22c2fbfe9aed4042300dc3a0a))
+
 ## [0.19.2](https://github.com/Augno/api/compare/v0.19.1...v0.19.2) (2026-06-02)
 
 

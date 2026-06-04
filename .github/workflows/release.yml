@@ -248,8 +248,8 @@ jobs:
           aws s3 cp s3://augno-public-openapi-specs/openapi.json specs/sdk-baseline/public_openapi_spec.json 2>/dev/null || true
           aws s3 cp s3://augno-private-openapi-specs/openapi.json specs/sdk-baseline/internal_openapi_spec.json 2>/dev/null || true
 
-      - name: Generate OpenAPI Specs
-        run: make openapi
+      - name: Generate OpenAPI Specs and Stainless configs
+        run: make openapi-stainless
 
       - name: Compare internal OpenAPI spec to S3 baseline
         id: compare-internal

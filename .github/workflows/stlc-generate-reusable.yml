@@ -13,7 +13,7 @@ name: Generate SDKs (reusable)
         type: string
         default: main
       openapi_specs_source:
-        description: "s3 — download specs from release S3 buckets; generate — run make openapi-quiet in this job (manual)"
+        description: "s3 — download specs from release S3 buckets; generate — run make openapi-stainless-quiet in this job (manual)"
         required: false
         type: string
         default: generate
@@ -145,9 +145,9 @@ jobs:
           go-version-file: go.mod
           cache-dependency-path: go.sum
 
-      - name: Generate OpenAPI specifications
+      - name: Generate OpenAPI specifications and Stainless configs
         if: matrix.spec_changed == 'true' && inputs.openapi_specs_source == 'generate'
-        run: make openapi-quiet
+        run: make openapi-stainless-quiet
 
       - name: Setup stlc
         if: matrix.spec_changed == 'true'
@@ -297,7 +297,7 @@ jobs:
             if [ "$OPENAPI_SPECS_SOURCE" = "s3" ]; then
               echo "OpenAPI specs were downloaded from the release S3 buckets (\`augno-*-openapi-specs/openapi.json\`)."
             else
-              echo "OpenAPI specs were generated in this job with \`make openapi-quiet\`."
+              echo "OpenAPI specs and Stainless configs were generated in this job with \`make openapi-stainless-quiet\`."
             fi
             echo ""
             echo "Review and merge this PR. The SDK repo's Changesets release workflow will open **chore: version packages** when needed; merge that PR to publish to GitHub Packages."

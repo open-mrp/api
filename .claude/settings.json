@@ -15,6 +15,7 @@
         "Bash(make mocks:*)",
         "Bash(make sqlc:*)",
         "Bash(make openapi:*)",
+        "Bash(make stainless:*)",
         "Bash(make fmt:*)",
         "Bash(make gosec:*)",
         "Bash(find:*)",

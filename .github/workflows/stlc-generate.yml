@@ -1,7 +1,7 @@
 name: Generate SDKs with stlc (manual)
 
 # Release-driven SDK generation runs from release.yml (specs from S3 after publish-openapi-specs).
-# This workflow is for ad-hoc / emergency runs; it regenerates specs in the job with make openapi-quiet.
+# This workflow is for ad-hoc / emergency runs; it regenerates specs and Stainless configs in the job with make openapi-stainless-quiet.
 on:
   workflow_dispatch:
     inputs:

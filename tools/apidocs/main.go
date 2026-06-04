@@ -5,6 +5,7 @@ import (
 	"flag"
 	"log"
 	"os"
+	"time"
 
 	"github.com/augno/api/shared/version"
 )
@@ -23,8 +24,14 @@ func main() {
 	rootDir := flag.String("root", "..", "Project root directory (paths are relative to this)")
 	transformsPath := flag.String("transforms", "tools/apidocs/transforms.json", "Path to transforms JSON file")
 	httpieMode := flag.Bool("httpie", false, "Generate HTTPie workspace file instead of OpenAPI specs")
+	skipStainless := flag.Bool("skip-stainless", false, "Skip Stainless config generation (only generate OpenAPI specs)")
+	onlyStainless := flag.Bool("only-stainless", false, "Only generate Stainless configs (skip OpenAPI specs)")
 	quiet := flag.Bool("quiet", false, "Suppress informational output")
 	flag.Parse()
+
+	if *skipStainless && *onlyStainless {
+		log.Fatal("Error: --skip-stainless and --only-stainless are mutually exclusive")
+	}
 	quietOutput = *quiet
 
 	if err := os.Chdir(*rootDir); err != nil {
@@ -57,7 +64,14 @@ func main() {
 		return
 	}
 
-	generate(groups, "specs/public_openapi_spec.json", true, transforms, ver)
-	generate(groups, "specs/internal_openapi_spec.json", false, transforms, ver)
-	generateStainlessConfigs(groups, ver)
+	if !*onlyStainless {
+		start := time.Now()
+		generate(groups, "specs/public_openapi_spec.json", true, transforms, ver)
+		generate(groups, "specs/internal_openapi_spec.json", false, transforms, ver)
+		log.Printf("OpenAPI spec generation completed in %s", time.Since(start).Round(time.Millisecond))
+	}
+
+	if !*skipStainless {
+		generateStainlessConfigs(groups, ver)
+	}
 }

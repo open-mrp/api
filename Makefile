@@ -1,4 +1,4 @@
-.PHONY: help dev sqlc proto buf-lint db-dump test test-verbose test-sql-prepare-smoke install-tools docs mocks lint gosec gosec-fast govet static-check check-format jaeger-tracing connect-minikube connect-eks version validate-openapi-specs httpie local-db local-db-down local-db-nuke seed-core seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook view-otel e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns openapi openapi-quiet install-stlc stlc-internal-sdk stlc-public-typescript-sdk stlc-sdks
+.PHONY: help dev sqlc proto buf-lint db-dump test test-verbose test-sql-prepare-smoke install-tools docs mocks lint gosec gosec-fast govet static-check check-format jaeger-tracing connect-minikube connect-eks version validate-openapi-specs httpie local-db local-db-down local-db-nuke seed-core seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook view-otel e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns openapi openapi-quiet stainless openapi-stainless openapi-stainless-quiet install-stlc stlc-internal-sdk stlc-public-typescript-sdk stlc-sdks
 
 # Include .env file if it exists (optional for CI)
 -include .env
@@ -50,11 +50,22 @@ dev: ## Run the API in development mode
 	@$(MAKE) fix-minikube-dns
 	tilt up
 
-openapi: ## Generate OpenAPI specifications
+openapi: ## Generate OpenAPI specifications (specs only, no Stainless configs)
+	@mkdir -p specs
+	@cd tools && GOTOOLCHAIN=go1.26.2 go run ./apidocs --name api --skip-stainless
+
+openapi-quiet: ## Generate OpenAPI specifications without informational output (specs only)
+	@mkdir -p specs
+	@cd tools && GOTOOLCHAIN=go1.26.2 go run ./apidocs --name api --skip-stainless --quiet
+
+stainless: ## Generate Stainless SDK configs only (no OpenAPI specs)
+	@cd tools && GOTOOLCHAIN=go1.26.2 go run ./apidocs --name api --only-stainless
+
+openapi-stainless: ## Generate both OpenAPI specs and Stainless SDK configs
 	@mkdir -p specs
 	@cd tools && GOTOOLCHAIN=go1.26.2 go run ./apidocs --name api
 
-openapi-quiet: ## Generate OpenAPI specifications without informational output
+openapi-stainless-quiet: ## Generate both OpenAPI specs and Stainless SDK configs (no informational output)
 	@mkdir -p specs
 	@cd tools && GOTOOLCHAIN=go1.26.2 go run ./apidocs --name api --quiet
 

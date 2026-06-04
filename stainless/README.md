@@ -9,13 +9,15 @@ Augno publishes **multiple** Stainless workspaces from this directory:
 
 Paths in each `workspace.json` are relative to that JSON file (`openapi_spec`, `stainless_config`) and climb to the monorepo root via `output_path`.
 
-## Regenerate specs
+## Regenerate specs and configs
 
-From **`api/`**:
+From **`api/`** (regenerates both the OpenAPI specs that Stainless reads and the `stainless.yml` configs in this directory):
 
 ```bash
-make openapi
+make openapi-stainless
 ```
+
+To regenerate only the `stainless.yml` configs (without touching the specs), use `make stainless`. To regenerate only the specs, use `make openapi`.
 
 ## Run STLC (`stlc` CLI)
 

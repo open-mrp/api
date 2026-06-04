@@ -10,7 +10,7 @@ This reflects your **account migration guide** at repo root [`migration-guide.md
 | **Workspace** | A directory tree that contains **`workspace.json`**, **`stainless.yml`**, the spec snapshot, **`custom-code/`**, build manifests (`builds/`), etc. |
 | **Discovery** | Run `stlc` **from somewhere under the config repo**; it walks up until it finds **`stainless/workspace.json`**, unless you pass `--workspace`. |
 | **SDK repos** | `targets.<lang>.staging_repo` / `production_repo` describe **GitHub repos** (`augno/internal-sdk`, `augno/typescript-sdk`). Builds write **into clones** rooted under the workspace’s **`output_path`** (`output_path` + repo name ⇒ e.g. `core/internal-sdk` in our monorepo). |
-| **Day-to-day loop** | `make openapi` (refresh specs) → `stlc build [--push]`; CI uses one workflow against the config repo with `STLC_READ_TOKEN` / `SDK_WRITE_TOKEN`. |
+| **Day-to-day loop** | `make openapi-stainless` (refresh specs **and** `stainless.yml` configs) → `stlc build [--push]`; CI uses one workflow against the config repo with `STLC_READ_TOKEN` / `SDK_WRITE_TOKEN`. |
 
 **Anti-patterns** for this model:
 
@@ -61,10 +61,10 @@ stlc version
 
 1. **Install** `stlc` (above).
 2. From **`api/`**:
-   - Regenerate OpenAPI when protos/services change:
+   - Regenerate OpenAPI specs and Stainless configs when protos/services change:
 
      ```bash
-     make openapi
+     make openapi-stainless
      ```
 
    - Regenerate SDKs:
@@ -101,7 +101,7 @@ So after edits under **`stlc-main/packages/sdk-codegen/`**, rebuild the worker c
 
 SDK generation runs **only** from [`.github/workflows/release.yml`](../.github/workflows/release.yml) **`generate-sdks`** after **`publish-openapi-specs`** succeeds:
 
-1. **`publish-openapi-specs`** downloads **`openapi.json`** from each bucket into **`specs/sdk-baseline/`** (pre-upload baseline), runs **`make openapi`**, compares with [`scripts/sdk-openapi-spec-changed.sh`](../scripts/sdk-openapi-spec-changed.sh) for internal and public, then uploads **`openapi.json`** and **`stainless.yml`** (plus versioned copies) to **`augno-public-openapi-specs`** and **`augno-private-openapi-specs`**. Job outputs **`internal_spec_changed`** and **`public_spec_changed`** gate SDK generation.
+1. **`publish-openapi-specs`** downloads **`openapi.json`** from each bucket into **`specs/sdk-baseline/`** (pre-upload baseline), runs **`make openapi-stainless`** (specs + Stainless configs, since both are uploaded to S3), compares with [`scripts/sdk-openapi-spec-changed.sh`](../scripts/sdk-openapi-spec-changed.sh) for internal and public, then uploads **`openapi.json`** and **`stainless.yml`** (plus versioned copies) to **`augno-public-openapi-specs`** and **`augno-private-openapi-specs`**. Job outputs **`internal_spec_changed`** and **`public_spec_changed`** gate SDK generation.
 
 2. **`generate-sdks`** calls [`stlc-generate-reusable.yml`](../.github/workflows/stlc-generate-reusable.yml) with **`openapi_specs_source: s3`** and inputs **`openapi_internal_gate`** / **`openapi_public_gate`** (from **`internal_spec_changed`** / **`public_spec_changed`** on **`publish-openapi-specs`**). When a flag is **`false`**, that SDK’s **`stlc build --push`** and changeset amend are **skipped**. When **`true`**, it downloads the published specs from S3, runs **`stlc build --push`** to **`main`**, amends that commit with **`.changeset/sync-api-<tag>.md`**, and pushes to [`Augno/internal-sdk`](https://github.com/Augno/internal-sdk) and [`Augno/typescript-sdk`](https://github.com/Augno/typescript-sdk). Each SDK repo’s Changesets workflow then opens **chore: version packages** on **`main`**—one merge to publish.
 
@@ -131,7 +131,7 @@ Production flow (keeps SDKs aligned with what is deployed):
 
 When `stlc build` fails, the release job runs **Print STLC failure report** (`stlc status`, `stlc diagnostics`, `stlc show`, and the latest `builds/*.json` manifest) in the job log and Actions step summary.
 
-Local preview before release: `make openapi` then `make stlc-internal-sdk` / `make stlc-public-typescript-sdk` from `api/`.
+Local preview before release: `make openapi-stainless` then `make stlc-internal-sdk` / `make stlc-public-typescript-sdk` from `api/`.
 
 ### Repository secrets (required before CI can push)
 

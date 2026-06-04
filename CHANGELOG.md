@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.4](https://github.com/Augno/api/compare/v0.19.3...v0.19.4) (2026-06-04)
+
+
+### Bug Fixes
+
+* enhance OpenAPI and Stainless SDK generation in Makefile and workflows ([44c6b97](https://github.com/Augno/api/commit/44c6b97d7a13abb0fd49daba3980dcef14083770))
+
 ## [0.19.3](https://github.com/Augno/api/compare/v0.19.2...v0.19.3) (2026-06-03)
 
 

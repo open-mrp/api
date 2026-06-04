@@ -433,7 +433,9 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 			}
 
 			// Send welcome email if user has an email and we generated a password for them.
-			if params.Email != nil && generatedPassword != "" {
+			// Suppliers are skipped: there is no supplier portal yet, so a supplier-relation
+			// user has nowhere to log in and does not need their generated password.
+			if params.Email != nil && generatedPassword != "" && !identity.IsTargetSupplierAccount() {
 				emailParams := map[string]any{
 					"Name":     stringOrDefault(params.Name, "there"),
 					"Password": generatedPassword,

@@ -79,7 +79,7 @@ func (m *consumptionSvcImpl) CreateConsumption(ctx context.Context, req *CreateC
 		QuantityUnitId:      req.QuantityUnitID,
 		WasteQuantityValue:  req.WasteQuantityValue,
 		WasteQuantityUnitId: req.WasteQuantityUnitID,
-		Instructions:        req.Instructions,
+		Instructions:        req.Instructions.Ptr(),
 		Includes:            resourcekit.FilterIncludes(ctx, consumptionIncludes...),
 	}
 
@@ -102,12 +102,12 @@ func (m *consumptionSvcImpl) UpdateConsumption(ctx context.Context, req *UpdateC
 	pbReq := &pb.UpdateConsumptionRequest{
 		ProductionStepId:    req.ProductionStepID,
 		Id:                  req.ConsumptionID,
-		ItemId:              req.ItemID,
-		QuantityValue:       req.QuantityValue,
-		QuantityUnitId:      req.QuantityUnitID,
-		WasteQuantityValue:  req.WasteQuantityValue,
-		WasteQuantityUnitId: req.WasteQuantityUnitID,
-		Instructions:        req.Instructions,
+		ItemId:              req.ItemID.Ptr(),
+		QuantityValue:       req.QuantityValue.Ptr(),
+		QuantityUnitId:      req.QuantityUnitID.Ptr(),
+		WasteQuantityValue:  req.WasteQuantityValue.Ptr(),
+		WasteQuantityUnitId: req.WasteQuantityUnitID.Ptr(),
+		Instructions:        req.Instructions.Ptr(),
 		Includes:            resourcekit.FilterIncludes(ctx, consumptionIncludes...),
 	}
 

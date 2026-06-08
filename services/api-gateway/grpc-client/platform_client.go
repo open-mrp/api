@@ -16,10 +16,6 @@ type PlatformServiceClient struct {
 	grpcConn      *contracts.GRPCClientConn
 }
 
-func NewPlatformServiceClient(getenv func(string) string) (*PlatformServiceClient, error) {
-	return NewPlatformServiceClientWithURL(getenv("PLATFORM_SERVICE_URL"))
-}
-
 func NewPlatformServiceClientWithURL(url string) (*PlatformServiceClient, error) {
 	grpcConn, err := contracts.NewGRPCClientConn(contracts.GRPCConnTarget{URL: url, Name: platformServiceName}, nil)
 	if err != nil {

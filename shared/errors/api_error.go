@@ -364,13 +364,6 @@ func WithInternal(err error) APIErrorOption {
 	}
 }
 
-// WithQuota returns an option that attaches quota details during NewAPIError construction.
-func WithQuota(limit, used int32, resetAt *time.Time) APIErrorOption {
-	return func(e *APIError) {
-		e.Quota = &QuotaInfo{Limit: limit, Used: used, ResetAt: resetAt}
-	}
-}
-
 // nestInternalMessage concatenates the internal messages of nested APIErrors to form
 // a chain like "outer context: inner context". This preserves diagnostic context when
 // one service wraps an error received from another.
@@ -446,11 +439,6 @@ func NewParameterUnknownError(publicMessage string, param string) *APIError {
 	return NewAPIError(ErrorCodeParameterUnknown, ErrorTypeInvalidRequest, publicMessage, "", WithParam(param), WithDocURL(docURLParameterUnknown))
 }
 
-// NewParametersExclusiveError creates a 400 error when mutually exclusive parameters are both provided.
-func NewParametersExclusiveError(publicMessage string, param string) *APIError {
-	return NewAPIError(ErrorCodeParametersExclusive, ErrorTypeInvalidRequest, publicMessage, "", WithParam(param), WithDocURL(docURLParametersExclusive))
-}
-
 // NewAuthenticationError creates a 401 Unauthorized error for invalid credentials.
 func NewAuthenticationError(publicMessage string) *APIError {
 	return NewAPIError(ErrorCodeInvalidCredentials, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLInvalidCredentials))
@@ -505,11 +493,6 @@ func NewResourceConflictError(publicMessage string) *APIError {
 // rather than a generic state conflict.
 func NewResourceExistsError(publicMessage string) *APIError {
 	return NewAPIError(ErrorCodeResourceExists, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLResourceConflict))
-}
-
-// NewResourceGoneError creates a 410 Gone error for permanently deleted resources.
-func NewResourceGoneError(publicMessage string) *APIError {
-	return NewAPIError(ErrorCodeResourceGone, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLResourceGone))
 }
 
 // NewAlreadyDeletedError creates a 410 Gone error for resources that were already deleted.

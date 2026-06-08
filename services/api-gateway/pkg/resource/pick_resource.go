@@ -8,11 +8,11 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SamplePickDetailID = "pk_016452192feb7952d8393f0105"
+const SamplePickID = "pk_016452192feb7952d8393f0105"
 const SamplePickNumber = "PK-001"
 
-// PickDetail is a full pick resource.
-type PickDetail struct {
+// Pick is a full pick resource.
+type Pick struct {
 	// Pick ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
@@ -20,13 +20,13 @@ type PickDetail struct {
 	// Pick number.
 	Number string `json:"number" validate:"required"`
 	// Associated sales order. Expandable via include[]=sales_order.
-	SalesOrder *SalesOrderDetail `json:"sales_order" expandable:"true"`
-	// Associated customer.
-	Customer *Customer `json:"customer"`
-	// Pick priority.
-	Priority *Priority `json:"priority"`
+	SalesOrder *SalesOrder `json:"sales_order" expandable:"true"`
+	// Associated customer. Expandable via include[]=customer.
+	Customer *Customer `json:"customer" expandable:"true"`
+	// Pick priority code.
+	Priority constants.PriorityCode `json:"priority" validate:"required"`
 	// Pick lines.
-	Lines *List[PickLineDetail] `json:"lines" expandable:"true"`
+	Lines *List[PickLine] `json:"lines" expandable:"true"`
 	// Associated departments. Expandable via include[]=departments.
 	Departments *List[Department] `json:"departments" expandable:"true"`
 	// Timestamp when the pick was finished.
@@ -37,88 +37,31 @@ type PickDetail struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-var SamplePickDetail = &PickDetail{
-	ID:     SamplePickDetailID,
-	Object: constants.ObjectTypePick,
-	Number: SamplePickNumber,
-	SalesOrder: &SalesOrderDetail{
-		ID:     SampleSalesOrderDetailID,
-		Object: constants.ObjectTypeSalesOrder,
-		Number: SampleSalesOrderNumber,
-	},
-	Customer: &Customer{
-		ID:     SampleCustomerID,
-		Object: constants.ObjectTypeCustomer,
-		Name:   SampleCustomerName,
-		Number: SampleCustomerNumber,
-	},
-	Priority:    SamplePriority,
-	Lines:       NewList([]PickLineDetail{*SamplePickLineDetail}, PageInfo{}),
+var SamplePick = &Pick{
+	ID:          SamplePickID,
+	Object:      constants.ObjectTypePick,
+	Number:      SamplePickNumber,
+	Priority:    SamplePriorityCode,
+	Lines:       NewList([]PickLine{*SamplePickLine}, PageInfo{}),
 	Departments: NewList([]Department{*SampleDepartment}, PageInfo{}),
 	CreatedAt:   timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:   timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
-func (*PickDetail) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SamplePickDetail)
-}
-
-// PickSummary is a pick resource for list views.
-type PickSummary struct {
-	// Pick ID.
-	ID string `json:"id" validate:"required"`
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=pick"`
-	// Pick number.
-	Number string `json:"number" validate:"required"`
-	// Associated sales order. Expandable via include[]=sales_order.
-	SalesOrder *SalesOrderDetail `json:"sales_order" expandable:"true"`
-	// Associated customer.
-	Customer *Customer `json:"customer"`
-	// Pick priority.
-	Priority *Priority `json:"priority"`
-	// Timestamp when the pick was finished.
-	FinishedAt *time.Time `json:"finished_at"`
-	// Creation timestamp.
-	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// Last updated timestamp.
-	UpdatedAt time.Time `json:"updated_at" validate:"required"`
-}
-
-var SamplePickSummary = &PickSummary{
-	ID:     SamplePickDetailID,
-	Object: constants.ObjectTypePick,
-	Number: SamplePickNumber,
-	SalesOrder: &SalesOrderDetail{
-		ID:     SampleSalesOrderDetailID,
-		Object: constants.ObjectTypeSalesOrder,
-		Number: SampleSalesOrderNumber,
-	},
-	Customer: &Customer{
-		ID:     SampleCustomerID,
-		Object: constants.ObjectTypeCustomer,
-		Name:   SampleCustomerName,
-		Number: SampleCustomerNumber,
-	},
-	Priority:  SamplePriority,
-	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
-}
-
-func (*PickSummary) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SamplePickSummary)
+func (*Pick) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SamplePick)
 }
 
 // PackPickResponse is the result of packing a pick.
 type PackPickResponse struct {
 	// Updated pick.
-	Pick *PickDetail `json:"pick" validate:"required"`
+	Pick *Pick `json:"pick" validate:"required"`
 	// Created shipment number.
 	ShipmentNumber string `json:"shipment_number" validate:"required"`
 }
 
 var SamplePackPickResponse = &PackPickResponse{
-	Pick:           SamplePickDetail,
+	Pick:           SamplePick,
 	ShipmentNumber: "SH-001",
 }
 

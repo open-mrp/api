@@ -127,18 +127,18 @@ func (m *accountPriceSvcImpl) CreateAccountPrice(ctx context.Context, req *Creat
 func (m *accountPriceSvcImpl) UpdateAccountPrice(ctx context.Context, req *UpdateAccountPriceRequest) (*apiresource.AccountPrice, *apierror.APIError) {
 	pbReq := &pb.UpdateAccountPriceRequest{
 		Id:                    req.AccountPriceID,
-		RecipientAccountId:    req.RecipientAccountID,
-		ProductLineId:         req.ProductLineID,
-		RateValue:             req.RateValue,
-		RateNumeratorUnitId:   req.RateNumeratorUnitID,
-		RateDenominatorUnitId: req.RateDenominatorUnitID,
+		RecipientAccountId:    req.RecipientAccountID.Ptr(),
+		ProductLineId:         req.ProductLineID.Ptr(),
+		RateValue:             req.RateValue.Ptr(),
+		RateNumeratorUnitId:   req.RateNumeratorUnitID.Ptr(),
+		RateDenominatorUnitId: req.RateDenominatorUnitID.Ptr(),
 	}
 
-	if req.CategoryIDs != nil {
-		pbReq.CategoryIds = &pb.AccountPriceIDList{Ids: *req.CategoryIDs}
+	if v, ok := req.CategoryIDs.Value(); ok {
+		pbReq.CategoryIds = &pb.AccountPriceIDList{Ids: v}
 	}
-	if req.AttributeIDs != nil {
-		pbReq.AttributeIds = &pb.AccountPriceIDList{Ids: *req.AttributeIDs}
+	if v, ok := req.AttributeIDs.Value(); ok {
+		pbReq.AttributeIds = &pb.AccountPriceIDList{Ids: v}
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, accountPriceSvcTracer, "service.account_prices.update", domain.ServiceName,

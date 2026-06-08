@@ -120,7 +120,7 @@ func (m *authSvcImpl) Register(ctx context.Context, req *RegisterRequest) (*apir
 				Email:       req.Email,
 				Password:    req.Password,
 				Name:        req.Name,
-				AccountSlug: req.AccountSlug,
+				AccountSlug: req.AccountSlug.Ptr(),
 			}, opts...)
 		})
 
@@ -174,7 +174,7 @@ func (m *authSvcImpl) RequestPasswordReset(ctx context.Context, req *RequestPass
 		func(ctx context.Context, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 			return m.authClient.RequestPasswordReset(ctx, &pb.RequestPasswordResetRequest{
 				Identifier:  req.Identifier,
-				AccountSlug: req.AccountSlug,
+				AccountSlug: req.AccountSlug.Ptr(),
 			}, opts...)
 		})
 

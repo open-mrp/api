@@ -16,7 +16,13 @@ func init() {
 		Subs: []resourcekit.SubField{
 			{Key: "config", Populate: populateConfigOnAgent},
 			{Key: "tools", Populate: populateToolsOnAgent},
-			{Key: "role", Populate: populateRoleOnAgent},
+			{
+				Key:         "role",
+				Target:      constants.ObjectTypeRole,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractIDs:  extractRoleIDFromAgent,
+				Populate:    populateRoleOnAgent,
+			},
 		},
 	})
 }
@@ -41,12 +47,24 @@ func populateToolsOnAgent(ctx context.Context, parent any, _ map[string]any) {
 	a.Tools = v.(*apiresource.List[apiresource.AgentDefinitionTool])
 }
 
-func populateRoleOnAgent(ctx context.Context, parent any, _ map[string]any) {
+func extractRoleIDFromAgent(ctx context.Context, parent any) []string {
 	a := parent.(*apiresource.AgentDefinition)
-	v, ok := resourcekit.GetLoadMeta(ctx).
-		Get(constants.ObjectTypeAgentDefinition, a.ID, "role")
-	if !ok {
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeAgentDefinition, a.ID, "role_id")
+	if id == "" {
+		return nil
+	}
+	return []string{id}
+}
+
+func populateRoleOnAgent(ctx context.Context, parent any, loaded map[string]any) {
+	a := parent.(*apiresource.AgentDefinition)
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeAgentDefinition, a.ID, "role_id")
+	if id == "" {
 		return
 	}
-	a.Role = v.(*apiresource.Role)
+	if v, ok := loaded[id]; ok {
+		a.Role = v.(*apiresource.Role)
+	}
 }

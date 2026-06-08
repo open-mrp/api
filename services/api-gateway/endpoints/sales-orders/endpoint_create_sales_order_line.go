@@ -8,7 +8,9 @@ import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to create a line on a sales order.
@@ -16,15 +18,13 @@ type CreateSalesOrderLineRequest struct {
 	// Sales order ID.
 	SalesOrderID string `path:"id" validate:"required"`
 	apirequest.OrderLineInput
-	// EDI line item ID.
-	EdiLineItemID *string `json:"edi_line_item_id,omitempty" validate:"omitempty"`
 }
 
 var sampleCreateSOLineItemID = apiresource.SampleItemID
 var sampleCreateSalesOrderLineRequest = &CreateSalesOrderLineRequest{
 	OrderLineInput: apirequest.OrderLineInput{
 		ProductID:                  apiresource.SampleProductID,
-		ItemID:                     &sampleCreateSOLineItemID,
+		ItemID:                     field.Some(sampleCreateSOLineItemID),
 		ProductSKU:                 "WIDGET-001",
 		QuantityValue:              "10",
 		QuantityUnitID:             apiresource.SampleUnitID,
@@ -41,8 +41,8 @@ func (*CreateSalesOrderLineRequest) SchemaExample() any {
 // Creates a line item on a sales order.
 type CreateSalesOrderLineEndpoint struct{}
 
-func (e *CreateSalesOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSalesOrderLineRequest, *apiresource.SalesOrderLineDetail] {
-	return (&apiendpoint.APIEndpoint[*CreateSalesOrderLineRequest, *apiresource.SalesOrderLineDetail]{
+func (e *CreateSalesOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSalesOrderLineRequest, *apiresource.SalesOrderLine] {
+	return (&apiendpoint.APIEndpoint[*CreateSalesOrderLineRequest, *apiresource.SalesOrderLine]{
 		Title:             "Create Sales Order Line",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
@@ -50,8 +50,13 @@ func (e *CreateSalesOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*C
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateSalesOrderLineRequest) (*apiresource.SalesOrderLineDetail, *apierror.APIError) {
+		ObjectType:        constants.ObjectTypeSalesOrderLine,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateSalesOrderLineRequest) (*apiresource.SalesOrderLine, *apierror.APIError) {
 			return svc.(SalesOrderSvc).CreateSalesOrderLine
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeSalesOrderLine,
+			Fields:     []string{"product", "quantity_ordered", "unit_price", "unit_cost", "totals"},
+		}),
 	})
 }

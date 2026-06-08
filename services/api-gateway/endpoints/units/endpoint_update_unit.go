@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to partially update a unit.
@@ -16,22 +17,22 @@ type UpdateUnitRequest struct {
 	// Unit ID.
 	UnitID string `path:"id" validate:"required"`
 	// Display name of the unit.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// Short abbreviation for the unit.
-	Abbreviation *string `json:"abbreviation,omitempty" validate:"omitempty"`
+	Abbreviation field.Optional[string] `json:"abbreviation,omitzero" validate:"omitempty"`
 	// Conversion ratio numerator, as a decimal string.
-	RatioNumerator *string `json:"ratio_numerator,omitempty" format:"decimal"`
+	RatioNumerator field.Optional[string] `json:"ratio_numerator,omitzero" format:"decimal"`
 	// Conversion ratio denominator, as a decimal string. Must not be zero.
-	RatioDenominator *string `json:"ratio_denominator,omitempty" validate:"omitempty,nonzero_decimal" format:"decimal"`
+	RatioDenominator field.Optional[string] `json:"ratio_denominator,omitzero" validate:"omitempty,nonzero_decimal" format:"decimal"`
 	// Conversion offset numerator, as a decimal string.
-	OffsetNumerator *string `json:"offset_numerator,omitempty" format:"decimal"`
+	OffsetNumerator field.Optional[string] `json:"offset_numerator,omitzero" format:"decimal"`
 	// Conversion offset denominator, as a decimal string. Must not be zero.
-	OffsetDenominator *string `json:"offset_denominator,omitempty" validate:"omitempty,nonzero_decimal" format:"decimal"`
+	OffsetDenominator field.Optional[string] `json:"offset_denominator,omitzero" validate:"omitempty,nonzero_decimal" format:"decimal"`
 }
 
 var sampleUpdateUnitRequest = &UpdateUnitRequest{
-	Name:         new("Kilogram"),
-	Abbreviation: new("kg"),
+	Name:         field.Some("Kilogram"),
+	Abbreviation: field.Some("kg"),
 }
 
 func (*UpdateUnitRequest) SchemaExample() any {

@@ -10,7 +10,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to update a material.
@@ -18,22 +18,21 @@ type UpdateMaterialRequest struct {
 	// Material ID.
 	ItemID string `path:"id" validate:"required"`
 	// SKU code.
-	SKU *string `json:"sku,omitempty" validate:"omitempty,max=255"`
+	SKU field.Optional[string] `json:"sku,omitzero" validate:"omitempty,max=255"`
 	// Description.
-	Description *string `json:"description,omitempty"`
+	Description field.Optional[string] `json:"description,omitzero"`
 	// Notes.
-	Notes *string `json:"notes,omitempty"`
+	Notes field.Optional[string] `json:"notes,omitzero"`
 	// Order point quantity.
-	OrderPoint *QuantityInputRequest `json:"order_point,omitempty"`
+	OrderPoint field.Optional[QuantityInputRequest] `json:"order_point,omitzero"`
 	// Lead time quantity.
-	LeadTime *QuantityInputRequest `json:"lead_time,omitempty"`
+	LeadTime field.Optional[QuantityInputRequest] `json:"lead_time,omitzero"`
 	// Updated unit cost. Same currency rule as on create.
-	UnitCost patch.Nullable[apirequest.RateInput] `json:"unit_cost,omitzero"`
+	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero"`
 }
 
-var sampleUpdateMaterialSKU = "MAT-001-UPDATED"
 var sampleUpdateMaterialRequest = &UpdateMaterialRequest{
-	SKU: &sampleUpdateMaterialSKU,
+	SKU: field.Some("MAT-001-UPDATED"),
 }
 
 func (*UpdateMaterialRequest) SchemaExample() any {

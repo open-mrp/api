@@ -150,21 +150,21 @@ func (m *registrationSessionSvcImpl) UpdateSession(ctx context.Context, req *Upd
 		SessionId: req.SessionID,
 	}
 
-	if req.Step != nil {
-		s := string(*req.Step)
+	if step, ok := req.Step.Value(); ok {
+		s := string(step)
 		pbReq.Step = &s
 	}
 
-	if req.SessionData != nil {
+	if sessionData, ok := req.SessionData.Value(); ok {
 		pbReq.SessionData = &pb.RegistrationSessionData{
-			UserName:                 req.SessionData.UserName,
-			AccountName:              req.SessionData.AccountName,
-			BillingAddressLine1:      req.SessionData.BillingAddressLine1,
-			BillingAddressLine2:      req.SessionData.BillingAddressLine2,
-			BillingAddressCity:       req.SessionData.BillingAddressCity,
-			BillingAddressState:      req.SessionData.BillingAddressState,
-			BillingAddressPostalCode: req.SessionData.BillingAddressPostalCode,
-			BillingAddressCountry:    req.SessionData.BillingAddressCountry,
+			UserName:                 sessionData.UserName.Ptr(),
+			AccountName:              sessionData.AccountName.Ptr(),
+			BillingAddressLine1:      sessionData.BillingAddressLine1.Ptr(),
+			BillingAddressLine2:      sessionData.BillingAddressLine2.Ptr(),
+			BillingAddressCity:       sessionData.BillingAddressCity.Ptr(),
+			BillingAddressState:      sessionData.BillingAddressState.Ptr(),
+			BillingAddressPostalCode: sessionData.BillingAddressPostalCode.Ptr(),
+			BillingAddressCountry:    sessionData.BillingAddressCountry.Ptr(),
 		}
 	}
 

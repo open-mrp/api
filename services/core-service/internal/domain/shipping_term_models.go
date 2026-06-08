@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"github.com/augno/api/shared/constants"
+	"github.com/augno/api/shared/field"
 	"github.com/augno/api/shared/pagination"
-	"github.com/augno/api/shared/patch"
 )
 
 type Quantity struct {
@@ -74,9 +74,9 @@ type UpdateShippingTermParams struct {
 	ShippingTermID              string
 	Name                        *string
 	Type                        *constants.ShippingTermType
-	FlatRate                    patch.Field[QuantityInput]
-	MinimumOrderValue           patch.Field[QuantityInput]
-	FreeShippingServiceLevelIDs patch.Field[[]string]
+	FlatRate                    field.Clearable[QuantityInput]
+	MinimumOrderValue           field.Clearable[QuantityInput]
+	FreeShippingServiceLevelIDs field.Clearable[[]string]
 	FlatRateID                  *string
 	MinimumOrderID              *string
 	Includes                    []string

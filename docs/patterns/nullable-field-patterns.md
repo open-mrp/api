@@ -1,103 +1,190 @@
-# Nullable and PATCH Field Patterns
+# Request Field Tags, Nullability, and PATCH Patterns
 
-PATCH endpoints need to distinguish three states for updatable fields:
+This is the canonical reference for how we model **request** field presence on the API gateway: which Go type to use, which `json` tag to pair it with, what each combination means on the wire, and how it flows through validation, OpenAPI, proto, and the service layer.
 
-| State | JSON | Meaning |
-|-------|------|---------|
-| Unset | key absent | Leave the existing value unchanged |
-| Clear | `"field": null` | Set the column to NULL (where supported) |
-| Set | `"field": "value"` | Update to the new value |
+For the **response** side (resource structs), see [`docs/api-resource-conventions.md`](../api-resource-conventions.md). The short version of the response rule lives at the bottom of this doc too, because the same `*T` spelling means something *different* in a response than in a request, and that difference trips people up.
 
-## Request struct types
+> **Background reading.** The two engineering articles explain *why* this design exists, including how Go's `encoding/json` behaves on marshal and unmarshal: [Declarative API Endpoints](../article1.md) (request decoding) and [Source Code → API Reference](../article2.md) (how these types become the OpenAPI contract).
 
-### `*patch.Field[T]` — clearable optional fields
+---
 
-Use for any PATCH field that accepts explicit `null` to clear. The pointer means the key may be absent (unset); the inner field encodes clear vs set when present:
+## The core problem: three wire states, two native Go states
+
+Any JSON field in an incoming request body is in exactly one of three states:
+
+| Wire state | Example body | What the caller means |
+|------------|--------------|-----------------------|
+| **Absent** | `{}` | "I'm not saying anything about this field." |
+| **Null** | `{"note": null}` | "Set this to null / clear it." |
+| **Value** | `{"note": "hi"}` | "Set this to this value." |
+
+Plain Go types collapse two of these into one. Unmarshal `{}` or `{"note": null}` into a `*string` and you get `nil` **both times** — Go cannot tell *absent* from *null*. Unmarshal into a `string` and both give `""` — indistinguishable from a real empty string. That lost bit of information is the entire reason `field.Optional` and `field.Clearable` exist: they carry a custom `UnmarshalJSON` that records *which* of the three states actually arrived.
+
+---
+
+## The four contexts
+
+Which states you need to distinguish depends on what the request *does*. That, not personal taste, picks the type.
+
+### 1. Create / action requests (`CreateXRequest`, action POST bodies)
+
+A create has no existing value to "leave unchanged," so *absent* and *null* mean the same thing ("not provided"). You only need **provided vs. not**, and an explicit `null` is a client mistake we reject.
 
 ```go
-type UpdateAccountGroupRequest struct {
-	Description *patch.Field[string] `json:"description,omitempty,omitzero"`
+type CreateCustomerRequest struct {
+	// Required: value type, validate:"required", NO omit tag.
+	Name string `json:"name" validate:"required,max=255"`
+	// Optional scalar/enum/struct: field.Optional[T] + ,omitzero.
+	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
+	// Optional enum with a documented default.
+	StatusCode field.Optional[constants.AccountStatusCode] `json:"status,omitzero" default:"normal"`
+	// Optional nested input struct — still field.Optional, NOT *QuantityInput.
+	CreditLimit field.Optional[apirequest.QuantityInput] `json:"credit_limit,omitzero"`
+	// Optional slice: stay []T, just use ,omitzero (do NOT wrap slices).
+	PriceGroupIDs []string `json:"customer_price_group_ids,omitzero"`
 }
 ```
 
-- Use `json:"...,omitempty"` (and `omitzero` for value-type `*patch.Field`) on the pointer so absent keys stay unset and examples omit unset fields.
-- `validate:"omitempty,..."` on the pointer is still correct (nil skips validation).
-- OpenAPI: inner type (`string`, `QuantityInput`, `array`, …), `nullable: true`, `x-nullable-clear: true`; PATCH request schemas must not list the field in `required` (all body fields are optional).
-- Runtime: absent key → nil pointer; `ApplyPtrFieldNulls` maps explicit JSON `null` to inner clear before service logic runs.
-- Proto: map with `StringPatch`, `QuantityPatch`, `StringListPatch`, etc. via `patch.StringFieldPtrToProto`, etc.
+### 2. Update / PATCH requests (`UpdateXRequest`)
 
-### `patch.Nullable[T]` — optional input documented as nullable
-
-Use on create (and other non-clearable) request fields that should appear as `nullable: true` in OpenAPI but must not accept explicit JSON `null` at runtime.
-
-Always use the **value type** with `json:"...,omitzero"`. Do not use `*patch.Nullable[T]` (null would decode as a nil pointer and skip `UnmarshalJSON`, so explicit `null` would not be rejected).
+Here all three states are meaningful: omit = leave unchanged, `null` = clear the column, value = set it. Two sub-cases:
 
 ```go
-type CreateMaterialRequest struct {
-	Description patch.Nullable[string] `json:"description,omitzero"`
-	Phone       patch.Nullable[string] `json:"phone,omitzero" validate:"omitempty,max=255"`
+type UpdateCustomerRequest struct {
+	// Path param: value type, never wrapped.
+	CustomerID string `path:"id" validate:"required"`
+	// Settable but NOT clearable (column is non-nullable): field.Optional[T].
+	// Omit to leave unchanged; an explicit null is rejected.
+	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
+	// Settable AND clearable (nullable column): *field.Clearable[T].
+	// Omit = leave; null = clear; value = set.
+	Note *field.Clearable[string] `json:"note,omitzero"`
+	// "Replace the whole collection when provided" — needs absent-vs-empty,
+	// so wrap the slice: field.Optional[[]T].
+	PriceGroupIDs field.Optional[[]string] `json:"customer_price_group_ids,omitzero"`
 }
 ```
 
-- Unset when the key is absent (`omitzero` + `IsZero()`); set when a value is provided. Explicit JSON `null` is rejected at unmarshal (`patch.ErrExplicitNull`).
-- Add `validate:"omitempty,..."` only when other validators apply to the inner value; do not use `validate:"omitempty"` alone (unset is already handled by the custom validator).
-- OpenAPI: inner type, `nullable: true`, no `x-nullable-clear`.
-- Service layer: use `field.Ptr()` to obtain `*T` for proto mapping when set, or `field.Value()` when you need the value and presence.
-- Samples: `patch.SetNullable(v)` or `patch.PtrNullable(&v)`; never `&patch.Nullable[T]`.
+> **We do not use bare `*string` for PATCH inputs anymore.** A `*string` can't be told apart from `null` at decode time and silently treats `{"name": null}` as "leave unchanged," which is surprising. `field.Optional[T]` rejects the null explicitly. `*field.Clearable[T]` is the *only* request shape that accepts `null`, and it does so on purpose (to clear).
 
-### `*T` with `json:"...,omitempty"` — optional, not clearable
+### 3. Responses (resource structs)
 
-Use for PATCH fields that may be omitted but must not be sent as `null`:
+Output only. There is no "absent" — every field is serialized — so plain Go types are correct. **See [`api-resource-conventions.md`](../api-resource-conventions.md); never put `omitempty` on a response field.**
 
 ```go
-type UpdateAccountGroupRequest struct {
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+type Customer struct {
+	Name string  `json:"name" validate:"required"` // always present
+	Note *string `json:"note"`                      // value or JSON null (NO omit tag)
 }
 ```
 
-- OpenAPI: not nullable
-- Runtime: `RejectExplicitJSONNulls` rejects explicit `null` and blank strings for `*string`
+### 4. Shared input fragments (`pkg/request/*`: `AddressInput`, `QuantityInput`, …)
 
-### `*T` without `omitempty` — response nullable fields
+These are create-style building blocks embedded in other requests. They follow the **create** rules (`field.Optional` for optional, value + `required` for mandatory).
 
-Use on **response** resources for fields that are always present but may be `null`:
+---
+
+## The decision table
+
+| Context | Always present / required | Optional, not clearable | Clearable (accepts `null`) |
+|---------|---------------------------|-------------------------|----------------------------|
+| **Create / action** | `T` + `validate:"required"`, no tag | `field.Optional[T]` + `,omitzero` | — (creates don't clear) |
+| **Update / PATCH** | `T` (path params only) | `field.Optional[T]` + `,omitzero` | `*field.Clearable[T]` + `,omitzero` |
+| **Response** | `T` + `validate:"required"` | `*T` (nullable, **no** omit tag) | `*T` (nullable, **no** omit tag) |
+
+Optional **slices**: `[]T` + `,omitzero` on create (absent vs. empty doesn't matter); `field.Optional[[]T]` on update when "provided replaces the collection" must be distinguishable from "omitted."
+
+---
+
+## `omitzero` vs. `omitempty` (and why the wrappers force it)
+
+This is the rule that looks arbitrary until you know it:
+
+| You wrote | Use this json tag | Why |
+|-----------|-------------------|-----|
+| `field.Optional[T]` (value) | `,omitzero` | The wrapper implements `IsZero()`. `omitzero` (Go 1.24+) calls it, so an unset value is dropped from generated examples. `omitempty` does **not** call `IsZero` on a struct and would emit a broken `{}`. |
+| `*field.Clearable[T]` (pointer) | `,omitzero` | Nil pointer is the zero value, so `omitzero` drops it. (`omitempty` also works on pointers, but we standardize on `omitzero` everywhere in requests so there is one rule.) |
+| `[]T` / `field.Optional[[]T]` | `,omitzero` | Same: one rule. |
+| `*T` in a **response** | **no omit tag** | Responses must serialize `null`, not drop the key. |
+
+**Rule of thumb: every request field gets `,omitzero`; response fields get no omit tag.** Omit tags only affect *marshaling* (the OpenAPI examples and responses) — the server ignores them when decoding — so getting this wrong produces malformed docs examples, not a runtime accept/reject change. The accept/reject behavior comes from the *type* (below), not the tag.
+
+> `validate:"omitempty,..."` is a different `omitempty` — it's a `go-playground/validator` keyword meaning "skip the other rules when unset." Leave it exactly as-is; it has nothing to do with the json tag.
+
+---
+
+## What each type accepts at runtime
+
+The gateway request pipeline (in `services/api-gateway/pkg/endpoint/api_endpoint.go`, `Execute`) runs, in order:
+
+1. **`DecodeJSONInto`** → `encoding/json` unmarshal. Each wrapper's custom `UnmarshalJSON` fires here.
+   - `field.Optional[T].UnmarshalJSON(null)` returns `field.ErrExplicitNull`; `Execute` catches it and `field.ExplicitNullField` turns it into a field-named `400 "Field 'x' cannot be null."`.
+   - `field.Clearable[T].UnmarshalJSON(null)` records the **clear** state (no error).
+2. **`field.ApplyPtrClearableNulls`** — `encoding/json` leaves a `*field.Clearable[T]` nil when the key is an explicit `null`, so this pass walks the raw body and restores the clear sentinel.
+3. **`validate.ApplySlicePresenceFlags`** — legacy `Has*` companions for a few slice fields.
+4. **`validate.RejectExplicitJSONNulls`** — the guard for everything that is *not* a wrapper:
+   - **Bare `*T` + `omitempty`**: rejects explicit `null` **and** blank/whitespace strings.
+   - **`field.Clearable[T]`**: skipped (it accepts `null` by design).
+   - **`field.Optional[T]`**: `null` was already rejected at step 1; this pass additionally rejects a present-but-**blank** string, so `{"name": ""}` is a `400 "Field 'x' must not be blank."` rather than silently setting `""`. (This applies uniformly to create and update Optional fields.)
+
+Net behavior, by type:
+
+| Type | `{}` (absent) | `{"x": null}` | `{"x": ""}` | `{"x": "v"}` |
+|------|---------------|---------------|-------------|--------------|
+| `T` + `required` | `400` (required) | `400` | depends on `validate` | set |
+| `field.Optional[T]` | unset (OK) | **`400` cannot be null** | **`400` must not be blank** | set |
+| `*field.Clearable[T]` | unset (OK) | **clear** | set to `""` | set |
+
+---
+
+## Reading these in the service layer
 
 ```go
-type AccountGroup struct {
-	Description *string `json:"description"`
-}
+// field.Optional[T]
+if v, ok := req.Name.Value(); ok { /* provided */ }
+pbReq.Name = req.Name.Ptr()            // *T: non-nil only when set
+
+// *field.Clearable[T]
+c := field.Coalesce(req.Note)          // nil *Clearable -> Unset
+pbReq.Note = field.StringClearablePtrToProto(req.Note) // -> proto StringPatch
+val := c.StringPtrAfterBackfill(existing) // clear -> nil; set -> &v; unset -> existing
 ```
 
-- OpenAPI: `nullable: true` (no `x-nullable-clear`)
-- Never use `omitempty` on response resource fields
+Key accessors: `Value() (T, bool)`, `Ptr() *T`, `IsSet()/IsUnset()` (both); `IsClear()/WasProvided()`, `BackfillUnset`, `Coalesce` (Clearable). Build samples with `field.Some(v)` / `field.SomePtr(&v)` (Optional) and `field.Set(v)` / `field.Ptr(...)` (Clearable) — never `&field.Optional[T]{}`.
 
-## Layer mapping
+---
 
-| Layer | Clearable field | Nullable input | Optional non-clearable |
-|-------|-----------------|----------------|------------------------|
-| HTTP request | `*patch.Field[T]` + `omitempty` | `patch.Nullable[T]` (value) + `omitzero` | `*T` + `omitempty` |
-| OpenAPI | inner type, nullable, `x-nullable-clear` | inner type, nullable | inner type, not nullable |
-| Proto | `StringPatch` / `QuantityPatch` / … | `optional` scalar via `.Ptr()` | `optional` scalar |
-| Domain | `patch.Field[T]` | `*T` after backfill | `*T` after backfill |
-| SQL | `patch.StringToNullString` etc. | `COALESCE` / backfill | `COALESCE` / backfill |
+## OpenAPI mapping (derived automatically by `tools/apidocs`)
 
-## Gateway handler pipeline
+| Request shape | `required` | `nullable` | extra |
+|---------------|------------|------------|-------|
+| `T` (no omit) | yes | no | |
+| `field.Optional[T]` | **no** (always optional) | **no** | documents inner `T`; rejects explicit null |
+| `*field.Clearable[T]` | no | **yes** | in a request body, nullable means "send null to clear" |
+| `*T` + `omitempty` (legacy/none left) | no | no | |
+| `*T` no omit (**response only**) | yes | yes | "value or null" |
 
-After JSON decode on PATCH/POST bodies:
+You never set `required`/`nullable` by hand — the generator reads the type + tags. After changing any request struct, run `make openapi` and commit the regenerated spec.
 
-1. `ApplyPtrFieldNulls` — maps explicit JSON `null` on `*patch.Field` keys to inner clear (encoding/json leaves them nil)
-2. `ApplySlicePresenceFlags` — legacy `Has*` slice companions only
-3. `RejectExplicitJSONNulls` — rejects `null` on optional pointers (`omitempty`); skips `*patch.Field` and `patch.Nullable`
+---
 
-## Adding a new clearable field
+## Adding a new field — quick recipes
 
-1. Use `*patch.Field[T]` on the gateway update request struct with `json:"...,omitempty"`
-2. Map to proto patch types in the gateway service (`patch.StringFieldPtrToProto`, etc.)
-3. Use `patch.Field` in core-service domain params and service logic
-4. Regenerate OpenAPI: `make openapi`
+**Optional create input:** `field.Optional[T]` + `json:"x,omitzero"` (+ `validate:"omitempty,..."` only if the inner value has rules). Read with `.Ptr()`/`.Value()`. `make openapi`.
 
-## Adding a new nullable input field
+**PATCH, settable but not clearable:** `field.Optional[T]` + `json:"x,omitzero"`. Read with `.Ptr()`/`.Value()`.
 
-1. Use `patch.Nullable[T]` with `json:"...,omitzero"` on the gateway request struct
-2. Map with `.Ptr()` in the gateway service when calling proto
-3. Regenerate OpenAPI: `make openapi`
+**PATCH, clearable (nullable column):** `*field.Clearable[T]` + `json:"x,omitzero"`. Map with the `field.*ClearablePtrToProto` helpers; in core-service use `field.Clearable`/backfill. `make openapi`.
+
+**Response, nullable:** `*T`, **no** omit tag. (See `api-resource-conventions.md`.)
+
+---
+
+## Response-side rule (so the overload is explicit)
+
+A bare `*T` means different things in the two directions, distinguished only by the omit tag and the struct's role:
+
+- **Request** `*T` + `omitempty` → "optional input, null rejected" (legacy; prefer `field.Optional`).
+- **Response** `*T`, no tag → "always present, may be `null`."
+
+If you find yourself reaching for a bare pointer on a *request*, you almost certainly want `field.Optional[T]` (set-or-absent) or `*field.Clearable[T]` (set/clear/absent) instead.

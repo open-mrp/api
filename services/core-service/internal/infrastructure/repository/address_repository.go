@@ -10,8 +10,8 @@ import (
 	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 	"github.com/augno/api/shared/pagination"
-	"github.com/augno/api/shared/patch"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -301,8 +301,8 @@ func (r *addressRepoImpl) Update(ctx context.Context, params domain.UpdateAddres
 	result, err := r.queries.UpdateAddress(ctx, sqlc.UpdateAddressParams{
 		ID:         params.AddressID,
 		Name:       toNullString(params.Name),
-		Phone:      patch.StringToNullString(params.Phone),
-		Email:      patch.StringToNullString(params.Email),
+		Phone:      field.StringToNullString(params.Phone),
+		Email:      field.StringToNullString(params.Email),
 		IsDropShip: toNullBool(params.IsDropShip),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -406,7 +406,7 @@ func (r *addressRepoImpl) UpdateGeolocation(ctx context.Context, geolocationID s
 	_, err := r.queries.UpdateGeolocation(ctx, sqlc.UpdateGeolocationParams{
 		ID:          geolocationID,
 		StreetLine1: toNullString(params.StreetLine1),
-		StreetLine2: patch.StringToNullString(params.StreetLine2),
+		StreetLine2: field.StringToNullString(params.StreetLine2),
 		Locality:    toNullString(params.Locality),
 		State:       toNullString(params.State),
 		PostalCode:  toNullString(params.PostalCode),

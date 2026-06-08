@@ -219,6 +219,7 @@ const (
 	CoreService_ConnectProductionSteps_FullMethodName                     = "/core.CoreService/ConnectProductionSteps"
 	CoreService_ListCustomers_FullMethodName                              = "/core.CoreService/ListCustomers"
 	CoreService_GetCustomer_FullMethodName                                = "/core.CoreService/GetCustomer"
+	CoreService_BatchGetCustomersByIDs_FullMethodName                     = "/core.CoreService/BatchGetCustomersByIDs"
 	CoreService_CreateCustomer_FullMethodName                             = "/core.CoreService/CreateCustomer"
 	CoreService_DeleteCustomer_FullMethodName                             = "/core.CoreService/DeleteCustomer"
 	CoreService_BulkDeleteCustomers_FullMethodName                        = "/core.CoreService/BulkDeleteCustomers"
@@ -763,6 +764,8 @@ type CoreServiceClient interface {
 	ConnectProductionSteps(ctx context.Context, in *ConnectProductionStepsRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	ListCustomers(ctx context.Context, in *ListCustomersRequest, opts ...grpc.CallOption) (*ListCustomersResponse, error)
 	GetCustomer(ctx context.Context, in *GetCustomerRequest, opts ...grpc.CallOption) (*GetCustomerResponse, error)
+	// Returns customers by ID for the api-gateway include resolver.
+	BatchGetCustomersByIDs(ctx context.Context, in *BatchGetCustomersByIDsRequest, opts ...grpc.CallOption) (*BatchGetCustomersByIDsResponse, error)
 	CreateCustomer(ctx context.Context, in *CreateCustomerRequest, opts ...grpc.CallOption) (*CreateCustomerResponse, error)
 	// Deletes a customer and its associated relations.
 	DeleteCustomer(ctx context.Context, in *DeleteCustomerRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -2906,6 +2909,16 @@ func (c *coreServiceClient) GetCustomer(ctx context.Context, in *GetCustomerRequ
 	return out, nil
 }
 
+func (c *coreServiceClient) BatchGetCustomersByIDs(ctx context.Context, in *BatchGetCustomersByIDsRequest, opts ...grpc.CallOption) (*BatchGetCustomersByIDsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BatchGetCustomersByIDsResponse)
+	err := c.cc.Invoke(ctx, CoreService_BatchGetCustomersByIDs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *coreServiceClient) CreateCustomer(ctx context.Context, in *CreateCustomerRequest, opts ...grpc.CallOption) (*CreateCustomerResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateCustomerResponse)
@@ -4960,6 +4973,8 @@ type CoreServiceServer interface {
 	ConnectProductionSteps(context.Context, *ConnectProductionStepsRequest) (*emptypb.Empty, error)
 	ListCustomers(context.Context, *ListCustomersRequest) (*ListCustomersResponse, error)
 	GetCustomer(context.Context, *GetCustomerRequest) (*GetCustomerResponse, error)
+	// Returns customers by ID for the api-gateway include resolver.
+	BatchGetCustomersByIDs(context.Context, *BatchGetCustomersByIDsRequest) (*BatchGetCustomersByIDsResponse, error)
 	CreateCustomer(context.Context, *CreateCustomerRequest) (*CreateCustomerResponse, error)
 	// Deletes a customer and its associated relations.
 	DeleteCustomer(context.Context, *DeleteCustomerRequest) (*emptypb.Empty, error)
@@ -5758,6 +5773,9 @@ func (UnimplementedCoreServiceServer) ListCustomers(context.Context, *ListCustom
 }
 func (UnimplementedCoreServiceServer) GetCustomer(context.Context, *GetCustomerRequest) (*GetCustomerResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetCustomer not implemented")
+}
+func (UnimplementedCoreServiceServer) BatchGetCustomersByIDs(context.Context, *BatchGetCustomersByIDsRequest) (*BatchGetCustomersByIDsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BatchGetCustomersByIDs not implemented")
 }
 func (UnimplementedCoreServiceServer) CreateCustomer(context.Context, *CreateCustomerRequest) (*CreateCustomerResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateCustomer not implemented")
@@ -9740,6 +9758,24 @@ func _CoreService_GetCustomer_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CoreService_BatchGetCustomersByIDs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchGetCustomersByIDsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).BatchGetCustomersByIDs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_BatchGetCustomersByIDs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).BatchGetCustomersByIDs(ctx, req.(*BatchGetCustomersByIDsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CoreService_CreateCustomer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateCustomerRequest)
 	if err := dec(in); err != nil {
@@ -13538,6 +13574,10 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetCustomer",
 			Handler:    _CoreService_GetCustomer_Handler,
+		},
+		{
+			MethodName: "BatchGetCustomersByIDs",
+			Handler:    _CoreService_BatchGetCustomersByIDs_Handler,
 		},
 		{
 			MethodName: "CreateCustomer",

@@ -3,8 +3,8 @@ package domain
 import (
 	"time"
 
+	"github.com/augno/api/shared/field"
 	"github.com/augno/api/shared/pagination"
-	"github.com/augno/api/shared/patch"
 )
 
 // ProductFull represents a product entity, which extends an Item with product-specific fields.
@@ -96,8 +96,8 @@ type UpdateProductParams struct {
 	AccountID     string
 	ProductID     string
 	SKU           *string
-	Description   patch.Field[string]
-	Notes         patch.Field[string]
+	Description   field.Clearable[string]
+	Notes         field.Clearable[string]
 	IsPortalReady *bool
 	UnitPrice     *CreateRateParams
 	Includes      []string

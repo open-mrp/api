@@ -490,9 +490,10 @@ var LoggingService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	AuditService_CreateAuditEvent_FullMethodName = "/platform.AuditService/CreateAuditEvent"
-	AuditService_ListAuditEvents_FullMethodName  = "/platform.AuditService/ListAuditEvents"
-	AuditService_GetAuditEvent_FullMethodName    = "/platform.AuditService/GetAuditEvent"
+	AuditService_CreateAuditEvent_FullMethodName            = "/platform.AuditService/CreateAuditEvent"
+	AuditService_ListAuditEvents_FullMethodName             = "/platform.AuditService/ListAuditEvents"
+	AuditService_GetAuditEvent_FullMethodName               = "/platform.AuditService/GetAuditEvent"
+	AuditService_ListAuditEventResourceTypes_FullMethodName = "/platform.AuditService/ListAuditEventResourceTypes"
 )
 
 // AuditServiceClient is the client API for AuditService service.
@@ -507,6 +508,8 @@ type AuditServiceClient interface {
 	ListAuditEvents(ctx context.Context, in *ListAuditEventsRequest, opts ...grpc.CallOption) (*ListAuditEventsResponse, error)
 	// Returns a single audit event by ID.
 	GetAuditEvent(ctx context.Context, in *GetAuditEventRequest, opts ...grpc.CallOption) (*GetAuditEventResponse, error)
+	// Returns the full set of resource types that may appear on audit events.
+	ListAuditEventResourceTypes(ctx context.Context, in *ListAuditEventResourceTypesRequest, opts ...grpc.CallOption) (*ListAuditEventResourceTypesResponse, error)
 }
 
 type auditServiceClient struct {
@@ -547,6 +550,16 @@ func (c *auditServiceClient) GetAuditEvent(ctx context.Context, in *GetAuditEven
 	return out, nil
 }
 
+func (c *auditServiceClient) ListAuditEventResourceTypes(ctx context.Context, in *ListAuditEventResourceTypesRequest, opts ...grpc.CallOption) (*ListAuditEventResourceTypesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListAuditEventResourceTypesResponse)
+	err := c.cc.Invoke(ctx, AuditService_ListAuditEventResourceTypes_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuditServiceServer is the server API for AuditService service.
 // All implementations must embed UnimplementedAuditServiceServer
 // for forward compatibility.
@@ -559,6 +572,8 @@ type AuditServiceServer interface {
 	ListAuditEvents(context.Context, *ListAuditEventsRequest) (*ListAuditEventsResponse, error)
 	// Returns a single audit event by ID.
 	GetAuditEvent(context.Context, *GetAuditEventRequest) (*GetAuditEventResponse, error)
+	// Returns the full set of resource types that may appear on audit events.
+	ListAuditEventResourceTypes(context.Context, *ListAuditEventResourceTypesRequest) (*ListAuditEventResourceTypesResponse, error)
 	mustEmbedUnimplementedAuditServiceServer()
 }
 
@@ -577,6 +592,9 @@ func (UnimplementedAuditServiceServer) ListAuditEvents(context.Context, *ListAud
 }
 func (UnimplementedAuditServiceServer) GetAuditEvent(context.Context, *GetAuditEventRequest) (*GetAuditEventResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetAuditEvent not implemented")
+}
+func (UnimplementedAuditServiceServer) ListAuditEventResourceTypes(context.Context, *ListAuditEventResourceTypesRequest) (*ListAuditEventResourceTypesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListAuditEventResourceTypes not implemented")
 }
 func (UnimplementedAuditServiceServer) mustEmbedUnimplementedAuditServiceServer() {}
 func (UnimplementedAuditServiceServer) testEmbeddedByValue()                      {}
@@ -653,6 +671,24 @@ func _AuditService_GetAuditEvent_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuditService_ListAuditEventResourceTypes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListAuditEventResourceTypesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuditServiceServer).ListAuditEventResourceTypes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuditService_ListAuditEventResourceTypes_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuditServiceServer).ListAuditEventResourceTypes(ctx, req.(*ListAuditEventResourceTypesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuditService_ServiceDesc is the grpc.ServiceDesc for AuditService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -671,6 +707,10 @@ var AuditService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetAuditEvent",
 			Handler:    _AuditService_GetAuditEvent_Handler,
+		},
+		{
+			MethodName: "ListAuditEventResourceTypes",
+			Handler:    _AuditService_ListAuditEventResourceTypes_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

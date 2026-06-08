@@ -9,7 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to partially update an account group.
@@ -17,17 +17,23 @@ type UpdateAccountGroupRequest struct {
 	// Account group ID.
 	AccountGroupID string `path:"id" validate:"required"`
 	// Display name.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// Description.
-	Description *patch.Field[string] `json:"description"`
+	Description field.Clearable[string] `json:"description,omitzero"`
 	// Commission policy.
-	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy,omitempty"`
+	//
+	// - `commission_exempt`: no commission applies.
+	// - `commission_applied`: commission applies; if the account group is within a sales rep's territory, it will be assigned to that rep unless overridden.
+	CommissionPolicy field.Optional[constants.CommissionPolicy] `json:"commission_policy,omitzero"`
 	// Freight policy.
-	FreightPolicy *constants.FreightPolicy `json:"freight_policy,omitempty"`
+	//
+	// - `free_freight`: customers within this group will not have to pay for freight.
+	// - `billed_freight`: freight will be applied to any order within this account group, unless overridden elsewhere.
+	FreightPolicy field.Optional[constants.FreightPolicy] `json:"freight_policy,omitzero"`
 }
 
 var sampleUpdateAccountGroupRequest = &UpdateAccountGroupRequest{
-	Name: new("Updated Wholesale Customers"),
+	Name: field.Some("Updated Wholesale Customers"),
 }
 
 func (*UpdateAccountGroupRequest) SchemaExample() any {

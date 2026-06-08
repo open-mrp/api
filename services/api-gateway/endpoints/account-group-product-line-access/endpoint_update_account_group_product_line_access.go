@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // UpdateAccountGroupProductLineAccessRequest is a request to update product line access for an account group.
@@ -16,11 +17,11 @@ type UpdateAccountGroupProductLineAccessRequest struct {
 	// Account group ID.
 	AccountGroupID string `path:"account_group_id" validate:"required"`
 	// Product line IDs to grant access to.
-	ProductLineIDs *[]string `json:"product_line_ids,omitempty"`
+	ProductLineIDs field.Optional[[]string] `json:"product_line_ids,omitzero"`
 }
 
 var sampleUpdateAccountGroupProductLineAccessRequest = &UpdateAccountGroupProductLineAccessRequest{
-	ProductLineIDs: &[]string{apiresource.SampleProductLineID},
+	ProductLineIDs: field.Some([]string{apiresource.SampleProductLineID}),
 }
 
 func (*UpdateAccountGroupProductLineAccessRequest) SchemaExample() any {

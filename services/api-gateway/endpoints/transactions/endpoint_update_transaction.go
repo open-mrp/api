@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to update a transaction.
@@ -15,17 +16,17 @@ type UpdateTransactionRequest struct {
 	// Transaction ID.
 	TransactionID string `path:"id" validate:"required"`
 	// Transaction number.
-	Number *string `json:"number" validate:"omitempty,max=255"`
+	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
 	// Note.
-	Note *string `json:"note"`
+	Note field.Optional[string] `json:"note,omitzero"`
 	// Amount as a decimal string.
-	Amount *string `json:"amount"`
+	Amount field.Optional[string] `json:"amount,omitzero"`
 	// Transaction method code.
-	TransactionMethodCode *string `json:"method" validate:"omitempty,max=255"`
+	TransactionMethodCode field.Optional[string] `json:"method,omitzero" validate:"omitempty,max=255"`
 	// Adjustment type code.
-	AdjustmentTypeCode *string `json:"adjustment_type" validate:"omitempty,max=255"`
+	AdjustmentTypeCode field.Optional[string] `json:"adjustment_type,omitzero" validate:"omitempty,max=255"`
 	// Responsible user ID.
-	ResponsibleUserID *string `json:"responsible_user_id" validate:"omitempty"`
+	ResponsibleUserID field.Optional[string] `json:"responsible_user_id,omitzero" validate:"omitempty"`
 	// Set to true to clear the responsible user.
 	ClearResponsibleUser bool `json:"clear_responsible_user"`
 	// Set to true to clear the transaction method.
@@ -33,16 +34,16 @@ type UpdateTransactionRequest struct {
 	// Set to true to clear the adjustment type.
 	ClearAdjustmentType bool `json:"clear_adjustment_type"`
 	// Allocation status.
-	IsFullyAllocated *bool `json:"is_fully_allocated"`
+	IsFullyAllocated field.Optional[bool] `json:"is_fully_allocated,omitzero"`
 }
 
 var sampleUpdateTransactionNote = "Updated payment note"
 var sampleUpdateTransactionAmount = "750.00"
 var sampleUpdateTransactionMethodCode = "ach"
 var sampleUpdateTransactionRequest = &UpdateTransactionRequest{
-	Note:                  &sampleUpdateTransactionNote,
-	Amount:                &sampleUpdateTransactionAmount,
-	TransactionMethodCode: &sampleUpdateTransactionMethodCode,
+	Note:                  field.Some(sampleUpdateTransactionNote),
+	Amount:                field.Some(sampleUpdateTransactionAmount),
+	TransactionMethodCode: field.Some(sampleUpdateTransactionMethodCode),
 }
 
 func (*UpdateTransactionRequest) SchemaExample() any {

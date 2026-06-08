@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"time"
 
-	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
-
 	agentep "github.com/augno/api/services/api-gateway/endpoints/agents"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
@@ -176,21 +174,6 @@ func agentActionPresenter(a *pb.AgentActionInfo, agentRunID string, runCreatedAt
 	}
 
 	return action
-}
-
-func AgentRunListPresenter(ctx context.Context, resp *pb.ListRunsResponse) *apiresource.List[apiresource.AgentRun] {
-	if resp == nil {
-		return apiresource.NewList[apiresource.AgentRun](nil, apiresource.PageInfo{})
-	}
-
-	runs := make([]apiresource.AgentRun, len(resp.Runs))
-	for i, r := range resp.Runs {
-		runs[i] = AgentRunPresenter(r)
-	}
-
-	pageInfo := grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)
-
-	return apiresource.NewList(runs, pageInfo)
 }
 
 func lightStepActorPresenter(s *pb.AgentRunStepInfo) *apiresource.Actor {

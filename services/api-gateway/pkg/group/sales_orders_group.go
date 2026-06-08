@@ -36,7 +36,7 @@ func (*SalesOrdersEndpointGroup) Materialize(config *SalesOrdersEndpointGroupCon
 	inner := &apiendpoint.APIEndpointGroup{
 		Title:        "Sales Orders",
 		Description:  "List, view, create, update, and delete sales orders.",
-		ResourceType: &apiresource.SalesOrderDetail{},
+		ResourceType: &apiresource.SalesOrder{},
 	}
 
 	listEndpoint := apiendpoint.From(&salesorderep.ListSalesOrdersEndpoint{}).WithService(inner, svc)
@@ -45,7 +45,10 @@ func (*SalesOrdersEndpointGroup) Materialize(config *SalesOrdersEndpointGroupCon
 	updateEndpoint := apiendpoint.From(&salesorderep.UpdateSalesOrderEndpoint{}).WithService(inner, svc)
 	deleteEndpoint := apiendpoint.From(&salesorderep.DeleteSalesOrderEndpoint{}).WithService(inner, svc)
 	bulkDeleteEndpoint := apiendpoint.From(&salesorderep.BulkDeleteSalesOrdersEndpoint{}).WithService(inner, svc)
-	changeStatusEndpoint := apiendpoint.From(&salesorderep.ChangeSalesOrderStatusEndpoint{}).WithService(inner, svc)
+	issueEndpoint := apiendpoint.From(&salesorderep.IssueSalesOrderEndpoint{}).WithService(inner, svc)
+	unissueEndpoint := apiendpoint.From(&salesorderep.UnissueSalesOrderEndpoint{}).WithService(inner, svc)
+	closeEndpoint := apiendpoint.From(&salesorderep.CloseSalesOrderEndpoint{}).WithService(inner, svc)
+	openEndpoint := apiendpoint.From(&salesorderep.OpenSalesOrderEndpoint{}).WithService(inner, svc)
 	checkoutEndpoint := apiendpoint.From(&salesorderep.CheckoutSalesOrderEndpoint{}).WithService(inner, svc)
 	createProductionRunEndpoint := apiendpoint.From(&salesorderep.CreateProductionRunEndpoint{}).WithService(inner, svc)
 	createLineEndpoint := apiendpoint.From(&salesorderep.CreateSalesOrderLineEndpoint{}).WithService(inner, svc)
@@ -59,7 +62,10 @@ func (*SalesOrdersEndpointGroup) Materialize(config *SalesOrdersEndpointGroupCon
 		updateEndpoint,
 		deleteEndpoint,
 		bulkDeleteEndpoint,
-		changeStatusEndpoint,
+		issueEndpoint,
+		unissueEndpoint,
+		closeEndpoint,
+		openEndpoint,
 		checkoutEndpoint,
 		createProductionRunEndpoint,
 		createLineEndpoint,

@@ -85,7 +85,7 @@ func (m *transactionAllocationSvcImpl) ListAllocationEntries(ctx context.Context
 func (m *transactionAllocationSvcImpl) UpdateTransactionAllocation(ctx context.Context, req *UpdateTransactionAllocationRequest) (*apiresource.TransactionAllocation, *apierror.APIError) {
 	pbReq := &pb.UpdateTransactionAllocationRequest{
 		Id:     req.AllocationID,
-		Amount: req.Amount,
+		Amount: req.Amount.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, transactionAllocationSvcTracer, "service.transaction-allocations.update", domain.ServiceName,
@@ -231,7 +231,7 @@ func transactionAllocationFromProto(a *pb.TransactionAllocationInfo) apiresource
 		if a.InvoiceNumber != nil {
 			invoiceNumber = *a.InvoiceNumber
 		}
-		alloc.Invoice = &apiresource.InvoiceSummary{
+		alloc.Invoice = &apiresource.AllocationInvoice{
 			ID:     *a.InvoiceId,
 			Object: constants.ObjectTypeInvoiceSummary,
 			Number: invoiceNumber,

@@ -23,10 +23,6 @@ type CoreServiceClient struct {
 	grpcConn       *contracts.GRPCClientConn
 }
 
-func NewCoreServiceClient(getenv func(string) string) (*CoreServiceClient, error) {
-	return NewCoreServiceClientWithURL(getenv("CORE_SERVICE_URL"))
-}
-
 func NewCoreServiceClientWithURL(url string) (*CoreServiceClient, error) {
 	grpcConn, err := contracts.NewGRPCClientConn(contracts.GRPCConnTarget{URL: url, Name: coreServiceName}, nil)
 	if err != nil {

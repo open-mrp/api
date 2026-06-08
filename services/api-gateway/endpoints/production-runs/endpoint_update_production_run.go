@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to update a production run.
@@ -16,16 +17,16 @@ type UpdateProductionRunRequest struct {
 	// Production run ID.
 	ProductionRunID string `path:"id" validate:"required"`
 	// Production run number.
-	Number *string `json:"number" validate:"omitempty,max=255"`
+	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
 	// Responsible user ID.
-	ResponsibleUserID *string `json:"responsible_user_id" validate:"omitempty"`
+	ResponsibleUserID field.Optional[string] `json:"responsible_user_id,omitzero" validate:"omitempty"`
 }
 
 var sampleUpdateProductionRunNumber = "PR-00042"
 var sampleUpdateProductionRunUserID = apiresource.SampleUserID
 var sampleUpdateProductionRunRequest = &UpdateProductionRunRequest{
-	Number:            &sampleUpdateProductionRunNumber,
-	ResponsibleUserID: &sampleUpdateProductionRunUserID,
+	Number:            field.Some(sampleUpdateProductionRunNumber),
+	ResponsibleUserID: field.Some(sampleUpdateProductionRunUserID),
 }
 
 func (*UpdateProductionRunRequest) SchemaExample() any {

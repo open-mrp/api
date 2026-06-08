@@ -89,8 +89,8 @@ func (m *departmentSvcImpl) GetDepartment(ctx context.Context, req *RetrieveDepa
 func (m *departmentSvcImpl) CreateDepartment(ctx context.Context, req *CreateDepartmentRequest) (*apiresource.Department, *apierror.APIError) {
 	pbReq := &pb.CreateDepartmentRequest{
 		Name:               req.Name,
-		Notes:              req.Notes,
-		LocationId:         req.LocationID,
+		Notes:              req.Notes.Ptr(),
+		LocationId:         req.LocationID.Ptr(),
 		ScanningStationIds: req.ScanningStationIDs,
 		MachineIds:         req.MachineIDs,
 	}
@@ -109,9 +109,9 @@ func (m *departmentSvcImpl) CreateDepartment(ctx context.Context, req *CreateDep
 func (m *departmentSvcImpl) UpdateDepartment(ctx context.Context, req *UpdateDepartmentRequest) (*apiresource.Department, *apierror.APIError) {
 	pbReq := &pb.UpdateDepartmentRequest{
 		Id:                 req.DepartmentID,
-		Name:               req.Name,
-		Notes:              req.Notes,
-		LocationId:         req.LocationID,
+		Name:               req.Name.Ptr(),
+		Notes:              req.Notes.Ptr(),
+		LocationId:         req.LocationID.Ptr(),
 		ScanningStationIds: req.ScanningStationIDs,
 		MachineIds:         req.MachineIDs,
 	}

@@ -85,8 +85,8 @@ func (m *orderDiscountSvcImpl) CreateOrderDiscount(ctx context.Context, req *Cre
 	pbReq := &pb.CreateOrderDiscountRequest{
 		Name:         req.Name,
 		Code:         req.Code,
-		Percentage:   req.Percentage,
-		Amount:       req.Amount,
+		Percentage:   req.Percentage.Ptr(),
+		Amount:       req.Amount.Ptr(),
 		DiscountType: req.DiscountType,
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, orderDiscountSvcTracer, "service.order_discounts.create", domain.ServiceName,
@@ -102,11 +102,11 @@ func (m *orderDiscountSvcImpl) CreateOrderDiscount(ctx context.Context, req *Cre
 func (m *orderDiscountSvcImpl) UpdateOrderDiscount(ctx context.Context, req *UpdateOrderDiscountRequest) (*apiresource.OrderDiscount, *apierror.APIError) {
 	pbReq := &pb.UpdateOrderDiscountRequest{
 		Id:           req.OrderDiscountID,
-		Name:         req.Name,
-		Code:         req.Code,
-		Percentage:   req.Percentage,
-		Amount:       req.Amount,
-		DiscountType: req.DiscountType,
+		Name:         req.Name.Ptr(),
+		Code:         req.Code.Ptr(),
+		Percentage:   req.Percentage.Ptr(),
+		Amount:       req.Amount.Ptr(),
+		DiscountType: req.DiscountType.Ptr(),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, orderDiscountSvcTracer, "service.order_discounts.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateOrderDiscountResponse, error) {
@@ -136,8 +136,8 @@ func (m *orderDiscountSvcImpl) DeleteOrderDiscount(ctx context.Context, req *Del
 func (m *orderDiscountSvcImpl) FindOrderDiscountByCode(ctx context.Context, req *FindOrderDiscountByCodeRequest) (*apiresource.OrderDiscount, *apierror.APIError) {
 	pbReq := &pb.FindOrderDiscountByCodeRequest{
 		Code:           req.Code,
-		BuyerAccountId: req.BuyerAccountID,
-		SalesOrderId:   req.SalesOrderID,
+		BuyerAccountId: req.BuyerAccountID.Ptr(),
+		SalesOrderId:   req.SalesOrderID.Ptr(),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, orderDiscountSvcTracer, "service.order_discounts.find_by_code", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.FindOrderDiscountByCodeResponse, error) {

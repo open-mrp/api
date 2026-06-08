@@ -91,7 +91,6 @@ type openAPISchema struct {
 	Format               string                   `json:"format"`
 	Nullable             bool                     `json:"nullable"`
 	AdditionalProperties *openAPISchema           `json:"additionalProperties,omitempty"`
-	XNullableClear       bool                     `json:"x-nullable-clear,omitempty"`
 }
 
 type openAPIOperation struct {
@@ -377,7 +376,7 @@ type UpdateEndpointSpec struct {
 	Path                string
 	OperationID         string
 	PathParams          []string
-	NullableClearFields []string // field names with x-nullable-clear in the request body schema
+	NullableClearFields []string // request-body field names that are nullable (null clears them)
 }
 
 // ResolvePath replaces path parameters with seed data values.
@@ -460,7 +459,8 @@ func LoadUpdateEndpoints() ([]UpdateEndpointSpec, error) {
 			}
 		}
 
-		// Extract x-nullable-clear fields from the request body schema.
+		// Collect nullable request-body fields. In a request body, a nullable
+		// field is a clearable PATCH field: sending null clears it.
 		if op.RequestBody != nil {
 			if mt, ok := op.RequestBody.Content["application/json"]; ok {
 				reqSchema := mt.Schema
@@ -470,7 +470,7 @@ func LoadUpdateEndpoints() ([]UpdateEndpointSpec, error) {
 					}
 				}
 				for name, prop := range reqSchema.Properties {
-					if prop.XNullableClear {
+					if prop.Nullable {
 						ep.NullableClearFields = append(ep.NullableClearFields, name)
 					}
 				}

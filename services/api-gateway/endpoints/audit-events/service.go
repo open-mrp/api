@@ -7,7 +7,6 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
-	httptransport "github.com/augno/api/services/api-gateway/internal/http"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
@@ -51,22 +50,7 @@ func NewAuditEventSvc(config *AuditEventSvcConfig) AuditEventSvc {
 	}
 }
 
-func requireInternalAdmin(ctx context.Context) *apierror.APIError {
-	identity, apiErr := httptransport.GetIdentity(ctx)
-	if apiErr != nil {
-		return apiErr
-	}
-	if !identity.IsInternalUser() || !identity.IsAdmin() {
-		return apierror.NewAuthorizationError("Only internal administrators can access audit events.")
-	}
-	return nil
-}
-
 func (m *auditEventSvcImpl) ListAuditEvents(ctx context.Context, req *ListAuditEventsRequest) (*apiresource.List[apiresource.AuditEvent], *apierror.APIError) {
-	if apiErr := requireInternalAdmin(ctx); apiErr != nil {
-		return nil, apiErr
-	}
-
 	pbReq := &pb.ListAuditEventsRequest{
 		ResourceTypes: stringsFromObjectTypes(req.ResourceTypes),
 		ResourceIds:   req.ResourceIDs,
@@ -109,23 +93,27 @@ func (m *auditEventSvcImpl) ListAuditEvents(ctx context.Context, req *ListAuditE
 }
 
 func (m *auditEventSvcImpl) ListAuditEventResourceTypes(ctx context.Context, _ *ListAuditEventResourceTypesRequest) (*apiresource.List[constants.ObjectType], *apierror.APIError) {
-	if apiErr := requireInternalAdmin(ctx); apiErr != nil {
+	resp, apiErr := grpcutil.CallRPC(ctx, auditEventSvcTracer, "service.audit_events.list_resource_types", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListAuditEventResourceTypesResponse, error) {
+			return m.auditClient.ListAuditEventResourceTypes(ctx, &pb.ListAuditEventResourceTypesRequest{}, opts...)
+		})
+
+	if apiErr != nil {
 		return nil, apiErr
 	}
 
-	values := constants.ObjectType("").EnumValues()
-	types := make([]constants.ObjectType, len(values))
-	for i, v := range values {
-		types[i] = constants.ObjectType(v)
+	if resp == nil {
+		return apiresource.NewList[constants.ObjectType](nil, apiresource.PageInfo{}), nil
+	}
+
+	types := make([]constants.ObjectType, len(resp.ResourceTypes))
+	for i, rt := range resp.ResourceTypes {
+		types[i] = constants.ObjectType(rt)
 	}
 	return apiresource.NewList(types, apiresource.PageInfo{}), nil
 }
 
 func (m *auditEventSvcImpl) GetAuditEvent(ctx context.Context, req *RetrieveAuditEventRequest) (*apiresource.AuditEvent, *apierror.APIError) {
-	if apiErr := requireInternalAdmin(ctx); apiErr != nil {
-		return nil, apiErr
-	}
-
 	pbReq := &pb.GetAuditEventRequest{
 		Id:       req.ID,
 		Includes: resourcekit.FilterIncludes(ctx, "actor", "changes", "metadata"),

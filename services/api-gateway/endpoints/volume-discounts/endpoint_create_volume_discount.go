@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Volume discount tier to create.
@@ -20,7 +21,7 @@ type CreateVolumeDiscountTierInput struct {
 	// Quantity threshold as a decimal string.
 	Threshold string `json:"threshold" validate:"required" format:"decimal"`
 	// Parent tier ID for tier chaining.
-	ParentTierID *string `json:"parent_tier_id,omitempty" validate:"omitempty"`
+	ParentTierID field.Optional[string] `json:"parent_tier_id,omitzero" validate:"omitempty"`
 }
 
 // Request to create a volume discount.
@@ -30,15 +31,15 @@ type CreateVolumeDiscountRequest struct {
 	// Tiers for this volume discount.
 	Tiers []CreateVolumeDiscountTierInput `json:"tiers" validate:"required"`
 	// Account group IDs to associate as customer groups.
-	CustomerGroupIDs []string `json:"customer_group_ids,omitempty"`
+	CustomerGroupIDs []string `json:"customer_group_ids,omitzero"`
 	// Product line IDs to associate.
-	ProductLineIDs []string `json:"product_line_ids,omitempty"`
+	ProductLineIDs []string `json:"product_line_ids,omitzero"`
 	// Item category IDs to associate.
-	CategoryIDs []string `json:"category_ids,omitempty"`
+	CategoryIDs []string `json:"category_ids,omitzero"`
 	// Attribute IDs to associate.
-	AttributeIDs []string `json:"attribute_ids,omitempty"`
+	AttributeIDs []string `json:"attribute_ids,omitzero"`
 	// Unit IDs to associate as acceptable units.
-	UnitIDs []string `json:"unit_ids,omitempty"`
+	UnitIDs []string `json:"unit_ids,omitzero"`
 }
 
 var sampleCreateVolumeDiscountRequest = &CreateVolumeDiscountRequest{

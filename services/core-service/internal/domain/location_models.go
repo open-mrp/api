@@ -3,8 +3,8 @@ package domain
 import (
 	"time"
 
+	"github.com/augno/api/shared/field"
 	"github.com/augno/api/shared/pagination"
-	"github.com/augno/api/shared/patch"
 )
 
 // Location represents a location within an account.
@@ -74,8 +74,8 @@ type UpdateLocationParams struct {
 	LocationID string
 	Name       *string
 	TypeCode   *string
-	ParentID   patch.Field[string]
-	ChildIDs   patch.Field[[]string]
+	ParentID   field.Clearable[string]
+	ChildIDs   field.Clearable[[]string]
 	Includes   []string
 }
 

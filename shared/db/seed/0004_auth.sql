@@ -157,16 +157,21 @@ INSERT IGNORE INTO role_permission (id, role_id, permission_code, `create`, `rea
     ('rlpm_01seedscnr_self00', 'rl_scanner', 'self', 0, 1, 0, 0, NOW(), NOW());
 
 -- Users
+-- us_fltactor3 is a third member used only as a distinct request-log actor so the
+-- request-log actor_ids filter tests can prove that filtering by two members
+-- (User1 + User2) includes both and excludes a third (see crud_request_logs_test.go).
 INSERT IGNORE INTO user (id, name, username, email, hashed_password, email_verified, created_at, updated_at) VALUES
     ('us_1wjfmmbwg8l7', 'John Doe', 'jdoe', 'dane@augno.com', @password_hash, NOW(), NOW(), NOW()),
-    ('us_6p7460uuwibz', 'Sarah Martinez', 'smartinez', 'smartinez@augno.com', @password_hash, NOW(), NOW(), NOW());
+    ('us_6p7460uuwibz', 'Sarah Martinez', 'smartinez', 'smartinez@augno.com', @password_hash, NOW(), NOW(), NOW()),
+    ('us_fltactor3', 'Filter Test User 3', 'ftuser3', 'ftuser3@augno.com', @password_hash, NOW(), NOW(), NOW());
 
 -- Account-user associations. The admin account-user (SeedAccountUserID) is
 -- pinned to the Knitting department so `?include=department` resolves on the
 -- seeded account_user GET/LIST responses.
 INSERT IGNORE INTO account_user (id, user_id, role_id, account_id, department_id, last_used_at, created_at, updated_at) VALUES
     ('acus_s83fjhyfmqen', 'us_1wjfmmbwg8l7', 'rl_mtg88e6u6fbu', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'dp_01k0a5r01yfx3sj1vy9qgv3dc0', NOW(), NOW(), NOW()),
-    ('acus_ubdx4zebgl6p', 'us_6p7460uuwibz', 'rl_hh6mrlkv08n8', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'dp_01k0a5r01yfx3sj1vy9qgv3dc0', NOW(), NOW(), NOW());
+    ('acus_ubdx4zebgl6p', 'us_6p7460uuwibz', 'rl_hh6mrlkv08n8', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'dp_01k0a5r01yfx3sj1vy9qgv3dc0', NOW(), NOW(), NOW()),
+    ('acus_fltactor300', 'us_fltactor3', 'rl_hh6mrlkv08n8', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'dp_01k0a5r01yfx3sj1vy9qgv3dc0', NOW(), NOW(), NOW());
 
 -- API keys
 -- HMAC computed as: createHmac('sha256', 'pepper').update(secret).digest()

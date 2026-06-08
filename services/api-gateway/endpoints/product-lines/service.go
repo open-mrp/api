@@ -110,15 +110,15 @@ func (m *productLineSvcImpl) CreateProductLine(ctx context.Context, req *CreateP
 func (m *productLineSvcImpl) UpdateProductLine(ctx context.Context, req *UpdateProductLineRequest) (*apiresource.ProductLine, *apierror.APIError) {
 	pbReq := &pb.UpdateProductLineRequest{
 		Id:          req.ProductLineID,
-		Name:        req.Name,
-		UnitGroupId: req.UnitGroupID,
+		Name:        req.Name.Ptr(),
+		UnitGroupId: req.UnitGroupID.Ptr(),
 	}
-	if req.CommissionPolicy != nil {
-		s := string(*req.CommissionPolicy)
+	if v, ok := req.CommissionPolicy.Value(); ok {
+		s := string(v)
 		pbReq.CommissionPolicy = &s
 	}
-	if req.FreightPolicy != nil {
-		s := string(*req.FreightPolicy)
+	if v, ok := req.FreightPolicy.Value(); ok {
+		s := string(v)
 		pbReq.FreightPolicy = &s
 	}
 

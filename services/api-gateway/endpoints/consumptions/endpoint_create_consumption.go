@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to create a consumption.
@@ -26,7 +27,7 @@ type CreateConsumptionRequest struct {
 	// Waste quantity unit ID.
 	WasteQuantityUnitID string `json:"waste_quantity_unit_id" validate:"required"`
 	// Instructions for how this material is consumed.
-	Instructions *string `json:"instructions,omitempty"`
+	Instructions field.Optional[string] `json:"instructions,omitzero"`
 }
 
 var sampleCreateConsumptionRequest = &CreateConsumptionRequest{
@@ -35,7 +36,7 @@ var sampleCreateConsumptionRequest = &CreateConsumptionRequest{
 	QuantityUnitID:      apiresource.SampleUnitID,
 	WasteQuantityValue:  "0.500000000000000000000000000000",
 	WasteQuantityUnitID: apiresource.SampleUnitID,
-	Instructions:        new("Mix with water before adding"),
+	Instructions:        field.Some("Mix with water before adding"),
 }
 
 func (*CreateConsumptionRequest) SchemaExample() any {

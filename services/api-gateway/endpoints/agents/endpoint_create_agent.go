@@ -10,6 +10,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Tool to attach to an agent definition.
@@ -17,11 +18,11 @@ type ToolInput struct {
 	// Available tool ID.
 	ToolID string `json:"tool_id" validate:"required"`
 	// JSON configuration for this tool instance.
-	ConfigJSON string `json:"config_json,omitempty"`
+	ConfigJSON string `json:"config_json,omitzero"`
 	// Display order among the agent's tools (lower values appear first).
-	SortOrder int32 `json:"sort_order,omitempty"`
+	SortOrder int32 `json:"sort_order,omitzero"`
 	// Requires human review before execution.
-	RequireReview bool `json:"require_review,omitempty"`
+	RequireReview bool `json:"require_review,omitzero"`
 }
 
 var sampleToolInput = &ToolInput{
@@ -37,9 +38,9 @@ func (*ToolInput) SchemaExample() any {
 // Trigger-type-specific settings for agent creation/update requests.
 type TriggerConfigInput struct {
 	// Cron expression for scheduled triggers (e.g. "0 9 * * *").
-	CronSchedule *string `json:"cron_schedule" validate:"omitempty,max=255"`
+	CronSchedule field.Optional[string] `json:"cron_schedule,omitzero" validate:"omitempty,max=255"`
 	// IANA timezone for the cron schedule (e.g. "America/New_York").
-	Timezone *string `json:"timezone" validate:"omitempty,max=255"`
+	Timezone field.Optional[string] `json:"timezone,omitzero" validate:"omitempty,max=255"`
 	// Event types that trigger this agent (e.g. ["email.received", "order.created"]).
 	EventFilters []string `json:"event_filters"`
 }
@@ -55,23 +56,23 @@ func (*TriggerConfigInput) SchemaExample() any {
 // Agent-level configuration for creation/update requests.
 type ConfigInput struct {
 	// System prompt / instructions for the agent.
-	SystemPrompt *string `json:"system_prompt"`
+	SystemPrompt field.Optional[string] `json:"system_prompt,omitzero"`
 	// LLM model identifier (e.g. "claude-sonnet-4").
-	Model *string `json:"model" validate:"omitempty,max=255"`
+	Model field.Optional[string] `json:"model,omitzero" validate:"omitempty,max=255"`
 	// LLM provider name (e.g. "anthropic", "openai"). Inferred from model if omitted.
-	Provider *string `json:"provider" validate:"omitempty,max=255"`
+	Provider field.Optional[string] `json:"provider,omitzero" validate:"omitempty,max=255"`
 	// LLM sampling temperature between 0 and 1.
-	Temperature *float64 `json:"temperature" validate:"omitempty,min=0,max=1"`
+	Temperature field.Optional[float64] `json:"temperature,omitzero" validate:"omitempty,min=0,max=1"`
 	// Trigger-specific configuration. Shape depends on the agent's trigger_type.
-	TriggerConfig *TriggerConfigInput `json:"trigger_config"`
+	TriggerConfig field.Optional[TriggerConfigInput] `json:"trigger_config,omitzero"`
 }
 
 var sampleConfigInput = &ConfigInput{
-	SystemPrompt:  new("You are an order processing agent. Parse incoming emails and create draft orders."),
-	Model:         new("claude-sonnet-4"),
-	Provider:      new("anthropic"),
-	Temperature:   new(0.2),
-	TriggerConfig: sampleTriggerConfigInput,
+	SystemPrompt:  field.Some("You are an order processing agent. Parse incoming emails and create draft orders."),
+	Model:         field.Some("claude-sonnet-4"),
+	Provider:      field.Some("anthropic"),
+	Temperature:   field.Some(0.2),
+	TriggerConfig: field.Some(*sampleTriggerConfigInput),
 }
 
 func (*ConfigInput) SchemaExample() any {
@@ -80,10 +81,14 @@ func (*ConfigInput) SchemaExample() any {
 
 // Validate checks that the config is consistent with the given trigger type.
 func (c *ConfigInput) Validate(triggerType constants.AgentTriggerType) error {
-	if triggerType == constants.AgentTriggerTypeScheduled && (c.TriggerConfig == nil || c.TriggerConfig.CronSchedule == nil || *c.TriggerConfig.CronSchedule == "") {
-		return fmt.Errorf("trigger_config with cron_schedule is required for scheduled triggers")
+	tc, hasTC := c.TriggerConfig.Value()
+	if triggerType == constants.AgentTriggerTypeScheduled {
+		cron, hasCron := tc.CronSchedule.Value()
+		if !hasTC || !hasCron || cron == "" {
+			return fmt.Errorf("trigger_config with cron_schedule is required for scheduled triggers")
+		}
 	}
-	if triggerType == constants.AgentTriggerTypeEvent && (c.TriggerConfig == nil || len(c.TriggerConfig.EventFilters) == 0) {
+	if triggerType == constants.AgentTriggerTypeEvent && (!hasTC || len(tc.EventFilters) == 0) {
 		return fmt.Errorf("trigger_config with at least one event_filter is required for event triggers")
 	}
 	return nil
@@ -96,7 +101,7 @@ type CreateAgentRequest struct {
 	// URL-friendly identifier.
 	Slug string `json:"slug" validate:"required,max=255"`
 	// Description of what the agent does.
-	Description string `json:"description,omitempty"`
+	Description string `json:"description,omitzero"`
 	// Category code (e.g. "order_processing").
 	CategoryCode string `json:"category_code" validate:"required,max=255"`
 	// Trigger type: "manual", "scheduled", or "event".
@@ -104,9 +109,9 @@ type CreateAgentRequest struct {
 	// Agent-level configuration controlling LLM behavior and trigger settings.
 	Config ConfigInput `json:"config"`
 	// Tools to attach.
-	Tools []ToolInput `json:"tools,omitempty"`
+	Tools []ToolInput `json:"tools,omitzero"`
 	// Role ID defining agent permissions.
-	RoleID string `json:"role_id,omitempty" validate:"max=191"`
+	RoleID string `json:"role_id,omitzero" validate:"max=191"`
 }
 
 var sampleCreateAgentRequest = &CreateAgentRequest{

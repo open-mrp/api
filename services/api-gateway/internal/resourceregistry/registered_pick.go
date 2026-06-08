@@ -14,7 +14,20 @@ func init() {
 		ObjectType: constants.ObjectTypePick,
 		Load:       resourceloaders.LoadPicks,
 		Subs: []resourcekit.SubField{
-			{Key: "sales_order", Populate: populateSalesOrderOnPick},
+			{
+				Key:         "sales_order",
+				Target:      constants.ObjectTypeSalesOrder,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractIDs:  extractSalesOrderIDFromPick,
+				Populate:    populateSalesOrderOnPick,
+			},
+			{
+				Key:         "customer",
+				Target:      constants.ObjectTypeCustomer,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractIDs:  extractCustomerIDFromPick,
+				Populate:    populateCustomerOnPick,
+			},
 			{
 				Key:         "lines",
 				Target:      constants.ObjectTypePickLine,
@@ -34,26 +47,48 @@ func init() {
 	})
 }
 
-func populateSalesOrderOnPick(ctx context.Context, parent any, _ map[string]any) {
-	meta := resourcekit.GetLoadMeta(ctx)
-	switch p := parent.(type) {
-	case *apiresource.PickDetail:
-		v, ok := meta.Get(constants.ObjectTypePick, p.ID, "sales_order")
-		if !ok {
-			return
-		}
-		p.SalesOrder = v.(*apiresource.SalesOrderDetail)
-	case *apiresource.PickSummary:
-		v, ok := meta.Get(constants.ObjectTypePick, p.ID, "sales_order")
-		if !ok {
-			return
-		}
-		p.SalesOrder = v.(*apiresource.SalesOrderDetail)
+func extractSalesOrderIDFromPick(ctx context.Context, parent any) []string {
+	p := parent.(*apiresource.Pick)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypePick, p.ID, "sales_order_id")
+	if id == "" {
+		return nil
+	}
+	return []string{id}
+}
+
+func populateSalesOrderOnPick(ctx context.Context, parent any, loaded map[string]any) {
+	p := parent.(*apiresource.Pick)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypePick, p.ID, "sales_order_id")
+	if id == "" {
+		return
+	}
+	if v, ok := loaded[id]; ok {
+		p.SalesOrder = v.(*apiresource.SalesOrder)
+	}
+}
+
+func extractCustomerIDFromPick(ctx context.Context, parent any) []string {
+	p := parent.(*apiresource.Pick)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypePick, p.ID, "customer_id")
+	if id == "" {
+		return nil
+	}
+	return []string{id}
+}
+
+func populateCustomerOnPick(ctx context.Context, parent any, loaded map[string]any) {
+	p := parent.(*apiresource.Pick)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypePick, p.ID, "customer_id")
+	if id == "" {
+		return
+	}
+	if v, ok := loaded[id]; ok {
+		p.Customer = v.(*apiresource.Customer)
 	}
 }
 
 func extractLineRefsFromPick(_ context.Context, parent any) []any {
-	p := parent.(*apiresource.PickDetail)
+	p := parent.(*apiresource.Pick)
 	if p.Lines == nil {
 		return nil
 	}
@@ -65,17 +100,17 @@ func extractLineRefsFromPick(_ context.Context, parent any) []any {
 }
 
 func populateLinesOnPick(ctx context.Context, parent any, _ map[string]any) {
-	p := parent.(*apiresource.PickDetail)
+	p := parent.(*apiresource.Pick)
 	v, ok := resourcekit.GetLoadMeta(ctx).
 		Get(constants.ObjectTypePick, p.ID, "lines")
 	if !ok {
 		return
 	}
-	p.Lines = v.(*apiresource.List[apiresource.PickLineDetail])
+	p.Lines = v.(*apiresource.List[apiresource.PickLine])
 }
 
 func populateDepartmentsOnPick(ctx context.Context, parent any, _ map[string]any) {
-	p := parent.(*apiresource.PickDetail)
+	p := parent.(*apiresource.Pick)
 	v, ok := resourcekit.GetLoadMeta(ctx).
 		Get(constants.ObjectTypePick, p.ID, "departments")
 	if !ok {
@@ -85,11 +120,11 @@ func populateDepartmentsOnPick(ctx context.Context, parent any, _ map[string]any
 }
 
 func populateSalesOrderLineOnPickLine(ctx context.Context, parent any, _ map[string]any) {
-	p := parent.(*apiresource.PickLineDetail)
+	p := parent.(*apiresource.PickLine)
 	v, ok := resourcekit.GetLoadMeta(ctx).
 		Get(constants.ObjectTypePickLine, p.ID, "sales_order_line")
 	if !ok {
 		return
 	}
-	p.SalesOrderLine = v.(*apiresource.SalesOrderLineDetail)
+	p.SalesOrderLine = v.(*apiresource.SalesOrderLine)
 }

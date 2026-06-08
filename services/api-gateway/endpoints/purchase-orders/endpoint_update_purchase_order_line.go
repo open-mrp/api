@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to update a purchase order line.
@@ -17,29 +18,29 @@ type UpdatePurchaseOrderLineRequest struct {
 	// Purchase order line ID.
 	PurchaseOrderLineID string `path:"line_id" validate:"required"`
 	// Product ID.
-	ProductID *string `json:"product_id,omitempty" validate:"omitempty"`
+	ProductID field.Optional[string] `json:"product_id,omitzero" validate:"omitempty"`
 	// Item ID.
-	ItemID *string `json:"item_id,omitempty" validate:"omitempty"`
+	ItemID field.Optional[string] `json:"item_id,omitzero" validate:"omitempty"`
 	// Product SKU.
-	ProductSKU *string `json:"product_sku,omitempty" validate:"omitempty,max=255"`
+	ProductSKU field.Optional[string] `json:"product_sku,omitzero" validate:"omitempty,max=255"`
 	// Product description.
-	ProductDescription *string `json:"product_description,omitempty"`
+	ProductDescription field.Optional[string] `json:"product_description,omitzero"`
 	// Quantity value.
-	QuantityValue *string `json:"quantity_value,omitempty" format:"decimal"`
+	QuantityValue field.Optional[string] `json:"quantity_value,omitzero" format:"decimal"`
 	// Quantity unit ID.
-	QuantityUnitID *string `json:"quantity_unit_id,omitempty" validate:"omitempty"`
+	QuantityUnitID field.Optional[string] `json:"quantity_unit_id,omitzero" validate:"omitempty"`
 	// Unit price value.
-	UnitPriceValue *string `json:"unit_price_value,omitempty" format:"decimal"`
+	UnitPriceValue field.Optional[string] `json:"unit_price_value,omitzero" format:"decimal"`
 	// Unit price numerator unit ID.
-	UnitPriceNumeratorUnitID *string `json:"unit_price_numerator_unit_id,omitempty" validate:"omitempty"`
+	UnitPriceNumeratorUnitID field.Optional[string] `json:"unit_price_numerator_unit_id,omitzero" validate:"omitempty"`
 	// Unit price denominator unit ID.
-	UnitPriceDenominatorUnitID *string `json:"unit_price_denominator_unit_id,omitempty" validate:"omitempty"`
+	UnitPriceDenominatorUnitID field.Optional[string] `json:"unit_price_denominator_unit_id,omitzero" validate:"omitempty"`
 	// Unit cost value.
-	UnitCostValue *string `json:"unit_cost_value,omitempty" format:"decimal"`
+	UnitCostValue field.Optional[string] `json:"unit_cost_value,omitzero" format:"decimal"`
 	// Unit cost numerator unit ID.
-	UnitCostNumeratorUnitID *string `json:"unit_cost_numerator_unit_id,omitempty" validate:"omitempty"`
+	UnitCostNumeratorUnitID field.Optional[string] `json:"unit_cost_numerator_unit_id,omitzero" validate:"omitempty"`
 	// Unit cost denominator unit ID.
-	UnitCostDenominatorUnitID *string `json:"unit_cost_denominator_unit_id,omitempty" validate:"omitempty"`
+	UnitCostDenominatorUnitID field.Optional[string] `json:"unit_cost_denominator_unit_id,omitzero" validate:"omitempty"`
 }
 
 var sampleUpdatePOLineProductID = apiresource.SampleProductID
@@ -47,10 +48,10 @@ var sampleUpdatePOLineQuantityValue = "250"
 var sampleUpdatePOLineUnitPriceValue = "15.00"
 var sampleUpdatePOLineProductSKU = "RAW-100"
 var sampleUpdatePurchaseOrderLineRequest = &UpdatePurchaseOrderLineRequest{
-	ProductID:      &sampleUpdatePOLineProductID,
-	ProductSKU:     &sampleUpdatePOLineProductSKU,
-	QuantityValue:  &sampleUpdatePOLineQuantityValue,
-	UnitPriceValue: &sampleUpdatePOLineUnitPriceValue,
+	ProductID:      field.Some(sampleUpdatePOLineProductID),
+	ProductSKU:     field.Some(sampleUpdatePOLineProductSKU),
+	QuantityValue:  field.Some(sampleUpdatePOLineQuantityValue),
+	UnitPriceValue: field.Some(sampleUpdatePOLineUnitPriceValue),
 }
 
 func (*UpdatePurchaseOrderLineRequest) SchemaExample() any {
@@ -60,8 +61,8 @@ func (*UpdatePurchaseOrderLineRequest) SchemaExample() any {
 // Partially updates a purchase order line item.
 type UpdatePurchaseOrderLineEndpoint struct{}
 
-func (e *UpdatePurchaseOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePurchaseOrderLineRequest, *apiresource.PurchaseOrderLineDetail] {
-	return (&apiendpoint.APIEndpoint[*UpdatePurchaseOrderLineRequest, *apiresource.PurchaseOrderLineDetail]{
+func (e *UpdatePurchaseOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePurchaseOrderLineRequest, *apiresource.PurchaseOrderLine] {
+	return (&apiendpoint.APIEndpoint[*UpdatePurchaseOrderLineRequest, *apiresource.PurchaseOrderLine]{
 		Title:             "Update Purchase Order Line",
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
@@ -69,7 +70,7 @@ func (e *UpdatePurchaseOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdatePurchaseOrderLineRequest) (*apiresource.PurchaseOrderLineDetail, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdatePurchaseOrderLineRequest) (*apiresource.PurchaseOrderLine, *apierror.APIError) {
 			return svc.(PurchaseOrderSvc).UpdatePurchaseOrderLine
 		},
 	})

@@ -36,7 +36,7 @@ func init() {
 		ObjectType: productionFlowProductionType,
 		Load:       stubLoader,
 		Subs: []resourcekit.SubField{
-			{Key: "produced_item", Populate: populateProducedItemOnFlowProduction},
+			{Key: "produced_item", Target: constants.ObjectTypeItem, Cardinality: resourcekit.CardinalityOnePtr, ExtractIDs: extractProducedItemIDFromFlowProduction, Populate: populateProducedItemOnFlowProduction},
 		},
 	})
 
@@ -44,7 +44,7 @@ func init() {
 		ObjectType: productionFlowConsumptionType,
 		Load:       stubLoader,
 		Subs: []resourcekit.SubField{
-			{Key: "consumed_item", Populate: populateConsumedItemOnFlowConsumption},
+			{Key: "consumed_item", Target: constants.ObjectTypeItem, Cardinality: resourcekit.CardinalityOnePtr, ExtractIDs: extractConsumedItemIDFromFlowConsumption, Populate: populateConsumedItemOnFlowConsumption},
 			{Key: "quantity", Populate: populateQuantityOnFlowConsumption},
 			{Key: "waste_quantity", Populate: populateWasteQuantityOnFlowConsumption},
 		},
@@ -165,24 +165,48 @@ func populateOutStepsOnFlowStep(ctx context.Context, parent any, _ map[string]an
 	ps.OutSteps = v.(*apiresource.List[apiresource.ProductionStep])
 }
 
-func populateProducedItemOnFlowProduction(ctx context.Context, parent any, _ map[string]any) {
+func extractProducedItemIDFromFlowProduction(ctx context.Context, parent any) []string {
 	p := parent.(*apiresource.ProductionFlowProduction)
-	v, ok := resourcekit.GetLoadMeta(ctx).
-		Get(constants.ObjectTypeProduction, p.ID, "produced_item")
-	if !ok {
-		return
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeProduction, p.ID, "produced_item_id")
+	if id == "" {
+		return nil
 	}
-	p.ProducedItem = v.(*apiresource.Item)
+	return []string{id}
 }
 
-func populateConsumedItemOnFlowConsumption(ctx context.Context, parent any, _ map[string]any) {
-	c := parent.(*apiresource.ProductionFlowConsumption)
-	v, ok := resourcekit.GetLoadMeta(ctx).
-		Get(constants.ObjectTypeConsumption, c.ID, "consumed_item")
-	if !ok {
+func populateProducedItemOnFlowProduction(ctx context.Context, parent any, loaded map[string]any) {
+	p := parent.(*apiresource.ProductionFlowProduction)
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeProduction, p.ID, "produced_item_id")
+	if id == "" {
 		return
 	}
-	c.ConsumedItem = v.(*apiresource.Item)
+	if v, ok := loaded[id]; ok {
+		p.ProducedItem = v.(*apiresource.Item)
+	}
+}
+
+func extractConsumedItemIDFromFlowConsumption(ctx context.Context, parent any) []string {
+	c := parent.(*apiresource.ProductionFlowConsumption)
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeConsumption, c.ID, "consumed_item_id")
+	if id == "" {
+		return nil
+	}
+	return []string{id}
+}
+
+func populateConsumedItemOnFlowConsumption(ctx context.Context, parent any, loaded map[string]any) {
+	c := parent.(*apiresource.ProductionFlowConsumption)
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeConsumption, c.ID, "consumed_item_id")
+	if id == "" {
+		return
+	}
+	if v, ok := loaded[id]; ok {
+		c.ConsumedItem = v.(*apiresource.Item)
+	}
 }
 
 func populateQuantityOnFlowConsumption(_ context.Context, _ any, _ map[string]any) {

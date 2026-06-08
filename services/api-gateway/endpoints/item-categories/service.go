@@ -113,8 +113,8 @@ func (m *itemCategorySvcImpl) CreateItemCategory(ctx context.Context, req *Creat
 func (m *itemCategorySvcImpl) UpdateItemCategory(ctx context.Context, req *UpdateItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError) {
 	pbReq := &pb.UpdateItemCategoryRequest{
 		Id:    req.ItemCategoryID,
-		Name:  req.Name,
-		Notes: req.Notes,
+		Name:  req.Name.Ptr(),
+		Notes: req.Notes.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, itemCategorySvcTracer, "service.item-categories.update", domain.ServiceName,

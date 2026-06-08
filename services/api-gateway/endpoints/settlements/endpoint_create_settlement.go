@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // CreateSettlementAllocationRequest is an allocation in a create settlement request.
@@ -20,7 +21,7 @@ type CreateSettlementAllocationRequest struct {
 	// Amount to allocate as a decimal string.
 	Amount string `json:"amount" validate:"required"`
 	// Note about this allocation.
-	Note *string `json:"note"`
+	Note field.Optional[string] `json:"note,omitzero"`
 }
 
 // CreateSettlementRequest is the request to create a settlement.

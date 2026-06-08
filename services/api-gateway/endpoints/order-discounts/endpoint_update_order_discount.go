@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to partially update an order discount.
@@ -16,20 +17,20 @@ type UpdateOrderDiscountRequest struct {
 	// Order discount ID.
 	OrderDiscountID string `path:"id" validate:"required"`
 	// Display name.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// Discount code.
-	Code *string `json:"code,omitempty" validate:"omitempty,max=255"`
+	Code field.Optional[string] `json:"code,omitzero" validate:"omitempty,max=255"`
 	// Percentage value as a decimal string.
-	Percentage *string `json:"percentage,omitempty" format:"decimal"`
+	Percentage field.Optional[string] `json:"percentage,omitzero" format:"decimal"`
 	// Fixed amount as a decimal string.
-	Amount *string `json:"amount,omitempty" format:"decimal"`
+	Amount field.Optional[string] `json:"amount,omitzero" format:"decimal"`
 	// Discount type: "percentage" or "amount".
-	DiscountType *string `json:"discount_type,omitempty" validate:"omitempty,max=255"`
+	DiscountType field.Optional[string] `json:"discount_type,omitzero" validate:"omitempty,max=255"`
 }
 
 var sampleUpdateOrderDiscountRequest = &UpdateOrderDiscountRequest{
-	Name: new("15% Off"),
-	Code: new("SAVE15"),
+	Name: field.Some("15% Off"),
+	Code: field.Some("SAVE15"),
 }
 
 func (*UpdateOrderDiscountRequest) SchemaExample() any {

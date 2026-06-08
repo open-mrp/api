@@ -101,14 +101,14 @@ func (m *agentMemorySvcImpl) CreateMemory(ctx context.Context, req *CreateMemory
 	if req.Metadata != nil {
 		pbReq.MetadataJson = string(req.Metadata)
 	}
-	if req.EntityType != nil {
-		pbReq.EntityType = *req.EntityType
+	if v, ok := req.EntityType.Value(); ok {
+		pbReq.EntityType = v
 	}
-	if req.EntityID != nil {
-		pbReq.EntityId = *req.EntityID
+	if v, ok := req.EntityID.Value(); ok {
+		pbReq.EntityId = v
 	}
-	if req.ExpiresAt != nil {
-		pbReq.ExpiresAt = *req.ExpiresAt
+	if v, ok := req.ExpiresAt.Value(); ok {
+		pbReq.ExpiresAt = v
 	}
 	resp, rpcErr := grpcutil.CallRPC(ctx, memorySvcTracer, "service.agent_memories.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateAgentMemoryResponse, error) {
@@ -130,14 +130,14 @@ func (m *agentMemorySvcImpl) UpdateMemory(ctx context.Context, req *UpdateMemory
 	if req.Metadata != nil {
 		pbReq.MetadataJson = string(req.Metadata)
 	}
-	if req.EntityType != nil {
-		pbReq.EntityType = *req.EntityType
+	if v, ok := req.EntityType.Value(); ok {
+		pbReq.EntityType = v
 	}
-	if req.EntityID != nil {
-		pbReq.EntityId = *req.EntityID
+	if v, ok := req.EntityID.Value(); ok {
+		pbReq.EntityId = v
 	}
-	if req.ExpiresAt != nil {
-		pbReq.ExpiresAt = *req.ExpiresAt
+	if v, ok := req.ExpiresAt.Value(); ok {
+		pbReq.ExpiresAt = v
 	}
 	resp, rpcErr := grpcutil.CallRPC(ctx, memorySvcTracer, "service.agent_memories.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateAgentMemoryResponse, error) {

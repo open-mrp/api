@@ -57,6 +57,8 @@ type Invoice struct {
 	Note                  *string `audit:"note"`
 	OrderID               string  `audit:"order_id"`
 	OrderNumber           string  `audit:"order_number"`
+	CustomerID            string  `audit:"customer_id"`
+	PaymentTermID         *string `audit:"payment_term_id"`
 	BillingAddressID      string  `audit:"billing_address_id"`
 	BillingAddressName    *string `audit:"billing_address_name"`
 	BillingAddressLine1   *string `audit:"billing_address_line_1"`

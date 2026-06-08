@@ -42,27 +42,3 @@ var SamplePaymentTerm = &PaymentTerm{
 func (*PaymentTerm) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SamplePaymentTerm)
 }
-
-func ExpandablePaymentTermStub(id, name string, status constants.PaymentTermStatus, ts time.Time) *PaymentTerm {
-	if id == "" {
-		id = SamplePaymentTermID
-	}
-	if name == "" {
-		name = SamplePaymentTermName
-	}
-	if status == "" {
-		status = constants.PaymentTermStatusActive
-	}
-	if ts.IsZero() {
-		ts = time.Unix(0, 0).UTC()
-	}
-	return &PaymentTerm{
-		ID:        id,
-		Object:    constants.ObjectTypePaymentTerm,
-		Name:      name,
-		Status:    status,
-		Owner:     SystemOwner(),
-		CreatedAt: ts,
-		UpdatedAt: ts,
-	}
-}

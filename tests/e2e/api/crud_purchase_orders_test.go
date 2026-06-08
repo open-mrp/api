@@ -93,17 +93,19 @@ func TestPurchaseOrders_IncludeShipToAddress(t *testing.T) {
 	}
 }
 
+// Carrier and service level are no longer top-level purchase order includes;
+// they are nested under the consolidated freight sub-resource (include[]=freight).
 func TestPurchaseOrders_IncludeCarrier(t *testing.T) {
 	t.Parallel()
 	id := firstPurchaseOrderID(t)
-	status, body, err := apiClient.GetListRaw(purchaseOrdersPath+"/"+id, url.Values{"include": {"carrier"}})
+	status, body, err := apiClient.GetListRaw(purchaseOrdersPath+"/"+id, url.Values{"include": {"freight"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
-	_, ok := got["carrier"]
-	assert.True(t, ok, "carrier key should be present with ?include=carrier")
-	if c := jsonObject(got, "carrier"); c != nil {
+	freight := jsonObject(got, "freight")
+	require.NotNil(t, freight, "freight key should be present with ?include=freight")
+	if c := jsonObject(freight, "carrier"); c != nil {
 		assert.Equal(t, "carrier", jsonField(c, "object"))
 	}
 }
@@ -111,14 +113,14 @@ func TestPurchaseOrders_IncludeCarrier(t *testing.T) {
 func TestPurchaseOrders_IncludeServiceLevel(t *testing.T) {
 	t.Parallel()
 	id := firstPurchaseOrderID(t)
-	status, body, err := apiClient.GetListRaw(purchaseOrdersPath+"/"+id, url.Values{"include": {"service_level"}})
+	status, body, err := apiClient.GetListRaw(purchaseOrdersPath+"/"+id, url.Values{"include": {"freight"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
-	_, ok := got["service_level"]
-	assert.True(t, ok, "service_level key should be present with ?include=service_level")
-	if sl := jsonObject(got, "service_level"); sl != nil {
+	freight := jsonObject(got, "freight")
+	require.NotNil(t, freight, "freight key should be present with ?include=freight")
+	if sl := jsonObject(freight, "service_level"); sl != nil {
 		assert.Equal(t, "service_level", jsonField(sl, "object"))
 	}
 }

@@ -134,7 +134,7 @@ func (m *transactionSvcImpl) GetTransaction(ctx context.Context, req *RetrieveTr
 		Object:       constants.ObjectTypeQuantity,
 		Value:        d.AmountValue,
 		DisplayValue: apiresource.FormatDisplayValue(d.AmountValue, d.AmountUnitAbbreviation, string(constants.UnitTypeCurrency)),
-		Unit:         apiresource.ExpandableUnitStub(d.AmountUnitId, "", d.AmountUnitAbbreviation, string(constants.UnitTypeCurrency), createdAt),
+		// Unit left nil: expandable, loaded with real data via ?include=; never fabricated.
 	}
 
 	tx.TransactionType = &apiresource.TransactionType{
@@ -174,38 +174,10 @@ func (m *transactionSvcImpl) GetTransaction(ctx context.Context, req *RetrieveTr
 
 	meta := resourcekit.GetLoadMeta(ctx)
 
-	if d.CustomerId != nil {
-		customer := &apiresource.Customer{
-			ID:               *d.CustomerId,
-			Object:           constants.ObjectTypeCustomer,
-			EDIStatus:        constants.EDIStatusDisabled,
-			RelationshipType: constants.CustomerRelationshipTypeStandalone,
-			CreatedAt:        grpcutil.TimestampToTime(d.CustomerCreatedAt),
-			UpdatedAt:        grpcutil.TimestampToTime(d.CustomerUpdatedAt),
-		}
-		if d.CustomerName != nil {
-			customer.Name = *d.CustomerName
-		}
-		if d.CustomerNumber != nil {
-			customer.Number = *d.CustomerNumber
-		}
-		if d.CustomerStatus != nil {
-			customer.Status = constants.AccountStatusCode(*d.CustomerStatus)
-		} else {
-			customer.Status = constants.AccountStatusCodeNormal
-		}
-		if d.CustomerCommissionPolicy != nil {
-			customer.CommissionPolicy = constants.CommissionPolicy(*d.CustomerCommissionPolicy)
-		} else {
-			customer.CommissionPolicy = constants.CommissionPolicyApplied
-		}
-		if customer.CreatedAt.IsZero() {
-			customer.CreatedAt = createdAt
-		}
-		if customer.UpdatedAt.IsZero() {
-			customer.UpdatedAt = updatedAt
-		}
-		meta.Set(constants.ObjectTypeTransaction, tx.ID, "customer", customer)
+	// customer is an expandable reference: stash the FK id so LoadCustomers
+	// fetches the real Customer on ?include=customer. Never fabricate.
+	if d.CustomerId != nil && *d.CustomerId != "" {
+		meta.Set(constants.ObjectTypeTransaction, tx.ID, "customer_id", *d.CustomerId)
 	}
 
 	if d.ResponsibleUserId != nil {
@@ -241,10 +213,10 @@ func (m *transactionSvcImpl) CreateTransaction(ctx context.Context, req *CreateT
 		CustomerId:            req.CustomerID,
 		TransactionTypeCode:   req.TransactionTypeCode,
 		Amount:                req.Amount,
-		TransactionMethodCode: req.TransactionMethodCode,
-		AdjustmentTypeCode:    req.AdjustmentTypeCode,
-		ResponsibleUserId:     req.ResponsibleUserID,
-		Note:                  req.Note,
+		TransactionMethodCode: req.TransactionMethodCode.Ptr(),
+		AdjustmentTypeCode:    req.AdjustmentTypeCode.Ptr(),
+		ResponsibleUserId:     req.ResponsibleUserID.Ptr(),
+		Note:                  req.Note.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, transactionSvcTracer, "service.transactions.create", domain.ServiceName,
@@ -263,16 +235,16 @@ func (m *transactionSvcImpl) CreateTransaction(ctx context.Context, req *CreateT
 func (m *transactionSvcImpl) UpdateTransaction(ctx context.Context, req *UpdateTransactionRequest) (*apiresource.TransactionDetail, *apierror.APIError) {
 	pbReq := &pb.UpdateTransactionRequest{
 		Id:                     req.TransactionID,
-		Number:                 req.Number,
-		Note:                   req.Note,
-		Amount:                 req.Amount,
-		TransactionMethodCode:  req.TransactionMethodCode,
-		AdjustmentTypeCode:     req.AdjustmentTypeCode,
-		ResponsibleUserId:      req.ResponsibleUserID,
+		Number:                 req.Number.Ptr(),
+		Note:                   req.Note.Ptr(),
+		Amount:                 req.Amount.Ptr(),
+		TransactionMethodCode:  req.TransactionMethodCode.Ptr(),
+		AdjustmentTypeCode:     req.AdjustmentTypeCode.Ptr(),
+		ResponsibleUserId:      req.ResponsibleUserID.Ptr(),
 		ClearResponsibleUser:   req.ClearResponsibleUser,
 		ClearTransactionMethod: req.ClearTransactionMethod,
 		ClearAdjustmentType:    req.ClearAdjustmentType,
-		IsFullyAllocated:       req.IsFullyAllocated,
+		IsFullyAllocated:       req.IsFullyAllocated.Ptr(),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, transactionSvcTracer, "service.transactions.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateTransactionResponse, error) {

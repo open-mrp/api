@@ -354,6 +354,30 @@ func (s *AuditHandlerTestSuite) TestGetAuditEvent_ServiceError() {
 }
 
 // ---------------------------------------------------------------------------
+// ListAuditEventResourceTypes
+// ---------------------------------------------------------------------------
+
+func (s *AuditHandlerTestSuite) TestListAuditEventResourceTypes_Success() {
+	s.auditSvc.EXPECT().
+		ListAuditEventResourceTypes(gomock.Any()).
+		Return([]string{"unit", "order"}, nil).Times(1)
+
+	resp, err := s.handler.ListAuditEventResourceTypes(context.Background(), &pb.ListAuditEventResourceTypesRequest{})
+	s.NoError(err)
+	s.Equal([]string{"unit", "order"}, resp.ResourceTypes)
+}
+
+func (s *AuditHandlerTestSuite) TestListAuditEventResourceTypes_ServiceError() {
+	s.auditSvc.EXPECT().
+		ListAuditEventResourceTypes(gomock.Any()).
+		Return(nil, apierror.NewAuthorizationError("nope")).Times(1)
+
+	resp, err := s.handler.ListAuditEventResourceTypes(context.Background(), &pb.ListAuditEventResourceTypesRequest{})
+	s.Nil(resp)
+	s.Error(err)
+}
+
+// ---------------------------------------------------------------------------
 // auditEventToProto mapping
 // ---------------------------------------------------------------------------
 

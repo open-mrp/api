@@ -4,18 +4,19 @@ import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/field"
 )
 
 func (*CreatePurchaseOrderLineRequest) SchemaExample() any {
 	itemID := apiresource.SampleItemID
 	desc := "6061-T6 Aluminum Sheet 4x8"
 	return apiexample.ValidateAndMarshalToMap(&CreatePurchaseOrderLineRequest{
-		PurchaseOrderID: apiresource.SamplePurchaseOrderDetailID,
+		PurchaseOrderID: apiresource.SamplePurchaseOrderID,
 		OrderLineInput: apirequest.OrderLineInput{
 			ProductID:                  apiresource.SampleProductID,
-			ItemID:                     &itemID,
+			ItemID:                     field.Some(itemID),
 			ProductSKU:                 apiresource.SampleItemSKU,
-			ProductDescription:         &desc,
+			ProductDescription:         field.Some(desc),
 			QuantityValue:              "10",
 			QuantityUnitID:             apiresource.SampleUnitID,
 			UnitPriceValue:             apiresource.SampleRateValue,

@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to create a production step.
@@ -16,15 +17,15 @@ type CreateProductionStepRequest struct {
 	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
 	// Notes.
-	Notes *string `json:"notes,omitempty"`
+	Notes field.Optional[string] `json:"notes,omitzero"`
 	// Leveling factor as a decimal string.
 	LevelingFactor string `json:"leveling_factor" validate:"required"`
 	// Allowances as a decimal string.
 	Allowances string `json:"allowances" validate:"required"`
 	// Scanning station ID.
-	ScanningStationID *string `json:"scanning_station_id,omitempty" validate:"omitempty"`
+	ScanningStationID field.Optional[string] `json:"scanning_station_id,omitzero" validate:"omitempty"`
 	// Department ID.
-	DepartmentID *string `json:"department_id,omitempty" validate:"omitempty"`
+	DepartmentID field.Optional[string] `json:"department_id,omitzero" validate:"omitempty"`
 	// Labor rate configuration.
 	LaborRate CreateRateInput `json:"labor_rate" validate:"required"`
 	// Labor time configuration.
@@ -70,7 +71,7 @@ type CreateConsumptionInput struct {
 	// Waste quantity unit ID.
 	WasteQuantityUnitID string `json:"waste_quantity_unit_id" validate:"required"`
 	// Instructions for how this material is consumed.
-	Instructions *string `json:"instructions,omitempty"`
+	Instructions field.Optional[string] `json:"instructions,omitzero"`
 }
 
 var sampleCreateProductionStepScanningStationID = apiresource.SampleScanningStationID
@@ -78,7 +79,7 @@ var sampleCreateProductionStepRequest = &CreateProductionStepRequest{
 	Name:              "Mixing",
 	LevelingFactor:    "1.10",
 	Allowances:        "0.05",
-	ScanningStationID: &sampleCreateProductionStepScanningStationID,
+	ScanningStationID: field.Some(sampleCreateProductionStepScanningStationID),
 	LaborRate: CreateRateInput{
 		Value:             "25.00",
 		NumeratorUnitID:   apiresource.SampleUnitID,

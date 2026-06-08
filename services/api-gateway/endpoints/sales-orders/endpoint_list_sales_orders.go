@@ -36,8 +36,8 @@ type ListSalesOrdersRequest struct {
 // Returns a paginated list of sales orders for the current account.
 type ListSalesOrdersEndpoint struct{}
 
-func (e *ListSalesOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSalesOrdersRequest, *apiresource.List[apiresource.SalesOrderDetail]] {
-	return (&apiendpoint.APIEndpoint[*ListSalesOrdersRequest, *apiresource.List[apiresource.SalesOrderDetail]]{
+func (e *ListSalesOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSalesOrdersRequest, *apiresource.List[apiresource.SalesOrder]] {
+	return (&apiendpoint.APIEndpoint[*ListSalesOrdersRequest, *apiresource.List[apiresource.SalesOrder]]{
 		Title:             "List Sales Orders",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
@@ -46,7 +46,7 @@ func (e *ListSalesOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSa
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeSalesOrder,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *ListSalesOrdersRequest) (*apiresource.List[apiresource.SalesOrderDetail], *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *ListSalesOrdersRequest) (*apiresource.List[apiresource.SalesOrder], *apierror.APIError) {
 			return svc.(SalesOrderSvc).ListSalesOrders
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{

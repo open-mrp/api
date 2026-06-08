@@ -77,7 +77,7 @@ func (*AnalyzeManufacturingBatchRequest) SchemaExample() any {
 
 func (*AnalyzeMaterialsRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(&AnalyzeMaterialsRequest{
-		SalesOrderIDs: []string{apiresource.SampleSalesOrderDetailID},
+		SalesOrderIDs: []string{apiresource.SampleSalesOrderID},
 		SupplierIDs:   []string{apiresource.SampleSupplierID},
 	})
 }

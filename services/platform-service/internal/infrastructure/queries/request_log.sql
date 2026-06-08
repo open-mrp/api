@@ -1,7 +1,7 @@
 -- name: FindRequestLogByID :one
 SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
        COALESCE(CASE WHEN sqlc.arg('include_query_json') THEN rl.query_json ELSE NULL END, '') AS query_json,
-       rl.status_code, rl.latency_us, rl.api_version, COALESCE(au.id, rl.actor_id, '') AS actor_id,
+       rl.status_code, rl.latency_us, rl.api_version, rl.actor_id AS actor_id,
        rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
        rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
        rl.idempotency_key_id,
@@ -17,6 +17,10 @@ SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
        a.created_at AS account_created_at, a.updated_at AS account_updated_at,
        ik.idempotency_key
 FROM request_log rl
+-- actor_id stores the raw actor key (user_id for user actors, api_key.type_id
+-- for api_key actors) — the value the API exposes directly. Enrichment joins key
+-- on it: user by id, api_key by type_id, and account_user (for the role) by
+-- (user_id, target account).
 LEFT JOIN `user` u ON rl.actor_id = u.id AND rl.identity_type = 'user'
 LEFT JOIN api_key ak ON rl.actor_id = ak.type_id AND rl.identity_type = 'api_key'
 LEFT JOIN account_user au ON au.user_id = rl.actor_id
@@ -36,7 +40,7 @@ WHERE rl.id = ? AND rl.target_account_id = ?;
 -- name: FindRequestLogBaseByID :one
 SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
        COALESCE(CASE WHEN sqlc.arg('include_query_json') THEN rl.query_json ELSE NULL END, '') AS query_json,
-       rl.status_code, rl.latency_us, rl.api_version, COALESCE(au.id, rl.actor_id, '') AS actor_id,
+       rl.status_code, rl.latency_us, rl.api_version, rl.actor_id AS actor_id,
        rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
        rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
        rl.idempotency_key_id,
@@ -45,24 +49,8 @@ SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
        rl.target_account_id,
        ik.idempotency_key
 FROM request_log rl
-LEFT JOIN account_user au ON au.user_id = rl.actor_id
-  AND au.account_id = rl.target_account_id AND rl.identity_type = 'user'
 LEFT JOIN idempotency_key ik ON rl.idempotency_key_id = ik.type_id
 WHERE rl.id = ? AND rl.target_account_id = ?;
-
--- name: ResolveAccountUserActorIDs :many
--- Maps account_user ids (the actor id the API exposes for user actors) to the
--- user_id stored in request_log.actor_id. The list query filters on the indexed
--- rl.actor_id column directly, so callers translate the exposed account_user id
--- back to user_id before building the filter — see request_log_list_query.go.
---
--- Resolution is by the account_user primary key alone (it is globally unique), NOT
--- scoped to the viewed account: the actor picker may surface an account_user from a
--- different account than the one whose logs are being viewed, and the list query
--- already constrains rl.target_account_id, so an unscoped lookup cannot leak data.
-SELECT id, user_id
-FROM account_user
-WHERE id IN (sqlc.slice('ids'));
 
 -- name: DeleteExpiredRequestLogs :execresult
 DELETE FROM request_log

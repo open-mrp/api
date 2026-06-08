@@ -15,7 +15,7 @@ import (
 	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -130,8 +130,8 @@ func (m *productSvcImpl) GetProduct(ctx context.Context, req *RetrieveProductReq
 
 func (m *productSvcImpl) CreateProduct(ctx context.Context, req *CreateProductRequest) (*apiresource.Product, *apierror.APIError) {
 	isPortalReady := false
-	if req.PortalVisibility != nil {
-		isPortalReady = *req.PortalVisibility == constants.CustomerPortalVisibilityVisible
+	if v, ok := req.PortalVisibility.Value(); ok {
+		isPortalReady = v == constants.CustomerPortalVisibilityVisible
 	}
 
 	pbReq := &pb.CreateProductRequest{
@@ -139,7 +139,7 @@ func (m *productSvcImpl) CreateProduct(ctx context.Context, req *CreateProductRe
 		Description:     req.Description.Ptr(),
 		Notes:           req.Notes.Ptr(),
 		ProductTypeCode: string(req.ProductTypeCode),
-		ProductLineId:   req.ProductLineID,
+		ProductLineId:   req.ProductLineID.Ptr(),
 		CategoryId:      req.CategoryID,
 		IsPortalReady:   isPortalReady,
 		UnitPrice:       rateInputToProto(req.UnitPrice.Ptr()),
@@ -160,16 +160,16 @@ func (m *productSvcImpl) CreateProduct(ctx context.Context, req *CreateProductRe
 
 func (m *productSvcImpl) UpdateProduct(ctx context.Context, req *UpdateProductRequest) (*apiresource.Product, *apierror.APIError) {
 	var isPortalReady *bool
-	if req.PortalVisibility != nil {
-		v := *req.PortalVisibility == constants.CustomerPortalVisibilityVisible
+	if pv, ok := req.PortalVisibility.Value(); ok {
+		v := pv == constants.CustomerPortalVisibilityVisible
 		isPortalReady = &v
 	}
 
 	pbReq := &pb.UpdateProductRequest{
 		Id:            req.ProductID,
-		Sku:           req.SKU,
-		Description:   patch.StringFieldPtrToProto(req.Description),
-		Notes:         patch.StringFieldPtrToProto(req.Notes),
+		Sku:           req.SKU.Ptr(),
+		Description:   field.StringClearableToProto(req.Description),
+		Notes:         field.StringClearableToProto(req.Notes),
 		IsPortalReady: isPortalReady,
 		UnitPrice:     rateInputToProto(req.UnitPrice.Ptr()),
 	}

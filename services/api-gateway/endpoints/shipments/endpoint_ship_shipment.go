@@ -30,8 +30,8 @@ func (*ShipShipmentRequest) SchemaExample() any {
 // Marks a shipment as shipped and optionally sends a shipping notification email to the customer.
 type ShipShipmentEndpoint struct{}
 
-func (e *ShipShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*ShipShipmentRequest, *apiresource.ShipmentDetail] {
-	return (&apiendpoint.APIEndpoint[*ShipShipmentRequest, *apiresource.ShipmentDetail]{
+func (e *ShipShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*ShipShipmentRequest, *apiresource.Shipment] {
+	return (&apiendpoint.APIEndpoint[*ShipShipmentRequest, *apiresource.Shipment]{
 		Title:             "Ship Shipment",
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/shipments/{id}/actions/ship",
@@ -40,12 +40,12 @@ func (e *ShipShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*ShipShipm
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeShipment,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *ShipShipmentRequest) (*apiresource.ShipmentDetail, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *ShipShipmentRequest) (*apiresource.Shipment, *apierror.APIError) {
 			return svc.(ShipmentSvc).ShipShipment
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeShipment,
-			Fields:     []string{"lines", "shipping_cases", "sales_order", "customer", "carrier", "service_level", "shipping_address", "shipped_by", "invoice", "pick"},
+			Fields:     []string{"lines", "shipping_cases", "sales_order", "customer", "freight", "shipping_address", "shipped_by", "invoice", "pick"},
 		}),
 	})
 }

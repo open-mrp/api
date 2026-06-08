@@ -8,32 +8,12 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleShipmentDetailID = "sh_018b3a946651bfb6572b06b2b2"
+const SampleShipmentID = "sh_018b3a946651bfb6572b06b2b2"
 const SampleShipmentNumber = "SH-001"
 const SampleShipmentLineID = "shln_0133b6c3c807bf9c73581424c7"
 
-// Shipment status sub-resource.
-type ShipmentStatus struct {
-	// Status code.
-	Code string `json:"code" validate:"required"`
-	// Display name.
-	Name string `json:"name" validate:"required"`
-}
-
-// Carrier billing info on a shipment.
-type ShipmentBilling struct {
-	// Carrier billing type (e.g. "third_party").
-	Type string `json:"type" validate:"required"`
-	// Carrier billing account number.
-	Account *string `json:"account"`
-	// Billing address country.
-	Country *string `json:"country"`
-	// Billing address postal code.
-	Zip *string `json:"zip"`
-}
-
 // Full shipment resource.
-type ShipmentDetail struct {
+type Shipment struct {
 	// Shipment ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
@@ -46,18 +26,16 @@ type ShipmentDetail struct {
 	BillOfLading *string `json:"bill_of_lading"`
 	// Master tracking number.
 	MasterTrackingNumber *string `json:"master_tracking_number"`
-	// Shipment status.
-	Status ShipmentStatus `json:"status" validate:"required"`
+	// Shipment status code.
+	Status constants.ShipmentStatus `json:"status" validate:"required"`
 	// Timestamp when shipped.
 	ShippedAt *time.Time `json:"shipped_at"`
 	// Associated sales order.
-	SalesOrder *SalesOrderDetail `json:"sales_order" expandable:"true"`
+	SalesOrder *SalesOrder `json:"sales_order" expandable:"true"`
 	// Associated customer.
 	Customer *Customer `json:"customer" expandable:"true"`
-	// Carrier.
-	Carrier *Carrier `json:"carrier" expandable:"true"`
-	// Service level.
-	ServiceLevel *ServiceLevel `json:"service_level" expandable:"true"`
+	// Carrier selection and freight billing for this shipment.
+	Freight *Freight `json:"freight" expandable:"true"`
 	// Shipping address.
 	ShippingAddress *Address `json:"shipping_address" expandable:"true"`
 	// User who shipped this shipment.
@@ -65,45 +43,11 @@ type ShipmentDetail struct {
 	// Associated invoice.
 	Invoice *Invoice `json:"invoice" expandable:"true"`
 	// Pick associated with this shipment's order.
-	Pick *PickDetail `json:"pick" expandable:"true"`
-	// Carrier billing information.
-	Billing *ShipmentBilling `json:"billing"`
+	Pick *Pick `json:"pick" expandable:"true"`
 	// Shipment lines.
 	Lines *List[ShipmentLine] `json:"lines" expandable:"true"`
 	// Shipping cases.
 	ShippingCases *List[ShippingCaseDetail] `json:"shipping_cases" expandable:"true"`
-	// Creation timestamp.
-	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// Last updated timestamp.
-	UpdatedAt time.Time `json:"updated_at" validate:"required"`
-}
-
-// Shipment list view resource.
-type ShipmentSummary struct {
-	// Shipment ID.
-	ID string `json:"id" validate:"required"`
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=shipment_summary"`
-	// Shipment number.
-	Number string `json:"number" validate:"required"`
-	// Note attached to this shipment.
-	Note *string `json:"note"`
-	// Bill of lading number.
-	BillOfLading *string `json:"bill_of_lading"`
-	// Master tracking number.
-	MasterTrackingNumber *string `json:"master_tracking_number"`
-	// Shipment status.
-	Status ShipmentStatus `json:"status" validate:"required"`
-	// Timestamp when shipped.
-	ShippedAt *time.Time `json:"shipped_at"`
-	// Associated sales order.
-	SalesOrder *SalesOrderDetail `json:"sales_order" expandable:"true"`
-	// Associated customer.
-	Customer *Customer `json:"customer" expandable:"true"`
-	// Carrier.
-	Carrier *Carrier `json:"carrier" expandable:"true"`
-	// Service level.
-	ServiceLevel *ServiceLevel `json:"service_level" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
@@ -117,7 +61,7 @@ type ShipmentLine struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=shipment_line"`
 	// Associated sales order line.
-	SalesOrderLine *SalesOrderLineDetail `json:"sales_order_line" expandable:"true"`
+	SalesOrderLine *SalesOrderLine `json:"sales_order_line" expandable:"true"`
 	// Quantity shipped.
 	Quantity *Quantity `json:"quantity" validate:"required"`
 	// Creation timestamp.
@@ -223,76 +167,22 @@ func (*RateShopResult) SchemaExample() any {
 var sampleShipmentNote = "Handle with care"
 var sampleBillOfLading = "BOL-12345"
 var sampleMasterTrackingNumber = "1Z999AA10123456784"
-var sampleShipmentBillingType = "third_party"
-var sampleShipmentBillingAccount = "123456"
-var sampleShipmentBillingCountry = "US"
-var sampleShipmentBillingZip = "90210"
 
-var SampleShipmentDetail = &ShipmentDetail{
-	ID:                   SampleShipmentDetailID,
+var SampleShipment = &Shipment{
+	ID:                   SampleShipmentID,
 	Object:               constants.ObjectTypeShipment,
 	Number:               SampleShipmentNumber,
 	Note:                 &sampleShipmentNote,
 	BillOfLading:         &sampleBillOfLading,
 	MasterTrackingNumber: &sampleMasterTrackingNumber,
-	Status: ShipmentStatus{
-		Code: "shipped",
-		Name: "Shipped",
-	},
-	Billing: &ShipmentBilling{
-		Type:    sampleShipmentBillingType,
-		Account: &sampleShipmentBillingAccount,
-		Country: &sampleShipmentBillingCountry,
-		Zip:     &sampleShipmentBillingZip,
-	},
-	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	Status:               constants.ShipmentStatusShipped,
+	Freight:              SampleFreight,
+	CreatedAt:            timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:            timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
-func (*ShipmentDetail) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SampleShipmentDetail)
-}
-
-var SampleShipmentSummary = &ShipmentSummary{
-	ID:                   SampleShipmentDetailID,
-	Object:               constants.ObjectTypeShipmentSummary,
-	Number:               SampleShipmentNumber,
-	Note:                 &sampleShipmentNote,
-	BillOfLading:         &sampleBillOfLading,
-	MasterTrackingNumber: &sampleMasterTrackingNumber,
-	Status: ShipmentStatus{
-		Code: "shipped",
-		Name: "Shipped",
-	},
-	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
-}
-
-func (*ShipmentSummary) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SampleShipmentSummary)
-}
-
-func ExpandableShipmentStub(id, number string, ts time.Time) *ShipmentDetail {
-	if id == "" {
-		id = SampleShipmentDetailID
-	}
-	if number == "" {
-		number = SampleShipmentNumber
-	}
-	if ts.IsZero() {
-		ts = time.Unix(0, 0).UTC()
-	}
-	return &ShipmentDetail{
-		ID:     id,
-		Object: constants.ObjectTypeShipment,
-		Number: number,
-		Status: ShipmentStatus{
-			Code: string(constants.ShipmentStatusPacked),
-			Name: "Packed",
-		},
-		CreatedAt: ts,
-		UpdatedAt: ts,
-	}
+func (*Shipment) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleShipment)
 }
 
 var SampleShipmentLine = &ShipmentLine{

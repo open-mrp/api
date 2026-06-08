@@ -32,5 +32,9 @@ func (e *RetrieveDeliveryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveDeliveryRequest) (*apiresource.Delivery, *apierror.APIError) {
 			return svc.(DeliverySvc).GetDelivery
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeDelivery,
+			Fields:     []string{"purchase_order", "lines"},
+		}),
 	})
 }

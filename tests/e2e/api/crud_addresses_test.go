@@ -213,7 +213,7 @@ func TestAddresses_ListWithLimit(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(addressesPath, url.Values{"limit": {"1"}})
 	require.NoError(t, err)
-	assert.Len(t, list.Data, 1)
+	requirePageLen(t, list.Data, 1)
 }
 
 func TestAddresses_ListPagination(t *testing.T) {

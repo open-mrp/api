@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to update a receiving order line's quantity.
@@ -18,12 +19,12 @@ type UpdateReceivingOrderLineRequest struct {
 	// Receiving order line ID.
 	LineID string `path:"id" validate:"required"`
 	// Quantity value to set for this line.
-	QuantityValue *string `json:"quantity_value,omitempty"`
+	QuantityValue field.Optional[string] `json:"quantity_value,omitzero"`
 }
 
 var sampleUpdateReceivingOrderLineQuantityValue = "50"
 var sampleUpdateReceivingOrderLineRequest = &UpdateReceivingOrderLineRequest{
-	QuantityValue: &sampleUpdateReceivingOrderLineQuantityValue,
+	QuantityValue: field.Some(sampleUpdateReceivingOrderLineQuantityValue),
 }
 
 func (*UpdateReceivingOrderLineRequest) SchemaExample() any {

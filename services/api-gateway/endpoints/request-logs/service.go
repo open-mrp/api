@@ -7,7 +7,6 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
-	httptransport "github.com/augno/api/services/api-gateway/internal/http"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
@@ -50,22 +49,7 @@ func NewRequestLogSvc(config *RequestLogSvcConfig) RequestLogSvc {
 	}
 }
 
-func requireInternalAdmin(ctx context.Context) *apierror.APIError {
-	identity, apiErr := httptransport.GetIdentity(ctx)
-	if apiErr != nil {
-		return apiErr
-	}
-	if !identity.IsInternalUser() || !identity.IsAdmin() {
-		return apierror.NewAuthorizationError("Only internal administrators can access request logs.")
-	}
-	return nil
-}
-
 func (m *requestLogSvcImpl) ListRequestLogs(ctx context.Context, req *ListRequestLogsRequest) (*apiresource.List[apiresource.RequestLog], *apierror.APIError) {
-	if apiErr := requireInternalAdmin(ctx); apiErr != nil {
-		return nil, apiErr
-	}
-
 	methods := make([]string, len(req.Methods))
 	for i, m := range req.Methods {
 		methods[i] = string(m)
@@ -82,20 +66,21 @@ func (m *requestLogSvcImpl) ListRequestLogs(ctx context.Context, req *ListReques
 	}
 
 	pbReq := &pb.ListRequestLogsRequest{
-		Query:            req.Query,
-		Methods:          methods,
-		StatusCodes:      req.StatusCodes,
-		ErrorCodes:       errorCodes,
-		AccountIds:       req.AccountIDs,
-		ActorIds:         req.ActorIDs,
-		ActorTypes:       actorTypes,
-		NormalizedRoutes: req.NormalizedRoutes,
-		Hosts:            req.Hosts,
-		MinLatencyUs:     req.MinLatencyUs,
-		IdempotencyKey:   req.IdempotencyKey,
-		Cursor:           req.Cursor,
-		Limit:            req.Limit,
-		Includes:         resourcekit.FilterIncludes(ctx, "account", "actor", "actor.role"),
+		Query:             req.Query,
+		Methods:           methods,
+		StatusCodes:       req.StatusCodes,
+		StatusCodeClasses: req.StatusCodeClasses,
+		ErrorCodes:        errorCodes,
+		AccountIds:        req.AccountIDs,
+		ActorIds:          req.ActorIDs,
+		ActorTypes:        actorTypes,
+		NormalizedRoutes:  req.NormalizedRoutes,
+		Hosts:             req.Hosts,
+		MinLatencyUs:      req.MinLatencyUs,
+		IdempotencyKey:    req.IdempotencyKey,
+		Cursor:            req.Cursor,
+		Limit:             req.Limit,
+		Includes:          resourcekit.FilterIncludes(ctx, "account", "actor", "actor.role"),
 	}
 
 	if req.StartDate != nil && !req.StartDate.IsZero() {
@@ -129,10 +114,6 @@ func (m *requestLogSvcImpl) ListRequestLogs(ctx context.Context, req *ListReques
 }
 
 func (m *requestLogSvcImpl) GetRequestLog(ctx context.Context, req *RetrieveRequestLogRequest) (*apiresource.RequestLog, *apierror.APIError) {
-	if apiErr := requireInternalAdmin(ctx); apiErr != nil {
-		return nil, apiErr
-	}
-
 	pbReq := &pb.GetRequestLogRequest{
 		Id:       req.ID,
 		Includes: resourcekit.FilterIncludes(ctx, "account", "actor", "actor.role", "query_params", "request_body", "response_body"),

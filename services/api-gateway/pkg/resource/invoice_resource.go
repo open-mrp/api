@@ -14,32 +14,32 @@ const SampleInvoiceLineID = "ivln_01999b9fa867e396ec797aab95"
 // Same allocation row as SampleAllocationEntryID (invoice example embeds that entry).
 const SampleInvoiceAllocationID = SampleAllocationEntryID
 
-// Lightweight invoice for list views.
-type InvoiceSummary struct {
+// Invoice resource.
+type Invoice struct {
 	// Invoice ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=invoice_summary"`
+	Object constants.ObjectType `json:"object" validate:"required,enum=invoice"`
 	// Invoice number.
 	Number string `json:"number" validate:"required"`
 	// Note attached to the invoice.
 	Note *string `json:"note"`
-	// Customer associated with this invoice.
+	// Customer associated with this invoice. Expandable via include[]=customer.
 	Customer *Customer `json:"customer" expandable:"true"`
 	// Sales order associated with this invoice. Expandable via include[]=order.
-	Order *SalesOrderDetail `json:"order" expandable:"true"`
+	Order *SalesOrder `json:"order" expandable:"true"`
 	// Shipment associated with this invoice. Expandable via include[]=shipment.
-	Shipment *ShipmentDetail `json:"shipment" expandable:"true"`
+	Shipment *Shipment `json:"shipment" expandable:"true"`
 	// Number of line items.
 	LineCount int32 `json:"line_count"`
-	// Billing address.
+	// Billing address. Expandable via include[]=billing_address.
 	BillingAddress *Address `json:"billing_address" expandable:"true"`
 	// Customer priority code.
 	PriorityCode constants.PriorityCode `json:"priority" validate:"required"`
-	// Payment term.
+	// Payment term. Expandable via include[]=payment_term.
 	PaymentTerm *PaymentTerm `json:"payment_term" expandable:"true"`
-	// Whether the invoice has been paid in full.
-	IsPaidInFull bool `json:"is_paid_in_full"`
+	// Payment status of the invoice.
+	PaymentStatus constants.InvoicePaymentStatus `json:"payment_status" validate:"required"`
 	// Whether the invoice has been sent via EDI.
 	IsEdiSent bool `json:"is_edi_sent"`
 	// Whether the invoice has been sent.
@@ -50,74 +50,9 @@ type InvoiceSummary struct {
 	AcceptsInvoiceEmails bool `json:"accepts_invoice_emails"`
 	// Whether the customer is EDI enabled.
 	CustomerIsEdiEnabled bool `json:"customer_is_edi_enabled"`
-	// Timestamp when the invoice was created.
-	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// Timestamp when the invoice was last updated.
-	UpdatedAt time.Time `json:"updated_at" validate:"required"`
-}
-
-var SampleInvoiceSummary = &InvoiceSummary{
-	ID:     SampleInvoiceID,
-	Object: constants.ObjectTypeInvoiceSummary,
-	Number: "INV-001",
-	Customer: &Customer{
-		ID:     SampleCustomerID,
-		Object: constants.ObjectTypeCustomer,
-		Name:   SampleCustomerName,
-		Number: SampleCustomerNumber,
-	},
-	Order: &SalesOrderDetail{
-		ID:     SampleSalesOrderDetailID,
-		Object: constants.ObjectTypeSalesOrder,
-		Number: SampleSalesOrderNumber,
-	},
-	LineCount:      3,
-	BillingAddress: SampleAddress,
-	PriorityCode:   constants.PriorityCodeNormal,
-	PaymentTerm: &PaymentTerm{
-		ID:     SamplePaymentTermID,
-		Object: constants.ObjectTypePaymentTerm,
-		Name:   SamplePaymentTermName,
-	},
-	TotalInvoiced:        "1234.560000000000000000000000000000",
-	AcceptsInvoiceEmails: true,
-	CreatedAt:            timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:            timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
-}
-
-func (*InvoiceSummary) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SampleInvoiceSummary)
-}
-
-// Full invoice with expandable lines and allocations.
-type Invoice struct {
-	// Invoice ID.
-	ID string `json:"id" validate:"required"`
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=invoice"`
-	// Invoice number.
-	Number string `json:"number" validate:"required"`
-	// Note attached to the invoice.
-	Note *string `json:"note"`
-	// Sales order associated with this invoice. Expandable via include[]=order.
-	Order *SalesOrderDetail `json:"order" expandable:"true"`
-	// Billing address.
-	BillingAddress *Address `json:"billing_address" expandable:"true"`
-	// Shipment associated with this invoice. Expandable via include[]=shipment.
-	Shipment *ShipmentDetail `json:"shipment" expandable:"true"`
-	// Whether the invoice has been paid in full.
-	IsPaidInFull bool `json:"is_paid_in_full"`
-	// Whether the invoice has been overpaid.
-	IsOverPaid bool `json:"is_over_paid"`
-	// Whether the invoice has been sent via EDI.
-	IsEdiSent bool `json:"is_edi_sent"`
-	// Whether the invoice has been sent.
-	HasBeenSent bool `json:"has_been_sent"`
-	// Whether the customer accepts invoice emails.
-	AcceptsInvoiceEmails bool `json:"accepts_invoice_emails"`
-	// Line items in this invoice.
+	// Line items in this invoice. Expandable via include[]=lines.
 	Lines *List[InvoiceLine] `json:"lines" expandable:"true"`
-	// Allocations against this invoice.
+	// Allocations against this invoice. Expandable via include[]=allocations.
 	Allocations *List[InvoiceAllocation] `json:"allocations" expandable:"true"`
 	// Timestamp when the invoice was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -126,19 +61,19 @@ type Invoice struct {
 }
 
 var SampleInvoice = &Invoice{
-	ID:     SampleInvoiceID,
-	Object: constants.ObjectTypeInvoice,
-	Number: "INV-001",
-	Order: &SalesOrderDetail{
-		ID:     SampleSalesOrderDetailID,
-		Object: constants.ObjectTypeSalesOrder,
-		Number: SampleSalesOrderNumber,
-	},
-	BillingAddress: SampleAddress,
-	Lines:          NewList([]InvoiceLine{*SampleInvoiceLine}, PageInfo{}),
-	Allocations:    NewList([]InvoiceAllocation{*SampleInvoiceAllocation}, PageInfo{}),
-	CreatedAt:      timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:      timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:                   SampleInvoiceID,
+	Object:               constants.ObjectTypeInvoice,
+	Number:               "INV-001",
+	LineCount:            3,
+	BillingAddress:       SampleAddress,
+	PriorityCode:         constants.PriorityCodeNormal,
+	PaymentStatus:        constants.InvoicePaymentStatusUnpaid,
+	TotalInvoiced:        "1234.560000000000000000000000000000",
+	AcceptsInvoiceEmails: true,
+	Lines:                NewList([]InvoiceLine{*SampleInvoiceLine}, PageInfo{}),
+	Allocations:          NewList([]InvoiceAllocation{*SampleInvoiceAllocation}, PageInfo{}),
+	CreatedAt:            timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:            timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*Invoice) SchemaExample() any {
@@ -156,7 +91,7 @@ type InvoiceLine struct {
 	// Unit price for this line.
 	UnitPrice *Rate `json:"unit_price" validate:"required"`
 	// Sales order line associated with this invoice line. Expandable via include[]=lines.order_line.
-	OrderLine *SalesOrderLineDetail `json:"order_line" expandable:"true"`
+	OrderLine *SalesOrderLine `json:"order_line" expandable:"true"`
 	// Timestamp when the line was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Timestamp when the line was last updated.
@@ -180,7 +115,7 @@ var SampleInvoiceLine = &InvoiceLine{
 		},
 	},
 	UnitPrice: SampleRate,
-	OrderLine: SampleSalesOrderLineDetail,
+	OrderLine: SampleSalesOrderLine,
 	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

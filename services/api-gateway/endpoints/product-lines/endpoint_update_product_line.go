@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to partially update a product line.
@@ -16,19 +17,19 @@ type UpdateProductLineRequest struct {
 	// Product line ID.
 	ProductLineID string `path:"id" validate:"required"`
 	// Display name.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// Commission policy of products in this product line.
-	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy,omitempty"`
+	CommissionPolicy field.Optional[constants.CommissionPolicy] `json:"commission_policy,omitzero"`
 	// Freight policy for all items in this product line.
-	FreightPolicy *constants.FreightPolicy `json:"freight_policy,omitempty"`
+	FreightPolicy field.Optional[constants.FreightPolicy] `json:"freight_policy,omitzero"`
 	// Unit group ID associated with this product line. This unit group dictates the units that products in this product line may be purchased in.
-	UnitGroupID *string `json:"unit_group_id,omitempty" validate:"omitempty"`
+	UnitGroupID field.Optional[string] `json:"unit_group_id,omitzero" validate:"omitempty"`
 }
 
 var sampleUpdateProductLineName = "Updated Product Line"
 
 var sampleUpdateProductLineRequest = &UpdateProductLineRequest{
-	Name: &sampleUpdateProductLineName,
+	Name: field.Some(sampleUpdateProductLineName),
 }
 
 func (*UpdateProductLineRequest) SchemaExample() any {

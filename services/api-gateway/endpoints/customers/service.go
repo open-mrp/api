@@ -11,7 +11,7 @@ import (
 	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -226,20 +226,20 @@ func (m *customerSvcImpl) GetCustomer(ctx context.Context, req *RetrieveCustomer
 
 func (m *customerSvcImpl) CreateCustomer(ctx context.Context, req *CreateCustomerRequest) (*apiresource.Customer, *apierror.APIError) {
 	statusCode := constants.AccountStatusCodeNormal
-	if req.StatusCode != nil {
-		statusCode = *req.StatusCode
+	if v, ok := req.StatusCode.Value(); ok {
+		statusCode = v
 	}
 	commissionPolicy := constants.CommissionPolicyExempt
-	if req.CommissionPolicy != nil {
-		commissionPolicy = *req.CommissionPolicy
+	if v, ok := req.CommissionPolicy.Value(); ok {
+		commissionPolicy = v
 	}
 	freightPolicy := constants.FreightPolicyBilled
-	if req.FreightPolicy != nil {
-		freightPolicy = *req.FreightPolicy
+	if v, ok := req.FreightPolicy.Value(); ok {
+		freightPolicy = v
 	}
 	priorityCode := constants.PriorityCodeNormal
-	if req.DefaultPriorityCode != nil {
-		priorityCode = *req.DefaultPriorityCode
+	if v, ok := req.DefaultPriorityCode.Value(); ok {
+		priorityCode = v
 	}
 
 	statusCodeStr := string(statusCode)
@@ -249,31 +249,31 @@ func (m *customerSvcImpl) CreateCustomer(ctx context.Context, req *CreateCustome
 
 	pbReq := &pb.CreateCustomerRequest{
 		Name:                  req.Name,
-		Number:                req.Number,
-		Note:                  req.Note,
-		Email:                 req.Email,
-		Phone:                 req.Phone,
-		Url:                   req.URL,
+		Number:                req.Number.Ptr(),
+		Note:                  req.Note.Ptr(),
+		Email:                 req.Email.Ptr(),
+		Phone:                 req.Phone.Ptr(),
+		Url:                   req.URL.Ptr(),
 		StatusCode:            &statusCodeStr,
-		IsEdiEnabled:          ediStatusToBoolPtr(req.EDIStatus),
+		IsEdiEnabled:          ediStatusToBoolPtr(req.EDIStatus.Ptr()),
 		CommissionPolicy:      &commissionPolicyStr,
 		FreightPolicy:         &freightPolicyStr,
 		DefaultCarrierId:      &req.DefaultCarrierID,
-		DefaultServiceLevelId: req.DefaultServiceLevelID,
+		DefaultServiceLevelId: req.DefaultServiceLevelID.Ptr(),
 		DefaultPaymentTermId:  &req.DefaultPaymentTermID,
 		DefaultShippingTermId: &req.DefaultShippingTermID,
 		DefaultPriorityCode:   &priorityCodeStr,
-		DefaultSalesRepId:     req.DefaultSalesRepID,
+		DefaultSalesRepId:     req.DefaultSalesRepID.Ptr(),
 		CustomerPriceGroupIds: req.CustomerPriceGroupIDs,
 		CustomerTypeGroupId:   &req.CustomerTypeGroupID,
-		CarrierBillingType:    optCarrierBillingTypeToStringPtr(req.CarrierBillingType),
-		CarrierBillingAccount: req.CarrierBillingAccount,
+		CarrierBillingType:    optCarrierBillingTypeToStringPtr(req.CarrierBillingType.Ptr()),
+		CarrierBillingAccount: req.CarrierBillingAccount.Ptr(),
 		Includes:              resourcekit.FilterIncludes(ctx, customerIncludes...),
 	}
 
-	if req.CreditLimit != nil {
-		pbReq.CreditLimitValue = &req.CreditLimit.Value
-		pbReq.CreditLimitUnitId = &req.CreditLimit.UnitID
+	if cl, ok := req.CreditLimit.Value(); ok {
+		pbReq.CreditLimitValue = &cl.Value
+		pbReq.CreditLimitUnitId = &cl.UnitID
 	}
 
 	pbReq.BillToAddress = addressInputToCustomerProto(&req.BillToAddress)
@@ -391,33 +391,33 @@ func (m *customerSvcImpl) MergeCustomers(ctx context.Context, req *MergeCustomer
 func (m *customerSvcImpl) UpdateCustomer(ctx context.Context, req *UpdateCustomerRequest) (*apiresource.Customer, *apierror.APIError) {
 	pbReq := &pb.UpdateCustomerRequest{
 		Id:                       req.CustomerID,
-		Name:                     req.Name,
-		Number:                   req.Number,
-		Note:                     patch.StringFieldPtrToProto(req.Note),
-		Email:                    patch.StringFieldPtrToProto(req.Email),
-		Phone:                    patch.StringFieldPtrToProto(req.Phone),
-		Url:                      patch.StringFieldPtrToProto(req.URL),
-		StatusCode:               optAccountStatusCodeToStringPtr(req.StatusCode),
-		IsEdiEnabled:             ediStatusToBoolPtr(req.EDIStatus),
-		CommissionPolicy:         optCommissionPolicyToStringPtr(req.CommissionPolicy),
-		FreightPolicy:            optFreightPolicyToStringPtr(req.FreightPolicy),
-		DefaultCarrierId:         req.DefaultCarrierID,
-		DefaultServiceLevelId:    patch.StringFieldPtrToProto(req.DefaultServiceLevelID),
-		DefaultPaymentTermId:     req.DefaultPaymentTermID,
-		DefaultShippingTermId:    req.DefaultShippingTermID,
-		DefaultPriorityCode:      optPriorityCodeToStringPtr(req.DefaultPriorityCode),
-		DefaultSalesRepId:        patch.StringFieldPtrToProto(req.DefaultSalesRepID),
-		BillToAddressId:          patch.StringFieldPtrToProto(req.BillToAddressID),
-		ShipToAddressId:          patch.StringFieldPtrToProto(req.ShipToAddressID),
-		CustomerPriceGroupIds:    derefStringSlice(req.CustomerPriceGroupIDs),
-		CustomerTypeGroupId:      req.CustomerTypeGroupID,
-		CarrierBillingType:       optCarrierBillingTypeToStringPtr(req.CarrierBillingType),
-		CarrierBillingAccount:    patch.StringFieldPtrToProto(req.CarrierBillingAccount),
-		HasCustomerPriceGroupIds: req.CustomerPriceGroupIDs != nil,
+		Name:                     req.Name.Ptr(),
+		Number:                   req.Number.Ptr(),
+		Note:                     field.StringClearableToProto(req.Note),
+		Email:                    field.StringClearableToProto(req.Email),
+		Phone:                    field.StringClearableToProto(req.Phone),
+		Url:                      field.StringClearableToProto(req.URL),
+		StatusCode:               optAccountStatusCodeToStringPtr(req.StatusCode.Ptr()),
+		IsEdiEnabled:             ediStatusToBoolPtr(req.EDIStatus.Ptr()),
+		CommissionPolicy:         optCommissionPolicyToStringPtr(req.CommissionPolicy.Ptr()),
+		FreightPolicy:            optFreightPolicyToStringPtr(req.FreightPolicy.Ptr()),
+		DefaultCarrierId:         req.DefaultCarrierID.Ptr(),
+		DefaultServiceLevelId:    field.StringClearableToProto(req.DefaultServiceLevelID),
+		DefaultPaymentTermId:     req.DefaultPaymentTermID.Ptr(),
+		DefaultShippingTermId:    req.DefaultShippingTermID.Ptr(),
+		DefaultPriorityCode:      optPriorityCodeToStringPtr(req.DefaultPriorityCode.Ptr()),
+		DefaultSalesRepId:        field.StringClearableToProto(req.DefaultSalesRepID),
+		BillToAddressId:          field.StringClearableToProto(req.BillToAddressID),
+		ShipToAddressId:          field.StringClearableToProto(req.ShipToAddressID),
+		CustomerPriceGroupIds:    derefStringSlice(req.CustomerPriceGroupIDs.Ptr()),
+		CustomerTypeGroupId:      req.CustomerTypeGroupID.Ptr(),
+		CarrierBillingType:       optCarrierBillingTypeToStringPtr(req.CarrierBillingType.Ptr()),
+		CarrierBillingAccount:    field.StringClearableToProto(req.CarrierBillingAccount),
+		HasCustomerPriceGroupIds: req.CustomerPriceGroupIDs.IsSet(),
 		Includes:                 resourcekit.FilterIncludes(ctx, customerIncludes...),
 	}
 
-	pbReq.CreditLimit = apirequest.QuantityFieldPtrToProto(req.CreditLimit)
+	pbReq.CreditLimit = apirequest.QuantityFieldToProto(req.CreditLimit)
 
 	resp, apiErr := grpcutil.CallRPC(ctx, customerSvcTracer, "service.customers.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateCustomerResponse, error) {
@@ -441,7 +441,7 @@ func addressInputToCustomerProto(a *apirequest.AddressInput) *pb.CreateCustomerA
 		Name:         a.Name,
 		Phone:        a.Phone.Ptr(),
 		Email:        a.Email.Ptr(),
-		IsDropShip:   addressTypeToDropShip(a.Type),
+		IsDropShip:   addressTypeToDropShip(a.Type.Ptr()),
 		StreetLine_1: a.StreetLine1.Ptr(),
 		StreetLine_2: a.StreetLine2.Ptr(),
 		Locality:     a.Locality.Ptr(),
@@ -528,14 +528,12 @@ func stashCustomerMeta(ctx context.Context, cust *apiresource.Customer, c *pb.Cu
 			Object:       constants.ObjectTypeQuantity,
 			Value:        apiresource.NormalizeQuantityValue(c.CreditLimit.Value, unitType),
 			DisplayValue: apiresource.FormatDisplayValue(c.CreditLimit.Value, c.CreditLimit.UnitAbbreviation, unitType),
-			Unit: apiresource.ExpandableUnitStub(
-				c.CreditLimit.UnitId,
-				c.CreditLimit.UnitName,
-				c.CreditLimit.UnitAbbreviation,
-				c.CreditLimit.UnitType,
-				grpcutil.TimestampToTime(c.CreatedAt),
-			),
+			// Unit left nil: stash the FK id so LoadUnits fetches the real Unit on
+			// ?include=credit_limit.unit. Never fabricate.
 		})
+		if c.CreditLimit.UnitId != "" {
+			meta.Set(constants.ObjectTypeQuantity, c.CreditLimit.Id, "unit_id", c.CreditLimit.UnitId)
+		}
 	}
 
 	if c.BillToAddress != nil {
@@ -557,49 +555,20 @@ func stashCustomerMeta(ctx context.Context, cust *apiresource.Customer, c *pb.Cu
 	meta.Set(constants.ObjectTypeCustomer, cust.ID, "price_groups",
 		apiresource.NewList(priceGroups, apiresource.PageInfo{}))
 
-	if c.ParentAccount != nil {
-		pa := &apiresource.Customer{
-			ID:               c.ParentAccount.Id,
-			Object:           constants.ObjectTypeCustomer,
-			Name:             c.ParentAccount.Name,
-			Number:           c.ParentAccount.Number,
-			Status:           constants.AccountStatusCodeNormal,
-			EDIStatus:        constants.EDIStatusDisabled,
-			RelationshipType: constants.CustomerRelationshipTypeParent,
-			CommissionPolicy: constants.CommissionPolicyApplied,
-		}
-		if c.ParentAccount.CreatedAt != nil {
-			pa.CreatedAt = c.ParentAccount.CreatedAt.AsTime()
-		}
-		if c.ParentAccount.UpdatedAt != nil {
-			pa.UpdatedAt = c.ParentAccount.UpdatedAt.AsTime()
-		}
-		meta.Set(constants.ObjectTypeCustomer, cust.ID, "parent_account", pa)
+	// parent_account and child_accounts are expandable Customer references:
+	// stash the FK ids so LoadCustomers fetches the real Customers on ?include=.
+	// Never fabricate.
+	if c.ParentAccount != nil && c.ParentAccount.Id != "" {
+		meta.Set(constants.ObjectTypeCustomer, cust.ID, "parent_account_id", c.ParentAccount.Id)
 	}
-
 	if len(c.ChildAccounts) > 0 {
-		children := make([]apiresource.Customer, len(c.ChildAccounts))
-		for i, child := range c.ChildAccounts {
-			ca := apiresource.Customer{
-				ID:               child.Id,
-				Object:           constants.ObjectTypeCustomer,
-				Name:             child.Name,
-				Number:           child.Number,
-				Status:           constants.AccountStatusCodeNormal,
-				EDIStatus:        constants.EDIStatusDisabled,
-				RelationshipType: constants.CustomerRelationshipTypeChild,
-				CommissionPolicy: constants.CommissionPolicyApplied,
+		childIDs := make([]string, 0, len(c.ChildAccounts))
+		for _, child := range c.ChildAccounts {
+			if child.Id != "" {
+				childIDs = append(childIDs, child.Id)
 			}
-			if child.CreatedAt != nil {
-				ca.CreatedAt = child.CreatedAt.AsTime()
-			}
-			if child.UpdatedAt != nil {
-				ca.UpdatedAt = child.UpdatedAt.AsTime()
-			}
-			children[i] = ca
 		}
-		meta.Set(constants.ObjectTypeCustomer, cust.ID, "child_accounts",
-			apiresource.NewList(children, apiresource.PageInfo{}))
+		meta.Set(constants.ObjectTypeCustomer, cust.ID, "child_account_ids", childIDs)
 	}
 }
 
@@ -703,12 +672,16 @@ func buildDefaults(c *pb.CustomerProto) *apiresource.CustomerDefaults {
 	}
 
 	if c.DefaultPriority != nil {
-		d.Priority = apiresource.ExpandablePriorityStub(
-			c.DefaultPriority.Id,
-			constants.PriorityCode(c.DefaultPriority.Code),
-			c.DefaultPriority.Name,
-			grpcutil.TimestampToTime(c.CreatedAt),
-		)
+		// Real priority data from the proto (id, code, name); owner is an
+		// expandable sub-resource left nil. Never fabricate.
+		d.Priority = &apiresource.Priority{
+			ID:        c.DefaultPriority.Id,
+			Object:    constants.ObjectTypePriority,
+			Code:      constants.PriorityCode(c.DefaultPriority.Code),
+			Name:      c.DefaultPriority.Name,
+			CreatedAt: grpcutil.TimestampToTime(c.CreatedAt),
+			UpdatedAt: grpcutil.TimestampToTime(c.CreatedAt),
+		}
 	}
 
 	if c.DefaultSalesRep != nil {

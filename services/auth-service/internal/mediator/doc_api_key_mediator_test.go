@@ -178,7 +178,14 @@ func (s *DocAPIKeyMedTestSuite) TestResolve_RotateDocAPIKey_HasRedactedValue() {
 
 	s.apiKeyMed.EXPECT().
 		Rotate(gomock.Any(), gomock.Any()).
-		Return("aug_sk_test_full_rotated_qrst", rotatedAPIKey, nil)
+		DoAndReturn(func(_ context.Context, input domain.APIKeyRotateInput) (string, *apikey.APIKey, *apierror.APIError) {
+			// The underlying Rotate is scoped to the owner account; without it the
+			// rotation fails the ownership check and the key never auto-rotates.
+			s.Equal(sandboxAccountID, input.OwnerAccountID,
+				"Rotate must be scoped to the sandbox account that owns the doc API key")
+			s.Equal(oldAPIKeyTypeID, input.APIKeyTypeID)
+			return "aug_sk_test_full_rotated_qrst", rotatedAPIKey, nil
+		})
 
 	s.docAPIKeyRepo.EXPECT().
 		Create(gomock.Any(), gomock.Any()).

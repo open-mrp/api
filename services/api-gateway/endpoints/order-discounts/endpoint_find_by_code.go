@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to find an order discount by code.
@@ -16,9 +17,9 @@ type FindOrderDiscountByCodeRequest struct {
 	// Discount code.
 	Code string `json:"code" validate:"required"`
 	// Buyer account ID to scope the lookup.
-	BuyerAccountID *string `json:"buyer_account_id,omitempty"`
+	BuyerAccountID field.Optional[string] `json:"buyer_account_id,omitzero"`
 	// Sales order ID to scope the lookup.
-	SalesOrderID *string `json:"sales_order_id,omitempty"`
+	SalesOrderID field.Optional[string] `json:"sales_order_id,omitzero"`
 }
 
 var sampleFindOrderDiscountByCodeRequest = &FindOrderDiscountByCodeRequest{

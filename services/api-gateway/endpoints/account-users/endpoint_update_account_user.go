@@ -9,7 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to partially update an account user.
@@ -17,26 +17,26 @@ type UpdateAccountUserRequest struct {
 	// Account user ID.
 	AccountUserID string `path:"id" validate:"required"`
 	// User display name.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// User email address.
-	Email *string `json:"email,omitempty" validate:"omitnil,custom_email,max=255"`
+	Email field.Optional[string] `json:"email,omitzero" validate:"omitempty,custom_email,max=255"`
 	// Unique username (3–255 chars; letters, numbers, underscores, hyphens).
-	Username *string `json:"username,omitempty" validate:"omitempty,username"`
+	Username field.Optional[string] `json:"username,omitzero" validate:"omitempty,username"`
 	// Role assigned to the user.
-	RoleID *patch.Field[string] `json:"role_id,omitempty" validate:"omitempty"`
+	RoleID field.Clearable[string] `json:"role_id,omitzero" validate:"omitempty"`
 	// Department assigned to the user.
-	DepartmentID *patch.Field[string] `json:"department_id,omitempty" validate:"omitempty"`
+	DepartmentID field.Clearable[string] `json:"department_id,omitzero" validate:"omitempty"`
 	// Notification preferences to update (external targets only).
-	Preferences []NotificationPreferenceItem `json:"preferences,omitempty"`
+	Preferences []NotificationPreferenceItem `json:"preferences,omitzero"`
 }
 
 var sampleUpdateAccountUserName = apiresource.SampleUserName
 var sampleUpdateAccountUserRoleID = apiresource.SampleRoleID
 var sampleUpdateAccountUserDepartmentID = apiresource.SampleDepartmentID
 var sampleUpdateAccountUserRequest = &UpdateAccountUserRequest{
-	Name:         &sampleUpdateAccountUserName,
-	RoleID:       new(patch.Set(sampleUpdateAccountUserRoleID)),
-	DepartmentID: new(patch.Set(sampleUpdateAccountUserDepartmentID)),
+	Name:         field.Some(sampleUpdateAccountUserName),
+	RoleID:       field.Set(sampleUpdateAccountUserRoleID),
+	DepartmentID: field.Set(sampleUpdateAccountUserDepartmentID),
 }
 
 func (*UpdateAccountUserRequest) SchemaExample() any {

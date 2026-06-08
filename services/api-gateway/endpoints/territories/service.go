@@ -121,10 +121,10 @@ func (m *territorySvcImpl) CreateTerritory(ctx context.Context, req *CreateTerri
 	pbReq := &pb.CreateTerritoryRequest{
 		AccountId:     req.AccountID,
 		State:         req.State,
-		StartZipcode:  req.StartZipcode,
-		EndZipcode:    req.EndZipcode,
+		StartZipcode:  req.StartZipcode.Ptr(),
+		EndZipcode:    req.EndZipcode.Ptr(),
 		SalesRepId:    req.SalesRepID,
-		ProductLineId: req.ProductLineID,
+		ProductLineId: req.ProductLineID.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, territorySvcTracer, "service.territories.create", domain.ServiceName,
@@ -143,14 +143,14 @@ func (m *territorySvcImpl) UpdateTerritory(ctx context.Context, req *UpdateTerri
 	pbReq := &pb.UpdateTerritoryRequest{
 		AccountId:         req.AccountID,
 		Id:                req.TerritoryID,
-		State:             req.State,
-		StartZipcode:      req.StartZipcode,
-		EndZipcode:        req.EndZipcode,
-		SalesRepId:        req.SalesRepID,
-		ProductLineId:     req.ProductLineID,
-		ClearProductLine:  derefBool(req.ClearProductLine),
-		ClearStartZipcode: derefBool(req.ClearStartZipcode),
-		ClearEndZipcode:   derefBool(req.ClearEndZipcode),
+		State:             req.State.Ptr(),
+		StartZipcode:      req.StartZipcode.Ptr(),
+		EndZipcode:        req.EndZipcode.Ptr(),
+		SalesRepId:        req.SalesRepID.Ptr(),
+		ProductLineId:     req.ProductLineID.Ptr(),
+		ClearProductLine:  derefBool(req.ClearProductLine.Ptr()),
+		ClearStartZipcode: derefBool(req.ClearStartZipcode.Ptr()),
+		ClearEndZipcode:   derefBool(req.ClearEndZipcode.Ptr()),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, territorySvcTracer, "service.territories.update", domain.ServiceName,

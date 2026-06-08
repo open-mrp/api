@@ -99,7 +99,7 @@ func (m *volumeDiscountSvcImpl) CreateVolumeDiscount(ctx context.Context, req *C
 			Name:               t.Name,
 			DiscountPercentage: t.DiscountPercentage,
 			Threshold:          t.Threshold,
-			ParentTierId:       t.ParentTierID,
+			ParentTierId:       t.ParentTierID.Ptr(),
 		}
 	}
 
@@ -133,17 +133,17 @@ func (m *volumeDiscountSvcImpl) UpdateVolumeDiscount(ctx context.Context, req *U
 	tiers := make([]*pb.UpdateVolumeDiscountTierInput, len(req.Tiers))
 	for i, t := range req.Tiers {
 		tiers[i] = &pb.UpdateVolumeDiscountTierInput{
-			Id:                 t.ID,
-			Name:               t.Name,
-			DiscountPercentage: t.DiscountPercentage,
-			Threshold:          t.Threshold,
-			ParentTierId:       t.ParentTierID,
+			Id:                 t.ID.Ptr(),
+			Name:               t.Name.Ptr(),
+			DiscountPercentage: t.DiscountPercentage.Ptr(),
+			Threshold:          t.Threshold.Ptr(),
+			ParentTierId:       t.ParentTierID.Ptr(),
 		}
 	}
 
 	pbReq := &pb.UpdateVolumeDiscountRequest{
 		Id:                req.VolumeDiscountID,
-		Name:              req.Name,
+		Name:              req.Name.Ptr(),
 		Tiers:             tiers,
 		CustomerGroupIds:  req.CustomerGroupIDs,
 		ProductLineIds:    req.ProductLineIDs,

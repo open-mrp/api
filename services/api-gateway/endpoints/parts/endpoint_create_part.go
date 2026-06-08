@@ -10,7 +10,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to create a part.
@@ -18,24 +18,24 @@ type CreatePartRequest struct {
 	// SKU.
 	SKU string `json:"sku" validate:"required,max=255"`
 	// Description.
-	Description patch.Nullable[string] `json:"description,omitzero"`
+	Description field.Optional[string] `json:"description,omitzero"`
 	// Notes.
-	Notes patch.Nullable[string] `json:"notes,omitzero"`
+	Notes field.Optional[string] `json:"notes,omitzero"`
 	// Category ID.
 	CategoryID string `json:"category_id" validate:"required"`
 	// Initial unit price. When set, numerator must be a currency unit and
 	// denominator must not be.
-	UnitPrice patch.Nullable[apirequest.RateInput] `json:"unit_price,omitzero"`
+	UnitPrice field.Optional[apirequest.RateInput] `json:"unit_price,omitzero"`
 	// Initial unit cost. Same currency rule as unit_price.
-	UnitCost patch.Nullable[apirequest.RateInput] `json:"unit_cost,omitzero"`
+	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero"`
 	// Attribute IDs to connect to the part at creation time.
-	AttributeIDs []string `json:"attribute_ids,omitempty"`
+	AttributeIDs []string `json:"attribute_ids,omitzero"`
 }
 
 var sampleCreatePartDescription = "Deep groove ball bearing, 20x47x14mm"
 var sampleCreatePartRequest = &CreatePartRequest{
 	SKU:         apiresource.SamplePartSKU,
-	Description: patch.PtrNullable(&sampleCreatePartDescription),
+	Description: field.SomePtr(&sampleCreatePartDescription),
 	CategoryID:  apiresource.SampleItemCategoryID,
 }
 

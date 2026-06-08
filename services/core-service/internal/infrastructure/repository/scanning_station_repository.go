@@ -11,8 +11,8 @@ import (
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 	"github.com/augno/api/shared/pagination"
-	"github.com/augno/api/shared/patch"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -368,7 +368,7 @@ func (r *scanningStationRepoImpl) Update(ctx context.Context, params domain.Upda
 		ID:            params.ScanningStationID,
 		AccountID:     params.AccountID,
 		Name:          toNullString(params.Name),
-		Notes:         patch.StringToNullString(params.Notes),
+		Notes:         field.StringToNullString(params.Notes),
 		LabelSizeCode: toNullString(params.LabelSizeCode),
 		LabelTypeCode: toNullString(params.LabelTypeCode),
 		MaterialCheckRequired: toNullBool(func() *bool {

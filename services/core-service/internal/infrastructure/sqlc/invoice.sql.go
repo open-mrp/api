@@ -71,6 +71,8 @@ SELECT
     inv.updated_at,
     so.id AS order_id,
     so.number AS order_number,
+    so.buyer_account_id AS customer_id,
+    so.payment_term_id AS payment_term_id,
     addr.id AS billing_address_id,
     addr.name AS billing_address_name,
     geo.street_line_1 AS billing_address_line1,
@@ -112,6 +114,8 @@ type GetInvoiceRow struct {
 	UpdatedAt             time.Time
 	OrderID               string
 	OrderNumber           string
+	CustomerID            string
+	PaymentTermID         sql.NullString
 	BillingAddressID      string
 	BillingAddressName    string
 	BillingAddressLine1   sql.NullString
@@ -140,6 +144,8 @@ func (q *Queries) GetInvoice(ctx context.Context, arg GetInvoiceParams) (GetInvo
 		&i.UpdatedAt,
 		&i.OrderID,
 		&i.OrderNumber,
+		&i.CustomerID,
+		&i.PaymentTermID,
 		&i.BillingAddressID,
 		&i.BillingAddressName,
 		&i.BillingAddressLine1,

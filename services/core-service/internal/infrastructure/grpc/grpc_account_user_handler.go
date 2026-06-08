@@ -6,7 +6,7 @@ import (
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/contracts"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -110,8 +110,8 @@ func (h *gRPCHandler) UpdateAccountUser(ctx context.Context, req *pb.UpdateAccou
 		Name:                    req.Name,
 		Email:                   req.Email,
 		Username:                req.Username,
-		RoleID:                  patch.StringFieldFromProto(req.RoleId),
-		DepartmentID:            patch.StringFieldFromProto(req.DepartmentId),
+		RoleID:                  field.StringClearableFromProto(req.RoleId),
+		DepartmentID:            field.StringClearableFromProto(req.DepartmentId),
 		NotificationPreferences: prefs,
 	}, req.Includes)
 	if apiErr != nil {

@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // UpdatePickRequest is the request to partially update a pick's metadata.
@@ -16,14 +17,14 @@ type UpdatePickRequest struct {
 	// Pick ID.
 	PickID string `path:"id" validate:"required"`
 	// Pick number.
-	Number *string `json:"number,omitempty" validate:"omitempty,max=255"`
+	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
 	// Timestamp when the pick was finished. Pass an empty string to clear.
-	FinishedAt *string `json:"finished_at,omitempty"`
+	FinishedAt field.Optional[string] `json:"finished_at,omitzero"`
 }
 
 var sampleUpdatePickNumber = "PCK-2025-0042"
 var sampleUpdatePickRequest = &UpdatePickRequest{
-	Number: &sampleUpdatePickNumber,
+	Number: field.Some(sampleUpdatePickNumber),
 }
 
 func (*UpdatePickRequest) SchemaExample() any {
@@ -33,8 +34,8 @@ func (*UpdatePickRequest) SchemaExample() any {
 // Partially updates a pick's metadata.
 type UpdatePickEndpoint struct{}
 
-func (e *UpdatePickEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePickRequest, *apiresource.PickDetail] {
-	return (&apiendpoint.APIEndpoint[*UpdatePickRequest, *apiresource.PickDetail]{
+func (e *UpdatePickEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePickRequest, *apiresource.Pick] {
+	return (&apiendpoint.APIEndpoint[*UpdatePickRequest, *apiresource.Pick]{
 		Title:             "Update Pick",
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
@@ -43,7 +44,7 @@ func (e *UpdatePickEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePickR
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypePick,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdatePickRequest) (*apiresource.PickDetail, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdatePickRequest) (*apiresource.Pick, *apierror.APIError) {
 			return svc.(PickSvc).UpdatePick
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{

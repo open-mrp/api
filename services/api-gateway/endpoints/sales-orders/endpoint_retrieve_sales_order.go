@@ -19,8 +19,8 @@ type RetrieveSalesOrderRequest struct {
 // Returns a sales order by ID.
 type RetrieveSalesOrderEndpoint struct{}
 
-func (e *RetrieveSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveSalesOrderRequest, *apiresource.SalesOrderDetail] {
-	return (&apiendpoint.APIEndpoint[*RetrieveSalesOrderRequest, *apiresource.SalesOrderDetail]{
+func (e *RetrieveSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveSalesOrderRequest, *apiresource.SalesOrder] {
+	return (&apiendpoint.APIEndpoint[*RetrieveSalesOrderRequest, *apiresource.SalesOrder]{
 		Title:             "Retrieve Sales Order",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
@@ -29,12 +29,12 @@ func (e *RetrieveSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeSalesOrder,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveSalesOrderRequest) (*apiresource.SalesOrderDetail, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError) {
 			return svc.(SalesOrderSvc).GetSalesOrder
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeSalesOrder,
-			Fields:     []string{"customer", "bill_to_address", "ship_to_address", "carrier", "service_level", "payment_term", "shipping_term", "order_discount", "lines", "lines.item"},
+			Fields:     []string{"customer", "sales_rep", "bill_to_address", "ship_to_address", "freight", "payment_term", "shipping_term", "order_discount", "totals", "related.pick", "related.production_run", "related.shipments", "lines", "lines.product", "lines.quantity_ordered", "lines.unit_price", "lines.unit_cost", "lines.totals"},
 		}),
 	})
 }

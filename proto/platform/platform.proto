@@ -55,6 +55,9 @@ service AuditService {
 
   // Returns a single audit event by ID.
   rpc GetAuditEvent(GetAuditEventRequest) returns (GetAuditEventResponse);
+
+  // Returns the full set of resource types that may appear on audit events.
+  rpc ListAuditEventResourceTypes(ListAuditEventResourceTypesRequest) returns (ListAuditEventResourceTypesResponse);
 }
 
 enum ProcessIdempotencyKeyResult {
@@ -222,6 +225,8 @@ message ListRequestLogsRequest {
   optional int64 min_latency_us = 17;
   // Filter by user-provided idempotency key string (matches idempotency_key.idempotency_key).
   optional string idempotency_key = 18;
+  // Filter by HTTP status class: 1–5 for 1xx–5xx. OR'd with status_codes.
+  repeated int32 status_code_classes = 19;
 }
 
 message ListRequestLogsResponse {
@@ -314,6 +319,12 @@ message GetAuditEventRequest {
 
 message GetAuditEventResponse {
   AuditEventInfo audit_event = 1;
+}
+
+message ListAuditEventResourceTypesRequest {}
+
+message ListAuditEventResourceTypesResponse {
+  repeated string resource_types = 1;
 }
 
 message AuditEventInfo {

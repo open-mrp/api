@@ -10,6 +10,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to create an agent memory.
@@ -19,15 +20,15 @@ type CreateMemoryRequest struct {
 	// Text content.
 	Content string `json:"content" validate:"required"`
 	// JSON metadata.
-	Metadata json.RawMessage `json:"metadata,omitempty"`
+	Metadata json.RawMessage `json:"metadata,omitzero"`
 	// Entity type this memory is scoped to (e.g. "customer", "product").
-	EntityType *string `json:"entity_type,omitempty" validate:"omitempty,max=255"`
+	EntityType field.Optional[string] `json:"entity_type,omitzero" validate:"omitempty,max=255"`
 	// Entity ID.
-	EntityID *string `json:"entity_id,omitempty" validate:"omitempty"`
+	EntityID field.Optional[string] `json:"entity_id,omitzero" validate:"omitempty"`
 	// Importance score between 0 and 1.
-	Importance float64 `json:"importance,omitempty"`
+	Importance float64 `json:"importance,omitzero"`
 	// ISO 8601 expiration timestamp.
-	ExpiresAt *string `json:"expires_at,omitempty"`
+	ExpiresAt field.Optional[string] `json:"expires_at,omitzero"`
 }
 
 var sampleCreateMemoryRequest = &CreateMemoryRequest{

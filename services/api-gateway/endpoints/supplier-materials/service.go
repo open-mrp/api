@@ -84,15 +84,15 @@ func (s *supplierMaterialSvcImpl) GetSupplierMaterial(ctx context.Context, req *
 
 func (s *supplierMaterialSvcImpl) CreateSupplierMaterial(ctx context.Context, req *CreateSupplierMaterialRequest) (*apiresource.SupplierMaterial, *apierror.APIError) {
 	isActive := true
-	if req.IsActive != nil {
-		isActive = *req.IsActive
+	if v, ok := req.IsActive.Value(); ok {
+		isActive = v
 	}
 
 	pbReq := &pb.CreateSupplierMaterialRequest{
 		SupplierAccountId:   req.SupplierID,
 		MaterialId:          req.MaterialID,
 		SupplierPartNumber:  req.SupplierPartNumber,
-		SupplierDescription: req.SupplierDescription,
+		SupplierDescription: req.SupplierDescription.Ptr(),
 		IsActive:            isActive,
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, supplierMaterialSvcTracer, "service.supplier_materials.create", domain.ServiceName,
@@ -111,10 +111,10 @@ func (s *supplierMaterialSvcImpl) UpdateSupplierMaterial(ctx context.Context, re
 	pbReq := &pb.UpdateSupplierMaterialRequest{
 		SupplierAccountId:   req.SupplierID,
 		MaterialId:          req.MaterialID,
-		SupplierPartNumber:  req.SupplierPartNumber,
-		SupplierDescription: req.SupplierDescription,
-		UpdateDescription:   req.SupplierDescription != nil,
-		IsActive:            req.IsActive,
+		SupplierPartNumber:  req.SupplierPartNumber.Ptr(),
+		SupplierDescription: req.SupplierDescription.Ptr(),
+		UpdateDescription:   req.SupplierDescription.Ptr() != nil,
+		IsActive:            req.IsActive.Ptr(),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, supplierMaterialSvcTracer, "service.supplier_materials.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateSupplierMaterialResponse, error) {

@@ -30,30 +30,6 @@ type Priority struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-func ExpandablePriorityStub(id string, code constants.PriorityCode, name string, ts time.Time) *Priority {
-	if id == "" {
-		id = SamplePriorityID
-	}
-	if code == "" {
-		code = constants.PriorityCodeNormal
-	}
-	if name == "" {
-		name = SamplePriorityName
-	}
-	if ts.IsZero() {
-		ts = time.Unix(0, 0).UTC()
-	}
-	return &Priority{
-		ID:        id,
-		Object:    constants.ObjectTypePriority,
-		Code:      code,
-		Name:      name,
-		Owner:     SystemOwner(),
-		CreatedAt: ts,
-		UpdatedAt: ts,
-	}
-}
-
 var SamplePriority = &Priority{
 	ID:        SamplePriorityID,
 	Object:    constants.ObjectTypePriority,

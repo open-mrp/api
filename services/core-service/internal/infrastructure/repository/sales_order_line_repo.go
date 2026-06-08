@@ -423,10 +423,6 @@ func mapSalesOrderLineRow(row sqlc.GetSalesOrderLineRow) *domain.SalesOrderLine 
 		line.UnitCostDenominatorUnitAbbr = &row.UnitCostDenominatorUnitAbbreviation.String
 	}
 
-	if row.CompletedAt.Valid {
-		line.CompletedAt = &row.CompletedAt.Time
-	}
-
 	return line
 }
 
@@ -498,10 +494,6 @@ func mapSalesOrderLinesRow(row sqlc.GetSalesOrderLinesRow) *domain.SalesOrderLin
 	}
 	if row.UnitCostDenominatorUnitAbbreviation.Valid {
 		line.UnitCostDenominatorUnitAbbr = &row.UnitCostDenominatorUnitAbbreviation.String
-	}
-
-	if row.CompletedAt.Valid {
-		line.CompletedAt = &row.CompletedAt.Time
 	}
 
 	return line

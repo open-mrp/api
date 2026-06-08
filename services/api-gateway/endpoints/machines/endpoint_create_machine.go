@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to create a machine.
@@ -18,7 +19,7 @@ type CreateMachineRequest struct {
 	// Serial number.
 	SerialNumber string `json:"serial_number" validate:"required,max=255"`
 	// Notes.
-	Notes *string `json:"notes,omitempty"`
+	Notes field.Optional[string] `json:"notes,omitzero"`
 	// Department ID.
 	DepartmentID string `json:"department_id" validate:"required"`
 }

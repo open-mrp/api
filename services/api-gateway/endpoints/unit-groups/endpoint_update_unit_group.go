@@ -9,7 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 )
 
 // UpdateUnitGroupRequest is a request to partially update a unit group.
@@ -17,20 +17,20 @@ type UpdateUnitGroupRequest struct {
 	// Unit group ID.
 	UnitGroupID string `path:"id" validate:"required"`
 	// Display name.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// Notes. Set to null to clear.
-	Notes *patch.Field[string] `json:"notes,omitempty"`
+	Notes field.Clearable[string] `json:"notes,omitzero"`
 	// Base unit ID.
-	BaseUnitID *string `json:"base_unit_id,omitempty" validate:"omitempty"`
+	BaseUnitID field.Optional[string] `json:"base_unit_id,omitzero" validate:"omitempty"`
 	// Upserts associated units when provided. Existing units not in the list are preserved.
-	AssociatedUnits *[]CreateUnitGroupUnitParam `json:"associated_units,omitempty"`
+	AssociatedUnits field.Optional[[]CreateUnitGroupUnitParam] `json:"associated_units,omitzero"`
 }
 
 var sampleUpdateUnitGroupName = "Weight Units (Updated)"
 var sampleUpdateUnitGroupBaseUnitID = apiresource.SampleUnitID
 var sampleUpdateUnitGroupRequest = &UpdateUnitGroupRequest{
-	Name:       &sampleUpdateUnitGroupName,
-	BaseUnitID: &sampleUpdateUnitGroupBaseUnitID,
+	Name:       field.Some(sampleUpdateUnitGroupName),
+	BaseUnitID: field.Some(sampleUpdateUnitGroupBaseUnitID),
 }
 
 func (*UpdateUnitGroupRequest) SchemaExample() any {

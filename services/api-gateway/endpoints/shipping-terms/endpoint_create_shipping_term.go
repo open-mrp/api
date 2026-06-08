@@ -10,7 +10,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to create a shipping term.
@@ -20,11 +20,11 @@ type CreateShippingTermRequest struct {
 	// Shipping term type.
 	Type constants.ShippingTermType `json:"type" validate:"required"`
 	// Flat rate for this shipping term.
-	FlatRate patch.Nullable[apirequest.QuantityInput] `json:"flat_rate,omitzero"`
+	FlatRate field.Optional[apirequest.QuantityInput] `json:"flat_rate,omitzero"`
 	// Minimum order value for free shipping.
-	MinimumOrderValue patch.Nullable[apirequest.QuantityInput] `json:"minimum_order_value,omitzero"`
+	MinimumOrderValue field.Optional[apirequest.QuantityInput] `json:"minimum_order_value,omitzero"`
 	// Service level IDs that qualify for free shipping.
-	FreeShippingServiceLevelIDs []string `json:"free_shipping_service_level_ids,omitempty"`
+	FreeShippingServiceLevelIDs []string `json:"free_shipping_service_level_ids,omitzero"`
 }
 
 var sampleCreateShippingTermRequest = &CreateShippingTermRequest{

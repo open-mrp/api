@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to update a system property.
@@ -16,12 +17,12 @@ type UpdateSysPropertyRequest struct {
 	// System property ID.
 	SysPropertyID string `path:"id" validate:"required"`
 	// Counter value.
-	Value *int32 `json:"value,omitempty"`
+	Value field.Optional[int32] `json:"value,omitzero"`
 }
 
 var sampleUpdateSysPropertyValue int32 = 30
 var sampleUpdateSysPropertyRequest = &UpdateSysPropertyRequest{
-	Value: &sampleUpdateSysPropertyValue,
+	Value: field.Some(sampleUpdateSysPropertyValue),
 }
 
 func (*UpdateSysPropertyRequest) SchemaExample() any {

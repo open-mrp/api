@@ -9,7 +9,7 @@ import (
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to register a new or existing customer.
@@ -19,19 +19,19 @@ type RegisterCustomerRequest struct {
 	// Whether the registrant is an existing customer.
 	IsExistingCustomer bool `json:"is_existing_customer"`
 	// Customer number, if registering as an existing customer.
-	CustomerNumber *string `json:"customer_number,omitempty"`
+	CustomerNumber field.Optional[string] `json:"customer_number,omitzero"`
 	// Customer name.
-	CustomerName *string `json:"customer_name,omitempty"`
+	CustomerName field.Optional[string] `json:"customer_name,omitzero"`
 	// Customer group ID.
-	CustomerGroupID *string `json:"customer_group_id,omitempty"`
+	CustomerGroupID field.Optional[string] `json:"customer_group_id,omitzero"`
 	// Phone number.
-	Phone *string `json:"phone,omitempty"`
+	Phone field.Optional[string] `json:"phone,omitzero"`
 	// Customer address.
-	Address *apirequest.AddressInput `json:"address,omitempty"`
+	Address field.Optional[apirequest.AddressInput] `json:"address,omitzero"`
 	// Shipping term ID.
-	ShippingTermID *string `json:"shipping_term_id,omitempty"`
+	ShippingTermID field.Optional[string] `json:"shipping_term_id,omitzero"`
 	// Payment term ID.
-	PaymentTermID *string `json:"payment_term_id,omitempty"`
+	PaymentTermID field.Optional[string] `json:"payment_term_id,omitzero"`
 }
 
 var sampleRegisterStreetLine1 = "123 Main St"
@@ -42,19 +42,19 @@ var sampleRegisterPostalCode = "62701"
 var sampleRegisterCustomerRequest = &RegisterCustomerRequest{
 	AccountSlug:        "my-company",
 	IsExistingCustomer: false,
-	CustomerName:       new("Acme Corp"),
-	CustomerGroupID:    new("cgrp_01abc"),
-	Phone:              new("+15551234567"),
-	Address: &apirequest.AddressInput{
+	CustomerName:       field.Some("Acme Corp"),
+	CustomerGroupID:    field.Some("cgrp_01abc"),
+	Phone:              field.Some("+15551234567"),
+	Address: field.Some(apirequest.AddressInput{
 		Name:        "Headquarters",
-		StreetLine1: patch.PtrNullable(&sampleRegisterStreetLine1),
-		Locality:    patch.PtrNullable(&sampleRegisterLocality),
-		State:       patch.PtrNullable(&sampleRegisterState),
-		PostalCode:  patch.PtrNullable(&sampleRegisterPostalCode),
+		StreetLine1: field.SomePtr(&sampleRegisterStreetLine1),
+		Locality:    field.SomePtr(&sampleRegisterLocality),
+		State:       field.SomePtr(&sampleRegisterState),
+		PostalCode:  field.SomePtr(&sampleRegisterPostalCode),
 		Country:     "US",
-	},
-	PaymentTermID:  new("pt_01abc"),
-	ShippingTermID: new("st_01abc"),
+	}),
+	PaymentTermID:  field.Some("pt_01abc"),
+	ShippingTermID: field.Some("st_01abc"),
 }
 
 func (*RegisterCustomerRequest) SchemaExample() any {

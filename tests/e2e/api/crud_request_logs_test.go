@@ -3,10 +3,12 @@
 package api_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"sort"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -455,6 +457,115 @@ func TestRequestLogs_ListFilterByMultipleActorIDs(t *testing.T) {
 		require.NotNil(t, actor)
 		assert.Equal(t, actorID, jsonField(actor, "id"))
 	}
+}
+
+// TestRequestLogs_ListFilterByMultipleActorsUnion is the strong union check for
+// the actor array filter: filtering by two distinct, real actors must return
+// rows for BOTH of them, not just one. A filter that silently applied only the
+// first id, or that failed to resolve the externally-exposed account_user id
+// back to the stored rl.actor_id, would pass the weaker "no others" tests but
+// fail here. The seed data guarantees one user actor and one api_key actor.
+func TestRequestLogs_ListFilterByMultipleActorsUnion(t *testing.T) {
+	t.Parallel()
+	// Discover one user actor and one api_key actor by actor_type rather than from
+	// the recent-log window: the harness's own api-key traffic dominates the most
+	// recent rows, so a plain top-N probe rarely surfaces two distinct actor types.
+	// The seed data guarantees both a user-authored and an api_key-authored log.
+	discoverActorOfType := func(actorType string) string {
+		l, _, derr := apiClient.GetList(requestLogsPath, url.Values{
+			"actor_types": {actorType},
+			"include":     {"actor"},
+			"limit":       {"1"},
+		})
+		if derr != nil || len(l.Data) == 0 {
+			return ""
+		}
+		actor := jsonObject(parseJSON(l.Data[0]), "actor")
+		if actor == nil {
+			return ""
+		}
+		return jsonField(actor, "id")
+	}
+
+	actorA := discoverActorOfType("user")
+	actorB := discoverActorOfType("api_key")
+	if actorA == "" || actorB == "" || actorA == actorB {
+		t.Skip("Need a distinct user actor and api_key actor in request logs for a union test")
+		return
+	}
+
+	filtered, _, err := apiClient.GetList(requestLogsPath, url.Values{
+		"actor_ids": {actorA, actorB},
+		"include":   {"actor"},
+		"limit":     {"200"},
+	})
+	require.NoError(t, err)
+
+	allowed := map[string]bool{actorA: true, actorB: true}
+	sawA, sawB := false, false
+	for _, item := range filtered.Data {
+		actor := jsonObject(parseJSON(item), "actor")
+		require.NotNil(t, actor, "actor should be present with ?include=actor")
+		got := jsonField(actor, "id")
+		assert.True(t, allowed[got], "actor.id %q not in requested set {%s, %s}", got, actorA, actorB)
+		switch got {
+		case actorA:
+			sawA = true
+		case actorB:
+			sawB = true
+		}
+	}
+	assert.True(t, sawA, "union filter must return logs for actor %s", actorA)
+	assert.True(t, sawB, "union filter must return logs for actor %s", actorB)
+}
+
+// TestRequestLogs_ListSearchByIDInRoute verifies the free-text search ('q')
+// matches an id embedded in the request route, so an operator can paste a
+// resource id and find every log that touched it. The seed row
+// rqlog_01seedsearchtgt0 has SeedRequestLogSearchToken in its path.
+func TestRequestLogs_ListSearchByIDInRoute(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
+		"q":     {SeedRequestLogSearchToken},
+		"limit": {"50"},
+	})
+	if err != nil {
+		t.Skip("Request logs endpoint not accessible")
+		return
+	}
+	require.NotEmpty(t, list.Data, "search for %q should return the seeded log", SeedRequestLogSearchToken)
+
+	var found bool
+	for _, item := range list.Data {
+		m := parseJSON(item)
+		// Every match must contain the token somewhere searchable; in practice the
+		// route/path is where it lives.
+		path := jsonField(m, "path")
+		route := jsonField(m, "normalized_route")
+		assert.True(t,
+			strings.Contains(path, SeedRequestLogSearchToken) ||
+				strings.Contains(route, SeedRequestLogSearchToken) ||
+				jsonField(m, "id") == SeedRequestLogSearchToken,
+			"search hit %q has the token in neither path (%q) nor normalized_route (%q)",
+			jsonField(m, "id"), path, route,
+		)
+		if strings.Contains(path, SeedRequestLogSearchToken) {
+			found = true
+		}
+	}
+	assert.True(t, found, "search for %q should include the seeded request log whose path embeds it", SeedRequestLogSearchToken)
+}
+
+func TestRequestLogs_ListSearchNoResults(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
+		"q": {"zzzz-no-such-route-or-id-99999"},
+	})
+	if err != nil {
+		t.Skip("Request logs endpoint not accessible")
+		return
+	}
+	assertEmptyListData(t, list.Data, "search for a non-existent token should return no results")
 }
 
 func TestRequestLogs_ListFilterByMultipleNormalizedRoutes(t *testing.T) {
@@ -938,4 +1049,298 @@ func TestRequestLogs_ListIncludeActor(t *testing.T) {
 		assert.Equal(t, "actor", jsonField(actor, "object"))
 		assert.NotEmpty(t, jsonField(actor, "type"))
 	}
+}
+
+// --- Robust per-filter inclusion/exclusion tests ---
+//
+// The e2e harness emits its own request-log traffic against the seed account
+// continuously, so a filter test cannot prove exclusion by counting recent rows
+// or scanning the first page — harness noise drowns out the seed rows. Each of
+// these tests instead scopes its query to a private, deterministic 3-row cohort
+// (see seed_test.go / 0014_e2e_extras.sql) via a distinctive value the harness
+// never produces (a synthetic normalized_route, or a synthetic host where the
+// route is the dimension under test). It then ANDs the filter under test and
+// asserts the result set is *exactly* the two requested cohort rows — proving
+// both inclusion of the requested values and exclusion of the third.
+
+// requestLogIDSet returns the set of "id" values across list response data.
+func requestLogIDSet(data []json.RawMessage) map[string]bool {
+	out := make(map[string]bool, len(data))
+	for _, item := range data {
+		if id := jsonField(parseJSON(item), "id"); id != "" {
+			out[id] = true
+		}
+	}
+	return out
+}
+
+// assertRequestLogMembership asserts every id in wantPresent appears and every id
+// in wantAbsent does not. On failure it prints the full response for debugging.
+func assertRequestLogMembership(t *testing.T, data []json.RawMessage, wantPresent, wantAbsent []string) {
+	t.Helper()
+	ids := requestLogIDSet(data)
+	for _, id := range wantPresent {
+		assert.True(t, ids[id], "expected request log %s in filtered results; got:\n%s", id, formatListDataForLog(data))
+	}
+	for _, id := range wantAbsent {
+		assert.False(t, ids[id], "request log %s should have been excluded by the filter; got:\n%s", id, formatListDataForLog(data))
+	}
+}
+
+// fetchScopedRequestLogs runs a cohort-scoped list query with a high limit so the
+// whole (small) cohort fits on one page, and fails the test on transport error.
+func fetchScopedRequestLogs(t *testing.T, params url.Values) *ListResponse {
+	t.Helper()
+	if params.Get("limit") == "" {
+		params.Set("limit", "50")
+	}
+	list, _, err := apiClient.GetList(requestLogsPath, params)
+	require.NoError(t, err)
+	return list
+}
+
+func TestRequestLogs_FilterByMethods_IncludesAndExcludes(t *testing.T) {
+	t.Parallel()
+	list := fetchScopedRequestLogs(t, url.Values{
+		"normalized_routes": {SeedReqLogFilterMethodsRoute},
+		"methods":           {"GET", "POST"},
+	})
+	assert.Len(t, list.Data, 2, "scope + methods=[GET,POST] should return exactly the GET and POST cohort rows")
+	assertRequestLogMembership(t, list.Data,
+		[]string{SeedReqLogFilterMethodGet, SeedReqLogFilterMethodPost},
+		[]string{SeedReqLogFilterMethodPut})
+	for _, item := range list.Data {
+		assert.Contains(t, []string{"GET", "POST"}, jsonField(parseJSON(item), "method"))
+	}
+}
+
+func TestRequestLogs_FilterByStatusCodes_IncludesAndExcludes(t *testing.T) {
+	t.Parallel()
+	list := fetchScopedRequestLogs(t, url.Values{
+		"normalized_routes": {SeedReqLogFilterStatusRoute},
+		"status_codes":      {"200", "404"},
+	})
+	assert.Len(t, list.Data, 2, "scope + status_codes=[200,404] should return exactly two cohort rows")
+	assertRequestLogMembership(t, list.Data,
+		[]string{SeedReqLogFilterStatus200, SeedReqLogFilterStatus404},
+		[]string{SeedReqLogFilterStatus500})
+	for _, item := range list.Data {
+		assert.Contains(t, []string{"200", "404"}, jsonField(parseJSON(item), "status_code"))
+	}
+}
+
+// TestRequestLogs_FilterByStatusCodeClasses_IncludesAndExcludes covers the
+// status_code_classes filter, which matches a whole class via
+// FLOOR(status_code/100). Classes 2 and 4 select the 200 and 404 cohort rows and
+// exclude the 500 row.
+func TestRequestLogs_FilterByStatusCodeClasses_IncludesAndExcludes(t *testing.T) {
+	t.Parallel()
+	list := fetchScopedRequestLogs(t, url.Values{
+		"normalized_routes":   {SeedReqLogFilterStatusRoute},
+		"status_code_classes": {"2", "4"},
+	})
+	assert.Len(t, list.Data, 2, "scope + status_code_classes=[2,4] should return exactly the 2xx and 4xx cohort rows")
+	assertRequestLogMembership(t, list.Data,
+		[]string{SeedReqLogFilterStatus200, SeedReqLogFilterStatus404},
+		[]string{SeedReqLogFilterStatus500})
+	for _, item := range list.Data {
+		assert.Contains(t, []string{"200", "404"}, jsonField(parseJSON(item), "status_code"))
+	}
+}
+
+// TestRequestLogs_FilterByStatusCodesAndClasses_Or verifies that specific codes
+// and whole classes combine with OR (not AND): status_codes=200 plus
+// status_code_classes=5 returns the exact 200 row and any 5xx row (500) while
+// excluding 404. This is the combination the old category-only filter could not
+// express, and which the other filter tests don't cover.
+func TestRequestLogs_FilterByStatusCodesAndClasses_Or(t *testing.T) {
+	t.Parallel()
+	list := fetchScopedRequestLogs(t, url.Values{
+		"normalized_routes":   {SeedReqLogFilterStatusRoute},
+		"status_codes":        {"200"},
+		"status_code_classes": {"5"},
+	})
+	assert.Len(t, list.Data, 2, "scope + status_codes=[200] OR status_code_classes=[5] should return the 200 and 500 rows")
+	assertRequestLogMembership(t, list.Data,
+		[]string{SeedReqLogFilterStatus200, SeedReqLogFilterStatus500},
+		[]string{SeedReqLogFilterStatus404})
+	for _, item := range list.Data {
+		assert.Contains(t, []string{"200", "500"}, jsonField(parseJSON(item), "status_code"))
+	}
+}
+
+func TestRequestLogs_FilterByErrorCodes_IncludesAndExcludes(t *testing.T) {
+	t.Parallel()
+	list := fetchScopedRequestLogs(t, url.Values{
+		"normalized_routes": {SeedReqLogFilterErrorsRoute},
+		"error_codes":       {"resource_not_found", "validation_failed"},
+	})
+	assert.Len(t, list.Data, 2, "scope + error_codes=[resource_not_found,validation_failed] should return exactly two cohort rows")
+	assertRequestLogMembership(t, list.Data,
+		[]string{SeedReqLogFilterErrorNotFound, SeedReqLogFilterErrorValidate},
+		[]string{SeedReqLogFilterErrorAuth})
+	for _, item := range list.Data {
+		assert.Contains(t, []string{"resource_not_found", "validation_failed"}, jsonField(parseJSON(item), "error_code"))
+	}
+}
+
+// TestRequestLogs_FilterByAccountIDs_IncludesAndExcludes covers the account_ids
+// filter, which matches the acting account_id column. That column is not surfaced
+// in the response (the API exposes target_account_id as `account`), so this test
+// verifies the filter purely by which seeded cohort rows come back.
+func TestRequestLogs_FilterByAccountIDs_IncludesAndExcludes(t *testing.T) {
+	t.Parallel()
+	list := fetchScopedRequestLogs(t, url.Values{
+		"normalized_routes": {SeedReqLogFilterAccountsRoute},
+		"account_ids":       {SeedAccountID, SeedCustomerAccountID},
+	})
+	assert.Len(t, list.Data, 2, "scope + account_ids=[seed,customer] should return exactly two cohort rows")
+	assertRequestLogMembership(t, list.Data,
+		[]string{SeedReqLogFilterAccount1, SeedReqLogFilterAccount2},
+		[]string{SeedReqLogFilterAccount3})
+}
+
+// TestRequestLogs_FilterByActorIDs_IncludesAndExcludes is the headline case: three
+// distinct user actors, filtered by two. Both requested actors must appear and the
+// third must be excluded entirely.
+func TestRequestLogs_FilterByActorIDs_IncludesAndExcludes(t *testing.T) {
+	t.Parallel()
+	list := fetchScopedRequestLogs(t, url.Values{
+		"normalized_routes": {SeedReqLogFilterActorIDsRoute},
+		"actor_ids":         {SeedUserID, SeedUser2ID},
+		"include":           {"actor"},
+	})
+	assert.Len(t, list.Data, 2, "scope + actor_ids=[user1,user2] should return exactly two cohort rows")
+	assertRequestLogMembership(t, list.Data,
+		[]string{SeedReqLogFilterActorUser1, SeedReqLogFilterActorUser2},
+		[]string{SeedReqLogFilterActorUser3})
+	for _, item := range list.Data {
+		actor := jsonObject(parseJSON(item), "actor")
+		require.NotNil(t, actor, "actor should be present with ?include=actor")
+		assert.Contains(t, []string{SeedUserID, SeedUser2ID}, jsonField(actor, "id"))
+	}
+}
+
+func TestRequestLogs_FilterByActorTypes_IncludesAndExcludes(t *testing.T) {
+	t.Parallel()
+	list := fetchScopedRequestLogs(t, url.Values{
+		"normalized_routes": {SeedReqLogFilterActorTypesRoute},
+		"actor_types":       {"user", "api_key"},
+		"include":           {"actor"},
+	})
+	assert.Len(t, list.Data, 2, "scope + actor_types=[user,api_key] should return exactly two cohort rows")
+	assertRequestLogMembership(t, list.Data,
+		[]string{SeedReqLogFilterTypeUser, SeedReqLogFilterTypeAPIKey},
+		[]string{SeedReqLogFilterTypeInternal})
+	for _, item := range list.Data {
+		actor := jsonObject(parseJSON(item), "actor")
+		require.NotNil(t, actor, "actor should be present with ?include=actor")
+		assert.Contains(t, []string{"user", "api_key"}, jsonField(actor, "type"))
+	}
+}
+
+func TestRequestLogs_FilterByNormalizedRoutes_IncludesAndExcludes(t *testing.T) {
+	t.Parallel()
+	list := fetchScopedRequestLogs(t, url.Values{
+		"hosts":             {SeedReqLogFilterRouteHost},
+		"normalized_routes": {SeedReqLogFilterRouteA, SeedReqLogFilterRouteB},
+	})
+	assert.Len(t, list.Data, 2, "scope + normalized_routes=[a,b] should return exactly two cohort rows")
+	assertRequestLogMembership(t, list.Data,
+		[]string{SeedReqLogFilterRouteAID, SeedReqLogFilterRouteBID},
+		[]string{SeedReqLogFilterRouteCID})
+	for _, item := range list.Data {
+		assert.Contains(t, []string{SeedReqLogFilterRouteA, SeedReqLogFilterRouteB}, jsonField(parseJSON(item), "normalized_route"))
+	}
+}
+
+// TestRequestLogs_FilterByNormalizedRoutes_ParamNameDrift guards the endpoint
+// filter against param-name drift between the stored router templates
+// (snake_case) and the spec-derived templates the dashboard sends (Stainless
+// camelCases multi-word path params). The filter compares on route shape, so a
+// camelCase template must still match a snake_case stored route. Without the
+// normalization this returns zero rows — the original "filter by endpoint does
+// nothing" bug. The cohort tests above miss it because they filter by the exact
+// stored string.
+func TestRequestLogs_FilterByNormalizedRoutes_ParamNameDrift(t *testing.T) {
+	t.Parallel()
+	list := fetchScopedRequestLogs(t, url.Values{
+		"hosts":             {SeedReqLogFilterDriftHost},
+		"normalized_routes": {SeedReqLogFilterDriftCamel},
+	})
+	require.Len(t, list.Data, 1, "camelCase template %q must match the snake_case stored route via shape normalization", SeedReqLogFilterDriftCamel)
+	assert.Equal(t, SeedReqLogFilterDriftStored, jsonField(parseJSON(list.Data[0]), "normalized_route"))
+}
+
+func TestRequestLogs_FilterByHosts_IncludesAndExcludes(t *testing.T) {
+	t.Parallel()
+	list := fetchScopedRequestLogs(t, url.Values{
+		"normalized_routes": {SeedReqLogFilterHostsRoute},
+		"hosts":             {SeedReqLogFilterHostA, SeedReqLogFilterHostB},
+	})
+	assert.Len(t, list.Data, 2, "scope + hosts=[a,b] should return exactly two cohort rows")
+	assertRequestLogMembership(t, list.Data,
+		[]string{SeedReqLogFilterHostAID, SeedReqLogFilterHostBID},
+		[]string{SeedReqLogFilterHostCID})
+	for _, item := range list.Data {
+		assert.Contains(t, []string{SeedReqLogFilterHostA, SeedReqLogFilterHostB}, jsonField(parseJSON(item), "host"))
+	}
+}
+
+func TestRequestLogs_FilterByMinLatency_IncludesAndExcludes(t *testing.T) {
+	t.Parallel()
+	const threshold = 40000
+	list := fetchScopedRequestLogs(t, url.Values{
+		"normalized_routes": {SeedReqLogFilterLatencyRoute},
+		"min_latency_us":    {strconv.Itoa(threshold)},
+	})
+	assert.Len(t, list.Data, 2, "scope + min_latency_us=40000 should return the mid and hi latency rows")
+	assertRequestLogMembership(t, list.Data,
+		[]string{SeedReqLogFilterLatencyMid, SeedReqLogFilterLatencyHi},
+		[]string{SeedReqLogFilterLatencyLo})
+	for _, item := range list.Data {
+		lat, err := strconv.ParseFloat(jsonField(parseJSON(item), "latency_us"), 64)
+		require.NoError(t, err)
+		assert.GreaterOrEqual(t, int64(lat), int64(threshold), "every returned row must satisfy latency_us >= %d", threshold)
+	}
+}
+
+func TestRequestLogs_FilterByStartDate_IncludesAndExcludes(t *testing.T) {
+	t.Parallel()
+	// Boundary between old (2023-01-01) and mid (2023-06-01): include mid + new.
+	list := fetchScopedRequestLogs(t, url.Values{
+		"normalized_routes": {SeedReqLogFilterDatesRoute},
+		"start_date":        {"2023-03-01T00:00:00Z"},
+	})
+	assert.Len(t, list.Data, 2, "scope + start_date=2023-03-01 should return the mid and new rows")
+	assertRequestLogMembership(t, list.Data,
+		[]string{SeedReqLogFilterDateMid, SeedReqLogFilterDateNew},
+		[]string{SeedReqLogFilterDateOld})
+}
+
+func TestRequestLogs_FilterByEndDate_IncludesAndExcludes(t *testing.T) {
+	t.Parallel()
+	// Boundary between mid (2023-06-01) and new (2023-12-01): include old + mid.
+	list := fetchScopedRequestLogs(t, url.Values{
+		"normalized_routes": {SeedReqLogFilterDatesRoute},
+		"end_date":          {"2023-09-01T00:00:00Z"},
+	})
+	assert.Len(t, list.Data, 2, "scope + end_date=2023-09-01 should return the old and mid rows")
+	assertRequestLogMembership(t, list.Data,
+		[]string{SeedReqLogFilterDateOld, SeedReqLogFilterDateMid},
+		[]string{SeedReqLogFilterDateNew})
+}
+
+func TestRequestLogs_FilterByDateRange_IncludesOnlyMiddle(t *testing.T) {
+	t.Parallel()
+	// start + end together bracket only the mid (2023-06-01) row.
+	list := fetchScopedRequestLogs(t, url.Values{
+		"normalized_routes": {SeedReqLogFilterDatesRoute},
+		"start_date":        {"2023-03-01T00:00:00Z"},
+		"end_date":          {"2023-09-01T00:00:00Z"},
+	})
+	assert.Len(t, list.Data, 1, "scope + [2023-03-01, 2023-09-01] should return only the mid row")
+	assertRequestLogMembership(t, list.Data,
+		[]string{SeedReqLogFilterDateMid},
+		[]string{SeedReqLogFilterDateOld, SeedReqLogFilterDateNew})
 }

@@ -97,8 +97,8 @@ func (m *accountIntegrationSvcImpl) CreateAccountIntegration(ctx context.Context
 func (m *accountIntegrationSvcImpl) UpdateAccountIntegration(ctx context.Context, req *UpdateAccountIntegrationRequest) (*apiresource.AccountIntegration, *apierror.APIError) {
 	pbReq := &pb.UpdateAccountIntegrationRequest{
 		Id:       req.AccountIntegrationID,
-		Name:     req.Name,
-		IsActive: req.IsActive,
+		Name:     req.Name.Ptr(),
+		IsActive: req.IsActive.Ptr(),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, accountIntegrationSvcTracer, "service.account-integrations.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateAccountIntegrationResponse, error) {

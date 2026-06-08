@@ -3,6 +3,7 @@ package salesorderep
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
@@ -12,7 +13,9 @@ import (
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
+	"github.com/augno/api/shared/safeconv"
 	"github.com/augno/api/shared/tracing"
+	"github.com/shopspring/decimal"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -39,17 +42,20 @@ func toSalesOrderEmailContactList(inputs *[]SalesOrderEmailContactInput) *pb.Sal
 }
 
 type SalesOrderSvc interface {
-	ListSalesOrders(ctx context.Context, req *ListSalesOrdersRequest) (*apiresource.List[apiresource.SalesOrderDetail], *apierror.APIError)
-	GetSalesOrder(ctx context.Context, req *RetrieveSalesOrderRequest) (*apiresource.SalesOrderDetail, *apierror.APIError)
-	CreateSalesOrder(ctx context.Context, req *CreateSalesOrderRequest) (*apiresource.SalesOrderDetail, *apierror.APIError)
-	UpdateSalesOrder(ctx context.Context, req *UpdateSalesOrderRequest) (*apiresource.SalesOrderDetail, *apierror.APIError)
+	ListSalesOrders(ctx context.Context, req *ListSalesOrdersRequest) (*apiresource.List[apiresource.SalesOrder], *apierror.APIError)
+	GetSalesOrder(ctx context.Context, req *RetrieveSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError)
+	CreateSalesOrder(ctx context.Context, req *CreateSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError)
+	UpdateSalesOrder(ctx context.Context, req *UpdateSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError)
 	DeleteSalesOrder(ctx context.Context, req *DeleteSalesOrderRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	BulkDeleteSalesOrders(ctx context.Context, req *BulkDeleteSalesOrdersRequest) (*apiresource.EmptyResource, *apierror.APIError)
-	ChangeSalesOrderStatus(ctx context.Context, req *ChangeSalesOrderStatusRequest) (*apiresource.SalesOrderDetail, *apierror.APIError)
+	IssueSalesOrder(ctx context.Context, req *IssueSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError)
+	UnissueSalesOrder(ctx context.Context, req *UnissueSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError)
+	CloseSalesOrder(ctx context.Context, req *CloseSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError)
+	OpenSalesOrder(ctx context.Context, req *OpenSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError)
 	CheckoutSalesOrder(ctx context.Context, req *CheckoutSalesOrderRequest) (*CheckoutSalesOrderResponse, *apierror.APIError)
 	CreateSalesOrderProductionRun(ctx context.Context, req *CreateProductionRunRequest) (*CreateProductionRunResponse, *apierror.APIError)
-	CreateSalesOrderLine(ctx context.Context, req *CreateSalesOrderLineRequest) (*apiresource.SalesOrderLineDetail, *apierror.APIError)
-	UpdateSalesOrderLine(ctx context.Context, req *UpdateSalesOrderLineRequest) (*apiresource.SalesOrderLineDetail, *apierror.APIError)
+	CreateSalesOrderLine(ctx context.Context, req *CreateSalesOrderLineRequest) (*apiresource.SalesOrderLine, *apierror.APIError)
+	UpdateSalesOrderLine(ctx context.Context, req *UpdateSalesOrderLineRequest) (*apiresource.SalesOrderLine, *apierror.APIError)
 	DeleteSalesOrderLine(ctx context.Context, req *DeleteSalesOrderLineRequest) (*apiresource.EmptyResource, *apierror.APIError)
 }
 
@@ -63,7 +69,7 @@ type salesOrderSvcImpl struct {
 
 var salesOrderEpSvcTracer = tracing.GetTracer("api-gateway.endpoints.sales-orders.service")
 
-var salesOrderIncludes = []string{"customer", "bill_to_address", "ship_to_address", "carrier", "service_level", "payment_term", "shipping_term", "order_discount", "lines", "lines.item"}
+var salesOrderIncludes = []string{"customer", "sales_rep", "bill_to_address", "ship_to_address", "freight", "payment_term", "shipping_term", "order_discount", "totals", "related.pick", "related.production_run", "related.shipments", "lines", "lines.product", "lines.quantity_ordered", "lines.unit_price", "lines.unit_cost", "lines.totals"}
 
 func (c *SalesOrderSvcConfig) validate() error {
 	if c.CoreClient == nil {
@@ -82,7 +88,7 @@ func NewSalesOrderSvc(config *SalesOrderSvcConfig) SalesOrderSvc {
 	}
 }
 
-func (m *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, req *ListSalesOrdersRequest) (*apiresource.List[apiresource.SalesOrderDetail], *apierror.APIError) {
+func (m *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, req *ListSalesOrdersRequest) (*apiresource.List[apiresource.SalesOrder], *apierror.APIError) {
 	pbReq := &pb.ListSalesOrdersRequest{
 		Cursor:                req.Cursor,
 		Limit:                 req.Limit,
@@ -107,7 +113,7 @@ func (m *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, req *ListSalesO
 		return nil, apiErr
 	}
 
-	orders := make([]apiresource.SalesOrderDetail, len(resp.SalesOrders))
+	orders := make([]apiresource.SalesOrder, len(resp.SalesOrders))
 	for i, o := range resp.SalesOrders {
 		orders[i] = salesOrderSummaryToDetail(o)
 		stashSalesOrderSummaryMeta(ctx, o, &orders[i])
@@ -116,10 +122,10 @@ func (m *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, req *ListSalesO
 	return apiresource.NewList(orders, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
 
-func (m *salesOrderSvcImpl) GetSalesOrder(ctx context.Context, req *RetrieveSalesOrderRequest) (*apiresource.SalesOrderDetail, *apierror.APIError) {
+func (m *salesOrderSvcImpl) GetSalesOrder(ctx context.Context, req *RetrieveSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError) {
 	pbReq := &pb.GetSalesOrderRequest{
 		Id:       req.SalesOrderID,
-		Includes: resourcekit.FilterIncludes(ctx, salesOrderIncludes...),
+		Includes: withLinesForTotals(resourcekit.FilterIncludes(ctx, salesOrderIncludes...)),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.get", domain.ServiceName,
@@ -132,58 +138,63 @@ func (m *salesOrderSvcImpl) GetSalesOrder(ctx context.Context, req *RetrieveSale
 	}
 
 	result := salesOrderDetailFromProto(resp.SalesOrder)
-	stashSalesOrderDetailMeta(ctx, resp.SalesOrder, &result)
+	stashSalesOrderMeta(ctx, resp.SalesOrder, &result)
 	return &result, nil
 }
 
-func (m *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, req *CreateSalesOrderRequest) (*apiresource.SalesOrderDetail, *apierror.APIError) {
+func (m *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, req *CreateSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError) {
 	lines := make([]*pb.CreateSalesOrderLineInput, len(req.Lines))
 	for i, l := range req.Lines {
 		lines[i] = &pb.CreateSalesOrderLineInput{
 			ProductId:                  l.ProductID,
-			ItemId:                     l.ItemID,
+			ItemId:                     l.ItemID.Ptr(),
 			ProductSku:                 l.ProductSKU,
-			ProductDescription:         l.ProductDescription,
+			ProductDescription:         l.ProductDescription.Ptr(),
 			QuantityValue:              l.QuantityValue,
 			QuantityUnitId:             l.QuantityUnitID,
 			UnitPriceValue:             l.UnitPriceValue,
 			UnitPriceNumeratorUnitId:   l.UnitPriceNumeratorUnitID,
 			UnitPriceDenominatorUnitId: l.UnitPriceDenominatorUnitID,
-			UnitCostValue:              l.UnitCostValue,
-			UnitCostNumeratorUnitId:    l.UnitCostNumeratorUnitID,
-			UnitCostDenominatorUnitId:  l.UnitCostDenominatorUnitID,
-			EdiLineItemId:              l.EdiLineItemID,
+			UnitCostValue:              l.UnitCostValue.Ptr(),
+			UnitCostNumeratorUnitId:    l.UnitCostNumeratorUnitID.Ptr(),
+			UnitCostDenominatorUnitId:  l.UnitCostDenominatorUnitID.Ptr(),
 		}
+	}
+
+	var carrierBillingType *string
+	if v, ok := req.CarrierBillingType.Value(); ok {
+		s := string(v)
+		carrierBillingType = &s
 	}
 
 	pbReq := &pb.CreateSalesOrderRequest{
 		BuyerAccountId:               req.BuyerAccountID,
-		CustomerPoNumber:             req.CustomerPONumber,
-		Note:                         req.Note,
-		CarrierId:                    req.CarrierID,
-		ServiceLevelId:               req.ServiceLevelID,
-		CarrierBillingType:           req.CarrierBillingType,
-		CarrierBillingAccount:        req.CarrierBillingAccount,
+		CustomerPoNumber:             req.CustomerPurchaseOrderNumber.Ptr(),
+		Note:                         req.Note.Ptr(),
+		CarrierId:                    req.CarrierID.Ptr(),
+		ServiceLevelId:               req.ServiceLevelID.Ptr(),
+		CarrierBillingType:           carrierBillingType,
+		CarrierBillingAccount:        req.CarrierBillingAccountNumber.Ptr(),
 		PriorityCode:                 req.PriorityCode,
-		SalesRepId:                   req.SalesRepID,
-		ShippingTermId:               req.ShippingTermID,
+		SalesRepId:                   req.SalesRepID.Ptr(),
+		ShippingTermId:               req.ShippingTermID.Ptr(),
 		SalesOrderTypeCode:           req.SalesOrderTypeCode,
-		PaymentTermId:                req.PaymentTermID,
-		OrderDiscountId:              req.OrderDiscountID,
-		BillToName:                   req.BillToName,
-		BillToStreetLine_1:           req.BillToStreetLine1,
-		BillToStreetLine_2:           req.BillToStreetLine2,
-		BillToLocality:               req.BillToLocality,
-		BillToState:                  req.BillToState,
-		BillToPostalCode:             req.BillToPostalCode,
-		BillToCountry:                req.BillToCountry,
-		ShipToName:                   req.ShipToName,
-		ShipToStreetLine_1:           req.ShipToStreetLine1,
-		ShipToStreetLine_2:           req.ShipToStreetLine2,
-		ShipToLocality:               req.ShipToLocality,
-		ShipToState:                  req.ShipToState,
-		ShipToPostalCode:             req.ShipToPostalCode,
-		ShipToCountry:                req.ShipToCountry,
+		PaymentTermId:                req.PaymentTermID.Ptr(),
+		OrderDiscountId:              req.OrderDiscountID.Ptr(),
+		BillToName:                   req.BillToName.Ptr(),
+		BillToStreetLine_1:           req.BillToStreetLine1.Ptr(),
+		BillToStreetLine_2:           req.BillToStreetLine2.Ptr(),
+		BillToLocality:               req.BillToLocality.Ptr(),
+		BillToState:                  req.BillToState.Ptr(),
+		BillToPostalCode:             req.BillToPostalCode.Ptr(),
+		BillToCountry:                req.BillToCountry.Ptr(),
+		ShipToName:                   req.ShipToName.Ptr(),
+		ShipToStreetLine_1:           req.ShipToStreetLine1.Ptr(),
+		ShipToStreetLine_2:           req.ShipToStreetLine2.Ptr(),
+		ShipToLocality:               req.ShipToLocality.Ptr(),
+		ShipToState:                  req.ShipToState.Ptr(),
+		ShipToPostalCode:             req.ShipToPostalCode.Ptr(),
+		ShipToCountry:                req.ShipToCountry.Ptr(),
 		Lines:                        lines,
 		AcknowledgementEmailContacts: toSalesOrderEmailContactInputs(req.AcknowledgementEmailContacts),
 		InvoiceEmailContacts:         toSalesOrderEmailContactInputs(req.InvoiceEmailContacts),
@@ -199,41 +210,40 @@ func (m *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, req *CreateSal
 	}
 
 	result := salesOrderDetailFromProto(resp.SalesOrder)
-	stashSalesOrderDetailMeta(ctx, resp.SalesOrder, &result)
+	stashSalesOrderMeta(ctx, resp.SalesOrder, &result)
 	return &result, nil
 }
 
-func (m *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, req *UpdateSalesOrderRequest) (*apiresource.SalesOrderDetail, *apierror.APIError) {
+func (m *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, req *UpdateSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError) {
+	var carrierBillingType *string
+	if v, ok := req.CarrierBillingType.Value(); ok {
+		s := string(v)
+		carrierBillingType = &s
+	}
+
 	pbReq := &pb.UpdateSalesOrderRequest{
 		Id:                           req.SalesOrderID,
-		CustomerPoNumber:             req.CustomerPONumber,
-		Note:                         req.Note,
-		CarrierId:                    req.CarrierID,
-		ServiceLevelId:               req.ServiceLevelID,
-		CarrierBillingType:           req.CarrierBillingType,
-		CarrierBillingAccount:        req.CarrierBillingAccount,
-		PriorityCode:                 req.PriorityCode,
-		SalesRepId:                   req.SalesRepID,
-		ShippingTermId:               req.ShippingTermID,
-		PaymentTermId:                req.PaymentTermID,
-		OrderDiscountId:              req.OrderDiscountID,
-		BillToName:                   req.BillToName,
-		BillToStreetLine_1:           req.BillToStreetLine1,
-		BillToStreetLine_2:           req.BillToStreetLine2,
-		BillToLocality:               req.BillToLocality,
-		BillToState:                  req.BillToState,
-		BillToPostalCode:             req.BillToPostalCode,
-		BillToCountry:                req.BillToCountry,
-		ShipToName:                   req.ShipToName,
-		ShipToStreetLine_1:           req.ShipToStreetLine1,
-		ShipToStreetLine_2:           req.ShipToStreetLine2,
-		ShipToLocality:               req.ShipToLocality,
-		ShipToState:                  req.ShipToState,
-		ShipToPostalCode:             req.ShipToPostalCode,
-		ShipToCountry:                req.ShipToCountry,
-		AcknowledgementEmailContacts: toSalesOrderEmailContactList(req.AcknowledgementEmailContacts),
-		InvoiceEmailContacts:         toSalesOrderEmailContactList(req.InvoiceEmailContacts),
+		CustomerPoNumber:             req.CustomerPurchaseOrderNumber.Ptr(),
+		Note:                         req.Note.Ptr(),
+		CarrierId:                    req.CarrierID.Ptr(),
+		ServiceLevelId:               req.ServiceLevelID.Ptr(),
+		CarrierBillingType:           carrierBillingType,
+		CarrierBillingAccount:        req.CarrierBillingAccountNumber.Ptr(),
+		PriorityCode:                 req.PriorityCode.Ptr(),
+		SalesRepId:                   req.SalesRepID.Ptr(),
+		ShippingTermId:               req.ShippingTermID.Ptr(),
+		PaymentTermId:                req.PaymentTermID.Ptr(),
+		OrderDiscountId:              req.OrderDiscountID.Ptr(),
+		BillingAddressId:             req.BillingAddressID.Ptr(),
+		ShippingAddressId:            req.ShippingAddressID.Ptr(),
+		AcknowledgementEmailContacts: toSalesOrderEmailContactList(req.AcknowledgementEmailContacts.Ptr()),
+		InvoiceEmailContacts:         toSalesOrderEmailContactList(req.InvoiceEmailContacts.Ptr()),
 		Includes:                     resourcekit.FilterIncludes(ctx, salesOrderIncludes...),
+	}
+
+	if v, ok := req.AcknowledgmentStatus.Value(); ok {
+		sent := v == constants.AcknowledgmentStatusSent
+		pbReq.IsAcknowledgmentSent = &sent
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.update", domain.ServiceName,
@@ -245,7 +255,7 @@ func (m *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, req *UpdateSal
 	}
 
 	result := salesOrderDetailFromProto(resp.SalesOrder)
-	stashSalesOrderDetailMeta(ctx, resp.SalesOrder, &result)
+	stashSalesOrderMeta(ctx, resp.SalesOrder, &result)
 	return &result, nil
 }
 
@@ -277,11 +287,30 @@ func (m *salesOrderSvcImpl) BulkDeleteSalesOrders(ctx context.Context, req *Bulk
 	return &apiresource.EmptyResource{}, nil
 }
 
-func (m *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, req *ChangeSalesOrderStatusRequest) (*apiresource.SalesOrderDetail, *apierror.APIError) {
+func (m *salesOrderSvcImpl) IssueSalesOrder(ctx context.Context, req *IssueSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError) {
+	return m.changeSalesOrderStatus(ctx, req.SalesOrderID, constants.SalesOrderStatusChangeIssue, req.NotifyCustomer)
+}
+
+func (m *salesOrderSvcImpl) UnissueSalesOrder(ctx context.Context, req *UnissueSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError) {
+	return m.changeSalesOrderStatus(ctx, req.SalesOrderID, constants.SalesOrderStatusChangeUnissue, req.NotifyCustomer)
+}
+
+func (m *salesOrderSvcImpl) CloseSalesOrder(ctx context.Context, req *CloseSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError) {
+	return m.changeSalesOrderStatus(ctx, req.SalesOrderID, constants.SalesOrderStatusChangeClose, req.NotifyCustomer)
+}
+
+func (m *salesOrderSvcImpl) OpenSalesOrder(ctx context.Context, req *OpenSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError) {
+	return m.changeSalesOrderStatus(ctx, req.SalesOrderID, constants.SalesOrderStatusChangeOpen, req.NotifyCustomer)
+}
+
+// changeSalesOrderStatus performs a sales order status transition via the core
+// service. The four action endpoints (issue, unissue, close, open) funnel
+// through here with their fixed action and the caller's notify_customer flag.
+func (m *salesOrderSvcImpl) changeSalesOrderStatus(ctx context.Context, id string, action constants.SalesOrderStatusChange, notifyCustomer bool) (*apiresource.SalesOrder, *apierror.APIError) {
 	pbReq := &pb.ChangeSalesOrderStatusRequest{
-		Id:           req.SalesOrderID,
-		StatusChange: req.StatusChange,
-		SendEmail:    req.SendEmail,
+		Id:           id,
+		StatusChange: string(action),
+		SendEmail:    notifyCustomer,
 		Includes:     resourcekit.FilterIncludes(ctx, salesOrderIncludes...),
 	}
 
@@ -294,7 +323,7 @@ func (m *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, req *Cha
 	}
 
 	result := salesOrderDetailFromProto(resp.SalesOrder)
-	stashSalesOrderDetailMeta(ctx, resp.SalesOrder, &result)
+	stashSalesOrderMeta(ctx, resp.SalesOrder, &result)
 	return &result, nil
 }
 
@@ -302,8 +331,8 @@ func (m *salesOrderSvcImpl) CheckoutSalesOrder(ctx context.Context, req *Checkou
 	pbReq := &pb.CheckoutSalesOrderRequest{
 		Id:         req.SalesOrderID,
 		Email:      req.Email,
-		SuccessUrl: req.SuccessURL,
-		CancelUrl:  req.CancelURL,
+		SuccessUrl: req.SuccessURL.Ptr(),
+		CancelUrl:  req.CancelURL.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.checkout", domain.ServiceName,
@@ -336,22 +365,21 @@ func (m *salesOrderSvcImpl) CreateSalesOrderProductionRun(ctx context.Context, r
 	}, nil
 }
 
-func (m *salesOrderSvcImpl) CreateSalesOrderLine(ctx context.Context, req *CreateSalesOrderLineRequest) (*apiresource.SalesOrderLineDetail, *apierror.APIError) {
+func (m *salesOrderSvcImpl) CreateSalesOrderLine(ctx context.Context, req *CreateSalesOrderLineRequest) (*apiresource.SalesOrderLine, *apierror.APIError) {
 	pbReq := &pb.CreateSalesOrderLineRequest{
 		SalesOrderId:               req.SalesOrderID,
 		ProductId:                  req.ProductID,
-		ItemId:                     req.ItemID,
+		ItemId:                     req.ItemID.Ptr(),
 		ProductSku:                 req.ProductSKU,
-		ProductDescription:         req.ProductDescription,
+		ProductDescription:         req.ProductDescription.Ptr(),
 		QuantityValue:              req.QuantityValue,
 		QuantityUnitId:             req.QuantityUnitID,
 		UnitPriceValue:             req.UnitPriceValue,
 		UnitPriceNumeratorUnitId:   req.UnitPriceNumeratorUnitID,
 		UnitPriceDenominatorUnitId: req.UnitPriceDenominatorUnitID,
-		UnitCostValue:              req.UnitCostValue,
-		UnitCostNumeratorUnitId:    req.UnitCostNumeratorUnitID,
-		UnitCostDenominatorUnitId:  req.UnitCostDenominatorUnitID,
-		EdiLineItemId:              req.EdiLineItemID,
+		UnitCostValue:              req.UnitCostValue.Ptr(),
+		UnitCostNumeratorUnitId:    req.UnitCostNumeratorUnitID.Ptr(),
+		UnitCostDenominatorUnitId:  req.UnitCostDenominatorUnitID.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.create_line", domain.ServiceName,
@@ -363,26 +391,31 @@ func (m *salesOrderSvcImpl) CreateSalesOrderLine(ctx context.Context, req *Creat
 	}
 
 	result := salesOrderLineDetailFromProto(resp.SalesOrderLine)
+	stashSalesOrderLineMeta(resourcekit.GetLoadMeta(ctx), resp.SalesOrderLine, &result)
 	return &result, nil
 }
 
-func (m *salesOrderSvcImpl) UpdateSalesOrderLine(ctx context.Context, req *UpdateSalesOrderLineRequest) (*apiresource.SalesOrderLineDetail, *apierror.APIError) {
+func (m *salesOrderSvcImpl) UpdateSalesOrderLine(ctx context.Context, req *UpdateSalesOrderLineRequest) (*apiresource.SalesOrderLine, *apierror.APIError) {
 	pbReq := &pb.UpdateSalesOrderLineRequest{
-		SalesOrderId:               req.SalesOrderID,
-		Id:                         req.SalesOrderLineID,
-		ProductId:                  req.ProductID,
-		ItemId:                     req.ItemID,
-		ProductSku:                 req.ProductSKU,
-		ProductDescription:         req.ProductDescription,
-		QuantityValue:              req.QuantityValue,
-		QuantityUnitId:             req.QuantityUnitID,
-		UnitPriceValue:             req.UnitPriceValue,
-		UnitPriceNumeratorUnitId:   req.UnitPriceNumeratorUnitID,
-		UnitPriceDenominatorUnitId: req.UnitPriceDenominatorUnitID,
-		UnitCostValue:              req.UnitCostValue,
-		UnitCostNumeratorUnitId:    req.UnitCostNumeratorUnitID,
-		UnitCostDenominatorUnitId:  req.UnitCostDenominatorUnitID,
-		EdiLineItemId:              req.EdiLineItemID,
+		SalesOrderId:       req.SalesOrderID,
+		Id:                 req.SalesOrderLineID,
+		ItemId:             req.ItemID.Ptr(),
+		ProductSku:         req.ProductSKU.Ptr(),
+		ProductDescription: req.ProductDescription.Ptr(),
+	}
+	if v, ok := req.Quantity.Value(); ok {
+		pbReq.QuantityValue = &v.Value
+		pbReq.QuantityUnitId = &v.UnitID
+	}
+	if v, ok := req.UnitPrice.Value(); ok {
+		pbReq.UnitPriceValue = &v.Value
+		pbReq.UnitPriceNumeratorUnitId = &v.NumeratorUnitID
+		pbReq.UnitPriceDenominatorUnitId = &v.DenominatorUnitID
+	}
+	if v, ok := req.UnitCost.Value(); ok {
+		pbReq.UnitCostValue = &v.Value
+		pbReq.UnitCostNumeratorUnitId = &v.NumeratorUnitID
+		pbReq.UnitCostDenominatorUnitId = &v.DenominatorUnitID
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.update_line", domain.ServiceName,
@@ -394,6 +427,7 @@ func (m *salesOrderSvcImpl) UpdateSalesOrderLine(ctx context.Context, req *Updat
 	}
 
 	result := salesOrderLineDetailFromProto(resp.SalesOrderLine)
+	stashSalesOrderLineMeta(resourcekit.GetLoadMeta(ctx), resp.SalesOrderLine, &result)
 	return &result, nil
 }
 
@@ -414,117 +448,26 @@ func (m *salesOrderSvcImpl) DeleteSalesOrderLine(ctx context.Context, req *Delet
 	return &apiresource.EmptyResource{}, nil
 }
 
-func salesOrderSummaryFromProto(info *pb.SalesOrderSummaryInfo) apiresource.SalesOrderSummary {
-	customer := &apiresource.Customer{
-		ID:               info.CustomerId,
-		Object:           constants.ObjectTypeCustomer,
-		Name:             info.CustomerName,
-		Number:           info.CustomerNumber,
-		EDIStatus:        constants.EDIStatusDisabled,
-		RelationshipType: constants.CustomerRelationshipTypeStandalone,
-	}
-	if info.CustomerStatusCode != nil {
-		customer.Status = constants.AccountStatusCode(*info.CustomerStatusCode)
-	}
-	if info.CustomerCommissionPolicy != nil {
-		customer.CommissionPolicy = constants.CommissionPolicy(*info.CustomerCommissionPolicy)
-	}
-
-	s := apiresource.SalesOrderSummary{
-		ID:       info.Id,
-		Object:   constants.ObjectTypeSalesOrder,
-		Number:   info.Number,
-		Customer: customer,
-		Status: &apiresource.SalesOrderStatusDetail{
-			Code:   info.StatusCode,
-			Object: constants.ObjectTypeSalesOrderStatus,
-			Name:   info.StatusName,
-		},
-		Type: &apiresource.SalesOrderType{
-			Code:   info.TypeCode,
-			Object: constants.ObjectTypeSalesOrderType,
-			Name:   info.TypeName,
-		},
-		Priority:             apiresource.ExpandablePriorityStub("", constants.PriorityCode(info.PriorityCode), info.PriorityName, grpcutil.TimestampToTime(info.CreatedAt)),
-		LineCount:            info.LineCount,
-		IsAcknowledgmentSent: info.IsAcknowledgmentSent,
-		CustomerPO:           info.CustomerPoNumber,
-		CreatedAt:            grpcutil.TimestampToTime(info.CreatedAt),
-		UpdatedAt:            grpcutil.TimestampToTime(info.UpdatedAt),
+func salesOrderDetailFromProto(info *pb.SalesOrderInfo) apiresource.SalesOrder {
+	d := apiresource.SalesOrder{
+		ID:                          info.Id,
+		Object:                      constants.ObjectTypeSalesOrder,
+		Number:                      info.Number,
+		CustomerPurchaseOrderNumber: info.CustomerPoNumber,
+		Note:                        info.Note,
+		AcknowledgmentStatus:        acknowledgmentStatusFromBool(info.IsAcknowledgmentSent),
+		PaymentStatus:               constants.SalesOrderPaymentStatusUnpaid,
+		Status:                      constants.SalesOrderStatusCode(info.StatusCode),
+		Priority:                    constants.PriorityCode(info.PriorityCode),
+		LineCount:                   safeconv.IntToInt32(len(info.Lines)),
+		CreatedAt:                   grpcutil.TimestampToTime(info.CreatedAt),
+		UpdatedAt:                   grpcutil.TimestampToTime(info.UpdatedAt),
 	}
 
-	finalizeCustomerStubForInclude(customer, s.CreatedAt, s.UpdatedAt)
-
-	if info.PriorityId != nil {
-		s.Priority.ID = *info.PriorityId
-	}
-
-	if info.IssuedAt != nil {
-		t := grpcutil.TimestampToTime(info.IssuedAt)
-		s.IssuedAt = &t
-	}
-	if info.CompletedAt != nil {
-		t := grpcutil.TimestampToTime(info.CompletedAt)
-		s.CompletedAt = &t
-	}
-
-	return s
-}
-
-func salesOrderDetailFromProto(info *pb.SalesOrderInfo) apiresource.SalesOrderDetail {
-	d := apiresource.SalesOrderDetail{
-		ID:                    info.Id,
-		Object:                constants.ObjectTypeSalesOrder,
-		Number:                info.Number,
-		CustomerPO:            info.CustomerPoNumber,
-		Note:                  info.Note,
-		IsAcknowledgmentSent:  info.IsAcknowledgmentSent,
-		CarrierBillingType:    info.CarrierBillingType,
-		CarrierBillingAccount: info.CarrierBillingAccount,
-		Status: &apiresource.SalesOrderStatusDetail{
-			Code:   info.StatusCode,
-			Object: constants.ObjectTypeSalesOrderStatus,
-			Name:   info.StatusName,
-		},
-		Type: &apiresource.SalesOrderType{
-			Code:   info.TypeCode,
-			Object: constants.ObjectTypeSalesOrderType,
-			Name:   info.TypeName,
-		},
-		Priority:  apiresource.ExpandablePriorityStub("", constants.PriorityCode(info.PriorityCode), info.PriorityName, grpcutil.TimestampToTime(info.CreatedAt)),
-		CreatedAt: grpcutil.TimestampToTime(info.CreatedAt),
-		UpdatedAt: grpcutil.TimestampToTime(info.UpdatedAt),
-	}
-
-	if info.PriorityId != nil {
-		d.Priority.ID = *info.PriorityId
-	}
-
-	// Sales rep (as Actor sub-resource) — always inline, not expandable
-	if info.SalesRepId != nil {
-		d.SalesRep = apiresource.NewActor(
-			*info.SalesRepId,
-			constants.ActorTypeUser,
-			info.SalesRepName,
-			nil,
-		)
-	}
-
-	// Production run — always inline, not expandable
-	if info.ProductionRunId != nil {
-		d.ProductionRun = &apiresource.ProductionRun{
-			ID:     *info.ProductionRunId,
-			Object: constants.ObjectTypeProductionRun,
-		}
-	}
-
-	// Pick — always inline, not expandable
-	if info.PickId != nil {
-		d.Pick = &apiresource.Pick{
-			ID:     *info.PickId,
-			Object: constants.ObjectTypePick,
-		}
-	}
+	// sales_rep, totals, and the related records (pick/production_run/shipments)
+	// are all expandable — populated from stashed meta only when requested. The
+	// related group is always present (with nil, individually-expandable members).
+	d.Related = &apiresource.SalesOrderRelated{Object: constants.ObjectTypeSalesOrderRelated}
 
 	// Timestamps
 	if info.IssuedAt != nil {
@@ -551,36 +494,110 @@ func salesOrderDetailFromProto(info *pb.SalesOrderInfo) apiresource.SalesOrderDe
 	return d
 }
 
-func stashSalesOrderDetailMeta(ctx context.Context, info *pb.SalesOrderInfo, d *apiresource.SalesOrderDetail) {
+// withLinesForTotals ensures the backend returns line data whenever the
+// `totals` include is requested, since order totals are derived from line
+// values. Without this, ?include=totals alone would have no lines to sum and
+// totals would resolve to null.
+func withLinesForTotals(includes []string) []string {
+	hasTotals, hasLines := false, false
+	for _, inc := range includes {
+		switch {
+		case inc == "totals":
+			hasTotals = true
+		case inc == "lines" || strings.HasPrefix(inc, "lines."):
+			hasLines = true
+		}
+	}
+	if hasTotals && !hasLines {
+		includes = append(includes, "lines")
+	}
+	return includes
+}
+
+// salesOrderTotalsFromLines derives the order's monetary totals and pick/
+// fulfillment progress from its line data. Returns nil when no lines are present
+// on the proto (i.e. the `lines` include was not requested). This mirrors the
+// totals the legacy frontend computed client-side from the order's lines.
+func salesOrderTotalsFromLines(lines []*pb.SalesOrderLineInfo) *apiresource.SalesOrderTotals {
+	if len(lines) == 0 {
+		return nil
+	}
+
+	var totalOrdered, totalPacked, totalInvoiced decimal.Decimal
+
+	for _, l := range lines {
+		price := parseDecimal(l.UnitPriceValue)
+		totalOrdered = totalOrdered.Add(price.Mul(parseDecimal(l.QuantityValue)))
+		if l.QuantityPackedValue != nil {
+			totalPacked = totalPacked.Add(price.Mul(parseDecimal(*l.QuantityPackedValue)))
+		}
+		if l.QuantityInvoicedValue != nil {
+			totalInvoiced = totalInvoiced.Add(price.Mul(parseDecimal(*l.QuantityInvoicedValue)))
+		}
+	}
+
+	return &apiresource.SalesOrderTotals{
+		Object:   constants.ObjectTypeSalesOrderTotals,
+		Ordered:  totalOrdered.String(),
+		Packed:   totalPacked.String(),
+		Invoiced: totalInvoiced.String(),
+	}
+}
+
+// acknowledgmentStatusFromBool maps the legacy boolean acknowledgment flag to
+// the AcknowledgmentStatus enum.
+func acknowledgmentStatusFromBool(sent bool) constants.AcknowledgmentStatus {
+	if sent {
+		return constants.AcknowledgmentStatusSent
+	}
+	return constants.AcknowledgmentStatusNotSent
+}
+
+// parseDecimal parses a decimal string, treating empty/invalid input as zero.
+func parseDecimal(s string) decimal.Decimal {
+	if s == "" {
+		return decimal.Zero
+	}
+	d, err := decimal.NewFromString(s)
+	if err != nil {
+		return decimal.Zero
+	}
+	return d
+}
+
+func stashSalesOrderMeta(ctx context.Context, info *pb.SalesOrderInfo, d *apiresource.SalesOrder) {
 	if info == nil {
 		return
 	}
 
 	meta := resourcekit.GetLoadMeta(ctx)
 
-	// Customer
-	customer := &apiresource.Customer{
-		ID:               info.CustomerId,
-		Object:           constants.ObjectTypeCustomer,
-		Name:             info.CustomerName,
-		Number:           info.CustomerNumber,
-		EDIStatus:        constants.EDIStatusDisabled,
-		RelationshipType: constants.CustomerRelationshipTypeStandalone,
+	// customer is an expandable reference: stash the FK id so LoadCustomers
+	// fetches the real Customer on ?include=customer. Never fabricate.
+	if info.CustomerId != "" {
+		meta.Set(constants.ObjectTypeSalesOrder, d.ID, "customer_id", info.CustomerId)
 	}
-	if info.CustomerStatusCode != nil {
-		customer.Status = constants.AccountStatusCode(*info.CustomerStatusCode)
+
+	// Sales rep (expandable)
+	if info.SalesRepId != nil {
+		meta.Set(constants.ObjectTypeSalesOrder, d.ID, "sales_rep",
+			apiresource.NewActor(*info.SalesRepId, constants.ActorTypeUser, info.SalesRepName, nil))
 	}
-	if info.CustomerCommissionPolicy != nil {
-		customer.CommissionPolicy = constants.CommissionPolicy(*info.CustomerCommissionPolicy)
+
+	// Totals (expandable) — derived from line data when lines are present.
+	if totals := salesOrderTotalsFromLines(info.Lines); totals != nil {
+		meta.Set(constants.ObjectTypeSalesOrder, d.ID, "totals", totals)
 	}
-	if info.CustomerCreatedAt != nil {
-		customer.CreatedAt = info.CustomerCreatedAt.AsTime()
+
+	// Related records (expandable): pick / production_run / shipments.
+	if info.PickId != nil {
+		meta.Set(constants.ObjectTypeSalesOrder, d.ID, "related_pick",
+			apiresource.NewRecord(*info.PickId, constants.RecordTypePick))
 	}
-	if info.CustomerUpdatedAt != nil {
-		customer.UpdatedAt = info.CustomerUpdatedAt.AsTime()
+	if info.ProductionRunId != nil {
+		meta.Set(constants.ObjectTypeSalesOrder, d.ID, "related_production_run",
+			apiresource.NewRecord(*info.ProductionRunId, constants.RecordTypeProductionRun))
 	}
-	finalizeCustomerStubForInclude(customer, d.CreatedAt, d.UpdatedAt)
-	meta.Set(constants.ObjectTypeSalesOrder, d.ID, "customer", customer)
 
 	// Bill-to address
 	if info.BillingAddressId != "" {
@@ -606,7 +623,14 @@ func stashSalesOrderDetailMeta(ctx context.Context, info *pb.SalesOrderInfo, d *
 			))
 	}
 
-	// Carrier
+	// Freight (carrier selection + freight billing). Expanded as a whole via
+	// include[]=freight; carries the full carrier and service level inline.
+	freight := &apiresource.Freight{Object: constants.ObjectTypeFreight}
+	if info.CarrierBillingType != nil {
+		bt := constants.CarrierBillingType(*info.CarrierBillingType)
+		freight.BillingType = &bt
+	}
+	freight.BillingAccountNumber = info.CarrierBillingAccount
 	if info.CarrierId != nil {
 		carrier := &apiresource.Carrier{
 			ID:     *info.CarrierId,
@@ -626,10 +650,8 @@ func stashSalesOrderDetailMeta(ctx context.Context, info *pb.SalesOrderInfo, d *
 		if info.CarrierUpdatedAt != nil {
 			carrier.UpdatedAt = info.CarrierUpdatedAt.AsTime()
 		}
-		meta.Set(constants.ObjectTypeSalesOrder, d.ID, "carrier", carrier)
+		freight.Carrier = carrier
 	}
-
-	// Service level
 	if info.ServiceLevelId != nil {
 		sl := &apiresource.ServiceLevel{
 			ID:     *info.ServiceLevelId,
@@ -652,8 +674,9 @@ func stashSalesOrderDetailMeta(ctx context.Context, info *pb.SalesOrderInfo, d *
 		if info.ServiceLevelUpdatedAt != nil {
 			sl.UpdatedAt = info.ServiceLevelUpdatedAt.AsTime()
 		}
-		meta.Set(constants.ObjectTypeSalesOrder, d.ID, "service_level", sl)
+		freight.ServiceLevel = sl
 	}
+	meta.Set(constants.ObjectTypeSalesOrder, d.ID, "freight", freight)
 
 	// Payment term
 	if info.PaymentTermId != nil {
@@ -733,7 +756,7 @@ func stashSalesOrderDetailMeta(ctx context.Context, info *pb.SalesOrderInfo, d *
 	}
 
 	// Lines
-	lines := make([]apiresource.SalesOrderLineDetail, len(info.Lines))
+	lines := make([]apiresource.SalesOrderLine, len(info.Lines))
 	for i, l := range info.Lines {
 		lines[i] = salesOrderLineDetailFromProto(l)
 		stashSalesOrderLineMeta(meta, l, &lines[i])
@@ -741,35 +764,24 @@ func stashSalesOrderDetailMeta(ctx context.Context, info *pb.SalesOrderInfo, d *
 	meta.Set(constants.ObjectTypeSalesOrder, d.ID, "lines", apiresource.NewList(lines, apiresource.PageInfo{}))
 }
 
-// salesOrderSummaryToDetail maps a list-view SalesOrderSummaryInfo to SalesOrderDetail.
+// salesOrderSummaryToDetail maps a list-view SalesOrderSummaryInfo to SalesOrder.
 // Expandable sub-resources (customer, addresses, carrier, service level, etc.) are left nil
 // since they are populated via the V2 include resolver from stashed meta.
-func salesOrderSummaryToDetail(info *pb.SalesOrderSummaryInfo) apiresource.SalesOrderDetail {
-	d := apiresource.SalesOrderDetail{
-		ID:                   info.Id,
-		Object:               constants.ObjectTypeSalesOrder,
-		Number:               info.Number,
-		CustomerPO:           info.CustomerPoNumber,
-		IsAcknowledgmentSent: info.IsAcknowledgmentSent,
-		Status: &apiresource.SalesOrderStatusDetail{
-			Code:   info.StatusCode,
-			Object: constants.ObjectTypeSalesOrderStatus,
-			Name:   info.StatusName,
-		},
-		Type: &apiresource.SalesOrderType{
-			Code:   info.TypeCode,
-			Object: constants.ObjectTypeSalesOrderType,
-			Name:   info.TypeName,
-		},
-		Priority:  apiresource.ExpandablePriorityStub("", constants.PriorityCode(info.PriorityCode), info.PriorityName, grpcutil.TimestampToTime(info.CreatedAt)),
-		LineCount: info.LineCount,
-		CreatedAt: grpcutil.TimestampToTime(info.CreatedAt),
-		UpdatedAt: grpcutil.TimestampToTime(info.UpdatedAt),
+func salesOrderSummaryToDetail(info *pb.SalesOrderSummaryInfo) apiresource.SalesOrder {
+	d := apiresource.SalesOrder{
+		ID:                          info.Id,
+		Object:                      constants.ObjectTypeSalesOrder,
+		Number:                      info.Number,
+		CustomerPurchaseOrderNumber: info.CustomerPoNumber,
+		AcknowledgmentStatus:        acknowledgmentStatusFromBool(info.IsAcknowledgmentSent),
+		PaymentStatus:               constants.SalesOrderPaymentStatusUnpaid,
+		Status:                      constants.SalesOrderStatusCode(info.StatusCode),
+		Priority:                    constants.PriorityCode(info.PriorityCode),
+		LineCount:                   info.LineCount,
+		CreatedAt:                   grpcutil.TimestampToTime(info.CreatedAt),
+		UpdatedAt:                   grpcutil.TimestampToTime(info.UpdatedAt),
 	}
 
-	if info.PriorityId != nil {
-		d.Priority.ID = *info.PriorityId
-	}
 	if info.IssuedAt != nil {
 		t := grpcutil.TimestampToTime(info.IssuedAt)
 		d.IssuedAt = &t
@@ -782,174 +794,119 @@ func salesOrderSummaryToDetail(info *pb.SalesOrderSummaryInfo) apiresource.Sales
 	return d
 }
 
-func stashSalesOrderSummaryMeta(ctx context.Context, info *pb.SalesOrderSummaryInfo, d *apiresource.SalesOrderDetail) {
+func stashSalesOrderSummaryMeta(ctx context.Context, info *pb.SalesOrderSummaryInfo, d *apiresource.SalesOrder) {
 	if info == nil {
 		return
 	}
 
-	customer := &apiresource.Customer{
-		ID:               info.CustomerId,
-		Object:           constants.ObjectTypeCustomer,
-		Name:             info.CustomerName,
-		Number:           info.CustomerNumber,
-		EDIStatus:        constants.EDIStatusDisabled,
-		RelationshipType: constants.CustomerRelationshipTypeStandalone,
+	// customer is an expandable reference: stash the FK id so LoadCustomers
+	// fetches the real Customer on ?include=customer. Never fabricate.
+	if info.CustomerId != "" {
+		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeSalesOrder, d.ID, "customer_id", info.CustomerId)
 	}
-	if info.CustomerStatusCode != nil {
-		customer.Status = constants.AccountStatusCode(*info.CustomerStatusCode)
-	}
-	if info.CustomerCommissionPolicy != nil {
-		customer.CommissionPolicy = constants.CommissionPolicy(*info.CustomerCommissionPolicy)
-	}
-	finalizeCustomerStubForInclude(customer, d.CreatedAt, d.UpdatedAt)
-
-	resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeSalesOrder, d.ID, "customer", customer)
 }
 
-func salesOrderLineDetailFromProto(info *pb.SalesOrderLineInfo) apiresource.SalesOrderLineDetail {
-	l := apiresource.SalesOrderLineDetail{
+func salesOrderLineDetailFromProto(info *pb.SalesOrderLineInfo) apiresource.SalesOrderLine {
+	l := apiresource.SalesOrderLine{
 		ID:                 info.Id,
 		Object:             constants.ObjectTypeSalesOrderLine,
 		LineItemNumber:     info.LineItemNumber,
 		ProductSKU:         info.ProductSku,
 		ProductDescription: info.ProductDescription,
-		EdiLineItemID:      info.EdiLineItemId,
 		CreatedAt:          grpcutil.TimestampToTime(info.CreatedAt),
 		UpdatedAt:          grpcutil.TimestampToTime(info.UpdatedAt),
 	}
 
-	// Item
-	if info.ItemId != nil {
-		item := &apiresource.Item{
-			ID:           *info.ItemId,
-			Object:       constants.ObjectTypeItem,
-			ItemTypeCode: constants.ItemTypeCodeProduct,
-			CreatedAt:    grpcutil.TimestampToTime(info.CreatedAt),
-			UpdatedAt:    grpcutil.TimestampToTime(info.UpdatedAt),
-		}
-		if info.ItemSku != nil && *info.ItemSku != "" {
-			item.SKU = *info.ItemSku
-		} else {
-			item.SKU = info.ProductSku
-		}
-		l.Item = item
-	}
-
-	unitAbbr := info.QuantityUnitAbbreviation
-	unitType := info.QuantityUnitType
-
-	// Quantity ordered
-	l.QuantityOrdered = &apiresource.Quantity{
-		ID:           info.QuantityId,
-		Object:       constants.ObjectTypeQuantity,
-		Value:        info.QuantityValue,
-		DisplayValue: apiresource.FormatDisplayValue(info.QuantityValue, unitAbbr, unitType),
-	}
-
-	// Unit price
-	l.UnitPrice = &apiresource.Rate{
-		ID:           info.UnitPriceId,
-		Object:       constants.ObjectTypeRate,
-		Value:        info.UnitPriceValue,
-		DisplayValue: apiresource.FormatRateDisplayValue(info.UnitPriceValue, info.UnitPriceNumeratorUnitAbbreviation, "", info.UnitPriceDenominatorUnitAbbreviation),
-		CreatedAt:    l.CreatedAt,
-		UpdatedAt:    l.UpdatedAt,
-	}
-
-	// Unit cost
-	if info.UnitCostId != nil {
-		var unitCostValue, unitCostNumeratorAbbr, unitCostDenominatorAbbr string
-		if info.UnitCostValue != nil {
-			unitCostValue = *info.UnitCostValue
-		}
-		if info.UnitCostNumeratorUnitAbbreviation != nil {
-			unitCostNumeratorAbbr = *info.UnitCostNumeratorUnitAbbreviation
-		}
-		if info.UnitCostDenominatorUnitAbbreviation != nil {
-			unitCostDenominatorAbbr = *info.UnitCostDenominatorUnitAbbreviation
-		}
-		l.UnitCost = &apiresource.Rate{
-			ID:           *info.UnitCostId,
-			Object:       constants.ObjectTypeRate,
-			Value:        unitCostValue,
-			DisplayValue: apiresource.FormatRateDisplayValue(unitCostValue, unitCostNumeratorAbbr, "", unitCostDenominatorAbbr),
-			CreatedAt:    l.CreatedAt,
-			UpdatedAt:    l.UpdatedAt,
+	// Product — lightweight reference, fully loaded when lines.product is included.
+	if info.ProductId != nil {
+		l.Product = &apiresource.Product{
+			ID:     *info.ProductId,
+			Object: constants.ObjectTypeProduct,
 		}
 	}
 
-	// Quantity picked
-	if info.QuantityPickedValue != nil {
-		l.QuantityPicked = &apiresource.Quantity{
-			ID:           info.Id + ":picked",
-			Object:       constants.ObjectTypeQuantity,
-			Value:        *info.QuantityPickedValue,
-			DisplayValue: apiresource.FormatDisplayValue(*info.QuantityPickedValue, unitAbbr, unitType),
-		}
-	}
-
-	// Quantity packed
-	if info.QuantityPackedValue != nil {
-		l.QuantityPacked = &apiresource.Quantity{
-			ID:           info.Id + ":packed",
-			Object:       constants.ObjectTypeQuantity,
-			Value:        *info.QuantityPackedValue,
-			DisplayValue: apiresource.FormatDisplayValue(*info.QuantityPackedValue, unitAbbr, unitType),
-		}
-	}
-
-	// Quantity invoiced
-	if info.QuantityInvoicedValue != nil {
-		l.QuantityInvoiced = &apiresource.Quantity{
-			ID:           info.Id + ":invoiced",
-			Object:       constants.ObjectTypeQuantity,
-			Value:        *info.QuantityInvoicedValue,
-			DisplayValue: apiresource.FormatDisplayValue(*info.QuantityInvoicedValue, unitAbbr, unitType),
-		}
-	}
-
-	// Completed at
-	if info.CompletedAt != nil {
-		t := grpcutil.TimestampToTime(info.CompletedAt)
-		l.CompletedAt = &t
-	}
+	// quantity_ordered, unit_price, unit_cost, and totals are expandable —
+	// populated from stashed meta only when requested.
 
 	return l
 }
 
-func stashSalesOrderLineMeta(meta *resourcekit.LoadMeta, info *pb.SalesOrderLineInfo, line *apiresource.SalesOrderLineDetail) {
-	if info.ItemId != nil {
-		meta.Set(constants.ObjectTypeSalesOrderLine, line.ID, "item_id", *info.ItemId)
-	}
-	meta.Set(constants.ObjectTypeQuantity, info.QuantityId, "unit_id", info.QuantityUnitId)
-	meta.Set(constants.ObjectTypeRate, info.UnitPriceId, "numerator_unit_id", info.UnitPriceNumeratorUnitId)
-	meta.Set(constants.ObjectTypeRate, info.UnitPriceId, "denominator_unit_id", info.UnitPriceDenominatorUnitId)
-	if info.UnitCostId != nil {
-		if info.UnitCostNumeratorUnitId != nil {
-			meta.Set(constants.ObjectTypeRate, *info.UnitCostId, "numerator_unit_id", *info.UnitCostNumeratorUnitId)
-		}
-		if info.UnitCostDenominatorUnitId != nil {
-			meta.Set(constants.ObjectTypeRate, *info.UnitCostId, "denominator_unit_id", *info.UnitCostDenominatorUnitId)
-		}
+// buildLineQuantityOrdered builds the quantity-ordered sub-resource for a line.
+func buildLineQuantityOrdered(info *pb.SalesOrderLineInfo) *apiresource.Quantity {
+	return &apiresource.Quantity{
+		ID:           info.QuantityId,
+		Object:       constants.ObjectTypeQuantity,
+		Value:        info.QuantityValue,
+		DisplayValue: apiresource.FormatDisplayValue(info.QuantityValue, info.QuantityUnitAbbreviation, info.QuantityUnitType),
 	}
 }
 
-func finalizeCustomerStubForInclude(c *apiresource.Customer, fallbackCreated, fallbackUpdated time.Time) {
-	if c == nil {
-		return
+// buildLineUnitPrice builds the unit-price rate sub-resource for a line.
+func buildLineUnitPrice(info *pb.SalesOrderLineInfo, createdAt, updatedAt time.Time) *apiresource.Rate {
+	return &apiresource.Rate{
+		ID:           info.UnitPriceId,
+		Object:       constants.ObjectTypeRate,
+		Value:        info.UnitPriceValue,
+		DisplayValue: apiresource.FormatRateDisplayValue(info.UnitPriceValue, info.UnitPriceNumeratorUnitAbbreviation, "", info.UnitPriceDenominatorUnitAbbreviation),
+		CreatedAt:    createdAt,
+		UpdatedAt:    updatedAt,
 	}
-	if c.Status == "" {
-		c.Status = constants.AccountStatusCodeNormal
+}
+
+// buildLineUnitCost builds the unit-cost rate sub-resource for a line, or nil
+// when the line has no unit cost.
+func buildLineUnitCost(info *pb.SalesOrderLineInfo, createdAt, updatedAt time.Time) *apiresource.Rate {
+	if info.UnitCostId == nil {
+		return nil
 	}
-	if c.CommissionPolicy == "" {
-		c.CommissionPolicy = constants.CommissionPolicyApplied
+	var unitCostValue, unitCostNumeratorAbbr, unitCostDenominatorAbbr string
+	if info.UnitCostValue != nil {
+		unitCostValue = *info.UnitCostValue
 	}
-	if c.CreatedAt.IsZero() {
-		c.CreatedAt = fallbackCreated
+	if info.UnitCostNumeratorUnitAbbreviation != nil {
+		unitCostNumeratorAbbr = *info.UnitCostNumeratorUnitAbbreviation
 	}
-	if c.UpdatedAt.IsZero() {
-		c.UpdatedAt = fallbackUpdated
+	if info.UnitCostDenominatorUnitAbbreviation != nil {
+		unitCostDenominatorAbbr = *info.UnitCostDenominatorUnitAbbreviation
 	}
+	return &apiresource.Rate{
+		ID:           *info.UnitCostId,
+		Object:       constants.ObjectTypeRate,
+		Value:        unitCostValue,
+		DisplayValue: apiresource.FormatRateDisplayValue(unitCostValue, unitCostNumeratorAbbr, "", unitCostDenominatorAbbr),
+		CreatedAt:    createdAt,
+		UpdatedAt:    updatedAt,
+	}
+}
+
+// buildLineTotals derives the per-line monetary totals (ordered/packed/invoiced).
+func buildLineTotals(info *pb.SalesOrderLineInfo) *apiresource.SalesOrderTotals {
+	price := parseDecimal(info.UnitPriceValue)
+	var packed, invoiced decimal.Decimal
+	if info.QuantityPackedValue != nil {
+		packed = parseDecimal(*info.QuantityPackedValue)
+	}
+	if info.QuantityInvoicedValue != nil {
+		invoiced = parseDecimal(*info.QuantityInvoicedValue)
+	}
+	return &apiresource.SalesOrderTotals{
+		Object:   constants.ObjectTypeSalesOrderTotals,
+		Ordered:  price.Mul(parseDecimal(info.QuantityValue)).String(),
+		Packed:   price.Mul(packed).String(),
+		Invoiced: price.Mul(invoiced).String(),
+	}
+}
+
+// stashSalesOrderLineMeta stashes a line's expandable sub-resources
+// (quantity_ordered, unit_price, unit_cost, totals) so the include resolver can
+// populate them when requested.
+func stashSalesOrderLineMeta(meta *resourcekit.LoadMeta, info *pb.SalesOrderLineInfo, line *apiresource.SalesOrderLine) {
+	meta.Set(constants.ObjectTypeSalesOrderLine, line.ID, "quantity_ordered", buildLineQuantityOrdered(info))
+	meta.Set(constants.ObjectTypeSalesOrderLine, line.ID, "unit_price", buildLineUnitPrice(info, line.CreatedAt, line.UpdatedAt))
+	if unitCost := buildLineUnitCost(info, line.CreatedAt, line.UpdatedAt); unitCost != nil {
+		meta.Set(constants.ObjectTypeSalesOrderLine, line.ID, "unit_cost", unitCost)
+	}
+	meta.Set(constants.ObjectTypeSalesOrderLine, line.ID, "totals", buildLineTotals(info))
 }
 
 func buildSOAddressFromProto(

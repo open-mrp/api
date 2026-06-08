@@ -247,19 +247,19 @@ func (m *itemSvcImpl) ChangeItemCategory(ctx context.Context, req *ChangeItemCat
 
 func (m *itemSvcImpl) UpdateItemInventory(ctx context.Context, req *UpdateItemInventoryRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 	var reconcile *bool
-	if req.Operation != nil {
-		v := *req.Operation == constants.InventoryUpdateOperationReconcile
+	if op, ok := req.Operation.Value(); ok {
+		v := op == constants.InventoryUpdateOperationReconcile
 		reconcile = &v
 	}
 
 	pbReq := &pb.UpdateItemInventoryRequest{
 		ItemId:         req.ItemID,
-		QuantityChange: req.QuantityChange,
+		QuantityChange: req.QuantityChange.Ptr(),
 		Reconcile:      reconcile,
-		CustomerId:     req.CustomerID,
-		LocationId:     req.LocationID,
-		LotNumber:      req.LotNumber,
-		UnitId:         req.UnitID,
+		CustomerId:     req.CustomerID.Ptr(),
+		LocationId:     req.LocationID.Ptr(),
+		LotNumber:      req.LotNumber.Ptr(),
+		UnitId:         req.UnitID.Ptr(),
 	}
 
 	_, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.update_inventory", domain.ServiceName,

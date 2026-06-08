@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to partially update a department.
@@ -16,20 +17,20 @@ type UpdateDepartmentRequest struct {
 	// Department ID.
 	DepartmentID string `path:"id" validate:"required"`
 	// Display name.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// Notes about the department.
-	Notes *string `json:"notes,omitempty"`
+	Notes field.Optional[string] `json:"notes,omitzero"`
 	// Storage location ID.
-	LocationID *string `json:"location_id,omitempty" validate:"omitempty"`
+	LocationID field.Optional[string] `json:"location_id,omitzero" validate:"omitempty"`
 	// Scanning station IDs to connect (additive).
-	ScanningStationIDs []string `json:"scanning_station_ids,omitempty"`
+	ScanningStationIDs []string `json:"scanning_station_ids,omitzero"`
 	// Machine IDs to connect (additive).
-	MachineIDs []string `json:"machine_ids,omitempty"`
+	MachineIDs []string `json:"machine_ids,omitzero"`
 }
 
 var sampleUpdateDepartmentName = "Production"
 var sampleUpdateDepartmentRequest = &UpdateDepartmentRequest{
-	Name: &sampleUpdateDepartmentName,
+	Name: field.Some(sampleUpdateDepartmentName),
 }
 
 func (*UpdateDepartmentRequest) SchemaExample() any {

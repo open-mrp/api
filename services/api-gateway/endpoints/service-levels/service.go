@@ -85,8 +85,8 @@ func (m *serviceLevelSvcImpl) GetServiceLevel(ctx context.Context, req *Retrieve
 
 func (m *serviceLevelSvcImpl) CreateServiceLevel(ctx context.Context, req *CreateServiceLevelRequest) (*apiresource.ServiceLevel, *apierror.APIError) {
 	isPortalEnabled := true
-	if req.CustomerPortalVisibility != nil {
-		isPortalEnabled = *req.CustomerPortalVisibility == constants.CustomerPortalVisibilityVisible
+	if v, ok := req.CustomerPortalVisibility.Value(); ok {
+		isPortalEnabled = v == constants.CustomerPortalVisibilityVisible
 	}
 	pbReq := &pb.CreateServiceLevelRequest{
 		CarrierId:       req.CarrierID,
@@ -107,17 +107,17 @@ func (m *serviceLevelSvcImpl) CreateServiceLevel(ctx context.Context, req *Creat
 
 func (m *serviceLevelSvcImpl) UpdateServiceLevel(ctx context.Context, req *UpdateServiceLevelRequest) (*apiresource.ServiceLevel, *apierror.APIError) {
 	var isPortalEnabled *bool
-	if req.CustomerPortalVisibility != nil {
-		v := *req.CustomerPortalVisibility == constants.CustomerPortalVisibilityVisible
-		isPortalEnabled = &v
+	if v, ok := req.CustomerPortalVisibility.Value(); ok {
+		enabled := v == constants.CustomerPortalVisibilityVisible
+		isPortalEnabled = &enabled
 	}
 	pbReq := &pb.UpdateServiceLevelRequest{
 		CarrierId:       req.CarrierID,
 		Id:              req.ServiceLevelID,
-		Name:            req.Name,
-		Code:            req.Code,
+		Name:            req.Name.Ptr(),
+		Code:            req.Code.Ptr(),
 		IsPortalEnabled: isPortalEnabled,
-		IsDefault:       req.IsDefault,
+		IsDefault:       req.IsDefault.Ptr(),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, serviceLevelSvcTracer, "service.service_levels.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateServiceLevelResponse, error) {

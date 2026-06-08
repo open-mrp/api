@@ -14,7 +14,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	"github.com/augno/api/shared/contracts"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 )
 
 func endpointSpecField(e apiendpoint.APIEndpointer) reflect.Value {
@@ -67,8 +67,9 @@ func buildOpenAPISpec(groups []apiendpoint.APIEndpointGroup, publicOnly bool, ve
 			Schemas: make(map[string]Schema),
 			SecuritySchemes: map[string]SecuritySchemeSpec{
 				"BearerAuth": {
-					Type:   "http",
-					Scheme: "bearer",
+					Type:        "http",
+					Scheme:      "bearer",
+					Description: "API key authentication. Provide your API key as a Bearer token in the `Authorization` header.",
 				},
 			},
 		},
@@ -515,7 +516,11 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 	} else if reflect.PointerTo(t).Implements(reflect.TypeFor[contracts.DocumentedType]()) {
 		v := reflect.New(t).Interface().(contracts.DocumentedType)
 		func() {
-			defer func() { recover() }()
+			defer func() {
+				if r := recover(); r != nil {
+					panic(fmt.Errorf("SchemaExample() panicked for %s: %v", t, r))
+				}
+			}()
 			example = v.SchemaExample()
 		}()
 	}
@@ -571,12 +576,8 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 		parts := strings.Split(jsonTag, ",")
 		name := parts[0]
 
-		hasRequiredInJSON := false
 		hasOmitempty := false
 		for _, part := range parts[1:] {
-			if part == "required" {
-				hasRequiredInJSON = true
-			}
 			if part == "omitempty" || part == "omitzero" {
 				hasOmitempty = true
 			}
@@ -585,29 +586,28 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 		validateTag := f.Tag.Get("validate")
 		hasRequiredInValidate := strings.Contains(validateTag, "required")
 
-		// patch.Field[T] and patch.Nullable[T] unwrap to the inner type for OpenAPI.
-		isPatchField := patch.IsFieldType(f.Type)
-		isNullableInput := patch.IsNullableType(f.Type)
+		// field.Clearable[T] and field.Optional[T] unwrap to the inner type for OpenAPI.
+		isClearable := field.IsClearableType(f.Type)
+		isOptional := field.IsOptionalType(f.Type)
 		fieldType := f.Type
-		if isPatchField {
-			if innerType := patch.FieldElemType(f.Type); innerType != nil {
-				fieldType = innerType
-			}
-		} else if isNullableInput {
-			if innerType := patch.NullableElemType(f.Type); innerType != nil {
+		if isClearable || isOptional {
+			if innerType := openAPIInnerType(f.Type); innerType != nil {
 				fieldType = innerType
 			}
 		}
 
 		isOptionalPointer := f.Type.Kind() == reflect.Pointer && hasOmitempty
 		var isRequired bool
-		if isPatchField || isNullableInput {
-			isRequired = hasRequiredInJSON || hasRequiredInValidate
+		if isClearable || isOptional {
+			// field.Optional[T] and field.Clearable[T] model optional inputs: the
+			// client may always omit them, so they are never required. A genuinely
+			// required field uses a plain value type T with validate:"required".
+			isRequired = false
 		} else if f.Type.Kind() == reflect.Slice && hasOmitempty {
 			// Slices use omitempty semantics like pointers; empty slice is omitted from JSON.
-			isRequired = hasRequiredInJSON || hasRequiredInValidate
+			isRequired = hasRequiredInValidate
 		} else {
-			isRequired = hasRequiredInJSON || hasRequiredInValidate || !(f.Type.Kind() == reflect.Pointer && hasOmitempty)
+			isRequired = hasRequiredInValidate || !(f.Type.Kind() == reflect.Pointer && hasOmitempty)
 		}
 
 		if isRequired {
@@ -618,16 +618,19 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 			Description: typeDoc.Fields[f.Name],
 		}
 		switch {
-		case isPatchField:
-			fieldSchema.Nullable = true
-			fieldSchema.XNullableClear = true
-		case isNullableInput:
+		case isClearable:
+			// PATCH clearable input: omit to leave unchanged, send null to clear,
+			// or send a value to set. Null is an accepted wire value, so the field
+			// is nullable. In a request body a nullable field always means "send
+			// null to clear" — there is no separate marker.
 			fieldSchema.Nullable = true
 		case f.Type.Kind() == reflect.Pointer && !hasOmitempty:
 			// Response-style nullable fields: present in JSON as value or null.
 			fieldSchema.Nullable = true
-		case isOptionalPointer:
-			// Optional input pointers: omit to leave unchanged; explicit null is rejected at runtime.
+		case isOptional, isOptionalPointer:
+			// Optional inputs (field.Optional[T] or *T + omitempty): omit to leave
+			// unset/unchanged; an explicit null is rejected at runtime, so null is
+			// not a valid wire value and the field is not nullable.
 			fieldSchema.Nullable = false
 		}
 
@@ -667,7 +670,7 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 			fieldSchema.Format = formatVal
 		}
 
-		if !isPatchField && !isNullableInput {
+		if !isClearable && !isOptional {
 			fieldType = f.Type
 		}
 		if fieldType.Kind() == reflect.Pointer {
@@ -756,17 +759,17 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 			fieldSchema.Enum = append(fieldSchema.Enum, nil)
 		}
 
-		// If the schema example provides `null` for this property, mark it nullable.
-		// This is independent of the Go type so we don't miss nullable badges when
-		// the API chooses to return null even for non-pointer fields.
+		// A documented example that encodes `null` for a property must agree with the
+		// Go type's nullability. The type is the single source of truth: if it is
+		// non-nullable but the example is null, the schema and the sample output
+		// contradict each other. Fail generation loudly rather than silently papering
+		// over the mismatch by flipping the flag.
 		if exampleMap != nil {
-			if val, exists := exampleMap[name]; exists && isJSONNullish(val) {
-				fieldSchema.Nullable = true
-				// Keep nullable-enum null-inclusion consistent with the updated flag.
-				// Only append nil if not already present (the block above may have added it).
-				if len(fieldSchema.Enum) > 0 && !enumContainsNil(fieldSchema.Enum) {
-					fieldSchema.Enum = append(fieldSchema.Enum, nil)
-				}
+			if val, exists := exampleMap[name]; exists && isJSONNullish(val) && !fieldSchema.Nullable {
+				panic(fmt.Errorf(
+					"schema example for %s.%s is null but the Go type is non-nullable; "+
+						"make the field a pointer/field.Optional/field.Clearable, or remove the null from its SchemaExample()",
+					typeName, name))
 			}
 		}
 
@@ -884,6 +887,26 @@ func isJSONNullish(v any) bool {
 	default:
 		return false
 	}
+}
+
+// openAPIInnerType returns the wrapped value type T for a field.Clearable[T] or
+// field.Optional[T] by invoking its OpenAPIInnerType method via reflection. It returns
+// nil when t does not implement that method. Pointers are dereferenced first, though the
+// patch-field convention (enforced by field.AssertValuePatchFields) only allows value types.
+func openAPIInnerType(t reflect.Type) reflect.Type {
+	if t.Kind() == reflect.Pointer {
+		t = t.Elem()
+	}
+	method, ok := t.MethodByName("OpenAPIInnerType")
+	if !ok {
+		return nil
+	}
+	out := method.Func.Call([]reflect.Value{reflect.New(t).Elem()})
+	if len(out) != 1 {
+		return nil
+	}
+	inner, _ := out[0].Interface().(reflect.Type)
+	return inner
 }
 
 func getEnumValuesForStringType(t reflect.Type) []any {
@@ -1214,14 +1237,4 @@ func flattenStructFieldsWithPrefix(t reflect.Type, prefix []int) []reflect.Struc
 		fields = append(fields, f)
 	}
 	return fields
-}
-
-// enumContainsNil returns true if the enum slice already contains a nil entry.
-func enumContainsNil(enum []any) bool {
-	for _, v := range enum {
-		if v == nil {
-			return true
-		}
-	}
-	return false
 }

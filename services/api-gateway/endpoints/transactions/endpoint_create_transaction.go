@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to create a transaction.
@@ -19,13 +20,13 @@ type CreateTransactionRequest struct {
 	// Transaction amount as a decimal string.
 	Amount string `json:"amount" validate:"required"`
 	// Transaction method code.
-	TransactionMethodCode *string `json:"method" validate:"omitempty,max=255"`
+	TransactionMethodCode field.Optional[string] `json:"method,omitzero" validate:"omitempty,max=255"`
 	// Adjustment type code.
-	AdjustmentTypeCode *string `json:"adjustment_type" validate:"omitempty,max=255"`
+	AdjustmentTypeCode field.Optional[string] `json:"adjustment_type,omitzero" validate:"omitempty,max=255"`
 	// Responsible user ID.
-	ResponsibleUserID *string `json:"responsible_user_id" validate:"omitempty"`
+	ResponsibleUserID field.Optional[string] `json:"responsible_user_id,omitzero" validate:"omitempty"`
 	// Note.
-	Note *string `json:"note"`
+	Note field.Optional[string] `json:"note,omitzero"`
 }
 
 var sampleCreateTransactionMethodCode = "check"
@@ -34,8 +35,8 @@ var sampleCreateTransactionRequest = &CreateTransactionRequest{
 	CustomerID:            apiresource.SampleCustomerID,
 	TransactionTypeCode:   "payment",
 	Amount:                "500.00",
-	TransactionMethodCode: &sampleCreateTransactionMethodCode,
-	Note:                  &sampleCreateTransactionNote,
+	TransactionMethodCode: field.Some(sampleCreateTransactionMethodCode),
+	Note:                  field.Some(sampleCreateTransactionNote),
 }
 
 func (*CreateTransactionRequest) SchemaExample() any {

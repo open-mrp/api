@@ -9,7 +9,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -118,12 +118,12 @@ func (m *scanningStationSvcImpl) GetScanningStation(ctx context.Context, req *Re
 func (m *scanningStationSvcImpl) CreateScanningStation(ctx context.Context, req *CreateScanningStationRequest) (*apiresource.ScanningStation, *apierror.APIError) {
 	pbReq := &pb.CreateScanningStationRequest{
 		Name:                req.Name,
-		Notes:               req.Notes,
+		Notes:               req.Notes.Ptr(),
 		Type:                string(req.Type),
 		OperatorRequirement: string(req.OperatorRequirement),
 		DepartmentId:        req.DepartmentID,
-		LabelSizeCode:       req.LabelSizeCode.StringPtr(),
-		LabelTypeCode:       req.LabelTypeCode.StringPtr(),
+		LabelSizeCode:       req.LabelSizeCode.Ptr().StringPtr(),
+		LabelTypeCode:       req.LabelTypeCode.Ptr().StringPtr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, scanningStationSvcTracer, "service.scanning_stations.create", domain.ServiceName,
@@ -140,16 +140,16 @@ func (m *scanningStationSvcImpl) CreateScanningStation(ctx context.Context, req 
 func (m *scanningStationSvcImpl) UpdateScanningStation(ctx context.Context, req *UpdateScanningStationRequest) (*apiresource.ScanningStation, *apierror.APIError) {
 	pbReq := &pb.UpdateScanningStationRequest{
 		Id:            req.ScanningStationID,
-		Name:          req.Name,
-		Notes:         patch.StringFieldPtrToProto(req.Notes),
-		LabelSizeCode: req.LabelSizeCode.StringPtr(),
-		LabelTypeCode: req.LabelTypeCode.StringPtr(),
+		Name:          req.Name.Ptr(),
+		Notes:         field.StringClearableToProto(req.Notes),
+		LabelSizeCode: req.LabelSizeCode.Ptr().StringPtr(),
+		LabelTypeCode: req.LabelTypeCode.Ptr().StringPtr(),
 		OperatorRequirement: func() *string {
-			if req.OperatorRequirement == nil {
-				return nil
+			if v, ok := req.OperatorRequirement.Value(); ok {
+				s := string(v)
+				return &s
 			}
-			v := string(*req.OperatorRequirement)
-			return &v
+			return nil
 		}(),
 	}
 

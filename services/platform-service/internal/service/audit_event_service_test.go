@@ -258,6 +258,40 @@ func (s *AuditEventServiceTestSuite) TestListAuditEvents_RepoError() {
 }
 
 // ---------------------------------------------------------------------------
+// ListAuditEventResourceTypes
+// ---------------------------------------------------------------------------
+
+func (s *AuditEventServiceTestSuite) TestListAuditEventResourceTypes_Success() {
+	ctx := internalAuditCtx("acct_123")
+	result, apiErr := s.svc.ListAuditEventResourceTypes(ctx)
+	s.Nil(apiErr)
+	s.Equal(constants.ObjectType("").EnumValues(), result)
+}
+
+func (s *AuditEventServiceTestSuite) TestListAuditEventResourceTypes_NoIdentity() {
+	result, apiErr := s.svc.ListAuditEventResourceTypes(context.Background())
+	s.Nil(result)
+	s.NotNil(apiErr)
+	s.Equal(apierror.ErrorCodeInternalError, apiErr.Code)
+}
+
+func (s *AuditEventServiceTestSuite) TestListAuditEventResourceTypes_NotInternalActor() {
+	ctx := customerAuditCtx("acct_123")
+	result, apiErr := s.svc.ListAuditEventResourceTypes(ctx)
+	s.Nil(result)
+	s.NotNil(apiErr)
+	s.Equal(apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+}
+
+func (s *AuditEventServiceTestSuite) TestListAuditEventResourceTypes_MissingPermission() {
+	ctx := noPermAuditCtx("acct_123")
+	result, apiErr := s.svc.ListAuditEventResourceTypes(ctx)
+	s.Nil(result)
+	s.NotNil(apiErr)
+	s.Equal(apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+}
+
+// ---------------------------------------------------------------------------
 // runner
 // ---------------------------------------------------------------------------
 

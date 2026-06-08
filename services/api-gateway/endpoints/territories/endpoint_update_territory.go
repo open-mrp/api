@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to partially update a territory.
@@ -18,27 +19,27 @@ type UpdateTerritoryRequest struct {
 	// Territory ID.
 	TerritoryID string `path:"id" validate:"required"`
 	// State this territory covers.
-	State *string `json:"state,omitempty" validate:"omitempty,max=255"`
+	State field.Optional[string] `json:"state,omitzero" validate:"omitempty,max=255"`
 	// Start of ZIP code range (501-99999).
-	StartZipcode *int32 `json:"start_zipcode,omitempty"`
+	StartZipcode field.Optional[int32] `json:"start_zipcode,omitzero"`
 	// End of ZIP code range (501-99999).
-	EndZipcode *int32 `json:"end_zipcode,omitempty"`
+	EndZipcode field.Optional[int32] `json:"end_zipcode,omitzero"`
 	// Sales rep (account user) ID.
-	SalesRepID *string `json:"sales_rep_id,omitempty" validate:"omitempty"`
+	SalesRepID field.Optional[string] `json:"sales_rep_id,omitzero" validate:"omitempty"`
 	// Product line ID.
-	ProductLineID *string `json:"product_line_id,omitempty" validate:"omitempty"`
+	ProductLineID field.Optional[string] `json:"product_line_id,omitzero" validate:"omitempty"`
 	// Set to true to remove the product line.
-	ClearProductLine *bool `json:"clear_product_line,omitempty"`
+	ClearProductLine field.Optional[bool] `json:"clear_product_line,omitzero"`
 	// Set to true to remove the start ZIP code.
-	ClearStartZipcode *bool `json:"clear_start_zipcode,omitempty"`
+	ClearStartZipcode field.Optional[bool] `json:"clear_start_zipcode,omitzero"`
 	// Set to true to remove the end ZIP code.
-	ClearEndZipcode *bool `json:"clear_end_zipcode,omitempty"`
+	ClearEndZipcode field.Optional[bool] `json:"clear_end_zipcode,omitzero"`
 }
 
 var sampleUpdateState = "CA"
 
 var sampleUpdateTerritoryRequest = &UpdateTerritoryRequest{
-	State: &sampleUpdateState,
+	State: field.Some(sampleUpdateState),
 }
 
 func (*UpdateTerritoryRequest) SchemaExample() any {

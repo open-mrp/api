@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to partially update a rate.
@@ -16,22 +17,22 @@ type UpdateRateRequest struct {
 	// Rate ID.
 	RateID string `path:"id" validate:"required"`
 	// Decimal value of the rate.
-	Value *string `json:"value,omitempty"`
+	Value field.Optional[string] `json:"value,omitzero"`
 	// Numerator unit ID.
-	NumeratorUnitID *string `json:"numerator_unit_id,omitempty" validate:"omitempty"`
+	NumeratorUnitID field.Optional[string] `json:"numerator_unit_id,omitzero" validate:"omitempty"`
 	// Denominator unit ID.
-	DenominatorUnitID *string `json:"denominator_unit_id,omitempty" validate:"omitempty"`
+	DenominatorUnitID field.Optional[string] `json:"denominator_unit_id,omitzero" validate:"omitempty"`
 	// Parent resource ID.
-	ObjectID *string `json:"object_id,omitempty" validate:"omitempty"`
+	ObjectID field.Optional[string] `json:"object_id,omitzero" validate:"omitempty"`
 	// Parent resource type (e.g. "item", "production_step").
-	ObjectType *string `json:"object_type,omitempty" validate:"omitempty,max=255"`
+	ObjectType field.Optional[string] `json:"object_type,omitzero" validate:"omitempty,max=255"`
 }
 
 var sampleUpdateRateValue = apiresource.SampleRateValue
 var sampleUpdateRateNumeratorUnitID = apiresource.SampleUnitID
 var sampleUpdateRateRequest = &UpdateRateRequest{
-	Value:           &sampleUpdateRateValue,
-	NumeratorUnitID: &sampleUpdateRateNumeratorUnitID,
+	Value:           field.Some(sampleUpdateRateValue),
+	NumeratorUnitID: field.Some(sampleUpdateRateNumeratorUnitID),
 }
 
 func (*UpdateRateRequest) SchemaExample() any {

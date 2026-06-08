@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to create a scanning station.
@@ -16,7 +17,7 @@ type CreateScanningStationRequest struct {
 	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
 	// Notes.
-	Notes *string `json:"notes,omitempty"`
+	Notes field.Optional[string] `json:"notes,omitzero"`
 	// Scanning station type.
 	Type constants.ScanningStationType `json:"type" validate:"required"`
 	// Operator requirement behavior for this station.
@@ -24,9 +25,9 @@ type CreateScanningStationRequest struct {
 	// Department ID.
 	DepartmentID string `json:"department_id" validate:"required"`
 	// Label size code.
-	LabelSizeCode *constants.LabelSizeCode `json:"label_size,omitempty"`
+	LabelSizeCode field.Optional[constants.LabelSizeCode] `json:"label_size,omitzero"`
 	// Label type code.
-	LabelTypeCode *constants.LabelTypeCode `json:"label_type,omitempty"`
+	LabelTypeCode field.Optional[constants.LabelTypeCode] `json:"label_type,omitzero"`
 }
 
 var sampleLabelSizeCode = constants.LabelSizeCodeOneByOne
@@ -37,8 +38,8 @@ var sampleCreateScanningStationRequest = &CreateScanningStationRequest{
 	Type:                constants.ScanningStationTypeInitBatch,
 	OperatorRequirement: constants.OperatorRequirementNone,
 	DepartmentID:        apiresource.SampleDepartmentID,
-	LabelSizeCode:       &sampleLabelSizeCode,
-	LabelTypeCode:       &sampleLabelTypeCode,
+	LabelSizeCode:       field.Some(sampleLabelSizeCode),
+	LabelTypeCode:       field.Some(sampleLabelTypeCode),
 }
 
 func (*CreateScanningStationRequest) SchemaExample() any {

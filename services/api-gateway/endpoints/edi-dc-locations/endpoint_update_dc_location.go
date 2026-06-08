@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to partially update a DC location.
@@ -16,14 +17,14 @@ type UpdateDCLocationRequest struct {
 	// DC location ID.
 	DCLocationID string `path:"id" validate:"required"`
 	// Customer account ID.
-	CustomerID *string `json:"customer_id,omitempty" validate:"omitempty"`
+	CustomerID field.Optional[string] `json:"customer_id,omitzero" validate:"omitempty"`
 	// Location description.
-	Location *string `json:"location,omitempty" validate:"omitempty,max=255"`
+	Location field.Optional[string] `json:"location,omitzero" validate:"omitempty,max=255"`
 }
 
 var sampleUpdateDCLocationLocation = "Warehouse B - Bay 1"
 var sampleUpdateDCLocationRequest = &UpdateDCLocationRequest{
-	Location: &sampleUpdateDCLocationLocation,
+	Location: field.Some(sampleUpdateDCLocationLocation),
 }
 
 func (*UpdateDCLocationRequest) SchemaExample() any {

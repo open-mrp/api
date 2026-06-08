@@ -10,8 +10,8 @@ import (
 	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 	"github.com/augno/api/shared/pagination"
-	"github.com/augno/api/shared/patch"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -405,7 +405,7 @@ func (r *unitGroupRepoImpl) Update(ctx context.Context, params domain.UpdateUnit
 		AccountID:   gosql.NullString{String: params.AccountID, Valid: true},
 		Name:        toNullString(params.Name),
 		UpdateNotes: updateNotes,
-		Notes:       patch.StringToNullString(params.Notes),
+		Notes:       field.StringToNullString(params.Notes),
 		BaseUnitID:  toNullString(params.BaseUnitID),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {

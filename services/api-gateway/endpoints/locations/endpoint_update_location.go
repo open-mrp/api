@@ -9,7 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to partially update a location.
@@ -17,19 +17,17 @@ type UpdateLocationRequest struct {
 	// Location ID.
 	LocationID string `path:"id" validate:"required"`
 	// Display name.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// Location type code.
-	TypeCode *constants.LocationTypeCode `json:"type,omitempty"`
+	TypeCode field.Optional[constants.LocationTypeCode] `json:"type,omitzero"`
 	// Parent location ID. Send null to clear.
-	ParentID *patch.Field[string] `json:"parent_id,omitempty" validate:"omitempty"`
+	ParentID field.Clearable[string] `json:"parent_id,omitzero" validate:"omitempty"`
 	// Child location IDs. Replaces all current children when provided. Send null to clear.
-	ChildIDs *patch.Field[[]string] `json:"child_ids,omitempty"`
+	ChildIDs field.Clearable[[]string] `json:"child_ids,omitzero"`
 }
 
-var sampleUpdateName = "Warehouse B"
-
 var sampleUpdateLocationRequest = &UpdateLocationRequest{
-	Name: &sampleUpdateName,
+	Name: field.Some("Warehouse B"),
 }
 
 func (*UpdateLocationRequest) SchemaExample() any {

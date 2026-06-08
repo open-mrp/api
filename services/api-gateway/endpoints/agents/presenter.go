@@ -3,7 +3,6 @@ package agentep
 import (
 	"context"
 	"encoding/json"
-	"sort"
 
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
@@ -52,7 +51,11 @@ func AgentDefinitionPresenter(a *pb.AgentDefinitionInfo) apiresource.AgentDefini
 	}
 }
 
-func StashAgentDefinitionMeta(meta *resourcekit.LoadMeta, a *pb.AgentDefinitionInfo, roleInfo *ResolvedRole) {
+// roleInfo is retained for signature compatibility but no longer used: the role
+// is loaded with real data via LoadRoles when ?include=role is requested.
+// TODO: drop the resolveRole/ResolvedRole pre-fetch plumbing (agents + agent-runs)
+// now that includes load roles on demand.
+func StashAgentDefinitionMeta(meta *resourcekit.LoadMeta, a *pb.AgentDefinitionInfo, _ *ResolvedRole) {
 	if a == nil {
 		return
 	}
@@ -80,28 +83,11 @@ func StashAgentDefinitionMeta(meta *resourcekit.LoadMeta, a *pb.AgentDefinitionI
 	}
 	meta.Set(constants.ObjectTypeAgentDefinition, a.Id, "tools", apiresource.NewList(toolItems, apiresource.PageInfo{}))
 
+	// Role is an expandable sub-resource: stash only the FK id. When the client
+	// requests ?include=role, the resourcekit resolver loads the real Role (and
+	// its permissions/owner) via LoadRoles. Never fabricate role data here.
 	if a.RoleId != "" {
-		roleName := a.GetRoleName()
-		roleType := constants.RoleType(a.GetRoleTypeCode())
-		if roleInfo != nil {
-			roleName = roleInfo.Name
-			roleType = constants.RoleType(roleInfo.RoleType)
-		}
-		role := apiresource.ExpandableRoleStub(
-			a.RoleId,
-			roleName,
-			roleType,
-			timeutil.TimestampToTime(a.CreatedAt),
-		)
-		if roleInfo != nil && roleInfo.Permissions != nil {
-			perms := make([]string, 0, len(roleInfo.Permissions))
-			for p := range roleInfo.Permissions {
-				perms = append(perms, p)
-			}
-			sort.Strings(perms)
-			role.Permissions = &perms
-		}
-		meta.Set(constants.ObjectTypeAgentDefinition, a.Id, "role", role)
+		meta.Set(constants.ObjectTypeAgentDefinition, a.Id, "role_id", a.RoleId)
 	}
 }
 

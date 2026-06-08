@@ -21,13 +21,11 @@ type ListPicksRequest struct {
 	EndDate          *string  `query:"end_date"`
 }
 
-// TODO: stop returning PickSummary; return the full Pick apiresource and use proper includes values to control expansion.
-
 // Returns a paginated list of picks.
 type ListPicksEndpoint struct{}
 
-func (e *ListPicksEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPicksRequest, *apiresource.List[apiresource.PickSummary]] {
-	return (&apiendpoint.APIEndpoint[*ListPicksRequest, *apiresource.List[apiresource.PickSummary]]{
+func (e *ListPicksEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPicksRequest, *apiresource.List[apiresource.Pick]] {
+	return (&apiendpoint.APIEndpoint[*ListPicksRequest, *apiresource.List[apiresource.Pick]]{
 		Title:             "List Picks",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
@@ -36,12 +34,12 @@ func (e *ListPicksEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPicksReq
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypePick,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *ListPicksRequest) (*apiresource.List[apiresource.PickSummary], *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *ListPicksRequest) (*apiresource.List[apiresource.Pick], *apierror.APIError) {
 			return svc.(PickSvc).ListPicks
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypePick,
-			Fields:     []string{"sales_order"},
+			Fields:     []string{"sales_order", "customer"},
 		}),
 	})
 }

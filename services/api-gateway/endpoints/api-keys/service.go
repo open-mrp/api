@@ -86,8 +86,8 @@ func (m *apiKeySvcImpl) CreateAPIKey(ctx context.Context, req *CreateAPIKeyReque
 		Name:   req.Name,
 	}
 
-	if req.ExpiresAt != nil {
-		pbReq.ExpiresAt = timestamppb.New(*req.ExpiresAt)
+	if v, ok := req.ExpiresAt.Value(); ok {
+		pbReq.ExpiresAt = timestamppb.New(v)
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, apiKeySvcTracer, "service.api_keys.create", domain.ServiceName,
@@ -116,8 +116,8 @@ func (m *apiKeySvcImpl) RotateAPIKey(ctx context.Context, req *RotateAPIKeyReque
 		ApiKeyId: req.APIKeyID,
 	}
 
-	if req.ExpiresAt != nil {
-		pbReq.ExpiresAt = timestamppb.New(*req.ExpiresAt)
+	if v, ok := req.ExpiresAt.Value(); ok {
+		pbReq.ExpiresAt = timestamppb.New(v)
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, apiKeySvcTracer, "service.api_keys.rotate", domain.ServiceName,

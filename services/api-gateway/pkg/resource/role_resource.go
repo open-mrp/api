@@ -51,28 +51,3 @@ var SampleRole = &Role{
 func (*Role) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleRole)
 }
-
-// TODO: This is unacceptable. We should only send valid data back not make stuff up.
-func ExpandableRoleStub(id, name string, typeCode constants.RoleType, ts time.Time) *Role {
-	if id == "" {
-		id = SampleRoleID
-	}
-	if name == "" {
-		name = SampleRoleName
-	}
-	if typeCode == "" {
-		typeCode = constants.RoleTypeAdmin
-	}
-	if ts.IsZero() {
-		ts = time.Unix(0, 0).UTC()
-	}
-	return &Role{
-		ID:        id,
-		Object:    constants.ObjectTypeRole,
-		Name:      name,
-		TypeCode:  typeCode,
-		Owner:     SystemOwner(),
-		CreatedAt: ts,
-		UpdatedAt: ts,
-	}
-}

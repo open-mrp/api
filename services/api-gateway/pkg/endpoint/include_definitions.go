@@ -283,13 +283,23 @@ func init() {
 		ObjectType: constants.ObjectTypeSalesOrder,
 		Fields: []IncludeFieldDef{
 			{Key: "customer", ObjectType: constants.ObjectTypeCustomer},
+			{Key: "sales_rep", ObjectType: constants.ObjectTypeActor},
 			{Key: "bill_to_address", ObjectType: constants.ObjectTypeAddress},
 			{Key: "ship_to_address", ObjectType: constants.ObjectTypeAddress},
-			{Key: "carrier", ObjectType: constants.ObjectTypeCarrier},
-			{Key: "service_level", ObjectType: constants.ObjectTypeServiceLevel},
+			{Key: "freight", ObjectType: constants.ObjectTypeFreight},
 			{Key: "payment_term", ObjectType: constants.ObjectTypePaymentTerm},
 			{Key: "shipping_term", ObjectType: constants.ObjectTypeShippingTerm},
 			{Key: "order_discount", ObjectType: constants.ObjectTypeOrderDiscount},
+			{Key: "totals", ObjectType: constants.ObjectTypeSalesOrderTotals},
+			{
+				Key:        "related",
+				ObjectType: constants.ObjectTypeSalesOrderRelated,
+				Children: []IncludeFieldDef{
+					{Key: "pick", ObjectType: constants.ObjectTypeRecord},
+					{Key: "production_run", ObjectType: constants.ObjectTypeRecord},
+					{Key: "shipments", ObjectType: constants.ObjectTypeRecord},
+				},
+			},
 			{Key: "lines", ObjectType: constants.ObjectTypeSalesOrderLine},
 		},
 	})
@@ -297,29 +307,32 @@ func init() {
 	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypeSalesOrderLine,
 		Fields: []IncludeFieldDef{
-			{Key: "item", ObjectType: constants.ObjectTypeItem},
+			{Key: "product", ObjectType: constants.ObjectTypeProduct},
+			{Key: "quantity_ordered", ObjectType: constants.ObjectTypeQuantity},
+			{Key: "unit_price", ObjectType: constants.ObjectTypeRate},
+			{Key: "unit_cost", ObjectType: constants.ObjectTypeRate},
+			{Key: "totals", ObjectType: constants.ObjectTypeSalesOrderTotals},
 		},
 	})
 
 	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypeInvoice,
 		Fields: []IncludeFieldDef{
+			{Key: "customer", ObjectType: constants.ObjectTypeCustomer},
 			{Key: "order", ObjectType: constants.ObjectTypeSalesOrder},
 			{Key: "billing_address", ObjectType: constants.ObjectTypeAddress},
 			{Key: "shipment", ObjectType: constants.ObjectTypeShipment},
+			{Key: "payment_term", ObjectType: constants.ObjectTypePaymentTerm},
 			{Key: "lines", ObjectType: constants.ObjectTypeInvoiceLine},
 			{Key: "allocations", ObjectType: constants.ObjectTypeInvoiceAllocation},
 		},
 	})
 
 	RegisterIncludes(&ObjectIncludes{
-		ObjectType: constants.ObjectTypeInvoiceSummary,
+		ObjectType: constants.ObjectTypeInvoiceForPayment,
 		Fields: []IncludeFieldDef{
 			{Key: "customer", ObjectType: constants.ObjectTypeCustomer},
-			{Key: "order", ObjectType: constants.ObjectTypeSalesOrder},
-			{Key: "shipment", ObjectType: constants.ObjectTypeShipment},
-			{Key: "billing_address", ObjectType: constants.ObjectTypeAddress},
-			{Key: "payment_term", ObjectType: constants.ObjectTypePaymentTerm},
+			{Key: "parent_account", ObjectType: constants.ObjectTypeAccount},
 		},
 	})
 
@@ -347,14 +360,24 @@ func init() {
 	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypeDelivery,
 		Fields: []IncludeFieldDef{
-			{Key: "purchase_order", ObjectType: constants.ObjectTypeSalesOrder},
+			{Key: "purchase_order", ObjectType: constants.ObjectTypePurchaseOrder},
+			{Key: "lines", ObjectType: constants.ObjectTypeDeliveryLine},
 		},
 	})
 
 	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypeReceivingOrder,
 		Fields: []IncludeFieldDef{
-			{Key: "purchase_order", ObjectType: constants.ObjectTypeSalesOrder},
+			{Key: "purchase_order", ObjectType: constants.ObjectTypePurchaseOrder},
+			{Key: "supplier", ObjectType: constants.ObjectTypeAccount},
+			{Key: "lines", ObjectType: constants.ObjectTypeReceivingOrderLine},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeReceivingOrderLine,
+		Fields: []IncludeFieldDef{
+			{Key: "order_line", ObjectType: constants.ObjectTypeSalesOrderLine},
 		},
 	})
 
@@ -379,6 +402,7 @@ func init() {
 		ObjectType: constants.ObjectTypePick,
 		Fields: []IncludeFieldDef{
 			{Key: "sales_order", ObjectType: constants.ObjectTypeSalesOrder},
+			{Key: "customer", ObjectType: constants.ObjectTypeCustomer},
 			{Key: "departments", ObjectType: constants.ObjectTypeDepartment},
 			{Key: "lines", ObjectType: constants.ObjectTypePickLine},
 		},
@@ -421,8 +445,7 @@ func init() {
 			{Key: "supplier", ObjectType: constants.ObjectTypeSupplier},
 			{Key: "bill_to_address", ObjectType: constants.ObjectTypeAddress},
 			{Key: "ship_to_address", ObjectType: constants.ObjectTypeAddress},
-			{Key: "carrier", ObjectType: constants.ObjectTypeCarrier},
-			{Key: "service_level", ObjectType: constants.ObjectTypeServiceLevel},
+			{Key: "freight", ObjectType: constants.ObjectTypeFreight},
 			{Key: "payment_term", ObjectType: constants.ObjectTypePaymentTerm},
 			{Key: "shipping_term", ObjectType: constants.ObjectTypeShippingTerm},
 			{Key: "receiving_order", ObjectType: constants.ObjectTypeReceivingOrder},
@@ -508,9 +531,8 @@ func init() {
 			{Key: "lines", ObjectType: constants.ObjectTypeShipmentLine},
 			{Key: "shipping_cases", ObjectType: constants.ObjectTypeShippingCase},
 			{Key: "sales_order", ObjectType: constants.ObjectTypeSalesOrder},
+			{Key: "freight", ObjectType: constants.ObjectTypeFreight},
 			{Key: "customer", ObjectType: constants.ObjectTypeCustomer},
-			{Key: "carrier", ObjectType: constants.ObjectTypeCarrier},
-			{Key: "service_level", ObjectType: constants.ObjectTypeServiceLevel},
 			{Key: "shipping_address", ObjectType: constants.ObjectTypeAddress},
 			{Key: "shipped_by", ObjectType: constants.ObjectTypeAccountUser},
 			{Key: "invoice", ObjectType: constants.ObjectTypeInvoice},

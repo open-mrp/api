@@ -22,12 +22,19 @@ type AccountGroup struct {
 	// Description.
 	Description *string `json:"description"`
 	// Commission policy.
+	//
+	// - `commission_exempt`: no commission applies.
+	// - `commission_applied`: commission applies; if the account group is within a sales rep's territory, it will be assigned to that rep unless overridden.
 	CommissionPolicy constants.CommissionPolicy `json:"commission_policy" validate:"required"`
 	// Freight policy.
+	//
+	// - `free_freight`: customers within this group will not have to pay for freight.
+	// - `billed_freight`: freight will be applied to any order within this account group, unless overridden elsewhere.
 	FreightPolicy constants.FreightPolicy `json:"freight_policy" validate:"required"`
 	// Account group type.
 	//
-	// The type `pricing_group` indicates this account group is utilized for pricing rules. For example, you may have a 'Preferred' price group that receives a special discount rate. The type `type_group` indicates the account group is utilized to categorize a set of accounts. For example, you may have a group of accounts that are 'Consumers' or 'Distributors'.
+	// - `pricing_group`: used for pricing rules, such as a "Preferred" group that receives a special discount.
+	// - `type_group`: used to categorize accounts, such as "Consumers" or "Distributors".
 	Type constants.AccountGroupType `json:"type" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

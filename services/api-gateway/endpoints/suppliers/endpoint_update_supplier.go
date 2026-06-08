@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // UpdateSupplierRequest is the request to update a supplier.
@@ -15,24 +16,24 @@ type UpdateSupplierRequest struct {
 	// Supplier ID.
 	SupplierID string `path:"id" validate:"required"`
 	// Display name.
-	Name *string `json:"name" validate:"omitempty,max=255"`
+	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// Supplier number.
-	Number *string `json:"number" validate:"omitempty,max=255"`
+	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
 	// Note value. Set update_note to true to apply.
-	Note *string `json:"note"`
+	Note field.Optional[string] `json:"note,omitzero"`
 	// Whether to update the note field. Allows clearing to null.
 	UpdateNote bool `json:"update_note"`
 	// Bill-to address ID.
-	BillToAddressID *string `json:"bill_to_address_id" validate:"omitempty"`
+	BillToAddressID field.Optional[string] `json:"bill_to_address_id,omitzero" validate:"omitempty"`
 	// Ship-to address ID.
-	ShipToAddressID *string `json:"ship_to_address_id" validate:"omitempty"`
+	ShipToAddressID field.Optional[string] `json:"ship_to_address_id,omitzero" validate:"omitempty"`
 }
 
 var sampleUpdateSupplierName = "Acme Supplies LLC"
 var sampleUpdateSupplierNote = "Updated contact info"
 var sampleUpdateSupplierRequest = &UpdateSupplierRequest{
-	Name:       &sampleUpdateSupplierName,
-	Note:       &sampleUpdateSupplierNote,
+	Name:       field.Some(sampleUpdateSupplierName),
+	Note:       field.Some(sampleUpdateSupplierNote),
 	UpdateNote: true,
 }
 

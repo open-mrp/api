@@ -103,20 +103,20 @@ func (m *carrierSvcImpl) GetCarrier(ctx context.Context, req *RetrieveCarrierReq
 
 func (m *carrierSvcImpl) CreateCarrier(ctx context.Context, req *CreateCarrierRequest) (*apiresource.Carrier, *apierror.APIError) {
 	isPortalEnabled := true
-	if req.CustomerPortalVisibility != nil {
-		isPortalEnabled = *req.CustomerPortalVisibility == constants.CustomerPortalVisibilityVisible
+	if v, ok := req.CustomerPortalVisibility.Value(); ok {
+		isPortalEnabled = v == constants.CustomerPortalVisibilityVisible
 	}
 
 	var code *string
-	if req.Code != nil {
-		s := string(*req.Code)
+	if v, ok := req.Code.Value(); ok {
+		s := string(v)
 		code = &s
 	}
 
 	pbReq := &pb.CreateCarrierRequest{
 		Name:            req.Name,
 		Code:            code,
-		AccountNumber:   req.AccountNumber,
+		AccountNumber:   req.AccountNumber.Ptr(),
 		IsPortalEnabled: isPortalEnabled,
 	}
 
@@ -134,14 +134,14 @@ func (m *carrierSvcImpl) CreateCarrier(ctx context.Context, req *CreateCarrierRe
 
 func (m *carrierSvcImpl) UpdateCarrier(ctx context.Context, req *UpdateCarrierRequest) (*apiresource.Carrier, *apierror.APIError) {
 	var isPortalEnabled *bool
-	if req.CustomerPortalVisibility != nil {
-		v := *req.CustomerPortalVisibility == constants.CustomerPortalVisibilityVisible
-		isPortalEnabled = &v
+	if v, ok := req.CustomerPortalVisibility.Value(); ok {
+		enabled := v == constants.CustomerPortalVisibilityVisible
+		isPortalEnabled = &enabled
 	}
 
 	pbReq := &pb.UpdateCarrierRequest{
 		Id:              req.CarrierID,
-		Name:            req.Name,
+		Name:            req.Name.Ptr(),
 		IsPortalEnabled: isPortalEnabled,
 	}
 

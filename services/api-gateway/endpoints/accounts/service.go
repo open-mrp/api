@@ -91,15 +91,15 @@ func (m *accountSvcImpl) GetAccountBySlug(ctx context.Context, req *RetrieveAcco
 func (m *accountSvcImpl) UpdateAccount(ctx context.Context, req *UpdateAccountRequest) (*apiresource.Account, *apierror.APIError) {
 	pbReq := &pb.UpdateAccountRequest{
 		Id:              req.AccountID,
-		Name:            req.Name,
-		SupportEmail:    req.SupportEmail,
-		PhoneNumber:     req.PhoneNumber,
-		Slug:            req.Slug,
-		WebsiteUrl:      req.WebsiteURL,
-		FacebookHandle:  req.FacebookHandle,
-		InstagramHandle: req.InstagramHandle,
-		LinkedinHandle:  req.LinkedInHandle,
-		TwitterHandle:   req.TwitterHandle,
+		Name:            req.Name.Ptr(),
+		SupportEmail:    req.SupportEmail.Ptr(),
+		PhoneNumber:     req.PhoneNumber.Ptr(),
+		Slug:            req.Slug.Ptr(),
+		WebsiteUrl:      req.WebsiteURL.Ptr(),
+		FacebookHandle:  req.FacebookHandle.Ptr(),
+		InstagramHandle: req.InstagramHandle.Ptr(),
+		LinkedinHandle:  req.LinkedInHandle.Ptr(),
+		TwitterHandle:   req.TwitterHandle.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, accountSvcTracer, "service.accounts.update", domain.ServiceName,

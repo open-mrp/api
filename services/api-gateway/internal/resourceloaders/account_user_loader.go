@@ -51,6 +51,7 @@ func LoadAccountUsers(ctx context.Context, ids []string) (map[string]any, *apier
 func accountUserFromProto(au *pb.AccountUserDetail) *apiresource.AccountUser {
 	return &apiresource.AccountUser{
 		ID:         au.Id,
+		UserID:     au.UserId,
 		Object:     constants.ObjectTypeAccountUser,
 		Name:       au.Name,
 		Email:      au.Email,

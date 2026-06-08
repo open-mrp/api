@@ -40,6 +40,7 @@ type PickSummaryInfo struct {
 	CreatedAt        *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt        *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	SalesOrderNumber string                 `protobuf:"bytes,12,opt,name=sales_order_number,json=salesOrderNumber,proto3" json:"sales_order_number,omitempty"`
+	PriorityId       string                 `protobuf:"bytes,13,opt,name=priority_id,json=priorityId,proto3" json:"priority_id,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -158,6 +159,13 @@ func (x *PickSummaryInfo) GetSalesOrderNumber() string {
 	return ""
 }
 
+func (x *PickSummaryInfo) GetPriorityId() string {
+	if x != nil {
+		return x.PriorityId
+	}
+	return ""
+}
+
 // PickInfo represents a full pick resource.
 type PickInfo struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
@@ -175,6 +183,7 @@ type PickInfo struct {
 	Lines            []*PickLineInfo        `protobuf:"bytes,12,rep,name=lines,proto3" json:"lines,omitempty"`
 	Departments      []*PickDepartmentInfo  `protobuf:"bytes,13,rep,name=departments,proto3" json:"departments,omitempty"`
 	SalesOrderNumber string                 `protobuf:"bytes,14,opt,name=sales_order_number,json=salesOrderNumber,proto3" json:"sales_order_number,omitempty"`
+	PriorityId       string                 `protobuf:"bytes,15,opt,name=priority_id,json=priorityId,proto3" json:"priority_id,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -303,6 +312,13 @@ func (x *PickInfo) GetDepartments() []*PickDepartmentInfo {
 func (x *PickInfo) GetSalesOrderNumber() string {
 	if x != nil {
 		return x.SalesOrderNumber
+	}
+	return ""
+}
+
+func (x *PickInfo) GetPriorityId() string {
+	if x != nil {
+		return x.PriorityId
 	}
 	return ""
 }
@@ -1684,7 +1700,7 @@ var File_core_core_picking_proto protoreflect.FileDescriptor
 
 const file_core_core_picking_proto_rawDesc = "" +
 	"\n" +
-	"\x17core/core_picking.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fcore/core.proto\"\xf9\x03\n" +
+	"\x17core/core_picking.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fcore/core.proto\"\x9a\x04\n" +
 	"\x0fPickSummaryInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12$\n" +
@@ -1702,7 +1718,9 @@ const file_core_core_picking_proto_rawDesc = "" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12,\n" +
-	"\x12sales_order_number\x18\f \x01(\tR\x10salesOrderNumber\"\xd8\x04\n" +
+	"\x12sales_order_number\x18\f \x01(\tR\x10salesOrderNumber\x12\x1f\n" +
+	"\vpriority_id\x18\r \x01(\tR\n" +
+	"priorityId\"\xf9\x04\n" +
 	"\bPickInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12$\n" +
@@ -1722,7 +1740,9 @@ const file_core_core_picking_proto_rawDesc = "" +
 	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12(\n" +
 	"\x05lines\x18\f \x03(\v2\x12.core.PickLineInfoR\x05lines\x12:\n" +
 	"\vdepartments\x18\r \x03(\v2\x18.core.PickDepartmentInfoR\vdepartments\x12,\n" +
-	"\x12sales_order_number\x18\x0e \x01(\tR\x10salesOrderNumber\"\xcb\n" +
+	"\x12sales_order_number\x18\x0e \x01(\tR\x10salesOrderNumber\x12\x1f\n" +
+	"\vpriority_id\x18\x0f \x01(\tR\n" +
+	"priorityId\"\xcb\n" +
 	"\n" +
 	"\fPickLineInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +

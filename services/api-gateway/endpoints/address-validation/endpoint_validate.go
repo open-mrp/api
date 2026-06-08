@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to validate an address.
@@ -16,7 +17,7 @@ type ValidateAddressRequest struct {
 	// First line of the street address.
 	AddressLine1 string `json:"address_line_1" validate:"required"`
 	// Second line of the street address.
-	AddressLine2 *string `json:"address_line_2,omitempty"`
+	AddressLine2 field.Optional[string] `json:"address_line_2,omitzero"`
 	// City or locality.
 	City string `json:"city" validate:"required"`
 	// State or administrative area.

@@ -1,4 +1,4 @@
-package patch
+package field
 
 import (
 	"bytes"
@@ -6,19 +6,19 @@ import (
 	"errors"
 )
 
-// ErrExplicitNull is returned when JSON null is sent for a Nullable field.
+// ErrExplicitNull is returned when JSON null is sent for an Optional field.
 // The message is consumer-facing: UnmarshalJSON cannot know the field's JSON
 // key, so callers that have the request body should use ExplicitNullField to
 // build a parameter-specific message instead of surfacing this text directly.
 var ErrExplicitNull = errors.New("this field cannot be null")
 
 // IsZero reports whether the field is unset so encoding/json omitempty omits it.
-func (n Nullable[T]) IsZero() bool {
+func (n Optional[T]) IsZero() bool {
 	return n.IsUnset()
 }
 
 // MarshalJSON encodes set values; unset fields must use json omitempty.
-func (n Nullable[T]) MarshalJSON() ([]byte, error) {
+func (n Optional[T]) MarshalJSON() ([]byte, error) {
 	if !n.IsSet() {
 		return nil, errMarshalUnset
 	}
@@ -26,7 +26,7 @@ func (n Nullable[T]) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON decodes JSON: null is rejected; values set the field.
-func (n *Nullable[T]) UnmarshalJSON(data []byte) error {
+func (n *Optional[T]) UnmarshalJSON(data []byte) error {
 	if bytes.Equal(bytes.TrimSpace(data), []byte("null")) {
 		return ErrExplicitNull
 	}

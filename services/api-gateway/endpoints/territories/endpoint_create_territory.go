@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to create a territory.
@@ -18,13 +19,13 @@ type CreateTerritoryRequest struct {
 	// State this territory covers.
 	State string `json:"state" validate:"required,max=255"`
 	// Start of ZIP code range (501-99999).
-	StartZipcode *int32 `json:"start_zipcode,omitempty"`
+	StartZipcode field.Optional[int32] `json:"start_zipcode,omitzero"`
 	// End of ZIP code range (501-99999).
-	EndZipcode *int32 `json:"end_zipcode,omitempty"`
+	EndZipcode field.Optional[int32] `json:"end_zipcode,omitzero"`
 	// Sales rep (account user) ID.
 	SalesRepID string `json:"sales_rep_id" validate:"required"`
 	// Product line ID.
-	ProductLineID *string `json:"product_line_id,omitempty" validate:"omitempty"`
+	ProductLineID field.Optional[string] `json:"product_line_id,omitzero" validate:"omitempty"`
 }
 
 var sampleCreateStartZipcode int32 = 10001
@@ -32,8 +33,8 @@ var sampleCreateEndZipcode int32 = 10999
 
 var sampleCreateTerritoryRequest = &CreateTerritoryRequest{
 	State:        "NY",
-	StartZipcode: &sampleCreateStartZipcode,
-	EndZipcode:   &sampleCreateEndZipcode,
+	StartZipcode: field.Some(sampleCreateStartZipcode),
+	EndZipcode:   field.Some(sampleCreateEndZipcode),
 	SalesRepID:   apiresource.SampleAccountUserID,
 }
 

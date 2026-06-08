@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to create a checkout session for a sales order.
@@ -15,9 +16,9 @@ type CheckoutSalesOrderRequest struct {
 	// Email for the checkout session.
 	Email string `json:"email" validate:"required,email"`
 	// Redirect URL on success.
-	SuccessURL *string `json:"success_url,omitempty"`
+	SuccessURL field.Optional[string] `json:"success_url,omitzero"`
 	// Redirect URL on cancel.
-	CancelURL *string `json:"cancel_url,omitempty"`
+	CancelURL field.Optional[string] `json:"cancel_url,omitzero"`
 }
 
 // Checkout session result.

@@ -102,6 +102,7 @@ const (
 	SeedSalesOrderID         = "or_01k0a8bs2yejxbsvqhrx4drkq1"
 	SeedSalesOrderLineID     = "orln_01seediss_ln1_0000"
 	SeedShipmentID           = "sh_01k0a87w33emw8pmkz1mf86cg1"
+	SeedDeliveryID           = "dv_01seeddelivery1_0000"
 	SeedShipmentLineID       = "shln_01seedshpln1_00000"
 	SeedShippingCaseID       = "shcs_01seedshcase1_00000"
 	SeedPickID               = "pk_01k0a5tsn7f7psgagr1732fxqa"
@@ -134,6 +135,100 @@ const (
 	// Request logs (0014_e2e_extras.sql)
 	SeedRequestLogID             = "rqlog_01seedreqlog1_000" // linked from SeedAuditEventID for include=request tests
 	SeedRequestLogIdempotencyKey = "e2e-seed-idempotency-key-01"
+	// SeedRequestLogSearchToken is a distinctive resource id embedded in the path
+	// of rqlog_01seedsearchtgt0 (path=/v1/catalog/items/it_01seedreqlogsrchtgt).
+	// Searching ?q=<token> must return that log via the route/path search.
+	SeedRequestLogSearchToken = "it_01seedreqlogsrchtgt"
+
+	// --- Request-log filter cohorts (0014_e2e_extras.sql) ---
+	// Each filter dimension has a dedicated 3-row cohort sharing a distinctive
+	// scope value (a synthetic normalized_route, or a synthetic host where the
+	// route is itself the dimension under test) that the e2e harness never emits.
+	// A filter test ANDs the scope value with the filter under test so the result
+	// set is exactly the cohort, then asserts two values are included and the
+	// third is excluded. See crud_request_logs_test.go.
+
+	// Shared synthetic host for cohorts scoped by normalized_route.
+	SeedReqLogFilterHost = "rqlog-filter-e2e.test"
+
+	// methods cohort (scope normalized_route=/filtertest/methods).
+	SeedReqLogFilterMethodsRoute = "/filtertest/methods"
+	SeedReqLogFilterMethodGet    = "rqlog_01fltmethget00" // method=GET
+	SeedReqLogFilterMethodPost   = "rqlog_01fltmethpost0" // method=POST
+	SeedReqLogFilterMethodPut    = "rqlog_01fltmethput00" // method=PUT (excluded)
+
+	// status_codes cohort (scope normalized_route=/filtertest/status).
+	SeedReqLogFilterStatusRoute = "/filtertest/status"
+	SeedReqLogFilterStatus200   = "rqlog_01fltstat20000" // status_code=200
+	SeedReqLogFilterStatus404   = "rqlog_01fltstat40400" // status_code=404
+	SeedReqLogFilterStatus500   = "rqlog_01fltstat50000" // status_code=500 (excluded)
+
+	// account_ids cohort (scope normalized_route=/filtertest/accounts).
+	// account_id is the acting account; target_account_id is the seed account on
+	// all three so they are visible. account_id is not surfaced in the response.
+	SeedReqLogFilterAccountsRoute = "/filtertest/accounts"
+	SeedReqLogFilterAccount1      = "rqlog_01fltacct1000" // account_id=SeedAccountID
+	SeedReqLogFilterAccount2      = "rqlog_01fltacct2000" // account_id=SeedCustomerAccountID
+	SeedReqLogFilterAccount3      = "rqlog_01fltacct3000" // account_id=SeedChildAccountID1 (excluded)
+
+	// actor_ids cohort (scope normalized_route=/filtertest/actorids).
+	SeedReqLogFilterActorIDsRoute = "/filtertest/actorids"
+	SeedReqLogFilterActorUser1    = "rqlog_01fltactid100" // actor_id=SeedUserID
+	SeedReqLogFilterActorUser2    = "rqlog_01fltactid200" // actor_id=SeedUser2ID
+	SeedReqLogFilterActorUser3    = "rqlog_01fltactid300" // actor_id=us_fltactor3 (excluded)
+	SeedReqLogFilterActorUser3ID  = "us_fltactor3"
+
+	// actor_types cohort (scope normalized_route=/filtertest/actortypes).
+	SeedReqLogFilterActorTypesRoute = "/filtertest/actortypes"
+	SeedReqLogFilterTypeUser        = "rqlog_01flttypeusr0" // identity_type=user
+	SeedReqLogFilterTypeAPIKey      = "rqlog_01flttypekey0" // identity_type=api_key
+	SeedReqLogFilterTypeInternal    = "rqlog_01flttypeint0" // identity_type=internal (excluded)
+
+	// normalized_routes cohort (scope host=rqlog-route-e2e.test).
+	SeedReqLogFilterRouteHost = "rqlog-route-e2e.test"
+	SeedReqLogFilterRouteA    = "/filtertest/route-a"
+	SeedReqLogFilterRouteB    = "/filtertest/route-b"
+	SeedReqLogFilterRouteC    = "/filtertest/route-c" // excluded
+	SeedReqLogFilterRouteAID  = "rqlog_01fltroutea00"
+	SeedReqLogFilterRouteBID  = "rqlog_01fltrouteb00"
+	SeedReqLogFilterRouteCID  = "rqlog_01fltroutec00"
+
+	// normalized_route param-name drift cohort (scope host=rqlog-drift-e2e.test).
+	// The stored route uses the Go router's snake_case param name; the dashboard
+	// endpoint filter sends the Stainless public-spec form, which camelCases
+	// multi-word path params. The filter compares on route shape, so the
+	// camelCase template must still match the snake_case stored row.
+	SeedReqLogFilterDriftHost   = "rqlog-drift-e2e.test"
+	SeedReqLogFilterDriftStored = "/v1/catalog/unit-groups/{unit_group_id}/units" // as the router stores it
+	SeedReqLogFilterDriftCamel  = "/v1/catalog/unit-groups/{unitGroupId}/units"   // as the dashboard filter sends it
+	SeedReqLogFilterDriftID     = "rqlog_01fltdrift000"
+
+	// hosts cohort (scope normalized_route=/filtertest/hosts).
+	SeedReqLogFilterHostsRoute = "/filtertest/hosts"
+	SeedReqLogFilterHostA      = "rqlog-hosta-e2e.test"
+	SeedReqLogFilterHostB      = "rqlog-hostb-e2e.test"
+	SeedReqLogFilterHostC      = "rqlog-hostc-e2e.test" // excluded
+	SeedReqLogFilterHostAID    = "rqlog_01flthosta000"
+	SeedReqLogFilterHostBID    = "rqlog_01flthostb000"
+	SeedReqLogFilterHostCID    = "rqlog_01flthostc000"
+
+	// min_latency_us cohort (scope normalized_route=/filtertest/latency).
+	SeedReqLogFilterLatencyRoute = "/filtertest/latency"
+	SeedReqLogFilterLatencyLo    = "rqlog_01fltlatlo000" // latency_us=1000 (excluded by threshold)
+	SeedReqLogFilterLatencyMid   = "rqlog_01fltlatmid00" // latency_us=50000
+	SeedReqLogFilterLatencyHi    = "rqlog_01fltlathi000" // latency_us=100000
+
+	// date-range cohort (scope normalized_route=/filtertest/dates).
+	SeedReqLogFilterDatesRoute = "/filtertest/dates"
+	SeedReqLogFilterDateOld    = "rqlog_01fltdateold0" // occurred_at=2023-01-01
+	SeedReqLogFilterDateMid    = "rqlog_01fltdatemid0" // occurred_at=2023-06-01
+	SeedReqLogFilterDateNew    = "rqlog_01fltdatenew0" // occurred_at=2023-12-01
+
+	// error_codes cohort (scope normalized_route=/filtertest/errors).
+	SeedReqLogFilterErrorsRoute   = "/filtertest/errors"
+	SeedReqLogFilterErrorNotFound = "rqlog_01flterrnf000" // error_code=resource_not_found
+	SeedReqLogFilterErrorValidate = "rqlog_01flterrvf000" // error_code=validation_failed
+	SeedReqLogFilterErrorAuth     = "rqlog_01flterrua000" // error_code=unauthorized (excluded)
 
 	// Sandboxes
 	SeedSandboxAccountID = "ac_sandbox_01k0a5smf9ekb8rqg12555zjqb"
@@ -195,10 +290,14 @@ const (
 	SeedAgentAlertID            = "agal_01seede2e_alert002" // alert #2 has agent_run_id + agent_action_id populated
 
 	// Audit / Observability (seeded in 0014_e2e_extras.sql)
-	SeedAuditEventID            = "adev_01seedauditevent02" // event #2 has metadata populated
-	SeedInventoryChangeLogID    = "ivcl_01seedwss000000000" // seeded in 0007_items.sql, enriched in 0014_e2e_extras.sql
-	SeedRequestLogErrorID       = "rqlog_01seedreqlog4_000" // has error_code=validation_failed for filter tests
-	SeedRequestLogQueryParamsID = "rqlog_01seedreqlog5_000" // has query_json populated for include=query_params tests
+	SeedAuditEventID = "adev_01seedauditevent02" // event #2 has metadata populated
+	// adev_01seedsearchtgt01 carries a distinctive resource_id + request_id for
+	// the search ('q') tests. Searching either value must return that event.
+	SeedAuditEventSearchResourceID = "it_01seedauditsrchtgt"
+	SeedAuditEventSearchRequestID  = "rqlog_01seedauditsrchrq"
+	SeedInventoryChangeLogID       = "ivcl_01seedwss000000000" // seeded in 0007_items.sql, enriched in 0014_e2e_extras.sql
+	SeedRequestLogErrorID          = "rqlog_01seedreqlog4_000" // has error_code=validation_failed for filter tests
+	SeedRequestLogQueryParamsID    = "rqlog_01seedreqlog5_000" // has query_json populated for include=query_params tests
 
 	// Tenant B (seeded in 0015_tenant_b_e2e.sql) — used for tenant isolation tests
 	SeedTenantBAccountID = "ac_tenant2_e2e_isolati"
@@ -284,6 +383,7 @@ var pathSpecificIDSeeds = map[string]string{
 	"/v1/operations/rates/":                                              SeedRateID,
 	"/v1/operations/shipments/{shipment_id}/lines/":                      SeedShipmentLineID,
 	"/v1/operations/shipments/":                                          SeedShipmentID,
+	"/v1/operations/deliveries/":                                         SeedDeliveryID,
 	"/v1/operations/shipping-cases/":                                     SeedShippingCaseID,
 	"/v1/operations/shipping-terms/":                                     SeedCustomShippingTermID, // account-owned so owner.account include populates
 	"/v1/operations/locations/":                                          SeedLocationID,

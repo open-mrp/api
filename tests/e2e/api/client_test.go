@@ -51,6 +51,15 @@ func (c *Client) WithAccountID(accountID string) *Client {
 	return NewClient(c.baseURL, c.apiKey, accountID)
 }
 
+// WithBearerToken returns a new Client that authenticates with the given bearer
+// token (e.g. a user access token obtained from login) against accountID. Used
+// to exercise endpoints that require a user identity rather than an API key. In
+// the non-production e2e environment access tokens are accepted in the
+// Authorization header.
+func (c *Client) WithBearerToken(token, accountID string) *Client {
+	return NewClient(c.baseURL, token, accountID)
+}
+
 // Get performs an authenticated GET request with automatic retry on 429.
 func (c *Client) Get(path string, params url.Values) (*http.Response, error) {
 	u := c.baseURL + path

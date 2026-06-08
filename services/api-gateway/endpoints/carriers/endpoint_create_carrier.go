@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to create a carrier.
@@ -16,13 +17,13 @@ type CreateCarrierRequest struct {
 	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
 	// Carrier code.
-	Code *constants.CarrierCode `json:"code"`
+	Code field.Optional[constants.CarrierCode] `json:"code,omitzero"`
 	// Carrier account number. Required for UPS and USPS carriers.
-	AccountNumber *string `json:"account_number" validate:"omitempty,max=255"`
+	AccountNumber field.Optional[string] `json:"account_number,omitzero" validate:"omitempty,max=255"`
 	// Carrier visibility in the customer portal.
 	//
 	// If `visible`, this carrier will be available for your customers to utilize when they go to checkout. If `hidden`, this carrier will not be an option on checkout.
-	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility,omitempty" default:"visible"`
+	CustomerPortalVisibility field.Optional[constants.CustomerPortalVisibility] `json:"customer_portal_visibility,omitzero" default:"visible"`
 }
 
 var sampleCreateCarrierCode = constants.CarrierCodeFedEx
@@ -30,9 +31,9 @@ var sampleCreateCarrierAccountNumber = "1234567890"
 var sampleCreateCarrierVisibility = constants.CustomerPortalVisibilityVisible
 var sampleCreateCarrierRequest = &CreateCarrierRequest{
 	Name:                     "FedEx",
-	Code:                     &sampleCreateCarrierCode,
-	AccountNumber:            &sampleCreateCarrierAccountNumber,
-	CustomerPortalVisibility: &sampleCreateCarrierVisibility,
+	Code:                     field.Some(sampleCreateCarrierCode),
+	AccountNumber:            field.Some(sampleCreateCarrierAccountNumber),
+	CustomerPortalVisibility: field.Some(sampleCreateCarrierVisibility),
 }
 
 func (*CreateCarrierRequest) SchemaExample() any {

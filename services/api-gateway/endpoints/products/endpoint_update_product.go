@@ -10,7 +10,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 )
 
 // UpdateProductRequest is the request to partially update a product.
@@ -18,21 +18,21 @@ type UpdateProductRequest struct {
 	// Product ID.
 	ProductID string `path:"id" validate:"required"`
 	// SKU.
-	SKU *string `json:"sku,omitempty" validate:"omitempty,max=255"`
+	SKU field.Optional[string] `json:"sku,omitzero" validate:"omitempty,max=255"`
 	// Description.
-	Description *patch.Field[string] `json:"description"`
+	Description field.Clearable[string] `json:"description,omitzero"`
 	// Notes.
-	Notes *patch.Field[string] `json:"notes"`
+	Notes field.Clearable[string] `json:"notes,omitzero"`
 	// Whether visible in the customer portal.
-	PortalVisibility *constants.CustomerPortalVisibility `json:"portal_visibility,omitempty"`
+	PortalVisibility field.Optional[constants.CustomerPortalVisibility] `json:"portal_visibility,omitzero"`
 	// Updated unit price. Numerator must be a currency unit; denominator must not be.
-	UnitPrice patch.Nullable[apirequest.RateInput] `json:"unit_price,omitzero"`
+	UnitPrice field.Optional[apirequest.RateInput] `json:"unit_price,omitzero"`
 }
 
 var sampleUpdateProductSKU = "SKU-002"
 
 var sampleUpdateProductRequest = &UpdateProductRequest{
-	SKU: &sampleUpdateProductSKU,
+	SKU: field.Some(sampleUpdateProductSKU),
 }
 
 func (*UpdateProductRequest) SchemaExample() any {

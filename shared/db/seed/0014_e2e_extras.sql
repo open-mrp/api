@@ -173,13 +173,9 @@ INSERT IGNORE INTO carrier (id, code, name, account_id, created_at, updated_at) 
 INSERT IGNORE INTO carrier_option (id, code, name, carrier_id, account_id, created_at, updated_at) VALUES
     ('crop_01seedsysground000', 'ground', 'System Ground', 'syscar_01seedsysdefault', NULL, NOW(), NOW());
 
--- ============================================================
--- DELIVERIES (2 rows for pagination)
--- ============================================================
-
-INSERT IGNORE INTO delivery (id, number, sales_order_id, account_id, delivery_status_code, created_at, updated_at) VALUES
-    ('dv_01seeddelivery1_0000', 'DLV-001', 'or_01k0a8bs2yf909wjkd7ecd6x4z', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'accepted', NOW(), NOW()),
-    ('dv_01seeddelivery2_0000', 'DLV-002', 'or_01k0a8bs2ye3f9p8sj0m4dfmwe', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'accepted', NOW(), NOW());
+-- DELIVERIES are seeded after the PURCHASE ORDERS block below, because a
+-- delivery's sales_order_id references a purchase_order-type order (which is
+-- defined further down in this file).
 
 -- ============================================================
 -- BATCHES (2 rows for scanning station batches)
@@ -308,6 +304,29 @@ INSERT IGNORE INTO audit_event (type_id, actor_id, actor_type, identity_type, ac
 -- Backfill request_id on re-seed when INSERT IGNORE skips existing rows.
 UPDATE audit_event SET request_id = 'rqlog_01seedreqlog1_000' WHERE type_id = 'adev_01seedauditevent02' AND (request_id IS NULL OR request_id = '');
 
+-- Search + multi-actor fixtures.
+--  * adev_01seedsearchtgt01 carries a distinctive resource_id and request_id so
+--    the free-text search ('q') tests can paste an id and find the event. Audit
+--    search now matches resource_id and request_id in addition to resource_type
+--    and action (see queries/audit_event.sql). Far-future occurred_at keeps it on
+--    the first page despite hundreds of newer events other e2e runs generate.
+--  * adev_01seedactor2event0 is authored by the seed API key (a second, distinct
+--    actor) so the multi-actor union filter test has two real actors to combine.
+INSERT IGNORE INTO audit_event (type_id, actor_id, actor_type, identity_type, account_id, action, resource_type, resource_id, changes, metadata, service_name, request_id, occurred_at, created_at) VALUES
+    ('adev_01seedsearchtgt01', 'us_1wjfmmbwg8l7', 'user', 'internal', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'create', 'item', 'it_01seedauditsrchtgt', '[{"field":"name","old_value":null,"new_value":"Audit Search Target"}]', NULL, 'core-service', 'rqlog_01seedauditsrchrq', DATE_ADD(NOW(), INTERVAL 9 YEAR), DATE_ADD(NOW(), INTERVAL 9 YEAR)),
+    ('adev_01seedactor2event0', 'apky_pajbskcck3cabxajdh8h8', 'api_key', 'api_key', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'create', 'item', 'it_01seedauditactor2', '[{"field":"name","old_value":null,"new_value":"Audit Actor Two"}]', NULL, 'core-service', NULL, DATE_ADD(NOW(), INTERVAL 9 YEAR), DATE_ADD(NOW(), INTERVAL 9 YEAR));
+
+-- ============================================================
+-- CATALOG ATTRIBUTE LINKS (give materials and parts a 2nd distinct
+-- attribute so the array-filter union tests for attribute_ids have two
+-- values to combine — see TestArrayFilters_UnionExclusion). `_item_attributes`
+-- is the Prisma m2m join table (A = attribute id, B = item id).
+-- ============================================================
+
+INSERT IGNORE INTO _item_attributes (A, B) VALUES
+    ('at_01seedblack00000000', 'it_01seedyrn1item00000'),  -- material (yarn) gets Black, alongside existing Beige material tags
+    ('at_01seedsmall00000000', 'it_01seedlknitem000000');  -- part (large knitted sock) gets Small, alongside existing Large part tags
+
 -- ============================================================
 -- EMAIL LOGS (2 rows for pagination)
 -- ============================================================
@@ -322,6 +341,8 @@ INSERT IGNORE INTO email_recipient (id, email, email_log_id, created_at, updated
 
 -- ============================================================
 -- REQUEST LOGS (5 rows — 3 for pagination, 1 with an error_code, 1 with query_json for include tests)
+-- actor_id stores the raw actor id the API exposes: user_id (us_…) for user
+-- actors, api_key type_id (apky_…) for api keys.
 -- ============================================================
 
 INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, occurred_at, created_at) VALUES
@@ -335,10 +356,135 @@ INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status
 INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, query_json, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, occurred_at, created_at) VALUES
     ('rqlog_01seedreqlog5_000', 'GET', 'api.augno.com', '/v1/catalog/items', '/v1/catalog/items', '{"limit":10,"status_codes":["200"]}', 200, 8000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', DATE_SUB(NOW(), INTERVAL 3 HOUR), NOW());
 
+-- Search target: a distinctive resource id embedded in the request path so the
+-- free-text search ('q') test can paste that id and find the log. Request log
+-- search matches the literal path (and normalized_route) — see
+-- repository/request_log_list_query.go.
+INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, occurred_at, created_at) VALUES
+    ('rqlog_01seedsearchtgt0', 'GET', 'api.augno.com', '/v1/catalog/items/it_01seedreqlogsrchtgt', '/v1/catalog/items/{id}', 200, 11000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', DATE_SUB(NOW(), INTERVAL 20 MINUTE), NOW());
+
+-- Multi-actor union fixtures. One user-authored and one api_key-authored log,
+-- both with a far-future occurred_at so they stay at the top of any
+-- actor-filtered page. Without this the harness's own continuous api_key traffic
+-- buries the (older) user-authored seed rows past the first page, so a union
+-- filter test could not observe a result for the user actor even though the
+-- filter returns it. See TestRequestLogs_ListFilterByMultipleActorsUnion.
+INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, occurred_at, created_at) VALUES
+    ('rqlog_01sedunionuser0', 'GET', 'api.augno.com', '/v1/catalog/items', '/v1/catalog/items', 200, 10000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', DATE_ADD(NOW(), INTERVAL 9 YEAR), DATE_ADD(NOW(), INTERVAL 9 YEAR)),
+    ('rqlog_01sedunionapik0', 'GET', 'api.augno.com', '/v1/catalog/units', '/v1/catalog/units', 200, 10000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'apky_pajbskcck3cabxajdh8h8', 'api_key', 'api_key', DATE_ADD(NOW(), INTERVAL 9 YEAR), DATE_ADD(NOW(), INTERVAL 9 YEAR));
+
 INSERT IGNORE INTO idempotency_key (type_id, idempotency_key, identity_type, request_method, normalized_route, request_body_hash, scope_hash, recovery_point, target_account_id, actor_id, created_at, updated_at) VALUES
     ('idk_01seedreqlogik001', 'e2e-seed-idempotency-key-01', 'user', 'POST', '/v1/catalog/units', 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', 'finished', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', NOW(3), NOW(3));
 
 UPDATE request_log SET idempotency_key_id = 'idk_01seedreqlogik001' WHERE id = 'rqlog_01seedreqlog2_000';
+
+-- ============================================================
+-- REQUEST LOG FILTER COHORTS (robust per-filter e2e coverage)
+-- ============================================================
+-- The e2e harness emits a continuous stream of its own request_log rows against
+-- the seed account, so a filter test cannot prove exclusion by counting rows or
+-- by inspecting the "most recent" page — the harness noise drowns the seed rows.
+--
+-- These cohorts give every filter dimension a private, deterministic universe:
+--   * Each cohort shares a distinctive scope value the harness NEVER produces — a
+--     synthetic normalized_route (e.g. /filtertest/methods) for most cohorts, or a
+--     synthetic host (rqlog-route-e2e.test) for the route-filter cohort whose
+--     route is itself under test.
+--   * A test ANDs that scope value with the filter under test, so the result set
+--     is exactly the cohort's rows — harness traffic is excluded because it never
+--     carries the synthetic scope value (filters AND across dimensions).
+--   * Each cohort has THREE rows with three distinct values of the dimension; the
+--     test filters by two of them and asserts both are returned and the third is
+--     excluded entirely.
+--
+-- occurred_at is pinned in the past so these rows never surface in the harness-
+-- dominated "recent" window that the pre-existing discovery/shape tests sample;
+-- the filter tests below locate them by scope value, not by recency.
+-- See tests/e2e/api/crud_request_logs_test.go.
+
+-- methods cohort — scope normalized_route=/filtertest/methods, vary method.
+INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, occurred_at, created_at) VALUES
+    ('rqlog_01fltmethget00', 'GET',  'rqlog-filter-e2e.test', '/filtertest/methods', '/filtertest/methods', 200, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', '2022-01-01 00:00:00', NOW()),
+    ('rqlog_01fltmethpost0', 'POST', 'rqlog-filter-e2e.test', '/filtertest/methods', '/filtertest/methods', 201, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', '2022-01-01 00:00:00', NOW()),
+    ('rqlog_01fltmethput00', 'PUT',  'rqlog-filter-e2e.test', '/filtertest/methods', '/filtertest/methods', 200, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', '2022-01-01 00:00:00', NOW());
+
+-- status_codes cohort — scope normalized_route=/filtertest/status, vary status_code.
+INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, occurred_at, created_at) VALUES
+    ('rqlog_01fltstat20000', 'GET', 'rqlog-filter-e2e.test', '/filtertest/status', '/filtertest/status', 200, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', '2022-01-01 00:00:00', NOW()),
+    ('rqlog_01fltstat40400', 'GET', 'rqlog-filter-e2e.test', '/filtertest/status', '/filtertest/status', 404, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', '2022-01-01 00:00:00', NOW()),
+    ('rqlog_01fltstat50000', 'GET', 'rqlog-filter-e2e.test', '/filtertest/status', '/filtertest/status', 500, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', '2022-01-01 00:00:00', NOW());
+
+-- account_ids cohort — scope normalized_route=/filtertest/accounts, vary acting
+-- account_id while keeping target_account_id = the seed (caller) account so all
+-- three rows are visible. account_id is NOT surfaced in the response (the API
+-- exposes target_account_id as `account`), so the test verifies the filter by
+-- which seed-row IDs come back, not by reading a field.
+INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, occurred_at, created_at) VALUES
+    ('rqlog_01fltacct1000', 'GET', 'rqlog-filter-e2e.test', '/filtertest/accounts', '/filtertest/accounts', 200, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', '2022-01-01 00:00:00', NOW()),
+    ('rqlog_01fltacct2000', 'GET', 'rqlog-filter-e2e.test', '/filtertest/accounts', '/filtertest/accounts', 200, 15000, 1, 'ac_01k09wm2fgevdsc344gpbcj30f', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', '2022-01-01 00:00:00', NOW()),
+    ('rqlog_01fltacct3000', 'GET', 'rqlog-filter-e2e.test', '/filtertest/accounts', '/filtertest/accounts', 200, 15000, 1, 'ac_01seedchild_acct0001', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', '2022-01-01 00:00:00', NOW());
+
+-- actor_ids cohort — scope normalized_route=/filtertest/actorids, vary the user
+-- actor (User1 / User2 / User3). Filtering by User1+User2 must include both and
+-- exclude User3 (us_fltactor3, seeded in 0004_auth.sql).
+INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, occurred_at, created_at) VALUES
+    ('rqlog_01fltactid100', 'GET', 'rqlog-filter-e2e.test', '/filtertest/actorids', '/filtertest/actorids', 200, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', '2022-01-01 00:00:00', NOW()),
+    ('rqlog_01fltactid200', 'GET', 'rqlog-filter-e2e.test', '/filtertest/actorids', '/filtertest/actorids', 200, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_6p7460uuwibz', 'user', 'user', '2022-01-01 00:00:00', NOW()),
+    ('rqlog_01fltactid300', 'GET', 'rqlog-filter-e2e.test', '/filtertest/actorids', '/filtertest/actorids', 200, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_fltactor3',    'user', 'user', '2022-01-01 00:00:00', NOW());
+
+-- actor_types cohort — scope normalized_route=/filtertest/actortypes, vary
+-- identity_type (user / api_key / internal). The actor_types filter matches the
+-- identity_type column. Filtering by user+api_key must include those two and
+-- exclude the internal-actor row.
+INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, occurred_at, created_at) VALUES
+    ('rqlog_01flttypeusr0', 'GET', 'rqlog-filter-e2e.test', '/filtertest/actortypes', '/filtertest/actortypes', 200, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7',            'user',    'user',     '2022-01-01 00:00:00', NOW()),
+    ('rqlog_01flttypekey0', 'GET', 'rqlog-filter-e2e.test', '/filtertest/actortypes', '/filtertest/actortypes', 200, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'apky_pajbskcck3cabxajdh8h8', 'api_key', 'api_key',  '2022-01-01 00:00:00', NOW()),
+    ('rqlog_01flttypeint0', 'GET', 'rqlog-filter-e2e.test', '/filtertest/actortypes', '/filtertest/actortypes', 200, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', NULL,                        'internal','internal', '2022-01-01 00:00:00', NOW());
+
+-- normalized_routes cohort — scope host=rqlog-route-e2e.test (the route is the
+-- dimension under test, so the host is the scope), vary normalized_route.
+INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, occurred_at, created_at) VALUES
+    ('rqlog_01fltroutea00', 'GET', 'rqlog-route-e2e.test', '/filtertest/route-a', '/filtertest/route-a', 200, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', '2022-01-01 00:00:00', NOW()),
+    ('rqlog_01fltrouteb00', 'GET', 'rqlog-route-e2e.test', '/filtertest/route-b', '/filtertest/route-b', 200, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', '2022-01-01 00:00:00', NOW()),
+    ('rqlog_01fltroutec00', 'GET', 'rqlog-route-e2e.test', '/filtertest/route-c', '/filtertest/route-c', 200, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', '2022-01-01 00:00:00', NOW());
+
+-- normalized_route param-name drift cohort — scope host=rqlog-drift-e2e.test.
+-- The stored normalized_route uses the Go router's snake_case param name
+-- ({unit_group_id}); the dashboard endpoint filter derives its templates from
+-- the Stainless public spec, which camelCases multi-word path params
+-- ({unitGroupId}). The filter compares on route shape (param names collapsed to
+-- {}), so the camelCase template must still match this snake_case row. Regression
+-- guard for the endpoint filter silently returning zero results on multi-word
+-- path params — see normalizeRouteParams in the platform-service query builder.
+INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, occurred_at, created_at) VALUES
+    ('rqlog_01fltdrift000', 'GET', 'rqlog-drift-e2e.test', '/v1/catalog/unit-groups/ug_seeddrift00/units', '/v1/catalog/unit-groups/{unit_group_id}/units', 200, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', '2022-01-01 00:00:00', NOW());
+
+-- hosts cohort — scope normalized_route=/filtertest/hosts (the host is the
+-- dimension under test), vary host.
+INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, occurred_at, created_at) VALUES
+    ('rqlog_01flthosta000', 'GET', 'rqlog-hosta-e2e.test', '/filtertest/hosts', '/filtertest/hosts', 200, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', '2022-01-01 00:00:00', NOW()),
+    ('rqlog_01flthostb000', 'GET', 'rqlog-hostb-e2e.test', '/filtertest/hosts', '/filtertest/hosts', 200, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', '2022-01-01 00:00:00', NOW()),
+    ('rqlog_01flthostc000', 'GET', 'rqlog-hostc-e2e.test', '/filtertest/hosts', '/filtertest/hosts', 200, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', '2022-01-01 00:00:00', NOW());
+
+-- min_latency_us cohort — scope normalized_route=/filtertest/latency, vary latency.
+INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, occurred_at, created_at) VALUES
+    ('rqlog_01fltlatlo000', 'GET', 'rqlog-filter-e2e.test', '/filtertest/latency', '/filtertest/latency', 200, 1000,   1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', '2022-01-01 00:00:00', NOW()),
+    ('rqlog_01fltlatmid00', 'GET', 'rqlog-filter-e2e.test', '/filtertest/latency', '/filtertest/latency', 200, 50000,  1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', '2022-01-01 00:00:00', NOW()),
+    ('rqlog_01fltlathi000', 'GET', 'rqlog-filter-e2e.test', '/filtertest/latency', '/filtertest/latency', 200, 100000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', '2022-01-01 00:00:00', NOW());
+
+-- date-range cohort — scope normalized_route=/filtertest/dates, vary occurred_at
+-- with fixed absolute timestamps so the start_date / end_date boundary tests are
+-- deterministic. old=2023-01-01, mid=2023-06-01, new=2023-12-01.
+INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, occurred_at, created_at) VALUES
+    ('rqlog_01fltdateold0', 'GET', 'rqlog-filter-e2e.test', '/filtertest/dates', '/filtertest/dates', 200, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', '2023-01-01 00:00:00', NOW()),
+    ('rqlog_01fltdatemid0', 'GET', 'rqlog-filter-e2e.test', '/filtertest/dates', '/filtertest/dates', 200, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', '2023-06-01 00:00:00', NOW()),
+    ('rqlog_01fltdatenew0', 'GET', 'rqlog-filter-e2e.test', '/filtertest/dates', '/filtertest/dates', 200, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', '2023-12-01 00:00:00', NOW());
+
+-- error_codes cohort — scope normalized_route=/filtertest/errors, vary error_code.
+INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, error_code, error_message, occurred_at, created_at) VALUES
+    ('rqlog_01flterrnf000', 'GET',  'rqlog-filter-e2e.test', '/filtertest/errors', '/filtertest/errors', 404, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', 'resource_not_found', 'Resource not found.', '2022-01-01 00:00:00', NOW()),
+    ('rqlog_01flterrvf000', 'POST', 'rqlog-filter-e2e.test', '/filtertest/errors', '/filtertest/errors', 422, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', 'validation_failed',  'Validation failed.', '2022-01-01 00:00:00', NOW()),
+    ('rqlog_01flterrua000', 'GET',  'rqlog-filter-e2e.test', '/filtertest/errors', '/filtertest/errors', 401, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', 'unauthorized',       'Unauthorized.',      '2022-01-01 00:00:00', NOW());
 
 -- ============================================================
 -- ADDRESSES linked to OWNER ACCOUNT (for /v1/sales/addresses pagination)
@@ -480,6 +626,29 @@ UPDATE quantity SET unit_id = 'un_01seedpound00000000'
 UPDATE rate SET denominator_unit_id = 'un_01seedpound00000000'
  WHERE id IN ('rt_01seedpoln1_price000', 'rt_01seedpoln1_cost0000', 'rt_01seedpoln2_price000', 'rt_01seedpoln2_cost0000')
    AND denominator_unit_id = 'un_01seedpair000000000';
+
+-- ============================================================
+-- DELIVERIES (2 rows for pagination)
+-- ============================================================
+-- A delivery is an inbound receipt against a purchase order, so its
+-- sales_order_id references a purchase_order-type order (defined above). Seeded
+-- after the purchase orders and receiving-order lines so the FK targets exist.
+
+INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
+    ('qu_01seeddlvln1_qty000', 20, 'un_01seedpound00000000', NOW(), NOW()),
+    ('qu_01seeddlvln2_qty000', 10, 'un_01seedpound00000000', NOW(), NOW());
+
+INSERT IGNORE INTO rate (id, value, numerator_unit_id, denominator_unit_id, created_at, updated_at) VALUES
+    ('rt_01seeddlvln1_cost00', '4.00', 'dollar', 'un_01seedpound00000000', NOW(), NOW()),
+    ('rt_01seeddlvln2_cost00', '4.25', 'dollar', 'un_01seedpound00000000', NOW(), NOW());
+
+INSERT IGNORE INTO delivery (id, number, sales_order_id, account_id, delivery_status_code, created_at, updated_at) VALUES
+    ('dv_01seeddelivery1_0000', 'DLV-001', 'or_01seedpurchord1_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'accepted', NOW(), NOW()),
+    ('dv_01seeddelivery2_0000', 'DLV-002', 'or_01seedpurchord2_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'accepted', NOW(), NOW());
+
+INSERT IGNORE INTO delivery_line (id, delivery_id, receiving_order_line_id, quantity_id, unit_cost_id, created_at, updated_at) VALUES
+    ('dvln_01seeddlvln1_0000', 'dv_01seeddelivery1_0000', 'rcln_01seedrecvln1_0000', 'qu_01seeddlvln1_qty000', 'rt_01seeddlvln1_cost00', NOW(), NOW()),
+    ('dvln_01seeddlvln2_0000', 'dv_01seeddelivery1_0000', 'rcln_01seedrecvln2_0000', 'qu_01seeddlvln2_qty000', 'rt_01seeddlvln2_cost00', NOW(), NOW());
 
 -- ============================================================
 -- CUSTOMER RICH LINKS (seed-gap fill for `?include=` coverage)

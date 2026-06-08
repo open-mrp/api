@@ -77,6 +77,15 @@ func (m *SalesOrderStatusCode) StringPtr() *string {
 func (m *SalesOrderStatusChange) StringPtr() *string {
 	return stringPtrEnum(m)
 }
+func (m *SalesOrderPaymentStatus) StringPtr() *string {
+	return stringPtrEnum(m)
+}
+func (m *InvoicePaymentStatus) StringPtr() *string {
+	return stringPtrEnum(m)
+}
+func (m *AcknowledgmentStatus) StringPtr() *string {
+	return stringPtrEnum(m)
+}
 func (f *SubassemblyFilter) StringPtr() *string   { return stringPtrEnum(f) }
 func (m *OrderDiscountType) StringPtr() *string   { return stringPtrEnum(m) }
 func (m *SandboxMode) StringPtr() *string         { return stringPtrEnum(m) }

@@ -120,8 +120,8 @@ func (m *productionRunSvcImpl) CreateProductionRun(ctx context.Context, req *Cre
 func (m *productionRunSvcImpl) UpdateProductionRun(ctx context.Context, req *UpdateProductionRunRequest) (*apiresource.ProductionRunDetail, *apierror.APIError) {
 	pbReq := &pb.UpdateProductionRunRequest{
 		Id:                req.ProductionRunID,
-		Number:            req.Number,
-		ResponsibleUserId: req.ResponsibleUserID,
+		Number:            req.Number.Ptr(),
+		ResponsibleUserId: req.ResponsibleUserID.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productionRunEpSvcTracer, "service.production_runs.update", domain.ServiceName,

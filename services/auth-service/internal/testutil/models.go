@@ -82,23 +82,3 @@ type APIKeySvcTestModels struct {
 	ExpiredModel   *apikey.APIKey
 	BadSecretModel *apikey.APIKey
 }
-
-func NewAPIKeySvcTestModels(apiKeyUtils any) *APIKeySvcTestModels {
-	return &APIKeySvcTestModels{}
-}
-
-func (m *APIKeySvcTestModels) SetValidTestModel(secretHash []byte) {
-	m.ValidTestModel = GetValidTestAPIKeyModel(secretHash)
-}
-
-func (m *APIKeySvcTestModels) SetValidProdModel(secretHash []byte) {
-	m.ValidProdModel = GetValidProdAPIKeyModel(secretHash)
-}
-
-func (m *APIKeySvcTestModels) SetExpiredModel(secretHash []byte) {
-	m.ExpiredModel = GetExpiredAPIKeyModel(secretHash)
-}
-
-func (m *APIKeySvcTestModels) SetBadSecretModel(secretHash []byte) {
-	m.BadSecretModel = GetBadSecretAPIKeyModel(secretHash)
-}

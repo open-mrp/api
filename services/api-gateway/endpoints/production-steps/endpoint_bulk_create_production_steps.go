@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Consumption input resolved by SKU.
@@ -17,7 +18,7 @@ type BulkCreateConsumptionInput struct {
 	// Consumption quantity measure.
 	Measure float64 `json:"measure" validate:"required,gt=0"`
 	// Instructions for this consumption.
-	Instructions *string `json:"instructions,omitempty"`
+	Instructions field.Optional[string] `json:"instructions,omitzero"`
 }
 
 // Production output input resolved by SKU.
@@ -41,15 +42,15 @@ type BulkCreateProductionStepInput struct {
 	// Labor time value.
 	LaborTime float64 `json:"labor_time" validate:"required,gt=0"`
 	// Labor time unit abbreviation (default: "hr"). One of: hr, minute, second, day.
-	LaborTimeUnit *string `json:"labor_time_unit,omitempty"`
+	LaborTimeUnit field.Optional[string] `json:"labor_time_unit,omitzero"`
 	// Overhead rate in dollars per hour.
 	OverheadRate float64 `json:"overhead_rate" validate:"required,gt=0"`
 	// Allowances factor (default: 0).
-	Allowances *float64 `json:"allowances,omitempty"`
+	Allowances field.Optional[float64] `json:"allowances,omitzero"`
 	// Leveling factor (default: 0).
-	LevelingFactor *float64 `json:"leveling_factor,omitempty"`
+	LevelingFactor field.Optional[float64] `json:"leveling_factor,omitzero"`
 	// Scanning station name, resolved by name.
-	Station *string `json:"station,omitempty"`
+	Station field.Optional[string] `json:"station,omitzero"`
 }
 
 // Request to bulk create production steps.

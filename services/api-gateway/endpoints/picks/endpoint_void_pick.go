@@ -19,8 +19,8 @@ type VoidPickRequest struct {
 // Voids a pick, cancelling all lines.
 type VoidPickEndpoint struct{}
 
-func (e *VoidPickEndpoint) Materialize() *apiendpoint.APIEndpoint[*VoidPickRequest, *apiresource.PickDetail] {
-	return (&apiendpoint.APIEndpoint[*VoidPickRequest, *apiresource.PickDetail]{
+func (e *VoidPickEndpoint) Materialize() *apiendpoint.APIEndpoint[*VoidPickRequest, *apiresource.Pick] {
+	return (&apiendpoint.APIEndpoint[*VoidPickRequest, *apiresource.Pick]{
 		Title:             "Void Pick",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
@@ -29,7 +29,7 @@ func (e *VoidPickEndpoint) Materialize() *apiendpoint.APIEndpoint[*VoidPickReque
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypePick,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *VoidPickRequest) (*apiresource.PickDetail, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *VoidPickRequest) (*apiresource.Pick, *apierror.APIError) {
 			return svc.(PickSvc).VoidPick
 		},
 	})

@@ -23,16 +23,17 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	CorePurchaseService_ListPurchaseOrders_FullMethodName        = "/core.CorePurchaseService/ListPurchaseOrders"
-	CorePurchaseService_GetPurchaseOrder_FullMethodName          = "/core.CorePurchaseService/GetPurchaseOrder"
-	CorePurchaseService_CreatePurchaseOrder_FullMethodName       = "/core.CorePurchaseService/CreatePurchaseOrder"
-	CorePurchaseService_UpdatePurchaseOrder_FullMethodName       = "/core.CorePurchaseService/UpdatePurchaseOrder"
-	CorePurchaseService_DeletePurchaseOrder_FullMethodName       = "/core.CorePurchaseService/DeletePurchaseOrder"
-	CorePurchaseService_BulkDeletePurchaseOrders_FullMethodName  = "/core.CorePurchaseService/BulkDeletePurchaseOrders"
-	CorePurchaseService_ChangePurchaseOrderStatus_FullMethodName = "/core.CorePurchaseService/ChangePurchaseOrderStatus"
-	CorePurchaseService_CreatePurchaseOrderLine_FullMethodName   = "/core.CorePurchaseService/CreatePurchaseOrderLine"
-	CorePurchaseService_UpdatePurchaseOrderLine_FullMethodName   = "/core.CorePurchaseService/UpdatePurchaseOrderLine"
-	CorePurchaseService_DeletePurchaseOrderLine_FullMethodName   = "/core.CorePurchaseService/DeletePurchaseOrderLine"
+	CorePurchaseService_ListPurchaseOrders_FullMethodName          = "/core.CorePurchaseService/ListPurchaseOrders"
+	CorePurchaseService_GetPurchaseOrder_FullMethodName            = "/core.CorePurchaseService/GetPurchaseOrder"
+	CorePurchaseService_BatchGetPurchaseOrdersByIDs_FullMethodName = "/core.CorePurchaseService/BatchGetPurchaseOrdersByIDs"
+	CorePurchaseService_CreatePurchaseOrder_FullMethodName         = "/core.CorePurchaseService/CreatePurchaseOrder"
+	CorePurchaseService_UpdatePurchaseOrder_FullMethodName         = "/core.CorePurchaseService/UpdatePurchaseOrder"
+	CorePurchaseService_DeletePurchaseOrder_FullMethodName         = "/core.CorePurchaseService/DeletePurchaseOrder"
+	CorePurchaseService_BulkDeletePurchaseOrders_FullMethodName    = "/core.CorePurchaseService/BulkDeletePurchaseOrders"
+	CorePurchaseService_ChangePurchaseOrderStatus_FullMethodName   = "/core.CorePurchaseService/ChangePurchaseOrderStatus"
+	CorePurchaseService_CreatePurchaseOrderLine_FullMethodName     = "/core.CorePurchaseService/CreatePurchaseOrderLine"
+	CorePurchaseService_UpdatePurchaseOrderLine_FullMethodName     = "/core.CorePurchaseService/UpdatePurchaseOrderLine"
+	CorePurchaseService_DeletePurchaseOrderLine_FullMethodName     = "/core.CorePurchaseService/DeletePurchaseOrderLine"
 )
 
 // CorePurchaseServiceClient is the client API for CorePurchaseService service.
@@ -43,6 +44,8 @@ type CorePurchaseServiceClient interface {
 	ListPurchaseOrders(ctx context.Context, in *ListPurchaseOrdersRequest, opts ...grpc.CallOption) (*ListPurchaseOrdersResponse, error)
 	// GetPurchaseOrder returns a single purchase order by ID.
 	GetPurchaseOrder(ctx context.Context, in *GetPurchaseOrderRequest, opts ...grpc.CallOption) (*GetPurchaseOrderResponse, error)
+	// Returns purchase orders by ID for the api-gateway include resolver.
+	BatchGetPurchaseOrdersByIDs(ctx context.Context, in *BatchGetPurchaseOrdersByIDsRequest, opts ...grpc.CallOption) (*BatchGetPurchaseOrdersByIDsResponse, error)
 	// CreatePurchaseOrder creates a new purchase order.
 	CreatePurchaseOrder(ctx context.Context, in *CreatePurchaseOrderRequest, opts ...grpc.CallOption) (*CreatePurchaseOrderResponse, error)
 	// UpdatePurchaseOrder updates an existing purchase order.
@@ -83,6 +86,16 @@ func (c *corePurchaseServiceClient) GetPurchaseOrder(ctx context.Context, in *Ge
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetPurchaseOrderResponse)
 	err := c.cc.Invoke(ctx, CorePurchaseService_GetPurchaseOrder_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *corePurchaseServiceClient) BatchGetPurchaseOrdersByIDs(ctx context.Context, in *BatchGetPurchaseOrdersByIDsRequest, opts ...grpc.CallOption) (*BatchGetPurchaseOrdersByIDsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BatchGetPurchaseOrdersByIDsResponse)
+	err := c.cc.Invoke(ctx, CorePurchaseService_BatchGetPurchaseOrdersByIDs_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -177,6 +190,8 @@ type CorePurchaseServiceServer interface {
 	ListPurchaseOrders(context.Context, *ListPurchaseOrdersRequest) (*ListPurchaseOrdersResponse, error)
 	// GetPurchaseOrder returns a single purchase order by ID.
 	GetPurchaseOrder(context.Context, *GetPurchaseOrderRequest) (*GetPurchaseOrderResponse, error)
+	// Returns purchase orders by ID for the api-gateway include resolver.
+	BatchGetPurchaseOrdersByIDs(context.Context, *BatchGetPurchaseOrdersByIDsRequest) (*BatchGetPurchaseOrdersByIDsResponse, error)
 	// CreatePurchaseOrder creates a new purchase order.
 	CreatePurchaseOrder(context.Context, *CreatePurchaseOrderRequest) (*CreatePurchaseOrderResponse, error)
 	// UpdatePurchaseOrder updates an existing purchase order.
@@ -208,6 +223,9 @@ func (UnimplementedCorePurchaseServiceServer) ListPurchaseOrders(context.Context
 }
 func (UnimplementedCorePurchaseServiceServer) GetPurchaseOrder(context.Context, *GetPurchaseOrderRequest) (*GetPurchaseOrderResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetPurchaseOrder not implemented")
+}
+func (UnimplementedCorePurchaseServiceServer) BatchGetPurchaseOrdersByIDs(context.Context, *BatchGetPurchaseOrdersByIDsRequest) (*BatchGetPurchaseOrdersByIDsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BatchGetPurchaseOrdersByIDs not implemented")
 }
 func (UnimplementedCorePurchaseServiceServer) CreatePurchaseOrder(context.Context, *CreatePurchaseOrderRequest) (*CreatePurchaseOrderResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreatePurchaseOrder not implemented")
@@ -286,6 +304,24 @@ func _CorePurchaseService_GetPurchaseOrder_Handler(srv interface{}, ctx context.
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CorePurchaseServiceServer).GetPurchaseOrder(ctx, req.(*GetPurchaseOrderRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CorePurchaseService_BatchGetPurchaseOrdersByIDs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchGetPurchaseOrdersByIDsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CorePurchaseServiceServer).BatchGetPurchaseOrdersByIDs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CorePurchaseService_BatchGetPurchaseOrdersByIDs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CorePurchaseServiceServer).BatchGetPurchaseOrdersByIDs(ctx, req.(*BatchGetPurchaseOrdersByIDsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -448,6 +484,10 @@ var CorePurchaseService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetPurchaseOrder",
 			Handler:    _CorePurchaseService_GetPurchaseOrder_Handler,
+		},
+		{
+			MethodName: "BatchGetPurchaseOrdersByIDs",
+			Handler:    _CorePurchaseService_BatchGetPurchaseOrdersByIDs_Handler,
 		},
 		{
 			MethodName: "CreatePurchaseOrder",

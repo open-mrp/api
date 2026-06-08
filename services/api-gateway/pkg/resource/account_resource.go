@@ -48,25 +48,6 @@ func (*Account) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleAccount)
 }
 
-func ExpandableAccountStub(id, name string, ts time.Time) *Account {
-	if id == "" {
-		id = SampleAccountID
-	}
-	if name == "" {
-		name = SampleAccountName
-	}
-	if ts.IsZero() {
-		ts = time.Unix(0, 0).UTC()
-	}
-	return &Account{
-		ID:        id,
-		Object:    constants.ObjectTypeAccount,
-		Name:      name,
-		CreatedAt: ts,
-		UpdatedAt: ts,
-	}
-}
-
 // Branding metadata for an account.
 type AccountBranding struct {
 	// Branding ID.

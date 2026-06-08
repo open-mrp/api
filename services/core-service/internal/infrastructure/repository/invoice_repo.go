@@ -237,6 +237,7 @@ func (r *invoiceRepoImpl) Get(ctx context.Context, params domain.GetInvoiceParam
 		Number:                row.Number,
 		OrderID:               row.OrderID,
 		OrderNumber:           row.OrderNumber,
+		CustomerID:            row.CustomerID,
 		BillingAddressID:      row.BillingAddressID,
 		BillingAddressCountry: row.BillingAddressCountry,
 		IsPaidInFull:          row.IsPaidInFull,
@@ -246,6 +247,10 @@ func (r *invoiceRepoImpl) Get(ctx context.Context, params domain.GetInvoiceParam
 		AcceptsInvoiceEmails:  row.AcceptsInvoiceEmails != 0,
 		CreatedAt:             row.CreatedAt,
 		UpdatedAt:             row.UpdatedAt,
+	}
+
+	if row.PaymentTermID.Valid {
+		invoice.PaymentTermID = &row.PaymentTermID.String
 	}
 
 	if row.Note.Valid {

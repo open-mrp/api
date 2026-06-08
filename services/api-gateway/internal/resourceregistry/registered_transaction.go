@@ -14,21 +14,37 @@ func init() {
 		ObjectType: constants.ObjectTypeTransaction,
 		Load:       resourceloaders.LoadTransactions,
 		Subs: []resourcekit.SubField{
-			{Key: "customer", Populate: populateCustomerOnTransaction},
+			{
+				Key:         "customer",
+				Target:      constants.ObjectTypeCustomer,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractIDs:  extractCustomerIDFromTransaction,
+				Populate:    populateCustomerOnTransaction,
+			},
 			{Key: "responsible_user", Populate: populateResponsibleUserOnTransaction},
 			{Key: "allocations", Cardinality: resourcekit.CardinalityList, Populate: populateAllocationsOnTransaction},
 		},
 	})
 }
 
-func populateCustomerOnTransaction(ctx context.Context, parent any, _ map[string]any) {
+func extractCustomerIDFromTransaction(ctx context.Context, parent any) []string {
 	tx := parent.(*apiresource.TransactionDetail)
-	v, ok := resourcekit.GetLoadMeta(ctx).
-		Get(constants.ObjectTypeTransaction, tx.ID, "customer")
-	if !ok {
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeTransaction, tx.ID, "customer_id")
+	if id == "" {
+		return nil
+	}
+	return []string{id}
+}
+
+func populateCustomerOnTransaction(ctx context.Context, parent any, loaded map[string]any) {
+	tx := parent.(*apiresource.TransactionDetail)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeTransaction, tx.ID, "customer_id")
+	if id == "" {
 		return
 	}
-	tx.Customer = v.(*apiresource.Customer)
+	if v, ok := loaded[id]; ok {
+		tx.Customer = v.(*apiresource.Customer)
+	}
 }
 
 func populateResponsibleUserOnTransaction(ctx context.Context, parent any, _ map[string]any) {

@@ -9,7 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to partially update an address.
@@ -17,31 +17,31 @@ type UpdateAddressRequest struct {
 	// Address ID.
 	AddressID string `path:"id" validate:"required"`
 	// Display name of the address.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// Phone number associated with the address.
-	Phone *patch.Field[string] `json:"phone,omitempty" validate:"omitempty,max=255"`
+	Phone field.Clearable[string] `json:"phone,omitzero" validate:"omitempty,max=255"`
 	// Email address associated with the address.
-	Email *patch.Field[string] `json:"email,omitempty" validate:"omitempty,max=255"`
+	Email field.Clearable[string] `json:"email,omitzero" validate:"omitempty,max=255"`
 	// Address type.
-	Type *constants.AddressType `json:"type,omitempty"`
+	Type field.Optional[constants.AddressType] `json:"type,omitzero"`
 	// First line of the street address.
-	StreetLine1 *string `json:"street_line_1,omitempty" validate:"omitempty,max=255"`
+	StreetLine1 field.Optional[string] `json:"street_line_1,omitzero" validate:"omitempty,max=255"`
 	// Second line of the street address.
-	StreetLine2 *patch.Field[string] `json:"street_line_2,omitempty" validate:"omitempty,max=255"`
+	StreetLine2 field.Clearable[string] `json:"street_line_2,omitzero" validate:"omitempty,max=255"`
 	// City or locality.
-	Locality *string `json:"locality,omitempty" validate:"omitempty,max=255"`
+	Locality field.Optional[string] `json:"locality,omitzero" validate:"omitempty,max=255"`
 	// State or administrative area.
-	State *string `json:"state,omitempty" validate:"omitempty,max=255"`
+	State field.Optional[string] `json:"state,omitzero" validate:"omitempty,max=255"`
 	// Postal or ZIP code.
-	PostalCode *string `json:"postal_code,omitempty" validate:"omitempty,max=255"`
+	PostalCode field.Optional[string] `json:"postal_code,omitzero" validate:"omitempty,max=255"`
 	// Two-letter country code.
-	Country *string `json:"country,omitempty" validate:"omitempty,max=2"`
+	Country field.Optional[string] `json:"country,omitzero" validate:"omitempty,max=2"`
 }
 
 var sampleUpdateName = "Warehouse"
 
 var sampleUpdateAddressRequest = &UpdateAddressRequest{
-	Name: &sampleUpdateName,
+	Name: field.Some(sampleUpdateName),
 }
 
 func (*UpdateAddressRequest) SchemaExample() any {

@@ -103,7 +103,7 @@ type TransactionAllocation struct {
 	// Associated transaction. Expandable via include[]=allocations.transaction.
 	Transaction *TransactionDetail `json:"transaction" expandable:"true"`
 	// Associated invoice.
-	Invoice *InvoiceSummary `json:"invoice"`
+	Invoice *AllocationInvoice `json:"invoice"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.

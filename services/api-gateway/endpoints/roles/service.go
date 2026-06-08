@@ -130,8 +130,8 @@ func (m *roleSvcImpl) CreateRole(ctx context.Context, req *CreateRoleRequest) (*
 
 func (m *roleSvcImpl) UpdateRole(ctx context.Context, req *UpdateRoleRequest) (*apiresource.Role, *apierror.APIError) {
 	var name string
-	if req.Name != nil {
-		name = *req.Name
+	if v, ok := req.Name.Value(); ok {
+		name = v
 	}
 
 	pbReq := &pb.UpdateRoleRequest{
@@ -139,9 +139,9 @@ func (m *roleSvcImpl) UpdateRole(ctx context.Context, req *UpdateRoleRequest) (*
 		Name: name,
 	}
 
-	if req.Permissions != nil {
+	if perms, ok := req.Permissions.Value(); ok {
 		pbReq.HasPermissions = true
-		pbPerms, apiErr := parsePermissionStrings(*req.Permissions)
+		pbPerms, apiErr := parsePermissionStrings(perms)
 		if apiErr != nil {
 			return nil, apiErr
 		}

@@ -492,7 +492,6 @@ SELECT
     uc_du.id AS unit_cost_denominator_unit_id,
     uc_du.abbreviation AS unit_cost_denominator_unit_abbreviation,
     -- Timestamps
-    sol.completed_at,
     sol.created_at,
     sol.updated_at
 FROM sales_order_line sol

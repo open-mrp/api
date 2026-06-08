@@ -17,8 +17,8 @@ type RetrievePickRequest struct {
 // Returns a pick by ID.
 type RetrievePickEndpoint struct{}
 
-func (e *RetrievePickEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrievePickRequest, *apiresource.PickDetail] {
-	return (&apiendpoint.APIEndpoint[*RetrievePickRequest, *apiresource.PickDetail]{
+func (e *RetrievePickEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrievePickRequest, *apiresource.Pick] {
+	return (&apiendpoint.APIEndpoint[*RetrievePickRequest, *apiresource.Pick]{
 		Title:             "Retrieve Pick",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
@@ -27,13 +27,14 @@ func (e *RetrievePickEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveP
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypePick,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrievePickRequest) (*apiresource.PickDetail, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrievePickRequest) (*apiresource.Pick, *apierror.APIError) {
 			return svc.(PickSvc).GetPick
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypePick,
 			Fields: []string{
 				"sales_order",
+				"customer",
 				"departments",
 				"lines",
 				"lines.sales_order_line",

@@ -16,20 +16,19 @@ func init() {
 		Subs: []resourcekit.SubField{
 			{Key: "lines", Populate: populateLinesOnShipment},
 			{Key: "shipping_cases", Populate: populateShippingCasesOnShipment},
-			{Key: "sales_order", Populate: populateSalesOrderOnShipment},
-			{Key: "customer", Populate: populateCustomerOnShipment},
-			{Key: "carrier", Populate: populateCarrierOnShipment},
-			{Key: "service_level", Populate: populateServiceLevelOnShipment},
-			{Key: "shipping_address", Populate: populateShippingAddressOnShipment},
-			{Key: "shipped_by", Populate: populateShippedByOnShipment},
-			{Key: "invoice", Populate: populateInvoiceOnShipment},
-			{Key: "pick", Populate: populatePickOnShipment},
+			{Key: "freight", Populate: populateFreightOnShipment},
+			{Key: "sales_order", Target: constants.ObjectTypeSalesOrder, Cardinality: resourcekit.CardinalityOnePtr, ExtractIDs: extractSalesOrderIDFromShipment, Populate: populateSalesOrderOnShipment},
+			{Key: "customer", Target: constants.ObjectTypeCustomer, Cardinality: resourcekit.CardinalityOnePtr, ExtractIDs: extractCustomerIDFromShipment, Populate: populateCustomerOnShipment},
+			{Key: "shipping_address", Target: constants.ObjectTypeAddress, Cardinality: resourcekit.CardinalityOnePtr, ExtractIDs: extractShippingAddressIDFromShipment, Populate: populateShippingAddressOnShipment},
+			{Key: "shipped_by", Target: constants.ObjectTypeAccountUser, Cardinality: resourcekit.CardinalityOnePtr, ExtractIDs: extractShippedByIDFromShipment, Populate: populateShippedByOnShipment},
+			{Key: "invoice", Target: constants.ObjectTypeInvoice, Cardinality: resourcekit.CardinalityOnePtr, ExtractIDs: extractInvoiceIDFromShipment, Populate: populateInvoiceOnShipment},
+			{Key: "pick", Target: constants.ObjectTypePick, Cardinality: resourcekit.CardinalityOnePtr, ExtractIDs: extractPickIDFromShipment, Populate: populatePickOnShipment},
 		},
 	})
 }
 
 func populateLinesOnShipment(ctx context.Context, parent any, _ map[string]any) {
-	s := parent.(*apiresource.ShipmentDetail)
+	s := parent.(*apiresource.Shipment)
 	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeShipment, s.ID, "lines")
 	if !ok {
 		return
@@ -38,7 +37,7 @@ func populateLinesOnShipment(ctx context.Context, parent any, _ map[string]any) 
 }
 
 func populateShippingCasesOnShipment(ctx context.Context, parent any, _ map[string]any) {
-	s := parent.(*apiresource.ShipmentDetail)
+	s := parent.(*apiresource.Shipment)
 	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeShipment, s.ID, "shipping_cases")
 	if !ok {
 		return
@@ -46,74 +45,131 @@ func populateShippingCasesOnShipment(ctx context.Context, parent any, _ map[stri
 	s.ShippingCases = v.(*apiresource.List[apiresource.ShippingCaseDetail])
 }
 
-func populateSalesOrderOnShipment(ctx context.Context, parent any, _ map[string]any) {
-	s := parent.(*apiresource.ShipmentDetail)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeShipment, s.ID, "sales_order")
+func populateFreightOnShipment(ctx context.Context, parent any, _ map[string]any) {
+	s := parent.(*apiresource.Shipment)
+	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeShipment, s.ID, "freight")
 	if !ok {
 		return
 	}
-	s.SalesOrder = v.(*apiresource.SalesOrderDetail)
+	s.Freight = v.(*apiresource.Freight)
 }
 
-func populateCustomerOnShipment(ctx context.Context, parent any, _ map[string]any) {
-	s := parent.(*apiresource.ShipmentDetail)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeShipment, s.ID, "customer")
-	if !ok {
-		return
+func extractSalesOrderIDFromShipment(ctx context.Context, parent any) []string {
+	s := parent.(*apiresource.Shipment)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeShipment, s.ID, "sales_order_id")
+	if id == "" {
+		return nil
 	}
-	s.Customer = v.(*apiresource.Customer)
+	return []string{id}
 }
 
-func populateCarrierOnShipment(ctx context.Context, parent any, _ map[string]any) {
-	s := parent.(*apiresource.ShipmentDetail)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeShipment, s.ID, "carrier")
-	if !ok {
+func populateSalesOrderOnShipment(ctx context.Context, parent any, loaded map[string]any) {
+	s := parent.(*apiresource.Shipment)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeShipment, s.ID, "sales_order_id")
+	if id == "" {
 		return
 	}
-	s.Carrier = v.(*apiresource.Carrier)
+	if v, ok := loaded[id]; ok {
+		s.SalesOrder = v.(*apiresource.SalesOrder)
+	}
 }
 
-func populateServiceLevelOnShipment(ctx context.Context, parent any, _ map[string]any) {
-	s := parent.(*apiresource.ShipmentDetail)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeShipment, s.ID, "service_level")
-	if !ok {
-		return
+func extractCustomerIDFromShipment(ctx context.Context, parent any) []string {
+	s := parent.(*apiresource.Shipment)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeShipment, s.ID, "customer_id")
+	if id == "" {
+		return nil
 	}
-	s.ServiceLevel = v.(*apiresource.ServiceLevel)
+	return []string{id}
 }
 
-func populateShippingAddressOnShipment(ctx context.Context, parent any, _ map[string]any) {
-	s := parent.(*apiresource.ShipmentDetail)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeShipment, s.ID, "shipping_address")
-	if !ok {
+func populateCustomerOnShipment(ctx context.Context, parent any, loaded map[string]any) {
+	s := parent.(*apiresource.Shipment)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeShipment, s.ID, "customer_id")
+	if id == "" {
 		return
 	}
-	s.ShippingAddress = v.(*apiresource.Address)
+	if v, ok := loaded[id]; ok {
+		s.Customer = v.(*apiresource.Customer)
+	}
 }
 
-func populateShippedByOnShipment(ctx context.Context, parent any, _ map[string]any) {
-	s := parent.(*apiresource.ShipmentDetail)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeShipment, s.ID, "shipped_by")
-	if !ok {
-		return
+func extractShippingAddressIDFromShipment(ctx context.Context, parent any) []string {
+	s := parent.(*apiresource.Shipment)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeShipment, s.ID, "shipping_address_id")
+	if id == "" {
+		return nil
 	}
-	s.ShippedBy = v.(*apiresource.AccountUser)
+	return []string{id}
 }
 
-func populateInvoiceOnShipment(ctx context.Context, parent any, _ map[string]any) {
-	s := parent.(*apiresource.ShipmentDetail)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeShipment, s.ID, "invoice")
-	if !ok {
+func populateShippingAddressOnShipment(ctx context.Context, parent any, loaded map[string]any) {
+	s := parent.(*apiresource.Shipment)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeShipment, s.ID, "shipping_address_id")
+	if id == "" {
 		return
 	}
-	s.Invoice = v.(*apiresource.Invoice)
+	if v, ok := loaded[id]; ok {
+		s.ShippingAddress = v.(*apiresource.Address)
+	}
 }
 
-func populatePickOnShipment(ctx context.Context, parent any, _ map[string]any) {
-	s := parent.(*apiresource.ShipmentDetail)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeShipment, s.ID, "pick")
-	if !ok {
+func extractShippedByIDFromShipment(ctx context.Context, parent any) []string {
+	s := parent.(*apiresource.Shipment)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeShipment, s.ID, "shipped_by_id")
+	if id == "" {
+		return nil
+	}
+	return []string{id}
+}
+
+func populateShippedByOnShipment(ctx context.Context, parent any, loaded map[string]any) {
+	s := parent.(*apiresource.Shipment)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeShipment, s.ID, "shipped_by_id")
+	if id == "" {
 		return
 	}
-	s.Pick = v.(*apiresource.PickDetail)
+	if v, ok := loaded[id]; ok {
+		s.ShippedBy = v.(*apiresource.AccountUser)
+	}
+}
+
+func extractInvoiceIDFromShipment(ctx context.Context, parent any) []string {
+	s := parent.(*apiresource.Shipment)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeShipment, s.ID, "invoice_id")
+	if id == "" {
+		return nil
+	}
+	return []string{id}
+}
+
+func populateInvoiceOnShipment(ctx context.Context, parent any, loaded map[string]any) {
+	s := parent.(*apiresource.Shipment)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeShipment, s.ID, "invoice_id")
+	if id == "" {
+		return
+	}
+	if v, ok := loaded[id]; ok {
+		s.Invoice = v.(*apiresource.Invoice)
+	}
+}
+
+func extractPickIDFromShipment(ctx context.Context, parent any) []string {
+	s := parent.(*apiresource.Shipment)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeShipment, s.ID, "pick_id")
+	if id == "" {
+		return nil
+	}
+	return []string{id}
+}
+
+func populatePickOnShipment(ctx context.Context, parent any, loaded map[string]any) {
+	s := parent.(*apiresource.Shipment)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeShipment, s.ID, "pick_id")
+	if id == "" {
+		return
+	}
+	if v, ok := loaded[id]; ok {
+		s.Pick = v.(*apiresource.Pick)
+	}
 }

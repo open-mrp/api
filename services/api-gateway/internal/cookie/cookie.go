@@ -58,52 +58,6 @@ func setRefreshTokenCookie(w http.ResponseWriter, token string, opts cookieOptio
 	http.SetCookie(w, makeRefreshTokenCookie(token, opts))
 }
 
-func clearAccessTokenCookie(w http.ResponseWriter, opts cookieOptions) {
-	http.SetCookie(w, makeClearAccessTokenCookie(opts))
-}
-
-func clearRefreshTokenCookie(w http.ResponseWriter, opts cookieOptions) {
-	http.SetCookie(w, makeClearRefreshTokenCookie(opts))
-}
-
-func SetAuthCookies(ctx context.Context, w http.ResponseWriter, accessToken, refreshToken string) {
-	platform, okp := appctx.GetPlatformFromContext(ctx)
-	if !okp {
-		panic("platform not found in context")
-	}
-	isProduction := platform == constants.PlatformModeProduction
-
-	setAccessTokenCookie(w, accessToken, getCookieOptions(isProduction, "/"))
-	setRefreshTokenCookie(w, refreshToken, getCookieOptions(isProduction, authRoutePrefix))
-}
-
-func SetAccessTokenCookie(ctx context.Context, w http.ResponseWriter, accessToken string) {
-	platform, okp := appctx.GetPlatformFromContext(ctx)
-	if !okp {
-		panic("platform not found in context")
-	}
-	isProduction := platform == constants.PlatformModeProduction
-	setAccessTokenCookie(w, accessToken, getCookieOptions(isProduction, "/"))
-}
-
-func ClearRefreshTokenCookie(ctx context.Context, w http.ResponseWriter) {
-	platform, okp := appctx.GetPlatformFromContext(ctx)
-	if !okp {
-		panic("platform not found in context")
-	}
-	isProduction := platform == constants.PlatformModeProduction
-	clearRefreshTokenCookie(w, getCookieOptions(isProduction, authRoutePrefix))
-}
-
-func ClearAccessTokenCookie(ctx context.Context, w http.ResponseWriter) {
-	platform, okp := appctx.GetPlatformFromContext(ctx)
-	if !okp {
-		panic("platform not found in context")
-	}
-	isProduction := platform == constants.PlatformModeProduction
-	clearAccessTokenCookie(w, getCookieOptions(isProduction, "/"))
-}
-
 func GetAccessTokenFromRequest(r *http.Request) (string, *apierror.APIError) {
 	cookie, err := r.Cookie(accessTokenCookieName)
 	if err != nil || cookie == nil || cookie.Value == "" {

@@ -49,6 +49,9 @@ func (r *requestLogRepoImpl) Create(ctx context.Context, rl *domain.RequestLog) 
 		statusCode = 500
 	}
 
+	// rl.ActorID is the raw actor id the API exposes — the user_id for a user
+	// actor, or the api_key type_id for an api_key actor (set from the identity by
+	// the gateway). Stored as-is.
 	err := r.db.CreateRequestLog(ctx, sqlc.CreateRequestLogParams{
 		ID:                   rl.ID,
 		Method:               rl.Method,
@@ -156,12 +159,8 @@ func (r *requestLogRepoImpl) List(ctx context.Context, targetAccountID string, f
 		dir = decoded.Direction
 	}
 
-	resolvedActorIDs, err := r.resolveActorIDFilter(ctx, filter.ActorIDs)
-	if err != nil {
-		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to resolve actor filter."))
-	}
-	filter.ActorIDs = resolvedActorIDs
-
+	// actor_id stores the raw id the API exposes (user_id for user actors), so the
+	// caller's filter.ActorIDs match rl.actor_id directly — no translation.
 	rawSQL, args := buildListQuery(mode, dir, targetAccountID, filter,
 		includeQueryJSON, includeRequestBody, includeResponseBody, cur, limit+1)
 
@@ -190,55 +189,6 @@ func (r *requestLogRepoImpl) List(ctx context.Context, targetAccountID string, f
 
 	paged, pageInfo := pagination.BuildPageString(results, limit, cursorDir, requestLogOccurredAt, requestLogID)
 	return &domain.ListRequestLogsResult{RequestLogs: paged, PageInfo: pageInfo}, nil
-}
-
-// resolveActorIDFilter translates the externally-exposed actor ids in an actor
-// filter to the raw rl.actor_id values stored in request_log, so the list query
-// can filter on the bare, indexed rl.actor_id column instead of a non-sargable
-// COALESCE(au.id, rl.actor_id) expression.
-//
-// The API exposes account_user.id as a user actor's id (via the
-// COALESCE(au.id, rl.actor_id) projection), but request_log.actor_id stores the
-// underlying user_id, so account_user ids are mapped back to user_id here. API
-// key actor ids are already stored as-is (rl.actor_id == api_key type_id) and
-// pass through unchanged.
-//
-// The mapping is by account_user.id (a globally-unique primary key), NOT scoped to
-// the viewed account: the dashboard actor picker can surface an account_user that
-// belongs to a different account than the one whose logs are being viewed (e.g. an
-// internal/admin actor, or a team list scoped to another account). Scoping the
-// lookup to the viewed account left those ids unresolved, so the raw account_user
-// id was passed through and matched no rows.
-//
-// Translation is attempted for EVERY supplied id, not just ids carrying the acus_
-// type prefix: account_user / user ids are not guaranteed to be prefixed type ids
-// (UUID-keyed identity records exist), so a prefix gate silently skipped the
-// translation and filtered the raw account_user id against rl.actor_id — matching
-// nothing. Ids that are not account_user ids (api_key type_ids, or ids already
-// equal to a user_id) match no account_user row and pass through unchanged.
-func (r *requestLogRepoImpl) resolveActorIDFilter(ctx context.Context, actorIDs []string) ([]string, error) {
-	if len(actorIDs) == 0 {
-		return actorIDs, nil
-	}
-
-	rows, err := r.db.ResolveAccountUserActorIDs(ctx, actorIDs)
-	if err != nil {
-		return nil, err
-	}
-	userByAccountUser := make(map[string]string, len(rows))
-	for _, row := range rows {
-		userByAccountUser[row.ID] = row.UserID
-	}
-
-	resolved := make([]string, 0, len(actorIDs))
-	for _, a := range actorIDs {
-		if userID, ok := userByAccountUser[a]; ok {
-			resolved = append(resolved, userID)
-			continue
-		}
-		resolved = append(resolved, a)
-	}
-	return resolved, nil
 }
 
 // anyIncludeRequested returns true when any of the given keys is present in includes.
@@ -402,7 +352,7 @@ func mapRowToRequestLogRead(row *sqlc.FindRequestLogByIDRow) *domain.RequestLogR
 	rl.ResponseJSON = anyToStringPtr(row.ResponseBodyJson)
 
 	identType := db.StringFromNullString(row.IdentityType)
-	actorID := row.ActorID
+	actorID := row.ActorID.String
 	if identType != nil && actorID != "" {
 		switch *identType {
 		case "user":

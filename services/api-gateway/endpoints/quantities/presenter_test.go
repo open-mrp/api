@@ -60,7 +60,7 @@ func TestUnitFromQuantityInfo_UsesUnitDetailWhenPresent(t *testing.T) {
 	}
 }
 
-func TestUnitFromQuantityInfo_FallsBackToExpandableUnitStub(t *testing.T) {
+func TestUnitFromQuantityInfo_ReturnsNilWhenNoUnitDetail(t *testing.T) {
 	t.Parallel()
 
 	now := timestamppb.Now()
@@ -75,31 +75,10 @@ func TestUnitFromQuantityInfo_FallsBackToExpandableUnitStub(t *testing.T) {
 		UpdatedAt:        timestamppb.Now(),
 	}
 
-	unit := UnitFromQuantityInfo(q)
-	if unit == nil {
-		t.Fatal("expected unit")
-	}
-
-	wrapped := apiresource.Quantity{
-		ID:           q.Id,
-		Object:       constants.ObjectTypeQuantity,
-		Value:        "12.5",
-		DisplayValue: "12.5 kg",
-		Unit:         unit,
-	}
-	resourcetest.ValidateResourceStruct(t, "QuantityInfo.UnitFallback", wrapped)
-	resourcetest.ValidatePopulatedExpandableFields(t, "QuantityInfo.UnitFallback", wrapped)
-	if unit.Object != constants.ObjectTypeUnit {
-		t.Fatalf("expected unit object type, got %q", unit.Object)
-	}
-	if unit.RatioNumerator != "1" || unit.RatioDenominator != "1" {
-		t.Fatalf("expected fallback ratios 1/1, got %s/%s", unit.RatioNumerator, unit.RatioDenominator)
-	}
-	if unit.OffsetNumerator != "0" || unit.OffsetDenominator != "1" {
-		t.Fatalf("expected fallback offsets 0/1, got %s/%s", unit.OffsetNumerator, unit.OffsetDenominator)
-	}
-	if !unit.CreatedAt.Equal(now.AsTime()) || !unit.UpdatedAt.Equal(now.AsTime()) {
-		t.Fatalf("expected fallback timestamps to use quantity created_at, got created_at=%v updated_at=%v", unit.CreatedAt, unit.UpdatedAt)
+	// No unit_detail on the proto: never fabricate a placeholder unit. The unit
+	// id is stashed elsewhere so the real Unit loads via ?include=unit.
+	if unit := UnitFromQuantityInfo(q); unit != nil {
+		t.Fatalf("expected nil when proto carries no unit detail, got %+v", unit)
 	}
 }
 
@@ -116,6 +95,18 @@ func TestQuantityFromProto_PopulatesNestedUnitContract(t *testing.T) {
 		UnitType:         "mass",
 		CreatedAt:        now,
 		UpdatedAt:        now,
+		UnitDetail: &pb.UnitInfo{
+			Id:                "un_01abc",
+			Name:              "Kilogram",
+			Abbreviation:      "kg",
+			Type:              "mass",
+			RatioNumerator:    "1000",
+			RatioDenominator:  "1",
+			OffsetNumerator:   "0",
+			OffsetDenominator: "1",
+			CreatedAt:         now,
+			UpdatedAt:         now,
+		},
 	}
 
 	result := quantityFromProto(q)

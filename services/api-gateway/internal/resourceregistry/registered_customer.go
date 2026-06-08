@@ -29,8 +29,8 @@ func init() {
 			{Key: "ship_to_address", Populate: populateShipToAddressOnCustomer},
 			{Key: "type", Populate: populateTypeOnCustomer},
 			{Key: "price_groups", Populate: populatePriceGroupsOnCustomer},
-			{Key: "parent_account", Populate: populateParentAccountOnCustomer},
-			{Key: "child_accounts", Populate: populateChildAccountsOnCustomer},
+			{Key: "parent_account", Target: constants.ObjectTypeCustomer, Cardinality: resourcekit.CardinalityOnePtr, ExtractIDs: extractParentAccountIDFromCustomer, Populate: populateParentAccountOnCustomer},
+			{Key: "child_accounts", Target: constants.ObjectTypeCustomer, Cardinality: resourcekit.CardinalityList, ExtractIDs: extractChildAccountIDsFromCustomer, Populate: populateChildAccountsOnCustomer},
 		},
 	})
 }
@@ -116,22 +116,42 @@ func populatePriceGroupsOnCustomer(ctx context.Context, parent any, _ map[string
 	c.PriceGroups = v.(*apiresource.List[apiresource.AccountGroup])
 }
 
-func populateParentAccountOnCustomer(ctx context.Context, parent any, _ map[string]any) {
+func extractParentAccountIDFromCustomer(ctx context.Context, parent any) []string {
 	c := parent.(*apiresource.Customer)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "parent_account")
-	if !ok {
-		return
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeCustomer, c.ID, "parent_account_id")
+	if id == "" {
+		return nil
 	}
-	c.ParentAccount = v.(*apiresource.Customer)
+	return []string{id}
 }
 
-func populateChildAccountsOnCustomer(ctx context.Context, parent any, _ map[string]any) {
+func populateParentAccountOnCustomer(ctx context.Context, parent any, loaded map[string]any) {
 	c := parent.(*apiresource.Customer)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "child_accounts")
-	if !ok {
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeCustomer, c.ID, "parent_account_id")
+	if id == "" {
 		return
 	}
-	c.ChildAccounts = v.(*apiresource.List[apiresource.Customer])
+	if v, ok := loaded[id]; ok {
+		c.ParentAccount = v.(*apiresource.Customer)
+	}
+}
+
+func extractChildAccountIDsFromCustomer(ctx context.Context, parent any) []string {
+	c := parent.(*apiresource.Customer)
+	ids, _ := resourcekit.GetLoadMeta(ctx).GetStrings(constants.ObjectTypeCustomer, c.ID, "child_account_ids")
+	return ids
+}
+
+func populateChildAccountsOnCustomer(ctx context.Context, parent any, loaded map[string]any) {
+	c := parent.(*apiresource.Customer)
+	ids, _ := resourcekit.GetLoadMeta(ctx).GetStrings(constants.ObjectTypeCustomer, c.ID, "child_account_ids")
+	items := make([]apiresource.Customer, 0, len(ids))
+	for _, id := range ids {
+		if v, ok := loaded[id]; ok {
+			items = append(items, *(v.(*apiresource.Customer)))
+		}
+	}
+	c.ChildAccounts = apiresource.NewList(items, apiresource.PageInfo{})
 }
 
 func populateCarrierOnCustomerFP(ctx context.Context, parent any, _ map[string]any) {

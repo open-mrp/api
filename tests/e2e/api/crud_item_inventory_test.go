@@ -14,10 +14,10 @@ func assertQuantityInfoShape(t *testing.T, qi map[string]any, label string) {
 	t.Helper()
 	require.NotNil(t, qi, "%s should be present", label)
 	assert.NotEmpty(t, jsonField(qi, "value"), "%s.value should be a non-empty decimal string", label)
-	unit := jsonObject(qi, "unit")
-	require.NotNil(t, unit, "%s.unit should be present", label)
-	assertObjectField(t, unit, "unit")
-	assert.NotEmpty(t, jsonField(unit, "id"), "%s.unit.id", label)
+	assert.NotEmpty(t, jsonField(qi, "display_value"), "%s.display_value should convey the unit", label)
+	// unit is an expandable sub-resource of a quantity: null unless explicitly
+	// requested. The unit abbreviation is still conveyed via display_value.
+	assert.Nil(t, qi["unit"], "%s.unit should be null without an explicit unit include", label)
 }
 
 // ──────────────────────────────────────────────

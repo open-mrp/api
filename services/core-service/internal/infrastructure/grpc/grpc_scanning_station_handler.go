@@ -6,7 +6,7 @@ import (
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/contracts"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -160,7 +160,7 @@ func (h *gRPCHandler) UpdateScanningStation(ctx context.Context, req *pb.UpdateS
 	params := domain.UpdateScanningStationParams{
 		ScanningStationID: req.Id,
 		Name:              req.Name,
-		Notes:             patch.StringFieldFromProto(req.Notes),
+		Notes:             field.StringClearableFromProto(req.Notes),
 		LabelSizeCode:     req.LabelSizeCode,
 		LabelTypeCode:     req.LabelTypeCode,
 		OperatorRequirement: func() *constants.OperatorRequirement {

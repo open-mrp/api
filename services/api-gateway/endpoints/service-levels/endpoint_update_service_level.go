@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to update a service level.
@@ -18,18 +19,18 @@ type UpdateServiceLevelRequest struct {
 	// Service level ID.
 	ServiceLevelID string `path:"id" validate:"required"`
 	// Display name.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// Service level code.
-	Code *string `json:"code,omitempty" validate:"omitempty,max=255"`
+	Code field.Optional[string] `json:"code,omitzero" validate:"omitempty,max=255"`
 	// Whether this service level will be available for customers to select in the customer portal.
-	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility,omitempty"`
+	CustomerPortalVisibility field.Optional[constants.CustomerPortalVisibility] `json:"customer_portal_visibility,omitzero"`
 	// Default service levels are the default-selected service level for that carrier.
-	IsDefault *bool `json:"is_default,omitempty"`
+	IsDefault field.Optional[bool] `json:"is_default,omitzero"`
 }
 
 var sampleUpdateServiceLevelName = "Express Shipping"
 var sampleUpdateServiceLevelRequest = &UpdateServiceLevelRequest{
-	Name: &sampleUpdateServiceLevelName,
+	Name: field.Some(sampleUpdateServiceLevelName),
 }
 
 func (*UpdateServiceLevelRequest) SchemaExample() any {

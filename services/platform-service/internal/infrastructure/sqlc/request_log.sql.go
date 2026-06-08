@@ -8,7 +8,6 @@ package sqlc
 import (
 	"context"
 	"database/sql"
-	"strings"
 	"time"
 
 	"github.com/augno/api/shared/db"
@@ -160,7 +159,7 @@ const findRequestLogBaseByID = `-- name: FindRequestLogBaseByID :one
 
 SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
        COALESCE(CASE WHEN ? THEN rl.query_json ELSE NULL END, '') AS query_json,
-       rl.status_code, rl.latency_us, rl.api_version, COALESCE(au.id, rl.actor_id, '') AS actor_id,
+       rl.status_code, rl.latency_us, rl.api_version, rl.actor_id AS actor_id,
        rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
        rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
        rl.idempotency_key_id,
@@ -169,8 +168,6 @@ SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
        rl.target_account_id,
        ik.idempotency_key
 FROM request_log rl
-LEFT JOIN account_user au ON au.user_id = rl.actor_id
-  AND au.account_id = rl.target_account_id AND rl.identity_type = 'user'
 LEFT JOIN idempotency_key ik ON rl.idempotency_key_id = ik.type_id
 WHERE rl.id = ? AND rl.target_account_id = ?
 `
@@ -193,7 +190,7 @@ type FindRequestLogBaseByIDRow struct {
 	StatusCode       int32
 	LatencyUs        int64
 	ApiVersion       sql.NullString
-	ActorID          string
+	ActorID          sql.NullString
 	ActorType        sql.NullString
 	IdentityType     sql.NullString
 	ClientIpString   sql.NullString
@@ -256,7 +253,7 @@ func (q *Queries) FindRequestLogBaseByID(ctx context.Context, arg FindRequestLog
 const findRequestLogByID = `-- name: FindRequestLogByID :one
 SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
        COALESCE(CASE WHEN ? THEN rl.query_json ELSE NULL END, '') AS query_json,
-       rl.status_code, rl.latency_us, rl.api_version, COALESCE(au.id, rl.actor_id, '') AS actor_id,
+       rl.status_code, rl.latency_us, rl.api_version, rl.actor_id AS actor_id,
        rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
        rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
        rl.idempotency_key_id,
@@ -301,7 +298,7 @@ type FindRequestLogByIDRow struct {
 	StatusCode          int32
 	LatencyUs           int64
 	ApiVersion          sql.NullString
-	ActorID             string
+	ActorID             sql.NullString
 	ActorType           sql.NullString
 	IdentityType        sql.NullString
 	ClientIpString      sql.NullString
@@ -332,6 +329,10 @@ type FindRequestLogByIDRow struct {
 	IdempotencyKey      sql.NullString
 }
 
+// actor_id stores the raw actor key (user_id for user actors, api_key.type_id
+// for api_key actors) — the value the API exposes directly. Enrichment joins key
+// on it: user by id, api_key by type_id, and account_user (for the role) by
+// (user_id, target account).
 func (q *Queries) FindRequestLogByID(ctx context.Context, arg FindRequestLogByIDParams) (FindRequestLogByIDRow, error) {
 	row := q.db.QueryRowContext(ctx, findRequestLogByID,
 		arg.IncludeQueryJson,
@@ -382,57 +383,4 @@ func (q *Queries) FindRequestLogByID(ctx context.Context, arg FindRequestLogByID
 		&i.IdempotencyKey,
 	)
 	return i, err
-}
-
-const resolveAccountUserActorIDs = `-- name: ResolveAccountUserActorIDs :many
-SELECT id, user_id
-FROM account_user
-WHERE id IN (/*SLICE:ids*/?)
-`
-
-type ResolveAccountUserActorIDsRow struct {
-	ID     string
-	UserID string
-}
-
-// Maps account_user ids (the actor id the API exposes for user actors) to the
-// user_id stored in request_log.actor_id. The list query filters on the indexed
-// rl.actor_id column directly, so callers translate the exposed account_user id
-// back to user_id before building the filter — see request_log_list_query.go.
-//
-// Resolution is by the account_user primary key alone (it is globally unique), NOT
-// scoped to the viewed account: the actor picker may surface an account_user from a
-// different account than the one whose logs are being viewed, and the list query
-// already constrains rl.target_account_id, so an unscoped lookup cannot leak data.
-func (q *Queries) ResolveAccountUserActorIDs(ctx context.Context, ids []string) ([]ResolveAccountUserActorIDsRow, error) {
-	query := resolveAccountUserActorIDs
-	var queryParams []interface{}
-	if len(ids) > 0 {
-		for _, v := range ids {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(ids))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
-	}
-	rows, err := q.db.QueryContext(ctx, query, queryParams...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ResolveAccountUserActorIDsRow
-	for rows.Next() {
-		var i ResolveAccountUserActorIDsRow
-		if err := rows.Scan(&i.ID, &i.UserID); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }

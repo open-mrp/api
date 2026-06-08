@@ -292,9 +292,9 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 	assert.Equal(t, "quantity", jsonField(cl, "object"))
 	assert.Equal(t, "10000", jsonField(cl, "value"))
 	assert.NotEmpty(t, jsonField(cl, "id"))
-	clUnit := jsonObject(cl, "unit")
-	require.NotNil(t, clUnit, "credit_limit.unit should be set")
-	assert.Equal(t, SeedUnitID, jsonField(clUnit, "id"))
+	// unit is an expandable sub-resource of a quantity: null unless explicitly
+	// requested (the abbreviation is still conveyed via display_value).
+	assert.Nil(t, cl["unit"], "credit_limit.unit should be null without an explicit unit include")
 
 	// ── UPDATE with different values for changeable fields ──
 
@@ -864,10 +864,9 @@ func TestCustomers_IncludeCreditLimit(t *testing.T) {
 	assert.NotEmpty(t, jsonField(cl, "display_value"))
 	assert.NotEmpty(t, jsonField(cl, "id"))
 
-	clUnit := jsonObject(cl, "unit")
-	require.NotNil(t, clUnit, "credit_limit.unit should be set")
-	assert.Equal(t, SeedUnitID, jsonField(clUnit, "id"))
-	assert.Equal(t, "unit", jsonField(clUnit, "object"))
+	// unit is an expandable sub-resource of a quantity: null unless explicitly
+	// requested. The unit abbreviation is still conveyed via display_value.
+	assert.Nil(t, cl["unit"], "credit_limit.unit should be null without an explicit unit include")
 }
 
 func TestCustomers_IncludeCreditLimitNullWhenNotSet(t *testing.T) {

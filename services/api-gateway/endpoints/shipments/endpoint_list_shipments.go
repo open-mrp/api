@@ -30,13 +30,11 @@ type ListShipmentsRequest struct {
 	EndDate *string `query:"end_date"`
 }
 
-// TODO: stop returning ShipmentSummary; return the full Shipment apiresource and use proper includes values to control expansion.
-
 // Returns a paginated list of shipments.
 type ListShipmentsEndpoint struct{}
 
-func (e *ListShipmentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListShipmentsRequest, *apiresource.List[apiresource.ShipmentSummary]] {
-	return (&apiendpoint.APIEndpoint[*ListShipmentsRequest, *apiresource.List[apiresource.ShipmentSummary]]{
+func (e *ListShipmentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListShipmentsRequest, *apiresource.List[apiresource.Shipment]] {
+	return (&apiendpoint.APIEndpoint[*ListShipmentsRequest, *apiresource.List[apiresource.Shipment]]{
 		Title:             "List Shipments",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
@@ -44,7 +42,7 @@ func (e *ListShipmentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListShip
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *ListShipmentsRequest) (*apiresource.List[apiresource.ShipmentSummary], *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *ListShipmentsRequest) (*apiresource.List[apiresource.Shipment], *apierror.APIError) {
 			return svc.(ShipmentSvc).ListShipments
 		},
 	})

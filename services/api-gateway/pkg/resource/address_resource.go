@@ -79,31 +79,3 @@ var SampleAddress = &Address{
 func (*Address) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleAddress)
 }
-
-func ExpandableAddressStub(id, name, country string, ts time.Time) *Address {
-	if id == "" {
-		id = SampleCRUDAddressID
-	}
-	if name == "" {
-		name = "Address"
-	}
-	if country == "" {
-		country = "US"
-	}
-	if ts.IsZero() {
-		ts = time.Unix(0, 0).UTC()
-	}
-	return &Address{
-		ID:     id,
-		Object: constants.ObjectTypeAddress,
-		Name:   name,
-		Type:   constants.AddressTypeStandard,
-		Geolocation: &Geolocation{
-			ID:      SampleGeolocationID,
-			Object:  constants.ObjectTypeGeolocation,
-			Country: country,
-		},
-		CreatedAt: ts,
-		UpdatedAt: ts,
-	}
-}

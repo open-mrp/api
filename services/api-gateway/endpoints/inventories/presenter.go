@@ -28,14 +28,11 @@ func ListInventoriesPresenter(ctx context.Context, resp *pb.ListInventoriesRespo
 		valueStr := strconv.FormatFloat(item.OnHandQuantity, 'f', -1, 64)
 		qid, _ := id.GenID(id.QuantityIDPrefix, nil)
 
-		unit := apiresource.ExpandableUnitStub(
-			item.OnHandUnitId,
-			item.OnHandUnitAbbreviation,
-			item.OnHandUnitAbbreviation,
-			item.OnHandUnitType,
-			grpcutil.TimestampToTime(nil),
-		)
-		meta.Set(constants.ObjectTypeQuantity, qid, "unit", unit)
+		// unit is an expandable reference on the quantity: stash the FK id so
+		// LoadUnits fetches the real Unit on ?include=...unit. Never fabricate.
+		if item.OnHandUnitId != "" {
+			meta.Set(constants.ObjectTypeQuantity, qid, "unit_id", item.OnHandUnitId)
+		}
 
 		items[i] = apiresource.InventoryItem{
 			Object: constants.ObjectTypeInventoryItem,

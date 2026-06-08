@@ -125,6 +125,21 @@ func (mr *MockAuditEventSvcMockRecorder) GetAuditEvent(ctx, id, includes any) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAuditEvent", reflect.TypeOf((*MockAuditEventSvc)(nil).GetAuditEvent), ctx, id, includes)
 }
 
+// ListAuditEventResourceTypes mocks base method.
+func (m *MockAuditEventSvc) ListAuditEventResourceTypes(ctx context.Context) ([]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAuditEventResourceTypes", ctx)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListAuditEventResourceTypes indicates an expected call of ListAuditEventResourceTypes.
+func (mr *MockAuditEventSvcMockRecorder) ListAuditEventResourceTypes(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAuditEventResourceTypes", reflect.TypeOf((*MockAuditEventSvc)(nil).ListAuditEventResourceTypes), ctx)
+}
+
 // ListAuditEvents mocks base method.
 func (m *MockAuditEventSvc) ListAuditEvents(ctx context.Context, filter *domain.ListAuditEventsFilter, includes []string) (*domain.ListAuditEventsResult, *apierror.APIError) {
 	m.ctrl.T.Helper()

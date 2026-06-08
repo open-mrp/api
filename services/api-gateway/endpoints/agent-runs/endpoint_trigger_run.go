@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to trigger an agent run.
@@ -16,12 +17,12 @@ type TriggerRunRequest struct {
 	// Agent definition ID.
 	AgentDefinitionID string `json:"agent_definition_id" validate:"required"`
 	// Input text for the agent.
-	Input string `json:"input,omitempty"`
+	Input field.Optional[string] `json:"input,omitzero"`
 }
 
 var sampleTriggerRunRequest = &TriggerRunRequest{
 	AgentDefinitionID: apiresource.SampleAgentDefinitionID,
-	Input:             "Process the latest incoming orders.",
+	Input:             field.Some("Process the latest incoming orders."),
 }
 
 func (*TriggerRunRequest) SchemaExample() any {

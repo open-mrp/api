@@ -12,8 +12,8 @@ import (
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 	"github.com/augno/api/shared/pagination"
-	"github.com/augno/api/shared/patch"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -693,8 +693,8 @@ func (r *productRepoImpl) Update(ctx context.Context, params domain.UpdateProduc
 
 	_, err := r.queries.ProductUpdateItem(ctx, sqlc.ProductUpdateItemParams{
 		Sku:         toNullString(params.SKU),
-		Description: patch.StringToNullString(params.Description),
-		Notes:       patch.StringToNullString(params.Notes),
+		Description: field.StringToNullString(params.Description),
+		Notes:       field.StringToNullString(params.Notes),
 		ID:          existing.ItemID,
 		AccountID:   params.AccountID,
 	})

@@ -43,15 +43,17 @@ func TestBuildListQuery_NoFiltersEmitsOnlyBaselinePredicates(t *testing.T) {
 	}
 }
 
-// Regression: the scan target for actor_id is a non-nullable string, so the
-// SELECT must coalesce to ” rather than letting NULL propagate. NULL
-// happens when rl.actor_id is NULL (e.g. unauthenticated request) and the
-// account_user join fails to match — the un-defaulted COALESCE returns NULL
-// and crashes rows.Scan with "converting NULL to string is unsupported".
-func TestBuildListQuery_ActorIDSelectCoalescesToEmptyString(t *testing.T) {
+// actor_id now stores the public id (account_user.id for user actors), so the
+// SELECT reads it directly — no COALESCE / account_user translation. The scan
+// target is a sql.NullString, so a NULL actor_id (e.g. unauthenticated request)
+// is handled by the scanner rather than a SQL-side default.
+func TestBuildListQuery_ActorIDSelectedDirectly(t *testing.T) {
 	for _, mode := range []queryMode{queryModeBase, queryModeActor, queryModeFull} {
 		sql, _ := buildListQuery(mode, pagination.DirectionForward, "acc_1", emptyFilter(), false, false, false, nil, 101)
-		mustContain(t, sql, "COALESCE(au.id, rl.actor_id, '') AS actor_id")
+		mustContain(t, sql, "rl.actor_id AS actor_id")
+		if strings.Contains(sql, "COALESCE(au.id") {
+			t.Errorf("query should no longer translate actor_id via account_user; SQL:\n%s", sql)
+		}
 	}
 }
 
@@ -102,11 +104,11 @@ func TestBuildListQuery_ActorModeWrapsInDerivedTableWithUserAndApiKeyJoins(t *te
 
 	mustContain(t, sql, " FROM (")
 	mustContain(t, sql, ") rl")
-	mustContain(t, sql, "LEFT JOIN account_user au ON au.id = rl.actor_id AND au.account_id = rl.target_account_id AND rl.identity_type = 'user'")
-	mustContain(t, sql, "LEFT JOIN `user` u ON au.user_id = u.id AND rl.identity_type = 'user'")
+	mustContain(t, sql, "LEFT JOIN `user` u ON u.id = rl.actor_id AND rl.identity_type = 'user'")
 	mustContain(t, sql, "LEFT JOIN api_key ak ON rl.actor_id = ak.type_id AND rl.identity_type = 'api_key'")
 
 	forbidden := []string{
+		"LEFT JOIN account_user au",
 		"LEFT JOIN role r_user",
 		"LEFT JOIN account a",
 	}
@@ -152,9 +154,9 @@ func TestBuildListQuery_FullModeWrapsInDerivedTableWithAllJoins(t *testing.T) {
 	}
 
 	required := []string{
-		"LEFT JOIN `user` u ON au.user_id = u.id AND rl.identity_type = 'user'",
+		"LEFT JOIN `user` u ON u.id = rl.actor_id AND rl.identity_type = 'user'",
 		"LEFT JOIN api_key ak ON rl.actor_id = ak.type_id AND rl.identity_type = 'api_key'",
-		"LEFT JOIN account_user au ON au.id = rl.actor_id AND au.account_id = rl.target_account_id AND rl.identity_type = 'user'",
+		"LEFT JOIN account_user au ON au.user_id = rl.actor_id AND au.account_id = rl.target_account_id AND rl.identity_type = 'user'",
 		"LEFT JOIN role r_user ON au.role_id = r_user.id",
 		"LEFT JOIN role r_key ON ak.role_id = r_key.id",
 		"LEFT JOIN account a ON rl.target_account_id = a.id",
@@ -187,7 +189,9 @@ func TestBuildListQuery_SliceFiltersExpandToMatchingPlaceholderCounts(t *testing
 	mustContain(t, sql, "rl.account_id IN (?, ?)")
 	mustContain(t, sql, "rl.actor_id IN (?, ?, ?)")
 	mustContain(t, sql, "rl.identity_type IN (?)")
-	mustContain(t, sql, "rl.normalized_route IN (?, ?)")
+	// normalized_route is compared on route shape (param tokens collapsed to
+	// `{}`) via REGEXP_REPLACE, not on the bare column. See normalizeRouteParams.
+	mustContain(t, sql, normalizedRouteColumnExpr+" IN (?, ?)")
 	mustContain(t, sql, "rl.host IN (?)")
 
 	// 3 JSON-include booleans (query/request/response) + target_account_id +

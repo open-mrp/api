@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to partially update an account price.
@@ -16,23 +17,23 @@ type UpdateAccountPriceRequest struct {
 	// Account price ID.
 	AccountPriceID string `path:"id" validate:"required"`
 	// Recipient account ID.
-	RecipientAccountID *string `json:"recipient_account_id,omitempty" validate:"omitempty"`
+	RecipientAccountID field.Optional[string] `json:"recipient_account_id,omitzero" validate:"omitempty"`
 	// Product line ID.
-	ProductLineID *string `json:"product_line_id,omitempty" validate:"omitempty"`
+	ProductLineID field.Optional[string] `json:"product_line_id,omitzero" validate:"omitempty"`
 	// Rate value as a decimal string.
-	RateValue *string `json:"rate_value,omitempty"`
+	RateValue field.Optional[string] `json:"rate_value,omitzero"`
 	// Rate numerator unit ID.
-	RateNumeratorUnitID *string `json:"rate_numerator_unit_id,omitempty" validate:"omitempty"`
+	RateNumeratorUnitID field.Optional[string] `json:"rate_numerator_unit_id,omitzero" validate:"omitempty"`
 	// Rate denominator unit ID.
-	RateDenominatorUnitID *string `json:"rate_denominator_unit_id,omitempty" validate:"omitempty"`
+	RateDenominatorUnitID field.Optional[string] `json:"rate_denominator_unit_id,omitzero" validate:"omitempty"`
 	// Item category IDs to constrain this price to. Replaces existing categories.
-	CategoryIDs *[]string `json:"category_ids,omitempty"`
+	CategoryIDs field.Optional[[]string] `json:"category_ids,omitzero"`
 	// Attribute IDs to constrain this price to. Replaces existing attributes.
-	AttributeIDs *[]string `json:"attribute_ids,omitempty"`
+	AttributeIDs field.Optional[[]string] `json:"attribute_ids,omitzero"`
 }
 
 var sampleUpdateAccountPriceRequest = &UpdateAccountPriceRequest{
-	RateValue: new("30.000000000000000000000000000000"),
+	RateValue: field.Some("30.000000000000000000000000000000"),
 }
 
 func (*UpdateAccountPriceRequest) SchemaExample() any {

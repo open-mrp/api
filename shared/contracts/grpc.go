@@ -151,12 +151,6 @@ func NewMissingGRPCRequestDataError() error {
 	return ConvertAPIErrorToGRPC(apiErr)
 }
 
-// NewMissingIdentityMetadataError returns a gRPC-encoded invariant violation for a missing identity header.
-func NewMissingIdentityMetadataError() error {
-	apiErr := apierror.NewInvariantViolationError("Missing identity metadata.")
-	return ConvertAPIErrorToGRPC(apiErr)
-}
-
 // ConvertAPIErrorToGRPC encodes an APIError as a gRPC status error. The full APIError JSON
 // is embedded in the status message (prefixed with apiErrorMarker) so that ConvertGRPCError
 // can reconstruct it losslessly. The gRPC status code is chosen to match the APIError category.
@@ -238,19 +232,6 @@ func isDeadlineError(ctx context.Context, err error) bool {
 	return errors.Is(err, context.DeadlineExceeded) || ctx.Err() == context.DeadlineExceeded
 }
 
-// GetIdempotencyKeyFromContext extracts the idempotency key from gRPC metadata.
-func GetIdempotencyKeyFromContext(ctx context.Context) *string {
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return nil
-	}
-	values := md.Get(IdempotencyKeyHeader)
-	if len(values) == 0 {
-		return nil
-	}
-	return &values[0]
-}
-
 // SetAPIVersionInMetadata sets the API version in the metadata.
 func SetAPIVersionInMetadata(md metadata.MD, version string) {
 	md.Set(APIVersionHeader, version)
@@ -263,11 +244,6 @@ func GetAPIVersionFromMetadata(md metadata.MD) string {
 		return ""
 	}
 	return values[0]
-}
-
-// SetRequestIDInMetadata sets the request ID in the metadata.
-func SetRequestIDInMetadata(md metadata.MD, requestID string) {
-	md.Set(RequestIDHeader, requestID)
 }
 
 // GetRequestIDFromMetadata extracts the request ID from the metadata.

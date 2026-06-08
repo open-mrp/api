@@ -102,17 +102,3 @@ const (
 	TransactionMethodCreditCard TransactionMethodCode = "credit_card"
 	TransactionMethodACH        TransactionMethodCode = "ach"
 )
-
-// MapStripePaymentMethodToTransactionMethod maps a Stripe payment method type to an internal code.
-func MapStripePaymentMethodToTransactionMethod(stripeType string) *TransactionMethodCode {
-	switch stripeType {
-	case "card", "link":
-		method := TransactionMethodCreditCard
-		return &method
-	case "us_bank_account":
-		method := TransactionMethodACH
-		return &method
-	default:
-		return nil
-	}
-}

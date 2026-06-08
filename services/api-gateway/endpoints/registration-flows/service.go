@@ -113,7 +113,7 @@ func (m *registrationFlowSvcImpl) CreateRegistrationFlow(ctx context.Context, re
 func (m *registrationFlowSvcImpl) UpdateRegistrationFlow(ctx context.Context, req *UpdateRegistrationFlowRequest) (*apiresource.RegistrationFlow, *apierror.APIError) {
 	pbReq := &pb.UpdateRegistrationFlowRequest{
 		Id:                  req.RegistrationFlowID,
-		Name:                req.Name,
+		Name:                req.Name.Ptr(),
 		CustomerGroupIds:    req.CustomerGroupIDs,
 		PaymentTermIds:      req.PaymentTermIDs,
 		ShippingTermIds:     req.ShippingTermIDs,
@@ -174,23 +174,23 @@ func (m *registrationFlowSvcImpl) RegisterCustomer(ctx context.Context, req *Reg
 	pbReq := &pb.RegisterCustomerRequest{
 		AccountSlug:        req.AccountSlug,
 		IsExistingCustomer: req.IsExistingCustomer,
-		CustomerNumber:     req.CustomerNumber,
-		CustomerName:       req.CustomerName,
-		CustomerGroupId:    req.CustomerGroupID,
-		Phone:              req.Phone,
-		ShippingTermId:     req.ShippingTermID,
-		PaymentTermId:      req.PaymentTermID,
+		CustomerNumber:     req.CustomerNumber.Ptr(),
+		CustomerName:       req.CustomerName.Ptr(),
+		CustomerGroupId:    req.CustomerGroupID.Ptr(),
+		Phone:              req.Phone.Ptr(),
+		ShippingTermId:     req.ShippingTermID.Ptr(),
+		PaymentTermId:      req.PaymentTermID.Ptr(),
 	}
 
-	if req.Address != nil {
+	if addr, ok := req.Address.Value(); ok {
 		pbReq.Address = &pb.RegisterCustomerAddressInput{
-			StreetLine_1: derefStr(req.Address.StreetLine1.Ptr()),
-			StreetLine_2: req.Address.StreetLine2.Ptr(),
-			Locality:     derefStr(req.Address.Locality.Ptr()),
-			State:        derefStr(req.Address.State.Ptr()),
-			PostalCode:   derefStr(req.Address.PostalCode.Ptr()),
-			Country:      req.Address.Country,
-			Name:         &req.Address.Name,
+			StreetLine_1: derefStr(addr.StreetLine1.Ptr()),
+			StreetLine_2: addr.StreetLine2.Ptr(),
+			Locality:     derefStr(addr.Locality.Ptr()),
+			State:        derefStr(addr.State.Ptr()),
+			PostalCode:   derefStr(addr.PostalCode.Ptr()),
+			Country:      addr.Country,
+			Name:         &addr.Name,
 		}
 	}
 

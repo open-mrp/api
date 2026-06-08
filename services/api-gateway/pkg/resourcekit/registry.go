@@ -27,17 +27,6 @@ const (
 	CardinalityList
 )
 
-func (c Cardinality) String() string {
-	switch c {
-	case CardinalityOnePtr:
-		return "one_ptr"
-	case CardinalityList:
-		return "list"
-	default:
-		return fmt.Sprintf("cardinality(%d)", int(c))
-	}
-}
-
 // Loader fetches resources by ID. The returned map is keyed by the resource ID
 // (the same string that appeared in the input slice). Missing IDs are simply
 // absent from the result — the resolver leaves the parent's sub-field unset.
@@ -162,19 +151,6 @@ func Lookup(ot constants.ObjectType) *Definition {
 	registryMu.RLock()
 	defer registryMu.RUnlock()
 	return registry[ot]
-}
-
-// All returns every registered Definition, sorted by ObjectType for determinism.
-// Intended for codegen tools (openapi, sdk) that need a stable iteration order.
-func All() []*Definition {
-	registryMu.RLock()
-	out := make([]*Definition, 0, len(registry))
-	for _, d := range registry {
-		out = append(out, d)
-	}
-	registryMu.RUnlock()
-	sort.Slice(out, func(i, j int) bool { return out[i].ObjectType < out[j].ObjectType })
-	return out
 }
 
 // AllowedIncludeKeys returns the transitive set of include paths reachable

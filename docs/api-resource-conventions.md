@@ -251,11 +251,29 @@ Use `appctx.GetRequestedIncludeKeys(ctx)` to forward the requested includes to b
 
 **Backward compatibility:** When no includes are set in the context (nil), `IsIncludeRequested()` returns `true` for all keys, so existing code that doesn't use the include system continues to work.
 
-### How Collapsing Works
+### How Population Works (real data on include, `null` otherwise)
 
-The presenter always populates all expandable fields when data is available. After the presenter returns, the endpoint framework applies `CollapseUnexpanded` which sets unrequested expandable fields to `null` in the serialized response.
+There is **no** post-hoc "collapse" step. The presenter builds the resource with every
+expandable field left `nil`, and stashes only the foreign-key **id** for each relation into the
+request-scoped load meta:
 
-For nested includes, parent objects are preserved when a child include is requested. For example, requesting `actor.role` keeps the `actor` object but only expands the `role` field within it.
+```go
+resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeInvoice, inv.ID, "order_id", orderID)
+```
+
+When the client requests `?include=<key>`, the include resolver
+(`pkg/resourcekit/resolver.go`) runs the registered `SubField`'s `ExtractIDs` (which reads the
+stashed id), batches a loader call (`BatchGet<X>ByIDs`) to fetch the **real** record from the
+source service, and runs `Populate` to write it onto the parent. An expandable field the client
+did **not** request is never touched, so it serializes as `null`.
+
+This is also why presenters must **never** fabricate expandable data: whatever a presenter assigns
+to an expandable field is serialized verbatim — there is no mechanism that strips it back out. Do
+not build placeholder/"stub" subresources or default their enum/status fields to plausible values;
+if real data isn't loaded, the field is `null`.
+
+For nested includes, parent objects are preserved when a child include is requested. For example,
+requesting `actor.role` keeps the `actor` object but only expands the `role` field within it.
 
 ### OpenAPI Documentation
 

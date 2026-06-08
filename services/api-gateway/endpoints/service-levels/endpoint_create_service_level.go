@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to create a service level.
@@ -20,7 +21,7 @@ type CreateServiceLevelRequest struct {
 	// Service level code.
 	Code string `json:"code" validate:"required,max=255"`
 	// Whether this service level will be available for customers to select in the customer portal.
-	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility,omitempty" default:"visible"`
+	CustomerPortalVisibility field.Optional[constants.CustomerPortalVisibility] `json:"customer_portal_visibility,omitzero" default:"visible"`
 	// Default service levels are the default-selected service level for that carrier.
 	IsDefault bool `json:"is_default"`
 }

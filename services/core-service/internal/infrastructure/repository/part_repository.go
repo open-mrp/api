@@ -10,8 +10,8 @@ import (
 	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 	"github.com/augno/api/shared/pagination"
-	"github.com/augno/api/shared/patch"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -421,8 +421,8 @@ func (r *partRepoImpl) UpdateItem(ctx context.Context, params domain.PartUpdateI
 
 	_, err := r.queries.PartUpdateItem(ctx, sqlc.PartUpdateItemParams{
 		Sku:         toNullString(params.SKU),
-		Description: patch.StringToNullString(params.Description),
-		Notes:       patch.StringToNullString(params.Notes),
+		Description: field.StringToNullString(params.Description),
+		Notes:       field.StringToNullString(params.Notes),
 		ID:          params.ItemID,
 		AccountID:   params.AccountID,
 	})

@@ -3,7 +3,6 @@ package apiresource
 import (
 	"time"
 
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/timeutil"
 )
@@ -42,8 +41,4 @@ var SampleRolePermission = &RolePermission{
 	Delete:         false,
 	CreatedAt:      timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:      timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
-}
-
-func (*RolePermission) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SampleRolePermission)
 }

@@ -3,8 +3,8 @@ package domain
 import (
 	"time"
 
+	"github.com/augno/api/shared/field"
 	"github.com/augno/api/shared/pagination"
-	"github.com/augno/api/shared/patch"
 )
 
 // Part represents a part entity (specialization of Item).
@@ -32,8 +32,8 @@ type UpdatePartParams struct {
 	AccountID   string
 	PartID      string
 	SKU         *string
-	Description patch.Field[string]
-	Notes       patch.Field[string]
+	Description field.Clearable[string]
+	Notes       field.Clearable[string]
 	Includes    []string
 }
 
@@ -41,8 +41,8 @@ type PartUpdateItemParams struct {
 	AccountID   string
 	ItemID      string
 	SKU         *string
-	Description patch.Field[string]
-	Notes       patch.Field[string]
+	Description field.Clearable[string]
+	Notes       field.Clearable[string]
 }
 
 type DeletePartParams struct {

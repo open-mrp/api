@@ -496,10 +496,6 @@ func salesOrderLineToProto(l *domain.SalesOrderLine) *pb.SalesOrderLineInfo {
 		UpdatedAt:                            timestamppb.New(l.UpdatedAt),
 	}
 
-	if l.CompletedAt != nil {
-		info.CompletedAt = timestamppb.New(*l.CompletedAt)
-	}
-
 	return info
 }
 
@@ -564,6 +560,30 @@ func (h *salesGRPCHandler) GetSalesOrder(ctx context.Context, req *pb.GetSalesOr
 	return &pb.GetSalesOrderResponse{
 		SalesOrder: salesOrderToProto(order),
 	}, nil
+}
+
+// BatchGetSalesOrdersByIDs returns full sales orders by ID for the api-gateway
+// include resolver. It reuses the authorized single-get path per id; ids the
+// caller cannot access or that no longer exist are omitted from the response so
+// the resolver simply leaves those references null.
+func (h *salesGRPCHandler) BatchGetSalesOrdersByIDs(ctx context.Context, req *pb.BatchGetSalesOrdersByIDsRequest) (*pb.BatchGetSalesOrdersByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	orders := make([]*pb.SalesOrderInfo, 0, len(req.Ids))
+	for _, soID := range req.Ids {
+		if soID == "" {
+			continue
+		}
+		order, apiErr := h.salesOrderSvc.GetSalesOrder(ctx, domain.GetSalesOrderParams{SalesOrderID: soID})
+		if apiErr != nil {
+			continue
+		}
+		orders = append(orders, salesOrderToProto(order))
+	}
+
+	return &pb.BatchGetSalesOrdersByIDsResponse{SalesOrders: orders}, nil
 }
 
 func (h *salesGRPCHandler) FindOrderDiscountByCode(ctx context.Context, req *pb.FindOrderDiscountByCodeRequest) (*pb.FindOrderDiscountByCodeResponse, error) {
@@ -682,20 +702,8 @@ func (h *salesGRPCHandler) UpdateSalesOrder(ctx context.Context, req *pb.UpdateS
 		OrderDiscountID:       req.OrderDiscountId,
 		IsAcknowledgmentSent:  req.IsAcknowledgmentSent,
 		BuyerAccountID:        req.CustomerId,
-		BillToName:            req.BillToName,
-		BillToStreetLine1:     req.BillToStreetLine_1,
-		BillToStreetLine2:     req.BillToStreetLine_2,
-		BillToLocality:        req.BillToLocality,
-		BillToState:           req.BillToState,
-		BillToPostalCode:      req.BillToPostalCode,
-		BillToCountry:         req.BillToCountry,
-		ShipToName:            req.ShipToName,
-		ShipToStreetLine1:     req.ShipToStreetLine_1,
-		ShipToStreetLine2:     req.ShipToStreetLine_2,
-		ShipToLocality:        req.ShipToLocality,
-		ShipToState:           req.ShipToState,
-		ShipToPostalCode:      req.ShipToPostalCode,
-		ShipToCountry:         req.ShipToCountry,
+		BillingAddressID:      req.BillingAddressId,
+		ShippingAddressID:     req.ShippingAddressId,
 		Includes:              req.Includes,
 	}
 

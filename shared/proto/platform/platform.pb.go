@@ -1162,8 +1162,10 @@ type ListRequestLogsRequest struct {
 	MinLatencyUs     *int64   `protobuf:"varint,17,opt,name=min_latency_us,json=minLatencyUs,proto3,oneof" json:"min_latency_us,omitempty"`
 	// Filter by user-provided idempotency key string (matches idempotency_key.idempotency_key).
 	IdempotencyKey *string `protobuf:"bytes,18,opt,name=idempotency_key,json=idempotencyKey,proto3,oneof" json:"idempotency_key,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Filter by HTTP status class: 1–5 for 1xx–5xx. OR'd with status_codes.
+	StatusCodeClasses []int32 `protobuf:"varint,19,rep,packed,name=status_code_classes,json=statusCodeClasses,proto3" json:"status_code_classes,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ListRequestLogsRequest) Reset() {
@@ -1306,6 +1308,13 @@ func (x *ListRequestLogsRequest) GetIdempotencyKey() string {
 		return *x.IdempotencyKey
 	}
 	return ""
+}
+
+func (x *ListRequestLogsRequest) GetStatusCodeClasses() []int32 {
+	if x != nil {
+		return x.StatusCodeClasses
+	}
+	return nil
 }
 
 type ListRequestLogsResponse struct {
@@ -2146,6 +2155,86 @@ func (x *GetAuditEventResponse) GetAuditEvent() *AuditEventInfo {
 	return nil
 }
 
+type ListAuditEventResourceTypesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAuditEventResourceTypesRequest) Reset() {
+	*x = ListAuditEventResourceTypesRequest{}
+	mi := &file_platform_platform_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAuditEventResourceTypesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAuditEventResourceTypesRequest) ProtoMessage() {}
+
+func (x *ListAuditEventResourceTypesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_platform_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAuditEventResourceTypesRequest.ProtoReflect.Descriptor instead.
+func (*ListAuditEventResourceTypesRequest) Descriptor() ([]byte, []int) {
+	return file_platform_platform_proto_rawDescGZIP(), []int{26}
+}
+
+type ListAuditEventResourceTypesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ResourceTypes []string               `protobuf:"bytes,1,rep,name=resource_types,json=resourceTypes,proto3" json:"resource_types,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAuditEventResourceTypesResponse) Reset() {
+	*x = ListAuditEventResourceTypesResponse{}
+	mi := &file_platform_platform_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAuditEventResourceTypesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAuditEventResourceTypesResponse) ProtoMessage() {}
+
+func (x *ListAuditEventResourceTypesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_platform_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAuditEventResourceTypesResponse.ProtoReflect.Descriptor instead.
+func (*ListAuditEventResourceTypesResponse) Descriptor() ([]byte, []int) {
+	return file_platform_platform_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *ListAuditEventResourceTypesResponse) GetResourceTypes() []string {
+	if x != nil {
+		return x.ResourceTypes
+	}
+	return nil
+}
+
 type AuditEventInfo struct {
 	state        protoimpl.MessageState `protogen:"open.v1"`
 	Id           string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -2168,7 +2257,7 @@ type AuditEventInfo struct {
 
 func (x *AuditEventInfo) Reset() {
 	*x = AuditEventInfo{}
-	mi := &file_platform_platform_proto_msgTypes[26]
+	mi := &file_platform_platform_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2180,7 +2269,7 @@ func (x *AuditEventInfo) String() string {
 func (*AuditEventInfo) ProtoMessage() {}
 
 func (x *AuditEventInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_platform_proto_msgTypes[26]
+	mi := &file_platform_platform_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2193,7 +2282,7 @@ func (x *AuditEventInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AuditEventInfo.ProtoReflect.Descriptor instead.
 func (*AuditEventInfo) Descriptor() ([]byte, []int) {
-	return file_platform_platform_proto_rawDescGZIP(), []int{26}
+	return file_platform_platform_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *AuditEventInfo) GetId() string {
@@ -2302,7 +2391,7 @@ type AuditActor struct {
 
 func (x *AuditActor) Reset() {
 	*x = AuditActor{}
-	mi := &file_platform_platform_proto_msgTypes[27]
+	mi := &file_platform_platform_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2314,7 +2403,7 @@ func (x *AuditActor) String() string {
 func (*AuditActor) ProtoMessage() {}
 
 func (x *AuditActor) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_platform_proto_msgTypes[27]
+	mi := &file_platform_platform_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2327,7 +2416,7 @@ func (x *AuditActor) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AuditActor.ProtoReflect.Descriptor instead.
 func (*AuditActor) Descriptor() ([]byte, []int) {
-	return file_platform_platform_proto_rawDescGZIP(), []int{27}
+	return file_platform_platform_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *AuditActor) GetId() string {
@@ -2383,7 +2472,7 @@ type AuditFieldChange struct {
 
 func (x *AuditFieldChange) Reset() {
 	*x = AuditFieldChange{}
-	mi := &file_platform_platform_proto_msgTypes[28]
+	mi := &file_platform_platform_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2395,7 +2484,7 @@ func (x *AuditFieldChange) String() string {
 func (*AuditFieldChange) ProtoMessage() {}
 
 func (x *AuditFieldChange) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_platform_proto_msgTypes[28]
+	mi := &file_platform_platform_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2408,7 +2497,7 @@ func (x *AuditFieldChange) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AuditFieldChange.ProtoReflect.Descriptor instead.
 func (*AuditFieldChange) Descriptor() ([]byte, []int) {
-	return file_platform_platform_proto_rawDescGZIP(), []int{28}
+	return file_platform_platform_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *AuditFieldChange) GetField() string {
@@ -2572,7 +2661,7 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\rhas_next_page\x18\x03 \x01(\bR\vhasNextPage\x12\"\n" +
 	"\rhas_prev_page\x18\x04 \x01(\bR\vhasPrevPageB\x0e\n" +
 	"\f_next_cursorB\x0e\n" +
-	"\f_prev_cursor\"\xd4\x05\n" +
+	"\f_prev_cursor\"\x84\x06\n" +
 	"\x16ListRequestLogsRequest\x12>\n" +
 	"\n" +
 	"start_date\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\tstartDate\x88\x01\x01\x12:\n" +
@@ -2593,7 +2682,8 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\x11normalized_routes\x18\x0f \x03(\tR\x10normalizedRoutes\x12\x14\n" +
 	"\x05hosts\x18\x10 \x03(\tR\x05hosts\x12)\n" +
 	"\x0emin_latency_us\x18\x11 \x01(\x03H\x04R\fminLatencyUs\x88\x01\x01\x12,\n" +
-	"\x0fidempotency_key\x18\x12 \x01(\tH\x05R\x0eidempotencyKey\x88\x01\x01B\r\n" +
+	"\x0fidempotency_key\x18\x12 \x01(\tH\x05R\x0eidempotencyKey\x88\x01\x01\x12.\n" +
+	"\x13status_code_classes\x18\x13 \x03(\x05R\x11statusCodeClassesB\r\n" +
 	"\v_start_dateB\v\n" +
 	"\t_end_dateB\t\n" +
 	"\a_cursorB\b\n" +
@@ -2717,7 +2807,10 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\bincludes\x18\x02 \x03(\tR\bincludes\"R\n" +
 	"\x15GetAuditEventResponse\x129\n" +
 	"\vaudit_event\x18\x01 \x01(\v2\x18.platform.AuditEventInfoR\n" +
-	"auditEvent\"\x81\x05\n" +
+	"auditEvent\"$\n" +
+	"\"ListAuditEventResourceTypesRequest\"L\n" +
+	"#ListAuditEventResourceTypesResponse\x12%\n" +
+	"\x0eresource_types\x18\x01 \x03(\tR\rresourceTypes\"\x81\x05\n" +
 	"\x0eAuditEventInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06action\x18\x02 \x01(\tR\x06action\x12#\n" +
@@ -2776,11 +2869,12 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\x0eLoggingService\x12Y\n" +
 	"\x10CreateRequestLog\x12!.platform.CreateRequestLogRequest\x1a\".platform.CreateRequestLogResponse\x12V\n" +
 	"\x0fListRequestLogs\x12 .platform.ListRequestLogsRequest\x1a!.platform.ListRequestLogsResponse\x12P\n" +
-	"\rGetRequestLog\x12\x1e.platform.GetRequestLogRequest\x1a\x1f.platform.GetRequestLogResponse2\x93\x02\n" +
+	"\rGetRequestLog\x12\x1e.platform.GetRequestLogRequest\x1a\x1f.platform.GetRequestLogResponse2\x8f\x03\n" +
 	"\fAuditService\x12Y\n" +
 	"\x10CreateAuditEvent\x12!.platform.CreateAuditEventRequest\x1a\".platform.CreateAuditEventResponse\x12V\n" +
 	"\x0fListAuditEvents\x12 .platform.ListAuditEventsRequest\x1a!.platform.ListAuditEventsResponse\x12P\n" +
-	"\rGetAuditEvent\x12\x1e.platform.GetAuditEventRequest\x1a\x1f.platform.GetAuditEventResponseB Z\x1eshared/proto/platform;platformb\x06proto3"
+	"\rGetAuditEvent\x12\x1e.platform.GetAuditEventRequest\x1a\x1f.platform.GetAuditEventResponse\x12z\n" +
+	"\x1bListAuditEventResourceTypes\x12,.platform.ListAuditEventResourceTypesRequest\x1a-.platform.ListAuditEventResourceTypesResponseB Z\x1eshared/proto/platform;platformb\x06proto3"
 
 var (
 	file_platform_platform_proto_rawDescOnce sync.Once
@@ -2795,65 +2889,67 @@ func file_platform_platform_proto_rawDescGZIP() []byte {
 }
 
 var file_platform_platform_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_platform_platform_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
+var file_platform_platform_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
 var file_platform_platform_proto_goTypes = []any{
-	(ProcessIdempotencyKeyResult)(0),          // 0: platform.ProcessIdempotencyKeyResult
-	(*ProcessIdempotencyKeyRequest)(nil),      // 1: platform.ProcessIdempotencyKeyRequest
-	(*ProcessIdempotencyKeyResponse)(nil),     // 2: platform.ProcessIdempotencyKeyResponse
-	(*SetIdempotencyKeyResponseRequest)(nil),  // 3: platform.SetIdempotencyKeyResponseRequest
-	(*SetIdempotencyKeyResponseResponse)(nil), // 4: platform.SetIdempotencyKeyResponseResponse
-	(*ReleaseIdempotencyKeyRequest)(nil),      // 5: platform.ReleaseIdempotencyKeyRequest
-	(*ReleaseIdempotencyKeyResponse)(nil),     // 6: platform.ReleaseIdempotencyKeyResponse
-	(*AdvanceRecoveryPointRequest)(nil),       // 7: platform.AdvanceRecoveryPointRequest
-	(*AdvanceRecoveryPointResponse)(nil),      // 8: platform.AdvanceRecoveryPointResponse
-	(*GetRecoveryPointRequest)(nil),           // 9: platform.GetRecoveryPointRequest
-	(*GetRecoveryPointResponse)(nil),          // 10: platform.GetRecoveryPointResponse
-	(*RequestLog)(nil),                        // 11: platform.RequestLog
-	(*CreateRequestLogRequest)(nil),           // 12: platform.CreateRequestLogRequest
-	(*CreateRequestLogResponse)(nil),          // 13: platform.CreateRequestLogResponse
-	(*PageInfo)(nil),                          // 14: platform.PageInfo
-	(*ListRequestLogsRequest)(nil),            // 15: platform.ListRequestLogsRequest
-	(*ListRequestLogsResponse)(nil),           // 16: platform.ListRequestLogsResponse
-	(*GetRequestLogRequest)(nil),              // 17: platform.GetRequestLogRequest
-	(*GetRequestLogResponse)(nil),             // 18: platform.GetRequestLogResponse
-	(*RequestLogInfo)(nil),                    // 19: platform.RequestLogInfo
-	(*RequestLogActor)(nil),                   // 20: platform.RequestLogActor
-	(*CreateAuditEventRequest)(nil),           // 21: platform.CreateAuditEventRequest
-	(*CreateAuditEventResponse)(nil),          // 22: platform.CreateAuditEventResponse
-	(*ListAuditEventsRequest)(nil),            // 23: platform.ListAuditEventsRequest
-	(*ListAuditEventsResponse)(nil),           // 24: platform.ListAuditEventsResponse
-	(*GetAuditEventRequest)(nil),              // 25: platform.GetAuditEventRequest
-	(*GetAuditEventResponse)(nil),             // 26: platform.GetAuditEventResponse
-	(*AuditEventInfo)(nil),                    // 27: platform.AuditEventInfo
-	(*AuditActor)(nil),                        // 28: platform.AuditActor
-	(*AuditFieldChange)(nil),                  // 29: platform.AuditFieldChange
-	(*timestamppb.Timestamp)(nil),             // 30: google.protobuf.Timestamp
+	(ProcessIdempotencyKeyResult)(0),            // 0: platform.ProcessIdempotencyKeyResult
+	(*ProcessIdempotencyKeyRequest)(nil),        // 1: platform.ProcessIdempotencyKeyRequest
+	(*ProcessIdempotencyKeyResponse)(nil),       // 2: platform.ProcessIdempotencyKeyResponse
+	(*SetIdempotencyKeyResponseRequest)(nil),    // 3: platform.SetIdempotencyKeyResponseRequest
+	(*SetIdempotencyKeyResponseResponse)(nil),   // 4: platform.SetIdempotencyKeyResponseResponse
+	(*ReleaseIdempotencyKeyRequest)(nil),        // 5: platform.ReleaseIdempotencyKeyRequest
+	(*ReleaseIdempotencyKeyResponse)(nil),       // 6: platform.ReleaseIdempotencyKeyResponse
+	(*AdvanceRecoveryPointRequest)(nil),         // 7: platform.AdvanceRecoveryPointRequest
+	(*AdvanceRecoveryPointResponse)(nil),        // 8: platform.AdvanceRecoveryPointResponse
+	(*GetRecoveryPointRequest)(nil),             // 9: platform.GetRecoveryPointRequest
+	(*GetRecoveryPointResponse)(nil),            // 10: platform.GetRecoveryPointResponse
+	(*RequestLog)(nil),                          // 11: platform.RequestLog
+	(*CreateRequestLogRequest)(nil),             // 12: platform.CreateRequestLogRequest
+	(*CreateRequestLogResponse)(nil),            // 13: platform.CreateRequestLogResponse
+	(*PageInfo)(nil),                            // 14: platform.PageInfo
+	(*ListRequestLogsRequest)(nil),              // 15: platform.ListRequestLogsRequest
+	(*ListRequestLogsResponse)(nil),             // 16: platform.ListRequestLogsResponse
+	(*GetRequestLogRequest)(nil),                // 17: platform.GetRequestLogRequest
+	(*GetRequestLogResponse)(nil),               // 18: platform.GetRequestLogResponse
+	(*RequestLogInfo)(nil),                      // 19: platform.RequestLogInfo
+	(*RequestLogActor)(nil),                     // 20: platform.RequestLogActor
+	(*CreateAuditEventRequest)(nil),             // 21: platform.CreateAuditEventRequest
+	(*CreateAuditEventResponse)(nil),            // 22: platform.CreateAuditEventResponse
+	(*ListAuditEventsRequest)(nil),              // 23: platform.ListAuditEventsRequest
+	(*ListAuditEventsResponse)(nil),             // 24: platform.ListAuditEventsResponse
+	(*GetAuditEventRequest)(nil),                // 25: platform.GetAuditEventRequest
+	(*GetAuditEventResponse)(nil),               // 26: platform.GetAuditEventResponse
+	(*ListAuditEventResourceTypesRequest)(nil),  // 27: platform.ListAuditEventResourceTypesRequest
+	(*ListAuditEventResourceTypesResponse)(nil), // 28: platform.ListAuditEventResourceTypesResponse
+	(*AuditEventInfo)(nil),                      // 29: platform.AuditEventInfo
+	(*AuditActor)(nil),                          // 30: platform.AuditActor
+	(*AuditFieldChange)(nil),                    // 31: platform.AuditFieldChange
+	(*timestamppb.Timestamp)(nil),               // 32: google.protobuf.Timestamp
 }
 var file_platform_platform_proto_depIdxs = []int32{
 	0,  // 0: platform.ProcessIdempotencyKeyResponse.result:type_name -> platform.ProcessIdempotencyKeyResult
-	30, // 1: platform.RequestLog.occurred_at:type_name -> google.protobuf.Timestamp
-	30, // 2: platform.RequestLog.created_at:type_name -> google.protobuf.Timestamp
+	32, // 1: platform.RequestLog.occurred_at:type_name -> google.protobuf.Timestamp
+	32, // 2: platform.RequestLog.created_at:type_name -> google.protobuf.Timestamp
 	11, // 3: platform.CreateRequestLogRequest.request_log:type_name -> platform.RequestLog
-	30, // 4: platform.ListRequestLogsRequest.start_date:type_name -> google.protobuf.Timestamp
-	30, // 5: platform.ListRequestLogsRequest.end_date:type_name -> google.protobuf.Timestamp
+	32, // 4: platform.ListRequestLogsRequest.start_date:type_name -> google.protobuf.Timestamp
+	32, // 5: platform.ListRequestLogsRequest.end_date:type_name -> google.protobuf.Timestamp
 	19, // 6: platform.ListRequestLogsResponse.request_logs:type_name -> platform.RequestLogInfo
 	14, // 7: platform.ListRequestLogsResponse.page_info:type_name -> platform.PageInfo
 	19, // 8: platform.GetRequestLogResponse.request_log:type_name -> platform.RequestLogInfo
-	30, // 9: platform.RequestLogInfo.occurred_at:type_name -> google.protobuf.Timestamp
-	30, // 10: platform.RequestLogInfo.created_at:type_name -> google.protobuf.Timestamp
+	32, // 9: platform.RequestLogInfo.occurred_at:type_name -> google.protobuf.Timestamp
+	32, // 10: platform.RequestLogInfo.created_at:type_name -> google.protobuf.Timestamp
 	20, // 11: platform.RequestLogInfo.actor:type_name -> platform.RequestLogActor
-	30, // 12: platform.RequestLogInfo.account_created_at:type_name -> google.protobuf.Timestamp
-	30, // 13: platform.RequestLogInfo.account_updated_at:type_name -> google.protobuf.Timestamp
-	27, // 14: platform.CreateAuditEventRequest.audit_event:type_name -> platform.AuditEventInfo
-	30, // 15: platform.ListAuditEventsRequest.start_date:type_name -> google.protobuf.Timestamp
-	30, // 16: platform.ListAuditEventsRequest.end_date:type_name -> google.protobuf.Timestamp
-	27, // 17: platform.ListAuditEventsResponse.audit_events:type_name -> platform.AuditEventInfo
+	32, // 12: platform.RequestLogInfo.account_created_at:type_name -> google.protobuf.Timestamp
+	32, // 13: platform.RequestLogInfo.account_updated_at:type_name -> google.protobuf.Timestamp
+	29, // 14: platform.CreateAuditEventRequest.audit_event:type_name -> platform.AuditEventInfo
+	32, // 15: platform.ListAuditEventsRequest.start_date:type_name -> google.protobuf.Timestamp
+	32, // 16: platform.ListAuditEventsRequest.end_date:type_name -> google.protobuf.Timestamp
+	29, // 17: platform.ListAuditEventsResponse.audit_events:type_name -> platform.AuditEventInfo
 	14, // 18: platform.ListAuditEventsResponse.page_info:type_name -> platform.PageInfo
-	27, // 19: platform.GetAuditEventResponse.audit_event:type_name -> platform.AuditEventInfo
-	28, // 20: platform.AuditEventInfo.actor:type_name -> platform.AuditActor
-	29, // 21: platform.AuditEventInfo.changes:type_name -> platform.AuditFieldChange
-	30, // 22: platform.AuditEventInfo.occurred_at:type_name -> google.protobuf.Timestamp
-	30, // 23: platform.AuditEventInfo.created_at:type_name -> google.protobuf.Timestamp
+	29, // 19: platform.GetAuditEventResponse.audit_event:type_name -> platform.AuditEventInfo
+	30, // 20: platform.AuditEventInfo.actor:type_name -> platform.AuditActor
+	31, // 21: platform.AuditEventInfo.changes:type_name -> platform.AuditFieldChange
+	32, // 22: platform.AuditEventInfo.occurred_at:type_name -> google.protobuf.Timestamp
+	32, // 23: platform.AuditEventInfo.created_at:type_name -> google.protobuf.Timestamp
 	1,  // 24: platform.IdempotencyService.ProcessIdempotencyKey:input_type -> platform.ProcessIdempotencyKeyRequest
 	3,  // 25: platform.IdempotencyService.SetIdempotencyKeyResponse:input_type -> platform.SetIdempotencyKeyResponseRequest
 	5,  // 26: platform.IdempotencyService.ReleaseIdempotencyKey:input_type -> platform.ReleaseIdempotencyKeyRequest
@@ -2865,19 +2961,21 @@ var file_platform_platform_proto_depIdxs = []int32{
 	21, // 32: platform.AuditService.CreateAuditEvent:input_type -> platform.CreateAuditEventRequest
 	23, // 33: platform.AuditService.ListAuditEvents:input_type -> platform.ListAuditEventsRequest
 	25, // 34: platform.AuditService.GetAuditEvent:input_type -> platform.GetAuditEventRequest
-	2,  // 35: platform.IdempotencyService.ProcessIdempotencyKey:output_type -> platform.ProcessIdempotencyKeyResponse
-	4,  // 36: platform.IdempotencyService.SetIdempotencyKeyResponse:output_type -> platform.SetIdempotencyKeyResponseResponse
-	6,  // 37: platform.IdempotencyService.ReleaseIdempotencyKey:output_type -> platform.ReleaseIdempotencyKeyResponse
-	8,  // 38: platform.IdempotencyService.AdvanceRecoveryPoint:output_type -> platform.AdvanceRecoveryPointResponse
-	10, // 39: platform.IdempotencyService.GetRecoveryPoint:output_type -> platform.GetRecoveryPointResponse
-	13, // 40: platform.LoggingService.CreateRequestLog:output_type -> platform.CreateRequestLogResponse
-	16, // 41: platform.LoggingService.ListRequestLogs:output_type -> platform.ListRequestLogsResponse
-	18, // 42: platform.LoggingService.GetRequestLog:output_type -> platform.GetRequestLogResponse
-	22, // 43: platform.AuditService.CreateAuditEvent:output_type -> platform.CreateAuditEventResponse
-	24, // 44: platform.AuditService.ListAuditEvents:output_type -> platform.ListAuditEventsResponse
-	26, // 45: platform.AuditService.GetAuditEvent:output_type -> platform.GetAuditEventResponse
-	35, // [35:46] is the sub-list for method output_type
-	24, // [24:35] is the sub-list for method input_type
+	27, // 35: platform.AuditService.ListAuditEventResourceTypes:input_type -> platform.ListAuditEventResourceTypesRequest
+	2,  // 36: platform.IdempotencyService.ProcessIdempotencyKey:output_type -> platform.ProcessIdempotencyKeyResponse
+	4,  // 37: platform.IdempotencyService.SetIdempotencyKeyResponse:output_type -> platform.SetIdempotencyKeyResponseResponse
+	6,  // 38: platform.IdempotencyService.ReleaseIdempotencyKey:output_type -> platform.ReleaseIdempotencyKeyResponse
+	8,  // 39: platform.IdempotencyService.AdvanceRecoveryPoint:output_type -> platform.AdvanceRecoveryPointResponse
+	10, // 40: platform.IdempotencyService.GetRecoveryPoint:output_type -> platform.GetRecoveryPointResponse
+	13, // 41: platform.LoggingService.CreateRequestLog:output_type -> platform.CreateRequestLogResponse
+	16, // 42: platform.LoggingService.ListRequestLogs:output_type -> platform.ListRequestLogsResponse
+	18, // 43: platform.LoggingService.GetRequestLog:output_type -> platform.GetRequestLogResponse
+	22, // 44: platform.AuditService.CreateAuditEvent:output_type -> platform.CreateAuditEventResponse
+	24, // 45: platform.AuditService.ListAuditEvents:output_type -> platform.ListAuditEventsResponse
+	26, // 46: platform.AuditService.GetAuditEvent:output_type -> platform.GetAuditEventResponse
+	28, // 47: platform.AuditService.ListAuditEventResourceTypes:output_type -> platform.ListAuditEventResourceTypesResponse
+	36, // [36:48] is the sub-list for method output_type
+	24, // [24:36] is the sub-list for method input_type
 	24, // [24:24] is the sub-list for extension type_name
 	24, // [24:24] is the sub-list for extension extendee
 	0,  // [0:24] is the sub-list for field type_name
@@ -2899,16 +2997,16 @@ func file_platform_platform_proto_init() {
 	file_platform_platform_proto_msgTypes[18].OneofWrappers = []any{}
 	file_platform_platform_proto_msgTypes[19].OneofWrappers = []any{}
 	file_platform_platform_proto_msgTypes[22].OneofWrappers = []any{}
-	file_platform_platform_proto_msgTypes[26].OneofWrappers = []any{}
-	file_platform_platform_proto_msgTypes[27].OneofWrappers = []any{}
 	file_platform_platform_proto_msgTypes[28].OneofWrappers = []any{}
+	file_platform_platform_proto_msgTypes[29].OneofWrappers = []any{}
+	file_platform_platform_proto_msgTypes[30].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_platform_platform_proto_rawDesc), len(file_platform_platform_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   29,
+			NumMessages:   31,
 			NumExtensions: 0,
 			NumServices:   3,
 		},

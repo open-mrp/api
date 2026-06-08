@@ -47,6 +47,9 @@ func (r *auditEventRepoImpl) Create(ctx context.Context, event *domain.AuditEven
 		metadataParam = db.NullableRawMessage(event.Metadata)
 	}
 
+	// event.ActorID is the raw actor id the API exposes — the user_id for a user
+	// actor, or the api_key type_id for an api_key actor (set from the identity by
+	// the audit consumer). Stored as-is.
 	err := r.db.CreateAuditEvent(ctx, sqlc.CreateAuditEventParams{
 		TypeID:           event.ID,
 		ActorID:          event.ActorID,

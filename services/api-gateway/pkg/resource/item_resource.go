@@ -41,26 +41,6 @@ type Item struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-func ExpandableItemStub(id, sku string, ts time.Time) *Item {
-	if id == "" {
-		id = "it_unknown"
-	}
-	if sku == "" {
-		sku = "ITEM"
-	}
-	if ts.IsZero() {
-		ts = time.Unix(0, 0).UTC()
-	}
-	return &Item{
-		ID:           id,
-		Object:       constants.ObjectTypeItem,
-		SKU:          sku,
-		ItemTypeCode: constants.ItemTypeCodeProduct,
-		CreatedAt:    ts,
-		UpdatedAt:    ts,
-	}
-}
-
 var sampleDescription = "6061-T6 aluminum sheet, 4ft x 8ft, 0.125in thick"
 
 var SampleItem = &Item{
@@ -211,10 +191,6 @@ var SampleExportItem = &ExportItem{
 	UpdatedAt:      timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
-func (*ExportItem) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SampleExportItem)
-}
-
 // ExportItemsResponse is the export items response in JSON format.
 // Export endpoints typically return an Excel file instead.
 type ExportItemsResponse struct {
@@ -230,10 +206,6 @@ var SampleExportItemsResponse = &ExportItemsResponse{
 	Object: constants.ObjectTypeList,
 	Items:  []*ExportItem{SampleExportItem},
 	Count:  1,
-}
-
-func (*ExportItemsResponse) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SampleExportItemsResponse)
 }
 
 // BulkReconcileItemsResponse is the response from bulk reconciling items.

@@ -31,12 +31,26 @@ func TestAuditEvents_ListSearchByResourceType(t *testing.T) {
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Search for 'unit' should return at least 1 result")
 
+	// Search matches the token across resource_type, action, resource_id and
+	// request_id. Every result must contain "unit" in at least one of the fields
+	// visible on the list item (request_id is only exposed via ?include=request).
 	for _, item := range list.Data {
 		m := parseJSON(item)
-		resourceType := jsonField(m, "resource_type")
-		assert.True(t,
-			strings.Contains(strings.ToLower(resourceType), "unit"),
-			"Search result resource_type %q should contain 'unit'", resourceType,
+		fields := []string{
+			jsonField(m, "resource_type"),
+			jsonField(m, "action"),
+			jsonField(m, "resource_id"),
+		}
+		var matched bool
+		for _, f := range fields {
+			if strings.Contains(strings.ToLower(f), "unit") {
+				matched = true
+				break
+			}
+		}
+		assert.True(t, matched,
+			"Search result should contain 'unit' in resource_type/action/resource_id; got resource_type=%q action=%q resource_id=%q",
+			fields[0], fields[1], fields[2],
 		)
 	}
 }
@@ -277,6 +291,117 @@ func TestAuditEvents_FilterByMultipleActorIDs(t *testing.T) {
 		require.NotNil(t, actor)
 		assert.Equal(t, actorID, jsonField(actor, "id"))
 	}
+}
+
+// TestAuditEvents_ListSearchByResourceID verifies free-text search ('q') matches
+// resource_id, so an operator can paste a resource id and find every audit event
+// about it. Before this fix, search only matched resource_type and action, so an
+// id query returned nothing. Seed event adev_01seedsearchtgt01 carries
+// SeedAuditEventSearchResourceID.
+func TestAuditEvents_ListSearchByResourceID(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(auditEventsPath, url.Values{
+		"q":     {SeedAuditEventSearchResourceID},
+		"limit": {"50"},
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, list.Data, "search for resource_id %q should return the seeded event", SeedAuditEventSearchResourceID)
+
+	var found bool
+	for _, item := range list.Data {
+		if DataItemField(item, "resource_id") == SeedAuditEventSearchResourceID {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "search for %q should include the seeded event with that resource_id", SeedAuditEventSearchResourceID)
+}
+
+// TestAuditEvents_ListSearchByRequestID verifies search ('q') matches request_id,
+// linking an audit event back to the request that produced it. Seed event
+// adev_01seedsearchtgt01 carries SeedAuditEventSearchRequestID.
+func TestAuditEvents_ListSearchByRequestID(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(auditEventsPath, url.Values{
+		"q":     {SeedAuditEventSearchRequestID},
+		"limit": {"50"},
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, list.Data, "search for request_id %q should return the seeded event", SeedAuditEventSearchRequestID)
+
+	var found bool
+	for _, item := range list.Data {
+		if DataItemField(item, "resource_id") == SeedAuditEventSearchResourceID {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "search for request_id %q should include the seeded event", SeedAuditEventSearchRequestID)
+}
+
+// TestAuditEvents_FilterByMultipleActorsUnion is the strong union check for the
+// actor array filter: filtering by two distinct, real actors must return events
+// for BOTH. The seed data provides one user actor and one api_key actor.
+func TestAuditEvents_FilterByMultipleActorsUnion(t *testing.T) {
+	t.Parallel()
+	probe, _, err := apiClient.GetList(auditEventsPath, url.Values{
+		"include": {"actor"},
+		"limit":   {"100"},
+	})
+	if err != nil || len(probe.Data) == 0 {
+		t.Skip("No audit events available to discover actor IDs")
+		return
+	}
+
+	idByType := map[string]string{}
+	var ordered []string
+	for _, item := range probe.Data {
+		actor := jsonObject(parseJSON(item), "actor")
+		if actor == nil {
+			continue
+		}
+		id := jsonField(actor, "id")
+		typ := jsonField(actor, "type")
+		if id == "" {
+			continue
+		}
+		if _, seen := idByType[typ]; !seen {
+			idByType[typ] = id
+			ordered = append(ordered, id)
+		}
+		if len(ordered) >= 2 {
+			break
+		}
+	}
+	if len(ordered) < 2 {
+		t.Skip("Need at least 2 distinct actors in recent audit events for a union test")
+		return
+	}
+	actorA, actorB := ordered[0], ordered[1]
+
+	filtered, _, err := apiClient.GetList(auditEventsPath, url.Values{
+		"actor_ids": {actorA, actorB},
+		"include":   {"actor"},
+		"limit":     {"200"},
+	})
+	require.NoError(t, err)
+
+	allowed := map[string]bool{actorA: true, actorB: true}
+	sawA, sawB := false, false
+	for _, item := range filtered.Data {
+		actor := jsonObject(parseJSON(item), "actor")
+		require.NotNil(t, actor, "actor should be present with ?include=actor")
+		got := jsonField(actor, "id")
+		assert.True(t, allowed[got], "actor.id %q not in requested set {%s, %s}", got, actorA, actorB)
+		switch got {
+		case actorA:
+			sawA = true
+		case actorB:
+			sawB = true
+		}
+	}
+	assert.True(t, sawA, "union filter must return events for actor %s", actorA)
+	assert.True(t, sawB, "union filter must return events for actor %s", actorB)
 }
 
 func TestAuditEvents_FilterByActorIDsImpossible(t *testing.T) {

@@ -89,19 +89,20 @@ func (h *loggingHandler) ListRequestLogs(ctx context.Context, req *pb.ListReques
 	}
 
 	filter := &domain.ListRequestLogsFilter{
-		Query:            req.Query,
-		Methods:          req.Methods,
-		StatusCodes:      req.StatusCodes,
-		ErrorCodes:       req.ErrorCodes,
-		AccountIDs:       req.AccountIds,
-		ActorIDs:         req.ActorIds,
-		ActorTypes:       req.ActorTypes,
-		NormalizedRoutes: req.NormalizedRoutes,
-		Hosts:            req.Hosts,
-		MinLatencyUs:     req.MinLatencyUs,
-		IdempotencyKey:   req.IdempotencyKey,
-		Cursor:           req.Cursor,
-		Limit:            req.Limit,
+		Query:             req.Query,
+		Methods:           req.Methods,
+		StatusCodes:       req.StatusCodes,
+		StatusCodeClasses: req.StatusCodeClasses,
+		ErrorCodes:        req.ErrorCodes,
+		AccountIDs:        req.AccountIds,
+		ActorIDs:          req.ActorIds,
+		ActorTypes:        req.ActorTypes,
+		NormalizedRoutes:  req.NormalizedRoutes,
+		Hosts:             req.Hosts,
+		MinLatencyUs:      req.MinLatencyUs,
+		IdempotencyKey:    req.IdempotencyKey,
+		Cursor:            req.Cursor,
+		Limit:             req.Limit,
 	}
 
 	if req.StartDate != nil {

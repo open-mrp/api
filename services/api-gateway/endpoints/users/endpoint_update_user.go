@@ -10,6 +10,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to update a user.
@@ -17,18 +18,18 @@ type UpdateUserRequest struct {
 	// User ID.
 	UserID string `path:"id" validate:"required"`
 	// Display name.
-	Name *string `json:"name" validate:"omitempty,max=255"`
+	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// Profile image URL.
-	ImageUrl *string `json:"image_url" validate:"omitempty,max=2083"`
+	ImageUrl field.Optional[string] `json:"image_url,omitzero" validate:"omitempty,max=2083"`
 	// Email verification timestamp. Set to null to mark as unverified.
-	EmailVerified *time.Time `json:"email_verified"`
+	EmailVerified field.Optional[time.Time] `json:"email_verified,omitzero"`
 }
 
 var sampleUpdateUserName = apiresource.SampleUserName
 var sampleUpdateUserImageUrl = apiresource.SampleUserImageUrl
 var sampleUpdateUserRequest = &UpdateUserRequest{
-	Name:     &sampleUpdateUserName,
-	ImageUrl: &sampleUpdateUserImageUrl,
+	Name:     field.Some(sampleUpdateUserName),
+	ImageUrl: field.Some(sampleUpdateUserImageUrl),
 }
 
 func (*UpdateUserRequest) SchemaExample() any {

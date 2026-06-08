@@ -11,7 +11,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -102,7 +102,7 @@ func (m *addressSvcImpl) CreateAddress(ctx context.Context, req *apirequest.Addr
 		Name:         req.Name,
 		Phone:        req.Phone.Ptr(),
 		Email:        req.Email.Ptr(),
-		IsDropShip:   addressTypeToDropShip(req.Type),
+		IsDropShip:   addressTypeToDropShip(req.Type.Ptr()),
 		StreetLine_1: req.StreetLine1.Ptr(),
 		StreetLine_2: req.StreetLine2.Ptr(),
 		Locality:     req.Locality.Ptr(),
@@ -123,16 +123,16 @@ func (m *addressSvcImpl) CreateAddress(ctx context.Context, req *apirequest.Addr
 func (m *addressSvcImpl) UpdateAddress(ctx context.Context, req *UpdateAddressRequest) (*apiresource.Address, *apierror.APIError) {
 	pbReq := &pb.UpdateAddressRequest{
 		Id:           req.AddressID,
-		Name:         req.Name,
-		Phone:        patch.StringFieldPtrToProto(req.Phone),
-		Email:        patch.StringFieldPtrToProto(req.Email),
-		IsDropShip:   addressTypeToDropShipPtr(req.Type),
-		StreetLine_1: req.StreetLine1,
-		StreetLine_2: patch.StringFieldPtrToProto(req.StreetLine2),
-		Locality:     req.Locality,
-		State:        req.State,
-		PostalCode:   req.PostalCode,
-		Country:      req.Country,
+		Name:         req.Name.Ptr(),
+		Phone:        field.StringClearableToProto(req.Phone),
+		Email:        field.StringClearableToProto(req.Email),
+		IsDropShip:   addressTypeToDropShipPtr(req.Type.Ptr()),
+		StreetLine_1: req.StreetLine1.Ptr(),
+		StreetLine_2: field.StringClearableToProto(req.StreetLine2),
+		Locality:     req.Locality.Ptr(),
+		State:        req.State.Ptr(),
+		PostalCode:   req.PostalCode.Ptr(),
+		Country:      req.Country.Ptr(),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, addressSvcTracer, "service.addresses.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateAddressResponse, error) {

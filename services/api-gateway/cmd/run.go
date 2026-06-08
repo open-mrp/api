@@ -133,7 +133,11 @@ func Run(
 	// HTTP request runs.
 	resourceloaders.SetCoreClient(coreClient.Client)
 	resourceloaders.SetCoreSalesClient(coreClient.Sales)
+	resourceloaders.SetCorePurchaseClient(coreClient.Purchase)
 	resourceloaders.SetFulfillmentClient(coreClient.Fulfillment)
+	resourceloaders.SetCorePickingClient(coreClient.Picking)
+	resourceloaders.SetCoreShippingClient(coreClient.Shipping)
+	resourceloaders.SetCoreReceivingClient(coreClient.Receiving)
 	resourceloaders.SetAuthClient(authClient.Client)
 
 	// Billing Service

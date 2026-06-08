@@ -19,8 +19,8 @@ type RetrieveShipmentRequest struct {
 // Returns a shipment by ID.
 type RetrieveShipmentEndpoint struct{}
 
-func (e *RetrieveShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveShipmentRequest, *apiresource.ShipmentDetail] {
-	return (&apiendpoint.APIEndpoint[*RetrieveShipmentRequest, *apiresource.ShipmentDetail]{
+func (e *RetrieveShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveShipmentRequest, *apiresource.Shipment] {
+	return (&apiendpoint.APIEndpoint[*RetrieveShipmentRequest, *apiresource.Shipment]{
 		Title:             "Retrieve Shipment",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
@@ -29,12 +29,12 @@ func (e *RetrieveShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeShipment,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveShipmentRequest) (*apiresource.ShipmentDetail, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveShipmentRequest) (*apiresource.Shipment, *apierror.APIError) {
 			return svc.(ShipmentSvc).GetShipment
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeShipment,
-			Fields:     []string{"lines", "shipping_cases", "sales_order", "customer", "carrier", "service_level", "shipping_address", "shipped_by", "invoice", "pick"},
+			Fields:     []string{"lines", "shipping_cases", "sales_order", "customer", "freight", "shipping_address", "shipped_by", "invoice", "pick"},
 		}),
 	})
 }

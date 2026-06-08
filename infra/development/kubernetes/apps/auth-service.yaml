@@ -17,6 +17,16 @@ spec:
           image: augno-api/auth-service
           ports:
             - containerPort: 9092
+          readinessProbe:
+            grpc:
+              port: 9092
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            grpc:
+              port: 9092
+            initialDelaySeconds: 15
+            periodSeconds: 20
           resources:
             requests:
               memory: "64Mi"

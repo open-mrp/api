@@ -123,12 +123,12 @@ func (m *unitSvcImpl) CreateUnit(ctx context.Context, req *CreateUnitRequest) (*
 func (m *unitSvcImpl) UpdateUnit(ctx context.Context, req *UpdateUnitRequest) (*apiresource.Unit, *apierror.APIError) {
 	pbReq := &pb.UpdateUnitRequest{
 		Id:                req.UnitID,
-		Name:              req.Name,
-		Abbreviation:      req.Abbreviation,
-		RatioNumerator:    req.RatioNumerator,
-		RatioDenominator:  req.RatioDenominator,
-		OffsetNumerator:   req.OffsetNumerator,
-		OffsetDenominator: req.OffsetDenominator,
+		Name:              req.Name.Ptr(),
+		Abbreviation:      req.Abbreviation.Ptr(),
+		RatioNumerator:    req.RatioNumerator.Ptr(),
+		RatioDenominator:  req.RatioDenominator.Ptr(),
+		OffsetNumerator:   req.OffsetNumerator.Ptr(),
+		OffsetDenominator: req.OffsetDenominator.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, unitSvcTracer, "service.units.update", domain.ServiceName,

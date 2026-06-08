@@ -4,16 +4,17 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/augno/api/shared/patch"
 	"github.com/augno/api/shared/validate"
 )
 
 func TestRejectExplicitJSONNulls_updateAccountGroup_nameNull(t *testing.T) {
 	t.Parallel()
+	// Name is an optional nullable_input field (field.Optional[string]), so an
+	// explicit null is accepted by RejectExplicitJSONNulls (it leaves the field unset).
 	body := []byte(`{"name": null}`)
 	var req UpdateAccountGroupRequest
-	if err := validate.RejectExplicitJSONNulls(body, &req); err == nil {
-		t.Fatal("expected error for name: null")
+	if err := validate.RejectExplicitJSONNulls(body, &req); err != nil {
+		t.Fatalf("expected name: null to be accepted, got error: %v", err)
 	}
 }
 
@@ -27,8 +28,7 @@ func TestUpdateAccountGroupRequest_JSON_descriptionNullAccepted(t *testing.T) {
 	if err := json.Unmarshal(body, &req); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	patch.ApplyPtrFieldNulls(body, &req)
-	if req.Description == nil || !req.Description.IsClear() {
+	if !req.Description.IsClear() {
 		t.Fatalf("expected Description clear, got %+v", req.Description)
 	}
 }
@@ -40,7 +40,7 @@ func TestUpdateAccountGroupRequest_JSON_descriptionStringOK(t *testing.T) {
 	if err := json.Unmarshal([]byte(body), &req); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if req.Description == nil || !req.Description.IsSet() {
+	if !req.Description.IsSet() {
 		t.Fatalf("expected Description set, got %+v", req.Description)
 	}
 	val, _ := req.Description.Value()
@@ -56,8 +56,8 @@ func TestUpdateAccountGroupRequest_JSON_omittedNameOK(t *testing.T) {
 	if err := json.Unmarshal([]byte(body), &req); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if req.Name != nil {
-		t.Fatalf("expected Name nil, got %v", req.Name)
+	if req.Name.IsSet() {
+		t.Fatalf("expected Name unset, got %v", req.Name)
 	}
 }
 
@@ -68,7 +68,7 @@ func TestUpdateAccountGroupRequest_JSON_nameStringOK(t *testing.T) {
 	if err := json.Unmarshal([]byte(body), &req); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if req.Name == nil || *req.Name != "Retail" {
+	if v, ok := req.Name.Value(); !ok || v != "Retail" {
 		t.Fatalf("unexpected Name: %+v", req.Name)
 	}
 }

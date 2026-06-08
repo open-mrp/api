@@ -1,11 +1,11 @@
-package patch
+package field
 
 import (
 	"encoding/json"
 	"testing"
 )
 
-func TestField_threeStates(t *testing.T) {
+func TestClearable_threeStates(t *testing.T) {
 	t.Parallel()
 
 	unset := Unset[string]()
@@ -28,7 +28,7 @@ func TestField_threeStates(t *testing.T) {
 	}
 }
 
-func TestField_marshalJSON(t *testing.T) {
+func TestClearable_marshalJSON(t *testing.T) {
 	t.Parallel()
 
 	set, err := json.Marshal(Set("hello"))
@@ -48,7 +48,7 @@ func TestField_marshalJSON(t *testing.T) {
 	}
 
 	type payload struct {
-		Note Field[string] `json:"note,omitzero"`
+		Note Clearable[string] `json:"note,omitzero"`
 	}
 	b, err := json.Marshal(payload{Note: Unset[string]()})
 	if err != nil {
@@ -67,15 +67,15 @@ func TestField_marshalJSON(t *testing.T) {
 	}
 }
 
-func TestField_unmarshalJSON(t *testing.T) {
+func TestClearable_unmarshalJSON(t *testing.T) {
 	t.Parallel()
 
-	var unset Field[string]
+	var unset Clearable[string]
 	if !unset.IsUnset() {
 		t.Fatal("zero value should be unset")
 	}
 
-	var clear Field[string]
+	var clear Clearable[string]
 	if err := clear.UnmarshalJSON([]byte("null")); err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +83,7 @@ func TestField_unmarshalJSON(t *testing.T) {
 		t.Fatal("null should clear")
 	}
 
-	var set Field[string]
+	var set Clearable[string]
 	if err := set.UnmarshalJSON([]byte(`"hello"`)); err != nil {
 		t.Fatal(err)
 	}
@@ -93,57 +93,35 @@ func TestField_unmarshalJSON(t *testing.T) {
 	}
 }
 
-func TestCoalesce_nilIsUnset(t *testing.T) {
-	t.Parallel()
-	f := Coalesce[string](nil)
-	if !f.IsUnset() {
-		t.Fatal("expected unset")
-	}
+type patchValueStruct struct {
+	Description Clearable[string] `json:"description,omitzero"`
 }
 
-func TestPtr_roundTrip(t *testing.T) {
-	t.Parallel()
-	set := Set("x")
-	p := new(set)
-	if p == nil || !p.IsSet() {
-		t.Fatal("expected set")
-	}
-	if Coalesce(p) != set {
-		t.Fatal("Coalesce(Ptr(f)) should equal f")
-	}
-}
-
-type patchPtrStruct struct {
-	Description *Field[string] `json:"description"`
-}
-
-func TestFieldPtr_unmarshalJSON(t *testing.T) {
+// TestClearableValue_unmarshalJSON verifies that a value Clearable distinguishes all
+// three states directly through json.Unmarshal — no repair pass needed. An explicit
+// null reaches the addressable field's UnmarshalJSON and is recorded as clear.
+func TestClearableValue_unmarshalJSON(t *testing.T) {
 	t.Parallel()
 
-	var absent patchPtrStruct
+	var absent patchValueStruct
 	if err := json.Unmarshal([]byte(`{}`), &absent); err != nil {
 		t.Fatal(err)
 	}
-	if absent.Description != nil {
-		t.Fatal("absent key should leave nil pointer")
+	if !absent.Description.IsUnset() {
+		t.Fatal("absent key should be unset")
 	}
 
-	var clear patchPtrStruct
+	var clear patchValueStruct
 	if err := json.Unmarshal([]byte(`{"description":null}`), &clear); err != nil {
 		t.Fatal(err)
 	}
-	ApplyPtrFieldNulls([]byte(`{"description":null}`), &clear)
-	if clear.Description == nil || !clear.Description.IsClear() {
-		t.Fatal("null should yield non-nil clear field")
+	if !clear.Description.IsClear() {
+		t.Fatal("null should clear")
 	}
 
-	var set patchPtrStruct
+	var set patchValueStruct
 	if err := json.Unmarshal([]byte(`{"description":"hello"}`), &set); err != nil {
 		t.Fatal(err)
-	}
-	ApplyPtrFieldNulls([]byte(`{"description":"hello"}`), &set)
-	if set.Description == nil || !set.Description.IsSet() {
-		t.Fatal("value should yield non-nil set field")
 	}
 	v, ok := set.Description.Value()
 	if !ok || v != "hello" {

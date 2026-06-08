@@ -10,7 +10,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to create a customer.
@@ -18,45 +18,45 @@ type CreateCustomerRequest struct {
 	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
 	// Customer number. Auto-generated if omitted.
-	Number *string `json:"number,omitempty" validate:"omitempty,max=255"`
+	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
 	// Note.
-	Note *string `json:"note,omitempty"`
+	Note field.Optional[string] `json:"note,omitzero"`
 	// Email address.
-	Email *string `json:"email,omitempty" validate:"omitempty,max=255"`
+	Email field.Optional[string] `json:"email,omitzero" validate:"omitempty,max=255"`
 	// Phone number.
-	Phone *string `json:"phone,omitempty" validate:"omitempty,max=255"`
+	Phone field.Optional[string] `json:"phone,omitzero" validate:"omitempty,max=255"`
 	// Website URL.
-	URL *string `json:"url,omitempty" validate:"omitempty,max=255"`
+	URL field.Optional[string] `json:"url,omitzero" validate:"omitempty,max=255"`
 	// Account status code.
-	StatusCode *constants.AccountStatusCode `json:"status,omitempty" default:"normal"`
+	StatusCode field.Optional[constants.AccountStatusCode] `json:"status,omitzero" default:"normal"`
 	// EDI status.
-	EDIStatus *constants.EDIStatus `json:"edi_status,omitempty" default:"disabled"`
+	EDIStatus field.Optional[constants.EDIStatus] `json:"edi_status,omitzero" default:"disabled"`
 	// Commission policy.
-	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy,omitempty" default:"commission_exempt"`
+	CommissionPolicy field.Optional[constants.CommissionPolicy] `json:"commission_policy,omitzero" default:"commission_exempt"`
 	// Freight policy.
-	FreightPolicy *constants.FreightPolicy `json:"freight_policy,omitempty" default:"billed_freight"`
+	FreightPolicy field.Optional[constants.FreightPolicy] `json:"freight_policy,omitzero" default:"billed_freight"`
 	// Default carrier ID.
 	DefaultCarrierID string `json:"default_carrier_id" validate:"required"`
 	// Default service level ID.
-	DefaultServiceLevelID *string `json:"default_service_level_id,omitempty" validate:"omitempty"`
+	DefaultServiceLevelID field.Optional[string] `json:"default_service_level_id,omitzero" validate:"omitempty"`
 	// Default payment term ID.
 	DefaultPaymentTermID string `json:"default_payment_term_id" validate:"required"`
 	// Default shipping term ID.
 	DefaultShippingTermID string `json:"default_shipping_term_id" validate:"required"`
 	// Default priority code.
-	DefaultPriorityCode *constants.PriorityCode `json:"default_priority,omitempty" default:"normal"`
+	DefaultPriorityCode field.Optional[constants.PriorityCode] `json:"default_priority,omitzero" default:"normal"`
 	// The ID of the account user to assign as the default sales rep.
-	DefaultSalesRepID *string `json:"default_sales_rep_id,omitempty" validate:"omitempty"`
+	DefaultSalesRepID field.Optional[string] `json:"default_sales_rep_id,omitzero" validate:"omitempty"`
 	// Price group IDs.
-	CustomerPriceGroupIDs []string `json:"customer_price_group_ids,omitempty"`
+	CustomerPriceGroupIDs []string `json:"customer_price_group_ids,omitzero"`
 	// Customer type group ID.
 	CustomerTypeGroupID string `json:"customer_type_group_id" validate:"required"`
 	// Carrier billing type.
-	CarrierBillingType *constants.CarrierBillingType `json:"carrier_billing_type,omitempty" default:"sender"`
+	CarrierBillingType field.Optional[constants.CarrierBillingType] `json:"carrier_billing_type,omitzero" default:"sender"`
 	// Carrier billing account number.
-	CarrierBillingAccount *string `json:"carrier_billing_account,omitempty" validate:"omitempty,max=255"`
+	CarrierBillingAccount field.Optional[string] `json:"carrier_billing_account,omitzero" validate:"omitempty,max=255"`
 	// Credit limit.
-	CreditLimit *apirequest.QuantityInput `json:"credit_limit,omitempty"`
+	CreditLimit field.Optional[apirequest.QuantityInput] `json:"credit_limit,omitzero"`
 	// Bill-to address.
 	BillToAddress apirequest.AddressInput `json:"bill_to_address" validate:"required"`
 	// Ship-to address.
@@ -70,25 +70,25 @@ var sampleCreateCustomerState = "NY"
 var sampleCreateCustomerPostalCode = "10001"
 var sampleCreateCustomerRequest = &CreateCustomerRequest{
 	Name:                  apiresource.SampleCustomerName,
-	Note:                  &sampleCreateCustomerNote,
+	Note:                  field.Some(sampleCreateCustomerNote),
 	DefaultCarrierID:      apiresource.SampleCarrierID,
 	DefaultPaymentTermID:  apiresource.SamplePaymentTermID,
 	DefaultShippingTermID: apiresource.SampleShippingTermID,
 	CustomerTypeGroupID:   apiresource.SampleAccountGroupID,
 	BillToAddress: apirequest.AddressInput{
 		Name:        apiresource.SampleCustomerName,
-		StreetLine1: patch.PtrNullable(&sampleCreateCustomerStreetLine1),
-		Locality:    patch.PtrNullable(&sampleCreateCustomerLocality),
-		State:       patch.PtrNullable(&sampleCreateCustomerState),
-		PostalCode:  patch.PtrNullable(&sampleCreateCustomerPostalCode),
+		StreetLine1: field.SomePtr(&sampleCreateCustomerStreetLine1),
+		Locality:    field.SomePtr(&sampleCreateCustomerLocality),
+		State:       field.SomePtr(&sampleCreateCustomerState),
+		PostalCode:  field.SomePtr(&sampleCreateCustomerPostalCode),
 		Country:     "US",
 	},
 	ShipToAddress: apirequest.AddressInput{
 		Name:        apiresource.SampleCustomerName,
-		StreetLine1: patch.PtrNullable(&sampleCreateCustomerStreetLine1),
-		Locality:    patch.PtrNullable(&sampleCreateCustomerLocality),
-		State:       patch.PtrNullable(&sampleCreateCustomerState),
-		PostalCode:  patch.PtrNullable(&sampleCreateCustomerPostalCode),
+		StreetLine1: field.SomePtr(&sampleCreateCustomerStreetLine1),
+		Locality:    field.SomePtr(&sampleCreateCustomerLocality),
+		State:       field.SomePtr(&sampleCreateCustomerState),
+		PostalCode:  field.SomePtr(&sampleCreateCustomerPostalCode),
 		Country:     "US",
 	},
 }

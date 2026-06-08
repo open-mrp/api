@@ -458,4 +458,6 @@ message InvoiceInfo {
   repeated InvoiceAllocationInfo allocations = 22;
   google.protobuf.Timestamp created_at = 23;
   google.protobuf.Timestamp updated_at = 24;
+  string customer_id = 25;
+  optional string payment_term_id = 26;
 }

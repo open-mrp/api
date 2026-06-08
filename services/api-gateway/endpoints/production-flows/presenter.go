@@ -49,8 +49,9 @@ func flowProductionPresenter(ctx context.Context, p *pb.ProductionFlowProduction
 		return nil
 	}
 	if p.ItemId != "" {
-		item := apiresource.ExpandableItemStub(p.ItemId, p.ItemSku, ts)
-		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeProduction, p.Id, "produced_item", item)
+		// produced_item is expandable: stash only the FK id; LoadItems fetches the
+		// real Item on ?include=...produced_item. Never fabricate.
+		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeProduction, p.Id, "produced_item_id", p.ItemId)
 	}
 	createdAt := ts
 	updatedAt := ts
@@ -76,8 +77,9 @@ func flowConsumptionPresenter(ctx context.Context, c *pb.ProductionFlowConsumpti
 		return apiresource.ProductionFlowConsumption{}
 	}
 	if c.ItemId != "" {
-		item := apiresource.ExpandableItemStub(c.ItemId, c.ItemSku, ts)
-		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeConsumption, c.Id, "consumed_item", item)
+		// consumed_item is expandable: stash only the FK id; LoadItems fetches the
+		// real Item on ?include=...consumed_item. Never fabricate.
+		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeConsumption, c.Id, "consumed_item_id", c.ItemId)
 	}
 	createdAt := grpcutil.TimestampToTime(c.CreatedAt)
 	if createdAt.IsZero() {
@@ -96,10 +98,6 @@ func flowConsumptionPresenter(ctx context.Context, c *pb.ProductionFlowConsumpti
 		CreatedAt:     createdAt,
 		UpdatedAt:     updatedAt,
 	}
-}
-
-func ProductionFlowStepPresenter(ctx context.Context, s *pb.ProductionFlowStepInfo) apiresource.ProductionFlowStep {
-	return productionFlowStepFromProto(ctx, s)
 }
 
 func productionFlowStepFromProto(ctx context.Context, s *pb.ProductionFlowStepInfo) apiresource.ProductionFlowStep {
@@ -316,22 +314,33 @@ func enrichFlowUnits(ctx context.Context, steps []apiresource.ProductionFlowStep
 	}
 }
 
+// unitFromRateInfo builds a Unit from the real unit fields the production-flow
+// proto carries inline. It never fabricates identifiers; ratio/offset default to
+// the mathematical identity only when the proto omits them so the Unit stays valid.
 func unitFromRateInfo(id, name, abbreviation, unitType, ratioNum, ratioDen, offsetNum, offsetDen string, createdAt, updatedAt *timestamppb.Timestamp) *apiresource.Unit {
-	unit := apiresource.ExpandableUnitStub(id, name, abbreviation, unitType, grpcutil.TimestampToTime(createdAt))
-	if ratioNum != "" {
-		unit.RatioNumerator = ratioNum
+	if ratioNum == "" {
+		ratioNum = "1"
 	}
-	if ratioDen != "" {
-		unit.RatioDenominator = ratioDen
+	if ratioDen == "" {
+		ratioDen = "1"
 	}
-	if offsetNum != "" {
-		unit.OffsetNumerator = offsetNum
+	if offsetNum == "" {
+		offsetNum = "0"
 	}
-	if offsetDen != "" {
-		unit.OffsetDenominator = offsetDen
+	if offsetDen == "" {
+		offsetDen = "1"
 	}
-	if ts := grpcutil.TimestampToTime(updatedAt); !ts.IsZero() {
-		unit.UpdatedAt = ts
+	return &apiresource.Unit{
+		ID:                id,
+		Object:            constants.ObjectTypeUnit,
+		Name:              name,
+		Abbreviation:      abbreviation,
+		Type:              constants.UnitType(unitType),
+		RatioNumerator:    ratioNum,
+		RatioDenominator:  ratioDen,
+		OffsetNumerator:   offsetNum,
+		OffsetDenominator: offsetDen,
+		CreatedAt:         grpcutil.TimestampToTime(createdAt),
+		UpdatedAt:         grpcutil.TimestampToTime(updatedAt),
 	}
-	return unit
 }

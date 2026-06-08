@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to partially update a shipment line.
@@ -17,16 +18,14 @@ type UpdateShipmentLineRequest struct {
 	// Shipment line ID.
 	ShipmentLineID string `path:"id" validate:"required"`
 	// Quantity value.
-	QuantityValue *string `json:"quantity_value,omitempty"`
+	QuantityValue field.Optional[string] `json:"quantity_value,omitzero"`
 	// Quantity unit ID.
-	QuantityUnitID *string `json:"quantity_unit_id,omitempty" validate:"omitempty"`
+	QuantityUnitID field.Optional[string] `json:"quantity_unit_id,omitzero" validate:"omitempty"`
 }
 
-var sampleUpdateShipmentLineQuantityValue = "5.000000000000000000000000000000"
-var sampleUpdateShipmentLineQuantityUnitID = apiresource.SampleUnitID
 var sampleUpdateShipmentLineRequest = &UpdateShipmentLineRequest{
-	QuantityValue:  &sampleUpdateShipmentLineQuantityValue,
-	QuantityUnitID: &sampleUpdateShipmentLineQuantityUnitID,
+	QuantityValue:  field.Some("5.000000000000000000000000000000"),
+	QuantityUnitID: field.Some(apiresource.SampleUnitID),
 }
 
 func (*UpdateShipmentLineRequest) SchemaExample() any {

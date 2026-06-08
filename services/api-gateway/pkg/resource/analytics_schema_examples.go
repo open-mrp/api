@@ -20,7 +20,7 @@ func sampleSalesEntry() SalesEntry {
 		ID:                "sale_analytics_doc_01061c4dc0d10772b6f05d1446",
 		IssuedAt:          &t,
 		OrderNumber:       SampleSalesOrderNumber,
-		OrderID:           SampleSalesOrderDetailID,
+		OrderID:           SampleSalesOrderID,
 		SalesRepID:        &srep,
 		CustomerID:        SampleCustomerID,
 		CustomerName:      SampleCustomerName,

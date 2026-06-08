@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // UpdateSettlementRequest is the request to update a settlement.
@@ -16,18 +17,18 @@ type UpdateSettlementRequest struct {
 	// Settlement ID.
 	SettlementID string `path:"id" validate:"required"`
 	// Settlement number.
-	Number *string `json:"number" validate:"omitempty,max=255"`
+	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
 	// Note for this settlement.
-	Note *string `json:"note"`
+	Note field.Optional[string] `json:"note,omitzero"`
 	// Responsible user ID.
-	ResponsibleUserID *string `json:"responsible_user_id" validate:"omitempty"`
+	ResponsibleUserID field.Optional[string] `json:"responsible_user_id,omitzero" validate:"omitempty"`
 }
 
 var sampleUpdateSettlementNote = "Partial payment applied"
 var sampleUpdateSettlementUserID = apiresource.SampleUserID
 var sampleUpdateSettlementRequest = &UpdateSettlementRequest{
-	Note:              &sampleUpdateSettlementNote,
-	ResponsibleUserID: &sampleUpdateSettlementUserID,
+	Note:              field.Some(sampleUpdateSettlementNote),
+	ResponsibleUserID: field.Some(sampleUpdateSettlementUserID),
 }
 
 func (*UpdateSettlementRequest) SchemaExample() any {

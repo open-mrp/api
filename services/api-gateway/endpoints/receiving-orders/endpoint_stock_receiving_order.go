@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to stock a receiving order.
@@ -24,9 +25,9 @@ type StockLineItemRequest struct {
 	// Receiving order line ID.
 	ReceivingOrderLineID string `json:"receiving_order_line_id"`
 	// Lot number to assign.
-	LotNumber *string `json:"lot_number,omitempty"`
+	LotNumber field.Optional[string] `json:"lot_number,omitzero"`
 	// Rejected quantity value.
-	RejectedQuantity *string `json:"rejected_quantity,omitempty"`
+	RejectedQuantity field.Optional[string] `json:"rejected_quantity,omitzero"`
 	// Storage allocations for this line item.
 	Allocations []AllocationRequest `json:"allocations"`
 }
@@ -34,7 +35,7 @@ type StockLineItemRequest struct {
 // Storage allocation.
 type AllocationRequest struct {
 	// Location ID to allocate to.
-	LocationID *string `json:"location_id,omitempty"`
+	LocationID field.Optional[string] `json:"location_id,omitzero"`
 	// Quantity to allocate.
 	Quantity string `json:"quantity"`
 }
@@ -46,7 +47,7 @@ var sampleStockReceivingOrderRequest = &StockReceivingOrderRequest{
 			ReceivingOrderLineID: apiresource.SampleReceivingOrderLineID,
 			Allocations: []AllocationRequest{
 				{
-					LocationID: &sampleStockLocationID,
+					LocationID: field.Some(sampleStockLocationID),
 					Quantity:   "100",
 				},
 			},

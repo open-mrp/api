@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to update a transaction allocation.
@@ -16,12 +17,12 @@ type UpdateTransactionAllocationRequest struct {
 	// Transaction allocation ID.
 	AllocationID string `path:"id" validate:"required"`
 	// Allocation amount as a decimal string.
-	Amount *string `json:"amount"`
+	Amount field.Optional[string] `json:"amount,omitzero"`
 }
 
 var sampleUpdateTransactionAllocationAmount = "150.00"
 var sampleUpdateTransactionAllocationRequest = &UpdateTransactionAllocationRequest{
-	Amount: &sampleUpdateTransactionAllocationAmount,
+	Amount: field.Some(sampleUpdateTransactionAllocationAmount),
 }
 
 func (*UpdateTransactionAllocationRequest) SchemaExample() any {

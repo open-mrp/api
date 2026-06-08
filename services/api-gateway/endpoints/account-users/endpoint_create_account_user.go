@@ -9,26 +9,26 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to create an account user.
 type CreateAccountUserRequest struct {
 	// User display name.
-	Name *string `json:"name" validate:"omitempty,max=255"`
+	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// User email address.
-	Email *string `json:"email" validate:"omitnil,custom_email,max=255"`
+	Email field.Optional[string] `json:"email,omitzero" validate:"omitempty,custom_email,max=255"`
 	// Unique username (3–255 chars; letters, numbers, underscores, hyphens).
-	Username *string `json:"username" validate:"omitempty,username"`
+	Username field.Optional[string] `json:"username,omitzero" validate:"omitempty,username"`
 	// Password. Only used for scanner-role users (scanning stations).
 	// Must be 8–72 chars and include upper, lower, number, and special character.
-	Password *string `json:"password" validate:"omitempty,password" sensitive:"true"` // #nosec G117 -- API request field for user password input
+	Password field.Optional[string] `json:"password,omitzero" validate:"omitempty,password" sensitive:"true"` // #nosec G117 -- API request field for user password input
 	// Role assigned to the user.
-	RoleID patch.Nullable[string] `json:"role_id,omitzero"`
+	RoleID field.Optional[string] `json:"role_id,omitzero"`
 	// Department assigned to the user.
-	DepartmentID patch.Nullable[string] `json:"department_id,omitzero"`
+	DepartmentID field.Optional[string] `json:"department_id,omitzero"`
 	// Notification preferences for the user (external targets only).
-	Preferences []NotificationPreferenceItem `json:"preferences,omitempty"`
+	Preferences []NotificationPreferenceItem `json:"preferences,omitzero"`
 }
 
 var sampleCreateAccountUserName = apiresource.SampleUserName
@@ -37,11 +37,11 @@ var sampleCreateAccountUserUsername = apiresource.SampleUserUsername
 var sampleCreateAccountUserPassword = apiresource.SampleUserPassword
 var sampleCreateAccountUserRoleID = apiresource.SampleRoleID
 var sampleCreateAccountUserRequest = &CreateAccountUserRequest{
-	Name:     &sampleCreateAccountUserName,
-	Email:    &sampleCreateAccountUserEmail,
-	Username: &sampleCreateAccountUserUsername,
-	Password: &sampleCreateAccountUserPassword,
-	RoleID:   patch.PtrNullable(&sampleCreateAccountUserRoleID),
+	Name:     field.Some(sampleCreateAccountUserName),
+	Email:    field.Some(sampleCreateAccountUserEmail),
+	Username: field.Some(sampleCreateAccountUserUsername),
+	Password: field.Some(sampleCreateAccountUserPassword),
+	RoleID:   field.SomePtr(&sampleCreateAccountUserRoleID),
 	Preferences: []NotificationPreferenceItem{
 		{NotificationTypeCode: constants.AccountRelationNotificationTypeOrderAcknowledgement, Enabled: true},
 	},

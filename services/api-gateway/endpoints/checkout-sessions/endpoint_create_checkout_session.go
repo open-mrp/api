@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to create a customer checkout session.
@@ -18,7 +19,7 @@ type CreateCheckoutSessionRequest struct {
 	// Order total in cents.
 	OrderTotalCents int64 `json:"order_total_cents" validate:"required"`
 	// Customer PO number.
-	CustomerPO *string `json:"customer_po,omitempty" validate:"omitempty,max=255"`
+	CustomerPO field.Optional[string] `json:"customer_po,omitzero" validate:"omitempty,max=255"`
 }
 
 // Result of creating a customer checkout session.

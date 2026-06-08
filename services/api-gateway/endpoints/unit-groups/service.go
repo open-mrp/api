@@ -11,7 +11,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -100,16 +100,16 @@ func (m *unitGroupSvcImpl) CreateUnitGroup(ctx context.Context, req *CreateUnitG
 	associatedUnits := make([]*pb.CreateUnitGroupUnitParam, len(req.AssociatedUnits))
 	for i, au := range req.AssociatedUnits {
 		discountPct := "1"
-		if au.DiscountPercentage != nil {
-			discountPct = strconv.FormatFloat(*au.DiscountPercentage, 'f', -1, 64)
+		if v, ok := au.DiscountPercentage.Value(); ok {
+			discountPct = strconv.FormatFloat(v, 'f', -1, 64)
 		}
 		discountFixed := "0"
-		if au.DiscountFixed != nil {
-			discountFixed = strconv.FormatFloat(*au.DiscountFixed, 'f', -1, 64)
+		if v, ok := au.DiscountFixed.Value(); ok {
+			discountFixed = strconv.FormatFloat(v, 'f', -1, 64)
 		}
 		isVisible := true
-		if au.CustomerPortalVisibility != nil {
-			isVisible = *au.CustomerPortalVisibility == constants.CustomerPortalVisibilityVisible
+		if v, ok := au.CustomerPortalVisibility.Value(); ok {
+			isVisible = v == constants.CustomerPortalVisibilityVisible
 		}
 		associatedUnits[i] = &pb.CreateUnitGroupUnitParam{
 			UnitId:             au.UnitID,
@@ -121,7 +121,7 @@ func (m *unitGroupSvcImpl) CreateUnitGroup(ctx context.Context, req *CreateUnitG
 
 	pbReq := &pb.CreateUnitGroupRequest{
 		Name:            req.Name,
-		Notes:           req.Notes,
+		Notes:           req.Notes.Ptr(),
 		Type:            string(req.Type),
 		BaseUnitId:      req.BaseUnitID,
 		UnitConversions: associatedUnits,
@@ -142,27 +142,27 @@ func (m *unitGroupSvcImpl) CreateUnitGroup(ctx context.Context, req *CreateUnitG
 func (m *unitGroupSvcImpl) UpdateUnitGroup(ctx context.Context, req *UpdateUnitGroupRequest) (*apiresource.UnitGroup, *apierror.APIError) {
 	pbReq := &pb.UpdateUnitGroupRequest{
 		Id:         req.UnitGroupID,
-		Name:       req.Name,
-		BaseUnitId: req.BaseUnitID,
+		Name:       req.Name.Ptr(),
+		BaseUnitId: req.BaseUnitID.Ptr(),
 	}
 
-	pbReq.Notes = patch.StringFieldPtrToProto(req.Notes)
+	pbReq.Notes = field.StringClearableToProto(req.Notes)
 
-	if req.AssociatedUnits != nil {
+	if associatedUnitsReq, ok := req.AssociatedUnits.Value(); ok {
 		pbReq.UpdateUnitConversions = true
-		associatedUnits := make([]*pb.CreateUnitGroupUnitParam, len(*req.AssociatedUnits))
-		for i, au := range *req.AssociatedUnits {
+		associatedUnits := make([]*pb.CreateUnitGroupUnitParam, len(associatedUnitsReq))
+		for i, au := range associatedUnitsReq {
 			discountPct := "1"
-			if au.DiscountPercentage != nil {
-				discountPct = strconv.FormatFloat(*au.DiscountPercentage, 'f', -1, 64)
+			if v, ok := au.DiscountPercentage.Value(); ok {
+				discountPct = strconv.FormatFloat(v, 'f', -1, 64)
 			}
 			discountFixed := "0"
-			if au.DiscountFixed != nil {
-				discountFixed = strconv.FormatFloat(*au.DiscountFixed, 'f', -1, 64)
+			if v, ok := au.DiscountFixed.Value(); ok {
+				discountFixed = strconv.FormatFloat(v, 'f', -1, 64)
 			}
 			isVisible := true
-			if au.CustomerPortalVisibility != nil {
-				isVisible = *au.CustomerPortalVisibility == constants.CustomerPortalVisibilityVisible
+			if v, ok := au.CustomerPortalVisibility.Value(); ok {
+				isVisible = v == constants.CustomerPortalVisibilityVisible
 			}
 			associatedUnits[i] = &pb.CreateUnitGroupUnitParam{
 				UnitId:             au.UnitID,
@@ -205,16 +205,16 @@ func (m *unitGroupSvcImpl) DeleteUnitGroup(ctx context.Context, req *DeleteUnitG
 
 func (m *unitGroupSvcImpl) CreateUnitGroupUnit(ctx context.Context, req *CreateUnitGroupUnitRequest) (*apiresource.UnitGroupUnit, *apierror.APIError) {
 	discountPct := "1"
-	if req.DiscountPercentage != nil {
-		discountPct = strconv.FormatFloat(*req.DiscountPercentage, 'f', -1, 64)
+	if v, ok := req.DiscountPercentage.Value(); ok {
+		discountPct = strconv.FormatFloat(v, 'f', -1, 64)
 	}
 	discountFixed := "0"
-	if req.DiscountFixed != nil {
-		discountFixed = strconv.FormatFloat(*req.DiscountFixed, 'f', -1, 64)
+	if v, ok := req.DiscountFixed.Value(); ok {
+		discountFixed = strconv.FormatFloat(v, 'f', -1, 64)
 	}
 	isVisible := true
-	if req.CustomerPortalVisibility != nil {
-		isVisible = *req.CustomerPortalVisibility == constants.CustomerPortalVisibilityVisible
+	if v, ok := req.CustomerPortalVisibility.Value(); ok {
+		isVisible = v == constants.CustomerPortalVisibilityVisible
 	}
 
 	pbReq := &pb.UpsertUnitGroupUnitRequest{
@@ -243,17 +243,17 @@ func (m *unitGroupSvcImpl) UpdateUnitGroupUnit(ctx context.Context, req *UpdateU
 		UnitGroupUnitId: req.AssociatedUnitID,
 	}
 
-	if req.UnitID != nil {
-		pbReq.UnitId = *req.UnitID
+	if v, ok := req.UnitID.Value(); ok {
+		pbReq.UnitId = v
 	}
-	if req.DiscountPercentage != nil {
-		pbReq.DiscountPercentage = strconv.FormatFloat(*req.DiscountPercentage, 'f', -1, 64)
+	if v, ok := req.DiscountPercentage.Value(); ok {
+		pbReq.DiscountPercentage = strconv.FormatFloat(v, 'f', -1, 64)
 	}
-	if req.DiscountFixed != nil {
-		pbReq.DiscountFixed = strconv.FormatFloat(*req.DiscountFixed, 'f', -1, 64)
+	if v, ok := req.DiscountFixed.Value(); ok {
+		pbReq.DiscountFixed = strconv.FormatFloat(v, 'f', -1, 64)
 	}
-	if req.CustomerPortalVisibility != nil {
-		pbReq.IsVisible = *req.CustomerPortalVisibility == constants.CustomerPortalVisibilityVisible
+	if v, ok := req.CustomerPortalVisibility.Value(); ok {
+		pbReq.IsVisible = v == constants.CustomerPortalVisibilityVisible
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, unitGroupSvcTracer, "service.unit_groups.update_unit", domain.ServiceName,

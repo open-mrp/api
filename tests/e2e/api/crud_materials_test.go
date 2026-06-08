@@ -32,15 +32,15 @@ func materialFullCreateBody(sku string) map[string]any {
 	return body
 }
 
-func assertMaterialQuantityInfo(t *testing.T, doc map[string]any, field string, expectUnitID string) {
+func assertMaterialQuantityInfo(t *testing.T, doc map[string]any, field string, _ string) {
 	t.Helper()
 	q := jsonObject(doc, field)
 	require.NotNil(t, q, "%s should be set", field)
-	u := jsonObject(q, "unit")
-	require.NotNil(t, u, "%s.unit should be set", field)
-	assert.Equal(t, expectUnitID, jsonField(u, "id"))
-	assert.Equal(t, "unit", jsonField(u, "object"))
 	assert.NotEmpty(t, jsonField(q, "value"), "%s.value should be non-empty", field)
+	assert.NotEmpty(t, jsonField(q, "display_value"), "%s.display_value should convey the unit", field)
+	// unit is an expandable sub-resource of a quantity: null unless explicitly
+	// requested. The unit abbreviation is still conveyed via display_value.
+	assert.Nil(t, q["unit"], "%s.unit should be null without an explicit unit include", field)
 }
 
 // ──────────────────────────────────────────────

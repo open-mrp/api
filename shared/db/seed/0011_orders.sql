@@ -219,3 +219,16 @@ SET
     shipping_term_id = COALESCE(shipping_term_id, 'prepaid_billed'),
     carrier_option_id = COALESCE(carrier_option_id, 'crop_01seedground000000')
 WHERE id = 'or_01k0a8bs2yejxbsvqhrx4drkq1';
+
+-- Production run linked to SeedSalesOrderID so `?include=related.production_run`
+-- resolves with real data.
+INSERT IGNORE INTO production_run (id, responsible_user_id, number, account_id, started_at, created_at, updated_at) VALUES
+    ('pr_01seedsalesorder0001', 'us_1wjfmmbwg8l7', 'PR-SEED-001', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW(), NOW());
+
+-- Backfill sales_rep + production_run on SeedSalesOrderID so `?include=sales_rep`
+-- and `?include=related.production_run` resolve with real data.
+UPDATE sales_order
+SET
+    sales_rep_id = COALESCE(sales_rep_id, 'acus_s83fjhyfmqen'),
+    production_run_id = COALESCE(production_run_id, 'pr_01seedsalesorder0001')
+WHERE id = 'or_01k0a8bs2yejxbsvqhrx4drkq1';

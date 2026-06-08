@@ -142,7 +142,6 @@ SELECT
     uc_du.id AS unit_cost_denominator_unit_id,
     uc_du.abbreviation AS unit_cost_denominator_unit_abbreviation,
     -- Timestamps
-    sol.completed_at,
     sol.created_at,
     sol.updated_at
 FROM sales_order_line sol
@@ -192,7 +191,6 @@ type GetPurchaseOrderLineRow struct {
 	UnitCostNumeratorUnitAbbreviation    sql.NullString
 	UnitCostDenominatorUnitID            sql.NullString
 	UnitCostDenominatorUnitAbbreviation  sql.NullString
-	CompletedAt                          sql.NullTime
 	CreatedAt                            time.Time
 	UpdatedAt                            time.Time
 }
@@ -228,7 +226,6 @@ func (q *Queries) GetPurchaseOrderLine(ctx context.Context, arg GetPurchaseOrder
 		&i.UnitCostNumeratorUnitAbbreviation,
 		&i.UnitCostDenominatorUnitID,
 		&i.UnitCostDenominatorUnitAbbreviation,
-		&i.CompletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

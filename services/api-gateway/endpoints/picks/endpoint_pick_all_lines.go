@@ -19,8 +19,8 @@ type PickAllLinesRequest struct {
 // Marks all lines on a pick as picked.
 type PickAllLinesEndpoint struct{}
 
-func (e *PickAllLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*PickAllLinesRequest, *apiresource.PickDetail] {
-	return (&apiendpoint.APIEndpoint[*PickAllLinesRequest, *apiresource.PickDetail]{
+func (e *PickAllLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*PickAllLinesRequest, *apiresource.Pick] {
+	return (&apiendpoint.APIEndpoint[*PickAllLinesRequest, *apiresource.Pick]{
 		Title:             "Pick All Lines",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
@@ -29,7 +29,7 @@ func (e *PickAllLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*PickAllLi
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypePick,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *PickAllLinesRequest) (*apiresource.PickDetail, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *PickAllLinesRequest) (*apiresource.Pick, *apierror.APIError) {
 			return svc.(PickSvc).PickAllLines
 		},
 	})

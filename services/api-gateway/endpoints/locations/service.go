@@ -9,7 +9,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -113,11 +113,11 @@ func (m *locationSvcImpl) CreateLocation(ctx context.Context, req *CreateLocatio
 func (m *locationSvcImpl) UpdateLocation(ctx context.Context, req *UpdateLocationRequest) (*apiresource.Location, *apierror.APIError) {
 	pbReq := &pb.UpdateLocationRequest{
 		Id:       req.LocationID,
-		Name:     req.Name,
-		TypeCode: req.TypeCode.StringPtr(),
-		ParentId: patch.StringFieldPtrToProto(req.ParentID),
+		Name:     req.Name.Ptr(),
+		TypeCode: req.TypeCode.Ptr().StringPtr(),
+		ParentId: field.StringClearableToProto(req.ParentID),
 	}
-	pbReq.ChildIds = patch.StringListSliceFieldPtrToProto(req.ChildIDs)
+	pbReq.ChildIds = field.StringListSliceClearableToProto(req.ChildIDs)
 
 	resp, apiErr := grpcutil.CallRPC(ctx, locationSvcTracer, "service.locations.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateLocationResponse, error) {

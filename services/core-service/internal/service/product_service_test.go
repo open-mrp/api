@@ -13,9 +13,9 @@ import (
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 	"github.com/augno/api/shared/messaging"
 	"github.com/augno/api/shared/pagination"
-	"github.com/augno/api/shared/patch"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -728,7 +728,7 @@ func (s *ProductSvcTestSuite) TestUpdateProduct_UpdateDescriptionFlagSemantics_E
 
 	result, err := s.productSvc.UpdateProduct(ctx, domain.UpdateProductParams{
 		ProductID:   "it_1",
-		Description: patch.Clear[string](),
+		Description: field.Clear[string](),
 	})
 
 	s.Nil(err)

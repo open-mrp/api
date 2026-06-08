@@ -5,7 +5,7 @@ import (
 
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/shared/contracts"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -158,8 +158,8 @@ func (h *gRPCHandler) UpdatePart(ctx context.Context, req *pb.UpdatePartRequest)
 	params := domain.UpdatePartParams{
 		PartID:      req.Id,
 		SKU:         req.Sku,
-		Description: patch.StringFieldFromProto(req.Description),
-		Notes:       patch.StringFieldFromProto(req.Notes),
+		Description: field.StringClearableFromProto(req.Description),
+		Notes:       field.StringClearableFromProto(req.Notes),
 		Includes:    req.Includes,
 	}
 

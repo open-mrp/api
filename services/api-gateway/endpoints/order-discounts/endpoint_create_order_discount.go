@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to create an order discount.
@@ -18,9 +19,9 @@ type CreateOrderDiscountRequest struct {
 	// Discount code.
 	Code string `json:"code" validate:"required,max=255"`
 	// Percentage value as a decimal string. Required when discount_type is "percentage".
-	Percentage *string `json:"percentage,omitempty" format:"decimal"`
+	Percentage field.Optional[string] `json:"percentage,omitzero" format:"decimal"`
 	// Fixed amount as a decimal string. Required when discount_type is "amount".
-	Amount *string `json:"amount,omitempty" format:"decimal"`
+	Amount field.Optional[string] `json:"amount,omitzero" format:"decimal"`
 	// Discount type: "percentage" or "amount".
 	DiscountType string `json:"discount_type" validate:"required,max=255"`
 }
@@ -28,7 +29,7 @@ type CreateOrderDiscountRequest struct {
 var sampleCreateOrderDiscountRequest = &CreateOrderDiscountRequest{
 	Name:         "10% Off",
 	Code:         "SAVE10",
-	Percentage:   new("10.000000000000000000000000000000"),
+	Percentage:   field.Some("10.000000000000000000000000000000"),
 	DiscountType: "percentage",
 }
 

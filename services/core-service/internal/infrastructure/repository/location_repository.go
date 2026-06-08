@@ -10,8 +10,8 @@ import (
 	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 	"github.com/augno/api/shared/pagination"
-	"github.com/augno/api/shared/patch"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -326,7 +326,7 @@ func (r *locationRepoImpl) Update(ctx context.Context, params domain.UpdateLocat
 		AccountID:               params.AccountID,
 		Name:                    toNullString(params.Name),
 		StorageLocationTypeCode: toNullString(params.TypeCode),
-		ParentID:                patch.StringToNullString(params.ParentID),
+		ParentID:                field.StringToNullString(params.ParentID),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

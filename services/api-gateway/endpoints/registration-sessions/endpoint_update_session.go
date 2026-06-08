@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to update a registration session.
@@ -16,17 +17,17 @@ type UpdateSessionRequest struct {
 	// Session ID.
 	SessionID string `json:"-" path:"session_id" validate:"required"`
 	// Step to advance the session to.
-	Step *constants.RegistrationStep `json:"step,omitempty"`
+	Step field.Optional[constants.RegistrationStep] `json:"step,omitzero"`
 	// Session data to merge into the existing session.
-	SessionData *UpdateSessionDataRequest `json:"session_data,omitempty"`
+	SessionData field.Optional[UpdateSessionDataRequest] `json:"session_data,omitzero"`
 }
 
 var sampleUpdateSessionRequest = &UpdateSessionRequest{
-	Step: new(constants.RegistrationStepUserDetails),
-	SessionData: &UpdateSessionDataRequest{
-		UserName:    new("Jane Smith"),
-		AccountName: new("Acme Corp"),
-	},
+	Step: field.Some(constants.RegistrationStepUserDetails),
+	SessionData: field.Some(UpdateSessionDataRequest{
+		UserName:    field.Some("Jane Smith"),
+		AccountName: field.Some("Acme Corp"),
+	}),
 }
 
 func (*UpdateSessionRequest) SchemaExample() any {
@@ -36,21 +37,21 @@ func (*UpdateSessionRequest) SchemaExample() any {
 // Mutable form data for a session update.
 type UpdateSessionDataRequest struct {
 	// Display name for the user.
-	UserName *string `json:"user_name,omitempty" validate:"omitempty,max=255"`
+	UserName field.Optional[string] `json:"user_name,omitzero" validate:"omitempty,max=255"`
 	// Display name for the account.
-	AccountName *string `json:"account_name,omitempty" validate:"omitempty,max=255"`
+	AccountName field.Optional[string] `json:"account_name,omitzero" validate:"omitempty,max=255"`
 	// Billing address line 1.
-	BillingAddressLine1 *string `json:"billing_address_line1,omitempty" validate:"omitempty,max=255"`
+	BillingAddressLine1 field.Optional[string] `json:"billing_address_line1,omitzero" validate:"omitempty,max=255"`
 	// Billing address line 2.
-	BillingAddressLine2 *string `json:"billing_address_line2,omitempty" validate:"omitempty,max=255"`
+	BillingAddressLine2 field.Optional[string] `json:"billing_address_line2,omitzero" validate:"omitempty,max=255"`
 	// Billing address city.
-	BillingAddressCity *string `json:"billing_address_city,omitempty" validate:"omitempty,max=255"`
+	BillingAddressCity field.Optional[string] `json:"billing_address_city,omitzero" validate:"omitempty,max=255"`
 	// Billing address state.
-	BillingAddressState *string `json:"billing_address_state,omitempty" validate:"omitempty,max=255"`
+	BillingAddressState field.Optional[string] `json:"billing_address_state,omitzero" validate:"omitempty,max=255"`
 	// Billing address postal code.
-	BillingAddressPostalCode *string `json:"billing_address_postal_code,omitempty" validate:"omitempty,max=255"`
+	BillingAddressPostalCode field.Optional[string] `json:"billing_address_postal_code,omitzero" validate:"omitempty,max=255"`
 	// Billing address country.
-	BillingAddressCountry *string `json:"billing_address_country,omitempty" validate:"omitempty,max=2"`
+	BillingAddressCountry field.Optional[string] `json:"billing_address_country,omitzero" validate:"omitempty,max=2"`
 }
 
 // Partially updates a registration session's step and form data; omitted fields are left unchanged.

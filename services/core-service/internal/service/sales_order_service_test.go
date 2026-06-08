@@ -617,10 +617,11 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_DuplicateOrderNumberRe
 	suite.Equal("number", apiErr.Param)
 }
 
-func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_ShipToChangeTriggersAddressUpdate() {
-	// When a ship-to field is supplied the service must update the address AND
-	// geolocation records. This locks in the "any ship-to field present → update
-	// address" trigger behavior.
+func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_ShippingAddressRepointsOrder() {
+	// Supplying a shipping_address_id re-points the order to an existing address
+	// via the order update. The service must NOT mutate any address or
+	// geolocation records — editing an address is a separate concern handled by
+	// the update-address endpoint.
 	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/UpdateSalesOrder")
 
 	suite.expectIdempotencyStarted()
@@ -629,18 +630,17 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_ShipToChangeTriggersAd
 		Get(gomock.Any(), "ac_test", "or_1").
 		Return(&domain.SalesOrder{ID: "or_1", ShippingAddressID: "addr_ship", BuyerAccountID: "ac_buyer"}, nil).Times(1)
 
-	suite.addressRepo.EXPECT().Update(gomock.Any(), gomock.Any()).Return(&domain.Address{}, nil).Times(1)
-	suite.addressRepo.EXPECT().GetGeolocationIDByAddressID(gomock.Any(), "addr_ship").Return("geo_ship", nil).Times(1)
-	suite.addressRepo.EXPECT().UpdateGeolocation(gomock.Any(), "geo_ship", gomock.Any()).Return(nil).Times(1)
-
-	suite.orderRepo.EXPECT().Update(gomock.Any(), gomock.Any()).
+	suite.orderRepo.EXPECT().
+		Update(gomock.Any(), gomock.Cond(func(p domain.UpdateSalesOrderParams) bool {
+			return p.ShippingAddressID != nil && *p.ShippingAddressID == "addr_new"
+		})).
 		Return(&domain.SalesOrder{ID: "or_1"}, nil).Times(1)
 
 	suite.expectCacheSuccess()
 
 	_, apiErr := suite.svc.UpdateSalesOrder(ctx, domain.UpdateSalesOrderParams{
-		SalesOrderID:     "or_1",
-		ShipToPostalCode: new("94105"),
+		SalesOrderID:      "or_1",
+		ShippingAddressID: new("addr_new"),
 	})
 	suite.Nil(apiErr)
 }

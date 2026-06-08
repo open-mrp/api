@@ -22,15 +22,24 @@ type ListRequestLogsRequest struct {
 	Methods []constants.HTTPMethod `query:"methods"`
 	// Filter by the HTTP status code.
 	StatusCodes []int32 `query:"status_codes"`
+	// Filter by the HTTP status class: 1–5 for 1xx–5xx. Combined with `status_codes`
+	// using OR — e.g. status_codes=401 and status_code_classes=5 matches 401 and any 5xx.
+	StatusCodeClasses []int32 `query:"status_code_classes"`
 	// Filter by API error code.
 	ErrorCodes []apierror.ErrorCode `query:"error_codes"`
-	// Filter by the account ID _targeted_ by the request. The actor may be operating on behalf of a separate account.
+	// Filter by the _acting_ account: the account the actor belongs to, not the account targeted by the request.
+	//
+	// This is usually your own account, but differs when another account acts on yours — for example a customer using a customer-portal API key, whose acting account is the customer's account. The request's target account is always your own account (the only account you are authorized to view request logs for), so this filter narrows by _who acted_, not by which account was acted upon.
 	AccountIDs []string `query:"account_ids"`
-	// Filter by the actor identifier. `account_user.id` when `identity_type`=`user`, or an `api_key.id` when `identity_type`=`api_key`.
+	// Filter by the actor identifier.
+	//
+	// This is the `user.id` when `identity_type`=`user` and an `api_key.id` when `identity_type`=`api_key`.
 	ActorIDs []string `query:"actor_ids"`
 	// Filter by the actor type.
 	ActorTypes []constants.ActorType `query:"actor_types"`
-	// Filter by the _normalized_ route template. For example `PATCH /v1/sales/customers/{id}` is the normalized route for a request route `PUT /v1/sales/customers/ac_...`.
+	// Filter by the _normalized_ route template.
+	//
+	// For example `PATCH /v1/sales/customers/{id}` is the normalized route for a request route `PUT /v1/sales/customers/ac_...`.
 	NormalizedRoutes []string `query:"normalized_routes"`
 	// Filter by the request host. Typically, `api.augno.com`.
 	Hosts []string `query:"hosts"`

@@ -100,8 +100,8 @@ func (m *accountGroupProductLineAccessSvcImpl) UpdateAccountGroupProductLineAcce
 	pbReq := &pb.UpdateAccountGroupProductLineAccessRequest{
 		AccountGroupId: req.AccountGroupID,
 	}
-	if req.ProductLineIDs != nil {
-		pbReq.ProductLineIds = *req.ProductLineIDs
+	if v, ok := req.ProductLineIDs.Value(); ok {
+		pbReq.ProductLineIds = v
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, accountGroupProductLineAccessSvcTracer, "service.account_group_product_line_access.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateAccountGroupProductLineAccessResponse, error) {

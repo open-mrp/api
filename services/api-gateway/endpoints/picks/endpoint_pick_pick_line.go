@@ -21,8 +21,8 @@ type PickPickLineRequest struct {
 // Marks a pick line as picked.
 type PickPickLineEndpoint struct{}
 
-func (e *PickPickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*PickPickLineRequest, *apiresource.PickLineDetail] {
-	return (&apiendpoint.APIEndpoint[*PickPickLineRequest, *apiresource.PickLineDetail]{
+func (e *PickPickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*PickPickLineRequest, *apiresource.PickLine] {
+	return (&apiendpoint.APIEndpoint[*PickPickLineRequest, *apiresource.PickLine]{
 		Title:             "Pick Pick Line",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
@@ -31,7 +31,7 @@ func (e *PickPickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*PickPickL
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypePickLine,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *PickPickLineRequest) (*apiresource.PickLineDetail, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *PickPickLineRequest) (*apiresource.PickLine, *apierror.APIError) {
 			return svc.(PickSvc).PickPickLine
 		},
 	})

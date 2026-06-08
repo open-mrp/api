@@ -151,7 +151,9 @@ func (m *agentRunSvcImpl) TriggerAgentRun(ctx context.Context, req *TriggerRunRe
 
 	pbReq := &pb.TriggerRunRequest{
 		AgentDefinitionCode: defResp.Agent.Slug,
-		Input:               req.Input,
+	}
+	if v, ok := req.Input.Value(); ok {
+		pbReq.Input = v
 	}
 
 	resp, triggerErr := grpcutil.CallRPC(ctx, runSvcTracer, "service.agent_runs.trigger", domain.ServiceName,

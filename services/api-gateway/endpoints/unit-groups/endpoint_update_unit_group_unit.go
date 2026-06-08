@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // UpdateUnitGroupUnitRequest is a request to update an associated unit.
@@ -18,20 +19,20 @@ type UpdateUnitGroupUnitRequest struct {
 	// Unit group unit ID.
 	AssociatedUnitID string `path:"id" validate:"required"`
 	// Unit ID.
-	UnitID *string `json:"unit_id,omitempty" validate:"omitempty"`
+	UnitID field.Optional[string] `json:"unit_id,omitzero" validate:"omitempty"`
 	// Discount percentage.
-	DiscountPercentage *float64 `json:"discount_percentage,omitempty"`
+	DiscountPercentage field.Optional[float64] `json:"discount_percentage,omitzero"`
 	// Fixed discount amount.
-	DiscountFixed *float64 `json:"discount_fixed,omitempty"`
+	DiscountFixed field.Optional[float64] `json:"discount_fixed,omitzero"`
 	// Customer portal visibility.
-	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility,omitempty"`
+	CustomerPortalVisibility field.Optional[constants.CustomerPortalVisibility] `json:"customer_portal_visibility,omitzero"`
 }
 
 var sampleUpdateUnitGroupUnitDiscountPct = float64(0.9)
 var sampleUpdateUnitGroupUnitUnitID = apiresource.SampleUnitID
 var sampleUpdateUnitGroupUnitRequest = &UpdateUnitGroupUnitRequest{
-	UnitID:             &sampleUpdateUnitGroupUnitUnitID,
-	DiscountPercentage: &sampleUpdateUnitGroupUnitDiscountPct,
+	UnitID:             field.Some(sampleUpdateUnitGroupUnitUnitID),
+	DiscountPercentage: field.Some(sampleUpdateUnitGroupUnitDiscountPct),
 }
 
 func (*UpdateUnitGroupUnitRequest) SchemaExample() any {

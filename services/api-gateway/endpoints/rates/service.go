@@ -49,11 +49,11 @@ func NewRateSvc(config *RateSvcConfig) RateSvc {
 func (m *rateSvcImpl) UpdateRate(ctx context.Context, req *UpdateRateRequest) (*apiresource.Rate, *apierror.APIError) {
 	pbReq := &pb.UpdateRateRequest{
 		Id:                req.RateID,
-		Value:             req.Value,
-		NumeratorUnitId:   req.NumeratorUnitID,
-		DenominatorUnitId: req.DenominatorUnitID,
-		ObjectId:          req.ObjectID,
-		ObjectType:        req.ObjectType,
+		Value:             req.Value.Ptr(),
+		NumeratorUnitId:   req.NumeratorUnitID.Ptr(),
+		DenominatorUnitId: req.DenominatorUnitID.Ptr(),
+		ObjectId:          req.ObjectID.Ptr(),
+		ObjectType:        req.ObjectType.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, rateSvcTracer, "service.rates.update", domain.ServiceName,

@@ -145,6 +145,8 @@ func sampleQueryExampleForOpenAPIName(openAPIParam string) any {
 		return []any{"api.augno.com"}
 	case "status_codes":
 		return []any{float64(200)}
+	case "status_code_classes":
+		return []any{float64(5)}
 	}
 
 	idSamples := map[string]string{

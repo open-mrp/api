@@ -1,8 +1,6 @@
 package materialep
 
 import (
-	"context"
-
 	itemep "github.com/augno/api/services/api-gateway/endpoints/items"
 	quantityep "github.com/augno/api/services/api-gateway/endpoints/quantities"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
@@ -51,43 +49,4 @@ func MaterialPresenter(m *pb.MaterialInfo) apiresource.Material {
 		CreatedAt:  grpcutil.TimestampToTime(m.CreatedAt),
 		UpdatedAt:  grpcutil.TimestampToTime(m.UpdatedAt),
 	}
-}
-
-func SupplierMaterialPresenter(sm *pb.SupplierMaterialInfo) apiresource.SupplierMaterial {
-	if sm == nil {
-		return apiresource.SupplierMaterial{}
-	}
-	var material *apiresource.Material
-	itemID := ""
-	if sm.Material != nil {
-		m := MaterialPresenter(sm.Material)
-		material = &m
-		itemID = m.ID
-	}
-	return apiresource.SupplierMaterial{
-		ID:                  itemID,
-		Object:              constants.ObjectTypeSupplierMaterial,
-		Material:            material,
-		SupplierPartNumber:  sm.SupplierPartNumber,
-		SupplierDescription: sm.SupplierDescription,
-		Status: func() constants.SupplierMaterialStatus {
-			if sm.IsActive {
-				return constants.SupplierMaterialStatusActive
-			}
-			return constants.SupplierMaterialStatusInactive
-		}(),
-		CreatedAt: grpcutil.TimestampToTime(sm.CreatedAt),
-		UpdatedAt: grpcutil.TimestampToTime(sm.UpdatedAt),
-	}
-}
-
-func SupplierMaterialListPresenter(ctx context.Context, resp *pb.ListSupplierMaterialsResponse) *apiresource.List[apiresource.SupplierMaterial] {
-	if resp == nil {
-		return apiresource.NewList[apiresource.SupplierMaterial](nil, apiresource.PageInfo{})
-	}
-	items := make([]apiresource.SupplierMaterial, len(resp.SupplierMaterials))
-	for i, sm := range resp.SupplierMaterials {
-		items[i] = SupplierMaterialPresenter(sm)
-	}
-	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

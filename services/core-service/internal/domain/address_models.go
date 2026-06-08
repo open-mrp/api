@@ -3,8 +3,8 @@ package domain
 import (
 	"time"
 
+	"github.com/augno/api/shared/field"
 	"github.com/augno/api/shared/pagination"
-	"github.com/augno/api/shared/patch"
 )
 
 // Geolocation represents a geographic location.
@@ -74,11 +74,11 @@ type UpdateAddressParams struct {
 	AccountID   string
 	AddressID   string
 	Name        *string
-	Phone       patch.Field[string]
-	Email       patch.Field[string]
+	Phone       field.Clearable[string]
+	Email       field.Clearable[string]
 	IsDropShip  *bool
 	StreetLine1 *string
-	StreetLine2 patch.Field[string]
+	StreetLine2 field.Clearable[string]
 	Locality    *string
 	State       *string
 	PostalCode  *string

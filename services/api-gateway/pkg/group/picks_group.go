@@ -36,7 +36,7 @@ func (*PicksEndpointGroup) Materialize(config *PicksEndpointGroupConfig) *PicksE
 	inner := &apiendpoint.APIEndpointGroup{
 		Title:        "Picks",
 		Description:  "List, view, update, pick, void, and pack picks and pick lines.",
-		ResourceType: &apiresource.PickDetail{},
+		ResourceType: &apiresource.Pick{},
 	}
 
 	listEndpoint := apiendpoint.From(&pickep.ListPicksEndpoint{}).WithService(inner, svc)

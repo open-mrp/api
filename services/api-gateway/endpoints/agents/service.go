@@ -198,34 +198,40 @@ func (m *agentSvcImpl) GetAgent(ctx context.Context, req *RetrieveAgentRequest) 
 }
 
 func (m *agentSvcImpl) UpdateAgent(ctx context.Context, req *UpdateAgentRequest) (*apiresource.AgentDefinition, *apierror.APIError) {
+	var triggerTypePtr *string
+	if tt, ok := req.TriggerType.Value(); ok {
+		s := string(tt)
+		triggerTypePtr = &s
+	}
+
 	pbReq := &pb.UpdateCustomAgentRequest{
 		AgentDefinitionId: req.AgentDefinitionID,
-		Name:              req.Name,
-		Slug:              req.Slug,
-		Description:       req.Description,
-		CategoryCode:      req.CategoryCode,
-		TriggerType:       req.TriggerType.StringPtr(),
-		RoleId:            req.RoleID,
+		Name:              req.Name.Ptr(),
+		Slug:              req.Slug.Ptr(),
+		Description:       req.Description.Ptr(),
+		CategoryCode:      req.CategoryCode.Ptr(),
+		TriggerType:       triggerTypePtr,
+		RoleId:            req.RoleID.Ptr(),
 		Includes:          resourcekit.FilterIncludes(ctx, agentIncludes...),
 	}
 
-	if req.Config != nil {
-		if req.TriggerType != nil {
-			if err := req.Config.Validate(*req.TriggerType); err != nil {
+	if cfg, ok := req.Config.Value(); ok {
+		if tt, ttOK := req.TriggerType.Value(); ttOK {
+			if err := cfg.Validate(tt); err != nil {
 				return nil, apierror.NewValidationError(err.Error())
 			}
 		}
-		configJSON, err := marshalConfig(*req.Config)
+		configJSON, err := marshalConfig(cfg)
 		if err != nil {
 			return nil, apierror.NewInternalError(err, "failed to marshal agent config")
 		}
 		pbReq.ConfigJson = &configJSON
 	}
 
-	if req.Tools != nil {
+	if toolInputs, ok := req.Tools.Value(); ok {
 		pbReq.ToolsProvided = true
-		tools := make([]*pb.AgentToolConfig, len(*req.Tools))
-		for i, t := range *req.Tools {
+		tools := make([]*pb.AgentToolConfig, len(toolInputs))
+		for i, t := range toolInputs {
 			tools[i] = &pb.AgentToolConfig{
 				ToolId:        t.ToolID,
 				ConfigJson:    t.ConfigJSON,

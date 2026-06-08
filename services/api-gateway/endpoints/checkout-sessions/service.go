@@ -51,9 +51,7 @@ func (m *checkoutSessionSvcImpl) CreateCheckoutSession(ctx context.Context, req 
 		OrderTotalCents: req.OrderTotalCents,
 	}
 
-	if req.CustomerPO != nil {
-		pbReq.CustomerPo = req.CustomerPO
-	}
+	pbReq.CustomerPo = req.CustomerPO.Ptr()
 
 	resp, apiErr := grpcutil.CallRPC(ctx, checkoutSessionSvcTracer, "service.checkout_sessions.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateCustomerCheckoutSessionResponse, error) {

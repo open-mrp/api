@@ -1,4 +1,4 @@
-package patch
+package field
 
 import (
 	"encoding/json"
@@ -7,15 +7,15 @@ import (
 	"testing"
 )
 
-func TestNullable_unsetAndSet(t *testing.T) {
+func TestOptional_unsetAndSet(t *testing.T) {
 	t.Parallel()
 
-	unset := UnsetNullable[string]()
+	unset := None[string]()
 	if !unset.IsUnset() || unset.IsSet() {
 		t.Fatal("expected unset")
 	}
 
-	set := SetNullable("x")
+	set := Some("x")
 	if !set.IsSet() {
 		t.Fatal("expected set")
 	}
@@ -28,11 +28,11 @@ func TestNullable_unsetAndSet(t *testing.T) {
 	}
 }
 
-func TestNullable_marshalJSON(t *testing.T) {
+func TestOptional_marshalJSON(t *testing.T) {
 	t.Parallel()
 
 	type payload struct {
-		Phone Nullable[string] `json:"phone,omitzero"`
+		Phone Optional[string] `json:"phone,omitzero"`
 	}
 
 	b, err := json.Marshal(payload{})
@@ -43,7 +43,7 @@ func TestNullable_marshalJSON(t *testing.T) {
 		t.Fatalf("expected {}, got %s", b)
 	}
 
-	b, err = json.Marshal(payload{Phone: SetNullable("555")})
+	b, err = json.Marshal(payload{Phone: Some("555")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,10 +52,10 @@ func TestNullable_marshalJSON(t *testing.T) {
 	}
 }
 
-func TestNullable_unmarshalJSON_rejectsNull(t *testing.T) {
+func TestOptional_unmarshalJSON_rejectsNull(t *testing.T) {
 	t.Parallel()
 
-	var n Nullable[string]
+	var n Optional[string]
 	err := n.UnmarshalJSON([]byte("null"))
 	if !errors.Is(err, ErrExplicitNull) {
 		t.Fatalf("expected ErrExplicitNull, got %v", err)
@@ -65,10 +65,10 @@ func TestNullable_unmarshalJSON_rejectsNull(t *testing.T) {
 	}
 }
 
-func TestNullable_unmarshalJSON_setsValue(t *testing.T) {
+func TestOptional_unmarshalJSON_setsValue(t *testing.T) {
 	t.Parallel()
 
-	var n Nullable[string]
+	var n Optional[string]
 	if err := n.UnmarshalJSON([]byte(`"hello"`)); err != nil {
 		t.Fatal(err)
 	}
@@ -81,32 +81,32 @@ func TestNullable_unmarshalJSON_setsValue(t *testing.T) {
 	}
 }
 
-func TestNullable_PtrNullable(t *testing.T) {
+func TestOptional_SomePtr(t *testing.T) {
 	t.Parallel()
 
 	s := "a"
-	if !PtrNullable(&s).IsSet() {
+	if !SomePtr(&s).IsSet() {
 		t.Fatal("expected set from pointer")
 	}
-	if PtrNullable[string](nil).IsSet() {
+	if SomePtr[string](nil).IsSet() {
 		t.Fatal("expected unset from nil pointer")
 	}
 }
 
-func TestIsNullableType(t *testing.T) {
+func TestIsOptionalType(t *testing.T) {
 	t.Parallel()
 
-	if !IsNullableType(reflectTypeOf(Nullable[string]{})) {
-		t.Fatal("Nullable[string] should be nullable type")
+	if !IsOptionalType(reflectTypeOf(Optional[string]{})) {
+		t.Fatal("Optional[string] should be nullable type")
 	}
-	if IsFieldType(reflectTypeOf(Nullable[string]{})) {
+	if IsClearableType(reflectTypeOf(Optional[string]{})) {
 		t.Fatal("Nullable should not be field type")
 	}
-	if !IsFieldType(reflectTypeOf(Field[string]{})) {
+	if !IsClearableType(reflectTypeOf(Clearable[string]{})) {
 		t.Fatal("Field should be field type")
 	}
-	if IsNullableType(reflect.TypeFor[*Nullable[string]]()) {
-		t.Fatal("*Nullable[string] must not be treated as nullable input type")
+	if IsOptionalType(reflect.TypeFor[*Optional[string]]()) {
+		t.Fatal("*Optional[string] must not be treated as nullable input type")
 	}
 }
 

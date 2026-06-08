@@ -22,16 +22,16 @@ var pickEpSvcTracer = tracing.GetTracer("api-gateway.endpoints.picks.service")
 var pickDetailIncludes = []string{"sales_order", "departments", "lines", "lines.sales_order_line"}
 
 type PickSvc interface {
-	ListPicks(ctx context.Context, req *ListPicksRequest) (*apiresource.List[apiresource.PickSummary], *apierror.APIError)
-	GetPick(ctx context.Context, req *RetrievePickRequest) (*apiresource.PickDetail, *apierror.APIError)
-	UpdatePick(ctx context.Context, req *UpdatePickRequest) (*apiresource.PickDetail, *apierror.APIError)
-	PickAllLines(ctx context.Context, req *PickAllLinesRequest) (*apiresource.PickDetail, *apierror.APIError)
-	VoidPick(ctx context.Context, req *VoidPickRequest) (*apiresource.PickDetail, *apierror.APIError)
+	ListPicks(ctx context.Context, req *ListPicksRequest) (*apiresource.List[apiresource.Pick], *apierror.APIError)
+	GetPick(ctx context.Context, req *RetrievePickRequest) (*apiresource.Pick, *apierror.APIError)
+	UpdatePick(ctx context.Context, req *UpdatePickRequest) (*apiresource.Pick, *apierror.APIError)
+	PickAllLines(ctx context.Context, req *PickAllLinesRequest) (*apiresource.Pick, *apierror.APIError)
+	VoidPick(ctx context.Context, req *VoidPickRequest) (*apiresource.Pick, *apierror.APIError)
 	PackPick(ctx context.Context, req *PackPickRequest) (*apiresource.PackPickResponse, *apierror.APIError)
 	GetPickShipments(ctx context.Context, req *GetPickShipmentsRequest) (*apiresource.PickShipmentsResponse, *apierror.APIError)
-	UpdatePickLine(ctx context.Context, req *UpdatePickLineRequest) (*apiresource.PickLineDetail, *apierror.APIError)
-	PickPickLine(ctx context.Context, req *PickPickLineRequest) (*apiresource.PickLineDetail, *apierror.APIError)
-	VoidPickLine(ctx context.Context, req *VoidPickLineRequest) (*apiresource.PickLineDetail, *apierror.APIError)
+	UpdatePickLine(ctx context.Context, req *UpdatePickLineRequest) (*apiresource.PickLine, *apierror.APIError)
+	PickPickLine(ctx context.Context, req *PickPickLineRequest) (*apiresource.PickLine, *apierror.APIError)
+	VoidPickLine(ctx context.Context, req *VoidPickLineRequest) (*apiresource.PickLine, *apierror.APIError)
 }
 
 type PickSvcConfig struct {
@@ -56,7 +56,7 @@ func NewPickSvc(config *PickSvcConfig) PickSvc {
 	return &pickSvcImpl{coreClient: config.CoreClient}
 }
 
-func (m *pickSvcImpl) ListPicks(ctx context.Context, req *ListPicksRequest) (*apiresource.List[apiresource.PickSummary], *apierror.APIError) {
+func (m *pickSvcImpl) ListPicks(ctx context.Context, req *ListPicksRequest) (*apiresource.List[apiresource.Pick], *apierror.APIError) {
 	pbReq := &pb.ListPicksRequest{
 		Limit: req.Limit,
 	}
@@ -96,7 +96,7 @@ func (m *pickSvcImpl) ListPicks(ctx context.Context, req *ListPicksRequest) (*ap
 		return nil, apiErr
 	}
 
-	picks := make([]apiresource.PickSummary, len(resp.Picks))
+	picks := make([]apiresource.Pick, len(resp.Picks))
 	for i, p := range resp.Picks {
 		picks[i] = pickSummaryFromProto(p)
 		stashPickSummaryMeta(ctx, &picks[i], p)
@@ -104,7 +104,7 @@ func (m *pickSvcImpl) ListPicks(ctx context.Context, req *ListPicksRequest) (*ap
 	return apiresource.NewList(picks, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
 
-func (m *pickSvcImpl) GetPick(ctx context.Context, req *RetrievePickRequest) (*apiresource.PickDetail, *apierror.APIError) {
+func (m *pickSvcImpl) GetPick(ctx context.Context, req *RetrievePickRequest) (*apiresource.Pick, *apierror.APIError) {
 	pbReq := &pb.GetPickRequest{Id: req.PickID, Includes: resourcekit.FilterIncludes(ctx, pickDetailIncludes...)}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, pickEpSvcTracer, "service.picks.get", domain.ServiceName,
@@ -120,13 +120,13 @@ func (m *pickSvcImpl) GetPick(ctx context.Context, req *RetrievePickRequest) (*a
 	return &result, nil
 }
 
-func (m *pickSvcImpl) UpdatePick(ctx context.Context, req *UpdatePickRequest) (*apiresource.PickDetail, *apierror.APIError) {
+func (m *pickSvcImpl) UpdatePick(ctx context.Context, req *UpdatePickRequest) (*apiresource.Pick, *apierror.APIError) {
 	pbReq := &pb.UpdatePickRequest{Id: req.PickID, Includes: resourcekit.FilterIncludes(ctx, pickDetailIncludes...)}
-	if req.Number != nil {
-		pbReq.Number = req.Number
+	if v, ok := req.Number.Value(); ok {
+		pbReq.Number = &v
 	}
-	if req.FinishedAt != nil {
-		pbReq.FinishedAt = req.FinishedAt
+	if v, ok := req.FinishedAt.Value(); ok {
+		pbReq.FinishedAt = &v
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, pickEpSvcTracer, "service.picks.update", domain.ServiceName,
@@ -142,7 +142,7 @@ func (m *pickSvcImpl) UpdatePick(ctx context.Context, req *UpdatePickRequest) (*
 	return &result, nil
 }
 
-func (m *pickSvcImpl) PickAllLines(ctx context.Context, req *PickAllLinesRequest) (*apiresource.PickDetail, *apierror.APIError) {
+func (m *pickSvcImpl) PickAllLines(ctx context.Context, req *PickAllLinesRequest) (*apiresource.Pick, *apierror.APIError) {
 	pbReq := &pb.PickAllLinesRequest{Id: req.PickID}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, pickEpSvcTracer, "service.picks.pick_all_lines", domain.ServiceName,
@@ -158,7 +158,7 @@ func (m *pickSvcImpl) PickAllLines(ctx context.Context, req *PickAllLinesRequest
 	return &result, nil
 }
 
-func (m *pickSvcImpl) VoidPick(ctx context.Context, req *VoidPickRequest) (*apiresource.PickDetail, *apierror.APIError) {
+func (m *pickSvcImpl) VoidPick(ctx context.Context, req *VoidPickRequest) (*apiresource.Pick, *apierror.APIError) {
 	pbReq := &pb.VoidPickRequest{Id: req.PickID}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, pickEpSvcTracer, "service.picks.void", domain.ServiceName,
@@ -186,7 +186,7 @@ func (m *pickSvcImpl) PackPick(ctx context.Context, req *PackPickRequest) (*apir
 	}
 
 	pick := pickDetailFromProto(resp.Pick)
-	populatePickDetailExpandable(&pick, resp.Pick)
+	populatePickGroups(&pick, resp.Pick)
 	return &apiresource.PackPickResponse{Pick: &pick, ShipmentNumber: resp.ShipmentNumber}, nil
 }
 
@@ -216,10 +216,10 @@ func (m *pickSvcImpl) GetPickShipments(ctx context.Context, req *GetPickShipment
 	}, nil
 }
 
-func (m *pickSvcImpl) UpdatePickLine(ctx context.Context, req *UpdatePickLineRequest) (*apiresource.PickLineDetail, *apierror.APIError) {
+func (m *pickSvcImpl) UpdatePickLine(ctx context.Context, req *UpdatePickLineRequest) (*apiresource.PickLine, *apierror.APIError) {
 	pbReq := &pb.UpdatePickLineRequest{PickId: req.PickID, Id: req.PickLineID}
-	if req.QuantityValue != nil {
-		pbReq.QuantityValue = req.QuantityValue
+	if v, ok := req.QuantityValue.Value(); ok {
+		pbReq.QuantityValue = &v
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, pickEpSvcTracer, "service.picks.update_line", domain.ServiceName,
@@ -235,7 +235,7 @@ func (m *pickSvcImpl) UpdatePickLine(ctx context.Context, req *UpdatePickLineReq
 	return &result, nil
 }
 
-func (m *pickSvcImpl) PickPickLine(ctx context.Context, req *PickPickLineRequest) (*apiresource.PickLineDetail, *apierror.APIError) {
+func (m *pickSvcImpl) PickPickLine(ctx context.Context, req *PickPickLineRequest) (*apiresource.PickLine, *apierror.APIError) {
 	pbReq := &pb.PickPickLineRequest{PickId: req.PickID, Id: req.PickLineID}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, pickEpSvcTracer, "service.picks.pick_line", domain.ServiceName,
@@ -251,7 +251,7 @@ func (m *pickSvcImpl) PickPickLine(ctx context.Context, req *PickPickLineRequest
 	return &result, nil
 }
 
-func (m *pickSvcImpl) VoidPickLine(ctx context.Context, req *VoidPickLineRequest) (*apiresource.PickLineDetail, *apierror.APIError) {
+func (m *pickSvcImpl) VoidPickLine(ctx context.Context, req *VoidPickLineRequest) (*apiresource.PickLine, *apierror.APIError) {
 	pbReq := &pb.VoidPickLineRequest{PickId: req.PickID, Id: req.PickLineID}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, pickEpSvcTracer, "service.picks.void_line", domain.ServiceName,
@@ -269,14 +269,13 @@ func (m *pickSvcImpl) VoidPickLine(ctx context.Context, req *VoidPickLineRequest
 
 // --- inline presenter functions ---
 
-func pickSummaryFromProto(info *pb.PickSummaryInfo) apiresource.PickSummary {
+func pickSummaryFromProto(info *pb.PickSummaryInfo) apiresource.Pick {
 	now := grpcutil.TimestampToTime(info.CreatedAt)
-	s := apiresource.PickSummary{
+	s := apiresource.Pick{
 		ID:        info.Id,
 		Object:    constants.ObjectTypePick,
 		Number:    info.Number,
-		Customer:  stubPickCustomer(info.CustomerId, info.CustomerName, info.CustomerNumber, now),
-		Priority:  apiresource.ExpandablePriorityStub("", constants.PriorityCode(info.PriorityCode), info.PriorityName, now),
+		Priority:  constants.PriorityCode(info.PriorityCode),
 		CreatedAt: now,
 		UpdatedAt: grpcutil.TimestampToTime(info.UpdatedAt),
 	}
@@ -284,21 +283,25 @@ func pickSummaryFromProto(info *pb.PickSummaryInfo) apiresource.PickSummary {
 	return s
 }
 
-func stashPickSummaryMeta(ctx context.Context, s *apiresource.PickSummary, info *pb.PickSummaryInfo) {
+func stashPickSummaryMeta(ctx context.Context, s *apiresource.Pick, info *pb.PickSummaryInfo) {
 	meta := resourcekit.GetLoadMeta(ctx)
-	now := grpcutil.TimestampToTime(info.CreatedAt)
-	meta.Set(constants.ObjectTypePick, s.ID, "sales_order",
-		buildPickSalesOrderStub(info.SalesOrderId, info.SalesOrderNumber, info.PriorityCode, info.PriorityName, now))
+	// sales_order and customer are expandable references: stash the FK ids so
+	// LoadSalesOrders / LoadCustomers fetch real data on ?include=. Never fabricate.
+	if info.SalesOrderId != "" {
+		meta.Set(constants.ObjectTypePick, s.ID, "sales_order_id", info.SalesOrderId)
+	}
+	if info.CustomerId != "" {
+		meta.Set(constants.ObjectTypePick, s.ID, "customer_id", info.CustomerId)
+	}
 }
 
-func pickDetailFromProto(info *pb.PickInfo) apiresource.PickDetail {
+func pickDetailFromProto(info *pb.PickInfo) apiresource.Pick {
 	now := grpcutil.TimestampToTime(info.CreatedAt)
-	d := apiresource.PickDetail{
+	d := apiresource.Pick{
 		ID:        info.Id,
 		Object:    constants.ObjectTypePick,
 		Number:    info.Number,
-		Customer:  stubPickCustomer(info.CustomerId, info.CustomerName, info.CustomerNumber, now),
-		Priority:  apiresource.ExpandablePriorityStub("", constants.PriorityCode(info.PriorityCode), info.PriorityName, now),
+		Priority:  constants.PriorityCode(info.PriorityCode),
 		CreatedAt: now,
 		UpdatedAt: grpcutil.TimestampToTime(info.UpdatedAt),
 	}
@@ -306,15 +309,21 @@ func pickDetailFromProto(info *pb.PickInfo) apiresource.PickDetail {
 	return d
 }
 
-func stashPickDetailMeta(ctx context.Context, d *apiresource.PickDetail, info *pb.PickInfo) {
+func stashPickDetailMeta(ctx context.Context, d *apiresource.Pick, info *pb.PickInfo) {
 	meta := resourcekit.GetLoadMeta(ctx)
 	now := grpcutil.TimestampToTime(info.CreatedAt)
 
-	meta.Set(constants.ObjectTypePick, d.ID, "sales_order",
-		buildPickSalesOrderStub(info.SalesOrderId, info.SalesOrderNumber, info.PriorityCode, info.PriorityName, now))
+	// sales_order and customer are expandable references: stash the FK ids so
+	// LoadSalesOrders / LoadCustomers fetch real data on ?include=. Never fabricate.
+	if info.SalesOrderId != "" {
+		meta.Set(constants.ObjectTypePick, d.ID, "sales_order_id", info.SalesOrderId)
+	}
+	if info.CustomerId != "" {
+		meta.Set(constants.ObjectTypePick, d.ID, "customer_id", info.CustomerId)
+	}
 
 	if len(info.Lines) > 0 {
-		lines := make([]apiresource.PickLineDetail, len(info.Lines))
+		lines := make([]apiresource.PickLine, len(info.Lines))
 		for i, l := range info.Lines {
 			lines[i] = pickLineDetailFromProto(l)
 			stashPickLineDetailMeta(ctx, &lines[i], l)
@@ -328,15 +337,17 @@ func stashPickDetailMeta(ctx context.Context, d *apiresource.PickDetail, info *p
 		apiresource.NewList(depts, apiresource.PageInfo{}))
 }
 
-func populatePickDetailExpandable(d *apiresource.PickDetail, info *pb.PickInfo) {
+// populatePickGroups fills the always-present Lines and Departments groups for
+// action responses (e.g. pack) that do not run the include resolver pipeline.
+// The loader-backed references (sales_order, customer, lines.sales_order_line)
+// remain null, populated only via ?include= on the standard pick endpoints.
+func populatePickGroups(d *apiresource.Pick, info *pb.PickInfo) {
 	now := grpcutil.TimestampToTime(info.CreatedAt)
-	d.SalesOrder = buildPickSalesOrderStub(info.SalesOrderId, info.SalesOrderNumber, info.PriorityCode, info.PriorityName, now)
 
 	if len(info.Lines) > 0 {
-		lines := make([]apiresource.PickLineDetail, len(info.Lines))
+		lines := make([]apiresource.PickLine, len(info.Lines))
 		for i, l := range info.Lines {
 			lines[i] = pickLineDetailFromProto(l)
-			lines[i].SalesOrderLine = buildSalesOrderLineForPick(l)
 		}
 		d.Lines = apiresource.NewList(lines, apiresource.PageInfo{})
 	}
@@ -344,9 +355,9 @@ func populatePickDetailExpandable(d *apiresource.PickDetail, info *pb.PickInfo) 
 	d.Departments = apiresource.NewList(buildPickDepartments(info.Departments, now), apiresource.PageInfo{})
 }
 
-func pickLineDetailFromProto(info *pb.PickLineInfo) apiresource.PickLineDetail {
+func pickLineDetailFromProto(info *pb.PickLineInfo) apiresource.PickLine {
 	now := grpcutil.TimestampToTime(info.CreatedAt)
-	d := apiresource.PickLineDetail{
+	d := apiresource.PickLine{
 		ID:     info.Id,
 		Object: constants.ObjectTypePickLine,
 		Quantity: &apiresource.Quantity{
@@ -358,12 +369,7 @@ func pickLineDetailFromProto(info *pb.PickLineInfo) apiresource.PickLineDetail {
 				info.QuantityUnitAbbreviation,
 				string(constants.UnitTypeQuantity),
 			),
-			Unit: stubUnitForPickLine(
-				info.QuantityUnitId,
-				info.QuantityUnitName,
-				info.QuantityUnitAbbreviation,
-				now,
-			),
+			// Unit left nil: expandable, loaded with real data via ?include=; never fabricated.
 		},
 		OrderedQuantity: &apiresource.Quantity{
 			ID:     info.OrderedQuantityId,
@@ -374,12 +380,7 @@ func pickLineDetailFromProto(info *pb.PickLineInfo) apiresource.PickLineDetail {
 				info.OrderedQuantityUnitAbbreviation,
 				string(constants.UnitTypeQuantity),
 			),
-			Unit: stubUnitForPickLine(
-				info.OrderedQuantityUnitId,
-				info.OrderedQuantityUnitName,
-				info.OrderedQuantityUnitAbbreviation,
-				now,
-			),
+			// Unit left nil: expandable, loaded with real data via ?include=; never fabricated.
 		},
 		CreatedAt: now,
 		UpdatedAt: now,
@@ -388,48 +389,12 @@ func pickLineDetailFromProto(info *pb.PickLineInfo) apiresource.PickLineDetail {
 	return d
 }
 
-func stashPickLineDetailMeta(ctx context.Context, d *apiresource.PickLineDetail, info *pb.PickLineInfo) {
+func stashPickLineDetailMeta(ctx context.Context, d *apiresource.PickLine, info *pb.PickLineInfo) {
 	resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypePickLine, d.ID, "sales_order_line",
 		buildSalesOrderLineForPick(info))
 }
 
 // --- helpers ---
-
-func stubPickCustomer(id, name, number string, now time.Time) *apiresource.Customer {
-	return &apiresource.Customer{
-		ID:               id,
-		Object:           constants.ObjectTypeCustomer,
-		Name:             name,
-		Number:           number,
-		Status:           constants.AccountStatusCodeNormal,
-		CommissionPolicy: constants.CommissionPolicyApplied,
-		EDIStatus:        constants.EDIStatusDisabled,
-		RelationshipType: constants.CustomerRelationshipTypeStandalone,
-		CreatedAt:        now,
-		UpdatedAt:        now,
-	}
-}
-
-func buildPickSalesOrderStub(salesOrderID, salesOrderNumber, priorityCode, priorityName string, now time.Time) *apiresource.SalesOrderDetail {
-	return &apiresource.SalesOrderDetail{
-		ID:     salesOrderID,
-		Object: constants.ObjectTypeSalesOrder,
-		Number: salesOrderNumber,
-		Status: &apiresource.SalesOrderStatusDetail{
-			Code:   string(constants.SalesOrderStatusCodeIssued),
-			Object: constants.ObjectTypeSalesOrderStatus,
-			Name:   "Issued",
-		},
-		Type: &apiresource.SalesOrderType{
-			Code:   "standard",
-			Object: constants.ObjectTypeSalesOrderType,
-			Name:   "Standard",
-		},
-		Priority:  apiresource.ExpandablePriorityStub("", constants.PriorityCode(priorityCode), priorityName, now),
-		CreatedAt: now,
-		UpdatedAt: now,
-	}
-}
 
 func buildPickDepartments(deps []*pb.PickDepartmentInfo, ts time.Time) []apiresource.Department {
 	depts := make([]apiresource.Department, len(deps))
@@ -449,32 +414,13 @@ func buildPickDepartments(deps []*pb.PickDepartmentInfo, ts time.Time) []apireso
 	return depts
 }
 
-func stubUnitForPickLine(id, name, abbr string, ts time.Time) *apiresource.Unit {
-	if id == "" {
-		id = "un_unknown"
-	}
-	if name == "" {
-		name = abbr
-	}
-	if abbr == "" {
-		abbr = "—"
-	}
-	return &apiresource.Unit{
-		ID:                id,
-		Object:            constants.ObjectTypeUnit,
-		Name:              name,
-		Abbreviation:      abbr,
-		Type:              constants.UnitTypeQuantity,
-		RatioNumerator:    "1",
-		RatioDenominator:  "1",
-		OffsetNumerator:   "0",
-		OffsetDenominator: "1",
-		CreatedAt:         ts,
-		UpdatedAt:         ts,
-	}
-}
-
-func buildSalesOrderLineForPick(info *pb.PickLineInfo) *apiresource.SalesOrderLineDetail {
+// buildSalesOrderLineForPick builds a pre-built, new-shape SalesOrderLine
+// reference from the pick line's identifying proto fields. There is no
+// standalone sales-order-line loader, so the parent proto carries the line's
+// identifying fields. Only the required base fields are set; the expandable
+// money/quantity fields (Product, QuantityOrdered, UnitPrice, UnitCost, Totals)
+// are left nil and are never fabricated.
+func buildSalesOrderLineForPick(info *pb.PickLineInfo) *apiresource.SalesOrderLine {
 	now := grpcutil.TimestampToTime(info.CreatedAt)
 	sku := info.OrderLineSku
 	if sku == "" {
@@ -485,63 +431,13 @@ func buildSalesOrderLineForPick(info *pb.PickLineInfo) *apiresource.SalesOrderLi
 		productDesc = info.OrderLineDescription
 	}
 
-	unitPriceValue := info.UnitPriceValue
-	if unitPriceValue == "" {
-		unitPriceValue = "0"
-	}
-	unitPriceID := info.UnitPriceId
-	if unitPriceID == "" {
-		unitPriceID = "ra_stub"
-	}
-
-	return &apiresource.SalesOrderLineDetail{
+	return &apiresource.SalesOrderLine{
 		ID:                 info.SalesOrderLineId,
 		Object:             constants.ObjectTypeSalesOrderLine,
 		LineItemNumber:     info.OrderLineItemNumber,
 		ProductSKU:         sku,
 		ProductDescription: productDesc,
-		QuantityOrdered: &apiresource.Quantity{
-			ID:     info.OrderedQuantityId,
-			Object: constants.ObjectTypeQuantity,
-			Value:  info.OrderedQuantityValue,
-			DisplayValue: apiresource.FormatDisplayValue(
-				info.OrderedQuantityValue,
-				info.OrderedQuantityUnitAbbreviation,
-				string(constants.UnitTypeQuantity),
-			),
-			Unit: stubUnitForPickLine(
-				info.OrderedQuantityUnitId,
-				info.OrderedQuantityUnitName,
-				info.OrderedQuantityUnitAbbreviation,
-				now,
-			),
-		},
-		UnitPrice: &apiresource.Rate{
-			ID:     unitPriceID,
-			Object: constants.ObjectTypeRate,
-			Value:  unitPriceValue,
-			NumeratorUnit: stubUnitForPickLine(
-				info.UnitPriceNumeratorUnitId,
-				info.UnitPriceNumeratorUnitAbbreviation,
-				info.UnitPriceNumeratorUnitAbbreviation,
-				now,
-			),
-			DenominatorUnit: stubUnitForPickLine(
-				info.UnitPriceDenominatorUnitId,
-				info.UnitPriceDenominatorUnitAbbreviation,
-				info.UnitPriceDenominatorUnitAbbreviation,
-				now,
-			),
-			DisplayValue: apiresource.FormatRateDisplayValue(
-				unitPriceValue,
-				info.UnitPriceNumeratorUnitAbbreviation,
-				"",
-				info.UnitPriceDenominatorUnitAbbreviation,
-			),
-			CreatedAt: now,
-			UpdatedAt: now,
-		},
-		CreatedAt: now,
-		UpdatedAt: now,
+		CreatedAt:          now,
+		UpdatedAt:          now,
 	}
 }

@@ -5,7 +5,7 @@ import (
 
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/shared/contracts"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -148,7 +148,7 @@ func (h *gRPCHandler) UpdateLocation(ctx context.Context, req *pb.UpdateLocation
 		LocationID: req.Id,
 		Name:       req.Name,
 		TypeCode:   req.TypeCode,
-		ParentID:   patch.StringFieldFromProto(req.ParentId),
+		ParentID:   field.StringClearableFromProto(req.ParentId),
 		ChildIDs:   stringListPatchToSliceField(req.ChildIds),
 		Includes:   req.Includes,
 	}

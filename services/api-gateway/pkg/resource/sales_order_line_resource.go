@@ -8,10 +8,10 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleSalesOrderLineDetailID = "orln_0142f9b74268973450b3a76ce3"
+const SampleSalesOrderLineID = "orln_0142f9b74268973450b3a76ce3"
 
 // Full sales order line resource.
-type SalesOrderLineDetail struct {
+type SalesOrderLine struct {
 	// Sales order line ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
@@ -22,24 +22,16 @@ type SalesOrderLineDetail struct {
 	ProductSKU string `json:"product_sku" validate:"required"`
 	// Product description.
 	ProductDescription *string `json:"product_description"`
-	// Associated item. Expandable.
-	Item *Item `json:"item" expandable:"true"`
+	// Associated product.
+	Product *Product `json:"product" expandable:"true"`
 	// Quantity ordered.
-	QuantityOrdered *Quantity `json:"quantity_ordered" validate:"required"`
-	// Quantity picked.
-	QuantityPicked *Quantity `json:"quantity_picked"`
-	// Quantity packed.
-	QuantityPacked *Quantity `json:"quantity_packed"`
-	// Quantity invoiced.
-	QuantityInvoiced *Quantity `json:"quantity_invoiced"`
+	QuantityOrdered *Quantity `json:"quantity_ordered" expandable:"true"`
 	// Unit price.
-	UnitPrice *Rate `json:"unit_price" validate:"required"`
+	UnitPrice *Rate `json:"unit_price" expandable:"true"`
 	// Unit cost.
-	UnitCost *Rate `json:"unit_cost"`
-	// EDI line item ID.
-	EdiLineItemID *string `json:"edi_line_item_id"`
-	// Completed timestamp.
-	CompletedAt *time.Time `json:"completed_at"`
+	UnitCost *Rate `json:"unit_cost" expandable:"true"`
+	// Derived monetary totals for this line.
+	Totals *SalesOrderTotals `json:"totals" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
@@ -48,18 +40,19 @@ type SalesOrderLineDetail struct {
 
 var sampleProductDescription = "6061-T6 Aluminum Sheet 4x8"
 
-var SampleSalesOrderLineDetail = &SalesOrderLineDetail{
-	ID:                 SampleSalesOrderLineDetailID,
+var SampleSalesOrderLine = &SalesOrderLine{
+	ID:                 SampleSalesOrderLineID,
 	Object:             constants.ObjectTypeSalesOrderLine,
 	LineItemNumber:     1,
 	ProductSKU:         SampleItemSKU,
 	ProductDescription: &sampleProductDescription,
 	QuantityOrdered:    SampleQuantity,
 	UnitPrice:          SampleRate,
+	Totals:             SampleSalesOrderTotals,
 	CreatedAt:          timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:          timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
-func (*SalesOrderLineDetail) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SampleSalesOrderLineDetail)
+func (*SalesOrderLine) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleSalesOrderLine)
 }

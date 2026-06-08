@@ -29,10 +29,6 @@ const (
 	UserStatusDeleted  UserStatus = "deleted"
 )
 
-func (s UserStatus) String() string {
-	return string(s)
-}
-
 func (u *User) ToProto() *pb.User {
 	if u == nil {
 		return nil

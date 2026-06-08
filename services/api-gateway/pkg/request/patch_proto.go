@@ -1,17 +1,12 @@
 package apirequest
 
 import (
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 )
 
-// QuantityFieldPtrToProto converts a quantity field pointer to protobuf.
-func QuantityFieldPtrToProto(f *patch.Field[QuantityInput]) *pb.QuantityPatch {
-	return QuantityFieldToProto(patch.Coalesce(f))
-}
-
 // QuantityFieldToProto converts a quantity field to protobuf.
-func QuantityFieldToProto(f patch.Field[QuantityInput]) *pb.QuantityPatch {
+func QuantityFieldToProto(f field.Clearable[QuantityInput]) *pb.QuantityPatch {
 	if f.IsUnset() {
 		return nil
 	}

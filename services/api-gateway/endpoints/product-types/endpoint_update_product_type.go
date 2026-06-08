@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to partially update a product type.
@@ -16,14 +17,14 @@ type UpdateProductTypeRequest struct {
 	// Product ID.
 	ProductTypeID string `path:"id" validate:"required"`
 	// Display name.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// Unique code.
-	Code *string `json:"code,omitempty" validate:"omitempty,max=255"`
+	Code field.Optional[string] `json:"code,omitzero" validate:"omitempty,max=255"`
 }
 
 var sampleUpdateProductTypeRequest = &UpdateProductTypeRequest{
-	Name: new("Service"),
-	Code: new("service"),
+	Name: field.Some("Service"),
+	Code: field.Some("service"),
 }
 
 func (*UpdateProductTypeRequest) SchemaExample() any {

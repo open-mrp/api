@@ -47,6 +47,15 @@ func SetCoreSalesClient(c pb.CoreSalesServiceClient) {
 	coreSalesClient = c
 }
 
+// corePurchaseClient is the CorePurchaseService client used by loaders whose
+// RPCs live in core_purchase.proto (purchase-order include resolution).
+var corePurchaseClient pb.CorePurchaseServiceClient
+
+// SetCorePurchaseClient is called once at startup with the CorePurchaseService client.
+func SetCorePurchaseClient(c pb.CorePurchaseServiceClient) {
+	corePurchaseClient = c
+}
+
 // SetAgentClient is called once at startup with the AgentService client.
 func SetAgentClient(c agentpb.AgentServiceClient) {
 	agentClient = c
@@ -59,6 +68,33 @@ var fulfillmentClient pb.CoreFulfillmentServiceClient
 // SetFulfillmentClient is called once at startup with the CoreFulfillmentService client.
 func SetFulfillmentClient(c pb.CoreFulfillmentServiceClient) {
 	fulfillmentClient = c
+}
+
+// corePickingClient is the CorePickingService client used by LoadPicks
+// (pick include resolution). Set at startup.
+var corePickingClient pb.CorePickingServiceClient
+
+// SetCorePickingClient is called once at startup with the CorePickingService client.
+func SetCorePickingClient(c pb.CorePickingServiceClient) {
+	corePickingClient = c
+}
+
+// coreShippingClient is the CoreShippingService client used by LoadShipments
+// (shipment include resolution). Set at startup.
+var coreShippingClient pb.CoreShippingServiceClient
+
+// SetCoreShippingClient is called once at startup with the CoreShippingService client.
+func SetCoreShippingClient(c pb.CoreShippingServiceClient) {
+	coreShippingClient = c
+}
+
+// coreReceivingClient is the CoreReceivingService client used by
+// LoadReceivingOrders (receiving order include resolution). Set at startup.
+var coreReceivingClient pb.CoreReceivingServiceClient
+
+// SetCoreReceivingClient is called once at startup with the CoreReceivingService client.
+func SetCoreReceivingClient(c pb.CoreReceivingServiceClient) {
+	coreReceivingClient = c
 }
 
 // authClient is the AuthService client used by loaders whose RPCs live in

@@ -22,6 +22,7 @@ type Pick struct {
 	CustomerID     string
 	CustomerName   string
 	CustomerNumber string
+	PriorityID     string
 	PriorityCode   constants.PriorityCode
 	PriorityName   string
 
@@ -39,6 +40,7 @@ type PickSummary struct {
 	CustomerID       string
 	CustomerName     string
 	CustomerNumber   string
+	PriorityID       string
 	PriorityCode     constants.PriorityCode
 	PriorityName     string
 	FinishedAt       *time.Time

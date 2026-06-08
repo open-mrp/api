@@ -10,6 +10,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to create an API key.
@@ -19,7 +20,7 @@ type CreateAPIKeyRequest struct {
 	// Human-readable name for the API key.
 	Name string `json:"name" validate:"required,max=255"`
 	// Expiration timestamp. If not set, the key does not expire.
-	ExpiresAt *time.Time `json:"expires_at,omitempty"`
+	ExpiresAt field.Optional[time.Time] `json:"expires_at,omitzero"`
 }
 
 var sampleCreateAPIKeyRequest = &CreateAPIKeyRequest{

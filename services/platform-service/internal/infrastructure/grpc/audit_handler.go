@@ -176,6 +176,20 @@ func (h *auditHandler) GetAuditEvent(ctx context.Context, req *pb.GetAuditEventR
 	}, nil
 }
 
+func (h *auditHandler) ListAuditEventResourceTypes(ctx context.Context, req *pb.ListAuditEventResourceTypesRequest) (*pb.ListAuditEventResourceTypesResponse, error) {
+	ctx, span := auditGRPCHandlerTracer.Start(ctx, "grpc_handler.list_audit_event_resource_types")
+	defer span.End()
+
+	resourceTypes, apiErr := h.auditSvc.ListAuditEventResourceTypes(ctx)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.ListAuditEventResourceTypesResponse{
+		ResourceTypes: resourceTypes,
+	}, nil
+}
+
 func auditEventToProto(ev *domain.AuditEventRead) *pb.AuditEventInfo {
 	if ev == nil {
 		return &pb.AuditEventInfo{}

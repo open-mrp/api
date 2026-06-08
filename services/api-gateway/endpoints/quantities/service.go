@@ -49,10 +49,10 @@ func NewQuantitySvc(config *QuantitySvcConfig) QuantitySvc {
 func (m *quantitySvcImpl) UpdateQuantity(ctx context.Context, req *UpdateQuantityRequest) (*apiresource.Quantity, *apierror.APIError) {
 	pbReq := &pb.UpdateQuantityRequest{
 		Id:         req.QuantityID,
-		Value:      req.Value,
-		UnitId:     req.UnitID,
-		ObjectId:   req.ObjectID,
-		ObjectType: req.ObjectType,
+		Value:      req.Value.Ptr(),
+		UnitId:     req.UnitID.Ptr(),
+		ObjectId:   req.ObjectID.Ptr(),
+		ObjectType: req.ObjectType.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, quantitySvcTracer, "service.quantities.update", domain.ServiceName,
@@ -88,8 +88,12 @@ func stashQuantityMeta(meta *resourcekit.LoadMeta, q *pb.QuantityInfo) {
 	if q == nil {
 		return
 	}
-	unit := UnitFromQuantityInfo(q)
-	if unit != nil {
+	// If the proto carried full unit detail, stash the resolved Unit directly
+	// (no extra fetch). Otherwise stash just the FK id so LoadUnits fetches the
+	// real Unit on ?include=unit. Never fabricate.
+	if unit := UnitFromQuantityInfo(q); unit != nil {
 		meta.Set(constants.ObjectTypeQuantity, q.Id, "unit", unit)
+	} else if q.UnitId != "" {
+		meta.Set(constants.ObjectTypeQuantity, q.Id, "unit_id", q.UnitId)
 	}
 }

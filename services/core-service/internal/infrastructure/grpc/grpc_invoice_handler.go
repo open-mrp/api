@@ -230,6 +230,8 @@ func invoiceToProto(inv *domain.Invoice) *pb.InvoiceInfo {
 		AcceptsInvoiceEmails:  inv.AcceptsInvoiceEmails,
 		Lines:                 lines,
 		Allocations:           allocations,
+		CustomerId:            inv.CustomerID,
+		PaymentTermId:         inv.PaymentTermID,
 		CreatedAt:             timestamppb.New(inv.CreatedAt),
 		UpdatedAt:             timestamppb.New(inv.UpdatedAt),
 	}

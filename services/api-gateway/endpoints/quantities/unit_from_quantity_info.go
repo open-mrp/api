@@ -2,11 +2,14 @@ package quantityep
 
 import (
 	unitep "github.com/augno/api/services/api-gateway/endpoints/units"
-	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	pb "github.com/augno/api/shared/proto/core"
 )
 
+// UnitFromQuantityInfo returns the fully-resolved Unit when the proto carries
+// complete unit detail, or nil otherwise. It never fabricates a placeholder —
+// when only a unit id is available, callers stash the id so the unit is loaded
+// with real data via LoadUnits when ?include= is requested.
 func UnitFromQuantityInfo(q *pb.QuantityInfo) *apiresource.Unit {
 	if q == nil {
 		return nil
@@ -15,11 +18,5 @@ func UnitFromQuantityInfo(q *pb.QuantityInfo) *apiresource.Unit {
 		u := unitep.UnitPresenter(ud, nil)
 		return &u
 	}
-	return apiresource.ExpandableUnitStub(
-		q.UnitId,
-		q.UnitName,
-		q.UnitAbbreviation,
-		q.UnitType,
-		grpcutil.TimestampToTime(q.CreatedAt),
-	)
+	return nil
 }

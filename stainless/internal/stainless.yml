@@ -649,13 +649,19 @@ resources:
           actions:
             methods:
               bulk_delete: post /v1/sales/sales-orders/actions/bulk-delete
-              change_status: put /v1/sales/sales-orders/{id}/actions/change-status
+              issue: put /v1/sales/sales-orders/{id}/actions/issue
+              unissue: put /v1/sales/sales-orders/{id}/actions/unissue
+              close: put /v1/sales/sales-orders/{id}/actions/close
+              open: put /v1/sales/sales-orders/{id}/actions/open
               create_production_run: post /v1/sales/sales-orders/{id}/actions/create-production-run
             models:
               bulk_delete_sales_orders_request: '#/components/schemas/BulkDeleteSalesOrdersRequest'
-              change_sales_order_status_request: '#/components/schemas/ChangeSalesOrderStatusRequest'
+              close_sales_order_request: '#/components/schemas/CloseSalesOrderRequest'
               create_production_run_response: '#/components/schemas/CreateProductionRunResponse'
               create_production_run_response_ref: '#/components/schemas/CreateProductionRunResponseRef'
+              issue_sales_order_request: '#/components/schemas/IssueSalesOrderRequest'
+              open_sales_order_request: '#/components/schemas/OpenSalesOrderRequest'
+              unissue_sales_order_request: '#/components/schemas/UnissueSalesOrderRequest'
           lines:
             methods:
               create: post /v1/sales/sales-orders/{id}/lines
@@ -663,24 +669,27 @@ resources:
               delete: delete /v1/sales/sales-orders/{id}/lines/{line_id}
             models:
               create_sales_order_line_request: '#/components/schemas/CreateSalesOrderLineRequest'
+              rate_input: '#/components/schemas/RateInput'
               update_sales_order_line_request: '#/components/schemas/UpdateSalesOrderLineRequest'
         models:
           checkout_sales_order_request: '#/components/schemas/CheckoutSalesOrderRequest'
           checkout_sales_order_response: '#/components/schemas/CheckoutSalesOrderResponse'
           create_sales_order_line_input: '#/components/schemas/CreateSalesOrderLineInput'
           create_sales_order_request: '#/components/schemas/CreateSalesOrderRequest'
-          list_sales_order_detail: '#/components/schemas/List_SalesOrderDetail'
-          list_sales_order_line_detail: '#/components/schemas/List_SalesOrderLineDetail'
+          freight: '#/components/schemas/Freight'
+          list_record: '#/components/schemas/List_Record'
+          list_sales_order: '#/components/schemas/List_SalesOrder'
+          list_sales_order_line: '#/components/schemas/List_SalesOrderLine'
           list_sales_order_status: '#/components/schemas/List_SalesOrderStatus'
           order_line_input: '#/components/schemas/OrderLineInput'
-          pick: '#/components/schemas/Pick'
-          production_run: '#/components/schemas/ProductionRun'
-          sales_order_detail: '#/components/schemas/SalesOrderDetail'
+          product: '#/components/schemas/Product'
+          record: '#/components/schemas/Record'
+          sales_order: '#/components/schemas/SalesOrder'
           sales_order_email_contact_input: '#/components/schemas/SalesOrderEmailContactInput'
-          sales_order_line_detail: '#/components/schemas/SalesOrderLineDetail'
+          sales_order_line: '#/components/schemas/SalesOrderLine'
+          sales_order_related: '#/components/schemas/SalesOrderRelated'
           sales_order_status: '#/components/schemas/SalesOrderStatus'
-          sales_order_status_detail: '#/components/schemas/SalesOrderStatusDetail'
-          sales_order_type: '#/components/schemas/SalesOrderType'
+          sales_order_totals: '#/components/schemas/SalesOrderTotals'
           update_sales_order_request: '#/components/schemas/UpdateSalesOrderRequest'
       volume_discounts:
         methods:
@@ -856,7 +865,6 @@ resources:
           list_material: '#/components/schemas/List_Material'
           material: '#/components/schemas/Material'
           quantity_input_request: '#/components/schemas/QuantityInputRequest'
-          rate_input: '#/components/schemas/RateInput'
           update_material_request: '#/components/schemas/UpdateMaterialRequest'
       parts:
         methods:
@@ -903,7 +911,6 @@ resources:
         models:
           create_product_request: '#/components/schemas/CreateProductRequest'
           list_product: '#/components/schemas/List_Product'
-          product: '#/components/schemas/Product'
           update_product_request: '#/components/schemas/UpdateProductRequest'
       product_types:
         methods:
@@ -1040,24 +1047,22 @@ resources:
           retrieve: get /v1/finance/invoices/{id}
           update: patch /v1/finance/invoices/{id}
         models:
+          allocation_invoice: '#/components/schemas/AllocationInvoice'
           invoice: '#/components/schemas/Invoice'
           invoice_allocation: '#/components/schemas/InvoiceAllocation'
           invoice_line: '#/components/schemas/InvoiceLine'
-          invoice_summary: '#/components/schemas/InvoiceSummary'
           list_department: '#/components/schemas/List_Department'
+          list_invoice: '#/components/schemas/List_Invoice'
           list_invoice_allocation: '#/components/schemas/List_InvoiceAllocation'
           list_invoice_line: '#/components/schemas/List_InvoiceLine'
-          list_invoice_summary: '#/components/schemas/List_InvoiceSummary'
-          list_pick_line_detail: '#/components/schemas/List_PickLineDetail'
+          list_pick_line: '#/components/schemas/List_PickLine'
           list_shipment_line: '#/components/schemas/List_ShipmentLine'
           list_shipping_case_detail: '#/components/schemas/List_ShippingCaseDetail'
           list_transaction_allocation: '#/components/schemas/List_TransactionAllocation'
-          pick_detail: '#/components/schemas/PickDetail'
-          pick_line_detail: '#/components/schemas/PickLineDetail'
-          shipment_billing: '#/components/schemas/ShipmentBilling'
-          shipment_detail: '#/components/schemas/ShipmentDetail'
+          pick: '#/components/schemas/Pick'
+          pick_line: '#/components/schemas/PickLine'
+          shipment: '#/components/schemas/Shipment'
           shipment_line: '#/components/schemas/ShipmentLine'
-          shipment_status: '#/components/schemas/ShipmentStatus'
           shipping_case_detail: '#/components/schemas/ShippingCaseDetail'
           transaction_allocation: '#/components/schemas/TransactionAllocation'
           transaction_detail: '#/components/schemas/TransactionDetail'
@@ -1109,7 +1114,6 @@ resources:
           delete: delete /v1/finance/transaction-allocations/{id}
         models:
           allocation_entry: '#/components/schemas/AllocationEntry'
-          allocation_invoice: '#/components/schemas/AllocationInvoice'
           allocation_transaction: '#/components/schemas/AllocationTransaction'
           list_allocation_entry: '#/components/schemas/List_AllocationEntry'
           update_transaction_allocation_request: '#/components/schemas/UpdateTransactionAllocationRequest'
@@ -1249,6 +1253,7 @@ resources:
           list_batch_flow_node: '#/components/schemas/List_BatchFlowNode'
           list_batch_lot: '#/components/schemas/List_BatchLot'
           list_scanning_production_step_info: '#/components/schemas/List_ScanningProductionStepInfo'
+          production_run: '#/components/schemas/ProductionRun'
           scanning_production_step_info: '#/components/schemas/ScanningProductionStepInfo'
       scanning_stations:
         methods:
@@ -1329,10 +1334,18 @@ resources:
         models:
           delivery: '#/components/schemas/Delivery'
           delivery_line: '#/components/schemas/DeliveryLine'
-          delivery_summary: '#/components/schemas/DeliverySummary'
+          email_contact: '#/components/schemas/EmailContact'
+          list_delivery: '#/components/schemas/List_Delivery'
           list_delivery_line: '#/components/schemas/List_DeliveryLine'
-          list_delivery_summary: '#/components/schemas/List_DeliverySummary'
+          list_email_contact: '#/components/schemas/List_EmailContact'
+          list_purchase_order_line: '#/components/schemas/List_PurchaseOrderLine'
+          list_receiving_order_line: '#/components/schemas/List_ReceivingOrderLine'
           lot: '#/components/schemas/Lot'
+          purchase_order: '#/components/schemas/PurchaseOrder'
+          purchase_order_line: '#/components/schemas/PurchaseOrderLine'
+          receiving_order: '#/components/schemas/ReceivingOrder'
+          receiving_order_line: '#/components/schemas/ReceivingOrderLine'
+          supplier: '#/components/schemas/Supplier'
       inventory_change_logs:
         methods:
           list: get /v1/operations/inventory-change-logs
@@ -1379,11 +1392,7 @@ resources:
             models:
               update_receiving_order_line_request: '#/components/schemas/UpdateReceivingOrderLineRequest'
         models:
-          list_receiving_order_line: '#/components/schemas/List_ReceivingOrderLine'
-          list_receiving_order_summary: '#/components/schemas/List_ReceivingOrderSummary'
-          receiving_order: '#/components/schemas/ReceivingOrder'
-          receiving_order_line: '#/components/schemas/ReceivingOrderLine'
-          receiving_order_summary: '#/components/schemas/ReceivingOrderSummary'
+          list_receiving_order: '#/components/schemas/List_ReceivingOrder'
       production_flows:
         methods:
           retrieve_by_item: get /v1/operations/production-flows/by-item/{item_id}
@@ -1448,14 +1457,7 @@ resources:
         models:
           create_purchase_order_line_input: '#/components/schemas/CreatePurchaseOrderLineInput'
           create_purchase_order_request: '#/components/schemas/CreatePurchaseOrderRequest'
-          email_contact: '#/components/schemas/EmailContact'
-          list_email_contact: '#/components/schemas/List_EmailContact'
-          list_purchase_order_line_detail: '#/components/schemas/List_PurchaseOrderLineDetail'
-          list_purchase_order_summary: '#/components/schemas/List_PurchaseOrderSummary'
-          purchase_order_detail: '#/components/schemas/PurchaseOrderDetail'
-          purchase_order_line_detail: '#/components/schemas/PurchaseOrderLineDetail'
-          purchase_order_summary: '#/components/schemas/PurchaseOrderSummary'
-          supplier: '#/components/schemas/Supplier'
+          list_purchase_order: '#/components/schemas/List_PurchaseOrder'
           update_purchase_order_request: '#/components/schemas/UpdatePurchaseOrderRequest'
       picks:
         methods:
@@ -1483,9 +1485,8 @@ resources:
             models:
               update_pick_line_request: '#/components/schemas/UpdatePickLineRequest'
         models:
-          list_pick_summary: '#/components/schemas/List_PickSummary'
+          list_pick: '#/components/schemas/List_Pick'
           pick_shipments_response: '#/components/schemas/PickShipmentsResponse'
-          pick_summary: '#/components/schemas/PickSummary'
           update_pick_request: '#/components/schemas/UpdatePickRequest'
       locations:
         methods:
@@ -1547,8 +1548,7 @@ resources:
               create_shipment_line_request: '#/components/schemas/CreateShipmentLineRequest'
               update_shipment_line_request: '#/components/schemas/UpdateShipmentLineRequest'
         models:
-          list_shipment_summary: '#/components/schemas/List_ShipmentSummary'
-          shipment_summary: '#/components/schemas/ShipmentSummary'
+          list_shipment: '#/components/schemas/List_Shipment'
           update_shipment_request: '#/components/schemas/UpdateShipmentRequest'
       edi:
         subresources:

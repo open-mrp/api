@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to partially update a consumption.
@@ -18,22 +19,22 @@ type UpdateConsumptionRequest struct {
 	// Consumption ID.
 	ConsumptionID string `path:"id" validate:"required"`
 	// Item ID.
-	ItemID *string `json:"item_id,omitempty" validate:"omitempty"`
+	ItemID field.Optional[string] `json:"item_id,omitzero" validate:"omitempty"`
 	// Consumed quantity value.
-	QuantityValue *string `json:"quantity_value,omitempty"`
+	QuantityValue field.Optional[string] `json:"quantity_value,omitzero"`
 	// Consumed quantity unit ID.
-	QuantityUnitID *string `json:"quantity_unit_id,omitempty" validate:"omitempty"`
+	QuantityUnitID field.Optional[string] `json:"quantity_unit_id,omitzero" validate:"omitempty"`
 	// Waste quantity value.
-	WasteQuantityValue *string `json:"waste_quantity_value,omitempty"`
+	WasteQuantityValue field.Optional[string] `json:"waste_quantity_value,omitzero"`
 	// Waste quantity unit ID.
-	WasteQuantityUnitID *string `json:"waste_quantity_unit_id,omitempty" validate:"omitempty"`
+	WasteQuantityUnitID field.Optional[string] `json:"waste_quantity_unit_id,omitzero" validate:"omitempty"`
 	// Instructions for how this material is consumed.
-	Instructions *string `json:"instructions,omitempty"`
+	Instructions field.Optional[string] `json:"instructions,omitzero"`
 }
 
 var sampleUpdateConsumptionRequest = &UpdateConsumptionRequest{
-	QuantityValue:  new("20.000000000000000000000000000000"),
-	QuantityUnitID: new(apiresource.SampleUnitID),
+	QuantityValue:  field.Some("20.000000000000000000000000000000"),
+	QuantityUnitID: field.Some(apiresource.SampleUnitID),
 }
 
 func (*UpdateConsumptionRequest) SchemaExample() any {

@@ -39,7 +39,7 @@ func populateShipmentOnShippingCase(ctx context.Context, parent any, _ map[strin
 	if !ok {
 		return
 	}
-	sc.Shipment = v.(*apiresource.ShipmentDetail)
+	sc.Shipment = v.(*apiresource.Shipment)
 }
 
 func populateFreightAmountOnShippingCase(ctx context.Context, parent any, _ map[string]any) {

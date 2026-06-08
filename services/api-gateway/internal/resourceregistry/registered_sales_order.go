@@ -14,14 +14,24 @@ func init() {
 		ObjectType: constants.ObjectTypeSalesOrder,
 		Load:       resourceloaders.LoadSalesOrders,
 		Subs: []resourcekit.SubField{
-			{Key: "customer", Populate: populateCustomerOnSO},
+			{
+				Key:         "customer",
+				Target:      constants.ObjectTypeCustomer,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractIDs:  extractCustomerIDFromSO,
+				Populate:    populateCustomerOnSO,
+			},
+			{Key: "sales_rep", Populate: populateSalesRepOnSO},
 			{Key: "bill_to_address", Populate: populateBillToAddressOnSO},
 			{Key: "ship_to_address", Populate: populateShipToAddressOnSO},
-			{Key: "carrier", Populate: populateCarrierOnSO},
-			{Key: "service_level", Populate: populateServiceLevelOnSO},
+			{Key: "freight", Populate: populateFreightOnSO},
 			{Key: "payment_term", Populate: populatePaymentTermOnSO},
 			{Key: "shipping_term", Populate: populateShippingTermOnSO},
 			{Key: "order_discount", Populate: populateOrderDiscountOnSO},
+			{Key: "totals", Populate: populateTotalsOnSO},
+			{Key: "related.pick", Populate: populatePickOnSORelated},
+			{Key: "related.production_run", Populate: populateProductionRunOnSORelated},
+			{Key: "related.shipments", Populate: populateShipmentsOnSORelated},
 			{
 				Key:         "lines",
 				Target:      constants.ObjectTypeSalesOrderLine,
@@ -32,17 +42,82 @@ func init() {
 	})
 }
 
-func populateCustomerOnSO(ctx context.Context, parent any, _ map[string]any) {
-	so := parent.(*apiresource.SalesOrderDetail)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "customer")
+func populateSalesRepOnSO(ctx context.Context, parent any, _ map[string]any) {
+	so := parent.(*apiresource.SalesOrder)
+	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "sales_rep")
 	if !ok {
 		return
 	}
-	so.Customer = v.(*apiresource.Customer)
+	so.SalesRep = v.(*apiresource.Actor)
+}
+
+func populateTotalsOnSO(ctx context.Context, parent any, _ map[string]any) {
+	so := parent.(*apiresource.SalesOrder)
+	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "totals")
+	if !ok {
+		return
+	}
+	so.Totals = v.(*apiresource.SalesOrderTotals)
+}
+
+func populatePickOnSORelated(ctx context.Context, parent any, _ map[string]any) {
+	so := parent.(*apiresource.SalesOrder)
+	if so.Related == nil {
+		return
+	}
+	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "related_pick")
+	if !ok {
+		return
+	}
+	so.Related.Pick = v.(*apiresource.Record)
+}
+
+func populateProductionRunOnSORelated(ctx context.Context, parent any, _ map[string]any) {
+	so := parent.(*apiresource.SalesOrder)
+	if so.Related == nil {
+		return
+	}
+	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "related_production_run")
+	if !ok {
+		return
+	}
+	so.Related.ProductionRun = v.(*apiresource.Record)
+}
+
+func populateShipmentsOnSORelated(ctx context.Context, parent any, _ map[string]any) {
+	so := parent.(*apiresource.SalesOrder)
+	if so.Related == nil {
+		return
+	}
+	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "related_shipments")
+	if !ok {
+		return
+	}
+	so.Related.Shipments = v.(*apiresource.List[apiresource.Record])
+}
+
+func extractCustomerIDFromSO(ctx context.Context, parent any) []string {
+	so := parent.(*apiresource.SalesOrder)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeSalesOrder, so.ID, "customer_id")
+	if id == "" {
+		return nil
+	}
+	return []string{id}
+}
+
+func populateCustomerOnSO(ctx context.Context, parent any, loaded map[string]any) {
+	so := parent.(*apiresource.SalesOrder)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeSalesOrder, so.ID, "customer_id")
+	if id == "" {
+		return
+	}
+	if v, ok := loaded[id]; ok {
+		so.Customer = v.(*apiresource.Customer)
+	}
 }
 
 func populateBillToAddressOnSO(ctx context.Context, parent any, _ map[string]any) {
-	so := parent.(*apiresource.SalesOrderDetail)
+	so := parent.(*apiresource.SalesOrder)
 	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "bill_to_address")
 	if !ok {
 		return
@@ -51,7 +126,7 @@ func populateBillToAddressOnSO(ctx context.Context, parent any, _ map[string]any
 }
 
 func populateShipToAddressOnSO(ctx context.Context, parent any, _ map[string]any) {
-	so := parent.(*apiresource.SalesOrderDetail)
+	so := parent.(*apiresource.SalesOrder)
 	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "ship_to_address")
 	if !ok {
 		return
@@ -59,26 +134,17 @@ func populateShipToAddressOnSO(ctx context.Context, parent any, _ map[string]any
 	so.ShipToAddress = v.(*apiresource.Address)
 }
 
-func populateCarrierOnSO(ctx context.Context, parent any, _ map[string]any) {
-	so := parent.(*apiresource.SalesOrderDetail)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "carrier")
+func populateFreightOnSO(ctx context.Context, parent any, _ map[string]any) {
+	so := parent.(*apiresource.SalesOrder)
+	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "freight")
 	if !ok {
 		return
 	}
-	so.Carrier = v.(*apiresource.Carrier)
-}
-
-func populateServiceLevelOnSO(ctx context.Context, parent any, _ map[string]any) {
-	so := parent.(*apiresource.SalesOrderDetail)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "service_level")
-	if !ok {
-		return
-	}
-	so.ServiceLevel = v.(*apiresource.ServiceLevel)
+	so.Freight = v.(*apiresource.Freight)
 }
 
 func populatePaymentTermOnSO(ctx context.Context, parent any, _ map[string]any) {
-	so := parent.(*apiresource.SalesOrderDetail)
+	so := parent.(*apiresource.SalesOrder)
 	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "payment_term")
 	if !ok {
 		return
@@ -87,7 +153,7 @@ func populatePaymentTermOnSO(ctx context.Context, parent any, _ map[string]any) 
 }
 
 func populateShippingTermOnSO(ctx context.Context, parent any, _ map[string]any) {
-	so := parent.(*apiresource.SalesOrderDetail)
+	so := parent.(*apiresource.SalesOrder)
 	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "shipping_term")
 	if !ok {
 		return
@@ -96,7 +162,7 @@ func populateShippingTermOnSO(ctx context.Context, parent any, _ map[string]any)
 }
 
 func populateOrderDiscountOnSO(ctx context.Context, parent any, _ map[string]any) {
-	so := parent.(*apiresource.SalesOrderDetail)
+	so := parent.(*apiresource.SalesOrder)
 	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "order_discount")
 	if !ok {
 		return
@@ -105,7 +171,7 @@ func populateOrderDiscountOnSO(ctx context.Context, parent any, _ map[string]any
 }
 
 func extractLineRefsFromSO(_ context.Context, parent any) []any {
-	so := parent.(*apiresource.SalesOrderDetail)
+	so := parent.(*apiresource.SalesOrder)
 	if so.Lines == nil {
 		return nil
 	}
@@ -117,10 +183,10 @@ func extractLineRefsFromSO(_ context.Context, parent any) []any {
 }
 
 func populateLinesOnSO(ctx context.Context, parent any, _ map[string]any) {
-	so := parent.(*apiresource.SalesOrderDetail)
+	so := parent.(*apiresource.SalesOrder)
 	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "lines")
 	if !ok {
 		return
 	}
-	so.Lines = v.(*apiresource.List[apiresource.SalesOrderLineDetail])
+	so.Lines = v.(*apiresource.List[apiresource.SalesOrderLine])
 }

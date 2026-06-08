@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to update a supplier material.
@@ -17,16 +18,16 @@ type UpdateSupplierMaterialRequest struct {
 	// Supplier material ID.
 	MaterialID string `path:"id" validate:"required"`
 	// Supplier part number for this material.
-	SupplierPartNumber *string `json:"supplier_part_number,omitempty" validate:"omitempty,max=255"`
+	SupplierPartNumber field.Optional[string] `json:"supplier_part_number,omitzero" validate:"omitempty,max=255"`
 	// Supplier description for this material.
-	SupplierDescription *string `json:"supplier_description,omitempty" validate:"omitempty,max=255"`
+	SupplierDescription field.Optional[string] `json:"supplier_description,omitzero" validate:"omitempty,max=255"`
 	// Active status.
-	IsActive *bool `json:"is_active,omitempty"`
+	IsActive field.Optional[bool] `json:"is_active,omitzero"`
 }
 
 var sampleUpdateSupplierPartNumber = "SUP-PART-002"
 var sampleUpdateSupplierMaterialRequest = &UpdateSupplierMaterialRequest{
-	SupplierPartNumber: &sampleUpdateSupplierPartNumber,
+	SupplierPartNumber: field.Some(sampleUpdateSupplierPartNumber),
 }
 
 func (*UpdateSupplierMaterialRequest) SchemaExample() any {

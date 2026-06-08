@@ -10,7 +10,7 @@ import (
 )
 
 // TestUpdateEndpoints_NullableClearFields verifies that every PATCH endpoint
-// with x-nullable-clear fields supports three states: set a value (200),
+// with nullable request-body fields supports three states: set a value (200),
 // clear by sending null (200), and restore.
 //
 // Fields are discovered from the OpenAPI spec. Only fields with a known seed

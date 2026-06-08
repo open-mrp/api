@@ -11,6 +11,7 @@ import (
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
+	"github.com/augno/api/shared/safeconv"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -18,15 +19,15 @@ import (
 )
 
 type PurchaseOrderSvc interface {
-	ListPurchaseOrders(ctx context.Context, req *ListPurchaseOrdersRequest) (*apiresource.List[apiresource.PurchaseOrderSummary], *apierror.APIError)
-	GetPurchaseOrder(ctx context.Context, req *RetrievePurchaseOrderRequest) (*apiresource.PurchaseOrderDetail, *apierror.APIError)
-	CreatePurchaseOrder(ctx context.Context, req *CreatePurchaseOrderRequest) (*apiresource.PurchaseOrderDetail, *apierror.APIError)
-	UpdatePurchaseOrder(ctx context.Context, req *UpdatePurchaseOrderRequest) (*apiresource.PurchaseOrderDetail, *apierror.APIError)
+	ListPurchaseOrders(ctx context.Context, req *ListPurchaseOrdersRequest) (*apiresource.List[apiresource.PurchaseOrder], *apierror.APIError)
+	GetPurchaseOrder(ctx context.Context, req *RetrievePurchaseOrderRequest) (*apiresource.PurchaseOrder, *apierror.APIError)
+	CreatePurchaseOrder(ctx context.Context, req *CreatePurchaseOrderRequest) (*apiresource.PurchaseOrder, *apierror.APIError)
+	UpdatePurchaseOrder(ctx context.Context, req *UpdatePurchaseOrderRequest) (*apiresource.PurchaseOrder, *apierror.APIError)
 	DeletePurchaseOrder(ctx context.Context, req *DeletePurchaseOrderRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	BulkDeletePurchaseOrders(ctx context.Context, req *BulkDeletePurchaseOrdersRequest) (*apiresource.EmptyResource, *apierror.APIError)
-	ChangePurchaseOrderStatus(ctx context.Context, req *ChangePurchaseOrderStatusRequest) (*apiresource.PurchaseOrderDetail, *apierror.APIError)
-	CreatePurchaseOrderLine(ctx context.Context, req *CreatePurchaseOrderLineRequest) (*apiresource.PurchaseOrderLineDetail, *apierror.APIError)
-	UpdatePurchaseOrderLine(ctx context.Context, req *UpdatePurchaseOrderLineRequest) (*apiresource.PurchaseOrderLineDetail, *apierror.APIError)
+	ChangePurchaseOrderStatus(ctx context.Context, req *ChangePurchaseOrderStatusRequest) (*apiresource.PurchaseOrder, *apierror.APIError)
+	CreatePurchaseOrderLine(ctx context.Context, req *CreatePurchaseOrderLineRequest) (*apiresource.PurchaseOrderLine, *apierror.APIError)
+	UpdatePurchaseOrderLine(ctx context.Context, req *UpdatePurchaseOrderLineRequest) (*apiresource.PurchaseOrderLine, *apierror.APIError)
 	DeletePurchaseOrderLine(ctx context.Context, req *DeletePurchaseOrderLineRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	ListPurchaseOrderStatuses(ctx context.Context, req *ListPurchaseOrderStatusesRequest) (*apiresource.List[apiresource.SalesOrderStatus], *apierror.APIError)
 }
@@ -43,7 +44,7 @@ type purchaseOrderSvcImpl struct {
 
 var purchaseOrderEpSvcTracer = tracing.GetTracer("api-gateway.endpoints.purchase-orders.service")
 
-var purchaseOrderIncludes = []string{"supplier", "bill_to_address", "ship_to_address", "carrier", "service_level", "payment_term", "shipping_term", "receiving_order", "lines", "contacts"}
+var purchaseOrderIncludes = []string{"supplier", "bill_to_address", "ship_to_address", "freight", "payment_term", "shipping_term", "receiving_order", "lines", "contacts"}
 
 func (c *PurchaseOrderSvcConfig) validate() error {
 	if c.CoreClient == nil {
@@ -66,7 +67,7 @@ func NewPurchaseOrderSvc(config *PurchaseOrderSvcConfig) PurchaseOrderSvc {
 	}
 }
 
-func (m *purchaseOrderSvcImpl) ListPurchaseOrders(ctx context.Context, req *ListPurchaseOrdersRequest) (*apiresource.List[apiresource.PurchaseOrderSummary], *apierror.APIError) {
+func (m *purchaseOrderSvcImpl) ListPurchaseOrders(ctx context.Context, req *ListPurchaseOrdersRequest) (*apiresource.List[apiresource.PurchaseOrder], *apierror.APIError) {
 	pbReq := &pb.ListPurchaseOrdersRequest{
 		Cursor:      req.Cursor,
 		Limit:       req.Limit,
@@ -87,15 +88,16 @@ func (m *purchaseOrderSvcImpl) ListPurchaseOrders(ctx context.Context, req *List
 		return nil, apiErr
 	}
 
-	orders := make([]apiresource.PurchaseOrderSummary, len(resp.PurchaseOrders))
+	orders := make([]apiresource.PurchaseOrder, len(resp.PurchaseOrders))
 	for i, o := range resp.PurchaseOrders {
 		orders[i] = purchaseOrderSummaryFromProto(o)
+		stashPurchaseOrderSummaryMeta(ctx, o, &orders[i])
 	}
 
 	return apiresource.NewList(orders, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
 
-func (m *purchaseOrderSvcImpl) GetPurchaseOrder(ctx context.Context, req *RetrievePurchaseOrderRequest) (*apiresource.PurchaseOrderDetail, *apierror.APIError) {
+func (m *purchaseOrderSvcImpl) GetPurchaseOrder(ctx context.Context, req *RetrievePurchaseOrderRequest) (*apiresource.PurchaseOrder, *apierror.APIError) {
 	pbReq := &pb.GetPurchaseOrderRequest{
 		Id:       req.PurchaseOrderID,
 		Includes: resourcekit.FilterIncludes(ctx, purchaseOrderIncludes...),
@@ -115,52 +117,52 @@ func (m *purchaseOrderSvcImpl) GetPurchaseOrder(ctx context.Context, req *Retrie
 	return &result, nil
 }
 
-func (m *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, req *CreatePurchaseOrderRequest) (*apiresource.PurchaseOrderDetail, *apierror.APIError) {
+func (m *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, req *CreatePurchaseOrderRequest) (*apiresource.PurchaseOrder, *apierror.APIError) {
 	lines := make([]*pb.CreatePurchaseOrderLineInput, len(req.Lines))
 	for i, l := range req.Lines {
 		lines[i] = &pb.CreatePurchaseOrderLineInput{
 			ProductId:                  l.ProductID,
-			ItemId:                     l.ItemID,
+			ItemId:                     l.ItemID.Ptr(),
 			ProductSku:                 l.ProductSKU,
-			ProductDescription:         l.ProductDescription,
+			ProductDescription:         l.ProductDescription.Ptr(),
 			QuantityValue:              l.QuantityValue,
 			QuantityUnitId:             l.QuantityUnitID,
 			UnitPriceValue:             l.UnitPriceValue,
 			UnitPriceNumeratorUnitId:   l.UnitPriceNumeratorUnitID,
 			UnitPriceDenominatorUnitId: l.UnitPriceDenominatorUnitID,
-			UnitCostValue:              l.UnitCostValue,
-			UnitCostNumeratorUnitId:    l.UnitCostNumeratorUnitID,
-			UnitCostDenominatorUnitId:  l.UnitCostDenominatorUnitID,
+			UnitCostValue:              l.UnitCostValue.Ptr(),
+			UnitCostNumeratorUnitId:    l.UnitCostNumeratorUnitID.Ptr(),
+			UnitCostDenominatorUnitId:  l.UnitCostDenominatorUnitID.Ptr(),
 		}
 	}
 
 	pbReq := &pb.CreatePurchaseOrderRequest{
 		SupplierAccountId:     req.SupplierAccountID,
-		Note:                  req.Note,
-		CarrierId:             req.CarrierID,
-		ServiceLevelId:        req.ServiceLevelID,
-		CarrierBillingType:    req.CarrierBillingType,
-		CarrierBillingAccount: req.CarrierBillingAccount,
+		Note:                  req.Note.Ptr(),
+		CarrierId:             req.CarrierID.Ptr(),
+		ServiceLevelId:        req.ServiceLevelID.Ptr(),
+		CarrierBillingType:    req.CarrierBillingType.Ptr(),
+		CarrierBillingAccount: req.CarrierBillingAccount.Ptr(),
 		PriorityCode:          req.PriorityCode,
-		ShippingTermId:        req.ShippingTermID,
-		PaymentTermId:         req.PaymentTermID,
-		BillToName:            req.BillToName,
-		BillToStreetLine_1:    req.BillToStreetLine1,
-		BillToStreetLine_2:    req.BillToStreetLine2,
-		BillToLocality:        req.BillToLocality,
-		BillToState:           req.BillToState,
-		BillToPostalCode:      req.BillToPostalCode,
-		BillToCountry:         req.BillToCountry,
-		ShipToName:            req.ShipToName,
-		ShipToStreetLine_1:    req.ShipToStreetLine1,
-		ShipToStreetLine_2:    req.ShipToStreetLine2,
-		ShipToLocality:        req.ShipToLocality,
-		ShipToState:           req.ShipToState,
-		ShipToPostalCode:      req.ShipToPostalCode,
-		ShipToCountry:         req.ShipToCountry,
+		ShippingTermId:        req.ShippingTermID.Ptr(),
+		PaymentTermId:         req.PaymentTermID.Ptr(),
+		BillToName:            req.BillToName.Ptr(),
+		BillToStreetLine_1:    req.BillToStreetLine1.Ptr(),
+		BillToStreetLine_2:    req.BillToStreetLine2.Ptr(),
+		BillToLocality:        req.BillToLocality.Ptr(),
+		BillToState:           req.BillToState.Ptr(),
+		BillToPostalCode:      req.BillToPostalCode.Ptr(),
+		BillToCountry:         req.BillToCountry.Ptr(),
+		ShipToName:            req.ShipToName.Ptr(),
+		ShipToStreetLine_1:    req.ShipToStreetLine1.Ptr(),
+		ShipToStreetLine_2:    req.ShipToStreetLine2.Ptr(),
+		ShipToLocality:        req.ShipToLocality.Ptr(),
+		ShipToState:           req.ShipToState.Ptr(),
+		ShipToPostalCode:      req.ShipToPostalCode.Ptr(),
+		ShipToCountry:         req.ShipToCountry.Ptr(),
 		Lines:                 lines,
 		ContactAccountUserIds: req.ContactAccountUserIDs,
-		PromisedAt:            req.PromisedAt,
+		PromisedAt:            req.PromisedAt.Ptr(),
 		Includes:              resourcekit.FilterIncludes(ctx, purchaseOrderIncludes...),
 	}
 
@@ -177,16 +179,17 @@ func (m *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, req *Cre
 	return &result, nil
 }
 
-func (m *purchaseOrderSvcImpl) UpdatePurchaseOrder(ctx context.Context, req *UpdatePurchaseOrderRequest) (*apiresource.PurchaseOrderDetail, *apierror.APIError) {
+func (m *purchaseOrderSvcImpl) UpdatePurchaseOrder(ctx context.Context, req *UpdatePurchaseOrderRequest) (*apiresource.PurchaseOrder, *apierror.APIError) {
+	contactAccountUserIDs, _ := req.ContactAccountUserIDs.Value()
 	pbReq := &pb.UpdatePurchaseOrderRequest{
 		Id:                    req.PurchaseOrderID,
-		Note:                  req.Note,
-		Number:                req.Number,
-		PriorityCode:          req.PriorityCode,
-		BillingAddressId:      req.BillingAddressID,
-		ShippingAddressId:     req.ShippingAddressID,
-		PromisedAt:            req.PromisedAt,
-		ContactAccountUserIds: req.ContactAccountUserIDs,
+		Note:                  req.Note.Ptr(),
+		Number:                req.Number.Ptr(),
+		PriorityCode:          req.PriorityCode.Ptr(),
+		BillingAddressId:      req.BillingAddressID.Ptr(),
+		ShippingAddressId:     req.ShippingAddressID.Ptr(),
+		PromisedAt:            req.PromisedAt.Ptr(),
+		ContactAccountUserIds: contactAccountUserIDs,
 		Includes:              resourcekit.FilterIncludes(ctx, purchaseOrderIncludes...),
 	}
 
@@ -231,7 +234,7 @@ func (m *purchaseOrderSvcImpl) BulkDeletePurchaseOrders(ctx context.Context, req
 	return &apiresource.EmptyResource{}, nil
 }
 
-func (m *purchaseOrderSvcImpl) ChangePurchaseOrderStatus(ctx context.Context, req *ChangePurchaseOrderStatusRequest) (*apiresource.PurchaseOrderDetail, *apierror.APIError) {
+func (m *purchaseOrderSvcImpl) ChangePurchaseOrderStatus(ctx context.Context, req *ChangePurchaseOrderStatusRequest) (*apiresource.PurchaseOrder, *apierror.APIError) {
 	pbReq := &pb.ChangePurchaseOrderStatusRequest{
 		Id:           req.PurchaseOrderID,
 		StatusChange: req.StatusChange,
@@ -252,21 +255,21 @@ func (m *purchaseOrderSvcImpl) ChangePurchaseOrderStatus(ctx context.Context, re
 	return &result, nil
 }
 
-func (m *purchaseOrderSvcImpl) CreatePurchaseOrderLine(ctx context.Context, req *CreatePurchaseOrderLineRequest) (*apiresource.PurchaseOrderLineDetail, *apierror.APIError) {
+func (m *purchaseOrderSvcImpl) CreatePurchaseOrderLine(ctx context.Context, req *CreatePurchaseOrderLineRequest) (*apiresource.PurchaseOrderLine, *apierror.APIError) {
 	pbReq := &pb.CreatePurchaseOrderLineRequest{
 		PurchaseOrderId:            req.PurchaseOrderID,
 		ProductId:                  req.ProductID,
-		ItemId:                     req.ItemID,
+		ItemId:                     req.ItemID.Ptr(),
 		ProductSku:                 req.ProductSKU,
-		ProductDescription:         req.ProductDescription,
+		ProductDescription:         req.ProductDescription.Ptr(),
 		QuantityValue:              req.QuantityValue,
 		QuantityUnitId:             req.QuantityUnitID,
 		UnitPriceValue:             req.UnitPriceValue,
 		UnitPriceNumeratorUnitId:   req.UnitPriceNumeratorUnitID,
 		UnitPriceDenominatorUnitId: req.UnitPriceDenominatorUnitID,
-		UnitCostValue:              req.UnitCostValue,
-		UnitCostNumeratorUnitId:    req.UnitCostNumeratorUnitID,
-		UnitCostDenominatorUnitId:  req.UnitCostDenominatorUnitID,
+		UnitCostValue:              req.UnitCostValue.Ptr(),
+		UnitCostNumeratorUnitId:    req.UnitCostNumeratorUnitID.Ptr(),
+		UnitCostDenominatorUnitId:  req.UnitCostDenominatorUnitID.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, purchaseOrderEpSvcTracer, "service.purchase_orders.create_line", domain.ServiceName,
@@ -281,22 +284,22 @@ func (m *purchaseOrderSvcImpl) CreatePurchaseOrderLine(ctx context.Context, req 
 	return &result, nil
 }
 
-func (m *purchaseOrderSvcImpl) UpdatePurchaseOrderLine(ctx context.Context, req *UpdatePurchaseOrderLineRequest) (*apiresource.PurchaseOrderLineDetail, *apierror.APIError) {
+func (m *purchaseOrderSvcImpl) UpdatePurchaseOrderLine(ctx context.Context, req *UpdatePurchaseOrderLineRequest) (*apiresource.PurchaseOrderLine, *apierror.APIError) {
 	pbReq := &pb.UpdatePurchaseOrderLineRequest{
 		PurchaseOrderId:            req.PurchaseOrderID,
 		Id:                         req.PurchaseOrderLineID,
-		ProductId:                  req.ProductID,
-		ItemId:                     req.ItemID,
-		ProductSku:                 req.ProductSKU,
-		ProductDescription:         req.ProductDescription,
-		QuantityValue:              req.QuantityValue,
-		QuantityUnitId:             req.QuantityUnitID,
-		UnitPriceValue:             req.UnitPriceValue,
-		UnitPriceNumeratorUnitId:   req.UnitPriceNumeratorUnitID,
-		UnitPriceDenominatorUnitId: req.UnitPriceDenominatorUnitID,
-		UnitCostValue:              req.UnitCostValue,
-		UnitCostNumeratorUnitId:    req.UnitCostNumeratorUnitID,
-		UnitCostDenominatorUnitId:  req.UnitCostDenominatorUnitID,
+		ProductId:                  req.ProductID.Ptr(),
+		ItemId:                     req.ItemID.Ptr(),
+		ProductSku:                 req.ProductSKU.Ptr(),
+		ProductDescription:         req.ProductDescription.Ptr(),
+		QuantityValue:              req.QuantityValue.Ptr(),
+		QuantityUnitId:             req.QuantityUnitID.Ptr(),
+		UnitPriceValue:             req.UnitPriceValue.Ptr(),
+		UnitPriceNumeratorUnitId:   req.UnitPriceNumeratorUnitID.Ptr(),
+		UnitPriceDenominatorUnitId: req.UnitPriceDenominatorUnitID.Ptr(),
+		UnitCostValue:              req.UnitCostValue.Ptr(),
+		UnitCostNumeratorUnitId:    req.UnitCostNumeratorUnitID.Ptr(),
+		UnitCostDenominatorUnitId:  req.UnitCostDenominatorUnitID.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, purchaseOrderEpSvcTracer, "service.purchase_orders.update_line", domain.ServiceName,
@@ -363,36 +366,21 @@ func (m *purchaseOrderSvcImpl) ListPurchaseOrderStatuses(ctx context.Context, re
 	return apiresource.NewList(statuses, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
 
-func purchaseOrderSummaryFromProto(info *pb.PurchaseOrderSummaryInfo) apiresource.PurchaseOrderSummary {
-	s := apiresource.PurchaseOrderSummary{
-		ID:     info.Id,
-		Object: constants.ObjectTypePurchaseOrder,
-		Number: info.Number,
-		Supplier: &apiresource.Supplier{
-			ID:     info.SupplierId,
-			Object: constants.ObjectTypeSupplier,
-			Name:   info.SupplierName,
-			Number: info.SupplierNumber,
-		},
-		Status: &apiresource.SalesOrderStatusDetail{
-			Code:   info.StatusCode,
-			Object: constants.ObjectTypeSalesOrderStatus,
-			Name:   info.StatusName,
-		},
-		Type: &apiresource.SalesOrderType{
-			Code:   info.TypeCode,
-			Object: constants.ObjectTypeSalesOrderType,
-			Name:   info.TypeName,
-		},
-		Priority:             apiresource.ExpandablePriorityStub("", constants.PriorityCode(info.PriorityCode), info.PriorityName, grpcutil.TimestampToTime(info.CreatedAt)),
+// purchaseOrderSummaryFromProto maps a list-view PurchaseOrderSummaryInfo to
+// PurchaseOrder. Expandable sub-resources (supplier, addresses, freight, etc.)
+// are left nil since they are populated via the include resolver from stashed
+// meta.
+func purchaseOrderSummaryFromProto(info *pb.PurchaseOrderSummaryInfo) apiresource.PurchaseOrder {
+	s := apiresource.PurchaseOrder{
+		ID:                   info.Id,
+		Object:               constants.ObjectTypePurchaseOrder,
+		Number:               info.Number,
+		Status:               constants.SalesOrderStatusCode(info.StatusCode),
+		Priority:             constants.PriorityCode(info.PriorityCode),
+		AcknowledgmentStatus: acknowledgmentStatusFromBool(info.IsAcknowledgmentSent),
 		LineCount:            info.LineCount,
-		IsAcknowledgmentSent: info.IsAcknowledgmentSent,
 		CreatedAt:            grpcutil.TimestampToTime(info.CreatedAt),
 		UpdatedAt:            grpcutil.TimestampToTime(info.UpdatedAt),
-	}
-
-	if info.PriorityId != nil {
-		s.Priority.ID = *info.PriorityId
 	}
 
 	if info.IssuedAt != nil {
@@ -407,32 +395,18 @@ func purchaseOrderSummaryFromProto(info *pb.PurchaseOrderSummaryInfo) apiresourc
 	return s
 }
 
-func purchaseOrderDetailFromProto(info *pb.PurchaseOrderInfo) apiresource.PurchaseOrderDetail {
-	d := apiresource.PurchaseOrderDetail{
-		ID:                    info.Id,
-		Object:                constants.ObjectTypePurchaseOrder,
-		Number:                info.Number,
-		Note:                  info.Note,
-		IsAcknowledgmentSent:  info.IsAcknowledgmentSent,
-		CarrierBillingType:    info.CarrierBillingType,
-		CarrierBillingAccount: info.CarrierBillingAccount,
-		Status: &apiresource.SalesOrderStatusDetail{
-			Code:   info.StatusCode,
-			Object: constants.ObjectTypeSalesOrderStatus,
-			Name:   info.StatusName,
-		},
-		Type: &apiresource.SalesOrderType{
-			Code:   info.TypeCode,
-			Object: constants.ObjectTypeSalesOrderType,
-			Name:   info.TypeName,
-		},
-		Priority:  apiresource.ExpandablePriorityStub("", constants.PriorityCode(info.PriorityCode), info.PriorityName, grpcutil.TimestampToTime(info.CreatedAt)),
-		CreatedAt: grpcutil.TimestampToTime(info.CreatedAt),
-		UpdatedAt: grpcutil.TimestampToTime(info.UpdatedAt),
-	}
-
-	if info.PriorityId != nil {
-		d.Priority.ID = *info.PriorityId
+func purchaseOrderDetailFromProto(info *pb.PurchaseOrderInfo) apiresource.PurchaseOrder {
+	d := apiresource.PurchaseOrder{
+		ID:                   info.Id,
+		Object:               constants.ObjectTypePurchaseOrder,
+		Number:               info.Number,
+		Note:                 info.Note,
+		Status:               constants.SalesOrderStatusCode(info.StatusCode),
+		Priority:             constants.PriorityCode(info.PriorityCode),
+		AcknowledgmentStatus: acknowledgmentStatusFromBool(info.IsAcknowledgmentSent),
+		LineCount:            safeconv.IntToInt32(len(info.Lines)),
+		CreatedAt:            grpcutil.TimestampToTime(info.CreatedAt),
+		UpdatedAt:            grpcutil.TimestampToTime(info.UpdatedAt),
 	}
 
 	if info.IssuedAt != nil {
@@ -451,7 +425,33 @@ func purchaseOrderDetailFromProto(info *pb.PurchaseOrderInfo) apiresource.Purcha
 	return d
 }
 
-func stashPurchaseOrderDetailMeta(ctx context.Context, info *pb.PurchaseOrderInfo, d *apiresource.PurchaseOrderDetail) {
+// acknowledgmentStatusFromBool maps the legacy boolean acknowledgment flag to
+// the AcknowledgmentStatus enum.
+func acknowledgmentStatusFromBool(sent bool) constants.AcknowledgmentStatus {
+	if sent {
+		return constants.AcknowledgmentStatusSent
+	}
+	return constants.AcknowledgmentStatusNotSent
+}
+
+// stashPurchaseOrderSummaryMeta stashes the FK ids exposed by a list-view
+// summary so the include resolver can fetch the real expandable resources.
+func stashPurchaseOrderSummaryMeta(ctx context.Context, info *pb.PurchaseOrderSummaryInfo, d *apiresource.PurchaseOrder) {
+	if info == nil {
+		return
+	}
+
+	if info.SupplierId != "" {
+		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypePurchaseOrder, d.ID, "supplier", &apiresource.Supplier{
+			ID:     info.SupplierId,
+			Object: constants.ObjectTypeSupplier,
+			Name:   info.SupplierName,
+			Number: info.SupplierNumber,
+		})
+	}
+}
+
+func stashPurchaseOrderDetailMeta(ctx context.Context, info *pb.PurchaseOrderInfo, d *apiresource.PurchaseOrder) {
 	if info == nil {
 		return
 	}
@@ -487,6 +487,14 @@ func stashPurchaseOrderDetailMeta(ctx context.Context, info *pb.PurchaseOrderInf
 			))
 	}
 
+	// Freight (carrier selection + freight billing). Expanded as a whole via
+	// include[]=freight; carries the full carrier and service level inline.
+	freight := &apiresource.Freight{Object: constants.ObjectTypeFreight}
+	if info.CarrierBillingType != nil {
+		bt := constants.CarrierBillingType(*info.CarrierBillingType)
+		freight.BillingType = &bt
+	}
+	freight.BillingAccountNumber = info.CarrierBillingAccount
 	if info.CarrierId != nil {
 		carrier := &apiresource.Carrier{
 			ID:     *info.CarrierId,
@@ -506,9 +514,8 @@ func stashPurchaseOrderDetailMeta(ctx context.Context, info *pb.PurchaseOrderInf
 		if info.CarrierUpdatedAt != nil {
 			carrier.UpdatedAt = info.CarrierUpdatedAt.AsTime()
 		}
-		meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "carrier", carrier)
+		freight.Carrier = carrier
 	}
-
 	if info.ServiceLevelId != nil {
 		sl := &apiresource.ServiceLevel{
 			ID:     *info.ServiceLevelId,
@@ -531,8 +538,9 @@ func stashPurchaseOrderDetailMeta(ctx context.Context, info *pb.PurchaseOrderInf
 		if info.ServiceLevelUpdatedAt != nil {
 			sl.UpdatedAt = info.ServiceLevelUpdatedAt.AsTime()
 		}
-		meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "service_level", sl)
+		freight.ServiceLevel = sl
 	}
+	meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "freight", freight)
 
 	if info.PaymentTermId != nil {
 		pt := &apiresource.PaymentTerm{
@@ -576,31 +584,14 @@ func stashPurchaseOrderDetailMeta(ctx context.Context, info *pb.PurchaseOrderInf
 		meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "shipping_term", st)
 	}
 
+	// receiving_order is a document-level cross-reference: stash only the FK id
+	// so the loader fetches the real ReceivingOrder on ?include=receiving_order.
+	// Never fabricate an inline stub.
 	if info.ReceivingOrderId != nil {
-		ro := &apiresource.ReceivingOrder{
-			ID:     *info.ReceivingOrderId,
-			Object: constants.ObjectTypeReceivingOrder,
-		}
-		if info.ReceivingOrder != nil {
-			roInfo := info.ReceivingOrder
-			ro.Number = roInfo.Number
-			ro.CreatedAt = grpcutil.TimestampToTime(roInfo.CreatedAt)
-			ro.UpdatedAt = grpcutil.TimestampToTime(roInfo.UpdatedAt)
-			ro.Note = roInfo.Note
-			if roInfo.CompletedAt != nil {
-				t := grpcutil.TimestampToTime(roInfo.CompletedAt)
-				ro.CompletedAt = &t
-			}
-			ro.PurchaseOrder = &apiresource.SalesOrderDetail{
-				ID:     roInfo.PurchaseOrderId,
-				Object: constants.ObjectTypeSalesOrder,
-				Number: roInfo.PurchaseOrderNumber,
-			}
-		}
-		meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "receiving_order", ro)
+		meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "receiving_order_id", *info.ReceivingOrderId)
 	}
 
-	lines := make([]apiresource.PurchaseOrderLineDetail, len(info.Lines))
+	lines := make([]apiresource.PurchaseOrderLine, len(info.Lines))
 	for i, l := range info.Lines {
 		lines[i] = purchaseOrderLineDetailFromProto(l)
 	}
@@ -620,8 +611,8 @@ func stashPurchaseOrderDetailMeta(ctx context.Context, info *pb.PurchaseOrderInf
 	meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "contacts", apiresource.NewList(contactItems, apiresource.PageInfo{}))
 }
 
-func purchaseOrderLineDetailFromProto(info *pb.PurchaseOrderLineInfo) apiresource.PurchaseOrderLineDetail {
-	l := apiresource.PurchaseOrderLineDetail{
+func purchaseOrderLineDetailFromProto(info *pb.PurchaseOrderLineInfo) apiresource.PurchaseOrderLine {
+	l := apiresource.PurchaseOrderLine{
 		ID:                 info.Id,
 		Object:             constants.ObjectTypePurchaseOrderLine,
 		LineItemNumber:     info.LineItemNumber,

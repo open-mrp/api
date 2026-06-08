@@ -104,15 +104,15 @@ func (s *supplierSvcImpl) CreateSupplier(ctx context.Context, req *CreateSupplie
 	pbReq := &pb.CreateSupplierRequest{
 		Name:     req.Name,
 		Number:   req.Number,
-		Note:     req.Note,
+		Note:     req.Note.Ptr(),
 		Includes: resourcekit.FilterIncludes(ctx, supplierIncludes...),
 	}
 
-	if req.BillToAddress != nil {
-		pbReq.BillToAddress = createAddressRequestToProto(req.BillToAddress)
+	if v, ok := req.BillToAddress.Value(); ok {
+		pbReq.BillToAddress = createAddressRequestToProto(&v)
 	}
-	if req.ShipToAddress != nil {
-		pbReq.ShipToAddress = createAddressRequestToProto(req.ShipToAddress)
+	if v, ok := req.ShipToAddress.Value(); ok {
+		pbReq.ShipToAddress = createAddressRequestToProto(&v)
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, supplierSvcTracer, "service.suppliers.create", domain.ServiceName,
@@ -132,12 +132,12 @@ func (s *supplierSvcImpl) CreateSupplier(ctx context.Context, req *CreateSupplie
 func (s *supplierSvcImpl) UpdateSupplier(ctx context.Context, req *UpdateSupplierRequest) (*apiresource.SupplierDetail, *apierror.APIError) {
 	pbReq := &pb.UpdateSupplierRequest{
 		Id:              req.SupplierID,
-		Name:            req.Name,
-		Number:          req.Number,
-		Note:            req.Note,
+		Name:            req.Name.Ptr(),
+		Number:          req.Number.Ptr(),
+		Note:            req.Note.Ptr(),
 		UpdateNote:      req.UpdateNote,
-		BillToAddressId: req.BillToAddressID,
-		ShipToAddressId: req.ShipToAddressID,
+		BillToAddressId: req.BillToAddressID.Ptr(),
+		ShipToAddressId: req.ShipToAddressID.Ptr(),
 		Includes:        resourcekit.FilterIncludes(ctx, supplierIncludes...),
 	}
 
@@ -199,7 +199,7 @@ func createAddressRequestToProto(a *apirequest.AddressInput) *pb.CreateSupplierA
 		Name:         a.Name,
 		Phone:        a.Phone.Ptr(),
 		Email:        a.Email.Ptr(),
-		IsDropShip:   addressTypeToDropShip(a.Type),
+		IsDropShip:   addressTypeToDropShip(a.Type.Ptr()),
 		StreetLine_1: a.StreetLine1.Ptr(),
 		StreetLine_2: a.StreetLine2.Ptr(),
 		Locality:     a.Locality.Ptr(),

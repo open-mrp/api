@@ -8,10 +8,13 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleSalesOrderDetailID = "or_01d5034136c3ccc048abecc312"
+const SampleSalesOrderID = "or_01d5034136c3ccc048abecc312"
 const SampleSalesOrderNumber = "SO-001"
 
 // Sales order type sub-resource.
+//
+// NOTE: retained for purchase orders, which still embed the full status/type
+// sub-resources. Sales orders now expose status/priority as plain codes.
 type SalesOrderType struct {
 	// Type code.
 	Code string `json:"code" validate:"required"`
@@ -28,6 +31,8 @@ var SampleSalesOrderType = &SalesOrderType{
 }
 
 // Sales order status sub-resource.
+//
+// NOTE: retained for purchase orders (see SalesOrderType note).
 type SalesOrderStatusDetail struct {
 	// Status code.
 	Code string `json:"code" validate:"required"`
@@ -43,64 +48,77 @@ var SampleSalesOrderStatusDetail = &SalesOrderStatusDetail{
 	Name:   "Estimate",
 }
 
-// Minimal pick sub-resource.
-type Pick struct {
-	// Pick ID.
-	ID string `json:"id" validate:"required"`
+// SalesOrderTotals holds the derived monetary totals for a sales order or one
+// of its lines, following the lifecycle ordered -> packed -> invoiced.
+type SalesOrderTotals struct {
 	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=pick"`
+	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order_totals"`
+	// Total ordered amount as a decimal string (unit price x quantity ordered).
+	Ordered string `json:"ordered" validate:"required" format:"decimal"`
+	// Total packed amount as a decimal string (unit price x quantity packed).
+	Packed string `json:"packed" validate:"required" format:"decimal"`
+	// Total invoiced amount as a decimal string (unit price x quantity invoiced).
+	Invoiced string `json:"invoiced" validate:"required" format:"decimal"`
+}
+
+// SalesOrderRelated groups the records related to a sales order. The members
+// are individually expandable (e.g. include[]=related.pick); the group itself
+// is always present.
+type SalesOrderRelated struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order_related"`
+	// Associated pick, as a lightweight record reference.
+	Pick *Record `json:"pick" expandable:"true"`
+	// Associated production run, as a lightweight record reference.
+	ProductionRun *Record `json:"production_run" expandable:"true"`
+	// Associated shipments, as lightweight record references.
+	Shipments *List[Record] `json:"shipments" expandable:"true"`
 }
 
 // Full sales order resource.
-type SalesOrderDetail struct {
+type SalesOrder struct {
 	// Sales order ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order"`
 	// Sales order number.
 	Number string `json:"number" validate:"required"`
-	// Customer purchase order number.
-	CustomerPO *string `json:"customer_po"`
+	// Customer's purchase order number.
+	CustomerPurchaseOrderNumber *string `json:"customer_purchase_order_number"`
 	// Order note.
 	Note *string `json:"note"`
-	// Whether the acknowledgment has been sent.
-	IsAcknowledgmentSent bool `json:"is_acknowledgment_sent"`
+	// Order status code.
+	Status constants.SalesOrderStatusCode `json:"status" validate:"required"`
+	// Priority code.
+	Priority constants.PriorityCode `json:"priority" validate:"required"`
+	// Payment status.
+	PaymentStatus constants.SalesOrderPaymentStatus `json:"payment_status" validate:"required"`
+	// Acknowledgment status.
+	AcknowledgmentStatus constants.AcknowledgmentStatus `json:"acknowledgment_status" validate:"required"`
 	// Associated customer.
 	Customer *Customer `json:"customer" expandable:"true"`
+	// Sales representative.
+	SalesRep *Actor `json:"sales_rep" expandable:"true"`
 	// Billing address.
 	BillToAddress *Address `json:"bill_to_address" expandable:"true"`
 	// Shipping address.
 	ShipToAddress *Address `json:"ship_to_address" expandable:"true"`
-	// Carrier.
-	Carrier *Carrier `json:"carrier" expandable:"true"`
-	// Service level.
-	ServiceLevel *ServiceLevel `json:"service_level" expandable:"true"`
-	// Carrier billing type.
-	CarrierBillingType *string `json:"carrier_billing_type"`
-	// Carrier billing account number.
-	CarrierBillingAccount *string `json:"carrier_billing_account"`
-	// Sales representative. Uses Actor sub-resource.
-	SalesRep *Actor `json:"sales_rep"`
-	// Order status.
-	Status *SalesOrderStatusDetail `json:"status" validate:"required"`
-	// Order type.
-	Type *SalesOrderType `json:"type" validate:"required"`
-	// Priority.
-	Priority *Priority `json:"priority" validate:"required"`
+	// Carrier selection and freight billing for this order.
+	Freight *Freight `json:"freight" expandable:"true"`
 	// Payment term.
 	PaymentTerm *PaymentTerm `json:"payment_term" expandable:"true"`
 	// Shipping term.
 	ShippingTerm *ShippingTerm `json:"shipping_term" expandable:"true"`
 	// Order discount.
 	OrderDiscount *OrderDiscount `json:"order_discount" expandable:"true"`
-	// Associated production run.
-	ProductionRun *ProductionRun `json:"production_run"`
-	// Associated pick.
-	Pick *Pick `json:"pick"`
 	// Order lines.
-	Lines *List[SalesOrderLineDetail] `json:"lines" expandable:"true"`
-	// Count of order lines. Always populated in list responses.
+	Lines *List[SalesOrderLine] `json:"lines" expandable:"true"`
+	// Count of order lines.
 	LineCount int32 `json:"line_count"`
+	// Derived monetary totals.
+	Totals *SalesOrderTotals `json:"totals" expandable:"true"`
+	// Records related to this order (pick, production run, shipments).
+	Related *SalesOrderRelated `json:"related"`
 	// Issued timestamp.
 	IssuedAt *time.Time `json:"issued_at"`
 	// Completed timestamp.
@@ -117,16 +135,26 @@ type SalesOrderDetail struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-var sampleCustomerPO = "PO-12345"
+var sampleCustomerPurchaseOrderNumber = "PO-12345"
 var sampleNote = "Rush order"
 
-var SampleSalesOrderDetail = &SalesOrderDetail{
-	ID:                   SampleSalesOrderDetailID,
-	Object:               constants.ObjectTypeSalesOrder,
-	Number:               SampleSalesOrderNumber,
-	CustomerPO:           &sampleCustomerPO,
-	Note:                 &sampleNote,
-	IsAcknowledgmentSent: false,
+var SampleSalesOrderTotals = &SalesOrderTotals{
+	Object:   constants.ObjectTypeSalesOrderTotals,
+	Ordered:  "1234.560000000000000000000000000000",
+	Packed:   "0.000000000000000000000000000000",
+	Invoiced: "0.000000000000000000000000000000",
+}
+
+var SampleSalesOrder = &SalesOrder{
+	ID:                          SampleSalesOrderID,
+	Object:                      constants.ObjectTypeSalesOrder,
+	Number:                      SampleSalesOrderNumber,
+	CustomerPurchaseOrderNumber: &sampleCustomerPurchaseOrderNumber,
+	Note:                        &sampleNote,
+	Status:                      constants.SalesOrderStatusCodeEstimate,
+	Priority:                    SamplePriorityCode,
+	PaymentStatus:               constants.SalesOrderPaymentStatusUnpaid,
+	AcknowledgmentStatus:        constants.AcknowledgmentStatusNotSent,
 	Customer: &Customer{
 		ID:     SampleCustomerID,
 		Object: constants.ObjectTypeCustomer,
@@ -135,98 +163,15 @@ var SampleSalesOrderDetail = &SalesOrderDetail{
 	},
 	BillToAddress: SampleAddress,
 	ShipToAddress: SampleAddress,
-	Status:        SampleSalesOrderStatusDetail,
-	Type:          SampleSalesOrderType,
-	Priority:      SamplePriority,
-	Lines:         NewList([]SalesOrderLineDetail{*SampleSalesOrderLineDetail}, PageInfo{}),
+	Freight:       SampleFreight,
+	Lines:         NewList([]SalesOrderLine{*SampleSalesOrderLine}, PageInfo{}),
+	LineCount:     1,
+	Totals:        SampleSalesOrderTotals,
+	Related:       &SalesOrderRelated{Object: constants.ObjectTypeSalesOrderRelated},
 	CreatedAt:     timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:     timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
-func (*SalesOrderDetail) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SampleSalesOrderDetail)
-}
-
-// Lightweight sales order for list views.
-type SalesOrderSummary struct {
-	// Sales order ID.
-	ID string `json:"id" validate:"required"`
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order"`
-	// Sales order number.
-	Number string `json:"number" validate:"required"`
-	// Customer purchase order number.
-	CustomerPO *string `json:"customer_po"`
-	// Associated customer.
-	Customer *Customer `json:"customer" validate:"required"`
-	// Order status.
-	Status *SalesOrderStatusDetail `json:"status" validate:"required"`
-	// Order type.
-	Type *SalesOrderType `json:"type" validate:"required"`
-	// Priority.
-	Priority *Priority `json:"priority" validate:"required"`
-	// Line item count.
-	LineCount int32 `json:"line_count"`
-	// Whether the acknowledgment has been sent.
-	IsAcknowledgmentSent bool `json:"is_acknowledgment_sent"`
-	// Issued timestamp.
-	IssuedAt *time.Time `json:"issued_at"`
-	// Completed timestamp.
-	CompletedAt *time.Time `json:"completed_at"`
-	// Creation timestamp.
-	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// Last updated timestamp.
-	UpdatedAt time.Time `json:"updated_at" validate:"required"`
-}
-
-var SampleSalesOrderSummary = &SalesOrderSummary{
-	ID:     SampleSalesOrderDetailID,
-	Object: constants.ObjectTypeSalesOrder,
-	Number: SampleSalesOrderNumber,
-	Customer: &Customer{
-		ID:     SampleCustomerID,
-		Object: constants.ObjectTypeCustomer,
-		Name:   SampleCustomerName,
-		Number: SampleCustomerNumber,
-	},
-	Status:    SampleSalesOrderStatusDetail,
-	Type:      SampleSalesOrderType,
-	Priority:  SamplePriority,
-	LineCount: 3,
-	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
-}
-
-func (*SalesOrderSummary) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SampleSalesOrderSummary)
-}
-
-func ExpandableSalesOrderStub(id, number string, ts time.Time) *SalesOrderDetail {
-	if id == "" {
-		id = SampleSalesOrderDetailID
-	}
-	if number == "" {
-		number = SampleSalesOrderNumber
-	}
-	if ts.IsZero() {
-		ts = time.Unix(0, 0).UTC()
-	}
-	return &SalesOrderDetail{
-		ID:     id,
-		Object: constants.ObjectTypeSalesOrder,
-		Number: number,
-		Status: &SalesOrderStatusDetail{
-			Code:   string(constants.SalesOrderStatusCodeIssued),
-			Object: constants.ObjectTypeSalesOrderStatus,
-			Name:   "Issued",
-		},
-		Type: &SalesOrderType{
-			Code:   "standard",
-			Object: constants.ObjectTypeSalesOrderType,
-			Name:   "Standard",
-		},
-		Priority:  ExpandablePriorityStub("", constants.PriorityCodeNormal, SamplePriorityName, ts),
-		CreatedAt: ts,
-		UpdatedAt: ts,
-	}
+func (*SalesOrder) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleSalesOrder)
 }

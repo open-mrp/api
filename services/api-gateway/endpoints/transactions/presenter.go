@@ -33,43 +33,13 @@ func TransactionDetailPresenter(d *pb.TransactionInfo) apiresource.TransactionDe
 		Object:       constants.ObjectTypeQuantity,
 		Value:        d.AmountValue,
 		DisplayValue: apiresource.FormatDisplayValue(d.AmountValue, d.AmountUnitAbbreviation, string(constants.UnitTypeCurrency)),
-		Unit:         apiresource.ExpandableUnitStub(d.AmountUnitId, "", d.AmountUnitAbbreviation, string(constants.UnitTypeCurrency), createdAt),
+		// Unit left nil: the expandable unit loads real data via ?include= and is
+		// never fabricated; display_value already carries the formatted amount.
 	}
 
-	if d.CustomerId != nil {
-		customer := &apiresource.Customer{
-			ID:               *d.CustomerId,
-			Object:           constants.ObjectTypeCustomer,
-			EDIStatus:        constants.EDIStatusDisabled,
-			RelationshipType: constants.CustomerRelationshipTypeStandalone,
-			CreatedAt:        grpcutil.TimestampToTime(d.CustomerCreatedAt),
-			UpdatedAt:        grpcutil.TimestampToTime(d.CustomerUpdatedAt),
-		}
-		if d.CustomerName != nil {
-			customer.Name = *d.CustomerName
-		}
-		if d.CustomerNumber != nil {
-			customer.Number = *d.CustomerNumber
-		}
-		if d.CustomerStatus != nil {
-			customer.Status = constants.AccountStatusCode(*d.CustomerStatus)
-		} else {
-			customer.Status = constants.AccountStatusCodeNormal
-		}
-		if d.CustomerCommissionPolicy != nil {
-			customer.CommissionPolicy = constants.CommissionPolicy(*d.CustomerCommissionPolicy)
-		} else {
-			customer.CommissionPolicy = constants.CommissionPolicyApplied
-		}
-		if customer.CreatedAt.IsZero() {
-			customer.CreatedAt = createdAt
-		}
-		if customer.UpdatedAt.IsZero() {
-			customer.UpdatedAt = updatedAt
-		}
-		tx.Customer = customer
-	}
-
+	// customer is an expandable reference loaded with real data via
+	// ?include=customer (see GetTransaction's meta stash); left nil here rather
+	// than fabricated.
 	if d.ResponsibleUserId != nil {
 		user := &apiresource.AccountUser{
 			ID:        *d.ResponsibleUserId,
@@ -158,42 +128,12 @@ func TransactionSummaryPresenter(d *pb.TransactionSummaryInfo) apiresource.Trans
 		Object:       constants.ObjectTypeQuantity,
 		Value:        d.AmountValue,
 		DisplayValue: apiresource.FormatDisplayValue(d.AmountValue, d.AmountUnitAbbreviation, string(constants.UnitTypeCurrency)),
-		Unit:         apiresource.ExpandableUnitStub(d.AmountUnitId, "", d.AmountUnitAbbreviation, string(constants.UnitTypeCurrency), createdAt),
+		// Unit left nil: the expandable unit loads real data via ?include= and is
+		// never fabricated; display_value already carries the formatted amount.
 	}
 
-	if d.CustomerId != nil {
-		customer := &apiresource.Customer{
-			ID:               *d.CustomerId,
-			Object:           constants.ObjectTypeCustomer,
-			EDIStatus:        constants.EDIStatusDisabled,
-			RelationshipType: constants.CustomerRelationshipTypeStandalone,
-			CreatedAt:        grpcutil.TimestampToTime(d.CustomerCreatedAt),
-			UpdatedAt:        grpcutil.TimestampToTime(d.CustomerUpdatedAt),
-		}
-		if d.CustomerName != nil {
-			customer.Name = *d.CustomerName
-		}
-		if d.CustomerNumber != nil {
-			customer.Number = *d.CustomerNumber
-		}
-		if d.CustomerStatus != nil {
-			customer.Status = constants.AccountStatusCode(*d.CustomerStatus)
-		} else {
-			customer.Status = constants.AccountStatusCodeNormal
-		}
-		if d.CustomerCommissionPolicy != nil {
-			customer.CommissionPolicy = constants.CommissionPolicy(*d.CustomerCommissionPolicy)
-		} else {
-			customer.CommissionPolicy = constants.CommissionPolicyApplied
-		}
-		if customer.CreatedAt.IsZero() {
-			customer.CreatedAt = createdAt
-		}
-		if customer.UpdatedAt.IsZero() {
-			customer.UpdatedAt = updatedAt
-		}
-		ts.Customer = customer
-	}
+	// customer is an expandable reference loaded with real data via
+	// ?include=customer; left nil here rather than fabricated.
 
 	ts.TransactionType = &apiresource.TransactionType{
 		ID:     d.TransactionTypeId,
@@ -247,7 +187,7 @@ func TransactionAllocationPresenter(a *pb.TransactionAllocationInfo) apiresource
 			Object:       constants.ObjectTypeQuantity,
 			Value:        a.AmountValue,
 			DisplayValue: apiresource.FormatDisplayValue(a.AmountValue, a.AmountUnitAbbreviation, string(constants.UnitTypeCurrency)),
-			Unit:         apiresource.ExpandableUnitStub(a.AmountUnitId, "", a.AmountUnitAbbreviation, string(constants.UnitTypeCurrency), grpcutil.TimestampToTime(a.CreatedAt)),
+			// Unit left nil: expandable, loaded with real data via ?include=; never fabricated.
 		},
 		Note:      a.Note,
 		CreatedAt: grpcutil.TimestampToTime(a.CreatedAt),
@@ -281,33 +221,4 @@ func AccountTransactionListPresenter(ctx context.Context, resp *pb.ListAccountTr
 	}
 
 	return apiresource.NewList(transactions, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
-}
-
-func AdjustmentTypePresenter(at *pb.AdjustmentTypeInfo) apiresource.AdjustmentType {
-	if at == nil {
-		return apiresource.AdjustmentType{}
-	}
-
-	return apiresource.AdjustmentType{
-		ID:        at.Id,
-		Object:    constants.ObjectTypeAdjustmentType,
-		Name:      at.Name,
-		Code:      constants.AdjustmentType(at.Code),
-		Owner:     apiresource.SystemOwner(),
-		CreatedAt: grpcutil.TimestampToTime(at.CreatedAt),
-		UpdatedAt: grpcutil.TimestampToTime(at.UpdatedAt),
-	}
-}
-
-func AdjustmentTypeListPresenter(ctx context.Context, resp *pb.ListAdjustmentTypesResponse) *apiresource.List[apiresource.AdjustmentType] {
-	if resp == nil {
-		return apiresource.NewList[apiresource.AdjustmentType](nil, apiresource.PageInfo{})
-	}
-
-	adjustmentTypes := make([]apiresource.AdjustmentType, len(resp.AdjustmentTypes))
-	for i, at := range resp.AdjustmentTypes {
-		adjustmentTypes[i] = AdjustmentTypePresenter(at)
-	}
-
-	return apiresource.NewList(adjustmentTypes, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

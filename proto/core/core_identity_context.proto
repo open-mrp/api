@@ -558,6 +558,14 @@ message GetCustomerRequest {
 message GetCustomerResponse {
   CustomerProto customer = 1;
 }
+
+// Batched read of customers for the api-gateway include resolver.
+message BatchGetCustomersByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetCustomersByIDsResponse {
+  repeated CustomerProto customers = 1;
+}
 message CreateCustomerAddressInput {
   string name = 1;
   optional string phone = 2;

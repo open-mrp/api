@@ -1,4 +1,4 @@
-package patch
+package field
 
 import pb "github.com/augno/api/shared/proto/core"
 
@@ -8,8 +8,8 @@ type QuantityInput struct {
 	UnitID string
 }
 
-// QuantityFieldFromProto converts protobuf to a quantity field.
-func QuantityFieldFromProto(p *pb.QuantityPatch) Field[QuantityInput] {
+// QuantityClearableFromProto converts protobuf to a quantity field.
+func QuantityClearableFromProto(p *pb.QuantityPatch) Clearable[QuantityInput] {
 	if p == nil {
 		return Unset[QuantityInput]()
 	}

@@ -217,7 +217,7 @@ func TestAPIKeys_ListPagination(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(apiKeysPath, url.Values{"limit": {"1"}})
 	require.NoError(t, err)
-	assert.Len(t, list.Data, 1)
+	requirePageLen(t, list.Data, 1)
 }
 
 func TestAPIKeys_GetNotFound(t *testing.T) {

@@ -72,11 +72,11 @@ func (m *shippingCaseSvcImpl) GetShippingCase(ctx context.Context, req *Retrieve
 func (m *shippingCaseSvcImpl) UpdateShippingCase(ctx context.Context, req *UpdateShippingCaseRequest) (*apiresource.ShippingCase, *apierror.APIError) {
 	pbReq := &pb.UpdateShippingCaseRequest{
 		Id:                  req.ShippingCaseID,
-		TrackingNumber:      req.TrackingNumber,
-		FreightAmountValue:  req.FreightAmountValue,
-		FreightAmountUnitId: req.FreightAmountUnitID,
-		FreightWeightValue:  req.FreightWeightValue,
-		FreightWeightUnitId: req.FreightWeightUnitID,
+		TrackingNumber:      req.TrackingNumber.Ptr(),
+		FreightAmountValue:  req.FreightAmountValue.Ptr(),
+		FreightAmountUnitId: req.FreightAmountUnitID.Ptr(),
+		FreightWeightValue:  req.FreightWeightValue.Ptr(),
+		FreightWeightUnitId: req.FreightWeightUnitID.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, shippingCaseSvcTracer, "service.shipping_cases.update", domain.ServiceName,
@@ -177,14 +177,11 @@ func stashShippingCaseMeta(meta *resourcekit.LoadMeta, sc *pb.ShippingCaseInfo) 
 	}
 	meta.Set(constants.ObjectTypeShippingCase, sc.Id, "carrier", carrier)
 
-	meta.Set(constants.ObjectTypeShippingCase, sc.Id, "shipment", &apiresource.ShipmentDetail{
-		ID:     sc.ShipmentId,
-		Object: constants.ObjectTypeShipment,
-		Number: sc.GetShipmentNumber(),
-		Status: apiresource.ShipmentStatus{
-			Code: sc.GetShipmentStatusCode(),
-			Name: sc.GetShipmentStatusName(),
-		},
+	meta.Set(constants.ObjectTypeShippingCase, sc.Id, "shipment", &apiresource.Shipment{
+		ID:        sc.ShipmentId,
+		Object:    constants.ObjectTypeShipment,
+		Number:    sc.GetShipmentNumber(),
+		Status:    constants.ShipmentStatus(sc.GetShipmentStatusCode()),
 		CreatedAt: grpcutil.TimestampToTime(sc.ShipmentCreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(sc.ShipmentUpdatedAt),
 	})

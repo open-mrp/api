@@ -61,6 +61,35 @@ func (m SalesOrderStatusChange) EnumValues() []string {
 	}
 }
 
+// SalesOrderPaymentStatus represents the payment state of a sales order.
+type SalesOrderPaymentStatus string
+
+const (
+	// SalesOrderPaymentStatusUnpaid indicates no payment has been received.
+	SalesOrderPaymentStatusUnpaid SalesOrderPaymentStatus = "unpaid"
+	// SalesOrderPaymentStatusPartiallyPaid indicates the order is partially paid.
+	SalesOrderPaymentStatusPartiallyPaid SalesOrderPaymentStatus = "partially_paid"
+	// SalesOrderPaymentStatusPaid indicates the order is paid in full.
+	SalesOrderPaymentStatusPaid SalesOrderPaymentStatus = "paid"
+)
+
+func (m SalesOrderPaymentStatus) IsValid() bool {
+	switch m {
+	case SalesOrderPaymentStatusUnpaid, SalesOrderPaymentStatusPartiallyPaid, SalesOrderPaymentStatusPaid:
+		return true
+	default:
+		return false
+	}
+}
+
+func (m SalesOrderPaymentStatus) EnumValues() []string {
+	return []string{
+		string(SalesOrderPaymentStatusUnpaid),
+		string(SalesOrderPaymentStatusPartiallyPaid),
+		string(SalesOrderPaymentStatusPaid),
+	}
+}
+
 // OrderDiscountType represents the type of discount applied to an order.
 type OrderDiscountType string
 

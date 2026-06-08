@@ -10,6 +10,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to update an agent memory.
@@ -17,19 +18,19 @@ type UpdateMemoryRequest struct {
 	// Memory ID.
 	ID string `path:"id" validate:"required"`
 	// Memory category (e.g. "preference", "fact", "instruction").
-	Category string `json:"category,omitempty" validate:"max=255"`
+	Category string `json:"category,omitzero" validate:"max=255"`
 	// Text content.
-	Content string `json:"content,omitempty"`
+	Content string `json:"content,omitzero"`
 	// JSON metadata.
-	Metadata json.RawMessage `json:"metadata,omitempty"`
+	Metadata json.RawMessage `json:"metadata,omitzero"`
 	// Entity type this memory is scoped to (e.g. "customer", "product").
-	EntityType *string `json:"entity_type,omitempty" validate:"omitempty,max=255"`
+	EntityType field.Optional[string] `json:"entity_type,omitzero" validate:"omitempty,max=255"`
 	// Entity ID.
-	EntityID *string `json:"entity_id,omitempty" validate:"omitempty"`
+	EntityID field.Optional[string] `json:"entity_id,omitzero" validate:"omitempty"`
 	// Importance score between 0 and 1.
-	Importance float64 `json:"importance,omitempty"`
+	Importance float64 `json:"importance,omitzero"`
 	// ISO 8601 expiration timestamp.
-	ExpiresAt *string `json:"expires_at,omitempty"`
+	ExpiresAt field.Optional[string] `json:"expires_at,omitzero"`
 }
 
 var sampleUpdateMemoryRequest = &UpdateMemoryRequest{

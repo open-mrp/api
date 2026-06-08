@@ -12,7 +12,7 @@ import (
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -136,9 +136,9 @@ func (m *partSvcImpl) CreatePart(ctx context.Context, req *CreatePartRequest) (*
 func (m *partSvcImpl) UpdatePart(ctx context.Context, req *UpdatePartRequest) (*apiresource.Part, *apierror.APIError) {
 	pbReq := &pb.UpdatePartRequest{
 		Id:          req.ItemID,
-		Sku:         req.SKU,
-		Description: patch.StringFieldPtrToProto(req.Description),
-		Notes:       patch.StringFieldPtrToProto(req.Notes),
+		Sku:         req.SKU.Ptr(),
+		Description: field.StringClearableToProto(req.Description),
+		Notes:       field.StringClearableToProto(req.Notes),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, partSvcTracer, "service.parts.update", domain.ServiceName,

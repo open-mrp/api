@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request for a password reset.
@@ -15,7 +16,7 @@ type RequestPasswordResetRequest struct {
 	// Username or email of the account to reset.
 	Identifier string `json:"identifier" validate:"required,identifier"`
 	// Account slug for redirecting to the original login portal after password reset.
-	AccountSlug *string `json:"account_slug,omitempty"`
+	AccountSlug field.Optional[string] `json:"account_slug,omitzero"`
 }
 
 var sampleRequestPasswordResetRequest = &RequestPasswordResetRequest{

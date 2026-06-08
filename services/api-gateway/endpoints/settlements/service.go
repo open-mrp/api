@@ -113,7 +113,7 @@ func (m *settlementSvcImpl) CreateSettlement(ctx context.Context, req *CreateSet
 			TransactionId: a.TransactionID,
 			InvoiceId:     a.InvoiceID,
 			Amount:        a.Amount,
-			Note:          a.Note,
+			Note:          a.Note.Ptr(),
 		}
 	}
 
@@ -140,9 +140,9 @@ func (m *settlementSvcImpl) CreateSettlement(ctx context.Context, req *CreateSet
 func (m *settlementSvcImpl) UpdateSettlement(ctx context.Context, req *UpdateSettlementRequest) (*apiresource.Settlement, *apierror.APIError) {
 	pbReq := &pb.UpdateSettlementRequest{
 		Id:                req.SettlementID,
-		Number:            req.Number,
-		Note:              req.Note,
-		ResponsibleUserId: req.ResponsibleUserID,
+		Number:            req.Number.Ptr(),
+		Note:              req.Note.Ptr(),
+		ResponsibleUserId: req.ResponsibleUserID.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, settlementSvcTracer, "service.settlements.update", domain.ServiceName,

@@ -10,7 +10,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to partially update a shipping term.
@@ -21,19 +21,19 @@ type UpdateShippingTermRequest struct {
 	// Shipping term ID.
 	ShippingTermID string `path:"id" validate:"required"`
 	// Display name.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// Shipping term type.
-	Type *constants.ShippingTermType `json:"type,omitempty"`
+	Type field.Optional[constants.ShippingTermType] `json:"type,omitzero"`
 	// Flat rate. Send null to clear.
-	FlatRate *patch.Field[apirequest.QuantityInput] `json:"flat_rate,omitempty"`
+	FlatRate field.Clearable[apirequest.QuantityInput] `json:"flat_rate,omitzero"`
 	// Minimum order value for free shipping. Send null to clear.
-	MinimumOrderValue *patch.Field[apirequest.QuantityInput] `json:"minimum_order_value,omitempty"`
+	MinimumOrderValue field.Clearable[apirequest.QuantityInput] `json:"minimum_order_value,omitzero"`
 	// Service level IDs that qualify for free shipping. Send null to clear.
-	FreeShippingServiceLevelIDs *patch.Field[[]string] `json:"free_shipping_service_level_ids,omitempty"`
+	FreeShippingServiceLevelIDs field.Clearable[[]string] `json:"free_shipping_service_level_ids,omitzero"`
 }
 
 var sampleUpdateShippingTermRequest = &UpdateShippingTermRequest{
-	Name: new("Collect"),
+	Name: field.Some("Collect"),
 }
 
 func (*UpdateShippingTermRequest) SchemaExample() any {

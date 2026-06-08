@@ -70,11 +70,11 @@ func (m *userSvcImpl) GetUser(ctx context.Context, req *RetrieveUserRequest) (*a
 func (m *userSvcImpl) UpdateUser(ctx context.Context, req *UpdateUserRequest) (*apiresource.User, *apierror.APIError) {
 	pbReq := &pb.UpdateUserRequest{
 		Id:       req.UserID,
-		Name:     req.Name,
-		ImageUrl: req.ImageUrl,
+		Name:     req.Name.Ptr(),
+		ImageUrl: req.ImageUrl.Ptr(),
 	}
-	if req.EmailVerified != nil {
-		pbReq.EmailVerifiedAt = timestamppb.New(*req.EmailVerified)
+	if v, ok := req.EmailVerified.Value(); ok {
+		pbReq.EmailVerifiedAt = timestamppb.New(v)
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, userSvcTracer, "service.users.update", domain.ServiceName,

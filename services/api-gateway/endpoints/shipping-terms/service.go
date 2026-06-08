@@ -10,7 +10,7 @@ import (
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -123,15 +123,15 @@ func (m *shippingTermSvcImpl) CreateShippingTerm(ctx context.Context, req *Creat
 func (m *shippingTermSvcImpl) UpdateShippingTerm(ctx context.Context, req *UpdateShippingTermRequest) (*apiresource.ShippingTerm, *apierror.APIError) {
 	pbReq := &pb.UpdateShippingTermRequest{
 		Id:   req.ShippingTermID,
-		Name: req.Name,
+		Name: req.Name.Ptr(),
 	}
-	if req.Type != nil {
-		t := string(*req.Type)
-		pbReq.Type = &t
+	if t, ok := req.Type.Value(); ok {
+		ts := string(t)
+		pbReq.Type = &ts
 	}
-	pbReq.FlatRate = apirequest.QuantityFieldPtrToProto(req.FlatRate)
-	pbReq.MinimumOrderValue = apirequest.QuantityFieldPtrToProto(req.MinimumOrderValue)
-	pbReq.FreeShippingServiceLevelIds = patch.StringListSliceFieldPtrToProto(req.FreeShippingServiceLevelIDs)
+	pbReq.FlatRate = apirequest.QuantityFieldToProto(req.FlatRate)
+	pbReq.MinimumOrderValue = apirequest.QuantityFieldToProto(req.MinimumOrderValue)
+	pbReq.FreeShippingServiceLevelIds = field.StringListSliceClearableToProto(req.FreeShippingServiceLevelIDs)
 
 	resp, apiErr := grpcutil.CallRPC(ctx, shippingTermSvcTracer, "service.shipping_terms.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateShippingTermResponse, error) {

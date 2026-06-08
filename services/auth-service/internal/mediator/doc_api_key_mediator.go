@@ -96,7 +96,7 @@ func (m *docAPIKeyMedImpl) Resolve(ctx context.Context, sandboxAccountID string)
 
 	// If the existing key is expired, we rotate it.
 	if existing.IsAPIKeyExpired() {
-		return m.rotateDocAPIKey(ctx, existing)
+		return m.rotateDocAPIKey(ctx, sandboxAccountID, existing)
 	}
 
 	return m.returnExistingKey(ctx, existing)
@@ -175,7 +175,7 @@ func (m *docAPIKeyMedImpl) returnExistingKey(ctx context.Context, existing *apik
 	}, nil
 }
 
-func (m *docAPIKeyMedImpl) rotateDocAPIKey(ctx context.Context, existing *apikey.DocAPIKey) (*domain.GetOrCreateDocAPIKeyResult, *apierror.APIError) {
+func (m *docAPIKeyMedImpl) rotateDocAPIKey(ctx context.Context, sandboxAccountID string, existing *apikey.DocAPIKey) (*domain.GetOrCreateDocAPIKeyResult, *apierror.APIError) {
 	ctx, span := docAPIKeyMedTracer.Start(ctx, "mediator.doc_api_key.rotate")
 	defer span.End()
 
@@ -187,9 +187,10 @@ func (m *docAPIKeyMedImpl) rotateDocAPIKey(ctx context.Context, existing *apikey
 	expiresAt := time.Now().UTC().AddDate(0, 0, docAPIKeyTTLDays)
 
 	newSecret, newAPIKey, rotateErr := m.apiKeyMed.Rotate(ctx, domain.APIKeyRotateInput{
-		AccountMode:  constants.AccountModeSandbox,
-		APIKeyTypeID: existing.APIKeyID,
-		ExpiresAt:    &expiresAt,
+		AccountMode:    constants.AccountModeSandbox,
+		APIKeyTypeID:   existing.APIKeyID,
+		OwnerAccountID: sandboxAccountID,
+		ExpiresAt:      &expiresAt,
 	})
 	if rotateErr != nil {
 		return nil, tracing.Trace(span, rotateErr)

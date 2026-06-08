@@ -17,7 +17,7 @@ type BulkDeletePurchaseOrdersRequest struct {
 }
 
 var sampleBulkDeletePurchaseOrdersRequest = &BulkDeletePurchaseOrdersRequest{
-	PurchaseOrderIDs: []string{apiresource.SamplePurchaseOrderDetailID},
+	PurchaseOrderIDs: []string{apiresource.SamplePurchaseOrderID},
 }
 
 func (*BulkDeletePurchaseOrdersRequest) SchemaExample() any {

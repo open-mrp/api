@@ -20,7 +20,6 @@ import (
 	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/idempotency"
 	"github.com/augno/api/shared/messaging"
-	"github.com/augno/api/shared/patch"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -554,73 +553,10 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 				}
 			}
 
-			// Update bill-to address record if any bill-to fields are provided
-			if params.BillToName != nil || params.BillToStreetLine1 != nil || params.BillToStreetLine2 != nil ||
-				params.BillToLocality != nil || params.BillToState != nil || params.BillToPostalCode != nil || params.BillToCountry != nil {
-				txAddrRepo := txSvc.repos.NewAddressRepo()
-
-				_, apiErr = txAddrRepo.Update(txCtx, domain.UpdateAddressParams{
-					AccountID: params.AccountID,
-					AddressID: existing.BillingAddressID,
-					Name:      params.BillToName,
-				})
-				if apiErr != nil {
-					return apiErr
-				}
-
-				geoID, apiErr := txAddrRepo.GetGeolocationIDByAddressID(txCtx, existing.BillingAddressID)
-				if apiErr != nil {
-					return apiErr
-				}
-
-				apiErr = txAddrRepo.UpdateGeolocation(txCtx, geoID, domain.UpdateAddressParams{
-					AccountID:   params.AccountID,
-					AddressID:   existing.BillingAddressID,
-					StreetLine1: params.BillToStreetLine1,
-					StreetLine2: patch.SetPtr(params.BillToStreetLine2),
-					Locality:    params.BillToLocality,
-					State:       params.BillToState,
-					PostalCode:  params.BillToPostalCode,
-					Country:     params.BillToCountry,
-				})
-				if apiErr != nil {
-					return apiErr
-				}
-			}
-
-			// Update ship-to address record if any ship-to fields are provided
-			if params.ShipToName != nil || params.ShipToStreetLine1 != nil || params.ShipToStreetLine2 != nil ||
-				params.ShipToLocality != nil || params.ShipToState != nil || params.ShipToPostalCode != nil || params.ShipToCountry != nil {
-				txAddrRepo := txSvc.repos.NewAddressRepo()
-
-				_, apiErr = txAddrRepo.Update(txCtx, domain.UpdateAddressParams{
-					AccountID: params.AccountID,
-					AddressID: existing.ShippingAddressID,
-					Name:      params.ShipToName,
-				})
-				if apiErr != nil {
-					return apiErr
-				}
-
-				geoID, apiErr := txAddrRepo.GetGeolocationIDByAddressID(txCtx, existing.ShippingAddressID)
-				if apiErr != nil {
-					return apiErr
-				}
-
-				apiErr = txAddrRepo.UpdateGeolocation(txCtx, geoID, domain.UpdateAddressParams{
-					AccountID:   params.AccountID,
-					AddressID:   existing.ShippingAddressID,
-					StreetLine1: params.ShipToStreetLine1,
-					StreetLine2: patch.SetPtr(params.ShipToStreetLine2),
-					Locality:    params.ShipToLocality,
-					State:       params.ShipToState,
-					PostalCode:  params.ShipToPostalCode,
-					Country:     params.ShipToCountry,
-				})
-				if apiErr != nil {
-					return apiErr
-				}
-			}
+			// Address changes re-point the order to an existing address by ID
+			// (params.BillingAddressID / params.ShippingAddressID, applied via the
+			// order update below). To edit an address's contents, callers use the
+			// update-address endpoint directly.
 
 			// Update the order
 			updated, apiErr := txRepo.Update(txCtx, params)

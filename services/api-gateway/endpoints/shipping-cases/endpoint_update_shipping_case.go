@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to update a shipping case.
@@ -16,20 +17,20 @@ type UpdateShippingCaseRequest struct {
 	// Shipping case ID.
 	ShippingCaseID string `path:"id" validate:"required"`
 	// Tracking number.
-	TrackingNumber *string `json:"tracking_number" validate:"omitempty,max=255"`
+	TrackingNumber field.Optional[string] `json:"tracking_number,omitzero" validate:"omitempty,max=255"`
 	// Freight amount value.
-	FreightAmountValue *string `json:"freight_amount_value"`
+	FreightAmountValue field.Optional[string] `json:"freight_amount_value,omitzero"`
 	// Freight amount unit ID.
-	FreightAmountUnitID *string `json:"freight_amount_unit_id" validate:"omitempty"`
+	FreightAmountUnitID field.Optional[string] `json:"freight_amount_unit_id,omitzero" validate:"omitempty"`
 	// Freight weight value.
-	FreightWeightValue *string `json:"freight_weight_value"`
+	FreightWeightValue field.Optional[string] `json:"freight_weight_value,omitzero"`
 	// Freight weight unit ID.
-	FreightWeightUnitID *string `json:"freight_weight_unit_id" validate:"omitempty"`
+	FreightWeightUnitID field.Optional[string] `json:"freight_weight_unit_id,omitzero" validate:"omitempty"`
 }
 
 var sampleTrackingNumber = "1Z999AA10123456784"
 var sampleUpdateShippingCaseRequest = &UpdateShippingCaseRequest{
-	TrackingNumber: &sampleTrackingNumber,
+	TrackingNumber: field.Some(sampleTrackingNumber),
 }
 
 func (*UpdateShippingCaseRequest) SchemaExample() any {

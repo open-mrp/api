@@ -29,7 +29,7 @@ type ShippingCase struct {
 	// Freight weight.
 	FreightWeight *Quantity `json:"freight_weight" expandable:"true"`
 	// Associated shipment.
-	Shipment *ShipmentDetail `json:"shipment" expandable:"true"`
+	Shipment *Shipment `json:"shipment" expandable:"true"`
 	// Carrier.
 	Carrier *Carrier `json:"carrier" expandable:"true"`
 	// Creation timestamp.

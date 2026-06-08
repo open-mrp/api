@@ -109,22 +109,23 @@ type RequestLogActor struct {
 }
 
 type ListRequestLogsFilter struct {
-	Query            *string
-	StartDate        *time.Time
-	EndDate          *time.Time
-	Methods          []string
-	StatusCodes      []int32
-	ErrorCodes       []string
-	AccountIDs       []string
-	ActorIDs         []string
-	ActorTypes       []string
-	NormalizedRoutes []string
-	Hosts            []string
-	MinLatencyUs     *int64
-	PublicEndpoint   *bool
-	IdempotencyKey   *string
-	Cursor           *string
-	Limit            int32
+	Query             *string
+	StartDate         *time.Time
+	EndDate           *time.Time
+	Methods           []string
+	StatusCodes       []int32
+	StatusCodeClasses []int32
+	ErrorCodes        []string
+	AccountIDs        []string
+	ActorIDs          []string
+	ActorTypes        []string
+	NormalizedRoutes  []string
+	Hosts             []string
+	MinLatencyUs      *int64
+	PublicEndpoint    *bool
+	IdempotencyKey    *string
+	Cursor            *string
+	Limit             int32
 }
 
 type ListRequestLogsResult struct {

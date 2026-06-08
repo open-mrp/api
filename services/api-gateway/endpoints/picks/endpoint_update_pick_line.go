@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // UpdatePickLineRequest is the request to update a pick line's quantity.
@@ -18,12 +19,12 @@ type UpdatePickLineRequest struct {
 	// Pick line ID.
 	PickLineID string `path:"id" validate:"required"`
 	// Quantity value to set for this line.
-	QuantityValue *string `json:"quantity_value,omitempty"`
+	QuantityValue field.Optional[string] `json:"quantity_value,omitzero"`
 }
 
 var sampleUpdatePickLineQuantityValue = "10.000000000000000000000000000000"
 var sampleUpdatePickLineRequest = &UpdatePickLineRequest{
-	QuantityValue: &sampleUpdatePickLineQuantityValue,
+	QuantityValue: field.Some(sampleUpdatePickLineQuantityValue),
 }
 
 func (*UpdatePickLineRequest) SchemaExample() any {
@@ -33,8 +34,8 @@ func (*UpdatePickLineRequest) SchemaExample() any {
 // Partially updates a pick line's quantity value.
 type UpdatePickLineEndpoint struct{}
 
-func (e *UpdatePickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePickLineRequest, *apiresource.PickLineDetail] {
-	return (&apiendpoint.APIEndpoint[*UpdatePickLineRequest, *apiresource.PickLineDetail]{
+func (e *UpdatePickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePickLineRequest, *apiresource.PickLine] {
+	return (&apiendpoint.APIEndpoint[*UpdatePickLineRequest, *apiresource.PickLine]{
 		Title:             "Update Pick Line",
 		Method:            http.MethodPatch,
 		Route:             "/v1/operations/picks/{pick_id}/lines/{id}",
@@ -43,7 +44,7 @@ func (e *UpdatePickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateP
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypePickLine,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdatePickLineRequest) (*apiresource.PickLineDetail, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdatePickLineRequest) (*apiresource.PickLine, *apierror.APIError) {
 			return svc.(PickSvc).UpdatePickLine
 		},
 	})

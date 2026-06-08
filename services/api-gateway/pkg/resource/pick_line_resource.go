@@ -8,10 +8,10 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SamplePickLineDetailID = "pkln_0170b1525f1c9843b22d914426"
+const SamplePickLineID = "pkln_0170b1525f1c9843b22d914426"
 
-// PickLineDetail is a pick line resource.
-type PickLineDetail struct {
+// PickLine is a pick line resource.
+type PickLine struct {
 	// Pick line ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
@@ -21,7 +21,7 @@ type PickLineDetail struct {
 	// Ordered quantity for this line.
 	OrderedQuantity *Quantity `json:"ordered_quantity" validate:"required"`
 	// Associated sales order line. Expandable via include[]=lines.sales_order_line.
-	SalesOrderLine *SalesOrderLineDetail `json:"sales_order_line" expandable:"true"`
+	SalesOrderLine *SalesOrderLine `json:"sales_order_line" expandable:"true"`
 	// Timestamp when the line was packed.
 	PackedAt *time.Time `json:"packed_at"`
 	// Creation timestamp.
@@ -30,16 +30,16 @@ type PickLineDetail struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-var SamplePickLineDetail = &PickLineDetail{
-	ID:              SamplePickLineDetailID,
+var SamplePickLine = &PickLine{
+	ID:              SamplePickLineID,
 	Object:          constants.ObjectTypePickLine,
 	Quantity:        SampleQuantity,
 	OrderedQuantity: SampleQuantity,
-	SalesOrderLine:  SampleSalesOrderLineDetail,
+	SalesOrderLine:  SampleSalesOrderLine,
 	CreatedAt:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:       timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
-func (*PickLineDetail) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SamplePickLineDetail)
+func (*PickLine) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SamplePickLine)
 }

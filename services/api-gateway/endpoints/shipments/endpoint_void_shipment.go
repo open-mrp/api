@@ -18,8 +18,8 @@ type VoidShipmentRequest struct {
 // Voids a shipment, cancelling it and returning its lines to the sales order.
 type VoidShipmentEndpoint struct{}
 
-func (e *VoidShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*VoidShipmentRequest, *apiresource.ShipmentDetail] {
-	return (&apiendpoint.APIEndpoint[*VoidShipmentRequest, *apiresource.ShipmentDetail]{
+func (e *VoidShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*VoidShipmentRequest, *apiresource.Shipment] {
+	return (&apiendpoint.APIEndpoint[*VoidShipmentRequest, *apiresource.Shipment]{
 		Title:             "Void Shipment",
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/shipments/{id}/actions/void",
@@ -27,7 +27,7 @@ func (e *VoidShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*VoidShipm
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *VoidShipmentRequest) (*apiresource.ShipmentDetail, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *VoidShipmentRequest) (*apiresource.Shipment, *apierror.APIError) {
 			return svc.(ShipmentSvc).VoidShipment
 		},
 	})

@@ -38,11 +38,6 @@ func RegisterIncludes(oi *ObjectIncludes) {
 	registry[oi.ObjectType] = oi
 }
 
-// GetObjectIncludes returns the registered includes for an object type, or nil.
-func GetObjectIncludes(ot constants.ObjectType) *ObjectIncludes {
-	return registry[ot]
-}
-
 // IncludesParams configures which includes an endpoint exposes.
 type IncludesParams struct {
 	// ObjectType is the root resource type returned by this endpoint.

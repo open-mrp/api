@@ -4767,6 +4767,8 @@ type InvoiceInfo struct {
 	Allocations           []*InvoiceAllocationInfo `protobuf:"bytes,22,rep,name=allocations,proto3" json:"allocations,omitempty"`
 	CreatedAt             *timestamppb.Timestamp   `protobuf:"bytes,23,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt             *timestamppb.Timestamp   `protobuf:"bytes,24,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	CustomerId            string                   `protobuf:"bytes,25,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	PaymentTermId         *string                  `protobuf:"bytes,26,opt,name=payment_term_id,json=paymentTermId,proto3,oneof" json:"payment_term_id,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -4967,6 +4969,20 @@ func (x *InvoiceInfo) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *InvoiceInfo) GetCustomerId() string {
+	if x != nil {
+		return x.CustomerId
+	}
+	return ""
+}
+
+func (x *InvoiceInfo) GetPaymentTermId() string {
+	if x != nil && x.PaymentTermId != nil {
+		return *x.PaymentTermId
+	}
+	return ""
 }
 
 var File_core_core_users_territories_proto protoreflect.FileDescriptor
@@ -5487,7 +5503,8 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\x12_payment_term_daysB\x19\n" +
 	"\x17_payment_term_is_activeB\x17\n" +
 	"\x15_customer_status_codeB\x1d\n" +
-	"\x1b_customer_commission_policy\"\xfe\t\n" +
+	"\x1b_customer_commission_policy\"\xe0\n" +
+	"\n" +
 	"\vInvoiceInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12\x17\n" +
@@ -5517,7 +5534,10 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x17 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x18 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\a\n" +
+	"updated_at\x18\x18 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1f\n" +
+	"\vcustomer_id\x18\x19 \x01(\tR\n" +
+	"customerId\x12+\n" +
+	"\x0fpayment_term_id\x18\x1a \x01(\tH\tR\rpaymentTermId\x88\x01\x01B\a\n" +
 	"\x05_noteB\x17\n" +
 	"\x15_billing_address_nameB\x18\n" +
 	"\x16_billing_address_line1B\x18\n" +
@@ -5526,7 +5546,8 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\x16_billing_address_stateB\x16\n" +
 	"\x14_billing_address_zipB\x0e\n" +
 	"\f_shipment_idB\x12\n" +
-	"\x10_shipment_numberB\x18Z\x16shared/proto/core;coreb\x06proto3"
+	"\x10_shipment_numberB\x12\n" +
+	"\x10_payment_term_idB\x18Z\x16shared/proto/core;coreb\x06proto3"
 
 var (
 	file_core_core_users_territories_proto_rawDescOnce sync.Once

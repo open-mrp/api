@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to create a supplier material.
@@ -19,9 +20,9 @@ type CreateSupplierMaterialRequest struct {
 	// Supplier part number for this material.
 	SupplierPartNumber string `json:"supplier_part_number" validate:"required,max=255"`
 	// Supplier description for this material.
-	SupplierDescription *string `json:"supplier_description,omitempty" validate:"omitempty,max=255"`
+	SupplierDescription field.Optional[string] `json:"supplier_description,omitzero" validate:"omitempty,max=255"`
 	// Active status.
-	IsActive *bool `json:"is_active"`
+	IsActive field.Optional[bool] `json:"is_active,omitzero"`
 }
 
 var sampleIsActive = true
@@ -29,7 +30,7 @@ var sampleIsActive = true
 var sampleCreateSupplierMaterialRequest = &CreateSupplierMaterialRequest{
 	MaterialID:         apiresource.SampleMaterialID,
 	SupplierPartNumber: "SUP-PART-001",
-	IsActive:           &sampleIsActive,
+	IsActive:           field.Some(sampleIsActive),
 }
 
 func (*CreateSupplierMaterialRequest) SchemaExample() any {

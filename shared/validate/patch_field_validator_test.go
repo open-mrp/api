@@ -4,11 +4,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 )
 
 type patchValidateReq struct {
-	Email *patch.Field[string] `json:"email" validate:"omitempty,max=255"`
+	Email field.Clearable[string] `json:"email,omitzero" validate:"omitempty,max=255"`
 }
 
 func TestPatchFieldValidator_unsetPasses(t *testing.T) {
@@ -20,7 +20,7 @@ func TestPatchFieldValidator_unsetPasses(t *testing.T) {
 
 func TestPatchFieldValidator_setValidates(t *testing.T) {
 	t.Parallel()
-	req := patchValidateReq{Email: new(patch.Set(strings.Repeat("x", 300)))}
+	req := patchValidateReq{Email: field.Set(strings.Repeat("x", 300))}
 	if err := Validate(&req); err == nil {
 		t.Fatal("expected max validation error")
 	}
@@ -28,7 +28,7 @@ func TestPatchFieldValidator_setValidates(t *testing.T) {
 
 func TestPatchFieldValidator_clearPasses(t *testing.T) {
 	t.Parallel()
-	req := patchValidateReq{Email: new(patch.Clear[string]())}
+	req := patchValidateReq{Email: field.Clear[string]()}
 	if err := Validate(&req); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

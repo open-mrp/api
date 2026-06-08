@@ -9,15 +9,15 @@ import (
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to rate shop across carriers.
 type RateShopRequest struct {
 	// Product line IDs.
-	ProductLineIDs []string `json:"product_line_ids,omitempty"`
+	ProductLineIDs []string `json:"product_line_ids,omitzero"`
 	// Customer ID.
-	CustomerID *string `json:"customer_id,omitempty"`
+	CustomerID field.Optional[string] `json:"customer_id,omitzero"`
 	// Origin address.
 	FromAddress apirequest.AddressInput `json:"from_address" validate:"required"`
 	// Destination address.
@@ -25,7 +25,7 @@ type RateShopRequest struct {
 	// Parcels to rate shop.
 	Parcels []ParcelInput `json:"parcels" validate:"required,min=1"`
 	// Total order value.
-	OrderTotal *float64 `json:"order_total,omitempty"`
+	OrderTotal field.Optional[float64] `json:"order_total,omitzero"`
 }
 
 var (
@@ -42,18 +42,18 @@ var (
 var sampleRateShopRequest = &RateShopRequest{
 	FromAddress: apirequest.AddressInput{
 		Name:        "Origin Warehouse",
-		StreetLine1: patch.PtrNullable(&sampleRateShopFromStreetLine1),
-		Locality:    patch.PtrNullable(&sampleRateShopFromLocality),
-		State:       patch.PtrNullable(&sampleRateShopFromState),
-		PostalCode:  patch.PtrNullable(&sampleRateShopFromPostalCode),
+		StreetLine1: field.SomePtr(&sampleRateShopFromStreetLine1),
+		Locality:    field.SomePtr(&sampleRateShopFromLocality),
+		State:       field.SomePtr(&sampleRateShopFromState),
+		PostalCode:  field.SomePtr(&sampleRateShopFromPostalCode),
 		Country:     apiresource.SampleAddressCountry,
 	},
 	ToAddress: apirequest.AddressInput{
 		Name:        "Destination",
-		StreetLine1: patch.PtrNullable(&sampleRateShopToStreetLine1),
-		Locality:    patch.PtrNullable(&sampleRateShopToLocality),
-		State:       patch.PtrNullable(&sampleRateShopToState),
-		PostalCode:  patch.PtrNullable(&sampleRateShopToPostalCode),
+		StreetLine1: field.SomePtr(&sampleRateShopToStreetLine1),
+		Locality:    field.SomePtr(&sampleRateShopToLocality),
+		State:       field.SomePtr(&sampleRateShopToState),
+		PostalCode:  field.SomePtr(&sampleRateShopToPostalCode),
 		Country:     "US",
 	},
 	Parcels: []ParcelInput{

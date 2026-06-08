@@ -61,12 +61,6 @@ func materialQuantityFromProto(q *pb.QuantityInfo) *apiresource.Quantity {
 		Object:       constants.ObjectTypeQuantity,
 		Value:        normalized,
 		DisplayValue: apiresource.FormatDisplayValue(normalized, q.UnitAbbreviation, q.UnitType),
-		Unit: apiresource.ExpandableUnitStub(
-			q.UnitId,
-			q.UnitName,
-			q.UnitAbbreviation,
-			q.UnitType,
-			grpcutil.TimestampToTime(q.CreatedAt),
-		),
+		// Unit left nil: expandable, loaded with real data via ?include=; never fabricated.
 	}
 }

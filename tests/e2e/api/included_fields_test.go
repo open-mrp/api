@@ -144,7 +144,10 @@ func TestCustomers_UpdateIncludedFieldsNotEmpty(t *testing.T) {
 // ──────────────────────────────────────────────
 
 const salesOrdersPath = "/v1/sales/sales-orders"
-const allSalesOrderIncludes = "carrier,service_level,payment_term,shipping_term"
+
+// Sales orders expose carrier/freight billing via the `freight` sub-resource;
+// carrier/service_level are not top-level sales-order includes.
+const allSalesOrderIncludes = "freight,payment_term,shipping_term"
 
 func TestSalesOrders_GetIncludedFieldsNotEmpty(t *testing.T) {
 	t.Parallel()
@@ -204,7 +207,10 @@ func TestSalesOrders_ListPriorityIDNotEmpty(t *testing.T) {
 // ──────────────────────────────────────────────
 
 const shipmentsPath = "/v1/operations/shipments"
-const allShipmentIncludes = "carrier,service_level"
+
+// Carrier and service level are no longer top-level shipment includes; they are
+// nested under the consolidated freight sub-resource (include[]=freight).
+const allShipmentIncludes = "freight"
 
 func TestShipments_GetIncludedFieldsNotEmpty(t *testing.T) {
 	t.Parallel()
@@ -217,12 +223,17 @@ func TestShipments_GetIncludedFieldsNotEmpty(t *testing.T) {
 
 	got := parseJSON(body)
 
-	if carrier := jsonObject(got, "carrier"); carrier != nil {
-		assertCarrierFieldsPopulated(t, carrier, "carrier")
+	freight := jsonObject(got, "freight")
+	if freight == nil {
+		return
 	}
 
-	if sl := jsonObject(got, "service_level"); sl != nil {
-		assertServiceLevelFieldsPopulated(t, sl, "service_level")
+	if carrier := jsonObject(freight, "carrier"); carrier != nil {
+		assertCarrierFieldsPopulated(t, carrier, "freight.carrier")
+	}
+
+	if sl := jsonObject(freight, "service_level"); sl != nil {
+		assertServiceLevelFieldsPopulated(t, sl, "freight.service_level")
 	}
 }
 

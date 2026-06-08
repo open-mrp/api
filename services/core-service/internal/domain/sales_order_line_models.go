@@ -45,9 +45,8 @@ type SalesOrderLine struct {
 	UnitCostDenominatorUnitID   *string `audit:"unit_cost_denominator_unit_id"`
 	UnitCostDenominatorUnitAbbr *string `audit:"unit_cost_denominator_unit_abbr"`
 
-	CompletedAt *time.Time `audit:"completed_at"`
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 // CreateSalesOrderLineParams holds the parameters for creating a sales order line.

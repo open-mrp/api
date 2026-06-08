@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to update an attribute.
@@ -18,15 +19,15 @@ type UpdateAttributeRequest struct {
 	// Attribute ID.
 	AttributeID string `path:"id" validate:"required"`
 	// Attribute value.
-	Value *string `json:"value,omitempty"`
+	Value field.Optional[string] `json:"value,omitzero"`
 	// Color code.
-	ColorCode *constants.Color `json:"color,omitempty"`
+	ColorCode field.Optional[constants.Color] `json:"color,omitzero"`
 	// Display order. Must be a positive integer.
-	SortOrder *int32 `json:"sort_order,omitempty" validate:"omitempty,min=1"`
+	SortOrder field.Optional[int32] `json:"sort_order,omitzero" validate:"omitempty,min=1"`
 }
 
 var sampleUpdateAttributeRequest = &UpdateAttributeRequest{
-	Value: new("Blue"),
+	Value: field.Some("Blue"),
 }
 
 func (*UpdateAttributeRequest) SchemaExample() any {

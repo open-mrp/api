@@ -19,7 +19,7 @@ import (
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 	"github.com/augno/api/shared/redact"
 	"github.com/augno/api/shared/tracing"
 	"github.com/augno/api/shared/validate"
@@ -129,6 +129,7 @@ func From[TReq, TResp any, T interface {
 	Materialize() *APIEndpoint[TReq, TResp]
 }](source T) *APIEndpoint[TReq, TResp] {
 	ep := source.Materialize()
+	field.AssertValuePatchFields(reflect.TypeFor[TReq]())
 	t := reflect.TypeOf(source)
 	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
@@ -273,8 +274,8 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 		}
 
 		if err := httptransport.DecodeJSONInto(any(req), r, true); err != nil {
-			if errors.Is(err, patch.ErrExplicitNull) {
-				if name, ok := patch.ExplicitNullField(bytesForNull, any(req)); ok {
+			if errors.Is(err, field.ErrExplicitNull) {
+				if name, ok := field.ExplicitNullField(bytesForNull, any(req)); ok {
 					recordAndRespondAPIError(ctx, w, span, "json_decode", apierror.NewInvalidFormatError(fmt.Sprintf("Field '%s' cannot be null.", name), name))
 					return
 				}
@@ -283,7 +284,6 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 			return
 		}
 
-		patch.ApplyPtrFieldNulls(bytesForNull, any(req))
 		validate.ApplySlicePresenceFlags(bytesForNull, any(req))
 
 		if apiErr := validate.RejectExplicitJSONNulls(bytesForNull, any(req)); apiErr != nil {

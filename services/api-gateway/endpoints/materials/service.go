@@ -136,18 +136,18 @@ func (m *materialSvcImpl) CreateMaterial(ctx context.Context, req *CreateMateria
 func (m *materialSvcImpl) UpdateMaterial(ctx context.Context, req *UpdateMaterialRequest) (*apiresource.Material, *apierror.APIError) {
 	pbReq := &pb.UpdateMaterialRequest{
 		Id:                req.ItemID,
-		Sku:               req.SKU,
-		Description:       req.Description,
-		UpdateDescription: req.Description != nil,
-		Notes:             req.Notes,
-		UpdateNotes:       req.Notes != nil,
+		Sku:               req.SKU.Ptr(),
+		Description:       req.Description.Ptr(),
+		UpdateDescription: req.Description.IsSet(),
+		Notes:             req.Notes.Ptr(),
+		UpdateNotes:       req.Notes.IsSet(),
 		UnitCost:          rateInputToProto(req.UnitCost.Ptr()),
 	}
-	if req.OrderPoint != nil {
-		pbReq.OrderPoint = &pb.QuantityInput{Value: req.OrderPoint.Value, UnitId: req.OrderPoint.UnitID}
+	if q, ok := req.OrderPoint.Value(); ok {
+		pbReq.OrderPoint = &pb.QuantityInput{Value: q.Value, UnitId: q.UnitID}
 	}
-	if req.LeadTime != nil {
-		pbReq.LeadTime = &pb.QuantityInput{Value: req.LeadTime.Value, UnitId: req.LeadTime.UnitID}
+	if q, ok := req.LeadTime.Value(); ok {
+		pbReq.LeadTime = &pb.QuantityInput{Value: q.Value, UnitId: q.UnitID}
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, materialSvcTracer, "service.materials.update", domain.ServiceName,

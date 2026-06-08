@@ -34,7 +34,7 @@ func (e *RetrieveInvoiceEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrie
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeInvoice,
-			Fields:     []string{"lines", "allocations"},
+			Fields:     []string{"customer", "order", "shipment", "billing_address", "payment_term", "lines", "allocations"},
 		}),
 	})
 }

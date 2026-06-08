@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to partially update an agent definition.
@@ -16,25 +17,25 @@ type UpdateAgentRequest struct {
 	// Agent definition ID.
 	AgentDefinitionID string `path:"id" validate:"required"`
 	// Display name.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// URL-friendly identifier.
-	Slug *string `json:"slug,omitempty" validate:"omitempty,max=255"`
+	Slug field.Optional[string] `json:"slug,omitzero" validate:"omitempty,max=255"`
 	// Description of what the agent does.
-	Description *string `json:"description,omitempty"`
+	Description field.Optional[string] `json:"description,omitzero"`
 	// Category code (e.g. "order_processing").
-	CategoryCode *string `json:"category_code,omitempty" validate:"omitempty,max=255"`
+	CategoryCode field.Optional[string] `json:"category_code,omitzero" validate:"omitempty,max=255"`
 	// Trigger type: "manual", "scheduled", or "event".
-	TriggerType *constants.AgentTriggerType `json:"trigger_type,omitempty"`
+	TriggerType field.Optional[constants.AgentTriggerType] `json:"trigger_type,omitzero"`
 	// Agent-level configuration controlling LLM behavior and trigger settings.
-	Config *ConfigInput `json:"config,omitempty"`
+	Config field.Optional[ConfigInput] `json:"config,omitzero"`
 	// Tools to attach. Replaces the existing tool set when provided.
-	Tools *[]ToolInput `json:"tools,omitempty"`
+	Tools field.Optional[[]ToolInput] `json:"tools,omitzero"`
 	// Role ID defining agent permissions.
-	RoleID *string `json:"role_id,omitempty" validate:"omitempty"`
+	RoleID field.Optional[string] `json:"role_id,omitzero" validate:"omitempty"`
 }
 
 var sampleUpdateAgentRequest = &UpdateAgentRequest{
-	Name: new("Inventory Monitor"),
+	Name: field.Some("Inventory Monitor"),
 }
 
 func (*UpdateAgentRequest) SchemaExample() any {

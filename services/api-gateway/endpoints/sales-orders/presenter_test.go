@@ -8,41 +8,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func TestSalesOrderSummaryPresenter(t *testing.T) {
-	t.Parallel()
-	now := timestamppb.Now()
-	priorityID := "pi_01abc"
-
-	custStatus := "active"
-	custCommission := "net"
-
-	info := &pb.SalesOrderSummaryInfo{
-		Id:                       "so_01abc",
-		Number:                   "SO-0001",
-		CustomerId:               "ac_01abc",
-		CustomerName:             "Acme Corp",
-		CustomerNumber:           "ACME001",
-		CustomerStatusCode:       &custStatus,
-		CustomerCommissionPolicy: &custCommission,
-		StatusCode:               "open",
-		StatusName:               "Open",
-		TypeCode:                 "standard",
-		TypeName:                 "Standard",
-		PriorityCode:             "normal",
-		PriorityName:             "Normal",
-		PriorityId:               &priorityID,
-		LineCount:                1,
-		IsAcknowledgmentSent:     true,
-		CustomerPoNumber:         new("PO-123"),
-		CreatedAt:                now,
-		UpdatedAt:                now,
-	}
-
-	result := salesOrderSummaryFromProto(info)
-	resourcetest.ValidateExpandableStubs(t, "SalesOrderSummary", result)
-}
-
-func TestSalesOrderDetailPresenter(t *testing.T) {
+func TestSalesOrderPresenter(t *testing.T) {
 	t.Parallel()
 	now := timestamppb.Now()
 	carrierID := "cr_01abc"
@@ -101,5 +67,5 @@ func TestSalesOrderDetailPresenter(t *testing.T) {
 	}
 
 	result := salesOrderDetailFromProto(info)
-	resourcetest.ValidateExpandableStubs(t, "SalesOrderDetail", result)
+	resourcetest.ValidateExpandableStubs(t, "SalesOrder", result)
 }

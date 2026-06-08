@@ -26,12 +26,11 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
-	"slices"
 	"strconv"
 	"strings"
 
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 	"github.com/go-playground/validator/v10"
 	"github.com/shopspring/decimal"
 )
@@ -62,7 +61,7 @@ var (
 var validate = validator.New()
 
 func init() {
-	patch.RegisterValidator(validate)
+	field.RegisterValidator(validate)
 	_ = validate.RegisterValidation("password", validatePassword)
 	_ = validate.RegisterValidation("username", validateUsername)
 	_ = validate.RegisterValidation("identifier", validateUsernameOrEmail)
@@ -473,13 +472,6 @@ func getFieldName(fieldErr validator.FieldError, structValue any) string {
 	return getFieldMetadata(fieldErr, structValue).name
 }
 
-// GetValidator returns the package-level validator instance with all custom tags
-// registered. Use this when you need to register additional custom tags or access
-// the validator directly (e.g. for testing).
-func GetValidator() *validator.Validate {
-	return validate
-}
-
 // Validator is a lightweight imperative validation helper for checks that cannot be
 // expressed with struct tags (e.g. cross-field constraints, conditional logic). It
 // collects named errors via AddError or Check and reports validity via Valid.
@@ -491,57 +483,4 @@ type Validator struct {
 	// Errors maps field names to their first error message. Only the first error
 	// per field is stored to keep messages concise.
 	Errors map[string]string
-}
-
-// New creates an empty Validator ready to accumulate errors.
-func New() *Validator {
-	return &Validator{Errors: make(map[string]string)}
-}
-
-// Valid returns true if no errors have been recorded.
-func (v *Validator) Valid() bool {
-	return len(v.Errors) == 0
-}
-
-// AddError records an error for key. If key already has an error, the call is a
-// no-op — only the first error per field is kept.
-func (v *Validator) AddError(key, message string) {
-	if _, exists := v.Errors[key]; !exists {
-		v.Errors[key] = message
-	}
-}
-
-// Check records an error for key when ok is false. It is syntactic sugar for a
-// conditional AddError call.
-func (v *Validator) Check(ok bool, key, message string) {
-	if !ok {
-		v.AddError(key, message)
-	}
-}
-
-// PermittedValue returns true if value is contained in permittedValues. It is a
-// generic helper intended for use with Validator.Check:
-//
-//	v.Check(validate.PermittedValue(req.Status, "active", "inactive"), "status", "must be active or inactive")
-func PermittedValue[T comparable](value T, permittedValues ...T) bool {
-	return slices.Contains(permittedValues, value)
-}
-
-// Matches returns true if value matches the given regular expression. Intended for
-// use with Validator.Check for pattern-based constraints.
-func Matches(value string, rx *regexp.Regexp) bool {
-	return rx.MatchString(value)
-}
-
-// Unique returns true if all elements in values are distinct. Uses a map internally,
-// so it runs in O(n) time. Intended for use with Validator.Check to enforce
-// no-duplicates constraints on slice fields.
-func Unique[T comparable](values []T) bool {
-	uniqueValues := make(map[T]bool)
-
-	for _, value := range values {
-		uniqueValues[value] = true
-	}
-
-	return len(values) == len(uniqueValues)
 }

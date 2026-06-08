@@ -19,12 +19,12 @@ import (
 )
 
 type ShipmentSvc interface {
-	ListShipments(ctx context.Context, req *ListShipmentsRequest) (*apiresource.List[apiresource.ShipmentSummary], *apierror.APIError)
-	GetShipment(ctx context.Context, req *RetrieveShipmentRequest) (*apiresource.ShipmentDetail, *apierror.APIError)
-	UpdateShipment(ctx context.Context, req *UpdateShipmentRequest) (*apiresource.ShipmentDetail, *apierror.APIError)
+	ListShipments(ctx context.Context, req *ListShipmentsRequest) (*apiresource.List[apiresource.Shipment], *apierror.APIError)
+	GetShipment(ctx context.Context, req *RetrieveShipmentRequest) (*apiresource.Shipment, *apierror.APIError)
+	UpdateShipment(ctx context.Context, req *UpdateShipmentRequest) (*apiresource.Shipment, *apierror.APIError)
 	DeleteShipment(ctx context.Context, req *DeleteShipmentRequest) (*apiresource.EmptyResource, *apierror.APIError)
-	ShipShipment(ctx context.Context, req *ShipShipmentRequest) (*apiresource.ShipmentDetail, *apierror.APIError)
-	VoidShipment(ctx context.Context, req *VoidShipmentRequest) (*apiresource.ShipmentDetail, *apierror.APIError)
+	ShipShipment(ctx context.Context, req *ShipShipmentRequest) (*apiresource.Shipment, *apierror.APIError)
+	VoidShipment(ctx context.Context, req *VoidShipmentRequest) (*apiresource.Shipment, *apierror.APIError)
 	EstimateRate(ctx context.Context, req *EstimateRateRequest) (*apiresource.EstimateRateResult, *apierror.APIError)
 	RateShop(ctx context.Context, req *RateShopRequest) (*apiresource.RateShopResult, *apierror.APIError)
 	ListShipmentLines(ctx context.Context, req *ListShipmentLinesRequest) (*apiresource.List[apiresource.ShipmentLine], *apierror.APIError)
@@ -44,7 +44,7 @@ type shipmentSvcImpl struct {
 
 var shipmentSvcTracer = tracing.GetTracer("api-gateway.endpoints.shipments.service")
 
-var shipmentIncludes = []string{"lines", "shipping_cases", "sales_order", "customer", "carrier", "service_level", "shipping_address", "shipped_by", "invoice", "pick"}
+var shipmentIncludes = []string{"lines", "shipping_cases", "sales_order", "customer", "freight", "shipping_address", "shipped_by", "invoice", "pick"}
 
 func (c *ShipmentSvcConfig) validate() error {
 	if c.CoreClient == nil {
@@ -63,7 +63,7 @@ func NewShipmentSvc(config *ShipmentSvcConfig) ShipmentSvc {
 	}
 }
 
-func (m *shipmentSvcImpl) ListShipments(ctx context.Context, req *ListShipmentsRequest) (*apiresource.List[apiresource.ShipmentSummary], *apierror.APIError) {
+func (m *shipmentSvcImpl) ListShipments(ctx context.Context, req *ListShipmentsRequest) (*apiresource.List[apiresource.Shipment], *apierror.APIError) {
 	pbReq := &pb.ListShipmentsRequest{
 		Cursor:           req.Cursor,
 		Limit:            req.Limit,
@@ -88,18 +88,19 @@ func (m *shipmentSvcImpl) ListShipments(ctx context.Context, req *ListShipmentsR
 	}
 
 	if resp == nil {
-		return apiresource.NewList[apiresource.ShipmentSummary](nil, apiresource.PageInfo{}), nil
+		return apiresource.NewList[apiresource.Shipment](nil, apiresource.PageInfo{}), nil
 	}
 
-	summaries := make([]apiresource.ShipmentSummary, len(resp.Shipments))
+	shipments := make([]apiresource.Shipment, len(resp.Shipments))
 	for i, s := range resp.Shipments {
-		summaries[i] = shipmentSummaryFromProto(s)
+		shipments[i] = shipmentFromSummaryProto(s)
+		stashShipmentSummaryMeta(ctx, s, &shipments[i])
 	}
 
-	return apiresource.NewList(summaries, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
+	return apiresource.NewList(shipments, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
 
-func (m *shipmentSvcImpl) GetShipment(ctx context.Context, req *RetrieveShipmentRequest) (*apiresource.ShipmentDetail, *apierror.APIError) {
+func (m *shipmentSvcImpl) GetShipment(ctx context.Context, req *RetrieveShipmentRequest) (*apiresource.Shipment, *apierror.APIError) {
 	pbReq := &pb.GetShipmentRequest{
 		Id:       req.ShipmentID,
 		Includes: resourcekit.FilterIncludes(ctx, shipmentIncludes...),
@@ -114,19 +115,19 @@ func (m *shipmentSvcImpl) GetShipment(ctx context.Context, req *RetrieveShipment
 		return nil, apiErr
 	}
 
-	result := shipmentDetailFromProto(resp.Shipment)
-	stashShipmentDetailMeta(ctx, resp.Shipment, &result)
+	result := shipmentFromProto(resp.Shipment)
+	stashShipmentMeta(ctx, resp.Shipment, &result)
 	return &result, nil
 }
 
-func (m *shipmentSvcImpl) UpdateShipment(ctx context.Context, req *UpdateShipmentRequest) (*apiresource.ShipmentDetail, *apierror.APIError) {
+func (m *shipmentSvcImpl) UpdateShipment(ctx context.Context, req *UpdateShipmentRequest) (*apiresource.Shipment, *apierror.APIError) {
 	pbReq := &pb.UpdateShipmentRequest{
 		Id:                   req.ShipmentID,
-		Note:                 req.Note,
-		Number:               req.Number,
-		MasterTrackingNumber: req.MasterTrackingNumber,
-		CarrierId:            req.CarrierID,
-		ServiceLevelId:       req.ServiceLevelID,
+		Note:                 req.Note.Ptr(),
+		Number:               req.Number.Ptr(),
+		MasterTrackingNumber: req.MasterTrackingNumber.Ptr(),
+		CarrierId:            req.CarrierID.Ptr(),
+		ServiceLevelId:       req.ServiceLevelID.Ptr(),
 		Includes:             resourcekit.FilterIncludes(ctx, shipmentIncludes...),
 	}
 
@@ -139,8 +140,8 @@ func (m *shipmentSvcImpl) UpdateShipment(ctx context.Context, req *UpdateShipmen
 		return nil, apiErr
 	}
 
-	result := shipmentDetailFromProto(resp.Shipment)
-	stashShipmentDetailMeta(ctx, resp.Shipment, &result)
+	result := shipmentFromProto(resp.Shipment)
+	stashShipmentMeta(ctx, resp.Shipment, &result)
 	return &result, nil
 }
 
@@ -161,7 +162,7 @@ func (m *shipmentSvcImpl) DeleteShipment(ctx context.Context, req *DeleteShipmen
 	return &apiresource.EmptyResource{}, nil
 }
 
-func (m *shipmentSvcImpl) ShipShipment(ctx context.Context, req *ShipShipmentRequest) (*apiresource.ShipmentDetail, *apierror.APIError) {
+func (m *shipmentSvcImpl) ShipShipment(ctx context.Context, req *ShipShipmentRequest) (*apiresource.Shipment, *apierror.APIError) {
 	pbReq := &pb.ShipShipmentRequest{
 		Id:            req.ShipmentID,
 		EmailCustomer: req.EmailCustomer,
@@ -177,12 +178,12 @@ func (m *shipmentSvcImpl) ShipShipment(ctx context.Context, req *ShipShipmentReq
 		return nil, apiErr
 	}
 
-	result := shipmentDetailFromProto(resp.Shipment)
-	stashShipmentDetailMeta(ctx, resp.Shipment, &result)
+	result := shipmentFromProto(resp.Shipment)
+	stashShipmentMeta(ctx, resp.Shipment, &result)
 	return &result, nil
 }
 
-func (m *shipmentSvcImpl) VoidShipment(ctx context.Context, req *VoidShipmentRequest) (*apiresource.ShipmentDetail, *apierror.APIError) {
+func (m *shipmentSvcImpl) VoidShipment(ctx context.Context, req *VoidShipmentRequest) (*apiresource.Shipment, *apierror.APIError) {
 	pbReq := &pb.VoidShipmentRequest{
 		Id: req.ShipmentID,
 	}
@@ -196,7 +197,8 @@ func (m *shipmentSvcImpl) VoidShipment(ctx context.Context, req *VoidShipmentReq
 		return nil, apiErr
 	}
 
-	result := shipmentDetailFromProtoFull(resp.Shipment)
+	// VoidShipment has no V2 include resolver, so expandables are left nil.
+	result := shipmentFromProto(resp.Shipment)
 	return &result, nil
 }
 
@@ -215,11 +217,11 @@ func (m *shipmentSvcImpl) EstimateRate(ctx context.Context, req *EstimateRateReq
 		CarrierId:      req.CarrierID,
 		ServiceLevelId: req.ServiceLevelID,
 		ProductLineIds: req.ProductLineIDs,
-		CustomerId:     req.CustomerID,
+		CustomerId:     req.CustomerID.Ptr(),
 		From:           addressInputToProto(req.FromAddress),
 		To:             addressInputToProto(req.ToAddress),
 		Parcels:        parcels,
-		OrderTotal:     req.OrderTotal,
+		OrderTotal:     req.OrderTotal.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, shipmentSvcTracer, "service.shipments.estimate_rate", domain.ServiceName,
@@ -247,11 +249,11 @@ func (m *shipmentSvcImpl) RateShop(ctx context.Context, req *RateShopRequest) (*
 
 	pbReq := &pb.RateShopRequest{
 		ProductLineIds: req.ProductLineIDs,
-		CustomerId:     req.CustomerID,
+		CustomerId:     req.CustomerID.Ptr(),
 		From:           addressInputToProto(req.FromAddress),
 		To:             addressInputToProto(req.ToAddress),
 		Parcels:        parcels,
-		OrderTotal:     req.OrderTotal,
+		OrderTotal:     req.OrderTotal.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, shipmentSvcTracer, "service.shipments.rate_shop", domain.ServiceName,
@@ -341,8 +343,8 @@ func (m *shipmentSvcImpl) UpdateShipmentLine(ctx context.Context, req *UpdateShi
 	pbReq := &pb.UpdateShipmentLineRequest{
 		ShipmentId:     req.ShipmentID,
 		Id:             req.ShipmentLineID,
-		QuantityValue:  req.QuantityValue,
-		QuantityUnitId: req.QuantityUnitID,
+		QuantityValue:  req.QuantityValue.Ptr(),
+		QuantityUnitId: req.QuantityUnitID.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, shipmentSvcTracer, "service.shipments.update_line", domain.ServiceName,
@@ -390,108 +392,96 @@ func addressInputToProto(a apirequest.AddressInput) *pb.AddressInput {
 	}
 }
 
-// shipmentDetailFromProto builds a ShipmentDetail with only non-expandable fields.
-// Expandable sub-resources (sales_order, pick, customer, carrier, service_level,
-// shipping_address, shipped_by, invoice, lines, shipping_cases) are left nil
-// and populated later by the V2 include resolver via stashShipmentDetailMeta.
-func shipmentDetailFromProto(s *pb.ShipmentInfo) apiresource.ShipmentDetail {
+// shipmentFromProto builds a Shipment with only base, non-expandable fields.
+// Expandable sub-resources (sales_order, customer, freight, shipping_address,
+// shipped_by, invoice, pick, lines, shipping_cases) are left nil and populated
+// later by the V2 include resolver via stashShipmentMeta.
+func shipmentFromProto(s *pb.ShipmentInfo) apiresource.Shipment {
 	if s == nil {
-		return apiresource.ShipmentDetail{}
+		return apiresource.Shipment{}
 	}
 
-	result := apiresource.ShipmentDetail{
+	return apiresource.Shipment{
 		ID:                   s.Id,
 		Object:               constants.ObjectTypeShipment,
 		Number:               s.Number,
 		Note:                 s.Note,
 		BillOfLading:         s.BillOfLading,
 		MasterTrackingNumber: s.MasterTrackingNumber,
-		Status: apiresource.ShipmentStatus{
-			Code: s.StatusCode,
-			Name: s.StatusName,
-		},
-		ShippedAt: grpcutil.TimestampToTimePtr(s.ShippedAt),
-		CreatedAt: grpcutil.TimestampToTime(s.CreatedAt),
-		UpdatedAt: grpcutil.TimestampToTime(s.UpdatedAt),
+		Status:               constants.ShipmentStatus(s.StatusCode),
+		ShippedAt:            grpcutil.TimestampToTimePtr(s.ShippedAt),
+		CreatedAt:            grpcutil.TimestampToTime(s.CreatedAt),
+		UpdatedAt:            grpcutil.TimestampToTime(s.UpdatedAt),
 	}
-
-	if s.CarrierBillingType != nil && *s.CarrierBillingType != "" {
-		result.Billing = &apiresource.ShipmentBilling{
-			Type:    *s.CarrierBillingType,
-			Account: s.CarrierBillingAccount,
-			Country: s.BillingAddressCountry,
-			Zip:     s.BillingAddressZip,
-		}
-	}
-
-	return result
 }
 
-// stashShipmentDetailMeta stashes all expandable sub-resource data into the
-// resourcekit load meta so the V2 include resolver can populate them.
-func stashShipmentDetailMeta(ctx context.Context, s *pb.ShipmentInfo, d *apiresource.ShipmentDetail) {
+// stashShipmentMeta stashes all expandable sub-resource data into the
+// resourcekit load meta so the V2 include resolver can populate them. Document-
+// level cross-references (sales_order, pick, invoice) and loader-backed
+// references (customer, shipping_address, shipped_by) are stashed as FK ids only.
+func stashShipmentMeta(ctx context.Context, s *pb.ShipmentInfo, d *apiresource.Shipment) {
 	if s == nil {
 		return
 	}
 
 	meta := resourcekit.GetLoadMeta(ctx)
 
+	// Document-level cross-references: stash only the FK id so the loader
+	// fetches the real document on ?include=. Never fabricate.
 	if s.SalesOrderId != "" {
-		so := &apiresource.SalesOrderDetail{
-			ID:         s.SalesOrderId,
-			Object:     constants.ObjectTypeSalesOrder,
-			Number:     s.SalesOrderNumber,
-			CustomerPO: s.CustomerPoNumber,
-		}
-		if s.SalesOrderCreatedAt != nil {
-			so.CreatedAt = s.SalesOrderCreatedAt.AsTime()
-		}
-		if s.SalesOrderUpdatedAt != nil {
-			so.UpdatedAt = s.SalesOrderUpdatedAt.AsTime()
-		}
-		meta.Set(constants.ObjectTypeShipment, d.ID, "sales_order", so)
+		meta.Set(constants.ObjectTypeShipment, d.ID, "sales_order_id", s.SalesOrderId)
 	}
-
 	if s.PickId != nil && *s.PickId != "" {
-		pick := &apiresource.PickDetail{
-			ID:     *s.PickId,
-			Object: constants.ObjectTypePick,
-		}
-		if s.PickNumber != nil {
-			pick.Number = *s.PickNumber
-		}
-		if s.PickCreatedAt != nil {
-			pick.CreatedAt = s.PickCreatedAt.AsTime()
-		}
-		if s.PickUpdatedAt != nil {
-			pick.UpdatedAt = s.PickUpdatedAt.AsTime()
-		}
-		meta.Set(constants.ObjectTypeShipment, d.ID, "pick", pick)
+		meta.Set(constants.ObjectTypeShipment, d.ID, "pick_id", *s.PickId)
+	}
+	if s.InvoiceId != nil && *s.InvoiceId != "" {
+		meta.Set(constants.ObjectTypeShipment, d.ID, "invoice_id", *s.InvoiceId)
 	}
 
+	// Loader-backed references: stash the FK ids so their real resources load on
+	// ?include=. Never fabricate.
 	if s.CustomerId != "" {
-		customer := &apiresource.Customer{
-			ID:               s.CustomerId,
-			Object:           constants.ObjectTypeCustomer,
-			Name:             s.CustomerName,
-			Number:           s.CustomerNumber,
-			EDIStatus:        constants.EDIStatusDisabled,
-			RelationshipType: constants.CustomerRelationshipTypeStandalone,
-		}
-		if s.CustomerStatusCode != nil {
-			customer.Status = constants.AccountStatusCode(*s.CustomerStatusCode)
-		}
-		if s.CustomerCommissionPolicy != nil {
-			customer.CommissionPolicy = constants.CommissionPolicy(*s.CustomerCommissionPolicy)
-		}
-		if s.CustomerCreatedAt != nil {
-			customer.CreatedAt = s.CustomerCreatedAt.AsTime()
-		}
-		if s.CustomerUpdatedAt != nil {
-			customer.UpdatedAt = s.CustomerUpdatedAt.AsTime()
-		}
-		meta.Set(constants.ObjectTypeShipment, d.ID, "customer", customer)
+		meta.Set(constants.ObjectTypeShipment, d.ID, "customer_id", s.CustomerId)
 	}
+	if s.ShippingAddressId != "" {
+		meta.Set(constants.ObjectTypeShipment, d.ID, "shipping_address_id", s.ShippingAddressId)
+	}
+	if s.ShippedById != nil && *s.ShippedById != "" {
+		meta.Set(constants.ObjectTypeShipment, d.ID, "shipped_by_id", *s.ShippedById)
+	}
+
+	// Freight (carrier selection + freight billing). Expanded as a whole via
+	// include[]=freight; carries the full carrier and service level inline. The
+	// proto's billing country/zip have no Freight home and are covered by the
+	// shipping_address, so they are dropped here.
+	meta.Set(constants.ObjectTypeShipment, d.ID, "freight", shipmentFreightFromProto(s))
+
+	if s.Lines != nil {
+		lines := make([]apiresource.ShipmentLine, len(s.Lines))
+		for i, l := range s.Lines {
+			lines[i] = shipmentLineFromProto(l)
+		}
+		meta.Set(constants.ObjectTypeShipment, d.ID, "lines", apiresource.NewList(lines, apiresource.PageInfo{}))
+	}
+
+	if s.ShippingCases != nil {
+		cases := make([]apiresource.ShippingCaseDetail, len(s.ShippingCases))
+		for i, c := range s.ShippingCases {
+			cases[i] = shippingCaseDetailFromProto(c)
+		}
+		meta.Set(constants.ObjectTypeShipment, d.ID, "shipping_cases", apiresource.NewList(cases, apiresource.PageInfo{}))
+	}
+}
+
+// shipmentFreightFromProto builds the Freight sub-resource (carrier selection +
+// freight billing) inline from a ShipmentInfo.
+func shipmentFreightFromProto(s *pb.ShipmentInfo) *apiresource.Freight {
+	freight := &apiresource.Freight{Object: constants.ObjectTypeFreight}
+	if s.CarrierBillingType != nil {
+		bt := constants.CarrierBillingType(*s.CarrierBillingType)
+		freight.BillingType = &bt
+	}
+	freight.BillingAccountNumber = s.CarrierBillingAccount
 
 	if s.CarrierId != "" {
 		carrier := &apiresource.Carrier{
@@ -510,7 +500,7 @@ func stashShipmentDetailMeta(ctx context.Context, s *pb.ShipmentInfo, d *apireso
 		if s.CarrierUpdatedAt != nil {
 			carrier.UpdatedAt = s.CarrierUpdatedAt.AsTime()
 		}
-		meta.Set(constants.ObjectTypeShipment, d.ID, "carrier", carrier)
+		freight.Carrier = carrier
 	}
 
 	if s.ServiceLevelId != nil && *s.ServiceLevelId != "" {
@@ -533,348 +523,49 @@ func stashShipmentDetailMeta(ctx context.Context, s *pb.ShipmentInfo, d *apireso
 		if s.ServiceLevelUpdatedAt != nil {
 			sl.UpdatedAt = s.ServiceLevelUpdatedAt.AsTime()
 		}
-		meta.Set(constants.ObjectTypeShipment, d.ID, "service_level", sl)
+		freight.ServiceLevel = sl
 	}
 
-	if s.ShippingAddressId != "" {
-		addr := &apiresource.Address{
-			ID:     s.ShippingAddressId,
-			Object: constants.ObjectTypeAddress,
-			Name:   derefStr(s.ShippingAddressName),
-			Type:   constants.AddressTypeStandard,
-		}
-		if s.ShippingAddressCreatedAt != nil {
-			addr.CreatedAt = s.ShippingAddressCreatedAt.AsTime()
-		}
-		if s.ShippingAddressUpdatedAt != nil {
-			addr.UpdatedAt = s.ShippingAddressUpdatedAt.AsTime()
-		}
-		meta.Set(constants.ObjectTypeShipment, d.ID, "shipping_address", addr)
-	}
-
-	if s.ShippedById != nil && *s.ShippedById != "" {
-		shippedBy := &apiresource.AccountUser{
-			ID:     *s.ShippedById,
-			Object: constants.ObjectTypeAccountUser,
-			Name:   s.ShippedByName,
-		}
-		if s.ShippedByStatus != nil {
-			shippedBy.Status = constants.AccountUserStatus(*s.ShippedByStatus)
-		}
-		if s.ShippedByCreatedAt != nil {
-			shippedBy.CreatedAt = s.ShippedByCreatedAt.AsTime()
-		}
-		if s.ShippedByUpdatedAt != nil {
-			shippedBy.UpdatedAt = s.ShippedByUpdatedAt.AsTime()
-		}
-		meta.Set(constants.ObjectTypeShipment, d.ID, "shipped_by", shippedBy)
-	}
-
-	if s.InvoiceId != nil && *s.InvoiceId != "" {
-		inv := &apiresource.Invoice{
-			ID:     *s.InvoiceId,
-			Object: constants.ObjectTypeInvoice,
-			Number: derefStr(s.InvoiceNumber),
-		}
-		if s.InvoiceCreatedAt != nil {
-			inv.CreatedAt = s.InvoiceCreatedAt.AsTime()
-		}
-		if s.InvoiceUpdatedAt != nil {
-			inv.UpdatedAt = s.InvoiceUpdatedAt.AsTime()
-		}
-		meta.Set(constants.ObjectTypeShipment, d.ID, "invoice", inv)
-	}
-
-	if s.Lines != nil {
-		lines := make([]apiresource.ShipmentLine, len(s.Lines))
-		for i, l := range s.Lines {
-			lines[i] = shipmentLineFromProto(l)
-		}
-		meta.Set(constants.ObjectTypeShipment, d.ID, "lines", apiresource.NewList(lines, apiresource.PageInfo{}))
-	}
-
-	if s.ShippingCases != nil {
-		cases := make([]apiresource.ShippingCaseDetail, len(s.ShippingCases))
-		for i, c := range s.ShippingCases {
-			cases[i] = shippingCaseDetailFromProto(c)
-		}
-		meta.Set(constants.ObjectTypeShipment, d.ID, "shipping_cases", apiresource.NewList(cases, apiresource.PageInfo{}))
-	}
+	return freight
 }
 
-// shipmentDetailFromProtoFull builds a ShipmentDetail with ALL fields populated
-// directly (no meta stashing). Used by endpoints without V2 include resolver
-// (e.g. VoidShipment).
-func shipmentDetailFromProtoFull(s *pb.ShipmentInfo) apiresource.ShipmentDetail {
+// shipmentFromSummaryProto builds a Shipment from a list-view ShipmentSummaryInfo
+// with only base fields. Expandable sub-resources are populated via the V2
+// include resolver from stashed meta.
+func shipmentFromSummaryProto(s *pb.ShipmentSummaryInfo) apiresource.Shipment {
 	if s == nil {
-		return apiresource.ShipmentDetail{}
+		return apiresource.Shipment{}
 	}
 
-	result := apiresource.ShipmentDetail{
+	return apiresource.Shipment{
 		ID:                   s.Id,
 		Object:               constants.ObjectTypeShipment,
 		Number:               s.Number,
 		Note:                 s.Note,
 		BillOfLading:         s.BillOfLading,
 		MasterTrackingNumber: s.MasterTrackingNumber,
-		Status: apiresource.ShipmentStatus{
-			Code: s.StatusCode,
-			Name: s.StatusName,
-		},
-		ShippedAt: grpcutil.TimestampToTimePtr(s.ShippedAt),
-		CreatedAt: grpcutil.TimestampToTime(s.CreatedAt),
-		UpdatedAt: grpcutil.TimestampToTime(s.UpdatedAt),
+		Status:               constants.ShipmentStatus(s.StatusCode),
+		ShippedAt:            grpcutil.TimestampToTimePtr(s.ShippedAt),
+		CreatedAt:            grpcutil.TimestampToTime(s.CreatedAt),
+		UpdatedAt:            grpcutil.TimestampToTime(s.UpdatedAt),
 	}
-
-	if s.SalesOrderId != "" {
-		result.SalesOrder = &apiresource.SalesOrderDetail{
-			ID:         s.SalesOrderId,
-			Object:     constants.ObjectTypeSalesOrder,
-			Number:     s.SalesOrderNumber,
-			CustomerPO: s.CustomerPoNumber,
-		}
-		if s.SalesOrderCreatedAt != nil {
-			result.SalesOrder.CreatedAt = s.SalesOrderCreatedAt.AsTime()
-		}
-		if s.SalesOrderUpdatedAt != nil {
-			result.SalesOrder.UpdatedAt = s.SalesOrderUpdatedAt.AsTime()
-		}
-	}
-
-	if s.PickId != nil && *s.PickId != "" {
-		result.Pick = &apiresource.PickDetail{
-			ID:     *s.PickId,
-			Object: constants.ObjectTypePick,
-		}
-		if s.PickNumber != nil {
-			result.Pick.Number = *s.PickNumber
-		}
-		if s.PickCreatedAt != nil {
-			result.Pick.CreatedAt = s.PickCreatedAt.AsTime()
-		}
-		if s.PickUpdatedAt != nil {
-			result.Pick.UpdatedAt = s.PickUpdatedAt.AsTime()
-		}
-	}
-
-	if s.CarrierBillingType != nil && *s.CarrierBillingType != "" {
-		result.Billing = &apiresource.ShipmentBilling{
-			Type:    *s.CarrierBillingType,
-			Account: s.CarrierBillingAccount,
-			Country: s.BillingAddressCountry,
-			Zip:     s.BillingAddressZip,
-		}
-	}
-
-	if s.CustomerId != "" {
-		result.Customer = &apiresource.Customer{
-			ID:               s.CustomerId,
-			Object:           constants.ObjectTypeCustomer,
-			Name:             s.CustomerName,
-			Number:           s.CustomerNumber,
-			EDIStatus:        constants.EDIStatusDisabled,
-			RelationshipType: constants.CustomerRelationshipTypeStandalone,
-		}
-		if s.CustomerStatusCode != nil {
-			result.Customer.Status = constants.AccountStatusCode(*s.CustomerStatusCode)
-		}
-		if s.CustomerCommissionPolicy != nil {
-			result.Customer.CommissionPolicy = constants.CommissionPolicy(*s.CustomerCommissionPolicy)
-		}
-		if s.CustomerCreatedAt != nil {
-			result.Customer.CreatedAt = s.CustomerCreatedAt.AsTime()
-		}
-		if s.CustomerUpdatedAt != nil {
-			result.Customer.UpdatedAt = s.CustomerUpdatedAt.AsTime()
-		}
-	}
-
-	if s.CarrierId != "" {
-		result.Carrier = &apiresource.Carrier{
-			ID:     s.CarrierId,
-			Object: constants.ObjectTypeCarrier,
-			Name:   s.CarrierName,
-		}
-		if s.CarrierIsPortalEnabled != nil && *s.CarrierIsPortalEnabled {
-			result.Carrier.CustomerPortalVisibility = constants.CustomerPortalVisibilityVisible
-		} else {
-			result.Carrier.CustomerPortalVisibility = constants.CustomerPortalVisibilityHidden
-		}
-		if s.CarrierCreatedAt != nil {
-			result.Carrier.CreatedAt = s.CarrierCreatedAt.AsTime()
-		}
-		if s.CarrierUpdatedAt != nil {
-			result.Carrier.UpdatedAt = s.CarrierUpdatedAt.AsTime()
-		}
-	}
-
-	if s.ServiceLevelId != nil && *s.ServiceLevelId != "" {
-		result.ServiceLevel = &apiresource.ServiceLevel{
-			ID:     *s.ServiceLevelId,
-			Object: constants.ObjectTypeServiceLevel,
-			Name:   derefStr(s.ServiceLevelName),
-		}
-		if s.ServiceLevelIsPortalEnabled != nil && *s.ServiceLevelIsPortalEnabled {
-			result.ServiceLevel.CustomerPortalVisibility = constants.CustomerPortalVisibilityVisible
-		} else {
-			result.ServiceLevel.CustomerPortalVisibility = constants.CustomerPortalVisibilityHidden
-		}
-		if s.ServiceLevelToken != nil {
-			result.ServiceLevel.ServiceLevelToken = constants.ServiceLevelCode(*s.ServiceLevelToken)
-		}
-		if s.ServiceLevelCreatedAt != nil {
-			result.ServiceLevel.CreatedAt = s.ServiceLevelCreatedAt.AsTime()
-		}
-		if s.ServiceLevelUpdatedAt != nil {
-			result.ServiceLevel.UpdatedAt = s.ServiceLevelUpdatedAt.AsTime()
-		}
-	}
-
-	if s.ShippingAddressId != "" {
-		result.ShippingAddress = &apiresource.Address{
-			ID:     s.ShippingAddressId,
-			Object: constants.ObjectTypeAddress,
-			Name:   derefStr(s.ShippingAddressName),
-			Type:   constants.AddressTypeStandard,
-		}
-		if s.ShippingAddressCreatedAt != nil {
-			result.ShippingAddress.CreatedAt = s.ShippingAddressCreatedAt.AsTime()
-		}
-		if s.ShippingAddressUpdatedAt != nil {
-			result.ShippingAddress.UpdatedAt = s.ShippingAddressUpdatedAt.AsTime()
-		}
-	}
-
-	if s.ShippedById != nil && *s.ShippedById != "" {
-		result.ShippedBy = &apiresource.AccountUser{
-			ID:     *s.ShippedById,
-			Object: constants.ObjectTypeAccountUser,
-			Name:   s.ShippedByName,
-		}
-		if s.ShippedByStatus != nil {
-			result.ShippedBy.Status = constants.AccountUserStatus(*s.ShippedByStatus)
-		}
-		if s.ShippedByCreatedAt != nil {
-			result.ShippedBy.CreatedAt = s.ShippedByCreatedAt.AsTime()
-		}
-		if s.ShippedByUpdatedAt != nil {
-			result.ShippedBy.UpdatedAt = s.ShippedByUpdatedAt.AsTime()
-		}
-	}
-
-	if s.InvoiceId != nil && *s.InvoiceId != "" {
-		result.Invoice = &apiresource.Invoice{
-			ID:     *s.InvoiceId,
-			Object: constants.ObjectTypeInvoice,
-			Number: derefStr(s.InvoiceNumber),
-		}
-		if s.InvoiceCreatedAt != nil {
-			result.Invoice.CreatedAt = s.InvoiceCreatedAt.AsTime()
-		}
-		if s.InvoiceUpdatedAt != nil {
-			result.Invoice.UpdatedAt = s.InvoiceUpdatedAt.AsTime()
-		}
-	}
-
-	if s.Lines != nil {
-		lines := make([]apiresource.ShipmentLine, len(s.Lines))
-		for i, l := range s.Lines {
-			lines[i] = shipmentLineFromProto(l)
-		}
-		result.Lines = apiresource.NewList(lines, apiresource.PageInfo{})
-	}
-
-	if s.ShippingCases != nil {
-		cases := make([]apiresource.ShippingCaseDetail, len(s.ShippingCases))
-		for i, c := range s.ShippingCases {
-			cases[i] = shippingCaseDetailFromProto(c)
-		}
-		result.ShippingCases = apiresource.NewList(cases, apiresource.PageInfo{})
-	}
-
-	return result
 }
 
-func shipmentSummaryFromProto(s *pb.ShipmentSummaryInfo) apiresource.ShipmentSummary {
+// stashShipmentSummaryMeta stashes the FK ids carried by a list-view shipment so
+// the include resolver can hydrate loader-backed references on ?include=.
+func stashShipmentSummaryMeta(ctx context.Context, s *pb.ShipmentSummaryInfo, d *apiresource.Shipment) {
 	if s == nil {
-		return apiresource.ShipmentSummary{}
+		return
 	}
 
-	result := apiresource.ShipmentSummary{
-		ID:                   s.Id,
-		Object:               constants.ObjectTypeShipmentSummary,
-		Number:               s.Number,
-		Note:                 s.Note,
-		BillOfLading:         s.BillOfLading,
-		MasterTrackingNumber: s.MasterTrackingNumber,
-		Status: apiresource.ShipmentStatus{
-			Code: s.StatusCode,
-			Name: s.StatusName,
-		},
-		ShippedAt: grpcutil.TimestampToTimePtr(s.ShippedAt),
-		CreatedAt: grpcutil.TimestampToTime(s.CreatedAt),
-		UpdatedAt: grpcutil.TimestampToTime(s.UpdatedAt),
-	}
+	meta := resourcekit.GetLoadMeta(ctx)
 
 	if s.SalesOrderId != "" {
-		result.SalesOrder = &apiresource.SalesOrderDetail{
-			ID:        s.SalesOrderId,
-			Object:    constants.ObjectTypeSalesOrder,
-			Number:    s.SalesOrderNumber,
-			CreatedAt: grpcutil.TimestampToTime(s.SalesOrderCreatedAt),
-			UpdatedAt: grpcutil.TimestampToTime(s.SalesOrderUpdatedAt),
-		}
+		meta.Set(constants.ObjectTypeShipment, d.ID, "sales_order_id", s.SalesOrderId)
 	}
-
 	if s.CustomerId != "" {
-		result.Customer = &apiresource.Customer{
-			ID:               s.CustomerId,
-			Object:           constants.ObjectTypeCustomer,
-			Name:             s.CustomerName,
-			Number:           s.CustomerNumber,
-			EDIStatus:        constants.EDIStatusDisabled,
-			RelationshipType: constants.CustomerRelationshipTypeStandalone,
-			CreatedAt:        grpcutil.TimestampToTime(s.CustomerCreatedAt),
-			UpdatedAt:        grpcutil.TimestampToTime(s.CustomerUpdatedAt),
-		}
-		if s.CustomerStatusCode != nil {
-			result.Customer.Status = constants.AccountStatusCode(*s.CustomerStatusCode)
-		}
-		if s.CustomerCommissionPolicy != nil {
-			result.Customer.CommissionPolicy = constants.CommissionPolicy(*s.CustomerCommissionPolicy)
-		}
+		meta.Set(constants.ObjectTypeShipment, d.ID, "customer_id", s.CustomerId)
 	}
-
-	if s.CarrierId != "" {
-		result.Carrier = &apiresource.Carrier{
-			ID:     s.CarrierId,
-			Object: constants.ObjectTypeCarrier,
-			Name:   s.CarrierName,
-		}
-		if s.CarrierIsPortalEnabled != nil && *s.CarrierIsPortalEnabled {
-			result.Carrier.CustomerPortalVisibility = constants.CustomerPortalVisibilityVisible
-		} else {
-			result.Carrier.CustomerPortalVisibility = constants.CustomerPortalVisibilityHidden
-		}
-	}
-
-	if s.ServiceLevelId != nil && *s.ServiceLevelId != "" {
-		result.ServiceLevel = &apiresource.ServiceLevel{
-			ID:     *s.ServiceLevelId,
-			Object: constants.ObjectTypeServiceLevel,
-			Name:   derefStr(s.ServiceLevelName),
-		}
-		if s.ServiceLevelIsPortalEnabled != nil && *s.ServiceLevelIsPortalEnabled {
-			result.ServiceLevel.CustomerPortalVisibility = constants.CustomerPortalVisibilityVisible
-		} else {
-			result.ServiceLevel.CustomerPortalVisibility = constants.CustomerPortalVisibilityHidden
-		}
-		if s.ServiceLevelToken != nil {
-			result.ServiceLevel.ServiceLevelToken = constants.ServiceLevelCode(*s.ServiceLevelToken)
-		}
-	}
-
-	return result
 }
 
 func shipmentLineFromProto(l *pb.ShipmentLineInfo) apiresource.ShipmentLine {

@@ -64,7 +64,3 @@ var SampleExportInventoryChangeLogsResponse = &ExportInventoryChangeLogsResponse
 	Items:  []*InventoryChangeLog{SampleInventoryChangeLog},
 	Count:  1,
 }
-
-func (*ExportInventoryChangeLogsResponse) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SampleExportInventoryChangeLogsResponse)
-}

@@ -10,7 +10,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -86,19 +86,19 @@ func (m *accountGroupSvcImpl) GetAccountGroup(ctx context.Context, req *Retrieve
 
 func (m *accountGroupSvcImpl) CreateAccountGroup(ctx context.Context, req *CreateAccountGroupRequest) (*apiresource.AccountGroup, *apierror.APIError) {
 	commissionPolicy := constants.CommissionPolicyExempt
-	if req.CommissionPolicy != nil {
-		commissionPolicy = *req.CommissionPolicy
+	if v, ok := req.CommissionPolicy.Value(); ok {
+		commissionPolicy = v
 	}
 	freightPolicy := constants.FreightPolicyBilled
-	if req.FreightPolicy != nil {
-		freightPolicy = *req.FreightPolicy
+	if v, ok := req.FreightPolicy.Value(); ok {
+		freightPolicy = v
 	}
 	pbReq := &pb.CreateAccountGroupRequest{
 		Name:             req.Name,
 		Type:             string(req.Type),
 		CommissionPolicy: string(commissionPolicy),
 		FreightPolicy:    string(freightPolicy),
-		Description:      req.Description,
+		Description:      req.Description.Ptr(),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, accountGroupSvcTracer, "service.account_groups.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateAccountGroupResponse, error) {
@@ -113,10 +113,10 @@ func (m *accountGroupSvcImpl) CreateAccountGroup(ctx context.Context, req *Creat
 func (m *accountGroupSvcImpl) UpdateAccountGroup(ctx context.Context, req *UpdateAccountGroupRequest) (*apiresource.AccountGroup, *apierror.APIError) {
 	pbReq := &pb.UpdateAccountGroupRequest{
 		Id:               req.AccountGroupID,
-		Name:             req.Name,
-		Description:      patch.StringFieldPtrToProto(req.Description),
-		CommissionPolicy: req.CommissionPolicy.StringPtr(),
-		FreightPolicy:    req.FreightPolicy.StringPtr(),
+		Name:             req.Name.Ptr(),
+		Description:      field.StringClearableToProto(req.Description),
+		CommissionPolicy: req.CommissionPolicy.Ptr().StringPtr(),
+		FreightPolicy:    req.FreightPolicy.Ptr().StringPtr(),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, accountGroupSvcTracer, "service.account_groups.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateAccountGroupResponse, error) {

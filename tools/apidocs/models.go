@@ -91,7 +91,6 @@ type Schema struct {
 	XStainlessEmptyObject        bool              `json:"x-stainless-empty-object,omitempty"`
 	XStainlessPaginationProperty map[string]string `json:"x-stainless-pagination-property,omitempty"`
 	XExpandable                  bool              `json:"x-expandable,omitempty"`
-	XNullableClear               bool              `json:"x-nullable-clear,omitempty"`
 
 	// PropertyOrder tracks struct field insertion order for JSON output.
 	// Not serialized; used during post-processing to reorder properties.
@@ -105,8 +104,9 @@ type Components struct {
 
 // SecuritySchemeSpec is a subset of OpenAPI 3 Security Scheme Object used for codegen.
 type SecuritySchemeSpec struct {
-	Type   string `json:"type"`
-	Scheme string `json:"scheme,omitempty"` // http: bearer, basic, …
-	In     string `json:"in,omitempty"`     // apiKey: cookie, header, query
-	Name   string `json:"name,omitempty"`   // apiKey: header / query parameter name
+	Type        string `json:"type"`
+	Description string `json:"description,omitempty"`
+	Scheme      string `json:"scheme,omitempty"` // http: bearer, basic, …
+	In          string `json:"in,omitempty"`     // apiKey: cookie, header, query
+	Name        string `json:"name,omitempty"`   // apiKey: header / query parameter name
 }

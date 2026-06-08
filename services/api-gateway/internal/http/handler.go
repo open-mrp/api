@@ -18,6 +18,7 @@ import (
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 	"github.com/augno/api/shared/fuzzy"
 )
 
@@ -629,6 +630,38 @@ func reflectHTTPRouterParam(r *http.Request) func(string) string {
 	return nil
 }
 
+// unwrapEnumWrapper extracts the inner value of a field.Optional[T]/field.Clearable[T]
+// for enum validation. It returns an addressable copy of the wrapped value and true
+// when the wrapper holds a concrete value (IsSet); unset or cleared wrappers return
+// false so the caller skips them.
+func unwrapEnumWrapper(fv reflect.Value) (reflect.Value, bool) {
+	if !fv.CanAddr() {
+		// Methods are value receivers, but Value() returns a copy we cannot address;
+		// make an addressable copy so MethodByName can be called.
+		tmp := reflect.New(fv.Type())
+		tmp.Elem().Set(fv)
+		fv = tmp.Elem()
+	}
+	if m := fv.MethodByName("IsSet"); m.IsValid() {
+		out := m.Call(nil)
+		if len(out) == 1 && out[0].Kind() == reflect.Bool && !out[0].Bool() {
+			return reflect.Value{}, false
+		}
+	}
+	valM := fv.MethodByName("Value")
+	if !valM.IsValid() {
+		return reflect.Value{}, false
+	}
+	out := valM.Call(nil)
+	if len(out) != 2 || out[1].Kind() != reflect.Bool || !out[1].Bool() {
+		return reflect.Value{}, false
+	}
+	inner := out[0]
+	addr := reflect.New(inner.Type())
+	addr.Elem().Set(inner)
+	return addr.Elem(), true
+}
+
 func tryContextPathMap(ctx context.Context) map[string]string {
 	if m, ok := appctx.GetPathParams(ctx); ok {
 		return m
@@ -660,6 +693,18 @@ func ValidateEnumFields(dst any) *apierror.APIError {
 			}
 			fv = fv.Elem()
 			ft = ft.Elem()
+		}
+
+		// Unwrap field.Optional[T]/field.Clearable[T] so the wrapped enum value is
+		// validated. These are structs with unexported fields, so without unwrapping
+		// the recursion below would skip them and the enum check would never run.
+		if field.IsOptionalType(ft) || field.IsClearableType(ft) {
+			inner, ok := unwrapEnumWrapper(fv)
+			if !ok {
+				continue
+			}
+			fv = inner
+			ft = inner.Type()
 		}
 
 		if ft.Kind() == reflect.Struct {

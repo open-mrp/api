@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to partially update a quantity.
@@ -16,20 +17,20 @@ type UpdateQuantityRequest struct {
 	// Quantity ID.
 	QuantityID string `path:"id" validate:"required"`
 	// Decimal value.
-	Value *string `json:"value,omitempty"`
+	Value field.Optional[string] `json:"value,omitzero"`
 	// Unit ID.
-	UnitID *string `json:"unit_id,omitempty" validate:"omitempty"`
+	UnitID field.Optional[string] `json:"unit_id,omitzero" validate:"omitempty"`
 	// Owner resource ID.
-	ObjectID *string `json:"object_id,omitempty" validate:"omitempty"`
+	ObjectID field.Optional[string] `json:"object_id,omitzero" validate:"omitempty"`
 	// Owner resource type (e.g. "item", "production_step").
-	ObjectType *string `json:"object_type,omitempty" validate:"omitempty,max=255"`
+	ObjectType field.Optional[string] `json:"object_type,omitzero" validate:"omitempty,max=255"`
 }
 
 var sampleUpdateQuantityValue = "50.000000000000000000000000000000"
 var sampleUpdateQuantityUnitID = apiresource.SampleUnitID
 var sampleUpdateQuantityRequest = &UpdateQuantityRequest{
-	Value:  &sampleUpdateQuantityValue,
-	UnitID: &sampleUpdateQuantityUnitID,
+	Value:  field.Some(sampleUpdateQuantityValue),
+	UnitID: field.Some(sampleUpdateQuantityUnitID),
 }
 
 func (*UpdateQuantityRequest) SchemaExample() any {

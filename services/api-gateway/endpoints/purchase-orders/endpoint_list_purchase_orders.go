@@ -24,13 +24,11 @@ type ListPurchaseOrdersRequest struct {
 	EndDate *string `query:"end_date"`
 }
 
-// TODO: stop returning PurchaseOrderSummary; return the full PurchaseOrder apiresource and use proper includes values to control expansion.
-
 // Returns a paginated list of purchase orders for the current account.
 type ListPurchaseOrdersEndpoint struct{}
 
-func (e *ListPurchaseOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPurchaseOrdersRequest, *apiresource.List[apiresource.PurchaseOrderSummary]] {
-	return (&apiendpoint.APIEndpoint[*ListPurchaseOrdersRequest, *apiresource.List[apiresource.PurchaseOrderSummary]]{
+func (e *ListPurchaseOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPurchaseOrdersRequest, *apiresource.List[apiresource.PurchaseOrder]] {
+	return (&apiendpoint.APIEndpoint[*ListPurchaseOrdersRequest, *apiresource.List[apiresource.PurchaseOrder]]{
 		Title:             "List Purchase Orders",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
@@ -38,7 +36,7 @@ func (e *ListPurchaseOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*Lis
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *ListPurchaseOrdersRequest) (*apiresource.List[apiresource.PurchaseOrderSummary], *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *ListPurchaseOrdersRequest) (*apiresource.List[apiresource.PurchaseOrder], *apierror.APIError) {
 			return svc.(PurchaseOrderSvc).ListPurchaseOrders
 		},
 	})

@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/contracts"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 
 	"google.golang.org/grpc"
@@ -1585,7 +1585,7 @@ func (h *gRPCHandler) UpdateAccountGroup(ctx context.Context, req *pb.UpdateAcco
 	params := domain.UpdateAccountGroupParams{
 		AccountGroupID:       req.Id,
 		Name:                 req.Name,
-		Description:          patch.StringFieldFromProto(req.Description),
+		Description:          field.StringClearableFromProto(req.Description),
 		CommissionPolicyCode: req.CommissionPolicy,
 		FreightPolicyCode:    req.FreightPolicy,
 	}
@@ -1786,11 +1786,11 @@ func (h *gRPCHandler) UpdateAddress(ctx context.Context, req *pb.UpdateAddressRe
 	params := domain.UpdateAddressParams{
 		AddressID:   req.Id,
 		Name:        req.Name,
-		Phone:       patch.StringFieldFromProto(req.Phone),
-		Email:       patch.StringFieldFromProto(req.Email),
+		Phone:       field.StringClearableFromProto(req.Phone),
+		Email:       field.StringClearableFromProto(req.Email),
 		IsDropShip:  req.IsDropShip,
 		StreetLine1: req.StreetLine_1,
-		StreetLine2: patch.StringFieldFromProto(req.StreetLine_2),
+		StreetLine2: field.StringClearableFromProto(req.StreetLine_2),
 		Locality:    req.Locality,
 		State:       req.State,
 		PostalCode:  req.PostalCode,

@@ -7,6 +7,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -16,7 +17,7 @@ import (
 )
 
 type DeliverySvc interface {
-	ListDeliveries(ctx context.Context, req *ListDeliveriesRequest) (*apiresource.List[apiresource.DeliverySummary], *apierror.APIError)
+	ListDeliveries(ctx context.Context, req *ListDeliveriesRequest) (*apiresource.List[apiresource.Delivery], *apierror.APIError)
 	GetDelivery(ctx context.Context, req *RetrieveDeliveryRequest) (*apiresource.Delivery, *apierror.APIError)
 }
 
@@ -47,7 +48,7 @@ func NewDeliverySvc(config *DeliverySvcConfig) DeliverySvc {
 	}
 }
 
-func (m *deliverySvcImpl) ListDeliveries(ctx context.Context, req *ListDeliveriesRequest) (*apiresource.List[apiresource.DeliverySummary], *apierror.APIError) {
+func (m *deliverySvcImpl) ListDeliveries(ctx context.Context, req *ListDeliveriesRequest) (*apiresource.List[apiresource.Delivery], *apierror.APIError) {
 	pbReq := &pb.ListDeliveriesRequest{
 		Cursor:      req.Cursor,
 		Limit:       req.Limit,
@@ -97,25 +98,23 @@ func (m *deliverySvcImpl) GetDelivery(ctx context.Context, req *RetrieveDelivery
 	}
 
 	result := deliveryFromProto(resp.Delivery)
+	stashDeliveryMeta(ctx, &result, resp.Delivery)
 	return &result, nil
 }
 
-func deliverySummaryFromProto(d *pb.DeliverySummaryInfo) apiresource.DeliverySummary {
+// deliverySummaryFromProto builds the base Delivery from the list-shaped proto.
+// The purchase_order reference is left nil; the FK id is stashed via
+// stashDeliverySummaryMeta so LoadPurchaseOrders fetches real data on ?include=.
+func deliverySummaryFromProto(d *pb.DeliverySummaryInfo) apiresource.Delivery {
 	if d == nil {
-		return apiresource.DeliverySummary{}
+		return apiresource.Delivery{}
 	}
 
-	return apiresource.DeliverySummary{
-		ID:     d.Id,
-		Object: constants.ObjectTypeDelivery,
-		Number: d.Number,
-		PurchaseOrder: &apiresource.SalesOrderDetail{
-			ID:     d.PurchaseOrderId,
-			Object: constants.ObjectTypeSalesOrder,
-			Number: d.PurchaseOrderNumber,
-		},
+	return apiresource.Delivery{
+		ID:         d.Id,
+		Object:     constants.ObjectTypeDelivery,
+		Number:     d.Number,
 		Status:     constants.DeliveryStatus(d.Status),
-		LineCount:  d.LineCount,
 		AcceptedAt: grpcutil.TimestampToTimePtr(d.AcceptedAt),
 		RejectedAt: grpcutil.TimestampToTimePtr(d.RejectedAt),
 		CreatedAt:  grpcutil.TimestampToTime(d.CreatedAt),
@@ -123,31 +122,56 @@ func deliverySummaryFromProto(d *pb.DeliverySummaryInfo) apiresource.DeliverySum
 	}
 }
 
+func stashDeliverySummaryMeta(ctx context.Context, d *apiresource.Delivery, info *pb.DeliverySummaryInfo) {
+	if info == nil {
+		return
+	}
+	// purchase_order is an expandable reference: stash the FK id so
+	// LoadPurchaseOrders fetches real data on ?include=. Never fabricate.
+	if info.PurchaseOrderId != "" {
+		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeDelivery, d.ID, "purchase_order_id", info.PurchaseOrderId)
+	}
+}
+
+// deliveryFromProto builds the base Delivery from the detail-shaped proto.
+// The purchase_order reference and lines are left nil; they are stashed via
+// stashDeliveryMeta and populated only via ?include=.
 func deliveryFromProto(d *pb.DeliveryInfo) apiresource.Delivery {
 	if d == nil {
 		return apiresource.Delivery{}
 	}
 
-	lines := make([]apiresource.DeliveryLine, len(d.Lines))
-	for i, l := range d.Lines {
-		lines[i] = deliveryLineFromProto(l)
-	}
-
 	return apiresource.Delivery{
-		ID:     d.Id,
-		Object: constants.ObjectTypeDelivery,
-		Number: d.Number,
-		PurchaseOrder: &apiresource.SalesOrderDetail{
-			ID:     d.PurchaseOrderId,
-			Object: constants.ObjectTypeSalesOrder,
-			Number: d.PurchaseOrderNumber,
-		},
+		ID:         d.Id,
+		Object:     constants.ObjectTypeDelivery,
+		Number:     d.Number,
 		Status:     constants.DeliveryStatus(d.Status),
-		Lines:      apiresource.NewList(lines, apiresource.PageInfo{}),
 		AcceptedAt: grpcutil.TimestampToTimePtr(d.AcceptedAt),
 		RejectedAt: grpcutil.TimestampToTimePtr(d.RejectedAt),
 		CreatedAt:  grpcutil.TimestampToTime(d.CreatedAt),
 		UpdatedAt:  grpcutil.TimestampToTime(d.UpdatedAt),
+	}
+}
+
+func stashDeliveryMeta(ctx context.Context, d *apiresource.Delivery, info *pb.DeliveryInfo) {
+	if info == nil {
+		return
+	}
+	meta := resourcekit.GetLoadMeta(ctx)
+
+	// purchase_order is an expandable reference: stash the FK id so
+	// LoadPurchaseOrders fetches real data on ?include=. Never fabricate.
+	if info.PurchaseOrderId != "" {
+		meta.Set(constants.ObjectTypeDelivery, d.ID, "purchase_order_id", info.PurchaseOrderId)
+	}
+
+	if len(info.Lines) > 0 {
+		lines := make([]apiresource.DeliveryLine, len(info.Lines))
+		for i, l := range info.Lines {
+			lines[i] = deliveryLineFromProto(l)
+		}
+		meta.Set(constants.ObjectTypeDelivery, d.ID, "lines",
+			apiresource.NewList(lines, apiresource.PageInfo{}))
 	}
 }
 
@@ -226,14 +250,15 @@ func deliveryLineFromProto(l *pb.DeliveryLineInfo) apiresource.DeliveryLine {
 	return line
 }
 
-func deliveryListFromProto(ctx context.Context, resp *pb.ListDeliveriesResponse) *apiresource.List[apiresource.DeliverySummary] {
+func deliveryListFromProto(ctx context.Context, resp *pb.ListDeliveriesResponse) *apiresource.List[apiresource.Delivery] {
 	if resp == nil {
-		return apiresource.NewList[apiresource.DeliverySummary](nil, apiresource.PageInfo{})
+		return apiresource.NewList[apiresource.Delivery](nil, apiresource.PageInfo{})
 	}
 
-	deliveries := make([]apiresource.DeliverySummary, len(resp.Deliveries))
+	deliveries := make([]apiresource.Delivery, len(resp.Deliveries))
 	for i, d := range resp.Deliveries {
 		deliveries[i] = deliverySummaryFromProto(d)
+		stashDeliverySummaryMeta(ctx, &deliveries[i], d)
 	}
 
 	return apiresource.NewList(deliveries, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))

@@ -9,14 +9,17 @@ import (
 	"strings"
 
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 )
 
 // RejectExplicitJSONNulls returns an invalid_format API error when the JSON body
 // contains an explicit null or a blank string for optional pointer fields
-// (json omitempty). Absent keys are allowed (PATCH semantics).
+// (json omitempty) or a blank string for field.Optional fields. Absent keys are
+// allowed (PATCH semantics).
 //
-// patch.Field values accept null (clear). Response-style pointers without
+// field.Clearable values accept null (clear) and are not checked here.
+// field.Optional values reject explicit null at unmarshal time; this pass only
+// rejects a present-but-blank string for them. Response-style pointers without
 // omitempty are not checked here.
 func RejectExplicitJSONNulls(body []byte, v any) *apierror.APIError {
 	body = bytes.TrimSpace(body)
@@ -65,10 +68,18 @@ func rejectExplicitNullsInStruct(rv reflect.Value, rt reflect.Type, raw map[stri
 			continue
 		}
 
-		if patch.IsFieldType(sf.Type) || patch.IsNullableType(sf.Type) {
+		if field.IsClearableType(sf.Type) {
+			// Clearable accepts null (clear) by design.
 			continue
 		}
-		if sf.Type.Kind() == reflect.Pointer && patch.IsFieldType(sf.Type.Elem()) {
+		if field.IsOptionalType(sf.Type) {
+			// Optional rejects an explicit null at unmarshal time; here we additionally
+			// reject a present-but-blank string so an empty value is a 400 rather than
+			// silently set to "". Non-string Optionals never carry a blank string here
+			// (it would have failed to unmarshal into the inner type).
+			if apiErr := rejectBlankString(sf, raw); apiErr != nil {
+				return apiErr
+			}
 			continue
 		}
 
@@ -149,6 +160,27 @@ func ApplySlicePresenceFlags(body []byte, v any) {
 		}
 		rv.FieldByName("Has" + sf.Name).SetBool(true)
 	}
+}
+
+// rejectBlankString returns an invalid_format error when sf's JSON key is present
+// and its value is a blank string. Absent keys and non-string values yield nil.
+func rejectBlankString(sf reflect.StructField, raw map[string]json.RawMessage) *apierror.APIError {
+	jsonName := jsonFieldNameFromTag(sf.Tag.Get("json"))
+	if jsonName == "" || jsonName == "-" {
+		return nil
+	}
+	rm, ok := raw[jsonName]
+	if !ok {
+		return nil
+	}
+	var parsed any
+	if err := json.Unmarshal(rm, &parsed); err != nil {
+		return nil
+	}
+	if str, ok := parsed.(string); ok && strings.TrimSpace(str) == "" {
+		return apierror.NewInvalidFormatError(fmt.Sprintf("Field '%s' must not be blank.", jsonName), jsonName)
+	}
+	return nil
 }
 
 func jsonTagHasOmitempty(tag string) bool {

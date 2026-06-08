@@ -7,6 +7,7 @@ import (
 	authtypes "github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/platform-service/internal/domain"
 	"github.com/augno/api/shared/appctx"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/tracing"
 )
@@ -87,4 +88,23 @@ func (s *auditEventSvcImpl) ListAuditEvents(ctx context.Context, filter *domain.
 	}
 
 	return s.auditEventRepo.List(ctx, identity.Target.AccountID, filter, includes)
+}
+
+func (s *auditEventSvcImpl) ListAuditEventResourceTypes(ctx context.Context) ([]string, *apierror.APIError) {
+	_, span := auditEventSvcTracer.Start(ctx, "service.audit_event.list_audit_event_resource_types")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(authtypes.PermissionDomainAuditEvents, authtypes.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return constants.ObjectType("").EnumValues(), nil
 }

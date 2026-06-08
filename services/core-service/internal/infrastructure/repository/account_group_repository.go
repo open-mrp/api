@@ -11,8 +11,8 @@ import (
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 	"github.com/augno/api/shared/pagination"
-	"github.com/augno/api/shared/patch"
 	"github.com/augno/api/shared/textutil"
 	"github.com/augno/api/shared/tracing"
 )
@@ -233,7 +233,7 @@ func (r *accountGroupRepoImpl) Update(ctx context.Context, params domain.UpdateA
 		ID:                   params.AccountGroupID,
 		OwnerAccountID:       params.AccountID,
 		Name:                 toNullString(params.Name),
-		Description:          patch.StringToNullString(params.Description),
+		Description:          field.StringToNullString(params.Description),
 		CommissionStatusCode: toNullString(params.CommissionPolicyCode),
 		FreightStatusCode:    toNullString(params.FreightPolicyCode),
 	})

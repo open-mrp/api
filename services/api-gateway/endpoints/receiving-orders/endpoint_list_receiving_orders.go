@@ -25,13 +25,11 @@ type ListReceivingOrdersRequest struct {
 	EndDate *string `query:"end_date"`
 }
 
-// TODO: stop returning ReceivingOrderSummary; return the full ReceivingOrder apiresource and use proper includes values to control expansion.
-
 // Returns a paginated list of receiving orders for the current account.
 type ListReceivingOrdersEndpoint struct{}
 
-func (e *ListReceivingOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListReceivingOrdersRequest, *apiresource.List[apiresource.ReceivingOrderSummary]] {
-	return (&apiendpoint.APIEndpoint[*ListReceivingOrdersRequest, *apiresource.List[apiresource.ReceivingOrderSummary]]{
+func (e *ListReceivingOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListReceivingOrdersRequest, *apiresource.List[apiresource.ReceivingOrder]] {
+	return (&apiendpoint.APIEndpoint[*ListReceivingOrdersRequest, *apiresource.List[apiresource.ReceivingOrder]]{
 		Title:             "List Receiving Orders",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
@@ -40,8 +38,12 @@ func (e *ListReceivingOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*Li
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeReceivingOrder,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *ListReceivingOrdersRequest) (*apiresource.List[apiresource.ReceivingOrderSummary], *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *ListReceivingOrdersRequest) (*apiresource.List[apiresource.ReceivingOrder], *apierror.APIError) {
 			return svc.(ReceivingOrderSvc).ListReceivingOrders
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeReceivingOrder,
+			Fields:     []string{"supplier", "purchase_order"},
+		}),
 	})
 }

@@ -3,8 +3,8 @@ package domain
 import (
 	"time"
 
+	"github.com/augno/api/shared/field"
 	"github.com/augno/api/shared/pagination"
-	"github.com/augno/api/shared/patch"
 )
 
 // UnitGroupFull represents a full unit group with its base unit and conversions.
@@ -74,7 +74,7 @@ type UpdateUnitGroupParams struct {
 	AccountID       string
 	UnitGroupID     string
 	Name            *string
-	Notes           patch.Field[string]
+	Notes           field.Clearable[string]
 	BaseUnitID      *string
 	UnitConversions *[]CreateUnitGroupUnitParams
 	Includes        []string

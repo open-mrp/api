@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to update an account integration.
@@ -16,13 +17,13 @@ type UpdateAccountIntegrationRequest struct {
 	// Account integration ID.
 	AccountIntegrationID string `path:"id" validate:"required"`
 	// Display name of the integration.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// Whether the integration is active.
-	IsActive *bool `json:"is_active,omitempty"`
+	IsActive field.Optional[bool] `json:"is_active,omitzero"`
 }
 
 var sampleUpdateAccountIntegrationRequest = &UpdateAccountIntegrationRequest{
-	Name: new("Updated Stripe Integration"),
+	Name: field.Some("Updated Stripe Integration"),
 }
 
 func (*UpdateAccountIntegrationRequest) SchemaExample() any {

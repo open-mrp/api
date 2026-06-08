@@ -24,7 +24,7 @@ func TestPicks_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 	assert.Nil(t, got["sales_order"], "sales_order should be null without include")
 	assert.Nil(t, got["lines"], "lines should be null without include")
 	assert.Nil(t, got["departments"], "departments should be null without include")
-	assert.NotNil(t, got["customer"], "customer should always be present")
+	assert.Nil(t, got["customer"], "customer should be null without include")
 	assert.NotNil(t, got["priority"], "priority should always be present")
 }
 
@@ -74,7 +74,7 @@ func TestPicks_List_SalesOrderNullWithoutInclude(t *testing.T) {
 	var first map[string]any
 	require.NoError(t, json.Unmarshal(list.Data[0], &first))
 	assert.Nil(t, first["sales_order"], "sales_order should be null without include on list")
-	assert.NotNil(t, first["customer"], "customer should always be present on list items")
+	assert.Nil(t, first["customer"], "customer should be null without include on list items")
 }
 
 func TestPicks_List_IncludeSalesOrder(t *testing.T) {

@@ -4,14 +4,48 @@ import (
 	"testing"
 
 	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 )
 
 type patchOptionalPointer struct {
 	Name             *string                     `json:"name,omitempty"`
 	Description      *string                     `json:"description,omitempty"`
 	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy,omitempty"`
-	Note             *patch.Field[string]        `json:"note"`
+	Note             field.Clearable[string]     `json:"note,omitzero"`
+}
+
+type optionalValueFields struct {
+	Name      field.Optional[string]                      `json:"name,omitzero"`
+	Status    field.Optional[constants.AccountStatusCode] `json:"status,omitzero"`
+	CarrierID field.Optional[string]                      `json:"carrier_id,omitzero"`
+}
+
+func TestRejectExplicitJSONNulls_rejectsBlankForOptionalValue(t *testing.T) {
+	t.Parallel()
+	body := []byte(`{"name": ""}`)
+	var req optionalValueFields
+	if err := RejectExplicitJSONNulls(body, &req); err == nil {
+		t.Fatal("expected error for name: empty string on field.Optional")
+	}
+}
+
+func TestRejectExplicitJSONNulls_rejectsWhitespaceForOptionalValue(t *testing.T) {
+	t.Parallel()
+	body := []byte(`{"carrier_id": "   "}`)
+	var req optionalValueFields
+	if err := RejectExplicitJSONNulls(body, &req); err == nil {
+		t.Fatal("expected error for carrier_id: whitespace-only on field.Optional")
+	}
+}
+
+func TestRejectExplicitJSONNulls_allowsValueAndOmittedForOptionalValue(t *testing.T) {
+	t.Parallel()
+	for _, body := range [][]byte{[]byte(`{"name": "Acme"}`), []byte(`{}`)} {
+		var req optionalValueFields
+		if err := RejectExplicitJSONNulls(body, &req); err != nil {
+			t.Fatalf("unexpected error for %s: %v", body, err)
+		}
+	}
 }
 
 func TestRejectExplicitJSONNulls_rejectsNullForOptionalPointer(t *testing.T) {

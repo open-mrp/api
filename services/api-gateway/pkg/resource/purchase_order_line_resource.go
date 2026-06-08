@@ -8,10 +8,10 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SamplePurchaseOrderLineDetailID = "poln_01466ec5a2737c7b871e2a756f"
+const SamplePurchaseOrderLineID = "poln_01466ec5a2737c7b871e2a756f"
 
 // Full purchase order line resource.
-type PurchaseOrderLineDetail struct {
+type PurchaseOrderLine struct {
 	// Purchase order line ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
@@ -40,8 +40,8 @@ type PurchaseOrderLineDetail struct {
 
 var samplePurchaseOrderLineProductDescription = "6061-T6 Aluminum Sheet 4x8"
 
-var SamplePurchaseOrderLineDetail = &PurchaseOrderLineDetail{
-	ID:                 SamplePurchaseOrderLineDetailID,
+var SamplePurchaseOrderLine = &PurchaseOrderLine{
+	ID:                 SamplePurchaseOrderLineID,
 	Object:             constants.ObjectTypePurchaseOrderLine,
 	LineItemNumber:     1,
 	ProductSKU:         SampleItemSKU,
@@ -52,6 +52,6 @@ var SamplePurchaseOrderLineDetail = &PurchaseOrderLineDetail{
 	UpdatedAt:          timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
-func (*PurchaseOrderLineDetail) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SamplePurchaseOrderLineDetail)
+func (*PurchaseOrderLine) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SamplePurchaseOrderLine)
 }

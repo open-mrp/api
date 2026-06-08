@@ -42,9 +42,35 @@ func TestAccountUsers_ListResponseShape(t *testing.T) {
 		require.NotNil(t, m)
 		assert.Equal(t, "account_user", jsonField(m, "object"))
 		assert.NotEmpty(t, jsonField(m, "id"))
+		// user_id is the underlying user id (us_…) sent as an actor_ids filter on
+		// request logs / audit events — distinct from id (the account_user id).
+		userID := jsonField(m, "user_id")
+		assert.NotEmpty(t, userID, "account_user must expose user_id")
+		assert.NotEqual(t, jsonField(m, "id"), userID, "user_id must differ from the account_user id")
 		assert.NotEmpty(t, jsonField(m, "status"))
 		assert.NotEmpty(t, jsonField(m, "created_at"))
 		assert.NotEmpty(t, jsonField(m, "updated_at"))
+	}
+}
+
+// TestAccountUsers_UserIDFiltersRequestLogs verifies the documented contract:
+// the account_user's user_id is what the request-logs actor_ids filter expects.
+func TestAccountUsers_UserIDFiltersRequestLogs(t *testing.T) {
+	t.Parallel()
+	// Discover a user_id that actually authored request logs: the seed user.
+	const seedUserID = "us_1wjfmmbwg8l7"
+
+	logs, _, err := apiClient.GetList(requestLogsPath, url.Values{
+		"actor_ids": {seedUserID},
+		"include":   {"actor"},
+		"limit":     {"10"},
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, logs.Data, "filtering request logs by a user_id should return that user's logs")
+	for _, item := range logs.Data {
+		actor := jsonObject(parseJSON(item), "actor")
+		require.NotNil(t, actor, "actor should be present with ?include=actor")
+		assert.Equal(t, seedUserID, jsonField(actor, "id"), "request log actor.id should be the user_id")
 	}
 }
 
@@ -52,7 +78,7 @@ func TestAccountUsers_ListPagination(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(accountUsersPath, url.Values{"limit": {"1"}})
 	require.NoError(t, err)
-	assert.Len(t, list.Data, 1)
+	requirePageLen(t, list.Data, 1)
 }
 
 func TestAccountUsers_ListFilterByRoleType(t *testing.T) {

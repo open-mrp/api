@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to update a carrier.
@@ -16,16 +17,16 @@ type UpdateCarrierRequest struct {
 	// Carrier ID.
 	CarrierID string `path:"id" validate:"required"`
 	// Display name.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// Carrier visibility in the customer portal.
 	//
 	// If `visible`, this carrier will be available for your customers to utilize when they go to checkout. If `hidden`, this carrier will not be an option on checkout.
-	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility,omitempty"`
+	CustomerPortalVisibility field.Optional[constants.CustomerPortalVisibility] `json:"customer_portal_visibility,omitzero"`
 }
 
 var sampleUpdateCarrierName = "FedEx Express"
 var sampleUpdateCarrierRequest = &UpdateCarrierRequest{
-	Name: &sampleUpdateCarrierName,
+	Name: field.Some(sampleUpdateCarrierName),
 }
 
 func (*UpdateCarrierRequest) SchemaExample() any {

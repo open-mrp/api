@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // UpdateRoleRequest is a request to update a role.
@@ -16,16 +17,16 @@ type UpdateRoleRequest struct {
 	// Role ID.
 	RoleID string `path:"id" validate:"required"`
 	// Display name.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// Permissions in `<domain>:<action>` format. Replaces all existing permissions; omit to leave unchanged.
-	Permissions *[]string `json:"permissions,omitempty"`
+	Permissions field.Optional[[]string] `json:"permissions,omitzero"`
 }
 
 var sampleUpdateRoleName = "Updated Manager"
 var sampleUpdateRolePerms = []string{"customers:read", "customers:update"}
 var sampleUpdateRoleRequest = &UpdateRoleRequest{
-	Name:        &sampleUpdateRoleName,
-	Permissions: &sampleUpdateRolePerms,
+	Name:        field.Some(sampleUpdateRoleName),
+	Permissions: field.Some(sampleUpdateRolePerms),
 }
 
 func (*UpdateRoleRequest) SchemaExample() any {

@@ -9,7 +9,7 @@ import (
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 )
 
 // Parcel for rate estimation.
@@ -31,9 +31,9 @@ type EstimateRateRequest struct {
 	// Service level ID.
 	ServiceLevelID string `json:"service_level_id" validate:"required"`
 	// Product line IDs.
-	ProductLineIDs []string `json:"product_line_ids,omitempty"`
+	ProductLineIDs []string `json:"product_line_ids,omitzero"`
 	// Customer ID.
-	CustomerID *string `json:"customer_id,omitempty"`
+	CustomerID field.Optional[string] `json:"customer_id,omitzero"`
 	// Origin address.
 	FromAddress apirequest.AddressInput `json:"from_address" validate:"required"`
 	// Destination address.
@@ -41,7 +41,7 @@ type EstimateRateRequest struct {
 	// Parcels to estimate rates for.
 	Parcels []ParcelInput `json:"parcels" validate:"required,min=1"`
 	// Total order value.
-	OrderTotal *float64 `json:"order_total,omitempty"`
+	OrderTotal field.Optional[float64] `json:"order_total,omitzero"`
 }
 
 var (
@@ -60,18 +60,18 @@ var sampleEstimateRateRequest = &EstimateRateRequest{
 	ServiceLevelID: apiresource.SampleServiceLevelID,
 	FromAddress: apirequest.AddressInput{
 		Name:        "Origin Warehouse",
-		StreetLine1: patch.PtrNullable(&sampleEstimateFromStreetLine1),
-		Locality:    patch.PtrNullable(&sampleEstimateFromLocality),
-		State:       patch.PtrNullable(&sampleEstimateFromState),
-		PostalCode:  patch.PtrNullable(&sampleEstimateFromPostalCode),
+		StreetLine1: field.SomePtr(&sampleEstimateFromStreetLine1),
+		Locality:    field.SomePtr(&sampleEstimateFromLocality),
+		State:       field.SomePtr(&sampleEstimateFromState),
+		PostalCode:  field.SomePtr(&sampleEstimateFromPostalCode),
 		Country:     apiresource.SampleAddressCountry,
 	},
 	ToAddress: apirequest.AddressInput{
 		Name:        "Destination",
-		StreetLine1: patch.PtrNullable(&sampleEstimateToStreetLine1),
-		Locality:    patch.PtrNullable(&sampleEstimateToLocality),
-		State:       patch.PtrNullable(&sampleEstimateToState),
-		PostalCode:  patch.PtrNullable(&sampleEstimateToPostalCode),
+		StreetLine1: field.SomePtr(&sampleEstimateToStreetLine1),
+		Locality:    field.SomePtr(&sampleEstimateToLocality),
+		State:       field.SomePtr(&sampleEstimateToState),
+		PostalCode:  field.SomePtr(&sampleEstimateToPostalCode),
 		Country:     "US",
 	},
 	Parcels: []ParcelInput{

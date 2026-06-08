@@ -35,6 +35,7 @@ const (
 	CoreSalesService_BatchGetSalesOrderStatusesByIDs_FullMethodName = "/core.CoreSalesService/BatchGetSalesOrderStatusesByIDs"
 	CoreSalesService_ListSalesOrders_FullMethodName                 = "/core.CoreSalesService/ListSalesOrders"
 	CoreSalesService_GetSalesOrder_FullMethodName                   = "/core.CoreSalesService/GetSalesOrder"
+	CoreSalesService_BatchGetSalesOrdersByIDs_FullMethodName        = "/core.CoreSalesService/BatchGetSalesOrdersByIDs"
 	CoreSalesService_CreateSalesOrder_FullMethodName                = "/core.CoreSalesService/CreateSalesOrder"
 	CoreSalesService_UpdateSalesOrder_FullMethodName                = "/core.CoreSalesService/UpdateSalesOrder"
 	CoreSalesService_DeleteSalesOrder_FullMethodName                = "/core.CoreSalesService/DeleteSalesOrder"
@@ -79,6 +80,8 @@ type CoreSalesServiceClient interface {
 	ListSalesOrders(ctx context.Context, in *ListSalesOrdersRequest, opts ...grpc.CallOption) (*ListSalesOrdersResponse, error)
 	// GetSalesOrder returns a single sales order by ID.
 	GetSalesOrder(ctx context.Context, in *GetSalesOrderRequest, opts ...grpc.CallOption) (*GetSalesOrderResponse, error)
+	// Returns sales orders by ID for the api-gateway include resolver.
+	BatchGetSalesOrdersByIDs(ctx context.Context, in *BatchGetSalesOrdersByIDsRequest, opts ...grpc.CallOption) (*BatchGetSalesOrdersByIDsResponse, error)
 	// CreateSalesOrder creates a new sales order.
 	CreateSalesOrder(ctx context.Context, in *CreateSalesOrderRequest, opts ...grpc.CallOption) (*CreateSalesOrderResponse, error)
 	// UpdateSalesOrder updates an existing sales order.
@@ -225,6 +228,16 @@ func (c *coreSalesServiceClient) GetSalesOrder(ctx context.Context, in *GetSales
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetSalesOrderResponse)
 	err := c.cc.Invoke(ctx, CoreSalesService_GetSalesOrder_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreSalesServiceClient) BatchGetSalesOrdersByIDs(ctx context.Context, in *BatchGetSalesOrdersByIDsRequest, opts ...grpc.CallOption) (*BatchGetSalesOrdersByIDsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BatchGetSalesOrdersByIDsResponse)
+	err := c.cc.Invoke(ctx, CoreSalesService_BatchGetSalesOrdersByIDs_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -417,6 +430,8 @@ type CoreSalesServiceServer interface {
 	ListSalesOrders(context.Context, *ListSalesOrdersRequest) (*ListSalesOrdersResponse, error)
 	// GetSalesOrder returns a single sales order by ID.
 	GetSalesOrder(context.Context, *GetSalesOrderRequest) (*GetSalesOrderResponse, error)
+	// Returns sales orders by ID for the api-gateway include resolver.
+	BatchGetSalesOrdersByIDs(context.Context, *BatchGetSalesOrdersByIDsRequest) (*BatchGetSalesOrdersByIDsResponse, error)
 	// CreateSalesOrder creates a new sales order.
 	CreateSalesOrder(context.Context, *CreateSalesOrderRequest) (*CreateSalesOrderResponse, error)
 	// UpdateSalesOrder updates an existing sales order.
@@ -491,6 +506,9 @@ func (UnimplementedCoreSalesServiceServer) ListSalesOrders(context.Context, *Lis
 }
 func (UnimplementedCoreSalesServiceServer) GetSalesOrder(context.Context, *GetSalesOrderRequest) (*GetSalesOrderResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetSalesOrder not implemented")
+}
+func (UnimplementedCoreSalesServiceServer) BatchGetSalesOrdersByIDs(context.Context, *BatchGetSalesOrdersByIDsRequest) (*BatchGetSalesOrdersByIDsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BatchGetSalesOrdersByIDs not implemented")
 }
 func (UnimplementedCoreSalesServiceServer) CreateSalesOrder(context.Context, *CreateSalesOrderRequest) (*CreateSalesOrderResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateSalesOrder not implemented")
@@ -755,6 +773,24 @@ func _CoreSalesService_GetSalesOrder_Handler(srv interface{}, ctx context.Contex
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CoreSalesServiceServer).GetSalesOrder(ctx, req.(*GetSalesOrderRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreSalesService_BatchGetSalesOrdersByIDs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchGetSalesOrdersByIDsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreSalesServiceServer).BatchGetSalesOrdersByIDs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreSalesService_BatchGetSalesOrdersByIDs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreSalesServiceServer).BatchGetSalesOrdersByIDs(ctx, req.(*BatchGetSalesOrdersByIDsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1097,6 +1133,10 @@ var CoreSalesService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetSalesOrder",
 			Handler:    _CoreSalesService_GetSalesOrder_Handler,
+		},
+		{
+			MethodName: "BatchGetSalesOrdersByIDs",
+			Handler:    _CoreSalesService_BatchGetSalesOrdersByIDs_Handler,
 		},
 		{
 			MethodName: "CreateSalesOrder",

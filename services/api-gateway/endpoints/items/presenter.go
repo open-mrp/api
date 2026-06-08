@@ -131,19 +131,6 @@ func ItemPresenter(i *pb.ItemInfo) apiresource.Item {
 	return item
 }
 
-func ItemListPresenter(ctx context.Context, resp *pb.ListItemsResponse) *apiresource.List[apiresource.Item] {
-	if resp == nil {
-		return apiresource.NewList[apiresource.Item](nil, apiresource.PageInfo{})
-	}
-
-	items := make([]apiresource.Item, len(resp.Items))
-	for i, item := range resp.Items {
-		items[i] = ItemPresenter(item)
-	}
-
-	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
-}
-
 func ItemInventoryPresenter(ctx context.Context, resp *pb.GetItemInventoryResponse) *apiresource.ItemInventory {
 	if resp == nil {
 		return nil
@@ -171,14 +158,11 @@ func buildQuantityFromProto(ctx context.Context, q *pb.QuantityInfo) *apiresourc
 	qid, _ := id.GenID(id.QuantityIDPrefix, nil)
 
 	meta := resourcekit.GetLoadMeta(ctx)
-	unit := apiresource.ExpandableUnitStub(
-		q.UnitId,
-		q.UnitAbbreviation,
-		q.UnitAbbreviation,
-		q.UnitType,
-		grpcutil.TimestampToTime(nil),
-	)
-	meta.Set(constants.ObjectTypeQuantity, qid, "unit", unit)
+	// unit is an expandable reference on the quantity: stash the FK id so
+	// LoadUnits fetches the real Unit on ?include=...unit. Never fabricate.
+	if q.UnitId != "" {
+		meta.Set(constants.ObjectTypeQuantity, qid, "unit_id", q.UnitId)
+	}
 
 	return &apiresource.Quantity{
 		ID:     qid,
@@ -189,7 +173,7 @@ func buildQuantityFromProto(ctx context.Context, q *pb.QuantityInfo) *apiresourc
 			q.UnitAbbreviation,
 			q.UnitType,
 		),
-		Unit: unit,
+		// Unit left nil: populated with real data via LoadUnits on ?include=...unit.
 	}
 }
 
@@ -227,38 +211,6 @@ func ItemTrendsPresenter(resp *pb.GetItemTrendsResponse) *apiresource.ItemTrends
 		Object:    constants.ObjectTypeItem,
 		TrendType: resp.TrendType,
 		Points:    apiresource.NewList(points, apiresource.PageInfo{}),
-	}
-}
-
-func ExportItemsPresenter(resp *pb.ExportItemsResponse) *apiresource.ExportItemsResponse {
-	if resp == nil {
-		return nil
-	}
-
-	items := make([]*apiresource.ExportItem, len(resp.Items))
-	for i, item := range resp.Items {
-		items[i] = &apiresource.ExportItem{
-			ID:             item.Id,
-			Object:         constants.ObjectTypeItem,
-			SKU:            item.Sku,
-			Description:    item.Description,
-			Notes:          item.Notes,
-			ItemTypeCode:   constants.ItemTypeCode(item.ItemTypeCode),
-			CategoryName:   item.CategoryName,
-			OnHandQuantity: item.OnHandQuantity,
-			OnHandUnit: &apiresource.Unit{
-				ID:     item.OnHandUnitId,
-				Object: constants.ObjectTypeUnit,
-			},
-			CreatedAt: grpcutil.TimestampToTime(item.CreatedAt),
-			UpdatedAt: grpcutil.TimestampToTime(item.UpdatedAt),
-		}
-	}
-
-	return &apiresource.ExportItemsResponse{
-		Object: constants.ObjectTypeList,
-		Items:  items,
-		Count:  resp.Count,
 	}
 }
 

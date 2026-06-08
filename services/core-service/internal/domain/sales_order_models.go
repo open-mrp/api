@@ -269,20 +269,6 @@ type UpdateSalesOrderParams struct {
 	IsAcknowledgmentSent  *bool
 	PromisedAt            *time.Time
 	BuyerAccountID        *string
-	BillToName            *string
-	BillToStreetLine1     *string
-	BillToStreetLine2     *string
-	BillToLocality        *string
-	BillToState           *string
-	BillToPostalCode      *string
-	BillToCountry         *string
-	ShipToName            *string
-	ShipToStreetLine1     *string
-	ShipToStreetLine2     *string
-	ShipToLocality        *string
-	ShipToState           *string
-	ShipToPostalCode      *string
-	ShipToCountry         *string
 	// When non-nil, replaces the acknowledgement email contacts on the order.
 	// Empty slice clears all contacts; nil leaves existing contacts untouched.
 	AcknowledgementEmailContacts *[]SalesOrderEmailContactInput

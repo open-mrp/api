@@ -46,15 +46,6 @@ func NewClient(ctx context.Context, region string) (*Client, *apierror.APIError)
 	}, nil
 }
 
-// NewClientFromConfig creates a new S3 client from an existing AWS config.
-func NewClientFromConfig(cfg aws.Config) *Client {
-	client := s3.NewFromConfig(cfg)
-	return &Client{
-		client:    client,
-		presigner: s3.NewPresignClient(client),
-	}
-}
-
 // Upload uploads a file to S3.
 func (c *Client) Upload(ctx context.Context, bucket, key string, body io.Reader, contentType string) *apierror.APIError {
 	ctx, span := s3Tracer.Start(ctx, "s3.upload")

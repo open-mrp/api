@@ -407,7 +407,7 @@ SELECT
     ro.updated_at,
     so.id AS purchase_order_id,
     so.number AS purchase_order_number,
-    ar.id AS supplier_id,
+    a.id AS supplier_id,
     a.name AS supplier_name,
     so.note
 FROM receiving_order ro
@@ -854,7 +854,7 @@ SELECT
     ro.updated_at,
     so.id AS purchase_order_id,
     so.number AS purchase_order_number,
-    ar.id AS supplier_id,
+    a.id AS supplier_id,
     a.name AS supplier_name,
     COUNT(rol.id) AS line_count,
     CASE
@@ -902,7 +902,7 @@ AND (
     ro.created_at > ?
     OR (ro.created_at = ? AND ro.id > ?)
 )
-GROUP BY ro.id, ro.number, ro.completed_at, ro.created_at, ro.updated_at, so.id, so.number, ar.id, a.name
+GROUP BY ro.id, ro.number, ro.completed_at, ro.created_at, ro.updated_at, so.id, so.number, a.id, a.name
 ORDER BY ro.created_at ASC, ro.id ASC
 LIMIT ?
 `
@@ -1015,7 +1015,7 @@ SELECT
     ro.updated_at,
     so.id AS purchase_order_id,
     so.number AS purchase_order_number,
-    ar.id AS supplier_id,
+    a.id AS supplier_id,
     a.name AS supplier_name,
     COUNT(rol.id) AS line_count,
     CASE
@@ -1064,7 +1064,7 @@ AND (
     OR ro.created_at < ?
     OR (ro.created_at = ? AND ro.id < ?)
 )
-GROUP BY ro.id, ro.number, ro.completed_at, ro.created_at, ro.updated_at, so.id, so.number, ar.id, a.name
+GROUP BY ro.id, ro.number, ro.completed_at, ro.created_at, ro.updated_at, so.id, so.number, a.id, a.name
 ORDER BY ro.created_at DESC, ro.id DESC
 LIMIT ?
 `

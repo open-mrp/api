@@ -122,17 +122,17 @@ func (m *productionStepSvcImpl) CreateProductionStep(ctx context.Context, req *C
 			QuantityUnitId:      c.QuantityUnitID,
 			WasteQuantityValue:  c.WasteQuantityValue,
 			WasteQuantityUnitId: c.WasteQuantityUnitID,
-			Instructions:        c.Instructions,
+			Instructions:        c.Instructions.Ptr(),
 		}
 	}
 
 	pbReq := &pb.CreateProductionStepRequest{
 		Name:              req.Name,
-		Notes:             req.Notes,
+		Notes:             req.Notes.Ptr(),
 		LevelingFactor:    req.LevelingFactor,
 		Allowances:        req.Allowances,
-		ScanningStationId: req.ScanningStationID,
-		DepartmentId:      req.DepartmentID,
+		ScanningStationId: req.ScanningStationID.Ptr(),
+		DepartmentId:      req.DepartmentID.Ptr(),
 		LaborRate: &pb.CreateRateInput{
 			Value:             req.LaborRate.Value,
 			NumeratorUnitId:   req.LaborRate.NumeratorUnitID,
@@ -174,10 +174,10 @@ func (m *productionStepSvcImpl) CreateProductionStep(ctx context.Context, req *C
 func (m *productionStepSvcImpl) UpdateProductionStep(ctx context.Context, req *UpdateProductionStepRequest) (*apiresource.ProductionStep, *apierror.APIError) {
 	pbReq := &pb.UpdateProductionStepRequest{
 		Id:                req.ProductionStepID,
-		Name:              req.Name,
-		LevelingFactor:    req.LevelingFactor,
-		Allowances:        req.Allowances,
-		ScanningStationId: req.ScanningStationID,
+		Name:              req.Name.Ptr(),
+		LevelingFactor:    req.LevelingFactor.Ptr(),
+		Allowances:        req.Allowances.Ptr(),
+		ScanningStationId: req.ScanningStationID.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productionStepSvcTracer, "service.production_steps.update", domain.ServiceName,
@@ -237,9 +237,9 @@ func (m *productionStepSvcImpl) UpdateProduction(ctx context.Context, req *Updat
 	pbReq := &pb.UpdateProductionRequest{
 		ProductionStepId: req.ProductionStepID,
 		Id:               req.ProductionID,
-		ItemId:           req.ItemID,
-		QuantityValue:    req.QuantityValue,
-		QuantityUnitId:   req.QuantityUnitID,
+		ItemId:           req.ItemID.Ptr(),
+		QuantityValue:    req.QuantityValue.Ptr(),
+		QuantityUnitId:   req.QuantityUnitID.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productionStepSvcTracer, "service.production_steps.update_production", domain.ServiceName,
@@ -265,7 +265,7 @@ func (m *productionStepSvcImpl) BulkCreateProductionSteps(ctx context.Context, r
 			consumptions[j] = &pb.BulkCreateConsumptionInput{
 				Sku:          c.SKU,
 				Measure:      fmt.Sprintf("%g", c.Measure),
-				Instructions: c.Instructions,
+				Instructions: c.Instructions.Ptr(),
 			}
 		}
 
@@ -278,12 +278,12 @@ func (m *productionStepSvcImpl) BulkCreateProductionSteps(ctx context.Context, r
 		}
 
 		var allowances, levelingFactor *string
-		if step.Allowances != nil {
-			s := fmt.Sprintf("%g", *step.Allowances)
+		if v, ok := step.Allowances.Value(); ok {
+			s := fmt.Sprintf("%g", v)
 			allowances = &s
 		}
-		if step.LevelingFactor != nil {
-			s := fmt.Sprintf("%g", *step.LevelingFactor)
+		if v, ok := step.LevelingFactor.Value(); ok {
+			s := fmt.Sprintf("%g", v)
 			levelingFactor = &s
 		}
 
@@ -293,11 +293,11 @@ func (m *productionStepSvcImpl) BulkCreateProductionSteps(ctx context.Context, r
 			Productions:    productions,
 			LaborRate:      fmt.Sprintf("%g", step.LaborRate),
 			LaborTime:      fmt.Sprintf("%g", step.LaborTime),
-			LaborTimeUnit:  step.LaborTimeUnit,
+			LaborTimeUnit:  step.LaborTimeUnit.Ptr(),
 			OverheadRate:   fmt.Sprintf("%g", step.OverheadRate),
 			Allowances:     allowances,
 			LevelingFactor: levelingFactor,
-			Station:        step.Station,
+			Station:        step.Station.Ptr(),
 		}
 	}
 
@@ -365,20 +365,8 @@ func rateFromStepProto(r *pb.ProductionStepRateInfo) *apiresource.Rate {
 		ID:     r.Id,
 		Object: constants.ObjectTypeRate,
 		Value:  r.Value,
-		NumeratorUnit: apiresource.ExpandableUnitStub(
-			r.NumeratorUnitId,
-			r.NumeratorUnitAbbreviation,
-			r.NumeratorUnitAbbreviation,
-			r.NumeratorUnitType,
-			embeddedRateTimestamp,
-		),
-		DenominatorUnit: apiresource.ExpandableUnitStub(
-			r.DenominatorUnitId,
-			r.DenominatorUnitAbbreviation,
-			r.DenominatorUnitAbbreviation,
-			r.DenominatorUnitType,
-			embeddedRateTimestamp,
-		),
+		// numerator_unit / denominator_unit left nil: expandable, loaded with real
+		// data via ?include=; never fabricated. display_value carries the rate.
 		DisplayValue: apiresource.FormatRateDisplayValue(r.Value, r.NumeratorUnitAbbreviation, r.NumeratorUnitType, r.DenominatorUnitAbbreviation),
 		CreatedAt:    embeddedRateTimestamp,
 		UpdatedAt:    embeddedRateTimestamp,
@@ -520,13 +508,13 @@ func stashProductionStepMeta(meta *resourcekit.LoadMeta, s *pb.ProductionStepInf
 
 	inSteps := make([]apiresource.ProductionStep, len(s.InSteps))
 	for i, st := range s.InSteps {
-		inSteps[i] = lightProductionStepToStub(st, stepTS)
+		inSteps[i] = lightProductionStepToResource(st, stepTS)
 	}
 	meta.Set(constants.ObjectTypeProductionStep, s.Id, "in_steps", apiresource.NewList(inSteps, apiresource.PageInfo{}))
 
 	outSteps := make([]apiresource.ProductionStep, len(s.OutSteps))
 	for i, st := range s.OutSteps {
-		outSteps[i] = lightProductionStepToStub(st, stepTS)
+		outSteps[i] = lightProductionStepToResource(st, stepTS)
 	}
 	meta.Set(constants.ObjectTypeProductionStep, s.Id, "out_steps", apiresource.NewList(outSteps, apiresource.PageInfo{}))
 }
@@ -562,7 +550,11 @@ func stepConsumptionFromProto(c *pb.ConsumptionInfo) apiresource.Consumption {
 	}
 }
 
-func lightProductionStepToStub(st *pb.LightProductionStepInfo, fallback time.Time) apiresource.ProductionStep {
+// lightProductionStepToResource maps the real, lightweight in/out-step data the
+// production-step proto carries inline into a ProductionStep reference. It never
+// fabricates identifiers; absent optional decimals default to their mathematical
+// identity (leveling_factor 1, allowances 0) so the resource stays valid.
+func lightProductionStepToResource(st *pb.LightProductionStepInfo, fallback time.Time) apiresource.ProductionStep {
 	lf := st.GetLevelingFactor()
 	if lf == "" {
 		lf = "1"

@@ -37,7 +37,7 @@ func (*PurchaseOrdersEndpointGroup) Materialize(config *PurchaseOrdersEndpointGr
 	inner := &apiendpoint.APIEndpointGroup{
 		Title:        "Purchase Orders",
 		Description:  "List, view, create, update, and delete purchase orders.",
-		ResourceType: &apiresource.PurchaseOrderDetail{},
+		ResourceType: &apiresource.PurchaseOrder{},
 	}
 
 	listEndpoint := apiendpoint.From(&purchaseorderep.ListPurchaseOrdersEndpoint{}).WithService(inner, svc)

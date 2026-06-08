@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // CreateUnitGroupUnitParam contains parameters for an associated unit.
@@ -16,11 +17,11 @@ type CreateUnitGroupUnitParam struct {
 	// Unit ID.
 	UnitID string `json:"unit_id" validate:"required"`
 	// Discount percentage.
-	DiscountPercentage *float64 `json:"discount_percentage,omitempty" default:"1"`
+	DiscountPercentage field.Optional[float64] `json:"discount_percentage,omitzero" default:"1"`
 	// Fixed discount amount.
-	DiscountFixed *float64 `json:"discount_fixed,omitempty" default:"0"`
+	DiscountFixed field.Optional[float64] `json:"discount_fixed,omitzero" default:"0"`
 	// Customer portal visibility.
-	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility,omitempty" default:"visible"`
+	CustomerPortalVisibility field.Optional[constants.CustomerPortalVisibility] `json:"customer_portal_visibility,omitzero" default:"visible"`
 }
 
 // CreateUnitGroupRequest is a request to create a unit group.
@@ -28,13 +29,13 @@ type CreateUnitGroupRequest struct {
 	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
 	// Notes.
-	Notes *string `json:"notes,omitempty" default:"null"`
+	Notes field.Optional[string] `json:"notes,omitzero" default:"null"`
 	// Unit type.
 	Type constants.UnitType `json:"type" validate:"required"`
 	// Base unit ID.
 	BaseUnitID string `json:"base_unit_id" validate:"required"`
 	// Associated units to create with the group.
-	AssociatedUnits []CreateUnitGroupUnitParam `json:"associated_units,omitempty"`
+	AssociatedUnits []CreateUnitGroupUnitParam `json:"associated_units,omitzero"`
 }
 
 var sampleCreateUnitGroupDiscountPct = float64(1)
@@ -47,9 +48,9 @@ var sampleCreateUnitGroupRequest = &CreateUnitGroupRequest{
 	AssociatedUnits: []CreateUnitGroupUnitParam{
 		{
 			UnitID:                   apiresource.SampleUnitID,
-			DiscountPercentage:       &sampleCreateUnitGroupDiscountPct,
-			DiscountFixed:            &sampleCreateUnitGroupDiscountFixed,
-			CustomerPortalVisibility: &sampleCreateUnitGroupVisibility,
+			DiscountPercentage:       field.Some(sampleCreateUnitGroupDiscountPct),
+			DiscountFixed:            field.Some(sampleCreateUnitGroupDiscountFixed),
+			CustomerPortalVisibility: field.Some(sampleCreateUnitGroupVisibility),
 		},
 	},
 }

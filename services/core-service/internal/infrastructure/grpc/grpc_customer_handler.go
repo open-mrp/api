@@ -6,7 +6,7 @@ import (
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/contracts"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -349,6 +349,30 @@ func (h *gRPCHandler) GetCustomer(ctx context.Context, req *pb.GetCustomerReques
 	}, nil
 }
 
+// BatchGetCustomersByIDs returns customers by ID for the api-gateway include
+// resolver. It reuses the authorized single-get path per id; ids the caller
+// cannot access or that no longer exist are omitted so the resolver leaves
+// those references null.
+func (h *gRPCHandler) BatchGetCustomersByIDs(ctx context.Context, req *pb.BatchGetCustomersByIDsRequest) (*pb.BatchGetCustomersByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	customers := make([]*pb.CustomerProto, 0, len(req.Ids))
+	for _, id := range req.Ids {
+		if id == "" {
+			continue
+		}
+		customer, apiErr := h.customerSvc.GetCustomer(ctx, id, nil)
+		if apiErr != nil {
+			continue
+		}
+		customers = append(customers, customerToProto(customer))
+	}
+
+	return &pb.BatchGetCustomersByIDsResponse{Customers: customers}, nil
+}
+
 func (h *gRPCHandler) CreateCustomer(ctx context.Context, req *pb.CreateCustomerRequest) (*pb.CreateCustomerResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
@@ -412,28 +436,28 @@ func (h *gRPCHandler) UpdateCustomer(ctx context.Context, req *pb.UpdateCustomer
 		CustomerAccountID:        req.Id,
 		Name:                     req.Name,
 		Number:                   req.Number,
-		Note:                     patch.StringFieldFromProto(req.Note),
-		Email:                    patch.StringFieldFromProto(req.Email),
-		Phone:                    patch.StringFieldFromProto(req.Phone),
-		URL:                      patch.StringFieldFromProto(req.Url),
+		Note:                     field.StringClearableFromProto(req.Note),
+		Email:                    field.StringClearableFromProto(req.Email),
+		Phone:                    field.StringClearableFromProto(req.Phone),
+		URL:                      field.StringClearableFromProto(req.Url),
 		StatusCode:               req.StatusCode,
 		IsEdiEnabled:             req.IsEdiEnabled,
 		CommissionPolicy:         optStringToCommissionPolicy(req.CommissionPolicy),
 		FreightPolicy:            optStringToFreightPolicy(req.FreightPolicy),
 		DefaultCarrierID:         req.DefaultCarrierId,
-		DefaultServiceLevelID:    patch.StringFieldFromProto(req.DefaultServiceLevelId),
+		DefaultServiceLevelID:    field.StringClearableFromProto(req.DefaultServiceLevelId),
 		DefaultPaymentTermID:     req.DefaultPaymentTermId,
 		DefaultShippingTermID:    req.DefaultShippingTermId,
 		DefaultPriorityCode:      req.DefaultPriorityCode,
-		DefaultSalesRepID:        patch.StringFieldFromProto(req.DefaultSalesRepId),
-		BillToAddressID:          patch.StringFieldFromProto(req.BillToAddressId),
-		ShipToAddressID:          patch.StringFieldFromProto(req.ShipToAddressId),
+		DefaultSalesRepID:        field.StringClearableFromProto(req.DefaultSalesRepId),
+		BillToAddressID:          field.StringClearableFromProto(req.BillToAddressId),
+		ShipToAddressID:          field.StringClearableFromProto(req.ShipToAddressId),
 		CustomerPriceGroupIDs:    req.CustomerPriceGroupIds,
 		HasCustomerPriceGroupIDs: req.HasCustomerPriceGroupIds,
 		CustomerTypeGroupID:      req.CustomerTypeGroupId,
 		CarrierBillingType:       req.CarrierBillingType,
-		CarrierBillingAccount:    patch.StringFieldFromProto(req.CarrierBillingAccount),
-		CreditLimit:              patch.QuantityFieldFromProto(req.CreditLimit),
+		CarrierBillingAccount:    field.StringClearableFromProto(req.CarrierBillingAccount),
+		CreditLimit:              field.QuantityClearableFromProto(req.CreditLimit),
 		Includes:                 req.Includes,
 	}
 

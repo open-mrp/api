@@ -25,13 +25,11 @@ type ListDeliveriesRequest struct {
 	EndDate *string `query:"end_date"`
 }
 
-// TODO: stop returning DeliverySummary; return the full Delivery apiresource and use proper includes values to control expansion.
-
 // Returns a paginated list of deliveries for the caller's account.
 type ListDeliveriesEndpoint struct{}
 
-func (e *ListDeliveriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListDeliveriesRequest, *apiresource.List[apiresource.DeliverySummary]] {
-	return (&apiendpoint.APIEndpoint[*ListDeliveriesRequest, *apiresource.List[apiresource.DeliverySummary]]{
+func (e *ListDeliveriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListDeliveriesRequest, *apiresource.List[apiresource.Delivery]] {
+	return (&apiendpoint.APIEndpoint[*ListDeliveriesRequest, *apiresource.List[apiresource.Delivery]]{
 		Title:             "List Deliveries",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
@@ -40,8 +38,12 @@ func (e *ListDeliveriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListDel
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeDelivery,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *ListDeliveriesRequest) (*apiresource.List[apiresource.DeliverySummary], *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *ListDeliveriesRequest) (*apiresource.List[apiresource.Delivery], *apierror.APIError) {
 			return svc.(DeliverySvc).ListDeliveries
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeDelivery,
+			Fields:     []string{"purchase_order"},
+		}),
 	})
 }

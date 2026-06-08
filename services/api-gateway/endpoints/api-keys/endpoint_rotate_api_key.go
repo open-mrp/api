@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to rotate an API key.
@@ -16,7 +17,7 @@ type RotateAPIKeyRequest struct {
 	// API key ID to rotate.
 	APIKeyID string `path:"id" validate:"required"`
 	// Expiration timestamp override. If omitted, the previous key's expiration is used.
-	ExpiresAt *time.Time `json:"expires_at,omitempty"`
+	ExpiresAt field.Optional[time.Time] `json:"expires_at,omitzero"`
 }
 
 func (*RotateAPIKeyRequest) SchemaExample() any {

@@ -5,7 +5,7 @@ import (
 
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/shared/contracts"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -191,8 +191,8 @@ func (h *gRPCHandler) UpdateProduct(ctx context.Context, req *pb.UpdateProductRe
 	params := domain.UpdateProductParams{
 		ProductID:     req.Id,
 		SKU:           req.Sku,
-		Description:   patch.StringFieldFromProto(req.Description),
-		Notes:         patch.StringFieldFromProto(req.Notes),
+		Description:   field.StringClearableFromProto(req.Description),
+		Notes:         field.StringClearableFromProto(req.Notes),
 		IsPortalReady: req.IsPortalReady,
 		UnitPrice:     protoToCreateRateInput(req.UnitPrice),
 		Includes:      req.Includes,

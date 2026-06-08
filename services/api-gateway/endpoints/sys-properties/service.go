@@ -82,7 +82,7 @@ func (m *sysPropertySvcImpl) GetSysProperty(ctx context.Context, req *RetrieveSy
 func (m *sysPropertySvcImpl) UpdateSysProperty(ctx context.Context, req *UpdateSysPropertyRequest) (*apiresource.SysProperty, *apierror.APIError) {
 	pbReq := &pb.UpdateSysPropertyRequest{
 		Id:    req.SysPropertyID,
-		Value: req.Value,
+		Value: req.Value.Ptr(),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, sysPropertySvcTracer, "service.sys_properties.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateSysPropertyResponse, error) {

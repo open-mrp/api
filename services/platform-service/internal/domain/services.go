@@ -31,4 +31,8 @@ type AuditEventSvc interface {
 	// ListAuditEvents returns a filtered, cursor-paginated list of audit events
 	// scoped to the caller's target account.
 	ListAuditEvents(ctx context.Context, filter *ListAuditEventsFilter, includes []string) (*ListAuditEventsResult, *apierror.APIError)
+
+	// ListAuditEventResourceTypes returns the full set of resource types that
+	// may appear on audit events.
+	ListAuditEventResourceTypes(ctx context.Context) ([]string, *apierror.APIError)
 }

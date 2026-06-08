@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to register a user.
@@ -20,7 +21,7 @@ type RegisterRequest struct {
 	// Full name.
 	Name string `json:"name" validate:"required"`
 	// When registering from a customer portal, scopes the magic-login link in the "already registered" email.
-	AccountSlug *string `json:"account_slug,omitempty" validate:"omitempty"`
+	AccountSlug field.Optional[string] `json:"account_slug,omitzero" validate:"omitempty"`
 }
 
 var sampleRegisterRequest = &RegisterRequest{

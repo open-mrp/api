@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to partially update a machine.
@@ -16,16 +17,16 @@ type UpdateMachineRequest struct {
 	// Machine ID.
 	MachineID string `path:"id" validate:"required"`
 	// Display name.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// Serial number.
-	SerialNumber *string `json:"serial_number,omitempty" validate:"omitempty,max=255"`
+	SerialNumber field.Optional[string] `json:"serial_number,omitzero" validate:"omitempty,max=255"`
 	// Notes.
-	Notes *string `json:"notes,omitempty"`
+	Notes field.Optional[string] `json:"notes,omitzero"`
 }
 
 var sampleUpdateMachineName = "Updated CNC Router"
 var sampleUpdateMachineRequest = &UpdateMachineRequest{
-	Name: &sampleUpdateMachineName,
+	Name: field.Some(sampleUpdateMachineName),
 }
 
 func (*UpdateMachineRequest) SchemaExample() any {

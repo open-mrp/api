@@ -102,7 +102,7 @@ func (q *Queries) DeleteExpiredAuditEvents(ctx context.Context, limit int32) (sq
 
 const findAuditEventByID = `-- name: FindAuditEventByID :one
 SELECT ae.type_id,
-       COALESCE(au.id, ae.actor_id, '') AS actor_id,
+       ae.actor_id AS actor_id,
        ae.actor_type,
        ae.identity_type,
        ae.account_id,
@@ -125,7 +125,6 @@ SELECT ae.type_id,
 FROM audit_event ae
 LEFT JOIN ` + "`" + `user` + "`" + ` u ON ae.actor_id = u.id AND ae.identity_type = 'user'
 LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key'
-LEFT JOIN account_user au ON au.user_id = ae.actor_id AND au.account_id = ae.account_id AND ae.identity_type = 'user'
 LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
 WHERE ae.type_id = ? AND ae.account_id = ?
 `
@@ -161,6 +160,8 @@ type FindAuditEventByIDRow struct {
 	IdempotencyKey      sql.NullString
 }
 
+// actor_id stores the raw actor key (user_id / api_key.type_id) — exposed
+// directly. Enrichment joins key on it: user by id, api_key by type_id.
 func (q *Queries) FindAuditEventByID(ctx context.Context, arg FindAuditEventByIDParams) (FindAuditEventByIDRow, error) {
 	row := q.db.QueryRowContext(ctx, findAuditEventByID,
 		arg.IncludeChanges,
@@ -197,7 +198,7 @@ func (q *Queries) FindAuditEventByID(ctx context.Context, arg FindAuditEventByID
 
 const listAuditEventsBackward = `-- name: ListAuditEventsBackward :many
 SELECT ae.type_id,
-       COALESCE(au.id, ae.actor_id, '') AS actor_id,
+       ae.actor_id AS actor_id,
        ae.actor_type,
        ae.identity_type,
        ae.account_id,
@@ -220,7 +221,6 @@ SELECT ae.type_id,
 FROM audit_event ae
 LEFT JOIN ` + "`" + `user` + "`" + ` u ON ae.actor_id = u.id AND ae.identity_type = 'user'
 LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key'
-LEFT JOIN account_user au ON au.user_id = ae.actor_id AND au.account_id = ae.account_id AND ae.identity_type = 'user'
 LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
 WHERE ae.account_id = ?
 AND (? = false OR ae.resource_type IN (/*SLICE:resource_types*/?))
@@ -233,6 +233,8 @@ AND (
     ? IS NULL
     OR ae.resource_type LIKE ?
     OR ae.action LIKE ?
+    OR ae.resource_id LIKE ?
+    OR ae.request_id LIKE ?
 )
 AND (
     ae.occurred_at > ?
@@ -286,6 +288,8 @@ type ListAuditEventsBackwardRow struct {
 	IdempotencyKey      sql.NullString
 }
 
+// actor_id stores the raw actor key (user_id / api_key.type_id) — exposed
+// directly. Enrichment joins key on it: user by id, api_key by type_id.
 func (q *Queries) ListAuditEventsBackward(ctx context.Context, arg ListAuditEventsBackwardParams) ([]ListAuditEventsBackwardRow, error) {
 	query := listAuditEventsBackward
 	var queryParams []interface{}
@@ -332,6 +336,8 @@ func (q *Queries) ListAuditEventsBackward(ctx context.Context, arg ListAuditEven
 	queryParams = append(queryParams, arg.StartDate)
 	queryParams = append(queryParams, arg.EndDate)
 	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
@@ -385,7 +391,7 @@ func (q *Queries) ListAuditEventsBackward(ctx context.Context, arg ListAuditEven
 
 const listAuditEventsForward = `-- name: ListAuditEventsForward :many
 SELECT ae.type_id,
-       COALESCE(au.id, ae.actor_id, '') AS actor_id,
+       ae.actor_id AS actor_id,
        ae.actor_type,
        ae.identity_type,
        ae.account_id,
@@ -408,7 +414,6 @@ SELECT ae.type_id,
 FROM audit_event ae
 LEFT JOIN ` + "`" + `user` + "`" + ` u ON ae.actor_id = u.id AND ae.identity_type = 'user'
 LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key'
-LEFT JOIN account_user au ON au.user_id = ae.actor_id AND au.account_id = ae.account_id AND ae.identity_type = 'user'
 LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
 WHERE ae.account_id = ?
 AND (? = false OR ae.resource_type IN (/*SLICE:resource_types*/?))
@@ -421,6 +426,8 @@ AND (
     ? IS NULL
     OR ae.resource_type LIKE ?
     OR ae.action LIKE ?
+    OR ae.resource_id LIKE ?
+    OR ae.request_id LIKE ?
 )
 AND (
     ? IS NULL
@@ -475,6 +482,8 @@ type ListAuditEventsForwardRow struct {
 	IdempotencyKey      sql.NullString
 }
 
+// actor_id stores the raw actor key (user_id / api_key.type_id) — exposed
+// directly. Enrichment joins key on it: user by id, api_key by type_id.
 func (q *Queries) ListAuditEventsForward(ctx context.Context, arg ListAuditEventsForwardParams) ([]ListAuditEventsForwardRow, error) {
 	query := listAuditEventsForward
 	var queryParams []interface{}
@@ -521,6 +530,8 @@ func (q *Queries) ListAuditEventsForward(ctx context.Context, arg ListAuditEvent
 	queryParams = append(queryParams, arg.StartDate)
 	queryParams = append(queryParams, arg.EndDate)
 	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)

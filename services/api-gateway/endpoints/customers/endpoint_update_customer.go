@@ -10,7 +10,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to partially update a customer.
@@ -18,51 +18,51 @@ type UpdateCustomerRequest struct {
 	// Customer ID.
 	CustomerID string `path:"id" validate:"required"`
 	// Customer name.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// Customer number.
-	Number *string `json:"number,omitempty" validate:"omitempty,max=255"`
+	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
 	// Note.
-	Note *patch.Field[string] `json:"note,omitempty"`
+	Note field.Clearable[string] `json:"note,omitzero"`
 	// Account status code.
-	StatusCode *constants.AccountStatusCode `json:"status,omitempty"`
+	StatusCode field.Optional[constants.AccountStatusCode] `json:"status,omitzero"`
 	// Email address. Send null to clear.
-	Email *patch.Field[string] `json:"email,omitempty" validate:"omitempty,max=255"`
+	Email field.Clearable[string] `json:"email,omitzero" validate:"omitempty,max=255"`
 	// Phone number. Send null to clear.
-	Phone *patch.Field[string] `json:"phone,omitempty" validate:"omitempty,max=255"`
+	Phone field.Clearable[string] `json:"phone,omitzero" validate:"omitempty,max=255"`
 	// Website URL. Send null to clear.
-	URL *patch.Field[string] `json:"url,omitempty" validate:"omitempty,max=255"`
+	URL field.Clearable[string] `json:"url,omitzero" validate:"omitempty,max=255"`
 	// EDI status.
-	EDIStatus *constants.EDIStatus `json:"edi_status,omitempty"`
+	EDIStatus field.Optional[constants.EDIStatus] `json:"edi_status,omitzero"`
 	// Commission policy.
-	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy,omitempty"`
+	CommissionPolicy field.Optional[constants.CommissionPolicy] `json:"commission_policy,omitzero"`
 	// Freight policy.
-	FreightPolicy *constants.FreightPolicy `json:"freight_policy,omitempty"`
+	FreightPolicy field.Optional[constants.FreightPolicy] `json:"freight_policy,omitzero"`
 	// Default carrier ID.
-	DefaultCarrierID *string `json:"default_carrier_id,omitempty" validate:"omitempty"`
+	DefaultCarrierID field.Optional[string] `json:"default_carrier_id,omitzero" validate:"omitempty"`
 	// Default service level ID.
-	DefaultServiceLevelID *patch.Field[string] `json:"default_service_level_id,omitempty" validate:"omitempty"`
+	DefaultServiceLevelID field.Clearable[string] `json:"default_service_level_id,omitzero" validate:"omitempty"`
 	// Default payment term ID.
-	DefaultPaymentTermID *string `json:"default_payment_term_id,omitempty" validate:"omitempty"`
+	DefaultPaymentTermID field.Optional[string] `json:"default_payment_term_id,omitzero" validate:"omitempty"`
 	// Default shipping term ID.
-	DefaultShippingTermID *string `json:"default_shipping_term_id,omitempty" validate:"omitempty"`
+	DefaultShippingTermID field.Optional[string] `json:"default_shipping_term_id,omitzero" validate:"omitempty"`
 	// Default priority code.
-	DefaultPriorityCode *constants.PriorityCode `json:"default_priority,omitempty"`
+	DefaultPriorityCode field.Optional[constants.PriorityCode] `json:"default_priority,omitzero"`
 	// The ID of the account user to assign as the default sales rep.
-	DefaultSalesRepID *patch.Field[string] `json:"default_sales_rep_id,omitempty" validate:"omitempty"`
+	DefaultSalesRepID field.Clearable[string] `json:"default_sales_rep_id,omitzero" validate:"omitempty"`
 	// Bill-to address ID.
-	BillToAddressID *patch.Field[string] `json:"bill_to_address_id,omitempty" validate:"omitempty"`
+	BillToAddressID field.Clearable[string] `json:"bill_to_address_id,omitzero" validate:"omitempty"`
 	// Ship-to address ID.
-	ShipToAddressID *patch.Field[string] `json:"ship_to_address_id,omitempty" validate:"omitempty"`
+	ShipToAddressID field.Clearable[string] `json:"ship_to_address_id,omitzero" validate:"omitempty"`
 	// Price group IDs. Replaces all existing price groups when provided.
-	CustomerPriceGroupIDs *[]string `json:"customer_price_group_ids,omitempty"`
+	CustomerPriceGroupIDs field.Optional[[]string] `json:"customer_price_group_ids,omitzero"`
 	// Customer type group ID.
-	CustomerTypeGroupID *string `json:"customer_type_group_id,omitempty" validate:"omitempty"`
+	CustomerTypeGroupID field.Optional[string] `json:"customer_type_group_id,omitzero" validate:"omitempty"`
 	// Carrier billing type.
-	CarrierBillingType *constants.CarrierBillingType `json:"carrier_billing_type,omitempty"`
+	CarrierBillingType field.Optional[constants.CarrierBillingType] `json:"carrier_billing_type,omitzero"`
 	// Carrier billing account number.
-	CarrierBillingAccount *patch.Field[string] `json:"carrier_billing_account,omitempty" validate:"omitempty,max=255"`
+	CarrierBillingAccount field.Clearable[string] `json:"carrier_billing_account,omitzero" validate:"omitempty,max=255"`
 	// Credit limit. Send null to clear.
-	CreditLimit *patch.Field[apirequest.QuantityInput] `json:"credit_limit,omitempty"`
+	CreditLimit field.Clearable[apirequest.QuantityInput] `json:"credit_limit,omitzero"`
 }
 
 var sampleUpdateCustomerName = "Acme Corp Updated"
@@ -70,10 +70,10 @@ var sampleUpdateCustomerNote = "Updated account notes"
 var sampleUpdateCustomerDefaultCarrierID = apiresource.SampleCarrierID
 var sampleUpdateCustomerFreightPolicy = constants.FreightPolicyBilled
 var sampleUpdateCustomerRequest = &UpdateCustomerRequest{
-	Name:             &sampleUpdateCustomerName,
-	Note:             new(patch.Set(sampleUpdateCustomerNote)),
-	DefaultCarrierID: &sampleUpdateCustomerDefaultCarrierID,
-	FreightPolicy:    &sampleUpdateCustomerFreightPolicy,
+	Name:             field.Some(sampleUpdateCustomerName),
+	Note:             field.Set(sampleUpdateCustomerNote),
+	DefaultCarrierID: field.Some(sampleUpdateCustomerDefaultCarrierID),
+	FreightPolicy:    field.Some(sampleUpdateCustomerFreightPolicy),
 }
 
 func (*UpdateCustomerRequest) SchemaExample() any {

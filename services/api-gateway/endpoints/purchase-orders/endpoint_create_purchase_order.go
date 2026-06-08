@@ -10,6 +10,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to create a purchase order.
@@ -17,55 +18,55 @@ type CreatePurchaseOrderRequest struct {
 	// Supplier account ID.
 	SupplierAccountID string `json:"supplier_account_id" validate:"required"`
 	// Order note.
-	Note *string `json:"note,omitempty"`
+	Note field.Optional[string] `json:"note,omitzero"`
 	// Carrier ID.
-	CarrierID *string `json:"carrier_id,omitempty" validate:"omitempty"`
+	CarrierID field.Optional[string] `json:"carrier_id,omitzero" validate:"omitempty"`
 	// Service level ID.
-	ServiceLevelID *string `json:"service_level_id,omitempty" validate:"omitempty"`
+	ServiceLevelID field.Optional[string] `json:"service_level_id,omitzero" validate:"omitempty"`
 	// Carrier billing type.
-	CarrierBillingType *string `json:"carrier_billing_type,omitempty" validate:"omitempty,max=255"`
+	CarrierBillingType field.Optional[string] `json:"carrier_billing_type,omitzero" validate:"omitempty,max=255"`
 	// Carrier billing account number.
-	CarrierBillingAccount *string `json:"carrier_billing_account,omitempty" validate:"omitempty,max=255"`
+	CarrierBillingAccount field.Optional[string] `json:"carrier_billing_account,omitzero" validate:"omitempty,max=255"`
 	// Priority code.
 	PriorityCode string `json:"priority_code" validate:"required,max=255"`
 	// Shipping term ID.
-	ShippingTermID *string `json:"shipping_term_id,omitempty" validate:"omitempty"`
+	ShippingTermID field.Optional[string] `json:"shipping_term_id,omitzero" validate:"omitempty"`
 	// Payment term ID.
-	PaymentTermID *string `json:"payment_term_id,omitempty" validate:"omitempty"`
+	PaymentTermID field.Optional[string] `json:"payment_term_id,omitzero" validate:"omitempty"`
 	// Bill-to address name.
-	BillToName *string `json:"bill_to_name,omitempty" validate:"omitempty,max=255"`
+	BillToName field.Optional[string] `json:"bill_to_name,omitzero" validate:"omitempty,max=255"`
 	// Bill-to street line 1.
-	BillToStreetLine1 *string `json:"bill_to_street_line_1,omitempty" validate:"omitempty,max=255"`
+	BillToStreetLine1 field.Optional[string] `json:"bill_to_street_line_1,omitzero" validate:"omitempty,max=255"`
 	// Bill-to street line 2.
-	BillToStreetLine2 *string `json:"bill_to_street_line_2,omitempty" validate:"omitempty,max=255"`
+	BillToStreetLine2 field.Optional[string] `json:"bill_to_street_line_2,omitzero" validate:"omitempty,max=255"`
 	// Bill-to locality/city.
-	BillToLocality *string `json:"bill_to_locality,omitempty" validate:"omitempty,max=255"`
+	BillToLocality field.Optional[string] `json:"bill_to_locality,omitzero" validate:"omitempty,max=255"`
 	// Bill-to state/province.
-	BillToState *string `json:"bill_to_state,omitempty" validate:"omitempty,max=255"`
+	BillToState field.Optional[string] `json:"bill_to_state,omitzero" validate:"omitempty,max=255"`
 	// Bill-to postal code.
-	BillToPostalCode *string `json:"bill_to_postal_code,omitempty" validate:"omitempty,max=255"`
+	BillToPostalCode field.Optional[string] `json:"bill_to_postal_code,omitzero" validate:"omitempty,max=255"`
 	// Bill-to country.
-	BillToCountry *string `json:"bill_to_country,omitempty" validate:"omitempty,max=2"`
+	BillToCountry field.Optional[string] `json:"bill_to_country,omitzero" validate:"omitempty,max=2"`
 	// Ship-to address name.
-	ShipToName *string `json:"ship_to_name,omitempty" validate:"omitempty,max=255"`
+	ShipToName field.Optional[string] `json:"ship_to_name,omitzero" validate:"omitempty,max=255"`
 	// Ship-to street line 1.
-	ShipToStreetLine1 *string `json:"ship_to_street_line_1,omitempty" validate:"omitempty,max=255"`
+	ShipToStreetLine1 field.Optional[string] `json:"ship_to_street_line_1,omitzero" validate:"omitempty,max=255"`
 	// Ship-to street line 2.
-	ShipToStreetLine2 *string `json:"ship_to_street_line_2,omitempty" validate:"omitempty,max=255"`
+	ShipToStreetLine2 field.Optional[string] `json:"ship_to_street_line_2,omitzero" validate:"omitempty,max=255"`
 	// Ship-to locality/city.
-	ShipToLocality *string `json:"ship_to_locality,omitempty" validate:"omitempty,max=255"`
+	ShipToLocality field.Optional[string] `json:"ship_to_locality,omitzero" validate:"omitempty,max=255"`
 	// Ship-to state/province.
-	ShipToState *string `json:"ship_to_state,omitempty" validate:"omitempty,max=255"`
+	ShipToState field.Optional[string] `json:"ship_to_state,omitzero" validate:"omitempty,max=255"`
 	// Ship-to postal code.
-	ShipToPostalCode *string `json:"ship_to_postal_code,omitempty" validate:"omitempty,max=255"`
+	ShipToPostalCode field.Optional[string] `json:"ship_to_postal_code,omitzero" validate:"omitempty,max=255"`
 	// Ship-to country.
-	ShipToCountry *string `json:"ship_to_country,omitempty" validate:"omitempty,max=2"`
+	ShipToCountry field.Optional[string] `json:"ship_to_country,omitzero" validate:"omitempty,max=2"`
 	// Order lines to create.
 	Lines []CreatePurchaseOrderLineInput `json:"lines"`
 	// Account user IDs for email contacts.
-	ContactAccountUserIDs []string `json:"contact_account_user_ids,omitempty"`
+	ContactAccountUserIDs []string `json:"contact_account_user_ids,omitzero"`
 	// Promised delivery date.
-	PromisedAt *string `json:"promised_at,omitempty"`
+	PromisedAt field.Optional[string] `json:"promised_at,omitzero"`
 }
 
 // Line item input for creating a purchase order.
@@ -84,16 +85,16 @@ var sampleCreatePOShipToPostalCode = apiresource.SampleAddressPostalCode
 var sampleCreatePOShipToCountry = apiresource.SampleAddressCountry
 var sampleCreatePurchaseOrderRequest = &CreatePurchaseOrderRequest{
 	SupplierAccountID: apiresource.SampleSupplierID,
-	Note:              &sampleCreatePONote,
-	CarrierID:         &sampleCreatePOCarrierID,
-	ServiceLevelID:    &sampleCreatePOServiceLevelID,
+	Note:              field.Some(sampleCreatePONote),
+	CarrierID:         field.Some(sampleCreatePOCarrierID),
+	ServiceLevelID:    field.Some(sampleCreatePOServiceLevelID),
 	PriorityCode:      string(constants.PriorityCodeNormal),
-	ShipToName:        &sampleCreatePOShipToName,
-	ShipToStreetLine1: &sampleCreatePOShipToStreetLine1,
-	ShipToLocality:    &sampleCreatePOShipToLocality,
-	ShipToState:       &sampleCreatePOShipToState,
-	ShipToPostalCode:  &sampleCreatePOShipToPostalCode,
-	ShipToCountry:     &sampleCreatePOShipToCountry,
+	ShipToName:        field.Some(sampleCreatePOShipToName),
+	ShipToStreetLine1: field.Some(sampleCreatePOShipToStreetLine1),
+	ShipToLocality:    field.Some(sampleCreatePOShipToLocality),
+	ShipToState:       field.Some(sampleCreatePOShipToState),
+	ShipToPostalCode:  field.Some(sampleCreatePOShipToPostalCode),
+	ShipToCountry:     field.Some(sampleCreatePOShipToCountry),
 	Lines: []CreatePurchaseOrderLineInput{
 		{
 			OrderLineInput: apirequest.OrderLineInput{
@@ -116,8 +117,8 @@ func (*CreatePurchaseOrderRequest) SchemaExample() any {
 // Creates a purchase order.
 type CreatePurchaseOrderEndpoint struct{}
 
-func (e *CreatePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePurchaseOrderRequest, *apiresource.PurchaseOrderDetail] {
-	return (&apiendpoint.APIEndpoint[*CreatePurchaseOrderRequest, *apiresource.PurchaseOrderDetail]{
+func (e *CreatePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePurchaseOrderRequest, *apiresource.PurchaseOrder] {
+	return (&apiendpoint.APIEndpoint[*CreatePurchaseOrderRequest, *apiresource.PurchaseOrder]{
 		Title:             "Create Purchase Order",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
@@ -126,15 +127,15 @@ func (e *CreatePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cr
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypePurchaseOrder,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *CreatePurchaseOrderRequest) (*apiresource.PurchaseOrderDetail, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *CreatePurchaseOrderRequest) (*apiresource.PurchaseOrder, *apierror.APIError) {
 			return svc.(PurchaseOrderSvc).CreatePurchaseOrder
 		},
-		LocationFunc: func(resp *apiresource.PurchaseOrderDetail) string {
+		LocationFunc: func(resp *apiresource.PurchaseOrder) string {
 			return "/v1/operations/purchase-orders/" + resp.ID
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypePurchaseOrder,
-			Fields:     []string{"supplier", "bill_to_address", "ship_to_address", "carrier", "service_level", "payment_term", "shipping_term", "receiving_order", "lines", "contacts"},
+			Fields:     []string{"supplier", "bill_to_address", "ship_to_address", "freight", "payment_term", "shipping_term", "receiving_order", "lines", "contacts"},
 		}),
 	})
 }

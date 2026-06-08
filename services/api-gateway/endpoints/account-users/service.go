@@ -10,7 +10,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -95,10 +95,10 @@ func (m *accountUserSvcImpl) GetAccountUser(ctx context.Context, req *RetrieveAc
 
 func (m *accountUserSvcImpl) CreateAccountUser(ctx context.Context, req *CreateAccountUserRequest) (*apiresource.AccountUser, *apierror.APIError) {
 	pbReq := &pb.CreateAccountUserRequest{
-		Name:                    req.Name,
-		Email:                   req.Email,
-		Username:                req.Username,
-		Password:                req.Password,
+		Name:                    req.Name.Ptr(),
+		Email:                   req.Email.Ptr(),
+		Username:                req.Username.Ptr(),
+		Password:                req.Password.Ptr(),
 		RoleId:                  req.RoleID.Ptr(),
 		DepartmentId:            req.DepartmentID.Ptr(),
 		NotificationPreferences: toProtoNotificationPrefs(req.Preferences),
@@ -118,11 +118,11 @@ func (m *accountUserSvcImpl) CreateAccountUser(ctx context.Context, req *CreateA
 func (m *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, req *UpdateAccountUserRequest) (*apiresource.AccountUser, *apierror.APIError) {
 	pbReq := &pb.UpdateAccountUserRequest{
 		AccountUserId:           req.AccountUserID,
-		Name:                    req.Name,
-		Email:                   req.Email,
-		Username:                req.Username,
-		RoleId:                  patch.StringFieldPtrToProto(req.RoleID),
-		DepartmentId:            patch.StringFieldPtrToProto(req.DepartmentID),
+		Name:                    req.Name.Ptr(),
+		Email:                   req.Email.Ptr(),
+		Username:                req.Username.Ptr(),
+		RoleId:                  field.StringClearableToProto(req.RoleID),
+		DepartmentId:            field.StringClearableToProto(req.DepartmentID),
 		NotificationPreferences: toProtoNotificationPrefs(req.Preferences),
 	}
 

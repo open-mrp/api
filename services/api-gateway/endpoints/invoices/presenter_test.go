@@ -1,6 +1,7 @@
 package invoiceep
 
 import (
+	"context"
 	"testing"
 
 	"github.com/augno/api/services/api-gateway/pkg/resource/resourcetest"
@@ -44,6 +45,6 @@ func TestInvoiceSummaryPresenter(t *testing.T) {
 		UpdatedAt:                now,
 	}
 
-	result := invoiceSummaryFromProto(info)
-	resourcetest.ValidateExpandableStubs(t, "InvoiceSummary", result)
+	result := invoiceFromSummaryProto(context.Background(), info)
+	resourcetest.ValidateExpandableStubs(t, "Invoice", result)
 }

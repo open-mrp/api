@@ -1323,7 +1323,6 @@ type SalesOrderLine struct {
 	UnitCostID         sql.NullString
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
-	CompletedAt        sql.NullTime
 }
 
 type SalesOrderStatus struct {

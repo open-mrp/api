@@ -17,6 +17,15 @@ VALUES
     ('agdf_01seede2e_custom00', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'Custom Test Agent', 'custom_test_agent', 'A custom agent for e2e update tests', 'custom', 'operations', 'manual', true, '{"model":"claude-sonnet-4-20250514","max_tokens":4096}', 'rl_mtg88e6u6fbu')
 ON CONFLICT (id) DO NOTHING;
 
+-- Second custom agent definition whose per-account status is 'inactive' (set in
+-- agent_account_status below), so the /v1/ai/agents `statuses` array filter has
+-- two distinct values (active/inactive) to combine — see
+-- TestArrayFilters_UnionExclusion.
+INSERT INTO agent_definition (id, account_id, name, slug, description, definition_type, category_code, trigger_type, is_active, config)
+VALUES
+    ('agdf_01seede2e_inact00', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'Inactive Test Agent', 'inactive_test_agent', 'A custom agent that is inactive for e2e status-filter coverage', 'custom', 'operations', 'manual', true, '{"model":"claude-sonnet-4-20250514","max_tokens":4096}')
+ON CONFLICT (id) DO NOTHING;
+
 -- Agent definition tools — attaches two system tools to the custom agent so
 -- `?include=tools` returns a populated list on the GET/LIST responses. Also
 -- attaches one tool to orderbot0 so get-run?include=definition.tools resolves
@@ -89,7 +98,8 @@ INSERT INTO agent_account_status (id, account_id, agent_definition_id, status_co
 VALUES
     ('agas_01seede2e_orderstatus', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'agdf_01seede2e_orderbot0', 'active'),
     ('agas_01seede2e_csstatus000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'agdf_01seede2e_csbot0000', 'active'),
-    ('agas_01seede2e_customstat0', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'agdf_01seede2e_custom00', 'active')
+    ('agas_01seede2e_customstat0', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'agdf_01seede2e_custom00', 'active'),
+    ('agas_01seede2e_inactstat0', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'agdf_01seede2e_inact00', 'inactive')
 ON CONFLICT (id) DO NOTHING;
 
 -- Agent token usage (for /v1/ai/usage) — unique on (account_id, date)

@@ -532,6 +532,7 @@ SELECT
     ba.name AS customer_name,
     ar.external_number AS customer_number,
     so.priority_code,
+    pr.id AS priority_id,
     pr.name AS priority_name,
     p.finished_at,
     p.created_at,
@@ -560,6 +561,7 @@ type GetPickRow struct {
 	CustomerName     string
 	CustomerNumber   string
 	PriorityCode     string
+	PriorityID       string
 	PriorityName     string
 	FinishedAt       sql.NullTime
 	CreatedAt        time.Time
@@ -578,6 +580,7 @@ func (q *Queries) GetPick(ctx context.Context, arg GetPickParams) (GetPickRow, e
 		&i.CustomerName,
 		&i.CustomerNumber,
 		&i.PriorityCode,
+		&i.PriorityID,
 		&i.PriorityName,
 		&i.FinishedAt,
 		&i.CreatedAt,
@@ -1010,6 +1013,7 @@ SELECT
     ba.name AS customer_name,
     ar.external_number AS customer_number,
     so.priority_code,
+    pr.id AS priority_id,
     pr.name AS priority_name,
     p.finished_at,
     p.created_at,
@@ -1104,6 +1108,7 @@ type ListPicksBackwardRow struct {
 	CustomerName     string
 	CustomerNumber   string
 	PriorityCode     string
+	PriorityID       string
 	PriorityName     string
 	FinishedAt       sql.NullTime
 	CreatedAt        time.Time
@@ -1184,6 +1189,7 @@ func (q *Queries) ListPicksBackward(ctx context.Context, arg ListPicksBackwardPa
 			&i.CustomerName,
 			&i.CustomerNumber,
 			&i.PriorityCode,
+			&i.PriorityID,
 			&i.PriorityName,
 			&i.FinishedAt,
 			&i.CreatedAt,
@@ -1212,6 +1218,7 @@ SELECT
     ba.name AS customer_name,
     ar.external_number AS customer_number,
     so.priority_code,
+    pr.id AS priority_id,
     pr.name AS priority_name,
     p.finished_at,
     p.created_at,
@@ -1307,6 +1314,7 @@ type ListPicksForwardRow struct {
 	CustomerName     string
 	CustomerNumber   string
 	PriorityCode     string
+	PriorityID       string
 	PriorityName     string
 	FinishedAt       sql.NullTime
 	CreatedAt        time.Time
@@ -1388,6 +1396,7 @@ func (q *Queries) ListPicksForward(ctx context.Context, arg ListPicksForwardPara
 			&i.CustomerName,
 			&i.CustomerNumber,
 			&i.PriorityCode,
+			&i.PriorityID,
 			&i.PriorityName,
 			&i.FinishedAt,
 			&i.CreatedAt,

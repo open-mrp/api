@@ -79,7 +79,3 @@ func quantityFromProto(q *pb.QuantityInfo) *apiresource.Quantity {
 		DisplayValue: apiresource.FormatDisplayValue(norm, q.UnitAbbreviation, q.UnitType),
 	}
 }
-
-func ShippingTermFromProto(st *pb.ShippingTermInfo) *apiresource.ShippingTerm {
-	return shippingTermFromProto(st)
-}

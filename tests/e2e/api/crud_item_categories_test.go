@@ -53,7 +53,7 @@ func TestItemCategories_ListPagination(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(itemCategoriesPath, url.Values{"limit": {"1"}})
 	require.NoError(t, err)
-	assert.Len(t, list.Data, 1)
+	requirePageLen(t, list.Data, 1)
 }
 
 func TestItemCategories_ListCursorPagination(t *testing.T) {

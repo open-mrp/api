@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // UpdateItemInventoryRequest is the request to adjust or reconcile inventory for an item.
@@ -16,25 +17,25 @@ type UpdateItemInventoryRequest struct {
 	// Item ID.
 	ItemID string `path:"id" validate:"required"`
 	// Quantity change to apply.
-	QuantityChange *float64 `json:"quantity_change,omitempty"`
+	QuantityChange field.Optional[float64] `json:"quantity_change,omitzero"`
 	// How quantity_change is applied: adjust adds to current inventory; reconcile sets inventory to the exact value.
-	Operation *constants.InventoryUpdateOperation `json:"operation,omitempty"`
+	Operation field.Optional[constants.InventoryUpdateOperation] `json:"operation,omitzero"`
 	// Customer ID.
-	CustomerID *string `json:"customer_id,omitempty" validate:"omitempty"`
+	CustomerID field.Optional[string] `json:"customer_id,omitzero" validate:"omitempty"`
 	// Location ID.
-	LocationID *string `json:"location_id,omitempty" validate:"omitempty"`
+	LocationID field.Optional[string] `json:"location_id,omitzero" validate:"omitempty"`
 	// Lot number.
-	LotNumber *string `json:"lot_number,omitempty" validate:"omitempty,max=255"`
+	LotNumber field.Optional[string] `json:"lot_number,omitzero" validate:"omitempty,max=255"`
 	// Unit ID for the quantity change.
-	UnitID *string `json:"unit_id,omitempty" validate:"omitempty"`
+	UnitID field.Optional[string] `json:"unit_id,omitzero" validate:"omitempty"`
 }
 
 var sampleUpdateItemInventoryRequest = &UpdateItemInventoryRequest{
-	QuantityChange: func() *float64 { v := 10.5; return &v }(),
-	Operation:      func() *constants.InventoryUpdateOperation { v := constants.InventoryUpdateOperationAdjust; return &v }(),
-	CustomerID:     func() *string { s := apiresource.SampleCustomerID; return &s }(),
-	LocationID:     func() *string { s := apiresource.SampleLocationID; return &s }(),
-	UnitID:         func() *string { s := apiresource.SampleUnitID; return &s }(),
+	QuantityChange: field.Some(10.5),
+	Operation:      field.Some(constants.InventoryUpdateOperationAdjust),
+	CustomerID:     field.Some(apiresource.SampleCustomerID),
+	LocationID:     field.Some(apiresource.SampleLocationID),
+	UnitID:         field.Some(apiresource.SampleUnitID),
 }
 
 func (*UpdateItemInventoryRequest) SchemaExample() any {

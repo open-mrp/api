@@ -23,7 +23,7 @@ type CreateShipmentLineRequest struct {
 }
 
 var sampleCreateShipmentLineRequest = &CreateShipmentLineRequest{
-	SalesOrderLineID: apiresource.SampleSalesOrderLineDetailID,
+	SalesOrderLineID: apiresource.SampleSalesOrderLineID,
 	QuantityValue:    "10.000000000000000000000000000000",
 	QuantityUnitID:   apiresource.SampleUnitID,
 }

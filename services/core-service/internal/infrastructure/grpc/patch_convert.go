@@ -2,31 +2,31 @@ package grpc
 
 import (
 	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 )
 
-func quantityPatchToDomain(p *pb.QuantityPatch) patch.Field[domain.QuantityInput] {
+func quantityPatchToDomain(p *pb.QuantityPatch) field.Clearable[domain.QuantityInput] {
 	if p == nil {
-		return patch.Unset[domain.QuantityInput]()
+		return field.Unset[domain.QuantityInput]()
 	}
 	if p.Clear {
-		return patch.Clear[domain.QuantityInput]()
+		return field.Clear[domain.QuantityInput]()
 	}
 	if p.Value == nil || p.UnitId == nil {
-		return patch.Clear[domain.QuantityInput]()
+		return field.Clear[domain.QuantityInput]()
 	}
-	return patch.Set(domain.QuantityInput{Value: *p.Value, UnitID: *p.UnitId})
+	return field.Set(domain.QuantityInput{Value: *p.Value, UnitID: *p.UnitId})
 }
 
-func stringListPatchToSliceField(p *pb.StringListPatch) patch.Field[[]string] {
-	f := patch.StringListFieldFromProto(p)
+func stringListPatchToSliceField(p *pb.StringListPatch) field.Clearable[[]string] {
+	f := field.StringListClearableFromProto(p)
 	if f.IsUnset() {
-		return patch.Unset[[]string]()
+		return field.Unset[[]string]()
 	}
 	if f.IsClear() {
-		return patch.Clear[[]string]()
+		return field.Clear[[]string]()
 	}
 	sl, _ := f.Value()
-	return patch.Set([]string(sl))
+	return field.Set([]string(sl))
 }

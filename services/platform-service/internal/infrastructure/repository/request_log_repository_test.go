@@ -36,7 +36,7 @@ func baseRow() sqlc.FindRequestLogByIDRow {
 func TestMapRowToRequestLogRead_UserActor(t *testing.T) {
 	t.Parallel()
 	row := baseRow()
-	row.ActorID = "actu_abc123"
+	row.ActorID = nullStr("actu_abc123")
 	row.ActorType = nullStr("internal")
 	row.IdentityType = nullStr("user")
 	row.UserEmail = nullStr("user@example.com")
@@ -76,7 +76,7 @@ func TestMapRowToRequestLogRead_UserActor(t *testing.T) {
 func TestMapRowToRequestLogRead_APIKeyActor(t *testing.T) {
 	t.Parallel()
 	row := baseRow()
-	row.ActorID = "apke_key_id_123"
+	row.ActorID = nullStr("apke_key_id_123")
 	row.ActorType = nullStr("customer")
 	row.IdentityType = nullStr("api_key")
 	row.ApiKeyTypeID = nullStr("apk_type_id_456")
@@ -112,7 +112,7 @@ func TestMapRowToRequestLogRead_APIKeyActor(t *testing.T) {
 func TestMapRowToRequestLogRead_APIKeyActor_FallbackToActorID(t *testing.T) {
 	t.Parallel()
 	row := baseRow()
-	row.ActorID = "apke_key_id_123"
+	row.ActorID = nullStr("apke_key_id_123")
 	row.ActorType = nullStr("customer")
 	row.IdentityType = nullStr("api_key")
 	// No ApiKeyTypeID - should fall back to ActorID
@@ -132,7 +132,7 @@ func TestMapRowToRequestLogRead_APIKeyActor_FallbackToActorID(t *testing.T) {
 func TestMapRowToRequestLogRead_NoActor_WhenIdentityTypeNil(t *testing.T) {
 	t.Parallel()
 	row := baseRow()
-	row.ActorID = "actu_abc123"
+	row.ActorID = nullStr("actu_abc123")
 	row.ActorType = nullStr("internal")
 	row.IdentityType = nullStrEmpty() // nil identity type
 
@@ -146,7 +146,7 @@ func TestMapRowToRequestLogRead_NoActor_WhenIdentityTypeNil(t *testing.T) {
 func TestMapRowToRequestLogRead_NoActor_WhenActorIDNil(t *testing.T) {
 	t.Parallel()
 	row := baseRow()
-	row.ActorID = "" // nil actor ID
+	row.ActorID = nullStrEmpty() // nil actor ID
 	row.ActorType = nullStr("internal")
 	row.IdentityType = nullStr("user")
 
@@ -160,7 +160,7 @@ func TestMapRowToRequestLogRead_NoActor_WhenActorIDNil(t *testing.T) {
 func TestMapRowToRequestLogRead_NoActor_WhenUnauthenticated(t *testing.T) {
 	t.Parallel()
 	row := baseRow()
-	row.ActorID = "actu_abc123"
+	row.ActorID = nullStr("actu_abc123")
 	row.ActorType = nullStr("internal")
 	row.IdentityType = nullStr("unauthenticated")
 
@@ -179,7 +179,7 @@ func TestMapRowToRequestLogRead_InternalActorType_WithUserIdentity(t *testing.T)
 	)
 
 	row := baseRow()
-	row.ActorID = "actu_abc123"
+	row.ActorID = nullStr("actu_abc123")
 	row.ActorType = nullStr("internal") // was incorrectly used for switching
 	row.IdentityType = nullStr("user")  // this is what should drive the switch
 	row.UserEmail = nullStr("admin@example.com")
@@ -204,7 +204,7 @@ func TestMapRowToRequestLogRead_CustomerActorType_WithAPIKeyIdentity(t *testing.
 	)
 
 	row := baseRow()
-	row.ActorID = "apke_key1"
+	row.ActorID = nullStr("apke_key1")
 	row.ActorType = nullStr("customer")
 	row.IdentityType = nullStr("api_key")
 	row.ApiKeyTypeID = nullStr("apk_type1")

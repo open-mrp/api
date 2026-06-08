@@ -77,7 +77,17 @@ func optOutKey(operationID, include string) string {
 //	bug:      backend doesn't attach the nested resource when requested.
 //	schema:   the relationship isn't representable in the current schema.
 var includesOptOut = map[string]string{
-	"retrieve-settlement::responsible_user": "bug: settlement stores user ID not account_user ID; loader cannot resolve",
+	"retrieve-settlement::responsible_user":   "bug: settlement stores user ID not account_user ID; loader cannot resolve",
+	"retrieve-sales-order::related.shipments": "bug: SalesOrderInfo proto does not expose linked shipment ids yet; needs backend wiring",
+	// The supplier is the seller account (cross-account); LoadAccounts is scoped to
+	// the caller's account so it cannot be loaded. Fix: carry the supplier inline on
+	// ReceivingOrderInfo as a *Supplier (mirror PurchaseOrder), not via LoadAccounts.
+	"retrieve-receiving-order::supplier": "bug: cross-account supplier not loadable via LoadAccounts; carry inline like PurchaseOrder",
+	"list-receiving-orders::supplier":    "bug: cross-account supplier not loadable via LoadAccounts; carry inline like PurchaseOrder",
+	// The shipping_address belongs to the customer account (cross-account); LoadAddresses
+	// is scoped to the caller's account. Fix: carry full shipping-address detail inline on
+	// ShipmentInfo (mirror SalesOrder bill_to/ship_to addresses).
+	"retrieve-shipment::shipping_address": "bug: cross-account shipping address not loadable via LoadAddresses; carry inline like SalesOrder addresses",
 }
 
 // assertIncludePopulated navigates the response to the JSON path described by

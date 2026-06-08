@@ -91,7 +91,7 @@ func (m *paymentTermSvcImpl) CreatePaymentTerm(ctx context.Context, req *CreateP
 func (m *paymentTermSvcImpl) UpdatePaymentTerm(ctx context.Context, req *UpdatePaymentTermRequest) (*apiresource.PaymentTerm, *apierror.APIError) {
 	resp, apiErr := grpcutil.CallRPC(ctx, paymentTermSvcTracer, "service.payment_terms.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdatePaymentTermResponse, error) {
-			return m.coreClient.UpdatePaymentTerm(ctx, &pb.UpdatePaymentTermRequest{Id: req.PaymentTermID, Name: req.Name}, opts...)
+			return m.coreClient.UpdatePaymentTerm(ctx, &pb.UpdatePaymentTermRequest{Id: req.PaymentTermID, Name: req.Name.Ptr()}, opts...)
 		})
 	if apiErr != nil {
 		return nil, apiErr

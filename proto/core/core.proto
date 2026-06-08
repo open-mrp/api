@@ -536,6 +536,8 @@ service CoreService {
 
   rpc ListCustomers(ListCustomersRequest) returns (ListCustomersResponse);
   rpc GetCustomer(GetCustomerRequest) returns (GetCustomerResponse);
+  // Returns customers by ID for the api-gateway include resolver.
+  rpc BatchGetCustomersByIDs(BatchGetCustomersByIDsRequest) returns (BatchGetCustomersByIDsResponse);
   rpc CreateCustomer(CreateCustomerRequest) returns (CreateCustomerResponse);
   // Deletes a customer and its associated relations.
   rpc DeleteCustomer(DeleteCustomerRequest) returns (google.protobuf.Empty);

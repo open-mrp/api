@@ -54,6 +54,7 @@ message PickSummaryInfo {
   google.protobuf.Timestamp created_at = 10;
   google.protobuf.Timestamp updated_at = 11;
   string sales_order_number = 12;
+  string priority_id = 13;
 }
 
 // PickInfo represents a full pick resource.
@@ -72,6 +73,7 @@ message PickInfo {
   repeated PickLineInfo lines = 12;
   repeated PickDepartmentInfo departments = 13;
   string sales_order_number = 14;
+  string priority_id = 15;
 }
 
 // PickLineInfo represents a pick line resource.

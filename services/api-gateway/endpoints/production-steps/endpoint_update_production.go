@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to update a production output.
@@ -18,20 +19,20 @@ type UpdateProductionRequest struct {
 	// Production ID.
 	ProductionID string `path:"id" validate:"required"`
 	// Item ID.
-	ItemID *string `json:"item_id,omitempty" validate:"omitempty"`
+	ItemID field.Optional[string] `json:"item_id,omitzero" validate:"omitempty"`
 	// Quantity value as a decimal string.
-	QuantityValue *string `json:"quantity_value,omitempty"`
+	QuantityValue field.Optional[string] `json:"quantity_value,omitzero"`
 	// Quantity unit ID.
-	QuantityUnitID *string `json:"quantity_unit_id,omitempty" validate:"omitempty"`
+	QuantityUnitID field.Optional[string] `json:"quantity_unit_id,omitzero" validate:"omitempty"`
 }
 
 var sampleUpdateProductionItemID = apiresource.SampleItemID
 var sampleUpdateProductionQuantityValue = "500"
 var sampleUpdateProductionQuantityUnitID = apiresource.SampleUnitID
 var sampleUpdateProductionRequest = &UpdateProductionRequest{
-	ItemID:         &sampleUpdateProductionItemID,
-	QuantityValue:  &sampleUpdateProductionQuantityValue,
-	QuantityUnitID: &sampleUpdateProductionQuantityUnitID,
+	ItemID:         field.Some(sampleUpdateProductionItemID),
+	QuantityValue:  field.Some(sampleUpdateProductionQuantityValue),
+	QuantityUnitID: field.Some(sampleUpdateProductionQuantityUnitID),
 }
 
 func (*UpdateProductionRequest) SchemaExample() any {

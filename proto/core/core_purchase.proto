@@ -17,6 +17,9 @@ service CorePurchaseService {
   // GetPurchaseOrder returns a single purchase order by ID.
   rpc GetPurchaseOrder(GetPurchaseOrderRequest) returns (GetPurchaseOrderResponse);
 
+  // Returns purchase orders by ID for the api-gateway include resolver.
+  rpc BatchGetPurchaseOrdersByIDs(BatchGetPurchaseOrdersByIDsRequest) returns (BatchGetPurchaseOrdersByIDsResponse);
+
   // CreatePurchaseOrder creates a new purchase order.
   rpc CreatePurchaseOrder(CreatePurchaseOrderRequest) returns (CreatePurchaseOrderResponse);
 
@@ -222,6 +225,14 @@ message GetPurchaseOrderRequest {
 
 message GetPurchaseOrderResponse {
   PurchaseOrderInfo purchase_order = 1;
+}
+
+// Batched read of purchase orders for the api-gateway include resolver.
+message BatchGetPurchaseOrdersByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetPurchaseOrdersByIDsResponse {
+  repeated PurchaseOrderInfo purchase_orders = 1;
 }
 
 message CreatePurchaseOrderRequest {

@@ -44,6 +44,9 @@ service CoreSalesService {
   // GetSalesOrder returns a single sales order by ID.
   rpc GetSalesOrder(GetSalesOrderRequest) returns (GetSalesOrderResponse);
 
+  // Returns sales orders by ID for the api-gateway include resolver.
+  rpc BatchGetSalesOrdersByIDs(BatchGetSalesOrdersByIDsRequest) returns (BatchGetSalesOrdersByIDsResponse);
+
   // CreateSalesOrder creates a new sales order.
   rpc CreateSalesOrder(CreateSalesOrderRequest) returns (CreateSalesOrderResponse);
 
@@ -194,6 +197,14 @@ message ListSalesOrderStatusesRequest {
 message ListSalesOrderStatusesResponse {
   repeated SalesOrderStatusInfo sales_order_statuses = 1;
   PageInfo page_info = 2;
+}
+
+// Batched read of full sales orders for the api-gateway resourcekit resolver.
+message BatchGetSalesOrdersByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetSalesOrdersByIDsResponse {
+  repeated SalesOrderInfo sales_orders = 1;
 }
 
 // Batched read for the api-gateway resourcekit resolver.
@@ -383,7 +394,7 @@ message SalesOrderLineInfo {
   optional string unit_cost_denominator_unit_id = 28;
   optional string unit_cost_denominator_unit_abbreviation = 29;
   // Timestamps
-  optional google.protobuf.Timestamp completed_at = 30;
+  reserved 30; // formerly completed_at (removed from sales order lines)
   google.protobuf.Timestamp created_at = 31;
   google.protobuf.Timestamp updated_at = 32;
 }
@@ -499,22 +510,11 @@ message UpdateSalesOrderRequest {
   optional string shipping_term_id = 10;
   optional string payment_term_id = 11;
   optional string order_discount_id = 12;
-  // Address fields for bill-to
-  optional string bill_to_name = 13;
-  optional string bill_to_street_line_1 = 14;
-  optional string bill_to_street_line_2 = 15;
-  optional string bill_to_locality = 16;
-  optional string bill_to_state = 17;
-  optional string bill_to_postal_code = 18;
-  optional string bill_to_country = 19;
-  // Address fields for ship-to
-  optional string ship_to_name = 20;
-  optional string ship_to_street_line_1 = 21;
-  optional string ship_to_street_line_2 = 22;
-  optional string ship_to_locality = 23;
-  optional string ship_to_state = 24;
-  optional string ship_to_postal_code = 25;
-  optional string ship_to_country = 26;
+  // Address references. To change an address's contents, callers use the
+  // update-address endpoint; the order update only re-points to an address ID.
+  reserved 13 to 26;
+  optional string billing_address_id = 34;
+  optional string shipping_address_id = 35;
   // Additional updatable fields
   optional string number = 27;
   optional bool is_acknowledgment_sent = 28;

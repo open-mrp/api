@@ -99,8 +99,8 @@ func (m *ediDCLocationSvcImpl) CreateDCLocation(ctx context.Context, req *Create
 func (m *ediDCLocationSvcImpl) UpdateDCLocation(ctx context.Context, req *UpdateDCLocationRequest) (*apiresource.DCLocation, *apierror.APIError) {
 	pbReq := &pb.UpdateDCLocationRequest{
 		Id:         req.DCLocationID,
-		CustomerId: req.CustomerID,
-		Location:   req.Location,
+		CustomerId: req.CustomerID.Ptr(),
+		Location:   req.Location.Ptr(),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, ediDCLocationSvcTracer, "service.edi-dc-locations.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateDCLocationResponse, error) {

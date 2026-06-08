@@ -1,6 +1,6 @@
 -- name: FindAuditEventByID :one
 SELECT ae.type_id,
-       COALESCE(au.id, ae.actor_id, '') AS actor_id,
+       ae.actor_id AS actor_id,
        ae.actor_type,
        ae.identity_type,
        ae.account_id,
@@ -21,15 +21,16 @@ SELECT ae.type_id,
        ak.redacted_value AS api_key_redacted_value,
        ik.idempotency_key
 FROM audit_event ae
+-- actor_id stores the raw actor key (user_id / api_key.type_id) — exposed
+-- directly. Enrichment joins key on it: user by id, api_key by type_id.
 LEFT JOIN `user` u ON ae.actor_id = u.id AND ae.identity_type = 'user'
 LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key'
-LEFT JOIN account_user au ON au.user_id = ae.actor_id AND au.account_id = ae.account_id AND ae.identity_type = 'user'
 LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
 WHERE ae.type_id = ? AND ae.account_id = ?;
 
 -- name: ListAuditEventsForward :many
 SELECT ae.type_id,
-       COALESCE(au.id, ae.actor_id, '') AS actor_id,
+       ae.actor_id AS actor_id,
        ae.actor_type,
        ae.identity_type,
        ae.account_id,
@@ -50,9 +51,10 @@ SELECT ae.type_id,
        ak.redacted_value AS api_key_redacted_value,
        ik.idempotency_key
 FROM audit_event ae
+-- actor_id stores the raw actor key (user_id / api_key.type_id) — exposed
+-- directly. Enrichment joins key on it: user by id, api_key by type_id.
 LEFT JOIN `user` u ON ae.actor_id = u.id AND ae.identity_type = 'user'
 LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key'
-LEFT JOIN account_user au ON au.user_id = ae.actor_id AND au.account_id = ae.account_id AND ae.identity_type = 'user'
 LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
 WHERE ae.account_id = sqlc.arg('target_account_id')
 AND (sqlc.arg('include_resource_type_filter') = false OR ae.resource_type IN (sqlc.slice('resource_types')))
@@ -65,6 +67,8 @@ AND (
     sqlc.narg('search_query') IS NULL
     OR ae.resource_type LIKE sqlc.narg('search_query')
     OR ae.action LIKE sqlc.narg('search_query')
+    OR ae.resource_id LIKE sqlc.narg('search_query')
+    OR ae.request_id LIKE sqlc.narg('search_query')
 )
 AND (
     sqlc.narg('cursor_occurred_at') IS NULL
@@ -76,7 +80,7 @@ LIMIT ?;
 
 -- name: ListAuditEventsBackward :many
 SELECT ae.type_id,
-       COALESCE(au.id, ae.actor_id, '') AS actor_id,
+       ae.actor_id AS actor_id,
        ae.actor_type,
        ae.identity_type,
        ae.account_id,
@@ -97,9 +101,10 @@ SELECT ae.type_id,
        ak.redacted_value AS api_key_redacted_value,
        ik.idempotency_key
 FROM audit_event ae
+-- actor_id stores the raw actor key (user_id / api_key.type_id) — exposed
+-- directly. Enrichment joins key on it: user by id, api_key by type_id.
 LEFT JOIN `user` u ON ae.actor_id = u.id AND ae.identity_type = 'user'
 LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key'
-LEFT JOIN account_user au ON au.user_id = ae.actor_id AND au.account_id = ae.account_id AND ae.identity_type = 'user'
 LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
 WHERE ae.account_id = sqlc.arg('target_account_id')
 AND (sqlc.arg('include_resource_type_filter') = false OR ae.resource_type IN (sqlc.slice('resource_types')))
@@ -112,6 +117,8 @@ AND (
     sqlc.narg('search_query') IS NULL
     OR ae.resource_type LIKE sqlc.narg('search_query')
     OR ae.action LIKE sqlc.narg('search_query')
+    OR ae.resource_id LIKE sqlc.narg('search_query')
+    OR ae.request_id LIKE sqlc.narg('search_query')
 )
 AND (
     ae.occurred_at > sqlc.arg('cursor_occurred_at')

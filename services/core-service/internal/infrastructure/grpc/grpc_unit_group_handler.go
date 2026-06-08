@@ -5,7 +5,7 @@ import (
 
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/shared/contracts"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -172,7 +172,7 @@ func (h *gRPCHandler) UpdateUnitGroup(ctx context.Context, req *pb.UpdateUnitGro
 	params := domain.UpdateUnitGroupParams{
 		UnitGroupID: req.Id,
 		Name:        req.Name,
-		Notes:       patch.StringFieldFromProto(req.Notes),
+		Notes:       field.StringClearableFromProto(req.Notes),
 		BaseUnitID:  req.BaseUnitId,
 		Includes:    req.Includes,
 	}

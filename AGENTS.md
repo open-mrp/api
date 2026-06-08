@@ -167,7 +167,29 @@ type APIKey struct {
 }
 ```
 
-Notice that we define some include parameters so that the user can fetch extra data (the role) if they desire. By default, no include values for these subresources will be null. Make sure we always structure apiresources to use subresources when they can and never inline subresource values in the resource directly (e.g. we would not create fields like RoleID or RoleName in the api key resource but instead make it a sub resource).
+Notice that we define some include parameters so that the user can fetch extra data (the role) if they desire. Make sure we always structure apiresources to use subresources when they can and never inline subresource values in the resource directly (e.g. we would not create fields like RoleID or RoleName in the api key resource but instead make it a sub resource).
+
+### Request field tags (create / update bodies)
+
+Request structs model field *presence* through the field's type, not a bare pointer. A bare Go pointer can't distinguish an absent key from an explicit `null`, so we use two wrapper types. **The type picks itself based on which states the endpoint must distinguish** — see `docs/patterns/nullable-field-patterns.md` for the full rationale, decision table, runtime pipeline, and proto/OpenAPI mapping.
+
+| Context | Required / always present | Optional, not clearable | Clearable (accepts `null`) |
+|---------|---------------------------|-------------------------|----------------------------|
+| Create / action | `T` + `validate:"required"`, no omit tag | `field.Optional[T]` + `,omitzero` | — |
+| Update / PATCH | `T` (path params) | `field.Optional[T]` + `,omitzero` | `*field.Clearable[T]` + `,omitzero` |
+| Response | `T` + `validate:"required"` | `*T` (nullable, **no** omit tag) | `*T` (nullable, **no** omit tag) |
+
+Rules: every **request** field uses `,omitzero` (never `,omitempty`) on its json tag; `validate:"omitempty,..."` is a separate validator keyword and stays. `field.Optional[T]` rejects an explicit `null` and a blank string (`400`); `*field.Clearable[T]` is the only request shape that accepts `null` (to clear). Never use a bare `*T` for an optional *request* field, and never use `omitempty` on a *response* field. After changing any request struct, run `make openapi` and commit the regenerated spec.
+
+### Expandable subresources: real data on include, `null` otherwise (NON-NEGOTIABLE)
+
+Expandable subresources (`expandable:"true"`) follow exactly one contract — the same one our other services use:
+
+- **`null` unless explicitly included.** If the client did not pass `?include=<key>`, the field is `null`. The presenter leaves the field `nil`; it does **not** assign anything.
+- **Real data only when included.** When `?include=<key>` is requested, the field is populated by a registered loader that fetches the **real** record from the source service (the `BatchGet<X>ByIDs` loader pattern in `internal/resourceloaders/`). What we serialize is exactly what the source returned — nothing invented.
+- **Never fabricate.** Do not build "stub" / placeholder subresources, do not default enum or status fields to plausible-looking values (`status: "issued"`, `priority: "normal"`, unit `ratio_numerator: "1"`, etc.), and do not hand-assemble a partial subresource from whatever foreign keys happen to be on the parent proto. If the real value is not available, the answer is `null`, not a guess.
+
+Mechanically: the presenter builds the resource with expandable fields left `nil` and stashes only the foreign-key **id** into the request-scoped load meta (`resourcekit.GetLoadMeta(ctx).Set(parentObjectType, parent.ID, "<fk>_id", id)`). The field is registered as a `SubField` in `internal/resourceregistry/registered_*.go` with a `Target`, an `ExtractIDs` that reads the stashed id, and a `Populate` that writes `loaded[id]` onto the parent. The include resolver only runs `Populate` for includes the client actually requested — so an un-requested field is never touched and serializes as `null`. There is no post-hoc "collapse" step that hides fabricated data; whatever the presenter puts on an expandable field ships to the client, which is exactly why presenters must never put fabricated data there.
 
 ## Typical gRPC Handler Shape
 
@@ -323,6 +345,7 @@ rather than:
 For deeper dives, review the following docs:
 
 - `docs/patterns/api-resource-conventions.md` — API resource field conventions (object field, no omitempty, sub-objects, expandable relations, include system, list responses, sample data)
+- `docs/patterns/nullable-field-patterns.md` — **Request** field tags and nullability: `field.Optional[T]` vs. `*field.Clearable[T]` vs. value types, `omitzero` rule, the absent/null/value three-state model, the gateway null/blank-rejection pipeline, and proto/OpenAPI mapping
 - `docs/patterns/architecture-patterns.md` — Layered architecture (services, mediators, repositories, transaction management, idempotency, error handling, tracing)
 - `docs/patterns/authentication-patterns.md` — Identity model, authorization checks, permission model, actor types
 - `docs/patterns/domain-layer-patterns.md` — Domain directory structure, standard files, mock generation, entry point pattern

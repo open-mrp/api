@@ -9,6 +9,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to partially update a registration flow.
@@ -16,23 +17,23 @@ type UpdateRegistrationFlowRequest struct {
 	// Registration flow ID.
 	RegistrationFlowID string `path:"id" validate:"required"`
 	// Display name.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// Customer group IDs.
-	CustomerGroupIDs []string `json:"customer_group_ids,omitempty"`
+	CustomerGroupIDs []string `json:"customer_group_ids,omitzero"`
 	// Payment term IDs.
-	PaymentTermIDs []string `json:"payment_term_ids,omitempty"`
+	PaymentTermIDs []string `json:"payment_term_ids,omitzero"`
 	// Shipping term IDs.
-	ShippingTermIDs []string `json:"shipping_term_ids,omitempty"`
+	ShippingTermIDs []string `json:"shipping_term_ids,omitzero"`
 	// Whether to replace customer groups.
-	HasCustomerGroupIDs bool `json:"has_customer_group_ids,omitempty"`
+	HasCustomerGroupIDs bool `json:"has_customer_group_ids,omitzero"`
 	// Whether to replace payment terms.
-	HasPaymentTermIDs bool `json:"has_payment_term_ids,omitempty"`
+	HasPaymentTermIDs bool `json:"has_payment_term_ids,omitzero"`
 	// Whether to replace shipping terms.
-	HasShippingTermIDs bool `json:"has_shipping_term_ids,omitempty"`
+	HasShippingTermIDs bool `json:"has_shipping_term_ids,omitzero"`
 }
 
 var sampleUpdateRegistrationFlowRequest = &UpdateRegistrationFlowRequest{
-	Name: new("Wholesale Registration Updated"),
+	Name: field.Some("Wholesale Registration Updated"),
 }
 
 func (*UpdateRegistrationFlowRequest) SchemaExample() any {

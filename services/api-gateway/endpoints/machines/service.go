@@ -106,7 +106,7 @@ func (m *machineSvcImpl) CreateMachine(ctx context.Context, req *CreateMachineRe
 	pbReq := &pb.CreateMachineRequest{
 		Name:         req.Name,
 		SerialNumber: req.SerialNumber,
-		Notes:        req.Notes,
+		Notes:        req.Notes.Ptr(),
 		DepartmentId: req.DepartmentID,
 	}
 
@@ -125,9 +125,9 @@ func (m *machineSvcImpl) CreateMachine(ctx context.Context, req *CreateMachineRe
 func (m *machineSvcImpl) UpdateMachine(ctx context.Context, req *UpdateMachineRequest) (*apiresource.Machine, *apierror.APIError) {
 	pbReq := &pb.UpdateMachineRequest{
 		Id:           req.MachineID,
-		Name:         req.Name,
-		SerialNumber: req.SerialNumber,
-		Notes:        req.Notes,
+		Name:         req.Name.Ptr(),
+		SerialNumber: req.SerialNumber.Ptr(),
+		Notes:        req.Notes.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, machineSvcTracer, "service.machines.update", domain.ServiceName,

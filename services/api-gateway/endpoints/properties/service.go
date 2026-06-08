@@ -114,7 +114,7 @@ func (m *propertySvcImpl) CreateProperty(ctx context.Context, req *CreatePropert
 func (m *propertySvcImpl) UpdateProperty(ctx context.Context, req *UpdatePropertyRequest) (*apiresource.Property, *apierror.APIError) {
 	pbReq := &pb.UpdatePropertyRequest{
 		Id:   req.PropertyID,
-		Name: req.Name,
+		Name: req.Name.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, propertySvcTracer, "service.properties.update", domain.ServiceName,
@@ -193,8 +193,8 @@ func (m *propertySvcImpl) CreateAttribute(ctx context.Context, req *CreateAttrib
 	}
 
 	var sortOrder int32 = -1
-	if req.SortOrder != nil {
-		sortOrder = *req.SortOrder
+	if v, ok := req.SortOrder.Value(); ok {
+		sortOrder = v
 	}
 
 	pbReq := &pb.CreateAttributeRequest{
@@ -218,17 +218,17 @@ func (m *propertySvcImpl) CreateAttribute(ctx context.Context, req *CreateAttrib
 
 func (m *propertySvcImpl) UpdateAttribute(ctx context.Context, req *UpdateAttributeRequest) (*apiresource.Attribute, *apierror.APIError) {
 	var colorCode *string
-	if req.ColorCode != nil {
-		s := string(*req.ColorCode)
+	if c, ok := req.ColorCode.Value(); ok {
+		s := string(c)
 		colorCode = &s
 	}
 
 	pbReq := &pb.UpdateAttributeRequest{
 		PropertyId: req.PropertyID,
 		Id:         req.AttributeID,
-		Value:      req.Value,
+		Value:      req.Value.Ptr(),
 		ColorCode:  colorCode,
-		SortOrder:  req.SortOrder,
+		SortOrder:  req.SortOrder.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, propertySvcTracer, "service.attributes.update", domain.ServiceName,

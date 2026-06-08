@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -30,13 +31,11 @@ type ListInvoicesRequest struct {
 	EndDate *string `query:"end_date"`
 }
 
-// TODO: stop returning InvoiceSummary; return the full Invoice apiresource and use proper includes values to control expansion.
-
 // Returns a paginated list of invoices for the current account.
 type ListInvoicesEndpoint struct{}
 
-func (e *ListInvoicesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListInvoicesRequest, *apiresource.List[apiresource.InvoiceSummary]] {
-	return (&apiendpoint.APIEndpoint[*ListInvoicesRequest, *apiresource.List[apiresource.InvoiceSummary]]{
+func (e *ListInvoicesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListInvoicesRequest, *apiresource.List[apiresource.Invoice]] {
+	return (&apiendpoint.APIEndpoint[*ListInvoicesRequest, *apiresource.List[apiresource.Invoice]]{
 		Title:             "List Invoices",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
@@ -44,8 +43,13 @@ func (e *ListInvoicesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListInvoi
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *ListInvoicesRequest) (*apiresource.List[apiresource.InvoiceSummary], *apierror.APIError) {
+		ObjectType:        constants.ObjectTypeInvoice,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *ListInvoicesRequest) (*apiresource.List[apiresource.Invoice], *apierror.APIError) {
 			return svc.(InvoiceSvc).ListInvoices
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeInvoice,
+			Fields:     []string{"customer", "order", "shipment", "billing_address", "payment_term"},
+		}),
 	})
 }

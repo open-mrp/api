@@ -3,17 +3,19 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/patch"
+	"github.com/augno/api/shared/field"
 
 	invoiceep "github.com/augno/api/services/api-gateway/endpoints/invoices"
 )
@@ -60,18 +62,21 @@ type patchQuantityInput struct {
 	UnitID string  `json:"unit_id"`
 }
 
-// PatchFieldStruct exercises patch.Field[T] OpenAPI generation.
+// PatchFieldStruct exercises field.Clearable[T] OpenAPI generation.
 type PatchFieldStruct struct {
-	Name        *string                          `json:"name,omitempty"`
-	Description *patch.Field[string]             `json:"description"`
-	FlatRate    *patch.Field[patchQuantityInput] `json:"flat_rate"`
-	Tags        *patch.Field[[]string]           `json:"tags,omitempty"`
+	Name        *string                             `json:"name,omitempty"`
+	Description field.Clearable[string]             `json:"description,omitzero"`
+	FlatRate    field.Clearable[patchQuantityInput] `json:"flat_rate,omitzero"`
+	Tags        field.Clearable[[]string]           `json:"tags,omitzero"`
 }
 
-// NullableInputStruct exercises patch.Nullable[T] OpenAPI generation.
-type NullableInputStruct struct {
+// OptionalInputStruct exercises field.Optional[T] OpenAPI generation.
+type OptionalInputStruct struct {
 	Optional    *string                `json:"optional,omitempty"`
-	Description patch.Nullable[string] `json:"description,omitzero"`
+	Description field.Optional[string] `json:"description,omitzero"`
+	// A field.Optional[T] is always an optional input; even a stray
+	// validate:"required" must not make it required in the schema.
+	Mandatory field.Optional[string] `json:"mandatory,omitzero" validate:"required"`
 }
 
 type TestSchemaStruct struct {
@@ -104,6 +109,19 @@ type NullableFromExampleStruct struct {
 func (*NullableFromExampleStruct) SchemaExample() any {
 	return map[string]any{
 		"raw": nil,
+	}
+}
+
+// ExampleNullMismatchStruct documents a `null` example for a field whose Go type
+// is non-nullable (a plain string). The example contradicts the type, which must
+// fail schema generation loudly rather than be silently coerced to nullable.
+type ExampleNullMismatchStruct struct {
+	Name string `json:"name"`
+}
+
+func (*ExampleNullMismatchStruct) SchemaExample() any {
+	return map[string]any{
+		"name": nil,
 	}
 }
 
@@ -261,9 +279,6 @@ func TestGenerateSchema(t *testing.T) {
 	if !respSchema.Properties["description"].Nullable {
 		t.Error("expected response pointer field 'description' to be nullable")
 	}
-	if respSchema.Properties["description"].XNullableClear {
-		t.Error("expected response pointer without x-nullable-clear")
-	}
 
 	// Test DocumentedType
 	docType := reflect.TypeOf(DocumentedStruct{})
@@ -290,15 +305,17 @@ func TestGenerateSchema(t *testing.T) {
 		t.Error("expected json.RawMessage field 'raw' to be nullable by default")
 	}
 
-	// If a documented example encodes `null`, we should mark the field nullable
-	// even when the Go type isn't a pointer.
+	// A `null` in SchemaExample is permitted when it agrees with an already-nullable
+	// Go type (here json.RawMessage, nullable by default); it is simply a no-op. A
+	// null example on a non-nullable type instead fails generation loudly — see
+	// TestGenerateSchema_ExampleNullOnNonNullableTypePanics.
 	exampleNullType := reflect.TypeOf(NullableFromExampleStruct{})
 	exampleNullSchema := generateSchema(exampleNullType, components, reader)
 	exampleNullField, ok := exampleNullSchema.Properties["raw"]
 	if !ok {
 		t.Fatal("expected property 'raw' to exist on NullableFromExampleStruct")
 	}
-	if exampleNullField.Nullable != true {
+	if !exampleNullField.Nullable {
 		t.Errorf("expected property 'raw' to be nullable, got %v", exampleNullField.Nullable)
 	}
 
@@ -307,7 +324,7 @@ func TestGenerateSchema(t *testing.T) {
 
 	for _, req := range patchSchema.Required {
 		if req == "flat_rate" || req == "tags" || req == "description" {
-			t.Errorf("patch.Field property %q must not be required", req)
+			t.Errorf("field.Clearable property %q must not be required", req)
 		}
 	}
 
@@ -318,16 +335,16 @@ func TestGenerateSchema(t *testing.T) {
 	if desc.Type != "string" {
 		t.Errorf("expected description type string, got %q", desc.Type)
 	}
-	if !desc.Nullable || !desc.XNullableClear {
-		t.Error("expected description to be nullable with x-nullable-clear")
+	if !desc.Nullable {
+		t.Error("expected clearable description to be nullable")
 	}
 
 	flat, ok := patchSchema.Properties["flat_rate"]
 	if !ok {
 		t.Fatal("expected property 'flat_rate'")
 	}
-	if !flat.Nullable || !flat.XNullableClear {
-		t.Error("expected flat_rate to be nullable with x-nullable-clear")
+	if !flat.Nullable {
+		t.Error("expected clearable flat_rate to be nullable")
 	}
 	if len(flat.AllOf) == 0 || flat.AllOf[0].Ref != "#/components/schemas/patchQuantityInput" {
 		t.Errorf("expected flat_rate to reference patchQuantityInput, got %+v", flat.AllOf)
@@ -340,21 +357,21 @@ func TestGenerateSchema(t *testing.T) {
 	if tags.Type != "array" || tags.Items == nil || tags.Items.Type != "string" {
 		t.Errorf("expected tags type array of string, got %+v", tags)
 	}
-	if !tags.Nullable || !tags.XNullableClear {
-		t.Error("expected tags to be nullable with x-nullable-clear")
+	if !tags.Nullable {
+		t.Error("expected clearable tags to be nullable")
 	}
 
 	if _, ok := components.Schemas["Field"]; ok {
-		t.Error("patch.Field must not appear as a component schema name")
+		t.Error("field.Clearable must not appear as a component schema name")
 	}
 	if _, ok := components.Schemas["patch_Field_string"]; ok {
-		t.Error("patch.Field must not leak into component schema names")
+		t.Error("field.Clearable must not leak into component schema names")
 	}
 
-	nullableType := reflect.TypeOf(NullableInputStruct{})
-	nullableSchema := generateSchema(nullableType, components, reader)
+	optionalType := reflect.TypeOf(OptionalInputStruct{})
+	optionalSchema := generateSchema(optionalType, components, reader)
 
-	opt, ok := nullableSchema.Properties["optional"]
+	opt, ok := optionalSchema.Properties["optional"]
 	if !ok {
 		t.Fatal("expected property 'optional'")
 	}
@@ -362,18 +379,25 @@ func TestGenerateSchema(t *testing.T) {
 		t.Error("expected optional *string with omitempty to not be nullable")
 	}
 
-	descNullable, ok := nullableSchema.Properties["description"]
+	descOptional, ok := optionalSchema.Properties["description"]
 	if !ok {
 		t.Fatal("expected property 'description'")
 	}
-	if descNullable.Type != "string" {
-		t.Errorf("expected description type string, got %q", descNullable.Type)
+	if descOptional.Type != "string" {
+		t.Errorf("expected description type string, got %q", descOptional.Type)
 	}
-	if !descNullable.Nullable {
-		t.Error("expected Nullable[string] to be nullable")
+	// field.Optional[T] rejects an explicit null at runtime, so it is an optional
+	// (omittable) input but NOT nullable on the wire.
+	if descOptional.Nullable {
+		t.Error("expected field.Optional[string] to not be nullable (it rejects explicit null)")
 	}
-	if descNullable.XNullableClear {
-		t.Error("expected Nullable[string] without x-nullable-clear")
+
+	// A field.Optional[T] is always optional: a validate:"required" tag must not
+	// promote it into the schema's required list.
+	for _, req := range optionalSchema.Required {
+		if req == "mandatory" {
+			t.Error("expected field.Optional[string] with validate:\"required\" to not be required")
+		}
 	}
 }
 
@@ -399,6 +423,27 @@ type retrieveAPIKeyMockEndpoint struct {
 
 func (e *retrieveAPIKeyMockEndpoint) GetHandler() http.HandlerFunc {
 	return nil
+}
+
+// TestGenerateSchema_ExampleNullOnNonNullableTypePanics asserts the type is the
+// single source of truth for nullability: a SchemaExample that encodes `null` for
+// a non-nullable Go field is a contradiction and must fail generation loudly.
+func TestGenerateSchema_ExampleNullOnNonNullableTypePanics(t *testing.T) {
+	t.Parallel()
+	reader := NewDocReader()
+	components := &Components{Schemas: make(map[string]Schema)}
+
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("expected generateSchema to panic when SchemaExample encodes null for a non-nullable field")
+		}
+		if msg := fmt.Sprint(r); !strings.Contains(msg, "non-nullable") {
+			t.Errorf("expected panic to mention the non-nullable mismatch, got: %v", r)
+		}
+	}()
+
+	generateSchema(reflect.TypeOf(ExampleNullMismatchStruct{}), components, reader)
 }
 
 func TestGenerate_FullAssembly(t *testing.T) {

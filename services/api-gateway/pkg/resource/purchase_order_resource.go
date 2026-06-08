@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SamplePurchaseOrderDetailID = "po_0169aa3a722b081b117ac0e44f"
+const SamplePurchaseOrderID = "po_0169aa3a722b081b117ac0e44f"
 const SampleEmailContactID = "ec_01758010d10f5629ce3880a4ab"
 const SamplePurchaseOrderNumber = "PO-001"
 const SampleSupplierID = "ac_0177902104bccac5fbb173cd96"
@@ -62,7 +62,7 @@ func (*EmailContact) SchemaExample() any {
 }
 
 // Full purchase order resource.
-type PurchaseOrderDetail struct {
+type PurchaseOrder struct {
 	// Purchase order ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
@@ -71,28 +71,20 @@ type PurchaseOrderDetail struct {
 	Number string `json:"number" validate:"required"`
 	// Order note.
 	Note *string `json:"note"`
-	// Whether the acknowledgment has been sent.
-	IsAcknowledgmentSent bool `json:"is_acknowledgment_sent"`
+	// Order status code.
+	Status constants.SalesOrderStatusCode `json:"status" validate:"required"`
+	// Priority code.
+	Priority constants.PriorityCode `json:"priority" validate:"required"`
+	// Acknowledgment status.
+	AcknowledgmentStatus constants.AcknowledgmentStatus `json:"acknowledgment_status" validate:"required"`
 	// Supplier.
 	Supplier *Supplier `json:"supplier" expandable:"true"`
 	// Billing address.
 	BillToAddress *Address `json:"bill_to_address" expandable:"true"`
 	// Shipping address.
 	ShipToAddress *Address `json:"ship_to_address" expandable:"true"`
-	// Carrier.
-	Carrier *Carrier `json:"carrier" expandable:"true"`
-	// Service level.
-	ServiceLevel *ServiceLevel `json:"service_level" expandable:"true"`
-	// Carrier billing type.
-	CarrierBillingType *string `json:"carrier_billing_type"`
-	// Carrier billing account number.
-	CarrierBillingAccount *string `json:"carrier_billing_account"`
-	// Order status.
-	Status *SalesOrderStatusDetail `json:"status" validate:"required"`
-	// Order type.
-	Type *SalesOrderType `json:"type" validate:"required"`
-	// Priority.
-	Priority *Priority `json:"priority" validate:"required"`
+	// Carrier selection and freight billing for this order.
+	Freight *Freight `json:"freight" expandable:"true"`
 	// Payment term.
 	PaymentTerm *PaymentTerm `json:"payment_term" expandable:"true"`
 	// Shipping term.
@@ -100,7 +92,9 @@ type PurchaseOrderDetail struct {
 	// Receiving order.
 	ReceivingOrder *ReceivingOrder `json:"receiving_order" expandable:"true"`
 	// Order lines.
-	Lines *List[PurchaseOrderLineDetail] `json:"lines" expandable:"true"`
+	Lines *List[PurchaseOrderLine] `json:"lines" expandable:"true"`
+	// Count of order lines.
+	LineCount int32 `json:"line_count"`
 	// Email contacts.
 	Contacts *List[EmailContact] `json:"contacts" expandable:"true"`
 	// Issued timestamp.
@@ -117,75 +111,24 @@ type PurchaseOrderDetail struct {
 
 var samplePurchaseOrderNote = "Please expedite"
 
-var SamplePurchaseOrderDetail = &PurchaseOrderDetail{
-	ID:                   SamplePurchaseOrderDetailID,
+var SamplePurchaseOrder = &PurchaseOrder{
+	ID:                   SamplePurchaseOrderID,
 	Object:               constants.ObjectTypePurchaseOrder,
 	Number:               SamplePurchaseOrderNumber,
 	Note:                 &samplePurchaseOrderNote,
-	IsAcknowledgmentSent: false,
+	Status:               constants.SalesOrderStatusCodeEstimate,
+	Priority:             SamplePriorityCode,
+	AcknowledgmentStatus: constants.AcknowledgmentStatusNotSent,
 	Supplier:             SampleSupplier,
 	BillToAddress:        SampleAddress,
 	ShipToAddress:        SampleAddress,
-	Status:               SampleSalesOrderStatusDetail,
-	Type:                 SampleSalesOrderType,
-	Priority:             SamplePriority,
-	Lines:                NewList([]PurchaseOrderLineDetail{*SamplePurchaseOrderLineDetail}, PageInfo{}),
+	Freight:              SampleFreight,
+	Lines:                NewList([]PurchaseOrderLine{*SamplePurchaseOrderLine}, PageInfo{}),
+	LineCount:            1,
 	CreatedAt:            timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:            timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
-func (*PurchaseOrderDetail) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SamplePurchaseOrderDetail)
-}
-
-// Lightweight purchase order for list views.
-type PurchaseOrderSummary struct {
-	// Purchase order ID.
-	ID string `json:"id" validate:"required"`
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=purchase_order"`
-	// Purchase order number.
-	Number string `json:"number" validate:"required"`
-	// Supplier.
-	Supplier *Supplier `json:"supplier" validate:"required"`
-	// Order status.
-	Status *SalesOrderStatusDetail `json:"status" validate:"required"`
-	// Order type.
-	Type *SalesOrderType `json:"type" validate:"required"`
-	// Priority.
-	Priority *Priority `json:"priority" validate:"required"`
-	// Line item count.
-	LineCount int32 `json:"line_count"`
-	// Whether the acknowledgment has been sent.
-	IsAcknowledgmentSent bool `json:"is_acknowledgment_sent"`
-	// Issued timestamp.
-	IssuedAt *time.Time `json:"issued_at"`
-	// Completed timestamp.
-	CompletedAt *time.Time `json:"completed_at"`
-	// Created timestamp.
-	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// Updated timestamp.
-	UpdatedAt time.Time `json:"updated_at" validate:"required"`
-}
-
-var SamplePurchaseOrderSummary = &PurchaseOrderSummary{
-	ID:     SamplePurchaseOrderDetailID,
-	Object: constants.ObjectTypePurchaseOrder,
-	Number: SamplePurchaseOrderNumber,
-	Supplier: &Supplier{
-		ID:     SampleSupplierID,
-		Object: constants.ObjectTypeSupplier,
-		Name:   SampleSupplierName,
-		Number: SampleSupplierNumber,
-	},
-	Status:    SampleSalesOrderStatusDetail,
-	Type:      SampleSalesOrderType,
-	Priority:  SamplePriority,
-	LineCount: 3,
-	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
-}
-
-func (*PurchaseOrderSummary) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SamplePurchaseOrderSummary)
+func (*PurchaseOrder) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SamplePurchaseOrder)
 }

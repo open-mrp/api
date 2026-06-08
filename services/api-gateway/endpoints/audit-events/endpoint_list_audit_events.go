@@ -24,7 +24,7 @@ type ListAuditEventsRequest struct {
 	ResourceIDs []string `query:"resource_ids"`
 	// Filter by the actor identifier.
 	//
-	// Will be `account_user.id` when `identity_type`=`user` or an `api_key.id` when `identity_type`=`api_key`.
+	// Will be `user.id` when `identity_type`=`user` or an `api_key.id` when `identity_type`=`api_key`.
 	ActorIDs []string `query:"actor_ids"`
 	// Filter by the audit actions.
 	Actions []constants.AuditAction `query:"actions"`

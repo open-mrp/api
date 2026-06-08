@@ -109,8 +109,8 @@ func (m *productTypeSvcImpl) CreateProductType(ctx context.Context, req *CreateP
 func (m *productTypeSvcImpl) UpdateProductType(ctx context.Context, req *UpdateProductTypeRequest) (*apiresource.ProductType, *apierror.APIError) {
 	pbReq := &pb.UpdateProductTypeRequest{
 		Id:   req.ProductTypeID,
-		Name: req.Name,
-		Code: req.Code,
+		Name: req.Name.Ptr(),
+		Code: req.Code.Ptr(),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, productTypeSvcTracer, "service.product_types.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateProductTypeResponse, error) {

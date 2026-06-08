@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.5](https://github.com/Augno/api/compare/v0.19.4...v0.19.5) (2026-06-08)
+
+
+### Bug Fixes
+
+* includes fields not working as expected ([#301](https://github.com/Augno/api/issues/301)) ([ebdaafe](https://github.com/Augno/api/commit/ebdaafe11645d8ae4ab750ae370139677d21decb))
+
 ## [0.19.4](https://github.com/Augno/api/compare/v0.19.3...v0.19.4) (2026-06-04)
 
 

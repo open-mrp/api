@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.0](https://github.com/Augno/api/compare/v0.19.5...v0.20.0) (2026-06-09)
+
+
+### Features
+
+* adding new revoke_at param for api key rotation ([#303](https://github.com/Augno/api/issues/303)) ([1f3b492](https://github.com/Augno/api/commit/1f3b492991d5dd31d791c40ecdcda0cb284daabe))
+
 ## [0.19.5](https://github.com/Augno/api/compare/v0.19.4...v0.19.5) (2026-06-08)
 
 

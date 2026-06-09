@@ -80,7 +80,14 @@ var SampleLocation = &Location{
 	TypeCode: SampleLocationTypeCode,
 	Parent:   nil,
 	Children: NewList([]Location{
-		{ID: SampleLocationChildID, Object: constants.ObjectTypeLocation, Name: "Shelf A1", TypeCode: SampleLocationTypeCode},
+		{
+			ID:        SampleLocationChildID,
+			Object:    constants.ObjectTypeLocation,
+			Name:      "Shelf A1",
+			TypeCode:  SampleLocationTypeCode,
+			CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+			UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+		},
 	}, PageInfo{}),
 	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),

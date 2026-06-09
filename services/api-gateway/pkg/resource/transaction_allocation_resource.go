@@ -35,6 +35,8 @@ type AllocationEntry struct {
 
 // Minimal customer sub-resource for allocation entries.
 type AllocationCustomer struct {
+	// Customer account id.
+	ID string `json:"id"`
 	// Customer display name.
 	Name string `json:"name" validate:"required"`
 	// Customer number.

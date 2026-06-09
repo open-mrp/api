@@ -225,6 +225,16 @@ SELECT
     co.updated_at AS service_level_updated_at,
     s.shipping_address_id,
     addr.name AS shipping_address_name,
+    addr.phone AS shipping_address_phone,
+    addr.email AS shipping_address_email,
+    addr.is_drop_ship AS shipping_address_is_drop_ship,
+    ship_geo.id AS shipping_address_geolocation_id,
+    ship_geo.street_line_1 AS shipping_address_street_line_1,
+    ship_geo.street_line_2 AS shipping_address_street_line_2,
+    ship_geo.locality AS shipping_address_locality,
+    ship_geo.state AS shipping_address_state,
+    ship_geo.postal_code AS shipping_address_postal_code,
+    ship_geo.country AS shipping_address_country,
     s.shipped_by_id,
     shipped_by_user.name AS shipped_by_name,
     s.invoice_id,
@@ -263,6 +273,7 @@ JOIN account ba ON ba.id = so.buyer_account_id
 JOIN carrier cr ON cr.id = s.carrier_id
 LEFT JOIN carrier_option co ON co.id = s.carrier_option_id
 LEFT JOIN address addr ON addr.id = s.shipping_address_id
+LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id
 LEFT JOIN account_user shipped_by_au ON shipped_by_au.id = s.shipped_by_id
 LEFT JOIN user shipped_by_user ON shipped_by_user.id = shipped_by_au.user_id
 LEFT JOIN invoice inv ON inv.id = s.invoice_id

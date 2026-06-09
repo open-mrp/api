@@ -77,6 +77,9 @@ func (m *purchaseOrderSvcImpl) ListPurchaseOrders(ctx context.Context, req *List
 		SupplierIds: req.SupplierIDs,
 		StartDate:   req.StartDate,
 		EndDate:     req.EndDate,
+		// Ask the backend to expand lines when the caller requested them (the rest
+		// of the includes are resolved gateway-side from the summary stash).
+		Includes: resourcekit.FilterIncludes(ctx, purchaseOrderIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, purchaseOrderEpSvcTracer, "service.purchase_orders.list", domain.ServiceName,
@@ -448,6 +451,16 @@ func stashPurchaseOrderSummaryMeta(ctx context.Context, info *pb.PurchaseOrderSu
 			Name:   info.SupplierName,
 			Number: info.SupplierNumber,
 		})
+	}
+
+	// Lines are populated on the summary only when the list request includes them.
+	if len(info.Lines) > 0 {
+		lines := make([]apiresource.PurchaseOrderLine, len(info.Lines))
+		for i, l := range info.Lines {
+			lines[i] = purchaseOrderLineDetailFromProto(l)
+		}
+		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypePurchaseOrder, d.ID, "lines",
+			apiresource.NewList(lines, apiresource.PageInfo{}))
 	}
 }
 

@@ -142,7 +142,7 @@ func TestAuditEvents_FilterByMultipleActions(t *testing.T) {
 	t.Parallel()
 	actions := discoverDistinctAuditValues(t, "action", 2)
 	if len(actions) < 2 {
-		t.Skip("Need at least 2 distinct audit actions in recent events")
+		t.Fatal("Need at least 2 distinct audit actions in recent events")
 		return
 	}
 
@@ -173,7 +173,7 @@ func TestAuditEvents_FilterBySingleResourceID(t *testing.T) {
 	t.Parallel()
 	ids := discoverDistinctAuditValues(t, "resource_id", 1)
 	if len(ids) == 0 {
-		t.Skip("No resource_ids available in recent audit events")
+		t.Fatal("No resource_ids available in recent audit events")
 		return
 	}
 	resourceID := ids[0]
@@ -194,7 +194,7 @@ func TestAuditEvents_FilterByMultipleResourceIDs(t *testing.T) {
 	t.Parallel()
 	ids := discoverDistinctAuditValues(t, "resource_id", 2)
 	if len(ids) < 2 {
-		t.Skip("Need at least 2 distinct resource_ids in recent audit events")
+		t.Fatal("Need at least 2 distinct resource_ids in recent audit events")
 		return
 	}
 
@@ -249,7 +249,7 @@ func TestAuditEvents_FilterByActorIDSingle(t *testing.T) {
 	t.Parallel()
 	actorID := discoverAuditActorID(t)
 	if actorID == "" {
-		t.Skip("No audit events with an actor ID available")
+		t.Fatal("No audit events with an actor ID available")
 		return
 	}
 
@@ -273,7 +273,7 @@ func TestAuditEvents_FilterByMultipleActorIDs(t *testing.T) {
 	t.Parallel()
 	actorID := discoverAuditActorID(t)
 	if actorID == "" {
-		t.Skip("No audit events with an actor ID available")
+		t.Fatal("No audit events with an actor ID available")
 		return
 	}
 
@@ -349,7 +349,7 @@ func TestAuditEvents_FilterByMultipleActorsUnion(t *testing.T) {
 		"limit":   {"100"},
 	})
 	if err != nil || len(probe.Data) == 0 {
-		t.Skip("No audit events available to discover actor IDs")
+		t.Fatal("No audit events available to discover actor IDs")
 		return
 	}
 
@@ -374,7 +374,7 @@ func TestAuditEvents_FilterByMultipleActorsUnion(t *testing.T) {
 		}
 	}
 	if len(ordered) < 2 {
-		t.Skip("Need at least 2 distinct actors in recent audit events for a union test")
+		t.Fatal("Need at least 2 distinct actors in recent audit events for a union test")
 		return
 	}
 	actorA, actorB := ordered[0], ordered[1]
@@ -449,7 +449,7 @@ func TestAuditEvents_GetByID(t *testing.T) {
 	list, _, err := apiClient.GetList(auditEventsPath, url.Values{"limit": {"1"}})
 	require.NoError(t, err)
 	if len(list.Data) == 0 {
-		t.Skip("No audit events available")
+		t.Fatal("No audit events available")
 	}
 
 	eventID := DataItemField(list.Data[0], "id")
@@ -473,7 +473,7 @@ func TestAuditEvents_IncludeChanges(t *testing.T) {
 	list, _, err := apiClient.GetList(auditEventsPath, url.Values{"limit": {"1"}})
 	require.NoError(t, err)
 	if len(list.Data) == 0 {
-		t.Skip("No audit events available")
+		t.Fatal("No audit events available")
 	}
 	eventID := DataItemField(list.Data[0], "id")
 
@@ -491,7 +491,7 @@ func TestAuditEvents_IncludeMetadata(t *testing.T) {
 	list, _, err := apiClient.GetList(auditEventsPath, url.Values{"limit": {"1"}})
 	require.NoError(t, err)
 	if len(list.Data) == 0 {
-		t.Skip("No audit events available")
+		t.Fatal("No audit events available")
 	}
 	eventID := DataItemField(list.Data[0], "id")
 
@@ -522,7 +522,7 @@ func TestAuditEvents_IncludeRequest(t *testing.T) {
 		assert.NotEmpty(t, jsonField(req, "id"), "request sub-resource should have an id")
 		return
 	}
-	t.Skip("No audit events with a request_id found in the first 25 events")
+	t.Fatal("No audit events with a request_id found in the first 25 events")
 }
 
 func TestAuditEvents_ExpandableFieldsNullWithoutInclude(t *testing.T) {
@@ -530,7 +530,7 @@ func TestAuditEvents_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 	list, _, err := apiClient.GetList(auditEventsPath, url.Values{"limit": {"1"}})
 	require.NoError(t, err)
 	if len(list.Data) == 0 {
-		t.Skip("No audit events available")
+		t.Fatal("No audit events available")
 	}
 	eventID := DataItemField(list.Data[0], "id")
 
@@ -550,7 +550,7 @@ func TestAuditEvents_IncludeActor(t *testing.T) {
 	list, _, err := apiClient.GetList(auditEventsPath, url.Values{"limit": {"1"}})
 	require.NoError(t, err)
 	if len(list.Data) == 0 {
-		t.Skip("No audit events available")
+		t.Fatal("No audit events available")
 	}
 	eventID := DataItemField(list.Data[0], "id")
 

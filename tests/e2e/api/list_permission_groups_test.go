@@ -111,7 +111,7 @@ func TestPermissionGroups_PermissionFields(t *testing.T) {
 		assert.NotEmpty(t, jsonField(perm, "updated_at"))
 		return
 	}
-	t.Skip("No permission groups with permissions found")
+	t.Fatal("No permission groups with permissions found")
 }
 
 func TestPermissionGroups_Pagination(t *testing.T) {
@@ -119,7 +119,7 @@ func TestPermissionGroups_Pagination(t *testing.T) {
 	list, _, err := apiClient.GetList(permissionGroupsPath, nil)
 	require.NoError(t, err)
 	if len(list.Data) <= 1 {
-		t.Skip("Need more than 1 permission group to test pagination")
+		t.Fatal("Need more than 1 permission group to test pagination")
 	}
 
 	page1, _, err := apiClient.GetList(permissionGroupsPath, nil)

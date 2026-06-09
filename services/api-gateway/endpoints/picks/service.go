@@ -59,6 +59,9 @@ func NewPickSvc(config *PickSvcConfig) PickSvc {
 func (m *pickSvcImpl) ListPicks(ctx context.Context, req *ListPicksRequest) (*apiresource.List[apiresource.Pick], *apierror.APIError) {
 	pbReq := &pb.ListPicksRequest{
 		Limit: req.Limit,
+		// Ask the backend to expand departments when requested (sales_order /
+		// customer are resolved gateway-side from stashed FK ids).
+		Includes: resourcekit.FilterIncludes(ctx, "departments"),
 	}
 	if req.Cursor != nil {
 		pbReq.Cursor = req.Cursor
@@ -292,6 +295,12 @@ func stashPickSummaryMeta(ctx context.Context, s *apiresource.Pick, info *pb.Pic
 	}
 	if info.CustomerId != "" {
 		meta.Set(constants.ObjectTypePick, s.ID, "customer_id", info.CustomerId)
+	}
+	// Departments are populated on the summary only when the list includes them.
+	if len(info.Departments) > 0 {
+		now := grpcutil.TimestampToTime(info.CreatedAt)
+		meta.Set(constants.ObjectTypePick, s.ID, "departments",
+			apiresource.NewList(buildPickDepartments(info.Departments, now), apiresource.PageInfo{}))
 	}
 }
 

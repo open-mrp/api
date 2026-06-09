@@ -3,6 +3,7 @@ package domain
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/augno/api/services/auth-service/internal/apikey"
 	"github.com/augno/api/services/auth-service/pkg/types"
@@ -32,9 +33,10 @@ type APIKeyRepo interface {
 	Touch(ctx context.Context, apiKeyID int64) *apierror.APIError
 	Create(ctx context.Context, apiKey *apikey.APIKey) (int64, *apierror.APIError)
 	GetByIDs(ctx context.Context, ownerAccountID string, ids []string) ([]*apikey.APIKey, *apierror.APIError)
-	// Revoke marks an API key as revoked. Scoped to ownerAccountID; returns a
+	// Revoke marks an API key as revoked at the given instant, which may be in
+	// the future to schedule revocation. Scoped to ownerAccountID; returns a
 	// not-found error if the key does not exist for the given owner.
-	Revoke(ctx context.Context, typeID string, ownerAccountID string) *apierror.APIError
+	Revoke(ctx context.Context, typeID string, ownerAccountID string, revokeAt time.Time) *apierror.APIError
 	List(ctx context.Context, input APIKeyListRepoInput) (*APIKeyListRepoResult, *apierror.APIError)
 }
 

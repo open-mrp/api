@@ -571,7 +571,7 @@ func (suite *APIKeyMedTestSuite) TestRotate_HasRedactedValue() {
 		Times(1)
 
 	suite.apiKeyRepo.EXPECT().
-		Revoke(gomock.Any(), apiKeyTypeID, ownerAccountID).
+		Revoke(gomock.Any(), apiKeyTypeID, ownerAccountID, gomock.Any()).
 		Return(nil).
 		Times(1)
 
@@ -631,7 +631,7 @@ func (suite *APIKeyMedTestSuite) TestRotate_RevokesOldKey() {
 		Times(1)
 
 	suite.apiKeyRepo.EXPECT().
-		Revoke(gomock.Any(), apiKeyTypeID, oldKey.OwnerAccountID).
+		Revoke(gomock.Any(), apiKeyTypeID, oldKey.OwnerAccountID, gomock.Any()).
 		Return(nil).
 		Times(1)
 
@@ -665,6 +665,140 @@ func (suite *APIKeyMedTestSuite) TestRotate_RevokesOldKey() {
 	suite.NotEmpty(fullKey)
 	suite.Require().NotNil(newKey)
 	suite.NotEqual(apiKeyTypeID, newKey.TypeID, "rotated key should have a new TypeID")
+}
+
+// expectRotateCreate wires the Create + post-create FindByTypeID expectations
+// shared by the rotation tests below, capturing the created key.
+func (suite *APIKeyMedTestSuite) expectRotateCreate() {
+	var createdKey *apikey.APIKey
+	suite.apiKeyRepo.EXPECT().
+		Create(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, ak *apikey.APIKey) (int64, *apierror.APIError) {
+			ak.ID = 11
+			createdKey = ak
+			return 11, nil
+		}).
+		Times(1)
+	suite.apiKeyRepo.EXPECT().
+		FindByTypeID(gomock.Any(), gomock.Any(), gomock.Nil()).
+		DoAndReturn(func(_ context.Context, _ string, _ []string) (*apikey.APIKey, *apierror.APIError) {
+			return createdKey, nil
+		}).
+		Times(1)
+}
+
+func (suite *APIKeyMedTestSuite) TestRotate_SchedulesFutureRevocation() {
+	ctx := context.Background()
+	apiKeyTypeID := "apikey_sched"
+	ownerAccountID := "ac_123456789012"
+	revokeAt := time.Now().UTC().Add(5 * 24 * time.Hour)
+
+	oldKey := &apikey.APIKey{
+		ID:             10,
+		TypeID:         apiKeyTypeID,
+		Name:           "Old Key",
+		OwnerAccountID: ownerAccountID,
+		RoleID:         "rl_123456789012",
+	}
+
+	suite.apiKeyRepo.EXPECT().
+		FindByTypeID(gomock.Any(), apiKeyTypeID, gomock.Nil()).
+		Return(oldKey, nil).
+		Times(1)
+
+	var capturedRevokeAt time.Time
+	suite.apiKeyRepo.EXPECT().
+		Revoke(gomock.Any(), apiKeyTypeID, ownerAccountID, gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ string, _ string, at time.Time) *apierror.APIError {
+			capturedRevokeAt = at
+			return nil
+		}).
+		Times(1)
+
+	suite.expectRotateCreate()
+
+	_, _, err := suite.apiKeyMed.Rotate(ctx, domain.APIKeyRotateInput{
+		AccountMode:    constants.AccountModeSandbox,
+		APIKeyTypeID:   apiKeyTypeID,
+		OwnerAccountID: ownerAccountID,
+		RevokeAt:       &revokeAt,
+	})
+
+	suite.Nil(err)
+	suite.WithinDuration(revokeAt, capturedRevokeAt, time.Second,
+		"old key should be revoked at the scheduled instant")
+}
+
+func (suite *APIKeyMedTestSuite) TestRotate_RevokeAtBeyondCap_ReturnsError() {
+	ctx := context.Background()
+	apiKeyTypeID := "apikey_toofar"
+	ownerAccountID := "ac_123456789012"
+	revokeAt := time.Now().UTC().Add(31 * 24 * time.Hour)
+
+	oldKey := &apikey.APIKey{
+		ID:             10,
+		TypeID:         apiKeyTypeID,
+		OwnerAccountID: ownerAccountID,
+		RoleID:         "rl_123456789012",
+	}
+
+	suite.apiKeyRepo.EXPECT().
+		FindByTypeID(gomock.Any(), apiKeyTypeID, gomock.Nil()).
+		Return(oldKey, nil).
+		Times(1)
+
+	// Revoke and Create must NOT be called when the schedule exceeds the cap.
+	_, _, err := suite.apiKeyMed.Rotate(ctx, domain.APIKeyRotateInput{
+		AccountMode:    constants.AccountModeSandbox,
+		APIKeyTypeID:   apiKeyTypeID,
+		OwnerAccountID: ownerAccountID,
+		RevokeAt:       &revokeAt,
+	})
+
+	suite.Require().NotNil(err, "scheduling beyond the 30-day cap should error")
+}
+
+func (suite *APIKeyMedTestSuite) TestRotate_RevokeAtInPast_RevokesImmediately() {
+	ctx := context.Background()
+	apiKeyTypeID := "apikey_past"
+	ownerAccountID := "ac_123456789012"
+	pastRevokeAt := time.Now().UTC().Add(-time.Hour)
+
+	oldKey := &apikey.APIKey{
+		ID:             10,
+		TypeID:         apiKeyTypeID,
+		OwnerAccountID: ownerAccountID,
+		RoleID:         "rl_123456789012",
+	}
+
+	suite.apiKeyRepo.EXPECT().
+		FindByTypeID(gomock.Any(), apiKeyTypeID, gomock.Nil()).
+		Return(oldKey, nil).
+		Times(1)
+
+	var capturedRevokeAt time.Time
+	suite.apiKeyRepo.EXPECT().
+		Revoke(gomock.Any(), apiKeyTypeID, ownerAccountID, gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ string, _ string, at time.Time) *apierror.APIError {
+			capturedRevokeAt = at
+			return nil
+		}).
+		Times(1)
+
+	suite.expectRotateCreate()
+
+	_, _, err := suite.apiKeyMed.Rotate(ctx, domain.APIKeyRotateInput{
+		AccountMode:    constants.AccountModeSandbox,
+		APIKeyTypeID:   apiKeyTypeID,
+		OwnerAccountID: ownerAccountID,
+		RevokeAt:       &pastRevokeAt,
+	})
+
+	suite.Nil(err)
+	suite.True(capturedRevokeAt.After(pastRevokeAt),
+		"a past revoke_at should collapse to immediate (now), not the past value")
+	suite.WithinDuration(time.Now().UTC(), capturedRevokeAt, 5*time.Second,
+		"should revoke at ~now")
 }
 
 func (suite *APIKeyMedTestSuite) TestList_HasRedactedValue() {

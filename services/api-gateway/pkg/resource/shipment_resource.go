@@ -62,6 +62,9 @@ type ShipmentLine struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=shipment_line"`
 	// Associated sales order line.
 	SalesOrderLine *SalesOrderLine `json:"sales_order_line" expandable:"true"`
+	// The shipped item (the order line's item). Populated inline when lines are
+	// included, carried directly from the order line's item id.
+	Item *Item `json:"item"`
 	// Quantity shipped.
 	Quantity *Quantity `json:"quantity" validate:"required"`
 	// Creation timestamp.

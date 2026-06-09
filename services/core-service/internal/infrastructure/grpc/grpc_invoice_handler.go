@@ -24,6 +24,7 @@ func (h *gRPCHandler) ListInvoices(ctx context.Context, req *pb.ListInvoicesRequ
 		ProductLineIDs:   req.ProductLineIds,
 		CustomerGroupIDs: req.CustomerGroupIds,
 		SalesRepIDs:      req.SalesRepIds,
+		Includes:         req.Includes,
 	}
 
 	if req.StartDate != nil {
@@ -187,6 +188,10 @@ func invoiceSummaryToProto(s *domain.InvoiceSummary) *pb.InvoiceSummaryInfo {
 	}
 	if s.CustomerCommissionPolicy != nil {
 		info.CustomerCommissionPolicy = s.CustomerCommissionPolicy
+	}
+
+	for _, l := range s.Lines {
+		info.Lines = append(info.Lines, invoiceLineToProto(l))
 	}
 
 	return info

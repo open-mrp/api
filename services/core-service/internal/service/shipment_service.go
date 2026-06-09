@@ -97,7 +97,28 @@ func (s *shipmentSvcImpl) ListShipments(ctx context.Context, params domain.ListS
 
 	params.AccountID = identity.Target.AccountID
 
-	return s.repos.NewShipmentRepo().List(ctx, params)
+	result, apiErr := s.repos.NewShipmentRepo().List(ctx, params)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	// Expand lines per shipment only when requested (so the list can serve the
+	// lines.item array filter).
+	for _, include := range params.Includes {
+		if include == "lines" {
+			lineRepo := s.repos.NewShipmentLineRepo()
+			for _, shp := range result.Shipments {
+				lines, apiErr := lineRepo.ListByShipment(ctx, shp.ID)
+				if apiErr != nil {
+					return nil, tracing.Trace(span, apiErr)
+				}
+				shp.Lines = lines
+			}
+			break
+		}
+	}
+
+	return result, nil
 }
 
 func (s *shipmentSvcImpl) GetShipment(ctx context.Context, params domain.GetShipmentParams) (*domain.Shipment, *apierror.APIError) {

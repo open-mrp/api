@@ -42,6 +42,10 @@ func pickSummaryToProto(p *domain.PickSummary) *pb.PickSummaryInfo {
 		info.FinishedAt = timestamppb.New(*p.FinishedAt)
 	}
 
+	for _, d := range p.Departments {
+		info.Departments = append(info.Departments, pickDepartmentToProto(d))
+	}
+
 	return info
 }
 
@@ -178,6 +182,7 @@ func (h *pickingGRPCHandler) ListPicks(ctx context.Context, req *pb.ListPicksReq
 	if req.EndDate != nil {
 		params.EndDate = req.EndDate
 	}
+	params.Includes = req.Includes
 
 	result, apiErr := h.pickSvc.ListPicks(ctx, params)
 	if apiErr != nil {

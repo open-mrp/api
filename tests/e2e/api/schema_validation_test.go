@@ -36,21 +36,21 @@ func TestSchemaValidation_ListEndpoints_ItemFieldsMatchSpec(t *testing.T) {
 
 			path, ok := ep.ResolvePath()
 			if !ok {
-				t.Skipf("Cannot resolve path params for %s", ep.Path)
+				t.Fatalf("Cannot resolve path params for %s", ep.Path)
 				return
 			}
 
 			// Get the response schema for this endpoint.
 			schema, ok := spec.GetResponseSchema(ep.Path, "get", "200")
 			if !ok {
-				t.Skipf("No 200 response schema found for GET %s", ep.Path)
+				t.Fatalf("No 200 response schema found for GET %s", ep.Path)
 				return
 			}
 
 			// List responses have a data array — find the item schema.
 			itemSchema := findListItemSchema(spec, schema)
 			if itemSchema == nil {
-				t.Skipf("Cannot determine list item schema for %s", ep.Path)
+				t.Fatalf("Cannot determine list item schema for %s", ep.Path)
 				return
 			}
 
@@ -62,7 +62,7 @@ func TestSchemaValidation_ListEndpoints_ItemFieldsMatchSpec(t *testing.T) {
 
 			specFields := spec.CollectSchemaFields(itemSchema)
 			if len(specFields) == 0 {
-				t.Skipf("No fields defined in schema for %s", ep.Path)
+				t.Fatalf("No fields defined in schema for %s", ep.Path)
 				return
 			}
 
@@ -71,14 +71,14 @@ func TestSchemaValidation_ListEndpoints_ItemFieldsMatchSpec(t *testing.T) {
 			require.NoError(t, err)
 			skipOnNonClientError(t, path, statusCode)
 			if statusCode != 200 {
-				t.Skipf("GET %s returned %d", path, statusCode)
+				t.Fatalf("GET %s returned %d", path, statusCode)
 				return
 			}
 
 			var list ListResponse
 			require.NoError(t, json.Unmarshal(body, &list))
 			if len(list.Data) == 0 {
-				t.Skipf("No data returned for %s", path)
+				t.Fatalf("No data returned for %s", path)
 				return
 			}
 
@@ -233,10 +233,12 @@ func TestSchemaValidation_UpdateResponseKeysMatchGet(t *testing.T) {
 // no corresponding GET endpoint (405). These are used as a fallback to obtain
 // the response shape for schema validation.
 var noGETPatchBodies = map[string]map[string]any{
-	"update-quantity":               {"value": "1"},
-	"update-rate":                   {"value": "1"},
-	"update-pick-line":              {"quantity_value": "1"},
-	"update-sales-order-line":       {"quantity_value": "1"},
+	"update-quantity":  {"value": "1"},
+	"update-rate":      {"value": "1"},
+	"update-pick-line": {"quantity_value": "1"},
+	// Sales-order line takes a nested `quantity` object (not a flat quantity_value
+	// like pick/receiving lines); use a scalar optional field for the no-op PATCH.
+	"update-sales-order-line":       {"product_description": "Schema validation update"},
 	"update-receiving-order-line":   {"quantity_value": "1"},
 	"update-transaction-allocation": {"amount": "1"},
 }
@@ -258,7 +260,7 @@ func TestSchemaValidation_UpdateEndpoints_ResponseFieldsMatchSpec(t *testing.T) 
 			// Get the response schema for this endpoint.
 			schema, ok := spec.GetResponseSchema(ep.Path, "patch", "200")
 			if !ok {
-				t.Skipf("No 200 response schema found for PATCH %s", ep.Path)
+				t.Fatalf("No 200 response schema found for PATCH %s", ep.Path)
 				return
 			}
 
@@ -271,7 +273,7 @@ func TestSchemaValidation_UpdateEndpoints_ResponseFieldsMatchSpec(t *testing.T) 
 			// If no GET endpoint exists (405), fall back to PATCH with empty body.
 			path, ok := ep.ResolvePath()
 			if !ok {
-				t.Skipf("Cannot resolve path params for %s", ep.Path)
+				t.Fatalf("Cannot resolve path params for %s", ep.Path)
 				return
 			}
 
@@ -293,12 +295,12 @@ func TestSchemaValidation_UpdateEndpoints_ResponseFieldsMatchSpec(t *testing.T) 
 				require.NoError(t, patchErr)
 				skipOnNonClientError(t, path, patchStatus)
 				if patchStatus != 200 {
-					t.Skipf("PATCH %s returned %d (no GET either)", path, patchStatus)
+					t.Fatalf("PATCH %s returned %d (no GET either)", path, patchStatus)
 					return
 				}
 				respBody = patchBody
 			} else {
-				t.Skipf("GET %s returned %d", path, getStatus)
+				t.Fatalf("GET %s returned %d", path, getStatus)
 				return
 			}
 
@@ -427,7 +429,7 @@ func TestSchemaValidation_ErrorResponseShape(t *testing.T) {
 			require.NoError(t, err)
 
 			if statusCode != tc.expectedCode {
-				t.Skipf("Expected %d but got %d for %s", tc.expectedCode, statusCode, tc.path)
+				t.Fatalf("Expected %d but got %d for %s", tc.expectedCode, statusCode, tc.path)
 				return
 			}
 

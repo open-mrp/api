@@ -144,7 +144,10 @@ UPDATE pick_line SET packed_at = DATE_SUB(NOW(), INTERVAL 4 DAY) WHERE id IN ('p
 INSERT IGNORE INTO `_departments_picks` (`A`, `B`) VALUES
     ('dp_01k0a5r01yfx3sj1vy9qgv3dc0', 'pk_01k0a5tsn7f7psgagr1732fxqa'),
     ('dp_01k0a5r01yfx3sj1vy9qgv3dc0', 'pk_01k0a5tsn7ejfrwg5dnshzfwsx'),
-    ('dp_01k0a5r01yfx3sj1vy9qgv3dc0', 'pk_01k0a5tsn7eeht162chb2jcknc');
+    ('dp_01k0a5r01yfx3sj1vy9qgv3dc0', 'pk_01k0a5tsn7eeht162chb2jcknc'),
+    -- A second distinct department on a pick so the picks/department_ids array
+    -- filter has >=2 distinct values to exercise union/exclusion (Washing).
+    ('dp_01k0a5r01yf5csvz0jqfznf13d', 'pk_01k0a5tsn7ejfrwg5dnshzfwsx');
 
 -- ============================================================
 -- SHIPMENTS
@@ -159,6 +162,11 @@ INSERT IGNORE INTO shipment (id, number, sales_order_id, carrier_id, carrier_opt
 -- Fulfilled shipment (status: shipped)
 INSERT IGNORE INTO shipment (id, number, sales_order_id, carrier_id, shipping_address_id, shipment_status_code, shipped_at, shipped_by_id, master_tracking_number, account_id, created_at, updated_at) VALUES
     ('sh_01k0a87w33fw0shhsahaa0yq6r', 'SHP-002', 'or_01k0a8bs2yf909wjkd7ecd6x4z', 'will_call', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'shipped', DATE_SUB(NOW(), INTERVAL 2 DAY), 'acus_s83fjhyfmqen', '1234567890', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+
+-- Packed shipment for the shared seed order (SeedSalesOrderID / ORD-001) so that
+-- ?include=related.shipments populates on its detail (ORD-001 has PICK-001).
+INSERT IGNORE INTO shipment (id, number, sales_order_id, carrier_id, shipping_address_id, shipment_status_code, account_id, created_at, updated_at) VALUES
+    ('sh_01k0a87w33emw8pmkz1mf86cg2', 'SHP-003', 'or_01k0a8bs2yejxbsvqhrx4drkq1', 'delivery', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'packed', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
 
 -- Shipping cases — quantities for freight weight/amount
 INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
@@ -232,3 +240,9 @@ SET
     sales_rep_id = COALESCE(sales_rep_id, 'acus_s83fjhyfmqen'),
     production_run_id = COALESCE(production_run_id, 'pr_01seedsalesorder0001')
 WHERE id = 'or_01k0a8bs2yejxbsvqhrx4drkq1';
+
+-- Assign a second, distinct sales rep to ORD-002 so the sales-orders/customers
+-- sales_rep_ids array filters have >=2 distinct values to exercise union/exclusion.
+UPDATE sales_order
+SET sales_rep_id = COALESCE(sales_rep_id, 'acus_ubdx4zebgl6p')
+WHERE id = 'or_01k0a8bs2ye3f9p8sj0m4dfmwe';

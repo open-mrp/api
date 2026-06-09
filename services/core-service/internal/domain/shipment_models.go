@@ -8,61 +8,71 @@ import (
 
 // Shipment represents the full detail of a shipment domain model.
 type Shipment struct {
-	ID                          string
-	Number                      string     `audit:"number"`
-	Note                        *string    `audit:"note"`
-	BillOfLading                *string    `audit:"bill_of_lading"`
-	MasterTrackingNumber        *string    `audit:"master_tracking_number"`
-	StatusCode                  string     `audit:"status_code"`
-	StatusName                  string     `audit:"status_name"`
-	ShippedAt                   *time.Time `audit:"shipped_at"`
-	SalesOrderID                string
-	SalesOrderNumber            string
-	CustomerPONumber            *string
-	CarrierBillingType          *string `audit:"carrier_billing_type"`
-	CarrierBillingAccount       *string `audit:"carrier_billing_account"`
-	CustomerID                  string
-	CustomerName                string
-	CustomerNumber              string
-	CustomerStatusCode          *string
-	CustomerCommissionPolicy    *string
-	CustomerCreatedAt           time.Time
-	CustomerUpdatedAt           time.Time
-	CarrierID                   string `audit:"carrier_id"`
-	CarrierName                 string `audit:"carrier_name"`
-	CarrierIsPortalEnabled      *bool
-	CarrierCreatedAt            *time.Time
-	CarrierUpdatedAt            *time.Time
-	ServiceLevelID              *string `audit:"service_level_id"`
-	ServiceLevelName            *string `audit:"service_level_name"`
-	ServiceLevelToken           *string
-	ServiceLevelIsPortalEnabled *bool
-	ServiceLevelCreatedAt       *time.Time
-	ServiceLevelUpdatedAt       *time.Time
-	ShippingAddressID           string
-	ShippingAddressName         *string
-	ShippingAddressCreatedAt    *time.Time
-	ShippingAddressUpdatedAt    *time.Time
-	ShippedByID                 *string `audit:"shipped_by_id"`
-	ShippedByName               *string `audit:"shipped_by_name"`
-	ShippedByStatusCode         *string
-	ShippedByCreatedAt          *time.Time
-	ShippedByUpdatedAt          *time.Time
-	InvoiceID                   *string
-	InvoiceNumber               *string
-	InvoiceCreatedAt            *time.Time
-	InvoiceUpdatedAt            *time.Time
-	PickID                      *string
-	PickNumber                  *string
-	PickCreatedAt               *time.Time
-	PickUpdatedAt               *time.Time
-	SalesOrderCreatedAt         time.Time
-	SalesOrderUpdatedAt         time.Time
-	BillingAddressCountry       *string
-	BillingAddressZip           *string
-	AccountID                   string
-	CreatedAt                   time.Time
-	UpdatedAt                   time.Time
+	ID                           string
+	Number                       string     `audit:"number"`
+	Note                         *string    `audit:"note"`
+	BillOfLading                 *string    `audit:"bill_of_lading"`
+	MasterTrackingNumber         *string    `audit:"master_tracking_number"`
+	StatusCode                   string     `audit:"status_code"`
+	StatusName                   string     `audit:"status_name"`
+	ShippedAt                    *time.Time `audit:"shipped_at"`
+	SalesOrderID                 string
+	SalesOrderNumber             string
+	CustomerPONumber             *string
+	CarrierBillingType           *string `audit:"carrier_billing_type"`
+	CarrierBillingAccount        *string `audit:"carrier_billing_account"`
+	CustomerID                   string
+	CustomerName                 string
+	CustomerNumber               string
+	CustomerStatusCode           *string
+	CustomerCommissionPolicy     *string
+	CustomerCreatedAt            time.Time
+	CustomerUpdatedAt            time.Time
+	CarrierID                    string `audit:"carrier_id"`
+	CarrierName                  string `audit:"carrier_name"`
+	CarrierIsPortalEnabled       *bool
+	CarrierCreatedAt             *time.Time
+	CarrierUpdatedAt             *time.Time
+	ServiceLevelID               *string `audit:"service_level_id"`
+	ServiceLevelName             *string `audit:"service_level_name"`
+	ServiceLevelToken            *string
+	ServiceLevelIsPortalEnabled  *bool
+	ServiceLevelCreatedAt        *time.Time
+	ServiceLevelUpdatedAt        *time.Time
+	ShippingAddressID            string
+	ShippingAddressName          *string
+	ShippingAddressPhone         *string
+	ShippingAddressEmail         *string
+	ShippingAddressIsDropShip    *bool
+	ShippingAddressGeolocationID *string
+	ShippingAddressStreetLine1   *string
+	ShippingAddressStreetLine2   *string
+	ShippingAddressLocality      *string
+	ShippingAddressState         *string
+	ShippingAddressPostalCode    *string
+	ShippingAddressCountry       *string
+	ShippingAddressCreatedAt     *time.Time
+	ShippingAddressUpdatedAt     *time.Time
+	ShippedByID                  *string `audit:"shipped_by_id"`
+	ShippedByName                *string `audit:"shipped_by_name"`
+	ShippedByStatusCode          *string
+	ShippedByCreatedAt           *time.Time
+	ShippedByUpdatedAt           *time.Time
+	InvoiceID                    *string
+	InvoiceNumber                *string
+	InvoiceCreatedAt             *time.Time
+	InvoiceUpdatedAt             *time.Time
+	PickID                       *string
+	PickNumber                   *string
+	PickCreatedAt                *time.Time
+	PickUpdatedAt                *time.Time
+	SalesOrderCreatedAt          time.Time
+	SalesOrderUpdatedAt          time.Time
+	BillingAddressCountry        *string
+	BillingAddressZip            *string
+	AccountID                    string
+	CreatedAt                    time.Time
+	UpdatedAt                    time.Time
 
 	// Expandable collections
 	Lines         []*ShipmentLine
@@ -99,6 +109,8 @@ type ShipmentSummary struct {
 	ServiceLevelIsPortalEnabled *bool
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time
+	// Lines (populated only when the list request includes "lines").
+	Lines []*ShipmentLine
 }
 
 // ListShipmentsParams holds the parameters for listing shipments.
@@ -115,6 +127,7 @@ type ListShipmentsParams struct {
 	SalesRepIDs      []string
 	StartDate        *string
 	EndDate          *string
+	Includes         []string
 }
 
 // ListShipmentsResult holds the result of listing shipments.

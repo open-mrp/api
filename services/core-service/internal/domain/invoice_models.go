@@ -48,6 +48,8 @@ type InvoiceSummary struct {
 	AcceptsInvoiceEmails     bool                   `audit:"accepts_invoice_emails"`
 	CreatedAt                time.Time
 	UpdatedAt                time.Time
+	// Lines (populated only when the list request includes "lines").
+	Lines []*InvoiceLine
 }
 
 // Invoice represents a full invoice with expandable lines and allocations.
@@ -145,6 +147,7 @@ type ListInvoicesParams struct {
 	SalesRepIDs      []string
 	StartDate        *time.Time
 	EndDate          *time.Time
+	Includes         []string
 }
 
 // ListInvoicesResult holds the result of listing invoices.

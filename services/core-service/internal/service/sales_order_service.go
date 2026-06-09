@@ -124,7 +124,35 @@ func (s *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, params domain.L
 		params.BuyerAccountID = actorAccountID
 	}
 
-	return s.repos.NewSalesOrderRepo().List(ctx, params)
+	repo := s.repos.NewSalesOrderRepo()
+	result, apiErr := repo.List(ctx, params)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	// The list now returns the full sales-order shape; expand lines per order
+	// only when requested (inline-joined fields are always present).
+	if includesSalesOrderLines(params.Includes) {
+		for _, order := range result.SalesOrders {
+			lines, apiErr := repo.GetLines(ctx, order.ID)
+			if apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
+			order.Lines = lines
+		}
+	}
+
+	if includesSalesOrderShipments(params.Includes) {
+		for _, order := range result.SalesOrders {
+			ids, apiErr := repo.GetShipmentIDs(ctx, order.ID)
+			if apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
+			order.ShipmentIDs = ids
+		}
+	}
+
+	return result, nil
 }
 
 func (s *salesOrderSvcImpl) GetSalesOrder(ctx context.Context, params domain.GetSalesOrderParams) (*domain.SalesOrder, *apierror.APIError) {
@@ -178,6 +206,14 @@ func (s *salesOrderSvcImpl) GetSalesOrder(ctx context.Context, params domain.Get
 			return nil, tracing.Trace(span, apiErr)
 		}
 		order.Lines = lines
+	}
+
+	if includesSalesOrderShipments(params.Includes) {
+		ids, apiErr := repo.GetShipmentIDs(ctx, params.SalesOrderID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		order.ShipmentIDs = ids
 	}
 
 	return order, nil
@@ -1861,6 +1897,15 @@ func (s *salesOrderSvcImpl) CreateSalesOrderProductionRun(ctx context.Context, p
 func includesSalesOrderLines(includes []string) bool {
 	for _, inc := range includes {
 		if inc == "lines" || strings.HasPrefix(inc, "lines.") {
+			return true
+		}
+	}
+	return false
+}
+
+func includesSalesOrderShipments(includes []string) bool {
+	for _, inc := range includes {
+		if inc == "related.shipments" {
 			return true
 		}
 	}

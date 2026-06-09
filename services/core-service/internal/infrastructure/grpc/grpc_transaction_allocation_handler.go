@@ -175,6 +175,7 @@ func openCreditEntryToProto(e *domain.OpenCreditEntry) *pb.OpenCreditEntryInfo {
 		OriginalAmount:      e.OriginalAmount,
 		AllocatedAmount:     e.AllocatedAmount,
 		LeftoverAmount:      e.LeftoverAmount,
+		CustomerId:          e.CustomerID,
 		CustomerName:        e.CustomerName,
 		CustomerNumber:      e.CustomerNumber,
 		TransactionType:     e.TransactionType,

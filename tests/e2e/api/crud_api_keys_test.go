@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -112,6 +113,64 @@ func TestAPIKeys_Rotate(t *testing.T) {
 	assert.NotNil(t, parseJSON(getBody)["revoked_at"])
 
 	apiClient.Delete(apiKeysPath + "/" + newID)
+}
+
+// TestAPIKeys_RotateScheduledRevocation verifies that a future revoke_at
+// schedules the old key's revocation rather than revoking it immediately: the
+// old key's revoked_at is persisted as the requested future instant.
+func TestAPIKeys_RotateScheduledRevocation(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.Post(apiKeysPath, map[string]any{
+		"name":    uniqueName("e2e-rotate-sched"),
+		"role_id": SeedAdminRoleID,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, body)
+	origID := jsonField(jsonObject(parseJSON(body), "api_key_info"), "id")
+
+	revokeAt := time.Now().UTC().Add(time.Hour).Truncate(time.Second)
+	rotStatus, rotBody, err := apiClient.Post(apiKeysPath+"/"+origID+"/actions/rotate", map[string]any{
+		"revoke_at": revokeAt.Format(time.RFC3339),
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, rotStatus, rotBody)
+	newID := jsonField(jsonObject(parseJSON(rotBody), "api_key_info"), "id")
+
+	getStatus, getBody, err := apiClient.GetListRaw(apiKeysPath+"/"+origID, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, getStatus, getBody)
+
+	revokedAtRaw, ok := parseJSON(getBody)["revoked_at"].(string)
+	require.True(t, ok, "old key should have a revoked_at, got: %s", string(getBody))
+	revokedAt, err := time.Parse(time.RFC3339, revokedAtRaw)
+	require.NoError(t, err)
+	assert.True(t, revokedAt.After(time.Now().UTC()),
+		"scheduled revoked_at should be in the future, got %s", revokedAtRaw)
+
+	apiClient.Delete(apiKeysPath + "/" + origID)
+	apiClient.Delete(apiKeysPath + "/" + newID)
+}
+
+// TestAPIKeys_RotateRevokeAtBeyondCap verifies the 30-day scheduling cap.
+func TestAPIKeys_RotateRevokeAtBeyondCap(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.Post(apiKeysPath, map[string]any{
+		"name":    uniqueName("e2e-rotate-cap"),
+		"role_id": SeedAdminRoleID,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, body)
+	origID := jsonField(jsonObject(parseJSON(body), "api_key_info"), "id")
+
+	revokeAt := time.Now().UTC().Add(31 * 24 * time.Hour).Format(time.RFC3339)
+	rotStatus, rotBody, err := apiClient.Post(apiKeysPath+"/"+origID+"/actions/rotate", map[string]any{
+		"revoke_at": revokeAt,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	assert.True(t, rotStatus == 400 || rotStatus == 422,
+		"revoke_at beyond 30 days should return 400 or 422, got %d: %s", rotStatus, string(rotBody))
+
+	apiClient.Delete(apiKeysPath + "/" + origID)
 }
 
 func TestAPIKeys_IncludeRole(t *testing.T) {

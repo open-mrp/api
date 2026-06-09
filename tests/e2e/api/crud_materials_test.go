@@ -276,7 +276,7 @@ func TestMaterials_ListPagination(t *testing.T) {
 	requirePageLen(t, page1.Data, 1)
 
 	if !page1.PageInfo.HasNextPage {
-		t.Skip("not enough materials for pagination test")
+		t.Fatal("not enough materials for pagination test")
 		return
 	}
 	require.NotNil(t, page1.PageInfo.NextPageURL)

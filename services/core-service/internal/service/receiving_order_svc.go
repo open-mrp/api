@@ -101,7 +101,28 @@ func (s *receivingOrderSvcImpl) ListReceivingOrders(ctx context.Context, params 
 		params.Status = &defaultStatus
 	}
 
-	return s.repos.NewReceivingOrderRepo().List(ctx, params)
+	repo := s.repos.NewReceivingOrderRepo()
+	result, apiErr := repo.List(ctx, params)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	// Expand lines per order only when requested (so the list can serve the
+	// lines.order_line.product.item array filter).
+	for _, include := range params.Includes {
+		if include == "lines" {
+			for _, ro := range result.ReceivingOrders {
+				lines, apiErr := repo.ListLines(ctx, ro.ID)
+				if apiErr != nil {
+					return nil, tracing.Trace(span, apiErr)
+				}
+				ro.Lines = lines
+			}
+			break
+		}
+	}
+
+	return result, nil
 }
 
 func (s *receivingOrderSvcImpl) GetReceivingOrder(ctx context.Context, params domain.GetReceivingOrderParams) (*domain.ReceivingOrder, *apierror.APIError) {

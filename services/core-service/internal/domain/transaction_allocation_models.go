@@ -30,6 +30,7 @@ type OpenCreditEntry struct {
 	OriginalAmount      string
 	AllocatedAmount     string
 	LeftoverAmount      string
+	CustomerID          string
 	CustomerName        string
 	CustomerNumber      *string
 	TransactionType     string

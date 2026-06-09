@@ -834,6 +834,14 @@ func fillOptionalBooleanExampleDefaults(example any, schema Schema) any {
 		filled[name] = false
 	}
 
+	// An empty object is not a useful example and never validates against a
+	// schema with required properties (it would emit `example: {}`). Omit it
+	// entirely — types without an authored SchemaExample simply carry no example
+	// rather than a placeholder that fails oas3-valid-schema-example.
+	if len(filled) == 0 {
+		return nil
+	}
+
 	return filled
 }
 

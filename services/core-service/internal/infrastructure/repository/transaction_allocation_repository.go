@@ -351,6 +351,7 @@ func (r *transactionAllocationRepoImpl) ListOpenCredits(ctx context.Context, par
 			OriginalAmount:     originalAmount,
 			AllocatedAmount:    allocatedAmount,
 			LeftoverAmount:     leftoverAmount,
+			CustomerID:         row.CustomerID,
 			CustomerName:       row.CustomerName,
 			TransactionType:    row.TransactionType,
 			InvoiceAllocations: allocsByTxn[row.ID],

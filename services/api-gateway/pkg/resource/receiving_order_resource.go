@@ -26,7 +26,9 @@ type ReceivingOrder struct {
 	// Purchase order associated with this receiving order. Expandable via include[]=purchase_order.
 	PurchaseOrder *PurchaseOrder `json:"purchase_order" expandable:"true"`
 	// Supplier associated with this receiving order. Expandable via include[]=supplier.
-	Supplier *Account `json:"supplier" expandable:"true"`
+	// Carried inline (like PurchaseOrder) because the supplier is the seller account,
+	// which is cross-account and not resolvable via the account-scoped loader.
+	Supplier *Supplier `json:"supplier" expandable:"true"`
 	// Line items in this receiving order. Expandable via include[]=lines.
 	Lines *List[ReceivingOrderLine] `json:"lines" expandable:"true"`
 	// Number of lines in this receiving order.
@@ -68,6 +70,10 @@ type ReceivingOrderLine struct {
 	RejectedQuantity *Quantity `json:"rejected_quantity"`
 	// Order line associated with this receiving order line. Expandable via include[]=lines.order_line.
 	OrderLine *SalesOrderLine `json:"order_line" expandable:"true"`
+	// The received item (the order line's item). Populated inline when lines are
+	// included — receiving-order lines are item-based (no product), so the item is
+	// carried directly rather than via order_line.product.
+	Item *Item `json:"item"`
 	// Timestamp when the line was stocked.
 	StockedAt *time.Time `json:"stocked_at"`
 	// Timestamp when the line was created.

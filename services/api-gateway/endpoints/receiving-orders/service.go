@@ -60,6 +60,9 @@ func (m *receivingOrderSvcImpl) ListReceivingOrders(ctx context.Context, req *Li
 		Status:      req.Status,
 		ItemIds:     req.ItemIDs,
 		SupplierIds: req.SupplierIDs,
+		// Ask the backend to expand lines when requested (supplier/purchase_order
+		// are resolved gateway-side).
+		Includes: resourcekit.FilterIncludes(ctx, "lines"),
 	}
 
 	if req.StartDate != nil {
@@ -255,7 +258,19 @@ func receivingOrderSummaryFromProto(ctx context.Context, info *pb.ReceivingOrder
 		UpdatedAt:            grpcutil.TimestampToTime(info.UpdatedAt),
 	}
 
-	stashReceivingOrderFKs(ctx, info.Id, info.SupplierId, info.PurchaseOrderId)
+	stashReceivingOrderFKs(ctx, info.Id, info.SupplierId, info.SupplierName, info.SupplierNumber, info.PurchaseOrderId)
+
+	// Lines are populated on the summary only when the list includes them.
+	if len(info.Lines) > 0 {
+		meta := resourcekit.GetLoadMeta(ctx)
+		lines := make([]apiresource.ReceivingOrderLine, len(info.Lines))
+		for i, l := range info.Lines {
+			lines[i] = receivingOrderLineFromProto(l)
+			stashReceivingOrderLineMeta(meta, l, &lines[i])
+		}
+		meta.Set(constants.ObjectTypeReceivingOrder, info.Id, "lines",
+			apiresource.NewList(lines, apiresource.PageInfo{}))
+	}
 
 	return r
 }
@@ -279,7 +294,7 @@ func receivingOrderFromProto(ctx context.Context, info *pb.ReceivingOrderInfo) a
 		UpdatedAt:   grpcutil.TimestampToTime(info.UpdatedAt),
 	}
 
-	stashReceivingOrderFKs(ctx, info.Id, info.SupplierId, info.PurchaseOrderId)
+	stashReceivingOrderFKs(ctx, info.Id, info.SupplierId, info.SupplierName, info.SupplierNumber, info.PurchaseOrderId)
 
 	// Lines (expandable): stash the pre-built list plus each line's order_line
 	// reference so the include resolver can populate them on ?include=lines and
@@ -298,17 +313,32 @@ func receivingOrderFromProto(ctx context.Context, info *pb.ReceivingOrderInfo) a
 	return r
 }
 
-// stashReceivingOrderFKs stashes the supplier and purchase_order FK ids so the
-// loader-backed include resolver fetches the real resources on ?include=.
-// Never fabricate the referenced documents.
-func stashReceivingOrderFKs(ctx context.Context, id string, supplierID *string, purchaseOrderID string) {
+// stashReceivingOrderFKs stashes the purchase_order FK id (loader-backed, same
+// account) and the supplier as a prebuilt object. The supplier is the seller
+// account — cross-account and not resolvable via the account-scoped loader — so
+// it is carried inline from the data the receiving-order query already joined,
+// mirroring PurchaseOrder. Never fabricate the referenced documents.
+func stashReceivingOrderFKs(ctx context.Context, id string, supplierID, supplierName, supplierNumber *string, purchaseOrderID string) {
 	meta := resourcekit.GetLoadMeta(ctx)
 	if supplierID != nil {
-		meta.Set(constants.ObjectTypeReceivingOrder, id, "supplier_id", *supplierID)
+		meta.Set(constants.ObjectTypeReceivingOrder, id, "supplier", &apiresource.Supplier{
+			ID:     *supplierID,
+			Object: constants.ObjectTypeSupplier,
+			Name:   derefOrEmpty(supplierName),
+			Number: derefOrEmpty(supplierNumber),
+		})
 	}
 	if purchaseOrderID != "" {
 		meta.Set(constants.ObjectTypeReceivingOrder, id, "purchase_order_id", purchaseOrderID)
 	}
+}
+
+// derefOrEmpty returns the pointed-to string or "" if nil.
+func derefOrEmpty(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }
 
 func receivingOrderLineFromProto(info *pb.ReceivingOrderLineInfo) apiresource.ReceivingOrderLine {
@@ -333,6 +363,15 @@ func receivingOrderLineFromProto(info *pb.ReceivingOrderLineInfo) apiresource.Re
 		StockedAt: grpcutil.TimestampToTimePtr(info.StockedAt),
 		CreatedAt: ts,
 		UpdatedAt: grpcutil.TimestampToTime(info.UpdatedAt),
+	}
+
+	// Item carried inline (the order line's item) — RO lines are item-based.
+	if info.OrderLineItemId != nil && *info.OrderLineItemId != "" {
+		item := &apiresource.Item{ID: *info.OrderLineItemId, Object: constants.ObjectTypeItem}
+		if info.OrderLineItemSku != nil {
+			item.SKU = *info.OrderLineItemSku
+		}
+		line.Item = item
 	}
 
 	if info.RejectedQuantityValue != nil {
@@ -365,7 +404,7 @@ func buildOrderLineForReceivingLine(info *pb.ReceivingOrderLineInfo) *apiresourc
 		productDesc = info.OrderLineItemDescription
 	}
 
-	return &apiresource.SalesOrderLine{
+	line := &apiresource.SalesOrderLine{
 		ID:                 info.OrderLineId,
 		Object:             constants.ObjectTypeSalesOrderLine,
 		LineItemNumber:     1,
@@ -374,6 +413,12 @@ func buildOrderLineForReceivingLine(info *pb.ReceivingOrderLineInfo) *apiresourc
 		CreatedAt:          ts,
 		UpdatedAt:          ts,
 	}
+	// Carry the product as a lightweight reference so the sales-order-line product
+	// loader can resolve order_line.product(.item/.product_line) on ?include=.
+	if info.OrderLineProductId != nil && *info.OrderLineProductId != "" {
+		line.Product = &apiresource.Product{ID: *info.OrderLineProductId, Object: constants.ObjectTypeProduct}
+	}
+	return line
 }
 
 // stashReceivingOrderLineMeta stashes a line's expandable order_line reference

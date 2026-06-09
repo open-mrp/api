@@ -65,6 +65,8 @@ message PurchaseOrderSummaryInfo {
   google.protobuf.Timestamp updated_at = 16;
   int32 line_count = 17;
   optional string priority_id = 18;
+  // Lines (populated only when the list request includes "lines").
+  repeated PurchaseOrderLineInfo lines = 19;
 }
 
 // PurchaseOrderInfo represents a full purchase order with all detail.
@@ -211,6 +213,7 @@ message ListPurchaseOrdersRequest {
   repeated string supplier_ids = 6;
   optional string start_date = 7;
   optional string end_date = 8;
+  repeated string includes = 9;
 }
 
 message ListPurchaseOrdersResponse {

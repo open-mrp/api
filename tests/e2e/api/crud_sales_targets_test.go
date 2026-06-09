@@ -21,7 +21,7 @@ func discoverActiveAccountUserID(t *testing.T) string {
 			return jsonField(m, "id")
 		}
 	}
-	t.Skip("No active account users available")
+	t.Fatal("No active account users available")
 	return ""
 }
 

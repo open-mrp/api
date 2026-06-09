@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -39,5 +40,12 @@ func (e *ListPurchaseOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*Lis
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListPurchaseOrdersRequest) (*apiresource.List[apiresource.PurchaseOrder], *apierror.APIError) {
 			return svc.(PurchaseOrderSvc).ListPurchaseOrders
 		},
+		ObjectType: constants.ObjectTypePurchaseOrder,
+		// The list summary stashes the supplier inline (cross-account, like the
+		// receiving-order supplier); expose it so list rows can request it.
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypePurchaseOrder,
+			Fields:     []string{"supplier", "lines"},
+		}),
 	})
 }

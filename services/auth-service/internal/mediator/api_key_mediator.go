@@ -14,6 +14,10 @@ import (
 
 var apiKeyMedTracer = tracing.GetTracer("auth-service.api_key_mediator")
 
+// maxRevokeScheduleWindow caps how far in the future a rotation may schedule the
+// old key's revocation. Beyond this, the request is rejected.
+const maxRevokeScheduleWindow = 30 * 24 * time.Hour
+
 type apiKeyMedImpl struct {
 	repos      domain.RepoFactory
 	pepper     []byte
@@ -176,7 +180,7 @@ func (s *apiKeyMedImpl) Revoke(ctx context.Context, apiKeyTypeID string, ownerAc
 	ctx, span := apiKeyMedTracer.Start(ctx, "mediator.api_key.revoke")
 	defer span.End()
 
-	return s.repos.NewAPIKeyRepo().Revoke(ctx, apiKeyTypeID, ownerAccountID)
+	return s.repos.NewAPIKeyRepo().Revoke(ctx, apiKeyTypeID, ownerAccountID, time.Now().UTC())
 }
 
 // Rotate revokes the specified API key and creates a replacement with the same name,
@@ -200,7 +204,19 @@ func (s *apiKeyMedImpl) Rotate(ctx context.Context, input domain.APIKeyRotateInp
 		return "", nil, apierror.NewResourceNotFoundError("API key not found.")
 	}
 
-	if apiErr := apiKeyRepo.Revoke(ctx, input.APIKeyTypeID, input.OwnerAccountID); apiErr != nil {
+	// Determine when the old key is revoked. Default is immediate; a future
+	// RevokeAt schedules revocation (the old key keeps working until then),
+	// capped at maxRevokeScheduleWindow. A past/now RevokeAt collapses to immediate.
+	revokeAt := time.Now().UTC()
+	if input.RevokeAt != nil && input.RevokeAt.After(revokeAt) {
+		if input.RevokeAt.After(revokeAt.Add(maxRevokeScheduleWindow)) {
+			return "", nil, apierror.NewValidationErrorWithParam(
+				"Scheduled revocation must be no more than 30 days in the future.", "revoke_at")
+		}
+		revokeAt = input.RevokeAt.UTC()
+	}
+
+	if apiErr := apiKeyRepo.Revoke(ctx, input.APIKeyTypeID, input.OwnerAccountID, revokeAt); apiErr != nil {
 		return "", nil, apiErr
 	}
 

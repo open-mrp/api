@@ -326,5 +326,8 @@ func mapListByShipmentRow(row sqlc.ListShipmentLinesByShipmentRow) *domain.Shipm
 	if row.ProductDescription.Valid {
 		l.OrderLineDesc = &row.ProductDescription.String
 	}
+	if row.OrderLineItemID.Valid {
+		l.OrderLineItemID = &row.OrderLineItemID.String
+	}
 	return l
 }

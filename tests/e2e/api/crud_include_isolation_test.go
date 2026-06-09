@@ -75,10 +75,10 @@ func TestIncludeIsolation_ListEndpointsReturnNullSubobjectsWithoutInclude(t *tes
 			list, status, err := apiClient.GetList(tc.path, url.Values{"limit": {"5"}})
 			require.NoError(t, err)
 			if status != 200 {
-				t.Skipf("%s list not accessible (status %d)", tc.name, status)
+				t.Fatalf("%s list not accessible (status %d)", tc.name, status)
 			}
 			if len(list.Data) == 0 {
-				t.Skipf("no %s available to assert against", tc.name)
+				t.Fatalf("no %s available to assert against", tc.name)
 			}
 			for i, item := range list.Data {
 				m := parseJSON(item)
@@ -100,10 +100,10 @@ func TestRequestLogs_ListExpandableFieldsNullWithoutInclude(t *testing.T) {
 	list, status, err := apiClient.GetList(requestLogsPath, url.Values{"limit": {"5"}})
 	require.NoError(t, err)
 	if status != 200 {
-		t.Skipf("request logs list not accessible (status %d)", status)
+		t.Fatalf("request logs list not accessible (status %d)", status)
 	}
 	if len(list.Data) == 0 {
-		t.Skip("no request logs available")
+		t.Fatal("no request logs available")
 	}
 
 	for i, item := range list.Data {
@@ -129,7 +129,7 @@ func TestAuditEvents_IncludeRequestEmbeddedRequestLogHasNoAccountOrActor(t *test
 
 	req := jsonObject(parseJSON(body), "request")
 	if req == nil {
-		t.Skip("seeded audit event has no linked request log to assert against")
+		t.Fatal("seeded audit event has no linked request log to assert against")
 	}
 	assert.Equal(t, "request_log", jsonField(req, "object"), "request sub-resource should be a request_log")
 	assert.NotEmpty(t, jsonField(req, "id"), "request sub-resource should carry its base id")

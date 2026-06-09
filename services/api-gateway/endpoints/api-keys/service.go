@@ -120,6 +120,10 @@ func (m *apiKeySvcImpl) RotateAPIKey(ctx context.Context, req *RotateAPIKeyReque
 		pbReq.ExpiresAt = timestamppb.New(v)
 	}
 
+	if v, ok := req.RevokeAt.Value(); ok {
+		pbReq.RevokeAt = timestamppb.New(v)
+	}
+
 	resp, apiErr := grpcutil.CallRPC(ctx, apiKeySvcTracer, "service.api_keys.rotate", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.RotateAPIKeyResponse, error) {
 			return m.authClient.RotateAPIKey(ctx, pbReq, opts...)

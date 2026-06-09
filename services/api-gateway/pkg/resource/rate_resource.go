@@ -32,26 +32,14 @@ type Rate struct {
 }
 
 var SampleRate = &Rate{
-	ID:     SampleRateID,
-	Object: constants.ObjectTypeRate,
-	Value:  SampleRateValue,
-	NumeratorUnit: &Unit{
-		ID:           SampleUnitID,
-		Object:       constants.ObjectTypeUnit,
-		Name:         "US Dollar",
-		Abbreviation: "USD",
-		Type:         constants.UnitTypeCurrency,
-	},
-	DenominatorUnit: &Unit{
-		ID:           SampleUnitID,
-		Object:       constants.ObjectTypeUnit,
-		Name:         SampleUnitName,
-		Abbreviation: SampleUnitAbbreviation,
-		Type:         constants.UnitTypeMass,
-	},
-	DisplayValue: "$25.50 / " + SampleUnitAbbreviation,
-	CreatedAt:    timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:    timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:              SampleRateID,
+	Object:          constants.ObjectTypeRate,
+	Value:           SampleRateValue,
+	NumeratorUnit:   newSampleUnit("US Dollar", "USD", constants.UnitTypeCurrency),
+	DenominatorUnit: newSampleUnit(SampleUnitName, SampleUnitAbbreviation, constants.UnitTypeMass),
+	DisplayValue:    "$25.50 / " + SampleUnitAbbreviation,
+	CreatedAt:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:       timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 // FormatRateDisplayValue formats a rate as "numerator / denominator" (e.g. "$25.50 / kg").

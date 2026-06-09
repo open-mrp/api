@@ -55,6 +55,8 @@ message PickSummaryInfo {
   google.protobuf.Timestamp updated_at = 11;
   string sales_order_number = 12;
   string priority_id = 13;
+  // Departments (populated only when the list request includes "departments").
+  repeated PickDepartmentInfo departments = 14;
 }
 
 // PickInfo represents a full pick resource.
@@ -124,6 +126,7 @@ message ListPicksRequest {
   repeated string department_ids = 8;
   optional string start_date = 9;
   optional string end_date = 10;
+  repeated string includes = 11;
 }
 
 message ListPicksResponse {

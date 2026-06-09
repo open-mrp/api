@@ -334,6 +334,12 @@ func (h *gRPCHandler) RotateAPIKey(ctx context.Context, req *pb.RotateAPIKeyRequ
 			input.ExpiresAt = &t
 		}
 	}
+	if req.RevokeAt != nil {
+		t := req.RevokeAt.AsTime()
+		if !t.IsZero() {
+			input.RevokeAt = &t
+		}
+	}
 
 	result, apiErr := h.apiKeySvc.RotateAPIKey(ctx, input)
 	if apiErr != nil {

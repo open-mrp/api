@@ -63,6 +63,9 @@ func (m *invoiceSvcImpl) ListInvoices(ctx context.Context, req *ListInvoicesRequ
 		ProductLineIds:   req.ProductLineIDs,
 		CustomerGroupIds: req.CustomerGroupIDs,
 		SalesRepIds:      req.SalesRepIDs,
+		// Ask the backend to expand lines when requested (the rest of the includes
+		// are resolved gateway-side).
+		Includes: resourcekit.FilterIncludes(ctx, "lines"),
 	}
 
 	if req.StartDate != nil {
@@ -226,6 +229,14 @@ func invoiceFromSummaryProto(ctx context.Context, d *pb.InvoiceSummaryInfo) apir
 	if d.PaymentTermId != nil && *d.PaymentTermId != "" {
 		meta.Set(constants.ObjectTypeInvoice, inv.ID, "payment_term_id", *d.PaymentTermId)
 	}
+	// Lines are populated on the summary only when the list includes them.
+	if len(d.Lines) > 0 {
+		lines := make([]apiresource.InvoiceLine, len(d.Lines))
+		for i, l := range d.Lines {
+			lines[i] = invoiceLineFromProto(ctx, l)
+		}
+		meta.Set(constants.ObjectTypeInvoice, inv.ID, "lines", apiresource.NewList(lines, apiresource.PageInfo{}))
+	}
 	return inv
 }
 
@@ -329,6 +340,14 @@ func invoiceLineFromProto(ctx context.Context, l *pb.InvoiceLineInfo) apiresourc
 	// the line's identifying proto fields and stash it for populate on ?include=.
 	if l.OrderLineId != "" {
 		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeInvoiceLine, line.ID, "order_line", buildSalesOrderLineForInvoice(l))
+	}
+	// Item carried inline (the order line's item) so lines.item.id resolves.
+	if l.OrderLineItemId != nil && *l.OrderLineItemId != "" {
+		item := &apiresource.Item{ID: *l.OrderLineItemId, Object: constants.ObjectTypeItem}
+		if l.OrderLineItemSku != nil {
+			item.SKU = *l.OrderLineItemSku
+		}
+		line.Item = item
 	}
 	return line
 }

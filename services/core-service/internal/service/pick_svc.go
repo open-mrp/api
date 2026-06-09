@@ -100,7 +100,28 @@ func (s *pickSvcImpl) ListPicks(ctx context.Context, params domain.ListPicksPara
 
 	params.AccountID = identity.Target.AccountID
 
-	return s.repos.NewPickRepo().List(ctx, params)
+	repo := s.repos.NewPickRepo()
+	result, apiErr := repo.List(ctx, params)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	// Expand departments per pick only when requested (so the list can serve the
+	// department_ids array filter and rows that render department pills).
+	for _, include := range params.Includes {
+		if include == "departments" {
+			for _, pick := range result.Picks {
+				depts, apiErr := repo.GetDepartments(ctx, pick.ID)
+				if apiErr != nil {
+					return nil, tracing.Trace(span, apiErr)
+				}
+				pick.Departments = depts
+			}
+			break
+		}
+	}
+
+	return result, nil
 }
 
 func (s *pickSvcImpl) GetPick(ctx context.Context, pickID string, includes []string) (*domain.Pick, *apierror.APIError) {

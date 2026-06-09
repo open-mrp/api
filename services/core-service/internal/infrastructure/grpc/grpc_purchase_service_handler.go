@@ -52,6 +52,10 @@ func purchaseOrderSummaryToProto(s *domain.PurchaseOrderSummary) *pb.PurchaseOrd
 		info.CompletedAt = timestamppb.New(*s.CompletedAt)
 	}
 
+	for _, l := range s.Lines {
+		info.Lines = append(info.Lines, purchaseOrderLineToProto(l))
+	}
+
 	return info
 }
 
@@ -289,6 +293,7 @@ func (h *purchaseGRPCHandler) ListPurchaseOrders(ctx context.Context, req *pb.Li
 		SupplierIDs: req.SupplierIds,
 		StartDate:   req.StartDate,
 		EndDate:     req.EndDate,
+		Includes:    req.Includes,
 	}
 
 	result, apiErr := h.purchaseOrderSvc.ListPurchaseOrders(ctx, params)

@@ -76,9 +76,9 @@ FROM api_key
 WHERE api_key.owner_account_id = sqlc.arg('owner_account_id')
 AND (api_key.name LIKE CONCAT('%', sqlc.arg('query'), '%') OR sqlc.arg('query') = '')
 AND (
-    (sqlc.arg('include_active') = true AND api_key.revoked_at IS NULL AND (api_key.expires_at IS NULL OR api_key.expires_at > NOW(3)))
-    OR (sqlc.arg('include_expired') = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW(3) AND api_key.revoked_at IS NULL AND api_key.expires_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
-    OR (sqlc.arg('include_revoked') = true AND api_key.revoked_at IS NOT NULL AND api_key.revoked_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+    (sqlc.arg('include_active') = true AND (api_key.revoked_at IS NULL OR api_key.revoked_at > NOW(3)) AND (api_key.expires_at IS NULL OR api_key.expires_at > NOW(3)))
+    OR (sqlc.arg('include_expired') = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW(3) AND (api_key.revoked_at IS NULL OR api_key.revoked_at > NOW(3)) AND api_key.expires_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+    OR (sqlc.arg('include_revoked') = true AND api_key.revoked_at IS NOT NULL AND api_key.revoked_at <= NOW(3) AND api_key.revoked_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
 )
 AND (
     sqlc.narg('cursor_created_at') IS NULL
@@ -94,9 +94,9 @@ FROM api_key
 WHERE api_key.owner_account_id = sqlc.arg('owner_account_id')
 AND (api_key.name LIKE CONCAT('%', sqlc.arg('query'), '%') OR sqlc.arg('query') = '')
 AND (
-    (sqlc.arg('include_active') = true AND api_key.revoked_at IS NULL AND (api_key.expires_at IS NULL OR api_key.expires_at > NOW(3)))
-    OR (sqlc.arg('include_expired') = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW(3) AND api_key.revoked_at IS NULL AND api_key.expires_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
-    OR (sqlc.arg('include_revoked') = true AND api_key.revoked_at IS NOT NULL AND api_key.revoked_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+    (sqlc.arg('include_active') = true AND (api_key.revoked_at IS NULL OR api_key.revoked_at > NOW(3)) AND (api_key.expires_at IS NULL OR api_key.expires_at > NOW(3)))
+    OR (sqlc.arg('include_expired') = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW(3) AND (api_key.revoked_at IS NULL OR api_key.revoked_at > NOW(3)) AND api_key.expires_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+    OR (sqlc.arg('include_revoked') = true AND api_key.revoked_at IS NOT NULL AND api_key.revoked_at <= NOW(3) AND api_key.revoked_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
 )
 AND (
     api_key.created_at > sqlc.arg('cursor_created_at')
@@ -125,7 +125,7 @@ WHERE api_key.type_id IN (sqlc.slice('ids'))
 AND api_key.owner_account_id = sqlc.arg('owner_account_id');
 
 -- name: RevokeAPIKeyByTypeID :execresult
-UPDATE api_key SET revoked_at = NOW(3), updated_at = NOW(3) WHERE type_id = ? AND owner_account_id = ?;
+UPDATE api_key SET revoked_at = ?, updated_at = NOW(3) WHERE type_id = ? AND owner_account_id = ?;
 
 -- name: TouchAPIKeyByID :exec
 UPDATE api_key SET last_used_at = NOW(3), updated_at = NOW(3) WHERE id = ?;
@@ -154,9 +154,9 @@ LEFT JOIN role ON api_key.role_id = role.id
 WHERE api_key.owner_account_id = sqlc.arg('owner_account_id')
 AND (api_key.name LIKE CONCAT('%', sqlc.arg('query'), '%') OR sqlc.arg('query') = '')
 AND (
-    (sqlc.arg('include_active') = true AND api_key.revoked_at IS NULL AND (api_key.expires_at IS NULL OR api_key.expires_at > NOW(3)))
-    OR (sqlc.arg('include_expired') = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW(3) AND api_key.revoked_at IS NULL AND api_key.expires_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
-    OR (sqlc.arg('include_revoked') = true AND api_key.revoked_at IS NOT NULL AND api_key.revoked_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+    (sqlc.arg('include_active') = true AND (api_key.revoked_at IS NULL OR api_key.revoked_at > NOW(3)) AND (api_key.expires_at IS NULL OR api_key.expires_at > NOW(3)))
+    OR (sqlc.arg('include_expired') = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW(3) AND (api_key.revoked_at IS NULL OR api_key.revoked_at > NOW(3)) AND api_key.expires_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+    OR (sqlc.arg('include_revoked') = true AND api_key.revoked_at IS NOT NULL AND api_key.revoked_at <= NOW(3) AND api_key.revoked_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
 )
 AND (
     sqlc.narg('cursor_created_at') IS NULL
@@ -176,9 +176,9 @@ LEFT JOIN role ON api_key.role_id = role.id
 WHERE api_key.owner_account_id = sqlc.arg('owner_account_id')
 AND (api_key.name LIKE CONCAT('%', sqlc.arg('query'), '%') OR sqlc.arg('query') = '')
 AND (
-    (sqlc.arg('include_active') = true AND api_key.revoked_at IS NULL AND (api_key.expires_at IS NULL OR api_key.expires_at > NOW(3)))
-    OR (sqlc.arg('include_expired') = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW(3) AND api_key.revoked_at IS NULL AND api_key.expires_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
-    OR (sqlc.arg('include_revoked') = true AND api_key.revoked_at IS NOT NULL AND api_key.revoked_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+    (sqlc.arg('include_active') = true AND (api_key.revoked_at IS NULL OR api_key.revoked_at > NOW(3)) AND (api_key.expires_at IS NULL OR api_key.expires_at > NOW(3)))
+    OR (sqlc.arg('include_expired') = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW(3) AND (api_key.revoked_at IS NULL OR api_key.revoked_at > NOW(3)) AND api_key.expires_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+    OR (sqlc.arg('include_revoked') = true AND api_key.revoked_at IS NOT NULL AND api_key.revoked_at <= NOW(3) AND api_key.revoked_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
 )
 AND (
     api_key.created_at > sqlc.arg('cursor_created_at')

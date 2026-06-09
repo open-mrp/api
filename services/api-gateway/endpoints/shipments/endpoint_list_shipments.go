@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -45,5 +46,12 @@ func (e *ListShipmentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListShip
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListShipmentsRequest) (*apiresource.List[apiresource.Shipment], *apierror.APIError) {
 			return svc.(ShipmentSvc).ListShipments
 		},
+		ObjectType: constants.ObjectTypeShipment,
+		// The list summary carries customer_id + sales_order_id; expose exactly the
+		// includes those FK ids can resolve (loaders are account-scoped, same account).
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeShipment,
+			Fields:     []string{"customer", "sales_order", "lines"},
+		}),
 	})
 }

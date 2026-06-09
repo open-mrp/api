@@ -215,31 +215,6 @@ message BatchGetSalesOrderStatusesByIDsResponse {
   repeated SalesOrderStatusInfo sales_order_statuses = 1;
 }
 
-// SalesOrderSummaryInfo represents a sales order in list views.
-message SalesOrderSummaryInfo {
-  string id = 1;
-  string number = 2;
-  optional string customer_po_number = 3;
-  string status_code = 4;
-  string status_name = 5;
-  string type_code = 6;
-  string type_name = 7;
-  string customer_id = 8;
-  string customer_name = 9;
-  string customer_number = 10;
-  int32 line_count = 11;
-  bool is_acknowledgment_sent = 12;
-  string priority_code = 13;
-  string priority_name = 14;
-  optional google.protobuf.Timestamp issued_at = 15;
-  optional google.protobuf.Timestamp completed_at = 16;
-  google.protobuf.Timestamp created_at = 17;
-  google.protobuf.Timestamp updated_at = 18;
-  optional string priority_id = 19;
-  optional string customer_status_code = 20;
-  optional string customer_commission_policy = 21;
-}
-
 // SalesOrderInfo represents a full sales order with all detail.
 message SalesOrderInfo {
   string id = 1;
@@ -354,6 +329,11 @@ message SalesOrderInfo {
   // Shipping term timestamps
   optional google.protobuf.Timestamp shipping_term_created_at = 90;
   optional google.protobuf.Timestamp shipping_term_updated_at = 91;
+  // Count of order lines (always populated, independent of the lines include).
+  int32 line_count = 92;
+  // IDs of shipments linked to this order (populated when related.shipments is
+  // requested). The gateway builds the related.shipments record list from these.
+  repeated string shipment_ids = 93;
 }
 
 // SalesOrderLineInfo represents a sales order line.
@@ -416,10 +396,12 @@ message ListSalesOrdersRequest {
   bool exclude_internal_orders = 12;
   // If set, filters orders by buyer_account_id (for customer actor access).
   optional string buyer_account_id = 13;
+  // Includes to expand (e.g. "lines"); inline-joined fields are always present.
+  repeated string includes = 14;
 }
 
 message ListSalesOrdersResponse {
-  repeated SalesOrderSummaryInfo sales_orders = 1;
+  repeated SalesOrderInfo sales_orders = 1;
   PageInfo page_info = 2;
 }
 

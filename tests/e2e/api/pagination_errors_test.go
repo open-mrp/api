@@ -37,7 +37,7 @@ func TestListEndpoints_InvalidLimit_Zero(t *testing.T) {
 			t.Parallel()
 			path, ok := ep.ResolvePath()
 			if !ok {
-				t.Skipf("Cannot resolve path params for %s", ep.Path)
+				t.Fatalf("Cannot resolve path params for %s", ep.Path)
 				return
 			}
 
@@ -73,7 +73,7 @@ func TestListEndpoints_InvalidLimit_Negative(t *testing.T) {
 			t.Parallel()
 			path, ok := ep.ResolvePath()
 			if !ok {
-				t.Skipf("Cannot resolve path params for %s", ep.Path)
+				t.Fatalf("Cannot resolve path params for %s", ep.Path)
 				return
 			}
 
@@ -108,7 +108,7 @@ func TestListEndpoints_InvalidLimit_TooLarge(t *testing.T) {
 			t.Parallel()
 			path, ok := ep.ResolvePath()
 			if !ok {
-				t.Skipf("Cannot resolve path params for %s", ep.Path)
+				t.Fatalf("Cannot resolve path params for %s", ep.Path)
 				return
 			}
 
@@ -149,7 +149,7 @@ func TestListEndpoints_InvalidCursor(t *testing.T) {
 			t.Parallel()
 			path, ok := ep.ResolvePath()
 			if !ok {
-				t.Skipf("Cannot resolve path params for %s", ep.Path)
+				t.Fatalf("Cannot resolve path params for %s", ep.Path)
 				return
 			}
 
@@ -159,7 +159,7 @@ func TestListEndpoints_InvalidCursor(t *testing.T) {
 
 			if statusCode == 200 {
 				// Some endpoints silently accept invalid cursors and return empty results.
-				t.Skipf("GET %s accepts invalid cursor without error", path)
+				t.Fatalf("GET %s accepts invalid cursor without error", path)
 				return
 			}
 

@@ -21,6 +21,7 @@ func (h *gRPCHandler) ListDeliveries(ctx context.Context, req *pb.ListDeliveries
 		Status:      req.Status,
 		ItemIDs:     req.ItemIds,
 		SupplierIDs: req.SupplierIds,
+		Includes:    req.Includes,
 	}
 
 	if req.StartDate != nil {
@@ -91,6 +92,10 @@ func deliverySummaryToProto(d *domain.DeliverySummary) *pb.DeliverySummaryInfo {
 	}
 	if d.RejectedAt != nil {
 		info.RejectedAt = timestamppb.New(*d.RejectedAt)
+	}
+
+	for _, l := range d.Lines {
+		info.Lines = append(info.Lines, deliveryLineToProto(l))
 	}
 
 	return info

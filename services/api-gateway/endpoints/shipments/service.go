@@ -76,6 +76,9 @@ func (m *shipmentSvcImpl) ListShipments(ctx context.Context, req *ListShipmentsR
 		SalesRepIds:      req.SalesRepIDs,
 		StartDate:        req.StartDate,
 		EndDate:          req.EndDate,
+		// Ask the backend to expand lines when requested (other includes are
+		// resolved gateway-side from stashed FK ids).
+		Includes: resourcekit.FilterIncludes(ctx, "lines"),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, shipmentSvcTracer, "service.shipments.list", domain.ServiceName,
@@ -443,8 +446,11 @@ func stashShipmentMeta(ctx context.Context, s *pb.ShipmentInfo, d *apiresource.S
 	if s.CustomerId != "" {
 		meta.Set(constants.ObjectTypeShipment, d.ID, "customer_id", s.CustomerId)
 	}
+	// Shipping address belongs to the customer account (cross-account) and is not
+	// resolvable via the account-scoped loader, so it is carried inline from the
+	// data the shipment query already joined (mirrors SalesOrder addresses).
 	if s.ShippingAddressId != "" {
-		meta.Set(constants.ObjectTypeShipment, d.ID, "shipping_address_id", s.ShippingAddressId)
+		meta.Set(constants.ObjectTypeShipment, d.ID, "shipping_address", buildShipmentShippingAddress(s))
 	}
 	if s.ShippedById != nil && *s.ShippedById != "" {
 		meta.Set(constants.ObjectTypeShipment, d.ID, "shipped_by_id", *s.ShippedById)
@@ -471,6 +477,47 @@ func stashShipmentMeta(ctx context.Context, s *pb.ShipmentInfo, d *apiresource.S
 		}
 		meta.Set(constants.ObjectTypeShipment, d.ID, "shipping_cases", apiresource.NewList(cases, apiresource.PageInfo{}))
 	}
+}
+
+// buildShipmentShippingAddress builds the shipping Address inline from the data
+// the shipment query joined. The address belongs to the customer account and is
+// cross-account, so it cannot be resolved by the account-scoped loader.
+func buildShipmentShippingAddress(s *pb.ShipmentInfo) *apiresource.Address {
+	addr := &apiresource.Address{
+		ID:        s.ShippingAddressId,
+		Object:    constants.ObjectTypeAddress,
+		Phone:     s.ShippingAddressPhone,
+		Email:     s.ShippingAddressEmail,
+		Type:      constants.AddressTypeStandard,
+		CreatedAt: grpcutil.TimestampToTime(s.ShippingAddressCreatedAt),
+		UpdatedAt: grpcutil.TimestampToTime(s.ShippingAddressUpdatedAt),
+	}
+	if s.ShippingAddressName != nil {
+		addr.Name = *s.ShippingAddressName
+	}
+	if s.ShippingAddressIsDropShip != nil && *s.ShippingAddressIsDropShip {
+		addr.Type = constants.AddressTypeDropShip
+	}
+
+	country := ""
+	if s.ShippingAddressCountry != nil {
+		country = *s.ShippingAddressCountry
+	}
+	geo := &apiresource.Geolocation{
+		Object:      constants.ObjectTypeGeolocation,
+		StreetLine1: s.ShippingAddressStreetLine_1,
+		StreetLine2: s.ShippingAddressStreetLine_2,
+		Locality:    s.ShippingAddressLocality,
+		State:       s.ShippingAddressState,
+		PostalCode:  s.ShippingAddressPostalCode,
+		Country:     country,
+	}
+	if s.ShippingAddressGeolocationId != nil {
+		geo.ID = *s.ShippingAddressGeolocationId
+	}
+	addr.Geolocation = geo
+
+	return addr
 }
 
 // shipmentFreightFromProto builds the Freight sub-resource (carrier selection +
@@ -566,6 +613,14 @@ func stashShipmentSummaryMeta(ctx context.Context, s *pb.ShipmentSummaryInfo, d 
 	if s.CustomerId != "" {
 		meta.Set(constants.ObjectTypeShipment, d.ID, "customer_id", s.CustomerId)
 	}
+	// Lines are populated on the summary only when the list includes them.
+	if len(s.Lines) > 0 {
+		lines := make([]apiresource.ShipmentLine, len(s.Lines))
+		for i, l := range s.Lines {
+			lines[i] = shipmentLineFromProto(l)
+		}
+		meta.Set(constants.ObjectTypeShipment, d.ID, "lines", apiresource.NewList(lines, apiresource.PageInfo{}))
+	}
 }
 
 func shipmentLineFromProto(l *pb.ShipmentLineInfo) apiresource.ShipmentLine {
@@ -584,6 +639,15 @@ func shipmentLineFromProto(l *pb.ShipmentLineInfo) apiresource.ShipmentLine {
 		},
 		CreatedAt: grpcutil.TimestampToTime(l.CreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(l.UpdatedAt),
+	}
+
+	// Item carried inline (the order line's item) so lines.item.id resolves.
+	if l.OrderLineItemId != nil && *l.OrderLineItemId != "" {
+		item := &apiresource.Item{ID: *l.OrderLineItemId, Object: constants.ObjectTypeItem}
+		if l.OrderLineSku != "" {
+			item.SKU = l.OrderLineSku
+		}
+		result.Item = item
 	}
 
 	return result

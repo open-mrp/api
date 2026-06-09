@@ -56,7 +56,28 @@ func (s *deliverySvcImpl) ListDeliveries(ctx context.Context, params domain.List
 
 	params.AccountID = identity.Target.AccountID
 
-	return s.repos.NewDeliveryRepo().List(ctx, params)
+	repo := s.repos.NewDeliveryRepo()
+	result, apiErr := repo.List(ctx, params)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	// Expand lines per delivery only when requested (so the list can serve the
+	// lines.item array filter). Get returns the full delivery with its lines.
+	for _, include := range params.Includes {
+		if include == "lines" {
+			for _, summary := range result.Deliveries {
+				full, apiErr := repo.Get(ctx, domain.GetDeliveryParams{AccountID: params.AccountID, DeliveryID: summary.ID})
+				if apiErr != nil {
+					return nil, tracing.Trace(span, apiErr)
+				}
+				summary.Lines = full.Lines
+			}
+			break
+		}
+	}
+
+	return result, nil
 }
 
 func (s *deliverySvcImpl) GetDelivery(ctx context.Context, params domain.GetDeliveryParams) (*domain.Delivery, *apierror.APIError) {

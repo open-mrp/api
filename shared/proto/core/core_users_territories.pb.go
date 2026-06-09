@@ -3934,6 +3934,7 @@ type ListInvoicesRequest struct {
 	SalesRepIds      []string               `protobuf:"bytes,9,rep,name=sales_rep_ids,json=salesRepIds,proto3" json:"sales_rep_ids,omitempty"`
 	StartDate        *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=start_date,json=startDate,proto3,oneof" json:"start_date,omitempty"`
 	EndDate          *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=end_date,json=endDate,proto3,oneof" json:"end_date,omitempty"`
+	Includes         []string               `protobuf:"bytes,12,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -4041,6 +4042,13 @@ func (x *ListInvoicesRequest) GetStartDate() *timestamppb.Timestamp {
 func (x *ListInvoicesRequest) GetEndDate() *timestamppb.Timestamp {
 	if x != nil {
 		return x.EndDate
+	}
+	return nil
+}
+
+func (x *ListInvoicesRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
 	}
 	return nil
 }
@@ -4476,8 +4484,10 @@ type InvoiceSummaryInfo struct {
 	PaymentTermIsActive      *bool                  `protobuf:"varint,31,opt,name=payment_term_is_active,json=paymentTermIsActive,proto3,oneof" json:"payment_term_is_active,omitempty"`
 	CustomerStatusCode       *string                `protobuf:"bytes,32,opt,name=customer_status_code,json=customerStatusCode,proto3,oneof" json:"customer_status_code,omitempty"`
 	CustomerCommissionPolicy *string                `protobuf:"bytes,33,opt,name=customer_commission_policy,json=customerCommissionPolicy,proto3,oneof" json:"customer_commission_policy,omitempty"`
-	unknownFields            protoimpl.UnknownFields
-	sizeCache                protoimpl.SizeCache
+	// Lines (populated only when the list request includes "lines").
+	Lines         []*InvoiceLineInfo `protobuf:"bytes,34,rep,name=lines,proto3" json:"lines,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *InvoiceSummaryInfo) Reset() {
@@ -4739,6 +4749,13 @@ func (x *InvoiceSummaryInfo) GetCustomerCommissionPolicy() string {
 		return *x.CustomerCommissionPolicy
 	}
 	return ""
+}
+
+func (x *InvoiceSummaryInfo) GetLines() []*InvoiceLineInfo {
+	if x != nil {
+		return x.Lines
+	}
+	return nil
 }
 
 type InvoiceInfo struct {
@@ -5398,7 +5415,7 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\t_end_date\"\x8b\x01\n" +
 	"!ExportInventoryChangeLogsResponse\x12P\n" +
 	"\x15inventory_change_logs\x18\x01 \x03(\v2\x1c.core.InventoryChangeLogInfoR\x13inventoryChangeLogs\x12\x14\n" +
-	"\x05count\x18\x02 \x01(\x03R\x05count\"\xf2\x03\n" +
+	"\x05count\x18\x02 \x01(\x03R\x05count\"\x8e\x04\n" +
 	"\x13ListInvoicesRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
@@ -5412,7 +5429,8 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\n" +
 	"start_date\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampH\x03R\tstartDate\x88\x01\x01\x12:\n" +
-	"\bend_date\x18\v \x01(\v2\x1a.google.protobuf.TimestampH\x04R\aendDate\x88\x01\x01B\t\n" +
+	"\bend_date\x18\v \x01(\v2\x1a.google.protobuf.TimestampH\x04R\aendDate\x88\x01\x01\x12\x1a\n" +
+	"\bincludes\x18\f \x03(\tR\bincludesB\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_queryB\t\n" +
 	"\a_statusB\r\n" +
@@ -5448,7 +5466,7 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\x06_query\"\x84\x01\n" +
 	"\x1cListCustomerInvoicesResponse\x127\n" +
 	"\binvoices\x18\x01 \x03(\v2\x1b.core.InvoiceForPaymentInfoR\binvoices\x12+\n" +
-	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"\x9c\x0e\n" +
+	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"\xc9\x0e\n" +
 	"\x12InvoiceSummaryInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12\x17\n" +
@@ -5489,7 +5507,8 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"updated_at\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x128\n" +
 	"\x16payment_term_is_active\x18\x1f \x01(\bH\vR\x13paymentTermIsActive\x88\x01\x01\x125\n" +
 	"\x14customer_status_code\x18  \x01(\tH\fR\x12customerStatusCode\x88\x01\x01\x12A\n" +
-	"\x1acustomer_commission_policy\x18! \x01(\tH\rR\x18customerCommissionPolicy\x88\x01\x01B\a\n" +
+	"\x1acustomer_commission_policy\x18! \x01(\tH\rR\x18customerCommissionPolicy\x88\x01\x01\x12+\n" +
+	"\x05lines\x18\" \x03(\v2\x15.core.InvoiceLineInfoR\x05linesB\a\n" +
 	"\x05_noteB\x0e\n" +
 	"\f_shipment_idB\x17\n" +
 	"\x15_billing_address_nameB\x18\n" +
@@ -5715,15 +5734,16 @@ var file_core_core_users_territories_proto_depIdxs = []int32{
 	70, // 71: core.ListCustomerInvoicesResponse.page_info:type_name -> core.PageInfo
 	69, // 72: core.InvoiceSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
 	69, // 73: core.InvoiceSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
-	74, // 74: core.InvoiceInfo.lines:type_name -> core.InvoiceLineInfo
-	75, // 75: core.InvoiceInfo.allocations:type_name -> core.InvoiceAllocationInfo
-	69, // 76: core.InvoiceInfo.created_at:type_name -> google.protobuf.Timestamp
-	69, // 77: core.InvoiceInfo.updated_at:type_name -> google.protobuf.Timestamp
-	78, // [78:78] is the sub-list for method output_type
-	78, // [78:78] is the sub-list for method input_type
-	78, // [78:78] is the sub-list for extension type_name
-	78, // [78:78] is the sub-list for extension extendee
-	0,  // [0:78] is the sub-list for field type_name
+	74, // 74: core.InvoiceSummaryInfo.lines:type_name -> core.InvoiceLineInfo
+	74, // 75: core.InvoiceInfo.lines:type_name -> core.InvoiceLineInfo
+	75, // 76: core.InvoiceInfo.allocations:type_name -> core.InvoiceAllocationInfo
+	69, // 77: core.InvoiceInfo.created_at:type_name -> google.protobuf.Timestamp
+	69, // 78: core.InvoiceInfo.updated_at:type_name -> google.protobuf.Timestamp
+	79, // [79:79] is the sub-list for method output_type
+	79, // [79:79] is the sub-list for method input_type
+	79, // [79:79] is the sub-list for extension type_name
+	79, // [79:79] is the sub-list for extension extendee
+	0,  // [0:79] is the sub-list for field type_name
 }
 
 func init() { file_core_core_users_territories_proto_init() }

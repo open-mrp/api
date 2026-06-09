@@ -117,7 +117,7 @@ func TestSortingFiltering_FilteredPaginationConsistency(t *testing.T) {
 	require.NoError(t, json.Unmarshal(page1Body, &page1))
 
 	if !page1.PageInfo.HasNextPage || page1.PageInfo.NextPageURL == nil {
-		t.Skip("Not enough data to test filtered pagination")
+		t.Fatal("Not enough data to test filtered pagination")
 	}
 
 	page2Status, page2Body, err := apiClient.GetListRawFromPageURL(page1.PageInfo.NextPageURL)

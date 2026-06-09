@@ -403,9 +403,9 @@ LEFT JOIN role ON api_key.role_id = role.id
 WHERE api_key.owner_account_id = ?
 AND (api_key.name LIKE CONCAT('%', ?, '%') OR ? = '')
 AND (
-    (? = true AND api_key.revoked_at IS NULL AND (api_key.expires_at IS NULL OR api_key.expires_at > NOW(3)))
-    OR (? = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW(3) AND api_key.revoked_at IS NULL AND api_key.expires_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
-    OR (? = true AND api_key.revoked_at IS NOT NULL AND api_key.revoked_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+    (? = true AND (api_key.revoked_at IS NULL OR api_key.revoked_at > NOW(3)) AND (api_key.expires_at IS NULL OR api_key.expires_at > NOW(3)))
+    OR (? = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW(3) AND (api_key.revoked_at IS NULL OR api_key.revoked_at > NOW(3)) AND api_key.expires_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+    OR (? = true AND api_key.revoked_at IS NOT NULL AND api_key.revoked_at <= NOW(3) AND api_key.revoked_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
 )
 AND (
     api_key.created_at > ?
@@ -500,9 +500,9 @@ FROM api_key
 WHERE api_key.owner_account_id = ?
 AND (api_key.name LIKE CONCAT('%', ?, '%') OR ? = '')
 AND (
-    (? = true AND api_key.revoked_at IS NULL AND (api_key.expires_at IS NULL OR api_key.expires_at > NOW(3)))
-    OR (? = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW(3) AND api_key.revoked_at IS NULL AND api_key.expires_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
-    OR (? = true AND api_key.revoked_at IS NOT NULL AND api_key.revoked_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+    (? = true AND (api_key.revoked_at IS NULL OR api_key.revoked_at > NOW(3)) AND (api_key.expires_at IS NULL OR api_key.expires_at > NOW(3)))
+    OR (? = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW(3) AND (api_key.revoked_at IS NULL OR api_key.revoked_at > NOW(3)) AND api_key.expires_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+    OR (? = true AND api_key.revoked_at IS NOT NULL AND api_key.revoked_at <= NOW(3) AND api_key.revoked_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
 )
 AND (
     api_key.created_at > ?
@@ -577,9 +577,9 @@ FROM api_key
 WHERE api_key.owner_account_id = ?
 AND (api_key.name LIKE CONCAT('%', ?, '%') OR ? = '')
 AND (
-    (? = true AND api_key.revoked_at IS NULL AND (api_key.expires_at IS NULL OR api_key.expires_at > NOW(3)))
-    OR (? = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW(3) AND api_key.revoked_at IS NULL AND api_key.expires_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
-    OR (? = true AND api_key.revoked_at IS NOT NULL AND api_key.revoked_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+    (? = true AND (api_key.revoked_at IS NULL OR api_key.revoked_at > NOW(3)) AND (api_key.expires_at IS NULL OR api_key.expires_at > NOW(3)))
+    OR (? = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW(3) AND (api_key.revoked_at IS NULL OR api_key.revoked_at > NOW(3)) AND api_key.expires_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+    OR (? = true AND api_key.revoked_at IS NOT NULL AND api_key.revoked_at <= NOW(3) AND api_key.revoked_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
 )
 AND (
     ? IS NULL
@@ -660,9 +660,9 @@ LEFT JOIN role ON api_key.role_id = role.id
 WHERE api_key.owner_account_id = ?
 AND (api_key.name LIKE CONCAT('%', ?, '%') OR ? = '')
 AND (
-    (? = true AND api_key.revoked_at IS NULL AND (api_key.expires_at IS NULL OR api_key.expires_at > NOW(3)))
-    OR (? = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW(3) AND api_key.revoked_at IS NULL AND api_key.expires_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
-    OR (? = true AND api_key.revoked_at IS NOT NULL AND api_key.revoked_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+    (? = true AND (api_key.revoked_at IS NULL OR api_key.revoked_at > NOW(3)) AND (api_key.expires_at IS NULL OR api_key.expires_at > NOW(3)))
+    OR (? = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW(3) AND (api_key.revoked_at IS NULL OR api_key.revoked_at > NOW(3)) AND api_key.expires_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+    OR (? = true AND api_key.revoked_at IS NOT NULL AND api_key.revoked_at <= NOW(3) AND api_key.revoked_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
 )
 AND (
     ? IS NULL
@@ -754,16 +754,17 @@ func (q *Queries) ListAPIKeysForward(ctx context.Context, arg ListAPIKeysForward
 }
 
 const revokeAPIKeyByTypeID = `-- name: RevokeAPIKeyByTypeID :execresult
-UPDATE api_key SET revoked_at = NOW(3), updated_at = NOW(3) WHERE type_id = ? AND owner_account_id = ?
+UPDATE api_key SET revoked_at = ?, updated_at = NOW(3) WHERE type_id = ? AND owner_account_id = ?
 `
 
 type RevokeAPIKeyByTypeIDParams struct {
+	RevokedAt      sql.NullTime
 	TypeID         string
 	OwnerAccountID string
 }
 
 func (q *Queries) RevokeAPIKeyByTypeID(ctx context.Context, arg RevokeAPIKeyByTypeIDParams) (sql.Result, error) {
-	return q.db.ExecContext(ctx, revokeAPIKeyByTypeID, arg.TypeID, arg.OwnerAccountID)
+	return q.db.ExecContext(ctx, revokeAPIKeyByTypeID, arg.RevokedAt, arg.TypeID, arg.OwnerAccountID)
 }
 
 const touchAPIKeyByID = `-- name: TouchAPIKeyByID :exec

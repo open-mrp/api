@@ -6359,6 +6359,7 @@ type OpenCreditEntryInfo struct {
 	CustomerName        string                             `protobuf:"bytes,6,opt,name=customer_name,json=customerName,proto3" json:"customer_name,omitempty"`
 	CustomerNumber      *string                            `protobuf:"bytes,7,opt,name=customer_number,json=customerNumber,proto3,oneof" json:"customer_number,omitempty"`
 	TransactionType     string                             `protobuf:"bytes,8,opt,name=transaction_type,json=transactionType,proto3" json:"transaction_type,omitempty"`
+	CustomerId          string                             `protobuf:"bytes,16,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
 	TransactionMethod   *string                            `protobuf:"bytes,9,opt,name=transaction_method,json=transactionMethod,proto3,oneof" json:"transaction_method,omitempty"`
 	AdjustmentType      *string                            `protobuf:"bytes,10,opt,name=adjustment_type,json=adjustmentType,proto3,oneof" json:"adjustment_type,omitempty"`
 	ResponsibleUserName *string                            `protobuf:"bytes,11,opt,name=responsible_user_name,json=responsibleUserName,proto3,oneof" json:"responsible_user_name,omitempty"`
@@ -6452,6 +6453,13 @@ func (x *OpenCreditEntryInfo) GetCustomerNumber() string {
 func (x *OpenCreditEntryInfo) GetTransactionType() string {
 	if x != nil {
 		return x.TransactionType
+	}
+	return ""
+}
+
+func (x *OpenCreditEntryInfo) GetCustomerId() string {
+	if x != nil {
+		return x.CustomerId
 	}
 	return ""
 }
@@ -10591,7 +10599,7 @@ const file_core_core_lookups_proto_rawDesc = "" +
 	"\a_cursor\"{\n" +
 	"\x17ListOpenCreditsResponse\x123\n" +
 	"\aentries\x18\x01 \x03(\v2\x19.core.OpenCreditEntryInfoR\aentries\x12+\n" +
-	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"\xa8\x06\n" +
+	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"\xc9\x06\n" +
 	"\x13OpenCreditEntryInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12'\n" +
@@ -10600,7 +10608,9 @@ const file_core_core_lookups_proto_rawDesc = "" +
 	"\x0fleftover_amount\x18\x05 \x01(\tR\x0eleftoverAmount\x12#\n" +
 	"\rcustomer_name\x18\x06 \x01(\tR\fcustomerName\x12,\n" +
 	"\x0fcustomer_number\x18\a \x01(\tH\x00R\x0ecustomerNumber\x88\x01\x01\x12)\n" +
-	"\x10transaction_type\x18\b \x01(\tR\x0ftransactionType\x122\n" +
+	"\x10transaction_type\x18\b \x01(\tR\x0ftransactionType\x12\x1f\n" +
+	"\vcustomer_id\x18\x10 \x01(\tR\n" +
+	"customerId\x122\n" +
 	"\x12transaction_method\x18\t \x01(\tH\x01R\x11transactionMethod\x88\x01\x01\x12,\n" +
 	"\x0fadjustment_type\x18\n" +
 	" \x01(\tH\x02R\x0eadjustmentType\x88\x01\x01\x127\n" +

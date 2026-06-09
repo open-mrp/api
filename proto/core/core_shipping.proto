@@ -80,6 +80,8 @@ message ShipmentSummaryInfo {
   optional google.protobuf.Timestamp customer_updated_at = 26;
   optional google.protobuf.Timestamp sales_order_created_at = 27;
   optional google.protobuf.Timestamp sales_order_updated_at = 28;
+  // Lines (populated only when the list request includes "lines").
+  repeated ShipmentLineInfo lines = 29;
 }
 
 // ShipmentInfo represents a full shipment resource.
@@ -147,6 +149,18 @@ message ShipmentInfo {
   // Pick timestamps
   optional google.protobuf.Timestamp pick_created_at = 56;
   optional google.protobuf.Timestamp pick_updated_at = 57;
+  // Shipping address detail (carried inline; the address belongs to the customer
+  // account and is cross-account, so it cannot be resolved via the scoped loader).
+  optional string shipping_address_street_line_1 = 58;
+  optional string shipping_address_street_line_2 = 59;
+  optional string shipping_address_locality = 60;
+  optional string shipping_address_state = 61;
+  optional string shipping_address_postal_code = 62;
+  optional string shipping_address_country = 63;
+  optional string shipping_address_phone = 64;
+  optional string shipping_address_email = 65;
+  optional bool shipping_address_is_drop_ship = 66;
+  optional string shipping_address_geolocation_id = 67;
 }
 
 // ShipmentLineInfo represents a shipment line resource.
@@ -164,6 +178,9 @@ message ShipmentLineInfo {
   string quantity_unit_type = 11;
   google.protobuf.Timestamp created_at = 12;
   google.protobuf.Timestamp updated_at = 13;
+  // The sales order line's item id, carried so the shipment line exposes its
+  // item inline (shipment lines are reached via the sales order line).
+  optional string order_line_item_id = 14;
 }
 
 // ShippingCaseDetailInfo represents a shipping case within a shipment.
@@ -240,6 +257,7 @@ message ListShipmentsRequest {
   repeated string sales_rep_ids = 9;
   optional string start_date = 10;
   optional string end_date = 11;
+  repeated string includes = 12;
 }
 
 message ListShipmentsResponse {

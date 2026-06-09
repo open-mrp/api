@@ -260,13 +260,13 @@ func TestParts_ListPagination(t *testing.T) {
 	require.LessOrEqual(t, len(page1.Data), 1)
 
 	if !page1.PageInfo.HasNextPage || page1.PageInfo.NextPageURL == nil {
-		t.Skip("Not enough parts for pagination test")
+		t.Fatal("Not enough parts for pagination test")
 	}
 
 	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
 	require.NoError(t, err)
 	if len(page2.Data) == 0 {
-		t.Skip("Pagination page returned empty; likely parallel test interference")
+		t.Fatal("Pagination page returned empty; likely parallel test interference")
 	}
 
 	id1 := DataItemField(page1.Data[0], "id")

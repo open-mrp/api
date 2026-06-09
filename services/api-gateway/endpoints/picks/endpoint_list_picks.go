@@ -39,7 +39,7 @@ func (e *ListPicksEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPicksReq
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypePick,
-			Fields:     []string{"sales_order", "customer"},
+			Fields:     []string{"sales_order", "customer", "departments"},
 		}),
 	})
 }

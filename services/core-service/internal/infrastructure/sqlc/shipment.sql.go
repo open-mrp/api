@@ -99,6 +99,16 @@ SELECT
     co.updated_at AS service_level_updated_at,
     s.shipping_address_id,
     addr.name AS shipping_address_name,
+    addr.phone AS shipping_address_phone,
+    addr.email AS shipping_address_email,
+    addr.is_drop_ship AS shipping_address_is_drop_ship,
+    ship_geo.id AS shipping_address_geolocation_id,
+    ship_geo.street_line_1 AS shipping_address_street_line_1,
+    ship_geo.street_line_2 AS shipping_address_street_line_2,
+    ship_geo.locality AS shipping_address_locality,
+    ship_geo.state AS shipping_address_state,
+    ship_geo.postal_code AS shipping_address_postal_code,
+    ship_geo.country AS shipping_address_country,
     s.shipped_by_id,
     shipped_by_user.name AS shipped_by_name,
     s.invoice_id,
@@ -137,6 +147,7 @@ JOIN account ba ON ba.id = so.buyer_account_id
 JOIN carrier cr ON cr.id = s.carrier_id
 LEFT JOIN carrier_option co ON co.id = s.carrier_option_id
 LEFT JOIN address addr ON addr.id = s.shipping_address_id
+LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id
 LEFT JOIN account_user shipped_by_au ON shipped_by_au.id = s.shipped_by_id
 LEFT JOIN user shipped_by_user ON shipped_by_user.id = shipped_by_au.user_id
 LEFT JOIN invoice inv ON inv.id = s.invoice_id
@@ -153,61 +164,71 @@ type GetShipmentParams struct {
 }
 
 type GetShipmentRow struct {
-	ID                          string
-	Number                      string
-	BillOfLading                sql.NullString
-	Note                        sql.NullString
-	MasterTrackingNumber        sql.NullString
-	ShippedAt                   sql.NullTime
-	StatusCode                  string
-	StatusName                  string
-	SalesOrderID                string
-	SalesOrderNumber            string
-	CustomerPoNumber            sql.NullString
-	CarrierBillingType          sql.NullString
-	CarrierBillingAccount       sql.NullString
-	CarrierID                   string
-	CarrierName                 string
-	CarrierIsPortalEnabled      bool
-	CarrierCreatedAt            time.Time
-	CarrierUpdatedAt            time.Time
-	CarrierOptionID             sql.NullString
-	CarrierOptionName           sql.NullString
-	ServiceLevelIsPortalEnabled sql.NullBool
-	ServiceLevelToken           sql.NullString
-	ServiceLevelCreatedAt       sql.NullTime
-	ServiceLevelUpdatedAt       sql.NullTime
-	ShippingAddressID           string
-	ShippingAddressName         sql.NullString
-	ShippedByID                 sql.NullString
-	ShippedByName               sql.NullString
-	InvoiceID                   sql.NullString
-	InvoiceNumber               sql.NullString
-	CustomerID                  string
-	CustomerName                string
-	CustomerNumber              string
-	CustomerStatusCode          sql.NullString
-	CustomerCommissionPolicy    sql.NullString
-	CustomerCreatedAt           time.Time
-	CustomerUpdatedAt           time.Time
-	PickID                      sql.NullString
-	PickNumber                  sql.NullString
-	PickCreatedAt               sql.NullTime
-	PickUpdatedAt               sql.NullTime
-	BillingAddressCountry       sql.NullString
-	BillingAddressZip           sql.NullString
-	AccountID                   string
-	CreatedAt                   time.Time
-	UpdatedAt                   time.Time
-	SalesOrderCreatedAt         time.Time
-	SalesOrderUpdatedAt         time.Time
-	ShippingAddressCreatedAt    sql.NullTime
-	ShippingAddressUpdatedAt    sql.NullTime
-	ShippedByStatusCode         sql.NullString
-	ShippedByCreatedAt          sql.NullTime
-	ShippedByUpdatedAt          sql.NullTime
-	InvoiceCreatedAt            sql.NullTime
-	InvoiceUpdatedAt            sql.NullTime
+	ID                           string
+	Number                       string
+	BillOfLading                 sql.NullString
+	Note                         sql.NullString
+	MasterTrackingNumber         sql.NullString
+	ShippedAt                    sql.NullTime
+	StatusCode                   string
+	StatusName                   string
+	SalesOrderID                 string
+	SalesOrderNumber             string
+	CustomerPoNumber             sql.NullString
+	CarrierBillingType           sql.NullString
+	CarrierBillingAccount        sql.NullString
+	CarrierID                    string
+	CarrierName                  string
+	CarrierIsPortalEnabled       bool
+	CarrierCreatedAt             time.Time
+	CarrierUpdatedAt             time.Time
+	CarrierOptionID              sql.NullString
+	CarrierOptionName            sql.NullString
+	ServiceLevelIsPortalEnabled  sql.NullBool
+	ServiceLevelToken            sql.NullString
+	ServiceLevelCreatedAt        sql.NullTime
+	ServiceLevelUpdatedAt        sql.NullTime
+	ShippingAddressID            string
+	ShippingAddressName          sql.NullString
+	ShippingAddressPhone         sql.NullString
+	ShippingAddressEmail         sql.NullString
+	ShippingAddressIsDropShip    sql.NullBool
+	ShippingAddressGeolocationID sql.NullString
+	ShippingAddressStreetLine1   sql.NullString
+	ShippingAddressStreetLine2   sql.NullString
+	ShippingAddressLocality      sql.NullString
+	ShippingAddressState         sql.NullString
+	ShippingAddressPostalCode    sql.NullString
+	ShippingAddressCountry       sql.NullString
+	ShippedByID                  sql.NullString
+	ShippedByName                sql.NullString
+	InvoiceID                    sql.NullString
+	InvoiceNumber                sql.NullString
+	CustomerID                   string
+	CustomerName                 string
+	CustomerNumber               string
+	CustomerStatusCode           sql.NullString
+	CustomerCommissionPolicy     sql.NullString
+	CustomerCreatedAt            time.Time
+	CustomerUpdatedAt            time.Time
+	PickID                       sql.NullString
+	PickNumber                   sql.NullString
+	PickCreatedAt                sql.NullTime
+	PickUpdatedAt                sql.NullTime
+	BillingAddressCountry        sql.NullString
+	BillingAddressZip            sql.NullString
+	AccountID                    string
+	CreatedAt                    time.Time
+	UpdatedAt                    time.Time
+	SalesOrderCreatedAt          time.Time
+	SalesOrderUpdatedAt          time.Time
+	ShippingAddressCreatedAt     sql.NullTime
+	ShippingAddressUpdatedAt     sql.NullTime
+	ShippedByStatusCode          sql.NullString
+	ShippedByCreatedAt           sql.NullTime
+	ShippedByUpdatedAt           sql.NullTime
+	InvoiceCreatedAt             sql.NullTime
+	InvoiceUpdatedAt             sql.NullTime
 }
 
 func (q *Queries) GetShipment(ctx context.Context, arg GetShipmentParams) (GetShipmentRow, error) {
@@ -240,6 +261,16 @@ func (q *Queries) GetShipment(ctx context.Context, arg GetShipmentParams) (GetSh
 		&i.ServiceLevelUpdatedAt,
 		&i.ShippingAddressID,
 		&i.ShippingAddressName,
+		&i.ShippingAddressPhone,
+		&i.ShippingAddressEmail,
+		&i.ShippingAddressIsDropShip,
+		&i.ShippingAddressGeolocationID,
+		&i.ShippingAddressStreetLine1,
+		&i.ShippingAddressStreetLine2,
+		&i.ShippingAddressLocality,
+		&i.ShippingAddressState,
+		&i.ShippingAddressPostalCode,
+		&i.ShippingAddressCountry,
 		&i.ShippedByID,
 		&i.ShippedByName,
 		&i.InvoiceID,

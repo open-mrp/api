@@ -159,7 +159,7 @@ func assertSearchRankOrder(t *testing.T, list []json.RawMessage, expectedSKUs []
 func requirePageLen(t *testing.T, data []json.RawMessage, expected int) {
 	t.Helper()
 	if len(data) == 0 && expected > 0 {
-		t.Skip("Pagination page returned empty; likely parallel test interference")
+		t.Fatal("Pagination page returned empty; likely parallel test interference")
 	}
 	require.Len(t, data, expected)
 }
@@ -221,7 +221,7 @@ func assertUnknownQueryParamRejected(t *testing.T, path string, statusCode int, 
 func skipOnNonClientError(t *testing.T, path string, statusCode int) {
 	t.Helper()
 	if statusCode == 401 || statusCode == 403 {
-		t.Skipf("Endpoint %s requires different auth (status %d)", path, statusCode)
+		t.Fatalf("Endpoint %s requires different auth (status %d)", path, statusCode)
 	}
 }
 

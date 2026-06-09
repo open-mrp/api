@@ -108,7 +108,7 @@ func TestSQLInjection_SearchQuery_DoesNotBypassWhereClause(t *testing.T) {
 	require.NoError(t, err)
 	baselineCount := len(baselineList.Data)
 	if baselineCount < 2 {
-		t.Skipf("need at least 2 customers in the tenant for this test; got %d", baselineCount)
+		t.Fatalf("need at least 2 customers in the tenant for this test; got %d", baselineCount)
 	}
 
 	// A benign search for a random unique string establishes the expected

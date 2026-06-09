@@ -356,11 +356,12 @@ func (r *apiKeyRepoImpl) GetByIDs(ctx context.Context, ownerAccountID string, id
 	return keys, nil
 }
 
-func (r *apiKeyRepoImpl) Revoke(ctx context.Context, typeID string, ownerAccountID string) *apierror.APIError {
+func (r *apiKeyRepoImpl) Revoke(ctx context.Context, typeID string, ownerAccountID string, revokeAt time.Time) *apierror.APIError {
 	ctx, span := apiKeyRepoTracer.Start(ctx, "repository.api_key.revoke")
 	defer span.End()
 
 	result, err := r.db.RevokeAPIKeyByTypeID(ctx, sqlc.RevokeAPIKeyByTypeIDParams{
+		RevokedAt:      gosql.NullTime{Time: revokeAt, Valid: true},
 		TypeID:         typeID,
 		OwnerAccountID: ownerAccountID,
 	})

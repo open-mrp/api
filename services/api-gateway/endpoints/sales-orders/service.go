@@ -13,7 +13,6 @@ import (
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
-	"github.com/augno/api/shared/safeconv"
 	"github.com/augno/api/shared/tracing"
 	"github.com/shopspring/decimal"
 	"google.golang.org/grpc"
@@ -102,6 +101,9 @@ func (m *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, req *ListSalesO
 		StartDate:             req.StartDate,
 		EndDate:               req.EndDate,
 		ExcludeInternalOrders: req.ExcludeInternalOrders,
+		// The list returns the full sales-order resource; ask the backend to
+		// expand only what the caller requested (inline fields always present).
+		Includes: withLinesForTotals(resourcekit.FilterIncludes(ctx, salesOrderIncludes...)),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.list", domain.ServiceName,
@@ -115,8 +117,8 @@ func (m *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, req *ListSalesO
 
 	orders := make([]apiresource.SalesOrder, len(resp.SalesOrders))
 	for i, o := range resp.SalesOrders {
-		orders[i] = salesOrderSummaryToDetail(o)
-		stashSalesOrderSummaryMeta(ctx, o, &orders[i])
+		orders[i] = salesOrderDetailFromProto(o)
+		stashSalesOrderMeta(ctx, o, &orders[i])
 	}
 
 	return apiresource.NewList(orders, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
@@ -459,7 +461,7 @@ func salesOrderDetailFromProto(info *pb.SalesOrderInfo) apiresource.SalesOrder {
 		PaymentStatus:               constants.SalesOrderPaymentStatusUnpaid,
 		Status:                      constants.SalesOrderStatusCode(info.StatusCode),
 		Priority:                    constants.PriorityCode(info.PriorityCode),
-		LineCount:                   safeconv.IntToInt32(len(info.Lines)),
+		LineCount:                   info.LineCount,
 		CreatedAt:                   grpcutil.TimestampToTime(info.CreatedAt),
 		UpdatedAt:                   grpcutil.TimestampToTime(info.UpdatedAt),
 	}
@@ -597,6 +599,16 @@ func stashSalesOrderMeta(ctx context.Context, info *pb.SalesOrderInfo, d *apires
 	if info.ProductionRunId != nil {
 		meta.Set(constants.ObjectTypeSalesOrder, d.ID, "related_production_run",
 			apiresource.NewRecord(*info.ProductionRunId, constants.RecordTypeProductionRun))
+	}
+	// Linked shipments (populated by the backend only when related.shipments is
+	// requested). Build the record list from the ids the order carries.
+	if len(info.ShipmentIds) > 0 {
+		records := make([]apiresource.Record, len(info.ShipmentIds))
+		for i, sid := range info.ShipmentIds {
+			records[i] = *apiresource.NewRecord(sid, constants.RecordTypeShipment)
+		}
+		meta.Set(constants.ObjectTypeSalesOrder, d.ID, "related_shipments",
+			apiresource.NewList(records, apiresource.PageInfo{}))
 	}
 
 	// Bill-to address
@@ -762,48 +774,6 @@ func stashSalesOrderMeta(ctx context.Context, info *pb.SalesOrderInfo, d *apires
 		stashSalesOrderLineMeta(meta, l, &lines[i])
 	}
 	meta.Set(constants.ObjectTypeSalesOrder, d.ID, "lines", apiresource.NewList(lines, apiresource.PageInfo{}))
-}
-
-// salesOrderSummaryToDetail maps a list-view SalesOrderSummaryInfo to SalesOrder.
-// Expandable sub-resources (customer, addresses, carrier, service level, etc.) are left nil
-// since they are populated via the V2 include resolver from stashed meta.
-func salesOrderSummaryToDetail(info *pb.SalesOrderSummaryInfo) apiresource.SalesOrder {
-	d := apiresource.SalesOrder{
-		ID:                          info.Id,
-		Object:                      constants.ObjectTypeSalesOrder,
-		Number:                      info.Number,
-		CustomerPurchaseOrderNumber: info.CustomerPoNumber,
-		AcknowledgmentStatus:        acknowledgmentStatusFromBool(info.IsAcknowledgmentSent),
-		PaymentStatus:               constants.SalesOrderPaymentStatusUnpaid,
-		Status:                      constants.SalesOrderStatusCode(info.StatusCode),
-		Priority:                    constants.PriorityCode(info.PriorityCode),
-		LineCount:                   info.LineCount,
-		CreatedAt:                   grpcutil.TimestampToTime(info.CreatedAt),
-		UpdatedAt:                   grpcutil.TimestampToTime(info.UpdatedAt),
-	}
-
-	if info.IssuedAt != nil {
-		t := grpcutil.TimestampToTime(info.IssuedAt)
-		d.IssuedAt = &t
-	}
-	if info.CompletedAt != nil {
-		t := grpcutil.TimestampToTime(info.CompletedAt)
-		d.CompletedAt = &t
-	}
-
-	return d
-}
-
-func stashSalesOrderSummaryMeta(ctx context.Context, info *pb.SalesOrderSummaryInfo, d *apiresource.SalesOrder) {
-	if info == nil {
-		return
-	}
-
-	// customer is an expandable reference: stash the FK id so LoadCustomers
-	// fetches the real Customer on ?include=customer. Never fabricate.
-	if info.CustomerId != "" {
-		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeSalesOrder, d.ID, "customer_id", info.CustomerId)
-	}
 }
 
 func salesOrderLineDetailFromProto(info *pb.SalesOrderLineInfo) apiresource.SalesOrderLine {

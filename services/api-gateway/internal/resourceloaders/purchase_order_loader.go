@@ -6,6 +6,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -30,9 +31,20 @@ func LoadPurchaseOrders(ctx context.Context, ids []string) (map[string]any, *api
 	if apiErr != nil {
 		return nil, apiErr
 	}
+	meta := resourcekit.GetLoadMeta(ctx)
 	out := make(map[string]any, len(resp.PurchaseOrders))
 	for _, po := range resp.PurchaseOrders {
 		out[po.Id] = purchaseOrderReferenceFromProto(po)
+		// Stash the supplier (cross-account, carried inline on the proto) so a
+		// nested ?include=...purchase_order.supplier resolves on a loaded PO.
+		if po.SupplierId != "" {
+			meta.Set(constants.ObjectTypePurchaseOrder, po.Id, "supplier", &apiresource.Supplier{
+				ID:     po.SupplierId,
+				Object: constants.ObjectTypeSupplier,
+				Name:   po.SupplierName,
+				Number: po.SupplierNumber,
+			})
+		}
 	}
 	return out, nil
 }

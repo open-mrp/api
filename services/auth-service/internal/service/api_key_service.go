@@ -405,6 +405,7 @@ func (s *apiKeySvcImpl) RotateAPIKey(ctx context.Context, input domain.RotateAPI
 				APIKeyTypeID:   input.APIKeyID,
 				OwnerAccountID: identity.Target.AccountID,
 				ExpiresAt:      input.ExpiresAt,
+				RevokeAt:       input.RevokeAt,
 			})
 			if rotateErr != nil {
 				return rotateErr

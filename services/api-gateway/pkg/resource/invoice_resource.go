@@ -92,6 +92,9 @@ type InvoiceLine struct {
 	UnitPrice *Rate `json:"unit_price" validate:"required"`
 	// Sales order line associated with this invoice line. Expandable via include[]=lines.order_line.
 	OrderLine *SalesOrderLine `json:"order_line" expandable:"true"`
+	// The invoiced item (the order line's item). Populated inline when lines are
+	// included, carried directly from the order line's item id.
+	Item *Item `json:"item"`
 	// Timestamp when the line was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Timestamp when the line was last updated.
@@ -106,13 +109,7 @@ var SampleInvoiceLine = &InvoiceLine{
 		Object:       constants.ObjectTypeQuantity,
 		Value:        "100.000000000000000000000000000000",
 		DisplayValue: "100 lb",
-		Unit: &Unit{
-			ID:           SampleUnitID,
-			Object:       constants.ObjectTypeUnit,
-			Name:         SampleUnitName,
-			Abbreviation: SampleUnitAbbreviation,
-			Type:         constants.UnitTypeMass,
-		},
+		Unit:         newSampleUnit(SampleUnitName, SampleUnitAbbreviation, constants.UnitTypeMass),
 	},
 	UnitPrice: SampleRate,
 	OrderLine: SampleSalesOrderLine,
@@ -151,13 +148,7 @@ var SampleInvoiceAllocation = &InvoiceAllocation{
 		Object:       constants.ObjectTypeQuantity,
 		Value:        "500.000000000000000000000000000000",
 		DisplayValue: "$500.00",
-		Unit: &Unit{
-			ID:           SampleUnitID,
-			Object:       constants.ObjectTypeUnit,
-			Name:         "US Dollar",
-			Abbreviation: "$",
-			Type:         constants.UnitTypeCurrency,
-		},
+		Unit:         newSampleUnit("US Dollar", "$", constants.UnitTypeCurrency),
 	},
 	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),

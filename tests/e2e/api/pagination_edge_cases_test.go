@@ -53,11 +53,11 @@ func TestPaginationEdge_StaleCursorHandled(t *testing.T) {
 	require.NoError(t, json.Unmarshal(page1Body, &page1))
 
 	if page1.PageInfo.NextPageURL == nil {
-		t.Skip("No next page URL available for stale cursor test")
+		t.Fatal("No next page URL available for stale cursor test")
 	}
 	path, q, ok := ListURLPathQuery(page1.PageInfo.NextPageURL)
 	if !ok || q.Get("cursor") == "" {
-		t.Skip("next_page_url missing cursor query param")
+		t.Fatal("next_page_url missing cursor query param")
 	}
 	q.Set("cursor", q.Get("cursor")+"_stale")
 

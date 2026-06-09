@@ -74,7 +74,7 @@ func TestListProducts_Pagination(t *testing.T) {
 	assert.LessOrEqual(t, len(page1.Data), 2, "Limit=2 should return at most 2 items")
 
 	if !page1.PageInfo.HasNextPage {
-		t.Skip("Not enough products for pagination test")
+		t.Fatal("Not enough products for pagination test")
 		return
 	}
 

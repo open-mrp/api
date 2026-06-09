@@ -97,7 +97,28 @@ func (s *invoiceSvcImpl) ListInvoices(ctx context.Context, params domain.ListInv
 
 	params.AccountID = identity.Target.AccountID
 
-	return s.repos.NewInvoiceRepo().List(ctx, params)
+	repo := s.repos.NewInvoiceRepo()
+	result, apiErr := repo.List(ctx, params)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	// Expand lines per invoice only when requested (so the list can serve the
+	// lines.item array filter).
+	for _, include := range params.Includes {
+		if include == "lines" {
+			for _, inv := range result.Invoices {
+				lines, apiErr := repo.GetLines(ctx, inv.ID)
+				if apiErr != nil {
+					return nil, tracing.Trace(span, apiErr)
+				}
+				inv.Lines = lines
+			}
+			break
+		}
+	}
+
+	return result, nil
 }
 
 func (s *invoiceSvcImpl) GetInvoice(ctx context.Context, params domain.GetInvoiceParams) (*domain.Invoice, *apierror.APIError) {

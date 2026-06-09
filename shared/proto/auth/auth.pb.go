@@ -1319,8 +1319,12 @@ type RotateAPIKeyRequest struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	ApiKeyId string                 `protobuf:"bytes,1,opt,name=api_key_id,json=apiKeyId,proto3" json:"api_key_id,omitempty"`
 	// If not set, the new key inherits the old key's expiration.
-	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=expires_at,json=expiresAt,proto3,oneof" json:"expires_at,omitempty"`
-	Includes      []string               `protobuf:"bytes,3,rep,name=includes,proto3" json:"includes,omitempty"`
+	ExpiresAt *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=expires_at,json=expiresAt,proto3,oneof" json:"expires_at,omitempty"`
+	Includes  []string               `protobuf:"bytes,3,rep,name=includes,proto3" json:"includes,omitempty"`
+	// When to revoke the old key. If not set (or in the past), the old key is
+	// revoked immediately. A future value schedules revocation (max 30 days out),
+	// keeping the old key valid until then.
+	RevokeAt      *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=revoke_at,json=revokeAt,proto3,oneof" json:"revoke_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1372,6 +1376,13 @@ func (x *RotateAPIKeyRequest) GetExpiresAt() *timestamppb.Timestamp {
 func (x *RotateAPIKeyRequest) GetIncludes() []string {
 	if x != nil {
 		return x.Includes
+	}
+	return nil
+}
+
+func (x *RotateAPIKeyRequest) GetRevokeAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RevokeAt
 	}
 	return nil
 }
@@ -3499,14 +3510,17 @@ const file_auth_auth_proto_rawDesc = "" +
 	"\v_expires_at\"g\n" +
 	"\x14CreateAPIKeyResponse\x12$\n" +
 	"\x0eapi_key_secret\x18\x01 \x01(\tR\fapiKeySecret\x12)\n" +
-	"\aapi_key\x18\x02 \x01(\v2\x10.auth.APIKeyInfoR\x06apiKey\"\x9e\x01\n" +
+	"\aapi_key\x18\x02 \x01(\v2\x10.auth.APIKeyInfoR\x06apiKey\"\xea\x01\n" +
 	"\x13RotateAPIKeyRequest\x12\x1c\n" +
 	"\n" +
 	"api_key_id\x18\x01 \x01(\tR\bapiKeyId\x12>\n" +
 	"\n" +
 	"expires_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\texpiresAt\x88\x01\x01\x12\x1a\n" +
-	"\bincludes\x18\x03 \x03(\tR\bincludesB\r\n" +
-	"\v_expires_at\"g\n" +
+	"\bincludes\x18\x03 \x03(\tR\bincludes\x12<\n" +
+	"\trevoke_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampH\x01R\brevokeAt\x88\x01\x01B\r\n" +
+	"\v_expires_atB\f\n" +
+	"\n" +
+	"_revoke_at\"g\n" +
 	"\x14RotateAPIKeyResponse\x12$\n" +
 	"\x0eapi_key_secret\x18\x01 \x01(\tR\fapiKeySecret\x12)\n" +
 	"\aapi_key\x18\x02 \x01(\v2\x10.auth.APIKeyInfoR\x06apiKey\"3\n" +
@@ -3837,88 +3851,89 @@ var file_auth_auth_proto_depIdxs = []int32{
 	58, // 10: auth.CreateAPIKeyRequest.expires_at:type_name -> google.protobuf.Timestamp
 	32, // 11: auth.CreateAPIKeyResponse.api_key:type_name -> auth.APIKeyInfo
 	58, // 12: auth.RotateAPIKeyRequest.expires_at:type_name -> google.protobuf.Timestamp
-	32, // 13: auth.RotateAPIKeyResponse.api_key:type_name -> auth.APIKeyInfo
-	32, // 14: auth.ListAPIKeysResponse.api_keys:type_name -> auth.APIKeyInfo
-	26, // 15: auth.ListAPIKeysResponse.page_info:type_name -> auth.PageInfo
-	32, // 16: auth.GetAPIKeyResponse.api_key:type_name -> auth.APIKeyInfo
-	32, // 17: auth.BatchGetAPIKeysByIDsResponse.api_keys:type_name -> auth.APIKeyInfo
-	58, // 18: auth.APIKeyInfo.created_at:type_name -> google.protobuf.Timestamp
-	58, // 19: auth.APIKeyInfo.updated_at:type_name -> google.protobuf.Timestamp
-	58, // 20: auth.APIKeyInfo.last_used_at:type_name -> google.protobuf.Timestamp
-	58, // 21: auth.APIKeyInfo.expires_at:type_name -> google.protobuf.Timestamp
-	58, // 22: auth.APIKeyInfo.revoked_at:type_name -> google.protobuf.Timestamp
-	32, // 23: auth.GetOrCreateDocAPIKeyResponse.api_key:type_name -> auth.APIKeyInfo
-	38, // 24: auth.RegistrationSessionInfo.session_data:type_name -> auth.RegistrationSessionData
-	58, // 25: auth.RegistrationSessionInfo.completed_at:type_name -> google.protobuf.Timestamp
-	58, // 26: auth.RegistrationSessionInfo.created_at:type_name -> google.protobuf.Timestamp
-	58, // 27: auth.RegistrationSessionInfo.updated_at:type_name -> google.protobuf.Timestamp
-	39, // 28: auth.VerifyRegistrationTokenResponse.session:type_name -> auth.RegistrationSessionInfo
-	39, // 29: auth.GetRegistrationSessionResponse.session:type_name -> auth.RegistrationSessionInfo
-	38, // 30: auth.UpdateRegistrationSessionRequest.session_data:type_name -> auth.RegistrationSessionData
-	39, // 31: auth.UpdateRegistrationSessionResponse.session:type_name -> auth.RegistrationSessionInfo
-	39, // 32: auth.ListRegistrationSessionsResponse.sessions:type_name -> auth.RegistrationSessionInfo
-	26, // 33: auth.ListRegistrationSessionsResponse.page_info:type_name -> auth.PageInfo
-	55, // 34: auth.GetIncompleteRegistrationSessionResponse.session:type_name -> auth.IncompleteRegistrationSessionProto
-	58, // 35: auth.IncompleteRegistrationSessionProto.created_at:type_name -> google.protobuf.Timestamp
-	8,  // 36: auth.AuthService.ValidateCredential:input_type -> auth.Credential
-	5,  // 37: auth.AuthService.Login:input_type -> auth.LoginRequest
-	12, // 38: auth.AuthService.Register:input_type -> auth.RegisterRequest
-	14, // 39: auth.AuthService.RefreshToken:input_type -> auth.RefreshTokenRequest
-	16, // 40: auth.AuthService.RequestPasswordReset:input_type -> auth.RequestPasswordResetRequest
-	17, // 41: auth.AuthService.ResetPassword:input_type -> auth.ResetPasswordRequest
-	18, // 42: auth.AuthService.RevokeRefreshToken:input_type -> auth.RevokeRefreshTokenRequest
-	19, // 43: auth.AuthService.UpdatePassword:input_type -> auth.UpdatePasswordRequest
-	20, // 44: auth.AuthService.CreateAPIKey:input_type -> auth.CreateAPIKeyRequest
-	22, // 45: auth.AuthService.RotateAPIKey:input_type -> auth.RotateAPIKeyRequest
-	24, // 46: auth.AuthService.RevokeAPIKey:input_type -> auth.RevokeAPIKeyRequest
-	25, // 47: auth.AuthService.ListAPIKeys:input_type -> auth.ListAPIKeysRequest
-	28, // 48: auth.AuthService.GetAPIKey:input_type -> auth.GetAPIKeyRequest
-	30, // 49: auth.AuthService.BatchGetAPIKeysByIDs:input_type -> auth.BatchGetAPIKeysByIDsRequest
-	33, // 50: auth.AuthService.GetOrCreateDocAPIKey:input_type -> auth.GetOrCreateDocAPIKeyRequest
-	35, // 51: auth.AuthService.CreateRegistrationSession:input_type -> auth.CreateRegistrationSessionRequest
-	37, // 52: auth.AuthService.ResendVerificationEmail:input_type -> auth.ResendVerificationEmailRequest
-	40, // 53: auth.AuthService.VerifyRegistrationToken:input_type -> auth.VerifyRegistrationTokenRequest
-	42, // 54: auth.AuthService.GetRegistrationSession:input_type -> auth.GetRegistrationSessionRequest
-	44, // 55: auth.AuthService.CreateUserForRegistration:input_type -> auth.CreateUserForRegistrationRequest
-	46, // 56: auth.AuthService.UpdateRegistrationSession:input_type -> auth.UpdateRegistrationSessionRequest
-	48, // 57: auth.AuthService.ListRegistrationSessions:input_type -> auth.ListRegistrationSessionsRequest
-	50, // 58: auth.AuthService.SetupRegistrationBilling:input_type -> auth.SetupRegistrationBillingRequest
-	51, // 59: auth.AuthService.ConfirmRegistrationPayment:input_type -> auth.ConfirmRegistrationPaymentRequest
-	3,  // 60: auth.AuthService.CompleteRegistration:input_type -> auth.CompleteRegistrationRequest
-	13, // 61: auth.AuthService.MagicLogin:input_type -> auth.MagicLoginRequest
-	53, // 62: auth.AuthService.GetIncompleteRegistrationSession:input_type -> auth.GetIncompleteRegistrationSessionRequest
-	9,  // 63: auth.AuthService.ValidateCredential:output_type -> auth.Identity
-	6,  // 64: auth.AuthService.Login:output_type -> auth.LoginResponse
-	6,  // 65: auth.AuthService.Register:output_type -> auth.LoginResponse
-	15, // 66: auth.AuthService.RefreshToken:output_type -> auth.RefreshTokenResponse
-	59, // 67: auth.AuthService.RequestPasswordReset:output_type -> google.protobuf.Empty
-	6,  // 68: auth.AuthService.ResetPassword:output_type -> auth.LoginResponse
-	59, // 69: auth.AuthService.RevokeRefreshToken:output_type -> google.protobuf.Empty
-	59, // 70: auth.AuthService.UpdatePassword:output_type -> google.protobuf.Empty
-	21, // 71: auth.AuthService.CreateAPIKey:output_type -> auth.CreateAPIKeyResponse
-	23, // 72: auth.AuthService.RotateAPIKey:output_type -> auth.RotateAPIKeyResponse
-	59, // 73: auth.AuthService.RevokeAPIKey:output_type -> google.protobuf.Empty
-	27, // 74: auth.AuthService.ListAPIKeys:output_type -> auth.ListAPIKeysResponse
-	29, // 75: auth.AuthService.GetAPIKey:output_type -> auth.GetAPIKeyResponse
-	31, // 76: auth.AuthService.BatchGetAPIKeysByIDs:output_type -> auth.BatchGetAPIKeysByIDsResponse
-	34, // 77: auth.AuthService.GetOrCreateDocAPIKey:output_type -> auth.GetOrCreateDocAPIKeyResponse
-	36, // 78: auth.AuthService.CreateRegistrationSession:output_type -> auth.CreateRegistrationSessionResponse
-	59, // 79: auth.AuthService.ResendVerificationEmail:output_type -> google.protobuf.Empty
-	41, // 80: auth.AuthService.VerifyRegistrationToken:output_type -> auth.VerifyRegistrationTokenResponse
-	43, // 81: auth.AuthService.GetRegistrationSession:output_type -> auth.GetRegistrationSessionResponse
-	45, // 82: auth.AuthService.CreateUserForRegistration:output_type -> auth.CreateUserForRegistrationResponse
-	47, // 83: auth.AuthService.UpdateRegistrationSession:output_type -> auth.UpdateRegistrationSessionResponse
-	49, // 84: auth.AuthService.ListRegistrationSessions:output_type -> auth.ListRegistrationSessionsResponse
-	56, // 85: auth.AuthService.SetupRegistrationBilling:output_type -> auth.SetupRegistrationBillingResponse
-	52, // 86: auth.AuthService.ConfirmRegistrationPayment:output_type -> auth.ConfirmRegistrationPaymentResponse
-	4,  // 87: auth.AuthService.CompleteRegistration:output_type -> auth.CompleteRegistrationResponse
-	6,  // 88: auth.AuthService.MagicLogin:output_type -> auth.LoginResponse
-	54, // 89: auth.AuthService.GetIncompleteRegistrationSession:output_type -> auth.GetIncompleteRegistrationSessionResponse
-	63, // [63:90] is the sub-list for method output_type
-	36, // [36:63] is the sub-list for method input_type
-	36, // [36:36] is the sub-list for extension type_name
-	36, // [36:36] is the sub-list for extension extendee
-	0,  // [0:36] is the sub-list for field type_name
+	58, // 13: auth.RotateAPIKeyRequest.revoke_at:type_name -> google.protobuf.Timestamp
+	32, // 14: auth.RotateAPIKeyResponse.api_key:type_name -> auth.APIKeyInfo
+	32, // 15: auth.ListAPIKeysResponse.api_keys:type_name -> auth.APIKeyInfo
+	26, // 16: auth.ListAPIKeysResponse.page_info:type_name -> auth.PageInfo
+	32, // 17: auth.GetAPIKeyResponse.api_key:type_name -> auth.APIKeyInfo
+	32, // 18: auth.BatchGetAPIKeysByIDsResponse.api_keys:type_name -> auth.APIKeyInfo
+	58, // 19: auth.APIKeyInfo.created_at:type_name -> google.protobuf.Timestamp
+	58, // 20: auth.APIKeyInfo.updated_at:type_name -> google.protobuf.Timestamp
+	58, // 21: auth.APIKeyInfo.last_used_at:type_name -> google.protobuf.Timestamp
+	58, // 22: auth.APIKeyInfo.expires_at:type_name -> google.protobuf.Timestamp
+	58, // 23: auth.APIKeyInfo.revoked_at:type_name -> google.protobuf.Timestamp
+	32, // 24: auth.GetOrCreateDocAPIKeyResponse.api_key:type_name -> auth.APIKeyInfo
+	38, // 25: auth.RegistrationSessionInfo.session_data:type_name -> auth.RegistrationSessionData
+	58, // 26: auth.RegistrationSessionInfo.completed_at:type_name -> google.protobuf.Timestamp
+	58, // 27: auth.RegistrationSessionInfo.created_at:type_name -> google.protobuf.Timestamp
+	58, // 28: auth.RegistrationSessionInfo.updated_at:type_name -> google.protobuf.Timestamp
+	39, // 29: auth.VerifyRegistrationTokenResponse.session:type_name -> auth.RegistrationSessionInfo
+	39, // 30: auth.GetRegistrationSessionResponse.session:type_name -> auth.RegistrationSessionInfo
+	38, // 31: auth.UpdateRegistrationSessionRequest.session_data:type_name -> auth.RegistrationSessionData
+	39, // 32: auth.UpdateRegistrationSessionResponse.session:type_name -> auth.RegistrationSessionInfo
+	39, // 33: auth.ListRegistrationSessionsResponse.sessions:type_name -> auth.RegistrationSessionInfo
+	26, // 34: auth.ListRegistrationSessionsResponse.page_info:type_name -> auth.PageInfo
+	55, // 35: auth.GetIncompleteRegistrationSessionResponse.session:type_name -> auth.IncompleteRegistrationSessionProto
+	58, // 36: auth.IncompleteRegistrationSessionProto.created_at:type_name -> google.protobuf.Timestamp
+	8,  // 37: auth.AuthService.ValidateCredential:input_type -> auth.Credential
+	5,  // 38: auth.AuthService.Login:input_type -> auth.LoginRequest
+	12, // 39: auth.AuthService.Register:input_type -> auth.RegisterRequest
+	14, // 40: auth.AuthService.RefreshToken:input_type -> auth.RefreshTokenRequest
+	16, // 41: auth.AuthService.RequestPasswordReset:input_type -> auth.RequestPasswordResetRequest
+	17, // 42: auth.AuthService.ResetPassword:input_type -> auth.ResetPasswordRequest
+	18, // 43: auth.AuthService.RevokeRefreshToken:input_type -> auth.RevokeRefreshTokenRequest
+	19, // 44: auth.AuthService.UpdatePassword:input_type -> auth.UpdatePasswordRequest
+	20, // 45: auth.AuthService.CreateAPIKey:input_type -> auth.CreateAPIKeyRequest
+	22, // 46: auth.AuthService.RotateAPIKey:input_type -> auth.RotateAPIKeyRequest
+	24, // 47: auth.AuthService.RevokeAPIKey:input_type -> auth.RevokeAPIKeyRequest
+	25, // 48: auth.AuthService.ListAPIKeys:input_type -> auth.ListAPIKeysRequest
+	28, // 49: auth.AuthService.GetAPIKey:input_type -> auth.GetAPIKeyRequest
+	30, // 50: auth.AuthService.BatchGetAPIKeysByIDs:input_type -> auth.BatchGetAPIKeysByIDsRequest
+	33, // 51: auth.AuthService.GetOrCreateDocAPIKey:input_type -> auth.GetOrCreateDocAPIKeyRequest
+	35, // 52: auth.AuthService.CreateRegistrationSession:input_type -> auth.CreateRegistrationSessionRequest
+	37, // 53: auth.AuthService.ResendVerificationEmail:input_type -> auth.ResendVerificationEmailRequest
+	40, // 54: auth.AuthService.VerifyRegistrationToken:input_type -> auth.VerifyRegistrationTokenRequest
+	42, // 55: auth.AuthService.GetRegistrationSession:input_type -> auth.GetRegistrationSessionRequest
+	44, // 56: auth.AuthService.CreateUserForRegistration:input_type -> auth.CreateUserForRegistrationRequest
+	46, // 57: auth.AuthService.UpdateRegistrationSession:input_type -> auth.UpdateRegistrationSessionRequest
+	48, // 58: auth.AuthService.ListRegistrationSessions:input_type -> auth.ListRegistrationSessionsRequest
+	50, // 59: auth.AuthService.SetupRegistrationBilling:input_type -> auth.SetupRegistrationBillingRequest
+	51, // 60: auth.AuthService.ConfirmRegistrationPayment:input_type -> auth.ConfirmRegistrationPaymentRequest
+	3,  // 61: auth.AuthService.CompleteRegistration:input_type -> auth.CompleteRegistrationRequest
+	13, // 62: auth.AuthService.MagicLogin:input_type -> auth.MagicLoginRequest
+	53, // 63: auth.AuthService.GetIncompleteRegistrationSession:input_type -> auth.GetIncompleteRegistrationSessionRequest
+	9,  // 64: auth.AuthService.ValidateCredential:output_type -> auth.Identity
+	6,  // 65: auth.AuthService.Login:output_type -> auth.LoginResponse
+	6,  // 66: auth.AuthService.Register:output_type -> auth.LoginResponse
+	15, // 67: auth.AuthService.RefreshToken:output_type -> auth.RefreshTokenResponse
+	59, // 68: auth.AuthService.RequestPasswordReset:output_type -> google.protobuf.Empty
+	6,  // 69: auth.AuthService.ResetPassword:output_type -> auth.LoginResponse
+	59, // 70: auth.AuthService.RevokeRefreshToken:output_type -> google.protobuf.Empty
+	59, // 71: auth.AuthService.UpdatePassword:output_type -> google.protobuf.Empty
+	21, // 72: auth.AuthService.CreateAPIKey:output_type -> auth.CreateAPIKeyResponse
+	23, // 73: auth.AuthService.RotateAPIKey:output_type -> auth.RotateAPIKeyResponse
+	59, // 74: auth.AuthService.RevokeAPIKey:output_type -> google.protobuf.Empty
+	27, // 75: auth.AuthService.ListAPIKeys:output_type -> auth.ListAPIKeysResponse
+	29, // 76: auth.AuthService.GetAPIKey:output_type -> auth.GetAPIKeyResponse
+	31, // 77: auth.AuthService.BatchGetAPIKeysByIDs:output_type -> auth.BatchGetAPIKeysByIDsResponse
+	34, // 78: auth.AuthService.GetOrCreateDocAPIKey:output_type -> auth.GetOrCreateDocAPIKeyResponse
+	36, // 79: auth.AuthService.CreateRegistrationSession:output_type -> auth.CreateRegistrationSessionResponse
+	59, // 80: auth.AuthService.ResendVerificationEmail:output_type -> google.protobuf.Empty
+	41, // 81: auth.AuthService.VerifyRegistrationToken:output_type -> auth.VerifyRegistrationTokenResponse
+	43, // 82: auth.AuthService.GetRegistrationSession:output_type -> auth.GetRegistrationSessionResponse
+	45, // 83: auth.AuthService.CreateUserForRegistration:output_type -> auth.CreateUserForRegistrationResponse
+	47, // 84: auth.AuthService.UpdateRegistrationSession:output_type -> auth.UpdateRegistrationSessionResponse
+	49, // 85: auth.AuthService.ListRegistrationSessions:output_type -> auth.ListRegistrationSessionsResponse
+	56, // 86: auth.AuthService.SetupRegistrationBilling:output_type -> auth.SetupRegistrationBillingResponse
+	52, // 87: auth.AuthService.ConfirmRegistrationPayment:output_type -> auth.ConfirmRegistrationPaymentResponse
+	4,  // 88: auth.AuthService.CompleteRegistration:output_type -> auth.CompleteRegistrationResponse
+	6,  // 89: auth.AuthService.MagicLogin:output_type -> auth.LoginResponse
+	54, // 90: auth.AuthService.GetIncompleteRegistrationSession:output_type -> auth.GetIncompleteRegistrationSessionResponse
+	64, // [64:91] is the sub-list for method output_type
+	37, // [37:64] is the sub-list for method input_type
+	37, // [37:37] is the sub-list for extension type_name
+	37, // [37:37] is the sub-list for extension extendee
+	0,  // [0:37] is the sub-list for field type_name
 }
 
 func init() { file_auth_auth_proto_init() }

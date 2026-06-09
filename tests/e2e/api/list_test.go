@@ -19,7 +19,7 @@ func TestListEndpoints_ValidShape(t *testing.T) {
 			t.Parallel()
 			path, ok := ep.ResolvePath()
 			if !ok {
-				t.Skipf("Cannot resolve path params for %s", ep.Path)
+				t.Fatalf("Cannot resolve path params for %s", ep.Path)
 				return
 			}
 
@@ -47,7 +47,7 @@ func TestListEndpoints_LimitParam(t *testing.T) {
 			t.Parallel()
 			path, ok := ep.ResolvePath()
 			if !ok {
-				t.Skipf("Cannot resolve path params for %s", ep.Path)
+				t.Fatalf("Cannot resolve path params for %s", ep.Path)
 				return
 			}
 
@@ -74,7 +74,7 @@ func TestListEndpoints_SearchNonsense(t *testing.T) {
 			t.Parallel()
 			path, ok := ep.ResolvePath()
 			if !ok {
-				t.Skipf("Cannot resolve path params for %s", ep.Path)
+				t.Fatalf("Cannot resolve path params for %s", ep.Path)
 				return
 			}
 
@@ -108,7 +108,7 @@ func TestListEndpoints_ItemObjectField(t *testing.T) {
 			t.Parallel()
 			path, ok := ep.ResolvePath()
 			if !ok {
-				t.Skipf("Cannot resolve path params for %s", ep.Path)
+				t.Fatalf("Cannot resolve path params for %s", ep.Path)
 				return
 			}
 
@@ -143,7 +143,7 @@ func TestListEndpoints_PaginationCursor(t *testing.T) {
 			t.Parallel()
 			path, ok := ep.ResolvePath()
 			if !ok {
-				t.Skipf("Cannot resolve path params for %s", ep.Path)
+				t.Fatalf("Cannot resolve path params for %s", ep.Path)
 				return
 			}
 
@@ -156,7 +156,7 @@ func TestListEndpoints_PaginationCursor(t *testing.T) {
 			require.NoError(t, json.Unmarshal(body, &page1))
 
 			if len(page1.Data) == 0 || !page1.PageInfo.HasNextPage {
-				t.Skipf("Not enough data for pagination test on %s", path)
+				t.Fatalf("Not enough data for pagination test on %s", path)
 				return
 			}
 

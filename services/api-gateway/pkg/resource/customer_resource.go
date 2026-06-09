@@ -189,12 +189,7 @@ var SampleFrequentlyOrderedProduct = &FrequentlyOrderedProduct{
 		Object: constants.ObjectTypeItem,
 		SKU:    SampleItemSKU,
 	},
-	Unit: &Unit{
-		ID:           SampleUnitID,
-		Object:       constants.ObjectTypeUnit,
-		Name:         SampleUnitName,
-		Abbreviation: SampleUnitAbbreviation,
-	},
+	Unit:       newSampleUnit(SampleUnitName, SampleUnitAbbreviation, constants.UnitTypeMass),
 	OrderCount: 42,
 }
 

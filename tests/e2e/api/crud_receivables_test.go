@@ -25,7 +25,7 @@ func TestReceivables_ListResponseShape(t *testing.T) {
 	assert.Equal(t, "list", list.Object)
 
 	if len(list.Data) == 0 {
-		t.Skip("No receivable entries available to verify shape")
+		t.Fatal("No receivable entries available to verify shape")
 	}
 
 	m := parseJSON(list.Data[0])

@@ -52,6 +52,7 @@ message ListDeliveriesRequest {
   repeated string supplier_ids = 6;
   optional google.protobuf.Timestamp start_date = 7;
   optional google.protobuf.Timestamp end_date = 8;
+  repeated string includes = 9;
 }
 message ListDeliveriesResponse {
   repeated DeliverySummaryInfo deliveries = 1;
@@ -74,6 +75,8 @@ message DeliverySummaryInfo {
   optional google.protobuf.Timestamp rejected_at = 8;
   google.protobuf.Timestamp created_at = 9;
   google.protobuf.Timestamp updated_at = 10;
+  // Lines (populated only when the list request includes "lines").
+  repeated DeliveryLineInfo lines = 11;
 }
 message DeliveryInfo {
   string id = 1;

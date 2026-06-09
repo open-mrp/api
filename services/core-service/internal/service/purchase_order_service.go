@@ -94,7 +94,28 @@ func (s *purchaseOrderSvcImpl) ListPurchaseOrders(ctx context.Context, params do
 
 	params.AccountID = identity.Target.AccountID
 
-	return s.repos.NewPurchaseOrderRepo().List(ctx, params)
+	repo := s.repos.NewPurchaseOrderRepo()
+	result, apiErr := repo.List(ctx, params)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	// Expand lines per order only when requested (so the list can serve the
+	// lines.item array filter and list rows that render line data).
+	for _, include := range params.Includes {
+		if include == "lines" {
+			for _, order := range result.PurchaseOrders {
+				lines, apiErr := repo.GetLines(ctx, order.ID)
+				if apiErr != nil {
+					return nil, tracing.Trace(span, apiErr)
+				}
+				order.Lines = lines
+			}
+			break
+		}
+	}
+
+	return result, nil
 }
 
 func (s *purchaseOrderSvcImpl) GetPurchaseOrder(ctx context.Context, params domain.GetPurchaseOrderParams) (*domain.PurchaseOrder, *apierror.APIError) {

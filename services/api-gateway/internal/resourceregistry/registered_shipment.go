@@ -19,7 +19,7 @@ func init() {
 			{Key: "freight", Populate: populateFreightOnShipment},
 			{Key: "sales_order", Target: constants.ObjectTypeSalesOrder, Cardinality: resourcekit.CardinalityOnePtr, ExtractIDs: extractSalesOrderIDFromShipment, Populate: populateSalesOrderOnShipment},
 			{Key: "customer", Target: constants.ObjectTypeCustomer, Cardinality: resourcekit.CardinalityOnePtr, ExtractIDs: extractCustomerIDFromShipment, Populate: populateCustomerOnShipment},
-			{Key: "shipping_address", Target: constants.ObjectTypeAddress, Cardinality: resourcekit.CardinalityOnePtr, ExtractIDs: extractShippingAddressIDFromShipment, Populate: populateShippingAddressOnShipment},
+			{Key: "shipping_address", Populate: populateShippingAddressOnShipment},
 			{Key: "shipped_by", Target: constants.ObjectTypeAccountUser, Cardinality: resourcekit.CardinalityOnePtr, ExtractIDs: extractShippedByIDFromShipment, Populate: populateShippedByOnShipment},
 			{Key: "invoice", Target: constants.ObjectTypeInvoice, Cardinality: resourcekit.CardinalityOnePtr, ExtractIDs: extractInvoiceIDFromShipment, Populate: populateInvoiceOnShipment},
 			{Key: "pick", Target: constants.ObjectTypePick, Cardinality: resourcekit.CardinalityOnePtr, ExtractIDs: extractPickIDFromShipment, Populate: populatePickOnShipment},
@@ -94,24 +94,13 @@ func populateCustomerOnShipment(ctx context.Context, parent any, loaded map[stri
 	}
 }
 
-func extractShippingAddressIDFromShipment(ctx context.Context, parent any) []string {
+func populateShippingAddressOnShipment(ctx context.Context, parent any, _ map[string]any) {
 	s := parent.(*apiresource.Shipment)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeShipment, s.ID, "shipping_address_id")
-	if id == "" {
-		return nil
-	}
-	return []string{id}
-}
-
-func populateShippingAddressOnShipment(ctx context.Context, parent any, loaded map[string]any) {
-	s := parent.(*apiresource.Shipment)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeShipment, s.ID, "shipping_address_id")
-	if id == "" {
+	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeShipment, s.ID, "shipping_address")
+	if !ok {
 		return
 	}
-	if v, ok := loaded[id]; ok {
-		s.ShippingAddress = v.(*apiresource.Address)
-	}
+	s.ShippingAddress = v.(*apiresource.Address)
 }
 
 func extractShippedByIDFromShipment(ctx context.Context, parent any) []string {

@@ -231,14 +231,14 @@ func TestAdherence_IsValidMatchesEnumValues(t *testing.T) {
 		t.Run(et.Name, func(t *testing.T) {
 			instance, ok := typeRegistry[et.Name]
 			if !ok {
-				t.Skipf("type %s not registered in typeRegistry", et.Name)
+				t.Fatalf("type %s not registered in typeRegistry", et.Name)
 			}
 
 			v := reflect.ValueOf(instance)
 
 			enumValuesMethod := v.MethodByName("EnumValues")
 			if !enumValuesMethod.IsValid() {
-				t.Skipf("type %s missing EnumValues()", et.Name)
+				t.Fatalf("type %s missing EnumValues()", et.Name)
 			}
 
 			results := enumValuesMethod.Call(nil)
@@ -256,7 +256,7 @@ func TestAdherence_IsValidMatchesEnumValues(t *testing.T) {
 				typedVal.SetString(val)
 				isValidMethod := typedVal.MethodByName("IsValid")
 				if !isValidMethod.IsValid() {
-					t.Skipf("type %s missing IsValid()", et.Name)
+					t.Fatalf("type %s missing IsValid()", et.Name)
 				}
 				result := isValidMethod.Call(nil)
 				if !result[0].Bool() {
@@ -304,7 +304,7 @@ func TestAdherence_StringPtrMatchesEnumValues(t *testing.T) {
 
 			enumValuesMethod := v.MethodByName("EnumValues")
 			if !enumValuesMethod.IsValid() {
-				t.Skipf("type %s missing EnumValues()", et.Name)
+				t.Fatalf("type %s missing EnumValues()", et.Name)
 			}
 
 			results := enumValuesMethod.Call(nil)
@@ -315,7 +315,7 @@ func TestAdherence_StringPtrMatchesEnumValues(t *testing.T) {
 			nilPtr := reflect.Zero(ptrType)
 			stringPtrNilMethod := nilPtr.MethodByName("StringPtr")
 			if !stringPtrNilMethod.IsValid() {
-				t.Skipf("type %s missing StringPtr()", et.Name)
+				t.Fatalf("type %s missing StringPtr()", et.Name)
 			}
 
 			gotNil := stringPtrNilMethod.Call(nil)[0]
@@ -331,7 +331,7 @@ func TestAdherence_StringPtrMatchesEnumValues(t *testing.T) {
 				ptrVal := typedVal.Addr()
 				stringPtrMethod := ptrVal.MethodByName("StringPtr")
 				if !stringPtrMethod.IsValid() {
-					t.Skipf("type %s missing StringPtr() on pointer receiver", et.Name)
+					t.Fatalf("type %s missing StringPtr() on pointer receiver", et.Name)
 				}
 
 				got := stringPtrMethod.Call(nil)[0]

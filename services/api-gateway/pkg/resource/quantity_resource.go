@@ -30,13 +30,7 @@ var SampleQuantity = &Quantity{
 	Object:       constants.ObjectTypeQuantity,
 	Value:        "1234.56",
 	DisplayValue: "$1,234.56",
-	Unit: &Unit{
-		ID:           SampleUnitID,
-		Object:       constants.ObjectTypeUnit,
-		Name:         "US Dollar",
-		Abbreviation: "$",
-		Type:         constants.UnitTypeCurrency,
-	},
+	Unit:         newSampleUnit("US Dollar", "$", constants.UnitTypeCurrency),
 }
 
 func (*Quantity) SchemaExample() any {

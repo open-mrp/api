@@ -45,6 +45,7 @@ SELECT
     so.number AS purchase_order_number,
     a.id AS supplier_id,
     a.name AS supplier_name,
+    ar.external_number AS supplier_number,
     COUNT(rol.id) AS line_count,
     CASE
         WHEN COUNT(rol.id) = 0 THEN 0
@@ -92,7 +93,7 @@ AND (
     OR ro.created_at < sqlc.narg('cursor_created_at')
     OR (ro.created_at = sqlc.narg('cursor_created_at') AND ro.id < sqlc.narg('cursor_id'))
 )
-GROUP BY ro.id, ro.number, ro.completed_at, ro.created_at, ro.updated_at, so.id, so.number, a.id, a.name
+GROUP BY ro.id, ro.number, ro.completed_at, ro.created_at, ro.updated_at, so.id, so.number, a.id, a.name, ar.external_number
 ORDER BY ro.created_at DESC, ro.id DESC
 LIMIT ?;
 
@@ -107,6 +108,7 @@ SELECT
     so.number AS purchase_order_number,
     a.id AS supplier_id,
     a.name AS supplier_name,
+    ar.external_number AS supplier_number,
     COUNT(rol.id) AS line_count,
     CASE
         WHEN COUNT(rol.id) = 0 THEN 0
@@ -153,7 +155,7 @@ AND (
     ro.created_at > sqlc.arg('cursor_created_at')
     OR (ro.created_at = sqlc.arg('cursor_created_at') AND ro.id > sqlc.arg('cursor_id'))
 )
-GROUP BY ro.id, ro.number, ro.completed_at, ro.created_at, ro.updated_at, so.id, so.number, a.id, a.name
+GROUP BY ro.id, ro.number, ro.completed_at, ro.created_at, ro.updated_at, so.id, so.number, a.id, a.name, ar.external_number
 ORDER BY ro.created_at ASC, ro.id ASC
 LIMIT ?;
 
@@ -168,6 +170,7 @@ SELECT
     so.number AS purchase_order_number,
     a.id AS supplier_id,
     a.name AS supplier_name,
+    ar.external_number AS supplier_number,
     so.note
 FROM receiving_order ro
 JOIN sales_order so ON ro.order_id = so.id
@@ -188,6 +191,7 @@ SELECT
     qu.abbreviation AS quantity_unit_abbreviation,
     sol.id AS order_line_id,
     sol.item_id AS order_line_item_id,
+    sol.product_id AS order_line_product_id,
     i.sku AS order_line_item_sku,
     i.description AS order_line_item_description,
     oq.value AS order_line_quantity_ordered,
@@ -296,6 +300,7 @@ SELECT
     qu.abbreviation AS quantity_unit_abbreviation,
     sol.id AS order_line_id,
     sol.item_id AS order_line_item_id,
+    sol.product_id AS order_line_product_id,
     i.sku AS order_line_item_sku,
     i.description AS order_line_item_description,
     oq.value AS order_line_quantity_ordered,

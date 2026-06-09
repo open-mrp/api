@@ -71,7 +71,7 @@ func TestUnits_ListCursorPagination(t *testing.T) {
 	requirePageLen(t, page1.Data, 1)
 
 	if !page1.PageInfo.HasNextPage {
-		t.Skip("Not enough units for pagination test")
+		t.Fatal("Not enough units for pagination test")
 		return
 	}
 	require.NotNil(t, page1.PageInfo.NextPageURL, "next_page_url should be set when has_next_page is true")

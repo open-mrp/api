@@ -101,3 +101,83 @@ func TestSalesOrders_IncludeLines(t *testing.T) {
 	require.NotNil(t, lines, "lines should be present with ?include=lines")
 	assert.Equal(t, "list", jsonField(lines, "object"))
 }
+
+// ──────────────────────────────────────────────
+// SalesOrder — List parity (no summary object)
+// ──────────────────────────────────────────────
+//
+// The list endpoint returns the full SalesOrder resource (there is no
+// SalesOrderSummary). These tests pin that a list row can expand the same
+// includes as detail, while inline scalars like line_count are always present.
+
+// salesOrderListRow fetches the sales-order list with the given query params and
+// returns the row for SeedSalesOrderID, failing if it is not on the page.
+func salesOrderListRow(t *testing.T, params url.Values) map[string]any {
+	t.Helper()
+	if params == nil {
+		params = url.Values{}
+	}
+	params.Set("limit", "100")
+
+	status, body, err := apiClient.GetListRaw(salesOrdersPath, params)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	got := parseJSON(body)
+	for _, item := range jsonArray(got, "data") {
+		row, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		if jsonField(row, "id") == SeedSalesOrderID {
+			return row
+		}
+	}
+	require.FailNowf(t, "seed sales order not found in list", "id %s not in list response", SeedSalesOrderID)
+	return nil
+}
+
+func TestSalesOrders_List_ExpandableFieldsNullWithoutInclude(t *testing.T) {
+	t.Parallel()
+
+	row := salesOrderListRow(t, nil)
+
+	// Inline scalars are always present on every row.
+	assert.Equal(t, "sales_order", jsonField(row, "object"))
+	assert.NotEmpty(t, jsonField(row, "number"))
+	_, hasLineCount := row["line_count"]
+	assert.True(t, hasLineCount, "line_count should always be present on a list row")
+
+	// Expandable sub-resources are null until requested — same as detail.
+	assert.Nil(t, row["customer"], "customer should be null without ?include=customer")
+	assert.Nil(t, row["ship_to_address"], "ship_to_address should be null without ?include=ship_to_address")
+	assert.Nil(t, row["payment_term"], "payment_term should be null without ?include=payment_term")
+	assert.Nil(t, row["lines"], "lines should be null without ?include=lines")
+}
+
+func TestSalesOrders_List_IncludeShipToAddress(t *testing.T) {
+	t.Parallel()
+
+	row := salesOrderListRow(t, url.Values{"include": {"ship_to_address"}})
+	addr := jsonObject(row, "ship_to_address")
+	require.NotNil(t, addr, "ship_to_address should be populated on the list row with ?include=ship_to_address")
+	assert.Equal(t, "address", jsonField(addr, "object"))
+}
+
+func TestSalesOrders_List_IncludePaymentTerm(t *testing.T) {
+	t.Parallel()
+
+	row := salesOrderListRow(t, url.Values{"include": {"payment_term"}})
+	term := jsonObject(row, "payment_term")
+	require.NotNil(t, term, "payment_term should be populated on the list row with ?include=payment_term")
+	assert.Equal(t, "payment_term", jsonField(term, "object"))
+}
+
+func TestSalesOrders_List_IncludeLines(t *testing.T) {
+	t.Parallel()
+
+	row := salesOrderListRow(t, url.Values{"include": {"lines"}})
+	lines := jsonObject(row, "lines")
+	require.NotNil(t, lines, "lines should be populated on the list row with ?include=lines")
+	assert.Equal(t, "list", jsonField(lines, "object"))
+}

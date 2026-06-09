@@ -77,6 +77,10 @@ func shipmentSummaryToProto(s *domain.ShipmentSummary) *pb.ShipmentSummaryInfo {
 	info.SalesOrderCreatedAt = timestamppb.New(s.SalesOrderCreatedAt)
 	info.SalesOrderUpdatedAt = timestamppb.New(s.SalesOrderUpdatedAt)
 
+	for _, l := range s.Lines {
+		info.Lines = append(info.Lines, shipmentLineToProto(l))
+	}
+
 	return info
 }
 
@@ -136,6 +140,16 @@ func shipmentToProto(s *domain.Shipment) *pb.ShipmentInfo {
 	if s.ShippingAddressName != nil {
 		info.ShippingAddressName = s.ShippingAddressName
 	}
+	info.ShippingAddressPhone = s.ShippingAddressPhone
+	info.ShippingAddressEmail = s.ShippingAddressEmail
+	info.ShippingAddressIsDropShip = s.ShippingAddressIsDropShip
+	info.ShippingAddressGeolocationId = s.ShippingAddressGeolocationID
+	info.ShippingAddressStreetLine_1 = s.ShippingAddressStreetLine1
+	info.ShippingAddressStreetLine_2 = s.ShippingAddressStreetLine2
+	info.ShippingAddressLocality = s.ShippingAddressLocality
+	info.ShippingAddressState = s.ShippingAddressState
+	info.ShippingAddressPostalCode = s.ShippingAddressPostalCode
+	info.ShippingAddressCountry = s.ShippingAddressCountry
 	if s.ShippedByID != nil {
 		info.ShippedById = s.ShippedByID
 	}
@@ -257,6 +271,9 @@ func shipmentLineToProto(l *domain.ShipmentLine) *pb.ShipmentLineInfo {
 
 	if l.OrderLineDesc != nil {
 		info.OrderLineDescription = l.OrderLineDesc
+	}
+	if l.OrderLineItemID != nil {
+		info.OrderLineItemId = l.OrderLineItemID
 	}
 
 	return info
@@ -384,7 +401,8 @@ func (h *shippingGRPCHandler) ListShipments(ctx context.Context, req *pb.ListShi
 	}
 
 	params := domain.ListShipmentsParams{
-		Limit: req.Limit,
+		Limit:    req.Limit,
+		Includes: req.Includes,
 	}
 
 	if req.Cursor != nil {

@@ -330,6 +330,10 @@ func (r *receivingOrderRepoImpl) Get(ctx context.Context, accountID, receivingOr
 	if row.SupplierName.Valid {
 		supplierName = &row.SupplierName.String
 	}
+	var supplierNumber *string
+	if row.SupplierNumber.Valid {
+		supplierNumber = &row.SupplierNumber.String
+	}
 	var note *string
 	if row.Note.Valid {
 		note = &row.Note.String
@@ -342,6 +346,7 @@ func (r *receivingOrderRepoImpl) Get(ctx context.Context, accountID, receivingOr
 		PurchaseOrderNumber: row.PurchaseOrderNumber,
 		SupplierID:          supplierID,
 		SupplierName:        supplierName,
+		SupplierNumber:      supplierNumber,
 		Note:                note,
 		Lines:               lines,
 		CompletedAt:         completedAt,
@@ -959,6 +964,10 @@ func mapForwardReceivingOrderRow(row sqlc.ListReceivingOrdersForwardRow) *domain
 	if row.SupplierName.Valid {
 		supplierName = &row.SupplierName.String
 	}
+	var supplierNumber *string
+	if row.SupplierNumber.Valid {
+		supplierNumber = &row.SupplierNumber.String
+	}
 
 	return &domain.ReceivingOrderSummary{
 		ID:                   row.ID,
@@ -967,6 +976,7 @@ func mapForwardReceivingOrderRow(row sqlc.ListReceivingOrdersForwardRow) *domain
 		PurchaseOrderNumber:  row.PurchaseOrderNumber,
 		SupplierID:           supplierID,
 		SupplierName:         supplierName,
+		SupplierNumber:       supplierNumber,
 		LineCount:            safeconv.Int64ToInt32(row.LineCount),
 		CompletionPercentage: receivingOrderInterfaceToFloat64(row.CompletionPercentage),
 		CompletedAt:          completedAt,
@@ -988,6 +998,10 @@ func mapBackwardReceivingOrderRow(row sqlc.ListReceivingOrdersBackwardRow) *doma
 	if row.SupplierName.Valid {
 		supplierName = &row.SupplierName.String
 	}
+	var supplierNumber *string
+	if row.SupplierNumber.Valid {
+		supplierNumber = &row.SupplierNumber.String
+	}
 
 	return &domain.ReceivingOrderSummary{
 		ID:                   row.ID,
@@ -996,6 +1010,7 @@ func mapBackwardReceivingOrderRow(row sqlc.ListReceivingOrdersBackwardRow) *doma
 		PurchaseOrderNumber:  row.PurchaseOrderNumber,
 		SupplierID:           supplierID,
 		SupplierName:         supplierName,
+		SupplierNumber:       supplierNumber,
 		LineCount:            safeconv.Int64ToInt32(row.LineCount),
 		CompletionPercentage: receivingOrderInterfaceToFloat64(row.CompletionPercentage),
 		CompletedAt:          completedAt,
@@ -1021,6 +1036,9 @@ func mapReceivingOrderLineRow(row sqlc.ListReceivingOrderLinesByOrderIDRow) *dom
 
 	if row.StockedAt.Valid {
 		line.StockedAt = &row.StockedAt.Time
+	}
+	if row.OrderLineProductID.Valid {
+		line.OrderLineProductID = &row.OrderLineProductID.String
 	}
 	if row.OrderLineItemID.Valid {
 		line.OrderLineItemID = &row.OrderLineItemID.String
@@ -1064,6 +1082,9 @@ func mapGetReceivingOrderLineRow(row sqlc.GetReceivingOrderLineRow) *domain.Rece
 
 	if row.StockedAt.Valid {
 		line.StockedAt = &row.StockedAt.Time
+	}
+	if row.OrderLineProductID.Valid {
+		line.OrderLineProductID = &row.OrderLineProductID.String
 	}
 	if row.OrderLineItemID.Valid {
 		line.OrderLineItemID = &row.OrderLineItemID.String

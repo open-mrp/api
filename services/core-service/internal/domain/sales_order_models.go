@@ -121,33 +121,14 @@ type SalesOrder struct {
 	// Joined pick
 	PickID *string
 
+	// Count of order lines (always populated, independent of the lines include).
+	LineCount int32
+
 	// Lines (populated when included)
 	Lines []*SalesOrderLine
-}
 
-// SalesOrderSummary represents a sales order for list views.
-type SalesOrderSummary struct {
-	ID                       string
-	Number                   string
-	CustomerPONumber         *string
-	StatusCode               string
-	StatusName               string
-	TypeCode                 string
-	TypeName                 string
-	CustomerID               string
-	CustomerName             string
-	CustomerNumber           string
-	CustomerStatusCode       *string
-	CustomerCommissionPolicy *string
-	LineCount                int32
-	IsAcknowledgmentSent     bool
-	PriorityCode             constants.PriorityCode
-	PriorityName             string
-	PriorityID               *string
-	IssuedAt                 *time.Time
-	CompletedAt              *time.Time
-	CreatedAt                time.Time
-	UpdatedAt                time.Time
+	// IDs of shipments linked to this order (populated when related.shipments is included).
+	ShipmentIDs []string
 }
 
 // ListSalesOrdersParams holds the parameters for listing sales orders.
@@ -166,11 +147,13 @@ type ListSalesOrdersParams struct {
 	ExcludeInternalOrders bool
 	AccountID             string
 	BuyerAccountID        *string
+	// Includes to expand (e.g. "lines"); inline-joined fields are always present.
+	Includes []string
 }
 
 // ListSalesOrdersResult holds the result of listing sales orders.
 type ListSalesOrdersResult struct {
-	SalesOrders []*SalesOrderSummary
+	SalesOrders []*SalesOrder
 	PageInfo    pagination.PageInfo
 }
 

@@ -15,11 +15,14 @@ type ReceivingOrderSummary struct {
 	PurchaseOrderNumber  string
 	SupplierID           *string
 	SupplierName         *string
+	SupplierNumber       *string
 	LineCount            int32
 	CompletionPercentage float64
 	CompletedAt          *time.Time
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
+	// Lines (populated only when the list request includes "lines").
+	Lines []*ReceivingOrderLine
 }
 
 // ReceivingOrder represents a full receiving order with its lines.
@@ -30,6 +33,7 @@ type ReceivingOrder struct {
 	PurchaseOrderNumber string  `audit:"purchase_order_number"`
 	SupplierID          *string `audit:"supplier_id"`
 	SupplierName        *string `audit:"supplier_name"`
+	SupplierNumber      *string `audit:"supplier_number"`
 	Note                *string `audit:"note"`
 	Lines               []*ReceivingOrderLine
 	CompletedAt         *time.Time `audit:"completed_at"`
@@ -46,6 +50,7 @@ type ReceivingOrderLine struct {
 	QuantityUnitAbbreviation  string  `audit:"quantity_unit_abbreviation"`
 	RejectedQuantityValue     *string `audit:"rejected_quantity_value"`
 	OrderLineID               string
+	OrderLineProductID        *string
 	OrderLineItemID           *string `audit:"order_line_item_id"`
 	OrderLineItemSKU          *string `audit:"order_line_item_sku"`
 	OrderLineItemDescription  *string `audit:"order_line_item_description"`
@@ -68,6 +73,7 @@ type ListReceivingOrdersParams struct {
 	SupplierIDs []string
 	StartDate   *time.Time
 	EndDate     *time.Time
+	Includes    []string
 }
 
 // ListReceivingOrdersResult holds the result of listing receiving orders.

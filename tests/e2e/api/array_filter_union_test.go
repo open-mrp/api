@@ -93,7 +93,7 @@ func arrayFilterCases() []arrayFilterCase {
 		{name: "sales-orders/product_line_ids", path: "/v1/sales/sales-orders", param: "product_line_ids", valuePath: "lines.data[].product.product_line.id", include: "lines.product.product_line", fromSelf: true},
 
 		{name: "invoices/customer_ids", path: "/v1/finance/invoices", param: "customer_ids", valuePath: "customer.id", include: "customer", fromSelf: true},
-		{name: "invoices/item_ids", path: "/v1/finance/invoices", param: "item_ids", valuePath: "lines.data[].order_line.product.item.id", include: "lines.order_line.product.item", fromSelf: true},
+		{name: "invoices/item_ids", path: "/v1/finance/invoices", param: "item_ids", valuePath: "lines.data[].item.id", include: "lines", fromSelf: true},
 
 		{name: "transactions/types", path: "/v1/finance/transactions", param: "types", valuePath: "transaction_type.code", fromSelf: true},
 		{name: "transactions/adjustment_types", path: "/v1/finance/transactions", param: "adjustment_types", valuePath: "adjustment_type.code", fromSelf: true},
@@ -106,19 +106,22 @@ func arrayFilterCases() []arrayFilterCase {
 		{name: "settlements/invoice_ids", path: "/v1/finance/settlements", param: "invoice_ids", valuePath: "id", fromSelf: false, fromPath: "/v1/finance/invoices"},
 
 		// --- operations ---
-		{name: "deliveries/supplier_ids", path: "/v1/operations/deliveries", param: "supplier_ids", valuePath: "purchase_order.supplier.id", include: "purchase_order", fromSelf: true},
+		{name: "deliveries/supplier_ids", path: "/v1/operations/deliveries", param: "supplier_ids", valuePath: "purchase_order.supplier.id", include: "purchase_order.supplier", fromSelf: true},
 		{name: "deliveries/item_ids", path: "/v1/operations/deliveries", param: "item_ids", valuePath: "lines.data[].item.id", include: "lines", fromSelf: true},
 
 		{name: "picks/customer_ids", path: "/v1/operations/picks", param: "customer_ids", valuePath: "customer.id", include: "customer", fromSelf: true},
 		{name: "picks/department_ids", path: "/v1/operations/picks", param: "department_ids", valuePath: "departments.data[].id", include: "departments", fromSelf: true},
 
 		{name: "shipments/customer_ids", path: "/v1/operations/shipments", param: "customer_ids", valuePath: "customer.id", include: "customer", fromSelf: true},
-		{name: "shipments/item_ids", path: "/v1/operations/shipments", param: "item_ids", valuePath: "lines.data[].sales_order_line.product.item.id", include: "lines", fromSelf: true},
+		{name: "shipments/item_ids", path: "/v1/operations/shipments", param: "item_ids", valuePath: "lines.data[].item.id", include: "lines", fromSelf: true},
 
-		{name: "suppliers/item_ids", path: "/v1/operations/suppliers", param: "item_ids", valuePath: "id", fromSelf: false, fromPath: "/v1/catalog/items"},
+		// Suppliers link to items via supplier_material (materials), so source the
+		// candidate item ids from the materials feed rather than /v1/catalog/items
+		// (whose first rows are sock products that no supplier carries).
+		{name: "suppliers/item_ids", path: "/v1/operations/suppliers", param: "item_ids", valuePath: "item.id", fromSelf: false, fromPath: "/v1/catalog/materials", fromInclude: "item"},
 
 		{name: "receiving-orders/supplier_ids", path: "/v1/operations/receiving-orders", param: "supplier_ids", valuePath: "supplier.id", include: "supplier", fromSelf: true},
-		{name: "receiving-orders/item_ids", path: "/v1/operations/receiving-orders", param: "item_ids", valuePath: "lines.data[].order_line.product.item.id", include: "lines.order_line", fromSelf: true},
+		{name: "receiving-orders/item_ids", path: "/v1/operations/receiving-orders", param: "item_ids", valuePath: "lines.data[].item.id", include: "lines", fromSelf: true},
 
 		{name: "purchase-orders/status_codes", path: "/v1/operations/purchase-orders", param: "status_codes", valuePath: "status", fromSelf: true},
 		{name: "purchase-orders/supplier_ids", path: "/v1/operations/purchase-orders", param: "supplier_ids", valuePath: "supplier.id", include: "supplier", fromSelf: true},
@@ -163,26 +166,20 @@ func runArrayFilterUnion(t *testing.T, c arrayFilterCase) {
 		discoverPath, discoverInclude, discoverField = c.fromPath, c.fromInclude, c.valuePath
 	}
 	values := discoverFieldValues(t, discoverPath, discoverInclude, discoverField, 2)
-	if len(values) < 2 {
-		t.Skipf("%s %s: fewer than 2 distinct values for %q available in seed data — add seed data to exercise this filter",
-			c.path, c.param, c.valuePath)
-		return
-	}
+	require.GreaterOrEqualf(t, len(values), 2,
+		"%s %s: fewer than 2 distinct values for %q available in seed data — every array filter must have seed coverage (no skips)",
+		c.path, c.param, c.valuePath)
 	a, b := values[0], values[1]
 
 	// 2. Single-value result sets.
 	s1 := filteredIDSet(t, c.path, c.param, a)
 	s2 := filteredIDSet(t, c.path, c.param, b)
-	if len(s1) == 0 || len(s2) == 0 {
-		if c.fromSelf {
-			// The value came from a live row of this endpoint, so filtering by it
-			// must return rows. Empty means the filter is dead or broken.
-			require.NotEmpty(t, s1, "%s: filtering by a value (%q) that exists on a returned row produced no results — filter %q appears broken", c.path, a, c.param)
-			require.NotEmpty(t, s2, "%s: filtering by a value (%q) that exists on a returned row produced no results — filter %q appears broken", c.path, b, c.param)
-		}
-		t.Skipf("%s %s: no rows linked to the sourced values (%q / %q) — add seed data to exercise this filter", c.path, c.param, a, b)
-		return
-	}
+	// Filtering by a value that was sourced from real data must return rows — for
+	// fromSelf cases the value is a live row of this endpoint, and for sibling-fed
+	// cases the seed links the sourced values. Empty means a dead/broken filter or
+	// a seed gap; either way it must fail, never skip.
+	require.NotEmptyf(t, s1, "%s: filtering by a sourced value (%q) produced no results — filter %q broken or missing seed coverage", c.path, a, c.param)
+	require.NotEmptyf(t, s2, "%s: filtering by a sourced value (%q) produced no results — filter %q broken or missing seed coverage", c.path, b, c.param)
 
 	// 3. Combined result set and the union/exclusion checks, with one retry to
 	//    absorb a row created/deleted by another parallel test between calls.

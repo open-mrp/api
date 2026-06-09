@@ -549,6 +549,14 @@ func init() {
 		},
 	})
 
+	// The transactions LIST returns transaction_summary (distinct from the detail).
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeTransactionSummary,
+		Fields: []IncludeFieldDef{
+			{Key: "customer", ObjectType: constants.ObjectTypeCustomer},
+		},
+	})
+
 	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypeSettlement,
 		Fields: []IncludeFieldDef{

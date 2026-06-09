@@ -26,7 +26,7 @@ func TestListEndpoints_ResponseContracts(t *testing.T) {
 
 			path, ok := ep.ResolvePath()
 			if !ok {
-				t.Skipf("Cannot resolve path params for %s", ep.Path)
+				t.Fatalf("Cannot resolve path params for %s", ep.Path)
 				return
 			}
 
@@ -34,7 +34,7 @@ func TestListEndpoints_ResponseContracts(t *testing.T) {
 			require.NoError(t, err, "GET %s failed", path)
 			skipOnNonClientError(t, path, status)
 			if status != 200 {
-				t.Skipf("GET %s returned %d", path, status)
+				t.Fatalf("GET %s returned %d", path, status)
 				return
 			}
 
@@ -62,7 +62,7 @@ func TestSeededGetEndpoints_ResponseContracts(t *testing.T) {
 
 			path, ok := resolveSeededGetPath(prefix, seedID)
 			if !ok {
-				t.Skipf("Could not resolve seeded GET path for %s", prefix)
+				t.Fatalf("Could not resolve seeded GET path for %s", prefix)
 				return
 			}
 
@@ -70,7 +70,7 @@ func TestSeededGetEndpoints_ResponseContracts(t *testing.T) {
 			require.NoError(t, err, "GET %s failed", path)
 			skipOnNonClientError(t, path, status)
 			if status == 405 {
-				t.Skipf("GET %s not supported", path)
+				t.Fatalf("GET %s not supported", path)
 				return
 			}
 			requireStatus(t, 200, status, body)

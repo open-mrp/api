@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -10,7 +11,7 @@ import (
 )
 
 func queryParameterExample(reqType reflect.Type, field reflect.StructField, paramSchema Schema) any {
-	if v := queryValueFromSchemaExample(reqType, field); v != nil {
+	if v := queryValueFromSchemaExample(reqType, field); v != nil && queryExampleSatisfiesEnum(v, paramSchema) {
 		return v
 	}
 	queryTag := field.Tag.Get("query")
@@ -19,11 +20,44 @@ func queryParameterExample(reqType reflect.Type, field reflect.StructField, para
 		if paramSchema.Type == "array" && !strings.HasSuffix(paramName, "[]") {
 			paramName = paramName + "[]"
 		}
-		if v := sampleQueryExampleForOpenAPIName(paramName); v != nil {
+		if v := sampleQueryExampleForOpenAPIName(paramName); v != nil && queryExampleSatisfiesEnum(v, paramSchema) {
 			return v
 		}
 	}
 	return parameterExample(paramSchema)
+}
+
+// queryExampleSatisfiesEnum reports whether v is consistent with paramSchema's
+// enum constraint, if it has one. A generic documented/hard-coded sample that is
+// not a member of the parameter's enum (e.g. a `type` sample of "payment" applied
+// to an endpoint whose `type` enum is [material_category, product_category]) must
+// be rejected so the enum-aware fallback can substitute a valid value.
+func queryExampleSatisfiesEnum(v any, paramSchema Schema) bool {
+	if paramSchema.Type == "array" && paramSchema.Items != nil && len(paramSchema.Items.Enum) > 0 {
+		arr, ok := v.([]any)
+		if !ok {
+			return false
+		}
+		for _, e := range arr {
+			if !enumContains(paramSchema.Items.Enum, e) {
+				return false
+			}
+		}
+		return true
+	}
+	if len(paramSchema.Enum) > 0 {
+		return enumContains(paramSchema.Enum, v)
+	}
+	return true
+}
+
+func enumContains(enum []any, v any) bool {
+	for _, e := range enum {
+		if fmt.Sprint(e) == fmt.Sprint(v) {
+			return true
+		}
+	}
+	return false
 }
 
 func queryValueFromSchemaExample(reqType reflect.Type, field reflect.StructField) any {

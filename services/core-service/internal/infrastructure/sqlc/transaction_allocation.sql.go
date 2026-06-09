@@ -410,6 +410,7 @@ SELECT
     t.created_at,
     tt.name AS transaction_type,
     q.value AS original_amount,
+    t.customer_account_id AS customer_id,
     cust_acct.name AS customer_name,
     ar.external_number AS customer_number,
     tm.name AS transaction_method,
@@ -474,6 +475,7 @@ type ListOpenCreditsRow struct {
 	CreatedAt           time.Time
 	TransactionType     string
 	OriginalAmount      string
+	CustomerID          string
 	CustomerName        string
 	CustomerNumber      sql.NullString
 	TransactionMethod   sql.NullString
@@ -525,6 +527,7 @@ func (q *Queries) ListOpenCredits(ctx context.Context, arg ListOpenCreditsParams
 			&i.CreatedAt,
 			&i.TransactionType,
 			&i.OriginalAmount,
+			&i.CustomerID,
 			&i.CustomerName,
 			&i.CustomerNumber,
 			&i.TransactionMethod,

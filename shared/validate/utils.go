@@ -3,7 +3,7 @@
 // human-readable error formatting that maps directly to the API's error response
 // contract ([apierror.APIError] with a Param field).
 //
-// Five custom validator tags are registered at init time:
+// Six custom validator tags are registered at init time:
 //
 //   - "password":          8–72 characters, at least one lowercase letter, one uppercase
 //     letter, one digit, and one special character.
@@ -14,8 +14,10 @@
 //   - "custom_email":      stricter email validation than the built-in "email" tag,
 //     enforcing RFC length limits, TLD format, and no consecutive dots.
 //   - "nonzero_decimal":   the field, parsed as a decimal string, must not equal zero.
+//   - "max_days_ahead=N":  a time.Time (or field.Optional[time.Time]) no more than N days
+//     in the future. Past/zero values pass.
 //
-// All custom tags treat empty strings as valid — combine with "required" when the
+// All custom tags treat empty/zero values as valid — combine with "required" when the
 // field must be present.
 //
 // The package also provides a lightweight [Validator] helper for imperative checks
@@ -28,6 +30,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -67,6 +70,7 @@ func init() {
 	_ = validate.RegisterValidation("identifier", validateUsernameOrEmail)
 	_ = validate.RegisterValidation("custom_email", validateCustomEmail)
 	_ = validate.RegisterValidation("nonzero_decimal", validateNonzeroDecimal)
+	_ = validate.RegisterValidation("max_days_ahead", validateMaxDaysAhead)
 }
 
 // validatePassword implements the "password" struct tag. A valid password is 8–72
@@ -216,6 +220,33 @@ func validateNonzeroDecimal(fl validator.FieldLevel) bool {
 	return !d.IsZero()
 }
 
+// validateMaxDaysAhead implements the "max_days_ahead" struct tag for time.Time
+// fields (and field.Optional[time.Time], which the custom type func unwraps to the
+// inner time.Time or nil). It fails only when the value is more than N days in the
+// future, where N is the tag parameter (e.g. max_days_ahead=30). Unset/zero and past
+// values pass — combine with "required" to enforce presence.
+func validateMaxDaysAhead(fl validator.FieldLevel) bool {
+	field := fl.Field()
+	if !field.IsValid() {
+		return true
+	}
+	if field.Kind() == reflect.Pointer {
+		if field.IsNil() {
+			return true
+		}
+		field = field.Elem()
+	}
+	t, ok := field.Interface().(time.Time)
+	if !ok || t.IsZero() {
+		return true
+	}
+	days, err := strconv.Atoi(fl.Param())
+	if err != nil {
+		return false
+	}
+	return !t.After(time.Now().Add(time.Duration(days) * 24 * time.Hour))
+}
+
 // Validate runs all struct-tag validations on v and returns a user-facing
 // [apierror.APIError] on failure (nil on success). When a single field fails, the
 // error's Param is set to that field's JSON/form/query name so the client can
@@ -337,6 +368,8 @@ func formatFieldError(fieldErr validator.FieldError, structValue any) string {
 		return fmt.Sprintf("%s '%s' must be a valid email address.", source, fieldName)
 	case "nonzero_decimal":
 		return fmt.Sprintf("%s '%s' must not be zero.", source, fieldName)
+	case "max_days_ahead":
+		return fmt.Sprintf("%s '%s' must be no more than %s days in the future.", source, fieldName, fieldErr.Param())
 	default:
 		return fmt.Sprintf("%s '%s' is invalid (%s).", source, fieldName, fieldErr.Tag())
 	}

@@ -46,6 +46,8 @@ type PickSummary struct {
 	FinishedAt       *time.Time
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+	// Departments (populated only when the list request includes "departments").
+	Departments []*PickDepartment
 }
 
 // PickDepartment represents a department associated with a pick.
@@ -99,6 +101,7 @@ type ListPicksParams struct {
 	DepartmentIDs    []string
 	StartDate        *string
 	EndDate          *string
+	Includes         []string
 }
 
 // ListPicksResult holds the result of listing picks.

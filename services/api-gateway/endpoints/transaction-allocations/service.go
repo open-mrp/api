@@ -262,6 +262,7 @@ func openCreditEntryFromProto(d *pb.OpenCreditEntryInfo) apiresource.OpenCreditE
 		AllocatedAmount: d.AllocatedAmount,
 		LeftoverAmount:  d.LeftoverAmount,
 		Customer: &apiresource.AllocationCustomer{
+			ID:     d.CustomerId,
 			Name:   d.CustomerName,
 			Number: d.CustomerNumber,
 		},

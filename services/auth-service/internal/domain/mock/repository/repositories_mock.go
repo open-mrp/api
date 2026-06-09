@@ -13,6 +13,7 @@ import (
 	context "context"
 	json "encoding/json"
 	reflect "reflect"
+	time "time"
 
 	apikey "github.com/augno/api/services/auth-service/internal/apikey"
 	domain "github.com/augno/api/services/auth-service/internal/domain"
@@ -138,17 +139,17 @@ func (mr *MockAPIKeyRepoMockRecorder) List(ctx, input any) *gomock.Call {
 }
 
 // Revoke mocks base method.
-func (m *MockAPIKeyRepo) Revoke(ctx context.Context, typeID, ownerAccountID string) *apierror.APIError {
+func (m *MockAPIKeyRepo) Revoke(ctx context.Context, typeID, ownerAccountID string, revokeAt time.Time) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Revoke", ctx, typeID, ownerAccountID)
+	ret := m.ctrl.Call(m, "Revoke", ctx, typeID, ownerAccountID, revokeAt)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
 // Revoke indicates an expected call of Revoke.
-func (mr *MockAPIKeyRepoMockRecorder) Revoke(ctx, typeID, ownerAccountID any) *gomock.Call {
+func (mr *MockAPIKeyRepoMockRecorder) Revoke(ctx, typeID, ownerAccountID, revokeAt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Revoke", reflect.TypeOf((*MockAPIKeyRepo)(nil).Revoke), ctx, typeID, ownerAccountID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Revoke", reflect.TypeOf((*MockAPIKeyRepo)(nil).Revoke), ctx, typeID, ownerAccountID, revokeAt)
 }
 
 // Touch mocks base method.

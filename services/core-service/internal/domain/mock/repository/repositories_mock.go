@@ -9995,6 +9995,21 @@ func (mr *MockSalesOrderRepoMockRecorder) GetSaleLinesForIssue(ctx, salesOrderID
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSaleLinesForIssue", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetSaleLinesForIssue), ctx, salesOrderID)
 }
 
+// GetShipmentIDs mocks base method.
+func (m *MockSalesOrderRepo) GetShipmentIDs(ctx context.Context, salesOrderID string) ([]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetShipmentIDs", ctx, salesOrderID)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetShipmentIDs indicates an expected call of GetShipmentIDs.
+func (mr *MockSalesOrderRepoMockRecorder) GetShipmentIDs(ctx, salesOrderID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShipmentIDs", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetShipmentIDs), ctx, salesOrderID)
+}
+
 // HasShippedShipment mocks base method.
 func (m *MockSalesOrderRepo) HasShippedShipment(ctx context.Context, salesOrderID string) (bool, *apierror.APIError) {
 	m.ctrl.T.Helper()

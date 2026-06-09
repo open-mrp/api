@@ -5,6 +5,7 @@ SELECT
     sl.sales_order_line_id,
     sol.product_sku,
     sol.product_description,
+    sol.item_id AS order_line_item_id,
     -- Quantity
     q.id AS quantity_id,
     q.value AS quantity_value,
@@ -41,6 +42,7 @@ SELECT
     sl.sales_order_line_id,
     sol.product_sku,
     sol.product_description,
+    sol.item_id AS order_line_item_id,
     -- Quantity
     q.id AS quantity_id,
     q.value AS quantity_value,
@@ -76,6 +78,7 @@ SELECT
     sl.sales_order_line_id,
     sol.product_sku,
     sol.product_description,
+    sol.item_id AS order_line_item_id,
     -- Quantity
     q.id AS quantity_id,
     q.value AS quantity_value,
@@ -138,6 +141,7 @@ SELECT
     sl.sales_order_line_id,
     sol.product_sku,
     sol.product_description,
+    sol.item_id AS order_line_item_id,
     -- Quantity
     q.id AS quantity_id,
     q.value AS quantity_value,

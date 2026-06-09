@@ -43,7 +43,7 @@ func (e *ListDeliveriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListDel
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeDelivery,
-			Fields:     []string{"purchase_order"},
+			Fields:     []string{"purchase_order", "purchase_order.supplier", "lines"},
 		}),
 	})
 }

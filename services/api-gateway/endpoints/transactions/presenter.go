@@ -5,6 +5,7 @@ import (
 
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
 	pb "github.com/augno/api/shared/proto/core"
 )
@@ -205,6 +206,11 @@ func TransactionListPresenter(ctx context.Context, resp *pb.ListTransactionsResp
 	transactions := make([]apiresource.TransactionSummary, len(resp.Transactions))
 	for i, d := range resp.Transactions {
 		transactions[i] = TransactionSummaryPresenter(d)
+		// customer is an expandable reference: stash the FK id so LoadCustomers
+		// fetches the real Customer on ?include=customer. Never fabricate.
+		if d.CustomerId != nil && *d.CustomerId != "" {
+			resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeTransactionSummary, d.Id, "customer_id", *d.CustomerId)
+		}
 	}
 
 	return apiresource.NewList(transactions, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))

@@ -76,11 +76,8 @@ var SampleAuditEvent = &AuditEvent{
 			NewValue: json.RawMessage(`"new@example.com"`),
 		},
 	}, PageInfo{}),
-	Metadata: json.RawMessage(SampleAuditEventMetadataReason),
-	Request: &RequestLog{
-		ID:     SampleRequestLogID,
-		Object: constants.ObjectTypeRequestLog,
-	},
+	Metadata:   json.RawMessage(SampleAuditEventMetadataReason),
+	Request:    SampleRequestLog,
 	SourceIP:   new(SampleAuditEventSourceIP),
 	OccurredAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),

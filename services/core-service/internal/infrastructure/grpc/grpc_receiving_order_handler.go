@@ -40,8 +40,15 @@ func receivingOrderSummaryToProto(s *domain.ReceivingOrderSummary) *pb.Receiving
 	if s.SupplierName != nil {
 		info.SupplierName = s.SupplierName
 	}
+	if s.SupplierNumber != nil {
+		info.SupplierNumber = s.SupplierNumber
+	}
 	if s.CompletedAt != nil {
 		info.CompletedAt = timestamppb.New(*s.CompletedAt)
+	}
+
+	for _, l := range s.Lines {
+		info.Lines = append(info.Lines, receivingOrderLineToProto(l))
 	}
 
 	return info
@@ -66,6 +73,9 @@ func receivingOrderToProto(o *domain.ReceivingOrder) *pb.ReceivingOrderInfo {
 	}
 	if o.SupplierName != nil {
 		info.SupplierName = o.SupplierName
+	}
+	if o.SupplierNumber != nil {
+		info.SupplierNumber = o.SupplierNumber
 	}
 	if o.Note != nil {
 		info.Note = o.Note
@@ -106,6 +116,9 @@ func receivingOrderLineToProto(l *domain.ReceivingOrderLine) *pb.ReceivingOrderL
 
 	if l.RejectedQuantityValue != nil {
 		info.RejectedQuantityValue = l.RejectedQuantityValue
+	}
+	if l.OrderLineProductID != nil {
+		info.OrderLineProductId = l.OrderLineProductID
 	}
 	if l.OrderLineItemID != nil {
 		info.OrderLineItemId = l.OrderLineItemID
@@ -165,7 +178,8 @@ func (h *receivingGRPCHandler) ListReceivingOrders(ctx context.Context, req *pb.
 	}
 
 	params := domain.ListReceivingOrdersParams{
-		Limit: req.Limit,
+		Limit:    req.Limit,
+		Includes: req.Includes,
 	}
 
 	if req.Cursor != nil {

@@ -124,6 +124,8 @@ type PurchaseOrderSummary struct {
 	CompletedAt          *time.Time
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
+	// Lines (populated only when the list request includes "lines").
+	Lines []*PurchaseOrderLine
 }
 
 // PurchaseOrderLine represents a purchase order line domain model.
@@ -185,6 +187,7 @@ type ListPurchaseOrdersParams struct {
 	StartDate   *string
 	EndDate     *string
 	AccountID   string
+	Includes    []string
 }
 
 // ListPurchaseOrdersResult holds the result of listing purchase orders.

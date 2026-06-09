@@ -327,6 +327,16 @@ func (r *shipmentRepoImpl) Get(ctx context.Context, params domain.GetShipmentPar
 	if row.ShippingAddressName.Valid {
 		shipment.ShippingAddressName = &row.ShippingAddressName.String
 	}
+	shipment.ShippingAddressPhone = nullStringPtr(row.ShippingAddressPhone)
+	shipment.ShippingAddressEmail = nullStringPtr(row.ShippingAddressEmail)
+	shipment.ShippingAddressIsDropShip = nullBoolPtr(row.ShippingAddressIsDropShip)
+	shipment.ShippingAddressGeolocationID = nullStringPtr(row.ShippingAddressGeolocationID)
+	shipment.ShippingAddressStreetLine1 = nullStringPtr(row.ShippingAddressStreetLine1)
+	shipment.ShippingAddressStreetLine2 = nullStringPtr(row.ShippingAddressStreetLine2)
+	shipment.ShippingAddressLocality = nullStringPtr(row.ShippingAddressLocality)
+	shipment.ShippingAddressState = nullStringPtr(row.ShippingAddressState)
+	shipment.ShippingAddressPostalCode = nullStringPtr(row.ShippingAddressPostalCode)
+	shipment.ShippingAddressCountry = nullStringPtr(row.ShippingAddressCountry)
 	if row.ShippedByID.Valid {
 		shipment.ShippedByID = &row.ShippedByID.String
 	}

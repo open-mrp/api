@@ -365,6 +365,7 @@ message ListInvoicesRequest {
   repeated string sales_rep_ids = 9;
   optional google.protobuf.Timestamp start_date = 10;
   optional google.protobuf.Timestamp end_date = 11;
+  repeated string includes = 12;
 }
 message ListInvoicesResponse {
   repeated InvoiceSummaryInfo invoices = 1;
@@ -432,6 +433,8 @@ message InvoiceSummaryInfo {
   optional bool payment_term_is_active = 31;
   optional string customer_status_code = 32;
   optional string customer_commission_policy = 33;
+  // Lines (populated only when the list request includes "lines").
+  repeated InvoiceLineInfo lines = 34;
 }
 message InvoiceInfo {
   string id = 1;

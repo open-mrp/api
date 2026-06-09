@@ -15,11 +15,11 @@ func init() {
 		Load:       resourceloaders.LoadReceivingOrders,
 		Subs: []resourcekit.SubField{
 			{
-				Key:         "supplier",
-				Target:      constants.ObjectTypeAccount,
-				Cardinality: resourcekit.CardinalityOnePtr,
-				ExtractIDs:  extractSupplierIDFromReceivingOrder,
-				Populate:    populateSupplierOnReceivingOrder,
+				// Supplier is carried inline (prebuilt) rather than loaded: it is the
+				// seller account, which is cross-account and not resolvable via the
+				// account-scoped loader. Mirrors PurchaseOrder.
+				Key:      "supplier",
+				Populate: populateSupplierOnReceivingOrder,
 			},
 			{
 				Key:         "purchase_order",
@@ -40,31 +40,26 @@ func init() {
 		ObjectType: constants.ObjectTypeReceivingOrderLine,
 		Load:       resourceloaders.LoadReceivingOrderLines,
 		Subs: []resourcekit.SubField{
-			{Key: "order_line", Populate: populateOrderLineOnReceivingOrderLine},
+			{
+				// Target + ExtractRefs so the resolver recurses into the order_line
+				// (a SalesOrderLine) and resolves its nested product/item includes.
+				Key:         "order_line",
+				Target:      constants.ObjectTypeSalesOrderLine,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractRefs: extractOrderLineRefFromReceivingOrderLine,
+				Populate:    populateOrderLineOnReceivingOrderLine,
+			},
 		},
 	})
 }
 
-func extractSupplierIDFromReceivingOrder(ctx context.Context, parent any) []string {
+func populateSupplierOnReceivingOrder(ctx context.Context, parent any, _ map[string]any) {
 	ro := parent.(*apiresource.ReceivingOrder)
-	id, _ := resourcekit.GetLoadMeta(ctx).
-		GetString(constants.ObjectTypeReceivingOrder, ro.ID, "supplier_id")
-	if id == "" {
-		return nil
-	}
-	return []string{id}
-}
-
-func populateSupplierOnReceivingOrder(ctx context.Context, parent any, loaded map[string]any) {
-	ro := parent.(*apiresource.ReceivingOrder)
-	id, _ := resourcekit.GetLoadMeta(ctx).
-		GetString(constants.ObjectTypeReceivingOrder, ro.ID, "supplier_id")
-	if id == "" {
+	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeReceivingOrder, ro.ID, "supplier")
+	if !ok {
 		return
 	}
-	if v, ok := loaded[id]; ok {
-		ro.Supplier = v.(*apiresource.Account)
-	}
+	ro.Supplier = v.(*apiresource.Supplier)
 }
 
 func extractPurchaseOrderIDFromReceivingOrder(ctx context.Context, parent any) []string {
@@ -119,4 +114,14 @@ func populateOrderLineOnReceivingOrderLine(ctx context.Context, parent any, _ ma
 		return
 	}
 	l.OrderLine = v.(*apiresource.SalesOrderLine)
+}
+
+// extractOrderLineRefFromReceivingOrderLine returns the populated order_line so
+// the resolver recurses into it (resolving order_line.product[.item]).
+func extractOrderLineRefFromReceivingOrderLine(_ context.Context, parent any) []any {
+	l := parent.(*apiresource.ReceivingOrderLine)
+	if l.OrderLine == nil {
+		return nil
+	}
+	return []any{l.OrderLine}
 }

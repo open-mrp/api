@@ -215,50 +215,6 @@ func (h *salesGRPCHandler) DeleteOrderDiscount(ctx context.Context, req *pb.Dele
 	}, nil
 }
 
-func salesOrderSummaryToProto(s *domain.SalesOrderSummary) *pb.SalesOrderSummaryInfo {
-	if s == nil {
-		return nil
-	}
-
-	info := &pb.SalesOrderSummaryInfo{
-		Id:                   s.ID,
-		Number:               s.Number,
-		CustomerPoNumber:     s.CustomerPONumber,
-		StatusCode:           s.StatusCode,
-		StatusName:           s.StatusName,
-		TypeCode:             s.TypeCode,
-		TypeName:             s.TypeName,
-		CustomerId:           s.CustomerID,
-		CustomerName:         s.CustomerName,
-		CustomerNumber:       s.CustomerNumber,
-		LineCount:            s.LineCount,
-		IsAcknowledgmentSent: s.IsAcknowledgmentSent,
-		PriorityCode:         string(s.PriorityCode),
-		PriorityName:         s.PriorityName,
-		CreatedAt:            timestamppb.New(s.CreatedAt),
-		UpdatedAt:            timestamppb.New(s.UpdatedAt),
-	}
-
-	if s.CustomerStatusCode != nil {
-		info.CustomerStatusCode = s.CustomerStatusCode
-	}
-	if s.CustomerCommissionPolicy != nil {
-		info.CustomerCommissionPolicy = s.CustomerCommissionPolicy
-	}
-
-	if s.PriorityID != nil {
-		info.PriorityId = s.PriorityID
-	}
-	if s.IssuedAt != nil {
-		info.IssuedAt = timestamppb.New(*s.IssuedAt)
-	}
-	if s.CompletedAt != nil {
-		info.CompletedAt = timestamppb.New(*s.CompletedAt)
-	}
-
-	return info
-}
-
 func salesOrderToProto(o *domain.SalesOrder) *pb.SalesOrderInfo {
 	if o == nil {
 		return nil
@@ -315,6 +271,8 @@ func salesOrderToProto(o *domain.SalesOrder) *pb.SalesOrderInfo {
 		ShipToEmail:           o.ShipToEmail,
 		CarrierName:           o.CarrierName,
 		ServiceLevelName:      o.ServiceLevelName,
+		LineCount:             o.LineCount,
+		ShipmentIds:           o.ShipmentIDs,
 		CreatedAt:             timestamppb.New(o.CreatedAt),
 		UpdatedAt:             timestamppb.New(o.UpdatedAt),
 	}
@@ -518,6 +476,7 @@ func (h *salesGRPCHandler) ListSalesOrders(ctx context.Context, req *pb.ListSale
 		EndDate:               req.EndDate,
 		ExcludeInternalOrders: req.ExcludeInternalOrders,
 		BuyerAccountID:        req.BuyerAccountId,
+		Includes:              req.Includes,
 	}
 
 	result, apiErr := h.salesOrderSvc.ListSalesOrders(ctx, params)
@@ -525,9 +484,9 @@ func (h *salesGRPCHandler) ListSalesOrders(ctx context.Context, req *pb.ListSale
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
-	orders := make([]*pb.SalesOrderSummaryInfo, len(result.SalesOrders))
+	orders := make([]*pb.SalesOrderInfo, len(result.SalesOrders))
 	for i, o := range result.SalesOrders {
-		orders[i] = salesOrderSummaryToProto(o)
+		orders[i] = salesOrderToProto(o)
 	}
 
 	return &pb.ListSalesOrdersResponse{

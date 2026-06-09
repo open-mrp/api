@@ -39,8 +39,11 @@ type ReceivingOrderSummaryInfo struct {
 	CompletedAt          *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`
 	CreatedAt            *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt            *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	SupplierNumber       *string                `protobuf:"bytes,12,opt,name=supplier_number,json=supplierNumber,proto3,oneof" json:"supplier_number,omitempty"`
+	// Lines (populated only when the list request includes "lines").
+	Lines         []*ReceivingOrderLineInfo `protobuf:"bytes,13,rep,name=lines,proto3" json:"lines,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ReceivingOrderSummaryInfo) Reset() {
@@ -150,6 +153,20 @@ func (x *ReceivingOrderSummaryInfo) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *ReceivingOrderSummaryInfo) GetSupplierNumber() string {
+	if x != nil && x.SupplierNumber != nil {
+		return *x.SupplierNumber
+	}
+	return ""
+}
+
+func (x *ReceivingOrderSummaryInfo) GetLines() []*ReceivingOrderLineInfo {
+	if x != nil {
+		return x.Lines
+	}
+	return nil
+}
+
 // ReceivingOrderInfo represents a full receiving order with lines.
 type ReceivingOrderInfo struct {
 	state               protoimpl.MessageState    `protogen:"open.v1"`
@@ -164,6 +181,7 @@ type ReceivingOrderInfo struct {
 	CompletedAt         *timestamppb.Timestamp    `protobuf:"bytes,9,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`
 	CreatedAt           *timestamppb.Timestamp    `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt           *timestamppb.Timestamp    `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	SupplierNumber      *string                   `protobuf:"bytes,12,opt,name=supplier_number,json=supplierNumber,proto3,oneof" json:"supplier_number,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -275,6 +293,13 @@ func (x *ReceivingOrderInfo) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *ReceivingOrderInfo) GetSupplierNumber() string {
+	if x != nil && x.SupplierNumber != nil {
+		return *x.SupplierNumber
+	}
+	return ""
+}
+
 // ReceivingOrderLineInfo represents a receiving order line.
 type ReceivingOrderLineInfo struct {
 	state                     protoimpl.MessageState `protogen:"open.v1"`
@@ -294,8 +319,11 @@ type ReceivingOrderLineInfo struct {
 	StockedAt                 *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=stocked_at,json=stockedAt,proto3,oneof" json:"stocked_at,omitempty"`
 	CreatedAt                 *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt                 *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields             protoimpl.UnknownFields
-	sizeCache                 protoimpl.SizeCache
+	// The order line's product id, so the order_line.product.item include chain
+	// resolves (the product loader fills item/product_line from this).
+	OrderLineProductId *string `protobuf:"bytes,17,opt,name=order_line_product_id,json=orderLineProductId,proto3,oneof" json:"order_line_product_id,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *ReceivingOrderLineInfo) Reset() {
@@ -438,6 +466,13 @@ func (x *ReceivingOrderLineInfo) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *ReceivingOrderLineInfo) GetOrderLineProductId() string {
+	if x != nil && x.OrderLineProductId != nil {
+		return *x.OrderLineProductId
+	}
+	return ""
 }
 
 // StockingDataInfo contains stocking data for the stock action.
@@ -618,6 +653,7 @@ type ListReceivingOrdersRequest struct {
 	SupplierIds   []string               `protobuf:"bytes,6,rep,name=supplier_ids,json=supplierIds,proto3" json:"supplier_ids,omitempty"`
 	StartDate     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=start_date,json=startDate,proto3,oneof" json:"start_date,omitempty"`
 	EndDate       *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=end_date,json=endDate,proto3,oneof" json:"end_date,omitempty"`
+	Includes      []string               `protobuf:"bytes,9,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -704,6 +740,13 @@ func (x *ListReceivingOrdersRequest) GetStartDate() *timestamppb.Timestamp {
 func (x *ListReceivingOrdersRequest) GetEndDate() *timestamppb.Timestamp {
 	if x != nil {
 		return x.EndDate
+	}
+	return nil
+}
+
+func (x *ListReceivingOrdersRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
 	}
 	return nil
 }
@@ -1427,7 +1470,7 @@ var File_core_core_receiving_proto protoreflect.FileDescriptor
 
 const file_core_core_receiving_proto_rawDesc = "" +
 	"\n" +
-	"\x19core/core_receiving.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fcore/core.proto\"\xb4\x04\n" +
+	"\x19core/core_receiving.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fcore/core.proto\"\xaa\x05\n" +
 	"\x19ReceivingOrderSummaryInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12*\n" +
@@ -1444,10 +1487,13 @@ const file_core_core_receiving_proto_rawDesc = "" +
 	"created_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x0e\n" +
+	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12,\n" +
+	"\x0fsupplier_number\x18\f \x01(\tH\x03R\x0esupplierNumber\x88\x01\x01\x122\n" +
+	"\x05lines\x18\r \x03(\v2\x1c.core.ReceivingOrderLineInfoR\x05linesB\x0e\n" +
 	"\f_supplier_idB\x10\n" +
 	"\x0e_supplier_nameB\x0f\n" +
-	"\r_completed_at\"\xaf\x04\n" +
+	"\r_completed_atB\x12\n" +
+	"\x10_supplier_number\"\xf1\x04\n" +
 	"\x12ReceivingOrderInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12*\n" +
@@ -1463,11 +1509,13 @@ const file_core_core_receiving_proto_rawDesc = "" +
 	"created_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x0e\n" +
+	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12,\n" +
+	"\x0fsupplier_number\x18\f \x01(\tH\x04R\x0esupplierNumber\x88\x01\x01B\x0e\n" +
 	"\f_supplier_idB\x10\n" +
 	"\x0e_supplier_nameB\a\n" +
 	"\x05_noteB\x0f\n" +
-	"\r_completed_at\"\xc0\a\n" +
+	"\r_completed_atB\x12\n" +
+	"\x10_supplier_number\"\x92\b\n" +
 	"\x16ReceivingOrderLineInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vquantity_id\x18\x02 \x01(\tR\n" +
@@ -1489,12 +1537,14 @@ const file_core_core_receiving_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x1a\n" +
+	"updated_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x126\n" +
+	"\x15order_line_product_id\x18\x11 \x01(\tH\x05R\x12orderLineProductId\x88\x01\x01B\x1a\n" +
 	"\x18_rejected_quantity_valueB\x15\n" +
 	"\x13_order_line_item_idB\x16\n" +
 	"\x14_order_line_item_skuB\x1e\n" +
 	"\x1c_order_line_item_descriptionB\r\n" +
-	"\v_stocked_at\"M\n" +
+	"\v_stocked_atB\x18\n" +
+	"\x16_order_line_product_id\"M\n" +
 	"\x10StockingDataInfo\x129\n" +
 	"\n" +
 	"line_items\x18\x01 \x03(\v2\x1a.core.StockingLineItemInfoR\tlineItems\"\x87\x02\n" +
@@ -1510,7 +1560,7 @@ const file_core_core_receiving_proto_rawDesc = "" +
 	"\vlocation_id\x18\x01 \x01(\tH\x00R\n" +
 	"locationId\x88\x01\x01\x12\x1a\n" +
 	"\bquantity\x18\x02 \x01(\tR\bquantityB\x0e\n" +
-	"\f_location_id\"\xfd\x02\n" +
+	"\f_location_id\"\x99\x03\n" +
 	"\x1aListReceivingOrdersRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
@@ -1520,7 +1570,8 @@ const file_core_core_receiving_proto_rawDesc = "" +
 	"\fsupplier_ids\x18\x06 \x03(\tR\vsupplierIds\x12>\n" +
 	"\n" +
 	"start_date\x18\a \x01(\v2\x1a.google.protobuf.TimestampH\x03R\tstartDate\x88\x01\x01\x12:\n" +
-	"\bend_date\x18\b \x01(\v2\x1a.google.protobuf.TimestampH\x04R\aendDate\x88\x01\x01B\t\n" +
+	"\bend_date\x18\b \x01(\v2\x1a.google.protobuf.TimestampH\x04R\aendDate\x88\x01\x01\x12\x1a\n" +
+	"\bincludes\x18\t \x03(\tR\bincludesB\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_queryB\t\n" +
 	"\a_statusB\r\n" +
@@ -1616,48 +1667,49 @@ var file_core_core_receiving_proto_depIdxs = []int32{
 	22, // 0: core.ReceivingOrderSummaryInfo.completed_at:type_name -> google.protobuf.Timestamp
 	22, // 1: core.ReceivingOrderSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
 	22, // 2: core.ReceivingOrderSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
-	2,  // 3: core.ReceivingOrderInfo.lines:type_name -> core.ReceivingOrderLineInfo
-	22, // 4: core.ReceivingOrderInfo.completed_at:type_name -> google.protobuf.Timestamp
-	22, // 5: core.ReceivingOrderInfo.created_at:type_name -> google.protobuf.Timestamp
-	22, // 6: core.ReceivingOrderInfo.updated_at:type_name -> google.protobuf.Timestamp
-	22, // 7: core.ReceivingOrderLineInfo.stocked_at:type_name -> google.protobuf.Timestamp
-	22, // 8: core.ReceivingOrderLineInfo.created_at:type_name -> google.protobuf.Timestamp
-	22, // 9: core.ReceivingOrderLineInfo.updated_at:type_name -> google.protobuf.Timestamp
-	4,  // 10: core.StockingDataInfo.line_items:type_name -> core.StockingLineItemInfo
-	5,  // 11: core.StockingLineItemInfo.allocations:type_name -> core.StorageAllocationInfo
-	22, // 12: core.ListReceivingOrdersRequest.start_date:type_name -> google.protobuf.Timestamp
-	22, // 13: core.ListReceivingOrdersRequest.end_date:type_name -> google.protobuf.Timestamp
-	0,  // 14: core.ListReceivingOrdersResponse.receiving_orders:type_name -> core.ReceivingOrderSummaryInfo
-	23, // 15: core.ListReceivingOrdersResponse.page_info:type_name -> core.PageInfo
-	1,  // 16: core.GetReceivingOrderResponse.receiving_order:type_name -> core.ReceivingOrderInfo
-	3,  // 17: core.StockReceivingOrderRequest.data:type_name -> core.StockingDataInfo
-	1,  // 18: core.StockReceivingOrderResponse.receiving_order:type_name -> core.ReceivingOrderInfo
-	1,  // 19: core.ReceiveReceivingOrderResponse.receiving_order:type_name -> core.ReceivingOrderInfo
-	1,  // 20: core.VoidReceivingOrderResponse.receiving_order:type_name -> core.ReceivingOrderInfo
-	2,  // 21: core.UpdateReceivingOrderLineResponse.line:type_name -> core.ReceivingOrderLineInfo
-	2,  // 22: core.VoidReceivingOrderLineResponse.line:type_name -> core.ReceivingOrderLineInfo
-	2,  // 23: core.ReceiveReceivingOrderLineResponse.line:type_name -> core.ReceivingOrderLineInfo
-	6,  // 24: core.CoreReceivingService.ListReceivingOrders:input_type -> core.ListReceivingOrdersRequest
-	8,  // 25: core.CoreReceivingService.GetReceivingOrder:input_type -> core.GetReceivingOrderRequest
-	10, // 26: core.CoreReceivingService.StockReceivingOrder:input_type -> core.StockReceivingOrderRequest
-	12, // 27: core.CoreReceivingService.ReceiveReceivingOrder:input_type -> core.ReceiveReceivingOrderRequest
-	14, // 28: core.CoreReceivingService.VoidReceivingOrder:input_type -> core.VoidReceivingOrderRequest
-	16, // 29: core.CoreReceivingService.UpdateReceivingOrderLine:input_type -> core.UpdateReceivingOrderLineRequest
-	18, // 30: core.CoreReceivingService.VoidReceivingOrderLine:input_type -> core.VoidReceivingOrderLineRequest
-	20, // 31: core.CoreReceivingService.ReceiveReceivingOrderLine:input_type -> core.ReceiveReceivingOrderLineRequest
-	7,  // 32: core.CoreReceivingService.ListReceivingOrders:output_type -> core.ListReceivingOrdersResponse
-	9,  // 33: core.CoreReceivingService.GetReceivingOrder:output_type -> core.GetReceivingOrderResponse
-	11, // 34: core.CoreReceivingService.StockReceivingOrder:output_type -> core.StockReceivingOrderResponse
-	13, // 35: core.CoreReceivingService.ReceiveReceivingOrder:output_type -> core.ReceiveReceivingOrderResponse
-	15, // 36: core.CoreReceivingService.VoidReceivingOrder:output_type -> core.VoidReceivingOrderResponse
-	17, // 37: core.CoreReceivingService.UpdateReceivingOrderLine:output_type -> core.UpdateReceivingOrderLineResponse
-	19, // 38: core.CoreReceivingService.VoidReceivingOrderLine:output_type -> core.VoidReceivingOrderLineResponse
-	21, // 39: core.CoreReceivingService.ReceiveReceivingOrderLine:output_type -> core.ReceiveReceivingOrderLineResponse
-	32, // [32:40] is the sub-list for method output_type
-	24, // [24:32] is the sub-list for method input_type
-	24, // [24:24] is the sub-list for extension type_name
-	24, // [24:24] is the sub-list for extension extendee
-	0,  // [0:24] is the sub-list for field type_name
+	2,  // 3: core.ReceivingOrderSummaryInfo.lines:type_name -> core.ReceivingOrderLineInfo
+	2,  // 4: core.ReceivingOrderInfo.lines:type_name -> core.ReceivingOrderLineInfo
+	22, // 5: core.ReceivingOrderInfo.completed_at:type_name -> google.protobuf.Timestamp
+	22, // 6: core.ReceivingOrderInfo.created_at:type_name -> google.protobuf.Timestamp
+	22, // 7: core.ReceivingOrderInfo.updated_at:type_name -> google.protobuf.Timestamp
+	22, // 8: core.ReceivingOrderLineInfo.stocked_at:type_name -> google.protobuf.Timestamp
+	22, // 9: core.ReceivingOrderLineInfo.created_at:type_name -> google.protobuf.Timestamp
+	22, // 10: core.ReceivingOrderLineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	4,  // 11: core.StockingDataInfo.line_items:type_name -> core.StockingLineItemInfo
+	5,  // 12: core.StockingLineItemInfo.allocations:type_name -> core.StorageAllocationInfo
+	22, // 13: core.ListReceivingOrdersRequest.start_date:type_name -> google.protobuf.Timestamp
+	22, // 14: core.ListReceivingOrdersRequest.end_date:type_name -> google.protobuf.Timestamp
+	0,  // 15: core.ListReceivingOrdersResponse.receiving_orders:type_name -> core.ReceivingOrderSummaryInfo
+	23, // 16: core.ListReceivingOrdersResponse.page_info:type_name -> core.PageInfo
+	1,  // 17: core.GetReceivingOrderResponse.receiving_order:type_name -> core.ReceivingOrderInfo
+	3,  // 18: core.StockReceivingOrderRequest.data:type_name -> core.StockingDataInfo
+	1,  // 19: core.StockReceivingOrderResponse.receiving_order:type_name -> core.ReceivingOrderInfo
+	1,  // 20: core.ReceiveReceivingOrderResponse.receiving_order:type_name -> core.ReceivingOrderInfo
+	1,  // 21: core.VoidReceivingOrderResponse.receiving_order:type_name -> core.ReceivingOrderInfo
+	2,  // 22: core.UpdateReceivingOrderLineResponse.line:type_name -> core.ReceivingOrderLineInfo
+	2,  // 23: core.VoidReceivingOrderLineResponse.line:type_name -> core.ReceivingOrderLineInfo
+	2,  // 24: core.ReceiveReceivingOrderLineResponse.line:type_name -> core.ReceivingOrderLineInfo
+	6,  // 25: core.CoreReceivingService.ListReceivingOrders:input_type -> core.ListReceivingOrdersRequest
+	8,  // 26: core.CoreReceivingService.GetReceivingOrder:input_type -> core.GetReceivingOrderRequest
+	10, // 27: core.CoreReceivingService.StockReceivingOrder:input_type -> core.StockReceivingOrderRequest
+	12, // 28: core.CoreReceivingService.ReceiveReceivingOrder:input_type -> core.ReceiveReceivingOrderRequest
+	14, // 29: core.CoreReceivingService.VoidReceivingOrder:input_type -> core.VoidReceivingOrderRequest
+	16, // 30: core.CoreReceivingService.UpdateReceivingOrderLine:input_type -> core.UpdateReceivingOrderLineRequest
+	18, // 31: core.CoreReceivingService.VoidReceivingOrderLine:input_type -> core.VoidReceivingOrderLineRequest
+	20, // 32: core.CoreReceivingService.ReceiveReceivingOrderLine:input_type -> core.ReceiveReceivingOrderLineRequest
+	7,  // 33: core.CoreReceivingService.ListReceivingOrders:output_type -> core.ListReceivingOrdersResponse
+	9,  // 34: core.CoreReceivingService.GetReceivingOrder:output_type -> core.GetReceivingOrderResponse
+	11, // 35: core.CoreReceivingService.StockReceivingOrder:output_type -> core.StockReceivingOrderResponse
+	13, // 36: core.CoreReceivingService.ReceiveReceivingOrder:output_type -> core.ReceiveReceivingOrderResponse
+	15, // 37: core.CoreReceivingService.VoidReceivingOrder:output_type -> core.VoidReceivingOrderResponse
+	17, // 38: core.CoreReceivingService.UpdateReceivingOrderLine:output_type -> core.UpdateReceivingOrderLineResponse
+	19, // 39: core.CoreReceivingService.VoidReceivingOrderLine:output_type -> core.VoidReceivingOrderLineResponse
+	21, // 40: core.CoreReceivingService.ReceiveReceivingOrderLine:output_type -> core.ReceiveReceivingOrderLineResponse
+	33, // [33:41] is the sub-list for method output_type
+	25, // [25:33] is the sub-list for method input_type
+	25, // [25:25] is the sub-list for extension type_name
+	25, // [25:25] is the sub-list for extension extendee
+	0,  // [0:25] is the sub-list for field type_name
 }
 
 func init() { file_core_core_receiving_proto_init() }

@@ -126,6 +126,7 @@ SELECT
     t.created_at,
     tt.name AS transaction_type,
     q.value AS original_amount,
+    t.customer_account_id AS customer_id,
     cust_acct.name AS customer_name,
     ar.external_number AS customer_number,
     tm.name AS transaction_method,

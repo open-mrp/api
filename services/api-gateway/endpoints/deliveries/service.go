@@ -56,6 +56,9 @@ func (m *deliverySvcImpl) ListDeliveries(ctx context.Context, req *ListDeliverie
 		Status:      req.Status,
 		ItemIds:     req.ItemIDs,
 		SupplierIds: req.SupplierIDs,
+		// Ask the backend to expand lines when requested (purchase_order is
+		// resolved gateway-side from the stashed FK id).
+		Includes: resourcekit.FilterIncludes(ctx, "purchase_order", "lines"),
 	}
 
 	if req.StartDate != nil {
@@ -130,6 +133,15 @@ func stashDeliverySummaryMeta(ctx context.Context, d *apiresource.Delivery, info
 	// LoadPurchaseOrders fetches real data on ?include=. Never fabricate.
 	if info.PurchaseOrderId != "" {
 		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeDelivery, d.ID, "purchase_order_id", info.PurchaseOrderId)
+	}
+	// Lines are populated on the summary only when the list request includes them.
+	if len(info.Lines) > 0 {
+		lines := make([]apiresource.DeliveryLine, len(info.Lines))
+		for i, l := range info.Lines {
+			lines[i] = deliveryLineFromProto(l)
+		}
+		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeDelivery, d.ID, "lines",
+			apiresource.NewList(lines, apiresource.PageInfo{}))
 	}
 }
 

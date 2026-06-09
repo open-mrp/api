@@ -115,7 +115,10 @@ UPDATE account_relation
 -- Supplier materials (supplier_account_id is the counterparty account, not the relation ID)
 INSERT IGNORE INTO supplier_material (id, material_id, supplier_account_id, supplier_part_number, supplier_description, is_active, owner_account_id, created_at, updated_at) VALUES
     ('spml_01seedsupmat1_0000', 'ml_01seedyrn1mat000000', 'ac_01seedsupplier_acct0', 'YRN-EXT-001', 'Premium Yarn Type 1', 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
-    ('spml_01seedsupmat2_0000', 'ml_01seedyrn2mat000000', 'ac_01seedsupplier_acct0', 'YRN-EXT-002', 'Premium Yarn Type 2', 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+    ('spml_01seedsupmat2_0000', 'ml_01seedyrn2mat000000', 'ac_01seedsupplier_acct0', 'YRN-EXT-002', 'Premium Yarn Type 2', 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
+    -- Link a third yarn to a second supplier so the suppliers/item_ids array
+    -- filter sees the top-of-feed material items linked to >=2 distinct suppliers.
+    ('spml_01seedsupmat3_0000', 'ml_01seedyrn3mat000000', 'ac_01seedsupplier_acct1', 'YRN-EXT-003', 'Premium Yarn Type 3', 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
 
 -- ============================================================
 -- TERRITORIES (2 rows for pagination)
@@ -371,7 +374,11 @@ INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status
 -- filter returns it. See TestRequestLogs_ListFilterByMultipleActorsUnion.
 INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, occurred_at, created_at) VALUES
     ('rqlog_01sedunionuser0', 'GET', 'api.augno.com', '/v1/catalog/items', '/v1/catalog/items', 200, 10000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', DATE_ADD(NOW(), INTERVAL 9 YEAR), DATE_ADD(NOW(), INTERVAL 9 YEAR)),
-    ('rqlog_01sedunionapik0', 'GET', 'api.augno.com', '/v1/catalog/units', '/v1/catalog/units', 200, 10000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'apky_pajbskcck3cabxajdh8h8', 'api_key', 'api_key', DATE_ADD(NOW(), INTERVAL 9 YEAR), DATE_ADD(NOW(), INTERVAL 9 YEAR));
+    ('rqlog_01sedunionapik0', 'GET', 'api.augno.com', '/v1/catalog/units', '/v1/catalog/units', 200, 10000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'apky_pajbskcck3cabxajdh8h8', 'api_key', 'api_key', DATE_ADD(NOW(), INTERVAL 9 YEAR), DATE_ADD(NOW(), INTERVAL 9 YEAR)),
+    -- A far-future POST/201 row so the methods and status_codes filter discoveries
+    -- always see >=2 distinct values on the first page (the harness's own traffic is
+    -- all GET/200, and the seeded POST/422 rows are old enough to be buried).
+    ('rqlog_01sedunionpost0', 'POST', 'api.augno.com', '/v1/catalog/units', '/v1/catalog/units', 201, 10000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', DATE_ADD(NOW(), INTERVAL 9 YEAR), DATE_ADD(NOW(), INTERVAL 9 YEAR));
 
 INSERT IGNORE INTO idempotency_key (type_id, idempotency_key, identity_type, request_method, normalized_route, request_body_hash, scope_hash, recovery_point, target_account_id, actor_id, created_at, updated_at) VALUES
     ('idk_01seedreqlogik001', 'e2e-seed-idempotency-key-01', 'user', 'POST', '/v1/catalog/units', 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', 'finished', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', NOW(3), NOW(3));
@@ -771,8 +778,13 @@ UPDATE inventory_change_log
        updated_at = '2099-12-31 23:59:59.000'
  WHERE id = 'ivcl_01seedwss000000000';
 
+-- A second distinct action_type_code + responsible_user so the
+-- inventory-change-logs action_type_codes and changed_by_user_ids array filters
+-- have >=2 distinct values to exercise union/exclusion.
 UPDATE inventory_change_log
    SET scanning_station_id = 'sgsn_01k0a8201zegarjfsjaw5n7yfv',
+       action_type_code = 'system_action',
+       responsible_user_id = 'us_6p7460uuwibz',
        created_at = '2099-12-31 23:59:58.000',
        updated_at = '2099-12-31 23:59:58.000'
  WHERE id = 'ivcl_01seedwls000000000';

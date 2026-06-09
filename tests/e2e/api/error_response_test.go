@@ -85,7 +85,7 @@ func TestUpdateEndpoints_UnknownFieldRejected(t *testing.T) {
 			t.Parallel()
 			path, ok := ep.ResolvePath()
 			if !ok {
-				t.Skipf("Cannot resolve path params for %s", ep.Path)
+				t.Fatalf("Cannot resolve path params for %s", ep.Path)
 				return
 			}
 
@@ -107,7 +107,7 @@ func TestCreateEndpoints_UnknownFieldRejected(t *testing.T) {
 			t.Parallel()
 			path, ok := ep.ResolvePath()
 			if !ok {
-				t.Skipf("Cannot resolve path params for %s", ep.Path)
+				t.Fatalf("Cannot resolve path params for %s", ep.Path)
 				return
 			}
 
@@ -129,7 +129,7 @@ func TestPutEndpoints_UnknownFieldRejected(t *testing.T) {
 			t.Parallel()
 			path, ok := ep.ResolvePath()
 			if !ok {
-				t.Skipf("Cannot resolve path params for %s", ep.Path)
+				t.Fatalf("Cannot resolve path params for %s", ep.Path)
 				return
 			}
 
@@ -151,7 +151,7 @@ func TestListEndpoints_UnknownQueryParamRejected(t *testing.T) {
 			t.Parallel()
 			path, ok := ep.ResolvePath()
 			if !ok {
-				t.Skipf("Cannot resolve path params for %s", ep.Path)
+				t.Fatalf("Cannot resolve path params for %s", ep.Path)
 				return
 			}
 
@@ -183,7 +183,7 @@ func TestUpdateEndpoints_TimestampFieldsRejected(t *testing.T) {
 				t.Parallel()
 				path, ok := ep.ResolvePath()
 				if !ok {
-					t.Skipf("Cannot resolve path params for %s", ep.Path)
+					t.Fatalf("Cannot resolve path params for %s", ep.Path)
 					return
 				}
 
@@ -217,7 +217,7 @@ func TestUpdateEndpoints_EmptyBodyErrorShape(t *testing.T) {
 			t.Parallel()
 			path, ok := ep.ResolvePath()
 			if !ok {
-				t.Skipf("Cannot resolve path params for %s", ep.Path)
+				t.Fatalf("Cannot resolve path params for %s", ep.Path)
 				return
 			}
 
@@ -226,7 +226,7 @@ func TestUpdateEndpoints_EmptyBodyErrorShape(t *testing.T) {
 			skipOnNonClientError(t, path, statusCode)
 
 			if statusCode != 400 {
-				t.Skipf("PATCH %s with empty body returned %d (expected 400)", path, statusCode)
+				t.Fatalf("PATCH %s with empty body returned %d (expected 400)", path, statusCode)
 				return
 			}
 
@@ -260,7 +260,7 @@ func TestMethodNotAllowed(t *testing.T) {
 			skipOnNonClientError(t, path, statusCode)
 
 			if statusCode != 405 {
-				t.Skipf("POST %s returned %d (expected 405), endpoint may accept POST", path, statusCode)
+				t.Fatalf("POST %s returned %d (expected 405), endpoint may accept POST", path, statusCode)
 				return
 			}
 

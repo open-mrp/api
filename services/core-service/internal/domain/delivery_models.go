@@ -18,6 +18,8 @@ type DeliverySummary struct {
 	RejectedAt          *time.Time
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
+	// Lines (populated only when the list request includes "lines").
+	Lines []*DeliveryLine
 }
 
 // Delivery represents a full delivery with its lines.
@@ -69,6 +71,7 @@ type ListDeliveriesParams struct {
 	SupplierIDs []string
 	StartDate   *time.Time
 	EndDate     *time.Time
+	Includes    []string
 }
 
 // ListDeliveriesResult holds the result of listing deliveries.

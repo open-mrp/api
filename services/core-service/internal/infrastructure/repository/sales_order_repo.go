@@ -30,8 +30,8 @@ func NewSalesOrderRepo(queries *sqlc.Queries) domain.SalesOrderRepo {
 	return &salesOrderRepoImpl{queries: queries}
 }
 
-func salesOrderCreatedAt(d *domain.SalesOrderSummary) time.Time { return d.CreatedAt }
-func salesOrderID(d *domain.SalesOrderSummary) string           { return d.ID }
+func salesOrderCreatedAt(d *domain.SalesOrder) time.Time { return d.CreatedAt }
+func salesOrderID(d *domain.SalesOrder) string           { return d.ID }
 
 func (r *salesOrderRepoImpl) NoteFirstShipAt(ctx context.Context, accountID, salesOrderID string) *apierror.APIError {
 	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.note_first_ship_at")
@@ -164,7 +164,7 @@ func (r *salesOrderRepoImpl) List(ctx context.Context, params domain.ListSalesOr
 			if apiErr := db.MapSQLError(err); apiErr != nil {
 				return nil, tracing.Trace(span, apiErr)
 			}
-			orders := make([]*domain.SalesOrderSummary, len(rows))
+			orders := make([]*domain.SalesOrder, len(rows))
 			for i, row := range rows {
 				orders[i] = mapBackwardSalesOrderRow(row)
 			}
@@ -199,7 +199,7 @@ func (r *salesOrderRepoImpl) List(ctx context.Context, params domain.ListSalesOr
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
-		orders := make([]*domain.SalesOrderSummary, len(rows))
+		orders := make([]*domain.SalesOrder, len(rows))
 		for i, row := range rows {
 			orders[i] = mapForwardSalesOrderRow(row)
 		}
@@ -233,7 +233,7 @@ func (r *salesOrderRepoImpl) List(ctx context.Context, params domain.ListSalesOr
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	orders := make([]*domain.SalesOrderSummary, len(rows))
+	orders := make([]*domain.SalesOrder, len(rows))
 	for i, row := range rows {
 		orders[i] = mapForwardSalesOrderRow(row)
 	}
@@ -288,6 +288,17 @@ func (r *salesOrderRepoImpl) GetLines(ctx context.Context, salesOrderID string) 
 	}
 
 	return lines, nil
+}
+
+func (r *salesOrderRepoImpl) GetShipmentIDs(ctx context.Context, salesOrderID string) ([]string, *apierror.APIError) {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_shipment_ids")
+	defer span.End()
+
+	ids, err := r.queries.GetShipmentIDsBySalesOrder(ctx, salesOrderID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return ids, nil
 }
 
 func (r *salesOrderRepoImpl) Create(ctx context.Context, soID string, params domain.CreateSalesOrderParams) (*domain.SalesOrder, *apierror.APIError) {
@@ -781,6 +792,7 @@ func mapGetSalesOrderRow(row sqlc.GetSalesOrderRow) *domain.SalesOrder {
 		StatusName:           row.StatusName,
 		TypeName:             row.TypeName,
 		PriorityName:         row.PriorityName,
+		LineCount:            safeconv.Int64ToInt32(row.LineCount),
 	}
 
 	so.CustomerPONumber = nullStringToPtr(row.CustomerPoNumber)
@@ -905,6 +917,7 @@ func mapGetSalesOrderForCustomerRow(row sqlc.GetSalesOrderForCustomerRow) *domai
 		StatusName:           row.StatusName,
 		TypeName:             row.TypeName,
 		PriorityName:         row.PriorityName,
+		LineCount:            safeconv.Int64ToInt32(row.LineCount),
 	}
 
 	so.CustomerPONumber = nullStringToPtr(row.CustomerPoNumber)
@@ -1009,66 +1022,429 @@ func mapGetSalesOrderForCustomerRow(row sqlc.GetSalesOrderForCustomerRow) *domai
 	return so
 }
 
-func mapForwardSalesOrderRow(row sqlc.ListSalesOrdersForwardRow) *domain.SalesOrderSummary {
-	s := &domain.SalesOrderSummary{
-		ID:                   row.ID,
-		Number:               row.Number,
-		StatusCode:           row.StatusCode,
-		StatusName:           row.StatusName,
-		TypeCode:             row.TypeCode,
-		TypeName:             row.TypeName,
-		CustomerID:           row.CustomerID,
-		CustomerName:         row.CustomerName,
-		CustomerNumber:       row.CustomerNumber,
-		LineCount:            safeconv.Int64ToInt32(row.LineCount),
-		IsAcknowledgmentSent: row.IsAcknowledgmentSent,
-		PriorityCode:         constants.PriorityCode(row.PriorityCode),
-		PriorityName:         row.PriorityName,
-		CreatedAt:            row.CreatedAt,
-		UpdatedAt:            row.UpdatedAt,
-	}
-	s.CustomerPONumber = nullStringToPtr(row.CustomerPoNumber)
-	s.PriorityID = &row.PriorityID
-	s.CustomerStatusCode = nullStringToPtr(row.CustomerStatusCode)
-	s.CustomerCommissionPolicy = nullStringToPtr(row.CustomerCommissionPolicy)
-	if row.IssuedAt.Valid {
-		s.IssuedAt = &row.IssuedAt.Time
-	}
-	if row.CompletedAt.Valid {
-		s.CompletedAt = &row.CompletedAt.Time
-	}
-	return s
+// listSalesOrderRow carries the shared column set returned by the forward and
+// backward list queries. Both queries now project the same full detail shape as
+// GetSalesOrder (plus line_count), so their rows map through one helper.
+type listSalesOrderRow struct {
+	ID                          string
+	Number                      string
+	CustomerPoNumber            gosql.NullString
+	Note                        gosql.NullString
+	IsAcknowledgmentSent        bool
+	BillingAddressID            string
+	ShippingAddressID           string
+	CarrierID                   gosql.NullString
+	CarrierOptionID             gosql.NullString
+	CarrierBillingType          gosql.NullString
+	CarrierBillingAccount       gosql.NullString
+	PriorityCode                string
+	SalesRepID                  gosql.NullString
+	ShippingTermID              gosql.NullString
+	SalesOrderStatusCode        string
+	SalesOrderTypeCode          string
+	PaymentTermID               gosql.NullString
+	ProductionRunID             gosql.NullString
+	OrderDiscountID             gosql.NullString
+	BuyerAccountID              string
+	SellerAccountID             string
+	OwnerAccountID              string
+	IssuedAt                    gosql.NullTime
+	CompletedAt                 gosql.NullTime
+	FirstShipAt                 gosql.NullTime
+	ExpiredAt                   gosql.NullTime
+	PromisedAt                  gosql.NullTime
+	CreatedAt                   time.Time
+	UpdatedAt                   time.Time
+	CustomerName                string
+	CustomerNumber              string
+	CustomerStatusCode          gosql.NullString
+	CustomerCommissionPolicy    gosql.NullString
+	CustomerCreatedAt           time.Time
+	CustomerUpdatedAt           time.Time
+	StatusName                  string
+	TypeName                    string
+	PriorityName                string
+	PriorityID                  string
+	BillToName                  gosql.NullString
+	BillToIsDropShip            gosql.NullBool
+	BillToGeolocationID         gosql.NullString
+	BillToStreetLine1           gosql.NullString
+	BillToStreetLine2           gosql.NullString
+	BillToLocality              gosql.NullString
+	BillToState                 gosql.NullString
+	BillToPostalCode            gosql.NullString
+	BillToCountry               gosql.NullString
+	BillToPhone                 gosql.NullString
+	BillToEmail                 gosql.NullString
+	BillToCreatedAt             gosql.NullTime
+	BillToUpdatedAt             gosql.NullTime
+	ShipToName                  gosql.NullString
+	ShipToIsDropShip            gosql.NullBool
+	ShipToGeolocationID         gosql.NullString
+	ShipToStreetLine1           gosql.NullString
+	ShipToStreetLine2           gosql.NullString
+	ShipToLocality              gosql.NullString
+	ShipToState                 gosql.NullString
+	ShipToPostalCode            gosql.NullString
+	ShipToCountry               gosql.NullString
+	ShipToPhone                 gosql.NullString
+	ShipToEmail                 gosql.NullString
+	ShipToCreatedAt             gosql.NullTime
+	ShipToUpdatedAt             gosql.NullTime
+	CarrierName                 gosql.NullString
+	CarrierIsPortalEnabled      gosql.NullBool
+	CarrierCreatedAt            gosql.NullTime
+	CarrierUpdatedAt            gosql.NullTime
+	CarrierOptionName           gosql.NullString
+	ServiceLevelIsPortalEnabled gosql.NullBool
+	ServiceLevelToken           gosql.NullString
+	ServiceLevelCreatedAt       gosql.NullTime
+	ServiceLevelUpdatedAt       gosql.NullTime
+	SalesRepName                gosql.NullString
+	PaymentTermName             gosql.NullString
+	PaymentTermIsActive         gosql.NullBool
+	PaymentTermCreatedAt        gosql.NullTime
+	PaymentTermUpdatedAt        gosql.NullTime
+	ShippingTermName            gosql.NullString
+	ShippingTermIsFreightExempt gosql.NullBool
+	ShippingTermIsCarrierRate   gosql.NullBool
+	ShippingTermCreatedAt       gosql.NullTime
+	ShippingTermUpdatedAt       gosql.NullTime
+	OrderDiscountName           gosql.NullString
+	OrderDiscountCode           gosql.NullString
+	OrderDiscountPercentage     gosql.NullFloat64
+	OrderDiscountAmount         gosql.NullFloat64
+	OrderDiscountDiscountType   gosql.NullString
+	OrderDiscountOrderCount     int64
+	OrderDiscountCreatedAt      gosql.NullTime
+	OrderDiscountUpdatedAt      gosql.NullTime
+	PickID                      gosql.NullString
+	LineCount                   int64
 }
 
-func mapBackwardSalesOrderRow(row sqlc.ListSalesOrdersBackwardRow) *domain.SalesOrderSummary {
-	s := &domain.SalesOrderSummary{
+// mapListSalesOrderRow maps a shared list row into a full domain.SalesOrder,
+// mirroring mapGetSalesOrderRow so list and detail return the same shape.
+func mapListSalesOrderRow(row listSalesOrderRow) *domain.SalesOrder {
+	so := &domain.SalesOrder{
 		ID:                   row.ID,
 		Number:               row.Number,
-		StatusCode:           row.StatusCode,
-		StatusName:           row.StatusName,
-		TypeCode:             row.TypeCode,
-		TypeName:             row.TypeName,
-		CustomerID:           row.CustomerID,
-		CustomerName:         row.CustomerName,
-		CustomerNumber:       row.CustomerNumber,
-		LineCount:            safeconv.Int64ToInt32(row.LineCount),
 		IsAcknowledgmentSent: row.IsAcknowledgmentSent,
+		BillingAddressID:     row.BillingAddressID,
+		ShippingAddressID:    row.ShippingAddressID,
 		PriorityCode:         constants.PriorityCode(row.PriorityCode),
-		PriorityName:         row.PriorityName,
+		SalesOrderStatusCode: row.SalesOrderStatusCode,
+		SalesOrderTypeCode:   row.SalesOrderTypeCode,
+		BuyerAccountID:       row.BuyerAccountID,
+		SellerAccountID:      row.SellerAccountID,
+		OwnerAccountID:       row.OwnerAccountID,
 		CreatedAt:            row.CreatedAt,
 		UpdatedAt:            row.UpdatedAt,
+		CustomerName:         row.CustomerName,
+		CustomerNumber:       row.CustomerNumber,
+		StatusName:           row.StatusName,
+		TypeName:             row.TypeName,
+		PriorityName:         row.PriorityName,
+		LineCount:            safeconv.Int64ToInt32(row.LineCount),
 	}
-	s.CustomerPONumber = nullStringToPtr(row.CustomerPoNumber)
-	s.PriorityID = &row.PriorityID
-	s.CustomerStatusCode = nullStringToPtr(row.CustomerStatusCode)
-	s.CustomerCommissionPolicy = nullStringToPtr(row.CustomerCommissionPolicy)
+
+	so.CustomerPONumber = nullStringToPtr(row.CustomerPoNumber)
+	so.Note = nullStringToPtr(row.Note)
+	so.CarrierID = nullStringToPtr(row.CarrierID)
+	so.ServiceLevelID = nullStringToPtr(row.CarrierOptionID)
+	so.CarrierBillingType = nullStringToPtr(row.CarrierBillingType)
+	so.CarrierBillingAccount = nullStringToPtr(row.CarrierBillingAccount)
+	so.SalesRepID = nullStringToPtr(row.SalesRepID)
+	so.ShippingTermID = nullStringToPtr(row.ShippingTermID)
+	so.PaymentTermID = nullStringToPtr(row.PaymentTermID)
+	so.ProductionRunID = nullStringToPtr(row.ProductionRunID)
+	so.OrderDiscountID = nullStringToPtr(row.OrderDiscountID)
+
 	if row.IssuedAt.Valid {
-		s.IssuedAt = &row.IssuedAt.Time
+		so.IssuedAt = &row.IssuedAt.Time
 	}
 	if row.CompletedAt.Valid {
-		s.CompletedAt = &row.CompletedAt.Time
+		so.CompletedAt = &row.CompletedAt.Time
 	}
-	return s
+	if row.FirstShipAt.Valid {
+		so.FirstShipAt = &row.FirstShipAt.Time
+	}
+	if row.ExpiredAt.Valid {
+		so.ExpiredAt = &row.ExpiredAt.Time
+	}
+	if row.PromisedAt.Valid {
+		so.PromisedAt = &row.PromisedAt.Time
+	}
+
+	so.BillToName = nullStringToPtr(row.BillToName)
+	so.BillToIsDropShip = nullBoolPtr(row.BillToIsDropShip)
+	so.BillToGeolocationID = nullStringToPtr(row.BillToGeolocationID)
+	so.BillToStreetLine1 = nullStringToPtr(row.BillToStreetLine1)
+	so.BillToStreetLine2 = nullStringToPtr(row.BillToStreetLine2)
+	so.BillToLocality = nullStringToPtr(row.BillToLocality)
+	so.BillToState = nullStringToPtr(row.BillToState)
+	so.BillToPostalCode = nullStringToPtr(row.BillToPostalCode)
+	so.BillToCountry = nullStringToPtr(row.BillToCountry)
+	so.BillToPhone = nullStringToPtr(row.BillToPhone)
+	so.BillToEmail = nullStringToPtr(row.BillToEmail)
+	so.BillToCreatedAt = nullTimePtr(row.BillToCreatedAt)
+	so.BillToUpdatedAt = nullTimePtr(row.BillToUpdatedAt)
+	so.ShipToName = nullStringToPtr(row.ShipToName)
+	so.ShipToIsDropShip = nullBoolPtr(row.ShipToIsDropShip)
+	so.ShipToGeolocationID = nullStringToPtr(row.ShipToGeolocationID)
+	so.ShipToStreetLine1 = nullStringToPtr(row.ShipToStreetLine1)
+	so.ShipToStreetLine2 = nullStringToPtr(row.ShipToStreetLine2)
+	so.ShipToLocality = nullStringToPtr(row.ShipToLocality)
+	so.ShipToState = nullStringToPtr(row.ShipToState)
+	so.ShipToPostalCode = nullStringToPtr(row.ShipToPostalCode)
+	so.ShipToCountry = nullStringToPtr(row.ShipToCountry)
+	so.ShipToPhone = nullStringToPtr(row.ShipToPhone)
+	so.ShipToEmail = nullStringToPtr(row.ShipToEmail)
+	so.ShipToCreatedAt = nullTimePtr(row.ShipToCreatedAt)
+	so.ShipToUpdatedAt = nullTimePtr(row.ShipToUpdatedAt)
+
+	so.CustomerCreatedAt = &row.CustomerCreatedAt
+	so.CustomerUpdatedAt = &row.CustomerUpdatedAt
+
+	so.CarrierName = nullStringToPtr(row.CarrierName)
+	so.CarrierIsPortalEnabled = nullBoolPtr(row.CarrierIsPortalEnabled)
+	so.CarrierCreatedAt = nullTimePtr(row.CarrierCreatedAt)
+	so.CarrierUpdatedAt = nullTimePtr(row.CarrierUpdatedAt)
+	so.ServiceLevelName = nullStringToPtr(row.CarrierOptionName)
+	so.ServiceLevelIsPortalEnabled = nullBoolPtr(row.ServiceLevelIsPortalEnabled)
+	so.ServiceLevelToken = nullStringToPtr(row.ServiceLevelToken)
+	so.ServiceLevelCreatedAt = nullTimePtr(row.ServiceLevelCreatedAt)
+	so.ServiceLevelUpdatedAt = nullTimePtr(row.ServiceLevelUpdatedAt)
+	so.SalesRepName = nullStringToPtr(row.SalesRepName)
+	so.PaymentTermName = nullStringToPtr(row.PaymentTermName)
+	so.PaymentTermIsActive = nullBoolPtr(row.PaymentTermIsActive)
+	so.PaymentTermCreatedAt = nullTimePtr(row.PaymentTermCreatedAt)
+	so.PaymentTermUpdatedAt = nullTimePtr(row.PaymentTermUpdatedAt)
+	so.ShippingTermName = nullStringToPtr(row.ShippingTermName)
+	so.ShippingTermIsFreightExempt = nullBoolPtr(row.ShippingTermIsFreightExempt)
+	so.ShippingTermIsCarrierRate = nullBoolPtr(row.ShippingTermIsCarrierRate)
+	so.ShippingTermCreatedAt = nullTimePtr(row.ShippingTermCreatedAt)
+	so.ShippingTermUpdatedAt = nullTimePtr(row.ShippingTermUpdatedAt)
+	so.OrderDiscountName = nullStringToPtr(row.OrderDiscountName)
+	so.OrderDiscountCode = nullStringToPtr(row.OrderDiscountCode)
+	if row.OrderDiscountPercentage.Valid {
+		s := strconv.FormatFloat(row.OrderDiscountPercentage.Float64, 'f', -1, 64)
+		so.OrderDiscountPercentage = &s
+	}
+	if row.OrderDiscountAmount.Valid {
+		s := strconv.FormatFloat(row.OrderDiscountAmount.Float64, 'f', -1, 64)
+		so.OrderDiscountAmount = &s
+	}
+	so.OrderDiscountDiscountType = nullStringToPtr(row.OrderDiscountDiscountType)
+	if row.OrderDiscountID.Valid {
+		cnt := safeconv.Int64ToInt32(row.OrderDiscountOrderCount)
+		so.OrderDiscountOrderCount = &cnt
+	}
+	so.OrderDiscountCreatedAt = nullTimePtr(row.OrderDiscountCreatedAt)
+	so.OrderDiscountUpdatedAt = nullTimePtr(row.OrderDiscountUpdatedAt)
+	so.PickID = nullStringToPtr(row.PickID)
+	so.PriorityID = &row.PriorityID
+	so.CustomerStatusCode = nullStringToPtr(row.CustomerStatusCode)
+	so.CustomerCommissionPolicy = nullStringToPtr(row.CustomerCommissionPolicy)
+
+	return so
+}
+
+func mapForwardSalesOrderRow(row sqlc.ListSalesOrdersForwardRow) *domain.SalesOrder {
+	return mapListSalesOrderRow(listSalesOrderRow{
+		ID:                          row.ID,
+		Number:                      row.Number,
+		CustomerPoNumber:            row.CustomerPoNumber,
+		Note:                        row.Note,
+		IsAcknowledgmentSent:        row.IsAcknowledgmentSent,
+		BillingAddressID:            row.BillingAddressID,
+		ShippingAddressID:           row.ShippingAddressID,
+		CarrierID:                   row.CarrierID,
+		CarrierOptionID:             row.CarrierOptionID,
+		CarrierBillingType:          row.CarrierBillingType,
+		CarrierBillingAccount:       row.CarrierBillingAccount,
+		PriorityCode:                row.PriorityCode,
+		SalesRepID:                  row.SalesRepID,
+		ShippingTermID:              row.ShippingTermID,
+		SalesOrderStatusCode:        row.SalesOrderStatusCode,
+		SalesOrderTypeCode:          row.SalesOrderTypeCode,
+		PaymentTermID:               row.PaymentTermID,
+		ProductionRunID:             row.ProductionRunID,
+		OrderDiscountID:             row.OrderDiscountID,
+		BuyerAccountID:              row.BuyerAccountID,
+		SellerAccountID:             row.SellerAccountID,
+		OwnerAccountID:              row.OwnerAccountID,
+		IssuedAt:                    row.IssuedAt,
+		CompletedAt:                 row.CompletedAt,
+		FirstShipAt:                 row.FirstShipAt,
+		ExpiredAt:                   row.ExpiredAt,
+		PromisedAt:                  row.PromisedAt,
+		CreatedAt:                   row.CreatedAt,
+		UpdatedAt:                   row.UpdatedAt,
+		CustomerName:                row.CustomerName,
+		CustomerNumber:              row.CustomerNumber,
+		CustomerStatusCode:          row.CustomerStatusCode,
+		CustomerCommissionPolicy:    row.CustomerCommissionPolicy,
+		CustomerCreatedAt:           row.CustomerCreatedAt,
+		CustomerUpdatedAt:           row.CustomerUpdatedAt,
+		StatusName:                  row.StatusName,
+		TypeName:                    row.TypeName,
+		PriorityName:                row.PriorityName,
+		PriorityID:                  row.PriorityID,
+		BillToName:                  row.BillToName,
+		BillToIsDropShip:            row.BillToIsDropShip,
+		BillToGeolocationID:         row.BillToGeolocationID,
+		BillToStreetLine1:           row.BillToStreetLine1,
+		BillToStreetLine2:           row.BillToStreetLine2,
+		BillToLocality:              row.BillToLocality,
+		BillToState:                 row.BillToState,
+		BillToPostalCode:            row.BillToPostalCode,
+		BillToCountry:               row.BillToCountry,
+		BillToPhone:                 row.BillToPhone,
+		BillToEmail:                 row.BillToEmail,
+		BillToCreatedAt:             row.BillToCreatedAt,
+		BillToUpdatedAt:             row.BillToUpdatedAt,
+		ShipToName:                  row.ShipToName,
+		ShipToIsDropShip:            row.ShipToIsDropShip,
+		ShipToGeolocationID:         row.ShipToGeolocationID,
+		ShipToStreetLine1:           row.ShipToStreetLine1,
+		ShipToStreetLine2:           row.ShipToStreetLine2,
+		ShipToLocality:              row.ShipToLocality,
+		ShipToState:                 row.ShipToState,
+		ShipToPostalCode:            row.ShipToPostalCode,
+		ShipToCountry:               row.ShipToCountry,
+		ShipToPhone:                 row.ShipToPhone,
+		ShipToEmail:                 row.ShipToEmail,
+		ShipToCreatedAt:             row.ShipToCreatedAt,
+		ShipToUpdatedAt:             row.ShipToUpdatedAt,
+		CarrierName:                 row.CarrierName,
+		CarrierIsPortalEnabled:      row.CarrierIsPortalEnabled,
+		CarrierCreatedAt:            row.CarrierCreatedAt,
+		CarrierUpdatedAt:            row.CarrierUpdatedAt,
+		CarrierOptionName:           row.CarrierOptionName,
+		ServiceLevelIsPortalEnabled: row.ServiceLevelIsPortalEnabled,
+		ServiceLevelToken:           row.ServiceLevelToken,
+		ServiceLevelCreatedAt:       row.ServiceLevelCreatedAt,
+		ServiceLevelUpdatedAt:       row.ServiceLevelUpdatedAt,
+		SalesRepName:                row.SalesRepName,
+		PaymentTermName:             row.PaymentTermName,
+		PaymentTermIsActive:         row.PaymentTermIsActive,
+		PaymentTermCreatedAt:        row.PaymentTermCreatedAt,
+		PaymentTermUpdatedAt:        row.PaymentTermUpdatedAt,
+		ShippingTermName:            row.ShippingTermName,
+		ShippingTermIsFreightExempt: row.ShippingTermIsFreightExempt,
+		ShippingTermIsCarrierRate:   row.ShippingTermIsCarrierRate,
+		ShippingTermCreatedAt:       row.ShippingTermCreatedAt,
+		ShippingTermUpdatedAt:       row.ShippingTermUpdatedAt,
+		OrderDiscountName:           row.OrderDiscountName,
+		OrderDiscountCode:           row.OrderDiscountCode,
+		OrderDiscountPercentage:     row.OrderDiscountPercentage,
+		OrderDiscountAmount:         row.OrderDiscountAmount,
+		OrderDiscountDiscountType:   row.OrderDiscountDiscountType,
+		OrderDiscountOrderCount:     row.OrderDiscountOrderCount,
+		OrderDiscountCreatedAt:      row.OrderDiscountCreatedAt,
+		OrderDiscountUpdatedAt:      row.OrderDiscountUpdatedAt,
+		PickID:                      row.PickID,
+		LineCount:                   row.LineCount,
+	})
+}
+
+func mapBackwardSalesOrderRow(row sqlc.ListSalesOrdersBackwardRow) *domain.SalesOrder {
+	return mapListSalesOrderRow(listSalesOrderRow{
+		ID:                          row.ID,
+		Number:                      row.Number,
+		CustomerPoNumber:            row.CustomerPoNumber,
+		Note:                        row.Note,
+		IsAcknowledgmentSent:        row.IsAcknowledgmentSent,
+		BillingAddressID:            row.BillingAddressID,
+		ShippingAddressID:           row.ShippingAddressID,
+		CarrierID:                   row.CarrierID,
+		CarrierOptionID:             row.CarrierOptionID,
+		CarrierBillingType:          row.CarrierBillingType,
+		CarrierBillingAccount:       row.CarrierBillingAccount,
+		PriorityCode:                row.PriorityCode,
+		SalesRepID:                  row.SalesRepID,
+		ShippingTermID:              row.ShippingTermID,
+		SalesOrderStatusCode:        row.SalesOrderStatusCode,
+		SalesOrderTypeCode:          row.SalesOrderTypeCode,
+		PaymentTermID:               row.PaymentTermID,
+		ProductionRunID:             row.ProductionRunID,
+		OrderDiscountID:             row.OrderDiscountID,
+		BuyerAccountID:              row.BuyerAccountID,
+		SellerAccountID:             row.SellerAccountID,
+		OwnerAccountID:              row.OwnerAccountID,
+		IssuedAt:                    row.IssuedAt,
+		CompletedAt:                 row.CompletedAt,
+		FirstShipAt:                 row.FirstShipAt,
+		ExpiredAt:                   row.ExpiredAt,
+		PromisedAt:                  row.PromisedAt,
+		CreatedAt:                   row.CreatedAt,
+		UpdatedAt:                   row.UpdatedAt,
+		CustomerName:                row.CustomerName,
+		CustomerNumber:              row.CustomerNumber,
+		CustomerStatusCode:          row.CustomerStatusCode,
+		CustomerCommissionPolicy:    row.CustomerCommissionPolicy,
+		CustomerCreatedAt:           row.CustomerCreatedAt,
+		CustomerUpdatedAt:           row.CustomerUpdatedAt,
+		StatusName:                  row.StatusName,
+		TypeName:                    row.TypeName,
+		PriorityName:                row.PriorityName,
+		PriorityID:                  row.PriorityID,
+		BillToName:                  row.BillToName,
+		BillToIsDropShip:            row.BillToIsDropShip,
+		BillToGeolocationID:         row.BillToGeolocationID,
+		BillToStreetLine1:           row.BillToStreetLine1,
+		BillToStreetLine2:           row.BillToStreetLine2,
+		BillToLocality:              row.BillToLocality,
+		BillToState:                 row.BillToState,
+		BillToPostalCode:            row.BillToPostalCode,
+		BillToCountry:               row.BillToCountry,
+		BillToPhone:                 row.BillToPhone,
+		BillToEmail:                 row.BillToEmail,
+		BillToCreatedAt:             row.BillToCreatedAt,
+		BillToUpdatedAt:             row.BillToUpdatedAt,
+		ShipToName:                  row.ShipToName,
+		ShipToIsDropShip:            row.ShipToIsDropShip,
+		ShipToGeolocationID:         row.ShipToGeolocationID,
+		ShipToStreetLine1:           row.ShipToStreetLine1,
+		ShipToStreetLine2:           row.ShipToStreetLine2,
+		ShipToLocality:              row.ShipToLocality,
+		ShipToState:                 row.ShipToState,
+		ShipToPostalCode:            row.ShipToPostalCode,
+		ShipToCountry:               row.ShipToCountry,
+		ShipToPhone:                 row.ShipToPhone,
+		ShipToEmail:                 row.ShipToEmail,
+		ShipToCreatedAt:             row.ShipToCreatedAt,
+		ShipToUpdatedAt:             row.ShipToUpdatedAt,
+		CarrierName:                 row.CarrierName,
+		CarrierIsPortalEnabled:      row.CarrierIsPortalEnabled,
+		CarrierCreatedAt:            row.CarrierCreatedAt,
+		CarrierUpdatedAt:            row.CarrierUpdatedAt,
+		CarrierOptionName:           row.CarrierOptionName,
+		ServiceLevelIsPortalEnabled: row.ServiceLevelIsPortalEnabled,
+		ServiceLevelToken:           row.ServiceLevelToken,
+		ServiceLevelCreatedAt:       row.ServiceLevelCreatedAt,
+		ServiceLevelUpdatedAt:       row.ServiceLevelUpdatedAt,
+		SalesRepName:                row.SalesRepName,
+		PaymentTermName:             row.PaymentTermName,
+		PaymentTermIsActive:         row.PaymentTermIsActive,
+		PaymentTermCreatedAt:        row.PaymentTermCreatedAt,
+		PaymentTermUpdatedAt:        row.PaymentTermUpdatedAt,
+		ShippingTermName:            row.ShippingTermName,
+		ShippingTermIsFreightExempt: row.ShippingTermIsFreightExempt,
+		ShippingTermIsCarrierRate:   row.ShippingTermIsCarrierRate,
+		ShippingTermCreatedAt:       row.ShippingTermCreatedAt,
+		ShippingTermUpdatedAt:       row.ShippingTermUpdatedAt,
+		OrderDiscountName:           row.OrderDiscountName,
+		OrderDiscountCode:           row.OrderDiscountCode,
+		OrderDiscountPercentage:     row.OrderDiscountPercentage,
+		OrderDiscountAmount:         row.OrderDiscountAmount,
+		OrderDiscountDiscountType:   row.OrderDiscountDiscountType,
+		OrderDiscountOrderCount:     row.OrderDiscountOrderCount,
+		OrderDiscountCreatedAt:      row.OrderDiscountCreatedAt,
+		OrderDiscountUpdatedAt:      row.OrderDiscountUpdatedAt,
+		PickID:                      row.PickID,
+		LineCount:                   row.LineCount,
+	})
 }
 
 func (r *salesOrderRepoImpl) CheckPaymentStatus(ctx context.Context, salesOrderID string) (bool, *apierror.APIError) {

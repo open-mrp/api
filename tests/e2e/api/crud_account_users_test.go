@@ -110,7 +110,7 @@ func TestAccountUsers_ListSearchByName(t *testing.T) {
 	requireStatus(t, 200, getStatus, getBody)
 	name := jsonField(parseJSON(getBody), "name")
 	if name == "" {
-		t.Skip("Seeded account user has no name set")
+		t.Fatal("Seeded account user has no name set")
 	}
 
 	list, _, err := apiClient.GetList(accountUsersPath, url.Values{"q": {name}})

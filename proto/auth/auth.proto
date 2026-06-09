@@ -252,6 +252,10 @@ message RotateAPIKeyRequest {
   // If not set, the new key inherits the old key's expiration.
   optional google.protobuf.Timestamp expires_at = 2;
   repeated string includes = 3;
+  // When to revoke the old key. If not set (or in the past), the old key is
+  // revoked immediately. A future value schedules revocation (max 30 days out),
+  // keeping the old key valid until then.
+  optional google.protobuf.Timestamp revoke_at = 4;
 }
 
 message RotateAPIKeyResponse {

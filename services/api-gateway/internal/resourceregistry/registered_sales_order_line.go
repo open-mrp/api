@@ -15,9 +15,15 @@ func init() {
 		Load:       stubLoadSalesOrderLines,
 		Subs: []resourcekit.SubField{
 			{
+				// Load the product via LoadProducts (rather than recursing into the
+				// prebuilt stub) so the product's item_id/product_line_id meta is
+				// stashed and nested includes (lines.product.item /
+				// lines.product.product_line) resolve.
 				Key:         "product",
 				Target:      constants.ObjectTypeProduct,
-				ExtractRefs: extractProductRefsFromSOLine,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractIDs:  extractProductIDFromSOLine,
+				Populate:    populateProductOnSOLine,
 			},
 			{Key: "quantity_ordered", Populate: populateQuantityOrderedOnSOLine},
 			{Key: "unit_price", Populate: populateUnitPriceOnSOLine},
@@ -67,10 +73,20 @@ func stubLoadSalesOrderLines(_ context.Context, _ []string) (map[string]any, *ap
 	return nil, nil
 }
 
-func extractProductRefsFromSOLine(_ context.Context, parent any) []any {
+func extractProductIDFromSOLine(_ context.Context, parent any) []string {
 	l := parent.(*apiresource.SalesOrderLine)
-	if l.Product == nil {
+	if l.Product == nil || l.Product.ID == "" {
 		return nil
 	}
-	return []any{l.Product}
+	return []string{l.Product.ID}
+}
+
+func populateProductOnSOLine(_ context.Context, parent any, loaded map[string]any) {
+	l := parent.(*apiresource.SalesOrderLine)
+	if l.Product == nil {
+		return
+	}
+	if v, ok := loaded[l.Product.ID]; ok {
+		l.Product = v.(*apiresource.Product)
+	}
 }

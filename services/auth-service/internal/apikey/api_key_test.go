@@ -291,6 +291,60 @@ func TestToProto_OptionalTimestamps(t *testing.T) {
 	}
 }
 
+func TestAPIKey_IsRevoked(t *testing.T) {
+	t.Parallel()
+	now := time.Now().UTC()
+	past := now.Add(-time.Hour)
+	future := now.Add(time.Hour)
+
+	cases := []struct {
+		name      string
+		revokedAt *time.Time
+		want      bool
+	}{
+		{"nil revoked_at is not revoked", nil, false},
+		{"past revoked_at is revoked", &past, true},
+		{"future revoked_at is scheduled, not yet revoked", &future, false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			key := &APIKey{RevokedAt: tc.revokedAt}
+			if got := key.IsRevoked(); got != tc.want {
+				t.Errorf("IsRevoked() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestAPIKey_IsExpired(t *testing.T) {
+	t.Parallel()
+	now := time.Now().UTC()
+	past := now.Add(-time.Hour)
+	future := now.Add(time.Hour)
+
+	cases := []struct {
+		name      string
+		expiresAt *time.Time
+		want      bool
+	}{
+		{"nil expires_at is not expired", nil, false},
+		{"past expires_at is expired", &past, true},
+		{"future expires_at is not expired", &future, false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			key := &APIKey{ExpiresAt: tc.expiresAt}
+			if got := key.IsExpired(); got != tc.want {
+				t.Errorf("IsExpired() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestParsedAPIKey_RedactedValue(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

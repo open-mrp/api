@@ -409,6 +409,7 @@ SELECT
     so.number AS purchase_order_number,
     a.id AS supplier_id,
     a.name AS supplier_name,
+    ar.external_number AS supplier_number,
     so.note
 FROM receiving_order ro
 JOIN sales_order so ON ro.order_id = so.id
@@ -433,6 +434,7 @@ type GetReceivingOrderByIDRow struct {
 	PurchaseOrderNumber string
 	SupplierID          sql.NullString
 	SupplierName        sql.NullString
+	SupplierNumber      sql.NullString
 	Note                sql.NullString
 }
 
@@ -449,6 +451,7 @@ func (q *Queries) GetReceivingOrderByID(ctx context.Context, arg GetReceivingOrd
 		&i.PurchaseOrderNumber,
 		&i.SupplierID,
 		&i.SupplierName,
+		&i.SupplierNumber,
 		&i.Note,
 	)
 	return i, err
@@ -479,6 +482,7 @@ SELECT
     qu.abbreviation AS quantity_unit_abbreviation,
     sol.id AS order_line_id,
     sol.item_id AS order_line_item_id,
+    sol.product_id AS order_line_product_id,
     i.sku AS order_line_item_sku,
     i.description AS order_line_item_description,
     oq.value AS order_line_quantity_ordered,
@@ -506,6 +510,7 @@ type GetReceivingOrderLineRow struct {
 	QuantityUnitAbbreviation  string
 	OrderLineID               string
 	OrderLineItemID           sql.NullString
+	OrderLineProductID        sql.NullString
 	OrderLineItemSku          sql.NullString
 	OrderLineItemDescription  sql.NullString
 	OrderLineQuantityOrdered  string
@@ -528,6 +533,7 @@ func (q *Queries) GetReceivingOrderLine(ctx context.Context, lineID string) (Get
 		&i.QuantityUnitAbbreviation,
 		&i.OrderLineID,
 		&i.OrderLineItemID,
+		&i.OrderLineProductID,
 		&i.OrderLineItemSku,
 		&i.OrderLineItemDescription,
 		&i.OrderLineQuantityOrdered,
@@ -769,6 +775,7 @@ SELECT
     qu.abbreviation AS quantity_unit_abbreviation,
     sol.id AS order_line_id,
     sol.item_id AS order_line_item_id,
+    sol.product_id AS order_line_product_id,
     i.sku AS order_line_item_sku,
     i.description AS order_line_item_description,
     oq.value AS order_line_quantity_ordered,
@@ -797,6 +804,7 @@ type ListReceivingOrderLinesByOrderIDRow struct {
 	QuantityUnitAbbreviation  string
 	OrderLineID               string
 	OrderLineItemID           sql.NullString
+	OrderLineProductID        sql.NullString
 	OrderLineItemSku          sql.NullString
 	OrderLineItemDescription  sql.NullString
 	OrderLineQuantityOrdered  string
@@ -825,6 +833,7 @@ func (q *Queries) ListReceivingOrderLinesByOrderID(ctx context.Context, receivin
 			&i.QuantityUnitAbbreviation,
 			&i.OrderLineID,
 			&i.OrderLineItemID,
+			&i.OrderLineProductID,
 			&i.OrderLineItemSku,
 			&i.OrderLineItemDescription,
 			&i.OrderLineQuantityOrdered,
@@ -856,6 +865,7 @@ SELECT
     so.number AS purchase_order_number,
     a.id AS supplier_id,
     a.name AS supplier_name,
+    ar.external_number AS supplier_number,
     COUNT(rol.id) AS line_count,
     CASE
         WHEN COUNT(rol.id) = 0 THEN 0
@@ -902,7 +912,7 @@ AND (
     ro.created_at > ?
     OR (ro.created_at = ? AND ro.id > ?)
 )
-GROUP BY ro.id, ro.number, ro.completed_at, ro.created_at, ro.updated_at, so.id, so.number, a.id, a.name
+GROUP BY ro.id, ro.number, ro.completed_at, ro.created_at, ro.updated_at, so.id, so.number, a.id, a.name, ar.external_number
 ORDER BY ro.created_at ASC, ro.id ASC
 LIMIT ?
 `
@@ -932,6 +942,7 @@ type ListReceivingOrdersBackwardRow struct {
 	PurchaseOrderNumber  string
 	SupplierID           sql.NullString
 	SupplierName         sql.NullString
+	SupplierNumber       sql.NullString
 	LineCount            int64
 	CompletionPercentage interface{}
 }
@@ -990,6 +1001,7 @@ func (q *Queries) ListReceivingOrdersBackward(ctx context.Context, arg ListRecei
 			&i.PurchaseOrderNumber,
 			&i.SupplierID,
 			&i.SupplierName,
+			&i.SupplierNumber,
 			&i.LineCount,
 			&i.CompletionPercentage,
 		); err != nil {
@@ -1017,6 +1029,7 @@ SELECT
     so.number AS purchase_order_number,
     a.id AS supplier_id,
     a.name AS supplier_name,
+    ar.external_number AS supplier_number,
     COUNT(rol.id) AS line_count,
     CASE
         WHEN COUNT(rol.id) = 0 THEN 0
@@ -1064,7 +1077,7 @@ AND (
     OR ro.created_at < ?
     OR (ro.created_at = ? AND ro.id < ?)
 )
-GROUP BY ro.id, ro.number, ro.completed_at, ro.created_at, ro.updated_at, so.id, so.number, a.id, a.name
+GROUP BY ro.id, ro.number, ro.completed_at, ro.created_at, ro.updated_at, so.id, so.number, a.id, a.name, ar.external_number
 ORDER BY ro.created_at DESC, ro.id DESC
 LIMIT ?
 `
@@ -1094,6 +1107,7 @@ type ListReceivingOrdersForwardRow struct {
 	PurchaseOrderNumber  string
 	SupplierID           sql.NullString
 	SupplierName         sql.NullString
+	SupplierNumber       sql.NullString
 	LineCount            int64
 	CompletionPercentage interface{}
 }
@@ -1153,6 +1167,7 @@ func (q *Queries) ListReceivingOrdersForward(ctx context.Context, arg ListReceiv
 			&i.PurchaseOrderNumber,
 			&i.SupplierID,
 			&i.SupplierName,
+			&i.SupplierNumber,
 			&i.LineCount,
 			&i.CompletionPercentage,
 		); err != nil {

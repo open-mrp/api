@@ -3,6 +3,9 @@ package validate
 import (
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/augno/api/shared/field"
 )
 
 type passwordTestStruct struct {
@@ -458,6 +461,51 @@ func TestValidateCustomEmailTagWithRequired(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+type maxDaysAheadTestStruct struct {
+	RevokeAt field.Optional[time.Time] `json:"revoke_at,omitzero" validate:"omitempty,max_days_ahead=30"`
+}
+
+func TestValidateMaxDaysAheadTag(t *testing.T) {
+	t.Parallel()
+	now := time.Now()
+	tests := []struct {
+		name     string
+		value    field.Optional[time.Time]
+		hasError bool
+	}{
+		{name: "unset passes", value: field.Optional[time.Time]{}, hasError: false},
+		{name: "now passes", value: field.Some(now), hasError: false},
+		{name: "within window passes", value: field.Some(now.Add(29 * 24 * time.Hour)), hasError: false},
+		{name: "past passes (collapses to immediate)", value: field.Some(now.Add(-48 * time.Hour)), hasError: false},
+		{name: "beyond 30 days fails", value: field.Some(now.Add(31 * 24 * time.Hour)), hasError: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			err := Validate(&maxDaysAheadTestStruct{RevokeAt: tt.value})
+			if tt.hasError && err == nil {
+				t.Errorf("expected validation to fail, got nil")
+			}
+			if !tt.hasError && err != nil {
+				t.Errorf("expected validation to pass, got: %v", err)
+			}
+		})
+	}
+}
+
+func TestValidateMaxDaysAheadErrorMessage(t *testing.T) {
+	t.Parallel()
+	req := &maxDaysAheadTestStruct{RevokeAt: field.Some(time.Now().Add(60 * 24 * time.Hour))}
+	err := Validate(req)
+	if err == nil {
+		t.Fatal("expected validation to fail")
+	}
+	expected := "must be no more than 30 days in the future"
+	if !strings.Contains(err.PublicMessage, expected) {
+		t.Errorf("expected message to contain '%s', got: %s", expected, err.PublicMessage)
 	}
 }
 

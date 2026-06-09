@@ -246,7 +246,7 @@ func (suite *SalesOrderSvcTestSuite) TestListSalesOrders_InternalActor() {
 		DoAndReturn(func(_ context.Context, params domain.ListSalesOrdersParams) (*domain.ListSalesOrdersResult, *apierror.APIError) {
 			suite.Equal("ac_test", params.AccountID)
 			suite.Nil(params.BuyerAccountID, "internal actor must not be scoped to a buyer")
-			return &domain.ListSalesOrdersResult{SalesOrders: []*domain.SalesOrderSummary{{ID: "or_1"}}}, nil
+			return &domain.ListSalesOrdersResult{SalesOrders: []*domain.SalesOrder{{ID: "or_1"}}}, nil
 		}).
 		Times(1)
 

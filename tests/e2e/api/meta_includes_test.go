@@ -18,12 +18,9 @@ import (
 //
 // The test is data-driven off the OpenAPI spec, so new includes are
 // automatically covered as soon as they're added to an endpoint's
-// IncludeConfig.
-//
-// For an (operationID, include) pair that cannot yet satisfy the populated-
-// data assertion (seed data truly has no nested resource, or nested data is
-// not expected on the seeded parent), add an entry to includesOptOut with the
-// reason. Every opt-out is a TODO to backfill seed data.
+// IncludeConfig. Every declared include must populate against the seed data —
+// there is no opt-out/skip mechanism: a gap is a failure to fix (seed data or
+// backend), not something to skip.
 func TestIncludes_PopulateNestedResources(t *testing.T) {
 	t.Parallel()
 
@@ -44,11 +41,6 @@ func TestIncludes_PopulateNestedResources(t *testing.T) {
 				t.Run(include, func(t *testing.T) {
 					t.Parallel()
 
-					if reason, skip := includesOptOut[optOutKey(ep.OperationID, include)]; skip {
-						t.Skipf("opt-out: %s", reason)
-						return
-					}
-
 					status, body, err := apiClient.GetListRaw(path, withIncludeQuery(query, include))
 					require.NoError(t, err, "GET %s?include=%s failed", path, include)
 					requireStatus(t, 200, status, body)
@@ -61,33 +53,6 @@ func TestIncludes_PopulateNestedResources(t *testing.T) {
 			}
 		})
 	}
-}
-
-// optOutKey formats an opt-out map key.
-func optOutKey(operationID, include string) string {
-	return operationID + "::" + include
-}
-
-// includesOptOut lists (operationID, include) pairs whose populated-data
-// assertion is knowingly skipped. Each entry is a TODO to either backfill
-// seed data or fix a backend bug. The goal is an empty map — every opt-out
-// is tech debt. Reasons are tagged:
-//
-//	seed-gap: nested resource isn't in the seed data; add it.
-//	bug:      backend doesn't attach the nested resource when requested.
-//	schema:   the relationship isn't representable in the current schema.
-var includesOptOut = map[string]string{
-	"retrieve-settlement::responsible_user":   "bug: settlement stores user ID not account_user ID; loader cannot resolve",
-	"retrieve-sales-order::related.shipments": "bug: SalesOrderInfo proto does not expose linked shipment ids yet; needs backend wiring",
-	// The supplier is the seller account (cross-account); LoadAccounts is scoped to
-	// the caller's account so it cannot be loaded. Fix: carry the supplier inline on
-	// ReceivingOrderInfo as a *Supplier (mirror PurchaseOrder), not via LoadAccounts.
-	"retrieve-receiving-order::supplier": "bug: cross-account supplier not loadable via LoadAccounts; carry inline like PurchaseOrder",
-	"list-receiving-orders::supplier":    "bug: cross-account supplier not loadable via LoadAccounts; carry inline like PurchaseOrder",
-	// The shipping_address belongs to the customer account (cross-account); LoadAddresses
-	// is scoped to the caller's account. Fix: carry full shipping-address detail inline on
-	// ShipmentInfo (mirror SalesOrder bill_to/ship_to addresses).
-	"retrieve-shipment::shipping_address": "bug: cross-account shipping address not loadable via LoadAddresses; carry inline like SalesOrder addresses",
 }
 
 // assertIncludePopulated navigates the response to the JSON path described by
@@ -562,99 +527,6 @@ func extractRootObjectTyped(root map[string]any, wantObject string) []map[string
 	return nil
 }
 
-func splitOptOutKey(key string) (operationID, include string, ok bool) {
-	parts := strings.SplitN(key, "::", 2)
-	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-		return "", "", false
-	}
-	return parts[0], parts[1], true
-}
-
-func isTaggedOptOutReason(reason string) bool {
-	for _, prefix := range []string{"seed-gap:", "bug:", "schema:"} {
-		if strings.HasPrefix(reason, prefix) {
-			return true
-		}
-	}
-	return false
-}
-
-func lookupIncludeGetEndpoint(endpoints []IncludeGetEndpoint, operationID string) (IncludeGetEndpoint, bool) {
-	for _, ep := range endpoints {
-		if ep.OperationID == operationID {
-			return ep, true
-		}
-	}
-	return IncludeGetEndpoint{}, false
-}
-
-func lookupIncludePutEndpoint(endpoints []IncludePutEndpoint, operationID string) (IncludePutEndpoint, bool) {
-	for _, ep := range endpoints {
-		if ep.OperationID == operationID {
-			return ep, true
-		}
-	}
-	return IncludePutEndpoint{}, false
-}
-
-func endpointDeclaresInclude(includes []string, include string) bool {
-	for _, candidate := range includes {
-		if candidate == include {
-			return true
-		}
-	}
-	return false
-}
-
-func executeIncludeOptOutProbe(t *testing.T, operationID, include string) bool {
-	t.Helper()
-
-	getEndpoints, err := loadIncludeGetEndpoints()
-	require.NoError(t, err, "load include-supporting GET endpoints")
-
-	if ep, ok := lookupIncludeGetEndpoint(getEndpoints, operationID); ok {
-		path, query, resolved := resolveGetScenario(ep)
-		require.True(t, resolved, "resolveGetScenario(%s) operationId=%s", ep.Path, ep.OperationID)
-		status, body, err := apiClient.GetListRaw(path, withIncludeQuery(query, include))
-		require.NoError(t, err, "GET %s?include=%s failed", path, include)
-		if status != 200 {
-			return false
-		}
-		got := parseJSON(body)
-		require.NotNil(t, got, "response should be valid JSON")
-		return checkIncludePopulated(got, include) == nil
-	}
-
-	putEndpoints, err := loadIncludePutEndpoints()
-	require.NoError(t, err, "load include-supporting PUT endpoints")
-
-	if ep, ok := lookupIncludePutEndpoint(putEndpoints, operationID); ok {
-		scenario, hasScenario := includesPutScenarioByOperationID[ep.OperationID]
-		require.True(t, hasScenario, "register includesPutScenarioByOperationID[%q]", ep.OperationID)
-		path, resolved := resolvePutScenarioPath(ep, scenario.pathValues)
-		require.True(t, resolved, "resolvePutScenarioPath(%s) operationId=%s", ep.Path, ep.OperationID)
-		status, body, err := apiClient.PutRaw(path, url.Values{"include": {include}}, scenario.buildBody(path))
-		require.NoError(t, err, "PUT %s?include=%s failed", path, include)
-		if status != 200 {
-			return false
-		}
-		got := parseJSON(body)
-		require.NotNil(t, got, "response should be valid JSON")
-
-		targets := scenario.extractTargets(got)
-		require.NotEmpty(t, targets, "%s (%s): no extraction targets in response", ep.OperationID, include)
-		for _, tgt := range targets {
-			if checkIncludePopulated(tgt, include) == nil {
-				return true
-			}
-		}
-		return false
-	}
-
-	t.Fatalf("opt-out %q references unknown include operation", optOutKey(operationID, include))
-	return false
-}
-
 func TestIncludes_GetFixtureCoverage(t *testing.T) {
 	t.Parallel()
 
@@ -717,52 +589,6 @@ func TestIncludes_ExpandableFieldsCollapseWithoutInclude(t *testing.T) {
 
 			for _, include := range ep.IncludeEnum {
 				assertIncludeCollapsedWithoutRequest(t, got, include)
-			}
-		})
-	}
-}
-
-func TestIncludes_OptOutMetadata(t *testing.T) {
-	t.Parallel()
-
-	getEndpoints, err := loadIncludeGetEndpoints()
-	require.NoError(t, err, "load include-supporting GET endpoints")
-	putEndpoints, err := loadIncludePutEndpoints()
-	require.NoError(t, err, "load include-supporting PUT endpoints")
-
-	for key, reason := range includesOptOut {
-		operationID, include, ok := splitOptOutKey(key)
-		require.Truef(t, ok, "invalid opt-out key format: %q", key)
-		require.Truef(t, isTaggedOptOutReason(reason),
-			"opt-out %q must start with one of seed-gap:, bug:, schema:, got %q", key, reason)
-
-		if ep, ok := lookupIncludeGetEndpoint(getEndpoints, operationID); ok {
-			require.Truef(t, endpointDeclaresInclude(ep.IncludeEnum, include),
-				"GET opt-out %q references include %q that is not declared by operation %q", key, include, operationID)
-			continue
-		}
-		if ep, ok := lookupIncludePutEndpoint(putEndpoints, operationID); ok {
-			require.Truef(t, endpointDeclaresInclude(ep.IncludeEnum, include),
-				"PUT opt-out %q references include %q that is not declared by operation %q", key, include, operationID)
-			continue
-		}
-
-		t.Fatalf("opt-out %q references unknown include operation %q", key, operationID)
-	}
-}
-
-func TestIncludes_OptOutsRemainNecessary(t *testing.T) {
-	t.Parallel()
-
-	for key := range includesOptOut {
-		key := key
-		t.Run(key, func(t *testing.T) {
-			t.Parallel()
-
-			operationID, include, ok := splitOptOutKey(key)
-			require.Truef(t, ok, "invalid opt-out key format: %q", key)
-			if executeIncludeOptOutProbe(t, operationID, include) {
-				t.Fatalf("opt-out %q is stale: the include now populates successfully and the opt-out should be removed", key)
 			}
 		})
 	}
@@ -920,11 +746,6 @@ func TestIncludes_PutPopulateNestedResources(t *testing.T) {
 
 			runOne := func(t *testing.T, include string) {
 				t.Helper()
-
-				if reason, skip := includesOptOut[optOutKey(ep.OperationID, include)]; skip {
-					t.Skipf("opt-out: %s", reason)
-					return
-				}
 
 				status, respBody, err := apiClient.PutRaw(path, url.Values{"include": {include}}, body)
 				require.NoError(t, err, "PUT %s?include=%s failed", path, include)

@@ -62,6 +62,30 @@ func (*Unit) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleUnit)
 }
 
+// newSampleUnit builds a complete sample Unit for embedding in other resources'
+// examples. The conversion fields default to an identity base unit and the
+// audit fields to the shared sample timestamps, so every embedded unit is a
+// fully populated, schema-valid example (the exact ratio is immaterial for a
+// nested reference). Use this instead of a partial &Unit{...} literal, which
+// would leave required fields empty in the generated example.
+func newSampleUnit(name, abbreviation string, unitType constants.UnitType) *Unit {
+	return &Unit{
+		ID:                SampleUnitID,
+		Object:            constants.ObjectTypeUnit,
+		Name:              name,
+		Abbreviation:      abbreviation,
+		Type:              unitType,
+		RatioNumerator:    "1",
+		RatioDenominator:  "1",
+		OffsetNumerator:   "0",
+		OffsetDenominator: "1",
+		IsBaseUnit:        true,
+		Owner:             SampleOwnerSystem,
+		CreatedAt:         timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+		UpdatedAt:         timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	}
+}
+
 // Result of unit abbreviation validation.
 type ValidateUnitsResponse struct {
 	// Resource type identifier.

@@ -571,6 +571,7 @@ message OpenCreditEntryInfo {
   string customer_name = 6;
   optional string customer_number = 7;
   string transaction_type = 8;
+  string customer_id = 16;
   optional string transaction_method = 9;
   optional string adjustment_type = 10;
   optional string responsible_user_name = 11;

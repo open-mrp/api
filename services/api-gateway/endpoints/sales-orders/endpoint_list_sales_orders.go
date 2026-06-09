@@ -51,7 +51,7 @@ func (e *ListSalesOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSa
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeSalesOrder,
-			Fields:     []string{"customer"},
+			Fields:     []string{"customer", "sales_rep", "bill_to_address", "ship_to_address", "freight", "payment_term", "shipping_term", "order_discount", "totals", "related.pick", "related.production_run", "related.shipments", "lines", "lines.product", "lines.product.item", "lines.product.product_line", "lines.quantity_ordered", "lines.unit_price", "lines.unit_cost", "lines.totals"},
 		}),
 	})
 }

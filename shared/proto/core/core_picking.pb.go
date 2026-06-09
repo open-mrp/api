@@ -41,8 +41,10 @@ type PickSummaryInfo struct {
 	UpdatedAt        *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	SalesOrderNumber string                 `protobuf:"bytes,12,opt,name=sales_order_number,json=salesOrderNumber,proto3" json:"sales_order_number,omitempty"`
 	PriorityId       string                 `protobuf:"bytes,13,opt,name=priority_id,json=priorityId,proto3" json:"priority_id,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Departments (populated only when the list request includes "departments").
+	Departments   []*PickDepartmentInfo `protobuf:"bytes,14,rep,name=departments,proto3" json:"departments,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *PickSummaryInfo) Reset() {
@@ -164,6 +166,13 @@ func (x *PickSummaryInfo) GetPriorityId() string {
 		return x.PriorityId
 	}
 	return ""
+}
+
+func (x *PickSummaryInfo) GetDepartments() []*PickDepartmentInfo {
+	if x != nil {
+		return x.Departments
+	}
+	return nil
 }
 
 // PickInfo represents a full pick resource.
@@ -627,6 +636,7 @@ type ListPicksRequest struct {
 	DepartmentIds    []string               `protobuf:"bytes,8,rep,name=department_ids,json=departmentIds,proto3" json:"department_ids,omitempty"`
 	StartDate        *string                `protobuf:"bytes,9,opt,name=start_date,json=startDate,proto3,oneof" json:"start_date,omitempty"`
 	EndDate          *string                `protobuf:"bytes,10,opt,name=end_date,json=endDate,proto3,oneof" json:"end_date,omitempty"`
+	Includes         []string               `protobuf:"bytes,11,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -729,6 +739,13 @@ func (x *ListPicksRequest) GetEndDate() string {
 		return *x.EndDate
 	}
 	return ""
+}
+
+func (x *ListPicksRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type ListPicksResponse struct {
@@ -1700,7 +1717,7 @@ var File_core_core_picking_proto protoreflect.FileDescriptor
 
 const file_core_core_picking_proto_rawDesc = "" +
 	"\n" +
-	"\x17core/core_picking.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fcore/core.proto\"\x9a\x04\n" +
+	"\x17core/core_picking.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fcore/core.proto\"\xd6\x04\n" +
 	"\x0fPickSummaryInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12$\n" +
@@ -1720,7 +1737,8 @@ const file_core_core_picking_proto_rawDesc = "" +
 	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12,\n" +
 	"\x12sales_order_number\x18\f \x01(\tR\x10salesOrderNumber\x12\x1f\n" +
 	"\vpriority_id\x18\r \x01(\tR\n" +
-	"priorityId\"\xf9\x04\n" +
+	"priorityId\x12:\n" +
+	"\vdepartments\x18\x0e \x03(\v2\x18.core.PickDepartmentInfoR\vdepartments\"\xf9\x04\n" +
 	"\bPickInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12$\n" +
@@ -1777,7 +1795,7 @@ const file_core_core_picking_proto_rawDesc = "" +
 	"\x17_order_line_description\"8\n" +
 	"\x12PickDepartmentInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"\x9f\x03\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\"\xbb\x03\n" +
 	"\x10ListPicksRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
@@ -1790,7 +1808,8 @@ const file_core_core_picking_proto_rawDesc = "" +
 	"\n" +
 	"start_date\x18\t \x01(\tH\x03R\tstartDate\x88\x01\x01\x12\x1e\n" +
 	"\bend_date\x18\n" +
-	" \x01(\tH\x04R\aendDate\x88\x01\x01B\t\n" +
+	" \x01(\tH\x04R\aendDate\x88\x01\x01\x12\x1a\n" +
+	"\bincludes\x18\v \x03(\tR\bincludesB\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_queryB\t\n" +
 	"\a_statusB\r\n" +
@@ -1914,49 +1933,50 @@ var file_core_core_picking_proto_depIdxs = []int32{
 	24, // 0: core.PickSummaryInfo.finished_at:type_name -> google.protobuf.Timestamp
 	24, // 1: core.PickSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
 	24, // 2: core.PickSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
-	24, // 3: core.PickInfo.finished_at:type_name -> google.protobuf.Timestamp
-	24, // 4: core.PickInfo.created_at:type_name -> google.protobuf.Timestamp
-	24, // 5: core.PickInfo.updated_at:type_name -> google.protobuf.Timestamp
-	2,  // 6: core.PickInfo.lines:type_name -> core.PickLineInfo
-	3,  // 7: core.PickInfo.departments:type_name -> core.PickDepartmentInfo
-	24, // 8: core.PickLineInfo.packed_at:type_name -> google.protobuf.Timestamp
-	24, // 9: core.PickLineInfo.created_at:type_name -> google.protobuf.Timestamp
-	24, // 10: core.PickLineInfo.updated_at:type_name -> google.protobuf.Timestamp
-	0,  // 11: core.ListPicksResponse.picks:type_name -> core.PickSummaryInfo
-	25, // 12: core.ListPicksResponse.page_info:type_name -> core.PageInfo
-	1,  // 13: core.GetPickResponse.pick:type_name -> core.PickInfo
-	1,  // 14: core.UpdatePickResponse.pick:type_name -> core.PickInfo
-	1,  // 15: core.PickAllLinesResponse.pick:type_name -> core.PickInfo
-	1,  // 16: core.VoidPickResponse.pick:type_name -> core.PickInfo
-	1,  // 17: core.PackPickResponse.pick:type_name -> core.PickInfo
-	2,  // 18: core.UpdatePickLineResponse.pick_line:type_name -> core.PickLineInfo
-	2,  // 19: core.PickPickLineResponse.pick_line:type_name -> core.PickLineInfo
-	2,  // 20: core.VoidPickLineResponse.pick_line:type_name -> core.PickLineInfo
-	4,  // 21: core.CorePickingService.ListPicks:input_type -> core.ListPicksRequest
-	6,  // 22: core.CorePickingService.GetPick:input_type -> core.GetPickRequest
-	8,  // 23: core.CorePickingService.UpdatePick:input_type -> core.UpdatePickRequest
-	10, // 24: core.CorePickingService.PickAllLines:input_type -> core.PickAllLinesRequest
-	12, // 25: core.CorePickingService.VoidPick:input_type -> core.VoidPickRequest
-	14, // 26: core.CorePickingService.PackPick:input_type -> core.PackPickRequest
-	16, // 27: core.CorePickingService.GetPickShipments:input_type -> core.GetPickShipmentsRequest
-	18, // 28: core.CorePickingService.UpdatePickLine:input_type -> core.UpdatePickLineRequest
-	20, // 29: core.CorePickingService.PickPickLine:input_type -> core.PickPickLineRequest
-	22, // 30: core.CorePickingService.VoidPickLine:input_type -> core.VoidPickLineRequest
-	5,  // 31: core.CorePickingService.ListPicks:output_type -> core.ListPicksResponse
-	7,  // 32: core.CorePickingService.GetPick:output_type -> core.GetPickResponse
-	9,  // 33: core.CorePickingService.UpdatePick:output_type -> core.UpdatePickResponse
-	11, // 34: core.CorePickingService.PickAllLines:output_type -> core.PickAllLinesResponse
-	13, // 35: core.CorePickingService.VoidPick:output_type -> core.VoidPickResponse
-	15, // 36: core.CorePickingService.PackPick:output_type -> core.PackPickResponse
-	17, // 37: core.CorePickingService.GetPickShipments:output_type -> core.GetPickShipmentsResponse
-	19, // 38: core.CorePickingService.UpdatePickLine:output_type -> core.UpdatePickLineResponse
-	21, // 39: core.CorePickingService.PickPickLine:output_type -> core.PickPickLineResponse
-	23, // 40: core.CorePickingService.VoidPickLine:output_type -> core.VoidPickLineResponse
-	31, // [31:41] is the sub-list for method output_type
-	21, // [21:31] is the sub-list for method input_type
-	21, // [21:21] is the sub-list for extension type_name
-	21, // [21:21] is the sub-list for extension extendee
-	0,  // [0:21] is the sub-list for field type_name
+	3,  // 3: core.PickSummaryInfo.departments:type_name -> core.PickDepartmentInfo
+	24, // 4: core.PickInfo.finished_at:type_name -> google.protobuf.Timestamp
+	24, // 5: core.PickInfo.created_at:type_name -> google.protobuf.Timestamp
+	24, // 6: core.PickInfo.updated_at:type_name -> google.protobuf.Timestamp
+	2,  // 7: core.PickInfo.lines:type_name -> core.PickLineInfo
+	3,  // 8: core.PickInfo.departments:type_name -> core.PickDepartmentInfo
+	24, // 9: core.PickLineInfo.packed_at:type_name -> google.protobuf.Timestamp
+	24, // 10: core.PickLineInfo.created_at:type_name -> google.protobuf.Timestamp
+	24, // 11: core.PickLineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	0,  // 12: core.ListPicksResponse.picks:type_name -> core.PickSummaryInfo
+	25, // 13: core.ListPicksResponse.page_info:type_name -> core.PageInfo
+	1,  // 14: core.GetPickResponse.pick:type_name -> core.PickInfo
+	1,  // 15: core.UpdatePickResponse.pick:type_name -> core.PickInfo
+	1,  // 16: core.PickAllLinesResponse.pick:type_name -> core.PickInfo
+	1,  // 17: core.VoidPickResponse.pick:type_name -> core.PickInfo
+	1,  // 18: core.PackPickResponse.pick:type_name -> core.PickInfo
+	2,  // 19: core.UpdatePickLineResponse.pick_line:type_name -> core.PickLineInfo
+	2,  // 20: core.PickPickLineResponse.pick_line:type_name -> core.PickLineInfo
+	2,  // 21: core.VoidPickLineResponse.pick_line:type_name -> core.PickLineInfo
+	4,  // 22: core.CorePickingService.ListPicks:input_type -> core.ListPicksRequest
+	6,  // 23: core.CorePickingService.GetPick:input_type -> core.GetPickRequest
+	8,  // 24: core.CorePickingService.UpdatePick:input_type -> core.UpdatePickRequest
+	10, // 25: core.CorePickingService.PickAllLines:input_type -> core.PickAllLinesRequest
+	12, // 26: core.CorePickingService.VoidPick:input_type -> core.VoidPickRequest
+	14, // 27: core.CorePickingService.PackPick:input_type -> core.PackPickRequest
+	16, // 28: core.CorePickingService.GetPickShipments:input_type -> core.GetPickShipmentsRequest
+	18, // 29: core.CorePickingService.UpdatePickLine:input_type -> core.UpdatePickLineRequest
+	20, // 30: core.CorePickingService.PickPickLine:input_type -> core.PickPickLineRequest
+	22, // 31: core.CorePickingService.VoidPickLine:input_type -> core.VoidPickLineRequest
+	5,  // 32: core.CorePickingService.ListPicks:output_type -> core.ListPicksResponse
+	7,  // 33: core.CorePickingService.GetPick:output_type -> core.GetPickResponse
+	9,  // 34: core.CorePickingService.UpdatePick:output_type -> core.UpdatePickResponse
+	11, // 35: core.CorePickingService.PickAllLines:output_type -> core.PickAllLinesResponse
+	13, // 36: core.CorePickingService.VoidPick:output_type -> core.VoidPickResponse
+	15, // 37: core.CorePickingService.PackPick:output_type -> core.PackPickResponse
+	17, // 38: core.CorePickingService.GetPickShipments:output_type -> core.GetPickShipmentsResponse
+	19, // 39: core.CorePickingService.UpdatePickLine:output_type -> core.UpdatePickLineResponse
+	21, // 40: core.CorePickingService.PickPickLine:output_type -> core.PickPickLineResponse
+	23, // 41: core.CorePickingService.VoidPickLine:output_type -> core.VoidPickLineResponse
+	32, // [32:42] is the sub-list for method output_type
+	22, // [22:32] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
 func init() { file_core_core_picking_proto_init() }

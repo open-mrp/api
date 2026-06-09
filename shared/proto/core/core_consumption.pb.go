@@ -427,6 +427,7 @@ type ListDeliveriesRequest struct {
 	SupplierIds   []string               `protobuf:"bytes,6,rep,name=supplier_ids,json=supplierIds,proto3" json:"supplier_ids,omitempty"`
 	StartDate     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=start_date,json=startDate,proto3,oneof" json:"start_date,omitempty"`
 	EndDate       *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=end_date,json=endDate,proto3,oneof" json:"end_date,omitempty"`
+	Includes      []string               `protobuf:"bytes,9,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -513,6 +514,13 @@ func (x *ListDeliveriesRequest) GetStartDate() *timestamppb.Timestamp {
 func (x *ListDeliveriesRequest) GetEndDate() *timestamppb.Timestamp {
 	if x != nil {
 		return x.EndDate
+	}
+	return nil
+}
+
+func (x *ListDeliveriesRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
 	}
 	return nil
 }
@@ -669,8 +677,10 @@ type DeliverySummaryInfo struct {
 	RejectedAt          *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=rejected_at,json=rejectedAt,proto3,oneof" json:"rejected_at,omitempty"`
 	CreatedAt           *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt           *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// Lines (populated only when the list request includes "lines").
+	Lines         []*DeliveryLineInfo `protobuf:"bytes,11,rep,name=lines,proto3" json:"lines,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DeliverySummaryInfo) Reset() {
@@ -769,6 +779,13 @@ func (x *DeliverySummaryInfo) GetCreatedAt() *timestamppb.Timestamp {
 func (x *DeliverySummaryInfo) GetUpdatedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.UpdatedAt
+	}
+	return nil
+}
+
+func (x *DeliverySummaryInfo) GetLines() []*DeliveryLineInfo {
+	if x != nil {
+		return x.Lines
 	}
 	return nil
 }
@@ -5452,7 +5469,7 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\x12production_step_id\x18\x01 \x01(\tR\x10productionStepId\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\"T\n" +
 	"\x19DeleteConsumptionResponse\x127\n" +
-	"\vconsumption\x18\x01 \x01(\v2\x15.core.ConsumptionInfoR\vconsumption\"\xf8\x02\n" +
+	"\vconsumption\x18\x01 \x01(\v2\x15.core.ConsumptionInfoR\vconsumption\"\x94\x03\n" +
 	"\x15ListDeliveriesRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
@@ -5462,7 +5479,8 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\fsupplier_ids\x18\x06 \x03(\tR\vsupplierIds\x12>\n" +
 	"\n" +
 	"start_date\x18\a \x01(\v2\x1a.google.protobuf.TimestampH\x03R\tstartDate\x88\x01\x01\x12:\n" +
-	"\bend_date\x18\b \x01(\v2\x1a.google.protobuf.TimestampH\x04R\aendDate\x88\x01\x01B\t\n" +
+	"\bend_date\x18\b \x01(\v2\x1a.google.protobuf.TimestampH\x04R\aendDate\x88\x01\x01\x12\x1a\n" +
+	"\bincludes\x18\t \x03(\tR\bincludesB\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_queryB\t\n" +
 	"\a_statusB\r\n" +
@@ -5476,7 +5494,7 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\x12GetDeliveryRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"E\n" +
 	"\x13GetDeliveryResponse\x12.\n" +
-	"\bdelivery\x18\x01 \x01(\v2\x12.core.DeliveryInfoR\bdelivery\"\xee\x03\n" +
+	"\bdelivery\x18\x01 \x01(\v2\x12.core.DeliveryInfoR\bdelivery\"\x9c\x04\n" +
 	"\x13DeliverySummaryInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12*\n" +
@@ -5493,7 +5511,8 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"created_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x0e\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12,\n" +
+	"\x05lines\x18\v \x03(\v2\x16.core.DeliveryLineInfoR\x05linesB\x0e\n" +
 	"\f_accepted_atB\x0e\n" +
 	"\f_rejected_at\"\xf6\x03\n" +
 	"\fDeliveryInfo\x12\x0e\n" +
@@ -6081,86 +6100,87 @@ var file_core_core_consumption_proto_depIdxs = []int32{
 	84, // 9: core.DeliverySummaryInfo.rejected_at:type_name -> google.protobuf.Timestamp
 	84, // 10: core.DeliverySummaryInfo.created_at:type_name -> google.protobuf.Timestamp
 	84, // 11: core.DeliverySummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
-	12, // 12: core.DeliveryInfo.lines:type_name -> core.DeliveryLineInfo
-	84, // 13: core.DeliveryInfo.accepted_at:type_name -> google.protobuf.Timestamp
-	84, // 14: core.DeliveryInfo.rejected_at:type_name -> google.protobuf.Timestamp
-	84, // 15: core.DeliveryInfo.created_at:type_name -> google.protobuf.Timestamp
-	84, // 16: core.DeliveryInfo.updated_at:type_name -> google.protobuf.Timestamp
-	84, // 17: core.DeliveryLineInfo.accepted_at:type_name -> google.protobuf.Timestamp
-	84, // 18: core.DeliveryLineInfo.rejected_at:type_name -> google.protobuf.Timestamp
-	84, // 19: core.DeliveryLineInfo.created_at:type_name -> google.protobuf.Timestamp
-	84, // 20: core.DeliveryLineInfo.updated_at:type_name -> google.protobuf.Timestamp
-	84, // 21: core.LightScanningStationInfo.created_at:type_name -> google.protobuf.Timestamp
-	84, // 22: core.LightScanningStationInfo.updated_at:type_name -> google.protobuf.Timestamp
-	84, // 23: core.LightProductionStepInfo.created_at:type_name -> google.protobuf.Timestamp
-	84, // 24: core.LightProductionStepInfo.updated_at:type_name -> google.protobuf.Timestamp
-	84, // 25: core.ScanningStationInfo.department_created_at:type_name -> google.protobuf.Timestamp
-	84, // 26: core.ScanningStationInfo.department_updated_at:type_name -> google.protobuf.Timestamp
-	14, // 27: core.ScanningStationInfo.production_steps:type_name -> core.LightProductionStepInfo
-	84, // 28: core.ScanningStationInfo.created_at:type_name -> google.protobuf.Timestamp
-	84, // 29: core.ScanningStationInfo.updated_at:type_name -> google.protobuf.Timestamp
-	15, // 30: core.ListScanningStationsResponse.scanning_stations:type_name -> core.ScanningStationInfo
-	85, // 31: core.ListScanningStationsResponse.page_info:type_name -> core.PageInfo
-	15, // 32: core.GetScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
-	15, // 33: core.CreateScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
-	86, // 34: core.UpdateScanningStationRequest.notes:type_name -> core.StringPatch
-	15, // 35: core.UpdateScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
-	15, // 36: core.BatchGetScanningStationsByIDsResponse.scanning_stations:type_name -> core.ScanningStationInfo
-	28, // 37: core.LocationInfo.children:type_name -> core.LocationChildInfo
-	84, // 38: core.LocationInfo.created_at:type_name -> google.protobuf.Timestamp
-	84, // 39: core.LocationInfo.updated_at:type_name -> google.protobuf.Timestamp
-	84, // 40: core.LocationTypeInfo.created_at:type_name -> google.protobuf.Timestamp
-	84, // 41: core.LocationTypeInfo.updated_at:type_name -> google.protobuf.Timestamp
-	29, // 42: core.ListLocationsResponse.locations:type_name -> core.LocationInfo
-	85, // 43: core.ListLocationsResponse.page_info:type_name -> core.PageInfo
-	29, // 44: core.GetLocationResponse.location:type_name -> core.LocationInfo
-	29, // 45: core.CreateLocationResponse.location:type_name -> core.LocationInfo
-	86, // 46: core.UpdateLocationRequest.parent_id:type_name -> core.StringPatch
-	87, // 47: core.UpdateLocationRequest.child_ids:type_name -> core.StringListPatch
-	29, // 48: core.UpdateLocationResponse.location:type_name -> core.LocationInfo
-	30, // 49: core.ListLocationTypesResponse.location_types:type_name -> core.LocationTypeInfo
-	85, // 50: core.ListLocationTypesResponse.page_info:type_name -> core.PageInfo
-	30, // 51: core.GetLocationTypeResponse.location_type:type_name -> core.LocationTypeInfo
-	29, // 52: core.BatchGetLocationsByIDsResponse.locations:type_name -> core.LocationInfo
-	84, // 53: core.SupplierSummaryProto.created_at:type_name -> google.protobuf.Timestamp
-	88, // 54: core.SupplierProto.bill_to_address:type_name -> core.CustomerAddressProto
-	88, // 55: core.SupplierProto.ship_to_address:type_name -> core.CustomerAddressProto
-	84, // 56: core.SupplierProto.created_at:type_name -> google.protobuf.Timestamp
-	84, // 57: core.SupplierProto.updated_at:type_name -> google.protobuf.Timestamp
-	84, // 58: core.ListSuppliersRequest.start_date:type_name -> google.protobuf.Timestamp
-	84, // 59: core.ListSuppliersRequest.end_date:type_name -> google.protobuf.Timestamp
-	46, // 60: core.ListSuppliersResponse.suppliers:type_name -> core.SupplierSummaryProto
-	85, // 61: core.ListSuppliersResponse.page_info:type_name -> core.PageInfo
-	47, // 62: core.GetSupplierResponse.supplier:type_name -> core.SupplierProto
-	48, // 63: core.CreateSupplierRequest.bill_to_address:type_name -> core.CreateSupplierAddressInput
-	48, // 64: core.CreateSupplierRequest.ship_to_address:type_name -> core.CreateSupplierAddressInput
-	47, // 65: core.CreateSupplierResponse.supplier:type_name -> core.SupplierProto
-	47, // 66: core.UpdateSupplierResponse.supplier:type_name -> core.SupplierProto
-	47, // 67: core.DeleteSupplierResponse.supplier:type_name -> core.SupplierProto
-	84, // 68: core.SysPropertyInfo.created_at:type_name -> google.protobuf.Timestamp
-	84, // 69: core.SysPropertyInfo.updated_at:type_name -> google.protobuf.Timestamp
-	60, // 70: core.ListSysPropertiesResponse.sys_properties:type_name -> core.SysPropertyInfo
-	85, // 71: core.ListSysPropertiesResponse.page_info:type_name -> core.PageInfo
-	60, // 72: core.GetSysPropertyResponse.sys_property:type_name -> core.SysPropertyInfo
-	60, // 73: core.UpdateSysPropertyResponse.sys_property:type_name -> core.SysPropertyInfo
-	60, // 74: core.BatchGetSysPropertiesByIDsResponse.sys_properties:type_name -> core.SysPropertyInfo
-	84, // 75: core.TenancyRoleProto.created_at:type_name -> google.protobuf.Timestamp
-	84, // 76: core.TenancyRoleProto.updated_at:type_name -> google.protobuf.Timestamp
-	72, // 77: core.TenancyAccountPlanProto.limits:type_name -> core.TenancyAccountPlanLimitProto
-	82, // 78: core.TenancyAccountPlanProto.features:type_name -> core.TenancyAccountPlanProto.FeaturesEntry
-	71, // 79: core.TenancyCurrentAccountProto.role:type_name -> core.TenancyRoleProto
-	73, // 80: core.TenancyCurrentAccountProto.account_plan:type_name -> core.TenancyAccountPlanProto
-	84, // 81: core.TenancyPendingRegistrationProto.created_at:type_name -> google.protobuf.Timestamp
-	74, // 82: core.GetTenancyResponse.current_account:type_name -> core.TenancyCurrentAccountProto
-	75, // 83: core.GetTenancyResponse.owner_account:type_name -> core.TenancyAccountSummaryProto
-	75, // 84: core.GetTenancyResponse.sandboxes:type_name -> core.TenancyAccountSummaryProto
-	76, // 85: core.GetTenancyResponse.other_accounts:type_name -> core.TenancyOtherAccountProto
-	77, // 86: core.GetTenancyResponse.pending_registration:type_name -> core.TenancyPendingRegistrationProto
-	87, // [87:87] is the sub-list for method output_type
-	87, // [87:87] is the sub-list for method input_type
-	87, // [87:87] is the sub-list for extension type_name
-	87, // [87:87] is the sub-list for extension extendee
-	0,  // [0:87] is the sub-list for field type_name
+	12, // 12: core.DeliverySummaryInfo.lines:type_name -> core.DeliveryLineInfo
+	12, // 13: core.DeliveryInfo.lines:type_name -> core.DeliveryLineInfo
+	84, // 14: core.DeliveryInfo.accepted_at:type_name -> google.protobuf.Timestamp
+	84, // 15: core.DeliveryInfo.rejected_at:type_name -> google.protobuf.Timestamp
+	84, // 16: core.DeliveryInfo.created_at:type_name -> google.protobuf.Timestamp
+	84, // 17: core.DeliveryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	84, // 18: core.DeliveryLineInfo.accepted_at:type_name -> google.protobuf.Timestamp
+	84, // 19: core.DeliveryLineInfo.rejected_at:type_name -> google.protobuf.Timestamp
+	84, // 20: core.DeliveryLineInfo.created_at:type_name -> google.protobuf.Timestamp
+	84, // 21: core.DeliveryLineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	84, // 22: core.LightScanningStationInfo.created_at:type_name -> google.protobuf.Timestamp
+	84, // 23: core.LightScanningStationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	84, // 24: core.LightProductionStepInfo.created_at:type_name -> google.protobuf.Timestamp
+	84, // 25: core.LightProductionStepInfo.updated_at:type_name -> google.protobuf.Timestamp
+	84, // 26: core.ScanningStationInfo.department_created_at:type_name -> google.protobuf.Timestamp
+	84, // 27: core.ScanningStationInfo.department_updated_at:type_name -> google.protobuf.Timestamp
+	14, // 28: core.ScanningStationInfo.production_steps:type_name -> core.LightProductionStepInfo
+	84, // 29: core.ScanningStationInfo.created_at:type_name -> google.protobuf.Timestamp
+	84, // 30: core.ScanningStationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	15, // 31: core.ListScanningStationsResponse.scanning_stations:type_name -> core.ScanningStationInfo
+	85, // 32: core.ListScanningStationsResponse.page_info:type_name -> core.PageInfo
+	15, // 33: core.GetScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
+	15, // 34: core.CreateScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
+	86, // 35: core.UpdateScanningStationRequest.notes:type_name -> core.StringPatch
+	15, // 36: core.UpdateScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
+	15, // 37: core.BatchGetScanningStationsByIDsResponse.scanning_stations:type_name -> core.ScanningStationInfo
+	28, // 38: core.LocationInfo.children:type_name -> core.LocationChildInfo
+	84, // 39: core.LocationInfo.created_at:type_name -> google.protobuf.Timestamp
+	84, // 40: core.LocationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	84, // 41: core.LocationTypeInfo.created_at:type_name -> google.protobuf.Timestamp
+	84, // 42: core.LocationTypeInfo.updated_at:type_name -> google.protobuf.Timestamp
+	29, // 43: core.ListLocationsResponse.locations:type_name -> core.LocationInfo
+	85, // 44: core.ListLocationsResponse.page_info:type_name -> core.PageInfo
+	29, // 45: core.GetLocationResponse.location:type_name -> core.LocationInfo
+	29, // 46: core.CreateLocationResponse.location:type_name -> core.LocationInfo
+	86, // 47: core.UpdateLocationRequest.parent_id:type_name -> core.StringPatch
+	87, // 48: core.UpdateLocationRequest.child_ids:type_name -> core.StringListPatch
+	29, // 49: core.UpdateLocationResponse.location:type_name -> core.LocationInfo
+	30, // 50: core.ListLocationTypesResponse.location_types:type_name -> core.LocationTypeInfo
+	85, // 51: core.ListLocationTypesResponse.page_info:type_name -> core.PageInfo
+	30, // 52: core.GetLocationTypeResponse.location_type:type_name -> core.LocationTypeInfo
+	29, // 53: core.BatchGetLocationsByIDsResponse.locations:type_name -> core.LocationInfo
+	84, // 54: core.SupplierSummaryProto.created_at:type_name -> google.protobuf.Timestamp
+	88, // 55: core.SupplierProto.bill_to_address:type_name -> core.CustomerAddressProto
+	88, // 56: core.SupplierProto.ship_to_address:type_name -> core.CustomerAddressProto
+	84, // 57: core.SupplierProto.created_at:type_name -> google.protobuf.Timestamp
+	84, // 58: core.SupplierProto.updated_at:type_name -> google.protobuf.Timestamp
+	84, // 59: core.ListSuppliersRequest.start_date:type_name -> google.protobuf.Timestamp
+	84, // 60: core.ListSuppliersRequest.end_date:type_name -> google.protobuf.Timestamp
+	46, // 61: core.ListSuppliersResponse.suppliers:type_name -> core.SupplierSummaryProto
+	85, // 62: core.ListSuppliersResponse.page_info:type_name -> core.PageInfo
+	47, // 63: core.GetSupplierResponse.supplier:type_name -> core.SupplierProto
+	48, // 64: core.CreateSupplierRequest.bill_to_address:type_name -> core.CreateSupplierAddressInput
+	48, // 65: core.CreateSupplierRequest.ship_to_address:type_name -> core.CreateSupplierAddressInput
+	47, // 66: core.CreateSupplierResponse.supplier:type_name -> core.SupplierProto
+	47, // 67: core.UpdateSupplierResponse.supplier:type_name -> core.SupplierProto
+	47, // 68: core.DeleteSupplierResponse.supplier:type_name -> core.SupplierProto
+	84, // 69: core.SysPropertyInfo.created_at:type_name -> google.protobuf.Timestamp
+	84, // 70: core.SysPropertyInfo.updated_at:type_name -> google.protobuf.Timestamp
+	60, // 71: core.ListSysPropertiesResponse.sys_properties:type_name -> core.SysPropertyInfo
+	85, // 72: core.ListSysPropertiesResponse.page_info:type_name -> core.PageInfo
+	60, // 73: core.GetSysPropertyResponse.sys_property:type_name -> core.SysPropertyInfo
+	60, // 74: core.UpdateSysPropertyResponse.sys_property:type_name -> core.SysPropertyInfo
+	60, // 75: core.BatchGetSysPropertiesByIDsResponse.sys_properties:type_name -> core.SysPropertyInfo
+	84, // 76: core.TenancyRoleProto.created_at:type_name -> google.protobuf.Timestamp
+	84, // 77: core.TenancyRoleProto.updated_at:type_name -> google.protobuf.Timestamp
+	72, // 78: core.TenancyAccountPlanProto.limits:type_name -> core.TenancyAccountPlanLimitProto
+	82, // 79: core.TenancyAccountPlanProto.features:type_name -> core.TenancyAccountPlanProto.FeaturesEntry
+	71, // 80: core.TenancyCurrentAccountProto.role:type_name -> core.TenancyRoleProto
+	73, // 81: core.TenancyCurrentAccountProto.account_plan:type_name -> core.TenancyAccountPlanProto
+	84, // 82: core.TenancyPendingRegistrationProto.created_at:type_name -> google.protobuf.Timestamp
+	74, // 83: core.GetTenancyResponse.current_account:type_name -> core.TenancyCurrentAccountProto
+	75, // 84: core.GetTenancyResponse.owner_account:type_name -> core.TenancyAccountSummaryProto
+	75, // 85: core.GetTenancyResponse.sandboxes:type_name -> core.TenancyAccountSummaryProto
+	76, // 86: core.GetTenancyResponse.other_accounts:type_name -> core.TenancyOtherAccountProto
+	77, // 87: core.GetTenancyResponse.pending_registration:type_name -> core.TenancyPendingRegistrationProto
+	88, // [88:88] is the sub-list for method output_type
+	88, // [88:88] is the sub-list for method input_type
+	88, // [88:88] is the sub-list for extension type_name
+	88, // [88:88] is the sub-list for extension extendee
+	0,  // [0:88] is the sub-list for field type_name
 }
 
 func init() { file_core_core_consumption_proto_init() }

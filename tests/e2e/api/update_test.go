@@ -23,7 +23,7 @@ func TestUpdateEndpoints_NullableClearFields(t *testing.T) {
 		t.Run(ep.OperationID, func(t *testing.T) {
 			path, ok := ep.ResolvePath()
 			if !ok {
-				t.Skipf("Cannot resolve path params for %s", ep.Path)
+				t.Fatalf("Cannot resolve path params for %s", ep.Path)
 				return
 			}
 
@@ -37,7 +37,7 @@ func TestUpdateEndpoints_NullableClearFields(t *testing.T) {
 					getStatus, getBody, err := apiClient.GetListRaw(path, nil)
 					require.NoError(t, err)
 					if getStatus == 404 || getStatus == 401 || getStatus == 403 {
-						t.Skipf("Seed resource not accessible for %s: %d", path, getStatus)
+						t.Fatalf("Seed resource not accessible for %s: %d", path, getStatus)
 						return
 					}
 					requireStatus(t, 200, getStatus, getBody)
@@ -49,7 +49,7 @@ func TestUpdateEndpoints_NullableClearFields(t *testing.T) {
 					}, newIdempotencyKey())
 					require.NoError(t, err)
 					if setStatus == 404 || setStatus == 401 || setStatus == 403 {
-						t.Skipf("Seed resource not accessible for %s: %d", path, setStatus)
+						t.Fatalf("Seed resource not accessible for %s: %d", path, setStatus)
 						return
 					}
 					requireStatus(t, 200, setStatus, setBody)
@@ -80,7 +80,7 @@ func TestUpdateEndpoints_EmptyBodyRejected(t *testing.T) {
 			t.Parallel()
 			path, ok := ep.ResolvePath()
 			if !ok {
-				t.Skipf("Cannot resolve path params for %s", ep.Path)
+				t.Fatalf("Cannot resolve path params for %s", ep.Path)
 				return
 			}
 

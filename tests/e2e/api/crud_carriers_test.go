@@ -160,7 +160,7 @@ func TestCarriers_ListPagination(t *testing.T) {
 	requirePageLen(t, list1.Data, 1)
 
 	if !list1.PageInfo.HasNextPage {
-		t.Skip("Not enough data for pagination test")
+		t.Fatal("Not enough data for pagination test")
 		return
 	}
 

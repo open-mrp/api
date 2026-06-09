@@ -57,6 +57,9 @@ type APIKeyRotateInput struct {
 	APIKeyTypeID   string
 	OwnerAccountID string
 	ExpiresAt      *time.Time
+	// RevokeAt schedules when the old key is revoked. Nil or past/now means
+	// immediate revocation; a future instant keeps the old key valid until then.
+	RevokeAt *time.Time
 }
 
 type APIKeyRevokeInput struct {

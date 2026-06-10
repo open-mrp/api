@@ -135,9 +135,10 @@ SELECT
     s.created_at,
     s.updated_at
 FROM settlement s
--- responsible_user_id stores a user id; resolve it to the account_user in this
--- settlement's account so the (account-scoped) account_user loader can populate it.
-LEFT JOIN account_user au ON au.user_id = s.responsible_user_id AND au.account_id = s.account_id
+-- responsible_user_id may store either an account_user id (rows written by the
+-- v2 API, which resolves on write) or a legacy user id; match both, scoped to
+-- the settlement's account, so the account_user loader can populate it.
+LEFT JOIN account_user au ON au.account_id = s.account_id AND (au.id = s.responsible_user_id OR au.user_id = s.responsible_user_id)
 LEFT JOIN `user` u ON u.id = au.user_id
 WHERE s.id = sqlc.arg('id')
 AND s.account_id = sqlc.arg('account_id');

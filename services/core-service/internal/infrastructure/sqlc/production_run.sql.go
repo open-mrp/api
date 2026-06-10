@@ -192,6 +192,7 @@ SELECT
     pr.id,
     pr.number,
     pr.responsible_user_id,
+    au.id AS responsible_account_user_id,
     COALESCE(u.name, au.id, '') AS responsible_user_name,
     au.status_code AS responsible_user_status_code,
     au.created_at AS responsible_user_created_at,
@@ -203,12 +204,12 @@ SELECT
     pr.updated_at,
     COUNT(DISTINCT b.id) AS batch_count
 FROM production_run pr
-LEFT JOIN account_user au ON au.id = pr.responsible_user_id AND au.account_id = pr.account_id
+LEFT JOIN account_user au ON au.account_id = pr.account_id AND (au.id = pr.responsible_user_id OR au.user_id = pr.responsible_user_id)
 LEFT JOIN user u ON u.id = au.user_id
 LEFT JOIN batch b ON b.production_run_id = pr.id AND b.account_id = pr.account_id
 WHERE pr.id = ?
 AND pr.account_id = ?
-GROUP BY pr.id
+GROUP BY pr.id, au.id
 `
 
 type GetProductionRunParams struct {
@@ -220,6 +221,7 @@ type GetProductionRunRow struct {
 	ID                        string
 	Number                    string
 	ResponsibleUserID         string
+	ResponsibleAccountUserID  sql.NullString
 	ResponsibleUserName       string
 	ResponsibleUserStatusCode sql.NullString
 	ResponsibleUserCreatedAt  sql.NullTime
@@ -232,6 +234,8 @@ type GetProductionRunRow struct {
 	BatchCount                int64
 }
 
+// responsible_user_id may store either an account_user id or a legacy user
+// id; match both, scoped to the run's account.
 func (q *Queries) GetProductionRun(ctx context.Context, arg GetProductionRunParams) (GetProductionRunRow, error) {
 	row := q.db.QueryRowContext(ctx, getProductionRun, arg.ID, arg.AccountID)
 	var i GetProductionRunRow
@@ -239,6 +243,7 @@ func (q *Queries) GetProductionRun(ctx context.Context, arg GetProductionRunPara
 		&i.ID,
 		&i.Number,
 		&i.ResponsibleUserID,
+		&i.ResponsibleAccountUserID,
 		&i.ResponsibleUserName,
 		&i.ResponsibleUserStatusCode,
 		&i.ResponsibleUserCreatedAt,
@@ -298,6 +303,7 @@ SELECT
     pr.id,
     pr.number,
     pr.responsible_user_id,
+    au.id AS responsible_account_user_id,
     COALESCE(u.name, au.id, '') AS responsible_user_name,
     au.status_code AS responsible_user_status_code,
     au.created_at AS responsible_user_created_at,
@@ -308,7 +314,7 @@ SELECT
     pr.updated_at,
     COUNT(DISTINCT b.id) AS batch_count
 FROM production_run pr
-LEFT JOIN account_user au ON au.id = pr.responsible_user_id AND au.account_id = pr.account_id
+LEFT JOIN account_user au ON au.account_id = pr.account_id AND (au.id = pr.responsible_user_id OR au.user_id = pr.responsible_user_id)
 LEFT JOIN user u ON u.id = au.user_id
 LEFT JOIN batch b ON b.production_run_id = pr.id AND b.account_id = pr.account_id
 WHERE pr.account_id = ?
@@ -359,7 +365,7 @@ AND (
     OR pr.created_at > ?
     OR (pr.created_at = ? AND pr.id > ?)
 )
-GROUP BY pr.id
+GROUP BY pr.id, au.id
 ORDER BY pr.created_at ASC, pr.id ASC
 LIMIT ?
 `
@@ -386,6 +392,7 @@ type ListProductionRunsBackwardRow struct {
 	ID                        string
 	Number                    string
 	ResponsibleUserID         string
+	ResponsibleAccountUserID  sql.NullString
 	ResponsibleUserName       string
 	ResponsibleUserStatusCode sql.NullString
 	ResponsibleUserCreatedAt  sql.NullTime
@@ -397,6 +404,8 @@ type ListProductionRunsBackwardRow struct {
 	BatchCount                int64
 }
 
+// responsible_user_id may store either an account_user id or a legacy user
+// id; match both, scoped to the run's account.
 func (q *Queries) ListProductionRunsBackward(ctx context.Context, arg ListProductionRunsBackwardParams) ([]ListProductionRunsBackwardRow, error) {
 	query := listProductionRunsBackward
 	var queryParams []interface{}
@@ -446,6 +455,7 @@ func (q *Queries) ListProductionRunsBackward(ctx context.Context, arg ListProduc
 			&i.ID,
 			&i.Number,
 			&i.ResponsibleUserID,
+			&i.ResponsibleAccountUserID,
 			&i.ResponsibleUserName,
 			&i.ResponsibleUserStatusCode,
 			&i.ResponsibleUserCreatedAt,
@@ -474,6 +484,7 @@ SELECT
     pr.id,
     pr.number,
     pr.responsible_user_id,
+    au.id AS responsible_account_user_id,
     COALESCE(u.name, au.id, '') AS responsible_user_name,
     au.status_code AS responsible_user_status_code,
     au.created_at AS responsible_user_created_at,
@@ -484,7 +495,7 @@ SELECT
     pr.updated_at,
     COUNT(DISTINCT b.id) AS batch_count
 FROM production_run pr
-LEFT JOIN account_user au ON au.id = pr.responsible_user_id AND au.account_id = pr.account_id
+LEFT JOIN account_user au ON au.account_id = pr.account_id AND (au.id = pr.responsible_user_id OR au.user_id = pr.responsible_user_id)
 LEFT JOIN user u ON u.id = au.user_id
 LEFT JOIN batch b ON b.production_run_id = pr.id AND b.account_id = pr.account_id
 WHERE pr.account_id = ?
@@ -535,7 +546,7 @@ AND (
     OR pr.created_at < ?
     OR (pr.created_at = ? AND pr.id < ?)
 )
-GROUP BY pr.id
+GROUP BY pr.id, au.id
 ORDER BY pr.created_at DESC, pr.id DESC
 LIMIT ?
 `
@@ -562,6 +573,7 @@ type ListProductionRunsForwardRow struct {
 	ID                        string
 	Number                    string
 	ResponsibleUserID         string
+	ResponsibleAccountUserID  sql.NullString
 	ResponsibleUserName       string
 	ResponsibleUserStatusCode sql.NullString
 	ResponsibleUserCreatedAt  sql.NullTime
@@ -573,6 +585,8 @@ type ListProductionRunsForwardRow struct {
 	BatchCount                int64
 }
 
+// responsible_user_id may store either an account_user id or a legacy user
+// id; match both, scoped to the run's account.
 func (q *Queries) ListProductionRunsForward(ctx context.Context, arg ListProductionRunsForwardParams) ([]ListProductionRunsForwardRow, error) {
 	query := listProductionRunsForward
 	var queryParams []interface{}
@@ -622,6 +636,7 @@ func (q *Queries) ListProductionRunsForward(ctx context.Context, arg ListProduct
 			&i.ID,
 			&i.Number,
 			&i.ResponsibleUserID,
+			&i.ResponsibleAccountUserID,
 			&i.ResponsibleUserName,
 			&i.ResponsibleUserStatusCode,
 			&i.ResponsibleUserCreatedAt,

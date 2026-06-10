@@ -34,7 +34,7 @@ func TestAccountUsers_List(t *testing.T) {
 
 func TestAccountUsers_ListResponseShape(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(accountUsersPath, nil)
+	list, _, err := apiClient.GetList(accountUsersPath, url.Values{"include": {"user"}})
 	require.NoError(t, err)
 
 	for _, item := range list.Data {
@@ -42,19 +42,33 @@ func TestAccountUsers_ListResponseShape(t *testing.T) {
 		require.NotNil(t, m)
 		assert.Equal(t, "account_user", jsonField(m, "object"))
 		assert.NotEmpty(t, jsonField(m, "id"))
-		// user is a polymorphic Entity reference to the underlying user (us_…) whose id is
-		// sent as an actor_ids filter on request logs / audit events — distinct
-		// from id (the account_user id).
+		// user is the full underlying user (us_…) expanded via ?include=user.
+		// Its id is what the actor_ids filter on request logs / audit events
+		// expects — distinct from id (the account_user id).
 		user := jsonObject(m, "user")
-		require.NotNil(t, user, "account_user must expose a user sub-object")
-		assert.Equal(t, "entity", jsonField(user, "object"))
-		assert.Equal(t, "user", jsonField(user, "type"))
+		require.NotNil(t, user, "user must be expanded with ?include=user")
+		assert.Equal(t, "user", jsonField(user, "object"))
 		userID := jsonField(user, "id")
-		assert.NotEmpty(t, userID, "account_user user sub-object must have an id")
+		assert.NotEmpty(t, userID, "expanded user must have an id")
 		assert.NotEqual(t, jsonField(m, "id"), userID, "user.id must differ from the account_user id")
+		assert.NotEmpty(t, jsonField(user, "created_at"))
+		assert.NotEmpty(t, jsonField(user, "updated_at"))
 		assert.NotEmpty(t, jsonField(m, "status"))
 		assert.NotEmpty(t, jsonField(m, "created_at"))
 		assert.NotEmpty(t, jsonField(m, "updated_at"))
+	}
+}
+
+func TestAccountUsers_ListUserNullWithoutInclude(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(accountUsersPath, nil)
+	require.NoError(t, err)
+	require.NotEmpty(t, list.Data)
+
+	for _, item := range list.Data {
+		m := parseJSON(item)
+		require.NotNil(t, m)
+		assert.Nil(t, m["user"], "user should be null without ?include=user")
 	}
 }
 
@@ -110,21 +124,21 @@ func TestAccountUsers_ListFilterByRoleType(t *testing.T) {
 func TestAccountUsers_ListSearchByName(t *testing.T) {
 	t.Parallel()
 	// First get the seeded user's name to search for
-	getStatus, getBody, err := apiClient.GetListRaw(accountUsersPath+"/"+SeedAccountUserID, nil)
+	getStatus, getBody, err := apiClient.GetListRaw(accountUsersPath+"/"+SeedAccountUserID, url.Values{"include": {"user"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
-	name := jsonField(parseJSON(getBody), "name")
+	name := jsonField(jsonObject(parseJSON(getBody), "user"), "name")
 	if name == "" {
 		t.Fatal("Seeded account user has no name set")
 	}
 
-	list, _, err := apiClient.GetList(accountUsersPath, url.Values{"q": {name}})
+	list, _, err := apiClient.GetList(accountUsersPath, url.Values{"q": {name}, "include": {"user"}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Search by name should return at least 1 result")
 
 	lowerName := strings.ToLower(name)
 	for _, item := range list.Data {
-		n := DataItemField(item, "name")
+		n := jsonField(jsonObject(parseJSON(item), "user"), "name")
 		assert.True(t,
 			strings.Contains(strings.ToLower(n), lowerName),
 			"Search result %q should contain %q", n, name,
@@ -209,15 +223,17 @@ func TestAccountUsers_CreateAndGet(t *testing.T) {
 	assert.NotEmpty(t, id)
 	defer removeAccountUser(id)
 	assertCreatedLocation(t, createResp.Header, id)
-	assert.Equal(t, name, jsonField(created, "name"))
 
-	// Get
-	getStatus, getBody, err := apiClient.GetListRaw(accountUsersPath+"/"+id, nil)
+	// Get with the user expanded — profile fields live on the user sub-resource.
+	getStatus, getBody, err := apiClient.GetListRaw(accountUsersPath+"/"+id, url.Values{"include": {"user"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 	got := parseJSON(getBody)
 	assert.Equal(t, id, jsonField(got, "id"))
-	assert.Equal(t, name, jsonField(got, "name"))
+	user := jsonObject(got, "user")
+	require.NotNil(t, user, "user should be expanded with ?include=user")
+	assert.Equal(t, name, jsonField(user, "name"))
+	assert.Equal(t, email, jsonField(user, "email"))
 
 	// Audit
 	expectAuditEvent(t, id, "account_user", "create")
@@ -245,21 +261,25 @@ func TestAccountUsers_CreateAndUpdateAllFields(t *testing.T) {
 	defer removeAccountUser(id)
 
 	assert.Equal(t, "account_user", jsonField(got, "object"))
-	assert.Equal(t, name, jsonField(got, "name"))
-	assert.Equal(t, email, jsonField(got, "email"))
 	assert.NotEmpty(t, jsonField(got, "status"))
 	_, hasIsVerified := got["is_verified"]
 	assert.False(t, hasIsVerified, "is_verified should not be exposed on the resource")
-	assertNilField(t, got, "image_url")
 	assertNilField(t, got, "last_used_at")
 	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 
 	// Verify via GET with include
-	getStatus, getBody, err := apiClient.GetListRaw(accountUsersPath+"/"+id, url.Values{"include": {"role,department"}})
+	getStatus, getBody, err := apiClient.GetListRaw(accountUsersPath+"/"+id, url.Values{"include": {"user,role,department"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 	got = parseJSON(getBody)
+
+	user := jsonObject(got, "user")
+	require.NotNil(t, user, "user must be expanded with ?include=user")
+	assert.Equal(t, "user", jsonField(user, "object"))
+	assert.Equal(t, name, jsonField(user, "name"))
+	assert.Equal(t, email, jsonField(user, "email"))
+	assertNilField(t, user, "image_url")
 
 	role := jsonObject(got, "role")
 	require.NotNil(t, role, "role must be set after create")
@@ -285,17 +305,20 @@ func TestAccountUsers_CreateAndUpdateAllFields(t *testing.T) {
 	updated := parseJSON(patchBody)
 	assert.Equal(t, id, jsonField(updated, "id"), "ID must not change")
 	assert.Equal(t, "account_user", jsonField(updated, "object"))
-	assert.Equal(t, updatedName, jsonField(updated, "name"))
-	assert.Equal(t, updatedEmail, jsonField(updated, "email"))
 	assert.NotEmpty(t, jsonField(updated, "status"), "status should be preserved")
 	assertValidTimestamp(t, jsonField(updated, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(updated, "updated_at"), "updated_at")
 
 	// Verify via GET with include
-	getStatus2, getBody2, err := apiClient.GetListRaw(accountUsersPath+"/"+id, url.Values{"include": {"role,department"}})
+	getStatus2, getBody2, err := apiClient.GetListRaw(accountUsersPath+"/"+id, url.Values{"include": {"user,role,department"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus2, getBody2)
 	updated = parseJSON(getBody2)
+
+	updUser := jsonObject(updated, "user")
+	require.NotNil(t, updUser, "user should be expanded")
+	assert.Equal(t, updatedName, jsonField(updUser, "name"))
+	assert.Equal(t, updatedEmail, jsonField(updUser, "email"))
 
 	updRole := jsonObject(updated, "role")
 	require.NotNil(t, updRole, "role should be updated")
@@ -332,7 +355,12 @@ func TestAccountUsers_Update(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
-	assert.Equal(t, newName, jsonField(parseJSON(patchBody), "name"))
+
+	// Verify the rename landed on the underlying user.
+	getStatus, getBody, err := apiClient.GetListRaw(accountUsersPath+"/"+id, url.Values{"include": {"user"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, getStatus, getBody)
+	assert.Equal(t, newName, jsonField(jsonObject(parseJSON(getBody), "user"), "name"))
 
 	// Audit
 	expectAuditEvent(t, id, "account_user", "update")
@@ -535,8 +563,13 @@ func TestAccountUsers_CreateScannerWithPassword(t *testing.T) {
 	require.NotEmpty(t, id)
 	defer removeAccountUser(id)
 
-	assert.Equal(t, username, jsonField(got, "username"))
-	assertNilField(t, got, "email")
+	getStatus, getBody, err := apiClient.GetListRaw(accountUsersPath+"/"+id, url.Values{"include": {"user"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, getStatus, getBody)
+	user := jsonObject(parseJSON(getBody), "user")
+	require.NotNil(t, user, "user should be expanded with ?include=user")
+	assert.Equal(t, username, jsonField(user, "username"))
+	assertNilField(t, user, "email")
 }
 
 func TestAccountUsers_CreateScannerMissingPasswordFails(t *testing.T) {
@@ -676,19 +709,32 @@ func TestAccountUsers_OmittedFields(t *testing.T) {
 		defer removeAccountUser(id)
 
 		assert.Equal(t, "account_user", jsonField(got, "object"))
-		assert.Equal(t, name, jsonField(got, "name"))
-		assert.Equal(t, email, jsonField(got, "email"))
 		assert.NotEmpty(t, jsonField(got, "status"))
 		_, hasIsVerified := got["is_verified"]
 		assert.False(t, hasIsVerified, "is_verified should not be exposed on the resource")
-		assertNilField(t, got, "image_url")
+		// Profile fields moved onto the user sub-resource in 1.0.forge-preview.2.
+		for _, key := range []string{"name", "email", "username", "image_url"} {
+			_, present := got[key]
+			assert.False(t, present, "%s should not be exposed on the account_user resource", key)
+		}
 		assertNilField(t, got, "last_used_at")
 		assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 
 		// Expandable fields should be nil without ?include
+		assertNilField(t, got, "user")
 		assertNilField(t, got, "role")
 		assertNilField(t, got, "department")
+
+		// Profile fields are exposed via the expanded user.
+		getStatus, getBody, err := apiClient.GetListRaw(accountUsersPath+"/"+id, url.Values{"include": {"user"}})
+		require.NoError(t, err)
+		requireStatus(t, 200, getStatus, getBody)
+		user := jsonObject(parseJSON(getBody), "user")
+		require.NotNil(t, user, "user should be expanded with ?include=user")
+		assert.Equal(t, name, jsonField(user, "name"))
+		assert.Equal(t, email, jsonField(user, "email"))
+		assertNilField(t, user, "image_url")
 	})
 
 	t.Run("UpdatePreservesOmittedFields", func(t *testing.T) {
@@ -720,19 +766,21 @@ func TestAccountUsers_OmittedFields(t *testing.T) {
 		requireStatus(t, 200, patchStatus, patchBody)
 
 		// GET with include to verify preservation
-		getStatus, getBody, err := apiClient.GetListRaw(accountUsersPath+"/"+id, url.Values{"include": {"role,department"}})
+		getStatus, getBody, err := apiClient.GetListRaw(accountUsersPath+"/"+id, url.Values{"include": {"user,role,department"}})
 		require.NoError(t, err)
 		requireStatus(t, 200, getStatus, getBody)
 
 		got := parseJSON(getBody)
+		user := jsonObject(got, "user")
+		require.NotNil(t, user, "user should be expanded")
 
 		// Updated field
-		assert.Equal(t, newName, jsonField(got, "name"))
+		assert.Equal(t, newName, jsonField(user, "name"))
 
 		// Preserved fields
 		assert.Equal(t, id, jsonField(got, "id"))
 		assert.Equal(t, "account_user", jsonField(got, "object"))
-		assert.Equal(t, email, jsonField(got, "email"), "email should be preserved")
+		assert.Equal(t, email, jsonField(user, "email"), "email should be preserved")
 		assert.NotEmpty(t, jsonField(got, "status"), "status should be preserved")
 		assert.Equal(t, origCreatedAt, jsonField(got, "created_at"), "created_at should not change")
 		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")

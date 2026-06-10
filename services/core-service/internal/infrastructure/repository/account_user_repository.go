@@ -55,6 +55,24 @@ func (r *accountUserRepoImpl) FindByAccountAndUserID(ctx context.Context, userID
 	}, nil
 }
 
+func (r *accountUserRepoImpl) ResolveAccountUserID(ctx context.Context, accountID, userOrAccountUserID string) (string, *apierror.APIError) {
+	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.resolve_account_user_id")
+	defer span.End()
+
+	id, err := r.queries.ResolveAccountUserID(ctx, sqlc.ResolveAccountUserIDParams{
+		AccountID:           accountID,
+		UserOrAccountUserID: userOrAccountUserID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+			return "", apiErr
+		}
+		return "", tracing.Trace(span, apiErr)
+	}
+
+	return id, nil
+}
+
 func (r *accountUserRepoImpl) FindAffiliationsByUserID(ctx context.Context, userID string) ([]domain.AccountAffiliation, *apierror.APIError) {
 	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.find_affiliations_by_user_id")
 	defer span.End()

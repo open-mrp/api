@@ -64,7 +64,7 @@ func (e *UpdateTerritoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Update
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeTerritory,
-			Fields:     []string{"sales_rep", "product_line"},
+			Fields:     []string{"sales_rep", "sales_rep.user", "product_line"},
 		}),
 	})
 }

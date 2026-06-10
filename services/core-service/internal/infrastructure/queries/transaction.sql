@@ -235,6 +235,7 @@ SELECT
     ar.created_at AS customer_created_at,
     ar.updated_at AS customer_updated_at,
     t.responsible_user_id,
+    au.id AS responsible_account_user_id,
     COALESCE(usr.name, '') AS responsible_user_name,
     au.status_code AS responsible_user_status,
     au.created_at AS responsible_user_created_at,
@@ -263,7 +264,10 @@ JOIN account ba ON ba.id = t.customer_account_id
 JOIN account_relation ar ON ar.owner_account_id = t.account_id AND ar.counterparty_account_id = t.customer_account_id
 LEFT JOIN transaction_method tm ON tm.code = t.transaction_method_code
 LEFT JOIN adjustment_type at2 ON at2.code = t.adjustment_type_code
-LEFT JOIN account_user au ON au.id = t.responsible_user_id
+-- responsible_user_id may store either an account_user id (rows written by
+-- the v2 API, which resolves on write) or a legacy user id; match both,
+-- scoped to the transaction's account.
+LEFT JOIN account_user au ON au.account_id = t.account_id AND (au.id = t.responsible_user_id OR au.user_id = t.responsible_user_id)
 LEFT JOIN user usr ON usr.id = au.user_id
 WHERE t.id = sqlc.arg('id')
 AND t.account_id = sqlc.arg('account_id');
@@ -354,6 +358,7 @@ SELECT
     ar.created_at AS customer_created_at,
     ar.updated_at AS customer_updated_at,
     t.responsible_user_id,
+    au.id AS responsible_account_user_id,
     COALESCE(usr.name, '') AS responsible_user_name,
     au.status_code AS responsible_user_status,
     au.created_at AS responsible_user_created_at,
@@ -382,7 +387,10 @@ JOIN account ba ON ba.id = t.customer_account_id
 JOIN account_relation ar ON ar.owner_account_id = t.account_id AND ar.counterparty_account_id = t.customer_account_id
 LEFT JOIN transaction_method tm ON tm.code = t.transaction_method_code
 LEFT JOIN adjustment_type at2 ON at2.code = t.adjustment_type_code
-LEFT JOIN account_user au ON au.id = t.responsible_user_id
+-- responsible_user_id may store either an account_user id (rows written by
+-- the v2 API, which resolves on write) or a legacy user id; match both,
+-- scoped to the transaction's account.
+LEFT JOIN account_user au ON au.account_id = t.account_id AND (au.id = t.responsible_user_id OR au.user_id = t.responsible_user_id)
 LEFT JOIN user usr ON usr.id = au.user_id
 WHERE t.account_id = sqlc.arg('account_id')
 AND (
@@ -421,6 +429,7 @@ SELECT
     ar.created_at AS customer_created_at,
     ar.updated_at AS customer_updated_at,
     t.responsible_user_id,
+    au.id AS responsible_account_user_id,
     COALESCE(usr.name, '') AS responsible_user_name,
     au.status_code AS responsible_user_status,
     au.created_at AS responsible_user_created_at,
@@ -449,7 +458,10 @@ JOIN account ba ON ba.id = t.customer_account_id
 JOIN account_relation ar ON ar.owner_account_id = t.account_id AND ar.counterparty_account_id = t.customer_account_id
 LEFT JOIN transaction_method tm ON tm.code = t.transaction_method_code
 LEFT JOIN adjustment_type at2 ON at2.code = t.adjustment_type_code
-LEFT JOIN account_user au ON au.id = t.responsible_user_id
+-- responsible_user_id may store either an account_user id (rows written by
+-- the v2 API, which resolves on write) or a legacy user id; match both,
+-- scoped to the transaction's account.
+LEFT JOIN account_user au ON au.account_id = t.account_id AND (au.id = t.responsible_user_id OR au.user_id = t.responsible_user_id)
 LEFT JOIN user usr ON usr.id = au.user_id
 WHERE t.account_id = sqlc.arg('account_id')
 AND (

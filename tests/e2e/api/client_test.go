@@ -20,7 +20,7 @@ type Response struct {
 	Header     http.Header
 }
 
-const defaultAPIVersion = "1.0.forge-preview.1"
+const defaultAPIVersion = "1.0.forge-preview.2"
 
 // Client is an HTTP client for the Augno API configured with authentication.
 type Client struct {
@@ -49,6 +49,14 @@ func NewClient(baseURL, apiKey, accountID string) *Client {
 // WithAccountID returns a new Client targeting a different account.
 func (c *Client) WithAccountID(accountID string) *Client {
 	return NewClient(c.baseURL, c.apiKey, accountID)
+}
+
+// WithAPIVersion returns a new Client pinned to a specific API version. Used
+// to exercise the version-transform backwards-compatibility path.
+func (c *Client) WithAPIVersion(version string) *Client {
+	clone := NewClient(c.baseURL, c.apiKey, c.accountID)
+	clone.apiVersion = version
+	return clone
 }
 
 // WithBearerToken returns a new Client that authenticates with the given bearer

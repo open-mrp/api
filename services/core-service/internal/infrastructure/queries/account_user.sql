@@ -351,6 +351,16 @@ LEFT JOIN role r ON au.role_id = r.id
 LEFT JOIN department d ON au.department_id = d.id
 WHERE au.account_id = ? AND au.id = ?;
 
+-- name: ResolveAccountUserID :one
+-- Resolves either an account_user id or a user id to the account_user id in
+-- the given account. Used by write paths that accept both id forms.
+SELECT au.id
+FROM account_user au
+WHERE au.account_id = sqlc.arg('account_id')
+AND (au.id = sqlc.arg('user_or_account_user_id') OR au.user_id = sqlc.arg('user_or_account_user_id'))
+AND (au.status_code = 'active' OR au.status_code IS NULL)
+LIMIT 1;
+
 -- name: GetAccountUserDetailsByIDs :many
 SELECT
     au.id,

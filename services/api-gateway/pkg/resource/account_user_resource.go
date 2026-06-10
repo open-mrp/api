@@ -8,22 +8,15 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-// Account user with profile, role, and department.
+// Account user with role and department. Profile fields (name, email,
+// username, image URL) live on the expandable user sub-resource.
 type AccountUser struct {
 	// Account user ID.
 	ID string `json:"id" validate:"required"`
-	// Underlying user reference.
-	User *Entity `json:"user"`
+	// Underlying user.
+	User *User `json:"user" expandable:"true"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_user"`
-	// Display name.
-	Name *string `json:"name"`
-	// Email address.
-	Email *string `json:"email"`
-	// Username.
-	Username *string `json:"username"`
-	// Profile image URL.
-	ImageURL *string `json:"image_url"`
 	// Account user status.
 	Status constants.AccountUserStatus `json:"status" validate:"required"`
 	// Assigned role.
@@ -40,15 +33,10 @@ type AccountUser struct {
 
 const SampleAccountUserID = "acus_01ea9983ddb41dacc44ecf997c"
 
-var sampleAccountUserName = "John Doe"
-var sampleAccountUserEmail = "john@augno.com"
-
 var SampleAccountUser = &AccountUser{
 	ID:        SampleAccountUserID,
-	User:      SampleUserEntity,
+	User:      SampleUser,
 	Object:    constants.ObjectTypeAccountUser,
-	Name:      &sampleAccountUserName,
-	Email:     &sampleAccountUserEmail,
 	Status:    constants.AccountUserStatusActive,
 	Role:      SampleRole,
 	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),

@@ -39,6 +39,17 @@ func LoadAPIKeys(ctx context.Context, ids []string) (map[string]any, *apierror.A
 	return out, nil
 }
 
+// APIKeyFromProto builds the APIKey resource from the proto and stashes the
+// role FK in LoadMeta so ?include=role resolves. List presenters use this
+// directly so the response comes from the list RPC's single snapshot instead
+// of a second batch read that can observe concurrent mutations.
+func APIKeyFromProto(ctx context.Context, k *authpb.APIKeyInfo) *apiresource.APIKey {
+	if k.RoleId != nil {
+		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeAPIKey, k.Id, "role_id", *k.RoleId)
+	}
+	return apiKeyFromProto(k)
+}
+
 func apiKeyFromProto(k *authpb.APIKeyInfo) *apiresource.APIKey {
 	return &apiresource.APIKey{
 		ID:            k.Id,

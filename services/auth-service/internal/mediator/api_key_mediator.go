@@ -185,7 +185,8 @@ func (s *apiKeyMedImpl) Revoke(ctx context.Context, apiKeyTypeID string, ownerAc
 	ctx, span := apiKeyMedTracer.Start(ctx, "mediator.api_key.revoke")
 	defer span.End()
 
-	return s.repos.NewAPIKeyRepo().Revoke(ctx, apiKeyTypeID, ownerAccountID, time.Now().UTC())
+	// nil revokeAt = immediate revocation on the database clock.
+	return s.repos.NewAPIKeyRepo().Revoke(ctx, apiKeyTypeID, ownerAccountID, nil)
 }
 
 // Rotate revokes the specified API key and creates a replacement with the same name,
@@ -215,16 +216,19 @@ func (s *apiKeyMedImpl) Rotate(ctx context.Context, input domain.APIKeyRotateInp
 		return "", nil, apierror.NewResourceNotFoundError("API key not found.")
 	}
 
-	// Determine when the old key is revoked. Default is immediate; a future
-	// RevokeAt schedules revocation (the old key keeps working until then),
-	// capped at maxRevokeScheduleWindow. A past/now RevokeAt collapses to immediate.
-	revokeAt := time.Now().UTC()
-	if input.RevokeAt != nil && input.RevokeAt.After(revokeAt) {
-		if input.RevokeAt.After(revokeAt.Add(maxRevokeScheduleWindow)) {
+	// Determine when the old key is revoked. Default is immediate (nil — the
+	// database clock is used); a future RevokeAt schedules revocation (the old
+	// key keeps working until then), capped at maxRevokeScheduleWindow. A
+	// past/now RevokeAt collapses to immediate.
+	var revokeAt *time.Time
+	now := time.Now().UTC()
+	if input.RevokeAt != nil && input.RevokeAt.After(now) {
+		if input.RevokeAt.After(now.Add(maxRevokeScheduleWindow)) {
 			return "", nil, apierror.NewValidationErrorWithParam(
 				"Scheduled revocation must be no more than 30 days in the future.", "revoke_at")
 		}
-		revokeAt = input.RevokeAt.UTC()
+		scheduled := input.RevokeAt.UTC()
+		revokeAt = &scheduled
 	}
 
 	if apiErr := apiKeyRepo.Revoke(ctx, input.APIKeyTypeID, input.OwnerAccountID, revokeAt); apiErr != nil {

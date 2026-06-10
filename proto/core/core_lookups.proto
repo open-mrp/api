@@ -600,6 +600,13 @@ message GetUserRequest {
 message GetUserResponse {
   UserInfo user = 1;
 }
+// Batched read for the api-gateway resourcekit resolver.
+message BatchGetUsersByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetUsersByIDsResponse {
+  repeated UserInfo users = 1;
+}
 message UpdateUserRequest {
   string id = 1;
   optional string name = 2;

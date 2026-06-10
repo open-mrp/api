@@ -498,7 +498,11 @@ func mapTransactionRow(row sqlc.FindTransactionByIDRow) *domain.Transaction {
 	customerUpdatedAt := row.CustomerUpdatedAt
 	t.CustomerUpdatedAt = &customerUpdatedAt
 
-	if row.ResponsibleUserID.Valid {
+	// Prefer the account_user id resolved by the query; legacy rows store a
+	// user id in responsible_user_id and may have no account_user match.
+	if row.ResponsibleAccountUserID.Valid {
+		t.ResponsibleUserID = &row.ResponsibleAccountUserID.String
+	} else if row.ResponsibleUserID.Valid {
 		t.ResponsibleUserID = &row.ResponsibleUserID.String
 	}
 	name := row.ResponsibleUserName
@@ -777,7 +781,11 @@ func mapAccountTransactionForwardRow(row sqlc.ListAccountTransactionsForwardRow)
 	customerUpdatedAt := row.CustomerUpdatedAt
 	t.CustomerUpdatedAt = &customerUpdatedAt
 
-	if row.ResponsibleUserID.Valid {
+	// Prefer the account_user id resolved by the query; legacy rows store a
+	// user id in responsible_user_id and may have no account_user match.
+	if row.ResponsibleAccountUserID.Valid {
+		t.ResponsibleUserID = &row.ResponsibleAccountUserID.String
+	} else if row.ResponsibleUserID.Valid {
 		t.ResponsibleUserID = &row.ResponsibleUserID.String
 	}
 	name := row.ResponsibleUserName
@@ -856,7 +864,11 @@ func mapAccountTransactionBackwardRow(row sqlc.ListAccountTransactionsBackwardRo
 	customerUpdatedAt := row.CustomerUpdatedAt
 	t.CustomerUpdatedAt = &customerUpdatedAt
 
-	if row.ResponsibleUserID.Valid {
+	// Prefer the account_user id resolved by the query; legacy rows store a
+	// user id in responsible_user_id and may have no account_user match.
+	if row.ResponsibleAccountUserID.Valid {
+		t.ResponsibleUserID = &row.ResponsibleAccountUserID.String
+	} else if row.ResponsibleUserID.Valid {
 		t.ResponsibleUserID = &row.ResponsibleUserID.String
 	}
 	name := row.ResponsibleUserName

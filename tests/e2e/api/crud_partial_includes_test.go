@@ -97,6 +97,7 @@ func TestAccountUsers_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
+	assert.Nil(t, got["user"], "user should be null without ?include=user")
 	assert.Nil(t, got["role"], "role should be null without ?include=role")
 	assert.Nil(t, got["department"], "department should be null without ?include=department")
 }

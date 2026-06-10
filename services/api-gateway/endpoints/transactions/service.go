@@ -111,103 +111,12 @@ func (m *transactionSvcImpl) GetTransaction(ctx context.Context, req *RetrieveTr
 		return nil, apiErr
 	}
 
-	d := resp.Transaction
-	if d == nil {
+	if resp.Transaction == nil {
 		return nil, apierror.NewResourceNotFoundError("Transaction not found.")
 	}
 
-	createdAt := grpcutil.TimestampToTime(d.CreatedAt)
-	updatedAt := grpcutil.TimestampToTime(d.UpdatedAt)
-
-	tx := &apiresource.TransactionDetail{
-		ID:               d.Id,
-		Object:           constants.ObjectTypeTransaction,
-		Number:           d.Number,
-		IsFullyAllocated: d.IsFullyAllocated,
-		StripePaymentID:  d.StripePaymentId,
-		AllocationCount:  d.AllocationCount,
-		Note:             d.Note,
-		CreatedAt:        createdAt,
-		UpdatedAt:        updatedAt,
-	}
-
-	tx.Amount = &apiresource.Quantity{
-		ID:           d.AmountId,
-		Object:       constants.ObjectTypeQuantity,
-		Value:        d.AmountValue,
-		DisplayValue: apiresource.FormatDisplayValue(d.AmountValue, d.AmountUnitAbbreviation, string(constants.UnitTypeCurrency)),
-		// Unit left nil: expandable, loaded with real data via ?include=; never fabricated.
-	}
-
-	tx.TransactionType = &apiresource.TransactionType{
-		ID:     d.TransactionTypeId,
-		Object: constants.ObjectTypeTransactionType,
-		Name:   d.TransactionTypeName,
-		Code:   constants.TransactionType(d.TransactionTypeCode),
-	}
-
-	if d.TransactionMethodId != nil {
-		tx.TransactionMethod = &apiresource.TransactionMethod{
-			ID:     *d.TransactionMethodId,
-			Object: constants.ObjectTypeTransactionMethod,
-		}
-		if d.TransactionMethodName != nil {
-			tx.TransactionMethod.Name = *d.TransactionMethodName
-		}
-		if d.TransactionMethodCode != nil {
-			tx.TransactionMethod.Code = constants.TransactionMethod(*d.TransactionMethodCode)
-		}
-	}
-
-	if d.AdjustmentTypeId != nil {
-		tx.AdjustmentType = &apiresource.AdjustmentType{
-			ID:        *d.AdjustmentTypeId,
-			Object:    constants.ObjectTypeAdjustmentType,
-			CreatedAt: createdAt,
-			UpdatedAt: updatedAt,
-		}
-		if d.AdjustmentTypeName != nil {
-			tx.AdjustmentType.Name = *d.AdjustmentTypeName
-		}
-		if d.AdjustmentTypeCode != nil {
-			tx.AdjustmentType.Code = constants.AdjustmentType(*d.AdjustmentTypeCode)
-		}
-	}
-
-	meta := resourcekit.GetLoadMeta(ctx)
-
-	// customer is an expandable reference: stash the FK id so LoadCustomers
-	// fetches the real Customer on ?include=customer. Never fabricate.
-	if d.CustomerId != nil && *d.CustomerId != "" {
-		meta.Set(constants.ObjectTypeTransaction, tx.ID, "customer_id", *d.CustomerId)
-	}
-
-	if d.ResponsibleUserId != nil {
-		user := &apiresource.AccountUser{
-			ID:        *d.ResponsibleUserId,
-			Object:    constants.ObjectTypeAccountUser,
-			Name:      d.ResponsibleUserName,
-			CreatedAt: grpcutil.TimestampToTime(d.ResponsibleUserCreatedAt),
-			UpdatedAt: grpcutil.TimestampToTime(d.ResponsibleUserUpdatedAt),
-		}
-		if d.ResponsibleUserStatus != nil {
-			user.Status = constants.AccountUserStatus(*d.ResponsibleUserStatus)
-		} else {
-			user.Status = constants.AccountUserStatusActive
-		}
-		meta.Set(constants.ObjectTypeTransaction, tx.ID, "responsible_user", user)
-	}
-
-	if d.Allocations != nil {
-		allocations := make([]apiresource.TransactionAllocation, len(d.Allocations))
-		for i, a := range d.Allocations {
-			allocations[i] = TransactionAllocationPresenter(a)
-		}
-		meta.Set(constants.ObjectTypeTransaction, tx.ID, "allocations",
-			apiresource.NewList(allocations, apiresource.PageInfo{}))
-	}
-
-	return tx, nil
+	tx := TransactionDetailPresenter(ctx, resp.Transaction)
+	return &tx, nil
 }
 
 func (m *transactionSvcImpl) CreateTransaction(ctx context.Context, req *CreateTransactionRequest) (*apiresource.TransactionDetail, *apierror.APIError) {
@@ -230,7 +139,7 @@ func (m *transactionSvcImpl) CreateTransaction(ctx context.Context, req *CreateT
 		return nil, apiErr
 	}
 
-	result := TransactionDetailPresenter(resp.Transaction)
+	result := TransactionDetailPresenter(ctx, resp.Transaction)
 	return &result, nil
 }
 
@@ -257,7 +166,7 @@ func (m *transactionSvcImpl) UpdateTransaction(ctx context.Context, req *UpdateT
 		return nil, apiErr
 	}
 
-	result := TransactionDetailPresenter(resp.Transaction)
+	result := TransactionDetailPresenter(ctx, resp.Transaction)
 	return &result, nil
 }
 
@@ -275,7 +184,7 @@ func (m *transactionSvcImpl) DeleteTransaction(ctx context.Context, req *DeleteT
 		return nil, apiErr
 	}
 
-	result := TransactionDetailPresenter(resp.Transaction)
+	result := TransactionDetailPresenter(ctx, resp.Transaction)
 	return &result, nil
 }
 

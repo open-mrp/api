@@ -33,6 +33,8 @@ func LoadAccountUsers(ctx context.Context, ids []string) (map[string]any, *apier
 	for _, au := range resp.AccountUsers {
 		out[au.Id] = accountUserFromProto(au)
 
+		meta.Set(constants.ObjectTypeAccountUser, au.Id, "user_id", au.UserId)
+
 		var roleID string
 		if au.RoleId != nil {
 			roleID = *au.RoleId
@@ -51,12 +53,7 @@ func LoadAccountUsers(ctx context.Context, ids []string) (map[string]any, *apier
 func accountUserFromProto(au *pb.AccountUserDetail) *apiresource.AccountUser {
 	return &apiresource.AccountUser{
 		ID:         au.Id,
-		User:       apiresource.NewEntity(au.UserId, constants.ObjectTypeUser, au.Name, au.Email),
 		Object:     constants.ObjectTypeAccountUser,
-		Name:       au.Name,
-		Email:      au.Email,
-		Username:   au.Username,
-		ImageURL:   au.ImageUrl,
 		Status:     constants.AccountUserStatus(au.StatusCode),
 		LastUsedAt: grpcutil.TimestampToTimePtr(au.LastUsedAt),
 		CreatedAt:  grpcutil.TimestampToTime(au.CreatedAt),

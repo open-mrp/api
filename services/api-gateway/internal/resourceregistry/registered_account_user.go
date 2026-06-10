@@ -15,6 +15,13 @@ func init() {
 		Load:       resourceloaders.LoadAccountUsers,
 		Subs: []resourcekit.SubField{
 			{
+				Key:         "user",
+				Target:      constants.ObjectTypeUser,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractIDs:  extractUserIDFromAccountUser,
+				Populate:    populateUserOnAccountUser,
+			},
+			{
 				Key:         "role",
 				Target:      constants.ObjectTypeRole,
 				Cardinality: resourcekit.CardinalityOnePtr,
@@ -30,6 +37,28 @@ func init() {
 			},
 		},
 	})
+}
+
+func extractUserIDFromAccountUser(ctx context.Context, parent any) []string {
+	au := parent.(*apiresource.AccountUser)
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeAccountUser, au.ID, "user_id")
+	if id == "" {
+		return nil
+	}
+	return []string{id}
+}
+
+func populateUserOnAccountUser(ctx context.Context, parent any, loaded map[string]any) {
+	au := parent.(*apiresource.AccountUser)
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeAccountUser, au.ID, "user_id")
+	if id == "" {
+		return
+	}
+	if v, ok := loaded[id]; ok {
+		au.User = v.(*apiresource.User)
+	}
 }
 
 func extractRoleIDFromAccountUser(ctx context.Context, parent any) []string {

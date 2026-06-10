@@ -346,6 +346,7 @@ For deeper dives, review the following docs:
 
 - `docs/patterns/api-resource-conventions.md` — API resource field conventions (object field, no omitempty, sub-objects, expandable relations, include system, list responses, sample data)
 - `docs/patterns/nullable-field-patterns.md` — **Request** field tags and nullability: `field.Optional[T]` vs. `*field.Clearable[T]` vs. value types, `omitzero` rule, the absent/null/value three-state model, the gateway null/blank-rejection pipeline, and proto/OpenAPI mapping
+- `docs/patterns/api-versioning-patterns.md` — API version scheme, the no-breaking-changes contract, gateway-edge transformers (`versiontransforms/`), forced includes, and the version deprecation/removal process
 - `docs/patterns/architecture-patterns.md` — Layered architecture (services, mediators, repositories, transaction management, idempotency, error handling, tracing)
 - `docs/patterns/authentication-patterns.md` — Identity model, authorization checks, permission model, actor types
 - `docs/patterns/domain-layer-patterns.md` — Domain directory structure, standard files, mock generation, entry point pattern

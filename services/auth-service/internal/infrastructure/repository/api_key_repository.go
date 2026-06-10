@@ -356,12 +356,16 @@ func (r *apiKeyRepoImpl) GetByIDs(ctx context.Context, ownerAccountID string, id
 	return keys, nil
 }
 
-func (r *apiKeyRepoImpl) Revoke(ctx context.Context, typeID string, ownerAccountID string, revokeAt time.Time) *apierror.APIError {
+// Revoke revokes an API key. A nil revokeAt revokes immediately using the
+// database clock — a service-supplied "now" can sit ahead of the database
+// clock and would briefly count as a scheduled (still-active) revocation. A
+// non-nil revokeAt schedules a future revocation.
+func (r *apiKeyRepoImpl) Revoke(ctx context.Context, typeID string, ownerAccountID string, revokeAt *time.Time) *apierror.APIError {
 	ctx, span := apiKeyRepoTracer.Start(ctx, "repository.api_key.revoke")
 	defer span.End()
 
 	result, err := r.db.RevokeAPIKeyByTypeID(ctx, sqlc.RevokeAPIKeyByTypeIDParams{
-		RevokedAt:      gosql.NullTime{Time: revokeAt, Valid: true},
+		RevokedAt:      db.NullTimePtr(revokeAt),
 		TypeID:         typeID,
 		OwnerAccountID: ownerAccountID,
 	})

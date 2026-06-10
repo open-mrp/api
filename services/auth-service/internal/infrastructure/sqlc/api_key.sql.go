@@ -754,7 +754,10 @@ func (q *Queries) ListAPIKeysForward(ctx context.Context, arg ListAPIKeysForward
 }
 
 const revokeAPIKeyByTypeID = `-- name: RevokeAPIKeyByTypeID :execresult
-UPDATE api_key SET revoked_at = ?, updated_at = NOW(3) WHERE type_id = ? AND owner_account_id = ?
+UPDATE api_key
+SET revoked_at = COALESCE(?, NOW(3)), updated_at = NOW(3)
+WHERE type_id = ?
+AND owner_account_id = ?
 `
 
 type RevokeAPIKeyByTypeIDParams struct {
@@ -763,6 +766,10 @@ type RevokeAPIKeyByTypeIDParams struct {
 	OwnerAccountID string
 }
 
+// A NULL revoked_at means "revoke immediately": the database clock is used so
+// the revocation can never land in the DB's future (the status filters compare
+// revoked_at against NOW(3), and a service-supplied timestamp can be ahead of
+// the database clock). A non-NULL value schedules a future revocation.
 func (q *Queries) RevokeAPIKeyByTypeID(ctx context.Context, arg RevokeAPIKeyByTypeIDParams) (sql.Result, error) {
 	return q.db.ExecContext(ctx, revokeAPIKeyByTypeID, arg.RevokedAt, arg.TypeID, arg.OwnerAccountID)
 }

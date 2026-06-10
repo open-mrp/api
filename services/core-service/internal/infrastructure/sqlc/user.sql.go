@@ -8,6 +8,8 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
+	"time"
 )
 
 const findUserByEmail = `-- name: FindUserByEmail :one
@@ -93,6 +95,77 @@ func (q *Queries) GetUserHashedPassword(ctx context.Context, id string) (sql.Nul
 	var hashed_password sql.NullString
 	err := row.Scan(&hashed_password)
 	return hashed_password, err
+}
+
+const getUsersByIDs = `-- name: GetUsersByIDs :many
+SELECT u.id, u.email, u.name, u.username, u.email_verified, u.image_url, u.status_code, u.created_at, u.updated_at
+FROM ` + "`" + `user` + "`" + ` u
+WHERE u.id IN (/*SLICE:ids*/?)
+AND EXISTS (
+    SELECT 1 FROM account_user au
+    WHERE au.user_id = u.id AND au.account_id = ?
+)
+`
+
+type GetUsersByIDsParams struct {
+	Ids       []string
+	AccountID string
+}
+
+type GetUsersByIDsRow struct {
+	ID            string
+	Email         sql.NullString
+	Name          sql.NullString
+	Username      sql.NullString
+	EmailVerified sql.NullTime
+	ImageUrl      sql.NullString
+	StatusCode    string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+func (q *Queries) GetUsersByIDs(ctx context.Context, arg GetUsersByIDsParams) ([]GetUsersByIDsRow, error) {
+	query := getUsersByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetUsersByIDsRow
+	for rows.Next() {
+		var i GetUsersByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.Name,
+			&i.Username,
+			&i.EmailVerified,
+			&i.ImageUrl,
+			&i.StatusCode,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const insertUser = `-- name: InsertUser :exec

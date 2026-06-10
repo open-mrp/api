@@ -37,6 +37,15 @@ SELECT id, email, name, username, hashed_password, email_verified, image_url, st
 FROM `user`
 WHERE id = ?;
 
+-- name: GetUsersByIDs :many
+SELECT u.id, u.email, u.name, u.username, u.email_verified, u.image_url, u.status_code, u.created_at, u.updated_at
+FROM `user` u
+WHERE u.id IN (sqlc.slice('ids'))
+AND EXISTS (
+    SELECT 1 FROM account_user au
+    WHERE au.user_id = u.id AND au.account_id = sqlc.arg('account_id')
+);
+
 -- name: UpdateUserImageURL :exec
 UPDATE `user`
 SET image_url = ?, updated_at = NOW(3)

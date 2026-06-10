@@ -36,7 +36,7 @@ func (e *RetrieveTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 		ObjectType: constants.ObjectTypeTransaction,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeTransaction,
-			Fields:     []string{"allocations", "customer", "responsible_user"},
+			Fields:     []string{"allocations", "customer", "responsible_user", "responsible_user.user"},
 		}),
 	})
 }

@@ -36,6 +36,6 @@ func Run(
 		return fmt.Errorf("generating ID: %w", apiErr)
 	}
 
-	fmt.Fprint(stdout, generated)
+	fmt.Fprint(stdout, generated) // #nosec G705 -- CLI stdout output, not web context
 	return nil
 }

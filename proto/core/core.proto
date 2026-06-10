@@ -701,6 +701,8 @@ service CoreService {
   // Users
 
   rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  // Batched read for the api-gateway resourcekit resolver.
+  rpc BatchGetUsersByIDs(BatchGetUsersByIDsRequest) returns (BatchGetUsersByIDsResponse);
   rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
   // Uploads a profile photo to S3.
   rpc UploadUserPhoto(UploadUserPhotoRequest) returns (UploadUserPhotoResponse);

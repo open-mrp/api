@@ -36,7 +36,9 @@ type APIKeyRepo interface {
 	// Revoke marks an API key as revoked at the given instant, which may be in
 	// the future to schedule revocation. Scoped to ownerAccountID; returns a
 	// not-found error if the key does not exist for the given owner.
-	Revoke(ctx context.Context, typeID string, ownerAccountID string, revokeAt time.Time) *apierror.APIError
+	// Revoke revokes an API key. A nil revokeAt revokes immediately using the
+	// database clock; a non-nil revokeAt schedules a future revocation.
+	Revoke(ctx context.Context, typeID string, ownerAccountID string, revokeAt *time.Time) *apierror.APIError
 	List(ctx context.Context, input APIKeyListRepoInput) (*APIKeyListRepoResult, *apierror.APIError)
 }
 

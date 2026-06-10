@@ -207,6 +207,22 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 			recordAndRespondAPIError(ctx, w, span, "include_validation", apiErr)
 			return
 		}
+		// Older API versions may need sub-resources resolved that their callers
+		// could not request, so the response transformer has real data to
+		// downgrade from (e.g. `user` on account_user). Nested forced keys
+		// (containing a dot) apply only when their parent path is already in
+		// the tree — forcing them unconditionally would expand sub-resources
+		// the caller never asked for, which is itself a shape change.
+		if e.ObjectType != "" {
+			if requestVersion, ok := appctx.GetAPIVersionFromContext(ctx); ok && !requestVersion.Equal(version.Latest) {
+				for _, key := range version.ForcedIncludes(version.Latest, requestVersion, e.ObjectType) {
+					if idx := strings.LastIndex(key, "."); idx >= 0 && !includeTree.Has(key[:idx]) {
+						continue
+					}
+					includeTree.Add(key)
+				}
+			}
+		}
 		// Expose the requested includes to the service handler so it can forward
 		// only what the client asked for to the backend, rather than over-fetching
 		// a fixed set.
@@ -367,7 +383,33 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 			}
 		}
 	}
-	httptransport.RespondWithJSON(ctx, w, e.SuccessStatusCode, resp, respondOpts...)
+
+	// Downgrade the response shape when the caller is on an older API version.
+	respPayload := any(resp)
+	if e.ObjectType != "" {
+		if requestVersion, ok := appctx.GetAPIVersionFromContext(ctx); ok && !requestVersion.Equal(version.Latest) {
+			if transformed, ok := transformResponsePayload(respPayload, version.Latest, requestVersion, e.ObjectType); ok {
+				respPayload = transformed
+			}
+		}
+	}
+	httptransport.RespondWithJSON(ctx, w, e.SuccessStatusCode, respPayload, respondOpts...)
+}
+
+// transformResponsePayload marshals the response through JSON and applies the
+// registered response transformers to downgrade it from the 'from' version to
+// the 'to' version. Returns false (and the response is sent untransformed)
+// only if the payload does not marshal to a JSON object.
+func transformResponsePayload(resp any, from, to version.APIVersion, objectType constants.ObjectType) (any, bool) {
+	body, err := json.Marshal(resp)
+	if err != nil {
+		return nil, false
+	}
+	var data map[string]any
+	if err := json.Unmarshal(body, &data); err != nil {
+		return nil, false
+	}
+	return version.Transform(from, to, objectType, data), true
 }
 
 // transformRequestBody reads the request body, applies version transformations to upgrade the request from an older version format to the latest format, and returns a new request with the transformed body.

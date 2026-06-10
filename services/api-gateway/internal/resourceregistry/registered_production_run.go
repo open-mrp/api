@@ -14,17 +14,60 @@ func init() {
 		ObjectType: constants.ObjectTypeProductionRun,
 		Load:       resourceloaders.LoadProductionRuns,
 		Subs: []resourcekit.SubField{
-			{Key: "responsible_user", Populate: populateResponsibleUserOnProductionRun},
+			{
+				Key:         "responsible_user",
+				Target:      constants.ObjectTypeAccountUser,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractIDs:  extractResponsibleUserIDFromProductionRun,
+				Populate:    populateResponsibleUserOnProductionRun,
+			},
 		},
 	})
 }
 
-func populateResponsibleUserOnProductionRun(ctx context.Context, parent any, _ map[string]any) {
-	pr := parent.(*apiresource.ProductionRunDetail)
-	v, ok := resourcekit.GetLoadMeta(ctx).
-		Get(constants.ObjectTypeProductionRun, pr.ID, "responsible_user")
+// productionRunID returns the run ID for either resource shape that shares the
+// production_run object type (detail on Get/Create/Update, summary on List).
+func productionRunID(parent any) string {
+	switch pr := parent.(type) {
+	case *apiresource.ProductionRunDetail:
+		return pr.ID
+	case *apiresource.ProductionRunSummary:
+		return pr.ID
+	}
+	return ""
+}
+
+func extractResponsibleUserIDFromProductionRun(ctx context.Context, parent any) []string {
+	runID := productionRunID(parent)
+	if runID == "" {
+		return nil
+	}
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeProductionRun, runID, "responsible_user_id")
+	if id == "" {
+		return nil
+	}
+	return []string{id}
+}
+
+func populateResponsibleUserOnProductionRun(ctx context.Context, parent any, loaded map[string]any) {
+	runID := productionRunID(parent)
+	if runID == "" {
+		return
+	}
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeProductionRun, runID, "responsible_user_id")
+	if id == "" {
+		return
+	}
+	v, ok := loaded[id]
 	if !ok {
 		return
 	}
-	pr.ResponsibleUser = v.(*apiresource.AccountUser)
+	switch pr := parent.(type) {
+	case *apiresource.ProductionRunDetail:
+		pr.ResponsibleUser = v.(*apiresource.AccountUser)
+	case *apiresource.ProductionRunSummary:
+		pr.ResponsibleUser = v.(*apiresource.AccountUser)
+	}
 }

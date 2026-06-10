@@ -3,6 +3,7 @@ SELECT
     pr.id,
     pr.number,
     pr.responsible_user_id,
+    au.id AS responsible_account_user_id,
     COALESCE(u.name, au.id, '') AS responsible_user_name,
     au.status_code AS responsible_user_status_code,
     au.created_at AS responsible_user_created_at,
@@ -13,7 +14,9 @@ SELECT
     pr.updated_at,
     COUNT(DISTINCT b.id) AS batch_count
 FROM production_run pr
-LEFT JOIN account_user au ON au.id = pr.responsible_user_id AND au.account_id = pr.account_id
+-- responsible_user_id may store either an account_user id or a legacy user
+-- id; match both, scoped to the run's account.
+LEFT JOIN account_user au ON au.account_id = pr.account_id AND (au.id = pr.responsible_user_id OR au.user_id = pr.responsible_user_id)
 LEFT JOIN user u ON u.id = au.user_id
 LEFT JOIN batch b ON b.production_run_id = pr.id AND b.account_id = pr.account_id
 WHERE pr.account_id = sqlc.arg('account_id')
@@ -64,7 +67,7 @@ AND (
     OR pr.created_at < sqlc.narg('cursor_created_at')
     OR (pr.created_at = sqlc.narg('cursor_created_at') AND pr.id < sqlc.narg('cursor_id'))
 )
-GROUP BY pr.id
+GROUP BY pr.id, au.id
 ORDER BY pr.created_at DESC, pr.id DESC
 LIMIT ?;
 
@@ -73,6 +76,7 @@ SELECT
     pr.id,
     pr.number,
     pr.responsible_user_id,
+    au.id AS responsible_account_user_id,
     COALESCE(u.name, au.id, '') AS responsible_user_name,
     au.status_code AS responsible_user_status_code,
     au.created_at AS responsible_user_created_at,
@@ -83,7 +87,9 @@ SELECT
     pr.updated_at,
     COUNT(DISTINCT b.id) AS batch_count
 FROM production_run pr
-LEFT JOIN account_user au ON au.id = pr.responsible_user_id AND au.account_id = pr.account_id
+-- responsible_user_id may store either an account_user id or a legacy user
+-- id; match both, scoped to the run's account.
+LEFT JOIN account_user au ON au.account_id = pr.account_id AND (au.id = pr.responsible_user_id OR au.user_id = pr.responsible_user_id)
 LEFT JOIN user u ON u.id = au.user_id
 LEFT JOIN batch b ON b.production_run_id = pr.id AND b.account_id = pr.account_id
 WHERE pr.account_id = sqlc.arg('account_id')
@@ -134,7 +140,7 @@ AND (
     OR pr.created_at > sqlc.narg('cursor_created_at')
     OR (pr.created_at = sqlc.narg('cursor_created_at') AND pr.id > sqlc.narg('cursor_id'))
 )
-GROUP BY pr.id
+GROUP BY pr.id, au.id
 ORDER BY pr.created_at ASC, pr.id ASC
 LIMIT ?;
 
@@ -143,6 +149,7 @@ SELECT
     pr.id,
     pr.number,
     pr.responsible_user_id,
+    au.id AS responsible_account_user_id,
     COALESCE(u.name, au.id, '') AS responsible_user_name,
     au.status_code AS responsible_user_status_code,
     au.created_at AS responsible_user_created_at,
@@ -154,12 +161,14 @@ SELECT
     pr.updated_at,
     COUNT(DISTINCT b.id) AS batch_count
 FROM production_run pr
-LEFT JOIN account_user au ON au.id = pr.responsible_user_id AND au.account_id = pr.account_id
+-- responsible_user_id may store either an account_user id or a legacy user
+-- id; match both, scoped to the run's account.
+LEFT JOIN account_user au ON au.account_id = pr.account_id AND (au.id = pr.responsible_user_id OR au.user_id = pr.responsible_user_id)
 LEFT JOIN user u ON u.id = au.user_id
 LEFT JOIN batch b ON b.production_run_id = pr.id AND b.account_id = pr.account_id
 WHERE pr.id = sqlc.arg('id')
 AND pr.account_id = sqlc.arg('account_id')
-GROUP BY pr.id;
+GROUP BY pr.id, au.id;
 
 -- name: InsertProductionRun :exec
 INSERT INTO production_run (id, responsible_user_id, number, account_id, created_at, updated_at)

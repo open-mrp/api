@@ -158,15 +158,15 @@ func (s *settlementSvcImpl) CreateSettlement(ctx context.Context, params domain.
 
 	params.AccountID = identity.Target.AccountID
 
-	// Validate responsible user exists in account and resolve user ID to account_user ID.
-	// The API accepts a user ID (matching the legacy Dashboard behavior) and the settlement
-	// table stores the account_user ID.
+	// Validate responsible user exists in account and resolve to the
+	// account_user ID. The client may send either an account_user id or a
+	// user id (the latter matching the legacy Dashboard behavior).
 	accountUserRepo := s.repos.NewAccountUserRepo()
-	accountUser, apiErr := accountUserRepo.FindByAccountAndUserID(ctx, params.ResponsibleUserID, params.AccountID)
+	resolvedID, apiErr := accountUserRepo.ResolveAccountUserID(ctx, params.AccountID, params.ResponsibleUserID)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Account user not found."))
 	}
-	params.ResponsibleUserID = accountUser.ID
+	params.ResponsibleUserID = resolvedID
 
 	meds := s.mediators()
 
@@ -294,6 +294,17 @@ func (s *settlementSvcImpl) UpdateSettlement(ctx context.Context, params domain.
 	}
 
 	params.AccountID = identity.Target.AccountID
+
+	// If the responsible user is being updated, validate existence and resolve
+	// to the account_user ID. The client may send either an account_user id or
+	// a user id.
+	if params.ResponsibleUserID != nil {
+		resolvedID, apiErr := s.repos.NewAccountUserRepo().ResolveAccountUserID(ctx, params.AccountID, *params.ResponsibleUserID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Account user not found."))
+		}
+		params.ResponsibleUserID = &resolvedID
+	}
 
 	meds := s.mediators()
 

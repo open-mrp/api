@@ -34,7 +34,7 @@ func (e *RetrieveAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 		ObjectType: constants.ObjectTypeAccountUser,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAccountUser,
-			Fields:     []string{"role", "department"},
+			Fields:     []string{"user", "role", "department"},
 		}),
 	})
 }

@@ -44,6 +44,21 @@ func (m *MockUserSvc) EXPECT() *MockUserSvcMockRecorder {
 	return m.recorder
 }
 
+// BatchGetUsersByIDs mocks base method.
+func (m *MockUserSvc) BatchGetUsersByIDs(ctx context.Context, ids []string) ([]*domain.UserRecord, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchGetUsersByIDs", ctx, ids)
+	ret0, _ := ret[0].([]*domain.UserRecord)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// BatchGetUsersByIDs indicates an expected call of BatchGetUsersByIDs.
+func (mr *MockUserSvcMockRecorder) BatchGetUsersByIDs(ctx, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetUsersByIDs", reflect.TypeOf((*MockUserSvc)(nil).BatchGetUsersByIDs), ctx, ids)
+}
+
 // GetUser mocks base method.
 func (m *MockUserSvc) GetUser(ctx context.Context, userID string) (*domain.UserRecord, *apierror.APIError) {
 	m.ctrl.T.Helper()

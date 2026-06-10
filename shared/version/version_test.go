@@ -282,10 +282,10 @@ func TestSupportedVersionStrings(t *testing.T) {
 		t.Error("Expected at least one supported version")
 	}
 
-	found := slices.Contains(strings, "1.0.forge-preview.1")
-
-	if !found {
-		t.Error("Expected 1.0.forge-preview.1 in supported versions")
+	for _, want := range []string{"1.0.forge-preview.1", "1.0.forge-preview.2"} {
+		if !slices.Contains(strings, want) {
+			t.Errorf("Expected %s in supported versions", want)
+		}
 	}
 }
 
@@ -293,6 +293,10 @@ func TestIsSupported(t *testing.T) {
 	t.Parallel()
 	if !IsSupported("1.0.forge-preview.1") {
 		t.Error("Expected 1.0.forge-preview.1 to be supported")
+	}
+
+	if !IsSupported("1.0.forge-preview.2") {
+		t.Error("Expected 1.0.forge-preview.2 to be supported")
 	}
 
 	if IsSupported("1.0.forge") {
@@ -331,8 +335,41 @@ func TestMustParse_Invalid(t *testing.T) {
 
 func TestLatest(t *testing.T) {
 	t.Parallel()
-	if Latest.Version != "1.0.forge-preview.1" {
-		t.Errorf("Expected Latest to be 1.0.forge-preview.1, got %s", Latest.Version)
+	if Latest.Version != "1.0.forge-preview.2" {
+		t.Errorf("Expected Latest to be 1.0.forge-preview.2, got %s", Latest.Version)
+	}
+}
+
+func TestV1_0_Forge_Preview2(t *testing.T) {
+	t.Parallel()
+	v := V1_0_Forge_Preview2
+
+	if v.Version != "1.0.forge-preview.2" {
+		t.Errorf("Expected Version to be 1.0.forge-preview.2, got %s", v.Version)
+	}
+
+	if v.Minor != 1 {
+		t.Errorf("Expected Minor to be 1, got %d", v.Minor)
+	}
+
+	if v.Patch != 0 {
+		t.Errorf("Expected Patch to be 0, got %d", v.Patch)
+	}
+
+	if v.Codename != "forge" {
+		t.Errorf("Expected Codename to be forge, got %s", v.Codename)
+	}
+
+	if !v.IsPreview {
+		t.Error("Expected IsPreview to be true")
+	}
+
+	if v.Preview != 2 {
+		t.Errorf("Expected Preview to be 2, got %d", v.Preview)
+	}
+
+	if !V1_0_Forge_Preview1.Before(V1_0_Forge_Preview2) {
+		t.Error("Expected preview.1 to be before preview.2")
 	}
 }
 

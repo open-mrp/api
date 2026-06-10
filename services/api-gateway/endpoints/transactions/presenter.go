@@ -10,7 +10,12 @@ import (
 	pb "github.com/augno/api/shared/proto/core"
 )
 
-func TransactionDetailPresenter(d *pb.TransactionInfo) apiresource.TransactionDetail {
+// TransactionDetailPresenter builds the transaction detail resource and
+// stashes the expandable sub-resource data (customer FK, responsible_user FK,
+// allocations) in the request-scoped LoadMeta so the include resolver can
+// populate them when requested. Expandable fields stay nil here — never
+// fabricated.
+func TransactionDetailPresenter(ctx context.Context, d *pb.TransactionInfo) apiresource.TransactionDetail {
 	if d == nil {
 		return apiresource.TransactionDetail{}
 	}
@@ -25,6 +30,7 @@ func TransactionDetailPresenter(d *pb.TransactionInfo) apiresource.TransactionDe
 		IsFullyAllocated: d.IsFullyAllocated,
 		StripePaymentID:  d.StripePaymentId,
 		AllocationCount:  d.AllocationCount,
+		Note:             d.Note,
 		CreatedAt:        createdAt,
 		UpdatedAt:        updatedAt,
 	}
@@ -37,27 +43,6 @@ func TransactionDetailPresenter(d *pb.TransactionInfo) apiresource.TransactionDe
 		// Unit left nil: the expandable unit loads real data via ?include= and is
 		// never fabricated; display_value already carries the formatted amount.
 	}
-
-	// customer is an expandable reference loaded with real data via
-	// ?include=customer (see GetTransaction's meta stash); left nil here rather
-	// than fabricated.
-	if d.ResponsibleUserId != nil {
-		user := &apiresource.AccountUser{
-			ID:        *d.ResponsibleUserId,
-			Object:    constants.ObjectTypeAccountUser,
-			Name:      d.ResponsibleUserName,
-			CreatedAt: grpcutil.TimestampToTime(d.ResponsibleUserCreatedAt),
-			UpdatedAt: grpcutil.TimestampToTime(d.ResponsibleUserUpdatedAt),
-		}
-		if d.ResponsibleUserStatus != nil {
-			user.Status = constants.AccountUserStatus(*d.ResponsibleUserStatus)
-		} else {
-			user.Status = constants.AccountUserStatusActive
-		}
-		tx.ResponsibleUser = user
-	}
-
-	tx.Note = d.Note
 
 	tx.TransactionType = &apiresource.TransactionType{
 		ID:     d.TransactionTypeId,
@@ -80,10 +65,11 @@ func TransactionDetailPresenter(d *pb.TransactionInfo) apiresource.TransactionDe
 	}
 
 	if d.AdjustmentTypeId != nil {
+		// Owner left nil: expandable, and not derivable here (adjustment
+		// types may be system- or account-owned). Never fabricate.
 		tx.AdjustmentType = &apiresource.AdjustmentType{
 			ID:        *d.AdjustmentTypeId,
 			Object:    constants.ObjectTypeAdjustmentType,
-			Owner:     apiresource.SystemOwner(),
 			CreatedAt: createdAt,
 			UpdatedAt: updatedAt,
 		}
@@ -95,12 +81,23 @@ func TransactionDetailPresenter(d *pb.TransactionInfo) apiresource.TransactionDe
 		}
 	}
 
+	meta := resourcekit.GetLoadMeta(ctx)
+
+	if d.CustomerId != nil && *d.CustomerId != "" {
+		meta.Set(constants.ObjectTypeTransaction, tx.ID, "customer_id", *d.CustomerId)
+	}
+
+	if d.ResponsibleUserId != nil && *d.ResponsibleUserId != "" {
+		meta.Set(constants.ObjectTypeTransaction, tx.ID, "responsible_user_id", *d.ResponsibleUserId)
+	}
+
 	if d.Allocations != nil {
 		allocations := make([]apiresource.TransactionAllocation, len(d.Allocations))
 		for i, a := range d.Allocations {
 			allocations[i] = TransactionAllocationPresenter(a)
 		}
-		tx.Allocations = apiresource.NewList(allocations, apiresource.PageInfo{})
+		meta.Set(constants.ObjectTypeTransaction, tx.ID, "allocations",
+			apiresource.NewList(allocations, apiresource.PageInfo{}))
 	}
 
 	return tx
@@ -223,7 +220,7 @@ func AccountTransactionListPresenter(ctx context.Context, resp *pb.ListAccountTr
 
 	transactions := make([]apiresource.TransactionDetail, len(resp.Transactions))
 	for i, d := range resp.Transactions {
-		transactions[i] = TransactionDetailPresenter(d)
+		transactions[i] = TransactionDetailPresenter(ctx, d)
 	}
 
 	return apiresource.NewList(transactions, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))

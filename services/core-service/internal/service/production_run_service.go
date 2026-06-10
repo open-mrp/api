@@ -136,16 +136,14 @@ func (s *productionRunSvcImpl) CreateProductionRun(ctx context.Context, params d
 
 	params.AccountID = identity.Target.AccountID
 
-	// Validate that the responsible user exists in the account.
-	// The responsible_user_id from the client is a user_id; we look up the account_user.
+	// Validate that the responsible user exists in the account. The client may
+	// send either an account_user id or a user id; store the account_user id.
 	accountUserRepo := s.repos.NewAccountUserRepo()
-	accountUser, apiErr := accountUserRepo.FindByAccountAndUserID(ctx, params.ResponsibleUserID, params.AccountID)
+	resolvedID, apiErr := accountUserRepo.ResolveAccountUserID(ctx, params.AccountID, params.ResponsibleUserID)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("The responsible user was not found in this account."))
 	}
-
-	// Store the account_user ID (not the user ID) as responsible_user_id.
-	params.ResponsibleUserID = accountUser.ID
+	params.ResponsibleUserID = resolvedID
 
 	productionRunID, apiErr := id.GenID(id.ProductionRunIDPrefix, nil)
 	if apiErr != nil {
@@ -249,15 +247,15 @@ func (s *productionRunSvcImpl) UpdateProductionRun(ctx context.Context, params d
 		}
 	}
 
-	// If responsible user is being updated, validate existence.
+	// If responsible user is being updated, validate existence. The client may
+	// send either an account_user id or a user id; store the account_user id.
 	if params.ResponsibleUserID != nil {
 		accountUserRepo := s.repos.NewAccountUserRepo()
-		accountUser, apiErr := accountUserRepo.FindByAccountAndUserID(ctx, *params.ResponsibleUserID, params.AccountID)
+		resolvedID, apiErr := accountUserRepo.ResolveAccountUserID(ctx, params.AccountID, *params.ResponsibleUserID)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("The responsible user was not found in this account."))
 		}
-		// Replace the user_id with the account_user ID.
-		params.ResponsibleUserID = &accountUser.ID
+		params.ResponsibleUserID = &resolvedID
 	}
 
 	meds := s.mediators()

@@ -706,10 +706,10 @@ func (suite *APIKeyMedTestSuite) TestRotate_SchedulesFutureRevocation() {
 		Return(oldKey, nil).
 		Times(1)
 
-	var capturedRevokeAt time.Time
+	var capturedRevokeAt *time.Time
 	suite.apiKeyRepo.EXPECT().
 		Revoke(gomock.Any(), apiKeyTypeID, ownerAccountID, gomock.Any()).
-		DoAndReturn(func(_ context.Context, _ string, _ string, at time.Time) *apierror.APIError {
+		DoAndReturn(func(_ context.Context, _ string, _ string, at *time.Time) *apierror.APIError {
 			capturedRevokeAt = at
 			return nil
 		}).
@@ -725,7 +725,8 @@ func (suite *APIKeyMedTestSuite) TestRotate_SchedulesFutureRevocation() {
 	})
 
 	suite.Nil(err)
-	suite.WithinDuration(revokeAt, capturedRevokeAt, time.Second,
+	suite.NotNil(capturedRevokeAt, "a future revoke_at should schedule revocation")
+	suite.WithinDuration(revokeAt, *capturedRevokeAt, time.Second,
 		"old key should be revoked at the scheduled instant")
 }
 
@@ -776,11 +777,11 @@ func (suite *APIKeyMedTestSuite) TestRotate_RevokeAtInPast_RevokesImmediately() 
 		Return(oldKey, nil).
 		Times(1)
 
-	var capturedRevokeAt time.Time
+	revokeCalled := false
 	suite.apiKeyRepo.EXPECT().
-		Revoke(gomock.Any(), apiKeyTypeID, ownerAccountID, gomock.Any()).
-		DoAndReturn(func(_ context.Context, _ string, _ string, at time.Time) *apierror.APIError {
-			capturedRevokeAt = at
+		Revoke(gomock.Any(), apiKeyTypeID, ownerAccountID, gomock.Nil()).
+		DoAndReturn(func(_ context.Context, _ string, _ string, _ *time.Time) *apierror.APIError {
+			revokeCalled = true
 			return nil
 		}).
 		Times(1)
@@ -795,10 +796,8 @@ func (suite *APIKeyMedTestSuite) TestRotate_RevokeAtInPast_RevokesImmediately() 
 	})
 
 	suite.Nil(err)
-	suite.True(capturedRevokeAt.After(pastRevokeAt),
-		"a past revoke_at should collapse to immediate (now), not the past value")
-	suite.WithinDuration(time.Now().UTC(), capturedRevokeAt, 5*time.Second,
-		"should revoke at ~now")
+	suite.True(revokeCalled,
+		"a past revoke_at should collapse to an immediate (nil — database clock) revocation")
 }
 
 func (suite *APIKeyMedTestSuite) TestList_HasRedactedValue() {

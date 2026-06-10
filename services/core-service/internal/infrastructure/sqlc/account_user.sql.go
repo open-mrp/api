@@ -1338,6 +1338,29 @@ func (q *Queries) ReactivateAccountUsers(ctx context.Context, arg ReactivateAcco
 	return q.db.ExecContext(ctx, reactivateAccountUsers, arg.AccountID, arg.Limit)
 }
 
+const resolveAccountUserID = `-- name: ResolveAccountUserID :one
+SELECT au.id
+FROM account_user au
+WHERE au.account_id = ?
+AND (au.id = ? OR au.user_id = ?)
+AND (au.status_code = 'active' OR au.status_code IS NULL)
+LIMIT 1
+`
+
+type ResolveAccountUserIDParams struct {
+	AccountID           string
+	UserOrAccountUserID string
+}
+
+// Resolves either an account_user id or a user id to the account_user id in
+// the given account. Used by write paths that accept both id forms.
+func (q *Queries) ResolveAccountUserID(ctx context.Context, arg ResolveAccountUserIDParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, resolveAccountUserID, arg.AccountID, arg.UserOrAccountUserID, arg.UserOrAccountUserID)
+	var id string
+	err := row.Scan(&id)
+	return id, err
+}
+
 const revokeRefreshTokensByUserID = `-- name: RevokeRefreshTokensByUserID :exec
 UPDATE refresh_token
 SET revoked_at = NOW(3)

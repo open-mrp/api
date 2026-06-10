@@ -61,7 +61,7 @@ func (e *UpdateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		ObjectType: constants.ObjectTypeAccountUser,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAccountUser,
-			Fields:     []string{"role", "department"},
+			Fields:     []string{"user", "role", "department"},
 		}),
 	})
 }

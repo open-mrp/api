@@ -512,9 +512,8 @@ func stashCustomerMeta(ctx context.Context, cust *apiresource.Customer, c *pb.Cu
 		meta.Set(constants.ObjectTypeCustomer, cust.ID, "defaults_priority", defaults.Priority)
 		defaults.Priority = nil
 	}
-	if defaults.SalesRep != nil {
-		meta.Set(constants.ObjectTypeCustomer, cust.ID, "defaults_sales_rep", defaults.SalesRep)
-		defaults.SalesRep = nil
+	if c.DefaultSalesRep != nil {
+		meta.Set(constants.ObjectTypeCustomer, cust.ID, "defaults_sales_rep_id", c.DefaultSalesRep.Id)
 	}
 
 	meta.Set(constants.ObjectTypeCustomer, cust.ID, "notification_preferences", &apiresource.CustomerNotificationPreferences{
@@ -685,23 +684,9 @@ func buildDefaults(c *pb.CustomerProto) *apiresource.CustomerDefaults {
 		}
 	}
 
-	if c.DefaultSalesRep != nil {
-		sr := &apiresource.AccountUser{
-			ID:     c.DefaultSalesRep.Id,
-			Object: constants.ObjectTypeAccountUser,
-			Name:   c.DefaultSalesRep.Name,
-		}
-		if c.DefaultSalesRep.Status != nil {
-			sr.Status = constants.AccountUserStatus(*c.DefaultSalesRep.Status)
-		}
-		if c.DefaultSalesRep.CreatedAt != nil {
-			sr.CreatedAt = c.DefaultSalesRep.CreatedAt.AsTime()
-		}
-		if c.DefaultSalesRep.UpdatedAt != nil {
-			sr.UpdatedAt = c.DefaultSalesRep.UpdatedAt.AsTime()
-		}
-		d.SalesRep = sr
-	}
+	// sales_rep is an expandable reference: the FK id is stashed in LoadMeta so
+	// LoadAccountUsers fetches the real account user on
+	// ?include=defaults.sales_rep. Never fabricate.
 
 	return d
 }

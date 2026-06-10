@@ -139,7 +139,7 @@ func (mr *MockAPIKeyRepoMockRecorder) List(ctx, input any) *gomock.Call {
 }
 
 // Revoke mocks base method.
-func (m *MockAPIKeyRepo) Revoke(ctx context.Context, typeID, ownerAccountID string, revokeAt time.Time) *apierror.APIError {
+func (m *MockAPIKeyRepo) Revoke(ctx context.Context, typeID, ownerAccountID string, revokeAt *time.Time) *apierror.APIError {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Revoke", ctx, typeID, ownerAccountID, revokeAt)
 	ret0, _ := ret[0].(*apierror.APIError)

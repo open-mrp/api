@@ -23,7 +23,13 @@ func init() {
 			{Key: "defaults.payment_term", Populate: populatePaymentTermOnCustomerDefaults},
 			{Key: "defaults.shipping_term", Populate: populateShippingTermOnCustomerDefaults},
 			{Key: "defaults.priority", Populate: populatePriorityOnCustomerDefaults},
-			{Key: "defaults.sales_rep", Populate: populateSalesRepOnCustomerDefaults},
+			{
+				Key:         "defaults.sales_rep",
+				Target:      constants.ObjectTypeAccountUser,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractIDs:  extractSalesRepIDFromCustomerDefaults,
+				Populate:    populateSalesRepOnCustomerDefaults,
+			},
 			{Key: "notification_preferences", Populate: populateNotificationPreferencesOnCustomer},
 			{Key: "bill_to_address", Populate: populateBillToAddressOnCustomer},
 			{Key: "ship_to_address", Populate: populateShipToAddressOnCustomer},
@@ -214,14 +220,27 @@ func populatePriorityOnCustomerDefaults(ctx context.Context, parent any, _ map[s
 	c.Defaults.Priority = v.(*apiresource.Priority)
 }
 
-func populateSalesRepOnCustomerDefaults(ctx context.Context, parent any, _ map[string]any) {
+func extractSalesRepIDFromCustomerDefaults(ctx context.Context, parent any) []string {
+	c := parent.(*apiresource.Customer)
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeCustomer, c.ID, "defaults_sales_rep_id")
+	if id == "" {
+		return nil
+	}
+	return []string{id}
+}
+
+func populateSalesRepOnCustomerDefaults(ctx context.Context, parent any, loaded map[string]any) {
 	c := parent.(*apiresource.Customer)
 	if c.Defaults == nil {
 		return
 	}
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "defaults_sales_rep")
-	if !ok {
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeCustomer, c.ID, "defaults_sales_rep_id")
+	if id == "" {
 		return
 	}
-	c.Defaults.SalesRep = v.(*apiresource.AccountUser)
+	if v, ok := loaded[id]; ok {
+		c.Defaults.SalesRep = v.(*apiresource.AccountUser)
+	}
 }

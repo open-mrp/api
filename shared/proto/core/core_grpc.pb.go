@@ -319,6 +319,7 @@ const (
 	CoreService_DeleteTransactionAllocation_FullMethodName                = "/core.CoreService/DeleteTransactionAllocation"
 	CoreService_ListOpenCredits_FullMethodName                            = "/core.CoreService/ListOpenCredits"
 	CoreService_GetUser_FullMethodName                                    = "/core.CoreService/GetUser"
+	CoreService_BatchGetUsersByIDs_FullMethodName                         = "/core.CoreService/BatchGetUsersByIDs"
 	CoreService_UpdateUser_FullMethodName                                 = "/core.CoreService/UpdateUser"
 	CoreService_UploadUserPhoto_FullMethodName                            = "/core.CoreService/UploadUserPhoto"
 	CoreService_GetUserPhotoURL_FullMethodName                            = "/core.CoreService/GetUserPhotoURL"
@@ -422,7 +423,7 @@ type CoreServiceClient interface {
 	CreateSandbox(ctx context.Context, in *CreateSandboxRequest, opts ...grpc.CallOption) (*CreateSandboxResponse, error)
 	// Returns a single sandbox account by ID.
 	GetSandbox(ctx context.Context, in *GetSandboxRequest, opts ...grpc.CallOption) (*GetSandboxResponse, error)
-	// Deletes a sandbox and purges account-scoped data asynchronously; rejects if last sandbox.
+	// Deletes a sandbox and purges account-scoped data asynchronously.
 	DeleteSandbox(ctx context.Context, in *DeleteSandboxRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Returns sandboxes by ID for the api-gateway include resolver.
 	BatchGetSandboxesByIDs(ctx context.Context, in *BatchGetSandboxesByIDsRequest, opts ...grpc.CallOption) (*BatchGetSandboxesByIDsResponse, error)
@@ -895,6 +896,8 @@ type CoreServiceClient interface {
 	DeleteTransactionAllocation(ctx context.Context, in *DeleteTransactionAllocationRequest, opts ...grpc.CallOption) (*DeleteTransactionAllocationResponse, error)
 	ListOpenCredits(ctx context.Context, in *ListOpenCreditsRequest, opts ...grpc.CallOption) (*ListOpenCreditsResponse, error)
 	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error)
+	// Batched read for the api-gateway resourcekit resolver.
+	BatchGetUsersByIDs(ctx context.Context, in *BatchGetUsersByIDsRequest, opts ...grpc.CallOption) (*BatchGetUsersByIDsResponse, error)
 	UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error)
 	// Uploads a profile photo to S3.
 	UploadUserPhoto(ctx context.Context, in *UploadUserPhotoRequest, opts ...grpc.CallOption) (*UploadUserPhotoResponse, error)
@@ -3909,6 +3912,16 @@ func (c *coreServiceClient) GetUser(ctx context.Context, in *GetUserRequest, opt
 	return out, nil
 }
 
+func (c *coreServiceClient) BatchGetUsersByIDs(ctx context.Context, in *BatchGetUsersByIDsRequest, opts ...grpc.CallOption) (*BatchGetUsersByIDsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BatchGetUsersByIDsResponse)
+	err := c.cc.Invoke(ctx, CoreService_BatchGetUsersByIDs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *coreServiceClient) UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(UpdateUserResponse)
@@ -4631,7 +4644,7 @@ type CoreServiceServer interface {
 	CreateSandbox(context.Context, *CreateSandboxRequest) (*CreateSandboxResponse, error)
 	// Returns a single sandbox account by ID.
 	GetSandbox(context.Context, *GetSandboxRequest) (*GetSandboxResponse, error)
-	// Deletes a sandbox and purges account-scoped data asynchronously; rejects if last sandbox.
+	// Deletes a sandbox and purges account-scoped data asynchronously.
 	DeleteSandbox(context.Context, *DeleteSandboxRequest) (*emptypb.Empty, error)
 	// Returns sandboxes by ID for the api-gateway include resolver.
 	BatchGetSandboxesByIDs(context.Context, *BatchGetSandboxesByIDsRequest) (*BatchGetSandboxesByIDsResponse, error)
@@ -5104,6 +5117,8 @@ type CoreServiceServer interface {
 	DeleteTransactionAllocation(context.Context, *DeleteTransactionAllocationRequest) (*DeleteTransactionAllocationResponse, error)
 	ListOpenCredits(context.Context, *ListOpenCreditsRequest) (*ListOpenCreditsResponse, error)
 	GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error)
+	// Batched read for the api-gateway resourcekit resolver.
+	BatchGetUsersByIDs(context.Context, *BatchGetUsersByIDsRequest) (*BatchGetUsersByIDsResponse, error)
 	UpdateUser(context.Context, *UpdateUserRequest) (*UpdateUserResponse, error)
 	// Uploads a profile photo to S3.
 	UploadUserPhoto(context.Context, *UploadUserPhotoRequest) (*UploadUserPhotoResponse, error)
@@ -6073,6 +6088,9 @@ func (UnimplementedCoreServiceServer) ListOpenCredits(context.Context, *ListOpen
 }
 func (UnimplementedCoreServiceServer) GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetUser not implemented")
+}
+func (UnimplementedCoreServiceServer) BatchGetUsersByIDs(context.Context, *BatchGetUsersByIDsRequest) (*BatchGetUsersByIDsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BatchGetUsersByIDs not implemented")
 }
 func (UnimplementedCoreServiceServer) UpdateUser(context.Context, *UpdateUserRequest) (*UpdateUserResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateUser not implemented")
@@ -11558,6 +11576,24 @@ func _CoreService_GetUser_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CoreService_BatchGetUsersByIDs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchGetUsersByIDsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).BatchGetUsersByIDs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_BatchGetUsersByIDs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).BatchGetUsersByIDs(ctx, req.(*BatchGetUsersByIDsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CoreService_UpdateUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(UpdateUserRequest)
 	if err := dec(in); err != nil {
@@ -13974,6 +14010,10 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUser",
 			Handler:    _CoreService_GetUser_Handler,
+		},
+		{
+			MethodName: "BatchGetUsersByIDs",
+			Handler:    _CoreService_BatchGetUsersByIDs_Handler,
 		},
 		{
 			MethodName: "UpdateUser",

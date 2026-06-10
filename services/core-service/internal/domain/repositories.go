@@ -50,6 +50,9 @@ type AccountRepo interface {
 
 type AccountUserRepo interface {
 	FindByAccountAndUserID(ctx context.Context, userID, accountID string) (*AccountUser, *apierror.APIError)
+	// ResolveAccountUserID resolves either an account_user id or a user id to
+	// the account_user id within the given account.
+	ResolveAccountUserID(ctx context.Context, accountID, userOrAccountUserID string) (string, *apierror.APIError)
 	FindAffiliationsByUserID(ctx context.Context, userID string) ([]AccountAffiliation, *apierror.APIError)
 	FindLastUsedAccountID(ctx context.Context, userID string) (string, *apierror.APIError)
 	UpdateLastUsedAt(ctx context.Context, accountUserID string, lastUsedAt time.Time) *apierror.APIError
@@ -75,6 +78,8 @@ type AccountUserRepo interface {
 
 type UserRepo interface {
 	FindByID(ctx context.Context, userID string) (*UserRecord, *apierror.APIError)
+	// GetByIDs returns the users matching the given IDs that are affiliated with the given account.
+	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*UserRecord, *apierror.APIError)
 	FindByEmail(ctx context.Context, email string) (*UserRecord, *apierror.APIError)
 	FindByUsername(ctx context.Context, username string) (*UserRecord, *apierror.APIError)
 	CreateUser(ctx context.Context, id string, params CreateUserRecordParams) *apierror.APIError

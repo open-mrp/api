@@ -163,15 +163,22 @@ func TestSortingFiltering_APIKeyStatusFilter(t *testing.T) {
 	revokedID := jsonField(jsonObject(created, "api_key_info"), "id")
 	apiClient.Delete(apiKeysPath + "/" + revokedID)
 
-	// Active filter should not include revoked key, and all returned keys must be active (revoked_at is null).
+	// Active filter should not include the revoked key. Active keys are either
+	// un-revoked or scheduled for a future revocation (rotate's revoke_at), so
+	// revoked_at must be empty or in the future. Allow a little slack for
+	// clock skew between the harness and the database.
 	activeList, _, err := apiClient.GetList(apiKeysPath, url.Values{"statuses": {"active"}})
 	require.NoError(t, err)
 	for _, item := range activeList.Data {
 		m := parseJSON(item)
 		assert.NotEqual(t, revokedID, DataItemField(item, "id"),
 			"Revoked key should not appear in active-filtered list")
-		assert.Empty(t, jsonField(m, "revoked_at"),
-			"Active-filtered key %q should have no revoked_at", DataItemField(item, "id"))
+		if raw := jsonField(m, "revoked_at"); raw != "" {
+			revokedAt, err := time.Parse(time.RFC3339, raw)
+			require.NoError(t, err, "Active-filtered key %q has unparseable revoked_at %q", DataItemField(item, "id"), raw)
+			assert.True(t, revokedAt.After(time.Now().UTC().Add(-5*time.Second)),
+				"Active-filtered key %q should only have a future (scheduled) revoked_at, got %s", DataItemField(item, "id"), raw)
+		}
 	}
 
 	// Revoked filter should include the key, and all returned keys must be revoked (revoked_at is non-null).

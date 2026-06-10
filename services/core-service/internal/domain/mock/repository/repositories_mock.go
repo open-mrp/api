@@ -764,6 +764,21 @@ func (mr *MockAccountUserRepoMockRecorder) ReactivateUsers(ctx, accountID, limit
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReactivateUsers", reflect.TypeOf((*MockAccountUserRepo)(nil).ReactivateUsers), ctx, accountID, limit)
 }
 
+// ResolveAccountUserID mocks base method.
+func (m *MockAccountUserRepo) ResolveAccountUserID(ctx context.Context, accountID, userOrAccountUserID string) (string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResolveAccountUserID", ctx, accountID, userOrAccountUserID)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ResolveAccountUserID indicates an expected call of ResolveAccountUserID.
+func (mr *MockAccountUserRepoMockRecorder) ResolveAccountUserID(ctx, accountID, userOrAccountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveAccountUserID", reflect.TypeOf((*MockAccountUserRepo)(nil).ResolveAccountUserID), ctx, accountID, userOrAccountUserID)
+}
+
 // RevokeRefreshTokensByUserID mocks base method.
 func (m *MockAccountUserRepo) RevokeRefreshTokensByUserID(ctx context.Context, userID string) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -915,6 +930,21 @@ func (m *MockUserRepo) FindByUsername(ctx context.Context, username string) (*do
 func (mr *MockUserRepoMockRecorder) FindByUsername(ctx, username any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindByUsername", reflect.TypeOf((*MockUserRepo)(nil).FindByUsername), ctx, username)
+}
+
+// GetByIDs mocks base method.
+func (m *MockUserRepo) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.UserRecord, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByIDs", ctx, accountID, ids)
+	ret0, _ := ret[0].([]*domain.UserRecord)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetByIDs indicates an expected call of GetByIDs.
+func (mr *MockUserRepoMockRecorder) GetByIDs(ctx, accountID, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByIDs", reflect.TypeOf((*MockUserRepo)(nil).GetByIDs), ctx, accountID, ids)
 }
 
 // GetHashedPassword mocks base method.

@@ -125,7 +125,14 @@ WHERE api_key.type_id IN (sqlc.slice('ids'))
 AND api_key.owner_account_id = sqlc.arg('owner_account_id');
 
 -- name: RevokeAPIKeyByTypeID :execresult
-UPDATE api_key SET revoked_at = ?, updated_at = NOW(3) WHERE type_id = ? AND owner_account_id = ?;
+-- A NULL revoked_at means "revoke immediately": the database clock is used so
+-- the revocation can never land in the DB's future (the status filters compare
+-- revoked_at against NOW(3), and a service-supplied timestamp can be ahead of
+-- the database clock). A non-NULL value schedules a future revocation.
+UPDATE api_key
+SET revoked_at = COALESCE(sqlc.narg('revoked_at'), NOW(3)), updated_at = NOW(3)
+WHERE type_id = sqlc.arg('type_id')
+AND owner_account_id = sqlc.arg('owner_account_id');
 
 -- name: TouchAPIKeyByID :exec
 UPDATE api_key SET last_used_at = NOW(3), updated_at = NOW(3) WHERE id = ?;

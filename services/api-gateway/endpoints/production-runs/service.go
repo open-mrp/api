@@ -218,16 +218,9 @@ func productionRunSummaryFromProto(info *pb.ProductionRunSummaryInfo) apiresourc
 		UpdatedAt:  grpcutil.TimestampToTime(info.UpdatedAt),
 	}
 
-	if info.ResponsibleUserId != "" {
-		s.ResponsibleUser = &apiresource.AccountUser{
-			ID:        info.ResponsibleUserId,
-			Object:    constants.ObjectTypeAccountUser,
-			Name:      info.ResponsibleUserName,
-			Status:    constants.AccountUserStatus(info.GetResponsibleUserStatusCode()),
-			CreatedAt: grpcutil.TimestampToTime(info.ResponsibleUserCreatedAt),
-			UpdatedAt: grpcutil.TimestampToTime(info.ResponsibleUserUpdatedAt),
-		}
-	}
+	// responsible_user is an expandable reference: the FK id is stashed in
+	// LoadMeta so LoadAccountUsers fetches the real account user on
+	// ?include=responsible_user. Never fabricate.
 
 	s.StartedAt = grpcutil.TimestampToTimePtr(info.StartedAt)
 	s.CompletedAt = grpcutil.TimestampToTimePtr(info.CompletedAt)
@@ -236,9 +229,13 @@ func productionRunSummaryFromProto(info *pb.ProductionRunSummaryInfo) apiresourc
 }
 
 func productionRunListFromProto(ctx context.Context, resp *pb.ListProductionRunsResponse) *apiresource.List[apiresource.ProductionRunSummary] {
+	meta := resourcekit.GetLoadMeta(ctx)
 	runs := make([]apiresource.ProductionRunSummary, len(resp.ProductionRuns))
 	for i, pr := range resp.ProductionRuns {
 		runs[i] = productionRunSummaryFromProto(pr)
+		if pr.ResponsibleUserId != "" {
+			meta.Set(constants.ObjectTypeProductionRun, pr.Id, "responsible_user_id", pr.ResponsibleUserId)
+		}
 	}
 
 	return apiresource.NewList(runs, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
@@ -264,15 +261,10 @@ func stashProductionRunDetailMeta(meta *resourcekit.LoadMeta, info *pb.Productio
 	if info == nil || info.ResponsibleUserId == "" {
 		return
 	}
-	user := &apiresource.AccountUser{
-		ID:        info.ResponsibleUserId,
-		Object:    constants.ObjectTypeAccountUser,
-		Name:      info.ResponsibleUserName,
-		Status:    constants.AccountUserStatus(info.GetResponsibleUserStatusCode()),
-		CreatedAt: grpcutil.TimestampToTime(info.ResponsibleUserCreatedAt),
-		UpdatedAt: grpcutil.TimestampToTime(info.ResponsibleUserUpdatedAt),
-	}
-	meta.Set(constants.ObjectTypeProductionRun, info.Id, "responsible_user", user)
+	// responsible_user is an expandable reference: stash the FK id so
+	// LoadAccountUsers fetches the real account user on
+	// ?include=responsible_user. Never fabricate.
+	meta.Set(constants.ObjectTypeProductionRun, info.Id, "responsible_user_id", info.ResponsibleUserId)
 }
 
 func addBatchesFromProto(resp *pb.AddBatchesToProductionRunResponse) *apiresource.List[apiresource.Batch] {

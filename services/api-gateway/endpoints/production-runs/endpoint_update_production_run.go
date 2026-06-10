@@ -51,7 +51,7 @@ func (e *UpdateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*Up
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeProductionRun,
-			Fields:     []string{"responsible_user"},
+			Fields:     []string{"responsible_user", "responsible_user.user"},
 		}),
 	})
 }

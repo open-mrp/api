@@ -168,11 +168,21 @@ func (r *productionRunRepoImpl) List(ctx context.Context, params domain.ListProd
 	return &domain.ListProductionRunsResult{ProductionRuns: result, PageInfo: pageInfo}, nil
 }
 
+// resolvedResponsibleUserID prefers the account_user id resolved by the query;
+// legacy rows store a user id in responsible_user_id and may have no
+// account_user match, in which case the raw value is kept.
+func resolvedResponsibleUserID(accountUserID gosql.NullString, raw string) string {
+	if accountUserID.Valid {
+		return accountUserID.String
+	}
+	return raw
+}
+
 func mapForwardProductionRunRow(row sqlc.ListProductionRunsForwardRow) *domain.ProductionRunSummary {
 	s := &domain.ProductionRunSummary{
 		ID:                row.ID,
 		Number:            row.Number,
-		ResponsibleUserID: row.ResponsibleUserID,
+		ResponsibleUserID: resolvedResponsibleUserID(row.ResponsibleAccountUserID, row.ResponsibleUserID),
 		BatchCount:        safeconv.Int64ToInt32(row.BatchCount),
 		CreatedAt:         row.CreatedAt,
 		UpdatedAt:         row.UpdatedAt,
@@ -202,7 +212,7 @@ func mapBackwardProductionRunRow(row sqlc.ListProductionRunsBackwardRow) *domain
 	s := &domain.ProductionRunSummary{
 		ID:                row.ID,
 		Number:            row.Number,
-		ResponsibleUserID: row.ResponsibleUserID,
+		ResponsibleUserID: resolvedResponsibleUserID(row.ResponsibleAccountUserID, row.ResponsibleUserID),
 		BatchCount:        safeconv.Int64ToInt32(row.BatchCount),
 		CreatedAt:         row.CreatedAt,
 		UpdatedAt:         row.UpdatedAt,
@@ -243,7 +253,7 @@ func (r *productionRunRepoImpl) Get(ctx context.Context, params domain.GetProduc
 	run := &domain.ProductionRun{
 		ID:                row.ID,
 		Number:            row.Number,
-		ResponsibleUserID: row.ResponsibleUserID,
+		ResponsibleUserID: resolvedResponsibleUserID(row.ResponsibleAccountUserID, row.ResponsibleUserID),
 		AccountID:         row.AccountID,
 		BatchCount:        safeconv.Int64ToInt32(row.BatchCount),
 		CreatedAt:         row.CreatedAt,

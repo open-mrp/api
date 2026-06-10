@@ -113,6 +113,36 @@ func (r *userRepoImpl) GetHashedPassword(ctx context.Context, userID string) (st
 	return *result, nil
 }
 
+func (r *userRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.UserRecord, *apierror.APIError) {
+	ctx, span := userRepoTracer.Start(ctx, "repository.user.get_by_ids")
+	defer span.End()
+
+	rows, err := r.queries.GetUsersByIDs(ctx, sqlc.GetUsersByIDsParams{
+		Ids:       ids,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	items := make([]*domain.UserRecord, len(rows))
+	for i, row := range rows {
+		items[i] = &domain.UserRecord{
+			ID:            row.ID,
+			Email:         db.StringFromNullString(row.Email),
+			Name:          db.StringFromNullString(row.Name),
+			Username:      db.StringFromNullString(row.Username),
+			EmailVerified: db.TimeFromNullTime(row.EmailVerified),
+			ImageURL:      db.StringFromNullString(row.ImageUrl),
+			StatusCode:    row.StatusCode,
+			CreatedAt:     row.CreatedAt,
+			UpdatedAt:     row.UpdatedAt,
+		}
+	}
+
+	return items, nil
+}
+
 func (r *userRepoImpl) FindByID(ctx context.Context, userID string) (*domain.UserRecord, *apierror.APIError) {
 	ctx, span := userRepoTracer.Start(ctx, "repository.user.find_by_id")
 	defer span.End()

@@ -10,6 +10,8 @@ import (
 
 type UserSvc interface {
 	GetUser(ctx context.Context, userID string) (*UserRecord, *apierror.APIError)
+	// BatchGetUsersByIDs returns users matching the given IDs that are affiliated with the target account.
+	BatchGetUsersByIDs(ctx context.Context, ids []string) ([]*UserRecord, *apierror.APIError)
 	UpdateUser(ctx context.Context, userID string, params UpdateUserParams) (*UserRecord, *apierror.APIError)
 	UploadUserPhoto(ctx context.Context, userID string, file []byte, contentType string) *apierror.APIError
 	GetUserPhotoURL(ctx context.Context, userID string) (*string, *apierror.APIError)

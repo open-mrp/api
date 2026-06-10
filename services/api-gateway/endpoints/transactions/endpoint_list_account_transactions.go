@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -37,5 +38,10 @@ func (e *ListAccountTransactionsEndpoint) Materialize() *apiendpoint.APIEndpoint
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAccountTransactionsRequest) (*apiresource.List[apiresource.TransactionDetail], *apierror.APIError) {
 			return svc.(TransactionSvc).ListAccountTransactions
 		},
+		ObjectType: constants.ObjectTypeTransaction,
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeTransaction,
+			Fields:     []string{"allocations", "customer", "responsible_user", "responsible_user.user"},
+		}),
 	})
 }

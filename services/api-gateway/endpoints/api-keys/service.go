@@ -183,21 +183,13 @@ func (m *apiKeySvcImpl) ListAPIKeys(ctx context.Context, req *ListAPIKeysRequest
 		return nil, apiErr
 	}
 
-	ids := make([]string, len(resp.ApiKeys))
-	for i, k := range resp.ApiKeys {
-		ids[i] = k.Id
-	}
-
-	loaded, apiErr := resourceloaders.LoadAPIKeys(ctx, ids)
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	keys := make([]apiresource.APIKey, 0, len(ids))
-	for _, id := range ids {
-		if v, ok := loaded[id]; ok {
-			keys = append(keys, *v.(*apiresource.APIKey))
-		}
+	// Present directly from the list response: re-fetching by id in a second
+	// RPC can observe keys mutated after the filter ran (e.g. a key revoked
+	// between the two reads showing up in an active-filtered list with its
+	// fresh revoked_at).
+	keys := make([]apiresource.APIKey, 0, len(resp.ApiKeys))
+	for _, k := range resp.ApiKeys {
+		keys = append(keys, *resourceloaders.APIKeyFromProto(ctx, k))
 	}
 
 	return apiresource.NewList(keys, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil

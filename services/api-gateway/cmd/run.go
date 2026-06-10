@@ -25,6 +25,11 @@ import (
 	// (a few lines below).
 	_ "github.com/augno/api/services/api-gateway/internal/resourceregistry"
 	"github.com/augno/api/services/api-gateway/internal/router"
+
+	// versiontransforms's init() registers the version.Transformer chain that
+	// downgrades responses (and upgrades requests) for callers on older API
+	// versions. Blank-imported so the init runs at startup.
+	_ "github.com/augno/api/services/api-gateway/internal/versiontransforms"
 	"github.com/augno/api/services/api-gateway/internal/ws"
 	"github.com/augno/api/shared/db"
 	"github.com/augno/api/shared/lease"

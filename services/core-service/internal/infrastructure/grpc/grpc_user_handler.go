@@ -54,6 +54,26 @@ func (h *gRPCHandler) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.
 	}, nil
 }
 
+func (h *gRPCHandler) BatchGetUsersByIDs(ctx context.Context, req *pb.BatchGetUsersByIDsRequest) (*pb.BatchGetUsersByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	users, apiErr := h.userSvc.BatchGetUsersByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	pbUsers := make([]*pb.UserInfo, len(users))
+	for i, u := range users {
+		pbUsers[i] = userRecordToProto(u)
+	}
+
+	return &pb.BatchGetUsersByIDsResponse{
+		Users: pbUsers,
+	}, nil
+}
+
 func (h *gRPCHandler) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest) (*pb.UpdateUserResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

@@ -43,5 +43,9 @@ func (e *ListProductionRunsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Lis
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListProductionRunsRequest) (*apiresource.List[apiresource.ProductionRunSummary], *apierror.APIError) {
 			return svc.(ProductionRunSvc).ListProductionRuns
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeProductionRun,
+			Fields:     []string{"responsible_user", "responsible_user.user"},
+		}),
 	})
 }

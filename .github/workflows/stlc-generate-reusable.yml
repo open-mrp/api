@@ -61,7 +61,6 @@ permissions:
 
 env:
   STLC_GITHUB_ORG: sdk-gen
-  STLC_TARGETS: typescript
 
 jobs:
   spec-changes:
@@ -104,13 +103,31 @@ jobs:
         include:
           - sdk: internal
             workspace: stainless/internal
+            targets: typescript
+            release: changesets
             pr_repo: Augno/internal-sdk
             package_name: "@augno/internal-sdk"
             spec_changed: ${{ needs.spec-changes.outputs.internal }}
           - sdk: public
             workspace: stainless/public
+            targets: typescript
+            release: changesets
             pr_repo: Augno/typescript-sdk
             package_name: "@augno/sdk"
+            spec_changed: ${{ needs.spec-changes.outputs.public }}
+          - sdk: public-python
+            workspace: stainless/public
+            targets: python
+            release: release-please
+            pr_repo: augno/python-sdk
+            package_name: augno
+            spec_changed: ${{ needs.spec-changes.outputs.public }}
+          - sdk: public-go
+            workspace: stainless/public
+            targets: go
+            release: release-please
+            pr_repo: augno/augno-go
+            package_name: augno
             spec_changed: ${{ needs.spec-changes.outputs.public }}
     steps:
       - name: Skip SDK generation (OpenAPI spec unchanged)
@@ -195,9 +212,10 @@ jobs:
           BUMP: ${{ steps.bump.outputs.bump }}
           BRANCH: ${{ inputs.push_branch }}
           COMMIT_MSG: ${{ inputs.commit_message }}
+          TARGETS: ${{ matrix.targets }}
           GH_TOKEN: ${{ secrets.SDK_WRITE_TOKEN }}
         run: |
-          echo "Building ${{ matrix.workspace }} to branch: $BRANCH (API ${API_VERSION})"
+          echo "Building ${{ matrix.workspace }} (${TARGETS}) to branch: $BRANCH (API ${API_VERSION})"
           if [ -n "$COMMIT_MSG" ]; then
             commit_message="$COMMIT_MSG"
           else
@@ -213,11 +231,14 @@ jobs:
             --branch "$BRANCH" \
             --output "/tmp/sdk-output/${{ matrix.sdk }}" \
             --push \
-            --targets "$STLC_TARGETS" \
+            --targets "$TARGETS" \
             "${commit_args[@]}"
 
+      # Changesets-managed SDKs (TypeScript) need an explicit .changeset/*.md to cut a
+      # release. release-please SDKs (python, go) instead derive the bump from the
+      # conventional-commit sync message produced by "Generate SDK and push" above.
       - name: Add changeset to SDK commit and push
-        if: matrix.spec_changed == 'true' && steps.build.outcome == 'success' && inputs.open_pr != true
+        if: matrix.release == 'changesets' && matrix.spec_changed == 'true' && steps.build.outcome == 'success' && inputs.open_pr != true
         env:
           GH_TOKEN: ${{ secrets.SDK_WRITE_TOKEN }}
           API_VERSION: ${{ inputs.api_version }}
@@ -251,7 +272,7 @@ jobs:
           git push --force-with-lease origin "HEAD:${BRANCH}"
 
       - name: Add changeset for npm release (changesets)
-        if: matrix.spec_changed == 'true' && steps.build.outcome == 'success' && inputs.open_pr
+        if: matrix.release == 'changesets' && matrix.spec_changed == 'true' && steps.build.outcome == 'success' && inputs.open_pr
         env:
           GH_TOKEN: ${{ secrets.SDK_WRITE_TOKEN }}
           API_VERSION: ${{ inputs.api_version }}

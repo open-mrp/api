@@ -17,18 +17,29 @@ This reflects your **account migration guide** at repo root [`migration-guide.md
 - Copying **`stainless/`** or **OpenAPI** into **`internal-sdk`** and running codegen there—you duplicate truth, fight `git clean`, and drift from **`stlc init --from-cloud`** bundle layout.
 - Vendoring **`stlc`** inside an SDK repo—install **`stlc` + `stlc-typescript`** from **`sdk-gen/*`** (see **Install stlc** below).
 
-We already have **two workspaces** aligned with **two TS packages**:
+We have **two workspaces**. The **internal** workspace builds one TypeScript target; the **public**
+workspace is **multi-target** (TypeScript + Python + Go), each target building to its own repo:
 
-| SDK | Workspace | Spec | Stainless config | Repo (`staging_repo`) |
-| --- | --- | --- | --- | --- |
-| **Internal dashboard client** `@augno/internal-sdk` | [`stainless/internal`](../stainless/internal/) | [`specs/internal_openapi_spec.json`](../specs/) | [`stainless/internal/stainless.yml`](../stainless/internal/stainless.yml) | [`augno/internal-sdk`](https://github.com/augno/internal-sdk) |
-| **Public npm client** `@augno/sdk` | [`stainless/public`](../stainless/public/) | [`specs/public_openapi_spec.json`](../specs/) | [`stainless/public/stainless.yml`](../stainless/public/stainless.yml) | [`augno/typescript-sdk`](https://github.com/augno/typescript-sdk) |
+| Workspace | Target | Package | Spec | Repo (`production_repo`) | Registry |
+| --- | --- | --- | --- | --- | --- |
+| [`stainless/internal`](../stainless/internal/) | typescript | `@augno/internal-sdk` | `internal_openapi_spec.json` | [`augno/internal-sdk`](https://github.com/augno/internal-sdk) | GitHub Packages |
+| [`stainless/public`](../stainless/public/) | typescript | `@augno/sdk` | `public_openapi_spec.json` | [`augno/typescript-sdk`](https://github.com/augno/typescript-sdk) | npmjs |
+| [`stainless/public`](../stainless/public/) | python | `augno` | `public_openapi_spec.json` | [`augno/python-sdk`](https://github.com/augno/python-sdk) | PyPI (OIDC) |
+| [`stainless/public`](../stainless/public/) | go | `github.com/augno/augno-go` | `public_openapi_spec.json` | [`augno/augno-go`](https://github.com/augno/augno-go) | git tag → pkg.go.dev |
 
-`workspace.json` in each workspace sets `output_path` to the monorepo root (`../../../` from `stainless/*/`), so `stlc` targets **`internal-sdk`** and **`typescript-sdk`** sibling directories—not `sdks/` under `api/`—without extra flags.
+A single `stainless/public/stainless.yml` declares all three public targets under `targets:`; `stlc build
+--targets <lang>` selects one. The Go module path is **derived** as `github.com/<go.production_repo>`.
+`workspace.json` in each workspace sets `output_path` to the monorepo root (`../../../` from
+`stainless/*/`), so `stlc` targets the SDK sibling directories—not `sdks/` under `api/`—without extra flags.
+
+> **Editing `stainless.yml`:** `make stainless` regenerates only the `resources:` node
+> (`tools/apidocs/stainless.go` `rewriteStainlessResources`); the `targets:`, `client_settings:`, and
+> `environments:` blocks are hand-maintained and preserved. Add/adjust targets there directly.
 
 ## Install stlc
 
-Augno uses **forks under [`sdk-gen`](https://github.com/sdk-gen)** (`stlc`, `stlc-typescript`), not the upstream `stainless/*` repos.
+Augno uses **forks under [`sdk-gen`](https://github.com/sdk-gen)** (`stlc` plus the `stlc-typescript`,
+`stlc-python`, and `stlc-go` language workers), not the upstream `stainless/*` repos.
 
 From **`api/`**:
 
@@ -37,7 +48,8 @@ make install-stlc
 # or: ./scripts/install-stlc.sh
 ```
 
-The script uses `STLC_READ_TOKEN` if set, otherwise `gh auth token`. Scope the PAT to **Contents: Read** on `sdk-gen/stlc` and `sdk-gen/stlc-typescript`.
+The script uses `STLC_READ_TOKEN` if set, otherwise `gh auth token`. Scope the PAT to **Contents: Read**
+on `sdk-gen/stlc`, `sdk-gen/stlc-typescript`, `sdk-gen/stlc-python`, and `sdk-gen/stlc-go`.
 
 Manual install:
 
@@ -45,8 +57,15 @@ Manual install:
 export STLC_GITHUB_ORG=sdk-gen   # default in scripts/CI
 npm install -g \
   git+https://github.com/sdk-gen/stlc.git \
-  git+https://github.com/sdk-gen/stlc-typescript.git
+  git+https://github.com/sdk-gen/stlc-typescript.git \
+  git+https://github.com/sdk-gen/stlc-python.git \
+  git+https://github.com/sdk-gen/stlc-go.git
 ```
+
+> **Worker resolution gotcha:** `stlc` finds language workers via Node module resolution as siblings of
+> itself. If you have a `stlc` from another source ahead on `PATH` (e.g. Homebrew) it may not see the
+> npm-global workers, so `stlc build --targets python` fails with *"the `stlc-python` plugin is
+> missing"*. Put the npm global bin first: `export PATH="$(npm config get prefix)/bin:$PATH"`.
 
 If the forks are private, use authenticated URLs (as in `scripts/install-stlc.sh`).
 
@@ -70,11 +89,16 @@ stlc version
    - Regenerate SDKs:
 
      ```bash
-     make stlc-internal-sdk           # augno/internal-sdk → @augno/internal-sdk
-     make stlc-public-typescript-sdk  # augno/typescript-sdk → @augno/sdk
-     # or both:
-     make stlc-sdks
+     make stlc-internal-sdk           # augno/internal-sdk  → @augno/internal-sdk (TS)
+     make stlc-public-typescript-sdk  # augno/typescript-sdk → @augno/sdk          (TS)
+     make stlc-public-python-sdk      # augno/python-sdk     → augno               (PyPI)
+     make stlc-public-go-sdk          # augno/augno-go       → github.com/augno/augno-go
+     make stlc-public-sdks            # all three public targets
+     make stlc-sdks                   # internal + all public targets
      ```
+
+     `make stlc-public-sdks` is equivalent to one multi-target build:
+     `stlc build --workspace stainless/public --targets typescript,python,go`.
 
 3. **Commits**: use a clean tree per target repo, then e.g.
 
@@ -103,7 +127,11 @@ SDK generation runs **only** from [`.github/workflows/release.yml`](../.github/w
 
 1. **`publish-openapi-specs`** downloads **`openapi.json`** from each bucket into **`specs/sdk-baseline/`** (pre-upload baseline), runs **`make openapi-stainless`** (specs + Stainless configs, since both are uploaded to S3), compares with [`scripts/sdk-openapi-spec-changed.sh`](../scripts/sdk-openapi-spec-changed.sh) for internal and public, then uploads **`openapi.json`** and **`stainless.yml`** (plus versioned copies) to **`augno-public-openapi-specs`** and **`augno-private-openapi-specs`**. Job outputs **`internal_spec_changed`** and **`public_spec_changed`** gate SDK generation.
 
-2. **`generate-sdks`** calls [`stlc-generate-reusable.yml`](../.github/workflows/stlc-generate-reusable.yml) with **`openapi_specs_source: s3`** and inputs **`openapi_internal_gate`** / **`openapi_public_gate`** (from **`internal_spec_changed`** / **`public_spec_changed`** on **`publish-openapi-specs`**). When a flag is **`false`**, that SDK’s **`stlc build --push`** and changeset amend are **skipped**. When **`true`**, it downloads the published specs from S3, runs **`stlc build --push`** to **`main`**, amends that commit with **`.changeset/sync-api-<tag>.md`**, and pushes to [`Augno/internal-sdk`](https://github.com/Augno/internal-sdk) and [`Augno/typescript-sdk`](https://github.com/Augno/typescript-sdk). Each SDK repo’s Changesets workflow then opens **chore: version packages** on **`main`**—one merge to publish.
+2. **`generate-sdks`** calls [`stlc-generate-reusable.yml`](../.github/workflows/stlc-generate-reusable.yml) with **`openapi_specs_source: s3`** and inputs **`openapi_internal_gate`** / **`openapi_public_gate`** (from **`internal_spec_changed`** / **`public_spec_changed`** on **`publish-openapi-specs`**). The job runs a **matrix of four SDK targets** — internal TS, public TS, public Python, public Go — each gated on its spec's change flag. When a flag is **`false`**, that target's **`stlc build --push`** is **skipped**. When **`true`**, it downloads the published specs from S3 and runs **`stlc build --push --targets <lang>`** to the target's **`main`**:
+   - **TypeScript** (`internal`, `public`, `release: changesets`): the sync commit is **amended** with `.changeset/sync-api-<tag>.md`; each repo's Changesets workflow opens **chore: version packages** → merge to publish.
+   - **Python / Go** (`public-python`, `public-go`, `release: release-please`): **no changeset is added.** The conventional-commit sync message (`feat(sdk):`/`fix(sdk):`/`feat(sdk)!:` `sync with deployed API <tag>`) is what each repo's **release-please** workflow consumes to open a `release: <version>` PR → merge to publish.
+
+   All three public targets share the single `stainless/public` workspace and the same `public_spec_changed` gate, so a public-spec change fans out to `typescript-sdk`, `python-sdk`, and `augno-go` together.
 
 [`stlc-generate.yml`](../.github/workflows/stlc-generate.yml) is **manual-only** (`workflow_dispatch`); it sets **`openapi_specs_source: generate`** and leaves change flags unset so **`stlc build --push`** always runs without an S3 pre-compare gate.
 
@@ -131,7 +159,7 @@ Production flow (keeps SDKs aligned with what is deployed):
 
 When `stlc build` fails, the release job runs **Print STLC failure report** (`stlc status`, `stlc diagnostics`, `stlc show`, and the latest `builds/*.json` manifest) in the job log and Actions step summary.
 
-Local preview before release: `make openapi-stainless` then `make stlc-internal-sdk` / `make stlc-public-typescript-sdk` from `api/`.
+Local preview before release: `make openapi-stainless` then `make stlc-internal-sdk` / `make stlc-public-sdks` (TS + Python + Go) from `api/`.
 
 ### Repository secrets (required before CI can push)
 
@@ -139,12 +167,12 @@ Add these secrets on **`augno/api`** (Settings → Secrets and variables → Act
 
 | Secret | Permissions |
 | --- | --- |
-| **`STLC_READ_TOKEN`** | Fine-grained PAT, **Contents: Read** on `sdk-gen/stlc` and `sdk-gen/stlc-typescript` |
-| **`SDK_WRITE_TOKEN`** | Fine-grained PAT, **Contents: Write** on `augno/internal-sdk` and `augno/typescript-sdk` (push to **`main`**). Add **Pull requests: Write** only if you use manual `stlc-generate` with `open_pr: true`. |
+| **`STLC_READ_TOKEN`** | Fine-grained PAT, **Contents: Read** on `sdk-gen/stlc`, `sdk-gen/stlc-typescript`, `sdk-gen/stlc-python`, and `sdk-gen/stlc-go` |
+| **`SDK_WRITE_TOKEN`** | Fine-grained PAT, **Contents: Write** on `augno/internal-sdk`, `augno/typescript-sdk`, `augno/python-sdk`, and `augno/augno-go` (push to **`main`**). Add **Pull requests: Write** only if you use manual `stlc-generate` with `open_pr: true`. |
 
 Authorize both tokens for SSO if your org requires it.
 
-The API release workflow regenerates SDKs and dispatches `api-release` to spec consumers in parallel after deploy and OpenAPI publish. SDK repos (`internal-sdk`, `typescript-sdk`) receive direct pushes to **`main`** when their OpenAPI spec changed.
+The API release workflow regenerates SDKs and dispatches `api-release` to spec consumers in parallel after deploy and OpenAPI publish. SDK repos (`internal-sdk`, `typescript-sdk`, `python-sdk`, `augno-go`) receive direct pushes to **`main`** when their OpenAPI spec changed.
 
 ### SDK release checklist (`internal-sdk`, `typescript-sdk`)
 
@@ -154,6 +182,35 @@ When the API release changed that SDK’s OpenAPI spec, automation pushes **`fix
 2. **Merge the version PR** when opened — that completes the GitHub Packages publish for `@augno/internal-sdk` / `@augno/sdk`.
 
 If the spec was unchanged for that SDK, no push runs and no new SDK version is cut.
+
+### SDK release model (`python-sdk`, `augno-go`)
+
+These repos use **release-please**, not Changesets. `stlc` generates the per-repo config
+(`release-please-config.json`, `.release-please-manifest.json`, the version `extra-files`, and — for
+Python — `bin/publish-pypi`, `publish-pypi.yml`, `release-doctor.yml`). It does **not** generate a
+workflow that opens the release PR or publishes on release (Stainless's hosted backend normally does
+that). In the self-hosted model each repo therefore needs **one committed `release.yml`** (analogous to
+the Changesets `release.yml` on `typescript-sdk`):
+
+- **`augno/python-sdk`** — on push to `main`: run `googleapis/release-please-action@v5` (opens
+  `release: <version>` PR). On `release_created`: `uv build` + `uv publish` via **PyPI Trusted
+  Publishing** (job needs `permissions: id-token: write`; `bin/publish-pypi` already does this — it
+  uses OIDC when `PYPI_TOKEN` is unset). One-time on PyPI: register a **Trusted Publisher** for project
+  `augno` → repo `augno/python-sdk`, workflow filename = that `release.yml`.
+- **`augno/augno-go`** — on push to `main`: run `googleapis/release-please-action@v5` only. The git tag
+  release-please creates **is** the publish; `pkg.go.dev` indexes the public repo. No registry secret.
+
+Two one-time config notes per repo:
+- `stlc` defaults `release-please-config.json` to `"versioning": "prerelease"` / `"prerelease": true`
+  (alpha versions). For a stable public SDK, set `"prerelease": false` and remove the prerelease
+  versioning once you cut `v1`-style releases.
+- `release-doctor.yml` references a **`RELEASE_PLEASE_TOKEN`** secret; provide it (a PAT or the
+  app token used by the release workflow) or remove that workflow.
+
+The Go module path must equal the repo URL (`github.com/augno/augno-go`), the repo must be **public**,
+and `go.production_repo` in `stainless/public/stainless.yml` must match it — this is derived, not a
+separate field. The legacy Stainless-cloud stub `Augno/go-sdk` (module `github.com/stainless-sdks/...`)
+is **not** this repo; archive it to avoid confusion.
 
 ### Publishing packages
 

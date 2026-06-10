@@ -231,12 +231,6 @@ jobs:
           role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/github-action-role
           aws-region: us-east-2
 
-      - name: Read API Version
-        id: api-version
-        run: |
-          API_VERSION=$(go run ./cmd/print-version)
-          echo "api_version=$API_VERSION" >> "$GITHUB_OUTPUT"
-
       - name: Install Modules
         run: |
           go mod tidy
@@ -261,19 +255,22 @@ jobs:
 
       - name: Upload Public Release Artifacts to S3
         run: |
-          api_version="${{ steps.api-version.outputs.api_version }}"
+          # Key per-version artifacts by the release-please tag (e.g. v0.20.1), the same
+          # value notify-consumers dispatches. The API version (cmd/print-version) is not
+          # unique per release, so it can't key release artifacts.
+          release_version="${{ needs.release-please.outputs.tag_name }}"
           aws s3 cp specs/public_openapi_spec.json "s3://augno-public-openapi-specs/openapi.json"
-          aws s3 cp specs/public_openapi_spec.json "s3://augno-public-openapi-specs/${api_version}.json"
+          aws s3 cp specs/public_openapi_spec.json "s3://augno-public-openapi-specs/${release_version}.json"
           aws s3 cp stainless/public/stainless.yml "s3://augno-public-openapi-specs/stainless.yml"
-          aws s3 cp stainless/public/stainless.yml "s3://augno-public-openapi-specs/${api_version}-stainless.yml"
+          aws s3 cp stainless/public/stainless.yml "s3://augno-public-openapi-specs/${release_version}-stainless.yml"
 
       - name: Upload Private Release Artifacts to S3
         run: |
-          api_version="${{ steps.api-version.outputs.api_version }}"
+          release_version="${{ needs.release-please.outputs.tag_name }}"
           aws s3 cp specs/internal_openapi_spec.json "s3://augno-private-openapi-specs/openapi.json"
-          aws s3 cp specs/internal_openapi_spec.json "s3://augno-private-openapi-specs/${api_version}.json"
+          aws s3 cp specs/internal_openapi_spec.json "s3://augno-private-openapi-specs/${release_version}.json"
           aws s3 cp stainless/internal/stainless.yml "s3://augno-private-openapi-specs/stainless.yml"
-          aws s3 cp stainless/internal/stainless.yml "s3://augno-private-openapi-specs/${api_version}-stainless.yml"
+          aws s3 cp stainless/internal/stainless.yml "s3://augno-private-openapi-specs/${release_version}-stainless.yml"
 
   generate-sdks:
     name: Generate SDKs with stlc
@@ -321,4 +318,7 @@ jobs:
           token: ${{ secrets.CROSS_REPO_PAT }}
           repository: ${{ matrix.consumer }}
           event-type: api-release
+          # Send the release-please tag (e.g. v0.20.1) — the SAME value publish-openapi-specs
+          # uses to key the per-version S3 artifact `<tag>.json`, which consumers fetch.
+          # Keep this in lockstep with the Upload *Release Artifacts to S3 steps.
           client-payload: '{"api_version": "${{ needs.release-please.outputs.tag_name }}"}'

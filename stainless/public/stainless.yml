@@ -11,6 +11,24 @@ targets:
     publish:
       npm:
         registry: npmjs
+  python:
+    edition: python.2025-11-20
+    # package_name is both the import name (`from augno import ...`) and the
+    # PyPI distribution name (`pip install augno`); project_name defaults to it.
+    package_name: augno
+    staging_repo: augno/python-sdk
+    production_repo: augno/python-sdk
+    publish:
+      pypi:
+        # GitHub Actions OIDC (PyPI Trusted Publishing) — no long-lived token.
+        auth_method: oidc
+  go:
+    edition: go.2026-04-15
+    # Module path is derived as github.com/<production_repo> => github.com/augno/augno-go.
+    # Go "publishing" is a git tag (release-please); pkg.go.dev indexes the public repo.
+    package_name: augno
+    staging_repo: augno/augno-go
+    production_repo: augno/augno-go
 environments:
   production: https://api.augno.com
   local: http://localhost:8081

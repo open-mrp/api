@@ -24,9 +24,14 @@ type consumptionSvcImpl struct {
 }
 
 type ConsumptionSvcConfig struct {
-	Repos           domain.RepoFactory
+	// Repos (required) is the repository factory.
+	Repos domain.RepoFactory
+
+	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
-	TxManager       TransactionManager
+
+	// TxManager (required) wraps multi-step operations in database transactions.
+	TxManager TransactionManager
 }
 
 func (c *ConsumptionSvcConfig) validate() error {
@@ -302,7 +307,8 @@ func (s *consumptionSvcImpl) UpdateConsumption(ctx context.Context, params domai
 				}
 
 				if downstreamStepID != nil {
-					if apiErr := txMeds.ProductionFlow.DisconnectSteps(txCtx, *downstreamStepID, params.ProductionStepID); apiErr != nil {
+					// DisconnectSteps(source, target): source is the upstream step, target the downstream step.
+					if apiErr := txMeds.ProductionFlow.DisconnectSteps(txCtx, params.ProductionStepID, *downstreamStepID); apiErr != nil {
 						return apiErr
 					}
 				}

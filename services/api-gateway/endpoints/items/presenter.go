@@ -202,6 +202,7 @@ func ItemTrendsPresenter(resp *pb.GetItemTrendsResponse) *apiresource.ItemTrends
 	points := make([]apiresource.ItemTrendPoint, len(resp.Points))
 	for i, p := range resp.Points {
 		points[i] = apiresource.ItemTrendPoint{
+			Object:     constants.ObjectTypeItemTrendPoint,
 			OccurredAt: grpcutil.TimestampToTime(p.Date),
 			Value:      p.Value,
 		}

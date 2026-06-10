@@ -26,9 +26,14 @@ type productSvcImpl struct {
 }
 
 type ProductSvcConfig struct {
-	Repos           domain.RepoFactory
+	// Repos (required) is the repository factory.
+	Repos domain.RepoFactory
+
+	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
-	TxManager       TransactionManager
+
+	// TxManager (required) wraps multi-step operations in database transactions.
+	TxManager TransactionManager
 }
 
 func (c *ProductSvcConfig) validate() error {
@@ -80,6 +85,14 @@ func (s *productSvcImpl) SearchProducts(ctx context.Context, accountID, query st
 	ctx, span := productSvcTracer.Start(ctx, "service.product.search_products")
 	defer span.End()
 
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsAuthenticated(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	return s.repos.NewProductRepo().SearchBySKU(ctx, accountID, query)
 }
 
@@ -88,6 +101,14 @@ func (s *productSvcImpl) ListProducts(ctx context.Context, accountID string) ([]
 	ctx, span := productSvcTracer.Start(ctx, "service.product.list_products")
 	defer span.End()
 
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsAuthenticated(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	return s.repos.NewProductRepo().ListByAccount(ctx, accountID)
 }
 
@@ -95,6 +116,14 @@ func (s *productSvcImpl) ListProducts(ctx context.Context, accountID string) ([]
 func (s *productSvcImpl) GetCustomerByEmail(ctx context.Context, ownerAccountID, email string) (*domain.CustomerByEmail, *apierror.APIError) {
 	ctx, span := productSvcTracer.Start(ctx, "service.product.get_customer_by_email")
 	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsAuthenticated(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
 	return s.repos.NewAccountRelationRepo().FindCustomerByEmail(ctx, ownerAccountID, email)
 }
@@ -525,10 +554,13 @@ func (s *productSvcImpl) UpdateProduct(ctx context.Context, params domain.Update
 			txProductRepo := txSvc.repos.NewProductRepo()
 			txItemRepo := txSvc.repos.NewItemRepo()
 
-			// Fetch existing product before mutation for audit diff.
+			// Fetch existing product before mutation for audit diff (same
+			// includes as the post-update fetch so include-only fields cannot
+			// produce false diffs).
 			old, apiErr := txProductRepo.Get(txCtx, domain.GetProductFullParams{
 				AccountID: params.AccountID,
 				ProductID: params.ProductID,
+				Includes:  params.Includes,
 			})
 			if apiErr != nil {
 				return apiErr
@@ -572,6 +604,9 @@ func (s *productSvcImpl) UpdateProduct(ctx context.Context, params domain.Update
 			result = updated
 
 			changes := audit.ComputeChanges(old, updated)
+			// Item-level fields (sku, description, notes) live on the joined
+			// item row; diff them the same way part updates do.
+			changes = append(changes, audit.ComputeChanges(old.Item, updated.Item)...)
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,

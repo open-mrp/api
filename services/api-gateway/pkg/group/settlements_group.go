@@ -14,6 +14,7 @@ type SettlementsEndpointGroup struct {
 }
 
 type SettlementsEndpointGroupConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient *grpcclient.CoreServiceClient
 }
 

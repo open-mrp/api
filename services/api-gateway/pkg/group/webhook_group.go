@@ -14,6 +14,7 @@ type WebhooksEndpointGroup struct {
 }
 
 type WebhooksEndpointGroupConfig struct {
+	// BillingClient (required) is the billing-service gRPC client.
 	BillingClient *grpcclient.BillingServiceClient
 }
 

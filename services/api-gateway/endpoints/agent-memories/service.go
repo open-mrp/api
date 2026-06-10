@@ -23,6 +23,7 @@ type AgentMemorySvc interface {
 }
 
 type AgentMemorySvcConfig struct {
+	// AgentClient (required) is the agent-service gRPC client.
 	AgentClient pb.AgentServiceClient
 }
 
@@ -94,9 +95,11 @@ func (m *agentMemorySvcImpl) GetMemory(ctx context.Context, req *RetrieveMemoryR
 
 func (m *agentMemorySvcImpl) CreateMemory(ctx context.Context, req *CreateMemoryRequest) (*apiresource.AgentMemory, *apierror.APIError) {
 	pbReq := &pb.CreateAgentMemoryRequest{
-		Category:   req.Category,
-		Content:    req.Content,
-		Importance: req.Importance,
+		Category: req.Category,
+		Content:  req.Content,
+	}
+	if v, ok := req.Importance.Value(); ok {
+		pbReq.Importance = v
 	}
 	if req.Metadata != nil {
 		pbReq.MetadataJson = string(req.Metadata)
@@ -122,10 +125,16 @@ func (m *agentMemorySvcImpl) CreateMemory(ctx context.Context, req *CreateMemory
 
 func (m *agentMemorySvcImpl) UpdateMemory(ctx context.Context, req *UpdateMemoryRequest) (*apiresource.AgentMemory, *apierror.APIError) {
 	pbReq := &pb.UpdateAgentMemoryRequest{
-		Id:         req.ID,
-		Category:   req.Category,
-		Content:    req.Content,
-		Importance: req.Importance,
+		Id: req.ID,
+	}
+	if v, ok := req.Category.Value(); ok {
+		pbReq.Category = v
+	}
+	if v, ok := req.Content.Value(); ok {
+		pbReq.Content = v
+	}
+	if v, ok := req.Importance.Value(); ok {
+		pbReq.Importance = v
 	}
 	if req.Metadata != nil {
 		pbReq.MetadataJson = string(req.Metadata)

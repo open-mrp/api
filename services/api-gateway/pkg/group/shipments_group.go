@@ -14,6 +14,7 @@ type ShipmentsEndpointGroup struct {
 }
 
 type ShipmentsEndpointGroupConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient *grpcclient.CoreServiceClient
 }
 

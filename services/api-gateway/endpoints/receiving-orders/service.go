@@ -31,6 +31,7 @@ type ReceivingOrderSvc interface {
 }
 
 type ReceivingOrderSvcConfig struct {
+	// CoreClient (required) is the core-service receiving gRPC client.
 	CoreClient pb.CoreReceivingServiceClient
 }
 

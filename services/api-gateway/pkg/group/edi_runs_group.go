@@ -14,6 +14,7 @@ type EDIRunsEndpointGroup struct {
 }
 
 type EDIRunsEndpointGroupConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient *grpcclient.CoreServiceClient
 }
 

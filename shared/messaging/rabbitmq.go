@@ -104,28 +104,28 @@ func (c *RabbitMQConfig) withDefaults() *RabbitMQConfig {
 
 func (c *RabbitMQConfig) validate() error {
 	if c == nil {
-		return fmt.Errorf("config is nil")
+		return fmt.Errorf("rabbitMQ: config is nil")
 	}
 	if c.URI == "" {
-		return fmt.Errorf("rabbitMQ URI is empty")
+		return fmt.Errorf("rabbitMQ: URI is empty")
 	}
 	if c.ConnectionTimeout <= 0 {
-		return fmt.Errorf("connection timeout must be positive")
+		return fmt.Errorf("rabbitMQ: connection timeout must be positive")
 	}
 	if c.MaxRetries <= 0 {
-		return fmt.Errorf("max retries must be positive")
+		return fmt.Errorf("rabbitMQ: max retries must be positive")
 	}
 	if c.InitialRetryWait <= 0 {
-		return fmt.Errorf("initial retry wait must be positive")
+		return fmt.Errorf("rabbitMQ: initial retry wait must be positive")
 	}
 	if c.MaxRetryWait < c.InitialRetryWait {
-		return fmt.Errorf("max retry wait must be >= initial retry wait")
+		return fmt.Errorf("rabbitMQ: max retry wait must be >= initial retry wait")
 	}
 	if c.PrefetchCount <= 0 {
-		return fmt.Errorf("prefetch count must be positive")
+		return fmt.Errorf("rabbitMQ: prefetch count must be positive")
 	}
 	if c.ReconnectDelay <= 0 {
-		return fmt.Errorf("reconnect delay must be positive")
+		return fmt.Errorf("rabbitMQ: reconnect delay must be positive")
 	}
 	return nil
 }

@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // BulkCreateItemInput is the input for a single item in a bulk create operation.
@@ -15,11 +16,11 @@ type BulkCreateItemInput struct {
 	// Item SKU.
 	SKU string `json:"sku" validate:"required"`
 	// Item description.
-	Description *string `json:"description,omitempty"`
+	Description field.Optional[string] `json:"description,omitzero"`
 	// Item category ID.
 	ItemCategoryID string `json:"item_category_id" validate:"required"`
 	// Product line ID.
-	ProductLineID *string `json:"product_line_id,omitempty"`
+	ProductLineID field.Optional[string] `json:"product_line_id,omitzero"`
 }
 
 // BulkCreateItemsRequest is the request to create multiple items.
@@ -30,13 +31,12 @@ type BulkCreateItemsRequest struct {
 	Type string `json:"type" validate:"required"`
 }
 
-var sampleBulkCreateItemDescription = "Raw almond flour, 25 lb bag"
 var sampleBulkCreateItemsRequest = &BulkCreateItemsRequest{
 	Type: "material",
 	Items: []BulkCreateItemInput{
 		{
 			SKU:            "ALM-FLOUR-25LB",
-			Description:    &sampleBulkCreateItemDescription,
+			Description:    field.Some("Raw almond flour, 25 lb bag"),
 			ItemCategoryID: apiresource.SampleItemCategoryID,
 		},
 	},

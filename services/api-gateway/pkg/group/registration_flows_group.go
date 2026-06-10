@@ -14,6 +14,7 @@ type RegistrationFlowsEndpointGroup struct {
 }
 
 type RegistrationFlowsEndpointGroupConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient *grpcclient.CoreServiceClient
 }
 

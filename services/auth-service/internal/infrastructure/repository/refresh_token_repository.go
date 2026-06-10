@@ -79,7 +79,7 @@ func (r *refreshTokenRepoImpl) Revoke(ctx context.Context, token string) *apierr
 }
 
 func (r *refreshTokenRepoImpl) RevokeAll(ctx context.Context, userID string) *apierror.APIError {
-	ctx, span := refreshTokenRepoTracer.Start(ctx, "repository.refresh_token.revokeAll")
+	ctx, span := refreshTokenRepoTracer.Start(ctx, "repository.refresh_token.revoke_all")
 	defer span.End()
 
 	err := r.db.RevokeAllRefreshTokensByUserID(ctx, userID)

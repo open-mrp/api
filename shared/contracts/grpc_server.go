@@ -44,7 +44,8 @@ type GRPCServerConfig struct {
 
 	// EnforcementPolicy (optional; default: 10s min ping time, permit without stream)
 	// controls the minimum time between client pings and whether pings are allowed
-	// when there are no active streams.
+	// when there are no active streams. PermitWithoutStream is always set to true by
+	// WithDefaults and cannot be disabled via this config.
 	EnforcementPolicy keepalive.EnforcementPolicy
 
 	// UnaryInterceptors (optional; default: SpanRenamer, Recovery, Identity, IdempotencyKey,

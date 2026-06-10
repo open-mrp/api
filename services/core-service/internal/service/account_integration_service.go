@@ -30,10 +30,19 @@ type accountIntegrationSvcImpl struct {
 }
 
 type AccountIntegrationSvcConfig struct {
-	Repos           domain.RepoFactory
+	// Repos (required) is the repository factory.
+	Repos domain.RepoFactory
+
+	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
-	TxManager       TransactionManager
-	EncryptionKey   []byte
+
+	// TxManager (required) wraps multi-step operations in database transactions.
+	TxManager TransactionManager
+
+	// EncryptionKey (required) encrypts sensitive fields at rest.
+	EncryptionKey []byte
+
+	// EncryptionKeyID (required) identifies the active encryption key version.
 	EncryptionKeyID string
 }
 

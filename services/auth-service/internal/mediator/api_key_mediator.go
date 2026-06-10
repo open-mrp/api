@@ -25,8 +25,13 @@ type apiKeyMedImpl struct {
 }
 
 type APIKeyMedConfig struct {
-	Repos      domain.RepoFactory
-	Pepper     []byte
+	// Repos (required) is the repository factory for API key persistence.
+	Repos domain.RepoFactory
+
+	// Pepper (required) is the pepper mixed into API key hashes.
+	Pepper []byte
+
+	// CoreClient (required) is the core-service client used to resolve accounts.
 	CoreClient domain.AuthCoreClient
 }
 
@@ -186,9 +191,15 @@ func (s *apiKeyMedImpl) Revoke(ctx context.Context, apiKeyTypeID string, ownerAc
 // Rotate revokes the specified API key and creates a replacement with the same name,
 // owner account, and role.
 //
-// 1. Look up the existing API key by type ID.
-// 2. Revoke the existing key.
-// 3. Create a new key using the old key's properties, with an optionally overridden expiration.
+//  1. Look up the existing API key by type ID.
+//  2. Revoke the existing key. By default revocation is immediate; a future
+//     RevokeAt schedules it (the old key keeps working until then) and is
+//     rejected with a validation error if more than 30 days out, while a
+//     past/now RevokeAt collapses to immediate.
+//  3. Create a new key using the old key's properties, with an optionally overridden expiration.
+//
+// Scoped to OwnerAccountID: returns a not-found error if the key does not
+// exist for the requested owner.
 func (s *apiKeyMedImpl) Rotate(ctx context.Context, input domain.APIKeyRotateInput) (string, *apikey.APIKey, *apierror.APIError) {
 	ctx, span := apiKeyMedTracer.Start(ctx, "mediator.api_key.rotate")
 	defer span.End()

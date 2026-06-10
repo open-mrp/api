@@ -34,7 +34,7 @@ func TestLogin_WithEmail(t *testing.T) {
 	status, body, err := apiClient.Post(loginPath, map[string]any{
 		"identifier": seedUserEmail,
 		"password":   seedUserPassword,
-	}, "")
+	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -51,7 +51,7 @@ func TestLogin_WithUsername(t *testing.T) {
 	status, body, err := apiClient.Post(loginPath, map[string]any{
 		"identifier": seedUserUsername,
 		"password":   seedUserPassword,
-	}, "")
+	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -66,7 +66,7 @@ func TestLogin_ResponseFields(t *testing.T) {
 	resp, err := apiClient.PostFull(loginPath, map[string]any{
 		"identifier": seedUserEmail,
 		"password":   seedUserPassword,
-	}, "")
+	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, resp.StatusCode, resp.Body)
 
@@ -89,7 +89,7 @@ func TestLogin_SetsCookies(t *testing.T) {
 	resp, err := apiClient.PostFull(loginPath, map[string]any{
 		"identifier": seedUserEmail,
 		"password":   seedUserPassword,
-	}, "")
+	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, resp.StatusCode, resp.Body)
 
@@ -118,7 +118,7 @@ func TestLogin_SecondUser(t *testing.T) {
 	status, body, err := apiClient.Post(loginPath, map[string]any{
 		"identifier": seedUser2Email,
 		"password":   seedUserPassword,
-	}, "")
+	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -137,7 +137,7 @@ func TestLogin_MissingIdentifier(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(loginPath, map[string]any{
 		"password": seedUserPassword,
-	}, "")
+	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 
@@ -149,7 +149,7 @@ func TestLogin_MissingPassword(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(loginPath, map[string]any{
 		"identifier": seedUserEmail,
-	}, "")
+	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 
@@ -159,7 +159,7 @@ func TestLogin_MissingPassword(t *testing.T) {
 
 func TestLogin_EmptyBody(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(loginPath, map[string]any{}, "")
+	status, body, err := apiClient.Post(loginPath, map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 
@@ -172,7 +172,7 @@ func TestLogin_InvalidIdentifier_TooShort(t *testing.T) {
 	status, body, err := apiClient.Post(loginPath, map[string]any{
 		"identifier": "ab",
 		"password":   seedUserPassword,
-	}, "")
+	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 
@@ -185,7 +185,7 @@ func TestLogin_InvalidIdentifier_BadEmail(t *testing.T) {
 	status, body, err := apiClient.Post(loginPath, map[string]any{
 		"identifier": "not-an-email@",
 		"password":   seedUserPassword,
-	}, "")
+	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 
@@ -198,7 +198,7 @@ func TestLogin_PasswordTooLong(t *testing.T) {
 	status, body, err := apiClient.Post(loginPath, map[string]any{
 		"identifier": seedUserEmail,
 		"password":   strings.Repeat("a", 73),
-	}, "")
+	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 
@@ -214,7 +214,7 @@ func TestLogin_WrongPassword(t *testing.T) {
 	status, body, err := apiClient.Post(loginPath, map[string]any{
 		"identifier": seedUserEmail,
 		"password":   "WrongPass123!",
-	}, "")
+	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 401, status, body)
 
@@ -226,7 +226,7 @@ func TestLogin_NonExistentEmail(t *testing.T) {
 	status, body, err := apiClient.Post(loginPath, map[string]any{
 		"identifier": "nonexistent@example.com",
 		"password":   seedUserPassword,
-	}, "")
+	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 401, status, body)
 
@@ -238,7 +238,7 @@ func TestLogin_NonExistentUsername(t *testing.T) {
 	status, body, err := apiClient.Post(loginPath, map[string]any{
 		"identifier": "zzz_no_such_user",
 		"password":   seedUserPassword,
-	}, "")
+	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 401, status, body)
 
@@ -260,7 +260,7 @@ func TestLogin_WrongHTTPMethod(t *testing.T) {
 
 func TestLogin_NilBody(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(loginPath, nil, "")
+	status, body, err := apiClient.Post(loginPath, nil, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
 		"nil body should return 400 or 422, got %d: %s", status, string(body))

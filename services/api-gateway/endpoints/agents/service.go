@@ -27,8 +27,11 @@ type AgentSvc interface {
 }
 
 type AgentSvcConfig struct {
+	// AgentClient (required) is the agent-service gRPC client.
 	AgentClient pb.AgentServiceClient
-	CoreClient  corepb.CoreServiceClient
+
+	// CoreClient (required) is the core-service gRPC client.
+	CoreClient corepb.CoreServiceClient
 }
 
 type agentSvcImpl struct {
@@ -63,7 +66,10 @@ func (m *agentSvcImpl) resolveRole(ctx context.Context, roleID string) *Resolved
 	if roleID == "" {
 		return nil
 	}
-	resp, err := m.coreClient.GetRoleInfo(ctx, &corepb.GetRoleInfoRequest{RoleId: roleID})
+	resp, err := grpcutil.CallRPC(ctx, agentSvcTracer, "service.agents.resolve_role", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*corepb.GetRoleInfoResponse, error) {
+			return m.coreClient.GetRoleInfo(ctx, &corepb.GetRoleInfoRequest{RoleId: roleID}, opts...)
+		})
 	if err != nil {
 		return nil
 	}
@@ -71,7 +77,10 @@ func (m *agentSvcImpl) resolveRole(ctx context.Context, roleID string) *Resolved
 		Name:     resp.Name,
 		RoleType: resp.RoleTypeCode,
 	}
-	permResp, permErr := m.coreClient.GetRolePermissions(ctx, &corepb.GetRolePermissionsRequest{RoleId: roleID})
+	permResp, permErr := grpcutil.CallRPC(ctx, agentSvcTracer, "service.agents.resolve_role_permissions", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*corepb.GetRolePermissionsResponse, error) {
+			return m.coreClient.GetRolePermissions(ctx, &corepb.GetRolePermissionsRequest{RoleId: roleID}, opts...)
+		})
 	if permErr == nil {
 		resolved.Permissions = permResp.Permissions
 	}
@@ -92,6 +101,22 @@ func marshalConfig(cfg ConfigInput) (string, error) {
 	return string(b), nil
 }
 
+// toolConfigFromInput maps a ToolInput to its proto representation; unset
+// optional fields map to proto zero values.
+func toolConfigFromInput(t ToolInput) *pb.AgentToolConfig {
+	cfg := &pb.AgentToolConfig{ToolId: t.ToolID}
+	if v, ok := t.ConfigJSON.Value(); ok {
+		cfg.ConfigJson = v
+	}
+	if v, ok := t.SortOrder.Value(); ok {
+		cfg.SortOrder = v
+	}
+	if v, ok := t.RequireReview.Value(); ok {
+		cfg.RequireReview = v
+	}
+	return cfg
+}
+
 func (m *agentSvcImpl) CreateAgent(ctx context.Context, req *CreateAgentRequest) (*apiresource.AgentDefinition, *apierror.APIError) {
 	if err := req.Config.Validate(req.TriggerType); err != nil {
 		return nil, apierror.NewValidationError(err.Error())
@@ -104,24 +129,23 @@ func (m *agentSvcImpl) CreateAgent(ctx context.Context, req *CreateAgentRequest)
 
 	tools := make([]*pb.AgentToolConfig, len(req.Tools))
 	for i, t := range req.Tools {
-		tools[i] = &pb.AgentToolConfig{
-			ToolId:        t.ToolID,
-			ConfigJson:    t.ConfigJSON,
-			SortOrder:     t.SortOrder,
-			RequireReview: t.RequireReview,
-		}
+		tools[i] = toolConfigFromInput(t)
 	}
 
 	pbReq := &pb.CreateCustomAgentRequest{
 		Name:         req.Name,
 		Slug:         req.Slug,
-		Description:  req.Description,
 		CategoryCode: req.CategoryCode,
 		TriggerType:  string(req.TriggerType),
 		ConfigJson:   configJSON,
 		Tools:        tools,
 		Includes:     resourcekit.FilterIncludes(ctx, agentIncludes...),
-		RoleId:       req.RoleID,
+	}
+	if v, ok := req.Description.Value(); ok {
+		pbReq.Description = v
+	}
+	if v, ok := req.RoleID.Value(); ok {
+		pbReq.RoleId = v
 	}
 
 	resp, rpcErr := grpcutil.CallRPC(ctx, agentSvcTracer, "service.agents.create", domain.ServiceName,
@@ -232,12 +256,7 @@ func (m *agentSvcImpl) UpdateAgent(ctx context.Context, req *UpdateAgentRequest)
 		pbReq.ToolsProvided = true
 		tools := make([]*pb.AgentToolConfig, len(toolInputs))
 		for i, t := range toolInputs {
-			tools[i] = &pb.AgentToolConfig{
-				ToolId:        t.ToolID,
-				ConfigJson:    t.ConfigJSON,
-				SortOrder:     t.SortOrder,
-				RequireReview: t.RequireReview,
-			}
+			tools[i] = toolConfigFromInput(t)
 		}
 		pbReq.Tools = tools
 	}
@@ -275,7 +294,7 @@ func (m *agentSvcImpl) DeleteAgent(ctx context.Context, req *DeleteAgentRequest)
 func (m *agentSvcImpl) UpdateAgentStatus(ctx context.Context, req *UpdateAgentStatusRequest) (*apiresource.AgentDefinition, *apierror.APIError) {
 	pbReq := &pb.UpdateAgentAccountStatusRequest{
 		AgentDefinitionId: req.AgentDefinitionID,
-		StatusCode:        req.StatusCode,
+		StatusCode:        req.Status,
 	}
 
 	if _, rpcErr := grpcutil.CallRPC(ctx, agentSvcTracer, "service.agents.update_status", domain.ServiceName,

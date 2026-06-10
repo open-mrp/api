@@ -54,6 +54,8 @@ func (*Pick) SchemaExample() any {
 
 // PackPickResponse is the result of packing a pick.
 type PackPickResponse struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=pack_pick_response"`
 	// Updated pick.
 	Pick *Pick `json:"pick" validate:"required"`
 	// Created shipment number.
@@ -61,6 +63,7 @@ type PackPickResponse struct {
 }
 
 var SamplePackPickResponse = &PackPickResponse{
+	Object:         constants.ObjectTypePackPickResponse,
 	Pick:           SamplePick,
 	ShipmentNumber: "SH-001",
 }
@@ -71,6 +74,8 @@ func (*PackPickResponse) SchemaExample() any {
 
 // PickShipmentsResponse is the result of getting shipments for a pick.
 type PickShipmentsResponse struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=pick_shipments_response"`
 	// Shipment numbers associated with the pick.
 	ShipmentNumbers []string `json:"shipment_numbers" validate:"required"`
 	// Total count of matching shipment numbers.
@@ -78,6 +83,7 @@ type PickShipmentsResponse struct {
 }
 
 var SamplePickShipmentsResponse = &PickShipmentsResponse{
+	Object:          constants.ObjectTypePickShipmentsResponse,
 	ShipmentNumbers: []string{"SH-001", "SH-002"},
 	Count:           2,
 }

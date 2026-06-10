@@ -14,6 +14,7 @@ type UtilsEndpointGroup struct {
 }
 
 type UtilsEndpointGroupConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient *grpcclient.CoreServiceClient
 }
 

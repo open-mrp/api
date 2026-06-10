@@ -27,6 +27,7 @@ type LocationSvc interface {
 }
 
 type LocationSvcConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient pb.CoreServiceClient
 }
 

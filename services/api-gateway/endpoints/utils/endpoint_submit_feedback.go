@@ -5,8 +5,10 @@ import (
 	"net/http"
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to submit user feedback.
@@ -16,16 +18,16 @@ type SubmitFeedbackRequest struct {
 	// Answer to the question.
 	Answer string `json:"answer" validate:"required"`
 	// URL of the page where feedback was submitted.
-	PageURL *string `json:"page_url"`
+	PageURL field.Optional[string] `json:"page_url,omitzero"`
 }
 
-var exampleSubmitFeedbackRequest = &SubmitFeedbackRequest{
+var sampleSubmitFeedbackRequest = &SubmitFeedbackRequest{
 	Question: "How would you rate this feature?",
 	Answer:   "Very useful, but could use better documentation.",
 }
 
 func (*SubmitFeedbackRequest) SchemaExample() any {
-	return exampleSubmitFeedbackRequest
+	return apiexample.ValidateAndMarshalToMap(sampleSubmitFeedbackRequest)
 }
 
 // Submits user feedback for a given question and page.

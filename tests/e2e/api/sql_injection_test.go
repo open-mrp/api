@@ -5,6 +5,7 @@ package api_test
 import (
 	"fmt"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -24,6 +25,12 @@ import (
 //     attacker isn't entitled to (no row-count blowup, no cross-tenant leak).
 //   - Body strings round-trip verbatim — they're stored as literals, never
 //     interpreted by the SQL engine.
+
+// sqliBodyMarker prefixes the names of customers created by
+// TestSQLInjection_BodyField_RoundTripsLiterally. Those names embed the raw
+// payloads, so the search test excludes them when counting matches — they are
+// legitimate literal matches created concurrently, not evidence of a bypass.
+const sqliBodyMarker = "e2e-sqli-body"
 
 // sqlInjectionPayloads are classic SQLi attempts: string terminators, comment
 // sequences, tautologies, stacked statements, and UNION attempts.
@@ -61,7 +68,7 @@ func TestSQLInjection_BodyField_RoundTripsLiterally(t *testing.T) {
 			// Embed the payload inside a unique marker so the resource is
 			// addressable via search even when the payload itself is junk
 			// (e.g. just `'`). The marker stays ASCII-clean.
-			marker := uniqueName("e2e-sqli-body")
+			marker := uniqueName(sqliBodyMarker)
 			name := marker + " " + payload
 
 			body := validCustomerBody(name)
@@ -144,27 +151,34 @@ func TestSQLInjection_SearchQuery_DoesNotBypassWhereClause(t *testing.T) {
 			})
 			require.NoError(t, err)
 
+			// The parallel BodyField test creates customers whose names
+			// embed the raw payloads, so short payloads like `'` match
+			// them literally. Exclude those rows: they are expected
+			// literal matches, not bypass evidence. A real bypass would
+			// return the seed rows, which survive this filter.
+			var matched int
+			for _, item := range list.Data {
+				if !strings.Contains(DataItemField(item, "name"), sqliBodyMarker) {
+					matched++
+				}
+			}
+
 			// The decisive check: an injection that bypassed the WHERE
 			// clause would return the full row set. A safe query returns
 			// at most the (small) number of rows whose name literally
-			// contains the payload — bounded above by the benign count + a
-			// small constant for any accidental literal matches.
-			assert.Less(t, len(list.Data), baselineCount,
-				"SQLi payload %q returned %d rows (baseline=%d) — looks like the WHERE clause was bypassed",
-				payload, len(list.Data), baselineCount)
+			// contains the payload.
+			assert.Less(t, matched, baselineCount,
+				"SQLi payload %q matched %d non-body-test rows (baseline=%d) — looks like the WHERE clause was bypassed",
+				payload, matched, baselineCount)
 
 			// Tighter check when the payload contains no characters that
-			// could match a real customer name. Most payloads here are
-			// SQL-only punctuation, so we expect very few matches.
-			// We allow up to len(sqlInjectionPayloads) extra matches
-			// because the parallel BodyField test creates customers
-			// whose names contain the payload strings, and short
-			// payloads like `'` are substrings of those names.
+			// could match a real customer name. These payloads are
+			// SQL-only punctuation, so we expect essentially no matches
+			// beyond the benign no-match bound.
 			if !containsAlphaNumRun(payload, 3) {
-				maxAllowed := benignCount + len(sqlInjectionPayloads)
-				assert.LessOrEqual(t, len(list.Data), maxAllowed,
-					"SQLi payload %q returned more matches (%d) than expected (benign=%d + body-test headroom=%d)",
-					payload, len(list.Data), benignCount, len(sqlInjectionPayloads))
+				assert.LessOrEqual(t, matched, benignCount,
+					"SQLi payload %q matched more rows (%d) than the benign no-match bound (%d)",
+					payload, matched, benignCount)
 			}
 		})
 	}

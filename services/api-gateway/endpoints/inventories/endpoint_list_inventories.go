@@ -18,8 +18,8 @@ type ListInventoriesRequest struct {
 // Returns a paginated list of items with on-hand inventory quantities for the account.
 type ListInventoriesEndpoint struct{}
 
-func (e *ListInventoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListInventoriesRequest, *apiresource.ListInventoriesResponse] {
-	return (&apiendpoint.APIEndpoint[*ListInventoriesRequest, *apiresource.ListInventoriesResponse]{
+func (e *ListInventoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListInventoriesRequest, *apiresource.List[apiresource.InventoryItem]] {
+	return (&apiendpoint.APIEndpoint[*ListInventoriesRequest, *apiresource.List[apiresource.InventoryItem]]{
 		Title:             "List Inventories",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
@@ -28,7 +28,7 @@ func (e *ListInventoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListIn
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeInventoryItem,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *ListInventoriesRequest) (*apiresource.ListInventoriesResponse, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *ListInventoriesRequest) (*apiresource.List[apiresource.InventoryItem], *apierror.APIError) {
 			return svc.(InventorySvc).ListInventories
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{

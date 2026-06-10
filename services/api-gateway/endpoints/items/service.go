@@ -34,6 +34,7 @@ type ItemSvc interface {
 }
 
 type ItemSvcConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient pb.CoreServiceClient
 }
 
@@ -279,9 +280,9 @@ func (m *itemSvcImpl) BulkCreateItems(ctx context.Context, req *BulkCreateItemsR
 	for i, item := range req.Items {
 		pbItems[i] = &pb.BulkCreateItemInput{
 			Sku:            item.SKU,
-			Description:    item.Description,
+			Description:    item.Description.Ptr(),
 			ItemCategoryId: item.ItemCategoryID,
-			ProductLineId:  item.ProductLineID,
+			ProductLineId:  item.ProductLineID.Ptr(),
 		}
 	}
 

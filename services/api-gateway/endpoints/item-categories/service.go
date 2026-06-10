@@ -27,6 +27,7 @@ type ItemCategorySvc interface {
 }
 
 type ItemCategorySvcConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient pb.CoreServiceClient
 }
 

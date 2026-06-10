@@ -15,8 +15,8 @@ type Item struct {
 	Description    *string `audit:"description"`
 	Notes          *string `audit:"notes"`
 	ItemTypeCode   string  `audit:"item_type_code"`
-	ItemCategoryID string
-	CategoryName   string `audit:"category_name"`
+	ItemCategoryID string  `audit:"item_category_id"`
+	CategoryName   string  `audit:"category_name"`
 	UnitValueID    string
 	UnitCostID     string
 	BurnRateID     string
@@ -33,7 +33,7 @@ type Item struct {
 	Category  *ItemCategory
 
 	// Many-to-many joined data
-	Attributes []*ItemAttribute
+	Attributes []*ItemAttribute `audit:"attributes"`
 }
 
 // ItemCategory represents an item category (joined data).

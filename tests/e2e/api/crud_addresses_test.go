@@ -249,6 +249,7 @@ func TestAddresses_ListSearchNoResults(t *testing.T) {
 
 // createAddressForFilterTest creates an address with the given drop_ship flag and
 // returns its name (which is unique enough to find in a filtered list result).
+// The address is deleted automatically when the test finishes.
 func createAddressForFilterTest(t *testing.T, addressType string) string {
 	t.Helper()
 	name := uniqueName("e2e-addr-ds")
@@ -259,6 +260,8 @@ func createAddressForFilterTest(t *testing.T, addressType string) string {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, resp.StatusCode, resp.Body)
+	id := jsonField(parseJSON(resp.Body), "id")
+	t.Cleanup(func() { apiClient.Delete(addressesPath + "/" + id) })
 	return name
 }
 
@@ -396,6 +399,7 @@ func TestAddresses_CreateDuplicateName(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 201, status1, body1)
 	id1 := jsonField(parseJSON(body1), "id")
+	defer apiClient.Delete(addressesPath + "/" + id1)
 
 	status2, body2, err := apiClient.Post(addressesPath, map[string]any{
 		"name":    name,
@@ -404,11 +408,9 @@ func TestAddresses_CreateDuplicateName(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 201, status2, body2)
 	id2 := jsonField(parseJSON(body2), "id")
+	defer apiClient.Delete(addressesPath + "/" + id2)
 
 	assert.NotEqual(t, id1, id2, "duplicate names should create separate addresses")
-
-	apiClient.Delete(addressesPath + "/" + id1)
-	apiClient.Delete(addressesPath + "/" + id2)
 }
 
 func TestAddresses_UpdateAddressFields(t *testing.T) {
@@ -427,6 +429,7 @@ func TestAddresses_UpdateAddressFields(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
+	defer apiClient.Delete(addressesPath + "/" + id)
 
 	// Update address-level fields only
 	newName := uniqueName("e2e-addr-upd-fields2")
@@ -449,8 +452,6 @@ func TestAddresses_UpdateAddressFields(t *testing.T) {
 	assert.Equal(t, "500 Original St", jsonField(geo, "street_line_1"))
 	assert.Equal(t, "Austin", jsonField(geo, "locality"))
 	assert.Equal(t, "US", jsonField(geo, "country"))
-
-	apiClient.Delete(addressesPath + "/" + id)
 }
 
 func TestAddresses_UpdateGeolocationFields(t *testing.T) {
@@ -469,6 +470,7 @@ func TestAddresses_UpdateGeolocationFields(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
+	defer apiClient.Delete(addressesPath + "/" + id)
 
 	// Update geolocation fields
 	patchStatus, patchBody, err := apiClient.Patch(addressesPath+"/"+id, map[string]any{
@@ -492,8 +494,6 @@ func TestAddresses_UpdateGeolocationFields(t *testing.T) {
 	assert.Equal(t, "WA", jsonField(geo, "state"))
 	assert.Equal(t, "98101", jsonField(geo, "postal_code"))
 	assert.Equal(t, "US", jsonField(geo, "country"))
-
-	apiClient.Delete(addressesPath + "/" + id)
 }
 
 func TestAddresses_DeleteInUse(t *testing.T) {

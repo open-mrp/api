@@ -15,6 +15,7 @@ type APIKeysEndpointGroup struct {
 }
 
 type APIKeysEndpointGroupConfig struct {
+	// AuthClient (required) is the auth-service gRPC client.
 	AuthClient *grpcclient.AuthServiceClient
 }
 

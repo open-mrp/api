@@ -25,7 +25,7 @@ type CreateSalesOrderRequest struct {
 	CarrierID field.Optional[string] `json:"carrier_id,omitzero" validate:"omitempty"`
 	// Service level ID.
 	ServiceLevelID field.Optional[string] `json:"service_level_id,omitzero" validate:"omitempty"`
-	// Who is billed for freight (sender or third_party).
+	// Who is billed for freight.
 	CarrierBillingType field.Optional[constants.CarrierBillingType] `json:"carrier_billing_type,omitzero" validate:"omitempty"`
 	// Carrier billing account number.
 	CarrierBillingAccountNumber field.Optional[string] `json:"carrier_billing_account_number,omitzero" validate:"omitempty,max=255"`

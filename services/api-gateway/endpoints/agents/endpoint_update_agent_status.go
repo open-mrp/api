@@ -15,12 +15,12 @@ import (
 type UpdateAgentStatusRequest struct {
 	// Agent definition ID.
 	AgentDefinitionID string `path:"id" validate:"required"`
-	// Account-level status code: "active" or "inactive".
-	StatusCode string `json:"status_code" validate:"required,max=255"`
+	// Account-level status: "active" or "inactive".
+	Status string `json:"status" validate:"required,max=255"`
 }
 
 var sampleUpdateAgentStatusRequest = &UpdateAgentStatusRequest{
-	StatusCode: "active",
+	Status: "active",
 }
 
 func (*UpdateAgentStatusRequest) SchemaExample() any {

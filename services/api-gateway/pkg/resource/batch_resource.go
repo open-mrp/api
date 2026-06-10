@@ -50,10 +50,32 @@ func (*ProductionRun) SchemaExample() any {
 
 // Lot associated with a batch.
 type BatchLot struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=batch_lot"`
 	// Lot number.
 	LotNumber string `json:"lot_number" validate:"required"`
 	// Lot type (material or productionRun).
 	Type string `json:"type" validate:"required"`
+}
+
+var SampleBatchLot = &BatchLot{
+	Object:    constants.ObjectTypeBatchLot,
+	LotNumber: "LOT-001",
+	Type:      "material",
+}
+
+// Minimal reference to another batch, carrying only the id and object
+// discriminator.
+type BatchReference struct {
+	// Batch ID.
+	ID string `json:"id" validate:"required"`
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=batch"`
+}
+
+var SampleBatchReference = &BatchReference{
+	ID:     SampleBatchID,
+	Object: constants.ObjectTypeBatch,
 }
 
 // Production batch.
@@ -82,10 +104,10 @@ type Batch struct {
 	Machines *List[Machine] `json:"machines" expandable:"true"`
 	// Associated lots.
 	Lots *List[BatchLot] `json:"lots"`
-	// Input batch IDs.
-	InputBatchIDs []string `json:"input_batch_ids"`
-	// Output batch IDs.
-	OutputBatchIDs []string `json:"output_batch_ids"`
+	// Batches that feed into this batch.
+	InputBatches *List[BatchReference] `json:"input_batches"`
+	// Batches this batch feeds into.
+	OutputBatches *List[BatchReference] `json:"output_batches"`
 	// Closed timestamp.
 	ClosedAt *time.Time `json:"closed_at"`
 	// Scanned timestamp.
@@ -110,9 +132,9 @@ var SampleBatch = &Batch{
 	ProductionStep:  nil,
 	ProductionRun:   SampleProductionRun,
 	Machines:        NewList([]Machine{*SampleMachine}, PageInfo{}),
-	Lots:            NewList([]BatchLot{}, PageInfo{}),
-	InputBatchIDs:   []string{},
-	OutputBatchIDs:  []string{},
+	Lots:            NewList([]BatchLot{*SampleBatchLot}, PageInfo{}),
+	InputBatches:    NewList([]BatchReference{}, PageInfo{}),
+	OutputBatches:   NewList([]BatchReference{}, PageInfo{}),
 	ClosedAt:        nil,
 	ScannedAt:       &sampleScannedAt,
 	CreatedAt:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),
@@ -133,17 +155,17 @@ type BatchFlowNode struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=batch_flow_node"`
 	// Batch at this node.
 	Batch Batch `json:"batch"`
-	// IDs of batches that feed into this batch.
-	InputBatchIDs []string `json:"input_batch_ids"`
-	// IDs of batches this batch feeds into.
-	OutputBatchIDs []string `json:"output_batch_ids"`
+	// Batches that feed into this batch.
+	InputBatches *List[BatchReference] `json:"input_batches"`
+	// Batches this batch feeds into.
+	OutputBatches *List[BatchReference] `json:"output_batches"`
 }
 
 var SampleBatchFlowNode = &BatchFlowNode{
-	Object:         constants.ObjectTypeBatchFlowNode,
-	Batch:          *SampleBatch,
-	InputBatchIDs:  []string{},
-	OutputBatchIDs: []string{},
+	Object:        constants.ObjectTypeBatchFlowNode,
+	Batch:         *SampleBatch,
+	InputBatches:  NewList([]BatchReference{}, PageInfo{}),
+	OutputBatches: NewList([]BatchReference{}, PageInfo{}),
 }
 
 func (*BatchFlowNode) SchemaExample() any {

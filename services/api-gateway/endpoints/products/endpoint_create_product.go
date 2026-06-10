@@ -21,7 +21,7 @@ type CreateProductRequest struct {
 	Description field.Optional[string] `json:"description,omitzero"`
 	// Notes.
 	Notes field.Optional[string] `json:"notes,omitzero"`
-	// Product type code (e.g. sale, sample).
+	// Product type code.
 	ProductTypeCode constants.ProductTypeCode `json:"type" validate:"required"`
 	// Product line ID.
 	ProductLineID field.Optional[string] `json:"product_line_id,omitzero" validate:"omitempty"`

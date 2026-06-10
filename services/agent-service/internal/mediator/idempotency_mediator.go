@@ -21,6 +21,7 @@ type idempotencyMedImpl struct {
 }
 
 type IdempotencyMedConfig struct {
+	// Repos (required) is the repository factory for idempotency persistence.
 	Repos domain.RepoFactory
 }
 

@@ -11,6 +11,7 @@ import (
 	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/id"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -30,6 +31,7 @@ type TransactionSvc interface {
 }
 
 type TransactionSvcConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient pb.CoreServiceClient
 }
 
@@ -303,28 +305,35 @@ func (m *transactionSvcImpl) ListAccountTransactions(ctx context.Context, req *L
 	return AccountTransactionListPresenter(ctx, resp), nil
 }
 
+// seedID composes a well-known seeded-row ID from a shared/id prefix constant
+// so the prefix cannot drift from shared/id. The suffixes match the rows in
+// shared/db/seed/0001_static_types.sql.
+func seedID(prefix id.IDPrefix, suffix string) string {
+	return string(prefix) + "_" + suffix
+}
+
 // staticTransactionTypes is the hardcoded list of transaction types.
 var staticTransactionTypes = []apiresource.TransactionType{
 	{
-		ID:     "txtp_01seedpayment000000",
+		ID:     seedID(id.TransactionTypeIDPrefix, "01seedpayment000000"),
 		Object: constants.ObjectTypeTransactionType,
 		Name:   "Payment",
 		Code:   "payment",
 	},
 	{
-		ID:     "txtp_01seedcreditmemo000",
+		ID:     seedID(id.TransactionTypeIDPrefix, "01seedcreditmemo000"),
 		Object: constants.ObjectTypeTransactionType,
 		Name:   "Credit Memo",
 		Code:   "credit_memo",
 	},
 	{
-		ID:     "txtp_01seedadjustment000",
+		ID:     seedID(id.TransactionTypeIDPrefix, "01seedadjustment000"),
 		Object: constants.ObjectTypeTransactionType,
 		Name:   "Adjustment",
 		Code:   "adjustment",
 	},
 	{
-		ID:     "txtp_01seedrebate0000000",
+		ID:     seedID(id.TransactionTypeIDPrefix, "01seedrebate0000000"),
 		Object: constants.ObjectTypeTransactionType,
 		Name:   "Rebate",
 		Code:   "rebate",
@@ -334,31 +343,31 @@ var staticTransactionTypes = []apiresource.TransactionType{
 // staticTransactionMethods is the hardcoded list of transaction methods.
 var staticTransactionMethods = []apiresource.TransactionMethod{
 	{
-		ID:     "txmd_01seedcash00000000",
+		ID:     seedID(id.TransactionMethodIDPrefix, "01seedcash00000000"),
 		Object: constants.ObjectTypeTransactionMethod,
 		Name:   "Cash",
 		Code:   "cash",
 	},
 	{
-		ID:     "txmd_01seedcheck0000000",
+		ID:     seedID(id.TransactionMethodIDPrefix, "01seedcheck0000000"),
 		Object: constants.ObjectTypeTransactionMethod,
 		Name:   "Check",
 		Code:   "check",
 	},
 	{
-		ID:     "txmd_01seedcreditcard00",
+		ID:     seedID(id.TransactionMethodIDPrefix, "01seedcreditcard00"),
 		Object: constants.ObjectTypeTransactionMethod,
 		Name:   "Credit Card",
 		Code:   "credit_card",
 	},
 	{
-		ID:     "txmd_01seedgiftcard0000",
+		ID:     seedID(id.TransactionMethodIDPrefix, "01seedgiftcard0000"),
 		Object: constants.ObjectTypeTransactionMethod,
 		Name:   "Gift Card",
 		Code:   "gift_card",
 	},
 	{
-		ID:     "txmd_01seedach000000000",
+		ID:     seedID(id.TransactionMethodIDPrefix, "01seedach000000000"),
 		Object: constants.ObjectTypeTransactionMethod,
 		Name:   "Ach",
 		Code:   "ach",

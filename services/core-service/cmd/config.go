@@ -51,6 +51,7 @@ type config struct {
 	CursorHMACKey []byte
 
 	// GoogleMapsAPIKey (required) is the Google Maps API key for address validation.
+	// Not enforced when PlatformMode is "test".
 	GoogleMapsAPIKey string
 
 	// IntegrationEncryptionKey (required) is the hex-encoded AES-256 key for encrypting integration credentials.
@@ -60,15 +61,19 @@ type config struct {
 	IntegrationEncryptionKeyID string
 
 	// AWSRegion (required) is the AWS region for S3 operations.
+	// Not enforced when PlatformMode is "test".
 	AWSRegion string
 
 	// AccountPhotosBucket (required) is the S3 bucket for account logos.
+	// Not enforced when PlatformMode is "test".
 	AccountPhotosBucket string
 
 	// UserPhotosBucket (required) is the S3 bucket for user profile photos.
+	// Not enforced when PlatformMode is "test".
 	UserPhotosBucket string
 
 	// ShippingLabelsBucket (required) is the S3 bucket for shipping label assets.
+	// Not enforced when PlatformMode is "test".
 	ShippingLabelsBucket string
 
 	// FrontendURL (required) is the base URL of the frontend application, used for checkout return URLs.

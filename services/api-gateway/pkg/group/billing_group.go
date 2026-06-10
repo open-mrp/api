@@ -14,8 +14,11 @@ type BillingEndpointGroup struct {
 }
 
 type BillingEndpointGroupConfig struct {
+	// BillingClient (required) is the billing-service gRPC client.
 	BillingClient *grpcclient.BillingServiceClient
-	CoreClient    *grpcclient.CoreServiceClient
+
+	// CoreClient (required) is the core-service gRPC client.
+	CoreClient *grpcclient.CoreServiceClient
 }
 
 func (c *BillingEndpointGroupConfig) validate() error {

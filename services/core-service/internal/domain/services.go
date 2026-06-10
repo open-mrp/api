@@ -41,8 +41,7 @@ type SandboxSvc interface {
 	GetSandbox(ctx context.Context, sandboxTypeID string, includes []string) (*SandboxAccount, *apierror.APIError)
 
 	// DeleteSandbox deletes a sandbox account and its underlying account record.
-	// At least one sandbox must remain per production account. Account-scoped data
-	// is purged asynchronously via an outbox message.
+	// Account-scoped data is purged asynchronously via an outbox message.
 	DeleteSandbox(ctx context.Context, sandboxTypeID string) *apierror.APIError
 
 	// BatchGetSandboxesByIDs returns sandbox accounts matching the input type IDs

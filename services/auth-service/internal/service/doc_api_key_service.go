@@ -25,9 +25,16 @@ type docAPIKeySvcImpl struct {
 }
 
 type DocAPIKeySvcConfig struct {
-	Repos           domain.RepoFactory
+	// Repos (required) is the repository factory for auth persistence.
+	Repos domain.RepoFactory
+
+	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
-	TxManager       TransactionManager
+
+	// TxManager (optional; default: nil) wraps multi-step operations in database
+	// transactions. It is not validated at construction; transactional code paths
+	// panic at runtime if it is unset.
+	TxManager TransactionManager
 }
 
 func (c *DocAPIKeySvcConfig) validate() error {
@@ -147,15 +154,24 @@ func (s *docAPIKeySvcImpl) GetOrCreateDocAPIKey(ctx context.Context) (*domain.Ge
 
 	case domain.RecoveryPointStarted:
 		var result *domain.GetOrCreateDocAPIKeyResult
-		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *docAPIKeySvcImpl) *apierror.APIError {
-			txMeds := txSvc.mediators()
-			var resolveErr *apierror.APIError
-			result, resolveErr = txMeds.DocAPIKey.Resolve(txCtx, identity.Target.AccountID)
-			if resolveErr != nil {
-				return resolveErr
-			}
-			return txMeds.Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
-		})
+		resolveTx := func() *apierror.APIError {
+			return s.withTx(ctx, func(txCtx context.Context, txSvc *docAPIKeySvcImpl) *apierror.APIError {
+				txMeds := txSvc.mediators()
+				var resolveErr *apierror.APIError
+				result, resolveErr = txMeds.DocAPIKey.Resolve(txCtx, identity.Target.AccountID)
+				if resolveErr != nil {
+					return resolveErr
+				}
+				return txMeds.Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
+			})
+		}
+		apiErr = resolveTx()
+		if apiErr != nil && apiErr.Code == apierror.ErrorCodeResourceExists {
+			// A concurrent request created the doc API key first (unique key on
+			// owner_account_id). Re-resolve in a fresh transaction to return the
+			// winner's key instead of propagating the conflict.
+			apiErr = resolveTx()
+		}
 		if apiErr != nil {
 			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 		}

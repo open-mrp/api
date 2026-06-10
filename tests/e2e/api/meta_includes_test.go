@@ -709,7 +709,7 @@ var includesPutScenarioByOperationID = map[string]putIncludeScenario{
 			"id": SeedCustomAgentDefinitionID,
 		},
 		buildBody: func(_ string) map[string]any {
-			return map[string]any{"status_code": "active"}
+			return map[string]any{"status": "active"}
 		},
 		extractTargets: func(root map[string]any) []map[string]any {
 			return extractRootObjectTyped(root, "agent_definition")

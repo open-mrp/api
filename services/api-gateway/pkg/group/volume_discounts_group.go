@@ -14,6 +14,7 @@ type VolumeDiscountsEndpointGroup struct {
 }
 
 type VolumeDiscountsEndpointGroupConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient *grpcclient.CoreServiceClient
 }
 

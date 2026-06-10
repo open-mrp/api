@@ -71,7 +71,7 @@ func (r *userRepoImpl) Create(ctx context.Context, userID, email, name, hashedPa
 }
 
 func (r *userRepoImpl) UpdatePassword(ctx context.Context, userID string, hashedPassword string) *apierror.APIError {
-	ctx, span := userRepoTracer.Start(ctx, "repository.user.updatePassword")
+	ctx, span := userRepoTracer.Start(ctx, "repository.user.update_password")
 	defer span.End()
 
 	err := r.db.UpdateUserPassword(ctx, sqlc.UpdateUserPasswordParams{

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
+	"github.com/augno/api/shared/appctx"
 	s3client "github.com/augno/api/shared/cloud/s3"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/tracing"
@@ -27,9 +28,17 @@ type tenancySvcImpl struct {
 }
 
 type TenancySvcConfig struct {
-	RepoFactory      domain.RepoFactory
-	AuthClient       domain.CoreAuthClient
-	S3Client         s3client.ObjectStore
+	// RepoFactory (required) is the repository factory.
+	RepoFactory domain.RepoFactory
+
+	// AuthClient (required) is the auth-service client.
+	AuthClient domain.CoreAuthClient
+
+	// S3Client (required) is the object store client used for file storage.
+	S3Client s3client.ObjectStore
+
+	// UserPhotosBucket (optional; default: "") is the S3 bucket for user photos. It is not validated
+	// at construction.
 	UserPhotosBucket string
 }
 
@@ -67,6 +76,16 @@ func NewTenancySvc(config *TenancySvcConfig) domain.TenancySvc {
 func (s *tenancySvcImpl) GetTenancy(ctx context.Context, userID string, targetAccountID *string) (*domain.Tenancy, *apierror.APIError) {
 	ctx, span := tenancySvcTracer.Start(ctx, "service.tenancy.get")
 	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	// Tenancy is account-agnostic: the user may not have selected an account
+	// yet, so require an authenticated user actor but not an assigned account.
+	if apiErr := identity.CheckHasUserActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
 	allAccounts, apiErr := s.accountUserRepo.FindTenancyAccountsByUserID(ctx, userID)
 	if apiErr != nil {
@@ -125,6 +144,16 @@ func (s *tenancySvcImpl) SwitchAccount(ctx context.Context, userID, accountID st
 	ctx, span := tenancySvcTracer.Start(ctx, "service.tenancy.switch_account")
 	defer span.End()
 
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	// Switching accounts is account-agnostic by definition; require an
+	// authenticated user actor but not an assigned account.
+	if apiErr := identity.CheckHasUserActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	allAccounts, apiErr := s.accountUserRepo.FindTenancyAccountsByUserID(ctx, userID)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -182,6 +211,17 @@ func (s *tenancySvcImpl) GetCurrentUser(ctx context.Context, userID string, targ
 	ctx, span := tenancySvcTracer.Start(ctx, "service.tenancy.get_current_user")
 	defer span.End()
 
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	// Account-agnostic like GetTenancy: /me is called before an account is
+	// selected, so the identity may have no actor account. CheckIsUser would
+	// 403 there; require an authenticated user actor only.
+	if apiErr := identity.CheckHasUserActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	user, apiErr := s.userRepo.FindByID(ctx, userID)
 	if apiErr != nil {
 		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
@@ -207,6 +247,14 @@ func (s *tenancySvcImpl) GetCurrentUser(ctx context.Context, userID string, targ
 func (s *tenancySvcImpl) ListCustomerAccountsForUser(ctx context.Context, userID, vendorAccountID string) ([]domain.CustomerAccountSummary, *apierror.APIError) {
 	ctx, span := tenancySvcTracer.Start(ctx, "service.tenancy.list_customer_accounts")
 	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckHasUserActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
 	accounts, apiErr := s.accountRelationRepo.FindCustomerAccountsByVendorAndUser(ctx, vendorAccountID, userID)
 	if apiErr != nil {

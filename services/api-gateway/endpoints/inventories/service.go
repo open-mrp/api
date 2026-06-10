@@ -14,10 +14,11 @@ import (
 )
 
 type InventorySvc interface {
-	ListInventories(ctx context.Context, req *ListInventoriesRequest) (*apiresource.ListInventoriesResponse, *apierror.APIError)
+	ListInventories(ctx context.Context, req *ListInventoriesRequest) (*apiresource.List[apiresource.InventoryItem], *apierror.APIError)
 }
 
 type InventorySvcConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient pb.CoreServiceClient
 }
 
@@ -44,7 +45,7 @@ func NewInventorySvc(config *InventorySvcConfig) InventorySvc {
 	}
 }
 
-func (m *inventorySvcImpl) ListInventories(ctx context.Context, req *ListInventoriesRequest) (*apiresource.ListInventoriesResponse, *apierror.APIError) {
+func (m *inventorySvcImpl) ListInventories(ctx context.Context, req *ListInventoriesRequest) (*apiresource.List[apiresource.InventoryItem], *apierror.APIError) {
 	pbReq := &pb.ListInventoriesRequest{
 		Cursor: req.Cursor,
 		Limit:  req.Limit,

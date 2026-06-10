@@ -25,10 +25,19 @@ type userSvcImpl struct {
 }
 
 type UserSvcConfig struct {
-	Repos                 domain.RepoFactory
-	MediatorFactory       domain.MediatorFactory
+	// Repos (required) is the repository factory for auth persistence.
+	Repos domain.RepoFactory
+
+	// MediatorFactory (required) builds the mediators used by this service.
+	MediatorFactory domain.MediatorFactory
+
+	// NotificationPublisher (required) publishes notification messages to the outbox.
 	NotificationPublisher domain.NotificationPublisher
-	TxManager             TransactionManager
+
+	// TxManager (optional; default: nil) wraps multi-step operations in database
+	// transactions. It is not validated at construction; transactional code paths
+	// panic at runtime if it is unset.
+	TxManager TransactionManager
 }
 
 func (c *UserSvcConfig) validate() error {

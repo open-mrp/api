@@ -6,12 +6,6 @@ import (
 	"github.com/augno/api/shared/pagination"
 )
 
-// RecoveryPoint constants for settlement operations.
-const (
-	SettlementRecoveryPointStarted  RecoveryPoint = "started"
-	SettlementRecoveryPointFinished RecoveryPoint = "finished"
-)
-
 // Settlement represents a full settlement with expandable allocations.
 type Settlement struct {
 	ID                  string

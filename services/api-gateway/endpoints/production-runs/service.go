@@ -28,6 +28,7 @@ type ProductionRunSvc interface {
 }
 
 type ProductionRunSvcConfig struct {
+	// CoreClient (required) is the core-service production-run gRPC client.
 	CoreClient pb.CoreProductionRunServiceClient
 }
 
@@ -159,12 +160,12 @@ func (m *productionRunSvcImpl) AddBatchesToProductionRun(ctx context.Context, re
 			ItemId:            b.ItemID,
 			QuantityValue:     b.QuantityValue,
 			QuantityUnitId:    b.QuantityUnitID,
-			SecondsValue:      b.SecondsValue,
-			SecondsUnitId:     b.SecondsUnitID,
-			WasteValue:        b.WasteValue,
-			WasteUnitId:       b.WasteUnitID,
-			ProductionStepId:  b.ProductionStepID,
-			ScanningStationId: b.ScanningStationID,
+			SecondsValue:      b.SecondsValue.Ptr(),
+			SecondsUnitId:     b.SecondsUnitID.Ptr(),
+			WasteValue:        b.WasteValue.Ptr(),
+			WasteUnitId:       b.WasteUnitID.Ptr(),
+			ProductionStepId:  b.ProductionStepID.Ptr(),
+			ScanningStationId: b.ScanningStationID.Ptr(),
 		}
 	}
 

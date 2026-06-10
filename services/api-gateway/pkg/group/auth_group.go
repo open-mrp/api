@@ -14,7 +14,10 @@ type AuthEndpointGroup struct {
 }
 
 type AuthEndpointGroupConfig struct {
+	// AuthClient (required) is the auth-service gRPC client.
 	AuthClient *grpcclient.AuthServiceClient
+
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient *grpcclient.CoreServiceClient
 }
 

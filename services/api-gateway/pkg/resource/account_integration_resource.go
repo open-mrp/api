@@ -19,7 +19,7 @@ type AccountIntegration struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_integration"`
 	// Display name of the integration.
 	Name string `json:"name" validate:"required"`
-	// Integration provider code (e.g. "stripe", "shippo").
+	// Integration provider code.
 	IntegrationCode constants.IntegrationCode `json:"provider" validate:"required"`
 	// Whether the integration is active.
 	IsActive bool `json:"is_active"`

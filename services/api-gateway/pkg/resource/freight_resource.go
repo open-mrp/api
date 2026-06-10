@@ -21,7 +21,7 @@ type Freight struct {
 	Carrier *Carrier `json:"carrier"`
 	// Service level.
 	ServiceLevel *ServiceLevel `json:"service_level"`
-	// Who is billed for freight (sender or third_party).
+	// Who is billed for freight.
 	BillingType *constants.CarrierBillingType `json:"billing_type"`
 	// Carrier billing account number, used when a third party is billed.
 	BillingAccountNumber *string `json:"billing_account_number"`

@@ -309,7 +309,7 @@ func TestAPIKeys_GetAllFields(t *testing.T) {
 	assert.True(t, hasRevokedAt, "revoked_at field should be present in response")
 }
 
-func TestAPIKeys_Idempotent(t *testing.T) {
+func TestAPIKeys_CreateIdempotent(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-idem-key")
 	idemKey := newIdempotencyKey()

@@ -24,8 +24,13 @@ type notificationSvcImpl struct {
 }
 
 type NotificationSvcConfig struct {
-	EmailLogRepo     domain.EmailLogRepo
-	EmailSender      domain.EmailSender
+	// EmailLogRepo (required) persists email send/delivery logs.
+	EmailLogRepo domain.EmailLogRepo
+
+	// EmailSender (required) sends outbound email.
+	EmailSender domain.EmailSender
+
+	// TemplateRenderer (required) renders email templates into message bodies.
 	TemplateRenderer email.TemplateRenderer
 }
 

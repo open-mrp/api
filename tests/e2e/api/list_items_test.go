@@ -179,7 +179,7 @@ func TestListItems_FilterByCategoryWithPagination(t *testing.T) {
 }
 
 // fetchProductionStepInStepIDs returns parent step IDs from GET /production-steps/{id}?include=in_steps.
-// _parent_child_production_steps stores parent→child as (A,B); in_steps are rows where this step is B.
+// _parent_child_production_steps stores (A=downstream child, B=upstream parent); in_steps are rows where this step is A.
 func fetchProductionStepInStepIDs(t *testing.T, productionStepID string) []string {
 	t.Helper()
 	path := "/v1/operations/production-steps/" + productionStepID
@@ -237,7 +237,7 @@ func collectPagedItemSKUs(t *testing.T, baseParams url.Values) map[string]struct
 func TestListItems_SubassemblyFilterInitialOnly_ReturnsInitialPartsOnly(t *testing.T) {
 	t.Parallel()
 
-	// Prove seeded edges match API semantics (A=parent, B=child). If rows were swapped so tests on SKUs
+	// Prove seeded edges match API semantics (A=downstream child, B=upstream parent). If rows were swapped so tests on SKUs
 	// still accidentally lined up, parent/child via in_steps would disagree with shared/db/seed/0009_production.sql comments.
 	sewParents := fetchProductionStepInStepIDs(t, SeedSewLargeProductionStepID)
 	assert.Contains(t, sewParents, SeedProductionStepID, "Sew Large Sock must list Knit Large Sock as in_step")

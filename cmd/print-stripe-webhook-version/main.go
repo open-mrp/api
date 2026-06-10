@@ -1,11 +1,28 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"io"
+	"os"
 
 	"github.com/augno/api/shared/constants"
 )
 
 func main() {
-	fmt.Print(constants.StripeAPIVersion)
+	ctx := context.Background()
+	if err := Run(ctx, os.Getenv, os.Stdin, os.Stdout, os.Stderr); err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		os.Exit(1)
+	}
+}
+
+func Run(
+	ctx context.Context,
+	getenv func(string) string,
+	stdin io.Reader,
+	stdout, stderr io.Writer,
+) error {
+	_, err := fmt.Fprint(stdout, constants.StripeAPIVersion)
+	return err
 }

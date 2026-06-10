@@ -14,8 +14,13 @@ type AgentRunsEndpointGroup struct {
 }
 
 type AgentRunsEndpointGroupConfig struct {
+	// AgentClient (required) is the agent-service gRPC client.
 	AgentClient *grpcclient.AgentServiceClient
-	CoreClient  *grpcclient.CoreServiceClient
+
+	// CoreClient (optional; default: nil) is the core-service gRPC client used
+	// to resolve role info at runtime. It may be nil in static-reflection
+	// contexts (e.g. OpenAPI generation) where no RPCs are made.
+	CoreClient *grpcclient.CoreServiceClient
 }
 
 func (c *AgentRunsEndpointGroupConfig) validate() error {

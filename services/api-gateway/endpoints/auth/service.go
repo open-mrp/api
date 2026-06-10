@@ -47,7 +47,10 @@ type AuthSvc interface {
 }
 
 type AuthSvcConfig struct {
+	// AuthClient (required) is the auth-service gRPC client.
 	AuthClient pb.AuthServiceClient
+
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient corepb.CoreServiceClient
 }
 

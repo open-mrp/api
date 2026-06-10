@@ -18,6 +18,7 @@ type permissionGroupSvcImpl struct {
 }
 
 type PermissionGroupSvcConfig struct {
+	// Repos (required) is the repository factory.
 	Repos domain.RepoFactory
 }
 

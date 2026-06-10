@@ -14,6 +14,7 @@ type SalesOrderStatusesEndpointGroup struct {
 }
 
 type SalesOrderStatusesEndpointGroupConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient *grpcclient.CoreServiceClient
 }
 

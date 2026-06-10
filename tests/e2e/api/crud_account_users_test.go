@@ -42,11 +42,16 @@ func TestAccountUsers_ListResponseShape(t *testing.T) {
 		require.NotNil(t, m)
 		assert.Equal(t, "account_user", jsonField(m, "object"))
 		assert.NotEmpty(t, jsonField(m, "id"))
-		// user_id is the underlying user id (us_…) sent as an actor_ids filter on
-		// request logs / audit events — distinct from id (the account_user id).
-		userID := jsonField(m, "user_id")
-		assert.NotEmpty(t, userID, "account_user must expose user_id")
-		assert.NotEqual(t, jsonField(m, "id"), userID, "user_id must differ from the account_user id")
+		// user is a polymorphic Entity reference to the underlying user (us_…) whose id is
+		// sent as an actor_ids filter on request logs / audit events — distinct
+		// from id (the account_user id).
+		user := jsonObject(m, "user")
+		require.NotNil(t, user, "account_user must expose a user sub-object")
+		assert.Equal(t, "entity", jsonField(user, "object"))
+		assert.Equal(t, "user", jsonField(user, "type"))
+		userID := jsonField(user, "id")
+		assert.NotEmpty(t, userID, "account_user user sub-object must have an id")
+		assert.NotEqual(t, jsonField(m, "id"), userID, "user.id must differ from the account_user id")
 		assert.NotEmpty(t, jsonField(m, "status"))
 		assert.NotEmpty(t, jsonField(m, "created_at"))
 		assert.NotEmpty(t, jsonField(m, "updated_at"))
@@ -54,7 +59,7 @@ func TestAccountUsers_ListResponseShape(t *testing.T) {
 }
 
 // TestAccountUsers_UserIDFiltersRequestLogs verifies the documented contract:
-// the account_user's user_id is what the request-logs actor_ids filter expects.
+// the account_user's user.id is what the request-logs actor_ids filter expects.
 func TestAccountUsers_UserIDFiltersRequestLogs(t *testing.T) {
 	t.Parallel()
 	// Discover a user_id that actually authored request logs: the seed user.
@@ -202,6 +207,7 @@ func TestAccountUsers_CreateAndGet(t *testing.T) {
 	assert.Equal(t, "account_user", jsonField(created, "object"))
 	id := jsonField(created, "id")
 	assert.NotEmpty(t, id)
+	defer removeAccountUser(id)
 	assertCreatedLocation(t, createResp.Header, id)
 	assert.Equal(t, name, jsonField(created, "name"))
 
@@ -215,9 +221,6 @@ func TestAccountUsers_CreateAndGet(t *testing.T) {
 
 	// Audit
 	expectAuditEvent(t, id, "account_user", "create")
-
-	// Cleanup
-	removeAccountUser(id)
 }
 
 func TestAccountUsers_CreateAndUpdateAllFields(t *testing.T) {
@@ -321,6 +324,7 @@ func TestAccountUsers_Update(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
+	defer removeAccountUser(id)
 
 	newName := uniqueName("e2e-acuser-new")
 	patchStatus, patchBody, err := apiClient.Patch(accountUsersPath+"/"+id, map[string]any{
@@ -332,9 +336,6 @@ func TestAccountUsers_Update(t *testing.T) {
 
 	// Audit
 	expectAuditEvent(t, id, "account_user", "update")
-
-	// Cleanup
-	removeAccountUser(id)
 }
 
 func TestAccountUsers_Remove(t *testing.T) {
@@ -380,6 +381,7 @@ func TestAccountUsers_LockAndUnlock(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
+	defer removeAccountUser(id)
 
 	// Lock via disable action.
 	lockStatus, lockBody, err := apiClient.Put(accountUsersPath+"/"+id+"/actions/disable", nil)
@@ -411,9 +413,6 @@ func TestAccountUsers_LockAndUnlock(t *testing.T) {
 	// Audit — lock and unlock both emit "update" actions
 	expectAuditEvent(t, id, "account_user", "create")
 	expectAuditEvent(t, id, "account_user", "update")
-
-	// Cleanup
-	removeAccountUser(id)
 }
 
 func TestAccountUsers_RemoveAndRestore(t *testing.T) {
@@ -429,6 +428,7 @@ func TestAccountUsers_RemoveAndRestore(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
+	defer removeAccountUser(id)
 
 	// Remove via remove action.
 	delStatus, delBody, err := apiClient.Put(accountUsersPath+"/"+id+"/actions/remove", nil)
@@ -452,12 +452,9 @@ func TestAccountUsers_RemoveAndRestore(t *testing.T) {
 	expectAuditEvent(t, id, "account_user", "create")
 	expectAuditEvent(t, id, "account_user", "delete")
 	expectAuditEvent(t, id, "account_user", "update") // restore emits update
-
-	// Cleanup
-	removeAccountUser(id)
 }
 
-func TestAccountUsers_Idempotent(t *testing.T) {
+func TestAccountUsers_CreateIdempotent(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-idem-acuser")
 	email := name + "@e2e-test.augno.com"

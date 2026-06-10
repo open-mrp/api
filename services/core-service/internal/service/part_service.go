@@ -26,9 +26,14 @@ type partSvcImpl struct {
 }
 
 type PartSvcConfig struct {
-	Repos           domain.RepoFactory
+	// Repos (required) is the repository factory.
+	Repos domain.RepoFactory
+
+	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
-	TxManager       TransactionManager
+
+	// TxManager (required) wraps multi-step operations in database transactions.
+	TxManager TransactionManager
 }
 
 func (c *PartSvcConfig) validate() error {
@@ -91,6 +96,13 @@ func (s *partSvcImpl) ExportParts(ctx context.Context, params domain.ExportParts
 	}
 	if !identity.IsTargetAccountSet() {
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+
+	if identity.IsExternalTarget() {
+		meds := s.mediators()
+		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 	}
 
 	params.AccountID = identity.Target.AccountID
@@ -424,8 +436,9 @@ func (s *partSvcImpl) UpdatePart(ctx context.Context, params domain.UpdatePartPa
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *partSvcImpl) *apierror.APIError {
 			txPartRepo := txSvc.repos.NewPartRepo()
 
-			// Fetch the part before update for audit diff.
-			old, apiErr := txPartRepo.Get(txCtx, domain.GetPartParams{AccountID: params.AccountID, PartID: params.PartID})
+			// Fetch the part before update for audit diff (same includes as the
+			// post-update fetch so include-only fields cannot produce false diffs).
+			old, apiErr := txPartRepo.Get(txCtx, domain.GetPartParams{AccountID: params.AccountID, PartID: params.PartID, Includes: params.Includes})
 			if apiErr != nil {
 				return apiErr
 			}

@@ -152,6 +152,7 @@ func (suite *PasswordSvcTestSuite) TestUpdatePassword_Success() {
 	userID := testutil.EntityIDUser
 	acctID := "acct_test"
 	ctx := appctx.WithIdentity(context.Background(), &types.Identity{
+		Type:   types.IdentityActorTypeUser,
 		Target: &types.IdentityTarget{AccountID: acctID},
 		Actor:  &types.IdentityActor{ID: userID, AccountID: &acctID},
 	})
@@ -188,6 +189,7 @@ func (suite *PasswordSvcTestSuite) TestUpdatePassword_Success() {
 func (suite *PasswordSvcTestSuite) TestUpdatePassword_ValidateFails() {
 	userID := testutil.EntityIDUser
 	ctx := appctx.WithIdentity(context.Background(), &types.Identity{
+		Type:  types.IdentityActorTypeUser,
 		Actor: &types.IdentityActor{ID: userID},
 	})
 	oldPassword := "wrong-password"

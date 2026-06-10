@@ -12,8 +12,8 @@ import (
 type AccountUser struct {
 	// Account user ID.
 	ID string `json:"id" validate:"required"`
-	// Underlying user ID.
-	UserID string `json:"user_id" validate:"required"`
+	// Underlying user reference.
+	User *Entity `json:"user"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_user"`
 	// Display name.
@@ -45,7 +45,7 @@ var sampleAccountUserEmail = "john@augno.com"
 
 var SampleAccountUser = &AccountUser{
 	ID:        SampleAccountUserID,
-	UserID:    SampleUserID,
+	User:      SampleUserEntity,
 	Object:    constants.ObjectTypeAccountUser,
 	Name:      &sampleAccountUserName,
 	Email:     &sampleAccountUserEmail,

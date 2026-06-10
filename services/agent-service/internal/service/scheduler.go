@@ -11,6 +11,7 @@ import (
 	"github.com/augno/api/services/agent-service/internal/domain"
 	agentdb "github.com/augno/api/services/agent-service/internal/infrastructure/db"
 	"github.com/augno/api/services/agent-service/internal/infrastructure/sqlc"
+	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/contracts"
 	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/lease"
@@ -27,11 +28,51 @@ const (
 )
 
 type SchedulerConfig struct {
-	Repos        domain.RepoFactory
-	OutboxRepo   messaging.OutboxRepo
+	// Repos (required) is the repository factory for agent persistence.
+	Repos domain.RepoFactory
+
+	// OutboxRepo (required) is the outbox repository used to enqueue run commands.
+	OutboxRepo messaging.OutboxRepo
+
+	// PollInterval (optional; default: 60s) controls how frequently the scheduler
+	// polls for due agent schedules.
 	PollInterval time.Duration
-	PlanGate     PlanGate
-	Lease        *lease.Lease
+
+	// PlanGate (optional; default: nil) checks whether an account's plan allows
+	// agents. When nil, plan gating is skipped and all accounts are allowed.
+	PlanGate PlanGate
+
+	// Lease (required) is the distributed lease ensuring only one pod schedules
+	// runs per tick.
+	Lease *lease.Lease
+}
+
+// WithDefaults fills zero-value fields with production defaults and returns the config.
+func (c *SchedulerConfig) WithDefaults() *SchedulerConfig {
+	if c == nil {
+		c = &SchedulerConfig{}
+	}
+
+	if c.PollInterval == 0 {
+		c.PollInterval = 60 * time.Second
+	}
+	return c
+}
+
+func (c *SchedulerConfig) validate() error {
+	if c.Repos == nil {
+		return fmt.Errorf("scheduler service: repos is required")
+	}
+	if c.OutboxRepo == nil {
+		return fmt.Errorf("scheduler service: outbox repo is required")
+	}
+	if c.Lease == nil {
+		return fmt.Errorf("scheduler service: lease is required")
+	}
+	if c.PollInterval <= 0 {
+		return fmt.Errorf("scheduler service: poll interval must be positive")
+	}
+	return nil
 }
 
 type schedulerSvc struct {
@@ -45,24 +86,15 @@ type schedulerSvc struct {
 }
 
 func NewSchedulerSvc(config *SchedulerConfig) domain.SchedulerSvc {
-	if config.Repos == nil {
-		panic(fmt.Errorf("scheduler service: repos is required"))
-	}
-	if config.OutboxRepo == nil {
-		panic(fmt.Errorf("scheduler service: outbox repo is required"))
-	}
-	if config.Lease == nil {
-		panic(fmt.Errorf("scheduler service: lease is required"))
+	config = config.WithDefaults()
+	if err := config.validate(); err != nil {
+		panic(err)
 	}
 
-	interval := config.PollInterval
-	if interval == 0 {
-		interval = 60 * time.Second
-	}
 	return &schedulerSvc{
 		repos:        config.Repos,
 		outboxRepo:   config.OutboxRepo,
-		pollInterval: interval,
+		pollInterval: config.PollInterval,
 		planGate:     config.PlanGate,
 		lease:        config.Lease,
 		stopCh:       make(chan struct{}),
@@ -196,7 +228,7 @@ func (s *schedulerSvc) scheduleRun(ctx context.Context, cfg sqlc.ListEnabledConf
 		AgentDefinitionID: cfg.AgentDefinitionID,
 		AgentConfigID:     agentdb.PgText(cfg.ID),
 		StatusCode:        domain.RunStatusPending,
-		TriggerType:       domain.TriggerScheduled,
+		TriggerType:       string(constants.AgentTriggerTypeScheduled),
 		Input:             json.RawMessage(`{}`),
 		Output:            json.RawMessage(`{}`),
 	}); insertErr != nil {
@@ -214,7 +246,7 @@ func (s *schedulerSvc) scheduleRun(ctx context.Context, cfg sqlc.ListEnabledConf
 		AgentRunID:    runID,
 		AgentConfigID: cfg.ID,
 		AccountID:     cfg.AccountID,
-		TriggerType:   domain.TriggerScheduled,
+		TriggerType:   string(constants.AgentTriggerTypeScheduled),
 	}
 	dataBytes, _ := json.Marshal(data)
 

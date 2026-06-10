@@ -49,12 +49,13 @@ type config struct {
 	CursorHMACKey []byte
 
 	// StripeSecretKey (required) is the API key for the Stripe AI Gateway.
+	// Not enforced when PlatformMode is "test".
 	StripeSecretKey string
 
-	// AgentArtifactsBucket (optional) is the S3 bucket for storing agent artifacts.
+	// AgentArtifactsBucket (optional; default: "") is the S3 bucket for storing agent artifacts.
 	AgentArtifactsBucket string
 
-	// AgentInboundMailBucket (optional) is the S3 bucket for inbound agent emails.
+	// AgentInboundMailBucket (optional; default: "") is the S3 bucket for inbound agent emails.
 	AgentInboundMailBucket string
 
 	// BillingServiceURL (required) is the billing service address for gRPC.

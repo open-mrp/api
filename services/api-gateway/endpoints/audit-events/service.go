@@ -24,6 +24,7 @@ type AuditEventSvc interface {
 }
 
 type AuditEventSvcConfig struct {
+	// AuditClient (required) is the platform-service audit gRPC client.
 	AuditClient pb.AuditServiceClient
 }
 

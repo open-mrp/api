@@ -18,6 +18,7 @@ type CheckoutSessionSvc interface {
 }
 
 type CheckoutSessionSvcConfig struct {
+	// CoreSalesClient (required) is the core-service sales gRPC client.
 	CoreSalesClient pb.CoreSalesServiceClient
 }
 

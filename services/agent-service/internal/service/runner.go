@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/augno/api/services/agent-service/internal/agents"
 	"github.com/augno/api/services/agent-service/internal/domain"
 	agentdb "github.com/augno/api/services/agent-service/internal/infrastructure/db"
 	"github.com/augno/api/services/agent-service/internal/infrastructure/sqlc"
@@ -37,18 +38,55 @@ type agentConfig struct {
 }
 
 type RunnerConfig struct {
-	Repos         domain.RepoFactory
-	ToolRegistry  *domain.ToolHandlerRegistry
-	LLMProviders  map[string]llm.LLMProvider
-	OutboxRepo    messaging.OutboxRepo
-	CoreClient    domain.CoreClient
-	Broker        messaging.MessageBroker
+	// Repos (required) is the repository factory for agent persistence.
+	Repos domain.RepoFactory
+
+	// ToolRegistry (required) resolves the tool handlers available to agent runs.
+	ToolRegistry *agents.ToolHandlerRegistry
+
+	// LLMProviders (required) maps provider names to LLM provider implementations.
+	LLMProviders map[string]llm.LLMProvider
+
+	// OutboxRepo (required) is the outbox repository used to enqueue messages.
+	OutboxRepo messaging.OutboxRepo
+
+	// CoreClient (required) is the core-service client used to resolve account
+	// context and role permissions.
+	CoreClient domain.CoreClient
+
+	// Broker (optional; default: nil) is the message broker used to stream run
+	// step events. When nil, step events are not published.
+	Broker messaging.MessageBroker
+
+	// BillingClient (required) resolves billing customers for spend tracking.
 	BillingClient domain.BillingCustomerResolver
+}
+
+func (c *RunnerConfig) validate() error {
+	if c.Repos == nil {
+		return fmt.Errorf("runner service: repos is required")
+	}
+	if c.ToolRegistry == nil {
+		return fmt.Errorf("runner service: tool registry is required")
+	}
+	if c.LLMProviders == nil {
+		return fmt.Errorf("runner service: llm providers is required")
+	}
+	if c.OutboxRepo == nil {
+		return fmt.Errorf("runner service: outbox repo is required")
+	}
+	if c.CoreClient == nil {
+		return fmt.Errorf("runner service: core client is required")
+	}
+	if c.BillingClient == nil {
+		return fmt.Errorf("runner service: billing client is required")
+	}
+	return nil
 }
 
 type runnerSvc struct {
 	repos         domain.RepoFactory
-	toolRegistry  *domain.ToolHandlerRegistry
+	toolRegistry  *agents.ToolHandlerRegistry
 	llmProviders  map[string]llm.LLMProvider
 	outboxRepo    messaging.OutboxRepo
 	coreClient    domain.CoreClient
@@ -57,20 +95,8 @@ type runnerSvc struct {
 }
 
 func NewRunnerSvc(config *RunnerConfig) domain.RunnerSvc {
-	if config.Repos == nil {
-		panic(fmt.Errorf("runner service: repos is required"))
-	}
-	if config.ToolRegistry == nil {
-		panic(fmt.Errorf("runner service: tool registry is required"))
-	}
-	if config.LLMProviders == nil {
-		panic(fmt.Errorf("runner service: llm providers is required"))
-	}
-	if config.OutboxRepo == nil {
-		panic(fmt.Errorf("runner service: outbox repo is required"))
-	}
-	if config.BillingClient == nil {
-		panic(fmt.Errorf("runner service: billing client is required"))
+	if err := config.validate(); err != nil {
+		panic(err)
 	}
 
 	return &runnerSvc{
@@ -305,7 +331,7 @@ func (s *runnerSvc) ExecuteRun(ctx context.Context, runID, configID, accountID, 
 	statusCode := domain.RunStatusCompleted
 	if result.AwaitingApproval {
 		statusCode = domain.RunStatusAwaitingApproval
-	} else if triggerType == domain.TriggerManual {
+	} else if triggerType == string(constants.AgentTriggerTypeManual) {
 		statusCode = domain.RunStatusAwaitingInput
 	}
 	if completeErr := runRepo.UpdateCompleted(ctx, sqlc.UpdateAgentRunCompletedParams{
@@ -1480,7 +1506,7 @@ func (s *runnerSvc) persistOutputs(ctx context.Context, runID, accountID, billin
 			AccountID:    accountID,
 			AgentRunID:   agentdb.PgText(runID),
 			SeverityCode: a.SeverityCode,
-			StatusCode:   domain.AlertStatusOpen,
+			StatusCode:   string(constants.AgentAlertStatusOpen),
 			Title:        a.Title,
 			Message:      agentdb.PgText(a.Message),
 			Metadata:     a.Metadata,

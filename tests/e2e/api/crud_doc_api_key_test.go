@@ -33,7 +33,7 @@ func loginAsUser(t *testing.T, identifier, password, accountID string) *Client {
 	resp, err := apiClient.PostFull(loginPath, map[string]any{
 		"identifier": identifier,
 		"password":   password,
-	}, "")
+	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, resp.StatusCode, resp.Body)
 
@@ -67,7 +67,7 @@ func cookieValue(setCookies []string, name string) string {
 // returning the key ID and plaintext secret.
 func fetchDocAPIKey(t *testing.T, c *Client) docAPIKeyResult {
 	t.Helper()
-	resp, err := c.PostFull(docAPIKeyPath, nil, "")
+	resp, err := c.PostFull(docAPIKeyPath, nil, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, resp.StatusCode, resp.Body)
 
@@ -84,7 +84,7 @@ func TestDocAPIKey_FetchReturnsKey(t *testing.T) {
 	t.Parallel()
 	user := loginAsSandboxUser(t)
 
-	resp, err := user.PostFull(docAPIKeyPath, nil, "")
+	resp, err := user.PostFull(docAPIKeyPath, nil, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, resp.StatusCode, resp.Body)
 
@@ -137,7 +137,7 @@ func TestDocAPIKey_ReturnedSecretAuthenticates(t *testing.T) {
 // it requires a user identity. The default harness client uses an API key.
 func TestDocAPIKey_RejectsAPIKeyAuth(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(docAPIKeyPath, nil, "")
+	status, body, err := apiClient.Post(docAPIKeyPath, nil, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 403, status, body)
 	requireErrorResponse(t, body, "insufficient_permissions", "invalid_request_error")
@@ -149,7 +149,7 @@ func TestDocAPIKey_RejectsProductionAccount(t *testing.T) {
 	t.Parallel()
 	user := loginAsUser(t, seedUserEmail, seedUserPassword, SeedAccountID)
 
-	status, body, err := user.Post(docAPIKeyPath, nil, "")
+	status, body, err := user.Post(docAPIKeyPath, nil, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")

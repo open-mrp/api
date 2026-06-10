@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to get material consumption data for a scanning station.
@@ -17,19 +18,19 @@ type GetScanningStationConsumptionRequest struct {
 	// Batch IDs to calculate consumption for.
 	BatchIDs []string `json:"batch_ids" validate:"required"`
 	// Production step ID to scope the consumption calculation.
-	ProductionStepID *string `json:"production_step_id"`
+	ProductionStepID field.Optional[string] `json:"production_step_id,omitzero"`
 	// Split quantity to factor into the consumption calculation.
-	SplitQuantity *SplitQuantityInput `json:"split_quantity"`
+	SplitQuantity field.Optional[SplitQuantityInput] `json:"split_quantity,omitzero"`
 }
 
 var sampleGetScanningStationConsumptionRequest = &GetScanningStationConsumptionRequest{
 	BatchIDs:         []string{apiresource.SampleBatchID},
-	ProductionStepID: func() *string { s := apiresource.SampleProductionStepID; return &s }(),
-	SplitQuantity: &SplitQuantityInput{
+	ProductionStepID: field.Some(apiresource.SampleProductionStepID),
+	SplitQuantity: field.Some(SplitQuantityInput{
 		ID:      apiresource.SampleBatchID,
 		Measure: "10.5",
 		UnitID:  apiresource.SampleUnitID,
-	},
+	}),
 }
 
 func (*GetScanningStationConsumptionRequest) SchemaExample() any {

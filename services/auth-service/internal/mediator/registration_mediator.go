@@ -37,11 +37,20 @@ type registrationMedImpl struct {
 }
 
 type RegistrationMedConfig struct {
-	Repos                 domain.RepoFactory
+	// Repos (required) is the repository factory for registration persistence.
+	Repos domain.RepoFactory
+
+	// NotificationPublisher (required) publishes notification messages to the outbox.
 	NotificationPublisher domain.NotificationPublisher
-	FrontendURL           string
-	UserMed               domain.UserMed
-	RefreshTokenMed       domain.RefreshTokenMed
+
+	// FrontendURL (required) is the dashboard base URL used in registration emails.
+	FrontendURL string
+
+	// UserMed (required) creates and manages users during registration.
+	UserMed domain.UserMed
+
+	// RefreshTokenMed (required) issues refresh tokens on successful registration.
+	RefreshTokenMed domain.RefreshTokenMed
 }
 
 func (c *RegistrationMedConfig) validate() error {

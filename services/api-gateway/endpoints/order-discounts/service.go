@@ -24,6 +24,7 @@ type OrderDiscountSvc interface {
 }
 
 type OrderDiscountSvcConfig struct {
+	// CoreClient (required) is the core-service sales gRPC client.
 	CoreClient pb.CoreSalesServiceClient
 }
 

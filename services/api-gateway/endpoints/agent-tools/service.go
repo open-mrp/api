@@ -24,6 +24,7 @@ type AgentToolSvc interface {
 }
 
 type AgentToolSvcConfig struct {
+	// AgentClient (required) is the agent-service gRPC client.
 	AgentClient pb.AgentServiceClient
 }
 

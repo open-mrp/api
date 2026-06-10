@@ -28,6 +28,7 @@ type CarrierSvc interface {
 }
 
 type CarrierSvcConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient pb.CoreServiceClient
 }
 
@@ -194,7 +195,7 @@ func (m *carrierSvcImpl) InitiateOAuth(ctx context.Context, req *InitiateOAuthRe
 	pbReq := &pb.InitiateCarrierOAuthRequest{
 		CarrierId:   req.CarrierID,
 		RedirectUri: req.RedirectURI,
-		State:       req.State,
+		State:       req.State.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, carrierSvcTracer, "service.carriers.initiate_oauth", domain.ServiceName,

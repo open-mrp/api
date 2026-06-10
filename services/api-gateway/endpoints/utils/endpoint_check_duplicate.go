@@ -5,8 +5,10 @@ import (
 	"net/http"
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to check for a duplicate record number.
@@ -16,16 +18,16 @@ type CheckDuplicateRequest struct {
 	// Record number to check.
 	RecordNumber string `json:"record_number" validate:"required"`
 	// Customer ID, required for customer_po_number checks.
-	CustomerID *string `json:"customer_id"`
+	CustomerID field.Optional[string] `json:"customer_id,omitzero"`
 }
 
-var exampleCheckDuplicateRequest = &CheckDuplicateRequest{
+var sampleCheckDuplicateRequest = &CheckDuplicateRequest{
 	Type:         "invoice_number",
 	RecordNumber: "INV-001",
 }
 
 func (*CheckDuplicateRequest) SchemaExample() any {
-	return exampleCheckDuplicateRequest
+	return apiexample.ValidateAndMarshalToMap(sampleCheckDuplicateRequest)
 }
 
 // Checks whether a record number already exists for the given type (invoice number, order number, or customer PO number).

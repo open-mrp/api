@@ -14,6 +14,7 @@ type ProductTypesEndpointGroup struct {
 }
 
 type ProductTypesEndpointGroupConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient *grpcclient.CoreServiceClient
 }
 

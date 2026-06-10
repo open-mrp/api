@@ -59,6 +59,7 @@ type SalesOrderSvc interface {
 }
 
 type SalesOrderSvcConfig struct {
+	// CoreClient (required) is the core-service sales gRPC client.
 	CoreClient pb.CoreSalesServiceClient
 }
 
@@ -345,7 +346,10 @@ func (m *salesOrderSvcImpl) CheckoutSalesOrder(ctx context.Context, req *Checkou
 		return nil, apiErr
 	}
 
-	return &CheckoutSalesOrderResponse{CheckoutURL: resp.CheckoutUrl}, nil
+	return &CheckoutSalesOrderResponse{
+		Object:      constants.ObjectTypeCheckoutSalesOrderResponse,
+		CheckoutURL: resp.CheckoutUrl,
+	}, nil
 }
 
 func (m *salesOrderSvcImpl) CreateSalesOrderProductionRun(ctx context.Context, req *CreateProductionRunRequest) (*CreateProductionRunResponse, *apierror.APIError) {
@@ -360,6 +364,7 @@ func (m *salesOrderSvcImpl) CreateSalesOrderProductionRun(ctx context.Context, r
 	}
 
 	return &CreateProductionRunResponse{
+		Object: constants.ObjectTypeCreateProductionRunResponse,
 		ProductionRun: CreateProductionRunResponseRef{
 			ID:     resp.ProductionRunId,
 			Object: constants.ObjectTypeProductionRun,

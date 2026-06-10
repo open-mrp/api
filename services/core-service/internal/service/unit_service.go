@@ -25,9 +25,14 @@ type unitSvcImpl struct {
 }
 
 type UnitSvcConfig struct {
-	Repos           domain.RepoFactory
+	// Repos (required) is the repository factory.
+	Repos domain.RepoFactory
+
+	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
-	TxManager       TransactionManager
+
+	// TxManager (required) wraps multi-step operations in database transactions.
+	TxManager TransactionManager
 }
 
 func (c *UnitSvcConfig) validate() error {
@@ -408,8 +413,8 @@ func (s *unitSvcImpl) DeleteUnit(ctx context.Context, unitID string) *apierror.A
 
 // ValidateUnits validates unit abbreviations and returns matching units.
 //
-// 1. Extract and validate the caller's identity (assigned actor — internal or customer).
-// 2. For internal users, check units:read permission.
+// 1. Extract and validate the caller's identity (assigned actor — internal, customer, or supplier).
+// 2. For internal actors, check the routed read permission; verify counterparty read access for external targets.
 // 3. Extract abbreviations from the unit map and query the repository (case-insensitive).
 // 4. Build a result map matching original keys to found units.
 func (s *unitSvcImpl) ValidateUnits(ctx context.Context, params domain.ValidateUnitsParams) (*domain.ValidateUnitsResult, *apierror.APIError) {
@@ -425,8 +430,17 @@ func (s *unitSvcImpl) ValidateUnits(ctx context.Context, params domain.ValidateU
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	if identity.IsInternalUser() {
-		if apiErr := identity.CheckHasPermission(types.PermissionDomainUnits, types.ActionRead); apiErr != nil {
+	if apiErr := checkUnitReadPermission(identity); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+
+	if identity.IsExternalTarget() {
+		meds := s.mediators()
+		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 	}
@@ -487,7 +501,7 @@ func (s *unitSvcImpl) BatchGetUnitsByIDs(ctx context.Context, ids []string) ([]*
 	}
 
 	if identity.IsInternalActor() {
-		if apiErr := identity.CheckHasPermission(types.PermissionDomainUnits, types.ActionRead); apiErr != nil {
+		if apiErr := checkUnitReadPermission(identity); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 	} else if !identity.IsCustomerUser() && !identity.IsSupplierUser() {
@@ -505,4 +519,19 @@ func (s *unitSvcImpl) BatchGetUnitsByIDs(ctx context.Context, ids []string) ([]*
 		return nil, nil
 	}
 	return s.repos.NewUnitRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
+}
+
+// checkUnitReadPermission checks the appropriate read permission based on the identity context.
+// Internal actors need units:read for their own account, or customers:read / suppliers:read for external accounts.
+func checkUnitReadPermission(identity *types.Identity) *apierror.APIError {
+	if !identity.IsInternalActor() {
+		return nil
+	}
+	if identity.IsTargetCustomerAccount() {
+		return identity.CheckHasPermission(types.PermissionDomainCustomers, types.ActionRead)
+	}
+	if identity.IsTargetSupplierAccount() {
+		return identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionRead)
+	}
+	return identity.CheckHasPermission(types.PermissionDomainUnits, types.ActionRead)
 }

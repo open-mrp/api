@@ -141,6 +141,9 @@ func (h *gRPCHandler) UpdateAccountUserPassword(ctx context.Context, req *pb.Upd
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
 	apiErr := h.accountUserSvc.UpdateAccountUserPassword(ctx, req.AccountUserId, req.RequesterPassword, req.NewPassword)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)

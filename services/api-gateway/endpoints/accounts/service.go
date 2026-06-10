@@ -24,6 +24,7 @@ type AccountSvc interface {
 }
 
 type AccountSvcConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient pb.CoreServiceClient
 }
 
@@ -134,6 +135,7 @@ func (m *accountSvcImpl) UploadAccountPhoto(ctx context.Context, req *UploadAcco
 	}
 
 	return &apiresource.AccountPhotoUploadResult{
+		Object:  constants.ObjectTypeAccountPhotoUploadResult,
 		Success: resp.Success,
 	}, nil
 }
@@ -153,7 +155,8 @@ func (m *accountSvcImpl) GetAccountLogoURL(ctx context.Context, req *GetAccountL
 	}
 
 	return &apiresource.AccountLogoURL{
-		URL: resp.Url,
+		Object: constants.ObjectTypeAccountLogoURL,
+		URL:    resp.Url,
 	}, nil
 }
 

@@ -30,6 +30,8 @@ type Config struct {
 	DBURI string
 
 	// TracingEnabled (optional; default: true) specifies whether tracing is enabled.
+	// The zero value (false) is treated as "unset" by withDefaults and replaced with
+	// true, so tracing cannot be disabled via this config.
 	TracingEnabled bool
 
 	// ConnectionMaxLifetime (optional; default: 30m) is the maximum lifetime of a connection.
@@ -64,10 +66,10 @@ func (c *Config) withDefaults() *Config {
 // validate checks that the Config fields form a coherent database connection pool configuration.
 func (c *Config) validate() error {
 	if c == nil {
-		return fmt.Errorf("config is nil")
+		return fmt.Errorf("db: config is nil")
 	}
 	if c.DBURI == "" {
-		return fmt.Errorf("database URI is empty")
+		return fmt.Errorf("db: database URI is empty")
 	}
 	return nil
 }

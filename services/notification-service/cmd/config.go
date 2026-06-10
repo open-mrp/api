@@ -36,6 +36,7 @@ type config struct {
 	DBURL string
 
 	// AWSRegion (required) is the AWS region for SES email delivery.
+	// Not enforced when PlatformMode is "test".
 	AWSRegion string
 
 	// RabbitMQURI (optional; default: "amqp://guest:guest@rabbitmq:5672/") is the RabbitMQ connection URI.

@@ -1269,12 +1269,14 @@ CREATE TABLE `doc_api_key` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `type_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `api_key_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `owner_account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `encrypted_secret` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
   UNIQUE KEY `doc_api_key_type_id_key` (`type_id`),
-  UNIQUE KEY `doc_api_key_api_key_id_key` (`api_key_id`)
+  UNIQUE KEY `doc_api_key_api_key_id_key` (`api_key_id`),
+  UNIQUE KEY `doc_api_key_owner_account_id_key` (`owner_account_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

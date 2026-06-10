@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
@@ -26,12 +27,22 @@ type CreateProductionRunResponseRef struct {
 
 // Result of creating a production run.
 type CreateProductionRunResponse struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=create_production_run_response"`
 	// Created production run.
 	ProductionRun CreateProductionRunResponseRef `json:"production_run" validate:"required"`
 }
 
+var sampleCreateProductionRunResponse = &CreateProductionRunResponse{
+	Object: constants.ObjectTypeCreateProductionRunResponse,
+	ProductionRun: CreateProductionRunResponseRef{
+		ID:     apiresource.SampleProductionRunID,
+		Object: constants.ObjectTypeProductionRun,
+	},
+}
+
 func (*CreateProductionRunResponse) SchemaExample() any {
-	return map[string]any{"production_run": map[string]any{"id": apiresource.SampleProductionRunID, "object": string(constants.ObjectTypeProductionRun)}}
+	return apiexample.ValidateAndMarshalToMap(sampleCreateProductionRunResponse)
 }
 
 // Creates a production run from a sales order.

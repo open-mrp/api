@@ -25,6 +25,7 @@ type UnitSvc interface {
 }
 
 type UnitSvcConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient pb.CoreServiceClient
 }
 

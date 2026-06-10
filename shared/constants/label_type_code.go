@@ -4,7 +4,9 @@ package constants
 type LabelTypeCode string
 
 const (
-	LabelTypeCodeTag      LabelTypeCode = "tag"
+	// LabelTypeCodeTag indicates a tag label.
+	LabelTypeCodeTag LabelTypeCode = "tag"
+	// LabelTypeCodeTraveler indicates a traveler label.
 	LabelTypeCodeTraveler LabelTypeCode = "traveler"
 )
 

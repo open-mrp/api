@@ -31,9 +31,16 @@ type utilsSvcImpl struct {
 
 // UtilsSvcConfig holds the dependencies for the utils service.
 type UtilsSvcConfig struct {
-	Repos                 domain.RepoFactory
-	MediatorFactory       domain.MediatorFactory
-	TxManager             TransactionManager
+	// Repos (required) is the repository factory.
+	Repos domain.RepoFactory
+
+	// MediatorFactory (required) builds the mediators used by this service.
+	MediatorFactory domain.MediatorFactory
+
+	// TxManager (required) wraps multi-step operations in database transactions.
+	TxManager TransactionManager
+
+	// NotificationPublisher (required) publishes notification messages to the outbox.
 	NotificationPublisher domain.NotificationPublisher
 }
 

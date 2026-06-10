@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime/debug"
 	"strings"
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
@@ -390,24 +390,33 @@ func formatOpenAPIJSON(data map[string]any) ([]byte, error) {
 	return indented.Bytes(), nil
 }
 
-func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOnly bool, transforms []Transform, version string) {
+func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOnly bool, transforms []Transform, version string) (err error) {
+	// Schema generation reports invariant violations by panicking deep inside
+	// the recursive builder; surface those as returned errors instead of
+	// crashing the process (main() owns the exit).
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("generating spec %s: %v\n%s", outputPath, r, debug.Stack())
+		}
+	}()
+
 	data, err := buildOpenAPIDocument(groups, publicOnly, transforms, version)
 	if err != nil {
-		log.Fatalf("Error building OpenAPI document: %v", err)
+		return fmt.Errorf("building OpenAPI document: %w", err)
 	}
 
 	output, err := formatOpenAPIJSON(data)
 	if err != nil {
-		log.Fatalf("Error formatting spec: %v", err)
+		return fmt.Errorf("formatting spec: %w", err)
 	}
 
 	if err := os.MkdirAll(filepath.Dir(outputPath), 0750); err != nil {
-		log.Fatalf("Error creating directory for spec: %v", err)
+		return fmt.Errorf("creating directory for spec: %w", err)
 	}
 
 	err = os.WriteFile(outputPath, output, 0600)
 	if err != nil {
-		log.Fatalf("Error writing spec to %s: %v", outputPath, err)
+		return fmt.Errorf("writing spec to %s: %w", outputPath, err)
 	}
 
 	totalEndpoints := 0
@@ -424,6 +433,7 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 		specType = "public"
 	}
 	logInfof("OpenAPI spec generated in %s (%d %s endpoints)\n", outputPath, totalEndpoints, specType)
+	return nil
 }
 
 func getCleanTypeName(t reflect.Type) string {

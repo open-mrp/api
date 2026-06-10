@@ -19,6 +19,7 @@ type SalesOrderStatusSvc interface {
 }
 
 type SalesOrderStatusSvcConfig struct {
+	// CoreClient (required) is the core-service sales gRPC client.
 	CoreClient pb.CoreSalesServiceClient
 }
 

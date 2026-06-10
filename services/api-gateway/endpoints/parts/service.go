@@ -40,6 +40,7 @@ type PartSvc interface {
 }
 
 type PartSvcConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient pb.CoreServiceClient
 }
 

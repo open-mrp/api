@@ -7,8 +7,8 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	httptransport "github.com/augno/api/services/api-gateway/internal/http"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/id"
@@ -31,8 +31,11 @@ type BillingSvc interface {
 }
 
 type BillingSvcConfig struct {
+	// BillingClient (required) is the billing-service gRPC client.
 	BillingClient pb.BillingServiceClient
-	CoreClient    corepb.CoreServiceClient
+
+	// CoreClient (required) is the core-service gRPC client.
+	CoreClient corepb.CoreServiceClient
 }
 
 type billingSvcImpl struct {
@@ -88,9 +91,11 @@ func (m *billingSvcImpl) GetAccountUsage(ctx context.Context, _ *apiresource.Emp
 
 	result := accountUsageFromProto(resp)
 
-	// Fetch spending cap from core-service to include in agent spend info.
-	identity, ok := appctx.GetIdentityFromContext(ctx)
-	if ok && identity != nil && identity.Target != nil && identity.Target.AccountID != "" {
+	// Fetch spending cap from core-service to include in agent spend info. The
+	// downstream GetAccountContext RPC is unguarded (auth bootstrap plumbing),
+	// so require an authenticated identity here before calling it.
+	identity, idErr := httptransport.GetIdentity(ctx)
+	if idErr == nil && identity.IsAuthenticated() && identity.Target != nil && identity.Target.AccountID != "" {
 		acctResp, capErr := grpcutil.CallRPC(ctx, billingSvcTracer, "service.billing.get_spending_cap_for_usage", domain.ServiceName,
 			func(ctx context.Context, opts ...grpc.CallOption) (*corepb.GetAccountContextResponse, error) {
 				return m.coreClient.GetAccountContext(ctx, &corepb.GetAccountContextRequest{
@@ -195,8 +200,16 @@ func (m *billingSvcImpl) SwitchPlan(ctx context.Context, req *SwitchPlanRequest)
 }
 
 func (m *billingSvcImpl) GetSpendingCap(ctx context.Context, _ *apiresource.EmptyResource) (*apiresource.SpendingCapResponse, *apierror.APIError) {
-	identity, ok := appctx.GetIdentityFromContext(ctx)
-	if !ok || identity == nil || identity.Target == nil || identity.Target.AccountID == "" {
+	identity, idErr := httptransport.GetIdentity(ctx)
+	if idErr != nil {
+		return nil, idErr
+	}
+	// The downstream GetAccountContext RPC is unguarded (auth bootstrap
+	// plumbing), so authentication must be enforced here at the gateway.
+	if apiErr := identity.CheckIsAuthenticated(); apiErr != nil {
+		return nil, apiErr
+	}
+	if identity.Target == nil || identity.Target.AccountID == "" {
 		return nil, apierror.NewAuthenticationError("Missing account context")
 	}
 
@@ -218,10 +231,17 @@ func (m *billingSvcImpl) GetSpendingCap(ctx context.Context, _ *apiresource.Empt
 }
 
 func (m *billingSvcImpl) SetSpendingCap(ctx context.Context, req *SetSpendingCapRequest) (*apiresource.SpendingCapResponse, *apierror.APIError) {
+	// Clearable contract: omitting cap_cents leaves the existing cap
+	// unchanged (only an explicit null clears it), so skip the update and
+	// return the current cap.
+	if req.CapCents.IsUnset() {
+		return m.GetSpendingCap(ctx, &apiresource.EmptyResource{})
+	}
+
 	resp, apiErr := grpcutil.CallRPC(ctx, billingSvcTracer, "service.billing.set_spending_cap", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*corepb.UpdateAgentSpendingCapResponse, error) {
 			return m.coreClient.UpdateAgentSpendingCap(ctx, &corepb.UpdateAgentSpendingCapRequest{
-				CapCents: req.CapCents,
+				CapCents: req.CapCents.ValuePtr(),
 			}, opts...)
 		})
 

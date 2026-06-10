@@ -21,6 +21,7 @@ type WebhookSvc interface {
 }
 
 type WebhookSvcConfig struct {
+	// BillingClient (required) is the billing-service gRPC client.
 	BillingClient pb.BillingServiceClient
 }
 

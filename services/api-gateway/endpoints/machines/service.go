@@ -24,6 +24,7 @@ type MachineSvc interface {
 }
 
 type MachineSvcConfig struct {
+	// CoreClient (required) is the core-service fulfillment gRPC client.
 	CoreClient pb.CoreFulfillmentServiceClient
 }
 

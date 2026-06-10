@@ -31,6 +31,7 @@ type burnRateMedImpl struct {
 }
 
 type BurnRateMedConfig struct {
+	// Repos (required) is the repository factory for burn-rate calculations.
 	Repos domain.RepoFactory
 }
 
@@ -48,6 +49,14 @@ func NewBurnRateMed(config *BurnRateMedConfig) domain.BurnRateMed {
 	return &burnRateMedImpl{repos: config.Repos}
 }
 
+// RecalculateFromHistory updates the item's burn_rate from consumption change logs
+// over the last 30 days. No-op when there is insufficient history.
+//
+//  1. Load the item and resolve its category's base unit.
+//  2. List the item's consumption change logs; no-op when fewer than two exist.
+//  3. Sum the absolute consumption quantities, converting each to the base unit.
+//  4. Divide the total by the days elapsed between the first and last log.
+//  5. Persist the resulting per-day rate to the item's burn rate.
 func (m *burnRateMedImpl) RecalculateFromHistory(ctx context.Context, accountID, itemID string) *apierror.APIError {
 	ctx, span := burnRateMedTracer.Start(ctx, "mediator.burn_rate.recalculate_from_history")
 	defer span.End()

@@ -32,12 +32,25 @@ type userMedImpl struct {
 }
 
 type UserMedConfig struct {
-	Repos                 domain.RepoFactory
-	JWTSecret             string // #nosec G117 - Struct field, not a hardcoded credential
-	FrontendURL           string
-	RefreshTokenMed       domain.RefreshTokenMed
-	APIKeyMed             domain.APIKeyMed
-	CoreClient            domain.AuthCoreClient
+	// Repos (required) is the repository factory for user persistence.
+	Repos domain.RepoFactory
+
+	// JWTSecret (required) signs and verifies user-flow JWTs.
+	JWTSecret string // #nosec G117 - Struct field, not a hardcoded credential
+
+	// FrontendURL (required) is the dashboard base URL used in user emails.
+	FrontendURL string
+
+	// RefreshTokenMed (required) manages refresh tokens for user sessions.
+	RefreshTokenMed domain.RefreshTokenMed
+
+	// APIKeyMed (required) manages the user's API keys.
+	APIKeyMed domain.APIKeyMed
+
+	// CoreClient (required) is the core-service client used to resolve accounts.
+	CoreClient domain.AuthCoreClient
+
+	// NotificationPublisher (required) publishes notification messages to the outbox.
 	NotificationPublisher domain.NotificationPublisher
 }
 
@@ -100,7 +113,7 @@ func (s *userMedImpl) GenAuthAccessToken(ctx context.Context, userID string) (st
 // Side effects:
 //   - Sends a welcome email.
 func (s *userMedImpl) Register(ctx context.Context, input domain.RegisterUserInput) (*types.User, *apierror.APIError) {
-	ctx, span := userMedTracer.Start(ctx, "domain.auth.register")
+	ctx, span := userMedTracer.Start(ctx, "mediator.user.register")
 	defer span.End()
 
 	userRepo := s.repos.NewUserRepo()

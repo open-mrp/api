@@ -18,6 +18,7 @@ type deliverySvcImpl struct {
 }
 
 type DeliverySvcConfig struct {
+	// Repos (required) is the repository factory.
 	Repos domain.RepoFactory
 }
 

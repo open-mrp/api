@@ -5,6 +5,8 @@ import (
 	"net/http"
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -22,19 +24,32 @@ type CreateCheckoutSessionRequest struct {
 	CustomerPO field.Optional[string] `json:"customer_po,omitzero" validate:"omitempty,max=255"`
 }
 
+var sampleCreateCheckoutSessionRequest = &CreateCheckoutSessionRequest{
+	OrderID:         apiresource.SampleSalesOrderID,
+	OrderNumber:     apiresource.SampleSalesOrderNumber,
+	OrderTotalCents: 50000,
+	CustomerPO:      field.Some("PO-4242"),
+}
+
+func (*CreateCheckoutSessionRequest) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(sampleCreateCheckoutSessionRequest)
+}
+
 // Result of creating a customer checkout session.
 type CheckoutSessionResponse struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=checkout_session"`
 	// Stripe checkout session client secret for embedded checkout.
-	CheckoutSessionClientSecret string `json:"checkout_session_client_secret" validate:"required,max=255"`
+	CheckoutSessionClientSecret string `json:"checkout_session_client_secret" validate:"required,max=255" sensitive:"true"` // #nosec G117 - Struct field, not a hardcoded credential
+}
+
+var sampleCheckoutSessionResponse = &CheckoutSessionResponse{
+	Object:                      constants.ObjectTypeCheckoutSession,
+	CheckoutSessionClientSecret: "cs_test_secret_example123",
 }
 
 func (*CheckoutSessionResponse) SchemaExample() any {
-	return map[string]any{
-		"object":                         "checkout_session",
-		"checkout_session_client_secret": "cs_test_secret_example123",
-	}
+	return apiexample.ValidateAndMarshalToMap(sampleCheckoutSessionResponse)
 }
 
 // Creates an embedded Stripe checkout session for a customer actor and returns a client secret for use with Stripe.js.

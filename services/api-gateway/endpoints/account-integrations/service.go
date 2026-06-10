@@ -25,6 +25,7 @@ type AccountIntegrationSvc interface {
 }
 
 type AccountIntegrationSvcConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient pb.CoreServiceClient
 }
 

@@ -20,6 +20,7 @@ type PrioritySvc interface {
 }
 
 type PrioritySvcConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient pb.CoreServiceClient
 }
 

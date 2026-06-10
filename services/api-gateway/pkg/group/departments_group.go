@@ -14,6 +14,7 @@ type DepartmentsEndpointGroup struct {
 }
 
 type DepartmentsEndpointGroupConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient *grpcclient.CoreServiceClient
 }
 

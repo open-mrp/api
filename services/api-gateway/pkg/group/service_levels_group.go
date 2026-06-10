@@ -14,6 +14,7 @@ type ServiceLevelsEndpointGroup struct {
 }
 
 type ServiceLevelsEndpointGroupConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient *grpcclient.CoreServiceClient
 }
 

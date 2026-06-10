@@ -25,7 +25,7 @@ type UpdateSalesOrderRequest struct {
 	CarrierID field.Optional[string] `json:"carrier_id,omitzero" validate:"omitempty"`
 	// Service level ID.
 	ServiceLevelID field.Optional[string] `json:"service_level_id,omitzero" validate:"omitempty"`
-	// Who is billed for freight (sender or third_party).
+	// Who is billed for freight.
 	CarrierBillingType field.Optional[constants.CarrierBillingType] `json:"carrier_billing_type,omitzero" validate:"omitempty"`
 	// Carrier billing account number.
 	CarrierBillingAccountNumber field.Optional[string] `json:"carrier_billing_account_number,omitzero" validate:"omitempty,max=255"`
@@ -47,7 +47,7 @@ type UpdateSalesOrderRequest struct {
 	ShippingAddressID field.Optional[string] `json:"shipping_address_id,omitzero" validate:"omitempty"`
 	// Order number.
 	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
-	// Acknowledgment status (not_sent, sent).
+	// Acknowledgment status.
 	AcknowledgmentStatus field.Optional[constants.AcknowledgmentStatus] `json:"acknowledgment_status,omitzero" validate:"omitempty"`
 	// Promised delivery date.
 	PromisedAt field.Optional[time.Time] `json:"promised_at,omitzero"`

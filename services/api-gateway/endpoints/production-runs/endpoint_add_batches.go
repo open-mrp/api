@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Batch to add to a production run.
@@ -19,17 +20,17 @@ type AddBatchInputRequest struct {
 	// Quantity unit ID.
 	QuantityUnitID string `json:"quantity_unit_id" validate:"required"`
 	// Seconds value as a decimal string.
-	SecondsValue *string `json:"seconds_value"`
+	SecondsValue field.Optional[string] `json:"seconds_value,omitzero"`
 	// Seconds unit ID.
-	SecondsUnitID *string `json:"seconds_unit_id"`
+	SecondsUnitID field.Optional[string] `json:"seconds_unit_id,omitzero"`
 	// Waste value as a decimal string.
-	WasteValue *string `json:"waste_value"`
+	WasteValue field.Optional[string] `json:"waste_value,omitzero"`
 	// Waste unit ID.
-	WasteUnitID *string `json:"waste_unit_id"`
+	WasteUnitID field.Optional[string] `json:"waste_unit_id,omitzero"`
 	// Production step ID.
-	ProductionStepID *string `json:"production_step_id"`
+	ProductionStepID field.Optional[string] `json:"production_step_id,omitzero"`
 	// Scanning station ID.
-	ScanningStationID *string `json:"scanning_station_id"`
+	ScanningStationID field.Optional[string] `json:"scanning_station_id,omitzero"`
 }
 
 // Request to add batches to a production run.
@@ -40,14 +41,13 @@ type AddBatchesToProductionRunRequest struct {
 	Batches []AddBatchInputRequest `json:"batches" validate:"required,min=1"`
 }
 
-var sampleAddBatchesProductionStepID = apiresource.SampleProductionStepID
 var sampleAddBatchesToProductionRunRequest = &AddBatchesToProductionRunRequest{
 	Batches: []AddBatchInputRequest{
 		{
 			ItemID:           apiresource.SampleItemID,
 			QuantityValue:    "100",
 			QuantityUnitID:   apiresource.SampleUnitID,
-			ProductionStepID: &sampleAddBatchesProductionStepID,
+			ProductionStepID: field.Some(apiresource.SampleProductionStepID),
 		},
 	},
 }

@@ -174,8 +174,8 @@ func TestParts_OmittedFields(t *testing.T) {
 		item := jsonObject(parseJSON(getBody), "item")
 		require.NotNil(t, item)
 		assert.Equal(t, sku, jsonField(item, "sku"))
-		assert.Nil(t, item["description"])
-		assert.Nil(t, item["notes"])
+		assertNilField(t, item, "description")
+		assertNilField(t, item, "notes")
 	})
 
 	t.Run("CreateMissingRequiredFields", func(t *testing.T) {

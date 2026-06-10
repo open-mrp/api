@@ -144,11 +144,15 @@ func (*PublicAccount) SchemaExample() any {
 
 // Presigned URL for an account's logo.
 type AccountLogoURL struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=account_logo_url"`
 	// Presigned URL. Null if no logo exists.
 	URL *string `json:"url"`
 }
 
-var SampleAccountLogoURL = &AccountLogoURL{}
+var SampleAccountLogoURL = &AccountLogoURL{
+	Object: constants.ObjectTypeAccountLogoURL,
+}
 
 func (*AccountLogoURL) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleAccountLogoURL)
@@ -156,11 +160,14 @@ func (*AccountLogoURL) SchemaExample() any {
 
 // Result of an account photo upload.
 type AccountPhotoUploadResult struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=account_photo_upload_result"`
 	// Whether the upload was successful.
 	Success bool `json:"success"`
 }
 
 var SampleAccountPhotoUploadResult = &AccountPhotoUploadResult{
+	Object:  constants.ObjectTypeAccountPhotoUploadResult,
 	Success: true,
 }
 

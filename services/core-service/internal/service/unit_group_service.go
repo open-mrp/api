@@ -24,9 +24,14 @@ type unitGroupSvcImpl struct {
 }
 
 type UnitGroupSvcConfig struct {
-	Repos           domain.RepoFactory
+	// Repos (required) is the repository factory.
+	Repos domain.RepoFactory
+
+	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
-	TxManager       TransactionManager
+
+	// TxManager (required) wraps multi-step operations in database transactions.
+	TxManager TransactionManager
 }
 
 func (c *UnitGroupSvcConfig) validate() error {
@@ -301,9 +306,12 @@ func (s *unitGroupSvcImpl) UpdateUnitGroup(ctx context.Context, params domain.Up
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *unitGroupSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewUnitGroupRepo()
 
+			// Load with the same includes as the post-update fetch so
+			// include-gated fields cannot produce false audit diffs.
 			existing, apiErr := txRepo.Get(txCtx, domain.GetUnitGroupParams{
 				AccountID:   params.AccountID,
 				UnitGroupID: params.UnitGroupID,
+				Includes:    params.Includes,
 			})
 			if apiErr != nil {
 				return apiErr
@@ -566,6 +574,32 @@ func (s *unitGroupSvcImpl) UpsertUnitGroupUnit(ctx context.Context, params domai
 				return apiErr
 			}
 			result = upserted
+
+			// Find the prior unit conversion (if any) for the audit diff.
+			var oldUnit *domain.UnitGroupUnit
+			for _, uc := range existing.UnitConversions {
+				if uc.ID == work.UnitGroupUnitID {
+					oldUnit = uc
+					break
+				}
+			}
+
+			auditAction := constants.AuditActionUpdate
+			if oldUnit == nil {
+				auditAction = constants.AuditActionCreate
+			}
+
+			changes := audit.ComputeChanges(oldUnit, upserted)
+
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       auditAction,
+				ResourceType: constants.ObjectTypeUnitGroupUnit,
+				ResourceID:   upserted.ID,
+				Changes:      changes,
+			}); apiErr != nil {
+				return apiErr
+			}
 
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
 		})

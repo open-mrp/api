@@ -19,6 +19,7 @@ type PermissionGroupSvc interface {
 }
 
 type PermissionGroupSvcConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient pb.CoreServiceClient
 }
 

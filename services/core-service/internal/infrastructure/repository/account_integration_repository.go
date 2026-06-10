@@ -30,7 +30,7 @@ func (r *accountIntegrationRepoImpl) List(ctx context.Context, params domain.Lis
 
 	var searchQuery sql.NullString
 	if params.Query != nil && *params.Query != "" {
-		searchQuery = sql.NullString{String: "%" + *params.Query + "%", Valid: true}
+		searchQuery = sql.NullString{String: "%" + db.EscapeLike(*params.Query) + "%", Valid: true}
 	}
 
 	var cursorDir *pagination.Direction

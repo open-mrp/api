@@ -153,7 +153,7 @@ func (r *auditEventRepoImpl) List(ctx context.Context, targetAccountID string, f
 
 	searchQuery := sql.NullString{}
 	if filter.Query != nil && *filter.Query != "" {
-		searchQuery = sql.NullString{String: "%" + *filter.Query + "%", Valid: true}
+		searchQuery = sql.NullString{String: "%" + db.EscapeLike(*filter.Query) + "%", Valid: true}
 	}
 
 	startDate := db.NullTimePtr(filter.StartDate)

@@ -50,9 +50,9 @@ type GRPCClientConn struct {
 
 // GRPCConnTarget identifies the gRPC server to connect to.
 type GRPCConnTarget struct {
-	// URL is the dial address (e.g. "auth-service:9092").
+	// URL (required) is the dial address (e.g. "auth-service:9092").
 	URL string
-	// Name is a human-readable identifier used in logs and error messages.
+	// Name (required) is a human-readable identifier used in logs and error messages.
 	Name string
 }
 

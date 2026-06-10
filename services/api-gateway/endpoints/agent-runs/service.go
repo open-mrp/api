@@ -25,8 +25,13 @@ type AgentRunSvc interface {
 }
 
 type AgentRunSvcConfig struct {
+	// AgentClient (required) is the agent-service gRPC client.
 	AgentClient pb.AgentServiceClient
-	CoreClient  corepb.CoreServiceClient
+
+	// CoreClient (optional; default: nil) is the core-service gRPC client used to
+	// resolve role info at runtime. It may be nil in static-reflection contexts
+	// (e.g. OpenAPI generation) where no RPCs are made.
+	CoreClient corepb.CoreServiceClient
 }
 
 type resolvedRole struct {
@@ -64,7 +69,10 @@ func (m *agentRunSvcImpl) resolveRole(ctx context.Context, roleID string) *resol
 	if roleID == "" || m.coreClient == nil {
 		return nil
 	}
-	resp, err := m.coreClient.GetRoleInfo(ctx, &corepb.GetRoleInfoRequest{RoleId: roleID})
+	resp, err := grpcutil.CallRPC(ctx, runSvcTracer, "service.agent_runs.resolve_role", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*corepb.GetRoleInfoResponse, error) {
+			return m.coreClient.GetRoleInfo(ctx, &corepb.GetRoleInfoRequest{RoleId: roleID}, opts...)
+		})
 	if err != nil {
 		return nil
 	}

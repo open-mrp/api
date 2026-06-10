@@ -27,6 +27,7 @@ type APIKeySvc interface {
 }
 
 type APIKeySvcConfig struct {
+	// AuthClient (required) is the auth-service gRPC client.
 	AuthClient pb.AuthServiceClient
 }
 

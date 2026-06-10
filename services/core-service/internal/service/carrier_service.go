@@ -30,12 +30,24 @@ type carrierSvcImpl struct {
 }
 
 type CarrierSvcConfig struct {
-	Repos           domain.RepoFactory
+	// Repos (required) is the repository factory.
+	Repos domain.RepoFactory
+
+	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
-	TxManager       TransactionManager
-	ShippoFactory   domain.ShippoClientFactory
-	EncryptionKey   []byte
-	AccountSvc      domain.AccountSvc
+
+	// TxManager (required) wraps multi-step operations in database transactions.
+	TxManager TransactionManager
+
+	// ShippoFactory (required) builds Shippo shipping clients.
+	ShippoFactory domain.ShippoClientFactory
+
+	// EncryptionKey (optional; default: nil) encrypts sensitive fields at rest. It is not validated
+	// at construction.
+	EncryptionKey []byte
+
+	// AccountSvc (required) is the account service dependency.
+	AccountSvc domain.AccountSvc
 }
 
 func (c *CarrierSvcConfig) validate() error {

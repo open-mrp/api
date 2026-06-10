@@ -4,7 +4,7 @@
 // global TracerProvider, then uses GetTracer to obtain per-package tracers.
 //
 // Configuration is resolved from a combination of struct fields and OTEL_* environment
-// variables, with struct fields taking precedence. See Config for details.
+// variables, with non-zero struct fields taking precedence. See Config for details.
 package tracing
 
 import (
@@ -38,7 +38,7 @@ import (
 var (
 	// errConfigNil is returned when a nil Config reaches a method that cannot
 	// apply defaults (e.g. newExporter, newTraceProvider).
-	errConfigNil = fmt.Errorf("tracing config is nil")
+	errConfigNil = fmt.Errorf("tracing: config is nil")
 )
 
 // noopTracer is a process-wide no-op tracer used by [StartSpan] when tracing is
@@ -72,8 +72,9 @@ const (
 
 // Config holds all settings needed to initialize an OTLP trace exporter and sampler.
 // Each field can be set explicitly or left zero to fall back to the corresponding
-// OTEL_* environment variable (resolved in withDefaults). Explicit values always
-// take precedence over environment variables.
+// OTEL_* environment variable (resolved in withDefaults). Explicit values take
+// precedence over environment variables, except boolean fields (Insecure), whose
+// false zero value falls back to the env var.
 type Config struct {
 	// ServiceName (required) identifies this service in trace backends (e.g. "auth-service").
 	// Falls back to the serviceName argument passed to InitProvider.
@@ -89,11 +90,13 @@ type Config struct {
 	Endpoint string
 
 	// Protocol (optional; default: OTEL_EXPORTER_OTLP_PROTOCOL or "http") selects the OTLP
-	// transport: "grpc" or "http/protobuf".
+	// transport: "http" or "grpc".
 	Protocol constants.Protocol
 
 	// Insecure (optional; default: OTEL_EXPORTER_OTLP_INSECURE) disables TLS for the
-	// exporter connection.
+	// exporter connection. The zero value (false) is treated as "unset" by withDefaults
+	// and falls back to the env var, so TLS cannot be forced on via this config when
+	// OTEL_EXPORTER_OTLP_INSECURE is truthy.
 	Insecure bool
 
 	// Headers (optional; default: OTEL_EXPORTER_OTLP_HEADERS) are sent with every export
@@ -162,13 +165,13 @@ func (c *Config) validate() error {
 		return errConfigNil
 	}
 	if c.ServiceName == "" {
-		return fmt.Errorf("service name is required")
+		return fmt.Errorf("tracing: service name is required")
 	}
 	if !c.Environment.IsValid() {
-		return fmt.Errorf("environment is invalid: %s", c.Environment)
+		return fmt.Errorf("tracing: environment is invalid: %s", c.Environment)
 	}
 	if !c.Protocol.IsValid() {
-		return fmt.Errorf("protocol is invalid: %s", c.Protocol)
+		return fmt.Errorf("tracing: protocol is invalid: %s", c.Protocol)
 	}
 	return nil
 }
@@ -226,6 +229,9 @@ type WorkerTracerProvider struct {
 func NewWorkerTracerProvider(ctx context.Context, baseServiceName string, getenv func(string) string) (*WorkerTracerProvider, error) {
 	cfg := new(Config).withDefaults(baseServiceName, getenv)
 	cfg.ServiceName = baseServiceName + "-worker"
+	if err := cfg.validate(); err != nil {
+		return nil, err
+	}
 
 	exporter, err := cfg.newExporter(ctx)
 	if err != nil {

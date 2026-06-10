@@ -11,7 +11,7 @@ type Entity struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=entity"`
-	// The resource kind that this entity references (e.g. "user", "customer", "sales_order").
+	// The resource kind that this entity references.
 	Type constants.ObjectType `json:"type" validate:"required"`
 	// Human-readable display name for the entity (e.g. a user's full name, a sales order number).
 	Name *string `json:"name"`

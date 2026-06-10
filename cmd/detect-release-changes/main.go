@@ -5,8 +5,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -32,61 +34,90 @@ type outputs struct {
 	PlatformChanged    string
 }
 
+// errBadFlags signals a flag-parse failure; the FlagSet already printed the
+// message and usage to stderr, so main exits nonzero without re-printing.
+var errBadFlags = errors.New("invalid command-line flags")
+
 func main() {
+	ctx := context.Background()
+	if err := Run(ctx, os.Args, os.Getenv, os.Stdin, os.Stdout, os.Stderr); err != nil {
+		if !errors.Is(err, errBadFlags) {
+			fmt.Fprintf(os.Stderr, "%s\n", err)
+		}
+		os.Exit(1)
+	}
+}
+
+func Run(
+	ctx context.Context,
+	args []string,
+	getenv func(string) string,
+	stdin io.Reader,
+	stdout, stderr io.Writer,
+) error {
 	var currentTag string
 	var repoRoot string
 
-	flag.StringVar(&currentTag, "current-tag", "", "Current release tag, for example v0.18.3")
-	flag.StringVar(&repoRoot, "repo-root", ".", "Repository root")
-	flag.Parse()
+	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	flags.StringVar(&currentTag, "current-tag", "", "Current release tag, for example v0.18.3")
+	flags.StringVar(&repoRoot, "repo-root", ".", "Repository root")
+	if err := flags.Parse(args[1:]); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
+		return errBadFlags
+	}
 
 	if currentTag == "" {
-		fail("missing required --current-tag")
+		return errors.New("missing required --current-tag")
 	}
 
 	absRepoRoot, err := filepath.Abs(repoRoot)
 	if err != nil {
-		fail("resolve repo root: %v", err)
+		return fmt.Errorf("resolve repo root: %w", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 
 	if err := gitFetchTags(ctx, absRepoRoot); err != nil {
-		fail("fetch git tags: %v", err)
+		return fmt.Errorf("fetch git tags: %w", err)
 	}
 
 	previousTag, err := previousReleaseTag(ctx, absRepoRoot, currentTag)
 	if err != nil {
-		fail("find previous release tag: %v", err)
+		return fmt.Errorf("find previous release tag: %w", err)
 	}
 
 	currentRef, err := currentRefForTag(ctx, absRepoRoot, currentTag)
 	if err != nil {
-		fail("resolve current ref: %v", err)
+		return fmt.Errorf("resolve current ref: %w", err)
 	}
 
 	changedFiles, err := changedFilesBetween(ctx, absRepoRoot, previousTag, currentRef)
 	if err != nil {
-		fail("list changed files: %v", err)
+		return fmt.Errorf("list changed files: %w", err)
 	}
 
 	dirToServices, err := buildDependencyMap(ctx, absRepoRoot)
 	if err != nil {
-		fail("build service dependency map: %v", err)
+		return fmt.Errorf("build service dependency map: %w", err)
 	}
 
 	analysis := releasechanges.Analyze(changedFiles, dirToServices)
 
 	out, err := marshalOutputs(previousTag, currentRef, analysis)
 	if err != nil {
-		fail("marshal outputs: %v", err)
+		return fmt.Errorf("marshal outputs: %w", err)
 	}
 
-	printSummary(previousTag, currentRef, changedFiles, analysis)
-	if err := writeOutputs(out); err != nil {
-		fail("write outputs: %v", err)
+	printSummary(stdout, previousTag, currentRef, changedFiles, analysis)
+	if err := writeOutputs(stdout, getenv, out); err != nil {
+		return fmt.Errorf("write outputs: %w", err)
 	}
+
+	return nil
 }
 
 func gitFetchTags(ctx context.Context, repoRoot string) error {
@@ -237,18 +268,18 @@ func marshalOutputs(previousTag, currentRef string, analysis releasechanges.Anal
 	}, nil
 }
 
-func printSummary(previousTag, currentRef string, changedFiles []string, analysis releasechanges.Analysis) {
-	fmt.Printf("Previous tag: %s\n", valueOrNone(previousTag))
-	fmt.Printf("Current ref: %s\n", currentRef)
-	fmt.Printf("Changed files: %d\n", len(changedFiles))
-	fmt.Printf("Build services: %s\n", joinOrNone(analysis.BuildServices))
-	fmt.Printf("Deploy services: %s\n", joinOrNone(analysis.DeployServices))
-	fmt.Printf("Terraform changed: %t\n", analysis.TerraformChanged)
-	fmt.Printf("Config changed: %t\n", analysis.ConfigChanged)
-	fmt.Printf("Platform changed: %t\n", analysis.PlatformChanged)
+func printSummary(stdout io.Writer, previousTag, currentRef string, changedFiles []string, analysis releasechanges.Analysis) {
+	fmt.Fprintf(stdout, "Previous tag: %s\n", valueOrNone(previousTag))
+	fmt.Fprintf(stdout, "Current ref: %s\n", currentRef)
+	fmt.Fprintf(stdout, "Changed files: %d\n", len(changedFiles))
+	fmt.Fprintf(stdout, "Build services: %s\n", joinOrNone(analysis.BuildServices))
+	fmt.Fprintf(stdout, "Deploy services: %s\n", joinOrNone(analysis.DeployServices))
+	fmt.Fprintf(stdout, "Terraform changed: %t\n", analysis.TerraformChanged)
+	fmt.Fprintf(stdout, "Config changed: %t\n", analysis.ConfigChanged)
+	fmt.Fprintf(stdout, "Platform changed: %t\n", analysis.PlatformChanged)
 }
 
-func writeOutputs(out outputs) error {
+func writeOutputs(stdout io.Writer, getenv func(string) string, out outputs) error {
 	lines := []string{
 		"previous_tag=" + out.PreviousTag,
 		"current_ref=" + out.CurrentRef,
@@ -265,10 +296,10 @@ func writeOutputs(out outputs) error {
 	}
 
 	for _, line := range lines {
-		fmt.Println(line)
+		fmt.Fprintln(stdout, line)
 	}
 
-	outputPath := os.Getenv("GITHUB_OUTPUT")
+	outputPath := getenv("GITHUB_OUTPUT")
 	if outputPath == "" {
 		return nil
 	}
@@ -319,9 +350,4 @@ func valueOrNone(value string) string {
 		return "(none)"
 	}
 	return value
-}
-
-func fail(format string, args ...any) {
-	fmt.Fprintf(os.Stderr, format+"\n", args...)
-	os.Exit(1)
 }

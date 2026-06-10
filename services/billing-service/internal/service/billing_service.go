@@ -20,12 +20,24 @@ import (
 var billingSvcTracer = tracing.GetTracer("billing-service.service")
 
 type BillingSvcConfig struct {
-	Repos              domain.RepoFactory
-	StripeClient       domain.StripeClient
-	CoreClient         domain.CoreClient
-	FrontendURL        string
+	// Repos (required) is the repository factory for billing persistence.
+	Repos domain.RepoFactory
+
+	// StripeClient (required) is the Stripe API client.
+	StripeClient domain.StripeClient
+
+	// CoreClient (required) is the core-service client used to resolve accounts.
+	CoreClient domain.CoreClient
+
+	// FrontendURL (required) is the dashboard base URL used in Stripe redirect
+	// and portal links.
+	FrontendURL string
+
+	// NotificationClient (required) sends billing-related notifications.
 	NotificationClient domain.NotificationClient
-	IdempotencyMed     domain.IdempotencyMed
+
+	// IdempotencyMed (required) deduplicates billing operations.
+	IdempotencyMed domain.IdempotencyMed
 }
 
 type billingSvcImpl struct {

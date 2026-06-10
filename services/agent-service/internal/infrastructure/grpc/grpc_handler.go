@@ -3,7 +3,6 @@ package grpc
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strings"
 	"time"
 
@@ -14,7 +13,6 @@ import (
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/contracts"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/messaging"
 	"github.com/augno/api/shared/pagination"
 	pb "github.com/augno/api/shared/proto/agent"
 	"github.com/augno/api/shared/safeconv"
@@ -26,22 +24,18 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var handlerTracer = tracing.GetTracer("agent-domain.grpc_handler")
+var handlerTracer = tracing.GetTracer("agent-service.grpc_handler")
 
 type agentHandler struct {
 	pb.UnimplementedAgentServiceServer
-	runner      domain.RunnerSvc
 	repos       domain.RepoFactory
-	outbox      messaging.OutboxRepo
 	agentDefSvc domain.AgentDefinitionSvc
 	planGate    *PlanGateAdapter
 }
 
-func NewAgentHandler(server *grpc.Server, runner domain.RunnerSvc, repos domain.RepoFactory, outbox messaging.OutboxRepo, agentDefSvc domain.AgentDefinitionSvc, planGate *PlanGateAdapter) *agentHandler {
+func NewAgentHandler(server *grpc.Server, repos domain.RepoFactory, agentDefSvc domain.AgentDefinitionSvc, planGate *PlanGateAdapter) *agentHandler {
 	handler := &agentHandler{
-		runner:      runner,
 		repos:       repos,
-		outbox:      outbox,
 		agentDefSvc: agentDefSvc,
 		planGate:    planGate,
 	}
@@ -75,7 +69,7 @@ func (h *agentHandler) checkPlanAccess(ctx context.Context) error {
 
 func getAccountIDFromContext(ctx context.Context) (string, error) {
 	identity, ok := appctx.GetIdentityFromContext(ctx)
-	if !ok || identity == nil || identity.Target == nil {
+	if !ok || identity == nil || !identity.IsTargetAccountSet() {
 		return "", status.Error(codes.Unauthenticated, "identity with account ID is required")
 	}
 	return identity.Target.AccountID, nil
@@ -1073,49 +1067,24 @@ func (h *agentHandler) UpdateAgentMemory(ctx context.Context, req *pb.UpdateAgen
 		return nil, status.Error(codes.InvalidArgument, "id is required")
 	}
 
-	accountID, err := getAccountIDFromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
 
-	var metadata []byte
-	if req.MetadataJson != "" {
-		metadata = []byte(req.MetadataJson)
-	} else {
-		metadata = []byte("{}")
-	}
-
-	var expiresAt pgtype.Timestamptz
-	if req.ExpiresAt != "" {
-		t, parseErr := parseTimestamp(req.ExpiresAt)
-		if parseErr != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "invalid expires_at: %s", parseErr.Error())
-		}
-		expiresAt = pgtype.Timestamptz{Time: t, Valid: true}
-	}
-
-	memoryRepo := h.repos.NewAgentMemoryRepo()
-	updateErr := memoryRepo.Update(ctx, sqlc.UpdateAgentMemoryParams{
-		ID:         req.Id,
-		Category:   req.Category,
-		Content:    req.Content,
-		Metadata:   metadata,
-		EntityType: pgtype.Text{String: req.EntityType, Valid: req.EntityType != ""},
-		EntityID:   pgtype.Text{String: req.EntityId, Valid: req.EntityId != ""},
-		Importance: req.Importance,
-		ExpiresAt:  expiresAt,
-		AccountID:  accountID,
+	result, apiErr := h.agentDefSvc.UpdateAgentMemory(ctx, domain.UpdateAgentMemoryParams{
+		MemoryID:     req.Id,
+		Category:     req.Category,
+		Content:      req.Content,
+		MetadataJSON: req.MetadataJson,
+		EntityType:   req.EntityType,
+		EntityID:     req.EntityId,
+		Importance:   req.Importance,
+		ExpiresAt:    req.ExpiresAt,
 	})
-	if updateErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(updateErr)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
-	memory, getErr := memoryRepo.GetByID(ctx, req.Id)
-	if getErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(getErr)
-	}
-
-	return &pb.UpdateAgentMemoryResponse{Memory: sqlcMemoryToProto(memory)}, nil
+	return &pb.UpdateAgentMemoryResponse{Memory: domainMemoryToProto(result)}, nil
 }
 
 func (h *agentHandler) DeleteAgentMemory(ctx context.Context, req *pb.DeleteAgentMemoryRequest) (*pb.DeleteAgentMemoryResponse, error) {
@@ -1133,15 +1102,9 @@ func (h *agentHandler) DeleteAgentMemory(ctx context.Context, req *pb.DeleteAgen
 		return nil, status.Error(codes.InvalidArgument, "id is required")
 	}
 
-	accountID, err := getAccountIDFromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	memoryRepo := h.repos.NewAgentMemoryRepo()
-	deleteErr := memoryRepo.Delete(ctx, req.Id, accountID)
-	if deleteErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(deleteErr)
+	apiErr := h.agentDefSvc.DeleteAgentMemory(ctx, domain.DeleteAgentMemoryParams{MemoryID: req.Id})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
 	return &pb.DeleteAgentMemoryResponse{Success: true}, nil
@@ -1462,21 +1425,6 @@ func nestedIncludes(includes []string, parent string) []string {
 		}
 	}
 	return out
-}
-
-func parseTimestamp(s string) (time.Time, error) {
-	formats := []string{
-		"2006-01-02T15:04:05.000Z",
-		"2006-01-02T15:04:05Z",
-		"2006-01-02T15:04:05-07:00",
-		"2006-01-02",
-	}
-	for _, f := range formats {
-		if t, err := time.Parse(f, s); err == nil {
-			return t, nil
-		}
-	}
-	return time.Time{}, fmt.Errorf("unsupported timestamp format: %s", s)
 }
 
 func domainToProtoAccountStatus(info *domain.AgentAccountStatusInfo) *pb.AgentAccountStatusInfo {

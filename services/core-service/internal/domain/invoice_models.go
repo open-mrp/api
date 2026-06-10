@@ -7,12 +7,6 @@ import (
 	"github.com/augno/api/shared/pagination"
 )
 
-// RecoveryPoint constants for invoice operations.
-const (
-	InvoiceRecoveryPointStarted  RecoveryPoint = "started"
-	InvoiceRecoveryPointFinished RecoveryPoint = "finished"
-)
-
 // InvoiceSummary represents a lightweight invoice for list views.
 type InvoiceSummary struct {
 	ID                       string

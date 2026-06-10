@@ -123,7 +123,7 @@ func TestSandboxes_Delete(t *testing.T) {
 	assert.Equal(t, 404, getStatus)
 }
 
-func TestSandboxes_Idempotent(t *testing.T) {
+func TestSandboxes_CreateIdempotent(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-idem")
 	idemKey := newIdempotencyKey()

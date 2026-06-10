@@ -5,6 +5,8 @@ import (
 	"net/http"
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
 )
@@ -23,12 +25,19 @@ type CheckoutSalesOrderRequest struct {
 
 // Checkout session result.
 type CheckoutSalesOrderResponse struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=checkout_sales_order_response"`
 	// Checkout URL.
 	CheckoutURL string `json:"checkout_url" validate:"required"`
 }
 
+var sampleCheckoutSalesOrderResponse = &CheckoutSalesOrderResponse{
+	Object:      constants.ObjectTypeCheckoutSalesOrderResponse,
+	CheckoutURL: "https://checkout.stripe.com/pay/cs_test_example",
+}
+
 func (*CheckoutSalesOrderResponse) SchemaExample() any {
-	return map[string]any{"checkout_url": "https://checkout.stripe.com/pay/cs_test_example"}
+	return apiexample.ValidateAndMarshalToMap(sampleCheckoutSalesOrderResponse)
 }
 
 // Creates a checkout session for a sales order.

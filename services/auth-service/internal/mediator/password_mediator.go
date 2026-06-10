@@ -27,11 +27,20 @@ type passwordMedImpl struct {
 }
 
 type PasswordMedConfig struct {
-	Repos                 domain.RepoFactory
-	RefreshTokenMed       domain.RefreshTokenMed
-	JWTSecret             string // #nosec G117 - Struct field, not a hardcoded credential
+	// Repos (required) is the repository factory for credential persistence.
+	Repos domain.RepoFactory
+
+	// RefreshTokenMed (required) revokes refresh tokens on password changes.
+	RefreshTokenMed domain.RefreshTokenMed
+
+	// JWTSecret (required) signs and verifies password-flow JWTs.
+	JWTSecret string // #nosec G117 - Struct field, not a hardcoded credential
+
+	// NotificationPublisher (required) publishes notification messages to the outbox.
 	NotificationPublisher domain.NotificationPublisher
-	FrontendURL           string
+
+	// FrontendURL (required) is the dashboard base URL used in password emails.
+	FrontendURL string
 }
 
 func (c *PasswordMedConfig) validate() error {

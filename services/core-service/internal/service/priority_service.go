@@ -18,6 +18,7 @@ type prioritySvcImpl struct {
 }
 
 type PrioritySvcConfig struct {
+	// Repos (required) is the repository factory.
 	Repos domain.RepoFactory
 }
 

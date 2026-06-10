@@ -14,6 +14,7 @@ type RequestLogsEndpointGroup struct {
 }
 
 type RequestLogsEndpointGroupConfig struct {
+	// PlatformClient (required) is the platform-service gRPC client.
 	PlatformClient *grpcclient.PlatformServiceClient
 }
 

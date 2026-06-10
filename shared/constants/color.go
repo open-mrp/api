@@ -4,16 +4,26 @@ package constants
 type Color string
 
 const (
-	ColorBlue    Color = "blue"
-	ColorBrown   Color = "brown"
+	// ColorBlue indicates the color blue.
+	ColorBlue Color = "blue"
+	// ColorBrown indicates the color brown.
+	ColorBrown Color = "brown"
+	// ColorDefault indicates the default color.
 	ColorDefault Color = "default"
-	ColorGray    Color = "gray"
-	ColorGreen   Color = "green"
-	ColorOrange  Color = "orange"
-	ColorPink    Color = "pink"
-	ColorPurple  Color = "purple"
-	ColorRed     Color = "red"
-	ColorYellow  Color = "yellow"
+	// ColorGray indicates the color gray.
+	ColorGray Color = "gray"
+	// ColorGreen indicates the color green.
+	ColorGreen Color = "green"
+	// ColorOrange indicates the color orange.
+	ColorOrange Color = "orange"
+	// ColorPink indicates the color pink.
+	ColorPink Color = "pink"
+	// ColorPurple indicates the color purple.
+	ColorPurple Color = "purple"
+	// ColorRed indicates the color red.
+	ColorRed Color = "red"
+	// ColorYellow indicates the color yellow.
+	ColorYellow Color = "yellow"
 )
 
 func (m Color) IsValid() bool {

@@ -40,10 +40,20 @@ type accountSvcImpl struct {
 }
 
 type AccountSvcConfig struct {
-	RepoFactory         domain.RepoFactory
-	MediatorFactory     domain.MediatorFactory
-	TxManager           TransactionManager
-	S3Client            s3client.ObjectStore
+	// RepoFactory (required) is the repository factory.
+	RepoFactory domain.RepoFactory
+
+	// MediatorFactory (required) builds the mediators used by this service.
+	MediatorFactory domain.MediatorFactory
+
+	// TxManager (required) wraps multi-step operations in database transactions.
+	TxManager TransactionManager
+
+	// S3Client (required) is the object store client used for file storage.
+	S3Client s3client.ObjectStore
+
+	// AccountPhotosBucket (optional; default: "") is the S3 bucket for account photos. It is not validated
+	// at construction.
 	AccountPhotosBucket string
 }
 
@@ -1025,6 +1035,14 @@ func (s *accountSvcImpl) UploadAccountPhoto(ctx context.Context, accountID strin
 func (s *accountSvcImpl) GetAccountLogoURL(ctx context.Context, accountID string) (*string, *apierror.APIError) {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_account_logo_url")
 	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsAuthenticated(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
 	logoKey, apiErr := s.accountRepo.GetBrandingLogoKey(ctx, accountID)
 	if apiErr != nil {

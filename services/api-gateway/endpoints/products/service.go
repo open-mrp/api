@@ -47,6 +47,7 @@ type ProductSvc interface {
 }
 
 type ProductSvcConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient pb.CoreServiceClient
 }
 

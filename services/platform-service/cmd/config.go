@@ -71,8 +71,14 @@ func (c *config) validate() error {
 	if c == nil {
 		return fmt.Errorf("platform-service: config is nil")
 	}
+	if !c.PlatformMode.IsValid() {
+		return fmt.Errorf("platform-service: the provided platform mode is invalid: %s", c.PlatformMode)
+	}
 	if c.DBURL == "" {
 		return fmt.Errorf("platform-service: the provided database URI is empty")
+	}
+	if len(c.CursorHMACKey) == 0 {
+		return fmt.Errorf("platform-service: CURSOR_HMAC_KEY is required")
 	}
 	return nil
 }

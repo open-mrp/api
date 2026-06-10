@@ -15,6 +15,7 @@ type RegistrationSessionsEndpointGroup struct {
 }
 
 type RegistrationSessionsEndpointGroupConfig struct {
+	// AuthClient (required) is the auth-service gRPC client.
 	AuthClient *grpcclient.AuthServiceClient
 }
 

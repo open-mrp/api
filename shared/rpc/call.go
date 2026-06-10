@@ -19,7 +19,12 @@ const DefaultTimeout = 10 * time.Second
 type Option func(*config)
 
 type config struct {
-	timeout    time.Duration
+	// timeout (optional; default: 0, meaning DefaultTimeout of 10s) overrides the
+	// RPC deadline. Set via WithTimeout.
+	timeout time.Duration
+
+	// onReplayed (optional; default: nil) is invoked when the response was an
+	// idempotent replay; skipped when nil. Set via WithOnReplayed.
 	onReplayed func()
 }
 

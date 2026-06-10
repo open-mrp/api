@@ -8,8 +8,8 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	httptransport "github.com/augno/api/services/api-gateway/internal/http"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -25,6 +25,7 @@ type TenancySvc interface {
 }
 
 type TenancySvcConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient pb.CoreServiceClient
 }
 
@@ -49,7 +50,10 @@ func NewTenancySvc(config *TenancySvcConfig) TenancySvc {
 }
 
 func (m *tenancySvcImpl) GetTenancy(ctx context.Context, req *GetTenancyRequest) (*apiresource.Tenancy, *apierror.APIError) {
-	identity, _ := appctx.GetIdentityFromContext(ctx)
+	identity, apiErr := httptransport.GetIdentity(ctx)
+	if apiErr != nil {
+		return nil, apiErr
+	}
 
 	// Tenancy is account-agnostic: it is how a freshly authenticated user
 	// discovers which accounts they can access, so it is called before any
@@ -82,7 +86,10 @@ func (m *tenancySvcImpl) GetTenancy(ctx context.Context, req *GetTenancyRequest)
 }
 
 func (m *tenancySvcImpl) SwitchAccount(ctx context.Context, req *SwitchAccountRequest) (*apiresource.Tenancy, *apierror.APIError) {
-	identity, _ := appctx.GetIdentityFromContext(ctx)
+	identity, apiErr := httptransport.GetIdentity(ctx)
+	if apiErr != nil {
+		return nil, apiErr
+	}
 
 	pbReq := &pb.SwitchTenancyAccountRequest{
 		AccountId: req.AccountID,
@@ -103,9 +110,15 @@ func (m *tenancySvcImpl) SwitchAccount(ctx context.Context, req *SwitchAccountRe
 }
 
 func (m *tenancySvcImpl) GetCurrentUser(ctx context.Context, req *GetCurrentUserRequest) (*apiresource.User, *apierror.APIError) {
-	identity, _ := appctx.GetIdentityFromContext(ctx)
+	identity, apiErr := httptransport.GetIdentity(ctx)
+	if apiErr != nil {
+		return nil, apiErr
+	}
 
-	if apiErr := identity.CheckIsUser(); apiErr != nil {
+	// /me is account-agnostic: it is called before an account is selected
+	// (no Augno-Account header), so the identity may have no actor account.
+	// CheckIsUser would 403 there; require an authenticated user actor only.
+	if apiErr := identity.CheckHasUserActor(); apiErr != nil {
 		return nil, apiErr
 	}
 
@@ -128,7 +141,10 @@ func (m *tenancySvcImpl) GetCurrentUser(ctx context.Context, req *GetCurrentUser
 }
 
 func (m *tenancySvcImpl) ListCustomerAccounts(ctx context.Context, req *ListCustomerAccountsRequest) (*apiresource.List[apiresource.CustomerAccountSummary], *apierror.APIError) {
-	identity, _ := appctx.GetIdentityFromContext(ctx)
+	identity, apiErr := httptransport.GetIdentity(ctx)
+	if apiErr != nil {
+		return nil, apiErr
+	}
 
 	pbReq := &pb.ListCustomerAccountsForUserRequest{
 		VendorAccountId: req.VendorAccountID,
@@ -188,6 +204,7 @@ func tenancyPendingRegistrationFromProto(pr *pb.TenancyPendingRegistrationProto)
 		return nil
 	}
 	return &apiresource.TenancyPendingRegistration{
+		Object:    constants.ObjectTypeTenancyPendingRegistration,
 		SessionID: pr.SessionId,
 		PlanCode:  pr.PlanCode,
 		Step:      pr.Step,

@@ -201,7 +201,10 @@ func (h *billingHandler) GetAccountUsage(ctx context.Context, req *pb.GetAccount
 	if !ok || identity == nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
 	}
-	if identity.Target == nil {
+	if apiErr := identity.CheckIsAuthenticated(); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	if !identity.IsTargetAccountSet() {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account header is required."))
 	}
 
@@ -275,7 +278,7 @@ func (h *billingHandler) CreateBillingPortalSession(ctx context.Context, req *pb
 	if !identity.IsInternalUser() || !identity.IsAdmin() {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
 	}
-	if identity.Target == nil {
+	if !identity.IsTargetAccountSet() {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account header is required."))
 	}
 
@@ -302,7 +305,7 @@ func (h *billingHandler) RequestEnterpriseUpgrade(ctx context.Context, req *pb.R
 	if !identity.IsInternalUser() || !identity.IsAdmin() {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
 	}
-	if identity.Target == nil {
+	if !identity.IsTargetAccountSet() {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account header is required."))
 	}
 
@@ -346,7 +349,7 @@ func (h *billingHandler) EnsureBillingCustomer(ctx context.Context, req *pb.Ensu
 		if !identity.IsInternalUser() || !identity.IsAdmin() {
 			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
 		}
-		if identity.Target == nil {
+		if !identity.IsTargetAccountSet() {
 			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account header is required."))
 		}
 		accountID = identity.Target.AccountID
@@ -383,7 +386,7 @@ func (h *billingHandler) SwitchPlan(ctx context.Context, req *pb.SwitchPlanReque
 	if !identity.IsInternalUser() || !identity.IsAdmin() {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
 	}
-	if identity.Target == nil {
+	if !identity.IsTargetAccountSet() {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account header is required."))
 	}
 
@@ -414,7 +417,7 @@ func (h *billingHandler) PreviewPlanChange(ctx context.Context, req *pb.PreviewP
 	if !identity.IsInternalUser() || !identity.IsAdmin() {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
 	}
-	if identity.Target == nil {
+	if !identity.IsTargetAccountSet() {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account header is required."))
 	}
 

@@ -20,6 +20,7 @@ type EDISvc interface {
 }
 
 type EDISvcConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient pb.CoreServiceClient
 }
 

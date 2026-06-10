@@ -110,18 +110,10 @@ func BatchPresenter(b *pb.BatchInfo) apiresource.Batch {
 	lots := make([]apiresource.BatchLot, len(b.Lots))
 	for i, l := range b.Lots {
 		lots[i] = apiresource.BatchLot{
+			Object:    constants.ObjectTypeBatchLot,
 			LotNumber: l.LotNumber,
 			Type:      l.Type,
 		}
-	}
-
-	inputBatchIDs := b.InputBatchIds
-	if inputBatchIDs == nil {
-		inputBatchIDs = []string{}
-	}
-	outputBatchIDs := b.OutputBatchIds
-	if outputBatchIDs == nil {
-		outputBatchIDs = []string{}
 	}
 
 	return apiresource.Batch{
@@ -137,8 +129,8 @@ func BatchPresenter(b *pb.BatchInfo) apiresource.Batch {
 		ProductionRun:   productionRun,
 		Machines:        apiresource.NewList(machines, apiresource.PageInfo{}),
 		Lots:            apiresource.NewList(lots, apiresource.PageInfo{}),
-		InputBatchIDs:   inputBatchIDs,
-		OutputBatchIDs:  outputBatchIDs,
+		InputBatches:    batchReferenceList(b.InputBatchIds),
+		OutputBatches:   batchReferenceList(b.OutputBatchIds),
 		ClosedAt:        grpcutil.TimestampToTimePtr(b.ClosedAt),
 		ScannedAt:       grpcutil.TimestampToTimePtr(b.ScannedAt),
 		CreatedAt:       grpcutil.TimestampToTime(b.CreatedAt),
@@ -223,22 +215,22 @@ func BatchFlowNodePresenter(n *pb.BatchFlowNodeInfo) apiresource.BatchFlowNode {
 		return apiresource.BatchFlowNode{}
 	}
 
-	inputIDs := n.InputBatchIds
-	if inputIDs == nil {
-		inputIDs = []string{}
-	}
-
-	outputIDs := n.OutputBatchIds
-	if outputIDs == nil {
-		outputIDs = []string{}
-	}
-
 	return apiresource.BatchFlowNode{
-		Object:         constants.ObjectTypeBatchFlowNode,
-		Batch:          BatchPresenter(n.Batch),
-		InputBatchIDs:  inputIDs,
-		OutputBatchIDs: outputIDs,
+		Object:        constants.ObjectTypeBatchFlowNode,
+		Batch:         BatchPresenter(n.Batch),
+		InputBatches:  batchReferenceList(n.InputBatchIds),
+		OutputBatches: batchReferenceList(n.OutputBatchIds),
 	}
+}
+
+// batchReferenceList converts a slice of batch IDs to an embedded list of
+// minimal batch references.
+func batchReferenceList(ids []string) *apiresource.List[apiresource.BatchReference] {
+	refs := make([]apiresource.BatchReference, len(ids))
+	for i, id := range ids {
+		refs[i] = apiresource.BatchReference{ID: id, Object: constants.ObjectTypeBatch}
+	}
+	return apiresource.NewList(refs, apiresource.PageInfo{})
 }
 
 // ScanningConsumptionPresenter converts a proto ScanningConsumptionInfo to an apiresource.ScanningConsumption.

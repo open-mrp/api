@@ -24,9 +24,14 @@ type serviceLevelSvcImpl struct {
 }
 
 type ServiceLevelSvcConfig struct {
-	Repos           domain.RepoFactory
+	// Repos (required) is the repository factory.
+	Repos domain.RepoFactory
+
+	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
-	TxManager       TransactionManager
+
+	// TxManager (required) wraps multi-step operations in database transactions.
+	TxManager TransactionManager
 }
 
 func (c *ServiceLevelSvcConfig) validate() error {
@@ -85,10 +90,12 @@ func (s *serviceLevelSvcImpl) ListServiceLevels(ctx context.Context, params doma
 	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if identity.IsInternalUser() {
-		if apiErr := identity.CheckHasPermission(types.PermissionDomainCarriers, types.ActionRead); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
+	if apiErr := checkCarrierReadPermission(identity); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
 	if identity.IsExternalTarget() {
@@ -115,10 +122,12 @@ func (s *serviceLevelSvcImpl) GetServiceLevel(ctx context.Context, carrierID, se
 	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if identity.IsInternalUser() {
-		if apiErr := identity.CheckHasPermission(types.PermissionDomainCarriers, types.ActionRead); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
+	if apiErr := checkCarrierReadPermission(identity); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
 	if identity.IsExternalTarget() {

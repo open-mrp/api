@@ -25,9 +25,14 @@ type productLineSvcImpl struct {
 }
 
 type ProductLineSvcConfig struct {
-	Repos           domain.RepoFactory
+	// Repos (required) is the repository factory.
+	Repos domain.RepoFactory
+
+	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
-	TxManager       TransactionManager
+
+	// TxManager (required) wraps multi-step operations in database transactions.
+	TxManager TransactionManager
 }
 
 func (c *ProductLineSvcConfig) validate() error {
@@ -92,11 +97,18 @@ func (s *productLineSvcImpl) ListProductLines(ctx context.Context, params domain
 	}
 
 	if identity.IsInternalActor() {
-		if apiErr := identity.CheckHasPermission(types.PermissionDomainProductLines, types.ActionRead); apiErr != nil {
+		if apiErr := checkProductLineReadPermission(identity); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 	} else if !identity.IsCustomerUser() && !identity.IsSupplierUser() {
 		return nil, tracing.Trace(span, apierror.NewAuthorizationError("You do not have access to this resource."))
+	}
+
+	if identity.IsExternalTarget() {
+		meds := s.mediators()
+		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 	}
 
 	params.AccountID = identity.Target.AccountID
@@ -139,11 +151,18 @@ func (s *productLineSvcImpl) GetProductLine(ctx context.Context, params domain.G
 	}
 
 	if identity.IsInternalActor() {
-		if apiErr := identity.CheckHasPermission(types.PermissionDomainProductLines, types.ActionRead); apiErr != nil {
+		if apiErr := checkProductLineReadPermission(identity); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 	} else if !identity.IsCustomerUser() && !identity.IsSupplierUser() {
 		return nil, tracing.Trace(span, apierror.NewAuthorizationError("You do not have access to this resource."))
+	}
+
+	if identity.IsExternalTarget() {
+		meds := s.mediators()
+		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 	}
 
 	params.AccountID = identity.Target.AccountID
@@ -447,7 +466,7 @@ func (s *productLineSvcImpl) BatchGetProductLinesByIDs(ctx context.Context, ids 
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 	if identity.IsInternalActor() {
-		if apiErr := identity.CheckHasPermission(types.PermissionDomainProductLines, types.ActionRead); apiErr != nil {
+		if apiErr := checkProductLineReadPermission(identity); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 	} else if !identity.IsCustomerUser() && !identity.IsSupplierUser() {
@@ -463,4 +482,19 @@ func (s *productLineSvcImpl) BatchGetProductLinesByIDs(ctx context.Context, ids 
 		return nil, nil
 	}
 	return s.repos.NewProductLineRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
+}
+
+// checkProductLineReadPermission checks the appropriate read permission based on the identity context.
+// Internal actors need product_lines:read for their own account, or customers:read / suppliers:read for external accounts.
+func checkProductLineReadPermission(identity *types.Identity) *apierror.APIError {
+	if !identity.IsInternalActor() {
+		return nil
+	}
+	if identity.IsTargetCustomerAccount() {
+		return identity.CheckHasPermission(types.PermissionDomainCustomers, types.ActionRead)
+	}
+	if identity.IsTargetSupplierAccount() {
+		return identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionRead)
+	}
+	return identity.CheckHasPermission(types.PermissionDomainProductLines, types.ActionRead)
 }

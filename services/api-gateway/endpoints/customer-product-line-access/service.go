@@ -24,6 +24,7 @@ type CustomerProductLineAccessSvc interface {
 }
 
 type CustomerProductLineAccessSvcConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient pb.CoreServiceClient
 }
 

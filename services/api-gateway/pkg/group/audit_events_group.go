@@ -14,6 +14,7 @@ type AuditEventsEndpointGroup struct {
 }
 
 type AuditEventsEndpointGroupConfig struct {
+	// PlatformClient (required) is the platform-service gRPC client.
 	PlatformClient *grpcclient.PlatformServiceClient
 }
 

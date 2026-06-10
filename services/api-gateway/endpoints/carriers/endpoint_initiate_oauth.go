@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to initiate carrier OAuth.
@@ -17,7 +18,7 @@ type InitiateOAuthRequest struct {
 	// Redirect URI after OAuth completes.
 	RedirectURI string `json:"redirect_uri" validate:"required"`
 	// Opaque state value passed through the OAuth flow.
-	State *string `json:"state"`
+	State field.Optional[string] `json:"state,omitzero"`
 }
 
 var sampleInitiateOAuthRequest = &InitiateOAuthRequest{

@@ -185,6 +185,23 @@ type CreateAgentMemoryParams struct {
 	ExpiresAt    string
 }
 
+// UpdateAgentMemoryParams holds the parameters for updating an agent memory.
+type UpdateAgentMemoryParams struct {
+	MemoryID     string
+	Category     string
+	Content      string
+	MetadataJSON string
+	EntityType   string
+	EntityID     string
+	Importance   float64
+	ExpiresAt    string
+}
+
+// DeleteAgentMemoryParams holds the parameters for deleting an agent memory.
+type DeleteAgentMemoryParams struct {
+	MemoryID string
+}
+
 // AcknowledgeAgentAlertParams holds the parameters for acknowledging an agent alert.
 type AcknowledgeAgentAlertParams struct {
 	AlertID string

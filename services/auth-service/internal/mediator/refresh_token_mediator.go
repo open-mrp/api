@@ -17,6 +17,7 @@ type refreshTokenMedImpl struct {
 }
 
 type RefreshTokenMedConfig struct {
+	// Repos (required) is the repository factory for refresh token persistence.
 	Repos domain.RepoFactory
 }
 

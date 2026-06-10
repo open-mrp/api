@@ -123,7 +123,7 @@ type SetupBillingResponse struct {
 	// Stripe customer ID.
 	StripeCustomerID string `json:"stripe_customer_id" validate:"required"`
 	// Stripe Setup Intent client secret for Stripe.js payment collection.
-	ClientSecret string `json:"client_secret" validate:"required"` // #nosec G117 -- Stripe client_secret passed to frontend, not a hardcoded secret
+	ClientSecret string `json:"client_secret" validate:"required" sensitive:"true"` // #nosec G117 -- Stripe client_secret passed to frontend, not a hardcoded secret
 	// Stripe publishable key for Stripe.js initialization.
 	PublishableKey string `json:"publishable_key" validate:"required"`
 }

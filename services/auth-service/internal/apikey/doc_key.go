@@ -6,6 +6,7 @@ type DocAPIKey struct {
 	ID              int64
 	TypeID          string
 	APIKeyID        string
+	OwnerAccountID  string
 	EncryptedSecret string
 	CreatedAt       time.Time
 	UpdatedAt       time.Time

@@ -57,8 +57,9 @@ const (
 // set the values they want to override.
 type Config struct {
 	// MaxRetries (optional; default: 3) is the maximum number of retry attempts after
-	// the initial call. Total invocations = MaxRetries + 1. Setting to 0 means the
-	// operation runs exactly once with no retries.
+	// the initial call. Total invocations = MaxRetries + 1. The zero value is treated
+	// as "unset" by WithDefaults and replaced with the default of 3; running exactly
+	// once with no retries is not expressible via this config.
 	MaxRetries int
 
 	// InitialWait (optional; default: 1s) is the delay before the first retry. It also
@@ -78,7 +79,9 @@ type Config struct {
 
 	// JitterFraction (optional; default: 0.1) controls the +/- random spread applied to
 	// each delay. A value of 0.1 means the final delay is within +/-10% of the computed
-	// exponential value. Set to 0 to disable jitter. Must be in [0, 1.0].
+	// exponential value. Must be in [0, 1.0]. The zero value is treated as "unset" by
+	// WithDefaults and replaced with the default of 0.1, so disabling jitter is only
+	// possible when bypassing WithDefaults (e.g. calling CalculateDelay directly).
 	JitterFraction float64
 }
 
@@ -102,7 +105,8 @@ func (c *Config) WithDefaults() *Config {
 
 // validate checks that the Config fields form a coherent retry policy. It
 // returns a descriptive error for any constraint violation:
-//   - MaxRetries must be >= 0 (0 means "no retries, run once").
+//   - MaxRetries must be >= 0 (WithDefaults replaces 0 with the default of 3
+//     before WithBackoff validates, so the effective value is always >= 1).
 //   - InitialWait and MaxWait must be positive, and MaxWait >= InitialWait.
 //   - Multiplier must be >= 1.0 (otherwise delays would shrink over time).
 //   - JitterFraction must be in [0, 1.0].

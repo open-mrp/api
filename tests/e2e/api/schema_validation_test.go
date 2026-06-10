@@ -291,7 +291,7 @@ func TestSchemaValidation_UpdateEndpoints_ResponseFieldsMatchSpec(t *testing.T) 
 				if body == nil {
 					body = map[string]any{}
 				}
-				patchStatus, patchBody, patchErr := apiClient.Patch(path, body, "")
+				patchStatus, patchBody, patchErr := apiClient.Patch(path, body, newIdempotencyKey())
 				require.NoError(t, patchErr)
 				skipOnNonClientError(t, path, patchStatus)
 				if patchStatus != 200 {

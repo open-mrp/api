@@ -127,6 +127,7 @@ func TestRoles_IncludePermissions(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	roleID := jsonField(parseJSON(createBody), "id")
+	defer apiClient.Delete(rolesPath + "/" + roleID)
 
 	// Get with ?include=permissions
 	status, body, err := apiClient.GetListRaw(rolesPath+"/"+roleID, url.Values{"include": {"permissions"}})
@@ -144,9 +145,6 @@ func TestRoles_IncludePermissions(t *testing.T) {
 	firstPerm, ok := permsSlice[0].(string)
 	require.True(t, ok, "each permission should be a string")
 	assert.Contains(t, firstPerm, ":", "permission should be in '<domain>:<action>' format")
-
-	// Cleanup
-	apiClient.Delete(rolesPath + "/" + roleID)
 }
 
 func TestRoles_IncludeOwnerAndPermissions(t *testing.T) {
@@ -161,6 +159,7 @@ func TestRoles_IncludeOwnerAndPermissions(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	roleID := jsonField(parseJSON(createBody), "id")
+	defer apiClient.Delete(rolesPath + "/" + roleID)
 
 	// Request both includes at once
 	status, body, err := apiClient.GetListRaw(rolesPath+"/"+roleID, url.Values{"include": {"owner,permissions"}})
@@ -180,9 +179,6 @@ func TestRoles_IncludeOwnerAndPermissions(t *testing.T) {
 	permsSlice, ok := perms.([]any)
 	require.True(t, ok, "permissions should be a slice")
 	assert.GreaterOrEqual(t, len(permsSlice), 1, "permissions should contain at least one entry")
-
-	// Cleanup
-	apiClient.Delete(rolesPath + "/" + roleID)
 }
 
 // --- CRUD ---
@@ -239,6 +235,7 @@ func TestRoles_CRUD(t *testing.T) {
 }
 
 func TestRoles_UpdatePermissions(t *testing.T) {
+	t.Parallel()
 	name := uniqueName("e2e-role-perms")
 
 	// Create with one permission
@@ -249,6 +246,7 @@ func TestRoles_UpdatePermissions(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
+	defer apiClient.Delete(rolesPath + "/" + id)
 
 	created := parseJSON(createBody)
 	permissions, ok := created["permissions"]
@@ -272,12 +270,9 @@ func TestRoles_UpdatePermissions(t *testing.T) {
 	updatedPermsSlice, ok := updatedPerms.([]any)
 	// 2 permission codes with multiple CRUD flags: customers (4 actions) + invoices (1 action) = 5 entries
 	require.True(t, ok && len(updatedPermsSlice) >= 2, "Should have at least 2 permissions after update, got %d", len(updatedPermsSlice))
-
-	// Cleanup
-	apiClient.Delete(rolesPath + "/" + id)
 }
 
-func TestRoles_Idempotent(t *testing.T) {
+func TestRoles_CreateIdempotent(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-idem-role")
 	idemKey := newIdempotencyKey()
@@ -369,6 +364,7 @@ func TestRoles_ListWithIncludePermissions(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	roleID := jsonField(parseJSON(createBody), "id")
+	defer apiClient.Delete(rolesPath + "/" + roleID)
 
 	list, _, err := apiClient.GetList(rolesPath, url.Values{"include": {"permissions"}})
 	require.NoError(t, err)
@@ -389,9 +385,6 @@ func TestRoles_ListWithIncludePermissions(t *testing.T) {
 		}
 	}
 	assert.True(t, foundWithPerms, "at least one role in the list should have non-empty permissions")
-
-	// Cleanup
-	apiClient.Delete(rolesPath + "/" + roleID)
 }
 
 func TestRoles_ListWithIncludeOwner(t *testing.T) {
@@ -427,6 +420,7 @@ func TestRoles_UpdateIdempotent(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
+	defer apiClient.Delete(rolesPath + "/" + id)
 
 	newName := uniqueName("e2e-role-idem-upd2")
 	idemKey := newIdempotencyKey()
@@ -441,8 +435,6 @@ func TestRoles_UpdateIdempotent(t *testing.T) {
 
 	assert.Equal(t, jsonField(parseJSON(body1), "name"), jsonField(parseJSON(body2), "name"))
 	assert.Equal(t, jsonField(parseJSON(body1), "id"), jsonField(parseJSON(body2), "id"))
-
-	apiClient.Delete(rolesPath + "/" + id)
 }
 
 // --- Conflict / Validation ---
@@ -455,13 +447,12 @@ func TestRoles_CreateDuplicateNameFails(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
+	defer apiClient.Delete(rolesPath + "/" + id)
 
 	// Attempt to create another role with the same name (different idempotency key)
 	status2, body2, err := apiClient.Post(rolesPath, map[string]any{"name": name}, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.Equal(t, 409, status2, "Duplicate name should return 409, got %d: %s", status2, string(body2))
-
-	apiClient.Delete(rolesPath + "/" + id)
 }
 
 func TestRoles_DeleteAlreadyDeletedFails(t *testing.T) {
@@ -700,6 +691,7 @@ func TestRoles_CreateDuplicate_ErrorShape(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 201, status1, body1)
 	id1 := jsonField(parseJSON(body1), "id")
+	defer apiClient.Delete(rolesPath + "/" + id1)
 
 	// Create second role with same name — expect conflict.
 	status2, body2, err := apiClient.Post(rolesPath, map[string]any{"name": name}, newIdempotencyKey())
@@ -707,6 +699,4 @@ func TestRoles_CreateDuplicate_ErrorShape(t *testing.T) {
 	requireStatus(t, 409, status2, body2)
 
 	requireErrorResponse(t, body2, "resource_conflict", "invalid_request_error")
-
-	apiClient.Delete(rolesPath + "/" + id1)
 }

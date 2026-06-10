@@ -56,11 +56,14 @@ func (*User) SchemaExample() any {
 
 // Result of a user photo upload.
 type UserPhotoUploadResult struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=user_photo_upload_result"`
 	// Upload success status.
 	Success bool `json:"success"`
 }
 
 var SampleUserPhotoUploadResult = &UserPhotoUploadResult{
+	Object:  constants.ObjectTypeUserPhotoUploadResult,
 	Success: true,
 }
 
@@ -70,11 +73,15 @@ func (*UserPhotoUploadResult) SchemaExample() any {
 
 // Presigned URL for a user's profile photo.
 type UserPhotoURL struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=user_photo_url"`
 	// Presigned URL for the profile photo, or null if no photo exists.
 	URL *string `json:"url"`
 }
 
-var SampleUserPhotoURL = &UserPhotoURL{}
+var SampleUserPhotoURL = &UserPhotoURL{
+	Object: constants.ObjectTypeUserPhotoURL,
+}
 
 func (*UserPhotoURL) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleUserPhotoURL)

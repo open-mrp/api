@@ -3,12 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"runtime/debug"
 	"strings"
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
@@ -120,7 +120,16 @@ var authGroupTitles = map[string]bool{
 	"Registration Flows":    true,
 }
 
-func generateHTTPieWorkspace(groups []apiendpoint.APIEndpointGroup, outputPath string) {
+func generateHTTPieWorkspace(groups []apiendpoint.APIEndpointGroup, outputPath string) (err error) {
+	// Schema generation reports invariant violations by panicking deep inside
+	// the recursive builder; surface those as returned errors instead of
+	// crashing the process (main() owns the exit).
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("generating HTTPie workspace %s: %v\n%s", outputPath, r, debug.Stack())
+		}
+	}()
+
 	workspace := HTTPieWorkspace{
 		Meta: HTTPieMeta{
 			Format:      "httpie",
@@ -144,21 +153,22 @@ func generateHTTPieWorkspace(groups []apiendpoint.APIEndpointGroup, outputPath s
 
 	data, err := json.MarshalIndent(workspace, "", "  ")
 	if err != nil {
-		log.Fatalf("Error marshaling HTTPie workspace: %v", err)
+		return fmt.Errorf("marshaling HTTPie workspace: %w", err)
 	}
 
 	// Ensure trailing newline
 	data = append(data, '\n')
 
 	if err := os.MkdirAll(filepath.Dir(outputPath), 0750); err != nil {
-		log.Fatalf("Error creating directory for HTTPie workspace: %v", err)
+		return fmt.Errorf("creating directory for HTTPie workspace: %w", err)
 	}
 
 	if err := os.WriteFile(outputPath, data, 0600); err != nil {
-		log.Fatalf("Error writing HTTPie workspace to %s: %v", outputPath, err)
+		return fmt.Errorf("writing HTTPie workspace to %s: %w", outputPath, err)
 	}
 
 	logInfof("Generated HTTPie workspace at %s", outputPath)
+	return nil
 }
 
 func buildCollections(groups []apiendpoint.APIEndpointGroup) []HTTPieCollection {

@@ -13,13 +13,9 @@ import (
 	pb "github.com/augno/api/shared/proto/core"
 )
 
-func ListInventoriesPresenter(ctx context.Context, resp *pb.ListInventoriesResponse) *apiresource.ListInventoriesResponse {
+func ListInventoriesPresenter(ctx context.Context, resp *pb.ListInventoriesResponse) *apiresource.List[apiresource.InventoryItem] {
 	if resp == nil {
-		return &apiresource.ListInventoriesResponse{
-			Object: constants.ObjectTypeList,
-			Data:   []apiresource.InventoryItem{},
-			Count:  0,
-		}
+		return apiresource.NewList[apiresource.InventoryItem](nil, apiresource.PageInfo{})
 	}
 
 	meta := resourcekit.GetLoadMeta(ctx)
@@ -46,10 +42,5 @@ func ListInventoriesPresenter(ctx context.Context, resp *pb.ListInventoriesRespo
 		}
 	}
 
-	return &apiresource.ListInventoriesResponse{
-		Object:   constants.ObjectTypeList,
-		PageInfo: grpcutil.MapProtoPageInfo(ctx, resp.PageInfo),
-		Data:     items,
-		Count:    resp.Count,
-	}
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

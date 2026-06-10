@@ -18,6 +18,7 @@ type inventoryChangeLogSvcImpl struct {
 }
 
 type InventoryChangeLogSvcConfig struct {
+	// Repos (required) is the repository factory.
 	Repos domain.RepoFactory
 }
 

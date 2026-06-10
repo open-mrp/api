@@ -30,6 +30,7 @@ type ProductionStepSvc interface {
 }
 
 type ProductionStepSvcConfig struct {
+	// CoreClient (required) is the core-service production-step gRPC client.
 	CoreClient pb.CoreProductionStepServiceClient
 }
 

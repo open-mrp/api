@@ -30,8 +30,8 @@ import (
 //   - grpc_code:         gRPC status code string (e.g. "OK", "NotFound")
 //   - duration_ms:       handler execution time in fractional milliseconds
 //   - request_id:        from [appctx.GetRequestID], if present in context
-//   - auth_type:         identity type (user, api_key, unauthenticated)
-//   - user_id / key_id:  actor ID, depending on auth type
+//   - auth_type:         identity type (user, api_key, agent, unauthenticated)
+//   - user_id / key_id / agent_id: actor ID, depending on auth type
 //   - target_account_id: account scope, if present
 //   - account_mode:      production / test, if present
 //   - trace_id, span_id: from the active OpenTelemetry span, if recording
@@ -98,6 +98,7 @@ func buildCanonicalAttrs(ctx context.Context, method string, err error, duration
 //
 //   - User identity:    auth_type="user",    user_id="usr_..."
 //   - API key identity: auth_type="api_key", key_id="apke_..."
+//   - Agent identity:   auth_type="agent",   agent_id=<agent definition ID>
 //   - Unauthenticated:  auth_type="unauthenticated" (no actor ID)
 //
 // Optional fields (target_account_id, account_mode) are included only when non-empty
@@ -113,6 +114,8 @@ func extractIdentityAttrs(identity *types.Identity) []slog.Attr {
 			attrs = append(attrs, slog.String("user_id", identity.Actor.ID))
 		case types.IdentityActorTypeAPIKey:
 			attrs = append(attrs, slog.String("key_id", identity.Actor.ID))
+		case types.IdentityActorTypeAgent:
+			attrs = append(attrs, slog.String("agent_id", identity.Actor.ID))
 		}
 	}
 

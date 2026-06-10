@@ -63,7 +63,7 @@ service CoreService {
   // Returns a single sandbox account by ID.
   rpc GetSandbox(GetSandboxRequest) returns (GetSandboxResponse);
 
-  // Deletes a sandbox and purges account-scoped data asynchronously; rejects if last sandbox.
+  // Deletes a sandbox and purges account-scoped data asynchronously.
   rpc DeleteSandbox(DeleteSandboxRequest) returns (google.protobuf.Empty);
 
   // Returns sandboxes by ID for the api-gateway include resolver.

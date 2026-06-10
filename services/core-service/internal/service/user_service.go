@@ -29,10 +29,20 @@ type userSvcImpl struct {
 }
 
 type UserSvcConfig struct {
-	Repos            domain.RepoFactory
-	MediatorFactory  domain.MediatorFactory
-	TxManager        TransactionManager
-	S3Client         s3client.ObjectStore
+	// Repos (required) is the repository factory.
+	Repos domain.RepoFactory
+
+	// MediatorFactory (required) builds the mediators used by this service.
+	MediatorFactory domain.MediatorFactory
+
+	// TxManager (required) wraps multi-step operations in database transactions.
+	TxManager TransactionManager
+
+	// S3Client (required) is the object store client used for file storage.
+	S3Client s3client.ObjectStore
+
+	// UserPhotosBucket (optional; default: "") is the S3 bucket for user photos. It is not validated
+	// at construction.
 	UserPhotosBucket string
 }
 
@@ -254,6 +264,14 @@ func (s *userSvcImpl) UploadUserPhoto(ctx context.Context, userID string, file [
 func (s *userSvcImpl) GetUserPhotoURL(ctx context.Context, userID string) (*string, *apierror.APIError) {
 	ctx, span := userSvcTracer.Start(ctx, "service.user.get_photo_url")
 	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsAuthenticated(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
 	accountUserRepo := s.repos.NewAccountUserRepo()
 	accountID, apiErr := accountUserRepo.FindFirstAccountIDByUserID(ctx, userID)

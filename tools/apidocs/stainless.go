@@ -3,9 +3,9 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"os"
 	"reflect"
+	"runtime/debug"
 	"sort"
 	"strings"
 	"unicode"
@@ -111,7 +111,7 @@ func dedupeModels(root *stainlessNode) {
 	walk(root)
 }
 
-func generateStainlessConfigs(groups []apiendpoint.APIEndpointGroup, version string) {
+func generateStainlessConfigs(groups []apiendpoint.APIEndpointGroup, version string) error {
 	workspaces := []struct {
 		outputPath string
 		publicOnly bool
@@ -122,12 +122,24 @@ func generateStainlessConfigs(groups []apiendpoint.APIEndpointGroup, version str
 
 	for _, workspace := range workspaces {
 		if err := generateStainlessConfig(groups, workspace.outputPath, workspace.publicOnly, version); err != nil {
-			log.Fatalf("Error generating Stainless config %s: %v", workspace.outputPath, err)
+			return fmt.Errorf("generating Stainless config %s: %w", workspace.outputPath, err)
 		}
 	}
+	return nil
 }
 
-func generateStainlessConfig(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOnly bool, version string) error {
+func generateStainlessConfig(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOnly bool, version string) (err error) {
+	// Schema generation reports invariant violations by panicking deep inside
+	// the recursive builder; surface those as returned errors instead of
+	// crashing the process (main() owns the exit).
+	defer func() {
+		if r := recover(); r != nil {
+			// No path prefix here: the caller wraps with the path-qualified
+			// "generating Stainless config %s" context.
+			err = fmt.Errorf("panic: %v\n%s", r, debug.Stack())
+		}
+	}()
+
 	spec, _, err := buildOpenAPISpec(groups, publicOnly, version)
 	if err != nil {
 		return err

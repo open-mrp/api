@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -17,13 +18,13 @@ type EmailRecordRequest struct {
 	Type string `json:"type" validate:"required"`
 }
 
-var exampleEmailRecordRequest = &EmailRecordRequest{
-	ID:   "inv_abc123",
+var sampleEmailRecordRequest = &EmailRecordRequest{
+	ID:   apiresource.SampleInvoiceID,
 	Type: "invoice",
 }
 
 func (*EmailRecordRequest) SchemaExample() any {
-	return exampleEmailRecordRequest
+	return apiexample.ValidateAndMarshalToMap(sampleEmailRecordRequest)
 }
 
 // Emails a record (invoice, sales order, or purchase order) to the configured recipients as a PDF attachment.

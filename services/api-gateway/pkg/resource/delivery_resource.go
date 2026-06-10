@@ -38,7 +38,7 @@ type Delivery struct {
 	Number string `json:"number" validate:"required"`
 	// Associated purchase order. Expandable via include[]=purchase_order.
 	PurchaseOrder *PurchaseOrder `json:"purchase_order" expandable:"true"`
-	// Delivery status (accepted or rejected).
+	// Delivery status.
 	Status constants.DeliveryStatus `json:"status" validate:"required"`
 	// Delivery line items. Expandable via include[]=lines.
 	Lines *List[DeliveryLine] `json:"lines" expandable:"true"`

@@ -35,6 +35,7 @@ type PickSvc interface {
 }
 
 type PickSvcConfig struct {
+	// CoreClient (required) is the core-service picking gRPC client.
 	CoreClient pb.CorePickingServiceClient
 }
 
@@ -190,7 +191,7 @@ func (m *pickSvcImpl) PackPick(ctx context.Context, req *PackPickRequest) (*apir
 
 	pick := pickDetailFromProto(resp.Pick)
 	populatePickGroups(&pick, resp.Pick)
-	return &apiresource.PackPickResponse{Pick: &pick, ShipmentNumber: resp.ShipmentNumber}, nil
+	return &apiresource.PackPickResponse{Object: constants.ObjectTypePackPickResponse, Pick: &pick, ShipmentNumber: resp.ShipmentNumber}, nil
 }
 
 func (m *pickSvcImpl) GetPickShipments(ctx context.Context, req *GetPickShipmentsRequest) (*apiresource.PickShipmentsResponse, *apierror.APIError) {
@@ -214,6 +215,7 @@ func (m *pickSvcImpl) GetPickShipments(ctx context.Context, req *GetPickShipment
 	}
 
 	return &apiresource.PickShipmentsResponse{
+		Object:          constants.ObjectTypePickShipmentsResponse,
 		ShipmentNumbers: resp.ShipmentNumbers,
 		Count:           resp.Count,
 	}, nil

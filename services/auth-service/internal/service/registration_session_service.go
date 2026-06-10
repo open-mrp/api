@@ -33,13 +33,31 @@ type registrationSessionSvcImpl struct {
 }
 
 type RegistrationSessionSvcConfig struct {
-	Repos                 domain.RepoFactory
-	MediatorFactory       domain.MediatorFactory
+	// Repos (required) is the repository factory for auth persistence.
+	Repos domain.RepoFactory
+
+	// MediatorFactory (required) builds the mediators used by this service.
+	MediatorFactory domain.MediatorFactory
+
+	// NotificationPublisher (required) publishes notification messages to the outbox.
 	NotificationPublisher domain.NotificationPublisher
-	TxManager             TransactionManager
-	BillingClient         domain.AuthBillingClient
-	CoreClient            domain.AuthCoreClient
-	FrontendURL           string
+
+	// TxManager (optional; default: nil) wraps multi-step operations in database
+	// transactions. It is not validated at construction; transactional code paths
+	// panic at runtime if it is unset.
+	TxManager TransactionManager
+
+	// BillingClient (optional; default: nil) is the billing-service client used to
+	// provision billing customers during registration. Not validated at construction.
+	BillingClient domain.AuthBillingClient
+
+	// CoreClient (optional; default: nil) is the core-service client used during
+	// registration. Not validated at construction.
+	CoreClient domain.AuthCoreClient
+
+	// FrontendURL (optional; default: "") is the dashboard base URL used in
+	// registration emails and redirects. Not validated at construction.
+	FrontendURL string
 }
 
 func (c *RegistrationSessionSvcConfig) validate() error {
@@ -366,8 +384,13 @@ func (s *registrationSessionSvcImpl) ListSessions(ctx context.Context, input dom
 	defer span.End()
 
 	identity, ok := appctx.GetIdentityFromContext(ctx)
-	if !ok || identity.Type != types.IdentityActorTypeUser {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("User authentication required."))
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	// Registration users typically have no account yet, so require an
+	// authenticated user actor without an assigned account.
+	if apiErr := identity.CheckHasUserActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
 	regSessionRepo := s.repos.NewRegistrationSessionRepo()

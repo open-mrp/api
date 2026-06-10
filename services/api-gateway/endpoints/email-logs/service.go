@@ -21,6 +21,7 @@ type EmailLogSvc interface {
 }
 
 type EmailLogSvcConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient pb.CoreServiceClient
 }
 

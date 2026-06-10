@@ -25,6 +25,8 @@ const (
 type RPCOption func(*rpcConfig)
 
 type rpcConfig struct {
+	// timeout (optional; default: 0, i.e. use the shared rpc package's default
+	// deadline) overrides the RPC deadline for a single call.
 	timeout time.Duration
 }
 

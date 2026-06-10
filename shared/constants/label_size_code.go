@@ -4,10 +4,14 @@ package constants
 type LabelSizeCode string
 
 const (
-	LabelSizeCodeOneByOne   LabelSizeCode = "1x1"
+	// LabelSizeCodeOneByOne indicates a 1x1 label.
+	LabelSizeCodeOneByOne LabelSizeCode = "1x1"
+	// LabelSizeCodeOneByThree indicates a 1x3 label.
 	LabelSizeCodeOneByThree LabelSizeCode = "1x3"
-	LabelSizeCodeOneByFour  LabelSizeCode = "1x4"
-	LabelSizeCodeTwoByFour  LabelSizeCode = "2x4"
+	// LabelSizeCodeOneByFour indicates a 1x4 label.
+	LabelSizeCodeOneByFour LabelSizeCode = "1x4"
+	// LabelSizeCodeTwoByFour indicates a 2x4 label.
+	LabelSizeCodeTwoByFour LabelSizeCode = "2x4"
 )
 
 func (c LabelSizeCode) IsValid() bool {

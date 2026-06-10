@@ -24,7 +24,7 @@ type UpdateAgentRequest struct {
 	Description field.Optional[string] `json:"description,omitzero"`
 	// Category code (e.g. "order_processing").
 	CategoryCode field.Optional[string] `json:"category_code,omitzero" validate:"omitempty,max=255"`
-	// Trigger type: "manual", "scheduled", or "event".
+	// Trigger type.
 	TriggerType field.Optional[constants.AgentTriggerType] `json:"trigger_type,omitzero"`
 	// Agent-level configuration controlling LLM behavior and trigger settings.
 	Config field.Optional[ConfigInput] `json:"config,omitzero"`

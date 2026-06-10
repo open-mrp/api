@@ -11,19 +11,41 @@ import (
 )
 
 type BaseConfig struct {
-	PlatformMode        constants.PlatformMode
-	LogPrefix           string
-	LogFlags            int
-	LogWriter           io.Writer
-	AuthClient          *grpcclient.AuthServiceClient
-	CoreClient          *grpcclient.CoreServiceClient
-	BillingClient       *grpcclient.BillingServiceClient
-	PlatformClient      *grpcclient.PlatformServiceClient
-	AgentClient         *grpcclient.AgentServiceClient
+	// PlatformMode (optional; default: "" i.e. unset) is the platform mode
+	// propagated to endpoint groups and middleware.
+	PlatformMode constants.PlatformMode
+
+	// LogPrefix (optional; default: "") is prepended to every router log line.
+	LogPrefix string
+
+	// LogFlags (optional; default: log.LstdFlags) are the standard-library log
+	// flags for the router logger. The zero value is treated as unset.
+	LogFlags int
+
+	// LogWriter (required) receives router log output.
+	LogWriter io.Writer
+
+	// AuthClient (required) is the auth-service gRPC client.
+	AuthClient *grpcclient.AuthServiceClient
+
+	// CoreClient (required) is the core-service gRPC client.
+	CoreClient *grpcclient.CoreServiceClient
+
+	// BillingClient (required) is the billing-service gRPC client.
+	BillingClient *grpcclient.BillingServiceClient
+
+	// PlatformClient (required) is the platform-service gRPC client.
+	PlatformClient *grpcclient.PlatformServiceClient
+
+	// AgentClient (required) is the agent-service gRPC client.
+	AgentClient *grpcclient.AgentServiceClient
+
+	// RequestLogPublisher (required) publishes request logs to the outbox.
 	RequestLogPublisher domain.RequestLogPublisher
-	// TrustedProxyHops is the number of reverse-proxy hops in front of this
-	// service whose X-Forwarded-For entries can be trusted. See
-	// header.GetClientIP for details. Defaults to 0 (XFF is not trusted).
+
+	// TrustedProxyHops (optional; default: 0, meaning XFF is not trusted) is the
+	// number of reverse-proxy hops in front of this service whose X-Forwarded-For
+	// entries can be trusted. See header.GetClientIP for details.
 	TrustedProxyHops int
 }
 
@@ -67,6 +89,18 @@ func (c *BaseConfig) validate() error {
 	}
 	if c.AuthClient == nil {
 		return fmt.Errorf("base config: auth client is required")
+	}
+	if c.CoreClient == nil {
+		return fmt.Errorf("base config: core client is required")
+	}
+	if c.BillingClient == nil {
+		return fmt.Errorf("base config: billing client is required")
+	}
+	if c.PlatformClient == nil {
+		return fmt.Errorf("base config: platform client is required")
+	}
+	if c.AgentClient == nil {
+		return fmt.Errorf("base config: agent client is required")
 	}
 	if c.RequestLogPublisher == nil {
 		return fmt.Errorf("base config: request log publisher is required")

@@ -34,7 +34,8 @@ type RequestLog struct {
 	NormalizedRoute string `json:"normalized_route" validate:"required"`
 	// Query parameters.
 	QueryJSON json.RawMessage `json:"query_params" expandable:"true"`
-	// HTTP status code.
+	// HTTP status code. Exception to the `status` naming convention: this is a numeric HTTP
+	// response code (200/404/…), not a domain lifecycle status enum, so the `_code` suffix is meaningful.
 	StatusCode int32 `json:"status_code" validate:"required"`
 	// Request latency in microseconds.
 	LatencyUs int64 `json:"latency_us" validate:"required"`

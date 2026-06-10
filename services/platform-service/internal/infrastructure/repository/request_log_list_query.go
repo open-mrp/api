@@ -7,6 +7,7 @@ import (
 
 	"github.com/augno/api/services/platform-service/internal/domain"
 	"github.com/augno/api/services/platform-service/internal/infrastructure/sqlc"
+	"github.com/augno/api/shared/db"
 	"github.com/augno/api/shared/pagination"
 )
 
@@ -117,7 +118,7 @@ func buildListQuery(
 	args = append(args, targetAccountID)
 
 	if f.Query != nil && *f.Query != "" {
-		like := "%" + *f.Query + "%"
+		like := "%" + db.EscapeLike(*f.Query) + "%"
 		// Match the log's own id (exact) plus a substring search across the
 		// request route (both the literal path and the normalized route) and the
 		// error message. Searching rl.path lets a caller paste a resource id that

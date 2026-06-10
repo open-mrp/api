@@ -20,6 +20,7 @@ type EDIRunSvc interface {
 }
 
 type EDIRunSvcConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient pb.CoreServiceClient
 }
 

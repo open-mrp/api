@@ -14,8 +14,11 @@ type AgentsEndpointGroup struct {
 }
 
 type AgentsEndpointGroupConfig struct {
+	// AgentClient (required) is the agent-service gRPC client.
 	AgentClient *grpcclient.AgentServiceClient
-	CoreClient  *grpcclient.CoreServiceClient
+
+	// CoreClient (required) is the core-service gRPC client.
+	CoreClient *grpcclient.CoreServiceClient
 }
 
 func (c *AgentsEndpointGroupConfig) validate() error {

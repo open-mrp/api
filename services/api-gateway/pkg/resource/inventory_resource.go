@@ -15,30 +15,12 @@ type InventoryItem struct {
 	Quantity *Quantity `json:"quantity" validate:"required"`
 }
 
-// Paginated list of inventory items.
-type ListInventoriesResponse struct {
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=list"`
-	// Pagination metadata.
-	PageInfo PageInfo `json:"page_info"`
-	// Inventory items.
-	Data []InventoryItem `json:"data" validate:"required"`
-	// Total count.
-	Count int64 `json:"count" validate:"required"`
+var SampleInventoryItem = &InventoryItem{
+	Object:   constants.ObjectTypeInventoryItem,
+	Item:     *SampleItem,
+	Quantity: SampleQuantity,
 }
 
-// SchemaExample returns an example of ListInventoriesResponse for documentation.
-func (*ListInventoriesResponse) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(&ListInventoriesResponse{
-		Object:   constants.ObjectTypeList,
-		PageInfo: PageInfo{},
-		Data: []InventoryItem{
-			{
-				Object:   constants.ObjectTypeInventoryItem,
-				Item:     *SampleItem,
-				Quantity: SampleQuantity,
-			},
-		},
-		Count: 1,
-	})
+func (*InventoryItem) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleInventoryItem)
 }

@@ -39,11 +39,11 @@ func assertItemCoreFields(t *testing.T, got map[string]any) {
 	assert.NotEmpty(t, jsonField(got, "type"))
 	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
-	assert.Nil(t, got["category"])
-	assert.Nil(t, got["unit_value"])
-	assert.Nil(t, got["unit_cost"])
-	assert.Nil(t, got["burn_rate"])
-	assert.Nil(t, got["attributes"])
+	assertNilField(t, got, "category")
+	assertNilField(t, got, "unit_value")
+	assertNilField(t, got, "unit_cost")
+	assertNilField(t, got, "burn_rate")
+	assertNilField(t, got, "attributes")
 }
 
 // ──────────────────────────────────────────────
@@ -121,15 +121,15 @@ func TestItems_RetrieveResponseShape(t *testing.T) {
 	assertObjectField(t, got, "item")
 	assert.Equal(t, SeedItemSKU, jsonField(got, "sku"))
 	assert.Equal(t, SeedItemDescription, jsonField(got, "description"))
-	assert.Nil(t, got["notes"])
+	assertNilField(t, got, "notes")
 	assert.Equal(t, "product", jsonField(got, "type"))
 	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
-	assert.Nil(t, got["category"])
-	assert.Nil(t, got["unit_value"])
-	assert.Nil(t, got["unit_cost"])
-	assert.Nil(t, got["burn_rate"])
-	assert.Nil(t, got["attributes"])
+	assertNilField(t, got, "category")
+	assertNilField(t, got, "unit_value")
+	assertNilField(t, got, "unit_cost")
+	assertNilField(t, got, "burn_rate")
+	assertNilField(t, got, "attributes")
 }
 
 // ──────────────────────────────────────────────
@@ -167,11 +167,11 @@ func TestItems_UpdateAllFields(t *testing.T) {
 	assert.Equal(t, newSKU, jsonField(item, "sku"))
 	assert.Equal(t, desc, jsonField(item, "description"))
 	assert.Equal(t, notes, jsonField(item, "notes"))
-	assert.Nil(t, item["category"])
-	assert.Nil(t, item["unit_value"])
-	assert.Nil(t, item["unit_cost"])
-	assert.Nil(t, item["burn_rate"])
-	assert.Nil(t, item["attributes"])
+	assertNilField(t, item, "category")
+	assertNilField(t, item, "unit_value")
+	assertNilField(t, item, "unit_cost")
+	assertNilField(t, item, "burn_rate")
+	assertNilField(t, item, "attributes")
 }
 
 func TestItems_UpdatePreservesOmittedFields(t *testing.T) {
@@ -235,7 +235,7 @@ func TestItems_UpdateNullDescription(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 	got := parseJSON(getBody)
-	assert.Nil(t, got["description"])
+	assertNilField(t, got, "description")
 }
 
 func TestItems_UpdateNullNotes(t *testing.T) {
@@ -259,7 +259,7 @@ func TestItems_UpdateNullNotes(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 	got := parseJSON(getBody)
-	assert.Nil(t, got["notes"])
+	assertNilField(t, got, "notes")
 }
 
 func TestItems_UpdateIdempotent(t *testing.T) {

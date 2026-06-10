@@ -14,6 +14,7 @@ type TerritoriesEndpointGroup struct {
 }
 
 type TerritoriesEndpointGroupConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient *grpcclient.CoreServiceClient
 }
 

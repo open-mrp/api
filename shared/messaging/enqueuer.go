@@ -46,13 +46,14 @@ type EnqueuerConfig struct {
 	// its expired-lock cleanup pass, releasing locks held by crashed processes.
 	CleanupInterval time.Duration
 
-	// RetryBackoff (optional) configures the exponential backoff with jitter used to
-	// compute the delay before retrying a failed outbox message. Uses retry.Config
-	// defaults (1s base, 2x multiplier, 10s max, 10% jitter) when nil.
+	// RetryBackoff (optional; default: 1s base, 2x multiplier, 1h max, 25% jitter; in
+	// test mode 10ms base, 2x multiplier, 2s max, 10% jitter) configures the exponential
+	// backoff with jitter used to compute the delay before retrying a failed outbox message.
 	RetryBackoff *retry.Config
 
-	// DBRetryBackoff (optional) configures short retries for transient database lock
-	// conflicts while claiming or marking outbox rows.
+	// DBRetryBackoff (optional; default: OutboxDBRetryConfig(PlatformMode) — 3 retries,
+	// 25ms initial, 500ms max, 20% jitter in production) configures short retries for
+	// transient database lock conflicts while claiming or marking outbox rows.
 	DBRetryBackoff *retry.Config
 
 	// RetentionHours (optional; default: 168 i.e. 7 days) is how long published outbox
@@ -136,10 +137,33 @@ func (c *EnqueuerConfig) WithDefaults() *EnqueuerConfig {
 	return c
 }
 
-// validate checks that the config has all required fields.
+// validate checks that the config has all required fields and that interval,
+// batch, and retention settings are positive. Must be called after WithDefaults,
+// which fills zero-value fields with production defaults.
 func (c *EnqueuerConfig) validate() error {
 	if c.ServiceName == "" {
 		return fmt.Errorf("enqueuer: service name is required")
+	}
+	if c.PollInterval <= 0 {
+		return fmt.Errorf("enqueuer: poll interval must be positive")
+	}
+	if c.BatchSize <= 0 {
+		return fmt.Errorf("enqueuer: batch size must be positive")
+	}
+	if c.LockDurationSeconds <= 0 {
+		return fmt.Errorf("enqueuer: lock duration must be positive")
+	}
+	if c.CleanupInterval <= 0 {
+		return fmt.Errorf("enqueuer: cleanup interval must be positive")
+	}
+	if c.RetentionHours <= 0 {
+		return fmt.Errorf("enqueuer: retention hours must be positive")
+	}
+	if c.PurgeInterval <= 0 {
+		return fmt.Errorf("enqueuer: purge interval must be positive")
+	}
+	if c.PurgeLeaseTTL <= 0 {
+		return fmt.Errorf("enqueuer: purge lease TTL must be positive")
 	}
 	return nil
 }

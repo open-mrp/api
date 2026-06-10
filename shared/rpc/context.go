@@ -33,6 +33,9 @@ func WithMetadata(key string, values ...string) MetadataOption {
 type ServiceCallOption func(*serviceCallConfig)
 
 type serviceCallConfig struct {
+	// idempotencyKey (optional; default: "") explicitly overrides the idempotency
+	// key sent in outgoing metadata. When empty, the key carried by the incoming
+	// context is forwarded instead.
 	idempotencyKey string
 }
 

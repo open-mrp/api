@@ -34,6 +34,7 @@ func (r *docAPIKeyRepoImpl) FindBySandboxAccountID(ctx context.Context, sandboxA
 		ID:              row.ID,
 		TypeID:          row.TypeID,
 		APIKeyID:        row.ApiKeyID,
+		OwnerAccountID:  row.OwnerAccountID,
 		EncryptedSecret: row.EncryptedSecret,
 		CreatedAt:       row.CreatedAt,
 		UpdatedAt:       row.UpdatedAt,
@@ -55,6 +56,7 @@ func (r *docAPIKeyRepoImpl) FindByAPIKeyID(ctx context.Context, apiKeyID string)
 		ID:              row.ID,
 		TypeID:          row.TypeID,
 		APIKeyID:        row.ApiKeyID,
+		OwnerAccountID:  row.OwnerAccountID,
 		EncryptedSecret: row.EncryptedSecret,
 		CreatedAt:       row.CreatedAt,
 		UpdatedAt:       row.UpdatedAt,
@@ -68,6 +70,7 @@ func (r *docAPIKeyRepoImpl) Create(ctx context.Context, docAPIKey *apikey.DocAPI
 	result, err := r.queries.CreateDocAPIKey(ctx, sqlc.CreateDocAPIKeyParams{
 		TypeID:          docAPIKey.TypeID,
 		ApiKeyID:        docAPIKey.APIKeyID,
+		OwnerAccountID:  docAPIKey.OwnerAccountID,
 		EncryptedSecret: docAPIKey.EncryptedSecret,
 	})
 

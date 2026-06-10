@@ -33,6 +33,7 @@ type RegistrationSessionSvc interface {
 }
 
 type RegistrationSessionSvcConfig struct {
+	// AuthClient (required) is the auth-service gRPC client.
 	AuthClient pb.AuthServiceClient
 }
 

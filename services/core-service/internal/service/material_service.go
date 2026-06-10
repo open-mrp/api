@@ -27,9 +27,14 @@ type materialSvcImpl struct {
 }
 
 type MaterialSvcConfig struct {
-	Repos           domain.RepoFactory
+	// Repos (required) is the repository factory.
+	Repos domain.RepoFactory
+
+	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
-	TxManager       TransactionManager
+
+	// TxManager (required) wraps multi-step operations in database transactions.
+	TxManager TransactionManager
 }
 
 func (c *MaterialSvcConfig) validate() error {
@@ -497,8 +502,9 @@ func (s *materialSvcImpl) UpdateMaterial(ctx context.Context, params domain.Upda
 			txMaterialRepo := txSvc.repos.NewMaterialRepo()
 			txItemRepo := txSvc.repos.NewItemRepo()
 
-			// Verify the material exists.
-			existing, apiErr := txMaterialRepo.GetByID(txCtx, domain.GetMaterialParams{AccountID: params.AccountID, MaterialID: params.MaterialID})
+			// Verify the material exists. Load with the same includes as the
+			// post-update fetch so include-only fields cannot produce false audit diffs.
+			existing, apiErr := txMaterialRepo.GetByID(txCtx, domain.GetMaterialParams{AccountID: params.AccountID, MaterialID: params.MaterialID, Includes: params.Includes})
 			if apiErr != nil {
 				return apiErr
 			}

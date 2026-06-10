@@ -481,7 +481,9 @@ func TestGenerate_FullAssembly(t *testing.T) {
 	}
 
 	// Generate internal spec (should include both)
-	generate(groups, outputPath, false, nil, "1.0.0")
+	if err := generate(groups, outputPath, false, nil, "1.0.0"); err != nil {
+		t.Fatalf("generate: %v", err)
+	}
 
 	data, err := os.ReadFile(outputPath)
 	if err != nil {
@@ -533,7 +535,9 @@ func TestGenerate_FullAssembly(t *testing.T) {
 
 	// Generate public spec (should only include public)
 	publicOutputPath := filepath.Join(tempDir, "public_spec.json")
-	generate(groups, publicOutputPath, true, nil, "1.0.0")
+	if err := generate(groups, publicOutputPath, true, nil, "1.0.0"); err != nil {
+		t.Fatalf("generate: %v", err)
+	}
 
 	publicData, _ := os.ReadFile(publicOutputPath)
 	var publicSpec map[string]any
@@ -562,7 +566,9 @@ func TestGenerateCreatesDirectory(t *testing.T) {
 	groups := []apiendpoint.APIEndpointGroup{}
 
 	// This should create 'missing-dir' and write 'spec.json'
-	generate(groups, outputPath, true, nil, "1.0.0")
+	if err := generate(groups, outputPath, true, nil, "1.0.0"); err != nil {
+		t.Fatalf("generate: %v", err)
+	}
 
 	if _, err := os.Stat(outputPath); os.IsNotExist(err) {
 		t.Errorf("expected file %s to be created, but it was not", outputPath)
@@ -802,7 +808,9 @@ func TestGenerate_PathParameterExamples(t *testing.T) {
 			},
 		},
 	}
-	generate(groups, outputPath, false, nil, "1.0.0")
+	if err := generate(groups, outputPath, false, nil, "1.0.0"); err != nil {
+		t.Fatalf("generate: %v", err)
+	}
 
 	data, err := os.ReadFile(outputPath)
 	if err != nil {

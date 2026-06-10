@@ -18,17 +18,17 @@ type ToolInput struct {
 	// Available tool ID.
 	ToolID string `json:"tool_id" validate:"required"`
 	// JSON configuration for this tool instance.
-	ConfigJSON string `json:"config_json,omitzero"`
+	ConfigJSON field.Optional[string] `json:"config_json,omitzero"`
 	// Display order among the agent's tools (lower values appear first).
-	SortOrder int32 `json:"sort_order,omitzero"`
+	SortOrder field.Optional[int32] `json:"sort_order,omitzero"`
 	// Requires human review before execution.
-	RequireReview bool `json:"require_review,omitzero"`
+	RequireReview field.Optional[bool] `json:"require_review,omitzero"`
 }
 
 var sampleToolInput = &ToolInput{
 	ToolID:        apiresource.SampleAvailableToolID,
-	SortOrder:     1,
-	RequireReview: true,
+	SortOrder:     field.Some(int32(1)),
+	RequireReview: field.Some(true),
 }
 
 func (*ToolInput) SchemaExample() any {
@@ -101,28 +101,28 @@ type CreateAgentRequest struct {
 	// URL-friendly identifier.
 	Slug string `json:"slug" validate:"required,max=255"`
 	// Description of what the agent does.
-	Description string `json:"description,omitzero"`
+	Description field.Optional[string] `json:"description,omitzero"`
 	// Category code (e.g. "order_processing").
 	CategoryCode string `json:"category_code" validate:"required,max=255"`
-	// Trigger type: "manual", "scheduled", or "event".
+	// Trigger type.
 	TriggerType constants.AgentTriggerType `json:"trigger_type" validate:"required"`
 	// Agent-level configuration controlling LLM behavior and trigger settings.
 	Config ConfigInput `json:"config"`
 	// Tools to attach.
 	Tools []ToolInput `json:"tools,omitzero"`
 	// Role ID defining agent permissions.
-	RoleID string `json:"role_id,omitzero" validate:"max=191"`
+	RoleID field.Optional[string] `json:"role_id,omitzero" validate:"omitempty,max=191"`
 }
 
 var sampleCreateAgentRequest = &CreateAgentRequest{
 	Name:         "Inventory Monitor",
 	Slug:         "inventory_monitor",
-	Description:  "Monitors inventory levels and creates restock alerts.",
+	Description:  field.Some("Monitors inventory levels and creates restock alerts."),
 	CategoryCode: "inventory",
 	TriggerType:  constants.AgentTriggerTypeEvent,
 	Config:       *sampleConfigInput,
 	Tools:        []ToolInput{*sampleToolInput},
-	RoleID:       apiresource.SampleRoleID,
+	RoleID:       field.Some(apiresource.SampleRoleID),
 }
 
 func (*CreateAgentRequest) SchemaExample() any {

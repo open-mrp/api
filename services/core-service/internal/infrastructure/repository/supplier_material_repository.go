@@ -218,7 +218,7 @@ func (r *supplierMaterialRepoImpl) List(ctx context.Context, params domain.ListS
 
 	searchQuery := gosql.NullString{}
 	if params.Query != nil && *params.Query != "" {
-		searchQuery = gosql.NullString{String: "%" + *params.Query + "%", Valid: true}
+		searchQuery = gosql.NullString{String: "%" + db.EscapeLike(*params.Query) + "%", Valid: true}
 	}
 
 	var cursorDir *pagination.Direction

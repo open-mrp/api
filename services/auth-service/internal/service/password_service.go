@@ -27,10 +27,19 @@ type passwordSvcImpl struct {
 }
 
 type PasswordSvcConfig struct {
-	Repos                 domain.RepoFactory
-	MediatorFactory       domain.MediatorFactory
+	// Repos (required) is the repository factory for auth persistence.
+	Repos domain.RepoFactory
+
+	// MediatorFactory (required) builds the mediators used by this service.
+	MediatorFactory domain.MediatorFactory
+
+	// NotificationPublisher (required) publishes notification messages to the outbox.
 	NotificationPublisher domain.NotificationPublisher
-	TxManager             TransactionManager
+
+	// TxManager (optional; default: nil) wraps multi-step operations in database
+	// transactions. It is not validated at construction; transactional code paths
+	// panic at runtime if it is unset.
+	TxManager TransactionManager
 }
 
 func (c *PasswordSvcConfig) validate() error {
@@ -249,6 +258,12 @@ func (s *passwordSvcImpl) UpdatePassword(ctx context.Context, oldPassword, newPa
 	identity, ok := appctx.GetIdentityFromContext(ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	// Account-agnostic: users without an assigned account (e.g. mid
+	// registration) may still change their password, so require an
+	// authenticated user actor rather than an assigned account.
+	if apiErr := identity.CheckHasUserActor(); apiErr != nil {
+		return tracing.Trace(span, apiErr)
 	}
 
 	meds := s.mediators()

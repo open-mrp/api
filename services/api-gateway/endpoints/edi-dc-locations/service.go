@@ -24,6 +24,7 @@ type EDIDCLocationSvc interface {
 }
 
 type EDIDCLocationSvcConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient pb.CoreServiceClient
 }
 

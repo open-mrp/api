@@ -64,7 +64,7 @@ type config struct {
 	// RabbitMQURI (optional; default: "amqp://guest:guest@rabbitmq:5672/") is the RabbitMQ connection URI.
 	RabbitMQURI string
 
-	// FrontendURL (optional) is the base URL of the frontend application, used to build
+	// FrontendURL (optional; default: "") is the base URL of the frontend application, used to build
 	// request log links in error responses. When empty, request_log_url will be null.
 	FrontendURL string
 

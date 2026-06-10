@@ -11,6 +11,26 @@ type CoreClient interface {
 	GetAccountContext(ctx context.Context, accountID string) (*AccountContext, error)
 }
 
+// ProductResult holds product data returned by core-service.
+type ProductResult struct {
+	ProductID   string
+	ItemID      string
+	SKU         string
+	Description string
+	UnitPrice   string
+}
+
+// CustomerResult holds customer data returned by core-service.
+type CustomerResult struct {
+	RelationID            string
+	OwnerAccountID        string
+	CounterpartyAccountID string
+	RoleCode              string
+	Alias                 string
+	Email                 string
+	UserName              string
+}
+
 // AccountContext holds billing-relevant metadata for an account.
 type AccountContext struct {
 	IsSandbox                    bool

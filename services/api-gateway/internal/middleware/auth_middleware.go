@@ -19,6 +19,8 @@ import (
 )
 
 type AuthMiddlewareConfig struct {
+	// AuthClient (required) is the auth-service gRPC client used to validate
+	// access tokens and API keys.
 	AuthClient *grpcclient.AuthServiceClient
 }
 

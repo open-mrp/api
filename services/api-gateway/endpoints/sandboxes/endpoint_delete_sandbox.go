@@ -15,7 +15,7 @@ type DeleteSandboxRequest struct {
 	SandboxID string `path:"id" validate:"required"`
 }
 
-// Deletes a sandbox account. At least one sandbox must remain per production account.
+// Deletes a sandbox account. Account-scoped data is purged asynchronously.
 type DeleteSandboxEndpoint struct{}
 
 func (e *DeleteSandboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSandboxRequest, *apiresource.EmptyResource] {

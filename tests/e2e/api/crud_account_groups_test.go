@@ -118,7 +118,7 @@ func TestAccountGroups_CreateAndUpdateAllFields(t *testing.T) {
 	assert.Equal(t, "type_group", jsonField(updated, "type"), "type should be preserved")
 }
 
-func TestAccountGroups_Idempotent(t *testing.T) {
+func TestAccountGroups_CreateIdempotent(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-idem-acgrp")
 	idemKey := newIdempotencyKey()
@@ -154,6 +154,24 @@ func TestAccountGroups_OmittedFields(t *testing.T) {
 		assert.Equal(t, "billed_freight", jsonField(got, "freight_policy"))
 		assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
+	})
+
+	t.Run("CreateMissingRequiredFields", func(t *testing.T) {
+		// Missing name
+		status, body, err := apiClient.Post(accountGroupsPath, map[string]any{
+			"type": "type_group",
+		}, newIdempotencyKey())
+		require.NoError(t, err)
+		assert.True(t, status == 400 || status == 422,
+			"Missing name should return 400 or 422, got %d: %s", status, string(body))
+
+		// Missing type
+		status, body, err = apiClient.Post(accountGroupsPath, map[string]any{
+			"name": uniqueName("e2e-acgrp-notype"),
+		}, newIdempotencyKey())
+		require.NoError(t, err)
+		assert.True(t, status == 400 || status == 422,
+			"Missing type should return 400 or 422, got %d: %s", status, string(body))
 	})
 
 	t.Run("UpdatePreservesOmittedFields", func(t *testing.T) {
@@ -244,17 +262,13 @@ func TestAccountGroups_List(t *testing.T) {
 
 // ── Validation ──────────────────────────────────
 
-func TestAccountGroups_Validation(t *testing.T) {
+func TestAccountGroups_CreateValidation_EmptyName(t *testing.T) {
 	t.Parallel()
-
-	t.Run("EmptyName", func(t *testing.T) {
-		t.Parallel()
-		status, body, err := apiClient.Post(accountGroupsPath, map[string]any{
-			"name": "",
-			"type": "type_group",
-		}, newIdempotencyKey())
-		require.NoError(t, err)
-		assert.True(t, status == 400 || status == 422,
-			"Empty name should return 400 or 422, got %d: %s", status, string(body))
-	})
+	status, body, err := apiClient.Post(accountGroupsPath, map[string]any{
+		"name": "",
+		"type": "type_group",
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	assert.True(t, status == 400 || status == 422,
+		"Empty name should return 400 or 422, got %d: %s", status, string(body))
 }

@@ -473,7 +473,7 @@ func (r *batchRepoImpl) FindByScanningStation(ctx context.Context, params domain
 
 	searchQuery := gosql.NullString{}
 	if params.Query != nil && *params.Query != "" {
-		searchQuery = gosql.NullString{String: "%" + *params.Query + "%", Valid: true}
+		searchQuery = gosql.NullString{String: "%" + db.EscapeLike(*params.Query) + "%", Valid: true}
 	}
 
 	scanningStationID := db.NullString(params.ScanningStationID)

@@ -12,18 +12,24 @@ import (
 )
 
 const createDocAPIKey = `-- name: CreateDocAPIKey :execresult
-INSERT INTO doc_api_key (type_id, api_key_id, encrypted_secret, created_at, updated_at)
-VALUES (?, ?, ?, NOW(3), NOW(3))
+INSERT INTO doc_api_key (type_id, api_key_id, owner_account_id, encrypted_secret, created_at, updated_at)
+VALUES (?, ?, ?, ?, NOW(3), NOW(3))
 `
 
 type CreateDocAPIKeyParams struct {
 	TypeID          string
 	ApiKeyID        string
+	OwnerAccountID  string
 	EncryptedSecret string
 }
 
 func (q *Queries) CreateDocAPIKey(ctx context.Context, arg CreateDocAPIKeyParams) (sql.Result, error) {
-	return q.db.ExecContext(ctx, createDocAPIKey, arg.TypeID, arg.ApiKeyID, arg.EncryptedSecret)
+	return q.db.ExecContext(ctx, createDocAPIKey,
+		arg.TypeID,
+		arg.ApiKeyID,
+		arg.OwnerAccountID,
+		arg.EncryptedSecret,
+	)
 }
 
 const deleteDocAPIKeyByAPIKeyID = `-- name: DeleteDocAPIKeyByAPIKeyID :exec
@@ -45,7 +51,7 @@ func (q *Queries) DeleteDocAPIKeyByID(ctx context.Context, id int64) error {
 }
 
 const findDocAPIKeyByAPIKeyID = `-- name: FindDocAPIKeyByAPIKeyID :one
-SELECT id, type_id, api_key_id, encrypted_secret, created_at, updated_at
+SELECT id, type_id, api_key_id, owner_account_id, encrypted_secret, created_at, updated_at
 FROM doc_api_key WHERE api_key_id = ? LIMIT 1
 `
 
@@ -56,6 +62,7 @@ func (q *Queries) FindDocAPIKeyByAPIKeyID(ctx context.Context, apiKeyID string) 
 		&i.ID,
 		&i.TypeID,
 		&i.ApiKeyID,
+		&i.OwnerAccountID,
 		&i.EncryptedSecret,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -65,13 +72,12 @@ func (q *Queries) FindDocAPIKeyByAPIKeyID(ctx context.Context, apiKeyID string) 
 
 const findDocAPIKeyBySandboxAccountID = `-- name: FindDocAPIKeyBySandboxAccountID :one
 SELECT
-    dak.id, dak.type_id, dak.api_key_id, dak.encrypted_secret,
+    dak.id, dak.type_id, dak.api_key_id, dak.owner_account_id, dak.encrypted_secret,
     dak.created_at, dak.updated_at,
     ak.expires_at AS ak_expires_at, ak.revoked_at AS ak_revoked_at
 FROM doc_api_key dak
 JOIN api_key ak ON dak.api_key_id = ak.type_id
-WHERE ak.owner_account_id = ?
-ORDER BY dak.id DESC
+WHERE dak.owner_account_id = ?
 LIMIT 1
 `
 
@@ -79,6 +85,7 @@ type FindDocAPIKeyBySandboxAccountIDRow struct {
 	ID              int64
 	TypeID          string
 	ApiKeyID        string
+	OwnerAccountID  string
 	EncryptedSecret string
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
@@ -93,6 +100,7 @@ func (q *Queries) FindDocAPIKeyBySandboxAccountID(ctx context.Context, ownerAcco
 		&i.ID,
 		&i.TypeID,
 		&i.ApiKeyID,
+		&i.OwnerAccountID,
 		&i.EncryptedSecret,
 		&i.CreatedAt,
 		&i.UpdatedAt,

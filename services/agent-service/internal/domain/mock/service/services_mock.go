@@ -218,6 +218,20 @@ func (mr *MockAgentDefinitionSvcMockRecorder) CreateCustomAgent(ctx, params any)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateCustomAgent", reflect.TypeOf((*MockAgentDefinitionSvc)(nil).CreateCustomAgent), ctx, params)
 }
 
+// DeleteAgentMemory mocks base method.
+func (m *MockAgentDefinitionSvc) DeleteAgentMemory(ctx context.Context, params domain.DeleteAgentMemoryParams) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteAgentMemory", ctx, params)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// DeleteAgentMemory indicates an expected call of DeleteAgentMemory.
+func (mr *MockAgentDefinitionSvcMockRecorder) DeleteAgentMemory(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAgentMemory", reflect.TypeOf((*MockAgentDefinitionSvc)(nil).DeleteAgentMemory), ctx, params)
+}
+
 // DeleteCustomAgent mocks base method.
 func (m *MockAgentDefinitionSvc) DeleteCustomAgent(ctx context.Context, params domain.DeleteCustomAgentParams) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -306,6 +320,21 @@ func (m *MockAgentDefinitionSvc) UpdateAgentAccountStatus(ctx context.Context, p
 func (mr *MockAgentDefinitionSvcMockRecorder) UpdateAgentAccountStatus(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAgentAccountStatus", reflect.TypeOf((*MockAgentDefinitionSvc)(nil).UpdateAgentAccountStatus), ctx, params)
+}
+
+// UpdateAgentMemory mocks base method.
+func (m *MockAgentDefinitionSvc) UpdateAgentMemory(ctx context.Context, params domain.UpdateAgentMemoryParams) (*domain.AgentMemoryInfo, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateAgentMemory", ctx, params)
+	ret0, _ := ret[0].(*domain.AgentMemoryInfo)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// UpdateAgentMemory indicates an expected call of UpdateAgentMemory.
+func (mr *MockAgentDefinitionSvcMockRecorder) UpdateAgentMemory(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAgentMemory", reflect.TypeOf((*MockAgentDefinitionSvc)(nil).UpdateAgentMemory), ctx, params)
 }
 
 // UpdateCustomAgent mocks base method.

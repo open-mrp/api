@@ -14,6 +14,7 @@ type PaymentTermsEndpointGroup struct {
 }
 
 type PaymentTermsEndpointGroupConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient *grpcclient.CoreServiceClient
 }
 

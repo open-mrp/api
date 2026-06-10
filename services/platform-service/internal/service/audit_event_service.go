@@ -19,6 +19,7 @@ type auditEventSvcImpl struct {
 }
 
 type AuditEventSvcConfig struct {
+	// Repos (required) is the repository factory for audit event persistence.
 	Repos domain.RepoFactory
 }
 

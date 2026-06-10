@@ -183,7 +183,7 @@ func TestCustomers_AuditEvents_Changes(t *testing.T) {
 
 	nameCreateChange, ok := changeForField(createChanges, "name")
 	require.True(t, ok, "create audit event should include a name change")
-	assert.Nil(t, nameCreateChange["old_value"])
+	assertNilField(t, nameCreateChange, "old_value")
 	assert.Equal(t, name, jsonField(nameCreateChange, "new_value"))
 
 	note := "audit change test note"
@@ -199,7 +199,7 @@ func TestCustomers_AuditEvents_Changes(t *testing.T) {
 
 	noteUpdateChange, ok := changeForField(updateChanges, "note")
 	require.True(t, ok, "update audit event should include a note change")
-	assert.Nil(t, noteUpdateChange["old_value"])
+	assertNilField(t, noteUpdateChange, "old_value")
 	assert.Equal(t, note, jsonField(noteUpdateChange, "new_value"))
 
 	delStatus, delBody, err := apiClient.Delete(customersPath + "/" + id)
@@ -213,7 +213,7 @@ func TestCustomers_AuditEvents_Changes(t *testing.T) {
 	nameDeleteChange, ok := changeForField(deleteChanges, "name")
 	require.True(t, ok, "delete audit event should include a name change")
 	assert.Equal(t, name, jsonField(nameDeleteChange, "old_value"))
-	assert.Nil(t, nameDeleteChange["new_value"])
+	assertNilField(t, nameDeleteChange, "new_value")
 }
 
 func TestCustomers_AuditEvents_UpdateAllFields(t *testing.T) {
@@ -317,8 +317,8 @@ func TestCustomers_AuditEvents_UpdateAllFields(t *testing.T) {
 	// Verify EDI status updates the underlying audited field.
 	ediChange, ok := changeForField(changes, "is_edi_enabled")
 	require.True(t, ok, "should include is_edi_enabled change")
-	assert.Equal(t, false, ediChange["old_value"], "is_edi_enabled old_value should be false")
-	assert.Equal(t, true, ediChange["new_value"], "is_edi_enabled new_value should be true")
+	assert.Equal(t, "false", jsonField(ediChange, "old_value"), "is_edi_enabled old_value should be false")
+	assert.Equal(t, "true", jsonField(ediChange, "new_value"), "is_edi_enabled new_value should be true")
 
 	// Verify enum/policy field changes.
 	commChange, ok := changeForField(changes, "commission_policy")
@@ -440,18 +440,18 @@ func TestCustomers_AuditEvents_ClearAllNullableFields(t *testing.T) {
 	salesRepChange, ok := changeForField(changes, "default_sales_rep_id")
 	require.True(t, ok, "should include default_sales_rep_id change")
 	assert.Equal(t, origSalesRepID, jsonField(salesRepChange, "old_value"))
-	assert.Nil(t, salesRepChange["new_value"])
+	assertNilField(t, salesRepChange, "new_value")
 
 	// Verify address IDs cleared to null.
 	billChange, ok := changeForField(changes, "bill_to_address_id")
 	require.True(t, ok, "should include bill_to_address_id change")
 	assert.Equal(t, origBillToID, jsonField(billChange, "old_value"))
-	assert.Nil(t, billChange["new_value"])
+	assertNilField(t, billChange, "new_value")
 
 	shipChange, ok := changeForField(changes, "ship_to_address_id")
 	require.True(t, ok, "should include ship_to_address_id change")
 	assert.Equal(t, origShipToID, jsonField(shipChange, "old_value"))
-	assert.Nil(t, shipChange["new_value"])
+	assertNilField(t, shipChange, "new_value")
 }
 
 func TestCustomers_RequestLogs(t *testing.T) {

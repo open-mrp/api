@@ -360,7 +360,7 @@ func (r *customerRepoImpl) List(ctx context.Context, params domain.ListCustomers
 
 	searchQuery := gosql.NullString{}
 	if params.Query != nil && *params.Query != "" {
-		searchQuery = gosql.NullString{String: "%" + *params.Query + "%", Valid: true}
+		searchQuery = gosql.NullString{String: "%" + db.EscapeLike(*params.Query) + "%", Valid: true}
 	}
 
 	// Build filter flags and slices.

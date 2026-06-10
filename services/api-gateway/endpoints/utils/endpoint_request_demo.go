@@ -5,8 +5,10 @@ import (
 	"net/http"
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to submit a demo request.
@@ -18,19 +20,19 @@ type RequestDemoRequest struct {
 	// Company name.
 	Company string `json:"company" validate:"required"`
 	// Phone number.
-	PhoneNumber *string `json:"phone_number"`
+	PhoneNumber field.Optional[string] `json:"phone_number,omitzero"`
 	// Message from the requester.
-	Message *string `json:"message"`
+	Message field.Optional[string] `json:"message,omitzero"`
 }
 
-var exampleRequestDemoRequest = &RequestDemoRequest{
+var sampleRequestDemoRequest = &RequestDemoRequest{
 	Name:    "Jane Smith",
 	Email:   "jane@example.com",
 	Company: "Acme Corp",
 }
 
 func (*RequestDemoRequest) SchemaExample() any {
-	return exampleRequestDemoRequest
+	return apiexample.ValidateAndMarshalToMap(sampleRequestDemoRequest)
 }
 
 // Submits a demo request from a prospective customer.

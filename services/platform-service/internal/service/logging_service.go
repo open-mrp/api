@@ -18,6 +18,7 @@ type loggingSvcImpl struct {
 }
 
 type LoggingSvcConfig struct {
+	// Repos (required) is the repository factory for request log persistence.
 	Repos domain.RepoFactory
 }
 

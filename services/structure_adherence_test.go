@@ -111,6 +111,23 @@ func TestStructure_DomainServicesExists(t *testing.T) {
 	}
 }
 
+func TestStructure_DomainFactoriesExistsWithRepositories(t *testing.T) {
+	t.Parallel()
+	dir := servicesDir(t)
+	for _, svc := range listServices(t) {
+		t.Run(svc, func(t *testing.T) {
+			repoPath := filepath.Join(dir, svc, "internal", "domain", "repositories.go")
+			if _, err := os.Stat(repoPath); os.IsNotExist(err) {
+				return
+			}
+			factoryPath := filepath.Join(dir, svc, "internal", "domain", "factories.go")
+			if _, err := os.Stat(factoryPath); os.IsNotExist(err) {
+				t.Errorf("internal/domain/repositories.go exists without internal/domain/factories.go")
+			}
+		})
+	}
+}
+
 func TestStructure_MainCallsRun(t *testing.T) {
 	t.Parallel()
 	dir := servicesDir(t)

@@ -88,6 +88,12 @@ type AgentDefinitionSvc interface {
 	// CreateAgentMemory creates a new agent memory record.
 	CreateAgentMemory(ctx context.Context, params CreateAgentMemoryParams) (*AgentMemoryInfo, *apierror.APIError)
 
+	// UpdateAgentMemory updates an existing agent memory record.
+	UpdateAgentMemory(ctx context.Context, params UpdateAgentMemoryParams) (*AgentMemoryInfo, *apierror.APIError)
+
+	// DeleteAgentMemory deletes an agent memory record.
+	DeleteAgentMemory(ctx context.Context, params DeleteAgentMemoryParams) *apierror.APIError
+
 	// AcknowledgeAgentAlert acknowledges an agent alert.
 	AcknowledgeAgentAlert(ctx context.Context, params AcknowledgeAgentAlertParams) (*AgentAlertInfo, *apierror.APIError)
 }

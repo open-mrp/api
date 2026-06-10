@@ -33,14 +33,29 @@ type accountUserSvcImpl struct {
 }
 
 type AccountUserSvcConfig struct {
-	Repos                 domain.RepoFactory
-	MediatorFactory       domain.MediatorFactory
-	TxManager             TransactionManager
+	// Repos (required) is the repository factory.
+	Repos domain.RepoFactory
+
+	// MediatorFactory (required) builds the mediators used by this service.
+	MediatorFactory domain.MediatorFactory
+
+	// TxManager (required) wraps multi-step operations in database transactions.
+	TxManager TransactionManager
+
+	// NotificationPublisher (required) publishes notification messages to the outbox.
 	NotificationPublisher domain.NotificationPublisher
-	BillingPublisher      domain.BillingPublisher
-	S3Client              s3client.ObjectStore
-	UserPhotosBucket      string
-	PlatformMode          constants.PlatformMode
+
+	// BillingPublisher (required) publishes billing messages to the outbox.
+	BillingPublisher domain.BillingPublisher
+
+	// S3Client (required) is the object store client used for file storage.
+	S3Client s3client.ObjectStore
+
+	// UserPhotosBucket (required) is the S3 bucket for user photos.
+	UserPhotosBucket string
+
+	// PlatformMode (required) is the platform mode.
+	PlatformMode constants.PlatformMode
 }
 
 func (c *AccountUserSvcConfig) validate() error {
@@ -877,59 +892,79 @@ func (s *accountUserSvcImpl) UpdateAccountUserPassword(ctx context.Context, acco
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Actor not found in identity."))
 	}
 
-	requesterHashedPassword, apiErr := s.repos.NewUserRepo().GetHashedPassword(ctx, identity.Actor.ID)
+	meds := s.mediators()
+
+	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
 	if apiErr != nil {
-		return tracing.Trace(span, apiErr)
+		return apiErr
 	}
 
-	matches, err := crypto.CompareBcryptHash(requesterHashedPassword, requesterPassword)
-	if err != nil {
-		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to verify password."))
-	}
-	if !matches {
-		return tracing.Trace(span, apierror.NewAuthenticationError("Incorrect password."))
-	}
+	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
+	case domain.RecoveryPointFinished:
+		cached, err := idempotency.UnmarshalCachedResponse[struct{}](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		if err != nil {
+			return tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
+		}
+		return cached.Error
 
-	// Verify that the target account user belongs to the requester's account.
-	// Include "role" so RoleType is populated for the scanner-role check below.
-	targetAccountUser, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, identity.Target.AccountID, accountUserID, []string{"role"})
-	if apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	// Passwords may only be rotated for scanner-role (scanning station) users.
-	if targetAccountUser.RoleType == nil || *targetAccountUser.RoleType != string(constants.RoleTypeScanner) {
-		return tracing.Trace(span, apierror.NewValidationError("Password updates are only supported for scanner-role users."))
-	}
-
-	// Hash the new password.
-	newHashedPassword, err := crypto.HashBcrypt(newPassword)
-	if err != nil {
-		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to hash new password."))
-	}
-
-	// Update the target user's password within a transaction.
-	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *accountUserSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewUserRepo().UpdatePassword(txCtx, targetAccountUser.UserID, newHashedPassword); apiErr != nil {
-			return apiErr
+	case domain.RecoveryPointStarted:
+		requesterHashedPassword, apiErr := s.repos.NewUserRepo().GetHashedPassword(ctx, identity.Actor.ID)
+		if apiErr != nil {
+			return tracing.Trace(span, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr))
 		}
 
-		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-			ServiceName:  domain.ServiceName,
-			Action:       constants.AuditActionUpdate,
-			ResourceType: constants.ObjectTypeAccountUser,
-			ResourceID:   targetAccountUser.ID,
-		}); apiErr != nil {
-			return apiErr
+		matches, err := crypto.CompareBcryptHash(requesterHashedPassword, requesterPassword)
+		if err != nil {
+			return tracing.Trace(span, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apierror.NewInternalError(err, "Failed to verify password.")))
+		}
+		if !matches {
+			return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apierror.NewAuthenticationError("Incorrect password."))
+		}
+
+		// Verify that the target account user belongs to the requester's account.
+		// Include "role" so RoleType is populated for the scanner-role check below.
+		targetAccountUser, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, identity.Target.AccountID, accountUserID, []string{"role"})
+		if apiErr != nil {
+			return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
+		}
+
+		// Passwords may only be rotated for scanner-role (scanning station) users.
+		if targetAccountUser.RoleType == nil || *targetAccountUser.RoleType != string(constants.RoleTypeScanner) {
+			return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apierror.NewValidationError("Password updates are only supported for scanner-role users."))
+		}
+
+		// Hash the new password.
+		newHashedPassword, err := crypto.HashBcrypt(newPassword)
+		if err != nil {
+			return tracing.Trace(span, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apierror.NewInternalError(err, "Failed to hash new password.")))
+		}
+
+		// Update the target user's password within a transaction.
+		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *accountUserSvcImpl) *apierror.APIError {
+			if apiErr := txSvc.repos.NewUserRepo().UpdatePassword(txCtx, targetAccountUser.UserID, newHashedPassword); apiErr != nil {
+				return apiErr
+			}
+
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       constants.AuditActionUpdate,
+				ResourceType: constants.ObjectTypeAccountUser,
+				ResourceID:   targetAccountUser.ID,
+			}); apiErr != nil {
+				return apiErr
+			}
+
+			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, struct{}{})
+		})
+		if apiErr != nil {
+			return tracing.Trace(span, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr))
 		}
 
 		return nil
-	})
-	if apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
 
-	return nil
+	default:
+		return tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
+	}
 }
 
 // checkSeatLimit checks whether the account has room for another active user.

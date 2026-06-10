@@ -23,6 +23,7 @@ type ShippingCaseSvc interface {
 }
 
 type ShippingCaseSvcConfig struct {
+	// CoreClient (required) is the core-service shipping-case gRPC client.
 	CoreClient pb.CoreShippingCaseServiceClient
 }
 

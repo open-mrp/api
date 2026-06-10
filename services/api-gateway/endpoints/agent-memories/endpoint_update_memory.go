@@ -18,9 +18,9 @@ type UpdateMemoryRequest struct {
 	// Memory ID.
 	ID string `path:"id" validate:"required"`
 	// Memory category (e.g. "preference", "fact", "instruction").
-	Category string `json:"category,omitzero" validate:"max=255"`
+	Category field.Optional[string] `json:"category,omitzero" validate:"omitempty,max=255"`
 	// Text content.
-	Content string `json:"content,omitzero"`
+	Content field.Optional[string] `json:"content,omitzero"`
 	// JSON metadata.
 	Metadata json.RawMessage `json:"metadata,omitzero"`
 	// Entity type this memory is scoped to (e.g. "customer", "product").
@@ -28,14 +28,14 @@ type UpdateMemoryRequest struct {
 	// Entity ID.
 	EntityID field.Optional[string] `json:"entity_id,omitzero" validate:"omitempty"`
 	// Importance score between 0 and 1.
-	Importance float64 `json:"importance,omitzero"`
+	Importance field.Optional[float64] `json:"importance,omitzero"`
 	// ISO 8601 expiration timestamp.
 	ExpiresAt field.Optional[string] `json:"expires_at,omitzero"`
 }
 
 var sampleUpdateMemoryRequest = &UpdateMemoryRequest{
-	Content:    "Customer prefers next-day shipping on all orders.",
-	Importance: 0.9,
+	Content:    field.Some("Customer prefers next-day shipping on all orders."),
+	Importance: field.Some(0.9),
 }
 
 func (*UpdateMemoryRequest) SchemaExample() any {

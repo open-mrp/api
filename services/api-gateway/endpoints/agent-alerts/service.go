@@ -25,6 +25,7 @@ type AgentAlertSvc interface {
 }
 
 type AgentAlertSvcConfig struct {
+	// AgentClient (required) is the agent-service gRPC client.
 	AgentClient pb.AgentServiceClient
 }
 

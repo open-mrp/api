@@ -14,6 +14,7 @@ type SandboxesEndpointGroup struct {
 }
 
 type SandboxesEndpointGroupConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient *grpcclient.CoreServiceClient
 }
 

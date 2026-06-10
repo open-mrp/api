@@ -1,6 +1,7 @@
 package apiresource
 
 import (
+	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/timeutil"
 )
@@ -71,4 +72,8 @@ var SampleOwnerAccount = &Owner{
 		CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 		UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 	},
+}
+
+func (*Owner) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleOwnerAccount)
 }

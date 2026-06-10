@@ -23,6 +23,7 @@ type UserSvc interface {
 }
 
 type UserSvcConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient pb.CoreServiceClient
 }
 
@@ -107,6 +108,7 @@ func (m *userSvcImpl) UploadUserPhoto(ctx context.Context, req *UploadUserPhotoR
 	}
 
 	return &apiresource.UserPhotoUploadResult{
+		Object:  constants.ObjectTypeUserPhotoUploadResult,
 		Success: resp.Success,
 	}, nil
 }
@@ -126,7 +128,8 @@ func (m *userSvcImpl) GetUserPhotoURL(ctx context.Context, req *GetUserPhotoURLR
 	}
 
 	return &apiresource.UserPhotoURL{
-		URL: resp.Url,
+		Object: constants.ObjectTypeUserPhotoURL,
+		URL:    resp.Url,
 	}, nil
 }
 

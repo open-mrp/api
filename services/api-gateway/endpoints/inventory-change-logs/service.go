@@ -25,6 +25,7 @@ type InventoryChangeLogSvc interface {
 }
 
 type InventoryChangeLogSvcConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient pb.CoreServiceClient
 }
 

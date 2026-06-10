@@ -25,6 +25,7 @@ type VolumeDiscountSvc interface {
 }
 
 type VolumeDiscountSvcConfig struct {
+	// CoreClient (required) is the core-service sales gRPC client.
 	CoreClient pb.CoreSalesServiceClient
 }
 

@@ -22,6 +22,7 @@ type UtilsSvc interface {
 }
 
 type UtilsSvcConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient pb.CoreServiceClient
 }
 
@@ -64,9 +65,7 @@ func (m *utilsSvcImpl) CheckDuplicate(ctx context.Context, req *CheckDuplicateRe
 	pbReq := &pb.CheckDuplicateRequest{
 		Type:         pbType,
 		RecordNumber: req.RecordNumber,
-	}
-	if req.CustomerID != nil {
-		pbReq.CustomerId = req.CustomerID
+		CustomerId:   req.CustomerID.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, utilsSvcTracer, "service.utils.check_duplicate", domain.ServiceName,
@@ -79,6 +78,7 @@ func (m *utilsSvcImpl) CheckDuplicate(ctx context.Context, req *CheckDuplicateRe
 	}
 
 	result := &apiresource.CheckDuplicateResult{
+		Object:      constants.ObjectTypeCheckDuplicateResult,
 		IsDuplicate: resp.IsDuplicate,
 	}
 	if resp.Message != nil {
@@ -120,15 +120,11 @@ func (m *utilsSvcImpl) EmailRecord(ctx context.Context, req *EmailRecordRequest)
 
 func (m *utilsSvcImpl) RequestDemo(ctx context.Context, req *RequestDemoRequest) (*apiresource.MessageResource, *apierror.APIError) {
 	pbReq := &pb.RequestDemoRequest{
-		Name:    req.Name,
-		Email:   req.Email,
-		Company: req.Company,
-	}
-	if req.PhoneNumber != nil {
-		pbReq.PhoneNumber = req.PhoneNumber
-	}
-	if req.Message != nil {
-		pbReq.Message = req.Message
+		Name:        req.Name,
+		Email:       req.Email,
+		Company:     req.Company,
+		PhoneNumber: req.PhoneNumber.Ptr(),
+		Message:     req.Message.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, utilsSvcTracer, "service.utils.request_demo", domain.ServiceName,
@@ -150,9 +146,7 @@ func (m *utilsSvcImpl) SubmitFeedback(ctx context.Context, req *SubmitFeedbackRe
 	pbReq := &pb.SubmitFeedbackRequest{
 		Question: req.Question,
 		Answer:   req.Answer,
-	}
-	if req.PageURL != nil {
-		pbReq.PageUrl = req.PageURL
+		PageUrl:  req.PageURL.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, utilsSvcTracer, "service.utils.submit_feedback", domain.ServiceName,

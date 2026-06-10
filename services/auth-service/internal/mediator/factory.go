@@ -8,11 +8,23 @@ import (
 
 // FactoryConfig declares the dependencies needed to build mediators.
 type MediatorFactoryConfig struct {
-	JWTSecret              string // #nosec G117 - Struct field, not a hardcoded credential
-	APIKeyPepper           []byte
-	NotificationPublisher  domain.NotificationPublisher
-	FrontendURL            string
-	CoreClient             domain.AuthCoreClient
+	// JWTSecret (required) signs and verifies JWT access tokens.
+	JWTSecret string // #nosec G117 - Struct field, not a hardcoded credential
+
+	// APIKeyPepper (required) is the pepper mixed into API key hashes.
+	APIKeyPepper []byte
+
+	// NotificationPublisher (required) publishes notification messages to the outbox.
+	NotificationPublisher domain.NotificationPublisher
+
+	// FrontendURL (required) is the dashboard base URL used in emails and redirects.
+	FrontendURL string
+
+	// CoreClient (required) is the core-service client used by the mediators.
+	CoreClient domain.AuthCoreClient
+
+	// DocAPIKeyEncryptionKey (optional; default: nil) encrypts doc API keys at rest.
+	// When empty, the doc API key mediator is not constructed.
 	DocAPIKeyEncryptionKey []byte
 }
 

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -15,12 +16,12 @@ type ResubmitEDIInvoiceRequest struct {
 	InvoiceID string `json:"invoice_id" validate:"required"`
 }
 
-var exampleResubmitEDIInvoiceRequest = &ResubmitEDIInvoiceRequest{
-	InvoiceID: "inv_abc123",
+var sampleResubmitEDIInvoiceRequest = &ResubmitEDIInvoiceRequest{
+	InvoiceID: apiresource.SampleInvoiceID,
 }
 
 func (*ResubmitEDIInvoiceRequest) SchemaExample() any {
-	return exampleResubmitEDIInvoiceRequest
+	return apiexample.ValidateAndMarshalToMap(sampleResubmitEDIInvoiceRequest)
 }
 
 // Resubmits an invoice via EDI. Fails if the invoice does not exist or EDI is not enabled on the account.

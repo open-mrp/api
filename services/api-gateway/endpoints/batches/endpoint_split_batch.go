@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Quantity input for a split operation.
@@ -31,9 +32,9 @@ type SplitBatchRequest struct {
 	// First split quantity.
 	Firsts SplitQuantityInput `json:"firsts" validate:"required"`
 	// Second split quantity.
-	Seconds *SplitQuantityInput `json:"seconds"`
+	Seconds field.Optional[SplitQuantityInput] `json:"seconds,omitzero"`
 	// Waste quantity.
-	Waste *SplitQuantityInput `json:"waste"`
+	Waste field.Optional[SplitQuantityInput] `json:"waste,omitzero"`
 	// Whether to close the original batches after splitting.
 	CloseBatch bool `json:"close_batch"`
 }

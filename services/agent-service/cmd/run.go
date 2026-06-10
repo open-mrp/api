@@ -138,7 +138,7 @@ func Run(
 	repoFactory := repository.NewRepoFactory(queries)
 
 	// Tool handler registry
-	toolRegistry := domain.NewToolHandlerRegistry()
+	toolRegistry := agents.NewToolHandlerRegistry()
 	agents.RegisterTools(toolRegistry)
 
 	// Runner service
@@ -192,7 +192,7 @@ func Run(
 	if err != nil {
 		return err
 	}
-	agentgrpc.NewAgentHandler(server.Server(), runner, repoFactory, repoFactory.NewOutboxRepo(), agentDefSvc, planGate)
+	agentgrpc.NewAgentHandler(server.Server(), repoFactory, agentDefSvc, planGate)
 
 	logger.Info("Agent service starting", "port", cfg.Port)
 

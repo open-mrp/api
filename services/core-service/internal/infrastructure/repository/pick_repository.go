@@ -452,7 +452,7 @@ func (r *pickRepoImpl) GetShipmentNumbers(ctx context.Context, params domain.Get
 
 	var searchQuery gosql.NullString
 	if params.Query != nil && *params.Query != "" {
-		searchQuery = gosql.NullString{String: "%" + *params.Query + "%", Valid: true}
+		searchQuery = gosql.NullString{String: "%" + db.EscapeLike(*params.Query) + "%", Valid: true}
 	}
 
 	limit := params.Limit

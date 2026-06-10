@@ -69,7 +69,7 @@ func (c *AuditEventConsumer) handleMessage(ctx context.Context, msg amqp091.Deli
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
-	if identity.Target == nil {
+	if !identity.IsTargetAccountSet() {
 		return tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
 	}
 	if identity.Actor == nil {

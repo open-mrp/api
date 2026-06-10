@@ -34,11 +34,11 @@ func TestAddresses_UpdateClearNullableFields(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 	got := parseJSON(getBody)
-	assert.Nil(t, got["email"])
-	assert.Nil(t, got["phone"])
+	assertNilField(t, got, "email")
+	assertNilField(t, got, "phone")
 	geo := jsonObject(got, "geolocation")
 	require.NotNil(t, geo)
-	assert.Nil(t, geo["street_line_2"])
+	assertNilField(t, geo, "street_line_2")
 }
 
 func TestParts_UpdateClearDescriptionAndNotes(t *testing.T) {
@@ -64,8 +64,8 @@ func TestParts_UpdateClearDescriptionAndNotes(t *testing.T) {
 	requireStatus(t, 200, getStatus, getBody)
 	item := jsonObject(parseJSON(getBody), "item")
 	require.NotNil(t, item)
-	assert.Nil(t, item["description"])
-	assert.Nil(t, item["notes"])
+	assertNilField(t, item, "description")
+	assertNilField(t, item, "notes")
 }
 
 func TestScanningStations_UpdateClearNotes(t *testing.T) {

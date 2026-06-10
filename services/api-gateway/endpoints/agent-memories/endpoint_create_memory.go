@@ -26,7 +26,7 @@ type CreateMemoryRequest struct {
 	// Entity ID.
 	EntityID field.Optional[string] `json:"entity_id,omitzero" validate:"omitempty"`
 	// Importance score between 0 and 1.
-	Importance float64 `json:"importance,omitzero"`
+	Importance field.Optional[float64] `json:"importance,omitzero"`
 	// ISO 8601 expiration timestamp.
 	ExpiresAt field.Optional[string] `json:"expires_at,omitzero"`
 }
@@ -35,7 +35,7 @@ var sampleCreateMemoryRequest = &CreateMemoryRequest{
 	Category:   "preference",
 	Content:    "Customer prefers express shipping on all orders.",
 	Metadata:   json.RawMessage(`{"source": "support_ticket"}`),
-	Importance: 0.8,
+	Importance: field.Some(0.8),
 }
 
 func (*CreateMemoryRequest) SchemaExample() any {

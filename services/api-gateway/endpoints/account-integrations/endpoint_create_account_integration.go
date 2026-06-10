@@ -15,7 +15,7 @@ import (
 type CreateAccountIntegrationRequest struct {
 	// Display name of the integration.
 	Name string `json:"name" validate:"required,max=255"`
-	// Integration provider code (e.g. "stripe", "shippo").
+	// Integration provider code.
 	IntegrationCode constants.IntegrationCode `json:"integration_code" validate:"required"`
 	// Credentials JSON string containing provider-specific keys.
 	Credentials string `json:"credentials" validate:"required" sensitive:"true"`

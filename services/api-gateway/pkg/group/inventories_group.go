@@ -14,6 +14,7 @@ type InventoriesEndpointGroup struct {
 }
 
 type InventoriesEndpointGroupConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient *grpcclient.CoreServiceClient
 }
 
@@ -36,7 +37,7 @@ func (*InventoriesEndpointGroup) Materialize(config *InventoriesEndpointGroupCon
 	inner := &apiendpoint.APIEndpointGroup{
 		Title:        "Inventories",
 		Description:  "List item inventories with on-hand quantities.",
-		ResourceType: &apiresource.ListInventoriesResponse{},
+		ResourceType: &apiresource.InventoryItem{},
 	}
 
 	listInventoriesEndpoint := apiendpoint.From(&inventoryep.ListInventoriesEndpoint{}).WithService(inner, inventorySvc)

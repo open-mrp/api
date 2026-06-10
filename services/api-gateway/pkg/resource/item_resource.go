@@ -120,6 +120,8 @@ func (*ItemCosts) SchemaExample() any {
 
 // ItemTrendPoint is a single trend data point.
 type ItemTrendPoint struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=item_trend_point"`
 	// Timestamp of the data point.
 	OccurredAt time.Time `json:"occurred_at" validate:"required"`
 	// Value at this date.
@@ -141,6 +143,7 @@ var SampleItemTrends = &ItemTrends{
 	TrendType: "on_hand",
 	Points: NewList([]ItemTrendPoint{
 		{
+			Object:     constants.ObjectTypeItemTrendPoint,
 			OccurredAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 			Value:      "100.000000000000000000000000000000",
 		},

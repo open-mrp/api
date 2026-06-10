@@ -157,6 +157,50 @@ func (s *DocAPIKeySvcTestSuite) TestGetOrCreateDocAPIKey_CachedResponse() {
 	s.Equal(testAPIKeyTypeID, result.APIKey.TypeID)
 }
 
+func (s *DocAPIKeySvcTestSuite) TestGetOrCreateDocAPIKey_RetriesOnConcurrentCreate() {
+	ctx := s.newAdminCtx()
+
+	idempotencyKey := &domain.IdempotencyKey{
+		TypeID:        "idk_test",
+		RecoveryPoint: domain.RecoveryPointStarted,
+	}
+
+	expectedResult := &domain.GetOrCreateDocAPIKeyResult{
+		APIKeySecret: testAPIKeySecret,
+		APIKey: &apikey.APIKey{
+			TypeID: testAPIKeyTypeID,
+		},
+	}
+
+	s.idempotencyMed.EXPECT().
+		UpsertIdempotencyKey(gomock.Any(), gomock.Any()).
+		Return(idempotencyKey, nil).
+		Times(1)
+
+	// First resolve loses the unique-key race; the retry returns the winner's key.
+	gomock.InOrder(
+		s.docAPIKeyMed.EXPECT().
+			Resolve(gomock.Any(), testSandboxAccountID).
+			Return(nil, apierror.NewResourceExistsError("Resource already exists.")).
+			Times(1),
+		s.docAPIKeyMed.EXPECT().
+			Resolve(gomock.Any(), testSandboxAccountID).
+			Return(expectedResult, nil).
+			Times(1),
+	)
+
+	s.idempotencyMed.EXPECT().
+		CacheSuccessResponse(gomock.Any(), idempotencyKey.TypeID, gomock.Any()).
+		Return(nil).
+		Times(1)
+
+	result, apiErr := s.svc.GetOrCreateDocAPIKey(ctx)
+
+	s.Nil(apiErr)
+	s.NotNil(result)
+	s.Equal(testAPIKeySecret, result.APIKeySecret)
+}
+
 func (s *DocAPIKeySvcTestSuite) TestGetOrCreateDocAPIKey_ResolveError_CachesError() {
 	ctx := s.newAdminCtx()
 

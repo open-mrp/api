@@ -18,6 +18,7 @@ type sandboxMedImpl struct {
 }
 
 type SandboxMedConfig struct {
+	// Repos (required) is the repository factory for sandbox operations.
 	Repos domain.RepoFactory
 }
 

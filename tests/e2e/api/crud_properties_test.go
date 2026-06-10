@@ -137,7 +137,7 @@ func TestProperties_IncludeAttributes(t *testing.T) {
 	assert.Equal(t, "list", jsonField(attrs, "object"))
 }
 
-func TestProperties_Idempotent(t *testing.T) {
+func TestProperties_CreateIdempotent(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-idem-prop")
 	idemKey := newIdempotencyKey()

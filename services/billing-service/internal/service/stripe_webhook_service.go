@@ -15,9 +15,15 @@ import (
 var stripeWebhookSvcTracer = tracing.GetTracer("billing-service.stripe_webhook_service")
 
 type StripeWebhookSvcConfig struct {
-	Repos         domain.RepoFactory
-	StripeClient  domain.StripeClient
-	VerboseErrors bool // when true, include underlying Stripe error in 400 response (e.g. dev)
+	// Repos (required) is the repository factory for billing persistence.
+	Repos domain.RepoFactory
+
+	// StripeClient (required) is the Stripe API client used to verify webhooks.
+	StripeClient domain.StripeClient
+
+	// VerboseErrors (optional; default: false) includes the underlying Stripe
+	// error in 400 responses when true (e.g. in dev).
+	VerboseErrors bool
 }
 
 type stripeWebhookSvcImpl struct {

@@ -23,8 +23,13 @@ func (p *ParsedAPIKey) String() string {
 
 // APIKeyGenConfig holds optional overrides for key generation strengths.
 type APIKeyGenConfig struct {
+	// SecretKeyStrength (optional; default: KeyStrengthHigh) controls the length of
+	// the generated secret portion of the key.
 	SecretKeyStrength KeyStrength
-	IDKeyStrength     KeyStrength
+
+	// IDKeyStrength (optional; default: KeyStrengthLow) controls the length of the
+	// generated ID portion of the key.
+	IDKeyStrength KeyStrength
 }
 
 const (

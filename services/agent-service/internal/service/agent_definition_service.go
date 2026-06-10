@@ -63,21 +63,36 @@ type agentDefSvcImpl struct {
 }
 
 type AgentDefinitionSvcConfig struct {
-	Repos           domain.RepoFactory
+	// Repos (required) is the repository factory for agent persistence.
+	Repos domain.RepoFactory
+
+	// MediatorFactory (required) builds the mediators used for access checks.
 	MediatorFactory domain.MediatorFactory
-	TxManager       TransactionManager
-	PlanGate        PlanGate
+
+	// TxManager (required) wraps multi-step operations in database transactions.
+	TxManager TransactionManager
+
+	// PlanGate (optional; default: nil) checks whether an account's plan allows
+	// agents. When nil, plan gating is skipped and all accounts are allowed.
+	PlanGate PlanGate
+}
+
+func (c *AgentDefinitionSvcConfig) validate() error {
+	if c.Repos == nil {
+		return fmt.Errorf("agent definition service: repos is required")
+	}
+	if c.MediatorFactory == nil {
+		return fmt.Errorf("agent definition service: mediator factory is required")
+	}
+	if c.TxManager == nil {
+		return fmt.Errorf("agent definition service: tx manager is required")
+	}
+	return nil
 }
 
 func NewAgentDefinitionSvc(config *AgentDefinitionSvcConfig) domain.AgentDefinitionSvc {
-	if config.Repos == nil {
-		panic(fmt.Errorf("agent definition service: repos is required"))
-	}
-	if config.MediatorFactory == nil {
-		panic(fmt.Errorf("agent definition service: mediator factory is required"))
-	}
-	if config.TxManager == nil {
-		panic(fmt.Errorf("agent definition service: tx manager is required"))
+	if err := config.validate(); err != nil {
+		panic(err)
 	}
 
 	return &agentDefSvcImpl{
@@ -179,7 +194,7 @@ func (s *agentDefSvcImpl) CreateCustomAgent(ctx context.Context, params domain.C
 				Name:           params.Name,
 				Slug:           params.Slug,
 				Description:    agentdb.PgText(params.Description),
-				DefinitionType: domain.DefinitionTypeCustom,
+				DefinitionType: string(constants.AgentDefinitionTypeCustom),
 				CategoryCode:   params.CategoryCode,
 				TriggerType:    params.TriggerType,
 				IsActive:       true,
@@ -307,7 +322,7 @@ func (s *agentDefSvcImpl) UpdateCustomAgent(ctx context.Context, params domain.U
 			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
 				apierror.NewResourceNotFoundError("Agent definition not found: "+params.AgentDefinitionID))
 		}
-		if def.DefinitionType != domain.DefinitionTypeCustom {
+		if def.DefinitionType != string(constants.AgentDefinitionTypeCustom) {
 			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
 				apierror.NewAuthorizationError("Cannot edit system agent definitions."))
 		}
@@ -459,7 +474,7 @@ func (s *agentDefSvcImpl) DeleteCustomAgent(ctx context.Context, params domain.D
 		}
 		return tracing.Trace(span, apierror.NewResourceNotFoundError("Agent definition not found: "+params.AgentDefinitionID))
 	}
-	if def.DefinitionType != domain.DefinitionTypeCustom {
+	if def.DefinitionType != string(constants.AgentDefinitionTypeCustom) {
 		return tracing.Trace(span, apierror.NewAuthorizationError("Cannot delete system agent definitions."))
 	}
 	if !def.AccountID.Valid || def.AccountID.String != accountID {
@@ -1031,7 +1046,7 @@ func (s *agentDefSvcImpl) TriggerRun(ctx context.Context, params domain.TriggerR
 				AgentDefinitionID:       def.ID,
 				AgentConfigID:           agentdb.PgText(config.ID),
 				StatusCode:              domain.RunStatusPending,
-				TriggerType:             domain.TriggerManual,
+				TriggerType:             string(constants.AgentTriggerTypeManual),
 				Input:                   runInput,
 				Output:                  json.RawMessage(`{}`),
 				TriggeredByActorID:      agentdb.PgText(identity.Actor.ID),
@@ -1045,7 +1060,7 @@ func (s *agentDefSvcImpl) TriggerRun(ctx context.Context, params domain.TriggerR
 				AgentRunID:    runID,
 				AgentConfigID: config.ID,
 				AccountID:     accountID,
-				TriggerType:   domain.TriggerManual,
+				TriggerType:   string(constants.AgentTriggerTypeManual),
 			}
 			dataBytes, _ := json.Marshal(data)
 
@@ -1379,6 +1394,183 @@ func (s *agentDefSvcImpl) CreateAgentMemory(ctx context.Context, params domain.C
 	}
 }
 
+// UpdateAgentMemory updates an existing agent memory record, with idempotency support.
+func (s *agentDefSvcImpl) UpdateAgentMemory(ctx context.Context, params domain.UpdateAgentMemoryParams) (*domain.AgentMemoryInfo, *apierror.APIError) {
+	ctx, span := agentDefSvcTracer.Start(ctx, "service.agent_definition.update_agent_memory")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, apierror.NewInvariantViolationError("Identity not found in context.")
+	}
+
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
+	}
+	accountID := identity.Target.AccountID
+
+	meds := s.mediators()
+
+	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
+	case domain.RecoveryPointFinished:
+		cached, err := idempotency.UnmarshalCachedResponse[domain.AgentMemoryInfo](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		if err != nil {
+			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
+		}
+		return cached.Data, cached.Error
+
+	case domain.RecoveryPointStarted:
+		var metadata []byte
+		if params.MetadataJSON != "" {
+			metadata = []byte(params.MetadataJSON)
+		} else {
+			metadata = []byte("{}")
+		}
+
+		var expiresAt pgtype.Timestamptz
+		if params.ExpiresAt != "" {
+			t, parseErr := parseTimestamp(params.ExpiresAt)
+			if parseErr != nil {
+				return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
+					apierror.NewValidationErrorWithParam("Invalid expires_at: "+parseErr.Error(), "expires_at"))
+			}
+			expiresAt = pgtype.Timestamptz{Time: t, Valid: true}
+		}
+
+		var result *domain.AgentMemoryInfo
+		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *agentDefSvcImpl) *apierror.APIError {
+			memoryRepo := txSvc.repos.NewAgentMemoryRepo()
+
+			oldMemory, getErr := memoryRepo.GetByID(txCtx, params.MemoryID)
+			if getErr != nil {
+				if apierror.IsNotFound(getErr) {
+					return apierror.NewResourceNotFoundError("Agent memory not found.")
+				}
+				return getErr
+			}
+			if oldMemory.AccountID != accountID {
+				return apierror.NewResourceNotFoundError("Agent memory not found.")
+			}
+			old := sqlcMemoryToDomain(oldMemory)
+
+			if updateErr := memoryRepo.Update(txCtx, sqlc.UpdateAgentMemoryParams{
+				ID:         params.MemoryID,
+				Category:   params.Category,
+				Content:    params.Content,
+				Metadata:   metadata,
+				EntityType: pgtype.Text{String: params.EntityType, Valid: params.EntityType != ""},
+				EntityID:   pgtype.Text{String: params.EntityID, Valid: params.EntityID != ""},
+				Importance: params.Importance,
+				ExpiresAt:  expiresAt,
+				AccountID:  accountID,
+			}); updateErr != nil {
+				return updateErr
+			}
+
+			memory, getErr := memoryRepo.GetByID(txCtx, params.MemoryID)
+			if getErr != nil {
+				return getErr
+			}
+			result = sqlcMemoryToDomain(memory)
+
+			changes := audit.ComputeChanges(old, result)
+
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       constants.AuditActionUpdate,
+				ResourceType: constants.ObjectTypeAgentMemory,
+				ResourceID:   result.ID,
+				Changes:      changes,
+			}); apiErr != nil {
+				return apiErr
+			}
+
+			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
+		})
+
+		if apiErr != nil {
+			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
+		}
+
+		return result, nil
+
+	default:
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
+	}
+}
+
+// DeleteAgentMemory deletes an agent memory record.
+//
+//  1. Extract the caller's identity and verify it is an internal actor with a target account.
+//  2. Look up the memory; rows that are missing or owned by another account are
+//     treated as already deleted (idempotent no-op success).
+//  3. Within a transaction, delete the memory and publish a delete audit event.
+func (s *agentDefSvcImpl) DeleteAgentMemory(ctx context.Context, params domain.DeleteAgentMemoryParams) *apierror.APIError {
+	ctx, span := agentDefSvcTracer.Start(ctx, "service.agent_definition.delete_agent_memory")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return apierror.NewInvariantViolationError("Identity not found in context.")
+	}
+
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if !identity.IsTargetAccountSet() {
+		return tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
+	}
+	accountID := identity.Target.AccountID
+
+	apiErr := s.withTx(ctx, func(txCtx context.Context, txSvc *agentDefSvcImpl) *apierror.APIError {
+		memoryRepo := txSvc.repos.NewAgentMemoryRepo()
+
+		oldMemory, getErr := memoryRepo.GetByID(txCtx, params.MemoryID)
+		if getErr != nil {
+			if apierror.IsNotFound(getErr) {
+				// The account-scoped delete has always been a silent no-op for
+				// missing rows; keep repeat deletes idempotent successes.
+				return nil
+			}
+			return getErr
+		}
+		if oldMemory.AccountID != accountID {
+			// A memory owned by another account is invisible to the caller;
+			// treat it as already deleted rather than leaking its existence.
+			return nil
+		}
+		old := sqlcMemoryToDomain(oldMemory)
+
+		if deleteErr := memoryRepo.Delete(txCtx, params.MemoryID, accountID); deleteErr != nil {
+			return deleteErr
+		}
+
+		changes := audit.ComputeChanges(old, (*domain.AgentMemoryInfo)(nil))
+
+		return audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+			ServiceName:  domain.ServiceName,
+			Action:       constants.AuditActionDelete,
+			ResourceType: constants.ObjectTypeAgentMemory,
+			ResourceID:   old.ID,
+			Changes:      changes,
+		})
+	})
+
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
+}
+
 // AcknowledgeAgentAlert acknowledges an agent alert, with idempotency support.
 func (s *agentDefSvcImpl) AcknowledgeAgentAlert(ctx context.Context, params domain.AcknowledgeAgentAlertParams) (*domain.AgentAlertInfo, *apierror.APIError) {
 	ctx, span := agentDefSvcTracer.Start(ctx, "service.agent_definition.acknowledge_agent_alert")
@@ -1702,7 +1894,7 @@ func sqlToAgentDefinitionInfo(def *sqlc.AgentDefinition, tools []sqlc.ListToolsB
 		DefinitionType: def.DefinitionType,
 		CategoryCode:   def.CategoryCode,
 		TriggerType:    def.TriggerType,
-		IsEditable:     def.DefinitionType == domain.DefinitionTypeCustom,
+		IsEditable:     def.DefinitionType == string(constants.AgentDefinitionTypeCustom),
 		Config:         config,
 		RoleID:         roleID,
 		Tools:          domainTools,

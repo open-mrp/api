@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"slices"
 	"strings"
 
 	"github.com/shopspring/decimal"
@@ -29,9 +30,14 @@ type itemSvcImpl struct {
 }
 
 type ItemSvcConfig struct {
-	Repos           domain.RepoFactory
+	// Repos (required) is the repository factory.
+	Repos domain.RepoFactory
+
+	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
-	TxManager       TransactionManager
+
+	// TxManager (required) wraps multi-step operations in database transactions.
+	TxManager TransactionManager
 }
 
 func (c *ItemSvcConfig) validate() error {
@@ -508,6 +514,20 @@ func (s *itemSvcImpl) withTx(ctx context.Context, fn func(context.Context, *item
 	})
 }
 
+// itemAuditIncludes merges user-requested includes with the includes required
+// for correct audit change tracking (attributes).
+func itemAuditIncludes(userIncludes []string) []string {
+	auditRequired := []string{"attributes"}
+	merged := make([]string, len(auditRequired))
+	copy(merged, auditRequired)
+	for _, inc := range userIncludes {
+		if !slices.Contains(merged, inc) {
+			merged = append(merged, inc)
+		}
+	}
+	return merged
+}
+
 // UpdateItem partially updates an item (sku, description, notes).
 func (s *itemSvcImpl) UpdateItem(ctx context.Context, params domain.UpdateItemParams) (*domain.Item, *apierror.APIError) {
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.update")
@@ -644,6 +664,17 @@ func (s *itemSvcImpl) AddItemAttribute(ctx context.Context, itemID, attributeID 
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *itemSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewItemRepo()
 
+			auditIncs := itemAuditIncludes(includes)
+
+			old, apiErr := txRepo.Get(txCtx, domain.GetItemParams{
+				AccountID: accountID,
+				ItemID:    itemID,
+				Includes:  auditIncs,
+			})
+			if apiErr != nil {
+				return apiErr
+			}
+
 			if apiErr := txRepo.AddAttribute(txCtx, domain.AddItemAttributeParams{
 				AccountID:   accountID,
 				ItemID:      itemID,
@@ -655,12 +686,28 @@ func (s *itemSvcImpl) AddItemAttribute(ctx context.Context, itemID, attributeID 
 			item, apiErr := txRepo.Get(txCtx, domain.GetItemParams{
 				AccountID: accountID,
 				ItemID:    itemID,
-				Includes:  includes,
+				Includes:  auditIncs,
 			})
 			if apiErr != nil {
 				return apiErr
 			}
 			result = item
+
+			changes := audit.ComputeChanges(old, item)
+
+			// Adding an already-associated attribute is a documented no-op;
+			// skip the publish when nothing actually changed.
+			if len(changes) > 0 {
+				if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+					ServiceName:  domain.ServiceName,
+					Action:       constants.AuditActionUpdate,
+					ResourceType: constants.ObjectTypeItem,
+					ResourceID:   item.ID,
+					Changes:      changes,
+				}); apiErr != nil {
+					return apiErr
+				}
+			}
 
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
 		})
@@ -715,6 +762,17 @@ func (s *itemSvcImpl) RemoveItemAttribute(ctx context.Context, itemID, attribute
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *itemSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewItemRepo()
 
+			auditIncs := itemAuditIncludes(includes)
+
+			old, apiErr := txRepo.Get(txCtx, domain.GetItemParams{
+				AccountID: accountID,
+				ItemID:    itemID,
+				Includes:  auditIncs,
+			})
+			if apiErr != nil {
+				return apiErr
+			}
+
 			if apiErr := txRepo.RemoveAttribute(txCtx, domain.RemoveItemAttributeParams{
 				AccountID:   accountID,
 				ItemID:      itemID,
@@ -726,12 +784,24 @@ func (s *itemSvcImpl) RemoveItemAttribute(ctx context.Context, itemID, attribute
 			item, apiErr := txRepo.Get(txCtx, domain.GetItemParams{
 				AccountID: accountID,
 				ItemID:    itemID,
-				Includes:  includes,
+				Includes:  auditIncs,
 			})
 			if apiErr != nil {
 				return apiErr
 			}
 			result = item
+
+			changes := audit.ComputeChanges(old, item)
+
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       constants.AuditActionUpdate,
+				ResourceType: constants.ObjectTypeItem,
+				ResourceID:   item.ID,
+				Changes:      changes,
+			}); apiErr != nil {
+				return apiErr
+			}
 
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
 		})
@@ -807,9 +877,12 @@ func (s *itemSvcImpl) ChangeItemCategory(ctx context.Context, itemID, categoryID
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *itemSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewItemRepo()
 
+			auditIncs := itemAuditIncludes(includes)
+
 			itemForValidation, apiErr := txRepo.Get(txCtx, domain.GetItemParams{
 				AccountID: accountID,
 				ItemID:    itemID,
+				Includes:  auditIncs,
 			})
 			if apiErr != nil {
 				return apiErr
@@ -858,12 +931,28 @@ func (s *itemSvcImpl) ChangeItemCategory(ctx context.Context, itemID, categoryID
 			item, apiErr := txRepo.Get(txCtx, domain.GetItemParams{
 				AccountID: accountID,
 				ItemID:    itemID,
-				Includes:  includes,
+				Includes:  auditIncs,
 			})
 			if apiErr != nil {
 				return apiErr
 			}
 			result = item
+
+			changes := audit.ComputeChanges(itemForValidation, item)
+
+			// Re-assigning the item's current category is a no-op; skip the
+			// publish when nothing actually changed.
+			if len(changes) > 0 {
+				if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+					ServiceName:  domain.ServiceName,
+					Action:       constants.AuditActionUpdate,
+					ResourceType: constants.ObjectTypeItem,
+					ResourceID:   item.ID,
+					Changes:      changes,
+				}); apiErr != nil {
+					return apiErr
+				}
+			}
 
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
 		})

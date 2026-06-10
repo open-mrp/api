@@ -29,10 +29,17 @@ type docAPIKeyMedImpl struct {
 }
 
 type DocAPIKeyMedConfig struct {
-	Repos         domain.RepoFactory
+	// Repos (required) is the repository factory for doc API key persistence.
+	Repos domain.RepoFactory
+
+	// EncryptionKey (required) encrypts doc API keys at rest.
 	EncryptionKey []byte
-	CoreClient    domain.AuthCoreClient
-	APIKeyMed     domain.APIKeyMed
+
+	// CoreClient (required) is the core-service client used to resolve accounts.
+	CoreClient domain.AuthCoreClient
+
+	// APIKeyMed (required) manages the underlying API keys.
+	APIKeyMed domain.APIKeyMed
 }
 
 func (c *DocAPIKeyMedConfig) validate() error {
@@ -146,6 +153,7 @@ func (m *docAPIKeyMedImpl) SyncRotatedAPIKey(ctx context.Context, input domain.D
 	if _, createErr := m.repos.NewDocAPIKeyRepo().Create(ctx, &apikey.DocAPIKey{
 		TypeID:          typeID,
 		APIKeyID:        input.NewAPIKey.TypeID,
+		OwnerAccountID:  input.NewAPIKey.OwnerAccountID,
 		EncryptedSecret: encrypted,
 	}); createErr != nil {
 		return tracing.Trace(span, createErr)
@@ -211,6 +219,7 @@ func (m *docAPIKeyMedImpl) rotateDocAPIKey(ctx context.Context, sandboxAccountID
 	if _, createErr := m.repos.NewDocAPIKeyRepo().Create(ctx, &apikey.DocAPIKey{
 		TypeID:          typeID,
 		APIKeyID:        newAPIKey.TypeID,
+		OwnerAccountID:  sandboxAccountID,
 		EncryptedSecret: encrypted,
 	}); createErr != nil {
 		return nil, tracing.Trace(span, createErr)
@@ -258,10 +267,13 @@ func (m *docAPIKeyMedImpl) createDocAPIKey(ctx context.Context, sandboxAccountID
 		return nil, tracing.Trace(span, genErr)
 	}
 
-	// Create a new doc API key record for the sandbox account.
+	// Create a new doc API key record for the sandbox account. The unique key
+	// on owner_account_id makes concurrent creates lose with a ResourceExists
+	// error, which the service retries to return the winner's key.
 	if _, createDocErr := m.repos.NewDocAPIKeyRepo().Create(ctx, &apikey.DocAPIKey{
 		TypeID:          typeID,
 		APIKeyID:        apiKey.TypeID,
+		OwnerAccountID:  sandboxAccountID,
 		EncryptedSecret: encrypted,
 	}); createDocErr != nil {
 		return nil, tracing.Trace(span, createDocErr)

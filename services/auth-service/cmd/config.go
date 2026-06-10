@@ -59,8 +59,13 @@ type config struct {
 	// PlatformServiceURL (required) is the platform service address for gRPC.
 	PlatformServiceURL string
 
-	// DocAPIKeyEncryptionKey (optional) is the 32-byte AES-256 key used to encrypt doc API key secrets.
+	// DocAPIKeyEncryptionKey (required) is the 32-byte AES-256 key used to encrypt doc API
+	// key secrets, decoded from the 64-character hex DOC_API_KEY_ENCRYPTION_KEY env var.
 	DocAPIKeyEncryptionKey []byte
+
+	// docAPIKeyEncryptionKeyErr records a DOC_API_KEY_ENCRYPTION_KEY decode failure from
+	// withDefaults so validate can surface it as a component-scoped error.
+	docAPIKeyEncryptionKeyErr error
 
 	// BillingServiceURL (optional; default: "billing-service:9092") is the billing service address for gRPC.
 	BillingServiceURL string
@@ -83,10 +88,7 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		port = p
 	}
 
-	key, err := crypto.DecodeHexKey256(env.GetEnv(envDocAPIKeyEncryptionKey, getenv))
-	if err != nil {
-		panic(err)
-	}
+	key, keyErr := crypto.DecodeHexKey256(env.GetEnv(envDocAPIKeyEncryptionKey, getenv))
 
 	platformMode := constants.PlatformModeProduction
 	if p := env.GetEnv(envPlatformMode, getenv); p != "" {
@@ -106,6 +108,8 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		BillingServiceURL:      cmp.Or(env.GetEnv(envBillingServiceURL, getenv), defaultBillingServiceURL),
 		CursorHMACKey:          []byte(env.GetEnv(envCursorHMACKey, getenv)),
 		PlatformMode:           platformMode,
+
+		docAPIKeyEncryptionKeyErr: keyErr,
 	}
 }
 
@@ -113,6 +117,9 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 func (c *config) validate() error {
 	if c == nil {
 		return fmt.Errorf("auth-service: config is nil")
+	}
+	if !c.PlatformMode.IsValid() {
+		return fmt.Errorf("auth-service: the provided platform mode is invalid: %s", c.PlatformMode)
 	}
 	if c.DBURL == "" {
 		return fmt.Errorf("auth-service: the provided database URI is empty")
@@ -128,6 +135,12 @@ func (c *config) validate() error {
 	}
 	if len(c.CursorHMACKey) == 0 {
 		return fmt.Errorf("auth-service: CURSOR_HMAC_KEY is required")
+	}
+	if c.PlatformServiceURL == "" {
+		return fmt.Errorf("auth-service: PLATFORM_SERVICE_URL is required")
+	}
+	if c.docAPIKeyEncryptionKeyErr != nil {
+		return fmt.Errorf("auth-service: DOC_API_KEY_ENCRYPTION_KEY must be a 64-character hex AES-256 key: %w", c.docAPIKeyEncryptionKeyErr)
 	}
 	return nil
 }

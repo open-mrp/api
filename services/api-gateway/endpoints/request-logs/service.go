@@ -23,6 +23,7 @@ type RequestLogSvc interface {
 }
 
 type RequestLogSvcConfig struct {
+	// LoggingClient (required) is the platform-service logging gRPC client.
 	LoggingClient pb.LoggingServiceClient
 }
 

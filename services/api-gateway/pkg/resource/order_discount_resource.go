@@ -24,7 +24,7 @@ type OrderDiscount struct {
 	Percentage string `json:"percentage" validate:"required" format:"decimal"`
 	// Fixed amount as a decimal string.
 	Amount string `json:"amount" validate:"required" format:"decimal"`
-	// Discount type: "percentage" or "amount".
+	// Discount type.
 	DiscountType constants.OrderDiscountType `json:"discount_type" validate:"required"`
 	// Number of orders using this discount.
 	OrderCount int32 `json:"order_count" validate:"required"`

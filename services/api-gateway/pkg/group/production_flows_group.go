@@ -14,6 +14,7 @@ type ProductionFlowsEndpointGroup struct {
 }
 
 type ProductionFlowsEndpointGroupConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient *grpcclient.CoreServiceClient
 }
 

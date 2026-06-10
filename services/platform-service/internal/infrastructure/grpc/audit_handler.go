@@ -48,7 +48,7 @@ func (h *auditHandler) CreateAuditEvent(ctx context.Context, req *pb.CreateAudit
 	if !ok || identity == nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
 	}
-	if identity.Target == nil {
+	if !identity.IsTargetAccountSet() {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account header is required."))
 	}
 

@@ -53,8 +53,22 @@ func sanitizeLogValue(s string) string {
 var stripeClientTracer = tracing.GetTracer("billing-service.stripe_client")
 
 type ClientConfig struct {
+	// WebhookSecret (required) is the Stripe webhook signing secret used to
+	// verify incoming webhook payloads.
 	WebhookSecret string
-	APIKey        string // #nosec G117 - Config field populated from env var at startup
+
+	// APIKey (required) is the Stripe secret API key.
+	APIKey string // #nosec G117 - Config field populated from env var at startup
+}
+
+func (c *ClientConfig) validate() error {
+	if c.WebhookSecret == "" {
+		return fmt.Errorf("stripe client: webhook secret is required")
+	}
+	if c.APIKey == "" {
+		return fmt.Errorf("stripe client: api key is required")
+	}
+	return nil
 }
 
 type stripeClientImpl struct {
@@ -62,6 +76,10 @@ type stripeClientImpl struct {
 }
 
 func NewStripeClient(cfg *ClientConfig) domain.StripeClient {
+	if err := cfg.validate(); err != nil {
+		panic(err)
+	}
+
 	stripe.Key = cfg.APIKey
 
 	httpClient := &http.Client{

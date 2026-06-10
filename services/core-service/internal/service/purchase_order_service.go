@@ -28,9 +28,17 @@ type purchaseOrderSvcImpl struct {
 }
 
 type PurchaseOrderSvcConfig struct {
-	Repos                 domain.RepoFactory
-	MediatorFactory       domain.MediatorFactory
-	TxManager             TransactionManager
+	// Repos (required) is the repository factory.
+	Repos domain.RepoFactory
+
+	// MediatorFactory (required) builds the mediators used by this service.
+	MediatorFactory domain.MediatorFactory
+
+	// TxManager (required) wraps multi-step operations in database transactions.
+	TxManager TransactionManager
+
+	// NotificationPublisher (optional; default: nil) publishes notification messages to the outbox. It is not validated
+	// at construction.
 	NotificationPublisher domain.NotificationPublisher
 }
 

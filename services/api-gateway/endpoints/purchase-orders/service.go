@@ -33,7 +33,10 @@ type PurchaseOrderSvc interface {
 }
 
 type PurchaseOrderSvcConfig struct {
-	CoreClient  pb.CorePurchaseServiceClient
+	// CoreClient (required) is the core-service purchasing gRPC client.
+	CoreClient pb.CorePurchaseServiceClient
+
+	// SalesClient (required) is the core-service sales gRPC client.
 	SalesClient pb.CoreSalesServiceClient
 }
 

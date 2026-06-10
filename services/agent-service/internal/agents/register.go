@@ -1,8 +1,6 @@
 package agents
 
-import "github.com/augno/api/services/agent-service/internal/domain"
-
-func RegisterTools(registry *domain.ToolHandlerRegistry) {
+func RegisterTools(registry *ToolHandlerRegistry) {
 	registry.Register("save_memory", HandleSaveMemory)
 	registry.Register("create_alert", HandleCreateAlert)
 	registry.Register("search_products", HandleSearchProducts)

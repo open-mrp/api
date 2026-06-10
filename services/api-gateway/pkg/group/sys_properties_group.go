@@ -14,6 +14,7 @@ type SysPropertiesEndpointGroup struct {
 }
 
 type SysPropertiesEndpointGroupConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient *grpcclient.CoreServiceClient
 }
 

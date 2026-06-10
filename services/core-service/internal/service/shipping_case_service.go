@@ -27,10 +27,20 @@ type shippingCaseSvcImpl struct {
 }
 
 type ShippingCaseSvcConfig struct {
-	RepoFactory          domain.RepoFactory
-	MediatorFactory      domain.MediatorFactory
-	TxManager            TransactionManager
-	S3Client             s3client.ObjectStore
+	// RepoFactory (required) is the repository factory.
+	RepoFactory domain.RepoFactory
+
+	// MediatorFactory (required) builds the mediators used by this service.
+	MediatorFactory domain.MediatorFactory
+
+	// TxManager (required) wraps multi-step operations in database transactions.
+	TxManager TransactionManager
+
+	// S3Client (required) is the object store client used for file storage.
+	S3Client s3client.ObjectStore
+
+	// ShippingLabelsBucket (optional; default: "") is the S3 bucket for shipping labels. It is not validated
+	// at construction.
 	ShippingLabelsBucket string
 }
 

@@ -14,6 +14,7 @@ type AgentToolsEndpointGroup struct {
 }
 
 type AgentToolsEndpointGroupConfig struct {
+	// AgentClient (required) is the agent-service gRPC client.
 	AgentClient *grpcclient.AgentServiceClient
 }
 

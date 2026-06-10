@@ -3,11 +3,13 @@ package batchep
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -31,6 +33,7 @@ type BatchSvc interface {
 }
 
 type BatchSvcConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient pb.CoreServiceClient
 }
 
@@ -204,7 +207,34 @@ func (m *batchSvcImpl) MergeBatches(ctx context.Context, req *MergeBatchesReques
 	return &result, nil
 }
 
+// validateSplitQuantity enforces the required-field rules on an optional
+// SplitQuantityInput. The struct-tag validator cannot see inside the
+// field.Optional wrapper (its inner value is unexported and the wrapped
+// struct type cannot be registered from shared/field), so the inner
+// validate:"required" tags on Measure and UnitID are enforced imperatively
+// here whenever the field was provided.
+func validateSplitQuantity(q field.Optional[SplitQuantityInput], jsonField string) *apierror.APIError {
+	v, ok := q.Value()
+	if !ok {
+		return nil
+	}
+	if strings.TrimSpace(v.Measure) == "" {
+		return apierror.NewMissingFieldError(fmt.Sprintf("Field '%s.measure' is required.", jsonField), jsonField+".measure")
+	}
+	if strings.TrimSpace(v.UnitID) == "" {
+		return apierror.NewMissingFieldError(fmt.Sprintf("Field '%s.unit_id' is required.", jsonField), jsonField+".unit_id")
+	}
+	return nil
+}
+
 func (m *batchSvcImpl) SplitBatch(ctx context.Context, req *SplitBatchRequest) (*apiresource.Batch, *apierror.APIError) {
+	if apiErr := validateSplitQuantity(req.Seconds, "seconds"); apiErr != nil {
+		return nil, apiErr
+	}
+	if apiErr := validateSplitQuantity(req.Waste, "waste"); apiErr != nil {
+		return nil, apiErr
+	}
+
 	pbReq := &pb.SplitBatchRequest{
 		BatchIds:          req.BatchIDs,
 		ScanningStationId: req.ScanningStationID,
@@ -213,11 +243,11 @@ func (m *batchSvcImpl) SplitBatch(ctx context.Context, req *SplitBatchRequest) (
 		CloseBatch:        req.CloseBatch,
 	}
 
-	if req.Seconds != nil {
-		pbReq.Seconds = &pb.BatchQuantityInfo{Id: req.Seconds.ID, Measure: req.Seconds.Measure, UnitId: req.Seconds.UnitID}
+	if seconds, ok := req.Seconds.Value(); ok {
+		pbReq.Seconds = &pb.BatchQuantityInfo{Id: seconds.ID, Measure: seconds.Measure, UnitId: seconds.UnitID}
 	}
-	if req.Waste != nil {
-		pbReq.Waste = &pb.BatchQuantityInfo{Id: req.Waste.ID, Measure: req.Waste.Measure, UnitId: req.Waste.UnitID}
+	if waste, ok := req.Waste.Value(); ok {
+		pbReq.Waste = &pb.BatchQuantityInfo{Id: waste.ID, Measure: waste.Measure, UnitId: waste.UnitID}
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, batchSvcTracer, "service.batches.split", domain.ServiceName,
@@ -252,17 +282,21 @@ func (m *batchSvcImpl) GetRemainingQuantityToSplit(ctx context.Context, req *Get
 }
 
 func (m *batchSvcImpl) GetScanningStationConsumption(ctx context.Context, req *GetScanningStationConsumptionRequest) (*apiresource.List[apiresource.ScanningConsumption], *apierror.APIError) {
+	if apiErr := validateSplitQuantity(req.SplitQuantity, "split_quantity"); apiErr != nil {
+		return nil, apiErr
+	}
+
 	pbReq := &pb.GetScanningStationConsumptionRequest{
 		ScanningStationId: req.ScanningStationID,
 		BatchIds:          req.BatchIDs,
-		ProductionStepId:  req.ProductionStepID,
+		ProductionStepId:  req.ProductionStepID.Ptr(),
 	}
 
-	if req.SplitQuantity != nil {
+	if splitQuantity, ok := req.SplitQuantity.Value(); ok {
 		pbReq.SplitQuantity = &pb.BatchQuantityInfo{
-			Id:      req.SplitQuantity.ID,
-			Measure: req.SplitQuantity.Measure,
-			UnitId:  req.SplitQuantity.UnitID,
+			Id:      splitQuantity.ID,
+			Measure: splitQuantity.Measure,
+			UnitId:  splitQuantity.UnitID,
 		}
 	}
 

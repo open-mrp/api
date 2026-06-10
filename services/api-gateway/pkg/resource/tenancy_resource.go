@@ -3,6 +3,7 @@ package apiresource
 import (
 	"time"
 
+	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	"github.com/augno/api/shared/constants"
 )
 
@@ -73,6 +74,8 @@ type TenancyAccountPlan struct {
 // TenancyPendingRegistration represents an in-progress registration session
 // for the authenticated user.
 type TenancyPendingRegistration struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=tenancy_pending_registration"`
 	// Registration session ID.
 	SessionID string `json:"session_id" validate:"required"`
 	// Plan code selected during registration.
@@ -115,14 +118,50 @@ type TenancyOtherAccount struct {
 	Type string `json:"type" validate:"required"`
 }
 
+// SampleTenancy describes a fully registered user operating in their owner
+// account, so pending_registration is null — a pending registration only
+// exists mid-signup, before the account does.
+var SampleTenancy = &Tenancy{
+	Object: constants.ObjectTypeTenancy,
+	CurrentAccount: &TenancyCurrentAccount{
+		ID:               SampleAccountID,
+		Object:           constants.ObjectTypeAccount,
+		Name:             SampleAccountName,
+		Type:             string(constants.AccountTypeCodeStandard),
+		OnboardingStatus: "active",
+		Plan:             string(constants.PublicPlanCodeStarter),
+		Role:             SampleRole,
+		AccountPlan: &TenancyAccountPlan{
+			TypeID:        SamplePlanTypeIDStarter,
+			Object:        constants.ObjectTypeAccountPlan,
+			Name:          "Starter",
+			PlanTypeCode:  string(constants.PublicPlanCodeStarter),
+			Version:       1,
+			PricePerSeat:  19,
+			PricePerMonth: new(19.0),
+			SeatMinimum:   new(int32(1)),
+			Limits: map[string]*int32{
+				"sandboxes_maximum": new(int32(3)),
+				"seats_maximum":     new(int32(5)),
+				"invoices_maximum":  nil,
+			},
+			Features: map[string]bool{
+				"customer_portal":      true,
+				"sales_rep_dashboards": false,
+			},
+		},
+	},
+	Sandboxes: NewList([]TenancySandboxAccount{}, PageInfo{}),
+	OwnerAccount: &TenancyOwnerAccount{
+		ID:     SampleAccountID,
+		Object: constants.ObjectTypeAccount,
+		Name:   SampleAccountName,
+	},
+	OtherAccounts: NewList([]TenancyOtherAccount{}, PageInfo{}),
+}
+
 func (*Tenancy) SchemaExample() any {
-	return map[string]any{
-		"object":          "tenancy",
-		"current_account": nil,
-		"sandboxes":       []any{},
-		"owner_account":   nil,
-		"other_accounts":  []any{},
-	}
+	return apiexample.ValidateAndMarshalToMap(SampleTenancy)
 }
 
 // Minimal customer account summary.

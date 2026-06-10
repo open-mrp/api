@@ -14,6 +14,7 @@ type MachinesEndpointGroup struct {
 }
 
 type MachinesEndpointGroupConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient *grpcclient.CoreServiceClient
 }
 

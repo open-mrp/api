@@ -50,6 +50,17 @@ Status string `json:"status" validate:"required"`
 StatusCode string `json:"status_code" validate:"required"`
 ```
 
+**Exception — HTTP status codes.** This rule targets domain lifecycle status _enums_ (e.g. `"active"`,
+`"completed"`), where the `_code` suffix is redundant. A numeric HTTP response code is a real, standardized
+code and keeps the suffix:
+
+```go
+// RequestLog.StatusCode — HTTP response code, not a domain status enum.
+StatusCode int32 `json:"status_code" validate:"required"`
+```
+
+This also keeps the response field aligned with the `status_codes` / `status_code_classes` list filters.
+
 ### Date/Time Fields
 
 All date/time fields must end with `_at`:

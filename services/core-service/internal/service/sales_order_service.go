@@ -36,13 +36,30 @@ type salesOrderSvcImpl struct {
 }
 
 type SalesOrderSvcConfig struct {
-	Repos                 domain.RepoFactory
-	MediatorFactory       domain.MediatorFactory
-	TxManager             TransactionManager
+	// Repos (required) is the repository factory.
+	Repos domain.RepoFactory
+
+	// MediatorFactory (required) builds the mediators used by this service.
+	MediatorFactory domain.MediatorFactory
+
+	// TxManager (required) wraps multi-step operations in database transactions.
+	TxManager TransactionManager
+
+	// CheckoutClientFactory (optional; default: nil) builds Stripe checkout clients. It is not validated
+	// at construction; checkout code paths panic at runtime if it is unset.
 	CheckoutClientFactory domain.StripeCheckoutClientFactory
+
+	// NotificationPublisher (optional; default: nil) publishes notification messages to the outbox. It is not validated
+	// at construction.
 	NotificationPublisher domain.NotificationPublisher
-	EncryptionKey         []byte
-	FrontendURL           string
+
+	// EncryptionKey (optional; default: nil) encrypts sensitive fields at rest. It is not validated
+	// at construction.
+	EncryptionKey []byte
+
+	// FrontendURL (optional; default: "") is the dashboard base URL used in links. It is not validated
+	// at construction.
+	FrontendURL string
 }
 
 func (c *SalesOrderSvcConfig) validate() error {
@@ -1565,6 +1582,11 @@ func (s *salesOrderSvcImpl) CreateCustomerCheckoutSession(ctx context.Context, p
 	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
+
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+
 	if !identity.IsCustomerUser() {
 		return nil, tracing.Trace(span, apierror.NewValidationError("Invalid actor type."))
 	}
@@ -1577,6 +1599,17 @@ func (s *salesOrderSvcImpl) CreateCustomerCheckoutSession(ctx context.Context, p
 	targetAccountID := identity.Target.AccountID
 
 	meds := s.mediators()
+
+	// Counterparty-write exception: this mutation is gated by counterparty read
+	// access rather than CheckEditAccess, which is owner-direction only and
+	// rejects targets with an active billing plan (i.e. every paying merchant a
+	// customer checks out against). The customer-actor gate above plus the
+	// account-relation check here is the intended authorization for checkout.
+	if identity.IsExternalTarget() {
+		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, customerAccountID, targetAccountID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
 	if apiErr != nil {

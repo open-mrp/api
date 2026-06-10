@@ -11,6 +11,7 @@ import (
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -95,6 +96,50 @@ func TestBuildCanonicalAttrs_DurationIsPositive(t *testing.T) {
 	}
 }
 
+func TestBuildCanonicalAttrs_WithRecordingSpan(t *testing.T) {
+	t.Parallel()
+	tracer := sdktrace.NewTracerProvider().Tracer("test")
+	ctx, span := tracer.Start(context.Background(), "test-span")
+	defer span.End()
+
+	attrs := buildCanonicalAttrs(ctx, "/svc/Method", nil, time.Millisecond)
+
+	m := attrsToMap(attrs)
+	assertAttr(t, m, "trace_id", span.SpanContext().TraceID().String())
+	assertAttr(t, m, "span_id", span.SpanContext().SpanID().String())
+}
+
+func TestBuildCanonicalAttrs_NoTraceIDs_WithoutSpan(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	attrs := buildCanonicalAttrs(ctx, "/svc/Method", nil, time.Millisecond)
+
+	m := attrsToMap(attrs)
+	if _, ok := m["trace_id"]; ok {
+		t.Error("expected no trace_id attribute when no span in context")
+	}
+	if _, ok := m["span_id"]; ok {
+		t.Error("expected no span_id attribute when no span in context")
+	}
+}
+
+func TestBuildCanonicalAttrs_NoTraceIDs_NonRecordingSpan(t *testing.T) {
+	t.Parallel()
+	tracer := sdktrace.NewTracerProvider(sdktrace.WithSampler(sdktrace.NeverSample())).Tracer("test")
+	ctx, span := tracer.Start(context.Background(), "test-span")
+	defer span.End()
+
+	attrs := buildCanonicalAttrs(ctx, "/svc/Method", nil, time.Millisecond)
+
+	m := attrsToMap(attrs)
+	if _, ok := m["trace_id"]; ok {
+		t.Error("expected no trace_id attribute when span is not recording")
+	}
+	if _, ok := m["span_id"]; ok {
+		t.Error("expected no span_id attribute when span is not recording")
+	}
+}
+
 // --- extractIdentityAttrs tests ---
 
 func TestExtractIdentityAttrs_UserIdentity(t *testing.T) {
@@ -134,6 +179,29 @@ func TestExtractIdentityAttrs_APIKeyIdentity(t *testing.T) {
 
 	if _, ok := m["user_id"]; ok {
 		t.Error("expected no user_id for API key identity")
+	}
+}
+
+func TestExtractIdentityAttrs_AgentIdentity(t *testing.T) {
+	t.Parallel()
+	identity := &types.Identity{
+		Type: types.IdentityActorTypeAgent,
+		Actor: &types.IdentityActor{
+			ID: "agnt_456",
+		},
+	}
+
+	attrs := extractIdentityAttrs(identity)
+	m := attrsToMap(attrs)
+
+	assertAttr(t, m, "auth_type", "agent")
+	assertAttr(t, m, "agent_id", "agnt_456")
+
+	if _, ok := m["user_id"]; ok {
+		t.Error("expected no user_id for agent identity")
+	}
+	if _, ok := m["key_id"]; ok {
+		t.Error("expected no key_id for agent identity")
 	}
 }
 

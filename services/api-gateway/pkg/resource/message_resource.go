@@ -1,6 +1,9 @@
 package apiresource
 
-import "github.com/augno/api/shared/constants"
+import (
+	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	"github.com/augno/api/shared/constants"
+)
 
 // Message resource.
 type MessageResource struct {
@@ -10,11 +13,11 @@ type MessageResource struct {
 	Message string `json:"message" validate:"required"`
 }
 
-var exampleMessageResource = &MessageResource{
+var SampleMessageResource = &MessageResource{
 	Object:  constants.ObjectTypeMessage,
 	Message: "Operation completed successfully.",
 }
 
 func (*MessageResource) SchemaExample() any {
-	return exampleMessageResource
+	return apiexample.ValidateAndMarshalToMap(SampleMessageResource)
 }

@@ -69,7 +69,7 @@ func (r *accountRelationRepoImpl) ListChildAccounts(ctx context.Context, params 
 
 	searchQuery := gosql.NullString{}
 	if params.Query != nil && *params.Query != "" {
-		searchQuery = gosql.NullString{String: "%" + *params.Query + "%", Valid: true}
+		searchQuery = gosql.NullString{String: "%" + db.EscapeLike(*params.Query) + "%", Valid: true}
 	}
 
 	parentRelNullStr := gosql.NullString{String: parentRelationID, Valid: true}

@@ -14,6 +14,7 @@ type AgentMemoriesEndpointGroup struct {
 }
 
 type AgentMemoriesEndpointGroupConfig struct {
+	// AgentClient (required) is the agent-service gRPC client.
 	AgentClient *grpcclient.AgentServiceClient
 }
 

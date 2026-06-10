@@ -28,10 +28,21 @@ type shipmentSvcImpl struct {
 }
 
 type ShipmentSvcConfig struct {
-	Repos           domain.RepoFactory
+	// Repos (required) is the repository factory.
+	Repos domain.RepoFactory
+
+	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
-	TxManager       TransactionManager
-	ShippoFactory   domain.ShippoClientFactory
+
+	// TxManager (required) wraps multi-step operations in database transactions.
+	TxManager TransactionManager
+
+	// ShippoFactory (optional; default: nil) builds Shippo shipping clients. It is not validated
+	// at construction; shipping code paths panic at runtime if it is unset.
+	ShippoFactory domain.ShippoClientFactory
+
+	// NotificationPub (optional; default: nil) publishes notification messages to the outbox. It is not validated
+	// at construction.
 	NotificationPub domain.NotificationPublisher
 }
 
@@ -753,7 +764,7 @@ func (s *shipmentSvcImpl) EstimateRate(ctx context.Context, params domain.Estima
 		return 0, tracing.Trace(span, apiErr)
 	}
 	if identity.IsInternalActor() {
-		if apiErr := identity.CheckHasPermission(types.PermissionDomainShipments, types.ActionRead); apiErr != nil {
+		if apiErr := checkShipmentReadPermission(identity); apiErr != nil {
 			return 0, tracing.Trace(span, apiErr)
 		}
 	} else if identity.IsCustomerUser() {
@@ -766,6 +777,13 @@ func (s *shipmentSvcImpl) EstimateRate(ctx context.Context, params domain.Estima
 
 	if !identity.IsTargetAccountSet() {
 		return 0, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+
+	if identity.IsExternalTarget() {
+		meds := s.mediators()
+		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+			return 0, tracing.Trace(span, apiErr)
+		}
 	}
 
 	params.AccountID = identity.Target.AccountID
@@ -908,7 +926,7 @@ func (s *shipmentSvcImpl) RateShop(ctx context.Context, params domain.RateShopPa
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if identity.IsInternalActor() {
-		if apiErr := identity.CheckHasPermission(types.PermissionDomainShipments, types.ActionRead); apiErr != nil {
+		if apiErr := checkShipmentReadPermission(identity); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 	} else if identity.IsCustomerUser() {
@@ -921,6 +939,13 @@ func (s *shipmentSvcImpl) RateShop(ctx context.Context, params domain.RateShopPa
 
 	if !identity.IsTargetAccountSet() {
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+
+	if identity.IsExternalTarget() {
+		meds := s.mediators()
+		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 	}
 
 	params.AccountID = identity.Target.AccountID
@@ -1148,4 +1173,19 @@ func (s *shipmentSvcImpl) RateShop(ctx context.Context, params domain.RateShopPa
 	}
 
 	return result, nil
+}
+
+// checkShipmentReadPermission checks the appropriate read permission based on the identity context.
+// Internal actors need shipments:read for their own account, or customers:read / suppliers:read for external accounts.
+func checkShipmentReadPermission(identity *types.Identity) *apierror.APIError {
+	if !identity.IsInternalActor() {
+		return nil
+	}
+	if identity.IsTargetCustomerAccount() {
+		return identity.CheckHasPermission(types.PermissionDomainCustomers, types.ActionRead)
+	}
+	if identity.IsTargetSupplierAccount() {
+		return identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionRead)
+	}
+	return identity.CheckHasPermission(types.PermissionDomainShipments, types.ActionRead)
 }

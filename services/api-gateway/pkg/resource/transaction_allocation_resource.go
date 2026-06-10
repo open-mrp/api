@@ -33,10 +33,15 @@ type AllocationEntry struct {
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 }
 
-// Minimal customer sub-resource for allocation entries.
+// Minimal customer sub-resource for allocation entries. It carries its own
+// allocation_customer discriminator (not customer) because allocation list
+// entries do not carry a customer id, so it is not a resolvable customer
+// reference.
 type AllocationCustomer struct {
-	// Customer account id.
-	ID string `json:"id"`
+	// Customer account ID. Null when the entry does not carry one.
+	ID *string `json:"id"`
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=allocation_customer"`
 	// Customer display name.
 	Name string `json:"name" validate:"required"`
 	// Customer number.
@@ -73,7 +78,8 @@ var SampleAllocationEntry = &AllocationEntry{
 	Amount:        "500.000000000000000000000000000000",
 	DisplayAmount: "$500.00",
 	Customer: &AllocationCustomer{
-		Name: "Acme Corp",
+		Object: constants.ObjectTypeAllocationCustomer,
+		Name:   SampleCustomerName,
 	},
 	Transaction: &AllocationTransaction{
 		ID:     SampleTransactionDetailID,
@@ -121,13 +127,15 @@ type OpenCreditEntry struct {
 	// Stripe payment ID, if applicable.
 	StripePaymentID *string `json:"stripe_payment_id"`
 	// Allocations against invoices for this transaction.
-	InvoiceAllocations []InvoiceAllocationEntry `json:"invoice_allocations"`
+	InvoiceAllocations *List[InvoiceAllocationEntry] `json:"invoice_allocations"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 }
 
 // Allocation of a credit against an invoice.
 type InvoiceAllocationEntry struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=invoice_allocation_entry"`
 	// Invoice number.
 	InvoiceNumber string `json:"invoice_number" validate:"required"`
 	// Allocated amount as a decimal string.
@@ -142,12 +150,14 @@ var SampleOpenCreditEntry = &OpenCreditEntry{
 	AllocatedAmount: "500.000000000000000000000000000000",
 	LeftoverAmount:  "500.000000000000000000000000000000",
 	Customer: &AllocationCustomer{
-		Name: "Acme Corp",
+		ID:     new(SampleCustomerID),
+		Object: constants.ObjectTypeAllocationCustomer,
+		Name:   SampleCustomerName,
 	},
 	TransactionType: "payment",
-	InvoiceAllocations: []InvoiceAllocationEntry{
-		{InvoiceNumber: "INV-001", Amount: "500.000000000000000000000000000000"},
-	},
+	InvoiceAllocations: NewList([]InvoiceAllocationEntry{
+		{Object: constants.ObjectTypeInvoiceAllocationEntry, InvoiceNumber: "INV-001", Amount: "500.000000000000000000000000000000"},
+	}, PageInfo{}),
 	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 }
 

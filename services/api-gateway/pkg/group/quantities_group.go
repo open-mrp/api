@@ -14,6 +14,7 @@ type QuantitiesEndpointGroup struct {
 }
 
 type QuantitiesEndpointGroupConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient *grpcclient.CoreServiceClient
 }
 

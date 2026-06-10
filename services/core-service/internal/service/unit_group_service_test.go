@@ -43,6 +43,7 @@ func TestUpsertUnitGroupUnit_IdempotencyStarted_CachesSuccess(t *testing.T) {
 	repoFactory := factorymock.NewMockRepoFactory(ctrl)
 	repoFactory.EXPECT().NewUnitGroupRepo().Return(unitGroupRepo).AnyTimes()
 	repoFactory.EXPECT().NewUnitQueryRepo().Return(unitQueryRepo).AnyTimes()
+	repoFactory.EXPECT().NewOutboxRepo().Return(&stubOutboxRepo{}).AnyTimes()
 
 	idempotencyMed := mediatormock.NewMockIdempotencyMed(ctrl)
 	mediatorFactory := factorymock.NewMockMediatorFactory(ctrl)

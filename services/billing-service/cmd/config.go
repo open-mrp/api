@@ -46,9 +46,11 @@ type config struct {
 	PlatformMode constants.PlatformMode
 
 	// StripeWebhookSecret (required) is the Stripe webhook signing secret.
+	// Not enforced when PlatformMode is "test".
 	StripeWebhookSecret string
 
 	// StripeSecretKey (required) is the Stripe secret API key.
+	// Not enforced when PlatformMode is "test".
 	StripeSecretKey string
 
 	// CoreServiceURL (required) is the core service address for gRPC.
@@ -63,12 +65,13 @@ type config struct {
 	// FrontendURL (required) is the base URL of the frontend application.
 	FrontendURL string
 
-	// StripeWebhookVerboseErrors (optional) when true, 400 responses for webhook signature
+	// StripeWebhookVerboseErrors (optional; default: false) when true, 400 responses for webhook signature
 	// failures include the underlying Stripe error in the message (for development).
 	StripeWebhookVerboseErrors bool
 
 	// StripePublishableKey (required) is the Stripe publishable key sent to clients
 	// for Stripe.js initialization.
+	// Not enforced when PlatformMode is "test".
 	StripePublishableKey string
 }
 
@@ -122,6 +125,9 @@ func (c *config) validate() error {
 		}
 		if c.StripeSecretKey == "" {
 			return fmt.Errorf("billing-service: STRIPE_SECRET_KEY is required")
+		}
+		if c.StripePublishableKey == "" {
+			return fmt.Errorf("billing-service: STRIPE_PUBLISHABLE_KEY is required")
 		}
 	}
 	if c.CoreServiceURL == "" {

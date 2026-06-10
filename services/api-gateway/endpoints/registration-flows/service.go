@@ -26,6 +26,7 @@ type RegistrationFlowSvc interface {
 }
 
 type RegistrationFlowSvcConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient pb.CoreServiceClient
 }
 

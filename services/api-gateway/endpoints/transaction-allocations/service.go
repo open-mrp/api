@@ -23,6 +23,7 @@ type TransactionAllocationSvc interface {
 }
 
 type TransactionAllocationSvcConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient pb.CoreServiceClient
 }
 
@@ -165,7 +166,9 @@ func allocationEntryFromProto(d *pb.AllocationEntryInfo) apiresource.AllocationE
 		Object:        constants.ObjectTypeAllocationEntry,
 		Amount:        d.AmountValue,
 		DisplayAmount: apiresource.FormatDisplayValue(d.AmountValue, d.AmountUnitAbbr, string(constants.UnitTypeCurrency)),
+		// pb.AllocationEntryInfo does not carry a customer id, so ID stays null.
 		Customer: &apiresource.AllocationCustomer{
+			Object: constants.ObjectTypeAllocationCustomer,
 			Name:   d.CustomerName,
 			Number: d.CustomerNumber,
 		},
@@ -249,6 +252,7 @@ func openCreditEntryFromProto(d *pb.OpenCreditEntryInfo) apiresource.OpenCreditE
 	allocations := make([]apiresource.InvoiceAllocationEntry, len(d.InvoiceAllocations))
 	for i, a := range d.InvoiceAllocations {
 		allocations[i] = apiresource.InvoiceAllocationEntry{
+			Object:        constants.ObjectTypeInvoiceAllocationEntry,
 			InvoiceNumber: a.InvoiceNumber,
 			Amount:        a.Amount,
 		}
@@ -262,7 +266,8 @@ func openCreditEntryFromProto(d *pb.OpenCreditEntryInfo) apiresource.OpenCreditE
 		AllocatedAmount: d.AllocatedAmount,
 		LeftoverAmount:  d.LeftoverAmount,
 		Customer: &apiresource.AllocationCustomer{
-			ID:     d.CustomerId,
+			ID:     &d.CustomerId,
+			Object: constants.ObjectTypeAllocationCustomer,
 			Name:   d.CustomerName,
 			Number: d.CustomerNumber,
 		},
@@ -272,7 +277,7 @@ func openCreditEntryFromProto(d *pb.OpenCreditEntryInfo) apiresource.OpenCreditE
 		ResponsibleUserName: d.ResponsibleUserName,
 		Note:                d.Note,
 		StripePaymentID:     d.StripePaymentId,
-		InvoiceAllocations:  allocations,
+		InvoiceAllocations:  apiresource.NewList(allocations, apiresource.PageInfo{}),
 		CreatedAt:           grpcutil.TimestampToTime(d.CreatedAt),
 	}
 }

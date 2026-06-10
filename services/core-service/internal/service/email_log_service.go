@@ -18,6 +18,7 @@ type emailLogSvcImpl struct {
 }
 
 type EmailLogSvcConfig struct {
+	// Repos (required) is the repository factory.
 	Repos domain.RepoFactory
 }
 

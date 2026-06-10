@@ -10,11 +10,11 @@ import (
 // UnitGroupFull represents a full unit group with its base unit and conversions.
 type UnitGroupFull struct {
 	ID              string
-	Name            string  `audit:"name"`
-	Notes           *string `audit:"notes"`
-	Type            string  `audit:"type"`
-	BaseUnit        LightUnit
-	UnitConversions []*UnitGroupUnit
+	Name            string           `audit:"name"`
+	Notes           *string          `audit:"notes"`
+	Type            string           `audit:"type"`
+	BaseUnit        LightUnit        `audit:"base_unit"`
+	UnitConversions []*UnitGroupUnit `audit:"associated_units"`
 	AccountID       *string
 	CreatedAt       time.Time
 	UpdatedAt       time.Time

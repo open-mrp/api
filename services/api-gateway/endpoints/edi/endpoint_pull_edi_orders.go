@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -12,10 +13,10 @@ import (
 // Request to trigger an EDI pull-orders operation.
 type PullEDIOrdersRequest struct{}
 
-var examplePullEDIOrdersRequest = &PullEDIOrdersRequest{}
+var samplePullEDIOrdersRequest = &PullEDIOrdersRequest{}
 
 func (*PullEDIOrdersRequest) SchemaExample() any {
-	return examplePullEDIOrdersRequest
+	return apiexample.ValidateAndMarshalToMap(samplePullEDIOrdersRequest)
 }
 
 // Triggers an EDI pull-orders operation, pulling orders from FTP and processing invoices via Stedi.

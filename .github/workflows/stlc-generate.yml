@@ -35,7 +35,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       api_version: ${{ steps.msg.outputs.api_version }}
-      commit_msg: ${{ steps.msg.outputs.commit_msg }}
     steps:
       - uses: actions/checkout@v5
       - name: Resolve API version for SDK commit
@@ -53,13 +52,7 @@ jobs:
             v*) ;;
             *) api_version="v${api_version}" ;;
           esac
-          commit_msg="fix(sdk): sync with deployed API ${api_version}"
           echo "api_version=${api_version}" >> "$GITHUB_OUTPUT"
-          {
-            echo "commit_msg<<MSG_EOF"
-            echo "$commit_msg"
-            echo "MSG_EOF"
-          } >> "$GITHUB_OUTPUT"
 
   generate:
     name: Generate SDKs
@@ -71,7 +64,6 @@ jobs:
       openapi_specs_source: generate
       open_pr: ${{ github.event.inputs.open_pr }}
       pr_base_branch: main
-      commit_message: ${{ needs.resolve.outputs.commit_msg }}
     secrets:
       STLC_READ_TOKEN: ${{ secrets.STLC_READ_TOKEN }}
       SDK_WRITE_TOKEN: ${{ secrets.SDK_WRITE_TOKEN }}

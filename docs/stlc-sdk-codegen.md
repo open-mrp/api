@@ -115,7 +115,7 @@ TypeScript codegen overwrites `pnpm-lock.yaml` using merged templates from `stlc
 | --- | --- | --- |
 | After **release-please** tag, **deploy** succeeds, and **OpenAPI** changed vs S3 baseline | **`main`** on each SDK repo | Changesets opens **chore: version packages** → merge once to publish |
 
-[`internal-sdk`](https://github.com/augno/internal-sdk) and [`typescript-sdk`](https://github.com/augno/typescript-sdk) publish via [changesets](https://github.com/changesets/changesets) on push to **`main`**. Release automation pushes SDK codegen plus a `.changeset/sync-api-<tag>.md` patch-level changeset in one commit (amended after `stlc build --push`). There is no separate `api-release` dispatch to those repos and no bot sync PR to merge first.
+[`internal-sdk`](https://github.com/augno/internal-sdk) and [`typescript-sdk`](https://github.com/augno/typescript-sdk) publish via [changesets](https://github.com/changesets/changesets) on push to **`main`**. Release automation pushes SDK codegen plus a `.changeset/sync-api-<tag>.md` changeset in one commit (amended after `stlc build --push`). The changeset bump level mirrors the API release: derived from the tag shape (`X.0.0` → major, `X.Y.0` → minor, otherwise patch — release-please always zeroes lower components on a bump), so a minor/major API release produces a minor/major SDK release. There is no separate `api-release` dispatch to those repos and no bot sync PR to merge first.
 
 Production flow (keeps SDKs aligned with what is deployed):
 
@@ -148,7 +148,7 @@ The API release workflow regenerates SDKs and dispatches `api-release` to spec c
 
 ### SDK release checklist (`internal-sdk`, `typescript-sdk`)
 
-When the API release changed that SDK’s OpenAPI spec, automation pushes **`fix(sdk): sync with deployed API <tag>`** (including `.changeset/sync-api-<tag>.md`) to **`main`**. Then:
+When the API release changed that SDK’s OpenAPI spec, automation pushes **`fix(sdk)`/`feat(sdk)`/`feat(sdk)!`** **`: sync with deployed API <tag>`** (prefix matches the API bump level, including `.changeset/sync-api-<tag>.md` at that same level) to **`main`**. Then:
 
 1. **`release.yml` on `main`** — Changesets opens **chore: version packages** (or publishes when configured to do so).
 2. **Merge the version PR** when opened — that completes the GitHub Packages publish for `@augno/internal-sdk` / `@augno/sdk`.

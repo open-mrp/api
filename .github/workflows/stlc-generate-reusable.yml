@@ -165,11 +165,34 @@ jobs:
           git config --global user.email "stlc-bot@users.noreply.github.com"
           gh auth setup-git
 
+      - name: Determine SDK bump level from API version
+        if: matrix.spec_changed == 'true'
+        id: bump
+        env:
+          API_VERSION: ${{ inputs.api_version }}
+        run: |
+          set -euo pipefail
+          ver="${API_VERSION#v}"
+          IFS='.' read -r _ minor patch <<<"$ver"
+          patch="${patch%%[-+]*}"
+          # release-please semver bumps zero out lower components: a major release
+          # is always X.0.0 and a minor always X.Y.0, so the tag shape encodes the bump.
+          if [ "$minor" = "0" ] && [ "$patch" = "0" ]; then
+            bump=major
+          elif [ "$patch" = "0" ]; then
+            bump=minor
+          else
+            bump=patch
+          fi
+          echo "bump=$bump" >> "$GITHUB_OUTPUT"
+          echo "API ${API_VERSION} -> SDK changeset bump: ${bump}"
+
       - name: Generate SDK and push
         if: matrix.spec_changed == 'true'
         id: build
         env:
           API_VERSION: ${{ inputs.api_version }}
+          BUMP: ${{ steps.bump.outputs.bump }}
           BRANCH: ${{ inputs.push_branch }}
           COMMIT_MSG: ${{ inputs.commit_message }}
           GH_TOKEN: ${{ secrets.SDK_WRITE_TOKEN }}
@@ -178,7 +201,11 @@ jobs:
           if [ -n "$COMMIT_MSG" ]; then
             commit_message="$COMMIT_MSG"
           else
-            commit_message="fix(sdk): sync with deployed API ${API_VERSION}"
+            case "$BUMP" in
+              major) commit_message="feat(sdk)!: sync with deployed API ${API_VERSION}" ;;
+              minor) commit_message="feat(sdk): sync with deployed API ${API_VERSION}" ;;
+              *) commit_message="fix(sdk): sync with deployed API ${API_VERSION}" ;;
+            esac
           fi
           commit_args=(--commit "$commit_message")
           env -u CI -u GITHUB_ACTIONS stlc build \
@@ -194,6 +221,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.SDK_WRITE_TOKEN }}
           API_VERSION: ${{ inputs.api_version }}
+          BUMP: ${{ steps.bump.outputs.bump }}
           BRANCH: ${{ inputs.push_branch }}
           PKG_NAME: ${{ matrix.package_name }}
           REPO: ${{ matrix.pr_repo }}
@@ -213,7 +241,7 @@ jobs:
           mkdir -p .changeset
           {
             echo "---"
-            echo "'${PKG_NAME}': patch"
+            echo "'${PKG_NAME}': ${BUMP}"
             echo "---"
             echo ""
             echo "Sync SDK with deployed Augno API ${API_VERSION}."
@@ -227,6 +255,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.SDK_WRITE_TOKEN }}
           API_VERSION: ${{ inputs.api_version }}
+          BUMP: ${{ steps.bump.outputs.bump }}
           BRANCH: ${{ inputs.push_branch }}
           PKG_NAME: ${{ matrix.package_name }}
           REPO: ${{ matrix.pr_repo }}
@@ -245,7 +274,7 @@ jobs:
           fi
           {
             echo "---"
-            echo "'${PKG_NAME}': patch"
+            echo "'${PKG_NAME}': ${BUMP}"
             echo "---"
             echo ""
             echo "Sync SDK with deployed Augno API ${API_VERSION}."
@@ -262,6 +291,7 @@ jobs:
           BRANCH: ${{ inputs.push_branch }}
           BASE: ${{ inputs.pr_base_branch }}
           TAG: ${{ inputs.api_version }}
+          BUMP: ${{ steps.bump.outputs.bump }}
           OPENAPI_SPECS_SOURCE: ${{ inputs.openapi_specs_source }}
         run: |
           set -euo pipefail
@@ -304,9 +334,14 @@ jobs:
             echo ""
             echo "Release automation pushes directly to \`${branch}\` instead; use \`open_pr\` only for manual workflow_dispatch runs."
           } > "$body_file"
+          case "$BUMP" in
+            major) pr_title="feat(sdk)!: sync with deployed API ${tag}" ;;
+            minor) pr_title="feat(sdk): sync with deployed API ${tag}" ;;
+            *) pr_title="fix(sdk): sync with deployed API ${tag}" ;;
+          esac
           set +e
           gh pr create --repo "$repo" --base "$base" --head "$branch" \
-            --title "fix(sdk): sync with deployed API ${tag}" \
+            --title "$pr_title" \
             --body-file "$body_file" >pr_create.log 2>&1
           pr_rc=$?
           set -e

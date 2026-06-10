@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.1](https://github.com/Augno/api/compare/v0.20.0...v0.20.1) (2026-06-10)
+
+
+### Bug Fixes
+
+* enforce docs/ patterns and conventions across the codebase ([#305](https://github.com/Augno/api/issues/305)) ([ad952d9](https://github.com/Augno/api/commit/ad952d97a14fb1cf92e39a7eaa073f54b305963c))
+
 ## [0.20.0](https://github.com/Augno/api/compare/v0.19.5...v0.20.0) (2026-06-09)
 
 

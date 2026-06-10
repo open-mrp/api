@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.21.1](https://github.com/Augno/api/compare/v0.21.0...v0.21.1) (2026-06-10)
+
+
+### Bug Fixes
+
+* flaky e2e tests and release issues on sdks ([8bb9a60](https://github.com/Augno/api/commit/8bb9a608410ebfb14fb62192e0cda0a7976a706c))
+* make SDK codegen robust to config drift + set up uv for Python ([5e655f3](https://github.com/Augno/api/commit/5e655f303a5d71894b27b609eaed234a17520071))
+
 ## [0.21.0](https://github.com/Augno/api/compare/v0.20.2...v0.21.0) (2026-06-10)
 
 

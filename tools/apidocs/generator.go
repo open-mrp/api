@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/contracts"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -475,6 +476,22 @@ func getCleanTypeName(t reflect.Type) string {
 	return name
 }
 
+// namedEnumSchemaTypes lists string enum types that the generator emits as a single named component schema (referenced via $ref) instead of inlining the enum at every use site. Promoting a shared enum here dedupes it across all generated SDKs and avoids flat-namespace collisions in languages like Go — e.g. the LocationType resource model vs. the LocationTypeCode enum reused by Location.type and (Create|Update)LocationRequest.type, which Go would otherwise both name LocationType. Opt in by adding the type; the schema name is the Go type's own name.
+var namedEnumSchemaTypes = map[reflect.Type]bool{
+	reflect.TypeFor[constants.LocationTypeCode](): true,
+}
+
+// namedEnumSchemaName returns the component schema name for an opted-in named enum type, or "" if t is not registered.
+func namedEnumSchemaName(t reflect.Type) string {
+	if t.Kind() == reflect.Pointer {
+		t = t.Elem()
+	}
+	if namedEnumSchemaTypes[t] {
+		return t.Name()
+	}
+	return ""
+}
+
 func generateSchema(t reflect.Type, components *Components, docReader *DocReader) Schema {
 	origT := t
 	if t.Kind() == reflect.Pointer {
@@ -689,10 +706,18 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 
 		switch fieldType.Kind() {
 		case reflect.String:
-			fieldSchema.Type = "string"
-			if len(fieldSchema.Enum) == 0 {
-				if enumValues := getEnumValuesForStringType(fieldType); len(enumValues) > 0 {
-					fieldSchema.Enum = enumValues
+			if name := namedEnumSchemaName(fieldType); name != "" && len(fieldSchema.Enum) == 0 {
+				if _, ok := components.Schemas[name]; !ok {
+					components.Schemas[name] = generateSchema(fieldType, components, docReader)
+				}
+				// In OpenAPI 3.0.x a $ref cannot have sibling keys, so wrap it in allOf to keep the field-level description alongside the reference (same pattern as the struct case below).
+				fieldSchema.AllOf = []Schema{{Ref: "#/components/schemas/" + name}}
+			} else {
+				fieldSchema.Type = "string"
+				if len(fieldSchema.Enum) == 0 {
+					if enumValues := getEnumValuesForStringType(fieldType); len(enumValues) > 0 {
+						fieldSchema.Enum = enumValues
+					}
 				}
 			}
 		case reflect.Int, reflect.Int32, reflect.Int64:

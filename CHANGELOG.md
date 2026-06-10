@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.2](https://github.com/Augno/api/compare/v0.20.1...v0.20.2) (2026-06-10)
+
+
+### Bug Fixes
+
+* version bumps in the api should flow through to the sdks (patch, minor, major) ([c45bdb8](https://github.com/Augno/api/commit/c45bdb881390370678373c4de097ba4a10940a28))
+
 ## [0.20.1](https://github.com/Augno/api/compare/v0.20.0...v0.20.1) (2026-06-10)
 
 

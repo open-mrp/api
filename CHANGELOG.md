@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.4](https://github.com/Augno/api/compare/v0.21.3...v0.21.4) (2026-06-10)
+
+
+### Bug Fixes
+
+* harden mcp server ([e9f8fa5](https://github.com/Augno/api/commit/e9f8fa51a0a155df061f576cc996c7052c8bde7f))
+
 ## [0.21.3](https://github.com/Augno/api/compare/v0.21.2...v0.21.3) (2026-06-10)
 
 

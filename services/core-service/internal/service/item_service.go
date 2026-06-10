@@ -1220,11 +1220,19 @@ func (s *itemSvcImpl) UpdateItemInventory(ctx context.Context, params domain.Upd
 				return apiErr
 			}
 
+			// Empty when delta is zero (reconcile to the same quantity), in
+			// which case the publisher skips the event as a no-op.
+			var changes []audit.FieldChange
+			if !delta.IsZero() {
+				changes = append(changes, audit.NewFieldChange("quantity", currentQty, currentQty.Add(delta)))
+			}
+
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
 				Action:       constants.AuditActionUpdate,
 				ResourceType: constants.ObjectTypeItem,
 				ResourceID:   params.ItemID,
+				Changes:      changes,
 			}); apiErr != nil {
 				return apiErr
 			}
@@ -1888,11 +1896,19 @@ func (s *itemSvcImpl) BulkReconcileItems(ctx context.Context, params domain.Bulk
 						PreviousQuantity: currentQty, NewQuantity: newQty,
 					})
 
+					// Empty when the reconciled quantity equals the current
+					// quantity; the publisher skips the event as a no-op.
+					var changes []audit.FieldChange
+					if delta != 0 {
+						changes = append(changes, audit.NewFieldChange("quantity", currentQty, newQty))
+					}
+
 					if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 						ServiceName:  domain.ServiceName,
 						Action:       constants.AuditActionUpdate,
 						ResourceType: constants.ObjectTypeItem,
 						ResourceID:   item.ItemID,
+						Changes:      changes,
 					}); apiErr != nil {
 						result.Errors = append(result.Errors, domain.ReconcileError{SKU: d.SKU, Error: "Failed to publish audit event"})
 						continue

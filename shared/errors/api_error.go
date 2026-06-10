@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"runtime"
 	"time"
 
 	"github.com/augno/api/shared/version"
@@ -291,6 +292,10 @@ type APIError struct {
 	InternalMessage string `json:"-"`
 	// Internal is the underlying error, if any. Never sent to clients. Accessible via Unwrap().
 	Internal error `json:"-"`
+	// Stack is the goroutine stack captured at the point a 5xx error is created, so the
+	// recorded trace points at the failing code rather than the response-writing layer.
+	// Empty for non-5xx errors. Never sent to clients. Propagated across gRPC via ToJSON.
+	Stack string `json:"-"`
 }
 
 // Error returns the internal (non-public) error string for logging. If an underlying
@@ -300,7 +305,9 @@ func (e *APIError) Error() string {
 		return ""
 	}
 	if e.Internal != nil {
-		return e.InternalMessage + ": " + e.Internal.Error()
+		if inner := e.Internal.Error(); inner != "" {
+			return e.InternalMessage + ": " + inner
+		}
 	}
 	return e.InternalMessage
 }
@@ -401,7 +408,27 @@ func NewAPIError(code ErrorCode, errorType ErrorType, publicMessage string, inte
 		opt(apiError)
 	}
 
+	// For server-side (5xx) errors, capture a stack at the origin so the recorded trace
+	// points at the failing code. If the wrapped error is itself an APIError that already
+	// captured a stack (e.g. arriving from a downstream service), inherit it rather than
+	// overwrite it with this less-useful outer frame. 4xx errors skip this entirely.
+	if Is5XXErrorCode(apiError.Code) {
+		if inner, ok := apiError.Internal.(*APIError); ok && inner.Stack != "" {
+			apiError.Stack = inner.Stack
+		} else {
+			apiError.Stack = captureStack()
+		}
+	}
+
 	return apiError
+}
+
+// captureStack returns a formatted stack trace for the current goroutine, used to
+// pinpoint where a 5xx error originated.
+func captureStack() string {
+	buf := make([]byte, 32768) // 32KB
+	n := runtime.Stack(buf, false)
+	return string(buf[:n])
 }
 
 // NewValidationError creates a 400 Bad Request error for general input validation failures.
@@ -720,6 +747,7 @@ type apiErrorSerializable struct {
 	Quota           *QuotaInfo `json:"quota,omitempty"`
 	InternalMessage string     `json:"internal_message,omitempty"`
 	InternalError   string     `json:"internal_error,omitempty"`
+	Stack           string     `json:"stack,omitempty"`
 }
 
 // ToJSON serializes the full APIError (including internal fields) to JSON for
@@ -738,6 +766,7 @@ func (e *APIError) ToJSON() ([]byte, error) {
 		IsTransient:     e.IsTransient,
 		Quota:           e.Quota,
 		InternalMessage: e.InternalMessage,
+		Stack:           e.Stack,
 	}
 
 	if e.Internal != nil {
@@ -764,6 +793,7 @@ func APIErrorFromJSON(jsonData []byte) (*APIError, error) {
 		IsTransient:     serializable.IsTransient,
 		Quota:           serializable.Quota,
 		InternalMessage: serializable.InternalMessage,
+		Stack:           serializable.Stack,
 	}
 
 	if serializable.InternalError != "" {

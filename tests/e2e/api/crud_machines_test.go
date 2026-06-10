@@ -3,6 +3,7 @@
 package api_test
 
 import (
+	"fmt"
 	"net/url"
 	"strings"
 	"testing"
@@ -152,19 +153,26 @@ func TestMachines_ListWithLimit(t *testing.T) {
 
 func TestMachines_ListPagination(t *testing.T) {
 	t.Parallel()
-	page1, _, err := apiClient.GetList(machinesPath, url.Values{"limit": {"1"}})
-	require.NoError(t, err)
-	requirePageLen(t, page1.Data, 1)
-	require.True(t, page1.PageInfo.HasNextPage, "should have a next page")
-	require.NotNil(t, page1.PageInfo.NextPageURL)
+	// Paginate over rows this test owns, scoped by a unique search term, so
+	// parallel tests creating or deleting machines cannot shift the cursor
+	// window.
+	prefix := uniqueName("e2e-mach-pg")
+	var ids []string
+	for i := 0; i < 2; i++ {
+		status, body, err := apiClient.Post(machinesPath, map[string]any{
+			"name":          fmt.Sprintf("%s-%d", prefix, i),
+			"serial_number": uniqueName("e2e-mach-pg-sn"),
+			"department_id": SeedDepartmentID,
+		}, newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, 201, status, body)
+		id := jsonField(parseJSON(body), "id")
+		require.NotEmpty(t, id)
+		defer apiClient.Delete(machinesPath + "/" + id)
+		ids = append(ids, id)
+	}
 
-	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
-	require.NoError(t, err)
-	requirePageLen(t, page2.Data, 1)
-
-	id1 := DataItemField(page1.Data[0], "id")
-	id2 := DataItemField(page2.Data[0], "id")
-	assert.NotEqual(t, id1, id2, "pages should return different items")
+	assertScopedCursorPagination(t, machinesPath, url.Values{"q": {prefix}}, ids)
 }
 
 func TestMachines_ListSearch(t *testing.T) {

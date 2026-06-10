@@ -137,19 +137,12 @@ func TestNestedUserInclude_ProductionRunResponsibleUser(t *testing.T) {
 	ru := jsonObject(parseJSON(body), "responsible_user")
 	assertExpandedAccountUserWithUser(t, ru, SeedAccountUserID)
 
-	// The list endpoint supports the same includes on summaries.
-	list, _, err := apiClient.GetList(productionRunsPath, url.Values{"include": {"responsible_user,responsible_user.user"}})
-	require.NoError(t, err)
-	found := false
-	for _, item := range list.Data {
-		m := parseJSON(item)
-		if jsonField(m, "id") != id {
-			continue
-		}
-		found = true
-		assertExpandedAccountUserWithUser(t, jsonObject(m, "responsible_user"), SeedAccountUserID)
-	}
-	assert.True(t, found, "created production run should appear in the list")
+	// The list endpoint supports the same includes on summaries. Paginate
+	// until found: rows accumulate across repeated e2e runs.
+	item := listFindByField(t, productionRunsPath,
+		url.Values{"include": {"responsible_user,responsible_user.user"}}, "id", id)
+	require.NotNil(t, item, "created production run should appear in the list")
+	assertExpandedAccountUserWithUser(t, jsonObject(parseJSON(item), "responsible_user"), SeedAccountUserID)
 }
 
 func TestNestedUserInclude_SettlementResponsibleUser(t *testing.T) {

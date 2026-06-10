@@ -19,15 +19,10 @@ func TestListCustomers_ReturnsSeededData(t *testing.T) {
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Should have at least 1 seeded customer")
 
-	found := false
-	for _, item := range list.Data {
-		name := DataItemField(item, "name")
-		if name == SeedCustomerName {
-			found = true
-			break
-		}
-	}
-	assert.True(t, found, "Seeded customer %q not found in list", SeedCustomerName)
+	// Paginate until found: seed rows are the oldest and fall off the
+	// first page as repeated e2e runs accumulate data.
+	assert.NotNil(t, listFindByField(t, customersPath, nil, "name", SeedCustomerName),
+		"Seeded customer %q not found in list", SeedCustomerName)
 }
 
 func TestListCustomers_SearchByName(t *testing.T) {

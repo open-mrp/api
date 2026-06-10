@@ -950,6 +950,10 @@ func (s *accountUserSvcImpl) UpdateAccountUserPassword(ctx context.Context, acco
 				Action:       constants.AuditActionUpdate,
 				ResourceType: constants.ObjectTypeAccountUser,
 				ResourceID:   targetAccountUser.ID,
+				// No Changes: never record password material. Metadata marks
+				// what happened so the event is self-describing (and is not
+				// skipped as a no-op by the publisher).
+				Metadata: map[string]any{"password_rotated": true},
 			}); apiErr != nil {
 				return apiErr
 			}

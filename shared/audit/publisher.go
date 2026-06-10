@@ -39,6 +39,13 @@ func (p *Publisher) Publish(
 	outboxRepo messaging.OutboxRepo,
 	data EventData,
 ) *apierror.APIError {
+	// Skip no-op updates: an update event with no recorded changes and no
+	// metadata carries no information (e.g. a PATCH that sets fields to their
+	// current values). Create and delete events always publish.
+	if data.Action == constants.AuditActionUpdate && len(data.Changes) == 0 && len(data.Metadata) == 0 {
+		return nil
+	}
+
 	identity, ok := appctx.GetIdentityFromContext(ctx)
 	if !ok || identity == nil {
 		return apierror.NewInvariantViolationError("Identity not found in context.")

@@ -4,6 +4,7 @@ package api_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"testing"
 
@@ -255,23 +256,19 @@ func TestParts_List(t *testing.T) {
 func TestParts_ListPagination(t *testing.T) {
 	t.Parallel()
 
-	page1, _, err := apiClient.GetList(partsPath, url.Values{"limit": {"1"}})
-	require.NoError(t, err)
-	require.LessOrEqual(t, len(page1.Data), 1)
-
-	if !page1.PageInfo.HasNextPage || page1.PageInfo.NextPageURL == nil {
-		t.Fatal("Not enough parts for pagination test")
+	// Paginate over rows this test owns, scoped by a unique search term, so
+	// parallel tests creating or deleting parts cannot shift the cursor
+	// window.
+	prefix := uniqueName("e2e-part-pg")
+	var ids []string
+	for i := 0; i < 2; i++ {
+		created := createAndCleanup(t, partsPath, validPartBody(fmt.Sprintf("%s-%d", prefix, i)))
+		id := jsonField(created, "id")
+		require.NotEmpty(t, id)
+		ids = append(ids, id)
 	}
 
-	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
-	require.NoError(t, err)
-	if len(page2.Data) == 0 {
-		t.Fatal("Pagination page returned empty; likely parallel test interference")
-	}
-
-	id1 := DataItemField(page1.Data[0], "id")
-	id2 := DataItemField(page2.Data[0], "id")
-	assert.NotEqual(t, id1, id2, "pages should return different parts")
+	assertScopedCursorPagination(t, partsPath, url.Values{"q": {prefix}}, ids)
 }
 
 func TestParts_ListSearch(t *testing.T) {

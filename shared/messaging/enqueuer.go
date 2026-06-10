@@ -250,14 +250,14 @@ func (e *Enqueuer) Stop() {
 	slog.Info("Outbox enqueuer stopped", "service", e.config.ServiceName)
 }
 
-// pollLoop ticks at PollInterval and calls processBatch on each tick. In test
+// pollLoop ticks at PollInterval and calls drainPending on each tick. In test
 // platform mode it also processes once immediately so the first outbox row is not
 // delayed by a full poll interval. Exits when the enqueuer's context is cancelled.
 func (e *Enqueuer) pollLoop() {
 	defer e.wg.Done()
 
 	if e.config.PlatformMode.IsTest() {
-		e.processBatch()
+		e.drainPending()
 	}
 
 	ticker := time.NewTicker(e.config.PollInterval)
@@ -268,7 +268,28 @@ func (e *Enqueuer) pollLoop() {
 		case <-e.ctx.Done():
 			return
 		case <-ticker.C:
-			e.processBatch()
+			e.drainPending()
+		}
+	}
+}
+
+// drainPending repeatedly processes batches until the backlog is drained (a
+// batch comes back smaller than BatchSize) or the context is cancelled. Without
+// draining, throughput would be capped at BatchSize messages per PollInterval —
+// far below the rate at which a busy service writes outbox rows — and the
+// pending backlog would grow without bound under sustained load. Messages that
+// fail to publish are rescheduled with backoff (next_run_at in the future), so
+// they do not keep the drain loop spinning.
+func (e *Enqueuer) drainPending() {
+	for {
+		select {
+		case <-e.ctx.Done():
+			return
+		default:
+		}
+
+		if acquired := e.processBatch(); acquired < e.config.BatchSize {
+			return
 		}
 	}
 }
@@ -294,10 +315,12 @@ func (e *Enqueuer) cleanupLoop() {
 
 // processBatch acquires up to BatchSize pending outbox messages (locked to this
 // instance's LockOwner), publishes each to RabbitMQ via publishMessage, and marks
-// the result in the database. Successfully published messages are deleted from the
-// outbox (MarkPublished). Failed messages have their attempt count incremented and
-// are scheduled for retry with exponential backoff (MarkFailed).
-func (e *Enqueuer) processBatch() {
+// the results in the database: successfully published messages are marked in one
+// set-based MarkPublished call; failed messages have their attempt count
+// incremented and are scheduled for retry with exponential backoff (MarkFailed).
+// Returns the number of messages acquired so drainPending can tell whether the
+// backlog may hold more work (a full batch) or is drained (a short batch).
+func (e *Enqueuer) processBatch() int {
 	var messages []*OutboxMessage
 	err := WithOutboxDBLockRetry(e.ctx, e.config.DBRetryBackoff, "outbox.acquire_and_lock", func() error {
 		var err error
@@ -306,15 +329,16 @@ func (e *Enqueuer) processBatch() {
 	})
 	if err != nil {
 		slog.Error("Failed to acquire outbox messages", "error", err)
-		return
+		return 0
 	}
 
 	if len(messages) == 0 {
-		return
+		return 0
 	}
 
 	slog.Debug("Processing outbox messages", "count", len(messages))
 
+	publishedIDs := make([]int64, 0, len(messages))
 	for _, msg := range messages {
 		if err := e.publishMessage(msg); err != nil {
 			delay := retry.CalculateDelay(e.config.RetryBackoff, msg.Attempts)
@@ -334,18 +358,24 @@ func (e *Enqueuer) processBatch() {
 			continue
 		}
 
+		publishedIDs = append(publishedIDs, msg.ID)
+	}
+
+	if len(publishedIDs) > 0 {
 		err := WithOutboxDBLockRetry(e.ctx, e.config.DBRetryBackoff, "outbox.mark_published", func() error {
-			return e.repo.MarkPublished(e.ctx, msg.ID)
+			return e.repo.MarkPublished(e.ctx, publishedIDs)
 		})
 		if err != nil {
-			slog.Error("Failed to mark message as published", "id", msg.ID, "error", err)
+			// The messages were published but stay locked as 'pending'; their
+			// locks expire and another pass republishes them — consumers
+			// deduplicate via the inbox, so at-least-once still holds.
+			slog.Error("Failed to mark messages as published", "count", len(publishedIDs), "error", err)
 		} else {
-			slog.Debug("Published outbox message",
-				"message_id", msg.MessageID,
-				"message_type", msg.MessageType,
-			)
+			slog.Debug("Published outbox messages", "count", len(publishedIDs))
 		}
 	}
+
+	return len(messages)
 }
 
 // publishMessage publishes an OutboxMessage via the message broker. It stamps

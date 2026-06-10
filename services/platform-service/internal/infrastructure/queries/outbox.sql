@@ -27,12 +27,12 @@ WHERE id IN (sqlc.slice('ids'))
   AND lock_expires_at > NOW(3)
 ORDER BY id ASC;
 
--- name: MarkOutboxMessagePublished :exec
+-- name: MarkOutboxMessagesPublished :exec
 UPDATE message_outbox
 SET status = 'published', published_at = NOW(3),
     locked_at = NULL, lock_owner = NULL, lock_expires_at = NULL,
     updated_at = NOW(3)
-WHERE id = ?;
+WHERE id IN (sqlc.slice('ids'));
 
 -- name: MarkOutboxMessageFailed :exec
 UPDATE message_outbox

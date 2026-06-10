@@ -94,14 +94,10 @@ func TestProperties_List(t *testing.T) {
 	assert.Equal(t, "list", list.Object)
 	assert.GreaterOrEqual(t, len(list.Data), 1)
 
-	found := false
-	for _, item := range list.Data {
-		if DataItemField(item, "name") == SeedPropertyName {
-			found = true
-			break
-		}
-	}
-	assert.True(t, found, "Seeded property %q should appear in list", SeedPropertyName)
+	// Paginate until found: seed rows are the oldest and fall off the
+	// first page as repeated e2e runs accumulate data.
+	assert.NotNil(t, listFindByField(t, propertiesPath, nil, "name", SeedPropertyName),
+		"Seeded property %q should appear in list", SeedPropertyName)
 }
 
 func TestProperties_ListSearchByName(t *testing.T) {

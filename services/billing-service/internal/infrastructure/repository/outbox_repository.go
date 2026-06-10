@@ -164,11 +164,15 @@ func (r *outboxEnqueuerRepoImpl) AcquireAndLock(ctx context.Context, lockOwner s
 	return messages, nil
 }
 
-func (r *outboxEnqueuerRepoImpl) MarkPublished(ctx context.Context, id int64) error {
+func (r *outboxEnqueuerRepoImpl) MarkPublished(ctx context.Context, ids []int64) error {
 	ctx, span := tracing.StartSpan(ctx, outboxRepoTracer, "repository.outbox.mark_published")
 	defer span.End()
 
-	err := r.queries.MarkOutboxMessagePublished(ctx, id)
+	if len(ids) == 0 {
+		return nil
+	}
+
+	err := r.queries.MarkOutboxMessagesPublished(ctx, ids)
 	if err != nil {
 		span.RecordError(err)
 		return err

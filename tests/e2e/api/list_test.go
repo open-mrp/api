@@ -147,24 +147,39 @@ func TestListEndpoints_PaginationCursor(t *testing.T) {
 				return
 			}
 
-			statusCode, body, err := apiClient.GetListRaw(path, url.Values{"limit": {"1"}})
-			require.NoError(t, err, "GET %s?limit=1 (page 1) failed", path)
-			skipOnNonClientError(t, path, statusCode)
-			require.Equal(t, 200, statusCode, "GET %s?limit=1 returned %d: %s", path, statusCode, string(body))
+			// This sweep paginates shared global lists, so parallel tests can
+			// delete the rows behind the cursor between the two fetches and
+			// leave page 2 legitimately empty. Retry the whole sequence a few
+			// times: transient interference passes on a later attempt, while a
+			// real pagination bug fails every attempt.
+			const pageFetchAttempts = 3
+			var page1, page2 ListResponse
+			for attempt := 1; ; attempt++ {
+				statusCode, body, err := apiClient.GetListRaw(path, url.Values{"limit": {"1"}})
+				require.NoError(t, err, "GET %s?limit=1 (page 1) failed", path)
+				skipOnNonClientError(t, path, statusCode)
+				require.Equal(t, 200, statusCode, "GET %s?limit=1 returned %d: %s", path, statusCode, string(body))
 
-			var page1 ListResponse
-			require.NoError(t, json.Unmarshal(body, &page1))
+				page1 = ListResponse{}
+				require.NoError(t, json.Unmarshal(body, &page1))
 
-			if len(page1.Data) == 0 || !page1.PageInfo.HasNextPage {
-				t.Fatalf("Not enough data for pagination test on %s", path)
-				return
+				if len(page1.Data) == 0 || !page1.PageInfo.HasNextPage {
+					t.Fatalf("Not enough data for pagination test on %s", path)
+					return
+				}
+
+				require.NotNil(t, page1.PageInfo.NextPageURL, "next_page_url should be set when has_next_page is true")
+
+				p2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
+				require.NoError(t, err, "GET page 2 via next_page_url failed for %s", path)
+				page2 = *p2
+
+				if len(page2.Data) > 0 || attempt >= pageFetchAttempts {
+					break
+				}
+				t.Logf("page 2 of %s empty on attempt %d (likely parallel deletes); retrying", path, attempt)
 			}
-
-			require.NotNil(t, page1.PageInfo.NextPageURL, "next_page_url should be set when has_next_page is true")
-
-			page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
-			require.NoError(t, err, "GET page 2 via next_page_url failed for %s", path)
-			assert.NotEmpty(t, page2.Data, "Page 2 should have data")
+			assert.NotEmpty(t, page2.Data, "Page 2 should have data (after %d attempts)", pageFetchAttempts)
 
 			if len(page1.Data) > 0 && len(page2.Data) > 0 {
 				id1 := DataItemField(page1.Data[0], "id")

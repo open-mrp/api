@@ -60,6 +60,10 @@ type rabbitMQ struct {
 	mu            sync.Mutex
 	publishFunc   func(context.Context, string, string, amqp.Publishing) error
 	reconnectFunc func(context.Context) error
+
+	// consumerRetry overrides the per-delivery handler retry policy; nil means
+	// the package retry defaults. Indirected for testability.
+	consumerRetry *retry.Config
 }
 
 // RabbitMQConfig represents the configuration for the rabbitMQ client.
@@ -166,16 +170,31 @@ func NewRabbitMQ(ctx context.Context, config *RabbitMQConfig) (MessageBroker, er
 
 // ConsumeMessages starts consuming from the given queue in a background goroutine.
 // The goroutine runs an infinite loop that re-establishes the channel and consumer
-// on any connection interruption. For each delivery:
+// on any connection interruption. Deliveries are processed by a pool of
+// Concurrency worker goroutines (default 1); for each delivery:
 //  1. The message is wrapped in a traced span via tracing.TracedConsumer.
 //  2. The handler is called with exponential backoff retries (via retry.WithBackoff).
 //  3. On success the delivery is ACKed. On exhausted retries the delivery is rejected
 //     without requeue, sending it to the dead-letter queue with diagnostic headers
 //     (x-death-reason, x-retry-count, etc.).
 //
-// QoS prefetch is set to 1, ensuring fair dispatch — each consumer processes one
-// message at a time and only receives the next after acknowledging the current one.
-func (r *rabbitMQ) ConsumeMessages(ctx context.Context, queueName string, handler MessageHandler) error {
+// With the default Concurrency of 1, QoS prefetch is the broker default (1) and
+// each message is fully processed before the next is delivered — strict in-order
+// consumption. With Concurrency > 1, prefetch is raised to 2x the worker count so
+// workers stay fed, and messages on this queue are processed (and ACKed) out of
+// order; see ConsumeOptions.Concurrency for when that is safe.
+func (r *rabbitMQ) ConsumeMessages(ctx context.Context, queueName string, handler MessageHandler, opts ...ConsumeOption) error {
+	options := ConsumeOptions{Concurrency: 1}
+	for _, opt := range opts {
+		opt(&options)
+	}
+	concurrency := max(options.Concurrency, 1)
+
+	prefetch := r.prefetchCount
+	if concurrency > 1 {
+		prefetch = concurrency * 2
+	}
+
 	go func() {
 		for {
 			select {
@@ -196,9 +215,9 @@ func (r *rabbitMQ) ConsumeMessages(ctx context.Context, queueName string, handle
 			}
 
 			err := r.Channel.Qos(
-				r.prefetchCount, // prefetchCount
-				0,               // prefetchSize
-				false,           // global
+				prefetch, // prefetchCount
+				0,        // prefetchSize
+				false,    // global
 			)
 			if err != nil {
 				slog.Error("Failed to set QoS, retrying", "queue", queueName, "error", err, "retry_delay", r.reconnectDelay)
@@ -229,50 +248,30 @@ func (r *rabbitMQ) ConsumeMessages(ctx context.Context, queueName string, handle
 				continue
 			}
 
-			slog.Info("Started consuming", "queue", queueName)
+			slog.Info("Started consuming", "queue", queueName, "concurrency", concurrency, "prefetch", prefetch)
 
-			for msg := range msgs {
-				select {
-				case <-ctx.Done():
-					slog.Info("Context cancelled, stopping consumer", "queue", queueName)
-					return
-				default:
-				}
-
-				if err := tracing.TracedConsumer(msg, queueName, func(ctx context.Context, d amqp.Delivery) error {
-
-					retryCfg := new(retry.Config).WithDefaults()
-					err := retry.WithBackoff(ctx, retryCfg, func() error {
-						return handler(ctx, d)
-					})
-					if err != nil {
-
-						// Add failure context before sending to the DLQ
-						headers := amqp.Table{}
-						if d.Headers != nil {
-							headers = d.Headers
-						}
-
-						headers["x-death-reason"] = err.Error()
-						headers["x-origin-exchange"] = d.Exchange
-						headers["x-original-routing-key"] = d.RoutingKey
-						headers["x-retry-count"] = retryCfg.MaxRetries
-						d.Headers = headers
-
-						// Reject without requeue - message will go to the DLQ
-						_ = d.Reject(false)
-						return err
+			// Workers exit when the deliveries channel closes (connection loss
+			// or shutdown). The pool is re-created on each (re)connect.
+			var wg sync.WaitGroup
+			for range concurrency {
+				wg.Go(func() {
+					for msg := range msgs {
+						r.processDelivery(ctx, queueName, handler, msg)
 					}
+				})
+			}
 
-					// Only Ack if the handler succeeds
-					if ackErr := msg.Ack(false); ackErr != nil {
-						slog.Error("Failed to Ack message", "error", ackErr, "body", string(msg.Body))
-					}
+			workersDone := make(chan struct{})
+			go func() {
+				wg.Wait()
+				close(workersDone)
+			}()
 
-					return nil
-				}); err != nil {
-					slog.Error("Error processing message", "error", err)
-				}
+			select {
+			case <-ctx.Done():
+				slog.Info("Context cancelled, stopping consumer", "queue", queueName)
+				return
+			case <-workersDone:
 			}
 
 			slog.Info("Consumption loop ended, reconnecting", "queue", queueName)
@@ -285,6 +284,53 @@ func (r *rabbitMQ) ConsumeMessages(ctx context.Context, queueName string, handle
 	}()
 
 	return nil
+}
+
+// processDelivery handles one AMQP delivery: traced span, handler invocation
+// with backoff retries, ACK on success, and rejection to the dead-letter queue
+// (with diagnostic headers) when retries are exhausted.
+func (r *rabbitMQ) processDelivery(ctx context.Context, queueName string, handler MessageHandler, msg amqp.Delivery) {
+	select {
+	case <-ctx.Done():
+		return
+	default:
+	}
+
+	if err := tracing.TracedConsumer(msg, queueName, func(ctx context.Context, d amqp.Delivery) error {
+		retryCfg := r.consumerRetry
+		if retryCfg == nil {
+			retryCfg = new(retry.Config).WithDefaults()
+		}
+		err := retry.WithBackoff(ctx, retryCfg, func() error {
+			return handler(ctx, d)
+		})
+		if err != nil {
+			// Add failure context before sending to the DLQ
+			headers := amqp.Table{}
+			if d.Headers != nil {
+				headers = d.Headers
+			}
+
+			headers["x-death-reason"] = err.Error()
+			headers["x-origin-exchange"] = d.Exchange
+			headers["x-original-routing-key"] = d.RoutingKey
+			headers["x-retry-count"] = retryCfg.MaxRetries
+			d.Headers = headers
+
+			// Reject without requeue - message will go to the DLQ
+			_ = d.Reject(false)
+			return err
+		}
+
+		// Only Ack if the handler succeeds
+		if ackErr := msg.Ack(false); ackErr != nil {
+			slog.Error("Failed to Ack message", "error", ackErr, "body", string(msg.Body))
+		}
+
+		return nil
+	}); err != nil {
+		slog.Error("Error processing message", "error", err)
+	}
 }
 
 // PublishMessage serializes an AmqpMessage to JSON and publishes it to the

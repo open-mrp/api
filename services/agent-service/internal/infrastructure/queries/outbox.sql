@@ -27,12 +27,12 @@ SELECT * FROM message_outbox
 WHERE lock_owner = $1 AND lock_expires_at > now()
 ORDER BY next_run_at ASC;
 
--- name: MarkOutboxMessagePublished :exec
+-- name: MarkOutboxMessagesPublished :exec
 UPDATE message_outbox
 SET status = 'published', published_at = now(),
     locked_at = NULL, lock_owner = NULL, lock_expires_at = NULL,
     updated_at = now()
-WHERE id = $1;
+WHERE id = ANY(@ids::bigint[]);
 
 -- name: MarkOutboxMessageFailed :exec
 UPDATE message_outbox

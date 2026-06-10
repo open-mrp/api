@@ -3,6 +3,7 @@
 package api_test
 
 import (
+	"fmt"
 	"net/url"
 	"strings"
 	"testing"
@@ -101,19 +102,36 @@ func TestListItems_SearchNoResults(t *testing.T) {
 
 func TestListItems_Pagination(t *testing.T) {
 	t.Parallel()
-	page1, _, err := apiClient.GetList(itemsPath, url.Values{"limit": {"1"}})
-	require.NoError(t, err)
-	requirePageLen(t, page1.Data, 1)
-	require.True(t, page1.PageInfo.HasNextPage, "seeded catalog should have more than one item for pagination")
-	require.NotNil(t, page1.PageInfo.NextPageURL)
+	// Paginate over items this test owns (created via materials with a unique
+	// SKU prefix), scoped by q, so parallel tests creating or deleting items
+	// cannot shift the cursor window.
+	prefix := uniqueName("e2e-item-pg")
+	ids := createItemsViaMaterials(t, prefix, 2)
 
-	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
-	require.NoError(t, err)
-	requirePageLen(t, page2.Data, 1)
+	assertScopedCursorPagination(t, itemsPath, url.Values{"q": {prefix}}, ids)
+}
 
-	id1 := DataItemField(page1.Data[0], "id")
-	id2 := DataItemField(page2.Data[0], "id")
-	assert.NotEqual(t, id1, id2, "cursor pages should return different items")
+// createItemsViaMaterials creates n materials with SKUs sharing the given
+// unique prefix (registering cleanup) and returns the ids of the catalog
+// items they produce.
+func createItemsViaMaterials(t *testing.T, prefix string, n int) []string {
+	t.Helper()
+	var ids []string
+	for i := 0; i < n; i++ {
+		sku := fmt.Sprintf("%s-%d", prefix, i)
+		createStatus, createBody, err := apiClient.Post(materialsPath, validMaterialBody(sku), newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, 201, createStatus, createBody)
+		materialID := jsonField(parseJSON(createBody), "id")
+		require.NotEmpty(t, materialID)
+		t.Cleanup(func() { apiClient.Delete(materialsPath + "/" + materialID) })
+
+		list, _, err := apiClient.GetList(itemsPath, url.Values{"q": {sku}})
+		require.NoError(t, err)
+		require.Len(t, list.Data, 1, "exactly one item should match the unique SKU %q", sku)
+		ids = append(ids, DataItemField(list.Data[0], "id"))
+	}
+	return ids
 }
 
 func TestListItems_FilterByProductLine(t *testing.T) {
@@ -155,27 +173,17 @@ func TestListItems_FilterByCustomer_NoResults(t *testing.T) {
 func TestListItems_FilterByCategoryWithPagination(t *testing.T) {
 	t.Parallel()
 
-	// Page 1: limit=1 with category filter — verifies filters apply on first page.
-	page1, _, err := apiClient.GetList(itemsPath, url.Values{
+	// Paginate over items this test owns (validMaterialBody puts them in
+	// SeedItemCategoryID), scoped by both the category filter and a unique q,
+	// verifying filters persist across cursor pages without interference from
+	// parallel tests mutating the shared category.
+	prefix := uniqueName("e2e-item-catpg")
+	ids := createItemsViaMaterials(t, prefix, 2)
+
+	assertScopedCursorPagination(t, itemsPath, url.Values{
 		"category_ids": {SeedItemCategoryID},
-		"limit":        {"1"},
-	})
-	require.NoError(t, err)
-	requirePageLen(t, page1.Data, 1)
-
-	if !page1.PageInfo.HasNextPage || page1.PageInfo.NextPageURL == nil {
-		// Only one item in the category — still confirms the filter worked.
-		return
-	}
-
-	// Page 2: follows next_page_url — verifies filters persist across pages.
-	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
-	require.NoError(t, err)
-	requirePageLen(t, page2.Data, 1)
-
-	id1 := DataItemField(page1.Data[0], "id")
-	id2 := DataItemField(page2.Data[0], "id")
-	assert.NotEqual(t, id1, id2, "Cursor pages should return different items")
+		"q":            {prefix},
+	}, ids)
 }
 
 // fetchProductionStepInStepIDs returns parent step IDs from GET /production-steps/{id}?include=in_steps.

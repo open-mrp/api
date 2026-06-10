@@ -23,14 +23,9 @@ func TestUnits_List(t *testing.T) {
 	assert.Equal(t, "list", list.Object)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Should have at least 1 seeded unit")
 
-	found := false
-	for _, item := range list.Data {
-		if DataItemField(item, "id") == SeedUnitID {
-			found = true
-			break
-		}
-	}
-	assert.True(t, found, "Seeded unit should appear in list")
+	// Paginate until found: seed rows are the oldest and fall off the
+	// first page as repeated e2e runs accumulate data.
+	assertListContainsID(t, unitsPath, nil, SeedUnitID)
 }
 
 func TestUnits_ListResponseShape(t *testing.T) {
@@ -66,25 +61,9 @@ func TestUnits_ListPagination(t *testing.T) {
 
 func TestUnits_ListCursorPagination(t *testing.T) {
 	t.Parallel()
-	page1, _, err := apiClient.GetList(unitsPath, url.Values{"limit": {"1"}})
-	require.NoError(t, err)
-	requirePageLen(t, page1.Data, 1)
-
-	if !page1.PageInfo.HasNextPage {
-		t.Fatal("Not enough units for pagination test")
-		return
-	}
-	require.NotNil(t, page1.PageInfo.NextPageURL, "next_page_url should be set when has_next_page is true")
-
-	page1ID := DataItemField(page1.Data[0], "id")
-	assert.NotEmpty(t, page1ID)
-
-	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
-	require.NoError(t, err)
-	requirePageLen(t, page2.Data, 1)
-
-	page2ID := DataItemField(page2.Data[0], "id")
-	assert.NotEqual(t, page1ID, page2ID, "Page 2 should return a different item than page 1")
+	// Retry-bounded two-page fetch: parallel tests can delete the rows
+	// behind the cursor between fetches on this shared list.
+	assertCursorPaginationAdvances(t, unitsPath, nil)
 }
 
 func TestUnits_ListSearchByName(t *testing.T) {

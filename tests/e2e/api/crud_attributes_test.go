@@ -108,14 +108,9 @@ func TestAttributes_List(t *testing.T) {
 	assert.Equal(t, "list", list.Object)
 	assert.GreaterOrEqual(t, len(list.Data), 1)
 
-	found := false
-	for _, item := range list.Data {
-		if DataItemField(item, "id") == SeedAttributeID {
-			found = true
-			break
-		}
-	}
-	assert.True(t, found, "Seeded attribute should appear in list")
+	// Paginate until found: seed rows are the oldest and fall off the
+	// first page as repeated e2e runs accumulate data.
+	assertListContainsID(t, attributesPath(SeedPropertyID), nil, SeedAttributeID)
 }
 
 func TestAttributes_ListSearchByValue(t *testing.T) {

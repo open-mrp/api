@@ -29,19 +29,9 @@ func TestEmailLogs_ListWithLimit(t *testing.T) {
 
 func TestEmailLogs_ListPagination(t *testing.T) {
 	t.Parallel()
-	page1, _, err := apiClient.GetList(emailLogsPath, url.Values{"limit": {"1"}})
-	require.NoError(t, err)
-	requirePageLen(t, page1.Data, 1)
-	require.True(t, page1.PageInfo.HasNextPage, "should have a next page")
-	require.NotNil(t, page1.PageInfo.NextPageURL)
-
-	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
-	require.NoError(t, err)
-	requirePageLen(t, page2.Data, 1)
-
-	id1 := DataItemField(page1.Data[0], "id")
-	id2 := DataItemField(page2.Data[0], "id")
-	assert.NotEqual(t, id1, id2, "pages should return different items")
+	// Retry-bounded two-page fetch: parallel tests can delete the rows
+	// behind the cursor between fetches on this shared list.
+	assertCursorPaginationAdvances(t, emailLogsPath, nil)
 }
 
 func TestEmailLogs_ListSearch(t *testing.T) {

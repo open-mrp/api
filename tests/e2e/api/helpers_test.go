@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -153,15 +154,134 @@ func assertSearchRankOrder(t *testing.T, list []json.RawMessage, expectedSKUs []
 	}
 }
 
-// requirePageLen checks that a pagination page has the expected number of items.
-// If the page is unexpectedly empty it skips the test rather than failing, since
-// parallel CRUD tests can interfere with cursor pagination results.
+// requirePageLen checks that a pagination page has the expected number of
+// items. Only use it on lists that parallel tests cannot shrink (system
+// enums, append-only logs, single-fetch checks) — for mutable shared lists
+// use assertScopedCursorPagination or assertCursorPaginationAdvances instead.
 func requirePageLen(t *testing.T, data []json.RawMessage, expected int) {
 	t.Helper()
 	if len(data) == 0 && expected > 0 {
 		t.Fatal("Pagination page returned empty; likely parallel test interference")
 	}
 	require.Len(t, data, expected)
+}
+
+// maxListScanPages bounds how many pages listFindByField walks (pages of
+// 1000, so 25k rows) before declaring a row absent.
+const maxListScanPages = 25
+
+// listFindByField pages through a cursor-paginated list endpoint (following
+// next_page_url with limit=1000, up to maxListScanPages pages) and returns
+// the first item whose field equals value, or nil when no page contains it.
+//
+// List tests must never assume a row lands on the first page: repeated e2e
+// runs against the same database accumulate rows, and seed rows — the oldest —
+// are the first to fall off the newest-first front page.
+func listFindByField(t *testing.T, path string, params url.Values, field, value string) json.RawMessage {
+	t.Helper()
+
+	merged := url.Values{"limit": {"1000"}}
+	for k, vs := range params {
+		merged[k] = vs
+	}
+
+	list, _, err := apiClient.GetList(path, merged)
+	require.NoError(t, err, "listing %s", path)
+	for page := 0; page < maxListScanPages; page++ {
+		for _, item := range list.Data {
+			if DataItemField(item, field) == value {
+				return item
+			}
+		}
+		if !list.PageInfo.HasNextPage || list.PageInfo.NextPageURL == nil {
+			return nil
+		}
+		list, _, err = apiClient.GetListFromPageURL(list.PageInfo.NextPageURL)
+		require.NoError(t, err, "paging %s", path)
+	}
+	return nil
+}
+
+// assertListContainsID asserts an item with the given id appears somewhere in
+// the paginated list.
+func assertListContainsID(t *testing.T, path string, params url.Values, id string) {
+	t.Helper()
+	assert.NotNil(t, listFindByField(t, path, params, "id", id),
+		"item %q should appear in the %s list (scanned up to %d pages)", id, path, maxListScanPages)
+}
+
+// assertCursorPaginationAdvances fetches two consecutive limit=1 pages of a
+// shared (globally mutable) list and asserts the cursor advanced to a
+// different row. Parallel tests can delete the rows behind the cursor between
+// the two fetches and leave page 2 legitimately empty, so the sequence is
+// retried a few times: transient interference passes on a later attempt while
+// a real pagination bug fails every attempt. Prefer
+// assertScopedCursorPagination (test-owned rows) where the resource supports
+// search-scoped listing.
+func assertCursorPaginationAdvances(t *testing.T, path string, params url.Values) {
+	t.Helper()
+	const attempts = 3
+
+	merged := url.Values{"limit": {"1"}}
+	for k, vs := range params {
+		merged[k] = vs
+	}
+
+	for attempt := 1; ; attempt++ {
+		page1, _, err := apiClient.GetList(path, merged)
+		require.NoError(t, err, "listing %s", path)
+		require.Len(t, page1.Data, 1, "first page of %s should hold one row", path)
+		require.True(t, page1.PageInfo.HasNextPage, "%s should have a next page", path)
+		require.NotNil(t, page1.PageInfo.NextPageURL)
+
+		page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
+		require.NoError(t, err, "paging %s", path)
+
+		if len(page2.Data) == 0 && attempt < attempts {
+			t.Logf("page 2 of %s empty on attempt %d (likely parallel deletes); retrying", path, attempt)
+			continue
+		}
+		require.Len(t, page2.Data, 1, "second page of %s should hold one row (after %d attempts)", path, attempt)
+
+		assert.NotEqual(t,
+			DataItemField(page1.Data[0], "id"), DataItemField(page2.Data[0], "id"),
+			"consecutive pages of %s should return different items", path)
+		return
+	}
+}
+
+// assertScopedCursorPagination walks a list one row per page and asserts that
+// exactly the given ids are reached, each exactly once — proving the cursor
+// advances without duplicating or skipping rows. Callers scope the list to
+// rows they own (a search param matching a unique prefix), which makes the
+// walk immune to rows that parallel tests create or delete.
+func assertScopedCursorPagination(t *testing.T, path string, params url.Values, wantIDs []string) {
+	t.Helper()
+	require.GreaterOrEqual(t, len(wantIDs), 2, "scoped pagination needs at least two rows")
+
+	merged := url.Values{"limit": {"1"}}
+	for k, vs := range params {
+		merged[k] = vs
+	}
+
+	list, _, err := apiClient.GetList(path, merged)
+	require.NoError(t, err, "listing %s", path)
+
+	var seen []string
+	for page := 0; page <= len(wantIDs); page++ {
+		require.LessOrEqual(t, len(list.Data), 1, "limit=1 pages should hold at most one row")
+		for _, item := range list.Data {
+			seen = append(seen, DataItemField(item, "id"))
+		}
+		if !list.PageInfo.HasNextPage || list.PageInfo.NextPageURL == nil {
+			break
+		}
+		list, _, err = apiClient.GetListFromPageURL(list.PageInfo.NextPageURL)
+		require.NoError(t, err, "paging %s", path)
+	}
+
+	assert.ElementsMatch(t, wantIDs, seen,
+		"cursor walk over %s should visit each scoped row exactly once", path)
 }
 
 // requireStatus asserts the HTTP status code matches and includes the body in the error message.

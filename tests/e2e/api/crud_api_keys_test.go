@@ -58,14 +58,9 @@ func TestAPIKeys_List(t *testing.T) {
 	assert.Equal(t, "list", list.Object)
 	assert.GreaterOrEqual(t, len(list.Data), 1)
 
-	found := false
-	for _, item := range list.Data {
-		if DataItemField(item, "id") == SeedAPIKeyID {
-			found = true
-			break
-		}
-	}
-	assert.True(t, found, "Seeded API key should appear in list")
+	// Paginate until found: seed rows are the oldest and fall off the
+	// first page as repeated e2e runs accumulate data.
+	assertListContainsID(t, apiKeysPath, nil, SeedAPIKeyID)
 }
 
 func TestAPIKeys_Revoke(t *testing.T) {

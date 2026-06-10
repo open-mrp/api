@@ -3,6 +3,7 @@
 package api_test
 
 import (
+	"fmt"
 	"net/url"
 	"strings"
 	"testing"
@@ -121,14 +122,9 @@ func TestCarriers_List(t *testing.T) {
 	assert.Equal(t, "list", list.Object)
 	assert.GreaterOrEqual(t, len(list.Data), 1)
 
-	found := false
-	for _, item := range list.Data {
-		if DataItemField(item, "id") == SeedCarrierID {
-			found = true
-			break
-		}
-	}
-	assert.True(t, found, "Seeded carrier %q should appear in list", SeedCarrierID)
+	// Paginate until found: seed rows are the oldest and fall off the
+	// first page as repeated e2e runs accumulate data.
+	assertListContainsID(t, carriersPath, nil, SeedCarrierID)
 }
 
 func TestCarriers_ListSearchByName(t *testing.T) {
@@ -155,24 +151,23 @@ func TestCarriers_ListSearchNoResults(t *testing.T) {
 
 func TestCarriers_ListPagination(t *testing.T) {
 	t.Parallel()
-	list1, _, err := apiClient.GetList(carriersPath, url.Values{"limit": {"1"}})
-	require.NoError(t, err)
-	requirePageLen(t, list1.Data, 1)
-
-	if !list1.PageInfo.HasNextPage {
-		t.Fatal("Not enough data for pagination test")
-		return
+	// Paginate over rows this test owns, scoped by a unique search term, so
+	// parallel tests creating or deleting carriers cannot shift the cursor
+	// window.
+	prefix := uniqueName("e2e-carr-pg")
+	var ids []string
+	for i := 0; i < 2; i++ {
+		status, body, err := apiClient.Post(carriersPath,
+			map[string]any{"name": fmt.Sprintf("%s-%d", prefix, i), "code": "will_call"}, newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, 201, status, body)
+		id := jsonField(parseJSON(body), "id")
+		require.NotEmpty(t, id)
+		defer apiClient.Delete(carriersPath + "/" + id)
+		ids = append(ids, id)
 	}
 
-	require.NotNil(t, list1.PageInfo.NextPageURL)
-
-	list2, _, err := apiClient.GetListFromPageURL(list1.PageInfo.NextPageURL)
-	require.NoError(t, err)
-	requirePageLen(t, list2.Data, 1)
-
-	id1 := DataItemField(list1.Data[0], "id")
-	id2 := DataItemField(list2.Data[0], "id")
-	assert.NotEqual(t, id1, id2, "Paginated pages should return different items")
+	assertScopedCursorPagination(t, carriersPath, url.Values{"q": {prefix}}, ids)
 }
 
 func TestCarriers_GetSeeded(t *testing.T) {
@@ -324,26 +319,11 @@ func TestCarriers_IncludeServiceLevels(t *testing.T) {
 
 func TestCarriers_ListIncludeServiceLevels(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(carriersPath, url.Values{"include": {"service_levels"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	got := parseJSON(body)
-	items, ok := got["data"].([]any)
-	require.True(t, ok, "list response should have a data array")
-
-	var seeded map[string]any
-	for _, raw := range items {
-		item, ok := raw.(map[string]any)
-		if !ok {
-			continue
-		}
-		if jsonField(item, "id") == SeedCarrierID {
-			seeded = item
-			break
-		}
-	}
-	require.NotNil(t, seeded, "seeded carrier %q should appear in the list", SeedCarrierID)
+	// Paginate until found: seed rows are the oldest and fall off the first
+	// page as repeated e2e runs accumulate data.
+	raw := listFindByField(t, carriersPath, url.Values{"include": {"service_levels"}}, "id", SeedCarrierID)
+	require.NotNil(t, raw, "seeded carrier %q should appear in the list", SeedCarrierID)
+	seeded := parseJSON(raw)
 
 	sl := jsonObject(seeded, "service_levels")
 	require.NotNil(t, sl, "service_levels should be present on list items with ?include=service_levels")

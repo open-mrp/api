@@ -28,11 +28,22 @@ func RespondWithAPIError(ctx context.Context, w http.ResponseWriter, apiErr *api
 		rl.ErrorCode = &errorCode
 		rl.ErrorMessage = &apiErr.PublicMessage
 		if apiErr.Code == apierror.ErrorCodeInternalError {
-			rl.InternalErrorMessage = &apiErr.InternalMessage
-			stackTrace := make([]byte, 32768) // 32KB
-			length := runtime.Stack(stackTrace, false)
-			st := string(stackTrace[:length])
-			rl.StackTrace = &st
+			// Record the full internal chain (InternalMessage + wrapped Internal error), not
+			// just the top-level message — otherwise the underlying cause (e.g. the real
+			// driver error behind "Database request failed for unknown reason.") is lost.
+			internalMessage := apiErr.Error()
+			rl.InternalErrorMessage = &internalMessage
+			// Prefer the stack captured where the error originated (NewInternalError). Fall
+			// back to capturing here only if the error carries no origin stack.
+			if apiErr.Stack != "" {
+				st := apiErr.Stack
+				rl.StackTrace = &st
+			} else {
+				stackTrace := make([]byte, 32768) // 32KB
+				length := runtime.Stack(stackTrace, false)
+				st := string(stackTrace[:length])
+				rl.StackTrace = &st
+			}
 		}
 	}
 

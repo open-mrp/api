@@ -139,3 +139,51 @@ func TestAPIError_ToResponseMap_Order(t *testing.T) {
 		lastIdx = idx
 	}
 }
+
+func TestNewInternalError_CapturesOriginStack(t *testing.T) {
+	err := NewInternalError(errors.New("boom"), "something failed")
+
+	if err.Stack == "" {
+		t.Fatal("expected a stack to be captured for a 5xx error")
+	}
+	// The stack must include this test function — i.e. the origin, not just the
+	// constructor — so the recorded trace points at the failing code.
+	if !strings.Contains(err.Stack, "TestNewInternalError_CapturesOriginStack") {
+		t.Errorf("expected captured stack to include the calling frame, got:\n%s", err.Stack)
+	}
+}
+
+func TestNewValidationError_DoesNotCaptureStack(t *testing.T) {
+	err := NewValidationError("bad input")
+
+	if err.Stack != "" {
+		t.Errorf("expected no stack for a 4xx error, got:\n%s", err.Stack)
+	}
+}
+
+func TestNewInternalError_InheritsWrappedOriginStack(t *testing.T) {
+	origin := NewInternalError(errors.New("db exploded"), "query failed")
+	wrapped := NewInternalError(origin, "handler failed")
+
+	if wrapped.Stack != origin.Stack {
+		t.Error("expected outer error to inherit the wrapped error's origin stack rather than re-capture")
+	}
+}
+
+func TestAPIError_Stack_SurvivesJSONRoundTrip(t *testing.T) {
+	original := NewInternalError(errors.New("db exploded"), "query failed")
+
+	data, err := original.ToJSON()
+	if err != nil {
+		t.Fatalf("ToJSON: %v", err)
+	}
+
+	restored, err := APIErrorFromJSON(data)
+	if err != nil {
+		t.Fatalf("APIErrorFromJSON: %v", err)
+	}
+
+	if restored.Stack != original.Stack {
+		t.Errorf("stack not preserved across gRPC serialization\nwant:\n%s\ngot:\n%s", original.Stack, restored.Stack)
+	}
+}

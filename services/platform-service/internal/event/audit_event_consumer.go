@@ -40,10 +40,13 @@ func NewAuditEventConsumer(
 }
 
 func (c *AuditEventConsumer) Listen(ctx context.Context) error {
+	// Audit events are independent rows with inbox-based dedup, so they can be
+	// persisted concurrently — no cross-message ordering requirement.
 	return c.rabbitmq.ConsumeMessages(
 		ctx,
 		messaging.PlatformEventAuditLogQueue,
 		c.inboxConsumer.Wrap("platform.audit_event", c.handleMessage),
+		messaging.WithConcurrency(persistenceConsumerConcurrency),
 	)
 }
 

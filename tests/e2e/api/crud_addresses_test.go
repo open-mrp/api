@@ -3,6 +3,7 @@
 package api_test
 
 import (
+	"fmt"
 	"net/url"
 	"testing"
 
@@ -218,19 +219,30 @@ func TestAddresses_ListWithLimit(t *testing.T) {
 
 func TestAddresses_ListPagination(t *testing.T) {
 	t.Parallel()
-	page1, _, err := apiClient.GetList(addressesPath, url.Values{"limit": {"1"}})
-	require.NoError(t, err)
-	requirePageLen(t, page1.Data, 1)
-	require.True(t, page1.PageInfo.HasNextPage, "should have a next page")
-	require.NotNil(t, page1.PageInfo.NextPageURL)
+	// Paginate over rows this test owns, scoped by a unique search term, so
+	// parallel tests creating or deleting addresses cannot shift the cursor
+	// window.
+	prefix := uniqueName("e2e-addr-pg")
+	var ids []string
+	for i := 0; i < 2; i++ {
+		status, body, err := apiClient.Post(addressesPath, map[string]any{
+			"name":          fmt.Sprintf("%s-%d", prefix, i),
+			"type":          "drop_ship",
+			"street_line_1": "100 Pagination Ave",
+			"locality":      "Denver",
+			"state":         "CO",
+			"postal_code":   "80202",
+			"country":       "US",
+		}, newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, 201, status, body)
+		id := jsonField(parseJSON(body), "id")
+		require.NotEmpty(t, id)
+		defer apiClient.Delete(addressesPath + "/" + id)
+		ids = append(ids, id)
+	}
 
-	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
-	require.NoError(t, err)
-	requirePageLen(t, page2.Data, 1)
-
-	id1 := DataItemField(page1.Data[0], "id")
-	id2 := DataItemField(page2.Data[0], "id")
-	assert.NotEqual(t, id1, id2, "pages should return different items")
+	assertScopedCursorPagination(t, addressesPath, url.Values{"q": {prefix}}, ids)
 }
 
 func TestAddresses_ListSearch(t *testing.T) {

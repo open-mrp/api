@@ -91,9 +91,11 @@ type OutboxEnqueuerRepo interface {
 	// lockDurationSeconds. Returns the locked messages for publishing.
 	AcquireAndLock(ctx context.Context, lockOwner string, limit int, lockDurationSeconds int) ([]*OutboxMessage, error)
 
-	// MarkPublished updates the message status to 'published' with a timestamp,
-	// preserving the record for audit and debugging purposes.
-	MarkPublished(ctx context.Context, id int64) error
+	// MarkPublished updates the given messages' status to 'published' with a
+	// timestamp, preserving the records for audit and debugging purposes. The
+	// enqueuer calls this once per batch with every id it published, so the
+	// implementation should issue a single set-based UPDATE.
+	MarkPublished(ctx context.Context, ids []int64) error
 
 	// MarkFailed increments the message's attempt count, records the error message,
 	// and schedules the next retry after retryDelaySecs seconds. If MaxAttempts is

@@ -524,6 +524,7 @@ type DocApiKey struct {
 	ID              int64
 	TypeID          string
 	ApiKeyID        string
+	OwnerAccountID  string
 	EncryptedSecret string
 	CreatedAt       time.Time
 	UpdatedAt       time.Time

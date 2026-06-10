@@ -12,6 +12,16 @@ Services that mutate user-visible data can publish **audit events** through `sha
 
 `EventData` and the outbox payload are defined in `shared/audit/types.go` and `shared/audit/publisher.go`.
 
+## No-op updates are skipped
+
+`Publish` silently drops an `AuditActionUpdate` event when **both** `Changes` and `Metadata` are empty. This is how same-value PATCH requests (which pass the `RejectEmptyPatchBody` guard but change nothing) avoid producing empty `changes: []` audit events. Create and delete events always publish.
+
+Consequences for call sites:
+
+- The normal `ComputeChanges(existing, updated)` flow needs no special handling — an empty diff means the event is skipped.
+- An update event that intentionally records no field diff (e.g. password rotation, where recording values would leak secrets) **must** set `Metadata` (e.g. `{"password_rotated": true}`) or it will be silently dropped.
+- For computed changes not derivable from two struct snapshots (e.g. inventory quantity corrections), build them with `audit.NewFieldChange(field, old, new)` and only append when the value actually changed.
+
 ## `Metadata`
 
 Use `EventData.Metadata` only for **extra context** that is not a normal attribute of the resource (reason codes, ticket IDs, bulk-job labels, correlation IDs). Do **not** duplicate **actor** or **target account** there: those come from request identity and are propagated with the outbox message; persisting them again in metadata is redundant.

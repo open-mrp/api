@@ -215,14 +215,10 @@ func TestAccountGroups_List(t *testing.T) {
 		assert.Equal(t, "list", list.Object)
 		assert.GreaterOrEqual(t, len(list.Data), 1)
 
-		found := false
-		for _, item := range list.Data {
-			if DataItemField(item, "name") == SeedCustomerGroupName {
-				found = true
-				break
-			}
-		}
-		assert.True(t, found, "Seeded account group %q should appear in list", SeedCustomerGroupName)
+		// Paginate until found: seed rows are the oldest and fall off the
+		// first page as repeated e2e runs accumulate data.
+		assert.NotNil(t, listFindByField(t, accountGroupsPath, nil, "name", SeedCustomerGroupName),
+			"Seeded account group %q should appear in list", SeedCustomerGroupName)
 	})
 
 	t.Run("SearchByName", func(t *testing.T) {

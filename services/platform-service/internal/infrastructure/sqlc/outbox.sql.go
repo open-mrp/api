@@ -163,16 +163,26 @@ func (q *Queries) MarkOutboxMessageFailed(ctx context.Context, arg MarkOutboxMes
 	return err
 }
 
-const markOutboxMessagePublished = `-- name: MarkOutboxMessagePublished :exec
+const markOutboxMessagesPublished = `-- name: MarkOutboxMessagesPublished :exec
 UPDATE message_outbox
 SET status = 'published', published_at = NOW(3),
     locked_at = NULL, lock_owner = NULL, lock_expires_at = NULL,
     updated_at = NOW(3)
-WHERE id = ?
+WHERE id IN (/*SLICE:ids*/?)
 `
 
-func (q *Queries) MarkOutboxMessagePublished(ctx context.Context, id int64) error {
-	_, err := q.db.ExecContext(ctx, markOutboxMessagePublished, id)
+func (q *Queries) MarkOutboxMessagesPublished(ctx context.Context, ids []int64) error {
+	query := markOutboxMessagesPublished
+	var queryParams []interface{}
+	if len(ids) > 0 {
+		for _, v := range ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 

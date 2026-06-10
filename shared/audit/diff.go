@@ -83,6 +83,18 @@ func ComputeChanges(old, new any, fields ...string) []FieldChange {
 	return changes
 }
 
+// NewFieldChange builds a FieldChange from explicit old/new values for call
+// sites where the change is not derivable from two struct snapshots (e.g.
+// computed quantities). Values are marshalled to JSON fragments the same way
+// ComputeChanges does.
+func NewFieldChange(field string, oldValue, newValue any) FieldChange {
+	return FieldChange{
+		Field:    field,
+		OldValue: marshalToRawJSON(oldValue),
+		NewValue: marshalToRawJSON(newValue),
+	}
+}
+
 // auditFieldKeyForStructField returns the audit payload key for a struct field
 // if the field exists and has a non-empty `audit` tag.
 func auditFieldKeyForStructField(structType reflect.Type, fieldName string) (string, bool) {

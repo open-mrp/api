@@ -34,7 +34,7 @@ func (b *mockBroker) PublishMessage(_ context.Context, exchange, routingKey stri
 	return nil
 }
 
-func (b *mockBroker) ConsumeMessages(_ context.Context, _ string, _ messaging.MessageHandler) error {
+func (b *mockBroker) ConsumeMessages(_ context.Context, _ string, _ messaging.MessageHandler, _ ...messaging.ConsumeOption) error {
 	return nil
 }
 

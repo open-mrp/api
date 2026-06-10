@@ -3,7 +3,7 @@
 package api_test
 
 import (
-	"encoding/json"
+	"fmt"
 	"net/url"
 	"strings"
 	"testing"
@@ -106,33 +106,23 @@ func TestSortingFiltering_SearchMatchesExpected(t *testing.T) {
 func TestSortingFiltering_FilteredPaginationConsistency(t *testing.T) {
 	t.Parallel()
 
-	// Fetch filtered results with limit=1, then paginate.
-	page1Status, page1Body, err := apiClient.GetListRaw(customersPath, url.Values{
-		"limit": {"1"},
-	})
-	require.NoError(t, err)
-	requireStatus(t, 200, page1Status, page1Body)
-
-	var page1 ListResponse
-	require.NoError(t, json.Unmarshal(page1Body, &page1))
-
-	if !page1.PageInfo.HasNextPage || page1.PageInfo.NextPageURL == nil {
-		t.Fatal("Not enough data to test filtered pagination")
+	// Paginate over customers this test owns, scoped by a unique search term,
+	// so parallel tests creating or deleting customers cannot shift the
+	// cursor window.
+	prefix := uniqueName("e2e-filt-pg")
+	var ids []string
+	for i := 0; i < 2; i++ {
+		status, body, err := apiClient.Post(customersPath,
+			validCustomerBody(fmt.Sprintf("%s-%d", prefix, i)), newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, 201, status, body)
+		id := jsonField(parseJSON(body), "id")
+		require.NotEmpty(t, id)
+		defer apiClient.Delete(customersPath + "/" + id)
+		ids = append(ids, id)
 	}
 
-	page2Status, page2Body, err := apiClient.GetListRawFromPageURL(page1.PageInfo.NextPageURL)
-	require.NoError(t, err)
-	requireStatus(t, 200, page2Status, page2Body)
-
-	var page2 ListResponse
-	require.NoError(t, json.Unmarshal(page2Body, &page2))
-
-	// Pages should return different items.
-	if len(page1.Data) > 0 && len(page2.Data) > 0 {
-		id1 := DataItemField(page1.Data[0], "id")
-		id2 := DataItemField(page2.Data[0], "id")
-		assert.NotEqual(t, id1, id2, "Paginated pages should return different items")
-	}
+	assertScopedCursorPagination(t, customersPath, url.Values{"q": {prefix}}, ids)
 }
 
 // ──────────────────────────────────────────────

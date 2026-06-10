@@ -215,6 +215,7 @@ jobs:
     outputs:
       internal_spec_changed: ${{ steps.compare-internal.outputs.changed }}
       public_spec_changed: ${{ steps.compare-public.outputs.changed }}
+      api_version: ${{ steps.api-version.outputs.api_version }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v5
@@ -236,6 +237,10 @@ jobs:
           go mod tidy
           cd tools && go mod tidy
 
+      - name: Resolve API version
+        id: api-version
+        run: echo "api_version=$(go run ./cmd/print-version)" >> "$GITHUB_OUTPUT"
+
       - name: Snapshot current OpenAPI specs from S3 (pre-upload baseline)
         run: |
           mkdir -p specs/sdk-baseline
@@ -255,22 +260,24 @@ jobs:
 
       - name: Upload Public Release Artifacts to S3
         run: |
-          # Key per-version artifacts by the release-please tag (e.g. v0.20.1), the same
-          # value notify-consumers dispatches. The API version (cmd/print-version) is not
-          # unique per release, so it can't key release artifacts.
-          release_version="${{ needs.release-please.outputs.tag_name }}"
+          # Key per-version artifacts by the API version (cmd/print-version, e.g.
+          # 1.0.forge-preview.2) — the same value notify-consumers dispatches and the
+          # spec embeds in info.version. The API version is not unique per release, so
+          # releases that ship the same API version overwrite the key: it always holds
+          # the latest spec for that API version.
+          api_version="${{ steps.api-version.outputs.api_version }}"
           aws s3 cp specs/public_openapi_spec.json "s3://augno-public-openapi-specs/openapi.json"
-          aws s3 cp specs/public_openapi_spec.json "s3://augno-public-openapi-specs/${release_version}.json"
+          aws s3 cp specs/public_openapi_spec.json "s3://augno-public-openapi-specs/${api_version}.json"
           aws s3 cp stainless/public/stainless.yml "s3://augno-public-openapi-specs/stainless.yml"
-          aws s3 cp stainless/public/stainless.yml "s3://augno-public-openapi-specs/${release_version}-stainless.yml"
+          aws s3 cp stainless/public/stainless.yml "s3://augno-public-openapi-specs/${api_version}-stainless.yml"
 
       - name: Upload Private Release Artifacts to S3
         run: |
-          release_version="${{ needs.release-please.outputs.tag_name }}"
+          api_version="${{ steps.api-version.outputs.api_version }}"
           aws s3 cp specs/internal_openapi_spec.json "s3://augno-private-openapi-specs/openapi.json"
-          aws s3 cp specs/internal_openapi_spec.json "s3://augno-private-openapi-specs/${release_version}.json"
+          aws s3 cp specs/internal_openapi_spec.json "s3://augno-private-openapi-specs/${api_version}.json"
           aws s3 cp stainless/internal/stainless.yml "s3://augno-private-openapi-specs/stainless.yml"
-          aws s3 cp stainless/internal/stainless.yml "s3://augno-private-openapi-specs/${release_version}-stainless.yml"
+          aws s3 cp stainless/internal/stainless.yml "s3://augno-private-openapi-specs/${api_version}-stainless.yml"
 
   generate-sdks:
     name: Generate SDKs with stlc
@@ -285,6 +292,8 @@ jobs:
       contents: read
     uses: ./.github/workflows/stlc-generate-reusable.yml
     with:
+      # Deliberately the release-please tag, not the API version: the reusable
+      # workflow derives the SDK semver bump from the tag's shape (vX.Y.Z).
       api_version: ${{ needs.release-please.outputs.tag_name }}
       push_branch: main
       openapi_specs_source: s3
@@ -318,7 +327,9 @@ jobs:
           token: ${{ secrets.CROSS_REPO_PAT }}
           repository: ${{ matrix.consumer }}
           event-type: api-release
-          # Send the release-please tag (e.g. v0.20.1) — the SAME value publish-openapi-specs
-          # uses to key the per-version S3 artifact `<tag>.json`, which consumers fetch.
-          # Keep this in lockstep with the Upload *Release Artifacts to S3 steps.
-          client-payload: '{"api_version": "${{ needs.release-please.outputs.tag_name }}"}'
+          # Send the API version (e.g. 1.0.forge-preview.2) — the SAME value
+          # publish-openapi-specs uses to key the per-version S3 artifact
+          # `<api_version>.json`, which consumers fetch. Keep this in lockstep with
+          # the Upload *Release Artifacts to S3 steps. release_version (the
+          # release-please tag) rides along for traceability.
+          client-payload: '{"api_version": "${{ needs.publish-openapi-specs.outputs.api_version }}", "release_version": "${{ needs.release-please.outputs.tag_name }}"}'

@@ -3,6 +3,7 @@
 package api_test
 
 import (
+	"fmt"
 	"net/url"
 	"testing"
 
@@ -271,23 +272,23 @@ func TestMaterials_List(t *testing.T) {
 
 func TestMaterials_ListPagination(t *testing.T) {
 	t.Parallel()
-	page1, _, err := apiClient.GetList(materialsPath, url.Values{"limit": {"1"}})
-	require.NoError(t, err)
-	requirePageLen(t, page1.Data, 1)
-
-	if !page1.PageInfo.HasNextPage {
-		t.Fatal("not enough materials for pagination test")
-		return
+	// Paginate over rows this test owns, scoped by a unique search term, so
+	// parallel tests creating or deleting materials cannot shift the cursor
+	// window.
+	prefix := uniqueName("e2e-mat-pg")
+	var ids []string
+	for i := 0; i < 2; i++ {
+		sku := fmt.Sprintf("%s-%d", prefix, i)
+		createStatus, createBody, err := apiClient.Post(materialsPath, validMaterialBody(sku), newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, 201, createStatus, createBody)
+		id := jsonField(parseJSON(createBody), "id")
+		require.NotEmpty(t, id)
+		defer apiClient.Delete(materialsPath + "/" + id)
+		ids = append(ids, id)
 	}
-	require.NotNil(t, page1.PageInfo.NextPageURL)
 
-	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
-	require.NoError(t, err)
-	requirePageLen(t, page2.Data, 1)
-
-	id1 := DataItemField(page1.Data[0], "id")
-	id2 := DataItemField(page2.Data[0], "id")
-	assert.NotEqual(t, id1, id2, "pages should return different items")
+	assertScopedCursorPagination(t, materialsPath, url.Values{"q": {prefix}}, ids)
 }
 
 func TestMaterials_ListSearch(t *testing.T) {

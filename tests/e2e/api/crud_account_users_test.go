@@ -22,14 +22,9 @@ func TestAccountUsers_List(t *testing.T) {
 	assert.Equal(t, "list", list.Object)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Should have at least 1 seeded account user")
 
-	found := false
-	for _, item := range list.Data {
-		if DataItemField(item, "id") == SeedAccountUserID {
-			found = true
-			break
-		}
-	}
-	assert.True(t, found, "Seeded account user should appear in list")
+	// Paginate until found: seed rows are the oldest and fall off the
+	// first page as repeated e2e runs accumulate data.
+	assertListContainsID(t, accountUsersPath, nil, SeedAccountUserID)
 }
 
 func TestAccountUsers_ListResponseShape(t *testing.T) {
@@ -526,18 +521,9 @@ func TestAccountUsers_ListIncludeRemoved(t *testing.T) {
 
 	removeAccountUser(id)
 
-	// List with removed_scope=included should find the removed user
-	list, _, err := apiClient.GetList(accountUsersPath, url.Values{"removed_scope": {"included"}})
-	require.NoError(t, err)
-
-	found := false
-	for _, item := range list.Data {
-		if DataItemField(item, "id") == id {
-			found = true
-			break
-		}
-	}
-	assert.True(t, found, "Removed user should appear when removed_scope=included")
+	// List with removed_scope=included should find the removed user.
+	// Paginate until found: rows accumulate across repeated e2e runs.
+	assertListContainsID(t, accountUsersPath, url.Values{"removed_scope": {"included"}}, id)
 }
 
 // removeAccountUser is a test helper that soft-deletes a user via the remove action.

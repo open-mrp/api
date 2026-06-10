@@ -138,8 +138,10 @@ func TestRespondWithAPIError_WithRequestLog_InternalError(t *testing.T) {
 		t.Fatal("expected StackTrace to be set for internal error")
 	}
 
-	if !strings.Contains(*rl.StackTrace, "RespondWithAPIError") {
-		t.Fatal("expected StackTrace to contain function name")
+	// The recorded stack is captured at the error's origin (where the constructor was
+	// called), not at the response-writing layer — so it points at the failing code.
+	if !strings.Contains(*rl.StackTrace, "TestRespondWithAPIError_WithRequestLog_InternalError") {
+		t.Fatalf("expected StackTrace to point at the error origin, got:\n%s", *rl.StackTrace)
 	}
 
 	var response map[string]any

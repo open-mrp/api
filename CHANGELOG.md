@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.3](https://github.com/Augno/api/compare/v0.21.2...v0.21.3) (2026-06-10)
+
+
+### Bug Fixes
+
+* minor docs updates; mcp server; e2e test flaky fixes ([35b4762](https://github.com/Augno/api/commit/35b476297b9784a4e8f5a0fe062a5ce7ef4e0e00))
+
 ## [0.21.2](https://github.com/Augno/api/compare/v0.21.1...v0.21.2) (2026-06-10)
 
 

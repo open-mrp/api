@@ -148,12 +148,18 @@ jobs:
           role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/github-action-role
           aws-region: us-east-2
 
-      - name: Download OpenAPI specs from S3
+      - name: Download OpenAPI specs and Stainless configs from S3
         if: matrix.spec_changed == 'true' && inputs.openapi_specs_source == 's3'
         run: |
           mkdir -p specs
           ./scripts/fetch-openapi-spec-s3.sh internal specs/internal_openapi_spec.json current
           ./scripts/fetch-openapi-spec-s3.sh public specs/public_openapi_spec.json current
+          # Also pull the freshly generated stainless.yml that publish-openapi-specs
+          # uploaded alongside each spec, so codegen uses config that matches the spec
+          # instead of a possibly-stale committed stainless.yml (resources drift when
+          # a schema change lands without re-running `make openapi-stainless`).
+          ./scripts/fetch-openapi-spec-s3.sh internal stainless/internal/stainless.yml current stainless
+          ./scripts/fetch-openapi-spec-s3.sh public stainless/public/stainless.yml current stainless
 
       - name: Set up Go
         if: matrix.spec_changed == 'true' && inputs.openapi_specs_source == 'generate'
@@ -165,6 +171,10 @@ jobs:
       - name: Generate OpenAPI specifications and Stainless configs
         if: matrix.spec_changed == 'true' && inputs.openapi_specs_source == 'generate'
         run: make openapi-stainless-quiet
+
+      - name: Set up uv (Python SDK bootstrap/build)
+        if: matrix.spec_changed == 'true' && contains(matrix.targets, 'python')
+        uses: astral-sh/setup-uv@v5
 
       - name: Setup stlc
         if: matrix.spec_changed == 'true'

@@ -375,7 +375,6 @@ resources:
           customer_freight_preferences: '#/components/schemas/CustomerFreightPreferences'
           customer_notification_preferences: '#/components/schemas/CustomerNotificationPreferences'
           department: '#/components/schemas/Department'
-          entity: '#/components/schemas/Entity'
           list_consumption: '#/components/schemas/List_Consumption'
           list_customer: '#/components/schemas/List_Customer'
           list_location: '#/components/schemas/List_Location'
@@ -394,6 +393,7 @@ resources:
           service_level: '#/components/schemas/ServiceLevel'
           shipping_term: '#/components/schemas/ShippingTerm'
           update_customer_request: '#/components/schemas/UpdateCustomerRequest'
+          user: '#/components/schemas/User'
       sales_orders:
         methods:
           retrieve_statuses: get /v1/sales/sales-orders/statuses

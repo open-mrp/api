@@ -224,6 +224,13 @@ jobs:
           COMMIT_MSG: ${{ inputs.commit_message }}
           TARGETS: ${{ matrix.targets }}
           GH_TOKEN: ${{ secrets.SDK_WRITE_TOKEN }}
+          # The public TS target also generates the MCP server (options.mcp_server),
+          # which loads a second plugin (stlc-mcp) alongside stlc-typescript. Both
+          # plugins must share one codegen.lib.mjs instance; without
+          # --preserve-symlinks each symlinked plugin resolves its own copy and stlc
+          # fails with "the `stlc-mcp` plugin is missing". Scoped to the public leg so
+          # internal/python/go resolution is unchanged.
+          NODE_OPTIONS: ${{ matrix.sdk == 'public' && '--preserve-symlinks' || '' }}
         run: |
           echo "Building ${{ matrix.workspace }} (${TARGETS}) to branch: $BRANCH (API ${API_VERSION})"
           if [ -n "$COMMIT_MSG" ]; then

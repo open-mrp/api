@@ -984,9 +984,6 @@ CREATE TABLE `batch` (
   UNIQUE KEY `batch_waste_quantity_id_key` (`waste_quantity_id`),
   KEY `batch_location_id_idx` (`location_id`),
   KEY `batch_item_id_idx` (`item_id`),
-  KEY `batch_quantity_id_idx` (`quantity_id`),
-  KEY `batch_seconds_quantity_id_idx` (`seconds_quantity_id`),
-  KEY `batch_waste_quantity_id_idx` (`waste_quantity_id`),
   KEY `batch_scanning_station_id_idx` (`scanning_station_id`),
   KEY `batch_production_step_id_idx` (`production_step_id`),
   KEY `batch_account_id_scanned_at_idx` (`account_id`,`scanned_at`),
@@ -1117,9 +1114,7 @@ CREATE TABLE `consumption` (
   UNIQUE KEY `consumption_quantity_id_key` (`quantity_id`),
   UNIQUE KEY `consumption_waste_quantity_id_key` (`waste_quantity_id`),
   KEY `consumption_production_step_id_idx` (`production_step_id`),
-  KEY `consumption_waste_quantity_id_idx` (`waste_quantity_id`),
-  KEY `consumption_item_id_idx` (`item_id`),
-  KEY `consumption_quantity_id_idx` (`quantity_id`)
+  KEY `consumption_item_id_idx` (`item_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -1515,7 +1510,6 @@ CREATE TABLE `inventory_change_log` (
   UNIQUE KEY `inventory_change_log_inventory_log_id_key` (`inventory_log_id`),
   KEY `inventory_change_log_item_id_idx` (`item_id`),
   KEY `inventory_change_log_action_type_code_idx` (`action_type_code`),
-  KEY `inventory_change_log_quantity_id_idx` (`quantity_id`),
   KEY `inventory_change_log_responsible_user_id_idx` (`responsible_user_id`),
   KEY `inventory_change_log_scanning_station_id_idx` (`scanning_station_id`),
   KEY `inventory_change_log_account_id_idx` (`account_id`),
@@ -1575,7 +1569,6 @@ CREATE TABLE `inventory_log` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `inventory_log_quantity_id_key` (`quantity_id`),
   KEY `inventory_log_item_id_idx` (`item_id`),
-  KEY `inventory_log_quantity_id_idx` (`quantity_id`),
   KEY `inventory_log_account_id_idx` (`account_id`),
   KEY `inventory_log_created_at_idx` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -1703,7 +1696,6 @@ CREATE TABLE `invoice_line` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `invoice_line_quantity_id_key` (`quantity_id`),
   KEY `invoice_line_invoice_id_idx` (`invoice_id`),
-  KEY `invoice_line_quantity_id_idx` (`quantity_id`),
   KEY `invoice_line_sales_order_line_id_idx` (`sales_order_line_id`),
   KEY `invoice_line_invoice_id_sales_order_line_id_idx` (`invoice_id`,`sales_order_line_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -1735,9 +1727,7 @@ CREATE TABLE `item` (
   UNIQUE KEY `item_unit_value_id_key` (`unit_value_id`),
   UNIQUE KEY `item_burn_rate_id_key` (`burn_rate_id`),
   UNIQUE KEY `item_unit_cost_id_key` (`unit_cost_id`),
-  KEY `item_unit_value_id_idx` (`unit_value_id`),
-  KEY `item_unit_cost_id_idx` (`unit_cost_id`),
-  KEY `item_burn_rate_id_idx` (`burn_rate_id`),
+  UNIQUE KEY `item_account_id_sku_key` (`account_id`,`sku`),
   KEY `item_item_category_id_idx` (`item_category_id`),
   KEY `item_account_id_idx` (`account_id`),
   KEY `item_item_type_code_idx` (`item_type_code`),
@@ -1764,8 +1754,8 @@ CREATE TABLE `item_category` (
   `item_category_type_code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `unit_group_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`id`),
+  UNIQUE KEY `item_category_account_id_name_key` (`account_id`,`name`),
   KEY `item_category_unit_group_id_idx` (`unit_group_id`),
-  KEY `item_category_account_id_idx` (`account_id`),
   KEY `item_category_item_category_type_code_idx` (`item_category_type_code`),
   FULLTEXT KEY `item_category_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -1933,10 +1923,7 @@ CREATE TABLE `material` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `material_item_id_key` (`item_id`),
   UNIQUE KEY `material_order_point_id_key` (`order_point_id`),
-  UNIQUE KEY `material_lead_time_id_key` (`lead_time_id`),
-  KEY `material_item_id_idx` (`item_id`),
-  KEY `material_order_point_id_idx` (`order_point_id`),
-  KEY `material_lead_time_id_idx` (`lead_time_id`)
+  UNIQUE KEY `material_lead_time_id_key` (`lead_time_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -2046,7 +2033,6 @@ CREATE TABLE `order_discount` (
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
   UNIQUE KEY `order_discount_account_id_code_key` (`account_id`,`code`),
-  KEY `order_discount_account_id_idx` (`account_id`),
   KEY `order_discount_discount_type_code_idx` (`discount_type_code`),
   KEY `order_discount_code_idx` (`code`),
   FULLTEXT KEY `order_discount_name_idx` (`name`),
@@ -2106,8 +2092,7 @@ CREATE TABLE `part` (
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `item_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `part_item_id_key` (`item_id`),
-  KEY `part_item_id_idx` (`item_id`)
+  UNIQUE KEY `part_item_id_key` (`item_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -2190,7 +2175,6 @@ CREATE TABLE `pick` (
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
   UNIQUE KEY `pick_sales_order_id_key` (`sales_order_id`),
-  KEY `pick_sales_order_id_idx` (`sales_order_id`),
   KEY `pick_account_id_idx` (`account_id`),
   KEY `pick_account_id_finished_at_idx` (`account_id`,`finished_at`),
   FULLTEXT KEY `pick_number_idx` (`number`)
@@ -2215,7 +2199,6 @@ CREATE TABLE `pick_line` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `pick_line_quantity_id_key` (`quantity_id`),
   KEY `pick_line_pick_id_idx` (`pick_id`),
-  KEY `pick_line_quantity_id_idx` (`quantity_id`),
   KEY `pick_line_sales_order_line_id_idx` (`sales_order_line_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -2256,7 +2239,6 @@ CREATE TABLE `product` (
   `is_portal_ready` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`),
   UNIQUE KEY `product_item_id_key` (`item_id`),
-  KEY `product_item_id_idx` (`item_id`),
   KEY `product_product_line_id_idx` (`product_line_id`),
   KEY `product_product_type_code_idx` (`product_type_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -2309,7 +2291,6 @@ CREATE TABLE `product_line_target` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `product_line_target_amount_id_key` (`amount_id`),
   KEY `product_line_target_sales_rep_id_idx` (`sales_rep_id`),
-  KEY `product_line_target_amount_id_idx` (`amount_id`),
   KEY `product_line_target_product_line_id_idx` (`product_line_id`),
   KEY `product_line_target_account_id_idx` (`account_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -2351,7 +2332,6 @@ CREATE TABLE `production` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `production_quantity_id_key` (`quantity_id`),
   KEY `production_item_id_idx` (`item_id`),
-  KEY `production_quantity_id_idx` (`quantity_id`),
   KEY `production_production_step_id_idx` (`production_step_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -2405,9 +2385,6 @@ CREATE TABLE `production_step` (
   UNIQUE KEY `production_step_labor_rate_id_key` (`labor_rate_id`),
   UNIQUE KEY `production_step_labor_time_id_key` (`labor_time_id`),
   UNIQUE KEY `production_step_overhead_rate_id_key` (`overhead_rate_id`),
-  KEY `production_step_labor_time_id_idx` (`labor_time_id`),
-  KEY `production_step_labor_rate_id_idx` (`labor_rate_id`),
-  KEY `production_step_overhead_rate_id_idx` (`overhead_rate_id`),
   KEY `production_step_department_id_idx` (`department_id`),
   KEY `production_step_scanning_station_id_idx` (`scanning_station_id`),
   KEY `production_step_account_id_idx` (`account_id`),
@@ -2431,7 +2408,7 @@ CREATE TABLE `property` (
   `is_public` tinyint(1) NOT NULL DEFAULT '1',
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `property_account_id_idx` (`account_id`),
+  UNIQUE KEY `property_account_id_name_key` (`account_id`,`name`),
   FULLTEXT KEY `property_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -3077,7 +3054,6 @@ CREATE TABLE `shipment` (
   KEY `shipment_carrier_id_idx` (`carrier_id`),
   KEY `shipment_carrier_option_id_idx` (`carrier_option_id`),
   KEY `shipment_shipped_by_id_idx` (`shipped_by_id`),
-  KEY `shipment_invoice_id_idx` (`invoice_id`),
   KEY `shipment_shipment_status_code_idx` (`shipment_status_code`),
   KEY `shipment_account_id_idx` (`account_id`),
   KEY `shipment_created_at_idx` (`created_at`),
@@ -3109,7 +3085,6 @@ CREATE TABLE `shipment_line` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `shipment_line_quantity_id_key` (`quantity_id`),
   KEY `shipment_line_shipment_id_idx` (`shipment_id`),
-  KEY `shipment_line_quantity_id_idx` (`quantity_id`),
   KEY `shipment_line_sales_order_line_id_idx` (`sales_order_line_id`),
   KEY `shipment_line_created_at_idx` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -3159,8 +3134,6 @@ CREATE TABLE `shipping_case` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `shipping_case_freight_amount_id_key` (`freight_amount_id`),
   UNIQUE KEY `shipping_case_freight_weight_id_key` (`freight_weight_id`),
-  KEY `shipping_case_freight_amount_id_idx` (`freight_amount_id`),
-  KEY `shipping_case_freight_weight_id_idx` (`freight_weight_id`),
   KEY `shipping_case_shipment_id_idx` (`shipment_id`),
   KEY `shipping_case_carrier_id_idx` (`carrier_id`),
   KEY `shipping_case_account_id_idx` (`account_id`),
@@ -3195,8 +3168,6 @@ CREATE TABLE `shipping_term` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `shipping_term_flat_rate_id_key` (`flat_rate_id`),
   UNIQUE KEY `shipping_term_minimum_order_id_key` (`minimum_order_id`),
-  KEY `shipping_term_minimum_order_id_idx` (`minimum_order_id`),
-  KEY `shipping_term_flat_rate_id_idx` (`flat_rate_id`),
   KEY `shipping_term_account_id_idx` (`account_id`),
   FULLTEXT KEY `shipping_term_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -3237,8 +3208,7 @@ CREATE TABLE `storage_location` (
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
-  UNIQUE KEY `storage_location_name_account_id_key` (`name`,`account_id`),
-  KEY `storage_location_account_id_idx` (`account_id`),
+  UNIQUE KEY `storage_location_account_id_name_key` (`account_id`,`name`),
   KEY `storage_location_address_id_idx` (`address_id`),
   KEY `storage_location_storage_location_type_code_idx` (`storage_location_type_code`),
   KEY `storage_location_parent_id_idx` (`parent_id`),
@@ -3372,7 +3342,6 @@ CREATE TABLE `target` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `target_amount_id_key` (`amount_id`),
   KEY `target_sales_rep_id_idx` (`sales_rep_id`),
-  KEY `target_amount_id_idx` (`amount_id`),
   KEY `target_account_id_idx` (`account_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -3475,8 +3444,6 @@ CREATE TABLE `transaction` (
   KEY `transaction_adjustment_type_code_idx` (`adjustment_type_code`),
   KEY `transaction_customer_account_id_idx` (`customer_account_id`),
   KEY `transaction_responsible_user_id_idx` (`responsible_user_id`),
-  KEY `transaction_amount_id_idx` (`amount_id`),
-  KEY `transaction_stripe_payment_id_idx` (`stripe_payment_id`),
   KEY `transaction_account_id_created_at_idx` (`account_id`,`created_at`),
   KEY `transaction_account_id_transaction_type_code_created_at_id_idx` (`account_id`,`transaction_type_code`,`created_at` DESC,`id` DESC),
   KEY `transaction_account_id_customer_account_id_created_at_id_idx` (`account_id`,`customer_account_id`,`created_at` DESC,`id` DESC),
@@ -3508,7 +3475,6 @@ CREATE TABLE `transaction_allocation` (
   UNIQUE KEY `transaction_allocation_amount_id_key` (`amount_id`),
   KEY `transaction_allocation_settlement_id_idx` (`settlement_id`),
   KEY `transaction_allocation_transaction_id_idx` (`transaction_id`),
-  KEY `transaction_allocation_amount_id_idx` (`amount_id`),
   KEY `transaction_allocation_invoice_id_idx` (`invoice_id`),
   KEY `transaction_allocation_created_at_idx` (`created_at`),
   KEY `transaction_allocation_transaction_id_created_at_id_idx` (`transaction_id`,`created_at` DESC,`id` DESC)
@@ -3577,8 +3543,8 @@ CREATE TABLE `unit` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `unit_account_id_abbreviation_key` (`account_id`,`abbreviation`),
   UNIQUE KEY `unit_account_id_name_key` (`account_id`,`name`),
-  KEY `unit_account_id_created_at_id_idx` (`account_id`,`created_at`,`id`),
   KEY `unit_unit_dimension_code_idx` (`unit_dimension_code`),
+  KEY `unit_account_id_id_created_at_idx` (`account_id`,`id`,`created_at`),
   FULLTEXT KEY `unit_name_idx` (`name`),
   FULLTEXT KEY `unit_abbreviation_idx` (`abbreviation`),
   FULLTEXT KEY `unit_name_abbreviation_idx` (`name`,`abbreviation`)
@@ -3691,7 +3657,7 @@ CREATE TABLE `user` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-06-10 14:24:55
+-- Dump completed on 2026-06-10 14:34:09
 
 -- +goose Down
 

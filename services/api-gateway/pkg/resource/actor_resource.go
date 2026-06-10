@@ -15,7 +15,11 @@ type Actor struct {
 	Type constants.ActorType `json:"type" validate:"required"`
 	// Display name.
 	Name *string `json:"name"`
-	// Human-readable handle (`email` for users, `redacted_value` for API keys, `slug` for agents).
+	// Human-readable handle.
+	//
+	// - `email` for users
+	// - `redacted_value` for API keys
+	// - `slug` for agents
 	Handle *string `json:"handle"`
 	// Assigned role.
 	Role *Role `json:"role" expandable:"true"`

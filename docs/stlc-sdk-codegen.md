@@ -39,7 +39,9 @@ A single `stainless/public/stainless.yml` declares all three public targets unde
 ## Install stlc
 
 Augno uses **forks under [`sdk-gen`](https://github.com/sdk-gen)** (`stlc` plus the `stlc-typescript`,
-`stlc-python`, and `stlc-go` language workers), not the upstream `stainless/*` repos.
+`stlc-python`, `stlc-go`, and `stlc-mcp` workers), not the upstream `stainless/*` repos. `stlc-mcp` is
+the worker that generates the MCP server (`packages/mcp-server`) when a target enables
+`options.mcp_server` — see [MCP server](#mcp-server) below.
 
 From **`api/`**:
 
@@ -49,7 +51,8 @@ make install-stlc
 ```
 
 The script uses `STLC_READ_TOKEN` if set, otherwise `gh auth token`. Scope the PAT to **Contents: Read**
-on `sdk-gen/stlc`, `sdk-gen/stlc-typescript`, `sdk-gen/stlc-python`, and `sdk-gen/stlc-go`.
+on `sdk-gen/stlc`, `sdk-gen/stlc-typescript`, `sdk-gen/stlc-python`, `sdk-gen/stlc-go`, and
+`sdk-gen/stlc-mcp`.
 
 Manual install:
 
@@ -59,8 +62,16 @@ npm install -g \
   git+https://github.com/sdk-gen/stlc.git \
   git+https://github.com/sdk-gen/stlc-typescript.git \
   git+https://github.com/sdk-gen/stlc-python.git \
-  git+https://github.com/sdk-gen/stlc-go.git
+  git+https://github.com/sdk-gen/stlc-go.git \
+  git+https://github.com/sdk-gen/stlc-mcp.git
 ```
+
+> **Worker install location gotcha:** `stlc` resolves workers as siblings of itself (the directory the
+> `stlc` bin's package lives in). If a Node upgrade has moved `npm prefix` away from where `stlc` is
+> installed, a plain `npm install -g stlc-mcp` lands in the wrong global root and `stlc` still reports
+> the plugin missing. Install into the prefix `stlc` actually uses, e.g.
+> `npm install -g --prefix "$(dirname "$(dirname "$(readlink -f "$(command -v stlc)")")")" git+https://github.com/sdk-gen/stlc-mcp.git`,
+> or just reinstall the whole set with `make install-stlc`.
 
 > **Worker resolution gotcha:** `stlc` finds language workers via Node module resolution as siblings of
 > itself. If you have a `stlc` from another source ahead on `PATH` (e.g. Homebrew) it may not see the
@@ -119,6 +130,54 @@ When you run **`node …/stlc-main/packages/stlc/dist/index.cjs`** (or iterate o
 
 So after edits under **`stlc-main/packages/sdk-codegen/`**, rebuild the worker codegen lib (e.g. from **`stlc-main/packages/sdk-worker`** run **`pnpm exec tsn scripts/build.ts --skip-plugins`**) and ensure **`stlc-main/packages/stlc/dist/codegen.lib.mjs`** / **`codegen.worker.mjs`** pick up **`sdk-worker/dist`**, otherwise **`stlc build`** keeps using stale shared codegen while the plugin shim points at **`stlc/dist/codegen.lib.mjs`**.
 
+## MCP server
+
+The **public** TypeScript target also generates an **MCP server** as a sub-package
+(`typescript-sdk/packages/mcp-server`). There is **no standalone `mcp` target** in stlc — it is enabled
+via `targets.typescript.options.mcp_server` in [`stainless/public/stainless.yml`](../stainless/public/stainless.yml)
+and built by the `stlc-mcp` worker. The server wraps `@augno/sdk` and is published as `@augno/sdk-mcp`.
+
+Key facts about our configuration:
+
+- **One code tool, no separate per-endpoint tools.** This stlc edition exposes a single code-execution
+  tool; agents call the API by writing TypeScript against the SDK (all endpoints are reachable via
+  `packages/mcp-server/src/methods.ts`). `enable_docs_tool` is **off** (it needs an SDK docs-search API
+  we don't serve). The `MCP/NoToolsEnabled` diagnostic is a hard error if you disable **both** tools.
+- **Code execution is local, not the Stainless sandbox.** Because we generate self-hosted (not
+  `stainlessManaged`), `useLocalCodeMode` is forced on: the code tool runs in an **in-container Deno
+  worker** (`@valtown/deno-http-worker`), so there is no external runtime dependency. The generated
+  runtime image is `denoland/deno:alpine` with Node added.
+- **`--preserve-symlinks` is required.** The public TS build loads two plugins (`stlc-typescript` +
+  `stlc-mcp`). They must share one `codegen.lib.mjs`; without `NODE_OPTIONS=--preserve-symlinks` each
+  symlinked plugin resolves its own copy and stlc fails with *"the `stlc-mcp` plugin is missing"*. This
+  flag is wired into `make stlc-public-typescript-sdk` and the public leg of
+  [`stlc-generate-reusable.yml`](../.github/workflows/stlc-generate-reusable.yml). Internal/Python/Go
+  builds do not set it.
+
+### Hosting (EKS)
+
+stlc generates a runnable HTTP server (`mcp-server --transport=http --port=<n>`, routes `GET /health`
+and `GET`/`POST /`, Streamable HTTP, stateless) **and** its own Dockerfile at
+`packages/mcp-server/Dockerfile`. We host it on the existing EKS cluster:
+
+- **ECR:** `augno/mcp-server` ([`infra/.../terraform/ecr.tf`](../infra/production/terraform/ecr.tf)) —
+  a dedicated repo kept **out** of `var.service_names` so the Go build matrix never tries to build it
+  with the shared Go Dockerfile.
+- **k8s:** [`infra/.../kubernetes/apps/mcp-server.yaml`](../infra/production/kubernetes/apps/mcp-server.yaml)
+  — Deployment + NodePort Service + Ingress on **`mcp.augno.com`**, sharing the api-gateway ALB
+  (`group.name: api-gateway`, so no second ALB). Each caller passes their own Augno API key as a Bearer
+  token (`parseClientAuthHeaders`), so no shared credential is mounted.
+- **CI:** the `build-deploy-mcp` job in [`release.yml`](../.github/workflows/release.yml) runs after
+  `generate-sdks` (gated on the public spec changing), checks out `augno/typescript-sdk@main`, builds
+  the image from the generated Dockerfile, pushes `augno/mcp-server:<tag>`/`:latest`, and rolls it out
+  with `kubectl`.
+
+**Prerequisites before the first deploy:**
+
+- An **ACM certificate covering `mcp.augno.com`** (e.g. a `*.augno.com` wildcard) so the shared ALB has
+  a listener cert for the host (the ingress relies on cert auto-discovery, like api-gateway).
+- `make install-stlc` has been re-run so CI/agents have the `stlc-mcp` worker.
+
 ## CI
 
 ### Release (canonical)
@@ -167,7 +226,7 @@ Add these secrets on **`augno/api`** (Settings → Secrets and variables → Act
 
 | Secret | Permissions |
 | --- | --- |
-| **`STLC_READ_TOKEN`** | Fine-grained PAT, **Contents: Read** on `sdk-gen/stlc`, `sdk-gen/stlc-typescript`, `sdk-gen/stlc-python`, and `sdk-gen/stlc-go` |
+| **`STLC_READ_TOKEN`** | Fine-grained PAT, **Contents: Read** on `sdk-gen/stlc`, `sdk-gen/stlc-typescript`, `sdk-gen/stlc-python`, `sdk-gen/stlc-go`, and `sdk-gen/stlc-mcp` |
 | **`SDK_WRITE_TOKEN`** | Fine-grained PAT, **Contents: Write** on `augno/internal-sdk`, `augno/typescript-sdk`, `augno/python-sdk`, and `augno/augno-go` (push to **`main`**). Add **Pull requests: Write** only if you use manual `stlc-generate` with `open_pr: true`. |
 
 Authorize both tokens for SSO if your org requires it.

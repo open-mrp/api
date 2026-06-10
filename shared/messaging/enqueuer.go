@@ -83,7 +83,7 @@ func (c *EnqueuerConfig) WithDefaults() *EnqueuerConfig {
 	}
 	if c.PollInterval == 0 {
 		if c.PlatformMode.IsTest() {
-			c.PollInterval = 50 * time.Millisecond
+			c.PollInterval = 10 * time.Millisecond
 		} else {
 			c.PollInterval = 1 * time.Second
 		}

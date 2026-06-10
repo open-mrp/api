@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Install stlc + the TypeScript, Python, and Go language workers from Augno's
-# sdk-gen forks (not stainless/*).
+# Install stlc + the TypeScript, Python, Go, and MCP workers from Augno's
+# sdk-gen forks (not stainless/*). The MCP worker (stlc-mcp) generates the
+# packages/mcp-server sub-package when a target enables options.mcp_server.
 set -euo pipefail
 
 STLC_GITHUB_ORG="${STLC_GITHUB_ORG:-sdk-gen}"
@@ -23,7 +24,8 @@ npm install -g \
   "git+https://x-access-token:${STLC_READ_TOKEN}@github.com/${STLC_GITHUB_ORG}/stlc.git" \
   "git+https://x-access-token:${STLC_READ_TOKEN}@github.com/${STLC_GITHUB_ORG}/stlc-typescript.git" \
   "git+https://x-access-token:${STLC_READ_TOKEN}@github.com/${STLC_GITHUB_ORG}/stlc-python.git" \
-  "git+https://x-access-token:${STLC_READ_TOKEN}@github.com/${STLC_GITHUB_ORG}/stlc-go.git"
+  "git+https://x-access-token:${STLC_READ_TOKEN}@github.com/${STLC_GITHUB_ORG}/stlc-go.git" \
+  "git+https://x-access-token:${STLC_READ_TOKEN}@github.com/${STLC_GITHUB_ORG}/stlc-mcp.git"
 
 echo "Installed stlc from github.com/${STLC_GITHUB_ORG}."
 echo "Ensure npm global bin is on PATH, e.g.:"

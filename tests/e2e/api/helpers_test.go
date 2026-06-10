@@ -23,7 +23,7 @@ import (
 // unconditional long sleep when the backend is already caught up.
 const (
 	e2eAsyncWaitTimeout  = 15 * time.Second
-	e2eAsyncPollInterval = 200 * time.Millisecond
+	e2eAsyncPollInterval = 50 * time.Millisecond
 )
 
 // uniqueName generates a unique name for test resources.
@@ -212,12 +212,13 @@ func assertListContainsID(t *testing.T, path string, params url.Values, id strin
 
 // assertCursorPaginationAdvances fetches two consecutive limit=1 pages of a
 // shared (globally mutable) list and asserts the cursor advanced to a
-// different row. Parallel tests can delete the rows behind the cursor between
-// the two fetches and leave page 2 legitimately empty, so the sequence is
-// retried a few times: transient interference passes on a later attempt while
-// a real pagination bug fails every attempt. Prefer
-// assertScopedCursorPagination (test-owned rows) where the resource supports
-// search-scoped listing.
+// different row. Parallel tests can delete rows mid-flight and leave either
+// page legitimately empty: list endpoints fetch a page of ids and then batch-
+// hydrate them, silently dropping ids deleted in between, so even page 1 can
+// come back empty under churn. The sequence is therefore retried a few times:
+// transient interference passes on a later attempt while a real pagination
+// bug fails every attempt. Prefer assertScopedCursorPagination (test-owned
+// rows) where the resource supports search-scoped listing.
 func assertCursorPaginationAdvances(t *testing.T, path string, params url.Values) {
 	t.Helper()
 	const attempts = 3
@@ -230,7 +231,11 @@ func assertCursorPaginationAdvances(t *testing.T, path string, params url.Values
 	for attempt := 1; ; attempt++ {
 		page1, _, err := apiClient.GetList(path, merged)
 		require.NoError(t, err, "listing %s", path)
-		require.Len(t, page1.Data, 1, "first page of %s should hold one row", path)
+		if (len(page1.Data) != 1 || !page1.PageInfo.HasNextPage || page1.PageInfo.NextPageURL == nil) && attempt < attempts {
+			t.Logf("page 1 of %s incomplete on attempt %d (likely parallel deletes); retrying", path, attempt)
+			continue
+		}
+		require.Len(t, page1.Data, 1, "first page of %s should hold one row (after %d attempts)", path, attempt)
 		require.True(t, page1.PageInfo.HasNextPage, "%s should have a next page", path)
 		require.NotNil(t, page1.PageInfo.NextPageURL)
 

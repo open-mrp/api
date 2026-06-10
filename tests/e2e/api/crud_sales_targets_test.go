@@ -11,18 +11,17 @@ import (
 
 const accountUsersForSalesTargetsPath = "/v1/identity/account-users"
 
+// discoverActiveAccountUserID returns the seeded admin account user, which is
+// guaranteed active and cannot be disabled or removed. Picking an arbitrary
+// active user from the list races with parallel account-user tests that remove
+// their transient users mid-flight.
 func discoverActiveAccountUserID(t *testing.T) string {
 	t.Helper()
-	list, _, err := apiClient.GetList(accountUsersForSalesTargetsPath, nil)
+	status, body, err := apiClient.GetListRaw(accountUsersForSalesTargetsPath+"/"+SeedAccountUserID, nil)
 	require.NoError(t, err)
-	for _, item := range list.Data {
-		m := parseJSON(item)
-		if jsonField(m, "status") == "active" {
-			return jsonField(m, "id")
-		}
-	}
-	t.Fatal("No active account users available")
-	return ""
+	requireStatus(t, 200, status, body)
+	require.Equal(t, "active", jsonField(parseJSON(body), "status"), "seed account user must be active")
+	return SeedAccountUserID
 }
 
 func salesTargetsPathFor(accountUserID string) string {

@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.21.0](https://github.com/Augno/api/compare/v0.20.2...v0.21.0) (2026-06-10)
+
+
+### Features
+
+* user sub-object on account user rather than using inline fields ([#310](https://github.com/Augno/api/issues/310)) ([3e4ac35](https://github.com/Augno/api/commit/3e4ac35cfcae3335002f8608e9a924dee0f7bac9))
+
+
+### Bug Fixes
+
+* generate release-please workflow for python/go SDKs natively ([#311](https://github.com/Augno/api/issues/311)) ([ed6c468](https://github.com/Augno/api/commit/ed6c4680ce23c8d72f3e294a7cf3e911f34ad7d1))
+* promote LocationTypeCode to a named schema for Go SDK ([#308](https://github.com/Augno/api/issues/308)) ([e620ba3](https://github.com/Augno/api/commit/e620ba35f53919cefa1b4047f2334b5854a73c3d))
+
 ## [0.20.2](https://github.com/Augno/api/compare/v0.20.1...v0.20.2) (2026-06-10)
 
 

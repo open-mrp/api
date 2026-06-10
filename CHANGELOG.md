@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.21.2](https://github.com/Augno/api/compare/v0.21.1...v0.21.2) (2026-06-10)
+
+
+### Bug Fixes
+
+* db in sync with prod ([19efb9c](https://github.com/Augno/api/commit/19efb9cd5c5bb4fcfb72082134a93dc3909fe121))
+* faster polling for messages for prod ([bce3ac5](https://github.com/Augno/api/commit/bce3ac5e18756d0401445059093d805baf188a1c))
+
 ## [0.21.1](https://github.com/Augno/api/compare/v0.21.0...v0.21.1) (2026-06-10)
 
 

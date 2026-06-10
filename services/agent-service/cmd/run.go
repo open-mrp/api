@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/augno/api/services/agent-service/internal/agents"
 	"github.com/augno/api/services/agent-service/internal/domain"
@@ -68,14 +67,10 @@ func Run(
 	leaseSvc := lease.New(repository.NewLeaseRepo(queries))
 
 	outboxRepo := repository.NewOutboxEnqueuerRepo(pgpool, queries)
-	encCfg := &messaging.EnqueuerConfig{
+	enqueuer, err := messaging.NewEnqueuer(&messaging.EnqueuerConfig{
 		ServiceName:  domain.ServiceName,
 		PlatformMode: cfg.PlatformMode,
-	}
-	if !cfg.PlatformMode.IsTest() {
-		encCfg.PollInterval = 1 * time.Second
-	}
-	enqueuer, err := messaging.NewEnqueuer(encCfg, outboxRepo, rabbitmq, leaseSvc)
+	}, outboxRepo, rabbitmq, leaseSvc)
 	if err != nil {
 		return err
 	}

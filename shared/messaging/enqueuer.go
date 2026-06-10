@@ -29,7 +29,7 @@ type EnqueuerConfig struct {
 	// process instance, used to claim outbox messages via optimistic locking.
 	LockOwner string
 
-	// PollInterval (optional; default: 30s) controls how frequently the enqueuer polls
+	// PollInterval (optional; default: 1s) controls how frequently the enqueuer polls
 	// the outbox table for pending messages.
 	PollInterval time.Duration
 
@@ -85,7 +85,7 @@ func (c *EnqueuerConfig) WithDefaults() *EnqueuerConfig {
 		if c.PlatformMode.IsTest() {
 			c.PollInterval = 50 * time.Millisecond
 		} else {
-			c.PollInterval = 30 * time.Second
+			c.PollInterval = 1 * time.Second
 		}
 	}
 	if c.BatchSize == 0 {

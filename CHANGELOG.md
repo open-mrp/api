@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.0](https://github.com/Augno/api/compare/v0.21.5...v0.22.0) (2026-06-11)
+
+
+### Features
+
+* add per-job least-privilege IAM roles for GitHub Actions (phase A) ([#317](https://github.com/Augno/api/issues/317)) ([18f4c4d](https://github.com/Augno/api/commit/18f4c4ded8e1a39884bfbde550c2e4ac80d4d8ff))
+
 ## [0.21.5](https://github.com/Augno/api/compare/v0.21.4...v0.21.5) (2026-06-11)
 
 

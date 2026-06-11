@@ -16,16 +16,18 @@ import (
 type UpdateAccountGroupRequest struct {
 	// Account group ID.
 	AccountGroupID string `path:"id" validate:"required"`
-	// Display name.
+	// Display name of the account group.
+	//
+	// Must be unique within your account; maximum 255 characters.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Description.
+	// Free-form description of the account group.
 	Description field.Clearable[string] `json:"description,omitzero"`
-	// Commission policy.
+	// How sales commission applies to accounts in this group.
 	//
 	// - `commission_exempt`: no commission applies.
 	// - `commission_applied`: commission applies; if the account group is within a sales rep's territory, it will be assigned to that rep unless overridden.
 	CommissionPolicy field.Optional[constants.CommissionPolicy] `json:"commission_policy,omitzero"`
-	// Freight policy.
+	// How freight charges apply to orders from accounts in this group.
 	//
 	// - `free_freight`: customers within this group will not have to pay for freight.
 	// - `billed_freight`: freight will be applied to any order within this account group, unless overridden elsewhere.
@@ -41,6 +43,8 @@ func (*UpdateAccountGroupRequest) SchemaExample() any {
 }
 
 // Partially updates an account group.
+//
+// Only the provided fields are changed. The account group's `type` cannot be changed after creation.
 type UpdateAccountGroupEndpoint struct{}
 
 func (e *UpdateAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAccountGroupRequest, *apiresource.AccountGroup] {

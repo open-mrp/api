@@ -16,13 +16,15 @@ type ProductionRunDetail struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=production_run"`
 	// Production run number, unique per account.
 	Number string `json:"number" validate:"required"`
-	// Responsible user.
+	// Account user accountable for executing the run.
 	ResponsibleUser *AccountUser `json:"responsible_user" expandable:"true"`
-	// Batch count.
+	// Number of batches currently recorded against this run.
 	BatchCount int32 `json:"batch_count" validate:"required"`
-	// Start timestamp.
+	// Time the run started production, or `null` if it has not started yet.
 	StartedAt *time.Time `json:"started_at"`
-	// Completion timestamp.
+	// Time the run was marked complete, or `null` if still in progress.
+	//
+	// Once set, new batches can no longer be added to the run.
 	CompletedAt *time.Time `json:"completed_at"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -51,13 +53,15 @@ type ProductionRunSummary struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=production_run"`
 	// Production run number, unique per account.
 	Number string `json:"number" validate:"required"`
-	// Responsible user.
+	// Account user accountable for executing the run.
 	ResponsibleUser *AccountUser `json:"responsible_user"`
-	// Batch count.
+	// Number of batches currently recorded against this run.
 	BatchCount int32 `json:"batch_count" validate:"required"`
-	// Start timestamp.
+	// Time the run started production, or `null` if it has not started yet.
 	StartedAt *time.Time `json:"started_at"`
-	// Completion timestamp.
+	// Time the run was marked complete, or `null` if still in progress.
+	//
+	// Once set, new batches can no longer be added to the run.
 	CompletedAt *time.Time `json:"completed_at"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

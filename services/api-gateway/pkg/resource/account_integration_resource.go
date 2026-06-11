@@ -20,6 +20,9 @@ type AccountIntegration struct {
 	// Display name of the integration.
 	Name string `json:"name" validate:"required"`
 	// Integration provider code.
+	//
+	// - `stripe`: Stripe payment processing.
+	// - `shippo`: Shippo shipping and label generation.
 	IntegrationCode constants.IntegrationCode `json:"provider" validate:"required"`
 	// Whether the integration is active.
 	IsActive bool `json:"is_active"`

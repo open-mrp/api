@@ -16,15 +16,28 @@ type InventoryChangeLog struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=inventory_change_log"`
-	// Inventory action type code.
+	// Action that produced this inventory change.
+	//
+	// - `scan`: change driven by a scan, typically a production step.
+	// - `user_action`: change made manually by a user.
+	// - `system_action`: change made automatically by the system.
+	// - `user_correction`: manual adjustment a user made to correct an inventory discrepancy.
 	ActionTypeCode constants.InventoryActionType `json:"action_type" validate:"required"`
-	// Quantity for this change.
+	// Amount of inventory this change applied.
+	//
+	// Expandable via `include[]=quantity`.
 	Quantity *Quantity `json:"quantity" expandable:"true"`
 	// Item affected by this change.
+	//
+	// Expandable via `include[]=item`.
 	Item *Item `json:"item" expandable:"true"`
-	// User responsible for this change.
+	// User who initiated this change, if any.
+	//
+	// Absent for system-driven changes. Expandable via `include[]=responsible_user`.
 	ResponsibleUser *User `json:"responsible_user" expandable:"true"`
-	// Scanning station where this change occurred.
+	// Scanning station where this change occurred, if it originated from a scan.
+	//
+	// Expandable via `include[]=responsible_scanning_station`.
 	ResponsibleScanningStation *ScanningStation `json:"responsible_scanning_station" expandable:"true"`
 	// Timestamp when this change was recorded.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -49,6 +62,7 @@ func (*InventoryChangeLog) SchemaExample() any {
 }
 
 // ExportInventoryChangeLogsResponse is the response for the export endpoint when returning JSON.
+//
 // Export endpoints typically return an Excel file; this struct is used for JSON output.
 type ExportInventoryChangeLogsResponse struct {
 	// Resource type identifier.

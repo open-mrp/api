@@ -19,7 +19,9 @@ type ChildAccount struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=child_account"`
 	// Counterparty account.
 	Account *Account `json:"account" validate:"required"`
-	// External number for the account relation.
+	// Your own identifier for this customer (e.g. a CRM or ERP customer number), stored on the relation.
+	//
+	// Null if not set.
 	ExternalNumber *string `json:"external_number"`
 	// Support email from account branding.
 	Email *string `json:"email"`

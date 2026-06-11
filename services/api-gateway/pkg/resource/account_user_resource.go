@@ -8,8 +8,9 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-// Account user with role and department. Profile fields (name, email,
-// username, image URL) live on the expandable user sub-resource.
+// Account user with role and department.
+//
+// Profile fields (name, email, username, image URL) live on the expandable user sub-resource.
 type AccountUser struct {
 	// Account user ID.
 	ID string `json:"id" validate:"required"`
@@ -18,6 +19,10 @@ type AccountUser struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_user"`
 	// Account user status.
+	//
+	// - `active`: the user can access the account.
+	// - `disabled`: the user is locked out of the account.
+	// - `removed`: the user has been removed (soft-deleted) from the account.
 	Status constants.AccountUserStatus `json:"status" validate:"required"`
 	// Assigned role.
 	Role *Role `json:"role" expandable:"true"`

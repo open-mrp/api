@@ -11,15 +11,25 @@ import (
 type Tenancy struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=tenancy"`
-	// Current account the user is operating in.
+	// Account the request is currently acting within.
+	//
+	// `null` when the user has no active account selected (for example, mid-registration).
 	CurrentAccount *TenancyCurrentAccount `json:"current_account"`
 	// Sandbox accounts available to the user.
+	//
+	// Always present; the list is empty when the user has no sandboxes.
 	Sandboxes *List[TenancySandboxAccount] `json:"sandboxes" validate:"required"`
-	// Owner account for the user's tenancy.
+	// The user's owning (production) account.
+	//
+	// `null` if the user does not own an account.
 	OwnerAccount *TenancyOwnerAccount `json:"owner_account"`
-	// Other accounts the user has access to.
+	// Other accounts the user has access to beyond their current and owner accounts.
+	//
+	// Always present; the list is empty when there are none.
 	OtherAccounts *List[TenancyOtherAccount] `json:"other_accounts" validate:"required"`
-	// In-progress registration session, if one exists.
+	// In-progress registration session.
+	//
+	// `null` once the user has completed registration; only populated mid-signup, before an account exists.
 	PendingRegistration *TenancyPendingRegistration `json:"pending_registration"`
 }
 
@@ -71,8 +81,7 @@ type TenancyAccountPlan struct {
 	Features map[string]bool `json:"features"`
 }
 
-// TenancyPendingRegistration represents an in-progress registration session
-// for the authenticated user.
+// TenancyPendingRegistration represents an in-progress registration session for the authenticated user.
 type TenancyPendingRegistration struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=tenancy_pending_registration"`
@@ -118,9 +127,7 @@ type TenancyOtherAccount struct {
 	Type string `json:"type" validate:"required"`
 }
 
-// SampleTenancy describes a fully registered user operating in their owner
-// account, so pending_registration is null — a pending registration only
-// exists mid-signup, before the account does.
+// SampleTenancy describes a fully registered user operating in their owner account, so pending_registration is null — a pending registration only exists mid-signup, before the account does.
 var SampleTenancy = &Tenancy{
 	Object: constants.ObjectTypeTenancy,
 	CurrentAccount: &TenancyCurrentAccount{

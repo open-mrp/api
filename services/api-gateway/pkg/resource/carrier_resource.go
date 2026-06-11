@@ -19,11 +19,22 @@ type Carrier struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=carrier"`
 	// Display name.
 	Name string `json:"name" validate:"required"`
-	// Carrier code.
+	// Well-known carrier identifier.
+	//
+	// Null for custom carriers without a recognized code.
+	//
+	// - `fedex`, `ups`, `usps`: integrated carriers managed through Shippo (live rating and labels).
+	// - `will_call`: customer picks the order up; no carrier shipment.
+	// - `delivery`: delivered by your own vehicles/drivers.
+	// - `ltl`, `ltl1`: less-than-truckload freight carriers.
+	// - `freight_collect`: freight billed to and arranged by the receiver.
 	Code *constants.CarrierCode `json:"code"`
-	// Account number.
+	// Your account number with this carrier, used for rating and billing.
 	AccountNumber *string `json:"account_number"`
-	// Customer portal visibility.
+	// Whether this carrier is shown to customers in the customer portal.
+	//
+	// - `visible`: customers can see and select this carrier.
+	// - `hidden`: the carrier is concealed from the customer portal.
 	CustomerPortalVisibility constants.CustomerPortalVisibility `json:"customer_portal_visibility" validate:"required"`
 	// Owner.
 	Owner *Owner `json:"owner" expandable:"true"`
@@ -75,7 +86,9 @@ func (*OAuthResponse) SchemaExample() any {
 type OAuthStatusResponse struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=oauth_status_response"`
-	// OAuth connection status. One of "connected", "authorization_pending", or "disconnected".
+	// OAuth connection status.
+	//
+	// One of "connected", "authorization_pending", or "disconnected".
 	Status string `json:"status" validate:"required"`
 }
 

@@ -1,5 +1,5 @@
 name: "Setup stlc"
-description: "Install the stlc CLI and the TypeScript, Python, and Go language workers for SDK generation in CI."
+description: "Install the stlc CLI and the TypeScript, Python, Go, and MCP language workers for SDK generation in CI."
 
 inputs:
   github-org:
@@ -7,7 +7,7 @@ inputs:
     required: false
     default: "sdk-gen"
   stlc-read-token:
-    description: "PAT with Contents:Read on <github-org>/stlc, stlc-typescript, stlc-python, and stlc-go."
+    description: "PAT with Contents:Read on <github-org>/stlc, stlc-typescript, stlc-python, stlc-go, and stlc-mcp."
     required: true
 
 runs:
@@ -37,7 +37,8 @@ runs:
           "git+https://x-access-token:${STLC_READ_TOKEN}@github.com/${STLC_GITHUB_ORG}/stlc.git" \
           "git+https://x-access-token:${STLC_READ_TOKEN}@github.com/${STLC_GITHUB_ORG}/stlc-typescript.git" \
           "git+https://x-access-token:${STLC_READ_TOKEN}@github.com/${STLC_GITHUB_ORG}/stlc-python.git" \
-          "git+https://x-access-token:${STLC_READ_TOKEN}@github.com/${STLC_GITHUB_ORG}/stlc-go.git"
+          "git+https://x-access-token:${STLC_READ_TOKEN}@github.com/${STLC_GITHUB_ORG}/stlc-go.git" \
+          "git+https://x-access-token:${STLC_READ_TOKEN}@github.com/${STLC_GITHUB_ORG}/stlc-mcp.git"
 
     - name: Check stlc CLI is callable
       shell: bash

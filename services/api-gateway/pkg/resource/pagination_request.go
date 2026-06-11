@@ -6,6 +6,7 @@ import (
 )
 
 // PaginationRequest is the standard request type for paginated list endpoints.
+//
 // Embed this in a custom request struct if the endpoint needs additional query parameters.
 type PaginationRequest struct {
 	// Cursor token used to retrieve the next or previous page of results.

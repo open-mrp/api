@@ -100,7 +100,9 @@ type TransactionAllocation struct {
 	Amount *Quantity `json:"amount" validate:"required"`
 	// Note.
 	Note *string `json:"note"`
-	// Associated transaction. Expandable via include[]=allocations.transaction.
+	// Associated transaction.
+	//
+	// Expandable via include[]=allocations.transaction.
 	Transaction *TransactionDetail `json:"transaction" expandable:"true"`
 	// Associated invoice.
 	Invoice *AllocationInvoice `json:"invoice"`

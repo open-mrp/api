@@ -19,17 +19,29 @@ type Pick struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=pick"`
 	// Pick number.
 	Number string `json:"number" validate:"required"`
-	// Associated sales order. Expandable via include[]=sales_order.
+	// Associated sales order.
+	//
+	// Expandable via include[]=sales_order.
 	SalesOrder *SalesOrder `json:"sales_order" expandable:"true"`
-	// Associated customer. Expandable via include[]=customer.
+	// Associated customer.
+	//
+	// Expandable via include[]=customer.
 	Customer *Customer `json:"customer" expandable:"true"`
-	// Pick priority code.
+	// Pick priority code, used to order picks for fulfillment.
+	//
+	// - `low`: low priority.
+	// - `normal`: normal priority.
+	// - `high`: high priority.
 	Priority constants.PriorityCode `json:"priority" validate:"required"`
 	// Pick lines.
 	Lines *List[PickLine] `json:"lines" expandable:"true"`
-	// Associated departments. Expandable via include[]=departments.
+	// Associated departments.
+	//
+	// Expandable via include[]=departments.
 	Departments *List[Department] `json:"departments" expandable:"true"`
 	// Timestamp when the pick was finished.
+	//
+	// `null` while the pick is still in progress.
 	FinishedAt *time.Time `json:"finished_at"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

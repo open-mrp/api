@@ -146,7 +146,9 @@ func (*PublicAccount) SchemaExample() any {
 type AccountLogoURL struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_logo_url"`
-	// Presigned URL. Null if no logo exists.
+	// Presigned URL.
+	//
+	// Null if no logo exists.
 	URL *string `json:"url"`
 }
 

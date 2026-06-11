@@ -19,7 +19,9 @@ type AccountGroup struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_group"`
 	// Display name.
 	Name string `json:"name" validate:"required"`
-	// Description.
+	// Free-form description of the account group.
+	//
+	// Optional; `null` when not set.
 	Description *string `json:"description"`
 	// Commission policy.
 	//

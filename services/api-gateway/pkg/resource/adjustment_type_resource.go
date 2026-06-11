@@ -20,9 +20,18 @@ type AdjustmentType struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=adjustment_type"`
 	// Display name.
 	Name string `json:"name" validate:"required"`
-	// Machine-readable code.
+	// Machine-readable code identifying what kind of adjustment this is.
+	//
+	// - `discount`: a price reduction applied to an order.
+	// - `shipping_discrepancy`: corrects a difference between quoted and actual freight.
+	// - `short_payment`: reconciles an invoice paid for less than the amount due.
+	// - `write_off`: cancels an uncollectible balance.
+	// - `fee`: an additional charge added to an order.
+	// - `refund`: returns money to the customer.
 	Code constants.AdjustmentType `json:"code" validate:"required"`
-	// Resource owner.
+	// Provenance of this adjustment type.
+	//
+	// System-owned types are platform-provided defaults shared across all accounts; account-owned types are custom to one account.
 	Owner *Owner `json:"owner" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

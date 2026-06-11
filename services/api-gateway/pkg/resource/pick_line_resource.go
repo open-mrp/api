@@ -16,13 +16,19 @@ type PickLine struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=pick_line"`
-	// Quantity picked for this line.
+	// Quantity actually picked for this line.
+	//
+	// May be less than `ordered_quantity` when stock is short or the line is only partially fulfilled.
 	Quantity *Quantity `json:"quantity" validate:"required"`
-	// Ordered quantity for this line.
+	// Quantity requested by the originating sales order line for this pick line.
 	OrderedQuantity *Quantity `json:"ordered_quantity" validate:"required"`
-	// Associated sales order line. Expandable via include[]=lines.sales_order_line.
+	// Associated sales order line.
+	//
+	// Expandable via include[]=lines.sales_order_line.
 	SalesOrderLine *SalesOrderLine `json:"sales_order_line" expandable:"true"`
 	// Timestamp when the line was packed.
+	//
+	// `null` until the line has been packed.
 	PackedAt *time.Time `json:"packed_at"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

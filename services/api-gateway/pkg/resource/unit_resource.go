@@ -23,16 +23,35 @@ type Unit struct {
 	// Short abbreviation for the unit (e.g. "g", "kg").
 	Abbreviation string `json:"abbreviation" validate:"required"`
 	// Unit dimension.
+	//
+	// Units can only be converted to other units sharing the same dimension.
+	//
+	// - `currency`: monetary units such as dollars or euros.
+	// - `quantity`: discrete countable units.
+	// - `time`: time-based units such as hours or minutes.
+	// - `mass`: weight-based units such as kilograms or pounds.
+	// - `volume`: volumetric units such as liters or gallons.
+	// - `length`: distance-based units such as meters or feet.
+	// - `temperature`: temperature units such as Celsius or Fahrenheit.
+	// - `area`: area-based units such as square meters or acres.
 	Type constants.UnitType `json:"type" validate:"required"`
 	// Conversion ratio numerator relative to the base unit in the same dimension.
 	RatioNumerator string `json:"ratio_numerator" validate:"required" format:"decimal"`
-	// Conversion ratio denominator relative to the base unit in the same dimension. Cannot be zero.
+	// Conversion ratio denominator relative to the base unit in the same dimension.
+	//
+	// Cannot be zero.
 	RatioDenominator string `json:"ratio_denominator" validate:"required" format:"decimal"`
-	// Conversion offset numerator, used for temperature-like conversions. Zero for most unit types.
+	// Conversion offset numerator, used for temperature-like conversions.
+	//
+	// Zero for most unit types.
 	OffsetNumerator string `json:"offset_numerator" validate:"required" format:"decimal"`
-	// Conversion offset denominator. Typically 1. Cannot be zero.
+	// Conversion offset denominator.
+	//
+	// Typically 1. Cannot be zero.
 	OffsetDenominator string `json:"offset_denominator" validate:"required" format:"decimal"`
-	// Whether this is the base unit for its dimension. Conversion ratios are relative to this unit.
+	// Whether this is the base unit for its dimension.
+	//
+	// Conversion ratios are relative to this unit.
 	IsBaseUnit bool `json:"is_base_unit"`
 	// Owner of this resource.
 	Owner *Owner `json:"owner" expandable:"true"`
@@ -62,12 +81,7 @@ func (*Unit) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleUnit)
 }
 
-// newSampleUnit builds a complete sample Unit for embedding in other resources'
-// examples. The conversion fields default to an identity base unit and the
-// audit fields to the shared sample timestamps, so every embedded unit is a
-// fully populated, schema-valid example (the exact ratio is immaterial for a
-// nested reference). Use this instead of a partial &Unit{...} literal, which
-// would leave required fields empty in the generated example.
+// newSampleUnit builds a complete sample Unit for embedding in other resources' examples. The conversion fields default to an identity base unit and the audit fields to the shared sample timestamps, so every embedded unit is a fully populated, schema-valid example (the exact ratio is immaterial for a nested reference). Use this instead of a partial &Unit{...} literal, which would leave required fields empty in the generated example.
 func newSampleUnit(name, abbreviation string, unitType constants.UnitType) *Unit {
 	return &Unit{
 		ID:                SampleUnitID,

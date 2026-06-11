@@ -21,12 +21,21 @@ type AgentDefinition struct {
 	// Description of what the agent does.
 	Description *string `json:"description"`
 	// Agent definition type.
+	//
+	// - `system`: provided by Augno; cannot be edited or deleted.
+	// - `custom`: created by a user in this account.
 	DefinitionType constants.AgentDefinitionType `json:"definition_type" validate:"required"`
-	// Category code.
+	// Category grouping for the agent (e.g. `order_processing`), used to organize agents in the UI.
 	CategoryCode string `json:"category_code" validate:"required"`
-	// How this agent is triggered.
+	// How runs of this agent are initiated.
+	//
+	// - `scheduled`: runs on a cron schedule (see `config.trigger_config.cron_schedule`).
+	// - `event`: runs in response to platform events (see `config.trigger_config.event_filters`).
+	// - `manual`: runs only when explicitly invoked.
 	TriggerType constants.AgentTriggerType `json:"trigger_type" validate:"required"`
 	// Whether the current user can edit this agent definition.
+	//
+	// Always `false` for `system` definitions.
 	IsEditable bool `json:"is_editable"`
 	// Role defining agent permissions.
 	Role *Role `json:"role" expandable:"true"`
@@ -34,7 +43,10 @@ type AgentDefinition struct {
 	Config *AgentDefinitionConfig `json:"config" expandable:"true"`
 	// Tools attached to this agent.
 	Tools *List[AgentDefinitionTool] `json:"tools" expandable:"true"`
-	// Per-account activation status.
+	// Whether this agent is enabled for the current account.
+	//
+	// - `active`: enabled and able to run for this account.
+	// - `inactive`: disabled for this account; will not run.
 	AccountStatus constants.AgentAccountStatus `json:"status" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

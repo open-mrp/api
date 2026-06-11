@@ -10,9 +10,14 @@ import (
 type Owner struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=owner"`
-	// The owner type: "system" for platform defaults, "account" for account-owned resources.
+	// Owner type, identifying where the resource came from.
+	//
+	// - `system`: a platform-provided default shared across all accounts; not editable.
+	// - `account`: created and owned by a specific account; the `account` field identifies which.
 	Type constants.OwnerType `json:"type" validate:"required"`
-	// The account that owns this resource. `null` if the object is system-owned.
+	// The account that owns this resource.
+	//
+	// `null` when `type` is `system`.
 	Account *Account `json:"account" expandable:"true"`
 }
 
@@ -24,8 +29,7 @@ func SystemOwner() *Owner {
 	}
 }
 
-// NewOwner constructs an Owner from an optional account ID.
-// A nil or empty account ID produces a system owner; otherwise an account owner.
+// NewOwner constructs an Owner from an optional account ID. A nil or empty account ID produces a system owner; otherwise an account owner.
 func NewOwner(accountID *string) *Owner {
 	if accountID == nil || *accountID == "" {
 		return SystemOwner()
@@ -40,9 +44,7 @@ func NewOwner(accountID *string) *Owner {
 	}
 }
 
-// NewOwnerWithAccount constructs an Owner from an optional account ID and a
-// resolved Account. When account is non-nil it is used directly; otherwise the
-// Owner falls back to a stub Account containing only ID and Object.
+// NewOwnerWithAccount constructs an Owner from an optional account ID and a resolved Account. When account is non-nil it is used directly; otherwise the Owner falls back to a stub Account containing only ID and Object.
 func NewOwnerWithAccount(accountID *string, account *Account) *Owner {
 	if accountID == nil || *accountID == "" {
 		return SystemOwner()

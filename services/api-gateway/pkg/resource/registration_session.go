@@ -70,21 +70,40 @@ type RegistrationSession struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=registration_session"`
-	// Pricing plan code.
+	// Code of the pricing plan selected for this registration, e.g. `free`, `starter`, or `pro`.
 	PlanCode string `json:"plan_code" validate:"required"`
-	// Current registration step.
+	// Current step in the registration flow.
+	//
+	// Steps advance in this order:
+	//
+	// - `verification`: the user is verifying their email address.
+	// - `user_details`: the user is providing their personal details (name, etc.).
+	// - `account_details`: the user is providing their account/company details.
+	// - `review`: the user is reviewing their registration details before payment.
+	// - `payment`: the user is providing their payment details.
+	// - `completed`: registration has finished and the account is active.
 	Step constants.RegistrationStep `json:"step" validate:"required"`
-	// Stripe customer ID.
+	// ID of the Stripe customer created for this registration.
+	//
+	// `null` until billing is set up.
 	StripeCustomerID *string `json:"stripe_customer_id"`
-	// Stripe checkout session ID.
+	// ID of the Stripe Checkout session used to collect payment.
+	//
+	// `null` until checkout is started.
 	StripeCheckoutSessionID *string `json:"stripe_checkout_session_id"`
-	// Whether payment has been completed.
+	// Whether payment has been completed for this registration.
+	//
+	// Set to `true` once the `payment` step succeeds; `false` for free plans that require no payment.
 	PaymentCompleted bool `json:"payment_completed"`
 	// Account being registered.
+	//
+	// `null` until the `account_details` step is reached.
 	Account *RegistrationSessionAccount `json:"account"`
 	// User being registered.
 	User RegistrationSessionUser `json:"user" validate:"required"`
-	// Timestamp when registration was completed. Null if still in progress.
+	// Timestamp when registration was completed.
+	//
+	// Null if still in progress.
 	CompletedAt *time.Time `json:"completed_at"`
 	// Timestamp when this session was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

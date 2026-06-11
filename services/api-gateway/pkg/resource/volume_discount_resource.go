@@ -19,7 +19,9 @@ type VolumeDiscount struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=volume_discount"`
 	// Display name.
 	Name string `json:"name" validate:"required"`
-	// Tiers.
+	// Quantity tiers that define the discount.
+	//
+	// Each tier sets a discount percentage that applies once the ordered quantity reaches its threshold.
 	Tiers *List[VolumeDiscountTier] `json:"tiers" validate:"required"`
 	// Customer groups associated with this volume discount.
 	CustomerGroups *List[AccountGroup] `json:"customer_groups" expandable:"true"`
@@ -45,9 +47,11 @@ type VolumeDiscountTier struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=volume_discount_tier"`
 	// Display name.
 	Name string `json:"name" validate:"required"`
-	// Discount percentage as a decimal string.
+	// Percentage taken off the price once the threshold is met, as a decimal string.
+	//
+	// For example, `5` means a 5% discount.
 	DiscountPercentage string `json:"discount_percentage" validate:"required" format:"decimal"`
-	// Quantity threshold as a decimal string.
+	// Minimum ordered quantity at which this tier's discount begins to apply, as a decimal string.
 	Threshold string `json:"threshold" validate:"required" format:"decimal"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

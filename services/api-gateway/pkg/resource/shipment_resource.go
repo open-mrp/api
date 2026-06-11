@@ -27,6 +27,9 @@ type Shipment struct {
 	// Master tracking number.
 	MasterTrackingNumber *string `json:"master_tracking_number"`
 	// Shipment status code.
+	//
+	// - `packed`: the shipment has been packed but not yet dispatched.
+	// - `shipped`: the shipment has left the facility (`shipped_at` is set).
 	Status constants.ShipmentStatus `json:"status" validate:"required"`
 	// Timestamp when shipped.
 	ShippedAt *time.Time `json:"shipped_at"`
@@ -62,8 +65,9 @@ type ShipmentLine struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=shipment_line"`
 	// Associated sales order line.
 	SalesOrderLine *SalesOrderLine `json:"sales_order_line" expandable:"true"`
-	// The shipped item (the order line's item). Populated inline when lines are
-	// included, carried directly from the order line's item id.
+	// The shipped item (the order line's item).
+	//
+	// Populated inline when lines are included, carried directly from the order line's item id.
 	Item *Item `json:"item"`
 	// Quantity shipped.
 	Quantity *Quantity `json:"quantity" validate:"required"`
@@ -107,11 +111,20 @@ type ShippingCaseDetail struct {
 type RateShopResult struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=rate_shop_result"`
-	// Available rate options.
+	// Available rate options, sorted by rate ascending.
+	//
+	// Empty when freight is exempt for the order.
 	Options *List[RateShopOption] `json:"options" validate:"required"`
-	// Exemption type, if applicable.
+	// Why a special freight outcome was applied to these options, if any.
+	//
+	// - `freight_exempt`: the order is exempt from freight; no options are returned.
+	// - `minimum_order_met`: the free-shipping minimum order value was reached, so eligible options are rated at zero.
+	// - `flat_rate`: a flat shipping rate was applied to the options (see `flat_rate`).
+	// - `none`: standard carrier rates apply with no exemption.
 	ExemptionType *string `json:"exemption_type"`
-	// Flat rate amount, if applicable.
+	// Flat shipping amount applied to the options.
+	//
+	// Set only when `exemption_type` is `flat_rate`.
 	FlatRate *float64 `json:"flat_rate"`
 }
 

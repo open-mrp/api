@@ -24,13 +24,33 @@ type ScanningStation struct {
 	Name string `json:"name" validate:"required"`
 	// Notes.
 	Notes *string `json:"notes"`
-	// Scanning station type.
+	// Scanning station type, determining which batch operation the station performs.
+	//
+	// - `init_batch`: initializes a new batch.
+	// - `merge_batch`: merges multiple batches into one.
+	// - `move_batch`: moves a batch to another location or step.
+	// - `split_batch`: splits a batch into multiple batches.
 	Type constants.ScanningStationType `json:"type" validate:"required"`
-	// Label size code.
+	// Label size printed at this station.
+	//
+	// `null` when no label size is configured.
+	//
+	// - `1x1`: 1x1 inch label.
+	// - `1x3`: 1x3 inch label.
+	// - `1x4`: 1x4 inch label.
+	// - `2x4`: 2x4 inch label.
 	LabelSizeCode *constants.LabelSizeCode `json:"label_size"`
-	// Label type code.
+	// Label type printed at this station.
+	//
+	// `null` when no label type is configured.
+	//
+	// - `tag`: a tag label.
+	// - `traveler`: a traveler label that accompanies the batch through production.
 	LabelTypeCode *constants.LabelTypeCode `json:"label_type"`
 	// Operator requirement behavior for this station.
+	//
+	// - `none`: no operator action is required to complete a scan.
+	// - `material_check`: the operator must perform a material check before the scan is accepted.
 	OperatorRequirement constants.OperatorRequirement `json:"operator_requirement"`
 	// Department.
 	Department *Department `json:"department" expandable:"true"`

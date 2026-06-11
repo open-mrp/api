@@ -18,9 +18,13 @@ type Role struct {
 	Name string `json:"name" validate:"required"`
 	// Role type code.
 	//
-	// The role's type is sometimes used to gate special behaviors in the frontend
-	// and to restrict some actions to only certain types of roles. For example,
-	// only roles with the type `admin` can create and manage API keys.
+	// The role's type is sometimes used to gate special behaviors in the frontend and to restrict some actions to only certain types of roles. For example, only roles with the type `admin` can create and manage API keys.
+	//
+	// - `admin`: full administrative access, including managing API keys.
+	// - `user`: a custom role tailored to a specific need (its permissions are defined explicitly).
+	// - `scanner`: a role for scanning-station operators.
+	// - `sales_rep`: a role for sales representatives.
+	// - `agent`: a role assigned to an automated agent rather than a person.
 	TypeCode constants.RoleType `json:"type" validate:"required"`
 	// Owner of this resource.
 	Owner *Owner `json:"owner" expandable:"true"`

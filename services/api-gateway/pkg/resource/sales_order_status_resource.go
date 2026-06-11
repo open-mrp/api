@@ -21,10 +21,14 @@ type SalesOrderStatus struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order_status"`
 	// Machine-readable status code.
+	//
+	// - `estimate`: a draft quote that has not yet been committed.
+	// - `issued`: the order has been issued and is being fulfilled.
+	// - `fulfilled`: the order has been completed and closed.
 	Code constants.SalesOrderStatusCode `json:"code" validate:"required"`
 	// Display name.
 	Name string `json:"name" validate:"required"`
-	// Owner.
+	// Who owns this status value: the Augno system (built-in statuses) or your account (custom statuses).
 	Owner *Owner `json:"owner" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

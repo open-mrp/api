@@ -23,13 +23,20 @@ type ItemCategory struct {
 	Name string `json:"name" validate:"required"`
 	// Notes.
 	Notes *string `json:"notes"`
-	// Item category type.
+	// What kind of items this category groups.
+	//
+	// - `material_category`: groups raw materials or components.
+	// - `product_category`: groups finished products.
 	Type constants.ItemCategoryType `json:"type" validate:"required"`
 	// Owner of the item category.
+	//
+	// System-owned categories are platform defaults (the `owner.type` is `system` and `owner.account` is `null`); account-owned categories were created by your organization.
 	Owner *Owner `json:"owner" expandable:"true"`
 	// Properties associated with this item category.
 	Properties *List[Property] `json:"properties" expandable:"true"`
-	// Unit group associated with this item category. This unit group dictates the available units that items in this category may embody in your production process.
+	// Unit group associated with this item category.
+	//
+	// This unit group dictates the available units that items in this category may embody in your production process.
 	UnitGroup *UnitGroup `json:"unit_group" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

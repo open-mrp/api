@@ -16,7 +16,9 @@ type ProductionOutput struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=production"`
-	// Produced item. Expandable via include[]=produced_item.
+	// Produced item.
+	//
+	// Expandable via include[]=produced_item.
 	ProducedItem *Item `json:"produced_item" expandable:"true"`
 	// Quantity produced.
 	Quantity *Quantity `json:"quantity"`

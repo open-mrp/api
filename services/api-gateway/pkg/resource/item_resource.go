@@ -23,15 +23,19 @@ type Item struct {
 	Description *string `json:"description"`
 	// Notes.
 	Notes *string `json:"notes"`
-	// Item type code.
+	// What kind of item this is.
+	//
+	// - `product`: a finished product.
+	// - `material`: a raw material or component consumed in production.
+	// - `part`: a part used in production.
 	ItemTypeCode constants.ItemTypeCode `json:"type" validate:"required"`
 	// Item category.
 	Category *ItemCategory `json:"category" expandable:"true"`
-	// Unit value rate.
+	// Selling value per unit, expressed as a rate (e.g. `$25.50 / kg`).
 	UnitValue *Rate `json:"unit_value" expandable:"true"`
-	// Unit cost rate.
+	// Cost per unit, expressed as a rate (e.g. `$10.00 / kg`).
 	UnitCost *Rate `json:"unit_cost" expandable:"true"`
-	// Burn rate.
+	// Rate at which this item is consumed in production, expressed as a quantity over time (e.g. `100 kg / hr`).
 	BurnRate *Rate `json:"burn_rate" expandable:"true"`
 	// Attributes assigned to this item.
 	Attributes *List[Attribute] `json:"attributes" expandable:"true"`
@@ -67,13 +71,21 @@ func (*Item) SchemaExample() any {
 type ItemInventory struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=item_inventory"`
-	// On-hand quantity. Expandable via include[]=on_hand.
+	// Physical quantity currently in stock.
+	//
+	// Expandable via include[]=on_hand.
 	OnHand *Quantity `json:"on_hand" expandable:"true"`
-	// Reserved quantity. Expandable via include[]=reserved.
+	// Quantity committed to existing orders and therefore not free to allocate.
+	//
+	// Expandable via include[]=reserved.
 	Reserved *Quantity `json:"reserved" expandable:"true"`
-	// Available-to-promise quantity. Expandable via include[]=available_to_promise.
+	// Quantity free to commit to new orders, i.e. on-hand minus reserved minus short.
+	//
+	// Expandable via include[]=available_to_promise.
 	AvailableToPromise *Quantity `json:"available_to_promise" expandable:"true"`
-	// Short quantity. Expandable via include[]=short.
+	// Quantity by which demand exceeds available supply (the unfulfillable shortfall).
+	//
+	// Expandable via include[]=short.
 	Short *Quantity `json:"short" expandable:"true"`
 }
 
@@ -166,7 +178,11 @@ type ExportItem struct {
 	Description *string `json:"description"`
 	// Notes.
 	Notes *string `json:"notes"`
-	// Item type code.
+	// What kind of item this is.
+	//
+	// - `product`: a finished product.
+	// - `material`: a raw material or component consumed in production.
+	// - `part`: a part used in production.
 	ItemTypeCode constants.ItemTypeCode `json:"type" validate:"required"`
 	// Category name.
 	CategoryName string `json:"category_name"`
@@ -195,6 +211,7 @@ var SampleExportItem = &ExportItem{
 }
 
 // ExportItemsResponse is the export items response in JSON format.
+//
 // Export endpoints typically return an Excel file instead.
 type ExportItemsResponse struct {
 	// Resource type identifier.

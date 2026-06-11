@@ -18,11 +18,17 @@ type Priority struct {
 	ID string `json:"id"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=priority"`
-	// Machine-readable code.
+	// Machine-readable code identifying the priority level.
+	//
+	// - `low`: lowest urgency; worked after normal and high.
+	// - `normal`: default urgency for most orders and picks.
+	// - `high`: highest urgency; worked ahead of normal and low.
 	Code constants.PriorityCode `json:"code" validate:"required"`
 	// Display name.
 	Name string `json:"name" validate:"required"`
-	// Owner of this resource.
+	// Provenance of this priority.
+	//
+	// System-owned priorities are platform-provided defaults shared across all accounts; account-owned priorities are custom to one account.
 	Owner *Owner `json:"owner" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at"`

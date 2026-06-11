@@ -22,7 +22,14 @@ type LocationType struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=location_type"`
-	// Location type code.
+	// Location type code, identifying the level of the storage hierarchy this type represents.
+	//
+	// - `building`: a building-level location.
+	// - `section`: a section within a building.
+	// - `aisle`: an aisle within a section.
+	// - `rack`: a rack within an aisle.
+	// - `shelf`: a shelf within a rack.
+	// - `bin`: a bin within a shelf.
 	Code constants.LocationTypeCode `json:"code" validate:"required"`
 	// Display name.
 	Name string `json:"name" validate:"required"`
@@ -61,11 +68,22 @@ type Location struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=location"`
 	// Display name.
 	Name string `json:"name" validate:"required"`
-	// Location type code.
+	// Location type code, identifying this location's level in the storage hierarchy.
+	//
+	// - `building`: a building-level location.
+	// - `section`: a section within a building.
+	// - `aisle`: an aisle within a section.
+	// - `rack`: a rack within an aisle.
+	// - `shelf`: a shelf within a rack.
+	// - `bin`: a bin within a shelf.
 	TypeCode constants.LocationTypeCode `json:"type" validate:"required"`
-	// Parent location. Null for top-level locations. Expandable.
+	// Parent location.
+	//
+	// Null for top-level locations. Expandable.
 	Parent *Location `json:"parent" expandable:"true"`
-	// Child locations. Expandable.
+	// Child locations.
+	//
+	// Expandable.
 	Children *List[Location] `json:"children" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at"`

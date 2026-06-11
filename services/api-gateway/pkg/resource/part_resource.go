@@ -17,7 +17,7 @@ type Part struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=part"`
-	// Item.
+	// The underlying inventory item this part record represents.
 	Item *Item `json:"item" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

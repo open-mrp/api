@@ -18,9 +18,13 @@ type Territory struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=territory"`
 	// State this territory covers.
 	State string `json:"state" validate:"required"`
-	// Start of ZIP code range.
+	// Inclusive start of the ZIP code range this territory covers within the state.
+	//
+	// Optional; `null` when the territory spans the entire state.
 	StartZipcode *int32 `json:"start_zipcode"`
-	// End of ZIP code range.
+	// Inclusive end of the ZIP code range this territory covers within the state.
+	//
+	// Optional; `null` when the territory spans the entire state.
 	EndZipcode *int32 `json:"end_zipcode"`
 	// Sales rep assigned to this territory.
 	SalesRep *AccountUser `json:"sales_rep" expandable:"true"`

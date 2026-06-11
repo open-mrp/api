@@ -25,19 +25,31 @@ type AuditFieldChange struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=audit_field_change"`
 	// Name of the changed field.
 	Field string `json:"field" validate:"required"`
-	// Previous value as a JSON fragment. Null for creation events.
+	// Previous value as a JSON fragment.
+	//
+	// Null for creation events.
 	OldValue json.RawMessage `json:"old_value"`
-	// New value as a JSON fragment. Null for deletion events.
+	// New value as a JSON fragment.
+	//
+	// Null for deletion events.
 	NewValue json.RawMessage `json:"new_value"`
 }
 
-// Immutable audit event record. Captures the actor, changed resource, and timestamp.
+// Immutable audit event record.
+//
+// Captures the actor, changed resource, and timestamp.
 type AuditEvent struct {
 	// Audit event ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=audit_event"`
 	// Mutation type.
+	//
+	// - `create`: the resource was created.
+	// - `update`: one or more fields were changed.
+	// - `delete`: the resource was deleted.
+	// - `restore`: a previously deleted resource was restored.
+	// - `archive`: the resource was archived.
 	Action constants.AuditAction `json:"action" validate:"required"`
 	// Resource type of the audited entity.
 	ResourceType constants.ObjectType `json:"resource_type" validate:"required"`
@@ -49,7 +61,9 @@ type AuditEvent struct {
 	Changes *List[AuditFieldChange] `json:"changes" expandable:"true"`
 	// Arbitrary JSON metadata for the mutation (e.g. reason, source, tags).
 	Metadata json.RawMessage `json:"metadata"`
-	// Originating HTTP request. Expandable.
+	// Originating HTTP request.
+	//
+	// Expandable.
 	Request *RequestLog `json:"request" expandable:"true"`
 	// Idempotency key of the originating request.
 	IdempotencyKey *string `json:"idempotency_key"`

@@ -22,7 +22,10 @@ type SupplierMaterial struct {
 	SupplierPartNumber string `json:"supplier_part_number" validate:"required"`
 	// Supplier description for this material.
 	SupplierDescription *string `json:"supplier_description"`
-	// Whether this supplier material link is active.
+	// Whether this supplier can currently be sourced for the material.
+	//
+	// - `active`: the supplier is available to source this material.
+	// - `inactive`: the link is retained for history but the supplier is not   considered when sourcing this material.
 	Status constants.SupplierMaterialStatus `json:"status" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

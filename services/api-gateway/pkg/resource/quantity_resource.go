@@ -17,11 +17,15 @@ type Quantity struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=quantity"`
-	// Decimal value.
+	// Raw decimal value of the quantity, as a string to preserve precision.
+	//
+	// This is the unformatted machine value; see `display_value` for the human-readable rendering with unit and thousands separators.
 	Value string `json:"value" validate:"required" format:"decimal"`
 	// Formatted value with unit abbreviation (e.g. "$1,234.56" or "100 kg").
 	DisplayValue string `json:"display_value" validate:"required"`
-	// Associated unit.
+	// Unit of measure for this value (e.g. a currency, mass, or count unit).
+	//
+	// Expandable via include[]=unit.
 	Unit *Unit `json:"unit" expandable:"true"`
 }
 
@@ -37,22 +41,17 @@ func (*Quantity) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleQuantity)
 }
 
-// NormalizeQuantityValue returns a canonical decimal string for API quantity values,
-// trimming database fixed-point padding. Currency units use two fractional digits;
-// other dimensions trim trailing fractional zeros.
+// NormalizeQuantityValue returns a canonical decimal string for API quantity values, trimming database fixed-point padding. Currency units use two fractional digits; other dimensions trim trailing fractional zeros.
 func NormalizeQuantityValue(value, unitType string) string {
 	return normalizeDecimalString(value, unitType == string(constants.UnitTypeCurrency))
 }
 
-// NormalizeMonetaryQuantityValue returns a decimal string with exactly two fractional digits.
-// Use for price-like quantities whose unit dimension is not currency (e.g. shipping flat rates).
+// NormalizeMonetaryQuantityValue returns a decimal string with exactly two fractional digits. Use for price-like quantities whose unit dimension is not currency (e.g. shipping flat rates).
 func NormalizeMonetaryQuantityValue(value string) string {
 	return normalizeDecimalString(value, true)
 }
 
-// NormalizeRateValue returns a canonical decimal string for API rate values.
-// It trims database fixed-point padding while preserving at least two
-// fractional digits when the source value is fractional.
+// NormalizeRateValue returns a canonical decimal string for API rate values. It trims database fixed-point padding while preserving at least two fractional digits when the source value is fractional.
 func NormalizeRateValue(value string) string {
 	normalized := normalizeDecimalString(value, false)
 	if !strings.Contains(value, ".") {
@@ -71,9 +70,7 @@ func NormalizeRateValue(value string) string {
 	return normalized
 }
 
-// FormatDisplayValue formats a decimal value string with a unit abbreviation.
-// For currency units, the abbreviation is placed before the value (e.g. "$1,234.56").
-// For other units, the abbreviation is placed after the value (e.g. "100 kg").
+// FormatDisplayValue formats a decimal value string with a unit abbreviation. For currency units, the abbreviation is placed before the value (e.g. "$1,234.56"). For other units, the abbreviation is placed after the value (e.g. "100 kg").
 func FormatDisplayValue(value, unitAbbreviation, unitType string) string {
 	formatted := formatDecimal(value, unitType == string(constants.UnitTypeCurrency))
 	if unitType == string(constants.UnitTypeCurrency) {
@@ -131,8 +128,7 @@ func normalizeDecimalString(value string, isCurrency bool) string {
 	return result
 }
 
-// formatDecimal formats a decimal string with comma separators.
-// For currency, always shows 2 decimal places. For other types, trims trailing zeros.
+// formatDecimal formats a decimal string with comma separators. For currency, always shows 2 decimal places. For other types, trims trailing zeros.
 func formatDecimal(value string, isCurrency bool) string {
 	s := normalizeDecimalString(value, isCurrency)
 	parts := strings.SplitN(s, ".", 2)

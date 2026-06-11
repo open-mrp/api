@@ -17,25 +17,49 @@ type AgentAction struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=agent_action"`
 	// Agent run this action belongs to.
 	Run *AgentRun `json:"run" validate:"required" expandable:"true"`
-	// Tool slug.
+	// Slug of the tool the agent invoked for this action.
+	//
+	// - `save_memory`: store an observation about a customer or product.
+	// - `update_memory`: update an existing memory entry.
+	// - `delete_memory`: delete a memory entry.
+	// - `create_alert`: raise an alert that requires human attention.
+	// - `search_products`: search for products by keyword.
+	// - `list_products`: list all products in the account catalog.
+	// - `lookup_customer`: look up a customer by email.
+	// - `create_artifact`: create an artifact such as a report, document, or data export.
+	// - `read_doc`: read Augno documentation pages.
+	// - `fetch_url`: fetch content from a public URL.
 	ToolSlug constants.ToolSlug `json:"tool_slug" validate:"required"`
 	// Current action status.
+	//
+	// - `pending_review`: awaiting human review before it can execute.
+	// - `auto_approved`: automatically approved by policy.
+	// - `approved`: manually approved by a user.
+	// - `rejected`: rejected by a user; will not execute.
+	// - `executed`: successfully executed.
+	// - `failed`: errored during execution; see `error_message`.
 	Status constants.AgentActionStatus `json:"status" validate:"required"`
 	// Short label.
 	Label *string `json:"label"`
 	// Action description.
 	Description *string `json:"description"`
-	// Action input.
+	// Arguments passed to the tool, as JSON.
+	//
+	// Shape depends on `tool_slug`.
 	Input json.RawMessage `json:"input"`
-	// Action output.
+	// Result returned by the tool, as JSON.
+	//
+	// Shape depends on `tool_slug`. `null` until the action executes.
 	Output json.RawMessage `json:"output"`
 	// Error message if the action failed.
 	ErrorMessage *string `json:"error_message"`
 	// Entity this action relates to.
 	Entity *Entity `json:"entity"`
-	// Whether human review is required.
+	// Whether this action must be reviewed by a human before it can execute.
 	RequiresReview bool `json:"requires_review"`
 	// When the action was reviewed.
+	//
+	// `null` until a review decision is recorded.
 	ReviewedAt *time.Time `json:"reviewed_at"`
 	// Who reviewed the action.
 	ReviewedBy *Actor `json:"reviewed_by"`

@@ -44,6 +44,9 @@ type Address struct {
 	// Email address associated with the address.
 	Email *string `json:"email"`
 	// Address type.
+	//
+	// - `standard`: a normal shipping or billing address.
+	// - `drop_ship`: an address an order is shipped to directly, typically a third party or end customer rather than the account itself.
 	Type constants.AddressType `json:"type" validate:"required"`
 	// Geolocation details for the address.
 	Geolocation *Geolocation `json:"geolocation" validate:"required"`

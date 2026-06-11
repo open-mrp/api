@@ -10,7 +10,9 @@ import (
 
 // AccountGroupProductLineAccess is the product lines accessible to an account group.
 type AccountGroupProductLineAccess struct {
-	// Account group.
+	// The account group this access record belongs to.
+	//
+	// There is at most one access record per account group, so this also identifies the record.
 	AccountGroup *AccountGroup `json:"account_group" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_group_product_line_access"`

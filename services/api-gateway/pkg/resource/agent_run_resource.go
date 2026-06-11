@@ -20,12 +20,26 @@ type AgentRun struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=agent_run"`
 	// Current run status.
+	//
+	// - `pending`: queued but not yet started.
+	// - `running`: currently executing.
+	// - `awaiting_input`: paused, waiting for user input before continuing.
+	// - `awaiting_approval`: paused, waiting for a pending action to be approved.
+	// - `completed`: finished successfully.
+	// - `failed`: stopped after an error; see `error_message`.
+	// - `cancelled`: stopped before completion by a user.
 	Status constants.AgentRunStatus `json:"status" validate:"required"`
-	// Trigger type.
+	// How this run was initiated.
+	//
+	// - `scheduled`: started by the agent's cron schedule.
+	// - `event`: started in response to a platform event.
+	// - `manual`: started by an explicit request; see `triggered_by`.
 	TriggerType constants.AgentTriggerType `json:"trigger_type" validate:"required"`
-	// Input provided to the agent.
+	// Input provided to the agent at the start of the run, as JSON.
 	Input json.RawMessage `json:"input"`
-	// Output produced by the agent.
+	// Final output produced by the agent, as JSON.
+	//
+	// `null` until the run completes.
 	Output json.RawMessage `json:"output"`
 	// Error message if the run failed.
 	ErrorMessage *string `json:"error_message"`
@@ -39,7 +53,9 @@ type AgentRun struct {
 	TotalInputTokens *int64 `json:"total_input_tokens"`
 	// Total output tokens consumed.
 	TotalOutputTokens *int64 `json:"total_output_tokens"`
-	// Actor that triggered this run. Null for scheduled or event-triggered runs.
+	// Actor that triggered this run.
+	//
+	// Null for scheduled or event-triggered runs.
 	TriggeredBy *Actor `json:"triggered_by"`
 	// When this run was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

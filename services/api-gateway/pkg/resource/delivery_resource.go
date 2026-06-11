@@ -36,11 +36,18 @@ type Delivery struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=delivery"`
 	// Delivery number.
 	Number string `json:"number" validate:"required"`
-	// Associated purchase order. Expandable via include[]=purchase_order.
+	// Associated purchase order.
+	//
+	// Expandable via include[]=purchase_order.
 	PurchaseOrder *PurchaseOrder `json:"purchase_order" expandable:"true"`
 	// Delivery status.
+	//
+	// - `accepted`: the delivery was received and accepted (`accepted_at` is set).
+	// - `rejected`: the delivery was refused (`rejected_at` is set).
 	Status constants.DeliveryStatus `json:"status" validate:"required"`
-	// Delivery line items. Expandable via include[]=lines.
+	// Delivery line items.
+	//
+	// Expandable via include[]=lines.
 	Lines *List[DeliveryLine] `json:"lines" expandable:"true"`
 	// Accepted timestamp.
 	AcceptedAt *time.Time `json:"accepted_at"`
@@ -73,7 +80,9 @@ type DeliveryLine struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=delivery_line"`
-	// Associated item. Null if the item has been deleted.
+	// Associated item.
+	//
+	// Null if the item has been deleted.
 	Item *Item `json:"item"`
 	// Quantity received.
 	Quantity *Quantity `json:"quantity" validate:"required"`

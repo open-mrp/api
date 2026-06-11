@@ -19,11 +19,16 @@ type ServiceLevel struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=service_level"`
 	// Display name.
 	Name string `json:"name" validate:"required"`
-	// Service level token.
+	// Carrier-specific code identifying this service level (e.g. `fedex_ground`, `ups_next_day_air`).
+	//
+	// Values are carrier-defined, so any non-empty string is accepted.
 	ServiceLevelToken constants.ServiceLevelCode `json:"service_level_token" validate:"required"`
-	// Customer portal visibility.
+	// Whether this service level is shown to customers in the customer portal.
+	//
+	// - `visible`: customers can see and select this service level.
+	// - `hidden`: the service level is concealed from the customer portal.
 	CustomerPortalVisibility constants.CustomerPortalVisibility `json:"customer_portal_visibility" validate:"required"`
-	// Default service level for the carrier.
+	// Whether this is the carrier's default service level, pre-selected when the carrier is chosen.
 	IsDefault bool `json:"is_default"`
 	// Owner.
 	Owner *Owner `json:"owner" expandable:"true"`

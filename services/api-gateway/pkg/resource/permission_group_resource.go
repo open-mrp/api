@@ -17,13 +17,15 @@ type Permission struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=permission"`
-	// Permission code.
+	// Permission code in `{domain}:{action}` format, such as `customers:read`.
 	Code string `json:"code" validate:"required"`
 	// Display name.
 	Name string `json:"name" validate:"required"`
 	// Description of what this permission controls.
+	//
+	// `null` when not set.
 	Description *string `json:"description"`
-	// Permission group code.
+	// Code of the permission group this permission belongs to, such as `customers`.
 	PermissionGroupCode string `json:"group" validate:"required"`
 	// When the permission was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -56,7 +58,9 @@ type PermissionGroup struct {
 	Code string `json:"code" validate:"required"`
 	// Display name.
 	Name string `json:"name" validate:"required"`
-	// Description.
+	// Free-form description of the permission group.
+	//
+	// `null` when not set.
 	Description *string `json:"description"`
 	// Permissions in this group.
 	Permissions *List[Permission] `json:"permissions"`

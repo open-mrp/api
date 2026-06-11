@@ -44,7 +44,7 @@ type EmailContact struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=email_contact"`
-	// Account user.
+	// Account user whose email address receives order communications.
 	AccountUser *AccountUser `json:"account_user" validate:"required"`
 }
 
@@ -71,11 +71,22 @@ type PurchaseOrder struct {
 	Number string `json:"number" validate:"required"`
 	// Order note.
 	Note *string `json:"note"`
-	// Order status code.
+	// Lifecycle status of the order.
+	//
+	// - `estimate`: a draft that has not yet been issued to the supplier.
+	// - `issued`: the order has been issued to the supplier and is open for receiving.
+	// - `fulfilled`: the order is complete and closed.
 	Status constants.SalesOrderStatusCode `json:"status" validate:"required"`
-	// Priority code.
+	// Priority level for fulfilling the order.
+	//
+	// - `low`
+	// - `normal`
+	// - `high`
 	Priority constants.PriorityCode `json:"priority" validate:"required"`
-	// Acknowledgment status.
+	// Whether an acknowledgment has been sent to the supplier.
+	//
+	// - `not_sent`: no acknowledgment has been sent.
+	// - `sent`: the acknowledgment has been sent.
 	AcknowledgmentStatus constants.AcknowledgmentStatus `json:"acknowledgment_status" validate:"required"`
 	// Supplier.
 	Supplier *Supplier `json:"supplier" expandable:"true"`
@@ -93,15 +104,19 @@ type PurchaseOrder struct {
 	ReceivingOrder *ReceivingOrder `json:"receiving_order" expandable:"true"`
 	// Order lines.
 	Lines *List[PurchaseOrderLine] `json:"lines" expandable:"true"`
-	// Count of order lines.
+	// Total number of lines on the order, independent of whether `lines` is expanded.
 	LineCount int32 `json:"line_count"`
-	// Email contacts.
+	// Supplier-side contacts that order communications are sent to.
 	Contacts *List[EmailContact] `json:"contacts" expandable:"true"`
-	// Issued timestamp.
+	// When the order was issued to the supplier.
+	//
+	// Null until status reaches `issued`.
 	IssuedAt *time.Time `json:"issued_at"`
-	// Completed timestamp.
+	// When the order was completed.
+	//
+	// Null until status reaches `fulfilled`.
 	CompletedAt *time.Time `json:"completed_at"`
-	// Scheduled/promised timestamp.
+	// Promised or scheduled date for the order, if one has been set.
 	ScheduledAt *time.Time `json:"scheduled_at"`
 	// Created timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

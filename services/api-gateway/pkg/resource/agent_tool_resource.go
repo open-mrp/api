@@ -38,6 +38,7 @@ type AvailableTool struct {
 	// Tool description.
 	Description *string `json:"description"`
 	// JSON schema describing the configuration options this tool accepts.
+	//
 	// Defines the shape of the `config` field on AgentDefinitionTool.
 	//
 	// For example:
@@ -54,13 +55,14 @@ type AvailableTool struct {
 	// }
 	// ```
 	ConfigSchema json.RawMessage `json:"config_schema"`
-	// Tool category.
+	// Category grouping for the tool (e.g. `built_in`).
 	Category string `json:"category" validate:"required"`
-	// Required permissions.
+	// Permission scopes the agent's role must hold for this tool to be usable (e.g. `products:read`).
 	RequiredPermissions []string `json:"required_permissions"`
 }
 
 // Tool attached to an agent definition.
+//
 // Pairs an AvailableTool with agent-specific config values.
 type AgentDefinitionTool struct {
 	// Agent definition tool ID.
@@ -70,6 +72,7 @@ type AgentDefinitionTool struct {
 	// Attached tool.
 	Tool AvailableTool `json:"tool" validate:"required"`
 	// Instance-specific configuration for this tool.
+	//
 	// Must conform to the tool's config_schema.
 	Config json.RawMessage `json:"config"`
 	// Sort order within the agent.

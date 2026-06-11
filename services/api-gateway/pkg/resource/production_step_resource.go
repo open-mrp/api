@@ -22,25 +22,39 @@ type ProductionStep struct {
 	LevelingFactor string `json:"leveling_factor" validate:"required" format:"decimal"`
 	// Allowances as a decimal string.
 	Allowances string `json:"allowances" validate:"required" format:"decimal"`
-	// Labor rate.
+	// Cost of labor for this step, expressed as a rate (e.g. currency per unit of output).
 	LaborRate *Rate `json:"labor_rate"`
-	// Labor time.
+	// Labor duration for this step, expressed as a rate (e.g. time per unit of output).
 	LaborTime *Rate `json:"labor_time"`
-	// Overhead rate.
+	// Overhead cost for this step, expressed as a rate (e.g. currency per unit of output).
 	OverheadRate *Rate `json:"overhead_rate"`
-	// Production output. Expandable via include[]=production.
+	// Production output.
+	//
+	// Expandable via include[]=production.
 	Production *ProductionOutput `json:"production" expandable:"true"`
-	// Consumptions. Expandable via include[]=consumptions.
+	// Materials consumed by this step.
+	//
+	// Expandable via include[]=consumptions.
 	Consumptions *List[Consumption] `json:"consumptions" expandable:"true"`
-	// Machines assigned to this step. Expandable via include[]=machines.
+	// Machines assigned to this step.
+	//
+	// Expandable via include[]=machines.
 	Machines *List[Machine] `json:"machines" expandable:"true"`
-	// Scanning station. Expandable via include[]=scanning_station.
+	// Scanning station where this step is scanned, if assigned.
+	//
+	// Expandable via include[]=scanning_station.
 	ScanningStation *ScanningStation `json:"scanning_station" expandable:"true"`
-	// Input steps feeding into this step. Expandable via include[]=in_steps.
+	// Input steps feeding into this step.
+	//
+	// Expandable via include[]=in_steps.
 	InSteps *List[ProductionStep] `json:"in_steps" expandable:"true"`
-	// Output steps this step feeds into. Expandable via include[]=out_steps.
+	// Output steps this step feeds into.
+	//
+	// Expandable via include[]=out_steps.
 	OutSteps *List[ProductionStep] `json:"out_steps" expandable:"true"`
-	// Department. Expandable via include[]=department.
+	// Department.
+	//
+	// Expandable via include[]=department.
 	Department *Department `json:"department" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

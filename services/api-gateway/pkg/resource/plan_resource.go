@@ -15,7 +15,9 @@ type PlanLimit struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=plan_limit"`
 	// Resource key this limit applies to (e.g., "sandboxes", "seats", "invoices").
 	Key string `json:"key" validate:"required"`
-	// Maximum allowed value. Null means unlimited.
+	// Maximum allowed value.
+	//
+	// Null means unlimited.
 	Value *int `json:"value"`
 }
 
@@ -27,11 +29,17 @@ type PricingPlan struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=pricing_plan"`
 	// Display name of the plan.
 	Name string `json:"name" validate:"required"`
-	// Plan type code.
+	// Plan tier code.
+	//
+	// - `free`: the no-cost entry tier.
+	// - `starter`: the paid entry tier for small teams.
+	// - `pro`: the higher tier with expanded limits and support.
 	PlanTypeCode constants.PublicPlanCode `json:"plan_type" validate:"required"`
 	// Price per seat per month in dollars.
 	PricePerSeat float64 `json:"price_per_seat"`
-	// Flat monthly price in dollars, if applicable.
+	// Per-seat price override in dollars used in place of `price_per_seat` when set.
+	//
+	// The monthly bill multiplies this by the number of seats (at least `seat_minimum`). `null` or `0` falls back to `price_per_seat`.
 	PricePerMonth *float64 `json:"price_per_month"`
 	// Minimum seats required for this plan.
 	SeatMinimum *int `json:"seat_minimum"`
@@ -45,7 +53,9 @@ type PricingPlan struct {
 	IsHighlighted bool `json:"is_highlighted"`
 	// Call-to-action button text.
 	ButtonText string `json:"button_text" validate:"required"`
-	// Name of the previous plan tier this plan includes.
+	// Name of the lower plan tier whose features this plan also includes, for an "everything in X, plus..." callout on the pricing page.
+	//
+	// Null for the entry tier, which builds on no prior plan.
 	IncludesPreviousPlan *string `json:"includes_previous_plan"`
 }
 

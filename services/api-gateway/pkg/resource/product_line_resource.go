@@ -23,13 +23,21 @@ type ProductLine struct {
 	Description *string `json:"description"`
 	// Notes.
 	Notes *string `json:"notes"`
-	// Commission policy of products in this product line.
+	// Default commission policy for products in this product line.
+	//
+	// - `commission_exempt`: no commission applies to these products.
+	// - `commission_applied`: commission applies to these products, unless overridden elsewhere.
 	CommissionPolicy constants.CommissionPolicy `json:"commission_policy" validate:"required"`
-	// Freight policy for all items in this product line.
+	// Default freight policy for products in this product line.
+	//
+	// - `free_freight`: these products do not incur a freight charge.
+	// - `billed_freight`: freight is billed for these products, unless overridden elsewhere.
 	FreightPolicy constants.FreightPolicy `json:"freight_policy" validate:"required"`
 	// Owner of the product line.
 	Owner *Owner `json:"owner" expandable:"true"`
-	// Unit group associated with this product line. This unit group dictates the available units that products in this product line may embody in your production process.
+	// Unit group associated with this product line.
+	//
+	// This unit group dictates the available units that products in this product line may embody in your production process.
 	UnitGroup *UnitGroup `json:"unit_group" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

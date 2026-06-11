@@ -33,12 +33,13 @@ type AllocationEntry struct {
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 }
 
-// Minimal customer sub-resource for allocation entries. It carries its own
-// allocation_customer discriminator (not customer) because allocation list
-// entries do not carry a customer id, so it is not a resolvable customer
-// reference.
+// Minimal customer sub-resource for allocation entries.
+//
+// It carries its own allocation_customer discriminator (not customer) because allocation list entries do not carry a customer id, so it is not a resolvable customer reference.
 type AllocationCustomer struct {
-	// Customer account ID. Null when the entry does not carry one.
+	// Customer account ID.
+	//
+	// Null when the entry does not carry one.
 	ID *string `json:"id"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=allocation_customer"`
@@ -54,11 +55,15 @@ type AllocationTransaction struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=transaction"`
-	// Transaction type (e.g. "payment", "credit").
+	// Transaction type code: one of `payment`, `credit_memo`, `adjustment`, or `rebate`.
 	Type string `json:"type" validate:"required"`
-	// Transaction method (e.g. "check", "wire").
+	// Payment method code (e.g. `check`, `ach`).
+	//
+	// Typically present only on payment transactions and null for credit memos, adjustments, and rebates.
 	Method *string `json:"method"`
-	// Adjustment type, if applicable.
+	// Adjustment category code.
+	//
+	// Typically populated when `type` is `adjustment`; null for other types.
 	AdjustmentType *string `json:"adjustment_type"`
 }
 
@@ -108,17 +113,23 @@ type OpenCreditEntry struct {
 	Number string `json:"number" validate:"required"`
 	// Original transaction amount as a decimal string.
 	OriginalAmount string `json:"original_amount" validate:"required"`
-	// Total amount already allocated as a decimal string.
+	// Total amount already allocated against invoices as a decimal string.
 	AllocatedAmount string `json:"allocated_amount" validate:"required"`
-	// Remaining unallocated amount as a decimal string.
+	// Remaining unallocated credit as a decimal string (`original_amount` minus `allocated_amount`).
+	//
+	// This is the balance still available to apply.
 	LeftoverAmount string `json:"leftover_amount" validate:"required"`
 	// Customer associated with this transaction.
 	Customer *AllocationCustomer `json:"customer" validate:"required"`
-	// Transaction type.
+	// Transaction type code: one of `payment`, `credit_memo`, `adjustment`, or `rebate`.
 	TransactionType string `json:"transaction_type" validate:"required"`
-	// Transaction method.
+	// Payment method code (e.g. `check`, `ach`).
+	//
+	// Typically present only on payment transactions and null for credit memos, adjustments, and rebates.
 	TransactionMethod *string `json:"transaction_method"`
-	// Adjustment type, if applicable.
+	// Adjustment category code.
+	//
+	// Typically populated when `transaction_type` is `adjustment`; null for other types.
 	AdjustmentType *string `json:"adjustment_type"`
 	// Responsible user's name.
 	ResponsibleUserName *string `json:"responsible_user_name"`

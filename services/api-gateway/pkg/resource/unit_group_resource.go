@@ -18,9 +18,22 @@ type UnitGroup struct {
 	Name string `json:"name" validate:"required"`
 	// Notes.
 	Notes *string `json:"notes"`
-	// Unit type.
+	// Dimension shared by every unit in this group.
+	//
+	// Only units of this dimension can belong to the group.
+	//
+	// - `currency`: monetary units such as dollars or euros.
+	// - `quantity`: discrete countable units.
+	// - `time`: time-based units such as hours or minutes.
+	// - `mass`: weight-based units such as kilograms or pounds.
+	// - `volume`: volumetric units such as liters or gallons.
+	// - `length`: distance-based units such as meters or feet.
+	// - `temperature`: temperature units such as Celsius or Fahrenheit.
+	// - `area`: area-based units such as square meters or acres.
 	Type constants.UnitType `json:"type" validate:"required"`
-	// Base unit.
+	// Base unit of the group.
+	//
+	// All other units' conversion ratios are expressed relative to this unit. Expandable.
 	BaseUnit *Unit `json:"base_unit" expandable:"true"`
 	// Associated units.
 	AssociatedUnits *List[UnitGroupUnit] `json:"associated_units" expandable:"true"`
@@ -40,11 +53,18 @@ type UnitGroupUnit struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=unit_group_unit"`
 	// Unit.
 	Unit *Unit `json:"unit" expandable:"true"`
-	// Discount percentage.
+	// Percentage discount applied when ordering in this unit, as a number out of 100 (e.g. `1` means 1%).
+	//
+	// Defaults to `1`.
 	DiscountPercentage float64 `json:"discount_percentage"`
-	// Fixed discount amount.
+	// Fixed per-unit discount amount applied when ordering in this unit, in the account's currency.
+	//
+	// Defaults to `0`.
 	DiscountFixed float64 `json:"discount_fixed"`
-	// Customer portal visibility.
+	// Whether this unit is shown to customers in the customer portal.
+	//
+	// - `visible`: the unit is selectable in the customer portal.
+	// - `hidden`: the unit is hidden from the customer portal.
 	CustomerPortalVisibility constants.CustomerPortalVisibility `json:"customer_portal_visibility" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

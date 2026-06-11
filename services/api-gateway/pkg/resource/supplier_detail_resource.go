@@ -16,9 +16,11 @@ type SupplierDetail struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=supplier"`
 	// Display name.
 	Name string `json:"name" validate:"required"`
-	// Supplier number.
+	// Human-facing supplier code, unique per account (e.g. `SUP-001`).
 	Number string `json:"number" validate:"required"`
-	// Supplier notes.
+	// Free-form notes about the supplier.
+	//
+	// Null if none.
 	Note *string `json:"note"`
 	// Default billing address.
 	BillToAddress *Address `json:"bill_to_address" expandable:"true"`
@@ -57,7 +59,7 @@ type SupplierSummary struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=supplier_summary"`
 	// Display name.
 	Name string `json:"name" validate:"required"`
-	// Supplier number.
+	// Human-facing supplier code, unique per account (e.g. `SUP-001`).
 	Number string `json:"number" validate:"required"`
 	// Number of associated materials.
 	MaterialCount int64 `json:"material_count"`

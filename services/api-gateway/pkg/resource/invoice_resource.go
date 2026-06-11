@@ -24,21 +24,40 @@ type Invoice struct {
 	Number string `json:"number" validate:"required"`
 	// Note attached to the invoice.
 	Note *string `json:"note"`
-	// Customer associated with this invoice. Expandable via include[]=customer.
+	// Customer associated with this invoice.
+	//
+	// Expandable via include[]=customer.
 	Customer *Customer `json:"customer" expandable:"true"`
-	// Sales order associated with this invoice. Expandable via include[]=order.
+	// Sales order associated with this invoice.
+	//
+	// Expandable via include[]=order.
 	Order *SalesOrder `json:"order" expandable:"true"`
-	// Shipment associated with this invoice. Expandable via include[]=shipment.
+	// Shipment associated with this invoice.
+	//
+	// Expandable via include[]=shipment.
 	Shipment *Shipment `json:"shipment" expandable:"true"`
 	// Number of line items.
 	LineCount int32 `json:"line_count"`
-	// Billing address. Expandable via include[]=billing_address.
+	// Billing address.
+	//
+	// Expandable via include[]=billing_address.
 	BillingAddress *Address `json:"billing_address" expandable:"true"`
-	// Customer priority code.
+	// Customer priority code carried onto the invoice.
+	//
+	// - `low`
+	// - `normal`
+	// - `high`
 	PriorityCode constants.PriorityCode `json:"priority" validate:"required"`
-	// Payment term. Expandable via include[]=payment_term.
+	// Payment term.
+	//
+	// Expandable via include[]=payment_term.
 	PaymentTerm *PaymentTerm `json:"payment_term" expandable:"true"`
-	// Payment status of the invoice.
+	// Payment status of the invoice, derived from the allocations applied to it.
+	//
+	// - `unpaid`: no payment has been received.
+	// - `partially_paid`: some but not all of the invoiced amount has been paid.
+	// - `paid`: paid in full.
+	// - `overpaid`: allocations exceed the invoiced amount.
 	PaymentStatus constants.InvoicePaymentStatus `json:"payment_status" validate:"required"`
 	// Whether the invoice has been sent via EDI.
 	IsEdiSent bool `json:"is_edi_sent"`
@@ -50,9 +69,13 @@ type Invoice struct {
 	AcceptsInvoiceEmails bool `json:"accepts_invoice_emails"`
 	// Whether the customer is EDI enabled.
 	CustomerIsEdiEnabled bool `json:"customer_is_edi_enabled"`
-	// Line items in this invoice. Expandable via include[]=lines.
+	// Line items in this invoice.
+	//
+	// Expandable via include[]=lines.
 	Lines *List[InvoiceLine] `json:"lines" expandable:"true"`
-	// Allocations against this invoice. Expandable via include[]=allocations.
+	// Allocations against this invoice.
+	//
+	// Expandable via include[]=allocations.
 	Allocations *List[InvoiceAllocation] `json:"allocations" expandable:"true"`
 	// Timestamp when the invoice was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -90,10 +113,13 @@ type InvoiceLine struct {
 	Quantity *Quantity `json:"quantity" validate:"required"`
 	// Unit price for this line.
 	UnitPrice *Rate `json:"unit_price" validate:"required"`
-	// Sales order line associated with this invoice line. Expandable via include[]=lines.order_line.
+	// Sales order line associated with this invoice line.
+	//
+	// Expandable via include[]=lines.order_line.
 	OrderLine *SalesOrderLine `json:"order_line" expandable:"true"`
-	// The invoiced item (the order line's item). Populated inline when lines are
-	// included, carried directly from the order line's item id.
+	// The invoiced item (the order line's item).
+	//
+	// Populated inline when lines are included, carried directly from the order line's item id.
 	Item *Item `json:"item"`
 	// Timestamp when the line was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -127,7 +153,9 @@ type InvoiceAllocation struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=invoice_allocation"`
-	// Transaction associated with this allocation. Expandable via include[]=allocations.transaction.
+	// Transaction associated with this allocation.
+	//
+	// Expandable via include[]=allocations.transaction.
 	Transaction *TransactionDetail `json:"transaction" expandable:"true"`
 	// Allocated amount.
 	Amount *Quantity `json:"amount" validate:"required"`

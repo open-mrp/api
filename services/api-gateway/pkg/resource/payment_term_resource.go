@@ -20,8 +20,13 @@ type PaymentTerm struct {
 	// Display name.
 	Name string `json:"name" validate:"required"`
 	// Payment term status.
+	//
+	// - `active`: the term is available for assignment to customers and invoices.
+	// - `inactive`: the term is retained for historical records but cannot be assigned.
 	Status constants.PaymentTermStatus `json:"status" validate:"required"`
-	// Owner of this resource.
+	// Owner of this resource, indicating whether it is an Augno-provided system default or was created by your account.
+	//
+	// Expandable via include[]=owner.
 	Owner *Owner `json:"owner" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

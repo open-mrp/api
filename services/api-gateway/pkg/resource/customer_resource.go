@@ -21,15 +21,30 @@ type Customer struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=customer"`
 	// Display name.
 	Name string `json:"name" validate:"required"`
-	// Customer number.
+	// Human-readable customer number used to identify the account, distinct from the `id`.
 	Number string `json:"number" validate:"required"`
-	// Account status code.
+	// Account status code, controlling whether the customer can transact.
+	//
+	// - `normal`: standard active account with no restrictions.
+	// - `preferred`: active account flagged as preferred.
+	// - `hold_shipment`: orders can be placed, but shipments are held.
+	// - `hold_all`: all activity is on hold.
 	Status constants.AccountStatusCode `json:"status" validate:"required"`
-	// EDI status.
+	// Whether EDI (Electronic Data Interchange) is enabled for this customer.
+	//
+	// - `enabled`: EDI is enabled.
+	// - `disabled`: EDI is disabled.
 	EDIStatus constants.EDIStatus `json:"edi_status" validate:"required"`
-	// Customer relationship type.
+	// The customer's position in the account hierarchy.
+	//
+	// - `standalone`: no parent or child accounts.
+	// - `parent`: has one or more child accounts (see `child_accounts`).
+	// - `child`: belongs to a parent account (see `parent_account`).
 	RelationshipType constants.CustomerRelationshipType `json:"relationship_type" validate:"required"`
-	// Commission policy.
+	// Commission policy applied to this customer's orders.
+	//
+	// - `commission_applied`: commission applies to orders.
+	// - `commission_exempt`: no commission applies.
 	CommissionPolicy constants.CommissionPolicy `json:"commission_policy" validate:"required"`
 	// Note.
 	Note *string `json:"note"`
@@ -47,13 +62,17 @@ type Customer struct {
 	BillToAddress *Address `json:"bill_to_address" expandable:"true"`
 	// Default shipping address.
 	ShipToAddress *Address `json:"ship_to_address" expandable:"true"`
-	// Customer type group.
+	// The account group of type `type_group` that categorizes this customer (for example "Distributors").
 	Type *AccountGroup `json:"type" expandable:"true"`
-	// Pricing groups.
+	// Account groups of type `pricing_group` that this customer belongs to, used to apply pricing rules.
 	PriceGroups *List[AccountGroup] `json:"price_groups" expandable:"true"`
-	// Parent account. Present if this is a child account.
+	// Parent account.
+	//
+	// Present if this is a child account.
 	ParentAccount *Customer `json:"parent_account" expandable:"true"`
-	// Child accounts. Present if this is a parent account.
+	// Child accounts.
+	//
+	// Present if this is a parent account.
 	ChildAccounts *List[Customer] `json:"child_accounts" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -77,15 +96,21 @@ type CustomerContactInfo struct {
 type CustomerFreightPreferences struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=customer_freight_preferences"`
-	// Freight policy.
+	// Freight policy applied to this customer's orders.
+	//
+	// - `free_freight`: the customer is not billed for freight.
+	// - `billed_freight`: freight is billed to the customer, unless overridden elsewhere.
 	Status constants.FreightPolicy `json:"status" validate:"required"`
 	// Default carrier.
 	Carrier *Carrier `json:"carrier" expandable:"true"`
 	// Default service level.
 	ServiceLevel *ServiceLevel `json:"service_level" expandable:"true"`
-	// Carrier billing type.
+	// Who pays the carrier for shipments.
+	//
+	// - `sender`: the shipper (you) pays the carrier.
+	// - `third_party`: a third party is billed, using `billing_account`.
 	BillingType *constants.CarrierBillingType `json:"billing_type"`
-	// Carrier billing account number.
+	// Carrier billing account number charged when `billing_type` is `third_party`.
 	BillingAccount *string `json:"billing_account"`
 }
 

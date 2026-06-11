@@ -76,3 +76,6 @@ crash.log
 # builds
 stainless/internal/builds/
 stainless/public/builds/
+
+# prompt executables
+prompts/*.mjs

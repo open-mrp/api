@@ -17,7 +17,7 @@ type AgentMemory struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=agent_memory"`
-	// Memory category.
+	// Free-form category used to group related memories (e.g. `preference`).
 	Category string `json:"category" validate:"required"`
 	// Memory content.
 	Content string `json:"content" validate:"required"`
@@ -25,9 +25,13 @@ type AgentMemory struct {
 	Metadata json.RawMessage `json:"metadata"`
 	// Associated entity.
 	Entity *Entity `json:"entity"`
-	// Importance score (0–1 scale).
+	// Relative importance from `0` to `1`, used to prioritize which memories the agent recalls.
+	//
+	// Higher is more important.
 	Importance float64 `json:"importance"`
-	// Expiration timestamp. Null means it never expires.
+	// Expiration timestamp.
+	//
+	// Null means it never expires.
 	ExpiresAt *time.Time `json:"expires_at"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

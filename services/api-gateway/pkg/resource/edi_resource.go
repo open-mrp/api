@@ -26,9 +26,11 @@ type DCLocation struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=dc_location"`
-	// Location description.
+	// Free-form description identifying this distribution-center location, such as a warehouse name and bay (for example, `Warehouse A - Bay 3`).
 	Location string `json:"location" validate:"required"`
-	// Associated customer.
+	// The customer this DC location belongs to.
+	//
+	// Every DC location is tied to a customer.
 	Customer *DCLocationCustomer `json:"customer"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

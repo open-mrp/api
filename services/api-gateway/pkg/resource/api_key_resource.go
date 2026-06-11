@@ -29,17 +29,23 @@ type APIKey struct {
 	Name string `json:"name" validate:"required"`
 	// Redacted key value safe for display.
 	RedactedValue string `json:"redacted_value" validate:"required"`
-	// Assigned role.
+	// Role assigned to the key, which determines the permissions of requests made with it.
 	Role *Role `json:"role" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
-	// Last used timestamp.
+	// When the key was last used to authenticate a request.
+	//
+	// `null` if it has never been used.
 	LastUsedAt *time.Time `json:"last_used_at"`
-	// Expiration timestamp.
+	// When the key expires and stops authenticating.
+	//
+	// `null` if the key never expires.
 	ExpiresAt *time.Time `json:"expires_at"`
-	// Revocation timestamp.
+	// When the key was revoked.
+	//
+	// `null` if the key has not been revoked.
 	RevokedAt *time.Time `json:"revoked_at"`
 }
 
@@ -47,7 +53,9 @@ type APIKey struct {
 type CreatedAPIKey struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=created_api_key"`
-	// Full secret value. Returned once and cannot be retrieved later. Learn more about [managing your API keys](https://docs.augno.com/api/managing-api-keys).
+	// Full secret value.
+	//
+	// Returned once and cannot be retrieved later. Learn more about [managing your API keys](https://docs.augno.com/api/managing-api-keys).
 	APIKeySecret string `json:"api_key_secret" validate:"required" sensitive:"true"`
 	// API key metadata.
 	APIKeyInfo APIKey `json:"api_key_info" validate:"required"`

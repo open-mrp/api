@@ -16,13 +16,15 @@ type SalesTarget struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sales_target"`
-	// Start date.
+	// Start of the period this target applies to (inclusive).
 	StartAt time.Time `json:"start_at" validate:"required"`
-	// End date.
+	// End of the period this target applies to (e.g. the close of a quarter).
 	EndAt time.Time `json:"end_at" validate:"required"`
-	// Sales representative.
+	// Sales representative the target is assigned to.
+	//
+	// Expandable: by default only the user reference is returned; request the full user object via `include[]=sales_rep`.
 	SalesRep *User `json:"sales_rep" expandable:"true"`
-	// Target amount.
+	// Goal amount the representative is expected to reach over the period, expressed as a monetary quantity.
 	Amount *Quantity `json:"amount" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

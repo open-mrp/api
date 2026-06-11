@@ -14,7 +14,9 @@ type RolePermission struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=role_permission"`
-	// Permission domain code.
+	// Resource domain this entry grants access to, such as `customers` or `orders`.
+	//
+	// The `create`, `read`, `update`, and `delete` flags below apply to this domain.
 	PermissionCode string `json:"domain" validate:"required"`
 	// Grants create access.
 	Create bool `json:"create"`

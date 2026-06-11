@@ -14,7 +14,9 @@ type UsageItem struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=usage_item"`
 	// Current usage count.
 	Current int `json:"current"`
-	// Maximum allowed usage. Null means unlimited.
+	// Maximum allowed usage.
+	//
+	// Null means unlimited.
 	Limit *int `json:"limit"`
 }
 
@@ -106,7 +108,9 @@ type EnsureBillingCustomerResponse struct {
 type SpendingCapResponse struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=spending_cap_response"`
-	// Monthly spending cap in cents. Null means no cap.
+	// Monthly spending cap in cents.
+	//
+	// Null means no cap.
 	CapCents *int64 `json:"cap_cents"`
 }
 
@@ -116,7 +120,9 @@ type AgentSpendInfo struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=agent_spend_info"`
 	// Estimated spend in cents for the current billing month.
 	EstimatedSpendCents int64 `json:"estimated_spend_cents"`
-	// Monthly spending cap in cents. Null means no cap.
+	// Monthly spending cap in cents.
+	//
+	// Null means no cap.
 	CapCents *int64 `json:"cap_cents"`
 }
 

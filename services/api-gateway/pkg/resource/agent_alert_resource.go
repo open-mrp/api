@@ -21,8 +21,16 @@ type AgentAlert struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=agent_alert"`
 	// Alert severity.
+	//
+	// - `info`: informational; requires no immediate action.
+	// - `warning`: a potential issue that should be reviewed.
+	// - `urgent`: an issue that requires prompt attention.
+	// - `critical`: a severe issue requiring immediate action.
 	Severity constants.AgentAlertSeverity `json:"severity" validate:"required"`
 	// Alert status.
+	//
+	// - `open`: not yet acknowledged.
+	// - `acknowledged`: seen and acknowledged by a user; see `acknowledged_at` and `acknowledged_by`.
 	Status constants.AgentAlertStatus `json:"status" validate:"required"`
 	// Alert title.
 	Title string `json:"title" validate:"required"`
@@ -39,8 +47,12 @@ type AgentAlert struct {
 	// Last update timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 	// Agent run that produced this alert.
+	//
+	// `null` if the alert is not tied to a specific run.
 	Run *AgentRun `json:"run" expandable:"true"`
-	// Agent action that produced this alert.
+	// Specific agent action that produced this alert.
+	//
+	// `null` if the alert is not tied to a specific action.
 	Action *AgentAction `json:"action" expandable:"true"`
 }
 

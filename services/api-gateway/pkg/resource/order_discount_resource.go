@@ -20,13 +20,20 @@ type OrderDiscount struct {
 	Name string `json:"name" validate:"required"`
 	// Discount code.
 	Code string `json:"code" validate:"required"`
-	// Percentage value as a decimal string.
+	// Percent off as a decimal string (e.g. `10` for 10%).
+	//
+	// Applies when `discount_type` is `percentage`; otherwise `0`.
 	Percentage string `json:"percentage" validate:"required" format:"decimal"`
-	// Fixed amount as a decimal string.
+	// Fixed amount off as a decimal string.
+	//
+	// Applies when `discount_type` is `amount`; otherwise `0`.
 	Amount string `json:"amount" validate:"required" format:"decimal"`
-	// Discount type.
+	// How the discount is calculated, determining whether `percentage` or `amount` is used.
+	//
+	// - `percentage`: the discount is a percent off, taken from `percentage`.
+	// - `amount`: the discount is a fixed amount off, taken from `amount`.
 	DiscountType constants.OrderDiscountType `json:"discount_type" validate:"required"`
-	// Number of orders using this discount.
+	// Number of orders currently using this discount.
 	OrderCount int32 `json:"order_count" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

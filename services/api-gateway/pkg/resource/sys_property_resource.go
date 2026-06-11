@@ -14,7 +14,7 @@ const SampleSysPropertyTypeName = "Transaction Number"
 const SampleSysPropertyTypeCode = "transaction_number"
 const SampleSysPropertyValueInt int32 = 42
 
-// System property counter.
+// Monotonic counter maintained by the system, such as the next transaction or document number to assign.
 type SysProperty struct {
 	// System property ID.
 	ID string `json:"id" validate:"required"`
@@ -50,13 +50,13 @@ func (*SysProperty) SchemaExample() any {
 
 // System property type.
 type SysPropertyType struct {
-	// System property ID.
+	// System property type ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sys_property_type"`
 	// Display name.
 	Name string `json:"name" validate:"required"`
-	// Type code.
+	// Machine-readable code identifying which counter this is, such as `transaction_number`.
 	Code string `json:"code" validate:"required"`
 }
 

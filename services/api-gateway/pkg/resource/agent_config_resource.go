@@ -6,6 +6,7 @@ import (
 )
 
 // Agent-level configuration controlling LLM behavior.
+//
 // Separate from AgentDefinitionTool.Config, which configures individual tools.
 type AgentDefinitionConfig struct {
 	// Resource type identifier.
@@ -14,18 +15,21 @@ type AgentDefinitionConfig struct {
 	SystemPrompt *string `json:"system_prompt"`
 	// LLM model identifier (e.g. "claude-sonnet-4").
 	Model *string `json:"model"`
-	// LLM provider name (e.g. "anthropic", "openai"). Inferred from model if omitted.
+	// LLM provider name (e.g. "anthropic", "openai").
+	//
+	// Inferred from model if omitted.
 	Provider *string `json:"provider"`
 	// LLM sampling temperature between 0 and 1.
 	Temperature *float64 `json:"temperature"`
-	// Trigger-specific configuration. Shape depends on the agent's trigger_type.
+	// Trigger-specific configuration.
+	//
+	// Shape depends on the agent's trigger_type.
 	TriggerConfig *TriggerConfig `json:"trigger_config"`
 }
 
 // Trigger-type-specific configuration.
-// For "scheduled": CronSchedule is populated.
-// For "event": EventFilters is populated.
-// For "manual": all fields are empty.
+//
+// For "scheduled": CronSchedule is populated. For "event": EventFilters is populated. For "manual": all fields are empty.
 type TriggerConfig struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=trigger_config"`

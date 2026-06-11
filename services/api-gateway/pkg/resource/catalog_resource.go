@@ -6,12 +6,14 @@ import (
 )
 
 // Product line available in the catalog.
+//
+// A product line is the top-level grouping of the catalog; browse its products by passing this product line's ID to the list-catalog-products endpoint.
 type CatalogProductLine struct {
 	// Product line ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=catalog_product_line"`
-	// Name.
+	// Display name of the product line.
 	Name string `json:"name" validate:"required"`
 }
 
@@ -21,45 +23,55 @@ type CatalogCategory struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=catalog_category"`
-	// Name.
+	// Display name of the category.
 	Name string `json:"name" validate:"required"`
-	// Properties associated with this item category.
+	// Properties shared by products in this category, such as `Color` or `Size`.
+	//
+	// These are the dimensions along which the category's products vary; each product's specific values appear under its `attributes`.
 	Properties *List[CatalogProperty] `json:"properties" validate:"required"`
-	// Products in this category.
+	// Products belonging to this category.
 	Products *List[CatalogProduct] `json:"products" validate:"required"`
 }
 
-// Property associated with an item category.
+// Property associated with an item category, e.g. `Color`.
+//
+// A property defines a dimension along which products in a category vary; its possible values are represented as catalog attributes.
 type CatalogProperty struct {
 	// Property ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=catalog_property"`
-	// Name.
+	// Display name of the property, e.g. `Color`.
 	Name string `json:"name" validate:"required"`
 }
 
 // Product in the catalog.
+//
+// A catalog product is identified by its underlying `item` rather than a product ID of its own.
 type CatalogProduct struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=catalog_product"`
-	// Associated item.
+	// Inventory item this catalog product represents.
+	//
+	// Use its `id` and `sku` to look up the full item.
 	Item *Item `json:"item" validate:"required"`
-	// Description.
+	// Human-readable description of the product, carried over from the item.
 	Description string `json:"description" validate:"required"`
-	// Attributes.
+	// Attribute values that distinguish this product within its category, e.g. `Red` for the `Color` property.
 	Attributes *List[CatalogAttribute] `json:"attributes" validate:"required"`
 }
 
-// Attribute of a product in the catalog.
+// Attribute of a product in the catalog: a single value of a property, e.g. `Red` for the `Color` property.
 type CatalogAttribute struct {
 	// Attribute ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=catalog_attribute"`
-	// Attribute value.
+	// The attribute's value, e.g. `Red`.
+	//
+	// This is the specific value the product takes for its `property`.
 	Name string `json:"name" validate:"required"`
-	// Property this attribute belongs to.
+	// Property this attribute is a value of, e.g. `Color`.
 	Property *CatalogProperty `json:"property" validate:"required"`
 }
 

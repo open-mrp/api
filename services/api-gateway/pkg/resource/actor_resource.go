@@ -12,6 +12,10 @@ type Actor struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=actor"`
 	// Actor type.
+	//
+	// - `user`: a human user account.
+	// - `api_key`: a programmatic caller authenticating with an API key.
+	// - `agent`: an automated agent acting on the account's behalf.
 	Type constants.ActorType `json:"type" validate:"required"`
 	// Display name.
 	Name *string `json:"name"`
@@ -25,8 +29,7 @@ type Actor struct {
 	Role *Role `json:"role" expandable:"true"`
 }
 
-// NewActor constructs an Actor reference with the canonical "actor" object type
-// and the supplied actor subtype (user, api_key, agent).
+// NewActor constructs an Actor reference with the canonical "actor" object type and the supplied actor subtype (user, api_key, agent).
 func NewActor(id string, actorType constants.ActorType, name, handle *string) *Actor {
 	return &Actor{
 		ID:     id,

@@ -23,14 +23,24 @@ type User struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=user"`
 	// Email address.
+	//
+	// `null` if the user has no email on record.
 	Email *string `json:"email"`
-	// Display name.
+	// User's full display name.
+	//
+	// `null` if not set.
 	Name *string `json:"name"`
 	// Username.
+	//
+	// `null` if the user has no username.
 	Username *string `json:"username"`
-	// Email verified timestamp, null if unverified.
+	// When the user verified their email address.
+	//
+	// `null` if the email is unverified.
 	EmailVerifiedAt *time.Time `json:"email_verified_at"`
-	// Profile image URL.
+	// URL of the user's profile image.
+	//
+	// `null` if no image has been uploaded.
 	ImageUrl *string `json:"image_url"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

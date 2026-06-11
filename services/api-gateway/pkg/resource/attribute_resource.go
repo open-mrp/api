@@ -17,11 +17,15 @@ type Attribute struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=attribute"`
-	// Attribute value.
+	// The selectable value this attribute represents, such as `Red` for a `Color` property or `Large` for a `Size` property.
 	Value string `json:"value" validate:"required"`
-	// Color code.
+	// Swatch color used to display this attribute in the UI.
+	//
+	// One of `blue`, `brown`, `gray`, `green`, `orange`, `pink`, `purple`, `red`, `yellow`, or `default` (a neutral fallback color).
 	ColorCode constants.Color `json:"color" validate:"required"`
-	// Display order.
+	// Position of this attribute relative to its siblings within the property, ascending.
+	//
+	// Lower values sort first.
 	SortOrder int32 `json:"sort_order"`
 	// Property this attribute belongs to (set when the attribute is returned under item.attributes).
 	Property *Property `json:"property"`

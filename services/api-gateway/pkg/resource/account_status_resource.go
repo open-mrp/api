@@ -21,6 +21,11 @@ type AccountStatus struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_status"`
 	// Machine-readable status code.
+	//
+	// - `normal`: standard account with no restrictions.
+	// - `preferred`: account flagged as preferred (e.g. for prioritized handling).
+	// - `hold_shipment`: shipments to this account are held; orders may still be placed.
+	// - `hold_all`: all activity for this account is held.
 	Code constants.AccountStatusCode `json:"code" validate:"required"`
 	// Display name.
 	Name string `json:"name" validate:"required"`

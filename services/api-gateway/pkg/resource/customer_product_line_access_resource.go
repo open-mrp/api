@@ -10,7 +10,7 @@ import (
 
 // Product lines accessible to a customer.
 type CustomerProductLineAccess struct {
-	// Customer.
+	// The customer whose product line access this record describes.
 	Customer *Customer `json:"customer" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=customer_product_line_access"`

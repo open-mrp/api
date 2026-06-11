@@ -26,16 +26,21 @@ type RequestLog struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=request_log"`
 	// HTTP method.
 	Method string `json:"method" validate:"required"`
-	// Request host. Usually `api.augno.com`.
+	// Request host.
+	//
+	// Usually `api.augno.com`.
 	Host string `json:"host" validate:"required"`
 	// Non-normalized request path.
 	Path string `json:"path" validate:"required"`
-	// _Normalized_ route template. For example `PATCH /v1/sales/customers/{id}` is the normalized route for a request route `PUT /v1/sales/customers/ac_...`.
+	// _Normalized_ route template.
+	//
+	// For example `PATCH /v1/sales/customers/{id}` is the normalized route for a request route `PUT /v1/sales/customers/ac_...`.
 	NormalizedRoute string `json:"normalized_route" validate:"required"`
 	// Query parameters.
 	QueryJSON json.RawMessage `json:"query_params" expandable:"true"`
-	// HTTP status code. Exception to the `status` naming convention: this is a numeric HTTP
-	// response code (200/404/…), not a domain lifecycle status enum, so the `_code` suffix is meaningful.
+	// HTTP status code.
+	//
+	// Exception to the `status` naming convention: this is a numeric HTTP response code (200/404/…), not a domain lifecycle status enum, so the `_code` suffix is meaningful.
 	StatusCode int32 `json:"status_code" validate:"required"`
 	// Request latency in microseconds.
 	LatencyUs int64 `json:"latency_us" validate:"required"`
@@ -47,9 +52,13 @@ type RequestLog struct {
 	UserAgent *string `json:"user_agent"`
 	// Referrer header.
 	Referrer *string `json:"referrer"`
-	// API error code.
+	// Machine-readable API error code.
+	//
+	// Populated only for failed requests; `null` on success.
 	ErrorCode *string `json:"error_code"`
-	// Error message.
+	// Human-readable error message.
+	//
+	// Populated only for failed requests; `null` on success.
 	ErrorMessage *string `json:"error_message"`
 	// When the request occurred.
 	OccurredAt time.Time `json:"occurred_at" validate:"required"`
@@ -57,8 +66,7 @@ type RequestLog struct {
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Account _targeted_ by the request — your own account, since that is the only account you can view request logs for.
 	//
-	// This is the request's target, not the acting account. To filter by who acted (which may be another account
-	// operating on yours), use the `account_ids` query parameter, which matches the acting account instead.
+	// This is the request's target, not the acting account. To filter by who acted (which may be another account operating on yours), use the `account_ids` query parameter, which matches the acting account instead.
 	Account *Account `json:"account" expandable:"true"`
 	// Actor who made the request.
 	Actor *Actor `json:"actor" expandable:"true"`

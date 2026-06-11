@@ -16,21 +16,23 @@ type PurchaseOrderLine struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=purchase_order_line"`
-	// Line item number.
+	// Position of this line within the order, starting at 1.
 	LineItemNumber int32 `json:"line_item_number" validate:"required"`
-	// Product SKU.
+	// SKU of the ordered product, copied onto the line at order time.
 	ProductSKU string `json:"product_sku" validate:"required"`
-	// Product description.
+	// Free-text description of the ordered product.
 	ProductDescription *string `json:"product_description"`
-	// Item.
+	// Catalog item this line references, if it is linked to one.
 	Item *Item `json:"item"`
-	// Quantity ordered.
+	// Quantity ordered from the supplier.
 	QuantityOrdered *Quantity `json:"quantity_ordered" validate:"required"`
-	// Quantity received.
+	// Quantity received against this line so far.
+	//
+	// Null until any receiving has occurred.
 	QuantityReceived *Quantity `json:"quantity_received"`
-	// Unit price.
+	// Agreed purchase price per unit for this line.
 	UnitPrice *Rate `json:"unit_price" validate:"required"`
-	// Unit cost.
+	// Recorded cost per unit, if captured separately from the purchase price.
 	UnitCost *Rate `json:"unit_cost"`
 	// Created timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

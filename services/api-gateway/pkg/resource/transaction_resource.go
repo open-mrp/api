@@ -20,7 +20,12 @@ type TransactionType struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=transaction_type"`
 	// Display name.
 	Name string `json:"name" validate:"required"`
-	// Machine-readable code.
+	// Machine-readable code identifying the kind of transaction.
+	//
+	// - `payment`: money received from the customer.
+	// - `credit_memo`: a credit issued to the customer.
+	// - `adjustment`: a manual correction (see the transaction's `adjustment_type`).
+	// - `rebate`: a rebate granted to the customer.
 	Code constants.TransactionType `json:"code" validate:"required"`
 }
 
@@ -43,7 +48,13 @@ type TransactionMethod struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=transaction_method"`
 	// Display name.
 	Name string `json:"name" validate:"required"`
-	// Machine-readable code.
+	// Machine-readable code identifying how the transaction was made.
+	//
+	// - `cash`
+	// - `check`
+	// - `credit_card`
+	// - `gift_card`
+	// - `ach`
 	Code constants.TransactionMethod `json:"code" validate:"required"`
 }
 
@@ -76,17 +87,27 @@ type TransactionDetail struct {
 	Note *string `json:"note"`
 	// Transaction type.
 	TransactionType *TransactionType `json:"transaction_type" validate:"required"`
-	// Transaction method.
+	// Payment method used.
+	//
+	// Typically present only on payment transactions and null for credit memos, adjustments, and rebates.
 	TransactionMethod *TransactionMethod `json:"transaction_method"`
-	// Adjustment type.
+	// Adjustment category.
+	//
+	// Typically populated for `adjustment` transactions; null for other types.
 	AdjustmentType *AdjustmentType `json:"adjustment_type"`
-	// Whether fully allocated against invoices.
+	// Whether the full transaction amount has been allocated against invoices.
+	//
+	// When `false`, some of the amount remains as an open (unapplied) balance.
 	IsFullyAllocated bool `json:"is_fully_allocated" validate:"required"`
 	// Stripe payment ID.
+	//
+	// Set only for transactions collected through Stripe; null for transactions recorded outside Stripe.
 	StripePaymentID *string `json:"stripe_payment_id"`
-	// Number of allocations.
+	// Number of allocations against invoices for this transaction.
 	AllocationCount int32 `json:"allocation_count" validate:"required"`
-	// Allocations.
+	// Allocations of this transaction against invoices.
+	//
+	// Expandable via include[]=allocations.
 	Allocations *List[TransactionAllocation] `json:"allocations" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -139,13 +160,19 @@ type TransactionSummary struct {
 	Customer *Customer `json:"customer" expandable:"true"`
 	// Transaction type.
 	TransactionType *TransactionType `json:"transaction_type" validate:"required"`
-	// Transaction method.
+	// Payment method used.
+	//
+	// Typically present only on payment transactions and null for credit memos, adjustments, and rebates.
 	TransactionMethod *TransactionMethod `json:"transaction_method"`
-	// Adjustment type.
+	// Adjustment category.
+	//
+	// Typically populated for `adjustment` transactions; null for other types.
 	AdjustmentType *AdjustmentType `json:"adjustment_type"`
-	// Whether fully allocated against invoices.
+	// Whether the full transaction amount has been allocated against invoices.
+	//
+	// When `false`, some of the amount remains as an open (unapplied) balance.
 	IsFullyAllocated bool `json:"is_fully_allocated" validate:"required"`
-	// Number of allocations.
+	// Number of allocations against invoices for this transaction.
 	AllocationCount int32 `json:"allocation_count" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

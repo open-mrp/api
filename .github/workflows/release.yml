@@ -4,6 +4,26 @@ on:
   push:
     branches:
       - main
+  # Manual resume: re-run the full pipeline for an already-published release.
+  # Use this when a release run failed partway (e.g. deploy blocked on infra)
+  # and the failure was fixed out-of-band — "Re-run all jobs" does NOT work
+  # because release-please reports release_created=false for an existing
+  # release, which silently skips every downstream job.
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: >-
+          Existing release tag to run the pipeline for (e.g. v0.23.1). Only
+          valid for the MOST RECENT release: change detection diffs against
+          the newest other tag.
+        required: true
+        type: string
+
+# Serialize release runs so a manual resume cannot race the next
+# push-triggered release deploy.
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -14,16 +34,34 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     outputs:
-      release_created: ${{ steps.release.outputs.release_created }}
-      tag_name: ${{ steps.release.outputs.tag_name }}
+      release_created: ${{ steps.resolve.outputs.release_created }}
+      tag_name: ${{ steps.resolve.outputs.tag_name }}
     steps:
       - uses: actions/checkout@v5
       - uses: googleapis/release-please-action@v5
+        if: github.event_name == 'push'
         id: release
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+      - name: Validate dispatched tag
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release view "${{ inputs.tag_name }}" --repo "${{ github.repository }}" --json tagName --jq .tagName
+
+      - name: Resolve release outputs
+        id: resolve
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "release_created=true" >> "$GITHUB_OUTPUT"
+            echo "tag_name=${{ inputs.tag_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "release_created=${{ steps.release.outputs.release_created }}" >> "$GITHUB_OUTPUT"
+            echo "tag_name=${{ steps.release.outputs.tag_name }}" >> "$GITHUB_OUTPUT"
+          fi
 
   detect-changes:
     name: Detect Release Changes
@@ -48,6 +86,8 @@ jobs:
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
+          # On manual dispatch, run from the release tag, not main HEAD.
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || '' }}
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -94,6 +134,9 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v5
+        with:
+          # On manual dispatch, run from the release tag, not main HEAD.
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || '' }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6
@@ -138,6 +181,9 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v5
+        with:
+          # On manual dispatch, run from the release tag, not main HEAD.
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || '' }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6
@@ -182,6 +228,9 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v5
+        with:
+          # On manual dispatch, run from the release tag, not main HEAD.
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || '' }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6
@@ -219,6 +268,9 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v5
+        with:
+          # On manual dispatch, run from the release tag, not main HEAD.
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || '' }}
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -325,6 +377,9 @@ jobs:
     steps:
       - name: Checkout API repo (k8s manifest + kubeconfig)
         uses: actions/checkout@v5
+        with:
+          # On manual dispatch, run from the release tag, not main HEAD.
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || '' }}
 
       - name: Checkout typescript-sdk (MCP build context)
         uses: actions/checkout@v5

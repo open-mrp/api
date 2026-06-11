@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-// SupplierDetail is the full supplier resource.
+// A business you purchase materials from, with its default billing and shipping addresses.
 type SupplierDetail struct {
 	// Supplier ID.
 	ID string `json:"id" validate:"required"`
@@ -19,14 +19,12 @@ type SupplierDetail struct {
 	// Human-facing supplier code, unique per account (e.g. `SUP-001`).
 	Number string `json:"number" validate:"required"`
 	// Free-form notes about the supplier.
-	//
-	// Null if none.
 	Note *string `json:"note"`
 	// Default billing address.
 	BillToAddress *Address `json:"bill_to_address" expandable:"true"`
 	// Default shipping address.
 	ShipToAddress *Address `json:"ship_to_address" expandable:"true"`
-	// Number of associated materials.
+	// Number of materials sourced from this supplier.
 	MaterialCount int64 `json:"material_count"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -51,7 +49,7 @@ func (*SupplierDetail) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleSupplierDetail)
 }
 
-// SupplierSummary is the lightweight supplier resource for list results.
+// A condensed supplier representation returned by list endpoints.
 type SupplierSummary struct {
 	// Supplier ID.
 	ID string `json:"id" validate:"required"`
@@ -61,7 +59,7 @@ type SupplierSummary struct {
 	Name string `json:"name" validate:"required"`
 	// Human-facing supplier code, unique per account (e.g. `SUP-001`).
 	Number string `json:"number" validate:"required"`
-	// Number of associated materials.
+	// Number of materials sourced from this supplier.
 	MaterialCount int64 `json:"material_count"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

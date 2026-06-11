@@ -11,6 +11,16 @@ targets:
     publish:
       npm:
         registry: npmjs
+      # Emit .github/workflows/release-please.yml + release-please-config.json as
+      # generated files (self-hosted, not stainlessManaged), so the TS SDK's
+      # release automation survives every regeneration — same as python/go below.
+      # Without this block stlc emits release-please-config.json but NOT the
+      # workflow that consumes it, leaving the SDK with no way to cut a release
+      # (the old Changesets "Release" workflow was removed in the same migration).
+      # prerelease: true keeps the existing 0.x prerelease versioning.
+      release:
+        branch: main
+        prerelease: true
     options:
       # Generate an MCP server as a sub-package (packages/mcp-server) of the
       # public TypeScript SDK. There is no standalone `mcp` target in stlc; the

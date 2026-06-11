@@ -111,7 +111,12 @@ jobs:
           - sdk: public
             workspace: stainless/public
             targets: typescript
-            release: changesets
+            # release-please, not changesets: the public TS SDK was migrated off
+            # Changesets (the .changeset dir + Release workflow were removed) to
+            # release-please in the v0.23.2 regen. Like python/go, it derives its
+            # bump from the conventional "fix(sdk): sync with deployed API vX.Y.Z"
+            # commit produced below; the "Add changeset" steps no longer apply.
+            release: release-please
             pr_repo: Augno/typescript-sdk
             package_name: "@augno/sdk"
             spec_changed: ${{ needs.spec-changes.outputs.public }}

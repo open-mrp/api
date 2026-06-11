@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.21.5](https://github.com/Augno/api/compare/v0.21.4...v0.21.5) (2026-06-11)
+
+
+### Bug Fixes
+
+* allow rabbitmq pod eviction so node drains don't deadlock ([#316](https://github.com/Augno/api/issues/316)) ([7d8f33e](https://github.com/Augno/api/commit/7d8f33eff3cd26565b7faf8c814937620e5a68cc))
+* sync Augno-Version default header with spec version on generation ([#320](https://github.com/Augno/api/issues/320)) ([4b8f820](https://github.com/Augno/api/commit/4b8f8201575e2c683ef4a9fed14c383b00581654))
+
 ## [0.21.4](https://github.com/Augno/api/compare/v0.21.3...v0.21.4) (2026-06-10)
 
 

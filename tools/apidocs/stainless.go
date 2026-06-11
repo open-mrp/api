@@ -168,6 +168,13 @@ func generateStainlessConfig(groups []apiendpoint.APIEndpointGroup, outputPath s
 		return err
 	}
 
+	// Keep the Augno-Version default header in sync with the spec's info.version
+	// (which is set to `version` in buildOpenAPISpec). The self-hosted stlc fork
+	// emits this header literally, so it must be refreshed on every generation.
+	if err := syncVersionHeaderValue(outputPath, version); err != nil {
+		return err
+	}
+
 	specType := "internal"
 	if publicOnly {
 		specType = "public"
@@ -518,6 +525,89 @@ func replaceTopLevelMappingNode(root *yaml.Node, key string, value *yaml.Node) {
 	root.Content = append(root.Content,
 		&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: key},
 		value,
+	)
+}
+
+// syncVersionHeaderValue rewrites the value of every
+// client_settings.default_headers entry marked `version_header: true` to the
+// given API version. The header's name and presence stay hand-maintained in
+// stainless.yml; this only keeps its value aligned with the spec's info.version
+// so the generated SDKs send the correct Augno-Version header. It is a no-op if
+// no such header is configured.
+func syncVersionHeaderValue(path, version string) error {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	var doc yaml.Node
+	if err := yaml.Unmarshal(raw, &doc); err != nil {
+		return err
+	}
+	if len(doc.Content) == 0 || doc.Content[0].Kind != yaml.MappingNode {
+		return fmt.Errorf("unexpected yaml document shape in %s", path)
+	}
+
+	defaultHeaders := mappingValue(mappingValue(doc.Content[0], "client_settings"), "default_headers")
+	if defaultHeaders == nil || defaultHeaders.Kind != yaml.MappingNode {
+		return nil
+	}
+
+	changed := false
+	for i := 0; i+1 < len(defaultHeaders.Content); i += 2 {
+		header := defaultHeaders.Content[i+1]
+		if header.Kind != yaml.MappingNode {
+			continue
+		}
+		if marker := mappingValue(header, "version_header"); marker == nil || marker.Value != "true" {
+			continue
+		}
+		setMappingStringValue(header, "value", version)
+		changed = true
+	}
+	if !changed {
+		return nil
+	}
+
+	var formatted bytes.Buffer
+	encoder := yaml.NewEncoder(&formatted)
+	encoder.SetIndent(2)
+	if err := encoder.Encode(&doc); err != nil {
+		return err
+	}
+	if err := encoder.Close(); err != nil {
+		return err
+	}
+
+	return os.WriteFile(path, formatted.Bytes(), 0600)
+}
+
+// mappingValue returns the value node associated with key in a mapping node, or
+// nil if node is not a mapping or the key is absent.
+func mappingValue(node *yaml.Node, key string) *yaml.Node {
+	if node == nil || node.Kind != yaml.MappingNode {
+		return nil
+	}
+	for i := 0; i+1 < len(node.Content); i += 2 {
+		if node.Content[i].Value == key {
+			return node.Content[i+1]
+		}
+	}
+	return nil
+}
+
+// setMappingStringValue sets (or inserts) a double-quoted string scalar for key
+// in a mapping node.
+func setMappingStringValue(node *yaml.Node, key, value string) {
+	for i := 0; i+1 < len(node.Content); i += 2 {
+		if node.Content[i].Value == key {
+			node.Content[i+1] = &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Style: yaml.DoubleQuotedStyle, Value: value}
+			return
+		}
+	}
+	node.Content = append(node.Content,
+		&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: key},
+		&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Style: yaml.DoubleQuotedStyle, Value: value},
 	)
 }
 

@@ -14,7 +14,15 @@ environments:
   production: https://api.augno.com
   local: http://localhost:8081
 client_settings:
-  send_openapi_info_version_as_header: Augno-Version
+  # The API requires an Augno-Version header on every request. The self-hosted
+  # stlc fork does not honor the upstream `send_openapi_info_version_as_header`
+  # key, so we emit it as a default header instead. `version_header: true` marks
+  # it as the API-version header; `value` is kept in sync with the spec's
+  # info.version by `make stainless` (see tools/apidocs/stainless.go).
+  default_headers:
+    Augno-Version:
+      value: "1.0.forge-preview.2"
+      version_header: true
   bearer_token_refresh:
     method: PUT
     path: "/v1/auth/access-tokens"

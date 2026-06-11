@@ -312,3 +312,64 @@ func TestRewriteStainlessResourcesReplacesOnlyResourcesNode(t *testing.T) {
 		t.Fatal("auth resources entry missing after rewrite")
 	}
 }
+
+func TestSyncVersionHeaderValueUpdatesOnlyVersionHeader(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "stainless.yml")
+	input := []byte("edition: \"2026-02-23\"\n" +
+		"client_settings:\n" +
+		"  default_headers:\n" +
+		"    Augno-Version:\n" +
+		"      value: \"0.0.0-stale\"\n" +
+		"      version_header: true\n" +
+		"    X-Static:\n" +
+		"      value: \"keep-me\"\n")
+	if err := os.WriteFile(path, input, 0600); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	if err := syncVersionHeaderValue(path, "1.2.3"); err != nil {
+		t.Fatalf("syncVersionHeaderValue: %v", err)
+	}
+
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+	var doc map[string]any
+	if err := yaml.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("yaml.Unmarshal: %v", err)
+	}
+
+	headers := doc["client_settings"].(map[string]any)["default_headers"].(map[string]any)
+	if got := headers["Augno-Version"].(map[string]any)["value"]; got != "1.2.3" {
+		t.Fatalf("Augno-Version value = %v; want 1.2.3", got)
+	}
+	if got := headers["Augno-Version"].(map[string]any)["version_header"]; got != true {
+		t.Fatalf("version_header marker = %v; want true (must be preserved)", got)
+	}
+	// A header without the version_header marker must be left untouched.
+	if got := headers["X-Static"].(map[string]any)["value"]; got != "keep-me" {
+		t.Fatalf("X-Static value = %v; want keep-me", got)
+	}
+	if got := doc["edition"]; got != "2026-02-23" {
+		t.Fatalf("edition = %v; want 2026-02-23", got)
+	}
+}
+
+func TestSyncVersionHeaderValueNoOpWithoutHeader(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "stainless.yml")
+	input := []byte("edition: \"2026-02-23\"\nclient_settings:\n  omit_stainless_headers: true\n")
+	if err := os.WriteFile(path, input, 0600); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	if err := syncVersionHeaderValue(path, "1.2.3"); err != nil {
+		t.Fatalf("syncVersionHeaderValue (no header configured) returned error: %v", err)
+	}
+}

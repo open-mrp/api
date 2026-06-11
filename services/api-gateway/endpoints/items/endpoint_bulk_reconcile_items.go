@@ -12,11 +12,15 @@ import (
 
 // BulkReconcileItemInput is the input for a single item in a bulk reconcile operation.
 type BulkReconcileItemInput struct {
-	// Item SKU.
+	// SKU of the item to reconcile.
+	//
+	// Items whose SKU does not match an existing item are reported in the response's `skipped_items` rather than failing the request.
 	SKU string `json:"sku" validate:"required"`
-	// Unit abbreviation for the quantity.
+	// Abbreviation of the unit the quantity is expressed in (e.g. `kg`).
+	//
+	// Must match a unit defined on the account; items with an unknown unit are reported in the response's `errors`.
 	Unit string `json:"unit" validate:"required"`
-	// Quantity.
+	// Quantity to apply, interpreted according to the request's `reconcile_type`.
 	Quantity float64 `json:"quantity" validate:"required"`
 }
 
@@ -24,7 +28,10 @@ type BulkReconcileItemInput struct {
 type BulkReconcileItemsRequest struct {
 	// Items to reconcile.
 	Data []BulkReconcileItemInput `json:"data" validate:"required"`
-	// Reconcile type: "addition" or "force".
+	// How each item's quantity is applied to its current on-hand inventory.
+	//
+	// - `addition`: adds the quantity to the item's current on-hand quantity.
+	// - `force`: sets the item's on-hand quantity to exactly the given quantity.
 	ReconcileType string `json:"reconcile_type" validate:"required"`
 }
 
@@ -43,7 +50,9 @@ func (*BulkReconcileItemsRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleBulkReconcileItemsRequest)
 }
 
-// Reconciles inventory for multiple items by SKU, either adding to or forcing the exact quantity depending on reconcile_type.
+// Reconciles on-hand inventory for multiple items by SKU in one call.
+//
+// `reconcile_type` controls whether each quantity is added to the item's current on-hand quantity (`addition`) or replaces it (`force`). The response reports each item as reconciled, skipped (e.g. unknown SKU), or errored (e.g. unknown unit), so a problem with one item does not fail the rest of the batch.
 type BulkReconcileItemsEndpoint struct{}
 
 func (e *BulkReconcileItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkReconcileItemsRequest, *apiresource.BulkReconcileItemsResponse] {

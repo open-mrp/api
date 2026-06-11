@@ -17,8 +17,12 @@ type UpdateUnitRequest struct {
 	// Unit ID.
 	UnitID string `path:"id" validate:"required"`
 	// Display name of the unit.
+	//
+	// Must be unique within the account.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// Short abbreviation for the unit.
+	//
+	// Must be unique within the account.
 	Abbreviation field.Optional[string] `json:"abbreviation,omitzero" validate:"omitempty"`
 	// Conversion ratio numerator, as a decimal string.
 	RatioNumerator field.Optional[string] `json:"ratio_numerator,omitzero" format:"decimal"`

@@ -16,15 +16,19 @@ import (
 type UpdateRateRequest struct {
 	// Rate ID.
 	RateID string `path:"id" validate:"required"`
-	// Decimal value of the rate.
+	// New decimal value for the rate, expressed as the amount of the numerator unit per one denominator unit.
 	Value field.Optional[string] `json:"value,omitzero"`
-	// Numerator unit ID.
+	// ID of the new unit for the rate's numerator (e.g. the currency of a price).
 	NumeratorUnitID field.Optional[string] `json:"numerator_unit_id,omitzero" validate:"omitempty"`
-	// Denominator unit ID.
+	// ID of the new unit for the rate's denominator (the per-unit basis).
 	DenominatorUnitID field.Optional[string] `json:"denominator_unit_id,omitzero" validate:"omitempty"`
-	// Parent resource ID.
+	// ID of the resource that owns this rate.
+	//
+	// Used together with `object_type` to verify the owning resource exists; it does not reassign the rate.
 	ObjectID field.Optional[string] `json:"object_id,omitzero" validate:"omitempty"`
-	// Parent resource type (e.g. "item", "production_step").
+	// Type of the resource that owns this rate.
+	//
+	// Determines the permission required for the update. Must be `item` or `production_step`.
 	ObjectType field.Optional[string] `json:"object_type,omitzero" validate:"omitempty,max=255"`
 }
 

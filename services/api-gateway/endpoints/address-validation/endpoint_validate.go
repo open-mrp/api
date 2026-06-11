@@ -24,7 +24,7 @@ type ValidateAddressRequest struct {
 	State string `json:"state" validate:"required"`
 	// Postal or ZIP code.
 	PostalCode string `json:"postal_code" validate:"required"`
-	// Country name or code.
+	// Country name or two-letter country code (for example `United States` or `US`).
 	Country string `json:"country" validate:"required"`
 }
 

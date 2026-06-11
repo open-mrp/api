@@ -14,13 +14,13 @@ import (
 
 // Request to create a customer checkout session.
 type CreateCheckoutSessionRequest struct {
-	// Sales order ID.
+	// ID of the sales order to collect payment for.
 	OrderID string `json:"order_id" validate:"required"`
-	// Order number for display.
+	// Human-readable order number shown to the customer during checkout.
 	OrderNumber string `json:"order_number" validate:"required,max=255"`
-	// Order total in cents.
+	// Order total in cents; the amount the customer is charged.
 	OrderTotalCents int64 `json:"order_total_cents" validate:"required"`
-	// Customer PO number.
+	// Customer purchase order (PO) number to associate with the payment.
 	CustomerPO field.Optional[string] `json:"customer_po,omitzero" validate:"omitempty,max=255"`
 }
 
@@ -39,7 +39,9 @@ func (*CreateCheckoutSessionRequest) SchemaExample() any {
 type CheckoutSessionResponse struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=checkout_session"`
-	// Stripe checkout session client secret for embedded checkout.
+	// Client secret for the Stripe embedded checkout session.
+	//
+	// Pass this to Stripe.js to mount the embedded checkout form.
 	CheckoutSessionClientSecret string `json:"checkout_session_client_secret" validate:"required,max=255" sensitive:"true"` // #nosec G117 - Struct field, not a hardcoded credential
 }
 
@@ -52,7 +54,9 @@ func (*CheckoutSessionResponse) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCheckoutSessionResponse)
 }
 
-// Creates an embedded Stripe checkout session for a customer actor and returns a client secret for use with Stripe.js.
+// Creates an embedded Stripe checkout session for paying a sales order and returns a client secret for use with Stripe.js.
+//
+// The session is created on the target account's own Stripe integration, so the caller must be a customer user of that account.
 type CreateCheckoutSessionEndpoint struct{}
 
 func (e *CreateCheckoutSessionEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateCheckoutSessionRequest, *CheckoutSessionResponse] {

@@ -16,13 +16,17 @@ import (
 type UpdateQuantityRequest struct {
 	// Quantity ID.
 	QuantityID string `path:"id" validate:"required"`
-	// Decimal value.
+	// New decimal value for the quantity, as a string to preserve precision.
 	Value field.Optional[string] `json:"value,omitzero"`
-	// Unit ID.
+	// ID of the new unit of measure for the quantity.
 	UnitID field.Optional[string] `json:"unit_id,omitzero" validate:"omitempty"`
-	// Owner resource ID.
+	// ID of the resource that owns this quantity.
+	//
+	// Used together with `object_type` to verify the owning resource exists; it does not reassign the quantity.
 	ObjectID field.Optional[string] `json:"object_id,omitzero" validate:"omitempty"`
-	// Owner resource type (e.g. "item", "production_step").
+	// Type of the resource that owns this quantity.
+	//
+	// Determines the permission required for the update. Must be `item` or `production_step`.
 	ObjectType field.Optional[string] `json:"object_type,omitzero" validate:"omitempty,max=255"`
 }
 

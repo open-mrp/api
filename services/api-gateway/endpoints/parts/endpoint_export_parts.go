@@ -12,7 +12,7 @@ import (
 
 // ExportPartsRequest is the request to export parts as an Excel file.
 type ExportPartsRequest struct {
-	// Optional search query.
+	// Free-text search query matched against parts.
 	Query *string `query:"q"`
 	// Filter by category IDs.
 	CategoryIDs []string `query:"category_ids"`

@@ -15,7 +15,9 @@ type ListAccountStatusesRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of account statuses. Global lookup values for setting account relationship statuses.
+// Returns a paginated list of account statuses.
+//
+// Account statuses are system-provided lookup values shared across all accounts, used to set a customer's status (for example, placing a customer on shipment hold).
 type ListAccountStatusesEndpoint struct{}
 
 func (e *ListAccountStatusesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAccountStatusesRequest, *apiresource.List[apiresource.AccountStatus]] {

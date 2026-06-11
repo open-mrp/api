@@ -13,11 +13,13 @@ import (
 type RemoveItemCategoryPropertyRequest struct {
 	// Item category ID.
 	ItemCategoryID string `path:"id" validate:"required"`
-	// Property ID.
+	// ID of the property to remove from the category.
 	PropertyID string `path:"property_id" validate:"required"`
 }
 
-// Removes a property from an item category. Default system categories cannot be modified.
+// Removes a property from an item category.
+//
+// Default system categories cannot be modified.
 type RemoveItemCategoryPropertyEndpoint struct{}
 
 func (e *RemoveItemCategoryPropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RemoveItemCategoryPropertyRequest, *apiresource.EmptyResource] {

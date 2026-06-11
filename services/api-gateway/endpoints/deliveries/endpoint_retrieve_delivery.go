@@ -16,7 +16,7 @@ type RetrieveDeliveryRequest struct {
 	DeliveryID string `path:"id" validate:"required"`
 }
 
-// Returns a delivery by ID, including all delivery lines.
+// Returns a delivery by ID.
 type RetrieveDeliveryEndpoint struct{}
 
 func (e *RetrieveDeliveryEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveDeliveryRequest, *apiresource.Delivery] {

@@ -16,15 +16,25 @@ import (
 type UpdateScanningStationRequest struct {
 	// Scanning station ID.
 	ScanningStationID string `path:"id" validate:"required"`
-	// Display name.
+	// Display name of the scanning station.
+	//
+	// Must be unique within your account; maximum 255 characters.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Notes.
+	// Free-form notes about the scanning station.
+	//
+	// Send `null` to clear.
 	Notes field.Clearable[string] `json:"notes,omitzero"`
-	// Label size code.
+	// Size of the labels printed at this station, given as width-by-height (for example, `1x1`).
 	LabelSizeCode field.Optional[constants.LabelSizeCode] `json:"label_size,omitzero"`
-	// Label type code.
+	// Type of label printed at this station.
+	//
+	// - `tag`: a label attached to the physical product.
+	// - `traveler`: a routing sheet that accompanies the batch through every production step.
 	LabelTypeCode field.Optional[constants.LabelTypeCode] `json:"label_type,omitzero"`
-	// Operator requirement behavior for this station.
+	// Whether operators must perform a material check at this station.
+	//
+	// - `none`: no additional operator check is required.
+	// - `material_check`: a material check is expected before the operation.
 	OperatorRequirement field.Optional[constants.OperatorRequirement] `json:"operator_requirement,omitzero"`
 }
 
@@ -38,6 +48,8 @@ func (*UpdateScanningStationRequest) SchemaExample() any {
 }
 
 // Partially updates a scanning station.
+//
+// Only the fields provided in the request are changed. Returns a conflict error if the new name is already in use by another scanning station.
 type UpdateScanningStationEndpoint struct{}
 
 func (e *UpdateScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateScanningStationRequest, *apiresource.ScanningStation] {

@@ -10,13 +10,15 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteSettlementRequest is the request to delete a settlement.
+// Request to delete a settlement.
 type DeleteSettlementRequest struct {
 	// Settlement ID.
 	SettlementID string `path:"id" validate:"required"`
 }
 
-// Deletes a settlement, removing allocations and reverting payment statuses on affected invoices and transactions.
+// Deletes a settlement and all of its allocations.
+//
+// Affected invoices revert to an `unpaid` payment status, affected transactions are no longer marked fully allocated, and adjustment transactions referenced only by this settlement are removed.
 type DeleteSettlementEndpoint struct{}
 
 func (e *DeleteSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSettlementRequest, *apiresource.Settlement] {

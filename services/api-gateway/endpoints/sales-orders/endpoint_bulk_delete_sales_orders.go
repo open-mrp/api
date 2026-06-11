@@ -12,7 +12,7 @@ import (
 
 // Request to bulk delete sales orders.
 type BulkDeleteSalesOrdersRequest struct {
-	// Sales order IDs.
+	// IDs of the sales orders to delete.
 	SalesOrderIDs []string `json:"sales_order_ids" validate:"required"`
 }
 
@@ -24,7 +24,9 @@ func (*BulkDeleteSalesOrdersRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleBulkDeleteSalesOrdersRequest)
 }
 
-// Deletes multiple sales orders in a single operation.
+// Deletes multiple sales orders in a single atomic operation.
+//
+// Fulfilled orders cannot be deleted; if any requested order fails this check, no orders are deleted.
 type BulkDeleteSalesOrdersEndpoint struct{}
 
 func (e *BulkDeleteSalesOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkDeleteSalesOrdersRequest, *apiresource.EmptyResource] {

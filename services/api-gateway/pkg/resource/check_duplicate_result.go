@@ -9,9 +9,11 @@ import (
 type CheckDuplicateResult struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=check_duplicate_result"`
-	// Whether the record number is a duplicate.
+	// Whether a record with the given number already exists on the account.
 	IsDuplicate bool `json:"is_duplicate" validate:"required"`
-	// Human-readable message if the record is a duplicate.
+	// Human-readable message describing the duplicate.
+	//
+	// Populated only when `is_duplicate` is `true`; names the type and value that already exists.
 	Message *string `json:"message"`
 }
 

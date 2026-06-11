@@ -26,7 +26,9 @@ func (*GetPossibleNextStepsRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleGetPossibleNextStepsRequest)
 }
 
-// Returns possible next production steps for a batch at a given scanning station.
+// Returns the production steps a batch can be advanced to from a given scanning station.
+//
+// The batch's flow is traversed forward and the child steps of each reachable batch's current step are collected; only steps assigned to the given scanning station are returned.
 type GetPossibleNextStepsEndpoint struct{}
 
 func (e *GetPossibleNextStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetPossibleNextStepsRequest, *apiresource.List[apiresource.ScanningProductionStepInfo]] {

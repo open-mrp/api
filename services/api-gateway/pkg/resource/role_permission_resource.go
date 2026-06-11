@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-// RolePermission is a permission entry on a role.
+// A role's access grant for a single resource domain, with separate create, read, update, and delete flags.
 type RolePermission struct {
 	// Role permission ID.
 	ID string `json:"id" validate:"required"`

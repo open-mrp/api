@@ -14,13 +14,19 @@ import (
 
 // Request to partially update a part.
 type UpdatePartRequest struct {
-	// Part ID.
+	// ID of the part to update.
 	ItemID string `path:"id" validate:"required"`
-	// SKU.
+	// New stock keeping unit code for the part.
+	//
+	// Must remain unique within the account; a conflict error is returned if another item already uses it.
 	SKU field.Optional[string] `json:"sku,omitzero" validate:"omitempty,max=255"`
-	// Description.
+	// New description for the part.
+	//
+	// Set to a string to replace the current description, or `null` to clear it.
 	Description field.Clearable[string] `json:"description,omitzero"`
-	// Notes.
+	// New notes for the part.
+	//
+	// Set to a string to replace the current notes, or `null` to clear them.
 	Notes field.Clearable[string] `json:"notes,omitzero"`
 }
 
@@ -35,7 +41,9 @@ func (*UpdatePartRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdatePartRequest)
 }
 
-// Partially updates a part. Fields not provided retain their current values.
+// Partially updates a part.
+//
+// Fields not provided retain their current values.
 type UpdatePartEndpoint struct{}
 
 func (e *UpdatePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePartRequest, *apiresource.Part] {

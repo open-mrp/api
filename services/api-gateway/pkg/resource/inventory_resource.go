@@ -5,13 +5,13 @@ import (
 	"github.com/augno/api/shared/constants"
 )
 
-// Item with on-hand inventory quantity.
+// An item together with its current on-hand inventory quantity.
 type InventoryItem struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=inventory_item"`
-	// Item details.
+	// The item this inventory entry reports on.
 	Item Item `json:"item" validate:"required"`
-	// On-hand quantity.
+	// Current on-hand quantity of the item.
 	Quantity *Quantity `json:"quantity" validate:"required"`
 }
 

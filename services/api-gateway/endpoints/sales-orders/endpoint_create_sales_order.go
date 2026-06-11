@@ -15,9 +15,11 @@ import (
 
 // Request to create a sales order.
 type CreateSalesOrderRequest struct {
-	// Buyer account ID.
+	// ID of the customer account the order is for.
 	BuyerAccountID string `json:"buyer_account_id" validate:"required"`
-	// Customer's purchase order number.
+	// The customer's own purchase order number, for cross-referencing.
+	//
+	// Must be unique among your orders for this customer.
 	CustomerPurchaseOrderNumber field.Optional[string] `json:"customer_purchase_order_number,omitzero" validate:"omitempty,max=255"`
 	// Order note.
 	Note field.Optional[string] `json:"note,omitzero"`
@@ -26,12 +28,17 @@ type CreateSalesOrderRequest struct {
 	// Service level ID.
 	ServiceLevelID field.Optional[string] `json:"service_level_id,omitzero" validate:"omitempty"`
 	// Who is billed for freight.
+	//
+	// - `sender`: the sender pays for shipping.
+	// - `third_party`: a third party pays for shipping, using the carrier billing account number.
 	CarrierBillingType field.Optional[constants.CarrierBillingType] `json:"carrier_billing_type,omitzero" validate:"omitempty"`
 	// Carrier billing account number.
 	CarrierBillingAccountNumber field.Optional[string] `json:"carrier_billing_account_number,omitzero" validate:"omitempty,max=255"`
-	// Priority code.
+	// Fulfillment priority used to rank the order on the shop floor.
 	PriorityCode string `json:"priority_code" validate:"required,max=255"`
 	// Sales rep ID.
+	//
+	// When omitted, a rep is assigned automatically: the customer's default sales rep first, then the sales territory matching the ship-to postal code, then the ship-to state.
 	SalesRepID field.Optional[string] `json:"sales_rep_id,omitzero" validate:"omitempty"`
 	// Shipping term ID.
 	ShippingTermID field.Optional[string] `json:"shipping_term_id,omitzero" validate:"omitempty"`
@@ -40,6 +47,8 @@ type CreateSalesOrderRequest struct {
 	// Payment term ID.
 	PaymentTermID field.Optional[string] `json:"payment_term_id,omitzero" validate:"omitempty"`
 	// Order discount ID.
+	//
+	// When supplied, a discount line is added to the order automatically.
 	OrderDiscountID field.Optional[string] `json:"order_discount_id,omitzero" validate:"omitempty"`
 	// Bill-to address name.
 	BillToName field.Optional[string] `json:"bill_to_name,omitzero" validate:"omitempty,max=255"`
@@ -53,7 +62,7 @@ type CreateSalesOrderRequest struct {
 	BillToState field.Optional[string] `json:"bill_to_state,omitzero" validate:"omitempty,max=255"`
 	// Bill-to postal code.
 	BillToPostalCode field.Optional[string] `json:"bill_to_postal_code,omitzero" validate:"omitempty,max=255"`
-	// Bill-to country.
+	// Bill-to country, as a two-letter ISO code.
 	BillToCountry field.Optional[string] `json:"bill_to_country,omitzero" validate:"omitempty,max=2"`
 	// Ship-to address name.
 	ShipToName field.Optional[string] `json:"ship_to_name,omitzero" validate:"omitempty,max=255"`
@@ -67,7 +76,7 @@ type CreateSalesOrderRequest struct {
 	ShipToState field.Optional[string] `json:"ship_to_state,omitzero" validate:"omitempty,max=255"`
 	// Ship-to postal code.
 	ShipToPostalCode field.Optional[string] `json:"ship_to_postal_code,omitzero" validate:"omitempty,max=255"`
-	// Ship-to country.
+	// Ship-to country, as a two-letter ISO code.
 	ShipToCountry field.Optional[string] `json:"ship_to_country,omitzero" validate:"omitempty,max=2"`
 	// Order lines to create.
 	Lines []CreateSalesOrderLineInput `json:"lines"`
@@ -129,7 +138,9 @@ func (*CreateSalesOrderRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateSalesOrderRequest)
 }
 
-// Creates a sales order.
+// Creates a sales order in `estimate` status.
+//
+// The order number is assigned automatically, and a sales rep is auto-assigned when none is provided. A shipping line is always added to the order, plus a discount line when an order discount is supplied.
 type CreateSalesOrderEndpoint struct{}
 
 func (e *CreateSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSalesOrderRequest, *apiresource.SalesOrder] {

@@ -16,7 +16,7 @@ import (
 type UpdateCarrierRequest struct {
 	// Carrier ID.
 	CarrierID string `path:"id" validate:"required"`
-	// Display name.
+	// Human-readable name for the carrier, unique among your account's carriers.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// Carrier visibility in the customer portal.
 	//

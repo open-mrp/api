@@ -10,7 +10,7 @@ import (
 
 const SampleProductID = "pd_013c29ab3f1518d0004094c316"
 
-// Product with expandable item, product line, and product type.
+// Product pairs an inventory item with how it is sold: its product type, optional product line, and customer portal visibility.
 type Product struct {
 	// Product ID.
 	ID string `json:"id" validate:"required"`
@@ -30,9 +30,9 @@ type Product struct {
 	// - `visible`: buyers can see and order the product in the portal.
 	// - `hidden`: the product is concealed from the portal but remains usable internally.
 	PortalVisibility constants.CustomerPortalVisibility `json:"portal_visibility" validate:"required"`
-	// Product line.
+	// The product line this product is assigned to, if any.
 	ProductLine *ProductLine `json:"product_line" expandable:"true"`
-	// Item.
+	// The inventory item backing this product, which holds its SKU, description, pricing, and attributes.
 	Item *Item `json:"item" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -59,7 +59,9 @@ func (*Product) SchemaExample() any {
 type ValidateProductsResponse struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=map"`
-	// Validated products keyed by original map key.
+	// Matched products keyed by the same keys supplied in the request's `products_map`.
+	//
+	// Keys whose SKU did not match any product are omitted.
 	Products map[string]*Product `json:"products" validate:"required"`
 }
 

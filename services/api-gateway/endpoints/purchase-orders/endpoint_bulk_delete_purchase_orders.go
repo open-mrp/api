@@ -12,7 +12,7 @@ import (
 
 // Request to delete multiple purchase orders.
 type BulkDeletePurchaseOrdersRequest struct {
-	// Purchase order IDs.
+	// IDs of the purchase orders to delete.
 	PurchaseOrderIDs []string `json:"purchase_order_ids" validate:"required"`
 }
 
@@ -24,7 +24,9 @@ func (*BulkDeletePurchaseOrdersRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleBulkDeletePurchaseOrdersRequest)
 }
 
-// Deletes multiple purchase orders.
+// Deletes multiple purchase orders in a single request.
+//
+// If any of the orders is in `fulfilled` status the request fails and no orders are deleted.
 type BulkDeletePurchaseOrdersEndpoint struct{}
 
 func (e *BulkDeletePurchaseOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkDeletePurchaseOrdersRequest, *apiresource.EmptyResource] {

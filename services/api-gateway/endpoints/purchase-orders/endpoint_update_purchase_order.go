@@ -18,17 +18,23 @@ type UpdatePurchaseOrderRequest struct {
 	PurchaseOrderID string `path:"id" validate:"required"`
 	// Order note.
 	Note field.Optional[string] `json:"note,omitzero"`
-	// Purchase order number.
+	// New purchase order number.
+	//
+	// Must be unique within the account.
 	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
-	// Priority code.
+	// Priority level for fulfilling the order (`low`, `normal`, or `high`).
 	PriorityCode field.Optional[string] `json:"priority_code,omitzero" validate:"omitempty,max=255"`
-	// Billing address ID.
+	// ID of an existing address to use as the bill-to address.
 	BillingAddressID field.Optional[string] `json:"billing_address_id,omitzero" validate:"omitempty"`
-	// Shipping address ID.
+	// ID of an existing address to use as the ship-to address.
 	ShippingAddressID field.Optional[string] `json:"shipping_address_id,omitzero" validate:"omitempty"`
-	// Promised delivery date.
+	// Promised delivery date in `YYYY-MM-DD` format.
+	//
+	// Returned as `scheduled_at` on the purchase order resource.
 	PromisedAt field.Optional[string] `json:"promised_at,omitzero"`
-	// Account user IDs for email contacts. Replaces existing contacts.
+	// IDs of account users to set as the order's email contacts.
+	//
+	// Replaces the full set of existing contacts; omit the field to leave contacts unchanged.
 	ContactAccountUserIDs field.Optional[[]string] `json:"contact_account_user_ids,omitzero"`
 }
 

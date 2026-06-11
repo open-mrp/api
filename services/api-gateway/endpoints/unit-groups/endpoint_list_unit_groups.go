@@ -10,10 +10,10 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListUnitGroupsRequest is a request to list unit groups.
+// Request to list unit groups.
 type ListUnitGroupsRequest struct {
 	apiresource.PaginationRequest
-	// Filter by the unit type.
+	// Filter by unit dimension (e.g. `mass`).
 	Type *constants.UnitType `query:"type"`
 }
 

@@ -15,7 +15,9 @@ import (
 type IssueSalesOrderRequest struct {
 	// Sales order ID.
 	SalesOrderID string `path:"id" validate:"required"`
-	// Whether to notify the customer (e.g. send an order acknowledgement email).
+	// Whether to notify the customer.
+	//
+	// When `true`, the order acknowledgement email is sent to the contacts configured on the order and the order's `acknowledgment_status` is set to `sent`.
 	NotifyCustomer bool `json:"notify_customer"`
 }
 
@@ -25,7 +27,9 @@ func (*IssueSalesOrderRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleIssueSalesOrderRequest)
 }
 
-// Issues a sales order, transitioning it from estimate to issued.
+// Issues a sales order, transitioning it from `estimate` to `issued`.
+//
+// Issuing commits the order for fulfillment: a pick is created for the order's sale lines and inventory is reserved for each line tied to an inventory item.
 type IssueSalesOrderEndpoint struct{}
 
 func (e *IssueSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*IssueSalesOrderRequest, *apiresource.SalesOrder] {

@@ -65,22 +65,19 @@ type AddressDetailsResult struct {
 type ValidatedAddress struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=validated_address"`
-	// Address validation status.
-	//
-	// - `valid`: the address was validated successfully.
-	// - `invalid`: the address could not be validated; see `validation_messages` for the issues found.
+	// Whether the address could be validated.
 	Status constants.AddressValidationStatus `json:"status" validate:"required"`
 	// Formatted, single-line address as standardized by the validation service.
 	//
-	// `null` when the service did not return a formatted address (this can occur regardless of `status`).
+	// The validation service may omit this regardless of `status`, so it can be absent even for a `valid` address.
 	FormattedAddress *string `json:"formatted_address"`
 	// Standardized, parsed address components returned by the validation service.
 	//
-	// `null` when the service did not return parsed components (independent of `status`).
+	// The validation service may omit this regardless of `status`, so it can be absent even for a `valid` address.
 	Components *AddressComponents `json:"components"`
 	// Human-readable messages describing issues found during validation.
 	//
-	// Empty when no issues were reported.
+	// May be non-empty even when `status` is `valid`, for example when components were inferred or replaced with standardized values. Empty when no issues were reported.
 	ValidationMessages []string `json:"validation_messages"`
 }
 

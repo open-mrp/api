@@ -15,7 +15,9 @@ type DeleteCarrierRequest struct {
 	CarrierID string `path:"id" validate:"required"`
 }
 
-// Deletes a carrier and cascades to remove all options. If the carrier is managed by Shippo, the Shippo account is deactivated.
+// Deletes a carrier and all of its service levels.
+//
+// If the carrier is connected through Shippo, its Shippo carrier account is deactivated. System-owned carriers cannot be deleted.
 type DeleteCarrierEndpoint struct{}
 
 func (e *DeleteCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteCarrierRequest, *apiresource.EmptyResource] {

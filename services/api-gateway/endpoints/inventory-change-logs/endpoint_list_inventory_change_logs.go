@@ -16,17 +16,17 @@ type ListInventoryChangeLogsRequest struct {
 	apiresource.PaginationRequest
 	// Filter by item IDs.
 	ItemIDs []string `query:"item_ids"`
-	// Filter by action type codes.
+	// Filter by the action that produced the change.
 	ActionTypeCodes []string `query:"action_type_codes"`
-	// Filter by responsible user IDs.
+	// Filter by the user responsible for the change.
 	ChangedByUserIDs []string `query:"changed_by_user_ids"`
-	// Filter change logs created on or after this date.
+	// Restricts results to change logs created on or after this timestamp.
 	StartDate *time.Time `query:"start_date"`
-	// Filter change logs created on or before this date.
+	// Restricts results to change logs created on or before this timestamp.
 	EndDate *time.Time `query:"end_date"`
 }
 
-// Returns a paginated list of inventory change logs for the target account.
+// Returns a paginated list of inventory change logs, newest first.
 type ListInventoryChangeLogsEndpoint struct{}
 
 func (e *ListInventoryChangeLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListInventoryChangeLogsRequest, *apiresource.List[apiresource.InventoryChangeLog]] {

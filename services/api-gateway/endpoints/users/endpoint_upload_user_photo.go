@@ -15,11 +15,13 @@ type UploadUserPhotoRequest struct {
 	UserID string `path:"id" validate:"required"`
 	// Raw image bytes.
 	RawBody []byte `rawbody:"true"`
-	// Content type of the image (e.g. image/png).
+	// MIME type of the image (e.g. `image/png`).
 	ContentType string `header:"Content-Type"`
 }
 
 // Uploads a profile photo for a user.
+//
+// The photo replaces any existing one, and the user's `image_url` is updated to serve the new photo.
 type UploadUserPhotoEndpoint struct{}
 
 func (e *UploadUserPhotoEndpoint) Materialize() *apiendpoint.APIEndpoint[*UploadUserPhotoRequest, *apiresource.UserPhotoUploadResult] {

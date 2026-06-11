@@ -16,6 +16,8 @@ type DeletePurchaseOrderRequest struct {
 }
 
 // Deletes a purchase order and all its related records.
+//
+// Orders in `fulfilled` status cannot be deleted.
 type DeletePurchaseOrderEndpoint struct{}
 
 func (e *DeletePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeletePurchaseOrderRequest, *apiresource.EmptyResource] {

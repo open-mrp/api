@@ -10,7 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListAlertsRequest is a request to list agent alerts.
+// Request to list agent alerts.
 type ListAlertsRequest struct {
 	apiresource.PaginationRequest
 	// Filter by severity.

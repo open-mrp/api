@@ -22,7 +22,9 @@ type UpdateAccountRequest struct {
 	SupportEmail field.Optional[string] `json:"support_email,omitzero" validate:"omitempty,custom_email,max=255"`
 	// Support phone number.
 	PhoneNumber field.Optional[string] `json:"phone_number,omitzero" validate:"omitempty,max=255"`
-	// Portal slug.
+	// URL slug for the account's customer portal.
+	//
+	// The slug is unique across all accounts; updating to one that is already taken returns a conflict error.
 	Slug field.Optional[string] `json:"slug,omitzero" validate:"omitempty,min=3,max=255"`
 	// Website URL.
 	WebsiteURL field.Optional[string] `json:"website_url,omitzero" validate:"omitempty,url,max=2083"`
@@ -45,6 +47,8 @@ func (*UpdateAccountRequest) SchemaExample() any {
 }
 
 // Partially updates an account's name, branding, and portal settings.
+//
+// Only the fields provided in the request are changed. You can only update the account you are acting in.
 type UpdateAccountEndpoint struct{}
 
 func (e *UpdateAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAccountRequest, *apiresource.Account] {

@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-// AccountGroupProductLineAccess is the product lines accessible to an account group.
+// The set of product lines that accounts in an account group are allowed to order from.
 type AccountGroupProductLineAccess struct {
 	// The account group this access record belongs to.
 	//

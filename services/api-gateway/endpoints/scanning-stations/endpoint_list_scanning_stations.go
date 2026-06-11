@@ -15,7 +15,7 @@ type ListScanningStationsRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of scanning stations for the current account.
+// Returns a paginated list of scanning stations in your account.
 type ListScanningStationsEndpoint struct{}
 
 func (e *ListScanningStationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListScanningStationsRequest, *apiresource.List[apiresource.ScanningStation]] {

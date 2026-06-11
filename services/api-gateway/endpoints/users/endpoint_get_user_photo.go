@@ -15,7 +15,9 @@ type GetUserPhotoURLRequest struct {
 	UserID string `path:"id" validate:"required"`
 }
 
-// Returns a presigned URL for the user's profile photo. Expires after one hour.
+// Returns a presigned URL for the user's profile photo.
+//
+// The URL expires one hour after it is issued.
 type GetUserPhotoURLEndpoint struct{}
 
 func (e *GetUserPhotoURLEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetUserPhotoURLRequest, *apiresource.UserPhotoURL] {

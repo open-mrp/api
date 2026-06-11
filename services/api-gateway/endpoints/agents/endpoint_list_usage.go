@@ -11,9 +11,9 @@ import (
 
 // Request to list agent token usage records.
 type ListUsageRequest struct {
-	// Number of days of usage history to return. Defaults to 30.
+	// Number of days of usage history to return, counting back from today.
 	Days int32 `query:"days" default:"30" validate:"min=1,max=365"`
-	// Maximum number of records to return per page. Defaults to 100.
+	// Maximum number of records to return per page.
 	Limit int32 `query:"limit" default:"100" validate:"min=1,max=1000"`
 	// Pagination cursor from a previous response.
 	Cursor *string `query:"cursor"`

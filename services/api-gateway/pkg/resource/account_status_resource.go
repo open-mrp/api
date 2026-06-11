@@ -14,13 +14,15 @@ var SampleAccountStatusCode = constants.AccountStatusCodeNormal
 
 const SampleAccountStatusName = "Normal"
 
-// AccountStatus is an account status lookup value.
+// AccountStatus is a lookup value describing the standing of a customer account, such as whether shipments or all activity should be held.
 type AccountStatus struct {
 	// Account status ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_status"`
 	// Machine-readable status code.
+	//
+	// This is the value used as a customer's `status`.
 	//
 	// - `normal`: standard account with no restrictions.
 	// - `preferred`: account flagged as preferred (e.g. for prioritized handling).
@@ -30,6 +32,8 @@ type AccountStatus struct {
 	// Display name.
 	Name string `json:"name" validate:"required"`
 	// Owner of this resource.
+	//
+	// Account statuses are system-owned platform defaults shared across all accounts.
 	Owner *Owner `json:"owner" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

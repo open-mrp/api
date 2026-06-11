@@ -16,11 +16,15 @@ import (
 type UpdateMachineRequest struct {
 	// Machine ID.
 	MachineID string `path:"id" validate:"required"`
-	// Display name.
+	// Display name of the machine.
+	//
+	// Must be unique within your account; maximum 255 characters.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Serial number.
+	// Serial number of the machine.
+	//
+	// Maximum 255 characters.
 	SerialNumber field.Optional[string] `json:"serial_number,omitzero" validate:"omitempty,max=255"`
-	// Notes.
+	// Free-form notes about the machine.
 	Notes field.Optional[string] `json:"notes,omitzero"`
 }
 
@@ -34,6 +38,8 @@ func (*UpdateMachineRequest) SchemaExample() any {
 }
 
 // Partially updates a machine.
+//
+// Only the fields provided in the request are changed. Returns a conflict error if the new name is already in use by another machine.
 type UpdateMachineEndpoint struct{}
 
 func (e *UpdateMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateMachineRequest, *apiresource.Machine] {

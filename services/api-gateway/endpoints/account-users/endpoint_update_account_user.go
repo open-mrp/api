@@ -19,14 +19,24 @@ type UpdateAccountUserRequest struct {
 	// User display name.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// User email address.
+	//
+	// Must not already be in use by another user.
 	Email field.Optional[string] `json:"email,omitzero" validate:"omitempty,custom_email,max=255"`
-	// Unique username (3–255 chars; letters, numbers, underscores, hyphens).
+	// Unique username.
+	//
+	// 3–255 characters; letters, numbers, underscores, and hyphens. Must not already be in use by another user.
 	Username field.Optional[string] `json:"username,omitzero" validate:"omitempty,username"`
-	// Role assigned to the user.
+	// ID of the role to assign to the user.
+	//
+	// Set to `null` to clear the role.
 	RoleID field.Clearable[string] `json:"role_id,omitzero" validate:"omitempty"`
-	// Department assigned to the user.
+	// ID of the department to assign to the user.
+	//
+	// Set to `null` to clear the department.
 	DepartmentID field.Clearable[string] `json:"department_id,omitzero" validate:"omitempty"`
-	// Notification preferences to update (external targets only).
+	// Notification preference toggles to apply.
+	//
+	// Only allowed when updating a user in another account you manage (cross-account); rejected otherwise. Notification types omitted from the list are left unchanged.
 	Preferences []NotificationPreferenceItem `json:"preferences,omitzero"`
 }
 
@@ -44,6 +54,8 @@ func (*UpdateAccountUserRequest) SchemaExample() any {
 }
 
 // Partially updates an account user.
+//
+// Omitted fields are left unchanged. Profile fields (`name`, `email`, `username`) update the underlying user, which is shared across every account the user belongs to.
 type UpdateAccountUserEndpoint struct{}
 
 func (e *UpdateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAccountUserRequest, *apiresource.AccountUser] {

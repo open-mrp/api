@@ -10,7 +10,7 @@ import (
 
 const SampleEmailLogID = "eml_017b80707ada92dddff8a2c3a0"
 
-// Email log entry.
+// A record of an email sent on the account's behalf, such as an invoice or a user invitation.
 type EmailLog struct {
 	// Email log ID.
 	ID string `json:"id" validate:"required"`
@@ -25,11 +25,11 @@ type EmailLog struct {
 	Recipients []string `json:"recipients" validate:"required"`
 	// Email subject line.
 	Subject *string `json:"subject"`
-	// Filename of any attachment.
+	// Filename of the attached document.
 	Filename *string `json:"filename"`
-	// Actor who sent the email.
+	// The user who sent the email.
 	//
-	// Null when the email was sent by the system.
+	// Absent for emails the platform sends automatically (for example system notifications), which are not attributed to a user.
 	SentBy *Actor `json:"sent_by" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

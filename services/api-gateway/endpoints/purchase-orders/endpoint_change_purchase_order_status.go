@@ -15,9 +15,16 @@ import (
 type ChangePurchaseOrderStatusRequest struct {
 	// Purchase order ID.
 	PurchaseOrderID string `path:"id" validate:"required"`
-	// Status change action (e.g., "issue", "unissue", "close", "open").
+	// The lifecycle transition to apply.
+	//
+	// - `issue`: move an `estimate` order to `issued`. Creates the order's receiving order with a line for each order line.
+	// - `unissue`: move an `issued` order back to `estimate`. Deletes the receiving order.
+	// - `close`: move an `issued` order to `fulfilled`. Marks the receiving order complete.
+	// - `open`: move a `fulfilled` order back to `issued`. Re-opens the receiving order.
 	StatusChange string `json:"status_change" validate:"required"`
-	// Whether to send a notification email.
+	// Whether to email the purchase order to the order's contacts.
+	//
+	// Only applies to the `issue` action. When `true`, the purchase order submission email is sent to the order's email contacts and `acknowledgment_status` is set to `sent`.
 	SendEmail bool `json:"send_email"`
 }
 
@@ -30,7 +37,9 @@ func (*ChangePurchaseOrderStatusRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleChangePurchaseOrderStatusRequest)
 }
 
-// Changes the status of a purchase order. Supported actions: issue (draft to issued), unissue (issued to draft), close (issued to closed), open (closed to issued).
+// Moves a purchase order through its lifecycle.
+//
+// Supported actions: `issue` (`estimate` to `issued`), `unissue` (`issued` back to `estimate`), `close` (`issued` to `fulfilled`), and `open` (`fulfilled` back to `issued`). Each action is only valid from the status noted; otherwise the request fails validation.
 type ChangePurchaseOrderStatusEndpoint struct{}
 
 func (e *ChangePurchaseOrderStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*ChangePurchaseOrderStatusRequest, *apiresource.PurchaseOrder] {

@@ -15,11 +15,15 @@ import (
 
 // Request to create an API key.
 type CreateAPIKeyRequest struct {
-	// Role ID assigned to the API key.
+	// ID of the role to assign to the API key.
+	//
+	// The role determines the permissions of requests authenticated with the key.
 	RoleID string `json:"role_id" validate:"required"`
 	// Human-readable name for the API key.
 	Name string `json:"name" validate:"required,max=255"`
-	// Expiration timestamp. If not set, the key does not expire.
+	// When the key expires and stops authenticating requests.
+	//
+	// If omitted, the key never expires.
 	ExpiresAt field.Optional[time.Time] `json:"expires_at,omitzero"`
 }
 

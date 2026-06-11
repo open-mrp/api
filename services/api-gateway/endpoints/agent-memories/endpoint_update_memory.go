@@ -17,19 +17,27 @@ import (
 type UpdateMemoryRequest struct {
 	// Memory ID.
 	ID string `path:"id" validate:"required"`
-	// Memory category (e.g. "preference", "fact", "instruction").
+	// Free-form category used to group related memories (e.g. `preference`, `fact`, `instruction`).
 	Category field.Optional[string] `json:"category,omitzero" validate:"omitempty,max=255"`
 	// Text content.
 	Content field.Optional[string] `json:"content,omitzero"`
-	// JSON metadata.
+	// Arbitrary metadata as JSON.
 	Metadata json.RawMessage `json:"metadata,omitzero"`
-	// Entity type this memory is scoped to (e.g. "customer", "product").
+	// Type of platform record this memory is scoped to (e.g. `customer`, `product`).
+	//
+	// Provide together with `entity_id` to scope the memory to a specific record.
 	EntityType field.Optional[string] `json:"entity_type,omitzero" validate:"omitempty,max=255"`
-	// Entity ID.
+	// ID of the platform record this memory is scoped to.
+	//
+	// Provide together with `entity_type`.
 	EntityID field.Optional[string] `json:"entity_id,omitzero" validate:"omitempty"`
-	// Importance score between 0 and 1.
+	// Relative importance from `0` to `1`, used to prioritize which memories the agent recalls.
+	//
+	// Higher is more important.
 	Importance field.Optional[float64] `json:"importance,omitzero"`
-	// ISO 8601 expiration timestamp.
+	// Expiration timestamp in ISO 8601 format (e.g. `2026-01-02T15:04:05Z`).
+	//
+	// Expired memories are excluded from list results and are no longer recalled by agents.
 	ExpiresAt field.Optional[string] `json:"expires_at,omitzero"`
 }
 

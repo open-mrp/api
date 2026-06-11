@@ -16,7 +16,7 @@ import (
 type UpdatePropertyRequest struct {
 	// Property ID.
 	PropertyID string `path:"id" validate:"required"`
-	// Name.
+	// Display name of the property, such as `Color` or `Size`.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 }
 

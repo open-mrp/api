@@ -14,19 +14,34 @@ import (
 
 // Request to create a scanning station.
 type CreateScanningStationRequest struct {
-	// Display name.
+	// Display name of the scanning station.
+	//
+	// Must be unique within your account; maximum 255 characters.
 	Name string `json:"name" validate:"required,max=255"`
-	// Notes.
+	// Free-form notes about the scanning station.
 	Notes field.Optional[string] `json:"notes,omitzero"`
-	// Scanning station type.
+	// Scanning station type, determining which batch operation the station performs.
+	//
+	// - `init_batch`: initializes a new batch.
+	// - `merge_batch`: merges multiple batches into one.
+	// - `move_batch`: moves a batch to another location or step.
+	// - `split_batch`: splits a batch into multiple batches.
+	//
+	// The type cannot be changed after creation.
 	Type constants.ScanningStationType `json:"type" validate:"required"`
-	// Operator requirement behavior for this station.
+	// Whether operators must perform a material check at this station.
+	//
+	// - `none`: no additional operator check is required.
+	// - `material_check`: a material check is expected before the operation.
 	OperatorRequirement constants.OperatorRequirement `json:"operator_requirement" validate:"required"`
-	// Department ID.
+	// ID of the department this station belongs to.
 	DepartmentID string `json:"department_id" validate:"required"`
-	// Label size code.
+	// Size of the labels printed at this station, given as width-by-height (for example, `1x1`).
 	LabelSizeCode field.Optional[constants.LabelSizeCode] `json:"label_size,omitzero"`
-	// Label type code.
+	// Type of label printed at this station.
+	//
+	// - `tag`: a label attached to the physical product.
+	// - `traveler`: a routing sheet that accompanies the batch through every production step.
 	LabelTypeCode field.Optional[constants.LabelTypeCode] `json:"label_type,omitzero"`
 }
 
@@ -46,7 +61,9 @@ func (*CreateScanningStationRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateScanningStationRequest)
 }
 
-// Creates a scanning station associated with a department.
+// Creates a scanning station and assigns it to a department.
+//
+// Returns a conflict error if a scanning station with the same name already exists.
 type CreateScanningStationEndpoint struct{}
 
 func (e *CreateScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateScanningStationRequest, *apiresource.ScanningStation] {

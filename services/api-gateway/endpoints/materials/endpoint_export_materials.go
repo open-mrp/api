@@ -12,7 +12,7 @@ import (
 
 // ExportMaterialsRequest is the request to export materials as an Excel file.
 type ExportMaterialsRequest struct {
-	// Optional search query.
+	// Free-text search query matched against materials.
 	Query *string `query:"q"`
 	// Filter by category IDs.
 	CategoryIDs []string `query:"category_ids"`

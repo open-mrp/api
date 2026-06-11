@@ -15,7 +15,9 @@ type SetupBillingRequest struct {
 	SessionID string `json:"-" path:"session_id" validate:"required"`
 }
 
-// Creates a Stripe customer and billing profile for a registration session.
+// Creates a Stripe customer and Setup Intent for collecting the registration's payment method.
+//
+// Returns the Setup Intent client secret and publishable key needed to collect a payment method with Stripe.js. Safe to retry; an existing Stripe customer is reused.
 type SetupBillingEndpoint struct{}
 
 func (e *SetupBillingEndpoint) Materialize() *apiendpoint.APIEndpoint[*SetupBillingRequest, *apiresource.SetupBillingResponse] {

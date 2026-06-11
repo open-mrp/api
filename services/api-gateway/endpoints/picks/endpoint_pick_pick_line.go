@@ -19,6 +19,8 @@ type PickPickLineRequest struct {
 }
 
 // Marks a pick line as picked.
+//
+// Sets the line's picked quantity to the quantity still outstanding on its sales order line. Has no effect on a line that has already been packed.
 type PickPickLineEndpoint struct{}
 
 func (e *PickPickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*PickPickLineRequest, *apiresource.PickLine] {

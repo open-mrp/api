@@ -14,19 +14,19 @@ import (
 // Request to list production steps.
 type ListProductionStepsRequest struct {
 	apiresource.PaginationRequest
-	// Filter by produced item IDs.
+	// Only return steps that produce or consume any of these items.
 	ItemIDs []string `query:"item_ids"`
-	// Filter by machine IDs.
+	// Only return steps with any of these machines assigned.
 	MachineIDs []string `query:"machine_ids"`
-	// Filter by scanning station IDs.
+	// Only return steps assigned to any of these scanning stations.
 	ScanningStationIDs []string `query:"scanning_station_ids"`
-	// Filter by input step IDs.
+	// Only return steps that are directly fed by any of these upstream steps.
 	InputStepIDs []string `query:"input_step_ids"`
-	// Filter by output step IDs.
+	// Only return steps that feed directly into any of these downstream steps.
 	OutputStepIDs []string `query:"output_step_ids"`
-	// Filter by start date.
+	// Only return steps created on or after this timestamp (inclusive).
 	StartDate *time.Time `query:"start_date"`
-	// Filter by end date.
+	// Only return steps created on or before this timestamp (inclusive).
 	EndDate *time.Time `query:"end_date"`
 }
 

@@ -14,17 +14,17 @@ import (
 
 // Request to partially update a shipment.
 type UpdateShipmentRequest struct {
-	// Shipment ID.
+	// ID of the shipment to update.
 	ShipmentID string `path:"id" validate:"required"`
 	// Note for the shipment.
 	Note field.Optional[string] `json:"note,omitzero"`
-	// Shipment number.
+	// Human-readable shipment number.
 	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
-	// Master tracking number.
+	// Carrier master tracking number covering the shipment as a whole.
 	MasterTrackingNumber field.Optional[string] `json:"master_tracking_number,omitzero" validate:"omitempty,max=255"`
-	// Carrier ID.
+	// ID of the carrier to set on the shipment's freight.
 	CarrierID field.Optional[string] `json:"carrier_id,omitzero" validate:"omitempty"`
-	// Service level ID.
+	// ID of the carrier service level to set on the shipment's freight.
 	ServiceLevelID field.Optional[string] `json:"service_level_id,omitzero" validate:"omitempty"`
 }
 

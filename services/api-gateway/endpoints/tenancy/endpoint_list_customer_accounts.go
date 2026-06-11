@@ -12,7 +12,7 @@ import (
 
 // Request to list customer accounts accessible to the authenticated user under a vendor account.
 type ListCustomerAccountsRequest struct {
-	// Vendor account ID.
+	// ID of the vendor account whose customer accounts to list.
 	VendorAccountID string `path:"vendor_account_id" validate:"required"`
 	apiresource.PaginationRequest
 }

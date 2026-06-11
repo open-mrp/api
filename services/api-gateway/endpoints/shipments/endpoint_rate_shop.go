@@ -14,9 +14,13 @@ import (
 
 // Request to rate shop across carriers.
 type RateShopRequest struct {
-	// Product line IDs.
+	// Product lines of the items being shipped, used to apply freight exemptions.
+	//
+	// If any listed product line is freight exempt, no options are returned and `exemption_type` is `freight_exempt`.
 	ProductLineIDs []string `json:"product_line_ids,omitzero"`
-	// Customer ID.
+	// ID of the customer the shipment is for, used to apply the customer's freight policy and default shipping term.
+	//
+	// A freight-exempt customer or a free-freight shipping term returns no options with `exemption_type` set to `freight_exempt`; a flat-rate shipping term replaces carrier rates with the flat rate.
 	CustomerID field.Optional[string] `json:"customer_id,omitzero"`
 	// Origin address.
 	FromAddress apirequest.AddressInput `json:"from_address" validate:"required"`
@@ -24,7 +28,7 @@ type RateShopRequest struct {
 	ToAddress apirequest.AddressInput `json:"to_address" validate:"required"`
 	// Parcels to rate shop.
 	Parcels []ParcelInput `json:"parcels" validate:"required,min=1"`
-	// Total order value.
+	// Total value of the order, used to evaluate the free-shipping minimum order value on the customer's shipping term.
 	OrderTotal field.Optional[float64] `json:"order_total,omitzero"`
 }
 
@@ -70,7 +74,9 @@ func (*RateShopRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleRateShopRequest)
 }
 
-// Compares shipping rates across all available carriers and options for the given addresses and parcels.
+// Compares shipping rates across all of the account's carriers and service levels for the given addresses and parcels.
+//
+// Returns options sorted by rate ascending, after applying the account's freight rules: freight-exempt product lines or customers and free-freight shipping terms return no options, a flat-rate shipping term replaces carrier rates with the flat rate, and a met free-shipping minimum order value zeroes the rate on eligible options. Live carrier rates require the Shippo integration; carriers without live rating configured are returned with a rate of `0`.
 type RateShopEndpoint struct{}
 
 func (e *RateShopEndpoint) Materialize() *apiendpoint.APIEndpoint[*RateShopRequest, *apiresource.RateShopResult] {

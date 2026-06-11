@@ -17,7 +17,9 @@ type ListCatalogProductsRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of products in a specific product line, grouped by item category.
+// Returns the products in a product line, grouped by item category.
+//
+// Each category lists the properties its products vary along and the products themselves. Customers only see products they have access to. Pagination applies to categories, not to the products within them.
 type ListCatalogProductsEndpoint struct{}
 
 func (e *ListCatalogProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCatalogProductsRequest, *apiresource.List[apiresource.CatalogCategory]] {

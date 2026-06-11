@@ -14,13 +14,26 @@ import (
 
 // Request to create a location.
 type CreateLocationRequest struct {
-	// Display name.
+	// Display name of the location.
+	//
+	// Maximum 255 characters.
 	Name string `json:"name" validate:"required,max=255"`
-	// Location type code.
+	// Location type code, identifying this location's level in the storage hierarchy.
+	//
+	// - `building`: a building-level location.
+	// - `section`: a section within a building.
+	// - `aisle`: an aisle within a section.
+	// - `rack`: a rack within an aisle.
+	// - `shelf`: a shelf within a rack.
+	// - `bin`: a bin within a shelf.
 	TypeCode constants.LocationTypeCode `json:"type" validate:"required"`
-	// Parent location ID. Null for top-level locations.
+	// ID of the parent location.
+	//
+	// Omit for top-level locations.
 	ParentID field.Optional[string] `json:"parent_id,omitzero"`
-	// IDs of child locations to attach.
+	// IDs of existing locations to attach as children of the new location.
+	//
+	// Listed locations are moved from their current parent, if any.
 	ChildIDs field.Optional[[]string] `json:"child_ids,omitzero"`
 }
 
@@ -33,7 +46,7 @@ func (*CreateLocationRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateLocationRequest)
 }
 
-// Creates a location for the caller's account.
+// Creates a storage location, optionally placing it in the location hierarchy.
 type CreateLocationEndpoint struct{}
 
 func (e *CreateLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateLocationRequest, *apiresource.Location] {

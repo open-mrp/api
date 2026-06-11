@@ -15,7 +15,9 @@ import (
 type UpdateAgentStatusRequest struct {
 	// Agent definition ID.
 	AgentDefinitionID string `path:"id" validate:"required"`
-	// Account-level status: "active" or "inactive".
+	// Account-level status to set: `active` to enable the agent for this account, `inactive` to disable it.
+	//
+	// This only affects activation for the current account and leaves the shared agent definition unchanged.
 	Status string `json:"status" validate:"required,max=255"`
 }
 
@@ -27,7 +29,9 @@ func (*UpdateAgentStatusRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateAgentStatusRequest)
 }
 
-// Upserts the per-account status for an agent definition.
+// Enables or disables an agent for the current account.
+//
+// Sets the account-level status without modifying the underlying agent definition, so it works for both `system` and `custom` agents. Returns the updated agent definition.
 type UpdateAgentStatusEndpoint struct{}
 
 func (e *UpdateAgentStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAgentStatusRequest, *apiresource.AgentDefinition] {

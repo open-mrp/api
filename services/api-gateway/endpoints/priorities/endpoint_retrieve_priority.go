@@ -10,9 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Request to get a priority.
+// Request to retrieve a priority.
 type RetrievePriorityRequest struct {
 	// Priority ID or code.
+	//
+	// Accepts either a priority ID or one of the codes `low`, `normal`, `high`.
 	PriorityID string `path:"id" validate:"required"`
 }
 

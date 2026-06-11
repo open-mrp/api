@@ -16,6 +16,8 @@ type GetShippingCaseLabelRequest struct {
 }
 
 // Returns a presigned URL for the shipping case's label image.
+//
+// The returned URL expires one hour after it is issued, and is null when no label has been generated for the case.
 type GetShippingCaseLabelEndpoint struct{}
 
 func (e *GetShippingCaseLabelEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetShippingCaseLabelRequest, *apiresource.ShippingCaseLabelURL] {

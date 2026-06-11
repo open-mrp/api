@@ -16,7 +16,7 @@ type DeleteTransactionRequest struct {
 	TransactionID string `path:"id" validate:"required"`
 }
 
-// Deletes a transaction and cascades deletion to allocations.
+// Deletes a transaction along with all of its invoice allocations, and returns the deleted transaction.
 type DeleteTransactionEndpoint struct{}
 
 func (e *DeleteTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteTransactionRequest, *apiresource.TransactionDetail] {

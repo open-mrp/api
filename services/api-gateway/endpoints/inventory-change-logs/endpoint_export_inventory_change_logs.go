@@ -14,17 +14,19 @@ import (
 type ExportInventoryChangeLogsRequest struct {
 	// Filter by item IDs.
 	ItemIDs []string `query:"item_ids"`
-	// Filter by action type codes.
+	// Filter by the action that produced the change.
 	ActionTypeCodes []string `query:"action_type_codes"`
-	// Filter by responsible user IDs.
+	// Filter by the user responsible for the change.
 	ChangedByUserIDs []string `query:"changed_by_user_ids"`
-	// Filter change logs created on or after this date.
+	// Restricts results to change logs created on or after this timestamp.
 	StartDate *time.Time `query:"start_date"`
-	// Filter change logs created on or before this date.
+	// Restricts results to change logs created on or before this timestamp.
 	EndDate *time.Time `query:"end_date"`
 }
 
 // Exports inventory change logs matching the provided filters as an Excel file.
+//
+// Unlike the list endpoint, results are not paginated — every matching change log is included in the download.
 type ExportInventoryChangeLogsEndpoint struct{}
 
 func (e *ExportInventoryChangeLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportInventoryChangeLogsRequest, *httptransport.FileDownload] {

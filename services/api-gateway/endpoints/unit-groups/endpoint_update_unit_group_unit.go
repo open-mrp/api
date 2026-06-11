@@ -12,19 +12,21 @@ import (
 	"github.com/augno/api/shared/field"
 )
 
-// UpdateUnitGroupUnitRequest is a request to update an associated unit.
+// Request to partially update an associated unit within a unit group.
 type UpdateUnitGroupUnitRequest struct {
 	// Unit group ID.
 	UnitGroupID string `path:"unit_group_id" validate:"required"`
 	// Unit group unit ID.
 	AssociatedUnitID string `path:"id" validate:"required"`
-	// Unit ID.
+	// ID of the unit this association refers to.
+	//
+	// The unit's dimension must match the group's `type`.
 	UnitID field.Optional[string] `json:"unit_id,omitzero" validate:"omitempty"`
-	// Discount percentage.
+	// Percentage discount applied to the unit's price when an order is placed in this unit (e.g. `10` is a 10% discount).
 	DiscountPercentage field.Optional[float64] `json:"discount_percentage,omitzero"`
-	// Fixed discount amount.
+	// Flat amount subtracted from the unit's price when an order is placed in this unit.
 	DiscountFixed field.Optional[float64] `json:"discount_fixed,omitzero"`
-	// Customer portal visibility.
+	// Whether the unit is shown to customers in the customer portal.
 	CustomerPortalVisibility field.Optional[constants.CustomerPortalVisibility] `json:"customer_portal_visibility,omitzero"`
 }
 

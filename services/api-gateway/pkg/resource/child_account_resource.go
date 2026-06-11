@@ -14,16 +14,16 @@ const SampleChildAccountExternalNumber = "CUST-001"
 // Child customer account in a parent-child relationship.
 type ChildAccount struct {
 	// Account relation ID.
+	//
+	// Identifies the relationship record, not the child account itself; use `account.id` for the account.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=child_account"`
-	// Counterparty account.
+	// The child account itself.
 	Account *Account `json:"account" validate:"required"`
-	// Your own identifier for this customer (e.g. a CRM or ERP customer number), stored on the relation.
-	//
-	// Null if not set.
+	// Your own identifier for this customer, such as a CRM or ERP customer number, stored on the parent-child relation rather than on the account.
 	ExternalNumber *string `json:"external_number"`
-	// Support email from account branding.
+	// Support email address copied from the child account's branding.
 	Email *string `json:"email"`
 	// When this relation was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

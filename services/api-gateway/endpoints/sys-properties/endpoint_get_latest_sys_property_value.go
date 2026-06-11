@@ -11,11 +11,13 @@ import (
 
 // Request to get the latest value for a system property type.
 type GetLatestSysPropertyValueRequest struct {
-	// System property type code (e.g. transaction_number).
+	// System property type code identifying which counter to read, such as `transaction_number` or `purchase_order_number`.
 	TypeCode string `path:"type_code" validate:"required"`
 }
 
-// Returns the next available counter value for a system property type, initializing it if it does not exist for the account.
+// Returns the next available counter value for a system property type.
+//
+// Initializes the counter at `1` if it does not yet exist for the account. If the current value is already used by an existing record (for example, a transaction with that number), the counter is incremented before the value is returned. The `sscc_count` counter is returned as-is, without a duplicate check.
 type GetLatestSysPropertyValueEndpoint struct{}
 
 func (e *GetLatestSysPropertyValueEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetLatestSysPropertyValueRequest, *apiresource.SysPropertyValue] {

@@ -17,17 +17,26 @@ type CreateAccountUserRequest struct {
 	// User display name.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// User email address.
+	//
+	// Either `email` or `username` must be provided. If a user with this email already exists, that user is added to the account instead of a new user being created.
 	Email field.Optional[string] `json:"email,omitzero" validate:"omitempty,custom_email,max=255"`
-	// Unique username (3–255 chars; letters, numbers, underscores, hyphens).
+	// Unique username.
+	//
+	// 3–255 characters; letters, numbers, underscores, and hyphens. Either `email` or `username` must be provided. Providing a username without an email creates a scanning station user.
 	Username field.Optional[string] `json:"username,omitzero" validate:"omitempty,username"`
-	// Password. Only used for scanner-role users (scanning stations).
-	// Must be 8–72 chars and include upper, lower, number, and special character.
+	// Password for scanning station users.
+	//
+	// Required when creating a scanning station user (username without email) and rejected for all other users, who instead receive a generated password in their welcome email. Must be 8–72 characters and include an uppercase letter, a lowercase letter, a number, and a special character.
 	Password field.Optional[string] `json:"password,omitzero" validate:"omitempty,password" sensitive:"true"` // #nosec G117 -- API request field for user password input
-	// Role assigned to the user.
+	// ID of the role to assign to the user.
+	//
+	// Ignored for scanning station users, which are always assigned the scanner role.
 	RoleID field.Optional[string] `json:"role_id,omitzero"`
-	// Department assigned to the user.
+	// ID of the department to assign to the user.
 	DepartmentID field.Optional[string] `json:"department_id,omitzero"`
-	// Notification preferences for the user (external targets only).
+	// Notification preference toggles for the new user.
+	//
+	// Only applies when creating a user in another account you manage (cross-account); ignored when creating a user in your own account.
 	Preferences []NotificationPreferenceItem `json:"preferences,omitzero"`
 }
 
@@ -51,7 +60,9 @@ func (*CreateAccountUserRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateAccountUserRequest)
 }
 
-// Creates a new account user and invites them to the target account.
+// Adds a user to the target account.
+//
+// If no user with the given email or username exists, a new user is created and sent a welcome email containing a generated password. If a matching user already exists, that user is added to the account instead.
 type CreateAccountUserEndpoint struct{}
 
 func (e *CreateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAccountUserRequest, *apiresource.AccountUser] {

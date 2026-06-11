@@ -18,11 +18,13 @@ type UpdateInvoiceRequest struct {
 	InvoiceID string `path:"id" validate:"required"`
 	// Note to attach to the invoice.
 	Note field.Optional[string] `json:"note,omitzero"`
-	// Whether the invoice has been sent.
+	// Whether the invoice has been sent to the customer.
 	HasBeenSent field.Optional[bool] `json:"has_been_sent,omitzero"`
 	// Whether the invoice has been sent via EDI.
 	IsEdiSent field.Optional[bool] `json:"is_edi_sent,omitzero"`
 	// Whether the invoice has been paid in full.
+	//
+	// Setting this to `true` marks the invoice as paid regardless of recorded allocations, which updates the invoice's `payment_status` and removes it from receivables listings.
 	IsPaidInFull field.Optional[bool] `json:"is_paid_in_full,omitzero"`
 }
 

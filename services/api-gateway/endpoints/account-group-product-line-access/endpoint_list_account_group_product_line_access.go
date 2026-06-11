@@ -10,12 +10,12 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListAccountGroupProductLineAccessRequest is a request to list product line access records grouped by account group.
+// Request to list product line access records, one per account group.
 type ListAccountGroupProductLineAccessRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of product line access records grouped by account group.
+// Returns a paginated list of product line access records, one per account group.
 type ListAccountGroupProductLineAccessEndpoint struct{}
 
 func (e *ListAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAccountGroupProductLineAccessRequest, *apiresource.List[apiresource.AccountGroupProductLineAccess]] {

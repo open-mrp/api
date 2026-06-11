@@ -13,20 +13,22 @@ const SampleItemCategoryName = "Electronics"
 const SampleUnitGroupID = "ug_01aad07abb8e41fd392d2d7013"
 const SampleUnitGroupName = "Weight"
 
-// ItemCategory resource.
+// A grouping of related catalog items that defines the unit group and properties available to the items within it.
 type ItemCategory struct {
 	// Item category ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=item_category"`
-	// Display name.
+	// Display name of the item category.
 	Name string `json:"name" validate:"required"`
-	// Notes.
+	// Free-form notes about the item category.
 	Notes *string `json:"notes"`
 	// What kind of items this category groups.
 	//
-	// - `material_category`: groups raw materials or components.
-	// - `product_category`: groups finished products.
+	// An item can only be assigned to a category whose type matches the item's `type`.
+	//
+	// - `material_category`: groups raw materials and components (items of type `material`).
+	// - `product_category`: groups finished products and parts (items of type `product` or `part`).
 	Type constants.ItemCategoryType `json:"type" validate:"required"`
 	// Owner of the item category.
 	//
@@ -36,7 +38,7 @@ type ItemCategory struct {
 	Properties *List[Property] `json:"properties" expandable:"true"`
 	// Unit group associated with this item category.
 	//
-	// This unit group dictates the available units that items in this category may embody in your production process.
+	// This unit group determines the units of measure available to items in this category throughout your production process.
 	UnitGroup *UnitGroup `json:"unit_group" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

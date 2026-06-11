@@ -10,7 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// RetrieveAlertRequest is a request to get an agent alert.
+// Request to retrieve an agent alert.
 type RetrieveAlertRequest struct {
 	// Alert ID.
 	AlertID string `path:"id" validate:"required"`

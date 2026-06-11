@@ -10,7 +10,9 @@ import (
 
 const SampleMaterialID = "ml_014613b8f7959a091d8cc0cef4"
 
-// Material with order point and lead time.
+// A material in the account's catalog: a raw material or component consumed in production.
+//
+// Material-level data such as the SKU, description, category, pricing, and attributes lives on the underlying `item`; the material record adds the reordering fields `order_point` and `lead_time`.
 type Material struct {
 	// Material ID.
 	ID string `json:"id" validate:"required"`
@@ -20,11 +22,11 @@ type Material struct {
 	Item *Item `json:"item" expandable:"true"`
 	// Reorder threshold: when on-hand stock falls to this quantity, the material should be reordered.
 	//
-	// Null if no reorder point is configured.
+	// Initialized to a zero quantity in the category's base unit when not provided at creation.
 	OrderPoint *Quantity `json:"order_point"`
 	// Expected time between placing an order for this material and receiving it, expressed as a quantity in a time unit (e.g. days).
 	//
-	// Null if not set.
+	// Initialized to a zero quantity in the category's base unit when not provided at creation.
 	LeadTime *Quantity `json:"lead_time"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

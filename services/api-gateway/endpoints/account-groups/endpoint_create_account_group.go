@@ -14,25 +14,28 @@ import (
 
 // Request to create an account group.
 type CreateAccountGroupRequest struct {
-	// Display name.
-	Name string `json:"name" validate:"required,max=255"`
-	// Account group type.
+	// Display name of the account group.
 	//
-	// Cannot be changed after creation.
+	// Must be unique within your account; maximum 255 characters.
+	Name string `json:"name" validate:"required,max=255"`
+	// How this account group will be used.
+	//
 	// - `pricing_group`: used for pricing rules, such as a "Preferred" group that receives a special discount.
 	// - `type_group`: used to categorize accounts, such as "Consumers" or "Distributors".
-	Type constants.AccountGroupType `json:"type" validate:"required"`
-	// Commission policy. Defaults to `commission_exempt`.
 	//
-	// - `commission_exempt`: no commission applies.
-	// - `commission_applied`: commission applies; if the account group is within a sales rep's territory, it will be assigned to that rep unless overridden.
+	// The type cannot be changed after creation.
+	Type constants.AccountGroupType `json:"type" validate:"required"`
+	// How sales commission applies to accounts in this group.
+	//
+	// - `commission_applied`: sales commission is calculated on orders from accounts in this group.
+	// - `commission_exempt`: orders from accounts in this group are exempt from commission.
 	CommissionPolicy field.Optional[constants.CommissionPolicy] `json:"commission_policy,omitzero" default:"commission_exempt"`
-	// Freight policy. Defaults to `billed_freight`.
+	// How freight charges apply to orders from accounts in this group.
 	//
 	// - `free_freight`: customers within this group will not have to pay for freight.
 	// - `billed_freight`: freight will be applied to any order within this account group, unless overridden elsewhere.
 	FreightPolicy field.Optional[constants.FreightPolicy] `json:"freight_policy,omitzero" default:"billed_freight"`
-	// Description.
+	// Free-form description of the account group.
 	Description field.Optional[string] `json:"description,omitzero"`
 }
 
@@ -46,6 +49,8 @@ func (*CreateAccountGroupRequest) SchemaExample() any {
 }
 
 // Creates an account group.
+//
+// Returns a conflict error if an account group with the same name already exists.
 type CreateAccountGroupEndpoint struct{}
 
 func (e *CreateAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAccountGroupRequest, *apiresource.AccountGroup] {

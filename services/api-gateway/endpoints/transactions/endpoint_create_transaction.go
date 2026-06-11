@@ -14,19 +14,30 @@ import (
 
 // Request to create a transaction.
 type CreateTransactionRequest struct {
-	// Customer ID.
+	// ID of the customer the transaction is recorded against.
 	CustomerID string `json:"customer_id" validate:"required"`
 	// Transaction type code.
+	//
+	// - `payment`: money received from the customer.
+	// - `credit_memo`: a credit issued to the customer.
+	// - `adjustment`: a manual correction (also provide `adjustment_type`).
+	// - `rebate`: a rebate granted to the customer.
 	TransactionTypeCode string `json:"type" validate:"required,max=255"`
-	// Transaction amount as a decimal string.
+	// Transaction amount as a decimal string, in US dollars.
 	Amount string `json:"amount" validate:"required"`
-	// Transaction method code.
+	// Payment method code: one of `cash`, `check`, `credit_card`, `gift_card`, or `ach`.
+	//
+	// Typically provided for payment transactions.
 	TransactionMethodCode field.Optional[string] `json:"method,omitzero" validate:"omitempty,max=255"`
-	// Adjustment type code.
+	// Adjustment type code (see List Adjustment Types for available values).
+	//
+	// Typically provided when `type` is `adjustment`.
 	AdjustmentTypeCode field.Optional[string] `json:"adjustment_type,omitzero" validate:"omitempty,max=255"`
-	// Responsible user ID.
+	// ID of the account user responsible for the transaction.
+	//
+	// When omitted, the account user making the request is recorded as responsible.
 	ResponsibleUserID field.Optional[string] `json:"responsible_user_id,omitzero" validate:"omitempty"`
-	// Note.
+	// Free-form note attached to the transaction.
 	Note field.Optional[string] `json:"note,omitzero"`
 }
 

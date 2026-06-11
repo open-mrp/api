@@ -15,27 +15,35 @@ import (
 type SplitQuantityInput struct {
 	// Identifier for this split quantity.
 	ID string `json:"id"`
-	// Decimal measure value.
+	// Quantity to split off, as a decimal measure expressed in `unit_id`.
 	Measure string `json:"measure" validate:"required"`
-	// Unit ID.
+	// ID of the unit the measure is expressed in.
 	UnitID string `json:"unit_id" validate:"required"`
 }
 
-// Request to split batches into multiple parts.
+// Request to split a quantity off one or more batches into a new batch.
 type SplitBatchRequest struct {
-	// Batch IDs to split.
+	// Batch IDs to split from.
+	//
+	// Pass a single ID for single-part production steps, or multiple IDs (one per part) for multi-part steps.
 	BatchIDs []string `json:"batch_ids" validate:"required"`
 	// Scanning station ID performing the split.
 	ScanningStationID string `json:"scanning_station_id" validate:"required"`
-	// Production step ID for the split.
+	// The production step the new batch is created at.
 	ProductionStepID string `json:"production_step_id" validate:"required"`
-	// First split quantity.
+	// First-quality output quantity for the new batch.
+	//
+	// At least one of `firsts`, `seconds`, or `waste` must be non-zero.
 	Firsts SplitQuantityInput `json:"firsts" validate:"required"`
-	// Second split quantity.
+	// Seconds-quality (B-grade) output quantity recorded on the new batch.
+	//
+	// Seconds consume input materials but are not added to inventory.
 	Seconds field.Optional[SplitQuantityInput] `json:"seconds,omitzero"`
-	// Waste quantity.
+	// Scrap quantity recorded on the new batch.
 	Waste field.Optional[SplitQuantityInput] `json:"waste,omitzero"`
-	// Whether to close the original batches after splitting.
+	// Whether to close the source batches after splitting.
+	//
+	// When the source batches are left open, each is still closed automatically once its quantity is fully used by splits.
 	CloseBatch bool `json:"close_batch"`
 }
 
@@ -55,7 +63,9 @@ func (*SplitBatchRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleSplitBatchRequest)
 }
 
-// Splits one or more batches into multiple parts with specified quantities, optionally tracking waste and closing the originals.
+// Splits a quantity off one or more batches into a new batch, grading the output as firsts, seconds, and waste.
+//
+// A new batch carrying the firsts quantity is created at the production step, with any seconds and waste recorded on it; the source batches are linked as inputs. Returns the newly created batch.
 type SplitBatchEndpoint struct{}
 
 func (e *SplitBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*SplitBatchRequest, *apiresource.Batch] {

@@ -21,7 +21,7 @@ type UpdateUserRequest struct {
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// Profile image URL.
 	ImageUrl field.Optional[string] `json:"image_url,omitzero" validate:"omitempty,max=2083"`
-	// Email verification timestamp. Set to null to mark as unverified.
+	// Timestamp recording when the user's email address was verified.
 	EmailVerified field.Optional[time.Time] `json:"email_verified,omitzero"`
 }
 

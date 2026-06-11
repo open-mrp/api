@@ -11,7 +11,9 @@ import (
 const SamplePartID = "pt_018d7bab53e864351f4c693a21"
 const SamplePartSKU = "BRG-6204-2RS"
 
-// Part resource.
+// A part in the account's catalog: a component used in production.
+//
+// Part-level data such as the SKU, description, category, pricing, and attributes lives on the underlying `item`.
 type Part struct {
 	// Part ID.
 	ID string `json:"id" validate:"required"`

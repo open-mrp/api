@@ -11,7 +11,7 @@ import (
 const SampleAllocationEntryID = "txal_016cc92c2d9c0b12801e3160e0"
 const SampleOpenCreditEntryID = "txn_0102a8419c19035a1062bfd5b1" // #nosec G101 -- sample ID, not a credential
 
-// Transaction allocation entry in list views.
+// An application of part of a transaction's amount against a specific invoice, as returned in list views.
 type AllocationEntry struct {
 	// Allocation ID.
 	ID string `json:"id" validate:"required"`
@@ -33,13 +33,11 @@ type AllocationEntry struct {
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 }
 
-// Minimal customer sub-resource for allocation entries.
+// Minimal customer sub-resource for allocation entries and open-credit entries.
 //
-// It carries its own allocation_customer discriminator (not customer) because allocation list entries do not carry a customer id, so it is not a resolvable customer reference.
+// It carries its own allocation_customer discriminator (not customer) because the customer id is not always present (allocation list entries omit it), so it is not a guaranteed-resolvable customer reference.
 type AllocationCustomer struct {
 	// Customer account ID.
-	//
-	// Null when the entry does not carry one.
 	ID *string `json:"id"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=allocation_customer"`
@@ -121,15 +119,17 @@ type OpenCreditEntry struct {
 	LeftoverAmount string `json:"leftover_amount" validate:"required"`
 	// Customer associated with this transaction.
 	Customer *AllocationCustomer `json:"customer" validate:"required"`
-	// Transaction type code: one of `payment`, `credit_memo`, `adjustment`, or `rebate`.
+	// Type of the underlying transaction.
+	//
+	// Corresponds to one of the standard transaction types: payment, credit memo, adjustment, or rebate.
 	TransactionType string `json:"transaction_type" validate:"required"`
-	// Payment method code (e.g. `check`, `ach`).
+	// Payment method of the underlying transaction.
 	//
 	// Typically present only on payment transactions and null for credit memos, adjustments, and rebates.
 	TransactionMethod *string `json:"transaction_method"`
-	// Adjustment category code.
+	// Adjustment category of the underlying transaction.
 	//
-	// Typically populated when `transaction_type` is `adjustment`; null for other types.
+	// Typically populated for adjustment transactions; null for other types.
 	AdjustmentType *string `json:"adjustment_type"`
 	// Responsible user's name.
 	ResponsibleUserName *string `json:"responsible_user_name"`

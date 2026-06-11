@@ -13,9 +13,18 @@ import (
 // Request to list account users.
 type ListAccountUsersRequest struct {
 	apiresource.PaginationRequest
-	// Filter by role type code.
+	// Filter by role type.
+	//
+	// - `admin`: account administrators.
+	// - `user`: users with a custom role.
+	// - `scanner`: scanning station users.
+	// - `sales_rep`: sales representatives.
+	// - `agent`: automated agents.
 	RoleType *constants.RoleType `query:"role_type"`
-	// Controls whether removed account users are included.
+	// Controls whether removed (soft-deleted) account users appear in the list.
+	//
+	// - `excluded`: only active and disabled users (default).
+	// - `included`: removed users are listed as well.
 	RemovedScope *constants.RemovedResourceScope `query:"removed_scope"`
 }
 

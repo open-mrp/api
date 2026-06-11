@@ -10,7 +10,7 @@ import (
 
 const SampleSalesTargetID = "ta_0139fc283170d6e226c81719af"
 
-// Sales target for an account user.
+// A revenue goal assigned to a sales rep for a specific time period.
 type SalesTarget struct {
 	// Sales target ID.
 	ID string `json:"id" validate:"required"`
@@ -20,9 +20,9 @@ type SalesTarget struct {
 	StartAt time.Time `json:"start_at" validate:"required"`
 	// End of the period this target applies to (e.g. the close of a quarter).
 	EndAt time.Time `json:"end_at" validate:"required"`
-	// Sales representative the target is assigned to.
+	// Sales rep (account user) this target is assigned to.
 	//
-	// Expandable: by default only the user reference is returned; request the full user object via `include[]=sales_rep`.
+	// Returned as a reference with only the `id` populated.
 	SalesRep *User `json:"sales_rep" expandable:"true"`
 	// Goal amount the representative is expected to reach over the period, expressed as a monetary quantity.
 	Amount *Quantity `json:"amount" validate:"required"`

@@ -15,7 +15,9 @@ type GetItemCostsRequest struct {
 	ItemID string `path:"id" validate:"required"`
 }
 
-// Returns the production cost breakdown for an item, including direct material, direct labor, overhead, and total costs.
+// Returns the per-unit production cost breakdown for an item, including direct material, direct labor, overhead, and total costs.
+//
+// Costs are computed from the production flow that produces the item; items not produced by any production flow return a not-found error. As a side effect, the item's `unit_cost` rate is refreshed to the computed total.
 type GetItemCostsEndpoint struct{}
 
 func (e *GetItemCostsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetItemCostsRequest, *apiresource.ItemCosts] {

@@ -24,8 +24,8 @@ type UpdateAccountGroupRequest struct {
 	Description field.Clearable[string] `json:"description,omitzero"`
 	// How sales commission applies to accounts in this group.
 	//
-	// - `commission_exempt`: no commission applies.
-	// - `commission_applied`: commission applies; if the account group is within a sales rep's territory, it will be assigned to that rep unless overridden.
+	// - `commission_applied`: sales commission is calculated on orders from accounts in this group.
+	// - `commission_exempt`: orders from accounts in this group are exempt from commission.
 	CommissionPolicy field.Optional[constants.CommissionPolicy] `json:"commission_policy,omitzero"`
 	// How freight charges apply to orders from accounts in this group.
 	//

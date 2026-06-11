@@ -9,12 +9,12 @@ import (
 )
 
 // ProductionFlow is the production flow graph for an item.
+//
+// Contains the step(s) that produce the item, every upstream step that feeds them, and any connected downstream steps.
 type ProductionFlow struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=production_flow"`
-	// Steps in the production flow graph.
-	//
-	// Expandable via include[]=steps.
+	// Steps in the production flow graph, with the item's producing step(s) listed first.
 	Steps *List[ProductionFlowStep] `json:"steps" expandable:"true"`
 }
 
@@ -28,43 +28,33 @@ type ProductionFlowStep struct {
 	Name string `json:"name" validate:"required"`
 	// Notes.
 	Notes *string `json:"notes"`
-	// Production output for this step.
-	//
-	// Expandable via include[]=steps.production.
+	// The item and quantity this step produces.
 	Production *ProductionFlowProduction `json:"production" expandable:"true"`
-	// Consumptions (inputs) for this step.
-	//
-	// Expandable via include[]=steps.consumptions.
+	// Materials this step consumes as inputs, with their quantities and expected waste.
 	Consumptions *List[ProductionFlowConsumption] `json:"consumptions" expandable:"true"`
 	// Steps that feed into this step.
-	//
-	// Expandable via include[]=steps.in_steps.
 	InSteps *List[ProductionStep] `json:"in_steps" expandable:"true"`
 	// Steps that this step feeds into.
-	//
-	// Expandable via include[]=steps.out_steps.
 	OutSteps *List[ProductionStep] `json:"out_steps" expandable:"true"`
 	// Machines assigned to this step.
-	//
-	// Expandable via include[]=steps.machines.
 	Machines *List[Machine] `json:"machines" expandable:"true"`
-	// Department for this step.
-	//
-	// Expandable via include[]=steps.department.
+	// Department responsible for this step.
 	Department *Department `json:"department" expandable:"true"`
-	// Scanning station, if assigned.
-	//
-	// Expandable via include[]=steps.scanning_station.
+	// Scanning station where this step's batches are scanned.
 	ScanningStation *ScanningStation `json:"scanning_station" expandable:"true"`
-	// Leveling factor as a decimal string.
+	// Leveling correction factor applied to labor time in cost calculations, as a decimal string.
+	//
+	// Effective labor time per unit is `labor_time × (1 + leveling_factor) × (1 + allowances)`.
 	LevelingFactor string `json:"leveling_factor" validate:"required" format:"decimal"`
-	// Allowances as a decimal string.
+	// Allowance correction factor applied to labor time in cost calculations, as a decimal string.
+	//
+	// Effective labor time per unit is `labor_time × (1 + leveling_factor) × (1 + allowances)`.
 	Allowances string `json:"allowances" validate:"required" format:"decimal"`
-	// Cost of labor for this step, expressed as a rate (e.g. currency per unit of output).
+	// Cost of labor for this step, expressed as a rate of currency per unit of time (e.g. `$` per `hr`).
 	LaborRate *Rate `json:"labor_rate"`
 	// Labor duration for this step, expressed as a rate (e.g. time per unit of output).
 	LaborTime *Rate `json:"labor_time"`
-	// Overhead cost for this step, expressed as a rate (e.g. currency per unit of output).
+	// Overhead cost for this step, expressed as a rate of currency per unit of time (e.g. `$` per `hr`).
 	OverheadRate *Rate `json:"overhead_rate"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -78,11 +68,9 @@ type ProductionFlowProduction struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=production"`
-	// Produced item.
-	//
-	// Expandable via include[]=produced_item.
+	// Item produced by the step.
 	ProducedItem *Item `json:"produced_item" expandable:"true"`
-	// Produced quantity.
+	// Quantity of the item this step produces.
 	Quantity *Quantity `json:"quantity" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -96,9 +84,7 @@ type ProductionFlowConsumption struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=consumption"`
-	// Consumed item.
-	//
-	// Expandable via include[]=consumed_item.
+	// Item consumed by the step.
 	ConsumedItem *Item `json:"consumed_item" expandable:"true"`
 	// Quantity of the item consumed by this step.
 	Quantity *Quantity `json:"quantity" validate:"required"`

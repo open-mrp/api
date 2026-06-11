@@ -10,6 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
+// Request to list the tools available to agents.
 type ListToolsRequest struct {
 	apiresource.PaginationRequest
 }

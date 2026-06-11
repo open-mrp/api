@@ -15,15 +15,17 @@ const SampleRegistrationFlowOptionName = "Standard Option"
 
 // Selectable option within a registration flow.
 type RegistrationFlowOption struct {
-	// Registration flow option ID.
+	// ID of the underlying customer group, payment term, or shipping term this option refers to.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=registration_flow_option"`
-	// Display name.
+	// Display name of the underlying customer group, payment term, or shipping term.
 	Name string `json:"name" validate:"required"`
 }
 
-// Registration flow for customer onboarding.
+// Configuration for customer self-registration.
+//
+// A registration flow defines which customer groups, payment terms, and shipping terms a customer can choose from when registering with your account.
 type RegistrationFlow struct {
 	// Registration flow ID.
 	ID string `json:"id" validate:"required"`
@@ -31,11 +33,11 @@ type RegistrationFlow struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=registration_flow"`
 	// Display name.
 	Name string `json:"name" validate:"required"`
-	// Customer group options available in this flow.
+	// Customer groups a registering customer can be placed into.
 	CustomerGroupOptions *List[RegistrationFlowOption] `json:"customer_group_options" validate:"required"`
-	// Payment term options available in this flow.
+	// Payment terms a registering customer can choose from.
 	PaymentTermOptions *List[RegistrationFlowOption] `json:"payment_term_options" validate:"required"`
-	// Shipping term options available in this flow.
+	// Shipping terms a registering customer can choose from.
 	ShippingTermOptions *List[RegistrationFlowOption] `json:"shipping_term_options" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

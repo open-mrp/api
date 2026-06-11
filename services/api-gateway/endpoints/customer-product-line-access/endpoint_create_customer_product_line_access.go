@@ -13,9 +13,9 @@ import (
 
 // Request to create product line access for a customer.
 type CreateCustomerProductLineAccessRequest struct {
-	// Customer ID.
+	// ID of the customer to grant product line access to.
 	CustomerID string `json:"customer_id" validate:"required"`
-	// Product line IDs to grant access to.
+	// IDs of the product lines the customer can access.
 	ProductLineIDs []string `json:"product_line_ids" validate:"required"`
 }
 
@@ -28,7 +28,9 @@ func (*CreateCustomerProductLineAccessRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateCustomerProductLineAccessRequest)
 }
 
-// Creates product line access for a customer.
+// Grants a customer direct access to a set of product lines.
+//
+// Each customer can have at most one access record; fails with a conflict error if one already exists. Use Update Customer Product Line Access to change an existing record.
 type CreateCustomerProductLineAccessEndpoint struct{}
 
 func (e *CreateCustomerProductLineAccessEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateCustomerProductLineAccessRequest, *apiresource.CustomerProductLineAccess] {

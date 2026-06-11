@@ -16,9 +16,11 @@ import (
 type UpdatePickRequest struct {
 	// Pick ID.
 	PickID string `path:"id" validate:"required"`
-	// Pick number.
+	// New number to assign to the pick.
 	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
-	// Timestamp when the pick was finished. Pass an empty string to clear.
+	// Timestamp when the pick was finished, in RFC 3339 format.
+	//
+	// Pass an empty string to clear the value and reopen the pick.
 	FinishedAt field.Optional[string] `json:"finished_at,omitzero"`
 }
 

@@ -16,7 +16,9 @@ type RetrieveAccountBySlugRequest struct {
 	Slug string `path:"slug" validate:"required"`
 }
 
-// Returns a public account by portal slug. Unauthenticated.
+// Returns a minimal public profile for the account that owns the given portal slug.
+//
+// This endpoint does not require authentication; it is intended for customer portal branding lookups.
 type RetrieveAccountBySlugEndpoint struct{}
 
 func (e *RetrieveAccountBySlugEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAccountBySlugRequest, *apiresource.PublicAccount] {

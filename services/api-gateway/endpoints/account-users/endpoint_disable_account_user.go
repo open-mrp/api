@@ -15,7 +15,9 @@ type DisableAccountUserRequest struct {
 	AccountUserID string `path:"id" validate:"required"`
 }
 
-// Disables an account user. Disabled users will not be able to access the target account.
+// Disables (locks) an account user.
+//
+// Disabled users cannot access the target account and their active sessions are revoked. Admin users cannot be disabled, you cannot disable yourself, and removed users must be activated before they can be disabled.
 type DisableAccountUserEndpoint struct{}
 
 func (e *DisableAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*DisableAccountUserRequest, *apiresource.EmptyResource] {

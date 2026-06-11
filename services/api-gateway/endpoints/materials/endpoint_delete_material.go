@@ -11,11 +11,13 @@ import (
 
 // Request to delete a material.
 type DeleteMaterialRequest struct {
-	// Material ID.
+	// ID of the material to delete.
 	ItemID string `path:"id" validate:"required"`
 }
 
-// Deletes a material by ID.
+// Deletes a material.
+//
+// This is a soft delete: the material is marked deleted and no longer returned by other endpoints, but the record is retained. Deleting an already-deleted material returns an error.
 type DeleteMaterialEndpoint struct{}
 
 func (e *DeleteMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteMaterialRequest, *apiresource.Material] {

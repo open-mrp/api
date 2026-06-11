@@ -15,7 +15,7 @@ type DeleteRoleRequest struct {
 	RoleID string `path:"id" validate:"required"`
 }
 
-// Deletes a role and its associated permissions. Global roles cannot be deleted.
+// Deletes a role and its associated permissions. Global roles and roles currently assigned to one or more users cannot be deleted.
 type DeleteRoleEndpoint struct{}
 
 func (e *DeleteRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteRoleRequest, *apiresource.EmptyResource] {

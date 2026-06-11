@@ -13,11 +13,13 @@ import (
 type GetItemTrendsRequest struct {
 	// Item ID.
 	ItemID string `path:"id" validate:"required"`
-	// Trend type (e.g. "on_hand", "cost").
+	// The trend metric to fetch.
+	//
+	// Currently the only supported value is `inventory`, which returns the item's inventory-level measurements from the last 30 days. Unsupported values are rejected with a validation error.
 	TrendType string `query:"trend_type" validate:"required"`
 }
 
-// Returns historical trend data for an item for the specified metric.
+// Returns historical trend data for an item as a time-ordered series of data points.
 type GetItemTrendsEndpoint struct{}
 
 func (e *GetItemTrendsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetItemTrendsRequest, *apiresource.ItemTrends] {

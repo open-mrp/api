@@ -18,11 +18,17 @@ type UpdateProductionRequest struct {
 	ProductionStepID string `path:"production_step_id" validate:"required"`
 	// Production ID.
 	ProductionID string `path:"id" validate:"required"`
-	// Item ID.
+	// New produced item ID.
+	//
+	// Changing the item re-links the step's connections in the production flow graph.
 	ItemID field.Optional[string] `json:"item_id,omitzero" validate:"omitempty"`
 	// Quantity value as a decimal string.
+	//
+	// Ignored unless `quantity_unit_id` is also provided.
 	QuantityValue field.Optional[string] `json:"quantity_value,omitzero"`
-	// Quantity unit ID.
+	// Unit ID for `quantity_value`.
+	//
+	// Ignored unless `quantity_value` is also provided.
 	QuantityUnitID field.Optional[string] `json:"quantity_unit_id,omitzero" validate:"omitempty"`
 }
 

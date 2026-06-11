@@ -17,6 +17,8 @@ type PickAllLinesRequest struct {
 }
 
 // Marks all lines on a pick as picked.
+//
+// Sets each unpacked line's picked quantity to the quantity still outstanding on its sales order line. Lines that have already been packed are unaffected.
 type PickAllLinesEndpoint struct{}
 
 func (e *PickAllLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*PickAllLinesRequest, *apiresource.Pick] {

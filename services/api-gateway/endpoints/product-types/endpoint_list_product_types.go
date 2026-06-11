@@ -15,7 +15,9 @@ type ListProductTypesRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of product types. Product types are global and not scoped to a specific account.
+// Returns a paginated list of product types.
+//
+// Product types are global and not scoped to a specific account.
 type ListProductTypesEndpoint struct{}
 
 func (e *ListProductTypesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListProductTypesRequest, *apiresource.List[apiresource.ProductType]] {

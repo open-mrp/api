@@ -16,7 +16,7 @@ type RetrieveRoleRequest struct {
 	RoleID string `path:"id" validate:"required"`
 }
 
-// Returns a role by ID, including its structured permissions.
+// Returns a role by ID, including its permissions.
 type RetrieveRoleEndpoint struct{}
 
 func (e *RetrieveRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveRoleRequest, *apiresource.Role] {

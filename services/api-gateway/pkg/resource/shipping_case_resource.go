@@ -10,7 +10,9 @@ import (
 
 const SampleShippingCaseID = "shcs_01207a101ea1475c687a39cf76"
 
-// Physical shipping case within a shipment.
+// A physical case packed within a shipment.
+//
+// Each case carries its own SSCC, carrier tracking number, shipping label, and freight cost and weight.
 type ShippingCase struct {
 	// Shipping case ID.
 	ID string `json:"id" validate:"required"`
@@ -19,18 +21,20 @@ type ShippingCase struct {
 	// Human-readable case number.
 	Number string `json:"number" validate:"required"`
 	// Serial Shipping Container Code.
+	//
+	// A GS1 SSCC-18 identifier assigned automatically when the shipment ships.
 	SSCC *string `json:"sscc"`
 	// Carrier tracking number.
 	TrackingNumber *string `json:"tracking_number"`
-	// Shipped timestamp.
+	// When the case shipped.
 	ShippedAt *time.Time `json:"shipped_at"`
-	// Freight amount.
+	// Freight cost charged for this case.
 	FreightAmount *Quantity `json:"freight_amount" expandable:"true"`
-	// Freight weight.
+	// Shipping weight of this case.
 	FreightWeight *Quantity `json:"freight_weight" expandable:"true"`
-	// Associated shipment.
+	// The shipment this case belongs to.
 	Shipment *Shipment `json:"shipment" expandable:"true"`
-	// Carrier.
+	// The carrier transporting this case.
 	Carrier *Carrier `json:"carrier" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -38,11 +42,13 @@ type ShippingCase struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-// Shipping case label URL.
+// Presigned link to a shipping case's label image.
 type ShippingCaseLabelURL struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=shipping_case_label_url"`
-	// Presigned label URL, or null if no label exists.
+	// Presigned link to the shipping case's label image.
+	//
+	// The URL expires one hour after it is issued.
 	URL *string `json:"url"`
 }
 

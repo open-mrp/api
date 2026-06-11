@@ -18,7 +18,7 @@ const SampleRequestLogClientIP = "198.51.100.7"
 const SampleRequestLogUserAgent = "Mozilla/5.0"
 const SampleRequestLogResponseBody = `{"object":"list","page_info":{"next_page_url":null,"previous_page_url":null,"has_next_page":false,"has_prev_page":false},"data":[]}`
 
-// RequestLog is an API request log entry.
+// A log of a single API request, capturing its route, outcome, latency, and actor.
 type RequestLog struct {
 	// Request log ID.
 	ID string `json:"id" validate:"required"`
@@ -32,15 +32,13 @@ type RequestLog struct {
 	Host string `json:"host" validate:"required"`
 	// Non-normalized request path.
 	Path string `json:"path" validate:"required"`
-	// _Normalized_ route template.
+	// The route template the request matched, with path parameters left as placeholders.
 	//
-	// For example `PATCH /v1/sales/customers/{id}` is the normalized route for a request route `PUT /v1/sales/customers/ac_...`.
+	// For example `/v1/sales/customers/{id}` is the normalized route for the request path `/v1/sales/customers/ac_...`. Falls back to the raw path when the request did not match a registered route.
 	NormalizedRoute string `json:"normalized_route" validate:"required"`
 	// Query parameters.
 	QueryJSON json.RawMessage `json:"query_params" expandable:"true"`
-	// HTTP status code.
-	//
-	// Exception to the `status` naming convention: this is a numeric HTTP response code (200/404/…), not a domain lifecycle status enum, so the `_code` suffix is meaningful.
+	// HTTP response status code (e.g. `200`, `404`).
 	StatusCode int32 `json:"status_code" validate:"required"`
 	// Request latency in microseconds.
 	LatencyUs int64 `json:"latency_us" validate:"required"`
@@ -54,11 +52,11 @@ type RequestLog struct {
 	Referrer *string `json:"referrer"`
 	// Machine-readable API error code.
 	//
-	// Populated only for failed requests; `null` on success.
+	// Populated only for failed requests.
 	ErrorCode *string `json:"error_code"`
 	// Human-readable error message.
 	//
-	// Populated only for failed requests; `null` on success.
+	// Populated only for failed requests.
 	ErrorMessage *string `json:"error_message"`
 	// When the request occurred.
 	OccurredAt time.Time `json:"occurred_at" validate:"required"`

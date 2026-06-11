@@ -15,7 +15,9 @@ type DeleteCustomerRequest struct {
 	CustomerID string `path:"id" validate:"required"`
 }
 
-// Deletes a customer and associated account relations, addresses, and account users.
+// Deletes a customer.
+//
+// Fails with a conflict error if any sales orders still reference the customer; delete or reassign those orders, or merge the customer into another first.
 type DeleteCustomerEndpoint struct{}
 
 func (e *DeleteCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteCustomerRequest, *apiresource.EmptyResource] {

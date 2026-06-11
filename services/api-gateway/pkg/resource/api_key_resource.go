@@ -19,7 +19,7 @@ const SampleTestAPIKeyValue = "aug_sk_test_RhxFDvTdDnb0bgtcoA5P79_60EmH4h9j9Zlds
 // #nosec G101 - This is sample data for API documentation, not a real credential
 const SampleProdAPIKeyValue = "aug_sk_prod_RhxFDvTdDnb0bgtcoA5P79_60EmH4h9j9ZldsuU9XyngXlpu8NqdIlGTQw8OM8cGeCadyhjtr"
 
-// API key resource.
+// An API key used to authenticate requests to the Augno API.
 type APIKey struct {
 	// API key ID.
 	ID string `json:"id" validate:"required"`
@@ -28,6 +28,8 @@ type APIKey struct {
 	// Human-readable name for the API key.
 	Name string `json:"name" validate:"required"`
 	// Redacted key value safe for display.
+	//
+	// The key's prefix followed by its last four characters, e.g. `aug_sk_prod_****hjt4`.
 	RedactedValue string `json:"redacted_value" validate:"required"`
 	// Role assigned to the key, which determines the permissions of requests made with it.
 	Role *Role `json:"role" expandable:"true"`
@@ -37,15 +39,15 @@ type APIKey struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 	// When the key was last used to authenticate a request.
 	//
-	// `null` if it has never been used.
+	// Updated at most once every 24 hours, so it may lag the key's most recent use. `null` if the key has never been used.
 	LastUsedAt *time.Time `json:"last_used_at"`
 	// When the key expires and stops authenticating.
 	//
 	// `null` if the key never expires.
 	ExpiresAt *time.Time `json:"expires_at"`
-	// When the key was revoked.
+	// When the key's revocation takes effect.
 	//
-	// `null` if the key has not been revoked.
+	// A future timestamp means revocation was scheduled (for example, during rotation) and the key continues to authenticate requests until that time. `null` if the key has not been revoked.
 	RevokedAt *time.Time `json:"revoked_at"`
 }
 

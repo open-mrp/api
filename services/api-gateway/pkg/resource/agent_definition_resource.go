@@ -8,19 +8,21 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-// Agent definition resource.
+// An AI agent available to the account.
+//
+// The definition describes what the agent does, how its runs are triggered, the tools it can use, and whether it is currently enabled for the account.
 type AgentDefinition struct {
 	// Agent definition ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=agent_definition"`
-	// Display name.
+	// Human-readable name of the agent.
 	Name string `json:"name" validate:"required"`
-	// URL-friendly slug.
+	// URL-friendly identifier for the agent.
 	Slug string `json:"slug" validate:"required"`
 	// Description of what the agent does.
 	Description *string `json:"description"`
-	// Agent definition type.
+	// Whether the agent is provided by Augno or created in this account.
 	//
 	// - `system`: provided by Augno; cannot be edited or deleted.
 	// - `custom`: created by a user in this account.
@@ -37,16 +39,15 @@ type AgentDefinition struct {
 	//
 	// Always `false` for `system` definitions.
 	IsEditable bool `json:"is_editable"`
-	// Role defining agent permissions.
+	// Role defining the permissions the agent operates with.
 	Role *Role `json:"role" expandable:"true"`
-	// Agent configuration.
+	// Agent-level configuration controlling LLM behavior and trigger settings.
 	Config *AgentDefinitionConfig `json:"config" expandable:"true"`
 	// Tools attached to this agent.
 	Tools *List[AgentDefinitionTool] `json:"tools" expandable:"true"`
 	// Whether this agent is enabled for the current account.
 	//
-	// - `active`: enabled and able to run for this account.
-	// - `inactive`: disabled for this account; will not run.
+	// Activation is per-account: a `system` agent shared across accounts can be `active` for one account and `inactive` for another. An `inactive` agent does not run.
 	AccountStatus constants.AgentAccountStatus `json:"status" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

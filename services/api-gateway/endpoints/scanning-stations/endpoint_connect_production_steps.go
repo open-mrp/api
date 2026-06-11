@@ -14,7 +14,9 @@ import (
 type ConnectProductionStepsRequest struct {
 	// Scanning station ID.
 	ScanningStationID string `path:"id" validate:"required"`
-	// Name or partial name of production steps to connect.
+	// Full or partial production step name to match.
+	//
+	// Every production step in your account whose name contains this value is connected to the station.
 	Name string `json:"name" validate:"required"`
 }
 
@@ -26,7 +28,9 @@ func (*ConnectProductionStepsRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleConnectProductionStepsRequest)
 }
 
-// Connects production steps matching the provided name to a scanning station.
+// Connects production steps to a scanning station by name.
+//
+// Every production step whose name contains the provided value is connected. A production step can be connected to at most one scanning station, so matching steps are moved from any station they were previously connected to.
 type ConnectProductionStepsEndpoint struct{}
 
 func (e *ConnectProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ConnectProductionStepsRequest, *apiresource.EmptyResource] {

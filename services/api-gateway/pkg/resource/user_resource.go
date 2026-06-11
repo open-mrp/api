@@ -16,31 +16,23 @@ const SampleUserImageUrl = "https://cdn.augno.com/avatars/us_0151164dcaea4cbded2
 const SampleUserPassword = "QgS7Z8Hhj3&1"     // #nosec G101 -- sample data for API docs
 const SampleNewUserPassword = "50iR2X0r@bvIH" // #nosec G101 -- sample data for API docs
 
-// User resource.
+// A user's global profile, shared across every account they belong to.
+//
+// Account-specific settings (status, role, department) live on the account user resource that links the user to each account.
 type User struct {
 	// User ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=user"`
 	// Email address.
-	//
-	// `null` if the user has no email on record.
 	Email *string `json:"email"`
 	// User's full display name.
-	//
-	// `null` if not set.
 	Name *string `json:"name"`
 	// Username.
-	//
-	// `null` if the user has no username.
 	Username *string `json:"username"`
 	// When the user verified their email address.
-	//
-	// `null` if the email is unverified.
 	EmailVerifiedAt *time.Time `json:"email_verified_at"`
 	// URL of the user's profile image.
-	//
-	// `null` if no image has been uploaded.
 	ImageUrl *string `json:"image_url"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -68,7 +60,7 @@ func (*User) SchemaExample() any {
 type UserPhotoUploadResult struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=user_photo_upload_result"`
-	// Upload success status.
+	// Whether the photo was uploaded successfully.
 	Success bool `json:"success"`
 }
 
@@ -85,7 +77,9 @@ func (*UserPhotoUploadResult) SchemaExample() any {
 type UserPhotoURL struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=user_photo_url"`
-	// Presigned URL for the profile photo, or null if no photo exists.
+	// Presigned URL for the profile photo.
+	//
+	// The URL is valid for one hour after it is issued.
 	URL *string `json:"url"`
 }
 

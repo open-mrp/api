@@ -19,6 +19,8 @@ type VoidPickLineRequest struct {
 }
 
 // Voids a pick line.
+//
+// Resets the line's picked quantity to zero. Fails if the line has already been packed.
 type VoidPickLineEndpoint struct{}
 
 func (e *VoidPickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*VoidPickLineRequest, *apiresource.PickLine] {

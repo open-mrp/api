@@ -13,15 +13,19 @@ import (
 // Request to list deliveries.
 type ListDeliveriesRequest struct {
 	apiresource.PaginationRequest
-	// Filter by status: all, accepted, or rejected. Defaults to accepted.
+	// Filter by delivery status.
+	//
+	// When omitted, only accepted deliveries are returned; rejected deliveries are hidden unless you opt in.
+	//
+	// - `all`: deliveries of any status, including rejected.
 	Status *string `query:"status" default:"accepted" validate:"omitempty,oneof=all accepted rejected"`
-	// Filter by item IDs present in delivery lines.
+	// Filter to deliveries with at least one line for any of the given item IDs.
 	ItemIDs []string `query:"item_ids"`
-	// Filter by supplier account IDs.
+	// Filter to deliveries whose purchase order is with any of the given supplier account IDs.
 	SupplierIDs []string `query:"supplier_ids"`
-	// Filter by start date (inclusive).
+	// Only include deliveries created on or after this date (`YYYY-MM-DD`).
 	StartDate *string `query:"start_date"`
-	// Filter by end date (inclusive).
+	// Only include deliveries created on or before this date (`YYYY-MM-DD`).
 	EndDate *string `query:"end_date"`
 }
 

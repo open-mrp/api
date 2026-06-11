@@ -11,7 +11,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListRequestLogsRequest is a request to list request logs.
+// Request to list request logs.
 type ListRequestLogsRequest struct {
 	apiresource.PaginationRequest
 	// Restricts results to request logs on or after this timestamp.
@@ -22,8 +22,9 @@ type ListRequestLogsRequest struct {
 	Methods []constants.HTTPMethod `query:"methods"`
 	// Filter by the HTTP status code.
 	StatusCodes []int32 `query:"status_codes"`
-	// Filter by the HTTP status class: 1–5 for 1xx–5xx. Combined with `status_codes`
-	// using OR — e.g. status_codes=401 and status_code_classes=5 matches 401 and any 5xx.
+	// Filter by the HTTP status class, expressed as the leading digit: `1`–`5` for 1xx–5xx.
+	//
+	// Combined with `status_codes` using OR — e.g. `status_codes=401` and `status_code_classes=5` matches 401 responses and any 5xx response.
 	StatusCodeClasses []int32 `query:"status_code_classes"`
 	// Filter by API error code.
 	ErrorCodes []apierror.ErrorCode `query:"error_codes"`
@@ -33,23 +34,25 @@ type ListRequestLogsRequest struct {
 	AccountIDs []string `query:"account_ids"`
 	// Filter by the actor identifier.
 	//
-	// This is the `user.id` when `identity_type`=`user` and an `api_key.id` when `identity_type`=`api_key`.
+	// Matches the log's `actor.id`: a user ID for `user` actors or an API key ID for `api_key` actors.
 	ActorIDs []string `query:"actor_ids"`
 	// Filter by the actor type.
 	ActorTypes []constants.ActorType `query:"actor_types"`
 	// Filter by the _normalized_ route template.
 	//
-	// For example `PATCH /v1/sales/customers/{id}` is the normalized route for a request route `PUT /v1/sales/customers/ac_...`.
+	// For example `/v1/sales/customers/{id}` matches every request to that route regardless of the specific customer ID. Parameter names inside `{}` are ignored when matching, so `{customer_id}` and `{id}` are equivalent.
 	NormalizedRoutes []string `query:"normalized_routes"`
-	// Filter by the request host. Typically, `api.augno.com`.
+	// Filter by the request host.
+	//
+	// Typically `api.augno.com`.
 	Hosts []string `query:"hosts"`
-	// Filter by the minimum latency in microseconds.
+	// Restricts results to requests that took at least this many microseconds.
 	MinLatencyUs *int64 `query:"min_latency_us"`
 	// Filter by the user-provided idempotency key.
 	IdempotencyKey *string `query:"idempotency_key"`
 }
 
-// Returns a paginated list of request logs.
+// Returns a paginated list of request logs for the current account.
 type ListRequestLogsEndpoint struct{}
 
 func (e *ListRequestLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRequestLogsRequest, *apiresource.List[apiresource.RequestLog]] {

@@ -12,8 +12,9 @@ import (
 // GetPickShipmentsRequest is the request to get shipments for a pick.
 type GetPickShipmentsRequest struct {
 	// Pick ID.
-	PickID string  `path:"id" validate:"required"`
-	Query  *string `query:"q"`
+	PickID string `path:"id" validate:"required"`
+	// Search query that filters shipment numbers by substring match.
+	Query *string `query:"q"`
 	// Maximum number of results to return.
 	Limit *int32 `query:"limit"`
 	// Number of results to skip.
@@ -21,6 +22,8 @@ type GetPickShipmentsRequest struct {
 }
 
 // Returns the shipment numbers associated with a pick.
+//
+// Shipments are matched through the pick's sales order, so the list covers every shipment created for that order.
 type GetPickShipmentsEndpoint struct{}
 
 func (e *GetPickShipmentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetPickShipmentsRequest, *apiresource.PickShipmentsResponse] {

@@ -17,7 +17,7 @@ type Owner struct {
 	Type constants.OwnerType `json:"type" validate:"required"`
 	// The account that owns this resource.
 	//
-	// `null` when `type` is `system`.
+	// Present only when `type` is `account`; system-owned resources have no owning account.
 	Account *Account `json:"account" expandable:"true"`
 }
 

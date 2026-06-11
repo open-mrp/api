@@ -11,7 +11,7 @@ import (
 const SampleCRUDAddressID = "ad_012100950cfaa34aa0e0ad7258"
 const SampleGeolocationID = "gl_013e4c26412103c6757ba71806"
 
-// Geolocation sub-resource.
+// The street-level location details of an address.
 type Geolocation struct {
 	// Geolocation ID.
 	ID string `json:"id" validate:"required"`
@@ -31,7 +31,7 @@ type Geolocation struct {
 	Country string `json:"country" validate:"required"`
 }
 
-// Address with associated geolocation.
+// A saved address that can be used for billing and shipping on sales orders, invoices, and shipments.
 type Address struct {
 	// Address ID.
 	ID string `json:"id" validate:"required"`

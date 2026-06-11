@@ -15,7 +15,9 @@ type GetBatchFlowRequest struct {
 	BatchID string `path:"id" validate:"required"`
 }
 
-// Returns the production flow graph for a batch, including all input and output batch relationships.
+// Returns the full production flow graph containing a batch.
+//
+// The flow is every batch connected to the given batch through input/output relationships, in both directions, returned as nodes with their input and output edges.
 type GetBatchFlowEndpoint struct{}
 
 func (e *GetBatchFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetBatchFlowRequest, *apiresource.List[apiresource.BatchFlowNode]] {

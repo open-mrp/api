@@ -15,7 +15,9 @@ type DeleteTransactionAllocationRequest struct {
 	AllocationID string `path:"id" validate:"required"`
 }
 
-// Deletes a transaction allocation.
+// Deletes a transaction allocation, making the allocated amount available again as open credit.
+//
+// The parent transaction's `is_fully_allocated` flag is not recomputed automatically; update the transaction separately if needed.
 type DeleteTransactionAllocationEndpoint struct{}
 
 func (e *DeleteTransactionAllocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteTransactionAllocationRequest, *apiresource.EmptyResource] {

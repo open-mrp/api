@@ -27,7 +27,9 @@ func (*ConnectStepsRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleConnectStepsRequest)
 }
 
-// Connects two production steps in the production flow DAG. The source step becomes an upstream dependency of the target step.
+// Connects two production steps in the production flow DAG.
+//
+// The source step becomes an upstream dependency of the target step; connecting an already-connected pair has no effect. Connections are also maintained automatically from item relationships, so manual connections may be rebuilt when a step's produced or consumed items change.
 type ConnectStepsEndpoint struct{}
 
 func (e *ConnectStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ConnectStepsRequest, *apiresource.EmptyResource] {

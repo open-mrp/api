@@ -9,7 +9,9 @@ import (
 type PlanChangeProration struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=plan_change_proration"`
-	// Net amount in cents.
+	// Net amount due in cents for the plan change, after proration.
+	//
+	// A negative value indicates a credit to the account.
 	NetAmount int64 `json:"net_amount"`
 	// Formatted net amount for display (e.g., "$49.00").
 	FormattedNetAmount string `json:"formatted_net_amount" validate:"required"`
@@ -20,6 +22,8 @@ type PlanChangeProration struct {
 	// Detailed line items from the cost preview.
 	LineItems *List[PlanChangeLineItem] `json:"line_items"`
 	// Whether the amounts are locally estimated rather than calculated by Stripe.
+	//
+	// When `true`, the amounts are approximations and the final charge may differ.
 	IsEstimate bool `json:"is_estimate"`
 }
 

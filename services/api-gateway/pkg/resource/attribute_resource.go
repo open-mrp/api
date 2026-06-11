@@ -11,7 +11,9 @@ import (
 const SampleAttributeID = "at_01c9493ec0c46bb0ed12708ae4"
 const SampleAttributeValue = "Premium"
 
-// Value option within a property.
+// A selectable value within a property, such as `Red` for a `Color` property.
+//
+// Attributes are assigned to items to classify them.
 type Attribute struct {
 	// Attribute ID.
 	ID string `json:"id" validate:"required"`
@@ -21,13 +23,15 @@ type Attribute struct {
 	Value string `json:"value" validate:"required"`
 	// Swatch color used to display this attribute in the UI.
 	//
-	// One of `blue`, `brown`, `gray`, `green`, `orange`, `pink`, `purple`, `red`, `yellow`, or `default` (a neutral fallback color).
+	// The named colors are arbitrary display choices; `default` is a neutral fallback used when no specific swatch applies.
 	ColorCode constants.Color `json:"color" validate:"required"`
-	// Position of this attribute relative to its siblings within the property, ascending.
+	// Position of this attribute relative to its siblings within the property, starting at `1`.
 	//
-	// Lower values sort first.
+	// Positions are kept contiguous: creating, reordering, or deleting an attribute automatically shifts its siblings.
 	SortOrder int32 `json:"sort_order"`
-	// Property this attribute belongs to (set when the attribute is returned under item.attributes).
+	// The property this attribute belongs to.
+	//
+	// Populated only when the attribute is returned under an item's `attributes` list.
 	Property *Property `json:"property"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

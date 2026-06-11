@@ -16,15 +16,19 @@ import (
 type CreateTerritoryRequest struct {
 	// Account ID.
 	AccountID string `path:"account_id" validate:"required"`
-	// State this territory covers.
+	// State this territory covers (e.g. `NY`).
 	State string `json:"state" validate:"required,max=255"`
-	// Start of ZIP code range (501-99999).
+	// Inclusive start of the ZIP code range this territory covers (`501`-`99999`).
+	//
+	// Omit both ZIP code fields to cover the entire state.
 	StartZipcode field.Optional[int32] `json:"start_zipcode,omitzero"`
-	// End of ZIP code range (501-99999).
+	// Inclusive end of the ZIP code range this territory covers (`501`-`99999`).
 	EndZipcode field.Optional[int32] `json:"end_zipcode,omitzero"`
-	// Sales rep (account user) ID.
+	// ID of the account user (sales rep) to assign to this territory.
 	SalesRepID string `json:"sales_rep_id" validate:"required"`
-	// Product line ID.
+	// ID of the product line to scope this territory to.
+	//
+	// Omit to have the territory apply regardless of product line.
 	ProductLineID field.Optional[string] `json:"product_line_id,omitzero" validate:"omitempty"`
 }
 
@@ -42,7 +46,7 @@ func (*CreateTerritoryRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateTerritoryRequest)
 }
 
-// Creates a territory.
+// Creates a territory that assigns a sales rep to a state or ZIP code range.
 type CreateTerritoryEndpoint struct{}
 
 func (e *CreateTerritoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateTerritoryRequest, *apiresource.Territory] {

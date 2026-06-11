@@ -14,17 +14,25 @@ import (
 
 // Request to create or update a sales target.
 type UpsertSalesTargetRequest struct {
-	// Sales rep user ID.
+	// ID of the account user (sales rep) the target is for.
 	SalesRepID string `path:"id" validate:"required"`
-	// Sales target ID.
+	// ID of the sales target to create or update.
+	//
+	// If no target with this ID exists, a new one is created with this ID.
 	TargetID string `path:"target_id" validate:"required"`
-	// Start date.
+	// Start of the period the target applies to (inclusive).
+	//
+	// Only applied when creating a new target; the dates on an existing target are not changed.
 	StartDate time.Time `json:"start_date"`
-	// End date.
+	// End of the period the target applies to.
+	//
+	// Only applied when creating a new target; the dates on an existing target are not changed.
 	EndDate time.Time `json:"end_date"`
-	// Target amount value (decimal string).
+	// Goal amount for the period, as a decimal string (e.g. `75000.00`).
 	AmountValue string `json:"amount_value"`
-	// Amount unit ID.
+	// ID of the unit the amount is denominated in (typically a currency unit).
+	//
+	// Only applied when creating a new target; the unit on an existing target is not changed.
 	AmountUnitID string `json:"amount_unit_id"`
 }
 
@@ -40,6 +48,8 @@ func (*UpsertSalesTargetRequest) SchemaExample() any {
 }
 
 // Creates or updates a sales target by ID.
+//
+// If no target with the given ID exists, one is created with the supplied dates, amount, and unit. If it already exists, only the amount value is updated — the dates and unit are left unchanged.
 type UpsertSalesTargetEndpoint struct{}
 
 func (e *UpsertSalesTargetEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpsertSalesTargetRequest, *apiresource.SalesTarget] {

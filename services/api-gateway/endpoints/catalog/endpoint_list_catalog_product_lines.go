@@ -15,7 +15,9 @@ type ListCatalogProductLinesRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of product lines available in the catalog. Customers only see product lines they have access to.
+// Returns a paginated list of product lines available in the catalog.
+//
+// Customers only see product lines they have access to.
 type ListCatalogProductLinesEndpoint struct{}
 
 func (e *ListCatalogProductLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCatalogProductLinesRequest, *apiresource.List[apiresource.CatalogProductLine]] {

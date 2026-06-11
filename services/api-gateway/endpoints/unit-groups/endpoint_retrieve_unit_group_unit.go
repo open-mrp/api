@@ -10,7 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// RetrieveUnitGroupUnitRequest is a request to retrieve a unit group unit.
+// Request to retrieve an associated unit within a unit group.
 type RetrieveUnitGroupUnitRequest struct {
 	// Unit group ID.
 	UnitGroupID string `path:"unit_group_id" validate:"required"`

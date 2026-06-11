@@ -10,7 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// RetrieveRequestLogRequest is a request to get a request log.
+// Request to retrieve a request log.
 type RetrieveRequestLogRequest struct {
 	// Request log ID.
 	ID string `path:"id" validate:"required"`

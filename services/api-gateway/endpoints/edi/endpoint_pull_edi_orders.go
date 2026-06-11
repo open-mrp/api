@@ -19,7 +19,9 @@ func (*PullEDIOrdersRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(samplePullEDIOrdersRequest)
 }
 
-// Triggers an EDI pull-orders operation, pulling orders from FTP and processing invoices via Stedi.
+// Triggers the target account's EDI pull-orders operation.
+//
+// Returns a confirmation message.
 type PullEDIOrdersEndpoint struct{}
 
 func (e *PullEDIOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*PullEDIOrdersRequest, *apiresource.MessageResource] {

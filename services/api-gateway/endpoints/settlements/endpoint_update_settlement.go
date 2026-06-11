@@ -12,15 +12,19 @@ import (
 	"github.com/augno/api/shared/field"
 )
 
-// UpdateSettlementRequest is the request to update a settlement.
+// Request to partially update a settlement.
 type UpdateSettlementRequest struct {
 	// Settlement ID.
 	SettlementID string `path:"id" validate:"required"`
-	// Settlement number.
+	// New settlement number.
+	//
+	// Must be unique within the account.
 	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
 	// Note for this settlement.
 	Note field.Optional[string] `json:"note,omitzero"`
-	// Responsible user ID.
+	// ID of the user responsible for this settlement.
+	//
+	// Accepts either an account user ID or a user ID; the value is resolved to an account user in the current account.
 	ResponsibleUserID field.Optional[string] `json:"responsible_user_id,omitzero" validate:"omitempty"`
 }
 

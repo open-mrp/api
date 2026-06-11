@@ -15,11 +15,13 @@ import (
 type CheckoutSalesOrderRequest struct {
 	// Sales order ID.
 	SalesOrderID string `path:"id" validate:"required"`
-	// Email for the checkout session.
+	// Email address to send the checkout link to.
+	//
+	// Also set as the customer email on the payment provider's checkout session.
 	Email string `json:"email" validate:"required,email"`
-	// Redirect URL on success.
+	// URL the customer is redirected to after completing the checkout.
 	SuccessURL field.Optional[string] `json:"success_url,omitzero"`
-	// Redirect URL on cancel.
+	// URL the customer is redirected to if they cancel the checkout.
 	CancelURL field.Optional[string] `json:"cancel_url,omitzero"`
 }
 
@@ -27,7 +29,7 @@ type CheckoutSalesOrderRequest struct {
 type CheckoutSalesOrderResponse struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=checkout_sales_order_response"`
-	// Checkout URL.
+	// URL of the hosted payment page where the customer completes the checkout.
 	CheckoutURL string `json:"checkout_url" validate:"required"`
 }
 
@@ -40,7 +42,9 @@ func (*CheckoutSalesOrderResponse) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCheckoutSalesOrderResponse)
 }
 
-// Creates a checkout session for a sales order.
+// Creates a hosted payment checkout session for a sales order.
+//
+// Requires an active Stripe integration on the account. The checkout is built from the order's lines, and the checkout link is emailed to the provided address. Fails with a conflict if the order already has a payment.
 type CheckoutSalesOrderEndpoint struct{}
 
 func (e *CheckoutSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*CheckoutSalesOrderRequest, *CheckoutSalesOrderResponse] {

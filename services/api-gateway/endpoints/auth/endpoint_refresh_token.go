@@ -12,7 +12,7 @@ import (
 
 // Request to refresh an access token.
 type RefreshTokenRequest struct {
-	// Refresh token cookie.
+	// Refresh token, read from the `__Secure-augno.refresh-token` cookie.
 	RefreshToken string `cookie:"__Secure-augno.refresh-token" validate:"required"` // #nosec G117 - Struct field, not a hardcoded credential
 }
 

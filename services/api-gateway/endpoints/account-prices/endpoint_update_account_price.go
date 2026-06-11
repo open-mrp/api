@@ -16,19 +16,23 @@ import (
 type UpdateAccountPriceRequest struct {
 	// Account price ID.
 	AccountPriceID string `path:"id" validate:"required"`
-	// Recipient account ID.
+	// Recipient customer account ID.
 	RecipientAccountID field.Optional[string] `json:"recipient_account_id,omitzero" validate:"omitempty"`
 	// Product line ID.
 	ProductLineID field.Optional[string] `json:"product_line_id,omitzero" validate:"omitempty"`
 	// Rate value as a decimal string.
 	RateValue field.Optional[string] `json:"rate_value,omitzero"`
-	// Rate numerator unit ID.
+	// ID of the unit for the rate's numerator, typically a currency unit.
 	RateNumeratorUnitID field.Optional[string] `json:"rate_numerator_unit_id,omitzero" validate:"omitempty"`
-	// Rate denominator unit ID.
+	// ID of the unit for the rate's denominator — the quantity unit being priced.
 	RateDenominatorUnitID field.Optional[string] `json:"rate_denominator_unit_id,omitzero" validate:"omitempty"`
-	// Item category IDs to constrain this price to. Replaces existing categories.
+	// Item category IDs to constrain this price to.
+	//
+	// When provided, replaces the existing set of categories entirely; an empty list removes all category constraints.
 	CategoryIDs field.Optional[[]string] `json:"category_ids,omitzero"`
-	// Attribute IDs to constrain this price to. Replaces existing attributes.
+	// Attribute IDs to constrain this price to.
+	//
+	// When provided, replaces the existing set of attributes entirely; an empty list removes all attribute constraints.
 	AttributeIDs field.Optional[[]string] `json:"attribute_ids,omitzero"`
 }
 
@@ -40,7 +44,9 @@ func (*UpdateAccountPriceRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateAccountPriceRequest)
 }
 
-// Partially updates an account price. If category_ids or attribute_ids are provided, they replace the existing set entirely.
+// Partially updates an account price.
+//
+// Only the provided fields are changed. If `category_ids` or `attribute_ids` are provided, they replace the existing set entirely.
 type UpdateAccountPriceEndpoint struct{}
 
 func (e *UpdateAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAccountPriceRequest, *apiresource.AccountPrice] {

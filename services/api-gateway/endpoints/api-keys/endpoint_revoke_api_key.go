@@ -17,7 +17,7 @@ type RevokeAPIKeyRequest struct {
 
 // Revokes an [API key](https://docs.augno.com/api/api-keys).
 //
-// Revoked API keys will be unable to be used to authenticate requests.
+// Revocation takes effect immediately and cannot be undone; revoked keys can no longer be used to authenticate requests. To replace a key without losing access, use Rotate API Key instead.
 type RevokeAPIKeyEndpoint struct{}
 
 func (e *RevokeAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RevokeAPIKeyRequest, *apiresource.EmptyResource] {

@@ -5,39 +5,43 @@ import (
 	"github.com/augno/api/shared/constants"
 )
 
-// Agent-level configuration controlling LLM behavior.
+// Agent-level configuration controlling LLM behavior and trigger settings.
 //
-// Separate from AgentDefinitionTool.Config, which configures individual tools.
+// Distinct from per-tool configuration (`tools[].config`), which configures individual tools attached to the agent.
 type AgentDefinitionConfig struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=agent_definition_config"`
 	// System prompt / instructions for the agent.
 	SystemPrompt *string `json:"system_prompt"`
-	// LLM model identifier (e.g. "claude-sonnet-4").
+	// LLM model identifier (e.g. `claude-sonnet-4`).
 	Model *string `json:"model"`
-	// LLM provider name (e.g. "anthropic", "openai").
+	// LLM provider name (e.g. `anthropic`, `openai`).
 	//
-	// Inferred from model if omitted.
+	// Inferred from `model` if omitted.
 	Provider *string `json:"provider"`
 	// LLM sampling temperature between 0 and 1.
 	Temperature *float64 `json:"temperature"`
 	// Trigger-specific configuration.
 	//
-	// Shape depends on the agent's trigger_type.
+	// Shape depends on the agent's `trigger_type`.
 	TriggerConfig *TriggerConfig `json:"trigger_config"`
 }
 
 // Trigger-type-specific configuration.
 //
-// For "scheduled": CronSchedule is populated. For "event": EventFilters is populated. For "manual": all fields are empty.
+// Which fields are populated depends on the agent's `trigger_type`:
+//
+// - `scheduled`: `cron_schedule` (and optionally `timezone`) is set.
+// - `event`: `event_filters` is set.
+// - `manual`: all fields are empty.
 type TriggerConfig struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=trigger_config"`
-	// Cron expression for scheduled triggers (e.g. "0 9 * * *").
+	// Cron expression for scheduled triggers (e.g. `0 9 * * *`).
 	CronSchedule *string `json:"cron_schedule"`
-	// IANA timezone for the cron schedule (e.g. "America/New_York").
+	// IANA timezone for the cron schedule (e.g. `America/New_York`).
 	Timezone *string `json:"timezone"`
-	// Event types that trigger this agent (e.g. ["email.received", "order.created"]).
+	// Event types that trigger this agent (e.g. `["email.received", "order.created"]`).
 	EventFilters []string `json:"event_filters"`
 }
 

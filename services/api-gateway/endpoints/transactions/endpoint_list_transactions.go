@@ -13,21 +13,21 @@ import (
 // Request to list transactions.
 type ListTransactionsRequest struct {
 	apiresource.PaginationRequest
-	// Filter by allocation status (allocated, unallocated, partially_allocated).
+	// Filter by allocation status: `allocated` (fully allocated against invoices) or `unallocated` (has an open balance).
 	Status *string `query:"status"`
-	// Filter by transaction type codes.
+	// Filter by transaction type codes (`payment`, `credit_memo`, `adjustment`, `rebate`).
 	TypeCodes []string `query:"types"`
 	// Filter by adjustment type codes.
 	AdjustmentTypeCodes []string `query:"adjustment_types"`
-	// Filter by transaction method codes.
+	// Filter by payment method codes (`cash`, `check`, `credit_card`, `gift_card`, `ach`).
 	MethodCodes []string `query:"methods"`
 	// Filter by customer IDs.
 	CustomerIDs []string `query:"customer_ids"`
 	// Filter by customer group IDs.
 	CustomerGroupIDs []string `query:"customer_group_ids"`
-	// Filter by start date (inclusive).
+	// Only include transactions created on or after this date (`YYYY-MM-DD`).
 	StartDate *string `query:"start_date"`
-	// Filter by end date (inclusive).
+	// Only include transactions created before this date (`YYYY-MM-DD`).
 	EndDate *string `query:"end_date"`
 }
 

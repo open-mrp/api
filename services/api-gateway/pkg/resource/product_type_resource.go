@@ -12,13 +12,13 @@ const SampleProductTypeID = "prty_01ddca85eedfb6b101a3c2f379"
 const SampleProductTypeName = "Sale"
 const SampleProductTypeCode = "sale"
 
-// ProductType resource.
+// ProductType classifies how a product behaves on orders and invoices.
 type ProductType struct {
 	// Product type ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=product_type"`
-	// Display name.
+	// Human-readable name of the product type, unique across product types.
 	Name string `json:"name" validate:"required"`
 	// Stable machine-readable code identifying the kind of product type.
 	//
@@ -28,6 +28,8 @@ type ProductType struct {
 	// - `credit`: a credit applied against an order or invoice.
 	// - `return`: a returned product (RMA).
 	// - `tax`: a tax line.
+	//
+	// Products reference their product type by this code, and the code can be used in place of the ID when retrieving a product type.
 	Code constants.ProductTypeCode `json:"code" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

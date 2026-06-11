@@ -14,23 +14,37 @@ import (
 
 // Request to register a new or existing customer.
 type RegisterCustomerRequest struct {
-	// Account slug.
+	// Slug of the seller account the customer is registering with.
 	AccountSlug string `json:"account_slug" validate:"required"`
-	// Whether the registrant is an existing customer.
+	// Whether the registrant is an existing customer of the seller account.
+	//
+	// When `true`, the registering user is linked to the customer account matching `customer_number`. When `false`, a new customer account is created and `customer_name`, `customer_group_id`, `address`, `shipping_term_id`, and `payment_term_id` are required.
 	IsExistingCustomer bool `json:"is_existing_customer"`
-	// Customer number, if registering as an existing customer.
+	// Customer number identifying the existing customer account.
+	//
+	// Required when `is_existing_customer` is `true`; ignored otherwise. New customers are assigned the seller's next customer number automatically.
 	CustomerNumber field.Optional[string] `json:"customer_number,omitzero"`
-	// Customer name.
+	// Name for the new customer account.
+	//
+	// Required when registering as a new customer.
 	CustomerName field.Optional[string] `json:"customer_name,omitzero"`
-	// Customer group ID.
+	// ID of the customer group to place the new customer in.
+	//
+	// Required when registering as a new customer.
 	CustomerGroupID field.Optional[string] `json:"customer_group_id,omitzero"`
-	// Phone number.
+	// Contact phone number for the new customer.
 	Phone field.Optional[string] `json:"phone,omitzero"`
-	// Customer address.
+	// Address for the new customer account.
+	//
+	// Required when registering as a new customer.
 	Address field.Optional[apirequest.AddressInput] `json:"address,omitzero"`
-	// Shipping term ID.
+	// ID of the shipping term assigned to the new customer.
+	//
+	// Required when registering as a new customer.
 	ShippingTermID field.Optional[string] `json:"shipping_term_id,omitzero"`
-	// Payment term ID.
+	// ID of the payment term assigned to the new customer.
+	//
+	// Required when registering as a new customer.
 	PaymentTermID field.Optional[string] `json:"payment_term_id,omitzero"`
 }
 
@@ -61,7 +75,9 @@ func (*RegisterCustomerRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleRegisterCustomerRequest)
 }
 
-// Registers a customer through a registration flow.
+// Registers the authenticated user as a customer of a seller account.
+//
+// Either links the user to an existing customer account by customer number, or creates a new customer account with the provided details and links the user to it.
 type RegisterCustomerEndpoint struct{}
 
 func (e *RegisterCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*RegisterCustomerRequest, *apiresource.EmptyResource] {

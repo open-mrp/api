@@ -8,9 +8,9 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-// Account user with role and department.
+// A user's membership in an account, carrying the account-specific status, role, and department.
 //
-// Profile fields (name, email, username, image URL) live on the expandable user sub-resource.
+// Profile fields (name, email, username, image URL) live on the expandable `user` sub-resource, which is shared across every account the user belongs to.
 type AccountUser struct {
 	// Account user ID.
 	ID string `json:"id" validate:"required"`
@@ -28,7 +28,7 @@ type AccountUser struct {
 	Role *Role `json:"role" expandable:"true"`
 	// Assigned department.
 	Department *Department `json:"department" expandable:"true"`
-	// When the user last used this account.
+	// When the user last accessed this account.
 	LastUsedAt *time.Time `json:"last_used_at"`
 	// When the account user was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

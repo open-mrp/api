@@ -15,11 +15,11 @@ import (
 type CreateRegistrationFlowRequest struct {
 	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
-	// Customer group IDs.
+	// IDs of the customer groups offered as options in this flow.
 	CustomerGroupIDs []string `json:"customer_group_ids"`
-	// Payment term IDs.
+	// IDs of the payment terms offered as options in this flow.
 	PaymentTermIDs []string `json:"payment_term_ids"`
-	// Shipping term IDs.
+	// IDs of the shipping terms offered as options in this flow.
 	ShippingTermIDs []string `json:"shipping_term_ids"`
 }
 
@@ -34,7 +34,7 @@ func (*CreateRegistrationFlowRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateRegistrationFlowRequest)
 }
 
-// Creates a registration flow.
+// Creates a registration flow defining the customer group, payment term, and shipping term options offered during customer self-registration.
 type CreateRegistrationFlowEndpoint struct{}
 
 func (e *CreateRegistrationFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateRegistrationFlowRequest, *apiresource.RegistrationFlow] {

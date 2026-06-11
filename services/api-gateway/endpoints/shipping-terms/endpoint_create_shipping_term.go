@@ -15,15 +15,21 @@ import (
 
 // Request to create a shipping term.
 type CreateShippingTermRequest struct {
-	// Display name.
+	// Human-readable name for the shipping term, used to identify it when assigning shipping terms to customers and orders.
 	Name string `json:"name" validate:"required,max=255"`
-	// Shipping term type.
+	// Freight pricing model applied by this shipping term.
+	//
+	// - `free_freight`: no shipping cost to the buyer.
+	// - `flat_rate_freight`: a fixed shipping cost regardless of order details (see `flat_rate`).
+	// - `carrier_rate_freight`: shipping cost is determined by the carrier's quoted rate.
 	Type constants.ShippingTermType `json:"type" validate:"required"`
-	// Flat rate for this shipping term.
+	// Fixed shipping charge applied to orders.
+	//
+	// Only applied when `type` is `flat_rate_freight`.
 	FlatRate field.Optional[apirequest.QuantityInput] `json:"flat_rate,omitzero"`
-	// Minimum order value for free shipping.
+	// Order subtotal a buyer must reach for this term's free-shipping rules to apply.
 	MinimumOrderValue field.Optional[apirequest.QuantityInput] `json:"minimum_order_value,omitzero"`
-	// Service level IDs that qualify for free shipping.
+	// IDs of service levels that ship for free under this term (typically once `minimum_order_value` is met).
 	FreeShippingServiceLevelIDs []string `json:"free_shipping_service_level_ids,omitzero"`
 }
 

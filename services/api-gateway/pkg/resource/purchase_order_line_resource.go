@@ -10,7 +10,7 @@ import (
 
 const SamplePurchaseOrderLineID = "poln_01466ec5a2737c7b871e2a756f"
 
-// Full purchase order line resource.
+// A single line item on a purchase order.
 type PurchaseOrderLine struct {
 	// Purchase order line ID.
 	ID string `json:"id" validate:"required"`

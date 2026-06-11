@@ -18,15 +18,17 @@ type UpdateConsumptionRequest struct {
 	ProductionStepID string `path:"production_step_id" validate:"required"`
 	// Consumption ID.
 	ConsumptionID string `path:"id" validate:"required"`
-	// Item ID.
+	// ID of the item to consume.
+	//
+	// Changing the item disconnects any production-flow link based on the previous item and re-links the flow using the new item.
 	ItemID field.Optional[string] `json:"item_id,omitzero" validate:"omitempty"`
-	// Consumed quantity value.
+	// Amount of the item consumed, as a decimal string.
 	QuantityValue field.Optional[string] `json:"quantity_value,omitzero"`
-	// Consumed quantity unit ID.
+	// ID of the unit of measure for `quantity_value`.
 	QuantityUnitID field.Optional[string] `json:"quantity_unit_id,omitzero" validate:"omitempty"`
-	// Waste quantity value.
+	// Amount of the item lost as waste, as a decimal string, tracked separately from the consumed quantity.
 	WasteQuantityValue field.Optional[string] `json:"waste_quantity_value,omitzero"`
-	// Waste quantity unit ID.
+	// ID of the unit of measure for `waste_quantity_value`.
 	WasteQuantityUnitID field.Optional[string] `json:"waste_quantity_unit_id,omitzero" validate:"omitempty"`
 	// Instructions for how this material is consumed.
 	Instructions field.Optional[string] `json:"instructions,omitzero"`
@@ -42,6 +44,8 @@ func (*UpdateConsumptionRequest) SchemaExample() any {
 }
 
 // Partially updates a consumption within a production step.
+//
+// Omitted fields are left unchanged.
 type UpdateConsumptionEndpoint struct{}
 
 func (e *UpdateConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateConsumptionRequest, *apiresource.Consumption] {

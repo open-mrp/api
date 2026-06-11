@@ -15,7 +15,9 @@ type DeleteAddressRequest struct {
 	AddressID string `path:"id" validate:"required"`
 }
 
-// Deletes an address. Fails if the address is in use as a billing or shipping address on a sales order, invoice, or shipment, or as a default account address.
+// Deletes an address.
+//
+// Deletion fails if the address is in use as a billing or shipping address on a sales order, invoice, or shipment, or as a default account address.
 type DeleteAddressEndpoint struct{}
 
 func (e *DeleteAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAddressRequest, *apiresource.EmptyResource] {

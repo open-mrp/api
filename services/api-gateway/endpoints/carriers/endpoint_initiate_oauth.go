@@ -29,7 +29,9 @@ func (*InitiateOAuthRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleInitiateOAuthRequest)
 }
 
-// Initiates the OAuth flow for a Shippo-managed carrier and returns an OAuth URL. Not available in sandbox mode.
+// Initiates the OAuth authorization flow for a Shippo-managed carrier and returns the URL to redirect the user to.
+//
+// Not available in sandbox mode.
 type InitiateOAuthEndpoint struct{}
 
 func (e *InitiateOAuthEndpoint) Materialize() *apiendpoint.APIEndpoint[*InitiateOAuthRequest, *apiresource.OAuthResponse] {

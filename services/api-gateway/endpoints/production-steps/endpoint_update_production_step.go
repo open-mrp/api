@@ -16,11 +16,13 @@ import (
 type UpdateProductionStepRequest struct {
 	// Production step ID.
 	ProductionStepID string `path:"id" validate:"required"`
-	// Display name.
+	// New display name.
+	//
+	// Must be unique within the account.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Leveling factor as a decimal string.
+	// Leveling correction factor applied to labor time in cost calculations, as a decimal string.
 	LevelingFactor field.Optional[string] `json:"leveling_factor,omitzero"`
-	// Allowances as a decimal string.
+	// Allowance correction factor applied to labor time in cost calculations, as a decimal string.
 	Allowances field.Optional[string] `json:"allowances,omitzero"`
 	// Scanning station ID.
 	ScanningStationID field.Optional[string] `json:"scanning_station_id,omitzero" validate:"omitempty"`

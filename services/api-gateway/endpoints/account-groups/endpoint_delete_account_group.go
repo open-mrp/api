@@ -15,7 +15,9 @@ type DeleteAccountGroupRequest struct {
 	AccountGroupID string `path:"id" validate:"required"`
 }
 
-// Deletes an account group. Fails if the account group is actively used in production.
+// Deletes an account group.
+//
+// Deletion fails with a validation error while the account group is still in use — for example by customer records, product line access, volume discounts, pricing assignments, or an active registration flow.
 type DeleteAccountGroupEndpoint struct{}
 
 func (e *DeleteAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAccountGroupRequest, *apiresource.EmptyResource] {

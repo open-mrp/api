@@ -15,7 +15,7 @@ type ListDCLocationsRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of DC locations for the current account.
+// Returns a paginated list of DC locations for the target account.
 type ListDCLocationsEndpoint struct{}
 
 func (e *ListDCLocationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListDCLocationsRequest, *apiresource.List[apiresource.DCLocation]] {

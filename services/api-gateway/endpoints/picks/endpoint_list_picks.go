@@ -10,15 +10,28 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
+// ListPicksRequest is the request to list picks.
 type ListPicksRequest struct {
 	apiresource.PaginationRequest
-	Status           *string  `query:"status"`
-	CustomerIDs      []string `query:"customer_ids"`
-	ProductLineIDs   []string `query:"product_line_ids"`
+	// Filter by pick status.
+	//
+	// - `open`: picks still in progress (not yet finished).
+	// - `closed`: picks that have been finished.
+	Status *string `query:"status"`
+	// Filter by customer IDs.
+	CustomerIDs []string `query:"customer_ids"`
+	// Filter by product line IDs.
+	//
+	// Matches picks that contain at least one line for a product in any of the given product lines.
+	ProductLineIDs []string `query:"product_line_ids"`
+	// Filter by customer group IDs.
 	CustomerGroupIDs []string `query:"customer_group_ids"`
-	DepartmentIDs    []string `query:"department_ids"`
-	StartDate        *string  `query:"start_date"`
-	EndDate          *string  `query:"end_date"`
+	// Filter by department IDs.
+	DepartmentIDs []string `query:"department_ids"`
+	// Only return picks created on or after this date (`YYYY-MM-DD`).
+	StartDate *string `query:"start_date"`
+	// Only return picks created before this date (`YYYY-MM-DD`).
+	EndDate *string `query:"end_date"`
 }
 
 // Returns a paginated list of picks.

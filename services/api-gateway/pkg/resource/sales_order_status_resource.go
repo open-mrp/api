@@ -28,7 +28,7 @@ type SalesOrderStatus struct {
 	Code constants.SalesOrderStatusCode `json:"code" validate:"required"`
 	// Display name.
 	Name string `json:"name" validate:"required"`
-	// Who owns this status value: the Augno system (built-in statuses) or your account (custom statuses).
+	// The owner of this status value; sales order statuses are platform-defined.
 	Owner *Owner `json:"owner" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

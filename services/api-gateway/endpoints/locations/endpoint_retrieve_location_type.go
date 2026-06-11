@@ -11,7 +11,7 @@ import (
 
 // Request to get a location type.
 type RetrieveLocationTypeRequest struct {
-	// Location ID or code.
+	// Location type ID or code, such as `building` or `bin`.
 	Identifier string `path:"id" validate:"required"`
 }
 

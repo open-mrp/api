@@ -15,7 +15,9 @@ type DeleteLocationRequest struct {
 	LocationID string `path:"id" validate:"required"`
 }
 
-// Deletes a location. Fails if the location has child locations.
+// Deletes a location.
+//
+// Fails if the location has child locations; remove or reassign the children first.
 type DeleteLocationEndpoint struct{}
 
 func (e *DeleteLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteLocationRequest, *apiresource.EmptyResource] {

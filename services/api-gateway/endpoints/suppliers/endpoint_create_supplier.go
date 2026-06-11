@@ -14,15 +14,19 @@ import (
 
 // CreateSupplierRequest is the request to create a supplier.
 type CreateSupplierRequest struct {
-	// Display name.
+	// The supplier's name, as shown in the dashboard and on documents.
 	Name string `json:"name" validate:"required,max=255"`
-	// Supplier number. Must be unique per account.
+	// Human-facing supplier code, such as `SUP-001`.
+	//
+	// Must be unique per account; creating a supplier with a number already in use returns a conflict error.
 	Number string `json:"number" validate:"required,max=255"`
-	// Supplier notes.
+	// Free-form notes about the supplier.
 	Note field.Optional[string] `json:"note,omitzero"`
-	// Bill-to address to create inline.
+	// Default billing address to create for the supplier.
 	BillToAddress field.Optional[apirequest.AddressInput] `json:"bill_to_address,omitzero"`
-	// Ship-to address to create inline.
+	// Default shipping address to create for the supplier.
+	//
+	// If omitted and `bill_to_address` is provided, the billing address is also used as the default shipping address.
 	ShipToAddress field.Optional[apirequest.AddressInput] `json:"ship_to_address,omitzero"`
 }
 

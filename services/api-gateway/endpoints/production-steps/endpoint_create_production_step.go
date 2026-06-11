@@ -14,27 +14,31 @@ import (
 
 // Request to create a production step.
 type CreateProductionStepRequest struct {
-	// Display name.
+	// Display name of the step.
 	Name string `json:"name" validate:"required,max=255"`
-	// Notes.
+	// Free-form notes about the step.
 	Notes field.Optional[string] `json:"notes,omitzero"`
-	// Leveling factor as a decimal string.
+	// Leveling correction factor applied to labor time in cost calculations, as a decimal string.
 	LevelingFactor string `json:"leveling_factor" validate:"required"`
-	// Allowances as a decimal string.
+	// Allowance correction factor applied to labor time in cost calculations, as a decimal string.
 	Allowances string `json:"allowances" validate:"required"`
 	// Scanning station ID.
 	ScanningStationID field.Optional[string] `json:"scanning_station_id,omitzero" validate:"omitempty"`
 	// Department ID.
 	DepartmentID field.Optional[string] `json:"department_id,omitzero" validate:"omitempty"`
-	// Labor rate configuration.
+	// Cost of labor for this step, expressed as a rate of currency per unit of time (e.g. `$` per `hr`).
+	//
+	// The numerator unit must be a currency and the denominator must not be.
 	LaborRate CreateRateInput `json:"labor_rate" validate:"required"`
-	// Labor time configuration.
+	// Labor duration for this step, expressed as a rate (e.g. time per unit of output).
 	LaborTime CreateRateInput `json:"labor_time" validate:"required"`
-	// Overhead rate configuration.
+	// Overhead cost for this step, expressed as a rate of currency per unit of time (e.g. `$` per `hr`).
+	//
+	// The numerator unit must be a currency and the denominator must not be.
 	OverheadRate CreateRateInput `json:"overhead_rate" validate:"required"`
-	// Production output configuration.
+	// The item and quantity this step produces.
 	Production CreateProductionInput `json:"production" validate:"required"`
-	// Consumptions.
+	// Materials consumed by the step.
 	Consumptions []CreateConsumptionInput `json:"consumptions"`
 }
 
@@ -66,9 +70,9 @@ type CreateConsumptionInput struct {
 	QuantityValue string `json:"quantity_value" validate:"required"`
 	// Quantity unit ID.
 	QuantityUnitID string `json:"quantity_unit_id" validate:"required"`
-	// Waste quantity value as a decimal string.
+	// Quantity expected to be lost as scrap or waste, as a decimal string.
 	WasteQuantityValue string `json:"waste_quantity_value" validate:"required"`
-	// Waste quantity unit ID.
+	// Unit ID for `waste_quantity_value`.
 	WasteQuantityUnitID string `json:"waste_quantity_unit_id" validate:"required"`
 	// Instructions for how this material is consumed.
 	Instructions field.Optional[string] `json:"instructions,omitzero"`
@@ -115,7 +119,9 @@ func (*CreateProductionStepRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateProductionStepRequest)
 }
 
-// Creates a production step with production output, rates, and consumptions.
+// Creates a production step with its production output, cost rates, and consumptions.
+//
+// The step is automatically connected into the production flow graph based on the items it produces and consumes.
 type CreateProductionStepEndpoint struct{}
 
 func (e *CreateProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductionStepRequest, *apiresource.ProductionStep] {

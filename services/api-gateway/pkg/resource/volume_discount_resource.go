@@ -11,27 +11,41 @@ import (
 const SampleVolumeDiscountID = "quds_01b64658b647f3c5266b8f6ae1"
 const SampleVolumeDiscountTierID = "qudstr_01576d26526ad625c3dd0725a9"
 
-// Volume discount with tiered pricing.
+// A quantity-based discount with tiered percentage rates.
+//
+// A volume discount reduces the price once the ordered quantity reaches a tier's threshold. The customer group, product line, category, attribute, and acceptable unit associations scope which orders qualify; an empty association list means no restriction on that dimension.
 type VolumeDiscount struct {
 	// Volume discount ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=volume_discount"`
 	// Display name.
+	//
+	// Must be unique within the account.
 	Name string `json:"name" validate:"required"`
 	// Quantity tiers that define the discount.
 	//
 	// Each tier sets a discount percentage that applies once the ordered quantity reaches its threshold.
 	Tiers *List[VolumeDiscountTier] `json:"tiers" validate:"required"`
-	// Customer groups associated with this volume discount.
+	// Customer groups this discount is scoped to.
+	//
+	// When set, only customers belonging to at least one of these groups qualify; when empty, all customers qualify.
 	CustomerGroups *List[AccountGroup] `json:"customer_groups" expandable:"true"`
-	// Product lines associated with this volume discount.
+	// Product lines this discount is scoped to.
+	//
+	// When set, only items in one of these product lines qualify; when empty, all product lines qualify.
 	ProductLines *List[ProductLine] `json:"product_lines" expandable:"true"`
-	// Item categories associated with this volume discount.
+	// Item categories this discount is scoped to.
+	//
+	// When set, only items in one of these categories qualify; when empty, all categories qualify.
 	Categories *List[ItemCategory] `json:"categories" expandable:"true"`
-	// Attributes associated with this volume discount.
+	// Attributes this discount is scoped to.
+	//
+	// When set, an item qualifies only if it has every listed attribute; when empty, attributes are not considered.
 	Attributes *List[Attribute] `json:"attributes" expandable:"true"`
-	// Acceptable units for this volume discount.
+	// Units that ordered quantities are measured in when evaluating tier thresholds.
+	//
+	// Quantities ordered in other units are converted to an acceptable unit before being compared against tier thresholds.
 	AcceptableUnits *List[Unit] `json:"acceptable_units" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

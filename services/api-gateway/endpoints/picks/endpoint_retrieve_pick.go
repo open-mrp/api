@@ -10,7 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
+// RetrievePickRequest is the request to retrieve a pick.
 type RetrievePickRequest struct {
+	// Pick ID.
 	PickID string `path:"id" validate:"required"`
 }
 

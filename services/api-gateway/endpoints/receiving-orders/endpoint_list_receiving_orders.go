@@ -13,19 +13,25 @@ import (
 // Request to list receiving orders.
 type ListReceivingOrdersRequest struct {
 	apiresource.PaginationRequest
-	// Filter by status.
+	// Filter by completion status.
+	//
+	// Only open orders are returned when this is omitted.
+	//
+	// An order is `open` while any line is still unstocked and `completed` once every line is stocked; `all` returns both.
 	Status *string `query:"status"`
-	// Filter by item IDs present in receiving order lines.
+	// Filter to orders that have at least one line for any of the given item IDs.
 	ItemIDs []string `query:"item_ids"`
-	// Filter by supplier account IDs.
+	// Filter to orders whose originating purchase order was placed with any of the given supplier account IDs.
 	SupplierIDs []string `query:"supplier_ids"`
-	// Filter by start date (inclusive).
+	// Only return orders created on or after this date (`YYYY-MM-DD`, inclusive).
 	StartDate *string `query:"start_date"`
-	// Filter by end date (inclusive).
+	// Only return orders created on or before this date (`YYYY-MM-DD`, inclusive).
 	EndDate *string `query:"end_date"`
 }
 
 // Returns a paginated list of receiving orders for the current account.
+//
+// Only open (incomplete) orders are returned by default; pass `status` to change this.
 type ListReceivingOrdersEndpoint struct{}
 
 func (e *ListReceivingOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListReceivingOrdersRequest, *apiresource.List[apiresource.ReceivingOrder]] {

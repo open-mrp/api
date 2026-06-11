@@ -13,15 +13,18 @@ import (
 // Request to list production runs.
 type ListProductionRunsRequest struct {
 	apiresource.PaginationRequest
-	// Filter by status: "open" or "closed".
+	// Filter by run status.
+	//
+	// - `open`: runs that have not been completed.
+	// - `closed`: runs that have been completed.
 	Status *string `query:"status"`
-	// Filter by item IDs (batches containing these items).
+	// Only return runs containing at least one batch that produces any of these items.
 	ItemIDs []string `query:"item_ids"`
-	// Filter by machine IDs (batches using these machines).
+	// Only return runs containing at least one batch that used any of these machines.
 	MachineIDs []string `query:"machine_ids"`
-	// Filter by start date (inclusive).
+	// Only return runs created on or after this date (inclusive), formatted as `YYYY-MM-DD`.
 	StartDate *string `query:"start_date"`
-	// Filter by end date (inclusive).
+	// Only return runs created on or before this date (inclusive), formatted as `YYYY-MM-DD`.
 	EndDate *string `query:"end_date"`
 }
 

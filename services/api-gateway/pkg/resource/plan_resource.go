@@ -13,7 +13,7 @@ const SamplePlanTypeIDPro = "pl_01963a15f27a743b231dd9479b"
 type PlanLimit struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=plan_limit"`
-	// Resource key this limit applies to (e.g., "sandboxes", "seats", "invoices").
+	// Resource key this limit applies to (e.g., `seats_maximum`, `sandboxes_maximum`, `invoices_maximum`, `batches_maximum`).
 	Key string `json:"key" validate:"required"`
 	// Maximum allowed value.
 	//
@@ -29,11 +29,7 @@ type PricingPlan struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=pricing_plan"`
 	// Display name of the plan.
 	Name string `json:"name" validate:"required"`
-	// Plan tier code.
-	//
-	// - `free`: the no-cost entry tier.
-	// - `starter`: the paid entry tier for small teams.
-	// - `pro`: the higher tier with expanded limits and support.
+	// Tier of this pricing plan.
 	PlanTypeCode constants.PublicPlanCode `json:"plan_type" validate:"required"`
 	// Price per seat per month in dollars.
 	PricePerSeat float64 `json:"price_per_seat"`
@@ -41,7 +37,9 @@ type PricingPlan struct {
 	//
 	// The monthly bill multiplies this by the number of seats (at least `seat_minimum`). `null` or `0` falls back to `price_per_seat`.
 	PricePerMonth *float64 `json:"price_per_month"`
-	// Minimum seats required for this plan.
+	// Minimum number of seats billed on this plan.
+	//
+	// When the account has fewer users than this minimum, the monthly bill is still calculated using this seat count. Null means no minimum.
 	SeatMinimum *int `json:"seat_minimum"`
 	// Resource limits for this plan.
 	Limits *List[PlanLimit] `json:"limits" validate:"required"`

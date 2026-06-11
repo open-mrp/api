@@ -16,6 +16,8 @@ type OpenSalesOrderRequest struct {
 	// Sales order ID.
 	SalesOrderID string `path:"id" validate:"required"`
 	// Whether to notify the customer.
+	//
+	// Reserved for future use; no notification email is currently sent for this action.
 	NotifyCustomer bool `json:"notify_customer"`
 }
 
@@ -25,7 +27,9 @@ func (*OpenSalesOrderRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleOpenSalesOrderRequest)
 }
 
-// Reopens a sales order, transitioning it from fulfilled back to issued.
+// Reopens a sales order, transitioning it from `fulfilled` back to `issued`.
+//
+// Clears the order's completion timestamp and marks its pick as unfinished.
 type OpenSalesOrderEndpoint struct{}
 
 func (e *OpenSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*OpenSalesOrderRequest, *apiresource.SalesOrder] {

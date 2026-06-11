@@ -24,7 +24,9 @@ func (*BulkDeleteCustomersRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleBulkDeleteCustomersRequest)
 }
 
-// Deletes multiple customers.
+// Deletes multiple customers in a single atomic operation.
+//
+// Fails with a conflict error if any sales orders still reference any of the customers; if any customer cannot be deleted, none are.
 type BulkDeleteCustomersEndpoint struct{}
 
 func (e *BulkDeleteCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkDeleteCustomersRequest, *apiresource.EmptyResource] {

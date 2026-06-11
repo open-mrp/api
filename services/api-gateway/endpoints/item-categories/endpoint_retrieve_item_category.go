@@ -16,7 +16,9 @@ type RetrieveItemCategoryRequest struct {
 	ItemCategoryID string `path:"id" validate:"required"`
 }
 
-// Returns an item category by ID. Includes account-specific and global system categories.
+// Returns an item category by ID.
+//
+// Both account-owned categories and global system categories can be retrieved.
 type RetrieveItemCategoryEndpoint struct{}
 
 func (e *RetrieveItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveItemCategoryRequest, *apiresource.ItemCategory] {

@@ -12,34 +12,38 @@ const SampleShipmentID = "sh_018b3a946651bfb6572b06b2b2"
 const SampleShipmentNumber = "SH-001"
 const SampleShipmentLineID = "shln_0133b6c3c807bf9c73581424c7"
 
-// Full shipment resource.
+// A shipment of packed goods fulfilling a sales order, from packing through dispatch.
 type Shipment struct {
 	// Shipment ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=shipment"`
-	// Shipment number.
+	// Human-readable shipment number.
 	Number string `json:"number" validate:"required"`
 	// Note attached to this shipment.
 	Note *string `json:"note"`
 	// Bill of lading number.
 	BillOfLading *string `json:"bill_of_lading"`
-	// Master tracking number.
+	// Carrier master tracking number covering the shipment as a whole.
+	//
+	// Individual shipping cases carry their own per-case tracking numbers.
 	MasterTrackingNumber *string `json:"master_tracking_number"`
 	// Shipment status code.
 	//
 	// - `packed`: the shipment has been packed but not yet dispatched.
 	// - `shipped`: the shipment has left the facility (`shipped_at` is set).
 	Status constants.ShipmentStatus `json:"status" validate:"required"`
-	// Timestamp when shipped.
+	// Timestamp when the shipment was shipped.
+	//
+	// Null until the shipment is shipped; cleared again if the shipment is voided.
 	ShippedAt *time.Time `json:"shipped_at"`
-	// Associated sales order.
+	// The sales order this shipment fulfills.
 	SalesOrder *SalesOrder `json:"sales_order" expandable:"true"`
-	// Associated customer.
+	// The customer receiving this shipment.
 	Customer *Customer `json:"customer" expandable:"true"`
 	// Carrier selection and freight billing for this shipment.
 	Freight *Freight `json:"freight" expandable:"true"`
-	// Shipping address.
+	// Destination shipping address.
 	ShippingAddress *Address `json:"shipping_address" expandable:"true"`
 	// User who shipped this shipment.
 	ShippedBy *AccountUser `json:"shipped_by" expandable:"true"`
@@ -47,9 +51,9 @@ type Shipment struct {
 	Invoice *Invoice `json:"invoice" expandable:"true"`
 	// Pick associated with this shipment's order.
 	Pick *Pick `json:"pick" expandable:"true"`
-	// Shipment lines.
+	// Lines recording the quantity shipped for each sales order line.
 	Lines *List[ShipmentLine] `json:"lines" expandable:"true"`
-	// Shipping cases.
+	// Physical cases (packages) in this shipment, each with its own tracking and label details.
 	ShippingCases *List[ShippingCaseDetail] `json:"shipping_cases" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -57,13 +61,13 @@ type Shipment struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-// Shipment line resource.
+// A shipment line recording the quantity of a sales order line included in a shipment.
 type ShipmentLine struct {
 	// Shipment line ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=shipment_line"`
-	// Associated sales order line.
+	// The sales order line this shipment line fulfills.
 	SalesOrderLine *SalesOrderLine `json:"sales_order_line" expandable:"true"`
 	// The shipped item (the order line's item).
 	//
@@ -77,7 +81,7 @@ type ShipmentLine struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-// Shipping case resource in shipment detail views.
+// A physical case (package) in a shipment, as shown in shipment detail views.
 type ShippingCaseDetail struct {
 	// Shipping case ID.
 	ID string `json:"id" validate:"required"`
@@ -85,19 +89,21 @@ type ShippingCaseDetail struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=shipping_case"`
 	// Human-readable case number.
 	Number string `json:"number" validate:"required"`
-	// Serial Shipping Container Code.
+	// Serial Shipping Container Code (SSCC) identifying this case.
+	//
+	// Assigned automatically when the shipment is shipped if the case does not already have one.
 	SSCC *string `json:"sscc"`
-	// Carrier tracking number.
+	// Carrier tracking number for this case.
 	TrackingNumber *string `json:"tracking_number"`
-	// Shippo transaction ID.
+	// ID of the Shippo transaction for this case's shipping label, when the label was purchased through the Shippo integration.
 	ShippoTransactionID *string `json:"shippo_transaction_id"`
-	// Shipping label URL.
+	// URL of the printable shipping label for this case.
 	ShippingLabelURL *string `json:"shipping_label_url"`
 	// Timestamp when shipped.
 	ShippedAt *time.Time `json:"shipped_at"`
-	// Freight amount.
+	// Freight charge for this case.
 	FreightAmount *Quantity `json:"freight_amount"`
-	// Freight weight.
+	// Shipping weight of this case.
 	FreightWeight *Quantity `json:"freight_weight"`
 	// Carrier.
 	Carrier *Carrier `json:"carrier" expandable:"true"`
@@ -128,7 +134,7 @@ type RateShopResult struct {
 	FlatRate *float64 `json:"flat_rate"`
 }
 
-// Rate shop option.
+// A single carrier and service level option returned by rate shopping.
 type RateShopOption struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=rate_shop_option"`
@@ -136,9 +142,11 @@ type RateShopOption struct {
 	Carrier *Carrier `json:"carrier" expandable:"true"`
 	// Service level.
 	ServiceLevel *ServiceLevel `json:"service_level" expandable:"true"`
-	// Rate amount.
+	// Quoted shipping rate for this carrier and service level.
+	//
+	// `0` when the carrier is not configured for live rating, or when a free-shipping rule (such as a met minimum order value) applies to this option.
 	Rate float64 `json:"rate" validate:"required"`
-	// Estimated delivery days.
+	// Estimated number of days until delivery, when the carrier provides an estimate.
 	EstimatedDays *int32 `json:"estimated_days"`
 }
 
@@ -146,7 +154,9 @@ type RateShopOption struct {
 type EstimateRateResult struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=estimate_rate_result"`
-	// Estimated rate amount.
+	// Estimated shipping rate.
+	//
+	// `0` when freight is exempt (a freight-exempt product line or customer, or a free-freight shipping term), when the free-shipping minimum order value is met, or when the carrier is not configured for live rating. When the customer's shipping term has a flat rate, the flat rate is returned.
 	Rate float64 `json:"rate" validate:"required"`
 }
 

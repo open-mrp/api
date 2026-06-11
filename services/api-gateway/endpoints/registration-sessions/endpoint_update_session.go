@@ -17,6 +17,8 @@ type UpdateSessionRequest struct {
 	// Session ID.
 	SessionID string `json:"-" path:"session_id" validate:"required"`
 	// Step to advance the session to.
+	//
+	// Must be later than the session's current step; moving backwards is rejected. See the session resource's `step` field for the step order.
 	Step field.Optional[constants.RegistrationStep] `json:"step,omitzero"`
 	// Session data to merge into the existing session.
 	SessionData field.Optional[UpdateSessionDataRequest] `json:"session_data,omitzero"`
@@ -50,7 +52,7 @@ type UpdateSessionDataRequest struct {
 	BillingAddressState field.Optional[string] `json:"billing_address_state,omitzero" validate:"omitempty,max=255"`
 	// Billing address postal code.
 	BillingAddressPostalCode field.Optional[string] `json:"billing_address_postal_code,omitzero" validate:"omitempty,max=255"`
-	// Billing address country.
+	// Billing address country as a two-letter country code.
 	BillingAddressCountry field.Optional[string] `json:"billing_address_country,omitzero" validate:"omitempty,max=2"`
 }
 

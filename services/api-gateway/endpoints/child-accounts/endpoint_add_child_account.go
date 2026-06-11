@@ -12,11 +12,13 @@ import (
 
 // Request to add a child account.
 type AddChildAccountRequest struct {
-	// Child account ID.
+	// ID of the account to link as a child.
 	ChildAccountID string `path:"child_account_id" validate:"required"`
 }
 
-// Adds a child account relationship to the target account.
+// Links an existing account as a child of the target account.
+//
+// This call is idempotent: linking an account that is already a child of the target account succeeds without changes. Circular relationships (making an account a child of its own child) are rejected with a conflict error.
 type AddChildAccountEndpoint struct{}
 
 func (e *AddChildAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddChildAccountRequest, *apiresource.ChildAccount] {

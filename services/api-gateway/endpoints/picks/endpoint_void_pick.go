@@ -17,6 +17,8 @@ type VoidPickRequest struct {
 }
 
 // Voids a pick, cancelling all lines.
+//
+// Resets the picked quantity on every unpacked line to zero and clears the pick's `finished_at` timestamp. Fails if a shipment has already been created for the pick's sales order.
 type VoidPickEndpoint struct{}
 
 func (e *VoidPickEndpoint) Materialize() *apiendpoint.APIEndpoint[*VoidPickRequest, *apiresource.Pick] {

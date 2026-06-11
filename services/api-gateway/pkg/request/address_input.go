@@ -6,7 +6,7 @@ import (
 	"github.com/augno/api/shared/field"
 )
 
-// Request to create an address.
+// Address details used to create an address, either directly or inline on another resource.
 type AddressInput struct {
 	// Display name of the address.
 	Name string `json:"name" validate:"required,max=255"`
@@ -15,6 +15,9 @@ type AddressInput struct {
 	// Email address associated with the address.
 	Email field.Optional[string] `json:"email,omitzero" validate:"omitempty,custom_email,max=255"`
 	// Address type.
+	//
+	// - `standard`: a normal shipping or billing address.
+	// - `drop_ship`: an address an order is shipped to directly, typically a third party or end customer rather than the account itself.
 	Type field.Optional[constants.AddressType] `json:"type,omitzero" default:"standard"`
 	// First line of the street address.
 	StreetLine1 field.Optional[string] `json:"street_line_1,omitzero" validate:"omitempty,max=255"`

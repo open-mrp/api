@@ -34,7 +34,9 @@ func (*RegisterRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleRegisterRequest)
 }
 
-// Registers a user on the customer portal. Returns the user object and sets access and refresh tokens in cookies.
+// Registers a user on the customer portal.
+//
+// Returns the new user object and sets access and refresh tokens in cookies. If the email is already registered, the request fails with a generic validation error (so existing emails are not revealed) and an "already registered" email containing a magic login link is sent to the existing user instead.
 type RegisterEndpoint struct{}
 
 func (e *RegisterEndpoint) Materialize() *apiendpoint.APIEndpoint[*RegisterRequest, *apiresource.User] {

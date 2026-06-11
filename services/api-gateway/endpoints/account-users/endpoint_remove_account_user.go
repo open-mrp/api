@@ -16,6 +16,8 @@ type RemoveAccountUserRequest struct {
 }
 
 // Removes a user from the target account.
+//
+// Removal is a soft delete: removed users are excluded from listings unless requested via `removed_scope`, and can be restored with the activate action.
 type RemoveAccountUserEndpoint struct{}
 
 func (e *RemoveAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*RemoveAccountUserRequest, *apiresource.EmptyResource] {

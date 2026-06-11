@@ -11,11 +11,13 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateAccountGroupProductLineAccessRequest is a request to create product line access for an account group.
+// Request to create product line access for an account group.
 type CreateAccountGroupProductLineAccessRequest struct {
-	// Account group ID.
+	// ID of the account group to grant product line access to.
 	AccountGroupID string `json:"account_group_id" validate:"required"`
-	// Product line IDs to grant access to.
+	// IDs of the product lines the account group is granted access to.
+	//
+	// Must contain at least one product line ID; every ID must belong to your account.
 	ProductLineIDs []string `json:"product_line_ids" validate:"required"`
 }
 
@@ -28,7 +30,9 @@ func (*CreateAccountGroupProductLineAccessRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateAccountGroupProductLineAccessRequest)
 }
 
-// Creates product line access for an account group.
+// Creates a product line access record for an account group.
+//
+// Each account group can have at most one access record; creating one for an account group that already has one returns a conflict error.
 type CreateAccountGroupProductLineAccessEndpoint struct{}
 
 func (e *CreateAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAccountGroupProductLineAccessRequest, *apiresource.AccountGroupProductLineAccess] {

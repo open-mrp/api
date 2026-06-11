@@ -15,11 +15,13 @@ type ListAccountTransactionsRequest struct {
 	apiresource.PaginationRequest
 	// Customer account ID.
 	CustomerAccountID string `path:"account_id" validate:"required"`
-	// Filter by allocation status.
+	// Filter by allocation status: `allocated` (fully allocated against invoices) or `unallocated` (has an open balance).
 	Status *string `query:"status"`
-	// Filter by transaction type.
+	// Filter by transaction type code (`payment`, `credit_memo`, `adjustment`, or `rebate`).
 	Type *string `query:"type"`
-	// Include transactions from child accounts. Defaults to true.
+	// Whether to also include transactions recorded against the customer's child accounts.
+	//
+	// Child account transactions are included unless this is set to `false`.
 	IncludeChildAccounts *bool `query:"include_child_accounts"`
 }
 

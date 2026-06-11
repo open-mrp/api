@@ -18,11 +18,15 @@ type UpdateAttributeRequest struct {
 	PropertyID string `path:"property_id" validate:"required"`
 	// Attribute ID.
 	AttributeID string `path:"id" validate:"required"`
-	// Attribute value.
+	// The selectable value this attribute represents, such as `Red`.
+	//
+	// Must be non-blank and unique across all attributes in the account, not just within the property.
 	Value field.Optional[string] `json:"value,omitzero"`
-	// Color code.
+	// Swatch color used to display this attribute in the UI.
 	ColorCode field.Optional[constants.Color] `json:"color,omitzero"`
-	// Display order. Must be a positive integer.
+	// New position of this attribute relative to its siblings within the property, starting at `1`.
+	//
+	// Must be at most the property's current attribute count; the attributes between the old and new positions shift to make room.
 	SortOrder field.Optional[int32] `json:"sort_order,omitzero" validate:"omitempty,min=1"`
 }
 

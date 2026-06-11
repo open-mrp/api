@@ -18,6 +18,8 @@ type DeleteAttributeRequest struct {
 }
 
 // Deletes an attribute from a property.
+//
+// Remaining attributes in the property are shifted so their sort orders stay contiguous.
 type DeleteAttributeEndpoint struct{}
 
 func (e *DeleteAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAttributeRequest, *apiresource.EmptyResource] {

@@ -13,7 +13,7 @@ import (
 
 // Request to mark a shipment as shipped.
 type ShipShipmentRequest struct {
-	// Shipment ID.
+	// ID of the shipment to ship.
 	ShipmentID string `path:"id" validate:"required"`
 	// Whether to email the customer a shipping notification.
 	EmailCustomer bool `json:"email_customer"`
@@ -27,7 +27,9 @@ func (*ShipShipmentRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleShipShipmentRequest)
 }
 
-// Marks a shipment as shipped and optionally sends a shipping notification email to the customer.
+// Marks a shipment as shipped.
+//
+// Sets the shipment status to `shipped`, records `shipped_at` and the acting user as `shipped_by`, marks all shipping cases as shipped, and assigns an SSCC to any case that does not already have one. Fails with a conflict error if the shipment has already been shipped.
 type ShipShipmentEndpoint struct{}
 
 func (e *ShipShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*ShipShipmentRequest, *apiresource.Shipment] {

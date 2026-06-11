@@ -15,9 +15,9 @@ import (
 // Request to list agent memories.
 type ListMemoriesRequest struct {
 	apiresource.PaginationRequest
-	// Category filter (e.g. "preference", "fact").
+	// Filter to memories with this exact category (e.g. `preference`, `fact`).
 	Category *string `query:"category"`
-	// Entity type filter (e.g. "customer", "product").
+	// Filter to memories scoped to this entity type (e.g. `customer`, `product`).
 	EntityType *string `query:"entity_type"`
 }
 
@@ -37,7 +37,9 @@ func (*ListMemoriesRequest) SchemaExample() any {
 	return m
 }
 
-// Returns a paginated list of agent memories.
+// Returns a paginated list of agent memories for the current account.
+//
+// Memories whose `expires_at` has passed are excluded.
 type ListMemoriesEndpoint struct{}
 
 func (e *ListMemoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMemoriesRequest, *apiresource.List[apiresource.AgentMemory]] {

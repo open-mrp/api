@@ -25,11 +25,13 @@ type ListSalesOrdersRequest struct {
 	CustomerGroupIDs []string `query:"customer_group_ids"`
 	// Filter by sales rep IDs.
 	SalesRepIDs []string `query:"sales_rep_ids"`
-	// Filter by start date (inclusive).
+	// Earliest order creation date to include, in `YYYY-MM-DD` format (inclusive).
 	StartDate *string `query:"start_date"`
-	// Filter by end date (inclusive).
+	// Latest order creation date to include, in `YYYY-MM-DD` format (inclusive).
 	EndDate *string `query:"end_date"`
 	// Whether to exclude internal orders.
+	//
+	// When `true`, omits orders the account placed with itself (the buyer is the same account that owns the order).
 	ExcludeInternalOrders bool `query:"exclude_internal_orders"`
 }
 

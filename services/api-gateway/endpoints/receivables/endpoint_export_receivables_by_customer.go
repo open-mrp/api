@@ -14,11 +14,13 @@ import (
 type ExportReceivablesByCustomerRequest struct {
 	// Customer account ID.
 	AccountID string `json:"-" path:"account_id" validate:"required"`
-	// Cutoff date for the receivables snapshot.
+	// Compute receivable balances as of this timestamp.
+	//
+	// Only invoices created before the cutoff are included, and only allocations made before the cutoff are subtracted from each remaining balance. When omitted, current balances are returned.
 	CutoffDate *time.Time `query:"cutoff_date"`
 }
 
-// Exports all receivable entries for a specific customer account as a CSV file.
+// Exports all outstanding receivable entries for a specific customer account as a CSV file.
 type ExportReceivablesByCustomerEndpoint struct{}
 
 func (e *ExportReceivablesByCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportReceivablesByCustomerRequest, *httptransport.FileDownload] {

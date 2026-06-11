@@ -16,7 +16,7 @@ import (
 // ListItemsRequest is the request to list items.
 type ListItemsRequest struct {
 	apiresource.PaginationRequest
-	// Filter by item type codes.
+	// Filter to items of these types (`product`, `material`, `part`).
 	Types []string `query:"types"`
 	// Filter by category IDs.
 	CategoryIDs []string `query:"category_ids"`
@@ -28,7 +28,10 @@ type ListItemsRequest struct {
 	StartDate *time.Time `query:"start_date"`
 	// Filter items created on or before this date.
 	EndDate *time.Time `query:"end_date"`
-	// Which subassemblies to include when listing (default: all).
+	// Restricts results based on where the item is produced in its production flow.
+	//
+	// - `all`: no restriction.
+	// - `initial_only`: only items produced by an initial production step, i.e. a step with no upstream steps feeding into it.
 	SubassemblyFilter *constants.SubassemblyFilter `query:"subassembly_filter" default:"all"`
 	// Filter by product line IDs (only items whose product belongs to one of these lines).
 	ProductLineIDs []string `query:"product_line_ids"`

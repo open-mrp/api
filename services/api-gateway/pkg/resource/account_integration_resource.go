@@ -25,6 +25,8 @@ type AccountIntegration struct {
 	// - `shippo`: Shippo shipping and label generation.
 	IntegrationCode constants.IntegrationCode `json:"provider" validate:"required"`
 	// Whether the integration is active.
+	//
+	// Integrations are created active. Deactivating an integration keeps its stored credentials but stops it from being used (for example, the Stripe publishable key cannot be retrieved while the Stripe integration is inactive).
 	IsActive bool `json:"is_active"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -50,7 +52,7 @@ func (*AccountIntegration) SchemaExample() any {
 type StripePublishableKey struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=stripe_publishable_key"`
-	// Stripe publishable key.
+	// The publishable key (`pk_...`) from the account's Stripe integration, safe to use in client-side code.
 	PublishableKey string `json:"publishable_key" validate:"required"`
 }
 
@@ -68,6 +70,8 @@ type StripeStatus struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=stripe_status"`
 	// Whether a Stripe integration is configured.
+	//
+	// `true` if the account has a Stripe integration on file, regardless of whether the integration is currently active.
 	HasStripeIntegration bool `json:"has_stripe_integration"`
 }
 

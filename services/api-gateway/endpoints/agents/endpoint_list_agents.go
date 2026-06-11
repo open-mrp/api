@@ -13,13 +13,13 @@ import (
 // Request to list agent definitions.
 type ListAgentsRequest struct {
 	apiresource.PaginationRequest
-	// Filter by account-level status.
+	// Restricts results to agents with one of the given account-level statuses.
 	//
-	// Omit to return agents of every status; pass e.g. ?statuses=active to narrow.
+	// Omit to return agents of every status; repeat the parameter to match more than one status.
 	Status []constants.AgentAccountStatus `query:"statuses"`
-	// Filter by definition type.
+	// Restricts results to agents of one of the given definition types.
 	DefinitionType []constants.AgentDefinitionType `query:"definition_types"`
-	// Filter by trigger type.
+	// Restricts results to agents with one of the given trigger types.
 	TriggerType []constants.AgentTriggerType `query:"trigger_types"`
 }
 

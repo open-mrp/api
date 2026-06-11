@@ -27,7 +27,9 @@ func (*UpdatePasswordRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdatePasswordRequest)
 }
 
-// Updates a user's password, revoking previous tokens and setting new access and refresh tokens in cookies.
+// Updates the authenticated user's password after verifying their current password.
+//
+// All of the user's existing refresh tokens are revoked, signing out their other active sessions.
 type UpdatePasswordEndpoint struct{}
 
 func (e *UpdatePasswordEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePasswordRequest, *apiresource.EmptyResource] {

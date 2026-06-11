@@ -11,7 +11,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Creates an address for the targeted account.
+// Creates an address.
 type CreateAddressEndpoint struct{}
 
 func (e *CreateAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*apirequest.AddressInput, *apiresource.Address] {

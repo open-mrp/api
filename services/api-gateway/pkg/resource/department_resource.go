@@ -15,17 +15,19 @@ const SampleDepartmentName = "Fabrication"
 // Department — full department resource
 // ---------------------------------------------------------------------------
 
-// Department resource.
+// A functional area of a production operation, such as fabrication or packaging, that groups scanning stations and machines.
 type Department struct {
 	// Department ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=department"`
-	// Display name.
+	// Display name of the department.
+	//
+	// Unique within the account.
 	Name string `json:"name" validate:"required"`
-	// Notes about the department.
+	// Free-form notes about the department.
 	Notes *string `json:"notes"`
-	// Associated location.
+	// The storage location where this department operates.
 	Location *Location `json:"location" expandable:"true"`
 	// Scanning stations in this department.
 	ScanningStations *List[ScanningStation] `json:"scanning_stations" expandable:"true"`

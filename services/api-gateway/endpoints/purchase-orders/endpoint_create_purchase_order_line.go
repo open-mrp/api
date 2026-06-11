@@ -18,6 +18,8 @@ type CreatePurchaseOrderLineRequest struct {
 }
 
 // Creates a line item on a purchase order.
+//
+// If the order has already been issued, a matching receiving order line is created as well.
 type CreatePurchaseOrderLineEndpoint struct{}
 
 func (e *CreatePurchaseOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePurchaseOrderLineRequest, *apiresource.PurchaseOrderLine] {

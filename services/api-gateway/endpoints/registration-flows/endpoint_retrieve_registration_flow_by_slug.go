@@ -10,13 +10,13 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Request to retrieve a registration flow by slug.
+// Request to retrieve a registration flow by account slug.
 type RetrieveRegistrationFlowBySlugRequest struct {
-	// Registration flow slug.
+	// Slug of the account whose registration flow to retrieve.
 	Slug string `path:"slug" validate:"required"`
 }
 
-// Returns a registration flow by slug.
+// Returns the registration flow of the account with the given slug.
 type RetrieveRegistrationFlowBySlugEndpoint struct{}
 
 func (e *RetrieveRegistrationFlowBySlugEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveRegistrationFlowBySlugRequest, *apiresource.RegistrationFlow] {

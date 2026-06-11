@@ -15,7 +15,9 @@ type DeleteShippingTermRequest struct {
 	ShippingTermID string `path:"id" validate:"required"`
 }
 
-// Deletes an account-owned shipping term. Default shipping terms cannot be deleted.
+// Deletes an account-owned shipping term.
+//
+// System-provided default shipping terms cannot be deleted.
 type DeleteShippingTermEndpoint struct{}
 
 func (e *DeleteShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteShippingTermRequest, *apiresource.EmptyResource] {

@@ -13,11 +13,16 @@ import (
 
 // Request to create an item category.
 type CreateItemCategoryRequest struct {
-	// Display name.
+	// Display name of the item category.
 	Name string `json:"name" validate:"required,max=255"`
-	// Item category type. Material categories are used to group materials, while product categories are used to group products and parts.
+	// What kind of items this category groups.
+	//
+	// - `material_category`: groups raw materials and components (items of type `material`).
+	// - `product_category`: groups finished products and parts (items of type `product` or `part`).
 	Type constants.ItemCategoryType `json:"type" validate:"required"`
-	// Unit group ID.
+	// ID of the unit group that determines the units of measure available to items in this category.
+	//
+	// After creation, the unit group can only be replaced by another unit group of the same unit type via the Change Item Category Unit Group endpoint.
 	UnitGroupID string `json:"unit_group_id" validate:"required"`
 }
 

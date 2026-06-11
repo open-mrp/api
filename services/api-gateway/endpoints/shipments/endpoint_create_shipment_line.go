@@ -12,13 +12,13 @@ import (
 
 // Request to create a shipment line.
 type CreateShipmentLineRequest struct {
-	// Shipment ID.
+	// ID of the shipment to add the line to.
 	ShipmentID string `path:"shipment_id" validate:"required"`
-	// Sales order line ID.
+	// ID of the sales order line this shipment line fulfills.
 	SalesOrderLineID string `json:"sales_order_line_id" validate:"required"`
-	// Quantity value.
+	// Quantity shipped, as a decimal string.
 	QuantityValue string `json:"quantity_value" validate:"required"`
-	// Quantity unit ID.
+	// ID of the unit of measure for `quantity_value`.
 	QuantityUnitID string `json:"quantity_unit_id" validate:"required"`
 }
 

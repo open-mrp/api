@@ -15,7 +15,9 @@ type ListPaymentTermsRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of payment terms. Includes both account-specific and system default payment terms.
+// Returns a paginated list of payment terms.
+//
+// The list includes both payment terms created by your account and Augno-provided system defaults.
 type ListPaymentTermsEndpoint struct{}
 
 func (e *ListPaymentTermsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPaymentTermsRequest, *apiresource.List[apiresource.PaymentTerm]] {

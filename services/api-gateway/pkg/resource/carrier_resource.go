@@ -11,17 +11,17 @@ import (
 const SampleCarrierID = "cr_01784fd54c9ba197bb4e42f0e6"
 const SampleCarrierName = "FedEx"
 
-// Carrier resource.
+// A shipping carrier configured for fulfilling orders.
+//
+// Carriers with a Shippo-supported `code` (`fedex`, `ups`, `usps`) are connected through Shippo for live rating and label purchase; other carriers represent self-managed shipping methods such as will call or local delivery.
 type Carrier struct {
 	// Carrier ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=carrier"`
-	// Display name.
+	// Human-readable name for the carrier, unique among your account's carriers.
 	Name string `json:"name" validate:"required"`
-	// Well-known carrier identifier.
-	//
-	// Null for custom carriers without a recognized code.
+	// Well-known carrier identifier, set only for recognized carriers and absent for custom ones.
 	//
 	// - `fedex`, `ups`, `usps`: integrated carriers managed through Shippo (live rating and labels).
 	// - `will_call`: customer picks the order up; no carrier shipment.
@@ -29,16 +29,15 @@ type Carrier struct {
 	// - `ltl`, `ltl1`: less-than-truckload freight carriers.
 	// - `freight_collect`: freight billed to and arranged by the receiver.
 	Code *constants.CarrierCode `json:"code"`
-	// Your account number with this carrier, used for rating and billing.
+	// Your account number with this carrier, used to connect UPS and USPS accounts.
 	AccountNumber *string `json:"account_number"`
-	// Whether this carrier is shown to customers in the customer portal.
-	//
-	// - `visible`: customers can see and select this carrier.
-	// - `hidden`: the carrier is concealed from the customer portal.
+	// Whether customers can see and select this carrier at checkout in the customer portal.
 	CustomerPortalVisibility constants.CustomerPortalVisibility `json:"customer_portal_visibility" validate:"required"`
-	// Owner.
+	// Provenance of this carrier.
+	//
+	// System-owned carriers are platform-provided defaults shared across all accounts and cannot be deleted; account-owned carriers are custom to your account.
 	Owner *Owner `json:"owner" expandable:"true"`
-	// Service levels.
+	// Shipping service levels offered by this carrier (e.g. ground, overnight).
 	ServiceLevels *List[ServiceLevel] `json:"service_levels" expandable:"true"`
 	// Soft-delete timestamp.
 	DeletedAt *time.Time `json:"deleted_at"`
@@ -88,7 +87,9 @@ type OAuthStatusResponse struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=oauth_status_response"`
 	// OAuth connection status.
 	//
-	// One of "connected", "authorization_pending", or "disconnected".
+	// - `connected`: the carrier account is authorized and ready for live rating and labels.
+	// - `authorization_pending`: the carrier account exists but OAuth authorization has not been completed.
+	// - `disconnected`: no carrier account is connected. Sandbox accounts always report this status.
 	Status string `json:"status" validate:"required"`
 }
 

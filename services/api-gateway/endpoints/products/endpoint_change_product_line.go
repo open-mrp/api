@@ -14,7 +14,7 @@ import (
 type ChangeProductProductLineRequest struct {
 	// Product ID.
 	ProductID string `path:"id" validate:"required"`
-	// Product line ID.
+	// ID of the product line to assign to the product.
 	ProductLineID string `path:"product_line_id" validate:"required"`
 }
 

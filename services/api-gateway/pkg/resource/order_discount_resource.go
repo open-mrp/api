@@ -10,7 +10,9 @@ import (
 
 const SampleOrderDiscountID = "ords_01121c5e2f6937a6b896daad3a"
 
-// Order discount resource.
+// A discount code that can be applied to a sales order.
+//
+// An order discount reduces the order total by either a percentage or a fixed amount, depending on `discount_type`.
 type OrderDiscount struct {
 	// Order discount ID.
 	ID string `json:"id" validate:"required"`
@@ -18,7 +20,9 @@ type OrderDiscount struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=order_discount"`
 	// Display name.
 	Name string `json:"name" validate:"required"`
-	// Discount code.
+	// The code entered to apply this discount to an order.
+	//
+	// Must be unique within the account.
 	Code string `json:"code" validate:"required"`
 	// Percent off as a decimal string (e.g. `10` for 10%).
 	//

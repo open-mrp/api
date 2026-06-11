@@ -13,9 +13,11 @@ import (
 
 // Request to merge source customers into a target customer.
 type MergeCustomersRequest struct {
-	// Target customer ID.
+	// ID of the target customer that receives the merged records.
 	CustomerID string `path:"id" validate:"required"`
-	// Source customer IDs.
+	// IDs of the source customers to merge into the target.
+	//
+	// Sources are deleted after the merge. The list must not contain duplicates or the target customer's ID.
 	SourceCustomerIDs []string `json:"source_customer_ids" validate:"required"`
 }
 
@@ -27,7 +29,9 @@ func (*MergeCustomersRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleMergeCustomersRequest)
 }
 
-// Merges one or more source customers into a target customer, reassigning all associated records and deleting the source accounts.
+// Merges one or more source customers into a target customer.
+//
+// Sales orders, invoices, shipments, deliveries, and other transaction records from the source customers are reassigned to the target; price groups, product line access, addresses, and users are consolidated without duplicates; the source customers are then deleted.
 type MergeCustomersEndpoint struct{}
 
 func (e *MergeCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*MergeCustomersRequest, *apiresource.Customer] {

@@ -13,11 +13,13 @@ import (
 type AddItemCategoryPropertyRequest struct {
 	// Item category ID.
 	ItemCategoryID string `path:"id" validate:"required"`
-	// Property ID.
+	// ID of the property to add to the category.
 	PropertyID string `path:"property_id" validate:"required"`
 }
 
-// Adds a property to an item category. Default system categories cannot be modified.
+// Adds a property to an item category, making the property available to items in that category.
+//
+// Each property name can appear only once per category; adding a property whose name duplicates one already in the category returns a conflict error. Default system categories cannot be modified.
 type AddItemCategoryPropertyEndpoint struct{}
 
 func (e *AddItemCategoryPropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddItemCategoryPropertyRequest, *apiresource.EmptyResource] {

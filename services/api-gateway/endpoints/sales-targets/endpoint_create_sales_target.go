@@ -14,15 +14,15 @@ import (
 
 // Request to create a sales target.
 type CreateSalesTargetRequest struct {
-	// Sales rep user ID.
+	// ID of the account user (sales rep) the target is for.
 	SalesRepID string `path:"id" validate:"required"`
-	// Start date.
+	// Start of the period the target applies to (inclusive).
 	StartDate time.Time `json:"start_date"`
-	// End date.
+	// End of the period the target applies to.
 	EndDate time.Time `json:"end_date"`
-	// Target amount value (decimal string).
+	// Goal amount for the period, as a decimal string (e.g. `50000.00`).
 	AmountValue string `json:"amount_value"`
-	// Amount unit ID.
+	// ID of the unit the amount is denominated in (typically a currency unit).
 	AmountUnitID string `json:"amount_unit_id" validate:"max=191"`
 }
 

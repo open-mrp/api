@@ -14,6 +14,12 @@ import (
 type ListAPIKeysRequest struct {
 	apiresource.PaginationRequest
 	// API key statuses to filter by.
+	//
+	// - `active`: the key can be used to authenticate requests.
+	// - `expired`: the key passed its expiration time and can no longer authenticate requests.
+	// - `revoked`: the key was revoked and can no longer authenticate requests.
+	//
+	// When omitted, keys of every status are returned.
 	Statuses []constants.APIKeyStatus `query:"statuses" default:"active,expired,revoked"`
 }
 

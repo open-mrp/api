@@ -14,11 +14,13 @@ import (
 // Request to list all receivable entries.
 type ListReceivablesRequest struct {
 	apiresource.PaginationRequest
-	// Cutoff date for the receivables snapshot.
+	// Compute receivable balances as of this timestamp.
+	//
+	// Only invoices created before the cutoff are included, and only allocations made before the cutoff are subtracted from each remaining balance. When omitted, current balances are returned.
 	CutoffDate *time.Time `query:"cutoff_date"`
 }
 
-// Returns a paginated list of receivable entries for the current account.
+// Returns a paginated list of outstanding receivable entries for the current account.
 type ListReceivablesEndpoint struct{}
 
 func (e *ListReceivablesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListReceivablesRequest, *apiresource.List[apiresource.ReceivableEntry]] {

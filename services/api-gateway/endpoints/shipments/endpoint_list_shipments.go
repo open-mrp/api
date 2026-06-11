@@ -13,21 +13,21 @@ import (
 // Request to list shipments.
 type ListShipmentsRequest struct {
 	apiresource.PaginationRequest
-	// Filter by shipment status.
+	// Filter by shipment status (`packed` or `shipped`).
 	Status *string `query:"status"`
-	// Filter by item IDs.
+	// Only include shipments containing at least one line for any of these items.
 	ItemIDs []string `query:"item_ids"`
-	// Filter by customer IDs.
+	// Only include shipments for any of these customers.
 	CustomerIDs []string `query:"customer_ids"`
-	// Filter by product line IDs.
+	// Only include shipments containing at least one line whose product belongs to any of these product lines.
 	ProductLineIDs []string `query:"product_line_ids"`
-	// Filter by customer group IDs.
+	// Only include shipments whose customer belongs to any of these customer groups.
 	CustomerGroupIDs []string `query:"customer_group_ids"`
-	// Filter by sales rep IDs.
+	// Only include shipments whose customer is assigned to any of these sales reps.
 	SalesRepIDs []string `query:"sales_rep_ids"`
-	// Filter by start date (inclusive).
+	// Only include shipments created on or after this date (`YYYY-MM-DD`).
 	StartDate *string `query:"start_date"`
-	// Filter by end date (inclusive).
+	// Only include shipments created on or before this date (`YYYY-MM-DD`).
 	EndDate *string `query:"end_date"`
 }
 

@@ -14,9 +14,11 @@ import (
 type CreateUserRequest struct {
 	// Session ID.
 	SessionID string `json:"-" path:"session_id" validate:"required"`
-	// Display name.
+	// The user's display name.
 	Name string `json:"name" validate:"required,max=255"`
-	// Password.
+	// Password for the new user.
+	//
+	// Must be 8–72 characters and contain at least one lowercase letter, one uppercase letter, one digit, and one special character.
 	Password string `json:"password" validate:"required,password" sensitive:"true"` // #nosec G117 - Struct field, not a hardcoded credential
 }
 
@@ -29,7 +31,9 @@ func (*CreateUserRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateUserRequest)
 }
 
-// Creates or associates a user with a registration session. If the session email matches an existing user, that user is associated; otherwise a new user is created.
+// Creates the user for a registration session.
+//
+// If the session's email matches an existing user, that user is associated with the session instead of creating a new one. Advances the session to the `account_details` step.
 type CreateUserEndpoint struct{}
 
 func (e *CreateUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateUserRequest, *apiresource.CreateUserResponse] {

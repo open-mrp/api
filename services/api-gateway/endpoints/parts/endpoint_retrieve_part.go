@@ -12,7 +12,7 @@ import (
 
 // Request to retrieve a part by ID.
 type RetrievePartRequest struct {
-	// Part ID.
+	// ID of the part to retrieve.
 	ItemID string `path:"id" validate:"required"`
 }
 

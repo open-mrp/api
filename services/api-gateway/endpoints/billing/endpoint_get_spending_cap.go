@@ -10,7 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Returns the monthly agent spending cap for the account. Null cap_cents means no cap.
+// Returns the monthly agent spending cap for the account. A null `cap_cents` means no cap is set.
 type GetSpendingCapEndpoint struct{}
 
 func (e *GetSpendingCapEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.SpendingCapResponse] {

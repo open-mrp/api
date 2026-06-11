@@ -14,15 +14,21 @@ import (
 
 // Request to create a carrier.
 type CreateCarrierRequest struct {
-	// Display name.
+	// Human-readable name for the carrier.
+	//
+	// Must be unique among your account's carriers.
 	Name string `json:"name" validate:"required,max=255"`
-	// Carrier code.
+	// Well-known carrier code.
+	//
+	// Omit for a custom carrier. Providing a Shippo-supported code (`fedex`, `ups`, `usps`) connects the carrier through Shippo and auto-syncs its service levels.
 	Code field.Optional[constants.CarrierCode] `json:"code,omitzero"`
-	// Carrier account number. Required for UPS and USPS carriers.
+	// Your account number with this carrier.
+	//
+	// Required when `code` is `ups` or `usps`, which connect to Shippo using this number; FedEx connects via OAuth instead.
 	AccountNumber field.Optional[string] `json:"account_number,omitzero" validate:"omitempty,max=255"`
 	// Carrier visibility in the customer portal.
 	//
-	// If `visible`, this carrier will be available for your customers to utilize when they go to checkout. If `hidden`, this carrier will not be an option on checkout.
+	// A `visible` carrier can be selected by your customers at checkout; a `hidden` carrier is not offered there. New carriers are visible unless set to `hidden`.
 	CustomerPortalVisibility field.Optional[constants.CustomerPortalVisibility] `json:"customer_portal_visibility,omitzero" default:"visible"`
 }
 
@@ -40,7 +46,9 @@ func (*CreateCarrierRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateCarrierRequest)
 }
 
-// Creates a carrier. If a Shippo-supported carrier code is provided, the carrier will be registered with Shippo and service levels will be auto-synced as options.
+// Creates a carrier.
+//
+// If a Shippo-supported code (`fedex`, `ups`, `usps`) is provided, the carrier is connected through Shippo and its service levels are auto-synced, initially hidden from the customer portal. Sandbox accounts skip the Shippo connection.
 type CreateCarrierEndpoint struct{}
 
 func (e *CreateCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateCarrierRequest, *apiresource.Carrier] {

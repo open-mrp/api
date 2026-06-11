@@ -12,7 +12,7 @@ import (
 
 // Request to resubmit an invoice via EDI.
 type ResubmitEDIInvoiceRequest struct {
-	// Invoice ID.
+	// ID of the invoice to resubmit.
 	InvoiceID string `json:"invoice_id" validate:"required"`
 }
 
@@ -24,7 +24,9 @@ func (*ResubmitEDIInvoiceRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleResubmitEDIInvoiceRequest)
 }
 
-// Resubmits an invoice via EDI. Fails if the invoice does not exist or EDI is not enabled on the account.
+// Triggers an EDI resubmission request for an invoice.
+//
+// Returns a confirmation message.
 type ResubmitEDIInvoiceEndpoint struct{}
 
 func (e *ResubmitEDIInvoiceEndpoint) Materialize() *apiendpoint.APIEndpoint[*ResubmitEDIInvoiceRequest, *apiresource.MessageResource] {

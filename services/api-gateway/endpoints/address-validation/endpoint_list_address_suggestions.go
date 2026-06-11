@@ -12,9 +12,11 @@ import (
 
 // Request for address autocomplete.
 type AutocompleteAddressRequest struct {
-	// Autocomplete input text.
+	// Partial address text to generate suggestions for.
 	Input string `query:"input" validate:"required"`
-	// Session token for grouping autocomplete requests.
+	// Opaque token that groups a series of related autocomplete requests into a single session.
+	//
+	// Reuse the same token for each keystroke of one address entry.
 	SessionToken *string `query:"session_token"` // #nosec G117 -- not a secret, Google Maps session correlation token
 }
 

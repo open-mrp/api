@@ -14,11 +14,15 @@ import (
 
 // Request to partially update a product type.
 type UpdateProductTypeRequest struct {
-	// Product ID.
+	// Product type ID.
 	ProductTypeID string `path:"id" validate:"required"`
-	// Display name.
+	// New human-readable name.
+	//
+	// Must be unique across product types.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Unique code.
+	// New machine-readable code.
+	//
+	// Must be unique across product types.
 	Code field.Optional[string] `json:"code,omitzero" validate:"omitempty,max=255"`
 }
 

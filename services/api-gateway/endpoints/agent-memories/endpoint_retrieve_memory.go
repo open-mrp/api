@@ -10,7 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Request to get an agent memory.
+// Request to retrieve an agent memory.
 type RetrieveMemoryRequest struct {
 	// Memory ID.
 	ID string `path:"id" validate:"required"`

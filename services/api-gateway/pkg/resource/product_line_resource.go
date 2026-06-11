@@ -12,16 +12,18 @@ const SampleProductLineID = "pl_01996357326a0d3f7b129542ea"
 const SampleProductLineName = "Industrial Fasteners"
 
 // Product line resource.
+//
+// A product line groups related products in your catalog and carries the default commission policy, freight policy, and unit group for those products.
 type ProductLine struct {
 	// Product line ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=product_line"`
-	// Display name.
+	// Display name of the product line.
 	Name string `json:"name" validate:"required"`
-	// Description.
+	// Free-form description of the product line.
 	Description *string `json:"description"`
-	// Notes.
+	// Free-form notes about the product line.
 	Notes *string `json:"notes"`
 	// Default commission policy for products in this product line.
 	//
@@ -34,10 +36,12 @@ type ProductLine struct {
 	// - `billed_freight`: freight is billed for these products, unless overridden elsewhere.
 	FreightPolicy constants.FreightPolicy `json:"freight_policy" validate:"required"`
 	// Owner of the product line.
+	//
+	// System-owned product lines are platform-provided and shared across all accounts; account-owned product lines are custom to your account.
 	Owner *Owner `json:"owner" expandable:"true"`
 	// Unit group associated with this product line.
 	//
-	// This unit group dictates the available units that products in this product line may embody in your production process.
+	// The unit group determines the set of units available to products in this product line.
 	UnitGroup *UnitGroup `json:"unit_group" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

@@ -15,7 +15,7 @@ import (
 type BulkCreateConsumptionInput struct {
 	// SKU of the consumed material.
 	SKU string `json:"sku" validate:"required"`
-	// Consumption quantity measure.
+	// Quantity consumed, in the item's base unit.
 	Measure float64 `json:"measure" validate:"required,gt=0"`
 	// Instructions for this consumption.
 	Instructions field.Optional[string] `json:"instructions,omitzero"`
@@ -25,37 +25,51 @@ type BulkCreateConsumptionInput struct {
 type BulkCreateProductionOutputInput struct {
 	// SKU of the produced item.
 	SKU string `json:"sku" validate:"required"`
-	// Production quantity measure.
+	// Quantity produced, in the item's base unit.
 	Measure float64 `json:"measure" validate:"required,gt=0"`
 }
 
 // Production step input for bulk creation.
 type BulkCreateProductionStepInput struct {
-	// Display name.
+	// Display name of the production step.
+	//
+	// Used to match existing steps: if a step with this name already exists in the account, that step is updated in place instead of creating a new one.
 	Name string `json:"name" validate:"required"`
-	// Consumptions.
+	// Materials consumed by the step, resolved by SKU.
 	Consumptions []BulkCreateConsumptionInput `json:"consumptions"`
-	// Production outputs. At least one is required.
+	// Items produced by the step, resolved by SKU.
+	//
+	// At least one is required.
 	Productions []BulkCreateProductionOutputInput `json:"productions" validate:"required,min=1"`
 	// Labor rate in dollars per hour.
 	LaborRate float64 `json:"labor_rate" validate:"required,gt=0"`
-	// Labor time value.
+	// Labor time required per unit of output.
+	//
+	// Stored as `labor_time_unit` per one base unit of the first production output.
 	LaborTime float64 `json:"labor_time" validate:"required,gt=0"`
-	// Labor time unit abbreviation (default: "hr"). One of: hr, minute, second, day.
+	// Labor time unit abbreviation.
+	//
+	// Accepted values (case-insensitive): `hr`, `minute`, `min`, `second`, `sec`, `day`. Defaults to `hr`.
 	LaborTimeUnit field.Optional[string] `json:"labor_time_unit,omitzero"`
 	// Overhead rate in dollars per hour.
 	OverheadRate float64 `json:"overhead_rate" validate:"required,gt=0"`
-	// Allowances factor (default: 0).
+	// Allowance correction factor applied to labor time in cost calculations.
+	//
+	// Defaults to `0`.
 	Allowances field.Optional[float64] `json:"allowances,omitzero"`
-	// Leveling factor (default: 0).
+	// Leveling correction factor applied to labor time in cost calculations.
+	//
+	// Defaults to `0`.
 	LevelingFactor field.Optional[float64] `json:"leveling_factor,omitzero"`
-	// Scanning station name, resolved by name.
+	// Name of an existing scanning station to assign to the step.
+	//
+	// Resolved by exact name; rows referencing an unknown station are skipped.
 	Station field.Optional[string] `json:"station,omitzero"`
 }
 
 // Request to bulk create production steps.
 type BulkCreateProductionStepsRequest struct {
-	// Production steps to create.
+	// Production steps to create or update.
 	Steps []BulkCreateProductionStepInput `json:"steps" validate:"required"`
 }
 
@@ -86,7 +100,9 @@ func (*BulkCreateProductionStepsRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleBulkCreateProductionStepsRequest)
 }
 
-// Creates multiple production steps in a single request.
+// Creates or updates multiple production steps in a single request.
+//
+// Rows are matched to existing steps by name: matches are updated in place (replacing their production outputs and consumptions) and the rest are created. Each row succeeds or fails independently; failures are reported per row in the response instead of failing the whole request.
 type BulkCreateProductionStepsEndpoint struct{}
 
 func (e *BulkCreateProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkCreateProductionStepsRequest, *apiresource.BulkCreateProductionStepsResponse] {

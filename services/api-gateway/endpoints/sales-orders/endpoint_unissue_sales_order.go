@@ -16,6 +16,8 @@ type UnissueSalesOrderRequest struct {
 	// Sales order ID.
 	SalesOrderID string `path:"id" validate:"required"`
 	// Whether to notify the customer.
+	//
+	// Reserved for future use; no notification email is currently sent for this action.
 	NotifyCustomer bool `json:"notify_customer"`
 }
 
@@ -25,7 +27,9 @@ func (*UnissueSalesOrderRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUnissueSalesOrderRequest)
 }
 
-// Unissues a sales order, transitioning it from issued back to estimate.
+// Unissues a sales order, transitioning it from `issued` back to `estimate`.
+//
+// Deletes the order's pick and releases any inventory reserved when the order was issued.
 type UnissueSalesOrderEndpoint struct{}
 
 func (e *UnissueSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*UnissueSalesOrderRequest, *apiresource.SalesOrder] {

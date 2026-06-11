@@ -15,15 +15,15 @@ const SampleSupplierID = "ac_0177902104bccac5fbb173cd96"
 const SampleSupplierName = "Acme Supplies Inc."
 const SampleSupplierNumber = "SUP-001"
 
-// Supplier sub-resource.
+// The supplier (selling account) an order is placed with.
 type Supplier struct {
 	// Supplier ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=supplier"`
-	// Display name.
+	// Name of the supplier account.
 	Name string `json:"name" validate:"required"`
-	// Supplier number.
+	// Human-facing supplier code, unique per account (e.g. `SUP-001`).
 	Number string `json:"number" validate:"required"`
 }
 
@@ -38,7 +38,7 @@ func (*Supplier) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleSupplier)
 }
 
-// Email contact sub-resource.
+// A contact that receives email communications for an order.
 type EmailContact struct {
 	// Email contact ID.
 	ID string `json:"id" validate:"required"`
@@ -61,13 +61,17 @@ func (*EmailContact) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleEmailContact)
 }
 
-// Full purchase order resource.
+// An order placed with a supplier to purchase materials or products.
+//
+// The list endpoint returns this same type as the retrieve endpoint, with the same fields available.
 type PurchaseOrder struct {
 	// Purchase order ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=purchase_order"`
-	// Purchase order number.
+	// Human-readable identifier for the order.
+	//
+	// Assigned automatically from a per-account sequence at creation; can be changed via update but must stay unique within the account.
 	Number string `json:"number" validate:"required"`
 	// Order note.
 	Note *string `json:"note"`
@@ -77,18 +81,13 @@ type PurchaseOrder struct {
 	// - `issued`: the order has been issued to the supplier and is open for receiving.
 	// - `fulfilled`: the order is complete and closed.
 	Status constants.SalesOrderStatusCode `json:"status" validate:"required"`
-	// Priority level for fulfilling the order.
-	//
-	// - `low`
-	// - `normal`
-	// - `high`
+	// Priority level for fulfilling the order, relative to other open orders.
 	Priority constants.PriorityCode `json:"priority" validate:"required"`
-	// Whether an acknowledgment has been sent to the supplier.
+	// Whether the order acknowledgment email has been sent to the supplier.
 	//
-	// - `not_sent`: no acknowledgment has been sent.
-	// - `sent`: the acknowledgment has been sent.
+	// Advances to `sent` when the order is issued with the `send_email` option; otherwise stays `not_sent`.
 	AcknowledgmentStatus constants.AcknowledgmentStatus `json:"acknowledgment_status" validate:"required"`
-	// Supplier.
+	// Supplier the order is placed with.
 	Supplier *Supplier `json:"supplier" expandable:"true"`
 	// Billing address.
 	BillToAddress *Address `json:"bill_to_address" expandable:"true"`
@@ -96,15 +95,17 @@ type PurchaseOrder struct {
 	ShipToAddress *Address `json:"ship_to_address" expandable:"true"`
 	// Carrier selection and freight billing for this order.
 	Freight *Freight `json:"freight" expandable:"true"`
-	// Payment term.
+	// Payment terms agreed with the supplier.
 	PaymentTerm *PaymentTerm `json:"payment_term" expandable:"true"`
-	// Shipping term.
+	// Shipping terms for the order.
 	ShippingTerm *ShippingTerm `json:"shipping_term" expandable:"true"`
-	// Receiving order.
+	// Receiving order used to receive inventory against this purchase order.
+	//
+	// Created automatically when the order is issued; null while the order is an estimate.
 	ReceivingOrder *ReceivingOrder `json:"receiving_order" expandable:"true"`
-	// Order lines.
+	// Line items on the order.
 	Lines *List[PurchaseOrderLine] `json:"lines" expandable:"true"`
-	// Total number of lines on the order, independent of whether `lines` is expanded.
+	// Total number of lines on the order.
 	LineCount int32 `json:"line_count"`
 	// Supplier-side contacts that order communications are sent to.
 	Contacts *List[EmailContact] `json:"contacts" expandable:"true"`
@@ -117,6 +118,8 @@ type PurchaseOrder struct {
 	// Null until status reaches `fulfilled`.
 	CompletedAt *time.Time `json:"completed_at"`
 	// Promised or scheduled date for the order, if one has been set.
+	//
+	// Set via the `promised_at` request field.
 	ScheduledAt *time.Time `json:"scheduled_at"`
 	// Created timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

@@ -14,6 +14,8 @@ import (
 type GetTenancyRequest struct{}
 
 // Returns the authenticated user's tenancy context.
+//
+// The tenancy describes which account the user is currently acting in and every other account they can switch to, including sandboxes. It can be called before an account is selected, such as immediately after authentication.
 type GetTenancyEndpoint struct{}
 
 func (e *GetTenancyEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetTenancyRequest, *apiresource.Tenancy] {

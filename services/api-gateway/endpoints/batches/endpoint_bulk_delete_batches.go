@@ -24,7 +24,9 @@ func (*DeleteManyBatchesRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleDeleteManyBatchesRequest)
 }
 
-// Deletes multiple batches.
+// Deletes multiple batches in one request.
+//
+// Batch IDs that cannot be found are skipped; the request fails only if none of the batches exist. After deletion, any production run whose batches are now all scanned or deleted is closed automatically.
 type BulkDeleteBatchesEndpoint struct{}
 
 func (e *BulkDeleteBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteManyBatchesRequest, *apiresource.EmptyResource] {

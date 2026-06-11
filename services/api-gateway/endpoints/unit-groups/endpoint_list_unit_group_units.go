@@ -10,7 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListUnitGroupUnitsRequest is a request to list units within a unit group.
+// Request to list the associated units within a unit group.
 type ListUnitGroupUnitsRequest struct {
 	// Unit group ID.
 	UnitGroupID string `path:"unit_group_id" validate:"required"`

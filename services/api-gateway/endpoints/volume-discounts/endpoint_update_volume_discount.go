@@ -14,13 +14,15 @@ import (
 
 // Volume discount tier to upsert.
 type UpdateVolumeDiscountTierInput struct {
-	// Existing tier ID. Omit for new tiers.
+	// ID of an existing tier to update.
+	//
+	// Omit to create a new tier.
 	ID field.Optional[string] `json:"id,omitzero" validate:"omitempty"`
 	// Display name.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Discount percentage as a decimal string.
+	// Percentage taken off the price once the threshold is met, as a decimal string (e.g. `5` for 5%).
 	DiscountPercentage field.Optional[string] `json:"discount_percentage,omitzero" format:"decimal"`
-	// Quantity threshold as a decimal string.
+	// Minimum ordered quantity at which this tier's discount begins to apply, as a decimal string.
 	Threshold field.Optional[string] `json:"threshold,omitzero" format:"decimal"`
 	// Parent tier ID for tier chaining.
 	ParentTierID field.Optional[string] `json:"parent_tier_id,omitzero" validate:"omitempty"`
@@ -31,30 +33,46 @@ type UpdateVolumeDiscountRequest struct {
 	// Volume discount ID.
 	VolumeDiscountID string `path:"id" validate:"required"`
 	// Display name.
+	//
+	// Must be unique within the account.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Tiers (upsert semantics).
+	// The full set of tiers for this discount.
+	//
+	// Only applied when `has_tiers` is `true`. Tiers with an `id` are updated, tiers without an `id` are created, and existing tiers not present in the list are deleted.
 	Tiers []UpdateVolumeDiscountTierInput `json:"tiers,omitzero"`
 	// Account group IDs to set as customer groups.
+	//
+	// Only applied when `has_customer_groups` is `true`, in which case they replace the existing set entirely.
 	CustomerGroupIDs []string `json:"customer_group_ids,omitzero"`
 	// Product line IDs to set.
+	//
+	// Only applied when `has_product_lines` is `true`, in which case they replace the existing set entirely.
 	ProductLineIDs []string `json:"product_line_ids,omitzero"`
 	// Item category IDs to set.
+	//
+	// Only applied when `has_categories` is `true`, in which case they replace the existing set entirely.
 	CategoryIDs []string `json:"category_ids,omitzero"`
 	// Attribute IDs to set.
+	//
+	// Only applied when `has_attributes` is `true`, in which case they replace the existing set entirely.
 	AttributeIDs []string `json:"attribute_ids,omitzero"`
-	// Unit IDs to set as acceptable units.
+	// IDs of the units to set as acceptable units.
+	//
+	// Only applied when `has_units` is `true`, in which case they replace the existing set entirely.
 	UnitIDs []string `json:"unit_ids,omitzero"`
-	// Whether to replace tiers.
+	// Whether to apply the `tiers` field.
+	//
+	// When `true`, the discount's tiers are replaced with the contents of `tiers` (an empty list deletes all tiers). When `false`, `tiers` is ignored.
 	HasTiers bool `json:"has_tiers,omitzero"`
-	// Whether to replace customer groups.
+	// Whether to apply the `customer_group_ids` field; when `false`, it is ignored.
 	HasCustomerGroups bool `json:"has_customer_groups,omitzero"`
-	// Whether to replace product lines.
+	// Whether to apply the `product_line_ids` field; when `false`, it is ignored.
 	HasProductLines bool `json:"has_product_lines,omitzero"`
-	// Whether to replace categories.
+	// Whether to apply the `category_ids` field; when `false`, it is ignored.
 	HasCategories bool `json:"has_categories,omitzero"`
-	// Whether to replace attributes.
+	// Whether to apply the `attribute_ids` field; when `false`, it is ignored.
 	HasAttributes bool `json:"has_attributes,omitzero"`
-	// Whether to replace units.
+	// Whether to apply the `unit_ids` field; when `false`, it is ignored.
 	HasUnits bool `json:"has_units,omitzero"`
 }
 
@@ -74,7 +92,9 @@ func (*UpdateVolumeDiscountRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateVolumeDiscountRequest)
 }
 
-// Partially updates a volume discount. Tiers use upsert semantics and relations are replaced when the corresponding has_* flag is true.
+// Partially updates a volume discount.
+//
+// The tier and association lists are only applied when their corresponding `has_*` flag is `true`, in which case they replace the existing set entirely. Tiers use upsert semantics: tiers with an `id` are updated, tiers without one are created, and existing tiers omitted from the list are deleted.
 type UpdateVolumeDiscountEndpoint struct{}
 
 func (e *UpdateVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateVolumeDiscountRequest, *apiresource.VolumeDiscount] {

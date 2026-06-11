@@ -12,7 +12,7 @@ import (
 
 // Request to get details for a place.
 type RetrieveAddressDetailsRequest struct {
-	// Google Places ID.
+	// The place ID to look up, as returned in the `id` field of an address suggestion.
 	PlaceID string `path:"id" validate:"required"`
 	// Session token for grouping with a previous autocomplete request.
 	SessionToken *string `query:"session_token"` // #nosec G117 -- not a secret, Google Maps session correlation token

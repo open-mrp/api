@@ -15,7 +15,9 @@ type GetOAuthStatusRequest struct {
 	CarrierID string `path:"id" validate:"required"`
 }
 
-// Returns the OAuth connection status for a carrier. Sandbox accounts always return disconnected.
+// Returns the OAuth connection status for a carrier.
+//
+// The status is one of `connected`, `authorization_pending`, or `disconnected`. Sandbox accounts always return `disconnected`.
 type GetOAuthStatusEndpoint struct{}
 
 func (e *GetOAuthStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetOAuthStatusRequest, *apiresource.OAuthStatusResponse] {

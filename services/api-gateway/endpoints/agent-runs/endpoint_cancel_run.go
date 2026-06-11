@@ -16,12 +16,14 @@ type CancelRunRequest struct {
 	AgentRunID string `path:"id" validate:"required"`
 }
 
-// Cancels a running or pending agent run.
+// Cancels a pending or running agent run.
+//
+// Only runs in the `pending` or `running` status can be cancelled; cancelling a run in any other status returns a validation error.
 type CancelRunEndpoint struct{}
 
 func (e *CancelRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*CancelRunRequest, *apiresource.AgentRun] {
 	return (&apiendpoint.APIEndpoint[*CancelRunRequest, *apiresource.AgentRun]{
-		Title:             "Cancel Run",
+		Title:             "Cancel Agent Run",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/runs/{id}/actions/cancel",

@@ -24,7 +24,7 @@ func (*CloseBatchRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCloseBatchRequest)
 }
 
-// Closes a batch, marking it as completed.
+// Closes a batch so it can no longer be scanned or advanced through production.
 type CloseBatchEndpoint struct{}
 
 func (e *CloseBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*CloseBatchRequest, *apiresource.Batch] {

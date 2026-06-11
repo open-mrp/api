@@ -16,7 +16,7 @@ type RetrieveCustomerProductLineAccessRequest struct {
 	CustomerID string `path:"customer_id" validate:"required"`
 }
 
-// Returns the product line access for a customer.
+// Returns a customer's direct product line access record.
 type RetrieveCustomerProductLineAccessEndpoint struct{}
 
 func (e *RetrieveCustomerProductLineAccessEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveCustomerProductLineAccessRequest, *apiresource.CustomerProductLineAccess] {

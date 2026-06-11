@@ -13,7 +13,9 @@ import (
 // Request to list EDI runs.
 type ListEDIRunsRequest struct {
 	apiresource.PaginationRequest
-	// Success status filter.
+	// Filters runs by outcome.
+	//
+	// Pass `true` to return only successful runs or `false` to return only failed runs. Omit to return runs regardless of outcome.
 	HasSucceeded *bool `query:"has_succeeded"`
 }
 

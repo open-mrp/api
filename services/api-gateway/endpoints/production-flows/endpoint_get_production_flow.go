@@ -12,11 +12,13 @@ import (
 
 // GetProductionFlowRequest is the request to retrieve the production flow graph for an item.
 type GetProductionFlowRequest struct {
-	// Item ID.
+	// ID of the item whose production flow to retrieve.
 	ItemID string `path:"item_id" validate:"required"`
 }
 
-// Returns the production flow graph for the given item, including all production steps, their consumptions, and connections.
+// Returns the production flow graph for the given item.
+//
+// The graph contains the step(s) that produce the item, every upstream step that feeds them, and any connected downstream steps, with each step's production output, consumptions, and connections. The list of steps is empty if no production step produces the item.
 type GetProductionFlowEndpoint struct{}
 
 func (e *GetProductionFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetProductionFlowRequest, *apiresource.ProductionFlow] {

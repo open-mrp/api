@@ -14,12 +14,22 @@ import (
 // Request to create a product line.
 type CreateProductLineRequest struct {
 	// Display name.
+	//
+	// Must be unique among the account's product lines; a duplicate name returns a conflict error.
 	Name string `json:"name" validate:"required,max=255"`
-	// Unit group ID associated with this product line. This unit group dictates the units that products in this product line may be purchased in.
+	// ID of the unit group to associate with this product line.
+	//
+	// The unit group determines the set of units available to products in this product line.
 	UnitGroupID string `json:"unit_group_id" validate:"required"`
-	// Commission policy of products in this product line.
+	// Default commission policy for products in this product line.
+	//
+	// - `commission_exempt`: no commission applies to these products.
+	// - `commission_applied`: commission applies to these products, unless overridden elsewhere.
 	CommissionPolicy constants.CommissionPolicy `json:"commission_policy" validate:"required"`
-	// Freight policy for all items in this product line.
+	// Default freight policy for products in this product line.
+	//
+	// - `free_freight`: these products do not incur a freight charge.
+	// - `billed_freight`: freight is billed for these products, unless overridden elsewhere.
 	FreightPolicy constants.FreightPolicy `json:"freight_policy" validate:"required"`
 }
 

@@ -48,19 +48,19 @@ func (*SysProperty) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleSysProperty)
 }
 
-// System property type.
+// The kind of counter a system property tracks.
 type SysPropertyType struct {
 	// System property type ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sys_property_type"`
-	// Display name.
+	// Human-readable name of the counter, such as `Transaction Number`.
 	Name string `json:"name" validate:"required"`
-	// Machine-readable code identifying which counter this is, such as `transaction_number`.
+	// Machine-readable code identifying which counter this is, such as `transaction_number` or `purchase_order_number`.
 	Code string `json:"code" validate:"required"`
 }
 
-// System property value response.
+// The current value of a system property counter.
 type SysPropertyValue struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sys_property_value"`

@@ -12,21 +12,23 @@ const SampleAdjustmentTypeID = "adjt_01200338b135dc51aba62d4bf8"
 const SampleAdjustmentTypeName = "Discount"
 const SampleAdjustmentTypeCode = string(constants.AdjustmentTypeDiscount)
 
-// Adjustment type resource.
+// A category of financial adjustment, such as a discount, fee, or write-off.
+//
+// Adjustment types classify adjustment transactions recorded against customer invoices.
 type AdjustmentType struct {
-	// Adjustment ID.
+	// Adjustment type ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=adjustment_type"`
-	// Display name.
+	// Human-readable name of the adjustment type (e.g. "Discount").
 	Name string `json:"name" validate:"required"`
 	// Machine-readable code identifying what kind of adjustment this is.
 	//
-	// - `discount`: a price reduction applied to an order.
+	// - `discount`: a price reduction.
 	// - `shipping_discrepancy`: corrects a difference between quoted and actual freight.
 	// - `short_payment`: reconciles an invoice paid for less than the amount due.
 	// - `write_off`: cancels an uncollectible balance.
-	// - `fee`: an additional charge added to an order.
+	// - `fee`: an additional charge.
 	// - `refund`: returns money to the customer.
 	Code constants.AdjustmentType `json:"code" validate:"required"`
 	// Provenance of this adjustment type.

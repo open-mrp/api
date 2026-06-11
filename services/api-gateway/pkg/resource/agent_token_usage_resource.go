@@ -11,20 +11,22 @@ import (
 const SampleAgentTokenUsageID = "agtk_017f89e51168bae2dc06684fa2" // #nosec G101 -- sample ID, not a credential
 
 // Daily agent token usage record.
+//
+// One record exists per account per day, aggregating LLM token consumption, cost, and run count across all agent runs that day.
 type AgentTokenUsage struct {
 	// Usage record ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=agent_token_usage"`
-	// Date of usage (YYYY-MM-DD).
+	// Date of usage (`YYYY-MM-DD`).
 	Date string `json:"date" validate:"required"`
-	// Total input tokens consumed.
+	// Total input tokens consumed on this date.
 	InputTokens int64 `json:"input_tokens"`
-	// Total output tokens consumed.
+	// Total output tokens consumed on this date.
 	OutputTokens int64 `json:"output_tokens"`
-	// Total cost in USD.
+	// Total cost in USD for this date.
 	TotalCost float64 `json:"total_cost"`
-	// Number of agent runs.
+	// Number of agent runs on this date.
 	RunCount int32 `json:"run_count"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

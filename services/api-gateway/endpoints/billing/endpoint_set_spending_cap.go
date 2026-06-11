@@ -14,8 +14,9 @@ import (
 
 // Request to set or remove the monthly spending cap.
 type SetSpendingCapRequest struct {
-	// Monthly spending cap in cents. Null removes the cap; omitting the
-	// field leaves the current cap unchanged.
+	// Monthly agent spending cap in cents.
+	//
+	// Set to `null` to remove the cap; omit the field to leave the current cap unchanged.
 	CapCents field.Clearable[int64] `json:"cap_cents,omitzero"`
 }
 
@@ -28,6 +29,8 @@ func (*SetSpendingCapRequest) SchemaExample() any {
 }
 
 // Sets or removes the monthly agent spending cap for the account.
+//
+// When estimated agent spend reaches the cap, new agent runs are blocked and in-progress runs are stopped until the cap is raised, removed, or the next billing month begins.
 type SetSpendingCapEndpoint struct{}
 
 func (e *SetSpendingCapEndpoint) Materialize() *apiendpoint.APIEndpoint[*SetSpendingCapRequest, *apiresource.SpendingCapResponse] {

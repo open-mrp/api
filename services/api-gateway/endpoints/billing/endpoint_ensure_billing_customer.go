@@ -10,7 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Ensures a Stripe billing customer exists for the account.
+// Ensures a Stripe billing customer exists for the account, creating one if necessary.
 type EnsureBillingCustomerEndpoint struct{}
 
 func (e *EnsureBillingCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.EnsureBillingCustomerResponse] {

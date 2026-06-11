@@ -11,17 +11,19 @@ import (
 const SampleRateID = "ra_015aa0a9522cf222024fd21d1a"
 const SampleRateValue = "25.500000000000000000000000000000"
 
-// Rate resource.
+// Value expressed as a ratio of two units, such as a price per kilogram or a throughput per hour.
 type Rate struct {
 	// Rate ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=rate"`
-	// Rate value as a decimal string.
+	// Decimal value of the rate, as a string to preserve precision.
+	//
+	// Expressed as the amount of the numerator unit per one denominator unit.
 	Value string `json:"value" validate:"required" format:"decimal"`
-	// Numerator unit.
+	// Unit of the rate's numerator (e.g. the currency of a price).
 	NumeratorUnit *Unit `json:"numerator_unit" expandable:"true"`
-	// Denominator unit.
+	// Unit of the rate's denominator (the per-unit basis, e.g. kilograms for a price per kilogram).
 	DenominatorUnit *Unit `json:"denominator_unit" expandable:"true"`
 	// Human-readable formatted value (e.g. "$25.50 / kg" or "100 kg / hr").
 	DisplayValue string `json:"display_value" validate:"required"`

@@ -37,10 +37,12 @@ type AgentTokenDetail struct {
 	// Total tokens available (included + purchased).
 	TotalAvailable int64 `json:"total_available"`
 	// Estimated cost in dollars for the current billing period.
+	//
+	// This is a rough estimate for display purposes; the actual billed amount is calculated by the billing provider and may differ.
 	CurrentPeriodCost float64 `json:"current_period_cost"`
 	// When the current billing period ends (ISO 8601).
 	BillingPeriodEnd string `json:"billing_period_end"`
-	// Cost per million tokens for overage usage.
+	// Cost in dollars per million tokens for usage beyond the available token balance.
 	OverageCostPerMillionTokens float64 `json:"overage_cost_per_million_tokens"`
 }
 
@@ -48,15 +50,17 @@ type AgentTokenDetail struct {
 type AccountUsageResponse struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_usage_response"`
-	// Seat usage.
+	// Seat usage: users on the account counted against the plan's seat limit.
 	Seats UsageItem `json:"seats" validate:"required"`
-	// Invoice usage.
+	// Invoice usage, counted within the current billing period.
 	Invoices UsageItem `json:"invoices" validate:"required"`
-	// Batch usage.
+	// Batch usage, counted within the current billing period.
 	Batches UsageItem `json:"batches" validate:"required"`
-	// Sandbox usage.
+	// Sandbox usage: sandbox environments on the account counted against the plan's sandbox limit.
 	Sandboxes UsageItem `json:"sandboxes" validate:"required"`
 	// Subscription status information.
+	//
+	// Null if the account has no recorded subscription.
 	Subscription *SubscriptionInfo `json:"subscription"`
 	// Estimated agent LLM spending for the current month.
 	AgentSpend *AgentSpendInfo `json:"agent_spend"`
@@ -68,9 +72,19 @@ type AccountUsageResponse struct {
 type SubscriptionInfo struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=subscription_info"`
-	// Servicing status of the subscription (e.g., "active", "canceled").
+	// Whether the subscription is actively being serviced.
+	//
+	// Typically one of:
+	// - `active`: the subscription is in good standing.
+	// - `paused`: servicing is temporarily suspended.
+	// - `canceled`: the subscription has been canceled.
 	ServicingStatus string `json:"servicing_status" validate:"required"`
-	// Collection status (e.g., "current", "paused").
+	// Payment collection status of the subscription.
+	//
+	// Typically one of:
+	// - `current`: payments are being collected normally.
+	// - `paused`: payment collection is temporarily suspended.
+	// - `awaiting_customer_action`: a payment requires action from the customer (e.g., updating a payment method).
 	CollectionStatus string `json:"collection_status" validate:"required"`
 }
 
@@ -88,7 +102,9 @@ type SwitchPlanResponse struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=switch_plan_response"`
 	// Whether the plan switch was initiated successfully.
 	Success bool `json:"success"`
-	// Billing intent ID, if a billing intent was created.
+	// ID of the billing intent committed for the switch.
+	//
+	// Set to the committed billing intent ID for paid plan changes. Null for switches to the free plan, where no intent is surfaced.
 	IntentID *string `json:"intent_id"`
 }
 
@@ -98,7 +114,9 @@ type EnsureBillingCustomerResponse struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=ensure_billing_customer_response"`
 	// Stripe customer ID.
 	StripeCustomerID string `json:"stripe_customer_id" validate:"required"`
-	// Whether a Stripe customer was created.
+	// Whether a new Stripe customer was created by this call.
+	//
+	// `false` means the account already had a Stripe customer, which was returned instead.
 	Created bool `json:"created"`
 	// Billing profile ID, if one was created.
 	BillingProfileID *string `json:"billing_profile_id"`

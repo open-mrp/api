@@ -15,7 +15,9 @@ type DeletePaymentTermRequest struct {
 	PaymentTermID string `path:"id" validate:"required"`
 }
 
-// Deletes a payment term. Default payment terms cannot be deleted.
+// Deletes a payment term.
+//
+// Only payment terms created by your account can be deleted; system-owned default terms cannot be.
 type DeletePaymentTermEndpoint struct{}
 
 func (e *DeletePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeletePaymentTermRequest, *apiresource.EmptyResource] {

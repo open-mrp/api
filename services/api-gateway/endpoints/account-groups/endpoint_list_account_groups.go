@@ -13,7 +13,7 @@ import (
 // Request to list account groups.
 type ListAccountGroupsRequest struct {
 	apiresource.PaginationRequest
-	// Account group type filter.
+	// Filters results to account groups of the given type.
 	Type *constants.AccountGroupType `query:"type"`
 }
 

@@ -11,7 +11,7 @@ import (
 const SamplePickID = "pk_016452192feb7952d8393f0105"
 const SamplePickNumber = "PK-001"
 
-// Pick is a full pick resource.
+// A warehouse picking task for a sales order, tracking the quantities to pull from inventory and pack for shipment.
 type Pick struct {
 	// Pick ID.
 	ID string `json:"id" validate:"required"`
@@ -19,29 +19,19 @@ type Pick struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=pick"`
 	// Pick number.
 	Number string `json:"number" validate:"required"`
-	// Associated sales order.
-	//
-	// Expandable via include[]=sales_order.
+	// The sales order this pick fulfills.
 	SalesOrder *SalesOrder `json:"sales_order" expandable:"true"`
-	// Associated customer.
-	//
-	// Expandable via include[]=customer.
+	// The customer the associated sales order is for.
 	Customer *Customer `json:"customer" expandable:"true"`
-	// Pick priority code, used to order picks for fulfillment.
-	//
-	// - `low`: low priority.
-	// - `normal`: normal priority.
-	// - `high`: high priority.
+	// Priority used to order picks for fulfillment, inherited from the associated sales order.
 	Priority constants.PriorityCode `json:"priority" validate:"required"`
-	// Pick lines.
+	// The pick's lines, each tracking the quantity picked against one sales order line.
 	Lines *List[PickLine] `json:"lines" expandable:"true"`
-	// Associated departments.
-	//
-	// Expandable via include[]=departments.
+	// Departments assigned to this pick.
 	Departments *List[Department] `json:"departments" expandable:"true"`
 	// Timestamp when the pick was finished.
 	//
-	// `null` while the pick is still in progress.
+	// Unset while the pick is still in progress. Set automatically when packing leaves no unpacked lines with a remaining quantity to pick, and cleared when the pick is voided; it can also be set or cleared directly via Update Pick.
 	FinishedAt *time.Time `json:"finished_at"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -68,9 +58,11 @@ func (*Pick) SchemaExample() any {
 type PackPickResponse struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=pack_pick_response"`
-	// Updated pick.
+	// The pick after the pack operation, including its updated lines.
 	Pick *Pick `json:"pick" validate:"required"`
-	// Created shipment number.
+	// Number of the shipment created by the pack operation.
+	//
+	// Derived from the sales order number: the first shipment for an order uses the order number itself; later shipments append a sequence suffix (e.g. `SO-123-2`).
 	ShipmentNumber string `json:"shipment_number" validate:"required"`
 }
 
@@ -90,7 +82,7 @@ type PickShipmentsResponse struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=pick_shipments_response"`
 	// Shipment numbers associated with the pick.
 	ShipmentNumbers []string `json:"shipment_numbers" validate:"required"`
-	// Total count of matching shipment numbers.
+	// Total number of matching shipments, ignoring `limit` and `offset`.
 	Count int32 `json:"count" validate:"required"`
 }
 

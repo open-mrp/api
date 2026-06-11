@@ -16,15 +16,19 @@ type UploadAccountPhotoRequest struct {
 	// Raw image bytes.
 	RawBody []byte `rawbody:"true"`
 	// Content type of the image (e.g., image/png).
+	//
+	// The image is stored as `image/png` if this header is omitted, so set it to match the actual format you upload.
 	ContentType string `header:"Content-Type"`
 }
 
-// Uploads an account logo. Send as raw binary body.
+// Uploads an account logo.
+//
+// Send the image as the raw request body, not as multipart form data. The uploaded image replaces any existing logo and can be retrieved via the Get Account Logo URL endpoint. You can only upload a logo for the account you are acting in.
 type UploadAccountPhotoEndpoint struct{}
 
 func (e *UploadAccountPhotoEndpoint) Materialize() *apiendpoint.APIEndpoint[*UploadAccountPhotoRequest, *apiresource.AccountPhotoUploadResult] {
 	return (&apiendpoint.APIEndpoint[*UploadAccountPhotoRequest, *apiresource.AccountPhotoUploadResult]{
-		Title:             "Upload Account Photo",
+		Title:             "Upload Account Logo",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/accounts/{id}/photo",

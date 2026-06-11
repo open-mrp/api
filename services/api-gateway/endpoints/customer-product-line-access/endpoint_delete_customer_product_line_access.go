@@ -15,7 +15,9 @@ type DeleteCustomerProductLineAccessRequest struct {
 	CustomerID string `path:"customer_id" validate:"required"`
 }
 
-// Removes all product line access for a customer.
+// Removes a customer's direct product line access record.
+//
+// Access the customer inherits through its type group or pricing groups is not affected.
 type DeleteCustomerProductLineAccessEndpoint struct{}
 
 func (e *DeleteCustomerProductLineAccessEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteCustomerProductLineAccessRequest, *apiresource.EmptyResource] {

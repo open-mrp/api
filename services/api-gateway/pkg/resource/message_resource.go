@@ -5,7 +5,7 @@ import (
 	"github.com/augno/api/shared/constants"
 )
 
-// Message resource.
+// A human-readable confirmation returned by operations that do not produce a resource.
 type MessageResource struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=message"`

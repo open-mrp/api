@@ -18,7 +18,9 @@ type UpdateReceivingOrderLineRequest struct {
 	ReceivingOrderID string `path:"receiving_order_id" validate:"required"`
 	// Receiving order line ID.
 	LineID string `path:"id" validate:"required"`
-	// Quantity value to set for this line.
+	// New received quantity for the line, as a decimal string.
+	//
+	// When omitted, the line is returned unchanged.
 	QuantityValue field.Optional[string] `json:"quantity_value,omitzero"`
 }
 
@@ -31,7 +33,9 @@ func (*UpdateReceivingOrderLineRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateReceivingOrderLineRequest)
 }
 
-// Partially updates a receiving order line's quantity value.
+// Updates the received quantity on a receiving order line.
+//
+// Use this to record the quantity actually received — for example a partial delivery — before stocking the order.
 type UpdateReceivingOrderLineEndpoint struct{}
 
 func (e *UpdateReceivingOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateReceivingOrderLineRequest, *apiresource.ReceivingOrderLine] {

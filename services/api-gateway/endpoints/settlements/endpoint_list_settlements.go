@@ -10,16 +10,16 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListSettlementsRequest is the request to list settlements.
+// Request to list settlements.
 type ListSettlementsRequest struct {
 	apiresource.PaginationRequest
 	// Filter by transaction IDs present in allocations.
 	TransactionIDs []string `query:"transaction_ids"`
 	// Filter by invoice IDs present in allocations.
 	InvoiceIDs []string `query:"invoice_ids"`
-	// Filter by start date (inclusive).
+	// Only return settlements created on or after this date (`YYYY-MM-DD`).
 	StartDate *string `query:"start_date"`
-	// Filter by end date (inclusive).
+	// Only return settlements created before this date (`YYYY-MM-DD`).
 	EndDate *string `query:"end_date"`
 }
 

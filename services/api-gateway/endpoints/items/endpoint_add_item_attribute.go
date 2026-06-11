@@ -18,7 +18,9 @@ type AddItemAttributeRequest struct {
 	AttributeID string `path:"attribute_id" validate:"required"`
 }
 
-// Adds an attribute to an item. If the attribute is already associated with the item, this is a no-op.
+// Adds an attribute to an item and returns the updated item.
+//
+// If the attribute is already associated with the item, this is a no-op.
 type AddItemAttributeEndpoint struct{}
 
 func (e *AddItemAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddItemAttributeRequest, *apiresource.Item] {

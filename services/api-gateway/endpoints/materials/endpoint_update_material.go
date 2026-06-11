@@ -15,19 +15,23 @@ import (
 
 // Request to update a material.
 type UpdateMaterialRequest struct {
-	// Material ID.
+	// ID of the material to update.
 	ItemID string `path:"id" validate:"required"`
-	// SKU code.
+	// New stock keeping unit code for the material.
+	//
+	// Must remain unique within the account; a conflict error is returned if another item already uses it.
 	SKU field.Optional[string] `json:"sku,omitzero" validate:"omitempty,max=255"`
-	// Description.
+	// New description for the material.
 	Description field.Optional[string] `json:"description,omitzero"`
-	// Notes.
+	// New notes for the material.
 	Notes field.Optional[string] `json:"notes,omitzero"`
-	// Order point quantity.
+	// New reorder threshold: when on-hand stock falls to this quantity, the material should be reordered.
 	OrderPoint field.Optional[QuantityInputRequest] `json:"order_point,omitzero"`
-	// Lead time quantity.
+	// New expected time between placing an order for this material and receiving it.
 	LeadTime field.Optional[QuantityInputRequest] `json:"lead_time,omitzero"`
-	// Updated unit cost. Same currency rule as on create.
+	// New cost per unit.
+	//
+	// Follows the same unit rule as on create: `numerator_unit_id` must reference a currency unit and `denominator_unit_id` must reference a non-currency unit.
 	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero"`
 }
 
@@ -40,6 +44,8 @@ func (*UpdateMaterialRequest) SchemaExample() any {
 }
 
 // Partially updates a material.
+//
+// Fields not provided retain their current values.
 type UpdateMaterialEndpoint struct{}
 
 func (e *UpdateMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateMaterialRequest, *apiresource.Material] {

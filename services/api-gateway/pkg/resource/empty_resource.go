@@ -1,6 +1,6 @@
 package apiresource
 
-// Empty resource.
+// An empty object, used by endpoints that take no request parameters or return no response data.
 type EmptyResource struct {
 }
 

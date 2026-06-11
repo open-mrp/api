@@ -16,7 +16,9 @@ type SalesOrderLine struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order_line"`
-	// Line item number.
+	// Position of the line on the order.
+	//
+	// Assigned automatically in sequence, starting at `1`.
 	LineItemNumber int32 `json:"line_item_number" validate:"required"`
 	// Product SKU.
 	ProductSKU string `json:"product_sku" validate:"required"`
@@ -26,9 +28,9 @@ type SalesOrderLine struct {
 	Product *Product `json:"product" expandable:"true"`
 	// Quantity ordered.
 	QuantityOrdered *Quantity `json:"quantity_ordered" expandable:"true"`
-	// Unit price.
+	// Price charged per unit.
 	UnitPrice *Rate `json:"unit_price" expandable:"true"`
-	// Unit cost.
+	// Internal cost per unit, used to derive line profitability rather than what the customer is charged.
 	UnitCost *Rate `json:"unit_cost" expandable:"true"`
 	// Derived monetary totals for this line.
 	Totals *SalesOrderTotals `json:"totals" expandable:"true"`

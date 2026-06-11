@@ -14,37 +14,39 @@ import (
 // Request to list customers.
 type ListCustomersRequest struct {
 	apiresource.PaginationRequest
-	// Filter by customer group IDs.
+	// Filter by customer type group IDs (the account group of type `type_group` returned in the customer's `type` field).
 	CustomerGroupIDs []string `query:"customer_group_ids"`
-	// Filter by pricing group IDs.
+	// Filter to customers that belong to any of these pricing groups.
 	PricingGroupIDs []string `query:"pricing_group_ids"`
-	// Filter by sales rep IDs.
+	// Filter by default sales rep IDs.
 	SalesRepIDs []string `query:"sales_rep_ids"`
-	// Filter by status codes.
+	// Filter by account status codes.
 	StatusCodes []constants.AccountStatusCode `query:"status_codes"`
-	// Filter by shipping term IDs.
+	// Filter by default shipping term IDs.
 	ShippingTermIDs []string `query:"shipping_term_ids"`
-	// Filter by payment term IDs.
+	// Filter by default payment term IDs.
 	PaymentTermIDs []string `query:"payment_term_ids"`
-	// Filter by commission status codes.
+	// Filter by commission policy.
 	CommissionPolicyCodes []constants.CommissionPolicy `query:"commission_status_codes"`
-	// Filter by freight status codes.
+	// Filter by freight policy.
 	FreightPolicyCodes []constants.FreightPolicy `query:"freight_status_codes"`
-	// Filter by carrier IDs.
+	// Filter by default carrier IDs.
 	CarrierIDs []string `query:"carrier_ids"`
-	// Filter by service level IDs.
+	// Filter by default service level IDs.
 	ServiceLevelIDs []string `query:"service_level_ids"`
 	// Filter by whether the customer has child accounts.
 	ParentAccountStatus *constants.CustomerParentAccountStatus `query:"parent_account_status"`
-	// Filter by city.
+	// Filter to customers with any address in this city (exact match).
+	//
+	// When combined with `state` or `postal_code`, a single address must match all provided values.
 	City *string `query:"city"`
-	// Filter by state.
+	// Filter to customers with any address in this state (exact match).
 	State *string `query:"state"`
-	// Filter by postal code.
+	// Filter to customers with any address in this postal code (exact match).
 	PostalCode *string `query:"postal_code"`
-	// Filter by start date (created after).
+	// Filter to customers created at or after this timestamp (inclusive).
 	StartDate *time.Time `query:"start_date"`
-	// Filter by end date (created before).
+	// Filter to customers created at or before this timestamp (inclusive).
 	EndDate *time.Time `query:"end_date"`
 }
 

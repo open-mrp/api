@@ -22,18 +22,9 @@ type Unit struct {
 	Name string `json:"name" validate:"required"`
 	// Short abbreviation for the unit (e.g. "g", "kg").
 	Abbreviation string `json:"abbreviation" validate:"required"`
-	// Unit dimension.
+	// Physical dimension the unit measures, such as mass, volume, or currency.
 	//
-	// Units can only be converted to other units sharing the same dimension.
-	//
-	// - `currency`: monetary units such as dollars or euros.
-	// - `quantity`: discrete countable units.
-	// - `time`: time-based units such as hours or minutes.
-	// - `mass`: weight-based units such as kilograms or pounds.
-	// - `volume`: volumetric units such as liters or gallons.
-	// - `length`: distance-based units such as meters or feet.
-	// - `temperature`: temperature units such as Celsius or Fahrenheit.
-	// - `area`: area-based units such as square meters or acres.
+	// A unit can only be converted to another unit of the same dimension. The `quantity` dimension is for discrete countable items rather than a physical measure.
 	Type constants.UnitType `json:"type" validate:"required"`
 	// Conversion ratio numerator relative to the base unit in the same dimension.
 	RatioNumerator string `json:"ratio_numerator" validate:"required" format:"decimal"`
@@ -51,7 +42,7 @@ type Unit struct {
 	OffsetDenominator string `json:"offset_denominator" validate:"required" format:"decimal"`
 	// Whether this is the base unit for its dimension.
 	//
-	// Conversion ratios are relative to this unit.
+	// Conversion ratios are relative to this unit. Base units are platform-defined; account-created units always have this set to `false`.
 	IsBaseUnit bool `json:"is_base_unit"`
 	// Owner of this resource.
 	Owner *Owner `json:"owner" expandable:"true"`
@@ -105,6 +96,8 @@ type ValidateUnitsResponse struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=map"`
 	// Validated units keyed by the original map key.
+	//
+	// Abbreviations are matched case-insensitively; keys whose abbreviation did not match any unit are omitted.
 	Units map[string]*Unit `json:"units" validate:"required"`
 }
 

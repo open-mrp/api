@@ -19,27 +19,27 @@ type UpdatePurchaseOrderLineRequest struct {
 	PurchaseOrderLineID string `path:"line_id" validate:"required"`
 	// Product ID.
 	ProductID field.Optional[string] `json:"product_id,omitzero" validate:"omitempty"`
-	// Item ID.
+	// ID of the catalog item to link this line to.
 	ItemID field.Optional[string] `json:"item_id,omitzero" validate:"omitempty"`
-	// Product SKU.
+	// SKU of the ordered product.
 	ProductSKU field.Optional[string] `json:"product_sku,omitzero" validate:"omitempty,max=255"`
-	// Product description.
+	// Free-text description of the ordered product.
 	ProductDescription field.Optional[string] `json:"product_description,omitzero"`
-	// Quantity value.
+	// Quantity ordered, as a decimal string.
 	QuantityValue field.Optional[string] `json:"quantity_value,omitzero" format:"decimal"`
-	// Quantity unit ID.
+	// ID of the unit the quantity is measured in.
 	QuantityUnitID field.Optional[string] `json:"quantity_unit_id,omitzero" validate:"omitempty"`
-	// Unit price value.
+	// Purchase price per unit, as a decimal string.
 	UnitPriceValue field.Optional[string] `json:"unit_price_value,omitzero" format:"decimal"`
-	// Unit price numerator unit ID.
+	// ID of the unit price's numerator unit (e.g. a currency unit).
 	UnitPriceNumeratorUnitID field.Optional[string] `json:"unit_price_numerator_unit_id,omitzero" validate:"omitempty"`
-	// Unit price denominator unit ID.
+	// ID of the unit price's denominator unit (the unit the price is per).
 	UnitPriceDenominatorUnitID field.Optional[string] `json:"unit_price_denominator_unit_id,omitzero" validate:"omitempty"`
-	// Unit cost value.
+	// Recorded cost per unit, as a decimal string.
 	UnitCostValue field.Optional[string] `json:"unit_cost_value,omitzero" format:"decimal"`
-	// Unit cost numerator unit ID.
+	// ID of the unit cost's numerator unit (e.g. a currency unit).
 	UnitCostNumeratorUnitID field.Optional[string] `json:"unit_cost_numerator_unit_id,omitzero" validate:"omitempty"`
-	// Unit cost denominator unit ID.
+	// ID of the unit cost's denominator unit (the unit the cost is per).
 	UnitCostDenominatorUnitID field.Optional[string] `json:"unit_cost_denominator_unit_id,omitzero" validate:"omitempty"`
 }
 
@@ -59,6 +59,8 @@ func (*UpdatePurchaseOrderLineRequest) SchemaExample() any {
 }
 
 // Partially updates a purchase order line item.
+//
+// If the order has already been issued, the receiving order is updated to reflect the remaining quantity to receive.
 type UpdatePurchaseOrderLineEndpoint struct{}
 
 func (e *UpdatePurchaseOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePurchaseOrderLineRequest, *apiresource.PurchaseOrderLine] {

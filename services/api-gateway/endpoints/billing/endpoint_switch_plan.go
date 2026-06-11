@@ -16,7 +16,9 @@ type SwitchPlanRequest struct {
 	PlanID string `path:"id" validate:"required"`
 }
 
-// Switches the account to a different pricing plan, handling free-to-paid, paid-to-free, and paid-to-paid scenarios.
+// Switches the account to a different pricing plan.
+//
+// Handles free-to-paid, paid-to-free, and paid-to-paid changes. Switches that owe a prorated amount are charged immediately; use Preview Plan Change to see the cost first.
 type SwitchPlanEndpoint struct{}
 
 func (e *SwitchPlanEndpoint) Materialize() *apiendpoint.APIEndpoint[*SwitchPlanRequest, *apiresource.SwitchPlanResponse] {

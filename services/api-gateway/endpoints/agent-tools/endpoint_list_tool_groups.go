@@ -10,6 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
+// Request to list tool groups.
 type ListToolGroupsRequest struct {
 	apiresource.PaginationRequest
 }

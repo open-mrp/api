@@ -46,6 +46,8 @@ func (*CreateProductionRunResponse) SchemaExample() any {
 }
 
 // Creates a production run from a sales order.
+//
+// Creates a batch for each of the order's item-backed lines, reserves the material inventory required to produce them, and links the run to the order. An order can have at most one production run.
 type CreateProductionRunEndpoint struct{}
 
 func (e *CreateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductionRunRequest, *CreateProductionRunResponse] {

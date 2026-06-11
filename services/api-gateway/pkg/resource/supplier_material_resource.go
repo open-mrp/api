@@ -10,22 +10,21 @@ import (
 
 const SampleSupplierMaterialID = "suml_01e05d8a2821bf791bd30d537f"
 
-// Supplier material resource.
+// Links a material to a supplier that provides it, carrying the supplier's own part number and description for the material.
+//
+// Each material can be linked to a given supplier at most once.
 type SupplierMaterial struct {
-	// Supplier material ID.
+	// ID of the linked material, which also identifies this supplier material.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=supplier_material"`
 	// Material provided by this supplier.
 	Material *Material `json:"material" expandable:"true"`
-	// Supplier part number for this material.
+	// The part number the supplier uses for this material in their own catalog.
 	SupplierPartNumber string `json:"supplier_part_number" validate:"required"`
-	// Supplier description for this material.
+	// The supplier's own description of this material.
 	SupplierDescription *string `json:"supplier_description"`
-	// Whether this supplier can currently be sourced for the material.
-	//
-	// - `active`: the supplier is available to source this material.
-	// - `inactive`: the link is retained for history but the supplier is not   considered when sourcing this material.
+	// Whether this supplier is currently available as a source for the material.
 	Status constants.SupplierMaterialStatus `json:"status" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

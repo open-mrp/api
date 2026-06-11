@@ -38,7 +38,8 @@ The job is to review these comments and improve them so they genuinely explain t
   ```
 
   (A long single sentence that simply soft-wraps across two `//` lines with no second sentence is fine and needs no separator — the rule is about separating the *lead summary sentence* from any *additional* explanation.)
-* **The pattern to emulate** is the "secondary comment" block, e.g. `services/api-gateway/pkg/resource/account_group_resource.go` — `CommissionPolicy`, `FreightPolicy`, and `Type` each have a one-line lead summary, then a blank `//` line, then a Markdown bullet list explaining each enum value in plain business terms. That is the gold standard for a field whose meaning is non-obvious.
+* **The pattern to emulate** is the "secondary comment" block, e.g. `services/api-gateway/pkg/resource/account_group_resource.go` — `CommissionPolicy`, `FreightPolicy`, and `Type` each have a one-line lead summary, then a blank `//` line, then a Markdown bullet list explaining each enum value in plain business terms. That is the gold standard for an enum whose values carry non-obvious business meaning.
+* **Never restate schema facts the docs already render.** The public docs render type, required/optional status, nullability, allowed enum values, default values, and expandability directly from the OpenAPI spec next to each field. Do not add annotations like "Optional.", "Required.", "`null` when not set.", "Nullable.", statements of the field's type, "Expandable via `include=...`", "Defaults to `x`." as a bare schema fact, or an exhaustive list of the enum values for its own sake. Remove such annotations where they already exist. Enum bullet lists are only for values whose business meaning is not obvious from the value name (self-explanatory values like `active`/`inactive` get none). Mention a default only when its behavioral consequence is non-obvious, phrased as behavior, not as a schema fact.
 
 ## Scope
 
@@ -60,7 +61,7 @@ Out of scope — do not change:
 A good comment requires understanding what the endpoint/field actually does. Do not paraphrase the field name. Verify behavior against the implementation:
 
 * **Enum/constant semantics** → `shared/constants/` for the type's values and any documented meaning.
-* **Validation, defaults, required-ness** → the `validate:`, `default:`, and `field.Optional[...]` / pointer / value type on the field itself. A `default:"billed_freight"` tag means the comment should mention the default; a `field.Optional` means optional; a value type with `validate:"required"` means required.
+* **Validation, defaults, required-ness** → the `validate:`, `default:`, and `field.Optional[...]` / pointer / value type on the field itself. Use these to keep behavioral claims accurate — but never restate them as schema annotations (see Key facts).
 * **Endpoint behavior** → trace the `ServiceHandler` (e.g. `svc.(CustomerSvc).CreateCustomer`) to the actual service implementation in the relevant service (`core-service`, `auth-service`, `billing-service`, etc.) to understand what the endpoint really does, what it auto-generates, what side effects it has, and what the title/summary should convey.
 * **Cross-field interactions** → if a field's effect depends on another field, or can be overridden elsewhere (as the account-group freight/commission comments note), say so.
 
@@ -83,8 +84,9 @@ For each field, struct, endpoint, and title in the task:
 2. Determine, from the source of truth, what a consumer actually needs to know.
 3. Decide whether the comment is adequate or needs improvement. Improve it when any of these apply:
    * It merely restates the field name and the field's meaning is not fully obvious from name + type (e.g. what does this status actually control? what happens at each enum value?).
-   * The field is an enum/constant and the comment does not explain what the values mean in business terms. Add a secondary Markdown bullet list explaining each value (the account-group pattern).
-   * There is a non-obvious default, a required/optional nuance, an auto-generation behavior, or a side effect the consumer should know.
+   * The field is an enum/constant whose values' business meaning is not obvious from the value names. Add a secondary Markdown bullet list explaining those values (the account-group pattern); add nothing for self-explanatory values.
+   * There is a non-obvious auto-generation behavior, a side effect, or a behavioral consequence of a default the consumer should know.
+   * The comment contains a schema-fact annotation (optional/required, nullable, type, expandable, bare enum-value list, bare default) that must be removed.
    * There is a cross-field interaction or override behavior worth calling out.
    * The comment is stale or factually wrong relative to the implementation.
    * The endpoint struct comment or `Title` does not clearly and accurately describe what the endpoint does for an end user.

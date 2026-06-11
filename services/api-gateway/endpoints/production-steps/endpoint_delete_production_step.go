@@ -16,6 +16,8 @@ type DeleteProductionStepRequest struct {
 }
 
 // Deletes a production step and its associated data.
+//
+// The step's connections in the production flow graph are removed as part of the deletion.
 type DeleteProductionStepEndpoint struct{}
 
 func (e *DeleteProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteProductionStepRequest, *apiresource.EmptyResource] {

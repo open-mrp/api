@@ -13,7 +13,7 @@ import (
 
 // Request to switch the authenticated user's active account.
 type SwitchAccountRequest struct {
-	// Account ID.
+	// ID of the account to switch to.
 	AccountID string `json:"account_id" validate:"required"`
 }
 
@@ -26,6 +26,8 @@ func (*SwitchAccountRequest) SchemaExample() any {
 }
 
 // Switches the authenticated user's active account and returns the updated tenancy context.
+//
+// The user must have access to the requested account; switching to an account where the user is disabled or removed, or to a suspended or deactivated account, is rejected.
 type SwitchAccountEndpoint struct{}
 
 func (e *SwitchAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*SwitchAccountRequest, *apiresource.Tenancy] {

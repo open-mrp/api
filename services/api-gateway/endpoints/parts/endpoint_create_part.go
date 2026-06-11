@@ -15,20 +15,27 @@ import (
 
 // Request to create a part.
 type CreatePartRequest struct {
-	// SKU.
+	// Stock keeping unit code for the part.
+	//
+	// Must be unique within the account; creating a part with a SKU already used by another item fails with a conflict error.
 	SKU string `json:"sku" validate:"required,max=255"`
-	// Description.
+	// Free-form description of the part.
 	Description field.Optional[string] `json:"description,omitzero"`
-	// Notes.
+	// Free-form notes about the part.
 	Notes field.Optional[string] `json:"notes,omitzero"`
-	// Category ID.
+	// ID of the item category to place the part in.
+	//
+	// The category's unit group determines the base unit used for the part's rates (`unit_value`, `unit_cost`, `burn_rate`).
 	CategoryID string `json:"category_id" validate:"required"`
-	// Initial unit price. When set, numerator must be a currency unit and
-	// denominator must not be.
+	// Initial selling price per unit.
+	//
+	// `numerator_unit_id` must reference a currency unit and `denominator_unit_id` must reference a non-currency unit (e.g. `$5` per `ea`). When omitted, the price is initialized to a zero rate in the category's base unit.
 	UnitPrice field.Optional[apirequest.RateInput] `json:"unit_price,omitzero"`
-	// Initial unit cost. Same currency rule as unit_price.
+	// Initial cost per unit.
+	//
+	// Follows the same unit rule as `unit_price`: currency numerator, non-currency denominator. When omitted, the cost is initialized to a zero rate in the category's base unit.
 	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero"`
-	// Attribute IDs to connect to the part at creation time.
+	// IDs of existing attributes to link to the part at creation time.
 	AttributeIDs []string `json:"attribute_ids,omitzero"`
 }
 
@@ -44,6 +51,8 @@ func (*CreatePartRequest) SchemaExample() any {
 }
 
 // Creates a part with the specified SKU and category.
+//
+// Inventory tracking for the new part starts at a zero on-hand quantity in the category's base unit.
 type CreatePartEndpoint struct{}
 
 func (e *CreatePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePartRequest, *apiresource.Part] {

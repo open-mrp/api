@@ -12,7 +12,7 @@ import (
 
 // Request to initialize a batch at a scanning station.
 type InitializeBatchRequest struct {
-	// Batch ID.
+	// ID of the batch to initialize; the batch must be open and not yet scanned.
 	BatchID string `json:"batch_id" validate:"required"`
 	// Scanning station ID.
 	ScanningStationID string `json:"scanning_station_id" validate:"required"`
@@ -27,7 +27,9 @@ func (*InitializeBatchRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleInitializeBatchRequest)
 }
 
-// Initializes a batch at the specified scanning station.
+// Marks a production run batch as scanned at a scanning station, starting it through production.
+//
+// The batch is attached to the production step that produces its item at the station, the step's material consumption is executed asynchronously, and the batch is closed automatically if the step is the last one. The batch's production run is started, and the run is closed once all of its batches are scanned or deleted.
 type InitializeBatchEndpoint struct{}
 
 func (e *InitializeBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*InitializeBatchRequest, *apiresource.Batch] {

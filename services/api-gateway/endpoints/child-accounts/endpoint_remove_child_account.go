@@ -11,11 +11,13 @@ import (
 
 // Request to remove a child account.
 type RemoveChildAccountRequest struct {
-	// Child account ID.
+	// ID of the child account to unlink.
 	ChildAccountID string `path:"child_account_id" validate:"required"`
 }
 
-// Removes a child account from the target account.
+// Unlinks a child account from the target account.
+//
+// Only the parent-child relationship is removed; the child account itself is not deleted. This call is idempotent: removing an account that is not currently a child succeeds without changes.
 type RemoveChildAccountEndpoint struct{}
 
 func (e *RemoveChildAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*RemoveChildAccountRequest, *apiresource.EmptyResource] {

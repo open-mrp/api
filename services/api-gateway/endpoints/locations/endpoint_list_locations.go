@@ -15,7 +15,7 @@ type ListLocationsRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of locations for the caller's account.
+// Returns a paginated list of locations in your account.
 type ListLocationsEndpoint struct{}
 
 func (e *ListLocationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListLocationsRequest, *apiresource.List[apiresource.Location]] {

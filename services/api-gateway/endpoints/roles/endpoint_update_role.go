@@ -16,9 +16,11 @@ import (
 type UpdateRoleRequest struct {
 	// Role ID.
 	RoleID string `path:"id" validate:"required"`
-	// Display name.
+	// New display name for the role, unique within the account. Omit to leave unchanged.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Permissions in `<domain>:<action>` format. Replaces all existing permissions; omit to leave unchanged.
+	// Full replacement set of permissions, in `{domain}:{action}` format, such as `customers:read`.
+	//
+	// Replaces all existing permissions on the role. Pass an empty array to remove all permissions, or omit to leave them unchanged.
 	Permissions field.Optional[[]string] `json:"permissions,omitzero"`
 }
 

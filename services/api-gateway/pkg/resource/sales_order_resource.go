@@ -79,9 +79,13 @@ type SalesOrder struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order"`
-	// Sales order number.
+	// Human-readable order number, e.g. `SO-001`.
+	//
+	// Assigned automatically when the order is created; unique within your account.
 	Number string `json:"number" validate:"required"`
-	// Customer's purchase order number.
+	// The customer's own purchase order number, for cross-referencing.
+	//
+	// Unique among this customer's orders.
 	CustomerPurchaseOrderNumber *string `json:"customer_purchase_order_number"`
 	// Order note.
 	Note *string `json:"note"`
@@ -90,23 +94,16 @@ type SalesOrder struct {
 	// - `estimate`: a draft quote that has not yet been committed; not counted as a real order.
 	// - `issued`: the order has been issued and is being fulfilled.
 	// - `fulfilled`: the order has been completed and closed.
+	//
+	// Status changes are made through the issue, unissue, close, and reopen action endpoints rather than by updating this field.
 	Status constants.SalesOrderStatusCode `json:"status" validate:"required"`
 	// Fulfillment priority, used to rank orders on the shop floor.
-	//
-	// - `low`: lower than default urgency.
-	// - `normal`: the default urgency.
-	// - `high`: expedited ahead of normal-priority orders.
 	Priority constants.PriorityCode `json:"priority" validate:"required"`
 	// Payment state of the order.
 	//
-	// - `unpaid`: no payment has been received.
-	// - `partially_paid`: some, but not all, of the balance has been paid.
-	// - `paid`: the order has been paid in full.
+	// Payment tracking is not yet wired up, so this currently always reports `unpaid`.
 	PaymentStatus constants.SalesOrderPaymentStatus `json:"payment_status" validate:"required"`
 	// Whether an order acknowledgment has been sent to the customer.
-	//
-	// - `not_sent`: no acknowledgment has been sent.
-	// - `sent`: the acknowledgment has been sent.
 	AcknowledgmentStatus constants.AcknowledgmentStatus `json:"acknowledgment_status" validate:"required"`
 	// Associated customer.
 	Customer *Customer `json:"customer" expandable:"true"`
@@ -133,20 +130,12 @@ type SalesOrder struct {
 	// Records related to this order (pick, production run, shipments).
 	Related *SalesOrderRelated `json:"related"`
 	// When the order was issued (moved out of `estimate`).
-	//
-	// Null while still an estimate.
 	IssuedAt *time.Time `json:"issued_at"`
 	// When the order was fulfilled and closed.
-	//
-	// Null until the order reaches `fulfilled`.
 	CompletedAt *time.Time `json:"completed_at"`
 	// When the first shipment against this order went out.
-	//
-	// Null until something ships.
 	FirstShipAt *time.Time `json:"first_ship_at"`
 	// When this estimate expires, if an expiration was set.
-	//
-	// `null` when no expiration applies.
 	ExpiredAt *time.Time `json:"expired_at"`
 	// Date promised to the customer for delivery, if one was committed.
 	PromisedAt *time.Time `json:"promised_at"`

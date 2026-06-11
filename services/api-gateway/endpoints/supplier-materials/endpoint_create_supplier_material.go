@@ -13,15 +13,19 @@ import (
 
 // Request to create a supplier material.
 type CreateSupplierMaterialRequest struct {
-	// Supplier ID.
+	// ID of the supplier to link the material to.
 	SupplierID string `path:"supplier_id" validate:"required"`
-	// Material ID.
+	// ID of the material the supplier provides.
+	//
+	// A material can be linked to a given supplier at most once; creating a duplicate link fails with a conflict error.
 	MaterialID string `json:"material_id" validate:"required"`
-	// Supplier part number for this material.
+	// The part number the supplier uses for this material in their own catalog.
 	SupplierPartNumber string `json:"supplier_part_number" validate:"required,max=255"`
-	// Supplier description for this material.
+	// The supplier's own description of this material.
 	SupplierDescription field.Optional[string] `json:"supplier_description,omitzero" validate:"omitempty,max=255"`
-	// Active status.
+	// Whether the supplier is available to source this material.
+	//
+	// When omitted, the link is created active so the supplier is immediately usable as a source.
 	IsActive field.Optional[bool] `json:"is_active,omitzero"`
 }
 
@@ -37,7 +41,7 @@ func (*CreateSupplierMaterialRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateSupplierMaterialRequest)
 }
 
-// Creates a supplier material association.
+// Links a material to a supplier, recording the supplier's part number and description for it.
 type CreateSupplierMaterialEndpoint struct{}
 
 func (e *CreateSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSupplierMaterialRequest, *apiresource.SupplierMaterial] {

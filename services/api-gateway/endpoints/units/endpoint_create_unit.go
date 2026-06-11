@@ -14,10 +14,16 @@ import (
 // Request to create a unit.
 type CreateUnitRequest struct {
 	// Display name of the unit (e.g. "Gram").
+	//
+	// Must be unique within the account.
 	Name string `json:"name" validate:"required,max=255"`
 	// Short abbreviation for the unit (e.g. "g").
+	//
+	// Must be unique within the account.
 	Abbreviation string `json:"abbreviation" validate:"required"`
-	// Unit dimension code.
+	// Unit dimension (e.g. `mass`, `volume`, `currency`).
+	//
+	// Units can only be converted to other units of the same dimension.
 	Type constants.UnitType `json:"type" validate:"required"`
 	// Conversion ratio numerator relative to the base unit, as a decimal string.
 	RatioNumerator string `json:"ratio_numerator" validate:"required" format:"decimal"`

@@ -10,6 +10,8 @@ type Healthcheck struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=healthcheck"`
 	// Current operational status of the API service.
+	//
+	// Returns `healthy` when the service is up and able to handle requests.
 	Status string `json:"status" validate:"required"`
 }
 

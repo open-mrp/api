@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Request to email receivable entries for a specific customer.
+// Request to email a statement of account for a specific customer.
 type EmailReceivablesForCustomerRequest struct {
 	// Customer account ID.
 	AccountID string `json:"-" path:"account_id" validate:"required"`
-	// Email addresses to send the receivables report to.
+	// Email addresses to send the statement of account to.
 	RecipientEmails []string `json:"recipient_emails" validate:"required,min=1"`
 }
 
@@ -26,7 +26,9 @@ func (*EmailReceivablesForCustomerRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleEmailReceivablesForCustomerRequest)
 }
 
-// Sends a receivables report for a specific customer account to the provided email addresses.
+// Emails a statement of account for a specific customer to the provided recipients.
+//
+// The email carries an Excel attachment listing the customer's outstanding receivables and open credits.
 type EmailReceivablesForCustomerEndpoint struct{}
 
 func (e *EmailReceivablesForCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*EmailReceivablesForCustomerRequest, *apiresource.EmptyResource] {

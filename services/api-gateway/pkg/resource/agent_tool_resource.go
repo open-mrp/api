@@ -13,9 +13,9 @@ type ToolGroup struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=tool_group"`
-	// Display name.
+	// Human-readable group name (e.g. `Product Tools`).
 	Name string `json:"name" validate:"required"`
-	// Description.
+	// Description of what the tools in this group do.
 	Description *string `json:"description"`
 	// URL-friendly slug.
 	Slug string `json:"slug" validate:"required"`
@@ -73,11 +73,13 @@ type AgentDefinitionTool struct {
 	Tool AvailableTool `json:"tool" validate:"required"`
 	// Instance-specific configuration for this tool.
 	//
-	// Must conform to the tool's config_schema.
+	// Must conform to the tool's `config_schema`.
 	Config json.RawMessage `json:"config"`
 	// Sort order within the agent.
 	SortOrder int32 `json:"sort_order"`
-	// Requires human review before execution.
+	// Whether calls to this tool must be approved by a user before they execute.
+	//
+	// When `true`, the run pauses in the `awaiting_approval` status each time the agent invokes this tool; approve or allow the tool via the Continue Agent Run endpoint to proceed.
 	RequireReview bool `json:"require_review"`
 }
 

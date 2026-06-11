@@ -16,9 +16,9 @@ const SampleLocationTypeID = "lc_01e69cd3745a1bc0dd485986c0"
 const SampleLocationTypeCode = constants.LocationTypeCodeBuilding
 const SampleLocationTypeName = "Building"
 
-// LocationType resource.
+// A level in the storage location hierarchy, such as a building or a bin.
 type LocationType struct {
-	// Location ID.
+	// Location type ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=location_type"`
@@ -31,7 +31,7 @@ type LocationType struct {
 	// - `shelf`: a shelf within a rack.
 	// - `bin`: a bin within a shelf.
 	Code constants.LocationTypeCode `json:"code" validate:"required"`
-	// Display name.
+	// Display name of the location type.
 	Name string `json:"name" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at"`
@@ -60,13 +60,13 @@ const SampleLocationID = "lc_014d187d99b31926f0c74af9d8"
 const SampleLocationChildID = "lc_0132c4db1e220da9bc596cc4c9"
 const SampleLocationName = "Warehouse A"
 
-// Location resource.
+// A physical storage location, such as a warehouse, aisle, or bin, arranged in a parent-child hierarchy.
 type Location struct {
 	// Location ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=location"`
-	// Display name.
+	// Display name of the location.
 	Name string `json:"name" validate:"required"`
 	// Location type code, identifying this location's level in the storage hierarchy.
 	//
@@ -77,13 +77,11 @@ type Location struct {
 	// - `shelf`: a shelf within a rack.
 	// - `bin`: a bin within a shelf.
 	TypeCode constants.LocationTypeCode `json:"type" validate:"required"`
-	// Parent location.
+	// The location directly above this one in the storage hierarchy.
 	//
-	// Null for top-level locations. Expandable.
+	// Absent for top-level locations.
 	Parent *Location `json:"parent" expandable:"true"`
-	// Child locations.
-	//
-	// Expandable.
+	// The locations directly below this one in the storage hierarchy.
 	Children *List[Location] `json:"children" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at"`

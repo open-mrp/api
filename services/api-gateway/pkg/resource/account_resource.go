@@ -14,7 +14,7 @@ const SampleAccountBrandingID = "abr_01fa710842028837ac3ca9d590"
 const SampleAccountPortalID = "apo_0167f0d01165cbb56b55bc01fa"
 const SampleAccountPortalSlug = "acme"
 
-// Account with optional branding and portal sub-resources.
+// A customer account, including its branding and customer portal sub-resources.
 type Account struct {
 	// Account ID.
 	ID string `json:"id" validate:"required"`
@@ -26,9 +26,9 @@ type Account struct {
 	DefaultBillingAddress *Address `json:"default_billing_address" expandable:"true"`
 	// Default shipping address.
 	DefaultShippingAddress *Address `json:"default_shipping_address" expandable:"true"`
-	// Branding configuration.
+	// Customer-facing branding for the account, such as the logo, support contacts, and social links.
 	Branding *AccountBranding `json:"branding" expandable:"true"`
-	// Portal configuration.
+	// The account's customer portal settings, including the portal URL slug.
 	Portal *AccountPortal `json:"portal" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -93,7 +93,9 @@ type AccountPortal struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_portal"`
-	// Portal slug.
+	// URL slug that identifies the account's customer portal.
+	//
+	// Unique across all accounts.
 	Slug string `json:"slug" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -146,9 +148,9 @@ func (*PublicAccount) SchemaExample() any {
 type AccountLogoURL struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_logo_url"`
-	// Presigned URL.
+	// Presigned URL for downloading the account's logo.
 	//
-	// Null if no logo exists.
+	// The URL expires one hour after it is generated, so fetch the logo promptly rather than caching this URL.
 	URL *string `json:"url"`
 }
 

@@ -10,13 +10,13 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// AcknowledgeAlertRequest is a request to acknowledge an agent alert.
+// Request to acknowledge an agent alert.
 type AcknowledgeAlertRequest struct {
 	// Alert ID.
 	AlertID string `path:"id" validate:"required"`
 }
 
-// Marks an agent alert as acknowledged.
+// Marks an agent alert as acknowledged, recording the acknowledging actor and timestamp.
 type AcknowledgeAlertEndpoint struct{}
 
 func (e *AcknowledgeAlertEndpoint) Materialize() *apiendpoint.APIEndpoint[*AcknowledgeAlertRequest, *apiresource.AgentAlert] {

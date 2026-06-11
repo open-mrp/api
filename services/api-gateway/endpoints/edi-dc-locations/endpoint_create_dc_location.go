@@ -13,9 +13,9 @@ import (
 
 // Request to create a DC location.
 type CreateDCLocationRequest struct {
-	// Customer account ID.
+	// ID of the customer account this DC location belongs to.
 	CustomerID string `json:"customer_id" validate:"required"`
-	// Location description.
+	// Free-form description identifying the distribution-center location, such as a warehouse name and bay (for example, `Warehouse A - Bay 3`).
 	Location string `json:"location" validate:"required,max=255"`
 }
 
@@ -28,7 +28,7 @@ func (*CreateDCLocationRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateDCLocationRequest)
 }
 
-// Creates a DC location.
+// Creates a distribution-center (DC) location for a customer.
 type CreateDCLocationEndpoint struct{}
 
 func (e *CreateDCLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateDCLocationRequest, *apiresource.DCLocation] {

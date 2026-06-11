@@ -16,6 +16,8 @@ type ListInventoriesRequest struct {
 }
 
 // Returns a paginated list of items with on-hand inventory quantities for the account.
+//
+// Every item in the account appears once; items with no recorded inventory report a zero quantity.
 type ListInventoriesEndpoint struct{}
 
 func (e *ListInventoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListInventoriesRequest, *apiresource.List[apiresource.InventoryItem]] {

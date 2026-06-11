@@ -16,13 +16,22 @@ import (
 type CreateOrderDiscountRequest struct {
 	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
-	// Discount code.
+	// The code entered to apply this discount to an order.
+	//
+	// Must be unique within the account.
 	Code string `json:"code" validate:"required,max=255"`
-	// Percentage value as a decimal string. Required when discount_type is "percentage".
+	// Percent off as a decimal string (e.g. `10` for 10%).
+	//
+	// Used when `discount_type` is `percentage`; otherwise `0`.
 	Percentage field.Optional[string] `json:"percentage,omitzero" format:"decimal"`
-	// Fixed amount as a decimal string. Required when discount_type is "amount".
+	// Fixed amount off as a decimal string.
+	//
+	// Used when `discount_type` is `amount`; otherwise `0`.
 	Amount field.Optional[string] `json:"amount,omitzero" format:"decimal"`
-	// Discount type: "percentage" or "amount".
+	// How the discount is calculated.
+	//
+	// - `percentage`: the discount is a percent off, taken from `percentage`.
+	// - `amount`: the discount is a fixed amount off, taken from `amount`.
 	DiscountType string `json:"discount_type" validate:"required,max=255"`
 }
 
@@ -38,6 +47,8 @@ func (*CreateOrderDiscountRequest) SchemaExample() any {
 }
 
 // Creates an order discount.
+//
+// The discount code must be unique within the account; creating a discount with an existing code returns a conflict error.
 type CreateOrderDiscountEndpoint struct{}
 
 func (e *CreateOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateOrderDiscountRequest, *apiresource.OrderDiscount] {

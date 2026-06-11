@@ -19,9 +19,7 @@ type Sandbox struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=sandbox"`
 	// Display name.
 	Name string `json:"name" validate:"required"`
-	// Account that owns this sandbox.
-	//
-	// Expandable: by default only the account reference is returned; request the full account object via `include[]=owner_account`.
+	// The production account that owns this sandbox.
 	OwnerAccount *Account `json:"owner_account" expandable:"true"`
 	// When this sandbox was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

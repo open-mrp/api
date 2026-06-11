@@ -24,8 +24,6 @@ type Quantity struct {
 	// Formatted value with unit abbreviation (e.g. "$1,234.56" or "100 kg").
 	DisplayValue string `json:"display_value" validate:"required"`
 	// Unit of measure for this value (e.g. a currency, mass, or count unit).
-	//
-	// Expandable via include[]=unit.
 	Unit *Unit `json:"unit" expandable:"true"`
 }
 

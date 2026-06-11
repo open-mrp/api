@@ -15,11 +15,13 @@ type ListCustomerInvoicesRequest struct {
 	apiresource.PaginationRequest
 	// Customer account ID.
 	CustomerAccountID string `path:"account_id" validate:"required"`
-	// Whether to include child account invoices.
+	// Whether to also include invoices billed to the customer's child accounts.
+	//
+	// Currently has no effect: invoices for child accounts are always included.
 	IncludeChildAccounts bool `query:"include_child_accounts"`
 }
 
-// Returns a paginated list of invoices for a specific customer account, optionally including child account invoices.
+// Returns a paginated list of payment-oriented invoices for a specific customer account, including invoices billed to its child accounts.
 type ListCustomerInvoicesEndpoint struct{}
 
 func (e *ListCustomerInvoicesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCustomerInvoicesRequest, *apiresource.List[apiresource.InvoiceForPayment]] {

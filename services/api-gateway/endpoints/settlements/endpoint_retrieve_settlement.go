@@ -10,7 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// RetrieveSettlementRequest is the request to get a settlement.
+// Request to retrieve a settlement.
 type RetrieveSettlementRequest struct {
 	// Settlement ID.
 	SettlementID string `path:"id" validate:"required"`

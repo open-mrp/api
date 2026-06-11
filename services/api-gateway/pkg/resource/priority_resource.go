@@ -12,7 +12,7 @@ const SamplePriorityID = "pi_01fc435701244bb3978bfb77ff"
 const SamplePriorityCode = constants.PriorityCodeNormal
 const SamplePriorityName = "Normal"
 
-// Priority level used by sales orders and picks.
+// Priority level used to order work on sales orders, purchase orders, and picks.
 type Priority struct {
 	// Priority ID.
 	ID string `json:"id"`
@@ -26,9 +26,9 @@ type Priority struct {
 	Code constants.PriorityCode `json:"code" validate:"required"`
 	// Display name.
 	Name string `json:"name" validate:"required"`
-	// Provenance of this priority.
+	// Owner of this resource.
 	//
-	// System-owned priorities are platform-provided defaults shared across all accounts; account-owned priorities are custom to one account.
+	// Priorities are platform-provided and shared across all accounts, so the owner is always the Augno system owner.
 	Owner *Owner `json:"owner" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at"`

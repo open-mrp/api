@@ -12,13 +12,15 @@ import (
 
 // Request to get a supplier material.
 type RetrieveSupplierMaterialRequest struct {
-	// Supplier ID.
+	// ID of the supplier the material is linked to.
 	SupplierID string `path:"supplier_id" validate:"required"`
-	// Supplier material ID.
+	// ID of the material whose supplier link to retrieve.
+	//
+	// Supplier materials are addressed by the combination of supplier and material, so this path parameter takes the material's ID.
 	MaterialID string `path:"id" validate:"required"`
 }
 
-// Returns a supplier material by ID.
+// Returns the supplier material link for the given supplier and material.
 type RetrieveSupplierMaterialEndpoint struct{}
 
 func (e *RetrieveSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveSupplierMaterialRequest, *apiresource.SupplierMaterial] {

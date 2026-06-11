@@ -13,7 +13,9 @@ import (
 
 // Request to create a payment term.
 type CreatePaymentTermRequest struct {
-	// Display name (e.g. "Net 30").
+	// Display name (e.g. `Net 30`).
+	//
+	// Must be unique among the payment terms visible to your account, including system defaults.
 	Name string `json:"name" validate:"required,max=255"`
 }
 
@@ -26,6 +28,8 @@ func (*CreatePaymentTermRequest) SchemaExample() any {
 }
 
 // Creates a payment term.
+//
+// The new term is owned by your account and starts with status `active`.
 type CreatePaymentTermEndpoint struct{}
 
 func (e *CreatePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePaymentTermRequest, *apiresource.PaymentTerm] {

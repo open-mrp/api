@@ -9,7 +9,9 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-// Agent action resource.
+// A single tool invocation performed by an agent during a run.
+//
+// Each action records the tool that was called, its input and output, and any human review decision.
 type AgentAction struct {
 	// Agent action ID.
 	ID string `json:"id" validate:"required"`
@@ -39,9 +41,9 @@ type AgentAction struct {
 	// - `executed`: successfully executed.
 	// - `failed`: errored during execution; see `error_message`.
 	Status constants.AgentActionStatus `json:"status" validate:"required"`
-	// Short label.
+	// Short human-readable label summarizing the action.
 	Label *string `json:"label"`
-	// Action description.
+	// Longer description of what the action does.
 	Description *string `json:"description"`
 	// Arguments passed to the tool, as JSON.
 	//
@@ -49,17 +51,15 @@ type AgentAction struct {
 	Input json.RawMessage `json:"input"`
 	// Result returned by the tool, as JSON.
 	//
-	// Shape depends on `tool_slug`. `null` until the action executes.
+	// Recorded when the tool runs, so it is present even while the action is still `pending_review` or `auto_approved`; the shape depends on `tool_slug`, and it is `{}` when the tool returned no output.
 	Output json.RawMessage `json:"output"`
 	// Error message if the action failed.
 	ErrorMessage *string `json:"error_message"`
-	// Entity this action relates to.
+	// The resource this action operated on, when the tool targets a specific entity (e.g. the customer for `lookup_customer`).
 	Entity *Entity `json:"entity"`
 	// Whether this action must be reviewed by a human before it can execute.
 	RequiresReview bool `json:"requires_review"`
-	// When the action was reviewed.
-	//
-	// `null` until a review decision is recorded.
+	// When a human review decision was recorded for the action.
 	ReviewedAt *time.Time `json:"reviewed_at"`
 	// Who reviewed the action.
 	ReviewedBy *Actor `json:"reviewed_by"`

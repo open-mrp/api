@@ -13,11 +13,17 @@ import (
 
 // Request to check for a duplicate record number.
 type CheckDuplicateRequest struct {
-	// Duplicate check type: invoice_number, order_number, or customer_po_number.
+	// The kind of record number to check.
+	//
+	// - `invoice_number`: checks invoice numbers.
+	// - `order_number`: checks sales order numbers.
+	// - `customer_po_number`: checks customer PO numbers on sales orders; requires `customer_id`.
 	Type string `json:"type" validate:"required"`
-	// Record number to check.
+	// The record number to check for an existing match.
 	RecordNumber string `json:"record_number" validate:"required"`
-	// Customer ID, required for customer_po_number checks.
+	// ID of the customer to scope the check to.
+	//
+	// Required when `type` is `customer_po_number`; ignored for other types.
 	CustomerID field.Optional[string] `json:"customer_id,omitzero"`
 }
 
@@ -30,7 +36,7 @@ func (*CheckDuplicateRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCheckDuplicateRequest)
 }
 
-// Checks whether a record number already exists for the given type (invoice number, order number, or customer PO number).
+// Checks whether a record number already exists on the account for the given type (invoice number, sales order number, or customer PO number).
 type CheckDuplicateEndpoint struct{}
 
 func (e *CheckDuplicateEndpoint) Materialize() *apiendpoint.APIEndpoint[*CheckDuplicateRequest, *apiresource.CheckDuplicateResult] {

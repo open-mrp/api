@@ -10,15 +10,13 @@ import (
 
 const SampleProductionID = "pn_019136e48e8a24e64a131e3a23"
 
-// Production output of a production step.
+// The output of a production step: the item it produces and the quantity produced.
 type ProductionOutput struct {
 	// Production ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=production"`
-	// Produced item.
-	//
-	// Expandable via include[]=produced_item.
+	// Item produced by the step.
 	ProducedItem *Item `json:"produced_item" expandable:"true"`
 	// Quantity produced.
 	Quantity *Quantity `json:"quantity"`

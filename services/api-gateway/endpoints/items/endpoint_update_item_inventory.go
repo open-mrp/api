@@ -16,17 +16,28 @@ import (
 type UpdateItemInventoryRequest struct {
 	// Item ID.
 	ItemID string `path:"id" validate:"required"`
-	// Quantity change to apply.
+	// The quantity to apply, interpreted according to `operation`.
+	//
+	// With `adjust`, it is added to the current on-hand quantity and may be negative; with `reconcile`, the on-hand quantity is set to exactly this value.
 	QuantityChange field.Optional[float64] `json:"quantity_change,omitzero"`
-	// How quantity_change is applied: adjust adds to current inventory; reconcile sets inventory to the exact value.
+	// How `quantity_change` is applied.
+	//
+	// - `adjust`: adds `quantity_change` to the current on-hand quantity.
+	// - `reconcile`: sets the on-hand quantity to exactly `quantity_change`.
 	Operation field.Optional[constants.InventoryUpdateOperation] `json:"operation,omitzero"`
-	// Customer ID.
+	// ID of the customer account that owns the resulting inventory.
+	//
+	// When provided, added inventory is recorded as owned by this customer account instead of your own; requires edit access to that customer.
 	CustomerID field.Optional[string] `json:"customer_id,omitzero" validate:"omitempty"`
-	// Location ID.
+	// ID of the location to record the inventory change against.
+	//
+	// Must be a location in your account.
 	LocationID field.Optional[string] `json:"location_id,omitzero" validate:"omitempty"`
-	// Lot number.
+	// Lot number to record the inventory change against.
+	//
+	// The lot is created for the item if it does not already exist.
 	LotNumber field.Optional[string] `json:"lot_number,omitzero" validate:"omitempty,max=255"`
-	// Unit ID for the quantity change.
+	// ID of the unit `quantity_change` is expressed in.
 	UnitID field.Optional[string] `json:"unit_id,omitzero" validate:"omitempty"`
 }
 
@@ -42,7 +53,9 @@ func (*UpdateItemInventoryRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateItemInventoryRequest)
 }
 
-// Adjusts or reconciles inventory for an item. When operation is reconcile, inventory is set to the exact value; when operation is adjust, the quantity change is added to the current inventory.
+// Adjusts or reconciles on-hand inventory for an item.
+//
+// With `operation` set to `adjust` (the default), `quantity_change` is added to the current on-hand quantity; with `reconcile`, the on-hand quantity is set to exactly `quantity_change`. The change is recorded in the item's inventory audit trail as a user correction.
 type UpdateItemInventoryEndpoint struct{}
 
 func (e *UpdateItemInventoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateItemInventoryRequest, *apiresource.EmptyResource] {

@@ -18,13 +18,22 @@ type UpdateOrderDiscountRequest struct {
 	OrderDiscountID string `path:"id" validate:"required"`
 	// Display name.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Discount code.
+	// The code entered to apply this discount to an order.
+	//
+	// Must be unique within the account.
 	Code field.Optional[string] `json:"code,omitzero" validate:"omitempty,max=255"`
-	// Percentage value as a decimal string.
+	// Percent off as a decimal string (e.g. `10` for 10%).
+	//
+	// Used when `discount_type` is `percentage`.
 	Percentage field.Optional[string] `json:"percentage,omitzero" format:"decimal"`
-	// Fixed amount as a decimal string.
+	// Fixed amount off as a decimal string.
+	//
+	// Used when `discount_type` is `amount`.
 	Amount field.Optional[string] `json:"amount,omitzero" format:"decimal"`
-	// Discount type: "percentage" or "amount".
+	// How the discount is calculated.
+	//
+	// - `percentage`: the discount is a percent off, taken from `percentage`.
+	// - `amount`: the discount is a fixed amount off, taken from `amount`.
 	DiscountType field.Optional[string] `json:"discount_type,omitzero" validate:"omitempty,max=255"`
 }
 
@@ -38,6 +47,8 @@ func (*UpdateOrderDiscountRequest) SchemaExample() any {
 }
 
 // Partially updates an order discount.
+//
+// Only the provided fields are changed. Changing `code` to one already used by another discount returns a conflict error.
 type UpdateOrderDiscountEndpoint struct{}
 
 func (e *UpdateOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateOrderDiscountRequest, *apiresource.OrderDiscount] {

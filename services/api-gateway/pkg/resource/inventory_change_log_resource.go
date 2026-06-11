@@ -10,7 +10,9 @@ import (
 
 const SampleInventoryChangeLogID = "icl_01424a802cb48a96f94196f4f1"
 
-// InventoryChangeLog is an inventory change log entry.
+// InventoryChangeLog is a record of a single change to an item's on-hand inventory.
+//
+// Every inventory movement — production scans, manual user adjustments, and automatic system actions — produces one entry, forming an audit trail of how on-hand quantities changed over time.
 type InventoryChangeLog struct {
 	// Inventory change log ID.
 	ID string `json:"id" validate:"required"`
@@ -25,19 +27,15 @@ type InventoryChangeLog struct {
 	ActionTypeCode constants.InventoryActionType `json:"action_type" validate:"required"`
 	// Amount of inventory this change applied.
 	//
-	// Expandable via `include[]=quantity`.
+	// The value is signed: positive values increased on-hand inventory, negative values decreased it.
 	Quantity *Quantity `json:"quantity" expandable:"true"`
 	// Item affected by this change.
-	//
-	// Expandable via `include[]=item`.
 	Item *Item `json:"item" expandable:"true"`
 	// User who initiated this change, if any.
 	//
-	// Absent for system-driven changes. Expandable via `include[]=responsible_user`.
+	// Absent for system-driven changes.
 	ResponsibleUser *User `json:"responsible_user" expandable:"true"`
 	// Scanning station where this change occurred, if it originated from a scan.
-	//
-	// Expandable via `include[]=responsible_scanning_station`.
 	ResponsibleScanningStation *ScanningStation `json:"responsible_scanning_station" expandable:"true"`
 	// Timestamp when this change was recorded.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -61,9 +59,9 @@ func (*InventoryChangeLog) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleInventoryChangeLog)
 }
 
-// ExportInventoryChangeLogsResponse is the response for the export endpoint when returning JSON.
+// ExportInventoryChangeLogsResponse is the JSON shape of an inventory change log export.
 //
-// Export endpoints typically return an Excel file; this struct is used for JSON output.
+// The export endpoint itself returns an Excel file; this structure documents the equivalent JSON payload.
 type ExportInventoryChangeLogsResponse struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=list"`

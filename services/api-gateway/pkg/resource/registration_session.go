@@ -20,25 +20,33 @@ const SampleAddressCountry = "US"
 
 // User data within a registration session.
 type RegistrationSessionUser struct {
-	// User ID, null until user is created.
+	// ID of the user record.
+	//
+	// Populated once the user is created during the `user_details` step.
 	ID *string `json:"id"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=user"`
 	// Email address.
 	Email string `json:"email" validate:"required"`
-	// Timestamp when email was verified, null if pending.
+	// Timestamp when the user's email address was verified.
+	//
+	// Set once the `verification` step completes; until then the email is still pending verification.
 	EmailVerifiedAt *time.Time `json:"email_verified_at"`
-	// Display name.
+	// The user's display name.
+	//
+	// Provided by the registrant during the `user_details` step.
 	Name *string `json:"name"`
 }
 
 // Account data within a registration session.
 type RegistrationSessionAccount struct {
-	// Account ID, null until account is created.
+	// ID of the account record.
+	//
+	// Populated only after the registration completes and the account is provisioned.
 	ID *string `json:"id"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account"`
-	// Display name.
+	// Display name of the account being created.
 	Name string `json:"name" validate:"required"`
 	// Billing address.
 	BillingAddress RegistrationSessionAddress `json:"billing_address" validate:"required"`
@@ -46,7 +54,9 @@ type RegistrationSessionAccount struct {
 
 // Address within a registration session.
 type RegistrationSessionAddress struct {
-	// Address ID, null until address is created.
+	// ID of the address record.
+	//
+	// Populated only after the registration completes and the address is persisted; while the session is in progress the address fields hold the entered values without an ID.
 	ID *string `json:"id"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=address"`
@@ -64,13 +74,15 @@ type RegistrationSessionAddress struct {
 	Country *string `json:"country"`
 }
 
-// Registration session.
+// An in-progress self-serve registration.
+//
+// A session tracks a new customer's progress through email verification, user and account setup, payment, and final account provisioning.
 type RegistrationSession struct {
 	// Session ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=registration_session"`
-	// Code of the pricing plan selected for this registration, e.g. `free`, `starter`, or `pro`.
+	// Code of the pricing plan selected for this registration.
 	PlanCode string `json:"plan_code" validate:"required"`
 	// Current step in the registration flow.
 	//
@@ -85,11 +97,11 @@ type RegistrationSession struct {
 	Step constants.RegistrationStep `json:"step" validate:"required"`
 	// ID of the Stripe customer created for this registration.
 	//
-	// `null` until billing is set up.
+	// Populated when **Setup Registration Billing** runs; absent for free plans, which never set up billing.
 	StripeCustomerID *string `json:"stripe_customer_id"`
-	// ID of the Stripe Checkout session used to collect payment.
+	// ID of the Stripe Setup Intent created to collect the payment method.
 	//
-	// `null` until checkout is started.
+	// Despite the field name, this holds the Setup Intent ID created by **Setup Registration Billing**, which **Confirm Registration Payment** verifies against its `setup_intent_id`. It is populated once billing setup runs.
 	StripeCheckoutSessionID *string `json:"stripe_checkout_session_id"`
 	// Whether payment has been completed for this registration.
 	//
@@ -97,13 +109,11 @@ type RegistrationSession struct {
 	PaymentCompleted bool `json:"payment_completed"`
 	// Account being registered.
 	//
-	// `null` until the `account_details` step is reached.
+	// Populated once account details are entered during the `account_details` step.
 	Account *RegistrationSessionAccount `json:"account"`
 	// User being registered.
 	User RegistrationSessionUser `json:"user" validate:"required"`
 	// Timestamp when registration was completed.
-	//
-	// Null if still in progress.
 	CompletedAt *time.Time `json:"completed_at"`
 	// Timestamp when this session was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -113,7 +123,9 @@ type RegistrationSession struct {
 
 // Result of creating a registration session.
 type CreateSessionResponse struct {
-	// Session ID.
+	// ID of the registration session.
+	//
+	// If an active session already existed for the email, this is the existing session's ID rather than a new one.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=registration_session"`
@@ -121,7 +133,7 @@ type CreateSessionResponse struct {
 
 // Result of completing a registration.
 type CompleteRegistrationResponse struct {
-	// Account ID.
+	// ID of the newly created account.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account"`
@@ -129,7 +141,9 @@ type CompleteRegistrationResponse struct {
 
 // Result of creating a user for a registration session.
 type CreateUserResponse struct {
-	// User ID.
+	// ID of the user associated with the session.
+	//
+	// This is either the newly created user or, if the session's email matched an existing user, that existing user.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=user"`
@@ -151,9 +165,13 @@ type SetupBillingResponse struct {
 type ConfirmPaymentResponse struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=confirm_payment_response"`
-	// Setup Intent status (e.g., "succeeded").
+	// Status of the Stripe Setup Intent.
+	//
+	// Always `succeeded` on a successful response; any other Setup Intent status results in a validation error instead.
 	Status string `json:"status" validate:"required"`
 	// Payment method ID attached by the Setup Intent.
+	//
+	// Returned only the first time payment is confirmed; a repeat confirmation of an already-completed session succeeds but omits it.
 	PaymentMethodID *string `json:"payment_method_id"`
 }
 

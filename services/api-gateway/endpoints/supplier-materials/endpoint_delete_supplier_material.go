@@ -11,13 +11,17 @@ import (
 
 // Request to delete a supplier material.
 type DeleteSupplierMaterialRequest struct {
-	// Supplier ID.
+	// ID of the supplier the material is linked to.
 	SupplierID string `path:"supplier_id" validate:"required"`
-	// Supplier material ID.
+	// ID of the material whose supplier link to delete.
+	//
+	// Supplier materials are addressed by the combination of supplier and material, so this path parameter takes the material's ID.
 	MaterialID string `path:"id" validate:"required"`
 }
 
-// Deletes a supplier material association.
+// Deletes a supplier material link.
+//
+// Removing the link does not affect the underlying material or supplier.
 type DeleteSupplierMaterialEndpoint struct{}
 
 func (e *DeleteSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSupplierMaterialRequest, *apiresource.SupplierMaterial] {

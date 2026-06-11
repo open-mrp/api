@@ -13,7 +13,7 @@ import (
 
 // Request for a password reset.
 type RequestPasswordResetRequest struct {
-	// Username or email of the account to reset.
+	// Username or email of the user whose password should be reset.
 	Identifier string `json:"identifier" validate:"required,identifier"`
 	// Account slug for redirecting to the original login portal after password reset.
 	AccountSlug field.Optional[string] `json:"account_slug,omitzero"`
@@ -28,6 +28,8 @@ func (*RequestPasswordResetRequest) SchemaExample() any {
 }
 
 // Sends a password reset email to the user.
+//
+// Always returns an accepted response, whether or not the identifier matches a known user, so it does not reveal which identifiers exist. Reset links expire 15 minutes after they are issued.
 type RequestPasswordResetEndpoint struct{}
 
 func (e *RequestPasswordResetEndpoint) Materialize() *apiendpoint.APIEndpoint[*RequestPasswordResetRequest, *apiresource.EmptyResource] {

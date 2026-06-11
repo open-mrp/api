@@ -16,9 +16,9 @@ import (
 type UpdateDCLocationRequest struct {
 	// DC location ID.
 	DCLocationID string `path:"id" validate:"required"`
-	// Customer account ID.
+	// ID of the customer account to reassign this DC location to.
 	CustomerID field.Optional[string] `json:"customer_id,omitzero" validate:"omitempty"`
-	// Location description.
+	// Free-form description identifying the distribution-center location, such as a warehouse name and bay (for example, `Warehouse B - Bay 1`).
 	Location field.Optional[string] `json:"location,omitzero" validate:"omitempty,max=255"`
 }
 
@@ -32,6 +32,8 @@ func (*UpdateDCLocationRequest) SchemaExample() any {
 }
 
 // Partially updates a DC location.
+//
+// Omitted fields are left unchanged.
 type UpdateDCLocationEndpoint struct{}
 
 func (e *UpdateDCLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateDCLocationRequest, *apiresource.DCLocation] {

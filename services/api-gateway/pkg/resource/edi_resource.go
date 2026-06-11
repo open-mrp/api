@@ -10,17 +10,17 @@ import (
 
 const SampleDCLocationID = "dclo_0191ce9223b21dc31c9ee09b3e"
 
-// Customer sub-resource on a DC location.
+// Identifying details of the customer a DC location belongs to.
 type DCLocationCustomer struct {
 	// Customer ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=customer"`
-	// Display name.
+	// Display name of the customer.
 	Name string `json:"name" validate:"required"`
 }
 
-// DC location resource.
+// A distribution-center (DC) location belonging to a customer, used when processing orders received via EDI.
 type DCLocation struct {
 	// DC location ID.
 	ID string `json:"id" validate:"required"`
@@ -29,8 +29,6 @@ type DCLocation struct {
 	// Free-form description identifying this distribution-center location, such as a warehouse name and bay (for example, `Warehouse A - Bay 3`).
 	Location string `json:"location" validate:"required"`
 	// The customer this DC location belongs to.
-	//
-	// Every DC location is tied to a customer.
 	Customer *DCLocationCustomer `json:"customer"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -61,7 +59,9 @@ func (*DCLocation) SchemaExample() any {
 
 const SampleEDIRunID = "edru_016aa43a99df34b744f6e2b878"
 
-// EDI run resource.
+// A record of a single EDI processing run.
+//
+// EDI runs are created automatically by the platform's EDI processing and are read-only through the API.
 type EDIRun struct {
 	// EDI run ID.
 	ID string `json:"id" validate:"required"`

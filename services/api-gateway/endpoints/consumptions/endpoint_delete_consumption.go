@@ -19,6 +19,8 @@ type DeleteConsumptionRequest struct {
 }
 
 // Deletes a consumption from a production step.
+//
+// Any production-flow connections established through this consumption are disconnected. Returns the deleted consumption.
 type DeleteConsumptionEndpoint struct{}
 
 func (e *DeleteConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteConsumptionRequest, *apiresource.Consumption] {

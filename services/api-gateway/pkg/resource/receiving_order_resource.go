@@ -11,9 +11,11 @@ import (
 const SampleReceivingOrderID = "rcor_016911ec6c634a298b3dc1798e"
 const SampleReceivingOrderLineID = "rcorln_01f2aca124f3f5add7c94d5e4f"
 
-// Receiving order resource.
+// A receiving order tracks inbound inventory against an issued purchase order.
 //
-// The list endpoint returns this same type with only base fields populated; expandable references (purchase_order, supplier, lines) are populated via include[]=.
+// One receiving order is created automatically when a purchase order is issued, with one line per purchase order line. As goods arrive, line quantities are received and then stocked into inventory; the order is marked complete once every line is stocked.
+//
+// The list endpoint returns this same type as the retrieve endpoint, with the same fields available.
 type ReceivingOrder struct {
 	// Receiving order ID.
 	ID string `json:"id" validate:"required"`
@@ -23,19 +25,15 @@ type ReceivingOrder struct {
 	//
 	// It mirrors that purchase order's number (e.g. `PO-001`). Distinct from `id`; use it to reference the order in the UI and on documents.
 	Number string `json:"number" validate:"required"`
-	// Note on the receiving order.
+	// Free-text note carried over from the originating purchase order.
+	//
+	// Present only on the retrieve response; it is not returned in list results.
 	Note *string `json:"note"`
 	// Purchase order associated with this receiving order.
-	//
-	// Expandable via include[]=purchase_order.
 	PurchaseOrder *PurchaseOrder `json:"purchase_order" expandable:"true"`
-	// Supplier associated with this receiving order.
-	//
-	// Expandable via include[]=supplier. Carried inline (like PurchaseOrder) because the supplier is the seller account, which is cross-account and not resolvable via the account-scoped loader.
+	// The supplier (seller) account the originating purchase order was placed with.
 	Supplier *Supplier `json:"supplier" expandable:"true"`
 	// Line items in this receiving order.
-	//
-	// Expandable via include[]=lines.
 	Lines *List[ReceivingOrderLine] `json:"lines" expandable:"true"`
 	// Total number of lines on this receiving order.
 	//
@@ -46,8 +44,6 @@ type ReceivingOrder struct {
 	// A line counts toward completion once its `stocked_at` is set. Reaches `100` when every line is stocked, at which point the order is marked complete.
 	CompletionPercentage float64 `json:"completion_percentage"`
 	// Timestamp when the receiving order was completed, set automatically once all of its lines have been stocked.
-	//
-	// `null` while any line remains unstocked.
 	CompletedAt *time.Time `json:"completed_at"`
 	// Timestamp when the receiving order was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -71,28 +67,26 @@ func (*ReceivingOrder) SchemaExample() any {
 }
 
 // Line item in a receiving order.
+//
+// One line is created per purchase order line when the purchase order is issued, with its quantity initialized to the full ordered quantity. When a line is stocked short of the ordered quantity, a new line is created automatically for the remainder.
 type ReceivingOrderLine struct {
 	// Receiving order line ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=receiving_order_line"`
-	// Quantity received on this line.
+	// The quantity being received on this line.
+	//
+	// Initialized to the originating order line's full ordered quantity. Adjust it with Update Receiving Order Line, or use the receive actions to set it to the quantity still outstanding on the order line. Voiding the line resets it to `0`.
 	Quantity *Quantity `json:"quantity" validate:"required"`
 	// Quantity rejected on inspection and not stocked into inventory, recorded when the line is stocked.
-	//
-	// `null` when nothing was rejected.
 	RejectedQuantity *Quantity `json:"rejected_quantity"`
-	// Order line associated with this receiving order line.
-	//
-	// Expandable via include[]=lines.order_line.
+	// The purchase order line this receiving line was created from.
 	OrderLine *SalesOrderLine `json:"order_line" expandable:"true"`
-	// The received item (the order line's item).
-	//
-	// Populated inline when lines are included — receiving-order lines are item-based (no product), so the item is carried directly rather than via order_line.product.
+	// The item being received (the originating order line's item).
 	Item *Item `json:"item"`
 	// Timestamp when the received quantity was stocked into inventory.
 	//
-	// `null` until the line is stocked; once set, the line counts toward the order's `completion_percentage`.
+	// Once set, the line counts toward the order's `completion_percentage`.
 	StockedAt *time.Time `json:"stocked_at"`
 	// Timestamp when the line was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

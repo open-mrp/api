@@ -15,7 +15,9 @@ type DeleteProductionRunRequest struct {
 	ProductionRunID string `path:"id" validate:"required"`
 }
 
-// Deletes a production run and its associated batches and order links.
+// Deletes a production run.
+//
+// All batches recorded against the run are deleted, linked orders are detached from the run, and reserved inventory for those orders is released.
 type DeleteProductionRunEndpoint struct{}
 
 func (e *DeleteProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteProductionRunRequest, *apiresource.EmptyResource] {

@@ -13,13 +13,13 @@ const SampleCustomerName = "Acme Inc."
 const SampleCustomerNumber = "100042"
 const SampleCustomerRelationID = "acre_0153f41078e241b7487172c749"
 
-// Customer account.
+// A business you sell to, with its contact details, default fulfillment settings, and order policies.
 type Customer struct {
 	// Customer ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=customer"`
-	// Display name.
+	// The customer's business name, as shown throughout the app and on documents.
 	Name string `json:"name" validate:"required"`
 	// Human-readable customer number used to identify the account, distinct from the `id`.
 	Number string `json:"number" validate:"required"`
@@ -30,10 +30,7 @@ type Customer struct {
 	// - `hold_shipment`: orders can be placed, but shipments are held.
 	// - `hold_all`: all activity is on hold.
 	Status constants.AccountStatusCode `json:"status" validate:"required"`
-	// Whether EDI (Electronic Data Interchange) is enabled for this customer.
-	//
-	// - `enabled`: EDI is enabled.
-	// - `disabled`: EDI is disabled.
+	// Whether EDI (Electronic Data Interchange) is enabled for exchanging orders and documents with this customer.
 	EDIStatus constants.EDIStatus `json:"edi_status" validate:"required"`
 	// The customer's position in the account hierarchy.
 	//
@@ -41,20 +38,20 @@ type Customer struct {
 	// - `parent`: has one or more child accounts (see `child_accounts`).
 	// - `child`: belongs to a parent account (see `parent_account`).
 	RelationshipType constants.CustomerRelationshipType `json:"relationship_type" validate:"required"`
-	// Commission policy applied to this customer's orders.
+	// How sales commission applies to this customer's orders.
 	//
-	// - `commission_applied`: commission applies to orders.
-	// - `commission_exempt`: no commission applies.
+	// - `commission_exempt`: this customer's orders are exempt from sales commission.
+	// - `commission_applied`: sales commission is calculated on this customer's orders.
 	CommissionPolicy constants.CommissionPolicy `json:"commission_policy" validate:"required"`
-	// Note.
+	// Free-form note about the customer.
 	Note *string `json:"note"`
-	// Credit limit.
+	// Maximum credit extended to this customer.
 	CreditLimit *Quantity `json:"credit_limit" expandable:"true"`
 	// Contact information.
 	ContactInfo *CustomerContactInfo `json:"contact_info" expandable:"true"`
-	// Freight preferences.
+	// Freight and carrier preferences applied to this customer's shipments.
 	FreightPreferences *CustomerFreightPreferences `json:"freight_preferences" expandable:"true"`
-	// Default settings.
+	// Default settings applied to new orders for this customer.
 	Defaults *CustomerDefaults `json:"defaults" expandable:"true"`
 	// Notification preferences.
 	NotificationPreferences *CustomerNotificationPreferences `json:"notification_preferences" expandable:"true"`
@@ -203,7 +200,7 @@ type FrequentlyOrderedProduct struct {
 	Item *Item `json:"item" validate:"required"`
 	// Most commonly ordered unit.
 	Unit *Unit `json:"unit"`
-	// Number of times ordered.
+	// Number of times the customer has ordered this item in the `unit` shown.
 	OrderCount int32 `json:"order_count" validate:"required"`
 }
 

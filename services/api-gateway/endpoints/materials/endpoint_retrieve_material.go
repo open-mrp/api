@@ -12,7 +12,7 @@ import (
 
 // Request to get a material.
 type RetrieveMaterialRequest struct {
-	// Material ID.
+	// ID of the material to retrieve.
 	ItemID string `path:"id" validate:"required"`
 }
 

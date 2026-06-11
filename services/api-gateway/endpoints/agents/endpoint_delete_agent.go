@@ -15,7 +15,9 @@ type DeleteAgentRequest struct {
 	AgentDefinitionID string `path:"id" validate:"required"`
 }
 
-// Soft-deletes a custom agent definition. System agents cannot be deleted.
+// Deletes a custom agent definition.
+//
+// The agent is soft-deleted and can no longer be run or modified. System agents cannot be deleted.
 type DeleteAgentEndpoint struct{}
 
 func (e *DeleteAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAgentRequest, *apiresource.EmptyResource] {

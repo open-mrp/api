@@ -15,13 +15,17 @@ import (
 
 // Tool to attach to an agent definition.
 type ToolInput struct {
-	// Available tool ID.
+	// ID of the tool to attach.
+	//
+	// Available tool IDs can be discovered with the List Tools endpoint (`GET /v1/ai/tools`).
 	ToolID string `json:"tool_id" validate:"required"`
-	// JSON configuration for this tool instance.
+	// JSON-encoded configuration for this tool instance.
+	//
+	// The expected structure depends on the tool (see the tool's `config_schema`).
 	ConfigJSON field.Optional[string] `json:"config_json,omitzero"`
 	// Display order among the agent's tools (lower values appear first).
 	SortOrder field.Optional[int32] `json:"sort_order,omitzero"`
-	// Requires human review before execution.
+	// Whether actions from this tool require human review before they execute.
 	RequireReview field.Optional[bool] `json:"require_review,omitzero"`
 }
 
@@ -36,12 +40,18 @@ func (*ToolInput) SchemaExample() any {
 }
 
 // Trigger-type-specific settings for agent creation/update requests.
+//
+// Required contents depend on the agent's `trigger_type`:
+//
+// - `scheduled`: `cron_schedule` is required.
+// - `event`: at least one entry in `event_filters` is required.
+// - `manual`: no trigger configuration is needed.
 type TriggerConfigInput struct {
-	// Cron expression for scheduled triggers (e.g. "0 9 * * *").
+	// Cron expression for scheduled triggers (e.g. `0 9 * * *`).
 	CronSchedule field.Optional[string] `json:"cron_schedule,omitzero" validate:"omitempty,max=255"`
-	// IANA timezone for the cron schedule (e.g. "America/New_York").
+	// IANA timezone for the cron schedule (e.g. `America/New_York`).
 	Timezone field.Optional[string] `json:"timezone,omitzero" validate:"omitempty,max=255"`
-	// Event types that trigger this agent (e.g. ["email.received", "order.created"]).
+	// Event types that trigger this agent (e.g. `["email.received", "order.created"]`).
 	EventFilters []string `json:"event_filters"`
 }
 
@@ -57,13 +67,17 @@ func (*TriggerConfigInput) SchemaExample() any {
 type ConfigInput struct {
 	// System prompt / instructions for the agent.
 	SystemPrompt field.Optional[string] `json:"system_prompt,omitzero"`
-	// LLM model identifier (e.g. "claude-sonnet-4").
+	// LLM model identifier (e.g. `claude-sonnet-4`).
 	Model field.Optional[string] `json:"model,omitzero" validate:"omitempty,max=255"`
-	// LLM provider name (e.g. "anthropic", "openai"). Inferred from model if omitted.
+	// LLM provider name (e.g. `anthropic`, `openai`).
+	//
+	// Inferred from `model` if omitted.
 	Provider field.Optional[string] `json:"provider,omitzero" validate:"omitempty,max=255"`
 	// LLM sampling temperature between 0 and 1.
 	Temperature field.Optional[float64] `json:"temperature,omitzero" validate:"omitempty,min=0,max=1"`
-	// Trigger-specific configuration. Shape depends on the agent's trigger_type.
+	// Trigger-specific configuration.
+	//
+	// Required contents depend on the agent's `trigger_type`; see the trigger config schema.
 	TriggerConfig field.Optional[TriggerConfigInput] `json:"trigger_config,omitzero"`
 }
 
@@ -96,21 +110,25 @@ func (c *ConfigInput) Validate(triggerType constants.AgentTriggerType) error {
 
 // Request to create an agent definition.
 type CreateAgentRequest struct {
-	// Display name.
+	// Human-readable name of the agent.
 	Name string `json:"name" validate:"required,max=255"`
-	// URL-friendly identifier.
+	// URL-friendly identifier for the agent.
 	Slug string `json:"slug" validate:"required,max=255"`
 	// Description of what the agent does.
 	Description field.Optional[string] `json:"description,omitzero"`
-	// Category code (e.g. "order_processing").
+	// Category grouping for the agent (e.g. `order_processing`), used to organize agents in the UI.
 	CategoryCode string `json:"category_code" validate:"required,max=255"`
-	// Trigger type.
+	// How runs of this agent are initiated.
+	//
+	// - `scheduled`: runs on a cron schedule; `config.trigger_config.cron_schedule` is required.
+	// - `event`: runs in response to platform events; at least one `config.trigger_config.event_filters` entry is required.
+	// - `manual`: runs only when explicitly invoked.
 	TriggerType constants.AgentTriggerType `json:"trigger_type" validate:"required"`
 	// Agent-level configuration controlling LLM behavior and trigger settings.
 	Config ConfigInput `json:"config"`
-	// Tools to attach.
+	// Tools to attach to the agent.
 	Tools []ToolInput `json:"tools,omitzero"`
-	// Role ID defining agent permissions.
+	// ID of the role that defines the permissions the agent operates with.
 	RoleID field.Optional[string] `json:"role_id,omitzero" validate:"omitempty,max=191"`
 }
 
@@ -130,6 +148,8 @@ func (*CreateAgentRequest) SchemaExample() any {
 }
 
 // Creates a custom agent definition with optional tool configuration.
+//
+// The new agent has `definition_type` `custom` and is immediately `active` for the account.
 type CreateAgentEndpoint struct{}
 
 func (e *CreateAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAgentRequest, *apiresource.AgentDefinition] {

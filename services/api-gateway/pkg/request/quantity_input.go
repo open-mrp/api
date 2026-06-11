@@ -1,9 +1,9 @@
 package apirequest
 
-// QuantityInput represents a value with an associated unit for create/update requests.
+// A value with an associated unit, used in create and update requests.
 type QuantityInput struct {
-	// The decimal value.
+	// Decimal value, as a string to preserve precision.
 	Value string `json:"value" validate:"required" format:"decimal"`
-	// The unit ID for the value.
+	// ID of the unit of measure for the value.
 	UnitID string `json:"unit_id" validate:"required"`
 }

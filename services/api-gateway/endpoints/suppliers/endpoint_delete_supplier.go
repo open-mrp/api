@@ -15,7 +15,9 @@ type DeleteSupplierRequest struct {
 	SupplierID string `path:"id" validate:"required"`
 }
 
-// Deletes a supplier and its associated account relations, addresses, and account users.
+// Deletes a supplier.
+//
+// The supplier's saved addresses and any users belonging to the supplier are deleted along with it. Returns the deleted supplier.
 type DeleteSupplierEndpoint struct{}
 
 func (e *DeleteSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSupplierRequest, *apiresource.SupplierDetail] {

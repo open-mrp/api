@@ -21,7 +21,7 @@ type RetrieveRunEndpoint struct{}
 
 func (e *RetrieveRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveRunRequest, *apiresource.AgentRun] {
 	return (&apiendpoint.APIEndpoint[*RetrieveRunRequest, *apiresource.AgentRun]{
-		Title:             "Retrieve Run",
+		Title:             "Retrieve Agent Run",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/runs/{id}",

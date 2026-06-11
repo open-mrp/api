@@ -12,11 +12,13 @@ import (
 	"github.com/augno/api/shared/field"
 )
 
-// UpdateAccountGroupProductLineAccessRequest is a request to update product line access for an account group.
+// Request to update product line access for an account group.
 type UpdateAccountGroupProductLineAccessRequest struct {
 	// Account group ID.
 	AccountGroupID string `path:"account_group_id" validate:"required"`
-	// Product line IDs to grant access to.
+	// IDs of the product lines the account group should have access to.
+	//
+	// The provided list replaces the account group's existing set of product lines; every ID must belong to your account.
 	ProductLineIDs field.Optional[[]string] `json:"product_line_ids,omitzero"`
 }
 
@@ -28,7 +30,9 @@ func (*UpdateAccountGroupProductLineAccessRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateAccountGroupProductLineAccessRequest)
 }
 
-// Replaces all product line access for an account group.
+// Replaces the set of product lines accessible to an account group.
+//
+// This is a full replacement, not a merge: product lines omitted from the request lose access.
 type UpdateAccountGroupProductLineAccessEndpoint struct{}
 
 func (e *UpdateAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAccountGroupProductLineAccessRequest, *apiresource.AccountGroupProductLineAccess] {

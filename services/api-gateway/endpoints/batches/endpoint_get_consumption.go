@@ -18,8 +18,12 @@ type GetScanningStationConsumptionRequest struct {
 	// Batch IDs to calculate consumption for.
 	BatchIDs []string `json:"batch_ids" validate:"required"`
 	// Production step ID to scope the consumption calculation.
+	//
+	// Required when the scanning station is a move, split, or merge station. Ignored for initialize stations, where the step is derived from the station and the batch's item.
 	ProductionStepID field.Optional[string] `json:"production_step_id,omitzero"`
-	// Split quantity to factor into the consumption calculation.
+	// Proposed split quantity to factor into the consumption calculation.
+	//
+	// Required when the scanning station is a split station; for a single-batch split, material demand is scaled to this quantity instead of the full batch quantity.
 	SplitQuantity field.Optional[SplitQuantityInput] `json:"split_quantity,omitzero"`
 }
 
@@ -37,7 +41,9 @@ func (*GetScanningStationConsumptionRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleGetScanningStationConsumptionRequest)
 }
 
-// Returns material consumption data for the specified batches at a scanning station, optionally scoped to a production step and split quantity.
+// Returns the material demand and current inventory for the operation a scanning station would perform on the given batches.
+//
+// Demand is calculated from the production step's configured consumptions, scaled to the batch quantities (or the proposed split quantity). How the step is determined depends on the station's type: initialize stations derive it from the station and the batch's item, while move, split, and merge stations use `production_step_id`.
 type GetScanningStationConsumptionEndpoint struct{}
 
 func (e *GetScanningStationConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetScanningStationConsumptionRequest, *apiresource.List[apiresource.ScanningConsumption]] {

@@ -10,18 +10,20 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Request to sync carrier options from Shippo.
+// Request to sync a carrier's service levels from Shippo.
 type SyncOptionsRequest struct {
 	// Carrier ID.
 	CarrierID string `path:"id" validate:"required"`
 }
 
-// Syncs carrier options from Shippo service levels, adding new and removing stale ones. Not available in sandbox mode.
+// Re-syncs a carrier's service levels from Shippo.
+//
+// Service levels newly offered by the carrier are added (initially hidden from the customer portal) and previously synced ones no longer offered are removed; manually created service levels are untouched. Only available for Shippo-managed carriers; not available in sandbox mode.
 type SyncOptionsEndpoint struct{}
 
 func (e *SyncOptionsEndpoint) Materialize() *apiendpoint.APIEndpoint[*SyncOptionsRequest, *apiresource.Carrier] {
 	return (&apiendpoint.APIEndpoint[*SyncOptionsRequest, *apiresource.Carrier]{
-		Title:             "Sync Carrier Options",
+		Title:             "Sync Carrier Service Levels",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers/{id}/actions/sync-options",

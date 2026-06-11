@@ -19,6 +19,8 @@ type VoidReceivingOrderLineRequest struct {
 }
 
 // Voids a receiving order line.
+//
+// The line's received quantity is reset to `0` and its stocked state is cleared. The line itself is not deleted.
 type VoidReceivingOrderLineEndpoint struct{}
 
 func (e *VoidReceivingOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*VoidReceivingOrderLineRequest, *apiresource.ReceivingOrderLine] {

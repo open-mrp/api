@@ -12,7 +12,9 @@ import (
 
 // Request to validate units by abbreviation.
 type ValidateUnitsRequest struct {
-	// Map of arbitrary keys to unit abbreviation values to validate.
+	// Map of arbitrary keys to unit abbreviations to validate.
+	//
+	// Abbreviations are matched case-insensitively against the account's units.
 	UnitMap map[string]string `json:"unit_map" validate:"required"`
 }
 
@@ -24,7 +26,7 @@ func (*ValidateUnitsRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleValidateUnitsRequest)
 }
 
-// Validates unit abbreviations and returns matching units keyed by the original map keys.
+// Looks up units by abbreviation and returns the matches keyed by the original map keys; keys with no matching unit are omitted from the response.
 type ValidateUnitsEndpoint struct{}
 
 func (e *ValidateUnitsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ValidateUnitsRequest, *apiresource.ValidateUnitsResponse] {

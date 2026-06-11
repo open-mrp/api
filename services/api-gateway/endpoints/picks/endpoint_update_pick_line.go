@@ -18,7 +18,9 @@ type UpdatePickLineRequest struct {
 	PickID string `path:"pick_id" validate:"required"`
 	// Pick line ID.
 	PickLineID string `path:"id" validate:"required"`
-	// Quantity value to set for this line.
+	// New picked quantity for the line, as a decimal string.
+	//
+	// Interpreted in the line's existing quantity unit.
 	QuantityValue field.Optional[string] `json:"quantity_value,omitzero"`
 }
 
@@ -31,7 +33,7 @@ func (*UpdatePickLineRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdatePickLineRequest)
 }
 
-// Partially updates a pick line's quantity value.
+// Updates a pick line's picked quantity.
 type UpdatePickLineEndpoint struct{}
 
 func (e *UpdatePickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePickLineRequest, *apiresource.PickLine] {

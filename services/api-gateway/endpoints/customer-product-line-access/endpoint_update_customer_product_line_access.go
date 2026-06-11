@@ -16,7 +16,9 @@ import (
 type UpdateCustomerProductLineAccessRequest struct {
 	// Customer ID.
 	CustomerID string `path:"customer_id" validate:"required"`
-	// Product line IDs to grant access to.
+	// The full set of product line IDs the customer can access.
+	//
+	// Replaces all existing direct product line access. Omitting this field or sending an empty list removes all direct access.
 	ProductLineIDs field.Optional[[]string] `json:"product_line_ids,omitzero"`
 }
 
@@ -28,7 +30,7 @@ func (*UpdateCustomerProductLineAccessRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateCustomerProductLineAccessRequest)
 }
 
-// Replaces all product line access for a customer.
+// Replaces a customer's direct product line access with the provided set.
 type UpdateCustomerProductLineAccessEndpoint struct{}
 
 func (e *UpdateCustomerProductLineAccessEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateCustomerProductLineAccessRequest, *apiresource.CustomerProductLineAccess] {

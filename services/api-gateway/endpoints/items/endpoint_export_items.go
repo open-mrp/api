@@ -12,7 +12,7 @@ import (
 // ExportItemsRequest is the request to export items with inventory.
 type ExportItemsRequest struct{}
 
-// Exports all items with on-hand inventory as an Excel file.
+// Exports all items, with their on-hand inventory quantities, as an Excel file (`items.xlsx`).
 type ExportItemsEndpoint struct{}
 
 func (e *ExportItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportItemsRequest, *httptransport.FileDownload] {

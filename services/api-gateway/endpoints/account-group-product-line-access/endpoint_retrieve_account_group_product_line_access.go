@@ -10,7 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// RetrieveAccountGroupProductLineAccessRequest is a request to get product line access for an account group.
+// Request to retrieve product line access for an account group.
 type RetrieveAccountGroupProductLineAccessRequest struct {
 	// Account group ID.
 	AccountGroupID string `path:"account_group_id" validate:"required"`

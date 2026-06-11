@@ -13,7 +13,9 @@ import (
 
 // Request to create a production run.
 type CreateProductionRunRequest struct {
-	// Responsible user ID.
+	// ID of the account user accountable for executing the run.
+	//
+	// Accepts either an account user ID or a user ID; it is resolved and stored as the account user.
 	ResponsibleUserID string `json:"responsible_user_id" validate:"required"`
 }
 
@@ -26,6 +28,8 @@ func (*CreateProductionRunRequest) SchemaExample() any {
 }
 
 // Creates a production run.
+//
+// The run number is assigned automatically as the next sequential number for the account.
 type CreateProductionRunEndpoint struct{}
 
 func (e *CreateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductionRunRequest, *apiresource.ProductionRunDetail] {

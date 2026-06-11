@@ -13,6 +13,8 @@ import (
 // Request to move batches to a production step.
 type MoveBatchesRequest struct {
 	// Batch IDs to move.
+	//
+	// Pass a single ID to advance one batch, or multiple IDs (one per part) when the target step combines multiple parts.
 	BatchIDs []string `json:"batch_ids" validate:"required"`
 	// Target production step ID.
 	ProductionStepID string `json:"production_step_id" validate:"required"`
@@ -30,7 +32,9 @@ func (*MoveBatchesRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleMoveBatchesRequest)
 }
 
-// Moves batches to a production step at the specified scanning station.
+// Advances batches to a production step by creating a new batch at that step.
+//
+// A new batch is created with its item and quantity calculated from the target step's configuration, the source batches are linked as inputs and closed, and the step's material consumption is executed asynchronously. Returns the newly created batch.
 type MoveBatchesEndpoint struct{}
 
 func (e *MoveBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*MoveBatchesRequest, *apiresource.Batch] {

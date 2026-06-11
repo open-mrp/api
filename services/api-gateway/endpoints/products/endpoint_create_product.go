@@ -15,24 +15,43 @@ import (
 
 // CreateProductRequest is the request to create a product.
 type CreateProductRequest struct {
-	// SKU.
+	// Stock keeping unit code for the product's item.
+	//
+	// Must be unique within the account; creation fails with a conflict error if another item already uses it.
 	SKU string `json:"sku" validate:"required,max=255"`
 	// Description.
 	Description field.Optional[string] `json:"description,omitzero"`
 	// Notes.
 	Notes field.Optional[string] `json:"notes,omitzero"`
-	// Product type code.
+	// Product type code, which determines how the product behaves on orders and invoices.
+	//
+	// - `sale`: a standard sellable product.
+	// - `service`: a non-physical service line, such as labor or installation.
+	// - `shipping`: a shipping charge applied to an order.
+	// - `credit`: a credit applied against an order or invoice.
+	// - `return`: a returned product (RMA).
+	// - `tax`: a tax line.
 	ProductTypeCode constants.ProductTypeCode `json:"type" validate:"required"`
-	// Product line ID.
+	// ID of the product line to assign the product to.
 	ProductLineID field.Optional[string] `json:"product_line_id,omitzero" validate:"omitempty"`
-	// Category ID.
+	// ID of the item category for the product's item.
+	//
+	// The category's unit group determines the default units used for the product's pricing rates and inventory tracking.
 	CategoryID string `json:"category_id" validate:"required"`
-	// Whether visible in the customer portal.
+	// Whether the product is shown to buyers in the customer portal.
+	//
+	// - `visible`: buyers can see and order the product in the portal.
+	// - `hidden`: the product is concealed from the portal but remains usable internally.
+	//
+	// When omitted, the product is created hidden, so it must be set to `visible` before buyers can see it.
 	PortalVisibility field.Optional[constants.CustomerPortalVisibility] `json:"portal_visibility,omitzero" default:"hidden"`
-	// Initial unit price. When set, numerator must be a currency unit and
-	// denominator must not be.
+	// Initial selling price per unit.
+	//
+	// When set, the numerator unit must be a currency unit and the denominator unit must not be. When omitted, the price is initialized to a zero rate in the category's base unit.
 	UnitPrice field.Optional[apirequest.RateInput] `json:"unit_price,omitzero"`
-	// Initial unit cost. Same currency rule as unit_price.
+	// Initial cost per unit.
+	//
+	// The same unit rule as `unit_price` applies: the numerator unit must be a currency unit and the denominator unit must not be. When omitted, the cost is initialized to a zero rate in the category's base unit.
 	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero"`
 	// Attribute IDs to connect to the product at creation time.
 	AttributeIDs []string `json:"attribute_ids,omitzero"`
@@ -48,7 +67,9 @@ func (*CreateProductRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateProductRequest)
 }
 
-// Creates a product.
+// Creates a product and its backing inventory item.
+//
+// The new item starts with zero on-hand inventory, and its pricing defaults to zero rates in the category's base unit unless `unit_price` or `unit_cost` is provided.
 type CreateProductEndpoint struct{}
 
 func (e *CreateProductEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductRequest, *apiresource.Product] {

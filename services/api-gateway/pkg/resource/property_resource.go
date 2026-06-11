@@ -11,7 +11,9 @@ import (
 const SamplePropertyID = "pp_01e21344878064372f69e67093"
 const SamplePropertyName = "Color"
 
-// Property that groups attributes.
+// A named characteristic used to classify items, such as `Color` or `Size`.
+//
+// Each property defines a set of attributes — the selectable values (e.g. `Red`, `Blue`) that can be assigned to items.
 type Property struct {
 	// Property ID.
 	ID string `json:"id" validate:"required"`

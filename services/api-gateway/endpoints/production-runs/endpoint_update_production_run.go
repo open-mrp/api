@@ -16,9 +16,13 @@ import (
 type UpdateProductionRunRequest struct {
 	// Production run ID.
 	ProductionRunID string `path:"id" validate:"required"`
-	// Production run number.
+	// New production run number.
+	//
+	// Must be unique within the account.
 	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
-	// Responsible user ID.
+	// ID of the account user accountable for executing the run.
+	//
+	// Accepts either an account user ID or a user ID; it is resolved and stored as the account user.
 	ResponsibleUserID field.Optional[string] `json:"responsible_user_id,omitzero" validate:"omitempty"`
 }
 
@@ -33,7 +37,9 @@ func (*UpdateProductionRunRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateProductionRunRequest)
 }
 
-// Partially updates a production run. Fails if the run is completed.
+// Partially updates a production run.
+//
+// Fails if the run has been completed.
 type UpdateProductionRunEndpoint struct{}
 
 func (e *UpdateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateProductionRunRequest, *apiresource.ProductionRunDetail] {

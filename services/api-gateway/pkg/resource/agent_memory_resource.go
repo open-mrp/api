@@ -11,7 +11,7 @@ import (
 
 const SampleAgentMemoryID = "agmm_018731bdaf4ab04bd5bff1b65c"
 
-// Agent memory resource.
+// A piece of information an agent has saved for recall in future runs.
 type AgentMemory struct {
 	// Memory ID.
 	ID string `json:"id" validate:"required"`
@@ -23,15 +23,17 @@ type AgentMemory struct {
 	Content string `json:"content" validate:"required"`
 	// Arbitrary metadata as JSON.
 	Metadata json.RawMessage `json:"metadata"`
-	// Associated entity.
+	// The platform record this memory is about (e.g. a specific customer or product).
+	//
+	// `null` for memories that are not tied to a specific record.
 	Entity *Entity `json:"entity"`
 	// Relative importance from `0` to `1`, used to prioritize which memories the agent recalls.
 	//
 	// Higher is more important.
 	Importance float64 `json:"importance"`
-	// Expiration timestamp.
+	// When this memory expires.
 	//
-	// Null means it never expires.
+	// `null` means it never expires. Expired memories are excluded from list results and are no longer recalled by agents.
 	ExpiresAt *time.Time `json:"expires_at"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

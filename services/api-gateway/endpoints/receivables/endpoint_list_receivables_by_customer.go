@@ -16,11 +16,13 @@ type ListReceivablesByCustomerRequest struct {
 	apiresource.PaginationRequest
 	// Customer account ID.
 	AccountID string `json:"-" path:"account_id" validate:"required"`
-	// Cutoff date for the receivables snapshot.
+	// Compute receivable balances as of this timestamp.
+	//
+	// Only invoices created before the cutoff are included, and only allocations made before the cutoff are subtracted from each remaining balance. When omitted, current balances are returned.
 	CutoffDate *time.Time `query:"cutoff_date"`
 }
 
-// Returns a paginated list of receivable entries for a specific customer account.
+// Returns a paginated list of outstanding receivable entries for a specific customer account.
 type ListReceivablesByCustomerEndpoint struct{}
 
 func (e *ListReceivablesByCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListReceivablesByCustomerRequest, *apiresource.List[apiresource.ReceivableEntry]] {

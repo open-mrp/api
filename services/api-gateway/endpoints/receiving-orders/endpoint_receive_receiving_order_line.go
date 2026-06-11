@@ -18,7 +18,9 @@ type ReceiveReceivingOrderLineRequest struct {
 	LineID string `path:"id" validate:"required"`
 }
 
-// Marks a receiving order line as received.
+// Records the full outstanding quantity as received on a single receiving order line.
+//
+// Sets the line's quantity to the quantity still outstanding on its purchase order line (ordered minus previously received); if nothing is outstanding, the line is returned unchanged. This does not add inventory — use Stock Receiving Order to put the received quantity away.
 type ReceiveReceivingOrderLineEndpoint struct{}
 
 func (e *ReceiveReceivingOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*ReceiveReceivingOrderLineRequest, *apiresource.ReceivingOrderLine] {

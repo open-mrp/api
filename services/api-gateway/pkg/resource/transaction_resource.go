@@ -12,9 +12,9 @@ const SampleTransactionDetailID = "tx_01fc4d4f2b2ee1fa6b6d87257a"
 const SampleTransactionMethodID = "txmd_011b68c574f7c84504fc256ca7"
 const SampleTransactionTypeID = "txtp_01552974c3952ed8178ad671b8"
 
-// Transaction type resource.
+// The category of a financial transaction, such as a payment or credit memo.
 type TransactionType struct {
-	// Transaction ID.
+	// Transaction type ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=transaction_type"`
@@ -40,7 +40,7 @@ func (*TransactionType) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleTransactionType)
 }
 
-// Transaction method resource.
+// The payment method used to make a transaction, such as cash or check.
 type TransactionMethod struct {
 	// Transaction method ID.
 	ID string `json:"id" validate:"required"`
@@ -49,12 +49,6 @@ type TransactionMethod struct {
 	// Display name.
 	Name string `json:"name" validate:"required"`
 	// Machine-readable code identifying how the transaction was made.
-	//
-	// - `cash`
-	// - `check`
-	// - `credit_card`
-	// - `gift_card`
-	// - `ach`
 	Code constants.TransactionMethod `json:"code" validate:"required"`
 }
 
@@ -69,23 +63,27 @@ func (*TransactionMethod) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleTransactionMethod)
 }
 
-// Full transaction resource.
+// A financial transaction recorded against a customer, such as a payment, credit memo, adjustment, or rebate.
 type TransactionDetail struct {
 	// Transaction ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=transaction"`
-	// Transaction number.
+	// Human-readable transaction number.
+	//
+	// Generated automatically as a per-account sequence when the transaction is created. It can be changed later, but must remain unique within the account.
 	Number string `json:"number" validate:"required"`
-	// Transaction amount.
+	// The transaction amount, in US dollars.
 	Amount *Quantity `json:"amount" validate:"required"`
-	// Associated customer.
+	// The customer the transaction was recorded against.
 	Customer *Customer `json:"customer" expandable:"true"`
-	// Responsible user.
+	// The account user responsible for the transaction.
+	//
+	// When none is specified at creation, the account user making the request is recorded as responsible.
 	ResponsibleUser *AccountUser `json:"responsible_user" expandable:"true"`
-	// Note.
+	// Free-form note attached to the transaction.
 	Note *string `json:"note"`
-	// Transaction type.
+	// The transaction's type (payment, credit memo, adjustment, or rebate).
 	TransactionType *TransactionType `json:"transaction_type" validate:"required"`
 	// Payment method used.
 	//
@@ -97,7 +95,7 @@ type TransactionDetail struct {
 	AdjustmentType *AdjustmentType `json:"adjustment_type"`
 	// Whether the full transaction amount has been allocated against invoices.
 	//
-	// When `false`, some of the amount remains as an open (unapplied) balance.
+	// When `false`, some of the amount remains as an open (unapplied) balance and the transaction appears in the open credits list. This flag is set explicitly (see Update Transaction); it is not recomputed automatically when allocations change.
 	IsFullyAllocated bool `json:"is_fully_allocated" validate:"required"`
 	// Stripe payment ID.
 	//
@@ -106,8 +104,6 @@ type TransactionDetail struct {
 	// Number of allocations against invoices for this transaction.
 	AllocationCount int32 `json:"allocation_count" validate:"required"`
 	// Allocations of this transaction against invoices.
-	//
-	// Expandable via include[]=allocations.
 	Allocations *List[TransactionAllocation] `json:"allocations" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -152,13 +148,13 @@ type TransactionSummary struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=transaction_summary"`
-	// Transaction number.
+	// Human-readable transaction number, unique within the account.
 	Number string `json:"number" validate:"required"`
-	// Transaction amount.
+	// The transaction amount, in US dollars.
 	Amount *Quantity `json:"amount" validate:"required"`
-	// Associated customer.
+	// The customer the transaction was recorded against.
 	Customer *Customer `json:"customer" expandable:"true"`
-	// Transaction type.
+	// The transaction's type (payment, credit memo, adjustment, or rebate).
 	TransactionType *TransactionType `json:"transaction_type" validate:"required"`
 	// Payment method used.
 	//
@@ -170,7 +166,7 @@ type TransactionSummary struct {
 	AdjustmentType *AdjustmentType `json:"adjustment_type"`
 	// Whether the full transaction amount has been allocated against invoices.
 	//
-	// When `false`, some of the amount remains as an open (unapplied) balance.
+	// When `false`, some of the amount remains as an open (unapplied) balance and the transaction appears in the open credits list. This flag is set explicitly (see Update Transaction); it is not recomputed automatically when allocations change.
 	IsFullyAllocated bool `json:"is_fully_allocated" validate:"required"`
 	// Number of allocations against invoices for this transaction.
 	AllocationCount int32 `json:"allocation_count" validate:"required"`

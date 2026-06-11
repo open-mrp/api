@@ -15,7 +15,9 @@ type DeleteItemCategoryRequest struct {
 	ItemCategoryID string `path:"id" validate:"required"`
 }
 
-// Deletes an account-owned item category. Default system categories cannot be deleted.
+// Deletes an account-owned item category.
+//
+// Default system categories cannot be deleted.
 type DeleteItemCategoryEndpoint struct{}
 
 func (e *DeleteItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteItemCategoryRequest, *apiresource.EmptyResource] {

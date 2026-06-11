@@ -17,9 +17,9 @@ type UpdateShipmentLineRequest struct {
 	ShipmentID string `path:"shipment_id" validate:"required"`
 	// Shipment line ID.
 	ShipmentLineID string `path:"id" validate:"required"`
-	// Quantity value.
+	// Quantity shipped, as a decimal string.
 	QuantityValue field.Optional[string] `json:"quantity_value,omitzero"`
-	// Quantity unit ID.
+	// ID of the unit of measure for `quantity_value`.
 	QuantityUnitID field.Optional[string] `json:"quantity_unit_id,omitzero" validate:"omitempty"`
 }
 

@@ -26,10 +26,13 @@ type UpdateSalesOrderRequest struct {
 	// Service level ID.
 	ServiceLevelID field.Optional[string] `json:"service_level_id,omitzero" validate:"omitempty"`
 	// Who is billed for freight.
+	//
+	// - `sender`: the sender pays for shipping.
+	// - `third_party`: a third party pays for shipping, using the carrier billing account number.
 	CarrierBillingType field.Optional[constants.CarrierBillingType] `json:"carrier_billing_type,omitzero" validate:"omitempty"`
 	// Carrier billing account number.
 	CarrierBillingAccountNumber field.Optional[string] `json:"carrier_billing_account_number,omitzero" validate:"omitempty,max=255"`
-	// Priority code.
+	// New fulfillment priority for the order.
 	PriorityCode field.Optional[string] `json:"priority_code,omitzero" validate:"omitempty,max=255"`
 	// Sales rep ID.
 	SalesRepID field.Optional[string] `json:"sales_rep_id,omitzero" validate:"omitempty"`
@@ -39,25 +42,33 @@ type UpdateSalesOrderRequest struct {
 	PaymentTermID field.Optional[string] `json:"payment_term_id,omitzero" validate:"omitempty"`
 	// Order discount ID.
 	OrderDiscountID field.Optional[string] `json:"order_discount_id,omitzero" validate:"omitempty"`
-	// Billing address ID. Re-points the order to an existing address. To change
-	// an address's contents, use the update-address endpoint.
+	// Billing address ID.
+	//
+	// Re-points the order to an existing address. To change an address's contents, use the update-address endpoint.
 	BillingAddressID field.Optional[string] `json:"billing_address_id,omitzero" validate:"omitempty"`
-	// Shipping address ID. Re-points the order to an existing address. To change
-	// an address's contents, use the update-address endpoint.
+	// Shipping address ID.
+	//
+	// Re-points the order to an existing address. To change an address's contents, use the update-address endpoint.
 	ShippingAddressID field.Optional[string] `json:"shipping_address_id,omitzero" validate:"omitempty"`
 	// Order number.
+	//
+	// Must be unique within your account.
 	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
-	// Acknowledgment status.
+	// Acknowledgment status of the order.
+	//
+	// Set to `sent` to mark the acknowledgement as sent without emailing the customer, or `not_sent` to reset it.
 	AcknowledgmentStatus field.Optional[constants.AcknowledgmentStatus] `json:"acknowledgment_status,omitzero" validate:"omitempty"`
 	// Promised delivery date.
 	PromisedAt field.Optional[time.Time] `json:"promised_at,omitzero"`
 	// Customer ID.
 	CustomerID field.Optional[string] `json:"customer_id,omitzero" validate:"omitempty"`
-	// When set, replaces acknowledgement email contacts on the order.
-	// An empty list clears all contacts; omitted leaves existing contacts untouched.
+	// Replaces the acknowledgement email contacts on the order.
+	//
+	// An empty list clears all contacts; omitting the field leaves existing contacts untouched.
 	AcknowledgementEmailContacts field.Optional[[]SalesOrderEmailContactInput] `json:"acknowledgement_email_contacts,omitzero"`
-	// When set, replaces invoice email contacts on the order.
-	// An empty list clears all contacts; omitted leaves existing contacts untouched.
+	// Replaces the invoice email contacts on the order.
+	//
+	// An empty list clears all contacts; omitting the field leaves existing contacts untouched.
 	InvoiceEmailContacts field.Optional[[]SalesOrderEmailContactInput] `json:"invoice_email_contacts,omitzero"`
 }
 

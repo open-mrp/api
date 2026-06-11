@@ -12,11 +12,11 @@ import (
 	"github.com/augno/api/shared/field"
 )
 
-// CreateSettlementAllocationRequest is an allocation in a create settlement request.
+// A single allocation applying part of a transaction's amount to an invoice.
 type CreateSettlementAllocationRequest struct {
-	// Transaction ID.
+	// ID of the transaction (payment, rebate, adjustment, or credit memo) to allocate from.
 	TransactionID string `json:"transaction_id" validate:"required"`
-	// Invoice ID.
+	// ID of the invoice the amount is applied to.
 	InvoiceID string `json:"invoice_id" validate:"required"`
 	// Amount to allocate as a decimal string.
 	Amount string `json:"amount" validate:"required"`
@@ -24,11 +24,13 @@ type CreateSettlementAllocationRequest struct {
 	Note field.Optional[string] `json:"note,omitzero"`
 }
 
-// CreateSettlementRequest is the request to create a settlement.
+// Request to create a settlement.
 type CreateSettlementRequest struct {
-	// Responsible user ID.
+	// ID of the user responsible for this settlement.
+	//
+	// Accepts either an account user ID or a user ID; the value is resolved to an account user in the current account.
 	ResponsibleUserID string `json:"responsible_user_id" validate:"required"`
-	// Allocations for this settlement.
+	// Allocations to record in this settlement.
 	Allocations []CreateSettlementAllocationRequest `json:"allocations" validate:"required,min=1"`
 }
 
@@ -47,7 +49,9 @@ func (*CreateSettlementRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateSettlementRequest)
 }
 
-// Creates a settlement with transaction allocations. A settlement number is automatically generated.
+// Creates a settlement that applies transaction amounts to invoices.
+//
+// The settlement number is generated automatically from a per-account sequence, and the allocated transactions are marked as fully allocated.
 type CreateSettlementEndpoint struct{}
 
 func (e *CreateSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSettlementRequest, *apiresource.Settlement] {

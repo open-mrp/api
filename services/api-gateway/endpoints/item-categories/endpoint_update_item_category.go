@@ -16,9 +16,9 @@ import (
 type UpdateItemCategoryRequest struct {
 	// Item category ID.
 	ItemCategoryID string `path:"id" validate:"required"`
-	// Display name.
+	// Display name of the item category.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Notes.
+	// Free-form notes about the item category.
 	Notes field.Optional[string] `json:"notes,omitzero"`
 }
 
@@ -30,7 +30,9 @@ func (*UpdateItemCategoryRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateItemCategoryRequest)
 }
 
-// Partially updates an account-owned item category. Default system categories cannot be updated.
+// Partially updates an account-owned item category.
+//
+// Only the fields provided in the request body are changed. Default system categories cannot be updated.
 type UpdateItemCategoryEndpoint struct{}
 
 func (e *UpdateItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateItemCategoryRequest, *apiresource.ItemCategory] {

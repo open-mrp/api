@@ -17,11 +17,11 @@ type Item struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=item"`
-	// Stock keeping unit code.
+	// Stock keeping unit code, unique within the account.
 	SKU string `json:"sku" validate:"required"`
 	// Item description.
 	Description *string `json:"description"`
-	// Notes.
+	// Free-form notes about the item.
 	Notes *string `json:"notes"`
 	// What kind of item this is.
 	//
@@ -29,7 +29,9 @@ type Item struct {
 	// - `material`: a raw material or component consumed in production.
 	// - `part`: a part used in production.
 	ItemTypeCode constants.ItemTypeCode `json:"type" validate:"required"`
-	// Item category.
+	// The category this item belongs to.
+	//
+	// The category's unit group determines the base unit the item's rates (`unit_value`, `unit_cost`, `burn_rate`) are expressed in.
 	Category *ItemCategory `json:"category" expandable:"true"`
 	// Selling value per unit, expressed as a rate (e.g. `$25.50 / kg`).
 	UnitValue *Rate `json:"unit_value" expandable:"true"`
@@ -72,20 +74,12 @@ type ItemInventory struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=item_inventory"`
 	// Physical quantity currently in stock.
-	//
-	// Expandable via include[]=on_hand.
 	OnHand *Quantity `json:"on_hand" expandable:"true"`
 	// Quantity committed to existing orders and therefore not free to allocate.
-	//
-	// Expandable via include[]=reserved.
 	Reserved *Quantity `json:"reserved" expandable:"true"`
 	// Quantity free to commit to new orders, i.e. on-hand minus reserved minus short.
-	//
-	// Expandable via include[]=available_to_promise.
 	AvailableToPromise *Quantity `json:"available_to_promise" expandable:"true"`
 	// Quantity by which demand exceeds available supply (the unfulfillable shortfall).
-	//
-	// Expandable via include[]=short.
 	Short *Quantity `json:"short" expandable:"true"`
 }
 
@@ -101,19 +95,19 @@ func (*ItemInventory) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleItemInventory)
 }
 
-// ItemCosts is the cost breakdown for an item.
+// ItemCosts is the per-unit production cost breakdown for an item, computed from the production flow that produces it.
 type ItemCosts struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=item"`
-	// Direct material cost.
+	// Cost of materials consumed to produce one unit of the item.
 	DirectMaterialCost string `json:"direct_material_cost" validate:"required" format:"decimal"`
-	// Direct labor cost.
+	// Labor cost to produce one unit of the item.
 	DirectLaborCost string `json:"direct_labor_cost" validate:"required" format:"decimal"`
-	// Overhead cost.
+	// Overhead cost allocated to one unit of the item.
 	OverheadCost string `json:"overhead_cost" validate:"required" format:"decimal"`
-	// Total cost.
+	// Total cost to produce one unit of the item (material + labor + overhead).
 	TotalCost string `json:"total_cost" validate:"required" format:"decimal"`
-	// Unit for cost values.
+	// The unit of the item the per-unit costs are expressed against.
 	Unit *Unit `json:"unit"`
 }
 
@@ -136,7 +130,7 @@ type ItemTrendPoint struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=item_trend_point"`
 	// Timestamp of the data point.
 	OccurredAt time.Time `json:"occurred_at" validate:"required"`
-	// Value at this date.
+	// Recorded value of the trend metric at `occurred_at`.
 	Value string `json:"value" validate:"required" format:"decimal"`
 }
 
@@ -144,9 +138,11 @@ type ItemTrendPoint struct {
 type ItemTrends struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=item"`
-	// Requested trend type.
+	// The trend type that was requested.
+	//
+	// Currently the only supported value is `inventory`.
 	TrendType string `json:"trend_type" validate:"required"`
-	// Trend data points.
+	// Trend data points, ordered by time.
 	Points *List[ItemTrendPoint] `json:"points" validate:"required"`
 }
 
@@ -172,11 +168,11 @@ type ExportItem struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=item"`
-	// Stock keeping unit code.
+	// Stock keeping unit code, unique within the account.
 	SKU string `json:"sku" validate:"required"`
 	// Item description.
 	Description *string `json:"description"`
-	// Notes.
+	// Free-form notes about the item.
 	Notes *string `json:"notes"`
 	// What kind of item this is.
 	//
@@ -184,11 +180,11 @@ type ExportItem struct {
 	// - `material`: a raw material or component consumed in production.
 	// - `part`: a part used in production.
 	ItemTypeCode constants.ItemTypeCode `json:"type" validate:"required"`
-	// Category name.
+	// Name of the item's category.
 	CategoryName string `json:"category_name"`
-	// On-hand quantity.
+	// Physical quantity currently in stock, expressed in `on_hand_unit`.
 	OnHandQuantity string `json:"on_hand_quantity" format:"decimal"`
-	// On-hand unit.
+	// Unit of measure for `on_hand_quantity`.
 	OnHandUnit *Unit `json:"on_hand_unit"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -232,11 +228,11 @@ var SampleExportItemsResponse = &ExportItemsResponse{
 type BulkReconcileItemsResponse struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=bulk_reconcile_items_response"`
-	// Successfully reconciled items.
+	// Items whose inventory was successfully reconciled.
 	ReconciledItems *List[ReconciledItemResult] `json:"reconciled_items" validate:"required"`
-	// Skipped items.
+	// Items that were skipped, e.g. because no item with the given SKU exists.
 	SkippedItems *List[SkippedItemResult] `json:"skipped_items" validate:"required"`
-	// Reconciliation errors.
+	// Items that failed to reconcile, e.g. because the given unit does not exist or the inventory write failed.
 	Errors *List[ReconcileErrorResult] `json:"errors" validate:"required"`
 }
 
@@ -246,9 +242,9 @@ type ReconciledItemResult struct {
 	ItemID string `json:"item_id" validate:"required"`
 	// Item SKU.
 	SKU string `json:"sku" validate:"required"`
-	// Previous quantity.
+	// On-hand quantity before the reconciliation.
 	PreviousQuantity float64 `json:"previous_quantity" validate:"required"`
-	// New quantity.
+	// On-hand quantity after the reconciliation.
 	NewQuantity float64 `json:"new_quantity" validate:"required"`
 }
 
@@ -256,7 +252,7 @@ type ReconciledItemResult struct {
 type SkippedItemResult struct {
 	// Item SKU.
 	SKU string `json:"sku" validate:"required"`
-	// Reason for skipping.
+	// Human-readable reason the item was skipped.
 	Reason string `json:"reason" validate:"required"`
 }
 

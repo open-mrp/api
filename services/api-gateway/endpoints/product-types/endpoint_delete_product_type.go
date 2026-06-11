@@ -11,7 +11,7 @@ import (
 
 // Request to delete a product type.
 type DeleteProductTypeRequest struct {
-	// Product ID.
+	// Product type ID.
 	ProductTypeID string `path:"id" validate:"required"`
 }
 

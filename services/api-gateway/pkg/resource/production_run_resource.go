@@ -15,16 +15,20 @@ type ProductionRunDetail struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=production_run"`
 	// Production run number, unique per account.
+	//
+	// Assigned automatically at creation as the next sequential number for the account; can be changed via update.
 	Number string `json:"number" validate:"required"`
 	// Account user accountable for executing the run.
 	ResponsibleUser *AccountUser `json:"responsible_user" expandable:"true"`
 	// Number of batches currently recorded against this run.
 	BatchCount int32 `json:"batch_count" validate:"required"`
-	// Time the run started production, or `null` if it has not started yet.
-	StartedAt *time.Time `json:"started_at"`
-	// Time the run was marked complete, or `null` if still in progress.
+	// Time the run started production.
 	//
-	// Once set, new batches can no longer be added to the run.
+	// Set automatically when the first batch in the run is scanned, and unset until then.
+	StartedAt *time.Time `json:"started_at"`
+	// Time the run was marked complete.
+	//
+	// Set automatically once every batch in the run has been scanned or deleted, and unset while the run is still in progress. Once set, the run can no longer be updated and new batches can no longer be added.
 	CompletedAt *time.Time `json:"completed_at"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -52,16 +56,20 @@ type ProductionRunSummary struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=production_run"`
 	// Production run number, unique per account.
+	//
+	// Assigned automatically at creation as the next sequential number for the account; can be changed via update.
 	Number string `json:"number" validate:"required"`
 	// Account user accountable for executing the run.
 	ResponsibleUser *AccountUser `json:"responsible_user"`
 	// Number of batches currently recorded against this run.
 	BatchCount int32 `json:"batch_count" validate:"required"`
-	// Time the run started production, or `null` if it has not started yet.
-	StartedAt *time.Time `json:"started_at"`
-	// Time the run was marked complete, or `null` if still in progress.
+	// Time the run started production.
 	//
-	// Once set, new batches can no longer be added to the run.
+	// Set automatically when the first batch in the run is scanned, and unset until then.
+	StartedAt *time.Time `json:"started_at"`
+	// Time the run was marked complete.
+	//
+	// Set automatically once every batch in the run has been scanned or deleted, and unset while the run is still in progress. Once set, the run can no longer be updated and new batches can no longer be added.
 	CompletedAt *time.Time `json:"completed_at"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

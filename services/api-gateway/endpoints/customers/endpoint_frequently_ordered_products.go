@@ -15,7 +15,9 @@ type GetFrequentlyOrderedProductsRequest struct {
 	CustomerID string `path:"id" validate:"required"`
 }
 
-// Returns the most frequently ordered products for a customer based on historical sales order data.
+// Returns the products a customer orders most often, based on historical sales order data.
+//
+// Returns up to 12 products ranked by order count, each with the unit the customer most commonly orders it in.
 type GetFrequentlyOrderedProductsEndpoint struct{}
 
 func (e *GetFrequentlyOrderedProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetFrequentlyOrderedProductsRequest, *apiresource.List[apiresource.FrequentlyOrderedProduct]] {

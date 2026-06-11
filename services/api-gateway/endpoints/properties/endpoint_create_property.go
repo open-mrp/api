@@ -13,7 +13,7 @@ import (
 
 // Request to create a property.
 type CreatePropertyRequest struct {
-	// Name.
+	// Display name of the property, such as `Color` or `Size`.
 	Name string `json:"name" validate:"required,max=255"`
 }
 

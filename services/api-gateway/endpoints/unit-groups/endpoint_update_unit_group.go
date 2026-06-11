@@ -12,17 +12,23 @@ import (
 	"github.com/augno/api/shared/field"
 )
 
-// UpdateUnitGroupRequest is a request to partially update a unit group.
+// Request to partially update a unit group.
 type UpdateUnitGroupRequest struct {
 	// Unit group ID.
 	UnitGroupID string `path:"id" validate:"required"`
-	// Display name.
+	// Display name of the unit group.
+	//
+	// Must be unique within the account.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Notes. Set to null to clear.
+	// Free-form notes about the unit group.
+	//
+	// Set to `null` to clear.
 	Notes field.Clearable[string] `json:"notes,omitzero"`
-	// Base unit ID.
+	// ID of the group's base unit.
 	BaseUnitID field.Optional[string] `json:"base_unit_id,omitzero" validate:"omitempty"`
-	// Upserts associated units when provided. Existing units not in the list are preserved.
+	// Associated units to add or update in the group.
+	//
+	// Upserted by unit: a listed unit already in the group has its association updated, otherwise it is added. Existing units not in the list are preserved.
 	AssociatedUnits field.Optional[[]CreateUnitGroupUnitParam] `json:"associated_units,omitzero"`
 }
 

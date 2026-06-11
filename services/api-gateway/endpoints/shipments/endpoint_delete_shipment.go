@@ -15,7 +15,9 @@ type DeleteShipmentRequest struct {
 	ShipmentID string `path:"id" validate:"required"`
 }
 
-// Deletes a shipment. Fails if already shipped.
+// Deletes a shipment along with its lines and shipping cases.
+//
+// Deleting a shipment also unpacks the associated pick lines and reopens the pick for the shipment's order so the items can be repacked.
 type DeleteShipmentEndpoint struct{}
 
 func (e *DeleteShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteShipmentRequest, *apiresource.EmptyResource] {

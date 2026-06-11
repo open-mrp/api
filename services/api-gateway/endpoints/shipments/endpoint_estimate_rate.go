@@ -12,27 +12,31 @@ import (
 	"github.com/augno/api/shared/field"
 )
 
-// Parcel for rate estimation.
+// A parcel's weight and dimensions for shipping rate calculations.
 type ParcelInput struct {
-	// Weight.
+	// Parcel weight in pounds.
 	Weight float64 `json:"weight" validate:"required"`
-	// Length.
+	// Parcel length in inches.
 	Length float64 `json:"length" validate:"required"`
-	// Width.
+	// Parcel width in inches.
 	Width float64 `json:"width" validate:"required"`
-	// Height.
+	// Parcel height in inches.
 	Height float64 `json:"height" validate:"required"`
 }
 
 // Request to estimate a shipping rate.
 type EstimateRateRequest struct {
-	// Carrier ID.
+	// ID of the carrier to rate.
 	CarrierID string `json:"carrier_id" validate:"required"`
-	// Service level ID.
+	// ID of the carrier service level to rate.
 	ServiceLevelID string `json:"service_level_id" validate:"required"`
-	// Product line IDs.
+	// Product lines of the items being shipped, used to apply freight exemptions.
+	//
+	// If any listed product line is freight exempt, the estimated rate is `0`.
 	ProductLineIDs []string `json:"product_line_ids,omitzero"`
-	// Customer ID.
+	// ID of the customer the shipment is for, used to apply the customer's freight policy and default shipping term.
+	//
+	// A freight-exempt customer or a free-freight shipping term yields a rate of `0`; a flat-rate shipping term returns the flat rate.
 	CustomerID field.Optional[string] `json:"customer_id,omitzero"`
 	// Origin address.
 	FromAddress apirequest.AddressInput `json:"from_address" validate:"required"`
@@ -40,7 +44,7 @@ type EstimateRateRequest struct {
 	ToAddress apirequest.AddressInput `json:"to_address" validate:"required"`
 	// Parcels to estimate rates for.
 	Parcels []ParcelInput `json:"parcels" validate:"required,min=1"`
-	// Total order value.
+	// Total value of the order, used to evaluate the free-shipping minimum order value on the customer's shipping term.
 	OrderTotal field.Optional[float64] `json:"order_total,omitzero"`
 }
 
@@ -88,7 +92,9 @@ func (*EstimateRateRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleEstimateRateRequest)
 }
 
-// Estimates a shipping rate for a given carrier, carrier option, addresses, and parcels.
+// Estimates the shipping rate for a specific carrier and service level.
+//
+// Freight rules are applied before live rating: freight-exempt product lines or customers, free-freight shipping terms, and a met free-shipping minimum order value all return `0`, and a flat-rate shipping term returns its flat rate. Live rates require the Shippo integration; carriers without live rating configured return `0`.
 type EstimateRateEndpoint struct{}
 
 func (e *EstimateRateEndpoint) Materialize() *apiendpoint.APIEndpoint[*EstimateRateRequest, *apiresource.EstimateRateResult] {

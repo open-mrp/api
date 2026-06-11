@@ -16,15 +16,21 @@ import (
 type UpdateDepartmentRequest struct {
 	// Department ID.
 	DepartmentID string `path:"id" validate:"required"`
-	// Display name.
+	// Display name of the department.
+	//
+	// Must be unique within your account; maximum 255 characters.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Notes about the department.
+	// Free-form notes about the department.
 	Notes field.Optional[string] `json:"notes,omitzero"`
-	// Storage location ID.
+	// ID of the location where this department operates.
 	LocationID field.Optional[string] `json:"location_id,omitzero" validate:"omitempty"`
-	// Scanning station IDs to connect (additive).
+	// IDs of scanning stations to assign to this department.
+	//
+	// Assignment is additive: listed stations are moved into this department and stations already in the department are unaffected.
 	ScanningStationIDs []string `json:"scanning_station_ids,omitzero"`
-	// Machine IDs to connect (additive).
+	// IDs of machines to assign to this department.
+	//
+	// Assignment is additive: listed machines are moved into this department and machines already in the department are unaffected.
 	MachineIDs []string `json:"machine_ids,omitzero"`
 }
 
@@ -37,7 +43,9 @@ func (*UpdateDepartmentRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateDepartmentRequest)
 }
 
-// Partially updates a department. Adding scanning stations or machines is additive and does not remove existing ones.
+// Partially updates a department.
+//
+// Only the fields provided in the request are changed. Assigning scanning stations or machines is additive and does not remove existing ones. Returns a conflict error if the new name is already in use by another department.
 type UpdateDepartmentEndpoint struct{}
 
 func (e *UpdateDepartmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateDepartmentRequest, *apiresource.Department] {

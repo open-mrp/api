@@ -18,13 +18,17 @@ type UpdateServiceLevelRequest struct {
 	CarrierID string `path:"carrier_id" validate:"required"`
 	// Service level ID.
 	ServiceLevelID string `path:"id" validate:"required"`
-	// Display name.
+	// Human-readable name for the service level, shown to customers at checkout when the service level is visible.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Service level code.
+	// Carrier-specific code identifying this service level (e.g. `fedex_ground`).
+	//
+	// Must be unique among the carrier's service levels.
 	Code field.Optional[string] `json:"code,omitzero" validate:"omitempty,max=255"`
 	// Whether this service level will be available for customers to select in the customer portal.
 	CustomerPortalVisibility field.Optional[constants.CustomerPortalVisibility] `json:"customer_portal_visibility,omitzero"`
-	// Default service levels are the default-selected service level for that carrier.
+	// Whether this is the carrier's default service level, pre-selected when the carrier is chosen.
+	//
+	// Each carrier has at most one default; setting this to `true` clears the carrier's existing default.
 	IsDefault field.Optional[bool] `json:"is_default,omitzero"`
 }
 
@@ -38,6 +42,8 @@ func (*UpdateServiceLevelRequest) SchemaExample() any {
 }
 
 // Partially updates a service level.
+//
+// System-owned service levels cannot be updated.
 type UpdateServiceLevelEndpoint struct{}
 
 func (e *UpdateServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateServiceLevelRequest, *apiresource.ServiceLevel] {

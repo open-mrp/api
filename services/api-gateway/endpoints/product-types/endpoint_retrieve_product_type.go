@@ -12,7 +12,7 @@ import (
 
 // Request to get a product type.
 type RetrieveProductTypeRequest struct {
-	// Product ID or code.
+	// Product type ID or code.
 	ProductTypeID string `path:"id" validate:"required"`
 }
 

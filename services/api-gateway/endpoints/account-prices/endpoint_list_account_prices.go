@@ -13,7 +13,7 @@ import (
 // Request to list account prices.
 type ListAccountPricesRequest struct {
 	apiresource.PaginationRequest
-	// Recipient account ID filter.
+	// Filters results to prices whose recipient is this customer account.
 	RecipientAccountID *string `query:"recipient_account_id"`
 }
 

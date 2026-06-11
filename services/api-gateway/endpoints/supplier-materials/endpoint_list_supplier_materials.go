@@ -13,11 +13,11 @@ import (
 // Request to list supplier materials.
 type ListSupplierMaterialsRequest struct {
 	apiresource.PaginationRequest
-	// Supplier ID.
+	// ID of the supplier whose material links to list.
 	SupplierID string `path:"supplier_id" validate:"required"`
 }
 
-// Returns a paginated list of supplier materials.
+// Returns a paginated list of materials linked to the given supplier.
 type ListSupplierMaterialsEndpoint struct{}
 
 func (e *ListSupplierMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSupplierMaterialsRequest, *apiresource.List[apiresource.SupplierMaterial]] {

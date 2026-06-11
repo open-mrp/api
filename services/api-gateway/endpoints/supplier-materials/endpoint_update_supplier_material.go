@@ -13,15 +13,17 @@ import (
 
 // Request to update a supplier material.
 type UpdateSupplierMaterialRequest struct {
-	// Supplier ID.
+	// ID of the supplier the material is linked to.
 	SupplierID string `path:"supplier_id" validate:"required"`
-	// Supplier material ID.
+	// ID of the material whose supplier link to update.
+	//
+	// Supplier materials are addressed by the combination of supplier and material, so this path parameter takes the material's ID.
 	MaterialID string `path:"id" validate:"required"`
-	// Supplier part number for this material.
+	// New part number the supplier uses for this material.
 	SupplierPartNumber field.Optional[string] `json:"supplier_part_number,omitzero" validate:"omitempty,max=255"`
-	// Supplier description for this material.
+	// New supplier description of this material.
 	SupplierDescription field.Optional[string] `json:"supplier_description,omitzero" validate:"omitempty,max=255"`
-	// Active status.
+	// Whether the supplier is available to source this material.
 	IsActive field.Optional[bool] `json:"is_active,omitzero"`
 }
 
@@ -35,6 +37,8 @@ func (*UpdateSupplierMaterialRequest) SchemaExample() any {
 }
 
 // Partially updates a supplier material.
+//
+// Fields not provided retain their current values.
 type UpdateSupplierMaterialEndpoint struct{}
 
 func (e *UpdateSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateSupplierMaterialRequest, *apiresource.SupplierMaterial] {

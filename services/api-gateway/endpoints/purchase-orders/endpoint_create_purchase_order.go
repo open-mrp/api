@@ -15,19 +15,19 @@ import (
 
 // Request to create a purchase order.
 type CreatePurchaseOrderRequest struct {
-	// Supplier account ID.
+	// ID of the supplier account to place the order with.
 	SupplierAccountID string `json:"supplier_account_id" validate:"required"`
 	// Order note.
 	Note field.Optional[string] `json:"note,omitzero"`
-	// Carrier ID.
+	// ID of the carrier for the order's freight.
 	CarrierID field.Optional[string] `json:"carrier_id,omitzero" validate:"omitempty"`
-	// Service level ID.
+	// ID of the carrier service level for the order's freight.
 	ServiceLevelID field.Optional[string] `json:"service_level_id,omitzero" validate:"omitempty"`
-	// Carrier billing type.
+	// Which party the carrier bills for freight (`sender` or `third_party`).
 	CarrierBillingType field.Optional[string] `json:"carrier_billing_type,omitzero" validate:"omitempty,max=255"`
-	// Carrier billing account number.
+	// Carrier account number to bill when the billing type is `third_party`.
 	CarrierBillingAccount field.Optional[string] `json:"carrier_billing_account,omitzero" validate:"omitempty,max=255"`
-	// Priority code.
+	// Priority level for fulfilling the order (`low`, `normal`, or `high`).
 	PriorityCode string `json:"priority_code" validate:"required,max=255"`
 	// Shipping term ID.
 	ShippingTermID field.Optional[string] `json:"shipping_term_id,omitzero" validate:"omitempty"`
@@ -45,7 +45,7 @@ type CreatePurchaseOrderRequest struct {
 	BillToState field.Optional[string] `json:"bill_to_state,omitzero" validate:"omitempty,max=255"`
 	// Bill-to postal code.
 	BillToPostalCode field.Optional[string] `json:"bill_to_postal_code,omitzero" validate:"omitempty,max=255"`
-	// Bill-to country.
+	// Bill-to country as a two-letter code.
 	BillToCountry field.Optional[string] `json:"bill_to_country,omitzero" validate:"omitempty,max=2"`
 	// Ship-to address name.
 	ShipToName field.Optional[string] `json:"ship_to_name,omitzero" validate:"omitempty,max=255"`
@@ -59,13 +59,15 @@ type CreatePurchaseOrderRequest struct {
 	ShipToState field.Optional[string] `json:"ship_to_state,omitzero" validate:"omitempty,max=255"`
 	// Ship-to postal code.
 	ShipToPostalCode field.Optional[string] `json:"ship_to_postal_code,omitzero" validate:"omitempty,max=255"`
-	// Ship-to country.
+	// Ship-to country as a two-letter code.
 	ShipToCountry field.Optional[string] `json:"ship_to_country,omitzero" validate:"omitempty,max=2"`
 	// Order lines to create.
 	Lines []CreatePurchaseOrderLineInput `json:"lines"`
-	// Account user IDs for email contacts.
+	// IDs of account users to add as email contacts on the order.
+	//
+	// Contacts receive the purchase order email when the order is issued with `send_email`.
 	ContactAccountUserIDs []string `json:"contact_account_user_ids,omitzero"`
-	// Promised delivery date.
+	// Promised delivery date in `YYYY-MM-DD` format.
 	PromisedAt field.Optional[string] `json:"promised_at,omitzero"`
 }
 
@@ -115,6 +117,8 @@ func (*CreatePurchaseOrderRequest) SchemaExample() any {
 }
 
 // Creates a purchase order.
+//
+// The order number is assigned automatically and the order starts in `estimate` status. Bill-to and ship-to addresses are created from the inline address fields, and any provided lines and email contacts are created with the order.
 type CreatePurchaseOrderEndpoint struct{}
 
 func (e *CreatePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePurchaseOrderRequest, *apiresource.PurchaseOrder] {

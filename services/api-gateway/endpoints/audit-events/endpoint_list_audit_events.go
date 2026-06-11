@@ -19,14 +19,16 @@ type ListAuditEventsRequest struct {
 	// Restricts results to audit events on or before this timestamp.
 	EndDate *time.Time `query:"end_date"`
 	// Filter by the resource type of the audited entity.
+	//
+	// The full set of valid values is available from the List Audit Event Resource Types endpoint.
 	ResourceTypes []constants.ObjectType `query:"resource_types"`
 	// Filter by the audited resource IDs.
 	ResourceIDs []string `query:"resource_ids"`
 	// Filter by the actor identifier.
 	//
-	// Will be `user.id` when `identity_type`=`user` or an `api_key.id` when `identity_type`=`api_key`.
+	// Matches the event's `actor.id`: a user ID for `user` actors or an API key ID for `api_key` actors.
 	ActorIDs []string `query:"actor_ids"`
-	// Filter by the audit actions.
+	// Filter by the mutation type recorded on the event.
 	Actions []constants.AuditAction `query:"actions"`
 }
 

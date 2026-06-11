@@ -14,17 +14,17 @@ import (
 
 // Request to create a consumption.
 type CreateConsumptionRequest struct {
-	// Production step ID.
+	// ID of the production step that consumes the material.
 	ProductionStepID string `path:"production_step_id" validate:"required"`
-	// Item ID.
+	// ID of the item to consume.
 	ItemID string `json:"item_id" validate:"required"`
-	// Consumed quantity value.
+	// Amount of the item consumed, as a decimal string.
 	QuantityValue string `json:"quantity_value" validate:"required"`
-	// Consumed quantity unit ID.
+	// ID of the unit of measure for `quantity_value`.
 	QuantityUnitID string `json:"quantity_unit_id" validate:"required"`
-	// Waste quantity value.
+	// Amount of the item lost as waste, as a decimal string, tracked separately from the consumed quantity.
 	WasteQuantityValue string `json:"waste_quantity_value" validate:"required"`
-	// Waste quantity unit ID.
+	// ID of the unit of measure for `waste_quantity_value`.
 	WasteQuantityUnitID string `json:"waste_quantity_unit_id" validate:"required"`
 	// Instructions for how this material is consumed.
 	Instructions field.Optional[string] `json:"instructions,omitzero"`
@@ -44,6 +44,8 @@ func (*CreateConsumptionRequest) SchemaExample() any {
 }
 
 // Creates a consumption within a production step.
+//
+// Adding a consumption recomputes the production flow: if another production step produces the consumed item, the two steps are linked upstream/downstream automatically.
 type CreateConsumptionEndpoint struct{}
 
 func (e *CreateConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateConsumptionRequest, *apiresource.Consumption] {

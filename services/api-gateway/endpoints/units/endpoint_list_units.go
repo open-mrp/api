@@ -13,9 +13,9 @@ import (
 // Request to list units.
 type ListUnitsRequest struct {
 	apiresource.PaginationRequest
-	// Filter by unit dimension code.
+	// Filter by unit dimension (e.g. `mass`).
 	Type *constants.UnitType `query:"type"`
-	// Filter by unit group membership.
+	// Return only units that belong to at least one of the given unit groups.
 	UnitGroupIDs []string `query:"unit_group_ids"`
 }
 

@@ -12,7 +12,7 @@ import (
 
 // ExportProductsRequest is the request to export products as an Excel file.
 type ExportProductsRequest struct {
-	// Optional search query.
+	// Free-text query matched against products before exporting.
 	Query *string `query:"q"`
 	// Filter by category IDs.
 	CategoryIDs []string `query:"category_ids"`

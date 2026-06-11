@@ -15,17 +15,23 @@ import (
 type UpdateSupplierRequest struct {
 	// Supplier ID.
 	SupplierID string `path:"id" validate:"required"`
-	// Display name.
+	// The supplier's name, as shown in the dashboard and on documents.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Supplier number.
+	// Human-facing supplier code, such as `SUP-001`.
+	//
+	// Must be unique per account; updating to a number already used by another supplier returns a conflict error.
 	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
-	// Note value. Set update_note to true to apply.
+	// New value for the supplier's note.
+	//
+	// Ignored unless `update_note` is `true`.
 	Note field.Optional[string] `json:"note,omitzero"`
-	// Whether to update the note field. Allows clearing to null.
+	// Whether to apply the `note` field.
+	//
+	// When `true`, the note is set to the provided `note` value, or cleared to null if `note` is omitted. When `false` (the default), the note is left unchanged.
 	UpdateNote bool `json:"update_note"`
-	// Bill-to address ID.
+	// ID of an existing address to set as the supplier's default billing address.
 	BillToAddressID field.Optional[string] `json:"bill_to_address_id,omitzero" validate:"omitempty"`
-	// Ship-to address ID.
+	// ID of an existing address to set as the supplier's default shipping address.
 	ShipToAddressID field.Optional[string] `json:"ship_to_address_id,omitzero" validate:"omitempty"`
 }
 
@@ -41,7 +47,9 @@ func (*UpdateSupplierRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateSupplierRequest)
 }
 
-// Partially updates a supplier. Set update_note to true to update the note field, including clearing it.
+// Partially updates a supplier.
+//
+// Only provided fields are changed. To update or clear the note, set `update_note` to `true`.
 type UpdateSupplierEndpoint struct{}
 
 func (e *UpdateSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateSupplierRequest, *apiresource.SupplierDetail] {

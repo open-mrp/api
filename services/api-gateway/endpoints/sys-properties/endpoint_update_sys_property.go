@@ -16,7 +16,7 @@ import (
 type UpdateSysPropertyRequest struct {
 	// System property ID.
 	SysPropertyID string `path:"id" validate:"required"`
-	// Counter value.
+	// The new counter value, such as the next transaction or document number to assign.
 	Value field.Optional[int32] `json:"value,omitzero"`
 }
 

@@ -13,15 +13,15 @@ import (
 // Request to list open credit transactions.
 type ListOpenCreditsRequest struct {
 	apiresource.PaginationRequest
-	// Filter by start date (inclusive, YYYY-MM-DD).
+	// Only include transactions created on or after this date (`YYYY-MM-DD`).
 	StartDate *string `query:"start_date"`
-	// Filter by end date (exclusive, YYYY-MM-DD).
+	// Only include transactions created before this date (`YYYY-MM-DD`).
 	EndDate *string `query:"end_date"`
 	// Filter by customer account IDs.
 	CustomerIDs []string `query:"customer_ids"`
 }
 
-// Returns a paginated list of open credit transactions for the current account.
+// Returns a paginated list of transactions that are not fully allocated against invoices, with the remaining balance available to apply.
 type ListOpenCreditsEndpoint struct{}
 
 func (e *ListOpenCreditsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListOpenCreditsRequest, *apiresource.List[apiresource.OpenCreditEntry]] {

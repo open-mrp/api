@@ -18,21 +18,23 @@ type UpdateTerritoryRequest struct {
 	AccountID string `path:"account_id" validate:"required"`
 	// Territory ID.
 	TerritoryID string `path:"id" validate:"required"`
-	// State this territory covers.
+	// State this territory covers (e.g. `NY`).
 	State field.Optional[string] `json:"state,omitzero" validate:"omitempty,max=255"`
-	// Start of ZIP code range (501-99999).
+	// Inclusive start of the ZIP code range this territory covers (`501`-`99999`).
 	StartZipcode field.Optional[int32] `json:"start_zipcode,omitzero"`
-	// End of ZIP code range (501-99999).
+	// Inclusive end of the ZIP code range this territory covers (`501`-`99999`).
 	EndZipcode field.Optional[int32] `json:"end_zipcode,omitzero"`
-	// Sales rep (account user) ID.
+	// ID of the account user (sales rep) to assign to this territory.
 	SalesRepID field.Optional[string] `json:"sales_rep_id,omitzero" validate:"omitempty"`
-	// Product line ID.
+	// ID of the product line to scope this territory to.
 	ProductLineID field.Optional[string] `json:"product_line_id,omitzero" validate:"omitempty"`
-	// Set to true to remove the product line.
+	// Set to `true` to remove the product line, making the territory apply regardless of product line.
 	ClearProductLine field.Optional[bool] `json:"clear_product_line,omitzero"`
-	// Set to true to remove the start ZIP code.
+	// Set to `true` to remove the start ZIP code.
+	//
+	// Clearing the start ZIP code also clears the end ZIP code, so the territory covers the entire state.
 	ClearStartZipcode field.Optional[bool] `json:"clear_start_zipcode,omitzero"`
-	// Set to true to remove the end ZIP code.
+	// Set to `true` to remove the end ZIP code.
 	ClearEndZipcode field.Optional[bool] `json:"clear_end_zipcode,omitzero"`
 }
 

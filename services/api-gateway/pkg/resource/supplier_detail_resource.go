@@ -14,7 +14,7 @@ type SupplierDetail struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=supplier"`
-	// Display name.
+	// The supplier's name, as shown in the dashboard and on documents.
 	Name string `json:"name" validate:"required"`
 	// Human-facing supplier code, unique per account (e.g. `SUP-001`).
 	Number string `json:"number" validate:"required"`
@@ -55,7 +55,7 @@ type SupplierSummary struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=supplier_summary"`
-	// Display name.
+	// The supplier's name, as shown in the dashboard and on documents.
 	Name string `json:"name" validate:"required"`
 	// Human-facing supplier code, unique per account (e.g. `SUP-001`).
 	Number string `json:"number" validate:"required"`

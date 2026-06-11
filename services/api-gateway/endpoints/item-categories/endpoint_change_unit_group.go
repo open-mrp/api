@@ -13,11 +13,15 @@ import (
 type ChangeItemCategoryUnitGroupRequest struct {
 	// Item category ID.
 	ItemCategoryID string `path:"id" validate:"required"`
-	// Unit group ID.
+	// ID of the unit group to associate with the category.
+	//
+	// Must have the same unit type as the category's current unit group; otherwise the request fails with a validation error.
 	UnitGroupID string `path:"unit_group_id" validate:"required"`
 }
 
-// Changes the unit group associated with an item category. All items in the category are updated to use the new base unit asynchronously.
+// Changes the unit group associated with an item category.
+//
+// The new unit group must have the same unit type as the current one — for example, a category measured in `mass` units can only switch to another `mass` unit group. Default system categories cannot be modified.
 type ChangeItemCategoryUnitGroupEndpoint struct{}
 
 func (e *ChangeItemCategoryUnitGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*ChangeItemCategoryUnitGroupRequest, *apiresource.EmptyResource] {

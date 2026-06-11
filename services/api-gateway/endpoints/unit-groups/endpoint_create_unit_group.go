@@ -12,27 +12,33 @@ import (
 	"github.com/augno/api/shared/field"
 )
 
-// CreateUnitGroupUnitParam contains parameters for an associated unit.
+// Parameters for associating a unit with a unit group.
 type CreateUnitGroupUnitParam struct {
-	// Unit ID.
+	// ID of the unit to associate with the group.
+	//
+	// The unit's dimension must match the group's `type`.
 	UnitID string `json:"unit_id" validate:"required"`
-	// Discount percentage.
+	// Percentage discount applied to the unit's price when an order is placed in this unit (e.g. `10` is a 10% discount).
 	DiscountPercentage field.Optional[float64] `json:"discount_percentage,omitzero" default:"1"`
-	// Fixed discount amount.
+	// Flat amount subtracted from the unit's price when an order is placed in this unit.
 	DiscountFixed field.Optional[float64] `json:"discount_fixed,omitzero" default:"0"`
-	// Customer portal visibility.
+	// Whether the unit is shown to customers in the customer portal.
 	CustomerPortalVisibility field.Optional[constants.CustomerPortalVisibility] `json:"customer_portal_visibility,omitzero" default:"visible"`
 }
 
-// CreateUnitGroupRequest is a request to create a unit group.
+// Request to create a unit group.
 type CreateUnitGroupRequest struct {
-	// Display name.
+	// Display name of the unit group.
+	//
+	// Must be unique within the account.
 	Name string `json:"name" validate:"required,max=255"`
-	// Notes.
+	// Free-form notes about the unit group.
 	Notes field.Optional[string] `json:"notes,omitzero" default:"null"`
-	// Unit type.
+	// Dimension shared by every unit in this group (e.g. `mass`, `volume`).
+	//
+	// All associated units must be of this dimension.
 	Type constants.UnitType `json:"type" validate:"required"`
-	// Base unit ID.
+	// ID of the unit to designate as the group's reference unit.
 	BaseUnitID string `json:"base_unit_id" validate:"required"`
 	// Associated units to create with the group.
 	AssociatedUnits []CreateUnitGroupUnitParam `json:"associated_units,omitzero"`

@@ -12,9 +12,9 @@ import (
 
 // Request to analyze open batches.
 type AnalyzeOpenBatchesRequest struct {
-	// Item IDs to filter by.
+	// Restrict the summaries to batches of these items; omit to include all items.
 	ItemIDs []string `json:"item_ids"`
-	// Product line IDs to filter by.
+	// Restrict the summaries to batches whose item belongs to these product lines; omit to include all product lines.
 	ProductLineIDs []string `json:"product_line_ids"`
 }
 
@@ -27,7 +27,7 @@ func (*AnalyzeOpenBatchesRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleAnalyzeOpenBatchesRequest)
 }
 
-// Returns aggregated summaries of open batches, optionally filtered by item IDs or product line IDs.
+// Returns aggregated quantities of open (unclosed) batches, grouped by department, item, and scanning station.
 type AnalyzeOpenBatchesEndpoint struct{}
 
 func (e *AnalyzeOpenBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeOpenBatchesRequest, *apiresource.List[apiresource.OpenBatchSummary]] {

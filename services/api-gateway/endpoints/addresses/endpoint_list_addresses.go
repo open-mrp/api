@@ -13,7 +13,7 @@ import (
 // Request to list addresses.
 type ListAddressesRequest struct {
 	apiresource.PaginationRequest
-	// Filter by address type.
+	// Filter results to a single address type (`standard` or `drop_ship`).
 	Type *constants.AddressType `query:"type"`
 }
 

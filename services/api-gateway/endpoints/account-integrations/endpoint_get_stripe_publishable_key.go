@@ -13,6 +13,8 @@ import (
 type GetStripePublishableKeyRequest struct{}
 
 // Returns the Stripe publishable key for the target account.
+//
+// Fails if the account has no Stripe integration or the Stripe integration is inactive.
 type GetStripePublishableKeyEndpoint struct{}
 
 func (e *GetStripePublishableKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetStripePublishableKeyRequest, *apiresource.StripePublishableKey] {

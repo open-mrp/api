@@ -14,7 +14,9 @@ import (
 type ConfirmPaymentRequest struct {
 	// Session ID.
 	SessionID string `json:"-" path:"session_id" validate:"required"`
-	// Stripe Setup Intent ID to verify.
+	// ID of the Stripe Setup Intent to verify.
+	//
+	// Must be the Setup Intent created for this session by **Setup Registration Billing**, and its status must be `succeeded`.
 	SetupIntentID string `json:"setup_intent_id" validate:"required"`
 }
 

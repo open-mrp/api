@@ -12,12 +12,14 @@ import (
 
 // Request to list sales targets for an account user.
 type ListSalesTargetsRequest struct {
-	// Sales rep user ID.
+	// ID of the account user (sales rep) whose targets to list.
 	SalesRepID string `path:"id" validate:"required"`
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of sales targets for an account user.
+// Returns the sales targets for an account user.
+//
+// This endpoint does not support cursor pagination; passing a `cursor` returns a validation error.
 type ListSalesTargetsEndpoint struct{}
 
 func (e *ListSalesTargetsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSalesTargetsRequest, *apiresource.List[apiresource.SalesTarget]] {

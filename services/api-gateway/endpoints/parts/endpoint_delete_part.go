@@ -11,11 +11,13 @@ import (
 
 // Request to delete a part.
 type DeletePartRequest struct {
-	// Part ID.
+	// ID of the part to delete.
 	ItemID string `path:"id" validate:"required"`
 }
 
-// Deletes a part. Sets the deleted_at timestamp rather than removing the record.
+// Deletes a part.
+//
+// This is a soft delete: the part is marked deleted and no longer returned by other endpoints, but the record is retained. Deleting an already-deleted part returns an error.
 type DeletePartEndpoint struct{}
 
 func (e *DeletePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeletePartRequest, *apiresource.Part] {

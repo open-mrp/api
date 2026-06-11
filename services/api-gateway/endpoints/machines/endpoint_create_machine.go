@@ -14,13 +14,19 @@ import (
 
 // Request to create a machine.
 type CreateMachineRequest struct {
-	// Display name.
+	// Display name of the machine.
+	//
+	// Must be unique within your account; maximum 255 characters.
 	Name string `json:"name" validate:"required,max=255"`
-	// Serial number.
+	// Serial number of the machine.
+	//
+	// Maximum 255 characters.
 	SerialNumber string `json:"serial_number" validate:"required,max=255"`
-	// Notes.
+	// Free-form notes about the machine.
 	Notes field.Optional[string] `json:"notes,omitzero"`
-	// Department ID.
+	// ID of the department this machine belongs to.
+	//
+	// Must reference a department in your account.
 	DepartmentID string `json:"department_id" validate:"required"`
 }
 
@@ -34,7 +40,9 @@ func (*CreateMachineRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateMachineRequest)
 }
 
-// Creates a machine and associates it with a department.
+// Creates a machine and assigns it to a department.
+//
+// Returns a conflict error if a machine with the same name already exists.
 type CreateMachineEndpoint struct{}
 
 func (e *CreateMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateMachineRequest, *apiresource.Machine] {

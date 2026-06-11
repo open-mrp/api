@@ -15,7 +15,9 @@ type DeleteDepartmentRequest struct {
 	DepartmentID string `path:"id" validate:"required"`
 }
 
-// Deletes a department. Fails if the department still has associated scanning stations or machines.
+// Deletes a department.
+//
+// Scanning stations and machines assigned to the department are not deleted.
 type DeleteDepartmentEndpoint struct{}
 
 func (e *DeleteDepartmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteDepartmentRequest, *apiresource.EmptyResource] {

@@ -15,7 +15,9 @@ type GetAccountLogoURLRequest struct {
 	AccountID string `path:"id" validate:"required"`
 }
 
-// Returns a presigned URL for the account's logo. Expires after one hour.
+// Returns a presigned download URL for the account's logo.
+//
+// The URL expires one hour after it is generated, so fetch the logo promptly rather than caching it.
 type GetAccountLogoURLEndpoint struct{}
 
 func (e *GetAccountLogoURLEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetAccountLogoURLRequest, *apiresource.AccountLogoURL] {

@@ -19,13 +19,17 @@ type CreateAccountPriceRequest struct {
 	ProductLineID string `json:"product_line_id" validate:"required"`
 	// Rate value as a decimal string.
 	RateValue string `json:"rate_value" validate:"required"`
-	// Rate numerator unit ID.
+	// ID of the unit for the rate's numerator, typically a currency unit.
 	RateNumeratorUnitID string `json:"rate_numerator_unit_id" validate:"required"`
-	// Rate denominator unit ID.
+	// ID of the unit for the rate's denominator — the quantity unit being priced.
 	RateDenominatorUnitID string `json:"rate_denominator_unit_id" validate:"required"`
 	// Item category IDs to constrain this price to.
+	//
+	// When empty, the price is not restricted by item category.
 	CategoryIDs []string `json:"category_ids"`
 	// Attribute IDs to constrain this price to.
+	//
+	// When set, the price applies only to items that have every listed attribute.
 	AttributeIDs []string `json:"attribute_ids"`
 }
 
@@ -43,7 +47,9 @@ func (*CreateAccountPriceRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateAccountPriceRequest)
 }
 
-// Creates an account price for a recipient customer account. Account prices override all other pricing rules.
+// Creates a customer-specific price for a product line.
+//
+// When an order line matches the price's product line and constraints, the account price overrides standard pricing for the recipient customer.
 type CreateAccountPriceEndpoint struct{}
 
 func (e *CreateAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAccountPriceRequest, *apiresource.AccountPrice] {

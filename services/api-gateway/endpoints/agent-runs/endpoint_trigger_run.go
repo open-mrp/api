@@ -14,9 +14,13 @@ import (
 
 // Request to trigger an agent run.
 type TriggerRunRequest struct {
-	// Agent definition ID.
+	// ID of the agent definition to run.
+	//
+	// The agent must be active for the account; triggering an inactive agent returns a validation error.
 	AgentDefinitionID string `json:"agent_definition_id" validate:"required"`
-	// Input text for the agent.
+	// Instruction text passed to the agent at the start of the run.
+	//
+	// Recorded on the run as `{"message": <input>}` in its `input` field.
 	Input field.Optional[string] `json:"input,omitzero"`
 }
 
@@ -29,12 +33,14 @@ func (*TriggerRunRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleTriggerRunRequest)
 }
 
-// Triggers an agent run for the specified agent definition.
+// Starts a new run of the specified agent.
+//
+// The run is created in the `pending` status and executed asynchronously; poll Retrieve Agent Run to follow its progress.
 type TriggerRunEndpoint struct{}
 
 func (e *TriggerRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*TriggerRunRequest, *apiresource.AgentRun] {
 	return (&apiendpoint.APIEndpoint[*TriggerRunRequest, *apiresource.AgentRun]{
-		Title:             "Trigger Run",
+		Title:             "Trigger Agent Run",
 		Method:            http.MethodPost,
 		Route:             "/v1/ai/runs",
 		ContentType:       "application/json",

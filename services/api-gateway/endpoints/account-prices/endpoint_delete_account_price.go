@@ -15,7 +15,9 @@ type DeleteAccountPriceRequest struct {
 	AccountPriceID string `path:"id" validate:"required"`
 }
 
-// Deletes an account price. Associated category constraints, attribute constraints, and the rate record are also removed.
+// Deletes an account price.
+//
+// Associated category constraints, attribute constraints, and the rate record are also removed. Deletion is permanent; further requests against the deleted ID return an error.
 type DeleteAccountPriceEndpoint struct{}
 
 func (e *DeleteAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAccountPriceRequest, *apiresource.EmptyResource] {

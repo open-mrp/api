@@ -16,13 +16,19 @@ import (
 type CreateServiceLevelRequest struct {
 	// Carrier ID.
 	CarrierID string `path:"carrier_id" validate:"required"`
-	// Display name.
+	// Human-readable name for the service level, shown to customers at checkout when the service level is visible.
 	Name string `json:"name" validate:"required,max=255"`
-	// Service level code.
+	// Carrier-specific code identifying this service level (e.g. `fedex_ground`).
+	//
+	// Must be unique among the carrier's service levels.
 	Code string `json:"code" validate:"required,max=255"`
-	// Whether this service level will be available for customers to select in the customer portal.
+	// Service level visibility in the customer portal.
+	//
+	// A `visible` service level can be selected by your customers at checkout; a `hidden` one is not offered there. New service levels are visible unless set to `hidden`.
 	CustomerPortalVisibility field.Optional[constants.CustomerPortalVisibility] `json:"customer_portal_visibility,omitzero" default:"visible"`
-	// Default service levels are the default-selected service level for that carrier.
+	// Whether this becomes the carrier's default service level, pre-selected when the carrier is chosen.
+	//
+	// Each carrier has at most one default; setting this to `true` clears the carrier's existing default.
 	IsDefault bool `json:"is_default"`
 }
 

@@ -16,7 +16,9 @@ import (
 type UpdateTransactionAllocationRequest struct {
 	// Transaction allocation ID.
 	AllocationID string `path:"id" validate:"required"`
-	// Allocation amount as a decimal string.
+	// New allocated amount as a decimal string, in US dollars.
+	//
+	// Changing the amount does not recompute the parent transaction's `is_fully_allocated` flag; update the transaction separately if needed.
 	Amount field.Optional[string] `json:"amount,omitzero"`
 }
 

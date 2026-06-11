@@ -27,11 +27,11 @@ type AuditFieldChange struct {
 	Field string `json:"field" validate:"required"`
 	// Previous value as a JSON fragment.
 	//
-	// Null for creation events.
+	// `null` for creation events.
 	OldValue json.RawMessage `json:"old_value"`
 	// New value as a JSON fragment.
 	//
-	// Null for deletion events.
+	// `null` for deletion events.
 	NewValue json.RawMessage `json:"new_value"`
 }
 
@@ -61,9 +61,9 @@ type AuditEvent struct {
 	Changes *List[AuditFieldChange] `json:"changes" expandable:"true"`
 	// Arbitrary JSON metadata for the mutation (e.g. reason, source, tags).
 	Metadata json.RawMessage `json:"metadata"`
-	// Originating HTTP request.
+	// Log of the API request that caused the mutation.
 	//
-	// Expandable.
+	// `null` when the change did not originate from an API request.
 	Request *RequestLog `json:"request" expandable:"true"`
 	// Idempotency key of the originating request.
 	IdempotencyKey *string `json:"idempotency_key"`

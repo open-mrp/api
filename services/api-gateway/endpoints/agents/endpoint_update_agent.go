@@ -16,21 +16,25 @@ import (
 type UpdateAgentRequest struct {
 	// Agent definition ID.
 	AgentDefinitionID string `path:"id" validate:"required"`
-	// Display name.
+	// Human-readable name of the agent.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// URL-friendly identifier.
+	// URL-friendly identifier for the agent.
 	Slug field.Optional[string] `json:"slug,omitzero" validate:"omitempty,max=255"`
 	// Description of what the agent does.
 	Description field.Optional[string] `json:"description,omitzero"`
-	// Category code (e.g. "order_processing").
+	// Category grouping for the agent (e.g. `order_processing`), used to organize agents in the UI.
 	CategoryCode field.Optional[string] `json:"category_code,omitzero" validate:"omitempty,max=255"`
-	// Trigger type.
+	// How runs of this agent are initiated: `scheduled`, `event`, or `manual`.
+	//
+	// When changing the trigger type, also provide a `config` with a `trigger_config` appropriate for the new type (a cron schedule for `scheduled`, at least one event filter for `event`).
 	TriggerType field.Optional[constants.AgentTriggerType] `json:"trigger_type,omitzero"`
 	// Agent-level configuration controlling LLM behavior and trigger settings.
 	Config field.Optional[ConfigInput] `json:"config,omitzero"`
-	// Tools to attach. Replaces the existing tool set when provided.
+	// Tools to attach to the agent.
+	//
+	// Replaces the existing tool set when provided.
 	Tools field.Optional[[]ToolInput] `json:"tools,omitzero"`
-	// Role ID defining agent permissions.
+	// ID of the role that defines the permissions the agent operates with.
 	RoleID field.Optional[string] `json:"role_id,omitzero" validate:"omitempty"`
 }
 
@@ -42,7 +46,9 @@ func (*UpdateAgentRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateAgentRequest)
 }
 
-// Partially updates a custom agent definition. System agents cannot be modified.
+// Partially updates a custom agent definition.
+//
+// Only the fields provided in the request are changed. System agents cannot be modified.
 type UpdateAgentEndpoint struct{}
 
 func (e *UpdateAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAgentRequest, *apiresource.AgentDefinition] {

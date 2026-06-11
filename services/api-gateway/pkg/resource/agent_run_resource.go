@@ -13,7 +13,7 @@ const SampleAgentRunID = "agrn_01502aa6da9bbdbaa595915fa4"
 const SampleAgentActionID = "agax_018eddea543007633706d37109"
 const SampleAgentRunStepID = "agrnev_01148232974cd53b3ef1b6d437"
 
-// Agent run resource.
+// A single execution of an agent, from trigger through completion.
 type AgentRun struct {
 	// Agent run ID.
 	ID string `json:"id" validate:"required"`
@@ -49,9 +49,9 @@ type AgentRun struct {
 	CompletedAt *time.Time `json:"completed_at"`
 	// Duration in milliseconds.
 	DurationMs *int32 `json:"duration_ms"`
-	// Total input tokens consumed.
+	// Total LLM input tokens consumed across all model calls in this run.
 	TotalInputTokens *int64 `json:"total_input_tokens"`
-	// Total output tokens consumed.
+	// Total LLM output tokens generated across all model calls in this run.
 	TotalOutputTokens *int64 `json:"total_output_tokens"`
 	// Actor that triggered this run.
 	//
@@ -69,25 +69,25 @@ type AgentRun struct {
 	Steps *List[AgentRunStep] `json:"steps" expandable:"true"`
 }
 
-// Agent run step resource.
+// A single event in an agent run's execution timeline.
 type AgentRunStep struct {
 	// Agent run step ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=agent_run_step"`
-	// Step type.
+	// The kind of timeline event (e.g. `trigger_received`, `user_message`, `assistant_message`, `tool_call`, `tool_result`, `awaiting_approval`, `completion`, `error`).
 	StepType string `json:"step_type" validate:"required"`
 	// Short title for the step.
 	Title string `json:"title" validate:"required"`
-	// Step content.
+	// Text payload for the step, such as a message body or a tool result.
 	Content *string `json:"content"`
-	// Sequence number.
+	// Zero-based position of this step within the run's timeline.
 	Sequence int32 `json:"sequence"`
 	// Duration in milliseconds.
 	DurationMs *int32 `json:"duration_ms"`
-	// Actor who produced this event.
+	// Actor who produced this step.
 	Actor *Actor `json:"actor"`
-	// Metadata for the step.
+	// Additional structured data for the step, as JSON.
 	Metadata json.RawMessage `json:"metadata"`
 	// When this step was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

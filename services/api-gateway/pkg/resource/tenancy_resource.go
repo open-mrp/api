@@ -7,29 +7,21 @@ import (
 	"github.com/augno/api/shared/constants"
 )
 
-// Authenticated user's tenancy context.
+// The authenticated user's tenancy context: which account they are currently acting in and every other account they can switch to.
 type Tenancy struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=tenancy"`
 	// Account the request is currently acting within.
 	//
-	// `null` when the user has no active account selected (for example, mid-registration).
+	// Absent when the user has no active account selected, such as partway through registration.
 	CurrentAccount *TenancyCurrentAccount `json:"current_account"`
-	// Sandbox accounts available to the user.
-	//
-	// Always present; the list is empty when the user has no sandboxes.
+	// Sandbox accounts the user can switch into.
 	Sandboxes *List[TenancySandboxAccount] `json:"sandboxes" validate:"required"`
-	// The user's owning (production) account.
-	//
-	// `null` if the user does not own an account.
+	// The user's own production account, the account they signed up to create.
 	OwnerAccount *TenancyOwnerAccount `json:"owner_account"`
-	// Other accounts the user has access to beyond their current and owner accounts.
-	//
-	// Always present; the list is empty when there are none.
+	// Accounts the user has been granted access to beyond their current and owner accounts, such as other vendors' accounts.
 	OtherAccounts *List[TenancyOtherAccount] `json:"other_accounts" validate:"required"`
-	// In-progress registration session.
-	//
-	// `null` once the user has completed registration; only populated mid-signup, before an account exists.
+	// In-progress registration session, populated only partway through signup before the account exists.
 	PendingRegistration *TenancyPendingRegistration `json:"pending_registration"`
 }
 
@@ -42,14 +34,17 @@ type TenancyCurrentAccount struct {
 	// Display name.
 	Name string `json:"name" validate:"required"`
 	// Account type.
+	//
+	// - `company`: a standard production account.
+	// - `sandbox`: an isolated testing account.
 	Type string `json:"type" validate:"required"`
 	// Onboarding status.
 	OnboardingStatus string `json:"onboarding_status" validate:"required"`
-	// Plan code.
+	// Code of the account's subscription plan (for example `free`, `starter`, or `pro`).
 	Plan string `json:"plan" validate:"required"`
-	// Account slug.
+	// The account's customer portal slug.
 	Slug *string `json:"slug"`
-	// Role in this account.
+	// The authenticated user's role in this account.
 	Role *Role `json:"role"`
 	// Internal Stripe customer ID for this account.
 	InternalStripeCustomerID *string `json:"internal_stripe_customer_id"`
@@ -75,9 +70,9 @@ type TenancyAccountPlan struct {
 	PricePerMonth *float64 `json:"price_per_month"`
 	// Minimum seats required for this plan.
 	SeatMinimum *int32 `json:"seat_minimum"`
-	// Resource limits; null value means unlimited.
+	// Resource limits, keyed by limit code; a `null` value means unlimited.
 	Limits map[string]*int32 `json:"limits"`
-	// Feature flags.
+	// Feature availability for this plan, keyed by feature code.
 	Features map[string]bool `json:"features"`
 }
 
@@ -124,6 +119,9 @@ type TenancyOtherAccount struct {
 	// Display name.
 	Name string `json:"name" validate:"required"`
 	// Account type.
+	//
+	// - `company`: a standard production account.
+	// - `sandbox`: an isolated testing account.
 	Type string `json:"type" validate:"required"`
 }
 

@@ -16,6 +16,8 @@ type CloseSalesOrderRequest struct {
 	// Sales order ID.
 	SalesOrderID string `path:"id" validate:"required"`
 	// Whether to notify the customer.
+	//
+	// Reserved for future use; no notification email is currently sent for this action.
 	NotifyCustomer bool `json:"notify_customer"`
 }
 
@@ -25,7 +27,9 @@ func (*CloseSalesOrderRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCloseSalesOrderRequest)
 }
 
-// Closes a sales order, transitioning it from issued to fulfilled.
+// Closes a sales order, transitioning it from `issued` to `fulfilled`.
+//
+// Sets the order's completion timestamp and marks its pick as finished.
 type CloseSalesOrderEndpoint struct{}
 
 func (e *CloseSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*CloseSalesOrderRequest, *apiresource.SalesOrder] {

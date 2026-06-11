@@ -17,15 +17,26 @@ import (
 type UpdateProductRequest struct {
 	// Product ID.
 	ProductID string `path:"id" validate:"required"`
-	// SKU.
+	// New stock keeping unit code for the product's item.
+	//
+	// Must be unique within the account; the update fails with a conflict error if another item already uses it.
 	SKU field.Optional[string] `json:"sku,omitzero" validate:"omitempty,max=255"`
 	// Description.
+	//
+	// Send `null` to clear.
 	Description field.Clearable[string] `json:"description,omitzero"`
 	// Notes.
+	//
+	// Send `null` to clear.
 	Notes field.Clearable[string] `json:"notes,omitzero"`
-	// Whether visible in the customer portal.
+	// Whether the product is shown to buyers in the customer portal.
+	//
+	// - `visible`: buyers can see and order the product in the portal.
+	// - `hidden`: the product is concealed from the portal but remains usable internally.
 	PortalVisibility field.Optional[constants.CustomerPortalVisibility] `json:"portal_visibility,omitzero"`
-	// Updated unit price. Numerator must be a currency unit; denominator must not be.
+	// New selling price per unit.
+	//
+	// The numerator unit must be a currency unit and the denominator unit must not be.
 	UnitPrice field.Optional[apirequest.RateInput] `json:"unit_price,omitzero"`
 }
 

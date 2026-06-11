@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-// UnitGroup is a unit group resource.
+// Named collection of units sharing one dimension, defining which units products can be ordered in along with per-unit discounts and customer portal visibility.
 type UnitGroup struct {
 	// Unit group ID.
 	ID string `json:"id" validate:"required"`
@@ -16,28 +16,17 @@ type UnitGroup struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=unit_group"`
 	// Display name.
 	Name string `json:"name" validate:"required"`
-	// Notes.
+	// Free-form notes about the unit group.
 	Notes *string `json:"notes"`
-	// Dimension shared by every unit in this group.
+	// Physical dimension shared by every unit in this group, such as mass, volume, or currency.
 	//
 	// Only units of this dimension can belong to the group.
-	//
-	// - `currency`: monetary units such as dollars or euros.
-	// - `quantity`: discrete countable units.
-	// - `time`: time-based units such as hours or minutes.
-	// - `mass`: weight-based units such as kilograms or pounds.
-	// - `volume`: volumetric units such as liters or gallons.
-	// - `length`: distance-based units such as meters or feet.
-	// - `temperature`: temperature units such as Celsius or Fahrenheit.
-	// - `area`: area-based units such as square meters or acres.
 	Type constants.UnitType `json:"type" validate:"required"`
-	// Base unit of the group.
-	//
-	// All other units' conversion ratios are expressed relative to this unit. Expandable.
+	// The reference unit designated for this group.
 	BaseUnit *Unit `json:"base_unit" expandable:"true"`
-	// Associated units.
+	// Units associated with this group, each with its own discount and customer portal visibility settings.
 	AssociatedUnits *List[UnitGroupUnit] `json:"associated_units" expandable:"true"`
-	// Owner.
+	// Owner of this resource.
 	Owner *Owner `json:"owner" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -45,26 +34,19 @@ type UnitGroup struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-// UnitGroupUnit is an associated unit within a unit group.
+// Membership of a unit in a unit group, carrying the discount and customer portal visibility settings applied when ordering in that unit.
 type UnitGroupUnit struct {
 	// Unit group unit ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=unit_group_unit"`
-	// Unit.
+	// The unit this association refers to.
 	Unit *Unit `json:"unit" expandable:"true"`
-	// Percentage discount applied when ordering in this unit, as a number out of 100 (e.g. `1` means 1%).
-	//
-	// Defaults to `1`.
+	// Percentage discount applied to the unit's price when an order is placed in this unit (e.g. `10` is a 10% discount).
 	DiscountPercentage float64 `json:"discount_percentage"`
-	// Fixed per-unit discount amount applied when ordering in this unit, in the account's currency.
-	//
-	// Defaults to `0`.
+	// Flat amount subtracted from the unit's price when an order is placed in this unit.
 	DiscountFixed float64 `json:"discount_fixed"`
 	// Whether this unit is shown to customers in the customer portal.
-	//
-	// - `visible`: the unit is selectable in the customer portal.
-	// - `hidden`: the unit is hidden from the customer portal.
 	CustomerPortalVisibility constants.CustomerPortalVisibility `json:"customer_portal_visibility" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

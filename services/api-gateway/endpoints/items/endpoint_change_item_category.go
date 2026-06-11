@@ -14,11 +14,15 @@ import (
 type ChangeItemCategoryRequest struct {
 	// Item ID.
 	ItemID string `path:"id" validate:"required"`
-	// Category ID.
+	// ID of the category to move the item to.
+	//
+	// The category's type must be compatible with the item's type; otherwise the request fails validation.
 	CategoryID string `path:"category_id" validate:"required"`
 }
 
-// Changes the category of an item. When the category changes, the item's rate units are updated to the new category's base unit.
+// Moves an item to a different category.
+//
+// The item's rate units (unit value, unit cost, burn rate) and any related order-point, consumption, and production quantity units are updated to the new category's base unit. Re-assigning the item's current category is a no-op.
 type ChangeItemCategoryEndpoint struct{}
 
 func (e *ChangeItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*ChangeItemCategoryRequest, *apiresource.Item] {

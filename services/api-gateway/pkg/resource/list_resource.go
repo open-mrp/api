@@ -4,9 +4,13 @@ import "github.com/augno/api/shared/constants"
 
 // PageInfo contains URL-based pagination metadata.
 type PageInfo struct {
-	// URL to fetch the next page, `null` if no more pages.
+	// Relative URL that fetches the next page of results.
+	//
+	// Absent once the last page has been reached.
 	NextPageURL *string `json:"next_page_url"`
-	// URL to fetch the previous page, `null` if on the first page.
+	// Relative URL that fetches the previous page of results.
+	//
+	// Absent while on the first page.
 	PreviousPageURL *string `json:"previous_page_url"`
 	// Whether more results exist after this page.
 	HasNextPage bool `json:"has_next_page"`

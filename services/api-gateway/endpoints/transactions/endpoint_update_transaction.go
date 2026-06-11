@@ -16,25 +16,35 @@ import (
 type UpdateTransactionRequest struct {
 	// Transaction ID.
 	TransactionID string `path:"id" validate:"required"`
-	// Transaction number.
+	// New transaction number.
+	//
+	// Must be unique within the account; the request fails with a conflict error if another transaction already uses it.
 	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
-	// Note.
+	// Free-form note attached to the transaction.
 	Note field.Optional[string] `json:"note,omitzero"`
-	// Amount as a decimal string.
+	// New transaction amount as a decimal string, in US dollars.
 	Amount field.Optional[string] `json:"amount,omitzero"`
-	// Transaction method code.
+	// Payment method code: one of `cash`, `check`, `credit_card`, `gift_card`, or `ach`.
 	TransactionMethodCode field.Optional[string] `json:"method,omitzero" validate:"omitempty,max=255"`
-	// Adjustment type code.
+	// Adjustment type code (see List Adjustment Types for available values).
 	AdjustmentTypeCode field.Optional[string] `json:"adjustment_type,omitzero" validate:"omitempty,max=255"`
-	// Responsible user ID.
+	// ID of the account user responsible for the transaction.
 	ResponsibleUserID field.Optional[string] `json:"responsible_user_id,omitzero" validate:"omitempty"`
 	// Set to true to clear the responsible user.
+	//
+	// Takes precedence over `responsible_user_id` if both are provided.
 	ClearResponsibleUser bool `json:"clear_responsible_user"`
 	// Set to true to clear the transaction method.
+	//
+	// Takes precedence over `method` if both are provided.
 	ClearTransactionMethod bool `json:"clear_transaction_method"`
 	// Set to true to clear the adjustment type.
+	//
+	// Takes precedence over `adjustment_type` if both are provided.
 	ClearAdjustmentType bool `json:"clear_adjustment_type"`
-	// Allocation status.
+	// Whether the full transaction amount has been allocated against invoices.
+	//
+	// This flag is set explicitly here; it is not recomputed automatically when allocations change.
 	IsFullyAllocated field.Optional[bool] `json:"is_fully_allocated,omitzero"`
 }
 

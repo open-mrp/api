@@ -15,7 +15,9 @@ type CompleteRegistrationRequest struct {
 	SessionID string `json:"-" path:"session_id" validate:"required"`
 }
 
-// Completes the registration flow by provisioning accounts, roles, and permissions. Requires payment to be confirmed first.
+// Completes a registration session by provisioning the new account with its roles and permissions.
+//
+// Requires a user to have been created for the session, and, for paid plans, payment to be confirmed first. Returns the ID of the newly created account.
 type CompleteRegistrationEndpoint struct{}
 
 func (e *CompleteRegistrationEndpoint) Materialize() *apiendpoint.APIEndpoint[*CompleteRegistrationRequest, *apiresource.CompleteRegistrationResponse] {

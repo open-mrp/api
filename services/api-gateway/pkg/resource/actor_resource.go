@@ -17,13 +17,14 @@ type Actor struct {
 	// - `api_key`: a programmatic caller authenticating with an API key.
 	// - `agent`: an automated agent acting on the account's behalf.
 	Type constants.ActorType `json:"type" validate:"required"`
-	// Display name.
+	// The actor's display name.
 	Name *string `json:"name"`
-	// Human-readable handle.
+	// Human-readable handle identifying the actor.
 	//
-	// - `email` for users
-	// - `redacted_value` for API keys
-	// - `slug` for agents
+	// - For `user` actors: the user's email address.
+	// - For `api_key` actors: the redacted key value.
+	//
+	// Agent actors carry no handle.
 	Handle *string `json:"handle"`
 	// Assigned role.
 	Role *Role `json:"role" expandable:"true"`

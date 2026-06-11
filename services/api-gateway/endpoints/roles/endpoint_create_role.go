@@ -13,9 +13,11 @@ import (
 
 // CreateRoleRequest is a request to create a role.
 type CreateRoleRequest struct {
-	// Display name.
+	// Display name for the role, unique within the account.
 	Name string `json:"name" validate:"required,max=255"`
-	// Permissions to attach in `<domain>:<action>` format.
+	// Permissions to grant, in `{domain}:{action}` format, such as `customers:read`.
+	//
+	// The action must be one of `create`, `read`, `update`, or `delete`. Omit to create a role with no permissions.
 	Permissions []string `json:"permissions"`
 }
 
@@ -31,7 +33,7 @@ func (*CreateRoleRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateRoleRequest)
 }
 
-// Creates a new role with the specified permissions.
+// Creates a custom role with the specified permissions. Roles created through the API always have type `user`.
 type CreateRoleEndpoint struct{}
 
 func (e *CreateRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateRoleRequest, *apiresource.Role] {

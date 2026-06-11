@@ -16,15 +16,15 @@ import (
 type UpdateShippingCaseRequest struct {
 	// Shipping case ID.
 	ShippingCaseID string `path:"id" validate:"required"`
-	// Tracking number.
+	// Carrier tracking number to set on the case.
 	TrackingNumber field.Optional[string] `json:"tracking_number,omitzero" validate:"omitempty,max=255"`
-	// Freight amount value.
+	// New value for the case's freight cost, as a decimal string.
 	FreightAmountValue field.Optional[string] `json:"freight_amount_value,omitzero"`
-	// Freight amount unit ID.
+	// ID of the unit for the case's freight cost.
 	FreightAmountUnitID field.Optional[string] `json:"freight_amount_unit_id,omitzero" validate:"omitempty"`
-	// Freight weight value.
+	// New value for the case's freight weight, as a decimal string.
 	FreightWeightValue field.Optional[string] `json:"freight_weight_value,omitzero"`
-	// Freight weight unit ID.
+	// ID of the unit for the case's freight weight.
 	FreightWeightUnitID field.Optional[string] `json:"freight_weight_unit_id,omitzero" validate:"omitempty"`
 }
 

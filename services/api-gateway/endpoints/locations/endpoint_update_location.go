@@ -16,13 +16,26 @@ import (
 type UpdateLocationRequest struct {
 	// Location ID.
 	LocationID string `path:"id" validate:"required"`
-	// Display name.
+	// Display name of the location.
+	//
+	// Maximum 255 characters.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Location type code.
+	// Location type code, identifying this location's level in the storage hierarchy.
+	//
+	// - `building`: a building-level location.
+	// - `section`: a section within a building.
+	// - `aisle`: an aisle within a section.
+	// - `rack`: a rack within an aisle.
+	// - `shelf`: a shelf within a rack.
+	// - `bin`: a bin within a shelf.
 	TypeCode field.Optional[constants.LocationTypeCode] `json:"type,omitzero"`
-	// Parent location ID. Send null to clear.
+	// ID of the parent location.
+	//
+	// Send `null` to clear the parent and make this a top-level location.
 	ParentID field.Clearable[string] `json:"parent_id,omitzero" validate:"omitempty"`
-	// Child location IDs. Replaces all current children when provided. Send null to clear.
+	// IDs of locations to set as this location's children.
+	//
+	// When provided, replaces the full set of children: current children not listed are detached, and listed locations are moved from their current parent. Send `null` to detach all children.
 	ChildIDs field.Clearable[[]string] `json:"child_ids,omitzero"`
 }
 

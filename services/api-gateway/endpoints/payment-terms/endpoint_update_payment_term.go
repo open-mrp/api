@@ -16,7 +16,9 @@ import (
 type UpdatePaymentTermRequest struct {
 	// Payment term ID.
 	PaymentTermID string `path:"id" validate:"required"`
-	// Display name.
+	// New display name for the payment term.
+	//
+	// Must be unique among the payment terms visible to your account, including system defaults.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 }
 
@@ -28,7 +30,9 @@ func (*UpdatePaymentTermRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdatePaymentTermRequest)
 }
 
-// Partially updates a payment term. Default payment terms cannot be updated.
+// Partially updates a payment term.
+//
+// Only payment terms created by your account can be updated; system-owned default terms cannot be.
 type UpdatePaymentTermEndpoint struct{}
 
 func (e *UpdatePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePaymentTermRequest, *apiresource.PaymentTerm] {

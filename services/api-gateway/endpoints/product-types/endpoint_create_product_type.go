@@ -13,9 +13,13 @@ import (
 
 // Request to create a product type.
 type CreateProductTypeRequest struct {
-	// Display name.
+	// Human-readable name of the product type.
+	//
+	// Must be unique across product types.
 	Name string `json:"name" validate:"required,max=255"`
-	// Unique code.
+	// Stable machine-readable code for the product type.
+	//
+	// Must be unique across product types. Products reference their product type by this code, and the code can be used in place of the ID when retrieving a product type.
 	Code string `json:"code" validate:"required,max=255"`
 }
 

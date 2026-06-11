@@ -12,7 +12,7 @@ import (
 
 // Request to revoke a refresh token.
 type RevokeRefreshTokenRequest struct {
-	// Refresh token cookie.
+	// Refresh token to revoke, read from the `__Secure-augno.refresh-token` cookie.
 	RefreshToken string `cookie:"__Secure-augno.refresh-token" validate:"required"` // #nosec G117 - Struct field, not a hardcoded credential
 }
 

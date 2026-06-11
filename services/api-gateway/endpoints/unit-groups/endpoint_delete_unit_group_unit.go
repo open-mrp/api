@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteUnitGroupUnitRequest is a request to delete an associated unit from a unit group.
+// Request to remove an associated unit from a unit group.
 type DeleteUnitGroupUnitRequest struct {
 	// Unit group ID.
 	UnitGroupID string `path:"unit_group_id" validate:"required"`
@@ -17,7 +17,7 @@ type DeleteUnitGroupUnitRequest struct {
 	AssociatedUnitID string `path:"id" validate:"required"`
 }
 
-// Deletes an associated unit from a unit group.
+// Removes a unit from a unit group. The unit itself is not deleted.
 type DeleteUnitGroupUnitEndpoint struct{}
 
 func (e *DeleteUnitGroupUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteUnitGroupUnitRequest, *apiresource.EmptyResource] {

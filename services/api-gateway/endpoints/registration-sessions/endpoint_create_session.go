@@ -13,9 +13,13 @@ import (
 
 // Request to create a registration session.
 type CreateRegistrationSessionRequest struct {
-	// Email address.
+	// Email address of the registering user.
+	//
+	// A verification email is sent to this address to start the registration.
 	Email string `json:"email" validate:"required,custom_email,max=255"`
-	// Plan code.
+	// Code of the pricing plan to register for.
+	//
+	// Free plans skip the payment step; paid plans require a payment method to be collected and confirmed before the registration can complete.
 	PlanCode constants.PublicPlanCode `json:"plan_code" validate:"required"`
 }
 
@@ -28,7 +32,9 @@ func (*CreateRegistrationSessionRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateRegistrationSessionRequest)
 }
 
-// Creates a registration session. Returns the existing session ID if an active session already exists for that email.
+// Starts a self-serve registration session and sends a verification email.
+//
+// If an active session already exists for the email, the existing session's ID is returned instead of creating a new one.
 type CreateSessionEndpoint struct{}
 
 func (e *CreateSessionEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateRegistrationSessionRequest, *apiresource.CreateSessionResponse] {

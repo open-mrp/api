@@ -11,11 +11,13 @@ import (
 
 // Request to void a shipment.
 type VoidShipmentRequest struct {
-	// Shipment ID.
+	// ID of the shipment to void.
 	ShipmentID string `path:"id" validate:"required"`
 }
 
-// Voids a shipment, cancelling it and returning its lines to the sales order.
+// Voids a shipped shipment, returning it to the `packed` status.
+//
+// Only shipments in the `shipped` status can be voided; otherwise a conflict error is returned. Voiding clears `shipped_at` and `shipped_by`, clears tracking and label details from the shipment's shipping cases, deletes the invoice created for the shipment if one exists, and marks the associated sales order as unfulfilled.
 type VoidShipmentEndpoint struct{}
 
 func (e *VoidShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*VoidShipmentRequest, *apiresource.Shipment] {

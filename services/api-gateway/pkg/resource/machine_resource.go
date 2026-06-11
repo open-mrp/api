@@ -8,19 +8,21 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-// Machine within an account.
+// A piece of production equipment, such as a CNC router or press, assigned to a department.
 type Machine struct {
 	// Machine ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=machine"`
-	// Display name.
+	// Display name of the machine.
+	//
+	// Unique within the account.
 	Name string `json:"name" validate:"required"`
-	// Serial number.
+	// Serial number of the machine.
 	SerialNumber string `json:"serial_number" validate:"required"`
-	// Notes.
+	// Free-form notes about the machine.
 	Notes *string `json:"notes"`
-	// Associated department.
+	// The department this machine belongs to.
 	Department *Department `json:"department" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

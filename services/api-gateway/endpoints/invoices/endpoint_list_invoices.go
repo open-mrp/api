@@ -13,7 +13,12 @@ import (
 // Request to list invoices.
 type ListInvoicesRequest struct {
 	apiresource.PaginationRequest
-	// Filter by status: all, paid, unpaid, or overpaid.
+	// Filter invoices by payment status.
+	//
+	// - `all`: no payment-status filtering (same as omitting the parameter).
+	// - `paid`: only invoices paid in full.
+	// - `unpaid`: only invoices that are neither paid in full nor overpaid.
+	// - `overpaid`: only invoices whose allocations exceed the invoiced amount.
 	Status *string `query:"status" validate:"omitempty,oneof=all paid unpaid overpaid"`
 	// Filter by item IDs present in invoice lines.
 	ItemIDs []string `query:"item_ids"`
@@ -25,9 +30,9 @@ type ListInvoicesRequest struct {
 	CustomerGroupIDs []string `query:"customer_group_ids"`
 	// Filter by sales rep user IDs.
 	SalesRepIDs []string `query:"sales_rep_ids"`
-	// Filter by start date (inclusive).
+	// Only return invoices created on or after this date (`YYYY-MM-DD`).
 	StartDate *string `query:"start_date"`
-	// Filter by end date (inclusive).
+	// Only return invoices created before this date (`YYYY-MM-DD`).
 	EndDate *string `query:"end_date"`
 }
 

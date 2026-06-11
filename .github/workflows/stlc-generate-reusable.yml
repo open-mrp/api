@@ -145,7 +145,7 @@ jobs:
         if: matrix.spec_changed == 'true' && inputs.openapi_specs_source == 's3'
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/github-action-role
+          role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/github-actions-openapi-reader
           aws-region: us-east-2
 
       - name: Download OpenAPI specs and Stainless configs from S3

@@ -142,7 +142,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/github-action-role
+          role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/github-actions-ecr-push
           aws-region: us-east-2
 
       - name: Login to Amazon ECR
@@ -186,7 +186,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/github-action-role
+          role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/github-actions-eks-deploy
           aws-region: us-east-2
 
       - name: Deploy to EKS
@@ -229,7 +229,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/github-action-role
+          role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/github-actions-openapi-writer
           aws-region: us-east-2
 
       - name: Install Modules
@@ -337,7 +337,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/github-action-role
+          role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/github-actions-mcp-deploy
           aws-region: us-east-2
 
       - name: Login to Amazon ECR

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.3](https://github.com/Augno/api/compare/v0.23.2...v0.23.3) (2026-06-11)
+
+
+### Bug Fixes
+
+* issues with deployment ([067d108](https://github.com/Augno/api/commit/067d108439fda73e064e36acd3d4ebea58cbdfd0))
+
 ## [0.23.2](https://github.com/Augno/api/compare/v0.23.1...v0.23.2) (2026-06-11)
 
 

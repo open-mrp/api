@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.0](https://github.com/Augno/api/compare/v0.22.0...v0.23.0) (2026-06-11)
+
+
+### Features
+
+* add ACM certificate for mcp.augno.com ([#319](https://github.com/Augno/api/issues/319)) ([05d92d7](https://github.com/Augno/api/commit/05d92d73612be6cccc956b62dba4bc7ebd823f56))
+
 ## [0.22.0](https://github.com/Augno/api/compare/v0.21.5...v0.22.0) (2026-06-11)
 
 

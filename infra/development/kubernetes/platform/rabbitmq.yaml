@@ -122,7 +122,9 @@ kind: PodDisruptionBudget
 metadata:
     name: rabbitmq-pdb
 spec:
-    minAvailable: 1
+    # maxUnavailable (not minAvailable) — with a single replica, minAvailable: 1
+    # permits zero evictions and deadlocks every node drain. See production manifest.
+    maxUnavailable: 1
     selector:
         matchLabels:
             app: rabbitmq

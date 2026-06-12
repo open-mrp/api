@@ -57,12 +57,18 @@ jobs:
   generate:
     name: Generate SDKs
     needs: resolve
+    # The reusable workflow declares `id-token: write` (AWS OIDC on the s3 path);
+    # a called workflow can't be granted more than its caller, so this job must
+    # grant it too or the run fails at startup. Mirrors release.yml's generate-sdks.
+    permissions:
+      id-token: write
+      contents: read
     uses: ./.github/workflows/stlc-generate-reusable.yml
     with:
       api_version: ${{ needs.resolve.outputs.api_version }}
-      push_branch: ${{ github.event.inputs.push_branch }}
+      push_branch: ${{ inputs.push_branch }}
       openapi_specs_source: generate
-      open_pr: ${{ github.event.inputs.open_pr }}
+      open_pr: ${{ inputs.open_pr }}
       pr_base_branch: main
     secrets:
       STLC_READ_TOKEN: ${{ secrets.STLC_READ_TOKEN }}

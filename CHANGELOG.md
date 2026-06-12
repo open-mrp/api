@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.24.0](https://github.com/Augno/api/compare/v0.23.4...v0.24.0) (2026-06-12)
+
+
+### Features
+
+* add target account filtering to audit events ([#333](https://github.com/Augno/api/issues/333)) ([4b4f5d8](https://github.com/Augno/api/commit/4b4f5d8c8f70f6355cdf6f2cdbce724831f57461))
+* **ci:** add manual Deploy MCP Server workflow ([#330](https://github.com/Augno/api/issues/330)) ([4164fa4](https://github.com/Augno/api/commit/4164fa47c4898770e8801196a524aee19612d3f8))
+
+
+### Bug Fixes
+
+* **ci:** unblock the manual SDK-generation workflow ([#328](https://github.com/Augno/api/issues/328)) ([c8fa935](https://github.com/Augno/api/commit/c8fa935b0bacf2a47ee3a7a184ffea2da90a19b0))
+* **ci:** use SDK_WRITE_TOKEN for typescript-sdk checkout in MCP build ([#331](https://github.com/Augno/api/issues/331)) ([7d4bd69](https://github.com/Augno/api/commit/7d4bd690fe400758a0dcb4bbc05c5eb8492ad4aa))
+* **mcp:** pin runAsUser/runAsGroup 1001 for mcp-server pods ([#332](https://github.com/Augno/api/issues/332)) ([35c91a0](https://github.com/Augno/api/commit/35c91a0137e967a81551084882d70cea1dbe0897))
+
 ## [0.23.4](https://github.com/Augno/api/compare/v0.23.3...v0.23.4) (2026-06-11)
 
 

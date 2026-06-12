@@ -386,7 +386,10 @@ jobs:
         with:
           repository: augno/typescript-sdk
           ref: main
-          token: ${{ secrets.CROSS_REPO_PAT }}
+          # This job has no `environment: production`, so the CROSS_REPO_PAT env
+          # secret isn't available to it. SDK_WRITE_TOKEN (repo secret) has write
+          # access to the SDK repos and can read typescript-sdk here.
+          token: ${{ secrets.SDK_WRITE_TOKEN }}
           path: typescript-sdk-src
 
       - name: Configure AWS Credentials

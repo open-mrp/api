@@ -13,13 +13,22 @@ services:
     command:
       - --sort-buffer-size=8M
       - --max-connections=500
+    # Published on 3307 (3306 is the local dev MySQL) so host-side e2e tests can
+    # read backend state directly — e.g. the registration verification token,
+    # which is intentionally never exposed through the API.
+    ports:
+      - "3307:3306"
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pTesting123!"]
       interval: 5s
       timeout: 5s
       retries: 10
     networks:
+      # On the isolated backend net for service traffic, plus `edge` solely so
+      # the host-side e2e harness can reach the published 3307 port. (Docker
+      # Desktop can't publish a host port from an `internal` network.)
       - e2e
+      - edge
 
   postgres-e2e:
     image: postgres:16
@@ -279,8 +288,24 @@ services:
       retries: 15
       start_period: 10s
     networks:
+      # Backend net for proxying to services, plus `edge` so the host harness
+      # can reach the published 8082 port.
       - e2e
+      - edge
 
 networks:
+  # Backend network for all inter-service and DB traffic. `internal: true` means
+  # Docker adds no route to the outside world, so e2e services CANNOT reach the
+  # public internet — no real Stripe charges, emails, webhooks, or calls to
+  # production can escape the stack. Keep this internal.
   e2e:
+    driver: bridge
+    internal: true
+  # Minimal non-internal bridge used ONLY to publish host-facing ports for the
+  # two containers the e2e test runner connects to from the host (mysql-e2e:3307
+  # and api-gateway:8082). These two retain outbound connectivity as a side
+  # effect of port publishing, but neither makes external integration calls
+  # (mysql is passive; the gateway only routes to internal services). Do not
+  # attach billing/notification/agent/etc. here — they must stay fully isolated.
+  edge:
     driver: bridge

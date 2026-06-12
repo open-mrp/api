@@ -540,6 +540,7 @@ func TestAuditEvents_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 
 	got := parseJSON(getBody)
 	assert.Nil(t, got["actor"], "actor should be null without ?include=actor")
+	assert.Nil(t, got["account"], "account should be null without ?include=account")
 	assert.Nil(t, got["changes"], "changes should be null without ?include=changes")
 	assert.Nil(t, got["metadata"], "metadata should be null without ?include=metadata")
 	assert.Nil(t, got["request"], "request should be null without ?include=request")
@@ -563,4 +564,78 @@ func TestAuditEvents_IncludeActor(t *testing.T) {
 	assert.NotEmpty(t, jsonField(actor, "id"))
 	assert.Equal(t, "actor", jsonField(actor, "object"))
 	assert.NotEmpty(t, jsonField(actor, "type"))
+}
+
+// firstAuditEventWithAccount lists audit events with ?include=account and returns
+// the first event id together with its resolved target-account id. The far-future
+// seed events (0014_e2e_extras.sql) carry a target_account_id, so at least one
+// event on the first page always exposes an account.
+func firstAuditEventWithAccount(t *testing.T) (eventID, accountID string) {
+	t.Helper()
+	list, _, err := apiClient.GetList(auditEventsPath, url.Values{
+		"include": {"account"},
+		"limit":   {"25"},
+	})
+	require.NoError(t, err)
+	for _, item := range list.Data {
+		m := parseJSON(item)
+		account := jsonObject(m, "account")
+		if account == nil {
+			continue
+		}
+		return jsonField(m, "id"), jsonField(account, "id")
+	}
+	t.Fatal("No audit events with a target account found in the first 25 events")
+	return "", ""
+}
+
+func TestAuditEvents_IncludeAccount(t *testing.T) {
+	t.Parallel()
+	eventID, _ := firstAuditEventWithAccount(t)
+
+	getStatus, getBody, err := apiClient.GetListRaw(auditEventsPath+"/"+eventID, url.Values{"include": {"account"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, getStatus, getBody)
+
+	account := jsonObject(parseJSON(getBody), "account")
+	require.NotNil(t, account, "account should be present with ?include=account")
+	assert.Equal(t, "account", jsonField(account, "object"))
+	assert.NotEmpty(t, jsonField(account, "id"))
+	assert.NotEmpty(t, jsonField(account, "name"))
+}
+
+func TestAuditEvents_FilterByAccountID(t *testing.T) {
+	t.Parallel()
+	wantEventID, accountID := firstAuditEventWithAccount(t)
+
+	list, _, err := apiClient.GetList(auditEventsPath, url.Values{
+		"account_ids": {accountID},
+		"include":     {"account"},
+		"limit":       {"25"},
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, list.Data, "filtering by a real target account should return events")
+
+	foundWanted := false
+	for _, item := range list.Data {
+		m := parseJSON(item)
+		account := jsonObject(m, "account")
+		require.NotNil(t, account, "every event returned under an account_ids filter must have a target account")
+		assert.Equal(t, accountID, jsonField(account, "id"),
+			"account_ids filter must only return events targeting the requested account")
+		if jsonField(m, "id") == wantEventID {
+			foundWanted = true
+		}
+	}
+	assert.True(t, foundWanted, "the seed event targeting the account should appear in the filtered results")
+}
+
+func TestAuditEvents_FilterByAccountIDNoMatch(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(auditEventsPath, url.Values{
+		"account_ids": {"ac_doesnotexist00000000000"},
+		"limit":       {"25"},
+	})
+	require.NoError(t, err)
+	assert.Empty(t, list.Data, "filtering by an account with no audit events should return no results")
 }

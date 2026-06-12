@@ -82,12 +82,18 @@ func (h *auditHandler) CreateAuditEvent(ctx context.Context, req *pb.CreateAudit
 		occurredAt = info.OccurredAt.AsTime()
 	}
 
+	// target_account_id is the account the mutation was performed against — the
+	// Augno-Account target of the request, the same value used for account_id /
+	// the list authorization scope today.
+	targetAccountID := identity.Target.AccountID
+
 	event := &domain.AuditEvent{
-		ID:           info.GetId(),
-		ActorID:      info.Actor.GetId(),
-		ActorType:    info.Actor.GetType(),
-		IdentityType: info.Actor.GetIdentityType(),
-		AccountID:    identity.Target.AccountID,
+		ID:              info.GetId(),
+		ActorID:         info.Actor.GetId(),
+		ActorType:       info.Actor.GetType(),
+		IdentityType:    info.Actor.GetIdentityType(),
+		AccountID:       identity.Target.AccountID,
+		TargetAccountID: &targetAccountID,
 
 		Action:       constants.AuditAction(info.GetAction()),
 		ResourceType: constants.ObjectType(info.GetResourceType()),
@@ -123,6 +129,7 @@ func (h *auditHandler) ListAuditEvents(ctx context.Context, req *pb.ListAuditEve
 		ResourceIDs:   req.ResourceIds,
 		ActorIDs:      req.ActorIds,
 		Actions:       req.Actions,
+		AccountIDs:    req.AccountIds,
 		Query:         req.Query,
 		Cursor:        req.Cursor,
 		Limit:         req.Limit,
@@ -244,19 +251,32 @@ func auditEventToProto(ev *domain.AuditEventRead) *pb.AuditEventInfo {
 		}
 	}
 
+	var accountCreatedAt *timestamppb.Timestamp
+	if ev.AccountCreatedAt != nil {
+		accountCreatedAt = timestamppb.New(*ev.AccountCreatedAt)
+	}
+	var accountUpdatedAt *timestamppb.Timestamp
+	if ev.AccountUpdatedAt != nil {
+		accountUpdatedAt = timestamppb.New(*ev.AccountUpdatedAt)
+	}
+
 	return &pb.AuditEventInfo{
-		Id:             ev.ID,
-		Action:         string(ev.Action),
-		ResourceType:   string(ev.ResourceType),
-		ResourceId:     ev.ResourceID,
-		Actor:          actor,
-		Changes:        pbChanges,
-		MetadataJson:   metadata,
-		ServiceName:    serviceName,
-		RequestId:      ev.RequestID,
-		IdempotencyKey: ev.IdempotencyKey,
-		SourceIp:       ev.SourceIP,
-		OccurredAt:     occurredAt,
-		CreatedAt:      createdAt,
+		Id:               ev.ID,
+		Action:           string(ev.Action),
+		ResourceType:     string(ev.ResourceType),
+		ResourceId:       ev.ResourceID,
+		Actor:            actor,
+		Changes:          pbChanges,
+		MetadataJson:     metadata,
+		ServiceName:      serviceName,
+		RequestId:        ev.RequestID,
+		IdempotencyKey:   ev.IdempotencyKey,
+		SourceIp:         ev.SourceIP,
+		OccurredAt:       occurredAt,
+		CreatedAt:        createdAt,
+		AccountId:        ev.TargetAccountID,
+		AccountName:      ev.AccountName,
+		AccountCreatedAt: accountCreatedAt,
+		AccountUpdatedAt: accountUpdatedAt,
 	}
 }

@@ -21,6 +21,7 @@ INSERT IGNORE INTO audit_event (
         actor_type,
         identity_type,
         account_id,
+        target_account_id,
         action,
         resource_type,
         resource_id,
@@ -47,6 +48,7 @@ VALUES (
         ?,
         ?,
         ?,
+        ?,
         ?
     )
 `
@@ -57,6 +59,7 @@ type CreateAuditEventParams struct {
 	ActorType        string
 	IdentityType     string
 	AccountID        string
+	TargetAccountID  sql.NullString
 	Action           string
 	ResourceType     string
 	ResourceID       string
@@ -76,6 +79,7 @@ func (q *Queries) CreateAuditEvent(ctx context.Context, arg CreateAuditEventPara
 		arg.ActorType,
 		arg.IdentityType,
 		arg.AccountID,
+		arg.TargetAccountID,
 		arg.Action,
 		arg.ResourceType,
 		arg.ResourceID,
@@ -117,6 +121,10 @@ SELECT ae.type_id,
        ae.source_ip,
        ae.occurred_at,
        ae.created_at,
+       ae.target_account_id,
+       a.name AS account_name,
+       a.created_at AS account_created_at,
+       a.updated_at AS account_updated_at,
        u.name AS user_name,
        u.email AS user_email,
        ak.name AS api_key_name,
@@ -126,6 +134,7 @@ FROM audit_event ae
 LEFT JOIN ` + "`" + `user` + "`" + ` u ON ae.actor_id = u.id AND ae.identity_type = 'user'
 LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key'
 LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
+LEFT JOIN account a ON ae.target_account_id = a.id
 WHERE ae.type_id = ? AND ae.account_id = ?
 `
 
@@ -153,6 +162,10 @@ type FindAuditEventByIDRow struct {
 	SourceIp            sql.NullString
 	OccurredAt          time.Time
 	CreatedAt           time.Time
+	TargetAccountID     sql.NullString
+	AccountName         sql.NullString
+	AccountCreatedAt    sql.NullTime
+	AccountUpdatedAt    sql.NullTime
 	UserName            sql.NullString
 	UserEmail           sql.NullString
 	ApiKeyName          sql.NullString
@@ -162,6 +175,7 @@ type FindAuditEventByIDRow struct {
 
 // actor_id stores the raw actor key (user_id / api_key.type_id) — exposed
 // directly. Enrichment joins key on it: user by id, api_key by type_id.
+// Resolves the target account (target_account_id) for the `account` sub-resource.
 func (q *Queries) FindAuditEventByID(ctx context.Context, arg FindAuditEventByIDParams) (FindAuditEventByIDRow, error) {
 	row := q.db.QueryRowContext(ctx, findAuditEventByID,
 		arg.IncludeChanges,
@@ -187,6 +201,10 @@ func (q *Queries) FindAuditEventByID(ctx context.Context, arg FindAuditEventByID
 		&i.SourceIp,
 		&i.OccurredAt,
 		&i.CreatedAt,
+		&i.TargetAccountID,
+		&i.AccountName,
+		&i.AccountCreatedAt,
+		&i.AccountUpdatedAt,
 		&i.UserName,
 		&i.UserEmail,
 		&i.ApiKeyName,
@@ -213,6 +231,10 @@ SELECT ae.type_id,
        ae.source_ip,
        ae.occurred_at,
        ae.created_at,
+       ae.target_account_id,
+       a.name AS account_name,
+       a.created_at AS account_created_at,
+       a.updated_at AS account_updated_at,
        u.name AS user_name,
        u.email AS user_email,
        ak.name AS api_key_name,
@@ -222,7 +244,9 @@ FROM audit_event ae
 LEFT JOIN ` + "`" + `user` + "`" + ` u ON ae.actor_id = u.id AND ae.identity_type = 'user'
 LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key'
 LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
+LEFT JOIN account a ON ae.target_account_id = a.id
 WHERE ae.account_id = ?
+AND (? = false OR ae.target_account_id IN (/*SLICE:account_ids*/?))
 AND (? = false OR ae.resource_type IN (/*SLICE:resource_types*/?))
 AND (? = false OR ae.resource_id IN (/*SLICE:resource_ids*/?))
 AND (? = false OR ae.actor_id IN (/*SLICE:actor_ids*/?))
@@ -248,6 +272,8 @@ type ListAuditEventsBackwardParams struct {
 	IncludeChanges            db.NullableRawMessage
 	IncludeMetadata           db.NullableRawMessage
 	TargetAccountID           string
+	IncludeAccountFilter      interface{}
+	AccountIds                []sql.NullString
 	IncludeResourceTypeFilter interface{}
 	ResourceTypes             []string
 	IncludeResourceIDFilter   interface{}
@@ -281,6 +307,10 @@ type ListAuditEventsBackwardRow struct {
 	SourceIp            sql.NullString
 	OccurredAt          time.Time
 	CreatedAt           time.Time
+	TargetAccountID     sql.NullString
+	AccountName         sql.NullString
+	AccountCreatedAt    sql.NullTime
+	AccountUpdatedAt    sql.NullTime
 	UserName            sql.NullString
 	UserEmail           sql.NullString
 	ApiKeyName          sql.NullString
@@ -290,12 +320,22 @@ type ListAuditEventsBackwardRow struct {
 
 // actor_id stores the raw actor key (user_id / api_key.type_id) — exposed
 // directly. Enrichment joins key on it: user by id, api_key by type_id.
+// Resolves the target account (target_account_id) for the `account` sub-resource.
 func (q *Queries) ListAuditEventsBackward(ctx context.Context, arg ListAuditEventsBackwardParams) ([]ListAuditEventsBackwardRow, error) {
 	query := listAuditEventsBackward
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.IncludeChanges)
 	queryParams = append(queryParams, arg.IncludeMetadata)
 	queryParams = append(queryParams, arg.TargetAccountID)
+	queryParams = append(queryParams, arg.IncludeAccountFilter)
+	if len(arg.AccountIds) > 0 {
+		for _, v := range arg.AccountIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:account_ids*/?", strings.Repeat(",?", len(arg.AccountIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:account_ids*/?", "NULL", 1)
+	}
 	queryParams = append(queryParams, arg.IncludeResourceTypeFilter)
 	if len(arg.ResourceTypes) > 0 {
 		for _, v := range arg.ResourceTypes {
@@ -370,6 +410,10 @@ func (q *Queries) ListAuditEventsBackward(ctx context.Context, arg ListAuditEven
 			&i.SourceIp,
 			&i.OccurredAt,
 			&i.CreatedAt,
+			&i.TargetAccountID,
+			&i.AccountName,
+			&i.AccountCreatedAt,
+			&i.AccountUpdatedAt,
 			&i.UserName,
 			&i.UserEmail,
 			&i.ApiKeyName,
@@ -406,6 +450,10 @@ SELECT ae.type_id,
        ae.source_ip,
        ae.occurred_at,
        ae.created_at,
+       ae.target_account_id,
+       a.name AS account_name,
+       a.created_at AS account_created_at,
+       a.updated_at AS account_updated_at,
        u.name AS user_name,
        u.email AS user_email,
        ak.name AS api_key_name,
@@ -415,7 +463,9 @@ FROM audit_event ae
 LEFT JOIN ` + "`" + `user` + "`" + ` u ON ae.actor_id = u.id AND ae.identity_type = 'user'
 LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key'
 LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
+LEFT JOIN account a ON ae.target_account_id = a.id
 WHERE ae.account_id = ?
+AND (? = false OR ae.target_account_id IN (/*SLICE:account_ids*/?))
 AND (? = false OR ae.resource_type IN (/*SLICE:resource_types*/?))
 AND (? = false OR ae.resource_id IN (/*SLICE:resource_ids*/?))
 AND (? = false OR ae.actor_id IN (/*SLICE:actor_ids*/?))
@@ -442,6 +492,8 @@ type ListAuditEventsForwardParams struct {
 	IncludeChanges            db.NullableRawMessage
 	IncludeMetadata           db.NullableRawMessage
 	TargetAccountID           string
+	IncludeAccountFilter      interface{}
+	AccountIds                []sql.NullString
 	IncludeResourceTypeFilter interface{}
 	ResourceTypes             []string
 	IncludeResourceIDFilter   interface{}
@@ -475,6 +527,10 @@ type ListAuditEventsForwardRow struct {
 	SourceIp            sql.NullString
 	OccurredAt          time.Time
 	CreatedAt           time.Time
+	TargetAccountID     sql.NullString
+	AccountName         sql.NullString
+	AccountCreatedAt    sql.NullTime
+	AccountUpdatedAt    sql.NullTime
 	UserName            sql.NullString
 	UserEmail           sql.NullString
 	ApiKeyName          sql.NullString
@@ -484,12 +540,22 @@ type ListAuditEventsForwardRow struct {
 
 // actor_id stores the raw actor key (user_id / api_key.type_id) — exposed
 // directly. Enrichment joins key on it: user by id, api_key by type_id.
+// Resolves the target account (target_account_id) for the `account` sub-resource.
 func (q *Queries) ListAuditEventsForward(ctx context.Context, arg ListAuditEventsForwardParams) ([]ListAuditEventsForwardRow, error) {
 	query := listAuditEventsForward
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.IncludeChanges)
 	queryParams = append(queryParams, arg.IncludeMetadata)
 	queryParams = append(queryParams, arg.TargetAccountID)
+	queryParams = append(queryParams, arg.IncludeAccountFilter)
+	if len(arg.AccountIds) > 0 {
+		for _, v := range arg.AccountIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:account_ids*/?", strings.Repeat(",?", len(arg.AccountIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:account_ids*/?", "NULL", 1)
+	}
 	queryParams = append(queryParams, arg.IncludeResourceTypeFilter)
 	if len(arg.ResourceTypes) > 0 {
 		for _, v := range arg.ResourceTypes {
@@ -565,6 +631,10 @@ func (q *Queries) ListAuditEventsForward(ctx context.Context, arg ListAuditEvent
 			&i.SourceIp,
 			&i.OccurredAt,
 			&i.CreatedAt,
+			&i.TargetAccountID,
+			&i.AccountName,
+			&i.AccountCreatedAt,
+			&i.AccountUpdatedAt,
 			&i.UserName,
 			&i.UserEmail,
 			&i.ApiKeyName,

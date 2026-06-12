@@ -305,6 +305,9 @@ message ListAuditEventsRequest {
   int32 limit = 9;
   repeated string includes = 10;
   optional string query = 11;
+  // Filter by the target account (audit_event.target_account_id): the account
+  // the audited mutation was performed against.
+  repeated string account_ids = 12;
 }
 
 message ListAuditEventsResponse {
@@ -342,6 +345,12 @@ message AuditEventInfo {
   optional string source_ip = 11;
   google.protobuf.Timestamp occurred_at = 12;
   google.protobuf.Timestamp created_at = 13;
+  // Target account the mutation was performed against (audit_event.target_account_id),
+  // resolved against the account table for the `account` sub-resource.
+  optional string account_id = 14;
+  optional string account_name = 15;
+  optional google.protobuf.Timestamp account_created_at = 16;
+  optional google.protobuf.Timestamp account_updated_at = 17;
 }
 
 message AuditActor {

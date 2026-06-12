@@ -15,6 +15,10 @@ SELECT ae.type_id,
        ae.source_ip,
        ae.occurred_at,
        ae.created_at,
+       ae.target_account_id,
+       a.name AS account_name,
+       a.created_at AS account_created_at,
+       a.updated_at AS account_updated_at,
        u.name AS user_name,
        u.email AS user_email,
        ak.name AS api_key_name,
@@ -26,6 +30,8 @@ FROM audit_event ae
 LEFT JOIN `user` u ON ae.actor_id = u.id AND ae.identity_type = 'user'
 LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key'
 LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
+-- Resolves the target account (target_account_id) for the `account` sub-resource.
+LEFT JOIN account a ON ae.target_account_id = a.id
 WHERE ae.type_id = ? AND ae.account_id = ?;
 
 -- name: ListAuditEventsForward :many
@@ -45,6 +51,10 @@ SELECT ae.type_id,
        ae.source_ip,
        ae.occurred_at,
        ae.created_at,
+       ae.target_account_id,
+       a.name AS account_name,
+       a.created_at AS account_created_at,
+       a.updated_at AS account_updated_at,
        u.name AS user_name,
        u.email AS user_email,
        ak.name AS api_key_name,
@@ -56,7 +66,10 @@ FROM audit_event ae
 LEFT JOIN `user` u ON ae.actor_id = u.id AND ae.identity_type = 'user'
 LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key'
 LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
+-- Resolves the target account (target_account_id) for the `account` sub-resource.
+LEFT JOIN account a ON ae.target_account_id = a.id
 WHERE ae.account_id = sqlc.arg('target_account_id')
+AND (sqlc.arg('include_account_filter') = false OR ae.target_account_id IN (sqlc.slice('account_ids')))
 AND (sqlc.arg('include_resource_type_filter') = false OR ae.resource_type IN (sqlc.slice('resource_types')))
 AND (sqlc.arg('include_resource_id_filter') = false OR ae.resource_id IN (sqlc.slice('resource_ids')))
 AND (sqlc.arg('include_actor_id_filter') = false OR ae.actor_id IN (sqlc.slice('actor_ids')))
@@ -95,6 +108,10 @@ SELECT ae.type_id,
        ae.source_ip,
        ae.occurred_at,
        ae.created_at,
+       ae.target_account_id,
+       a.name AS account_name,
+       a.created_at AS account_created_at,
+       a.updated_at AS account_updated_at,
        u.name AS user_name,
        u.email AS user_email,
        ak.name AS api_key_name,
@@ -106,7 +123,10 @@ FROM audit_event ae
 LEFT JOIN `user` u ON ae.actor_id = u.id AND ae.identity_type = 'user'
 LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key'
 LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
+-- Resolves the target account (target_account_id) for the `account` sub-resource.
+LEFT JOIN account a ON ae.target_account_id = a.id
 WHERE ae.account_id = sqlc.arg('target_account_id')
+AND (sqlc.arg('include_account_filter') = false OR ae.target_account_id IN (sqlc.slice('account_ids')))
 AND (sqlc.arg('include_resource_type_filter') = false OR ae.resource_type IN (sqlc.slice('resource_types')))
 AND (sqlc.arg('include_resource_id_filter') = false OR ae.resource_id IN (sqlc.slice('resource_ids')))
 AND (sqlc.arg('include_actor_id_filter') = false OR ae.actor_id IN (sqlc.slice('actor_ids')))
@@ -139,6 +159,7 @@ INSERT IGNORE INTO audit_event (
         actor_type,
         identity_type,
         account_id,
+        target_account_id,
         action,
         resource_type,
         resource_id,
@@ -151,6 +172,7 @@ INSERT IGNORE INTO audit_event (
         occurred_at
     )
 VALUES (
+        ?,
         ?,
         ?,
         ?,

@@ -1897,12 +1897,15 @@ type ListAuditEventsRequest struct {
 	ResourceTypes []string               `protobuf:"bytes,3,rep,name=resource_types,json=resourceTypes,proto3" json:"resource_types,omitempty"`
 	ResourceIds   []string               `protobuf:"bytes,4,rep,name=resource_ids,json=resourceIds,proto3" json:"resource_ids,omitempty"`
 	// account_user.id when identity_type=user, or api_key.id when identity_type=api_key.
-	ActorIds      []string `protobuf:"bytes,5,rep,name=actor_ids,json=actorIds,proto3" json:"actor_ids,omitempty"`
-	Actions       []string `protobuf:"bytes,6,rep,name=actions,proto3" json:"actions,omitempty"`
-	Cursor        *string  `protobuf:"bytes,8,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
-	Limit         int32    `protobuf:"varint,9,opt,name=limit,proto3" json:"limit,omitempty"`
-	Includes      []string `protobuf:"bytes,10,rep,name=includes,proto3" json:"includes,omitempty"`
-	Query         *string  `protobuf:"bytes,11,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	ActorIds []string `protobuf:"bytes,5,rep,name=actor_ids,json=actorIds,proto3" json:"actor_ids,omitempty"`
+	Actions  []string `protobuf:"bytes,6,rep,name=actions,proto3" json:"actions,omitempty"`
+	Cursor   *string  `protobuf:"bytes,8,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
+	Limit    int32    `protobuf:"varint,9,opt,name=limit,proto3" json:"limit,omitempty"`
+	Includes []string `protobuf:"bytes,10,rep,name=includes,proto3" json:"includes,omitempty"`
+	Query    *string  `protobuf:"bytes,11,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	// Filter by the target account (audit_event.target_account_id): the account
+	// the audited mutation was performed against.
+	AccountIds    []string `protobuf:"bytes,12,rep,name=account_ids,json=accountIds,proto3" json:"account_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2005,6 +2008,13 @@ func (x *ListAuditEventsRequest) GetQuery() string {
 		return *x.Query
 	}
 	return ""
+}
+
+func (x *ListAuditEventsRequest) GetAccountIds() []string {
+	if x != nil {
+		return x.AccountIds
+	}
+	return nil
 }
 
 type ListAuditEventsResponse struct {
@@ -2251,8 +2261,14 @@ type AuditEventInfo struct {
 	SourceIp       *string                `protobuf:"bytes,11,opt,name=source_ip,json=sourceIp,proto3,oneof" json:"source_ip,omitempty"`
 	OccurredAt     *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
 	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Target account the mutation was performed against (audit_event.target_account_id),
+	// resolved against the account table for the `account` sub-resource.
+	AccountId        *string                `protobuf:"bytes,14,opt,name=account_id,json=accountId,proto3,oneof" json:"account_id,omitempty"`
+	AccountName      *string                `protobuf:"bytes,15,opt,name=account_name,json=accountName,proto3,oneof" json:"account_name,omitempty"`
+	AccountCreatedAt *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=account_created_at,json=accountCreatedAt,proto3,oneof" json:"account_created_at,omitempty"`
+	AccountUpdatedAt *timestamppb.Timestamp `protobuf:"bytes,17,opt,name=account_updated_at,json=accountUpdatedAt,proto3,oneof" json:"account_updated_at,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *AuditEventInfo) Reset() {
@@ -2372,6 +2388,34 @@ func (x *AuditEventInfo) GetOccurredAt() *timestamppb.Timestamp {
 func (x *AuditEventInfo) GetCreatedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *AuditEventInfo) GetAccountId() string {
+	if x != nil && x.AccountId != nil {
+		return *x.AccountId
+	}
+	return ""
+}
+
+func (x *AuditEventInfo) GetAccountName() string {
+	if x != nil && x.AccountName != nil {
+		return *x.AccountName
+	}
+	return ""
+}
+
+func (x *AuditEventInfo) GetAccountCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.AccountCreatedAt
+	}
+	return nil
+}
+
+func (x *AuditEventInfo) GetAccountUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.AccountUpdatedAt
 	}
 	return nil
 }
@@ -2780,7 +2824,7 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\vaudit_event\x18\x01 \x01(\v2\x18.platform.AuditEventInfoR\n" +
 	"auditEvent\"4\n" +
 	"\x18CreateAuditEventResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xc2\x03\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xe3\x03\n" +
 	"\x16ListAuditEventsRequest\x12>\n" +
 	"\n" +
 	"start_date\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\tstartDate\x88\x01\x01\x12:\n" +
@@ -2793,7 +2837,9 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\x05limit\x18\t \x01(\x05R\x05limit\x12\x1a\n" +
 	"\bincludes\x18\n" +
 	" \x03(\tR\bincludes\x12\x19\n" +
-	"\x05query\x18\v \x01(\tH\x03R\x05query\x88\x01\x01B\r\n" +
+	"\x05query\x18\v \x01(\tH\x03R\x05query\x88\x01\x01\x12\x1f\n" +
+	"\vaccount_ids\x18\f \x03(\tR\n" +
+	"accountIdsB\r\n" +
 	"\v_start_dateB\v\n" +
 	"\t_end_dateB\t\n" +
 	"\a_cursorB\b\n" +
@@ -2810,7 +2856,7 @@ const file_platform_platform_proto_rawDesc = "" +
 	"auditEvent\"$\n" +
 	"\"ListAuditEventResourceTypesRequest\"L\n" +
 	"#ListAuditEventResourceTypesResponse\x12%\n" +
-	"\x0eresource_types\x18\x01 \x03(\tR\rresourceTypes\"\x81\x05\n" +
+	"\x0eresource_types\x18\x01 \x03(\tR\rresourceTypes\"\xb9\a\n" +
 	"\x0eAuditEventInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06action\x18\x02 \x01(\tR\x06action\x12#\n" +
@@ -2829,14 +2875,23 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\voccurred_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"occurredAt\x129\n" +
 	"\n" +
-	"created_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAtB\b\n" +
+	"created_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12\"\n" +
+	"\n" +
+	"account_id\x18\x0e \x01(\tH\x06R\taccountId\x88\x01\x01\x12&\n" +
+	"\faccount_name\x18\x0f \x01(\tH\aR\vaccountName\x88\x01\x01\x12M\n" +
+	"\x12account_created_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampH\bR\x10accountCreatedAt\x88\x01\x01\x12M\n" +
+	"\x12account_updated_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampH\tR\x10accountUpdatedAt\x88\x01\x01B\b\n" +
 	"\x06_actorB\x10\n" +
 	"\x0e_metadata_jsonB\x0f\n" +
 	"\r_service_nameB\r\n" +
 	"\v_request_idB\x12\n" +
 	"\x10_idempotency_keyB\f\n" +
 	"\n" +
-	"_source_ip\"\xbe\x01\n" +
+	"_source_ipB\r\n" +
+	"\v_account_idB\x0f\n" +
+	"\r_account_nameB\x15\n" +
+	"\x13_account_created_atB\x15\n" +
+	"\x13_account_updated_at\"\xbe\x01\n" +
 	"\n" +
 	"AuditActor\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
@@ -2950,35 +3005,37 @@ var file_platform_platform_proto_depIdxs = []int32{
 	31, // 21: platform.AuditEventInfo.changes:type_name -> platform.AuditFieldChange
 	32, // 22: platform.AuditEventInfo.occurred_at:type_name -> google.protobuf.Timestamp
 	32, // 23: platform.AuditEventInfo.created_at:type_name -> google.protobuf.Timestamp
-	1,  // 24: platform.IdempotencyService.ProcessIdempotencyKey:input_type -> platform.ProcessIdempotencyKeyRequest
-	3,  // 25: platform.IdempotencyService.SetIdempotencyKeyResponse:input_type -> platform.SetIdempotencyKeyResponseRequest
-	5,  // 26: platform.IdempotencyService.ReleaseIdempotencyKey:input_type -> platform.ReleaseIdempotencyKeyRequest
-	7,  // 27: platform.IdempotencyService.AdvanceRecoveryPoint:input_type -> platform.AdvanceRecoveryPointRequest
-	9,  // 28: platform.IdempotencyService.GetRecoveryPoint:input_type -> platform.GetRecoveryPointRequest
-	12, // 29: platform.LoggingService.CreateRequestLog:input_type -> platform.CreateRequestLogRequest
-	15, // 30: platform.LoggingService.ListRequestLogs:input_type -> platform.ListRequestLogsRequest
-	17, // 31: platform.LoggingService.GetRequestLog:input_type -> platform.GetRequestLogRequest
-	21, // 32: platform.AuditService.CreateAuditEvent:input_type -> platform.CreateAuditEventRequest
-	23, // 33: platform.AuditService.ListAuditEvents:input_type -> platform.ListAuditEventsRequest
-	25, // 34: platform.AuditService.GetAuditEvent:input_type -> platform.GetAuditEventRequest
-	27, // 35: platform.AuditService.ListAuditEventResourceTypes:input_type -> platform.ListAuditEventResourceTypesRequest
-	2,  // 36: platform.IdempotencyService.ProcessIdempotencyKey:output_type -> platform.ProcessIdempotencyKeyResponse
-	4,  // 37: platform.IdempotencyService.SetIdempotencyKeyResponse:output_type -> platform.SetIdempotencyKeyResponseResponse
-	6,  // 38: platform.IdempotencyService.ReleaseIdempotencyKey:output_type -> platform.ReleaseIdempotencyKeyResponse
-	8,  // 39: platform.IdempotencyService.AdvanceRecoveryPoint:output_type -> platform.AdvanceRecoveryPointResponse
-	10, // 40: platform.IdempotencyService.GetRecoveryPoint:output_type -> platform.GetRecoveryPointResponse
-	13, // 41: platform.LoggingService.CreateRequestLog:output_type -> platform.CreateRequestLogResponse
-	16, // 42: platform.LoggingService.ListRequestLogs:output_type -> platform.ListRequestLogsResponse
-	18, // 43: platform.LoggingService.GetRequestLog:output_type -> platform.GetRequestLogResponse
-	22, // 44: platform.AuditService.CreateAuditEvent:output_type -> platform.CreateAuditEventResponse
-	24, // 45: platform.AuditService.ListAuditEvents:output_type -> platform.ListAuditEventsResponse
-	26, // 46: platform.AuditService.GetAuditEvent:output_type -> platform.GetAuditEventResponse
-	28, // 47: platform.AuditService.ListAuditEventResourceTypes:output_type -> platform.ListAuditEventResourceTypesResponse
-	36, // [36:48] is the sub-list for method output_type
-	24, // [24:36] is the sub-list for method input_type
-	24, // [24:24] is the sub-list for extension type_name
-	24, // [24:24] is the sub-list for extension extendee
-	0,  // [0:24] is the sub-list for field type_name
+	32, // 24: platform.AuditEventInfo.account_created_at:type_name -> google.protobuf.Timestamp
+	32, // 25: platform.AuditEventInfo.account_updated_at:type_name -> google.protobuf.Timestamp
+	1,  // 26: platform.IdempotencyService.ProcessIdempotencyKey:input_type -> platform.ProcessIdempotencyKeyRequest
+	3,  // 27: platform.IdempotencyService.SetIdempotencyKeyResponse:input_type -> platform.SetIdempotencyKeyResponseRequest
+	5,  // 28: platform.IdempotencyService.ReleaseIdempotencyKey:input_type -> platform.ReleaseIdempotencyKeyRequest
+	7,  // 29: platform.IdempotencyService.AdvanceRecoveryPoint:input_type -> platform.AdvanceRecoveryPointRequest
+	9,  // 30: platform.IdempotencyService.GetRecoveryPoint:input_type -> platform.GetRecoveryPointRequest
+	12, // 31: platform.LoggingService.CreateRequestLog:input_type -> platform.CreateRequestLogRequest
+	15, // 32: platform.LoggingService.ListRequestLogs:input_type -> platform.ListRequestLogsRequest
+	17, // 33: platform.LoggingService.GetRequestLog:input_type -> platform.GetRequestLogRequest
+	21, // 34: platform.AuditService.CreateAuditEvent:input_type -> platform.CreateAuditEventRequest
+	23, // 35: platform.AuditService.ListAuditEvents:input_type -> platform.ListAuditEventsRequest
+	25, // 36: platform.AuditService.GetAuditEvent:input_type -> platform.GetAuditEventRequest
+	27, // 37: platform.AuditService.ListAuditEventResourceTypes:input_type -> platform.ListAuditEventResourceTypesRequest
+	2,  // 38: platform.IdempotencyService.ProcessIdempotencyKey:output_type -> platform.ProcessIdempotencyKeyResponse
+	4,  // 39: platform.IdempotencyService.SetIdempotencyKeyResponse:output_type -> platform.SetIdempotencyKeyResponseResponse
+	6,  // 40: platform.IdempotencyService.ReleaseIdempotencyKey:output_type -> platform.ReleaseIdempotencyKeyResponse
+	8,  // 41: platform.IdempotencyService.AdvanceRecoveryPoint:output_type -> platform.AdvanceRecoveryPointResponse
+	10, // 42: platform.IdempotencyService.GetRecoveryPoint:output_type -> platform.GetRecoveryPointResponse
+	13, // 43: platform.LoggingService.CreateRequestLog:output_type -> platform.CreateRequestLogResponse
+	16, // 44: platform.LoggingService.ListRequestLogs:output_type -> platform.ListRequestLogsResponse
+	18, // 45: platform.LoggingService.GetRequestLog:output_type -> platform.GetRequestLogResponse
+	22, // 46: platform.AuditService.CreateAuditEvent:output_type -> platform.CreateAuditEventResponse
+	24, // 47: platform.AuditService.ListAuditEvents:output_type -> platform.ListAuditEventsResponse
+	26, // 48: platform.AuditService.GetAuditEvent:output_type -> platform.GetAuditEventResponse
+	28, // 49: platform.AuditService.ListAuditEventResourceTypes:output_type -> platform.ListAuditEventResourceTypesResponse
+	38, // [38:50] is the sub-list for method output_type
+	26, // [26:38] is the sub-list for method input_type
+	26, // [26:26] is the sub-list for extension type_name
+	26, // [26:26] is the sub-list for extension extendee
+	0,  // [0:26] is the sub-list for field type_name
 }
 
 func init() { file_platform_platform_proto_init() }

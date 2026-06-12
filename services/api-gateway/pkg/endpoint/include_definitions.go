@@ -68,6 +68,7 @@ func init() {
 		ObjectType: constants.ObjectTypeAuditEvent,
 		Fields: []IncludeFieldDef{
 			{Key: "actor", ObjectType: constants.ObjectTypeActor},
+			{Key: "account", ObjectType: constants.ObjectTypeAccount},
 			{Key: "changes", ObjectType: constants.ObjectTypeAuditEvent},
 			{Key: "metadata", ObjectType: constants.ObjectTypeAuditEvent},
 			{Key: "request", ObjectType: constants.ObjectTypeRequestLog},

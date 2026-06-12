@@ -6,11 +6,11 @@ import "github.com/augno/api/shared/constants"
 type PageInfo struct {
 	// Relative URL that fetches the next page of results.
 	//
-	// Absent once the last page has been reached.
+	// `null` when the last page has been reached.
 	NextPageURL *string `json:"next_page_url"`
 	// Relative URL that fetches the previous page of results.
 	//
-	// Absent while on the first page.
+	// `null` while on the first page.
 	PreviousPageURL *string `json:"previous_page_url"`
 	// Whether more results exist after this page.
 	HasNextPage bool `json:"has_next_page"`

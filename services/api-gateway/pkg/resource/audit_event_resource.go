@@ -57,6 +57,10 @@ type AuditEvent struct {
 	ResourceID string `json:"resource_id" validate:"required"`
 	// Actor who performed the mutation.
 	Actor *Actor `json:"actor" expandable:"true"`
+	// Account the audited mutation was performed against.
+	//
+	// For a mutation on one of your own resources this is your account; when you act on a customer's or supplier's account, it is that account.
+	Account *Account `json:"account" expandable:"true"`
 	// Field-level changes recorded for this event.
 	Changes *List[AuditFieldChange] `json:"changes" expandable:"true"`
 	// Arbitrary JSON metadata for the mutation (e.g. reason, source, tags).
@@ -82,6 +86,7 @@ var SampleAuditEvent = &AuditEvent{
 	ResourceType: SampleAuditEventResourceType,
 	ResourceID:   SampleAuditEventResourceID,
 	Actor:        SampleActor,
+	Account:      SampleAccount,
 	Changes: NewList([]AuditFieldChange{
 		{
 			Object:   constants.ObjectTypeAuditFieldChange,

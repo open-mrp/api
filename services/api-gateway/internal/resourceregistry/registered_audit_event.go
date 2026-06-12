@@ -16,6 +16,7 @@ func init() {
 		Load:       resourceloaders.LoadAuditEvents,
 		Subs: []resourcekit.SubField{
 			{Key: "actor", Populate: populateActorOnAuditEvent},
+			{Key: "account", Populate: populateAccountOnAuditEvent},
 			{Key: "changes", Populate: populateChangesOnAuditEvent},
 			{Key: "metadata", Populate: populateMetadataOnAuditEvent},
 			{
@@ -37,6 +38,16 @@ func populateActorOnAuditEvent(ctx context.Context, parent any, _ map[string]any
 		return
 	}
 	ae.Actor = v.(*apiresource.Actor)
+}
+
+func populateAccountOnAuditEvent(ctx context.Context, parent any, _ map[string]any) {
+	ae := parent.(*apiresource.AuditEvent)
+	v, ok := resourcekit.GetLoadMeta(ctx).
+		Get(constants.ObjectTypeAuditEvent, ae.ID, "account")
+	if !ok {
+		return
+	}
+	ae.Account = v.(*apiresource.Account)
 }
 
 func populateChangesOnAuditEvent(ctx context.Context, parent any, _ map[string]any) {

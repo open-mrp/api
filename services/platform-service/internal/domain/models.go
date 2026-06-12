@@ -174,6 +174,10 @@ type AuditEvent struct {
 	ActorType    string
 	IdentityType string
 	AccountID    string
+	// TargetAccountID is the account the audited mutation was performed against
+	// (the Augno-Account targeted by the originating request). Nullable until the
+	// backfill + non-null migration land.
+	TargetAccountID *string
 
 	Action       constants.AuditAction
 	ResourceType constants.ObjectType
@@ -192,8 +196,13 @@ type AuditEvent struct {
 
 type AuditEventRead struct {
 	AuditEvent
-	Actor          *AuditActor
-	IdempotencyKey *string
+	Actor *AuditActor
+	// Target account details, resolved from target_account_id for the `account`
+	// sub-resource. Nil when the event has no target account (pre-backfill rows).
+	AccountName      *string
+	AccountCreatedAt *time.Time
+	AccountUpdatedAt *time.Time
+	IdempotencyKey   *string
 }
 
 type ListAuditEventsFilter struct {
@@ -203,9 +212,11 @@ type ListAuditEventsFilter struct {
 	ResourceIDs   []string
 	ActorIDs      []string
 	Actions       []string
-	Query         *string
-	Cursor        *string
-	Limit         int32
+	// AccountIDs filters by target_account_id: the account the mutation targeted.
+	AccountIDs []string
+	Query      *string
+	Cursor     *string
+	Limit      int32
 }
 
 type ListAuditEventsResult struct {

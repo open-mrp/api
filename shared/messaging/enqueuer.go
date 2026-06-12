@@ -30,8 +30,17 @@ type EnqueuerConfig struct {
 	LockOwner string
 
 	// PollInterval (optional; default: 1s) controls how frequently the enqueuer polls
-	// the outbox table for pending messages.
+	// the outbox table for pending messages while there is work to do.
 	PollInterval time.Duration
+
+	// MaxPollInterval (optional; default: 5s in production, == PollInterval in test) is the
+	// ceiling for idle backoff. When consecutive polls find nothing, the interval doubles
+	// from PollInterval up to this value so an empty outbox is not queried at full rate.
+	// Any poll that finds work resets the interval to PollInterval, so pickup latency and
+	// throughput under load are unchanged; only the steady-state idle poll rate drops. The
+	// tradeoff is that the first message after a sustained idle period waits up to
+	// MaxPollInterval to be picked up. Must be >= PollInterval (clamped in WithDefaults).
+	MaxPollInterval time.Duration
 
 	// BatchSize (optional; default: 100) is the maximum number of outbox messages to lock
 	// and publish in a single poll cycle.
@@ -87,6 +96,17 @@ func (c *EnqueuerConfig) WithDefaults() *EnqueuerConfig {
 		} else {
 			c.PollInterval = 1 * time.Second
 		}
+	}
+	if c.MaxPollInterval == 0 {
+		if c.PlatformMode.IsTest() {
+			// Keep e2e cadence tight so async side-effects are observed quickly: no backoff.
+			c.MaxPollInterval = c.PollInterval
+		} else {
+			c.MaxPollInterval = 5 * time.Second
+		}
+	}
+	if c.MaxPollInterval < c.PollInterval {
+		c.MaxPollInterval = c.PollInterval
 	}
 	if c.BatchSize == 0 {
 		c.BatchSize = 100
@@ -146,6 +166,9 @@ func (c *EnqueuerConfig) validate() error {
 	}
 	if c.PollInterval <= 0 {
 		return fmt.Errorf("enqueuer: poll interval must be positive")
+	}
+	if c.MaxPollInterval < c.PollInterval {
+		return fmt.Errorf("enqueuer: max poll interval must be >= poll interval")
 	}
 	if c.BatchSize <= 0 {
 		return fmt.Errorf("enqueuer: batch size must be positive")
@@ -250,9 +273,12 @@ func (e *Enqueuer) Stop() {
 	slog.Info("Outbox enqueuer stopped", "service", e.config.ServiceName)
 }
 
-// pollLoop ticks at PollInterval and calls drainPending on each tick. In test
-// platform mode it also processes once immediately so the first outbox row is not
-// delayed by a full poll interval. Exits when the enqueuer's context is cancelled.
+// pollLoop polls at PollInterval while there is work, and backs off exponentially up
+// to MaxPollInterval while the outbox is idle (see EnqueuerConfig.MaxPollInterval). A
+// poll that finds work resets the interval to PollInterval immediately, so behavior
+// under load is identical to a fixed PollInterval ticker. In test platform mode it also
+// processes once immediately so the first outbox row is not delayed by a full poll
+// interval. Exits when the enqueuer's context is cancelled.
 func (e *Enqueuer) pollLoop() {
 	defer e.wg.Done()
 
@@ -260,15 +286,21 @@ func (e *Enqueuer) pollLoop() {
 		e.drainPending()
 	}
 
-	ticker := time.NewTicker(e.config.PollInterval)
-	defer ticker.Stop()
+	interval := e.config.PollInterval
+	timer := time.NewTimer(interval)
+	defer timer.Stop()
 
 	for {
 		select {
 		case <-e.ctx.Done():
 			return
-		case <-ticker.C:
-			e.drainPending()
+		case <-timer.C:
+			if e.drainPending() {
+				interval = e.config.PollInterval
+			} else {
+				interval = min(interval*2, e.config.MaxPollInterval)
+			}
+			timer.Reset(interval)
 		}
 	}
 }
@@ -280,16 +312,23 @@ func (e *Enqueuer) pollLoop() {
 // pending backlog would grow without bound under sustained load. Messages that
 // fail to publish are rescheduled with backoff (next_run_at in the future), so
 // they do not keep the drain loop spinning.
-func (e *Enqueuer) drainPending() {
+// Returns true if any messages were processed during the drain, which pollLoop uses to
+// distinguish a busy poll (reset to PollInterval) from an idle one (back off).
+func (e *Enqueuer) drainPending() bool {
+	didWork := false
 	for {
 		select {
 		case <-e.ctx.Done():
-			return
+			return didWork
 		default:
 		}
 
-		if acquired := e.processBatch(); acquired < e.config.BatchSize {
-			return
+		acquired := e.processBatch()
+		if acquired > 0 {
+			didWork = true
+		}
+		if acquired < e.config.BatchSize {
+			return didWork
 		}
 	}
 }

@@ -31,7 +31,7 @@ func (e *RetrieveAuditEventEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 		ObjectType:        constants.ObjectTypeAuditEvent,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAuditEvent,
-			Fields:     []string{"actor", "changes", "metadata", "request"},
+			Fields:     []string{"account", "actor", "changes", "metadata", "request"},
 		}),
 		Extras: apiendpoint.APIEndpointExtras{
 			SkipRequestLogging: true,

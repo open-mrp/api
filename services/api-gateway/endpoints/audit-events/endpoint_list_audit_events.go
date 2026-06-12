@@ -30,6 +30,10 @@ type ListAuditEventsRequest struct {
 	ActorIDs []string `query:"actor_ids"`
 	// Filter by the mutation type recorded on the event.
 	Actions []constants.AuditAction `query:"actions"`
+	// Filter by the target account the mutation was performed against.
+	//
+	// Narrows results to audit events whose `account` is one of the given account IDs — for example a specific customer's or supplier's account.
+	AccountIDs []string `query:"account_ids"`
 }
 
 // Returns a paginated list of audit events for the current account.
@@ -47,7 +51,7 @@ func (e *ListAuditEventsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAu
 		ObjectType:        constants.ObjectTypeAuditEvent,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAuditEvent,
-			Fields:     []string{"actor", "changes", "metadata", "request"},
+			Fields:     []string{"account", "actor", "changes", "metadata", "request"},
 		}),
 		Extras: apiendpoint.APIEndpointExtras{
 			SkipRequestLogging: true,

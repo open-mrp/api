@@ -363,6 +363,7 @@ type AuditEvent struct {
 	SourceIp         sql.NullString
 	OccurredAt       time.Time
 	CreatedAt        time.Time
+	TargetAccountID  sql.NullString
 }
 
 type Batch struct {

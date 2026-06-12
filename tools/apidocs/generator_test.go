@@ -732,10 +732,10 @@ func TestGenerateSchema_ListAndPageInfoUseDocComments(t *testing.T) {
 	if want := "PageInfo contains URL-based pagination metadata."; pageInfoSchema.Description != want {
 		t.Errorf("PageInfo schema description = %q; want %q", pageInfoSchema.Description, want)
 	}
-	if got := pageInfoSchema.Properties["next_page_url"].Description; got != "Relative URL that fetches the next page of results.\n\nAbsent once the last page has been reached." {
+	if got := pageInfoSchema.Properties["next_page_url"].Description; got != "Relative URL that fetches the next page of results.\n\n`null` when the last page has been reached." {
 		t.Errorf("next_page_url description = %q", got)
 	}
-	if got := pageInfoSchema.Properties["previous_page_url"].Description; got != "Relative URL that fetches the previous page of results.\n\nAbsent while on the first page." {
+	if got := pageInfoSchema.Properties["previous_page_url"].Description; got != "Relative URL that fetches the previous page of results.\n\n`null` while on the first page." {
 		t.Errorf("previous_page_url description = %q", got)
 	}
 	if got := pageInfoSchema.Properties["has_next_page"].Description; got != "Whether more results exist after this page." {

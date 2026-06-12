@@ -166,6 +166,31 @@ func requirePageLen(t *testing.T, data []json.RawMessage, expected int) {
 	require.Len(t, data, expected)
 }
 
+// assertListPageLen fetches a single page of the given list and asserts it
+// holds exactly `expected` rows, retrying a few times first. List endpoints
+// fetch a page of ids and then batch-hydrate them, silently dropping ids that
+// a parallel test deleted in between, so a limit=N page can come back short
+// (even empty) under churn while a real pagination bug fails every attempt.
+// Use this for limit=1 pagination smoke checks on mutable shared lists that
+// always have at least one undeletable row (e.g. a seeded global row).
+func assertListPageLen(t *testing.T, path string, params url.Values, expected int) {
+	t.Helper()
+	const attempts = 3
+
+	for attempt := 1; ; attempt++ {
+		list, _, err := apiClient.GetList(path, params)
+		require.NoError(t, err, "listing %s", path)
+		if len(list.Data) != expected && attempt < attempts {
+			t.Logf("page of %s held %d rows, want %d, on attempt %d (likely parallel deletes); retrying",
+				path, len(list.Data), expected, attempt)
+			continue
+		}
+		require.Len(t, list.Data, expected,
+			"page of %s should hold %d row(s) (after %d attempts)", path, expected, attempt)
+		return
+	}
+}
+
 // maxListScanPages bounds how many pages listFindByField walks (pages of
 // 1000, so 25k rows) before declaring a row absent.
 const maxListScanPages = 25

@@ -57,6 +57,7 @@ func (m *auditEventSvcImpl) ListAuditEvents(ctx context.Context, req *ListAuditE
 		ResourceIds:   req.ResourceIDs,
 		ActorIds:      req.ActorIDs,
 		Actions:       stringsFromActions(req.Actions),
+		AccountIds:    req.AccountIDs,
 		Query:         req.Query,
 		Cursor:        req.Cursor,
 		Limit:         req.Limit,
@@ -172,6 +173,21 @@ func stashAuditEventMeta(ctx context.Context, meta *resourcekit.LoadMeta, ev *pb
 		)
 		resourcekit.PreheatCache(ctx, constants.ObjectTypeActor, actor.ID, actor)
 		meta.Set(constants.ObjectTypeAuditEvent, ev.Id, "actor", actor)
+	}
+
+	if ev.AccountId != nil && ev.AccountName != nil {
+		account := &apiresource.Account{
+			ID:     *ev.AccountId,
+			Object: constants.ObjectTypeAccount,
+			Name:   *ev.AccountName,
+		}
+		if ev.AccountCreatedAt != nil {
+			account.CreatedAt = ev.AccountCreatedAt.AsTime()
+		}
+		if ev.AccountUpdatedAt != nil {
+			account.UpdatedAt = ev.AccountUpdatedAt.AsTime()
+		}
+		meta.Set(constants.ObjectTypeAuditEvent, ev.Id, "account", account)
 	}
 
 	if len(ev.Changes) > 0 {

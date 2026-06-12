@@ -56,6 +56,7 @@ func (r *auditEventRepoImpl) Create(ctx context.Context, event *domain.AuditEven
 		ActorType:        event.ActorType,
 		IdentityType:     event.IdentityType,
 		AccountID:        event.AccountID,
+		TargetAccountID:  db.NullStringPtr(event.TargetAccountID),
 		Action:           string(event.Action),
 		ResourceType:     string(event.ResourceType),
 		ResourceID:       event.ResourceID,
@@ -150,6 +151,8 @@ func (r *auditEventRepoImpl) List(ctx context.Context, targetAccountID string, f
 	actorIDs := ensureStringSlice(filter.ActorIDs)
 	includeActionFilter := len(filter.Actions) > 0
 	actions := ensureStringSlice(filter.Actions)
+	includeAccountFilter := len(filter.AccountIDs) > 0
+	accountIDs := ensureNullStringSlice(filter.AccountIDs)
 
 	searchQuery := sql.NullString{}
 	if filter.Query != nil && *filter.Query != "" {
@@ -173,6 +176,8 @@ func (r *auditEventRepoImpl) List(ctx context.Context, targetAccountID string, f
 			IncludeChanges:            includeChanges,
 			IncludeMetadata:           includeMetadata,
 			TargetAccountID:           targetAccountID,
+			IncludeAccountFilter:      includeAccountFilter,
+			AccountIds:                accountIDs,
 			IncludeResourceTypeFilter: includeResourceTypeFilter,
 			ResourceTypes:             resourceTypes,
 			IncludeResourceIDFilter:   includeResourceIDFilter,
@@ -206,6 +211,8 @@ func (r *auditEventRepoImpl) List(ctx context.Context, targetAccountID string, f
 		IncludeChanges:            includeChanges,
 		IncludeMetadata:           includeMetadata,
 		TargetAccountID:           targetAccountID,
+		IncludeAccountFilter:      includeAccountFilter,
+		AccountIds:                accountIDs,
 		IncludeResourceTypeFilter: includeResourceTypeFilter,
 		ResourceTypes:             resourceTypes,
 		IncludeResourceIDFilter:   includeResourceIDFilter,
@@ -240,11 +247,11 @@ func auditEventID(ae *domain.AuditEventRead) string            { return ae.ID }
 func mapAuditEventRowToRead(row any) *domain.AuditEventRead {
 	switch r := row.(type) {
 	case *sqlc.FindAuditEventByIDRow:
-		return mapAuditEventBaseRow(r.TypeID, r.ActorID, r.ActorType, r.IdentityType, r.AccountID, r.Action, r.ResourceType, r.ResourceID, r.Changes, r.Metadata, r.ServiceName, r.RequestID, r.IdempotencyKeyID, r.SourceIp, r.OccurredAt, r.CreatedAt, r.UserName, r.UserEmail, r.ApiKeyName, r.ApiKeyRedactedValue, r.IdempotencyKey)
+		return mapAuditEventBaseRow(r.TypeID, r.ActorID, r.ActorType, r.IdentityType, r.AccountID, r.TargetAccountID, r.AccountName, r.AccountCreatedAt, r.AccountUpdatedAt, r.Action, r.ResourceType, r.ResourceID, r.Changes, r.Metadata, r.ServiceName, r.RequestID, r.IdempotencyKeyID, r.SourceIp, r.OccurredAt, r.CreatedAt, r.UserName, r.UserEmail, r.ApiKeyName, r.ApiKeyRedactedValue, r.IdempotencyKey)
 	case *sqlc.ListAuditEventsForwardRow:
-		return mapAuditEventBaseRow(r.TypeID, r.ActorID, r.ActorType, r.IdentityType, r.AccountID, r.Action, r.ResourceType, r.ResourceID, r.Changes, r.Metadata, r.ServiceName, r.RequestID, r.IdempotencyKeyID, r.SourceIp, r.OccurredAt, r.CreatedAt, r.UserName, r.UserEmail, r.ApiKeyName, r.ApiKeyRedactedValue, r.IdempotencyKey)
+		return mapAuditEventBaseRow(r.TypeID, r.ActorID, r.ActorType, r.IdentityType, r.AccountID, r.TargetAccountID, r.AccountName, r.AccountCreatedAt, r.AccountUpdatedAt, r.Action, r.ResourceType, r.ResourceID, r.Changes, r.Metadata, r.ServiceName, r.RequestID, r.IdempotencyKeyID, r.SourceIp, r.OccurredAt, r.CreatedAt, r.UserName, r.UserEmail, r.ApiKeyName, r.ApiKeyRedactedValue, r.IdempotencyKey)
 	case *sqlc.ListAuditEventsBackwardRow:
-		return mapAuditEventBaseRow(r.TypeID, r.ActorID, r.ActorType, r.IdentityType, r.AccountID, r.Action, r.ResourceType, r.ResourceID, r.Changes, r.Metadata, r.ServiceName, r.RequestID, r.IdempotencyKeyID, r.SourceIp, r.OccurredAt, r.CreatedAt, r.UserName, r.UserEmail, r.ApiKeyName, r.ApiKeyRedactedValue, r.IdempotencyKey)
+		return mapAuditEventBaseRow(r.TypeID, r.ActorID, r.ActorType, r.IdentityType, r.AccountID, r.TargetAccountID, r.AccountName, r.AccountCreatedAt, r.AccountUpdatedAt, r.Action, r.ResourceType, r.ResourceID, r.Changes, r.Metadata, r.ServiceName, r.RequestID, r.IdempotencyKeyID, r.SourceIp, r.OccurredAt, r.CreatedAt, r.UserName, r.UserEmail, r.ApiKeyName, r.ApiKeyRedactedValue, r.IdempotencyKey)
 	default:
 		// Should never happen
 		return &domain.AuditEventRead{}
@@ -257,6 +264,10 @@ func mapAuditEventBaseRow(
 	actorType string,
 	identityType string,
 	accountID string,
+	targetAccountID sql.NullString,
+	accountName sql.NullString,
+	accountCreatedAt sql.NullTime,
+	accountUpdatedAt sql.NullTime,
 	action string,
 	resourceType string,
 	resourceID string,
@@ -296,14 +307,15 @@ func mapAuditEventBaseRow(
 		Handle:       auditActorHandle(identityType, userEmail, apiKeyRedactedValue),
 	}
 
-	return &domain.AuditEventRead{
+	read := &domain.AuditEventRead{
 		AuditEvent: domain.AuditEvent{
 			ID: typeID,
 
-			ActorID:      actorID,
-			ActorType:    actorType,
-			IdentityType: identityType,
-			AccountID:    accountID,
+			ActorID:         actorID,
+			ActorType:       actorType,
+			IdentityType:    identityType,
+			AccountID:       accountID,
+			TargetAccountID: db.StringFromNullString(targetAccountID),
 
 			Action:       constants.AuditAction(action),
 			ResourceType: constants.ObjectType(resourceType),
@@ -320,8 +332,20 @@ func mapAuditEventBaseRow(
 			CreatedAt:  createdAt,
 		},
 		Actor:          actor,
+		AccountName:    db.StringFromNullString(accountName),
 		IdempotencyKey: db.StringFromNullString(idempotencyKey),
 	}
+
+	if accountCreatedAt.Valid {
+		t := accountCreatedAt.Time
+		read.AccountCreatedAt = &t
+	}
+	if accountUpdatedAt.Valid {
+		t := accountUpdatedAt.Time
+		read.AccountUpdatedAt = &t
+	}
+
+	return read
 }
 
 func ensureStringSlice(vals []string) []string {
@@ -329,6 +353,21 @@ func ensureStringSlice(vals []string) []string {
 		return []string{""}
 	}
 	return vals
+}
+
+// ensureNullStringSlice mirrors ensureStringSlice for the nullable
+// target_account_id IN (...) filter: the slice must always have at least one
+// element so sqlc emits a valid placeholder, even when the filter is disabled
+// (the `include_account_filter = false OR ...` guard short-circuits the IN).
+func ensureNullStringSlice(vals []string) []sql.NullString {
+	if len(vals) == 0 {
+		return []sql.NullString{{}}
+	}
+	out := make([]sql.NullString, len(vals))
+	for i, v := range vals {
+		out[i] = sql.NullString{String: v, Valid: true}
+	}
+	return out
 }
 
 func interfaceToBytes(v any) []byte {

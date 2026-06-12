@@ -57,9 +57,10 @@ func TestRoles_ListFilterByRoleType(t *testing.T) {
 
 func TestRoles_ListPagination(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(rolesPath, url.Values{"limit": {"1"}})
-	require.NoError(t, err)
-	assert.Len(t, list.Data, 1)
+	// Retry-bounded: a limit=1 page can hydrate to fewer rows when a parallel
+	// test deletes the fetched row mid-flight. The seeded admin role is
+	// undeletable, so a stable page always exists on a later attempt.
+	assertListPageLen(t, rolesPath, url.Values{"limit": {"1"}}, 1)
 }
 
 func TestRoles_ListSearchByName(t *testing.T) {

@@ -62,6 +62,7 @@ jobs:
           # can read typescript-sdk here. CROSS_REPO_PAT is a `production`
           # environment secret and isn't available to this job.
           token: ${{ secrets.SDK_WRITE_TOKEN }}
+          persist-credentials: false
           path: typescript-sdk-src
 
       - name: Configure AWS Credentials

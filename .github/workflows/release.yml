@@ -38,6 +38,8 @@ jobs:
       tag_name: ${{ steps.resolve.outputs.tag_name }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - uses: googleapis/release-please-action@v5
         if: github.event_name == 'push'
         id: release
@@ -48,16 +50,42 @@ jobs:
 
       - name: Validate dispatched tag
         if: github.event_name == 'workflow_dispatch'
+        id: validate
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release view "${{ inputs.tag_name }}" --repo "${{ github.repository }}" --json tagName --jq .tagName
+          TAG_NAME: ${{ inputs.tag_name }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z][0-9A-Za-z.-]*)?$ ]]; then
+            echo "Invalid release tag: $TAG_NAME" >&2
+            exit 1
+          fi
+
+          release_tag="$(gh release view "$TAG_NAME" --repo "${{ github.repository }}" --json tagName --jq .tagName)"
+          latest_tag="$(gh release view --repo "${{ github.repository }}" --json tagName --jq .tagName)"
+          if [[ "$release_tag" != "$latest_tag" ]]; then
+            echo "Manual release resume is only allowed for the latest release tag: $latest_tag" >&2
+            exit 1
+          fi
+
+          git fetch --force --tags origin refs/heads/main:refs/remotes/origin/main
+          tag_sha="$(git rev-parse --verify "refs/tags/${release_tag}^{commit}")"
+          if ! git merge-base --is-ancestor "$tag_sha" refs/remotes/origin/main; then
+            echo "Release tag $release_tag does not point to a commit on main." >&2
+            exit 1
+          fi
+
+          echo "tag_name=${release_tag}" >> "$GITHUB_OUTPUT"
 
       - name: Resolve release outputs
         id: resolve
+        env:
+          VALIDATED_TAG_NAME: ${{ steps.validate.outputs.tag_name }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "release_created=true" >> "$GITHUB_OUTPUT"
-            echo "tag_name=${{ inputs.tag_name }}" >> "$GITHUB_OUTPUT"
+            echo "tag_name=${VALIDATED_TAG_NAME}" >> "$GITHUB_OUTPUT"
           else
             echo "release_created=${{ steps.release.outputs.release_created }}" >> "$GITHUB_OUTPUT"
             echo "tag_name=${{ steps.release.outputs.tag_name }}" >> "$GITHUB_OUTPUT"
@@ -86,8 +114,8 @@ jobs:
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
-          # On manual dispatch, run from the release tag, not main HEAD.
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || '' }}
+          # Run release jobs from the resolved release tag.
+          ref: ${{ needs.release-please.outputs.tag_name }}
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -135,8 +163,8 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v5
         with:
-          # On manual dispatch, run from the release tag, not main HEAD.
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || '' }}
+          # Run release jobs from the resolved release tag.
+          ref: ${{ needs.release-please.outputs.tag_name }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6
@@ -186,8 +214,8 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v5
         with:
-          # On manual dispatch, run from the release tag, not main HEAD.
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || '' }}
+          # Run release jobs from the resolved release tag.
+          ref: ${{ needs.release-please.outputs.tag_name }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6
@@ -237,8 +265,8 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v5
         with:
-          # On manual dispatch, run from the release tag, not main HEAD.
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || '' }}
+          # Run release jobs from the resolved release tag.
+          ref: ${{ needs.release-please.outputs.tag_name }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6
@@ -277,8 +305,8 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v5
         with:
-          # On manual dispatch, run from the release tag, not main HEAD.
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || '' }}
+          # Run release jobs from the resolved release tag.
+          ref: ${{ needs.release-please.outputs.tag_name }}
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -386,8 +414,8 @@ jobs:
       - name: Checkout API repo (k8s manifest + kubeconfig)
         uses: actions/checkout@v5
         with:
-          # On manual dispatch, run from the release tag, not main HEAD.
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || '' }}
+          # Run release jobs from the resolved release tag.
+          ref: ${{ needs.release-please.outputs.tag_name }}
 
       - name: Checkout typescript-sdk (MCP build context)
         uses: actions/checkout@v5

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.25.1](https://github.com/Augno/api/compare/v0.25.0...v0.25.1) (2026-06-15)
+
+
+### Bug Fixes
+
+* minor changes in docs ([a47fdca](https://github.com/Augno/api/commit/a47fdca1dd56e5fb3cd52ef48f47dc0bed1c244e))
+
 ## [0.25.0](https://github.com/Augno/api/compare/v0.24.0...v0.25.0) (2026-06-15)
 
 

@@ -135,14 +135,16 @@ LEFT JOIN ` + "`" + `user` + "`" + ` u ON ae.actor_id = u.id AND ae.identity_typ
 LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key'
 LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
 LEFT JOIN account a ON ae.target_account_id = a.id
-WHERE ae.type_id = ? AND ae.account_id = ?
+WHERE ae.type_id = ?
+  AND (ae.account_id = ? OR ae.target_account_id = ?)
 `
 
 type FindAuditEventByIDParams struct {
-	IncludeChanges  db.NullableRawMessage
-	IncludeMetadata db.NullableRawMessage
-	TypeID          string
-	AccountID       string
+	IncludeChanges        db.NullableRawMessage
+	IncludeMetadata       db.NullableRawMessage
+	TypeID                string
+	CallerAccountIDActor  string
+	CallerAccountIDTarget sql.NullString
 }
 
 type FindAuditEventByIDRow struct {
@@ -176,12 +178,14 @@ type FindAuditEventByIDRow struct {
 // actor_id stores the raw actor key (user_id / api_key.type_id) — exposed
 // directly. Enrichment joins key on it: user by id, api_key by type_id.
 // Resolves the target account (target_account_id) for the `account` sub-resource.
+// Visible when the caller's account is either the acting account or the target.
 func (q *Queries) FindAuditEventByID(ctx context.Context, arg FindAuditEventByIDParams) (FindAuditEventByIDRow, error) {
 	row := q.db.QueryRowContext(ctx, findAuditEventByID,
 		arg.IncludeChanges,
 		arg.IncludeMetadata,
 		arg.TypeID,
-		arg.AccountID,
+		arg.CallerAccountIDActor,
+		arg.CallerAccountIDTarget,
 	)
 	var i FindAuditEventByIDRow
 	err := row.Scan(
@@ -245,8 +249,9 @@ LEFT JOIN ` + "`" + `user` + "`" + ` u ON ae.actor_id = u.id AND ae.identity_typ
 LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key'
 LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
 LEFT JOIN account a ON ae.target_account_id = a.id
-WHERE ae.account_id = ?
-AND (? = false OR ae.target_account_id IN (/*SLICE:account_ids*/?))
+WHERE (ae.account_id = ? OR ae.target_account_id = ?)
+AND (? = false OR ae.account_id IN (/*SLICE:actor_account_ids*/?))
+AND (? = false OR ae.target_account_id IN (/*SLICE:target_account_ids*/?))
 AND (? = false OR ae.resource_type IN (/*SLICE:resource_types*/?))
 AND (? = false OR ae.resource_id IN (/*SLICE:resource_ids*/?))
 AND (? = false OR ae.actor_id IN (/*SLICE:actor_ids*/?))
@@ -269,25 +274,28 @@ LIMIT ?
 `
 
 type ListAuditEventsBackwardParams struct {
-	IncludeChanges            db.NullableRawMessage
-	IncludeMetadata           db.NullableRawMessage
-	TargetAccountID           string
-	IncludeAccountFilter      interface{}
-	AccountIds                []sql.NullString
-	IncludeResourceTypeFilter interface{}
-	ResourceTypes             []string
-	IncludeResourceIDFilter   interface{}
-	ResourceIds               []string
-	IncludeActorIDFilter      interface{}
-	ActorIds                  []string
-	IncludeActionFilter       interface{}
-	Actions                   []string
-	StartDate                 sql.NullTime
-	EndDate                   sql.NullTime
-	SearchQuery               sql.NullString
-	CursorOccurredAt          time.Time
-	CursorID                  string
-	Limit                     int32
+	IncludeChanges             db.NullableRawMessage
+	IncludeMetadata            db.NullableRawMessage
+	CallerAccountIDActor       string
+	CallerAccountIDTarget      sql.NullString
+	IncludeActorAccountFilter  interface{}
+	ActorAccountIds            []string
+	IncludeTargetAccountFilter interface{}
+	TargetAccountIds           []sql.NullString
+	IncludeResourceTypeFilter  interface{}
+	ResourceTypes              []string
+	IncludeResourceIDFilter    interface{}
+	ResourceIds                []string
+	IncludeActorIDFilter       interface{}
+	ActorIds                   []string
+	IncludeActionFilter        interface{}
+	Actions                    []string
+	StartDate                  sql.NullTime
+	EndDate                    sql.NullTime
+	SearchQuery                sql.NullString
+	CursorOccurredAt           time.Time
+	CursorID                   string
+	Limit                      int32
 }
 
 type ListAuditEventsBackwardRow struct {
@@ -326,15 +334,25 @@ func (q *Queries) ListAuditEventsBackward(ctx context.Context, arg ListAuditEven
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.IncludeChanges)
 	queryParams = append(queryParams, arg.IncludeMetadata)
-	queryParams = append(queryParams, arg.TargetAccountID)
-	queryParams = append(queryParams, arg.IncludeAccountFilter)
-	if len(arg.AccountIds) > 0 {
-		for _, v := range arg.AccountIds {
+	queryParams = append(queryParams, arg.CallerAccountIDActor)
+	queryParams = append(queryParams, arg.CallerAccountIDTarget)
+	queryParams = append(queryParams, arg.IncludeActorAccountFilter)
+	if len(arg.ActorAccountIds) > 0 {
+		for _, v := range arg.ActorAccountIds {
 			queryParams = append(queryParams, v)
 		}
-		query = strings.Replace(query, "/*SLICE:account_ids*/?", strings.Repeat(",?", len(arg.AccountIds))[1:], 1)
+		query = strings.Replace(query, "/*SLICE:actor_account_ids*/?", strings.Repeat(",?", len(arg.ActorAccountIds))[1:], 1)
 	} else {
-		query = strings.Replace(query, "/*SLICE:account_ids*/?", "NULL", 1)
+		query = strings.Replace(query, "/*SLICE:actor_account_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeTargetAccountFilter)
+	if len(arg.TargetAccountIds) > 0 {
+		for _, v := range arg.TargetAccountIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:target_account_ids*/?", strings.Repeat(",?", len(arg.TargetAccountIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:target_account_ids*/?", "NULL", 1)
 	}
 	queryParams = append(queryParams, arg.IncludeResourceTypeFilter)
 	if len(arg.ResourceTypes) > 0 {
@@ -464,8 +482,9 @@ LEFT JOIN ` + "`" + `user` + "`" + ` u ON ae.actor_id = u.id AND ae.identity_typ
 LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key'
 LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
 LEFT JOIN account a ON ae.target_account_id = a.id
-WHERE ae.account_id = ?
-AND (? = false OR ae.target_account_id IN (/*SLICE:account_ids*/?))
+WHERE (ae.account_id = ? OR ae.target_account_id = ?)
+AND (? = false OR ae.account_id IN (/*SLICE:actor_account_ids*/?))
+AND (? = false OR ae.target_account_id IN (/*SLICE:target_account_ids*/?))
 AND (? = false OR ae.resource_type IN (/*SLICE:resource_types*/?))
 AND (? = false OR ae.resource_id IN (/*SLICE:resource_ids*/?))
 AND (? = false OR ae.actor_id IN (/*SLICE:actor_ids*/?))
@@ -489,25 +508,28 @@ LIMIT ?
 `
 
 type ListAuditEventsForwardParams struct {
-	IncludeChanges            db.NullableRawMessage
-	IncludeMetadata           db.NullableRawMessage
-	TargetAccountID           string
-	IncludeAccountFilter      interface{}
-	AccountIds                []sql.NullString
-	IncludeResourceTypeFilter interface{}
-	ResourceTypes             []string
-	IncludeResourceIDFilter   interface{}
-	ResourceIds               []string
-	IncludeActorIDFilter      interface{}
-	ActorIds                  []string
-	IncludeActionFilter       interface{}
-	Actions                   []string
-	StartDate                 sql.NullTime
-	EndDate                   sql.NullTime
-	SearchQuery               sql.NullString
-	CursorOccurredAt          sql.NullTime
-	CursorID                  sql.NullString
-	Limit                     int32
+	IncludeChanges             db.NullableRawMessage
+	IncludeMetadata            db.NullableRawMessage
+	CallerAccountIDActor       string
+	CallerAccountIDTarget      sql.NullString
+	IncludeActorAccountFilter  interface{}
+	ActorAccountIds            []string
+	IncludeTargetAccountFilter interface{}
+	TargetAccountIds           []sql.NullString
+	IncludeResourceTypeFilter  interface{}
+	ResourceTypes              []string
+	IncludeResourceIDFilter    interface{}
+	ResourceIds                []string
+	IncludeActorIDFilter       interface{}
+	ActorIds                   []string
+	IncludeActionFilter        interface{}
+	Actions                    []string
+	StartDate                  sql.NullTime
+	EndDate                    sql.NullTime
+	SearchQuery                sql.NullString
+	CursorOccurredAt           sql.NullTime
+	CursorID                   sql.NullString
+	Limit                      int32
 }
 
 type ListAuditEventsForwardRow struct {
@@ -546,15 +568,25 @@ func (q *Queries) ListAuditEventsForward(ctx context.Context, arg ListAuditEvent
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.IncludeChanges)
 	queryParams = append(queryParams, arg.IncludeMetadata)
-	queryParams = append(queryParams, arg.TargetAccountID)
-	queryParams = append(queryParams, arg.IncludeAccountFilter)
-	if len(arg.AccountIds) > 0 {
-		for _, v := range arg.AccountIds {
+	queryParams = append(queryParams, arg.CallerAccountIDActor)
+	queryParams = append(queryParams, arg.CallerAccountIDTarget)
+	queryParams = append(queryParams, arg.IncludeActorAccountFilter)
+	if len(arg.ActorAccountIds) > 0 {
+		for _, v := range arg.ActorAccountIds {
 			queryParams = append(queryParams, v)
 		}
-		query = strings.Replace(query, "/*SLICE:account_ids*/?", strings.Repeat(",?", len(arg.AccountIds))[1:], 1)
+		query = strings.Replace(query, "/*SLICE:actor_account_ids*/?", strings.Repeat(",?", len(arg.ActorAccountIds))[1:], 1)
 	} else {
-		query = strings.Replace(query, "/*SLICE:account_ids*/?", "NULL", 1)
+		query = strings.Replace(query, "/*SLICE:actor_account_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeTargetAccountFilter)
+	if len(arg.TargetAccountIds) > 0 {
+		for _, v := range arg.TargetAccountIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:target_account_ids*/?", strings.Repeat(",?", len(arg.TargetAccountIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:target_account_ids*/?", "NULL", 1)
 	}
 	queryParams = append(queryParams, arg.IncludeResourceTypeFilter)
 	if len(arg.ResourceTypes) > 0 {

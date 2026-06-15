@@ -77,7 +77,7 @@ var requestLogRLBaseColumns = []string{
 func buildListQuery(
 	mode queryMode,
 	dir pagination.Direction,
-	targetAccountID string,
+	callerAccountID string,
 	f *domain.ListRequestLogsFilter,
 	includeQueryJSON, includeRequestBody, includeResponseBody bool,
 	cursor *pagination.StringCursor,
@@ -113,9 +113,14 @@ func buildListQuery(
 		)
 	}
 
-	// WHERE — only emit predicates the caller supplied.
-	inner.WriteString(" WHERE rl.target_account_id = ?")
-	args = append(args, targetAccountID)
+	// WHERE — only emit predicates the caller supplied. The security scope
+	// returns every log where the caller's account is either the acting account
+	// (rl.account_id) or the account the request targeted (rl.target_account_id).
+	// MySQL/Vitess satisfies the OR via index_merge over the per-side cursor
+	// indexes: (account_id, occurred_at DESC, id DESC) and
+	// (target_account_id, occurred_at DESC, id DESC).
+	inner.WriteString(" WHERE (rl.account_id = ? OR rl.target_account_id = ?)")
+	args = append(args, callerAccountID, callerAccountID)
 
 	if f.Query != nil && *f.Query != "" {
 		like := "%" + db.EscapeLike(*f.Query) + "%"
@@ -179,11 +184,21 @@ func buildListQuery(
 			args = append(args, ec)
 		}
 	}
-	if len(f.AccountIDs) > 0 {
+	if len(f.ActorAccountIDs) > 0 {
+		// Narrow to logs whose acting account is one of these (within scope).
 		inner.WriteString(" AND rl.account_id IN (")
-		inner.WriteString(placeholders(len(f.AccountIDs)))
+		inner.WriteString(placeholders(len(f.ActorAccountIDs)))
 		inner.WriteString(")")
-		for _, id := range f.AccountIDs {
+		for _, id := range f.ActorAccountIDs {
+			args = append(args, id)
+		}
+	}
+	if len(f.TargetAccountIDs) > 0 {
+		// Narrow to logs whose target account is one of these (within scope).
+		inner.WriteString(" AND rl.target_account_id IN (")
+		inner.WriteString(placeholders(len(f.TargetAccountIDs)))
+		inner.WriteString(")")
+		for _, id := range f.TargetAccountIDs {
 			args = append(args, id)
 		}
 	}

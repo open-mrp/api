@@ -32,7 +32,9 @@ LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key
 LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
 -- Resolves the target account (target_account_id) for the `account` sub-resource.
 LEFT JOIN account a ON ae.target_account_id = a.id
-WHERE ae.type_id = ? AND ae.account_id = ?;
+-- Visible when the caller's account is either the acting account or the target.
+WHERE ae.type_id = sqlc.arg('type_id')
+  AND (ae.account_id = sqlc.arg('caller_account_id_actor') OR ae.target_account_id = sqlc.arg('caller_account_id_target'));
 
 -- name: ListAuditEventsForward :many
 SELECT ae.type_id,
@@ -68,8 +70,9 @@ LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key
 LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
 -- Resolves the target account (target_account_id) for the `account` sub-resource.
 LEFT JOIN account a ON ae.target_account_id = a.id
-WHERE ae.account_id = sqlc.arg('target_account_id')
-AND (sqlc.arg('include_account_filter') = false OR ae.target_account_id IN (sqlc.slice('account_ids')))
+WHERE (ae.account_id = sqlc.arg('caller_account_id_actor') OR ae.target_account_id = sqlc.arg('caller_account_id_target'))
+AND (sqlc.arg('include_actor_account_filter') = false OR ae.account_id IN (sqlc.slice('actor_account_ids')))
+AND (sqlc.arg('include_target_account_filter') = false OR ae.target_account_id IN (sqlc.slice('target_account_ids')))
 AND (sqlc.arg('include_resource_type_filter') = false OR ae.resource_type IN (sqlc.slice('resource_types')))
 AND (sqlc.arg('include_resource_id_filter') = false OR ae.resource_id IN (sqlc.slice('resource_ids')))
 AND (sqlc.arg('include_actor_id_filter') = false OR ae.actor_id IN (sqlc.slice('actor_ids')))
@@ -125,8 +128,9 @@ LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key
 LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
 -- Resolves the target account (target_account_id) for the `account` sub-resource.
 LEFT JOIN account a ON ae.target_account_id = a.id
-WHERE ae.account_id = sqlc.arg('target_account_id')
-AND (sqlc.arg('include_account_filter') = false OR ae.target_account_id IN (sqlc.slice('account_ids')))
+WHERE (ae.account_id = sqlc.arg('caller_account_id_actor') OR ae.target_account_id = sqlc.arg('caller_account_id_target'))
+AND (sqlc.arg('include_actor_account_filter') = false OR ae.account_id IN (sqlc.slice('actor_account_ids')))
+AND (sqlc.arg('include_target_account_filter') = false OR ae.target_account_id IN (sqlc.slice('target_account_ids')))
 AND (sqlc.arg('include_resource_type_filter') = false OR ae.resource_type IN (sqlc.slice('resource_types')))
 AND (sqlc.arg('include_resource_id_filter') = false OR ae.resource_id IN (sqlc.slice('resource_ids')))
 AND (sqlc.arg('include_actor_id_filter') = false OR ae.actor_id IN (sqlc.slice('actor_ids')))

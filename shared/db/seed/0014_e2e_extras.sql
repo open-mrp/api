@@ -304,8 +304,8 @@ INSERT IGNORE INTO account_integration (id, account_id, integration_code, name, 
 -- e2e account itself, which exists in `account` so the `account` sub-resource
 -- include + the account_ids filter resolve a real account name.
 INSERT IGNORE INTO audit_event (type_id, actor_id, actor_type, identity_type, account_id, target_account_id, action, resource_type, resource_id, changes, metadata, service_name, request_id, occurred_at, created_at) VALUES
-    ('adev_01seedauditevent01', 'us_1wjfmmbwg8l7', 'user', 'internal', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'create', 'unit', 'un_01seedpair000000000', '[{"field":"name","old_value":null,"new_value":"Pair"}]', NULL, 'core-service', NULL, DATE_SUB(NOW(), INTERVAL 1 HOUR), NOW()),
-    ('adev_01seedauditevent02', 'us_1wjfmmbwg8l7', 'user', 'internal', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'update', 'property', 'pp_01k0a7ntn1ez6aw8x850femxeh', '[{"field":"name","old_value":"Colour","new_value":"Color"}]', '{"seed":true,"note":"manual e2e seed"}', 'core-service', 'rqlog_01seedreqlog1_000', DATE_ADD(NOW(), INTERVAL 10 YEAR), DATE_ADD(NOW(), INTERVAL 10 YEAR));
+    ('adev_01seedauditevent01', 'us_1wjfmmbwg8l7', 'user', 'user', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'create', 'unit', 'un_01seedpair000000000', '[{"field":"name","old_value":null,"new_value":"Pair"}]', NULL, 'core-service', NULL, DATE_SUB(NOW(), INTERVAL 1 HOUR), NOW()),
+    ('adev_01seedauditevent02', 'us_1wjfmmbwg8l7', 'user', 'user', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'update', 'property', 'pp_01k0a7ntn1ez6aw8x850femxeh', '[{"field":"name","old_value":"Colour","new_value":"Color"}]', '{"seed":true,"note":"manual e2e seed"}', 'core-service', 'rqlog_01seedreqlog1_000', DATE_ADD(NOW(), INTERVAL 10 YEAR), DATE_ADD(NOW(), INTERVAL 10 YEAR));
 
 -- Backfill request_id + target_account_id on re-seed when INSERT IGNORE skips existing rows.
 UPDATE audit_event SET request_id = 'rqlog_01seedreqlog1_000' WHERE type_id = 'adev_01seedauditevent02' AND (request_id IS NULL OR request_id = '');
@@ -320,8 +320,23 @@ UPDATE audit_event SET target_account_id = 'ac_01k0a5smf9ekb8rqg12555zjqa' WHERE
 --  * adev_01seedactor2event0 is authored by the seed API key (a second, distinct
 --    actor) so the multi-actor union filter test has two real actors to combine.
 INSERT IGNORE INTO audit_event (type_id, actor_id, actor_type, identity_type, account_id, action, resource_type, resource_id, changes, metadata, service_name, request_id, occurred_at, created_at) VALUES
-    ('adev_01seedsearchtgt01', 'us_1wjfmmbwg8l7', 'user', 'internal', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'create', 'item', 'it_01seedauditsrchtgt', '[{"field":"name","old_value":null,"new_value":"Audit Search Target"}]', NULL, 'core-service', 'rqlog_01seedauditsrchrq', DATE_ADD(NOW(), INTERVAL 9 YEAR), DATE_ADD(NOW(), INTERVAL 9 YEAR)),
+    ('adev_01seedsearchtgt01', 'us_1wjfmmbwg8l7', 'user', 'user', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'create', 'item', 'it_01seedauditsrchtgt', '[{"field":"name","old_value":null,"new_value":"Audit Search Target"}]', NULL, 'core-service', 'rqlog_01seedauditsrchrq', DATE_ADD(NOW(), INTERVAL 9 YEAR), DATE_ADD(NOW(), INTERVAL 9 YEAR)),
     ('adev_01seedactor2event0', 'apky_pajbskcck3cabxajdh8h8', 'api_key', 'api_key', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'create', 'item', 'it_01seedauditactor2', '[{"field":"name","old_value":null,"new_value":"Audit Actor Two"}]', NULL, 'core-service', NULL, DATE_ADD(NOW(), INTERVAL 9 YEAR), DATE_ADD(NOW(), INTERVAL 9 YEAR));
+
+-- actor-or-target scope cohort — the caller is the seed account; the list scope
+-- returns events where the seed account is EITHER the acting account (account_id)
+-- OR the target account (target_account_id). Each row has a distinct resource_id
+-- so the tests scope to this cohort via the resource_ids filter, then assert which
+-- rows the scope + the actor_account_ids / target_account_ids filters return:
+--   scope-actor   account_id=seed,     target=customer  -> visible via actor
+--   scope-target  account_id=customer, target=seed      -> visible via target
+--   scope-both    account_id=seed,     target=seed       -> visible via both
+--   scope-neither account_id=child,    target=customer  -> NEVER visible (out of scope)
+INSERT IGNORE INTO audit_event (type_id, actor_id, actor_type, identity_type, account_id, target_account_id, action, resource_type, resource_id, changes, metadata, service_name, request_id, occurred_at, created_at) VALUES
+    ('adev_01seedscopeactor', 'us_1wjfmmbwg8l7', 'user', 'user', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k09wm2fgevdsc344gpbcj30f', 'create', 'item', 'it_01seedauditscopeac', NULL, NULL, 'core-service', NULL, DATE_ADD(NOW(), INTERVAL 8 YEAR), DATE_ADD(NOW(), INTERVAL 8 YEAR)),
+    ('adev_01seedscopetarget', 'us_1wjfmmbwg8l7', 'user', 'user', 'ac_01k09wm2fgevdsc344gpbcj30f', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'create', 'item', 'it_01seedauditscopetg', NULL, NULL, 'core-service', NULL, DATE_ADD(NOW(), INTERVAL 8 YEAR), DATE_ADD(NOW(), INTERVAL 8 YEAR)),
+    ('adev_01seedscopeboth00', 'us_1wjfmmbwg8l7', 'user', 'user', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'create', 'item', 'it_01seedauditscopebt', NULL, NULL, 'core-service', NULL, DATE_ADD(NOW(), INTERVAL 8 YEAR), DATE_ADD(NOW(), INTERVAL 8 YEAR)),
+    ('adev_01seedscopeneither', 'us_1wjfmmbwg8l7', 'user', 'user', 'ac_01seedchild_acct0001', 'ac_01k09wm2fgevdsc344gpbcj30f', 'create', 'item', 'it_01seedauditscopenn', NULL, NULL, 'core-service', NULL, DATE_ADD(NOW(), INTERVAL 8 YEAR), DATE_ADD(NOW(), INTERVAL 8 YEAR));
 
 -- ============================================================
 -- CATALOG ATTRIBUTE LINKS (give materials and parts a 2nd distinct
@@ -434,6 +449,21 @@ INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status
     ('rqlog_01fltacct1000', 'GET', 'rqlog-filter-e2e.test', '/filtertest/accounts', '/filtertest/accounts', 200, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', '2022-01-01 00:00:00', NOW()),
     ('rqlog_01fltacct2000', 'GET', 'rqlog-filter-e2e.test', '/filtertest/accounts', '/filtertest/accounts', 200, 15000, 1, 'ac_01k09wm2fgevdsc344gpbcj30f', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', '2022-01-01 00:00:00', NOW()),
     ('rqlog_01fltacct3000', 'GET', 'rqlog-filter-e2e.test', '/filtertest/accounts', '/filtertest/accounts', 200, 15000, 1, 'ac_01seedchild_acct0001', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', '2022-01-01 00:00:00', NOW());
+
+-- actor-or-target scope cohort — scope normalized_route=/filtertest/scope. The
+-- caller is the seed account; the list scope returns rows where the seed account
+-- is EITHER the acting account (account_id) OR the target account
+-- (target_account_id). The four rows cover every quadrant so the scope + the
+-- explicit actor_account_ids / target_account_ids filters can be verified:
+--   scope-actor   account_id=seed,     target=customer  -> visible via actor
+--   scope-target  account_id=customer, target=seed      -> visible via target
+--   scope-both    account_id=seed,     target=seed       -> visible via both
+--   scope-neither account_id=child,    target=customer  -> NEVER visible (out of scope)
+INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, occurred_at, created_at) VALUES
+    ('rqlog_01fltscopeactr', 'GET', 'rqlog-filter-e2e.test', '/filtertest/scope', '/filtertest/scope', 200, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k09wm2fgevdsc344gpbcj30f', 'us_1wjfmmbwg8l7', 'user', 'user', '2022-01-01 00:00:00', NOW()),
+    ('rqlog_01fltscopetgt0', 'GET', 'rqlog-filter-e2e.test', '/filtertest/scope', '/filtertest/scope', 200, 15000, 1, 'ac_01k09wm2fgevdsc344gpbcj30f', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', '2022-01-01 00:00:00', NOW()),
+    ('rqlog_01fltscopeboth', 'GET', 'rqlog-filter-e2e.test', '/filtertest/scope', '/filtertest/scope', 200, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', '2022-01-01 00:00:00', NOW()),
+    ('rqlog_01fltscopenone', 'GET', 'rqlog-filter-e2e.test', '/filtertest/scope', '/filtertest/scope', 200, 15000, 1, 'ac_01seedchild_acct0001', 'ac_01k09wm2fgevdsc344gpbcj30f', 'us_1wjfmmbwg8l7', 'user', 'user', '2022-01-01 00:00:00', NOW());
 
 -- actor_ids cohort — scope normalized_route=/filtertest/actorids, vary the user
 -- actor (User1 / User2 / User3). Filtering by User1+User2 must include both and

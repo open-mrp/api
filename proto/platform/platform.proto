@@ -208,7 +208,9 @@ message ListRequestLogsRequest {
   repeated string methods = 3;
   repeated int32 status_codes = 4;
   repeated string error_codes = 5;
-  repeated string account_ids = 6;
+  // Superseded by actor_account_ids / target_account_ids.
+  reserved 6;
+  reserved "account_ids";
   // account_user.id when identity_type=user, or api_key.id when identity_type=api_key.
   repeated string actor_ids = 7;
   repeated string actor_types = 8;
@@ -227,6 +229,12 @@ message ListRequestLogsRequest {
   optional string idempotency_key = 18;
   // Filter by HTTP status class: 1–5 for 1xx–5xx. OR'd with status_codes.
   repeated int32 status_code_classes = 19;
+  // Filter by the acting account (request_log.account_id): the account the
+  // actor belongs to. Narrows within the caller's actor-or-target scope.
+  repeated string actor_account_ids = 20;
+  // Filter by the target account (request_log.target_account_id): the account
+  // the request acted upon. Narrows within the caller's actor-or-target scope.
+  repeated string target_account_ids = 21;
 }
 
 message ListRequestLogsResponse {
@@ -305,9 +313,16 @@ message ListAuditEventsRequest {
   int32 limit = 9;
   repeated string includes = 10;
   optional string query = 11;
+  // Superseded by actor_account_ids / target_account_ids.
+  reserved 12;
+  reserved "account_ids";
+  // Filter by the acting account (audit_event.account_id): the account that
+  // performed the mutation. Narrows within the caller's actor-or-target scope.
+  repeated string actor_account_ids = 13;
   // Filter by the target account (audit_event.target_account_id): the account
-  // the audited mutation was performed against.
-  repeated string account_ids = 12;
+  // the mutation was performed against. Narrows within the caller's
+  // actor-or-target scope.
+  repeated string target_account_ids = 14;
 }
 
 message ListAuditEventsResponse {

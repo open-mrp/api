@@ -29,13 +29,15 @@ LEFT JOIN role r_user ON au.role_id = r_user.id
 LEFT JOIN role r_key ON ak.role_id = r_key.id
 LEFT JOIN account a ON rl.target_account_id = a.id
 LEFT JOIN idempotency_key ik ON rl.idempotency_key_id = ik.type_id
-WHERE rl.id = ? AND rl.target_account_id = ?;
+-- Visible when the caller's account is either the acting account or the target.
+WHERE rl.id = sqlc.arg('id')
+  AND (rl.account_id = sqlc.arg('caller_account_id') OR rl.target_account_id = sqlc.arg('caller_account_id'));
 
 -- Request log list queries are built dynamically in Go — see
 -- repository/request_log_list_query.go. Filter predicates are only emitted
--- when the caller supplied a value, which keeps MySQL's plan on the
--- (target_account_id, occurred_at DESC, id DESC) index even when selective
--- filters like identity_type are applied.
+-- when the caller supplied a value. The actor-or-target security scope is an OR
+-- over account_id / target_account_id, satisfied by index_merge over the
+-- per-side (…, occurred_at DESC, id DESC) cursor indexes.
 
 -- name: FindRequestLogBaseByID :one
 SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
@@ -50,7 +52,9 @@ SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
        ik.idempotency_key
 FROM request_log rl
 LEFT JOIN idempotency_key ik ON rl.idempotency_key_id = ik.type_id
-WHERE rl.id = ? AND rl.target_account_id = ?;
+-- Visible when the caller's account is either the acting account or the target.
+WHERE rl.id = sqlc.arg('id')
+  AND (rl.account_id = sqlc.arg('caller_account_id') OR rl.target_account_id = sqlc.arg('caller_account_id'));
 
 -- name: DeleteExpiredRequestLogs :execresult
 DELETE FROM request_log

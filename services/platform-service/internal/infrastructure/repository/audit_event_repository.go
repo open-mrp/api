@@ -75,15 +75,16 @@ func (r *auditEventRepoImpl) Create(ctx context.Context, event *domain.AuditEven
 	return nil
 }
 
-func (r *auditEventRepoImpl) FindByID(ctx context.Context, id string, targetAccountID string, includes []string) (*domain.AuditEventRead, *apierror.APIError) {
+func (r *auditEventRepoImpl) FindByID(ctx context.Context, id string, callerAccountID string, includes []string) (*domain.AuditEventRead, *apierror.APIError) {
 	ctx, span := auditEventRepoTracer.Start(ctx, "repository.audit_event.find_by_id")
 	defer span.End()
 
 	row, err := r.db.FindAuditEventByID(ctx, sqlc.FindAuditEventByIDParams{
-		IncludeChanges:  includeJSONFieldParam(includes, "changes"),
-		IncludeMetadata: includeJSONFieldParam(includes, "metadata"),
-		TypeID:          id,
-		AccountID:       targetAccountID,
+		IncludeChanges:        includeJSONFieldParam(includes, "changes"),
+		IncludeMetadata:       includeJSONFieldParam(includes, "metadata"),
+		TypeID:                id,
+		CallerAccountIDActor:  callerAccountID,
+		CallerAccountIDTarget: db.NullString(callerAccountID),
 	})
 	if err != nil {
 		return nil, tracing.Trace(span, db.MapSQLError(err))
@@ -117,7 +118,7 @@ func auditActorHandle(identityType string, userEmail, apiKeyRedactedValue sql.Nu
 	return nil
 }
 
-func (r *auditEventRepoImpl) List(ctx context.Context, targetAccountID string, filter *domain.ListAuditEventsFilter, includes []string) (*domain.ListAuditEventsResult, *apierror.APIError) {
+func (r *auditEventRepoImpl) List(ctx context.Context, callerAccountID string, filter *domain.ListAuditEventsFilter, includes []string) (*domain.ListAuditEventsResult, *apierror.APIError) {
 	ctx, span := auditEventRepoTracer.Start(ctx, "repository.audit_event.list")
 	defer span.End()
 
@@ -151,8 +152,10 @@ func (r *auditEventRepoImpl) List(ctx context.Context, targetAccountID string, f
 	actorIDs := ensureStringSlice(filter.ActorIDs)
 	includeActionFilter := len(filter.Actions) > 0
 	actions := ensureStringSlice(filter.Actions)
-	includeAccountFilter := len(filter.AccountIDs) > 0
-	accountIDs := ensureNullStringSlice(filter.AccountIDs)
+	includeActorAccountFilter := len(filter.ActorAccountIDs) > 0
+	actorAccountIDs := ensureStringSlice(filter.ActorAccountIDs)
+	includeTargetAccountFilter := len(filter.TargetAccountIDs) > 0
+	targetAccountIDs := ensureNullStringSlice(filter.TargetAccountIDs)
 
 	searchQuery := sql.NullString{}
 	if filter.Query != nil && *filter.Query != "" {
@@ -173,25 +176,28 @@ func (r *auditEventRepoImpl) List(ctx context.Context, targetAccountID string, f
 		}
 
 		rows, err := r.db.ListAuditEventsForward(ctx, sqlc.ListAuditEventsForwardParams{
-			IncludeChanges:            includeChanges,
-			IncludeMetadata:           includeMetadata,
-			TargetAccountID:           targetAccountID,
-			IncludeAccountFilter:      includeAccountFilter,
-			AccountIds:                accountIDs,
-			IncludeResourceTypeFilter: includeResourceTypeFilter,
-			ResourceTypes:             resourceTypes,
-			IncludeResourceIDFilter:   includeResourceIDFilter,
-			ResourceIds:               resourceIDs,
-			IncludeActorIDFilter:      includeActorIDFilter,
-			ActorIds:                  actorIDs,
-			IncludeActionFilter:       includeActionFilter,
-			Actions:                   actions,
-			StartDate:                 startDate,
-			EndDate:                   endDate,
-			SearchQuery:               searchQuery,
-			CursorOccurredAt:          cursorOccurredAt,
-			CursorID:                  cursorID,
-			Limit:                     limit + 1,
+			IncludeChanges:             includeChanges,
+			IncludeMetadata:            includeMetadata,
+			CallerAccountIDActor:       callerAccountID,
+			CallerAccountIDTarget:      db.NullString(callerAccountID),
+			IncludeActorAccountFilter:  includeActorAccountFilter,
+			ActorAccountIds:            actorAccountIDs,
+			IncludeTargetAccountFilter: includeTargetAccountFilter,
+			TargetAccountIds:           targetAccountIDs,
+			IncludeResourceTypeFilter:  includeResourceTypeFilter,
+			ResourceTypes:              resourceTypes,
+			IncludeResourceIDFilter:    includeResourceIDFilter,
+			ResourceIds:                resourceIDs,
+			IncludeActorIDFilter:       includeActorIDFilter,
+			ActorIds:                   actorIDs,
+			IncludeActionFilter:        includeActionFilter,
+			Actions:                    actions,
+			StartDate:                  startDate,
+			EndDate:                    endDate,
+			SearchQuery:                searchQuery,
+			CursorOccurredAt:           cursorOccurredAt,
+			CursorID:                   cursorID,
+			Limit:                      limit + 1,
 		})
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to query audit events."))
@@ -208,25 +214,28 @@ func (r *auditEventRepoImpl) List(ctx context.Context, targetAccountID string, f
 
 	// Backward direction: query order ASC and BuildPageString will reverse.
 	rows, err := r.db.ListAuditEventsBackward(ctx, sqlc.ListAuditEventsBackwardParams{
-		IncludeChanges:            includeChanges,
-		IncludeMetadata:           includeMetadata,
-		TargetAccountID:           targetAccountID,
-		IncludeAccountFilter:      includeAccountFilter,
-		AccountIds:                accountIDs,
-		IncludeResourceTypeFilter: includeResourceTypeFilter,
-		ResourceTypes:             resourceTypes,
-		IncludeResourceIDFilter:   includeResourceIDFilter,
-		ResourceIds:               resourceIDs,
-		IncludeActorIDFilter:      includeActorIDFilter,
-		ActorIds:                  actorIDs,
-		IncludeActionFilter:       includeActionFilter,
-		Actions:                   actions,
-		StartDate:                 startDate,
-		EndDate:                   endDate,
-		SearchQuery:               searchQuery,
-		CursorOccurredAt:          cur.OccurredAt,
-		CursorID:                  cur.ID,
-		Limit:                     limit + 1,
+		IncludeChanges:             includeChanges,
+		IncludeMetadata:            includeMetadata,
+		CallerAccountIDActor:       callerAccountID,
+		CallerAccountIDTarget:      db.NullString(callerAccountID),
+		IncludeActorAccountFilter:  includeActorAccountFilter,
+		ActorAccountIds:            actorAccountIDs,
+		IncludeTargetAccountFilter: includeTargetAccountFilter,
+		TargetAccountIds:           targetAccountIDs,
+		IncludeResourceTypeFilter:  includeResourceTypeFilter,
+		ResourceTypes:              resourceTypes,
+		IncludeResourceIDFilter:    includeResourceIDFilter,
+		ResourceIds:                resourceIDs,
+		IncludeActorIDFilter:       includeActorIDFilter,
+		ActorIds:                   actorIDs,
+		IncludeActionFilter:        includeActionFilter,
+		Actions:                    actions,
+		StartDate:                  startDate,
+		EndDate:                    endDate,
+		SearchQuery:                searchQuery,
+		CursorOccurredAt:           cur.OccurredAt,
+		CursorID:                   cur.ID,
+		Limit:                      limit + 1,
 	})
 	if err != nil {
 		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to query audit events."))

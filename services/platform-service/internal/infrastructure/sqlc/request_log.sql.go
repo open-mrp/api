@@ -169,7 +169,8 @@ SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
        ik.idempotency_key
 FROM request_log rl
 LEFT JOIN idempotency_key ik ON rl.idempotency_key_id = ik.type_id
-WHERE rl.id = ? AND rl.target_account_id = ?
+WHERE rl.id = ?
+  AND (rl.account_id = ? OR rl.target_account_id = ?)
 `
 
 type FindRequestLogBaseByIDParams struct {
@@ -177,7 +178,7 @@ type FindRequestLogBaseByIDParams struct {
 	IncludeRequestBodyJson  db.NullableRawMessage
 	IncludeResponseBodyJson db.NullableRawMessage
 	ID                      string
-	TargetAccountID         sql.NullString
+	CallerAccountID         sql.NullString
 }
 
 type FindRequestLogBaseByIDRow struct {
@@ -209,16 +210,18 @@ type FindRequestLogBaseByIDRow struct {
 
 // Request log list queries are built dynamically in Go — see
 // repository/request_log_list_query.go. Filter predicates are only emitted
-// when the caller supplied a value, which keeps MySQL's plan on the
-// (target_account_id, occurred_at DESC, id DESC) index even when selective
-// filters like identity_type are applied.
+// when the caller supplied a value. The actor-or-target security scope is an OR
+// over account_id / target_account_id, satisfied by index_merge over the
+// per-side (…, occurred_at DESC, id DESC) cursor indexes.
+// Visible when the caller's account is either the acting account or the target.
 func (q *Queries) FindRequestLogBaseByID(ctx context.Context, arg FindRequestLogBaseByIDParams) (FindRequestLogBaseByIDRow, error) {
 	row := q.db.QueryRowContext(ctx, findRequestLogBaseByID,
 		arg.IncludeQueryJson,
 		arg.IncludeRequestBodyJson,
 		arg.IncludeResponseBodyJson,
 		arg.ID,
-		arg.TargetAccountID,
+		arg.CallerAccountID,
+		arg.CallerAccountID,
 	)
 	var i FindRequestLogBaseByIDRow
 	err := row.Scan(
@@ -277,7 +280,8 @@ LEFT JOIN role r_user ON au.role_id = r_user.id
 LEFT JOIN role r_key ON ak.role_id = r_key.id
 LEFT JOIN account a ON rl.target_account_id = a.id
 LEFT JOIN idempotency_key ik ON rl.idempotency_key_id = ik.type_id
-WHERE rl.id = ? AND rl.target_account_id = ?
+WHERE rl.id = ?
+  AND (rl.account_id = ? OR rl.target_account_id = ?)
 `
 
 type FindRequestLogByIDParams struct {
@@ -285,7 +289,7 @@ type FindRequestLogByIDParams struct {
 	IncludeRequestBodyJson  db.NullableRawMessage
 	IncludeResponseBodyJson db.NullableRawMessage
 	ID                      string
-	TargetAccountID         sql.NullString
+	CallerAccountID         sql.NullString
 }
 
 type FindRequestLogByIDRow struct {
@@ -333,13 +337,15 @@ type FindRequestLogByIDRow struct {
 // for api_key actors) — the value the API exposes directly. Enrichment joins key
 // on it: user by id, api_key by type_id, and account_user (for the role) by
 // (user_id, target account).
+// Visible when the caller's account is either the acting account or the target.
 func (q *Queries) FindRequestLogByID(ctx context.Context, arg FindRequestLogByIDParams) (FindRequestLogByIDRow, error) {
 	row := q.db.QueryRowContext(ctx, findRequestLogByID,
 		arg.IncludeQueryJson,
 		arg.IncludeRequestBodyJson,
 		arg.IncludeResponseBodyJson,
 		arg.ID,
-		arg.TargetAccountID,
+		arg.CallerAccountID,
+		arg.CallerAccountID,
 	)
 	var i FindRequestLogByIDRow
 	err := row.Scan(

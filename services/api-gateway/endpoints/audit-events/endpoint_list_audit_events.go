@@ -30,10 +30,14 @@ type ListAuditEventsRequest struct {
 	ActorIDs []string `query:"actor_ids"`
 	// Filter by the mutation type recorded on the event.
 	Actions []constants.AuditAction `query:"actions"`
-	// Filter by the target account the mutation was performed against.
+	// Filter by the _acting_ account: the account that performed the mutation.
 	//
-	// Narrows results to audit events whose `account` is one of the given account IDs — for example a specific customer's or supplier's account.
-	AccountIDs []string `query:"account_ids"`
+	// Results are always scoped to events where your account is either the acting account or the target account; this narrows that set to specific acting accounts — for example a specific customer's account that mutated a resource on your account.
+	ActorAccountIDs []string `query:"actor_account_ids"`
+	// Filter by the _target_ account the mutation was performed against (the event's `account`).
+	//
+	// Results are always scoped to events where your account is either the acting account or the target account; this narrows that set to specific target accounts — for example a specific customer's or supplier's account.
+	TargetAccountIDs []string `query:"target_account_ids"`
 }
 
 // Returns a paginated list of audit events for the current account.

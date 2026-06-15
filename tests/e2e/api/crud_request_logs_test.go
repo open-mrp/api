@@ -382,9 +382,10 @@ func TestRequestLogs_ListFilterByMultipleActorTypes(t *testing.T) {
 	}
 }
 
-func TestRequestLogs_ListFilterByMultipleAccountIDs(t *testing.T) {
+func TestRequestLogs_ListFilterByMultipleTargetAccountIDs(t *testing.T) {
 	t.Parallel()
-	// Discover the account_id present on recent logs by including ?include=account.
+	// The response `account` field is the target account, so discover it via
+	// ?include=account and filter on the matching target_account_ids param.
 	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
 		"include": {"account"},
 		"limit":   {"5"},
@@ -401,9 +402,9 @@ func TestRequestLogs_ListFilterByMultipleAccountIDs(t *testing.T) {
 
 	// Filter by [real, impossible] — every result should still be the real one.
 	filtered, _, err := apiClient.GetList(requestLogsPath, url.Values{
-		"account_ids": {accountID, "acct_zzzzzzzzzzzzzzzz"},
-		"include":     {"account"},
-		"limit":       {"10"},
+		"target_account_ids": {accountID, "acct_zzzzzzzzzzzzzzzz"},
+		"include":            {"account"},
+		"limit":              {"10"},
 	})
 	require.NoError(t, err)
 
@@ -1184,20 +1185,69 @@ func TestRequestLogs_FilterByErrorCodes_IncludesAndExcludes(t *testing.T) {
 	}
 }
 
-// TestRequestLogs_FilterByAccountIDs_IncludesAndExcludes covers the account_ids
-// filter, which matches the acting account_id column. That column is not surfaced
-// in the response (the API exposes target_account_id as `account`), so this test
-// verifies the filter purely by which seeded cohort rows come back.
-func TestRequestLogs_FilterByAccountIDs_IncludesAndExcludes(t *testing.T) {
+// TestRequestLogs_FilterByActorAccountIDs_IncludesAndExcludes covers the
+// actor_account_ids filter, which matches the acting account_id column. That
+// column is not surfaced in the response (the API exposes target_account_id as
+// `account`), so this test verifies the filter purely by which seeded cohort rows
+// come back. All three cohort rows target the seed account, so all are in scope.
+func TestRequestLogs_FilterByActorAccountIDs_IncludesAndExcludes(t *testing.T) {
 	t.Parallel()
 	list := fetchScopedRequestLogs(t, url.Values{
 		"normalized_routes": {SeedReqLogFilterAccountsRoute},
-		"account_ids":       {SeedAccountID, SeedCustomerAccountID},
+		"actor_account_ids": {SeedAccountID, SeedCustomerAccountID},
 	})
-	assert.Len(t, list.Data, 2, "scope + account_ids=[seed,customer] should return exactly two cohort rows")
+	assert.Len(t, list.Data, 2, "scope + actor_account_ids=[seed,customer] should return exactly two cohort rows")
 	assertRequestLogMembership(t, list.Data,
 		[]string{SeedReqLogFilterAccount1, SeedReqLogFilterAccount2},
 		[]string{SeedReqLogFilterAccount3})
+}
+
+// TestRequestLogs_ActorOrTargetScope_DefaultReturnsBothSides verifies the
+// security scope: with no account filter, the caller (the seed account) sees every
+// log where its account is either the acting account or the target account, and
+// never a log where it is neither. The /filtertest/scope cohort has one row per
+// quadrant.
+func TestRequestLogs_ActorOrTargetScope_DefaultReturnsBothSides(t *testing.T) {
+	t.Parallel()
+	list := fetchScopedRequestLogs(t, url.Values{
+		"normalized_routes": {SeedReqLogScopeRoute},
+	})
+	assert.Len(t, list.Data, 3, "scope should return the actor-side, target-side, and both rows")
+	assertRequestLogMembership(t, list.Data,
+		[]string{SeedReqLogScopeActor, SeedReqLogScopeTarget, SeedReqLogScopeBoth},
+		[]string{SeedReqLogScopeNeither})
+}
+
+// TestRequestLogs_FilterByActorAccountIDs_NarrowsWithinScope filters the scope
+// cohort to the acting-account side: only rows whose account_id is the seed
+// account remain (the actor-side and both rows). The target-side row (acted on the
+// seed by another account) and the out-of-scope row are excluded.
+func TestRequestLogs_FilterByActorAccountIDs_NarrowsWithinScope(t *testing.T) {
+	t.Parallel()
+	list := fetchScopedRequestLogs(t, url.Values{
+		"normalized_routes": {SeedReqLogScopeRoute},
+		"actor_account_ids": {SeedAccountID},
+	})
+	assert.Len(t, list.Data, 2, "actor_account_ids=[seed] should return the actor-side and both rows")
+	assertRequestLogMembership(t, list.Data,
+		[]string{SeedReqLogScopeActor, SeedReqLogScopeBoth},
+		[]string{SeedReqLogScopeTarget, SeedReqLogScopeNeither})
+}
+
+// TestRequestLogs_FilterByTargetAccountIDs_NarrowsWithinScope filters the scope
+// cohort to the target-account side: only rows whose target_account_id is the seed
+// account remain (the target-side and both rows). The actor-side row (the seed
+// acting on another account) and the out-of-scope row are excluded.
+func TestRequestLogs_FilterByTargetAccountIDs_NarrowsWithinScope(t *testing.T) {
+	t.Parallel()
+	list := fetchScopedRequestLogs(t, url.Values{
+		"normalized_routes":  {SeedReqLogScopeRoute},
+		"target_account_ids": {SeedAccountID},
+	})
+	assert.Len(t, list.Data, 2, "target_account_ids=[seed] should return the target-side and both rows")
+	assertRequestLogMembership(t, list.Data,
+		[]string{SeedReqLogScopeTarget, SeedReqLogScopeBoth},
+		[]string{SeedReqLogScopeActor, SeedReqLogScopeNeither})
 }
 
 // TestRequestLogs_FilterByActorIDs_IncludesAndExcludes is the headline case: three

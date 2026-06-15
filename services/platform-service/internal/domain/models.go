@@ -116,16 +116,21 @@ type ListRequestLogsFilter struct {
 	StatusCodes       []int32
 	StatusCodeClasses []int32
 	ErrorCodes        []string
-	AccountIDs        []string
-	ActorIDs          []string
-	ActorTypes        []string
-	NormalizedRoutes  []string
-	Hosts             []string
-	MinLatencyUs      *int64
-	PublicEndpoint    *bool
-	IdempotencyKey    *string
-	Cursor            *string
-	Limit             int32
+	// ActorAccountIDs filters by request_log.account_id: the account the actor
+	// belongs to. TargetAccountIDs filters by request_log.target_account_id: the
+	// account the request acted upon. Both narrow within the caller's
+	// actor-or-target security scope.
+	ActorAccountIDs  []string
+	TargetAccountIDs []string
+	ActorIDs         []string
+	ActorTypes       []string
+	NormalizedRoutes []string
+	Hosts            []string
+	MinLatencyUs     *int64
+	PublicEndpoint   *bool
+	IdempotencyKey   *string
+	Cursor           *string
+	Limit            int32
 }
 
 type ListRequestLogsResult struct {
@@ -212,11 +217,15 @@ type ListAuditEventsFilter struct {
 	ResourceIDs   []string
 	ActorIDs      []string
 	Actions       []string
-	// AccountIDs filters by target_account_id: the account the mutation targeted.
-	AccountIDs []string
-	Query      *string
-	Cursor     *string
-	Limit      int32
+	// ActorAccountIDs filters by audit_event.account_id: the account that
+	// performed the mutation. TargetAccountIDs filters by
+	// audit_event.target_account_id: the account the mutation targeted. Both
+	// narrow within the caller's actor-or-target security scope.
+	ActorAccountIDs  []string
+	TargetAccountIDs []string
+	Query            *string
+	Cursor           *string
+	Limit            int32
 }
 
 type ListAuditEventsResult struct {

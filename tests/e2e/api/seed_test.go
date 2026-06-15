@@ -171,6 +171,14 @@ const (
 	SeedReqLogFilterAccount2      = "rqlog_01fltacct2000" // account_id=SeedCustomerAccountID
 	SeedReqLogFilterAccount3      = "rqlog_01fltacct3000" // account_id=SeedChildAccountID1 (excluded)
 
+	// actor-or-target scope cohort (scope normalized_route=/filtertest/scope).
+	// Caller is the seed account; rows cover every actor/target quadrant.
+	SeedReqLogScopeRoute   = "/filtertest/scope"
+	SeedReqLogScopeActor   = "rqlog_01fltscopeactr" // account_id=seed, target=customer (actor side)
+	SeedReqLogScopeTarget  = "rqlog_01fltscopetgt0" // account_id=customer, target=seed (target side)
+	SeedReqLogScopeBoth    = "rqlog_01fltscopeboth" // account_id=seed, target=seed
+	SeedReqLogScopeNeither = "rqlog_01fltscopenone" // account_id=child, target=customer (out of scope)
+
 	// actor_ids cohort (scope normalized_route=/filtertest/actorids).
 	SeedReqLogFilterActorIDsRoute = "/filtertest/actorids"
 	SeedReqLogFilterActorUser1    = "rqlog_01fltactid100" // actor_id=SeedUserID
@@ -295,9 +303,19 @@ const (
 	// the search ('q') tests. Searching either value must return that event.
 	SeedAuditEventSearchResourceID = "it_01seedauditsrchtgt"
 	SeedAuditEventSearchRequestID  = "rqlog_01seedauditsrchrq"
-	SeedInventoryChangeLogID       = "ivcl_01seedwss000000000" // seeded in 0007_items.sql, enriched in 0014_e2e_extras.sql
-	SeedRequestLogErrorID          = "rqlog_01seedreqlog4_000" // has error_code=validation_failed for filter tests
-	SeedRequestLogQueryParamsID    = "rqlog_01seedreqlog5_000" // has query_json populated for include=query_params tests
+	// actor-or-target scope cohort (filter to it via the resource_ids below).
+	// Caller is the seed account; each event covers one actor/target quadrant.
+	SeedAuditScopeActorID       = "adev_01seedscopeactor"   // account_id=seed, target=customer
+	SeedAuditScopeActorRes      = "it_01seedauditscopeac"   // its resource_id
+	SeedAuditScopeTargetID      = "adev_01seedscopetarget"  // account_id=customer, target=seed
+	SeedAuditScopeTargetRes     = "it_01seedauditscopetg"   // its resource_id
+	SeedAuditScopeBothID        = "adev_01seedscopeboth00"  // account_id=seed, target=seed
+	SeedAuditScopeBothRes       = "it_01seedauditscopebt"   // its resource_id
+	SeedAuditScopeNeitherID     = "adev_01seedscopeneither" // account_id=child, target=customer (out of scope)
+	SeedAuditScopeNeitherRes    = "it_01seedauditscopenn"   // its resource_id
+	SeedInventoryChangeLogID    = "ivcl_01seedwss000000000" // seeded in 0007_items.sql, enriched in 0014_e2e_extras.sql
+	SeedRequestLogErrorID       = "rqlog_01seedreqlog4_000" // has error_code=validation_failed for filter tests
+	SeedRequestLogQueryParamsID = "rqlog_01seedreqlog5_000" // has query_json populated for include=query_params tests
 
 	// Tenant B (seeded in 0015_tenant_b_e2e.sql) — used for tenant isolation tests
 	SeedTenantBAccountID = "ac_tenant2_e2e_isolati"

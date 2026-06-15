@@ -90,7 +90,7 @@ func (r *requestLogRepoImpl) Create(ctx context.Context, rl *domain.RequestLog) 
 	return nil
 }
 
-func (r *requestLogRepoImpl) FindByID(ctx context.Context, id, targetAccountID string, includes []string) (*domain.RequestLogRead, *apierror.APIError) {
+func (r *requestLogRepoImpl) FindByID(ctx context.Context, id, callerAccountID string, includes []string) (*domain.RequestLogRead, *apierror.APIError) {
 	ctx, span := requestLogRepoTracer.Start(ctx, "repository.request_log.find_by_id")
 	defer span.End()
 	includeQueryJSON := includeJSONFieldParam(includes, "query_params")
@@ -103,7 +103,7 @@ func (r *requestLogRepoImpl) FindByID(ctx context.Context, id, targetAccountID s
 			IncludeRequestBodyJson:  includeRequestBody,
 			IncludeResponseBodyJson: includeResponseBody,
 			ID:                      id,
-			TargetAccountID:         db.NullString(targetAccountID),
+			CallerAccountID:         db.NullString(callerAccountID),
 		})
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
@@ -118,7 +118,7 @@ func (r *requestLogRepoImpl) FindByID(ctx context.Context, id, targetAccountID s
 		IncludeRequestBodyJson:  includeRequestBody,
 		IncludeResponseBodyJson: includeResponseBody,
 		ID:                      id,
-		TargetAccountID:         db.NullString(targetAccountID),
+		CallerAccountID:         db.NullString(callerAccountID),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -128,7 +128,7 @@ func (r *requestLogRepoImpl) FindByID(ctx context.Context, id, targetAccountID s
 	return read, nil
 }
 
-func (r *requestLogRepoImpl) List(ctx context.Context, targetAccountID string, filter *domain.ListRequestLogsFilter, includes []string) (*domain.ListRequestLogsResult, *apierror.APIError) {
+func (r *requestLogRepoImpl) List(ctx context.Context, callerAccountID string, filter *domain.ListRequestLogsFilter, includes []string) (*domain.ListRequestLogsResult, *apierror.APIError) {
 	ctx, span := requestLogRepoTracer.Start(ctx, "repository.request_log.list")
 	defer span.End()
 
@@ -161,7 +161,7 @@ func (r *requestLogRepoImpl) List(ctx context.Context, targetAccountID string, f
 
 	// actor_id stores the raw id the API exposes (user_id for user actors), so the
 	// caller's filter.ActorIDs match rl.actor_id directly — no translation.
-	rawSQL, args := buildListQuery(mode, dir, targetAccountID, filter,
+	rawSQL, args := buildListQuery(mode, dir, callerAccountID, filter,
 		includeQueryJSON, includeRequestBody, includeResponseBody, cur, limit+1)
 
 	rows, err := r.db.DB().QueryContext(ctx, rawSQL, args...)

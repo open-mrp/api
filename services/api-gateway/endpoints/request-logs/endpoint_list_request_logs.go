@@ -28,10 +28,14 @@ type ListRequestLogsRequest struct {
 	StatusCodeClasses []int32 `query:"status_code_classes"`
 	// Filter by API error code.
 	ErrorCodes []apierror.ErrorCode `query:"error_codes"`
-	// Filter by the _acting_ account: the account the actor belongs to, not the account targeted by the request.
+	// Filter by the _acting_ account: the account the actor belongs to (the log's `account.id`).
 	//
-	// This is usually your own account, but differs when another account acts on yours — for example a customer using a customer-portal API key, whose acting account is the customer's account. The request's target account is always your own account (the only account you are authorized to view request logs for), so this filter narrows by _who acted_, not by which account was acted upon.
-	AccountIDs []string `query:"account_ids"`
+	// Results are always scoped to logs where your account is either the acting account or the target account; this narrows that set to specific acting accounts. For example, pass a customer's account ID to see only requests that customer's actors made against your account.
+	ActorAccountIDs []string `query:"actor_account_ids"`
+	// Filter by the _target_ account: the account the request acted upon (the log's target account).
+	//
+	// Results are always scoped to logs where your account is either the acting account or the target account; this narrows that set to specific target accounts. For example, pass a supplier's account ID to see only requests your account made against that supplier.
+	TargetAccountIDs []string `query:"target_account_ids"`
 	// Filter by the actor identifier.
 	//
 	// Matches the log's `actor.id`: a user ID for `user` actors or an API key ID for `api_key` actors.

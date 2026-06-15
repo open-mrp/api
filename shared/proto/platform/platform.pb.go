@@ -1149,7 +1149,6 @@ type ListRequestLogsRequest struct {
 	Methods     []string               `protobuf:"bytes,3,rep,name=methods,proto3" json:"methods,omitempty"`
 	StatusCodes []int32                `protobuf:"varint,4,rep,packed,name=status_codes,json=statusCodes,proto3" json:"status_codes,omitempty"`
 	ErrorCodes  []string               `protobuf:"bytes,5,rep,name=error_codes,json=errorCodes,proto3" json:"error_codes,omitempty"`
-	AccountIds  []string               `protobuf:"bytes,6,rep,name=account_ids,json=accountIds,proto3" json:"account_ids,omitempty"`
 	// account_user.id when identity_type=user, or api_key.id when identity_type=api_key.
 	ActorIds         []string `protobuf:"bytes,7,rep,name=actor_ids,json=actorIds,proto3" json:"actor_ids,omitempty"`
 	ActorTypes       []string `protobuf:"bytes,8,rep,name=actor_types,json=actorTypes,proto3" json:"actor_types,omitempty"`
@@ -1164,8 +1163,14 @@ type ListRequestLogsRequest struct {
 	IdempotencyKey *string `protobuf:"bytes,18,opt,name=idempotency_key,json=idempotencyKey,proto3,oneof" json:"idempotency_key,omitempty"`
 	// Filter by HTTP status class: 1–5 for 1xx–5xx. OR'd with status_codes.
 	StatusCodeClasses []int32 `protobuf:"varint,19,rep,packed,name=status_code_classes,json=statusCodeClasses,proto3" json:"status_code_classes,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Filter by the acting account (request_log.account_id): the account the
+	// actor belongs to. Narrows within the caller's actor-or-target scope.
+	ActorAccountIds []string `protobuf:"bytes,20,rep,name=actor_account_ids,json=actorAccountIds,proto3" json:"actor_account_ids,omitempty"`
+	// Filter by the target account (request_log.target_account_id): the account
+	// the request acted upon. Narrows within the caller's actor-or-target scope.
+	TargetAccountIds []string `protobuf:"bytes,21,rep,name=target_account_ids,json=targetAccountIds,proto3" json:"target_account_ids,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *ListRequestLogsRequest) Reset() {
@@ -1229,13 +1234,6 @@ func (x *ListRequestLogsRequest) GetStatusCodes() []int32 {
 func (x *ListRequestLogsRequest) GetErrorCodes() []string {
 	if x != nil {
 		return x.ErrorCodes
-	}
-	return nil
-}
-
-func (x *ListRequestLogsRequest) GetAccountIds() []string {
-	if x != nil {
-		return x.AccountIds
 	}
 	return nil
 }
@@ -1313,6 +1311,20 @@ func (x *ListRequestLogsRequest) GetIdempotencyKey() string {
 func (x *ListRequestLogsRequest) GetStatusCodeClasses() []int32 {
 	if x != nil {
 		return x.StatusCodeClasses
+	}
+	return nil
+}
+
+func (x *ListRequestLogsRequest) GetActorAccountIds() []string {
+	if x != nil {
+		return x.ActorAccountIds
+	}
+	return nil
+}
+
+func (x *ListRequestLogsRequest) GetTargetAccountIds() []string {
+	if x != nil {
+		return x.TargetAccountIds
 	}
 	return nil
 }
@@ -1903,11 +1915,15 @@ type ListAuditEventsRequest struct {
 	Limit    int32    `protobuf:"varint,9,opt,name=limit,proto3" json:"limit,omitempty"`
 	Includes []string `protobuf:"bytes,10,rep,name=includes,proto3" json:"includes,omitempty"`
 	Query    *string  `protobuf:"bytes,11,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	// Filter by the acting account (audit_event.account_id): the account that
+	// performed the mutation. Narrows within the caller's actor-or-target scope.
+	ActorAccountIds []string `protobuf:"bytes,13,rep,name=actor_account_ids,json=actorAccountIds,proto3" json:"actor_account_ids,omitempty"`
 	// Filter by the target account (audit_event.target_account_id): the account
-	// the audited mutation was performed against.
-	AccountIds    []string `protobuf:"bytes,12,rep,name=account_ids,json=accountIds,proto3" json:"account_ids,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// the mutation was performed against. Narrows within the caller's
+	// actor-or-target scope.
+	TargetAccountIds []string `protobuf:"bytes,14,rep,name=target_account_ids,json=targetAccountIds,proto3" json:"target_account_ids,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *ListAuditEventsRequest) Reset() {
@@ -2010,9 +2026,16 @@ func (x *ListAuditEventsRequest) GetQuery() string {
 	return ""
 }
 
-func (x *ListAuditEventsRequest) GetAccountIds() []string {
+func (x *ListAuditEventsRequest) GetActorAccountIds() []string {
 	if x != nil {
-		return x.AccountIds
+		return x.ActorAccountIds
+	}
+	return nil
+}
+
+func (x *ListAuditEventsRequest) GetTargetAccountIds() []string {
+	if x != nil {
+		return x.TargetAccountIds
 	}
 	return nil
 }
@@ -2705,7 +2728,7 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\rhas_next_page\x18\x03 \x01(\bR\vhasNextPage\x12\"\n" +
 	"\rhas_prev_page\x18\x04 \x01(\bR\vhasPrevPageB\x0e\n" +
 	"\f_next_cursorB\x0e\n" +
-	"\f_prev_cursor\"\x84\x06\n" +
+	"\f_prev_cursor\"\xd0\x06\n" +
 	"\x16ListRequestLogsRequest\x12>\n" +
 	"\n" +
 	"start_date\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\tstartDate\x88\x01\x01\x12:\n" +
@@ -2713,9 +2736,7 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\amethods\x18\x03 \x03(\tR\amethods\x12!\n" +
 	"\fstatus_codes\x18\x04 \x03(\x05R\vstatusCodes\x12\x1f\n" +
 	"\verror_codes\x18\x05 \x03(\tR\n" +
-	"errorCodes\x12\x1f\n" +
-	"\vaccount_ids\x18\x06 \x03(\tR\n" +
-	"accountIds\x12\x1b\n" +
+	"errorCodes\x12\x1b\n" +
 	"\tactor_ids\x18\a \x03(\tR\bactorIds\x12\x1f\n" +
 	"\vactor_types\x18\b \x03(\tR\n" +
 	"actorTypes\x12\x1b\n" +
@@ -2727,15 +2748,17 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\x05hosts\x18\x10 \x03(\tR\x05hosts\x12)\n" +
 	"\x0emin_latency_us\x18\x11 \x01(\x03H\x04R\fminLatencyUs\x88\x01\x01\x12,\n" +
 	"\x0fidempotency_key\x18\x12 \x01(\tH\x05R\x0eidempotencyKey\x88\x01\x01\x12.\n" +
-	"\x13status_code_classes\x18\x13 \x03(\x05R\x11statusCodeClassesB\r\n" +
+	"\x13status_code_classes\x18\x13 \x03(\x05R\x11statusCodeClasses\x12*\n" +
+	"\x11actor_account_ids\x18\x14 \x03(\tR\x0factorAccountIds\x12,\n" +
+	"\x12target_account_ids\x18\x15 \x03(\tR\x10targetAccountIdsB\r\n" +
 	"\v_start_dateB\v\n" +
 	"\t_end_dateB\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_queryB\x11\n" +
 	"\x0f_min_latency_usB\x12\n" +
-	"\x10_idempotency_keyJ\x04\b\t\x10\n" +
+	"\x10_idempotency_keyJ\x04\b\x06\x10\aJ\x04\b\t\x10\n" +
 	"J\x04\b\n" +
-	"\x10\vR\n" +
+	"\x10\vR\vaccount_idsR\n" +
 	"actor_nameR\vexact_match\"\x87\x01\n" +
 	"\x17ListRequestLogsResponse\x12;\n" +
 	"\frequest_logs\x18\x01 \x03(\v2\x18.platform.RequestLogInfoR\vrequestLogs\x12/\n" +
@@ -2824,7 +2847,7 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\vaudit_event\x18\x01 \x01(\v2\x18.platform.AuditEventInfoR\n" +
 	"auditEvent\"4\n" +
 	"\x18CreateAuditEventResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xe3\x03\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xaf\x04\n" +
 	"\x16ListAuditEventsRequest\x12>\n" +
 	"\n" +
 	"start_date\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\tstartDate\x88\x01\x01\x12:\n" +
@@ -2837,14 +2860,14 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\x05limit\x18\t \x01(\x05R\x05limit\x12\x1a\n" +
 	"\bincludes\x18\n" +
 	" \x03(\tR\bincludes\x12\x19\n" +
-	"\x05query\x18\v \x01(\tH\x03R\x05query\x88\x01\x01\x12\x1f\n" +
-	"\vaccount_ids\x18\f \x03(\tR\n" +
-	"accountIdsB\r\n" +
+	"\x05query\x18\v \x01(\tH\x03R\x05query\x88\x01\x01\x12*\n" +
+	"\x11actor_account_ids\x18\r \x03(\tR\x0factorAccountIds\x12,\n" +
+	"\x12target_account_ids\x18\x0e \x03(\tR\x10targetAccountIdsB\r\n" +
 	"\v_start_dateB\v\n" +
 	"\t_end_dateB\t\n" +
 	"\a_cursorB\b\n" +
-	"\x06_queryJ\x04\b\a\x10\bR\n" +
-	"account_id\"\x87\x01\n" +
+	"\x06_queryJ\x04\b\a\x10\bJ\x04\b\f\x10\rR\n" +
+	"account_idR\vaccount_ids\"\x87\x01\n" +
 	"\x17ListAuditEventsResponse\x12;\n" +
 	"\faudit_events\x18\x01 \x03(\v2\x18.platform.AuditEventInfoR\vauditEvents\x12/\n" +
 	"\tpage_info\x18\x02 \x01(\v2\x12.platform.PageInfoR\bpageInfo\"B\n" +

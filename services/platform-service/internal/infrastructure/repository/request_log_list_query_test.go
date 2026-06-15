@@ -19,7 +19,7 @@ func emptyFilter() *domain.ListRequestLogsFilter {
 func TestBuildListQuery_NoFiltersEmitsOnlyBaselinePredicates(t *testing.T) {
 	sql, _ := buildListQuery(queryModeBase, pagination.DirectionForward, "acc_1", emptyFilter(), false, false, false, nil, 101)
 
-	mustContain(t, sql, "WHERE rl.target_account_id = ?")
+	mustContain(t, sql, "WHERE (rl.account_id = ? OR rl.target_account_id = ?)")
 	mustContain(t, sql, "ORDER BY rl.occurred_at DESC, rl.id DESC LIMIT ?")
 
 	forbidden := []string{
@@ -28,6 +28,7 @@ func TestBuildListQuery_NoFiltersEmitsOnlyBaselinePredicates(t *testing.T) {
 		"rl.status_code IN",
 		"rl.error_code IN",
 		"rl.account_id IN",
+		"rl.target_account_id IN",
 		"rl.actor_id IN",
 		"rl.normalized_route IN",
 		"rl.host IN",
@@ -175,7 +176,8 @@ func TestBuildListQuery_SliceFiltersExpandToMatchingPlaceholderCounts(t *testing
 	f.Methods = []string{"GET", "POST"}
 	f.StatusCodes = []int32{200, 404, 500}
 	f.ErrorCodes = []string{"not_found"}
-	f.AccountIDs = []string{"acct_a", "acct_b"}
+	f.ActorAccountIDs = []string{"acct_a", "acct_b"}
+	f.TargetAccountIDs = []string{"acct_c"}
 	f.ActorIDs = []string{"actu_1", "actu_2", "actu_3"}
 	f.ActorTypes = []string{"user"}
 	f.NormalizedRoutes = []string{"/a", "/b"}
@@ -187,6 +189,7 @@ func TestBuildListQuery_SliceFiltersExpandToMatchingPlaceholderCounts(t *testing
 	mustContain(t, sql, "rl.status_code IN (?, ?, ?)")
 	mustContain(t, sql, "rl.error_code IN (?)")
 	mustContain(t, sql, "rl.account_id IN (?, ?)")
+	mustContain(t, sql, "rl.target_account_id IN (?)")
 	mustContain(t, sql, "rl.actor_id IN (?, ?, ?)")
 	mustContain(t, sql, "rl.identity_type IN (?)")
 	// normalized_route is compared on route shape (param tokens collapsed to
@@ -194,10 +197,11 @@ func TestBuildListQuery_SliceFiltersExpandToMatchingPlaceholderCounts(t *testing
 	mustContain(t, sql, normalizedRouteColumnExpr+" IN (?, ?)")
 	mustContain(t, sql, "rl.host IN (?)")
 
-	// 3 JSON-include booleans (query/request/response) + target_account_id +
-	// 2 methods + 3 status codes + 1 error code + 2 account ids +
-	// 3 actor ids + 1 actor type + 2 routes + 1 host + limit = 20
-	want := 3 + 1 + 2 + 3 + 1 + 2 + 3 + 1 + 2 + 1 + 1
+	// 3 JSON-include booleans (query/request/response) + 2 caller-account scope
+	// binds (account_id OR target_account_id) + 2 methods + 3 status codes +
+	// 1 error code + 2 actor account ids + 1 target account id + 3 actor ids +
+	// 1 actor type + 2 routes + 1 host + limit = 22
+	want := 3 + 2 + 2 + 3 + 1 + 2 + 1 + 3 + 1 + 2 + 1 + 1
 	if len(args) != want {
 		t.Errorf("unexpected arg count: got %d, want %d; args=%#v", len(args), want, args)
 	}

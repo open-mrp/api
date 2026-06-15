@@ -37,6 +37,12 @@ sql:
             go_type:
               import: "github.com/augno/api/shared/db"
               type: "NullableRawMessage"
+          # target_account_id is nullable until the backfill + non-null migration
+          # land. Pin it so the equality predicate in the actor-or-target OR scope
+          # can't trip sqlc into inferring NOT NULL — which would panic scanning
+          # legacy NULL rows that match the scope via account_id.
+          - column: "audit_event.target_account_id"
+            go_type: "database/sql.NullString"
           - column: "audit_event.changes"
             go_type:
               import: "github.com/augno/api/shared/db"

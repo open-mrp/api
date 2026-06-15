@@ -604,14 +604,14 @@ func TestAuditEvents_IncludeAccount(t *testing.T) {
 	assert.NotEmpty(t, jsonField(account, "name"))
 }
 
-func TestAuditEvents_FilterByAccountID(t *testing.T) {
+func TestAuditEvents_FilterByTargetAccountID(t *testing.T) {
 	t.Parallel()
 	wantEventID, accountID := firstAuditEventWithAccount(t)
 
 	list, _, err := apiClient.GetList(auditEventsPath, url.Values{
-		"account_ids": {accountID},
-		"include":     {"account"},
-		"limit":       {"25"},
+		"target_account_ids": {accountID},
+		"include":            {"account"},
+		"limit":              {"25"},
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, list.Data, "filtering by a real target account should return events")
@@ -620,9 +620,9 @@ func TestAuditEvents_FilterByAccountID(t *testing.T) {
 	for _, item := range list.Data {
 		m := parseJSON(item)
 		account := jsonObject(m, "account")
-		require.NotNil(t, account, "every event returned under an account_ids filter must have a target account")
+		require.NotNil(t, account, "every event returned under a target_account_ids filter must have a target account")
 		assert.Equal(t, accountID, jsonField(account, "id"),
-			"account_ids filter must only return events targeting the requested account")
+			"target_account_ids filter must only return events targeting the requested account")
 		if jsonField(m, "id") == wantEventID {
 			foundWanted = true
 		}
@@ -630,12 +630,92 @@ func TestAuditEvents_FilterByAccountID(t *testing.T) {
 	assert.True(t, foundWanted, "the seed event targeting the account should appear in the filtered results")
 }
 
-func TestAuditEvents_FilterByAccountIDNoMatch(t *testing.T) {
+func TestAuditEvents_FilterByTargetAccountIDNoMatch(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(auditEventsPath, url.Values{
-		"account_ids": {"ac_doesnotexist00000000000"},
-		"limit":       {"25"},
+		"target_account_ids": {"ac_doesnotexist00000000000"},
+		"limit":              {"25"},
 	})
 	require.NoError(t, err)
 	assert.Empty(t, list.Data, "filtering by an account with no audit events should return no results")
+}
+
+// auditEventIDSet collects the `id` of each audit event in a list response.
+func auditEventIDSet(data []json.RawMessage) map[string]bool {
+	ids := make(map[string]bool, len(data))
+	for _, item := range data {
+		ids[jsonField(parseJSON(item), "id")] = true
+	}
+	return ids
+}
+
+func assertAuditEventMembership(t *testing.T, data []json.RawMessage, wantPresent, wantAbsent []string) {
+	t.Helper()
+	ids := auditEventIDSet(data)
+	for _, id := range wantPresent {
+		assert.True(t, ids[id], "expected audit event %s in filtered results", id)
+	}
+	for _, id := range wantAbsent {
+		assert.False(t, ids[id], "audit event %s should have been excluded by the filter", id)
+	}
+}
+
+// auditScopeCohort lists the actor-or-target scope cohort by its four resource_ids
+// (the caller is the seed account) with the given extra params applied.
+func auditScopeCohort(t *testing.T, extra url.Values) *ListResponse {
+	t.Helper()
+	params := url.Values{
+		"resource_ids": {
+			SeedAuditScopeActorRes,
+			SeedAuditScopeTargetRes,
+			SeedAuditScopeBothRes,
+			SeedAuditScopeNeitherRes,
+		},
+		"limit": {"50"},
+	}
+	for k, vs := range extra {
+		for _, v := range vs {
+			params.Add(k, v)
+		}
+	}
+	list, _, err := apiClient.GetList(auditEventsPath, params)
+	require.NoError(t, err)
+	return list
+}
+
+// TestAuditEvents_ActorOrTargetScope_DefaultReturnsBothSides verifies the security
+// scope: with no account filter the caller (seed account) sees every event where
+// its account is the actor account or the target account, and never one where it is
+// neither.
+func TestAuditEvents_ActorOrTargetScope_DefaultReturnsBothSides(t *testing.T) {
+	t.Parallel()
+	list := auditScopeCohort(t, nil)
+	assert.Len(t, list.Data, 3, "scope should return the actor-side, target-side, and both events")
+	assertAuditEventMembership(t, list.Data,
+		[]string{SeedAuditScopeActorID, SeedAuditScopeTargetID, SeedAuditScopeBothID},
+		[]string{SeedAuditScopeNeitherID})
+}
+
+// TestAuditEvents_FilterByActorAccountIDs_NarrowsWithinScope filters the scope
+// cohort to the acting-account side: only events whose account_id is the seed
+// account remain (actor-side + both).
+func TestAuditEvents_FilterByActorAccountIDs_NarrowsWithinScope(t *testing.T) {
+	t.Parallel()
+	list := auditScopeCohort(t, url.Values{"actor_account_ids": {SeedAccountID}})
+	assert.Len(t, list.Data, 2, "actor_account_ids=[seed] should return the actor-side and both events")
+	assertAuditEventMembership(t, list.Data,
+		[]string{SeedAuditScopeActorID, SeedAuditScopeBothID},
+		[]string{SeedAuditScopeTargetID, SeedAuditScopeNeitherID})
+}
+
+// TestAuditEvents_FilterByTargetAccountIDs_NarrowsWithinScope filters the scope
+// cohort to the target-account side: only events whose target_account_id is the
+// seed account remain (target-side + both).
+func TestAuditEvents_FilterByTargetAccountIDs_NarrowsWithinScope(t *testing.T) {
+	t.Parallel()
+	list := auditScopeCohort(t, url.Values{"target_account_ids": {SeedAccountID}})
+	assert.Len(t, list.Data, 2, "target_account_ids=[seed] should return the target-side and both events")
+	assertAuditEventMembership(t, list.Data,
+		[]string{SeedAuditScopeTargetID, SeedAuditScopeBothID},
+		[]string{SeedAuditScopeActorID, SeedAuditScopeNeitherID})
 }

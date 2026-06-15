@@ -53,15 +53,16 @@ func NewAuditEventSvc(config *AuditEventSvcConfig) AuditEventSvc {
 
 func (m *auditEventSvcImpl) ListAuditEvents(ctx context.Context, req *ListAuditEventsRequest) (*apiresource.List[apiresource.AuditEvent], *apierror.APIError) {
 	pbReq := &pb.ListAuditEventsRequest{
-		ResourceTypes: stringsFromObjectTypes(req.ResourceTypes),
-		ResourceIds:   req.ResourceIDs,
-		ActorIds:      req.ActorIDs,
-		Actions:       stringsFromActions(req.Actions),
-		AccountIds:    req.AccountIDs,
-		Query:         req.Query,
-		Cursor:        req.Cursor,
-		Limit:         req.Limit,
-		Includes:      resourcekit.FilterIncludes(ctx, "actor", "changes", "metadata"),
+		ResourceTypes:    stringsFromObjectTypes(req.ResourceTypes),
+		ResourceIds:      req.ResourceIDs,
+		ActorIds:         req.ActorIDs,
+		Actions:          stringsFromActions(req.Actions),
+		ActorAccountIds:  req.ActorAccountIDs,
+		TargetAccountIds: req.TargetAccountIDs,
+		Query:            req.Query,
+		Cursor:           req.Cursor,
+		Limit:            req.Limit,
+		Includes:         resourcekit.FilterIncludes(ctx, "actor", "changes", "metadata"),
 	}
 
 	if req.StartDate != nil && !req.StartDate.IsZero() {

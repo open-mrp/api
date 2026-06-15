@@ -62,9 +62,9 @@ type RequestLog struct {
 	OccurredAt time.Time `json:"occurred_at" validate:"required"`
 	// When the log entry was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// Account _targeted_ by the request — your own account, since that is the only account you can view request logs for.
+	// Account _targeted_ by the request: the account the request acted upon.
 	//
-	// This is the request's target, not the acting account. To filter by who acted (which may be another account operating on yours), use the `account_ids` query parameter, which matches the acting account instead.
+	// Results are scoped to logs where your account is either the acting account or the target account. Use the `target_account_ids` query parameter to filter by which account was acted upon, and `actor_account_ids` to filter by who acted.
 	Account *Account `json:"account" expandable:"true"`
 	// Actor who made the request.
 	Actor *Actor `json:"actor" expandable:"true"`

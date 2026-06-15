@@ -199,6 +199,8 @@ func sampleQueryExampleForOpenAPIName(openAPIParam string) any {
 		"carrier_ids":          apiresource.SampleCarrierID,
 		"service_level_ids":    apiresource.SampleServiceLevelID,
 		"account_ids":          apiresource.SampleAccountID,
+		"actor_account_ids":    apiresource.SampleAccountID,
+		"target_account_ids":   apiresource.SampleAccountID,
 		"actor_ids":            apiresource.SampleUserID,
 		"resource_ids":         apiresource.SampleAuditEventResourceID,
 		"transaction_ids":      apiresource.SampleTransactionDetailID,

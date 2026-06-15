@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.25.2](https://github.com/Augno/api/compare/v0.25.1...v0.25.2) (2026-06-15)
+
+
+### Bug Fixes
+
+* **ci:** avoid OIDC in manual SDK generation ([#344](https://github.com/Augno/api/issues/344)) ([dd139f7](https://github.com/Augno/api/commit/dd139f759ff3add62fcffbdd5ed04557caed2554))
+* **ci:** avoid persisting sdk checkout token ([#342](https://github.com/Augno/api/issues/342)) ([e7969f9](https://github.com/Augno/api/commit/e7969f9584d9e4103b1572993341467f8512129e))
+* **core-service:** enforce address RBAC for no-role internal users ([#345](https://github.com/Augno/api/issues/345)) ([503eabb](https://github.com/Augno/api/commit/503eabb24fe71766d8a40192b1c07b36c284c4de))
+* harden manual MCP deployment ([#343](https://github.com/Augno/api/issues/343)) ([b5e4c62](https://github.com/Augno/api/commit/b5e4c62aa5493fb482ee446316afa54a288b3852))
+* harden manual release resume ([#341](https://github.com/Augno/api/issues/341)) ([0d2a3c2](https://github.com/Augno/api/commit/0d2a3c22deb333de78af721ba54a905c650ddff9))
+* harden release terraform gate ([#349](https://github.com/Augno/api/issues/349)) ([075a7f4](https://github.com/Augno/api/commit/075a7f4fec384ac70da8b90267e399fb8e2d1e04))
+* permission issue will be fixed in the future ([ee6e7e0](https://github.com/Augno/api/commit/ee6e7e0ad658586e326fe7a2eac10a49b9b67bef))
+* preserve intentional audit update events ([#347](https://github.com/Augno/api/issues/347)) ([9d56f07](https://github.com/Augno/api/commit/9d56f07f89012529dc45b47cc963919752bfe737))
+* preserve target account on async audit events ([#346](https://github.com/Augno/api/issues/346)) ([68c762e](https://github.com/Augno/api/commit/68c762ef7af0f17fb9dc3f8b7d0592e7ea4c7af6))
+* prevent rotating revoked api keys ([#348](https://github.com/Augno/api/issues/348)) ([bd8a7a1](https://github.com/Augno/api/commit/bd8a7a1d2cda5ed0ca5491f9b0e97d38125b5919))
+* use read-only role for terraform-ci PR plans ([#340](https://github.com/Augno/api/issues/340)) ([4e614d3](https://github.com/Augno/api/commit/4e614d3b21e138e28229a8adbe8558c97223fee5))
+
 ## [0.25.1](https://github.com/Augno/api/compare/v0.25.0...v0.25.1) (2026-06-15)
 
 

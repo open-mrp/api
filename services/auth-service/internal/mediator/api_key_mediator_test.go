@@ -730,6 +730,37 @@ func (suite *APIKeyMedTestSuite) TestRotate_SchedulesFutureRevocation() {
 		"old key should be revoked at the scheduled instant")
 }
 
+func (suite *APIKeyMedTestSuite) TestRotate_AlreadyRevoked_ReturnsError() {
+	ctx := context.Background()
+	apiKeyTypeID := "apikey_revoked"
+	ownerAccountID := "ac_123456789012"
+	revokedAt := time.Now().UTC().Add(-time.Hour)
+	revokeAt := time.Now().UTC().Add(5 * 24 * time.Hour)
+
+	oldKey := &apikey.APIKey{
+		ID:             10,
+		TypeID:         apiKeyTypeID,
+		OwnerAccountID: ownerAccountID,
+		RoleID:         "rl_123456789012",
+		RevokedAt:      &revokedAt,
+	}
+
+	suite.apiKeyRepo.EXPECT().
+		FindByTypeID(gomock.Any(), apiKeyTypeID, gomock.Nil()).
+		Return(oldKey, nil).
+		Times(1)
+
+	_, _, err := suite.apiKeyMed.Rotate(ctx, domain.APIKeyRotateInput{
+		AccountMode:    constants.AccountModeSandbox,
+		APIKeyTypeID:   apiKeyTypeID,
+		OwnerAccountID: ownerAccountID,
+		RevokeAt:       &revokeAt,
+	})
+
+	suite.Require().NotNil(err, "already-revoked API keys must not be rotated")
+	suite.Equal(apierror.ErrorCodeRevokedAPIKey, err.Code)
+}
+
 func (suite *APIKeyMedTestSuite) TestRotate_RevokeAtBeyondCap_ReturnsError() {
 	ctx := context.Background()
 	apiKeyTypeID := "apikey_toofar"

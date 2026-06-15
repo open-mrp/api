@@ -215,6 +215,9 @@ func (s *apiKeyMedImpl) Rotate(ctx context.Context, input domain.APIKeyRotateInp
 	if oldKey.OwnerAccountID != input.OwnerAccountID {
 		return "", nil, apierror.NewResourceNotFoundError("API key not found.")
 	}
+	if oldKey.IsRevoked() {
+		return "", nil, apierror.NewRevokedAPIKeyError(apikey.ErrAPIKeyRevoked)
+	}
 
 	// Determine when the old key is revoked. Default is immediate (nil — the
 	// database clock is used); a future RevokeAt schedules revocation (the old

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.25.4](https://github.com/Augno/api/compare/v0.25.3...v0.25.4) (2026-06-15)
+
+
+### Bug Fixes
+
+* internal sdk release please ([#353](https://github.com/Augno/api/issues/353)) ([a354e9e](https://github.com/Augno/api/commit/a354e9e999d218e46275eac9a46a19e294fc1ba0))
+
 ## [0.25.3](https://github.com/Augno/api/compare/v0.25.2...v0.25.3) (2026-06-15)
 
 

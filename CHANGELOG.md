@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.25.0](https://github.com/Augno/api/compare/v0.24.0...v0.25.0) (2026-06-15)
+
+
+### Features
+
+* add filters for target and acting accounts in request logs and audit events ([#334](https://github.com/Augno/api/issues/334)) ([6efc522](https://github.com/Augno/api/commit/6efc522f7cc1005888cc65d56677809ae0da9e31))
+
 ## [0.24.0](https://github.com/Augno/api/compare/v0.23.4...v0.24.0) (2026-06-12)
 
 

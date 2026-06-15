@@ -57,7 +57,6 @@ name: Generate SDKs (reusable)
 
 permissions:
   contents: read
-  id-token: write
 
 env:
   STLC_GITHUB_ORG: sdk-gen
@@ -93,10 +92,55 @@ jobs:
           echo "public=true" >> "$GITHUB_OUTPUT"
           echo "S3 specs source without caller flags; assuming both changed."
 
+  fetch-openapi-specs-s3:
+    name: Fetch OpenAPI specs from S3
+    needs: spec-changes
+    if: inputs.openapi_specs_source == 's3' && (needs.spec-changes.outputs.internal == 'true' || needs.spec-changes.outputs.public == 'true')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/github-actions-openapi-reader
+          aws-region: us-east-2
+
+      - name: Download OpenAPI specs and Stainless configs from S3
+        run: |
+          mkdir -p specs
+          ./scripts/fetch-openapi-spec-s3.sh internal specs/internal_openapi_spec.json current
+          ./scripts/fetch-openapi-spec-s3.sh public specs/public_openapi_spec.json current
+          ./scripts/fetch-openapi-spec-s3.sh internal stainless/internal/stainless.yml current stainless
+          ./scripts/fetch-openapi-spec-s3.sh public stainless/public/stainless.yml current stainless
+
+      - name: Upload OpenAPI specs and Stainless configs
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi-stainless-inputs
+          path: |
+            specs/internal_openapi_spec.json
+            specs/public_openapi_spec.json
+            stainless/internal/stainless.yml
+            stainless/public/stainless.yml
+          if-no-files-found: error
+
   generate:
     name: Generate ${{ matrix.sdk }}
-    needs: spec-changes
+    needs: [spec-changes, fetch-openapi-specs-s3]
+    if: |
+      always() &&
+      needs.spec-changes.result == 'success' &&
+      (inputs.openapi_specs_source != 's3' || (needs.spec-changes.outputs.internal != 'true' && needs.spec-changes.outputs.public != 'true') || needs.fetch-openapi-specs-s3.result == 'success')
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -152,25 +196,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Configure AWS Credentials
+      - name: Download OpenAPI specs and Stainless configs
         if: matrix.spec_changed == 'true' && inputs.openapi_specs_source == 's3'
-        uses: aws-actions/configure-aws-credentials@v6
+        uses: actions/download-artifact@v4
         with:
-          role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/github-actions-openapi-reader
-          aws-region: us-east-2
-
-      - name: Download OpenAPI specs and Stainless configs from S3
-        if: matrix.spec_changed == 'true' && inputs.openapi_specs_source == 's3'
-        run: |
-          mkdir -p specs
-          ./scripts/fetch-openapi-spec-s3.sh internal specs/internal_openapi_spec.json current
-          ./scripts/fetch-openapi-spec-s3.sh public specs/public_openapi_spec.json current
-          # Also pull the freshly generated stainless.yml that publish-openapi-specs
-          # uploaded alongside each spec, so codegen uses config that matches the spec
-          # instead of a possibly-stale committed stainless.yml (resources drift when
-          # a schema change lands without re-running `make openapi-stainless`).
-          ./scripts/fetch-openapi-spec-s3.sh internal stainless/internal/stainless.yml current stainless
-          ./scripts/fetch-openapi-spec-s3.sh public stainless/public/stainless.yml current stainless
+          name: openapi-stainless-inputs
 
       - name: Set up Go
         if: matrix.spec_changed == 'true' && inputs.openapi_specs_source == 'generate'

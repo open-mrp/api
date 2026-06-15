@@ -650,7 +650,7 @@ func (s *pickSvcImpl) PackPick(ctx context.Context, pickID string, shipmentCaseC
 				Action:       constants.AuditActionUpdate,
 				ResourceType: constants.ObjectTypePick,
 				ResourceID:   pick.ID,
-				Changes:      nil,
+				Metadata:     map[string]any{"packed": true},
 			}); apiErr != nil {
 				return apiErr
 			}

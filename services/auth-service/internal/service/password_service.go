@@ -298,7 +298,7 @@ func (s *passwordSvcImpl) UpdatePassword(ctx context.Context, oldPassword, newPa
 				Action:       constants.AuditActionUpdate,
 				ResourceType: constants.ObjectTypeUser,
 				ResourceID:   identity.Actor.ID,
-				Changes:      nil,
+				Metadata:     map[string]any{"password_rotated": true},
 			}); apiErr != nil {
 				return apiErr
 			}

@@ -103,13 +103,16 @@ func (c *AuditEventConsumer) handleMessage(ctx context.Context, msg amqp091.Deli
 		requestID = &s
 	}
 
+	targetAccountID := identity.Target.AccountID
+
 	event := &domain.AuditEvent{
 		ID: payload.TypeID,
 
-		ActorID:      identity.Actor.ID,
-		ActorType:    string(identity.Actor.RelationType),
-		IdentityType: string(identity.Type),
-		AccountID:    identity.Target.AccountID,
+		ActorID:         identity.Actor.ID,
+		ActorType:       string(identity.Actor.RelationType),
+		IdentityType:    string(identity.Type),
+		AccountID:       identity.Target.AccountID,
+		TargetAccountID: &targetAccountID,
 
 		Action:       payload.Action,
 		ResourceType: constants.ObjectType(payload.ResourceType),

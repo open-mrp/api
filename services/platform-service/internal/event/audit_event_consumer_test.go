@@ -108,6 +108,8 @@ func (s *AuditEventConsumerTestSuite) TestHandleMessage_Success() {
 			s.Equal(string(types.IdentityRelationTypeInternal), event.ActorType)
 			s.Equal(string(types.IdentityActorTypeUser), event.IdentityType)
 			s.Equal("acct_1", event.AccountID)
+			s.NotNil(event.TargetAccountID)
+			s.Equal("acct_1", *event.TargetAccountID)
 			s.Equal(constants.AuditActionCreate, event.Action)
 			s.Equal(constants.ObjectType("unit"), event.ResourceType)
 			s.Equal("unit_1", event.ResourceID)

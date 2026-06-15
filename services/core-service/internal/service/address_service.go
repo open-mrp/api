@@ -554,11 +554,6 @@ func checkAddressReadPermission(identity *types.Identity) *apierror.APIError {
 	if !identity.IsInternalActor() {
 		return nil
 	}
-	// TODO: implement a proper default permission strategy for users without roles.
-	// For now, users with no role are granted full address access.
-	if !identity.IsRoleSet() {
-		return nil
-	}
 	if identity.IsTargetCustomerAccount() {
 		return identity.CheckHasPermission(types.PermissionDomainCustomers, types.ActionRead)
 	}
@@ -572,10 +567,6 @@ func checkAddressReadPermission(identity *types.Identity) *apierror.APIError {
 // Internal actors need addresses:{action} for their own account, or customers:update / suppliers:update for external accounts.
 func checkAddressWritePermission(identity *types.Identity, action types.Action) *apierror.APIError {
 	if !identity.IsInternalActor() {
-		return nil
-	}
-	// TODO: implement a proper default permission strategy for users without roles.
-	if !identity.IsRoleSet() {
 		return nil
 	}
 	if identity.IsTargetCustomerAccount() {

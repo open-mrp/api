@@ -169,8 +169,12 @@ jobs:
     if: |
       always() &&
       needs.release-please.outputs.release_created == 'true' &&
+      needs.detect-changes.result == 'success' &&
       needs.detect-changes.outputs.has_build_services == 'true' &&
-      (needs.terraform.result == 'success' || needs.terraform.result == 'skipped')
+      (
+        needs.terraform.result == 'success' ||
+        (needs.terraform.result == 'skipped' && needs.detect-changes.outputs.terraform_changed != 'true')
+      )
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -219,7 +223,11 @@ jobs:
     if: |
       always() &&
       needs.release-please.outputs.release_created == 'true' &&
-      (needs.terraform.result == 'success' || needs.terraform.result == 'skipped') &&
+      needs.detect-changes.result == 'success' &&
+      (
+        needs.terraform.result == 'success' ||
+        (needs.terraform.result == 'skipped' && needs.detect-changes.outputs.terraform_changed != 'true')
+      ) &&
       (needs.build-push.result == 'success' || needs.build-push.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.25.3](https://github.com/Augno/api/compare/v0.25.2...v0.25.3) (2026-06-15)
+
+
+### Bug Fixes
+
+* issue with s3 storage ([#351](https://github.com/Augno/api/issues/351)) ([f59b693](https://github.com/Augno/api/commit/f59b6930b00c221d5d9e025321b26f520e77d5d1))
+
 ## [0.25.2](https://github.com/Augno/api/compare/v0.25.1...v0.25.2) (2026-06-15)
 
 

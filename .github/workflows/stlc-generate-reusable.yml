@@ -8,7 +8,7 @@ name: Generate SDKs (reusable)
         required: true
         type: string
       push_branch:
-        description: Branch on each SDK repo to push SDK updates and changesets (typically main)
+        description: Branch on each SDK repo to push SDK updates (typically main)
         required: false
         type: string
         default: main
@@ -104,7 +104,13 @@ jobs:
           - sdk: internal
             workspace: stainless/internal
             targets: typescript
-            release: changesets
+            # release-please, not changesets: the v0.23.2 regen dropped internal-sdk's
+            # Changesets tooling (@changesets/cli + scripts/release + the Changesets
+            # Release workflow were removed). It now releases via release-please (a
+            # committed release.yml in Augno/internal-sdk), publishing to GitHub
+            # Packages, driven by the conventional "fix(sdk): sync ..." commit produced
+            # below; the "Add changeset" steps no longer apply.
+            release: release-please
             pr_repo: Augno/internal-sdk
             package_name: "@augno/internal-sdk"
             spec_changed: ${{ needs.spec-changes.outputs.internal }}
@@ -115,7 +121,7 @@ jobs:
             # Changesets (the .changeset dir + Release workflow were removed) to
             # release-please in the v0.23.2 regen. Like python/go, it derives its
             # bump from the conventional "fix(sdk): sync with deployed API vX.Y.Z"
-            # commit produced below; the "Add changeset" steps no longer apply.
+            # commit produced below.
             release: release-please
             pr_repo: Augno/typescript-sdk
             package_name: "@augno/sdk"
@@ -217,7 +223,7 @@ jobs:
             bump=patch
           fi
           echo "bump=$bump" >> "$GITHUB_OUTPUT"
-          echo "API ${API_VERSION} -> SDK changeset bump: ${bump}"
+          echo "API ${API_VERSION} -> SDK bump: ${bump}"
 
       - name: Generate SDK and push
         if: matrix.spec_changed == 'true'
@@ -256,75 +262,11 @@ jobs:
             --targets "$TARGETS" \
             "${commit_args[@]}"
 
-      # Changesets-managed SDKs (TypeScript) need an explicit .changeset/*.md to cut a
-      # release. release-please SDKs (python, go) instead derive the bump from the
-      # conventional-commit sync message produced by "Generate SDK and push" above.
-      - name: Add changeset to SDK commit and push
-        if: matrix.release == 'changesets' && matrix.spec_changed == 'true' && steps.build.outcome == 'success' && inputs.open_pr != true
-        env:
-          GH_TOKEN: ${{ secrets.SDK_WRITE_TOKEN }}
-          API_VERSION: ${{ inputs.api_version }}
-          BUMP: ${{ steps.bump.outputs.bump }}
-          BRANCH: ${{ inputs.push_branch }}
-          PKG_NAME: ${{ matrix.package_name }}
-          REPO: ${{ matrix.pr_repo }}
-        run: |
-          set -euo pipefail
-          safe_ver="${API_VERSION//\//-}"
-          cs_file=".changeset/sync-api-${safe_ver}.md"
-          work="$(mktemp -d)"
-          cd "$work"
-          gh repo clone "$REPO" sdk-repo -- --branch "$BRANCH" --single-branch
-          cd sdk-repo
-          git pull --ff-only origin "$BRANCH"
-          if [ -f "$cs_file" ]; then
-            echo "Changeset already on ${BRANCH} ($cs_file); skipping amend."
-            exit 0
-          fi
-          mkdir -p .changeset
-          {
-            echo "---"
-            echo "'${PKG_NAME}': ${BUMP}"
-            echo "---"
-            echo ""
-            echo "Sync SDK with deployed Augno API ${API_VERSION}."
-          } >"$cs_file"
-          git add "$cs_file"
-          git commit --amend --no-edit
-          git push --force-with-lease origin "HEAD:${BRANCH}"
-
-      - name: Add changeset for npm release (changesets)
-        if: matrix.release == 'changesets' && matrix.spec_changed == 'true' && steps.build.outcome == 'success' && inputs.open_pr
-        env:
-          GH_TOKEN: ${{ secrets.SDK_WRITE_TOKEN }}
-          API_VERSION: ${{ inputs.api_version }}
-          BUMP: ${{ steps.bump.outputs.bump }}
-          BRANCH: ${{ inputs.push_branch }}
-          PKG_NAME: ${{ matrix.package_name }}
-          REPO: ${{ matrix.pr_repo }}
-        run: |
-          set -euo pipefail
-          safe_ver="${API_VERSION//\//-}"
-          work="$(mktemp -d)"
-          cd "$work"
-          gh repo clone "$REPO" sdk-repo -- --branch "$BRANCH" --single-branch
-          cd sdk-repo
-          mkdir -p .changeset
-          cs_file=".changeset/sync-api-${safe_ver}.md"
-          if [ -f "$cs_file" ]; then
-            echo "Changeset already exists ($cs_file); skipping commit."
-            exit 0
-          fi
-          {
-            echo "---"
-            echo "'${PKG_NAME}': ${BUMP}"
-            echo "---"
-            echo ""
-            echo "Sync SDK with deployed Augno API ${API_VERSION}."
-          } >"$cs_file"
-          git add "$cs_file"
-          git commit -m "chore(sdk): add changeset for API ${API_VERSION}"
-          git push origin "HEAD:${BRANCH}"
+      # All SDK targets now release via release-please (python, go, public TS, and
+      # internal TS): each derives its bump from the conventional-commit sync
+      # message produced by "Generate SDK and push" above, so no explicit
+      # .changeset/*.md is added. (Internal-sdk publishes to GitHub Packages rather
+      # than npmjs, but still via release-please — see its committed release.yml.)
 
       - name: Open pull request on SDK repo
         if: matrix.spec_changed == 'true' && success() && inputs.open_pr
@@ -373,7 +315,7 @@ jobs:
               echo "OpenAPI specs and Stainless configs were generated in this job with \`make openapi-stainless-quiet\`."
             fi
             echo ""
-            echo "Review and merge this PR. The SDK repo's Changesets release workflow will open **chore: version packages** when needed; merge that PR to publish to GitHub Packages."
+            echo "Review and merge this PR. The SDK repo's release-please workflow will open a **release: <version>** PR when needed; merge that PR to publish."
             echo ""
             echo "Release automation pushes directly to \`${branch}\` instead; use \`open_pr\` only for manual workflow_dispatch runs."
           } > "$body_file"

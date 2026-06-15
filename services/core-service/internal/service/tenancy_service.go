@@ -230,14 +230,15 @@ func (s *tenancySvcImpl) GetCurrentUser(ctx context.Context, userID string, targ
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	if targetAccountID != nil {
+	if targetAccountID != nil && user.ImageURL != nil {
+		// A non-null user.image_url is the authoritative avatar existence signal
+		// (set only on photo upload), so we presign directly instead of doing an
+		// S3 HeadObject — presigning is a local SigV4 operation with no network
+		// I/O, keeping /me off the S3 critical path. On any signing error we
+		// simply leave the persisted image_url value in place.
 		key := *targetAccountID + "/" + userID + ".png"
-		exists, _ := s.s3Client.FileExists(ctx, s.userPhotosBucket, key)
-		if exists {
-			url, apiErr := s.s3Client.GetPresignedURL(ctx, s.userPhotosBucket, key, 60*time.Minute)
-			if apiErr == nil {
-				user.ImageURL = &url
-			}
+		if url, apiErr := s.s3Client.GetPresignedURL(ctx, s.userPhotosBucket, key, 60*time.Minute); apiErr == nil {
+			user.ImageURL = &url
 		}
 	}
 

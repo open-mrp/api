@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net/http"
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	"github.com/augno/api/shared/appctx"
@@ -104,8 +105,8 @@ func (p *requestLogOutboxPublisher) Create(ctx context.Context, rl *appctx.Reque
 			slog.Error("Failed to save request log to outbox", "error", err, "request_id", rl.ID)
 		}
 
-		// Send an email alert for 5xx errors (skip in development mode)
-		if rl.StatusCode >= 500 && p.platformMode != constants.PlatformModeDevelopment {
+		// Send an email alert for 5xx errors and 408 timeouts (skip in development mode)
+		if (rl.StatusCode >= 500 || rl.StatusCode == http.StatusRequestTimeout) && p.platformMode != constants.PlatformModeDevelopment {
 			p.publishErrorAlert(rl)
 		}
 	}()

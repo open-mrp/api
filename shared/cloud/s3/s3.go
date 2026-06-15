@@ -11,6 +11,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
@@ -33,8 +34,18 @@ type Client struct {
 }
 
 // NewClient creates a new S3 client using the given AWS region.
+//
+// The EC2 IMDS credential provider is disabled: pods receive credentials via
+// IRSA (web identity token), never the node instance role, and IMDS is
+// unreachable from pods anyway (the node hop limit is pinned to 1 as MCP
+// hardening). Leaving IMDS in the credential chain makes credential resolution
+// block for the full request deadline (~5s) on every call when no other
+// provider is configured, rather than failing fast.
 func NewClient(ctx context.Context, region string) (*Client, *apierror.APIError) {
-	cfg, err := awsconfig.LoadDefaultConfig(ctx, awsconfig.WithRegion(region))
+	cfg, err := awsconfig.LoadDefaultConfig(ctx,
+		awsconfig.WithRegion(region),
+		awsconfig.WithEC2IMDSClientEnableState(imds.ClientDisabled),
+	)
 	if err != nil {
 		return nil, apierror.NewInternalError(err, "Failed to load AWS configuration for S3.")
 	}

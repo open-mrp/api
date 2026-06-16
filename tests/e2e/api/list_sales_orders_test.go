@@ -75,6 +75,51 @@ func TestListSalesOrders_SearchByCustomerPOExact(t *testing.T) {
 	assertListContainsID(t, salesOrdersPath, url.Values{"q": {SeedSalesOrderPONumber}}, SeedPOSalesOrderID)
 }
 
+// --- Search respects the active list filters (regression) ---
+//
+// Search used to supersede every other filter: a q= hit was returned even when
+// its status / customer / date fell outside the active tab and filters (e.g.
+// searching a fulfilled order while on the pending tab pulled it in). These
+// guard that an exact-match hit is still subject to the filters applied
+// alongside it. The seed PO order (SeedPOSalesOrderID) is issued, buyer ==
+// SeedCustomerAccountID, created nine years out.
+
+func TestListSalesOrders_SearchRespectsStatusFilter(t *testing.T) {
+	t.Parallel()
+	// Same query, two different status tabs: the order's own status returns it,
+	// a different status excludes it. (Both "issued" and "fulfilled" are real
+	// status codes, so this is the filter doing its job — not an empty enum.)
+	matching := url.Values{"q": {SeedSalesOrderPONumber}, "status_codes": {"issued"}}
+	assertListContainsID(t, salesOrdersPath, matching, SeedPOSalesOrderID)
+
+	mismatched := url.Values{"q": {SeedSalesOrderPONumber}, "status_codes": {"fulfilled"}}
+	assert.Nil(t, listFindByField(t, salesOrdersPath, mismatched, "id", SeedPOSalesOrderID),
+		"search must not return an issued order while the active status tab is fulfilled")
+}
+
+func TestListSalesOrders_SearchRespectsCustomerFilter(t *testing.T) {
+	t.Parallel()
+	// The PO order's buyer is the main seed customer, so a matching customer_ids
+	// returns it; filtering to a different (nonexistent) customer must not.
+	matching := url.Values{"q": {SeedSalesOrderPONumber}, "customer_ids": {SeedCustomerAccountID}}
+	assertListContainsID(t, salesOrdersPath, matching, SeedPOSalesOrderID)
+
+	mismatched := url.Values{"q": {SeedSalesOrderPONumber}, "customer_ids": {"ac_00000000000000000000"}}
+	list, _, err := apiClient.GetList(salesOrdersPath, mismatched)
+	require.NoError(t, err)
+	assertEmptyListData(t, list.Data, "search must not bypass the customer_ids filter")
+}
+
+func TestListSalesOrders_SearchRespectsDateFilter(t *testing.T) {
+	t.Parallel()
+	// end_date is inclusive on created_at; the PO order is nine years out, so an
+	// end_date in the past must exclude it even though q= matches exactly.
+	mismatched := url.Values{"q": {SeedSalesOrderPONumber}, "end_date": {"2000-01-01"}}
+	list, _, err := apiClient.GetList(salesOrdersPath, mismatched)
+	require.NoError(t, err)
+	assertEmptyListData(t, list.Data, "search must not bypass the end_date filter")
+}
+
 // --- status_codes "all" wildcard ---
 
 func TestListSalesOrders_StatusCodesAllWildcard(t *testing.T) {

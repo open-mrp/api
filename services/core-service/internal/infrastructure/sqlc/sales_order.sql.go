@@ -2703,27 +2703,93 @@ func (q *Queries) NoteSalesOrderFirstShipAt(ctx context.Context, arg NoteSalesOr
 const searchSalesOrderIDs = `-- name: SearchSalesOrderIDs :many
 SELECT so.id, so.created_at
 FROM sales_order so
-WHERE so.owner_account_id = ?
-  AND so.seller_account_id = so.owner_account_id
-  AND (? IS NULL OR so.buyer_account_id = ?)
-  AND so.number = ?
-UNION
-SELECT so.id, so.created_at
-FROM sales_order so
-WHERE so.owner_account_id = ?
-  AND so.seller_account_id = so.owner_account_id
-  AND (? IS NULL OR so.buyer_account_id = ?)
-  AND so.customer_po_number = ?
-ORDER BY created_at DESC, id DESC
+JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
+    AND ar.counterparty_account_id = so.buyer_account_id
+WHERE so.id IN (
+    SELECT so2.id
+    FROM sales_order so2
+    WHERE so2.owner_account_id = ?
+      AND so2.seller_account_id = so2.owner_account_id
+      AND (? IS NULL OR so2.buyer_account_id = ?)
+      AND so2.number = ?
+    UNION
+    SELECT so2.id
+    FROM sales_order so2
+    WHERE so2.owner_account_id = ?
+      AND so2.seller_account_id = so2.owner_account_id
+      AND (? IS NULL OR so2.buyer_account_id = ?)
+      AND so2.customer_po_number = ?
+)
+AND (
+    ? = false
+    OR so.sales_order_status_code IN (/*SLICE:status_codes*/?)
+)
+AND (
+    ? = false
+    OR EXISTS (
+        SELECT 1 FROM sales_order_line sol2
+        WHERE sol2.sales_order_id = so.id
+        AND sol2.item_id IN (/*SLICE:item_ids*/?)
+    )
+)
+AND (
+    ? = false
+    OR EXISTS (
+        SELECT 1 FROM sales_order_line sol3
+        JOIN product p ON p.id = sol3.product_id
+        WHERE sol3.sales_order_id = so.id
+        AND p.product_line_id IN (/*SLICE:product_line_ids*/?)
+    )
+)
+AND (
+    ? = false
+    OR so.buyer_account_id IN (/*SLICE:customer_ids*/?)
+)
+AND (
+    ? = false
+    OR ar.account_group_id IN (/*SLICE:customer_group_ids*/?)
+)
+AND (
+    ? = false
+    OR so.sales_rep_id IN (/*SLICE:sales_rep_ids*/?)
+)
+AND (
+    ? IS NULL
+    OR so.created_at >= ?
+)
+AND (
+    ? IS NULL
+    OR so.created_at <= ?
+)
+AND (
+    ? = false
+    OR so.buyer_account_id != so.owner_account_id
+)
+ORDER BY so.created_at DESC, so.id DESC
 LIMIT ?
 `
 
 type SearchSalesOrderIDsParams struct {
-	AccountID      string
-	BuyerAccountID sql.NullString
-	SearchNumber   string
-	SearchPo       sql.NullString
-	Limit          int32
+	AccountID                  string
+	BuyerAccountID             sql.NullString
+	SearchNumber               string
+	SearchPo                   sql.NullString
+	IncludeStatusFilter        interface{}
+	StatusCodes                []string
+	IncludeItemFilter          interface{}
+	ItemIds                    []sql.NullString
+	IncludeProductLineFilter   interface{}
+	ProductLineIds             []sql.NullString
+	IncludeCustomerFilter      interface{}
+	CustomerIds                []string
+	IncludeCustomerGroupFilter interface{}
+	CustomerGroupIds           []sql.NullString
+	IncludeSalesRepFilter      interface{}
+	SalesRepIds                []sql.NullString
+	StartDate                  sql.NullTime
+	EndDate                    sql.NullTime
+	ExcludeInternalOrders      interface{}
+	Limit                      int32
 }
 
 type SearchSalesOrderIDsRow struct {
@@ -2731,25 +2797,91 @@ type SearchSalesOrderIDsRow struct {
 	CreatedAt time.Time
 }
 
-// Exact-match free-text search (the `q=` param). Split into a UNION of two
+// Exact-match free-text search (the `q=` param). The inner UNION is two
 // single-column equality seeks because this platform will NOT index_merge an
 // `(number = ? OR customer_po_number = ?)` predicate — it scans the whole
 // account instead. Each UNION arm seeks its own index (number via the global
 // number index; customer_po_number via sales_order_owner_customer_po_number_idx),
-// so a search resolves in ~1 row instead of a 121k-row scan. Returns the matching
-// IDs newest-first; the caller hydrates them.
+// so a search resolves in ~1 row instead of a 121k-row scan.
+//
+// The outer query then applies the same browse-list filters (status, item,
+// product line, customer, customer group, sales rep, date range, exclude-internal)
+// so search stays scoped to the active tab and filters instead of superseding
+// them. The filters run against the handful of seeked rows, so they cost
+// nothing — the index seeks still drive. Returns the matching IDs newest-first;
+// the caller hydrates them.
 func (q *Queries) SearchSalesOrderIDs(ctx context.Context, arg SearchSalesOrderIDsParams) ([]SearchSalesOrderIDsRow, error) {
-	rows, err := q.db.QueryContext(ctx, searchSalesOrderIDs,
-		arg.AccountID,
-		arg.BuyerAccountID,
-		arg.BuyerAccountID,
-		arg.SearchNumber,
-		arg.AccountID,
-		arg.BuyerAccountID,
-		arg.BuyerAccountID,
-		arg.SearchPo,
-		arg.Limit,
-	)
+	query := searchSalesOrderIDs
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.BuyerAccountID)
+	queryParams = append(queryParams, arg.BuyerAccountID)
+	queryParams = append(queryParams, arg.SearchNumber)
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.BuyerAccountID)
+	queryParams = append(queryParams, arg.BuyerAccountID)
+	queryParams = append(queryParams, arg.SearchPo)
+	queryParams = append(queryParams, arg.IncludeStatusFilter)
+	if len(arg.StatusCodes) > 0 {
+		for _, v := range arg.StatusCodes {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:status_codes*/?", strings.Repeat(",?", len(arg.StatusCodes))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:status_codes*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeItemFilter)
+	if len(arg.ItemIds) > 0 {
+		for _, v := range arg.ItemIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeProductLineFilter)
+	if len(arg.ProductLineIds) > 0 {
+		for _, v := range arg.ProductLineIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", strings.Repeat(",?", len(arg.ProductLineIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeCustomerFilter)
+	if len(arg.CustomerIds) > 0 {
+		for _, v := range arg.CustomerIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:customer_ids*/?", strings.Repeat(",?", len(arg.CustomerIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:customer_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeCustomerGroupFilter)
+	if len(arg.CustomerGroupIds) > 0 {
+		for _, v := range arg.CustomerGroupIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", strings.Repeat(",?", len(arg.CustomerGroupIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeSalesRepFilter)
+	if len(arg.SalesRepIds) > 0 {
+		for _, v := range arg.SalesRepIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:sales_rep_ids*/?", strings.Repeat(",?", len(arg.SalesRepIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:sales_rep_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.ExcludeInternalOrders)
+	queryParams = append(queryParams, arg.Limit)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}

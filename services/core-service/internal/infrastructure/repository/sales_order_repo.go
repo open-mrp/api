@@ -118,13 +118,24 @@ func (r *salesOrderRepoImpl) List(ctx context.Context, params domain.ListSalesOr
 	defer span.End()
 
 	searchQuery := buildSalesOrderSearchParams(params.Query)
-	startDate := parseDateString(params.StartDate)
-	endDate := parseDateString(params.EndDate)
 
 	buyerAccountID := gosql.NullString{}
 	if params.BuyerAccountID != nil {
 		buyerAccountID = gosql.NullString{String: *params.BuyerAccountID, Valid: true}
 	}
+
+	// Free-text search (`q=`) is an exact-match lookup on order number / customer
+	// PO. It resolves through dedicated index seeks (a UNION, since the platform
+	// won't index_merge an OR) and hydrates the few matches, instead of scanning
+	// the whole account through the browse-list query. Search still applies the
+	// active list filters (status tab, customer, etc.); it only bypasses the
+	// pagination cursor.
+	if searchQuery.Valid {
+		return r.searchList(ctx, params, buyerAccountID, searchQuery.String)
+	}
+
+	startDate := parseDateString(params.StartDate)
+	endDate := parseDateString(params.EndDate)
 
 	includeStatusFilter, statusCodes,
 		includeItemFilter, itemIDs,
@@ -132,15 +143,6 @@ func (r *salesOrderRepoImpl) List(ctx context.Context, params domain.ListSalesOr
 		includeCustomerFilter, customerIDs,
 		includeCustomerGroupFilter, customerGroupIDs,
 		includeSalesRepFilter, salesRepIDs := buildSalesOrderListFilters(params)
-
-	// Free-text search (`q=`) is an exact-match lookup on order number / customer
-	// PO. It resolves through dedicated index seeks (a UNION, since the platform
-	// won't index_merge an OR) and hydrates the few matches, instead of scanning
-	// the whole account through the browse-list query. Search supersedes the other
-	// list filters and pagination cursor.
-	if searchQuery.Valid {
-		return r.searchList(ctx, params, buyerAccountID, searchQuery.String)
-	}
 
 	var cursorDir *pagination.Direction
 
@@ -274,12 +276,34 @@ func (r *salesOrderRepoImpl) searchList(
 	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.search_list")
 	defer span.End()
 
+	includeStatusFilter, statusCodes,
+		includeItemFilter, itemIDs,
+		includeProductLineFilter, productLineIDs,
+		includeCustomerFilter, customerIDs,
+		includeCustomerGroupFilter, customerGroupIDs,
+		includeSalesRepFilter, salesRepIDs := buildSalesOrderListFilters(params)
+
 	idRows, err := r.queries.SearchSalesOrderIDs(ctx, sqlc.SearchSalesOrderIDsParams{
-		AccountID:      params.AccountID,
-		BuyerAccountID: buyerAccountID,
-		SearchNumber:   searchTerm,
-		SearchPo:       gosql.NullString{String: searchTerm, Valid: true},
-		Limit:          params.Limit + 1,
+		AccountID:                  params.AccountID,
+		BuyerAccountID:             buyerAccountID,
+		SearchNumber:               searchTerm,
+		SearchPo:                   gosql.NullString{String: searchTerm, Valid: true},
+		IncludeStatusFilter:        includeStatusFilter,
+		StatusCodes:                statusCodes,
+		IncludeItemFilter:          includeItemFilter,
+		ItemIds:                    itemIDs,
+		IncludeProductLineFilter:   includeProductLineFilter,
+		ProductLineIds:             productLineIDs,
+		IncludeCustomerFilter:      includeCustomerFilter,
+		CustomerIds:                customerIDs,
+		IncludeCustomerGroupFilter: includeCustomerGroupFilter,
+		CustomerGroupIds:           customerGroupIDs,
+		IncludeSalesRepFilter:      includeSalesRepFilter,
+		SalesRepIds:                salesRepIDs,
+		StartDate:                  parseDateString(params.StartDate),
+		EndDate:                    parseDateString(params.EndDate),
+		ExcludeInternalOrders:      params.ExcludeInternalOrders,
+		Limit:                      params.Limit + 1,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

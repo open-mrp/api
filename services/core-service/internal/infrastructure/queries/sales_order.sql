@@ -965,27 +965,84 @@ WHERE sol.sales_order_id IN (sqlc.slice('sales_order_ids'))
 GROUP BY sol.sales_order_id;
 
 -- name: SearchSalesOrderIDs :many
--- Exact-match free-text search (the `q=` param). Split into a UNION of two
+-- Exact-match free-text search (the `q=` param). The inner UNION is two
 -- single-column equality seeks because this platform will NOT index_merge an
 -- `(number = ? OR customer_po_number = ?)` predicate — it scans the whole
 -- account instead. Each UNION arm seeks its own index (number via the global
 -- number index; customer_po_number via sales_order_owner_customer_po_number_idx),
--- so a search resolves in ~1 row instead of a 121k-row scan. Returns the matching
--- IDs newest-first; the caller hydrates them.
+-- so a search resolves in ~1 row instead of a 121k-row scan.
+--
+-- The outer query then applies the same browse-list filters (status, item,
+-- product line, customer, customer group, sales rep, date range, exclude-internal)
+-- so search stays scoped to the active tab and filters instead of superseding
+-- them. The filters run against the handful of seeked rows, so they cost
+-- nothing — the index seeks still drive. Returns the matching IDs newest-first;
+-- the caller hydrates them.
 SELECT so.id, so.created_at
 FROM sales_order so
-WHERE so.owner_account_id = sqlc.arg('account_id')
-  AND so.seller_account_id = so.owner_account_id
-  AND (sqlc.narg('buyer_account_id') IS NULL OR so.buyer_account_id = sqlc.narg('buyer_account_id'))
-  AND so.number = sqlc.arg('search_number')
-UNION
-SELECT so.id, so.created_at
-FROM sales_order so
-WHERE so.owner_account_id = sqlc.arg('account_id')
-  AND so.seller_account_id = so.owner_account_id
-  AND (sqlc.narg('buyer_account_id') IS NULL OR so.buyer_account_id = sqlc.narg('buyer_account_id'))
-  AND so.customer_po_number = sqlc.arg('search_po')
-ORDER BY created_at DESC, id DESC
+JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
+    AND ar.counterparty_account_id = so.buyer_account_id
+WHERE so.id IN (
+    SELECT so2.id
+    FROM sales_order so2
+    WHERE so2.owner_account_id = sqlc.arg('account_id')
+      AND so2.seller_account_id = so2.owner_account_id
+      AND (sqlc.narg('buyer_account_id') IS NULL OR so2.buyer_account_id = sqlc.narg('buyer_account_id'))
+      AND so2.number = sqlc.arg('search_number')
+    UNION
+    SELECT so2.id
+    FROM sales_order so2
+    WHERE so2.owner_account_id = sqlc.arg('account_id')
+      AND so2.seller_account_id = so2.owner_account_id
+      AND (sqlc.narg('buyer_account_id') IS NULL OR so2.buyer_account_id = sqlc.narg('buyer_account_id'))
+      AND so2.customer_po_number = sqlc.arg('search_po')
+)
+AND (
+    sqlc.arg('include_status_filter') = false
+    OR so.sales_order_status_code IN (sqlc.slice('status_codes'))
+)
+AND (
+    sqlc.arg('include_item_filter') = false
+    OR EXISTS (
+        SELECT 1 FROM sales_order_line sol2
+        WHERE sol2.sales_order_id = so.id
+        AND sol2.item_id IN (sqlc.slice('item_ids'))
+    )
+)
+AND (
+    sqlc.arg('include_product_line_filter') = false
+    OR EXISTS (
+        SELECT 1 FROM sales_order_line sol3
+        JOIN product p ON p.id = sol3.product_id
+        WHERE sol3.sales_order_id = so.id
+        AND p.product_line_id IN (sqlc.slice('product_line_ids'))
+    )
+)
+AND (
+    sqlc.arg('include_customer_filter') = false
+    OR so.buyer_account_id IN (sqlc.slice('customer_ids'))
+)
+AND (
+    sqlc.arg('include_customer_group_filter') = false
+    OR ar.account_group_id IN (sqlc.slice('customer_group_ids'))
+)
+AND (
+    sqlc.arg('include_sales_rep_filter') = false
+    OR so.sales_rep_id IN (sqlc.slice('sales_rep_ids'))
+)
+AND (
+    sqlc.narg('start_date') IS NULL
+    OR so.created_at >= sqlc.narg('start_date')
+)
+AND (
+    sqlc.narg('end_date') IS NULL
+    OR so.created_at <= sqlc.narg('end_date')
+)
+AND (
+    sqlc.arg('exclude_internal_orders') = false
+    OR so.buyer_account_id != so.owner_account_id
+)
+ORDER BY so.created_at DESC, so.id DESC
 LIMIT ?;
 
 -- name: GetSalesOrderLinesForBOM :many

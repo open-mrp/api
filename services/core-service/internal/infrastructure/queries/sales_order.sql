@@ -109,7 +109,13 @@ SELECT STRAIGHT_JOIN
     od.updated_at AS order_discount_updated_at,
     -- Pick
     pk.id AS pick_id
-FROM sales_order so
+-- FORCE INDEX restricts the optimizer to the two indexes that satisfy the ORDER BY
+-- (created_at, id) without a filesort: sales_order_owner_created_idx when there is no
+-- status filter, sales_order_owner_status_created_idx when there is. Excluding the
+-- single-column sales_order_status_code index is the point — with a status filter the
+-- optimizer otherwise picks it, reads every matching row, runs them all through the
+-- joins, and filesorts the lot (~5s for large accounts even with LIMIT 10). Do not remove.
+FROM sales_order so FORCE INDEX (sales_order_owner_created_idx, sales_order_owner_status_created_idx)
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.buyer_account_id
 JOIN account ba ON ba.id = so.buyer_account_id
@@ -295,7 +301,13 @@ SELECT STRAIGHT_JOIN
     od.updated_at AS order_discount_updated_at,
     -- Pick
     pk.id AS pick_id
-FROM sales_order so
+-- FORCE INDEX restricts the optimizer to the two indexes that satisfy the ORDER BY
+-- (created_at, id) without a filesort: sales_order_owner_created_idx when there is no
+-- status filter, sales_order_owner_status_created_idx when there is. Excluding the
+-- single-column sales_order_status_code index is the point — with a status filter the
+-- optimizer otherwise picks it, reads every matching row, runs them all through the
+-- joins, and filesorts the lot (~5s for large accounts even with LIMIT 10). Do not remove.
+FROM sales_order so FORCE INDEX (sales_order_owner_created_idx, sales_order_owner_status_created_idx)
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.buyer_account_id
 JOIN account ba ON ba.id = so.buyer_account_id

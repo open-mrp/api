@@ -17,6 +17,7 @@ type AuditEventRepo interface {
 	Create(ctx context.Context, event *AuditEvent) *apierror.APIError
 	FindByID(ctx context.Context, id, targetAccountID string, includes []string) (*AuditEventRead, *apierror.APIError)
 	List(ctx context.Context, targetAccountID string, filter *ListAuditEventsFilter, includes []string) (*ListAuditEventsResult, *apierror.APIError)
+	BatchGetResourceCreators(ctx context.Context, callerAccountID, resourceType string, resourceIDs []string) ([]ResourceCreator, *apierror.APIError)
 }
 
 type UpsertAndLockResult struct {

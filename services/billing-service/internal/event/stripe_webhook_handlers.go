@@ -53,6 +53,46 @@ func (c *StripeWebhookConsumer) handleCustomerDeleted(ctx context.Context, event
 	return apiErrToErr(c.coreClient.ClearAccountStripeCustomer(ctx, eventID, accountID))
 }
 
+// checkoutSessionObject is the minimal set of fields parsed from a Stripe
+// checkout.session data.object.
+type checkoutSessionObject struct {
+	ID            string            `json:"id"`
+	PaymentIntent string            `json:"payment_intent"`
+	PaymentStatus string            `json:"payment_status"`
+	Metadata      map[string]string `json:"metadata"`
+}
+
+// handleCheckoutSessionCompleted links a completed Stripe checkout to its sales
+// order by recording the payment intent, which is what makes the order read as
+// paid. The orderID is carried on the session metadata set at checkout creation.
+func (c *StripeWebhookConsumer) handleCheckoutSessionCompleted(ctx context.Context, eventID string, rawObject json.RawMessage) error {
+	var sess checkoutSessionObject
+	if err := json.Unmarshal(rawObject, &sess); err != nil {
+		return fmt.Errorf("failed to parse checkout session object: %w", err)
+	}
+
+	orderID := sess.Metadata["orderID"]
+	if orderID == "" {
+		// Not an order checkout (e.g. a subscription session); nothing to link.
+		log.Printf("[stripe_webhook] checkout.session.completed %s has no orderID metadata, skipping", sess.ID)
+		return nil
+	}
+
+	if sess.PaymentStatus != "paid" {
+		log.Printf("[stripe_webhook] checkout.session.completed for order %s not paid (status=%s), skipping", orderID, sess.PaymentStatus)
+		return nil
+	}
+
+	if sess.PaymentIntent == "" {
+		log.Printf("[stripe_webhook] checkout.session.completed for order %s has no payment_intent, skipping", orderID)
+		return nil
+	}
+
+	log.Printf("[stripe_webhook] Recording payment for order %s (payment_intent=%s)", orderID, sess.PaymentIntent)
+
+	return apiErrToErr(c.coreClient.RecordOrderPayment(ctx, eventID, orderID, sess.PaymentIntent))
+}
+
 func (c *StripeWebhookConsumer) handleServicingActivated(ctx context.Context, eventID string, rawObject json.RawMessage) error {
 	var sub v2PricingPlanSubscriptionObject
 	if err := json.Unmarshal(rawObject, &sub); err != nil {

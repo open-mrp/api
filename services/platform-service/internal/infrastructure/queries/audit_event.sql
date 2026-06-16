@@ -36,6 +36,27 @@ LEFT JOIN account a ON ae.target_account_id = a.id
 WHERE ae.type_id = sqlc.arg('type_id')
   AND (ae.account_id = sqlc.arg('caller_account_id_actor') OR ae.target_account_id = sqlc.arg('caller_account_id_target'));
 
+-- name: BatchGetResourceCreators :many
+-- Returns the `create` audit-event actor for each of the given resource IDs,
+-- scoped to the caller's account. Backs the `created_by` include without granting
+-- full audit-event read access. actor_type carries the relation
+-- (internal/customer/supplier); identity_type the kind (user/api_key).
+SELECT ae.resource_id,
+       ae.actor_id,
+       ae.actor_type,
+       ae.identity_type,
+       u.name AS user_name,
+       u.email AS user_email,
+       ak.name AS api_key_name,
+       ak.redacted_value AS api_key_redacted_value
+FROM audit_event ae
+LEFT JOIN `user` u ON ae.actor_id = u.id AND ae.identity_type = 'user'
+LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key'
+WHERE ae.resource_type = sqlc.arg('resource_type')
+  AND ae.action = 'create'
+  AND ae.resource_id IN (sqlc.slice('resource_ids'))
+  AND (ae.account_id = sqlc.arg('caller_account_id_actor') OR ae.target_account_id = sqlc.arg('caller_account_id_target'));
+
 -- name: ListAuditEventsForward :many
 SELECT ae.type_id,
        ae.actor_id AS actor_id,

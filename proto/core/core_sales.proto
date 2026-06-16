@@ -94,6 +94,16 @@ service CoreSalesService {
 
   // CreateCustomerCheckoutSession creates a checkout session for a customer order.
   rpc CreateCustomerCheckoutSession(CreateCustomerCheckoutSessionRequest) returns (CreateCustomerCheckoutSessionResponse);
+
+  // RecordOrderPayment links a succeeded Stripe payment intent to a sales order.
+  // Called by the billing-service when a checkout session completes. Idempotent.
+  rpc RecordOrderPayment(RecordOrderPaymentRequest) returns (google.protobuf.Empty);
+}
+
+// RecordOrderPaymentRequest links a Stripe payment intent to a sales order.
+message RecordOrderPaymentRequest {
+  string sales_order_id = 1;
+  string payment_intent_id = 2;
 }
 
 // OrderDiscountInfo represents an order discount resource returned by the core-service.
@@ -334,6 +344,10 @@ message SalesOrderInfo {
   // IDs of shipments linked to this order (populated when related.shipments is
   // requested). The gateway builds the related.shipments record list from these.
   repeated string shipment_ids = 93;
+  // Derived payment state: "unpaid", "partially_paid", or "paid". Always
+  // populated; computed from settlement allocations vs. invoiced amounts plus
+  // any Stripe payment intent.
+  string payment_status = 94;
 }
 
 // SalesOrderLineInfo represents a sales order line.

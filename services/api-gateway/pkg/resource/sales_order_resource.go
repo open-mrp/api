@@ -109,6 +109,8 @@ type SalesOrder struct {
 	Customer *Customer `json:"customer" expandable:"true"`
 	// Sales representative.
 	SalesRep *Actor `json:"sales_rep" expandable:"true"`
+	// Who created this order, and their relation (internal/customer/system).
+	CreatedBy *CreatedBy `json:"created_by" expandable:"true"`
 	// Billing address.
 	BillToAddress *Address `json:"bill_to_address" expandable:"true"`
 	// Shipping address.

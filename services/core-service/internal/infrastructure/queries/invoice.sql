@@ -325,6 +325,36 @@ JOIN unit u ON u.id = q.unit_id
 WHERE ta.invoice_id = sqlc.arg('invoice_id')
 ORDER BY ta.created_at ASC, ta.id ASC;
 
+-- name: GetInvoicePaymentFlags :many
+-- For a set of invoices, recomputes whether each is paid in full / over paid by
+-- comparing the sum of its transaction allocations against its invoiced total
+-- (sum of invoice_line quantity x the order line's unit price). Used to refresh
+-- the denormalized invoice flags after settlement changes.
+SELECT
+    t.invoice_id,
+    (t.invoiced_total > 0 AND t.allocated_total >= t.invoiced_total) AS is_paid_in_full,
+    (t.invoiced_total > 0 AND t.allocated_total > t.invoiced_total) AS is_over_paid
+FROM (
+    SELECT
+        i.id AS invoice_id,
+        COALESCE((
+            SELECT SUM(taq.value)
+            FROM transaction_allocation ta
+            JOIN quantity taq ON taq.id = ta.amount_id
+            WHERE ta.invoice_id = i.id
+        ), 0) AS allocated_total,
+        COALESCE((
+            SELECT SUM(ilq.value * solr.value)
+            FROM invoice_line il
+            JOIN quantity ilq ON ilq.id = il.quantity_id
+            JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
+            JOIN rate solr ON solr.id = sol.unit_price_id
+            WHERE il.invoice_id = i.id
+        ), 0) AS invoiced_total
+    FROM invoice i
+    WHERE i.id IN (sqlc.slice('invoice_ids'))
+) t;
+
 -- name: UpdateInvoice :exec
 UPDATE invoice
 SET

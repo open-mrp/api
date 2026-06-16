@@ -115,6 +115,15 @@ func SetLoggingClient(c platformpb.LoggingServiceClient) {
 	loggingClient = c
 }
 
+// auditClient is the AuditService client used by LoadCreatedBySalesOrders to
+// resolve a resource's creator from its create audit event. Set at startup.
+var auditClient platformpb.AuditServiceClient
+
+// SetAuditClient is called once at startup with the AuditService client.
+func SetAuditClient(c platformpb.AuditServiceClient) {
+	auditClient = c
+}
+
 // ownerShellFromAccountID builds an Owner shell without a stub Account.
 // nil/empty → system-owned; non-empty → account-owned with Account left nil
 // (populated only when owner.account is explicitly included).

@@ -110,6 +110,21 @@ func (m *MockAuditEventRepo) EXPECT() *MockAuditEventRepoMockRecorder {
 	return m.recorder
 }
 
+// BatchGetResourceCreators mocks base method.
+func (m *MockAuditEventRepo) BatchGetResourceCreators(ctx context.Context, callerAccountID, resourceType string, resourceIDs []string) ([]domain.ResourceCreator, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchGetResourceCreators", ctx, callerAccountID, resourceType, resourceIDs)
+	ret0, _ := ret[0].([]domain.ResourceCreator)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// BatchGetResourceCreators indicates an expected call of BatchGetResourceCreators.
+func (mr *MockAuditEventRepoMockRecorder) BatchGetResourceCreators(ctx, callerAccountID, resourceType, resourceIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetResourceCreators", reflect.TypeOf((*MockAuditEventRepo)(nil).BatchGetResourceCreators), ctx, callerAccountID, resourceType, resourceIDs)
+}
+
 // Create mocks base method.
 func (m *MockAuditEventRepo) Create(ctx context.Context, event *domain.AuditEvent) *apierror.APIError {
 	m.ctrl.T.Helper()

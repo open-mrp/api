@@ -187,6 +187,9 @@ func Run(
 	// Wire the logging client into the resourcekit loaders for request-log resources.
 	resourceloaders.SetLoggingClient(platformClient.LoggingClient)
 
+	// Wire the audit client into the resourcekit loaders for created_by resolution.
+	resourceloaders.SetAuditClient(platformClient.AuditClient)
+
 	// Initialize the request log publisher.
 	reqLogPublisher := publisher.NewRequestLogOutboxPublisher(repository.NewOutboxRepo(queries), cfg.FrontendURL, cfg.PlatformMode)
 

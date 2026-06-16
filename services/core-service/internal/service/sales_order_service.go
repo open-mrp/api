@@ -147,6 +147,27 @@ func (s *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, params domain.L
 		return nil, tracing.Trace(span, apiErr)
 	}
 
+	// Populate the derived payment status for the whole page in one batched
+	// query (no per-order N+1), defaulting any order without payment activity
+	// to unpaid.
+	if len(result.SalesOrders) > 0 {
+		orderIDs := make([]string, len(result.SalesOrders))
+		for i, order := range result.SalesOrders {
+			orderIDs[i] = order.ID
+		}
+		statuses, apiErr := repo.GetPaymentStatuses(ctx, params.AccountID, orderIDs)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		for _, order := range result.SalesOrders {
+			if status, ok := statuses[order.ID]; ok {
+				order.PaymentStatus = status
+			} else {
+				order.PaymentStatus = constants.SalesOrderPaymentStatusUnpaid
+			}
+		}
+	}
+
 	// The list now returns the full sales-order shape; expand lines per order
 	// only when requested (inline-joined fields are always present).
 	if includesSalesOrderLines(params.Includes) {
@@ -215,6 +236,17 @@ func (s *salesOrderSvcImpl) GetSalesOrder(ctx context.Context, params domain.Get
 
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
+	}
+
+	// Populate the derived payment status (always present on the resource).
+	statuses, apiErr := repo.GetPaymentStatuses(ctx, params.AccountID, []string{order.ID})
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if status, ok := statuses[order.ID]; ok {
+		order.PaymentStatus = status
+	} else {
+		order.PaymentStatus = constants.SalesOrderPaymentStatusUnpaid
 	}
 
 	if includesSalesOrderLines(params.Includes) {
@@ -1751,6 +1783,33 @@ func (s *salesOrderSvcImpl) CreateCustomerCheckoutSession(ctx context.Context, p
 	default:
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
 	}
+}
+
+func (s *salesOrderSvcImpl) RecordOrderPayment(ctx context.Context, salesOrderID, paymentIntentID string) *apierror.APIError {
+	ctx, span := salesOrderSvcTracer.Start(ctx, "service.sales_order.record_order_payment")
+	defer span.End()
+
+	repo := s.repos.NewOrderPaymentIntentRepo()
+
+	// Idempotent: a Stripe webhook can be retried, so skip if this payment
+	// intent is already linked to an order.
+	existing, apiErr := repo.FindByPaymentIntentID(ctx, paymentIntentID)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if existing != nil {
+		return nil
+	}
+
+	opiID, apiErr := id.GenID(id.OrderPaymentIntentIDPrefix, nil)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	if apiErr := repo.Create(ctx, opiID, paymentIntentID, salesOrderID); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
 }
 
 func (s *salesOrderSvcImpl) CreateSalesOrderProductionRun(ctx context.Context, params domain.CreateSalesOrderProductionRunParams) (*domain.CreateSalesOrderProductionRunResult, *apierror.APIError) {

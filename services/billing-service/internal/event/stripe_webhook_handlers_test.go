@@ -16,6 +16,7 @@ type stubCoreClient struct {
 	getAccountByStripeCustomerID func(ctx context.Context, stripeCustomerID string) (string, string, *apierror.APIError)
 	updateAccountSubscription    func(ctx context.Context, idempotencyKey, accountID string, status *string, planCode string, stripeSubID *string, periodEnd *time.Time, stripeCustomerID *string, billingProfileID *string, billingCadenceID *string, pricingPlanSubscriptionID *string, servicingStatus *string, collectionStatus *string) *apierror.APIError
 	clearAccountStripeCustomer   func(ctx context.Context, idempotencyKey, accountID string) *apierror.APIError
+	recordOrderPayment           func(ctx context.Context, idempotencyKey, salesOrderID, paymentIntentID string) *apierror.APIError
 }
 
 func (s *stubCoreClient) GetAccountByStripeCustomerID(ctx context.Context, stripeCustomerID string) (string, string, *apierror.APIError) {
@@ -28,6 +29,13 @@ func (s *stubCoreClient) UpdateAccountSubscription(ctx context.Context, idempote
 
 func (s *stubCoreClient) ClearAccountStripeCustomer(ctx context.Context, idempotencyKey, accountID string) *apierror.APIError {
 	return s.clearAccountStripeCustomer(ctx, idempotencyKey, accountID)
+}
+
+func (s *stubCoreClient) RecordOrderPayment(ctx context.Context, idempotencyKey, salesOrderID, paymentIntentID string) *apierror.APIError {
+	if s.recordOrderPayment != nil {
+		return s.recordOrderPayment(ctx, idempotencyKey, salesOrderID, paymentIntentID)
+	}
+	return nil
 }
 
 type stubNotificationClient struct {
@@ -416,4 +424,64 @@ func TestHandleCadenceCanceled(t *testing.T) {
 	err := consumer.handleCadenceCanceled(ctx, "evt_cc", rawObject)
 	require.NoError(t, err)
 	assert.Equal(t, "canceled", *capturedStatus)
+}
+
+func TestHandleCheckoutSessionCompleted_RecordsPayment(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	var gotOrderID, gotPI, gotKey string
+	called := false
+	client := &stubCoreClient{
+		recordOrderPayment: func(_ context.Context, key, salesOrderID, paymentIntentID string) *apierror.APIError {
+			called = true
+			gotKey, gotOrderID, gotPI = key, salesOrderID, paymentIntentID
+			return nil
+		},
+	}
+
+	consumer := newTestConsumer(client)
+	rawObject, _ := json.Marshal(checkoutSessionObject{
+		ID:            "cs_1",
+		PaymentIntent: "pi_1",
+		PaymentStatus: "paid",
+		Metadata:      map[string]string{"orderID": "or_1"},
+	})
+
+	err := consumer.handleCheckoutSessionCompleted(ctx, "evt_co", rawObject)
+	require.NoError(t, err)
+	assert.True(t, called)
+	assert.Equal(t, "evt_co", gotKey)
+	assert.Equal(t, "or_1", gotOrderID)
+	assert.Equal(t, "pi_1", gotPI)
+}
+
+func TestHandleCheckoutSessionCompleted_SkipsWhenNotPaidOrNoOrder(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	cases := []struct {
+		name string
+		obj  checkoutSessionObject
+	}{
+		{"unpaid", checkoutSessionObject{ID: "cs_2", PaymentIntent: "pi_2", PaymentStatus: "unpaid", Metadata: map[string]string{"orderID": "or_2"}}},
+		{"no order metadata", checkoutSessionObject{ID: "cs_3", PaymentIntent: "pi_3", PaymentStatus: "paid"}},
+		{"no payment intent", checkoutSessionObject{ID: "cs_4", PaymentStatus: "paid", Metadata: map[string]string{"orderID": "or_4"}}},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			client := &stubCoreClient{
+				recordOrderPayment: func(_ context.Context, _, _, _ string) *apierror.APIError {
+					t.Fatal("RecordOrderPayment should not be called")
+					return nil
+				},
+			}
+			consumer := newTestConsumer(client)
+			rawObject, _ := json.Marshal(tc.obj)
+
+			err := consumer.handleCheckoutSessionCompleted(ctx, "evt_skip", rawObject)
+			require.NoError(t, err)
+		})
+	}
 }

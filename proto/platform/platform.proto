@@ -58,6 +58,12 @@ service AuditService {
 
   // Returns the full set of resource types that may appear on audit events.
   rpc ListAuditEventResourceTypes(ListAuditEventResourceTypesRequest) returns (ListAuditEventResourceTypesResponse);
+
+  // Returns the creating actor for a batch of resources, derived from each
+  // resource's `create` audit event. Scoped to the caller's account; unlike the
+  // full audit-event reads this requires only an assigned actor (not the audit
+  // read permission), so it can back a `created_by` include on those resources.
+  rpc BatchGetResourceCreators(BatchGetResourceCreatorsRequest) returns (BatchGetResourceCreatorsResponse);
 }
 
 enum ProcessIdempotencyKeyResult {
@@ -376,6 +382,24 @@ message AuditActor {
   optional string name = 5;
   // Email for users, redacted value for API keys.
   optional string handle = 6;
+}
+
+message BatchGetResourceCreatorsRequest {
+  string resource_type = 1;
+  repeated string resource_ids = 2;
+}
+
+message ResourceCreator {
+  string resource_id = 1;
+  // The create-event actor. `actor.type` carries the relation
+  // (internal/customer/supplier); `actor.identity_type` the kind (user/api_key).
+  AuditActor actor = 2;
+}
+
+message BatchGetResourceCreatorsResponse {
+  // One entry per resource that has a `create` audit event visible to the
+  // caller. Resources with no create event are simply absent.
+  repeated ResourceCreator creators = 1;
 }
 
 message AuditFieldChange {

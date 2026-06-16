@@ -162,6 +162,9 @@ func (c *StripeWebhookConsumer) handleStripeWebhook(ctx context.Context, msg amq
 	case "customer.deleted":
 		handlerErr = c.handleCustomerDeleted(ctx, event.ID, objectData)
 
+	case "checkout.session.completed":
+		handlerErr = c.handleCheckoutSessionCompleted(ctx, event.ID, objectData)
+
 	// v2 pricing plan subscription events
 	case "v2.billing.pricing_plan_subscription.servicing_activated":
 		handlerErr = c.handleServicingActivated(ctx, event.ID, objectData)

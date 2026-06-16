@@ -463,7 +463,7 @@ func salesOrderDetailFromProto(info *pb.SalesOrderInfo) apiresource.SalesOrder {
 		CustomerPurchaseOrderNumber: info.CustomerPoNumber,
 		Note:                        info.Note,
 		AcknowledgmentStatus:        acknowledgmentStatusFromBool(info.IsAcknowledgmentSent),
-		PaymentStatus:               constants.SalesOrderPaymentStatusUnpaid,
+		PaymentStatus:               salesOrderPaymentStatusFromProto(info.PaymentStatus),
 		Status:                      constants.SalesOrderStatusCode(info.StatusCode),
 		Priority:                    constants.PriorityCode(info.PriorityCode),
 		LineCount:                   info.LineCount,
@@ -558,6 +558,16 @@ func acknowledgmentStatusFromBool(sent bool) constants.AcknowledgmentStatus {
 		return constants.AcknowledgmentStatusSent
 	}
 	return constants.AcknowledgmentStatusNotSent
+}
+
+// salesOrderPaymentStatusFromProto maps the proto payment status to the resource
+// enum, defaulting to unpaid for any empty or unrecognized value.
+func salesOrderPaymentStatusFromProto(status string) constants.SalesOrderPaymentStatus {
+	s := constants.SalesOrderPaymentStatus(status)
+	if !s.IsValid() {
+		return constants.SalesOrderPaymentStatusUnpaid
+	}
+	return s
 }
 
 // parseDecimal parses a decimal string, treating empty/invalid input as zero.

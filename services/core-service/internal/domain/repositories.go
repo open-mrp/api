@@ -868,6 +868,7 @@ type SalesOrderRepo interface {
 	DeletePickLinesBySalesOrder(ctx context.Context, salesOrderID string) *apierror.APIError
 	DeletePickBySalesOrder(ctx context.Context, salesOrderID string) *apierror.APIError
 	CheckPaymentStatus(ctx context.Context, salesOrderID string) (bool, *apierror.APIError)
+	GetPaymentStatuses(ctx context.Context, accountID string, salesOrderIDs []string) (map[string]constants.SalesOrderPaymentStatus, *apierror.APIError)
 	GetLinesForBOM(ctx context.Context, salesOrderID string) ([]SalesOrderLineForBOM, *apierror.APIError)
 	SetProductionRunID(ctx context.Context, accountID, salesOrderID, productionRunID string) *apierror.APIError
 	GetSaleLinesForIssue(ctx context.Context, salesOrderID string) ([]SalesOrderSaleLineForIssue, *apierror.APIError)
@@ -1089,6 +1090,7 @@ type SettlementRepo interface {
 	DeleteOrphanedAdjustmentTransactions(ctx context.Context, settlementID string) *apierror.APIError
 	UpdateTransactionsFullyAllocated(ctx context.Context, transactionIDs []string, isFullyAllocated bool) *apierror.APIError
 	UpdateInvoicePaymentStatus(ctx context.Context, invoiceID string, isPaidInFull, isOverPaid bool) *apierror.APIError
+	GetInvoicePaymentFlags(ctx context.Context, invoiceIDs []string) ([]InvoicePaymentFlags, *apierror.APIError)
 }
 
 type TransactionRepo interface {

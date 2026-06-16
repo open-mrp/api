@@ -586,3 +586,29 @@ func (r *settlementRepoImpl) UpdateInvoicePaymentStatus(ctx context.Context, inv
 	}
 	return nil
 }
+
+// GetInvoicePaymentFlags recomputes, for each given invoice, whether it is paid
+// in full / over paid from its allocations vs. its invoiced total.
+func (r *settlementRepoImpl) GetInvoicePaymentFlags(ctx context.Context, invoiceIDs []string) ([]domain.InvoicePaymentFlags, *apierror.APIError) {
+	ctx, span := settlementRepoTracer.Start(ctx, "repository.settlement.get_invoice_payment_flags")
+	defer span.End()
+
+	if len(invoiceIDs) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.GetInvoicePaymentFlags(ctx, invoiceIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	flags := make([]domain.InvoicePaymentFlags, len(rows))
+	for i, row := range rows {
+		flags[i] = domain.InvoicePaymentFlags{
+			InvoiceID:    row.InvoiceID,
+			IsPaidInFull: row.IsPaidInFull.Valid && row.IsPaidInFull.Bool,
+			IsOverPaid:   row.IsOverPaid.Valid && row.IsOverPaid.Bool,
+		}
+	}
+	return flags, nil
+}

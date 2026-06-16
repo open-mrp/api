@@ -167,6 +167,49 @@ func TestCustomerPortalAccess_GetUnitGroupUnit(t *testing.T) {
 	assert.Equal(t, SeedUnitGroupUnitID, jsonField(parsed, "id"))
 }
 
+// TestCustomerPortalAccess_ListSalesOrders verifies a customer portal actor can
+// list sales orders on the vendor's account WITHOUT sales_orders:read, scoped to
+// orders where they are the buyer. Regression guard for the portal 403: the
+// portal must target the vendor account (the order owner), not the customer's
+// own account — targeting their own account classifies them as an internal actor
+// and trips the sales_orders:read permission check.
+func TestCustomerPortalAccess_ListSalesOrders(t *testing.T) {
+	t.Parallel()
+	client := getCustomerPortalClient()
+
+	status, body, err := client.GetListRaw(salesOrdersPath, url.Values{
+		"include": {"customer"},
+		"limit":   {"100"},
+	})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	parsed := parseJSON(body)
+	assert.Equal(t, "list", jsonField(parsed, "object"))
+
+	var sawBoughtOrder, sawVendorInternalOrder bool
+	for _, item := range jsonArray(parsed, "data") {
+		row, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		// Every visible order must belong to the customer (buyer == customer account).
+		cust := jsonObject(row, "customer")
+		require.NotNil(t, cust, "customer should be expanded with ?include=customer")
+		assert.Equal(t, SeedCustomerAccountID, jsonField(cust, "id"),
+			"a customer must only see orders where they are the buyer")
+		switch jsonField(row, "id") {
+		case SeedPOSalesOrderID:
+			sawBoughtOrder = true
+		case SeedInternalSalesOrderID:
+			sawVendorInternalOrder = true
+		}
+	}
+	assert.True(t, sawBoughtOrder, "customer should see an order they bought (%s)", SeedPOSalesOrderID)
+	assert.False(t, sawVendorInternalOrder,
+		"customer must not see the vendor's internal order (%s)", SeedInternalSalesOrderID)
+}
+
 // TestCustomerPortalAccess_CannotCreateProductLine verifies that customer
 // portal users cannot create product lines (write access restricted to internal actors).
 func TestCustomerPortalAccess_CannotCreateProductLine(t *testing.T) {

@@ -338,6 +338,76 @@ func (q *Queries) GetInvoiceLines(ctx context.Context, invoiceID string) ([]GetI
 	return items, nil
 }
 
+const getInvoicePaymentFlags = `-- name: GetInvoicePaymentFlags :many
+SELECT
+    t.invoice_id,
+    (t.invoiced_total > 0 AND t.allocated_total >= t.invoiced_total) AS is_paid_in_full,
+    (t.invoiced_total > 0 AND t.allocated_total > t.invoiced_total) AS is_over_paid
+FROM (
+    SELECT
+        i.id AS invoice_id,
+        COALESCE((
+            SELECT SUM(taq.value)
+            FROM transaction_allocation ta
+            JOIN quantity taq ON taq.id = ta.amount_id
+            WHERE ta.invoice_id = i.id
+        ), 0) AS allocated_total,
+        COALESCE((
+            SELECT SUM(ilq.value * solr.value)
+            FROM invoice_line il
+            JOIN quantity ilq ON ilq.id = il.quantity_id
+            JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
+            JOIN rate solr ON solr.id = sol.unit_price_id
+            WHERE il.invoice_id = i.id
+        ), 0) AS invoiced_total
+    FROM invoice i
+    WHERE i.id IN (/*SLICE:invoice_ids*/?)
+) t
+`
+
+type GetInvoicePaymentFlagsRow struct {
+	InvoiceID    string
+	IsPaidInFull sql.NullBool
+	IsOverPaid   sql.NullBool
+}
+
+// For a set of invoices, recomputes whether each is paid in full / over paid by
+// comparing the sum of its transaction allocations against its invoiced total
+// (sum of invoice_line quantity x the order line's unit price). Used to refresh
+// the denormalized invoice flags after settlement changes.
+func (q *Queries) GetInvoicePaymentFlags(ctx context.Context, invoiceIds []string) ([]GetInvoicePaymentFlagsRow, error) {
+	query := getInvoicePaymentFlags
+	var queryParams []interface{}
+	if len(invoiceIds) > 0 {
+		for _, v := range invoiceIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:invoice_ids*/?", strings.Repeat(",?", len(invoiceIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:invoice_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetInvoicePaymentFlagsRow
+	for rows.Next() {
+		var i GetInvoicePaymentFlagsRow
+		if err := rows.Scan(&i.InvoiceID, &i.IsPaidInFull, &i.IsOverPaid); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getInvoiceSummaryByID = `-- name: GetInvoiceSummaryByID :one
 SELECT
     inv.id,

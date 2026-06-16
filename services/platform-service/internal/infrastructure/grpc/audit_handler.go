@@ -116,6 +116,41 @@ func (h *auditHandler) CreateAuditEvent(ctx context.Context, req *pb.CreateAudit
 	return &pb.CreateAuditEventResponse{Success: true}, nil
 }
 
+func (h *auditHandler) BatchGetResourceCreators(ctx context.Context, req *pb.BatchGetResourceCreatorsRequest) (*pb.BatchGetResourceCreatorsResponse, error) {
+	ctx, span := auditGRPCHandlerTracer.Start(ctx, "grpc_handler.batch_get_resource_creators")
+	defer span.End()
+
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	creators, apiErr := h.auditSvc.BatchGetResourceCreators(ctx, req.ResourceType, req.ResourceIds)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	pbCreators := make([]*pb.ResourceCreator, 0, len(creators))
+	for _, c := range creators {
+		var actor *pb.AuditActor
+		if c.Actor != nil {
+			actor = &pb.AuditActor{
+				Id:           c.Actor.ID,
+				ActorType:    string(c.Actor.ActorType),
+				Type:         c.Actor.Type,
+				IdentityType: c.Actor.IdentityType,
+				Name:         c.Actor.Name,
+				Handle:       c.Actor.Handle,
+			}
+		}
+		pbCreators = append(pbCreators, &pb.ResourceCreator{
+			ResourceId: c.ResourceID,
+			Actor:      actor,
+		})
+	}
+
+	return &pb.BatchGetResourceCreatorsResponse{Creators: pbCreators}, nil
+}
+
 func (h *auditHandler) ListAuditEvents(ctx context.Context, req *pb.ListAuditEventsRequest) (*pb.ListAuditEventsResponse, error) {
 	ctx, span := auditGRPCHandlerTracer.Start(ctx, "grpc_handler.list_audit_events")
 	defer span.End()

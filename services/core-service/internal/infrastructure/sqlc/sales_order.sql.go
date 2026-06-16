@@ -1154,6 +1154,54 @@ func (q *Queries) GetSalesOrderForCustomer(ctx context.Context, arg GetSalesOrde
 	return i, err
 }
 
+const getSalesOrderLineCounts = `-- name: GetSalesOrderLineCounts :many
+SELECT sol.sales_order_id, COUNT(*) AS line_count
+FROM sales_order_line sol
+WHERE sol.sales_order_id IN (/*SLICE:sales_order_ids*/?)
+GROUP BY sol.sales_order_id
+`
+
+type GetSalesOrderLineCountsRow struct {
+	SalesOrderID string
+	LineCount    int64
+}
+
+// Counts line items for a set of sales orders in one batched pass, keyed by
+// sales order ID. Backs the list endpoint's line_count without a per-row
+// correlated subquery; orders with no lines are simply absent from the result.
+func (q *Queries) GetSalesOrderLineCounts(ctx context.Context, salesOrderIds []string) ([]GetSalesOrderLineCountsRow, error) {
+	query := getSalesOrderLineCounts
+	var queryParams []interface{}
+	if len(salesOrderIds) > 0 {
+		for _, v := range salesOrderIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", strings.Repeat(",?", len(salesOrderIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetSalesOrderLineCountsRow
+	for rows.Next() {
+		var i GetSalesOrderLineCountsRow
+		if err := rows.Scan(&i.SalesOrderID, &i.LineCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getSalesOrderLines = `-- name: GetSalesOrderLines :many
 SELECT
     sol.id,
@@ -1350,6 +1398,92 @@ func (q *Queries) GetSalesOrderLinesForBOM(ctx context.Context, salesOrderID str
 	return items, nil
 }
 
+const getSalesOrderPaymentStatuses = `-- name: GetSalesOrderPaymentStatuses :many
+SELECT
+    t.sales_order_id,
+    (
+        t.has_payment_intent
+        OR (t.invoiced_total > 0 AND t.allocated_total >= t.invoiced_total)
+    ) AS is_paid,
+    (t.allocated_total > 0) AS has_payment
+FROM (
+    SELECT
+        so.id AS sales_order_id,
+        EXISTS(
+            SELECT 1 FROM order_payment_intent opi
+            WHERE opi.sales_order_id = so.id
+        ) AS has_payment_intent,
+        COALESCE((
+            SELECT SUM(ilq.value * solr.value)
+            FROM invoice inv
+            JOIN invoice_line il ON il.invoice_id = inv.id
+            JOIN quantity ilq ON ilq.id = il.quantity_id
+            JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
+            JOIN rate solr ON solr.id = sol.unit_price_id
+            WHERE inv.sales_order_id = so.id
+        ), 0) AS invoiced_total,
+        COALESCE((
+            SELECT SUM(taq.value)
+            FROM transaction_allocation ta
+            JOIN invoice inv2 ON inv2.id = ta.invoice_id
+            JOIN quantity taq ON taq.id = ta.amount_id
+            WHERE inv2.sales_order_id = so.id
+        ), 0) AS allocated_total
+    FROM sales_order so
+    WHERE so.id IN (/*SLICE:sales_order_ids*/?)
+      AND so.owner_account_id = ?
+) t
+`
+
+type GetSalesOrderPaymentStatusesParams struct {
+	SalesOrderIds []string
+	AccountID     string
+}
+
+type GetSalesOrderPaymentStatusesRow struct {
+	SalesOrderID string
+	IsPaid       sql.NullBool
+	HasPayment   bool
+}
+
+// Computes a 3-state payment status for a set of sales orders in one batched
+// pass, derived live from settlement allocations vs. invoiced amounts (plus any
+// Stripe payment intent). Avoids per-order N+1 lookups when building a list.
+// is_paid  -> "paid", else has_payment -> "partially_paid", else "unpaid".
+func (q *Queries) GetSalesOrderPaymentStatuses(ctx context.Context, arg GetSalesOrderPaymentStatusesParams) ([]GetSalesOrderPaymentStatusesRow, error) {
+	query := getSalesOrderPaymentStatuses
+	var queryParams []interface{}
+	if len(arg.SalesOrderIds) > 0 {
+		for _, v := range arg.SalesOrderIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", strings.Repeat(",?", len(arg.SalesOrderIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetSalesOrderPaymentStatusesRow
+	for rows.Next() {
+		var i GetSalesOrderPaymentStatusesRow
+		if err := rows.Scan(&i.SalesOrderID, &i.IsPaid, &i.HasPayment); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getSalesOrderPickID = `-- name: GetSalesOrderPickID :one
 SELECT pk.id
 FROM pick pk
@@ -1530,7 +1664,7 @@ func (q *Queries) IsOrderForCustomer(ctx context.Context, arg IsOrderForCustomer
 }
 
 const listSalesOrdersBackward = `-- name: ListSalesOrdersBackward :many
-SELECT
+SELECT STRAIGHT_JOIN
     so.id,
     so.number,
     so.customer_po_number,
@@ -1631,13 +1765,10 @@ SELECT
     od.percentage AS order_discount_percentage,
     od.value AS order_discount_amount,
     od.discount_type_code AS order_discount_discount_type,
-    (SELECT COUNT(*) FROM sales_order so2 WHERE so2.order_discount_id = od.id) AS order_discount_order_count,
     od.created_at AS order_discount_created_at,
     od.updated_at AS order_discount_updated_at,
     -- Pick
-    pk.id AS pick_id,
-    -- Line count
-    (SELECT COUNT(*) FROM sales_order_line sol_count WHERE sol_count.sales_order_id = so.id) AS line_count
+    pk.id AS pick_id
 FROM sales_order so
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.buyer_account_id
@@ -1662,12 +1793,6 @@ AND so.seller_account_id = so.owner_account_id
 AND (
     ? IS NULL
     OR so.buyer_account_id = ?
-)
-AND (
-    ? IS NULL
-    OR so.number LIKE ?
-    OR so.customer_po_number LIKE ?
-    OR ba.name LIKE ?
 )
 AND (
     ? = false
@@ -1725,7 +1850,6 @@ LIMIT ?
 type ListSalesOrdersBackwardParams struct {
 	AccountID                  string
 	BuyerAccountID             sql.NullString
-	SearchQuery                sql.NullString
 	IncludeStatusFilter        interface{}
 	StatusCodes                []string
 	IncludeItemFilter          interface{}
@@ -1836,23 +1960,19 @@ type ListSalesOrdersBackwardRow struct {
 	OrderDiscountPercentage     sql.NullFloat64
 	OrderDiscountAmount         sql.NullFloat64
 	OrderDiscountDiscountType   sql.NullString
-	OrderDiscountOrderCount     int64
 	OrderDiscountCreatedAt      sql.NullTime
 	OrderDiscountUpdatedAt      sql.NullTime
 	PickID                      sql.NullString
-	LineCount                   int64
 }
 
+// STRAIGHT_JOIN forces `so` as the driving table; see ListSalesOrdersForward for why.
+// Do not remove.
 func (q *Queries) ListSalesOrdersBackward(ctx context.Context, arg ListSalesOrdersBackwardParams) ([]ListSalesOrdersBackwardRow, error) {
 	query := listSalesOrdersBackward
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.AccountID)
 	queryParams = append(queryParams, arg.BuyerAccountID)
 	queryParams = append(queryParams, arg.BuyerAccountID)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.IncludeStatusFilter)
 	if len(arg.StatusCodes) > 0 {
 		for _, v := range arg.StatusCodes {
@@ -2014,11 +2134,9 @@ func (q *Queries) ListSalesOrdersBackward(ctx context.Context, arg ListSalesOrde
 			&i.OrderDiscountPercentage,
 			&i.OrderDiscountAmount,
 			&i.OrderDiscountDiscountType,
-			&i.OrderDiscountOrderCount,
 			&i.OrderDiscountCreatedAt,
 			&i.OrderDiscountUpdatedAt,
 			&i.PickID,
-			&i.LineCount,
 		); err != nil {
 			return nil, err
 		}
@@ -2034,7 +2152,7 @@ func (q *Queries) ListSalesOrdersBackward(ctx context.Context, arg ListSalesOrde
 }
 
 const listSalesOrdersForward = `-- name: ListSalesOrdersForward :many
-SELECT
+SELECT STRAIGHT_JOIN
     so.id,
     so.number,
     so.customer_po_number,
@@ -2135,13 +2253,10 @@ SELECT
     od.percentage AS order_discount_percentage,
     od.value AS order_discount_amount,
     od.discount_type_code AS order_discount_discount_type,
-    (SELECT COUNT(*) FROM sales_order so2 WHERE so2.order_discount_id = od.id) AS order_discount_order_count,
     od.created_at AS order_discount_created_at,
     od.updated_at AS order_discount_updated_at,
     -- Pick
-    pk.id AS pick_id,
-    -- Line count
-    (SELECT COUNT(*) FROM sales_order_line sol_count WHERE sol_count.sales_order_id = so.id) AS line_count
+    pk.id AS pick_id
 FROM sales_order so
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.buyer_account_id
@@ -2166,12 +2281,6 @@ AND so.seller_account_id = so.owner_account_id
 AND (
     ? IS NULL
     OR so.buyer_account_id = ?
-)
-AND (
-    ? IS NULL
-    OR so.number LIKE ?
-    OR so.customer_po_number LIKE ?
-    OR ba.name LIKE ?
 )
 AND (
     ? = false
@@ -2230,7 +2339,6 @@ LIMIT ?
 type ListSalesOrdersForwardParams struct {
 	AccountID                  string
 	BuyerAccountID             sql.NullString
-	SearchQuery                sql.NullString
 	IncludeStatusFilter        interface{}
 	StatusCodes                []string
 	IncludeItemFilter          interface{}
@@ -2341,23 +2449,22 @@ type ListSalesOrdersForwardRow struct {
 	OrderDiscountPercentage     sql.NullFloat64
 	OrderDiscountAmount         sql.NullFloat64
 	OrderDiscountDiscountType   sql.NullString
-	OrderDiscountOrderCount     int64
 	OrderDiscountCreatedAt      sql.NullTime
 	OrderDiscountUpdatedAt      sql.NullTime
 	PickID                      sql.NullString
-	LineCount                   int64
 }
 
+// STRAIGHT_JOIN forces `so` as the driving table. Without it the optimizer drives
+// from the tiny sales_order_type join and materializes every order for the account
+// before sorting (filesort) — ~7s for large accounts. With `so` first it uses
+// sales_order_owner_created_idx (owner_account_id, created_at DESC, id DESC) to read
+// only the LIMIT rows in order. Do not remove.
 func (q *Queries) ListSalesOrdersForward(ctx context.Context, arg ListSalesOrdersForwardParams) ([]ListSalesOrdersForwardRow, error) {
 	query := listSalesOrdersForward
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.AccountID)
 	queryParams = append(queryParams, arg.BuyerAccountID)
 	queryParams = append(queryParams, arg.BuyerAccountID)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.IncludeStatusFilter)
 	if len(arg.StatusCodes) > 0 {
 		for _, v := range arg.StatusCodes {
@@ -2520,11 +2627,9 @@ func (q *Queries) ListSalesOrdersForward(ctx context.Context, arg ListSalesOrder
 			&i.OrderDiscountPercentage,
 			&i.OrderDiscountAmount,
 			&i.OrderDiscountDiscountType,
-			&i.OrderDiscountOrderCount,
 			&i.OrderDiscountCreatedAt,
 			&i.OrderDiscountUpdatedAt,
 			&i.PickID,
-			&i.LineCount,
 		); err != nil {
 			return nil, err
 		}
@@ -2593,6 +2698,77 @@ type NoteSalesOrderFirstShipAtParams struct {
 func (q *Queries) NoteSalesOrderFirstShipAt(ctx context.Context, arg NoteSalesOrderFirstShipAtParams) error {
 	_, err := q.db.ExecContext(ctx, noteSalesOrderFirstShipAt, arg.ID, arg.AccountID)
 	return err
+}
+
+const searchSalesOrderIDs = `-- name: SearchSalesOrderIDs :many
+SELECT so.id, so.created_at
+FROM sales_order so
+WHERE so.owner_account_id = ?
+  AND so.seller_account_id = so.owner_account_id
+  AND (? IS NULL OR so.buyer_account_id = ?)
+  AND so.number = ?
+UNION
+SELECT so.id, so.created_at
+FROM sales_order so
+WHERE so.owner_account_id = ?
+  AND so.seller_account_id = so.owner_account_id
+  AND (? IS NULL OR so.buyer_account_id = ?)
+  AND so.customer_po_number = ?
+ORDER BY created_at DESC, id DESC
+LIMIT ?
+`
+
+type SearchSalesOrderIDsParams struct {
+	AccountID      string
+	BuyerAccountID sql.NullString
+	SearchNumber   string
+	SearchPo       sql.NullString
+	Limit          int32
+}
+
+type SearchSalesOrderIDsRow struct {
+	ID        string
+	CreatedAt time.Time
+}
+
+// Exact-match free-text search (the `q=` param). Split into a UNION of two
+// single-column equality seeks because this platform will NOT index_merge an
+// `(number = ? OR customer_po_number = ?)` predicate — it scans the whole
+// account instead. Each UNION arm seeks its own index (number via the global
+// number index; customer_po_number via sales_order_owner_customer_po_number_idx),
+// so a search resolves in ~1 row instead of a 121k-row scan. Returns the matching
+// IDs newest-first; the caller hydrates them.
+func (q *Queries) SearchSalesOrderIDs(ctx context.Context, arg SearchSalesOrderIDsParams) ([]SearchSalesOrderIDsRow, error) {
+	rows, err := q.db.QueryContext(ctx, searchSalesOrderIDs,
+		arg.AccountID,
+		arg.BuyerAccountID,
+		arg.BuyerAccountID,
+		arg.SearchNumber,
+		arg.AccountID,
+		arg.BuyerAccountID,
+		arg.BuyerAccountID,
+		arg.SearchPo,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SearchSalesOrderIDsRow
+	for rows.Next() {
+		var i SearchSalesOrderIDsRow
+		if err := rows.Scan(&i.ID, &i.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const setSalesOrderProductionRunID = `-- name: SetSalesOrderProductionRunID :exec

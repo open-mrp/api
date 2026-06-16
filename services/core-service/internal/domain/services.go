@@ -1063,6 +1063,11 @@ type SalesOrderSvc interface {
 
 	// CreateCustomerCheckoutSession creates an embedded Stripe checkout session for a customer actor.
 	CreateCustomerCheckoutSession(ctx context.Context, params CreateCustomerCheckoutSessionParams) (*CreateCustomerCheckoutSessionResult, *apierror.APIError)
+
+	// RecordOrderPayment links a succeeded Stripe payment intent to a sales order
+	// (called from the billing-service on checkout.session.completed). Idempotent:
+	// a payment intent already linked is a no-op.
+	RecordOrderPayment(ctx context.Context, salesOrderID, paymentIntentID string) *apierror.APIError
 }
 
 type SalesOrderLineSvc interface {

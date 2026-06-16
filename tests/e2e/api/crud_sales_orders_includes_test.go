@@ -181,3 +181,69 @@ func TestSalesOrders_List_IncludeLines(t *testing.T) {
 	require.NotNil(t, lines, "lines should be populated on the list row with ?include=lines")
 	assert.Equal(t, "list", jsonField(lines, "object"))
 }
+
+// ──────────────────────────────────────────────
+// SalesOrder — created_by include
+// ──────────────────────────────────────────────
+//
+// created_by is resolved from the order's create audit event (via
+// platform-service) only when included. The seed order has a seeded internal
+// create event; SeedInternalSalesOrderID has none, exercising the system
+// fallback.
+
+func TestSalesOrders_CreatedBy_OmittedByDefault(t *testing.T) {
+	t.Parallel()
+
+	status, body, err := apiClient.GetListRaw(salesOrdersPath+"/"+SeedSalesOrderID, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assert.Nil(t, parseJSON(body)["created_by"], "created_by should be null without ?include=created_by")
+
+	row := salesOrderListRow(t, nil)
+	assert.Nil(t, row["created_by"], "created_by should be null on a list row without ?include=created_by")
+}
+
+func TestSalesOrders_IncludeCreatedBy_Retrieve(t *testing.T) {
+	t.Parallel()
+
+	status, body, err := apiClient.GetListRaw(salesOrdersPath+"/"+SeedSalesOrderID, url.Values{"include": {"created_by"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	createdBy := jsonObject(parseJSON(body), "created_by")
+	require.NotNil(t, createdBy, "created_by should be present with ?include=created_by")
+	assert.Equal(t, "created_by", jsonField(createdBy, "object"))
+	assert.Equal(t, "internal", jsonField(createdBy, "relation"))
+
+	actor := jsonObject(createdBy, "actor")
+	require.NotNil(t, actor, "actor should be present for an internal creator")
+	assert.Equal(t, "actor", jsonField(actor, "object"))
+	assert.NotEmpty(t, jsonField(actor, "id"))
+	assert.NotEmpty(t, jsonField(actor, "type"))
+}
+
+func TestSalesOrders_IncludeCreatedBy_List(t *testing.T) {
+	t.Parallel()
+
+	row := salesOrderListRow(t, url.Values{"include": {"created_by"}})
+	createdBy := jsonObject(row, "created_by")
+	require.NotNil(t, createdBy, "created_by should be present on a list row with ?include=created_by")
+	assert.Equal(t, "created_by", jsonField(createdBy, "object"))
+	assert.Equal(t, "internal", jsonField(createdBy, "relation"))
+	require.NotNil(t, jsonObject(createdBy, "actor"), "actor should be present for an internal creator")
+}
+
+func TestSalesOrders_IncludeCreatedBy_SystemFallback(t *testing.T) {
+	t.Parallel()
+
+	// An order with no create audit event resolves to a system creator, no actor.
+	status, body, err := apiClient.GetListRaw(salesOrdersPath+"/"+SeedInternalSalesOrderID, url.Values{"include": {"created_by"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	createdBy := jsonObject(parseJSON(body), "created_by")
+	require.NotNil(t, createdBy, "created_by should be present with ?include=created_by")
+	assert.Equal(t, "created_by", jsonField(createdBy, "object"))
+	assert.Equal(t, "system", jsonField(createdBy, "relation"))
+	assert.Nil(t, createdBy["actor"], "actor should be null for a system creator")
+}

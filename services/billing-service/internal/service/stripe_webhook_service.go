@@ -58,6 +58,8 @@ func NewStripeWebhookSvc(config *StripeWebhookSvcConfig) domain.StripeWebhookSvc
 // Unhandled types are acknowledged with a 200 but not enqueued.
 var handledEventTypes = map[string]bool{
 	"customer.deleted": true,
+	// Sales order checkout payment completion.
+	"checkout.session.completed": true,
 	// v2 pricing plan subscription events
 	"v2.billing.pricing_plan_subscription.servicing_activated": true,
 	"v2.billing.pricing_plan_subscription.servicing_canceled":  true,

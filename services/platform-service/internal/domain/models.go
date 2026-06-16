@@ -170,6 +170,13 @@ type AuditActor struct {
 	Handle       *string
 }
 
+// ResourceCreator is the actor that created a single resource, derived from its
+// `create` audit event. Backs the `created_by` include on those resources.
+type ResourceCreator struct {
+	ResourceID string
+	Actor      *AuditActor
+}
+
 // AuditEvent represents a single immutable audit event record.
 // It maps 1:1 with the `audit_event` table for storage.
 type AuditEvent struct {

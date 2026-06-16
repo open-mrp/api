@@ -22,6 +22,13 @@ func init() {
 				Populate:    populateCustomerOnSO,
 			},
 			{Key: "sales_rep", Populate: populateSalesRepOnSO},
+			{
+				Key:         "created_by",
+				Target:      constants.ObjectTypeCreatedBy,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractIDs:  extractSelfIDForCreatedBy,
+				Populate:    populateCreatedByOnSO,
+			},
 			{Key: "bill_to_address", Populate: populateBillToAddressOnSO},
 			{Key: "ship_to_address", Populate: populateShipToAddressOnSO},
 			{Key: "freight", Populate: populateFreightOnSO},
@@ -40,6 +47,24 @@ func init() {
 			},
 		},
 	})
+}
+
+// created_by is resolved lazily from each order's create audit event (via
+// platform-service), keyed by the order's own ID — so ExtractIDs returns the
+// order ID and the loader registered for ObjectTypeCreatedBy fetches the creator.
+func extractSelfIDForCreatedBy(_ context.Context, parent any) []string {
+	so := parent.(*apiresource.SalesOrder)
+	if so.ID == "" {
+		return nil
+	}
+	return []string{so.ID}
+}
+
+func populateCreatedByOnSO(_ context.Context, parent any, loaded map[string]any) {
+	so := parent.(*apiresource.SalesOrder)
+	if v, ok := loaded[so.ID]; ok {
+		so.CreatedBy = v.(*apiresource.CreatedBy)
+	}
 }
 
 func populateSalesRepOnSO(ctx context.Context, parent any, _ map[string]any) {

@@ -2528,6 +2528,158 @@ func (x *AuditActor) GetHandle() string {
 	return ""
 }
 
+type BatchGetResourceCreatorsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ResourceType  string                 `protobuf:"bytes,1,opt,name=resource_type,json=resourceType,proto3" json:"resource_type,omitempty"`
+	ResourceIds   []string               `protobuf:"bytes,2,rep,name=resource_ids,json=resourceIds,proto3" json:"resource_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BatchGetResourceCreatorsRequest) Reset() {
+	*x = BatchGetResourceCreatorsRequest{}
+	mi := &file_platform_platform_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BatchGetResourceCreatorsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BatchGetResourceCreatorsRequest) ProtoMessage() {}
+
+func (x *BatchGetResourceCreatorsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_platform_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BatchGetResourceCreatorsRequest.ProtoReflect.Descriptor instead.
+func (*BatchGetResourceCreatorsRequest) Descriptor() ([]byte, []int) {
+	return file_platform_platform_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *BatchGetResourceCreatorsRequest) GetResourceType() string {
+	if x != nil {
+		return x.ResourceType
+	}
+	return ""
+}
+
+func (x *BatchGetResourceCreatorsRequest) GetResourceIds() []string {
+	if x != nil {
+		return x.ResourceIds
+	}
+	return nil
+}
+
+type ResourceCreator struct {
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	ResourceId string                 `protobuf:"bytes,1,opt,name=resource_id,json=resourceId,proto3" json:"resource_id,omitempty"`
+	// The create-event actor. `actor.type` carries the relation
+	// (internal/customer/supplier); `actor.identity_type` the kind (user/api_key).
+	Actor         *AuditActor `protobuf:"bytes,2,opt,name=actor,proto3" json:"actor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResourceCreator) Reset() {
+	*x = ResourceCreator{}
+	mi := &file_platform_platform_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResourceCreator) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResourceCreator) ProtoMessage() {}
+
+func (x *ResourceCreator) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_platform_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResourceCreator.ProtoReflect.Descriptor instead.
+func (*ResourceCreator) Descriptor() ([]byte, []int) {
+	return file_platform_platform_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *ResourceCreator) GetResourceId() string {
+	if x != nil {
+		return x.ResourceId
+	}
+	return ""
+}
+
+func (x *ResourceCreator) GetActor() *AuditActor {
+	if x != nil {
+		return x.Actor
+	}
+	return nil
+}
+
+type BatchGetResourceCreatorsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// One entry per resource that has a `create` audit event visible to the
+	// caller. Resources with no create event are simply absent.
+	Creators      []*ResourceCreator `protobuf:"bytes,1,rep,name=creators,proto3" json:"creators,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BatchGetResourceCreatorsResponse) Reset() {
+	*x = BatchGetResourceCreatorsResponse{}
+	mi := &file_platform_platform_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BatchGetResourceCreatorsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BatchGetResourceCreatorsResponse) ProtoMessage() {}
+
+func (x *BatchGetResourceCreatorsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_platform_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BatchGetResourceCreatorsResponse.ProtoReflect.Descriptor instead.
+func (*BatchGetResourceCreatorsResponse) Descriptor() ([]byte, []int) {
+	return file_platform_platform_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *BatchGetResourceCreatorsResponse) GetCreators() []*ResourceCreator {
+	if x != nil {
+		return x.Creators
+	}
+	return nil
+}
+
 type AuditFieldChange struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Field         string                 `protobuf:"bytes,1,opt,name=field,proto3" json:"field,omitempty"`
@@ -2539,7 +2691,7 @@ type AuditFieldChange struct {
 
 func (x *AuditFieldChange) Reset() {
 	*x = AuditFieldChange{}
-	mi := &file_platform_platform_proto_msgTypes[30]
+	mi := &file_platform_platform_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2551,7 +2703,7 @@ func (x *AuditFieldChange) String() string {
 func (*AuditFieldChange) ProtoMessage() {}
 
 func (x *AuditFieldChange) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_platform_proto_msgTypes[30]
+	mi := &file_platform_platform_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2564,7 +2716,7 @@ func (x *AuditFieldChange) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AuditFieldChange.ProtoReflect.Descriptor instead.
 func (*AuditFieldChange) Descriptor() ([]byte, []int) {
-	return file_platform_platform_proto_rawDescGZIP(), []int{30}
+	return file_platform_platform_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *AuditFieldChange) GetField() string {
@@ -2925,7 +3077,16 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\x04name\x18\x05 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x1b\n" +
 	"\x06handle\x18\x06 \x01(\tH\x01R\x06handle\x88\x01\x01B\a\n" +
 	"\x05_nameB\t\n" +
-	"\a_handle\"\xa4\x01\n" +
+	"\a_handle\"i\n" +
+	"\x1fBatchGetResourceCreatorsRequest\x12#\n" +
+	"\rresource_type\x18\x01 \x01(\tR\fresourceType\x12!\n" +
+	"\fresource_ids\x18\x02 \x03(\tR\vresourceIds\"^\n" +
+	"\x0fResourceCreator\x12\x1f\n" +
+	"\vresource_id\x18\x01 \x01(\tR\n" +
+	"resourceId\x12*\n" +
+	"\x05actor\x18\x02 \x01(\v2\x14.platform.AuditActorR\x05actor\"Y\n" +
+	" BatchGetResourceCreatorsResponse\x125\n" +
+	"\bcreators\x18\x01 \x03(\v2\x19.platform.ResourceCreatorR\bcreators\"\xa4\x01\n" +
 	"\x10AuditFieldChange\x12\x14\n" +
 	"\x05field\x18\x01 \x01(\tR\x05field\x12)\n" +
 	"\x0eold_value_json\x18\x02 \x01(\tH\x00R\foldValueJson\x88\x01\x01\x12)\n" +
@@ -2947,12 +3108,13 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\x0eLoggingService\x12Y\n" +
 	"\x10CreateRequestLog\x12!.platform.CreateRequestLogRequest\x1a\".platform.CreateRequestLogResponse\x12V\n" +
 	"\x0fListRequestLogs\x12 .platform.ListRequestLogsRequest\x1a!.platform.ListRequestLogsResponse\x12P\n" +
-	"\rGetRequestLog\x12\x1e.platform.GetRequestLogRequest\x1a\x1f.platform.GetRequestLogResponse2\x8f\x03\n" +
+	"\rGetRequestLog\x12\x1e.platform.GetRequestLogRequest\x1a\x1f.platform.GetRequestLogResponse2\x82\x04\n" +
 	"\fAuditService\x12Y\n" +
 	"\x10CreateAuditEvent\x12!.platform.CreateAuditEventRequest\x1a\".platform.CreateAuditEventResponse\x12V\n" +
 	"\x0fListAuditEvents\x12 .platform.ListAuditEventsRequest\x1a!.platform.ListAuditEventsResponse\x12P\n" +
 	"\rGetAuditEvent\x12\x1e.platform.GetAuditEventRequest\x1a\x1f.platform.GetAuditEventResponse\x12z\n" +
-	"\x1bListAuditEventResourceTypes\x12,.platform.ListAuditEventResourceTypesRequest\x1a-.platform.ListAuditEventResourceTypesResponseB Z\x1eshared/proto/platform;platformb\x06proto3"
+	"\x1bListAuditEventResourceTypes\x12,.platform.ListAuditEventResourceTypesRequest\x1a-.platform.ListAuditEventResourceTypesResponse\x12q\n" +
+	"\x18BatchGetResourceCreators\x12).platform.BatchGetResourceCreatorsRequest\x1a*.platform.BatchGetResourceCreatorsResponseB Z\x1eshared/proto/platform;platformb\x06proto3"
 
 var (
 	file_platform_platform_proto_rawDescOnce sync.Once
@@ -2967,7 +3129,7 @@ func file_platform_platform_proto_rawDescGZIP() []byte {
 }
 
 var file_platform_platform_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_platform_platform_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
+var file_platform_platform_proto_msgTypes = make([]protoimpl.MessageInfo, 34)
 var file_platform_platform_proto_goTypes = []any{
 	(ProcessIdempotencyKeyResult)(0),            // 0: platform.ProcessIdempotencyKeyResult
 	(*ProcessIdempotencyKeyRequest)(nil),        // 1: platform.ProcessIdempotencyKeyRequest
@@ -3000,65 +3162,72 @@ var file_platform_platform_proto_goTypes = []any{
 	(*ListAuditEventResourceTypesResponse)(nil), // 28: platform.ListAuditEventResourceTypesResponse
 	(*AuditEventInfo)(nil),                      // 29: platform.AuditEventInfo
 	(*AuditActor)(nil),                          // 30: platform.AuditActor
-	(*AuditFieldChange)(nil),                    // 31: platform.AuditFieldChange
-	(*timestamppb.Timestamp)(nil),               // 32: google.protobuf.Timestamp
+	(*BatchGetResourceCreatorsRequest)(nil),     // 31: platform.BatchGetResourceCreatorsRequest
+	(*ResourceCreator)(nil),                     // 32: platform.ResourceCreator
+	(*BatchGetResourceCreatorsResponse)(nil),    // 33: platform.BatchGetResourceCreatorsResponse
+	(*AuditFieldChange)(nil),                    // 34: platform.AuditFieldChange
+	(*timestamppb.Timestamp)(nil),               // 35: google.protobuf.Timestamp
 }
 var file_platform_platform_proto_depIdxs = []int32{
 	0,  // 0: platform.ProcessIdempotencyKeyResponse.result:type_name -> platform.ProcessIdempotencyKeyResult
-	32, // 1: platform.RequestLog.occurred_at:type_name -> google.protobuf.Timestamp
-	32, // 2: platform.RequestLog.created_at:type_name -> google.protobuf.Timestamp
+	35, // 1: platform.RequestLog.occurred_at:type_name -> google.protobuf.Timestamp
+	35, // 2: platform.RequestLog.created_at:type_name -> google.protobuf.Timestamp
 	11, // 3: platform.CreateRequestLogRequest.request_log:type_name -> platform.RequestLog
-	32, // 4: platform.ListRequestLogsRequest.start_date:type_name -> google.protobuf.Timestamp
-	32, // 5: platform.ListRequestLogsRequest.end_date:type_name -> google.protobuf.Timestamp
+	35, // 4: platform.ListRequestLogsRequest.start_date:type_name -> google.protobuf.Timestamp
+	35, // 5: platform.ListRequestLogsRequest.end_date:type_name -> google.protobuf.Timestamp
 	19, // 6: platform.ListRequestLogsResponse.request_logs:type_name -> platform.RequestLogInfo
 	14, // 7: platform.ListRequestLogsResponse.page_info:type_name -> platform.PageInfo
 	19, // 8: platform.GetRequestLogResponse.request_log:type_name -> platform.RequestLogInfo
-	32, // 9: platform.RequestLogInfo.occurred_at:type_name -> google.protobuf.Timestamp
-	32, // 10: platform.RequestLogInfo.created_at:type_name -> google.protobuf.Timestamp
+	35, // 9: platform.RequestLogInfo.occurred_at:type_name -> google.protobuf.Timestamp
+	35, // 10: platform.RequestLogInfo.created_at:type_name -> google.protobuf.Timestamp
 	20, // 11: platform.RequestLogInfo.actor:type_name -> platform.RequestLogActor
-	32, // 12: platform.RequestLogInfo.account_created_at:type_name -> google.protobuf.Timestamp
-	32, // 13: platform.RequestLogInfo.account_updated_at:type_name -> google.protobuf.Timestamp
+	35, // 12: platform.RequestLogInfo.account_created_at:type_name -> google.protobuf.Timestamp
+	35, // 13: platform.RequestLogInfo.account_updated_at:type_name -> google.protobuf.Timestamp
 	29, // 14: platform.CreateAuditEventRequest.audit_event:type_name -> platform.AuditEventInfo
-	32, // 15: platform.ListAuditEventsRequest.start_date:type_name -> google.protobuf.Timestamp
-	32, // 16: platform.ListAuditEventsRequest.end_date:type_name -> google.protobuf.Timestamp
+	35, // 15: platform.ListAuditEventsRequest.start_date:type_name -> google.protobuf.Timestamp
+	35, // 16: platform.ListAuditEventsRequest.end_date:type_name -> google.protobuf.Timestamp
 	29, // 17: platform.ListAuditEventsResponse.audit_events:type_name -> platform.AuditEventInfo
 	14, // 18: platform.ListAuditEventsResponse.page_info:type_name -> platform.PageInfo
 	29, // 19: platform.GetAuditEventResponse.audit_event:type_name -> platform.AuditEventInfo
 	30, // 20: platform.AuditEventInfo.actor:type_name -> platform.AuditActor
-	31, // 21: platform.AuditEventInfo.changes:type_name -> platform.AuditFieldChange
-	32, // 22: platform.AuditEventInfo.occurred_at:type_name -> google.protobuf.Timestamp
-	32, // 23: platform.AuditEventInfo.created_at:type_name -> google.protobuf.Timestamp
-	32, // 24: platform.AuditEventInfo.account_created_at:type_name -> google.protobuf.Timestamp
-	32, // 25: platform.AuditEventInfo.account_updated_at:type_name -> google.protobuf.Timestamp
-	1,  // 26: platform.IdempotencyService.ProcessIdempotencyKey:input_type -> platform.ProcessIdempotencyKeyRequest
-	3,  // 27: platform.IdempotencyService.SetIdempotencyKeyResponse:input_type -> platform.SetIdempotencyKeyResponseRequest
-	5,  // 28: platform.IdempotencyService.ReleaseIdempotencyKey:input_type -> platform.ReleaseIdempotencyKeyRequest
-	7,  // 29: platform.IdempotencyService.AdvanceRecoveryPoint:input_type -> platform.AdvanceRecoveryPointRequest
-	9,  // 30: platform.IdempotencyService.GetRecoveryPoint:input_type -> platform.GetRecoveryPointRequest
-	12, // 31: platform.LoggingService.CreateRequestLog:input_type -> platform.CreateRequestLogRequest
-	15, // 32: platform.LoggingService.ListRequestLogs:input_type -> platform.ListRequestLogsRequest
-	17, // 33: platform.LoggingService.GetRequestLog:input_type -> platform.GetRequestLogRequest
-	21, // 34: platform.AuditService.CreateAuditEvent:input_type -> platform.CreateAuditEventRequest
-	23, // 35: platform.AuditService.ListAuditEvents:input_type -> platform.ListAuditEventsRequest
-	25, // 36: platform.AuditService.GetAuditEvent:input_type -> platform.GetAuditEventRequest
-	27, // 37: platform.AuditService.ListAuditEventResourceTypes:input_type -> platform.ListAuditEventResourceTypesRequest
-	2,  // 38: platform.IdempotencyService.ProcessIdempotencyKey:output_type -> platform.ProcessIdempotencyKeyResponse
-	4,  // 39: platform.IdempotencyService.SetIdempotencyKeyResponse:output_type -> platform.SetIdempotencyKeyResponseResponse
-	6,  // 40: platform.IdempotencyService.ReleaseIdempotencyKey:output_type -> platform.ReleaseIdempotencyKeyResponse
-	8,  // 41: platform.IdempotencyService.AdvanceRecoveryPoint:output_type -> platform.AdvanceRecoveryPointResponse
-	10, // 42: platform.IdempotencyService.GetRecoveryPoint:output_type -> platform.GetRecoveryPointResponse
-	13, // 43: platform.LoggingService.CreateRequestLog:output_type -> platform.CreateRequestLogResponse
-	16, // 44: platform.LoggingService.ListRequestLogs:output_type -> platform.ListRequestLogsResponse
-	18, // 45: platform.LoggingService.GetRequestLog:output_type -> platform.GetRequestLogResponse
-	22, // 46: platform.AuditService.CreateAuditEvent:output_type -> platform.CreateAuditEventResponse
-	24, // 47: platform.AuditService.ListAuditEvents:output_type -> platform.ListAuditEventsResponse
-	26, // 48: platform.AuditService.GetAuditEvent:output_type -> platform.GetAuditEventResponse
-	28, // 49: platform.AuditService.ListAuditEventResourceTypes:output_type -> platform.ListAuditEventResourceTypesResponse
-	38, // [38:50] is the sub-list for method output_type
-	26, // [26:38] is the sub-list for method input_type
-	26, // [26:26] is the sub-list for extension type_name
-	26, // [26:26] is the sub-list for extension extendee
-	0,  // [0:26] is the sub-list for field type_name
+	34, // 21: platform.AuditEventInfo.changes:type_name -> platform.AuditFieldChange
+	35, // 22: platform.AuditEventInfo.occurred_at:type_name -> google.protobuf.Timestamp
+	35, // 23: platform.AuditEventInfo.created_at:type_name -> google.protobuf.Timestamp
+	35, // 24: platform.AuditEventInfo.account_created_at:type_name -> google.protobuf.Timestamp
+	35, // 25: platform.AuditEventInfo.account_updated_at:type_name -> google.protobuf.Timestamp
+	30, // 26: platform.ResourceCreator.actor:type_name -> platform.AuditActor
+	32, // 27: platform.BatchGetResourceCreatorsResponse.creators:type_name -> platform.ResourceCreator
+	1,  // 28: platform.IdempotencyService.ProcessIdempotencyKey:input_type -> platform.ProcessIdempotencyKeyRequest
+	3,  // 29: platform.IdempotencyService.SetIdempotencyKeyResponse:input_type -> platform.SetIdempotencyKeyResponseRequest
+	5,  // 30: platform.IdempotencyService.ReleaseIdempotencyKey:input_type -> platform.ReleaseIdempotencyKeyRequest
+	7,  // 31: platform.IdempotencyService.AdvanceRecoveryPoint:input_type -> platform.AdvanceRecoveryPointRequest
+	9,  // 32: platform.IdempotencyService.GetRecoveryPoint:input_type -> platform.GetRecoveryPointRequest
+	12, // 33: platform.LoggingService.CreateRequestLog:input_type -> platform.CreateRequestLogRequest
+	15, // 34: platform.LoggingService.ListRequestLogs:input_type -> platform.ListRequestLogsRequest
+	17, // 35: platform.LoggingService.GetRequestLog:input_type -> platform.GetRequestLogRequest
+	21, // 36: platform.AuditService.CreateAuditEvent:input_type -> platform.CreateAuditEventRequest
+	23, // 37: platform.AuditService.ListAuditEvents:input_type -> platform.ListAuditEventsRequest
+	25, // 38: platform.AuditService.GetAuditEvent:input_type -> platform.GetAuditEventRequest
+	27, // 39: platform.AuditService.ListAuditEventResourceTypes:input_type -> platform.ListAuditEventResourceTypesRequest
+	31, // 40: platform.AuditService.BatchGetResourceCreators:input_type -> platform.BatchGetResourceCreatorsRequest
+	2,  // 41: platform.IdempotencyService.ProcessIdempotencyKey:output_type -> platform.ProcessIdempotencyKeyResponse
+	4,  // 42: platform.IdempotencyService.SetIdempotencyKeyResponse:output_type -> platform.SetIdempotencyKeyResponseResponse
+	6,  // 43: platform.IdempotencyService.ReleaseIdempotencyKey:output_type -> platform.ReleaseIdempotencyKeyResponse
+	8,  // 44: platform.IdempotencyService.AdvanceRecoveryPoint:output_type -> platform.AdvanceRecoveryPointResponse
+	10, // 45: platform.IdempotencyService.GetRecoveryPoint:output_type -> platform.GetRecoveryPointResponse
+	13, // 46: platform.LoggingService.CreateRequestLog:output_type -> platform.CreateRequestLogResponse
+	16, // 47: platform.LoggingService.ListRequestLogs:output_type -> platform.ListRequestLogsResponse
+	18, // 48: platform.LoggingService.GetRequestLog:output_type -> platform.GetRequestLogResponse
+	22, // 49: platform.AuditService.CreateAuditEvent:output_type -> platform.CreateAuditEventResponse
+	24, // 50: platform.AuditService.ListAuditEvents:output_type -> platform.ListAuditEventsResponse
+	26, // 51: platform.AuditService.GetAuditEvent:output_type -> platform.GetAuditEventResponse
+	28, // 52: platform.AuditService.ListAuditEventResourceTypes:output_type -> platform.ListAuditEventResourceTypesResponse
+	33, // 53: platform.AuditService.BatchGetResourceCreators:output_type -> platform.BatchGetResourceCreatorsResponse
+	41, // [41:54] is the sub-list for method output_type
+	28, // [28:41] is the sub-list for method input_type
+	28, // [28:28] is the sub-list for extension type_name
+	28, // [28:28] is the sub-list for extension extendee
+	0,  // [0:28] is the sub-list for field type_name
 }
 
 func init() { file_platform_platform_proto_init() }
@@ -3079,14 +3248,14 @@ func file_platform_platform_proto_init() {
 	file_platform_platform_proto_msgTypes[22].OneofWrappers = []any{}
 	file_platform_platform_proto_msgTypes[28].OneofWrappers = []any{}
 	file_platform_platform_proto_msgTypes[29].OneofWrappers = []any{}
-	file_platform_platform_proto_msgTypes[30].OneofWrappers = []any{}
+	file_platform_platform_proto_msgTypes[33].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_platform_platform_proto_rawDesc), len(file_platform_platform_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   31,
+			NumMessages:   34,
 			NumExtensions: 0,
 			NumServices:   3,
 		},

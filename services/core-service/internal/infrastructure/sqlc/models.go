@@ -354,6 +354,7 @@ type AuditEvent struct {
 	ActorType        string
 	IdentityType     string
 	AccountID        string
+	TargetAccountID  string
 	Action           string
 	ResourceType     string
 	ResourceID       string
@@ -365,7 +366,6 @@ type AuditEvent struct {
 	SourceIp         sql.NullString
 	OccurredAt       time.Time
 	CreatedAt        time.Time
-	TargetAccountID  sql.NullString
 }
 
 type Batch struct {
@@ -537,8 +537,8 @@ type EdiRun struct {
 	AccountID    string
 	CreatedAt    time.Time
 	HasSucceeded bool
-	UpdatedAt    time.Time
 	Failures     json.RawMessage
+	UpdatedAt    time.Time
 }
 
 type EmailLog struct {
@@ -1591,8 +1591,8 @@ type Transaction struct {
 	UpdatedAt             time.Time
 	AdjustmentTypeCode    sql.NullString
 	StripePaymentID       sql.NullString
-	Number                string
 	FundsReceivedAt       sql.NullTime
+	Number                string
 }
 
 type TransactionAllocation struct {

@@ -12,6 +12,7 @@ type WebhookCoreClient interface {
 	GetAccountByStripeCustomerID(ctx context.Context, stripeCustomerID string) (string, string, *apierror.APIError)
 	UpdateAccountSubscription(ctx context.Context, idempotencyKey, accountID string, status *string, planCode string, stripeSubID *string, periodEnd *time.Time, stripeCustomerID *string, billingProfileID *string, billingCadenceID *string, pricingPlanSubscriptionID *string, servicingStatus *string, collectionStatus *string) *apierror.APIError
 	ClearAccountStripeCustomer(ctx context.Context, idempotencyKey, accountID string) *apierror.APIError
+	RecordOrderPayment(ctx context.Context, idempotencyKey, salesOrderID, paymentIntentID string) *apierror.APIError
 }
 
 // EventLogRepo defines the event log operations needed by the webhook consumer.

@@ -94,6 +94,41 @@ func (r *auditEventRepoImpl) FindByID(ctx context.Context, id string, callerAcco
 	return read, nil
 }
 
+func (r *auditEventRepoImpl) BatchGetResourceCreators(ctx context.Context, callerAccountID, resourceType string, resourceIDs []string) ([]domain.ResourceCreator, *apierror.APIError) {
+	ctx, span := auditEventRepoTracer.Start(ctx, "repository.audit_event.batch_get_resource_creators")
+	defer span.End()
+
+	if len(resourceIDs) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.db.BatchGetResourceCreators(ctx, sqlc.BatchGetResourceCreatorsParams{
+		ResourceType:          resourceType,
+		ResourceIds:           resourceIDs,
+		CallerAccountIDActor:  callerAccountID,
+		CallerAccountIDTarget: db.NullString(callerAccountID),
+	})
+	if err != nil {
+		return nil, tracing.Trace(span, db.MapSQLError(err))
+	}
+
+	creators := make([]domain.ResourceCreator, 0, len(rows))
+	for _, row := range rows {
+		creators = append(creators, domain.ResourceCreator{
+			ResourceID: row.ResourceID,
+			Actor: &domain.AuditActor{
+				ID:           row.ActorID,
+				ActorType:    constants.ActorType(row.IdentityType),
+				Type:         row.ActorType,
+				IdentityType: row.IdentityType,
+				Name:         auditActorDisplayName(row.UserName, row.ApiKeyName),
+				Handle:       auditActorHandle(row.IdentityType, row.UserEmail, row.ApiKeyRedactedValue),
+			},
+		})
+	}
+	return creators, nil
+}
+
 func auditActorDisplayName(userName, apiKeyName sql.NullString) *string {
 	if userName.Valid && userName.String != "" {
 		s := userName.String

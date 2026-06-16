@@ -22,6 +22,7 @@ var coreClientTracer = tracing.GetTracer("billing-service.core_client")
 type BillingCoreClient struct {
 	grpcConn      *contracts.GRPCClientConn
 	accountClient pb.CoreAccountServiceClient
+	salesClient   pb.CoreSalesServiceClient
 }
 
 func NewBillingCoreClient(url string) (*BillingCoreClient, error) {
@@ -33,6 +34,7 @@ func NewBillingCoreClient(url string) (*BillingCoreClient, error) {
 	return &BillingCoreClient{
 		grpcConn:      grpcConn,
 		accountClient: pb.NewCoreAccountServiceClient(grpcConn.Conn()),
+		salesClient:   pb.NewCoreSalesServiceClient(grpcConn.Conn()),
 	}, nil
 }
 
@@ -49,6 +51,19 @@ func prepareCtx(ctx context.Context, idempotencyKey string) context.Context {
 		return rpc.PrepareServiceCallCtx(ctx, rpc.WithIdempotencyKeyOverride(idempotencyKey))
 	}
 	return rpc.PrepareServiceCallCtx(ctx)
+}
+
+func (c *BillingCoreClient) RecordOrderPayment(ctx context.Context, idempotencyKey, salesOrderID, paymentIntentID string) *apierror.APIError {
+	ctx = prepareCtx(ctx, idempotencyKey)
+
+	_, apiErr := rpc.CallRPC(ctx, coreClientTracer, "core_client.record_order_payment", coreServiceName,
+		func(ctx context.Context, opts ...grpclib.CallOption) (*emptypb.Empty, error) {
+			return c.salesClient.RecordOrderPayment(ctx, &pb.RecordOrderPaymentRequest{
+				SalesOrderId:    salesOrderID,
+				PaymentIntentId: paymentIntentID,
+			}, opts...)
+		})
+	return apiErr
 }
 
 func (c *BillingCoreClient) GetAccountByStripeCustomerID(ctx context.Context, stripeCustomerID string) (string, string, *apierror.APIError) {

@@ -47,6 +47,32 @@ func (s *auditEventSvcImpl) SaveAuditEvent(ctx context.Context, event *domain.Au
 	return s.auditEventRepo.Create(ctx, event)
 }
 
+func (s *auditEventSvcImpl) BatchGetResourceCreators(ctx context.Context, resourceType string, resourceIDs []string) ([]domain.ResourceCreator, *apierror.APIError) {
+	ctx, span := auditEventSvcTracer.Start(ctx, "service.audit_event.batch_get_resource_creators")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+
+	// Deliberately NOT gated by the audit read permission: "who created this
+	// resource" follows the resource's own visibility, so any assigned actor
+	// (internal or customer) may resolve it, scoped to their target account.
+	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
+	}
+
+	if len(resourceIDs) == 0 {
+		return nil, nil
+	}
+
+	return s.auditEventRepo.BatchGetResourceCreators(ctx, identity.Target.AccountID, resourceType, resourceIDs)
+}
+
 func (s *auditEventSvcImpl) GetAuditEvent(ctx context.Context, id string, includes []string) (*domain.AuditEventRead, *apierror.APIError) {
 	ctx, span := auditEventSvcTracer.Start(ctx, "service.audit_event.get_audit_event")
 	defer span.End()

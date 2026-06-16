@@ -273,6 +273,7 @@ func salesOrderToProto(o *domain.SalesOrder) *pb.SalesOrderInfo {
 		ServiceLevelName:      o.ServiceLevelName,
 		LineCount:             o.LineCount,
 		ShipmentIds:           o.ShipmentIDs,
+		PaymentStatus:         string(o.PaymentStatus),
 		CreatedAt:             timestamppb.New(o.CreatedAt),
 		UpdatedAt:             timestamppb.New(o.UpdatedAt),
 	}
@@ -896,6 +897,19 @@ func (h *salesGRPCHandler) CreateCustomerCheckoutSession(ctx context.Context, re
 	return &pb.CreateCustomerCheckoutSessionResponse{
 		ClientSecret: result.ClientSecret,
 	}, nil
+}
+
+func (h *salesGRPCHandler) RecordOrderPayment(ctx context.Context, req *pb.RecordOrderPaymentRequest) (*emptypb.Empty, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	apiErr := h.salesOrderSvc.RecordOrderPayment(ctx, req.SalesOrderId, req.PaymentIntentId)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &emptypb.Empty{}, nil
 }
 
 // protoToEmailContactInputs maps proto contact inputs to the domain layer.

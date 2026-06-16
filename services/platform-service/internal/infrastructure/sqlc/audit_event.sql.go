@@ -14,6 +14,91 @@ import (
 	"github.com/augno/api/shared/db"
 )
 
+const batchGetResourceCreators = `-- name: BatchGetResourceCreators :many
+SELECT ae.resource_id,
+       ae.actor_id,
+       ae.actor_type,
+       ae.identity_type,
+       u.name AS user_name,
+       u.email AS user_email,
+       ak.name AS api_key_name,
+       ak.redacted_value AS api_key_redacted_value
+FROM audit_event ae
+LEFT JOIN ` + "`" + `user` + "`" + ` u ON ae.actor_id = u.id AND ae.identity_type = 'user'
+LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key'
+WHERE ae.resource_type = ?
+  AND ae.action = 'create'
+  AND ae.resource_id IN (/*SLICE:resource_ids*/?)
+  AND (ae.account_id = ? OR ae.target_account_id = ?)
+`
+
+type BatchGetResourceCreatorsParams struct {
+	ResourceType          string
+	ResourceIds           []string
+	CallerAccountIDActor  string
+	CallerAccountIDTarget sql.NullString
+}
+
+type BatchGetResourceCreatorsRow struct {
+	ResourceID          string
+	ActorID             string
+	ActorType           string
+	IdentityType        string
+	UserName            sql.NullString
+	UserEmail           sql.NullString
+	ApiKeyName          sql.NullString
+	ApiKeyRedactedValue sql.NullString
+}
+
+// Returns the `create` audit-event actor for each of the given resource IDs,
+// scoped to the caller's account. Backs the `created_by` include without granting
+// full audit-event read access. actor_type carries the relation
+// (internal/customer/supplier); identity_type the kind (user/api_key).
+func (q *Queries) BatchGetResourceCreators(ctx context.Context, arg BatchGetResourceCreatorsParams) ([]BatchGetResourceCreatorsRow, error) {
+	query := batchGetResourceCreators
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.ResourceType)
+	if len(arg.ResourceIds) > 0 {
+		for _, v := range arg.ResourceIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:resource_ids*/?", strings.Repeat(",?", len(arg.ResourceIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:resource_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.CallerAccountIDActor)
+	queryParams = append(queryParams, arg.CallerAccountIDTarget)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []BatchGetResourceCreatorsRow
+	for rows.Next() {
+		var i BatchGetResourceCreatorsRow
+		if err := rows.Scan(
+			&i.ResourceID,
+			&i.ActorID,
+			&i.ActorType,
+			&i.IdentityType,
+			&i.UserName,
+			&i.UserEmail,
+			&i.ApiKeyName,
+			&i.ApiKeyRedactedValue,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const createAuditEvent = `-- name: CreateAuditEvent :exec
 INSERT IGNORE INTO audit_event (
         type_id,

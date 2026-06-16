@@ -172,6 +172,7 @@ var typeRegistry = map[string]any{
 	"PriorityCode":                    PriorityCode(""),
 	"PaymentTermStatus":               PaymentTermStatus(""),
 	"OwnerType":                       OwnerType(""),
+	"CreatedByRelation":               CreatedByRelation(""),
 	"CustomerPortalVisibility":        CustomerPortalVisibility(""),
 	"LocationTypeCode":                LocationTypeCode(""),
 	"LabelSizeCode":                   LabelSizeCode(""),

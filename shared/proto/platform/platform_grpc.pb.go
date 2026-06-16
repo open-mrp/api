@@ -494,6 +494,7 @@ const (
 	AuditService_ListAuditEvents_FullMethodName             = "/platform.AuditService/ListAuditEvents"
 	AuditService_GetAuditEvent_FullMethodName               = "/platform.AuditService/GetAuditEvent"
 	AuditService_ListAuditEventResourceTypes_FullMethodName = "/platform.AuditService/ListAuditEventResourceTypes"
+	AuditService_BatchGetResourceCreators_FullMethodName    = "/platform.AuditService/BatchGetResourceCreators"
 )
 
 // AuditServiceClient is the client API for AuditService service.
@@ -510,6 +511,11 @@ type AuditServiceClient interface {
 	GetAuditEvent(ctx context.Context, in *GetAuditEventRequest, opts ...grpc.CallOption) (*GetAuditEventResponse, error)
 	// Returns the full set of resource types that may appear on audit events.
 	ListAuditEventResourceTypes(ctx context.Context, in *ListAuditEventResourceTypesRequest, opts ...grpc.CallOption) (*ListAuditEventResourceTypesResponse, error)
+	// Returns the creating actor for a batch of resources, derived from each
+	// resource's `create` audit event. Scoped to the caller's account; unlike the
+	// full audit-event reads this requires only an assigned actor (not the audit
+	// read permission), so it can back a `created_by` include on those resources.
+	BatchGetResourceCreators(ctx context.Context, in *BatchGetResourceCreatorsRequest, opts ...grpc.CallOption) (*BatchGetResourceCreatorsResponse, error)
 }
 
 type auditServiceClient struct {
@@ -560,6 +566,16 @@ func (c *auditServiceClient) ListAuditEventResourceTypes(ctx context.Context, in
 	return out, nil
 }
 
+func (c *auditServiceClient) BatchGetResourceCreators(ctx context.Context, in *BatchGetResourceCreatorsRequest, opts ...grpc.CallOption) (*BatchGetResourceCreatorsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BatchGetResourceCreatorsResponse)
+	err := c.cc.Invoke(ctx, AuditService_BatchGetResourceCreators_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuditServiceServer is the server API for AuditService service.
 // All implementations must embed UnimplementedAuditServiceServer
 // for forward compatibility.
@@ -574,6 +590,11 @@ type AuditServiceServer interface {
 	GetAuditEvent(context.Context, *GetAuditEventRequest) (*GetAuditEventResponse, error)
 	// Returns the full set of resource types that may appear on audit events.
 	ListAuditEventResourceTypes(context.Context, *ListAuditEventResourceTypesRequest) (*ListAuditEventResourceTypesResponse, error)
+	// Returns the creating actor for a batch of resources, derived from each
+	// resource's `create` audit event. Scoped to the caller's account; unlike the
+	// full audit-event reads this requires only an assigned actor (not the audit
+	// read permission), so it can back a `created_by` include on those resources.
+	BatchGetResourceCreators(context.Context, *BatchGetResourceCreatorsRequest) (*BatchGetResourceCreatorsResponse, error)
 	mustEmbedUnimplementedAuditServiceServer()
 }
 
@@ -595,6 +616,9 @@ func (UnimplementedAuditServiceServer) GetAuditEvent(context.Context, *GetAuditE
 }
 func (UnimplementedAuditServiceServer) ListAuditEventResourceTypes(context.Context, *ListAuditEventResourceTypesRequest) (*ListAuditEventResourceTypesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListAuditEventResourceTypes not implemented")
+}
+func (UnimplementedAuditServiceServer) BatchGetResourceCreators(context.Context, *BatchGetResourceCreatorsRequest) (*BatchGetResourceCreatorsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BatchGetResourceCreators not implemented")
 }
 func (UnimplementedAuditServiceServer) mustEmbedUnimplementedAuditServiceServer() {}
 func (UnimplementedAuditServiceServer) testEmbeddedByValue()                      {}
@@ -689,6 +713,24 @@ func _AuditService_ListAuditEventResourceTypes_Handler(srv interface{}, ctx cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuditService_BatchGetResourceCreators_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchGetResourceCreatorsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuditServiceServer).BatchGetResourceCreators(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuditService_BatchGetResourceCreators_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuditServiceServer).BatchGetResourceCreators(ctx, req.(*BatchGetResourceCreatorsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuditService_ServiceDesc is the grpc.ServiceDesc for AuditService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -711,6 +753,10 @@ var AuditService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListAuditEventResourceTypes",
 			Handler:    _AuditService_ListAuditEventResourceTypes_Handler,
+		},
+		{
+			MethodName: "BatchGetResourceCreators",
+			Handler:    _AuditService_BatchGetResourceCreators_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

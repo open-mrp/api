@@ -35,4 +35,10 @@ type AuditEventSvc interface {
 	// ListAuditEventResourceTypes returns the full set of resource types that
 	// may appear on audit events.
 	ListAuditEventResourceTypes(ctx context.Context) ([]string, *apierror.APIError)
+
+	// BatchGetResourceCreators returns the creating actor for a batch of
+	// resources, derived from each resource's `create` audit event, scoped to
+	// the caller's target account. Requires only an assigned actor (not the
+	// audit read permission) so it can back a `created_by` include.
+	BatchGetResourceCreators(ctx context.Context, resourceType string, resourceIDs []string) ([]ResourceCreator, *apierror.APIError)
 }

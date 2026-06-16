@@ -99,8 +99,13 @@ const (
 	SeedProductionID       = "pn_01seedprod_knitlg00"
 
 	// Orders
-	SeedSalesOrderID         = "or_01k0a8bs2yejxbsvqhrx4drkq1"
-	SeedSalesOrderLineID     = "orln_01seediss_ln1_0000"
+	SeedSalesOrderID     = "or_01k0a8bs2yejxbsvqhrx4drkq1"
+	SeedSalesOrderLineID = "orln_01seediss_ln1_0000"
+	// List filter-coverage orders (shared/db/seed/0016_e2e_filter_coverage.sql).
+	// Both use a far-future created_at so they stay on the first list page.
+	SeedInternalSalesOrderID = "or_01seedfcsointernal" // buyer == owner == SeedAccountID
+	SeedPOSalesOrderID       = "or_01seedfcsopo00000"  // carries SeedSalesOrderPONumber
+	SeedSalesOrderPONumber   = "PO-E2E-EXACT-001"
 	SeedShipmentID           = "sh_01k0a87w33emw8pmkz1mf86cg1"
 	SeedDeliveryID           = "dv_01seeddelivery1_0000"
 	SeedShipmentLineID       = "shln_01seedshpln1_00000"

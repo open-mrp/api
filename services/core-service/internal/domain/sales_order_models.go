@@ -124,6 +124,10 @@ type SalesOrder struct {
 	// Count of order lines (always populated, independent of the lines include).
 	LineCount int32
 
+	// Derived payment state (always populated): computed from settlement
+	// allocations vs. invoiced amounts plus any Stripe payment intent.
+	PaymentStatus constants.SalesOrderPaymentStatus
+
 	// Lines (populated when included)
 	Lines []*SalesOrderLine
 

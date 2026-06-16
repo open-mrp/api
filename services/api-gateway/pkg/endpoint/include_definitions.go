@@ -286,6 +286,7 @@ func init() {
 		Fields: []IncludeFieldDef{
 			{Key: "customer", ObjectType: constants.ObjectTypeCustomer},
 			{Key: "sales_rep", ObjectType: constants.ObjectTypeActor},
+			{Key: "created_by", ObjectType: constants.ObjectTypeCreatedBy},
 			{Key: "bill_to_address", ObjectType: constants.ObjectTypeAddress},
 			{Key: "ship_to_address", ObjectType: constants.ObjectTypeAddress},
 			{Key: "freight", ObjectType: constants.ObjectTypeFreight},

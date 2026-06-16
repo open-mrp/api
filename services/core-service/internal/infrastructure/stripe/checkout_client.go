@@ -117,6 +117,13 @@ func (c *checkoutClientImpl) CreateEmbeddedCheckoutSession(ctx context.Context, 
 		SavedPaymentMethodOptions: &gostripe.CheckoutSessionSavedPaymentMethodOptionsParams{
 			PaymentMethodSave: gostripe.String("enabled"),
 		},
+		// Session-level metadata so checkout.session.completed webhooks carry the
+		// order reference directly (the session object does not echo
+		// payment_intent_data.metadata).
+		Metadata: map[string]string{
+			"orderID":    params.OrderID,
+			"customerID": params.CustomerID,
+		},
 		PaymentIntentData: &gostripe.CheckoutSessionPaymentIntentDataParams{
 			Metadata: map[string]string{
 				"orderID":    params.OrderID,

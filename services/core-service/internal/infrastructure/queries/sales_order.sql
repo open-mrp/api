@@ -1,5 +1,10 @@
 -- name: ListSalesOrdersForward :many
-SELECT
+-- STRAIGHT_JOIN forces `so` as the driving table. Without it the optimizer drives
+-- from the tiny sales_order_type join and materializes every order for the account
+-- before sorting (filesort) — ~7s for large accounts. With `so` first it uses
+-- sales_order_owner_created_idx (owner_account_id, created_at DESC, id DESC) to read
+-- only the LIMIT rows in order. Do not remove.
+SELECT STRAIGHT_JOIN
     so.id,
     so.number,
     so.customer_po_number,
@@ -100,13 +105,10 @@ SELECT
     od.percentage AS order_discount_percentage,
     od.value AS order_discount_amount,
     od.discount_type_code AS order_discount_discount_type,
-    (SELECT COUNT(*) FROM sales_order so2 WHERE so2.order_discount_id = od.id) AS order_discount_order_count,
     od.created_at AS order_discount_created_at,
     od.updated_at AS order_discount_updated_at,
     -- Pick
-    pk.id AS pick_id,
-    -- Line count
-    (SELECT COUNT(*) FROM sales_order_line sol_count WHERE sol_count.sales_order_id = so.id) AS line_count
+    pk.id AS pick_id
 FROM sales_order so
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.buyer_account_id
@@ -131,12 +133,6 @@ AND so.seller_account_id = so.owner_account_id
 AND (
     sqlc.narg('buyer_account_id') IS NULL
     OR so.buyer_account_id = sqlc.narg('buyer_account_id')
-)
-AND (
-    sqlc.narg('search_query') IS NULL
-    OR so.number LIKE sqlc.narg('search_query')
-    OR so.customer_po_number LIKE sqlc.narg('search_query')
-    OR ba.name LIKE sqlc.narg('search_query')
 )
 AND (
     sqlc.arg('include_status_filter') = false
@@ -192,7 +188,9 @@ ORDER BY so.created_at DESC, so.id DESC
 LIMIT ?;
 
 -- name: ListSalesOrdersBackward :many
-SELECT
+-- STRAIGHT_JOIN forces `so` as the driving table; see ListSalesOrdersForward for why.
+-- Do not remove.
+SELECT STRAIGHT_JOIN
     so.id,
     so.number,
     so.customer_po_number,
@@ -293,13 +291,10 @@ SELECT
     od.percentage AS order_discount_percentage,
     od.value AS order_discount_amount,
     od.discount_type_code AS order_discount_discount_type,
-    (SELECT COUNT(*) FROM sales_order so2 WHERE so2.order_discount_id = od.id) AS order_discount_order_count,
     od.created_at AS order_discount_created_at,
     od.updated_at AS order_discount_updated_at,
     -- Pick
-    pk.id AS pick_id,
-    -- Line count
-    (SELECT COUNT(*) FROM sales_order_line sol_count WHERE sol_count.sales_order_id = so.id) AS line_count
+    pk.id AS pick_id
 FROM sales_order so
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.buyer_account_id
@@ -324,12 +319,6 @@ AND so.seller_account_id = so.owner_account_id
 AND (
     sqlc.narg('buyer_account_id') IS NULL
     OR so.buyer_account_id = sqlc.narg('buyer_account_id')
-)
-AND (
-    sqlc.narg('search_query') IS NULL
-    OR so.number LIKE sqlc.narg('search_query')
-    OR so.customer_po_number LIKE sqlc.narg('search_query')
-    OR ba.name LIKE sqlc.narg('search_query')
 )
 AND (
     sqlc.arg('include_status_filter') = false
@@ -925,6 +914,79 @@ SELECT (
 ) AS has_payment_intent
 FROM sales_order so
 WHERE so.id = sqlc.arg('sales_order_id');
+
+-- name: GetSalesOrderPaymentStatuses :many
+-- Computes a 3-state payment status for a set of sales orders in one batched
+-- pass, derived live from settlement allocations vs. invoiced amounts (plus any
+-- Stripe payment intent). Avoids per-order N+1 lookups when building a list.
+-- is_paid  -> "paid", else has_payment -> "partially_paid", else "unpaid".
+SELECT
+    t.sales_order_id,
+    (
+        t.has_payment_intent
+        OR (t.invoiced_total > 0 AND t.allocated_total >= t.invoiced_total)
+    ) AS is_paid,
+    (t.allocated_total > 0) AS has_payment
+FROM (
+    SELECT
+        so.id AS sales_order_id,
+        EXISTS(
+            SELECT 1 FROM order_payment_intent opi
+            WHERE opi.sales_order_id = so.id
+        ) AS has_payment_intent,
+        COALESCE((
+            SELECT SUM(ilq.value * solr.value)
+            FROM invoice inv
+            JOIN invoice_line il ON il.invoice_id = inv.id
+            JOIN quantity ilq ON ilq.id = il.quantity_id
+            JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
+            JOIN rate solr ON solr.id = sol.unit_price_id
+            WHERE inv.sales_order_id = so.id
+        ), 0) AS invoiced_total,
+        COALESCE((
+            SELECT SUM(taq.value)
+            FROM transaction_allocation ta
+            JOIN invoice inv2 ON inv2.id = ta.invoice_id
+            JOIN quantity taq ON taq.id = ta.amount_id
+            WHERE inv2.sales_order_id = so.id
+        ), 0) AS allocated_total
+    FROM sales_order so
+    WHERE so.id IN (sqlc.slice('sales_order_ids'))
+      AND so.owner_account_id = sqlc.arg('account_id')
+) t;
+
+-- name: GetSalesOrderLineCounts :many
+-- Counts line items for a set of sales orders in one batched pass, keyed by
+-- sales order ID. Backs the list endpoint's line_count without a per-row
+-- correlated subquery; orders with no lines are simply absent from the result.
+SELECT sol.sales_order_id, COUNT(*) AS line_count
+FROM sales_order_line sol
+WHERE sol.sales_order_id IN (sqlc.slice('sales_order_ids'))
+GROUP BY sol.sales_order_id;
+
+-- name: SearchSalesOrderIDs :many
+-- Exact-match free-text search (the `q=` param). Split into a UNION of two
+-- single-column equality seeks because this platform will NOT index_merge an
+-- `(number = ? OR customer_po_number = ?)` predicate — it scans the whole
+-- account instead. Each UNION arm seeks its own index (number via the global
+-- number index; customer_po_number via sales_order_owner_customer_po_number_idx),
+-- so a search resolves in ~1 row instead of a 121k-row scan. Returns the matching
+-- IDs newest-first; the caller hydrates them.
+SELECT so.id, so.created_at
+FROM sales_order so
+WHERE so.owner_account_id = sqlc.arg('account_id')
+  AND so.seller_account_id = so.owner_account_id
+  AND (sqlc.narg('buyer_account_id') IS NULL OR so.buyer_account_id = sqlc.narg('buyer_account_id'))
+  AND so.number = sqlc.arg('search_number')
+UNION
+SELECT so.id, so.created_at
+FROM sales_order so
+WHERE so.owner_account_id = sqlc.arg('account_id')
+  AND so.seller_account_id = so.owner_account_id
+  AND (sqlc.narg('buyer_account_id') IS NULL OR so.buyer_account_id = sqlc.narg('buyer_account_id'))
+  AND so.customer_po_number = sqlc.arg('search_po')
+ORDER BY created_at DESC, id DESC
+LIMIT ?;
 
 -- name: GetSalesOrderLinesForBOM :many
 SELECT

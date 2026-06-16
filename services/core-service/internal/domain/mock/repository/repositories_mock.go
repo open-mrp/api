@@ -9995,6 +9995,21 @@ func (mr *MockSalesOrderRepoMockRecorder) GetNextOrderNumber(ctx, accountID any)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNextOrderNumber", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetNextOrderNumber), ctx, accountID)
 }
 
+// GetPaymentStatuses mocks base method.
+func (m *MockSalesOrderRepo) GetPaymentStatuses(ctx context.Context, accountID string, salesOrderIDs []string) (map[string]constants.SalesOrderPaymentStatus, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPaymentStatuses", ctx, accountID, salesOrderIDs)
+	ret0, _ := ret[0].(map[string]constants.SalesOrderPaymentStatus)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetPaymentStatuses indicates an expected call of GetPaymentStatuses.
+func (mr *MockSalesOrderRepoMockRecorder) GetPaymentStatuses(ctx, accountID, salesOrderIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPaymentStatuses", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetPaymentStatuses), ctx, accountID, salesOrderIDs)
+}
+
 // GetPickID mocks base method.
 func (m *MockSalesOrderRepo) GetPickID(ctx context.Context, salesOrderID string) (*string, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -12798,6 +12813,21 @@ func (m *MockSettlementRepo) GetDollarUnitID(ctx context.Context) (string, *apie
 func (mr *MockSettlementRepoMockRecorder) GetDollarUnitID(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDollarUnitID", reflect.TypeOf((*MockSettlementRepo)(nil).GetDollarUnitID), ctx)
+}
+
+// GetInvoicePaymentFlags mocks base method.
+func (m *MockSettlementRepo) GetInvoicePaymentFlags(ctx context.Context, invoiceIDs []string) ([]domain.InvoicePaymentFlags, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetInvoicePaymentFlags", ctx, invoiceIDs)
+	ret0, _ := ret[0].([]domain.InvoicePaymentFlags)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetInvoicePaymentFlags indicates an expected call of GetInvoicePaymentFlags.
+func (mr *MockSettlementRepoMockRecorder) GetInvoicePaymentFlags(ctx, invoiceIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInvoicePaymentFlags", reflect.TypeOf((*MockSettlementRepo)(nil).GetInvoicePaymentFlags), ctx, invoiceIDs)
 }
 
 // GetNextSettlementNumber mocks base method.

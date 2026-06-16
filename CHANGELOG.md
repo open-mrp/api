@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.26.0](https://github.com/Augno/api/compare/v0.25.4...v0.26.0) (2026-06-16)
+
+
+### Features
+
+* improved query speed and created_by field added to sales orders ([#355](https://github.com/Augno/api/issues/355)) ([cef9fe4](https://github.com/Augno/api/commit/cef9fe45805d9e44d712466bc6ed3870e696104c))
+
 ## [0.25.4](https://github.com/Augno/api/compare/v0.25.3...v0.25.4) (2026-06-15)
 
 

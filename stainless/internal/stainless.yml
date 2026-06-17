@@ -9,7 +9,20 @@ targets:
     staging_repo: augno/internal-sdk
     production_repo: augno/internal-sdk
     publish:
-      npm: true
+      # Publish to GitHub Packages (npm.pkg.github.com), not public npmjs — the
+      # object form selects the registry (`npm: true` shorthand means npmjs).
+      # `release` makes stlc emit the stock release-please workflow + config as
+      # generated files, so internal-sdk's release automation survives every SDK
+      # sync (codegen owns .github/workflows and deletes non-generated files —
+      # this previously wiped a hand-committed release.yml, so release-please
+      # never ran and the SDK stopped publishing). Mirrors the public typescript
+      # target, which uses the same block with `registry: npmjs`. prerelease:
+      # false cuts stable X.Y.Z versions.
+      npm:
+        registry: github-packages
+      release:
+        branch: main
+        prerelease: false
 environments:
   production: https://api.augno.com
   local: http://localhost:8081

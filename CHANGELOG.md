@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.26.3](https://github.com/Augno/api/compare/v0.26.2...v0.26.3) (2026-06-17)
+
+
+### Bug Fixes
+
+* adding some indexes ([82a2838](https://github.com/Augno/api/commit/82a28386e452741b90a942bb2451a71849818a89))
+* **sales-orders:** derive payment_status from invoice paid-in-full, matching legacy ([#361](https://github.com/Augno/api/issues/361)) ([8949fee](https://github.com/Augno/api/commit/8949feed3f5caadfc9ffcaa0e3dc567212a28c50))
+* **sdk:** generate internal-sdk release workflow via stlc ([#359](https://github.com/Augno/api/issues/359)) ([6ed20c5](https://github.com/Augno/api/commit/6ed20c5713bc93b379eead94e9e81c98e8042256))
+
 ## [0.26.2](https://github.com/Augno/api/compare/v0.26.1...v0.26.2) (2026-06-16)
 
 

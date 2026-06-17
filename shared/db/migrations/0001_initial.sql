@@ -1674,7 +1674,7 @@ CREATE TABLE `invoice` (
   KEY `invoice_sales_order_id_idx` (`sales_order_id`),
   KEY `invoice_created_at_idx` (`created_at`),
   KEY `invoice_billing_address_id_idx` (`billing_address_id`),
-  KEY `invoice_account_id_created_at_idx` (`account_id`,`created_at`),
+  KEY `invoice_account_created_idx` (`account_id`,`created_at` DESC,`id` DESC),
   FULLTEXT KEY `invoice_number_idx` (`number`),
   FULLTEXT KEY `invoice_note_idx` (`note`),
   FULLTEXT KEY `invoice_number_note_idx` (`number`,`note`)
@@ -1733,6 +1733,9 @@ CREATE TABLE `item` (
   KEY `item_item_category_id_idx` (`item_category_id`),
   KEY `item_account_id_idx` (`account_id`),
   KEY `item_item_type_code_idx` (`item_type_code`),
+  KEY `item_account_created_idx` (`account_id`,`created_at` DESC,`id` DESC),
+  KEY `item_account_type_created_idx` (`account_id`,`item_type_code`,`created_at` DESC,`id` DESC),
+  KEY `item_account_category_created_idx` (`account_id`,`item_category_id`,`created_at` DESC,`id` DESC),
   FULLTEXT KEY `item_sku_idx` (`sku`),
   FULLTEXT KEY `item_description_idx` (`description`),
   FULLTEXT KEY `item_sku_description_idx` (`sku`,`description`)
@@ -3023,6 +3026,7 @@ CREATE TABLE `settlement` (
   PRIMARY KEY (`id`),
   KEY `settlement_responsible_user_id_idx` (`responsible_user_id`),
   KEY `settlement_account_id_idx` (`account_id`),
+  KEY `settlement_account_created_idx` (`account_id`,`created_at` DESC,`id` DESC),
   FULLTEXT KEY `settlement_number_idx` (`number`),
   FULLTEXT KEY `settlement_note_idx` (`note`),
   FULLTEXT KEY `settlement_number_note_idx` (`number`,`note`)
@@ -3064,6 +3068,7 @@ CREATE TABLE `shipment` (
   KEY `shipment_account_id_idx` (`account_id`),
   KEY `shipment_created_at_idx` (`created_at`),
   KEY `shipment_account_id_shipment_status_code_created_at_id_idx` (`account_id`,`shipment_status_code`,`created_at` DESC,`id` DESC),
+  KEY `shipment_account_created_idx` (`account_id`,`created_at` DESC,`id` DESC),
   FULLTEXT KEY `shipment_number_idx` (`number`),
   FULLTEXT KEY `shipment_note_idx` (`note`),
   FULLTEXT KEY `shipment_bill_of_lading_idx` (`bill_of_lading`),
@@ -3663,7 +3668,7 @@ CREATE TABLE `user` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-06-16 11:32:49
+-- Dump completed on 2026-06-17  8:36:10
 
 -- +goose Down
 

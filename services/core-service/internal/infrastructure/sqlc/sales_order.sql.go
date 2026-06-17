@@ -19,17 +19,14 @@ SELECT (
   )
   OR (
     so.sales_order_status_code = 'fulfilled'
-    AND NOT EXISTS(
-      SELECT 1 FROM invoice_line il
-      JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
-      JOIN invoice i ON i.id = il.invoice_id
-      WHERE sol.sales_order_id = ?
-      AND i.is_paid_in_full = false
-    )
     AND EXISTS(
-      SELECT 1 FROM invoice_line il2
-      JOIN sales_order_line sol2 ON sol2.id = il2.sales_order_line_id
-      WHERE sol2.sales_order_id = ?
+      SELECT 1 FROM invoice i
+      WHERE i.sales_order_id = ?
+    )
+    AND NOT EXISTS(
+      SELECT 1 FROM invoice i
+      WHERE i.sales_order_id = ?
+      AND i.is_paid_in_full = false
     )
   )
 ) AS has_payment_intent
@@ -1403,25 +1400,30 @@ SELECT
     t.sales_order_id,
     (
         t.has_payment_intent
-        OR (t.invoiced_total > 0 AND t.allocated_total >= t.invoiced_total)
+        OR (
+            t.is_fulfilled
+            AND t.invoice_count > 0
+            AND t.unpaid_invoice_count = 0
+        )
     ) AS is_paid,
     (t.allocated_total > 0) AS has_payment
 FROM (
     SELECT
         so.id AS sales_order_id,
+        (so.sales_order_status_code = 'fulfilled') AS is_fulfilled,
         EXISTS(
             SELECT 1 FROM order_payment_intent opi
             WHERE opi.sales_order_id = so.id
         ) AS has_payment_intent,
-        COALESCE((
-            SELECT SUM(ilq.value * solr.value)
-            FROM invoice inv
-            JOIN invoice_line il ON il.invoice_id = inv.id
-            JOIN quantity ilq ON ilq.id = il.quantity_id
-            JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
-            JOIN rate solr ON solr.id = sol.unit_price_id
+        (
+            SELECT COUNT(*) FROM invoice inv
             WHERE inv.sales_order_id = so.id
-        ), 0) AS invoiced_total,
+        ) AS invoice_count,
+        (
+            SELECT COUNT(*) FROM invoice inv
+            WHERE inv.sales_order_id = so.id
+              AND inv.is_paid_in_full = false
+        ) AS unpaid_invoice_count,
         COALESCE((
             SELECT SUM(taq.value)
             FROM transaction_allocation ta
@@ -1447,9 +1449,12 @@ type GetSalesOrderPaymentStatusesRow struct {
 }
 
 // Computes a 3-state payment status for a set of sales orders in one batched
-// pass, derived live from settlement allocations vs. invoiced amounts (plus any
-// Stripe payment intent). Avoids per-order N+1 lookups when building a list.
-// is_paid  -> "paid", else has_payment -> "partially_paid", else "unpaid".
+// pass. "paid" mirrors the legacy dashboard rule exactly: the order has a Stripe
+// payment intent, OR it is fulfilled and every one of its invoices is paid in
+// full (the stored invoice.is_paid_in_full column). "partially_paid" surfaces
+// settlement-allocation activity that has not yet fully paid the order off.
+// Avoids per-order N+1 lookups when building a list.
+// is_paid -> "paid", else has_payment -> "partially_paid", else "unpaid".
 func (q *Queries) GetSalesOrderPaymentStatuses(ctx context.Context, arg GetSalesOrderPaymentStatusesParams) ([]GetSalesOrderPaymentStatusesRow, error) {
 	query := getSalesOrderPaymentStatuses
 	var queryParams []interface{}

@@ -959,3 +959,22 @@ INSERT IGNORE INTO sales_order_line (id, product_sku, product_description, produ
 
 INSERT IGNORE INTO order_email_contact (id, sales_order_id, account_user_id, notification_type_code, created_at, updated_at) VALUES
     ('oec_01seed_putinc_po_subm', 'or_01seed_putinc_po_es00', 'acus_s83fjhyfmqen', 'purchaseOrderSubmission', NOW(), NOW());
+
+-- ============================================================
+-- PAYMENT-STATUS REGRESSION FIXTURE (sales-order "paid" parity)
+-- ============================================================
+-- Reproduces the reported bug: a sales order shows "unpaid" under the customer
+-- list even though its invoice is marked paid. A fulfilled order whose only
+-- invoice is paid in full (is_paid_in_full = 1) but which has NO settlement
+-- transaction_allocation rows. The legacy dashboard rule marks this order PAID
+-- (fulfilled AND every invoice paid in full); the earlier allocation-vs-invoiced
+-- derivation marked it UNPAID because there were no allocations to reconcile.
+-- This fixture pins the legacy-parity behavior. Intentionally no
+-- transaction_allocation / invoice_line rows: the "paid" rule reads
+-- invoice.is_paid_in_full directly off invoice.sales_order_id.
+
+INSERT IGNORE INTO sales_order (id, number, sales_order_status_code, sales_order_type_code, priority_code, carrier_id, billing_address_id, shipping_address_id, buyer_account_id, seller_account_id, owner_account_id, payment_term_id, shipping_term_id, issued_at, first_ship_at, completed_at, created_at, updated_at) VALUES
+    ('or_01seedpaidnoalloc00', 'ORD-PAID-NOALLOC', 'fulfilled', 'sales_order', 'normal', 'will_call', 'ad_01k09wnac0e1ar211e0sy0ba4g', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'ac_01k09wm2fgevdsc344gpbcj30f', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'pytm_01seednet3000000', 'prepaid_billed', DATE_SUB(NOW(), INTERVAL 6 DAY), DATE_SUB(NOW(), INTERVAL 5 DAY), DATE_SUB(NOW(), INTERVAL 4 DAY), DATE_SUB(NOW(), INTERVAL 6 DAY), DATE_SUB(NOW(), INTERVAL 4 DAY));
+
+INSERT IGNORE INTO invoice (id, number, is_paid_in_full, sales_order_id, billing_address_id, account_id, created_at, updated_at) VALUES
+    ('iv_01seedpaidnoalloc00', 'INV-PAIDNOALLOC', 1, 'or_01seedpaidnoalloc00', 'ad_01k09wnac0e1ar211e0sy0ba4g', 'ac_01k0a5smf9ekb8rqg12555zjqa', DATE_SUB(NOW(), INTERVAL 4 DAY), DATE_SUB(NOW(), INTERVAL 4 DAY));

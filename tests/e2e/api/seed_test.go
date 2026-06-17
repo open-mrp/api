@@ -99,8 +99,15 @@ const (
 	SeedProductionID       = "pn_01seedprod_knitlg00"
 
 	// Orders
-	SeedSalesOrderID     = "or_01k0a8bs2yejxbsvqhrx4drkq1"
+	SeedSalesOrderID     = "or_01k0a8bs2yejxbsvqhrx4drkq1" // ORD-001: issued, $50 partial settlement allocation -> partially_paid
 	SeedSalesOrderLineID = "orln_01seediss_ln1_0000"
+	// Payment-status parity orders.
+	SeedEstimateOrderID      = "or_01k0a8bs2yfhev5begay245wez" // EST-001: estimate, no invoice/payment -> unpaid
+	SeedFulfilledPaidOrderID = "or_01k0a8bs2yf909wjkd7ecd6x4z" // ORD-003: fulfilled, invoice paid in full -> paid
+	// ORD-PAID-NOALLOC (0014_e2e_extras.sql): fulfilled, invoice paid in full but
+	// NO settlement allocation -> paid. Regression fixture for the reported bug
+	// where allocation-derived logic showed it unpaid.
+	SeedPaidNoAllocOrderID = "or_01seedpaidnoalloc00"
 	// List filter-coverage orders (shared/db/seed/0016_e2e_filter_coverage.sql).
 	// Both use a far-future created_at so they stay on the first list page.
 	SeedInternalSalesOrderID = "or_01seedfcsointernal" // buyer == owner == SeedAccountID

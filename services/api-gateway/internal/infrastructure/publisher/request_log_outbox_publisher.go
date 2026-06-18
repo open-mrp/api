@@ -82,8 +82,13 @@ func (p *requestLogOutboxPublisher) Create(ctx context.Context, rl *appctx.Reque
 		RequestID: rl.ID,
 		Data:      data,
 	}
+	// Capture the actor's display name from the identity while the request context is still available; the error-alert goroutine below runs on a detached context that no longer carries it.
+	var actorName *string
 	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
 		msg.Identity = identity
+		if identity != nil && identity.Actor != nil {
+			actorName = identity.Actor.Name
+		}
 	}
 
 	input := messaging.OutboxMessageInput{
@@ -107,14 +112,14 @@ func (p *requestLogOutboxPublisher) Create(ctx context.Context, rl *appctx.Reque
 
 		// Send an email alert for 5xx errors and 408 timeouts (skip in development mode)
 		if (rl.StatusCode >= 500 || rl.StatusCode == http.StatusRequestTimeout) && p.platformMode != constants.PlatformModeDevelopment {
-			p.publishErrorAlert(rl)
+			p.publishErrorAlert(rl, actorName)
 		}
 	}()
 
 	return nil
 }
 
-func (p *requestLogOutboxPublisher) publishErrorAlert(rl *appctx.RequestLog) {
+func (p *requestLogOutboxPublisher) publishErrorAlert(rl *appctx.RequestLog, actorName *string) {
 	params := map[string]any{
 		"RequestID":       rl.ID,
 		"Method":          rl.Method,
@@ -131,6 +136,7 @@ func (p *requestLogOutboxPublisher) publishErrorAlert(rl *appctx.RequestLog) {
 	setOptionalParam(params, "StackTrace", rl.StackTrace)
 	setOptionalParam(params, "RequestBody", rl.BodyJSON)
 	setOptionalParam(params, "ResponseBody", rl.ResponseJSON)
+	setOptionalParam(params, "UserName", actorName)
 	setOptionalParam(params, "ActorID", rl.ActorID)
 	setOptionalParam(params, "AccountID", rl.AccountID)
 	setOptionalParam(params, "TargetAccountID", rl.TargetAccountID)

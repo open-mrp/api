@@ -361,24 +361,11 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 			return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 		}
 
-		// Reserve the order number and reject duplicate order / customer-PO numbers FIRST — before the more expensive line/pricing resolution and the external shipping-rate lookup — so a duplicate fails fast without that wasted work.
+		// Reject a duplicate customer-PO number FIRST — before the more expensive line/pricing resolution and the external shipping-rate lookup — so a duplicate fails fast without that wasted work. The order number itself is allocated inside the write transaction below (not here), so a later failure — including the external Shippo rate lookup — never burns a number and leaves a permanent gap in the per-account sequence.
 		orderRepo := s.repos.NewSalesOrderRepo()
 
-		orderNumber, apiErr := orderRepo.GetNextOrderNumber(ctx, params.AccountID)
-		if apiErr != nil {
-			return nil, cacheErr(apiErr)
-		}
-
-		isDup, apiErr := orderRepo.IsDuplicateOrderNumber(ctx, params.AccountID, orderNumber, nil)
-		if apiErr != nil {
-			return nil, cacheErr(apiErr)
-		}
-		if isDup {
-			return nil, cacheErr(apierror.NewConflictErrorWithParam("A sales order with this number already exists.", "number"))
-		}
-
 		if params.CustomerPONumber != nil && *params.CustomerPONumber != "" {
-			isDup, apiErr = orderRepo.IsDuplicateCustomerPO(ctx, params.AccountID, params.BuyerAccountID, *params.CustomerPONumber, nil)
+			isDup, apiErr := orderRepo.IsDuplicateCustomerPO(ctx, params.AccountID, params.BuyerAccountID, *params.CustomerPONumber, nil)
 			if apiErr != nil {
 				return nil, cacheErr(apiErr)
 			}
@@ -436,6 +423,19 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 
 			txOrderRepo := txSvc.repos.NewSalesOrderRepo()
 			txLineRepo := txSvc.repos.NewSalesOrderLineRepo()
+
+			// Allocate the order number inside the transaction (the eager sys_property counter write happens here too) so that any failure in this create rolls the number back instead of leaving a permanent gap in the per-account sequence. Anything that can fail before this point (line/pricing resolution, the external Shippo rate lookup) therefore never consumes a number.
+			orderNumber, apiErr := txOrderRepo.GetNextOrderNumber(txCtx, params.AccountID)
+			if apiErr != nil {
+				return apiErr
+			}
+			isDup, apiErr := txOrderRepo.IsDuplicateOrderNumber(txCtx, params.AccountID, orderNumber, nil)
+			if apiErr != nil {
+				return apiErr
+			}
+			if isDup {
+				return apierror.NewConflictErrorWithParam("A sales order with this number already exists.", "number")
+			}
 
 			// Create the order. SellerAccountID and OwnerAccountID default to the target account (the account creating the order), matching Dashboard behavior.
 			createParams := domain.CreateSalesOrderParams{
@@ -1762,8 +1762,8 @@ func (s *salesOrderSvcImpl) CheckoutSalesOrder(ctx context.Context, params domai
 			return nil, tracing.Trace(span, apiErr)
 		}
 
-		// Decrypt Stripe credentials
-		decrypted, err := crypto.DecryptAESGCM(encryptedCreds, s.encryptionKey, nil)
+		// Decrypt Stripe credentials. The credential blob is sealed with the account ID as additional authenticated data (matching how both this service and the legacy dashboard API encrypt integration credentials), so the same account ID must be supplied here.
+		decrypted, err := crypto.DecryptAESGCM(encryptedCreds, s.encryptionKey, []byte(params.AccountID))
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to decrypt Stripe credentials."))
 		}
@@ -1926,8 +1926,8 @@ func (s *salesOrderSvcImpl) CreateCustomerCheckoutSession(ctx context.Context, p
 			return nil, tracing.Trace(span, apierror.NewValidationError("Stripe integration is not active for this account."))
 		}
 
-		// 3. Decrypt Stripe credentials
-		decrypted, err := crypto.DecryptAESGCM(encryptedCreds, s.encryptionKey, nil)
+		// 3. Decrypt Stripe credentials. The credential blob is sealed with the account ID as additional authenticated data (matching how both this service and the legacy dashboard API encrypt integration credentials), so the same account ID must be supplied here.
+		decrypted, err := crypto.DecryptAESGCM(encryptedCreds, s.encryptionKey, []byte(targetAccountID))
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to decrypt Stripe credentials."))
 		}

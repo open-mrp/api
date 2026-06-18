@@ -421,15 +421,12 @@ func basePricingBundle() *domain.PricingBundle {
 	}
 }
 
-// expectCreateOrderHappyRepoChain wires up every non-discretionary repo call in
-// the create happy path. Tests that exercise the happy path call this to avoid
-// re-declaring the whole chain; tests that exercise a specific branch (plan
-// limit, duplicate number, etc.) set up only the calls relevant to their check.
-func (suite *SalesOrderSvcTestSuite) expectCreateOrderHappyRepoChain(accountID string) {
-	suite.orderRepo.EXPECT().GetNextOrderNumber(gomock.Any(), accountID).Return("1001", nil).Times(1)
-	suite.orderRepo.EXPECT().IsDuplicateOrderNumber(gomock.Any(), accountID, "1001", (*string)(nil)).Return(false, nil).Times(1)
-	// No CustomerPONumber in base params → no duplicate-PO check performed.
-
+// expectCreateOrderResolutionChain wires the read-only resolution calls that run
+// BEFORE the write transaction: address validation, sales-rep resolution, line
+// pricing, and the (no-carrier → zero) shipping-rate cascade. It deliberately does
+// NOT set up order-number allocation (which now happens inside the transaction) or
+// any persistence, so branch tests can drive a failure at allocation time.
+func (suite *SalesOrderSvcTestSuite) expectCreateOrderResolutionChain(accountID string) {
 	// Bill-to + ship-to addresses are referenced by ID: validated against an account, then fetched.
 	suite.addressRepo.EXPECT().IsInAccount(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
 	suite.addressRepo.EXPECT().Get(gomock.Any(), gomock.Any()).
@@ -459,6 +456,19 @@ func (suite *SalesOrderSvcTestSuite) expectCreateOrderHappyRepoChain(accountID s
 		Return(nil, nil).AnyTimes()
 	suite.unitRepo.EXPECT().GetByIDs(gomock.Any(), accountID, gomock.Any()).
 		Return(nil, nil).AnyTimes()
+}
+
+// expectCreateOrderHappyRepoChain wires up every non-discretionary repo call in
+// the create happy path. Tests that exercise the happy path call this to avoid
+// re-declaring the whole chain; tests that exercise a specific branch (plan
+// limit, duplicate number, etc.) set up only the calls relevant to their check.
+func (suite *SalesOrderSvcTestSuite) expectCreateOrderHappyRepoChain(accountID string) {
+	suite.expectCreateOrderResolutionChain(accountID)
+
+	// Order-number allocation + duplicate check now run inside the write transaction.
+	suite.orderRepo.EXPECT().GetNextOrderNumber(gomock.Any(), accountID).Return("1001", nil).Times(1)
+	suite.orderRepo.EXPECT().IsDuplicateOrderNumber(gomock.Any(), accountID, "1001", (*string)(nil)).Return(false, nil).Times(1)
+	// No CustomerPONumber in base params → no duplicate-PO check performed.
 
 	suite.orderRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, id string, _ domain.CreateSalesOrderParams) (*domain.SalesOrder, *apierror.APIError) {
@@ -539,6 +549,8 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_DuplicateOrderNumber()
 	suite.expectPlanLimitAllows()
 	suite.expectIdempotencyStarted()
 
+	// The order number is allocated inside the write transaction (after the read-only resolution above), so a duplicate auto-generated number is detected there and rolls the transaction back instead of consuming the number.
+	suite.expectCreateOrderResolutionChain("ac_test")
 	suite.orderRepo.EXPECT().GetNextOrderNumber(gomock.Any(), "ac_test").Return("1001", nil).Times(1)
 	suite.orderRepo.EXPECT().IsDuplicateOrderNumber(gomock.Any(), "ac_test", "1001", (*string)(nil)).
 		Return(true, nil).Times(1)
@@ -551,15 +563,37 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_DuplicateOrderNumber()
 	suite.Equal("number", apiErr.Param)
 }
 
+// TestCreateSalesOrder_PreTransactionFailureDoesNotConsumeOrderNumber is the regression
+// guard for the order-number gap bug: allocation must happen inside the write transaction,
+// so any failure before it — here an address-validation error, but in the production incident
+// it was the external Shippo rate lookup returning 401 — never allocates (and never burns) a
+// number. GetNextOrderNumber is asserted to never be called on this path.
+func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_PreTransactionFailureDoesNotConsumeOrderNumber() {
+	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/CreateSalesOrder")
+
+	suite.expectPlanLimitAllows()
+	suite.expectIdempotencyStarted()
+
+	// Bill-to address fails validation → the create aborts before the write transaction.
+	suite.addressRepo.EXPECT().IsInAccount(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
+
+	// The order number must never be allocated when the create fails before the transaction.
+	suite.orderRepo.EXPECT().GetNextOrderNumber(gomock.Any(), gomock.Any()).Times(0)
+
+	suite.expectCacheError()
+
+	_, apiErr := suite.svc.CreateSalesOrder(ctx, baseCreateOrderParams())
+	suite.NotNil(apiErr)
+	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+}
+
 func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_DuplicateCustomerPONumber() {
 	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/CreateSalesOrder")
 
 	suite.expectPlanLimitAllows()
 	suite.expectIdempotencyStarted()
 
-	suite.orderRepo.EXPECT().GetNextOrderNumber(gomock.Any(), "ac_test").Return("1001", nil).Times(1)
-	suite.orderRepo.EXPECT().IsDuplicateOrderNumber(gomock.Any(), "ac_test", "1001", (*string)(nil)).
-		Return(false, nil).Times(1)
+	// The customer-PO duplicate check runs up front (before the order number is allocated inside the transaction), so it fails fast without ever reaching number allocation or the resolution/Shippo work.
 	suite.orderRepo.EXPECT().
 		IsDuplicateCustomerPO(gomock.Any(), "ac_test", "ac_buyer", "PO-123", (*string)(nil)).
 		Return(true, nil).Times(1)
@@ -1047,9 +1081,9 @@ func (suite *SalesOrderSvcTestSuite) TestCheckoutSalesOrder_Success() {
 
 	suite.expectIdempotencyStarted()
 
-	// Encrypt realistic Stripe creds so the service can round-trip decrypt them.
+	// Encrypt realistic Stripe creds so the service can round-trip decrypt them. The account ID is the additional authenticated data, matching how integration credentials are sealed by both this service and the legacy dashboard API.
 	credsJSON, _ := json.Marshal(domain.StripeCredentials{PrivateKey: "sk_test_xxx"})
-	encrypted, err := crypto.EncryptAESGCM(credsJSON, suite.encryptionKey, nil, "k1")
+	encrypted, err := crypto.EncryptAESGCM(credsJSON, suite.encryptionKey, []byte("ac_test"), "k1")
 	suite.Require().NoError(err)
 
 	suite.accountIntegrationRepo.EXPECT().
@@ -1111,7 +1145,7 @@ func (suite *SalesOrderSvcTestSuite) TestCheckoutSalesOrder_AlreadyPaidRejected(
 	suite.expectIdempotencyStarted()
 
 	credsJSON, _ := json.Marshal(domain.StripeCredentials{PrivateKey: "sk_test_xxx"})
-	encrypted, err := crypto.EncryptAESGCM(credsJSON, suite.encryptionKey, nil, "k1")
+	encrypted, err := crypto.EncryptAESGCM(credsJSON, suite.encryptionKey, []byte("ac_test"), "k1")
 	suite.Require().NoError(err)
 
 	suite.accountIntegrationRepo.EXPECT().

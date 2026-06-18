@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.27.0](https://github.com/Augno/api/compare/v0.26.3...v0.27.0) (2026-06-18)
+
+
+### Features
+
+* sales order creation ([#362](https://github.com/Augno/api/issues/362)) ([1f52475](https://github.com/Augno/api/commit/1f52475d047d1660937e37a34c96a7fcb1d72846))
+
 ## [0.26.3](https://github.com/Augno/api/compare/v0.26.2...v0.26.3) (2026-06-17)
 
 

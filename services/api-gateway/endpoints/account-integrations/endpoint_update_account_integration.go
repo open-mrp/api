@@ -18,10 +18,10 @@ type UpdateAccountIntegrationRequest struct {
 	AccountIntegrationID string `path:"id" validate:"required"`
 	// Display name of the integration.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Whether the integration is active.
+	// Lifecycle status of the integration.
 	//
-	// Set to `false` to deactivate the integration without deleting its stored credentials.
-	IsActive field.Optional[bool] `json:"is_active,omitzero"`
+	// Set to `inactive` to deactivate the integration without deleting its stored credentials.
+	Status field.Optional[constants.AccountIntegrationStatus] `json:"status,omitzero"`
 }
 
 var sampleUpdateAccountIntegrationRequest = &UpdateAccountIntegrationRequest{
@@ -44,7 +44,7 @@ func (e *UpdateAccountIntegrationEndpoint) Materialize() *apiendpoint.APIEndpoin
 		Route:             "/v1/identity/integrations/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeAccountIntegration,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAccountIntegrationRequest) (*apiresource.AccountIntegration, *apierror.APIError) {

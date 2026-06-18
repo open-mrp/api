@@ -656,6 +656,15 @@ func (r *rabbitMQ) setupExchangesAndQueues() error {
 		return err
 	}
 
+	// Core sales order created event queue (handled by core-service)
+	if err := r.declareAndBindQueue(
+		CoreEventSalesOrderCreatedQueue,
+		[]string{string(contracts.CoreEventSalesOrderCreated)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
 	// Billing stripe webhook event queue (handled by billing-service)
 	if err := r.declareAndBindQueue(
 		BillingEventStripeWebhookQueue,

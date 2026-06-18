@@ -3,6 +3,7 @@ package salesorderep
 import (
 	"context"
 	"net/http"
+	"time"
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
@@ -42,44 +43,20 @@ type CreateSalesOrderRequest struct {
 	SalesRepID field.Optional[string] `json:"sales_rep_id,omitzero" validate:"omitempty"`
 	// Shipping term ID.
 	ShippingTermID field.Optional[string] `json:"shipping_term_id,omitzero" validate:"omitempty"`
-	// Sales order type code.
-	SalesOrderTypeCode string `json:"sales_order_type_code" validate:"required,max=255"`
 	// Payment term ID.
 	PaymentTermID field.Optional[string] `json:"payment_term_id,omitzero" validate:"omitempty"`
 	// Order discount ID.
 	//
 	// When supplied, a discount line is added to the order automatically.
 	OrderDiscountID field.Optional[string] `json:"order_discount_id,omitzero" validate:"omitempty"`
-	// Bill-to address name.
-	BillToName field.Optional[string] `json:"bill_to_name,omitzero" validate:"omitempty,max=255"`
-	// Bill-to street line 1.
-	BillToStreetLine1 field.Optional[string] `json:"bill_to_street_line_1,omitzero" validate:"omitempty,max=255"`
-	// Bill-to street line 2.
-	BillToStreetLine2 field.Optional[string] `json:"bill_to_street_line_2,omitzero" validate:"omitempty,max=255"`
-	// Bill-to locality/city.
-	BillToLocality field.Optional[string] `json:"bill_to_locality,omitzero" validate:"omitempty,max=255"`
-	// Bill-to state/province.
-	BillToState field.Optional[string] `json:"bill_to_state,omitzero" validate:"omitempty,max=255"`
-	// Bill-to postal code.
-	BillToPostalCode field.Optional[string] `json:"bill_to_postal_code,omitzero" validate:"omitempty,max=255"`
-	// Bill-to country, as a two-letter ISO code.
-	BillToCountry field.Optional[string] `json:"bill_to_country,omitzero" validate:"omitempty,max=2"`
-	// Ship-to address name.
-	ShipToName field.Optional[string] `json:"ship_to_name,omitzero" validate:"omitempty,max=255"`
-	// Ship-to street line 1.
-	ShipToStreetLine1 field.Optional[string] `json:"ship_to_street_line_1,omitzero" validate:"omitempty,max=255"`
-	// Ship-to street line 2.
-	ShipToStreetLine2 field.Optional[string] `json:"ship_to_street_line_2,omitzero" validate:"omitempty,max=255"`
-	// Ship-to locality/city.
-	ShipToLocality field.Optional[string] `json:"ship_to_locality,omitzero" validate:"omitempty,max=255"`
-	// Ship-to state/province.
-	ShipToState field.Optional[string] `json:"ship_to_state,omitzero" validate:"omitempty,max=255"`
-	// Ship-to postal code.
-	ShipToPostalCode field.Optional[string] `json:"ship_to_postal_code,omitzero" validate:"omitempty,max=255"`
-	// Ship-to country, as a two-letter ISO code.
-	ShipToCountry field.Optional[string] `json:"ship_to_country,omitzero" validate:"omitempty,max=2"`
+	// Promised delivery date.
+	PromisedAt field.Optional[time.Time] `json:"promised_at,omitzero"`
+	// Bill-to address ID. Must reference an existing address on the order's owner or buyer account.
+	BillToAddressID string `json:"bill_to_address_id" validate:"required"`
+	// Ship-to address ID. Must reference an existing address on the order's owner or buyer account.
+	ShipToAddressID string `json:"ship_to_address_id" validate:"required"`
 	// Order lines to create.
-	Lines []CreateSalesOrderLineInput `json:"lines"`
+	Lines []CreateSalesOrderLineInput `json:"lines" validate:"required,min=1,dive"`
 	// Account users who should receive order acknowledgement emails.
 	AcknowledgementEmailContacts []SalesOrderEmailContactInput `json:"acknowledgement_email_contacts,omitzero"`
 	// Account users who should receive invoice emails.
@@ -87,8 +64,24 @@ type CreateSalesOrderRequest struct {
 }
 
 // Line item input for a create sales order request.
+//
+// The item, unit cost, and (unless an internal user supplies a `unit_price` override)
+// the unit price are resolved server-side from the product. The quantity unit must
+// belong to the product's unit group.
 type CreateSalesOrderLineInput struct {
-	apirequest.OrderLineInput
+	// ID of the product being ordered.
+	ProductID string `json:"product_id" validate:"required"`
+	// Quantity ordered.
+	Quantity apirequest.QuantityInput `json:"quantity" validate:"required"`
+	// SKU recorded on the line. Defaults to the product's SKU when omitted.
+	ProductSKU field.Optional[string] `json:"product_sku,omitzero" validate:"omitempty,max=255"`
+	// Description recorded on the line. Defaults to the product's description when omitted.
+	ProductDescription field.Optional[string] `json:"product_description,omitzero"`
+	// Unit price override. Honored only for internal users; for customer accounts it is
+	// ignored and the price is calculated server-side.
+	UnitPrice field.Optional[apirequest.RateInput] `json:"unit_price,omitzero"`
+	// EDI line item ID.
+	EdiLineItemID field.Optional[string] `json:"edi_line_item_id,omitzero"`
 }
 
 // SalesOrderEmailContactInput represents an account user subscribed to a sales-order email notification type.
@@ -100,35 +93,20 @@ type SalesOrderEmailContactInput struct {
 var sampleCreateSONote = "Rush order for trade show"
 var sampleCreateSOCarrierID = apiresource.SampleCarrierID
 var sampleCreateSOServiceLevelID = apiresource.SampleServiceLevelID
-var sampleCreateSOShipToName = apiresource.SampleCustomerName
-var sampleCreateSOShipToStreetLine1 = apiresource.SampleAddressLine1
-var sampleCreateSOShipToLocality = apiresource.SampleAddressCity
-var sampleCreateSOShipToState = apiresource.SampleAddressState
-var sampleCreateSOShipToPostalCode = apiresource.SampleAddressPostalCode
-var sampleCreateSOShipToCountry = apiresource.SampleAddressCountry
 var sampleCreateSalesOrderRequest = &CreateSalesOrderRequest{
-	BuyerAccountID:     apiresource.SampleCustomerID,
-	Note:               field.Some(sampleCreateSONote),
-	CarrierID:          field.Some(sampleCreateSOCarrierID),
-	ServiceLevelID:     field.Some(sampleCreateSOServiceLevelID),
-	PriorityCode:       string(constants.PriorityCodeNormal),
-	SalesOrderTypeCode: "sales_order",
-	ShipToName:         field.Some(sampleCreateSOShipToName),
-	ShipToStreetLine1:  field.Some(sampleCreateSOShipToStreetLine1),
-	ShipToLocality:     field.Some(sampleCreateSOShipToLocality),
-	ShipToState:        field.Some(sampleCreateSOShipToState),
-	ShipToPostalCode:   field.Some(sampleCreateSOShipToPostalCode),
-	ShipToCountry:      field.Some(sampleCreateSOShipToCountry),
+	BuyerAccountID:  apiresource.SampleCustomerID,
+	Note:            field.Some(sampleCreateSONote),
+	CarrierID:       field.Some(sampleCreateSOCarrierID),
+	ServiceLevelID:  field.Some(sampleCreateSOServiceLevelID),
+	PriorityCode:    string(constants.PriorityCodeNormal),
+	BillToAddressID: apiresource.SampleAddressID,
+	ShipToAddressID: apiresource.SampleAddressID,
 	Lines: []CreateSalesOrderLineInput{
 		{
-			OrderLineInput: apirequest.OrderLineInput{
-				ProductID:                  apiresource.SampleProductID,
-				ProductSKU:                 "WIDGET-001",
-				QuantityValue:              "10",
-				QuantityUnitID:             apiresource.SampleUnitID,
-				UnitPriceValue:             "25.00",
-				UnitPriceNumeratorUnitID:   apiresource.SampleUnitID,
-				UnitPriceDenominatorUnitID: apiresource.SampleUnitID,
+			ProductID: apiresource.SampleProductID,
+			Quantity: apirequest.QuantityInput{
+				Value:  "10",
+				UnitID: apiresource.SampleUnitID,
 			},
 		},
 	},

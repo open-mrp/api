@@ -58,6 +58,12 @@ const (
 	// mutation such as initialize, move, merge, or split.
 	CoreCmdExecuteProductionStep AmqpRoutingKey = "core.cmd.execute_production_step"
 
+	// CoreEventSalesOrderCreated is an event indicating a sales order was
+	// created. Consumers use it to run out-of-band side effects (e.g. syncing
+	// the order to a third-party CRM such as HubSpot) without blocking the
+	// create response.
+	CoreEventSalesOrderCreated AmqpRoutingKey = "core.event.sales_order_created"
+
 	// Logging
 
 	// LoggingEventRequestLogged is an event that indicates that a request has been logged.

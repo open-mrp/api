@@ -1057,6 +1057,7 @@ type SalesOrderSvc interface {
 
 	// CheckoutSalesOrder initiates a Stripe checkout for a sales order.
 	CheckoutSalesOrder(ctx context.Context, params CheckoutSalesOrderParams) (*CheckoutSalesOrderResult, *apierror.APIError)
+	QuoteSalesOrderLinePrices(ctx context.Context, params QuoteSalesOrderLinePricesParams) ([]SalesOrderLineQuote, *apierror.APIError)
 
 	// CreateSalesOrderProductionRun creates a production run from a sales order.
 	CreateSalesOrderProductionRun(ctx context.Context, params CreateSalesOrderProductionRunParams) (*CreateSalesOrderProductionRunResult, *apierror.APIError)

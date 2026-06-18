@@ -667,6 +667,7 @@ resources:
           update: patch /v1/sales/sales-orders/{id}
           delete: delete /v1/sales/sales-orders/{id}
           checkout: post /v1/sales/sales-orders/{id}/checkout
+          price_quote: post /v1/sales/sales-orders/price-quote
         subresources:
           actions:
             methods:

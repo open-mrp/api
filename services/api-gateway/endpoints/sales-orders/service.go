@@ -17,6 +17,7 @@ import (
 	"github.com/shopspring/decimal"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // toSalesOrderEmailContactInputs converts the endpoint input slice to proto messages.
@@ -52,6 +53,7 @@ type SalesOrderSvc interface {
 	CloseSalesOrder(ctx context.Context, req *CloseSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError)
 	OpenSalesOrder(ctx context.Context, req *OpenSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError)
 	CheckoutSalesOrder(ctx context.Context, req *CheckoutSalesOrderRequest) (*CheckoutSalesOrderResponse, *apierror.APIError)
+	QuoteSalesOrderPrices(ctx context.Context, req *QuoteSalesOrderPricesRequest) (*QuoteSalesOrderPricesResponse, *apierror.APIError)
 	CreateSalesOrderProductionRun(ctx context.Context, req *CreateProductionRunRequest) (*CreateProductionRunResponse, *apierror.APIError)
 	CreateSalesOrderLine(ctx context.Context, req *CreateSalesOrderLineRequest) (*apiresource.SalesOrderLine, *apierror.APIError)
 	UpdateSalesOrderLine(ctx context.Context, req *UpdateSalesOrderLineRequest) (*apiresource.SalesOrderLine, *apierror.APIError)
@@ -148,20 +150,20 @@ func (m *salesOrderSvcImpl) GetSalesOrder(ctx context.Context, req *RetrieveSale
 func (m *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, req *CreateSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError) {
 	lines := make([]*pb.CreateSalesOrderLineInput, len(req.Lines))
 	for i, l := range req.Lines {
-		lines[i] = &pb.CreateSalesOrderLineInput{
-			ProductId:                  l.ProductID,
-			ItemId:                     l.ItemID.Ptr(),
-			ProductSku:                 l.ProductSKU,
-			ProductDescription:         l.ProductDescription.Ptr(),
-			QuantityValue:              l.QuantityValue,
-			QuantityUnitId:             l.QuantityUnitID,
-			UnitPriceValue:             l.UnitPriceValue,
-			UnitPriceNumeratorUnitId:   l.UnitPriceNumeratorUnitID,
-			UnitPriceDenominatorUnitId: l.UnitPriceDenominatorUnitID,
-			UnitCostValue:              l.UnitCostValue.Ptr(),
-			UnitCostNumeratorUnitId:    l.UnitCostNumeratorUnitID.Ptr(),
-			UnitCostDenominatorUnitId:  l.UnitCostDenominatorUnitID.Ptr(),
+		line := &pb.CreateSalesOrderLineInput{
+			ProductId:          l.ProductID,
+			ProductSku:         l.ProductSKU.Ptr(),
+			ProductDescription: l.ProductDescription.Ptr(),
+			QuantityValue:      l.Quantity.Value,
+			QuantityUnitId:     l.Quantity.UnitID,
+			EdiLineItemId:      l.EdiLineItemID.Ptr(),
 		}
+		if up, ok := l.UnitPrice.Value(); ok {
+			line.UnitPriceValue = &up.Value
+			line.UnitPriceNumeratorUnitId = &up.NumeratorUnitID
+			line.UnitPriceDenominatorUnitId = &up.DenominatorUnitID
+		}
+		lines[i] = line
 	}
 
 	var carrierBillingType *string
@@ -181,27 +183,18 @@ func (m *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, req *CreateSal
 		PriorityCode:                 req.PriorityCode,
 		SalesRepId:                   req.SalesRepID.Ptr(),
 		ShippingTermId:               req.ShippingTermID.Ptr(),
-		SalesOrderTypeCode:           req.SalesOrderTypeCode,
 		PaymentTermId:                req.PaymentTermID.Ptr(),
 		OrderDiscountId:              req.OrderDiscountID.Ptr(),
-		BillToName:                   req.BillToName.Ptr(),
-		BillToStreetLine_1:           req.BillToStreetLine1.Ptr(),
-		BillToStreetLine_2:           req.BillToStreetLine2.Ptr(),
-		BillToLocality:               req.BillToLocality.Ptr(),
-		BillToState:                  req.BillToState.Ptr(),
-		BillToPostalCode:             req.BillToPostalCode.Ptr(),
-		BillToCountry:                req.BillToCountry.Ptr(),
-		ShipToName:                   req.ShipToName.Ptr(),
-		ShipToStreetLine_1:           req.ShipToStreetLine1.Ptr(),
-		ShipToStreetLine_2:           req.ShipToStreetLine2.Ptr(),
-		ShipToLocality:               req.ShipToLocality.Ptr(),
-		ShipToState:                  req.ShipToState.Ptr(),
-		ShipToPostalCode:             req.ShipToPostalCode.Ptr(),
-		ShipToCountry:                req.ShipToCountry.Ptr(),
+		BillToAddressId:              req.BillToAddressID,
+		ShipToAddressId:              req.ShipToAddressID,
 		Lines:                        lines,
 		AcknowledgementEmailContacts: toSalesOrderEmailContactInputs(req.AcknowledgementEmailContacts),
 		InvoiceEmailContacts:         toSalesOrderEmailContactInputs(req.InvoiceEmailContacts),
 		Includes:                     resourcekit.FilterIncludes(ctx, salesOrderIncludes...),
+	}
+
+	if v, ok := req.PromisedAt.Value(); ok {
+		pbReq.PromisedAt = timestamppb.New(v)
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.create", domain.ServiceName,
@@ -352,6 +345,45 @@ func (m *salesOrderSvcImpl) CheckoutSalesOrder(ctx context.Context, req *Checkou
 	}, nil
 }
 
+func (m *salesOrderSvcImpl) QuoteSalesOrderPrices(ctx context.Context, req *QuoteSalesOrderPricesRequest) (*QuoteSalesOrderPricesResponse, *apierror.APIError) {
+	lines := make([]*pb.QuoteSalesOrderLineInput, len(req.Lines))
+	for i, l := range req.Lines {
+		lines[i] = &pb.QuoteSalesOrderLineInput{
+			ProductId:      l.ProductID,
+			QuantityValue:  l.Quantity.Value,
+			QuantityUnitId: l.Quantity.UnitID,
+		}
+	}
+
+	pbReq := &pb.QuoteSalesOrderLinePricesRequest{
+		BuyerAccountId: req.BuyerAccountID,
+		Lines:          lines,
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.quote_prices", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.QuoteSalesOrderLinePricesResponse, error) {
+			return m.coreClient.QuoteSalesOrderLinePrices(ctx, pbReq, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	out := make([]QuotedSalesOrderLine, len(resp.Lines))
+	for i, l := range resp.Lines {
+		out[i] = QuotedSalesOrderLine{
+			ProductID:                  l.ProductId,
+			UnitPriceValue:             l.UnitPriceValue,
+			UnitPriceNumeratorUnitID:   l.UnitPriceNumeratorUnitId,
+			UnitPriceDenominatorUnitID: l.UnitPriceDenominatorUnitId,
+		}
+	}
+
+	return &QuoteSalesOrderPricesResponse{
+		Object: constants.ObjectTypeSalesOrderPriceQuote,
+		Lines:  out,
+	}, nil
+}
+
 func (m *salesOrderSvcImpl) CreateSalesOrderProductionRun(ctx context.Context, req *CreateProductionRunRequest) (*CreateProductionRunResponse, *apierror.APIError) {
 	pbReq := &pb.CreateSalesOrderProductionRunRequest{Id: req.SalesOrderID}
 
@@ -473,8 +505,8 @@ func salesOrderDetailFromProto(info *pb.SalesOrderInfo) apiresource.SalesOrder {
 
 	// sales_rep, totals, and the related records (pick/production_run/shipments)
 	// are all expandable — populated from stashed meta only when requested. The
-	// related group is always present (with nil, individually-expandable members).
-	d.Related = &apiresource.SalesOrderRelated{Object: constants.ObjectTypeSalesOrderRelated}
+	// related group is left nil here and created lazily when one of its members
+	// is expanded, so it serializes to null when no related include is requested.
 
 	// Timestamps
 	if info.IssuedAt != nil {

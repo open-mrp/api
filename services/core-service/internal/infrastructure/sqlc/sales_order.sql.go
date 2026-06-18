@@ -38,6 +38,11 @@ type CheckSalesOrderPaymentStatusParams struct {
 	SalesOrderID string
 }
 
+// Mirrors the legacy dashboard "is paid" rule used as the pre-checkout guard:
+// paid if the order has a Stripe payment intent, OR it is fulfilled and every
+// one of its invoices is paid in full. Reads invoice.is_paid_in_full directly
+// off the order's invoices (invoice.sales_order_id), matching the batched
+// GetSalesOrderPaymentStatuses query above.
 func (q *Queries) CheckSalesOrderPaymentStatus(ctx context.Context, arg CheckSalesOrderPaymentStatusParams) (sql.NullBool, error) {
 	row := q.db.QueryRowContext(ctx, checkSalesOrderPaymentStatus,
 		arg.SalesOrderID,
@@ -48,6 +53,41 @@ func (q *Queries) CheckSalesOrderPaymentStatus(ctx context.Context, arg CheckSal
 	var has_payment_intent sql.NullBool
 	err := row.Scan(&has_payment_intent)
 	return has_payment_intent, err
+}
+
+const countCommissionExemptProductLines = `-- name: CountCommissionExemptProductLines :one
+SELECT
+    COUNT(pl.id) AS total,
+    COUNT(CASE WHEN pl.is_commission_exempt THEN 1 END) AS exempt
+FROM product p
+JOIN product_line pl ON pl.id = p.product_line_id
+WHERE p.id IN (/*SLICE:product_ids*/?)
+`
+
+type CountCommissionExemptProductLinesRow struct {
+	Total  int64
+	Exempt int64
+}
+
+// For the given products, returns the number that have a product line (total) and
+// how many of those product lines are commission-exempt (exempt). Mirrors Dashboard's
+// "productLines.length > 0 && productLines.every(isCommissionExempt)" check used in
+// sales-rep resolution.
+func (q *Queries) CountCommissionExemptProductLines(ctx context.Context, productIds []string) (CountCommissionExemptProductLinesRow, error) {
+	query := countCommissionExemptProductLines
+	var queryParams []interface{}
+	if len(productIds) > 0 {
+		for _, v := range productIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:product_ids*/?", strings.Repeat(",?", len(productIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:product_ids*/?", "NULL", 1)
+	}
+	row := q.db.QueryRowContext(ctx, query, queryParams...)
+	var i CountCommissionExemptProductLinesRow
+	err := row.Scan(&i.Total, &i.Exempt)
+	return i, err
 }
 
 const countSalesOrdersForBuyerAccounts = `-- name: CountSalesOrdersForBuyerAccounts :one
@@ -157,7 +197,7 @@ INSERT INTO sales_order (
     carrier_id, carrier_option_id, carrier_billing_type, carrier_billing_account,
     priority_code, sales_rep_id, shipping_term_id,
     sales_order_status_code, sales_order_type_code,
-    payment_term_id, order_discount_id,
+    payment_term_id, order_discount_id, promised_at,
     buyer_account_id, seller_account_id, owner_account_id,
     created_at, updated_at
 ) VALUES (
@@ -165,8 +205,9 @@ INSERT INTO sales_order (
     ?, ?,
     ?, ?, ?, ?,
     ?, ?, ?,
-    ?, ?,
-    ?, ?,
+    -- sales_order_type_code is a storage discriminator; this endpoint only creates sales orders.
+    ?, 'sales_order',
+    ?, ?, ?,
     ?, ?, ?,
     NOW(3), NOW(3)
 )
@@ -187,9 +228,9 @@ type CreateSalesOrderParams struct {
 	SalesRepID            sql.NullString
 	ShippingTermID        sql.NullString
 	SalesOrderStatusCode  string
-	SalesOrderTypeCode    string
 	PaymentTermID         sql.NullString
 	OrderDiscountID       sql.NullString
+	PromisedAt            sql.NullTime
 	BuyerAccountID        string
 	SellerAccountID       string
 	OwnerAccountID        string
@@ -211,9 +252,9 @@ func (q *Queries) CreateSalesOrder(ctx context.Context, arg CreateSalesOrderPara
 		arg.SalesRepID,
 		arg.ShippingTermID,
 		arg.SalesOrderStatusCode,
-		arg.SalesOrderTypeCode,
 		arg.PaymentTermID,
 		arg.OrderDiscountID,
+		arg.PromisedAt,
 		arg.BuyerAccountID,
 		arg.SellerAccountID,
 		arg.OwnerAccountID,
@@ -426,6 +467,54 @@ func (q *Queries) DeleteShipmentLinesBySalesOrder(ctx context.Context, salesOrde
 	return err
 }
 
+const getAccountOriginAddress = `-- name: GetAccountOriginAddress :one
+SELECT
+    a.name AS name,
+    g.street_line_1 AS street_line_1,
+    g.street_line_2 AS street_line_2,
+    g.locality AS locality,
+    g.state AS state,
+    g.postal_code AS postal_code,
+    g.country AS country,
+    a.phone AS phone,
+    a.email AS email
+FROM account acc
+JOIN address a ON a.id = acc.default_billing_address_id
+JOIN geolocation g ON g.id = a.geolocation_id
+WHERE acc.id = ?
+`
+
+type GetAccountOriginAddressRow struct {
+	Name        string
+	StreetLine1 sql.NullString
+	StreetLine2 sql.NullString
+	Locality    sql.NullString
+	State       sql.NullString
+	PostalCode  sql.NullString
+	Country     string
+	Phone       sql.NullString
+	Email       sql.NullString
+}
+
+// The seller account's default billing address, used as the ship-from origin when
+// estimating a shipping rate on order create (mirrors Dashboard's account.defaultBillingAddress).
+func (q *Queries) GetAccountOriginAddress(ctx context.Context, accountID string) (GetAccountOriginAddressRow, error) {
+	row := q.db.QueryRowContext(ctx, getAccountOriginAddress, accountID)
+	var i GetAccountOriginAddressRow
+	err := row.Scan(
+		&i.Name,
+		&i.StreetLine1,
+		&i.StreetLine2,
+		&i.Locality,
+		&i.State,
+		&i.PostalCode,
+		&i.Country,
+		&i.Phone,
+		&i.Email,
+	)
+	return i, err
+}
+
 const getNextOrderNumber = `-- name: GetNextOrderNumber :one
 SELECT COALESCE(
     (SELECT MAX(CAST(sp.value AS UNSIGNED)) + 1
@@ -465,6 +554,56 @@ func (q *Queries) GetOrderAcknowledgementRecipients(ctx context.Context, salesOr
 			return nil, err
 		}
 		items = append(items, email)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getProductTypesAndLines = `-- name: GetProductTypesAndLines :many
+SELECT
+    p.id AS product_id,
+    p.product_type_code AS product_type_code,
+    p.product_line_id AS product_line_id
+FROM product p
+WHERE p.id IN (/*SLICE:product_ids*/?)
+`
+
+type GetProductTypesAndLinesRow struct {
+	ProductID       string
+	ProductTypeCode string
+	ProductLineID   sql.NullString
+}
+
+// Product type code + product line for a set of products, used to estimate parcel
+// weight (sale products only) and gather product-line freight exemptions on create.
+func (q *Queries) GetProductTypesAndLines(ctx context.Context, productIds []string) ([]GetProductTypesAndLinesRow, error) {
+	query := getProductTypesAndLines
+	var queryParams []interface{}
+	if len(productIds) > 0 {
+		for _, v := range productIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:product_ids*/?", strings.Repeat(",?", len(productIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:product_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetProductTypesAndLinesRow
+	for rows.Next() {
+		var i GetProductTypesAndLinesRow
+		if err := rows.Scan(&i.ProductID, &i.ProductTypeCode, &i.ProductLineID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err

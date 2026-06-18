@@ -19,13 +19,15 @@ type CreateAccountIntegrationRequest struct {
 	//
 	// - `stripe`: Stripe payment processing.
 	// - `shippo`: Shippo shipping and label generation.
-	IntegrationCode constants.IntegrationCode `json:"integration_code" validate:"required"`
+	// - `hubspot`: HubSpot CRM.
+	IntegrationCode constants.IntegrationCode `json:"provider" validate:"required"`
 	// JSON string containing the provider's credentials.
 	//
 	// Required keys depend on the provider:
 	//
-	// - `stripe`: `privateKey` (`sk_...`), `publishableKey` (`pk_...`), and `webhookSecret` (`whsec_...`).
-	// - `shippo`: `apiKey` (`shippo_live_...` or `shippo_test_...`).
+	// - `stripe`: `private_key` (`sk_...`), `publishable_key` (`pk_...`), and `webhook_secret` (`whsec_...`).
+	// - `shippo`: `api_key` (`shippo_live_...` or `shippo_test_...`).
+	// - `hubspot`: `access_token` (`pat-...`).
 	//
 	// Sandbox accounts must use test keys and production accounts must use live keys; credentials that do not match are rejected.
 	Credentials string `json:"credentials" validate:"required" sensitive:"true"`
@@ -34,7 +36,7 @@ type CreateAccountIntegrationRequest struct {
 var sampleCreateAccountIntegrationRequest = &CreateAccountIntegrationRequest{
 	Name:            "My Stripe Integration",
 	IntegrationCode: constants.IntegrationCodeStripe,
-	Credentials:     `{"privateKey":"sk_test_...","publishableKey":"pk_test_...","webhookSecret":"whsec_..."}`, // #nosec G101 -- sample request data
+	Credentials:     `{"private_key":"sk_test_...","publishable_key":"pk_test_...","webhook_secret":"whsec_..."}`, // #nosec G101 -- sample request data
 }
 
 func (*CreateAccountIntegrationRequest) SchemaExample() any {
@@ -53,7 +55,7 @@ func (e *CreateAccountIntegrationEndpoint) Materialize() *apiendpoint.APIEndpoin
 		ContentType:       "application/json",
 		Route:             "/v1/identity/integrations",
 		SuccessStatusCode: http.StatusCreated,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeAccountIntegration,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateAccountIntegrationRequest) (*apiresource.AccountIntegration, *apierror.APIError) {

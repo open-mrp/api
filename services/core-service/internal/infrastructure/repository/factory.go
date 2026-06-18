@@ -385,3 +385,7 @@ func (r *repoFactoryImpl) NewLocationRepo() domain.LocationRepo {
 func (r *repoFactoryImpl) NewScanningStationRepo() domain.ScanningStationRepo {
 	return NewScanningStationRepo(r.queries)
 }
+
+func (r *repoFactoryImpl) NewPricingRepo() domain.PricingRepo {
+	return NewPricingRepo(r.queries)
+}

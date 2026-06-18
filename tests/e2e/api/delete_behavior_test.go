@@ -99,7 +99,7 @@ func TestDeleteBehavior_CustomerDeleteConflictWhenSalesOrdersExist(t *testing.T)
 	require.NoError(t, err)
 	requireStatus(t, 201, plStatus, plBody)
 
-	orderPayload := minimalSalesOrderCreateBody(customerID)
+	orderPayload := minimalSalesOrderCreateBody(t, customerID)
 	orderStatus, orderBody, err := apiClient.Post(salesOrdersPath, orderPayload, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, orderStatus, orderBody)

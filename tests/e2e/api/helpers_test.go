@@ -488,38 +488,47 @@ func validCustomerBody(name string) map[string]any {
 	}
 }
 
+// createE2EAddress creates an address (owned by the actor's target account) and
+// registers cleanup, returning its ID for use as an order bill-to / ship-to.
+func createE2EAddress(t *testing.T, name string) string {
+	t.Helper()
+	status, body, err := apiClient.Post("/v1/sales/addresses", map[string]any{
+		"name":          name,
+		"street_line_1": "123 Test St",
+		"locality":      "Los Angeles",
+		"state":         "CA",
+		"postal_code":   "90001",
+		"country":       "US",
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, body)
+	id := jsonField(parseJSON(body), "id")
+	t.Cleanup(func() { _, _, _ = apiClient.Delete("/v1/sales/addresses/" + id) })
+	return id
+}
+
 // minimalSalesOrderCreateBody returns a minimal payload for POST /v1/sales/sales-orders (internal e2e).
+// Create only accepts existing address IDs, so this provisions a bill-to + ship-to address first.
 // The buyer must have product line access for the product's line (grant via POST .../product-line-access/customers first).
-func minimalSalesOrderCreateBody(buyerAccountID string) map[string]any {
+func minimalSalesOrderCreateBody(t *testing.T, buyerAccountID string) map[string]any {
 	return map[string]any{
-		"buyer_account_id":      buyerAccountID,
-		"carrier_id":            SeedCarrierID,
-		"service_level_id":      SeedServiceLevelID,
-		"priority_code":         "normal",
-		"sales_order_type_code": "sales_order",
-		"payment_term_id":       SeedPaymentTermID,
-		"shipping_term_id":      SeedShippingTermID,
-		"bill_to_name":          "E2E Bill-To",
-		"bill_to_street_line_1": "456 Test Ave",
-		"bill_to_locality":      "Denver",
-		"bill_to_state":         "CO",
-		"bill_to_postal_code":   "80202",
-		"bill_to_country":       "US",
-		"ship_to_name":          "E2E Ship-To",
-		"ship_to_street_line_1": "123 Test St",
-		"ship_to_locality":      "Los Angeles",
-		"ship_to_state":         "CA",
-		"ship_to_postal_code":   "90001",
-		"ship_to_country":       "US",
+		"buyer_account_id":   buyerAccountID,
+		"carrier_id":         SeedCarrierID,
+		"service_level_id":   SeedServiceLevelID,
+		"priority_code":      "normal",
+		"payment_term_id":    SeedPaymentTermID,
+		"shipping_term_id":   SeedShippingTermID,
+		"bill_to_address_id": createE2EAddress(t, "E2E Bill-To"),
+		"ship_to_address_id": createE2EAddress(t, "E2E Ship-To"),
+		// The item, SKU/description, unit cost, and unit price are resolved server-side
+		// from the product. The quantity unit must belong to the product's unit group.
 		"lines": []map[string]any{
 			{
-				"product_id":                     SeedProductID,
-				"product_sku":                    SeedItemSKU,
-				"quantity_value":                 "1",
-				"quantity_unit_id":               SeedUnitID,
-				"unit_price_value":               "10.00",
-				"unit_price_numerator_unit_id":   e2eCurrencyUnitID,
-				"unit_price_denominator_unit_id": SeedUnitID,
+				"product_id": SeedProductID,
+				"quantity": map[string]any{
+					"value":   "1",
+					"unit_id": SeedUnitID,
+				},
 			},
 		},
 	}

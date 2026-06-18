@@ -14,6 +14,9 @@ func stringPtrEnum[T ~string](v *T) *string {
 }
 
 func (m *AccountGroupType) StringPtr() *string { return stringPtrEnum(m) }
+func (m *AccountIntegrationStatus) StringPtr() *string {
+	return stringPtrEnum(m)
+}
 func (m *AccountRelationNotificationType) StringPtr() *string {
 	return stringPtrEnum(m)
 }
@@ -49,8 +52,9 @@ func (m *AccountUserStatus) StringPtr() *string { return stringPtrEnum(m) }
 func (s *SubscriptionStatus) StringPtr() *string {
 	return stringPtrEnum(s)
 }
-func (m *FreightPolicy) StringPtr() *string { return stringPtrEnum(m) }
-func (m *RoleType) StringPtr() *string      { return stringPtrEnum(m) }
+func (m *StripeConnectionStatus) StringPtr() *string { return stringPtrEnum(m) }
+func (m *FreightPolicy) StringPtr() *string          { return stringPtrEnum(m) }
+func (m *RoleType) StringPtr() *string               { return stringPtrEnum(m) }
 func (m *TransactionType) StringPtr() *string {
 	return stringPtrEnum(m)
 }

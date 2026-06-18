@@ -410,6 +410,8 @@ func Run(
 		TxManager:             txManager,
 		CheckoutClientFactory: stripeCheckoutFactory,
 		NotificationPublisher: notificationPublisher,
+		SalesOrderPublisher:   event.NewOutboxSalesOrderEventPublisher(),
+		ShippoFactory:         shippoFactory,
 		EncryptionKey:         integrationEncryptionKey,
 		FrontendURL:           cfg.FrontendURL,
 	})
@@ -598,6 +600,11 @@ func Run(
 
 	execStepConsumer := event.NewExecuteProductionStepConsumer(rabbitmq, inboxRepo, queries, repoFactory)
 	if err := execStepConsumer.Listen(ctx); err != nil {
+		return err
+	}
+
+	salesOrderCreatedConsumer := event.NewSalesOrderCreatedConsumer(rabbitmq, inboxRepo, repoFactory)
+	if err := salesOrderCreatedConsumer.Listen(ctx); err != nil {
 		return err
 	}
 

@@ -65,6 +65,10 @@ service CoreSalesService {
   // CheckoutSalesOrder initiates a checkout for a sales order.
   rpc CheckoutSalesOrder(CheckoutSalesOrderRequest) returns (CheckoutSalesOrderResponse);
 
+  // QuoteSalesOrderLinePrices computes the unit price for each line without creating
+  // an order, used to display prices to users (incl. the customer portal).
+  rpc QuoteSalesOrderLinePrices(QuoteSalesOrderLinePricesRequest) returns (QuoteSalesOrderLinePricesResponse);
+
   // CreateSalesOrderProductionRun creates a production run from a sales order.
   rpc CreateSalesOrderProductionRun(CreateSalesOrderProductionRunRequest) returns (CreateSalesOrderProductionRunResponse);
 
@@ -441,25 +445,14 @@ message CreateSalesOrderRequest {
   string priority_code = 8;
   optional string sales_rep_id = 9;
   optional string shipping_term_id = 10;
-  string sales_order_type_code = 11;
+  // sales_order_type_code (11) removed: the order type is a storage discriminator
+  // (always 'sales_order' for this endpoint), set in the repository layer — not API surface.
+  reserved 11;
   optional string payment_term_id = 12;
   optional string order_discount_id = 13;
-  // Address fields for bill-to
-  optional string bill_to_name = 14;
-  optional string bill_to_street_line_1 = 15;
-  optional string bill_to_street_line_2 = 16;
-  optional string bill_to_locality = 17;
-  optional string bill_to_state = 18;
-  optional string bill_to_postal_code = 19;
-  optional string bill_to_country = 20;
-  // Address fields for ship-to
-  optional string ship_to_name = 21;
-  optional string ship_to_street_line_1 = 22;
-  optional string ship_to_street_line_2 = 23;
-  optional string ship_to_locality = 24;
-  optional string ship_to_state = 25;
-  optional string ship_to_postal_code = 26;
-  optional string ship_to_country = 27;
+  // Flat bill_to_*/ship_to_* address fields (14-27) removed: create only accepts
+  // existing address IDs, matching Dashboard (addresses are persisted separately).
+  reserved 14 to 27;
   // Lines to create with the order
   repeated CreateSalesOrderLineInput lines = 28;
   // Email contact recipients for order acknowledgement emails
@@ -467,6 +460,12 @@ message CreateSalesOrderRequest {
   // Email contact recipients for invoice emails
   repeated SalesOrderEmailContactInput invoice_email_contacts = 30;
   repeated string includes = 31;
+  // Promised delivery date, stored at create time.
+  optional google.protobuf.Timestamp promised_at = 32;
+  // Existing bill-to / ship-to address IDs (required). The addresses must belong to
+  // the order's owner or buyer account.
+  string bill_to_address_id = 33;
+  string ship_to_address_id = 34;
 }
 
 message SalesOrderEmailContactInput {
@@ -475,17 +474,19 @@ message SalesOrderEmailContactInput {
 
 message CreateSalesOrderLineInput {
   string product_id = 1;
-  optional string item_id = 2;
-  string product_sku = 3;
+  // item_id (2) removed: the item is derived from the product. unit_cost (10-12)
+  // removed: cost is pulled from the item on the backend.
+  reserved 2, 10, 11, 12;
+  // product_sku / product_description default to the product's when omitted.
+  optional string product_sku = 3;
   optional string product_description = 4;
   string quantity_value = 5;
   string quantity_unit_id = 6;
-  string unit_price_value = 7;
-  string unit_price_numerator_unit_id = 8;
-  string unit_price_denominator_unit_id = 9;
-  optional string unit_cost_value = 10;
-  optional string unit_cost_numerator_unit_id = 11;
-  optional string unit_cost_denominator_unit_id = 12;
+  // Unit price override (optional). Honored only for internal users; for customer
+  // actors it is ignored and the price is computed server-side.
+  optional string unit_price_value = 7;
+  optional string unit_price_numerator_unit_id = 8;
+  optional string unit_price_denominator_unit_id = 9;
   optional string edi_line_item_id = 13;
 }
 
@@ -561,6 +562,28 @@ message CheckoutSalesOrderRequest {
 
 message CheckoutSalesOrderResponse {
   string checkout_url = 1;
+}
+
+message QuoteSalesOrderLineInput {
+  string product_id = 1;
+  string quantity_value = 2;
+  string quantity_unit_id = 3;
+}
+
+message QuoteSalesOrderLinePricesRequest {
+  string buyer_account_id = 1;
+  repeated QuoteSalesOrderLineInput lines = 2;
+}
+
+message SalesOrderLineQuote {
+  string product_id = 1;
+  string unit_price_value = 2;
+  string unit_price_numerator_unit_id = 3;
+  string unit_price_denominator_unit_id = 4;
+}
+
+message QuoteSalesOrderLinePricesResponse {
+  repeated SalesOrderLineQuote lines = 1;
 }
 
 message CreateSalesOrderProductionRunRequest {

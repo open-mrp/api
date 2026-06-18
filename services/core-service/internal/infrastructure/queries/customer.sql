@@ -979,3 +979,28 @@ WHERE id = sqlc.arg('id');
 
 -- name: DeleteCustomerCreditLimitQuantity :exec
 DELETE FROM quantity WHERE id = sqlc.arg('id');
+
+-- name: IsCustomerCommissionExempt :one
+-- Mirrors Dashboard's isCustomerOrGroupCommissionExempt: true when the customer
+-- relation, its type group, or any of its price groups is commission-exempt.
+SELECT EXISTS(
+    SELECT 1 FROM account_relation ar
+    WHERE ar.owner_account_id = sqlc.arg('owner_account_id')
+      AND ar.counterparty_account_id = sqlc.arg('customer_account_id')
+      AND ar.account_relation_role_code = 'customer'
+      AND (
+        ar.commission_status_code = 'commission_exempt'
+        OR EXISTS (
+            SELECT 1 FROM account_group tg
+            WHERE tg.id = ar.account_group_id
+              AND tg.account_group_type_code = 'type_group'
+              AND tg.commission_status_code = 'commission_exempt'
+        )
+        OR EXISTS (
+            SELECT 1 FROM account_relation_price_group arpg
+            JOIN account_group pg ON pg.id = arpg.account_group_id
+            WHERE arpg.account_relation_id = ar.id
+              AND pg.commission_status_code = 'commission_exempt'
+        )
+      )
+) AS `exists`;

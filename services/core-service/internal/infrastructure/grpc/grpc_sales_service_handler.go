@@ -577,21 +577,22 @@ func (h *salesGRPCHandler) CreateSalesOrder(ctx context.Context, req *pb.CreateS
 
 	lines := make([]domain.CreateSalesOrderLineInput, len(req.Lines))
 	for i, l := range req.Lines {
-		lines[i] = domain.CreateSalesOrderLineInput{
-			ProductID:                  l.ProductId,
-			ItemID:                     l.ItemId,
-			ProductSKU:                 l.ProductSku,
-			ProductDescription:         l.ProductDescription,
-			QuantityValue:              l.QuantityValue,
-			QuantityUnitID:             l.QuantityUnitId,
-			UnitPriceValue:             l.UnitPriceValue,
-			UnitPriceNumeratorUnitID:   l.UnitPriceNumeratorUnitId,
-			UnitPriceDenominatorUnitID: l.UnitPriceDenominatorUnitId,
-			UnitCostValue:              l.UnitCostValue,
-			UnitCostNumeratorUnitID:    l.UnitCostNumeratorUnitId,
-			UnitCostDenominatorUnitID:  l.UnitCostDenominatorUnitId,
-			EdiLineItemID:              l.EdiLineItemId,
+		line := domain.CreateSalesOrderLineInput{
+			ProductID:          l.ProductId,
+			ProductSKU:         l.ProductSku,
+			ProductDescription: l.ProductDescription,
+			QuantityValue:      l.QuantityValue,
+			QuantityUnitID:     l.QuantityUnitId,
+			EdiLineItemID:      l.EdiLineItemId,
 		}
+		if l.UnitPriceValue != nil {
+			line.UnitPrice = &domain.RateValue{
+				Value:             l.GetUnitPriceValue(),
+				NumeratorUnitID:   l.GetUnitPriceNumeratorUnitId(),
+				DenominatorUnitID: l.GetUnitPriceDenominatorUnitId(),
+			}
+		}
+		lines[i] = line
 	}
 
 	params := domain.CreateSalesOrderParams{
@@ -605,27 +606,19 @@ func (h *salesGRPCHandler) CreateSalesOrder(ctx context.Context, req *pb.CreateS
 		PriorityCode:                 req.PriorityCode,
 		SalesRepID:                   req.SalesRepId,
 		ShippingTermID:               req.ShippingTermId,
-		SalesOrderTypeCode:           req.SalesOrderTypeCode,
 		PaymentTermID:                req.PaymentTermId,
 		OrderDiscountID:              req.OrderDiscountId,
-		BillToName:                   req.BillToName,
-		BillToStreetLine1:            req.BillToStreetLine_1,
-		BillToStreetLine2:            req.BillToStreetLine_2,
-		BillToLocality:               req.BillToLocality,
-		BillToState:                  req.BillToState,
-		BillToPostalCode:             req.BillToPostalCode,
-		BillToCountry:                req.BillToCountry,
-		ShipToName:                   req.ShipToName,
-		ShipToStreetLine1:            req.ShipToStreetLine_1,
-		ShipToStreetLine2:            req.ShipToStreetLine_2,
-		ShipToLocality:               req.ShipToLocality,
-		ShipToState:                  req.ShipToState,
-		ShipToPostalCode:             req.ShipToPostalCode,
-		ShipToCountry:                req.ShipToCountry,
+		BillToAddressID:              req.BillToAddressId,
+		ShipToAddressID:              req.ShipToAddressId,
 		Lines:                        lines,
 		AcknowledgementEmailContacts: protoToEmailContactInputs(req.AcknowledgementEmailContacts),
 		InvoiceEmailContacts:         protoToEmailContactInputs(req.InvoiceEmailContacts),
 		Includes:                     req.Includes,
+	}
+
+	if req.PromisedAt != nil {
+		t := req.PromisedAt.AsTime()
+		params.PromisedAt = &t
 	}
 
 	order, apiErr := h.salesOrderSvc.CreateSalesOrder(ctx, params)
@@ -765,6 +758,41 @@ func (h *salesGRPCHandler) CheckoutSalesOrder(ctx context.Context, req *pb.Check
 	return &pb.CheckoutSalesOrderResponse{
 		CheckoutUrl: result.CheckoutURL,
 	}, nil
+}
+
+func (h *salesGRPCHandler) QuoteSalesOrderLinePrices(ctx context.Context, req *pb.QuoteSalesOrderLinePricesRequest) (*pb.QuoteSalesOrderLinePricesResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	lines := make([]domain.SalesOrderPriceLineInput, len(req.Lines))
+	for i, l := range req.Lines {
+		lines[i] = domain.SalesOrderPriceLineInput{
+			ProductID:      l.ProductId,
+			QuantityValue:  l.QuantityValue,
+			QuantityUnitID: l.QuantityUnitId,
+		}
+	}
+
+	quotes, apiErr := h.salesOrderSvc.QuoteSalesOrderLinePrices(ctx, domain.QuoteSalesOrderLinePricesParams{
+		BuyerAccountID: req.BuyerAccountId,
+		Lines:          lines,
+	})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	respLines := make([]*pb.SalesOrderLineQuote, len(quotes))
+	for i, q := range quotes {
+		respLines[i] = &pb.SalesOrderLineQuote{
+			ProductId:                  q.ProductID,
+			UnitPriceValue:             q.UnitPrice.Value,
+			UnitPriceNumeratorUnitId:   q.UnitPrice.NumeratorUnitID,
+			UnitPriceDenominatorUnitId: q.UnitPrice.DenominatorUnitID,
+		}
+	}
+
+	return &pb.QuoteSalesOrderLinePricesResponse{Lines: respLines}, nil
 }
 
 func (h *salesGRPCHandler) CreateSalesOrderProductionRun(ctx context.Context, req *pb.CreateSalesOrderProductionRunRequest) (*pb.CreateSalesOrderProductionRunResponse, error) {

@@ -12,6 +12,7 @@ import (
 
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/core-service/internal/domain"
+	"github.com/augno/api/services/core-service/internal/event"
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/audit"
 	"github.com/augno/api/shared/constants"
@@ -31,6 +32,8 @@ type salesOrderSvcImpl struct {
 	txManager             TransactionManager
 	checkoutClientFactory domain.StripeCheckoutClientFactory
 	notificationPublisher domain.NotificationPublisher
+	salesOrderPublisher   domain.SalesOrderEventPublisher
+	shippoFactory         domain.ShippoClientFactory
 	encryptionKey         []byte
 	frontendURL           string
 }
@@ -52,6 +55,16 @@ type SalesOrderSvcConfig struct {
 	// NotificationPublisher (optional; default: nil) publishes notification messages to the outbox. It is not validated
 	// at construction.
 	NotificationPublisher domain.NotificationPublisher
+
+	// SalesOrderPublisher (optional; default: nil) publishes sales-order domain events
+	// to the outbox. When nil, the sales-order-created event is skipped. It is not
+	// validated at construction.
+	SalesOrderPublisher domain.SalesOrderEventPublisher
+
+	// ShippoFactory (optional; default: nil) builds Shippo clients for live shipping-rate
+	// estimation on create. When nil, the synthesized shipping line falls back to rate 0
+	// (after honoring all freight-exemption / flat-rate / minimum-order rules).
+	ShippoFactory domain.ShippoClientFactory
 
 	// EncryptionKey (optional; default: nil) encrypts sensitive fields at rest. It is not validated
 	// at construction.
@@ -86,6 +99,8 @@ func NewSalesOrderSvc(config *SalesOrderSvcConfig) domain.SalesOrderSvc {
 		txManager:             config.TxManager,
 		checkoutClientFactory: config.CheckoutClientFactory,
 		notificationPublisher: config.NotificationPublisher,
+		salesOrderPublisher:   config.SalesOrderPublisher,
+		shippoFactory:         config.ShippoFactory,
 		encryptionKey:         config.EncryptionKey,
 		frontendURL:           config.FrontendURL,
 	}
@@ -98,9 +113,10 @@ func (s *salesOrderSvcImpl) mediators() domain.Mediators {
 func (s *salesOrderSvcImpl) withTx(ctx context.Context, fn func(context.Context, *salesOrderSvcImpl) *apierror.APIError) *apierror.APIError {
 	return s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
 		txSvc := &salesOrderSvcImpl{
-			repos:           f,
-			mediatorFactory: s.mediatorFactory,
-			txManager:       s.txManager,
+			repos:               f,
+			mediatorFactory:     s.mediatorFactory,
+			txManager:           s.txManager,
+			salesOrderPublisher: s.salesOrderPublisher,
 		}
 		return fn(txCtx, txSvc)
 	})
@@ -277,14 +293,40 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	if apiErr := identity.CheckHasPermission(types.PermissionDomainSalesOrders, types.ActionCreate); apiErr != nil {
+	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
+	// Authorization (matches Dashboard): internal users need the create permission;
+	// customer users may self-create only for their own account; other actor types
+	// cannot create orders.
+	switch {
+	case identity.IsInternalUser():
+		if apiErr := identity.CheckHasPermission(types.PermissionDomainSalesOrders, types.ActionCreate); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	case identity.IsCustomerUser():
+		actorAccountID := identity.ActorAccountID()
+		if actorAccountID == nil || params.BuyerAccountID != *actorAccountID {
+			return nil, tracing.Trace(span, apierror.NewAuthorizationError("You are not authorized to create an order for this customer."))
+		}
+	default:
+		return nil, tracing.Trace(span, apierror.NewAuthorizationError("You are not authorized to create sales orders."))
+	}
+
 	params.AccountID = identity.Target.AccountID
+
+	// For customer-portal creates, fold the customer's saved note into the order note
+	// (matches Dashboard: [customer.note, data.note] joined).
+	if identity.IsCustomerUser() {
+		if customer, apiErr := s.repos.NewCustomerRepo().Get(ctx, params.AccountID, params.BuyerAccountID, nil); apiErr == nil && customer != nil && customer.Note != nil && *customer.Note != "" {
+			folded := *customer.Note
+			if params.Note != nil && *params.Note != "" {
+				folded = *customer.Note + "\n\n" + *params.Note
+			}
+			params.Note = &folded
+		}
+	}
 
 	// Enforce the account's invoice-count plan limit before creating the order
 	// (matches Dashboard's canCreateInvoice guard). Sandboxes are exempt.
@@ -317,118 +359,107 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 			return nil, tracing.Trace(span, apiErr)
 		}
 
-		var result *domain.SalesOrder
-		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
-			txOrderRepo := txSvc.repos.NewSalesOrderRepo()
-			txAddressRepo := txSvc.repos.NewAddressRepo()
-			txLineRepo := txSvc.repos.NewSalesOrderLineRepo()
+		// Cache any failure from here on under the idempotency key so a retried request
+		// replays the same error (matches the in-transaction behavior this create flow
+		// previously relied on).
+		cacheErr := func(apiErr *apierror.APIError) *apierror.APIError {
+			return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
+		}
 
-			// Get next order number
-			orderNumber, apiErr := txOrderRepo.GetNextOrderNumber(txCtx, params.AccountID)
-			if apiErr != nil {
-				return apiErr
-			}
+		// Reserve the order number and reject duplicate order / customer-PO numbers
+		// FIRST — before the more expensive line/pricing resolution and the external
+		// shipping-rate lookup — so a duplicate fails fast without that wasted work.
+		orderRepo := s.repos.NewSalesOrderRepo()
 
-			// Check duplicate order number
-			isDup, apiErr := txOrderRepo.IsDuplicateOrderNumber(txCtx, params.AccountID, orderNumber, nil)
+		orderNumber, apiErr := orderRepo.GetNextOrderNumber(ctx, params.AccountID)
+		if apiErr != nil {
+			return nil, cacheErr(apiErr)
+		}
+
+		isDup, apiErr := orderRepo.IsDuplicateOrderNumber(ctx, params.AccountID, orderNumber, nil)
+		if apiErr != nil {
+			return nil, cacheErr(apiErr)
+		}
+		if isDup {
+			return nil, cacheErr(apierror.NewConflictErrorWithParam("A sales order with this number already exists.", "number"))
+		}
+
+		if params.CustomerPONumber != nil && *params.CustomerPONumber != "" {
+			isDup, apiErr = orderRepo.IsDuplicateCustomerPO(ctx, params.AccountID, params.BuyerAccountID, *params.CustomerPONumber, nil)
 			if apiErr != nil {
-				return apiErr
+				return nil, cacheErr(apiErr)
 			}
 			if isDup {
-				return apierror.NewConflictErrorWithParam("A sales order with this number already exists.", "number")
+				return nil, cacheErr(apierror.NewConflictErrorWithParam("A sales order with this customer PO number already exists.", "customer_po_number"))
 			}
+		}
 
-			// Check duplicate customer PO if provided
-			if params.CustomerPONumber != nil && *params.CustomerPONumber != "" {
-				isDup, apiErr = txOrderRepo.IsDuplicateCustomerPO(txCtx, params.AccountID, params.BuyerAccountID, *params.CustomerPONumber, nil)
-				if apiErr != nil {
-					return apiErr
-				}
-				if isDup {
-					return apierror.NewConflictErrorWithParam("A sales order with this customer PO number already exists.", "customer_po_number")
-				}
-			}
+		// Resolve everything else that only requires reads (and the live Shippo call)
+		// BEFORE opening the write transaction, so the external rate lookup never holds a
+		// DB transaction open across network latency. The transaction below performs only
+		// the inserts.
+		addressRepo := s.repos.NewAddressRepo()
 
-			// Create billing address
-			billAddrID, apiErr := id.GenID(id.AddressIDPrefix, nil)
-			if apiErr != nil {
-				return apiErr
-			}
-			billGeoID, apiErr := id.GenID(id.GeolocationIDPrefix, nil)
-			if apiErr != nil {
-				return apiErr
-			}
-			billAcctAddrID, apiErr := id.GenID(id.AccountAddressIDPrefix, nil)
-			if apiErr != nil {
-				return apiErr
-			}
+		// Reference the existing bill-to / ship-to addresses by ID (matching Dashboard,
+		// which only accepts address IDs; addresses are persisted separately). Each must
+		// belong to the order's owner or buyer account. The resolved ship-to feeds the
+		// sales-rep territory + shipping-rate logic below.
+		if _, apiErr := s.resolveOrderAddress(ctx, addressRepo, params.AccountID, params.BuyerAccountID, params.BillToAddressID); apiErr != nil {
+			return nil, cacheErr(apiErr)
+		}
+		shipAddr, apiErr := s.resolveOrderAddress(ctx, addressRepo, params.AccountID, params.BuyerAccountID, params.ShipToAddressID)
+		if apiErr != nil {
+			return nil, cacheErr(apiErr)
+		}
 
-			billName := ""
-			if params.BillToName != nil {
-				billName = *params.BillToName
-			}
-			billCountry := ""
-			if params.BillToCountry != nil {
-				billCountry = *params.BillToCountry
-			}
-
-			_, apiErr = txAddressRepo.Create(txCtx, billAddrID, billGeoID, billAcctAddrID, domain.CreateAddressParams{
-				AccountID:   params.AccountID,
-				Name:        billName,
-				StreetLine1: params.BillToStreetLine1,
-				StreetLine2: params.BillToStreetLine2,
-				Locality:    params.BillToLocality,
-				State:       params.BillToState,
-				PostalCode:  params.BillToPostalCode,
-				Country:     billCountry,
-			})
+		// Resolve the order discount, which the caller may pass as either its ID or
+		// its unique code; store the resolved ID on the order.
+		if params.OrderDiscountID != nil && *params.OrderDiscountID != "" {
+			resolvedDiscountID, apiErr := s.resolveOrderDiscountID(ctx, params.AccountID, *params.OrderDiscountID)
 			if apiErr != nil {
-				return apiErr
+				return nil, cacheErr(apiErr)
 			}
+			params.OrderDiscountID = &resolvedDiscountID
+		}
 
-			// Create shipping address
-			shipAddrID, apiErr := id.GenID(id.AddressIDPrefix, nil)
-			if apiErr != nil {
-				return apiErr
-			}
-			shipGeoID, apiErr := id.GenID(id.GeolocationIDPrefix, nil)
-			if apiErr != nil {
-				return apiErr
-			}
-			shipAcctAddrID, apiErr := id.GenID(id.AccountAddressIDPrefix, nil)
-			if apiErr != nil {
-				return apiErr
-			}
+		// Auto-assign sales rep when caller didn't supply one, matching Dashboard behavior:
+		// commission-exempt customer/product-lines yield no rep; otherwise prefer the
+		// customer's default sales rep, then zipcode territory, then state territory.
+		salesRepID := params.SalesRepID
+		if salesRepID == nil {
+			shipState, shipPostal := shipAddr.State, shipAddr.Zip
+			salesRepID = s.resolveSalesRepID(ctx, params.AccountID, params.BuyerAccountID, params.Lines, &shipState, &shipPostal)
+		}
 
-			shipName := ""
-			if params.ShipToName != nil {
-				shipName = *params.ShipToName
-			}
-			shipCountry := ""
-			if params.ShipToCountry != nil {
-				shipCountry = *params.ShipToCountry
-			}
+		// Resolve every line against the product/pricing data: validate the quantity
+		// unit against the product's unit group, default SKU/description from the
+		// product, derive the item + unit cost, and compute the unit price (internal
+		// actors may override via the line's unit_price; customer submissions are
+		// ignored and the price is computed server-side).
+		resolvedLines, apiErr := s.resolveSalesOrderCreateLines(ctx, params.AccountID, params.BuyerAccountID, identity.IsInternalUser(), params.Lines)
+		if apiErr != nil {
+			return nil, cacheErr(apiErr)
+		}
 
-			_, apiErr = txAddressRepo.Create(txCtx, shipAddrID, shipGeoID, shipAcctAddrID, domain.CreateAddressParams{
-				AccountID:   params.AccountID,
-				Name:        shipName,
-				StreetLine1: params.ShipToStreetLine1,
-				StreetLine2: params.ShipToStreetLine2,
-				Locality:    params.ShipToLocality,
-				State:       params.ShipToState,
-				PostalCode:  params.ShipToPostalCode,
-				Country:     shipCountry,
-			})
-			if apiErr != nil {
-				return apiErr
-			}
+		// Order total (product lines only), computed from the resolved unit prices —
+		// used by the shipping-rate minimum-order check and the discount line.
+		orderTotal := calculateResolvedLinesTotal(resolvedLines)
 
-			// Auto-assign sales rep when caller didn't supply one, matching Dashboard behavior:
-			// prefer the customer's default sales rep, then zipcode territory, then state territory.
-			salesRepID := params.SalesRepID
-			if salesRepID == nil {
-				salesRepID = txSvc.resolveSalesRepID(txCtx, params.AccountID, params.BuyerAccountID, params.ShipToState, params.ShipToPostalCode)
-			}
+		// Estimate the shipping rate via the freight-exemption / flat-rate / minimum-order /
+		// live-Shippo cascade (matches Dashboard). This is the only external call in the
+		// create path; computing it here on the outer receiver keeps the live Shippo HTTP
+		// request out of the transaction and uses the real Shippo factory.
+		shippingRate, apiErr := s.estimateOrderShippingRate(ctx, params, shipAddr, orderTotal)
+		if apiErr != nil {
+			return nil, cacheErr(apiErr)
+		}
+
+		var result *domain.SalesOrder
+		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
+			txCtx = event.WithRepos(txCtx, txSvc.repos)
+
+			txOrderRepo := txSvc.repos.NewSalesOrderRepo()
+			txLineRepo := txSvc.repos.NewSalesOrderLineRepo()
 
 			// Create the order
 			// SellerAccountID and OwnerAccountID default to the target account
@@ -440,8 +471,8 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 				OwnerAccountID:        params.AccountID,
 				Number:                orderNumber,
 				SalesOrderStatusCode:  params.SalesOrderStatusCode,
-				BillingAddressID:      billAddrID,
-				ShippingAddressID:     shipAddrID,
+				BillingAddressID:      params.BillToAddressID,
+				ShippingAddressID:     params.ShipToAddressID,
 				CustomerPONumber:      params.CustomerPONumber,
 				Note:                  params.Note,
 				CarrierID:             params.CarrierID,
@@ -451,9 +482,9 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 				PriorityCode:          params.PriorityCode,
 				SalesRepID:            salesRepID,
 				ShippingTermID:        params.ShippingTermID,
-				SalesOrderTypeCode:    params.SalesOrderTypeCode,
 				PaymentTermID:         params.PaymentTermID,
 				OrderDiscountID:       params.OrderDiscountID,
+				PromisedAt:            params.PromisedAt,
 			}
 
 			_, apiErr = txOrderRepo.Create(txCtx, orderID, createParams)
@@ -469,49 +500,49 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 				return apiErr
 			}
 
-			// Create order lines
-			for _, lineInput := range params.Lines {
+			// Create order lines (resolved above, before the transaction).
+			for _, rl := range resolvedLines {
 				lineID, apiErr := id.GenID(id.OrderLineIDPrefix, nil)
 				if apiErr != nil {
 					return apiErr
 				}
 
-				lineParams := domain.CreateSalesOrderLineParams{
+				itemID := rl.ItemID
+				costValue := rl.UnitCost.Value
+				costNum := rl.UnitCost.NumeratorUnitID
+				costDen := rl.UnitCost.DenominatorUnitID
+				_, apiErr = txLineRepo.Create(txCtx, lineID, domain.CreateSalesOrderLineParams{
 					SalesOrderID:               orderID,
 					AccountID:                  params.AccountID,
-					ProductID:                  lineInput.ProductID,
-					ItemID:                     lineInput.ItemID,
-					ProductSKU:                 lineInput.ProductSKU,
-					ProductDescription:         lineInput.ProductDescription,
-					QuantityValue:              lineInput.QuantityValue,
-					QuantityUnitID:             lineInput.QuantityUnitID,
-					UnitPriceValue:             lineInput.UnitPriceValue,
-					UnitPriceNumeratorUnitID:   lineInput.UnitPriceNumeratorUnitID,
-					UnitPriceDenominatorUnitID: lineInput.UnitPriceDenominatorUnitID,
-					UnitCostValue:              lineInput.UnitCostValue,
-					UnitCostNumeratorUnitID:    lineInput.UnitCostNumeratorUnitID,
-					UnitCostDenominatorUnitID:  lineInput.UnitCostDenominatorUnitID,
-					EdiLineItemID:              lineInput.EdiLineItemID,
-				}
-
-				_, apiErr = txLineRepo.Create(txCtx, lineID, lineParams)
+					ProductID:                  rl.ProductID,
+					ItemID:                     &itemID,
+					ProductSKU:                 rl.ProductSKU,
+					ProductDescription:         rl.ProductDescription,
+					QuantityValue:              rl.QuantityValue,
+					QuantityUnitID:             rl.QuantityUnitID,
+					UnitPriceValue:             rl.UnitPrice.Value,
+					UnitPriceNumeratorUnitID:   rl.UnitPrice.NumeratorUnitID,
+					UnitPriceDenominatorUnitID: rl.UnitPrice.DenominatorUnitID,
+					UnitCostValue:              &costValue,
+					UnitCostNumeratorUnitID:    &costNum,
+					UnitCostDenominatorUnitID:  &costDen,
+					EdiLineItemID:              rl.EdiLineItemID,
+				})
 				if apiErr != nil {
 					return apiErr
 				}
 			}
 
-			// Synthesize a shipping line (matches Dashboard, which always attaches one).
-			// NOTE: rate is currently fixed at 0 — real rate estimation via the carrier's
-			// Shippo connection is a separate enhancement; the line is still emitted so
-			// downstream consumers that expect a shipping row keep working.
-			if apiErr := txSvc.synthesizeShippingLine(txCtx, orderID, params); apiErr != nil {
+			// Synthesize a shipping line (matches Dashboard, which always attaches one)
+			// using the rate estimated before the transaction.
+			if apiErr := txSvc.synthesizeShippingLine(txCtx, orderID, params, shippingRate); apiErr != nil {
 				return apiErr
 			}
 
 			// Synthesize a discount line when an order-level discount was supplied
 			// (matches Dashboard: emits a negative-price line against the account's credit product).
 			if params.OrderDiscountID != nil {
-				if apiErr := txSvc.synthesizeDiscountLine(txCtx, orderID, params); apiErr != nil {
+				if apiErr := txSvc.synthesizeDiscountLine(txCtx, orderID, params, orderTotal); apiErr != nil {
 					return apiErr
 				}
 			}
@@ -542,6 +573,20 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 				Changes:      changes,
 			}); apiErr != nil {
 				return apiErr
+			}
+
+			// Publish the sales-order-created event to the outbox (same transaction) so
+			// out-of-band consumers (e.g. CRM sync) can react after the order commits.
+			if txSvc.salesOrderPublisher != nil {
+				if apiErr := txSvc.salesOrderPublisher.PublishSalesOrderCreated(txCtx, messaging.SalesOrderCreatedData{
+					SalesOrderID:   result.ID,
+					AccountID:      result.OwnerAccountID,
+					BuyerAccountID: result.BuyerAccountID,
+					Number:         result.Number,
+					StatusCode:     result.SalesOrderStatusCode,
+				}); apiErr != nil {
+					return apiErr
+				}
 			}
 
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
@@ -1228,7 +1273,10 @@ func (s *salesOrderSvcImpl) checkInvoicePlanLimit(ctx context.Context, accountID
 // order carries a dedicated shipping line. The unit price is left at 0 here;
 // rate estimation via the carrier API is a separate enhancement.
 // No-ops cleanly if the account has no shipping system product configured.
-func (s *salesOrderSvcImpl) synthesizeShippingLine(ctx context.Context, orderID string, params domain.CreateSalesOrderParams) *apierror.APIError {
+// synthesizeShippingLine inserts the order's shipping line using a rate already
+// estimated by the caller (see estimateOrderShippingRate). The rate is computed
+// before the transaction so the live Shippo call does not run inside it.
+func (s *salesOrderSvcImpl) synthesizeShippingLine(ctx context.Context, orderID string, params domain.CreateSalesOrderParams, rate string) *apierror.APIError {
 	shippingProduct, apiErr := s.repos.NewProductRepo().GetSystemProduct(ctx, params.AccountID, "shipping")
 	if apiErr != nil {
 		return apiErr
@@ -1254,11 +1302,225 @@ func (s *salesOrderSvcImpl) synthesizeShippingLine(ctx context.Context, orderID 
 		ProductSKU:                 shippingProduct.ProductSKU,
 		QuantityValue:              "1",
 		QuantityUnitID:             shippingProduct.QuantityUnitID,
-		UnitPriceValue:             "0",
+		UnitPriceValue:             rate,
 		UnitPriceNumeratorUnitID:   currencyUnitID,
 		UnitPriceDenominatorUnitID: shippingProduct.QuantityUnitID,
 	})
 	return apiErr
+}
+
+// estimateOrderShippingRate computes the posted shipping rate for a new order using
+// the shared freight-exemption / flat-rate / minimum-order / live-Shippo cascade,
+// mirroring Dashboard's estimatePostedShippingRate. Returns the rate as a decimal
+// string (not rounded to cents, matching Dashboard's create path). The live Shippo
+// rate already includes the 10% markup applied by the Shippo client.
+func (s *salesOrderSvcImpl) estimateOrderShippingRate(ctx context.Context, params domain.CreateSalesOrderParams, shipTo domain.ShippingAddress, orderTotal float64) (string, *apierror.APIError) {
+	productIDs := make([]string, 0, len(params.Lines))
+	for _, l := range params.Lines {
+		if l.ProductID != "" {
+			productIDs = append(productIDs, l.ProductID)
+		}
+	}
+
+	productInfo, apiErr := s.repos.NewSalesOrderRepo().GetProductTypesAndLines(ctx, productIDs)
+	if apiErr != nil {
+		return "", apiErr
+	}
+
+	typeByProduct := make(map[string]string, len(productInfo))
+	seenProductLine := make(map[string]struct{})
+	var productLineIDs []string
+	for _, p := range productInfo {
+		typeByProduct[p.ProductID] = p.ProductTypeCode
+		if p.ProductLineID != nil {
+			if _, ok := seenProductLine[*p.ProductLineID]; !ok {
+				seenProductLine[*p.ProductLineID] = struct{}{}
+				productLineIDs = append(productLineIDs, *p.ProductLineID)
+			}
+		}
+	}
+
+	weight, apiErr := s.estimateOrderWeight(ctx, params.AccountID, params.Lines, typeByProduct)
+	if apiErr != nil {
+		return "", apiErr
+	}
+
+	// Origin (ship-from) = the seller account's default billing address.
+	var from domain.ShippingAddress
+	if fromAddr, apiErr := s.repos.NewSalesOrderRepo().GetAccountOriginAddress(ctx, params.AccountID); apiErr != nil {
+		return "", apiErr
+	} else if fromAddr != nil {
+		from = *fromAddr
+	}
+
+	rate, apiErr := estimateShippingRate(ctx, s.repos, s.shippoFactory, domain.EstimateRateParams{
+		AccountID:      params.AccountID,
+		CarrierID:      derefString(params.CarrierID),
+		ServiceLevelID: derefString(params.ServiceLevelID),
+		ProductLineIDs: productLineIDs,
+		CustomerID:     &params.BuyerAccountID,
+		FromAddress:    from,
+		ToAddress:      shipTo,
+		OrderTotal:     &orderTotal,
+		Parcels: []domain.Parcel{{
+			Weight: strconv.FormatFloat(weight, 'f', -1, 64),
+			Length: "23.5",
+			Width:  "13",
+			Height: "9.5",
+		}},
+	})
+	if apiErr != nil {
+		return "", apiErr
+	}
+
+	return strconv.FormatFloat(rate, 'f', -1, 64), nil
+}
+
+// calculateResolvedLinesTotal sums quantity × (computed) unit price over the resolved
+// product lines, rounded to cents (matches Dashboard's calculateTotalOrdered used for
+// the shipping min-order threshold and the order discount).
+func calculateResolvedLinesTotal(lines []domain.ResolvedSalesOrderLine) float64 {
+	total := decimal.Zero
+	for _, l := range lines {
+		qty, err1 := decimal.NewFromString(l.QuantityValue)
+		price, err2 := decimal.NewFromString(l.UnitPrice.Value)
+		if err1 != nil || err2 != nil {
+			continue
+		}
+		total = total.Add(qty.Mul(price))
+	}
+	f, _ := total.Round(2).Float64()
+	return f
+}
+
+// shippingWeightMultipliers maps a quantity-unit abbreviation to its per-base-unit
+// weight multiplier, mirroring Dashboard's estimateOrderWeight (0.15 lb base per ea).
+var shippingWeightMultipliers = map[string]float64{
+	"ea":     1,
+	"pr":     2,
+	"ct10ea": 10,
+	"ct5pr":  10,
+	"ct10pr": 20,
+	"ct20ea": 20,
+	"ct12ea": 12,
+	"ct6pr":  12,
+	"ct12pr": 24,
+	"ct8ea":  8,
+	"cs40ea": 40,
+	"cs50ea": 50,
+	"ct16ea": 16,
+}
+
+// estimateOrderWeight estimates the parcel weight (lbs) for the order's sale-product
+// lines, mirroring Dashboard's estimateOrderWeight. Non-sale products and unknown
+// units contribute nothing.
+func (s *salesOrderSvcImpl) estimateOrderWeight(ctx context.Context, accountID string, lines []domain.CreateSalesOrderLineInput, typeByProduct map[string]string) (float64, *apierror.APIError) {
+	seenUnit := make(map[string]struct{})
+	var unitIDs []string
+	for _, l := range lines {
+		if l.QuantityUnitID == "" {
+			continue
+		}
+		if _, ok := seenUnit[l.QuantityUnitID]; !ok {
+			seenUnit[l.QuantityUnitID] = struct{}{}
+			unitIDs = append(unitIDs, l.QuantityUnitID)
+		}
+	}
+
+	abbrevByUnit := make(map[string]string)
+	if len(unitIDs) > 0 {
+		units, apiErr := s.repos.NewUnitRepo().GetByIDs(ctx, accountID, unitIDs)
+		if apiErr != nil {
+			return 0, apiErr
+		}
+		for _, u := range units {
+			abbrevByUnit[u.ID] = u.Abbreviation
+		}
+	}
+
+	const baseWeight = 0.15
+	weight := 0.0
+	for _, l := range lines {
+		// Only sale products contribute. A product with no known type still counts
+		// (matches Dashboard, which only skips when productType is present and not sale).
+		if tc, ok := typeByProduct[l.ProductID]; ok && tc != string(constants.ProductTypeCodeSale) {
+			continue
+		}
+		mult, ok := shippingWeightMultipliers[abbrevByUnit[l.QuantityUnitID]]
+		if !ok {
+			continue
+		}
+		qty, err := decimal.NewFromString(l.QuantityValue)
+		if err != nil {
+			continue
+		}
+		qf, _ := qty.Float64()
+		weight += qf * baseWeight * mult
+	}
+	return weight, nil
+}
+
+// QuoteSalesOrderLinePrices computes the unit price for each requested line without
+// creating an order, for displaying prices to users (including the customer portal).
+// Internal users (with sales-order read) and customer actors (for their own account)
+// may request quotes. The price is always computed server-side — there is no override.
+func (s *salesOrderSvcImpl) QuoteSalesOrderLinePrices(ctx context.Context, params domain.QuoteSalesOrderLinePricesParams) ([]domain.SalesOrderLineQuote, *apierror.APIError) {
+	ctx, span := salesOrderSvcTracer.Start(ctx, "service.sales_order.quote_line_prices")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	switch {
+	case identity.IsInternalUser():
+		if apiErr := identity.CheckHasPermission(types.PermissionDomainSalesOrders, types.ActionRead); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	case identity.IsCustomerUser():
+		actorAccountID := identity.ActorAccountID()
+		if actorAccountID == nil || params.BuyerAccountID != *actorAccountID {
+			return nil, tracing.Trace(span, apierror.NewAuthorizationError("You are not authorized to quote prices for this customer."))
+		}
+	default:
+		return nil, tracing.Trace(span, apierror.NewAuthorizationError("You are not authorized to quote sales order prices."))
+	}
+
+	accountID := identity.Target.AccountID
+
+	prices, apiErr := s.computeSalesOrderLinePrices(ctx, accountID, params.BuyerAccountID, identity.IsInternalUser(), params.Lines)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make([]domain.SalesOrderLineQuote, len(params.Lines))
+	for i, l := range params.Lines {
+		out[i] = domain.SalesOrderLineQuote{ProductID: l.ProductID, UnitPrice: domain.RateValue(prices[i])}
+	}
+	return out, nil
+}
+
+// resolveOrderDiscountID resolves a caller-supplied order-discount reference — which
+// may be either the discount's ID or its unique code — to the discount's ID.
+func (s *salesOrderSvcImpl) resolveOrderDiscountID(ctx context.Context, accountID, idOrCode string) (string, *apierror.APIError) {
+	discountRepo := s.repos.NewOrderDiscountRepo()
+	if d, apiErr := discountRepo.Get(ctx, domain.GetOrderDiscountParams{AccountID: accountID, OrderDiscountID: idOrCode}); apiErr == nil {
+		return d.ID, nil
+	} else if !apierror.IsNotFound(apiErr) {
+		return "", apiErr
+	}
+	d, apiErr := discountRepo.FindByCode(ctx, accountID, idOrCode)
+	if apiErr != nil {
+		if apierror.IsNotFound(apiErr) {
+			return "", apierror.NewValidationErrorWithParam("Order discount not found.", "order_discount_id")
+		}
+		return "", apiErr
+	}
+	return d.ID, nil
 }
 
 // synthesizeDiscountLine emits a negative-price order line against the account's
@@ -1266,7 +1528,7 @@ func (s *salesOrderSvcImpl) synthesizeShippingLine(ctx context.Context, orderID 
 // No-ops if the discount, credit product, or currency base unit cannot be resolved
 // (a missing credit product should not fail the create; the discount amount will just
 // not appear as a line item).
-func (s *salesOrderSvcImpl) synthesizeDiscountLine(ctx context.Context, orderID string, params domain.CreateSalesOrderParams) *apierror.APIError {
+func (s *salesOrderSvcImpl) synthesizeDiscountLine(ctx context.Context, orderID string, params domain.CreateSalesOrderParams, orderTotal float64) *apierror.APIError {
 	if params.OrderDiscountID == nil {
 		return nil
 	}
@@ -1282,20 +1544,9 @@ func (s *salesOrderSvcImpl) synthesizeDiscountLine(ctx context.Context, orderID 
 		return apiErr
 	}
 
-	// Compute total ordered from the input lines (qty * unit_price) and the discount amount.
-	total := decimal.Zero
-	for _, l := range params.Lines {
-		qty, err := decimal.NewFromString(l.QuantityValue)
-		if err != nil {
-			continue
-		}
-		price, err := decimal.NewFromString(l.UnitPriceValue)
-		if err != nil {
-			continue
-		}
-		total = total.Add(qty.Mul(price))
-	}
-
+	// The discount applies to the order total (product lines only), computed from the
+	// resolved unit prices.
+	total := decimal.NewFromFloat(orderTotal)
 	discountAmount := computeDiscountAmount(discount, total)
 	if discountAmount.IsZero() {
 		return nil
@@ -1370,17 +1621,37 @@ func computeDiscountAmount(discount *domain.OrderDiscount, total decimal.Decimal
 }
 
 // resolveSalesRepID auto-assigns a sales rep when the caller omits one.
-// Resolution order (matches Dashboard): customer default → zipcode territory → state territory → none.
+// Resolution order (matches Dashboard): commission-exempt customer/group → none;
+// all line product-lines commission-exempt → none; customer default → zipcode
+// territory → state territory → none.
 // Returns nil when no match is found; any lookup error is swallowed (rep stays unset rather than failing the order).
-func (s *salesOrderSvcImpl) resolveSalesRepID(ctx context.Context, accountID, buyerAccountID string, shipToState, shipToPostalCode *string) *string {
-	// 1. Customer default sales rep.
-	if customer, apiErr := s.repos.NewCustomerRepo().Get(ctx, accountID, buyerAccountID, nil); apiErr == nil && customer != nil && customer.DefaultSalesRepID != nil {
+func (s *salesOrderSvcImpl) resolveSalesRepID(ctx context.Context, accountID, buyerAccountID string, lines []domain.CreateSalesOrderLineInput, shipToState, shipToPostalCode *string) *string {
+	customerRepo := s.repos.NewCustomerRepo()
+
+	// 1. Commission-exempt customer / customer group → no rep.
+	if exempt, apiErr := customerRepo.IsCommissionExempt(ctx, accountID, buyerAccountID); apiErr == nil && exempt {
+		return nil
+	}
+
+	// 2. Every line's product line is commission-exempt → no rep.
+	productIDs := make([]string, 0, len(lines))
+	for _, l := range lines {
+		if l.ProductID != "" {
+			productIDs = append(productIDs, l.ProductID)
+		}
+	}
+	if allExempt, apiErr := s.repos.NewSalesOrderRepo().AreAllLineProductLinesCommissionExempt(ctx, productIDs); apiErr == nil && allExempt {
+		return nil
+	}
+
+	// 3. Customer default sales rep.
+	if customer, apiErr := customerRepo.Get(ctx, accountID, buyerAccountID, nil); apiErr == nil && customer != nil && customer.DefaultSalesRepID != nil {
 		return customer.DefaultSalesRepID
 	}
 
 	territoryRepo := s.repos.NewTerritoryRepo()
 
-	// 2. Zipcode territory lookup.
+	// 4. Zipcode territory lookup.
 	if shipToPostalCode != nil && *shipToPostalCode != "" {
 		base := *shipToPostalCode
 		if idx := strings.Index(base, "-"); idx >= 0 {
@@ -1393,7 +1664,7 @@ func (s *salesOrderSvcImpl) resolveSalesRepID(ctx context.Context, accountID, bu
 		}
 	}
 
-	// 3. State-only territory lookup.
+	// 5. State-only territory lookup.
 	if shipToState != nil && *shipToState != "" {
 		if rep, apiErr := territoryRepo.FindSalesRepByState(ctx, accountID, *shipToState); apiErr == nil && rep != nil {
 			return rep
@@ -1401,6 +1672,57 @@ func (s *salesOrderSvcImpl) resolveSalesRepID(ctx context.Context, accountID, bu
 	}
 
 	return nil
+}
+
+// resolveOrderAddress validates that an order's bill-to / ship-to address exists and
+// belongs to the order's owner or buyer account (matching Dashboard, which only
+// accepts existing address IDs), and returns it as a ShippingAddress for the sales-rep
+// territory + shipping-rate logic.
+func (s *salesOrderSvcImpl) resolveOrderAddress(ctx context.Context, addressRepo domain.AddressRepo, ownerAccountID, buyerAccountID, addressID string) (domain.ShippingAddress, *apierror.APIError) {
+	// Prefer the buyer (customer) account — that is where order addresses live in the
+	// Dashboard flow — then fall back to the order's owner account.
+	acct := ""
+	for _, candidate := range []string{buyerAccountID, ownerAccountID} {
+		inAccount, apiErr := addressRepo.IsInAccount(ctx, candidate, addressID)
+		if apiErr != nil {
+			return domain.ShippingAddress{}, apiErr
+		}
+		if inAccount {
+			acct = candidate
+			break
+		}
+	}
+	if acct == "" {
+		return domain.ShippingAddress{}, apierror.NewValidationError("Address does not belong to the order's owner or buyer account.")
+	}
+
+	existing, apiErr := addressRepo.Get(ctx, domain.GetAddressParams{AccountID: acct, AddressID: addressID})
+	if apiErr != nil {
+		return domain.ShippingAddress{}, apiErr
+	}
+	return shippingAddressFromDomain(existing), nil
+}
+
+// shippingAddressFromDomain projects a stored Address (+ geolocation) into the flat
+// ShippingAddress used by the shipping-rate cascade.
+func shippingAddressFromDomain(a *domain.Address) domain.ShippingAddress {
+	out := domain.ShippingAddress{Name: a.Name, Phone: a.Phone, Email: a.Email}
+	if a.Geolocation != nil {
+		out.Street1 = derefString(a.Geolocation.StreetLine1)
+		out.Street2 = a.Geolocation.StreetLine2
+		out.City = derefString(a.Geolocation.Locality)
+		out.State = derefString(a.Geolocation.State)
+		out.Zip = derefString(a.Geolocation.PostalCode)
+		out.Country = a.Geolocation.Country
+	}
+	return out
+}
+
+func derefString(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }
 
 // createOrderEmailContacts writes order_email_contact rows for the given contacts + notification type.

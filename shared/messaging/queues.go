@@ -52,6 +52,11 @@ const (
 	// reservation management after batch mutations (initialize, move, merge, split).
 	CoreCmdExecuteProductionStepQueue = "core_cmd_execute_production_step"
 
+	// CoreEventSalesOrderCreatedQueue carries sales-order-created events back to
+	// the core-service for out-of-band processing (e.g. CRM sync). Messages on
+	// this queue contain a SalesOrderCreatedData payload.
+	CoreEventSalesOrderCreatedQueue = "core_event_sales_order_created"
+
 	// BillingEventStripeWebhookQueue carries verified Stripe webhook events for
 	// asynchronous processing by the billing-service. The raw event payload and
 	// metadata are enqueued immediately on receipt so the webhook endpoint can
@@ -219,6 +224,23 @@ type SeatSyncData struct {
 type SeatChangeReportData struct {
 	// AccountID is the account whose seat count changed.
 	AccountID string `json:"account_id"`
+}
+
+// SalesOrderCreatedData is the payload for CoreEventSalesOrderCreatedQueue messages.
+// It identifies a newly created sales order so consumers can run out-of-band side
+// effects (e.g. CRM sync). Consumers re-fetch the full order by ID when they need
+// more than these identifiers.
+type SalesOrderCreatedData struct {
+	// SalesOrderID is the type-prefixed ID of the created order (e.g. "so_...").
+	SalesOrderID string `json:"sales_order_id"`
+	// AccountID is the owner/seller account the order belongs to.
+	AccountID string `json:"account_id"`
+	// BuyerAccountID is the customer account the order was created for.
+	BuyerAccountID string `json:"buyer_account_id"`
+	// Number is the human-facing order number.
+	Number string `json:"number"`
+	// StatusCode is the order's status at creation (e.g. "estimate").
+	StatusCode string `json:"status_code"`
 }
 
 // AgentRunCompletedData is the payload for AgentEventRunCompletedQueue messages.

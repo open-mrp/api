@@ -1702,4 +1702,22 @@ func (r *customerRepoImpl) DeleteCreditLimitQuantity(ctx context.Context, id str
 	return nil
 }
 
+// IsCommissionExempt reports whether the customer relationship, its type group, or
+// any of its price groups is commission-exempt. Mirrors Dashboard's
+// isCustomerOrGroupCommissionExempt, used in sales-rep auto-resolution.
+func (r *customerRepoImpl) IsCommissionExempt(ctx context.Context, ownerAccountID, customerAccountID string) (bool, *apierror.APIError) {
+	ctx, span := customerRepoTracer.Start(ctx, "repository.customer.is_commission_exempt")
+	defer span.End()
+
+	exempt, err := r.queries.IsCustomerCommissionExempt(ctx, sqlc.IsCustomerCommissionExemptParams{
+		OwnerAccountID:    ownerAccountID,
+		CustomerAccountID: customerAccountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+
+	return exempt, nil
+}
+
 // toNullString is defined in unit_repository.go

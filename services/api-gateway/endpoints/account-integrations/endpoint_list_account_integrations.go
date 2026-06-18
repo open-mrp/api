@@ -25,7 +25,7 @@ func (e *ListAccountIntegrationsEndpoint) Materialize() *apiendpoint.APIEndpoint
 		ContentType:       "application/json",
 		Route:             "/v1/identity/integrations",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeAccountIntegration,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAccountIntegrationsRequest) (*apiresource.List[apiresource.AccountIntegration], *apierror.APIError) {

@@ -61,7 +61,7 @@ type SalesOrderTotals struct {
 
 // SalesOrderRelated groups the records related to a sales order.
 //
-// The members are individually expandable (e.g. include[]=related.pick); the group itself is always present.
+// The members are individually expandable (e.g. include[]=related.pick). The group is null unless at least one of its members is expanded.
 type SalesOrderRelated struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order_related"`

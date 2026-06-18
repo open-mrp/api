@@ -46,6 +46,7 @@ type SalesOrderSvcTestSuite struct {
 	orderDiscountRepo        *repositorymock.MockOrderDiscountRepo
 	orderRepo                *repositorymock.MockSalesOrderRepo
 	lineRepo                 *repositorymock.MockSalesOrderLineRepo
+	pricingRepo              *repositorymock.MockPricingRepo
 	pickRepo                 *repositorymock.MockPickRepo
 	productRepo              *repositorymock.MockProductRepo
 	productionRunQueryRepo   *repositorymock.MockProductionRunQueryRepo
@@ -83,6 +84,7 @@ func (suite *SalesOrderSvcTestSuite) SetupTest() {
 	suite.orderDiscountRepo = repositorymock.NewMockOrderDiscountRepo(suite.ctrl)
 	suite.orderRepo = repositorymock.NewMockSalesOrderRepo(suite.ctrl)
 	suite.lineRepo = repositorymock.NewMockSalesOrderLineRepo(suite.ctrl)
+	suite.pricingRepo = repositorymock.NewMockPricingRepo(suite.ctrl)
 	suite.pickRepo = repositorymock.NewMockPickRepo(suite.ctrl)
 	suite.productRepo = repositorymock.NewMockProductRepo(suite.ctrl)
 	suite.productionRunQueryRepo = repositorymock.NewMockProductionRunQueryRepo(suite.ctrl)
@@ -106,6 +108,7 @@ func (suite *SalesOrderSvcTestSuite) SetupTest() {
 	suite.repoFactory.EXPECT().NewMaterialDemandRepo().Return(suite.materialDemandRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewOrderDiscountRepo().Return(suite.orderDiscountRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewSalesOrderRepo().Return(suite.orderRepo).AnyTimes()
+	suite.repoFactory.EXPECT().NewPricingRepo().Return(suite.pricingRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewSalesOrderLineRepo().Return(suite.lineRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewPickRepo().Return(suite.pickRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewProductRepo().Return(suite.productRepo).AnyTimes()
@@ -379,23 +382,41 @@ func baseCreateOrderParams() domain.CreateSalesOrderParams {
 		BuyerAccountID:       "ac_buyer",
 		SalesOrderStatusCode: string(constants.SalesOrderStatusCodeEstimate),
 		PriorityCode:         "normal",
-		SalesOrderTypeCode:   "sales_order",
-		BillToName:           new("Acme Inc"),
-		BillToCountry:        new("US"),
-		ShipToName:           new("Acme Warehouse"),
-		ShipToCountry:        new("US"),
-		ShipToState:          new("CA"),
-		ShipToPostalCode:     new("90001"),
+		BillToAddressID:      "ad_bill",
+		ShipToAddressID:      "ad_ship",
 		Lines: []domain.CreateSalesOrderLineInput{
 			{
-				ProductID:                  "prod_1",
-				ProductSKU:                 "SKU-1",
-				QuantityValue:              "2",
-				QuantityUnitID:             "un_ea",
-				UnitPriceValue:             "10",
-				UnitPriceNumeratorUnitID:   "un_usd",
-				UnitPriceDenominatorUnitID: "un_ea",
+				ProductID:      "prod_1",
+				QuantityValue:  "2",
+				QuantityUnitID: "un_ea",
 			},
+		},
+	}
+}
+
+// basePricingBundle returns a minimal pricing bundle for prod_1 priced in un_ea so
+// the create-line resolution (unit-group validation + price/cost) succeeds in tests.
+func basePricingBundle() *domain.PricingBundle {
+	return &domain.PricingBundle{
+		Products: map[string]*domain.PricingProduct{
+			"prod_1": {
+				ProductID:                  "prod_1",
+				ItemID:                     "it_1",
+				SKU:                        "SKU-1",
+				UnitCost:                   "5",
+				UnitCostNumeratorUnitID:    "un_usd",
+				UnitCostDenominatorUnitID:  "un_ea",
+				UnitValue:                  "10",
+				UnitValueNumeratorUnitID:   "un_usd",
+				UnitValueDenominatorUnitID: "un_ea",
+				CategoryUnitGroupID:        "ug_1",
+			},
+		},
+		Units: map[string]*domain.PricingUnit{
+			"un_ea": {ID: "un_ea", IsBaseUnit: true},
+		},
+		UnitGroupUnits: map[string]map[string]*domain.PricingUnitGroupUnit{
+			"ug_1": {"un_ea": {UnitGroupID: "ug_1", UnitID: "un_ea"}},
 		},
 	}
 }
@@ -409,16 +430,34 @@ func (suite *SalesOrderSvcTestSuite) expectCreateOrderHappyRepoChain(accountID s
 	suite.orderRepo.EXPECT().IsDuplicateOrderNumber(gomock.Any(), accountID, "1001", (*string)(nil)).Return(false, nil).Times(1)
 	// No CustomerPONumber in base params → no duplicate-PO check performed.
 
-	suite.addressRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(&domain.Address{}, nil).Times(2) // bill-to + ship-to
+	// Bill-to + ship-to addresses are referenced by ID: validated against an account, then fetched.
+	suite.addressRepo.EXPECT().IsInAccount(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
+	suite.addressRepo.EXPECT().Get(gomock.Any(), gomock.Any()).
+		Return(&domain.Address{Geolocation: &domain.Geolocation{State: new("CA"), PostalCode: new("90001")}}, nil).AnyTimes()
 
-	// Sales-rep resolution cascade: customer lookup → zipcode lookup → state lookup.
-	// Customer returns nil/none → falls to zipcode which also returns nil → falls to state which returns nil.
+	// Sales-rep resolution cascade: commission-exempt checks → customer lookup → zipcode → state.
+	// Not commission-exempt → customer has no default rep → zipcode nil → state nil.
+	suite.customerRepo.EXPECT().IsCommissionExempt(gomock.Any(), accountID, "ac_buyer").
+		Return(false, nil).AnyTimes()
+	suite.orderRepo.EXPECT().AreAllLineProductLinesCommissionExempt(gomock.Any(), gomock.Any()).
+		Return(false, nil).AnyTimes()
 	suite.customerRepo.EXPECT().Get(gomock.Any(), accountID, "ac_buyer", gomock.Any()).
-		Return(nil, apierror.NewResourceNotFoundError("not found")).AnyTimes()
+		Return(&domain.Customer{}, nil).AnyTimes()
 	suite.territoryRepo.EXPECT().FindSalesRepByZipcode(gomock.Any(), accountID, int32(90001)).
 		Return(nil, nil).AnyTimes()
 	suite.territoryRepo.EXPECT().FindSalesRepByState(gomock.Any(), accountID, "CA").
+		Return(nil, nil).AnyTimes()
+
+	// Line resolution (pricing + cost + unit-group validation) loads the bundle.
+	suite.pricingRepo.EXPECT().LoadPricingBundle(gomock.Any(), gomock.Any()).
+		Return(basePricingBundle(), nil).AnyTimes()
+
+	// Shipping-rate cascade inputs (no carrier / no Shippo in unit tests → rate 0).
+	suite.orderRepo.EXPECT().GetProductTypesAndLines(gomock.Any(), gomock.Any()).
+		Return([]domain.ProductTypeLine{}, nil).AnyTimes()
+	suite.orderRepo.EXPECT().GetAccountOriginAddress(gomock.Any(), accountID).
+		Return(nil, nil).AnyTimes()
+	suite.unitRepo.EXPECT().GetByIDs(gomock.Any(), accountID, gomock.Any()).
 		Return(nil, nil).AnyTimes()
 
 	suite.orderRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).
@@ -547,12 +586,30 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_SalesRepResolvedFromCu
 
 	suite.orderRepo.EXPECT().GetNextOrderNumber(gomock.Any(), "ac_test").Return("1001", nil).Times(1)
 	suite.orderRepo.EXPECT().IsDuplicateOrderNumber(gomock.Any(), "ac_test", "1001", (*string)(nil)).Return(false, nil).Times(1)
-	suite.addressRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(&domain.Address{}, nil).Times(2)
+	suite.addressRepo.EXPECT().IsInAccount(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
+	suite.addressRepo.EXPECT().Get(gomock.Any(), gomock.Any()).
+		Return(&domain.Address{Geolocation: &domain.Geolocation{State: new("CA"), PostalCode: new("90001")}}, nil).AnyTimes()
 
 	repID := "au_rep"
+	// Not commission-exempt → resolution proceeds to the customer default.
+	suite.customerRepo.EXPECT().IsCommissionExempt(gomock.Any(), "ac_test", "ac_buyer").
+		Return(false, nil).Times(1)
+	suite.orderRepo.EXPECT().AreAllLineProductLinesCommissionExempt(gomock.Any(), gomock.Any()).
+		Return(false, nil).Times(1)
+	// Get is called by both sales-rep resolution and the shipping-rate cascade.
 	suite.customerRepo.EXPECT().Get(gomock.Any(), "ac_test", "ac_buyer", gomock.Any()).
-		Return(&domain.Customer{DefaultSalesRepID: &repID}, nil).Times(1)
+		Return(&domain.Customer{DefaultSalesRepID: &repID}, nil).AnyTimes()
+	// Line resolution (pricing + cost + unit-group validation) loads the bundle.
+	suite.pricingRepo.EXPECT().LoadPricingBundle(gomock.Any(), gomock.Any()).
+		Return(basePricingBundle(), nil).AnyTimes()
+
+	// Shipping-rate cascade inputs (no carrier → rate 0).
+	suite.orderRepo.EXPECT().GetProductTypesAndLines(gomock.Any(), gomock.Any()).
+		Return([]domain.ProductTypeLine{}, nil).AnyTimes()
+	suite.orderRepo.EXPECT().GetAccountOriginAddress(gomock.Any(), "ac_test").
+		Return(nil, nil).AnyTimes()
+	suite.unitRepo.EXPECT().GetByIDs(gomock.Any(), "ac_test", gomock.Any()).
+		Return(nil, nil).AnyTimes()
 	// Zipcode / state lookups must NOT happen.
 
 	suite.orderRepo.EXPECT().

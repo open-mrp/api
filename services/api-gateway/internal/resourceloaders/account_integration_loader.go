@@ -45,7 +45,7 @@ func AccountIntegrationFromProto(ai *pb.AccountIntegrationInfo) *apiresource.Acc
 		Object:          constants.ObjectTypeAccountIntegration,
 		Name:            ai.Name,
 		IntegrationCode: constants.IntegrationCode(ai.IntegrationCode),
-		IsActive:        ai.IsActive,
+		Status:          constants.AccountIntegrationStatusFromActive(ai.IsActive),
 		CreatedAt:       grpcutil.TimestampToTime(ai.CreatedAt),
 		UpdatedAt:       grpcutil.TimestampToTime(ai.UpdatedAt),
 	}

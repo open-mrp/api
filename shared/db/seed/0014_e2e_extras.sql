@@ -961,6 +961,75 @@ INSERT IGNORE INTO order_email_contact (id, sales_order_id, account_user_id, not
     ('oec_01seed_putinc_po_subm', 'or_01seed_putinc_po_es00', 'acus_s83fjhyfmqen', 'purchaseOrderSubmission', NOW(), NOW());
 
 -- ============================================================
+-- SECTION: VOLUME-DISCOUNT + PER-PAIR ACCOUNT-PRICE PRICING CASES
+-- Replicates production pricing scenarios for the price-quote engine:
+--   - A "Carton (12 pr)" unit (= 12 pairs = 24 each) added to the Socks unit group.
+--   - A new "E2E Volume LTD" product line (NO account price → volume discount fires) with
+--     two products listed at 29.95/pair (= 359.40 per carton).
+--   - A volume discount with the production tier ladder (0→5.8096828%, then 4% at 4/7/10),
+--     scoped to the line + Socks category + beige attribute + carton unit, NO customer
+--     group (applies to all). Expected per-carton prices by summed carton quantity:
+--       1ct → 338.52, 4ct → 324.98, 8ct → 311.98, 11ct → 299.50 (multiplicative).
+--   - A per-pair account price (18.45/pair, beige-gated) for customer2 on the same line,
+--     which must beat the volume discount (account price wins).
+-- ============================================================
+
+INSERT IGNORE INTO unit (id, name, abbreviation, unit_dimension_code, ratio_numerator, ratio_denominator, offset_numerator, offset_denominator, is_base_unit, account_id, created_at, updated_at) VALUES
+    ('un_e2ecarton12pr000', 'Carton (12 pr)', 'ct12pr', 'quantity', 24, 1, 0, 1, 0, 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+
+INSERT IGNORE INTO unit_group_unit (id, unit_group_id, unit_id, created_at, updated_at) VALUES
+    ('ungpun_e2ecart12pr0', 'ungp_01k0a5ecy9edg9za40dnccw53n', 'un_e2ecarton12pr000', NOW(), NOW());
+
+INSERT IGNORE INTO product_line (id, name, account_id, unit_group_id, is_commission_exempt, is_freight_exempt, created_at, updated_at) VALUES
+    ('pdln_e2evolumeline0', 'E2E Volume LTD', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ungp_01k0a5ecy9edg9za40dnccw53n', 0, 0, NOW(), NOW());
+
+INSERT IGNORE INTO rate (id, value, numerator_unit_id, denominator_unit_id, created_at, updated_at) VALUES
+    ('rt_e2evol1list00000', 29.95, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_e2evol2list00000', 29.95, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_e2evol1cost00000', 10.00, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_e2evol2cost00000', 10.00, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_e2evol1burn00000', 0.50, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_e2evol2burn00000', 0.50, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_e2evolacctprice0', 18.45, 'dollar', 'un_01seedpair000000000', NOW(), NOW());
+
+-- item.burn_rate_id / unit_value_id / unit_cost_id are each UNIQUE, so every item needs
+-- its own rate rows.
+INSERT IGNORE INTO item (id, sku, description, unit_value_id, unit_cost_id, burn_rate_id, account_id, item_type_code, item_category_id, created_at, updated_at) VALUES
+    ('it_e2evol1000000000', 'E2E-LTD-A', 'E2E LTD product A', 'rt_e2evol1list00000', 'rt_e2evol1cost00000', 'rt_e2evol1burn00000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'product', 'itcg_01seedsocks000000', NOW(), NOW()),
+    ('it_e2evol2000000000', 'E2E-LTD-B', 'E2E LTD product B', 'rt_e2evol2list00000', 'rt_e2evol2cost00000', 'rt_e2evol2burn00000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'product', 'itcg_01seedsocks000000', NOW(), NOW());
+
+INSERT IGNORE INTO product (id, item_id, product_type_code, product_line_id, created_at, updated_at) VALUES
+    ('pd_e2evol1000000000', 'it_e2evol1000000000', 'sale', 'pdln_e2evolumeline0', NOW(), NOW()),
+    ('pd_e2evol2000000000', 'it_e2evol2000000000', 'sale', 'pdln_e2evolumeline0', NOW(), NOW());
+
+-- Both products carry the beige attribute (A = attribute id, B = item id).
+INSERT IGNORE INTO _item_attributes (A, B) VALUES
+    ('at_01seedbeige00000000', 'it_e2evol1000000000'),
+    ('at_01seedbeige00000000', 'it_e2evol2000000000');
+
+INSERT IGNORE INTO quantity_discount (id, name, account_id, created_at, updated_at) VALUES
+    ('quds_e2evolume00000', 'E2E Volume Discount', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+
+INSERT IGNORE INTO quantity_discount_tier (id, discount_percentage, name, threshold, parent_tier_id, quantity_discount_id, created_at, updated_at) VALUES
+    ('qudt_e2evoltier000', 0.05809682805, 'Tier 0',  0,  NULL, 'quds_e2evolume00000', NOW(), NOW()),
+    ('qudt_e2evoltier004', 0.04,          'Tier 4',  4,  NULL, 'quds_e2evolume00000', NOW(), NOW()),
+    ('qudt_e2evoltier007', 0.04,          'Tier 7',  7,  NULL, 'quds_e2evolume00000', NOW(), NOW()),
+    ('qudt_e2evoltier010', 0.04,          'Tier 10', 10, NULL, 'quds_e2evolume00000', NOW(), NOW());
+
+-- Discount scoping (A = entity id, B = quantity_discount id for these Prisma M2M tables).
+INSERT IGNORE INTO _product_lines_quantity_discounts (A, B) VALUES ('pdln_e2evolumeline0', 'quds_e2evolume00000');
+INSERT IGNORE INTO _item_categories_quantity_discounts (A, B) VALUES ('itcg_01seedsocks000000', 'quds_e2evolume00000');
+INSERT IGNORE INTO _quantity_discounts_attributes (A, B) VALUES ('at_01seedbeige00000000', 'quds_e2evolume00000');
+INSERT IGNORE INTO _quantity_discounts_units (A, B) VALUES ('un_e2ecarton12pr000', 'quds_e2evolume00000');
+
+-- Per-pair account price for customer2 on the volume line (beats the volume discount).
+INSERT IGNORE INTO account_price (id, owner_account_id, unit_value_id, product_line_id, recipient_account_id, created_at, updated_at) VALUES
+    ('acpr_e2evolacctpr0', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'rt_e2evolacctprice0', 'pdln_e2evolumeline0', 'ac_01seedcustomer2_acct0', NOW(), NOW());
+
+INSERT IGNORE INTO account_price_attribute (id, account_price_id, attribute_id, created_at, updated_at) VALUES
+    ('acprattr_e2evol000', 'acpr_e2evolacctpr0', 'at_01seedbeige00000000', NOW(), NOW());
+
+-- ============================================================
 -- PAYMENT-STATUS REGRESSION FIXTURE (sales-order "paid" parity)
 -- ============================================================
 -- Reproduces the reported bug: a sales order shows "unpaid" under the customer

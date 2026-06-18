@@ -156,6 +156,7 @@
         "httprouter",
         "httpsnoop",
         "httptransport",
+        "hubspot",
         "idemp",
         "identitytypes",
         "imds",

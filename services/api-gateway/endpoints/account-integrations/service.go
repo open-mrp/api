@@ -96,10 +96,17 @@ func (m *accountIntegrationSvcImpl) CreateAccountIntegration(ctx context.Context
 }
 
 func (m *accountIntegrationSvcImpl) UpdateAccountIntegration(ctx context.Context, req *UpdateAccountIntegrationRequest) (*apiresource.AccountIntegration, *apierror.APIError) {
+	// The public API models the lifecycle as a status enum; storage is still a
+	// boolean, so map status -> is_active when the field is present.
+	var isActive *bool
+	if status, ok := req.Status.Value(); ok {
+		active := status == constants.AccountIntegrationStatusActive
+		isActive = &active
+	}
 	pbReq := &pb.UpdateAccountIntegrationRequest{
 		Id:       req.AccountIntegrationID,
 		Name:     req.Name.Ptr(),
-		IsActive: req.IsActive.Ptr(),
+		IsActive: isActive,
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, accountIntegrationSvcTracer, "service.account-integrations.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateAccountIntegrationResponse, error) {
@@ -150,8 +157,8 @@ func (m *accountIntegrationSvcImpl) GetStripeStatus(ctx context.Context, req *Ge
 		return nil, apiErr
 	}
 	return &apiresource.StripeStatus{
-		Object:               constants.ObjectTypeStripeStatus,
-		HasStripeIntegration: resp.HasStripeIntegration,
+		Object: constants.ObjectTypeStripeStatus,
+		Status: constants.StripeConnectionStatusFromExists(resp.HasStripeIntegration),
 	}, nil
 }
 

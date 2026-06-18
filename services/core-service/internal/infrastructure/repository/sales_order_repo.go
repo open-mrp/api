@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -420,6 +421,11 @@ func (r *salesOrderRepoImpl) Create(ctx context.Context, soID string, params dom
 	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.create")
 	defer span.End()
 
+	promisedAtNull := gosql.NullTime{}
+	if params.PromisedAt != nil {
+		promisedAtNull = gosql.NullTime{Time: *params.PromisedAt, Valid: true}
+	}
+
 	err := r.queries.CreateSalesOrder(ctx, sqlc.CreateSalesOrderParams{
 		ID:                    soID,
 		Number:                params.Number,
@@ -435,9 +441,9 @@ func (r *salesOrderRepoImpl) Create(ctx context.Context, soID string, params dom
 		SalesRepID:            toNullString(params.SalesRepID),
 		ShippingTermID:        toNullString(params.ShippingTermID),
 		SalesOrderStatusCode:  params.SalesOrderStatusCode,
-		SalesOrderTypeCode:    params.SalesOrderTypeCode,
 		PaymentTermID:         toNullString(params.PaymentTermID),
 		OrderDiscountID:       toNullString(params.OrderDiscountID),
+		PromisedAt:            promisedAtNull,
 		BuyerAccountID:        params.BuyerAccountID,
 		SellerAccountID:       params.SellerAccountID,
 		OwnerAccountID:        params.OwnerAccountID,
@@ -557,6 +563,78 @@ func (r *salesOrderRepoImpl) IsDuplicateOrderNumber(ctx context.Context, account
 	}
 
 	return cnt > 0, nil
+}
+
+// AreAllLineProductLinesCommissionExempt reports whether every product line among
+// the given products is commission-exempt (and at least one product has a product
+// line). Mirrors Dashboard's "productLines.length > 0 && every(isCommissionExempt)".
+func (r *salesOrderRepoImpl) AreAllLineProductLinesCommissionExempt(ctx context.Context, productIDs []string) (bool, *apierror.APIError) {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.are_all_line_product_lines_commission_exempt")
+	defer span.End()
+
+	if len(productIDs) == 0 {
+		return false, nil
+	}
+
+	row, err := r.queries.CountCommissionExemptProductLines(ctx, productIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+
+	return row.Total > 0 && row.Total == row.Exempt, nil
+}
+
+// GetAccountOriginAddress returns the seller account's default billing address as a
+// ship-from origin for shipping-rate estimation, or nil when the account has none.
+func (r *salesOrderRepoImpl) GetAccountOriginAddress(ctx context.Context, accountID string) (*domain.ShippingAddress, *apierror.APIError) {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_account_origin_address")
+	defer span.End()
+
+	row, err := r.queries.GetAccountOriginAddress(ctx, accountID)
+	if errors.Is(err, gosql.ErrNoRows) {
+		return nil, nil
+	}
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return &domain.ShippingAddress{
+		Name:    row.Name,
+		Street1: nullSQLString(row.StreetLine1),
+		Street2: nullStringToPtr(row.StreetLine2),
+		City:    nullSQLString(row.Locality),
+		State:   nullSQLString(row.State),
+		Zip:     nullSQLString(row.PostalCode),
+		Country: row.Country,
+		Phone:   nullStringToPtr(row.Phone),
+		Email:   nullStringToPtr(row.Email),
+	}, nil
+}
+
+// GetProductTypesAndLines returns the product type code + product line for each of
+// the given products, used to estimate parcel weight and gather freight exemptions.
+func (r *salesOrderRepoImpl) GetProductTypesAndLines(ctx context.Context, productIDs []string) ([]domain.ProductTypeLine, *apierror.APIError) {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_product_types_and_lines")
+	defer span.End()
+
+	if len(productIDs) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.GetProductTypesAndLines(ctx, productIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make([]domain.ProductTypeLine, len(rows))
+	for i, row := range rows {
+		out[i] = domain.ProductTypeLine{
+			ProductID:       row.ProductID,
+			ProductTypeCode: row.ProductTypeCode,
+			ProductLineID:   nullStringToPtr(row.ProductLineID),
+		}
+	}
+	return out, nil
 }
 
 func (r *salesOrderRepoImpl) IsDuplicateCustomerPO(ctx context.Context, accountID, buyerAccountID, customerPO string, excludeID *string) (bool, *apierror.APIError) {

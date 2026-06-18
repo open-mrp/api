@@ -5566,6 +5566,21 @@ func (mr *MockSalesOrderSvcMockRecorder) ListSalesOrders(ctx, params any) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSalesOrders", reflect.TypeOf((*MockSalesOrderSvc)(nil).ListSalesOrders), ctx, params)
 }
 
+// QuoteSalesOrderLinePrices mocks base method.
+func (m *MockSalesOrderSvc) QuoteSalesOrderLinePrices(ctx context.Context, params domain.QuoteSalesOrderLinePricesParams) ([]domain.SalesOrderLineQuote, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "QuoteSalesOrderLinePrices", ctx, params)
+	ret0, _ := ret[0].([]domain.SalesOrderLineQuote)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// QuoteSalesOrderLinePrices indicates an expected call of QuoteSalesOrderLinePrices.
+func (mr *MockSalesOrderSvcMockRecorder) QuoteSalesOrderLinePrices(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QuoteSalesOrderLinePrices", reflect.TypeOf((*MockSalesOrderSvc)(nil).QuoteSalesOrderLinePrices), ctx, params)
+}
+
 // RecordOrderPayment mocks base method.
 func (m *MockSalesOrderSvc) RecordOrderPayment(ctx context.Context, salesOrderID, paymentIntentID string) *apierror.APIError {
 	m.ctrl.T.Helper()

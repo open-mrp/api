@@ -788,9 +788,19 @@ func (s *shipmentSvcImpl) EstimateRate(ctx context.Context, params domain.Estima
 
 	params.AccountID = identity.Target.AccountID
 
+	return estimateShippingRate(ctx, s.repos, s.shippoFactory, params)
+}
+
+// estimateShippingRate computes the posted shipping rate for an order or shipment,
+// mirroring Dashboard's estimatePostedShippingRate cascade: product-line freight
+// exemption → customer/group freight exemption → shipping-term free/flat/min-order →
+// carrier-without-Shippo → no Shippo integration → live Shippo rate (already marked up
+// by the Shippo client). A nil shippoFactory short-circuits the live rate to 0. It is
+// shared by the shipment estimate-rate endpoint and sales-order shipping-line synthesis.
+func estimateShippingRate(ctx context.Context, repos domain.RepoFactory, shippoFactory domain.ShippoClientFactory, params domain.EstimateRateParams) (float64, *apierror.APIError) {
 	// Check product line freight exemption: if any product line is freight exempt, rate is 0.
 	if len(params.ProductLineIDs) > 0 {
-		productLineRepo := s.repos.NewProductLineRepo()
+		productLineRepo := repos.NewProductLineRepo()
 		for _, plID := range params.ProductLineIDs {
 			pl, apiErr := productLineRepo.Get(ctx, domain.GetProductLineParams{
 				AccountID:     params.AccountID,
@@ -807,10 +817,10 @@ func (s *shipmentSvcImpl) EstimateRate(ctx context.Context, params domain.Estima
 
 	// Check customer-level freight exemptions and shipping term logic.
 	if params.CustomerID != nil {
-		customerRepo := s.repos.NewCustomerRepo()
+		customerRepo := repos.NewCustomerRepo()
 		customer, apiErr := customerRepo.Get(ctx, params.AccountID, *params.CustomerID, nil)
 		if apiErr != nil {
-			return 0, tracing.Trace(span, apiErr)
+			return 0, apiErr
 		}
 
 		// Customer or customer group is freight exempt.
@@ -820,13 +830,13 @@ func (s *shipmentSvcImpl) EstimateRate(ctx context.Context, params domain.Estima
 
 		// Check the customer's default shipping term.
 		if customer.DefaultShippingTermID != nil {
-			shippingTermRepo := s.repos.NewShippingTermRepo()
+			shippingTermRepo := repos.NewShippingTermRepo()
 			shippingTerm, apiErr := shippingTermRepo.Get(ctx, domain.GetShippingTermParams{
 				AccountID:      params.AccountID,
 				ShippingTermID: *customer.DefaultShippingTermID,
 			})
 			if apiErr != nil {
-				return 0, tracing.Trace(span, apiErr)
+				return 0, apiErr
 			}
 
 			// Shipping term is free freight.
@@ -838,7 +848,7 @@ func (s *shipmentSvcImpl) EstimateRate(ctx context.Context, params domain.Estima
 			if shippingTerm.Type == constants.ShippingTermTypeFlatRateFreight && shippingTerm.FlatRate != nil {
 				flatRate, err := strconv.ParseFloat(shippingTerm.FlatRate.Value, 64)
 				if err != nil {
-					return 0, tracing.Trace(span, apierror.NewInternalError(err, "Failed to parse flat rate value."))
+					return 0, apierror.NewInternalError(err, "Failed to parse flat rate value.")
 				}
 				return flatRate, nil
 			}
@@ -847,7 +857,7 @@ func (s *shipmentSvcImpl) EstimateRate(ctx context.Context, params domain.Estima
 			if shippingTerm.MinimumOrderValue != nil && params.OrderTotal != nil {
 				minValue, err := strconv.ParseFloat(shippingTerm.MinimumOrderValue.Value, 64)
 				if err != nil {
-					return 0, tracing.Trace(span, apierror.NewInternalError(err, "Failed to parse minimum order value."))
+					return 0, apierror.NewInternalError(err, "Failed to parse minimum order value.")
 				}
 				if *params.OrderTotal > minValue {
 					return 0, nil
@@ -856,11 +866,16 @@ func (s *shipmentSvcImpl) EstimateRate(ctx context.Context, params domain.Estima
 		}
 	}
 
+	// A carrier is required to fetch a live rate; without one there is no rate.
+	if params.CarrierID == "" {
+		return 0, nil
+	}
+
 	// Get carrier to find Shippo carrier account object ID.
-	carrierRepo := s.repos.NewCarrierRepo()
+	carrierRepo := repos.NewCarrierRepo()
 	carrier, apiErr := carrierRepo.Get(ctx, domain.GetCarrierParams{AccountID: params.AccountID, CarrierID: params.CarrierID})
 	if apiErr != nil {
-		return 0, tracing.Trace(span, apiErr)
+		return 0, apiErr
 	}
 
 	// If carrier doesn't have Shippo configured, return 0 (no rate available).
@@ -871,10 +886,10 @@ func (s *shipmentSvcImpl) EstimateRate(ctx context.Context, params domain.Estima
 	// Get service level token (optional).
 	var serviceLevelToken string
 	if params.ServiceLevelID != "" {
-		serviceLevelRepo := s.repos.NewServiceLevelRepo()
+		serviceLevelRepo := repos.NewServiceLevelRepo()
 		serviceLevel, apiErr := serviceLevelRepo.Get(ctx, params.AccountID, params.ServiceLevelID)
 		if apiErr != nil {
-			return 0, tracing.Trace(span, apiErr)
+			return 0, apiErr
 		}
 		if serviceLevel.ServiceLevelToken != nil {
 			serviceLevelToken = *serviceLevel.ServiceLevelToken
@@ -882,22 +897,22 @@ func (s *shipmentSvcImpl) EstimateRate(ctx context.Context, params domain.Estima
 	}
 
 	// Check if account has Shippo integration enabled.
-	integrationRepo := s.repos.NewAccountIntegrationRepo()
+	integrationRepo := repos.NewAccountIntegrationRepo()
 	hasIntegration, apiErr := integrationRepo.HasIntegration(ctx, params.AccountID, constants.IntegrationCodeShippo)
 	if apiErr != nil {
-		return 0, tracing.Trace(span, apiErr)
+		return 0, apiErr
 	}
-	if !hasIntegration {
+	if !hasIntegration || shippoFactory == nil {
 		return 0, nil
 	}
 
 	// Get account Shippo API key.
 	encryptedCreds, _, apiErr := integrationRepo.GetEncryptedCredentials(ctx, params.AccountID, constants.IntegrationCodeShippo)
 	if apiErr != nil {
-		return 0, tracing.Trace(span, apiErr)
+		return 0, apiErr
 	}
 
-	shippoClient := s.shippoFactory.Build(encryptedCreds)
+	shippoClient := shippoFactory.Build(encryptedCreds)
 
 	rate, apiErr := shippoClient.FetchShippingRate(ctx, domain.FetchShippingRateParams{
 		CarrierAccountObjectID: *carrier.ShippoCarrierAccountID,
@@ -907,7 +922,7 @@ func (s *shipmentSvcImpl) EstimateRate(ctx context.Context, params domain.Estima
 		Parcels:                params.Parcels,
 	})
 	if apiErr != nil {
-		return 0, tracing.Trace(span, apiErr)
+		return 0, apiErr
 	}
 
 	return rate, nil

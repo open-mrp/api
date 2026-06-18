@@ -282,6 +282,8 @@ func (s *accountIntegrationSvcImpl) validateCredentials(ctx context.Context, spa
 		return s.validateStripeCredentials(span, params.Credentials, accountCtx.IsSandbox)
 	case constants.IntegrationCodeShippo:
 		return s.validateShippoCredentials(span, params.Credentials, accountCtx.IsSandbox)
+	case constants.IntegrationCodeHubspot:
+		return s.validateHubspotCredentials(span, params.Credentials)
 	default:
 		return tracing.Trace(span, apierror.NewValidationErrorWithParam("Unsupported integration code.", "integration_code"))
 	}
@@ -340,6 +342,22 @@ func (s *accountIntegrationSvcImpl) validateShippoCredentials(span trace.Span, c
 		if !strings.HasPrefix(creds.APIKey, "shippo_live_") {
 			return tracing.Trace(span, apierror.NewValidationErrorWithParam("Production accounts must use live Shippo keys (shippo_live_).", "credentials"))
 		}
+	}
+
+	return nil
+}
+
+// validateHubspotCredentials validates a HubSpot Private App access token. HubSpot
+// tokens carry no sandbox/production distinction in their format, so the same
+// prefix check applies to every account.
+func (s *accountIntegrationSvcImpl) validateHubspotCredentials(span trace.Span, credentialsJSON string) *apierror.APIError {
+	var creds domain.HubspotCredentials
+	if err := json.Unmarshal([]byte(credentialsJSON), &creds); err != nil {
+		return tracing.Trace(span, apierror.NewValidationErrorWithParam("Invalid credentials JSON format.", "credentials"))
+	}
+
+	if !strings.HasPrefix(creds.AccessToken, "pat-") {
+		return tracing.Trace(span, apierror.NewValidationErrorWithParam("HubSpot access token must start with 'pat-'.", "credentials"))
 	}
 
 	return nil

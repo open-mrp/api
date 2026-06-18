@@ -85,40 +85,44 @@ func populateTotalsOnSO(ctx context.Context, parent any, _ map[string]any) {
 	so.Totals = v.(*apiresource.SalesOrderTotals)
 }
 
+// ensureSORelated lazily creates the related group on first expanded member, so
+// the group serializes to null when no related include (pick/production_run/
+// shipments) was requested.
+func ensureSORelated(so *apiresource.SalesOrder) *apiresource.SalesOrderRelated {
+	if so.Related == nil {
+		so.Related = &apiresource.SalesOrderRelated{Object: constants.ObjectTypeSalesOrderRelated}
+	}
+	return so.Related
+}
+
 func populatePickOnSORelated(ctx context.Context, parent any, _ map[string]any) {
 	so := parent.(*apiresource.SalesOrder)
-	if so.Related == nil {
-		return
-	}
+	related := ensureSORelated(so)
 	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "related_pick")
 	if !ok {
 		return
 	}
-	so.Related.Pick = v.(*apiresource.Record)
+	related.Pick = v.(*apiresource.Record)
 }
 
 func populateProductionRunOnSORelated(ctx context.Context, parent any, _ map[string]any) {
 	so := parent.(*apiresource.SalesOrder)
-	if so.Related == nil {
-		return
-	}
+	related := ensureSORelated(so)
 	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "related_production_run")
 	if !ok {
 		return
 	}
-	so.Related.ProductionRun = v.(*apiresource.Record)
+	related.ProductionRun = v.(*apiresource.Record)
 }
 
 func populateShipmentsOnSORelated(ctx context.Context, parent any, _ map[string]any) {
 	so := parent.(*apiresource.SalesOrder)
-	if so.Related == nil {
-		return
-	}
+	related := ensureSORelated(so)
 	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "related_shipments")
 	if !ok {
 		return
 	}
-	so.Related.Shipments = v.(*apiresource.List[apiresource.Record])
+	related.Shipments = v.(*apiresource.List[apiresource.Record])
 }
 
 func extractCustomerIDFromSO(ctx context.Context, parent any) []string {

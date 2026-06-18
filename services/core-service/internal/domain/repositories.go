@@ -694,6 +694,7 @@ type CustomerRepo interface {
 	UpdateBranding(ctx context.Context, customerAccountID string, email, phone, url *string) *apierror.APIError
 	Delete(ctx context.Context, ownerAccountID, customerAccountID string) *apierror.APIError
 	BulkDelete(ctx context.Context, ownerAccountID string, customerIDs []string) *apierror.APIError
+	IsCommissionExempt(ctx context.Context, ownerAccountID, customerAccountID string) (bool, *apierror.APIError)
 	ExistsByNumber(ctx context.Context, ownerAccountID, number string, excludeID *string) (bool, *apierror.APIError)
 	GetNextCustomerNumber(ctx context.Context, accountID string) (int64, *apierror.APIError)
 	UpdateNextCustomerNumber(ctx context.Context, sysPropertyID, accountID string, value string) *apierror.APIError
@@ -856,6 +857,9 @@ type SalesOrderRepo interface {
 	Delete(ctx context.Context, accountID, salesOrderID string) *apierror.APIError
 	UpdateStatus(ctx context.Context, accountID, salesOrderID, statusCode string, issuedAt, completedAt *time.Time) *apierror.APIError
 	IsOrderForCustomer(ctx context.Context, salesOrderID, buyerAccountID string) (bool, *apierror.APIError)
+	AreAllLineProductLinesCommissionExempt(ctx context.Context, productIDs []string) (bool, *apierror.APIError)
+	GetAccountOriginAddress(ctx context.Context, accountID string) (*ShippingAddress, *apierror.APIError)
+	GetProductTypesAndLines(ctx context.Context, productIDs []string) ([]ProductTypeLine, *apierror.APIError)
 	IsDuplicateOrderNumber(ctx context.Context, accountID, number string, excludeID *string) (bool, *apierror.APIError)
 	IsDuplicateCustomerPO(ctx context.Context, accountID, buyerAccountID, customerPO string, excludeID *string) (bool, *apierror.APIError)
 	CountSalesOrdersForBuyerAccounts(ctx context.Context, ownerAccountID string, buyerAccountIDs []string) (int64, *apierror.APIError)
@@ -1274,4 +1278,12 @@ type TerritoryRepo interface {
 	// FindSalesRepByState returns the sales_rep (account_user) ID for the
 	// state-only territory matching the given state, if any.
 	FindSalesRepByState(ctx context.Context, accountID, state string) (*string, *apierror.APIError)
+}
+
+// PricingRepo loads the data the sales-order-line pricing engine needs.
+type PricingRepo interface {
+	// LoadPricingBundle fetches, in a small number of queries, all product list
+	// prices, unit conversion data, unit-group discounts, account-price overrides
+	// (for the buyer and its parent account), and applicable volume discounts.
+	LoadPricingBundle(ctx context.Context, params LoadPricingBundleParams) (*PricingBundle, *apierror.APIError)
 }

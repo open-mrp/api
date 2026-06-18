@@ -189,24 +189,15 @@ type CreateSalesOrderParams struct {
 	PriorityCode          string
 	SalesRepID            *string
 	ShippingTermID        *string
-	SalesOrderTypeCode    string
 	PaymentTermID         *string
 	OrderDiscountID       *string
-	BillToName            *string
-	BillToStreetLine1     *string
-	BillToStreetLine2     *string
-	BillToLocality        *string
-	BillToState           *string
-	BillToPostalCode      *string
-	BillToCountry         *string
-	ShipToName            *string
-	ShipToStreetLine1     *string
-	ShipToStreetLine2     *string
-	ShipToLocality        *string
-	ShipToState           *string
-	ShipToPostalCode      *string
-	ShipToCountry         *string
-	Lines                 []CreateSalesOrderLineInput
+	PromisedAt            *time.Time
+	// Existing bill-to / ship-to address IDs the order references. The addresses must
+	// belong to the order's owner or buyer account (matching Dashboard, which only
+	// accepts address IDs — addresses are persisted separately).
+	BillToAddressID string
+	ShipToAddressID string
+	Lines           []CreateSalesOrderLineInput
 	// Email contact recipients to write into order_email_contact on create.
 	AcknowledgementEmailContacts []SalesOrderEmailContactInput
 	InvoiceEmailContacts         []SalesOrderEmailContactInput
@@ -217,21 +208,27 @@ type SalesOrderEmailContactInput struct {
 	AccountUserID string
 }
 
+// ProductTypeLine carries a product's type code and product line ID, used by
+// shipping-rate estimation (parcel weight + product-line freight exemption) on create.
+type ProductTypeLine struct {
+	ProductID       string
+	ProductTypeCode string
+	ProductLineID   *string
+}
+
 // CreateSalesOrderLineInput represents a line to create with a new sales order.
+// The item, SKU/description defaults, unit cost, and (unless an internal user
+// overrides) the unit price are all resolved server-side from the product.
 type CreateSalesOrderLineInput struct {
-	ProductID                  string
-	ItemID                     *string
-	ProductSKU                 string
-	ProductDescription         *string
-	QuantityValue              string
-	QuantityUnitID             string
-	UnitPriceValue             string
-	UnitPriceNumeratorUnitID   string
-	UnitPriceDenominatorUnitID string
-	UnitCostValue              *string
-	UnitCostNumeratorUnitID    *string
-	UnitCostDenominatorUnitID  *string
-	EdiLineItemID              *string
+	ProductID      string
+	QuantityValue  string
+	QuantityUnitID string
+	// ProductSKU / ProductDescription default to the product's when nil.
+	ProductSKU         *string
+	ProductDescription *string
+	// UnitPrice is an optional override, honored only for internal actors.
+	UnitPrice     *RateValue
+	EdiLineItemID *string
 }
 
 // UpdateSalesOrderParams holds the parameters for updating a sales order.

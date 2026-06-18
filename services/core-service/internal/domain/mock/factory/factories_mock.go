@@ -671,6 +671,20 @@ func (mr *MockRepoFactoryMockRecorder) NewPickRepo() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewPickRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewPickRepo))
 }
 
+// NewPricingRepo mocks base method.
+func (m *MockRepoFactory) NewPricingRepo() domain.PricingRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewPricingRepo")
+	ret0, _ := ret[0].(domain.PricingRepo)
+	return ret0
+}
+
+// NewPricingRepo indicates an expected call of NewPricingRepo.
+func (mr *MockRepoFactoryMockRecorder) NewPricingRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewPricingRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewPricingRepo))
+}
+
 // NewPriorityRepo mocks base method.
 func (m *MockRepoFactory) NewPriorityRepo() domain.PriorityRepo {
 	m.ctrl.T.Helper()

@@ -7984,6 +7984,21 @@ func (mr *MockCustomerRepoMockRecorder) InsertPriceGroup(ctx, id, relationID, gr
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertPriceGroup", reflect.TypeOf((*MockCustomerRepo)(nil).InsertPriceGroup), ctx, id, relationID, groupID)
 }
 
+// IsCommissionExempt mocks base method.
+func (m *MockCustomerRepo) IsCommissionExempt(ctx context.Context, ownerAccountID, customerAccountID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsCommissionExempt", ctx, ownerAccountID, customerAccountID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// IsCommissionExempt indicates an expected call of IsCommissionExempt.
+func (mr *MockCustomerRepoMockRecorder) IsCommissionExempt(ctx, ownerAccountID, customerAccountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsCommissionExempt", reflect.TypeOf((*MockCustomerRepo)(nil).IsCommissionExempt), ctx, ownerAccountID, customerAccountID)
+}
+
 // List mocks base method.
 func (m *MockCustomerRepo) List(ctx context.Context, params domain.ListCustomersParams) (*domain.ListCustomersResult, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -9692,6 +9707,21 @@ func (m *MockSalesOrderRepo) EXPECT() *MockSalesOrderRepoMockRecorder {
 	return m.recorder
 }
 
+// AreAllLineProductLinesCommissionExempt mocks base method.
+func (m *MockSalesOrderRepo) AreAllLineProductLinesCommissionExempt(ctx context.Context, productIDs []string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AreAllLineProductLinesCommissionExempt", ctx, productIDs)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// AreAllLineProductLinesCommissionExempt indicates an expected call of AreAllLineProductLinesCommissionExempt.
+func (mr *MockSalesOrderRepoMockRecorder) AreAllLineProductLinesCommissionExempt(ctx, productIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AreAllLineProductLinesCommissionExempt", reflect.TypeOf((*MockSalesOrderRepo)(nil).AreAllLineProductLinesCommissionExempt), ctx, productIDs)
+}
+
 // CheckPaymentStatus mocks base method.
 func (m *MockSalesOrderRepo) CheckPaymentStatus(ctx context.Context, salesOrderID string) (bool, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -9920,6 +9950,21 @@ func (mr *MockSalesOrderRepoMockRecorder) Get(ctx, accountID, salesOrderID any) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockSalesOrderRepo)(nil).Get), ctx, accountID, salesOrderID)
 }
 
+// GetAccountOriginAddress mocks base method.
+func (m *MockSalesOrderRepo) GetAccountOriginAddress(ctx context.Context, accountID string) (*domain.ShippingAddress, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAccountOriginAddress", ctx, accountID)
+	ret0, _ := ret[0].(*domain.ShippingAddress)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetAccountOriginAddress indicates an expected call of GetAccountOriginAddress.
+func (mr *MockSalesOrderRepoMockRecorder) GetAccountOriginAddress(ctx, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountOriginAddress", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetAccountOriginAddress), ctx, accountID)
+}
+
 // GetAcknowledgementRecipients mocks base method.
 func (m *MockSalesOrderRepo) GetAcknowledgementRecipients(ctx context.Context, salesOrderID string) ([]string, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -10023,6 +10068,21 @@ func (m *MockSalesOrderRepo) GetPickID(ctx context.Context, salesOrderID string)
 func (mr *MockSalesOrderRepoMockRecorder) GetPickID(ctx, salesOrderID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPickID", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetPickID), ctx, salesOrderID)
+}
+
+// GetProductTypesAndLines mocks base method.
+func (m *MockSalesOrderRepo) GetProductTypesAndLines(ctx context.Context, productIDs []string) ([]domain.ProductTypeLine, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetProductTypesAndLines", ctx, productIDs)
+	ret0, _ := ret[0].([]domain.ProductTypeLine)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetProductTypesAndLines indicates an expected call of GetProductTypesAndLines.
+func (mr *MockSalesOrderRepoMockRecorder) GetProductTypesAndLines(ctx, productIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProductTypesAndLines", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetProductTypesAndLines), ctx, productIDs)
 }
 
 // GetSaleLinesForIssue mocks base method.
@@ -15157,4 +15217,43 @@ func (m *MockTerritoryRepo) Update(ctx context.Context, params domain.UpdateTerr
 func (mr *MockTerritoryRepoMockRecorder) Update(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockTerritoryRepo)(nil).Update), ctx, params)
+}
+
+// MockPricingRepo is a mock of PricingRepo interface.
+type MockPricingRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockPricingRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockPricingRepoMockRecorder is the mock recorder for MockPricingRepo.
+type MockPricingRepoMockRecorder struct {
+	mock *MockPricingRepo
+}
+
+// NewMockPricingRepo creates a new mock instance.
+func NewMockPricingRepo(ctrl *gomock.Controller) *MockPricingRepo {
+	mock := &MockPricingRepo{ctrl: ctrl}
+	mock.recorder = &MockPricingRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockPricingRepo) EXPECT() *MockPricingRepoMockRecorder {
+	return m.recorder
+}
+
+// LoadPricingBundle mocks base method.
+func (m *MockPricingRepo) LoadPricingBundle(ctx context.Context, params domain.LoadPricingBundleParams) (*domain.PricingBundle, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LoadPricingBundle", ctx, params)
+	ret0, _ := ret[0].(*domain.PricingBundle)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// LoadPricingBundle indicates an expected call of LoadPricingBundle.
+func (mr *MockPricingRepoMockRecorder) LoadPricingBundle(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadPricingBundle", reflect.TypeOf((*MockPricingRepo)(nil).LoadPricingBundle), ctx, params)
 }

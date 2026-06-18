@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleAccountIntegrationID = "ai_0177772eae113431f64d473124"
+const SampleAccountIntegrationID = "acig_0177772eae113431f64d473124"
 const SampleAccountIntegrationName = "My Stripe Integration"
 
 // Third-party integration connected to an account.
@@ -23,11 +23,12 @@ type AccountIntegration struct {
 	//
 	// - `stripe`: Stripe payment processing.
 	// - `shippo`: Shippo shipping and label generation.
+	// - `hubspot`: HubSpot CRM.
 	IntegrationCode constants.IntegrationCode `json:"provider" validate:"required"`
-	// Whether the integration is active.
+	// Lifecycle status of the integration.
 	//
-	// Integrations are created active. Deactivating an integration keeps its stored credentials but stops it from being used (for example, the Stripe publishable key cannot be retrieved while the Stripe integration is inactive).
-	IsActive bool `json:"is_active"`
+	// Integrations are created `active`. Setting an integration to `inactive` keeps its stored credentials but stops it from being used (for example, the Stripe publishable key cannot be retrieved while the Stripe integration is inactive).
+	Status constants.AccountIntegrationStatus `json:"status" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
@@ -39,7 +40,7 @@ var SampleAccountIntegration = &AccountIntegration{
 	Object:          constants.ObjectTypeAccountIntegration,
 	Name:            SampleAccountIntegrationName,
 	IntegrationCode: constants.IntegrationCodeStripe,
-	IsActive:        true,
+	Status:          constants.AccountIntegrationStatusActive,
 	CreatedAt:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:       timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
@@ -71,13 +72,13 @@ type StripeStatus struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=stripe_status"`
 	// Whether a Stripe integration is configured.
 	//
-	// `true` if the account has a Stripe integration on file, regardless of whether the integration is currently active.
-	HasStripeIntegration bool `json:"has_stripe_integration"`
+	// `connected` if the account has a Stripe integration on file, regardless of whether the integration is currently active.
+	Status constants.StripeConnectionStatus `json:"status" validate:"required"`
 }
 
 var SampleStripeStatus = &StripeStatus{
-	Object:               constants.ObjectTypeStripeStatus,
-	HasStripeIntegration: true,
+	Object: constants.ObjectTypeStripeStatus,
+	Status: constants.StripeConnectionStatusConnected,
 }
 
 func (*StripeStatus) SchemaExample() any {

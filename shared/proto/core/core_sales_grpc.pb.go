@@ -42,6 +42,7 @@ const (
 	CoreSalesService_BulkDeleteSalesOrders_FullMethodName           = "/core.CoreSalesService/BulkDeleteSalesOrders"
 	CoreSalesService_ChangeSalesOrderStatus_FullMethodName          = "/core.CoreSalesService/ChangeSalesOrderStatus"
 	CoreSalesService_CheckoutSalesOrder_FullMethodName              = "/core.CoreSalesService/CheckoutSalesOrder"
+	CoreSalesService_QuoteSalesOrderLinePrices_FullMethodName       = "/core.CoreSalesService/QuoteSalesOrderLinePrices"
 	CoreSalesService_CreateSalesOrderProductionRun_FullMethodName   = "/core.CoreSalesService/CreateSalesOrderProductionRun"
 	CoreSalesService_CreateSalesOrderLine_FullMethodName            = "/core.CoreSalesService/CreateSalesOrderLine"
 	CoreSalesService_ListVolumeDiscounts_FullMethodName             = "/core.CoreSalesService/ListVolumeDiscounts"
@@ -95,6 +96,9 @@ type CoreSalesServiceClient interface {
 	ChangeSalesOrderStatus(ctx context.Context, in *ChangeSalesOrderStatusRequest, opts ...grpc.CallOption) (*ChangeSalesOrderStatusResponse, error)
 	// CheckoutSalesOrder initiates a checkout for a sales order.
 	CheckoutSalesOrder(ctx context.Context, in *CheckoutSalesOrderRequest, opts ...grpc.CallOption) (*CheckoutSalesOrderResponse, error)
+	// QuoteSalesOrderLinePrices computes the unit price for each line without creating
+	// an order, used to display prices to users (incl. the customer portal).
+	QuoteSalesOrderLinePrices(ctx context.Context, in *QuoteSalesOrderLinePricesRequest, opts ...grpc.CallOption) (*QuoteSalesOrderLinePricesResponse, error)
 	// CreateSalesOrderProductionRun creates a production run from a sales order.
 	CreateSalesOrderProductionRun(ctx context.Context, in *CreateSalesOrderProductionRunRequest, opts ...grpc.CallOption) (*CreateSalesOrderProductionRunResponse, error)
 	// CreateSalesOrderLine creates a new line on a sales order.
@@ -308,6 +312,16 @@ func (c *coreSalesServiceClient) CheckoutSalesOrder(ctx context.Context, in *Che
 	return out, nil
 }
 
+func (c *coreSalesServiceClient) QuoteSalesOrderLinePrices(ctx context.Context, in *QuoteSalesOrderLinePricesRequest, opts ...grpc.CallOption) (*QuoteSalesOrderLinePricesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QuoteSalesOrderLinePricesResponse)
+	err := c.cc.Invoke(ctx, CoreSalesService_QuoteSalesOrderLinePrices_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *coreSalesServiceClient) CreateSalesOrderProductionRun(ctx context.Context, in *CreateSalesOrderProductionRunRequest, opts ...grpc.CallOption) (*CreateSalesOrderProductionRunResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateSalesOrderProductionRunResponse)
@@ -458,6 +472,9 @@ type CoreSalesServiceServer interface {
 	ChangeSalesOrderStatus(context.Context, *ChangeSalesOrderStatusRequest) (*ChangeSalesOrderStatusResponse, error)
 	// CheckoutSalesOrder initiates a checkout for a sales order.
 	CheckoutSalesOrder(context.Context, *CheckoutSalesOrderRequest) (*CheckoutSalesOrderResponse, error)
+	// QuoteSalesOrderLinePrices computes the unit price for each line without creating
+	// an order, used to display prices to users (incl. the customer portal).
+	QuoteSalesOrderLinePrices(context.Context, *QuoteSalesOrderLinePricesRequest) (*QuoteSalesOrderLinePricesResponse, error)
 	// CreateSalesOrderProductionRun creates a production run from a sales order.
 	CreateSalesOrderProductionRun(context.Context, *CreateSalesOrderProductionRunRequest) (*CreateSalesOrderProductionRunResponse, error)
 	// CreateSalesOrderLine creates a new line on a sales order.
@@ -544,6 +561,9 @@ func (UnimplementedCoreSalesServiceServer) ChangeSalesOrderStatus(context.Contex
 }
 func (UnimplementedCoreSalesServiceServer) CheckoutSalesOrder(context.Context, *CheckoutSalesOrderRequest) (*CheckoutSalesOrderResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CheckoutSalesOrder not implemented")
+}
+func (UnimplementedCoreSalesServiceServer) QuoteSalesOrderLinePrices(context.Context, *QuoteSalesOrderLinePricesRequest) (*QuoteSalesOrderLinePricesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method QuoteSalesOrderLinePrices not implemented")
 }
 func (UnimplementedCoreSalesServiceServer) CreateSalesOrderProductionRun(context.Context, *CreateSalesOrderProductionRunRequest) (*CreateSalesOrderProductionRunResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateSalesOrderProductionRun not implemented")
@@ -923,6 +943,24 @@ func _CoreSalesService_CheckoutSalesOrder_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CoreSalesService_QuoteSalesOrderLinePrices_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QuoteSalesOrderLinePricesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreSalesServiceServer).QuoteSalesOrderLinePrices(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreSalesService_QuoteSalesOrderLinePrices_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreSalesServiceServer).QuoteSalesOrderLinePrices(ctx, req.(*QuoteSalesOrderLinePricesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CoreSalesService_CreateSalesOrderProductionRun_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateSalesOrderProductionRunRequest)
 	if err := dec(in); err != nil {
@@ -1199,6 +1237,10 @@ var CoreSalesService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CheckoutSalesOrder",
 			Handler:    _CoreSalesService_CheckoutSalesOrder_Handler,
+		},
+		{
+			MethodName: "QuoteSalesOrderLinePrices",
+			Handler:    _CoreSalesService_QuoteSalesOrderLinePrices_Handler,
 		},
 		{
 			MethodName: "CreateSalesOrderProductionRun",

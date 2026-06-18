@@ -52,7 +52,6 @@ func salesOrderReferenceFromProto(info *pb.SalesOrderInfo) *apiresource.SalesOrd
 		Priority:                    constants.PriorityCode(info.PriorityCode),
 		PaymentStatus:               constants.SalesOrderPaymentStatusUnpaid,
 		AcknowledgmentStatus:        ackStatus,
-		Related:                     &apiresource.SalesOrderRelated{Object: constants.ObjectTypeSalesOrderRelated},
 		CreatedAt:                   grpcutil.TimestampToTime(info.CreatedAt),
 		UpdatedAt:                   grpcutil.TimestampToTime(info.UpdatedAt),
 	}

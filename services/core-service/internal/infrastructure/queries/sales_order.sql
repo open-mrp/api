@@ -715,7 +715,7 @@ INSERT INTO sales_order (
     carrier_id, carrier_option_id, carrier_billing_type, carrier_billing_account,
     priority_code, sales_rep_id, shipping_term_id,
     sales_order_status_code, sales_order_type_code,
-    payment_term_id, order_discount_id,
+    payment_term_id, order_discount_id, promised_at,
     buyer_account_id, seller_account_id, owner_account_id,
     created_at, updated_at
 ) VALUES (
@@ -723,8 +723,9 @@ INSERT INTO sales_order (
     sqlc.arg('billing_address_id'), sqlc.arg('shipping_address_id'),
     sqlc.narg('carrier_id'), sqlc.narg('carrier_option_id'), sqlc.narg('carrier_billing_type'), sqlc.narg('carrier_billing_account'),
     sqlc.arg('priority_code'), sqlc.narg('sales_rep_id'), sqlc.narg('shipping_term_id'),
-    sqlc.arg('sales_order_status_code'), sqlc.arg('sales_order_type_code'),
-    sqlc.narg('payment_term_id'), sqlc.narg('order_discount_id'),
+    -- sales_order_type_code is a storage discriminator; this endpoint only creates sales orders.
+    sqlc.arg('sales_order_status_code'), 'sales_order',
+    sqlc.narg('payment_term_id'), sqlc.narg('order_discount_id'), sqlc.narg('promised_at'),
     sqlc.arg('buyer_account_id'), sqlc.arg('seller_account_id'), sqlc.arg('owner_account_id'),
     NOW(3), NOW(3)
 );
@@ -1129,3 +1130,43 @@ SELECT s.id
 FROM shipment s
 WHERE s.sales_order_id = sqlc.arg('sales_order_id')
 ORDER BY s.created_at, s.id;
+
+-- name: CountCommissionExemptProductLines :one
+-- For the given products, returns the number that have a product line (total) and
+-- how many of those product lines are commission-exempt (exempt). Mirrors Dashboard's
+-- "productLines.length > 0 && productLines.every(isCommissionExempt)" check used in
+-- sales-rep resolution.
+SELECT
+    COUNT(pl.id) AS total,
+    COUNT(CASE WHEN pl.is_commission_exempt THEN 1 END) AS exempt
+FROM product p
+JOIN product_line pl ON pl.id = p.product_line_id
+WHERE p.id IN (sqlc.slice('product_ids'));
+
+-- name: GetAccountOriginAddress :one
+-- The seller account's default billing address, used as the ship-from origin when
+-- estimating a shipping rate on order create (mirrors Dashboard's account.defaultBillingAddress).
+SELECT
+    a.name AS name,
+    g.street_line_1 AS street_line_1,
+    g.street_line_2 AS street_line_2,
+    g.locality AS locality,
+    g.state AS state,
+    g.postal_code AS postal_code,
+    g.country AS country,
+    a.phone AS phone,
+    a.email AS email
+FROM account acc
+JOIN address a ON a.id = acc.default_billing_address_id
+JOIN geolocation g ON g.id = a.geolocation_id
+WHERE acc.id = sqlc.arg('account_id');
+
+-- name: GetProductTypesAndLines :many
+-- Product type code + product line for a set of products, used to estimate parcel
+-- weight (sale products only) and gather product-line freight exemptions on create.
+SELECT
+    p.id AS product_id,
+    p.product_type_code AS product_type_code,
+    p.product_line_id AS product_line_id
+FROM product p
+WHERE p.id IN (sqlc.slice('product_ids'));

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.28.3](https://github.com/Augno/api/compare/v0.28.2...v0.28.3) (2026-06-18)
+
+
+### Bug Fixes
+
+* update Stripe credentials decryption to include account ID as additional authenticated data ([5993f7e](https://github.com/Augno/api/commit/5993f7eab50db57d47b89f399b59d83708c24e5e))
+
 ## [0.28.2](https://github.com/Augno/api/compare/v0.28.1...v0.28.2) (2026-06-18)
 
 

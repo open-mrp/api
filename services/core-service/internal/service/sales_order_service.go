@@ -1313,7 +1313,7 @@ func (s *salesOrderSvcImpl) estimateOrderShippingRate(ctx context.Context, param
 		from = *fromAddr
 	}
 
-	rate, apiErr := estimateShippingRate(ctx, s.repos, s.shippoFactory, domain.EstimateRateParams{
+	rate, apiErr := estimateShippingRate(ctx, s.repos, s.shippoFactory, s.encryptionKey, domain.EstimateRateParams{
 		AccountID:      params.AccountID,
 		CarrierID:      derefString(params.CarrierID),
 		ServiceLevelID: derefString(params.ServiceLevelID),

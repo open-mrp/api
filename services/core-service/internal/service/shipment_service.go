@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"slices"
 	"sort"
@@ -12,10 +13,24 @@ import (
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/audit"
 	"github.com/augno/api/shared/constants"
+	"github.com/augno/api/shared/crypto"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/idempotency"
 	"github.com/augno/api/shared/tracing"
 )
+
+// decryptShippoAPIKey decrypts and unwraps a stored Shippo integration credential blob, returning the plaintext API key to hand to the Shippo client factory. The credential is sealed with the account ID as additional authenticated data (see account_integration_service.go), so the same accountID must be supplied here.
+func decryptShippoAPIKey(encryptedCreds string, encryptionKey []byte, accountID string) (string, *apierror.APIError) {
+	plaintext, err := crypto.DecryptAESGCM(encryptedCreds, encryptionKey, []byte(accountID))
+	if err != nil {
+		return "", apierror.NewInternalError(err, "Failed to decrypt Shippo credentials.")
+	}
+	var creds domain.ShippoCredentials
+	if err := json.Unmarshal(plaintext, &creds); err != nil {
+		return "", apierror.NewInternalError(err, "Failed to parse Shippo credentials.")
+	}
+	return creds.APIKey, nil
+}
 
 var shipmentSvcTracer = tracing.GetTracer("core-service.shipment_service")
 
@@ -24,6 +39,7 @@ type shipmentSvcImpl struct {
 	mediatorFactory domain.MediatorFactory
 	txManager       TransactionManager
 	shippoFactory   domain.ShippoClientFactory
+	encryptionKey   []byte
 	notificationPub domain.NotificationPublisher
 }
 
@@ -40,6 +56,9 @@ type ShipmentSvcConfig struct {
 	// ShippoFactory (optional; default: nil) builds Shippo shipping clients. It is not validated
 	// at construction; shipping code paths panic at runtime if it is unset.
 	ShippoFactory domain.ShippoClientFactory
+
+	// EncryptionKey (optional; default: nil) decrypts stored integration credentials (e.g. the Shippo API key). It is not validated at construction; live-rate code paths fail at runtime if it is unset while a Shippo integration is configured.
+	EncryptionKey []byte
 
 	// NotificationPub (optional; default: nil) publishes notification messages to the outbox. It is not validated
 	// at construction.
@@ -69,6 +88,7 @@ func NewShipmentSvc(config *ShipmentSvcConfig) domain.ShipmentSvc {
 		mediatorFactory: config.MediatorFactory,
 		txManager:       config.TxManager,
 		shippoFactory:   config.ShippoFactory,
+		encryptionKey:   config.EncryptionKey,
 		notificationPub: config.NotificationPub,
 	}
 }
@@ -84,6 +104,7 @@ func (s *shipmentSvcImpl) withTx(ctx context.Context, fn func(context.Context, *
 			mediatorFactory: s.mediatorFactory,
 			txManager:       s.txManager,
 			shippoFactory:   s.shippoFactory,
+			encryptionKey:   s.encryptionKey,
 			notificationPub: s.notificationPub,
 		}
 		return fn(txCtx, txSvc)
@@ -785,11 +806,11 @@ func (s *shipmentSvcImpl) EstimateRate(ctx context.Context, params domain.Estima
 
 	params.AccountID = identity.Target.AccountID
 
-	return estimateShippingRate(ctx, s.repos, s.shippoFactory, params)
+	return estimateShippingRate(ctx, s.repos, s.shippoFactory, s.encryptionKey, params)
 }
 
 // estimateShippingRate computes the posted shipping rate for an order or shipment, mirroring Dashboard's estimatePostedShippingRate cascade: product-line freight exemption → customer/group freight exemption → shipping-term free/flat/min-order → carrier-without-Shippo → no Shippo integration → live Shippo rate (already marked up by the Shippo client). A nil shippoFactory short-circuits the live rate to 0. It is shared by the shipment estimate-rate endpoint and sales-order shipping-line synthesis.
-func estimateShippingRate(ctx context.Context, repos domain.RepoFactory, shippoFactory domain.ShippoClientFactory, params domain.EstimateRateParams) (float64, *apierror.APIError) {
+func estimateShippingRate(ctx context.Context, repos domain.RepoFactory, shippoFactory domain.ShippoClientFactory, encryptionKey []byte, params domain.EstimateRateParams) (float64, *apierror.APIError) {
 	// Check product line freight exemption: if any product line is freight exempt, rate is 0.
 	if len(params.ProductLineIDs) > 0 {
 		productLineRepo := repos.NewProductLineRepo()
@@ -904,7 +925,12 @@ func estimateShippingRate(ctx context.Context, repos domain.RepoFactory, shippoF
 		return 0, apiErr
 	}
 
-	shippoClient := shippoFactory.Build(encryptedCreds)
+	apiKey, apiErr := decryptShippoAPIKey(encryptedCreds, encryptionKey, params.AccountID)
+	if apiErr != nil {
+		return 0, apiErr
+	}
+
+	shippoClient := shippoFactory.Build(apiKey)
 
 	rate, apiErr := shippoClient.FetchShippingRate(ctx, domain.FetchShippingRateParams{
 		CarrierAccountObjectID: *carrier.ShippoCarrierAccountID,
@@ -1092,7 +1118,11 @@ func (s *shipmentSvcImpl) RateShop(ctx context.Context, params domain.RateShopPa
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
-		shippoClient = s.shippoFactory.Build(encryptedCreds)
+		apiKey, apiErr := decryptShippoAPIKey(encryptedCreds, s.encryptionKey, params.AccountID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		shippoClient = s.shippoFactory.Build(apiKey)
 	}
 
 	// 6. For each carrier, fetch rates.

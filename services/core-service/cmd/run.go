@@ -566,6 +566,7 @@ func Run(
 		MediatorFactory: mediatorFactory,
 		TxManager:       txManager,
 		ShippoFactory:   shippoFactory,
+		EncryptionKey:   integrationEncryptionKey,
 		NotificationPub: notificationPublisher,
 	})
 

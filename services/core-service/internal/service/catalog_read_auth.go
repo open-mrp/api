@@ -10,10 +10,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// authorizeCatalogBatchRead checks that the caller may read catalog resources in
-// the target account via batch-get loaders. Internal actors require the supplied
-// permission check; customer and supplier actors require a valid counterparty
-// relationship when accessing an external target account.
+// authorizeCatalogBatchRead checks that the caller may read catalog resources in the target account via batch-get loaders. Internal actors require the supplied permission check; customer and supplier actors require a valid counterparty relationship when accessing an external target account.
 func authorizeCatalogBatchRead(
 	ctx context.Context,
 	identity *types.Identity,

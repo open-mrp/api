@@ -49,9 +49,7 @@ func (r *requestLogRepoImpl) Create(ctx context.Context, rl *domain.RequestLog) 
 		statusCode = 500
 	}
 
-	// rl.ActorID is the raw actor id the API exposes — the user_id for a user
-	// actor, or the api_key type_id for an api_key actor (set from the identity by
-	// the gateway). Stored as-is.
+	// rl.ActorID is the raw actor id the API exposes — the user_id for a user actor, or the api_key type_id for an api_key actor (set from the identity by the gateway). Stored as-is.
 	err := r.db.CreateRequestLog(ctx, sqlc.CreateRequestLogParams{
 		ID:                   rl.ID,
 		Method:               rl.Method,
@@ -159,8 +157,7 @@ func (r *requestLogRepoImpl) List(ctx context.Context, callerAccountID string, f
 		dir = decoded.Direction
 	}
 
-	// actor_id stores the raw id the API exposes (user_id for user actors), so the
-	// caller's filter.ActorIDs match rl.actor_id directly — no translation.
+	// actor_id stores the raw id the API exposes (user_id for user actors), so the caller's filter.ActorIDs match rl.actor_id directly — no translation.
 	rawSQL, args := buildListQuery(mode, dir, callerAccountID, filter,
 		includeQueryJSON, includeRequestBody, includeResponseBody, cur, limit+1)
 
@@ -191,8 +188,7 @@ func (r *requestLogRepoImpl) List(ctx context.Context, callerAccountID string, f
 	return &domain.ListRequestLogsResult{RequestLogs: paged, PageInfo: pageInfo}, nil
 }
 
-// anyIncludeRequested returns true when any of the given keys is present in includes.
-// When includes is nil (no include param), returns false — no enriched data is needed.
+// anyIncludeRequested returns true when any of the given keys is present in includes. When includes is nil (no include param), returns false — no enriched data is needed.
 func anyIncludeRequested(includes []string, keys ...string) bool {
 	if includes == nil {
 		return false
@@ -230,8 +226,7 @@ func applyRequestedJSONIncludes(rl *domain.RequestLogRead, includes []string) {
 	}
 }
 
-// needsEnrichedFindByID returns true when the FindByID query must use the full JOINs
-// (because any sub-object include is requested).
+// needsEnrichedFindByID returns true when the FindByID query must use the full JOINs (because any sub-object include is requested).
 func needsEnrichedFindByID(includes []string) bool {
 	return anyIncludeRequested(includes, "account", "actor", "actor.role")
 }
@@ -244,9 +239,7 @@ const (
 	queryModeFull
 )
 
-// pickQueryMode picks the cheapest list query variant that satisfies the requested
-// includes. queryModeBase has no joins; queryModeActor joins user+api_key
-// only; queryModeFull joins all related tables.
+// pickQueryMode picks the cheapest list query variant that satisfies the requested includes. queryModeBase has no joins; queryModeActor joins user+api_key only; queryModeFull joins all related tables.
 func pickQueryMode(includes []string, _ *domain.ListRequestLogsFilter) queryMode {
 	if anyIncludeRequested(includes, "account", "actor.role") {
 		return queryModeFull

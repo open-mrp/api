@@ -7,8 +7,7 @@ import (
 )
 
 func init() {
-	// AccountIntegration is a pure leaf — scalar fields + integration code +
-	// is_active. Same empty-Subs Definition as AccountGroup/Address.
+	// AccountIntegration is a pure leaf — scalar fields + integration code + is_active. Same empty-Subs Definition as AccountGroup/Address.
 	resourcekit.Register(&resourcekit.Definition{
 		ObjectType: constants.ObjectTypeAccountIntegration,
 		Load:       resourceloaders.LoadAccountIntegrations,

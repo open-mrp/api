@@ -10,9 +10,7 @@ type ModelLimits struct {
 	OutputReserve int // tokens reserved for output generation
 }
 
-// ModelContextLimits defines the maximum prompt token budget per model.
-// These are set conservatively below the absolute API limits to leave
-// headroom for token-estimation inaccuracy and output tokens.
+// ModelContextLimits defines the maximum prompt token budget per model. These are set conservatively below the absolute API limits to leave headroom for token-estimation inaccuracy and output tokens.
 var ModelContextLimits = map[string]int{
 	"claude-sonnet-4":  180000,
 	"claude-haiku-4.5": 180000,
@@ -36,14 +34,12 @@ func GetModelLimits(model string) ModelLimits {
 	return ModelLimits{ContextLimit: defaultContextLimit, OutputReserve: 4096}
 }
 
-// EstimateContextUsage estimates the total token usage for a set of messages,
-// system prompt, and tool definitions.
+// EstimateContextUsage estimates the total token usage for a set of messages, system prompt, and tool definitions.
 func EstimateContextUsage(system string, messages []Message, tools []ToolDefinition) int {
 	return EstimateTokens(system) + estimateToolDefsTokens(tools) + EstimateAllMessages(messages)
 }
 
-// ContextBudgetRemaining returns the estimated tokens remaining before hitting
-// the proactive compaction threshold (85% of context limit).
+// ContextBudgetRemaining returns the estimated tokens remaining before hitting the proactive compaction threshold (85% of context limit).
 func ContextBudgetRemaining(system string, messages []Message, tools []ToolDefinition, model string) int {
 	ml := GetModelLimits(model)
 	threshold := int(float64(ml.ContextLimit) * 0.85)
@@ -55,9 +51,7 @@ func ContextBudgetRemaining(system string, messages []Message, tools []ToolDefin
 	return remaining
 }
 
-// NeedsProactiveCompaction returns true if the estimated token usage exceeds
-// 85% of the model's context limit, indicating compaction should be triggered
-// before the next LLM call to avoid a hard context overflow error.
+// NeedsProactiveCompaction returns true if the estimated token usage exceeds 85% of the model's context limit, indicating compaction should be triggered before the next LLM call to avoid a hard context overflow error.
 func NeedsProactiveCompaction(system string, messages []Message, tools []ToolDefinition, model string) bool {
 	return ContextBudgetRemaining(system, messages, tools, model) == 0
 }
@@ -76,8 +70,7 @@ const (
 	truncationPlaceholder = "[Earlier conversation history was removed to fit within the context window. The most recent messages are preserved below.]"
 )
 
-// EstimateTokens returns a rough token count for a string.
-// Uses ~4 characters per token, which is conservative for English/code.
+// EstimateTokens returns a rough token count for a string. Uses ~4 characters per token, which is conservative for English/code.
 func EstimateTokens(s string) int {
 	n := len(s)
 	if n == 0 {
@@ -172,9 +165,7 @@ func TruncateMessages(system string, messages []Message, tools []ToolDefinition,
 	return dropOldMessages(messages, budget)
 }
 
-// truncateAssistantContent caps the text content of assistant messages.
-// This targets verbose reasoning/thinking that the LLM produced but doesn't
-// need to re-read in full to continue the conversation.
+// truncateAssistantContent caps the text content of assistant messages. This targets verbose reasoning/thinking that the LLM produced but doesn't need to re-read in full to continue the conversation.
 func truncateAssistantContent(messages []Message) {
 	for i := range messages {
 		if messages[i].Role != "assistant" {
@@ -238,9 +229,7 @@ func capToolInputs(messages []Message) {
 	}
 }
 
-// dropOldNonUserMessages removes assistant and tool-result messages from the
-// middle of the conversation, oldest first, while preserving all user messages.
-// This keeps the user's intent and inputs intact.
+// dropOldNonUserMessages removes assistant and tool-result messages from the middle of the conversation, oldest first, while preserving all user messages. This keeps the user's intent and inputs intact.
 func dropOldNonUserMessages(messages []Message, budget int) []Message {
 	if len(messages) <= 3 {
 		return messages
@@ -266,8 +255,7 @@ func dropOldNonUserMessages(messages []Message, budget int) []Message {
 	return collectMessages(messages, drop)
 }
 
-// dropOldMessages drops messages from the middle of the conversation as a last resort,
-// keeping the first message and as many recent messages as fit.
+// dropOldMessages drops messages from the middle of the conversation as a last resort, keeping the first message and as many recent messages as fit.
 func dropOldMessages(messages []Message, budget int) []Message {
 	if len(messages) <= 2 {
 		return messages

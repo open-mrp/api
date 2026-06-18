@@ -39,8 +39,7 @@ type ShippingCaseSvcConfig struct {
 	// S3Client (required) is the object store client used for file storage.
 	S3Client s3client.ObjectStore
 
-	// ShippingLabelsBucket (optional; default: "") is the S3 bucket for shipping labels. It is not validated
-	// at construction.
+	// ShippingLabelsBucket (optional; default: "") is the S3 bucket for shipping labels. It is not validated at construction.
 	ShippingLabelsBucket string
 }
 
@@ -330,15 +329,7 @@ func (s *shippingCaseSvcImpl) GetShippingCaseLabel(ctx context.Context, accountI
 
 	s3Key := fmt.Sprintf("shipping-labels/%s/%s.gif", identity.Target.AccountID, number)
 
-	// NOTE: core-service only READS shipping labels here; they are written by the
-	// dashboard API. core-service's S3 access comes from the AugnoProdCoreS3Access
-	// IRSA policy (infra/production/terraform/core.tf). That policy is currently
-	// broad (Get/Put/Delete on all three buckets), but if it is ever tightened to
-	// least-privilege (read-only for the shipping-labels bucket, as it should be
-	// while core-service never uploads labels) and we later add an
-	// s3Client.Upload (PutObject) for shipping labels here, the policy must be
-	// updated to grant s3:PutObject on the shipping-labels bucket or the upload
-	// will fail with AccessDenied.
+	// NOTE: core-service only READS shipping labels here; they are written by the dashboard API. core-service's S3 access comes from the AugnoProdCoreS3Access IRSA policy (infra/production/terraform/core.tf). That policy is currently broad (Get/Put/Delete on all three buckets), but if it is ever tightened to least-privilege (read-only for the shipping-labels bucket, as it should be while core-service never uploads labels) and we later add an s3Client.Upload (PutObject) for shipping labels here, the policy must be updated to grant s3:PutObject on the shipping-labels bucket or the upload will fail with AccessDenied.
 	exists, apiErr := s.s3Client.FileExists(ctx, s.shippingLabelsBucket, s3Key)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

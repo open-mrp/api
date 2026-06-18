@@ -306,9 +306,7 @@ func (s *materialSvcImpl) CreateMaterial(ctx context.Context, params domain.Crea
 				return apiErr
 			}
 
-			// Insert rates for item (unit_value, unit_cost, burn_rate). Caller-supplied
-			// inputs override the defaults; unit_price and unit_cost additionally enforce
-			// the currency-numerator / non-currency-denominator rule.
+			// Insert rates for item (unit_value, unit_cost, burn_rate). Caller-supplied inputs override the defaults; unit_price and unit_cost additionally enforce the currency-numerator / non-currency-denominator rule.
 			txUnitRepo := txSvc.repos.NewUnitRepo()
 
 			unitValueValue, unitValueNum, unitValueDen := "0", baseUnitID, baseUnitID
@@ -337,8 +335,7 @@ func (s *materialSvcImpl) CreateMaterial(ctx context.Context, params domain.Crea
 				return apiErr
 			}
 
-			// Burn rate is always initialized to "0" per day; it is recomputed
-			// from inventory history by the burn-rate mediator.
+			// Burn rate is always initialized to "0" per day; it is recomputed from inventory history by the burn-rate mediator.
 			if apiErr := txMaterialRepo.InsertRate(txCtx, burnRateRateID, "0", baseUnitID, "day"); apiErr != nil {
 				return apiErr
 			}
@@ -502,8 +499,7 @@ func (s *materialSvcImpl) UpdateMaterial(ctx context.Context, params domain.Upda
 			txMaterialRepo := txSvc.repos.NewMaterialRepo()
 			txItemRepo := txSvc.repos.NewItemRepo()
 
-			// Verify the material exists. Load with the same includes as the
-			// post-update fetch so include-only fields cannot produce false audit diffs.
+			// Verify the material exists. Load with the same includes as the post-update fetch so include-only fields cannot produce false audit diffs.
 			existing, apiErr := txMaterialRepo.GetByID(txCtx, domain.GetMaterialParams{AccountID: params.AccountID, MaterialID: params.MaterialID, Includes: params.Includes})
 			if apiErr != nil {
 				return apiErr
@@ -678,8 +674,7 @@ func (s *materialSvcImpl) DeleteMaterial(ctx context.Context, materialID string)
 	return material, nil
 }
 
-// checkMaterialReadPermission checks the appropriate read permission based on the identity context.
-// Internal actors need materials:read for their own account, or customers:read / suppliers:read for external accounts.
+// BatchGetMaterialsByIDs fetches multiple materials by ID for the target account. It is restricted to internal actors and used by gateway resource loaders to hydrate expandable material references.
 func (s *materialSvcImpl) BatchGetMaterialsByIDs(ctx context.Context, ids []string) ([]*domain.Material, *apierror.APIError) {
 	ctx, span := materialSvcTracer.Start(ctx, "service.material.batch_get_by_ids")
 	defer span.End()

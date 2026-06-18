@@ -6,8 +6,7 @@ import (
 	nanoid "github.com/matoous/go-nanoid/v2"
 )
 
-// IDLength is the length of the ID. The longer the ID, the less likely there will
-// be a collision.
+// IDLength is the length of the ID. The longer the ID, the less likely there will be a collision.
 //   - IDLength12 - 308M IDs
 //   - IDLength19 - 86T IDs
 //   - IDLength22 - 18,660T IDs

@@ -72,9 +72,7 @@ func (s *childAccountSvcImpl) withTx(ctx context.Context, fn func(context.Contex
 	})
 }
 
-// BatchGetChildAccountsByIDs returns child account relations matching the
-// input relation IDs that the caller's account is authorized to read.
-// Used by the api-gateway resourcekit include resolver.
+// BatchGetChildAccountsByIDs returns child account relations matching the input relation IDs that the caller's account is authorized to read. Used by the api-gateway resourcekit include resolver.
 func (s *childAccountSvcImpl) BatchGetChildAccountsByIDs(ctx context.Context, relationIDs []string) ([]*domain.ChildAccount, *apierror.APIError) {
 	ctx, span := childAccountSvcTracer.Start(ctx, "service.child_account.batch_get_by_ids")
 	defer span.End()
@@ -124,8 +122,7 @@ func (s *childAccountSvcImpl) ListChildAccounts(ctx context.Context, cursor *str
 	})
 }
 
-// AddChildAccount adds a child account relationship. The target account is the parent.
-// PUT semantics: idempotent — if already set to this parent, return success.
+// AddChildAccount adds a child account relationship (the target account is the parent), setting parent_account_relation_id on the child within a transaction and publishing a child-account create audit event to the outbox. PUT semantics: idempotent — if already set to this parent, return success. Rejects circular relationships where the parent's parent is the child being added.
 func (s *childAccountSvcImpl) AddChildAccount(ctx context.Context, childAccountID string) (*domain.ChildAccount, *apierror.APIError) {
 	ctx, span := childAccountSvcTracer.Start(ctx, "service.child_account.add")
 	defer span.End()
@@ -208,7 +205,7 @@ func (s *childAccountSvcImpl) AddChildAccount(ctx context.Context, childAccountI
 	return result, nil
 }
 
-// RemoveChildAccount removes a child account relationship. Idempotent — if already cleared, return success.
+// RemoveChildAccount removes a child account relationship by clearing parent_account_relation_id on the child within a transaction and publishing a child-account delete audit event to the outbox. Idempotent — if already cleared, return success.
 func (s *childAccountSvcImpl) RemoveChildAccount(ctx context.Context, childAccountID string) *apierror.APIError {
 	ctx, span := childAccountSvcTracer.Start(ctx, "service.child_account.remove")
 	defer span.End()

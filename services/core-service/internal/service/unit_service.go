@@ -521,8 +521,7 @@ func (s *unitSvcImpl) BatchGetUnitsByIDs(ctx context.Context, ids []string) ([]*
 	return s.repos.NewUnitRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
 }
 
-// checkUnitReadPermission checks the appropriate read permission based on the identity context.
-// Internal actors need units:read for their own account, or customers:read / suppliers:read for external accounts.
+// checkUnitReadPermission checks the appropriate read permission based on the identity context. Internal actors need units:read for their own account, or customers:read / suppliers:read for external accounts.
 func checkUnitReadPermission(identity *types.Identity) *apierror.APIError {
 	if !identity.IsInternalActor() {
 		return nil

@@ -84,8 +84,7 @@ func (r *pricingRepoImpl) LoadPricingBundle(ctx context.Context, params domain.L
 	}
 
 	// --- Units (conversion data) --------------------------------------------
-	// Collect every unit id we may need: each line's ordered unit plus every
-	// product's base denominator unit.
+	// Collect every unit id we may need: each line's ordered unit plus every product's base denominator unit.
 	unitIDSet := make(map[string]struct{})
 	for _, id := range params.OrderedUnitIDs {
 		if id != "" {

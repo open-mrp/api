@@ -15,10 +15,7 @@ import (
 
 var accountLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.account")
 
-// LoadAccounts fetches accounts by ID via BatchGetAccountsByIDs. Builds
-// clean *apiresource.Account values. No FK metadata is currently stashed —
-// Account sub-resources (Branding, Portal, default addresses) aren't part of
-// the carrier pilot.
+// LoadAccounts fetches accounts by ID via BatchGetAccountsByIDs. Builds clean *apiresource.Account values. No FK metadata is currently stashed — Account sub-resources (Branding, Portal, default addresses) aren't part of the carrier pilot.
 func LoadAccounts(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil

@@ -1,8 +1,6 @@
 package constants
 
-// AcknowledgmentStatus represents whether an order acknowledgment has been sent
-// to the customer. Modeled as an enum (rather than a bool) so additional states
-// can be added later without a breaking change.
+// AcknowledgmentStatus represents whether an order acknowledgment has been sent to the customer. Modeled as an enum (rather than a bool) so additional states can be added later without a breaking change.
 type AcknowledgmentStatus string
 
 const (

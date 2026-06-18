@@ -65,7 +65,6 @@ var routeSegmentToIDVariable = map[string]string{
 	"units":              "unit-id",
 	"unit-groups":        "unit-group-id",
 	"properties":         "property-id",
-	"sys-properties":     "property-id",
 	"attributes":         "attribute-id",
 	"items":              "item-id",
 	"item-categories":    "item-category-id",

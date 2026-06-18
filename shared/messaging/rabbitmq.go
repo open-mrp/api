@@ -1,5 +1,4 @@
-// Package messaging provides rabbitMQ integration, outbox/inbox patterns, and
-// background workers for reliable asynchronous communication between microservices.
+// Package messaging provides rabbitMQ integration, outbox/inbox patterns, and background workers for reliable asynchronous communication between microservices.
 package messaging
 
 import (
@@ -22,13 +21,9 @@ import (
 )
 
 const (
-	// ApplicationExchange is the primary topic exchange that all services publish to
-	// and consume from. Messages are routed by their routing key (message type) to the
-	// appropriate queue bindings.
+	// ApplicationExchange is the primary topic exchange that all services publish to and consume from. Messages are routed by their routing key (message type) to the appropriate queue bindings.
 	ApplicationExchange = "app"
-	// deadLetterExchange receives messages that have been rejected by consumers after
-	// exhausting retries. All application queues are configured with x-dead-letter-exchange
-	// pointing here, so failed messages are preserved for inspection rather than lost.
+	// deadLetterExchange receives messages that have been rejected by consumers after exhausting retries. All application queues are configured with x-dead-letter-exchange pointing here, so failed messages are preserved for inspection rather than lost.
 	deadLetterExchange = "dlx"
 )
 
@@ -41,10 +36,7 @@ const (
 	defaultReconnectDelay    = 5 * time.Second
 )
 
-// rabbitMQ manages a single AMQP connection and channel to a rabbitMQ broker.
-// It implements the MessageBroker interface and handles automatic reconnection
-// on channel/connection failures, declares the full exchange and queue topology
-// on each (re)connect, and provides thread-safe publish and consume operations.
+// rabbitMQ manages a single AMQP connection and channel to a rabbitMQ broker. It implements the MessageBroker interface and handles automatic reconnection on channel/connection failures, declares the full exchange and queue topology on each (re)connect, and provides thread-safe publish and consume operations.
 type rabbitMQ struct {
 	uri               string
 	connectionTimeout time.Duration
@@ -61,8 +53,7 @@ type rabbitMQ struct {
 	publishFunc   func(context.Context, string, string, amqp.Publishing) error
 	reconnectFunc func(context.Context) error
 
-	// consumerRetry overrides the per-delivery handler retry policy; nil means
-	// the package retry defaults. Indirected for testability.
+	// consumerRetry overrides the per-delivery handler retry policy; nil means the package retry defaults. Indirected for testability.
 	consumerRetry *retry.Config
 }
 
@@ -134,10 +125,7 @@ func (c *RabbitMQConfig) validate() error {
 	return nil
 }
 
-// NewRabbitMQ creates a new rabbitMQ client connected to the given AMQP URI.
-// It dials the broker with exponential backoff, declares the full exchange/queue topology,
-// and verifies the connection is ready. On success the returned client is guaranteed
-// to have an open connection and channel.
+// NewRabbitMQ creates a new rabbitMQ client connected to the given AMQP URI. It dials the broker with exponential backoff, declares the full exchange/queue topology, and verifies the connection is ready. On success the returned client is guaranteed to have an open connection and channel.
 func NewRabbitMQ(ctx context.Context, config *RabbitMQConfig) (MessageBroker, error) {
 	config = config.withDefaults()
 	if err := config.validate(); err != nil {
@@ -168,21 +156,14 @@ func NewRabbitMQ(ctx context.Context, config *RabbitMQConfig) (MessageBroker, er
 	return rmq, nil
 }
 
-// ConsumeMessages starts consuming from the given queue in a background goroutine.
-// The goroutine runs an infinite loop that re-establishes the channel and consumer
-// on any connection interruption. Deliveries are processed by a pool of
-// Concurrency worker goroutines (default 1); for each delivery:
+// ConsumeMessages starts consuming from the given queue in a background goroutine. The goroutine runs an infinite loop that re-establishes the channel and consumer on any connection interruption. Deliveries are processed by a pool of Concurrency worker goroutines (default 1); for each delivery:
 //  1. The message is wrapped in a traced span via tracing.TracedConsumer.
 //  2. The handler is called with exponential backoff retries (via retry.WithBackoff).
 //  3. On success the delivery is ACKed. On exhausted retries the delivery is rejected
 //     without requeue, sending it to the dead-letter queue with diagnostic headers
 //     (x-death-reason, x-retry-count, etc.).
 //
-// With the default Concurrency of 1, QoS prefetch is the broker default (1) and
-// each message is fully processed before the next is delivered — strict in-order
-// consumption. With Concurrency > 1, prefetch is raised to 2x the worker count so
-// workers stay fed, and messages on this queue are processed (and ACKed) out of
-// order; see ConsumeOptions.Concurrency for when that is safe.
+// With the default Concurrency of 1, QoS prefetch is the broker default (1) and each message is fully processed before the next is delivered — strict in-order consumption. With Concurrency > 1, prefetch is raised to 2x the worker count so workers stay fed, and messages on this queue are processed (and ACKed) out of order; see ConsumeOptions.Concurrency for when that is safe.
 func (r *rabbitMQ) ConsumeMessages(ctx context.Context, queueName string, handler MessageHandler, opts ...ConsumeOption) error {
 	options := ConsumeOptions{Concurrency: 1}
 	for _, opt := range opts {
@@ -250,8 +231,7 @@ func (r *rabbitMQ) ConsumeMessages(ctx context.Context, queueName string, handle
 
 			slog.Info("Started consuming", "queue", queueName, "concurrency", concurrency, "prefetch", prefetch)
 
-			// Workers exit when the deliveries channel closes (connection loss
-			// or shutdown). The pool is re-created on each (re)connect.
+			// Workers exit when the deliveries channel closes (connection loss or shutdown). The pool is re-created on each (re)connect.
 			var wg sync.WaitGroup
 			for range concurrency {
 				wg.Go(func() {
@@ -286,9 +266,7 @@ func (r *rabbitMQ) ConsumeMessages(ctx context.Context, queueName string, handle
 	return nil
 }
 
-// processDelivery handles one AMQP delivery: traced span, handler invocation
-// with backoff retries, ACK on success, and rejection to the dead-letter queue
-// (with diagnostic headers) when retries are exhausted.
+// processDelivery handles one AMQP delivery: traced span, handler invocation with backoff retries, ACK on success, and rejection to the dead-letter queue (with diagnostic headers) when retries are exhausted.
 func (r *rabbitMQ) processDelivery(ctx context.Context, queueName string, handler MessageHandler, msg amqp.Delivery) {
 	select {
 	case <-ctx.Done():
@@ -333,11 +311,7 @@ func (r *rabbitMQ) processDelivery(ctx context.Context, queueName string, handle
 	}
 }
 
-// PublishMessage serializes an AmqpMessage to JSON and publishes it to the
-// given exchange with the specified routing key. If the message has no MessageID,
-// one is auto-generated using the shared id package (msg_ prefix, 22 chars).
-// The publish is traced via tracing.TracedPublisher and uses publishWithReconnect
-// to transparently recover from connection failures.
+// PublishMessage serializes an AmqpMessage to JSON and publishes it to the given exchange with the specified routing key. If the message has no MessageID, one is auto-generated using the shared id package (msg_ prefix, 22 chars). The publish is traced via tracing.TracedPublisher and uses publishWithReconnect to transparently recover from connection failures.
 func (r *rabbitMQ) PublishMessage(ctx context.Context, exchange, routingKey string, message contracts.AmqpMessage) error {
 	if message.MessageID == "" {
 		length := id.IDLength22
@@ -360,9 +334,7 @@ func (r *rabbitMQ) PublishMessage(ctx context.Context, exchange, routingKey stri
 	return tracing.TracedPublisher(ctx, exchange, routingKey, msg, r.publishWithReconnect)
 }
 
-// publish sends a single AMQP publishing to the given exchange and routing key.
-// This is the low-level publish that assumes the channel is already open. It is
-// called through publishFunc, which is indirected for testability.
+// publish sends a single AMQP publishing to the given exchange and routing key. This is the low-level publish that assumes the channel is already open. It is called through publishFunc, which is indirected for testability.
 func (r *rabbitMQ) publish(ctx context.Context, exchange, routingKey string, msg amqp.Publishing) error {
 	return r.Channel.PublishWithContext(ctx,
 		exchange,   // exchange
@@ -373,10 +345,7 @@ func (r *rabbitMQ) publish(ctx context.Context, exchange, routingKey string, msg
 	)
 }
 
-// publishWithReconnect is a resilient publish wrapper. It first ensures the channel
-// is open (reconnecting if needed), then attempts the publish. If the publish fails
-// with a recoverable error (closed connection, channel error, or connection forced),
-// it reconnects once and retries. Non-recoverable errors are returned immediately.
+// publishWithReconnect is a resilient publish wrapper. It first ensures the channel is open (reconnecting if needed), then attempts the publish. If the publish fails with a recoverable error (closed connection, channel error, or connection forced), it reconnects once and retries. Non-recoverable errors are returned immediately.
 func (r *rabbitMQ) publishWithReconnect(ctx context.Context, exchange, routingKey string, msg amqp.Publishing) error {
 	if err := r.ensureChannel(ctx); err != nil {
 		return err
@@ -395,9 +364,7 @@ func (r *rabbitMQ) publishWithReconnect(ctx context.Context, exchange, routingKe
 	return nil
 }
 
-// ensureChannel checks whether the connection and channel are still open and
-// triggers a reconnect if either has been closed. The check is performed under
-// the mutex to get a consistent snapshot of both conn and Channel state.
+// ensureChannel checks whether the connection and channel are still open and triggers a reconnect if either has been closed. The check is performed under the mutex to get a consistent snapshot of both conn and Channel state.
 func (r *rabbitMQ) ensureChannel(ctx context.Context) error {
 	r.mu.Lock()
 	needsReconnect := r.conn == nil || r.conn.IsClosed() || r.Channel == nil || r.Channel.IsClosed()
@@ -410,18 +377,11 @@ func (r *rabbitMQ) ensureChannel(ctx context.Context) error {
 	return r.reconnectFunc(ctx)
 }
 
-// reconnect establishes a fresh AMQP connection and channel, replacing any stale
-// resources. It is called both during initial startup (from NewRabbitMQ) and during
-// runtime recovery (from ensureChannel or publishWithReconnect).
+// reconnect establishes a fresh AMQP connection and channel, replacing any stale resources. It is called both during initial startup (from NewRabbitMQ) and during runtime recovery (from ensureChannel or publishWithReconnect).
 //
-// The method is guarded by mu and performs a double-check: if another goroutine
-// already reconnected while we were waiting for the lock, the existing healthy
-// connection is reused. On the first call it also initializes publishFunc and
-// reconnectFunc to their default implementations.
+// The method is guarded by mu and performs a double-check: if another goroutine already reconnected while we were waiting for the lock, the existing healthy connection is reused. On the first call it also initializes publishFunc and reconnectFunc to their default implementations.
 //
-// After dialing and opening a channel, it declares the full exchange/queue topology
-// via setupExchangesAndQueues. If topology setup fails, the connection is closed
-// and the error is returned.
+// After dialing and opening a channel, it declares the full exchange/queue topology via setupExchangesAndQueues. If topology setup fails, the connection is closed and the error is returned.
 func (r *rabbitMQ) reconnect(ctx context.Context) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -463,10 +423,7 @@ func (r *rabbitMQ) reconnect(ctx context.Context) error {
 	return nil
 }
 
-// connect dials the AMQP broker with exponential backoff (up to 10 retries, 1–10s
-// wait) and opens a channel on the new connection. Returns both the connection and
-// channel on success. If the dial exhausts retries or the channel open fails, all
-// resources are cleaned up before returning the error.
+// connect dials the AMQP broker with exponential backoff (up to 10 retries, 1–10s wait) and opens a channel on the new connection. Returns both the connection and channel on success. If the dial exhausts retries or the channel open fails, all resources are cleaned up before returning the error.
 func (r *rabbitMQ) connect(ctx context.Context) (*amqp.Connection, *amqp.Channel, error) {
 	cfg := retry.Config{
 		MaxRetries:  r.maxRetries,
@@ -495,11 +452,7 @@ func (r *rabbitMQ) connect(ctx context.Context) (*amqp.Connection, *amqp.Channel
 	return conn, ch, nil
 }
 
-// shouldReconnect returns true if the given error indicates a connection or channel
-// level failure that can be recovered by re-dialing the broker. It matches against
-// amqp.ErrClosed, AMQP channel/connection error codes, and the "not open" string
-// pattern. Returning false means the error is application-level and reconnecting
-// would not help (e.g. exchange not found, permission denied).
+// shouldReconnect returns true if the given error indicates a connection or channel level failure that can be recovered by re-dialing the broker. It matches against amqp.ErrClosed, AMQP channel/connection error codes, and the "not open" string pattern. Returning false means the error is application-level and reconnecting would not help (e.g. exchange not found, permission denied).
 func shouldReconnect(err error) bool {
 	if err == nil {
 		return false
@@ -517,9 +470,7 @@ func shouldReconnect(err error) bool {
 	return strings.Contains(err.Error(), "channel/connection is not open")
 }
 
-// setupDeadLetterExchange declares the dead-letter exchange (DLX), its catch-all
-// queue, and binds them with the "#" wildcard routing key. Any message rejected by
-// a consumer (after retry exhaustion) is routed here for post-mortem inspection.
+// setupDeadLetterExchange declares the dead-letter exchange (DLX), its catch-all queue, and binds them with the "#" wildcard routing key. Any message rejected by a consumer (after retry exhaustion) is routed here for post-mortem inspection.
 func (r *rabbitMQ) setupDeadLetterExchange() error {
 	err := r.Channel.ExchangeDeclare(
 		deadLetterExchange,
@@ -562,11 +513,7 @@ func (r *rabbitMQ) setupDeadLetterExchange() error {
 	return nil
 }
 
-// setupExchangesAndQueues declares the full AMQP topology: the dead-letter exchange,
-// the application topic exchange, and all service queues with their routing key
-// bindings. This is called on every (re)connect to ensure the topology exists even
-// if the broker was reset. All queues are durable and configured with x-dead-letter-exchange
-// so rejected messages flow to the DLQ.
+// setupExchangesAndQueues declares the full AMQP topology: the dead-letter exchange, the application topic exchange, and all service queues with their routing key bindings. This is called on every (re)connect to ensure the topology exists even if the broker was reset. All queues are durable and configured with x-dead-letter-exchange so rejected messages flow to the DLQ.
 func (r *rabbitMQ) setupExchangesAndQueues() error {
 	if err := r.setupDeadLetterExchange(); err != nil {
 		return err
@@ -749,10 +696,7 @@ func (r *rabbitMQ) setupExchangesAndQueues() error {
 	return nil
 }
 
-// declareAndBindQueue declares a durable queue with dead-letter routing to the DLX
-// and binds it to the given exchange for each of the specified message type routing
-// keys. This is the building block used by setupExchangesAndQueues for each
-// application queue.
+// declareAndBindQueue declares a durable queue with dead-letter routing to the DLX and binds it to the given exchange for each of the specified message type routing keys. This is the building block used by setupExchangesAndQueues for each application queue.
 func (r *rabbitMQ) declareAndBindQueue(queueName string, messageTypes []string, exchange string) error {
 	args := amqp.Table{
 		"x-dead-letter-exchange": deadLetterExchange,

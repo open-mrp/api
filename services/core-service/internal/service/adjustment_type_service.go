@@ -78,10 +78,7 @@ func (s *adjustmentTypeSvcImpl) BatchGetAdjustmentTypesByIDs(ctx context.Context
 	return s.repos.NewAdjustmentTypeRepo().GetByIDs(ctx, ids)
 }
 
-// checkAdjustmentTypeReadPermission checks the appropriate read permission.
-// Adjustment types are system-wide data; internal actors need adjustment_types:read.
-// Non-internal actors (customer/supplier) do not carry role-based permissions and are
-// permitted to read global lookup data.
+// checkAdjustmentTypeReadPermission checks the appropriate read permission. Adjustment types are system-wide data; internal actors need adjustment_types:read. Non-internal actors (customer/supplier) do not carry role-based permissions and are permitted to read global lookup data.
 func checkAdjustmentTypeReadPermission(identity *types.Identity) *apierror.APIError {
 	if !identity.IsInternalActor() {
 		return nil

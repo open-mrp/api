@@ -20,7 +20,7 @@ func (e *GetStripeStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetStr
 		Title:             "Get Stripe Status",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
-		Route:             "/v1/identity/integrations/stripe/status",
+		Route:             "/v1/settings/integrations/stripe/status",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,

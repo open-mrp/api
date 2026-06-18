@@ -37,8 +37,7 @@ type PurchaseOrderSvcConfig struct {
 	// TxManager (required) wraps multi-step operations in database transactions.
 	TxManager TransactionManager
 
-	// NotificationPublisher (optional; default: nil) publishes notification messages to the outbox. It is not validated
-	// at construction.
+	// NotificationPublisher (optional; default: nil) publishes notification messages to the outbox. When nil, status-change emails (e.g. purchase-order submission on issue) are skipped. It is not validated at construction.
 	NotificationPublisher domain.NotificationPublisher
 }
 
@@ -108,8 +107,7 @@ func (s *purchaseOrderSvcImpl) ListPurchaseOrders(ctx context.Context, params do
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Expand lines per order only when requested (so the list can serve the
-	// lines.item array filter and list rows that render line data).
+	// Expand lines per order only when requested (so the list can serve the lines.item array filter and list rows that render line data).
 	for _, include := range params.Includes {
 		if include == "lines" {
 			for _, order := range result.PurchaseOrders {
@@ -481,9 +479,7 @@ func (s *purchaseOrderSvcImpl) UpdatePurchaseOrder(ctx context.Context, params d
 				return apiErr
 			}
 
-			// Backfill unchanged nullable fields with existing values.
-			// Since the SQL uses direct assignment (no COALESCE) for these fields,
-			// we must provide the existing value when the field was not sent.
+			// Backfill unchanged nullable fields with existing values. Since the SQL uses direct assignment (no COALESCE) for these fields, we must provide the existing value when the field was not sent.
 			if params.BillingAddressID == nil {
 				params.BillingAddressID = &old.BillingAddressID
 			}
@@ -952,8 +948,7 @@ func (s *purchaseOrderSvcImpl) ChangePurchaseOrderStatus(ctx context.Context, pa
 	return updatedOrder, nil
 }
 
-// ensureSupplierMaterialLink checks if a material is linked to the supplier on the
-// purchase order. If not, it finds the material by item ID and creates the link.
+// ensureSupplierMaterialLink checks if a material is linked to the supplier on the purchase order. If not, it finds the material by item ID and creates the link.
 func ensureSupplierMaterialLink(ctx context.Context, repos domain.RepoFactory, accountID, purchaseOrderID, itemID, itemSKU string) *apierror.APIError {
 	poRepo := repos.NewPurchaseOrderRepo()
 	supplierMaterialRepo := repos.NewSupplierMaterialRepo()
@@ -994,8 +989,7 @@ func ensureSupplierMaterialLink(ctx context.Context, repos domain.RepoFactory, a
 		SupplierPartNumber: itemSKU,
 		IsActive:           true,
 	})
-	// Ignore errors from creation - a conflict means the link already exists,
-	// and any other error should not block the purchase order operation.
+	// Ignore errors from creation - a conflict means the link already exists, and any other error should not block the purchase order operation.
 
 	return nil
 }

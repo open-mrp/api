@@ -31,9 +31,7 @@ type DocAPIKeySvcConfig struct {
 	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
 
-	// TxManager (optional; default: nil) wraps multi-step operations in database
-	// transactions. It is not validated at construction; transactional code paths
-	// panic at runtime if it is unset.
+	// TxManager (optional; default: nil) wraps multi-step operations in database transactions. It is not validated at construction; transactional code paths panic at runtime if it is unset.
 	TxManager TransactionManager
 }
 
@@ -167,9 +165,7 @@ func (s *docAPIKeySvcImpl) GetOrCreateDocAPIKey(ctx context.Context) (*domain.Ge
 		}
 		apiErr = resolveTx()
 		if apiErr != nil && apiErr.Code == apierror.ErrorCodeResourceExists {
-			// A concurrent request created the doc API key first (unique key on
-			// owner_account_id). Re-resolve in a fresh transaction to return the
-			// winner's key instead of propagating the conflict.
+			// A concurrent request created the doc API key first (unique key on owner_account_id). Re-resolve in a fresh transaction to return the winner's key instead of propagating the conflict.
 			apiErr = resolveTx()
 		}
 		if apiErr != nil {

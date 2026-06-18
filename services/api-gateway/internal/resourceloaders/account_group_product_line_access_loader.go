@@ -15,10 +15,7 @@ import (
 
 var accountGroupProductLineAccessLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.account_group_product_line_access")
 
-// LoadAccountGroupProductLineAccess fetches access records by account_group_id
-// via BatchGetAccountGroupProductLineAccessByIDs. The inline AccountGroup
-// shell + ProductLines list are built from denormalized proto fields — no
-// expandable sub-resources.
+// LoadAccountGroupProductLineAccess fetches access records by account_group_id via BatchGetAccountGroupProductLineAccessByIDs. The inline AccountGroup shell + ProductLines list are built from denormalized proto fields — no expandable sub-resources.
 func LoadAccountGroupProductLineAccess(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil
@@ -37,9 +34,7 @@ func LoadAccountGroupProductLineAccess(ctx context.Context, ids []string) (map[s
 	return out, nil
 }
 
-// AccountGroupProductLineAccessFromProto maps the gRPC proto to the apiresource.
-// Exported so endpoint service methods that already hold a proto response
-// (Create/Update return the resource directly) can reuse it.
+// AccountGroupProductLineAccessFromProto maps the gRPC proto to the apiresource. Exported so endpoint service methods that already hold a proto response (Create/Update return the resource directly) can reuse it.
 func AccountGroupProductLineAccessFromProto(item *pb.AccountGroupProductLineAccessInfo) *apiresource.AccountGroupProductLineAccess {
 	productLines := make([]apiresource.ProductLine, len(item.ProductLines))
 	for i, pl := range item.ProductLines {

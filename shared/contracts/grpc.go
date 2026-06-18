@@ -30,13 +30,11 @@ const (
 	APIVersionHeader = "api-version"
 	// RequestIDHeader is the header name for the request ID in the metadata
 	RequestIDHeader = "request-id"
-	// ClientIPHeader is the header name for the originating HTTP client IP when
-	// the API gateway forwards a user request to a backend service.
+	// ClientIPHeader is the header name for the originating HTTP client IP when the API gateway forwards a user request to a backend service.
 	ClientIPHeader = "client-ip"
 )
 
-// GetIdentityFromMetadata extracts the caller's identity from gRPC incoming metadata.
-// Returns an APIError if the header is missing, duplicated, or malformed.
+// GetIdentityFromMetadata extracts the caller's identity from gRPC incoming metadata. Returns an APIError if the header is missing, duplicated, or malformed.
 func GetIdentityFromMetadata(md metadata.MD) (*types.Identity, *apierror.APIError) {
 	data := md.Get(IdentityHeader)
 	if len(data) == 0 {
@@ -52,8 +50,7 @@ func GetIdentityFromMetadata(md metadata.MD) (*types.Identity, *apierror.APIErro
 	return &identity, nil
 }
 
-// SetIdentityInMetadata serializes the identity as JSON and sets it on the outgoing gRPC metadata.
-// Silently drops the value if marshalling fails.
+// SetIdentityInMetadata serializes the identity as JSON and sets it on the outgoing gRPC metadata. Silently drops the value if marshalling fails.
 func SetIdentityInMetadata(md metadata.MD, identity *types.Identity) {
 	jsonData, err := json.Marshal(identity)
 	if err != nil {
@@ -62,9 +59,7 @@ func SetIdentityInMetadata(md metadata.MD, identity *types.Identity) {
 	md.Set(IdentityHeader, string(jsonData))
 }
 
-// IdentityUnaryServerInterceptor returns a server interceptor that extracts the caller's
-// identity from incoming gRPC metadata and stores it in the context. If the header is
-// absent or invalid the request proceeds without an identity.
+// IdentityUnaryServerInterceptor returns a server interceptor that extracts the caller's identity from incoming gRPC metadata and stores it in the context. If the header is absent or invalid the request proceeds without an identity.
 func IdentityUnaryServerInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		md, ok := metadata.FromIncomingContext(ctx)
@@ -77,9 +72,7 @@ func IdentityUnaryServerInterceptor() grpc.UnaryServerInterceptor {
 	}
 }
 
-// IdempotencyKeyUnaryServerInterceptor returns a server interceptor that extracts the
-// idempotency key and the handler's full method name from incoming metadata and stores
-// them in the context.
+// IdempotencyKeyUnaryServerInterceptor returns a server interceptor that extracts the idempotency key and the handler's full method name from incoming metadata and stores them in the context.
 func IdempotencyKeyUnaryServerInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		ctx = appctx.WithHandler(ctx, info.FullMethod)
@@ -94,12 +87,9 @@ func IdempotencyKeyUnaryServerInterceptor() grpc.UnaryServerInterceptor {
 	}
 }
 
-// ConvertGRPCError translates a gRPC status error into an APIError. If the status message
-// contains an encoded APIError (prefixed with apiErrorMarker) the original error is
-// reconstructed losslessly. Otherwise the gRPC code is mapped to a generic APIError.
+// ConvertGRPCError translates a gRPC status error into an APIError. If the status message contains an encoded APIError (prefixed with apiErrorMarker) the original error is reconstructed losslessly. Otherwise the gRPC code is mapped to a generic APIError.
 //
-// ctx should be the original HTTP request context so that client disconnections
-// (context.Canceled on the request) can be distinguished from server-side timeouts.
+// ctx should be the original HTTP request context so that client disconnections (context.Canceled on the request) can be distinguished from server-side timeouts.
 func ConvertGRPCError(ctx context.Context, err error, serviceName string) *apierror.APIError {
 	if err == nil {
 		return nil
@@ -151,9 +141,7 @@ func NewMissingGRPCRequestDataError() error {
 	return ConvertAPIErrorToGRPC(apiErr)
 }
 
-// ConvertAPIErrorToGRPC encodes an APIError as a gRPC status error. The full APIError JSON
-// is embedded in the status message (prefixed with apiErrorMarker) so that ConvertGRPCError
-// can reconstruct it losslessly. The gRPC status code is chosen to match the APIError category.
+// ConvertAPIErrorToGRPC encodes an APIError as a gRPC status error. The full APIError JSON is embedded in the status message (prefixed with apiErrorMarker) so that ConvertGRPCError can reconstruct it losslessly. The gRPC status code is chosen to match the APIError category.
 func ConvertAPIErrorToGRPC(apiErr *apierror.APIError) error {
 	if apiErr == nil {
 		return nil
@@ -218,10 +206,7 @@ func ConvertAPIErrorToGRPC(apiErr *apierror.APIError) error {
 	return grpcstatus.Error(grpcCode, encodedMessage)
 }
 
-// isClientCancellation reports whether the original request context was canceled,
-// indicating the client disconnected before the server finished processing.
-// This checks the parent context (typically the HTTP request context), not the
-// RPC child context, so a canceled parent means the client went away.
+// isClientCancellation reports whether the original request context was canceled, indicating the client disconnected before the server finished processing. This checks the parent context (typically the HTTP request context), not the RPC child context, so a canceled parent means the client went away.
 func isClientCancellation(ctx context.Context, err error) bool {
 	return ctx.Err() == context.Canceled ||
 		(errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded))

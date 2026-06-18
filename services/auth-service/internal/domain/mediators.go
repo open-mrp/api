@@ -69,8 +69,7 @@ type APIKeyRotateInput struct {
 	APIKeyTypeID   string
 	OwnerAccountID string
 	ExpiresAt      *time.Time
-	// RevokeAt schedules when the old key is revoked. Nil or past/now means
-	// immediate revocation; a future instant keeps the old key valid until then.
+	// RevokeAt schedules when the old key is revoked. Nil or past/now means immediate revocation; a future instant keeps the old key valid until then.
 	RevokeAt *time.Time
 }
 
@@ -120,25 +119,18 @@ type APIKeyMed interface {
 	// 5. Re-fetch the key to populate joined fields (role name, type code).
 	Create(ctx context.Context, input APIKeyCreateInput) (string, *apikey.APIKey, *apierror.APIError)
 
-	// Rotate revokes the specified API key and creates a replacement with the same name,
-	// owner account, and role.
+	// Rotate revokes the specified API key and creates a replacement with the same name, owner account, and role.
 	//
 	// 1. Look up the existing API key by type ID.
-	// 2. Revoke the existing key. By default revocation is immediate; a future
-	//    RevokeAt schedules it (the old key keeps working until then) and is
-	//    rejected with a validation error if more than 30 days out, while a
-	//    past/now RevokeAt collapses to immediate.
+	// 2. Revoke the existing key. By default revocation is immediate; a future RevokeAt schedules it (the old key keeps working until then) and is rejected with a validation error if more than 30 days out, while a past/now RevokeAt collapses to immediate.
 	// 3. Create a new key using the old key's properties, with an optionally overridden expiration.
 	//
-	// Scoped to OwnerAccountID: returns a not-found error if the key does not
-	// exist for the requested owner.
+	// Scoped to OwnerAccountID: returns a not-found error if the key does not exist for the requested owner.
 	Rotate(ctx context.Context, input APIKeyRotateInput) (string, *apikey.APIKey, *apierror.APIError)
 
 	// Revoke revokes an API key by its type ID.
 	//
-	// Scoped to ownerAccountID: returns a not-found error if the key does not
-	// exist for the given owner. This enforces tenant boundaries at the
-	// persistence layer as a backstop to service-layer ownership checks.
+	// Scoped to ownerAccountID: returns a not-found error if the key does not exist for the given owner. This enforces tenant boundaries at the persistence layer as a backstop to service-layer ownership checks.
 	Revoke(ctx context.Context, apiKeyTypeID string, ownerAccountID string) *apierror.APIError
 
 	// List returns a paginated list of API keys for the given owner account and filters.
@@ -159,8 +151,7 @@ type APIKeyMed interface {
 type PasswordMed interface {
 	// RequestReset initiates a password reset flow for the given identifier.
 	//
-	//  1. Look up the user by identifier; silently succeed if not found to avoid leaking
-	//     information about registered identifiers.
+	//  1. Look up the user by identifier; silently succeed if not found to avoid leaking information about registered identifiers.
 	//  2. Generate a short-lived password reset JWT (15 minutes).
 	//  3. Build the reset link, optionally scoped to an account slug.
 	//  4. Send a password reset email with the link.
@@ -183,11 +174,7 @@ type PasswordMed interface {
 	// Validate validates the identifier/password combination and returns the associated user.
 	//
 	//  1. Look up the user by identifier (email or user ID).
-	//  2. If the user has no stored password hash, silently send a password reset email
-	//     (when an email is on file) and return the generic invalid-credentials error so
-	//     that the response is indistinguishable from a missing user or wrong password.
-	//     This preserves recovery for legitimate passwordless users without leaking
-	//     account state to unauthenticated callers.
+	//  2. If the user has no stored password hash, silently send a password reset email (when an email is on file) and return the generic invalid-credentials error so that the response is indistinguishable from a missing user or wrong password. This preserves recovery for legitimate passwordless users without leaking account state to unauthenticated callers.
 	//  3. Compare the provided password against the stored hash.
 	//  4. Return the user if the password matches; return an authentication error otherwise.
 	Validate(ctx context.Context, identifier, password string) (*types.User, *apierror.APIError)
@@ -263,15 +250,12 @@ type UserMed interface {
 	// ValidateMagicLoginToken validates a magic-login token and returns the associated user.
 	ValidateMagicLoginToken(ctx context.Context, token string) (*types.User, *apierror.APIError)
 
-	// SendAlreadyRegisteredEmail generates a magic login token and sends the
-	// "already registered" email so the user can log in with one click.
-	// This must be called outside a transaction so the outbox message is not rolled back.
+	// SendAlreadyRegisteredEmail generates a magic login token and sends the "already registered" email so the user can log in with one click. This must be called outside a transaction so the outbox message is not rolled back.
 	SendAlreadyRegisteredEmail(ctx context.Context, user *types.User, accountSlug *string)
 
 	// ValidateCredential validates credentials provided by a request and returns an identity.
 	//
-	//  1. If authToken is empty, resolve the account mode for the target account (if provided)
-	//     and return an unauthenticated identity.
+	//  1. If authToken is empty, resolve the account mode for the target account (if provided) and return an unauthenticated identity.
 	//  2. If authToken has the API key prefix, delegate to validateAPIKeyCredential.
 	//  3. Otherwise, delegate to validateUserCredential for JWT-based validation.
 	//
@@ -283,12 +267,10 @@ type UserMed interface {
 }
 
 type RegistrationMed interface {
-	// CreateSession creates a new registration session or returns an existing active session
-	// for the given email (idempotent).
+	// CreateSession creates a new registration session or returns an existing active session for the given email (idempotent).
 	//
 	//  1. Check if the user already exists (noted but does not prevent session creation).
-	//  2. Look for an existing non-expired session for the email; if found, update the plan code
-	//     if different and resend the verification email.
+	//  2. Look for an existing non-expired session for the email; if found, update the plan code if different and resend the verification email.
 	//  3. Generate a unique type ID and verification token.
 	//  4. Create a new registration session record.
 	//  5. Send the verification email.
@@ -320,13 +302,11 @@ type RegistrationMed interface {
 	// 7. Re-fetch and return the updated session.
 	VerifyToken(ctx context.Context, token string) (*RegistrationSession, *apierror.APIError)
 
-	// CreateUserForSession creates a new user for the registration session and returns
-	// the user ID with auth tokens.
+	// CreateUserForSession creates a new user for the registration session and returns the user ID with auth tokens.
 	//
 	//  1. Look up the session by type ID and validate it is not completed and email is verified.
 	//  2. If the session already has a user, generate tokens for the existing user (idempotent).
-	//  3. Reject if an account already exists for the session's email — pre-existing
-	//     accounts must authenticate via login, not by holding a verified session id.
+	//  3. Reject if an account already exists for the session's email — pre-existing accounts must authenticate via login, not by holding a verified session id.
 	//  4. Hash the password and create a new user record.
 	//  5. Associate the user with the session and update session data with the user name.
 	//  6. Advance the session step to account_details.

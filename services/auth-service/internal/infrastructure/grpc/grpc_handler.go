@@ -476,9 +476,7 @@ func (h *gRPCHandler) UpdateRegistrationSession(ctx context.Context, req *pb.Upd
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
-	// Only pass step and session_data — sensitive fields (stripe_customer_id,
-	// payment_completed, stripe_subscription_id) are ignored. Payment state
-	// should only be modified via SetupBilling.
+	// Only pass step and session_data — sensitive fields (stripe_customer_id, payment_completed, stripe_subscription_id) are ignored. Payment state should only be modified via SetupBilling.
 	input := domain.UpdateRegistrationSessionInput{
 		SessionID: req.SessionId,
 	}

@@ -6,9 +6,7 @@ import (
 	"fmt"
 )
 
-// RandAlphanumericBytes returns an output of length n, where each byte is an
-// ASCII character chosen uniformly from [a-zA-Z0-9]. The output length n is
-// both the number of characters and the number of bytes in the returned slice.
+// RandAlphanumericBytes returns an output of length n, where each byte is an ASCII character chosen uniformly from [a-zA-Z0-9]. The output length n is both the number of characters and the number of bytes in the returned slice.
 func RandAlphanumericBytes(n int) ([]byte, error) {
 	if n < 0 {
 		return nil, fmt.Errorf("n must be >= 0")
@@ -20,8 +18,7 @@ func RandAlphanumericBytes(n int) ([]byte, error) {
 		return out, nil
 	}
 
-	// Generate random bytes in chunks and map them to charset with rejection
-	// to ensure uniform selection.
+	// Generate random bytes in chunks and map them to charset with rejection to ensure uniform selection.
 	buf := make([]byte, 32)
 	outI := 0
 
@@ -31,10 +28,7 @@ func RandAlphanumericBytes(n int) ([]byte, error) {
 		}
 
 		for _, b := range buf {
-			// To ensure uniform selection across the charset, we reject any bytes
-			// greater than or equal to maxUnbiased. Without this rejection, using
-			// modulo would slightly bias the distribution, making some characters
-			// more likely than others.
+			// To ensure uniform selection across the charset, we reject any bytes greater than or equal to maxUnbiased. Without this rejection, using modulo would slightly bias the distribution, making some characters more likely than others.
 			if b >= maxUnbiased {
 				continue // reject to avoid bias
 			}
@@ -50,8 +44,7 @@ func RandAlphanumericBytes(n int) ([]byte, error) {
 	return out, nil
 }
 
-// RandAlphanumericString returns a random alphanumeric string of length n,
-// implemented on top of RandAlphanumericBytes.
+// RandAlphanumericString returns a random alphanumeric string of length n, implemented on top of RandAlphanumericBytes.
 func RandAlphanumericString(n int) (string, error) {
 	b, err := RandAlphanumericBytes(n)
 	if err != nil {
@@ -60,8 +53,7 @@ func RandAlphanumericString(n int) (string, error) {
 	return string(b), nil
 }
 
-// RandHexString returns a hex-encoded string of n random bytes (2*n hex
-// characters). Useful for random tokens or passwords.
+// RandHexString returns a hex-encoded string of n random bytes (2*n hex characters). Useful for random tokens or passwords.
 func RandHexString(n int) (string, error) {
 	if n < 0 {
 		return "", fmt.Errorf("n must be >= 0")

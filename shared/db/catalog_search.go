@@ -5,8 +5,7 @@ import (
 	"strings"
 )
 
-// CatalogSearch binds parameters for catalog list queries that filter by item SKU
-// and description and rank exact / token / prefix SKU matches ahead of plain substring matches.
+// CatalogSearch binds parameters for catalog list queries that filter by item SKU and description and rank exact / token / prefix SKU matches ahead of plain substring matches.
 type CatalogSearch struct {
 	// Contains is a LIKE pattern "%escaped_query%" for substring matches.
 	Contains sql.NullString
@@ -16,8 +15,7 @@ type CatalogSearch struct {
 	Prefix sql.NullString
 }
 
-// NewCatalogSearch builds bind args for catalog search. If q is nil or empty, all
-// fields are invalid (no search).
+// NewCatalogSearch builds bind args for catalog search. If q is nil or empty, all fields are invalid (no search).
 func NewCatalogSearch(q *string) CatalogSearch {
 	if q == nil || *q == "" {
 		return CatalogSearch{}
@@ -46,8 +44,7 @@ func catalogSearchTokenTier(sku, exact string) bool {
 	return false
 }
 
-// CatalogSearchRank returns the SKU tier used for search ordering (0 exact, 1 token, 2 prefix, 3 substring-only).
-// It mirrors the CASE expression in catalog list SQL.
+// CatalogSearchRank returns the SKU tier used for search ordering (0 exact, 1 token, 2 prefix, 3 substring-only). It mirrors the CASE expression in catalog list SQL.
 func CatalogSearchRank(sku string, cs CatalogSearch) int32 {
 	if !cs.Contains.Valid {
 		return 0

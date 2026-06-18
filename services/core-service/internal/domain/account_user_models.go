@@ -8,8 +8,7 @@ import (
 	"github.com/augno/api/shared/pagination"
 )
 
-// AccountUserDetail is an enriched account user model with joined user, role,
-// and department data. Used by the account user management endpoints.
+// AccountUserDetail is an enriched account user model with joined user, role, and department data. Used by the account user management endpoints.
 type AccountUserDetail struct {
 	ID                  string
 	UserID              string
@@ -74,8 +73,7 @@ type NotificationPreferenceItem struct {
 }
 
 // UpdateAccountUserParams are the parameters for updating an account user.
-// NotificationPreferences: nil means "do not touch"; a non-nil (possibly empty)
-// slice applies the provided toggles.
+// NotificationPreferences: nil means "do not touch"; a non-nil (possibly empty) slice applies the provided toggles.
 type UpdateAccountUserParams struct {
 	AccountID               string
 	AccountUserID           string

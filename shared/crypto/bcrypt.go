@@ -16,9 +16,7 @@ func HashBcrypt(password string) (string, error) {
 	return string(hash), nil
 }
 
-// CompareBcryptHash compares a plaintext password against a bcrypt hash.
-// Returns (false, nil) when the password does not match.
-// Returns (false, error) for unexpected errors (e.g. malformed hash).
+// CompareBcryptHash compares a plaintext password against a bcrypt hash. Returns (false, nil) when the password does not match, and (false, error) for unexpected errors (e.g. malformed hash).
 func CompareBcryptHash(hash, password string) (bool, error) {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	if err != nil {

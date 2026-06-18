@@ -71,9 +71,7 @@ func (c *RunConsumer) handleExecuteRun(ctx context.Context, msg amqp.Delivery) e
 			"run_id", data.AgentRunID,
 			"error", err,
 		)
-		// Don't return error — the run is already marked as failed in the DB.
-		// Returning an error would cause the message to be requeued/retried,
-		// but the runner already handles failure state.
+		// Don't return error — the run is already marked as failed in the DB. Returning an error would cause the message to be requeued/retried, but the runner already handles failure state.
 		return nil
 	}
 

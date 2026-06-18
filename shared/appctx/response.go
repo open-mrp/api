@@ -7,15 +7,13 @@ import (
 
 const httpResponseMetadataKey contextKey = "http_response_metadata"
 
-// HTTPResponseMetadata carries response-scoped data (cookies, replay flag)
-// through the request lifecycle via a shared pointer in context.
+// HTTPResponseMetadata carries response-scoped data (cookies, replay flag) through the request lifecycle via a shared pointer in context.
 type HTTPResponseMetadata struct {
 	Cookies  []*http.Cookie
 	Replayed bool
 }
 
-// WithHTTPResponseMetadata returns a child context carrying a fresh metadata
-// pointer. The pointer is shared so downstream code can mutate it.
+// WithHTTPResponseMetadata returns a child context carrying a fresh metadata pointer. The pointer is shared so downstream code can mutate it.
 func WithHTTPResponseMetadata(ctx context.Context) (context.Context, *HTTPResponseMetadata) {
 	meta := &HTTPResponseMetadata{}
 	return context.WithValue(ctx, httpResponseMetadataKey, meta), meta

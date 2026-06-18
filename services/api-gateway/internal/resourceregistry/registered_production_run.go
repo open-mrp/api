@@ -25,8 +25,7 @@ func init() {
 	})
 }
 
-// productionRunID returns the run ID for either resource shape that shares the
-// production_run object type (detail on Get/Create/Update, summary on List).
+// productionRunID returns the run ID for either resource shape that shares the production_run object type (detail on Get/Create/Update, summary on List).
 func productionRunID(parent any) string {
 	switch pr := parent.(type) {
 	case *apiresource.ProductionRunDetail:

@@ -16,9 +16,7 @@ import (
 
 var sandboxLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.sandbox")
 
-// LoadSandboxes fetches sandboxes by ID via BatchGetSandboxesByIDs. Stashes
-// owner_account_id in LoadMeta so the `owner_account` SubField closure can
-// build the Account expansion when requested.
+// LoadSandboxes fetches sandboxes by ID via BatchGetSandboxesByIDs. Stashes owner_account_id in LoadMeta so the `owner_account` SubField closure can build the Account expansion when requested.
 func LoadSandboxes(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil

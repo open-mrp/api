@@ -7,8 +7,7 @@ import (
 )
 
 func init() {
-	// SysProperty is an account-scoped counter with inline SysPropertyType
-	// built from denormalized proto fields.
+	// SysProperty is an account-scoped counter with inline SysPropertyType built from denormalized proto fields.
 	resourcekit.Register(&resourcekit.Definition{
 		ObjectType: constants.ObjectTypeSysProperty,
 		Load:       resourceloaders.LoadSysProperties,

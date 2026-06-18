@@ -168,7 +168,6 @@ resources:
       user: '#/components/schemas/User'
   identity:
     methods:
-      retrieve_portal_branding: get /v1/identity/portal-branding/{slug}
       retrieve_permission_groups: get /v1/identity/permission-groups
     subresources:
       me:
@@ -260,25 +259,6 @@ resources:
           account_logo_url: '#/components/schemas/AccountLogoURL'
           account_photo_upload_result: '#/components/schemas/AccountPhotoUploadResult'
           update_account_request: '#/components/schemas/UpdateAccountRequest'
-      integrations:
-        methods:
-          list: get /v1/identity/integrations
-          create: post /v1/identity/integrations
-          update: put /v1/identity/integrations/{id}
-          delete: delete /v1/identity/integrations/{id}
-        subresources:
-          stripe:
-            methods:
-              retrieve_publishable_key: get /v1/identity/integrations/stripe/publishable-key
-              retrieve_status: get /v1/identity/integrations/stripe/status
-            models:
-              stripe_publishable_key: '#/components/schemas/StripePublishableKey'
-              stripe_status: '#/components/schemas/StripeStatus'
-        models:
-          account_integration: '#/components/schemas/AccountIntegration'
-          create_account_integration_request: '#/components/schemas/CreateAccountIntegrationRequest'
-          list_account_integration: '#/components/schemas/List_AccountIntegration'
-          update_account_integration_request: '#/components/schemas/UpdateAccountIntegrationRequest'
       child_accounts:
         methods:
           list: get /v1/identity/child-accounts
@@ -303,7 +283,6 @@ resources:
       list_permission_group: '#/components/schemas/List_PermissionGroup'
       permission: '#/components/schemas/Permission'
       permission_group: '#/components/schemas/PermissionGroup'
-      public_account: '#/components/schemas/PublicAccount'
   core:
     subresources:
       sandboxes:
@@ -335,18 +314,6 @@ resources:
           list_audit_event: '#/components/schemas/List_AuditEvent'
           list_audit_field_change: '#/components/schemas/List_AuditFieldChange'
           list_object_type: '#/components/schemas/List_ObjectType'
-      sys_properties:
-        methods:
-          list: get /v1/core/sys-properties
-          retrieve: get /v1/core/sys-properties/{id}
-          update: patch /v1/core/sys-properties/{id}
-          retrieve_latest_value: get /v1/core/sys-properties/{type_code}/latest-value
-        models:
-          list_sys_property: '#/components/schemas/List_SysProperty'
-          sys_property: '#/components/schemas/SysProperty'
-          sys_property_type: '#/components/schemas/SysPropertyType'
-          sys_property_value: '#/components/schemas/SysPropertyValue'
-          update_sys_property_request: '#/components/schemas/UpdateSysPropertyRequest'
       addresses:
         methods:
           retrieve_suggestions: get /v1/core/addresses/suggestions
@@ -692,20 +659,26 @@ resources:
               delete: delete /v1/sales/sales-orders/{id}/lines/{line_id}
             models:
               create_sales_order_line_request: '#/components/schemas/CreateSalesOrderLineRequest'
-              rate_input: '#/components/schemas/RateInput'
+              order_line_input: '#/components/schemas/OrderLineInput'
               update_sales_order_line_request: '#/components/schemas/UpdateSalesOrderLineRequest'
         models:
           checkout_sales_order_request: '#/components/schemas/CheckoutSalesOrderRequest'
           checkout_sales_order_response: '#/components/schemas/CheckoutSalesOrderResponse'
           create_sales_order_line_input: '#/components/schemas/CreateSalesOrderLineInput'
           create_sales_order_request: '#/components/schemas/CreateSalesOrderRequest'
+          created_by: '#/components/schemas/CreatedBy'
           freight: '#/components/schemas/Freight'
           list_record: '#/components/schemas/List_Record'
           list_sales_order: '#/components/schemas/List_SalesOrder'
           list_sales_order_line: '#/components/schemas/List_SalesOrderLine'
           list_sales_order_status: '#/components/schemas/List_SalesOrderStatus'
-          order_line_input: '#/components/schemas/OrderLineInput'
+          order_contact: '#/components/schemas/OrderContact'
           product: '#/components/schemas/Product'
+          quote_sales_order_line_input: '#/components/schemas/QuoteSalesOrderLineInput'
+          quote_sales_order_prices_request: '#/components/schemas/QuoteSalesOrderPricesRequest'
+          quote_sales_order_prices_response: '#/components/schemas/QuoteSalesOrderPricesResponse'
+          quoted_sales_order_line: '#/components/schemas/QuotedSalesOrderLine'
+          rate_input: '#/components/schemas/RateInput'
           record: '#/components/schemas/Record'
           sales_order: '#/components/schemas/SalesOrder'
           sales_order_email_contact_input: '#/components/schemas/SalesOrderEmailContactInput'
@@ -748,6 +721,43 @@ resources:
     models:
       checkout_session_response: '#/components/schemas/CheckoutSessionResponse'
       create_checkout_session_request: '#/components/schemas/CreateCheckoutSessionRequest'
+  settings:
+    methods:
+      retrieve_branding: get /v1/settings/branding/{slug}
+    subresources:
+      properties:
+        methods:
+          list: get /v1/settings/properties
+          retrieve: get /v1/settings/properties/{id}
+          update: patch /v1/settings/properties/{id}
+          retrieve_latest_value: get /v1/settings/properties/{type_code}/latest-value
+        models:
+          list_sys_property: '#/components/schemas/List_SysProperty'
+          sys_property: '#/components/schemas/SysProperty'
+          sys_property_type: '#/components/schemas/SysPropertyType'
+          sys_property_value: '#/components/schemas/SysPropertyValue'
+          update_sys_property_request: '#/components/schemas/UpdateSysPropertyRequest'
+      integrations:
+        methods:
+          list: get /v1/settings/integrations
+          create: post /v1/settings/integrations
+          update: put /v1/settings/integrations/{id}
+          delete: delete /v1/settings/integrations/{id}
+        subresources:
+          stripe:
+            methods:
+              retrieve_publishable_key: get /v1/settings/integrations/stripe/publishable-key
+              retrieve_status: get /v1/settings/integrations/stripe/status
+            models:
+              stripe_publishable_key: '#/components/schemas/StripePublishableKey'
+              stripe_status: '#/components/schemas/StripeStatus'
+        models:
+          account_integration: '#/components/schemas/AccountIntegration'
+          create_account_integration_request: '#/components/schemas/CreateAccountIntegrationRequest'
+          list_account_integration: '#/components/schemas/List_AccountIntegration'
+          update_account_integration_request: '#/components/schemas/UpdateAccountIntegrationRequest'
+    models:
+      public_account: '#/components/schemas/PublicAccount'
   catalog:
     subresources:
       units:

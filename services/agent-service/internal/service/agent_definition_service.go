@@ -27,9 +27,7 @@ import (
 
 var agentDefSvcTracer = tracing.GetTracer("agent-service.agent_definition_service")
 
-// auditIncludes lists the includes needed to fully populate audited fields
-// (e.g. Config). These are always loaded when building old/new snapshots for
-// audit diffs so that the comparison is accurate.
+// auditIncludes lists the includes needed to fully populate audited fields (e.g. Config). These are always loaded when building old/new snapshots for audit diffs so that the comparison is accurate.
 var auditIncludes = []string{"config"}
 
 // mergeIncludes returns a combined list of includes with duplicates removed.
@@ -1823,8 +1821,7 @@ func unmarshalPermissions(data []byte) []string {
 	return perms
 }
 
-// sqlToAgentDefinitionInfo converts sqlc rows into a domain AgentDefinitionInfo.
-// When includes is non-nil, fields not listed are set to nil.
+// sqlToAgentDefinitionInfo converts sqlc rows into a domain AgentDefinitionInfo. When includes is non-nil, fields not listed are set to nil.
 func sqlToAgentDefinitionInfo(def *sqlc.AgentDefinition, tools []sqlc.ListToolsByAgentDefinitionIDRow, accountStatus *sqlc.AgentAccountStatus, includes []string) *domain.AgentDefinitionInfo {
 	desc := ""
 	if def.Description.Valid {

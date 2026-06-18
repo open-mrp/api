@@ -47,9 +47,7 @@ func (r *auditEventRepoImpl) Create(ctx context.Context, event *domain.AuditEven
 		metadataParam = db.NullableRawMessage(event.Metadata)
 	}
 
-	// event.ActorID is the raw actor id the API exposes — the user_id for a user
-	// actor, or the api_key type_id for an api_key actor (set from the identity by
-	// the audit consumer). Stored as-is.
+	// event.ActorID is the raw actor id the API exposes — the user_id for a user actor, or the api_key type_id for an api_key actor (set from the identity by the audit consumer). Stored as-is.
 	err := r.db.CreateAuditEvent(ctx, sqlc.CreateAuditEventParams{
 		TypeID:           event.ID,
 		ActorID:          event.ActorID,
@@ -201,8 +199,7 @@ func (r *auditEventRepoImpl) List(ctx context.Context, callerAccountID string, f
 	endDate := db.NullTimePtr(filter.EndDate)
 
 	if cursorDir == nil || *cursorDir == pagination.DirectionForward {
-		// Forward query order DESC, returned rows are already in correct
-		// direction for BuildPageString.
+		// Forward query order DESC, returned rows are already in correct direction for BuildPageString.
 		var cursorOccurredAt sql.NullTime
 		var cursorID sql.NullString
 		if cur != nil {
@@ -399,10 +396,7 @@ func ensureStringSlice(vals []string) []string {
 	return vals
 }
 
-// ensureNullStringSlice mirrors ensureStringSlice for the nullable
-// target_account_id IN (...) filter: the slice must always have at least one
-// element so sqlc emits a valid placeholder, even when the filter is disabled
-// (the `include_account_filter = false OR ...` guard short-circuits the IN).
+// ensureNullStringSlice mirrors ensureStringSlice for the nullable target_account_id IN (...) filter: the slice must always have at least one element so sqlc emits a valid placeholder, even when the filter is disabled (the `include_account_filter = false OR ...` guard short-circuits the IN).
 func ensureNullStringSlice(vals []string) []sql.NullString {
 	if len(vals) == 0 {
 		return []sql.NullString{{}}

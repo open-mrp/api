@@ -42,21 +42,16 @@ type RegistrationSessionSvcConfig struct {
 	// NotificationPublisher (required) publishes notification messages to the outbox.
 	NotificationPublisher domain.NotificationPublisher
 
-	// TxManager (optional; default: nil) wraps multi-step operations in database
-	// transactions. It is not validated at construction; transactional code paths
-	// panic at runtime if it is unset.
+	// TxManager (optional; default: nil) wraps multi-step operations in database transactions. It is not validated at construction; transactional code paths panic at runtime if it is unset.
 	TxManager TransactionManager
 
-	// BillingClient (optional; default: nil) is the billing-service client used to
-	// provision billing customers during registration. Not validated at construction.
+	// BillingClient (optional; default: nil) is the billing-service client used to provision billing customers during registration. Not validated at construction.
 	BillingClient domain.AuthBillingClient
 
-	// CoreClient (optional; default: nil) is the core-service client used during
-	// registration. Not validated at construction.
+	// CoreClient (optional; default: nil) is the core-service client used during registration. Not validated at construction.
 	CoreClient domain.AuthCoreClient
 
-	// FrontendURL (optional; default: "") is the dashboard base URL used in
-	// registration emails and redirects. Not validated at construction.
+	// FrontendURL (optional; default: "") is the dashboard base URL used in registration emails and redirects. Not validated at construction.
 	FrontendURL string
 }
 
@@ -138,8 +133,7 @@ func (s *registrationSessionSvcImpl) withTx(ctx context.Context, fn func(context
 	})
 }
 
-// CreateSession creates a new registration session or returns an existing active session
-// for the given email (idempotent).
+// CreateSession creates a new registration session or returns an existing active session for the given email (idempotent).
 //
 // 1. Upsert an idempotency key; return the cached response if already finished.
 // 2. Delegate to the registration mediator inside a transaction.
@@ -188,8 +182,7 @@ func (s *registrationSessionSvcImpl) CreateSession(ctx context.Context, input do
 	}
 }
 
-// GetIncompleteByUserID returns the most recent incomplete registration session
-// for the given user, or (nil, nil) if none exists.
+// GetIncompleteByUserID returns the most recent incomplete registration session for the given user, or (nil, nil) if none exists.
 func (s *registrationSessionSvcImpl) GetIncompleteByUserID(ctx context.Context, userID string) (*domain.RegistrationSession, *apierror.APIError) {
 	ctx, span := registrationSessionSvcTracer.Start(ctx, "service.registration_session.get_incomplete_by_user_id")
 	defer span.End()
@@ -217,8 +210,7 @@ func (s *registrationSessionSvcImpl) GetSession(ctx context.Context, sessionID s
 	return session, nil
 }
 
-// CreateUserForSession creates or resolves a user for the registration session and returns
-// the user ID with auth tokens.
+// CreateUserForSession creates or resolves a user for the registration session and returns the user ID with auth tokens.
 //
 // 1. Upsert an idempotency key; return the cached response if already finished.
 // 2. Delegate to the registration mediator inside a transaction.
@@ -387,8 +379,7 @@ func (s *registrationSessionSvcImpl) ListSessions(ctx context.Context, input dom
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
-	// Registration users typically have no account yet, so require an
-	// authenticated user actor without an assigned account.
+	// Registration users typically have no account yet, so require an authenticated user actor without an assigned account.
 	if apiErr := identity.CheckHasUserActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -507,8 +498,7 @@ func (s *registrationSessionSvcImpl) CompleteRegistration(ctx context.Context, s
 				return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, getErr)
 			}
 
-			// 2. If accounts were already created for this session (by a prior request),
-			// skip directly to billing phase.
+			// 2. If accounts were already created for this session (by a prior request), skip directly to billing phase.
 			if session.AccountID != nil {
 				sandboxID, sandboxErr := s.coreClient.GetSandboxAccountByOwner(ctx, *session.AccountID)
 				if sandboxErr != nil {
@@ -594,8 +584,7 @@ func (s *registrationSessionSvcImpl) CompleteRegistration(ctx context.Context, s
 				SandboxID: accountResult.SandboxID,
 			}
 
-			// 7. Checkpoint: persist account_id to session and advance recovery point.
-			// This prevents duplicate account creation on retry if billing fails.
+			// 7. Checkpoint: persist account_id to session and advance recovery point. This prevents duplicate account creation on retry if billing fails.
 			resultBody, jsonErr := json.Marshal(result)
 			if jsonErr != nil {
 				return nil, tracing.Trace(span, apierror.NewInternalError(jsonErr, "Failed to marshal account result."))
@@ -623,9 +612,7 @@ func (s *registrationSessionSvcImpl) CompleteRegistration(ctx context.Context, s
 				result = cached.Data
 			}
 
-			// Stamp the newly created account onto the identity so downstream
-			// service calls (billing → core UpdateAccountSubscription → audit
-			// publisher) see a Target and don't reject the request.
+			// Stamp the newly created account onto the identity so downstream service calls (billing → core UpdateAccountSubscription → audit publisher) see a Target and don't reject the request.
 			if identity, ok := appctx.GetIdentityFromContext(ctx); ok && identity != nil {
 				identity.Target = &types.IdentityTarget{AccountID: result.AccountID}
 				ctx = appctx.WithIdentity(ctx, identity)
@@ -639,8 +626,7 @@ func (s *registrationSessionSvcImpl) CompleteRegistration(ctx context.Context, s
 
 			isFreePlan := session.PlanCode == string(constants.PlanCodeFree)
 
-			// Set up billing profile and subscribe for paid accounts.
-			// Stripe calls use idempotency keys so retries are safe.
+			// Set up billing profile and subscribe for paid accounts. Stripe calls use idempotency keys so retries are safe.
 			if !isFreePlan && session.StripeCustomerID != nil {
 				if _, profileErr := s.billingClient.SetupBillingProfile(ctx, result.AccountID); profileErr != nil {
 					return nil, tracing.Trace(span, profileErr)
@@ -668,8 +654,7 @@ func (s *registrationSessionSvcImpl) CompleteRegistration(ctx context.Context, s
 			recoveryPoint = domain.RecoveryPointAccountsCreated
 
 		case domain.RecoveryPointAccountsCreated:
-			// Session is already complete (guaranteed by the transaction in RecoveryPointCoreAccountCreated).
-			// Recover the result if entering this phase from a retry.
+			// Session is already complete (guaranteed by the transaction in RecoveryPointCoreAccountCreated). Recover the result if entering this phase from a retry.
 			if result == nil {
 				cached, err := idempotency.UnmarshalCachedResponse[domain.CompleteRegistrationOutput](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 				if err != nil {
@@ -698,11 +683,7 @@ func (s *registrationSessionSvcImpl) CompleteRegistration(ctx context.Context, s
 func (s *registrationSessionSvcImpl) handleRegistrationLimitHit(ctx context.Context, session *domain.RegistrationSession) {
 	limits := constants.GetRegistrationLimits(constants.PlanCode(session.PlanCode))
 
-	// Best-effort: insert into registration_queue. A unique constraint on
-	// registration_session_id makes this a no-op on retries; we use the
-	// "inserted" signal to suppress duplicate admin alerts for the same
-	// session so a caller cannot spam the queue/outbox by varying the
-	// idempotency key.
+	// Best-effort: insert into registration_queue. A unique constraint on registration_session_id makes this a no-op on retries; we use the "inserted" signal to suppress duplicate admin alerts for the same session so a caller cannot spam the queue/outbox by varying the idempotency key.
 	inserted, queueErr := s.repos.NewRegistrationQueueRepo().Create(ctx, session.Email, session.SessionData.AccountName, session.PlanCode, session.TypeID)
 	if queueErr != nil {
 		slog.ErrorContext(ctx, "failed to insert registration queue entry",
@@ -737,8 +718,7 @@ func (s *registrationSessionSvcImpl) handleRegistrationLimitHit(ctx context.Cont
 	}
 }
 
-// ConfirmPayment verifies that a Setup Intent succeeded and marks the
-// registration session's payment as completed.
+// ConfirmPayment verifies that a Setup Intent succeeded and marks the registration session's payment as completed.
 func (s *registrationSessionSvcImpl) ConfirmPayment(ctx context.Context, input domain.ConfirmPaymentInput) (*domain.ConfirmPaymentOutput, *apierror.APIError) {
 	ctx, span := registrationSessionSvcTracer.Start(ctx, "service.registration_session.confirm_payment")
 	defer span.End()
@@ -836,8 +816,7 @@ func (s *registrationSessionSvcImpl) ConfirmPayment(ctx context.Context, input d
 	}
 }
 
-// SetupBilling creates a Stripe customer and billing profile for a registration
-// session's selected plan.
+// SetupBilling creates a Stripe customer and billing profile for a registration session's selected plan.
 //
 //  1. Require user authentication and validate session ownership.
 //  2. Upsert an idempotency key; return the cached response if already finished.

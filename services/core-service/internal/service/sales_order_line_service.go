@@ -189,8 +189,7 @@ func (s *salesOrderLineSvcImpl) CreateSalesOrderLine(ctx context.Context, params
 	}
 }
 
-// createPickLineForRemainingQuantity creates a pick line for the remaining quantity
-// of an order line that has not yet been picked, matching the legacy Dashboard behavior.
+// createPickLineForRemainingQuantity creates a pick line for the remaining quantity of an order line that has not yet been picked, matching the legacy Dashboard behavior.
 func createPickLineForRemainingQuantity(ctx context.Context, lineRepo domain.SalesOrderLineRepo, pickLineRepo domain.PickLineRepo, orderLineID, pickID string) *apierror.APIError {
 	// Calculate remaining quantity to be picked
 	remainingValue, unitID, apiErr := pickLineRepo.CalculateRemainingForOrderLine(ctx, orderLineID)
@@ -419,8 +418,7 @@ func (s *salesOrderLineSvcImpl) DeleteSalesOrderLine(ctx context.Context, params
 		return tracing.Trace(span, apierror.NewResourceConflictError("Cannot delete a line item that has been shipped against."))
 	}
 
-	// Matches Dashboard's OrderUtils.isEditable gate: if the order has any shipped
-	// shipments (but isn't yet fulfilled/completed), only admins may delete lines.
+	// Matches Dashboard's OrderUtils.isEditable gate: if the order has any shipped shipments (but isn't yet fulfilled/completed), only admins may delete lines.
 	hasShippedShipment, apiErr := orderRepo.HasShippedShipment(ctx, params.SalesOrderID)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
@@ -472,8 +470,7 @@ func (s *salesOrderLineSvcImpl) DeleteSalesOrderLine(ctx context.Context, params
 	})
 }
 
-// checkSalesOrderLineWritePermission checks the appropriate write permission based on the identity context.
-// Internal actors need sales_orders:{action} for their own account, or customers:update / suppliers:update for external accounts.
+// checkSalesOrderLineWritePermission checks the appropriate write permission based on the identity context. Internal actors need sales_orders:{action} for their own account, or customers:update / suppliers:update for external accounts.
 func checkSalesOrderLineWritePermission(identity *types.Identity, action types.Action) *apierror.APIError {
 	if !identity.IsInternalActor() {
 		return nil

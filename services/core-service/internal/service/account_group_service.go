@@ -118,9 +118,7 @@ func (s *accountGroupSvcImpl) GetAccountGroup(ctx context.Context, accountGroupI
 	return s.repos.NewAccountGroupRepo().Get(ctx, identity.Target.AccountID, accountGroupID)
 }
 
-// BatchGetAccountGroupsByIDs returns account groups matching the input IDs that
-// the caller's account is authorized to read. Account groups are always
-// account-scoped (no system rows).
+// BatchGetAccountGroupsByIDs returns account groups matching the input IDs that the caller's account is authorized to read. Account groups are always account-scoped (no system rows).
 func (s *accountGroupSvcImpl) BatchGetAccountGroupsByIDs(ctx context.Context, ids []string) ([]*domain.AccountGroup, *apierror.APIError) {
 	ctx, span := accountGroupSvcTracer.Start(ctx, "service.account_group.batch_get_by_ids")
 	defer span.End()

@@ -15,9 +15,7 @@ import (
 
 var customerProductLineAccessLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.customer_product_line_access")
 
-// LoadCustomerProductLineAccess fetches access records by customer_id via
-// BatchGetCustomerProductLineAccessByIDs. Inline Customer shell and inline
-// ProductLines list — no expandable sub-resources.
+// LoadCustomerProductLineAccess fetches access records by customer_id via BatchGetCustomerProductLineAccessByIDs. Inline Customer shell and inline ProductLines list — no expandable sub-resources.
 func LoadCustomerProductLineAccess(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil
@@ -36,11 +34,8 @@ func LoadCustomerProductLineAccess(ctx context.Context, ids []string) (map[strin
 	return out, nil
 }
 
-// CustomerProductLineAccessFromProto maps the gRPC proto to the apiresource.
-// Exported for use by mutation handlers that already hold a proto response.
-// NOTE: preserves the legacy presenter's quirk of setting Customer.Object to
-// ObjectTypeAccount rather than ObjectTypeCustomer (the apiresource.Customer
-// type is account-shaped in the existing schema).
+// CustomerProductLineAccessFromProto maps the gRPC proto to the apiresource. Exported for use by mutation handlers that already hold a proto response.
+// NOTE: preserves the legacy presenter's quirk of setting Customer.Object to ObjectTypeAccount rather than ObjectTypeCustomer (the apiresource.Customer type is account-shaped in the existing schema).
 func CustomerProductLineAccessFromProto(item *pb.CustomerProductLineAccessInfo) *apiresource.CustomerProductLineAccess {
 	productLines := make([]apiresource.ProductLine, len(item.ProductLines))
 	for i, pl := range item.ProductLines {

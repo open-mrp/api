@@ -15,9 +15,7 @@ import (
 
 var orderDiscountLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.order_discount")
 
-// LoadOrderDiscounts fetches order discounts by ID via
-// BatchGetOrderDiscountsByIDs (CoreSalesService). Pure leaf — no expandable
-// sub-resources, so no LoadMeta is needed.
+// LoadOrderDiscounts fetches order discounts by ID via BatchGetOrderDiscountsByIDs (CoreSalesService). Pure leaf — no expandable sub-resources, so no LoadMeta is needed.
 func LoadOrderDiscounts(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil

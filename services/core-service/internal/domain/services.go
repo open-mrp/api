@@ -37,43 +37,33 @@ type SandboxSvc interface {
 	//   - limit controls the maximum number of results returned.
 	ListSandboxAccounts(ctx context.Context, cursor *string, limit int32, query *string, includes []string) (*ListSandboxAccountsResult, *apierror.APIError)
 
-	// GetSandbox returns a single sandbox account by its type ID. The caller must
-	// have read permission on the sandbox domain and the sandbox must belong to the
-	// caller's target account.
+	// GetSandbox returns a single sandbox account by its type ID. The caller must have read permission on the sandbox domain and the sandbox must belong to the caller's target account.
 	GetSandbox(ctx context.Context, sandboxTypeID string, includes []string) (*SandboxAccount, *apierror.APIError)
 
-	// DeleteSandbox deletes a sandbox account and its underlying account record.
-	// Account-scoped data is purged asynchronously via an outbox message.
+	// DeleteSandbox deletes a sandbox account and its underlying account record. Account-scoped data is purged asynchronously via an outbox message.
 	DeleteSandbox(ctx context.Context, sandboxTypeID string) *apierror.APIError
 
-	// BatchGetSandboxesByIDs returns sandbox accounts matching the input type IDs
-	// that the caller's account is authorized to read. Used by the api-gateway
-	// resourcekit include resolver.
+	// BatchGetSandboxesByIDs returns sandbox accounts matching the input type IDs that the caller's account is authorized to read. Used by the api-gateway resourcekit include resolver.
 	BatchGetSandboxesByIDs(ctx context.Context, typeIDs []string) ([]*SandboxAccount, *apierror.APIError)
 }
 
 type UnitSvc interface {
-	// ListUnits returns a paginated list of units visible to the caller's
-	// account. Includes both account-specific and global (system) units.
+	// ListUnits returns a paginated list of units visible to the caller's account. Includes both account-specific and global (system) units.
 	ListUnits(ctx context.Context, params ListUnitsParams) (*ListUnitsResult, *apierror.APIError)
 
-	// GetUnit returns a single unit by ID. The unit must belong to the
-	// caller's account or be a system (global) unit.
+	// GetUnit returns a single unit by ID. The unit must belong to the caller's account or be a system (global) unit.
 	GetUnit(ctx context.Context, unitID string) (*Unit, *apierror.APIError)
 
 	// CreateUnit creates a new account-owned unit.
 	CreateUnit(ctx context.Context, params CreateUnitParams) (*Unit, *apierror.APIError)
 
-	// UpdateUnit partially updates an account-owned unit. System units
-	// cannot be updated.
+	// UpdateUnit partially updates an account-owned unit. System units cannot be updated.
 	UpdateUnit(ctx context.Context, params UpdateUnitParams) (*Unit, *apierror.APIError)
 
-	// DeleteUnit deletes an account-owned unit and cascades to
-	// unit_group_unit associations. System units cannot be deleted.
+	// DeleteUnit deletes an account-owned unit and cascades to unit_group_unit associations. System units cannot be deleted.
 	DeleteUnit(ctx context.Context, unitID string) *apierror.APIError
 
-	// ValidateUnits validates unit abbreviations and returns matching units.
-	// Performs case-insensitive matching against both account and system units.
+	// ValidateUnits validates unit abbreviations and returns matching units. Performs case-insensitive matching against both account and system units.
 	ValidateUnits(ctx context.Context, params ValidateUnitsParams) (*ValidateUnitsResult, *apierror.APIError)
 
 	// BatchGetUnitsByIDs returns units by ID for the api-gateway include resolver.
@@ -81,32 +71,25 @@ type UnitSvc interface {
 }
 
 type UnitGroupSvc interface {
-	// ListUnitGroups returns a paginated list of unit groups visible to the
-	// caller's account. Includes both account-specific and system unit groups.
+	// ListUnitGroups returns a paginated list of unit groups visible to the caller's account. Includes both account-specific and system unit groups.
 	ListUnitGroups(ctx context.Context, params ListUnitGroupsParams) (*ListUnitGroupsResult, *apierror.APIError)
 
-	// GetUnitGroup returns a single unit group by ID with its unit conversions.
-	// Supports both internal and customer (cross-account) access.
+	// GetUnitGroup returns a single unit group by ID with its unit conversions. Supports both internal and customer (cross-account) access.
 	GetUnitGroup(ctx context.Context, params GetUnitGroupParams) (*UnitGroupFull, *apierror.APIError)
 
-	// CreateUnitGroup creates a new account-owned unit group with optional
-	// unit conversions. Idempotent via idempotency keys.
+	// CreateUnitGroup creates a new account-owned unit group with optional unit conversions. Idempotent via idempotency keys.
 	CreateUnitGroup(ctx context.Context, params CreateUnitGroupParams) (*UnitGroupFull, *apierror.APIError)
 
-	// UpdateUnitGroup partially updates an account-owned unit group.
-	// System unit groups cannot be modified. Idempotent via idempotency keys.
+	// UpdateUnitGroup partially updates an account-owned unit group. System unit groups cannot be modified. Idempotent via idempotency keys.
 	UpdateUnitGroup(ctx context.Context, params UpdateUnitGroupParams) (*UnitGroupFull, *apierror.APIError)
 
-	// DeleteUnitGroup deletes an account-owned unit group and cascades to
-	// all unit_group_unit records. System unit groups cannot be deleted.
+	// DeleteUnitGroup deletes an account-owned unit group and cascades to all unit_group_unit records. System unit groups cannot be deleted.
 	DeleteUnitGroup(ctx context.Context, unitGroupID string) *apierror.APIError
 
-	// UpsertUnitGroupUnit creates or updates a unit conversion within a unit group.
-	// The parent unit group must be account-owned.
+	// UpsertUnitGroupUnit creates or updates a unit conversion within a unit group. The parent unit group must be account-owned.
 	UpsertUnitGroupUnit(ctx context.Context, params UpsertUnitGroupUnitParams) (*UnitGroupUnit, *apierror.APIError)
 
-	// DeleteUnitGroupUnit removes a unit conversion from a unit group.
-	// The parent unit group must be account-owned.
+	// DeleteUnitGroupUnit removes a unit conversion from a unit group. The parent unit group must be account-owned.
 	DeleteUnitGroupUnit(ctx context.Context, params DeleteUnitGroupUnitParams) *apierror.APIError
 
 	// ListUnitGroupUnits returns all unit conversions for a unit group.
@@ -123,53 +106,42 @@ type UnitGroupSvc interface {
 }
 
 type PaymentTermSvc interface {
-	// ListPaymentTerms returns a paginated list of payment terms visible to the
-	// caller's account. Includes both account-specific and default (system) payment terms.
+	// ListPaymentTerms returns a paginated list of payment terms visible to the caller's account. Includes both account-specific and default (system) payment terms.
 	ListPaymentTerms(ctx context.Context, params ListPaymentTermsParams) (*ListPaymentTermsResult, *apierror.APIError)
 
-	// GetPaymentTerm returns a single payment term by ID. The payment term must
-	// belong to the caller's account or be a default (global) payment term.
+	// GetPaymentTerm returns a single payment term by ID. The payment term must belong to the caller's account or be a default (global) payment term.
 	GetPaymentTerm(ctx context.Context, paymentTermID string) (*PaymentTerm, *apierror.APIError)
 
-	// BatchGetPaymentTermsByIDs returns payment terms by ID for the api-gateway
-	// include resolver. Authorization matches GetPaymentTerm (caller's account
-	// + system terms).
+	// BatchGetPaymentTermsByIDs returns payment terms by ID for the api-gateway include resolver. Authorization matches GetPaymentTerm (caller's account + system terms).
 	BatchGetPaymentTermsByIDs(ctx context.Context, ids []string) ([]*PaymentTerm, *apierror.APIError)
 
 	// CreatePaymentTerm creates a new account-owned payment term.
 	CreatePaymentTerm(ctx context.Context, params CreatePaymentTermParams) (*PaymentTerm, *apierror.APIError)
 
-	// UpdatePaymentTerm partially updates an account-owned payment term. Default
-	// payment terms cannot be updated.
+	// UpdatePaymentTerm partially updates an account-owned payment term. Default payment terms cannot be updated.
 	UpdatePaymentTerm(ctx context.Context, params UpdatePaymentTermParams) (*PaymentTerm, *apierror.APIError)
 
-	// DeletePaymentTerm deletes an account-owned payment term. Default payment
-	// terms cannot be deleted.
+	// DeletePaymentTerm deletes an account-owned payment term. Default payment terms cannot be deleted.
 	DeletePaymentTerm(ctx context.Context, paymentTermID string) *apierror.APIError
 }
 
 type ShippingTermSvc interface {
-	// ListShippingTerms returns a paginated list of shipping terms visible to the
-	// caller's account. Includes both account-specific and default (system) shipping terms.
+	// ListShippingTerms returns a paginated list of shipping terms visible to the caller's account. Includes both account-specific and default (system) shipping terms.
 	ListShippingTerms(ctx context.Context, params ListShippingTermsParams) (*ListShippingTermsResult, *apierror.APIError)
 
-	// GetShippingTerm returns a single shipping term by ID. The shipping term must
-	// belong to the caller's account or be a default (global) shipping term.
+	// GetShippingTerm returns a single shipping term by ID. The shipping term must belong to the caller's account or be a default (global) shipping term.
 	GetShippingTerm(ctx context.Context, params GetShippingTermParams) (*ShippingTerm, *apierror.APIError)
 
 	// CreateShippingTerm creates a new account-owned shipping term.
 	CreateShippingTerm(ctx context.Context, params CreateShippingTermParams) (*ShippingTerm, *apierror.APIError)
 
-	// UpdateShippingTerm partially updates an account-owned shipping term. Default
-	// shipping terms cannot be updated.
+	// UpdateShippingTerm partially updates an account-owned shipping term. Default shipping terms cannot be updated.
 	UpdateShippingTerm(ctx context.Context, params UpdateShippingTermParams) (*ShippingTerm, *apierror.APIError)
 
-	// DeleteShippingTerm deletes an account-owned shipping term. Default shipping
-	// terms cannot be deleted.
+	// DeleteShippingTerm deletes an account-owned shipping term. Default shipping terms cannot be deleted.
 	DeleteShippingTerm(ctx context.Context, shippingTermID string) *apierror.APIError
 
-	// BatchGetShippingTermsByIDs returns shipping terms matching the given IDs
-	// that the caller's account is authorized to read.
+	// BatchGetShippingTermsByIDs returns shipping terms matching the given IDs that the caller's account is authorized to read.
 	BatchGetShippingTermsByIDs(ctx context.Context, ids []string) ([]*ShippingTerm, *apierror.APIError)
 }
 
@@ -189,9 +161,7 @@ type AccountGroupSvc interface {
 	// DeleteAccountGroup deletes an account group.
 	DeleteAccountGroup(ctx context.Context, accountGroupID string) *apierror.APIError
 
-	// BatchGetAccountGroupsByIDs returns account groups matching the input IDs
-	// that the caller's account is authorized to read. Used by the api-gateway
-	// resourcekit include resolver.
+	// BatchGetAccountGroupsByIDs returns account groups matching the input IDs that the caller's account is authorized to read. Used by the api-gateway resourcekit include resolver.
 	BatchGetAccountGroupsByIDs(ctx context.Context, ids []string) ([]*AccountGroup, *apierror.APIError)
 }
 
@@ -211,8 +181,7 @@ type AccountGroupProductLineAccessSvc interface {
 	// DeleteAccountGroupProductLineAccess removes all product line access for an account group.
 	DeleteAccountGroupProductLineAccess(ctx context.Context, accountGroupID string) *apierror.APIError
 
-	// BatchGetAccountGroupProductLineAccessByIDs returns access records for the
-	// given account_group_ids. Used by the api-gateway resourcekit resolver.
+	// BatchGetAccountGroupProductLineAccessByIDs returns access records for the given account_group_ids. Used by the api-gateway resourcekit resolver.
 	BatchGetAccountGroupProductLineAccessByIDs(ctx context.Context, accountGroupIDs []string) ([]*AccountGroupProductLineAccess, *apierror.APIError)
 }
 
@@ -232,8 +201,7 @@ type CustomerProductLineAccessSvc interface {
 	// DeleteCustomerProductLineAccess removes all product line access for a customer.
 	DeleteCustomerProductLineAccess(ctx context.Context, customerID string) *apierror.APIError
 
-	// BatchGetCustomerProductLineAccessByIDs returns access records for the
-	// given customer_ids. Used by the api-gateway resourcekit resolver.
+	// BatchGetCustomerProductLineAccessByIDs returns access records for the given customer_ids. Used by the api-gateway resourcekit resolver.
 	BatchGetCustomerProductLineAccessByIDs(ctx context.Context, customerIDs []string) ([]*CustomerProductLineAccess, *apierror.APIError)
 }
 
@@ -253,9 +221,7 @@ type AddressSvc interface {
 	// DeleteAddress deletes an address from an account.
 	DeleteAddress(ctx context.Context, params DeleteAddressParams) *apierror.APIError
 
-	// BatchGetAddressesByIDs returns addresses matching the input IDs that the
-	// caller's account is authorized to read. Used by the api-gateway
-	// resourcekit include resolver.
+	// BatchGetAddressesByIDs returns addresses matching the input IDs that the caller's account is authorized to read. Used by the api-gateway resourcekit include resolver.
 	BatchGetAddressesByIDs(ctx context.Context, ids []string) ([]*Address, *apierror.APIError)
 }
 
@@ -277,8 +243,7 @@ type AccountStatusSvc interface {
 	// GetAccountStatus returns a single account status by ID or code.
 	GetAccountStatus(ctx context.Context, identifier string) (*AccountStatus, *apierror.APIError)
 
-	// BatchGetAccountStatusesByIDs returns account statuses by ID for the
-	// api-gateway include resolver.
+	// BatchGetAccountStatusesByIDs returns account statuses by ID for the api-gateway include resolver.
 	BatchGetAccountStatusesByIDs(ctx context.Context, ids []string) ([]*AccountStatus, *apierror.APIError)
 }
 
@@ -289,8 +254,7 @@ type PrioritySvc interface {
 	// GetPriority returns a single priority by ID or code.
 	GetPriority(ctx context.Context, identifier string) (*Priority, *apierror.APIError)
 
-	// BatchGetPrioritiesByIDs returns priorities by ID for the api-gateway
-	// include resolver. Priorities are system-wide, no per-caller scoping.
+	// BatchGetPrioritiesByIDs returns priorities by ID for the api-gateway include resolver. Priorities are system-wide, no per-caller scoping.
 	BatchGetPrioritiesByIDs(ctx context.Context, ids []string) ([]*Priority, *apierror.APIError)
 }
 
@@ -331,14 +295,12 @@ type SalesTargetSvc interface {
 type AdjustmentTypeSvc interface {
 	// ListAdjustmentTypes returns a paginated list of adjustment types.
 	ListAdjustmentTypes(ctx context.Context, params ListAdjustmentTypesParams) (*ListAdjustmentTypesResult, *apierror.APIError)
-	// BatchGetAdjustmentTypesByIDs returns adjustment types by ID for the
-	// api-gateway include resolver.
+	// BatchGetAdjustmentTypesByIDs returns adjustment types by ID for the api-gateway include resolver.
 	BatchGetAdjustmentTypesByIDs(ctx context.Context, ids []string) ([]*AdjustmentType, *apierror.APIError)
 }
 
 type AccountPriceSvc interface {
-	// ListAccountPrices returns a paginated list of account prices for the caller's
-	// account. Customer actors can only see prices where they are the recipient.
+	// ListAccountPrices returns a paginated list of account prices for the caller's account. Customer actors can only see prices where they are the recipient.
 	ListAccountPrices(ctx context.Context, params ListAccountPricesParams) (*ListAccountPricesResult, *apierror.APIError)
 
 	// GetAccountPrice returns a single account price by ID.
@@ -347,8 +309,7 @@ type AccountPriceSvc interface {
 	// CreateAccountPrice creates a new account price with rate, category, and attribute associations.
 	CreateAccountPrice(ctx context.Context, params CreateAccountPriceParams) (*AccountPrice, *apierror.APIError)
 
-	// UpdateAccountPrice partially updates an account price. If categories or
-	// attributes are provided, they are replaced entirely (delete-all-then-recreate).
+	// UpdateAccountPrice partially updates an account price. If categories or attributes are provided, they are replaced entirely (delete-all-then-recreate).
 	UpdateAccountPrice(ctx context.Context, params UpdateAccountPriceParams) (*AccountPrice, *apierror.APIError)
 
 	// DeleteAccountPrice deletes an account price and cascades to associations and rate.
@@ -359,8 +320,7 @@ type AccountIntegrationSvc interface {
 	// ListAccountIntegrations returns a paginated list of integrations for the caller's account.
 	ListAccountIntegrations(ctx context.Context, params ListAccountIntegrationsParams) (*ListAccountIntegrationsResult, *apierror.APIError)
 
-	// CreateAccountIntegration creates or upserts an integration. If one with the same
-	// code exists, it updates name and credentials instead of inserting.
+	// CreateAccountIntegration creates or upserts an integration. If one with the same code exists, it updates name and credentials instead of inserting.
 	CreateAccountIntegration(ctx context.Context, params CreateAccountIntegrationParams) (*AccountIntegration, *apierror.APIError)
 
 	// UpdateAccountIntegration updates name and/or is_active on an integration.
@@ -375,9 +335,7 @@ type AccountIntegrationSvc interface {
 	// HasStripeIntegration returns whether the account has a Stripe integration.
 	HasStripeIntegration(ctx context.Context) (bool, *apierror.APIError)
 
-	// BatchGetAccountIntegrationsByIDs returns account integrations matching
-	// the input IDs that the caller's account is authorized to read. Used by
-	// the api-gateway resourcekit include resolver.
+	// BatchGetAccountIntegrationsByIDs returns account integrations matching the input IDs that the caller's account is authorized to read. Used by the api-gateway resourcekit include resolver.
 	BatchGetAccountIntegrationsByIDs(ctx context.Context, ids []string) ([]*AccountIntegration, *apierror.APIError)
 }
 
@@ -397,8 +355,7 @@ type PropertySvc interface {
 	// DeleteProperty deletes a property and cascades to its attributes.
 	DeleteProperty(ctx context.Context, propertyID string) *apierror.APIError
 
-	// BatchGetPropertiesByIDs returns properties matching the input IDs that
-	// belong to the caller's account. Always populates attributes.
+	// BatchGetPropertiesByIDs returns properties matching the input IDs that belong to the caller's account. Always populates attributes.
 	BatchGetPropertiesByIDs(ctx context.Context, ids []string) ([]*Property, *apierror.APIError)
 }
 
@@ -409,8 +366,7 @@ type AttributeSvc interface {
 	// GetAttribute returns a single attribute by ID within a property.
 	GetAttribute(ctx context.Context, propertyID, attributeID string) (*Attribute, *apierror.APIError)
 
-	// BatchGetAttributesByIDs returns attributes matching the input IDs that
-	// belong to the caller's account.
+	// BatchGetAttributesByIDs returns attributes matching the input IDs that belong to the caller's account.
 	BatchGetAttributesByIDs(ctx context.Context, ids []string) ([]*Attribute, *apierror.APIError)
 
 	// CreateAttribute creates a new attribute under a property.
@@ -430,15 +386,10 @@ type CarrierSvc interface {
 	// GetCarrier returns a single carrier by ID.
 	GetCarrier(ctx context.Context, params GetCarrierParams) (*Carrier, *apierror.APIError)
 
-	// BatchGetCarriersByIDs returns carriers by ID for the api-gateway include
-	// resolver. Authorization matches GetCarrier (caller's own account + system
-	// carriers). When serviceLevelsLimit > 0, each returned carrier carries a
-	// preview of up to N service_level IDs plus a has_more flag.
+	// BatchGetCarriersByIDs returns carriers by ID for the api-gateway include resolver. Authorization matches GetCarrier (caller's own account + system carriers). When serviceLevelsLimit > 0, each returned carrier carries a preview of up to N service_level IDs plus a has_more flag.
 	BatchGetCarriersByIDs(ctx context.Context, ids []string, serviceLevelsLimit int32) ([]*Carrier, *apierror.APIError)
 
-	// BatchGetServiceLevelsByIDs returns service levels by ID for the
-	// api-gateway include resolver. Authorization follows the parent carrier's
-	// account scope.
+	// BatchGetServiceLevelsByIDs returns service levels by ID for the api-gateway include resolver. Authorization follows the parent carrier's account scope.
 	BatchGetServiceLevelsByIDs(ctx context.Context, ids []string) ([]*ServiceLevel, *apierror.APIError)
 
 	// CreateCarrier creates a new carrier, optionally registering with Shippo.
@@ -511,8 +462,7 @@ type ProductSvc interface {
 }
 
 type ItemSvc interface {
-	// ListItems returns a paginated list of items for the caller's account.
-	// Supports filtering by type, category, attribute, supplier, date range, and full-text search.
+	// ListItems returns a paginated list of items for the caller's account. Supports filtering by type, category, attribute, supplier, date range, and full-text search.
 	ListItems(ctx context.Context, params ListItemsParams) (*ListItemsResult, *apierror.APIError)
 
 	// GetItem returns a single item by ID within the caller's account.
@@ -551,8 +501,7 @@ type ItemSvc interface {
 	// BulkReconcileItems reconciles inventory for multiple items by SKU.
 	BulkReconcileItems(ctx context.Context, params BulkReconcileItemsParams) (*BulkReconcileItemsResult, *apierror.APIError)
 
-	// BatchGetItemsByIDs returns items by ID for the api-gateway include resolver.
-	// Always populates rates and attributes.
+	// BatchGetItemsByIDs returns items by ID for the api-gateway include resolver. Always populates rates and attributes.
 	BatchGetItemsByIDs(ctx context.Context, ids []string) ([]*Item, *apierror.APIError)
 
 	// ListInventories returns all items with their on-hand inventory quantities.
@@ -574,9 +523,7 @@ type AccountSvc interface {
 	// GetRoleInfo returns a role's name and type code.
 	GetRoleInfo(ctx context.Context, roleID string) (*RoleInfo, *apierror.APIError)
 
-	// GetAccountRelationByUserID returns the relationship between the target account and the account implied by the user.
-	// actorAccountID is required for owner-side matches (the relation's owner_account_id must equal it);
-	// pass "" to skip the owner-side fallback entirely.
+	// GetAccountRelationByUserID returns the relationship between the target account and the account implied by the user. actorAccountID is required for owner-side matches (the relation's owner_account_id must equal it); pass "" to skip the owner-side fallback entirely.
 	GetAccountRelationByUserID(ctx context.Context, targetAccountID, actorAccountID, userID string) (*AccountRelation, *apierror.APIError)
 
 	// GetAccountRelationByAPIKeyID returns the relationship between the owner account and the account implied by the API key.
@@ -593,8 +540,7 @@ type AccountSvc interface {
 	// GetAdminRole returns the role ID used for administrative access.
 	GetAdminRole(ctx context.Context) (string, *apierror.APIError)
 
-	// UpdateAccountSubscription updates subscription fields on an account,
-	// resolving the account_plan_id from the plan_code.
+	// UpdateAccountSubscription updates subscription fields on an account, resolving the account_plan_id from the plan_code.
 	UpdateAccountSubscription(ctx context.Context, accountID string, status *string, planCode string, stripeSubID *string, periodEnd *time.Time, stripeCustomerID *string, billingProfileID *string, billingCadenceID *string, pricingPlanSubscriptionID *string, servicingStatus *string, collectionStatus *string) *apierror.APIError
 
 	// ClearAccountStripeCustomer removes all Stripe-related fields from an account.
@@ -603,21 +549,16 @@ type AccountSvc interface {
 	// GetAccountByStripeCustomerID resolves an account from a Stripe customer ID.
 	GetAccountByStripeCustomerID(ctx context.Context, stripeCustomerID string) (accountID string, planCode string, err *apierror.APIError)
 
-	// CompleteRegistration creates the production account, sandbox, owner roles,
-	// account-user records, business address, and portal for a newly registered
-	// user. Returns the new account ID and sandbox account ID.
+	// CompleteRegistration creates the production account, sandbox, owner roles, account-user records, business address, and portal for a newly registered user. Returns the new account ID and sandbox account ID.
 	CompleteRegistration(ctx context.Context, input CompleteRegistrationInput) (*CompleteRegistrationOutput, *apierror.APIError)
 
-	// UpdateAgentSpendingCap sets or removes the monthly agent LLM spending cap
-	// for the caller's account. Pass nil to remove the cap.
+	// UpdateAgentSpendingCap sets or removes the monthly agent LLM spending cap for the caller's account. Pass nil to remove the cap.
 	UpdateAgentSpendingCap(ctx context.Context, capCents *int64) (*int64, *apierror.APIError)
 
 	// GetAccount returns the full account with optional branding and portal sub-resources.
 	GetAccount(ctx context.Context, accountID string) (*Account, *apierror.APIError)
 
-	// BatchGetAccountsByIDs returns accounts matching the given IDs that the
-	// caller is authorized to read. Used by the api-gateway include resolver
-	// for owner.account expansion across many parent resources.
+	// BatchGetAccountsByIDs returns accounts matching the given IDs that the caller is authorized to read. Used by the api-gateway include resolver for owner.account expansion across many parent resources.
 	BatchGetAccountsByIDs(ctx context.Context, ids []string) ([]*Account, *apierror.APIError)
 
 	// GetAccountBySlug returns a minimal public account by portal slug (unauthenticated).
@@ -643,14 +584,12 @@ type CompleteRegistrationInput struct {
 	BusinessAddress      *RegistrationAddress
 }
 
-// RegistrationAccountData holds the business profile information collected
-// during onboarding.
+// RegistrationAccountData holds the business profile information collected during onboarding.
 type RegistrationAccountData struct {
 	AccountName string
 }
 
-// RegistrationAddress is a structured postal address collected during
-// registration.
+// RegistrationAddress is a structured postal address collected during registration.
 type RegistrationAddress struct {
 	Line1      string
 	Line2      string
@@ -895,15 +834,13 @@ type EmailLogSvc interface {
 }
 
 type InventoryChangeLogSvc interface {
-	// ListInventoryChangeLogs returns a paginated list of inventory change logs
-	// for the caller's account.
+	// ListInventoryChangeLogs returns a paginated list of inventory change logs for the caller's account.
 	ListInventoryChangeLogs(ctx context.Context, params ListInventoryChangeLogsParams) (*ListInventoryChangeLogsResult, *apierror.APIError)
 
 	// GetInventoryChangeLog returns a single inventory change log by ID.
 	GetInventoryChangeLog(ctx context.Context, id string) (*InventoryChangeLog, *apierror.APIError)
 
-	// ExportInventoryChangeLogs returns all inventory change logs matching the
-	// provided filters for the caller's account.
+	// ExportInventoryChangeLogs returns all inventory change logs matching the provided filters for the caller's account.
 	ExportInventoryChangeLogs(ctx context.Context, params ExportInventoryChangeLogsParams) ([]*InventoryChangeLog, *apierror.APIError)
 }
 
@@ -911,8 +848,7 @@ type InvoiceSvc interface {
 	// ListInvoices returns a paginated list of invoices for the caller's account.
 	ListInvoices(ctx context.Context, params ListInvoicesParams) (*ListInvoicesResult, *apierror.APIError)
 
-	// GetInvoice returns a single invoice by ID within the caller's account.
-	// Lines and allocations are fetched conditionally based on the includes parameter.
+	// GetInvoice returns a single invoice by ID within the caller's account. Lines and allocations are fetched conditionally based on the includes parameter.
 	GetInvoice(ctx context.Context, params GetInvoiceParams) (*Invoice, *apierror.APIError)
 
 	// UpdateInvoice partially updates an invoice with idempotency support.
@@ -977,12 +913,10 @@ type ReceivableSvc interface {
 }
 
 type SalesOrderStatusSvc interface {
-	// ListSalesOrderStatuses returns a paginated list of sales order statuses.
-	// These are global lookup values.
+	// ListSalesOrderStatuses returns a paginated list of sales order statuses. These are global lookup values.
 	ListSalesOrderStatuses(ctx context.Context, params ListSalesOrderStatusesParams) (*ListSalesOrderStatusesResult, *apierror.APIError)
 
-	// BatchGetSalesOrderStatusesByIDs returns statuses by ID for the
-	// api-gateway include resolver.
+	// BatchGetSalesOrderStatusesByIDs returns statuses by ID for the api-gateway include resolver.
 	BatchGetSalesOrderStatusesByIDs(ctx context.Context, ids []string) ([]*SalesOrderStatus, *apierror.APIError)
 }
 
@@ -1002,23 +936,18 @@ type OrderDiscountSvc interface {
 	// DeleteOrderDiscount deletes an order discount and returns the deleted resource.
 	DeleteOrderDiscount(ctx context.Context, orderDiscountID string) (*OrderDiscount, *apierror.APIError)
 
-	// FindOrderDiscountByCode finds an order discount by its code.
-	// Supports both internal and customer actors.
+	// FindOrderDiscountByCode finds an order discount by its code. Supports both internal and customer actors.
 	FindOrderDiscountByCode(ctx context.Context, params FindOrderDiscountByCodeParams) (*OrderDiscount, *apierror.APIError)
 
-	// BatchGetOrderDiscountsByIDs returns order discounts matching the input IDs
-	// that the caller's account is authorized to read. Used by the api-gateway
-	// resourcekit include resolver.
+	// BatchGetOrderDiscountsByIDs returns order discounts matching the input IDs that the caller's account is authorized to read. Used by the api-gateway resourcekit include resolver.
 	BatchGetOrderDiscountsByIDs(ctx context.Context, ids []string) ([]*OrderDiscount, *apierror.APIError)
 }
 
 type VolumeDiscountSvc interface {
-	// ListVolumeDiscounts returns a paginated list of volume discounts.
-	// Supports both internal and customer actors.
+	// ListVolumeDiscounts returns a paginated list of volume discounts. Supports both internal and customer actors.
 	ListVolumeDiscounts(ctx context.Context, params ListVolumeDiscountsParams) (*ListVolumeDiscountsResult, *apierror.APIError)
 
-	// GetVolumeDiscount returns a single volume discount by ID.
-	// Supports both internal and customer actors.
+	// GetVolumeDiscount returns a single volume discount by ID. Supports both internal and customer actors.
 	GetVolumeDiscount(ctx context.Context, params GetVolumeDiscountParams) (*VolumeDiscount, *apierror.APIError)
 
 	// CreateVolumeDiscount creates a new volume discount with tiers and relations.
@@ -1032,12 +961,10 @@ type VolumeDiscountSvc interface {
 }
 
 type SalesOrderSvc interface {
-	// ListSalesOrders returns a paginated list of sales orders for the caller's account.
-	// Supports customer actor access via BuyerAccountID filter.
+	// ListSalesOrders returns a paginated list of sales orders for the caller's account. Supports customer actor access via BuyerAccountID filter.
 	ListSalesOrders(ctx context.Context, params ListSalesOrdersParams) (*ListSalesOrdersResult, *apierror.APIError)
 
-	// GetSalesOrder returns a single sales order by ID.
-	// Lines are fetched conditionally based on the includes parameter.
+	// GetSalesOrder returns a single sales order by ID. Lines are fetched conditionally based on the includes parameter.
 	GetSalesOrder(ctx context.Context, params GetSalesOrderParams) (*SalesOrder, *apierror.APIError)
 
 	// CreateSalesOrder creates a new sales order with lines, addresses, and optional discount.
@@ -1065,9 +992,7 @@ type SalesOrderSvc interface {
 	// CreateCustomerCheckoutSession creates an embedded Stripe checkout session for a customer actor.
 	CreateCustomerCheckoutSession(ctx context.Context, params CreateCustomerCheckoutSessionParams) (*CreateCustomerCheckoutSessionResult, *apierror.APIError)
 
-	// RecordOrderPayment links a succeeded Stripe payment intent to a sales order
-	// (called from the billing-service on checkout.session.completed). Idempotent:
-	// a payment intent already linked is a no-op.
+	// RecordOrderPayment links a succeeded Stripe payment intent to a sales order (called from the billing-service on checkout.session.completed). Idempotent: a payment intent already linked is a no-op.
 	RecordOrderPayment(ctx context.Context, salesOrderID, paymentIntentID string) *apierror.APIError
 }
 
@@ -1162,8 +1087,7 @@ type SupplierMaterialSvc interface {
 }
 
 type PermissionGroupSvc interface {
-	// ListPermissionGroups returns a paginated list of permission groups
-	// with their nested permissions. Permission groups are global (not account-scoped).
+	// ListPermissionGroups returns a paginated list of permission groups with their nested permissions. Permission groups are global (not account-scoped).
 	ListPermissionGroups(ctx context.Context, params ListPermissionGroupsParams) (*ListPermissionGroupsResult, *apierror.APIError)
 
 	// BatchGetPermissionGroupsByIDs returns permission groups by their IDs for include resolution.
@@ -1233,8 +1157,7 @@ type ReceivingOrderLineSvc interface {
 }
 
 type ProductTypeSvc interface {
-	// ListProductTypes returns a paginated list of product types.
-	// Product types are global (not account-scoped).
+	// ListProductTypes returns a paginated list of product types. Product types are global (not account-scoped).
 	ListProductTypes(ctx context.Context, params ListProductTypesParams) (*ListProductTypesResult, *apierror.APIError)
 
 	// GetProductType returns a single product type by ID or code.
@@ -1249,8 +1172,7 @@ type ProductTypeSvc interface {
 	// DeleteProductType deletes a product type by ID.
 	DeleteProductType(ctx context.Context, id string) *apierror.APIError
 
-	// BatchGetProductTypesByIDs returns product types matching the input IDs.
-	// Used by the api-gateway resourcekit include resolver.
+	// BatchGetProductTypesByIDs returns product types matching the input IDs. Used by the api-gateway resourcekit include resolver.
 	BatchGetProductTypesByIDs(ctx context.Context, ids []string) ([]*ProductType, *apierror.APIError)
 }
 
@@ -1305,12 +1227,10 @@ type UtilsSvc interface {
 }
 
 type CatalogSvc interface {
-	// ListCatalogProductLines returns a paginated list of product lines available in the catalog.
-	// Supports both internal and customer actors via CheckIsAssignedActor.
+	// ListCatalogProductLines returns a paginated list of product lines available in the catalog. Supports both internal and customer actors via CheckIsAssignedActor.
 	ListCatalogProductLines(ctx context.Context, params ListCatalogProductLinesParams) (*ListCatalogProductLinesResult, *apierror.APIError)
 
-	// ListCatalogProducts returns a paginated list of products in a specific product line, grouped by item category.
-	// Supports both internal and customer actors via CheckIsAssignedActor.
+	// ListCatalogProducts returns a paginated list of products in a specific product line, grouped by item category. Supports both internal and customer actors via CheckIsAssignedActor.
 	ListCatalogProducts(ctx context.Context, params ListCatalogProductsParams) (*ListCatalogProductsResult, *apierror.APIError)
 }
 
@@ -1342,12 +1262,10 @@ type EDISvc interface {
 	// ResubmitInvoice resubmits an invoice via EDI.
 	ResubmitInvoice(ctx context.Context, invoiceID string) *apierror.APIError
 
-	// BatchGetDCLocationsByIDs returns DC locations matching the input IDs.
-	// Used by the api-gateway resourcekit include resolver.
+	// BatchGetDCLocationsByIDs returns DC locations matching the input IDs. Used by the api-gateway resourcekit include resolver.
 	BatchGetDCLocationsByIDs(ctx context.Context, ids []string) ([]*DCLocation, *apierror.APIError)
 
-	// BatchGetEDIRunsByIDs returns EDI runs matching the input IDs.
-	// Used by the api-gateway resourcekit include resolver.
+	// BatchGetEDIRunsByIDs returns EDI runs matching the input IDs. Used by the api-gateway resourcekit include resolver.
 	BatchGetEDIRunsByIDs(ctx context.Context, ids []string) ([]*EDIRun, *apierror.APIError)
 }
 
@@ -1398,8 +1316,7 @@ type SysPropertySvc interface {
 	GetLatestSysPropertyValue(ctx context.Context, typeCode constants.SysPropertyTypeCode) (string, *apierror.APIError)
 	UpdateSysProperty(ctx context.Context, params UpdateSysPropertyParams) (*SysProperty, *apierror.APIError)
 
-	// BatchGetSysPropertiesByIDs returns sys properties matching the input IDs.
-	// Used by the api-gateway resourcekit include resolver.
+	// BatchGetSysPropertiesByIDs returns sys properties matching the input IDs. Used by the api-gateway resourcekit include resolver.
 	BatchGetSysPropertiesByIDs(ctx context.Context, ids []string) ([]*SysProperty, *apierror.APIError)
 }
 
@@ -1458,8 +1375,7 @@ type StripeWebhookSvc interface {
 	HandleAccountStripeWebhook(ctx context.Context, params HandleStripeWebhookParams) *apierror.APIError
 }
 
-// CreateAccountParams holds the parameters for creating a production account
-// during registration.
+// CreateAccountParams holds the parameters for creating a production account during registration.
 type CreateAccountParams struct {
 	ID                   string
 	Name                 string

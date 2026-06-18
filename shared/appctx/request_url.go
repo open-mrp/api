@@ -7,8 +7,7 @@ import (
 
 const requestURLKey contextKey = "request_url"
 
-// WithRequestURL returns a child context carrying the current HTTP request URL.
-// This is used by list presenters to build absolute pagination URLs.
+// WithRequestURL returns a child context carrying the current HTTP request URL. This is used by list presenters to build absolute pagination URLs.
 func WithRequestURL(ctx context.Context, u *url.URL) context.Context {
 	return context.WithValue(ctx, requestURLKey, u)
 }

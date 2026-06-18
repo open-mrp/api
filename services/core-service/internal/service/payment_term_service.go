@@ -121,8 +121,7 @@ func (s *paymentTermSvcImpl) GetPaymentTerm(ctx context.Context, paymentTermID s
 	})
 }
 
-// BatchGetPaymentTermsByIDs returns payment terms matching the input IDs that
-// the caller's account is authorized to read (account-scoped plus system terms).
+// BatchGetPaymentTermsByIDs returns payment terms matching the input IDs that the caller's account is authorized to read (account-scoped plus system terms).
 func (s *paymentTermSvcImpl) BatchGetPaymentTermsByIDs(ctx context.Context, ids []string) ([]*domain.PaymentTerm, *apierror.APIError) {
 	ctx, span := paymentTermSvcTracer.Start(ctx, "service.payment_term.batch_get_by_ids")
 	defer span.End()

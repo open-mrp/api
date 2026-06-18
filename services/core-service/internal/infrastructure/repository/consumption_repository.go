@@ -35,8 +35,7 @@ func ptrToNullString(s *string) sql.NullString {
 	return sql.NullString{}
 }
 
-// clearableStringToNullString converts a *string using the sentinel pattern:
-// nil → keep existing (caller must backfill), ptr("") → SQL NULL, ptr("value") → "value".
+// clearableStringToNullString converts a *string using the sentinel pattern: nil → keep existing (caller must backfill), ptr("") → SQL NULL, ptr("value") → "value".
 func clearableStringToNullString(s *string) sql.NullString {
 	if s == nil || *s == "" {
 		return sql.NullString{}

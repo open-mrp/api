@@ -101,8 +101,7 @@ type propMeta struct {
 	name string
 }
 
-// collectProperties collects unique properties (in encounter order) from a
-// slice of items' category property lists.
+// collectProperties collects unique properties (in encounter order) from a slice of items' category property lists.
 func collectProperties(items []*apiresource.Item) ([]string, map[string]propMeta) {
 	order := []string{}
 	byID := map[string]propMeta{}
@@ -120,8 +119,7 @@ func collectProperties(items []*apiresource.Item) ([]string, map[string]propMeta
 	return order, byID
 }
 
-// attributeByPropertyID builds a map from property ID → attribute value for a
-// single item, using the item's attributes list.
+// attributeByPropertyID builds a map from property ID → attribute value for a single item, using the item's attributes list.
 func attributeByPropertyID(item *apiresource.Item) map[string]string {
 	result := map[string]string{}
 	if item == nil || item.Attributes == nil {

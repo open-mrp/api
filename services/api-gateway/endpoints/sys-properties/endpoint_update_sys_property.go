@@ -37,7 +37,7 @@ func (e *UpdateSysPropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		Title:             "Update System Property",
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
-		Route:             "/v1/core/sys-properties/{id}",
+		Route:             "/v1/settings/properties/{id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,

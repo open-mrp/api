@@ -13,8 +13,7 @@ import (
 	"github.com/augno/api/shared/tracing"
 )
 
-// checkCatalogReadPermission checks the appropriate read permission based on the target context.
-// Internal actors need products:read for their own account, or customers:read / suppliers:read for external accounts.
+// checkCatalogReadPermission checks the appropriate read permission based on the target context. Internal actors need products:read for their own account, or customers:read / suppliers:read for external accounts.
 func checkCatalogReadPermission(identity *types.Identity) *apierror.APIError {
 	if !identity.IsInternalActor() {
 		return nil
@@ -70,8 +69,7 @@ func (s *catalogSvcImpl) mediators() domain.Mediators {
 
 const defaultCatalogLimit int32 = 100
 
-// ListCatalogProductLines returns a paginated list of product lines available in the catalog.
-// Supports both internal and customer actors via CheckIsAssignedActor.
+// ListCatalogProductLines returns a paginated list of product lines available in the catalog. Supports both internal and customer actors via CheckIsAssignedActor.
 func (s *catalogSvcImpl) ListCatalogProductLines(ctx context.Context, params domain.ListCatalogProductLinesParams) (*domain.ListCatalogProductLinesResult, *apierror.APIError) {
 	ctx, span := catalogSvcTracer.Start(ctx, "service.catalog.list_product_lines")
 	defer span.End()
@@ -139,8 +137,7 @@ func (s *catalogSvcImpl) ListCatalogProductLines(ctx context.Context, params dom
 	}, nil
 }
 
-// ListCatalogProducts returns a paginated list of products in a specific product line, grouped by item category.
-// Supports both internal and customer actors via CheckIsAssignedActor.
+// ListCatalogProducts returns a paginated list of products in a specific product line, grouped by item category. Supports both internal and customer actors via CheckIsAssignedActor.
 func (s *catalogSvcImpl) ListCatalogProducts(ctx context.Context, params domain.ListCatalogProductsParams) (*domain.ListCatalogProductsResult, *apierror.APIError) {
 	ctx, span := catalogSvcTracer.Start(ctx, "service.catalog.list_products")
 	defer span.End()
@@ -208,8 +205,7 @@ func (s *catalogSvcImpl) ListCatalogProducts(ctx context.Context, params domain.
 	}, nil
 }
 
-// paginateByID applies simple cursor-based pagination to a slice of items using the item's ID as cursor.
-// The cursor is the ID of the last item on the previous page. Items after that cursor are returned.
+// paginateByID applies simple cursor-based pagination to a slice of items using the item's ID as cursor. The cursor is the ID of the last item on the previous page. Items after that cursor are returned.
 func paginateByID[T any](items []T, limit int32, cursor *string, getID func(T) string) ([]T, pagination.PageInfo) {
 	if len(items) == 0 {
 		return items, pagination.PageInfo{}

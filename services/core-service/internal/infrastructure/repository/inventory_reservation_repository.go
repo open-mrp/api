@@ -61,8 +61,7 @@ func (r *inventoryReservationRepo) CreateMaterialReservation(ctx context.Context
 	return nil
 }
 
-// ReduceReservedForOrderItem reduces reserved quantity for an order item using FIFO order.
-// It deletes or reduces reserved inventory issue records to release the specified measure.
+// ReduceReservedForOrderItem reduces reserved quantity for an order item using FIFO order. It deletes or reduces reserved inventory issue records to release the specified measure.
 func (r *inventoryReservationRepo) ReduceReservedForOrderItem(ctx context.Context, params domain.OrderReservationReductionParams) *apierror.APIError {
 	ctx, span := tracing.StartSpan(ctx, inventoryReservationRepoTracer, "repository.inventory_reservation.reduce_reserved_for_order_item")
 	defer span.End()
@@ -138,9 +137,7 @@ func (r *inventoryReservationRepo) ReduceReservedForOrderMaterials(ctx context.C
 	return nil
 }
 
-// AllocateReservationsForConsumption converts reserved inventory issues to open issues,
-// performing FIFO allocation against receipts. Returns the remaining quantity
-// that could not be allocated from reservations.
+// AllocateReservationsForConsumption converts reserved inventory issues to open issues, performing FIFO allocation against receipts. Returns the remaining quantity that could not be allocated from reservations.
 func (r *inventoryReservationRepo) AllocateReservationsForConsumption(ctx context.Context, params domain.ConsumptionAllocationParams) (*domain.ConsumptionAllocationResult, *apierror.APIError) {
 	ctx, span := tracing.StartSpan(ctx, inventoryReservationRepoTracer, "repository.inventory_reservation.allocate_reservations_for_consumption")
 	defer span.End()
@@ -350,8 +347,7 @@ func (r *inventoryReservationRepo) allocateOpenIssue(ctx context.Context, issueI
 	return nil
 }
 
-// AllocateOpenIssuesForItem performs FIFO allocation of all open inventory issues
-// for the given item against available receipts.
+// AllocateOpenIssuesForItem performs FIFO allocation of all open inventory issues for the given item against available receipts.
 func (r *inventoryReservationRepo) AllocateOpenIssuesForItem(ctx context.Context, accountID, itemID string) *apierror.APIError {
 	ctx, span := inventoryReservationRepoTracer.Start(ctx, "repository.inventory_reservation.allocate_open_issues_for_item")
 	defer span.End()

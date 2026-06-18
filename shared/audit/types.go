@@ -16,8 +16,7 @@ type FieldChange struct {
 	NewValue json.RawMessage `json:"new_value"`
 }
 
-// EventData is the producer-side input for publishing an audit event via the
-// platform's transactional outbox pipeline.
+// EventData is the producer-side input for publishing an audit event via the platform's transactional outbox pipeline.
 type EventData struct {
 	// ServiceName identifies the service that produced the audit event.
 	ServiceName  string
@@ -26,13 +25,11 @@ type EventData struct {
 	ResourceID   string
 	Changes      []FieldChange
 
-	// Metadata is any additional JSON-serializable context associated with the
-	// mutation (e.g. "reason", "source", "tags").
+	// Metadata is any additional JSON-serializable context associated with the mutation (e.g. "reason", "source", "tags").
 	Metadata map[string]any
 }
 
-// PublishedEvent is the JSON payload persisted in the outbox and later
-// processed by the platform-service audit consumer.
+// PublishedEvent is the JSON payload persisted in the outbox and later processed by the platform-service audit consumer.
 type PublishedEvent struct {
 	TypeID       string                `json:"type_id"`
 	Action       constants.AuditAction `json:"action"`

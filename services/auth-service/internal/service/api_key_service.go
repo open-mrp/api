@@ -33,9 +33,7 @@ type APIKeySvcConfig struct {
 	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
 
-	// TxManager (optional; default: nil) wraps multi-step operations in database
-	// transactions. It is not validated at construction; transactional code paths
-	// panic at runtime if it is unset.
+	// TxManager (optional; default: nil) wraps multi-step operations in database transactions. It is not validated at construction; transactional code paths panic at runtime if it is unset.
 	TxManager TransactionManager
 }
 

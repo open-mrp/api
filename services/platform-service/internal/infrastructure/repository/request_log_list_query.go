@@ -13,34 +13,20 @@ import (
 
 // routeParamPattern matches a single `{param_name}` path-parameter token.
 //
-// The stored normalized_route comes from the Go router's registered templates,
-// which use snake_case param names (e.g. `{unit_group_id}`). Callers — notably
-// the dashboard endpoint filter — derive their templates from the Stainless
-// public OpenAPI spec, which camelCases multi-word path params (`{unitGroupId}`)
-// and is otherwise free to rename them. Param names are cosmetic (path params
-// are positional), so we collapse every token to a bare `{}` on both the filter
-// input and the stored value before comparing, matching on route *shape*.
+// The stored normalized_route comes from the Go router's registered templates, which use snake_case param names (e.g. `{unit_group_id}`). Callers — notably the dashboard endpoint filter — derive their templates from the Stainless public OpenAPI spec, which camelCases multi-word path params (`{unitGroupId}`) and is otherwise free to rename them. Param names are cosmetic (path params are positional), so we collapse every token to a bare `{}` on both the filter input and the stored value before comparing, matching on route *shape*.
 var routeParamPattern = regexp.MustCompile(`\{[^}]+\}`)
 
-// normalizeRouteParams collapses every `{param}` token in a route template to a
-// bare `{}` placeholder so the comparison ignores param-name spelling/casing.
+// normalizeRouteParams collapses every `{param}` token in a route template to a bare `{}` placeholder so the comparison ignores param-name spelling/casing.
 func normalizeRouteParams(route string) string {
 	return routeParamPattern.ReplaceAllString(route, "{}")
 }
 
-// normalizedRouteColumnExpr is the SQL counterpart to normalizeRouteParams: it
-// collapses `{param}` tokens in the stored rl.normalized_route column to `{}`
-// with the same shape so the IN comparison lines up. The doubled backslashes
-// escape the regex braces for MySQL's REGEXP_REPLACE (ICU) engine.
+// normalizedRouteColumnExpr is the SQL counterpart to normalizeRouteParams: it collapses `{param}` tokens in the stored rl.normalized_route column to `{}` with the same shape so the IN comparison lines up. The doubled backslashes escape the regex braces for MySQL's REGEXP_REPLACE (ICU) engine.
 const normalizedRouteColumnExpr = `REGEXP_REPLACE(rl.normalized_route, '\\{[^}]+\\}', '{}')`
 
-// requestLogRLBaseColumns is the request_log SELECT list used by every list
-// mode. Kept as a single slice so SELECT list and row scanners can't drift.
+// requestLogRLBaseColumns is the request_log SELECT list used by every list mode. Kept as a single slice so SELECT list and row scanners can't drift.
 //
-// JSON columns (query_json, request_body_json, response_body_json) are emitted
-// as COALESCE(CASE WHEN ? THEN col ELSE NULL END, ”) so includeQueryJson /
-// includeRequestBodyJson / includeResponseBodyJson boolean args control whether
-// the payload is returned without changing the column count.
+// JSON columns (query_json, request_body_json, response_body_json) are emitted as COALESCE(CASE WHEN ? THEN col ELSE NULL END, ”) so includeQueryJson / includeRequestBodyJson / includeResponseBodyJson boolean args control whether the payload is returned without changing the column count.
 var requestLogRLBaseColumns = []string{
 	"rl.id",
 	"rl.method",
@@ -67,13 +53,9 @@ var requestLogRLBaseColumns = []string{
 	"rl.target_account_id",
 }
 
-// buildListQuery assembles the dynamic list SQL for a request_log listing.
-// Filter predicates are omitted entirely when the caller did not supply a
-// value — no OR-sentinel or CASE-WHEN wrappers — so MySQL sees only the
-// predicates that actually narrow the result set.
+// buildListQuery assembles the dynamic list SQL for a request_log listing. Filter predicates are omitted entirely when the caller did not supply a value — no OR-sentinel or CASE-WHEN wrappers — so MySQL sees only the predicates that actually narrow the result set.
 //
-// limit is applied inside the ORDER BY block; callers are expected to pass
-// limit+1 to support "has next page" detection.
+// limit is applied inside the ORDER BY block; callers are expected to pass limit+1 to support "has next page" detection.
 func buildListQuery(
 	mode queryMode,
 	dir pagination.Direction,
@@ -86,26 +68,17 @@ func buildListQuery(
 	var inner strings.Builder
 	var args []any
 
-	// SELECT + FROM for the inner query (for actor mode this is the derived
-	// table body; for base/full it's the final query).
+	// SELECT + FROM for the inner query (for actor mode this is the derived table body; for base/full it's the final query).
 	inner.WriteString("SELECT ")
 	inner.WriteString(strings.Join(requestLogRLBaseColumns, ", "))
 	args = append(args, includeQueryJSON, includeRequestBody, includeResponseBody)
 
 	switch mode {
 	case queryModeActor, queryModeFull:
-		// Both actor and full mode wrap the inner block in a derived table (see
-		// the wrapper below). The inner block selects only the rl.* base columns
-		// from request_log alone — actor_id is the raw value the API exposes, so
-		// no account_user translation join is needed here. Keeping the expensive
-		// user / api_key / role / account / idempotency_key joins out of the inner
-		// block lets the WHERE + ORDER BY + LIMIT run against request_log alone, so
-		// MySQL/Vitess uses the (target_account_id, occurred_at DESC, id DESC)
-		// index and LIMITs before any enrichment join happens.
+		// Both actor and full mode wrap the inner block in a derived table (see the wrapper below). The inner block selects only the rl.* base columns from request_log alone — actor_id is the raw value the API exposes, so no account_user translation join is needed here. Keeping the expensive user / api_key / role / account / idempotency_key joins out of the inner block lets the WHERE + ORDER BY + LIMIT run against request_log alone, so MySQL/Vitess uses the (target_account_id, occurred_at DESC, id DESC) index and LIMITs before any enrichment join happens.
 		inner.WriteString(" FROM request_log rl")
 	case queryModeBase:
-		// Base mode still pulls idempotency_key via a LEFT JOIN; that join is
-		// indexed and cheap.
+		// Base mode still pulls idempotency_key via a LEFT JOIN; that join is indexed and cheap.
 		inner.WriteString(", ik.idempotency_key")
 		inner.WriteString(
 			" FROM request_log rl" +
@@ -113,23 +86,13 @@ func buildListQuery(
 		)
 	}
 
-	// WHERE — only emit predicates the caller supplied. The security scope
-	// returns every log where the caller's account is either the acting account
-	// (rl.account_id) or the account the request targeted (rl.target_account_id).
-	// MySQL/Vitess satisfies the OR via index_merge over the per-side cursor
-	// indexes: (account_id, occurred_at DESC, id DESC) and
-	// (target_account_id, occurred_at DESC, id DESC).
+	// WHERE — only emit predicates the caller supplied. The security scope returns every log where the caller's account is either the acting account (rl.account_id) or the account the request targeted (rl.target_account_id). MySQL/Vitess satisfies the OR via index_merge over the per-side cursor indexes: (account_id, occurred_at DESC, id DESC) and (target_account_id, occurred_at DESC, id DESC).
 	inner.WriteString(" WHERE (rl.account_id = ? OR rl.target_account_id = ?)")
 	args = append(args, callerAccountID, callerAccountID)
 
 	if f.Query != nil && *f.Query != "" {
 		like := "%" + db.EscapeLike(*f.Query) + "%"
-		// Match the log's own id (exact) plus a substring search across the
-		// request route (both the literal path and the normalized route) and the
-		// error message. Searching rl.path lets a caller paste a resource id that
-		// appeared in a URL (e.g. /v1/catalog/items/it_123) and find every log
-		// that touched it; rl.normalized_route covers route-template searches
-		// (e.g. "catalog/items").
+		// Match the log's own id (exact) plus a substring search across the request route (both the literal path and the normalized route) and the error message. Searching rl.path lets a caller paste a resource id that appeared in a URL (e.g. /v1/catalog/items/it_123) and find every log that touched it; rl.normalized_route covers route-template searches (e.g. "catalog/items").
 		inner.WriteString(" AND (rl.id = ? OR rl.path LIKE ? OR rl.normalized_route LIKE ? OR rl.error_message LIKE ?)")
 		args = append(args, *f.Query, like, like, like)
 	}
@@ -150,10 +113,7 @@ func buildListQuery(
 		}
 	}
 	if len(f.StatusCodes) > 0 || len(f.StatusCodeClasses) > 0 {
-		// Specific codes and whole classes are OR'd together (then AND'd with the
-		// rest of the filters): status_codes=401 + status_code_classes=5 matches
-		// 401 and any 5xx. Classes use FLOOR(status_code/100) so a class matches
-		// every code in its range, not just the curated ones the UI lists.
+		// Specific codes and whole classes are OR'd together (then AND'd with the rest of the filters): status_codes=401 + status_code_classes=5 matches 401 and any 5xx. Classes use FLOOR(status_code/100) so a class matches every code in its range, not just the curated ones the UI lists.
 		inner.WriteString(" AND (")
 		if len(f.StatusCodes) > 0 {
 			inner.WriteString("rl.status_code IN (")
@@ -203,11 +163,7 @@ func buildListQuery(
 		}
 	}
 	if len(f.ActorIDs) > 0 {
-		// Filter on the bare rl.actor_id column so the predicate is sargable and
-		// can use the (target_account_id, actor_id, occurred_at DESC, id DESC)
-		// index. actor_id stores the raw id the API exposes (user_id for user
-		// actors, api_key.type_id for api_key actors), so the caller's ids match
-		// directly — no translation needed.
+		// Filter on the bare rl.actor_id column so the predicate is sargable and can use the (target_account_id, actor_id, occurred_at DESC, id DESC) index. actor_id stores the raw id the API exposes (user_id for user actors, api_key.type_id for api_key actors), so the caller's ids match directly — no translation needed.
 		inner.WriteString(" AND rl.actor_id IN (")
 		inner.WriteString(placeholders(len(f.ActorIDs)))
 		inner.WriteString(")")
@@ -224,9 +180,7 @@ func buildListQuery(
 		}
 	}
 	if len(f.NormalizedRoutes) > 0 {
-		// Compare on route shape (param names collapsed to `{}`) so the filter
-		// is immune to param-name drift between the stored router templates and
-		// the spec-derived templates callers send. See normalizeRouteParams.
+		// Compare on route shape (param names collapsed to `{}`) so the filter is immune to param-name drift between the stored router templates and the spec-derived templates callers send. See normalizeRouteParams.
 		inner.WriteString(" AND ")
 		inner.WriteString(normalizedRouteColumnExpr)
 		inner.WriteString(" IN (")
@@ -259,8 +213,7 @@ func buildListQuery(
 		args = append(args, *f.IdempotencyKey)
 	}
 
-	// Cursor predicate — matches the direction semantics used by the previous
-	// sqlc queries: forward pages older (DESC), backward pages newer (ASC).
+	// Cursor predicate — matches the direction semantics used by the previous sqlc queries: forward pages older (DESC), backward pages newer (ASC).
 	if cursor != nil {
 		switch dir {
 		case pagination.DirectionBackward:
@@ -283,17 +236,9 @@ func buildListQuery(
 		return inner.String(), args
 	}
 
-	// Actor and full mode: wrap the inner block as a derived table so
-	// MySQL/Vitess picks up the (target_account_id, occurred_at DESC, id DESC)
-	// index, runs the LIMIT, *then* nested-loop joins the enrichment tables on
-	// only the (≤ limit) matching rows. Without this the optimizer filesorts the
-	// whole target_account_id partition before the LIMIT, which times out on a
-	// large request_log table.
+	// Actor and full mode: wrap the inner block as a derived table so MySQL/Vitess picks up the (target_account_id, occurred_at DESC, id DESC) index, runs the LIMIT, *then* nested-loop joins the enrichment tables on only the (≤ limit) matching rows. Without this the optimizer filesorts the whole target_account_id partition before the LIMIT, which times out on a large request_log table.
 	//
-	// actor_id is the raw actor key exposed by the API: the user_id for a user
-	// actor (the outer user join keys on u.id = rl.actor_id, and the account_user
-	// join used for the role keys on au.user_id = rl.actor_id) or the
-	// api_key.type_id for an api_key actor (the api_key join keys on ak.type_id).
+	// actor_id is the raw actor key exposed by the API: the user_id for a user actor (the outer user join keys on u.id = rl.actor_id, and the account_user join used for the role keys on au.user_id = rl.actor_id) or the api_key.type_id for an api_key actor (the api_key join keys on ak.type_id).
 	var outer strings.Builder
 	outer.WriteString("SELECT " + derivedRequestLogRLColumns + ", ")
 	outer.WriteString("u.email AS user_email, u.name AS user_name, ")
@@ -329,10 +274,7 @@ func buildListQuery(
 	return outer.String(), args
 }
 
-// derivedRequestLogRLColumns is the rl.* projection the actor/full outer query
-// selects from the derived table. It mirrors requestLogRLBaseColumns column-for
-// -column (the JSON columns are already COALESCE'd inside the derived table, so
-// here they are plain rl.<alias> references).
+// derivedRequestLogRLColumns is the rl.* projection the actor/full outer query selects from the derived table. It mirrors requestLogRLBaseColumns column-for-column (the JSON columns are already COALESCE'd inside the derived table, so here they are plain rl.<alias> references).
 const derivedRequestLogRLColumns = "rl.id, rl.method, rl.host, rl.path, rl.normalized_route, " +
 	"rl.query_json, rl.status_code, rl.latency_us, rl.api_version, rl.actor_id, " +
 	"rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent, " +
@@ -347,9 +289,7 @@ func placeholders(n int) string {
 	return strings.Repeat("?, ", n-1) + "?"
 }
 
-// scanBaseListRows scans *sql.Rows produced by the queryModeBase builder output
-// into domain objects, reusing the base FindByID mapper for column → field
-// translation.
+// scanBaseListRows scans *sql.Rows produced by the queryModeBase builder output into domain objects, reusing the base FindByID mapper for column → field translation.
 func scanBaseListRows(rows *sql.Rows) ([]*domain.RequestLogRead, error) {
 	out := make([]*domain.RequestLogRead, 0, 16)
 	for rows.Next() {
@@ -407,10 +347,7 @@ func scanFullListRows(rows *sql.Rows) ([]*domain.RequestLogRead, error) {
 	return out, nil
 }
 
-// scanActorListRows scans *sql.Rows produced by the queryModeActor builder
-// output. Actor mode selects a subset of the full column set and leaves role /
-// account fields unset — mapRowToRequestLogRead treats their zero NullStrings
-// as nil in the domain object, matching the old per-variant mappers.
+// scanActorListRows scans *sql.Rows produced by the queryModeActor builder output. Actor mode selects a subset of the full column set and leaves role / account fields unset — mapRowToRequestLogRead treats their zero NullStrings as nil in the domain object, matching the old per-variant mappers.
 func scanActorListRows(rows *sql.Rows) ([]*domain.RequestLogRead, error) {
 	out := make([]*domain.RequestLogRead, 0, 16)
 	for rows.Next() {

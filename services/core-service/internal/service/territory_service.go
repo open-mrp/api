@@ -288,9 +288,7 @@ func (s *territorySvcImpl) UpdateTerritory(ctx context.Context, params domain.Up
 				return apiErr
 			}
 
-			// Backfill unchanged nullable fields with existing values.
-			// Since the SQL uses direct assignment (no COALESCE) for these fields,
-			// we must provide the existing value when the field was not sent.
+			// Backfill unchanged nullable fields with existing values. Since the SQL uses direct assignment (no COALESCE) for these fields, we must provide the existing value when the field was not sent.
 			if params.SalesRepID == nil && old.SalesRepID != "" {
 				params.SalesRepID = &old.SalesRepID
 			}

@@ -8,12 +8,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// RejectEmptyPatchBody returns a validation error when the JSON body does not
-// contain at least one field that maps to a body-bound struct field. Fields
-// bound from non-body sources (path, query, header tags) are excluded.
+// RejectEmptyPatchBody returns a validation error when the JSON body does not contain at least one field that maps to a body-bound struct field. Fields bound from non-body sources (path, query, header tags) are excluded.
 //
-// This prevents PATCH requests with empty bodies ({}) from silently succeeding
-// as no-op updates.
+// This prevents PATCH requests with empty bodies ({}) from silently succeeding as no-op updates.
 func RejectEmptyPatchBody(body []byte, v any) *apierror.APIError {
 	body = bytes.TrimSpace(body)
 	if len(body) == 0 || body[0] != '{' {
@@ -46,8 +43,7 @@ func RejectEmptyPatchBody(body []byte, v any) *apierror.APIError {
 	return apierror.NewValidationError("Request body must contain at least one field to update.")
 }
 
-// collectBodyFieldNames returns the set of JSON field names that are bound from
-// the request body (i.e. have a json tag but no path, query, or header tag).
+// collectBodyFieldNames returns the set of JSON field names that are bound from the request body (i.e. have a json tag but no path, query, or header tag).
 func collectBodyFieldNames(rt reflect.Type) map[string]bool {
 	names := make(map[string]bool)
 	collectBodyFieldNamesFromType(rt, names)

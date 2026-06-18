@@ -43,8 +43,7 @@ func NewAgentHandler(server *grpc.Server, repos domain.RepoFactory, agentDefSvc 
 	return handler
 }
 
-// checkPlanAccess verifies that the requesting account is on a paid plan.
-// Free plan accounts are blocked from all agent operations.
+// checkPlanAccess verifies that the requesting account is on a paid plan. Free plan accounts are blocked from all agent operations.
 func (h *agentHandler) checkPlanAccess(ctx context.Context) error {
 	accountID, err := getAccountIDFromContext(ctx)
 	if err != nil {
@@ -720,8 +719,7 @@ func (h *agentHandler) ListRuns(ctx context.Context, req *pb.ListRunsRequest) (*
 		func(r sqlc.AgentRun) string { return r.ID },
 	)
 
-	// Treat `foo.bar` requests as implying `foo` — the parent resource must be
-	// attached for the nested include to survive the api-gateway's collapse.
+	// Treat `foo.bar` requests as implying `foo` — the parent resource must be attached for the nested include to survive the api-gateway's collapse.
 	includedRoot := func(key string) bool {
 		prefix := key + "."
 		for _, inc := range req.Includes {
@@ -749,9 +747,7 @@ func (h *agentHandler) ListRuns(ctx context.Context, req *pb.ListRunsRequest) (*
 		}
 
 		if includedRoot("definition") {
-			// Pass the client's requested nested includes (e.g. "tools",
-			// "role", "config") so buildResultForAccount loads the matching
-			// sub-resources onto the returned definition.
+			// Pass the client's requested nested includes (e.g. "tools", "role", "config") so buildResultForAccount loads the matching sub-resources onto the returned definition.
 			defIncludes := nestedIncludes(req.Includes, "definition")
 			defResult, defErr := h.agentDefSvc.GetAgentDefinition(ctx, runs[i].AgentDefinitionID, defIncludes)
 			if defErr == nil {
@@ -1413,9 +1409,7 @@ func (h *agentHandler) AcknowledgeAgentAlert(ctx context.Context, req *pb.Acknow
 	return &pb.AcknowledgeAgentAlertResponse{Alert: domainAlertToProto(result)}, nil
 }
 
-// nestedIncludes filters an includes slice to the sub-paths under a parent
-// key, stripped of the parent prefix. For includes=["definition.role","config"]
-// and parent="definition" it returns ["role"]. Returns nil when nothing matches.
+// nestedIncludes filters an includes slice to the sub-paths under a parent key, stripped of the parent prefix. For includes=["definition.role","config"] and parent="definition" it returns ["role"]. Returns nil when nothing matches.
 func nestedIncludes(includes []string, parent string) []string {
 	prefix := parent + "."
 	var out []string

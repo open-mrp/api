@@ -30,16 +30,12 @@ func (m *APIKey) IsExpired() bool {
 	return m.ExpiresAt != nil && m.ExpiresAt.Before(time.Now().UTC())
 }
 
-// IsRevoked reports whether the API key has been revoked. RevokedAt holds the
-// instant revocation takes effect, which may be scheduled in the future (via
-// rotation): the key remains valid until that instant has passed.
+// IsRevoked reports whether the API key has been revoked. RevokedAt holds the instant revocation takes effect, which may be scheduled in the future (via rotation): the key remains valid until that instant has passed.
 func (m *APIKey) IsRevoked() bool {
 	return m.RevokedAt != nil && !m.RevokedAt.After(time.Now().UTC())
 }
 
-// ShouldTouch reports whether the API key's last-used timestamp should be
-// updated. It returns true when the key has never been used or was last used
-// before the given threshold time.
+// ShouldTouch reports whether the API key's last-used timestamp should be updated. It returns true when the key has never been used or was last used before the given threshold time.
 func (m *APIKey) ShouldTouch(threshold time.Time) bool {
 	return m.LastUsedAt == nil || m.LastUsedAt.Before(threshold)
 }

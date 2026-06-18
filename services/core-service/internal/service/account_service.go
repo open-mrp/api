@@ -52,8 +52,7 @@ type AccountSvcConfig struct {
 	// S3Client (required) is the object store client used for file storage.
 	S3Client s3client.ObjectStore
 
-	// AccountPhotosBucket (optional; default: "") is the S3 bucket for account photos. It is not validated
-	// at construction.
+	// AccountPhotosBucket (optional; default: "") is the S3 bucket for account photos. It is not validated at construction.
 	AccountPhotosBucket string
 }
 
@@ -94,8 +93,6 @@ func NewAccountSvc(config *AccountSvcConfig) domain.AccountSvc {
 }
 
 // GetAccountContext retrieves the account context (type, mode, and related metadata) for the given account.
-//
-// 1. Query the account repository for the account context by ID.
 func (s *accountSvcImpl) GetAccountContext(ctx context.Context, accountID string) (*domain.AccountContext, *apierror.APIError) {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_account_context")
 	defer span.End()
@@ -103,8 +100,7 @@ func (s *accountSvcImpl) GetAccountContext(ctx context.Context, accountID string
 	return s.accountRepo.GetAccountContext(ctx, accountID)
 }
 
-// GetUserAccountAccess checks whether a user has access to an account and returns their
-// access details including role and permissions.
+// GetUserAccountAccess checks whether a user has access to an account and returns their access details including role and permissions.
 //
 // 1. Look up the account-user link by user ID and account ID.
 // 2. If not found, return nil with false (no access) without an error.
@@ -458,10 +454,7 @@ func (s *accountSvcImpl) adjustAccountSeats(ctx context.Context, accountID, plan
 		"account_id", accountID, "active_count", activeCount, "seat_limit", limit)
 
 	if activeCount > limit {
-		// Downgrade: we must know which user to protect. Without identity
-		// (e.g. webhook-triggered) we cannot safely choose, so skip deactivation.
-		// The user-initiated path (SwitchPlan/ConfirmPlanSwitch) carries identity
-		// and will handle deactivation correctly.
+		// Downgrade: we must know which user to protect. Without identity (e.g. webhook-triggered) we cannot safely choose, so skip deactivation. The user-initiated path (SwitchPlan/ConfirmPlanSwitch) carries identity and will handle deactivation correctly.
 		identity, ok := appctx.GetIdentityFromContext(ctx)
 		if !ok || identity == nil || identity.Actor == nil {
 			slog.WarnContext(ctx, "[seat-adjust] skipping deactivation — no identity in context (webhook path)",
@@ -502,10 +495,7 @@ func (s *accountSvcImpl) reactivateAllDisabledUsers(ctx context.Context, account
 	}
 }
 
-// deactivateExcessUsers disables `excess` account users, protecting the requesting
-// user (or admin fallback) from deactivation. Least-recently-used users are removed first.
-// As a safety net, the keep user is explicitly re-activated after deactivation in case
-// the SQL exclusion didn't match (e.g. identity propagation edge cases).
+// deactivateExcessUsers disables `excess` account users, protecting the requesting user (or admin fallback) from deactivation. Least-recently-used users are removed first. As a safety net, the keep user is explicitly re-activated after deactivation in case the SQL exclusion didn't match (e.g. identity propagation edge cases).
 func (s *accountSvcImpl) deactivateExcessUsers(ctx context.Context, accountID, keepUserID string, excess int32) {
 	slog.InfoContext(ctx, "[seat-adjust] deactivating excess users",
 		"account_id", accountID, "keep_user_id", keepUserID, "excess", excess)
@@ -520,8 +510,7 @@ func (s *accountSvcImpl) deactivateExcessUsers(ctx context.Context, accountID, k
 	slog.InfoContext(ctx, "[seat-adjust] DeactivateExcept result",
 		"account_id", accountID, "keep_user_id", keepUserID, "rows_affected", deactivated)
 
-	// Safety net: ensure the keep user is active regardless of what the bulk
-	// deactivation did.
+	// Safety net: ensure the keep user is active regardless of what the bulk deactivation did.
 	if apiErr := s.accountUserRepo.EnsureActive(ctx, accountID, keepUserID); apiErr != nil {
 		slog.WarnContext(ctx, "[seat-adjust] EnsureActive failed",
 			"account_id", accountID, "keep_user_id", keepUserID, "error", apiErr.PublicMessage)
@@ -548,8 +537,7 @@ func (s *accountSvcImpl) GetAccountByStripeCustomerID(ctx context.Context, strip
 	return s.accountRepo.GetByStripeCustomerID(ctx, stripeCustomerID)
 }
 
-// CompleteRegistration provisions a new production account with all supporting resources
-// inside a single transaction.
+// CompleteRegistration provisions a new production account with all supporting resources inside a single transaction.
 //
 //  1. Generate a new account ID.
 //  2. Enforce registration limits for the selected plan.
@@ -731,8 +719,7 @@ func (s *accountSvcImpl) withTx(ctx context.Context, fn func(context.Context, *a
 	})
 }
 
-// agentCapUpdate is used as the idempotency cache payload for UpdateAgentSpendingCap.
-// A wrapper struct is required so that a nil cap is round-tripped correctly through JSON.
+// agentCapUpdate is used as the idempotency cache payload for UpdateAgentSpendingCap. A wrapper struct is required so that a nil cap is round-tripped correctly through JSON.
 type agentCapUpdate struct {
 	CapCents *int64 `json:"cap_cents"`
 }
@@ -842,11 +829,7 @@ func (s *accountSvcImpl) GetAccount(ctx context.Context, accountID string) (*dom
 	return s.accountRepo.GetByID(ctx, accountID)
 }
 
-// BatchGetAccountsByIDs returns accounts matching the input IDs that the
-// caller is authorized to read. Authorization mirrors GetAccount: the caller
-// can only access their own account. IDs that do not match the caller's
-// target account are silently dropped (matching the "missing IDs are absent"
-// loader contract used by the api-gateway resourcekit resolver).
+// BatchGetAccountsByIDs returns accounts matching the input IDs that the caller is authorized to read. Authorization mirrors GetAccount: the caller can only access their own account. IDs that do not match the caller's target account are silently dropped (matching the "missing IDs are absent" loader contract used by the api-gateway resourcekit resolver).
 func (s *accountSvcImpl) BatchGetAccountsByIDs(ctx context.Context, ids []string) ([]*domain.Account, *apierror.APIError) {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.batch_get_by_ids")
 	defer span.End()
@@ -865,9 +848,7 @@ func (s *accountSvcImpl) BatchGetAccountsByIDs(ctx context.Context, ids []string
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
-	// Authorization: the caller can only read their own account. Filter the
-	// input IDs to just the target account ID; everything else is silently
-	// dropped (the resolver treats absence as "field stays nil").
+	// Authorization: the caller can only read their own account. Filter the input IDs to just the target account ID; everything else is silently dropped (the resolver treats absence as "field stays nil").
 	allowed := make([]string, 0, 1)
 	for _, id := range ids {
 		if id == identity.Target.AccountID {

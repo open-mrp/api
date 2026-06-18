@@ -10,8 +10,7 @@ const (
 	truncationTailChars = 200
 )
 
-// ToolOutputLimits maps tool names to their specific output byte caps.
-// Tools not listed here use DefaultToolOutputMaxBytes.
+// ToolOutputLimits maps tool names to their specific output byte caps. Tools not listed here use DefaultToolOutputMaxBytes.
 var ToolOutputLimits = map[string]int{
 	"fetch_url": 30_000,
 	"read_doc":  30_000,
@@ -24,15 +23,12 @@ type TruncationResult struct {
 	FullLength   int
 }
 
-// TruncateToolOutput caps the content of a tool result at the given byte limit.
-// When truncated, it preserves the first (limit - tail) bytes and the last tail
-// bytes, inserting a truncation notice in between.
+// TruncateToolOutput caps the content of a tool result at the given byte limit. When truncated, it preserves the first (limit - tail) bytes and the last tail bytes, inserting a truncation notice in between.
 func TruncateToolOutput(content string, toolName string) string {
 	return TruncateToolOutputResult(content, toolName).Content
 }
 
-// TruncateToolOutputResult is like TruncateToolOutput but returns a TruncationResult
-// indicating whether truncation occurred and the original content length.
+// TruncateToolOutputResult is like TruncateToolOutput but returns a TruncationResult indicating whether truncation occurred and the original content length.
 func TruncateToolOutputResult(content string, toolName string) TruncationResult {
 	maxBytes := DefaultToolOutputMaxBytes
 	if limit, ok := ToolOutputLimits[toolName]; ok {

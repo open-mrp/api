@@ -35,11 +35,7 @@ func NewRequestLogConsumer(rabbitmq messaging.MessageBroker, loggingSvc domain.L
 	}
 }
 
-// persistenceConsumerConcurrency is the worker count for the request-log and
-// audit-event consumers. Each message is an independent insert (no
-// cross-message ordering) deduplicated by the inbox pattern, so concurrent
-// processing is safe; the gateway produces these in bursts proportional to
-// HTTP traffic, and a serial consumer falls behind.
+// persistenceConsumerConcurrency is the worker count for the request-log and audit-event consumers. Each message is an independent insert (no cross-message ordering) deduplicated by the inbox pattern, so concurrent processing is safe; the gateway produces these in bursts proportional to HTTP traffic, and a serial consumer falls behind.
 const persistenceConsumerConcurrency = 8
 
 func (c *RequestLogConsumer) Listen(ctx context.Context) error {

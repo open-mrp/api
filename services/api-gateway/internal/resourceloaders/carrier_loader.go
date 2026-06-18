@@ -16,16 +16,10 @@ import (
 
 var carrierLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.carrier")
 
-// CarrierServiceLevelsLimit caps the size of the service_levels list
-// returned inline on a Carrier. Clients that need more must page through
-// GET /v1/operations/carriers/{id}/service-levels.
+// CarrierServiceLevelsLimit caps the size of the service_levels list returned inline on a Carrier. Clients that need more must page through GET /v1/operations/carriers/{id}/service-levels.
 const CarrierServiceLevelsLimit = 10
 
-// LoadCarriers fetches carriers by ID via BatchGetCarriersByIDs. Each loaded
-// carrier is mapped to a clean *apiresource.Carrier with no FK fields. FK
-// info (owner account_id, service_level_ids preview, has_more flag) is
-// stashed in the request-scoped LoadMeta side-table for SubField closures
-// to read back.
+// LoadCarriers fetches carriers by ID via BatchGetCarriersByIDs. Each loaded carrier is mapped to a clean *apiresource.Carrier with no FK fields. FK info (owner account_id, service_level_ids preview, has_more flag) is stashed in the request-scoped LoadMeta side-table for SubField closures to read back.
 func LoadCarriers(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil
@@ -58,9 +52,7 @@ func LoadCarriers(ctx context.Context, ids []string) (map[string]any, *apierror.
 	return out, nil
 }
 
-// carrierFromProto maps a proto CarrierInfo to a clean apiresource.Carrier.
-// Fields that depend on includes (Owner, ServiceLevels) are left nil — they
-// only become populated when the resolver fires their SubField.Populate.
+// carrierFromProto maps a proto CarrierInfo to a clean apiresource.Carrier. Fields that depend on includes (Owner, ServiceLevels) are left nil — they only become populated when the resolver fires their SubField.Populate.
 func carrierFromProto(c *pb.CarrierInfo) *apiresource.Carrier {
 	var code *constants.CarrierCode
 	if c.Code != nil {

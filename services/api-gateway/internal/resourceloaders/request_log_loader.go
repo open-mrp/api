@@ -24,11 +24,7 @@ func LoadRequestLogs(ctx context.Context, ids []string) (map[string]any, *apierr
 	for _, id := range ids {
 		resp, apiErr := grpcutil.CallRPC(ctx, requestLogLoaderTracer, "loader.request_logs.get", domain.ServiceName,
 			func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetRequestLogResponse, error) {
-				// Base resource only: this loader populates a request_log embedded as
-				// another resource's sub-resource (e.g. an audit event's "request").
-				// Nested expansions like "request.account"/"request.actor" are not part
-				// of any endpoint's allowed includes, so the embedded request_log must
-				// not carry account/actor data the client never asked for.
+				// Base resource only: this loader populates a request_log embedded as another resource's sub-resource (e.g. an audit event's "request"). Nested expansions like "request.account"/"request.actor" are not part of any endpoint's allowed includes, so the embedded request_log must not carry account/actor data the client never asked for.
 				return loggingClient.GetRequestLog(ctx, &pb.GetRequestLogRequest{
 					Id: id,
 				}, opts...)

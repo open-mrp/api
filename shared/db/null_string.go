@@ -24,9 +24,7 @@ func NullStringLikePtr(s *string) sql.NullString {
 	return sql.NullString{String: "%" + EscapeLike(*s) + "%", Valid: true}
 }
 
-// NullStringFulltextPtr returns a NullString formatted for MySQL FULLTEXT
-// BOOLEAN MODE search. It appends a wildcard (*) so the term matches any
-// word that starts with the given value (e.g. "kilo" → "kilo*").
+// NullStringFulltextPtr returns a NullString formatted for MySQL FULLTEXT BOOLEAN MODE search. It appends a wildcard (*) so the term matches any word that starts with the given value (e.g. "kilo" → "kilo*").
 func NullStringFulltextPtr(s *string) sql.NullString {
 	if s == nil || *s == "" {
 		return sql.NullString{String: "", Valid: false}
@@ -57,14 +55,10 @@ func SanitizeFulltextBoolean(s string) string {
 	}, s)
 }
 
-// innoDBMinTokenSize is the default minimum word length for InnoDB FULLTEXT
-// indexes. Queries shorter than this must fall back to LIKE.
+// innoDBMinTokenSize is the default minimum word length for InnoDB FULLTEXT indexes. Queries shorter than this must fall back to LIKE.
 const innoDBMinTokenSize = 3
 
-// FulltextSearch holds parameters for a SQL clause that supports both
-// FULLTEXT (MATCH/AGAINST) and LIKE search. Queries with at least
-// innoDBMinTokenSize characters use FULLTEXT; shorter queries fall back to
-// LIKE so that short abbreviations (e.g. "pr") are still matched.
+// FulltextSearch holds parameters for a SQL clause that supports both FULLTEXT (MATCH/AGAINST) and LIKE search. Queries with at least innoDBMinTokenSize characters use FULLTEXT; shorter queries fall back to LIKE so that short abbreviations (e.g. "pr") are still matched.
 //
 // The SQL clause should be structured as:
 //
@@ -74,9 +68,7 @@ const innoDBMinTokenSize = 3
 //	    OR col LIKE sqlc.narg('like_query')
 //	)
 //
-// Due to a sqlc bug, MATCH/AGAINST generates a duplicate parameter
-// (SearchQuery_2). This helper populates both so callers don't need to
-// know about the dedup issue.
+// Due to a sqlc bug, MATCH/AGAINST generates a duplicate parameter (SearchQuery_2). This helper populates both so callers don't need to know about the dedup issue.
 //
 // Usage:
 //
@@ -115,9 +107,7 @@ func StringFromNullString(ns sql.NullString) *string {
 	return &ns.String
 }
 
-// StringFromInterface extracts a string from an interface{} value.
-// MySQL CASE expressions are typed as interface{} by sqlc and may arrive
-// as []byte or string depending on the driver. Returns "" for nil.
+// StringFromInterface extracts a string from an interface{} value. MySQL CASE expressions are typed as interface{} by sqlc and may arrive as []byte or string depending on the driver. Returns "" for nil.
 func StringFromInterface(v any) string {
 	if v == nil {
 		return ""

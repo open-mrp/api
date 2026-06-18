@@ -1,7 +1,4 @@
-// Package versiontransforms registers the version.Transformer chain that the
-// api-gateway uses to keep older API versions working. The package is
-// blank-imported from cmd/run.go so its init() fires before the routers are
-// built.
+// Package versiontransforms registers the version.Transformer chain that the api-gateway uses to keep older API versions working. The package is blank-imported from cmd/run.go so its init() fires before the routers are built.
 package versiontransforms
 
 import (
@@ -13,19 +10,9 @@ func init() {
 	version.Register(&accountUserForgePreview2To1{})
 }
 
-// accountUserForgePreview2To1 downgrades account_user payloads from
-// 1.0.forge-preview.2 to 1.0.forge-preview.1.
+// accountUserForgePreview2To1 downgrades account_user payloads from 1.0.forge-preview.2 to 1.0.forge-preview.1.
 //
-// preview.2 made `user` an expandable full User object and removed the
-// profile fields (name, email, username, image_url) that account_user had
-// duplicated from the user. preview.1 carried those fields on account_user
-// itself and exposed `user` as an always-present entity reference. The
-// downgrade hoists the profile fields off the expanded user — forced onto
-// account_user root responses via ForcedIncludes — and rebuilds the entity
-// reference. Account users embedded in other resources (sales_rep,
-// responsible_user, shipped_by) are downgraded to the preview.1 shape too,
-// but their profile fields are null unless the caller expanded the nested
-// user.
+// preview.2 made `user` an expandable full User object and removed the profile fields (name, email, username, image_url) that account_user had duplicated from the user. preview.1 carried those fields on account_user itself and exposed `user` as an always-present entity reference. The downgrade hoists the profile fields off the expanded user — forced onto account_user root responses via ForcedIncludes — and rebuilds the entity reference. Account users embedded in other resources (sales_rep, responsible_user, shipped_by) are downgraded to the preview.1 shape too, but their profile fields are null unless the caller expanded the nested user.
 type accountUserForgePreview2To1 struct{}
 
 func (t *accountUserForgePreview2To1) FromVersion() version.APIVersion {
@@ -55,14 +42,10 @@ func (t *accountUserForgePreview2To1) ForcedIncludes(objectType constants.Object
 	case constants.ObjectTypeAccountUser:
 		return []string{"user"}
 	case constants.ObjectTypeTransaction, constants.ObjectTypeProductionRun:
-		// preview.1 inlined responsible_user on these resources without an
-		// include; force the expansion (and its user, so the profile fields
-		// can be hoisted) to keep preview.1 responses populated.
+		// preview.1 inlined responsible_user on these resources without an include; force the expansion (and its user, so the profile fields can be hoisted) to keep preview.1 responses populated.
 		return []string{"responsible_user", "responsible_user.user"}
 	case constants.ObjectTypeCustomer:
-		// Nested keys apply only when the caller requested the parent path
-		// (defaults.sales_rep), restoring the profile fields preview.1
-		// carried on the expanded sales rep.
+		// Nested keys apply only when the caller requested the parent path (defaults.sales_rep), restoring the profile fields preview.1 carried on the expanded sales rep.
 		return []string{"defaults.sales_rep.user"}
 	case constants.ObjectTypeTerritory:
 		return []string{"sales_rep.user"}
@@ -84,9 +67,7 @@ func (t *accountUserForgePreview2To1) TransformRequest(_ constants.ObjectType, d
 	return data
 }
 
-// downgradeAccountUsersIn walks the payload and rewrites every embedded
-// account_user object in place — single resources, list envelopes, and
-// account users nested in other resources.
+// downgradeAccountUsersIn walks the payload and rewrites every embedded account_user object in place — single resources, list envelopes, and account users nested in other resources.
 func downgradeAccountUsersIn(node any) {
 	switch v := node.(type) {
 	case map[string]any:
@@ -103,9 +84,7 @@ func downgradeAccountUsersIn(node any) {
 	}
 }
 
-// downgradeAccountUser converts one account_user object from the preview.2
-// shape to the preview.1 shape: profile fields hoisted to the top level and
-// `user` demoted from a full User object to an entity reference.
+// downgradeAccountUser converts one account_user object from the preview.2 shape to the preview.1 shape: profile fields hoisted to the top level and `user` demoted from a full User object to an entity reference.
 func downgradeAccountUser(au map[string]any) {
 	user, _ := au["user"].(map[string]any)
 

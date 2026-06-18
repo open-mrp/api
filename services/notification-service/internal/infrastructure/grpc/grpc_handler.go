@@ -24,7 +24,7 @@ func NewGRPCHandler(server *grpc.Server, notificationSvc domain.NotificationSvc)
 	return handler
 }
 
-// SendEmail sends an email
+// SendEmail dispatches an email through the notification service (external email provider).
 func (h *gRPCHandler) SendEmail(ctx context.Context, req *pb.EmailRequest) (*pb.EmailResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
@@ -50,7 +50,7 @@ func (h *gRPCHandler) SendEmail(ctx context.Context, req *pb.EmailRequest) (*pb.
 	}, nil
 }
 
-// SendEnterpriseRequest sends an enterprise upgrade request email
+// SendEnterpriseRequest emails an enterprise-plan upgrade request (sales notification) through the notification service.
 func (h *gRPCHandler) SendEnterpriseRequest(ctx context.Context, req *pb.EnterpriseRequestEmailRequest) (*pb.EmailResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

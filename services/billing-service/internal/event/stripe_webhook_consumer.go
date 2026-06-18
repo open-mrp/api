@@ -53,8 +53,7 @@ func (c *StripeWebhookConsumer) Listen(ctx context.Context) error {
 		c.inboxConsumer.Wrap("billing.stripe_webhook", c.handleStripeWebhook))
 }
 
-// stripeEventEnvelope is a lightweight struct for extracting fields from a raw
-// Stripe event JSON payload without pulling in the full Stripe SDK types.
+// stripeEventEnvelope is a lightweight struct for extracting fields from a raw Stripe event JSON payload without pulling in the full Stripe SDK types.
 type stripeEventEnvelope struct {
 	ID   string          `json:"id"`
 	Type string          `json:"type"`
@@ -143,8 +142,7 @@ func (c *StripeWebhookConsumer) handleStripeWebhook(ctx context.Context, msg amq
 		attribute.String("stripe.object_id", objID.ID),
 	)
 
-	// Stripe-level dedup: check if this event was already fully processed
-	// (handles Stripe webhook retries arriving as different AMQP messages)
+	// Stripe-level dedup: check if this event was already fully processed (handles Stripe webhook retries arriving as different AMQP messages)
 	exists, err := c.stripeEventLogRepo.Exists(ctx, event.ID, objID.ID)
 	if err != nil {
 		log.Printf("[stripe_webhook] Failed to check stripe event log: %v", err)
@@ -193,9 +191,7 @@ func (c *StripeWebhookConsumer) handleStripeWebhook(ctx context.Context, msg amq
 		return handlerErr
 	}
 
-	// Mark event as fully processed after successful handler completion.
-	// If this insert fails, the handler will safely re-execute on retry
-	// because the gRPC mutations are idempotent.
+	// Mark event as fully processed after successful handler completion. If this insert fails, the handler will safely re-execute on retry because the gRPC mutations are idempotent.
 	if insertErr := c.stripeEventLogRepo.Insert(ctx, event.ID, event.Type, objID.ID); insertErr != nil {
 		log.Printf("[stripe_webhook] Failed to insert stripe event log: %v", insertErr)
 		span.RecordError(insertErr)

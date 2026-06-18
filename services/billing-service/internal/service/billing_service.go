@@ -29,8 +29,7 @@ type BillingSvcConfig struct {
 	// CoreClient (required) is the core-service client used to resolve accounts.
 	CoreClient domain.CoreClient
 
-	// FrontendURL (required) is the dashboard base URL used in Stripe redirect
-	// and portal links.
+	// FrontendURL (required) is the dashboard base URL used in Stripe redirect and portal links.
 	FrontendURL string
 
 	// NotificationClient (required) sends billing-related notifications.
@@ -242,9 +241,7 @@ func (s *billingSvcImpl) GetAccountUsage(ctx context.Context, accountID string) 
 	return usage, nil
 }
 
-// estimateTokenCostCents returns an approximate cost in cents for dashboard display only.
-// Actual billing is handled by the Stripe AI Gateway; these rates are rough estimates
-// and may not match the exact rate card markup applied to the customer's plan.
+// estimateTokenCostCents returns an approximate cost in cents for dashboard display only. Actual billing is handled by the Stripe AI Gateway; these rates are rough estimates and may not match the exact rate card markup applied to the customer's plan.
 func estimateTokenCostCents(inputTokens, outputTokens int64) int64 {
 	const inputCentsPerMillion = 300
 	const outputCentsPerMillion = 1500
@@ -353,9 +350,7 @@ func (s *billingSvcImpl) PreviewPlanChange(ctx context.Context, accountID string
 	// Create intent, reserve, extract preview, void
 	intentID, err := s.stripeClient.CreateBillingIntent(ctx, *subInfo.BillingCadenceID, []domain.BillingIntentAction{action}, "")
 
-	// If a stale preview intent blocks us, void it (best-effort) and retry once.
-	// The void may fail if the intent is already committed/voided by another process,
-	// but the retry may still succeed if the conflict has cleared.
+	// If a stale preview intent blocks us, void it (best-effort) and retry once. The void may fail if the intent is already committed/voided by another process, but the retry may still succeed if the conflict has cleared.
 	var conflict *domain.ErrBillingIntentConflict
 	if errors.As(err, &conflict) {
 		slog.WarnContext(ctx, "voiding conflicting preview billing intent",
@@ -406,8 +401,7 @@ func (s *billingSvcImpl) PreviewPlanChange(ctx context.Context, accountID string
 	}, nil
 }
 
-// estimateProrationLocally calculates a proration preview without Stripe billing
-// intents. Used as a fallback when the subscription is locked by another intent.
+// estimateProrationLocally calculates a proration preview without Stripe billing intents. Used as a fallback when the subscription is locked by another intent.
 func (s *billingSvcImpl) estimateProrationLocally(
 	ctx context.Context,
 	repo domain.AccountUsageRepo,

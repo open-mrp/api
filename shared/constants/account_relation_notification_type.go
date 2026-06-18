@@ -1,7 +1,6 @@
 package constants
 
-// AccountRelationNotificationType defines the types of notifications that can
-// be configured on an account relation.
+// AccountRelationNotificationType defines the types of notifications that can be configured on an account relation.
 type AccountRelationNotificationType string
 
 const (

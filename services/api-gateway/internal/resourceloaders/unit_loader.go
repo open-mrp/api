@@ -18,8 +18,7 @@ import (
 var unitLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.unit")
 
 // LoadUnits fetches units by ID via BatchGetUnitsByIDs.
-// Stashes owner_account_id in LoadMeta so the SubField closures can build the
-// Owner shell and (on owner.account) write the loaded Account.
+// Stashes owner_account_id in LoadMeta so the SubField closures can build the Owner shell and (on owner.account) write the loaded Account.
 func LoadUnits(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil

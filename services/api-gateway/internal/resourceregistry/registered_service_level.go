@@ -14,14 +14,12 @@ func init() {
 		ObjectType: constants.ObjectTypeServiceLevel,
 		Load:       resourceloaders.LoadServiceLevels,
 		Subs: []resourcekit.SubField{
-			// owner: no fetch — projects the Owner shell from the SL's
-			// account_id stashed in LoadMeta. type=system or type=account.
+			// owner: no fetch — projects the Owner shell from the SL's account_id stashed in LoadMeta. type=system or type=account.
 			{
 				Key:      "owner",
 				Populate: populateOwnerOnServiceLevel,
 			},
-			// owner.account: real fetch via the Account loader; writes the
-			// full Account into the Owner shell built by the "owner" sub.
+			// owner.account: real fetch via the Account loader; writes the full Account into the Owner shell built by the "owner" sub.
 			{
 				Key:         "owner.account",
 				Target:      constants.ObjectTypeAccount,

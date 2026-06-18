@@ -56,10 +56,7 @@ type StripeCredentials struct {
 	WebhookSecret  string `json:"webhook_secret"`
 }
 
-// UnmarshalJSON accepts both the canonical snake_case keys and the legacy
-// camelCase keys (privateKey/publishableKey/webhookSecret) so credentials stored
-// by the legacy dashboard and the v2 Go service can be read interchangeably while
-// both write paths coexist.
+// UnmarshalJSON accepts both the canonical snake_case keys and the legacy camelCase keys (privateKey/publishableKey/webhookSecret) so credentials stored by the legacy dashboard and the v2 Go service can be read interchangeably while both write paths coexist.
 func (c *StripeCredentials) UnmarshalJSON(data []byte) error {
 	var raw struct {
 		PrivateKey          string `json:"private_key"` // #nosec G117 -- transient JSON decode field, not a hardcoded secret
@@ -83,9 +80,7 @@ type ShippoCredentials struct {
 	APIKey string `json:"api_key"` // #nosec G117 -- field carries encrypted credentials, not a hardcoded secret
 }
 
-// UnmarshalJSON accepts both the canonical snake_case key and the legacy
-// camelCase key (apiKey) so legacy and v2 stored credentials can be read
-// interchangeably.
+// UnmarshalJSON accepts both the canonical snake_case key and the legacy camelCase key (apiKey) so legacy and v2 stored credentials can be read interchangeably.
 func (c *ShippoCredentials) UnmarshalJSON(data []byte) error {
 	var raw struct {
 		APIKey       string `json:"api_key"` // #nosec G117 -- transient JSON decode field, not a hardcoded secret

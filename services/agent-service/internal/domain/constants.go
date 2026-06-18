@@ -31,8 +31,7 @@ const (
 	AgentAccountStatusInactive = "inactive"
 )
 
-// AllowedModels is the strict allowlist of LLM models agents may use.
-// These identifiers match the Stripe AI Gateway naming convention (no date suffixes).
+// AllowedModels is the strict allowlist of LLM models agents may use. These identifiers match the Stripe AI Gateway naming convention (no date suffixes).
 var AllowedModels = map[string]bool{
 	// Anthropic
 	"claude-sonnet-4":  true,

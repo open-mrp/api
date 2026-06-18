@@ -294,6 +294,7 @@ func init() {
 			{Key: "shipping_term", ObjectType: constants.ObjectTypeShippingTerm},
 			{Key: "order_discount", ObjectType: constants.ObjectTypeOrderDiscount},
 			{Key: "totals", ObjectType: constants.ObjectTypeSalesOrderTotals},
+			{Key: "contacts", ObjectType: constants.ObjectTypeOrderContact},
 			{
 				Key:        "related",
 				ObjectType: constants.ObjectTypeSalesOrderRelated,

@@ -206,8 +206,7 @@ func (s *salesTargetSvcImpl) CreateSalesTarget(ctx context.Context, params domai
 	}
 }
 
-// UpsertSalesTarget creates or updates a sales target by ID.
-// This is a PUT endpoint — idempotent by design, no idempotency key needed.
+// UpsertSalesTarget creates or updates a sales target by ID. This is a PUT endpoint — idempotent by design, no idempotency key needed.
 func (s *salesTargetSvcImpl) UpsertSalesTarget(ctx context.Context, params domain.UpsertSalesTargetParams) (*domain.SalesTarget, *apierror.APIError) {
 	ctx, span := salesTargetSvcTracer.Start(ctx, "service.sales_target.upsert")
 	defer span.End()
@@ -258,8 +257,7 @@ func (s *salesTargetSvcImpl) UpsertSalesTarget(ctx context.Context, params domai
 			return nil, tracing.Trace(span, apiErr)
 		}
 
-		// Dashboard only updates the quantity measure (value) on existing targets.
-		// Dates and unit are not changed on update.
+		// Dashboard only updates the quantity measure (value) on existing targets. Dates and unit are not changed on update.
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *salesTargetSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewSalesTargetRepo()
 

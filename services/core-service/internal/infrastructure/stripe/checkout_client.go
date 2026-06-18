@@ -72,8 +72,7 @@ func (c *checkoutClientImpl) CreateOneTimeCheckoutSession(ctx context.Context, p
 		sessParams.CancelURL = gostripe.String(*params.CancelURL)
 	}
 
-	// Temporarily swap the global API key to use the per-account key.
-	// This is the approach used by the stripe-go SDK for per-request keys.
+	// Temporarily swap the global API key to use the per-account key. This is the approach used by the stripe-go SDK for per-request keys.
 	savedKey := gostripe.Key
 	gostripe.Key = c.apiKey
 	sess, err := session.New(sessParams)
@@ -117,9 +116,7 @@ func (c *checkoutClientImpl) CreateEmbeddedCheckoutSession(ctx context.Context, 
 		SavedPaymentMethodOptions: &gostripe.CheckoutSessionSavedPaymentMethodOptionsParams{
 			PaymentMethodSave: gostripe.String("enabled"),
 		},
-		// Session-level metadata so checkout.session.completed webhooks carry the
-		// order reference directly (the session object does not echo
-		// payment_intent_data.metadata).
+		// Session-level metadata so checkout.session.completed webhooks carry the order reference directly (the session object does not echo payment_intent_data.metadata).
 		Metadata: map[string]string{
 			"orderID":    params.OrderID,
 			"customerID": params.CustomerID,

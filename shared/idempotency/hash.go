@@ -8,27 +8,18 @@ import (
 	"sort"
 )
 
-// separator is the ASCII Unit Separator (0x1F), used to delimit fields in the
-// hash input string. Using a non-printable character prevents accidental collisions
-// when field values contain common delimiters like commas or colons.
+// separator is the ASCII Unit Separator (0x1F), used to delimit fields in the hash input string. Using a non-printable character prevents accidental collisions when field values contain common delimiters like commas or colons.
 const separator = "\x1f"
 
-// ComputeHTTPScopeHash produces a deterministic SHA-256 hex digest that uniquely
-// identifies the "scope" of an idempotent HTTP request. The scope binds the
-// idempotency key to a specific actor, target account, HTTP method, and route so
-// that the same key used by a different actor or against a different endpoint is
-// treated as a distinct request.
+// ComputeHTTPScopeHash produces a deterministic SHA-256 hex digest that uniquely identifies the "scope" of an idempotent HTTP request. The scope binds the idempotency key to a specific actor, target account, HTTP method, and route so that the same key used by a different actor or against a different endpoint is treated as a distinct request.
 //
 // Fields are concatenated with a unit-separator delimiter and hashed:
 //
 //	SHA256(actorID + \x1f + targetAccountID + \x1f + method + \x1f + normalizedRoute + \x1f + idempotencyKey)
 //
-// Nil pointer fields (actorID, targetAccountID) are coerced to empty strings,
-// meaning nil and "" produce the same hash. This is intentional — unauthenticated
-// requests have no actor ID, and some endpoints have no target account.
+// Nil pointer fields (actorID, targetAccountID) are coerced to empty strings, meaning nil and "" produce the same hash. This is intentional — unauthenticated requests have no actor ID, and some endpoints have no target account.
 //
-// The returned hash is stored in the idempotency_keys table as scope_hash and
-// compared on subsequent requests to detect key reuse across different scopes.
+// The returned hash is stored in the idempotency_keys table as scope_hash and compared on subsequent requests to detect key reuse across different scopes.
 func ComputeHTTPScopeHash(actorID, targetAccountID *string, method, normalizedRoute, idempotencyKey string) string {
 	emptyString := "" // allows us to affect the hash input without overwriting the original pointer for actorID and targetAccountID
 	if actorID == nil {
@@ -42,18 +33,13 @@ func ComputeHTTPScopeHash(actorID, targetAccountID *string, method, normalizedRo
 	return hex.EncodeToString(hash[:])
 }
 
-// ComputeServiceScopeHash produces a deterministic SHA-256 hex digest that uniquely
-// identifies the "scope" of an idempotent gRPC service call. This is the service-layer
-// counterpart of ComputeHTTPScopeHash, used by idempotency mediators in backend
-// services (e.g. auth-service) rather than the HTTP gateway.
+// ComputeServiceScopeHash produces a deterministic SHA-256 hex digest that uniquely identifies the "scope" of an idempotent gRPC service call. This is the service-layer counterpart of ComputeHTTPScopeHash, used by idempotency mediators in backend services (e.g. auth-service) rather than the HTTP gateway.
 //
 // Fields are concatenated with a unit-separator delimiter and hashed:
 //
 //	SHA256(actorID + \x1f + targetAccountID + \x1f + service + \x1f + handler + \x1f + idempotencyKey)
 //
-// Nil pointer fields (actorID, targetAccountID) are coerced to empty strings,
-// meaning nil and "" produce the same hash. This is intentional — unauthenticated
-// requests have no actor ID, and some endpoints have no target account.
+// Nil pointer fields (actorID, targetAccountID) are coerced to empty strings, meaning nil and "" produce the same hash. This is intentional — unauthenticated requests have no actor ID, and some endpoints have no target account.
 func ComputeServiceScopeHash(actorID, targetAccountID *string, service, handler, idempotencyKey string) string {
 	emptyString := "" // allows us to affect the hash input without overwriting the original pointer for actorID and targetAccountID
 	if actorID == nil {
@@ -67,18 +53,11 @@ func ComputeServiceScopeHash(actorID, targetAccountID *string, service, handler,
 	return hex.EncodeToString(hash[:])
 }
 
-// ComputeRequestBodyHash produces a deterministic SHA-256 hex digest of the request
-// payload. It is stored alongside the scope hash and compared on retries to detect
-// when a client reuses the same idempotency key with a different request body (which
-// is an error — the key should be unique per intended mutation).
+// ComputeRequestBodyHash produces a deterministic SHA-256 hex digest of the request payload. It is stored alongside the scope hash and compared on retries to detect when a client reuses the same idempotency key with a different request body (which is an error — the key should be unique per intended mutation).
 //
-// The body is first canonicalized via CanonicalizeJSON so that semantically identical
-// payloads with different key ordering or whitespace produce the same hash. If the
-// body is not valid JSON (e.g. form-encoded), the raw bytes are used as-is.
+// The body is first canonicalized via CanonicalizeJSON so that semantically identical payloads with different key ordering or whitespace produce the same hash. If the body is not valid JSON (e.g. form-encoded), the raw bytes are used as-is.
 //
-// URL query parameters are appended to the canonical body in sorted key order,
-// separated by the unit-separator character. This ensures that requests like
-// POST /api?page=1&limit=10 and POST /api?limit=10&page=1 hash identically.
+// URL query parameters are appended to the canonical body in sorted key order, separated by the unit-separator character. This ensures that requests like POST /api?page=1&limit=10 and POST /api?limit=10&page=1 hash identically.
 func ComputeRequestBodyHash(body []byte, params map[string]string) string {
 	canonicalized, err := CanonicalizeJSON(body)
 	if err != nil {
@@ -107,10 +86,7 @@ func ComputeRequestBodyHash(body []byte, params map[string]string) string {
 	return hex.EncodeToString(hash[:])
 }
 
-// CanonicalizeJSON re-encodes a JSON value into a deterministic byte representation.
-// It round-trips the data through json.Unmarshal/json.Marshal, which normalizes
-// whitespace and (via Go's map iteration + encoding/json's sorted-key output)
-// produces consistent key ordering for objects at all nesting levels.
+// CanonicalizeJSON re-encodes a JSON value into a deterministic byte representation. It round-trips the data through json.Unmarshal/json.Marshal, which normalizes whitespace and (via Go's map iteration + encoding/json's sorted-key output) produces consistent key ordering for objects at all nesting levels.
 //
 // Array element order is preserved — only object key order is normalized.
 //
@@ -130,8 +106,7 @@ func CanonicalizeJSON(data []byte) ([]byte, error) {
 	return json.Marshal(canonical)
 }
 
-// canonicalizeValue recursively walks a parsed JSON value, rebuilding maps and
-// slices so that encoding/json will serialize them with sorted keys.
+// canonicalizeValue recursively walks a parsed JSON value, rebuilding maps and slices so that encoding/json will serialize them with sorted keys.
 func canonicalizeValue(v any) any {
 	switch val := v.(type) {
 	case map[string]any:
@@ -143,8 +118,7 @@ func canonicalizeValue(v any) any {
 	}
 }
 
-// canonicalizeMap copies a JSON object into a fresh map, recursively canonicalizing
-// nested values. The new map ensures encoding/json produces sorted-key output.
+// canonicalizeMap copies a JSON object into a fresh map, recursively canonicalizing nested values. The new map ensures encoding/json produces sorted-key output.
 func canonicalizeMap(m map[string]any) map[string]any {
 	result := make(map[string]any, len(m))
 	for k, v := range m {
@@ -153,8 +127,7 @@ func canonicalizeMap(m map[string]any) map[string]any {
 	return result
 }
 
-// canonicalizeSlice copies a JSON array, recursively canonicalizing each element.
-// Element order is preserved since JSON arrays are ordered.
+// canonicalizeSlice copies a JSON array, recursively canonicalizing each element. Element order is preserved since JSON arrays are ordered.
 func canonicalizeSlice(s []any) []any {
 	result := make([]any, len(s))
 	for i, v := range s {

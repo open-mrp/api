@@ -87,8 +87,7 @@ func (s *receivableSvcImpl) withTx(ctx context.Context, fn func(context.Context,
 	})
 }
 
-// ListReceivables returns a paginated list of receivable entries for the caller's account.
-// Internal actors only. Requires invoices:read permission.
+// ListReceivables returns a paginated list of receivable entries for the caller's account. Internal actors only. Requires invoices:read permission.
 func (s *receivableSvcImpl) ListReceivables(ctx context.Context, params domain.ListReceivablesParams) (*domain.ListReceivablesResult, *apierror.APIError) {
 	ctx, span := receivableSvcTracer.Start(ctx, "service.receivable.list")
 	defer span.End()
@@ -110,8 +109,7 @@ func (s *receivableSvcImpl) ListReceivables(ctx context.Context, params domain.L
 	return s.repos.NewReceivableRepo().List(ctx, params)
 }
 
-// ListReceivablesByCustomer returns a paginated list of receivable entries for a specific customer.
-// Internal actors only. Requires customers:read permission.
+// ListReceivablesByCustomer returns a paginated list of receivable entries for a specific customer. Internal actors only. Requires customers:read permission.
 func (s *receivableSvcImpl) ListReceivablesByCustomer(ctx context.Context, params domain.ListReceivablesByCustomerParams) (*domain.ListReceivablesByCustomerResult, *apierror.APIError) {
 	ctx, span := receivableSvcTracer.Start(ctx, "service.receivable.list_by_customer")
 	defer span.End()
@@ -133,8 +131,7 @@ func (s *receivableSvcImpl) ListReceivablesByCustomer(ctx context.Context, param
 	return s.repos.NewReceivableRepo().ListByCustomer(ctx, params)
 }
 
-// ExportReceivablesByCustomer returns all receivable entries for a specific customer without pagination.
-// Internal actors only. Requires customers:read permission.
+// ExportReceivablesByCustomer returns all receivable entries for a specific customer without pagination. Internal actors only. Requires customers:read permission.
 func (s *receivableSvcImpl) ExportReceivablesByCustomer(ctx context.Context, params domain.ListReceivablesByCustomerParams) ([]domain.ReceivableEntry, *apierror.APIError) {
 	ctx, span := receivableSvcTracer.Start(ctx, "service.receivable.export_by_customer")
 	defer span.End()
@@ -156,8 +153,7 @@ func (s *receivableSvcImpl) ExportReceivablesByCustomer(ctx context.Context, par
 	return s.repos.NewReceivableRepo().ListAllByCustomer(ctx, accountID, params.CustomerAccountID, params.CutoffDate)
 }
 
-// EmailReceivablesForCustomer sends a receivables statement to the specified email addresses.
-// Internal actors only. Requires customers:read permission. Uses idempotency keys.
+// EmailReceivablesForCustomer sends a receivables statement to the specified email addresses. Internal actors only. Requires customers:read permission. Uses idempotency keys. The email publish and the idempotency cache update commit together in one transaction so a retry replays the cached result instead of re-sending.
 func (s *receivableSvcImpl) EmailReceivablesForCustomer(ctx context.Context, params domain.EmailReceivablesParams) *apierror.APIError {
 	ctx, span := receivableSvcTracer.Start(ctx, "service.receivable.email_for_customer")
 	defer span.End()
@@ -237,8 +233,7 @@ func (s *receivableSvcImpl) EmailReceivablesForCustomer(ctx context.Context, par
 			AttachmentContentType: &attachmentContentType,
 		}
 
-		// Publish the email inside a transaction so the outbox write and idempotency
-		// cache update are atomic.
+		// Publish the email inside a transaction so the outbox write and idempotency cache update are atomic.
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *receivableSvcImpl) *apierror.APIError {
 			txCtx = event.WithRepos(txCtx, txSvc.repos)
 

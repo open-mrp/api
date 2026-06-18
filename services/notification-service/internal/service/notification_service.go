@@ -197,9 +197,7 @@ func (s *notificationSvcImpl) isSandboxRequest(ctx context.Context) bool {
 	return ok && identity.AccountMode == constants.AccountModeSandbox
 }
 
-// logSuppressedEmail creates an email log entry for a sandbox-suppressed email
-// without actually sending it. The log records HasSent=false so it is clear
-// the email was never delivered.
+// logSuppressedEmail creates an email log entry for a sandbox-suppressed email without actually sending it. The log records HasSent=false so it is clear the email was never delivered.
 func (s *notificationSvcImpl) logSuppressedEmail(ctx context.Context, data domain.EmailSendData) (*string, *apierror.APIError) {
 	ctx, span := notificationSvcTracer.Start(ctx, "service.notification.sandbox_email_suppressed")
 	defer span.End()

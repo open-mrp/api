@@ -15,8 +15,7 @@ import (
 
 var sysPropertyLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.sys_property")
 
-// LoadSysProperties fetches sys properties by ID via BatchGetSysPropertiesByIDs.
-// Inline SysPropertyType is built from denormalized proto fields. Account-scoped.
+// LoadSysProperties fetches sys properties by ID via BatchGetSysPropertiesByIDs. Inline SysPropertyType is built from denormalized proto fields. Account-scoped.
 func LoadSysProperties(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil

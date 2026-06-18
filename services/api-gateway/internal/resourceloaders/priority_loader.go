@@ -15,9 +15,7 @@ import (
 
 var priorityLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.priority")
 
-// LoadPriorities fetches priorities by ID via BatchGetPrioritiesByIDs. Priority
-// is a system-only resource — Owner is always SystemOwner — so no FK metadata
-// needs to be stashed in LoadMeta.
+// LoadPriorities fetches priorities by ID via BatchGetPrioritiesByIDs. Priority is a system-only resource — Owner is always SystemOwner — so no FK metadata needs to be stashed in LoadMeta.
 func LoadPriorities(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil

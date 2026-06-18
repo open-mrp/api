@@ -16,71 +16,47 @@ import (
 
 // EnqueuerConfig holds the configuration for the outbox enqueuer.
 type EnqueuerConfig struct {
-	// ServiceName (required) identifies which service owns this enqueuer instance.
-	// Used in log messages and to scope outbox queries to the owning service's messages.
+	// ServiceName (required) identifies which service owns this enqueuer instance. Used in log messages and to scope outbox queries to the owning service's messages.
 	ServiceName string
 
-	// PlatformMode (optional) is the platform mode. When set to "test", default
-	// intervals are minimized so e2e runs observe async side-effects quickly (see
-	// WithDefaults).
+	// PlatformMode (optional) is the platform mode. When set to "test", default intervals are minimized so e2e runs observe async side-effects quickly (see WithDefaults).
 	PlatformMode constants.PlatformMode
 
-	// LockOwner (optional; default: "{hostname}-{pid}") is a unique identifier for this
-	// process instance, used to claim outbox messages via optimistic locking.
+	// LockOwner (optional; default: "{hostname}-{pid}") is a unique identifier for this process instance, used to claim outbox messages via optimistic locking.
 	LockOwner string
 
-	// PollInterval (optional; default: 1s) controls how frequently the enqueuer polls
-	// the outbox table for pending messages while there is work to do.
+	// PollInterval (optional; default: 1s) controls how frequently the enqueuer polls the outbox table for pending messages while there is work to do.
 	PollInterval time.Duration
 
-	// MaxPollInterval (optional; default: 5s in production, == PollInterval in test) is the
-	// ceiling for idle backoff. When consecutive polls find nothing, the interval doubles
-	// from PollInterval up to this value so an empty outbox is not queried at full rate.
-	// Any poll that finds work resets the interval to PollInterval, so pickup latency and
-	// throughput under load are unchanged; only the steady-state idle poll rate drops. The
-	// tradeoff is that the first message after a sustained idle period waits up to
-	// MaxPollInterval to be picked up. Must be >= PollInterval (clamped in WithDefaults).
+	// MaxPollInterval (optional; default: 5s in production, == PollInterval in test) is the ceiling for idle backoff. When consecutive polls find nothing, the interval doubles from PollInterval up to this value so an empty outbox is not queried at full rate. Any poll that finds work resets the interval to PollInterval, so pickup latency and throughput under load are unchanged; only the steady-state idle poll rate drops. The tradeoff is that the first message after a sustained idle period waits up to MaxPollInterval to be picked up. Must be >= PollInterval (clamped in WithDefaults).
 	MaxPollInterval time.Duration
 
-	// BatchSize (optional; default: 100) is the maximum number of outbox messages to lock
-	// and publish in a single poll cycle.
+	// BatchSize (optional; default: 100) is the maximum number of outbox messages to lock and publish in a single poll cycle.
 	BatchSize int
 
-	// LockDurationSeconds (optional; default: 60) is how long (in seconds) a message
-	// remains locked to this enqueuer before the lock expires and the message becomes
-	// eligible for another instance to pick up.
+	// LockDurationSeconds (optional; default: 60) is how long (in seconds) a message remains locked to this enqueuer before the lock expires and the message becomes eligible for another instance to pick up.
 	LockDurationSeconds int
 
-	// CleanupInterval (optional; default: 30s) controls how frequently the enqueuer runs
-	// its expired-lock cleanup pass, releasing locks held by crashed processes.
+	// CleanupInterval (optional; default: 30s) controls how frequently the enqueuer runs its expired-lock cleanup pass, releasing locks held by crashed processes.
 	CleanupInterval time.Duration
 
-	// RetryBackoff (optional; default: 1s base, 2x multiplier, 1h max, 25% jitter; in
-	// test mode 10ms base, 2x multiplier, 2s max, 10% jitter) configures the exponential
-	// backoff with jitter used to compute the delay before retrying a failed outbox message.
+	// RetryBackoff (optional; default: 1s base, 2x multiplier, 1h max, 25% jitter; in test mode 10ms base, 2x multiplier, 2s max, 10% jitter) configures the exponential backoff with jitter used to compute the delay before retrying a failed outbox message.
 	RetryBackoff *retry.Config
 
-	// DBRetryBackoff (optional; default: OutboxDBRetryConfig(PlatformMode) — 3 retries,
-	// 25ms initial, 500ms max, 20% jitter in production) configures short retries for
-	// transient database lock conflicts while claiming or marking outbox rows.
+	// DBRetryBackoff (optional; default: OutboxDBRetryConfig(PlatformMode) — 3 retries, 25ms initial, 500ms max, 20% jitter in production) configures short retries for transient database lock conflicts while claiming or marking outbox rows.
 	DBRetryBackoff *retry.Config
 
-	// RetentionHours (optional; default: 168 i.e. 7 days) is how long published outbox
-	// messages are kept before the purge loop deletes them.
+	// RetentionHours (optional; default: 168 i.e. 7 days) is how long published outbox messages are kept before the purge loop deletes them.
 	RetentionHours int
 
-	// PurgeInterval (optional; default: 1h) controls how frequently the enqueuer runs
-	// its purge loop to delete old published messages.
+	// PurgeInterval (optional; default: 1h) controls how frequently the enqueuer runs its purge loop to delete old published messages.
 	PurgeInterval time.Duration
 
-	// PurgeLeaseTTL (optional; default: 5m) bounds how long the purge loop holds its
-	// distributed lease. The lease ensures only one pod per service performs the bulk
-	// DELETE of published messages each tick.
+	// PurgeLeaseTTL (optional; default: 5m) bounds how long the purge loop holds its distributed lease. The lease ensures only one pod per service performs the bulk DELETE of published messages each tick.
 	PurgeLeaseTTL time.Duration
 }
 
-// WithDefaults fills zero-value fields with production defaults and returns the config.
-// It computes a unique lock owner from the hostname and process ID when not set.
+// WithDefaults fills zero-value fields with production defaults and returns the config. It computes a unique lock owner from the hostname and process ID when not set.
 func (c *EnqueuerConfig) WithDefaults() *EnqueuerConfig {
 	if c == nil {
 		c = &EnqueuerConfig{}
@@ -157,9 +133,7 @@ func (c *EnqueuerConfig) WithDefaults() *EnqueuerConfig {
 	return c
 }
 
-// validate checks that the config has all required fields and that interval,
-// batch, and retention settings are positive. Must be called after WithDefaults,
-// which fills zero-value fields with production defaults.
+// validate checks that the config has all required fields and that interval, batch, and retention settings are positive. Must be called after WithDefaults, which fills zero-value fields with production defaults.
 func (c *EnqueuerConfig) validate() error {
 	if c.ServiceName == "" {
 		return fmt.Errorf("enqueuer: service name is required")
@@ -199,9 +173,7 @@ func (c *EnqueuerConfig) validate() error {
 //   - cleanupLoop: on each tick, releases expired locks left by crashed instances
 //     so those messages become eligible for re-processing.
 //
-// Start and Stop control the goroutine lifecycle. Tracing is disabled for outbox
-// operations (via appctx.WithNoTrace) to avoid cluttering the trace backend with
-// high-volume background traffic.
+// Start and Stop control the goroutine lifecycle. Tracing is disabled for outbox operations (via appctx.WithNoTrace) to avoid cluttering the trace backend with high-volume background traffic.
 type Enqueuer struct {
 	config         EnqueuerConfig
 	repo           OutboxEnqueuerRepo
@@ -214,13 +186,9 @@ type Enqueuer struct {
 	wg     sync.WaitGroup
 }
 
-// NewEnqueuer creates a new outbox enqueuer. Pass a config with at least
-// ServiceName set; zero-value fields are filled with production defaults.
+// NewEnqueuer creates a new outbox enqueuer. Pass a config with at least ServiceName set; zero-value fields are filled with production defaults.
 //
-// The poll and cleanup loops continue to run on every pod — they coordinate
-// through per-message optimistic locking, and running them in parallel increases
-// publishing throughput and cross-pod recovery of stuck locks. The purge loop is
-// wrapped in a distributed lease so only one pod per service deletes old rows.
+// The poll and cleanup loops continue to run on every pod — they coordinate through per-message optimistic locking, and running them in parallel increases publishing throughput and cross-pod recovery of stuck locks. The purge loop is wrapped in a distributed lease so only one pod per service deletes old rows.
 func NewEnqueuer(config *EnqueuerConfig, repo OutboxEnqueuerRepo, broker MessageBroker, l *lease.Lease) (*Enqueuer, error) {
 	config = config.WithDefaults()
 	if err := config.validate(); err != nil {
@@ -238,12 +206,9 @@ func NewEnqueuer(config *EnqueuerConfig, repo OutboxEnqueuerRepo, broker Message
 	}, nil
 }
 
-// Start launches the poll and cleanup goroutines. The provided context is used as
-// the parent for all background operations; cancelling it (or calling Stop) shuts
-// down both loops. Tracing is disabled on the derived context so outbox polling
-// does not generate trace spans.
+// Start launches the poll and cleanup goroutines. The provided context is used as the parent for all background operations; cancelling it (or calling Stop) shuts down both loops. Tracing is disabled on the derived context so outbox polling does not generate trace spans.
 func (e *Enqueuer) Start(ctx context.Context) error {
-	// Disable tracing for background outbox operations to avoid cluttering traces
+	// Disable tracing for background outbox operations to avoid cluttering traces.
 	ctx = appctx.WithNoTrace(ctx)
 	e.ctx, e.cancel = context.WithCancel(ctx)
 
@@ -263,8 +228,7 @@ func (e *Enqueuer) Start(ctx context.Context) error {
 	return nil
 }
 
-// Stop cancels the background context and blocks until both the poll and cleanup
-// goroutines have exited. It is safe to call from a deferred shutdown path.
+// Stop cancels the background context and blocks until both the poll and cleanup goroutines have exited. It is safe to call from a deferred shutdown path.
 func (e *Enqueuer) Stop() {
 	if e.cancel != nil {
 		e.cancel()
@@ -273,12 +237,7 @@ func (e *Enqueuer) Stop() {
 	slog.Info("Outbox enqueuer stopped", "service", e.config.ServiceName)
 }
 
-// pollLoop polls at PollInterval while there is work, and backs off exponentially up
-// to MaxPollInterval while the outbox is idle (see EnqueuerConfig.MaxPollInterval). A
-// poll that finds work resets the interval to PollInterval immediately, so behavior
-// under load is identical to a fixed PollInterval ticker. In test platform mode it also
-// processes once immediately so the first outbox row is not delayed by a full poll
-// interval. Exits when the enqueuer's context is cancelled.
+// pollLoop polls at PollInterval while there is work, and backs off exponentially up to MaxPollInterval while the outbox is idle (see EnqueuerConfig.MaxPollInterval). A poll that finds work resets the interval to PollInterval immediately, so behavior under load is identical to a fixed PollInterval ticker. In test platform mode it also processes once immediately so the first outbox row is not delayed by a full poll interval. Exits when the enqueuer's context is cancelled.
 func (e *Enqueuer) pollLoop() {
 	defer e.wg.Done()
 
@@ -305,15 +264,8 @@ func (e *Enqueuer) pollLoop() {
 	}
 }
 
-// drainPending repeatedly processes batches until the backlog is drained (a
-// batch comes back smaller than BatchSize) or the context is cancelled. Without
-// draining, throughput would be capped at BatchSize messages per PollInterval —
-// far below the rate at which a busy service writes outbox rows — and the
-// pending backlog would grow without bound under sustained load. Messages that
-// fail to publish are rescheduled with backoff (next_run_at in the future), so
-// they do not keep the drain loop spinning.
-// Returns true if any messages were processed during the drain, which pollLoop uses to
-// distinguish a busy poll (reset to PollInterval) from an idle one (back off).
+// drainPending repeatedly processes batches until the backlog is drained (a batch comes back smaller than BatchSize) or the context is cancelled. Without draining, throughput would be capped at BatchSize messages per PollInterval — far below the rate at which a busy service writes outbox rows — and the pending backlog would grow without bound under sustained load. Messages that fail to publish are rescheduled with backoff (next_run_at in the future), so they do not keep the drain loop spinning.
+// Returns true if any messages were processed during the drain, which pollLoop uses to distinguish a busy poll (reset to PollInterval) from an idle one (back off).
 func (e *Enqueuer) drainPending() bool {
 	didWork := false
 	for {
@@ -333,9 +285,7 @@ func (e *Enqueuer) drainPending() bool {
 	}
 }
 
-// cleanupLoop ticks at CleanupInterval and releases expired outbox locks so
-// messages owned by crashed instances become eligible for re-processing. It exits
-// when the enqueuer's context is cancelled.
+// cleanupLoop ticks at CleanupInterval and releases expired outbox locks so messages owned by crashed instances become eligible for re-processing. It exits when the enqueuer's context is cancelled.
 func (e *Enqueuer) cleanupLoop() {
 	defer e.wg.Done()
 
@@ -352,13 +302,7 @@ func (e *Enqueuer) cleanupLoop() {
 	}
 }
 
-// processBatch acquires up to BatchSize pending outbox messages (locked to this
-// instance's LockOwner), publishes each to RabbitMQ via publishMessage, and marks
-// the results in the database: successfully published messages are marked in one
-// set-based MarkPublished call; failed messages have their attempt count
-// incremented and are scheduled for retry with exponential backoff (MarkFailed).
-// Returns the number of messages acquired so drainPending can tell whether the
-// backlog may hold more work (a full batch) or is drained (a short batch).
+// processBatch acquires up to BatchSize pending outbox messages (locked to this instance's LockOwner), publishes each to RabbitMQ via publishMessage, and marks the results in the database: successfully published messages are marked in one set-based MarkPublished call; failed messages have their attempt count incremented and are scheduled for retry with exponential backoff (MarkFailed). Returns the number of messages acquired so drainPending can tell whether the backlog may hold more work (a full batch) or is drained (a short batch).
 func (e *Enqueuer) processBatch() int {
 	var messages []*OutboxMessage
 	err := WithOutboxDBLockRetry(e.ctx, e.config.DBRetryBackoff, "outbox.acquire_and_lock", func() error {
@@ -405,9 +349,7 @@ func (e *Enqueuer) processBatch() int {
 			return e.repo.MarkPublished(e.ctx, publishedIDs)
 		})
 		if err != nil {
-			// The messages were published but stay locked as 'pending'; their
-			// locks expire and another pass republishes them — consumers
-			// deduplicate via the inbox, so at-least-once still holds.
+			// The messages were published but stay locked as 'pending'; their locks expire and another pass republishes them — consumers deduplicate via the inbox, so at-least-once still holds.
 			slog.Error("Failed to mark messages as published", "count", len(publishedIDs), "error", err)
 		} else {
 			slog.Debug("Published outbox messages", "count", len(publishedIDs))
@@ -417,8 +359,7 @@ func (e *Enqueuer) processBatch() int {
 	return len(messages)
 }
 
-// publishMessage publishes an OutboxMessage via the message broker. It stamps
-// the outbox-generated MessageID onto the payload before publishing.
+// publishMessage publishes an OutboxMessage via the message broker. It stamps the outbox-generated MessageID onto the payload before publishing.
 func (e *Enqueuer) publishMessage(msg *OutboxMessage) error {
 	payload := msg.Payload
 	payload.MessageID = msg.MessageID
@@ -426,10 +367,7 @@ func (e *Enqueuer) publishMessage(msg *OutboxMessage) error {
 	return e.broker.PublishMessage(e.ctx, msg.Destination, msg.RoutingKey, payload)
 }
 
-// cleanupExpiredLocks delegates to the repository to release outbox locks that have
-// exceeded LockDurationSeconds. This handles the case where a process crashes after
-// locking messages but before publishing them — the locks expire and the messages
-// become available for another enqueuer instance to pick up.
+// cleanupExpiredLocks delegates to the repository to release outbox locks that have exceeded LockDurationSeconds. This handles the case where a process crashes after locking messages but before publishing them — the locks expire and the messages become available for another enqueuer instance to pick up.
 func (e *Enqueuer) cleanupExpiredLocks() {
 	var count int64
 	err := WithOutboxDBLockRetry(e.ctx, e.config.DBRetryBackoff, "outbox.cleanup_expired_locks", func() error {
@@ -447,9 +385,7 @@ func (e *Enqueuer) cleanupExpiredLocks() {
 	}
 }
 
-// purgeLoop ticks at PurgeInterval and deletes published outbox messages older than
-// RetentionHours. Each tick acquires a distributed lease so only one pod per service
-// runs the DELETE — all other pods skip silently. Exits on context cancellation.
+// purgeLoop ticks at PurgeInterval and deletes published outbox messages older than RetentionHours. Each tick acquires a distributed lease so only one pod per service runs the DELETE — all other pods skip silently. Exits on context cancellation.
 func (e *Enqueuer) purgeLoop() {
 	defer e.wg.Done()
 
@@ -469,10 +405,7 @@ func (e *Enqueuer) purgeLoop() {
 	}
 }
 
-// purgePublished deletes published outbox messages that are older than the configured
-// retention period. This keeps the outbox table from growing unboundedly while still
-// preserving recent records for debugging and audit. Failed messages are intentionally
-// kept indefinitely for investigation.
+// purgePublished deletes published outbox messages that are older than the configured retention period. This keeps the outbox table from growing unboundedly while still preserving recent records for debugging and audit. Failed messages are intentionally kept indefinitely for investigation.
 func (e *Enqueuer) purgePublished(ctx context.Context) {
 	var count int64
 	err := WithOutboxDBLockRetry(ctx, e.config.DBRetryBackoff, "outbox.purge_published", func() error {

@@ -12,8 +12,7 @@ const (
 	PlanCodePro PlanCode = "pro"
 	// PlanCodeEnterprise indicates that the plan is an enterprise plan.
 	PlanCodeEnterprise PlanCode = "enterprise"
-	// PlanCodeEnterpriseTemplate indicates that the plan is an enterprise template plan.
-	// In practice, we only use the template plan for display purposes.
+	// PlanCodeEnterpriseTemplate indicates that the plan is an enterprise template plan. In practice, we only use the template plan for display purposes.
 	PlanCodeEnterpriseTemplate PlanCode = "enterprise_template"
 )
 

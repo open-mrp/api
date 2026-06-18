@@ -22,8 +22,7 @@ func (f Clearable[T]) IsZero() bool {
 	return f.IsUnset()
 }
 
-// MarshalJSON encodes set values as JSON and clear as null.
-// Unset fields must use json omitzero (IsZero reports unset) so they are omitted.
+// MarshalJSON encodes set values as JSON and clear as null. Unset fields must use json omitzero (IsZero reports unset) so they are omitted.
 func (f Clearable[T]) MarshalJSON() ([]byte, error) {
 	switch f.state {
 	case stateClear:

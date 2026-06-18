@@ -7,8 +7,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// StripeClient is the interface for all Stripe API operations needed by the
-// billing service, including v2 pricing plan billing and customer management.
+// StripeClient is the interface for all Stripe API operations needed by the billing service, including v2 pricing plan billing and customer management.
 type StripeClient interface {
 	// V1 APIs (still needed)
 	VerifyWebhookSignature(payload []byte, signature string) (*StripeEvent, error)
@@ -89,8 +88,7 @@ type BillingIntentLineItem struct {
 	Amount      int64
 }
 
-// ErrBillingIntentConflict is returned when CreateBillingIntent fails because
-// a pricing plan subscription is already reserved by another billing intent.
+// ErrBillingIntentConflict is returned when CreateBillingIntent fails because a pricing plan subscription is already reserved by another billing intent.
 type ErrBillingIntentConflict struct {
 	ConflictingIntentID string
 	Err                 error

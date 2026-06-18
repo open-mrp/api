@@ -35,8 +35,7 @@ type AESGCMEnvelope struct {
 	Payload string
 }
 
-// EncryptAESGCM encrypts plaintext using AES-256-GCM and returns a fully
-// encoded envelope string suitable for storage in a database.
+// EncryptAESGCM encrypts plaintext using AES-256-GCM and returns a fully encoded envelope string suitable for storage in a database.
 //
 // Params:
 //   - plaintext: data to encrypt

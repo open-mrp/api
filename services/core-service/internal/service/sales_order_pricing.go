@@ -12,15 +12,9 @@ import (
 	"github.com/augno/api/shared/tracing"
 )
 
-// computeSalesOrderLinePrices prices every line of a sales order at once. The
-// volume-discount stage sums quantities across all lines that share a chosen
-// discount, so the whole line set must be priced together.
+// computeSalesOrderLinePrices prices every line of a sales order at once. The volume-discount stage sums quantities across all lines that share a chosen discount, so the whole line set must be priced together.
 //
-// When the caller is an internal actor and provides an explicit OverrideUnitPrice
-// for a line, that override is used verbatim. Otherwise the unit price is computed
-// from the list price through the unit-conversion discount, base->ordered-unit
-// conversion, volume discount, and account-price override stages (in that order
-// of increasing precedence).
+// When the caller is an internal actor and provides an explicit OverrideUnitPrice for a line, that override is used verbatim. Otherwise the unit price is computed from the list price through the unit-conversion discount, base->ordered-unit conversion, volume discount, and account-price override stages (in that order of increasing precedence).
 func (s *salesOrderSvcImpl) computeSalesOrderLinePrices(
 	ctx context.Context,
 	ownerAccountID, buyerAccountID string,
@@ -73,12 +67,7 @@ func (s *salesOrderSvcImpl) computeSalesOrderLinePrices(
 	return out, nil
 }
 
-// resolveSalesOrderCreateLines resolves a set of create-line inputs against the
-// pricing bundle in one pass: validates that each line's quantity unit belongs to
-// the product's unit group, defaults the SKU/description from the product, derives
-// the item and unit cost, and computes the unit price (honoring an internal actor's
-// override when provided). All lines are resolved together so the volume-discount
-// stage can sum quantities across the order.
+// resolveSalesOrderCreateLines resolves a set of create-line inputs against the pricing bundle in one pass: validates that each line's quantity unit belongs to the product's unit group, defaults the SKU/description from the product, derives the item and unit cost, and computes the unit price (honoring an internal actor's override when provided). All lines are resolved together so the volume-discount stage can sum quantities across the order.
 func (s *salesOrderSvcImpl) resolveSalesOrderCreateLines(
 	ctx context.Context,
 	ownerAccountID, buyerAccountID string,
@@ -123,8 +112,7 @@ func (s *salesOrderSvcImpl) resolveSalesOrderCreateLines(
 			return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Product not found.", "product_id"))
 		}
 
-		// The quantity unit must belong to the product's unit group (the product
-		// line's group when present, else the item category's).
+		// The quantity unit must belong to the product's unit group (the product line's group when present, else the item category's).
 		unitGroupID := product.CategoryUnitGroupID
 		if product.ProductLineUnitGroupID != nil && *product.ProductLineUnitGroupID != "" {
 			unitGroupID = *product.ProductLineUnitGroupID
@@ -182,8 +170,7 @@ func (s *salesOrderSvcImpl) computeUnitPrice(
 ) domain.SalesOrderLinePrice {
 	product := bundle.Products[line.ProductID]
 	if product == nil {
-		// Unknown / unscoped product: nothing to price against. Return a zero
-		// price carrying the ordered unit as denominator (numerator unknown).
+		// Unknown / unscoped product: nothing to price against. Return a zero price carrying the ordered unit as denominator (numerator unknown).
 		return domain.SalesOrderLinePrice{
 			Value:             "0",
 			NumeratorUnitID:   "",
@@ -265,9 +252,7 @@ func (s *salesOrderSvcImpl) computeUnitPrice(
 	}
 }
 
-// selectAccountPrice returns the applicable account-price override, last match
-// wins (the bundle is ordered created_at ASC). A product with no product line
-// never matches an account price.
+// selectAccountPrice returns the applicable account-price override, last match wins (the bundle is ordered created_at ASC). A product with no product line never matches an account price.
 func (s *salesOrderSvcImpl) selectAccountPrice(bundle *domain.PricingBundle, product *domain.PricingProduct) *domain.PricingAccountPrice {
 	if product.ProductLineID == nil || *product.ProductLineID == "" {
 		return nil
@@ -282,9 +267,7 @@ func (s *salesOrderSvcImpl) selectAccountPrice(bundle *domain.PricingBundle, pro
 		if ap.ProductLineID != *product.ProductLineID {
 			continue
 		}
-		// Every price attribute id must be in the product's attribute ids.
-		// (Recipient buyer-or-parent already filtered at load time; categories
-		// are ignored.)
+		// Every price attribute id must be in the product's attribute ids. (Recipient buyer-or-parent already filtered at load time; categories are ignored.)
 		ok := true
 		for _, attr := range ap.AttributeIDs {
 			if _, found := productAttrs[attr]; !found {
@@ -300,9 +283,7 @@ func (s *salesOrderSvcImpl) selectAccountPrice(bundle *domain.PricingBundle, pro
 	return match
 }
 
-// selectVolumeDiscount chooses the applicable discount for a line: customer-group
-// matching discounts first, then the highest total multiplier among the met
-// tiers. Returns nil if none apply.
+// selectVolumeDiscount chooses the applicable discount for a line: customer-group matching discounts first, then the highest total multiplier among the met tiers. Returns nil if none apply.
 func (s *salesOrderSvcImpl) selectVolumeDiscount(
 	bundle *domain.PricingBundle,
 	product *domain.PricingProduct,
@@ -333,8 +314,7 @@ func (s *salesOrderSvcImpl) selectVolumeDiscount(
 			}
 			continue
 		}
-		// Within the same group-match class, the highest total multiplier wins
-		// (multiplier m = product of (1 - pct) over met tiers).
+		// Within the same group-match class, the highest total multiplier wins (multiplier m = product of (1 - pct) over met tiers).
 		if multiplier.GreaterThan(bestMultiplier) {
 			best, bestMultiplier = d, multiplier
 		}
@@ -342,10 +322,7 @@ func (s *salesOrderSvcImpl) selectVolumeDiscount(
 	return best
 }
 
-// discountMatchesProduct reports whether a product falls within a volume discount's
-// scope. Each dimension (product line, item category, attributes) filters only when
-// non-empty; an empty dimension is a wildcard. Customer-group scope is applied at load.
-// Mirrors the legacy VolumeDiscountUtils.findApplicableDiscounts (AND across dimensions).
+// discountMatchesProduct reports whether a product falls within a volume discount's scope. Each dimension (product line, item category, attributes) filters only when non-empty; an empty dimension is a wildcard. Customer-group scope is applied at load. Mirrors the legacy VolumeDiscountUtils.findApplicableDiscounts (AND across dimensions).
 func discountMatchesProduct(d *domain.PricingVolumeDiscount, product *domain.PricingProduct) bool {
 	if len(d.ProductLineIDs) > 0 {
 		if product.ProductLineID == nil || !slices.Contains(d.ProductLineIDs, *product.ProductLineID) {
@@ -364,8 +341,7 @@ func discountMatchesProduct(d *domain.PricingVolumeDiscount, product *domain.Pri
 	return true
 }
 
-// discountMultiplier returns the multiplicative product of (1 - pct) over all
-// met tiers, and whether any tier was met.
+// discountMultiplier returns the multiplicative product of (1 - pct) over all met tiers, and whether any tier was met.
 func discountMultiplier(d *domain.PricingVolumeDiscount, summedQty decimal.Decimal) (decimal.Decimal, bool) {
 	multiplier := decimal.NewFromInt(1)
 	any := false
@@ -380,9 +356,7 @@ func discountMultiplier(d *domain.PricingVolumeDiscount, summedQty decimal.Decim
 	return multiplier, any
 }
 
-// sumQuantityForDiscount sums the ordered quantity across all lines, each
-// normalized into one of the discount's acceptable units. On conversion failure
-// the line contributes 0.
+// sumQuantityForDiscount sums the ordered quantity across all lines, each normalized into one of the discount's acceptable units. On conversion failure the line contributes 0.
 func (s *salesOrderSvcImpl) sumQuantityForDiscount(
 	bundle *domain.PricingBundle,
 	discount *domain.PricingVolumeDiscount,
@@ -392,8 +366,7 @@ func (s *salesOrderSvcImpl) sumQuantityForDiscount(
 	if len(discount.AcceptableUnitIDs) == 0 {
 		return sum
 	}
-	// Sum only lines whose product is within the discount's scope (so an LTD discount
-	// sums LTD lines across products, not the whole cart).
+	// Sum only lines whose product is within the discount's scope (so an LTD discount sums LTD lines across products, not the whole cart).
 	for _, line := range allLines {
 		product := bundle.Products[line.ProductID]
 		if product == nil || !discountMatchesProduct(discount, product) {
@@ -414,8 +387,7 @@ func (s *salesOrderSvcImpl) sumQuantityForDiscount(
 	return sum
 }
 
-// convertToAnyAcceptable converts value from fromUnit into the first acceptable
-// unit that can be resolved. Returns false if none can be resolved.
+// convertToAnyAcceptable converts value from fromUnit into the first acceptable unit that can be resolved. Returns false if none can be resolved.
 func convertToAnyAcceptable(
 	bundle *domain.PricingBundle,
 	value decimal.Decimal,

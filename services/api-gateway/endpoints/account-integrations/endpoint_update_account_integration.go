@@ -41,7 +41,7 @@ func (e *UpdateAccountIntegrationEndpoint) Materialize() *apiendpoint.APIEndpoin
 	return (&apiendpoint.APIEndpoint[*UpdateAccountIntegrationRequest, *apiresource.AccountIntegration]{
 		Title:             "Update Account Integration",
 		Method:            http.MethodPut,
-		Route:             "/v1/identity/integrations/{id}",
+		Route:             "/v1/settings/integrations/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,

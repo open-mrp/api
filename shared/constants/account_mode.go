@@ -1,19 +1,12 @@
 package constants
 
-// Account Mode is the intended mode of operation for a request. This must be
-// either "production" or "sandbox". The mode of the request is a useful way
-// to ensure that a given request stays within the defined boundaries of it's
-// intended mode.
+// Account Mode is the intended mode of operation for a request. This must be either "production" or "sandbox". The mode of the request is a useful way to ensure that a given request stays within the defined boundaries of its intended mode.
 type AccountMode string
 
 const (
-	// AccountModeProduction indicates that the request is targeting production
-	// resources and integrations. This mode has real-world consequences and
-	// should be used with care.
+	// AccountModeProduction indicates that the request is targeting production resources and integrations. This mode has real-world consequences and should be used with care.
 	AccountModeProduction AccountMode = "prod"
-	// AccountModeSandbox indicates that the request is targeting sandbox
-	// resources and integrations. This mode is useful for testing and development
-	// and can be used more dangerously.
+	// AccountModeSandbox indicates that the request is targeting sandbox resources and integrations. This mode is useful for testing and development and can be used more dangerously.
 	AccountModeSandbox AccountMode = "test"
 )
 

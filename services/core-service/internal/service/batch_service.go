@@ -557,8 +557,7 @@ func (s *batchSvcImpl) getManyBatchConsumption(ctx context.Context, accountID st
 		return nil, apierror.NewResourceNotFoundError("One or more batches not found.")
 	}
 
-	// Calculate next step quantities for each batch individually and sum them,
-	// matching the Dashboard behavior of summing per-batch output quantities.
+	// Calculate next step quantities for each batch individually and sum them, matching the Dashboard behavior of summing per-batch output quantities.
 	totalOutputQuantity := decimal.Zero
 	for _, b := range sourceBatches {
 		result, apiErr := stepRepo.CalculateNextStepQuantities(ctx, accountID, b.Item.ID, b.Quantity, *params.ProductionStepID)

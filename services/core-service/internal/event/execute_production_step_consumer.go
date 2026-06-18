@@ -18,9 +18,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// ExecuteProductionStepConsumer processes execute-production-step commands.
-// It calculates inventory changes from batch mutations (initialize, move, merge, split)
-// and creates inventory receipts/issues accordingly.
+// ExecuteProductionStepConsumer processes execute-production-step commands. It calculates inventory changes from batch mutations (initialize, move, merge, split) and creates inventory receipts/issues accordingly.
 type ExecuteProductionStepConsumer struct {
 	rabbitmq      messaging.MessageBroker
 	inboxConsumer *messaging.InboxConsumer
@@ -102,8 +100,7 @@ func (c *ExecuteProductionStepConsumer) handleMessage(ctx context.Context, msg a
 	return c.executeProductionStep(ctx, accountID, evt)
 }
 
-// executeProductionStep implements the core logic ported from
-// dashboard/apps/api/src/repositories/production-step.repo.ts:1142-1434.
+// executeProductionStep implements the core logic ported from dashboard/apps/api/src/repositories/production-step.repo.ts:1142-1434.
 //
 // Since batch service events always use partUsageType=produced and undo=false,
 // this consumer only implements that path.
@@ -214,8 +211,8 @@ func (c *ExecuteProductionStepConsumer) executeProductionStep(ctx context.Contex
 }
 
 // handleProducedBatchShortfall handles the seconds/waste shortfall logic.
-// When a batch has seconds or waste, the produced quantity is reduced, and we need to
-// reduce the reservation on the associated order by the shortfall amount.
+//
+// When a batch has seconds or waste, the produced quantity is reduced, and we need to reduce the reservation on the associated order by the shortfall amount.
 func (c *ExecuteProductionStepConsumer) handleProducedBatchShortfall(
 	ctx context.Context,
 	accountID string,
@@ -283,8 +280,7 @@ func (c *ExecuteProductionStepConsumer) handleProducedBatchShortfall(
 	return nil
 }
 
-// handleConsumptionWithOrder handles consumption inventory changes when there's an associated order.
-// It tries to allocate from existing reservations first, then falls back to direct inventory update.
+// handleConsumptionWithOrder handles consumption inventory changes when there's an associated order. It tries to allocate from existing reservations first, then falls back to direct inventory update.
 func (c *ExecuteProductionStepConsumer) handleConsumptionWithOrder(
 	ctx context.Context,
 	accountID string,
@@ -417,8 +413,7 @@ func (c *ExecuteProductionStepConsumer) bfsForProductionRunID(ctx context.Contex
 	return "", nil
 }
 
-// bfsForProductionRunAndShortfall performs BFS up the batch lineage to find productionRunID
-// and accumulate seconds/waste quantities.
+// bfsForProductionRunAndShortfall performs BFS up the batch lineage to find productionRunID and accumulate seconds/waste quantities.
 func (c *ExecuteProductionStepConsumer) bfsForProductionRunAndShortfall(
 	ctx context.Context, startBatchID string,
 ) (productionRunID string, secondsSum, wasteSum decimal.Decimal, err error) {

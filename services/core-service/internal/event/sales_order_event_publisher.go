@@ -14,13 +14,10 @@ import (
 
 var salesOrderEventPublisherTracer = tracing.GetTracer("core-service.sales_order_event_publisher")
 
-// outboxSalesOrderEventPublisher writes sales-order domain events to the outbox table
-// instead of publishing directly to RabbitMQ, so the event commits atomically with the
-// order in the same transaction.
+// outboxSalesOrderEventPublisher writes sales-order domain events to the outbox table instead of publishing directly to RabbitMQ, so the event commits atomically with the order in the same transaction.
 type outboxSalesOrderEventPublisher struct{}
 
-// NewOutboxSalesOrderEventPublisher creates a sales-order event publisher that writes
-// to the outbox table for reliable message delivery.
+// NewOutboxSalesOrderEventPublisher creates a sales-order event publisher that writes to the outbox table for reliable message delivery.
 func NewOutboxSalesOrderEventPublisher() domain.SalesOrderEventPublisher {
 	return &outboxSalesOrderEventPublisher{}
 }

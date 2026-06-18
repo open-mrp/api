@@ -33,9 +33,7 @@ type AuthSvcConfig struct {
 	// NotificationPublisher (required) publishes notification messages to the outbox.
 	NotificationPublisher domain.NotificationPublisher
 
-	// TxManager (optional; default: nil) wraps multi-step operations in database
-	// transactions. It is not validated at construction; transactional code paths
-	// panic at runtime if it is unset.
+	// TxManager (optional; default: nil) wraps multi-step operations in database transactions. It is not validated at construction; transactional code paths panic at runtime if it is unset.
 	TxManager TransactionManager
 }
 
@@ -93,8 +91,6 @@ func (s *authSvcImpl) mediators() domain.Mediators {
 }
 
 // ValidateCredential validates an auth token and returns the resulting identity.
-//
-// 1. Delegate to the user mediator's ValidateCredential method.
 //
 // Behavior:
 //   - If authToken is empty, returns an unauthenticated identity.

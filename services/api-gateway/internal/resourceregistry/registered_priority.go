@@ -14,8 +14,7 @@ func init() {
 		ObjectType: constants.ObjectTypePriority,
 		Load:       resourceloaders.LoadPriorities,
 		Subs: []resourcekit.SubField{
-			// owner: priorities are always system-owned, so the projection
-			// is a constant SystemOwner. No FK lookup needed.
+			// owner: priorities are always system-owned, so the projection is a constant SystemOwner. No FK lookup needed.
 			{Key: "owner", Populate: populateOwnerOnPriority},
 		},
 	})

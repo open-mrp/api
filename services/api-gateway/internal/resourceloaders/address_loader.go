@@ -15,10 +15,7 @@ import (
 
 var addressLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.address")
 
-// LoadAddresses fetches addresses by ID via BatchGetAddressesByIDs. Geolocation
-// is an inline sub-record (always present, not expandable) so it's populated
-// directly from the proto response. Address exposes no expandable sub-resources
-// so no LoadMeta is needed.
+// LoadAddresses fetches addresses by ID via BatchGetAddressesByIDs. Geolocation is an inline sub-record (always present, not expandable) so it's populated directly from the proto response. Address exposes no expandable sub-resources so no LoadMeta is needed.
 func LoadAddresses(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil

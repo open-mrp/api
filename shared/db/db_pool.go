@@ -29,9 +29,7 @@ type Config struct {
 	// DBURI (required) is the database connection URI.
 	DBURI string
 
-	// TracingEnabled (optional; default: true) specifies whether tracing is enabled.
-	// The zero value (false) is treated as "unset" by withDefaults and replaced with
-	// true, so tracing cannot be disabled via this config.
+	// TracingEnabled (optional; default: true) specifies whether tracing is enabled. The zero value (false) is treated as "unset" by withDefaults and replaced with true, so tracing cannot be disabled via this config.
 	TracingEnabled bool
 
 	// ConnectionMaxLifetime (optional; default: 30m) is the maximum lifetime of a connection.
@@ -108,7 +106,6 @@ func NewDbPool(config *Config) (*sql.DB, error) {
 	var db *sql.DB
 	var err error
 	if config.TracingEnabled {
-		// Open a new SQL database connection pool with the given URL and tracing configuration.
 		db, err = otelsql.Open("mysql", config.DBURI,
 			otelsql.WithTracerProvider(otel.GetTracerProvider()),
 			otelsql.WithAttributes(semconv.DBSystemMySQL),

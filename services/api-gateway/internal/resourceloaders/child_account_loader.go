@@ -15,9 +15,7 @@ import (
 
 var childAccountLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.child_account")
 
-// LoadChildAccounts fetches child account relations by relation_id via
-// BatchGetChildAccountsByIDs. The inline Account is built directly from the
-// proto's denormalized account fields — no expandable sub-resources.
+// LoadChildAccounts fetches child account relations by relation_id via BatchGetChildAccountsByIDs. The inline Account is built directly from the proto's denormalized account fields — no expandable sub-resources.
 func LoadChildAccounts(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil
@@ -36,9 +34,7 @@ func LoadChildAccounts(ctx context.Context, ids []string) (map[string]any, *apie
 	return out, nil
 }
 
-// ChildAccountFromProto maps the gRPC ChildAccountProto to the apiresource
-// shape. Exported so endpoint service methods that already hold a proto
-// response (Add returns the resource directly) can reuse it.
+// ChildAccountFromProto maps the gRPC ChildAccountProto to the apiresource shape. Exported so endpoint service methods that already hold a proto response (Add returns the resource directly) can reuse it.
 func ChildAccountFromProto(ca *pb.ChildAccountProto) *apiresource.ChildAccount {
 	out := &apiresource.ChildAccount{
 		ID:     ca.RelationId,

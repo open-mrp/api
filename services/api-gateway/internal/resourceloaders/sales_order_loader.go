@@ -15,10 +15,7 @@ import (
 
 var salesOrderLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.sales_order")
 
-// LoadSalesOrders fetches sales orders by ID via BatchGetSalesOrdersByIDs and
-// builds expandable SalesOrder references with real header data. Nested
-// sub-resources (lines, addresses, customer, …) are their own expandable
-// relations and are not populated here.
+// LoadSalesOrders fetches sales orders by ID via BatchGetSalesOrdersByIDs and builds expandable SalesOrder references with real header data. Nested sub-resources (lines, addresses, customer, …) are their own expandable relations and are not populated here.
 func LoadSalesOrders(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil

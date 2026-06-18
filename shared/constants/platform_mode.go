@@ -4,15 +4,11 @@ package constants
 type PlatformMode string
 
 const (
-	// PlatformModeProduction indicates that the server is running in production mode. This
-	// is the default mode and should be used for all production environments.
+	// PlatformModeProduction indicates that the server is running in production mode. This is the default mode and should be used for all production environments.
 	PlatformModeProduction PlatformMode = "production"
-	// PlatformModeDevelopment indicates that the server is running in development mode. This
-	// mode is somewhat more permissive and has guardrails to mock some application behaviors
-	// for testing and development purposes.
+	// PlatformModeDevelopment indicates that the server is running in development mode. This mode is somewhat more permissive and has guardrails to mock some application behaviors for testing and development purposes.
 	PlatformModeDevelopment PlatformMode = "development"
-	// PlatformModeTest indicates that the server is running in test mode. Third-party
-	// integrations (Stripe, AWS, Google Maps, etc.) are replaced with no-op stubs.
+	// PlatformModeTest indicates that the server is running in test mode. Third-party integrations (Stripe, AWS, Google Maps, etc.) are replaced with no-op stubs.
 	PlatformModeTest PlatformMode = "test"
 )
 

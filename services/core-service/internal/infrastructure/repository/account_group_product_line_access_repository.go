@@ -88,9 +88,7 @@ func groupBackwardRows(rows []sqlc.ListAccountGroupProductLineAccessBackwardRow)
 	return result
 }
 
-// rowLimitMultiplier is used to over-fetch rows so we get enough unique account groups
-// after grouping. Since each account group may have multiple product lines, we fetch
-// more rows than the requested limit.
+// rowLimitMultiplier is used to over-fetch rows so we get enough unique account groups after grouping. Since each account group may have multiple product lines, we fetch more rows than the requested limit.
 const rowLimitMultiplier int32 = 20
 
 func (r *accountGroupProductLineAccessRepoImpl) List(ctx context.Context, params domain.ListAccountGroupProductLineAccessParams) (*domain.ListAccountGroupProductLineAccessResult, *apierror.APIError) {

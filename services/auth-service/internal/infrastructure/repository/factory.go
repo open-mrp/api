@@ -10,8 +10,7 @@ type repoFactoryImpl struct {
 	queries *sqlc.Queries
 }
 
-// NewRepoFactory creates a factory that instantiates repositories backed by the
-// provided sqlc query executor (raw DB or transactional).
+// NewRepoFactory creates a factory that instantiates repositories backed by the provided sqlc query executor (raw DB or transactional).
 func NewRepoFactory(queries *sqlc.Queries) domain.RepoFactory {
 	return &repoFactoryImpl{queries: queries}
 }

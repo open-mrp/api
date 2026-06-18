@@ -6,8 +6,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GenID generates a new type-specific ID with the given prefix and length.
-// If length is nil, it will default to 12.
+// GenID generates a new type-specific ID with the given prefix and length. If length is nil, it will default to 12.
 func GenID(prefix IDPrefix, length *IDLength) (string, *apierror.APIError) {
 	var useLength IDLength
 	if length == nil {

@@ -142,9 +142,7 @@ func (s *addressSvcImpl) GetAddress(ctx context.Context, params domain.GetAddres
 	return s.repos.NewAddressRepo().Get(ctx, params)
 }
 
-// BatchGetAddressesByIDs returns addresses matching the input IDs that the
-// caller's account is authorized to read. Addresses are always account-scoped
-// via the account_address junction.
+// BatchGetAddressesByIDs returns addresses matching the input IDs that the caller's account is authorized to read. Addresses are always account-scoped via the account_address junction.
 func (s *addressSvcImpl) BatchGetAddressesByIDs(ctx context.Context, ids []string) ([]*domain.Address, *apierror.APIError) {
 	ctx, span := addressSvcTracer.Start(ctx, "service.address.batch_get_by_ids")
 	defer span.End()
@@ -548,8 +546,7 @@ func (s *addressSvcImpl) DeleteAddress(ctx context.Context, params domain.Delete
 	return nil
 }
 
-// checkAddressReadPermission checks the appropriate read permission based on the identity context.
-// Internal actors need addresses:read for their own account, or customers:read / suppliers:read for external accounts.
+// checkAddressReadPermission checks the appropriate read permission based on the identity context. Internal actors need addresses:read for their own account, or customers:read / suppliers:read for external accounts.
 func checkAddressReadPermission(identity *types.Identity) *apierror.APIError {
 	if !identity.IsInternalActor() {
 		return nil
@@ -568,8 +565,7 @@ func checkAddressReadPermission(identity *types.Identity) *apierror.APIError {
 	return identity.CheckHasPermission(types.PermissionDomainAddresses, types.ActionRead)
 }
 
-// checkAddressWritePermission checks the appropriate write permission based on the identity context.
-// Internal actors need addresses:{action} for their own account, or customers:update / suppliers:update for external accounts.
+// checkAddressWritePermission checks the appropriate write permission based on the identity context. Internal actors need addresses:{action} for their own account, or customers:update / suppliers:update for external accounts.
 func checkAddressWritePermission(identity *types.Identity, action types.Action) *apierror.APIError {
 	if !identity.IsInternalActor() {
 		return nil

@@ -15,27 +15,22 @@ import (
 
 // InboxPurgerConfig holds the configuration for the inbox purger worker.
 type InboxPurgerConfig struct {
-	// ServiceName (required) identifies which service owns this purger. It's
-	// included in the lease name so each service scopes its purger independently.
+	// ServiceName (required) identifies which service owns this purger. It's included in the lease name so each service scopes its purger independently.
 	ServiceName string
 
-	// PlatformMode (optional) When test, default PurgeInterval is shortened (see WithDefaults).
+	// PlatformMode (optional; default: "") shortens the default PurgeInterval to 1m when test (see WithDefaults); otherwise the production 1h default applies.
 	PlatformMode constants.PlatformMode
 
-	// RetentionHours (optional; default: 168 i.e. 7 days) is how long processed inbox
-	// records are kept before the purge loop deletes them.
+	// RetentionHours (optional; default: 168 i.e. 7 days) is how long processed inbox records are kept before the purge loop deletes them.
 	RetentionHours int
 
-	// PurgeInterval (optional; default: 1h) controls how frequently the purger runs
-	// its purge loop to delete old processed records.
+	// PurgeInterval (optional; default: 1h) controls how frequently the purger runs its purge loop to delete old processed records.
 	PurgeInterval time.Duration
 
-	// BatchSize (optional; default: 1000) is the maximum number of processed inbox
-	// records to delete in a single SQL DELETE statement.
+	// BatchSize (optional; default: 1000) is the maximum number of processed inbox records to delete in a single SQL DELETE statement.
 	BatchSize int32
 
-	// LeaseTTL (optional; default: 5m) bounds how long the purger holds its lease
-	// before a crashed holder's claim expires.
+	// LeaseTTL (optional; default: 5m) bounds how long the purger holds its lease before a crashed holder's claim expires.
 	LeaseTTL time.Duration
 }
 
@@ -80,10 +75,7 @@ func (c *InboxPurgerConfig) validate() error {
 	return nil
 }
 
-// InboxPurger runs a background goroutine that periodically deletes processed
-// inbox records older than the configured retention period. This prevents the
-// message_inbox table from growing unboundedly while preserving recent records
-// for debugging and deduplication.
+// InboxPurger runs a background goroutine that periodically deletes processed inbox records older than the configured retention period. This prevents the message_inbox table from growing unboundedly while preserving recent records for debugging and deduplication.
 type InboxPurger struct {
 	config    InboxPurgerConfig
 	repo      InboxPurgerRepo
@@ -95,8 +87,7 @@ type InboxPurger struct {
 	wg     sync.WaitGroup
 }
 
-// NewInboxPurger creates a new inbox purger. A non-nil lease is required so that
-// only one pod per service deletes processed inbox rows each tick.
+// NewInboxPurger creates a new inbox purger. A non-nil lease is required so that only one pod per service deletes processed inbox rows each tick.
 func NewInboxPurger(config *InboxPurgerConfig, repo InboxPurgerRepo, l *lease.Lease) (*InboxPurger, error) {
 	config = config.WithDefaults()
 	if err := config.validate(); err != nil {
@@ -113,9 +104,7 @@ func NewInboxPurger(config *InboxPurgerConfig, repo InboxPurgerRepo, l *lease.Le
 	}, nil
 }
 
-// Start launches the background purge goroutine. The provided context is used as
-// the parent for all purge operations; cancelling it (or calling Stop) shuts down
-// the loop.
+// Start launches the background purge goroutine. The provided context is used as the parent for all purge operations; cancelling it (or calling Stop) shuts down the loop.
 func (p *InboxPurger) Start(ctx context.Context) error {
 	ctx = appctx.WithNoTrace(ctx)
 	p.ctx, p.cancel = context.WithCancel(ctx)
@@ -131,8 +120,7 @@ func (p *InboxPurger) Start(ctx context.Context) error {
 	return nil
 }
 
-// Stop cancels the background context and blocks until the purge goroutine has
-// exited.
+// Stop cancels the background context and blocks until the purge goroutine has exited.
 func (p *InboxPurger) Stop() {
 	if p.cancel != nil {
 		p.cancel()

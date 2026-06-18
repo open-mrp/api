@@ -39,8 +39,7 @@ func (t *versionOverrideTransport) RoundTrip(req *http.Request) (*http.Response,
 	return t.wrapped.RoundTrip(req)
 }
 
-// sanitizeLogValue strips control characters (newlines, tabs, etc.) from a
-// string before it is written to structured logs, preventing log injection.
+// sanitizeLogValue strips control characters (newlines, tabs, etc.) from a string before it is written to structured logs, preventing log injection.
 func sanitizeLogValue(s string) string {
 	return strings.Map(func(r rune) rune {
 		if unicode.IsControl(r) {
@@ -53,8 +52,7 @@ func sanitizeLogValue(s string) string {
 var stripeClientTracer = tracing.GetTracer("billing-service.stripe_client")
 
 type ClientConfig struct {
-	// WebhookSecret (required) is the Stripe webhook signing secret used to
-	// verify incoming webhook payloads.
+	// WebhookSecret (required) is the Stripe webhook signing secret used to verify incoming webhook payloads.
 	WebhookSecret string
 
 	// APIKey (required) is the Stripe secret API key.
@@ -376,8 +374,7 @@ func (c *stripeClientImpl) ReserveBillingIntent(ctx context.Context, intentID st
 		return nil, fmt.Errorf("failed to reserve billing intent: %w", err)
 	}
 
-	// Fetch the reserved intent to get amount_details.total — the reserve
-	// response itself does not include the total at the top level.
+	// Fetch the reserved intent to get amount_details.total — the reserve response itself does not include the total at the top level.
 	intentResp, err := stripe.RawRequest(http.MethodGet,
 		fmt.Sprintf("/v2/billing/intents/%s", intentID), "", nil)
 	if err != nil {
@@ -411,8 +408,7 @@ func (c *stripeClientImpl) CreatePaymentIntent(ctx context.Context, amountCents 
 	_, span := stripeClientTracer.Start(ctx, "stripe_client.create_payment_intent")
 	defer span.End()
 
-	// Look up the customer's default payment method. If none is set on
-	// invoice_settings, fall back to the first attached payment method.
+	// Look up the customer's default payment method. If none is set on invoice_settings, fall back to the first attached payment method.
 	cust, err := customer.Get(customerID, nil)
 	if err != nil {
 		span.RecordError(err)
@@ -628,9 +624,7 @@ func (c *stripeClientImpl) VerifyWebhookSignature(payload []byte, signature stri
 		"signature_preview", truncate(signature, 30),
 	)
 
-	// Use ValidatePayload instead of ConstructEvent so that both v1 events
-	// ("object":"event") and v2 event notifications ("object":"v2.core.event")
-	// pass signature verification. ConstructEvent rejects v2 payloads.
+	// Use ValidatePayload instead of ConstructEvent so that both v1 events ("object":"event") and v2 event notifications ("object":"v2.core.event") pass signature verification. ConstructEvent rejects v2 payloads.
 	if err := webhook.ValidatePayload(payload, signature, c.webhookSecret); err != nil {
 		slog.Error("stripe webhook signature validation failed",
 			"error", err.Error(),
@@ -640,8 +634,7 @@ func (c *stripeClientImpl) VerifyWebhookSignature(payload []byte, signature stri
 		return nil, fmt.Errorf("failed to verify webhook signature: %w", err)
 	}
 
-	// Parse the event envelope to extract ID, type, and object data.
-	// This works for both v1 and v2 event payloads.
+	// Parse the event envelope to extract ID, type, and object data. This works for both v1 and v2 event payloads.
 	var envelope struct {
 		ID   string `json:"id"`
 		Type string `json:"type"`

@@ -1,16 +1,11 @@
-// Package sanitize provides utilities for masking sensitive string values (API keys,
-// tokens, secrets) in log output, error messages, and user-facing responses. It
-// preserves enough of the original value for humans to identify which key is
-// referenced while hiding the secret material in the middle.
+// Package sanitize provides utilities for masking sensitive string values (API keys, tokens, secrets) in log output, error messages, and user-facing responses. It preserves enough of the original value for humans to identify which key is referenced while hiding the secret material in the middle.
 package sanitize
 
 import (
 	"strings"
 )
 
-// safeVocabulary lists string values that represent "no value" in various languages
-// and serialization formats. When a key matches one of these exactly, it is returned
-// unmasked because it carries no secret — masking it would only confuse the reader.
+// safeVocabulary lists string values that represent "no value" in various languages and serialization formats. When a key matches one of these exactly, it is returned unmasked because it carries no secret — masking it would only confuse the reader.
 var safeVocabulary = map[string]struct{}{
 	"":          {}, // empty string — nothing to mask
 	"undefined": {}, // JavaScript undefined serialized as string
@@ -18,11 +13,7 @@ var safeVocabulary = map[string]struct{}{
 	"null":      {}, // JSON null serialized as string
 }
 
-// SanitizeString masks the interior of key, preserving the first
-// visiblePrefixLength characters and the last visibleSuffixLength characters and
-// replacing the hidden portion with asterisks. The number of asterisks is capped at
-// 4 regardless of the actual hidden length, so the output does not leak information
-// about the key's size.
+// SanitizeString masks the interior of key, preserving the first visiblePrefixLength characters and the last visibleSuffixLength characters and replacing the hidden portion with asterisks. The number of asterisks is capped at 4 regardless of the actual hidden length, so the output does not leak information about the key's size.
 //
 // Special cases:
 //   - If either length parameter is negative, an empty string is returned as a

@@ -1,7 +1,4 @@
-// Package resourceregistry contains the init()-time resourcekit.Definition
-// registrations for every resource the api-gateway resolves includes against.
-// Importing the package (typically via blank-import from cmd/run.go) is what
-// causes the registrations to fire.
+// Package resourceregistry contains the init()-time resourcekit.Definition registrations for every resource the api-gateway resolves includes against. Importing the package (typically via blank-import from cmd/run.go) is what causes the registrations to fire.
 package resourceregistry
 
 import (

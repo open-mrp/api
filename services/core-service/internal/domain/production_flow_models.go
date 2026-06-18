@@ -8,8 +8,7 @@ type StepEdge struct {
 	ChildStepID  string `audit:"child_step_id"`
 }
 
-// ProductionFlowStep represents a single step in the production flow with all
-// associated data needed for flow display.
+// ProductionFlowStep represents a single step in the production flow with all associated data needed for flow display.
 type ProductionFlowStep struct {
 	ID                string
 	Name              string

@@ -337,10 +337,7 @@ func (h *purchaseGRPCHandler) GetPurchaseOrder(ctx context.Context, req *pb.GetP
 	}, nil
 }
 
-// BatchGetPurchaseOrdersByIDs returns purchase orders by ID for the api-gateway
-// include resolver. It reuses the authorized single-get path per id; ids the
-// caller cannot access or that no longer exist are omitted so the resolver
-// leaves those references null.
+// BatchGetPurchaseOrdersByIDs returns purchase orders by ID for the api-gateway include resolver. It reuses the authorized single-get path per id; ids the caller cannot access or that no longer exist are omitted so the resolver leaves those references null.
 func (h *purchaseGRPCHandler) BatchGetPurchaseOrdersByIDs(ctx context.Context, req *pb.BatchGetPurchaseOrdersByIDsRequest) (*pb.BatchGetPurchaseOrdersByIDsResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

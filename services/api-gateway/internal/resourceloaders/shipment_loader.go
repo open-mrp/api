@@ -15,11 +15,7 @@ import (
 
 var shipmentLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.shipment")
 
-// LoadShipments fetches shipments by ID via GetShipment and builds expandable
-// Shipment references with real header data. There is no batch RPC for
-// shipments, so each ID is fetched individually. Nested sub-resources (lines,
-// freight, sales_order, …) are their own expandable relations and are not
-// populated here.
+// LoadShipments fetches shipments by ID via GetShipment and builds expandable Shipment references with real header data. There is no batch RPC for shipments, so each ID is fetched individually. Nested sub-resources (lines, freight, sales_order, …) are their own expandable relations and are not populated here.
 func LoadShipments(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil

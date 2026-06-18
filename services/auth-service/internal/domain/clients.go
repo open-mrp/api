@@ -75,9 +75,7 @@ type AuthCoreClient interface {
 	// GetUserAccountAccess returns the user's role/permissions for an account
 	GetUserAccountAccess(ctx context.Context, userID, accountID string) (*AccountUserAccess, bool, *apierror.APIError)
 
-	// GetAccountRelationByUserID returns the relationship between accounts based on user.
-	// actorAccountID is required to unlock owner-side matches (the relation's owner_account_id
-	// must equal it); pass "" when no actor account has been validated to skip owner-side.
+	// GetAccountRelationByUserID returns the relationship between accounts based on user. actorAccountID is required to unlock owner-side matches (the relation's owner_account_id must equal it); pass "" when no actor account has been validated to skip owner-side.
 	GetAccountRelationByUserID(ctx context.Context, targetAccountID, actorAccountID, userID string) (*AuthAccountRelation, bool, *apierror.APIError)
 
 	// GetAccountRelationByAPIKeyID returns the relationship between accounts based on API key
@@ -95,7 +93,6 @@ type AuthCoreClient interface {
 	// GetAdminRole returns the admin role ID
 	GetAdminRole(ctx context.Context) (string, *apierror.APIError)
 
-	// CompleteRegistration creates the production account, sandbox, roles,
-	// and permissions via core-service.
+	// CompleteRegistration creates the production account, sandbox, roles, and permissions via core-service.
 	CompleteRegistration(ctx context.Context, input CompleteAccountRegistrationInput) (*CompleteRegistrationOutput, *apierror.APIError)
 }

@@ -23,7 +23,7 @@ func (e *ListSysPropertiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		Title:             "List System Properties",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
-		Route:             "/v1/core/sys-properties",
+		Route:             "/v1/settings/properties",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,

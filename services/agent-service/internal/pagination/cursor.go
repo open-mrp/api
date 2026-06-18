@@ -6,8 +6,7 @@ import (
 	pb "github.com/augno/api/shared/proto/agent"
 )
 
-// ParseOptionalStringCursor decodes a platform list cursor for forward-only varchar-ID
-// lists. Empty or omitted cursors are valid for the first page.
+// ParseOptionalStringCursor decodes a platform list cursor for forward-only varchar-ID lists. Empty or omitted cursors are valid for the first page.
 func ParseOptionalStringCursor(raw *string) (cursorID string, cursorDir *sharedpagination.Direction, apiErr *apierror.APIError) {
 	if raw == nil || *raw == "" {
 		return "", nil, nil

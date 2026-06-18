@@ -20,8 +20,7 @@ func signCursorPayload(key []byte, v any) string {
 	return payload + "." + sig
 }
 
-// EncodeDocumentationCursor returns a signed forward cursor for OpenAPI list examples
-// using pagination.Cursor (int64 internal IDs).
+// EncodeDocumentationCursor returns a signed forward cursor for OpenAPI list examples using pagination.Cursor (int64 internal IDs).
 func EncodeDocumentationCursor(createdAt time.Time, internalID int64) string {
 	return signCursorPayload(documentationHMACKey, Cursor{
 		CreatedAt: createdAt,
@@ -30,8 +29,7 @@ func EncodeDocumentationCursor(createdAt time.Time, internalID int64) string {
 	})
 }
 
-// EncodeDocumentationStringCursor returns a signed forward cursor for OpenAPI list examples
-// using pagination.StringCursor (varchar primary keys / type IDs).
+// EncodeDocumentationStringCursor returns a signed forward cursor for OpenAPI list examples using pagination.StringCursor (varchar primary keys / type IDs).
 func EncodeDocumentationStringCursor(occurredAt time.Time, id string) string {
 	return signCursorPayload(documentationHMACKey, StringCursor{
 		OccurredAt: occurredAt,

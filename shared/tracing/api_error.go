@@ -11,20 +11,14 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// maxStacktraceAttrLen caps the length of the stacktrace string stored as a span
-// attribute. Traces with very deep stacks are truncated to avoid inflating span
-// payloads beyond what trace backends can efficiently store and display.
+// maxStacktraceAttrLen caps the length of the stacktrace string stored as a span attribute. Traces with very deep stacks are truncated to avoid inflating span payloads beyond what trace backends can efficiently store and display.
 const maxStacktraceAttrLen = 8192
 
-// Trace records a structured "api.error" event on the given span and sets the span
-// status to Error. It returns the same *APIError so callers can use it inline:
+// Trace records a structured "api.error" event on the given span and sets the span status to Error. It returns the same *APIError so callers can use it inline:
 //
 //	return tracing.Trace(span, apierror.NewBadRequest("invalid input"))
 //
-// The recorded event carries attributes for every populated APIError field:
-// error.code, error.type, error.public_message, error.internal_message, error.param,
-// error.doc_url, error.internal_error. For 5xx errors a goroutine stacktrace is
-// captured (truncated to [maxStacktraceAttrLen]) to aid post-mortem debugging.
+// The recorded event carries attributes for every populated APIError field: error.code, error.type, error.public_message, error.internal_message, error.param, error.doc_url, error.internal_error. For 5xx errors a goroutine stacktrace is captured (truncated to [maxStacktraceAttrLen]) to aid post-mortem debugging.
 //
 // A nil error or nil span is handled gracefully (returns nil / no-ops respectively).
 func Trace(span trace.Span, err *apierror.APIError) *apierror.APIError {
@@ -65,9 +59,7 @@ func Trace(span trace.Span, err *apierror.APIError) *apierror.APIError {
 	return err
 }
 
-// captureStack returns the current goroutine's stack trace as a string. It wraps
-// debug.Stack in a deferred recover to guarantee it never panics — if the stack
-// capture itself fails, it returns a placeholder string rather than crashing.
+// captureStack returns the current goroutine's stack trace as a string. It wraps debug.Stack in a deferred recover to guarantee it never panics — if the stack capture itself fails, it returns a placeholder string rather than crashing.
 func captureStack() string {
 	var stack string
 	func() {
@@ -81,17 +73,12 @@ func captureStack() string {
 	return stack
 }
 
-// shouldCaptureStacktrace returns true when the error maps to an HTTP status code
-// >= 500 (Internal Server Error). Stacktraces are expensive and only valuable for
-// unexpected server-side failures; client errors (4xx) are expected conditions that
-// don't warrant a stack dump. Panic-recovery errors are naturally included because
-// they are translated to 500 status codes.
+// shouldCaptureStacktrace returns true when the error maps to an HTTP status code >= 500 (Internal Server Error). Stacktraces are expensive and only valuable for unexpected server-side failures; client errors (4xx) are expected conditions that don't warrant a stack dump. Panic-recovery errors are naturally included because they are translated to 500 status codes.
 func shouldCaptureStacktrace(apiErr *apierror.APIError) bool {
 	if apiErr == nil {
 		return false
 	}
 
-	// Panics are translated into internal server errors, so they naturally
-	// fall under this condition.
+	// Panics are translated into internal server errors, so they naturally fall under this condition.
 	return apierror.GetHTTPStatusCode(apiErr.Code) >= http.StatusInternalServerError
 }

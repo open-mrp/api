@@ -6,15 +6,12 @@ import (
 	"github.com/augno/api/shared/pagination"
 )
 
-// EmailLogActor identifies the actor who sent an email. Today this is always a
-// user, but the shape mirrors other actor references so future senders (API
-// keys, agents) can be represented without another schema change.
+// EmailLogActor identifies the actor who sent an email. Today this is always a user, but the shape mirrors other actor references so future senders (API keys, agents) can be represented without another schema change.
 type EmailLogActor struct {
 	ID        string
 	ActorType string
 	Name      *string
-	// Handle is the human-readable identifier for the actor — email for users,
-	// redacted value for API keys.
+	// Handle is the human-readable identifier for the actor — email for users, redacted value for API keys.
 	Handle *string
 }
 

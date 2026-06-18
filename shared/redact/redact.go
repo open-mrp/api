@@ -8,12 +8,9 @@ import (
 	"strings"
 )
 
-// SensitiveFields collects dot-separated JSON field paths declared with sensitive:"true"
-// on structs reachable from root type typ. Root may be a pointer (e.g. *MyRequest); non-struct
-// roots return nil.
+// SensitiveFields collects dot-separated JSON field paths declared with sensitive:"true" on structs reachable from root type typ. Root may be a pointer (e.g. *MyRequest); non-struct roots return nil.
 //
-// Embedding without a JSON key name preserves the same path prefix so promoted fields align
-// with encoding/json flattened output.
+// Embedding without a JSON key name preserves the same path prefix so promoted fields align with encoding/json flattened output.
 func SensitiveFields(typ reflect.Type) map[string]bool {
 	typ = deref(typ)
 	if typ == nil || typ.Kind() != reflect.Struct {
@@ -118,9 +115,7 @@ func collectWithVisited(typ reflect.Type, prefix string, out map[string]bool, de
 	}
 }
 
-// RedactJSON replaces JSON values whose paths exactly match sensitivePaths keys with the
-// JSON string ****. Arrays reuse the parent's path segment so structs under an array resolve
-// the same dotted paths encoding/json emits (no index in the path).
+// RedactJSON replaces JSON values whose paths exactly match sensitivePaths keys with the JSON string ****. Arrays reuse the parent's path segment so structs under an array resolve the same dotted paths encoding/json emits (no index in the path).
 //
 // On unmarshal marshal failure returns nil so callers omit the logged body entirely.
 func RedactJSON(raw []byte, sensitivePaths map[string]bool) []byte {

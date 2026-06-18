@@ -1092,6 +1092,15 @@ WHERE oec.sales_order_id = sqlc.arg('sales_order_id')
 AND oec.notification_type_code = 'order_acknowledgement'
 AND u.email IS NOT NULL;
 
+-- name: GetOrderEmailRecipientsByOrders :many
+SELECT oec.sales_order_id, oec.notification_type_code, u.email
+FROM order_email_contact oec
+JOIN account_user au ON au.id = oec.account_user_id
+JOIN user u ON u.id = au.user_id
+WHERE oec.sales_order_id IN (sqlc.slice('sales_order_ids'))
+AND oec.notification_type_code IN ('invoice', 'order_acknowledgement')
+AND u.email IS NOT NULL;
+
 -- name: MarkAcknowledgementSent :exec
 UPDATE sales_order SET
     is_acknowledgment_sent = true,

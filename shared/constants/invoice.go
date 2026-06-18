@@ -1,8 +1,6 @@
 package constants
 
-// InvoicePaymentStatus represents the payment state of an invoice. Modeled as an
-// enum (rather than separate is_paid_in_full / is_over_paid booleans) so new
-// states can be added later without a breaking change.
+// InvoicePaymentStatus represents the payment state of an invoice. Modeled as an enum (rather than separate is_paid_in_full / is_over_paid booleans) so new states can be added later without a breaking change.
 type InvoicePaymentStatus string
 
 const (

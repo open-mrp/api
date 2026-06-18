@@ -16,8 +16,7 @@ type customerObject struct {
 	ID string `json:"id"`
 }
 
-// v2PricingPlanSubscriptionObject represents v2 pricing plan subscription data
-// (fetched from the related_object URL in thin events).
+// v2PricingPlanSubscriptionObject represents v2 pricing plan subscription data (fetched from the related_object URL in thin events).
 type v2PricingPlanSubscriptionObject struct {
 	ID               string `json:"id"`
 	Customer         string `json:"customer"`
@@ -25,8 +24,7 @@ type v2PricingPlanSubscriptionObject struct {
 	CollectionStatus string `json:"collection_status"`
 }
 
-// v2CadenceObject represents v2 billing cadence data
-// (fetched from the related_object URL in thin events).
+// v2CadenceObject represents v2 billing cadence data (fetched from the related_object URL in thin events).
 type v2CadenceObject struct {
 	ID       string     `json:"id"`
 	Customer string     `json:"customer"`
@@ -53,8 +51,7 @@ func (c *StripeWebhookConsumer) handleCustomerDeleted(ctx context.Context, event
 	return apiErrToErr(c.coreClient.ClearAccountStripeCustomer(ctx, eventID, accountID))
 }
 
-// checkoutSessionObject is the minimal set of fields parsed from a Stripe
-// checkout.session data.object.
+// checkoutSessionObject is the minimal set of fields parsed from a Stripe checkout.session data.object.
 type checkoutSessionObject struct {
 	ID            string            `json:"id"`
 	PaymentIntent string            `json:"payment_intent"`
@@ -62,9 +59,7 @@ type checkoutSessionObject struct {
 	Metadata      map[string]string `json:"metadata"`
 }
 
-// handleCheckoutSessionCompleted links a completed Stripe checkout to its sales
-// order by recording the payment intent, which is what makes the order read as
-// paid. The orderID is carried on the session metadata set at checkout creation.
+// handleCheckoutSessionCompleted links a completed Stripe checkout to its sales order by recording the payment intent, which is what makes the order read as paid. The orderID is carried on the session metadata set at checkout creation.
 func (c *StripeWebhookConsumer) handleCheckoutSessionCompleted(ctx context.Context, eventID string, rawObject json.RawMessage) error {
 	var sess checkoutSessionObject
 	if err := json.Unmarshal(rawObject, &sess); err != nil {
@@ -123,8 +118,7 @@ func (c *StripeWebhookConsumer) handleServicingCanceled(ctx context.Context, eve
 		return apiErrToErr(apiErr)
 	}
 
-	// Mark servicing as canceled but keep the current plan active until the paid period ends.
-	// The plan will be downgraded to free when the period expires or via a separate cleanup job.
+	// Mark servicing as canceled but keep the current plan active until the paid period ends. The plan will be downgraded to free when the period expires or via a separate cleanup job.
 	servicingStatus := "canceled"
 	log.Printf("[stripe_webhook] Pricing plan subscription servicing canceled for account %s, marking status (plan retained until period end)", accountID)
 

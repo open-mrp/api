@@ -19,8 +19,7 @@ var tagsToStrip = map[string]bool{
 }
 
 // htmlToMarkdown converts raw HTML to clean markdown text.
-// It strips noisy elements (script, style, nav, footer, header) before
-// converting, producing compact output suitable for LLM consumption.
+// It strips noisy elements (script, style, nav, footer, header) before converting, producing compact output suitable for LLM consumption.
 func htmlToMarkdown(rawHTML string) string {
 	// Strip noisy tags before conversion.
 	cleaned := stripTags(rawHTML)

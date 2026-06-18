@@ -25,7 +25,7 @@ func (e *GetLatestSysPropertyValueEndpoint) Materialize() *apiendpoint.APIEndpoi
 		Title:             "Get Latest System Property Value",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
-		Route:             "/v1/core/sys-properties/{type_code}/latest-value",
+		Route:             "/v1/settings/properties/{type_code}/latest-value",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,

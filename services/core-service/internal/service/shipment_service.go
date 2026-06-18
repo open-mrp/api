@@ -113,8 +113,7 @@ func (s *shipmentSvcImpl) ListShipments(ctx context.Context, params domain.ListS
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Expand lines per shipment only when requested (so the list can serve the
-	// lines.item array filter).
+	// Expand lines per shipment only when requested (so the list can serve the lines.item array filter).
 	for _, include := range params.Includes {
 		if include == "lines" {
 			lineRepo := s.repos.NewShipmentLineRepo()
@@ -222,9 +221,7 @@ func (s *shipmentSvcImpl) UpdateShipment(ctx context.Context, params domain.Upda
 				return apiErr
 			}
 
-			// Backfill unchanged nullable fields with existing values.
-			// Since the SQL uses direct assignment (no COALESCE) for these fields,
-			// we must provide the existing value when the field was not sent.
+			// Backfill unchanged nullable fields with existing values. Since the SQL uses direct assignment (no COALESCE) for these fields, we must provide the existing value when the field was not sent.
 			if params.ServiceLevelID == nil {
 				params.ServiceLevelID = old.ServiceLevelID
 			}
@@ -791,12 +788,7 @@ func (s *shipmentSvcImpl) EstimateRate(ctx context.Context, params domain.Estima
 	return estimateShippingRate(ctx, s.repos, s.shippoFactory, params)
 }
 
-// estimateShippingRate computes the posted shipping rate for an order or shipment,
-// mirroring Dashboard's estimatePostedShippingRate cascade: product-line freight
-// exemption → customer/group freight exemption → shipping-term free/flat/min-order →
-// carrier-without-Shippo → no Shippo integration → live Shippo rate (already marked up
-// by the Shippo client). A nil shippoFactory short-circuits the live rate to 0. It is
-// shared by the shipment estimate-rate endpoint and sales-order shipping-line synthesis.
+// estimateShippingRate computes the posted shipping rate for an order or shipment, mirroring Dashboard's estimatePostedShippingRate cascade: product-line freight exemption → customer/group freight exemption → shipping-term free/flat/min-order → carrier-without-Shippo → no Shippo integration → live Shippo rate (already marked up by the Shippo client). A nil shippoFactory short-circuits the live rate to 0. It is shared by the shipment estimate-rate endpoint and sales-order shipping-line synthesis.
 func estimateShippingRate(ctx context.Context, repos domain.RepoFactory, shippoFactory domain.ShippoClientFactory, params domain.EstimateRateParams) (float64, *apierror.APIError) {
 	// Check product line freight exemption: if any product line is freight exempt, rate is 0.
 	if len(params.ProductLineIDs) > 0 {
@@ -1190,8 +1182,7 @@ func (s *shipmentSvcImpl) RateShop(ctx context.Context, params domain.RateShopPa
 	return result, nil
 }
 
-// checkShipmentReadPermission checks the appropriate read permission based on the identity context.
-// Internal actors need shipments:read for their own account, or customers:read / suppliers:read for external accounts.
+// checkShipmentReadPermission checks the appropriate read permission based on the identity context. Internal actors need shipments:read for their own account, or customers:read / suppliers:read for external accounts.
 func checkShipmentReadPermission(identity *types.Identity) *apierror.APIError {
 	if !identity.IsInternalActor() {
 		return nil

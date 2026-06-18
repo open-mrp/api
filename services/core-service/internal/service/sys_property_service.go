@@ -117,8 +117,7 @@ func (s *sysPropertySvcImpl) GetSysProperty(ctx context.Context, sysPropertyID s
 	return s.repos.NewSysPropertyRepo().Get(ctx, identity.Target.AccountID, sysPropertyID)
 }
 
-// BatchGetSysPropertiesByIDs returns sys properties matching the input IDs.
-// Account-scoped via the caller's identity.
+// BatchGetSysPropertiesByIDs returns sys properties matching the input IDs. Account-scoped via the caller's identity.
 func (s *sysPropertySvcImpl) BatchGetSysPropertiesByIDs(ctx context.Context, ids []string) ([]*domain.SysProperty, *apierror.APIError) {
 	ctx, span := sysPropertySvcTracer.Start(ctx, "service.sys_property.batch_get_by_ids")
 	defer span.End()

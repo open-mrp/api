@@ -36,6 +36,7 @@ func init() {
 			{Key: "shipping_term", Populate: populateShippingTermOnSO},
 			{Key: "order_discount", Populate: populateOrderDiscountOnSO},
 			{Key: "totals", Populate: populateTotalsOnSO},
+			{Key: "contacts", Populate: populateContactsOnSO},
 			{Key: "related.pick", Populate: populatePickOnSORelated},
 			{Key: "related.production_run", Populate: populateProductionRunOnSORelated},
 			{Key: "related.shipments", Populate: populateShipmentsOnSORelated},
@@ -49,9 +50,7 @@ func init() {
 	})
 }
 
-// created_by is resolved lazily from each order's create audit event (via
-// platform-service), keyed by the order's own ID — so ExtractIDs returns the
-// order ID and the loader registered for ObjectTypeCreatedBy fetches the creator.
+// created_by is resolved lazily from each order's create audit event (via platform-service), keyed by the order's own ID — so ExtractIDs returns the order ID and the loader registered for ObjectTypeCreatedBy fetches the creator.
 func extractSelfIDForCreatedBy(_ context.Context, parent any) []string {
 	so := parent.(*apiresource.SalesOrder)
 	if so.ID == "" {
@@ -85,9 +84,16 @@ func populateTotalsOnSO(ctx context.Context, parent any, _ map[string]any) {
 	so.Totals = v.(*apiresource.SalesOrderTotals)
 }
 
-// ensureSORelated lazily creates the related group on first expanded member, so
-// the group serializes to null when no related include (pick/production_run/
-// shipments) was requested.
+func populateContactsOnSO(ctx context.Context, parent any, _ map[string]any) {
+	so := parent.(*apiresource.SalesOrder)
+	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "contacts")
+	if !ok {
+		return
+	}
+	so.Contacts = v.(*apiresource.OrderContact)
+}
+
+// ensureSORelated lazily creates the related group on first expanded member, so the group serializes to null when no related include (pick/production_run/shipments) was requested.
 func ensureSORelated(so *apiresource.SalesOrder) *apiresource.SalesOrderRelated {
 	if so.Related == nil {
 		so.Related = &apiresource.SalesOrderRelated{Object: constants.ObjectTypeSalesOrderRelated}

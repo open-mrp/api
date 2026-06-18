@@ -42,14 +42,12 @@ func NewIdempotencyMed(config *IdempotencyMedConfig) domain.IdempotencyMed {
 	}
 }
 
-// UpsertIdempotencyKey returns the existing idempotency key for the request scope,
-// or creates one if it does not exist.
+// UpsertIdempotencyKey returns the existing idempotency key for the request scope, or creates one if it does not exist.
 //
 //  1. Resolve the idempotency key from the request context, falling back to the request ID.
 //  2. Compute the scope hash from the actor, target account, service, handler, and key.
 //  3. Return the existing key for the scope hash when one exists.
-//  4. Otherwise persist a new key at the Started recovery point, re-fetching the
-//     existing row if a concurrent request inserted the same scope hash first.
+//  4. Otherwise persist a new key at the Started recovery point, re-fetching the existing row if a concurrent request inserted the same scope hash first.
 func (m *idempotencyMedImpl) UpsertIdempotencyKey(ctx context.Context, identity *types.Identity) (*domain.IdempotencyKey, *apierror.APIError) {
 	ctx, span := idempotencyMedTracer.Start(ctx, "mediator.idempotency.upsert_idempotency_key")
 	defer span.End()
@@ -108,8 +106,7 @@ func (m *idempotencyMedImpl) UpsertIdempotencyKey(ctx context.Context, identity 
 	})
 
 	if apiErr != nil {
-		// A concurrent request may have inserted the same scope_hash first.
-		// Re-fetch the existing row instead of propagating the duplicate error.
+		// A concurrent request may have inserted the same scope_hash first. Re-fetch the existing row instead of propagating the duplicate error.
 		if apiErr.Code == apierror.ErrorCodeResourceExists {
 			existingKey, retryErr := repo.GetByScopeHash(ctx, scopeHash)
 			if retryErr != nil {
@@ -123,8 +120,7 @@ func (m *idempotencyMedImpl) UpsertIdempotencyKey(ctx context.Context, identity 
 	return newKey, nil
 }
 
-// CacheErrorResponse caches a non-transient error response for the given idempotency key
-// and returns the original error.
+// CacheErrorResponse caches a non-transient error response for the given idempotency key and returns the original error.
 //
 //  1. Return transient errors uncached so the client can retry.
 //  2. Persist non-transient errors as the cached response and mark the key finished.

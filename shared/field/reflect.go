@@ -7,13 +7,7 @@ func IsClearableType(typ reflect.Type) bool {
 	return openAPIKind(typ) == "clearable"
 }
 
-// AssertValuePatchFields panics if typ (or any embedded struct within it) declares a
-// field.Clearable[T] or field.Optional[T] as a pointer. Both must be used as values with
-// json:"<name>,omitzero": encoding/json short-circuits an explicit null on a pointer field
-// to a nil pointer without calling UnmarshalJSON. For Clearable that makes "clear"
-// indistinguishable from "unset"; for Optional it bypasses the null rejection so an explicit
-// null is silently accepted instead of erroring. This is invoked at endpoint registration so
-// a pointer field fails fast at startup rather than misbehaving at request time.
+// AssertValuePatchFields panics if typ (or any embedded struct within it) declares a field.Clearable[T] or field.Optional[T] as a pointer. Both must be used as values with json:"<name>,omitzero": encoding/json short-circuits an explicit null on a pointer field to a nil pointer without calling UnmarshalJSON. For Clearable that makes "clear" indistinguishable from "unset"; for Optional it bypasses the null rejection so an explicit null is silently accepted instead of erroring. This is invoked at endpoint registration so a pointer field fails fast at startup rather than misbehaving at request time.
 func AssertValuePatchFields(typ reflect.Type) {
 	for typ != nil && typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()

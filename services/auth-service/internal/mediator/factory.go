@@ -6,7 +6,7 @@ import (
 	"github.com/augno/api/services/auth-service/internal/domain"
 )
 
-// FactoryConfig declares the dependencies needed to build mediators.
+// MediatorFactoryConfig declares the dependencies needed to build mediators.
 type MediatorFactoryConfig struct {
 	// JWTSecret (required) signs and verifies JWT access tokens.
 	JWTSecret string // #nosec G117 - Struct field, not a hardcoded credential
@@ -23,8 +23,7 @@ type MediatorFactoryConfig struct {
 	// CoreClient (required) is the core-service client used by the mediators.
 	CoreClient domain.AuthCoreClient
 
-	// DocAPIKeyEncryptionKey (optional; default: nil) encrypts doc API keys at rest.
-	// When empty, the doc API key mediator is not constructed.
+	// DocAPIKeyEncryptionKey (optional; default: nil) encrypts doc API keys at rest. When empty, the doc API key mediator is not constructed.
 	DocAPIKeyEncryptionKey []byte
 }
 
@@ -56,9 +55,7 @@ func (c *MediatorFactoryConfig) validate() error {
 	return nil
 }
 
-// NewMediatorFactory creates a mediator factory that mirrors the repository factory
-// style: inject shared dependencies once, then build mediators bound to a
-// specific repository factory (e.g., per transaction).
+// NewMediatorFactory creates a mediator factory that mirrors the repository factory style: inject shared dependencies once, then build mediators bound to a specific repository factory (e.g., per transaction).
 func NewMediatorFactory(config *MediatorFactoryConfig) domain.MediatorFactory {
 	if err := config.validate(); err != nil {
 		panic(err)

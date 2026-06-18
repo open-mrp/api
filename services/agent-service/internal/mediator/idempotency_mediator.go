@@ -101,8 +101,7 @@ func (m *idempotencyMedImpl) UpsertIdempotencyKey(ctx context.Context, identity 
 	})
 
 	if apiErr != nil {
-		// A concurrent request may have inserted the same scope_hash first.
-		// Re-fetch the existing row instead of propagating the duplicate error.
+		// A concurrent request may have inserted the same scope_hash first. Re-fetch the existing row instead of propagating the duplicate error.
 		if apiErr.Code == apierror.ErrorCodeResourceExists {
 			existingKey, retryErr := repo.GetByScopeHash(ctx, scopeHash)
 			if retryErr != nil {

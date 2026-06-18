@@ -2,14 +2,9 @@ package field
 
 import "reflect"
 
-// Optional is an optional request/input value: present-or-absent, never null.
-// It is documented as nullable in OpenAPI (the value domain may be null), but an
-// explicit JSON null is rejected at unmarshal — callers express "no value" by
-// omitting the key. Absent keys are unset.
+// Optional is an optional request/input value: present-or-absent, never null. It is documented as nullable in OpenAPI (the value domain may be null), but an explicit JSON null is rejected at unmarshal — callers express "no value" by omitting the key. Absent keys are unset.
 //
-// Use the value type on create/input request structs with json:"<field>,omitzero"
-// (not a pointer). Do not use *Optional[T]: encoding/json would treat explicit null
-// as a nil pointer without invoking UnmarshalJSON, so null would not be rejected.
+// Use the value type on create/input request structs with json:"<field>,omitzero" (not a pointer). Do not use *Optional[T]: encoding/json would treat explicit null as a nil pointer without invoking UnmarshalJSON, so null would not be rejected.
 type Optional[T any] struct {
 	set   bool
 	value T

@@ -19,8 +19,7 @@ import (
 var unitGroupLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.unit_group")
 
 // LoadUnitGroups fetches unit groups by ID via BatchGetUnitGroupsByIDs.
-// Stashes owner_account_id, base_unit_id, and pre-built associated units
-// data in LoadMeta for SubField closures.
+// Stashes owner_account_id, base_unit_id, and pre-built associated units data in LoadMeta for SubField closures.
 func LoadUnitGroups(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil
@@ -47,10 +46,7 @@ func LoadUnitGroups(ctx context.Context, ids []string) (map[string]any, *apierro
 			meta.Set(constants.ObjectTypeUnitGroup, ug.Id, "base_unit_id", ug.BaseUnit.Id)
 		}
 
-		// Pre-build the associated units WITH inline Unit data for the
-		// no-fetch associated_units SubField on UnitGroup. This preserves
-		// backward compat: ?include[]=associated_units returns full
-		// UnitGroupUnits with Unit details populated.
+		// Pre-build the associated units WITH inline Unit data for the no-fetch associated_units SubField on UnitGroup. This preserves backward compat: ?include[]=associated_units returns full UnitGroupUnits with Unit details populated.
 		if len(ug.UnitConversions) > 0 {
 			items := make([]apiresource.UnitGroupUnit, 0, len(ug.UnitConversions))
 			for _, c := range ug.UnitConversions {
@@ -81,8 +77,7 @@ func unitGroupFromProto(ug *pb.UnitGroupInfo) *apiresource.UnitGroup {
 var unitGroupUnitLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.unit_group_unit")
 
 // LoadUnitGroupUnits fetches unit group units by ID via BatchGetUnitGroupUnitsByIDs.
-// Returns flat UnitGroupUnits without Unit populated — the unit SubField on
-// UnitGroupUnit handles loading Unit when ?include=unit is requested.
+// Returns flat UnitGroupUnits without Unit populated — the unit SubField on UnitGroupUnit handles loading Unit when ?include=unit is requested.
 func LoadUnitGroupUnits(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil
@@ -103,8 +98,7 @@ func LoadUnitGroupUnits(ctx context.Context, ids []string) (map[string]any, *api
 	return out, nil
 }
 
-// unitGroupUnitFromProtoFlat maps a proto UnitGroupUnitInfo to an apiresource
-// WITHOUT populating Unit. Used by standalone UnitGroupUnit endpoints.
+// unitGroupUnitFromProtoFlat maps a proto UnitGroupUnitInfo to an apiresource WITHOUT populating Unit. Used by standalone UnitGroupUnit endpoints.
 func unitGroupUnitFromProtoFlat(u *pb.UnitGroupUnitInfo) *apiresource.UnitGroupUnit {
 	discountPercentage, _ := strconv.ParseFloat(u.DiscountPercentage, 64)
 	discountFixed, _ := strconv.ParseFloat(u.DiscountFixed, 64)
@@ -125,9 +119,7 @@ func unitGroupUnitFromProtoFlat(u *pb.UnitGroupUnitInfo) *apiresource.UnitGroupU
 	}
 }
 
-// unitGroupUnitFromProtoWithUnit maps a proto UnitGroupUnitInfo WITH inline
-// Unit details. Used by the UnitGroup's associated_units SubField to preserve
-// backward compat where unit data is always returned.
+// unitGroupUnitFromProtoWithUnit maps a proto UnitGroupUnitInfo WITH inline Unit details. Used by the UnitGroup's associated_units SubField to preserve backward compat where unit data is always returned.
 func unitGroupUnitFromProtoWithUnit(u *pb.UnitGroupUnitInfo) apiresource.UnitGroupUnit {
 	result := *unitGroupUnitFromProtoFlat(u)
 

@@ -10,8 +10,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// RecoveryUnaryInterceptor recovers from panics in gRPC unary handlers
-// and converts them to internal server errors with details
+// RecoveryUnaryInterceptor recovers from panics in gRPC unary handlers and converts them to internal server errors with details.
 func RecoveryUnaryInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
 		defer func() {

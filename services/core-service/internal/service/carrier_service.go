@@ -42,8 +42,7 @@ type CarrierSvcConfig struct {
 	// ShippoFactory (required) builds Shippo shipping clients.
 	ShippoFactory domain.ShippoClientFactory
 
-	// EncryptionKey (optional; default: nil) encrypts sensitive fields at rest. It is not validated
-	// at construction.
+	// EncryptionKey (optional; default: nil) encrypts sensitive fields at rest. It is not validated at construction.
 	EncryptionKey []byte
 
 	// AccountSvc (required) is the account service dependency.
@@ -178,11 +177,7 @@ func (s *carrierSvcImpl) ListCarriers(ctx context.Context, params domain.ListCar
 	return result, nil
 }
 
-// BatchGetCarriersByIDs returns multiple carriers by ID with the same account
-// scoping rules as GetCarrier. When serviceLevelsLimit > 0, each returned
-// carrier is annotated with a preview of up to that many service_level IDs
-// plus a has_more flag (these are populated as fields on the returned domain
-// Carrier so the gRPC handler can mirror them into CarrierInfo).
+// BatchGetCarriersByIDs returns multiple carriers by ID with the same account scoping rules as GetCarrier. When serviceLevelsLimit > 0, each returned carrier is annotated with a preview of up to that many service_level IDs plus a has_more flag (these are populated as fields on the returned domain Carrier so the gRPC handler can mirror them into CarrierInfo).
 func (s *carrierSvcImpl) BatchGetCarriersByIDs(ctx context.Context, ids []string, serviceLevelsLimit int32) ([]*domain.Carrier, *apierror.APIError) {
 	ctx, span := carrierSvcTracer.Start(ctx, "service.carrier.batch_get_by_ids")
 	defer span.End()
@@ -241,9 +236,7 @@ func (s *carrierSvcImpl) BatchGetCarriersByIDs(ctx context.Context, ids []string
 	return carriers, nil
 }
 
-// BatchGetServiceLevelsByIDs returns service levels by ID, authorization
-// follows the parent carrier's account scope (the repo enforces this via the
-// inner JOIN on `carrier`).
+// BatchGetServiceLevelsByIDs returns service levels by ID, authorization follows the parent carrier's account scope (the repo enforces this via the inner JOIN on `carrier`).
 func (s *carrierSvcImpl) BatchGetServiceLevelsByIDs(ctx context.Context, ids []string) ([]*domain.ServiceLevel, *apierror.APIError) {
 	ctx, span := carrierSvcTracer.Start(ctx, "service.carrier.batch_get_service_levels_by_ids")
 	defer span.End()
@@ -922,8 +915,7 @@ func (s *carrierSvcImpl) SyncOptions(ctx context.Context, carrierID string) (*do
 	}
 }
 
-// checkCarrierReadPermission checks the appropriate read permission based on the identity context.
-// Internal actors need carriers:read for their own account, or customers:read / suppliers:read for external accounts.
+// checkCarrierReadPermission checks the appropriate read permission based on the identity context. Internal actors need carriers:read for their own account, or customers:read / suppliers:read for external accounts.
 func checkCarrierReadPermission(identity *types.Identity) *apierror.APIError {
 	if !identity.IsInternalActor() {
 		return nil

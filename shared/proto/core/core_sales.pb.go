@@ -1409,8 +1409,12 @@ type SalesOrderInfo struct {
 	// populated; computed from settlement allocations vs. invoiced amounts plus
 	// any Stripe payment intent.
 	PaymentStatus string `protobuf:"bytes,94,opt,name=payment_status,json=paymentStatus,proto3" json:"payment_status,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// Invoice email recipients (populated when contacts is included).
+	InvoiceEmails []string `protobuf:"bytes,95,rep,name=invoice_emails,json=invoiceEmails,proto3" json:"invoice_emails,omitempty"`
+	// Order acknowledgement email recipients (populated when contacts is included).
+	AcknowledgementEmails []string `protobuf:"bytes,96,rep,name=acknowledgement_emails,json=acknowledgementEmails,proto3" json:"acknowledgement_emails,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *SalesOrderInfo) Reset() {
@@ -2099,6 +2103,20 @@ func (x *SalesOrderInfo) GetPaymentStatus() string {
 		return x.PaymentStatus
 	}
 	return ""
+}
+
+func (x *SalesOrderInfo) GetInvoiceEmails() []string {
+	if x != nil {
+		return x.InvoiceEmails
+	}
+	return nil
+}
+
+func (x *SalesOrderInfo) GetAcknowledgementEmails() []string {
+	if x != nil {
+		return x.AcknowledgementEmails
+	}
+	return nil
 }
 
 // SalesOrderLineInfo represents a sales order line.
@@ -6099,7 +6117,7 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"&BatchGetSalesOrderStatusesByIDsRequest\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\"w\n" +
 	"'BatchGetSalesOrderStatusesByIDsResponse\x12L\n" +
-	"\x14sales_order_statuses\x18\x01 \x03(\v2\x1a.core.SalesOrderStatusInfoR\x12salesOrderStatuses\"\x995\n" +
+	"\x14sales_order_statuses\x18\x01 \x03(\v2\x1a.core.SalesOrderStatusInfoR\x12salesOrderStatuses\"\xf75\n" +
 	"\x0eSalesOrderInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x121\n" +
@@ -6209,7 +6227,9 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\n" +
 	"line_count\x18\\ \x01(\x05R\tlineCount\x12!\n" +
 	"\fshipment_ids\x18] \x03(\tR\vshipmentIds\x12%\n" +
-	"\x0epayment_status\x18^ \x01(\tR\rpaymentStatusB\x15\n" +
+	"\x0epayment_status\x18^ \x01(\tR\rpaymentStatus\x12%\n" +
+	"\x0einvoice_emails\x18_ \x03(\tR\rinvoiceEmails\x125\n" +
+	"\x16acknowledgement_emails\x18` \x03(\tR\x15acknowledgementEmailsB\x15\n" +
 	"\x13_customer_po_numberB\a\n" +
 	"\x05_noteB\x0f\n" +
 	"\r_bill_to_nameB\x18\n" +

@@ -87,10 +87,7 @@ func (s *prioritySvcImpl) GetPriority(ctx context.Context, identifier string) (*
 	return s.repos.NewPriorityRepo().Get(ctx, identifier)
 }
 
-// BatchGetPrioritiesByIDs returns priorities by ID for the api-gateway include
-// resolver. Priorities are system-wide so there's no per-caller scoping; we
-// still require the caller to be an authenticated internal actor with the
-// priorities:read permission.
+// BatchGetPrioritiesByIDs returns priorities by ID for the api-gateway include resolver. Priorities are system-wide so there's no per-caller scoping; we still require the caller to be an authenticated internal actor with the priorities:read permission.
 func (s *prioritySvcImpl) BatchGetPrioritiesByIDs(ctx context.Context, ids []string) ([]*domain.Priority, *apierror.APIError) {
 	ctx, span := prioritySvcTracer.Start(ctx, "service.priority.batch_get_by_ids")
 	defer span.End()

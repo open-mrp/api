@@ -54,8 +54,7 @@ func (r *accountRelationRepoImpl) ListChildAccounts(ctx context.Context, params 
 	ctx, span := childAccountRepoTracer.Start(ctx, "repository.child_account.list")
 	defer span.End()
 
-	// Resolve parent counterparty account ID to parent relation ID.
-	// If no relation exists, the account has no children — return an empty list.
+	// Resolve parent counterparty account ID to parent relation ID. If no relation exists, the account has no children — return an empty list.
 	parentRelationID, apiErr := r.FindRelationByOwnerAndCounterparty(ctx, params.OwnerAccountID, params.ParentAccountID)
 	if apiErr != nil {
 		if apiErr.Code == apierror.ErrorCodeResourceNotFound {

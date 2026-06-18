@@ -8,8 +8,7 @@ import (
 )
 
 type IdempotencyMed interface {
-	// UpsertIdempotencyKey returns the existing idempotency key for the request scope,
-	// or creates one if it does not exist.
+	// UpsertIdempotencyKey returns the existing idempotency key for the request scope, or creates one if it does not exist.
 	//
 	//  1. Resolve the idempotency key from the request context, falling back to the request ID.
 	//  2. Compute the scope hash from the actor, target account, service, handler, and key.
@@ -18,8 +17,7 @@ type IdempotencyMed interface {
 	//     existing row if a concurrent request inserted the same scope hash first.
 	UpsertIdempotencyKey(ctx context.Context, identity *types.Identity) (*IdempotencyKey, *apierror.APIError)
 
-	// CacheErrorResponse caches a non-transient error response for the given idempotency key
-	// and returns the original error.
+	// CacheErrorResponse caches a non-transient error response for the given idempotency key and returns the original error.
 	//
 	//  1. Return transient errors uncached so the client can retry.
 	//  2. Persist non-transient errors as the cached response and mark the key finished.

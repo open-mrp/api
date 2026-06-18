@@ -37,8 +37,7 @@ type TenancySvcConfig struct {
 	// S3Client (required) is the object store client used for file storage.
 	S3Client s3client.ObjectStore
 
-	// UserPhotosBucket (optional; default: "") is the S3 bucket for user photos. It is not validated
-	// at construction.
+	// UserPhotosBucket (optional; default: "") is the S3 bucket for user photos. It is not validated at construction.
 	UserPhotosBucket string
 }
 
@@ -81,8 +80,7 @@ func (s *tenancySvcImpl) GetTenancy(ctx context.Context, userID string, targetAc
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
-	// Tenancy is account-agnostic: the user may not have selected an account
-	// yet, so require an authenticated user actor but not an assigned account.
+	// Tenancy is account-agnostic: the user may not have selected an account yet, so require an authenticated user actor but not an assigned account.
 	if apiErr := identity.CheckHasUserActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -148,8 +146,7 @@ func (s *tenancySvcImpl) SwitchAccount(ctx context.Context, userID, accountID st
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
-	// Switching accounts is account-agnostic by definition; require an
-	// authenticated user actor but not an assigned account.
+	// Switching accounts is account-agnostic by definition; require an authenticated user actor but not an assigned account.
 	if apiErr := identity.CheckHasUserActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -215,9 +212,7 @@ func (s *tenancySvcImpl) GetCurrentUser(ctx context.Context, userID string, targ
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
-	// Account-agnostic like GetTenancy: /me is called before an account is
-	// selected, so the identity may have no actor account. CheckIsUser would
-	// 403 there; require an authenticated user actor only.
+	// Account-agnostic like GetTenancy: /me is called before an account is selected, so the identity may have no actor account. CheckIsUser would 403 there; require an authenticated user actor only.
 	if apiErr := identity.CheckHasUserActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -231,11 +226,7 @@ func (s *tenancySvcImpl) GetCurrentUser(ctx context.Context, userID string, targ
 	}
 
 	if targetAccountID != nil && user.ImageURL != nil {
-		// A non-null user.image_url is the authoritative avatar existence signal
-		// (set only on photo upload), so we presign directly instead of doing an
-		// S3 HeadObject — presigning is a local SigV4 operation with no network
-		// I/O, keeping /me off the S3 critical path. On any signing error we
-		// simply leave the persisted image_url value in place.
+		// A non-null user.image_url is the authoritative avatar existence signal (set only on photo upload), so we presign directly instead of doing an S3 HeadObject — presigning is a local SigV4 operation with no network I/O, keeping /me off the S3 critical path. On any signing error we simply leave the persisted image_url value in place.
 		key := *targetAccountID + "/" + userID + ".png"
 		if url, apiErr := s.s3Client.GetPresignedURL(ctx, s.userPhotosBucket, key, 60*time.Minute); apiErr == nil {
 			user.ImageURL = &url

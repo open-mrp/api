@@ -2,13 +2,10 @@ package id
 
 import "strings"
 
-// IDPrefix is a 2-letter prefix for a type-specific ID. This will be used to
-// compose the prefix for the ID. Since each word has a unique 2 letter vocabulary,
-// we can ensure the type ID provides a machine-readable and human-readable identifier.
+// IDPrefix is a 2-letter prefix for a type-specific ID. This will be used to compose the prefix for the ID. Since each word has a unique 2 letter vocabulary, we can ensure the type ID provides a machine-readable and human-readable identifier.
 type IDPrefix string
 
-// Vocabulary contains all 2-letter word codes used to compose ID prefixes.
-// Each code represents a semantic word/concept.
+// Vocabulary contains all 2-letter word codes used to compose ID prefixes. Each code represents a semantic word/concept.
 const (
 	// Base entities
 	VocAccount      = "ac"
@@ -132,15 +129,12 @@ const (
 	VocReceiving    = "rc"
 )
 
-// composePrefix concatenates vocabulary words to form a prefix.
-// This ensures consistency and makes prefix construction explicit.
+// composePrefix concatenates vocabulary words to form a prefix. This ensures consistency and makes prefix construction explicit.
 func composePrefix(words ...string) IDPrefix {
 	return IDPrefix(strings.Join(words, ""))
 }
 
-// IDPrefixes contains all the type ID prefix values used in the system.
-// This serves as a centralized reference for all type ID prefix values.
-// These constants can be used when creating new type ID structs or for validation.
+// IDPrefixes contains all the type ID prefix values used in the system. This serves as a centralized reference for all type ID prefix values. These constants can be used when creating new type ID structs or for validation.
 var (
 	// Account-related prefix values
 	AccountIDPrefix                               = composePrefix(VocAccount)

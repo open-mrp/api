@@ -10,8 +10,7 @@ import (
 	"github.com/augno/api/shared/retry"
 )
 
-// OutboxDBRetryConfig returns the short retry policy used for small outbox
-// database operations that can safely be re-attempted after a lock conflict.
+// OutboxDBRetryConfig returns the short retry policy used for small outbox database operations that can safely be re-attempted after a lock conflict.
 func OutboxDBRetryConfig(platformMode constants.PlatformMode) *retry.Config {
 	if platformMode.IsTest() {
 		return (&retry.Config{
@@ -32,9 +31,7 @@ func OutboxDBRetryConfig(platformMode constants.PlatformMode) *retry.Config {
 	}).WithDefaults()
 }
 
-// WithOutboxDBLockRetry retries operation only for transient database lock
-// conflicts. Callers should use it for small outbox operations whose retry is
-// idempotent, not for broader business transactions.
+// WithOutboxDBLockRetry retries operation only for transient database lock conflicts. Callers should use it for small outbox operations whose retry is idempotent, not for broader business transactions.
 func WithOutboxDBLockRetry(ctx context.Context, cfg *retry.Config, operation string, fn func() error) error {
 	cfg = cfg.WithDefaults()
 

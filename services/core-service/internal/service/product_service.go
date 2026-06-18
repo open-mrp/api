@@ -128,9 +128,7 @@ func (s *productSvcImpl) GetCustomerByEmail(ctx context.Context, ownerAccountID,
 	return s.repos.NewAccountRelationRepo().FindCustomerByEmail(ctx, ownerAccountID, email)
 }
 
-// ListProductsFull returns a paginated list of products for the caller's account.
-// Supports both internal and customer actors. Customers only see portal-ready products
-// from their accessible product lines.
+// ListProductsFull returns a paginated list of products for the caller's account. Supports both internal and customer actors. Customers only see portal-ready products from their accessible product lines.
 func (s *productSvcImpl) ListProductsFull(ctx context.Context, params domain.ListProductsFullParams) (*domain.ListProductsFullResult, *apierror.APIError) {
 	ctx, span := productSvcTracer.Start(ctx, "service.product.list_full")
 	defer span.End()
@@ -268,9 +266,7 @@ func (s *productSvcImpl) GetProduct(ctx context.Context, params domain.GetProduc
 	return product, nil
 }
 
-// attachProductIncludes populates expandable sub-resources on a product that
-// the product queries don't join. Specifically: item.attributes (loaded via
-// item repo) and product_line.unit_group (loaded via product_line repo).
+// attachProductIncludes populates expandable sub-resources on a product that the product queries don't join. Specifically: item.attributes (loaded via item repo) and product_line.unit_group (loaded via product_line repo).
 func (s *productSvcImpl) attachProductIncludes(ctx context.Context, product *domain.ProductFull, accountID string, includes []string) *apierror.APIError {
 	if product == nil {
 		return nil
@@ -283,9 +279,7 @@ func (s *productSvcImpl) attachProductIncludes(ctx context.Context, product *dom
 			Includes:  []string{"attributes"},
 		})
 		if apiErr != nil {
-			// The item was concurrently soft-deleted between the list/get query
-			// and this enrichment call. Skip enrichment rather than surfacing a
-			// spurious 404 to the caller.
+			// The item was concurrently soft-deleted between the list/get query and this enrichment call. Skip enrichment rather than surfacing a spurious 404 to the caller.
 			if !apierror.IsNotFound(apiErr) {
 				return apiErr
 			}
@@ -398,9 +392,7 @@ func (s *productSvcImpl) CreateProduct(ctx context.Context, params domain.Create
 				return apiErr
 			}
 
-			// Insert rates for item (unit_value, unit_cost, burn_rate). Caller-supplied
-			// inputs override the defaults; unit_price and unit_cost additionally enforce
-			// the currency-numerator / non-currency-denominator rule.
+			// Insert rates for item (unit_value, unit_cost, burn_rate). Caller-supplied inputs override the defaults; unit_price and unit_cost additionally enforce the currency-numerator / non-currency-denominator rule.
 			txUnitRepo := txSvc.repos.NewUnitRepo()
 
 			unitPriceValue, unitPriceNum, unitPriceDen := "0", baseUnitID, baseUnitID
@@ -429,8 +421,7 @@ func (s *productSvcImpl) CreateProduct(ctx context.Context, params domain.Create
 				return apiErr
 			}
 
-			// Burn rate is always initialized to "0" per day; it is recomputed
-			// from inventory history by the burn-rate mediator.
+			// Burn rate is always initialized to "0" per day; it is recomputed from inventory history by the burn-rate mediator.
 			if apiErr := txProductRepo.InsertRate(txCtx, burnRateRateID, "0", baseUnitID, "day"); apiErr != nil {
 				return apiErr
 			}
@@ -554,9 +545,7 @@ func (s *productSvcImpl) UpdateProduct(ctx context.Context, params domain.Update
 			txProductRepo := txSvc.repos.NewProductRepo()
 			txItemRepo := txSvc.repos.NewItemRepo()
 
-			// Fetch existing product before mutation for audit diff (same
-			// includes as the post-update fetch so include-only fields cannot
-			// produce false diffs).
+			// Fetch existing product before mutation for audit diff (same includes as the post-update fetch so include-only fields cannot produce false diffs).
 			old, apiErr := txProductRepo.Get(txCtx, domain.GetProductFullParams{
 				AccountID: params.AccountID,
 				ProductID: params.ProductID,
@@ -604,8 +593,7 @@ func (s *productSvcImpl) UpdateProduct(ctx context.Context, params domain.Update
 			result = updated
 
 			changes := audit.ComputeChanges(old, updated)
-			// Item-level fields (sku, description, notes) live on the joined
-			// item row; diff them the same way part updates do.
+			// Item-level fields (sku, description, notes) live on the joined item row; diff them the same way part updates do.
 			changes = append(changes, audit.ComputeChanges(old.Item, updated.Item)...)
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
@@ -854,8 +842,7 @@ func (s *productSvcImpl) BatchGetProductsByIDs(ctx context.Context, ids []string
 	return products, nil
 }
 
-// checkProductReadPermission checks the appropriate read permission based on the identity context.
-// Internal actors need items:read for their own account, or customers:read / suppliers:read for external accounts.
+// checkProductReadPermission checks the appropriate read permission based on the identity context. Internal actors need items:read for their own account, or customers:read / suppliers:read for external accounts.
 func checkProductReadPermission(identity *types.Identity) *apierror.APIError {
 	if !identity.IsInternalActor() {
 		return nil

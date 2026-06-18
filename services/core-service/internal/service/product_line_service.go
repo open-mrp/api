@@ -484,8 +484,7 @@ func (s *productLineSvcImpl) BatchGetProductLinesByIDs(ctx context.Context, ids 
 	return s.repos.NewProductLineRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
 }
 
-// checkProductLineReadPermission checks the appropriate read permission based on the identity context.
-// Internal actors need product_lines:read for their own account, or customers:read / suppliers:read for external accounts.
+// checkProductLineReadPermission checks the appropriate read permission based on the identity context. Internal actors need product_lines:read for their own account, or customers:read / suppliers:read for external accounts.
 func checkProductLineReadPermission(identity *types.Identity) *apierror.APIError {
 	if !identity.IsInternalActor() {
 		return nil

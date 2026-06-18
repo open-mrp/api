@@ -16,9 +16,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// SalesOrderCreatedConsumer processes sales-order-created events and runs the
-// out-of-band side effects that should not block the create response — currently
-// dispatching CRM sync for accounts with a connected integration (e.g. HubSpot).
+// SalesOrderCreatedConsumer processes sales-order-created events and runs the out-of-band side effects that should not block the create response — currently dispatching CRM sync for accounts with a connected integration (e.g. HubSpot).
 type SalesOrderCreatedConsumer struct {
 	rabbitmq      messaging.MessageBroker
 	inboxConsumer *messaging.InboxConsumer
@@ -82,23 +80,14 @@ func (c *SalesOrderCreatedConsumer) handleMessage(ctx context.Context, msg amqp.
 	return c.dispatchIntegrations(ctx, data)
 }
 
-// dispatchIntegrations runs each connected third-party integration's reaction to a new
-// sales order. Each integration is independent and idempotent on msg replay (the inbox
-// guarantees at-most-once delivery to this handler; integrations should additionally use
-// data.SalesOrderID as their upstream idempotency key).
+// dispatchIntegrations runs each connected third-party integration's reaction to a new sales order. Each integration is independent and idempotent on msg replay (the inbox guarantees at-most-once delivery to this handler; integrations should additionally use data.SalesOrderID as their upstream idempotency key).
 func (c *SalesOrderCreatedConsumer) dispatchIntegrations(ctx context.Context, data messaging.SalesOrderCreatedData) error {
 	return c.syncHubspot(ctx, data)
 }
 
-// syncHubspot pushes the new sales order to HubSpot when the account has the HubSpot
-// integration connected.
+// syncHubspot pushes the new sales order to HubSpot when the account has the HubSpot integration connected.
 //
-// TODO: implement the actual HubSpot sync once a HubSpot API client exists. The wiring
-// below establishes the trigger point and the enabled-check; the remaining work is to
-// (1) build a HubSpot client from the account's encrypted credentials
-// (AccountIntegrationRepo.GetEncryptedCredentials), (2) re-fetch the full order via the
-// sales-order repo, and (3) upsert the corresponding HubSpot deal/line items keyed on
-// data.SalesOrderID for idempotency.
+// TODO: implement the actual HubSpot sync once a HubSpot API client exists. The wiring below establishes the trigger point and the enabled-check; the remaining work is to (1) build a HubSpot client from the account's encrypted credentials (AccountIntegrationRepo.GetEncryptedCredentials), (2) re-fetch the full order via the sales-order repo, and (3) upsert the corresponding HubSpot deal/line items keyed on data.SalesOrderID for idempotency.
 func (c *SalesOrderCreatedConsumer) syncHubspot(ctx context.Context, data messaging.SalesOrderCreatedData) error {
 	hasHubspot, apiErr := c.repos.NewAccountIntegrationRepo().HasIntegration(ctx, data.AccountID, constants.IntegrationCodeHubspot)
 	if apiErr != nil {

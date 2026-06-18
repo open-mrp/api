@@ -23,7 +23,7 @@ func (e *ListAccountIntegrationsEndpoint) Materialize() *apiendpoint.APIEndpoint
 		Title:             "List Account Integrations",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
-		Route:             "/v1/identity/integrations",
+		Route:             "/v1/settings/integrations",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,

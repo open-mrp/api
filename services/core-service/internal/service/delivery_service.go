@@ -63,8 +63,7 @@ func (s *deliverySvcImpl) ListDeliveries(ctx context.Context, params domain.List
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Expand lines per delivery only when requested (so the list can serve the
-	// lines.item array filter). Get returns the full delivery with its lines.
+	// Expand lines per delivery only when requested (so the list can serve the lines.item array filter). Get returns the full delivery with its lines.
 	for _, include := range params.Includes {
 		if include == "lines" {
 			for _, summary := range result.Deliveries {

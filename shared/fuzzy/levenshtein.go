@@ -1,7 +1,6 @@
 package fuzzy
 
-// LevenshteinDistance computes the Levenshtein edit distance between two strings.
-// The implementation is iterative and uses O(min(m,n)) additional memory.
+// LevenshteinDistance computes the Levenshtein edit distance between two strings. The implementation is iterative and uses O(min(m,n)) additional memory.
 func LevenshteinDistance(a, b string) int {
 	if a == b {
 		return 0
@@ -50,8 +49,7 @@ func LevenshteinDistance(a, b string) int {
 	return prev[len(a)]
 }
 
-// FindClosestByLevenshtein returns the closest match to target from candidates and its distance.
-// If candidates is empty, it returns ("", 0).
+// FindClosestByLevenshtein returns the closest match to target from candidates and its distance. If candidates is empty, it returns ("", 0).
 func FindClosestByLevenshtein(target string, candidates []string) (string, int) {
 	best := ""
 	bestDist := 0

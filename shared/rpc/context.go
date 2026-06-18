@@ -12,8 +12,7 @@ import (
 // MetadataOption configures the outgoing gRPC metadata built by [PrepareRPCCtx].
 type MetadataOption func(metadata.MD)
 
-// WithIdentity adds the caller's identity from the context to the outgoing
-// gRPC metadata. If the context does not carry an identity the option is a no-op.
+// WithIdentity adds the caller's identity from the context to the outgoing gRPC metadata. If the context does not carry an identity the option is a no-op.
 func WithIdentity(ctx context.Context) MetadataOption {
 	return func(md metadata.MD) {
 		if identity, ok := appctx.GetIdentityFromContext(ctx); ok && identity != nil {
@@ -33,25 +32,16 @@ func WithMetadata(key string, values ...string) MetadataOption {
 type ServiceCallOption func(*serviceCallConfig)
 
 type serviceCallConfig struct {
-	// idempotencyKey (optional; default: "") explicitly overrides the idempotency
-	// key sent in outgoing metadata. When empty, the key carried by the incoming
-	// context is forwarded instead.
+	// idempotencyKey (optional; default: "") explicitly overrides the idempotency key sent in outgoing metadata. When empty, the key carried by the incoming context is forwarded instead.
 	idempotencyKey string
 }
 
-// WithIdempotencyKeyOverride sets an explicit idempotency key on the outgoing
-// metadata, overriding whatever the context carries. Use this when a caller
-// needs to pass a derived key (e.g. appending a suffix) instead of forwarding
-// the original.
+// WithIdempotencyKeyOverride sets an explicit idempotency key on the outgoing metadata, overriding whatever the context carries. Use this when a caller needs to pass a derived key (e.g. appending a suffix) instead of forwarding the original.
 func WithIdempotencyKeyOverride(key string) ServiceCallOption {
 	return func(c *serviceCallConfig) { c.idempotencyKey = key }
 }
 
-// PrepareServiceCallCtx builds outgoing gRPC metadata for a service-to-service
-// call. It always forwards identity, the idempotency key, the request ID, and
-// the propagated client IP from the incoming context. Callers can supply
-// [ServiceCallOption] values to customise the defaults (e.g. override the
-// idempotency key).
+// PrepareServiceCallCtx builds outgoing gRPC metadata for a service-to-service call. It always forwards identity, the idempotency key, the request ID, and the propagated client IP from the incoming context. Callers can supply [ServiceCallOption] values to customise the defaults (e.g. override the idempotency key).
 //
 // Use this instead of assembling metadata manually in each gRPC client.
 func PrepareServiceCallCtx(ctx context.Context, opts ...ServiceCallOption) context.Context {
@@ -85,8 +75,7 @@ func PrepareServiceCallCtx(ctx context.Context, opts ...ServiceCallOption) conte
 	return PrepareRPCCtx(ctx, mdOpts...)
 }
 
-// PrepareRPCCtx returns a new context with outgoing gRPC metadata configured
-// by the supplied options. Existing outgoing metadata on ctx is preserved.
+// PrepareRPCCtx returns a new context with outgoing gRPC metadata configured by the supplied options. Existing outgoing metadata on ctx is preserved.
 func PrepareRPCCtx(ctx context.Context, opts ...MetadataOption) context.Context {
 	md, ok := metadata.FromOutgoingContext(ctx)
 	if !ok {

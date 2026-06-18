@@ -6,8 +6,7 @@ type AccountIntegrationStatus string
 const (
 	// AccountIntegrationStatusActive indicates the integration is active and available for use.
 	AccountIntegrationStatusActive AccountIntegrationStatus = "active"
-	// AccountIntegrationStatusInactive indicates the integration is deactivated; its stored
-	// credentials are retained but it cannot be used.
+	// AccountIntegrationStatusInactive indicates the integration is deactivated; its stored credentials are retained but it cannot be used.
 	AccountIntegrationStatusInactive AccountIntegrationStatus = "inactive"
 )
 

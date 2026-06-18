@@ -273,6 +273,8 @@ func salesOrderToProto(o *domain.SalesOrder) *pb.SalesOrderInfo {
 		ServiceLevelName:      o.ServiceLevelName,
 		LineCount:             o.LineCount,
 		ShipmentIds:           o.ShipmentIDs,
+		InvoiceEmails:         o.InvoiceEmails,
+		AcknowledgementEmails: o.AcknowledgementEmails,
 		PaymentStatus:         string(o.PaymentStatus),
 		CreatedAt:             timestamppb.New(o.CreatedAt),
 		UpdatedAt:             timestamppb.New(o.UpdatedAt),
@@ -522,10 +524,7 @@ func (h *salesGRPCHandler) GetSalesOrder(ctx context.Context, req *pb.GetSalesOr
 	}, nil
 }
 
-// BatchGetSalesOrdersByIDs returns full sales orders by ID for the api-gateway
-// include resolver. It reuses the authorized single-get path per id; ids the
-// caller cannot access or that no longer exist are omitted from the response so
-// the resolver simply leaves those references null.
+// BatchGetSalesOrdersByIDs returns full sales orders by ID for the api-gateway include resolver. It reuses the authorized single-get path per id; ids the caller cannot access or that no longer exist are omitted from the response so the resolver simply leaves those references null.
 func (h *salesGRPCHandler) BatchGetSalesOrdersByIDs(ctx context.Context, req *pb.BatchGetSalesOrdersByIDsRequest) (*pb.BatchGetSalesOrdersByIDsResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

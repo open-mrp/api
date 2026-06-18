@@ -2,8 +2,7 @@ package domain
 
 import "time"
 
-// TenancyAccount represents an enriched account row from the tenancy query,
-// containing all fields needed for tenancy resolution.
+// TenancyAccount represents an enriched account row from the tenancy query, containing all fields needed for tenancy resolution.
 type TenancyAccount struct {
 	AccountID                string
 	AccountName              string
@@ -23,8 +22,7 @@ type TenancyAccount struct {
 	Plan                     *TenancyAccountPlanSummary
 }
 
-// TenancyAccountPlanSummary is the inline plan data returned by the tenancy query,
-// before limits/features have been joined in.
+// TenancyAccountPlanSummary is the inline plan data returned by the tenancy query, before limits/features have been joined in.
 type TenancyAccountPlanSummary struct {
 	TypeID        string
 	Name          string
@@ -58,8 +56,7 @@ type TenancyCurrentAccount struct {
 	AccountPlan              *TenancyAccountPlan
 }
 
-// TenancyAccountPlan is the fully-resolved plan for the current account,
-// including its limits and features.
+// TenancyAccountPlan is the fully-resolved plan for the current account, including its limits and features.
 type TenancyAccountPlan struct {
 	TypeID        string
 	Name          string
@@ -84,8 +81,7 @@ type TenancyRole struct {
 	UpdatedAt   time.Time
 }
 
-// TenancyPendingRegistration represents an in-progress registration session
-// for the authenticated user.
+// TenancyPendingRegistration represents an in-progress registration session for the authenticated user.
 type TenancyPendingRegistration struct {
 	SessionID string
 	PlanCode  string

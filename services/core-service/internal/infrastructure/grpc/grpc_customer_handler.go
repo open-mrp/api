@@ -349,10 +349,7 @@ func (h *gRPCHandler) GetCustomer(ctx context.Context, req *pb.GetCustomerReques
 	}, nil
 }
 
-// BatchGetCustomersByIDs returns customers by ID for the api-gateway include
-// resolver. It reuses the authorized single-get path per id; ids the caller
-// cannot access or that no longer exist are omitted so the resolver leaves
-// those references null.
+// BatchGetCustomersByIDs returns customers by ID for the api-gateway include resolver. It reuses the authorized single-get path per id; ids the caller cannot access or that no longer exist are omitted so the resolver leaves those references null.
 func (h *gRPCHandler) BatchGetCustomersByIDs(ctx context.Context, req *pb.BatchGetCustomersByIDsRequest) (*pb.BatchGetCustomersByIDsResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

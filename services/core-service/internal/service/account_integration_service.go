@@ -121,9 +121,7 @@ func (s *accountIntegrationSvcImpl) ListAccountIntegrations(ctx context.Context,
 	return s.repos.NewAccountIntegrationRepo().List(ctx, params)
 }
 
-// BatchGetAccountIntegrationsByIDs returns account integrations matching the
-// input IDs that the caller's account is authorized to read. Mirrors the
-// admin-only access check from List.
+// BatchGetAccountIntegrationsByIDs returns account integrations matching the input IDs that the caller's account is authorized to read. Mirrors the admin-only access check from List.
 func (s *accountIntegrationSvcImpl) BatchGetAccountIntegrationsByIDs(ctx context.Context, ids []string) ([]*domain.AccountIntegration, *apierror.APIError) {
 	ctx, span := accountIntegrationSvcTracer.Start(ctx, "service.account_integration.batch_get_by_ids")
 	defer span.End()
@@ -347,9 +345,7 @@ func (s *accountIntegrationSvcImpl) validateShippoCredentials(span trace.Span, c
 	return nil
 }
 
-// validateHubspotCredentials validates a HubSpot Private App access token. HubSpot
-// tokens carry no sandbox/production distinction in their format, so the same
-// prefix check applies to every account.
+// validateHubspotCredentials validates a HubSpot Private App access token. HubSpot tokens carry no sandbox/production distinction in their format, so the same prefix check applies to every account.
 func (s *accountIntegrationSvcImpl) validateHubspotCredentials(span trace.Span, credentialsJSON string) *apierror.APIError {
 	var creds domain.HubspotCredentials
 	if err := json.Unmarshal([]byte(credentialsJSON), &creds); err != nil {

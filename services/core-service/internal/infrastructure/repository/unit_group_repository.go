@@ -138,8 +138,7 @@ func mapGetUnitsByIDsRowToLightUnit(row sqlc.GetUnitsByIDsRow) domain.LightUnit 
 	}
 }
 
-// stitchBaseUnits fetches the base_unit for each UnitGroupFull and populates it in place.
-// Mappers must store the base_unit_id in BaseUnit.ID before calling this.
+// stitchBaseUnits fetches the base_unit for each UnitGroupFull and populates it in place. Mappers must store the base_unit_id in BaseUnit.ID before calling this.
 func (r *unitGroupRepoImpl) stitchBaseUnits(ctx context.Context, unitGroups []*domain.UnitGroupFull) *apierror.APIError {
 	if len(unitGroups) == 0 {
 		return nil
@@ -173,8 +172,7 @@ func (r *unitGroupRepoImpl) stitchBaseUnits(ctx context.Context, unitGroups []*d
 	return nil
 }
 
-// stitchUnitGroupUnits fetches unit conversions for each UnitGroupFull.
-// When includes contains "associated_units", it also stitches unit details.
+// stitchUnitGroupUnits fetches unit conversions for each UnitGroupFull. When includes contains "associated_units", it also stitches unit details.
 func (r *unitGroupRepoImpl) stitchUnitGroupUnits(ctx context.Context, unitGroups []*domain.UnitGroupFull, incs []string) *apierror.APIError {
 	if len(unitGroups) == 0 {
 		return nil

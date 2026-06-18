@@ -15,8 +15,7 @@ import (
 
 var accountIntegrationLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.account_integration")
 
-// LoadAccountIntegrations fetches account integrations by ID via
-// BatchGetAccountIntegrationsByIDs. Pure leaf — no expandable sub-resources.
+// LoadAccountIntegrations fetches account integrations by ID via BatchGetAccountIntegrationsByIDs. Pure leaf — no expandable sub-resources.
 func LoadAccountIntegrations(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil
@@ -35,10 +34,7 @@ func LoadAccountIntegrations(ctx context.Context, ids []string) (map[string]any,
 	return out, nil
 }
 
-// AccountIntegrationFromProto maps the gRPC AccountIntegrationInfo to the
-// apiresource shape. Exported so endpoint service methods that already hold a
-// proto response (e.g. Delete, which can't fan back through LoadXs) can
-// reuse it directly.
+// AccountIntegrationFromProto maps the gRPC AccountIntegrationInfo to the apiresource shape. Exported so endpoint service methods that already hold a proto response (e.g. Delete, which can't fan back through LoadXs) can reuse it directly.
 func AccountIntegrationFromProto(ai *pb.AccountIntegrationInfo) *apiresource.AccountIntegration {
 	return &apiresource.AccountIntegration{
 		ID:              ai.Id,

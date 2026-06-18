@@ -9,9 +9,7 @@ import (
 	"time"
 )
 
-// GatewayError is a structured error returned when the LLM gateway responds
-// with a non-200 status code. It classifies errors as retryable or not and
-// extracts the Retry-After header when present.
+// GatewayError is a structured error returned when the LLM gateway responds with a non-200 status code. It classifies errors as retryable or not and extracts the Retry-After header when present.
 type GatewayError struct {
 	StatusCode int
 	Body       string
@@ -23,8 +21,7 @@ func (e *GatewayError) Error() string {
 	return fmt.Sprintf("gateway returned status %d: %s", e.StatusCode, e.Body)
 }
 
-// RetryAfter returns the duration to wait before retrying, based on the
-// Retry-After header. Returns 0 if the header is absent or unparseable.
+// RetryAfter returns the duration to wait before retrying, based on the Retry-After header. Returns 0 if the header is absent or unparseable.
 func (e *GatewayError) RetryAfter() time.Duration {
 	if e.Headers == nil {
 		return 0
@@ -47,8 +44,7 @@ func (e *GatewayError) RetryAfter() time.Duration {
 	return 0
 }
 
-// IsContextLengthError returns true if the error body indicates the input
-// exceeded the model's context window. These errors should not be retried.
+// IsContextLengthError returns true if the error body indicates the input exceeded the model's context window. These errors should not be retried.
 func (e *GatewayError) IsContextLengthError() bool {
 	lower := strings.ToLower(e.Body)
 	return strings.Contains(lower, "context_length") ||
@@ -57,8 +53,7 @@ func (e *GatewayError) IsContextLengthError() bool {
 		strings.Contains(lower, "token limit")
 }
 
-// NewGatewayError creates a GatewayError from an HTTP response, classifying
-// whether the error is retryable based on the status code and response body.
+// NewGatewayError creates a GatewayError from an HTTP response, classifying whether the error is retryable based on the status code and response body.
 func NewGatewayError(statusCode int, body string, headers http.Header) *GatewayError {
 	ge := &GatewayError{
 		StatusCode: statusCode,
@@ -100,8 +95,7 @@ type gatewayErrorBody struct {
 	} `json:"error"`
 }
 
-// ExtractErrorMessage attempts to extract a human-readable error message from
-// the gateway response body. Falls back to the raw body if parsing fails.
+// ExtractErrorMessage attempts to extract a human-readable error message from the gateway response body. Falls back to the raw body if parsing fails.
 func ExtractErrorMessage(body string) string {
 	var parsed gatewayErrorBody
 	if err := json.Unmarshal([]byte(body), &parsed); err == nil && parsed.Error.Message != "" {

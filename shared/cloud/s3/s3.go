@@ -35,12 +35,7 @@ type Client struct {
 
 // NewClient creates a new S3 client using the given AWS region.
 //
-// The EC2 IMDS credential provider is disabled: pods receive credentials via
-// IRSA (web identity token), never the node instance role, and IMDS is
-// unreachable from pods anyway (the node hop limit is pinned to 1 as MCP
-// hardening). Leaving IMDS in the credential chain makes credential resolution
-// block for the full request deadline (~5s) on every call when no other
-// provider is configured, rather than failing fast.
+// The EC2 IMDS credential provider is disabled: pods receive credentials via IRSA (web identity token), never the node instance role, and IMDS is unreachable from pods anyway (the node hop limit is pinned to 1 as MCP hardening). Leaving IMDS in the credential chain makes credential resolution block for the full request deadline (~5s) on every call when no other provider is configured, rather than failing fast.
 func NewClient(ctx context.Context, region string) (*Client, *apierror.APIError) {
 	cfg, err := awsconfig.LoadDefaultConfig(ctx,
 		awsconfig.WithRegion(region),
@@ -110,9 +105,7 @@ func (c *Client) FileExists(ctx context.Context, bucket, key string) (bool, *api
 		if errors.As(err, &notFound) {
 			return false, nil
 		}
-		// S3 HeadObject returns a 404 as a smithy HTTP response error.
-		// It returns 403 instead of 404 when the caller lacks s3:ListBucket
-		// permission, so treat both as "not found".
+		// S3 HeadObject returns a 404 as a smithy HTTP response error. It returns 403 instead of 404 when the caller lacks s3:ListBucket permission, so treat both as "not found".
 		var respErr interface{ HTTPStatusCode() int }
 		if errors.As(err, &respErr) {
 			if code := respErr.HTTPStatusCode(); code == 404 || code == 403 {

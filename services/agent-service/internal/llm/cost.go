@@ -31,9 +31,7 @@ func pricingForModel(model string) modelPricing {
 	return defaultPricing
 }
 
-// EstimateTokenCostCents returns the estimated cost in cents for the given
-// token counts and model. Uses conservative (most expensive) pricing as
-// fallback for unknown models.
+// EstimateTokenCostCents returns the estimated cost in cents for the given token counts and model. Uses conservative (most expensive) pricing as fallback for unknown models.
 func EstimateTokenCostCents(inputTokens, outputTokens int, model string) int64 {
 	p := pricingForModel(model)
 	inputCost := int64(inputTokens) * p.inputCentsPerMillion / 1_000_000

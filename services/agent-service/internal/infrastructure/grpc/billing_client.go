@@ -44,9 +44,7 @@ func (c *AgentBillingClient) Close() error {
 }
 
 func (c *AgentBillingClient) GetStripeCustomerID(ctx context.Context, accountID string) (string, error) {
-	// When called from the runner (internal context), there is no idempotency
-	// key on the context. Generate one so the billing service's idempotency
-	// tracking doesn't reject the call.
+	// When called from the runner (internal context), there is no idempotency key on the context. Generate one so the billing service's idempotency tracking doesn't reject the call.
 	var opts []rpc.ServiceCallOption
 	if key, ok := appctx.GetIdempotencyKey(ctx); !ok || key == "" {
 		generated, genErr := id.GenID(id.IdempotencyKeyIDPrefix, nil)

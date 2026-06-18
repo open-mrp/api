@@ -15,10 +15,7 @@ import (
 
 var createdByLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.created_by")
 
-// LoadCreatedBySalesOrders resolves the creator of each sales order from its
-// `create` audit event (via platform-service), returning one CreatedBy per order
-// id. Orders with no create event (e.g. system/EDI-created) resolve to a system
-// CreatedBy with no actor, so the field is always present once included.
+// LoadCreatedBySalesOrders resolves the creator of each sales order from its `create` audit event (via platform-service), returning one CreatedBy per order id. Orders with no create event (e.g. system/EDI-created) resolve to a system CreatedBy with no actor, so the field is always present once included.
 func LoadCreatedBySalesOrders(ctx context.Context, orderIDs []string) (map[string]any, *apierror.APIError) {
 	if len(orderIDs) == 0 {
 		return nil, nil
@@ -48,9 +45,7 @@ func LoadCreatedBySalesOrders(ctx context.Context, orderIDs []string) (map[strin
 	return out, nil
 }
 
-// createdByFromAuditActor maps a create-event actor to a CreatedBy. AuditActor.Type
-// carries the relation (internal/customer/supplier); only internal/customer map to a
-// named creator — anything else is presented as system rather than inventing a value.
+// createdByFromAuditActor maps a create-event actor to a CreatedBy. AuditActor.Type carries the relation (internal/customer/supplier); only internal/customer map to a named creator — anything else is presented as system rather than inventing a value.
 func createdByFromAuditActor(a *pb.AuditActor) *apiresource.CreatedBy {
 	if a == nil {
 		return apiresource.SystemCreatedBy()

@@ -9980,6 +9980,21 @@ func (mr *MockSalesOrderRepoMockRecorder) GetAcknowledgementRecipients(ctx, sale
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAcknowledgementRecipients", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetAcknowledgementRecipients), ctx, salesOrderID)
 }
 
+// GetContactsByOrders mocks base method.
+func (m *MockSalesOrderRepo) GetContactsByOrders(ctx context.Context, salesOrderIDs []string) (map[string]*domain.SalesOrderContacts, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetContactsByOrders", ctx, salesOrderIDs)
+	ret0, _ := ret[0].(map[string]*domain.SalesOrderContacts)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetContactsByOrders indicates an expected call of GetContactsByOrders.
+func (mr *MockSalesOrderRepoMockRecorder) GetContactsByOrders(ctx, salesOrderIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContactsByOrders", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetContactsByOrders), ctx, salesOrderIDs)
+}
+
 // GetForCustomer mocks base method.
 func (m *MockSalesOrderRepo) GetForCustomer(ctx context.Context, accountID, buyerAccountID, salesOrderID string) (*domain.SalesOrder, *apierror.APIError) {
 	m.ctrl.T.Helper()

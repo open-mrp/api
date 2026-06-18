@@ -16,9 +16,7 @@ import (
 
 var serviceLevelLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.service_level")
 
-// LoadServiceLevels fetches service levels by ID via BatchGetServiceLevelsByIDs.
-// Builds clean *apiresource.ServiceLevel values; stashes the SL's
-// owner_account_id in LoadMeta for the owner/owner.account sub-fields.
+// LoadServiceLevels fetches service levels by ID via BatchGetServiceLevelsByIDs. It builds clean *apiresource.ServiceLevel values and stashes each service level's owner_account_id in LoadMeta for the owner/owner.account sub-fields.
 func LoadServiceLevels(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil

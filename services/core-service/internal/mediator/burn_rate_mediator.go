@@ -16,8 +16,7 @@ const burnRateDenominatorUnitID = "day"
 
 var burnRateMedTracer = tracing.GetTracer("core-service.burn_rate_mediator")
 
-// burnRateTimeSpanDays returns elapsed days between two consumption log timestamps.
-// When both fall in the same instant, use one day so multiple same-day events still yield a rate.
+// burnRateTimeSpanDays returns elapsed days between two consumption log timestamps. When both fall in the same instant, use one day so multiple same-day events still yield a rate.
 func burnRateTimeSpanDays(first, last time.Time) float64 {
 	span := last.Sub(first).Hours() / 24
 	if span <= 0 {
@@ -49,8 +48,7 @@ func NewBurnRateMed(config *BurnRateMedConfig) domain.BurnRateMed {
 	return &burnRateMedImpl{repos: config.Repos}
 }
 
-// RecalculateFromHistory updates the item's burn_rate from consumption change logs
-// over the last 30 days. No-op when there is insufficient history.
+// RecalculateFromHistory updates the item's burn_rate from consumption change logs over the last 30 days. No-op when there is insufficient history.
 //
 //  1. Load the item and resolve its category's base unit.
 //  2. List the item's consumption change logs; no-op when fewer than two exist.
@@ -127,8 +125,7 @@ func (m *burnRateMedImpl) RecalculateFromHistory(ctx context.Context, accountID,
 	return nil
 }
 
-// MaybeRecalculateAfterConsumption recalculates burn rate when a consumption change log was recorded.
-// Errors are traced but do not fail the caller's primary operation.
+// MaybeRecalculateAfterConsumption recalculates burn rate when a consumption change log was recorded. Errors are traced but do not fail the caller's primary operation.
 func MaybeRecalculateAfterConsumption(
 	ctx context.Context,
 	meds domain.Mediators,

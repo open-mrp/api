@@ -9,10 +9,7 @@ import (
 	"github.com/augno/api/shared/constants"
 )
 
-// serviceLevelsCanonicalPath is the dedicated paginated endpoint that the
-// `service_levels` include's next_page_url points at when the inline list is
-// truncated. Keeping this in one place so the URL shape stays consistent
-// with the registered HTTP route.
+// serviceLevelsCanonicalPath is the dedicated paginated endpoint that the `service_levels` include's next_page_url points at when the inline list is truncated. Keeping this in one place so the URL shape stays consistent with the registered HTTP route.
 const serviceLevelsCanonicalPath = "/v1/operations/carriers"
 
 func init() {
@@ -20,17 +17,12 @@ func init() {
 		ObjectType: constants.ObjectTypeCarrier,
 		Load:       resourceloaders.LoadCarriers,
 		Subs: []resourcekit.SubField{
-			// owner: no fetch. Builds the Owner shell from the carrier's
-			// account_id in LoadMeta (set by the carrier loader). type=system
-			// for NULL, type=account for a populated id with a stub Account.
+			// owner: no fetch. Builds the Owner shell from the carrier's account_id in LoadMeta (set by the carrier loader). type=system for NULL, type=account for a populated id with a stub Account.
 			{
 				Key:      "owner",
 				Populate: populateOwnerOnCarrier,
 			},
-			// owner.account: fetches the full Account by id and writes it
-			// into the shell built by the "owner" sub above. The resolver
-			// implicitly fires "owner" first because the tree treats
-			// "owner.account" as having "owner" as an ancestor.
+			// owner.account: fetches the full Account by id and writes it into the shell built by the "owner" sub above. The resolver implicitly fires "owner" first because the tree treats "owner.account" as having "owner" as an ancestor.
 			{
 				Key:         "owner.account",
 				Target:      constants.ObjectTypeAccount,
@@ -38,10 +30,7 @@ func init() {
 				ExtractIDs:  extractOwnerAccountIDFromCarrier,
 				Populate:    populateOwnerAccountOnCarrier,
 			},
-			// service_levels: fetches the previewed service levels via the
-			// SL loader, wraps them in *List[ServiceLevel] with a next_page
-			// URL pointing at the dedicated SL paginated endpoint when more
-			// exist beyond the preview cap.
+			// service_levels: fetches the previewed service levels via the SL loader, wraps them in *List[ServiceLevel] with a next_page URL pointing at the dedicated SL paginated endpoint when more exist beyond the preview cap.
 			{
 				Key:         "service_levels",
 				Target:      constants.ObjectTypeServiceLevel,
@@ -72,10 +61,7 @@ func extractOwnerAccountIDFromCarrier(ctx context.Context, parent any) []string 
 
 func populateOwnerAccountOnCarrier(ctx context.Context, parent any, loaded map[string]any) {
 	c := parent.(*apiresource.Carrier)
-	// The Owner shell is built by the "owner" sub which runs first
-	// (it's the dot-path ancestor of "owner.account" so tree.Has("owner")
-	// is true whenever tree.Has("owner.account") is). It has no Account
-	// attached — we read the FK from LoadMeta and look it up in `loaded`.
+	// The Owner shell is built by the "owner" sub which runs first (it's the dot-path ancestor of "owner.account" so tree.Has("owner") is true whenever tree.Has("owner.account") is). It has no Account attached — we read the FK from LoadMeta and look it up in `loaded`.
 	if c.Owner == nil {
 		return
 	}
@@ -111,10 +97,7 @@ func populateServiceLevelsOnCarrier(ctx context.Context, parent any, loaded map[
 
 	pageInfo := apiresource.PageInfo{HasNextPage: hasMore}
 	if hasMore {
-		// The inline preview isn't cursor-based, just a head-N projection
-		// of the full SL list. next_page_url therefore points at the first
-		// page of the dedicated paginated endpoint (no cursor query param);
-		// clients walk forward from there using its own cursors.
+		// The inline preview isn't cursor-based, just a head-N projection of the full SL list. next_page_url therefore points at the first page of the dedicated paginated endpoint (no cursor query param); clients walk forward from there using its own cursors.
 		nextURL := serviceLevelsCanonicalPath + "/" + c.ID + "/service-levels"
 		pageInfo.NextPageURL = &nextURL
 	}

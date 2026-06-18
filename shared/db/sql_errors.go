@@ -16,9 +16,7 @@ import (
 // DuplicateKeyMapping maps MySQL unique constraint names to custom APIError constructors.
 type DuplicateKeyMapping map[string]func() *apierror.APIError
 
-// MapSQLError converts common SQL/driver errors into an APIError so callers
-// can differentiate expected cases (e.g. not found) from infrastructural
-// failures (timeouts, connection issues, unknown errors).
+// MapSQLError converts common SQL/driver errors into an APIError so callers can differentiate expected cases (e.g. not found) from infrastructural failures (timeouts, connection issues, unknown errors).
 func MapSQLError(err error) *apierror.APIError {
 	if err == nil {
 		return nil
@@ -76,10 +74,7 @@ func MapSQLError(err error) *apierror.APIError {
 	return apierror.NewInternalError(err, "Database request failed for unknown reason.")
 }
 
-// MapSQLErrorWithDuplicateKeys works like MapSQLError but, for MySQL 1062 errors,
-// looks up the violated constraint name in the provided mapping to return a
-// domain-specific error. If no mapping matches, it falls through to the generic
-// ResourceExistsError from MapSQLError.
+// MapSQLErrorWithDuplicateKeys works like MapSQLError but, for MySQL 1062 errors, looks up the violated constraint name in the provided mapping to return a domain-specific error. If no mapping matches, it falls through to the generic ResourceExistsError from MapSQLError.
 func MapSQLErrorWithDuplicateKeys(err error, mapping DuplicateKeyMapping) *apierror.APIError {
 	if err == nil {
 		return nil
@@ -103,8 +98,7 @@ func MapSQLErrorWithDuplicateKeys(err error, mapping DuplicateKeyMapping) *apier
 	return MapSQLError(err)
 }
 
-// IsDeadlock reports whether err is a MySQL 1213 (deadlock) or
-// PostgreSQL 40P01 (deadlock_detected) / 40001 (serialization_failure) error.
+// IsDeadlock reports whether err is a MySQL 1213 (deadlock) or PostgreSQL 40P01 (deadlock_detected) / 40001 (serialization_failure) error.
 func IsDeadlock(err error) bool {
 	var mysqlErr *mysql.MySQLError
 	if errors.As(err, &mysqlErr) && mysqlErr.Number == 1213 {
@@ -114,8 +108,7 @@ func IsDeadlock(err error) bool {
 	return errors.As(err, &pgErr) && (pgErr.Code == "40P01" || pgErr.Code == "40001")
 }
 
-// IsRetryableLockConflict reports whether err is a transient database lock
-// conflict that is safe to retry around a small, idempotent database operation.
+// IsRetryableLockConflict reports whether err is a transient database lock conflict that is safe to retry around a small, idempotent database operation.
 func IsRetryableLockConflict(err error) bool {
 	var mysqlErr *mysql.MySQLError
 	if errors.As(err, &mysqlErr) {
@@ -135,8 +128,7 @@ func IsDuplicateEntry(err error) bool {
 	return errors.As(err, &pgErr) && pgErr.Code == "23505"
 }
 
-// extractKeyName parses "Duplicate entry '...' for key '<table>.<key_name>'"
-// and returns the key_name portion. Returns "" if the format doesn't match.
+// extractKeyName parses "Duplicate entry '...' for key '<table>.<key_name>'" and returns the key_name portion. Returns "" if the format doesn't match.
 func extractKeyName(message string) string {
 	const marker = "for key '"
 	idx := strings.LastIndex(message, marker)

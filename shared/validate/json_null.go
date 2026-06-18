@@ -12,15 +12,9 @@ import (
 	"github.com/augno/api/shared/field"
 )
 
-// RejectExplicitJSONNulls returns an invalid_format API error when the JSON body
-// contains an explicit null or a blank string for optional pointer fields
-// (json omitempty) or a blank string for field.Optional fields. Absent keys are
-// allowed (PATCH semantics).
+// RejectExplicitJSONNulls returns an invalid_format API error when the JSON body contains an explicit null or a blank string for optional pointer fields (json omitempty) or a blank string for field.Optional fields. Absent keys are allowed (PATCH semantics).
 //
-// field.Clearable values accept null (clear) and are not checked here.
-// field.Optional values reject explicit null at unmarshal time; this pass only
-// rejects a present-but-blank string for them. Response-style pointers without
-// omitempty are not checked here.
+// field.Clearable values accept null (clear) and are not checked here. field.Optional values reject explicit null at unmarshal time; this pass only rejects a present-but-blank string for them. Response-style pointers without omitempty are not checked here.
 func RejectExplicitJSONNulls(body []byte, v any) *apierror.APIError {
 	body = bytes.TrimSpace(body)
 	if len(body) == 0 || body[0] != '{' {
@@ -73,10 +67,7 @@ func rejectExplicitNullsInStruct(rv reflect.Value, rt reflect.Type, raw map[stri
 			continue
 		}
 		if field.IsOptionalType(sf.Type) {
-			// Optional rejects an explicit null at unmarshal time; here we additionally
-			// reject a present-but-blank string so an empty value is a 400 rather than
-			// silently set to "". Non-string Optionals never carry a blank string here
-			// (it would have failed to unmarshal into the inner type).
+			// Optional rejects an explicit null at unmarshal time; here we additionally reject a present-but-blank string so an empty value is a 400 rather than silently set to "". Non-string Optionals never carry a blank string here (it would have failed to unmarshal into the inner type).
 			if apiErr := rejectBlankString(sf, raw); apiErr != nil {
 				return apiErr
 			}
@@ -112,14 +103,9 @@ func rejectExplicitNullsInStruct(rv reflect.Value, rt reflect.Type, raw map[stri
 	return nil
 }
 
-// ApplySlicePresenceFlags sets boolean "Has" companion fields to true when the
-// corresponding slice field's JSON key is present in the raw body. This lets
-// downstream code distinguish "field absent" (Has=false) from "field explicitly
-// sent" (Has=true), including empty arrays to clear the collection.
+// ApplySlicePresenceFlags sets boolean "Has" companion fields to true when the corresponding slice field's JSON key is present in the raw body. This lets downstream code distinguish "field absent" (Has=false) from "field explicitly sent" (Has=true), including empty arrays to clear the collection.
 //
-// Convention: a slice field `FooIDs []string` with json tag "foo_ids" has a
-// companion `HasFooIDs bool` with json:"-". When "foo_ids" appears in the JSON
-// body, HasFooIDs is set to true.
+// Convention: a slice field `FooIDs []string` with json tag "foo_ids" has a companion `HasFooIDs bool` with json:"-". When "foo_ids" appears in the JSON body, HasFooIDs is set to true.
 func ApplySlicePresenceFlags(body []byte, v any) {
 	body = bytes.TrimSpace(body)
 	if len(body) == 0 || body[0] != '{' {
@@ -162,8 +148,7 @@ func ApplySlicePresenceFlags(body []byte, v any) {
 	}
 }
 
-// rejectBlankString returns an invalid_format error when sf's JSON key is present
-// and its value is a blank string. Absent keys and non-string values yield nil.
+// rejectBlankString returns an invalid_format error when sf's JSON key is present and its value is a blank string. Absent keys and non-string values yield nil.
 func rejectBlankString(sf reflect.StructField, raw map[string]json.RawMessage) *apierror.APIError {
 	jsonName := jsonFieldNameFromTag(sf.Tag.Get("json"))
 	if jsonName == "" || jsonName == "-" {

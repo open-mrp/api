@@ -13,10 +13,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// amqpHeadersCarrier adapts an amqp.Table (map[string]any) to the
-// propagation.TextMapCarrier interface so the OpenTelemetry propagator can
-// inject/extract W3C TraceContext headers into/from AMQP message headers. Only
-// string values are supported by Get; non-string header values are silently ignored.
+// amqpHeadersCarrier adapts an amqp.Table (map[string]any) to the propagation.TextMapCarrier interface so the OpenTelemetry propagator can inject/extract W3C TraceContext headers into/from AMQP message headers. Only string values are supported by Get; non-string header values are silently ignored.
 type amqpHeadersCarrier amqp.Table
 
 // Get returns the string value for key, or "" if the key is missing or not a string.
@@ -43,14 +40,9 @@ func (c amqpHeadersCarrier) Keys() []string {
 	return keys
 }
 
-// TracedPublisher wraps a RabbitMQ publish call with an OpenTelemetry producer span.
-// The span is named "rabbitmq.publish <normalized_routing_key>" and carries
-// messaging.* semantic attributes (system, destination exchange, routing key,
-// operation). Trace context is injected into the AMQP message headers so downstream
-// consumers can link their spans to this publish.
+// TracedPublisher wraps a RabbitMQ publish call with an OpenTelemetry producer span. The span is named "rabbitmq.publish <normalized_routing_key>" and carries messaging.* semantic attributes (system, destination exchange, routing key, operation). Trace context is injected into the AMQP message headers so downstream consumers can link their spans to this publish.
 //
-// If the context has tracing disabled via [WithNoTrace] (e.g. outbox background
-// publishing), the publish function is called directly with no span overhead.
+// If the context has tracing disabled via [WithNoTrace] (e.g. outbox background publishing), the publish function is called directly with no span overhead.
 func TracedPublisher(ctx context.Context, exchange, routingKey string, msg amqp.Publishing, publish func(context.Context, string, string, amqp.Publishing) error) error {
 	if !appctx.ShouldTrace(ctx) {
 		return publish(ctx, exchange, routingKey, msg)
@@ -87,20 +79,11 @@ func TracedPublisher(ctx context.Context, exchange, routingKey string, msg amqp.
 	return nil
 }
 
-// TracedConsumer wraps a RabbitMQ message handler with an OpenTelemetry consumer
-// span. It extracts trace context from the delivery's AMQP headers (injected by
-// [TracedPublisher]) so the consumer span becomes a child of the producer span,
-// forming a complete publish → consume trace.
+// TracedConsumer wraps a RabbitMQ message handler with an OpenTelemetry consumer span. It extracts trace context from the delivery's AMQP headers (injected by [TracedPublisher]) so the consumer span becomes a child of the producer span, forming a complete publish → consume trace.
 //
-// The span is named "rabbitmq.consume <normalized_name>" where the name is derived
-// from the delivery's routing key (preferred) or the queueName fallback. Messaging
-// semantic attributes (system, destination queue, exchange, routing key, operation)
-// are attached.
+// The span is named "rabbitmq.consume <normalized_name>" where the name is derived from the delivery's routing key (preferred) or the queueName fallback. Messaging semantic attributes (system, destination queue, exchange, routing key, operation) are attached.
 //
-// Unlike [TracedPublisher], this function does not check [ShouldTrace] because
-// consumer spans are always desirable — the consumer has no way to know whether the
-// publisher suppressed tracing, and the extracted parent context handles that
-// naturally.
+// Unlike [TracedPublisher], this function does not check [ShouldTrace] because consumer spans are always desirable — the consumer has no way to know whether the publisher suppressed tracing, and the extracted parent context handles that naturally.
 func TracedConsumer(delivery amqp.Delivery, queueName string, handler func(context.Context, amqp.Delivery) error) error {
 	// Extract trace context from message headers
 	carrier := amqpHeadersCarrier(delivery.Headers)

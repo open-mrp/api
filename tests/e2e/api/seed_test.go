@@ -384,7 +384,7 @@ var pathSpecificIDSeeds = map[string]string{
 	"/v1/catalog/unit-groups/{unit_group_id}/units/":                     SeedUnitGroupUnitID,
 	"/v1/catalog/unit-groups/":                                           SeedUnitGroupID,
 	"/v1/catalog/units/":                                                 SeedUnitID,
-	"/v1/core/sys-properties/":                                           SeedSysPropertyID,
+	"/v1/settings/properties/":                                           SeedSysPropertyID,
 	"/v1/finance/invoices/":                                              SeedInvoiceID,
 	"/v1/finance/payment-terms/":                                         SeedPaymentTermID,
 	"/v1/finance/settlements/":                                           SeedSettlementID,
@@ -392,7 +392,7 @@ var pathSpecificIDSeeds = map[string]string{
 	"/v1/finance/transactions/":                                          SeedTransactionID,
 	"/v1/identity/account-users/":                                        SeedAccountUserID,
 	"/v1/identity/accounts/":                                             SeedAccountID,
-	"/v1/identity/integrations/":                                         SeedAccountIntegrationID,
+	"/v1/settings/integrations/":                                         SeedAccountIntegrationID,
 	"/v1/identity/roles/":                                                SeedSalesRepRoleID, // account-owned so owner.account include populates
 	"/v1/identity/users/":                                                SeedUserID,
 	"/v1/operations/carriers/{carrier_id}/service-levels/":               SeedServiceLevelID,

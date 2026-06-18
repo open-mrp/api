@@ -18,58 +18,46 @@ type SchedulerSvc interface {
 	Stop()
 }
 
-// AgentDefinitionSvc handles business logic for agent definitions,
-// including CRUD operations with idempotency and tool management.
+// AgentDefinitionSvc handles business logic for agent definitions, including CRUD operations with idempotency and tool management.
 type AgentDefinitionSvc interface {
-	// CreateCustomAgent creates a new custom agent definition with optional
-	// tool links.
+	// CreateCustomAgent creates a new custom agent definition with optional tool links.
 	//
 	// Preconditions:
 	//   - All referenced tool IDs must exist.
 	//
 	// Side effects:
-	//   - Persists a new agent_definition row and associated
-	//     agent_definition_tool rows.
+	//   - Persists a new agent_definition row and associated agent_definition_tool rows.
 	//   - Caches the response in the service idempotency key.
 	CreateCustomAgent(ctx context.Context, params CreateCustomAgentParams) (*AgentDefinitionInfo, *apierror.APIError)
 
-	// UpdateCustomAgent updates a custom agent definition and replaces its
-	// tool links.
+	// UpdateCustomAgent updates a custom agent definition and replaces its tool links.
 	//
 	// Preconditions:
-	//   - The definition must exist, be of type "custom", and belong to the
-	//     caller's account.
+	//   - The definition must exist, be of type "custom", and belong to the caller's account.
 	//   - All referenced tool IDs must exist.
 	//
 	// Side effects:
-	//   - Updates the agent_definition row, deletes existing tool links, and
-	//     re-creates them from the provided list.
+	//   - Updates the agent_definition row, deletes existing tool links, and re-creates them from the provided list.
 	//   - Caches the response in the service idempotency key.
 	UpdateCustomAgent(ctx context.Context, params UpdateCustomAgentParams) (*AgentDefinitionInfo, *apierror.APIError)
 
 	// DeleteCustomAgent soft-deletes a custom agent definition.
 	//
 	// Preconditions:
-	//   - The definition must exist, be of type "custom", and belong to the
-	//     caller's account.
+	//   - The definition must exist, be of type "custom", and belong to the caller's account.
 	//
 	// Side effects:
 	//   - Sets is_active = false on the agent_definition row.
 	//   - Caches the response in the service idempotency key.
 	DeleteCustomAgent(ctx context.Context, params DeleteCustomAgentParams) *apierror.APIError
 
-	// GetAgentDefinition returns a single agent definition with its tools.
-	// System definitions are visible to all accounts; custom definitions are
-	// only visible to their owner.
+	// GetAgentDefinition returns a single agent definition with its tools. System definitions are visible to all accounts; custom definitions are only visible to their owner.
 	GetAgentDefinition(ctx context.Context, agentDefinitionID string, includes []string) (*AgentDefinitionInfo, *apierror.APIError)
 
-	// ListAgentDefinitions returns all active agent definitions visible to
-	// the given account (system definitions plus the account's custom ones).
+	// ListAgentDefinitions returns all active agent definitions visible to the given account (system definitions plus the account's custom ones).
 	ListAgentDefinitions(ctx context.Context, params ListAgentDefinitionsParams) (*ListAgentDefinitionsResult, *apierror.APIError)
 
-	// ListAvailableTools returns platform tool definitions that can be attached
-	// to agent definitions, along with tool groups. Results are filtered by
-	// query and paginated by cursor/limit when provided.
+	// ListAvailableTools returns platform tool definitions that can be attached to agent definitions, along with tool groups. Results are filtered by query and paginated by cursor/limit when provided.
 	ListAvailableTools(ctx context.Context, params ListAvailableToolsParams) ([]AvailableToolInfo, []ToolGroupInfo, *apierror.APIError)
 
 	// UpdateAgentAccountStatus upserts the per-account status for an agent definition.

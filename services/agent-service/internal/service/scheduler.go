@@ -34,16 +34,13 @@ type SchedulerConfig struct {
 	// OutboxRepo (required) is the outbox repository used to enqueue run commands.
 	OutboxRepo messaging.OutboxRepo
 
-	// PollInterval (optional; default: 60s) controls how frequently the scheduler
-	// polls for due agent schedules.
+	// PollInterval (optional; default: 60s) controls how frequently the scheduler polls for due agent schedules.
 	PollInterval time.Duration
 
-	// PlanGate (optional; default: nil) checks whether an account's plan allows
-	// agents. When nil, plan gating is skipped and all accounts are allowed.
+	// PlanGate (optional; default: nil) checks whether an account's plan allows agents. When nil, plan gating is skipped and all accounts are allowed.
 	PlanGate PlanGate
 
-	// Lease (required) is the distributed lease ensuring only one pod schedules
-	// runs per tick.
+	// Lease (required) is the distributed lease ensuring only one pod schedules runs per tick.
 	Lease *lease.Lease
 }
 

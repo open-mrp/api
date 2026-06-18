@@ -15,8 +15,7 @@ import (
 
 var accountStatusLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.account_status")
 
-// LoadAccountStatuses fetches account statuses by ID via
-// BatchGetAccountStatusesByIDs. System-only resource — no LoadMeta needed.
+// LoadAccountStatuses fetches account statuses by ID via BatchGetAccountStatusesByIDs. System-only resource — no LoadMeta needed.
 func LoadAccountStatuses(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil

@@ -10,12 +10,9 @@ import (
 )
 
 const (
-	// IdempotentReplayedHeader is the gRPC response metadata key that signals a
-	// cached (replayed) response. Clients can inspect this to know whether the
-	// server executed the request or returned a stored result.
+	// IdempotentReplayedHeader is the gRPC response metadata key that signals a cached (replayed) response. Clients can inspect this to know whether the server executed the request or returned a stored result.
 	IdempotentReplayedHeader = "x-idempotent-replayed"
-	// IdempotentReplayedHeaderValue is the value set on IdempotentReplayedHeader
-	// when the response was served from cache.
+	// IdempotentReplayedHeaderValue is the value set on IdempotentReplayedHeader when the response was served from cache.
 	IdempotentReplayedHeaderValue = "true"
 )
 
@@ -30,9 +27,7 @@ func IsIdempotentReplayed(md metadata.MD) bool {
 	return len(values) > 0 && values[0] == IdempotentReplayedHeaderValue
 }
 
-// WithIdempotencyTracking sets up idempotency response tracking for a gRPC handler.
-// It returns the updated context and a finalize function that should be deferred.
-// The finalize function will set the appropriate gRPC header if the response was replayed.
+// WithIdempotencyTracking sets up idempotency response tracking for a gRPC handler. It returns the updated context and a finalize function that should be deferred. The finalize function will set the appropriate gRPC header if the response was replayed.
 //
 // Usage:
 //

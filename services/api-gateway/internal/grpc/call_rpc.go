@@ -20,13 +20,11 @@ const (
 	BillingOperationTimeout  = 30 * time.Second
 )
 
-// RPCOption configures the behavior of [CallRPC]. Use the With* functions
-// in this package to obtain option values.
+// RPCOption configures the behavior of [CallRPC]. Use the With* functions in this package to obtain option values.
 type RPCOption func(*rpcConfig)
 
 type rpcConfig struct {
-	// timeout (optional; default: 0, i.e. use the shared rpc package's default
-	// deadline) overrides the RPC deadline for a single call.
+	// timeout (optional; default: 0, i.e. use the shared rpc package's default deadline) overrides the RPC deadline for a single call.
 	timeout time.Duration
 }
 
@@ -35,12 +33,9 @@ func WithTimeout(t time.Duration) RPCOption {
 	return func(c *rpcConfig) { c.timeout = t }
 }
 
-// CallRPC executes a gRPC call with gateway-specific metadata (identity,
-// idempotency key, API version, request ID) and standard boilerplate
-// (tracing, timeout, error conversion, replayed detection).
+// CallRPC executes a gRPC call with gateway-specific metadata (identity, idempotency key, API version, request ID) and standard boilerplate (tracing, timeout, error conversion, replayed detection).
 //
-// Callers within the gateway continue using this function with the same
-// signature — it delegates to [rpc.CallRPC] after preparing metadata.
+// Callers within the gateway continue using this function with the same signature — it delegates to [rpc.CallRPC] after preparing metadata.
 func CallRPC[T any](
 	ctx context.Context,
 	tracer trace.Tracer,
@@ -69,9 +64,7 @@ func CallRPC[T any](
 	return rpc.CallRPC(ctx, tracer, spanName, serviceName, call, rpcOpts...)
 }
 
-// prepareGatewayMetadata builds outgoing gRPC metadata from gateway context
-// values: identity, idempotency key, idempotency key ID, API version, and
-// request ID.
+// prepareGatewayMetadata builds outgoing gRPC metadata from gateway context values: identity, idempotency key, idempotency key ID, API version, and request ID.
 func prepareGatewayMetadata(ctx context.Context) context.Context {
 	mdOpts := []rpc.MetadataOption{
 		rpc.WithIdentity(ctx),

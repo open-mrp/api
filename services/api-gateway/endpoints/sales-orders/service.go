@@ -71,7 +71,7 @@ type salesOrderSvcImpl struct {
 
 var salesOrderEpSvcTracer = tracing.GetTracer("api-gateway.endpoints.sales-orders.service")
 
-var salesOrderIncludes = []string{"customer", "sales_rep", "bill_to_address", "ship_to_address", "freight", "payment_term", "shipping_term", "order_discount", "totals", "related.pick", "related.production_run", "related.shipments", "lines", "lines.product", "lines.quantity_ordered", "lines.unit_price", "lines.unit_cost", "lines.totals"}
+var salesOrderIncludes = []string{"customer", "sales_rep", "bill_to_address", "ship_to_address", "freight", "payment_term", "shipping_term", "order_discount", "totals", "contacts", "related.pick", "related.production_run", "related.shipments", "lines", "lines.product", "lines.quantity_ordered", "lines.unit_price", "lines.unit_cost", "lines.totals"}
 
 func (c *SalesOrderSvcConfig) validate() error {
 	if c.CoreClient == nil {
@@ -614,6 +614,15 @@ func parseDecimal(s string) decimal.Decimal {
 	return d
 }
 
+// orEmptyStrings returns a non-nil slice so the value serializes as a JSON array
+// (`[]`) rather than `null`.
+func orEmptyStrings(s []string) []string {
+	if s == nil {
+		return []string{}
+	}
+	return s
+}
+
 func stashSalesOrderMeta(ctx context.Context, info *pb.SalesOrderInfo, d *apiresource.SalesOrder) {
 	if info == nil {
 		return
@@ -637,6 +646,16 @@ func stashSalesOrderMeta(ctx context.Context, info *pb.SalesOrderInfo, d *apires
 	if totals := salesOrderTotalsFromLines(info.Lines); totals != nil {
 		meta.Set(constants.ObjectTypeSalesOrder, d.ID, "totals", totals)
 	}
+
+	// Contacts (expandable): email recipients grouped by notification purpose. The
+	// backend only populates the email lists when contacts is included; always stash
+	// the object so the populate step (which runs only for requested includes) finds it.
+	// Coalesce nil to empty slices so each group always serializes as a JSON array.
+	meta.Set(constants.ObjectTypeSalesOrder, d.ID, "contacts", &apiresource.OrderContact{
+		Object:          constants.ObjectTypeOrderContact,
+		Invoice:         orEmptyStrings(info.InvoiceEmails),
+		Acknowledgement: orEmptyStrings(info.AcknowledgementEmails),
+	})
 
 	// Related records (expandable): pick / production_run / shipments.
 	if info.PickId != nil {

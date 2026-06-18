@@ -7,9 +7,7 @@ import (
 )
 
 func init() {
-	// Address is a leaf resource: scalars + inline (non-expandable) Geolocation
-	// only. No expandable sub-resources, so the Definition declares no Subs.
-	// Geolocation is always populated as part of the loader response.
+	// Address is a leaf resource: scalars + inline (non-expandable) Geolocation only. No expandable sub-resources, so the Definition declares no Subs. Geolocation is always populated as part of the loader response.
 	resourcekit.Register(&resourcekit.Definition{
 		ObjectType: constants.ObjectTypeAddress,
 		Load:       resourceloaders.LoadAddresses,

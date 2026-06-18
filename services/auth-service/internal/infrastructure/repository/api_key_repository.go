@@ -226,9 +226,7 @@ func (r *apiKeyRepoImpl) List(ctx context.Context, input domain.APIKeyListRepoIn
 func apiKeyCreatedAt(k *apikey.APIKey) time.Time { return k.CreatedAt }
 func apiKeyID(k *apikey.APIKey) int64            { return k.ID }
 
-// includesContains returns true when the given key is in the includes list,
-// or when any include is a nested path rooted at that key (e.g. "role.permissions"
-// implies "role"). When includes is nil (no include param), returns false.
+// includesContains returns true when the given key is in the includes list, or when any include is a nested path rooted at that key (e.g. "role.permissions" implies "role"). When includes is nil (no include param), returns false.
 func includesContains(includes []string, key string) bool {
 	if includes == nil {
 		return false
@@ -356,10 +354,7 @@ func (r *apiKeyRepoImpl) GetByIDs(ctx context.Context, ownerAccountID string, id
 	return keys, nil
 }
 
-// Revoke revokes an API key. A nil revokeAt revokes immediately using the
-// database clock — a service-supplied "now" can sit ahead of the database
-// clock and would briefly count as a scheduled (still-active) revocation. A
-// non-nil revokeAt schedules a future revocation.
+// Revoke revokes an API key. A nil revokeAt revokes immediately using the database clock — a service-supplied "now" can sit ahead of the database clock and would briefly count as a scheduled (still-active) revocation. A non-nil revokeAt schedules a future revocation.
 func (r *apiKeyRepoImpl) Revoke(ctx context.Context, typeID string, ownerAccountID string, revokeAt *time.Time) *apierror.APIError {
 	ctx, span := apiKeyRepoTracer.Start(ctx, "repository.api_key.revoke")
 	defer span.End()

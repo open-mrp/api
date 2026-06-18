@@ -526,8 +526,7 @@ func (s *consumptionSvcImpl) DeleteConsumption(ctx context.Context, params domai
 	return consumption, nil
 }
 
-// updateConsumptionQuantities updates the main quantity and/or waste quantity
-// independently when their respective value+unit pairs are provided.
+// updateConsumptionQuantities updates the main quantity and/or waste quantity independently when their respective value+unit pairs are provided.
 func updateConsumptionQuantities(ctx context.Context, repo domain.ConsumptionRepo, params domain.UpdateConsumptionParams) *apierror.APIError {
 	needsQuantity := params.QuantityValue != nil && params.QuantityUnitID != nil
 	needsWaste := params.WasteQuantityValue != nil && params.WasteQuantityUnitID != nil

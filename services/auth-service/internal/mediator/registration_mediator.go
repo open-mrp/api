@@ -17,12 +17,10 @@ import (
 )
 
 const (
-	// registrationSessionTTL is the maximum age of a registration session
-	// before it is considered expired and ignored.
+	// registrationSessionTTL is the maximum age of a registration session before it is considered expired and ignored.
 	registrationSessionTTL = 7 * 24 * time.Hour // 7 days
 
-	// verificationTokenTTL is the maximum age of a verification token
-	// before it is considered expired.
+	// verificationTokenTTL is the maximum age of a verification token before it is considered expired.
 	verificationTokenTTL = 24 * time.Hour // 24 hours
 )
 
@@ -86,12 +84,10 @@ func NewRegistrationMed(config *RegistrationMedConfig) domain.RegistrationMed {
 	}
 }
 
-// CreateSession creates a new registration session or returns an existing active session
-// for the given email (idempotent).
+// CreateSession creates a new registration session or returns an existing active session for the given email (idempotent).
 //
 //  1. Check if the user already exists (noted but does not prevent session creation).
-//  2. Look for an existing non-expired session for the email; if found, update the plan code
-//     if different and resend the verification email.
+//  2. Look for an existing non-expired session for the email; if found, update the plan code if different and resend the verification email.
 //  3. Generate a unique type ID and verification token.
 //  4. Create a new registration session record.
 //  5. Send the verification email.
@@ -274,13 +270,11 @@ func (m *registrationMedImpl) VerifyToken(ctx context.Context, token string) (*d
 	return result, nil
 }
 
-// CreateUserForSession creates a new user for the registration session and returns
-// the user ID with auth tokens.
+// CreateUserForSession creates a new user for the registration session and returns the user ID with auth tokens.
 //
 //  1. Look up the session by type ID and validate it is not completed and email is verified.
 //  2. If the session already has a user, generate tokens for the existing user (idempotent).
-//  3. Reject if an account already exists for the session's email — pre-existing
-//     accounts must authenticate via login, not by holding a verified session id.
+//  3. Reject if an account already exists for the session's email — pre-existing accounts must authenticate via login, not by holding a verified session id.
 //  4. Hash the password and create a new user record.
 //  5. Associate the user with the session and update session data with the user name.
 //  6. Advance the session step to account_details.
@@ -329,9 +323,7 @@ func (m *registrationMedImpl) CreateUserForSession(ctx context.Context, input do
 		}, nil
 	}
 
-	// New-user path only. Reject if an account already exists for this email —
-	// pre-existing accounts must authenticate via login, since the session id
-	// holder is not proven to be that user.
+	// New-user path only. Reject if an account already exists for this email — pre-existing accounts must authenticate via login, since the session id holder is not proven to be that user.
 	existingUser, findErr := userRepo.Find(ctx, session.Email)
 	if findErr != nil && !apierror.IsNotFound(findErr) {
 		return nil, tracing.Trace(span, findErr)

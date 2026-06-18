@@ -11,8 +11,7 @@ import (
 
 var frontendURL string
 
-// SetFrontendURL configures the frontend base URL used to build request log links
-// in error responses. When empty, the request_log_url field will be null.
+// SetFrontendURL configures the frontend base URL used to build request log links in error responses. When empty, the request_log_url field will be null.
 func SetFrontendURL(url string) {
 	frontendURL = url
 }
@@ -28,13 +27,10 @@ func RespondWithAPIError(ctx context.Context, w http.ResponseWriter, apiErr *api
 		rl.ErrorCode = &errorCode
 		rl.ErrorMessage = &apiErr.PublicMessage
 		if apiErr.Code == apierror.ErrorCodeInternalError {
-			// Record the full internal chain (InternalMessage + wrapped Internal error), not
-			// just the top-level message — otherwise the underlying cause (e.g. the real
-			// driver error behind "Database request failed for unknown reason.") is lost.
+			// Record the full internal chain (InternalMessage + wrapped Internal error), not just the top-level message — otherwise the underlying cause (e.g. the real driver error behind "Database request failed for unknown reason.") is lost.
 			internalMessage := apiErr.Error()
 			rl.InternalErrorMessage = &internalMessage
-			// Prefer the stack captured where the error originated (NewInternalError). Fall
-			// back to capturing here only if the error carries no origin stack.
+			// Prefer the stack captured where the error originated (NewInternalError). Fall back to capturing here only if the error carries no origin stack.
 			if apiErr.Stack != "" {
 				st := apiErr.Stack
 				rl.StackTrace = &st

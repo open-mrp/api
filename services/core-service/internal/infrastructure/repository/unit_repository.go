@@ -337,8 +337,7 @@ func (r *unitRepoImpl) FindByAbbreviations(ctx context.Context, accountID string
 	ctx, span := unitRepoTracer.Start(ctx, "repository.unit.find_by_abbreviations")
 	defer span.End()
 
-	// NOTE: sqlc generation for FindUnitsByAbbreviations currently only accepts accountID.
-	// Filter abbreviations in-memory for now.
+	// NOTE: sqlc generation for FindUnitsByAbbreviations currently only accepts accountID. Filter abbreviations in-memory for now.
 	rows, err := r.queries.FindUnitsByAbbreviations(ctx, gosql.NullString{String: accountID, Valid: true})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

@@ -107,8 +107,7 @@ type UpdateRegistrationSessionData struct {
 	BillingAddressCountry    *string
 }
 
-// MergeInto applies non-nil fields from the update into the target, leaving
-// fields that were not provided in the PATCH request unchanged.
+// MergeInto applies non-nil fields from the update into the target, leaving fields that were not provided in the PATCH request unchanged.
 func (u *UpdateRegistrationSessionData) MergeInto(target *RegistrationSessionData) {
 	ptrutil.ApplyIfSet(&target.UserName, u.UserName)
 	ptrutil.ApplyIfSet(&target.AccountName, u.AccountName)
@@ -157,32 +156,26 @@ type ListRegistrationSessionsResult struct {
 }
 
 type RegistrationSessionSvc interface {
-	// CreateSession creates a new registration session or returns an existing
-	// active (uncompleted) session for the given email.
+	// CreateSession creates a new registration session or returns an existing active (uncompleted) session for the given email.
 	//
 	// Side effects:
 	//   - Sends a verification email to the user.
 	CreateSession(ctx context.Context, input CreateRegistrationSessionInput) (*CreateRegistrationSessionResult, *apierror.APIError)
 
-	// ResendVerificationEmail regenerates the verification token for an
-	// existing registration session and resends the verification email.
+	// ResendVerificationEmail regenerates the verification token for an existing registration session and resends the verification email.
 	//
 	// Side effects:
 	//   - Rotates the verification token.
 	//   - Sends a new verification email to the user.
 	ResendVerificationEmail(ctx context.Context, sessionID string) *apierror.APIError
 
-	// VerifyToken verifies the email token from the registration verification
-	// link. Marks the session's email as verified and advances the step to
-	// user_details. Idempotent: repeated calls return the same session.
+	// VerifyToken verifies the email token from the registration verification link. Marks the session's email as verified and advances the step to user_details. Idempotent: repeated calls return the same session.
 	VerifyToken(ctx context.Context, token string) (*RegistrationSession, *apierror.APIError)
 
-	// GetSession returns the current state of a registration session by its
-	// type ID. Returns a not-found error if the session does not exist.
+	// GetSession returns the current state of a registration session by its type ID. Returns a not-found error if the session does not exist.
 	GetSession(ctx context.Context, sessionID string) (*RegistrationSession, *apierror.APIError)
 
-	// CreateUserForSession creates or resolves a user for a registration session
-	// and returns the user ID with auth tokens.
+	// CreateUserForSession creates or resolves a user for a registration session and returns the user ID with auth tokens.
 	//
 	// Side effects:
 	//   - Creates a new user if one does not already exist for the session email.
@@ -190,44 +183,37 @@ type RegistrationSessionSvc interface {
 	//   - Advances the session step to account_details.
 	CreateUserForSession(ctx context.Context, input CreateUserForRegistrationInput) (*CreateUserForRegistrationOutput, *apierror.APIError)
 
-	// UpdateSession updates an in-progress registration session's step, form
-	// data, and/or Stripe-related fields. Returns the updated session.
+	// UpdateSession updates an in-progress registration session's step, form data, and/or Stripe-related fields. Returns the updated session.
 	//
 	// Authorization:
 	//   - Requires a user identity in context.
 	UpdateSession(ctx context.Context, input UpdateRegistrationSessionInput) (*RegistrationSession, *apierror.APIError)
 
-	// ListSessions returns a paginated list of open (uncompleted) registration
-	// sessions for the authenticated user.
+	// ListSessions returns a paginated list of open (uncompleted) registration sessions for the authenticated user.
 	//
 	// Authorization:
 	//   - Requires a user identity in context.
 	ListSessions(ctx context.Context, input ListRegistrationSessionsInput) (*ListRegistrationSessionsResult, *apierror.APIError)
 
-	// SetupBilling creates a Stripe customer and Setup Intent for a
-	// registration session. Uses recovery points for crash safety.
+	// SetupBilling creates a Stripe customer and Setup Intent for a registration session. Uses recovery points for crash safety.
 	//
 	// Authorization:
 	//   - Requires a user identity in context.
 	SetupBilling(ctx context.Context, input SetupBillingInput) (*SetupBillingOutput, *apierror.APIError)
 
-	// ConfirmPayment verifies that a Setup Intent succeeded and marks the
-	// registration session's payment as completed.
+	// ConfirmPayment verifies that a Setup Intent succeeded and marks the registration session's payment as completed.
 	//
 	// Authorization:
 	//   - Requires a user identity in context matching the session's user.
 	ConfirmPayment(ctx context.Context, input ConfirmPaymentInput) (*ConfirmPaymentOutput, *apierror.APIError)
 
-	// CompleteRegistration finalizes a registration session by calling
-	// core-service to create the production account, sandbox, roles, and
-	// permissions, then marks the session as completed.
+	// CompleteRegistration finalizes a registration session by calling core-service to create the production account, sandbox, roles, and permissions, then marks the session as completed.
 	//
 	// Authorization:
 	//   - Requires a user identity in context matching the session's user.
 	CompleteRegistration(ctx context.Context, sessionID string) (*CompleteRegistrationOutput, *apierror.APIError)
 
-	// GetIncompleteByUserID returns the most recent incomplete registration
-	// session for the given user, or (nil, nil) if none exists.
+	// GetIncompleteByUserID returns the most recent incomplete registration session for the given user, or (nil, nil) if none exists.
 	GetIncompleteByUserID(ctx context.Context, userID string) (*RegistrationSession, *apierror.APIError)
 }
 
@@ -237,8 +223,7 @@ type CompleteRegistrationOutput struct {
 	SandboxID string
 }
 
-// CompleteAccountRegistrationInput carries the data sent to core-service
-// to create the account and sandbox.
+// CompleteAccountRegistrationInput carries the data sent to core-service to create the account and sandbox.
 type CompleteAccountRegistrationInput struct {
 	UserID           string
 	PlanCode         string
@@ -247,8 +232,7 @@ type CompleteAccountRegistrationInput struct {
 	BusinessAddress  *RegistrationAddress
 }
 
-// RegistrationAddress is a structured postal address collected during
-// registration.
+// RegistrationAddress is a structured postal address collected during registration.
 type RegistrationAddress struct {
 	Line1      string
 	Line2      string
@@ -272,8 +256,7 @@ type CreateAPIKeyResult struct {
 type RotateAPIKeyInput struct {
 	APIKeyID  string
 	ExpiresAt *time.Time
-	// RevokeAt schedules when the old key is revoked. Nil or past/now means
-	// immediate revocation; a future instant keeps the old key valid until then.
+	// RevokeAt schedules when the old key is revoked. Nil or past/now means immediate revocation; a future instant keeps the old key valid until then.
 	RevokeAt *time.Time
 }
 

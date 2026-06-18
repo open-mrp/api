@@ -96,8 +96,7 @@ func DecodeJSONInto(dst any, r *http.Request, disallowUnknown bool) error {
 	return nil
 }
 
-// extractUnknownJSONFieldName tries to parse the offending field name from a json decoder error
-// when DisallowUnknownFields is enabled. It returns the field name and true if found.
+// extractUnknownJSONFieldName tries to parse the offending field name from a json decoder error when DisallowUnknownFields is enabled. It returns the field name and true if found.
 func extractUnknownJSONFieldName(err error) (string, bool) {
 	// Typical error format: `json: unknown field "expires"`
 	msg := err.Error()
@@ -119,8 +118,7 @@ func extractUnknownJSONFieldName(err error) (string, bool) {
 	return field, true
 }
 
-// collectJSONFieldNames returns the set of acceptable JSON keys for the provided destination struct.
-// It considers json tags; if absent, it falls back to the exported field name.
+// collectJSONFieldNames returns the set of acceptable JSON keys for the provided destination struct. It considers json tags; if absent, it falls back to the exported field name.
 func collectJSONFieldNames(dst any) []string {
 	t := reflect.TypeOf(dst)
 	for t.Kind() == reflect.Pointer {
@@ -170,8 +168,7 @@ func collectJSONFieldNames(dst any) []string {
 				if name == "" {
 					continue
 				}
-				// encoding/json matches field names case-insensitively, but suggestions
-				// should prefer the typical JSON style; we keep the declared name.
+				// encoding/json matches field names case-insensitively, but suggestions should prefer the typical JSON style; we keep the declared name.
 			}
 			namesSet[name] = struct{}{}
 		}
@@ -344,9 +341,7 @@ func rejectUnknownAgainstPlan(plan *bindPlan, u *url.URL, allowInclude bool) *ap
 	return nil
 }
 
-// BindIncomingRequest binds header, path, and query parameters with one traversal of the cached
-// bind plan. For each field that declares binding tags it applies headers/cookies first, path second,
-// and query third, matching BindFromHeaders + BindFromPath + BindFromQuery on the same destination.
+// BindIncomingRequest binds header, path, and query parameters with one traversal of the cached bind plan. For each field that declares binding tags it applies headers/cookies first, path second, and query third, matching BindFromHeaders + BindFromPath + BindFromQuery on the same destination.
 func BindIncomingRequest(r *http.Request, dst any, allowIncludeQueryKeys bool) error {
 	plan, err := planFor(dst)
 	if err != nil {
@@ -488,11 +483,7 @@ func BindRawBody(r *http.Request, dst any) error {
 	return nil
 }
 
-// RejectUnknownQueryParams returns an error when the URL contains query keys that
-// are not declared on the request struct (via `query` tags). Slice parameters
-// accept either ?key= or ?key[]= shapes; both key forms are treated as allowed.
-// When allowInclude is true, include and include[] are permitted (validated
-// separately by the endpoint).
+// RejectUnknownQueryParams returns an error when the URL contains query keys that are not declared on the request struct (via `query` tags). Slice parameters accept either ?key= or ?key[]= shapes; both key forms are treated as allowed. When allowInclude is true, include and include[] are permitted (validated separately by the endpoint).
 func RejectUnknownQueryParams(u *url.URL, dst any, allowInclude bool) *apierror.APIError {
 	plan, err := planFor(dst)
 	if err != nil {
@@ -630,10 +621,7 @@ func reflectHTTPRouterParam(r *http.Request) func(string) string {
 	return nil
 }
 
-// unwrapEnumWrapper extracts the inner value of a field.Optional[T]/field.Clearable[T]
-// for enum validation. It returns an addressable copy of the wrapped value and true
-// when the wrapper holds a concrete value (IsSet); unset or cleared wrappers return
-// false so the caller skips them.
+// unwrapEnumWrapper extracts the inner value of a field.Optional[T]/field.Clearable[T] for enum validation. It returns an addressable copy of the wrapped value and true when the wrapper holds a concrete value (IsSet); unset or cleared wrappers return false so the caller skips them.
 func unwrapEnumWrapper(fv reflect.Value) (reflect.Value, bool) {
 	if !fv.CanAddr() {
 		// Methods are value receivers, but Value() returns a copy we cannot address;
@@ -695,9 +683,7 @@ func ValidateEnumFields(dst any) *apierror.APIError {
 			ft = ft.Elem()
 		}
 
-		// Unwrap field.Optional[T]/field.Clearable[T] so the wrapped enum value is
-		// validated. These are structs with unexported fields, so without unwrapping
-		// the recursion below would skip them and the enum check would never run.
+		// Unwrap field.Optional[T]/field.Clearable[T] so the wrapped enum value is validated. These are structs with unexported fields, so without unwrapping the recursion below would skip them and the enum check would never run.
 		if field.IsOptionalType(ft) || field.IsClearableType(ft) {
 			inner, ok := unwrapEnumWrapper(fv)
 			if !ok {

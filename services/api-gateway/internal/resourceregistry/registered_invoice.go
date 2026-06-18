@@ -215,9 +215,7 @@ func populateAllocationsOnInvoice(ctx context.Context, parent any, _ map[string]
 	inv.Allocations = v.(*apiresource.List[apiresource.InvoiceAllocation])
 }
 
-// stubLoadInvoiceLines is a no-op loader: invoice lines are always carried inline
-// on the parent invoice; the line definition exists only so the line-level
-// expandable (order_line) can be processed.
+// stubLoadInvoiceLines is a no-op loader: invoice lines are always carried inline on the parent invoice; the line definition exists only so the line-level expandable (order_line) can be processed.
 func stubLoadInvoiceLines(_ context.Context, _ []string) (map[string]any, *apierror.APIError) {
 	return nil, nil
 }

@@ -271,9 +271,7 @@ func (s *purchaseOrderLineSvcImpl) UpdatePurchaseOrderLine(ctx context.Context, 
 				return apiErr
 			}
 
-			// Backfill unchanged nullable fields with existing values.
-			// Since the SQL uses direct assignment (no COALESCE) for these fields,
-			// we must provide the existing value when the field was not sent.
+			// Backfill unchanged nullable fields with existing values. Since the SQL uses direct assignment (no COALESCE) for these fields, we must provide the existing value when the field was not sent.
 			if params.ProductID == nil {
 				params.ProductID = old.ProductID
 			}
@@ -432,8 +430,7 @@ func (s *purchaseOrderLineSvcImpl) DeletePurchaseOrderLine(ctx context.Context, 
 	})
 }
 
-// checkPurchaseOrderLineWritePermission checks the appropriate write permission based on the target context.
-// Internal actors need purchase_orders:update for their own account, or suppliers:update when targeting a supplier account.
+// checkPurchaseOrderLineWritePermission checks the appropriate write permission based on the target context. Internal actors need purchase_orders:update for their own account, or suppliers:update when targeting a supplier account.
 func checkPurchaseOrderLineWritePermission(identity *types.Identity) *apierror.APIError {
 	if !identity.IsInternalActor() {
 		return nil

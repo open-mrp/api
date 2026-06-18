@@ -40,8 +40,6 @@ func NewLoggingSvc(config *LoggingSvcConfig) domain.LoggingSvc {
 }
 
 // SaveRequestLog persists a new API request log entry.
-//
-// 1. Insert the request log record into the repository.
 func (s *loggingSvcImpl) SaveRequestLog(ctx context.Context, rl *domain.RequestLog) *apierror.APIError {
 	ctx, span := loggingSvcTracer.Start(ctx, "service.logging.save_request_log")
 	defer span.End()

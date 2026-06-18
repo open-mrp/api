@@ -14,7 +14,6 @@ var routeSegmentToSampleID = map[string]string{
 	"units":                   apiresource.SampleUnitID,
 	"unit-groups":             apiresource.SampleUnitGroupID,
 	"properties":              apiresource.SamplePropertyID,
-	"sys-properties":          apiresource.SampleSysPropertyID,
 	"attributes":              apiresource.SampleAttributeID,
 	"items":                   apiresource.SampleItemID,
 	"item-categories":         apiresource.SampleItemCategoryID,
@@ -248,6 +247,12 @@ func sampleIDFromPathParam(pathParamName, route string) string {
 	}
 	if pathParamName != "id" {
 		return ""
+	}
+	// System properties (/v1/settings/properties/{id}) collide on the "properties"
+	// segment with item-category properties (/v1/catalog/item-categories/{id}/properties/{id}),
+	// which a single-segment map can't distinguish — disambiguate by full route.
+	if strings.HasPrefix(route, "/v1/settings/properties/") {
+		return apiresource.SampleSysPropertyID
 	}
 	segment := routeSegmentBeforeParam(route, "{id}")
 	if segment == "" {

@@ -11,9 +11,7 @@ import (
 	"github.com/coder/websocket"
 )
 
-// NewHandler returns an http.HandlerFunc that upgrades HTTP connections to
-// WebSocket, authenticates via cookie + account ID query param, and starts
-// the client read/write pumps.
+// NewHandler returns an http.HandlerFunc that upgrades HTTP connections to WebSocket, authenticates via cookie + account ID query param, and starts the client read/write pumps.
 func NewHandler(hub *Hub, authClient *grpcclient.AuthServiceClient) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Extract access token from cookie.
@@ -43,8 +41,7 @@ func NewHandler(hub *Hub, authClient *grpcclient.AuthServiceClient) http.Handler
 			}
 		}
 
-		// Clear the server's write deadline so the long-lived WebSocket
-		// connection doesn't get killed by the default httpWriteTimeout.
+		// Clear the server's write deadline so the long-lived WebSocket connection doesn't get killed by the default httpWriteTimeout.
 		rc := http.NewResponseController(w)
 		if err := rc.SetWriteDeadline(zeroTime); err != nil {
 			slog.Error("Failed to clear write deadline for WS", "error", err)

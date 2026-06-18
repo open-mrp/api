@@ -4,9 +4,7 @@ import (
 	"sync"
 )
 
-// Hub manages WebSocket client subscriptions, keyed by agent run ID.
-// It fans out incoming events to all clients subscribed to a given run,
-// with tenant isolation via account ID checks.
+// Hub manages WebSocket client subscriptions, keyed by agent run ID. It fans out incoming events to all clients subscribed to a given run, with tenant isolation via account ID checks.
 type Hub struct {
 	mu          sync.RWMutex
 	subscribers map[string]map[*Client]struct{} // runID → set of clients
@@ -43,9 +41,7 @@ func (h *Hub) Unsubscribe(runID string, client *Client) {
 	}
 }
 
-// Publish sends an event to all clients subscribed to the given run ID.
-// Only clients whose account ID matches the event's account ID receive
-// the message, ensuring tenant isolation.
+// Publish sends an event to all clients subscribed to the given run ID. Only clients whose account ID matches the event's account ID receive the message, ensuring tenant isolation.
 func (h *Hub) Publish(runID, accountID string, event []byte) {
 	h.mu.RLock()
 	clients := h.subscribers[runID]

@@ -1,5 +1,4 @@
-// Package safeconv provides safe integer conversion functions that clamp
-// values at the target type's boundaries instead of silently overflowing.
+// Package safeconv provides safe integer conversion functions that clamp values at the target type's boundaries instead of silently overflowing.
 package safeconv
 
 import "math"

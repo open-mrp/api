@@ -587,8 +587,7 @@ func (r *settlementRepoImpl) UpdateInvoicePaymentStatus(ctx context.Context, inv
 	return nil
 }
 
-// GetInvoicePaymentFlags recomputes, for each given invoice, whether it is paid
-// in full / over paid from its allocations vs. its invoiced total.
+// GetInvoicePaymentFlags recomputes, for each given invoice, whether it is paid in full / over paid from its allocations vs. its invoiced total.
 func (r *settlementRepoImpl) GetInvoicePaymentFlags(ctx context.Context, invoiceIDs []string) ([]domain.InvoicePaymentFlags, *apierror.APIError) {
 	ctx, span := settlementRepoTracer.Start(ctx, "repository.settlement.get_invoice_payment_flags")
 	defer span.End()

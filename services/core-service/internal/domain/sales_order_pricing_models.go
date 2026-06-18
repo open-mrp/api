@@ -2,17 +2,14 @@ package domain
 
 import "time"
 
-// RateValue is a minimal currency-per-unit rate: a value with numerator and
-// denominator unit ids. Used as the override input and as the engine output.
+// RateValue is a minimal currency-per-unit rate: a value with numerator and denominator unit ids. Used as the override input and as the engine output.
 type RateValue struct {
 	Value             string
 	NumeratorUnitID   string
 	DenominatorUnitID string
 }
 
-// SalesOrderPriceLineInput is one line to price. The volume-discount stage sums
-// quantities across all lines that share a chosen discount, so the engine takes
-// every line at once.
+// SalesOrderPriceLineInput is one line to price. The volume-discount stage sums quantities across all lines that share a chosen discount, so the engine takes every line at once.
 type SalesOrderPriceLineInput struct {
 	ProductID         string
 	QuantityValue     string
@@ -20,8 +17,7 @@ type SalesOrderPriceLineInput struct {
 	OverrideUnitPrice *RateValue
 }
 
-// SalesOrderLinePrice is the computed unit price for a single line, expressed as
-// currency (numerator) per ordered unit (denominator).
+// SalesOrderLinePrice is the computed unit price for a single line, expressed as currency (numerator) per ordered unit (denominator).
 type SalesOrderLinePrice struct {
 	Value             string
 	NumeratorUnitID   string
@@ -41,11 +37,7 @@ type SalesOrderLineQuote struct {
 	UnitPrice RateValue
 }
 
-// ResolvedSalesOrderLine is a fully resolved create-line: the caller's product +
-// quantity, with the SKU/description defaulted from the product, the item derived
-// from the product, the unit cost pulled from the item, and the unit price computed
-// server-side (or taken from an internal override). Produced by resolving the create
-// line inputs against the pricing bundle in one pass.
+// ResolvedSalesOrderLine is a fully resolved create-line: the caller's product + quantity, with the SKU/description defaulted from the product, the item derived from the product, the unit cost pulled from the item, and the unit price computed server-side (or taken from an internal override). Produced by resolving the create line inputs against the pricing bundle in one pass.
 type ResolvedSalesOrderLine struct {
 	ProductID          string
 	ItemID             string
@@ -63,8 +55,7 @@ type ResolvedSalesOrderLine struct {
 // PricingProduct is the list-price data the engine needs for one product.
 type PricingProduct struct {
 	ProductID string
-	// ItemID, SKU, Description are item-derived fields used to tie the line to
-	// inventory and default the line's recorded SKU/description.
+	// ItemID, SKU, Description are item-derived fields used to tie the line to inventory and default the line's recorded SKU/description.
 	ItemID      string
 	SKU         string
 	Description *string
@@ -72,11 +63,9 @@ type PricingProduct struct {
 	UnitCost                  string
 	UnitCostNumeratorUnitID   string
 	UnitCostDenominatorUnitID string
-	// ProductLineID is nil when the product has no product line. Such products
-	// never match an account price and use the item category's unit group.
+	// ProductLineID is nil when the product has no product line. Such products never match an account price and use the item category's unit group.
 	ProductLineID *string
-	// UnitValue is the item's list-price rate value (currency numerator per
-	// item-category base-unit denominator).
+	// UnitValue is the item's list-price rate value (currency numerator per item-category base-unit denominator).
 	UnitValue                  string
 	UnitValueNumeratorUnitID   string
 	UnitValueDenominatorUnitID string
@@ -128,9 +117,7 @@ type PricingVolumeDiscount struct {
 	MatchesCustomerGroup bool
 	Tiers                []PricingVolumeDiscountTier
 	AcceptableUnitIDs    []string
-	// Scoping: a product matches the discount only if it satisfies every non-empty
-	// dimension (product line AND item category AND attributes). An empty dimension is a
-	// wildcard. Customer-group scoping is already applied when the discount is loaded.
+	// Scoping: a product matches the discount only if it satisfies every non-empty dimension (product line AND item category AND attributes). An empty dimension is a wildcard. Customer-group scoping is already applied when the discount is loaded.
 	ProductLineIDs []string
 	CategoryIDs    []string
 	AttributeIDs   []string
@@ -151,8 +138,7 @@ type PricingBundle struct {
 	Units map[string]*PricingUnit
 	// UnitGroupUnits keyed by unitGroupID -> unitID.
 	UnitGroupUnits map[string]map[string]*PricingUnitGroupUnit
-	// AccountPrices in created_at ASC order (last match wins, so callers iterate
-	// and keep the last applicable).
+	// AccountPrices in created_at ASC order (last match wins, so callers iterate and keep the last applicable).
 	AccountPrices []*PricingAccountPrice
 	// VolumeDiscounts applicable to the buyer.
 	VolumeDiscounts []*PricingVolumeDiscount
@@ -163,7 +149,6 @@ type LoadPricingBundleParams struct {
 	OwnerAccountID string
 	BuyerAccountID string
 	ProductIDs     []string
-	// OrderedUnitIDs are the per-line ordered unit ids; combined with the
-	// products' base denominator units to fetch all needed conversion units.
+	// OrderedUnitIDs are the per-line ordered unit ids; combined with the products' base denominator units to fetch all needed conversion units.
 	OrderedUnitIDs []string
 }

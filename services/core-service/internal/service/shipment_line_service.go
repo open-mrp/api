@@ -320,9 +320,7 @@ func (s *shipmentLineSvcImpl) UpdateShipmentLine(ctx context.Context, params dom
 				return apiErr
 			}
 
-			// Backfill unchanged nullable fields with existing values.
-			// Since the SQL uses direct assignment (no COALESCE) for these fields,
-			// we must provide the existing value when the field was not sent.
+			// Backfill unchanged nullable fields with existing values. Since the SQL uses direct assignment (no COALESCE) for these fields, we must provide the existing value when the field was not sent.
 			if params.QuantityUnitID == nil {
 				params.QuantityUnitID = &old.QuantityUnitID
 			}
@@ -435,8 +433,7 @@ func (s *shipmentLineSvcImpl) DeleteShipmentLine(ctx context.Context, params dom
 	return nil
 }
 
-// checkShipmentLineReadPermission checks the appropriate read permission based on the identity context.
-// Internal actors need shipments:read for their own account, or customers:read / suppliers:read for external accounts.
+// checkShipmentLineReadPermission checks the appropriate read permission based on the identity context. Internal actors need shipments:read for their own account, or customers:read / suppliers:read for external accounts.
 func checkShipmentLineReadPermission(identity *types.Identity) *apierror.APIError {
 	if !identity.IsInternalActor() {
 		return nil

@@ -10,9 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// SandboxBillingMiddleware blocks sandbox accounts from accessing billing
-// endpoints. Sandbox accounts inherit their owner's plan and should never
-// interact with Stripe directly.
+// SandboxBillingMiddleware blocks sandbox accounts from accessing billing endpoints. Sandbox accounts inherit their owner's plan and should never interact with Stripe directly.
 func SandboxBillingMiddleware() func(http.HandlerFunc) http.HandlerFunc {
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {

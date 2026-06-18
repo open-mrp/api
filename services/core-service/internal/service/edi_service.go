@@ -246,9 +246,7 @@ func (s *ediSvcImpl) UpdateDCLocation(ctx context.Context, params domain.UpdateD
 				return apiErr
 			}
 
-			// Backfill unchanged nullable fields with existing values.
-			// Since the SQL uses direct assignment (no COALESCE) for these fields,
-			// we must provide the existing value when the field was not sent.
+			// Backfill unchanged nullable fields with existing values. Since the SQL uses direct assignment (no COALESCE) for these fields, we must provide the existing value when the field was not sent.
 			if params.Location == nil {
 				params.Location = &old.Location
 			}
@@ -401,8 +399,7 @@ func (s *ediSvcImpl) GetEDIRun(ctx context.Context, ediRunID string) (*domain.ED
 	return s.repos.NewEDIRepo().GetEDIRun(ctx, identity.Target.AccountID, ediRunID)
 }
 
-// BatchGetDCLocationsByIDs returns DC locations matching the input IDs that
-// the caller's account is authorized to read.
+// BatchGetDCLocationsByIDs returns DC locations matching the input IDs that the caller's account is authorized to read.
 func (s *ediSvcImpl) BatchGetDCLocationsByIDs(ctx context.Context, ids []string) ([]*domain.DCLocation, *apierror.APIError) {
 	ctx, span := ediSvcTracer.Start(ctx, "service.edi.batch_get_dc_locations_by_ids")
 	defer span.End()
@@ -426,8 +423,7 @@ func (s *ediSvcImpl) BatchGetDCLocationsByIDs(ctx context.Context, ids []string)
 	return s.repos.NewEDIRepo().GetDCLocationsByIDs(ctx, identity.Target.AccountID, ids)
 }
 
-// BatchGetEDIRunsByIDs returns EDI runs matching the input IDs that the
-// caller's account is authorized to read.
+// BatchGetEDIRunsByIDs returns EDI runs matching the input IDs that the caller's account is authorized to read.
 func (s *ediSvcImpl) BatchGetEDIRunsByIDs(ctx context.Context, ids []string) ([]*domain.EDIRun, *apierror.APIError) {
 	ctx, span := ediSvcTracer.Start(ctx, "service.edi.batch_get_edi_runs_by_ids")
 	defer span.End()

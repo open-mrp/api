@@ -15,8 +15,7 @@ import (
 
 var ediRunLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.edi_run")
 
-// LoadEDIRuns fetches EDI runs by ID via BatchGetEDIRunsByIDs. Pure leaf —
-// no nested fields at all.
+// LoadEDIRuns fetches EDI runs by ID via BatchGetEDIRunsByIDs. Pure leaf — no nested fields at all.
 func LoadEDIRuns(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil

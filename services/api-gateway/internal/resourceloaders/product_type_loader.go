@@ -15,9 +15,7 @@ import (
 
 var productTypeLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.product_type")
 
-// LoadProductTypes fetches product types by ID via BatchGetProductTypesByIDs.
-// ProductType is a system-only lookup with no expandable sub-resources, so no
-// LoadMeta is required.
+// LoadProductTypes fetches product types by ID via BatchGetProductTypesByIDs. ProductType is a system-only lookup with no expandable sub-resources, so no LoadMeta is required.
 func LoadProductTypes(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil

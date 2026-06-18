@@ -207,9 +207,7 @@ func (s *userSvcImpl) Register(ctx context.Context, input domain.RegisterInput) 
 		return cached.Data, cached.Error
 
 	case domain.RecoveryPointStarted:
-		// Check for existing user before the transaction so we can send the
-		// magic-login email outside the tx (outbox writes inside a rolled-back
-		// tx are lost).
+		// Check for existing user before the transaction so we can send the magic-login email outside the tx (outbox writes inside a rolled-back tx are lost).
 		userRepo := s.repos.NewUserRepo()
 		existingUser, findErr := userRepo.Find(ctx, input.Email)
 		if findErr != nil && !apierror.IsNotFound(findErr) {

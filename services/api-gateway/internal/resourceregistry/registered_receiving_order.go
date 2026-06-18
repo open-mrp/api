@@ -15,9 +15,7 @@ func init() {
 		Load:       resourceloaders.LoadReceivingOrders,
 		Subs: []resourcekit.SubField{
 			{
-				// Supplier is carried inline (prebuilt) rather than loaded: it is the
-				// seller account, which is cross-account and not resolvable via the
-				// account-scoped loader. Mirrors PurchaseOrder.
+				// Supplier is carried inline (prebuilt) rather than loaded: it is the seller account, which is cross-account and not resolvable via the account-scoped loader. Mirrors PurchaseOrder.
 				Key:      "supplier",
 				Populate: populateSupplierOnReceivingOrder,
 			},
@@ -41,8 +39,7 @@ func init() {
 		Load:       resourceloaders.LoadReceivingOrderLines,
 		Subs: []resourcekit.SubField{
 			{
-				// Target + ExtractRefs so the resolver recurses into the order_line
-				// (a SalesOrderLine) and resolves its nested product/item includes.
+				// Target + ExtractRefs so the resolver recurses into the order_line (a SalesOrderLine) and resolves its nested product/item includes.
 				Key:         "order_line",
 				Target:      constants.ObjectTypeSalesOrderLine,
 				Cardinality: resourcekit.CardinalityOnePtr,
@@ -116,8 +113,7 @@ func populateOrderLineOnReceivingOrderLine(ctx context.Context, parent any, _ ma
 	l.OrderLine = v.(*apiresource.SalesOrderLine)
 }
 
-// extractOrderLineRefFromReceivingOrderLine returns the populated order_line so
-// the resolver recurses into it (resolving order_line.product[.item]).
+// extractOrderLineRefFromReceivingOrderLine returns the populated order_line so the resolver recurses into it (resolving order_line.product[.item]).
 func extractOrderLineRefFromReceivingOrderLine(_ context.Context, parent any) []any {
 	l := parent.(*apiresource.ReceivingOrderLine)
 	if l.OrderLine == nil {

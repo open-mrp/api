@@ -14,8 +14,7 @@ import (
 
 const defaultGatewayBaseURL = "https://llm.stripe.com"
 
-// GatewayProvider routes all LLM calls through the Stripe AI Gateway,
-// which uses the OpenAI-compatible /chat/completions endpoint for all providers.
+// GatewayProvider routes all LLM calls through the Stripe AI Gateway, which uses the OpenAI-compatible /chat/completions endpoint for all providers.
 type GatewayProvider struct {
 	httpClient   *http.Client
 	stripeAPIKey string
@@ -92,8 +91,7 @@ func (p *GatewayProvider) CompleteWithTools(ctx context.Context, req *ToolReques
 	return convertGatewayResponse(&completion), nil
 }
 
-// GatewayModelName prefixes a model name with its provider for the Stripe AI Gateway.
-// Model names already match Stripe's naming convention (e.g. "claude-sonnet-4", "gpt-4o").
+// GatewayModelName prefixes a model name with its provider for the Stripe AI Gateway. Model names already match Stripe's naming convention (e.g. "claude-sonnet-4", "gpt-4o").
 func GatewayModelName(model string) string {
 	switch {
 	case strings.HasPrefix(model, "claude-"):

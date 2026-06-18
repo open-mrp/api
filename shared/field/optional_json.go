@@ -6,10 +6,7 @@ import (
 	"errors"
 )
 
-// ErrExplicitNull is returned when JSON null is sent for an Optional field.
-// The message is consumer-facing: UnmarshalJSON cannot know the field's JSON
-// key, so callers that have the request body should use ExplicitNullField to
-// build a parameter-specific message instead of surfacing this text directly.
+// ErrExplicitNull is returned when JSON null is sent for an Optional field. The message is consumer-facing: UnmarshalJSON cannot know the field's JSON key, so callers that have the request body should use ExplicitNullField to build a parameter-specific message instead of surfacing this text directly.
 var ErrExplicitNull = errors.New("this field cannot be null")
 
 // IsZero reports whether the field is unset so encoding/json omitempty omits it.

@@ -11,15 +11,13 @@ import (
 )
 
 type BaseConfig struct {
-	// PlatformMode (optional; default: "" i.e. unset) is the platform mode
-	// propagated to endpoint groups and middleware.
+	// PlatformMode (optional; default: "" i.e. unset) is the platform mode propagated to endpoint groups and middleware.
 	PlatformMode constants.PlatformMode
 
 	// LogPrefix (optional; default: "") is prepended to every router log line.
 	LogPrefix string
 
-	// LogFlags (optional; default: log.LstdFlags) are the standard-library log
-	// flags for the router logger. The zero value is treated as unset.
+	// LogFlags (optional; default: log.LstdFlags) are the standard-library log flags for the router logger. The zero value is treated as unset.
 	LogFlags int
 
 	// LogWriter (required) receives router log output.
@@ -43,9 +41,7 @@ type BaseConfig struct {
 	// RequestLogPublisher (required) publishes request logs to the outbox.
 	RequestLogPublisher domain.RequestLogPublisher
 
-	// TrustedProxyHops (optional; default: 0, meaning XFF is not trusted) is the
-	// number of reverse-proxy hops in front of this service whose X-Forwarded-For
-	// entries can be trusted. See header.GetClientIP for details.
+	// TrustedProxyHops (optional; default: 0, meaning XFF is not trusted) is the number of reverse-proxy hops in front of this service whose X-Forwarded-For entries can be trusted. See header.GetClientIP for details.
 	TrustedProxyHops int
 }
 

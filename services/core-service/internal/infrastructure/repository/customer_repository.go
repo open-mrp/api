@@ -541,10 +541,7 @@ func (r *customerRepoImpl) List(ctx context.Context, params domain.ListCustomers
 	return &domain.ListCustomersResult{Items: result, PageInfo: pageInfo}, nil
 }
 
-// stitchListCustomerIncludes fans out per-relation data (price groups, notification preferences)
-// into the list items when the corresponding include keys were requested. Skipping them keeps the
-// list path from paying for unused round-trips — the apiresource layer will collapse those fields
-// to null for clients that didn't ask for them.
+// stitchListCustomerIncludes fans out per-relation data (price groups, notification preferences) into the list items when the corresponding include keys were requested. Skipping them keeps the list path from paying for unused round-trips — the apiresource layer will collapse those fields to null for clients that didn't ask for them.
 func (r *customerRepoImpl) stitchListCustomerIncludes(ctx context.Context, ownerAccountID string, items []*domain.Customer, relationIDs []string, includes []string) *apierror.APIError {
 	if len(items) == 0 {
 		return nil
@@ -792,9 +789,7 @@ func wantsInclude(incs []string, key string) bool {
 	return slices.Contains(incs, key)
 }
 
-// fetchChildAccountsByRelationIDs batches a single SQL query to fetch direct
-// children for every parent relation ID in parentRelationIDs, grouped by
-// parent relation ID.
+// fetchChildAccountsByRelationIDs batches a single SQL query to fetch direct children for every parent relation ID in parentRelationIDs, grouped by parent relation ID.
 func (r *customerRepoImpl) fetchChildAccountsByRelationIDs(ctx context.Context, ownerAccountID string, parentRelationIDs []string) (map[string][]domain.CustomerChildAccount, *apierror.APIError) {
 	if len(parentRelationIDs) == 0 {
 		return nil, nil
@@ -1702,9 +1697,7 @@ func (r *customerRepoImpl) DeleteCreditLimitQuantity(ctx context.Context, id str
 	return nil
 }
 
-// IsCommissionExempt reports whether the customer relationship, its type group, or
-// any of its price groups is commission-exempt. Mirrors Dashboard's
-// isCustomerOrGroupCommissionExempt, used in sales-rep auto-resolution.
+// IsCommissionExempt reports whether the customer relationship, its type group, or any of its price groups is commission-exempt. Mirrors Dashboard's isCustomerOrGroupCommissionExempt, used in sales-rep auto-resolution.
 func (r *customerRepoImpl) IsCommissionExempt(ctx context.Context, ownerAccountID, customerAccountID string) (bool, *apierror.APIError) {
 	ctx, span := customerRepoTracer.Start(ctx, "repository.customer.is_commission_exempt")
 	defer span.End()

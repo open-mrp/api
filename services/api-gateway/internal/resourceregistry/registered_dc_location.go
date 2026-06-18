@@ -7,8 +7,7 @@ import (
 )
 
 func init() {
-	// DCLocation has an inline (non-expandable) DCLocationCustomer reference
-	// built from denormalized proto fields.
+	// DCLocation has an inline (non-expandable) DCLocationCustomer reference built from denormalized proto fields.
 	resourcekit.Register(&resourcekit.Definition{
 		ObjectType: constants.ObjectTypeDCLocation,
 		Load:       resourceloaders.LoadDCLocations,

@@ -15,10 +15,7 @@ import (
 
 var customerLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.customer")
 
-// LoadCustomers fetches customers by ID via BatchGetCustomersByIDs and builds
-// expandable Customer references with real header data. Nested sub-resources
-// (addresses, defaults, …) are their own expandable relations and are not
-// populated here.
+// LoadCustomers fetches customers by ID via BatchGetCustomersByIDs and builds expandable Customer references with real header data. Nested sub-resources (addresses, defaults, …) are their own expandable relations and are not populated here.
 func LoadCustomers(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil

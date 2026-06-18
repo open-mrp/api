@@ -50,12 +50,10 @@ type RunnerConfig struct {
 	// OutboxRepo (required) is the outbox repository used to enqueue messages.
 	OutboxRepo messaging.OutboxRepo
 
-	// CoreClient (required) is the core-service client used to resolve account
-	// context and role permissions.
+	// CoreClient (required) is the core-service client used to resolve account context and role permissions.
 	CoreClient domain.CoreClient
 
-	// Broker (optional; default: nil) is the message broker used to stream run
-	// step events. When nil, step events are not published.
+	// Broker (optional; default: nil) is the message broker used to stream run step events. When nil, step events are not published.
 	Broker messaging.MessageBroker
 
 	// BillingClient (required) resolves billing customers for spend tracking.
@@ -304,9 +302,7 @@ func (s *runnerSvc) ExecuteRun(ctx context.Context, runID, configID, accountID, 
 		})
 	}
 
-	// Only include built-in tools that are explicitly linked to this agent definition.
-	// Built-in tools not linked to the agent are intentionally omitted so the LLM
-	// does not believe it has access to tools the agent has not been set up with.
+	// Only include built-in tools that are explicitly linked to this agent definition. Built-in tools not linked to the agent are intentionally omitted so the LLM does not believe it has access to tools the agent has not been set up with.
 	toolDefs = s.appendLinkedBuiltinToolDefs(toolDefs, linkedTools)
 
 	// Resolve temperature
@@ -1658,10 +1654,7 @@ func builtinToolDefs() []builtinToolEntry {
 	}
 }
 
-// appendLinkedBuiltinToolDefs adds built-in tool definitions only when they
-// appear in the agent's linked tools but were skipped during the main loop
-// (e.g. because they had no ToolInputSchema in the DB row). This ensures
-// agents only see built-in tools that have been explicitly assigned to them.
+// appendLinkedBuiltinToolDefs adds built-in tool definitions only when they appear in the agent's linked tools but were skipped during the main loop (e.g. because they had no ToolInputSchema in the DB row). This ensures agents only see built-in tools that have been explicitly assigned to them.
 func (s *runnerSvc) appendLinkedBuiltinToolDefs(toolDefs []llm.ToolDefinition, linkedTools []sqlc.ListToolsByAgentDefinitionIDRow) []llm.ToolDefinition {
 	addedSlugs := make(map[string]bool, len(toolDefs))
 	for _, td := range toolDefs {

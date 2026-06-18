@@ -42,10 +42,7 @@ func LoadProductLines(ctx context.Context, ids []string) (map[string]any, *apier
 		}
 		meta.Set(constants.ObjectTypeProductLine, pl.Id, "owner_account_id", accountID)
 
-		// Pre-build the UnitGroup from the proto and stash it for the
-		// unit_group SubField's Populate. This preserves backward
-		// compat: requesting ?include[]=unit_group returns the full
-		// UnitGroup with BaseUnit and AssociatedUnits inline.
+		// Pre-build the UnitGroup from the proto and stash it for the unit_group SubField's Populate. This preserves backward compat: requesting ?include[]=unit_group returns the full UnitGroup with BaseUnit and AssociatedUnits inline.
 		if pl.UnitGroup != nil {
 			ug := buildUnitGroupFromProto(pl.UnitGroup)
 			meta.Set(constants.ObjectTypeProductLine, pl.Id, "unit_group", ug)

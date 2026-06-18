@@ -53,7 +53,7 @@ func (e *CreateAccountIntegrationEndpoint) Materialize() *apiendpoint.APIEndpoin
 		Title:             "Create Account Integration",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
-		Route:             "/v1/identity/integrations",
+		Route:             "/v1/settings/integrations",
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
@@ -62,7 +62,7 @@ func (e *CreateAccountIntegrationEndpoint) Materialize() *apiendpoint.APIEndpoin
 			return svc.(AccountIntegrationSvc).CreateAccountIntegration
 		},
 		LocationFunc: func(resp *apiresource.AccountIntegration) string {
-			return "/v1/identity/integrations/" + resp.ID
+			return "/v1/settings/integrations/" + resp.ID
 		},
 	})
 }

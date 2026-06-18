@@ -43,8 +43,7 @@ type subscribeMsg struct {
 	LastSequence *int   `json:"last_sequence,omitempty"`
 }
 
-// ReadPump reads messages from the WebSocket connection and handles
-// subscribe, unsubscribe, and ping commands.
+// ReadPump reads messages from the WebSocket connection and handles subscribe, unsubscribe, and ping commands.
 func (c *Client) ReadPump(ctx context.Context) {
 	defer func() {
 		c.hub.RemoveClient(c)

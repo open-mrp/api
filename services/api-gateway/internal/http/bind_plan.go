@@ -62,8 +62,7 @@ func bindTagOnStruct(sf reflect.StructTag) bool {
 	return sf.Get("query") != "" || sf.Get("path") != "" || sf.Get("header") != ""
 }
 
-// structTypeHasBindDescendant reports whether rt contains a query/path/header/cookie
-// bind tag on any reachable field (same recurse rules as buildBindPlan, without leaves).
+// structTypeHasBindDescendant reports whether rt contains a query/path/header/cookie bind tag on any reachable field (same recurse rules as buildBindPlan, without leaves).
 func structTypeHasBindDescendant(rt reflect.Type) bool {
 	visiting := make(map[reflect.Type]struct{})
 	return structTypeHasBindDescendantAt(rt, visiting, 0)
@@ -119,9 +118,7 @@ func structTypeHasBindDescendantAt(rt reflect.Type, visiting map[reflect.Type]st
 	return false
 }
 
-// buildBindPlan walks the request struct type and records bindable leaves. Recursion
-// is pruned into subtrees with no bind tags, capped by maxBindPlanStructDepth, and
-// cycle-safe via a per-path visiting set.
+// buildBindPlan walks the request struct type and records bindable leaves. Recursion is pruned into subtrees with no bind tags, capped by maxBindPlanStructDepth, and cycle-safe via a per-path visiting set.
 func buildBindPlan(root reflect.Type) *bindPlan {
 	allowedQuery := make(map[string]struct{})
 	var fields []bindField

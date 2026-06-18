@@ -7,18 +7,9 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-// RegisterValidator teaches go-playground/validator how to validate struct tags on
-// field.Clearable[T] and field.Optional[T]: unset (and clear for Clearable)
-// are treated as empty for validate:"omitempty"; when set, the inner value is validated.
+// RegisterValidator teaches go-playground/validator how to validate struct tags on field.Clearable[T] and field.Optional[T]: unset (and clear for Clearable) are treated as empty for validate:"omitempty"; when set, the inner value is validated.
 //
-// Every concrete inner type T that carries a comparison validator (min, max, gte,
-// lte, len, …) MUST be registered here. Without registration the validator sees the
-// wrapper struct instead of the inner value and panics (e.g. min on a bare
-// field.Optional[int32]). String/slice inner types only need registration so their
-// tags are honored; the scalar numeric/bool/time types below are required to avoid
-// that panic. Inner types defined outside this package (constants.*, request inputs)
-// cannot be referenced here without an import cycle — those fields must rely on
-// omitempty/required only, or register themselves from their own package.
+// Every concrete inner type T that carries a comparison validator (min, max, gte, lte, len, …) MUST be registered here. Without registration the validator sees the wrapper struct instead of the inner value and panics (e.g. min on a bare field.Optional[int32]). String/slice inner types only need registration so their tags are honored; the scalar numeric/bool/time types below are required to avoid that panic. Inner types defined outside this package (constants.*, request inputs) cannot be referenced here without an import cycle — those fields must rely on omitempty/required only, or register themselves from their own package.
 func RegisterValidator(v *validator.Validate) {
 	for _, typ := range []any{
 		Clearable[string]{},

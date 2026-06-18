@@ -28,12 +28,10 @@ func GetReposFromContext(ctx context.Context) (domain.RepoFactory, bool) {
 	return repos, ok
 }
 
-// outboxNotificationPublisher writes messages to the outbox table instead of
-// publishing directly to RabbitMQ.
+// outboxNotificationPublisher writes notification commands to the outbox table instead of publishing directly to RabbitMQ, so the message commits atomically with the surrounding transaction and is delivered out-of-band by the outbox drain.
 type outboxNotificationPublisher struct{}
 
-// NewOutboxNotificationPublisher creates a notification publisher that writes
-// to the outbox table for reliable message delivery.
+// NewOutboxNotificationPublisher creates a notification publisher that writes to the outbox table for reliable, transactionally-committed message delivery.
 func NewOutboxNotificationPublisher() domain.NotificationPublisher {
 	return &outboxNotificationPublisher{}
 }

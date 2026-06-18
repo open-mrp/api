@@ -19,8 +19,7 @@ type outboxEnqueuerRepoImpl struct {
 	queries *sqlc.Queries
 }
 
-// NewOutboxEnqueuerRepo creates a new outbox repository for the enqueuer.
-// It requires both the db pool (for transactions) and queries (for non-transactional operations).
+// NewOutboxEnqueuerRepo creates a new outbox repository for the enqueuer. It requires both the db pool (for transactions) and queries (for non-transactional operations).
 func NewOutboxEnqueuerRepo(dbPool *sql.DB, queries *sqlc.Queries) messaging.OutboxEnqueuerRepo {
 	return &outboxEnqueuerRepoImpl{dbPool: dbPool, queries: queries}
 }
@@ -29,8 +28,7 @@ func (r *outboxEnqueuerRepoImpl) AcquireAndLock(ctx context.Context, lockOwner s
 	ctx, span := tracing.StartSpan(ctx, outboxRepoTracer, "repository.outbox.acquire_and_lock")
 	defer span.End()
 
-	// Use a transaction to ensure the UPDATE and SELECT use the same connection.
-	// This prevents read-after-write inconsistency in distributed databases.
+	// Use a transaction to ensure the UPDATE and SELECT use the same connection. This prevents read-after-write inconsistency in distributed databases.
 	tx, err := r.dbPool.BeginTx(ctx, nil)
 	if err != nil {
 		span.RecordError(err)

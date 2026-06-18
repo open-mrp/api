@@ -111,8 +111,7 @@ func (s *pickSvcImpl) ListPicks(ctx context.Context, params domain.ListPicksPara
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Expand departments per pick only when requested (so the list can serve the
-	// department_ids array filter and rows that render department pills).
+	// Expand departments per pick only when requested (so the list can serve the department_ids array filter and rows that render department pills).
 	for _, include := range params.Includes {
 		if include == "departments" {
 			for _, pick := range result.Picks {
@@ -669,8 +668,7 @@ func (s *pickSvcImpl) PackPick(ctx context.Context, pickID string, shipmentCaseC
 	}
 }
 
-// checkPickReadPermission checks the appropriate read permission based on the identity context.
-// Internal actors need picks:read for their own account, or customers:read / suppliers:read for external accounts.
+// checkPickReadPermission checks the appropriate read permission based on the identity context. Internal actors need picks:read for their own account, or customers:read / suppliers:read for external accounts.
 func checkPickReadPermission(identity *types.Identity) *apierror.APIError {
 	if !identity.IsInternalActor() {
 		return nil

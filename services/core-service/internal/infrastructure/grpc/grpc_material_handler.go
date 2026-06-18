@@ -19,9 +19,7 @@ func protoToQuantityInput(q *pb.QuantityInput) *domain.QuantityInput {
 	}
 }
 
-// protoToCreateRateInput converts an optional CreateRateInput proto into the
-// domain CreateRateParams shape. Returns nil when the proto is nil so callers
-// can fall back to default-rate behavior in service layer.
+// protoToCreateRateInput converts an optional CreateRateInput proto into the domain CreateRateParams shape. Returns nil when the proto is nil so callers can fall back to default-rate behavior in service layer.
 func protoToCreateRateInput(r *pb.CreateRateInput) *domain.CreateRateParams {
 	if r == nil {
 		return nil

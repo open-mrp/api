@@ -112,8 +112,7 @@ type rawEmailInput struct {
 }
 
 func generateRawEmail(input rawEmailInput) ([]byte, error) {
-	// Prepare the body content
-	// Base64 encode and chunk the body to avoid line length limits (RFC 5322)
+	// Base64-encode and chunk the body to stay under the RFC 5322 line-length limit.
 	base64Body := base64.StdEncoding.EncodeToString([]byte(input.Body))
 	chunkedBody := splitString(base64Body, 76)
 

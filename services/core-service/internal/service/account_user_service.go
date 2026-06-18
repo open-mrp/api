@@ -51,10 +51,10 @@ type AccountUserSvcConfig struct {
 	// S3Client (required) is the object store client used for file storage.
 	S3Client s3client.ObjectStore
 
-	// UserPhotosBucket (required) is the S3 bucket for user photos.
+	// UserPhotosBucket (required outside test mode) is the S3 bucket for user photos. Validation skips this requirement when PlatformMode is test.
 	UserPhotosBucket string
 
-	// PlatformMode (required) is the platform mode.
+	// PlatformMode (required) gates test-only relaxations; in test mode UserPhotosBucket is not required.
 	PlatformMode constants.PlatformMode
 }
 
@@ -118,20 +118,9 @@ func (s *accountUserSvcImpl) withTx(ctx context.Context, fn func(context.Context
 	})
 }
 
-// resolveImageURL returns a presigned GET URL for the user's avatar, or nil if
-// the user has no avatar or the URL cannot be signed. The user-photos bucket is
-// private and SSE-S3-encrypted, so clients cannot fetch directly without a
-// short-lived signed URL.
+// resolveImageURL returns a presigned GET URL for the user's avatar, or nil if the user has no avatar or the URL cannot be signed. The user-photos bucket is private and SSE-S3-encrypted, so clients cannot fetch directly without a short-lived signed URL.
 //
-// hasImage is derived from the persisted user.image_url column (already loaded
-// on the account-user record): it is set when, and only when, a photo is
-// uploaded (see userSvcImpl.UploadUserPhoto), so it is an authoritative
-// existence signal. We rely on it instead of an S3 HeadObject so that listing N
-// users costs zero S3 round trips — the previous per-user HeadObject was an
-// N+1 that, combined with a stalled credential chain, could exhaust the request
-// deadline. Presigning is a purely local SigV4 operation (no network I/O), so
-// this is effectively free per call. Returning nil on any signing error ensures
-// a missing avatar never breaks the account-user response.
+// hasImage is derived from the persisted user.image_url column (already loaded on the account-user record): it is set when, and only when, a photo is uploaded (see userSvcImpl.UploadUserPhoto), so it is an authoritative existence signal. We rely on it instead of an S3 HeadObject so that listing N users costs zero S3 round trips — the previous per-user HeadObject was an N+1 that, combined with a stalled credential chain, could exhaust the request deadline. Presigning is a purely local SigV4 operation (no network I/O), so this is effectively free per call. Returning nil on any signing error ensures a missing avatar never breaks the account-user response.
 func (s *accountUserSvcImpl) resolveImageURL(ctx context.Context, accountID, userID string, hasImage bool) *string {
 	if !hasImage {
 		return nil
@@ -318,9 +307,7 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 				params.RoleID = &scannerRole.ID
 			}
 
-			// Sales-rep inference (mirrors Express): when the caller provides a role whose
-			// type is sales_rep, normalize to the canonical sales-rep role for the account.
-			// Skipped on the scanner path because the role has already been forced above.
+			// Sales-rep inference (mirrors Express): when the caller provides a role whose type is sales_rep, normalize to the canonical sales-rep role for the account. Skipped on the scanner path because the role has already been forced above.
 			if !isScanningStation && params.RoleID != nil {
 				providedRole, apiErr := txRoleRepo.Get(txCtx, *params.RoleID, params.AccountID)
 				if apiErr != nil {
@@ -454,9 +441,7 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 				return apiErr
 			}
 
-			// Send welcome email if user has an email and we generated a password for them.
-			// Suppliers are skipped: there is no supplier portal yet, so a supplier-relation
-			// user has nowhere to log in and does not need their generated password.
+			// Send welcome email if user has an email and we generated a password for them. Suppliers are skipped: there is no supplier portal yet, so a supplier-relation user has nowhere to log in and does not need their generated password.
 			if params.Email != nil && generatedPassword != "" && !identity.IsTargetSupplierAccount() {
 				emailParams := map[string]any{
 					"Name":     stringOrDefault(params.Name, "there"),
@@ -488,9 +473,7 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 					Subject:    subject,
 					TemplateID: constants.EmailTemplateNewUserWelcome,
 					Params:     emailParams,
-					// Scope the audit log to the originating (actor) account so the
-					// sender can confirm the email went out, even when creating a
-					// user for another account (external target).
+					// Scope the audit log to the originating (actor) account so the sender can confirm the email went out, even when creating a user for another account (external target).
 					AccountID: identity.ActorAccountID(),
 					SentByID:  &identity.Actor.ID,
 				}); apiErr != nil {
@@ -715,9 +698,7 @@ func (s *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, params domai
 	}
 }
 
-// UpdateAccountUserStatus transitions an account user to the given target status.
-// Consolidates lock (active→disabled), unlock (disabled→active), restore (removed→active),
-// and delete (→removed). Idempotent: calling with the current status is a no-op.
+// UpdateAccountUserStatus transitions an account user to the given target status. Consolidates lock (active→disabled), unlock (disabled→active), restore (removed→active), and delete (→removed). Idempotent: calling with the current status is a no-op.
 func (s *accountUserSvcImpl) UpdateAccountUserStatus(ctx context.Context, accountUserID string, targetStatus constants.AccountUserStatus) *apierror.APIError {
 	ctx, span := accountUserSvcTracer.Start(ctx, "service.account_user.update_status")
 	defer span.End()
@@ -884,9 +865,7 @@ func (s *accountUserSvcImpl) UpdateAccountUserPassword(ctx context.Context, acco
 	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
-	// Scanner-password rotation verifies the caller's own password, which only
-	// exists for user identities (session auth). API keys and other actor types
-	// have no password to verify against.
+	// Scanner-password rotation verifies the caller's own password, which only exists for user identities (session auth). API keys and other actor types have no password to verify against.
 	if !identity.IsUser() {
 		return tracing.Trace(span, apierror.NewAuthorizationError("Scanner password updates require session authentication."))
 	}
@@ -957,9 +936,7 @@ func (s *accountUserSvcImpl) UpdateAccountUserPassword(ctx context.Context, acco
 				Action:       constants.AuditActionUpdate,
 				ResourceType: constants.ObjectTypeAccountUser,
 				ResourceID:   targetAccountUser.ID,
-				// No Changes: never record password material. Metadata marks
-				// what happened so the event is self-describing (and is not
-				// skipped as a no-op by the publisher).
+				// No Changes: never record password material. Metadata marks what happened so the event is self-describing (and is not skipped as a no-op by the publisher).
 				Metadata: map[string]any{"password_rotated": true},
 			}); apiErr != nil {
 				return apiErr
@@ -1036,9 +1013,7 @@ func stringOrDefault(s *string, def string) string {
 	return *s
 }
 
-// checkAccountUserReadPermission checks the appropriate read permission based on the target context.
-// Internal actors targeting a customer account need customers:read; supplier account needs suppliers:read;
-// own account needs team:read.
+// checkAccountUserReadPermission checks the appropriate read permission based on the target context. Internal actors targeting a customer account need customers:read; supplier account needs suppliers:read; own account needs team:read.
 func checkAccountUserReadPermission(identity *types.Identity) *apierror.APIError {
 	if !identity.IsInternalActor() {
 		return nil
@@ -1052,9 +1027,7 @@ func checkAccountUserReadPermission(identity *types.Identity) *apierror.APIError
 	return identity.CheckHasPermission(types.PermissionDomainTeamUsers, types.ActionRead)
 }
 
-// checkAccountUserWritePermission checks the appropriate write permission based on the target context.
-// Internal actors targeting a customer account need customers:update; supplier account needs suppliers:update;
-// own account needs team:{action}.
+// checkAccountUserWritePermission checks the appropriate write permission based on the target context. Internal actors targeting a customer account need customers:update; supplier account needs suppliers:update; own account needs team:{action}.
 func checkAccountUserWritePermission(identity *types.Identity, action types.Action) *apierror.APIError {
 	if !identity.IsInternalActor() {
 		return nil

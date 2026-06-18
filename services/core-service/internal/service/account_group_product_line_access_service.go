@@ -117,10 +117,7 @@ func (s *accountGroupProductLineAccessSvcImpl) GetAccountGroupProductLineAccess(
 	return s.repos.NewAccountGroupProductLineAccessRepo().Get(ctx, identity.Target.AccountID, accountGroupID)
 }
 
-// BatchGetAccountGroupProductLineAccessByIDs returns access records for each
-// given account_group_id. Implemented as a loop over Get since the underlying
-// shape (one record per group, with N product lines) is awkward to express in
-// a single SQL query; batch sizes for include resolution are small.
+// BatchGetAccountGroupProductLineAccessByIDs returns access records for each given account_group_id. Implemented as a loop over Get since the underlying shape (one record per group, with N product lines) is awkward to express in a single SQL query; batch sizes for include resolution are small.
 func (s *accountGroupProductLineAccessSvcImpl) BatchGetAccountGroupProductLineAccessByIDs(ctx context.Context, accountGroupIDs []string) ([]*domain.AccountGroupProductLineAccess, *apierror.APIError) {
 	ctx, span := accountGroupProductLineAccessSvcTracer.Start(ctx, "service.account_group_product_line_access.batch_get_by_ids")
 	defer span.End()

@@ -14,12 +14,10 @@ import (
 
 var billingPublisherTracer = tracing.GetTracer("core-service.billing_publisher")
 
-// outboxBillingPublisher writes billing commands to the outbox table instead of
-// publishing directly to RabbitMQ.
+// outboxBillingPublisher writes billing commands to the outbox table instead of publishing directly to RabbitMQ, so each command commits atomically with the work that triggered it in the same transaction.
 type outboxBillingPublisher struct{}
 
-// NewOutboxBillingPublisher creates a billing publisher that writes
-// to the outbox table for reliable message delivery.
+// NewOutboxBillingPublisher creates a billing publisher that writes to the outbox table for reliable message delivery.
 func NewOutboxBillingPublisher() domain.BillingPublisher {
 	return &outboxBillingPublisher{}
 }

@@ -15,9 +15,7 @@ import (
 
 var accountGroupLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.account_group")
 
-// LoadAccountGroups fetches account groups by ID via
-// BatchGetAccountGroupsByIDs. AccountGroup exposes no expandable sub-resources
-// (not even an Owner) so no LoadMeta needs to be stashed.
+// LoadAccountGroups fetches account groups by ID via BatchGetAccountGroupsByIDs. AccountGroup exposes no expandable sub-resources (not even an Owner) so no LoadMeta needs to be stashed.
 func LoadAccountGroups(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil

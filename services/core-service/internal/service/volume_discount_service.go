@@ -425,8 +425,7 @@ func (s *volumeDiscountSvcImpl) DeleteVolumeDiscount(ctx context.Context, volume
 	return nil
 }
 
-// checkVolumeDiscountReadPermission checks the appropriate read permission based on the identity context.
-// Internal actors need discounts:read for their own account, or customers:read / suppliers:read for external accounts.
+// checkVolumeDiscountReadPermission checks the appropriate read permission based on the identity context. Internal actors need discounts:read for their own account, or customers:read / suppliers:read for external accounts.
 func checkVolumeDiscountReadPermission(identity *types.Identity) *apierror.APIError {
 	if !identity.IsInternalActor() {
 		return nil

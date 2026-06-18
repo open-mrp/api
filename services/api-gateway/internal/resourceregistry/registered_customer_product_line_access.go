@@ -7,8 +7,7 @@ import (
 )
 
 func init() {
-	// Customer-keyed twin of AccountGroupProductLineAccess. Same empty-Subs
-	// shape with denormalized Customer + inline ProductLines list.
+	// Customer-keyed twin of AccountGroupProductLineAccess. Same empty-Subs shape with denormalized Customer + inline ProductLines list.
 	resourcekit.Register(&resourcekit.Definition{
 		ObjectType: constants.ObjectTypeCustomerProductLineAccess,
 		Load:       resourceloaders.LoadCustomerProductLineAccess,

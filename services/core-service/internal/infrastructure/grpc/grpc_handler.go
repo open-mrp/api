@@ -84,8 +84,7 @@ type gRPCHandler struct {
 	roleSvc                          domain.RoleSvc
 }
 
-// handler is the shared gRPCHandler instance for the core service.
-// All Register* functions populate fields on this shared handler.
+// handler is the shared gRPCHandler instance for the core service. All Register* functions populate fields on this shared handler.
 var handler = &gRPCHandler{}
 
 func RegisterAddressService(server *grpc.Server, addressSvc domain.AddressSvc, addressValidationSvc domain.AddressValidationSvc) {
@@ -552,10 +551,7 @@ func (h *gRPCHandler) BatchGetSandboxesByIDs(ctx context.Context, req *pb.BatchG
 	return &pb.BatchGetSandboxesByIDsResponse{Sandboxes: pbSandboxes}, nil
 }
 
-// sandboxToProtoFlat returns the minimal SandboxInfo for V2 batch reads: it
-// always populates owner_account_id (the FK) so the api-gateway resolver can
-// stash it in LoadMeta, but never the denormalized owner_account_* fields
-// (those are filled by the Account loader when ?include[]=owner_account).
+// sandboxToProtoFlat returns the minimal SandboxInfo for V2 batch reads: it always populates owner_account_id (the FK) so the api-gateway resolver can stash it in LoadMeta, but never the denormalized owner_account_* fields (those are filled by the Account loader when ?include[]=owner_account).
 func sandboxToProtoFlat(s *domain.SandboxAccount) *pb.SandboxInfo {
 	ownID := s.OwnerAccountID
 	return &pb.SandboxInfo{

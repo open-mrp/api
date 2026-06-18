@@ -16,9 +16,7 @@ import (
 
 var paymentTermLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.payment_term")
 
-// LoadPaymentTerms fetches payment terms by ID via BatchGetPaymentTermsByIDs.
-// Stashes owner_account_id in LoadMeta so the SubField closures can build the
-// Owner shell and (on owner.account) write the loaded Account.
+// LoadPaymentTerms fetches payment terms by ID via BatchGetPaymentTermsByIDs. Stashes owner_account_id in LoadMeta so the SubField closures can build the Owner shell and (on owner.account) write the loaded Account.
 func LoadPaymentTerms(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil

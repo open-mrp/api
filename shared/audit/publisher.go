@@ -32,16 +32,13 @@ type auditEventOutboxPayload struct {
 
 // Publish enqueues an audit event via the platform outbox pipeline.
 //
-// It is safe to call inside a service transaction: the outboxRepo write is
-// performed atomically with the business mutation.
+// It is safe to call inside a service transaction: the outboxRepo write is performed atomically with the business mutation.
 func (p *Publisher) Publish(
 	ctx context.Context,
 	outboxRepo messaging.OutboxRepo,
 	data EventData,
 ) *apierror.APIError {
-	// Skip no-op updates: an update event with no recorded changes and no
-	// metadata carries no information (e.g. a PATCH that sets fields to their
-	// current values). Create and delete events always publish.
+	// Skip no-op updates: an update event with no recorded changes and no metadata carries no information (e.g. a PATCH that sets fields to their current values). Create and delete events always publish.
 	if data.Action == constants.AuditActionUpdate && len(data.Changes) == 0 && len(data.Metadata) == 0 {
 		return nil
 	}
@@ -96,8 +93,7 @@ func (p *Publisher) Publish(
 		return apierror.NewInternalError(err, "Audit publisher: failed to marshal audit payload.")
 	}
 
-	// Let the outbox repo generate its own MessageID if needed, but we supply
-	// a deterministic one to keep causal chains easy to trace.
+	// Let the outbox repo generate its own MessageID if needed, but we supply a deterministic one to keep causal chains easy to trace.
 	length2 := id.IDLength22
 	msgID, apiErr := id.GenID(id.MessageIDPrefix, &length2)
 	if apiErr != nil {

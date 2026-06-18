@@ -22,8 +22,7 @@ const (
 	CarrierCodeFreightCollect CarrierCode = "freight_collect"
 )
 
-// IsShippoCarrier returns true if the given code corresponds to a carrier
-// managed through the Shippo API (FedEx, UPS, USPS).
+// IsShippoCarrier returns true if the given code corresponds to a carrier managed through the Shippo API (FedEx, UPS, USPS).
 func IsShippoCarrier(code *string) bool {
 	if code == nil {
 		return false

@@ -30,8 +30,7 @@ func GetIdempotencyKeyID(ctx context.Context) (string, bool) {
 	return v, ok && v != ""
 }
 
-// IdempotencyResponseMetadata holds mutable, response-scoped flags that allow
-// service-layer code to communicate information back to the transport layer.
+// IdempotencyResponseMetadata holds mutable, response-scoped flags that allow service-layer code to communicate information back to the transport layer.
 type IdempotencyResponseMetadata struct {
 	Replayed bool
 }
@@ -47,8 +46,7 @@ func GetIdempotencyResponseMetadata(ctx context.Context) (*IdempotencyResponseMe
 	return meta, ok && meta != nil
 }
 
-// MarkIdempotencyReplayed sets the Replayed flag on the context's idempotency
-// response metadata. Safe to call when no metadata is present.
+// MarkIdempotencyReplayed sets the Replayed flag on the context's idempotency response metadata. Safe to call when no metadata is present.
 func MarkIdempotencyReplayed(ctx context.Context) {
 	if meta, ok := GetIdempotencyResponseMetadata(ctx); ok {
 		meta.Replayed = true

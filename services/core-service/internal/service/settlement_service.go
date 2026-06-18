@@ -158,9 +158,7 @@ func (s *settlementSvcImpl) CreateSettlement(ctx context.Context, params domain.
 
 	params.AccountID = identity.Target.AccountID
 
-	// Validate responsible user exists in account and resolve to the
-	// account_user ID. The client may send either an account_user id or a
-	// user id (the latter matching the legacy Dashboard behavior).
+	// Validate responsible user exists in account and resolve to the account_user ID. The client may send either an account_user id or a user id (the latter matching the legacy Dashboard behavior).
 	accountUserRepo := s.repos.NewAccountUserRepo()
 	resolvedID, apiErr := accountUserRepo.ResolveAccountUserID(ctx, params.AccountID, params.ResponsibleUserID)
 	if apiErr != nil {
@@ -295,9 +293,7 @@ func (s *settlementSvcImpl) UpdateSettlement(ctx context.Context, params domain.
 
 	params.AccountID = identity.Target.AccountID
 
-	// If the responsible user is being updated, validate existence and resolve
-	// to the account_user ID. The client may send either an account_user id or
-	// a user id.
+	// If the responsible user is being updated, validate existence and resolve to the account_user ID. The client may send either an account_user id or a user id.
 	if params.ResponsibleUserID != nil {
 		resolvedID, apiErr := s.repos.NewAccountUserRepo().ResolveAccountUserID(ctx, params.AccountID, *params.ResponsibleUserID)
 		if apiErr != nil {
@@ -481,12 +477,8 @@ func (s *settlementSvcImpl) DeleteSettlement(ctx context.Context, params domain.
 	return settlement, nil
 }
 
-// updatePaymentStatuses updates payment-related flags on affected invoices and transactions.
-// This runs after the settlement creation transaction has committed.
+// updatePaymentStatuses recomputes payment-related flags on the invoices and transactions affected by a settlement. It runs best-effort after the settlement-creation transaction has committed: any failure is swallowed (no log today) rather than rolling back the settlement, so a missed update leaves stale paid-in-full / fully-allocated flags until the next recompute. Could be replaced with an outbox message for durability.
 func (s *settlementSvcImpl) updatePaymentStatuses(ctx context.Context, settlementID, _ string) {
-	// This is a best-effort operation after the main transaction.
-	// In the future, this could be replaced with an outbox message.
-	// For now, we just log and continue if it fails.
 	repo := s.repos.NewSettlementRepo()
 
 	transactionIDs, apiErr := repo.GetAllocationTransactionIDs(ctx, settlementID)

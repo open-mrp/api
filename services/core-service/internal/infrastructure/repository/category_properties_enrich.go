@@ -9,9 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// enrichItemCategoryProperties loads _item_categories_properties for all distinct
-// item_category_id values present on the given items and attaches them to each
-// domain.ItemCategory.
+// enrichItemCategoryProperties loads _item_categories_properties for all distinct item_category_id values present on the given items and attaches them to each domain.ItemCategory.
 func enrichItemCategoryProperties(ctx context.Context, queries *sqlc.Queries, items []*domain.Item) *apierror.APIError {
 	idsMap := make(map[string]struct{})
 	for _, item := range items {

@@ -183,8 +183,7 @@ type ListCustomerInvoicesResult struct {
 	PageInfo pagination.PageInfo
 }
 
-// InvoicePaymentFlags holds the recomputed payment flags for a single invoice,
-// derived from its transaction allocations vs. its invoiced total.
+// InvoicePaymentFlags holds the recomputed payment flags for a single invoice, derived from its transaction allocations vs. its invoiced total.
 type InvoicePaymentFlags struct {
 	InvoiceID    string
 	IsPaidInFull bool

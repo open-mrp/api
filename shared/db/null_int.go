@@ -12,8 +12,7 @@ func NullInt64Ptr(i *int64) sql.NullInt64 {
 }
 
 // Int64FromInterface extracts an int64 from an interface{} value.
-// MySQL CASE expressions are typed as interface{} by sqlc and may arrive
-// as int64, int, or []byte depending on the driver. Returns (0, false) for nil.
+// MySQL CASE expressions are typed as interface{} by sqlc and may arrive as int64, int, or []byte depending on the driver. Returns (0, false) for nil.
 func Int64FromInterface(v any) (int64, bool) {
 	if v == nil {
 		return 0, false

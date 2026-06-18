@@ -1,7 +1,6 @@
 package constants
 
-// stringPtrEnum converts an optional enum value (which is represented as a
-// pointer to a named string type) into an optional string pointer.
+// stringPtrEnum converts an optional enum value (which is represented as a pointer to a named string type) into an optional string pointer.
 //
 // This is used by StringPtr() methods across all enum-like constant types.
 func stringPtrEnum[T ~string](v *T) *string {

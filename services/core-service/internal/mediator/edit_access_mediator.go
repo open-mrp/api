@@ -37,10 +37,7 @@ func NewEditAccessMed(config *EditAccessMedConfig) domain.EditAccessMed {
 	}
 }
 
-// CheckEditAccess verifies that the actor account has edit access to the
-// target account. Same-account access is always allowed. Cross-account
-// access requires: the target has no active billing plan, a relation exists
-// between the accounts, and the target has no other owner relations.
+// CheckEditAccess verifies that the actor account has edit access to the target account. Same-account access is always allowed. Cross-account access requires: the target has no active billing plan, a relation exists between the accounts, and the target has no other owner relations.
 //
 //  1. Allow access when the actor and target accounts are the same.
 //  2. Reject when the target has an active billing plan.

@@ -124,10 +124,7 @@ func mapRateRow(row sqlc.GetRatesByIDsRow) *domain.Rate {
 	}
 }
 
-// extractItemIncludes strips an "item." prefix from each include key and returns
-// the resulting slice. This lets material/part/product stitch functions pass
-// includes like "item.burn_rate" to the shared item stitch helpers that expect
-// bare keys like "burn_rate".
+// extractItemIncludes strips an "item." prefix from each include key and returns the resulting slice. This lets material/part/product stitch functions pass includes like "item.burn_rate" to the shared item stitch helpers that expect bare keys like "burn_rate".
 func extractItemIncludes(incs []string) []string {
 	const prefix = "item."
 	out := make([]string, 0, len(incs))
@@ -139,8 +136,7 @@ func extractItemIncludes(incs []string) []string {
 	return out
 }
 
-// stitchItemRates fetches rates for the given items and attaches them when the
-// caller has requested at least one rate include (unit_value, unit_cost, burn_rate).
+// stitchItemRates fetches rates for the given items and attaches them when the caller has requested at least one rate include (unit_value, unit_cost, burn_rate).
 func stitchItemRates(ctx context.Context, queries *sqlc.Queries, items []*domain.Item, incs []string) *apierror.APIError {
 	wantUnitValue := slices.Contains(incs, "unit_value")
 	wantUnitCost := slices.Contains(incs, "unit_cost")
@@ -201,8 +197,7 @@ func stitchItemRates(ctx context.Context, queries *sqlc.Queries, items []*domain
 	return nil
 }
 
-// wantsUnitGroup returns true when the includes contain "category.unit_group"
-// or any deeper path starting with "category.unit_group.".
+// wantsUnitGroup returns true when the includes contain "category.unit_group" or any deeper path starting with "category.unit_group.".
 func wantsUnitGroup(incs []string) bool {
 	for _, inc := range incs {
 		if inc == "category.unit_group" || strings.HasPrefix(inc, "category.unit_group.") {
@@ -212,9 +207,7 @@ func wantsUnitGroup(incs []string) bool {
 	return false
 }
 
-// stitchItemCategoryUnitGroups fetches unit group details and attaches them to
-// item categories when the caller has requested the category.unit_group include
-// or any sub-include under it.
+// stitchItemCategoryUnitGroups fetches unit group details and attaches them to item categories when the caller has requested the category.unit_group include or any sub-include under it.
 func stitchItemCategoryUnitGroups(ctx context.Context, queries *sqlc.Queries, items []*domain.Item, incs []string) *apierror.APIError {
 	if !wantsUnitGroup(incs) {
 		return nil
@@ -276,8 +269,7 @@ func stitchItemCategoryUnitGroups(ctx context.Context, queries *sqlc.Queries, it
 	return nil
 }
 
-// stitchItemCategoryUnitGroupBaseUnits batch-fetches the base unit for each
-// item's category unit group and populates UnitGroupBaseUnit.
+// stitchItemCategoryUnitGroupBaseUnits batch-fetches the base unit for each item's category unit group and populates UnitGroupBaseUnit.
 func stitchItemCategoryUnitGroupBaseUnits(ctx context.Context, queries *sqlc.Queries, items []*domain.Item) *apierror.APIError {
 	seen := make(map[string]struct{})
 	var baseUnitIDs []string
@@ -316,8 +308,7 @@ func stitchItemCategoryUnitGroupBaseUnits(ctx context.Context, queries *sqlc.Que
 	return nil
 }
 
-// mapUnitGroupUnitsByUnitGroupIDsRow converts a sqlc row into a domain.UnitGroupUnit
-// with its Unit sub-resource already populated (the query already joins unit).
+// mapUnitGroupUnitsByUnitGroupIDsRow converts a sqlc row into a domain.UnitGroupUnit with its Unit sub-resource already populated (the query already joins unit).
 func mapUnitGroupUnitsByUnitGroupIDsRow(row sqlc.ListUnitGroupUnitsByUnitGroupIDsRow) *domain.UnitGroupUnit {
 	var acctID *string
 	if row.UnitAccountID.Valid {
@@ -349,8 +340,7 @@ func mapUnitGroupUnitsByUnitGroupIDsRow(row sqlc.ListUnitGroupUnitsByUnitGroupID
 	}
 }
 
-// stitchItemCategoryAssociatedUnits batch-fetches unit group units for all
-// unique unit group IDs across the items and populates UnitGroupAssociatedUnits.
+// stitchItemCategoryAssociatedUnits batch-fetches unit group units for all unique unit group IDs across the items and populates UnitGroupAssociatedUnits.
 func stitchItemCategoryAssociatedUnits(ctx context.Context, queries *sqlc.Queries, items []*domain.Item, incs []string) *apierror.APIError {
 	seen := make(map[string]struct{})
 	var ugIDs []string
@@ -412,8 +402,7 @@ func loadItemAttributes(ctx context.Context, queries *sqlc.Queries, item *domain
 	return nil
 }
 
-// stitchItemAttributes batch-loads attributes for all items in a single query
-// when the caller has requested the attributes include.
+// stitchItemAttributes batch-loads attributes for all items in a single query when the caller has requested the attributes include.
 func stitchItemAttributes(ctx context.Context, queries *sqlc.Queries, items []*domain.Item, incs []string) *apierror.APIError {
 	if !slices.Contains(incs, "attributes") {
 		return nil
@@ -818,9 +807,7 @@ func (r *itemRepoImpl) GetTrends(ctx context.Context, accountID, itemID, trendTy
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Deduplicate by day: keep only the earliest log entry per calendar day.
-	// This matches the Dashboard behavior which iterates ASC-ordered logs and
-	// takes the first entry it encounters for each unique day.
+	// Deduplicate by day: keep only the earliest log entry per calendar day. This matches the Dashboard behavior which iterates ASC-ordered logs and takes the first entry it encounters for each unique day.
 	seen := make(map[string]struct{})
 	var points []*domain.ItemTrend
 	for _, row := range rows {

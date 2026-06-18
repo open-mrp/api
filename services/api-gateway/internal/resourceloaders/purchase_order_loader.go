@@ -16,10 +16,7 @@ import (
 
 var purchaseOrderLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.purchase_order")
 
-// LoadPurchaseOrders fetches purchase orders by ID via BatchGetPurchaseOrdersByIDs
-// and builds expandable PurchaseOrder references with real header data.
-// Nested sub-resources (lines, addresses, supplier, …) are their own expandable
-// relations and are not populated here.
+// LoadPurchaseOrders fetches purchase orders by ID via BatchGetPurchaseOrdersByIDs and builds expandable PurchaseOrder references with real header data. Nested sub-resources (lines, addresses, supplier, …) are their own expandable relations and are not populated here.
 func LoadPurchaseOrders(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil
@@ -35,8 +32,7 @@ func LoadPurchaseOrders(ctx context.Context, ids []string) (map[string]any, *api
 	out := make(map[string]any, len(resp.PurchaseOrders))
 	for _, po := range resp.PurchaseOrders {
 		out[po.Id] = purchaseOrderReferenceFromProto(po)
-		// Stash the supplier (cross-account, carried inline on the proto) so a
-		// nested ?include=...purchase_order.supplier resolves on a loaded PO.
+		// Stash the supplier (cross-account, carried inline on the proto) so a nested ?include=...purchase_order.supplier resolves on a loaded PO.
 		if po.SupplierId != "" {
 			meta.Set(constants.ObjectTypePurchaseOrder, po.Id, "supplier", &apiresource.Supplier{
 				ID:     po.SupplierId,

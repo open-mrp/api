@@ -2,12 +2,7 @@ package field
 
 // Clearable represents a PATCH field with three states: unset (omit), clear (null), or set (value).
 //
-// Use it on PATCH/update request structs as a value (Clearable[T], never *Clearable[T])
-// with json:"<name>,omitzero", where a caller may send a value, omit the key to leave the
-// field unchanged, or send null to clear it. It must be a value, not a pointer: encoding/json
-// short-circuits an explicit null on a pointer field to a nil pointer without calling
-// UnmarshalJSON, which would make "clear" indistinguishable from "unset". As a value the
-// addressable field's UnmarshalJSON is always invoked, so null is recorded as clear.
+// Use it on PATCH/update request structs as a value (Clearable[T], never *Clearable[T]) with json:"<name>,omitzero", where a caller may send a value, omit the key to leave the field unchanged, or send null to clear it. It must be a value, not a pointer: encoding/json short-circuits an explicit null on a pointer field to a nil pointer without calling UnmarshalJSON, which would make "clear" indistinguishable from "unset". As a value the addressable field's UnmarshalJSON is always invoked, so null is recorded as clear.
 type Clearable[T any] struct {
 	state clearableState
 	value T

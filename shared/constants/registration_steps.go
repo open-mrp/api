@@ -32,8 +32,7 @@ func (m RegistrationStep) IsValid() bool {
 	}
 }
 
-// Ordinal returns the numeric ordering of a registration step.
-// Higher values indicate later steps in the flow.
+// Ordinal returns the numeric ordering of a registration step. Higher values indicate later steps in the flow.
 func (m RegistrationStep) Ordinal() int {
 	switch m {
 	case RegistrationStepVerification:

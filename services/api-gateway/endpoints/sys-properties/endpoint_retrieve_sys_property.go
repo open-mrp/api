@@ -24,7 +24,7 @@ func (e *RetrieveSysPropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 		Title:             "Retrieve System Property",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
-		Route:             "/v1/core/sys-properties/{id}",
+		Route:             "/v1/settings/properties/{id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,

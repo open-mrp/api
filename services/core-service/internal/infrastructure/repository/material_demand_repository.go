@@ -42,10 +42,7 @@ func (r *materialDemandRepo) GetMaterialDemand(ctx context.Context, accountID st
 	return result, nil
 }
 
-// explode recursively traverses the BOM to calculate raw material demands.
-// For each item, it finds the production step that produces it, calculates
-// the normalization factor (requested qty / step output qty), and recurses
-// into each consumption. Leaf items (no production step) are raw materials.
+// explode recursively traverses the BOM to calculate raw material demands. For each item, it finds the production step that produces it, calculates the normalization factor (requested qty / step output qty), and recurses into each consumption. Leaf items (no production step) are raw materials.
 func (r *materialDemandRepo) explode(
 	ctx context.Context,
 	accountID, itemID string,
@@ -94,8 +91,7 @@ func (r *materialDemandRepo) explode(
 		return apierror.NewInternalError(parseErr, "Invalid production step output quantity.")
 	}
 
-	// If units differ, we work with the quantities as-is since the production
-	// step's consumption quantities are already expressed relative to its output.
+	// If units differ, we work with the quantities as-is since the production step's consumption quantities are already expressed relative to its output.
 	normFactor := measure.Div(stepOutputQty)
 
 	// Get all consumptions for this step

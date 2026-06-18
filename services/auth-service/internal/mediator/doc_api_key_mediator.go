@@ -78,11 +78,6 @@ func NewDocAPIKeyMed(config *DocAPIKeyMedConfig) domain.DocAPIKeyMed {
 // 3. If the existing key is revoked, return an error indicating manual rotation is required.
 // 4. If the existing key is expired, rotate it and return the new key.
 // 5. Otherwise, decrypt and return the existing key's secret.
-//
-// Behavior:
-//   - If a non-revoked, non-expired doc API key exists, it is returned.
-//   - If the existing key is expired, a new key is created via rotation.
-//   - If the existing key is revoked, returns an error indicating rotation is required.
 func (m *docAPIKeyMedImpl) Resolve(ctx context.Context, sandboxAccountID string) (*domain.GetOrCreateDocAPIKeyResult, *apierror.APIError) {
 	ctx, span := docAPIKeyMedTracer.Start(ctx, "mediator.doc_api_key.resolve")
 	defer span.End()
@@ -95,8 +90,7 @@ func (m *docAPIKeyMedImpl) Resolve(ctx context.Context, sandboxAccountID string)
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// We assume that if a user revokes this API key they would prefer to not auto-create a sandbox
-	// API key. They can manually rotate it to allow this setting.
+	// We assume that if a user revokes this API key they would prefer to not auto-create a sandbox API key. They can manually rotate it to allow this setting.
 	if existing.IsAPIKeyRevoked() {
 		return nil, tracing.Trace(span, apierror.NewValidationError("The documentation API key has been revoked. Please rotate it manually if you would like to continue using it."))
 	}
@@ -116,9 +110,6 @@ func (m *docAPIKeyMedImpl) Resolve(ctx context.Context, sandboxAccountID string)
 // 3. Delete the old doc API key record.
 // 4. Encrypt the new secret using AES-GCM.
 // 5. Create a new doc API key record pointing to the rotated API key.
-//
-// Behavior:
-//   - No-op if no doc API key exists for the old API key.
 //
 // Side effects:
 //   - Deletes the old doc API key record (if present).

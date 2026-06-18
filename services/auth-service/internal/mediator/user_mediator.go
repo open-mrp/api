@@ -181,9 +181,7 @@ func (s *userMedImpl) ValidateMagicLoginToken(ctx context.Context, magicToken st
 	return user, nil
 }
 
-// SendAlreadyRegisteredEmail generates a magic login token and sends the
-// "already registered" email so the user can log in with one click.
-// This must be called outside a transaction so the outbox message is not rolled back.
+// SendAlreadyRegisteredEmail generates a magic login token and sends the "already registered" email so the user can log in with one click. This must be called outside a transaction so the outbox message is not rolled back.
 func (s *userMedImpl) SendAlreadyRegisteredEmail(ctx context.Context, user *types.User, accountSlug *string) {
 	if user.Email == nil {
 		return

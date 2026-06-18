@@ -8,9 +8,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// AddressValidationSvc is a stub AddressValidationSvc implementation for use in
-// test mode. It returns realistic canned responses so that e2e tests can exercise
-// the full address validation flow without an external Google Maps API key.
+// AddressValidationSvc is a stub AddressValidationSvc implementation for use in test mode. It returns realistic canned responses so that e2e tests can exercise the full address validation flow without an external Google Maps API key.
 type AddressValidationSvc struct{}
 
 // stubPlaces maps fake place IDs to their address details.
@@ -85,8 +83,7 @@ func (s *AddressValidationSvc) GetPlaceDetails(_ context.Context, placeID string
 func (s *AddressValidationSvc) ValidateAddress(_ context.Context, addressLine1 string, addressLine2 *string, city, state, postalCode, country string) (*domain.ValidatedAddress, *apierror.APIError) {
 	regionCode := stubRegionCode(country)
 
-	// Detect clearly fake addresses by checking for nonsensical state codes or
-	// obviously invalid street numbers.
+	// Detect clearly fake addresses by checking for nonsensical state codes or obviously invalid street numbers.
 	isFake := state == "ZZ" || strings.Contains(strings.ToLower(city), "faketown") ||
 		strings.HasPrefix(addressLine1, "99999")
 

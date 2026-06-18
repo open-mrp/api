@@ -352,6 +352,10 @@ message SalesOrderInfo {
   // populated; computed from settlement allocations vs. invoiced amounts plus
   // any Stripe payment intent.
   string payment_status = 94;
+  // Invoice email recipients (populated when contacts is included).
+  repeated string invoice_emails = 95;
+  // Order acknowledgement email recipients (populated when contacts is included).
+  repeated string acknowledgement_emails = 96;
 }
 
 // SalesOrderLineInfo represents a sales order line.

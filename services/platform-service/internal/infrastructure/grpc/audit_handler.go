@@ -82,9 +82,7 @@ func (h *auditHandler) CreateAuditEvent(ctx context.Context, req *pb.CreateAudit
 		occurredAt = info.OccurredAt.AsTime()
 	}
 
-	// target_account_id is the account the mutation was performed against — the
-	// Augno-Account target of the request, the same value used for account_id /
-	// the list authorization scope today.
+	// target_account_id is the account the mutation was performed against — the Augno-Account target of the request, the same value used for account_id / the list authorization scope today.
 	targetAccountID := identity.Target.AccountID
 
 	event := &domain.AuditEvent{

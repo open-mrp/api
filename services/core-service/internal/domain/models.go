@@ -69,8 +69,7 @@ type AccountRelation struct {
 	OwnerAccountID        string
 	CounterpartyAccountID string
 	RoleCode              string
-	// IsOwnerSide is true when the caller's account is the owner of the relation
-	// (i.e. the API key belongs to the merchant targeting a customer/supplier account).
+	// IsOwnerSide is true when the caller's account is the owner of the relation (i.e. the API key belongs to the merchant targeting a customer/supplier account).
 	IsOwnerSide bool
 }
 

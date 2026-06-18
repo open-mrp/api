@@ -564,6 +564,55 @@ func (q *Queries) GetOrderAcknowledgementRecipients(ctx context.Context, salesOr
 	return items, nil
 }
 
+const getOrderEmailRecipientsByOrders = `-- name: GetOrderEmailRecipientsByOrders :many
+SELECT oec.sales_order_id, oec.notification_type_code, u.email
+FROM order_email_contact oec
+JOIN account_user au ON au.id = oec.account_user_id
+JOIN user u ON u.id = au.user_id
+WHERE oec.sales_order_id IN (/*SLICE:sales_order_ids*/?)
+AND oec.notification_type_code IN ('invoice', 'order_acknowledgement')
+AND u.email IS NOT NULL
+`
+
+type GetOrderEmailRecipientsByOrdersRow struct {
+	SalesOrderID         string
+	NotificationTypeCode string
+	Email                sql.NullString
+}
+
+func (q *Queries) GetOrderEmailRecipientsByOrders(ctx context.Context, salesOrderIds []string) ([]GetOrderEmailRecipientsByOrdersRow, error) {
+	query := getOrderEmailRecipientsByOrders
+	var queryParams []interface{}
+	if len(salesOrderIds) > 0 {
+		for _, v := range salesOrderIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", strings.Repeat(",?", len(salesOrderIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetOrderEmailRecipientsByOrdersRow
+	for rows.Next() {
+		var i GetOrderEmailRecipientsByOrdersRow
+		if err := rows.Scan(&i.SalesOrderID, &i.NotificationTypeCode, &i.Email); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getProductTypesAndLines = `-- name: GetProductTypesAndLines :many
 SELECT
     p.id AS product_id,

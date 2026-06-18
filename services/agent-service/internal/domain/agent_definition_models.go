@@ -5,8 +5,7 @@ import (
 	"time"
 )
 
-// AgentDefinitionInfo is the domain representation of an agent definition
-// with its linked tools.
+// AgentDefinitionInfo is the domain representation of an agent definition with its linked tools.
 type AgentDefinitionInfo struct {
 	ID             string
 	Name           string `audit:"name"`
@@ -24,8 +23,7 @@ type AgentDefinitionInfo struct {
 	UpdatedAt      time.Time
 }
 
-// AgentAccountStatusInfo is the domain representation of a per-account
-// status for an agent definition.
+// AgentAccountStatusInfo is the domain representation of a per-account status for an agent definition.
 type AgentAccountStatusInfo struct {
 	ID                string
 	AccountID         string
@@ -45,8 +43,7 @@ type ToolGroupInfo struct {
 	SortOrder   int32
 }
 
-// AgentDefinitionToolInfo is the domain representation of a tool linked to
-// an agent definition, including denormalized tool metadata.
+// AgentDefinitionToolInfo is the domain representation of a tool linked to an agent definition, including denormalized tool metadata.
 type AgentDefinitionToolInfo struct {
 	ID                  string
 	ToolID              string
@@ -62,8 +59,7 @@ type AgentDefinitionToolInfo struct {
 	RequiredPermissions []string
 }
 
-// AvailableToolInfo is the domain representation of a platform tool that
-// can be attached to an agent definition.
+// AvailableToolInfo is the domain representation of a platform tool that can be attached to an agent definition.
 type AvailableToolInfo struct {
 	ID                  string
 	DisplayName         string
@@ -120,8 +116,7 @@ type CreateCustomAgentParams struct {
 	Includes     []string
 }
 
-// UpdateCustomAgentParams holds the parameters for updating a custom agent definition.
-// Nil pointer fields indicate that the field should not be updated.
+// UpdateCustomAgentParams holds the parameters for updating a custom agent definition. Nil pointer fields indicate that the field should not be updated.
 type UpdateCustomAgentParams struct {
 	AgentDefinitionID string
 	Name              *string

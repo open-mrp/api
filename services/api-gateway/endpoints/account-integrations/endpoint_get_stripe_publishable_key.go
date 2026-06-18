@@ -22,7 +22,7 @@ func (e *GetStripePublishableKeyEndpoint) Materialize() *apiendpoint.APIEndpoint
 		Title:             "Get Stripe Publishable Key",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
-		Route:             "/v1/identity/integrations/stripe/publishable-key",
+		Route:             "/v1/settings/integrations/stripe/publishable-key",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,

@@ -34,6 +34,32 @@ func TestSalesOrders_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 	assert.Nil(t, got["shipping_term"], "shipping_term should be null without ?include=shipping_term")
 	assert.Nil(t, got["order_discount"], "order_discount should be null without ?include=order_discount")
 	assert.Nil(t, got["lines"], "lines should be null without ?include=lines")
+	assert.Nil(t, got["contacts"], "contacts should be null without ?include=contacts")
+}
+
+func TestSalesOrders_IncludeContacts(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.GetListRaw(salesOrdersPath+"/"+SeedSalesOrderID, url.Values{"include": {"contacts"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	contacts := jsonObject(parseJSON(body), "contacts")
+	require.NotNil(t, contacts, "contacts should be present with ?include=contacts")
+	assert.Equal(t, "order_contact", jsonField(contacts, "object"))
+	// ORD-001 is seeded with one invoice and one acknowledgement recipient.
+	assert.Contains(t, jsonStringSlice(contacts, "invoice"), "dane@augno.com")
+	assert.Contains(t, jsonStringSlice(contacts, "acknowledgement"), "smartinez@augno.com")
+}
+
+func TestSalesOrders_List_IncludeContacts(t *testing.T) {
+	t.Parallel()
+
+	row := salesOrderListRow(t, url.Values{"include": {"contacts"}})
+	contacts := jsonObject(row, "contacts")
+	require.NotNil(t, contacts, "contacts should be populated on the list row with ?include=contacts")
+	assert.Equal(t, "order_contact", jsonField(contacts, "object"))
+	assert.Contains(t, jsonStringSlice(contacts, "invoice"), "dane@augno.com")
+	assert.Contains(t, jsonStringSlice(contacts, "acknowledgement"), "smartinez@augno.com")
 }
 
 func TestSalesOrders_IncludeCustomer(t *testing.T) {

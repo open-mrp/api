@@ -14,8 +14,7 @@ import (
 // zeroTime is used to clear write deadlines on WebSocket connections.
 var zeroTime time.Time
 
-// StartEventConsumer starts a RabbitMQ consumer that reads agent run step
-// events and fans them out to WebSocket clients via the hub.
+// StartEventConsumer starts a RabbitMQ consumer that reads agent run step events and fans them out to WebSocket clients via the hub.
 func StartEventConsumer(ctx context.Context, broker messaging.MessageBroker, hub *Hub) error {
 	return broker.ConsumeMessages(ctx, messaging.AgentEventRunStepQueue, func(ctx context.Context, d amqp.Delivery) error {
 		// Unwrap the AmqpMessage envelope.
@@ -48,8 +47,7 @@ func StartEventConsumer(ctx context.Context, broker messaging.MessageBroker, hub
 	})
 }
 
-// StartRunCompletedConsumer starts a RabbitMQ consumer that reads agent run
-// completed events and fans them out to WebSocket clients via the hub.
+// StartRunCompletedConsumer starts a RabbitMQ consumer that reads agent run completed events and fans them out to WebSocket clients via the hub.
 func StartRunCompletedConsumer(ctx context.Context, broker messaging.MessageBroker, hub *Hub) error {
 	return broker.ConsumeMessages(ctx, messaging.AgentEventRunCompletedQueue, func(ctx context.Context, d amqp.Delivery) error {
 		var envelope contracts.AmqpMessage

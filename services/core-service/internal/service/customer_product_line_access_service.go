@@ -125,10 +125,7 @@ func (s *customerProductLineAccessSvcImpl) GetCustomerProductLineAccess(ctx cont
 	return s.repos.NewCustomerProductLineAccessRepo().Get(ctx, identity.Target.AccountID, customerID)
 }
 
-// BatchGetCustomerProductLineAccessByIDs returns access records for each given
-// customer_id. Loop over Get (same approach as AccountGroupProductLineAccess
-// — the underlying SQL shape is awkward to batch and include-resolution
-// batch sizes are small).
+// BatchGetCustomerProductLineAccessByIDs returns access records for each given customer_id. Loop over Get (same approach as AccountGroupProductLineAccess — the underlying SQL shape is awkward to batch and include-resolution batch sizes are small).
 func (s *customerProductLineAccessSvcImpl) BatchGetCustomerProductLineAccessByIDs(ctx context.Context, customerIDs []string) ([]*domain.CustomerProductLineAccess, *apierror.APIError) {
 	ctx, span := customerProductLineAccessSvcTracer.Start(ctx, "service.customer_product_line_access.batch_get_by_ids")
 	defer span.End()

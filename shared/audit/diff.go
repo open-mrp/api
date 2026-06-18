@@ -6,13 +6,9 @@ import (
 	"strings"
 )
 
-// ComputeChanges compares two values (typically two versions of the same
-// struct) and returns field-level before/after changes.
+// ComputeChanges compares two values (typically two versions of the same struct) and returns field-level before/after changes.
 //
-// Only struct fields with a non-empty `audit` struct tag are considered.
-// When fields is empty, every exported field that has an `audit` tag is
-// compared. When fields is non-empty, each name must be a Go struct field
-// name that also has an `audit` tag; untagged fields are skipped.
+// Only struct fields with a non-empty `audit` struct tag are considered. When fields is empty, every exported field that has an `audit` tag is compared. When fields is non-empty, each name must be a Go struct field name that also has an `audit` tag; untagged fields are skipped.
 func ComputeChanges(old, new any, fields ...string) []FieldChange {
 	oldVal := reflect.ValueOf(old)
 	newVal := reflect.ValueOf(new)
@@ -83,10 +79,7 @@ func ComputeChanges(old, new any, fields ...string) []FieldChange {
 	return changes
 }
 
-// NewFieldChange builds a FieldChange from explicit old/new values for call
-// sites where the change is not derivable from two struct snapshots (e.g.
-// computed quantities). Values are marshalled to JSON fragments the same way
-// ComputeChanges does.
+// NewFieldChange builds a FieldChange from explicit old/new values for call sites where the change is not derivable from two struct snapshots (e.g. computed quantities). Values are marshalled to JSON fragments the same way ComputeChanges does.
 func NewFieldChange(field string, oldValue, newValue any) FieldChange {
 	return FieldChange{
 		Field:    field,
@@ -95,8 +88,7 @@ func NewFieldChange(field string, oldValue, newValue any) FieldChange {
 	}
 }
 
-// auditFieldKeyForStructField returns the audit payload key for a struct field
-// if the field exists and has a non-empty `audit` tag.
+// auditFieldKeyForStructField returns the audit payload key for a struct field if the field exists and has a non-empty `audit` tag.
 func auditFieldKeyForStructField(structType reflect.Type, fieldName string) (string, bool) {
 	if structType == nil {
 		return "", false
@@ -140,9 +132,7 @@ func fieldValues(oldVal, newVal reflect.Value, fieldName string) (any, any) {
 	return oldField, newField
 }
 
-// jsonEqual compares two values. For json.RawMessage fields it performs a
-// semantic comparison (unmarshal then DeepEqual) so that key ordering and
-// whitespace differences do not produce false diffs.
+// jsonEqual compares two values. For json.RawMessage fields it performs a semantic comparison (unmarshal then DeepEqual) so that key ordering and whitespace differences do not produce false diffs.
 func jsonEqual(a, b any) bool {
 	aRaw, aIsJSON := a.(json.RawMessage)
 	bRaw, bIsJSON := b.(json.RawMessage)
@@ -167,8 +157,7 @@ func marshalToRawJSON(v any) json.RawMessage {
 
 	b, err := json.Marshal(v)
 	if err != nil {
-		// Fallback to a safe value to avoid publisher crashes. The audit event
-		// will still be recorded, albeit with null values for this field.
+		// Fallback to a safe value to avoid publisher crashes. The audit event will still be recorded, albeit with null values for this field.
 		return json.RawMessage("null")
 	}
 

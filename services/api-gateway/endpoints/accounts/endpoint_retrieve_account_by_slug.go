@@ -25,7 +25,7 @@ func (e *RetrieveAccountBySlugEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 	return (&apiendpoint.APIEndpoint[*RetrieveAccountBySlugRequest, *apiresource.PublicAccount]{
 		Title:             "Retrieve Account by Slug",
 		Method:            http.MethodGet,
-		Route:             "/v1/identity/portal-branding/{slug}",
+		Route:             "/v1/settings/branding/{slug}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,

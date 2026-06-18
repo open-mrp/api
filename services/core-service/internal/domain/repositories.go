@@ -15,8 +15,7 @@ type AccountRepo interface {
 	Create(ctx context.Context, id, name string, accountTypeCode AccountType, planCode constants.PlanCode) *apierror.APIError
 	GetPlanCode(ctx context.Context, id string) (constants.PlanCode, *apierror.APIError)
 	GetAccountContext(ctx context.Context, accountID string) (*AccountContext, *apierror.APIError)
-	// GetPlanIDAndPeriodEnd returns the account's active plan id (for limit lookups)
-	// and current subscription period end (for deriving billing-period start).
+	// GetPlanIDAndPeriodEnd returns the account's active plan id (for limit lookups) and current subscription period end (for deriving billing-period start).
 	GetPlanIDAndPeriodEnd(ctx context.Context, accountID string) (planID *string, periodEnd *time.Time, apiErr *apierror.APIError)
 	Delete(ctx context.Context, id string) *apierror.APIError
 	GetPlanTypeIDByCode(ctx context.Context, planCode string) (string, *apierror.APIError)
@@ -34,8 +33,7 @@ type AccountRepo interface {
 	GetBrandingLogoURL(ctx context.Context, accountID string) (*string, *apierror.APIError)
 	GetPortalSlug(ctx context.Context, accountID string) (*string, *apierror.APIError)
 	GetByID(ctx context.Context, accountID string) (*Account, *apierror.APIError)
-	// GetByIDs returns accounts matching the given IDs. Caller authorization
-	// is enforced at the service layer.
+	// GetByIDs returns accounts matching the given IDs. Caller authorization is enforced at the service layer.
 	GetByIDs(ctx context.Context, ids []string) ([]*Account, *apierror.APIError)
 	GetBySlug(ctx context.Context, slug string) (*PublicAccountBySlug, *apierror.APIError)
 	UpdateName(ctx context.Context, accountID, name string) *apierror.APIError
@@ -50,8 +48,7 @@ type AccountRepo interface {
 
 type AccountUserRepo interface {
 	FindByAccountAndUserID(ctx context.Context, userID, accountID string) (*AccountUser, *apierror.APIError)
-	// ResolveAccountUserID resolves either an account_user id or a user id to
-	// the account_user id within the given account.
+	// ResolveAccountUserID resolves either an account_user id or a user id to the account_user id within the given account.
 	ResolveAccountUserID(ctx context.Context, accountID, userOrAccountUserID string) (string, *apierror.APIError)
 	FindAffiliationsByUserID(ctx context.Context, userID string) ([]AccountAffiliation, *apierror.APIError)
 	FindLastUsedAccountID(ctx context.Context, userID string) (string, *apierror.APIError)
@@ -120,8 +117,7 @@ type AccountRelationRepo interface {
 	FindCustomerAccountsByVendorAndUser(ctx context.Context, vendorAccountID, userID string) ([]CustomerAccountSummary, *apierror.APIError)
 }
 
-// SystemProductInfo holds the minimal info needed to synthesize an order line
-// using one of the account's built-in system products (credit, shipping).
+// SystemProductInfo holds the minimal info needed to synthesize an order line using one of the account's built-in system products (credit, shipping).
 type SystemProductInfo struct {
 	ProductID      string
 	ProductSKU     string
@@ -131,9 +127,7 @@ type SystemProductInfo struct {
 type ProductRepo interface {
 	SearchBySKU(ctx context.Context, accountID, query string) ([]ProductInfo, *apierror.APIError)
 	ListByAccount(ctx context.Context, accountID string) ([]ProductInfo, *apierror.APIError)
-	// GetSystemProduct fetches the account's built-in product matching the
-	// given product_type_code (e.g. "credit", "shipping") along with the base
-	// unit of its item category. Returns nil if no such product exists.
+	// GetSystemProduct fetches the account's built-in product matching the given product_type_code (e.g. "credit", "shipping") along with the base unit of its item category. Returns nil if no such product exists.
 	GetSystemProduct(ctx context.Context, accountID, productTypeCode string) (*SystemProductInfo, *apierror.APIError)
 
 	List(ctx context.Context, params ListProductsFullParams) (*ListProductsFullResult, *apierror.APIError)
@@ -170,9 +164,7 @@ type ItemRepo interface {
 	GetCategoryBaseUnitID(ctx context.Context, categoryID string) (string, *apierror.APIError)
 	ListConsumptionChangeLogsForBurnRate(ctx context.Context, accountID, itemID string) ([]BurnRateConsumptionLog, *apierror.APIError)
 	FetchItemsBySKU(ctx context.Context, accountID string, skus []string) ([]ItemSKUInfo, *apierror.APIError)
-	// FindBySKU returns the existing item's ID and its unit_value rate ID for the
-	// given SKU within the account. Returns (nil, nil, nil) when no match exists.
-	// Used by bulk upsert flows.
+	// FindBySKU returns the existing item's ID and its unit_value rate ID for the given SKU within the account. Returns (nil, nil, nil) when no match exists. Used by bulk upsert flows.
 	FindBySKU(ctx context.Context, accountID, sku string) (itemID *string, unitValueRateID *string, apiErr *apierror.APIError)
 	// UpdateRateValue updates a rate's numeric value in place.
 	UpdateRateValue(ctx context.Context, rateID, value string) *apierror.APIError
@@ -204,34 +196,24 @@ type RoleRepo interface {
 	Delete(ctx context.Context, roleID, accountID string) *apierror.APIError
 }
 
-// RegistrationRepo handles the multi-step account creation during
-// registration: account record, owner role with all permissions,
-// account-user join, business address, and account portal.
+// RegistrationRepo handles the multi-step account creation during registration: account record, owner role with all permissions, account-user join, business address, and account portal.
 type RegistrationRepo interface {
-	// CreateAccountForRegistration creates a production account with Stripe
-	// billing fields populated.
+	// CreateAccountForRegistration creates a production account with Stripe billing fields populated.
 	CreateAccountForRegistration(ctx context.Context, params CreateAccountParams) *apierror.APIError
 
-	// CreateAccountUser creates an account-user join record linking the
-	// user to the account with the given role.
+	// CreateAccountUser creates an account-user join record linking the user to the account with the given role.
 	CreateAccountUser(ctx context.Context, accountID, userID, roleID string) *apierror.APIError
 
-	// CreateBusinessAddress creates a geolocation, address, and
-	// account-address chain and sets the address as the account's default
-	// billing and shipping address.
+	// CreateBusinessAddress creates a geolocation, address, and account-address chain and sets the address as the account's default billing and shipping address.
 	CreateBusinessAddress(ctx context.Context, accountID, accountName string, address RegistrationAddress) *apierror.APIError
 
-	// CreateAccountPortal creates a portal record with a slug derived from
-	// the account ID.
+	// CreateAccountPortal creates a portal record with a slug derived from the account ID.
 	CreateAccountPortal(ctx context.Context, accountID string) *apierror.APIError
 
-	// CreateSystemProducts creates the shipping and credit system products
-	// required by every account. This includes units, unit groups, item
-	// categories, product lines, rates, items, and product records.
+	// CreateSystemProducts creates the shipping and credit system products required by every account. This includes units, unit groups, item categories, product lines, rates, items, and product records.
 	CreateSystemProducts(ctx context.Context, accountID string) *apierror.APIError
 
-	// CreateAccountBranding creates a default (empty) branding record for
-	// the account so portal and notification templates can reference it.
+	// CreateAccountBranding creates a default (empty) branding record for the account so portal and notification templates can reference it.
 	CreateAccountBranding(ctx context.Context, accountID string) *apierror.APIError
 }
 
@@ -241,9 +223,7 @@ type UnitRepo interface {
 	// GetCurrencyBaseUnitID returns the global currency base unit ID used as the
 	// numerator unit when building monetary price rates.
 	GetCurrencyBaseUnitID(ctx context.Context) (string, *apierror.APIError)
-	// GetDimensionCodes returns a unit-id → unit_dimension_code map for the given
-	// IDs. Used to enforce unit-type constraints (e.g., currency-only numerator
-	// on cost rates) before persisting rate rows.
+	// GetDimensionCodes returns a unit-id → unit_dimension_code map for the given IDs. Used to enforce unit-type constraints (e.g., currency-only numerator on cost rates) before persisting rate rows.
 	GetDimensionCodes(ctx context.Context, ids []string) (map[string]string, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreateUnitParams) (*Unit, *apierror.APIError)
 	Update(ctx context.Context, params UpdateUnitParams) (*Unit, *apierror.APIError)
@@ -433,13 +413,9 @@ type CarrierRepo interface {
 	DeleteOptionsByCarrierID(ctx context.Context, accountID, carrierID string) *apierror.APIError
 	ExistsByName(ctx context.Context, accountID, name string, excludeID *string) (bool, *apierror.APIError)
 	ListOptionsByCarrierID(ctx context.Context, accountID, carrierID string) ([]*ServiceLevel, *apierror.APIError)
-	// ListOptionIDsForCarriers returns all carrier_option IDs grouped by
-	// carrier_id, ordered (carrier_id, created_at ASC, id ASC) — callers
-	// truncate to a per-carrier preview limit in Go.
+	// ListOptionIDsForCarriers returns all carrier_option IDs grouped by carrier_id, ordered (carrier_id, created_at ASC, id ASC) — callers truncate to a per-carrier preview limit in Go.
 	ListOptionIDsForCarriers(ctx context.Context, accountID string, carrierIDs []string) (map[string][]string, *apierror.APIError)
-	// GetOptionsByIDs returns full ServiceLevel records by id with the same
-	// account-scoping rule as ListOptionsByCarrierID (the parent carrier must
-	// be the caller's own or a system carrier).
+	// GetOptionsByIDs returns full ServiceLevel records by id with the same account-scoping rule as ListOptionsByCarrierID (the parent carrier must be the caller's own or a system carrier).
 	GetOptionsByIDs(ctx context.Context, accountID string, ids []string) ([]*ServiceLevel, *apierror.APIError)
 }
 
@@ -622,8 +598,7 @@ type ProductionRepo interface {
 
 // InventoryMutationRepo handles inventory receipt and issue creation for production step execution.
 type InventoryMutationRepo interface {
-	// UpdateInventory creates an inventory receipt (positive measure) or issue (negative measure)
-	// for the given item. This is the core inventory mutation used by the executeProductionStep consumer.
+	// UpdateInventory creates an inventory receipt (positive measure) or issue (negative measure) for the given item. This is the core inventory mutation used by the executeProductionStep consumer.
 	UpdateInventory(ctx context.Context, params InventoryUpdateParams) *apierror.APIError
 	// CreateInventoryReceipt creates an inventory receipt for positive delta.
 	CreateInventoryReceipt(ctx context.Context, params CreateInventoryReceiptParams) *apierror.APIError
@@ -653,11 +628,9 @@ type InventoryReservationRepo interface {
 	ReduceReservedForOrderItem(ctx context.Context, params OrderReservationReductionParams) *apierror.APIError
 	// ReduceReservedForOrderMaterials reduces reserved quantities for upstream materials of an order.
 	ReduceReservedForOrderMaterials(ctx context.Context, orderID, accountID string, demands []MaterialDemandItem) *apierror.APIError
-	// AllocateReservationsForConsumption allocates existing reservations for consumed materials.
-	// Returns the remaining quantity that could not be allocated from reservations.
+	// AllocateReservationsForConsumption allocates existing reservations for consumed materials. Returns the remaining quantity that could not be allocated from reservations.
 	AllocateReservationsForConsumption(ctx context.Context, params ConsumptionAllocationParams) (*ConsumptionAllocationResult, *apierror.APIError)
-	// AllocateOpenIssuesForItem performs FIFO allocation of all open inventory issues
-	// for the given item against available receipts. Used after receiving inventory.
+	// AllocateOpenIssuesForItem performs FIFO allocation of all open inventory issues for the given item against available receipts. Used after receiving inventory.
 	AllocateOpenIssuesForItem(ctx context.Context, accountID, itemID string) *apierror.APIError
 }
 
@@ -669,8 +642,7 @@ type MaterialDemandRepo interface {
 
 // UnitConversionRepo provides unit conversion capabilities.
 type UnitConversionRepo interface {
-	// ConvertValue converts a measure from one unit to another within the same unit group.
-	// Returns the converted measure.
+	// ConvertValue converts a measure from one unit to another within the same unit group. Returns the converted measure.
 	ConvertValue(ctx context.Context, measure decimal.Decimal, fromUnitID, toUnitID string) (decimal.Decimal, *apierror.APIError)
 }
 
@@ -852,6 +824,7 @@ type SalesOrderRepo interface {
 	GetForCustomer(ctx context.Context, accountID, buyerAccountID, salesOrderID string) (*SalesOrder, *apierror.APIError)
 	GetLines(ctx context.Context, salesOrderID string) ([]*SalesOrderLine, *apierror.APIError)
 	GetShipmentIDs(ctx context.Context, salesOrderID string) ([]string, *apierror.APIError)
+	GetContactsByOrders(ctx context.Context, salesOrderIDs []string) (map[string]*SalesOrderContacts, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreateSalesOrderParams) (*SalesOrder, *apierror.APIError)
 	Update(ctx context.Context, params UpdateSalesOrderParams) (*SalesOrder, *apierror.APIError)
 	Delete(ctx context.Context, accountID, salesOrderID string) *apierror.APIError
@@ -1272,18 +1245,14 @@ type TerritoryRepo interface {
 	Delete(ctx context.Context, params DeleteTerritoryParams) *apierror.APIError
 	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*Territory, *apierror.APIError)
 	IsInAccount(ctx context.Context, accountID, territoryID string) (bool, *apierror.APIError)
-	// FindSalesRepByZipcode returns the sales_rep (account_user) ID for the
-	// territory whose zipcode range includes the given zipcode, if any.
+	// FindSalesRepByZipcode returns the sales_rep (account_user) ID for the territory whose zipcode range includes the given zipcode, if any.
 	FindSalesRepByZipcode(ctx context.Context, accountID string, zipcode int32) (*string, *apierror.APIError)
-	// FindSalesRepByState returns the sales_rep (account_user) ID for the
-	// state-only territory matching the given state, if any.
+	// FindSalesRepByState returns the sales_rep (account_user) ID for the state-only territory matching the given state, if any.
 	FindSalesRepByState(ctx context.Context, accountID, state string) (*string, *apierror.APIError)
 }
 
 // PricingRepo loads the data the sales-order-line pricing engine needs.
 type PricingRepo interface {
-	// LoadPricingBundle fetches, in a small number of queries, all product list
-	// prices, unit conversion data, unit-group discounts, account-price overrides
-	// (for the buyer and its parent account), and applicable volume discounts.
+	// LoadPricingBundle fetches, in a small number of queries, all product list prices, unit conversion data, unit-group discounts, account-price overrides (for the buyer and its parent account), and applicable volume discounts.
 	LoadPricingBundle(ctx context.Context, params LoadPricingBundleParams) (*PricingBundle, *apierror.APIError)
 }

@@ -10,19 +10,14 @@ import (
 
 const unitDimensionCodeCurrency = "currency"
 
-// ValidateCostRateUnits ensures the unit IDs on each side of a cost-typed rate
-// match the conventional shape of money/quantity:
+// ValidateCostRateUnits ensures the unit IDs on each side of a cost-typed rate match the conventional shape of money/quantity:
 //
 //   - numerator must be a currency unit (the "$" in "$5/ea")
 //   - denominator must NOT be a currency unit (the "ea" in "$5/ea")
 //
-// Both unit IDs are looked up in a single round trip via UnitRepo. The repo is
-// taken as a parameter so callers can pass a transactional repo when the
-// validation runs inside a transaction (consistent with how InsertRate is used).
+// Both unit IDs are looked up in a single round trip via UnitRepo. The repo is taken as a parameter so callers can pass a transactional repo when the validation runs inside a transaction (consistent with how InsertRate is used).
 //
-// fieldName is the request-body field this validation belongs to (e.g.,
-// "unit_cost", "labor_rate") and is surfaced in the error so clients can pin
-// the failure to the right input.
+// fieldName is the request-body field this validation belongs to (e.g., "unit_cost", "labor_rate") and is surfaced in the error so clients can pin the failure to the right input.
 func ValidateCostRateUnits(ctx context.Context, repo domain.UnitRepo, numeratorUnitID, denominatorUnitID, fieldName string) *apierror.APIError {
 	if numeratorUnitID == "" {
 		return apierror.NewValidationErrorWithParam(

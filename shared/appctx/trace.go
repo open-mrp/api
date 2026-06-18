@@ -5,8 +5,7 @@ import "context"
 // noTraceKey is the context key that signals tracing should be suppressed.
 var noTraceKey = noTraceKeyType{}
 
-// WithNoTrace returns a derived context that suppresses span creation for the
-// current call tree.
+// WithNoTrace returns a derived context that suppresses span creation for the current call tree.
 func WithNoTrace(ctx context.Context) context.Context {
 	return context.WithValue(ctx, noTraceKey, true)
 }

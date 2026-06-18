@@ -178,23 +178,11 @@ INSERT IGNORE INTO transaction_allocation (id, transaction_id, amount_id, invoic
     -- stays top-of-feed for open-credits AND is linked for settlements/transaction_ids.
     ('txal_01seedfcalloc4', 'tx_01seedfctxn4_0000', 'qu_01seedfcal4_amt00', 'iv_01seedfcinv2a0000', 'sl_01seedfcsettl0000', NOW(), NOW());
 
--- Production run + batches producing the first two filter-coverage catalog items
--- (FC-PROD-YARN, FC-PART-CHEM) so the production-runs/item_ids array filter has
--- runs linked to the top-of-feed item ids (runs match via batch.item_id).
-INSERT IGNORE INTO production_run (id, responsible_user_id, number, account_id, started_at, created_at, updated_at) VALUES
-    ('pnrn_01seedfcrun00000', 'us_1wjfmmbwg8l7', 'PR-FC-001', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW(), NOW());
-
-INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
-    ('qu_01seedfcbatch1_qty', 10, 'un_01seedpound00000000', NOW(), NOW()),
-    ('qu_01seedfcbatch2_qty', 10, 'un_01seedpound00000000', NOW(), NOW()),
-    ('qu_01seedfcbatch3_qty', 10, 'un_01seedpound00000000', NOW(), NOW());
-
-INSERT IGNORE INTO batch (id, account_id, item_id, quantity_id, scanning_station_id, production_step_id, production_run_id, created_at, updated_at) VALUES
-    ('bt_01seedfcbatch1_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'it_01seedfcprodyarn00', 'qu_01seedfcbatch1_qty', 'sgsn_01k0a8201zegarjfsjaw5n7yfv', 'prs_01k0a51qxceydax5036pegvzzy', 'pnrn_01seedfcrun00000', NOW(), NOW()),
-    ('bt_01seedfcbatch2_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'it_01seedfcpartchem00', 'qu_01seedfcbatch2_qty', 'sgsn_01k0a8201zegarjfsjaw5n7yfv', 'prs_01k0a575j3fqr97khk36v114nj', 'pnrn_01seedfcrun00000', NOW(), NOW()),
-    -- The far-future eBad item is top of /catalog/items, which production-runs/item_ids
-    -- samples; give it a batch so that filter stays linked.
-    ('bt_01seedfcbatch3_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'it_01seedfcebad000000', 'qu_01seedfcbatch3_qty', 'sgsn_01k0a8201zegarjfsjaw5n7yfv', 'prs_01k0a51qxceydax5036pegvzzy', 'pnrn_01seedfcrun00000', NOW(), NOW());
+-- Production run + batches linked to catalog item ids that
+-- production-runs/item_ids discovers from /v1/catalog/items (runs match via batch.item_id).
+-- FC-PROD-YARN / FC-PART-CHEM are filter-coverage rows; FC-EBAD-PROD is far-future in
+-- the items feed; it_e2evol* volume-discount products (0014_e2e_extras.sql) are also
+-- sampled from the top of that feed.
 
 -- A product (and its item) in a SECOND product line (eBad) with a far-future
 -- created_at so the catalog products/items feeds always carry >=2 distinct
@@ -210,3 +198,20 @@ INSERT IGNORE INTO item (id, sku, description, account_id, item_type_code, item_
 
 INSERT IGNORE INTO product (id, item_id, product_type_code, product_line_id, is_portal_ready, created_at, updated_at) VALUES
     ('pd_01seedfcebad000000', 'it_01seedfcebad000000', 'sale', 'pdln_01k0a735ypfjva933tg57wfx0t', 1, DATE_ADD(NOW(), INTERVAL 9 YEAR), DATE_ADD(NOW(), INTERVAL 9 YEAR));
+
+INSERT IGNORE INTO production_run (id, responsible_user_id, number, account_id, started_at, created_at, updated_at) VALUES
+    ('pnrn_01seedfcrun00000', 'us_1wjfmmbwg8l7', 'PR-FC-001', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW(), NOW());
+
+INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
+    ('qu_01seedfcbatch1_qty', 10, 'un_01seedpound00000000', NOW(), NOW()),
+    ('qu_01seedfcbatch2_qty', 10, 'un_01seedpound00000000', NOW(), NOW()),
+    ('qu_01seedfcbatch3_qty', 10, 'un_01seedpound00000000', NOW(), NOW()),
+    ('qu_01seedfcbatch4_qty', 10, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedfcbatch5_qty', 10, 'un_01seedpair000000000', NOW(), NOW());
+
+INSERT IGNORE INTO batch (id, account_id, item_id, quantity_id, scanning_station_id, production_step_id, production_run_id, created_at, updated_at) VALUES
+    ('bt_01seedfcbatch1_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'it_01seedfcprodyarn00', 'qu_01seedfcbatch1_qty', 'sgsn_01k0a8201zegarjfsjaw5n7yfv', 'prs_01k0a51qxceydax5036pegvzzy', 'pnrn_01seedfcrun00000', NOW(), NOW()),
+    ('bt_01seedfcbatch2_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'it_01seedfcpartchem00', 'qu_01seedfcbatch2_qty', 'sgsn_01k0a8201zegarjfsjaw5n7yfv', 'prs_01k0a575j3fqr97khk36v114nj', 'pnrn_01seedfcrun00000', NOW(), NOW()),
+    ('bt_01seedfcbatch3_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'it_01seedfcebad000000', 'qu_01seedfcbatch3_qty', 'sgsn_01k0a8201zegarjfsjaw5n7yfv', 'prs_01k0a51qxceydax5036pegvzzy', 'pnrn_01seedfcrun00000', NOW(), NOW()),
+    ('bt_01seedfcbatch4_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'it_e2evol1000000000', 'qu_01seedfcbatch4_qty', 'sgsn_01k0a8201zegarjfsjaw5n7yfv', 'prs_01k0a51qxceydax5036pegvzzy', 'pnrn_01seedfcrun00000', NOW(), NOW()),
+    ('bt_01seedfcbatch5_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'it_e2evol2000000000', 'qu_01seedfcbatch5_qty', 'sgsn_01k0a8201zegarjfsjaw5n7yfv', 'prs_01k0a575j3fqr97khk36v114nj', 'pnrn_01seedfcrun00000', NOW(), NOW());

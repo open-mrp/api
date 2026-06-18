@@ -56,9 +56,7 @@ func (s *auditEventSvcImpl) BatchGetResourceCreators(ctx context.Context, resour
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	// Deliberately NOT gated by the audit read permission: "who created this
-	// resource" follows the resource's own visibility, so any assigned actor
-	// (internal or customer) may resolve it, scoped to their target account.
+	// Deliberately NOT gated by the audit read permission: "who created this resource" follows the resource's own visibility, so any assigned actor (internal or customer) may resolve it, scoped to their target account.
 	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}

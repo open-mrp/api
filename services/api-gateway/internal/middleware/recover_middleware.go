@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Recover gracefully from a panic and send the client an internal server error
+// RecoverMiddleware recovers from a handler panic, records the panic as the request log's error message (when one is not already set), and responds to the client with a generic internal server error instead of letting the connection drop.
 func RecoverMiddleware() func(http.HandlerFunc) http.HandlerFunc {
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {

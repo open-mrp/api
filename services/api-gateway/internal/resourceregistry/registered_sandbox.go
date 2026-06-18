@@ -10,9 +10,7 @@ import (
 )
 
 func init() {
-	// Sandbox exposes a direct `owner_account` expansion (an Account) — no
-	// intermediate Owner shell. The SubField reuses the already-registered
-	// Account loader; the FK is stashed in LoadMeta by LoadSandboxes.
+	// Sandbox exposes a direct `owner_account` expansion (an Account) — no intermediate Owner shell. The SubField reuses the already-registered Account loader; the FK is stashed in LoadMeta by LoadSandboxes.
 	resourcekit.Register(&resourcekit.Definition{
 		ObjectType: constants.ObjectTypeSandbox,
 		Load:       resourceloaders.LoadSandboxes,

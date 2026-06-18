@@ -37,24 +37,17 @@ const (
 
 // GRPCServerConfig holds settings for a gRPC server.
 type GRPCServerConfig struct {
-	// KeepaliveParams (optional; default: 15m idle, 30m age, 5s grace, 30s ping, 5s timeout)
-	// controls how the server manages idle connections, connection age limits, and
-	// server-side ping behavior.
+	// KeepaliveParams (optional; default: 15m idle, 30m age, 5s grace, 30s ping, 5s timeout) controls how the server manages idle connections, connection age limits, and server-side ping behavior.
 	KeepaliveParams keepalive.ServerParameters
 
-	// EnforcementPolicy (optional; default: 10s min ping time, permit without stream)
-	// controls the minimum time between client pings and whether pings are allowed
-	// when there are no active streams. PermitWithoutStream is always set to true by
-	// WithDefaults and cannot be disabled via this config.
+	// EnforcementPolicy (optional; default: 10s min ping time, permit without stream) controls the minimum time between client pings and whether pings are allowed when there are no active streams. PermitWithoutStream is always set to true by WithDefaults and cannot be disabled via this config.
 	EnforcementPolicy keepalive.EnforcementPolicy
 
-	// UnaryInterceptors (optional; default: SpanRenamer, Recovery, Identity, IdempotencyKey,
-	// RequestID, ClientIP, CanonicalLog) is the chain of server-side unary interceptors.
+	// UnaryInterceptors (optional; default: SpanRenamer, Recovery, Identity, IdempotencyKey, RequestID, ClientIP, CanonicalLog) is the chain of server-side unary interceptors.
 	UnaryInterceptors []grpc.UnaryServerInterceptor
 }
 
-// WithDefaults fills zero-value fields with production defaults and returns a new config.
-// When logger is nil, a default text handler logger writing to stdout is used.
+// WithDefaults fills zero-value fields with production defaults and returns a new config. When logger is nil, a default text handler logger writing to stdout is used.
 func (c *GRPCServerConfig) WithDefaults(logger *slog.Logger) *GRPCServerConfig {
 	if c == nil {
 		c = &GRPCServerConfig{}
@@ -113,8 +106,7 @@ type GRPCServer struct {
 	healthServer *health.Server
 }
 
-// NewGRPCServer creates a ready-to-use gRPC server with tracing, keepalive,
-// enforcement policy, interceptor chain, and health checking pre-configured.
+// NewGRPCServer creates a ready-to-use gRPC server with tracing, keepalive, enforcement policy, interceptor chain, and health checking pre-configured.
 func NewGRPCServer(serverName string, logger *slog.Logger, config *GRPCServerConfig) (*GRPCServer, error) {
 	config = config.WithDefaults(logger)
 	if err := config.validate(); err != nil {
@@ -144,9 +136,7 @@ func (s *GRPCServer) Server() *grpc.Server {
 	return s.server
 }
 
-// Serve listens on the given port and blocks until ctx is cancelled or a fatal
-// serve error occurs. On cancellation it attempts a graceful stop with a timeout
-// before forcing an immediate stop.
+// Serve listens on the given port and blocks until ctx is cancelled or a fatal serve error occurs. On cancellation it attempts a graceful stop with a timeout before forcing an immediate stop.
 func (s *GRPCServer) Serve(ctx context.Context, port int) error {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {

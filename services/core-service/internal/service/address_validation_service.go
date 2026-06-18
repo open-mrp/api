@@ -27,14 +27,11 @@ type addressValidationSvcImpl struct {
 }
 
 type AddressValidationSvcConfig struct {
-	// GoogleMapsAPIKey (optional; default: "") is the Google Maps Platform API key
-	// used for Places autocomplete and address validation. When empty, the
-	// address-validation endpoints return an internal "not configured" error.
+	// GoogleMapsAPIKey (optional; default: "") is the Google Maps Platform API key used for Places autocomplete and address validation. When empty, the address-validation endpoints return an internal "not configured" error.
 	GoogleMapsAPIKey string
 }
 
-// validate checks the config. All fields are optional, so it never fails today;
-// it exists to keep the construction path consistent with sibling services.
+// validate checks the config. All fields are optional, so it never fails today; it exists to keep the construction path consistent with sibling services.
 func (c *AddressValidationSvcConfig) validate() error {
 	return nil
 }

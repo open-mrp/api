@@ -44,6 +44,7 @@ func NewSeatChangeHandler(
 	}
 }
 
+// Handle consumes a seat-change event and reports the account's current seat count to Stripe as a metered usage event. Accounts with no Stripe customer (free tier) are skipped. The AMQP message ID is passed as the Stripe idempotency key, so redelivery of the same message does not double-report usage.
 func (h *SeatChangeHandler) Handle(ctx context.Context, msg amqp.Delivery) error {
 	ctx, span := h.tracer.Start(ctx, "handler.seat_change",
 		trace.WithSpanKind(trace.SpanKindConsumer),

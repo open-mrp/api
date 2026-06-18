@@ -12,8 +12,7 @@ import (
 
 var inventoryAuditTracer = tracing.GetTracer("core-service.inventory_audit")
 
-// RecordInventoryAuditTrail writes inventory_log and inventory_change_log after a mutation
-// and recalculates burn rate when the change represents consumption.
+// RecordInventoryAuditTrail writes inventory_log and inventory_change_log after a mutation and recalculates burn rate when the change represents consumption.
 func RecordInventoryAuditTrail(
 	ctx context.Context,
 	repos domain.RepoFactory,

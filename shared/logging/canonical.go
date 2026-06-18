@@ -1,11 +1,4 @@
-// Package logging provides structured logging utilities for gRPC services. Its
-// primary export is [CanonicalLogInterceptor], which emits a single "canonical log
-// line" for every gRPC call - a structured slog record containing the method name,
-// gRPC status code, response duration, caller identity, request ID, and trace
-// context. These canonical lines serve as the authoritative audit trail for all
-// service-to-service traffic and are designed to be queried in log aggregation
-// backends (e.g. Datadog, Loki) for latency analysis, error investigation, and
-// access auditing.
+// Package logging provides structured logging utilities for gRPC services. Its primary export is [CanonicalLogInterceptor], which emits a single "canonical log line" for every gRPC call - a structured slog record containing the method name, gRPC status code, response duration, caller identity, request ID, and trace context. These canonical lines serve as the authoritative audit trail for all service-to-service traffic and are designed to be queried in log aggregation backends (e.g. Datadog, Loki) for latency analysis, error investigation, and access auditing.
 package logging
 
 import (
@@ -21,9 +14,7 @@ import (
 	"github.com/augno/api/shared/appctx"
 )
 
-// CanonicalLogInterceptor returns a gRPC unary server interceptor that emits one
-// structured log line per RPC at INFO level. The log message is the full gRPC method
-// name (e.g. "/auth.v1.AuthService/LoginUser") and the record includes:
+// CanonicalLogInterceptor returns a gRPC unary server interceptor that emits one structured log line per RPC at INFO level. The log message is the full gRPC method name (e.g. "/auth.v1.AuthService/LoginUser") and the record includes:
 //
 //   - type:              always "canonical-log-line" (for log-query filtering)
 //   - grpc_method:       full gRPC method name
@@ -37,9 +28,7 @@ import (
 //   - trace_id, span_id: from the active OpenTelemetry span, if recording
 //   - error:             error message string, if the handler returned an error
 //
-// This interceptor must be placed at the end of the interceptor chain so that
-// upstream interceptors (identity extraction, request-ID propagation) have already
-// populated the context values it reads.
+// This interceptor must be placed at the end of the interceptor chain so that upstream interceptors (identity extraction, request-ID propagation) have already populated the context values it reads.
 func CanonicalLogInterceptor(logger *slog.Logger) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		start := time.Now()
@@ -54,12 +43,7 @@ func CanonicalLogInterceptor(logger *slog.Logger) grpc.UnaryServerInterceptor {
 	}
 }
 
-// buildCanonicalAttrs assembles the slog attributes for a canonical log line. It
-// always includes the base fields (type, grpc_method, grpc_code, duration_ms) and
-// conditionally appends request_id, identity fields, trace IDs, and the error
-// message based on what is available in the context and whether the handler errored.
-// Duration is recorded as fractional milliseconds (microsecond precision) for
-// consistency with trace-backend conventions.
+// buildCanonicalAttrs assembles the slog attributes for a canonical log line. It always includes the base fields (type, grpc_method, grpc_code, duration_ms) and conditionally appends request_id, identity fields, trace IDs, and the error message based on what is available in the context and whether the handler errored. Duration is recorded as fractional milliseconds (microsecond precision) for consistency with trace-backend conventions.
 func buildCanonicalAttrs(ctx context.Context, method string, err error, duration time.Duration) []slog.Attr {
 	attrs := []slog.Attr{
 		slog.String("type", "canonical-log-line"),
@@ -93,16 +77,14 @@ func buildCanonicalAttrs(ctx context.Context, method string, err error, duration
 	return attrs
 }
 
-// extractIdentityAttrs converts the caller's Identity into slog attributes for the
-// canonical log line. The attributes vary by identity type:
+// extractIdentityAttrs converts the caller's Identity into slog attributes for the canonical log line. The attributes vary by identity type:
 //
 //   - User identity:    auth_type="user",    user_id="usr_..."
 //   - API key identity: auth_type="api_key", key_id="apke_..."
 //   - Agent identity:   auth_type="agent",   agent_id=<agent definition ID>
 //   - Unauthenticated:  auth_type="unauthenticated" (no actor ID)
 //
-// Optional fields (target_account_id, account_mode) are included only when non-empty
-// to keep log lines compact for unauthenticated or account-less calls.
+// Optional fields (target_account_id, account_mode) are included only when non-empty to keep log lines compact for unauthenticated or account-less calls.
 func extractIdentityAttrs(identity *types.Identity) []slog.Attr {
 	attrs := []slog.Attr{
 		slog.String("auth_type", string(identity.Type)),

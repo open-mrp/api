@@ -14,32 +14,24 @@ import (
 )
 
 const (
-	// mysqlDuplicateEntryCode is the MySQL error number for unique constraint
-	// violations. The inbox table has a unique index on (message_id, handler),
-	// so a duplicate insert surfaces as this error code.
+	// mysqlDuplicateEntryCode is the MySQL error number for unique constraint violations. The inbox table has a unique index on (message_id, handler), so a duplicate insert surfaces as this error code.
 	mysqlDuplicateEntryCode = 1062
 )
 
-// InboxConsumer wraps message handlers with inbox-based deduplication to achieve
-// exactly-once processing semantics. For each incoming AMQP delivery it:
+// InboxConsumer wraps message handlers with inbox-based deduplication to achieve exactly-once processing semantics. For each incoming AMQP delivery it:
 //  1. Extracts the message ID and metadata from the delivery and body.
 //  2. Attempts to insert an inbox record (status = "received").
 //  3. If the insert succeeds (new message), the handler is invoked.
-//  4. If the insert fails with a duplicate-key error, handleDuplicate inspects the
-//     existing record's status to decide whether to skip (already processed), retry
-//     (previously failed), or retry (crash recovery — received but never completed).
+//  4. If the insert fails with a duplicate-key error, handleDuplicate inspects the existing record's status to decide whether to skip (already processed), retry (previously failed), or retry (crash recovery — received but never completed).
 //
-// This pattern guarantees that a handler is invoked at most once for a given
-// (message_id, handler) pair under normal operation, and provides safe retry
-// semantics for crash-recovery scenarios.
+// This pattern guarantees that a handler is invoked at most once for a given (message_id, handler) pair under normal operation, and provides safe retry semantics for crash-recovery scenarios.
 type InboxConsumer struct {
 	repo        InboxRepo
 	serviceName string
 	tracer      trace.Tracer
 }
 
-// NewInboxConsumer creates a new InboxConsumer that uses the given repository for
-// persistence and derives a tracer scoped to "{serviceName}.inbox_consumer".
+// NewInboxConsumer creates a new InboxConsumer that uses the given repository for persistence and derives a tracer scoped to "{serviceName}.inbox_consumer".
 func NewInboxConsumer(repo InboxRepo, serviceName string) *InboxConsumer {
 	return &InboxConsumer{
 		repo:        repo,
@@ -48,14 +40,9 @@ func NewInboxConsumer(repo InboxRepo, serviceName string) *InboxConsumer {
 	}
 }
 
-// Wrap returns a new MessageHandler that guards fn with inbox deduplication. The
-// handler parameter is a human-readable name that scopes the deduplication — the
-// same message ID processed by different handlers (e.g. "notification.send_email"
-// vs "notification.log_email") is treated as distinct and both execute.
+// Wrap returns a new MessageHandler that guards fn with inbox deduplication. The handler parameter is a human-readable name that scopes the deduplication — the same message ID processed by different handlers (e.g. "notification.send_email" vs "notification.log_email") is treated as distinct and both execute.
 //
-// Metadata (message ID, request ID, parent message ID) is extracted from the AMQP
-// delivery headers and body. If no message ID can be found, the handler runs without
-// deduplication (with a warning log) to avoid silently dropping messages.
+// Metadata (message ID, request ID, parent message ID) is extracted from the AMQP delivery headers and body. If no message ID can be found, the handler runs without deduplication (with a warning log) to avoid silently dropping messages.
 func (c *InboxConsumer) Wrap(handler string, fn MessageHandler) MessageHandler {
 	return func(ctx context.Context, msg amqp.Delivery) error {
 		ctx, span := c.tracer.Start(ctx, "inbox.wrap."+handler)
@@ -113,8 +100,7 @@ func (c *InboxConsumer) Wrap(handler string, fn MessageHandler) MessageHandler {
 	}
 }
 
-// executeAndRecord invokes the handler and updates the inbox record based on the
-// outcome. It is called both for new messages and for duplicates that need retry.
+// executeAndRecord invokes the handler and updates the inbox record based on the outcome. It is called both for new messages and for duplicates that need retry.
 func (c *InboxConsumer) executeAndRecord(ctx context.Context, recordID int64, messageID, handler string, fn MessageHandler, msg amqp.Delivery) error {
 	if err := fn(ctx, msg); err != nil {
 		if markErr := c.repo.MarkFailed(ctx, recordID, err.Error()); markErr != nil {
@@ -130,13 +116,9 @@ func (c *InboxConsumer) executeAndRecord(ctx context.Context, recordID int64, me
 	return nil
 }
 
-// handleDuplicate is called when the inbox insert fails with a duplicate-key error,
-// meaning this (message_id, handler) pair was seen before. It fetches the existing
-// record and decides the outcome based on its status:
-//   - "processed": the handler already ran to completion — skip silently (return nil
-//     so the delivery is ACKed).
-//   - has LastError or "received" with no error: a previous attempt failed or crashed
-//     — re-invoke the handler to retry processing.
+// handleDuplicate is called when the inbox insert fails with a duplicate-key error, meaning this (message_id, handler) pair was seen before. It fetches the existing record and decides the outcome based on its status:
+//   - "processed": the handler already ran to completion — skip silently (return nil so the delivery is ACKed).
+//   - has LastError or "received" with no error: a previous attempt failed or crashed — re-invoke the handler to retry processing.
 func (c *InboxConsumer) handleDuplicate(ctx context.Context, messageID, handler string, fn MessageHandler, msg amqp.Delivery) error {
 	record, err := c.repo.GetByMessageAndHandler(ctx, messageID, handler)
 	if err != nil {

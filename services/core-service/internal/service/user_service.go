@@ -114,8 +114,7 @@ func (s *userSvcImpl) GetUser(ctx context.Context, identifier string) (*domain.U
 
 	userRepo := s.repos.NewUserRepo()
 
-	// Try finding by ID first, then fall back to email and username.
-	// This matches the Dashboard behavior where the identifier can be an ID, email, or username.
+	// Try finding by ID first, then fall back to email and username. This matches the Dashboard behavior where the identifier can be an ID, email, or username.
 	user, apiErr := userRepo.FindByID(ctx, identifier)
 	if apiErr != nil && apierror.IsNotFound(apiErr) {
 		user, apiErr = userRepo.FindByEmail(ctx, identifier)

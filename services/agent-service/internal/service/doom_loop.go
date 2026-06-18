@@ -6,8 +6,7 @@ import (
 )
 
 const (
-	// doomLoopThreshold is the number of consecutive identical tool calls before
-	// injecting a synthetic error to break the loop.
+	// doomLoopThreshold is the number of consecutive identical tool calls before injecting a synthetic error to break the loop.
 	doomLoopThreshold = 3
 
 	// doomLoopWindowSize is the maximum number of recent tool calls tracked.
@@ -20,14 +19,12 @@ type toolCallFingerprint struct {
 	InputHash string
 }
 
-// doomLoopDetector tracks recent tool calls and detects when an agent is stuck
-// calling the same tool with identical input repeatedly.
+// doomLoopDetector tracks recent tool calls and detects when an agent is stuck calling the same tool with identical input repeatedly.
 type doomLoopDetector struct {
 	history []toolCallFingerprint
 }
 
-// Record adds a tool call to the history and returns true if the same
-// (name, inputHash) has been called doomLoopThreshold consecutive times.
+// Record adds a tool call to the history and returns true if the same (name, inputHash) has been called doomLoopThreshold consecutive times.
 func (d *doomLoopDetector) Record(toolName string, input []byte) bool {
 	h := sha256.Sum256(input)
 	fp := toolCallFingerprint{

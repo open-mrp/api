@@ -19,12 +19,10 @@ const DefaultTimeout = 10 * time.Second
 type Option func(*config)
 
 type config struct {
-	// timeout (optional; default: 0, meaning DefaultTimeout of 10s) overrides the
-	// RPC deadline. Set via WithTimeout.
+	// timeout (optional; default: 0, meaning DefaultTimeout of 10s) overrides the RPC deadline. Set via WithTimeout.
 	timeout time.Duration
 
-	// onReplayed (optional; default: nil) is invoked when the response was an
-	// idempotent replay; skipped when nil. Set via WithOnReplayed.
+	// onReplayed (optional; default: nil) is invoked when the response was an idempotent replay; skipped when nil. Set via WithOnReplayed.
 	onReplayed func()
 }
 
@@ -33,8 +31,7 @@ func WithTimeout(t time.Duration) Option {
 	return func(c *config) { c.timeout = t }
 }
 
-// WithOnReplayed registers a callback that is invoked when the response
-// headers indicate the server replayed a cached idempotent response.
+// WithOnReplayed registers a callback that is invoked when the response headers indicate the server replayed a cached idempotent response.
 func WithOnReplayed(fn func()) Option {
 	return func(c *config) { c.onReplayed = fn }
 }

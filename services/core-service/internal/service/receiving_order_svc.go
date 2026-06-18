@@ -550,8 +550,7 @@ func (s *receivingOrderSvcImpl) VoidReceivingOrder(ctx context.Context, receivin
 	}
 }
 
-// createDeliveryRecords creates delivery and delivery line records, plus inventory receipts
-// for each accepted allocation. This matches the Dashboard's createByReceivingOrder behavior.
+// createDeliveryRecords creates delivery and delivery line records, plus inventory receipts for each accepted allocation. This matches the Dashboard's createByReceivingOrder behavior.
 func (s *receivingOrderSvcImpl) createDeliveryRecords(ctx context.Context, txSvc *receivingOrderSvcImpl, params domain.StockReceivingOrderParams) *apierror.APIError {
 	txRepo := txSvc.repos.NewReceivingOrderRepo()
 	deliveryRepo := txSvc.repos.NewDeliveryRepo()
@@ -810,8 +809,7 @@ func (s *receivingOrderSvcImpl) createInventoryChangeLogs(ctx context.Context, t
 	return nil
 }
 
-// allocateOpenIssues performs FIFO allocation of open inventory issues
-// for each unique item that had accepted allocations during stocking.
+// allocateOpenIssues performs FIFO allocation of open inventory issues for each unique item that had accepted allocations during stocking.
 func (s *receivingOrderSvcImpl) allocateOpenIssues(ctx context.Context, txSvc *receivingOrderSvcImpl, params domain.StockReceivingOrderParams) *apierror.APIError {
 	txRepo := txSvc.repos.NewReceivingOrderRepo()
 	reservationRepo := txSvc.repos.NewInventoryReservationRepo()

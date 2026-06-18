@@ -124,8 +124,7 @@ type SalesOrder struct {
 	// Count of order lines (always populated, independent of the lines include).
 	LineCount int32
 
-	// Derived payment state (always populated): computed from settlement
-	// allocations vs. invoiced amounts plus any Stripe payment intent.
+	// Derived payment state (always populated): computed from settlement allocations vs. invoiced amounts plus any Stripe payment intent.
 	PaymentStatus constants.SalesOrderPaymentStatus
 
 	// Lines (populated when included)
@@ -133,6 +132,18 @@ type SalesOrder struct {
 
 	// IDs of shipments linked to this order (populated when related.shipments is included).
 	ShipmentIDs []string
+
+	// Invoice email recipients (populated when contacts is included).
+	InvoiceEmails []string
+
+	// Order acknowledgement email recipients (populated when contacts is included).
+	AcknowledgementEmails []string
+}
+
+// SalesOrderContacts holds a sales order's email recipients grouped by notification type.
+type SalesOrderContacts struct {
+	InvoiceEmails         []string
+	AcknowledgementEmails []string
 }
 
 // ListSalesOrdersParams holds the parameters for listing sales orders.
@@ -192,9 +203,7 @@ type CreateSalesOrderParams struct {
 	PaymentTermID         *string
 	OrderDiscountID       *string
 	PromisedAt            *time.Time
-	// Existing bill-to / ship-to address IDs the order references. The addresses must
-	// belong to the order's owner or buyer account (matching Dashboard, which only
-	// accepts address IDs — addresses are persisted separately).
+	// Existing bill-to / ship-to address IDs the order references. The addresses must belong to the order's owner or buyer account (matching Dashboard, which only accepts address IDs — addresses are persisted separately).
 	BillToAddressID string
 	ShipToAddressID string
 	Lines           []CreateSalesOrderLineInput
@@ -208,17 +217,14 @@ type SalesOrderEmailContactInput struct {
 	AccountUserID string
 }
 
-// ProductTypeLine carries a product's type code and product line ID, used by
-// shipping-rate estimation (parcel weight + product-line freight exemption) on create.
+// ProductTypeLine carries a product's type code and product line ID, used by shipping-rate estimation (parcel weight + product-line freight exemption) on create.
 type ProductTypeLine struct {
 	ProductID       string
 	ProductTypeCode string
 	ProductLineID   *string
 }
 
-// CreateSalesOrderLineInput represents a line to create with a new sales order.
-// The item, SKU/description defaults, unit cost, and (unless an internal user
-// overrides) the unit price are all resolved server-side from the product.
+// CreateSalesOrderLineInput represents a line to create with a new sales order. The item, SKU/description defaults, unit cost, and (unless an internal user overrides) the unit price are all resolved server-side from the product.
 type CreateSalesOrderLineInput struct {
 	ProductID      string
 	QuantityValue  string
@@ -253,11 +259,9 @@ type UpdateSalesOrderParams struct {
 	IsAcknowledgmentSent  *bool
 	PromisedAt            *time.Time
 	BuyerAccountID        *string
-	// When non-nil, replaces the acknowledgement email contacts on the order.
-	// Empty slice clears all contacts; nil leaves existing contacts untouched.
+	// When non-nil, replaces the acknowledgement email contacts on the order. Empty slice clears all contacts; nil leaves existing contacts untouched.
 	AcknowledgementEmailContacts *[]SalesOrderEmailContactInput
-	// When non-nil, replaces the invoice email contacts on the order.
-	// Empty slice clears all contacts; nil leaves existing contacts untouched.
+	// When non-nil, replaces the invoice email contacts on the order. Empty slice clears all contacts; nil leaves existing contacts untouched.
 	InvoiceEmailContacts *[]SalesOrderEmailContactInput
 }
 

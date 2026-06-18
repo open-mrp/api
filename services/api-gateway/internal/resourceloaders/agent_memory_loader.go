@@ -17,9 +17,7 @@ import (
 
 var agentMemoryLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.agent_memory")
 
-// LoadAgentMemories fetches agent memories by ID via
-// BatchGetAgentMemoriesByIDs (AgentService). Entity is materialized inline
-// from the proto entity_type/entity_id pair — no expandable sub-resources.
+// LoadAgentMemories fetches agent memories by ID via BatchGetAgentMemoriesByIDs (AgentService). Entity is materialized inline from the proto entity_type/entity_id pair — no expandable sub-resources.
 func LoadAgentMemories(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil
@@ -38,9 +36,7 @@ func LoadAgentMemories(ctx context.Context, ids []string) (map[string]any, *apie
 	return out, nil
 }
 
-// AgentMemoryFromProto maps the gRPC AgentMemoryInfo to the apiresource shape.
-// Exported so endpoint service methods that already hold a proto response
-// (e.g. Create/Update returning the resource directly) can reuse it.
+// AgentMemoryFromProto maps the gRPC AgentMemoryInfo to the apiresource shape. Exported so endpoint service methods that already hold a proto response (e.g. Create/Update returning the resource directly) can reuse it.
 func AgentMemoryFromProto(m *agentpb.AgentMemoryInfo) *apiresource.AgentMemory {
 	memory := &apiresource.AgentMemory{
 		ID:         m.Id,

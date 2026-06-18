@@ -16,8 +16,7 @@ const (
 	currencyNumberFormat = `_($* #,##0.00_);_($* (#,##0.00);_($* "-"??_);_(@_)`
 )
 
-// GenerateStatementOfAccount generates an Excel workbook containing a statement
-// of account with aging buckets for the given receivable invoices and open credits.
+// GenerateStatementOfAccount generates an Excel workbook containing a statement of account with aging buckets for the given receivable invoices and open credits.
 func GenerateStatementOfAccount(receivables []domain.ReceivableEntry, openCredits []domain.OpenCredit) ([]byte, error) {
 	f := excelize.NewFile()
 

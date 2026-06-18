@@ -15,10 +15,7 @@ import (
 
 var invoiceLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.invoice")
 
-// LoadInvoices fetches invoices by ID via GetInvoice and builds expandable
-// Invoice references with real header data. There is no batch RPC for invoices,
-// so each ID is fetched individually. Nested sub-resources (lines, allocations,
-// customer, …) are their own expandable relations and are not populated here.
+// LoadInvoices fetches invoices by ID via GetInvoice and builds expandable Invoice references with real header data. There is no batch RPC for invoices, so each ID is fetched individually. Nested sub-resources (lines, allocations, customer, …) are their own expandable relations and are not populated here.
 func LoadInvoices(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil

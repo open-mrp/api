@@ -2,8 +2,7 @@ package domain
 
 import "github.com/augno/api/shared/messaging"
 
-// RepoFactory provides repository instances that share the same underlying
-// sqlc query executor (plain DB access or a transaction).
+// RepoFactory provides repository instances that share the same underlying sqlc query executor (plain DB access or a transaction).
 type RepoFactory interface {
 	NewUserRepo() UserRepo
 	NewRefreshTokenRepo() RefreshTokenRepo

@@ -48,10 +48,7 @@ func needsCompaction(inputTokens int, model string) bool {
 	return inputTokens >= (limit - compactionBuffer)
 }
 
-// pruneOldToolResults replaces old tool result content with a placeholder.
-// It walks backwards through messages, protects the most recent pruneProtectTurns
-// user turns, and clears tool results from older turns.
-// Returns the estimated tokens freed.
+// pruneOldToolResults replaces old tool result content with a placeholder. It walks backwards through messages, protects the most recent pruneProtectTurns user turns, and clears tool results from older turns. Returns the estimated tokens freed.
 func pruneOldToolResults(messages []llm.Message) int {
 	if len(messages) <= 3 {
 		return 0
@@ -86,8 +83,7 @@ func pruneOldToolResults(messages []llm.Message) int {
 	return freed
 }
 
-// compactMessages calls the LLM to produce a conversation summary, returning
-// a synthetic user message containing the summary.
+// compactMessages calls the LLM to produce a conversation summary, returning a synthetic user message containing the summary.
 func compactMessages(
 	ctx context.Context,
 	provider llm.LLMProvider,

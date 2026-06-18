@@ -2,8 +2,7 @@ package domain
 
 import "github.com/shopspring/decimal"
 
-// InventoryUpdateParams describes a single inventory change (receipt or issue) to apply
-// after a production step execution. Positive measure = receipt; negative = issue.
+// InventoryUpdateParams describes a single inventory change (receipt or issue) to apply after a production step execution. Positive measure = receipt; negative = issue.
 type InventoryUpdateParams struct {
 	AccountID         string
 	ItemID            string
@@ -35,8 +34,7 @@ type ConsumptionAllocationParams struct {
 
 // ConsumptionAllocationResult is the result of allocating reservations for consumption.
 type ConsumptionAllocationResult struct {
-	// RemainingMeasure is the quantity that could not be allocated from existing reservations
-	// and must be deducted from general inventory instead.
+	// RemainingMeasure is the quantity that could not be allocated from existing reservations and must be deducted from general inventory instead.
 	RemainingMeasure decimal.Decimal
 	RemainingUnitID  string
 }
@@ -48,8 +46,7 @@ type MaterialDemandItem struct {
 	UnitID  string
 }
 
-// CreateMaterialReservationParams holds parameters for creating a reserved inventory issue
-// for a material demand linked to a sales order.
+// CreateMaterialReservationParams holds parameters for creating a reserved inventory issue for a material demand linked to a sales order.
 type CreateMaterialReservationParams struct {
 	AccountID string
 	ItemID    string

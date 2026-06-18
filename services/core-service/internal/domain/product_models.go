@@ -79,11 +79,7 @@ type CreateProductParams struct {
 	ProductLineID   *string
 	CategoryID      string
 	IsPortalReady   bool
-	// UnitPrice / UnitCost are initial rate values written into the unit_value
-	// and unit_cost Rate records. When nil they default to "0" against the
-	// category's base unit on both sides. When set, both enforce the
-	// currency-numerator / non-currency-denominator rule. Burn rate is always
-	// initialized to "0" per day and recomputed from inventory history.
+	// UnitPrice / UnitCost are initial rate values written into the unit_value and unit_cost Rate records. When nil they default to "0" against the category's base unit on both sides. When set, both enforce the currency-numerator / non-currency-denominator rule. Burn rate is always initialized to "0" per day and recomputed from inventory history.
 	UnitPrice *CreateRateParams
 	UnitCost  *CreateRateParams
 	// AttributeIDs are connected to the new item at creation time.

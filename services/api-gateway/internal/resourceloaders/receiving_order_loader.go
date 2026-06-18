@@ -16,11 +16,7 @@ import (
 
 var receivingOrderLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.receiving_order")
 
-// LoadReceivingOrders fetches receiving orders by ID via GetReceivingOrder and
-// builds expandable ReceivingOrder references with real header data. There is
-// no batch RPC for receiving orders, so each ID is fetched individually. Nested
-// sub-resources (lines, supplier, purchase_order) are their own expandable
-// relations and are not populated here.
+// LoadReceivingOrders fetches receiving orders by ID via GetReceivingOrder and builds expandable ReceivingOrder references with real header data. There is no batch RPC for receiving orders, so each ID is fetched individually. Nested sub-resources (lines, supplier, purchase_order) are their own expandable relations and are not populated here.
 func LoadReceivingOrders(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil

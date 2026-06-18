@@ -54,8 +54,7 @@ func NewStripeWebhookSvc(config *StripeWebhookSvcConfig) domain.StripeWebhookSvc
 	}
 }
 
-// handledEventTypes is the set of Stripe event types we process.
-// Unhandled types are acknowledged with a 200 but not enqueued.
+// handledEventTypes is the set of Stripe event types we process. Unhandled types are acknowledged with a 200 but not enqueued.
 var handledEventTypes = map[string]bool{
 	"customer.deleted": true,
 	// Sales order checkout payment completion.

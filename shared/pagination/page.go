@@ -9,8 +9,7 @@ type PageInfo struct {
 	HasPrevPage bool
 }
 
-// BuildPage trims the limit+1 slice, reverses if backward, and computes PageInfo.
-// cursorDir is nil for first-page requests.
+// BuildPage trims the limit+1 slice, reverses if backward, and computes PageInfo. cursorDir is nil for first-page requests.
 func BuildPage[T any](
 	items []T,
 	limit int32,
@@ -106,8 +105,7 @@ func BuildPage[T any](
 	return items, pi
 }
 
-// BuildPageString is like BuildPage but uses string IDs with StringCursor,
-// for tables whose primary key is a varchar.
+// BuildPageString is like BuildPage but uses string IDs with StringCursor, for tables whose primary key is a varchar.
 func BuildPageString[T any](
 	items []T,
 	limit int32,
@@ -200,8 +198,7 @@ func BuildPageString[T any](
 	return items, pi
 }
 
-// BuildPageStringWithSearchRank is like BuildPageString but embeds MatchTier in cursors
-// when searchRankEnabled is true (catalog search relevance pagination).
+// BuildPageStringWithSearchRank is like BuildPageString but embeds MatchTier in cursors when searchRankEnabled is true (catalog search relevance pagination).
 func BuildPageStringWithSearchRank[T any](
 	items []T,
 	limit int32,

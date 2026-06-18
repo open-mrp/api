@@ -40,26 +40,13 @@ var idempotencyMiddlewareTracer = tracing.GetTracer("api-gateway.idempotency_mid
 
 const maxIdempotencyResponseSize = 1024 * 64
 
-// maxIdempotencyRequestBodySize bounds the request body buffered by the
-// idempotency middleware so an unauthenticated client cannot exhaust gateway
-// memory by sending a very large body with an Idempotency-Key header. The
-// limit matches the per-endpoint JSON body cap in apiendpoint, so any request
-// that would have been accepted downstream is still accepted here.
+// maxIdempotencyRequestBodySize bounds the request body buffered by the idempotency middleware so an unauthenticated client cannot exhaust gateway memory by sending a very large body with an Idempotency-Key header. The limit matches the per-endpoint JSON body cap in apiendpoint, so any request that would have been accepted downstream is still accepted here.
 const maxIdempotencyRequestBodySize = 1 << 20 // 1 MiB
 
-// idempotencyStoreTimeout bounds the synchronous gRPC call that persists the
-// response body and releases the idempotency lock. It must be long enough to
-// survive parallel-request load because a timeout here abandons the SetResponse
-// in flight, leaving the row locked until lock_expires_at (5 minutes by
-// default). Duplicate requests in that window observe the key as still
-// "in progress" and the client has no retryable signal.
+// idempotencyStoreTimeout bounds the synchronous gRPC call that persists the response body and releases the idempotency lock. It must be long enough to survive parallel-request load because a timeout here abandons the SetResponse in flight, leaving the row locked until lock_expires_at (5 minutes by default). Duplicate requests in that window observe the key as still "in progress" and the client has no retryable signal.
 const idempotencyStoreTimeout = 30 * time.Second
 
-// responseRecorder buffers the downstream handler's response so the
-// idempotency record can be persisted synchronously before the client
-// receives the response. Without buffering, a client could receive its
-// response and fire a duplicate request before the async store completes,
-// causing the duplicate to observe the key as still "in progress".
+// responseRecorder buffers the downstream handler's response so the idempotency record can be persisted synchronously before the client receives the response. Without buffering, a client could receive its response and fire a duplicate request before the async store completes, causing the duplicate to observe the key as still "in progress".
 type responseRecorder struct {
 	headers         http.Header
 	statusCode      int
@@ -107,9 +94,7 @@ func (r *responseRecorder) Write(b []byte) (int, error) {
 	return len(b), nil
 }
 
-// flush writes the buffered headers, status, and body to the real
-// ResponseWriter. Callers must invoke this exactly once after the
-// idempotency record has been persisted.
+// flush writes the buffered headers, status, and body to the real ResponseWriter. Callers must invoke this exactly once after the idempotency record has been persisted.
 func (r *responseRecorder) flush(w http.ResponseWriter) {
 	maps.Copy(w.Header(), r.headers)
 	if r.written {
@@ -349,10 +334,7 @@ func IdempotencyMiddleware(config *IdempotencyMiddlewareConfig) func(http.Handle
 					ttl = &ttlVal
 				}
 
-				// Persist the idempotency record synchronously before the
-				// client sees the response so that a duplicate request
-				// arriving immediately after does not observe the key as
-				// still "in progress".
+				// Persist the idempotency record synchronously before the client sees the response so that a duplicate request arriving immediately after does not observe the key as still "in progress".
 				storeIdempotencyResponse(
 					context.WithoutCancel(ctx),
 					config.PlatformClient,
@@ -375,11 +357,7 @@ func IdempotencyMiddleware(config *IdempotencyMiddlewareConfig) func(http.Handle
 	}
 }
 
-// readAndRestoreBody buffers r.Body so it can be hashed for idempotency and
-// then restores it for downstream handlers. The read is capped at
-// maxIdempotencyRequestBodySize via http.MaxBytesReader; if the body exceeds
-// that cap, the returned APIError is non-nil and the caller must abort the
-// request rather than continue with a truncated body.
+// readAndRestoreBody buffers r.Body so it can be hashed for idempotency and then restores it for downstream handlers. The read is capped at maxIdempotencyRequestBodySize via http.MaxBytesReader; if the body exceeds that cap, the returned APIError is non-nil and the caller must abort the request rather than continue with a truncated body.
 func readAndRestoreBody(w http.ResponseWriter, r *http.Request) ([]byte, *http.Request, *apierror.APIError) {
 	if r.Body == nil {
 		return nil, r, nil

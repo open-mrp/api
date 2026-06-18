@@ -2,8 +2,7 @@ package crypto
 
 import "hash/crc32"
 
-// CRC32Base62 computes a CRC32-C (Castagnoli) checksum of data and returns it
-// as a base-62 [a-zA-Z0-9] string left-padded to the given width.
+// CRC32Base62 computes a CRC32-C (Castagnoli) checksum of data and returns it as a base-62 [a-zA-Z0-9] string left-padded to the given width.
 func CRC32Base62(data string, width int) string {
 	sum := crc32.Checksum([]byte(data), crc32.MakeTable(crc32.Castagnoli))
 	return base62Encode(uint64(sum), width)

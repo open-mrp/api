@@ -23,7 +23,7 @@ func (e *DeleteAccountIntegrationEndpoint) Materialize() *apiendpoint.APIEndpoin
 	return (&apiendpoint.APIEndpoint[*DeleteAccountIntegrationRequest, *apiresource.AccountIntegration]{
 		Title:             "Delete Account Integration",
 		Method:            http.MethodDelete,
-		Route:             "/v1/identity/integrations/{id}",
+		Route:             "/v1/settings/integrations/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,

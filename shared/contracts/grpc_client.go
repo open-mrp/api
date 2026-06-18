@@ -31,14 +31,7 @@ const (
 	defaultMaxCallRecvMsgSize = 100 * 1024 * 1024
 	// defaultMaxCallSendMsgSize is the maximum message size the client can send (100 MB)
 	defaultMaxCallSendMsgSize = 100 * 1024 * 1024
-	// defaultReconnectMaxDelay caps how long a subchannel waits between reconnect
-	// attempts. grpc-go's default is 120s, which means that after a server process
-	// restarts (e.g. a Tilt in-place hot reload via docker_build_with_restart), a
-	// client whose connection broke can sit in TRANSIENT_FAILURE backoff for up to
-	// two minutes before retrying — returning "connection refused" the whole time —
-	// even though the server is already healthy again. Capping the max delay makes
-	// clients reconnect within seconds. This matters most for the circular
-	// auth-service <-> core-service dependency.
+	// defaultReconnectMaxDelay caps how long a subchannel waits between reconnect attempts. grpc-go's default is 120s, which means that after a server process restarts (e.g. a Tilt in-place hot reload via docker_build_with_restart), a client whose connection broke can sit in TRANSIENT_FAILURE backoff for up to two minutes before retrying — returning "connection refused" the whole time — even though the server is already healthy again. Capping the max delay makes clients reconnect within seconds. This matters most for the circular auth-service <-> core-service dependency.
 	defaultReconnectMaxDelay = 5 * time.Second
 )
 
@@ -69,13 +62,10 @@ func (t *GRPCConnTarget) validate() error {
 
 // GRPCClientConfig holds dial-time settings for a gRPC client connection.
 type GRPCClientConfig struct {
-	// KeepaliveParams (optional; default: 60s ping, 5s timeout) controls how often the
-	// client pings the server and how long it waits for a response before considering
-	// the connection dead.
+	// KeepaliveParams (optional; default: 60s ping, 5s timeout) controls how often the client pings the server and how long it waits for a response before considering the connection dead.
 	KeepaliveParams keepalive.ClientParameters
 
-	// UnaryInterceptors (optional; default: retry-on-transient) is the chain of client-side
-	// unary interceptors.
+	// UnaryInterceptors (optional; default: retry-on-transient) is the chain of client-side unary interceptors.
 	UnaryInterceptors []grpc.UnaryClientInterceptor
 }
 
@@ -112,9 +102,7 @@ func (c *GRPCClientConfig) validate() error {
 	return nil
 }
 
-// NewGRPCClientConn creates a new gRPC client connection. The connection is established
-// using insecure credentials. Since all these connections are within the k8 cluster and
-// not over a public network, this acceptable.
+// NewGRPCClientConn creates a new gRPC client connection. The connection is established using insecure credentials. Since all these connections are within the k8s cluster and not over a public network, this is acceptable.
 func NewGRPCClientConn(target GRPCConnTarget, config *GRPCClientConfig) (*GRPCClientConn, error) {
 	if err := target.validate(); err != nil {
 		return nil, err
@@ -161,10 +149,7 @@ func (c *GRPCClientConn) Conn() *grpc.ClientConn {
 	return c.conn
 }
 
-// WaitForReady waits for the gRPC server to be ready. If an error
-// occurs, it is returned. If the context is canceled, the context
-// error is returned. Otherwise, we return when the SERVING status
-// is returned.
+// WaitForReady waits for the gRPC server to be ready. If an error occurs, it is returned. If the context is canceled, the context error is returned. Otherwise, we return when the SERVING status is returned.
 func (c *GRPCClientConn) WaitForReady(ctx context.Context) error {
 	if c == nil {
 		return errGRPCClientConnectionNotEstablished

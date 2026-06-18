@@ -12,8 +12,7 @@ import (
 
 var cursorKey []byte
 
-// Init sets the HMAC key used to sign and verify cursors.
-// Must be called once at service startup before any cursor operations.
+// Init sets the HMAC key used to sign and verify cursors. Must be called once at service startup before any cursor operations.
 func Init(key []byte) {
 	cursorKey = key
 }
@@ -31,8 +30,7 @@ type Cursor struct {
 	Direction Direction `json:"d"`
 }
 
-// StringCursor is like Cursor but uses a string ID instead of int64,
-// for tables whose primary key is a varchar (e.g. request_log).
+// StringCursor is like Cursor but uses a string ID instead of int64, for tables whose primary key is a varchar (e.g. request_log).
 type StringCursor struct {
 	OccurredAt time.Time `json:"c"`
 	ID         string    `json:"s"`

@@ -59,9 +59,7 @@ func (h *AgentTokenBillingHandler) Handle(ctx context.Context, msg amqp.Delivery
 		return err
 	}
 
-	// Use the billing account ID for all billing operations. For sandbox accounts,
-	// this is the production owner's account ID. Falls back to AccountID for
-	// backwards compatibility with events published before this field existed.
+	// Use the billing account ID for all billing operations. For sandbox accounts, this is the production owner's account ID. Falls back to AccountID for backwards compatibility with events published before this field existed.
 	billingAcctID := data.BillingAccountID
 	if billingAcctID == "" {
 		billingAcctID = data.AccountID

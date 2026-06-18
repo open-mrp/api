@@ -95,6 +95,13 @@ INSERT IGNORE INTO sales_order_line (id, product_sku, product_description, produ
     ('orln_01seediss_ln2_0000', 'SCK-002', 'Large white sock', 'pd_01k0a65nx5e3haz2fgfm34hmcz', 'it_01k0a7100aedgv8416p4p2v9ks', 'or_01k0a8bs2yejxbsvqhrx4drkq1', 'qu_01seediss_ln2_qty00', 'rt_01seediss_ln2_price', 'rt_01seediss_ln2_cost0', NOW(), NOW()),
     ('orln_01seediss_ln3_0000', 'Freight', 'Charges for shipping', 'pd_01k0a65nx5fj1bxedew2jvjpwz', 'it_01k0a71009fc5szdjy8mn2nzq5', 'or_01k0a8bs2yejxbsvqhrx4drkq1', 'qu_01seediss_ln3_qty00', 'rt_01seediss_ln3_price', 'rt_01seediss_ln3_cost0', NOW(), NOW());
 
+-- Email contacts for ORD-001 (SeedSalesOrderID): one invoice recipient (John Doe /
+-- dane@augno.com) and one acknowledgement recipient (Sarah Martinez /
+-- smartinez@augno.com), exercising the ?include=contacts expansion.
+INSERT IGNORE INTO order_email_contact (id, sales_order_id, account_user_id, notification_type_code, created_at, updated_at) VALUES
+    ('oec_01seediss_invoice00', 'or_01k0a8bs2yejxbsvqhrx4drkq1', 'acus_s83fjhyfmqen', 'invoice', NOW(), NOW()),
+    ('oec_01seediss_acknowled', 'or_01k0a8bs2yejxbsvqhrx4drkq1', 'acus_ubdx4zebgl6p', 'order_acknowledgement', NOW(), NOW());
+
 -- Packed order lines
 INSERT IGNORE INTO sales_order_line (id, product_sku, product_description, product_id, item_id, sales_order_id, quantity_id, unit_price_id, unit_cost_id, created_at, updated_at) VALUES
     ('orln_01seedpck_ln1_0000', 'SCK-003', 'Small black sock', 'pd_01k0a65nx5fjz8m1s3ytayfdby', 'it_01k0a7100afdnr1b41917qs27k', 'or_01k0a8bs2ye3f9p8sj0m4dfmwe', 'qu_01seedpck_ln1_qty00', 'rt_01seedpck_ln1_price', 'rt_01seedpck_ln1_cost0', NOW(), NOW()),

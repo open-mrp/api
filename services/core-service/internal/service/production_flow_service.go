@@ -151,8 +151,7 @@ func (s *productionFlowSvcImpl) GetProductionFlow(ctx context.Context, itemID st
 		}
 	}
 
-	// Include downstream steps so out_step_ids are not filtered to empty when
-	// the flow extends past the item's immediate producer(s).
+	// Include downstream steps so out_step_ids are not filtered to empty when the flow extends past the item's immediate producer(s).
 	fwdQueue := make([]string, 0, len(relevantStepIDs))
 	for id := range relevantStepIDs {
 		fwdQueue = append(fwdQueue, id)
@@ -188,9 +187,7 @@ func (s *productionFlowSvcImpl) GetProductionFlow(ctx context.Context, itemID st
 		return n
 	}
 
-	// Order steps so the item's producer(s) appear first, then by inbound edge
-	// count (descending) so the first row is not always a graph source with empty
-	// in_steps when downstream steps exist.
+	// Order steps so the item's producer(s) appear first, then by inbound edge count (descending) so the first row is not always a graph source with empty in_steps when downstream steps exist.
 	sort.Slice(stepIDs, func(i, j int) bool {
 		a, b := stepIDs[i], stepIDs[j]
 		aInit, bInit := initialSet[a], initialSet[b]

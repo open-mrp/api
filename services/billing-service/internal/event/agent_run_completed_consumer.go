@@ -9,6 +9,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// AgentRunCompletedConsumer consumes agent-run-completed events and bills the account for the run's token usage via AgentTokenBillingHandler. Delivery is wrapped by the inbox consumer, which deduplicates redeliveries for exactly-once processing so a redelivered event is not double-billed.
 type AgentRunCompletedConsumer struct {
 	rabbitmq      messaging.MessageBroker
 	inboxConsumer *messaging.InboxConsumer

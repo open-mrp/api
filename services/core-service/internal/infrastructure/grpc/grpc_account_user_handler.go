@@ -96,10 +96,7 @@ func (h *gRPCHandler) UpdateAccountUser(ctx context.Context, req *pb.UpdateAccou
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
-	// A nil slice ("no change") is distinguished from an explicit empty list,
-	// but proto3 repeated fields collapse both to an empty slice in the generated
-	// code. We treat any non-nil slice with at least one item as an update; callers
-	// that want "no change" simply omit the field.
+	// A nil slice ("no change") is distinguished from an explicit empty list, but proto3 repeated fields collapse both to an empty slice in the generated code. We treat any non-nil slice with at least one item as an update; callers that want "no change" simply omit the field.
 	var prefs []domain.NotificationPreferenceItem
 	if len(req.NotificationPreferences) > 0 {
 		prefs = notificationPrefsToDomain(req.NotificationPreferences)

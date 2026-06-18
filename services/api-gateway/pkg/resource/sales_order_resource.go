@@ -59,6 +59,16 @@ type SalesOrderTotals struct {
 	Invoiced string `json:"invoiced" validate:"required" format:"decimal"`
 }
 
+// OrderContact groups a sales order's email recipients by notification purpose.
+type OrderContact struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=order_contact"`
+	// Email addresses that receive invoices for this order.
+	Invoice []string `json:"invoice"`
+	// Email addresses that receive order acknowledgements for this order.
+	Acknowledgement []string `json:"acknowledgement"`
+}
+
 // SalesOrderRelated groups the records related to a sales order.
 //
 // The members are individually expandable (e.g. include[]=related.pick). The group is null unless at least one of its members is expanded.
@@ -131,6 +141,8 @@ type SalesOrder struct {
 	Totals *SalesOrderTotals `json:"totals" expandable:"true"`
 	// Records related to this order (pick, production run, shipments).
 	Related *SalesOrderRelated `json:"related"`
+	// Email recipients grouped by notification purpose.
+	Contacts *OrderContact `json:"contacts" expandable:"true"`
 	// When the order was issued (moved out of `estimate`).
 	IssuedAt *time.Time `json:"issued_at"`
 	// When the order was fulfilled and closed.

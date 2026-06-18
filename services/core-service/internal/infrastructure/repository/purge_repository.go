@@ -103,9 +103,7 @@ func (r *PurgeRepo) VerifyAccountIsSandboxOrDeleted(ctx context.Context, account
 	return nil
 }
 
-// prePurgeJoinDeletes removes rows from tables that lack an account_id column
-// but reference account-scoped parent rows. These must run before the main
-// purgeTargets loop deletes the parent rows (item, unit_group, etc.).
+// prePurgeJoinDeletes removes rows from tables that lack an account_id column but reference account-scoped parent rows. These must run before the main purgeTargets loop deletes the parent rows (item, unit_group, etc.).
 var prePurgeJoinDeletes = []string{
 	"DELETE p FROM product p JOIN item i ON p.item_id = i.id WHERE i.account_id = ?",
 	"DELETE r FROM rate r JOIN item i ON r.id = i.unit_value_id WHERE i.account_id = ?",

@@ -7,13 +7,7 @@ import (
 	"strings"
 )
 
-// ExplicitNullField scans body for the first Optional[T] struct field whose JSON
-// key is present and explicitly null, returning that field's JSON name. It lets a
-// caller that holds the raw request body turn the opaque ErrExplicitNull (which
-// has no field context, since UnmarshalJSON cannot know its own key) into a
-// parameter-specific error. The struct shape is read from v's type; v need not be
-// populated. Returns false when no such field is found (e.g. the null is on a
-// nested non-embedded struct), so callers should fall back to a generic message.
+// ExplicitNullField scans body for the first Optional[T] struct field whose JSON key is present and explicitly null, returning that field's JSON name. It lets a caller that holds the raw request body turn the opaque ErrExplicitNull (which has no field context, since UnmarshalJSON cannot know its own key) into a parameter-specific error. The struct shape is read from v's type; v need not be populated. Returns false when no such field is found (e.g. the null is on a nested non-embedded struct), so callers should fall back to a generic message.
 func ExplicitNullField(body []byte, v any) (string, bool) {
 	body = bytes.TrimSpace(body)
 	if len(body) == 0 || body[0] != '{' {

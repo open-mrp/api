@@ -417,6 +417,43 @@ func (r *salesOrderRepoImpl) GetShipmentIDs(ctx context.Context, salesOrderID st
 	return ids, nil
 }
 
+// GetContactsByOrders resolves the email recipients for a set of sales orders in a
+// single batched query, grouping them per order by notification type so list pages
+// avoid a per-order N+1.
+func (r *salesOrderRepoImpl) GetContactsByOrders(ctx context.Context, salesOrderIDs []string) (map[string]*domain.SalesOrderContacts, *apierror.APIError) {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_contacts_by_orders")
+	defer span.End()
+
+	contacts := make(map[string]*domain.SalesOrderContacts, len(salesOrderIDs))
+	if len(salesOrderIDs) == 0 {
+		return contacts, nil
+	}
+
+	rows, err := r.queries.GetOrderEmailRecipientsByOrders(ctx, salesOrderIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	for _, row := range rows {
+		if !row.Email.Valid {
+			continue
+		}
+		c := contacts[row.SalesOrderID]
+		if c == nil {
+			c = &domain.SalesOrderContacts{}
+			contacts[row.SalesOrderID] = c
+		}
+		switch row.NotificationTypeCode {
+		case string(constants.AccountRelationNotificationTypeInvoice):
+			c.InvoiceEmails = append(c.InvoiceEmails, row.Email.String)
+		case string(constants.AccountRelationNotificationTypeOrderAcknowledgement):
+			c.AcknowledgementEmails = append(c.AcknowledgementEmails, row.Email.String)
+		}
+	}
+
+	return contacts, nil
+}
+
 func (r *salesOrderRepoImpl) Create(ctx context.Context, soID string, params domain.CreateSalesOrderParams) (*domain.SalesOrder, *apierror.APIError) {
 	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.create")
 	defer span.End()

@@ -136,8 +136,7 @@ func (s *productionRunSvcImpl) CreateProductionRun(ctx context.Context, params d
 
 	params.AccountID = identity.Target.AccountID
 
-	// Validate that the responsible user exists in the account. The client may
-	// send either an account_user id or a user id; store the account_user id.
+	// Validate that the responsible user exists in the account. The client may send either an account_user id or a user id; store the account_user id.
 	accountUserRepo := s.repos.NewAccountUserRepo()
 	resolvedID, apiErr := accountUserRepo.ResolveAccountUserID(ctx, params.AccountID, params.ResponsibleUserID)
 	if apiErr != nil {
@@ -247,8 +246,7 @@ func (s *productionRunSvcImpl) UpdateProductionRun(ctx context.Context, params d
 		}
 	}
 
-	// If responsible user is being updated, validate existence. The client may
-	// send either an account_user id or a user id; store the account_user id.
+	// If responsible user is being updated, validate existence. The client may send either an account_user id or a user id; store the account_user id.
 	if params.ResponsibleUserID != nil {
 		accountUserRepo := s.repos.NewAccountUserRepo()
 		resolvedID, apiErr := accountUserRepo.ResolveAccountUserID(ctx, params.AccountID, *params.ResponsibleUserID)

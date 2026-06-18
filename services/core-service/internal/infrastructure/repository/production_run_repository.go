@@ -168,9 +168,7 @@ func (r *productionRunRepoImpl) List(ctx context.Context, params domain.ListProd
 	return &domain.ListProductionRunsResult{ProductionRuns: result, PageInfo: pageInfo}, nil
 }
 
-// resolvedResponsibleUserID prefers the account_user id resolved by the query;
-// legacy rows store a user id in responsible_user_id and may have no
-// account_user match, in which case the raw value is kept.
+// resolvedResponsibleUserID prefers the account_user id resolved by the query; legacy rows store a user id in responsible_user_id and may have no account_user match, in which case the raw value is kept.
 func resolvedResponsibleUserID(accountUserID gosql.NullString, raw string) string {
 	if accountUserID.Valid {
 		return accountUserID.String
@@ -481,8 +479,7 @@ func (r *productionRunRepoImpl) ListBatchesByRun(ctx context.Context, params dom
 	}
 
 	// Step 2: BFS traversal following batch flow graph.
-	// Matches Dashboard behavior: always traverse downstream (out),
-	// only traverse upstream (in) for active branches (open or leading to open batches).
+	// Matches Dashboard behavior: always traverse downstream (out), only traverse upstream (in) for active branches (open or leading to open batches).
 	visited := make(map[string]bool)
 	batchIDs := make(map[string]bool)
 	activeBranchBatches := make(map[string]bool)

@@ -1,7 +1,6 @@
 package constants
 
-// CreatedByRelation describes the relationship of an order's creator to the
-// account that owns the order.
+// CreatedByRelation describes the relationship of an order's creator to the account that owns the order.
 type CreatedByRelation string
 
 const (

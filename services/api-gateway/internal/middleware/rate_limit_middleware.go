@@ -45,9 +45,7 @@ func NewRateLimiter(limit int, window time.Duration) *RateLimiter {
 	}
 }
 
-// IsAllowed checks if the request is allowed based on the rate limit.
-// It returns a boolean indicating if the request is allowed, the
-// number of seconds until the rate limit resets, and the number of remaining requests.
+// IsAllowed records the attempt and reports whether the request is within the rate limit, the number of seconds until the limit resets, and the number of remaining requests in the current window.
 func (rl *RateLimiter) IsAllowed(key string) (bool, int, int) {
 	rl.mutex.Lock()
 	defer rl.mutex.Unlock()
@@ -81,9 +79,7 @@ func (rl *RateLimiter) IsAllowed(key string) (bool, int, int) {
 	return false, retryAfterSeconds, 0
 }
 
-// Check reports whether the given key is currently within the rate limit
-// without recording a new attempt. Pair with RecordFailure to throttle only
-// specific outcomes (e.g. failed login attempts) instead of every request.
+// Check reports whether the given key is currently within the rate limit without recording a new attempt. Pair with RecordFailure to throttle only specific outcomes (e.g. failed login attempts) instead of every request.
 func (rl *RateLimiter) Check(key string) (bool, int) {
 	rl.mutex.RLock()
 	defer rl.mutex.RUnlock()
@@ -102,8 +98,7 @@ func (rl *RateLimiter) Check(key string) (bool, int) {
 		return true, 0
 	}
 
-	// Use a violation count that grows with every overflow attempt so callers
-	// that have not yet incremented violations still see a meaningful backoff.
+	// Use a violation count that grows with every overflow attempt so callers that have not yet incremented violations still see a meaningful backoff.
 	violations := rl.violations[key]
 	if violations <= 0 {
 		violations = validCount - rl.limit + 1
@@ -112,8 +107,7 @@ func (rl *RateLimiter) Check(key string) (bool, int) {
 	return false, int(delay.Seconds())
 }
 
-// RecordFailure records a single failed attempt for the given key, advancing
-// the rate limit window and (when the limit is exceeded) the backoff state.
+// RecordFailure records a single failed attempt for the given key, advancing the rate limit window and (when the limit is exceeded) the backoff state.
 func (rl *RateLimiter) RecordFailure(key string) {
 	rl.mutex.Lock()
 	defer rl.mutex.Unlock()

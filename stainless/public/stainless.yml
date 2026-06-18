@@ -557,3 +557,16 @@ resources:
           create_role_request: '#/components/schemas/CreateRoleRequest'
           list_role: '#/components/schemas/List_Role'
           update_role_request: '#/components/schemas/UpdateRoleRequest'
+  settings:
+    subresources:
+      integrations:
+        methods:
+          list: get /v1/settings/integrations
+          create: post /v1/settings/integrations
+          update: put /v1/settings/integrations/{id}
+          delete: delete /v1/settings/integrations/{id}
+        models:
+          account_integration: '#/components/schemas/AccountIntegration'
+          create_account_integration_request: '#/components/schemas/CreateAccountIntegrationRequest'
+          list_account_integration: '#/components/schemas/List_AccountIntegration'
+          update_account_integration_request: '#/components/schemas/UpdateAccountIntegrationRequest'

@@ -38,16 +38,14 @@ func extractUnitIDFromQuantity(ctx context.Context, parent any) []string {
 func populateUnitOnQuantity(ctx context.Context, parent any, loaded map[string]any) {
 	q := parent.(*apiresource.Quantity)
 	meta := resourcekit.GetLoadMeta(ctx)
-	// Loader path: a "unit_id" was stashed (proto carried only the id) — use the
-	// real Unit fetched by LoadUnits.
+	// Loader path: a "unit_id" was stashed (proto carried only the id) — use the real Unit fetched by LoadUnits.
 	if id, _ := meta.GetString(constants.ObjectTypeQuantity, q.ID, "unit_id"); id != "" {
 		if v, ok := loaded[id]; ok {
 			q.Unit = v.(*apiresource.Unit)
 		}
 		return
 	}
-	// Inline path: a fully-resolved Unit was stashed because the parent proto
-	// already carried complete, real unit detail (no extra fetch needed).
+	// Inline path: a fully-resolved Unit was stashed because the parent proto already carried complete, real unit detail (no extra fetch needed).
 	if v, ok := meta.Get(constants.ObjectTypeQuantity, q.ID, "unit"); ok {
 		q.Unit = v.(*apiresource.Unit)
 	}

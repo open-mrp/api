@@ -15,9 +15,7 @@ import (
 
 var dcLocationLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.dc_location")
 
-// LoadDCLocations fetches DC locations by ID via BatchGetDCLocationsByIDs.
-// The inline DCLocationCustomer is materialized from the denormalized proto
-// customer_id/customer_name pair — not via an expandable SubField.
+// LoadDCLocations fetches DC locations by ID via BatchGetDCLocationsByIDs. The inline DCLocationCustomer is materialized from the denormalized proto customer_id/customer_name pair — not via an expandable SubField.
 func LoadDCLocations(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil

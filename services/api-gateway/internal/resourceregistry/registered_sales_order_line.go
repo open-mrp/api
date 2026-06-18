@@ -15,7 +15,11 @@ func init() {
 		Load:       stubLoadSalesOrderLines,
 		Subs: []resourcekit.SubField{
 			{
-				// Load the product via LoadProducts (rather than recursing into the prebuilt stub) so the product's item_id/product_line_id meta is stashed and nested includes (lines.product.item / lines.product.product_line) resolve.
+				// The product ID is stashed in meta (not on a prebuilt stub) so
+				// the line's `product` field stays nil unless lines.product is
+				// requested. Loading via LoadProducts (rather than recursing into
+				// a stub) also stashes the product's item_id/product_line_id meta
+				// so nested includes (lines.product.item / lines.product.product_line) resolve.
 				Key:         "product",
 				Target:      constants.ObjectTypeProduct,
 				Cardinality: resourcekit.CardinalityOnePtr,
@@ -70,20 +74,22 @@ func stubLoadSalesOrderLines(_ context.Context, _ []string) (map[string]any, *ap
 	return nil, nil
 }
 
-func extractProductIDFromSOLine(_ context.Context, parent any) []string {
+func extractProductIDFromSOLine(ctx context.Context, parent any) []string {
 	l := parent.(*apiresource.SalesOrderLine)
-	if l.Product == nil || l.Product.ID == "" {
+	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrderLine, l.ID, "product_id")
+	if !ok {
 		return nil
 	}
-	return []string{l.Product.ID}
+	return []string{v.(string)}
 }
 
-func populateProductOnSOLine(_ context.Context, parent any, loaded map[string]any) {
+func populateProductOnSOLine(ctx context.Context, parent any, loaded map[string]any) {
 	l := parent.(*apiresource.SalesOrderLine)
-	if l.Product == nil {
+	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrderLine, l.ID, "product_id")
+	if !ok {
 		return
 	}
-	if v, ok := loaded[l.Product.ID]; ok {
-		l.Product = v.(*apiresource.Product)
+	if p, ok := loaded[v.(string)]; ok {
+		l.Product = p.(*apiresource.Product)
 	}
 }

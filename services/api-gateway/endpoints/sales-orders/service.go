@@ -853,16 +853,8 @@ func salesOrderLineDetailFromProto(info *pb.SalesOrderLineInfo) apiresource.Sale
 		UpdatedAt:          grpcutil.TimestampToTime(info.UpdatedAt),
 	}
 
-	// Product — lightweight reference, fully loaded when lines.product is included.
-	if info.ProductId != nil {
-		l.Product = &apiresource.Product{
-			ID:     *info.ProductId,
-			Object: constants.ObjectTypeProduct,
-		}
-	}
-
-	// quantity_ordered, unit_price, unit_cost, and totals are expandable —
-	// populated from stashed meta only when requested.
+	// product, quantity_ordered, unit_price, unit_cost, and totals are
+	// expandable — populated from stashed meta only when requested.
 
 	return l
 }
@@ -937,6 +929,9 @@ func buildLineTotals(info *pb.SalesOrderLineInfo) *apiresource.SalesOrderTotals 
 // (quantity_ordered, unit_price, unit_cost, totals) so the include resolver can
 // populate them when requested.
 func stashSalesOrderLineMeta(meta *resourcekit.LoadMeta, info *pb.SalesOrderLineInfo, line *apiresource.SalesOrderLine) {
+	if info.ProductId != nil {
+		meta.Set(constants.ObjectTypeSalesOrderLine, line.ID, "product_id", *info.ProductId)
+	}
 	meta.Set(constants.ObjectTypeSalesOrderLine, line.ID, "quantity_ordered", buildLineQuantityOrdered(info))
 	meta.Set(constants.ObjectTypeSalesOrderLine, line.ID, "unit_price", buildLineUnitPrice(info, line.CreatedAt, line.UpdatedAt))
 	if unitCost := buildLineUnitCost(info, line.CreatedAt, line.UpdatedAt); unitCost != nil {

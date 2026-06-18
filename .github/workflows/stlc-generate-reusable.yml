@@ -148,25 +148,24 @@ jobs:
           - sdk: internal
             workspace: stainless/internal
             targets: typescript
-            # release-please, not changesets: the v0.23.2 regen dropped internal-sdk's
-            # Changesets tooling (@changesets/cli + scripts/release + the Changesets
-            # Release workflow were removed). It now releases via release-please (a
-            # committed release.yml in Augno/internal-sdk), publishing to GitHub
-            # Packages, driven by the conventional "fix(sdk): sync ..." commit produced
-            # below; the "Add changeset" steps no longer apply.
-            release: release-please
+            # changesets: current stlc tooling generates a combined, in-job changesets
+            # Release workflow (.github/workflows/release.yml + .changeset/ +
+            # scripts/release + @changesets/cli) that publishes @augno/internal-sdk to
+            # GitHub Packages with the built-in GITHUB_TOKEN — no RELEASE_PLEASE_TOKEN
+            # PAT and no cross-workflow trigger. The "Add changeset" step below writes
+            # the .changeset/*.md that drives the version PR.
+            release: changesets
             pr_repo: Augno/internal-sdk
             package_name: "@augno/internal-sdk"
             spec_changed: ${{ needs.spec-changes.outputs.internal }}
           - sdk: public
             workspace: stainless/public
             targets: typescript
-            # release-please, not changesets: the public TS SDK was migrated off
-            # Changesets (the .changeset dir + Release workflow were removed) to
-            # release-please in the v0.23.2 regen. Like python/go, it derives its
-            # bump from the conventional "fix(sdk): sync with deployed API vX.Y.Z"
-            # commit produced below.
-            release: release-please
+            # changesets: stlc generates a combined, in-job changesets Release workflow
+            # for the public TS SDK that publishes @augno/sdk to npmjs (NODE_AUTH_TOKEN
+            # from secrets.NPM_TOKEN, no PAT). The "Add changeset" step below writes the
+            # .changeset/*.md that drives the version PR.
+            release: changesets
             pr_repo: Augno/typescript-sdk
             package_name: "@augno/sdk"
             spec_changed: ${{ needs.spec-changes.outputs.public }}
@@ -292,11 +291,76 @@ jobs:
             --targets "$TARGETS" \
             "${commit_args[@]}"
 
-      # All SDK targets now release via release-please (python, go, public TS, and
-      # internal TS): each derives its bump from the conventional-commit sync
-      # message produced by "Generate SDK and push" above, so no explicit
-      # .changeset/*.md is added. (Internal-sdk publishes to GitHub Packages rather
-      # than npmjs, but still via release-please — see its committed release.yml.)
+      # Changesets-managed SDKs (TypeScript: internal + public) need an explicit
+      # .changeset/*.md to cut a release; the bump is derived from the API version by
+      # the "bump" step above. release-please SDKs (python, go) instead derive the bump
+      # from the conventional-commit sync message produced by "Generate SDK and push".
+      - name: Add changeset to SDK commit and push
+        if: matrix.release == 'changesets' && matrix.spec_changed == 'true' && steps.build.outcome == 'success' && inputs.open_pr != true
+        env:
+          GH_TOKEN: ${{ secrets.SDK_WRITE_TOKEN }}
+          API_VERSION: ${{ inputs.api_version }}
+          BUMP: ${{ steps.bump.outputs.bump }}
+          BRANCH: ${{ inputs.push_branch }}
+          PKG_NAME: ${{ matrix.package_name }}
+          REPO: ${{ matrix.pr_repo }}
+        run: |
+          set -euo pipefail
+          safe_ver="${API_VERSION//\//-}"
+          cs_file=".changeset/sync-api-${safe_ver}.md"
+          work="$(mktemp -d)"
+          cd "$work"
+          gh repo clone "$REPO" sdk-repo -- --branch "$BRANCH" --single-branch
+          cd sdk-repo
+          git pull --ff-only origin "$BRANCH"
+          if [ -f "$cs_file" ]; then
+            echo "Changeset already on ${BRANCH} ($cs_file); skipping amend."
+            exit 0
+          fi
+          mkdir -p .changeset
+          {
+            echo "---"
+            echo "'${PKG_NAME}': ${BUMP}"
+            echo "---"
+            echo ""
+            echo "Sync SDK with deployed Augno API ${API_VERSION}."
+          } >"$cs_file"
+          git add "$cs_file"
+          git commit --amend --no-edit
+          git push --force-with-lease origin "HEAD:${BRANCH}"
+
+      - name: Add changeset for npm release (changesets)
+        if: matrix.release == 'changesets' && matrix.spec_changed == 'true' && steps.build.outcome == 'success' && inputs.open_pr
+        env:
+          GH_TOKEN: ${{ secrets.SDK_WRITE_TOKEN }}
+          API_VERSION: ${{ inputs.api_version }}
+          BUMP: ${{ steps.bump.outputs.bump }}
+          BRANCH: ${{ inputs.push_branch }}
+          PKG_NAME: ${{ matrix.package_name }}
+          REPO: ${{ matrix.pr_repo }}
+        run: |
+          set -euo pipefail
+          safe_ver="${API_VERSION//\//-}"
+          work="$(mktemp -d)"
+          cd "$work"
+          gh repo clone "$REPO" sdk-repo -- --branch "$BRANCH" --single-branch
+          cd sdk-repo
+          mkdir -p .changeset
+          cs_file=".changeset/sync-api-${safe_ver}.md"
+          if [ -f "$cs_file" ]; then
+            echo "Changeset already exists ($cs_file); skipping commit."
+            exit 0
+          fi
+          {
+            echo "---"
+            echo "'${PKG_NAME}': ${BUMP}"
+            echo "---"
+            echo ""
+            echo "Sync SDK with deployed Augno API ${API_VERSION}."
+          } >"$cs_file"
+          git add "$cs_file"
+          git commit -m "chore(sdk): add changeset for API ${API_VERSION}"
+          git push origin "HEAD:${BRANCH}"
 
       - name: Open pull request on SDK repo
         if: matrix.spec_changed == 'true' && success() && inputs.open_pr

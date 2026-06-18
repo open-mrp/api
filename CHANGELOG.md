@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.28.2](https://github.com/Augno/api/compare/v0.28.1...v0.28.2) (2026-06-18)
+
+
+### Bug Fixes
+
+* hotfix for sales order creation bug preventing rates from landing on carriers ([fa46aee](https://github.com/Augno/api/commit/fa46aee1fd86c04a70b295c6e560f17c6a0030a8))
+
 ## [0.28.1](https://github.com/Augno/api/compare/v0.28.0...v0.28.1) (2026-06-18)
 
 

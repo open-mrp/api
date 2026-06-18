@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.28.0](https://github.com/Augno/api/compare/v0.27.0...v0.28.0) (2026-06-18)
+
+
+### Features
+
+* adding contacts to sales orders ([#366](https://github.com/Augno/api/issues/366)) ([5091a4c](https://github.com/Augno/api/commit/5091a4cd9832fd8dd40b0afa5e3e6f5388158923))
+
+
+### Bug Fixes
+
+* **ci:** grant id-token: write to manual SDK generate job ([#369](https://github.com/Augno/api/issues/369)) ([2a5d1d8](https://github.com/Augno/api/commit/2a5d1d897f994a040c45a21153c1c15b4aa45f6b))
+
 ## [0.27.0](https://github.com/Augno/api/compare/v0.26.3...v0.27.0) (2026-06-18)
 
 

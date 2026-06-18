@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.28.1](https://github.com/Augno/api/compare/v0.28.0...v0.28.1) (2026-06-18)
+
+
+### Bug Fixes
+
+* so product line item included without request ([#372](https://github.com/Augno/api/issues/372)) ([8ac8076](https://github.com/Augno/api/commit/8ac8076c9a929c369c0d3fb6cd9be677f2c26130))
+
 ## [0.28.0](https://github.com/Augno/api/compare/v0.27.0...v0.28.0) (2026-06-18)
 
 

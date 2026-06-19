@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.30.0](https://github.com/Augno/api/compare/v0.29.0...v0.30.0) (2026-06-19)
+
+
+### Features
+
+* unit group UK for account_id, name ([#380](https://github.com/Augno/api/issues/380)) ([b034a3b](https://github.com/Augno/api/commit/b034a3bc7e4bf72ec42b036fdbe496a428e70a9d))
+
 ## [0.29.0](https://github.com/Augno/api/compare/v0.28.3...v0.29.0) (2026-06-19)
 
 

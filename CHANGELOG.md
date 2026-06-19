@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.29.0](https://github.com/Augno/api/compare/v0.28.3...v0.29.0) (2026-06-19)
+
+
+### Features
+
+* make sales order list and create endpoints public ([#378](https://github.com/Augno/api/issues/378)) ([ea9d1d1](https://github.com/Augno/api/commit/ea9d1d1dfeac3012a0e441084c86b85438e79aa7))
+
 ## [0.28.3](https://github.com/Augno/api/compare/v0.28.2...v0.28.3) (2026-06-18)
 
 

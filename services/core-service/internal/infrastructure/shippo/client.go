@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -462,10 +463,10 @@ func (c *clientImpl) createShipmentForRates(ctx context.Context, carrierAccountO
 	shipmentParcels := make([]TestParcel, len(parcels))
 	for i, p := range parcels {
 		shipmentParcels[i] = TestParcel{
-			Weight:       p.Weight,
-			Length:       p.Length,
-			Width:        p.Width,
-			Height:       p.Height,
+			Weight:       normalizeShippoDecimal(p.Weight),
+			Length:       normalizeShippoDecimal(p.Length),
+			Width:        normalizeShippoDecimal(p.Width),
+			Height:       normalizeShippoDecimal(p.Height),
 			MassUnit:     "lb",
 			DistanceUnit: "in",
 		}
@@ -601,4 +602,27 @@ func parseFloat(s string) (float64, error) {
 	var f float64
 	_, err := fmt.Sscanf(s, "%f", &f)
 	return f, err
+}
+
+// shippoMaxDecimalPlaces bounds the fractional digits sent to Shippo for parcel
+// weight and dimensions.
+const shippoMaxDecimalPlaces = 4
+
+// normalizeShippoDecimal formats a numeric string with at most shippoMaxDecimalPlaces
+// fractional digits, trimming trailing zeros. Shippo's parcel fields are
+// DecimalField(max_digits=10); raw float formatting (e.g. strconv.FormatFloat(v,
+// 'f', -1, 64) producing "1.0499999999999998" from accumulated float arithmetic)
+// is otherwise rejected with "Ensure that there are no more than 10 digits in
+// total." Unparseable values are returned unchanged for Shippo to validate.
+func normalizeShippoDecimal(s string) string {
+	v, err := strconv.ParseFloat(strings.TrimSpace(s), 64)
+	if err != nil {
+		return s
+	}
+	out := strconv.FormatFloat(v, 'f', shippoMaxDecimalPlaces, 64)
+	if strings.Contains(out, ".") {
+		out = strings.TrimRight(out, "0")
+		out = strings.TrimRight(out, ".")
+	}
+	return out
 }

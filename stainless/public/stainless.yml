@@ -438,9 +438,26 @@ resources:
       sales_orders:
         methods:
           retrieve_statuses: get /v1/sales/sales-orders/statuses
+          list: get /v1/sales/sales-orders
+          create: post /v1/sales/sales-orders
         models:
+          create_sales_order_line_input: '#/components/schemas/CreateSalesOrderLineInput'
+          create_sales_order_request: '#/components/schemas/CreateSalesOrderRequest'
+          created_by: '#/components/schemas/CreatedBy'
+          freight: '#/components/schemas/Freight'
+          list_record: '#/components/schemas/List_Record'
+          list_sales_order: '#/components/schemas/List_SalesOrder'
+          list_sales_order_line: '#/components/schemas/List_SalesOrderLine'
           list_sales_order_status: '#/components/schemas/List_SalesOrderStatus'
+          order_contact: '#/components/schemas/OrderContact'
+          order_discount: '#/components/schemas/OrderDiscount'
+          record: '#/components/schemas/Record'
+          sales_order: '#/components/schemas/SalesOrder'
+          sales_order_email_contact_input: '#/components/schemas/SalesOrderEmailContactInput'
+          sales_order_line: '#/components/schemas/SalesOrderLine'
+          sales_order_related: '#/components/schemas/SalesOrderRelated'
           sales_order_status: '#/components/schemas/SalesOrderStatus'
+          sales_order_totals: '#/components/schemas/SalesOrderTotals'
   finance:
     methods:
       retrieve_transaction_types: get /v1/finance/transaction-types

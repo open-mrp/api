@@ -45,7 +45,7 @@ func (e *ListSalesOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSa
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeSalesOrder,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListSalesOrdersRequest) (*apiresource.List[apiresource.SalesOrder], *apierror.APIError) {

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.30.1](https://github.com/Augno/api/compare/v0.30.0...v0.30.1) (2026-06-23)
+
+
+### Bug Fixes
+
+* seed sales order number allocation from max order number ([#382](https://github.com/Augno/api/issues/382)) ([9c9f2c7](https://github.com/Augno/api/commit/9c9f2c7f00f07962b887549f939c28a5c12b2857))
+
 ## [0.30.0](https://github.com/Augno/api/compare/v0.29.0...v0.30.0) (2026-06-19)
 
 

@@ -516,18 +516,30 @@ func (q *Queries) GetAccountOriginAddress(ctx context.Context, accountID string)
 }
 
 const getNextOrderNumber = `-- name: GetNextOrderNumber :one
-SELECT COALESCE(
-    (SELECT MAX(CAST(sp.value AS UNSIGNED)) + 1
-     FROM sys_property sp
-     WHERE sp.account_id = ?
-     AND sp.sys_property_type_code = 'sales_order_number'),
-    1
-) AS next_number
+SELECT GREATEST(
+    COALESCE(
+        (SELECT MAX(CAST(sp.value AS UNSIGNED))
+         FROM sys_property sp
+         WHERE sp.account_id = ?
+         AND sp.sys_property_type_code = 'sales_order_number'),
+        0
+    ),
+    COALESCE(
+        (SELECT MAX(CAST(so.number AS UNSIGNED))
+         FROM sales_order so
+         WHERE so.owner_account_id = ?),
+        0
+    )
+) + 1 AS next_number
 `
 
-func (q *Queries) GetNextOrderNumber(ctx context.Context, accountID string) (interface{}, error) {
-	row := q.db.QueryRowContext(ctx, getNextOrderNumber, accountID)
-	var next_number interface{}
+type GetNextOrderNumberParams struct {
+	AccountID string
+}
+
+func (q *Queries) GetNextOrderNumber(ctx context.Context, arg GetNextOrderNumberParams) (int32, error) {
+	row := q.db.QueryRowContext(ctx, getNextOrderNumber, arg.AccountID, arg.AccountID)
+	var next_number int32
 	err := row.Scan(&next_number)
 	return next_number, err
 }

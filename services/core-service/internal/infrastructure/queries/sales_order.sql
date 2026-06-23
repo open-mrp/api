@@ -813,13 +813,21 @@ AND seller_account_id = sqlc.arg('owner_account_id')
 AND buyer_account_id IN (sqlc.slice('buyer_account_ids'));
 
 -- name: GetNextOrderNumber :one
-SELECT COALESCE(
-    (SELECT MAX(CAST(sp.value AS UNSIGNED)) + 1
-     FROM sys_property sp
-     WHERE sp.account_id = sqlc.arg('account_id')
-     AND sp.sys_property_type_code = 'sales_order_number'),
-    1
-) AS next_number;
+SELECT GREATEST(
+    COALESCE(
+        (SELECT MAX(CAST(sp.value AS UNSIGNED))
+         FROM sys_property sp
+         WHERE sp.account_id = sqlc.arg('account_id')
+         AND sp.sys_property_type_code = 'sales_order_number'),
+        0
+    ),
+    COALESCE(
+        (SELECT MAX(CAST(so.number AS UNSIGNED))
+         FROM sales_order so
+         WHERE so.owner_account_id = sqlc.arg('account_id')),
+        0
+    )
+) + 1 AS next_number;
 
 -- name: UpdateNextOrderNumber :exec
 INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created_at, updated_at)

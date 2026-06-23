@@ -714,16 +714,11 @@ func (r *salesOrderRepoImpl) GetNextOrderNumber(ctx context.Context, accountID s
 	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_next_order_number")
 	defer span.End()
 
-	nextNumber, err := r.queries.GetNextOrderNumber(ctx, accountID)
+	nextNumber, err := r.queries.GetNextOrderNumber(ctx, sqlc.GetNextOrderNumberParams{
+		AccountID: accountID,
+	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return "", tracing.Trace(span, apiErr)
-	}
-
-	numberStr := decimalToString(nextNumber)
-	var numberInt int32
-	_, parseErr := fmt.Sscanf(numberStr, "%d", &numberInt)
-	if parseErr != nil {
-		return "", tracing.Trace(span, apierror.NewInternalError(parseErr, "Failed to parse next order number."))
 	}
 
 	sysPropertyID, apiErr := id.GenID(id.SysPropertyIDPrefix, nil)
@@ -734,13 +729,13 @@ func (r *salesOrderRepoImpl) GetNextOrderNumber(ctx context.Context, accountID s
 	err = r.queries.UpdateNextOrderNumber(ctx, sqlc.UpdateNextOrderNumberParams{
 		ID:        sysPropertyID,
 		AccountID: accountID,
-		Value:     numberInt,
+		Value:     nextNumber,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return "", tracing.Trace(span, apiErr)
 	}
 
-	return numberStr, nil
+	return fmt.Sprintf("%d", nextNumber), nil
 }
 
 func (r *salesOrderRepoImpl) GetPickID(ctx context.Context, salesOrderID string) (*string, *apierror.APIError) {

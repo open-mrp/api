@@ -32,10 +32,14 @@ type UpdateUnitGroupUnitRequest struct {
 }
 
 var sampleUpdateUnitGroupUnitDiscountPct = float64(0.9)
+var sampleUpdateUnitGroupUnitDiscountFixed = float64(2.5)
 var sampleUpdateUnitGroupUnitUnitID = apiresource.SampleUnitID
+var sampleUpdateUnitGroupUnitVisibility = constants.CustomerPortalVisibilityVisible
 var sampleUpdateUnitGroupUnitRequest = &UpdateUnitGroupUnitRequest{
-	UnitID:             field.Some(sampleUpdateUnitGroupUnitUnitID),
-	DiscountPercentage: field.Some(sampleUpdateUnitGroupUnitDiscountPct),
+	UnitID:                   field.Some(sampleUpdateUnitGroupUnitUnitID),
+	DiscountPercentage:       field.Some(sampleUpdateUnitGroupUnitDiscountPct),
+	DiscountFixed:            field.Some(sampleUpdateUnitGroupUnitDiscountFixed),
+	CustomerPortalVisibility: field.Some(sampleUpdateUnitGroupUnitVisibility),
 }
 
 func (*UpdateUnitGroupUnitRequest) SchemaExample() any {

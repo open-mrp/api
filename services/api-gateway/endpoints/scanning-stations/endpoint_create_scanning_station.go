@@ -48,9 +48,11 @@ type CreateScanningStationRequest struct {
 
 var sampleLabelSizeCode = constants.LabelSizeCodeOneByOne
 var sampleLabelTypeCode = constants.LabelTypeCodeTag
+var sampleCreateScanningStationNotes = "Primary intake station on the receiving dock."
 
 var sampleCreateScanningStationRequest = &CreateScanningStationRequest{
 	Name:                apiresource.SampleScanningStationName,
+	Notes:               field.Some(sampleCreateScanningStationNotes),
 	Type:                constants.ScanningStationTypeInitBatch,
 	OperatorRequirement: constants.OperatorRequirementNone,
 	DepartmentID:        apiresource.SampleDepartmentID,

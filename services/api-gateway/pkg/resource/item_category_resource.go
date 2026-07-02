@@ -46,14 +46,19 @@ type ItemCategory struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
+var sampleItemCategoryNotes = "Components and raw materials used across the electronics assembly line."
+
 var SampleItemCategory = &ItemCategory{
-	ID:        SampleItemCategoryID,
-	Object:    constants.ObjectTypeItemCategory,
-	Name:      SampleItemCategoryName,
-	Type:      constants.ItemCategoryTypeMaterial,
-	Owner:     SampleOwnerSystem,
-	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:         SampleItemCategoryID,
+	Object:     constants.ObjectTypeItemCategory,
+	Name:       SampleItemCategoryName,
+	Notes:      &sampleItemCategoryNotes,
+	Type:       constants.ItemCategoryTypeMaterial,
+	Owner:      SampleOwnerSystem,
+	Properties: NewList([]Property{*SampleProperty}, PageInfo{}),
+	UnitGroup:  SampleUnitGroup,
+	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:  timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*ItemCategory) SchemaExample() any {

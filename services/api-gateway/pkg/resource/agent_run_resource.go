@@ -91,14 +91,16 @@ type AgentRunStep struct {
 }
 
 var SampleAgentRunStep = &AgentRunStep{
-	ID:        SampleAgentRunStepID,
-	Object:    constants.ObjectTypeAgentRunStep,
-	StepType:  "trigger_received",
-	Title:     "Run triggered",
-	Content:   new("Process order #1234"),
-	Sequence:  0,
-	Actor:     SampleActor,
-	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	ID:         SampleAgentRunStepID,
+	Object:     constants.ObjectTypeAgentRunStep,
+	StepType:   "trigger_received",
+	Title:      "Run triggered",
+	Content:    new("Process order #1234"),
+	Sequence:   0,
+	Actor:      SampleActor,
+	DurationMs: new(int32(12)),
+	Metadata:   json.RawMessage(`{"trigger_type":"manual"}`),
+	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 }
 
 func (*AgentRunStep) SchemaExample() any {
@@ -110,9 +112,12 @@ var SampleAgentRun = &AgentRun{
 	Object:      constants.ObjectTypeAgentRun,
 	TriggerType: constants.AgentTriggerTypeManual,
 	Status:      constants.AgentRunStatusCompleted,
+	Definition:  SampleAgentDefinition,
 	TriggeredBy: SampleActor,
 	Input:       json.RawMessage(`{"message":"Process order #1234"}`),
 	Output:      json.RawMessage(`{"response":"Order processed successfully"}`),
+	StartedAt:   new(timeutil.TimestampToTime(sampleCreatedAtTimestamp)),
+	CompletedAt: new(timeutil.TimestampToTime(sampleUpdatedAtTimestamp)),
 	DurationMs:  new(int32(1250)),
 	Actions:     NewList([]AgentAction{*SampleAgentAction}, PageInfo{}),
 	Steps:       NewList([]AgentRunStep{*SampleAgentRunStep}, PageInfo{}),

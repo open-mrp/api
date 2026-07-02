@@ -45,6 +45,7 @@ var SampleServiceLevel = &ServiceLevel{
 	Name:                     SampleServiceLevelName,
 	ServiceLevelToken:        "fedex_ground",
 	CustomerPortalVisibility: constants.CustomerPortalVisibilityVisible,
+	IsDefault:                true,
 	Owner:                    SampleOwnerAccount,
 	CreatedAt:                timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:                timeutil.TimestampToTime(sampleUpdatedAtTimestamp),

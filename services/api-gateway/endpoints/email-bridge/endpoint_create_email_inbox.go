@@ -35,9 +35,15 @@ type CreateEmailInboxRequest struct {
 	AgentTriggerKeywords []string `json:"agent_trigger_keywords,omitzero"`
 }
 
+var sampleCreateEmailInboxFromName = "Acme Support"
+
 var sampleCreateEmailInboxRequest = &CreateEmailInboxRequest{
-	EmailDomainID: apiresource.SampleEmailDomainID,
-	Address:       "support@acme.com",
+	EmailDomainID:        apiresource.SampleEmailDomainID,
+	Address:              "support@acme.com",
+	FromName:             field.Some(sampleCreateEmailInboxFromName),
+	AgentConfigID:        field.Some(apiresource.SampleAgentDefinitionID),
+	AgentTriggerPolicy:   field.Some(string(constants.AgentTriggerPolicyKeyword)),
+	AgentTriggerKeywords: []string{"invoice", "refund"},
 }
 
 func (*CreateEmailInboxRequest) SchemaExample() any {

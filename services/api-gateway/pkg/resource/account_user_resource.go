@@ -39,13 +39,15 @@ type AccountUser struct {
 const SampleAccountUserID = "acus_01ea9983ddb41dacc44ecf997c"
 
 var SampleAccountUser = &AccountUser{
-	ID:        SampleAccountUserID,
-	Object:    constants.ObjectTypeAccountUser,
-	Status:    constants.AccountUserStatusActive,
-	Role:      SampleRole,
-	User:      SampleUser,
-	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:         SampleAccountUserID,
+	Object:     constants.ObjectTypeAccountUser,
+	Status:     constants.AccountUserStatusActive,
+	Role:       SampleRole,
+	Department: SampleDepartment,
+	User:       SampleUser,
+	LastUsedAt: new(timeutil.TimestampToTime(sampleUpdatedAtTimestamp)),
+	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:  timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*AccountUser) SchemaExample() any {

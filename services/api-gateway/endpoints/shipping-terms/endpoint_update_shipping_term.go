@@ -43,7 +43,11 @@ type UpdateShippingTermRequest struct {
 }
 
 var sampleUpdateShippingTermRequest = &UpdateShippingTermRequest{
-	Name: field.Some("Collect"),
+	Name:                        field.Some("Collect"),
+	Type:                        field.Some(constants.ShippingTermTypeFlatRateFreight),
+	FlatRate:                    field.Set(apirequest.QuantityInput{Value: "15.00", UnitID: apiresource.SampleUnitID}),
+	MinimumOrderValue:           field.Set(apirequest.QuantityInput{Value: "500.00", UnitID: apiresource.SampleUnitID}),
+	FreeShippingServiceLevelIDs: field.Set([]string{apiresource.SampleServiceLevelID}),
 }
 
 func (*UpdateShippingTermRequest) SchemaExample() any {

@@ -23,9 +23,12 @@ type UpdateDraftRequest struct {
 	Subject field.Optional[string] `json:"subject,omitzero"`
 }
 
+var sampleUpdateDraftSubject = "Re: Order #1042"
+
 var sampleUpdateDraftRequest = &UpdateDraftRequest{
 	MessageID: apiresource.SampleMessageID,
 	Body:      "Hi Joe — good news, your order ships tomorrow.",
+	Subject:   field.Some(sampleUpdateDraftSubject),
 }
 
 func (*UpdateDraftRequest) SchemaExample() any {

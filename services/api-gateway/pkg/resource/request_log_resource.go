@@ -77,12 +77,13 @@ type RequestLog struct {
 }
 
 var SampleRequestLogActor = &Actor{
-	ID:     SampleUserID,
-	Object: constants.ObjectTypeActor,
-	Type:   constants.ActorTypeUser,
-	Name:   new(SampleUserName),
-	Handle: new(SampleUserEmail),
-	Role:   SampleRole,
+	ID:        SampleUserID,
+	Object:    constants.ObjectTypeActor,
+	Type:      constants.ActorTypeUser,
+	Name:      new(SampleUserName),
+	Handle:    new(SampleUserEmail),
+	AvatarURL: new(SampleUserImageUrl),
+	Role:      SampleRole,
 }
 
 var SampleRequestLog = &RequestLog{
@@ -98,6 +99,7 @@ var SampleRequestLog = &RequestLog{
 	APIVersion:       new(SampleRequestLogAPIVersion),
 	ClientIP:         new(SampleRequestLogClientIP),
 	UserAgent:        new(SampleRequestLogUserAgent),
+	Referrer:         new("https://app.augno.com"),
 	OccurredAt:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	CreatedAt:        timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	Account:          SampleAccount,

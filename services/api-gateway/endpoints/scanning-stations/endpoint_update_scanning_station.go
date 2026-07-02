@@ -40,8 +40,13 @@ type UpdateScanningStationRequest struct {
 }
 
 var sampleUpdateScanningStationName = "Station B"
+var sampleUpdateScanningStationNotes = "Relocated to the finishing area."
 var sampleUpdateScanningStationRequest = &UpdateScanningStationRequest{
-	Name: field.Some(sampleUpdateScanningStationName),
+	Name:                field.Some(sampleUpdateScanningStationName),
+	Notes:               field.Set(sampleUpdateScanningStationNotes),
+	LabelSizeCode:       field.Some(constants.LabelSizeCodeOneByOne),
+	LabelTypeCode:       field.Some(constants.LabelTypeCodeTag),
+	OperatorRequirement: field.Some(constants.OperatorRequirementMaterialCheck),
 }
 
 func (*UpdateScanningStationRequest) SchemaExample() any {

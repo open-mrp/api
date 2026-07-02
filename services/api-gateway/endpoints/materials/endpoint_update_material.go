@@ -36,8 +36,15 @@ type UpdateMaterialRequest struct {
 	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero"`
 }
 
+var sampleUpdateMaterialDescription = "Cold-rolled 304 stainless steel sheet, 2.0mm"
+var sampleUpdateMaterialNotes = "Reorder point raised after Q2 demand spike."
 var sampleUpdateMaterialRequest = &UpdateMaterialRequest{
-	SKU: field.Some("MAT-001-UPDATED"),
+	SKU:         field.Some("MAT-001-UPDATED"),
+	Description: field.Some(sampleUpdateMaterialDescription),
+	Notes:       field.Some(sampleUpdateMaterialNotes),
+	OrderPoint:  field.Some(QuantityInputRequest{Value: "150.00", UnitID: apiresource.SampleUnitID}),
+	LeadTime:    field.Some(QuantityInputRequest{Value: "10.00", UnitID: apiresource.SampleUnitID}),
+	UnitCost:    field.Some(apirequest.RateInput{Value: "9.10", NumeratorUnitID: apiresource.SampleUnitID, DenominatorUnitID: apiresource.SampleUnitID}),
 }
 
 func (*UpdateMaterialRequest) SchemaExample() any {

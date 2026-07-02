@@ -99,14 +99,24 @@ type SalesOrderEmailContactInput struct {
 var sampleCreateSONote = "Rush order for trade show"
 var sampleCreateSOCarrierID = apiresource.SampleCarrierID
 var sampleCreateSOServiceLevelID = apiresource.SampleServiceLevelID
+var sampleCreateSOCustomerPONumber = "PO-88231"
+var sampleCreateSOCarrierBillingAccount = "123456789"
 var sampleCreateSalesOrderRequest = &CreateSalesOrderRequest{
-	BuyerAccountID:  apiresource.SampleCustomerID,
-	Note:            field.Some(sampleCreateSONote),
-	CarrierID:       field.Some(sampleCreateSOCarrierID),
-	ServiceLevelID:  field.Some(sampleCreateSOServiceLevelID),
-	PriorityCode:    string(constants.PriorityCodeNormal),
-	BillToAddressID: apiresource.SampleAddressID,
-	ShipToAddressID: apiresource.SampleAddressID,
+	BuyerAccountID:              apiresource.SampleCustomerID,
+	CustomerPurchaseOrderNumber: field.Some(sampleCreateSOCustomerPONumber),
+	Note:                        field.Some(sampleCreateSONote),
+	CarrierID:                   field.Some(sampleCreateSOCarrierID),
+	ServiceLevelID:              field.Some(sampleCreateSOServiceLevelID),
+	CarrierBillingType:          field.Some(constants.CarrierBillingTypeSender),
+	CarrierBillingAccountNumber: field.Some(sampleCreateSOCarrierBillingAccount),
+	PriorityCode:                string(constants.PriorityCodeNormal),
+	SalesRepID:                  field.Some(apiresource.SampleAccountUserID),
+	ShippingTermID:              field.Some(apiresource.SampleShippingTermID),
+	PaymentTermID:               field.Some(apiresource.SamplePaymentTermID),
+	OrderDiscountID:             field.Some(apiresource.SampleOrderDiscountID),
+	PromisedAt:                  field.Some(time.Date(2026, time.May, 20, 0, 0, 0, 0, time.UTC)),
+	BillToAddressID:             apiresource.SampleAddressID,
+	ShipToAddressID:             apiresource.SampleAddressID,
 	Lines: []CreateSalesOrderLineInput{
 		{
 			ProductID: apiresource.SampleProductID,
@@ -115,6 +125,12 @@ var sampleCreateSalesOrderRequest = &CreateSalesOrderRequest{
 				UnitID: apiresource.SampleUnitID,
 			},
 		},
+	},
+	AcknowledgementEmailContacts: []SalesOrderEmailContactInput{
+		{AccountUserID: apiresource.SampleAccountUserID},
+	},
+	InvoiceEmailContacts: []SalesOrderEmailContactInput{
+		{AccountUserID: apiresource.SampleAccountUserID},
 	},
 }
 

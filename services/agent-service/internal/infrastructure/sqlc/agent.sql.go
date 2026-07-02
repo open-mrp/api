@@ -1995,9 +1995,9 @@ func (q *Queries) UpdateAgentRunCancelled(ctx context.Context, arg UpdateAgentRu
 
 const updateAgentRunCompleted = `-- name: UpdateAgentRunCompleted :exec
 UPDATE agent_run
-SET status_code = $1, output = $2,
-    completed_at = CASE WHEN $1 = 'completed' THEN now() ELSE NULL END,
-    duration_ms = CASE WHEN $1 = 'completed' THEN $3 ELSE NULL END,
+SET status_code = $1::text, output = $2,
+    completed_at = CASE WHEN $1::text = 'completed' THEN now() ELSE NULL END,
+    duration_ms = CASE WHEN $1::text = 'completed' THEN $3::integer ELSE NULL END,
     total_input_tokens = $4, total_output_tokens = $5,
     updated_at = now()
 WHERE id = $6 AND status_code != 'cancelled'

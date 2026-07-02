@@ -48,8 +48,10 @@ type CreateUnitGroupRequest struct {
 var sampleCreateUnitGroupDiscountPct = float64(1)
 var sampleCreateUnitGroupDiscountFixed = float64(0)
 var sampleCreateUnitGroupVisibility = constants.CustomerPortalVisibilityVisible
+var sampleCreateUnitGroupNotes = "Used for raw-material weight tracking across the warehouse."
 var sampleCreateUnitGroupRequest = &CreateUnitGroupRequest{
 	Name:       "Weight Units",
+	Notes:      field.Some(sampleCreateUnitGroupNotes),
 	Type:       constants.UnitTypeMass,
 	BaseUnitID: apiresource.SampleUnitID,
 	AssociatedUnits: []CreateUnitGroupUnitParam{

@@ -56,9 +56,18 @@ type CreateMaterialRequest struct {
 	AttributeIDs []string `json:"attribute_ids,omitzero"`
 }
 
+var sampleCreateMaterialDescription = "Cold-rolled 304 stainless steel sheet, 1.5mm"
+var sampleCreateMaterialNotes = "Store flat in a dry area to avoid surface oxidation."
 var sampleCreateMaterialRequest = &CreateMaterialRequest{
-	SKU:        "MAT-001",
-	CategoryID: apiresource.SampleItemCategoryID,
+	SKU:          "MAT-001",
+	Description:  field.Some(sampleCreateMaterialDescription),
+	Notes:        field.Some(sampleCreateMaterialNotes),
+	CategoryID:   apiresource.SampleItemCategoryID,
+	OrderPoint:   field.Some(QuantityInputRequest{Value: "100.00", UnitID: apiresource.SampleUnitID}),
+	LeadTime:     field.Some(QuantityInputRequest{Value: "7.00", UnitID: apiresource.SampleUnitID}),
+	UnitPrice:    field.Some(apirequest.RateInput{Value: "12.50", NumeratorUnitID: apiresource.SampleUnitID, DenominatorUnitID: apiresource.SampleUnitID}),
+	UnitCost:     field.Some(apirequest.RateInput{Value: "8.25", NumeratorUnitID: apiresource.SampleUnitID, DenominatorUnitID: apiresource.SampleUnitID}),
+	AttributeIDs: []string{apiresource.SampleAttributeID},
 }
 
 func (*CreateMaterialRequest) SchemaExample() any {

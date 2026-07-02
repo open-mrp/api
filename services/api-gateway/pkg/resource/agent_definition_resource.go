@@ -69,6 +69,7 @@ var SampleAgentDefinition = &AgentDefinition{
 	Description:    new("Processes incoming emails and creates draft orders."),
 	Editability:    constants.EditabilityReadOnly,
 	AccountStatus:  constants.AgentAccountStatusInactive,
+	Role:           SampleRole,
 	Config:         &SampleAgentDefinitionConfig,
 	Tools: NewList([]AgentDefinitionTool{
 		*SampleAgentDefinitionTool,

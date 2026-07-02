@@ -23,9 +23,10 @@ type MessagingBlock struct {
 }
 
 var SampleMessagingBlock = &MessagingBlock{
-	ID:        SampleMessagingBlockID,
-	Object:    constants.ObjectTypeMessagingBlock,
-	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	ID:          SampleMessagingBlockID,
+	Object:      constants.ObjectTypeMessagingBlock,
+	BlockedUser: SampleAccountUser,
+	CreatedAt:   timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 }
 
 func (*MessagingBlock) SchemaExample() any {

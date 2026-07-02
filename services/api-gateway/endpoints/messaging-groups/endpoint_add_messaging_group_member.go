@@ -29,6 +29,7 @@ var sampleAddMessagingGroupMemberRequest = &AddMessagingGroupMemberRequest{
 	GroupID:       apiresource.SampleMessagingGroupID,
 	MemberType:    constants.MessagingGroupMemberTypeUser,
 	AccountUserID: field.Some(apiresource.SampleAccountUserID),
+	AgentConfigID: field.Some(apiresource.SampleAgentDefinitionID),
 }
 
 func (*AddMessagingGroupMemberRequest) SchemaExample() any {

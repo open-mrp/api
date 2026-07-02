@@ -180,8 +180,9 @@ var SampleRateShopOption = &RateShopOption{
 }
 
 var SampleRateShopResult = &RateShopResult{
-	Object:  constants.ObjectTypeRateShopResult,
-	Options: NewList([]RateShopOption{*SampleRateShopOption}, PageInfo{}),
+	Object:        constants.ObjectTypeRateShopResult,
+	Options:       NewList([]RateShopOption{*SampleRateShopOption}, PageInfo{}),
+	ExemptionType: new("none"),
 }
 
 func (*RateShopResult) SchemaExample() any {
@@ -194,6 +195,49 @@ var sampleShipmentNote = "Handle with care"
 var sampleBillOfLading = "BOL-12345"
 var sampleMasterTrackingNumber = "1Z999AA10123456784"
 
+// sampleShipmentInvoice is a lean invoice example embedded in the shipment sample.
+// It intentionally leaves its own expandable back-references (shipment, order,
+// customer) nil so the shipment<->invoice example pair never nests infinitely.
+var sampleShipmentInvoice = &Invoice{
+	ID:             SampleInvoiceID,
+	Object:         constants.ObjectTypeInvoice,
+	Number:         "INV-001",
+	LineCount:      1,
+	BillingAddress: SampleAddress,
+	PriorityCode:   constants.PriorityCodeNormal,
+	PaymentStatus:  constants.InvoicePaymentStatusUnpaid,
+	TotalInvoiced:  "1234.560000000000000000000000000000",
+	HasBeenSent:    true,
+	CreatedAt:      timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:      timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+}
+
+var sampleShippingCaseDetail = ShippingCaseDetail{
+	ID:             SampleShippingCaseID,
+	Object:         constants.ObjectTypeShippingCase,
+	Number:         "SC-0001",
+	SSCC:           new("003456789000000018"),
+	TrackingNumber: new("1Z999AA10123456784"),
+	ShippedAt:      timeutil.TimestampToTimePtr(sampleUpdatedAtTimestamp),
+	FreightAmount: &Quantity{
+		ID:           SampleQuantityID,
+		Object:       constants.ObjectTypeQuantity,
+		Value:        "12.500000000000000000000000000000",
+		DisplayValue: "$12.50",
+		Unit:         newSampleUnit("US Dollar", "$", constants.UnitTypeCurrency),
+	},
+	FreightWeight: &Quantity{
+		ID:           SampleQuantityID,
+		Object:       constants.ObjectTypeQuantity,
+		Value:        "5.000000000000000000000000000000",
+		DisplayValue: "5 lb",
+		Unit:         newSampleUnit("Pound", "lb", constants.UnitTypeMass),
+	},
+	Carrier:   SampleCarrier,
+	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+}
+
 var SampleShipment = &Shipment{
 	ID:                   SampleShipmentID,
 	Object:               constants.ObjectTypeShipment,
@@ -202,9 +246,21 @@ var SampleShipment = &Shipment{
 	BillOfLading:         &sampleBillOfLading,
 	MasterTrackingNumber: &sampleMasterTrackingNumber,
 	Status:               constants.ShipmentStatusShipped,
+	ShippedAt:            timeutil.TimestampToTimePtr(sampleUpdatedAtTimestamp),
+	SalesOrder:           SampleSalesOrder,
+	Customer:             SampleCustomer,
 	Freight:              SampleFreight,
-	CreatedAt:            timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:            timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ShippingAddress:      SampleAddress,
+	ShippedBy: &AccountUser{
+		ID:     SampleAccountUserID,
+		Object: constants.ObjectTypeAccountUser,
+	},
+	Invoice:       sampleShipmentInvoice,
+	Pick:          SamplePick,
+	Lines:         NewList([]ShipmentLine{*SampleShipmentLine}, PageInfo{}),
+	ShippingCases: NewList([]ShippingCaseDetail{sampleShippingCaseDetail}, PageInfo{}),
+	CreatedAt:     timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:     timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*Shipment) SchemaExample() any {
@@ -212,8 +268,10 @@ func (*Shipment) SchemaExample() any {
 }
 
 var SampleShipmentLine = &ShipmentLine{
-	ID:     SampleShipmentLineID,
-	Object: constants.ObjectTypeShipmentLine,
+	ID:             SampleShipmentLineID,
+	Object:         constants.ObjectTypeShipmentLine,
+	SalesOrderLine: SampleSalesOrderLine,
+	Item:           SampleItem,
 	Quantity: &Quantity{
 		ID:           SampleQuantityID,
 		Object:       constants.ObjectTypeQuantity,

@@ -46,8 +46,11 @@ var SamplePurchaseOrderLine = &PurchaseOrderLine{
 	LineItemNumber:     1,
 	ProductSKU:         SampleItemSKU,
 	ProductDescription: &samplePurchaseOrderLineProductDescription,
+	Item:               SampleItem,
 	QuantityOrdered:    SampleQuantity,
+	QuantityReceived:   SampleQuantity,
 	UnitPrice:          SampleRate,
+	UnitCost:           SampleRate,
 	CreatedAt:          timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:          timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

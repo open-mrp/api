@@ -41,10 +41,15 @@ type CreatePartRequest struct {
 }
 
 var sampleCreatePartDescription = "Deep groove ball bearing, 20x47x14mm"
+var sampleCreatePartNotes = "OEM-equivalent; verify shielding type before substitution."
 var sampleCreatePartRequest = &CreatePartRequest{
-	SKU:         apiresource.SamplePartSKU,
-	Description: field.SomePtr(&sampleCreatePartDescription),
-	CategoryID:  apiresource.SampleItemCategoryID,
+	SKU:          apiresource.SamplePartSKU,
+	Description:  field.SomePtr(&sampleCreatePartDescription),
+	Notes:        field.Some(sampleCreatePartNotes),
+	CategoryID:   apiresource.SampleItemCategoryID,
+	UnitPrice:    field.Some(apirequest.RateInput{Value: "14.99", NumeratorUnitID: apiresource.SampleUnitID, DenominatorUnitID: apiresource.SampleUnitID}),
+	UnitCost:     field.Some(apirequest.RateInput{Value: "9.40", NumeratorUnitID: apiresource.SampleUnitID, DenominatorUnitID: apiresource.SampleUnitID}),
+	AttributeIDs: []string{apiresource.SampleAttributeID},
 }
 
 func (*CreatePartRequest) SchemaExample() any {

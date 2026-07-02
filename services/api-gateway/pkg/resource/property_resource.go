@@ -30,11 +30,12 @@ type Property struct {
 }
 
 var SampleProperty = &Property{
-	ID:        SamplePropertyID,
-	Object:    constants.ObjectTypeProperty,
-	Name:      SamplePropertyName,
-	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:         SamplePropertyID,
+	Object:     constants.ObjectTypeProperty,
+	Name:       SamplePropertyName,
+	Attributes: NewList([]Attribute{*SampleAttribute}, PageInfo{}),
+	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:  timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*Property) SchemaExample() any {

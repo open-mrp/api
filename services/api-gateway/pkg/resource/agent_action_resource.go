@@ -72,8 +72,12 @@ var SampleAgentAction = &AgentAction{
 	Tool:              constants.ToolReadDoc,
 	Status:            constants.AgentActionStatusExecuted,
 	Label:             new("Read Doc"),
+	Description:       new("Read the Augno documentation page on creating sales orders."),
 	Run:               &AgentRun{ID: SampleAgentRunID, Object: constants.ObjectTypeAgentRun},
+	Input:             json.RawMessage(`{"path":"/api/sales-orders/create"}`),
+	Output:            json.RawMessage(`{"title":"Create a sales order","url":"https://docs.augno.com/api/sales-orders/create"}`),
 	ReviewRequirement: constants.ReviewRequirementNotRequired,
+	ExecutedAt:        new(timeutil.TimestampToTime(sampleUpdatedAtTimestamp)),
 	CreatedAt:         timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:         timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

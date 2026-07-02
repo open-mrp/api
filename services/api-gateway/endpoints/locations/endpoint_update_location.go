@@ -41,7 +41,10 @@ type UpdateLocationRequest struct {
 }
 
 var sampleUpdateLocationRequest = &UpdateLocationRequest{
-	Name: field.Some("Warehouse B"),
+	Name:     field.Some("Warehouse B"),
+	TypeCode: field.Some(constants.LocationTypeCodeSection),
+	ParentID: field.Set(apiresource.SampleLocationID),
+	ChildIDs: field.Set([]string{apiresource.SampleLocationID}),
 }
 
 func (*UpdateLocationRequest) SchemaExample() any {

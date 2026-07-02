@@ -33,14 +33,21 @@ type AddressInput struct {
 	Country string `json:"country" validate:"required,max=2"`
 }
 
+var sampleAddressPhone = "555-123-4567"
+var sampleAddressEmail = "warehouse@acme.com"
 var sampleAddressStreetLine1 = "123 Main St"
+var sampleAddressStreetLine2 = "Suite 400"
 var sampleAddressLocality = "Springfield"
 var sampleAddressState = "IL"
 var sampleAddressPostalCode = "62701"
 
 var sampleAddressInput = &AddressInput{
 	Name:        "Headquarters",
+	Phone:       field.SomePtr(&sampleAddressPhone),
+	Email:       field.SomePtr(&sampleAddressEmail),
+	Type:        field.Some(constants.AddressTypeStandard),
 	StreetLine1: field.SomePtr(&sampleAddressStreetLine1),
+	StreetLine2: field.SomePtr(&sampleAddressStreetLine2),
 	Locality:    field.SomePtr(&sampleAddressLocality),
 	State:       field.SomePtr(&sampleAddressState),
 	PostalCode:  field.SomePtr(&sampleAddressPostalCode),

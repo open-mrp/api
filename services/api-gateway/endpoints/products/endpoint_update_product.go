@@ -42,9 +42,15 @@ type UpdateProductRequest struct {
 }
 
 var sampleUpdateProductSKU = "SKU-002"
+var sampleUpdateProductDescription = "Wireless barcode scanner with charging cradle (v2)"
+var sampleUpdateProductNotes = "Firmware 2.1 improves Bluetooth pairing reliability."
 
 var sampleUpdateProductRequest = &UpdateProductRequest{
-	SKU: field.Some(sampleUpdateProductSKU),
+	SKU:              field.Some(sampleUpdateProductSKU),
+	Description:      field.Set(sampleUpdateProductDescription),
+	Notes:            field.Set(sampleUpdateProductNotes),
+	PortalVisibility: field.Some(constants.CustomerPortalVisibilityVisible),
+	UnitPrice:        field.Some(apirequest.RateInput{Value: "219.00", NumeratorUnitID: apiresource.SampleUnitID, DenominatorUnitID: apiresource.SampleUnitID}),
 }
 
 func (*UpdateProductRequest) SchemaExample() any {

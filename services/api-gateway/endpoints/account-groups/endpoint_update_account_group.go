@@ -35,8 +35,12 @@ type UpdateAccountGroupRequest struct {
 	FreightPolicy field.Optional[constants.FreightPolicy] `json:"freight_policy,omitzero"`
 }
 
+var sampleUpdateAccountGroupDescription = "Customers who buy in bulk at wholesale pricing."
 var sampleUpdateAccountGroupRequest = &UpdateAccountGroupRequest{
-	Name: field.Some("Updated Wholesale Customers"),
+	Name:             field.Some("Updated Wholesale Customers"),
+	Description:      field.Set(sampleUpdateAccountGroupDescription),
+	CommissionPolicy: field.Some(constants.CommissionPolicyExempt),
+	FreightPolicy:    field.Some(constants.FreightPolicyBilled),
 }
 
 func (*UpdateAccountGroupRequest) SchemaExample() any {

@@ -53,9 +53,12 @@ type ShippingCaseLabelURL struct {
 }
 
 var SampleShippingCase = &ShippingCase{
-	ID:     SampleShippingCaseID,
-	Object: constants.ObjectTypeShippingCase,
-	Number: "SC-0001",
+	ID:             SampleShippingCaseID,
+	Object:         constants.ObjectTypeShippingCase,
+	Number:         "SC-0001",
+	SSCC:           new("003456789000000018"),
+	TrackingNumber: new("1Z999AA10123456784"),
+	ShippedAt:      timeutil.TimestampToTimePtr(sampleUpdatedAtTimestamp),
 	FreightAmount: &Quantity{
 		ID:           SampleQuantityID,
 		Object:       constants.ObjectTypeQuantity,

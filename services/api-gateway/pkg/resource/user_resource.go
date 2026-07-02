@@ -85,6 +85,7 @@ type UserPhotoURL struct {
 
 var SampleUserPhotoURL = &UserPhotoURL{
 	Object: constants.ObjectTypeUserPhotoURL,
+	URL:    new("https://cdn.augno.com/avatars/us_0151164dcaea4cbded27b50aae.jpg?X-Amz-Expires=3600&X-Amz-Signature=example"),
 }
 
 func (*UserPhotoURL) SchemaExample() any {

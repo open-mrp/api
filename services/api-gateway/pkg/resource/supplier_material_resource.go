@@ -33,15 +33,17 @@ type SupplierMaterial struct {
 }
 
 var sampleSupplierPartNumber = "SUP-PART-001"
+var sampleSupplierDescription = "Cold-rolled steel sheet, 16 gauge, 48x96 in."
 
 var SampleSupplierMaterial = &SupplierMaterial{
-	ID:                 SampleSupplierMaterialID,
-	Object:             constants.ObjectTypeSupplierMaterial,
-	Material:           SampleMaterial,
-	SupplierPartNumber: sampleSupplierPartNumber,
-	Status:             constants.SupplierMaterialStatusActive,
-	CreatedAt:          timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:          timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:                  SampleSupplierMaterialID,
+	Object:              constants.ObjectTypeSupplierMaterial,
+	Material:            SampleMaterial,
+	SupplierPartNumber:  sampleSupplierPartNumber,
+	SupplierDescription: &sampleSupplierDescription,
+	Status:              constants.SupplierMaterialStatusActive,
+	CreatedAt:           timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:           timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*SupplierMaterial) SchemaExample() any {

@@ -73,15 +73,19 @@ func (*UnitGroupUnit) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleUnitGroupUnit)
 }
 
+var sampleUnitGroupNotes = "Mass units used for ordering raw materials by weight."
+
 var SampleUnitGroup = &UnitGroup{
-	ID:        SampleUnitGroupID,
-	Object:    constants.ObjectTypeUnitGroup,
-	Name:      SampleUnitGroupName,
-	Type:      constants.UnitTypeMass,
-	BaseUnit:  SampleUnit,
-	Owner:     SampleOwnerSystem,
-	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:              SampleUnitGroupID,
+	Object:          constants.ObjectTypeUnitGroup,
+	Name:            SampleUnitGroupName,
+	Notes:           &sampleUnitGroupNotes,
+	Type:            constants.UnitTypeMass,
+	BaseUnit:        SampleUnit,
+	AssociatedUnits: NewList([]UnitGroupUnit{*SampleUnitGroupUnit}, PageInfo{}),
+	Owner:           SampleOwnerSystem,
+	CreatedAt:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:       timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*UnitGroup) SchemaExample() any {

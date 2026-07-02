@@ -32,7 +32,9 @@ type UpdateAttributeRequest struct {
 }
 
 var sampleUpdateAttributeRequest = &UpdateAttributeRequest{
-	Value: field.Some("Blue"),
+	Value:     field.Some("Blue"),
+	ColorCode: field.Some(constants.ColorBlue),
+	SortOrder: field.Some(int32(2)),
 }
 
 func (*UpdateAttributeRequest) SchemaExample() any {

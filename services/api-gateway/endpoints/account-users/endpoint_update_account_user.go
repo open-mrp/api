@@ -42,12 +42,19 @@ type UpdateAccountUserRequest struct {
 }
 
 var sampleUpdateAccountUserName = apiresource.SampleUserName
+var sampleUpdateAccountUserEmail = apiresource.SampleUserEmail
+var sampleUpdateAccountUserUsername = apiresource.SampleUserUsername
 var sampleUpdateAccountUserRoleID = apiresource.SampleRoleID
 var sampleUpdateAccountUserDepartmentID = apiresource.SampleDepartmentID
 var sampleUpdateAccountUserRequest = &UpdateAccountUserRequest{
 	Name:         field.Some(sampleUpdateAccountUserName),
+	Email:        field.Some(sampleUpdateAccountUserEmail),
+	Username:     field.Some(sampleUpdateAccountUserUsername),
 	RoleID:       field.Set(sampleUpdateAccountUserRoleID),
 	DepartmentID: field.Set(sampleUpdateAccountUserDepartmentID),
+	Preferences: []NotificationPreferenceItem{
+		{NotificationTypeCode: constants.AccountRelationNotificationTypeOrderAcknowledgement, Enabled: true},
+	},
 }
 
 func (*UpdateAccountUserRequest) SchemaExample() any {

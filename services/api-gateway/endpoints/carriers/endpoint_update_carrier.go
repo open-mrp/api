@@ -27,7 +27,8 @@ type UpdateCarrierRequest struct {
 
 var sampleUpdateCarrierName = "FedEx Express"
 var sampleUpdateCarrierRequest = &UpdateCarrierRequest{
-	Name: field.Some(sampleUpdateCarrierName),
+	Name:                     field.Some(sampleUpdateCarrierName),
+	CustomerPortalVisibility: field.Some(constants.CustomerPortalVisibilityVisible),
 }
 
 func (*UpdateCarrierRequest) SchemaExample() any {

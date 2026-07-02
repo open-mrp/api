@@ -43,6 +43,8 @@ var SamplePick = &Pick{
 	ID:          SamplePickID,
 	Object:      constants.ObjectTypePick,
 	Number:      SamplePickNumber,
+	SalesOrder:  SampleSalesOrder,
+	Customer:    SampleCustomer,
 	Priority:    SamplePriorityCode,
 	Lines:       NewList([]PickLine{*SamplePickLine}, PageInfo{}),
 	Departments: NewList([]Department{*SampleDepartment}, PageInfo{}),

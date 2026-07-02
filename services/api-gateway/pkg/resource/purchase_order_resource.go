@@ -141,8 +141,12 @@ var SamplePurchaseOrder = &PurchaseOrder{
 	BillToAddress:        SampleAddress,
 	ShipToAddress:        SampleAddress,
 	Freight:              SampleFreight,
+	PaymentTerm:          SamplePaymentTerm,
+	ShippingTerm:         SampleShippingTerm,
 	Lines:                NewList([]PurchaseOrderLine{*SamplePurchaseOrderLine}, PageInfo{}),
 	LineCount:            1,
+	Contacts:             NewList([]EmailContact{*SampleEmailContact}, PageInfo{}),
+	ScheduledAt:          timeutil.TimestampToTimePtr(sampleExpiresAtTimestamp),
 	CreatedAt:            timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:            timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

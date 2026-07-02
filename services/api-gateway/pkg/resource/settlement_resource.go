@@ -35,16 +35,20 @@ type Settlement struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
+var sampleSettlementNote = "Applied customer payment across open invoices."
+
 var SampleSettlement = &Settlement{
 	ID:     SampleSettlementID,
 	Object: constants.ObjectTypeSettlement,
 	Number: "1",
+	Note:   &sampleSettlementNote,
 	ResponsibleUser: &AccountUser{
 		ID:     SampleAccountUserID,
 		Object: constants.ObjectTypeAccountUser,
 	},
-	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	Allocations: NewList([]TransactionAllocation{*SampleTransactionAllocation2}, PageInfo{}),
+	CreatedAt:   timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:   timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*Settlement) SchemaExample() any {
@@ -82,14 +86,18 @@ type SettlementSummary struct {
 }
 
 var SampleSettlementSummary = &SettlementSummary{
-	ID:              SampleSettlementSummaryID,
-	Object:          constants.ObjectTypeSettlementSummary,
-	Number:          "1",
-	AllocationCount: 2,
-	InvoiceNumbers:  []string{"INV-001", "INV-002"},
-	CustomerNames:   []string{"Acme Corp"},
-	CreatedAt:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:       timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:               SampleSettlementSummaryID,
+	Object:           constants.ObjectTypeSettlementSummary,
+	Number:           "1",
+	AllocationCount:  2,
+	TotalPayments:    new("500.000000000000000000000000000000"),
+	TotalRebates:     new("0.000000000000000000000000000000"),
+	TotalAdjustments: new("0.000000000000000000000000000000"),
+	TotalCredits:     new("250.000000000000000000000000000000"),
+	InvoiceNumbers:   []string{"INV-001", "INV-002"},
+	CustomerNames:    []string{"Acme Corp"},
+	CreatedAt:        timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:        timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*SettlementSummary) SchemaExample() any {
@@ -116,6 +124,8 @@ type TransactionAllocation struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
+var sampleTransactionAllocation2Note = "Applied to the oldest open invoice first."
+
 var SampleTransactionAllocation2 = &TransactionAllocation{
 	ID:     SampleAllocationEntryID,
 	Object: constants.ObjectTypeTransactionAllocation,
@@ -126,9 +136,15 @@ var SampleTransactionAllocation2 = &TransactionAllocation{
 		DisplayValue: "$500.00",
 		Unit:         newSampleUnit("US Dollar", "$", constants.UnitTypeCurrency),
 	},
+	Note:        &sampleTransactionAllocation2Note,
 	Transaction: SampleTransactionDetail,
-	CreatedAt:   timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:   timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	Invoice: &AllocationInvoice{
+		ID:     SampleInvoiceID,
+		Object: constants.ObjectTypeInvoiceSummary,
+		Number: "INV-001",
+	},
+	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*TransactionAllocation) SchemaExample() any {

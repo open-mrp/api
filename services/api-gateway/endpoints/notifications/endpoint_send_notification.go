@@ -35,13 +35,19 @@ type SendNotificationRequest struct {
 	LinkResourceID field.Optional[string] `json:"link_resource_id,omitzero"`
 }
 
+var sampleSendNotificationBody = "Order #1042 was updated."
+
 var sampleSendNotificationRequest = &SendNotificationRequest{
 	Category: constants.NotificationCategoryOrderUpdated,
 	Target: apiresource.NotificationTargetInput{
 		Type: constants.NotificationTargetTypeAccountUser,
 		ID:   apiresource.SampleAccountUserID,
 	},
-	Title: "Order updated",
+	Title:            "Order updated",
+	Body:             field.Some(sampleSendNotificationBody),
+	Priority:         field.Some(constants.NotificationPriorityHigh),
+	LinkResourceType: field.Some(constants.ObjectTypeSalesOrder),
+	LinkResourceID:   field.Some(apiresource.SampleSalesOrderID),
 }
 
 func (*SendNotificationRequest) SchemaExample() any {

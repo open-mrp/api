@@ -34,9 +34,10 @@ type CreateServiceLevelRequest struct {
 }
 
 var sampleCreateServiceLevelRequest = &CreateServiceLevelRequest{
-	Name:      "Ground Shipping",
-	Code:      "ground",
-	IsDefault: false,
+	Name:                     "Ground Shipping",
+	Code:                     "ground",
+	CustomerPortalVisibility: field.Some(constants.CustomerPortalVisibilityVisible),
+	IsDefault:                false,
 }
 
 func (*CreateServiceLevelRequest) SchemaExample() any {

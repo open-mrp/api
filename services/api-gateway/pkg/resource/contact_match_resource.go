@@ -36,6 +36,8 @@ var SampleContactMatch = &ContactMatch{
 	Object:       constants.ObjectTypeContactMatch,
 	Relationship: constants.ContactRelationshipCustomer,
 	Email:        "buyer@acme-co.example",
+	AccountUser:  SampleAccountUser,
+	Account:      SampleAccount,
 }
 
 func (*ContactMatch) SchemaExample() any {

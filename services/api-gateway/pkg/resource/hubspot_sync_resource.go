@@ -106,11 +106,14 @@ type HubspotCompanyCandidate struct {
 const SampleHubspotSyncJobID = "igjb_zwfvfjfxl4lj"
 const SampleHubspotCompanyReviewID = "igrv_mkhn7eo9qexh"
 
+var sampleHubspotGoLiveCutoffAt = timeutil.TimestampToTime(sampleCreatedAtTimestamp)
+
 var SampleHubspotSyncJob = &HubspotSyncJob{
-	ID:     SampleHubspotSyncJobID,
-	Object: constants.ObjectTypeHubspotSyncJob,
-	Status: constants.HubspotSyncJobStatusReviewPending,
-	DryRun: true,
+	ID:             SampleHubspotSyncJobID,
+	Object:         constants.ObjectTypeHubspotSyncJob,
+	Status:         constants.HubspotSyncJobStatusReviewPending,
+	DryRun:         true,
+	GoLiveCutoffAt: &sampleHubspotGoLiveCutoffAt,
 	Report: &HubspotSyncReport{
 		Object:             constants.ObjectTypeHubspotSyncReport,
 		CustomersTotal:     120,

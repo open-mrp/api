@@ -23,8 +23,10 @@ type UpdateItemCategoryRequest struct {
 	Notes field.Optional[string] `json:"notes,omitzero"`
 }
 
+var sampleUpdateItemCategoryNotes = "Covers passive and active components; excludes assemblies."
 var sampleUpdateItemCategoryRequest = &UpdateItemCategoryRequest{
-	Name: field.Some("Electronic Components"),
+	Name:  field.Some("Electronic Components"),
+	Notes: field.Some(sampleUpdateItemCategoryNotes),
 }
 
 func (*UpdateItemCategoryRequest) SchemaExample() any {

@@ -41,6 +41,8 @@ type CreateLocationRequest struct {
 var sampleCreateLocationRequest = &CreateLocationRequest{
 	Name:     "Warehouse A",
 	TypeCode: "building",
+	ParentID: field.Some(apiresource.SampleLocationID),
+	ChildIDs: field.Some([]string{apiresource.SampleLocationID}),
 }
 
 func (*CreateLocationRequest) SchemaExample() any {

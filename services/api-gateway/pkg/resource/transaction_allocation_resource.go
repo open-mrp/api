@@ -94,6 +94,7 @@ var SampleAllocationEntry = &AllocationEntry{
 		Object: constants.ObjectTypeInvoiceSummary,
 		Number: "INV-001",
 	},
+	Note:      new("Applied to the oldest open invoice first."),
 	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 }
 
@@ -165,7 +166,10 @@ var SampleOpenCreditEntry = &OpenCreditEntry{
 		Object: constants.ObjectTypeAllocationCustomer,
 		Name:   SampleCustomerName,
 	},
-	TransactionType: "payment",
+	TransactionType:     "payment",
+	TransactionMethod:   new("check"),
+	ResponsibleUserName: new(SampleUserName),
+	Note:                new("Customer check deposited; partially applied."),
 	InvoiceAllocations: NewList([]InvoiceAllocationEntry{
 		{Object: constants.ObjectTypeInvoiceAllocationEntry, InvoiceNumber: "INV-001", Amount: "500.000000000000000000000000000000"},
 	}, PageInfo{}),

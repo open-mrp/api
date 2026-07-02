@@ -87,13 +87,35 @@ var sampleCreateCustomerStreetLine1 = "123 Main St"
 var sampleCreateCustomerLocality = "New York"
 var sampleCreateCustomerState = "NY"
 var sampleCreateCustomerPostalCode = "10001"
+var sampleCreateCustomerEmail = "orders@acme.com"
+var sampleCreateCustomerPhone = "555-123-4567"
+var sampleCreateCustomerURL = "https://acme.com"
+var sampleCreateCustomerCarrierBillingAccount = "123456789"
 var sampleCreateCustomerRequest = &CreateCustomerRequest{
 	Name:                  apiresource.SampleCustomerName,
+	Number:                field.Some(apiresource.SampleCustomerNumber),
 	Note:                  field.Some(sampleCreateCustomerNote),
+	Email:                 field.Some(sampleCreateCustomerEmail),
+	Phone:                 field.Some(sampleCreateCustomerPhone),
+	URL:                   field.Some(sampleCreateCustomerURL),
+	StatusCode:            field.Some(constants.AccountStatusCodeNormal),
+	EDIStatus:             field.Some(constants.EDIStatusDisabled),
+	CommissionPolicy:      field.Some(constants.CommissionPolicyApplied),
+	FreightPolicy:         field.Some(constants.FreightPolicyBilled),
 	DefaultCarrierID:      apiresource.SampleCarrierID,
+	DefaultServiceLevelID: field.Some(apiresource.SampleServiceLevelID),
 	DefaultPaymentTermID:  apiresource.SamplePaymentTermID,
 	DefaultShippingTermID: apiresource.SampleShippingTermID,
+	DefaultPriorityCode:   field.Some(constants.PriorityCodeNormal),
+	DefaultSalesRepID:     field.Some(apiresource.SampleAccountUserID),
+	CustomerPriceGroupIDs: []string{apiresource.SampleAccountGroupID},
 	CustomerTypeGroupID:   apiresource.SampleAccountGroupID,
+	CarrierBillingType:    field.Some(constants.CarrierBillingTypeSender),
+	CarrierBillingAccount: field.Some(sampleCreateCustomerCarrierBillingAccount),
+	CreditLimit: field.Some(apirequest.QuantityInput{
+		Value:  "10000.00",
+		UnitID: apiresource.SampleUnitID,
+	}),
 	BillToAddress: apirequest.AddressInput{
 		Name:        apiresource.SampleCustomerName,
 		StreetLine1: field.SomePtr(&sampleCreateCustomerStreetLine1),

@@ -25,7 +25,8 @@ type UpdateAccountIntegrationRequest struct {
 }
 
 var sampleUpdateAccountIntegrationRequest = &UpdateAccountIntegrationRequest{
-	Name: field.Some("Updated Stripe Integration"),
+	Name:   field.Some("Updated Stripe Integration"),
+	Status: field.Some(constants.AccountIntegrationStatusActive),
 }
 
 func (*UpdateAccountIntegrationRequest) SchemaExample() any {

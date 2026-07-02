@@ -46,6 +46,7 @@ var SamplePlanChangeProration = &PlanChangeProration{
 	LineItems: NewList([]PlanChangeLineItem{
 		{Object: constants.ObjectTypePlanChangeLineItem, Description: "Professional plan \u2014 1 seat(s) \u00d7 $49.00/mo", Amount: 4900},
 	}, PageInfo{}),
+	IsEstimate: true,
 }
 
 func (*PlanChangeProration) SchemaExample() any {

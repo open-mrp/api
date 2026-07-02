@@ -51,10 +51,15 @@ type ReceivingOrder struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
+var sampleReceivingOrderNote = "Please expedite"
+
 var SampleReceivingOrder = &ReceivingOrder{
 	ID:                   SampleReceivingOrderID,
 	Object:               constants.ObjectTypeReceivingOrder,
 	Number:               "RO-001",
+	Note:                 &sampleReceivingOrderNote,
+	PurchaseOrder:        SamplePurchaseOrder,
+	Supplier:             SampleSupplier,
 	Lines:                NewList([]ReceivingOrderLine{*SampleReceivingOrderLine}, PageInfo{}),
 	LineCount:            2,
 	CompletionPercentage: 50.0,
@@ -99,6 +104,7 @@ var SampleReceivingOrderLine = &ReceivingOrderLine{
 	Object:    constants.ObjectTypeReceivingOrderLine,
 	Quantity:  SampleQuantity,
 	OrderLine: SampleSalesOrderLine,
+	Item:      SampleItem,
 	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

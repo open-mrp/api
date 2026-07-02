@@ -67,16 +67,33 @@ type Invoice struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
+var sampleInvoiceNote = "Net 30 terms; contact accounts payable for remittance details."
+
 var SampleInvoice = &Invoice{
-	ID:                   SampleInvoiceID,
-	Object:               constants.ObjectTypeInvoice,
-	Number:               "INV-001",
+	ID:       SampleInvoiceID,
+	Object:   constants.ObjectTypeInvoice,
+	Number:   "INV-001",
+	Note:     &sampleInvoiceNote,
+	Customer: SampleCustomer,
+	Order:    SampleSalesOrder,
+	Shipment: &Shipment{
+		ID:        SampleShipmentID,
+		Object:    constants.ObjectTypeShipment,
+		Number:    SampleShipmentNumber,
+		Status:    constants.ShipmentStatusShipped,
+		CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+		UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	},
 	LineCount:            3,
 	BillingAddress:       SampleAddress,
 	PriorityCode:         constants.PriorityCodeNormal,
+	PaymentTerm:          SamplePaymentTerm,
 	PaymentStatus:        constants.InvoicePaymentStatusUnpaid,
+	IsEdiSent:            false,
+	HasBeenSent:          true,
 	TotalInvoiced:        "1234.560000000000000000000000000000",
 	AcceptsInvoiceEmails: true,
+	CustomerIsEdiEnabled: false,
 	Lines:                NewList([]InvoiceLine{*SampleInvoiceLine}, PageInfo{}),
 	Allocations:          NewList([]InvoiceAllocation{*SampleInvoiceAllocation}, PageInfo{}),
 	CreatedAt:            timeutil.TimestampToTime(sampleCreatedAtTimestamp),
@@ -121,6 +138,7 @@ var SampleInvoiceLine = &InvoiceLine{
 	},
 	UnitPrice: SampleRate,
 	OrderLine: SampleSalesOrderLine,
+	Item:      SampleItem,
 	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
@@ -149,10 +167,13 @@ type InvoiceAllocation struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
+var sampleInvoiceAllocationNote = "Partial payment applied from customer check #4021."
+
 var SampleInvoiceAllocation = &InvoiceAllocation{
 	ID:          SampleInvoiceAllocationID,
 	Object:      constants.ObjectTypeInvoiceAllocation,
 	Transaction: SampleTransactionDetail,
+	Note:        &sampleInvoiceAllocationNote,
 	Amount: &Quantity{
 		ID:           SampleQuantityID,
 		Object:       constants.ObjectTypeQuantity,
@@ -204,20 +225,28 @@ type InvoiceForPayment struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
+var sampleInvoiceForPaymentCustomerPO = "PO-88231"
+
 var SampleInvoiceForPayment = &InvoiceForPayment{
-	ID:     SampleInvoiceID,
-	Object: constants.ObjectTypeInvoiceForPayment,
-	Number: "INV-001",
+	ID:         SampleInvoiceID,
+	Object:     constants.ObjectTypeInvoiceForPayment,
+	Number:     "INV-001",
+	CustomerPO: &sampleInvoiceForPaymentCustomerPO,
 	Customer: &Customer{
 		ID:     SampleCustomerID,
 		Object: constants.ObjectTypeCustomer,
 		Name:   SampleCustomerName,
 		Number: SampleCustomerNumber,
 	},
-	InvoiceTotal: "1234.560000000000000000000000000000",
-	Allocations:  NewList([]InvoiceAllocation{*SampleInvoiceAllocation}, PageInfo{}),
-	CreatedAt:    timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:    timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	IsParentAccount: true,
+	ParentAccount:   SampleAccount,
+	IsPrepaid:       false,
+	BillingAddress:  SampleAddress,
+	InvoiceTotal:    "1234.560000000000000000000000000000",
+	IsPaidInFull:    false,
+	Allocations:     NewList([]InvoiceAllocation{*SampleInvoiceAllocation}, PageInfo{}),
+	CreatedAt:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:       timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*InvoiceForPayment) SchemaExample() any {

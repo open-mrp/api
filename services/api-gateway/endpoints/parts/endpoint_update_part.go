@@ -33,9 +33,11 @@ type UpdatePartRequest struct {
 
 var sampleUpdatePartSKU = apiresource.SamplePartSKU
 var sampleUpdatePartDescription = "Deep groove ball bearing, 20x47x14mm"
+var sampleUpdatePartNotes = "Superseded by low-friction variant; keep for legacy assemblies."
 var sampleUpdatePartRequest = &UpdatePartRequest{
 	SKU:         field.SomePtr(&sampleUpdatePartSKU),
 	Description: field.Set(sampleUpdatePartDescription),
+	Notes:       field.Set(sampleUpdatePartNotes),
 }
 
 func (*UpdatePartRequest) SchemaExample() any {

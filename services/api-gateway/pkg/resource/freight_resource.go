@@ -31,11 +31,13 @@ type Freight struct {
 	BillingAccountNumber *string `json:"billing_account_number"`
 }
 
+var sampleFreightPolicy = constants.FreightPolicyBilled
 var sampleFreightBillingType = constants.CarrierBillingTypeThirdParty
 var sampleFreightBillingAccountNumber = "123456789"
 
 var SampleFreight = &Freight{
 	Object:               constants.ObjectTypeFreight,
+	Policy:               &sampleFreightPolicy,
 	Carrier:              SampleCarrier,
 	ServiceLevel:         SampleServiceLevel,
 	BillingType:          &sampleFreightBillingType,

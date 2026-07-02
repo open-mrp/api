@@ -52,10 +52,13 @@ type ProductionStep struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
+var sampleProductionStepNotes = "Torque all fasteners to spec before releasing to the next step."
+
 var SampleProductionStep = &ProductionStep{
 	ID:              SampleProductionStepID,
 	Object:          constants.ObjectTypeProductionStep,
 	Name:            "Final Assembly",
+	Notes:           &sampleProductionStepNotes,
 	LevelingFactor:  "1.000000000000000000000000000000",
 	Allowances:      "0.000000000000000000000000000000",
 	LaborRate:       SampleRate,

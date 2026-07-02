@@ -57,11 +57,16 @@ type ScanningStation struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
+var sampleScanningStationNotes = "Initializes batches at the start of the packaging line."
+
 var SampleScanningStation = &ScanningStation{
 	ID:                  SampleScanningStationID,
 	Object:              constants.ObjectTypeScanningStation,
 	Name:                SampleScanningStationName,
+	Notes:               &sampleScanningStationNotes,
 	Type:                constants.ScanningStationTypeInitBatch,
+	LabelSizeCode:       new(constants.LabelSizeCodeTwoByFour),
+	LabelTypeCode:       new(constants.LabelTypeCodeTraveler),
 	OperatorRequirement: constants.OperatorRequirementNone,
 	Department:          nil,
 	ProductionSteps:     nil,

@@ -40,8 +40,12 @@ type UpdateUnitRequest struct {
 }
 
 var sampleUpdateUnitRequest = &UpdateUnitRequest{
-	Name:         field.Some("Kilogram"),
-	Abbreviation: field.Some("kg"),
+	Name:              field.Some("Kilogram"),
+	Abbreviation:      field.Some("kg"),
+	RatioNumerator:    field.Some("1000"),
+	RatioDenominator:  field.Some("1"),
+	OffsetNumerator:   field.Some("0"),
+	OffsetDenominator: field.Some("1"),
 }
 
 func (*UpdateUnitRequest) SchemaExample() any {

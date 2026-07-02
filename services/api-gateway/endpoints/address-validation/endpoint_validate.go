@@ -28,8 +28,10 @@ type ValidateAddressRequest struct {
 	Country string `json:"country" validate:"required"`
 }
 
+var sampleValidateAddressLine2 = "Suite 400"
 var sampleValidateAddressRequest = &ValidateAddressRequest{
 	AddressLine1: "123 Main St",
+	AddressLine2: field.Some(sampleValidateAddressLine2),
 	City:         "Springfield",
 	State:        "IL",
 	PostalCode:   "62701",

@@ -36,8 +36,10 @@ type CreateShippingTermRequest struct {
 
 var sampleCreateShippingTermRequest = &CreateShippingTermRequest{
 	Name:                        "Prepaid",
-	Type:                        constants.ShippingTermTypeCarrierRateFreight,
-	FreeShippingServiceLevelIDs: []string{},
+	Type:                        constants.ShippingTermTypeFlatRateFreight,
+	FlatRate:                    field.Some(apirequest.QuantityInput{Value: "15.00", UnitID: apiresource.SampleUnitID}),
+	MinimumOrderValue:           field.Some(apirequest.QuantityInput{Value: "500.00", UnitID: apiresource.SampleUnitID}),
+	FreeShippingServiceLevelIDs: []string{apiresource.SampleServiceLevelID},
 }
 
 func (*CreateShippingTermRequest) SchemaExample() any {

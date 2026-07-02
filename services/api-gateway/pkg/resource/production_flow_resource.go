@@ -102,6 +102,8 @@ type ProductionFlowConsumption struct {
 
 var sampleFlowInstructions = "Mix with water before adding"
 
+var sampleProductionFlowStepNotes = "Torque all fasteners to spec before releasing to the next step."
+
 var SampleProductionFlowProduction = &ProductionFlowProduction{
 	ID:           SampleProductionID,
 	Object:       constants.ObjectTypeProduction,
@@ -123,22 +125,24 @@ var SampleProductionFlowConsumption = ProductionFlowConsumption{
 }
 
 var SampleProductionFlowStep = ProductionFlowStep{
-	ID:             SampleProductionStepID,
-	Object:         constants.ObjectTypeProductionStep,
-	Name:           "Final Assembly",
-	Production:     SampleProductionFlowProduction,
-	Consumptions:   NewList([]ProductionFlowConsumption{SampleProductionFlowConsumption}, PageInfo{}),
-	InSteps:        NewList([]ProductionStep{}, PageInfo{}),
-	OutSteps:       NewList([]ProductionStep{}, PageInfo{}),
-	Machines:       NewList([]Machine{*SampleMachine}, PageInfo{}),
-	Department:     SampleDepartment,
-	LevelingFactor: "1.000000000000000000000000000000",
-	Allowances:     "0.000000000000000000000000000000",
-	LaborRate:      SampleRate,
-	LaborTime:      SampleRate,
-	OverheadRate:   SampleRate,
-	CreatedAt:      timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:      timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:              SampleProductionStepID,
+	Object:          constants.ObjectTypeProductionStep,
+	Name:            "Final Assembly",
+	Notes:           &sampleProductionFlowStepNotes,
+	Production:      SampleProductionFlowProduction,
+	Consumptions:    NewList([]ProductionFlowConsumption{SampleProductionFlowConsumption}, PageInfo{}),
+	InSteps:         NewList([]ProductionStep{}, PageInfo{}),
+	OutSteps:        NewList([]ProductionStep{}, PageInfo{}),
+	Machines:        NewList([]Machine{*SampleMachine}, PageInfo{}),
+	Department:      SampleDepartment,
+	ScanningStation: SampleScanningStation,
+	LevelingFactor:  "1.000000000000000000000000000000",
+	Allowances:      "0.000000000000000000000000000000",
+	LaborRate:       SampleRate,
+	LaborTime:       SampleRate,
+	OverheadRate:    SampleRate,
+	CreatedAt:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:       timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 var SampleProductionFlow = &ProductionFlow{

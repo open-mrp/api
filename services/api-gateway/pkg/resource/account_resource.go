@@ -37,11 +37,15 @@ type Account struct {
 }
 
 var SampleAccount = &Account{
-	ID:        SampleAccountID,
-	Object:    constants.ObjectTypeAccount,
-	Name:      SampleAccountName,
-	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:                     SampleAccountID,
+	Object:                 constants.ObjectTypeAccount,
+	Name:                   SampleAccountName,
+	DefaultBillingAddress:  SampleAddress,
+	DefaultShippingAddress: SampleAddress,
+	Branding:               SampleAccountBranding,
+	Portal:                 SampleAccountPortal,
+	CreatedAt:              timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:              timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*Account) SchemaExample() any {
@@ -77,10 +81,18 @@ type AccountBranding struct {
 }
 
 var SampleAccountBranding = &AccountBranding{
-	ID:        SampleAccountBrandingID,
-	Object:    constants.ObjectTypeAccountBranding,
-	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:              SampleAccountBrandingID,
+	Object:          constants.ObjectTypeAccountBranding,
+	SupportEmail:    new("support@acme.example.com"),
+	PhoneNumber:     new("+1-614-555-0100"),
+	LogoURL:         new("https://cdn.augno.com/branding/abr_01fa710842028837ac3ca9d590/logo.png"),
+	FacebookHandle:  new("acmeinc"),
+	InstagramHandle: new("acmeinc"),
+	LinkedInHandle:  new("acme-inc"),
+	TwitterHandle:   new("acmeinc"),
+	WebsiteURL:      new("https://www.acme.example.com"),
+	CreatedAt:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:       timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*AccountBranding) SchemaExample() any {
@@ -134,10 +146,13 @@ type PublicAccount struct {
 }
 
 var SamplePublicAccount = &PublicAccount{
-	ID:     SampleAccountID,
-	Object: constants.ObjectTypePublicAccount,
-	Name:   SampleAccountName,
-	Slug:   SampleAccountPortalSlug,
+	ID:                    SampleAccountID,
+	Object:                constants.ObjectTypePublicAccount,
+	Name:                  SampleAccountName,
+	Slug:                  SampleAccountPortalSlug,
+	DefaultBillingAddress: SampleAddress,
+	SupportEmail:          new("support@acme.example.com"),
+	LogoURL:               new("https://cdn.augno.com/branding/abr_01fa710842028837ac3ca9d590/logo.png"),
 }
 
 func (*PublicAccount) SchemaExample() any {
@@ -156,6 +171,7 @@ type AccountLogoURL struct {
 
 var SampleAccountLogoURL = &AccountLogoURL{
 	Object: constants.ObjectTypeAccountLogoURL,
+	URL:    new("https://augno-logos.s3.amazonaws.com/ac_01148680966698341a9c0976db/logo.png?X-Amz-Expires=3600&X-Amz-Signature=example"),
 }
 
 func (*AccountLogoURL) SchemaExample() any {

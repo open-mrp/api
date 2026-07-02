@@ -111,6 +111,7 @@ var SampleMessage = &Message{
 	Sender:       NewActor(SampleAccountUserID, constants.ActorTypeUser, new("Jie Yan"), nil),
 	Author:       NewActor(SampleAccountUserID, constants.ActorTypeUser, new("Jie Yan"), nil),
 	Attachments:  NewList([]MessageAttachment{*SampleMessageAttachment}, PageInfo{}),
+	Resource:     NewEntity(SampleSalesOrderID, constants.ObjectTypeSalesOrder, new("Order #1042"), nil),
 	CreatedAt:    timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:    timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

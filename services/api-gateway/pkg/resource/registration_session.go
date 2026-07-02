@@ -239,8 +239,9 @@ var SampleSetupBillingResponse = &SetupBillingResponse{
 }
 
 var SampleConfirmPaymentResponse = &ConfirmPaymentResponse{
-	Object: constants.ObjectTypeConfirmPaymentResponse,
-	Status: "succeeded",
+	Object:          constants.ObjectTypeConfirmPaymentResponse,
+	Status:          "succeeded",
+	PaymentMethodID: new("pm_1QXmZ2AbCdEfGhIjKlMnOpQr"),
 }
 
 func (*RegistrationSessionUser) SchemaExample() any {

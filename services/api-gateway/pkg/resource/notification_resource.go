@@ -67,6 +67,7 @@ var SampleNotification = &Notification{
 	Title:     "Order updated",
 	Body:      new("Order #1024 changed from estimate to confirmed."),
 	Sender:    NewActor(SampleAccountUserID, constants.ActorTypeUser, new("Jie Yan"), nil),
+	Resource:  NewEntity(SampleSalesOrderID, constants.ObjectTypeSalesOrder, new(SampleSalesOrderNumber), nil),
 	Priority:  constants.NotificationPriorityNormal,
 	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),

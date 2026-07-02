@@ -49,13 +49,17 @@ type Carrier struct {
 
 var sampleCarrierCode constants.CarrierCode = constants.CarrierCodeFedEx
 
+var sampleCarrierAccountNumber = "603145678"
+
 var SampleCarrier = &Carrier{
 	ID:                       SampleCarrierID,
 	Object:                   constants.ObjectTypeCarrier,
 	Name:                     SampleCarrierName,
 	Code:                     &sampleCarrierCode,
+	AccountNumber:            &sampleCarrierAccountNumber,
 	CustomerPortalVisibility: constants.CustomerPortalVisibilityVisible,
 	Owner:                    SampleOwnerAccount,
+	ServiceLevels:            NewList([]ServiceLevel{*SampleServiceLevel}, PageInfo{}),
 	CreatedAt:                timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:                timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

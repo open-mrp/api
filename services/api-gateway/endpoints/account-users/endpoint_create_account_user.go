@@ -46,12 +46,14 @@ var sampleCreateAccountUserEmail = apiresource.SampleUserEmail
 var sampleCreateAccountUserUsername = apiresource.SampleUserUsername
 var sampleCreateAccountUserPassword = apiresource.SampleUserPassword
 var sampleCreateAccountUserRoleID = apiresource.SampleRoleID
+var sampleCreateAccountUserDepartmentID = apiresource.SampleDepartmentID
 var sampleCreateAccountUserRequest = &CreateAccountUserRequest{
-	Name:     field.Some(sampleCreateAccountUserName),
-	Email:    field.Some(sampleCreateAccountUserEmail),
-	Username: field.Some(sampleCreateAccountUserUsername),
-	Password: field.Some(sampleCreateAccountUserPassword),
-	RoleID:   field.SomePtr(&sampleCreateAccountUserRoleID),
+	Name:         field.Some(sampleCreateAccountUserName),
+	Email:        field.Some(sampleCreateAccountUserEmail),
+	Username:     field.Some(sampleCreateAccountUserUsername),
+	Password:     field.Some(sampleCreateAccountUserPassword),
+	RoleID:       field.SomePtr(&sampleCreateAccountUserRoleID),
+	DepartmentID: field.SomePtr(&sampleCreateAccountUserDepartmentID),
 	Preferences: []NotificationPreferenceItem{
 		{NotificationTypeCode: constants.AccountRelationNotificationTypeOrderAcknowledgement, Enabled: true},
 	},

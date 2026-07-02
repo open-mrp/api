@@ -36,8 +36,14 @@ type UpdateEmailInboxRequest struct {
 	AgentTriggerKeywords []string `json:"agent_trigger_keywords,omitzero"`
 }
 
+var sampleUpdateEmailInboxFromName = "Acme Support"
+
 var sampleUpdateEmailInboxRequest = &UpdateEmailInboxRequest{
-	Status: "active",
+	Status:               "active",
+	FromName:             field.Some(sampleUpdateEmailInboxFromName),
+	AgentConfigID:        field.Some(apiresource.SampleAgentDefinitionID),
+	AgentTriggerPolicy:   field.Some(string(constants.AgentTriggerPolicyKeyword)),
+	AgentTriggerKeywords: []string{"invoice", "refund"},
 }
 
 func (*UpdateEmailInboxRequest) SchemaExample() any {

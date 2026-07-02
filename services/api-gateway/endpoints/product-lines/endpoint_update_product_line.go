@@ -40,7 +40,10 @@ type UpdateProductLineRequest struct {
 var sampleUpdateProductLineName = "Updated Product Line"
 
 var sampleUpdateProductLineRequest = &UpdateProductLineRequest{
-	Name: field.Some(sampleUpdateProductLineName),
+	Name:             field.Some(sampleUpdateProductLineName),
+	CommissionPolicy: field.Some(constants.CommissionPolicyApplied),
+	FreightPolicy:    field.Some(constants.FreightPolicyBilled),
+	UnitGroupID:      field.Some(apiresource.SampleUnitGroupID),
 }
 
 func (*UpdateProductLineRequest) SchemaExample() any {

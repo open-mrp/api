@@ -89,10 +89,30 @@ type MessageAttachmentInput struct {
 	ResourceID field.Optional[string] `json:"resource_id,omitzero"`
 }
 
+var sampleSendMessageSubject = "Re: Order #1042"
+
 var sampleSendMessageRequest = &SendMessageRequest{
-	ConversationID:  apiresource.SampleConversationID,
-	Body:            "Sounds good — shipping it today.",
-	ClientMessageID: "client_msg_8c7d2f",
+	ConversationID:        apiresource.SampleConversationID,
+	Body:                  "Sounds good — shipping it today.",
+	Mode:                  field.Some(constants.MessageSendModeSend),
+	Channel:               field.Some(constants.MessageChannelEmail),
+	SourceThreadMessageID: field.Some(apiresource.SampleMessageID),
+	ClientMessageID:       "client_msg_8c7d2f",
+	Audience:              field.Some(constants.ConversationAudienceCustomer),
+	Subject:               field.Some(sampleSendMessageSubject),
+	Cc:                    []string{"ap@acme.com"},
+	ScheduledAt:           field.Some(time.Date(2026, 5, 10, 15, 0, 0, 0, time.UTC)),
+	ReplyToMessageID:      field.Some(apiresource.SampleMessageID),
+	LinkResourceType:      field.Some(constants.ObjectTypeSalesOrder),
+	LinkResourceID:        field.Some(apiresource.SampleSalesOrderID),
+	Attachments: []MessageAttachmentInput{{
+		Kind:        constants.MessageAttachmentKindFile,
+		S3Key:       field.Some("uploads/acme/quote.pdf"),
+		Filename:    field.Some("quote.pdf"),
+		ContentType: field.Some("application/pdf"),
+		SizeBytes:   field.Some(int64(20480)),
+	}},
+	Mentions: []string{apiresource.SampleAccountUserID},
 }
 
 func (*SendMessageRequest) SchemaExample() any {

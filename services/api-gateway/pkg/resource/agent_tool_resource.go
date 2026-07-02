@@ -102,6 +102,7 @@ var SampleToolGroup = &ToolGroup{
 	Slug:        "customer_tools",
 	Icon:        "people",
 	SortOrder:   0,
+	Tools:       NewList([]AvailableTool{*SampleAvailableTool}, PageInfo{}),
 }
 
 var SampleAvailableTool = &AvailableTool{

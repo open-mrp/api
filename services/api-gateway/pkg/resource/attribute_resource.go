@@ -45,6 +45,13 @@ var SampleAttribute = &Attribute{
 	Value:     SampleAttributeValue,
 	ColorCode: constants.ColorRed,
 	SortOrder: 1,
+	Property: &Property{
+		ID:        SamplePropertyID,
+		Object:    constants.ObjectTypeProperty,
+		Name:      SamplePropertyName,
+		CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+		UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	},
 	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

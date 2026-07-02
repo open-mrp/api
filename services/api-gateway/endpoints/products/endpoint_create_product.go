@@ -58,10 +58,19 @@ type CreateProductRequest struct {
 	AttributeIDs []string `json:"attribute_ids,omitzero"`
 }
 
+var sampleCreateProductDescription = "Wireless barcode scanner with charging cradle"
+var sampleCreateProductNotes = "Ships with a 2-year warranty; register for extended coverage."
 var sampleCreateProductRequest = &CreateProductRequest{
-	SKU:             apiresource.SampleItemSKU,
-	ProductTypeCode: apiresource.SampleProductTypeCode,
-	CategoryID:      apiresource.SampleItemCategoryID,
+	SKU:              apiresource.SampleItemSKU,
+	Description:      field.Some(sampleCreateProductDescription),
+	Notes:            field.Some(sampleCreateProductNotes),
+	ProductTypeCode:  apiresource.SampleProductTypeCode,
+	ProductLineID:    field.Some(apiresource.SampleProductLineID),
+	CategoryID:       apiresource.SampleItemCategoryID,
+	PortalVisibility: field.Some(constants.CustomerPortalVisibilityVisible),
+	UnitPrice:        field.Some(apirequest.RateInput{Value: "199.00", NumeratorUnitID: apiresource.SampleUnitID, DenominatorUnitID: apiresource.SampleUnitID}),
+	UnitCost:         field.Some(apirequest.RateInput{Value: "112.00", NumeratorUnitID: apiresource.SampleUnitID, DenominatorUnitID: apiresource.SampleUnitID}),
+	AttributeIDs:     []string{apiresource.SampleAttributeID},
 }
 
 func (*CreateProductRequest) SchemaExample() any {

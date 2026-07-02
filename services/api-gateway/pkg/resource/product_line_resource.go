@@ -11,6 +11,9 @@ import (
 const SampleProductLineID = "pl_01996357326a0d3f7b129542ea"
 const SampleProductLineName = "Industrial Fasteners"
 
+var sampleProductLineDescription = "Bolts, screws, and anchors for heavy industrial assembly."
+var sampleProductLineNotes = "Priced per the 2026 supplier contract; review pricing each quarter."
+
 // Product line resource.
 //
 // A product line groups related products in your catalog and carries the default commission policy, freight policy, and unit group for those products.
@@ -53,9 +56,12 @@ var SampleProductLine = &ProductLine{
 	ID:               SampleProductLineID,
 	Object:           constants.ObjectTypeProductLine,
 	Name:             SampleProductLineName,
+	Description:      &sampleProductLineDescription,
+	Notes:            &sampleProductLineNotes,
 	CommissionPolicy: constants.CommissionPolicyExempt,
 	FreightPolicy:    constants.FreightPolicyBilled,
 	Owner:            SampleOwnerSystem,
+	UnitGroup:        SampleUnitGroup,
 	CreatedAt:        timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:        timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

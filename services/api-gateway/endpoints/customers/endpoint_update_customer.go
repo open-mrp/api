@@ -88,11 +88,37 @@ var sampleUpdateCustomerName = "Acme Corp Updated"
 var sampleUpdateCustomerNote = "Updated account notes"
 var sampleUpdateCustomerDefaultCarrierID = apiresource.SampleCarrierID
 var sampleUpdateCustomerFreightPolicy = constants.FreightPolicyBilled
+var sampleUpdateCustomerEmail = "orders@acme.com"
+var sampleUpdateCustomerPhone = "555-123-4567"
+var sampleUpdateCustomerURL = "https://acme.com"
+var sampleUpdateCustomerCarrierBillingAccount = "123456789"
 var sampleUpdateCustomerRequest = &UpdateCustomerRequest{
-	Name:             field.Some(sampleUpdateCustomerName),
-	Note:             field.Set(sampleUpdateCustomerNote),
-	DefaultCarrierID: field.Some(sampleUpdateCustomerDefaultCarrierID),
-	FreightPolicy:    field.Some(sampleUpdateCustomerFreightPolicy),
+	Name:                  field.Some(sampleUpdateCustomerName),
+	Number:                field.Some(apiresource.SampleCustomerNumber),
+	Note:                  field.Set(sampleUpdateCustomerNote),
+	StatusCode:            field.Some(constants.AccountStatusCodeNormal),
+	Email:                 field.Set(sampleUpdateCustomerEmail),
+	Phone:                 field.Set(sampleUpdateCustomerPhone),
+	URL:                   field.Set(sampleUpdateCustomerURL),
+	EDIStatus:             field.Some(constants.EDIStatusDisabled),
+	CommissionPolicy:      field.Some(constants.CommissionPolicyApplied),
+	FreightPolicy:         field.Some(sampleUpdateCustomerFreightPolicy),
+	DefaultCarrierID:      field.Some(sampleUpdateCustomerDefaultCarrierID),
+	DefaultServiceLevelID: field.Set(apiresource.SampleServiceLevelID),
+	DefaultPaymentTermID:  field.Some(apiresource.SamplePaymentTermID),
+	DefaultShippingTermID: field.Some(apiresource.SampleShippingTermID),
+	DefaultPriorityCode:   field.Some(constants.PriorityCodeNormal),
+	DefaultSalesRepID:     field.Set(apiresource.SampleAccountUserID),
+	BillToAddressID:       field.Set(apiresource.SampleAddressID),
+	ShipToAddressID:       field.Set(apiresource.SampleAddressID),
+	CustomerPriceGroupIDs: field.Some([]string{apiresource.SampleAccountGroupID}),
+	CustomerTypeGroupID:   field.Some(apiresource.SampleAccountGroupID),
+	CarrierBillingType:    field.Some(constants.CarrierBillingTypeSender),
+	CarrierBillingAccount: field.Set(sampleUpdateCustomerCarrierBillingAccount),
+	CreditLimit: field.Set(apirequest.QuantityInput{
+		Value:  "10000.00",
+		UnitID: apiresource.SampleUnitID,
+	}),
 }
 
 func (*UpdateCustomerRequest) SchemaExample() any {

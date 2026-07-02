@@ -150,6 +150,12 @@ var SampleSubscriptionInfo = &SubscriptionInfo{
 	CollectionStatus: "current",
 }
 
+var SampleAgentSpendInfo = &AgentSpendInfo{
+	Object:              constants.ObjectTypeAgentSpendInfo,
+	EstimatedSpendCents: 1875,
+	CapCents:            &sampleCapCents,
+}
+
 var SampleAccountUsageResponse = &AccountUsageResponse{
 	Object:       constants.ObjectTypeAccountUsageResponse,
 	Seats:        *SampleUsageItem,
@@ -157,6 +163,7 @@ var SampleAccountUsageResponse = &AccountUsageResponse{
 	Batches:      *SampleUsageItemUnlimited,
 	Sandboxes:    *SampleUsageItem,
 	Subscription: SampleSubscriptionInfo,
+	AgentSpend:   SampleAgentSpendInfo,
 }
 
 var SampleBillingPortalSessionResponse = &BillingPortalSessionResponse{
@@ -164,15 +171,21 @@ var SampleBillingPortalSessionResponse = &BillingPortalSessionResponse{
 	URL:    SampleBillingPortalURL,
 }
 
+var sampleSwitchPlanIntentID = "bintent_1MtHb3LkdIwHu7ixxOzzPQ12"
+
 var SampleSwitchPlanResponse = &SwitchPlanResponse{
-	Object:  constants.ObjectTypeSwitchPlanResponse,
-	Success: true,
+	Object:   constants.ObjectTypeSwitchPlanResponse,
+	Success:  true,
+	IntentID: &sampleSwitchPlanIntentID,
 }
+
+var sampleBillingProfileID = "bpr_1OG9R5zKr5xJHHpQ8Zk"
 
 var SampleEnsureBillingCustomerResponse = &EnsureBillingCustomerResponse{
 	Object:           constants.ObjectTypeEnsureBillingCustomerResponse,
 	StripeCustomerID: SampleStripeCustomerID,
 	Created:          true,
+	BillingProfileID: &sampleBillingProfileID,
 }
 
 var SampleWebhookResponse = &WebhookResponse{

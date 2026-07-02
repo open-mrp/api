@@ -61,10 +61,15 @@ var sampleLocality = "Columbus"
 var sampleState = "OH"
 var samplePostalCode = "43204"
 
+var sampleAddressPhone = "+1-614-555-0142"
+var sampleAddressEmail = "receiving@acme.example.com"
+
 var SampleAddress = &Address{
 	ID:     SampleCRUDAddressID,
 	Object: constants.ObjectTypeAddress,
 	Name:   "Headquarters",
+	Phone:  &sampleAddressPhone,
+	Email:  &sampleAddressEmail,
 	Type:   constants.AddressTypeStandard,
 	Geolocation: &Geolocation{
 		ID:          SampleGeolocationID,

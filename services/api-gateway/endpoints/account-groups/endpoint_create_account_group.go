@@ -40,9 +40,13 @@ type CreateAccountGroupRequest struct {
 	Description field.Optional[string] `json:"description,omitzero"`
 }
 
+var sampleCreateAccountGroupDescription = "Customers who buy in bulk at wholesale pricing."
 var sampleCreateAccountGroupRequest = &CreateAccountGroupRequest{
-	Name: "Wholesale Customers",
-	Type: constants.AccountGroupTypeTypeGroup,
+	Name:             "Wholesale Customers",
+	Type:             constants.AccountGroupTypeTypeGroup,
+	CommissionPolicy: field.Some(constants.CommissionPolicyExempt),
+	FreightPolicy:    field.Some(constants.FreightPolicyBilled),
+	Description:      field.Some(sampleCreateAccountGroupDescription),
 }
 
 func (*CreateAccountGroupRequest) SchemaExample() any {

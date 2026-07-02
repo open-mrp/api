@@ -51,9 +51,26 @@ type UpdateAddressRequest struct {
 }
 
 var sampleUpdateName = "Warehouse"
+var sampleUpdateAddressPhone = "555-123-4567"
+var sampleUpdateAddressEmail = "warehouse@acme.com"
+var sampleUpdateAddressStreetLine1 = "123 Main St"
+var sampleUpdateAddressStreetLine2 = "Suite 400"
+var sampleUpdateAddressLocality = "Springfield"
+var sampleUpdateAddressState = "IL"
+var sampleUpdateAddressPostalCode = "62701"
+var sampleUpdateAddressCountry = "US"
 
 var sampleUpdateAddressRequest = &UpdateAddressRequest{
-	Name: field.Some(sampleUpdateName),
+	Name:        field.Some(sampleUpdateName),
+	Phone:       field.Set(sampleUpdateAddressPhone),
+	Email:       field.Set(sampleUpdateAddressEmail),
+	Type:        field.Some(constants.AddressTypeStandard),
+	StreetLine1: field.Some(sampleUpdateAddressStreetLine1),
+	StreetLine2: field.Set(sampleUpdateAddressStreetLine2),
+	Locality:    field.Some(sampleUpdateAddressLocality),
+	State:       field.Some(sampleUpdateAddressState),
+	PostalCode:  field.Some(sampleUpdateAddressPostalCode),
+	Country:     field.Some(sampleUpdateAddressCountry),
 }
 
 func (*UpdateAddressRequest) SchemaExample() any {

@@ -27,9 +27,11 @@ type CreateAPIKeyRequest struct {
 	ExpiresAt field.Optional[time.Time] `json:"expires_at,omitzero"`
 }
 
+var sampleCreateAPIKeyExpiresAt = time.Date(2027, time.January, 1, 0, 0, 0, 0, time.UTC)
 var sampleCreateAPIKeyRequest = &CreateAPIKeyRequest{
-	RoleID: apiresource.SampleRoleID,
-	Name:   apiresource.SampleAPIKeyName,
+	RoleID:    apiresource.SampleRoleID,
+	Name:      apiresource.SampleAPIKeyName,
+	ExpiresAt: field.Some(sampleCreateAPIKeyExpiresAt),
 }
 
 func (*CreateAPIKeyRequest) SchemaExample() any {

@@ -55,6 +55,10 @@ var SampleRecord = &Record{
 	Type:   constants.RecordTypeShipment,
 	Number: &sampleRecordNumber,
 	Status: new("fulfilled"),
+	Metadata: map[string]string{
+		"carrier":         "UPS",
+		"tracking_number": "1Z999AA10123456784",
+	},
 }
 
 func (*Record) SchemaExample() any {

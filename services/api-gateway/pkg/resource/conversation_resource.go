@@ -161,8 +161,21 @@ var SampleConversation = &Conversation{
 	}, PageInfo{}),
 	Unread:        2,
 	LastMessageAt: timeutil.TimestampToTimePtr(sampleUpdatedAtTimestamp),
-	CreatedAt:     timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:     timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	LastMessage: &Message{
+		ID:         SampleMessageID,
+		Object:     constants.ObjectTypeChatMessage,
+		Kind:       constants.MessageKindChat,
+		Status:     constants.MessageStatusSent,
+		Visibility: constants.MessageVisibilityInternal,
+		Channel:    constants.MessageChannelMessage,
+		Sequence:   42,
+		Body:       new("Sounds good — shipping it today."),
+		Sender:     NewActor(SampleAccountUserID, constants.ActorTypeUser, new("Jie Yan"), nil),
+		CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+		UpdatedAt:  timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	},
+	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*Conversation) SchemaExample() any {

@@ -35,9 +35,22 @@ type UpdateUnitGroupRequest struct {
 
 var sampleUpdateUnitGroupName = "Weight Units (Updated)"
 var sampleUpdateUnitGroupBaseUnitID = apiresource.SampleUnitID
+var sampleUpdateUnitGroupNotes = "Added kilogram association for metric orders."
+var sampleUpdateUnitGroupUnitDiscountPct2 = float64(1)
+var sampleUpdateUnitGroupUnitDiscountFixed2 = float64(0)
+var sampleUpdateUnitGroupUnitVisibility2 = constants.CustomerPortalVisibilityVisible
 var sampleUpdateUnitGroupRequest = &UpdateUnitGroupRequest{
 	Name:       field.Some(sampleUpdateUnitGroupName),
+	Notes:      field.Set(sampleUpdateUnitGroupNotes),
 	BaseUnitID: field.Some(sampleUpdateUnitGroupBaseUnitID),
+	AssociatedUnits: field.Some([]CreateUnitGroupUnitParam{
+		{
+			UnitID:                   apiresource.SampleUnitID,
+			DiscountPercentage:       field.Some(sampleUpdateUnitGroupUnitDiscountPct2),
+			DiscountFixed:            field.Some(sampleUpdateUnitGroupUnitDiscountFixed2),
+			CustomerPortalVisibility: field.Some(sampleUpdateUnitGroupUnitVisibility2),
+		},
+	}),
 }
 
 func (*UpdateUnitGroupRequest) SchemaExample() any {

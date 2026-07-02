@@ -133,9 +133,28 @@ var SampleTransactionDetail = &TransactionDetail{
 	TransactionType:   SampleTransactionType,
 	TransactionMethod: SampleTransactionMethod,
 	IsFullyAllocated:  false,
+	StripePaymentID:   new("pi_3PqR8s2eZvKYlo2C0AbCdEfG"),
 	AllocationCount:   1,
-	CreatedAt:         timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:         timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	Allocations: NewList([]TransactionAllocation{{
+		ID:     SampleAllocationEntryID,
+		Object: constants.ObjectTypeTransactionAllocation,
+		Amount: &Quantity{
+			ID:           SampleQuantityID,
+			Object:       constants.ObjectTypeQuantity,
+			Value:        "500.000000000000000000000000000000",
+			DisplayValue: "$500.00",
+			Unit:         newSampleUnit("US Dollar", "$", constants.UnitTypeCurrency),
+		},
+		Invoice: &AllocationInvoice{
+			ID:     SampleInvoiceID,
+			Object: constants.ObjectTypeInvoiceSummary,
+			Number: "INV-001",
+		},
+		CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+		UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	}}, PageInfo{}),
+	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*TransactionDetail) SchemaExample() any {

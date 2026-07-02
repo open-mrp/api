@@ -37,12 +37,14 @@ type ProductionRunDetail struct {
 }
 
 var SampleProductionRunDetail = &ProductionRunDetail{
-	ID:         SampleProductionRunID,
-	Object:     constants.ObjectTypeProductionRun,
-	Number:     "1",
-	BatchCount: 3,
-	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:  timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:              SampleProductionRunID,
+	Object:          constants.ObjectTypeProductionRun,
+	Number:          "1",
+	ResponsibleUser: SampleAccountUser,
+	BatchCount:      3,
+	StartedAt:       timeutil.TimestampToTimePtr(sampleUpdatedAtTimestamp),
+	CreatedAt:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:       timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*ProductionRunDetail) SchemaExample() any {
@@ -78,12 +80,14 @@ type ProductionRunSummary struct {
 }
 
 var SampleProductionRunSummary = &ProductionRunSummary{
-	ID:         SampleProductionRunID,
-	Object:     constants.ObjectTypeProductionRun,
-	Number:     "1",
-	BatchCount: 3,
-	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:  timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:              SampleProductionRunID,
+	Object:          constants.ObjectTypeProductionRun,
+	Number:          "1",
+	ResponsibleUser: SampleAccountUser,
+	BatchCount:      3,
+	StartedAt:       timeutil.TimestampToTimePtr(sampleUpdatedAtTimestamp),
+	CreatedAt:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:       timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*ProductionRunSummary) SchemaExample() any {

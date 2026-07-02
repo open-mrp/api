@@ -17,6 +17,8 @@ const SampleAuditEventResourceID = SampleUserID
 
 const SampleAuditEventSourceIP = "198.51.100.8"
 
+const SampleAuditEventIdempotencyKey = "3f2504e0-4f89-41d3-9a0c-0305e82c3301"
+
 const SampleAuditEventMetadataReason = `{"reason":"operator override"}`
 
 // Field-level before/after transition recorded during a mutation.
@@ -97,11 +99,12 @@ var SampleAuditEvent = &AuditEvent{
 			NewValue: json.RawMessage(`"new@example.com"`),
 		},
 	}, PageInfo{}),
-	Metadata:   json.RawMessage(SampleAuditEventMetadataReason),
-	Request:    SampleRequestLog,
-	SourceIP:   new(SampleAuditEventSourceIP),
-	OccurredAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	Metadata:       json.RawMessage(SampleAuditEventMetadataReason),
+	Request:        SampleRequestLog,
+	IdempotencyKey: new(SampleAuditEventIdempotencyKey),
+	SourceIP:       new(SampleAuditEventSourceIP),
+	OccurredAt:     timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	CreatedAt:      timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 }
 
 func (*AuditEvent) SchemaExample() any {

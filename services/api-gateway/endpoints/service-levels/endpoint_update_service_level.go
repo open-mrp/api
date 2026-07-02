@@ -35,7 +35,9 @@ type UpdateServiceLevelRequest struct {
 
 var sampleUpdateServiceLevelName = "Express Shipping"
 var sampleUpdateServiceLevelRequest = &UpdateServiceLevelRequest{
-	Name: field.Some(sampleUpdateServiceLevelName),
+	Name:                     field.Some(sampleUpdateServiceLevelName),
+	Code:                     field.Some("express"),
+	CustomerPortalVisibility: field.Some(constants.CustomerPortalVisibilityVisible),
 }
 
 func (*UpdateServiceLevelRequest) SchemaExample() any {

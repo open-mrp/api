@@ -63,7 +63,9 @@ var SampleAnnouncement = &Announcement{
 	Title:     "Scheduled maintenance",
 	Body:      new("The platform will be briefly unavailable tonight at 2am UTC."),
 	Priority:  constants.NotificationPriorityNormal,
+	Resource:  NewEntity(SampleSalesOrderID, constants.ObjectTypeSalesOrder, new("Order #1042"), nil),
 	PublishAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	ExpiresAt: timeutil.TimestampToTimePtr(sampleExpiresAtTimestamp),
 	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

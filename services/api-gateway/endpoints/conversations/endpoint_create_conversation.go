@@ -35,9 +35,15 @@ type CreateConversationRequest struct {
 	TopicResourceID field.Optional[string] `json:"topic_resource_id,omitzero"`
 }
 
+var sampleCreateConversationTitle = "Order #1042 — shipping question"
+
 var sampleCreateConversationRequest = &CreateConversationRequest{
-	Type:                      constants.ConversationTypeDM,
+	Type:                      constants.ConversationTypeGroup,
 	ParticipantAccountUserIDs: []string{apiresource.SampleAccountUserID},
+	GroupID:                   field.Some(apiresource.SampleMessagingGroupID),
+	Title:                     field.Some(sampleCreateConversationTitle),
+	TopicResourceType:         field.Some(constants.ObjectTypeSalesOrder),
+	TopicResourceID:           field.Some(apiresource.SampleSalesOrderID),
 }
 
 func (*CreateConversationRequest) SchemaExample() any {

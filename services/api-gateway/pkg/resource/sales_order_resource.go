@@ -185,15 +185,26 @@ var SampleSalesOrder = &SalesOrder{
 		Name:   SampleCustomerName,
 		Number: SampleCustomerNumber,
 	},
+	SalesRep:      SampleActor,
+	CreatedBy:     SampleCreatedBy,
 	BillToAddress: SampleAddress,
 	ShipToAddress: SampleAddress,
 	Freight:       SampleFreight,
+	PaymentTerm:   SamplePaymentTerm,
+	ShippingTerm:  SampleShippingTerm,
+	OrderDiscount: SampleOrderDiscount,
 	Lines:         NewList([]SalesOrderLine{*SampleSalesOrderLine}, PageInfo{}),
 	LineCount:     1,
 	Totals:        SampleSalesOrderTotals,
 	Related:       &SalesOrderRelated{Object: constants.ObjectTypeSalesOrderRelated},
-	CreatedAt:     timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:     timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	Contacts: &OrderContact{
+		Object:          constants.ObjectTypeOrderContact,
+		Invoice:         []string{"ap@acme.example.com"},
+		Acknowledgement: []string{"purchasing@acme.example.com"},
+	},
+	PromisedAt: timeutil.TimestampToTimePtr(sampleExpiresAtTimestamp),
+	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:  timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*SalesOrder) SchemaExample() any {

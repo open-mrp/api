@@ -33,6 +33,7 @@ type SupportRoute struct {
 var SampleSupportRoute = &SupportRoute{
 	ID:                SampleSupportRouteID,
 	Object:            constants.ObjectTypeSupportRoute,
+	RelationAccount:   NewEntity(SampleAccountID, constants.ObjectTypeAccount, new(SampleAccountName), nil),
 	GroupConversation: NewEntity(SampleConversationID, constants.ObjectTypeConversation, nil, nil),
 	CreatedAt:         timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:         timeutil.TimestampToTime(sampleUpdatedAtTimestamp),

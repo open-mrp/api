@@ -64,6 +64,7 @@ var SampleDelivery = &Delivery{
 	PurchaseOrder: SamplePurchaseOrder,
 	Status:        constants.DeliveryStatusAccepted,
 	Lines:         NewList([]DeliveryLine{*SampleDeliveryLine}, PageInfo{}),
+	AcceptedAt:    timeutil.TimestampToTimePtr(sampleUpdatedAtTimestamp),
 	CreatedAt:     timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:     timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
@@ -108,10 +109,13 @@ var SampleDeliveryLine = &DeliveryLine{
 		Object: constants.ObjectTypeItem,
 		SKU:    SampleItemSKU,
 	},
-	Quantity:  SampleQuantity,
-	UnitCost:  SampleRate,
-	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	Quantity:   SampleQuantity,
+	UnitCost:   SampleRate,
+	Location:   SampleLocation,
+	Lot:        SampleLot,
+	AcceptedAt: timeutil.TimestampToTimePtr(sampleUpdatedAtTimestamp),
+	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:  timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*DeliveryLine) SchemaExample() any {

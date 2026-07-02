@@ -25,6 +25,7 @@ type CreateMessagingGroupRequest struct {
 var sampleCreateMessagingGroupRequest = &CreateMessagingGroupRequest{
 	Name:                 "Operations Team",
 	MemberAccountUserIDs: []string{apiresource.SampleAccountUserID},
+	MemberAgentConfigIDs: []string{apiresource.SampleAgentDefinitionID},
 }
 
 func (*CreateMessagingGroupRequest) SchemaExample() any {

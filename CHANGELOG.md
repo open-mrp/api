@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.32.2](https://github.com/Augno/api/compare/v0.32.1...v0.32.2) (2026-07-02)
+
+
+### Bug Fixes
+
+* websocket issues in production preventing display of messages instantly for sender ([badc2ab](https://github.com/Augno/api/commit/badc2ab7877c9b6a0fbe3e81391205439c7defae))
+
 ## [0.32.1](https://github.com/Augno/api/compare/v0.32.0...v0.32.1) (2026-07-02)
 
 

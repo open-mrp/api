@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.31.1](https://github.com/Augno/api/compare/v0.31.0...v0.31.1) (2026-07-02)
+
+
+### Bug Fixes
+
+* grant CI infra role sqs permissions for inbound-email queues ([#386](https://github.com/Augno/api/issues/386)) ([eeaab31](https://github.com/Augno/api/commit/eeaab319a7d096bbc32125b4509dd36493ba1a99))
+
 ## [0.31.0](https://github.com/Augno/api/compare/v0.30.1...v0.31.0) (2026-07-02)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.31.0](https://github.com/Augno/api/compare/v0.30.1...v0.31.0) (2026-07-02)
+
+
+### Features
+
+* chat and agents ([#384](https://github.com/Augno/api/issues/384)) ([3ed0615](https://github.com/Augno/api/commit/3ed0615c774a4176e24d2cdd7b97dd3ca65714e8))
+
 ## [0.30.1](https://github.com/Augno/api/compare/v0.30.0...v0.30.1) (2026-06-23)
 
 

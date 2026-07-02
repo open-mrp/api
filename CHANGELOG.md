@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.31.2](https://github.com/Augno/api/compare/v0.31.1...v0.31.2) (2026-07-02)
+
+
+### Bug Fixes
+
+* update resource requests and limits for agent service in Kubernetes configuration ([9c06c7d](https://github.com/Augno/api/commit/9c06c7dc73675e349511bee8182936a54fce4403))
+
 ## [0.31.1](https://github.com/Augno/api/compare/v0.31.0...v0.31.1) (2026-07-02)
 
 

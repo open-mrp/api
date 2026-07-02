@@ -83,6 +83,10 @@ func (s *stubStripeClient) ReportMeterEvent(context.Context, string, string, int
 	return nil
 }
 
+func (s *stubStripeClient) GetAgentTokenSpendCents(context.Context, string, string, time.Time) (int64, error) {
+	return 0, nil
+}
+
 func (s *stubStripeClient) FetchObject(ctx context.Context, objectURL string) ([]byte, error) {
 	if s.fetchObjectFn != nil {
 		return s.fetchObjectFn(ctx, objectURL)

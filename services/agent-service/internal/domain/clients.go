@@ -69,7 +69,9 @@ type AccountContext struct {
 	AgentMonthlySpendingCapCents *int64
 }
 
-// BillingCustomerResolver resolves the Stripe customer ID for an account.
+// BillingCustomerResolver resolves the Stripe customer ID for an account and the account's current agent spend.
 type BillingCustomerResolver interface {
 	GetStripeCustomerID(ctx context.Context, accountID string) (string, error)
+	// GetAgentSpendCents returns the account's marked-up token spend for the current billing period, as Stripe will bill it.
+	GetAgentSpendCents(ctx context.Context, accountID string) (int64, error)
 }

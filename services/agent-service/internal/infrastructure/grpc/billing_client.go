@@ -68,3 +68,20 @@ func (c *AgentBillingClient) GetStripeCustomerID(ctx context.Context, accountID 
 
 	return resp.StripeCustomerId, nil
 }
+
+// GetAgentSpendCents returns the account's marked-up token spend for the current billing period, as Stripe will bill it. Used to enforce the spending cap against the same figure the dashboard shows.
+func (c *AgentBillingClient) GetAgentSpendCents(ctx context.Context, accountID string) (int64, error) {
+	ctx = rpc.PrepareServiceCallCtx(ctx)
+
+	resp, apiErr := rpc.CallRPC(ctx, billingClientTracer, "billing_client.get_agent_spend", billingServiceName,
+		func(ctx context.Context, opts ...grpclib.CallOption) (*pb.GetAgentSpendResponse, error) {
+			return c.client.GetAgentSpend(ctx, &pb.GetAgentSpendRequest{
+				AccountId: &accountID,
+			}, opts...)
+		})
+	if apiErr != nil {
+		return 0, apiErr
+	}
+
+	return resp.EstimatedSpendCents, nil
+}

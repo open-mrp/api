@@ -2,6 +2,7 @@ package stub
 
 import (
 	"context"
+	"time"
 
 	"github.com/augno/api/services/billing-service/internal/domain"
 )
@@ -67,4 +68,8 @@ func (s *StripeClient) GetSetupIntent(_ context.Context, _ string) (*domain.Stri
 
 func (s *StripeClient) ReportMeterEvent(_ context.Context, _, _ string, _ int, _ string) error {
 	return nil
+}
+
+func (s *StripeClient) GetAgentTokenSpendCents(_ context.Context, _, _ string, _ time.Time) (int64, error) {
+	return 0, nil
 }

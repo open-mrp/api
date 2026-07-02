@@ -55,7 +55,7 @@ const (
 	// AgentCmdChatRunQueue carries chat-run commands (from notification-service) to the agent-service: create a chat-linked run and execute it.
 	AgentCmdChatRunQueue = "agent_cmd_chat_run"
 
-	// AgentEventRunCompletedQueue carries run-completed events emitted by the agent-service after an agent run finishes. Downstream consumers use these to aggregate token usage and billing.
+	// AgentEventRunCompletedQueue carries run-completed events emitted by the agent-service after an agent run finishes. It is the durable, shared work queue for billing-service token/usage aggregation (exactly-once across billing replicas). The api-gateway also consumes run-completed events for WebSocket fan-out, but via its own per-instance queue (ConsumeFanout with this base name) so every gateway replica gets a copy — it must not join this shared queue, or billing and the gateway would steal each other's events.
 	AgentEventRunCompletedQueue = "agent_event_run_completed"
 
 	// AgentEventRunStepQueue is the base name for the queue that carries individual run step events for real-time WebSocket streaming. Each API gateway instance appends a unique suffix to create its own exclusive auto-delete queue so that every instance receives every event via RabbitMQ fanout.

@@ -134,7 +134,7 @@ var SampleHubspotCompanyReview = &HubspotCompanyReview{
 	ID:       SampleHubspotCompanyReviewID,
 	Object:   constants.ObjectTypeHubspotCompanyReview,
 	Job:      &HubspotSyncJob{ID: SampleHubspotSyncJobID, Object: constants.ObjectTypeHubspotSyncJob},
-	Customer: &Customer{ID: SampleCustomerID, Object: constants.ObjectTypeCustomer, Name: "Acme Manufacturing"},
+	Customer: SampleCustomer,
 	Candidates: NewList([]HubspotCompanyCandidate{
 		{Object: constants.ObjectTypeHubspotCompanyCandidate, HubspotID: "12345", Name: "Acme Manufacturing", Domain: "acme.com"},
 		{Object: constants.ObjectTypeHubspotCompanyCandidate, HubspotID: "67890", Name: "Acme Mfg Inc", Domain: "acme.com"},

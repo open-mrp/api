@@ -355,6 +355,36 @@ func (h *billingHandler) EnsureBillingCustomer(ctx context.Context, req *pb.Ensu
 	return resp, nil
 }
 
+func (h *billingHandler) GetAgentSpend(ctx context.Context, req *pb.GetAgentSpendRequest) (*pb.GetAgentSpendResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	var accountID string
+	if req.AccountId != nil && *req.AccountId != "" {
+		accountID = *req.AccountId
+	} else {
+		identity, ok := appctx.GetIdentityFromContext(ctx)
+		if !ok || identity == nil {
+			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
+		}
+		if !identity.IsInternalUser() || !identity.IsAdmin() {
+			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
+		}
+		if !identity.IsTargetAccountSet() {
+			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account header is required."))
+		}
+		accountID = identity.Target.AccountID
+	}
+
+	cents, apiErr := h.billingSvc.GetAgentSpendCents(ctx, accountID)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.GetAgentSpendResponse{EstimatedSpendCents: cents}, nil
+}
+
 func (h *billingHandler) SwitchPlan(ctx context.Context, req *pb.SwitchPlanRequest) (*pb.SwitchPlanResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

@@ -170,13 +170,6 @@ jobs:
             pr_repo: Augno/typescript-sdk
             package_name: "@augno/sdk"
             spec_changed: ${{ needs.spec-changes.outputs.public }}
-          - sdk: public-python
-            workspace: stainless/public
-            targets: python
-            release: release-please
-            pr_repo: augno/python-sdk
-            package_name: augno
-            spec_changed: ${{ needs.spec-changes.outputs.public }}
           - sdk: public-go
             workspace: stainless/public
             targets: go
@@ -212,10 +205,6 @@ jobs:
       - name: Generate OpenAPI specifications and Stainless configs
         if: matrix.spec_changed == 'true' && inputs.openapi_specs_source == 'generate'
         run: make openapi-stainless-quiet
-
-      - name: Set up uv (Python SDK bootstrap/build)
-        if: matrix.spec_changed == 'true' && contains(matrix.targets, 'python')
-        uses: astral-sh/setup-uv@v5
 
       - name: Setup stlc
         if: matrix.spec_changed == 'true'

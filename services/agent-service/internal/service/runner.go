@@ -189,18 +189,14 @@ func (s *runnerSvc) resolveBillingContext(ctx context.Context, accountID, model 
 		model:            model,
 	}
 
-	// If a cap is set, compute estimated spend for the current month.
+	// If a cap is set, read the current period spend as Stripe will bill it — the same marked-up figure the dashboard shows — so the cap and the displayed number agree. The in-loop gate adds this run's per-turn estimate on top of this baseline to avoid a Stripe round trip per turn.
 	if bc.spendingCapCents != nil {
-		monthStart := time.Now().UTC()
-		monthStart = time.Date(monthStart.Year(), monthStart.Month(), 1, 0, 0, 0, 0, time.UTC)
-
-		tokenRepo := s.repos.NewAgentTokenUsageRepo()
-		inputTokens, outputTokens, tokenErr := tokenRepo.GetMonthlyUsage(ctx, billingAccountID, monthStart)
-		if tokenErr != nil {
-			return nil, fmt.Errorf("failed to query monthly token usage: %w", tokenErr)
+		spendCents, spendErr := s.billingClient.GetAgentSpendCents(ctx, billingAccountID)
+		if spendErr != nil {
+			return nil, fmt.Errorf("failed to resolve current agent spend: %w", spendErr)
 		}
 
-		bc.currentSpendCents = llm.EstimateTokenCostCents(int(inputTokens), int(outputTokens), model)
+		bc.currentSpendCents = spendCents
 
 		if bc.currentSpendCents >= *bc.spendingCapCents {
 			capDollars := float64(*bc.spendingCapCents) / 100.0

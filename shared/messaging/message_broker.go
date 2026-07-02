@@ -32,6 +32,8 @@ type MessageBroker interface {
 	PublishMessage(ctx context.Context, exchange, routingKey string, message contracts.AmqpMessage) error
 	// ConsumeMessages consumes messages from the given queue and invokes the handler for each delivery.
 	ConsumeMessages(ctx context.Context, queueName string, handler MessageHandler, opts ...ConsumeOption) error
+	// ConsumeFanout declares a per-instance ephemeral (non-durable, exclusive, auto-delete) queue named "<baseName>.<instance-suffix>", binds it to the given routing keys on the application exchange, and consumes from it. Because every process that calls this gets its OWN queue, each receives a copy of every matching message — true fan-out. This is the correct primitive for realtime WebSocket delivery, where every api-gateway replica holds a distinct set of client sockets and must therefore see every event. Contrast with ConsumeMessages, whose callers share one durable queue and thus compete for deliveries (work-queue semantics). The per-instance queue dies with the process, so undelivered realtime events are simply dropped — acceptable because the persisted rows remain the source of truth.
+	ConsumeFanout(ctx context.Context, baseName string, routingKeys []string, handler MessageHandler, opts ...ConsumeOption) error
 	// IsReady reports whether the broker connection and channel are ready for use.
 	IsReady() bool
 	// Close shuts down the AMQP channel and connection. Safe to call multiple times.

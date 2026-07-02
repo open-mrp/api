@@ -228,16 +228,11 @@ type InvoiceForPayment struct {
 var sampleInvoiceForPaymentCustomerPO = "PO-88231"
 
 var SampleInvoiceForPayment = &InvoiceForPayment{
-	ID:         SampleInvoiceID,
-	Object:     constants.ObjectTypeInvoiceForPayment,
-	Number:     "INV-001",
-	CustomerPO: &sampleInvoiceForPaymentCustomerPO,
-	Customer: &Customer{
-		ID:     SampleCustomerID,
-		Object: constants.ObjectTypeCustomer,
-		Name:   SampleCustomerName,
-		Number: SampleCustomerNumber,
-	},
+	ID:              SampleInvoiceID,
+	Object:          constants.ObjectTypeInvoiceForPayment,
+	Number:          "INV-001",
+	CustomerPO:      &sampleInvoiceForPaymentCustomerPO,
+	Customer:        SampleCustomer,
 	IsParentAccount: true,
 	ParentAccount:   SampleAccount,
 	IsPrepaid:       false,

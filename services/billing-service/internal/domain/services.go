@@ -29,6 +29,9 @@ type BillingSvc interface {
 	// GetAccountUsage returns current resource usage for the given account with plan limits and subscription information.
 	GetAccountUsage(ctx context.Context, accountID string) (*AccountUsage, *apierror.APIError)
 
+	// GetAgentSpendCents returns the marked-up token spend the account has accrued this billing period, as it will be billed in Stripe. This is the same figure surfaced on the dashboard; agent-service uses it to enforce the spending cap consistently.
+	GetAgentSpendCents(ctx context.Context, accountID string) (int64, *apierror.APIError)
+
 	// CreateBillingPortalSession creates a Stripe billing portal session for managing subscriptions. Returns the portal URL.
 	CreateBillingPortalSession(ctx context.Context, accountID string) (string, *apierror.APIError)
 

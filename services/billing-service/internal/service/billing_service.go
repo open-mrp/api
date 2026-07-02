@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/augno/api/services/billing-service/internal/domain"
@@ -37,6 +38,9 @@ type BillingSvcConfig struct {
 
 	// IdempotencyMed (required) deduplicates billing operations.
 	IdempotencyMed domain.IdempotencyMed
+
+	// TokenRateCardIDsByPlan (optional) maps a plan_code to the Stripe rate card id whose rates price that plan's LLM token usage. Used to compute the agent spend a customer will actually be billed. Plans absent from the map (e.g. free) report zero agent spend.
+	TokenRateCardIDsByPlan map[string]string
 }
 
 type billingSvcImpl struct {
@@ -46,6 +50,19 @@ type billingSvcImpl struct {
 	frontendURL        string
 	notificationClient domain.NotificationClient
 	idempotencyMed     domain.IdempotencyMed
+
+	tokenRateCardIDsByPlan map[string]string
+
+	agentSpendCacheMu sync.Mutex
+	agentSpendCache   map[string]agentSpendCacheEntry
+}
+
+// agentSpendCacheTTL bounds how stale the displayed/cap-enforced agent spend can be. Short because the underlying Stripe read is a couple of API calls and the value drives both the dashboard figure and cap enforcement.
+const agentSpendCacheTTL = 60 * time.Second
+
+type agentSpendCacheEntry struct {
+	cents     int64
+	expiresAt time.Time
 }
 
 func (c *BillingSvcConfig) validate() error {
@@ -76,12 +93,14 @@ func NewBillingSvc(config *BillingSvcConfig) domain.BillingSvc {
 	}
 
 	return &billingSvcImpl{
-		repos:              config.Repos,
-		stripeClient:       config.StripeClient,
-		coreClient:         config.CoreClient,
-		frontendURL:        config.FrontendURL,
-		notificationClient: config.NotificationClient,
-		idempotencyMed:     config.IdempotencyMed,
+		repos:                  config.Repos,
+		stripeClient:           config.StripeClient,
+		coreClient:             config.CoreClient,
+		frontendURL:            config.FrontendURL,
+		notificationClient:     config.NotificationClient,
+		idempotencyMed:         config.IdempotencyMed,
+		tokenRateCardIDsByPlan: config.TokenRateCardIDsByPlan,
+		agentSpendCache:        make(map[string]agentSpendCacheEntry),
 	}
 }
 
@@ -181,13 +200,7 @@ func (s *billingSvcImpl) GetAccountUsage(ctx context.Context, accountID string) 
 	}
 
 	// Determine billing period start for per-period usage counts
-	var periodStart time.Time
-	if subInfo.SubscriptionCurrentPeriodEnd != nil {
-		periodStart = subInfo.SubscriptionCurrentPeriodEnd.AddDate(0, -1, 0)
-	} else {
-		now := time.Now().UTC()
-		periodStart = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
-	}
+	periodStart := agentSpendPeriodStart(subInfo)
 
 	invoiceCount, apiErr := repo.CountInvoicesByAccountID(ctx, accountID, periodStart)
 	if apiErr != nil {
@@ -202,22 +215,79 @@ func (s *billingSvcImpl) GetAccountUsage(ctx context.Context, accountID string) 
 	usage.Invoices = domain.UsageItem{Current: invoiceCount, Limit: limitMap["invoices_maximum"]}
 	usage.Batches = domain.UsageItem{Current: batchCount, Limit: limitMap["batches_maximum"]}
 
-	tokenBillingRepo := s.repos.NewAgentTokenBillingRepo()
-	tokenBilling, tokenErr := tokenBillingRepo.GetByAccountAndPeriod(ctx, accountID, periodStart)
-	if tokenErr == nil && tokenBilling != nil {
-		usage.EstimatedAgentSpendCents = estimateTokenCostCents(tokenBilling.TotalInputTokens, tokenBilling.TotalOutputTokens)
-	}
+	usage.EstimatedAgentSpendCents = s.currentAgentSpendCents(ctx, accountID, periodStart)
 
 	return usage, nil
 }
 
-// estimateTokenCostCents returns an approximate cost in cents for dashboard display only. Actual billing is handled by the Stripe AI Gateway; these rates are rough estimates and may not match the exact rate card markup applied to the customer's plan.
-func estimateTokenCostCents(inputTokens, outputTokens int64) int64 {
-	const inputCentsPerMillion = 300
-	const outputCentsPerMillion = 1500
-	inputCost := inputTokens * inputCentsPerMillion / 1_000_000
-	outputCost := outputTokens * outputCentsPerMillion / 1_000_000
-	return inputCost + outputCost
+// currentAgentSpendCents returns the marked-up token spend the account will be billed in Stripe for the current period, cached briefly. It resolves the account's plan to a rate card, then has the Stripe client price the customer's metered usage against that rate card. Any failure (no rate card for the plan, no Stripe customer, transient API error) yields 0 so the surrounding usage read still succeeds; the last known good value is preferred over 0 when available.
+func (s *billingSvcImpl) currentAgentSpendCents(ctx context.Context, accountID string, periodStart time.Time) int64 {
+	s.agentSpendCacheMu.Lock()
+	cached, hasCached := s.agentSpendCache[accountID]
+	if hasCached && time.Now().Before(cached.expiresAt) {
+		s.agentSpendCacheMu.Unlock()
+		return cached.cents
+	}
+	s.agentSpendCacheMu.Unlock()
+
+	repo := s.repos.NewAccountUsageRepo()
+
+	_, planCode, planErr := repo.GetAccountNameAndPlanCode(ctx, accountID)
+	if planErr != nil {
+		return s.agentSpendFallback(cached, hasCached)
+	}
+	rateCardID := s.tokenRateCardIDsByPlan[planCode]
+	if rateCardID == "" {
+		// Plan has no token rate card (e.g. free); genuinely zero agent spend.
+		return 0
+	}
+
+	customerID, custErr := repo.GetStripeCustomerIDByAccountID(ctx, accountID)
+	if custErr != nil || customerID == nil || *customerID == "" {
+		return s.agentSpendFallback(cached, hasCached)
+	}
+
+	cents, err := s.stripeClient.GetAgentTokenSpendCents(ctx, *customerID, rateCardID, periodStart)
+	if err != nil {
+		slog.Error("failed to compute agent token spend from Stripe",
+			"account_id", accountID, "error", err.Error())
+		return s.agentSpendFallback(cached, hasCached)
+	}
+
+	s.agentSpendCacheMu.Lock()
+	s.agentSpendCache[accountID] = agentSpendCacheEntry{cents: cents, expiresAt: time.Now().Add(agentSpendCacheTTL)}
+	s.agentSpendCacheMu.Unlock()
+	return cents
+}
+
+// agentSpendFallback returns the last known good spend when a fresh read fails, so a transient Stripe error doesn't flip the displayed figure to $0.
+func (s *billingSvcImpl) agentSpendFallback(cached agentSpendCacheEntry, hasCached bool) int64 {
+	if hasCached {
+		return cached.cents
+	}
+	return 0
+}
+
+// GetAgentSpendCents returns the account's marked-up token spend for the current billing period. Shares the cached computation and period boundary used by GetAccountUsage so the cap agent-service enforces matches the dashboard figure.
+func (s *billingSvcImpl) GetAgentSpendCents(ctx context.Context, accountID string) (int64, *apierror.APIError) {
+	ctx, span := tracing.StartSpan(ctx, billingSvcTracer, "service.billing.get_agent_spend_cents")
+	defer span.End()
+
+	subInfo, apiErr := s.repos.NewAccountUsageRepo().GetAccountSubscriptionInfo(ctx, accountID)
+	if apiErr != nil {
+		return 0, tracing.Trace(span, apiErr)
+	}
+
+	return s.currentAgentSpendCents(ctx, accountID, agentSpendPeriodStart(subInfo)), nil
+}
+
+// agentSpendPeriodStart returns the start of the account's current billing period: one month before the subscription period end, or the calendar month start when there is no active subscription.
+func agentSpendPeriodStart(subInfo *domain.AccountSubscriptionInfo) time.Time {
+	if subInfo != nil && subInfo.SubscriptionCurrentPeriodEnd != nil {
+		return subInfo.SubscriptionCurrentPeriodEnd.AddDate(0, -1, 0)
+	}
+	now := time.Now().UTC()
+	return time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 }
 
 func (s *billingSvcImpl) CreateBillingPortalSession(ctx context.Context, accountID string) (string, *apierror.APIError) {

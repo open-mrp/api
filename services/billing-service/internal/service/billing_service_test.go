@@ -617,7 +617,8 @@ func (s *BillingSvcTestSuite) TestGetAccountUsage_HappyPath() {
 	}, nil)
 	s.accountUsageRepo.EXPECT().CountInvoicesByAccountID(anyCtx, accountID, gomock.Any()).Return(10, nil)
 	s.accountUsageRepo.EXPECT().CountBatchesByAccountID(anyCtx, accountID, gomock.Any()).Return(2, nil)
-	s.tokenBillingRepo.EXPECT().GetByAccountAndPeriod(anyCtx, accountID, gomock.Any()).Return(nil, nil)
+	// Agent spend resolves the plan's rate card; the suite configures no rate cards, so spend is 0 without a Stripe call.
+	s.accountUsageRepo.EXPECT().GetAccountNameAndPlanCode(anyCtx, accountID).Return("Test Account", "pro", nil)
 
 	usage, apiErr := s.billingSvc.GetAccountUsage(context.Background(), accountID)
 	s.Nil(apiErr)
@@ -626,6 +627,7 @@ func (s *BillingSvcTestSuite) TestGetAccountUsage_HappyPath() {
 	s.Equal(1, usage.Sandboxes.Current)
 	s.NotNil(usage.Subscription)
 	s.Equal("active", usage.Subscription.ServicingStatus)
+	s.Equal(int64(0), usage.EstimatedAgentSpendCents)
 }
 
 func (s *BillingSvcTestSuite) TestGetAccountUsage_FreePlanNoSubscription() {
@@ -639,11 +641,13 @@ func (s *BillingSvcTestSuite) TestGetAccountUsage_FreePlanNoSubscription() {
 	s.accountUsageRepo.EXPECT().GetAccountSubscriptionInfo(anyCtx, accountID).Return(&domain.AccountSubscriptionInfo{}, nil)
 	s.accountUsageRepo.EXPECT().CountInvoicesByAccountID(anyCtx, accountID, gomock.Any()).Return(0, nil)
 	s.accountUsageRepo.EXPECT().CountBatchesByAccountID(anyCtx, accountID, gomock.Any()).Return(0, nil)
-	s.tokenBillingRepo.EXPECT().GetByAccountAndPeriod(anyCtx, accountID, gomock.Any()).Return(nil, nil)
+	// Free plan has no token rate card, so agent spend is 0 without a Stripe call.
+	s.accountUsageRepo.EXPECT().GetAccountNameAndPlanCode(anyCtx, accountID).Return("Free Account", "free", nil)
 
 	usage, apiErr := s.billingSvc.GetAccountUsage(context.Background(), accountID)
 	s.Nil(apiErr)
 	s.Nil(usage.Subscription)
+	s.Equal(int64(0), usage.EstimatedAgentSpendCents)
 }
 
 // --- SetupBillingProfile tests ---

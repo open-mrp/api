@@ -41,15 +41,11 @@ type AccountPrice struct {
 }
 
 var SampleAccountPrice = &AccountPrice{
-	ID:     SampleAccountPriceID,
-	Object: constants.ObjectTypeAccountPrice,
-	RecipientAccount: &Customer{
-		ID:     SampleCustomerID,
-		Object: constants.ObjectTypeCustomer,
-		Name:   SampleCustomerName,
-	},
-	ProductLine: SampleProductLine,
-	Rate:        SampleRate,
+	ID:               SampleAccountPriceID,
+	Object:           constants.ObjectTypeAccountPrice,
+	RecipientAccount: SampleCustomer,
+	ProductLine:      SampleProductLine,
+	Rate:             SampleRate,
 	Categories: NewList([]ItemCategory{
 		{
 			ID:     SampleItemCategoryID,

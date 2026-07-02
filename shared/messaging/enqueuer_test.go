@@ -86,6 +86,10 @@ func (b *mockEnqueuerBroker) ConsumeMessages(context.Context, string, MessageHan
 	return nil
 }
 
+func (b *mockEnqueuerBroker) ConsumeFanout(context.Context, string, []string, MessageHandler, ...ConsumeOption) error {
+	return nil
+}
+
 func (b *mockEnqueuerBroker) IsReady() bool { return true }
 func (b *mockEnqueuerBroker) Close()        {}
 

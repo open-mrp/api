@@ -16,7 +16,7 @@ var zeroTime time.Time
 
 // StartEventConsumer starts a RabbitMQ consumer that reads agent run step events and fans them out to WebSocket clients via the hub.
 func StartEventConsumer(ctx context.Context, broker messaging.MessageBroker, hub *Hub) error {
-	return broker.ConsumeMessages(ctx, messaging.AgentEventRunStepQueue, func(ctx context.Context, d amqp.Delivery) error {
+	return broker.ConsumeFanout(ctx, messaging.AgentEventRunStepQueue, []string{string(contracts.AgentEventRunStep)}, func(ctx context.Context, d amqp.Delivery) error {
 		// Unwrap the AmqpMessage envelope.
 		var envelope contracts.AmqpMessage
 		if err := json.Unmarshal(d.Body, &envelope); err != nil {
@@ -65,7 +65,7 @@ func StartEventConsumer(ctx context.Context, broker messaging.MessageBroker, hub
 
 // StartNotificationConsumer starts a RabbitMQ consumer that reads in-app notification / messaging realtime-delivery events and fans them out to WebSocket clients via the hub, routing to the per-user topic (the bell) and/or a conversation topic (live chat).
 func StartNotificationConsumer(ctx context.Context, broker messaging.MessageBroker, hub *Hub) error {
-	return broker.ConsumeMessages(ctx, messaging.NotificationEventDeliveredQueue, func(ctx context.Context, d amqp.Delivery) error {
+	return broker.ConsumeFanout(ctx, messaging.NotificationEventDeliveredQueue, []string{string(contracts.NotificationEventDelivered), string(contracts.NotificationEventConversationUpdated)}, func(ctx context.Context, d amqp.Delivery) error {
 		var envelope contracts.AmqpMessage
 		if err := json.Unmarshal(d.Body, &envelope); err != nil {
 			slog.Error("WS notification consumer: failed to unmarshal envelope", "error", err)
@@ -132,7 +132,7 @@ func StartNotificationConsumer(ctx context.Context, broker messaging.MessageBrok
 
 // StartRunCompletedConsumer starts a RabbitMQ consumer that reads agent run completed events and fans them out to WebSocket clients via the hub.
 func StartRunCompletedConsumer(ctx context.Context, broker messaging.MessageBroker, hub *Hub) error {
-	return broker.ConsumeMessages(ctx, messaging.AgentEventRunCompletedQueue, func(ctx context.Context, d amqp.Delivery) error {
+	return broker.ConsumeFanout(ctx, messaging.AgentEventRunCompletedQueue, []string{string(contracts.AgentEventRunCompleted)}, func(ctx context.Context, d amqp.Delivery) error {
 		var envelope contracts.AmqpMessage
 		if err := json.Unmarshal(d.Body, &envelope); err != nil {
 			slog.Error("WS run-completed consumer: failed to unmarshal envelope", "error", err)

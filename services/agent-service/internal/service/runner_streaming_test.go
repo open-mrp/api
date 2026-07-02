@@ -38,6 +38,10 @@ func (b *mockBroker) ConsumeMessages(_ context.Context, _ string, _ messaging.Me
 	return nil
 }
 
+func (b *mockBroker) ConsumeFanout(_ context.Context, _ string, _ []string, _ messaging.MessageHandler, _ ...messaging.ConsumeOption) error {
+	return nil
+}
+
 func (b *mockBroker) IsReady() bool { return true }
 func (b *mockBroker) Close()        {}
 

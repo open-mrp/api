@@ -41,12 +41,7 @@ var SampleReceivableEntry = ReceivableEntry{
 		Object: constants.ObjectTypeInvoice,
 		Number: "INV-001",
 	},
-	Customer: &Customer{
-		ID:     SampleCustomerID,
-		Object: constants.ObjectTypeCustomer,
-		Name:   SampleCustomerName,
-		Number: SampleCustomerNumber,
-	},
+	Customer:         SampleCustomer,
 	PONumber:         nil,
 	InvoicedAt:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	RemainingBalance: "1234.560000000000000000000000000000",

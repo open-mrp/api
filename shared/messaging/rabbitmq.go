@@ -4,10 +4,13 @@ package messaging
 import (
 	"cmp"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -166,6 +169,20 @@ func NewRabbitMQ(ctx context.Context, config *RabbitMQConfig) (MessageBroker, er
 //
 // With the default Concurrency of 1, QoS prefetch is the broker default (1) and each message is fully processed before the next is delivered — strict in-order consumption. With Concurrency > 1, prefetch is raised to 2x the worker count so workers stay fed, and messages on this queue are processed (and ACKed) out of order; see ConsumeOptions.Concurrency for when that is safe.
 func (r *rabbitMQ) ConsumeMessages(ctx context.Context, queueName string, handler MessageHandler, opts ...ConsumeOption) error {
+	return r.consume(ctx, queueName, nil, handler, opts...)
+}
+
+// ConsumeFanout consumes from a per-instance ephemeral queue bound to routingKeys, so every calling process receives a copy of every matching message. See MessageBroker.ConsumeFanout for the semantics and when to use it instead of ConsumeMessages. The queue is (re)declared and (re)bound after every (re)connect, since exclusive/auto-delete queues are torn down with the connection that owns them.
+func (r *rabbitMQ) ConsumeFanout(ctx context.Context, baseName string, routingKeys []string, handler MessageHandler, opts ...ConsumeOption) error {
+	queueName := baseName + "." + instanceSuffix()
+	declareQueue := func() error {
+		return r.declareAndBindInstanceQueue(queueName, routingKeys)
+	}
+	return r.consume(ctx, queueName, declareQueue, handler, opts...)
+}
+
+// consume is the shared consumption loop backing ConsumeMessages and ConsumeFanout. When declareQueue is non-nil it is invoked after each (re)connect and before consuming, to (re)declare and (re)bind the queue; this is required for the ephemeral per-instance fan-out queues, which do not exist in the static topology declared by setupExchangesAndQueues and are destroyed whenever their connection drops.
+func (r *rabbitMQ) consume(ctx context.Context, queueName string, declareQueue func() error, handler MessageHandler, opts ...ConsumeOption) error {
 	options := ConsumeOptions{Concurrency: 1}
 	for _, opt := range opts {
 		opt(&options)
@@ -194,6 +211,19 @@ func (r *rabbitMQ) ConsumeMessages(ctx context.Context, queueName string, handle
 				case <-time.After(r.reconnectDelay):
 				}
 				continue
+			}
+
+			// Per-instance fan-out queues are not part of the static topology and are destroyed with their connection, so they must be (re)declared and (re)bound on every (re)connect before we can consume.
+			if declareQueue != nil {
+				if err := declareQueue(); err != nil {
+					slog.Error("Failed to declare instance queue, retrying", "queue", queueName, "error", err, "retry_delay", r.reconnectDelay)
+					select {
+					case <-ctx.Done():
+						return
+					case <-time.After(r.reconnectDelay):
+					}
+					continue
+				}
 			}
 
 			err := r.Channel.Qos(
@@ -712,7 +742,7 @@ func (r *rabbitMQ) setupExchangesAndQueues() error {
 		return err
 	}
 
-	// Agent event queue: run completed
+	// Agent event queue: run completed. This durable, shared queue is the billing-service work queue for token/usage aggregation (exactly-once across billing replicas). The api-gateway also needs run-completed events, but for WebSocket fan-out to every replica — it consumes them via its own per-instance queue (see ws.StartRunCompletedConsumer / ConsumeFanout), not this one.
 	if err := r.declareAndBindQueue(
 		AgentEventRunCompletedQueue,
 		[]string{string(contracts.AgentEventRunCompleted)},
@@ -721,23 +751,7 @@ func (r *rabbitMQ) setupExchangesAndQueues() error {
 		return err
 	}
 
-	// Agent event queue: run step (for WebSocket streaming)
-	if err := r.declareAndBindQueue(
-		AgentEventRunStepQueue,
-		[]string{string(contracts.AgentEventRunStep)},
-		ApplicationExchange,
-	); err != nil {
-		return err
-	}
-
-	// Notification realtime-delivery queue (for WebSocket fan-out of the bell + live chat)
-	if err := r.declareAndBindQueue(
-		NotificationEventDeliveredQueue,
-		[]string{string(contracts.NotificationEventDelivered), string(contracts.NotificationEventConversationUpdated)},
-		ApplicationExchange,
-	); err != nil {
-		return err
-	}
+	// AgentEventRunStepQueue and NotificationEventDeliveredQueue are intentionally NOT declared here. They are realtime WebSocket fan-out streams consumed by every api-gateway replica, each via its own ephemeral per-instance queue (see the ws consumers using ConsumeFanout). A single shared durable queue here would make the replicas competing consumers, so only one would receive each event and clients pinned to the other replicas would silently miss it.
 
 	return nil
 }
@@ -773,6 +787,58 @@ func (r *rabbitMQ) declareAndBindQueue(queueName string, messageTypes []string, 
 	}
 
 	return nil
+}
+
+// declareAndBindInstanceQueue declares an ephemeral queue owned by this process and binds it to the application exchange for each of the given routing keys. Unlike declareAndBindQueue, the queue is non-durable, exclusive (usable only by this connection), and auto-deleting (removed once the last consumer disconnects), so it lives and dies with this instance. No dead-letter routing is configured: fan-out delivery is best-effort and the persisted rows are the source of truth, so a rejected realtime event is simply dropped rather than parked in the DLQ. It is invoked on every (re)connect by the consume loop because the queue is torn down whenever its connection drops.
+func (r *rabbitMQ) declareAndBindInstanceQueue(queueName string, routingKeys []string) error {
+	q, err := r.Channel.QueueDeclare(
+		queueName, // name
+		false,     // durable
+		true,      // delete when unused
+		true,      // exclusive
+		false,     // no-wait
+		nil,       // arguments
+	)
+	if err != nil {
+		return fmt.Errorf("failed to declare instance queue %s: %v", queueName, err)
+	}
+
+	for _, rk := range routingKeys {
+		if err := r.Channel.QueueBind(
+			q.Name,              // queue name
+			rk,                  // routing key
+			ApplicationExchange, // exchange
+			false,
+			nil,
+		); err != nil {
+			return fmt.Errorf("failed to bind instance queue %s: %v", queueName, err)
+		}
+	}
+
+	return nil
+}
+
+// instanceSuffix returns a stable, process-unique queue-name suffix used to give each api-gateway replica its own fan-out queue. It combines the hostname (the pod name under Kubernetes, so queues are identifiable in the RabbitMQ management UI) with a random token to avoid collisions when two processes share a host. Computed once per process.
+var (
+	instanceSuffixOnce sync.Once
+	instanceSuffixVal  string
+)
+
+func instanceSuffix() string {
+	instanceSuffixOnce.Do(func() {
+		host, err := os.Hostname()
+		if err != nil || host == "" {
+			host = "unknown"
+		}
+		buf := make([]byte, 4)
+		if _, err := rand.Read(buf); err != nil {
+			// crypto/rand should never fail; fall back to a fixed token so the queue name is still valid.
+			instanceSuffixVal = host + ".00000000"
+			return
+		}
+		instanceSuffixVal = host + "." + hex.EncodeToString(buf)
+	})
+	return instanceSuffixVal
 }
 
 // IsReady reports whether the broker connection and channel are ready for use.

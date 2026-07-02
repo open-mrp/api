@@ -112,12 +112,13 @@ func Run(
 	})
 
 	billingSvc := service.NewBillingSvc(&service.BillingSvcConfig{
-		Repos:              repoFactory,
-		StripeClient:       stripeClient,
-		CoreClient:         coreClient,
-		FrontendURL:        cfg.FrontendURL,
-		NotificationClient: notificationClient,
-		IdempotencyMed:     idempotencyMed,
+		Repos:                  repoFactory,
+		StripeClient:           stripeClient,
+		CoreClient:             coreClient,
+		FrontendURL:            cfg.FrontendURL,
+		NotificationClient:     notificationClient,
+		IdempotencyMed:         idempotencyMed,
+		TokenRateCardIDsByPlan: cfg.TokenRateCardIDsByPlan,
 	})
 
 	stripeWebhookSvc := service.NewStripeWebhookSvc(&service.StripeWebhookSvcConfig{

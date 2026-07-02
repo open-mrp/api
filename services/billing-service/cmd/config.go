@@ -2,7 +2,9 @@ package main
 
 import (
 	"cmp"
+	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 
@@ -29,6 +31,7 @@ const (
 	envStripeWebhookVerboseErrors = "STRIPE_WEBHOOK_VERBOSE_ERRORS"
 	envStripePublishableKey       = "STRIPE_PUBLISHABLE_KEY" // #nosec G101 - Env var name, not a credential
 	envPlatformMode               = "PLATFORM"
+	envStripeTokenRateCardIDs     = "STRIPE_TOKEN_RATE_CARD_IDS" // #nosec G101 - Env var name, not a credential
 )
 
 // config represents the configuration for the billing service.
@@ -73,6 +76,12 @@ type config struct {
 	// for Stripe.js initialization.
 	// Not enforced when PlatformMode is "test".
 	StripePublishableKey string
+
+	// TokenRateCardIDsByPlan (optional) maps a plan_code to the Stripe rate card id
+	// that prices that plan's LLM token usage. Parsed from STRIPE_TOKEN_RATE_CARD_IDS,
+	// a JSON object like {"pro":"rcd_...","enterprise":"rcd_..."}. Plans not present
+	// report zero agent spend.
+	TokenRateCardIDsByPlan map[string]string
 }
 
 func (c *config) withDefaults(getenv func(string) string) *config {
@@ -93,6 +102,14 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		platformMode = constants.PlatformMode(p)
 	}
 
+	var tokenRateCardIDs map[string]string
+	if raw := env.GetEnv(envStripeTokenRateCardIDs, getenv); raw != "" {
+		if err := json.Unmarshal([]byte(raw), &tokenRateCardIDs); err != nil {
+			slog.Error("failed to parse STRIPE_TOKEN_RATE_CARD_IDS; agent spend will report zero", "error", err.Error())
+			tokenRateCardIDs = nil
+		}
+	}
+
 	return &config{
 		Port:                       port,
 		DBURL:                      env.GetEnv(envDBURL, getenv),
@@ -106,6 +123,7 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		FrontendURL:                env.GetEnv(envFrontendURL, getenv),
 		StripeWebhookVerboseErrors: verboseWebhookErrors,
 		StripePublishableKey:       env.GetEnv(envStripePublishableKey, getenv),
+		TokenRateCardIDsByPlan:     tokenRateCardIDs,
 	}
 }
 

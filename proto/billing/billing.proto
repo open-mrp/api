@@ -44,6 +44,12 @@ service BillingService {
   // a new Stripe customer is created and linked.
   rpc EnsureBillingCustomer(EnsureBillingCustomerRequest) returns (EnsureBillingCustomerResponse);
 
+  // GetAgentSpend returns the marked-up token spend an account has accrued in
+  // the current billing period, as it will be billed in Stripe. Used by
+  // agent-service to enforce the spending cap against the same figure the
+  // dashboard displays.
+  rpc GetAgentSpend(GetAgentSpendRequest) returns (GetAgentSpendResponse);
+
   // SwitchPlan initiates a plan switch using v2 billing intents.
   rpc SwitchPlan(SwitchPlanRequest) returns (SwitchPlanResponse);
 
@@ -200,6 +206,14 @@ message RequestEnterpriseUpgradeRequest {}
 
 message RequestEnterpriseUpgradeResponse {
   bool success = 1;
+}
+
+message GetAgentSpendRequest {
+  optional string account_id = 1;
+}
+
+message GetAgentSpendResponse {
+  int64 estimated_spend_cents = 1;
 }
 
 message EnsureBillingCustomerRequest {

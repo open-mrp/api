@@ -3,6 +3,7 @@ package domain
 import (
 	"context"
 	"fmt"
+	"time"
 
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -34,6 +35,9 @@ type StripeClient interface {
 
 	// ReportMeterEvent reports a usage meter event to the Stripe V2 billing/meter_events API.
 	ReportMeterEvent(ctx context.Context, eventName, stripeCustomerID string, value int, idempotencyKey string) error
+
+	// GetAgentTokenSpendCents returns the marked-up cost in cents of the customer's metered LLM token usage since the given time, reconstructed from the plan's rate card rates and the Stripe usage meter. This equals what Stripe will bill for the metered token lines: rates carry the plan's markup and the AI Gateway meters real per-model, per-token-type usage (including cache). Returns 0 when the rate card has no rates or the customer has no usage in the window.
+	GetAgentTokenSpendCents(ctx context.Context, customerID, rateCardID string, since time.Time) (int64, error)
 }
 
 // StripeCustomer represents a Stripe customer created during registration.

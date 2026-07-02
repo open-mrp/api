@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.31.3](https://github.com/Augno/api/compare/v0.31.2...v0.31.3) (2026-07-02)
+
+
+### Bug Fixes
+
+* update resource requests and limits for multiple services in Kubernetes configuration ([3082fe3](https://github.com/Augno/api/commit/3082fe316b2cfcac378c4b56b972055391635bc2))
+
 ## [0.31.2](https://github.com/Augno/api/compare/v0.31.1...v0.31.2) (2026-07-02)
 
 

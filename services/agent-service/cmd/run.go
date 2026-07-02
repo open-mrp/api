@@ -72,9 +72,10 @@ func Run(
 	enqueuer, err := messaging.NewEnqueuer(&messaging.EnqueuerConfig{
 		ServiceName:  domain.ServiceName,
 		PlatformMode: cfg.PlatformMode,
-		// Chat runs kick the enqueuer (OutboxNotifier below) so they start instantly; this caps the
-		// worst case if a kick is ever missed at 2s instead of the default 5s idle ceiling.
-		MaxPollInterval: 2 * time.Second,
+		// Chat runs kick the enqueuer (OutboxNotifier below) so they start instantly; this tightens the
+		// idle-backoff ceiling below the shared default so an un-kicked streaming event still posts
+		// within 500ms rather than waiting out a longer idle poll.
+		MaxPollInterval: 500 * time.Millisecond,
 	}, outboxRepo, rabbitmq, leaseSvc)
 	if err != nil {
 		return err
@@ -178,6 +179,7 @@ func Run(
 		NotificationClient: notificationClient,
 		Broker:             rabbitmq,
 		BillingClient:      billingClient,
+		OutboxNotifier:     enqueuer,
 	})
 
 	// Run consumer

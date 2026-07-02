@@ -25,10 +25,10 @@ type EnqueuerConfig struct {
 	// LockOwner (optional; default: "{hostname}-{pid}") is a unique identifier for this process instance, used to claim outbox messages via optimistic locking.
 	LockOwner string
 
-	// PollInterval (optional; default: 1s) controls how frequently the enqueuer polls the outbox table for pending messages while there is work to do.
+	// PollInterval (optional; default: 250ms in production, 10ms in test) controls how frequently the enqueuer polls the outbox table for pending messages while there is work to do.
 	PollInterval time.Duration
 
-	// MaxPollInterval (optional; default: 5s in production, == PollInterval in test) is the ceiling for idle backoff. When consecutive polls find nothing, the interval doubles from PollInterval up to this value so an empty outbox is not queried at full rate. Any poll that finds work resets the interval to PollInterval, so pickup latency and throughput under load are unchanged; only the steady-state idle poll rate drops. The tradeoff is that the first message after a sustained idle period waits up to MaxPollInterval to be picked up. Must be >= PollInterval (clamped in WithDefaults).
+	// MaxPollInterval (optional; default: 1s in production, == PollInterval in test) is the ceiling for idle backoff. When consecutive polls find nothing, the interval doubles from PollInterval up to this value so an empty outbox is not queried at full rate. Any poll that finds work resets the interval to PollInterval, so pickup latency and throughput under load are unchanged; only the steady-state idle poll rate drops. The tradeoff is that the first message after a sustained idle period waits up to MaxPollInterval to be picked up. Must be >= PollInterval (clamped in WithDefaults).
 	MaxPollInterval time.Duration
 
 	// BatchSize (optional; default: 100) is the maximum number of outbox messages to lock and publish in a single poll cycle.
@@ -70,7 +70,7 @@ func (c *EnqueuerConfig) WithDefaults() *EnqueuerConfig {
 		if c.PlatformMode.IsTest() {
 			c.PollInterval = 10 * time.Millisecond
 		} else {
-			c.PollInterval = 1 * time.Second
+			c.PollInterval = 250 * time.Millisecond
 		}
 	}
 	if c.MaxPollInterval == 0 {
@@ -78,7 +78,7 @@ func (c *EnqueuerConfig) WithDefaults() *EnqueuerConfig {
 			// Keep e2e cadence tight so async side-effects are observed quickly: no backoff.
 			c.MaxPollInterval = c.PollInterval
 		} else {
-			c.MaxPollInterval = 5 * time.Second
+			c.MaxPollInterval = 1 * time.Second
 		}
 	}
 	if c.MaxPollInterval < c.PollInterval {

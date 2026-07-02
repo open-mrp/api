@@ -73,6 +73,9 @@ type RunnerConfig struct {
 
 	// BillingClient (required) resolves billing customers for spend tracking.
 	BillingClient domain.BillingCustomerResolver
+
+	// OutboxNotifier (optional; default: nil) wakes the outbox enqueuer the instant the runner commits a latency-sensitive durable row (the streaming reply bubble, its finalize, run completion), so those post without waiting out the enqueuer's idle poll backoff. When nil, they are still picked up on the next poll.
+	OutboxNotifier messaging.OutboxNotifier
 }
 
 func (c *RunnerConfig) WithDefaults() *RunnerConfig {
@@ -114,6 +117,7 @@ type runnerSvc struct {
 	notificationClient domain.NotificationClient
 	broker             messaging.MessageBroker
 	billingClient      domain.BillingCustomerResolver
+	outboxNotifier     messaging.OutboxNotifier
 }
 
 func NewRunnerSvc(config *RunnerConfig) domain.RunnerSvc {
@@ -132,6 +136,14 @@ func NewRunnerSvc(config *RunnerConfig) domain.RunnerSvc {
 		notificationClient: config.NotificationClient,
 		broker:             config.Broker,
 		billingClient:      config.BillingClient,
+		outboxNotifier:     config.OutboxNotifier,
+	}
+}
+
+// kickOutbox wakes the outbox enqueuer so a just-committed durable row (a streaming reply, its finalize, or run completion) is published immediately rather than on the enqueuer's next idle poll, which can be up to MaxPollInterval away. No-op when no notifier was injected. Call only after the writing Create has returned — kicking before the row is committed would race the poll against an as-yet-invisible row.
+func (s *runnerSvc) kickOutbox() {
+	if s.outboxNotifier != nil {
+		s.outboxNotifier.Notify()
 	}
 }
 
@@ -2262,6 +2274,8 @@ func (s *runnerSvc) writeRunCompletedEvent(ctx context.Context, runID, accountID
 	}); outboxErr != nil {
 		slog.Error("Failed to write run completed event to outbox", "error", outboxErr, "run_id", runID)
 	}
+	// Publish the run-completed event now rather than on the enqueuer's next idle poll.
+	s.kickOutbox()
 }
 
 // writeRunCompletedNotification enqueues an in-app "agent run completed" notification to the user who triggered the run. Best-effort: it fires only for user-triggered runs (not scheduled/system/agent triggers), attributing the notification to the agent as sender and linking to the run. The notification-service fan-out resolves the recipient user id to the per-account account_user id and pushes it to the bell in real time.
@@ -2485,6 +2499,8 @@ func (s *runnerSvc) enqueueAgentReply(ctx context.Context, data messaging.AgentR
 	}); outboxErr != nil {
 		slog.Error("Failed to enqueue agent chat reply", "error", outboxErr, "run_id", data.AgentRunID, "phase", data.Phase)
 	}
+	// Post the reply bubble / its finalize now rather than on the enqueuer's next idle poll.
+	s.kickOutbox()
 }
 
 // maybePatchChatStream streams the growing answer into the in-flight chat reply message, throttled to the chatStreamPatch cadence. No-op when no stream is in flight.

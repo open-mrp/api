@@ -80,9 +80,9 @@ func Run(
 		ServiceName:  domain.ServiceName,
 		PlatformMode: cfg.PlatformMode,
 		// Posting a message kicks the enqueuer (see NewConversationSvc) so agent dispatch and realtime
-		// delivery fire instantly; this caps the worst case if a kick is ever missed at 2s rather than
-		// the default 5s idle ceiling.
-		MaxPollInterval: 2 * time.Second,
+		// delivery fire instantly; this tightens the idle-backoff ceiling below the shared default so an
+		// un-kicked realtime event still posts within 500ms.
+		MaxPollInterval: 500 * time.Millisecond,
 	}, outboxEnqueuerRepo, rabbitmq, leaseSvc)
 	if err != nil {
 		return err

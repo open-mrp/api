@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.32.0](https://github.com/Augno/api/compare/v0.31.3...v0.32.0) (2026-07-02)
+
+
+### Features
+
+* implement idle watchdog and timeout for LLM streaming connections ([ad824b6](https://github.com/Augno/api/commit/ad824b61d22f5ee343d6e996a40a7afc4d434d2f))
+
+
+### Bug Fixes
+
+* tighten enqueuer polling intervals and add outbox notifier to runner service ([5461f3b](https://github.com/Augno/api/commit/5461f3b6469b2a76f5320dff6b3326a8941f0352))
+
 ## [0.31.3](https://github.com/Augno/api/compare/v0.31.2...v0.31.3) (2026-07-02)
 
 

@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/augno/api/services/auth-service/pkg/types"
+
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -27,7 +29,10 @@ func (e *ListPermissionGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*L
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
-		ObjectType:        constants.ObjectTypePermissionGroup,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainPermissions, Action: types.ActionRead},
+		},
+		ObjectType: constants.ObjectTypePermissionGroup,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListPermissionGroupsRequest) (*apiresource.List[apiresource.PermissionGroup], *apierror.APIError) {
 			return svc.(PermissionGroupSvc).ListPermissionGroups
 		},

@@ -26,6 +26,8 @@ func (e *ListAccountIntegrationsEndpoint) Materialize() *apiendpoint.APIEndpoint
 		Route:             "/v1/settings/integrations",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
+		AgentTool:         true,
+		RequiredRoleType:  constants.RoleTypeAdmin,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeAccountIntegration,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAccountIntegrationsRequest) (*apiresource.List[apiresource.AccountIntegration], *apierror.APIError) {

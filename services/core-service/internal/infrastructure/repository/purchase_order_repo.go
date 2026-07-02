@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
-	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -314,33 +314,26 @@ func (r *purchaseOrderRepoImpl) GetNextOrderNumber(ctx context.Context, accountI
 	ctx, span := purchaseOrderRepoTracer.Start(ctx, "repository.purchase_order.get_next_order_number")
 	defer span.End()
 
-	nextNumber, err := r.queries.GetNextPurchaseOrderNumber(ctx, accountID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return "", tracing.Trace(span, apiErr)
-	}
-
-	numberStr := decimalToString(nextNumber)
-	var numberInt int32
-	_, parseErr := fmt.Sscanf(numberStr, "%d", &numberInt)
-	if parseErr != nil {
-		return "", tracing.Trace(span, apierror.NewInternalError(parseErr, "Failed to parse next purchase order number."))
-	}
-
 	sysPropertyID, apiErr := id.GenID(id.SysPropertyIDPrefix, nil)
 	if apiErr != nil {
 		return "", tracing.Trace(span, apiErr)
 	}
 
-	err = r.queries.UpdateNextPurchaseOrderNumber(ctx, sqlc.UpdateNextPurchaseOrderNumberParams{
+	// Atomically reserve the next number: the upsert row-locks the per-account counter and returns the
+	// reserved value via LAST_INSERT_ID, so concurrent creates serialize instead of racing on MAX+1.
+	res, err := r.queries.AllocateNextPurchaseOrderNumber(ctx, sqlc.AllocateNextPurchaseOrderNumberParams{
 		ID:        sysPropertyID,
 		AccountID: accountID,
-		Value:     numberInt,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return "", tracing.Trace(span, apiErr)
 	}
+	number, err := res.LastInsertId()
+	if err != nil {
+		return "", tracing.Trace(span, apierror.NewInternalError(err, "Failed to read the reserved purchase order number."))
+	}
 
-	return numberStr, nil
+	return strconv.FormatInt(number, 10), nil
 }
 
 func (r *purchaseOrderRepoImpl) GetSupplierID(ctx context.Context, accountID, purchaseOrderID string) (string, *apierror.APIError) {

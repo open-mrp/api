@@ -155,7 +155,6 @@ func (s *salesOrderSvcImpl) resolveSalesOrderCreateLines(
 				NumeratorUnitID:   product.UnitCostNumeratorUnitID,
 				DenominatorUnitID: product.UnitCostDenominatorUnitID,
 			},
-			EdiLineItemID: line.EdiLineItemID,
 		}
 	}
 
@@ -404,8 +403,7 @@ func convertToAnyAcceptable(
 	return decimal.Zero, false
 }
 
-// convertValue converts a measure from one unit to another within a unit group,
-// via the shared base measure (UnitGroupUtils-style):
+// convertValue converts a measure from one unit to another within a unit group, via the shared base measure (UnitGroupUtils-style):
 //
 //	base = normalizeQuantity(value, from)
 //	result = inverse-normalize(base, to)
@@ -466,10 +464,7 @@ func parseDecimal(s string) decimal.Decimal {
 // round2 rounds to 2 decimal places using JS Math.round semantics (half toward
 // +infinity): math.Floor(x*100 + 0.5) / 100. Applied only at the final step.
 //
-// The rounding decision is performed in float64 to match the upstream JS engine
-// bit-for-bit (including float64 representation effects on exact half-way
-// values). The float64 result is then re-parsed through decimal at scale 2 so
-// the emitted string is a clean 2-decimal value with no float artifacts.
+// The rounding decision is performed in float64 to match the upstream JS engine bit-for-bit (including float64 representation effects on exact half-way values). The float64 result is then re-parsed through decimal at scale 2 so the emitted string is a clean 2-decimal value with no float artifacts.
 func round2(x decimal.Decimal) decimal.Decimal {
 	f, _ := x.Float64()
 	rounded := math.Floor(f*100+0.5) / 100

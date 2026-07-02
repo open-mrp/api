@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/augno/api/services/auth-service/pkg/types"
+
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -29,7 +31,10 @@ func (e *ListInventoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListIn
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
-		ObjectType:        constants.ObjectTypeInventoryItem,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainItems, Action: types.ActionRead},
+		},
+		ObjectType: constants.ObjectTypeInventoryItem,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListInventoriesRequest) (*apiresource.List[apiresource.InventoryItem], *apierror.APIError) {
 			return svc.(InventorySvc).ListInventories
 		},

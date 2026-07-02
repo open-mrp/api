@@ -15,9 +15,10 @@ Every gRPC unary call emits exactly one structured `slog` record at INFO level �
 | `grpc_code` | string | gRPC status code, e.g. `"OK"`, `"NotFound"` |
 | `duration_ms` | float64 | Handler execution time in fractional milliseconds |
 | `request_id` | string | From context, if present |
-| `auth_type` | string | `"user"`, `"api_key"`, or `"unauthenticated"` |
+| `auth_type` | string | `"user"`, `"api_key"`, `"agent"`, or `"unauthenticated"` |
 | `user_id` | string | Actor ID when auth_type is `"user"` |
 | `key_id` | string | Actor ID when auth_type is `"api_key"` |
+| `agent_id` | string | Actor ID when auth_type is `"agent"` |
 | `target_account_id` | string | Account scope, if present |
 | `account_mode` | string | `"prod"` or `"test"`, if present |
 | `trace_id` | string | OpenTelemetry trace ID, if span is recording |
@@ -34,7 +35,8 @@ The interceptor chain is defined in `shared/contracts/grpc_server.go` (`GRPCServ
 3. Identity          — extracts identity from gRPC metadata into context
 4. IdempotencyKey    — extracts idempotency key from metadata into context
 5. RequestID         — extracts or generates request ID into context
-6. CanonicalLog      — emits the canonical log line (MUST BE LAST)
+6. ClientIP          — extracts the client IP from metadata into context
+7. CanonicalLog      — emits the canonical log line (MUST BE LAST)
 ```
 
 ### Why CanonicalLog Must Be Last

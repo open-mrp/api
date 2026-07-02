@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -22,14 +23,16 @@ type ListAccountGroupsEndpoint struct{}
 
 func (e *ListAccountGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAccountGroupsRequest, *apiresource.List[apiresource.AccountGroup]] {
 	return (&apiendpoint.APIEndpoint[*ListAccountGroupsRequest, *apiresource.List[apiresource.AccountGroup]]{
-		Title:             "List Account Groups",
-		Method:            http.MethodGet,
-		ContentType:       "application/json",
-		Route:             "/v1/sales/account-groups",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeAccountGroup,
+		Title:               "List Account Groups",
+		Method:              http.MethodGet,
+		ContentType:         "application/json",
+		Route:               "/v1/sales/account-groups",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainCustomerGroups, Action: types.ActionRead}},
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeAccountGroup,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAccountGroupsRequest) (*apiresource.List[apiresource.AccountGroup], *apierror.APIError) {
 			return svc.(AccountGroupSvc).ListAccountGroups
 		},

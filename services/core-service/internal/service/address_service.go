@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -201,6 +202,12 @@ func (s *addressSvcImpl) CreateAddress(ctx context.Context, params domain.Create
 
 	params.AccountID = identity.Target.AccountID
 
+	normalizedName, apiErr := normalizeAddressName(params.Name)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	params.Name = normalizedName
+
 	addressID, apiErr := id.GenID(id.AddressIDPrefix, nil)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -297,6 +304,12 @@ func (s *addressSvcImpl) UpdateAddress(ctx context.Context, params domain.Update
 
 	params.AccountID = identity.Target.AccountID
 
+	normalizedName, apiErr := normalizeOptionalAddressName(params.Name)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	params.Name = normalizedName
+
 	meds := s.mediators()
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
@@ -371,8 +384,7 @@ func (s *addressSvcImpl) UpdateAddress(ctx context.Context, params domain.Update
 				// Clear google_place_id on geo change
 				clearGeoParams := params
 				clearGeoParams.StreetLine2 = streetLine2Field.BackfillUnsetPtr(existing.Geolocation.StreetLine2)
-				// Build the update params with cleared google_place_id
-				// by ensuring we send all geo fields to the update
+				// Build the update params with cleared google_place_id by ensuring we send all geo fields to the update
 
 				if sharedCount > 1 {
 					// Shared: create new geolocation and relink
@@ -598,4 +610,23 @@ func coalesceString(update *string, existing *string) string {
 		return *existing
 	}
 	return ""
+}
+
+func normalizeAddressName(name string) (string, *apierror.APIError) {
+	trimmed := strings.TrimSpace(name)
+	if trimmed == "" {
+		return "", apierror.NewValidationErrorWithParam("Address name is required.", "name")
+	}
+	return trimmed, nil
+}
+
+func normalizeOptionalAddressName(name *string) (*string, *apierror.APIError) {
+	if name == nil {
+		return nil, nil
+	}
+	normalized, apiErr := normalizeAddressName(*name)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	return &normalized, nil
 }

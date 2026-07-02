@@ -129,6 +129,47 @@ func TestMapRowToRequestLogRead_APIKeyActor_FallbackToActorID(t *testing.T) {
 	}
 }
 
+func TestMapRowToRequestLogRead_AgentActor(t *testing.T) {
+	t.Parallel()
+	row := baseRow()
+	// actor_id holds the agent definition id; actor_type stores the relation
+	// ("internal") while identity_type drives the actor kind.
+	row.ActorID = nullStr("agdf_abc123")
+	row.ActorType = nullStr("internal")
+	row.IdentityType = nullStr("agent")
+
+	rl := mapRowToRequestLogRead(&row)
+
+	if rl.Actor == nil {
+		t.Fatal("expected Actor to be resolved for identity_type=agent")
+	}
+	if rl.Actor.ActorType != constants.ActorTypeAgent {
+		t.Errorf("expected ActorType %q, got %q", constants.ActorTypeAgent, rl.Actor.ActorType)
+	}
+	if rl.Actor.ID != "agdf_abc123" {
+		t.Errorf("expected actor ID 'agdf_abc123', got %q", rl.Actor.ID)
+	}
+	// Name/handle are resolved by the api-gateway presenter (agent-service is a
+	// separate datastore), so nothing is joined here.
+	if rl.Actor.Name != nil {
+		t.Errorf("expected name to be nil (resolved downstream), got %v", *rl.Actor.Name)
+	}
+}
+
+func TestBuildMinimalActor_Agent(t *testing.T) {
+	t.Parallel()
+	actor := buildMinimalActor("agdf_abc123", nullStr("agent"))
+	if actor == nil {
+		t.Fatal("expected minimal actor for identity_type=agent")
+	}
+	if actor.ActorType != constants.ActorTypeAgent {
+		t.Errorf("expected ActorType %q, got %q", constants.ActorTypeAgent, actor.ActorType)
+	}
+	if actor.ID != "agdf_abc123" {
+		t.Errorf("expected actor ID 'agdf_abc123', got %q", actor.ID)
+	}
+}
+
 func TestMapRowToRequestLogRead_NoActor_WhenIdentityTypeNil(t *testing.T) {
 	t.Parallel()
 	row := baseRow()

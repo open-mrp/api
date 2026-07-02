@@ -181,9 +181,17 @@ type Enqueuer struct {
 	lease          *lease.Lease
 	purgeLeaseName string
 
+	// notify wakes the poll loop the moment a producer commits an outbox row, so the row is published immediately instead of waiting out the (idle-backed-off) poll timer. Buffered at 1 and written non-blockingly, so it coalesces a burst of writes into a single wake-up — the drain that follows picks up every pending row anyway.
+	notify chan struct{}
+
 	ctx    context.Context
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
+}
+
+// OutboxNotifier is the producer-facing handle for waking an Enqueuer after an outbox write commits. *Enqueuer satisfies it. Inject it into services that write latency-sensitive outbox rows (e.g. starting an agent chat run) so the row is picked up on the next instant rather than on the next idle poll, which can be as long as MaxPollInterval away.
+type OutboxNotifier interface {
+	Notify()
 }
 
 // NewEnqueuer creates a new outbox enqueuer. Pass a config with at least ServiceName set; zero-value fields are filled with production defaults.
@@ -203,7 +211,19 @@ func NewEnqueuer(config *EnqueuerConfig, repo OutboxEnqueuerRepo, broker Message
 		broker:         broker,
 		lease:          l,
 		purgeLeaseName: "outbox-purge-" + config.ServiceName,
+		notify:         make(chan struct{}, 1),
 	}, nil
+}
+
+// Notify wakes the poll loop to drain the outbox immediately rather than waiting for the next (possibly idle-backed-off) tick. Call it AFTER the transaction that wrote the outbox row commits — the row must be visible to the poll query, so kicking from inside the still-open transaction would race the poll and be wasted. It is non-blocking and coalescing: a kick that lands while one is already pending is dropped (the pending wake-up's drain handles every available row), and kicking before Start or after Stop is harmless. Safe for concurrent callers; the nil receiver guard lets callers hold a possibly-unset OutboxNotifier without nil-checking.
+func (e *Enqueuer) Notify() {
+	if e == nil {
+		return
+	}
+	select {
+	case e.notify <- struct{}{}:
+	default:
+	}
 }
 
 // Start launches the poll and cleanup goroutines. The provided context is used as the parent for all background operations; cancelling it (or calling Stop) shuts down both loops. Tracing is disabled on the derived context so outbox polling does not generate trace spans.
@@ -237,7 +257,7 @@ func (e *Enqueuer) Stop() {
 	slog.Info("Outbox enqueuer stopped", "service", e.config.ServiceName)
 }
 
-// pollLoop polls at PollInterval while there is work, and backs off exponentially up to MaxPollInterval while the outbox is idle (see EnqueuerConfig.MaxPollInterval). A poll that finds work resets the interval to PollInterval immediately, so behavior under load is identical to a fixed PollInterval ticker. In test platform mode it also processes once immediately so the first outbox row is not delayed by a full poll interval. Exits when the enqueuer's context is cancelled.
+// pollLoop polls at PollInterval while there is work, and backs off exponentially up to MaxPollInterval while the outbox is idle (see EnqueuerConfig.MaxPollInterval). A poll that finds work resets the interval to PollInterval immediately, so behavior under load is identical to a fixed PollInterval ticker. A Notify() kick (sent by a producer right after it commits an outbox row) wakes the loop out of an idle backoff to drain at once, so the first message after a quiet period isn't stuck waiting up to MaxPollInterval — the backoff only governs the unkicked steady state. In test platform mode it also processes once immediately so the first outbox row is not delayed by a full poll interval. Exits when the enqueuer's context is cancelled.
 func (e *Enqueuer) pollLoop() {
 	defer e.wg.Done()
 
@@ -253,6 +273,17 @@ func (e *Enqueuer) pollLoop() {
 		select {
 		case <-e.ctx.Done():
 			return
+		case <-e.notify:
+			// A producer committed an outbox row and kicked us — drain now instead of waiting out the timer (which may be deep in its idle backoff), then resume polling at the base interval. Stop-and-drain the timer before resetting so an already-expired tick doesn't fire a redundant drain immediately after.
+			if !timer.Stop() {
+				select {
+				case <-timer.C:
+				default:
+				}
+			}
+			e.drainPending()
+			interval = e.config.PollInterval
+			timer.Reset(interval)
 		case <-timer.C:
 			if e.drainPending() {
 				interval = e.config.PollInterval

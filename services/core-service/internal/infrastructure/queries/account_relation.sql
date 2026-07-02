@@ -97,3 +97,33 @@ JOIN account_relation ar ON ar.counterparty_account_id = au.account_id
 WHERE u.email = ?
 LIMIT 1;
 
+-- name: FindContactsByEmail :many
+SELECT
+    au.id AS account_user_id,
+    au.user_id AS user_id,
+    au.account_id AS account_id,
+    au.role_id AS role_id,
+    au.department_id AS department_id,
+    au.status_code AS status_code,
+    au.last_used_at AS last_used_at,
+    au.created_at AS created_at,
+    au.updated_at AS updated_at,
+    u.email AS email,
+    COALESCE(
+        CASE
+            WHEN au.account_id = sqlc.arg(owner_account_id) THEN 'self'
+            ELSE ar.account_relation_role_code
+        END,
+        ''
+    ) AS relationship
+FROM user u
+JOIN account_user au ON au.user_id = u.id
+LEFT JOIN account_relation ar
+    ON ar.counterparty_account_id = au.account_id
+    AND ar.owner_account_id = sqlc.arg(owner_account_id)
+    AND ar.account_relation_role_code IN ('customer', 'supplier')
+WHERE u.email = sqlc.arg(email)
+    AND au.status_code = 'active'
+    AND (au.account_id = sqlc.arg(owner_account_id) OR ar.id IS NOT NULL)
+ORDER BY relationship, au.account_id;
+

@@ -464,6 +464,42 @@ func TestValidateCustomEmailTagWithRequired(t *testing.T) {
 	}
 }
 
+type multipleOfTestStruct struct {
+	Importance field.Optional[float64] `json:"importance,omitzero" validate:"omitempty,min=0,max=1,multiple_of=0.1"`
+}
+
+func TestValidateMultipleOfTag(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		value    field.Optional[float64]
+		hasError bool
+	}{
+		{name: "unset passes", value: field.Optional[float64]{}, hasError: false},
+		{name: "zero passes", value: field.Some(0.0), hasError: false},
+		{name: "one tenth passes", value: field.Some(0.1), hasError: false},
+		{name: "point three passes", value: field.Some(0.3), hasError: false},
+		{name: "point eight passes", value: field.Some(0.8), hasError: false},
+		{name: "one passes", value: field.Some(1.0), hasError: false},
+		{name: "hundredth fails", value: field.Some(0.05), hasError: true},
+		{name: "non-tenth fails", value: field.Some(0.15), hasError: true},
+		{name: "above max fails", value: field.Some(1.1), hasError: true},
+		{name: "negative fails", value: field.Some(-0.1), hasError: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			err := Validate(&multipleOfTestStruct{Importance: tt.value})
+			if tt.hasError && err == nil {
+				t.Errorf("expected validation to fail, got nil")
+			}
+			if !tt.hasError && err != nil {
+				t.Errorf("expected validation to pass, got: %v", err)
+			}
+		})
+	}
+}
+
 type maxDaysAheadTestStruct struct {
 	RevokeAt field.Optional[time.Time] `json:"revoke_at,omitzero" validate:"omitempty,max_days_ahead=30"`
 }

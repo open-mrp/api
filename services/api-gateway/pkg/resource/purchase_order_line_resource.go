@@ -27,8 +27,6 @@ type PurchaseOrderLine struct {
 	// Quantity ordered from the supplier.
 	QuantityOrdered *Quantity `json:"quantity_ordered" validate:"required"`
 	// Quantity received against this line so far.
-	//
-	// Null until any receiving has occurred.
 	QuantityReceived *Quantity `json:"quantity_received"`
 	// Agreed purchase price per unit for this line.
 	UnitPrice *Rate `json:"unit_price" validate:"required"`

@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -67,13 +68,15 @@ type CreateAccountUserEndpoint struct{}
 
 func (e *CreateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAccountUserRequest, *apiresource.AccountUser] {
 	return (&apiendpoint.APIEndpoint[*CreateAccountUserRequest, *apiresource.AccountUser]{
-		Title:             "Create Account User",
-		Method:            http.MethodPost,
-		ContentType:       "application/json",
-		Route:             "/v1/identity/account-users",
-		SuccessStatusCode: http.StatusCreated,
-		Public:            true,
-		Preview:           true,
+		Title:               "Create Account User",
+		Method:              http.MethodPost,
+		ContentType:         "application/json",
+		Route:               "/v1/identity/account-users",
+		SuccessStatusCode:   http.StatusCreated,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainTeamUsers, Action: types.ActionCreate}, {Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate}},
+		Preview:             true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateAccountUserRequest) (*apiresource.AccountUser, *apierror.APIError) {
 			return svc.(AccountUserSvc).CreateAccountUser
 		},

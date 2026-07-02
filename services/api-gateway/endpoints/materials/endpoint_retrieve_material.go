@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -21,14 +22,16 @@ type RetrieveMaterialEndpoint struct{}
 
 func (e *RetrieveMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveMaterialRequest, *apiresource.Material] {
 	return (&apiendpoint.APIEndpoint[*RetrieveMaterialRequest, *apiresource.Material]{
-		Title:             "Retrieve Material",
-		Method:            http.MethodGet,
-		ContentType:       "application/json",
-		Route:             "/v1/catalog/materials/{id}",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeMaterial,
+		Title:               "Retrieve Material",
+		Method:              http.MethodGet,
+		ContentType:         "application/json",
+		Route:               "/v1/catalog/materials/{id}",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMaterials, Action: types.ActionRead}, {Domain: types.PermissionDomainCustomers, Action: types.ActionRead}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionRead}},
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeMaterial,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveMaterialRequest) (*apiresource.Material, *apierror.APIError) {
 			return svc.(MaterialSvc).GetMaterial
 		},

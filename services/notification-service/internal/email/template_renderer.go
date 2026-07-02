@@ -47,6 +47,7 @@ func NewTemplateRenderer() (TemplateRenderer, *apierror.APIError) {
 		constants.EmailTemplateInvoice:                    "templates/invoice_email.html",
 		constants.EmailTemplateOrderAcknowledgement:       "templates/order_acknowledgement_email.html",
 		constants.EmailTemplateAlreadyRegistered:          "templates/already_registered.html",
+		constants.EmailTemplateChatMessage:                "templates/chat_message.html",
 	}
 
 	for templateID, filename := range templateFiles {

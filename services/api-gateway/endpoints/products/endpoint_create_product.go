@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -19,9 +20,9 @@ type CreateProductRequest struct {
 	//
 	// Must be unique within the account; creation fails with a conflict error if another item already uses it.
 	SKU string `json:"sku" validate:"required,max=255"`
-	// Description.
+	// Free-form description of the product.
 	Description field.Optional[string] `json:"description,omitzero"`
-	// Notes.
+	// Free-form notes about the product.
 	Notes field.Optional[string] `json:"notes,omitzero"`
 	// Product type code, which determines how the product behaves on orders and invoices.
 	//
@@ -74,13 +75,15 @@ type CreateProductEndpoint struct{}
 
 func (e *CreateProductEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductRequest, *apiresource.Product] {
 	return (&apiendpoint.APIEndpoint[*CreateProductRequest, *apiresource.Product]{
-		Title:             "Create Product",
-		Method:            http.MethodPost,
-		ContentType:       "application/json",
-		Route:             "/v1/catalog/products",
-		SuccessStatusCode: http.StatusCreated,
-		Public:            true,
-		Preview:           true,
+		Title:               "Create Product",
+		Method:              http.MethodPost,
+		ContentType:         "application/json",
+		Route:               "/v1/catalog/products",
+		SuccessStatusCode:   http.StatusCreated,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionCreate}},
+		Preview:             true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateProductRequest) (*apiresource.Product, *apierror.APIError) {
 			return svc.(ProductSvc).CreateProduct
 		},

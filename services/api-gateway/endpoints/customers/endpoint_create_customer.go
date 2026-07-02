@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -122,14 +123,16 @@ type CreateCustomerEndpoint struct{}
 
 func (e *CreateCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateCustomerRequest, *apiresource.Customer] {
 	return (&apiendpoint.APIEndpoint[*CreateCustomerRequest, *apiresource.Customer]{
-		Title:             "Create Customer",
-		Method:            http.MethodPost,
-		Route:             "/v1/sales/customers",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusCreated,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeCustomer,
+		Title:               "Create Customer",
+		Method:              http.MethodPost,
+		Route:               "/v1/sales/customers",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusCreated,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainCustomers, Action: types.ActionCreate}},
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeCustomer,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateCustomerRequest) (*apiresource.Customer, *apierror.APIError) {
 			return svc.(CustomerSvc).CreateCustomer
 		},
@@ -144,6 +147,7 @@ func (e *CreateCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateC
 				"type",
 				"parent_account",
 				"freight_preferences.carrier",
+				"freight_preferences.carrier.service_levels",
 				"freight_preferences.service_level",
 				"defaults.payment_term",
 				"defaults.shipping_term",
@@ -157,6 +161,7 @@ func (e *CreateCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateC
 				"price_groups",
 				"child_accounts",
 				"credit_limit",
+				"credit_limit.unit",
 			},
 		}),
 	})

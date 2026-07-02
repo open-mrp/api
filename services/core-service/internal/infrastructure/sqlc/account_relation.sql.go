@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"time"
 )
 
 const countCounterpartyRelationsExcluding = `-- name: CountCounterpartyRelationsExcluding :one
@@ -196,6 +197,96 @@ func (q *Queries) FindAccountRelationByOwnerAndCounterparty(ctx context.Context,
 	var id string
 	err := row.Scan(&id)
 	return id, err
+}
+
+const findContactsByEmail = `-- name: FindContactsByEmail :many
+SELECT
+    au.id AS account_user_id,
+    au.user_id AS user_id,
+    au.account_id AS account_id,
+    au.role_id AS role_id,
+    au.department_id AS department_id,
+    au.status_code AS status_code,
+    au.last_used_at AS last_used_at,
+    au.created_at AS created_at,
+    au.updated_at AS updated_at,
+    u.email AS email,
+    COALESCE(
+        CASE
+            WHEN au.account_id = ? THEN 'self'
+            ELSE ar.account_relation_role_code
+        END,
+        ''
+    ) AS relationship
+FROM user u
+JOIN account_user au ON au.user_id = u.id
+LEFT JOIN account_relation ar
+    ON ar.counterparty_account_id = au.account_id
+    AND ar.owner_account_id = ?
+    AND ar.account_relation_role_code IN ('customer', 'supplier')
+WHERE u.email = ?
+    AND au.status_code = 'active'
+    AND (au.account_id = ? OR ar.id IS NOT NULL)
+ORDER BY relationship, au.account_id
+`
+
+type FindContactsByEmailParams struct {
+	OwnerAccountID string
+	Email          sql.NullString
+}
+
+type FindContactsByEmailRow struct {
+	AccountUserID string
+	UserID        string
+	AccountID     string
+	RoleID        sql.NullString
+	DepartmentID  sql.NullString
+	StatusCode    string
+	LastUsedAt    sql.NullTime
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	Email         sql.NullString
+	Relationship  interface{}
+}
+
+func (q *Queries) FindContactsByEmail(ctx context.Context, arg FindContactsByEmailParams) ([]FindContactsByEmailRow, error) {
+	rows, err := q.db.QueryContext(ctx, findContactsByEmail,
+		arg.OwnerAccountID,
+		arg.OwnerAccountID,
+		arg.Email,
+		arg.OwnerAccountID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindContactsByEmailRow
+	for rows.Next() {
+		var i FindContactsByEmailRow
+		if err := rows.Scan(
+			&i.AccountUserID,
+			&i.UserID,
+			&i.AccountID,
+			&i.RoleID,
+			&i.DepartmentID,
+			&i.StatusCode,
+			&i.LastUsedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Email,
+			&i.Relationship,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const findCustomerAccountsByVendorAndUser = `-- name: FindCustomerAccountsByVendorAndUser :many

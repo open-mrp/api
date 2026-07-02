@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	types "github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -28,6 +29,9 @@ func (e *ListBatchesByScanningStationEndpoint) Materialize() *apiendpoint.APIEnd
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainBatches, Action: types.ActionRead},
+		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListBatchesByScanningStationRequest) (*apiresource.List[apiresource.Batch], *apierror.APIError) {
 			return svc.(BatchSvc).ListBatchesByScanningStation
 		},

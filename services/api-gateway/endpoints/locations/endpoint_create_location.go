@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -51,13 +52,15 @@ type CreateLocationEndpoint struct{}
 
 func (e *CreateLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateLocationRequest, *apiresource.Location] {
 	return (&apiendpoint.APIEndpoint[*CreateLocationRequest, *apiresource.Location]{
-		Title:             "Create Location",
-		Method:            http.MethodPost,
-		ContentType:       "application/json",
-		Route:             "/v1/operations/locations",
-		SuccessStatusCode: http.StatusCreated,
-		Public:            true,
-		Preview:           true,
+		Title:               "Create Location",
+		Method:              http.MethodPost,
+		ContentType:         "application/json",
+		Route:               "/v1/operations/locations",
+		SuccessStatusCode:   http.StatusCreated,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainLocations, Action: types.ActionCreate}},
+		Preview:             true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateLocationRequest) (*apiresource.Location, *apierror.APIError) {
 			return svc.(LocationSvc).CreateLocation
 		},

@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -28,7 +29,12 @@ func (e *RetrieveVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
-		ObjectType:        constants.ObjectTypeVolumeDiscount,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainDiscounts, Action: types.ActionRead},
+			{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},
+			{Domain: types.PermissionDomainSuppliers, Action: types.ActionRead},
+		},
+		ObjectType: constants.ObjectTypeVolumeDiscount,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveVolumeDiscountRequest) (*apiresource.VolumeDiscount, *apierror.APIError) {
 			return svc.(VolumeDiscountSvc).GetVolumeDiscount
 		},

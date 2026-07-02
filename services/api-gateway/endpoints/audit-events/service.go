@@ -7,6 +7,7 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
@@ -52,10 +53,16 @@ func NewAuditEventSvc(config *AuditEventSvcConfig) AuditEventSvc {
 }
 
 func (m *auditEventSvcImpl) ListAuditEvents(ctx context.Context, req *ListAuditEventsRequest) (*apiresource.List[apiresource.AuditEvent], *apierror.APIError) {
+	actorTypes := make([]string, len(req.ActorTypes))
+	for i, at := range req.ActorTypes {
+		actorTypes[i] = string(at)
+	}
+
 	pbReq := &pb.ListAuditEventsRequest{
 		ResourceTypes:    stringsFromObjectTypes(req.ResourceTypes),
 		ResourceIds:      req.ResourceIDs,
 		ActorIds:         req.ActorIDs,
+		ActorTypes:       actorTypes,
 		Actions:          stringsFromActions(req.Actions),
 		ActorAccountIds:  req.ActorAccountIDs,
 		TargetAccountIds: req.TargetAccountIDs,
@@ -87,10 +94,14 @@ func (m *auditEventSvcImpl) ListAuditEvents(ctx context.Context, req *ListAuditE
 
 	meta := resourcekit.GetLoadMeta(ctx)
 	events := make([]apiresource.AuditEvent, len(resp.AuditEvents))
+	var agentActors []*apiresource.Actor
 	for i, ev := range resp.AuditEvents {
 		events[i] = auditEventFromProto(ev)
-		stashAuditEventMeta(ctx, meta, ev)
+		if actor := stashAuditEventMeta(ctx, meta, ev); actor != nil && actor.Type == constants.ActorTypeAgent {
+			agentActors = append(agentActors, actor)
+		}
 	}
+	hydrateAgentActors(ctx, agentActors)
 
 	return apiresource.NewList(events, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
@@ -133,8 +144,22 @@ func (m *auditEventSvcImpl) GetAuditEvent(ctx context.Context, req *RetrieveAudi
 
 	meta := resourcekit.GetLoadMeta(ctx)
 	result := auditEventFromProto(resp.AuditEvent)
-	stashAuditEventMeta(ctx, meta, resp.AuditEvent)
+	if actor := stashAuditEventMeta(ctx, meta, resp.AuditEvent); actor != nil && actor.Type == constants.ActorTypeAgent {
+		hydrateAgentActors(ctx, []*apiresource.Actor{actor})
+	}
 	return &result, nil
+}
+
+// hydrateAgentActors fills in agent actors' display name + handle from agent-service.
+// Unlike user/api_key actors — whose names are joined in platform-service — agent
+// definitions live in a separate datastore, so their names must be resolved here.
+// Best-effort and a no-op unless the caller expanded the actor (the only case where
+// the name is rendered), avoiding a needless agent-service round-trip otherwise.
+func hydrateAgentActors(ctx context.Context, actors []*apiresource.Actor) {
+	if len(actors) == 0 || !resourcekit.RequestedIncludeSet(ctx)["actor"] {
+		return
+	}
+	resourceloaders.HydrateActorNames(ctx, actors)
 }
 
 func auditEventFromProto(ev *pb.AuditEventInfo) apiresource.AuditEvent {
@@ -155,18 +180,22 @@ func auditEventFromProto(ev *pb.AuditEventInfo) apiresource.AuditEvent {
 	}
 }
 
-func stashAuditEventMeta(ctx context.Context, meta *resourcekit.LoadMeta, ev *pb.AuditEventInfo) {
+// stashAuditEventMeta stashes the event's expandable sub-resources into the load
+// meta and returns the event's actor (or nil) so the caller can hydrate agent
+// actors' names from agent-service, mirroring the request-log path.
+func stashAuditEventMeta(ctx context.Context, meta *resourcekit.LoadMeta, ev *pb.AuditEventInfo) *apiresource.Actor {
 	if ev == nil {
-		return
+		return nil
 	}
 
+	var actor *apiresource.Actor
 	if ev.Actor != nil {
 		var name *string
 		if ev.Actor.Name != nil && *ev.Actor.Name != "" {
 			n := *ev.Actor.Name
 			name = &n
 		}
-		actor := apiresource.NewActor(
+		actor = apiresource.NewActor(
 			ev.Actor.Id,
 			constants.ActorType(ev.Actor.ActorType),
 			name,
@@ -202,6 +231,8 @@ func stashAuditEventMeta(ctx context.Context, meta *resourcekit.LoadMeta, ev *pb
 	if ev.RequestId != nil && *ev.RequestId != "" {
 		meta.Set(constants.ObjectTypeAuditEvent, ev.Id, "request_id", *ev.RequestId)
 	}
+
+	return actor
 }
 
 func auditFieldChangesFromProto(changes []*pb.AuditFieldChange) *apiresource.List[apiresource.AuditFieldChange] {

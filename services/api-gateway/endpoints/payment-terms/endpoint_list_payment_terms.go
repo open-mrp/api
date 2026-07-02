@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -22,14 +23,16 @@ type ListPaymentTermsEndpoint struct{}
 
 func (e *ListPaymentTermsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPaymentTermsRequest, *apiresource.List[apiresource.PaymentTerm]] {
 	return (&apiendpoint.APIEndpoint[*ListPaymentTermsRequest, *apiresource.List[apiresource.PaymentTerm]]{
-		Title:             "List Payment Terms",
-		Method:            http.MethodGet,
-		ContentType:       "application/json",
-		Route:             "/v1/finance/payment-terms",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypePaymentTerm,
+		Title:               "List Payment Terms",
+		Method:              http.MethodGet,
+		ContentType:         "application/json",
+		Route:               "/v1/finance/payment-terms",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainPaymentTerms, Action: types.ActionRead}},
+		Preview:             true,
+		ObjectType:          constants.ObjectTypePaymentTerm,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListPaymentTermsRequest) (*apiresource.List[apiresource.PaymentTerm], *apierror.APIError) {
 			return svc.(PaymentTermSvc).ListPaymentTerms
 		},

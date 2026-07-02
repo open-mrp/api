@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -41,14 +42,16 @@ type CreateItemCategoryEndpoint struct{}
 
 func (e *CreateItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateItemCategoryRequest, *apiresource.ItemCategory] {
 	return (&apiendpoint.APIEndpoint[*CreateItemCategoryRequest, *apiresource.ItemCategory]{
-		Title:             "Create Item Category",
-		Method:            http.MethodPost,
-		ContentType:       "application/json",
-		Route:             "/v1/catalog/item-categories",
-		SuccessStatusCode: http.StatusCreated,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeItemCategory,
+		Title:               "Create Item Category",
+		Method:              http.MethodPost,
+		ContentType:         "application/json",
+		Route:               "/v1/catalog/item-categories",
+		SuccessStatusCode:   http.StatusCreated,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainCategories, Action: types.ActionCreate}},
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeItemCategory,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError) {
 			return svc.(ItemCategorySvc).CreateItemCategory
 		},

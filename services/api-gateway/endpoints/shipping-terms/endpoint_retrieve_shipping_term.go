@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -21,14 +22,16 @@ type RetrieveShippingTermEndpoint struct{}
 
 func (e *RetrieveShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveShippingTermRequest, *apiresource.ShippingTerm] {
 	return (&apiendpoint.APIEndpoint[*RetrieveShippingTermRequest, *apiresource.ShippingTerm]{
-		Title:             "Retrieve Shipping Term",
-		Method:            http.MethodGet,
-		Route:             "/v1/operations/shipping-terms/{id}",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeShippingTerm,
+		Title:               "Retrieve Shipping Term",
+		Method:              http.MethodGet,
+		Route:               "/v1/operations/shipping-terms/{id}",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainShippingTerms, Action: types.ActionRead}},
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeShippingTerm,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeShippingTerm,
 			Fields:     []string{"owner", "owner.account", "flat_rate.unit", "minimum_order_value.unit", "free_shipping_service_levels"},

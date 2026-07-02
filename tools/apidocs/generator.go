@@ -32,6 +32,26 @@ func endpointSpecField(e apiendpoint.APIEndpointer) reflect.Value {
 	return specField
 }
 
+// authRequirementParagraph renders the endpoint's declared role-type and permission requirements as a human-readable sentence (or two) for appending to the OpenAPI operation description. Returns "" when the endpoint declares neither. Reuses requiredRoleType and explicitPermissions (agent_tools.go).
+func authRequirementParagraph(spec reflect.Value) string {
+	var sentences []string
+	if role := requiredRoleType(spec); role != "" {
+		sentences = append(sentences, fmt.Sprintf("This endpoint requires the `%s` role type.", role))
+	}
+	if perms := explicitPermissions(spec); len(perms) > 0 {
+		quoted := make([]string, len(perms))
+		for i, p := range perms {
+			quoted[i] = "`" + p + "`"
+		}
+		noun := "permission"
+		if len(perms) > 1 {
+			noun = "permissions"
+		}
+		sentences = append(sentences, fmt.Sprintf("This endpoint requires the %s: %s.", noun, strings.Join(quoted, ", ")))
+	}
+	return strings.Join(sentences, " ")
+}
+
 func endpointRequestHasJSONFields(reqType reflect.Type) bool {
 	if reqType.Kind() == reflect.Pointer {
 		reqType = reqType.Elem()
@@ -104,6 +124,13 @@ func buildOpenAPISpec(groups []apiendpoint.APIEndpointGroup, publicOnly bool, ve
 			if epTypeVal := specField.FieldByName("EndpointType"); epTypeVal.IsValid() && !epTypeVal.IsNil() {
 				epType := epTypeVal.Interface().(reflect.Type)
 				description = docReader.GetTypeDoc(epType).Doc
+			}
+			if note := authRequirementParagraph(specField); note != "" {
+				if description != "" {
+					description += "\n\n" + note
+				} else {
+					description = note
+				}
 			}
 			method := strings.ToUpper(strings.TrimSpace(specField.FieldByName("Method").String()))
 			route := strings.TrimSpace(specField.FieldByName("Route").String())

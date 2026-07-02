@@ -104,8 +104,7 @@ func (s *supplierMaterialSvcImpl) ListSupplierMaterials(ctx context.Context, par
 	return s.repos.NewSupplierMaterialRepo().List(ctx, params)
 }
 
-// GetSupplierMaterial retrieves a single supplier material by supplier account ID and material ID,
-// scoped to the caller's account.
+// GetSupplierMaterial retrieves a single supplier material by supplier account ID and material ID, scoped to the caller's account.
 //
 // 1. Extract and validate the caller's identity, actor type, and suppliers:read permission.
 // 2. Require the Augno-Account header.
@@ -301,8 +300,7 @@ func (s *supplierMaterialSvcImpl) UpdateSupplierMaterial(ctx context.Context, pa
 	}
 }
 
-// DeleteSupplierMaterial deletes a supplier material association by supplier and material ID,
-// scoped to the caller's account.
+// DeleteSupplierMaterial deletes a supplier material association by supplier and material ID, scoped to the caller's account.
 //
 // 1. Extract and validate the caller's identity, actor type, and suppliers:update permission.
 // 2. Require the Augno-Account header.

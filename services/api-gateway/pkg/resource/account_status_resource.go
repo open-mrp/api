@@ -29,7 +29,7 @@ type AccountStatus struct {
 	// - `hold_shipment`: shipments to this account are held; orders may still be placed.
 	// - `hold_all`: all activity for this account is held.
 	Code constants.AccountStatusCode `json:"code" validate:"required"`
-	// Display name.
+	// Human-readable label for the status.
 	Name string `json:"name" validate:"required"`
 	// Owner of this resource.
 	//

@@ -14,12 +14,16 @@ const (
 	AuditActionRestore AuditAction = "restore"
 	// AuditActionArchive represents an archive mutation.
 	AuditActionArchive AuditAction = "archive"
+	// AuditActionApprove represents a human approving a gated action (e.g. letting a review-gated agent tool run).
+	AuditActionApprove AuditAction = "approve"
+	// AuditActionDeny represents a human denying a gated action (e.g. rejecting a review-gated agent tool).
+	AuditActionDeny AuditAction = "deny"
 )
 
 func (m AuditAction) IsValid() bool {
 	switch m {
 	case AuditActionCreate, AuditActionUpdate, AuditActionDelete,
-		AuditActionRestore, AuditActionArchive:
+		AuditActionRestore, AuditActionArchive, AuditActionApprove, AuditActionDeny:
 		return true
 	default:
 		return false
@@ -33,5 +37,7 @@ func (m AuditAction) EnumValues() []string {
 		string(AuditActionDelete),
 		string(AuditActionRestore),
 		string(AuditActionArchive),
+		string(AuditActionApprove),
+		string(AuditActionDeny),
 	}
 }

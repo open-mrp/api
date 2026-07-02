@@ -66,11 +66,7 @@ func NewPasswordSvc(config *PasswordSvcConfig) domain.PasswordSvc {
 	}
 }
 
-func (c *PasswordSvcConfig) WithDefaults(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, coreClient domain.AuthCoreClient) *PasswordSvcConfig {
-	if c == nil {
-		c = &PasswordSvcConfig{}
-	}
-
+func BuildPasswordSvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, coreClient domain.AuthCoreClient) *PasswordSvcConfig {
 	repoFactory := repository.NewRepoFactory(queries)
 	notificationPublisher := event.NewOutboxNotificationPublisher()
 
@@ -257,9 +253,7 @@ func (s *passwordSvcImpl) UpdatePassword(ctx context.Context, oldPassword, newPa
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
-	// Account-agnostic: users without an assigned account (e.g. mid
-	// registration) may still change their password, so require an
-	// authenticated user actor rather than an assigned account.
+	// Account-agnostic: users without an assigned account (e.g. mid registration) may still change their password, so require an authenticated user actor rather than an assigned account.
 	if apiErr := identity.CheckHasUserActor(); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}

@@ -28,6 +28,10 @@ const (
 	DeletedRecordResourceTypeConsumption DeletedRecordResourceType = "consumption"
 	// DeletedRecordResourceTypeCustomAgent identifies deleted custom_agent records.
 	DeletedRecordResourceTypeCustomAgent DeletedRecordResourceType = "custom_agent"
+	// DeletedRecordResourceTypeAgentMemory identifies deleted agent_memory records.
+	DeletedRecordResourceTypeAgentMemory DeletedRecordResourceType = "agent_memory"
+	// DeletedRecordResourceTypeMessagingGroup identifies deleted messaging_group records.
+	DeletedRecordResourceTypeMessagingGroup DeletedRecordResourceType = "messaging_group"
 	// DeletedRecordResourceTypeCustomer identifies deleted customer records.
 	DeletedRecordResourceTypeCustomer DeletedRecordResourceType = "customer"
 	// DeletedRecordResourceTypeCustomerProductLineAccess identifies deleted customer_product_line_access records.
@@ -122,6 +126,8 @@ func (m DeletedRecordResourceType) IsValid() bool {
 		DeletedRecordResourceTypeServiceLevel,
 		DeletedRecordResourceTypeConsumption,
 		DeletedRecordResourceTypeCustomAgent,
+		DeletedRecordResourceTypeAgentMemory,
+		DeletedRecordResourceTypeMessagingGroup,
 		DeletedRecordResourceTypeCustomer,
 		DeletedRecordResourceTypeCustomerProductLineAccess,
 		DeletedRecordResourceTypeDCLocation,
@@ -181,6 +187,8 @@ func (m DeletedRecordResourceType) EnumValues() []string {
 		string(DeletedRecordResourceTypeServiceLevel),
 		string(DeletedRecordResourceTypeConsumption),
 		string(DeletedRecordResourceTypeCustomAgent),
+		string(DeletedRecordResourceTypeAgentMemory),
+		string(DeletedRecordResourceTypeMessagingGroup),
 		string(DeletedRecordResourceTypeCustomer),
 		string(DeletedRecordResourceTypeCustomerProductLineAccess),
 		string(DeletedRecordResourceTypeDCLocation),

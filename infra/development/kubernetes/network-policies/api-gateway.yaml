@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+    name: api-gateway-ingress
+spec:
+    podSelector:
+        matchLabels:
+            app: api-gateway
+    policyTypes:
+        - Ingress
+    ingress:
+        # Public HTTP listener (8081): reachable from anywhere (load balancer,
+        # health checks, in-cluster clients). Unchanged from prior behavior.
+        - ports:
+              - protocol: TCP
+                port: 8081
+        # Internal listener (8091): ONLY agent-service may reach it. This is the
+        # network-layer half of the agent → api-gateway trust boundary; the other
+        # half is the shared service token enforced in InternalAuthMiddleware.
+        - from:
+              - podSelector:
+                    matchLabels:
+                        app: agent-service
+          ports:
+              - protocol: TCP
+                port: 8091

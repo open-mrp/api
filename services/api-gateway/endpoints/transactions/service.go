@@ -7,6 +7,7 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	httptransport "github.com/augno/api/services/api-gateway/internal/http"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
@@ -283,7 +284,15 @@ var staticTransactionMethods = []apiresource.TransactionMethod{
 	},
 }
 
-func (m *transactionSvcImpl) ListTransactionTypes(_ context.Context, req *ListTransactionTypesRequest) (*apiresource.List[apiresource.TransactionType], *apierror.APIError) {
+func (m *transactionSvcImpl) ListTransactionTypes(ctx context.Context, req *ListTransactionTypesRequest) (*apiresource.List[apiresource.TransactionType], *apierror.APIError) {
+	identity, idErr := httptransport.GetIdentity(ctx)
+	if idErr != nil {
+		return nil, idErr
+	}
+	if apiErr := identity.CheckIsAuthenticated(); apiErr != nil {
+		return nil, apiErr
+	}
+
 	if req.Cursor != nil && *req.Cursor != "" {
 		return nil, apierror.NewValidationError("Invalid pagination cursor.")
 	}
@@ -305,7 +314,15 @@ func (m *transactionSvcImpl) ListTransactionTypes(_ context.Context, req *ListTr
 	return apiresource.NewList(results, apiresource.PageInfo{}), nil
 }
 
-func (m *transactionSvcImpl) ListTransactionMethods(_ context.Context, req *ListTransactionMethodsRequest) (*apiresource.List[apiresource.TransactionMethod], *apierror.APIError) {
+func (m *transactionSvcImpl) ListTransactionMethods(ctx context.Context, req *ListTransactionMethodsRequest) (*apiresource.List[apiresource.TransactionMethod], *apierror.APIError) {
+	identity, idErr := httptransport.GetIdentity(ctx)
+	if idErr != nil {
+		return nil, idErr
+	}
+	if apiErr := identity.CheckIsAuthenticated(); apiErr != nil {
+		return nil, apiErr
+	}
+
 	if req.Cursor != nil && *req.Cursor != "" {
 		return nil, apierror.NewValidationError("Invalid pagination cursor.")
 	}

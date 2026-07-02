@@ -40,6 +40,8 @@ const (
 	VocDefinition   = "df"
 	VocDepartment   = "dp"
 	VocDocument     = "do"
+	VocDomain       = "dn"
+	VocDraft        = "dr"
 	VocEDI          = "ed"
 	VocEmail        = "em"
 	VocEnterprise   = "en"
@@ -60,12 +62,14 @@ const (
 	VocItem         = "it"
 	VocInvoice      = "iv"
 	VocInbox        = "ix"
+	VocJob          = "jb"
 	VocKey          = "ke"
 	VocLabel        = "lb"
 	VocLevel        = "lv"
 	VocLocation     = "lc"
 	VocLog          = "lg"
 	VocLine         = "ln"
+	VocLink         = "lk"
 	VocLot          = "lt"
 	VocMachine      = "mc"
 	VocMemory       = "mm"
@@ -99,6 +103,10 @@ const (
 	VocRun          = "rn"
 	VocRequest      = "rq"
 	VocRate         = "rt"
+	VocRecord       = "rd"
+	VocReview       = "rv"
+	VocReply        = "ry"
+	VocRoute        = "ru"
 	VocSandbox      = "sb"
 	VocSession      = "se"
 	VocShipment     = "sh"
@@ -110,6 +118,7 @@ const (
 	VocStation      = "sn"
 	VocStatus       = "ss"
 	VocSupplier     = "su"
+	VocSupport      = "sp"
 	VocSeverity     = "sv"
 	VocSystem       = "sy"
 	VocSize         = "sz"
@@ -127,6 +136,12 @@ const (
 	VocVisibility   = "vi"
 	VocVerification = "ve"
 	VocReceiving    = "rc"
+	VocConversation = "cv"
+	VocSchedule     = "sc"
+	VocAttachment   = "ah"
+	VocAnnouncement = "an"
+	VocBlock        = "bk"
+	VocReport       = "ro"
 )
 
 // composePrefix concatenates vocabulary words to form a prefix. This ensures consistency and makes prefix construction explicit.
@@ -170,7 +185,6 @@ var (
 	AgentActionIDPrefix         = composePrefix(VocAgent, VocAction)
 	AgentArtifactIDPrefix       = composePrefix(VocAgent, VocArtifact)
 	AgentMemoryIDPrefix         = composePrefix(VocAgent, VocMemory)
-	AgentAlertIDPrefix          = composePrefix(VocAgent, VocNotification)
 	AgentTokenUsageIDPrefix     = composePrefix(VocAgent, VocToken)
 	TokenPackPurchaseIDPrefix   = composePrefix(VocToken, VocPayment)
 	AgentDefinitionToolIDPrefix = composePrefix(VocAgent, VocDefinition, VocTool)
@@ -249,6 +263,11 @@ var (
 
 	// Integration-related prefix values
 	IntegrationIDPrefix = composePrefix(VocIntegration)
+
+	// HubSpot sync (backfill/reconciliation) prefix values
+	HubspotSyncJobIDPrefix       = composePrefix(VocIntegration, VocJob)
+	HubspotSyncRecordIDPrefix    = composePrefix(VocIntegration, VocRecord)
+	HubspotCompanyReviewIDPrefix = composePrefix(VocIntegration, VocReview)
 
 	// Invoice-related prefix values
 	InvoiceIDPrefix     = composePrefix(VocInvoice)
@@ -394,6 +413,9 @@ var (
 	EmailLogIDPrefix       = composePrefix(VocEmail, VocLog)
 	EmailRecipientIDPrefix = composePrefix(VocEmail, VocRecipient)
 	OrderEmailIDPrefix     = composePrefix(VocOrder, VocEmail)
+	EmailDomainIDPrefix    = composePrefix(VocEmail, VocDomain)
+	EmailInboxIDPrefix     = composePrefix(VocEmail, VocInbox)
+	EmailMessageIDPrefix   = composePrefix(VocEmail, VocMessage)
 
 	// Inventory-related prefix values
 	InventoryChangeLogIDPrefix  = composePrefix(VocInventory, VocChange, VocLog)
@@ -448,5 +470,21 @@ var (
 	ReceivingOrderLineIDPrefix = composePrefix(VocReceiving, VocOrder, VocLine)
 
 	// Messaging-related prefix values
-	MessageIDPrefix = composePrefix(VocMessage)
+	MessageIDPrefix                 = composePrefix(VocMessage)
+	ConversationIDPrefix            = composePrefix(VocConversation)
+	ConversationParticipantIDPrefix = composePrefix(VocConversation, VocPart)
+	MessagingGroupIDPrefix          = composePrefix(VocConversation, VocGroup)
+	MessagingGroupMemberIDPrefix    = composePrefix(VocConversation, VocGroup, VocPart)
+	MessageAttachmentIDPrefix       = composePrefix(VocMessage, VocAttachment)
+	MessageReceiptIDPrefix          = composePrefix(VocMessage, VocReceiving)
+	MessageBlockIDPrefix            = composePrefix(VocMessage, VocBlock)
+	MessageReportIDPrefix           = composePrefix(VocMessage, VocReport)
+	NotificationIDPrefix            = composePrefix(VocNotification)
+	NotificationPreferenceIDPrefix  = composePrefix(VocNotification, VocPreference)
+	ScheduledMessageIDPrefix        = composePrefix(VocSchedule, VocMessage)
+	AnnouncementIDPrefix            = composePrefix(VocAnnouncement)
+	AnnouncementReceiptIDPrefix     = composePrefix(VocAnnouncement, VocReceiving)
+	SupportRouteIDPrefix            = composePrefix(VocSupport, VocRoute)
+	ReplyDraftIDPrefix              = composePrefix(VocReply, VocDraft)
+	ConversationLinkIDPrefix        = composePrefix(VocConversation, VocLink)
 )

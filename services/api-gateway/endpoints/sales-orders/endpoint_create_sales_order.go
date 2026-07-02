@@ -9,6 +9,7 @@ import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -51,9 +52,13 @@ type CreateSalesOrderRequest struct {
 	OrderDiscountID field.Optional[string] `json:"order_discount_id,omitzero" validate:"omitempty"`
 	// Promised delivery date.
 	PromisedAt field.Optional[time.Time] `json:"promised_at,omitzero"`
-	// Bill-to address ID. Must reference an existing address on the order's owner or buyer account.
+	// Bill-to address ID.
+	//
+	// Must reference an existing address on the order's owner or buyer account.
 	BillToAddressID string `json:"bill_to_address_id" validate:"required"`
-	// Ship-to address ID. Must reference an existing address on the order's owner or buyer account.
+	// Ship-to address ID.
+	//
+	// Must reference an existing address on the order's owner or buyer account.
 	ShipToAddressID string `json:"ship_to_address_id" validate:"required"`
 	// Order lines to create.
 	Lines []CreateSalesOrderLineInput `json:"lines" validate:"required,min=1,dive"`
@@ -65,23 +70,24 @@ type CreateSalesOrderRequest struct {
 
 // Line item input for a create sales order request.
 //
-// The item, unit cost, and (unless an internal user supplies a `unit_price` override)
-// the unit price are resolved server-side from the product. The quantity unit must
-// belong to the product's unit group.
+// The item, unit cost, and (unless an internal user supplies a `unit_price` override) the unit price are resolved server-side from the product. The quantity unit must belong to the product's unit group.
 type CreateSalesOrderLineInput struct {
 	// ID of the product being ordered.
 	ProductID string `json:"product_id" validate:"required"`
 	// Quantity ordered.
 	Quantity apirequest.QuantityInput `json:"quantity" validate:"required"`
-	// SKU recorded on the line. Defaults to the product's SKU when omitted.
+	// SKU recorded on the line.
+	//
+	// Defaults to the product's SKU when omitted.
 	ProductSKU field.Optional[string] `json:"product_sku,omitzero" validate:"omitempty,max=255"`
-	// Description recorded on the line. Defaults to the product's description when omitted.
+	// Description recorded on the line.
+	//
+	// Defaults to the product's description when omitted.
 	ProductDescription field.Optional[string] `json:"product_description,omitzero"`
-	// Unit price override. Honored only for internal users; for customer accounts it is
-	// ignored and the price is calculated server-side.
+	// Unit price override.
+	//
+	// Honored only for internal users; for customer accounts it is ignored and the price is calculated server-side.
 	UnitPrice field.Optional[apirequest.RateInput] `json:"unit_price,omitzero"`
-	// EDI line item ID.
-	EdiLineItemID field.Optional[string] `json:"edi_line_item_id,omitzero"`
 }
 
 // SalesOrderEmailContactInput represents an account user subscribed to a sales-order email notification type.
@@ -123,14 +129,16 @@ type CreateSalesOrderEndpoint struct{}
 
 func (e *CreateSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSalesOrderRequest, *apiresource.SalesOrder] {
 	return (&apiendpoint.APIEndpoint[*CreateSalesOrderRequest, *apiresource.SalesOrder]{
-		Title:             "Create Sales Order",
-		Method:            http.MethodPost,
-		ContentType:       "application/json",
-		Route:             "/v1/sales/sales-orders",
-		SuccessStatusCode: http.StatusCreated,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeSalesOrder,
+		Title:               "Create Sales Order",
+		Method:              http.MethodPost,
+		ContentType:         "application/json",
+		Route:               "/v1/sales/sales-orders",
+		SuccessStatusCode:   http.StatusCreated,
+		Public:              true,
+		Preview:             true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionCreate}},
+		ObjectType:          constants.ObjectTypeSalesOrder,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError) {
 			return svc.(SalesOrderSvc).CreateSalesOrder
 		},

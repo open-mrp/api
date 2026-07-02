@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -22,13 +23,14 @@ type DeleteBatchEndpoint struct{}
 
 func (e *DeleteBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteBatchRequest, *apiresource.Batch] {
 	return (&apiendpoint.APIEndpoint[*DeleteBatchRequest, *apiresource.Batch]{
-		Title:             "Delete Batch",
-		Method:            http.MethodDelete,
-		ContentType:       "application/json",
-		Route:             "/v1/operations/batches/{id}",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
+		Title:               "Delete Batch",
+		Method:              http.MethodDelete,
+		ContentType:         "application/json",
+		Route:               "/v1/operations/batches/{id}",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionDelete}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteBatchRequest) (*apiresource.Batch, *apierror.APIError) {
 			return svc.(BatchSvc).DeleteBatch
 		},

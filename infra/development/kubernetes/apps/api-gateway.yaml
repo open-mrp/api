@@ -17,6 +17,8 @@ spec:
           image: augno-api/api-gateway
           ports:
             - containerPort: 8081
+            # Internal listener for agent-service endpoint-tools. Not exposed by any Service of type LoadBalancer/NodePort or any Ingress.
+            - containerPort: 8091
           startupProbe:
             httpGet:
               path: /healthz
@@ -62,6 +64,20 @@ spec:
                 configMapKeyRef:
                   key: PORT
                   name: app-config
+            - name: INTERNAL_PORT
+              valueFrom:
+                configMapKeyRef:
+                  key: INTERNAL_PORT
+                  name: app-config
+            # When unset the internal listener does not start, so the feature is
+            # simply off (no exposure). optional: true keeps pods from crash-looping
+            # in clusters that have not provisioned the secret yet.
+            - name: INTERNAL_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: internal-service-token
+                  key: token
+                  optional: true
             - name: AUTH_SERVICE_URL
               valueFrom:
                 configMapKeyRef:
@@ -127,5 +143,22 @@ spec:
   ports:
     - port: 8081
       targetPort: 8081
+  selector:
+    app: api-gateway
+
+---
+# Internal-only Service for the agent-service → api-gateway endpoint-tool path.
+# ClusterIP means it is reachable only inside the cluster; no Ingress references
+# it, so it is never exposed through the public load balancer.
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway-internal
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8091
+      targetPort: 8091
+      name: internal
   selector:
     app: api-gateway

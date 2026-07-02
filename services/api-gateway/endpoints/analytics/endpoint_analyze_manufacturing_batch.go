@@ -7,6 +7,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -35,13 +36,14 @@ type AnalyzeManufacturingBatchEndpoint struct{}
 
 func (e *AnalyzeManufacturingBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeManufacturingBatchRequest, *apiresource.AnalyzeManufacturingBatchResponse] {
 	return (&apiendpoint.APIEndpoint[*AnalyzeManufacturingBatchRequest, *apiresource.AnalyzeManufacturingBatchResponse]{
-		Title:             "Analyze Manufacturing Batch",
-		Method:            http.MethodPut,
-		Route:             "/v1/core/analytics/manufacturing-batch",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
+		Title:               "Analyze Manufacturing Batch",
+		Method:              http.MethodPut,
+		Route:               "/v1/core/analytics/manufacturing-batch",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeManufacturingBatchRequest) (*apiresource.AnalyzeManufacturingBatchResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeManufacturingBatch
 		},

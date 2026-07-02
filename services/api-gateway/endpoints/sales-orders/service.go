@@ -92,18 +92,17 @@ func NewSalesOrderSvc(config *SalesOrderSvcConfig) SalesOrderSvc {
 
 func (m *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, req *ListSalesOrdersRequest) (*apiresource.List[apiresource.SalesOrder], *apierror.APIError) {
 	pbReq := &pb.ListSalesOrdersRequest{
-		Cursor:                req.Cursor,
-		Limit:                 req.Limit,
-		Query:                 req.Query,
-		StatusCodes:           req.StatusCodes,
-		ItemIds:               req.ItemIDs,
-		ProductLineIds:        req.ProductLineIDs,
-		CustomerIds:           req.CustomerIDs,
-		CustomerGroupIds:      req.CustomerGroupIDs,
-		SalesRepIds:           req.SalesRepIDs,
-		StartDate:             req.StartDate,
-		EndDate:               req.EndDate,
-		ExcludeInternalOrders: req.ExcludeInternalOrders,
+		Cursor:           req.Cursor,
+		Limit:            req.Limit,
+		Query:            req.Query,
+		StatusCodes:      req.StatusCodes,
+		ItemIds:          req.ItemIDs,
+		ProductLineIds:   req.ProductLineIDs,
+		CustomerIds:      req.CustomerIDs,
+		CustomerGroupIds: req.CustomerGroupIDs,
+		SalesRepIds:      req.SalesRepIDs,
+		StartDate:        req.StartDate,
+		EndDate:          req.EndDate,
 		// The list returns the full sales-order resource; ask the backend to
 		// expand only what the caller requested (inline fields always present).
 		Includes: withLinesForTotals(resourcekit.FilterIncludes(ctx, salesOrderIncludes...)),
@@ -156,7 +155,6 @@ func (m *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, req *CreateSal
 			ProductDescription: l.ProductDescription.Ptr(),
 			QuantityValue:      l.Quantity.Value,
 			QuantityUnitId:     l.Quantity.UnitID,
-			EdiLineItemId:      l.EdiLineItemID.Ptr(),
 		}
 		if up, ok := l.UnitPrice.Value(); ok {
 			line.UnitPriceValue = &up.Value
@@ -657,24 +655,15 @@ func stashSalesOrderMeta(ctx context.Context, info *pb.SalesOrderInfo, d *apires
 		Acknowledgement: orEmptyStrings(info.AcknowledgementEmails),
 	})
 
-	// Related records (expandable): pick / production_run / shipments.
+	// Related records (expandable): stash the referenced ids so the include resolver can fetch each record's number and status from its owning service when related.pick / related.production_run / related.shipments is requested.
 	if info.PickId != nil {
-		meta.Set(constants.ObjectTypeSalesOrder, d.ID, "related_pick",
-			apiresource.NewRecord(*info.PickId, constants.RecordTypePick))
+		meta.Set(constants.ObjectTypeSalesOrder, d.ID, "related_pick_id", *info.PickId)
 	}
 	if info.ProductionRunId != nil {
-		meta.Set(constants.ObjectTypeSalesOrder, d.ID, "related_production_run",
-			apiresource.NewRecord(*info.ProductionRunId, constants.RecordTypeProductionRun))
+		meta.Set(constants.ObjectTypeSalesOrder, d.ID, "related_production_run_id", *info.ProductionRunId)
 	}
-	// Linked shipments (populated by the backend only when related.shipments is
-	// requested). Build the record list from the ids the order carries.
 	if len(info.ShipmentIds) > 0 {
-		records := make([]apiresource.Record, len(info.ShipmentIds))
-		for i, sid := range info.ShipmentIds {
-			records[i] = *apiresource.NewRecord(sid, constants.RecordTypeShipment)
-		}
-		meta.Set(constants.ObjectTypeSalesOrder, d.ID, "related_shipments",
-			apiresource.NewList(records, apiresource.PageInfo{}))
+		meta.Set(constants.ObjectTypeSalesOrder, d.ID, "related_shipment_ids", info.ShipmentIds)
 	}
 
 	// Bill-to address
@@ -853,8 +842,7 @@ func salesOrderLineDetailFromProto(info *pb.SalesOrderLineInfo) apiresource.Sale
 		UpdatedAt:          grpcutil.TimestampToTime(info.UpdatedAt),
 	}
 
-	// product, quantity_ordered, unit_price, unit_cost, and totals are
-	// expandable — populated from stashed meta only when requested.
+	// product, quantity_ordered, unit_price, unit_cost, and totals are expandable — populated from stashed meta only when requested.
 
 	return l
 }

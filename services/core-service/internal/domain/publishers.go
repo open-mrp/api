@@ -19,6 +19,14 @@ type SalesOrderEventPublisher interface {
 	PublishSalesOrderCreated(ctx context.Context, data messaging.SalesOrderCreatedData) *apierror.APIError
 }
 
+// HubspotSyncPublisher publishes HubSpot backfill commands via the outbox pattern, so the command commits atomically with the job row.
+type HubspotSyncPublisher interface {
+	// PublishPreview writes a preview command to the outbox for the given backfill job.
+	PublishPreview(ctx context.Context, data messaging.HubspotSyncCommandData) *apierror.APIError
+	// PublishExecute writes an execute command to the outbox for the given backfill job.
+	PublishExecute(ctx context.Context, data messaging.HubspotSyncCommandData) *apierror.APIError
+}
+
 // BillingPublisher publishes billing-related commands via the outbox pattern.
 type BillingPublisher interface {
 	// PublishSyncSeats writes a sync-seats command to the outbox for the given account.

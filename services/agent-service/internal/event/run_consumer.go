@@ -100,7 +100,7 @@ func (c *RunConsumer) handleContinueRun(ctx context.Context, msg amqp.Delivery) 
 		"account_id", data.AccountID,
 	)
 
-	if err := c.runner.ContinueRun(ctx, data.AgentRunID, data.AccountID, data.Message, data.ApprovedToolSlugs, data.AllowedToolSlugs, data.ActorID, data.ActorType, data.ActorName); err != nil {
+	if err := c.runner.ContinueRun(ctx, data.AgentRunID, data.AccountID, data.Message, data.ApprovedToolSlugs, data.ApproveAllPending, data.RejectedToolSlugs, data.ApprovedToolCallIDs, data.RejectedToolCallIDs, data.ActorID, data.ActorType, data.ActorName, data.ReplyToMessageID); err != nil {
 		span.RecordError(err)
 		slog.Error("Agent continue run failed",
 			"run_id", data.AgentRunID,

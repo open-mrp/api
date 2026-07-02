@@ -38,6 +38,9 @@ type BaseConfig struct {
 	// AgentClient (required) is the agent-service gRPC client.
 	AgentClient *grpcclient.AgentServiceClient
 
+	// NotificationClient (required) is the notification-service gRPC client.
+	NotificationClient *grpcclient.NotificationServiceClient
+
 	// RequestLogPublisher (required) publishes request logs to the outbox.
 	RequestLogPublisher domain.RequestLogPublisher
 
@@ -47,6 +50,12 @@ type BaseConfig struct {
 
 type MainRouterConfig struct {
 	BaseConfig
+
+	// Internal, when true, serves the endpoint groups on the trusted internal listener: AuthMiddleware is replaced with InternalAuthMiddleware so an agent identity supplied by agent-service is honored. This listener must never be exposed behind the public ALB.
+	Internal bool
+
+	// InternalServiceToken (required when Internal) is the shared secret gating identity trust on the internal listener.
+	InternalServiceToken string
 }
 
 type AuthRouterConfig struct {
@@ -74,6 +83,7 @@ func (c *BaseConfig) WithDefaults() *BaseConfig {
 		BillingClient:       c.BillingClient,
 		PlatformClient:      c.PlatformClient,
 		AgentClient:         c.AgentClient,
+		NotificationClient:  c.NotificationClient,
 		RequestLogPublisher: c.RequestLogPublisher,
 		TrustedProxyHops:    c.TrustedProxyHops,
 	}
@@ -98,8 +108,21 @@ func (c *BaseConfig) validate() error {
 	if c.AgentClient == nil {
 		return fmt.Errorf("base config: agent client is required")
 	}
+	if c.NotificationClient == nil {
+		return fmt.Errorf("base config: notification client is required")
+	}
 	if c.RequestLogPublisher == nil {
 		return fmt.Errorf("base config: request log publisher is required")
+	}
+	return nil
+}
+
+func (c *MainRouterConfig) validate() error {
+	if err := c.BaseConfig.validate(); err != nil {
+		return err
+	}
+	if c.Internal && c.InternalServiceToken == "" {
+		return fmt.Errorf("main router config: internal service token is required when Internal is set")
 	}
 	return nil
 }
@@ -112,6 +135,19 @@ func NewMainRouter(baseCfg *BaseConfig) *router {
 
 	r := NewRouter()
 	r.InitEndpointGroups(MainRouterConfig{BaseConfig: *baseCfg})
+	return r
+}
+
+// NewInternalRouter builds a router that serves the same endpoint groups as the main router but trusts an agent identity via InternalAuthMiddleware instead of validating user credentials. It must only be served on the internal listener.
+func NewInternalRouter(baseCfg *BaseConfig, serviceToken string) *router {
+	baseCfg = baseCfg.WithDefaults()
+	cfg := MainRouterConfig{BaseConfig: *baseCfg, Internal: true, InternalServiceToken: serviceToken}
+	if err := cfg.validate(); err != nil {
+		panic(err)
+	}
+
+	r := NewRouter()
+	r.InitEndpointGroups(cfg)
 	return r
 }
 
@@ -149,6 +185,7 @@ func BuildBaseConfig(
 	billingClient *grpcclient.BillingServiceClient,
 	platformClient *grpcclient.PlatformServiceClient,
 	agentClient *grpcclient.AgentServiceClient,
+	notificationClient *grpcclient.NotificationServiceClient,
 	reqLogPublisher domain.RequestLogPublisher,
 	logWriter io.Writer,
 	trustedProxyHops int,
@@ -163,6 +200,7 @@ func BuildBaseConfig(
 		BillingClient:       billingClient,
 		PlatformClient:      platformClient,
 		AgentClient:         agentClient,
+		NotificationClient:  notificationClient,
 		RequestLogPublisher: reqLogPublisher,
 		TrustedProxyHops:    trustedProxyHops,
 	}

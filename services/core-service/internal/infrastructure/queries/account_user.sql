@@ -392,6 +392,20 @@ SET role_id = sqlc.narg(role_id),
     updated_at = NOW(3)
 WHERE id = ?;
 
+-- name: FindRemovedAccountUserIDByAccountAndUserID :one
+SELECT id
+FROM account_user
+WHERE account_id = ? AND user_id = ? AND status_code = 'removed'
+LIMIT 1;
+
+-- name: ReactivateRemovedAccountUser :exec
+UPDATE account_user
+SET status_code = 'active',
+    role_id = sqlc.narg(role_id),
+    department_id = sqlc.narg(department_id),
+    updated_at = NOW(3)
+WHERE account_id = ? AND user_id = ? AND status_code = 'removed';
+
 -- name: SoftDeleteAccountUser :execresult
 UPDATE account_user
 SET status_code = 'removed', updated_at = NOW(3)

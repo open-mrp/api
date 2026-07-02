@@ -53,6 +53,28 @@ func (e *GatewayError) IsContextLengthError() bool {
 		strings.Contains(lower, "token limit")
 }
 
+// IsBillingLimitError reports whether the gateway rejected the call because the customer's billing/spend limit was reached (a 402 Payment Required, or a 4xx whose body indicates a billing/quota/budget problem). These are account-wide: every model and provider routes through the same Stripe customer, so retrying or failing over to another model won't help — the run must stop.
+func (e *GatewayError) IsBillingLimitError() bool {
+	if e.StatusCode == http.StatusPaymentRequired { // 402
+		return true
+	}
+	lower := strings.ToLower(e.Body)
+	for _, kw := range []string{
+		"insufficient_quota",
+		"billing_hard_limit",
+		"spending limit",
+		"spend limit",
+		"usage limit",
+		"budget",
+		"billing",
+	} {
+		if strings.Contains(lower, kw) {
+			return true
+		}
+	}
+	return false
+}
+
 // NewGatewayError creates a GatewayError from an HTTP response, classifying whether the error is retryable based on the status code and response body.
 func NewGatewayError(statusCode int, body string, headers http.Header) *GatewayError {
 	ge := &GatewayError{
@@ -80,6 +102,11 @@ func NewGatewayError(statusCode int, body string, headers http.Header) *GatewayE
 
 	// Context length errors are never retryable regardless of status code.
 	if ge.IsContextLengthError() {
+		ge.Retryable = false
+	}
+
+	// Billing/spend-limit rejections are account-wide; retrying or failing over won't help. This also reclassifies a billing-related 429 (which would otherwise be treated as a transient rate limit).
+	if ge.IsBillingLimitError() {
 		ge.Retryable = false
 	}
 

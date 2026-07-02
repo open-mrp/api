@@ -14,4 +14,56 @@ sql:
               import: "encoding/json"
               type: "RawMessage"
               pointer: true
+          - column: "message_outbox.headers"
+            go_type:
+              import: "github.com/augno/api/shared/db"
+              type: "NullableRawMessage"
+          - column: "notification.template_params"
+            go_type:
+              import: "github.com/augno/api/shared/db"
+              type: "NullableRawMessage"
+          - column: "notification.metadata"
+            go_type:
+              import: "github.com/augno/api/shared/db"
+              type: "NullableRawMessage"
+          - column: "announcement.template_params"
+            go_type:
+              import: "github.com/augno/api/shared/db"
+              type: "NullableRawMessage"
+          - column: "announcement.audience"
+            go_type:
+              import: "github.com/augno/api/shared/db"
+              type: "NullableRawMessage"
+          - column: "conversation.metadata"
+            go_type:
+              import: "github.com/augno/api/shared/db"
+              type: "NullableRawMessage"
+          - column: "message.metadata"
+            go_type:
+              import: "github.com/augno/api/shared/db"
+              type: "NullableRawMessage"
+          - column: "message.template_params"
+            go_type:
+              import: "github.com/augno/api/shared/db"
+              type: "NullableRawMessage"
+          - column: "conversation_participant.agent_trigger_keywords"
+            go_type:
+              import: "github.com/augno/api/shared/db"
+              type: "NullableRawMessage"
+          - column: "scheduled_message.metadata"
+            go_type:
+              import: "github.com/augno/api/shared/db"
+              type: "NullableRawMessage"
+          - column: "email_domain.dkim_tokens"
+            go_type:
+              import: "github.com/augno/api/shared/db"
+              type: "NullableRawMessage"
+          - column: "email_inbox.agent_trigger_keywords"
+            go_type:
+              import: "github.com/augno/api/shared/db"
+              type: "NullableRawMessage"
+          - column: "reply_draft.metadata"
+            go_type:
+              import: "github.com/augno/api/shared/db"
+              type: "NullableRawMessage"
 

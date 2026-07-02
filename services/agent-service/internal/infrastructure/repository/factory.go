@@ -42,16 +42,8 @@ func (r *repoFactoryImpl) NewAgentMemoryRepo() domain.AgentMemoryRepo {
 	return NewAgentMemoryRepo(r.queries)
 }
 
-func (r *repoFactoryImpl) NewAgentAlertRepo() domain.AgentAlertRepo {
-	return NewAgentAlertRepo(r.queries)
-}
-
 func (r *repoFactoryImpl) NewAgentTokenUsageRepo() domain.AgentTokenUsageRepo {
 	return NewAgentTokenUsageRepo(r.queries)
-}
-
-func (r *repoFactoryImpl) NewToolDefinitionRepo() domain.ToolDefinitionRepo {
-	return NewToolDefinitionRepo(r.queries)
 }
 
 func (r *repoFactoryImpl) NewAgentDefinitionToolRepo() domain.AgentDefinitionToolRepo {

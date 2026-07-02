@@ -23,12 +23,6 @@ type AgentDefinitionRepo interface {
 	GetByAccountAndSlug(ctx context.Context, slug, accountID string) (*sqlc.AgentDefinition, *apierror.APIError)
 }
 
-type ToolDefinitionRepo interface {
-	GetByID(ctx context.Context, id string) (*sqlc.ToolDefinition, *apierror.APIError)
-	ListAll(ctx context.Context) ([]sqlc.ListToolDefinitionsRow, *apierror.APIError)
-	ListToolGroups(ctx context.Context) ([]sqlc.ToolGroup, *apierror.APIError)
-}
-
 type AgentDefinitionToolRepo interface {
 	Insert(ctx context.Context, params sqlc.InsertAgentDefinitionToolParams) *apierror.APIError
 	DeleteByAgentID(ctx context.Context, agentDefinitionID string) *apierror.APIError
@@ -48,10 +42,14 @@ type AgentRunRepo interface {
 	GetByID(ctx context.Context, id string) (*sqlc.AgentRun, *apierror.APIError)
 	ListByAccountFiltered(ctx context.Context, params sqlc.ListAgentRunsByAccountFilteredParams) ([]sqlc.AgentRun, *apierror.APIError)
 	UpdateStatus(ctx context.Context, id, status string) *apierror.APIError
-	UpdateStarted(ctx context.Context, id string) *apierror.APIError
+	MarkCancelledByUser(ctx context.Context, id string) *apierror.APIError
+	MarkRetrying(ctx context.Context, id string) (int32, *apierror.APIError)
+	MarkAutoRetrying(ctx context.Context, id string) (int32, *apierror.APIError)
+	UpdateStarted(ctx context.Context, id string) (int64, *apierror.APIError)
 	UpdateCompleted(ctx context.Context, params sqlc.UpdateAgentRunCompletedParams) *apierror.APIError
+	UpdateCancelled(ctx context.Context, params sqlc.UpdateAgentRunCancelledParams) *apierror.APIError
 	UpdateFailed(ctx context.Context, params sqlc.UpdateAgentRunFailedParams) *apierror.APIError
-	UpdateAllowedToolSlugs(ctx context.Context, id string, slugsJSON []byte) *apierror.APIError
+	MarkDivergedFromConversation(ctx context.Context, id string) *apierror.APIError
 	GetLastByConfigID(ctx context.Context, configID string) (*sqlc.AgentRun, *apierror.APIError)
 }
 
@@ -60,6 +58,8 @@ type AgentActionRepo interface {
 	GetByID(ctx context.Context, id string) (*sqlc.AgentAction, *apierror.APIError)
 	ListByRun(ctx context.Context, runID string) ([]sqlc.AgentAction, *apierror.APIError)
 	UpdateStatus(ctx context.Context, params sqlc.UpdateAgentActionStatusParams) *apierror.APIError
+	// MarkReviewed records an approval/rejection decision on a pending action — its new status plus who reviewed it and when (for the audit trail). It does not touch executed_at; execution is separate.
+	MarkReviewed(ctx context.Context, params sqlc.MarkAgentActionReviewedParams) *apierror.APIError
 }
 
 type AgentArtifactRepo interface {
@@ -78,14 +78,6 @@ type AgentMemoryRepo interface {
 	Update(ctx context.Context, params sqlc.UpdateAgentMemoryParams) *apierror.APIError
 	Delete(ctx context.Context, id, accountID string) *apierror.APIError
 	ListByAccountCursor(ctx context.Context, params sqlc.ListAgentMemoriesByAccountCursorParams) ([]sqlc.AgentMemory, *apierror.APIError)
-}
-
-type AgentAlertRepo interface {
-	Insert(ctx context.Context, params sqlc.InsertAgentAlertParams) *apierror.APIError
-	GetByID(ctx context.Context, id string) (*sqlc.GetAgentAlertByIDRow, *apierror.APIError)
-	ListByAccount(ctx context.Context, accountID string, limit int32) ([]sqlc.AgentAlert, *apierror.APIError)
-	ListByAccountCursor(ctx context.Context, params sqlc.ListAgentAlertsByAccountCursorParams) ([]sqlc.ListAgentAlertsByAccountCursorRow, *apierror.APIError)
-	Acknowledge(ctx context.Context, params sqlc.AcknowledgeAgentAlertParams) *apierror.APIError
 }
 
 type AgentTokenUsageRepo interface {

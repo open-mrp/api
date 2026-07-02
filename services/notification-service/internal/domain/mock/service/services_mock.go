@@ -12,11 +12,981 @@ package servicemock
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	domain "github.com/augno/api/services/notification-service/internal/domain"
 	apierror "github.com/augno/api/shared/errors"
+	messaging "github.com/augno/api/shared/messaging"
 	gomock "go.uber.org/mock/gomock"
 )
+
+// MockConversationSvc is a mock of ConversationSvc interface.
+type MockConversationSvc struct {
+	ctrl     *gomock.Controller
+	recorder *MockConversationSvcMockRecorder
+	isgomock struct{}
+}
+
+// MockConversationSvcMockRecorder is the mock recorder for MockConversationSvc.
+type MockConversationSvcMockRecorder struct {
+	mock *MockConversationSvc
+}
+
+// NewMockConversationSvc creates a new mock instance.
+func NewMockConversationSvc(ctrl *gomock.Controller) *MockConversationSvc {
+	mock := &MockConversationSvc{ctrl: ctrl}
+	mock.recorder = &MockConversationSvcMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockConversationSvc) EXPECT() *MockConversationSvcMockRecorder {
+	return m.recorder
+}
+
+// AddAgentParticipant mocks base method.
+func (m *MockConversationSvc) AddAgentParticipant(ctx context.Context, input domain.AddAgentParticipantInput) (*domain.ConversationParticipant, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddAgentParticipant", ctx, input)
+	ret0, _ := ret[0].(*domain.ConversationParticipant)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// AddAgentParticipant indicates an expected call of AddAgentParticipant.
+func (mr *MockConversationSvcMockRecorder) AddAgentParticipant(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddAgentParticipant", reflect.TypeOf((*MockConversationSvc)(nil).AddAgentParticipant), ctx, input)
+}
+
+// AddConversationLink mocks base method.
+func (m *MockConversationSvc) AddConversationLink(ctx context.Context, conversationID, resourceType, resourceID string) (*domain.ConversationLink, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddConversationLink", ctx, conversationID, resourceType, resourceID)
+	ret0, _ := ret[0].(*domain.ConversationLink)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// AddConversationLink indicates an expected call of AddConversationLink.
+func (mr *MockConversationSvcMockRecorder) AddConversationLink(ctx, conversationID, resourceType, resourceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddConversationLink", reflect.TypeOf((*MockConversationSvc)(nil).AddConversationLink), ctx, conversationID, resourceType, resourceID)
+}
+
+// AddMessagingGroupMember mocks base method.
+func (m *MockConversationSvc) AddMessagingGroupMember(ctx context.Context, input domain.AddMessagingGroupMemberInput) (*domain.MessagingGroup, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddMessagingGroupMember", ctx, input)
+	ret0, _ := ret[0].(*domain.MessagingGroup)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// AddMessagingGroupMember indicates an expected call of AddMessagingGroupMember.
+func (mr *MockConversationSvcMockRecorder) AddMessagingGroupMember(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddMessagingGroupMember", reflect.TypeOf((*MockConversationSvc)(nil).AddMessagingGroupMember), ctx, input)
+}
+
+// AddParticipant mocks base method.
+func (m *MockConversationSvc) AddParticipant(ctx context.Context, conversationID, accountUserID, role string) (*domain.Conversation, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddParticipant", ctx, conversationID, accountUserID, role)
+	ret0, _ := ret[0].(*domain.Conversation)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// AddParticipant indicates an expected call of AddParticipant.
+func (mr *MockConversationSvcMockRecorder) AddParticipant(ctx, conversationID, accountUserID, role any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddParticipant", reflect.TypeOf((*MockConversationSvc)(nil).AddParticipant), ctx, conversationID, accountUserID, role)
+}
+
+// ApproveAndSendReplyDraft mocks base method.
+func (m *MockConversationSvc) ApproveAndSendReplyDraft(ctx context.Context, draftID, clientMessageID string) (*domain.Message, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApproveAndSendReplyDraft", ctx, draftID, clientMessageID)
+	ret0, _ := ret[0].(*domain.Message)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ApproveAndSendReplyDraft indicates an expected call of ApproveAndSendReplyDraft.
+func (mr *MockConversationSvcMockRecorder) ApproveAndSendReplyDraft(ctx, draftID, clientMessageID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApproveAndSendReplyDraft", reflect.TypeOf((*MockConversationSvc)(nil).ApproveAndSendReplyDraft), ctx, draftID, clientMessageID)
+}
+
+// AssignConversation mocks base method.
+func (m *MockConversationSvc) AssignConversation(ctx context.Context, conversationID string, assigneeResourceType, assigneeResourceID *string) (*domain.Conversation, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AssignConversation", ctx, conversationID, assigneeResourceType, assigneeResourceID)
+	ret0, _ := ret[0].(*domain.Conversation)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// AssignConversation indicates an expected call of AssignConversation.
+func (mr *MockConversationSvcMockRecorder) AssignConversation(ctx, conversationID, assigneeResourceType, assigneeResourceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AssignConversation", reflect.TypeOf((*MockConversationSvc)(nil).AssignConversation), ctx, conversationID, assigneeResourceType, assigneeResourceID)
+}
+
+// BatchGetConversations mocks base method.
+func (m *MockConversationSvc) BatchGetConversations(ctx context.Context, ids []string) ([]*domain.Conversation, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchGetConversations", ctx, ids)
+	ret0, _ := ret[0].([]*domain.Conversation)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// BatchGetConversations indicates an expected call of BatchGetConversations.
+func (mr *MockConversationSvcMockRecorder) BatchGetConversations(ctx, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetConversations", reflect.TypeOf((*MockConversationSvc)(nil).BatchGetConversations), ctx, ids)
+}
+
+// BatchGetMessages mocks base method.
+func (m *MockConversationSvc) BatchGetMessages(ctx context.Context, ids []string) ([]*domain.Message, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchGetMessages", ctx, ids)
+	ret0, _ := ret[0].([]*domain.Message)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// BatchGetMessages indicates an expected call of BatchGetMessages.
+func (mr *MockConversationSvcMockRecorder) BatchGetMessages(ctx, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetMessages", reflect.TypeOf((*MockConversationSvc)(nil).BatchGetMessages), ctx, ids)
+}
+
+// Block mocks base method.
+func (m *MockConversationSvc) Block(ctx context.Context, blockedAccountUserID string) (*domain.MessageBlock, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Block", ctx, blockedAccountUserID)
+	ret0, _ := ret[0].(*domain.MessageBlock)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Block indicates an expected call of Block.
+func (mr *MockConversationSvcMockRecorder) Block(ctx, blockedAccountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Block", reflect.TypeOf((*MockConversationSvc)(nil).Block), ctx, blockedAccountUserID)
+}
+
+// CancelScheduledMessage mocks base method.
+func (m *MockConversationSvc) CancelScheduledMessage(ctx context.Context, id string) (*domain.Message, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CancelScheduledMessage", ctx, id)
+	ret0, _ := ret[0].(*domain.Message)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CancelScheduledMessage indicates an expected call of CancelScheduledMessage.
+func (mr *MockConversationSvcMockRecorder) CancelScheduledMessage(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelScheduledMessage", reflect.TypeOf((*MockConversationSvc)(nil).CancelScheduledMessage), ctx, id)
+}
+
+// ClearSupportRoute mocks base method.
+func (m *MockConversationSvc) ClearSupportRoute(ctx context.Context, relationAccountID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClearSupportRoute", ctx, relationAccountID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// ClearSupportRoute indicates an expected call of ClearSupportRoute.
+func (mr *MockConversationSvcMockRecorder) ClearSupportRoute(ctx, relationAccountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearSupportRoute", reflect.TypeOf((*MockConversationSvc)(nil).ClearSupportRoute), ctx, relationAccountID)
+}
+
+// ContactSupport mocks base method.
+func (m *MockConversationSvc) ContactSupport(ctx context.Context) (*domain.Conversation, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ContactSupport", ctx)
+	ret0, _ := ret[0].(*domain.Conversation)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ContactSupport indicates an expected call of ContactSupport.
+func (mr *MockConversationSvcMockRecorder) ContactSupport(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContactSupport", reflect.TypeOf((*MockConversationSvc)(nil).ContactSupport), ctx)
+}
+
+// CreateAttachmentUploadURL mocks base method.
+func (m *MockConversationSvc) CreateAttachmentUploadURL(ctx context.Context, conversationID, filename, contentType string) (*domain.AttachmentUploadTarget, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateAttachmentUploadURL", ctx, conversationID, filename, contentType)
+	ret0, _ := ret[0].(*domain.AttachmentUploadTarget)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CreateAttachmentUploadURL indicates an expected call of CreateAttachmentUploadURL.
+func (mr *MockConversationSvcMockRecorder) CreateAttachmentUploadURL(ctx, conversationID, filename, contentType any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAttachmentUploadURL", reflect.TypeOf((*MockConversationSvc)(nil).CreateAttachmentUploadURL), ctx, conversationID, filename, contentType)
+}
+
+// CreateConversation mocks base method.
+func (m *MockConversationSvc) CreateConversation(ctx context.Context, input domain.CreateConversationInput) (*domain.Conversation, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateConversation", ctx, input)
+	ret0, _ := ret[0].(*domain.Conversation)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CreateConversation indicates an expected call of CreateConversation.
+func (mr *MockConversationSvcMockRecorder) CreateConversation(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateConversation", reflect.TypeOf((*MockConversationSvc)(nil).CreateConversation), ctx, input)
+}
+
+// CreateMessagingGroup mocks base method.
+func (m *MockConversationSvc) CreateMessagingGroup(ctx context.Context, input domain.CreateMessagingGroupInput) (*domain.MessagingGroup, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateMessagingGroup", ctx, input)
+	ret0, _ := ret[0].(*domain.MessagingGroup)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CreateMessagingGroup indicates an expected call of CreateMessagingGroup.
+func (mr *MockConversationSvcMockRecorder) CreateMessagingGroup(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateMessagingGroup", reflect.TypeOf((*MockConversationSvc)(nil).CreateMessagingGroup), ctx, input)
+}
+
+// CreateReplyDraft mocks base method.
+func (m *MockConversationSvc) CreateReplyDraft(ctx context.Context, input domain.CreateReplyDraftInput) (*domain.Message, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateReplyDraft", ctx, input)
+	ret0, _ := ret[0].(*domain.Message)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CreateReplyDraft indicates an expected call of CreateReplyDraft.
+func (mr *MockConversationSvcMockRecorder) CreateReplyDraft(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateReplyDraft", reflect.TypeOf((*MockConversationSvc)(nil).CreateReplyDraft), ctx, input)
+}
+
+// DeleteMessagingGroup mocks base method.
+func (m *MockConversationSvc) DeleteMessagingGroup(ctx context.Context, groupID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteMessagingGroup", ctx, groupID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// DeleteMessagingGroup indicates an expected call of DeleteMessagingGroup.
+func (mr *MockConversationSvcMockRecorder) DeleteMessagingGroup(ctx, groupID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteMessagingGroup", reflect.TypeOf((*MockConversationSvc)(nil).DeleteMessagingGroup), ctx, groupID)
+}
+
+// DeliverDueScheduledMessages mocks base method.
+func (m *MockConversationSvc) DeliverDueScheduledMessages(ctx context.Context, limit int32) (int, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeliverDueScheduledMessages", ctx, limit)
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// DeliverDueScheduledMessages indicates an expected call of DeliverDueScheduledMessages.
+func (mr *MockConversationSvcMockRecorder) DeliverDueScheduledMessages(ctx, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeliverDueScheduledMessages", reflect.TypeOf((*MockConversationSvc)(nil).DeliverDueScheduledMessages), ctx, limit)
+}
+
+// GetConversation mocks base method.
+func (m *MockConversationSvc) GetConversation(ctx context.Context, id string) (*domain.Conversation, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetConversation", ctx, id)
+	ret0, _ := ret[0].(*domain.Conversation)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetConversation indicates an expected call of GetConversation.
+func (mr *MockConversationSvcMockRecorder) GetConversation(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConversation", reflect.TypeOf((*MockConversationSvc)(nil).GetConversation), ctx, id)
+}
+
+// GetMessagingGroup mocks base method.
+func (m *MockConversationSvc) GetMessagingGroup(ctx context.Context, groupID string) (*domain.MessagingGroup, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMessagingGroup", ctx, groupID)
+	ret0, _ := ret[0].(*domain.MessagingGroup)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetMessagingGroup indicates an expected call of GetMessagingGroup.
+func (mr *MockConversationSvcMockRecorder) GetMessagingGroup(ctx, groupID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMessagingGroup", reflect.TypeOf((*MockConversationSvc)(nil).GetMessagingGroup), ctx, groupID)
+}
+
+// GetSupportRoute mocks base method.
+func (m *MockConversationSvc) GetSupportRoute(ctx context.Context, relationAccountID string) (*domain.SupportRoute, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSupportRoute", ctx, relationAccountID)
+	ret0, _ := ret[0].(*domain.SupportRoute)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetSupportRoute indicates an expected call of GetSupportRoute.
+func (mr *MockConversationSvcMockRecorder) GetSupportRoute(ctx, relationAccountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSupportRoute", reflect.TypeOf((*MockConversationSvc)(nil).GetSupportRoute), ctx, relationAccountID)
+}
+
+// Hide mocks base method.
+func (m *MockConversationSvc) Hide(ctx context.Context, conversationID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Hide", ctx, conversationID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Hide indicates an expected call of Hide.
+func (mr *MockConversationSvcMockRecorder) Hide(ctx, conversationID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Hide", reflect.TypeOf((*MockConversationSvc)(nil).Hide), ctx, conversationID)
+}
+
+// IngestInboundEmail mocks base method.
+func (m *MockConversationSvc) IngestInboundEmail(ctx context.Context, input domain.IngestInboundEmailInput) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IngestInboundEmail", ctx, input)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// IngestInboundEmail indicates an expected call of IngestInboundEmail.
+func (mr *MockConversationSvcMockRecorder) IngestInboundEmail(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IngestInboundEmail", reflect.TypeOf((*MockConversationSvc)(nil).IngestInboundEmail), ctx, input)
+}
+
+// IsParticipant mocks base method.
+func (m *MockConversationSvc) IsParticipant(ctx context.Context, conversationID, userID, accountID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsParticipant", ctx, conversationID, userID, accountID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// IsParticipant indicates an expected call of IsParticipant.
+func (mr *MockConversationSvcMockRecorder) IsParticipant(ctx, conversationID, userID, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsParticipant", reflect.TypeOf((*MockConversationSvc)(nil).IsParticipant), ctx, conversationID, userID, accountID)
+}
+
+// Leave mocks base method.
+func (m *MockConversationSvc) Leave(ctx context.Context, conversationID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Leave", ctx, conversationID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Leave indicates an expected call of Leave.
+func (mr *MockConversationSvcMockRecorder) Leave(ctx, conversationID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Leave", reflect.TypeOf((*MockConversationSvc)(nil).Leave), ctx, conversationID)
+}
+
+// ListBlocks mocks base method.
+func (m *MockConversationSvc) ListBlocks(ctx context.Context) ([]*domain.MessageBlock, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListBlocks", ctx)
+	ret0, _ := ret[0].([]*domain.MessageBlock)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListBlocks indicates an expected call of ListBlocks.
+func (mr *MockConversationSvcMockRecorder) ListBlocks(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBlocks", reflect.TypeOf((*MockConversationSvc)(nil).ListBlocks), ctx)
+}
+
+// ListContacts mocks base method.
+func (m *MockConversationSvc) ListContacts(ctx context.Context, query string) ([]*domain.MessagingContact, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListContacts", ctx, query)
+	ret0, _ := ret[0].([]*domain.MessagingContact)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListContacts indicates an expected call of ListContacts.
+func (mr *MockConversationSvcMockRecorder) ListContacts(ctx, query any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListContacts", reflect.TypeOf((*MockConversationSvc)(nil).ListContacts), ctx, query)
+}
+
+// ListConversationLinks mocks base method.
+func (m *MockConversationSvc) ListConversationLinks(ctx context.Context, conversationID string) ([]*domain.ConversationLink, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListConversationLinks", ctx, conversationID)
+	ret0, _ := ret[0].([]*domain.ConversationLink)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListConversationLinks indicates an expected call of ListConversationLinks.
+func (mr *MockConversationSvcMockRecorder) ListConversationLinks(ctx, conversationID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListConversationLinks", reflect.TypeOf((*MockConversationSvc)(nil).ListConversationLinks), ctx, conversationID)
+}
+
+// ListConversations mocks base method.
+func (m *MockConversationSvc) ListConversations(ctx context.Context, input domain.ListConversationsInput) (*domain.ConversationPage, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListConversations", ctx, input)
+	ret0, _ := ret[0].(*domain.ConversationPage)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListConversations indicates an expected call of ListConversations.
+func (mr *MockConversationSvcMockRecorder) ListConversations(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListConversations", reflect.TypeOf((*MockConversationSvc)(nil).ListConversations), ctx, input)
+}
+
+// ListConversationsByResource mocks base method.
+func (m *MockConversationSvc) ListConversationsByResource(ctx context.Context, resourceType, resourceID string, limit int32) ([]*domain.Conversation, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListConversationsByResource", ctx, resourceType, resourceID, limit)
+	ret0, _ := ret[0].([]*domain.Conversation)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListConversationsByResource indicates an expected call of ListConversationsByResource.
+func (mr *MockConversationSvcMockRecorder) ListConversationsByResource(ctx, resourceType, resourceID, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListConversationsByResource", reflect.TypeOf((*MockConversationSvc)(nil).ListConversationsByResource), ctx, resourceType, resourceID, limit)
+}
+
+// ListInbox mocks base method.
+func (m *MockConversationSvc) ListInbox(ctx context.Context, input domain.SupportInboxInput) (*domain.ConversationPage, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListInbox", ctx, input)
+	ret0, _ := ret[0].(*domain.ConversationPage)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListInbox indicates an expected call of ListInbox.
+func (mr *MockConversationSvcMockRecorder) ListInbox(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInbox", reflect.TypeOf((*MockConversationSvc)(nil).ListInbox), ctx, input)
+}
+
+// ListMessages mocks base method.
+func (m *MockConversationSvc) ListMessages(ctx context.Context, input domain.ListMessagesInput) (*domain.MessagePage, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListMessages", ctx, input)
+	ret0, _ := ret[0].(*domain.MessagePage)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListMessages indicates an expected call of ListMessages.
+func (mr *MockConversationSvcMockRecorder) ListMessages(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListMessages", reflect.TypeOf((*MockConversationSvc)(nil).ListMessages), ctx, input)
+}
+
+// ListMessagingGroups mocks base method.
+func (m *MockConversationSvc) ListMessagingGroups(ctx context.Context) ([]*domain.MessagingGroup, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListMessagingGroups", ctx)
+	ret0, _ := ret[0].([]*domain.MessagingGroup)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListMessagingGroups indicates an expected call of ListMessagingGroups.
+func (mr *MockConversationSvcMockRecorder) ListMessagingGroups(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListMessagingGroups", reflect.TypeOf((*MockConversationSvc)(nil).ListMessagingGroups), ctx)
+}
+
+// ListReplyDrafts mocks base method.
+func (m *MockConversationSvc) ListReplyDrafts(ctx context.Context, conversationID string, status *string) ([]*domain.Message, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListReplyDrafts", ctx, conversationID, status)
+	ret0, _ := ret[0].([]*domain.Message)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListReplyDrafts indicates an expected call of ListReplyDrafts.
+func (mr *MockConversationSvcMockRecorder) ListReplyDrafts(ctx, conversationID, status any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListReplyDrafts", reflect.TypeOf((*MockConversationSvc)(nil).ListReplyDrafts), ctx, conversationID, status)
+}
+
+// ListScheduledMessages mocks base method.
+func (m *MockConversationSvc) ListScheduledMessages(ctx context.Context, conversationID string) ([]*domain.Message, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListScheduledMessages", ctx, conversationID)
+	ret0, _ := ret[0].([]*domain.Message)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListScheduledMessages indicates an expected call of ListScheduledMessages.
+func (mr *MockConversationSvcMockRecorder) ListScheduledMessages(ctx, conversationID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListScheduledMessages", reflect.TypeOf((*MockConversationSvc)(nil).ListScheduledMessages), ctx, conversationID)
+}
+
+// MarkConversationRead mocks base method.
+func (m *MockConversationSvc) MarkConversationRead(ctx context.Context, conversationID string, upToSequence int64) (int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkConversationRead", ctx, conversationID, upToSequence)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// MarkConversationRead indicates an expected call of MarkConversationRead.
+func (mr *MockConversationSvcMockRecorder) MarkConversationRead(ctx, conversationID, upToSequence any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkConversationRead", reflect.TypeOf((*MockConversationSvc)(nil).MarkConversationRead), ctx, conversationID, upToSequence)
+}
+
+// PostAgentReply mocks base method.
+func (m *MockConversationSvc) PostAgentReply(ctx context.Context, input domain.AgentReplyInput) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PostAgentReply", ctx, input)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// PostAgentReply indicates an expected call of PostAgentReply.
+func (mr *MockConversationSvcMockRecorder) PostAgentReply(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostAgentReply", reflect.TypeOf((*MockConversationSvc)(nil).PostAgentReply), ctx, input)
+}
+
+// PostAgentReplyComplete mocks base method.
+func (m *MockConversationSvc) PostAgentReplyComplete(ctx context.Context, input domain.AgentReplyInput) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PostAgentReplyComplete", ctx, input)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// PostAgentReplyComplete indicates an expected call of PostAgentReplyComplete.
+func (mr *MockConversationSvcMockRecorder) PostAgentReplyComplete(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostAgentReplyComplete", reflect.TypeOf((*MockConversationSvc)(nil).PostAgentReplyComplete), ctx, input)
+}
+
+// PostAgentReplyPatch mocks base method.
+func (m *MockConversationSvc) PostAgentReplyPatch(ctx context.Context, input domain.AgentReplyPatchInput) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PostAgentReplyPatch", ctx, input)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// PostAgentReplyPatch indicates an expected call of PostAgentReplyPatch.
+func (mr *MockConversationSvcMockRecorder) PostAgentReplyPatch(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostAgentReplyPatch", reflect.TypeOf((*MockConversationSvc)(nil).PostAgentReplyPatch), ctx, input)
+}
+
+// PostAgentReplyStart mocks base method.
+func (m *MockConversationSvc) PostAgentReplyStart(ctx context.Context, input domain.AgentReplyInput) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PostAgentReplyStart", ctx, input)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// PostAgentReplyStart indicates an expected call of PostAgentReplyStart.
+func (mr *MockConversationSvcMockRecorder) PostAgentReplyStart(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostAgentReplyStart", reflect.TypeOf((*MockConversationSvc)(nil).PostAgentReplyStart), ctx, input)
+}
+
+// PostConversationSystemEvent mocks base method.
+func (m *MockConversationSvc) PostConversationSystemEvent(ctx context.Context, input domain.SystemEventInput) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PostConversationSystemEvent", ctx, input)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// PostConversationSystemEvent indicates an expected call of PostConversationSystemEvent.
+func (mr *MockConversationSvcMockRecorder) PostConversationSystemEvent(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostConversationSystemEvent", reflect.TypeOf((*MockConversationSvc)(nil).PostConversationSystemEvent), ctx, input)
+}
+
+// PostReplyDraft mocks base method.
+func (m *MockConversationSvc) PostReplyDraft(ctx context.Context, input domain.PostReplyDraftInput) (*domain.Message, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PostReplyDraft", ctx, input)
+	ret0, _ := ret[0].(*domain.Message)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// PostReplyDraft indicates an expected call of PostReplyDraft.
+func (mr *MockConversationSvcMockRecorder) PostReplyDraft(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostReplyDraft", reflect.TypeOf((*MockConversationSvc)(nil).PostReplyDraft), ctx, input)
+}
+
+// RedactConversation mocks base method.
+func (m *MockConversationSvc) RedactConversation(ctx context.Context, conversationID string) (*domain.Conversation, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RedactConversation", ctx, conversationID)
+	ret0, _ := ret[0].(*domain.Conversation)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// RedactConversation indicates an expected call of RedactConversation.
+func (mr *MockConversationSvcMockRecorder) RedactConversation(ctx, conversationID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RedactConversation", reflect.TypeOf((*MockConversationSvc)(nil).RedactConversation), ctx, conversationID)
+}
+
+// RejectReplyDraft mocks base method.
+func (m *MockConversationSvc) RejectReplyDraft(ctx context.Context, draftID string) (*domain.Message, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RejectReplyDraft", ctx, draftID)
+	ret0, _ := ret[0].(*domain.Message)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// RejectReplyDraft indicates an expected call of RejectReplyDraft.
+func (mr *MockConversationSvcMockRecorder) RejectReplyDraft(ctx, draftID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RejectReplyDraft", reflect.TypeOf((*MockConversationSvc)(nil).RejectReplyDraft), ctx, draftID)
+}
+
+// RemoveAgentParticipant mocks base method.
+func (m *MockConversationSvc) RemoveAgentParticipant(ctx context.Context, conversationID, participantID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveAgentParticipant", ctx, conversationID, participantID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// RemoveAgentParticipant indicates an expected call of RemoveAgentParticipant.
+func (mr *MockConversationSvcMockRecorder) RemoveAgentParticipant(ctx, conversationID, participantID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveAgentParticipant", reflect.TypeOf((*MockConversationSvc)(nil).RemoveAgentParticipant), ctx, conversationID, participantID)
+}
+
+// RemoveConversationLink mocks base method.
+func (m *MockConversationSvc) RemoveConversationLink(ctx context.Context, conversationID, linkID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveConversationLink", ctx, conversationID, linkID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// RemoveConversationLink indicates an expected call of RemoveConversationLink.
+func (mr *MockConversationSvcMockRecorder) RemoveConversationLink(ctx, conversationID, linkID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveConversationLink", reflect.TypeOf((*MockConversationSvc)(nil).RemoveConversationLink), ctx, conversationID, linkID)
+}
+
+// RemoveMessagingGroupMember mocks base method.
+func (m *MockConversationSvc) RemoveMessagingGroupMember(ctx context.Context, groupID, memberID string) (*domain.MessagingGroup, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveMessagingGroupMember", ctx, groupID, memberID)
+	ret0, _ := ret[0].(*domain.MessagingGroup)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// RemoveMessagingGroupMember indicates an expected call of RemoveMessagingGroupMember.
+func (mr *MockConversationSvcMockRecorder) RemoveMessagingGroupMember(ctx, groupID, memberID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveMessagingGroupMember", reflect.TypeOf((*MockConversationSvc)(nil).RemoveMessagingGroupMember), ctx, groupID, memberID)
+}
+
+// RemoveParticipant mocks base method.
+func (m *MockConversationSvc) RemoveParticipant(ctx context.Context, conversationID, participantID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveParticipant", ctx, conversationID, participantID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// RemoveParticipant indicates an expected call of RemoveParticipant.
+func (mr *MockConversationSvcMockRecorder) RemoveParticipant(ctx, conversationID, participantID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveParticipant", reflect.TypeOf((*MockConversationSvc)(nil).RemoveParticipant), ctx, conversationID, participantID)
+}
+
+// ReportConversation mocks base method.
+func (m *MockConversationSvc) ReportConversation(ctx context.Context, conversationID string, messageID *string, reason string) (*domain.MessageReport, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReportConversation", ctx, conversationID, messageID, reason)
+	ret0, _ := ret[0].(*domain.MessageReport)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ReportConversation indicates an expected call of ReportConversation.
+func (mr *MockConversationSvcMockRecorder) ReportConversation(ctx, conversationID, messageID, reason any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReportConversation", reflect.TypeOf((*MockConversationSvc)(nil).ReportConversation), ctx, conversationID, messageID, reason)
+}
+
+// ScheduleMessage mocks base method.
+func (m *MockConversationSvc) ScheduleMessage(ctx context.Context, input domain.CreateScheduledMessageInput) (*domain.Message, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ScheduleMessage", ctx, input)
+	ret0, _ := ret[0].(*domain.Message)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ScheduleMessage indicates an expected call of ScheduleMessage.
+func (mr *MockConversationSvcMockRecorder) ScheduleMessage(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScheduleMessage", reflect.TypeOf((*MockConversationSvc)(nil).ScheduleMessage), ctx, input)
+}
+
+// SendInboxReply mocks base method.
+func (m *MockConversationSvc) SendInboxReply(ctx context.Context, input domain.SendInboxReplyInput) (*domain.Message, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendInboxReply", ctx, input)
+	ret0, _ := ret[0].(*domain.Message)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// SendInboxReply indicates an expected call of SendInboxReply.
+func (mr *MockConversationSvcMockRecorder) SendInboxReply(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendInboxReply", reflect.TypeOf((*MockConversationSvc)(nil).SendInboxReply), ctx, input)
+}
+
+// SendMessage mocks base method.
+func (m *MockConversationSvc) SendMessage(ctx context.Context, input domain.SendMessageInput) (*domain.Message, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendMessage", ctx, input)
+	ret0, _ := ret[0].(*domain.Message)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// SendMessage indicates an expected call of SendMessage.
+func (mr *MockConversationSvcMockRecorder) SendMessage(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMessage", reflect.TypeOf((*MockConversationSvc)(nil).SendMessage), ctx, input)
+}
+
+// SendTyping mocks base method.
+func (m *MockConversationSvc) SendTyping(ctx context.Context, conversationID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendTyping", ctx, conversationID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SendTyping indicates an expected call of SendTyping.
+func (mr *MockConversationSvcMockRecorder) SendTyping(ctx, conversationID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendTyping", reflect.TypeOf((*MockConversationSvc)(nil).SendTyping), ctx, conversationID)
+}
+
+// SetLegalHold mocks base method.
+func (m *MockConversationSvc) SetLegalHold(ctx context.Context, conversationID string, hold bool) (*domain.Conversation, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetLegalHold", ctx, conversationID, hold)
+	ret0, _ := ret[0].(*domain.Conversation)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// SetLegalHold indicates an expected call of SetLegalHold.
+func (mr *MockConversationSvcMockRecorder) SetLegalHold(ctx, conversationID, hold any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetLegalHold", reflect.TypeOf((*MockConversationSvc)(nil).SetLegalHold), ctx, conversationID, hold)
+}
+
+// SetMute mocks base method.
+func (m *MockConversationSvc) SetMute(ctx context.Context, conversationID string, muted bool, mutedUntil *time.Time) (*domain.Conversation, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetMute", ctx, conversationID, muted, mutedUntil)
+	ret0, _ := ret[0].(*domain.Conversation)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// SetMute indicates an expected call of SetMute.
+func (mr *MockConversationSvcMockRecorder) SetMute(ctx, conversationID, muted, mutedUntil any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetMute", reflect.TypeOf((*MockConversationSvc)(nil).SetMute), ctx, conversationID, muted, mutedUntil)
+}
+
+// SetSupportRoute mocks base method.
+func (m *MockConversationSvc) SetSupportRoute(ctx context.Context, relationAccountID, groupConversationID string) (*domain.SupportRoute, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetSupportRoute", ctx, relationAccountID, groupConversationID)
+	ret0, _ := ret[0].(*domain.SupportRoute)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// SetSupportRoute indicates an expected call of SetSupportRoute.
+func (mr *MockConversationSvcMockRecorder) SetSupportRoute(ctx, relationAccountID, groupConversationID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSupportRoute", reflect.TypeOf((*MockConversationSvc)(nil).SetSupportRoute), ctx, relationAccountID, groupConversationID)
+}
+
+// SupportAvailability mocks base method.
+func (m *MockConversationSvc) SupportAvailability(ctx context.Context) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SupportAvailability", ctx)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// SupportAvailability indicates an expected call of SupportAvailability.
+func (mr *MockConversationSvcMockRecorder) SupportAvailability(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SupportAvailability", reflect.TypeOf((*MockConversationSvc)(nil).SupportAvailability), ctx)
+}
+
+// Unblock mocks base method.
+func (m *MockConversationSvc) Unblock(ctx context.Context, blockedAccountUserID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Unblock", ctx, blockedAccountUserID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Unblock indicates an expected call of Unblock.
+func (mr *MockConversationSvcMockRecorder) Unblock(ctx, blockedAccountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unblock", reflect.TypeOf((*MockConversationSvc)(nil).Unblock), ctx, blockedAccountUserID)
+}
+
+// Unhide mocks base method.
+func (m *MockConversationSvc) Unhide(ctx context.Context, conversationID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Unhide", ctx, conversationID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Unhide indicates an expected call of Unhide.
+func (mr *MockConversationSvcMockRecorder) Unhide(ctx, conversationID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unhide", reflect.TypeOf((*MockConversationSvc)(nil).Unhide), ctx, conversationID)
+}
+
+// UpdateConversation mocks base method.
+func (m *MockConversationSvc) UpdateConversation(ctx context.Context, conversationID string, title, status *string, clearTitle bool) (*domain.Conversation, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateConversation", ctx, conversationID, title, status, clearTitle)
+	ret0, _ := ret[0].(*domain.Conversation)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// UpdateConversation indicates an expected call of UpdateConversation.
+func (mr *MockConversationSvcMockRecorder) UpdateConversation(ctx, conversationID, title, status, clearTitle any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateConversation", reflect.TypeOf((*MockConversationSvc)(nil).UpdateConversation), ctx, conversationID, title, status, clearTitle)
+}
+
+// UpdateMessagingGroup mocks base method.
+func (m *MockConversationSvc) UpdateMessagingGroup(ctx context.Context, groupID, name string) (*domain.MessagingGroup, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateMessagingGroup", ctx, groupID, name)
+	ret0, _ := ret[0].(*domain.MessagingGroup)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// UpdateMessagingGroup indicates an expected call of UpdateMessagingGroup.
+func (mr *MockConversationSvcMockRecorder) UpdateMessagingGroup(ctx, groupID, name any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMessagingGroup", reflect.TypeOf((*MockConversationSvc)(nil).UpdateMessagingGroup), ctx, groupID, name)
+}
+
+// UpdateParticipantRole mocks base method.
+func (m *MockConversationSvc) UpdateParticipantRole(ctx context.Context, conversationID, participantID, role string) (*domain.Conversation, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateParticipantRole", ctx, conversationID, participantID, role)
+	ret0, _ := ret[0].(*domain.Conversation)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// UpdateParticipantRole indicates an expected call of UpdateParticipantRole.
+func (mr *MockConversationSvcMockRecorder) UpdateParticipantRole(ctx, conversationID, participantID, role any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateParticipantRole", reflect.TypeOf((*MockConversationSvc)(nil).UpdateParticipantRole), ctx, conversationID, participantID, role)
+}
+
+// UpdateReplyDraft mocks base method.
+func (m *MockConversationSvc) UpdateReplyDraft(ctx context.Context, draftID, body string, subject *string) (*domain.Message, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateReplyDraft", ctx, draftID, body, subject)
+	ret0, _ := ret[0].(*domain.Message)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// UpdateReplyDraft indicates an expected call of UpdateReplyDraft.
+func (mr *MockConversationSvcMockRecorder) UpdateReplyDraft(ctx, draftID, body, subject any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateReplyDraft", reflect.TypeOf((*MockConversationSvc)(nil).UpdateReplyDraft), ctx, draftID, body, subject)
+}
+
+// UpdateWorkflowStatus mocks base method.
+func (m *MockConversationSvc) UpdateWorkflowStatus(ctx context.Context, conversationID, status string) (*domain.Conversation, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateWorkflowStatus", ctx, conversationID, status)
+	ret0, _ := ret[0].(*domain.Conversation)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// UpdateWorkflowStatus indicates an expected call of UpdateWorkflowStatus.
+func (mr *MockConversationSvcMockRecorder) UpdateWorkflowStatus(ctx, conversationID, status any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateWorkflowStatus", reflect.TypeOf((*MockConversationSvc)(nil).UpdateWorkflowStatus), ctx, conversationID, status)
+}
 
 // MockNotificationSvc is a mock of NotificationSvc interface.
 type MockNotificationSvc struct {
@@ -83,6 +1053,284 @@ func (m *MockNotificationSvc) SendEnterpriseRequest(ctx context.Context, req *do
 func (mr *MockNotificationSvcMockRecorder) SendEnterpriseRequest(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendEnterpriseRequest", reflect.TypeOf((*MockNotificationSvc)(nil).SendEnterpriseRequest), ctx, req)
+}
+
+// MockMessagingSvc is a mock of MessagingSvc interface.
+type MockMessagingSvc struct {
+	ctrl     *gomock.Controller
+	recorder *MockMessagingSvcMockRecorder
+	isgomock struct{}
+}
+
+// MockMessagingSvcMockRecorder is the mock recorder for MockMessagingSvc.
+type MockMessagingSvcMockRecorder struct {
+	mock *MockMessagingSvc
+}
+
+// NewMockMessagingSvc creates a new mock instance.
+func NewMockMessagingSvc(ctrl *gomock.Controller) *MockMessagingSvc {
+	mock := &MockMessagingSvc{ctrl: ctrl}
+	mock.recorder = &MockMessagingSvcMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockMessagingSvc) EXPECT() *MockMessagingSvcMockRecorder {
+	return m.recorder
+}
+
+// FanOut mocks base method.
+func (m *MockMessagingSvc) FanOut(ctx context.Context, dedupeSeed string, data messaging.AlertFanoutData) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FanOut", ctx, dedupeSeed, data)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// FanOut indicates an expected call of FanOut.
+func (mr *MockMessagingSvcMockRecorder) FanOut(ctx, dedupeSeed, data any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FanOut", reflect.TypeOf((*MockMessagingSvc)(nil).FanOut), ctx, dedupeSeed, data)
+}
+
+// GetAnnouncement mocks base method.
+func (m *MockMessagingSvc) GetAnnouncement(ctx context.Context, id string) (*domain.Announcement, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAnnouncement", ctx, id)
+	ret0, _ := ret[0].(*domain.Announcement)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetAnnouncement indicates an expected call of GetAnnouncement.
+func (mr *MockMessagingSvcMockRecorder) GetAnnouncement(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAnnouncement", reflect.TypeOf((*MockMessagingSvc)(nil).GetAnnouncement), ctx, id)
+}
+
+// GetNotification mocks base method.
+func (m *MockMessagingSvc) GetNotification(ctx context.Context, id string) (*domain.Notification, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNotification", ctx, id)
+	ret0, _ := ret[0].(*domain.Notification)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetNotification indicates an expected call of GetNotification.
+func (mr *MockMessagingSvcMockRecorder) GetNotification(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNotification", reflect.TypeOf((*MockMessagingSvc)(nil).GetNotification), ctx, id)
+}
+
+// GetUnreadCount mocks base method.
+func (m *MockMessagingSvc) GetUnreadCount(ctx context.Context) (*domain.UnreadCounts, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUnreadCount", ctx)
+	ret0, _ := ret[0].(*domain.UnreadCounts)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetUnreadCount indicates an expected call of GetUnreadCount.
+func (mr *MockMessagingSvcMockRecorder) GetUnreadCount(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUnreadCount", reflect.TypeOf((*MockMessagingSvc)(nil).GetUnreadCount), ctx)
+}
+
+// GetUnreadSummary mocks base method.
+func (m *MockMessagingSvc) GetUnreadSummary(ctx context.Context) (*domain.UnreadSummary, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUnreadSummary", ctx)
+	ret0, _ := ret[0].(*domain.UnreadSummary)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetUnreadSummary indicates an expected call of GetUnreadSummary.
+func (mr *MockMessagingSvcMockRecorder) GetUnreadSummary(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUnreadSummary", reflect.TypeOf((*MockMessagingSvc)(nil).GetUnreadSummary), ctx)
+}
+
+// ListAnnouncements mocks base method.
+func (m *MockMessagingSvc) ListAnnouncements(ctx context.Context, input domain.ListAnnouncementsInput) (*domain.AnnouncementPage, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAnnouncements", ctx, input)
+	ret0, _ := ret[0].(*domain.AnnouncementPage)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListAnnouncements indicates an expected call of ListAnnouncements.
+func (mr *MockMessagingSvcMockRecorder) ListAnnouncements(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAnnouncements", reflect.TypeOf((*MockMessagingSvc)(nil).ListAnnouncements), ctx, input)
+}
+
+// ListNotificationPreferences mocks base method.
+func (m *MockMessagingSvc) ListNotificationPreferences(ctx context.Context) ([]*domain.NotificationPreference, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListNotificationPreferences", ctx)
+	ret0, _ := ret[0].([]*domain.NotificationPreference)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListNotificationPreferences indicates an expected call of ListNotificationPreferences.
+func (mr *MockMessagingSvcMockRecorder) ListNotificationPreferences(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNotificationPreferences", reflect.TypeOf((*MockMessagingSvc)(nil).ListNotificationPreferences), ctx)
+}
+
+// ListNotifications mocks base method.
+func (m *MockMessagingSvc) ListNotifications(ctx context.Context, input domain.ListNotificationsInput) (*domain.NotificationPage, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListNotifications", ctx, input)
+	ret0, _ := ret[0].(*domain.NotificationPage)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListNotifications indicates an expected call of ListNotifications.
+func (mr *MockMessagingSvcMockRecorder) ListNotifications(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNotifications", reflect.TypeOf((*MockMessagingSvc)(nil).ListNotifications), ctx, input)
+}
+
+// MarkAllSeen mocks base method.
+func (m *MockMessagingSvc) MarkAllSeen(ctx context.Context) (int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkAllSeen", ctx)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// MarkAllSeen indicates an expected call of MarkAllSeen.
+func (mr *MockMessagingSvcMockRecorder) MarkAllSeen(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkAllSeen", reflect.TypeOf((*MockMessagingSvc)(nil).MarkAllSeen), ctx)
+}
+
+// MarkAnnouncementDismissed mocks base method.
+func (m *MockMessagingSvc) MarkAnnouncementDismissed(ctx context.Context, id string) (*domain.Announcement, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkAnnouncementDismissed", ctx, id)
+	ret0, _ := ret[0].(*domain.Announcement)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// MarkAnnouncementDismissed indicates an expected call of MarkAnnouncementDismissed.
+func (mr *MockMessagingSvcMockRecorder) MarkAnnouncementDismissed(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkAnnouncementDismissed", reflect.TypeOf((*MockMessagingSvc)(nil).MarkAnnouncementDismissed), ctx, id)
+}
+
+// MarkAnnouncementRead mocks base method.
+func (m *MockMessagingSvc) MarkAnnouncementRead(ctx context.Context, id string) (*domain.Announcement, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkAnnouncementRead", ctx, id)
+	ret0, _ := ret[0].(*domain.Announcement)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// MarkAnnouncementRead indicates an expected call of MarkAnnouncementRead.
+func (mr *MockMessagingSvcMockRecorder) MarkAnnouncementRead(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkAnnouncementRead", reflect.TypeOf((*MockMessagingSvc)(nil).MarkAnnouncementRead), ctx, id)
+}
+
+// MarkAnnouncementSeen mocks base method.
+func (m *MockMessagingSvc) MarkAnnouncementSeen(ctx context.Context, id string) (*domain.Announcement, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkAnnouncementSeen", ctx, id)
+	ret0, _ := ret[0].(*domain.Announcement)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// MarkAnnouncementSeen indicates an expected call of MarkAnnouncementSeen.
+func (mr *MockMessagingSvcMockRecorder) MarkAnnouncementSeen(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkAnnouncementSeen", reflect.TypeOf((*MockMessagingSvc)(nil).MarkAnnouncementSeen), ctx, id)
+}
+
+// MarkDismissed mocks base method.
+func (m *MockMessagingSvc) MarkDismissed(ctx context.Context, id string) (*domain.Notification, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkDismissed", ctx, id)
+	ret0, _ := ret[0].(*domain.Notification)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// MarkDismissed indicates an expected call of MarkDismissed.
+func (mr *MockMessagingSvcMockRecorder) MarkDismissed(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkDismissed", reflect.TypeOf((*MockMessagingSvc)(nil).MarkDismissed), ctx, id)
+}
+
+// MarkRead mocks base method.
+func (m *MockMessagingSvc) MarkRead(ctx context.Context, id string) (*domain.Notification, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkRead", ctx, id)
+	ret0, _ := ret[0].(*domain.Notification)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// MarkRead indicates an expected call of MarkRead.
+func (mr *MockMessagingSvcMockRecorder) MarkRead(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkRead", reflect.TypeOf((*MockMessagingSvc)(nil).MarkRead), ctx, id)
+}
+
+// MarkSeen mocks base method.
+func (m *MockMessagingSvc) MarkSeen(ctx context.Context, id string) (*domain.Notification, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkSeen", ctx, id)
+	ret0, _ := ret[0].(*domain.Notification)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// MarkSeen indicates an expected call of MarkSeen.
+func (mr *MockMessagingSvcMockRecorder) MarkSeen(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkSeen", reflect.TypeOf((*MockMessagingSvc)(nil).MarkSeen), ctx, id)
+}
+
+// SendNotification mocks base method.
+func (m *MockMessagingSvc) SendNotification(ctx context.Context, input domain.SendNotificationInput) (int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendNotification", ctx, input)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// SendNotification indicates an expected call of SendNotification.
+func (mr *MockMessagingSvcMockRecorder) SendNotification(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendNotification", reflect.TypeOf((*MockMessagingSvc)(nil).SendNotification), ctx, input)
+}
+
+// UpsertNotificationPreference mocks base method.
+func (m *MockMessagingSvc) UpsertNotificationPreference(ctx context.Context, input domain.UpsertNotificationPreferenceInput) (*domain.NotificationPreference, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpsertNotificationPreference", ctx, input)
+	ret0, _ := ret[0].(*domain.NotificationPreference)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// UpsertNotificationPreference indicates an expected call of UpsertNotificationPreference.
+func (mr *MockMessagingSvcMockRecorder) UpsertNotificationPreference(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertNotificationPreference", reflect.TypeOf((*MockMessagingSvc)(nil).UpsertNotificationPreference), ctx, input)
 }
 
 // MockEmailSender is a mock of EmailSender interface.

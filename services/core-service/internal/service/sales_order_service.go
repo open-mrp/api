@@ -395,6 +395,14 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 			params.OrderDiscountID = &resolvedDiscountID
 		}
 
+		// Reject caller-supplied foreign keys that don't exist. Vitess does not
+		// enforce these FKs, so without these checks a garbage id would be
+		// silently stored as a dangling reference (or, for email-contact account
+		// users, silently dropped) instead of failing the create.
+		if apiErr := s.validateSalesOrderReferences(ctx, params); apiErr != nil {
+			return nil, cacheErr(apiErr)
+		}
+
 		// Auto-assign sales rep when caller didn't supply one, matching Dashboard behavior: commission-exempt customer/product-lines yield no rep; otherwise prefer the customer's default sales rep, then zipcode territory, then state territory.
 		salesRepID := params.SalesRepID
 		if salesRepID == nil {
@@ -500,7 +508,6 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 					UnitCostValue:              &costValue,
 					UnitCostNumeratorUnitID:    &costNum,
 					UnitCostDenominatorUnitID:  &costDen,
-					EdiLineItemID:              rl.EdiLineItemID,
 				})
 				if apiErr != nil {
 					return apiErr
@@ -1473,6 +1480,64 @@ func (s *salesOrderSvcImpl) resolveOrderDiscountID(ctx context.Context, accountI
 	return d.ID, nil
 }
 
+// validateSalesOrderReferences rejects caller-supplied foreign keys that don't
+// exist in the account. carrier_id and order_discount_id are validated
+// separately (in the shipping-rate estimate and resolveOrderDiscountID
+// respectively); this covers the remaining references that were previously
+// accepted unchecked.
+func (s *salesOrderSvcImpl) validateSalesOrderReferences(ctx context.Context, params domain.CreateSalesOrderParams) *apierror.APIError {
+	if params.ServiceLevelID != nil && *params.ServiceLevelID != "" {
+		if _, apiErr := s.repos.NewServiceLevelRepo().Get(ctx, params.AccountID, *params.ServiceLevelID); apiErr != nil {
+			return mapSalesOrderReferenceError(apiErr, "Service level not found.", "service_level_id")
+		}
+	}
+	if params.ShippingTermID != nil && *params.ShippingTermID != "" {
+		if _, apiErr := s.repos.NewShippingTermRepo().Get(ctx, domain.GetShippingTermParams{AccountID: params.AccountID, ShippingTermID: *params.ShippingTermID}); apiErr != nil {
+			return mapSalesOrderReferenceError(apiErr, "Shipping term not found.", "shipping_term_id")
+		}
+	}
+	if params.PaymentTermID != nil && *params.PaymentTermID != "" {
+		if _, apiErr := s.repos.NewPaymentTermRepo().Get(ctx, domain.GetPaymentTermParams{AccountID: params.AccountID, PaymentTermID: *params.PaymentTermID}); apiErr != nil {
+			return mapSalesOrderReferenceError(apiErr, "Payment term not found.", "payment_term_id")
+		}
+	}
+	if params.SalesRepID != nil && *params.SalesRepID != "" {
+		if _, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, params.AccountID, *params.SalesRepID, nil); apiErr != nil {
+			return mapSalesOrderReferenceError(apiErr, "Sales rep not found.", "sales_rep_id")
+		}
+	}
+	if apiErr := s.validateEmailContactAccountUsers(ctx, params.AccountID, params.AcknowledgementEmailContacts, "acknowledgement_email_contacts"); apiErr != nil {
+		return apiErr
+	}
+	if apiErr := s.validateEmailContactAccountUsers(ctx, params.AccountID, params.InvoiceEmailContacts, "invoice_email_contacts"); apiErr != nil {
+		return apiErr
+	}
+	return nil
+}
+
+// validateEmailContactAccountUsers rejects an order email-contact whose
+// account_user_id does not exist, rather than silently dropping the reference.
+func (s *salesOrderSvcImpl) validateEmailContactAccountUsers(ctx context.Context, accountID string, contacts []domain.SalesOrderEmailContactInput, param string) *apierror.APIError {
+	for _, c := range contacts {
+		if c.AccountUserID == "" {
+			continue
+		}
+		if _, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, accountID, c.AccountUserID, nil); apiErr != nil {
+			return mapSalesOrderReferenceError(apiErr, "Email contact account user not found.", param)
+		}
+	}
+	return nil
+}
+
+// mapSalesOrderReferenceError turns a not-found lookup into a field-scoped 400
+// validation error and passes any other error through unchanged.
+func mapSalesOrderReferenceError(apiErr *apierror.APIError, notFoundMsg, param string) *apierror.APIError {
+	if apierror.IsNotFound(apiErr) {
+		return apierror.NewValidationErrorWithParam(notFoundMsg, param)
+	}
+	return apiErr
+}
+
 // synthesizeDiscountLine emits a negative-price order line against the account's credit product to realize an order-level discount, matching Dashboard behavior. No-ops if the discount, credit product, or currency base unit cannot be resolved (a missing credit product should not fail the create; the discount amount will just not appear as a line item).
 func (s *salesOrderSvcImpl) synthesizeDiscountLine(ctx context.Context, orderID string, params domain.CreateSalesOrderParams, orderTotal float64) *apierror.APIError {
 	if params.OrderDiscountID == nil {
@@ -2262,8 +2327,7 @@ func includesSalesOrderContacts(includes []string) bool {
 	return false
 }
 
-// attachSalesOrderContacts batch-loads email recipients for the given orders (one
-// query for the whole set) and assigns them per order. No-op when none are passed.
+// attachSalesOrderContacts batch-loads email recipients for the given orders (one query for the whole set) and assigns them per order. No-op when none are passed.
 func attachSalesOrderContacts(ctx context.Context, repo domain.SalesOrderRepo, orders []*domain.SalesOrder) *apierror.APIError {
 	if len(orders) == 0 {
 		return nil

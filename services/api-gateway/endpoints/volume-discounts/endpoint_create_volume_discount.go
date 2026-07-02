@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -14,7 +15,7 @@ import (
 
 // Volume discount tier to create.
 type CreateVolumeDiscountTierInput struct {
-	// Display name.
+	// Display name of the tier.
 	Name string `json:"name" validate:"required,max=255"`
 	// Percentage taken off the price once the threshold is met, as a decimal string (e.g. `5` for 5%).
 	DiscountPercentage string `json:"discount_percentage" validate:"required" format:"decimal"`
@@ -26,7 +27,7 @@ type CreateVolumeDiscountTierInput struct {
 
 // Request to create a volume discount.
 type CreateVolumeDiscountRequest struct {
-	// Display name.
+	// Display name of the volume discount.
 	//
 	// Must be unique within the account.
 	Name string `json:"name" validate:"required,max=255"`
@@ -81,7 +82,10 @@ func (e *CreateVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*C
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
-		ObjectType:        constants.ObjectTypeVolumeDiscount,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainDiscounts, Action: types.ActionCreate},
+		},
+		ObjectType: constants.ObjectTypeVolumeDiscount,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateVolumeDiscountRequest) (*apiresource.VolumeDiscount, *apierror.APIError) {
 			return svc.(VolumeDiscountSvc).CreateVolumeDiscount
 		},

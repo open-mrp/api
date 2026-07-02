@@ -5,8 +5,7 @@ import (
 	"encoding/json"
 	"log"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/constants"
+	"github.com/augno/api/services/core-service/internal/hubspotsync"
 	"github.com/augno/api/shared/contracts"
 	"github.com/augno/api/shared/messaging"
 	"github.com/augno/api/shared/tracing"
@@ -20,19 +19,19 @@ import (
 type SalesOrderCreatedConsumer struct {
 	rabbitmq      messaging.MessageBroker
 	inboxConsumer *messaging.InboxConsumer
-	repos         domain.RepoFactory
+	hubspotSync   hubspotsync.Service
 	tracer        trace.Tracer
 }
 
 func NewSalesOrderCreatedConsumer(
 	rabbitmq messaging.MessageBroker,
 	inboxRepo messaging.InboxRepo,
-	repos domain.RepoFactory,
+	hubspotSync hubspotsync.Service,
 ) *SalesOrderCreatedConsumer {
 	return &SalesOrderCreatedConsumer{
 		rabbitmq:      rabbitmq,
 		inboxConsumer: messaging.NewInboxConsumer(inboxRepo, "core-service"),
-		repos:         repos,
+		hubspotSync:   hubspotSync,
 		tracer:        tracing.GetTracer("core-service.sales_order_created_consumer"),
 	}
 }
@@ -86,18 +85,16 @@ func (c *SalesOrderCreatedConsumer) dispatchIntegrations(ctx context.Context, da
 }
 
 // syncHubspot pushes the new sales order to HubSpot when the account has the HubSpot integration connected.
-//
-// TODO: implement the actual HubSpot sync once a HubSpot API client exists. The wiring below establishes the trigger point and the enabled-check; the remaining work is to (1) build a HubSpot client from the account's encrypted credentials (AccountIntegrationRepo.GetEncryptedCredentials), (2) re-fetch the full order via the sales-order repo, and (3) upsert the corresponding HubSpot deal/line items keyed on data.SalesOrderID for idempotency.
+// The engine no-ops when HubSpot isn't connected. Transient failures (rate limits, 5xx) are returned so the inbox retries; permanent failures (e.g. HubSpot 4xx on bad data) are logged and swallowed so a single bad order can't poison-loop the queue.
 func (c *SalesOrderCreatedConsumer) syncHubspot(ctx context.Context, data messaging.SalesOrderCreatedData) error {
-	hasHubspot, apiErr := c.repos.NewAccountIntegrationRepo().HasIntegration(ctx, data.AccountID, constants.IntegrationCodeHubspot)
-	if apiErr != nil {
-		return apiErr
-	}
-	if !hasHubspot {
+	apiErr := c.hubspotSync.SyncOrder(ctx, data.AccountID, data.SalesOrderID)
+	if apiErr == nil {
 		return nil
 	}
-
-	log.Printf("[sales_order_created] HubSpot integration enabled for account %s; sync for order %s not yet implemented",
-		data.AccountID, data.SalesOrderID)
+	if apiErr.IsTransient {
+		return apiErr
+	}
+	log.Printf("[sales_order_created] HubSpot sync permanently failed for order %s (account %s): %v",
+		data.SalesOrderID, data.AccountID, apiErr)
 	return nil
 }

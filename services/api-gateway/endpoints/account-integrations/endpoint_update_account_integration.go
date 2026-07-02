@@ -45,6 +45,8 @@ func (e *UpdateAccountIntegrationEndpoint) Materialize() *apiendpoint.APIEndpoin
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
+		AgentTool:         true,
+		RequiredRoleType:  constants.RoleTypeAdmin,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeAccountIntegration,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAccountIntegrationRequest) (*apiresource.AccountIntegration, *apierror.APIError) {

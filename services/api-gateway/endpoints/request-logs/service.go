@@ -7,6 +7,7 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
@@ -107,10 +108,14 @@ func (m *requestLogSvcImpl) ListRequestLogs(ctx context.Context, req *ListReques
 
 	meta := resourcekit.GetLoadMeta(ctx)
 	logs := make([]apiresource.RequestLog, len(resp.RequestLogs))
+	var agentActors []*apiresource.Actor
 	for i, rl := range resp.RequestLogs {
 		logs[i] = requestLogFromProto(rl)
-		stashRequestLogMeta(ctx, meta, rl)
+		if actor := stashRequestLogMeta(ctx, meta, rl); actor != nil && actor.Type == constants.ActorTypeAgent {
+			agentActors = append(agentActors, actor)
+		}
 	}
+	hydrateAgentActors(ctx, agentActors)
 
 	return apiresource.NewList(logs, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
@@ -132,8 +137,22 @@ func (m *requestLogSvcImpl) GetRequestLog(ctx context.Context, req *RetrieveRequ
 
 	meta := resourcekit.GetLoadMeta(ctx)
 	result := requestLogFromProto(resp.RequestLog)
-	stashRequestLogMeta(ctx, meta, resp.RequestLog)
+	if actor := stashRequestLogMeta(ctx, meta, resp.RequestLog); actor != nil && actor.Type == constants.ActorTypeAgent {
+		hydrateAgentActors(ctx, []*apiresource.Actor{actor})
+	}
 	return &result, nil
+}
+
+// hydrateAgentActors fills in agent actors' display name + handle from agent-service.
+// Unlike user/api_key actors — whose names are joined in platform-service — agent
+// definitions live in a separate datastore, so their names must be resolved here.
+// Best-effort and a no-op unless the caller expanded the actor (the only case where
+// the name is rendered), avoiding a needless agent-service round-trip otherwise.
+func hydrateAgentActors(ctx context.Context, actors []*apiresource.Actor) {
+	if len(actors) == 0 || !resourcekit.RequestedIncludeSet(ctx)["actor"] {
+		return
+	}
+	resourceloaders.HydrateActorNames(ctx, actors)
 }
 
 func requestLogFromProto(rl *pb.RequestLogInfo) apiresource.RequestLog {
@@ -141,7 +160,7 @@ func requestLogFromProto(rl *pb.RequestLogInfo) apiresource.RequestLog {
 		return apiresource.RequestLog{}
 	}
 
-	return apiresource.RequestLog{
+	result := apiresource.RequestLog{
 		ID:              rl.Id,
 		Object:          constants.ObjectTypeRequestLog,
 		Method:          rl.Method,
@@ -160,11 +179,18 @@ func requestLogFromProto(rl *pb.RequestLogInfo) apiresource.RequestLog {
 		CreatedAt:       grpcutil.TimestampToTime(rl.CreatedAt),
 		IdempotencyKey:  rl.IdempotencyKey,
 	}
+	// Never expose internal infrastructure (internal listener host, pod IP) for agent requests.
+	result.ScrubInternalInfra(rl.IdentityType)
+	return result
 }
 
-func stashRequestLogMeta(ctx context.Context, meta *resourcekit.LoadMeta, rl *pb.RequestLogInfo) {
+// stashRequestLogMeta preheats the request log's account/actor and sub-resource
+// payloads into the request-scoped resolver cache. It returns the actor it built
+// (nil when the log has none) so the caller can post-process it — e.g. resolve agent
+// display names that platform-service cannot join.
+func stashRequestLogMeta(ctx context.Context, meta *resourcekit.LoadMeta, rl *pb.RequestLogInfo) *apiresource.Actor {
 	if rl == nil {
-		return
+		return nil
 	}
 
 	if rl.AccountId != nil && rl.AccountName != nil {
@@ -182,6 +208,7 @@ func stashRequestLogMeta(ctx context.Context, meta *resourcekit.LoadMeta, rl *pb
 		meta.Set(constants.ObjectTypeRequestLog, rl.Id, "account", account)
 	}
 
+	var actor *apiresource.Actor
 	if rl.Actor != nil {
 		actorType := constants.ActorType(rl.Actor.ActorType)
 		var handle *string
@@ -191,7 +218,7 @@ func stashRequestLogMeta(ctx context.Context, meta *resourcekit.LoadMeta, rl *pb
 		case constants.ActorTypeUser:
 			handle = rl.Actor.Email
 		}
-		actor := apiresource.NewActor(rl.Actor.Id, actorType, rl.Actor.Name, handle)
+		actor = apiresource.NewActor(rl.Actor.Id, actorType, rl.Actor.Name, handle)
 		resourcekit.PreheatCache(ctx, constants.ObjectTypeActor, actor.ID, actor)
 		meta.Set(constants.ObjectTypeRequestLog, rl.Id, "actor_id", actor.ID)
 		if rl.Actor.RoleId != nil {
@@ -208,6 +235,8 @@ func stashRequestLogMeta(ctx context.Context, meta *resourcekit.LoadMeta, rl *pb
 	if rl.ResponseJson != nil {
 		meta.Set(constants.ObjectTypeRequestLog, rl.Id, "response_body", rawMessageFromString(*rl.ResponseJson))
 	}
+
+	return actor
 }
 
 func rawMessageFromString(s string) json.RawMessage {

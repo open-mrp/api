@@ -35,7 +35,7 @@ func (*MachinesEndpointGroup) Materialize(config *MachinesEndpointGroupConfig) *
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
-		Title:        "Machines Management",
+		Title:        "Machines",
 		Description:  "List and manage machines.",
 		ResourceType: &apiresource.Machine{},
 	}

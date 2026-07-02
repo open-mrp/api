@@ -59,11 +59,7 @@ func NewAPIKeySvc(config *APIKeySvcConfig) domain.APIKeySvc {
 	}
 }
 
-func (c *APIKeySvcConfig) WithDefaults(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, coreClient domain.AuthCoreClient, encryptionKey []byte) *APIKeySvcConfig {
-	if c == nil {
-		c = &APIKeySvcConfig{}
-	}
-
+func BuildAPIKeySvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, coreClient domain.AuthCoreClient, encryptionKey []byte) *APIKeySvcConfig {
 	repoFactory := repository.NewRepoFactory(queries)
 	notificationPublisher := event.NewOutboxNotificationPublisher()
 

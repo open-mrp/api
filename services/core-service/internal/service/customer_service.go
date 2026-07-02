@@ -1089,8 +1089,7 @@ func checkCustomerReadPermission(identity *types.Identity) *apierror.APIError {
 	return identity.CheckHasPermission(types.PermissionDomainCustomers, types.ActionRead)
 }
 
-// ensureAccountAddressLink creates an account_address record linking the given
-// address to the account, if one does not already exist.
+// ensureAccountAddressLink creates an account_address record linking the given address to the account, if one does not already exist.
 func ensureAccountAddressLink(ctx context.Context, repo domain.CustomerRepo, accountID, addressID string) *apierror.APIError {
 	existingIDs, apiErr := repo.GetAccountAddressIDs(ctx, accountID)
 	if apiErr != nil {
@@ -1106,8 +1105,7 @@ func ensureAccountAddressLink(ctx context.Context, repo domain.CustomerRepo, acc
 	return repo.InsertAccountAddress(ctx, newID, accountID, addressID)
 }
 
-// addressParamsEqual returns true when two CreateAddressParams represent the
-// same physical address (ignoring AccountID which is set later).
+// addressParamsEqual returns true when two CreateAddressParams represent the same physical address (ignoring AccountID which is set later).
 func addressParamsEqual(a, b domain.CreateAddressParams) bool {
 	return a.Name == b.Name &&
 		optStrEqual(a.Phone, b.Phone) &&
@@ -1131,8 +1129,7 @@ func optStrEqual(a, b *string) bool {
 	return *a == *b
 }
 
-// customerAuditIncludes merges user-requested includes with the includes required
-// for correct audit change tracking (price_groups and notification_preferences).
+// customerAuditIncludes merges user-requested includes with the includes required for correct audit change tracking (price_groups and notification_preferences).
 func customerAuditIncludes(userIncludes []string) []string {
 	auditRequired := []string{"price_groups", "notification_preferences"}
 	merged := make([]string, len(auditRequired))

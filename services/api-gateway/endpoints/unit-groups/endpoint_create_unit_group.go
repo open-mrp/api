@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -34,7 +35,7 @@ type CreateUnitGroupRequest struct {
 	Name string `json:"name" validate:"required,max=255"`
 	// Free-form notes about the unit group.
 	Notes field.Optional[string] `json:"notes,omitzero" default:"null"`
-	// Dimension shared by every unit in this group (e.g. `mass`, `volume`).
+	// Dimension shared by every unit in this group.
 	//
 	// All associated units must be of this dimension.
 	Type constants.UnitType `json:"type" validate:"required"`
@@ -70,14 +71,16 @@ type CreateUnitGroupEndpoint struct{}
 
 func (e *CreateUnitGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateUnitGroupRequest, *apiresource.UnitGroup] {
 	return (&apiendpoint.APIEndpoint[*CreateUnitGroupRequest, *apiresource.UnitGroup]{
-		Title:             "Create Unit Group",
-		Method:            http.MethodPost,
-		ContentType:       "application/json",
-		Route:             "/v1/catalog/unit-groups",
-		SuccessStatusCode: http.StatusCreated,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeUnitGroup,
+		Title:               "Create Unit Group",
+		Method:              http.MethodPost,
+		ContentType:         "application/json",
+		Route:               "/v1/catalog/unit-groups",
+		SuccessStatusCode:   http.StatusCreated,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainUnitGroups, Action: types.ActionCreate}},
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeUnitGroup,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateUnitGroupRequest) (*apiresource.UnitGroup, *apierror.APIError) {
 			return svc.(UnitGroupSvc).CreateUnitGroup
 		},

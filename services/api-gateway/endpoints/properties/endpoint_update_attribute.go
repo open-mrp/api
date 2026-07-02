@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -43,14 +44,16 @@ type UpdateAttributeEndpoint struct{}
 
 func (e *UpdateAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAttributeRequest, *apiresource.Attribute] {
 	return (&apiendpoint.APIEndpoint[*UpdateAttributeRequest, *apiresource.Attribute]{
-		Title:             "Update Attribute",
-		Method:            http.MethodPatch,
-		ContentType:       "application/json",
-		Route:             CatalogPropertyAttributeRoute,
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeAttribute,
+		Title:               "Update Attribute",
+		Method:              http.MethodPatch,
+		ContentType:         "application/json",
+		Route:               CatalogPropertyAttributeRoute,
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProperties, Action: types.ActionUpdate}},
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeAttribute,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAttributeRequest) (*apiresource.Attribute, *apierror.APIError) {
 			return svc.(PropertySvc).UpdateAttribute
 		},

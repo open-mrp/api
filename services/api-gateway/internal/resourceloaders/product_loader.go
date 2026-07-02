@@ -28,19 +28,28 @@ func LoadProducts(ctx context.Context, ids []string) (map[string]any, *apierror.
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
 	out := make(map[string]any, len(resp.Products))
 	for _, p := range resp.Products {
-		out[p.Id] = productFromProto(p)
-		meta.Set(constants.ObjectTypeProduct, p.Id, "item_id", p.ItemId)
-		if p.ProductLineId != nil {
-			meta.Set(constants.ObjectTypeProduct, p.Id, "product_line_id", *p.ProductLineId)
-		}
+		out[p.Id] = ProductFromProto(p)
+		StashProductMeta(ctx, p)
 	}
 	return out, nil
 }
 
-func productFromProto(p *pb.ProductFullInfo) *apiresource.Product {
+// StashProductMeta records the ids needed to populate a product's expandable fields (item, product_line) when the include resolver runs. Pair it with ProductFromProto so includes work without leaking the nested resources.
+func StashProductMeta(ctx context.Context, p *pb.ProductFullInfo) {
+	if p == nil {
+		return
+	}
+	meta := resourcekit.GetLoadMeta(ctx)
+	meta.Set(constants.ObjectTypeProduct, p.Id, "item_id", p.ItemId)
+	if p.ProductLineId != nil {
+		meta.Set(constants.ObjectTypeProduct, p.Id, "product_line_id", *p.ProductLineId)
+	}
+}
+
+// ProductFromProto builds the gated Product resource: expandable fields (item, product_line) are left nil and populated only when explicitly requested via the include resolver. Use this — never the full ProductPresenter — when building a JSON API response.
+func ProductFromProto(p *pb.ProductFullInfo) *apiresource.Product {
 	res := &apiresource.Product{
 		ID:        p.Id,
 		Object:    constants.ObjectTypeProduct,

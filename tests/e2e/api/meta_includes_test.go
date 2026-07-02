@@ -329,7 +329,13 @@ var includeGetScenarioByOperationID = map[string]includeGetScenario{}
 // test because the standard e2e API key can't exercise them (internal-admin-
 // only endpoints, etc.). Mirrors the pattern of excludedPaginationPaths.
 var excludedIncludePaths = []string{
-	"/v1/core/request-logs", // requires internal admin role
+	"/v1/core/request-logs",       // requires internal admin role
+	"/v1/messaging/conversations", // chat requires an account-member session, not the API key; includes are covered by the dedicated messaging chat tests
+	"/v1/messaging/inbox",         // support inbox needs a real customer-support case the API-key harness can't provision; covered by messaging_external_cases_test.go
+	"/v1/messaging/notifications", // per-account_user bell feed; the API-key harness has no feed data. resource include is covered by messaging_notifications_test.go
+	"/v1/messaging/announcements", // per-account_user receipts the API-key harness can't produce. resource include is covered by messaging_announcements_test.go
+	"/v1/messaging/blocks",        // blocks are participant-scoped and require an account-member session, not the API key; covered by messaging_chat_groups_test.go
+	"/v1/messaging/messages",      // scheduled/message list is per-account_user; the API-key harness has no chat session. Covered by messaging_scheduled_test.go
 }
 
 func isExcludedFromIncludes(path string) bool {

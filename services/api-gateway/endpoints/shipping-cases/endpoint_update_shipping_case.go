@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -49,7 +50,10 @@ func (e *UpdateShippingCaseEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
-		ObjectType:        constants.ObjectTypeShippingCase,
+		// UpdateShippingCase enforces shipments:update in the service (shipping cases
+		// are a facet of shipments). Declared here to match that enforcement.
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainShipments, Action: types.ActionUpdate}},
+		ObjectType:          constants.ObjectTypeShippingCase,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateShippingCaseRequest) (*apiresource.ShippingCase, *apierror.APIError) {
 			return svc.(ShippingCaseSvc).UpdateShippingCase
 		},

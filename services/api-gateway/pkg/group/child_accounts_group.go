@@ -35,7 +35,7 @@ func (*ChildAccountsEndpointGroup) Materialize(config *ChildAccountsEndpointGrou
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
-		Title:        "Child Accounts Management",
+		Title:        "Child Accounts",
 		Description:  "Manage parent-child relationships between customer accounts.",
 		ResourceType: &apiresource.ChildAccount{},
 	}

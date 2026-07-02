@@ -35,7 +35,7 @@ func (*RatesEndpointGroup) Materialize(config *RatesEndpointGroupConfig) *RatesE
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
-		Title:        "Rates Management",
+		Title:        "Rates",
 		Description:  "Manage rate records.",
 		ResourceType: &apiresource.Rate{},
 	}

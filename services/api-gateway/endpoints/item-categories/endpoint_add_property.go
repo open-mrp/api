@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -24,13 +25,15 @@ type AddItemCategoryPropertyEndpoint struct{}
 
 func (e *AddItemCategoryPropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddItemCategoryPropertyRequest, *apiresource.EmptyResource] {
 	return (&apiendpoint.APIEndpoint[*AddItemCategoryPropertyRequest, *apiresource.EmptyResource]{
-		Title:             "Add Item Category Property",
-		Method:            http.MethodPut,
-		Route:             "/v1/catalog/item-categories/{id}/properties/{property_id}",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
+		Title:               "Add Item Category Property",
+		Method:              http.MethodPut,
+		Route:               "/v1/catalog/item-categories/{id}/properties/{property_id}",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainCategories, Action: types.ActionUpdate}},
+		Preview:             true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AddItemCategoryPropertyRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ItemCategorySvc).AddItemCategoryProperty
 		},

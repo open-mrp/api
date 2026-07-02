@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -21,17 +22,21 @@ type CreateUnitRequest struct {
 	//
 	// Must be unique within the account.
 	Abbreviation string `json:"abbreviation" validate:"required"`
-	// Unit dimension (e.g. `mass`, `volume`, `currency`).
+	// Unit dimension.
 	//
 	// Units can only be converted to other units of the same dimension.
 	Type constants.UnitType `json:"type" validate:"required"`
-	// Conversion ratio numerator relative to the base unit, as a decimal string.
-	RatioNumerator string `json:"ratio_numerator" validate:"required" format:"decimal"`
-	// Conversion ratio denominator relative to the base unit, as a decimal string. Must not be zero.
+	// Conversion ratio numerator relative to the base unit.
+	RatioNumerator string `json:"ratio_numerator" validate:"required,decimal" format:"decimal"`
+	// Conversion ratio denominator relative to the base unit.
+	//
+	// Must not be zero.
 	RatioDenominator string `json:"ratio_denominator" validate:"required,nonzero_decimal" format:"decimal"`
-	// Conversion offset numerator, as a decimal string.
-	OffsetNumerator string `json:"offset_numerator" validate:"required" format:"decimal"`
-	// Conversion offset denominator, as a decimal string. Must not be zero.
+	// Conversion offset numerator, used for temperature-like conversions.
+	OffsetNumerator string `json:"offset_numerator" validate:"required,decimal" format:"decimal"`
+	// Conversion offset denominator.
+	//
+	// Must not be zero.
 	OffsetDenominator string `json:"offset_denominator" validate:"required,nonzero_decimal" format:"decimal"`
 }
 
@@ -54,14 +59,16 @@ type CreateUnitEndpoint struct{}
 
 func (e *CreateUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateUnitRequest, *apiresource.Unit] {
 	return (&apiendpoint.APIEndpoint[*CreateUnitRequest, *apiresource.Unit]{
-		Title:             "Create Unit",
-		Method:            http.MethodPost,
-		ContentType:       "application/json",
-		Route:             "/v1/catalog/units",
-		SuccessStatusCode: http.StatusCreated,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeUnit,
+		Title:               "Create Unit",
+		Method:              http.MethodPost,
+		ContentType:         "application/json",
+		Route:               "/v1/catalog/units",
+		SuccessStatusCode:   http.StatusCreated,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainUnits, Action: types.ActionCreate}},
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeUnit,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateUnitRequest) (*apiresource.Unit, *apierror.APIError) {
 			return svc.(UnitSvc).CreateUnit
 		},

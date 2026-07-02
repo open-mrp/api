@@ -186,6 +186,9 @@ func (s *attributeSvcImpl) CreateAttribute(ctx context.Context, params domain.Cr
 
 	params.AccountID = identity.Target.AccountID
 	params.Value = strings.TrimSpace(params.Value)
+	if params.Value == "" {
+		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Attribute must have a name.", "value"))
+	}
 
 	meds := s.mediators()
 

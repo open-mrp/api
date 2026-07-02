@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -19,12 +20,20 @@ type ContinueRunRequest struct {
 	Message string `json:"message" validate:"required"`
 	// Slugs of tools whose pending calls should be approved.
 	//
-	// When empty, all pending tool calls are approved. Approvals are one-time: later calls to the same tool pause for review again unless the slug is also in `allowed_tool_slugs`.
-	ApprovedToolSlugs []string `json:"approved_tool_slugs"`
-	// Slugs of tools to allow for the rest of the run.
+	// When empty, all pending tool calls are approved. Approvals are always one-time: a later call to the same tool pauses for review again.
+	ApprovedToolSlugs []string `json:"approved_tool_slugs,omitzero"`
+	// Slugs of tools whose pending calls should be denied.
 	//
-	// Allowed tools execute without pausing for review; slugs accumulate across continue requests for the life of the run.
-	AllowedToolSlugs []string `json:"allowed_tool_slugs"`
+	// The run keeps going: each denied call is answered with a "denied by user" result so the agent proceeds without it, instead of cancelling the run. A single resume may both approve and reject different tools.
+	RejectedToolSlugs []string `json:"rejected_tool_slugs,omitzero"`
+	// Tool-call IDs (the `tool_use_id` of individual blocked calls) to approve.
+	//
+	// Use this instead of `approved_tool_slugs` to approve ONE specific call when several pending calls share the same tool slug — approving by slug would approve all of them. Approvals are one-time.
+	ApprovedToolCallIDs []string `json:"approved_tool_call_ids,omitzero"`
+	// Tool-call IDs (the `tool_use_id` of individual blocked calls) to deny.
+	//
+	// Per-call counterpart of `rejected_tool_slugs`, letting you deny one specific call among several that share a slug. Each denied call is answered with a "denied by user" result and the run continues.
+	RejectedToolCallIDs []string `json:"rejected_tool_call_ids,omitzero"`
 }
 
 var sampleContinueRunRequest = &ContinueRunRequest{
@@ -42,14 +51,15 @@ type ContinueRunEndpoint struct{}
 
 func (e *ContinueRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*ContinueRunRequest, *apiresource.AgentRun] {
 	return (&apiendpoint.APIEndpoint[*ContinueRunRequest, *apiresource.AgentRun]{
-		Title:             "Continue Agent Run",
-		Method:            http.MethodPost,
-		ContentType:       "application/json",
-		Route:             "/v1/ai/runs/{id}/actions/continue",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeAgentRun,
+		Title:               "Continue Agent Run",
+		Method:              http.MethodPost,
+		ContentType:         "application/json",
+		Route:               "/v1/ai/runs/{id}/actions/continue",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeAgentRun,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAgentRuns, Action: types.ActionUpdate}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ContinueRunRequest) (*apiresource.AgentRun, *apierror.APIError) {
 			return svc.(AgentRunSvc).ContinueAgentRun
 		},

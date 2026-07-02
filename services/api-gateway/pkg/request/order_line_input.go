@@ -2,9 +2,7 @@ package apirequest
 
 import "github.com/augno/api/shared/field"
 
-// OrderLineInput represents the shared fields for creating an order line item.
-//
-// Used as an embedded struct in purchase order and sales order line inputs.
+// Shared fields for a line item on a purchase order or sales order.
 type OrderLineInput struct {
 	// ID of the product being ordered.
 	ProductID string `json:"product_id" validate:"required"`

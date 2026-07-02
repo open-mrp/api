@@ -242,7 +242,7 @@ message UpsertUnitGroupUnitRequest {
   string unit_group_unit_id = 2;
   string unit_id = 3;
   string discount_percentage = 4;
-  bool is_visible = 5;
+  optional bool is_visible = 5;
   string discount_fixed = 6;
   repeated string includes = 7;
 }

@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -21,14 +22,15 @@ type RetrieveProductTypeEndpoint struct{}
 
 func (e *RetrieveProductTypeEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveProductTypeRequest, *apiresource.ProductType] {
 	return (&apiendpoint.APIEndpoint[*RetrieveProductTypeRequest, *apiresource.ProductType]{
-		Title:             "Retrieve Product Type",
-		Method:            http.MethodGet,
-		Route:             "/v1/catalog/product-types/{id}",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeProductType,
+		Title:               "Retrieve Product Type",
+		Method:              http.MethodGet,
+		Route:               "/v1/catalog/product-types/{id}",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProductTypes, Action: types.ActionRead}},
+		ObjectType:          constants.ObjectTypeProductType,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveProductTypeRequest) (*apiresource.ProductType, *apierror.APIError) {
 			return svc.(ProductTypeSvc).GetProductType
 		},

@@ -200,9 +200,10 @@ func (m *productSvcImpl) DeleteProduct(ctx context.Context, req *DeleteProductRe
 		return nil, apiErr
 	}
 
-	result := ProductPresenter(resp.Product)
-	stashProductMeta(ctx, resp.Product)
-	return &result, nil
+	// Gated build: item / product_line stay nil and populate only when the caller requests them via ?include=. ProductPresenter would embed them unconditionally and is reserved for the Excel export path.
+	result := resourceloaders.ProductFromProto(resp.Product)
+	resourceloaders.StashProductMeta(ctx, resp.Product)
+	return result, nil
 }
 
 func (m *productSvcImpl) ChangeProductProductLine(ctx context.Context, req *ChangeProductProductLineRequest) (*apiresource.Product, *apierror.APIError) {
@@ -295,17 +296,6 @@ func (m *productSvcImpl) ExportProducts(ctx context.Context, req *ExportProducts
 		Filename:    filename,
 		Body:        body,
 	}, nil
-}
-
-func stashProductMeta(ctx context.Context, p *pb.ProductFullInfo) {
-	if p == nil {
-		return
-	}
-	meta := resourcekit.GetLoadMeta(ctx)
-	meta.Set(constants.ObjectTypeProduct, p.Id, "item_id", p.ItemId)
-	if p.ProductLineId != nil {
-		meta.Set(constants.ObjectTypeProduct, p.Id, "product_line_id", *p.ProductLineId)
-	}
 }
 
 func loadProductByID(ctx context.Context, id string) (*apiresource.Product, *apierror.APIError) {

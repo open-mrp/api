@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -16,7 +17,7 @@ import (
 type UpdateAccountRequest struct {
 	// Account ID.
 	AccountID string `path:"id" validate:"required"`
-	// Display name.
+	// The account's display name.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// Support email address.
 	SupportEmail field.Optional[string] `json:"support_email,omitzero" validate:"omitempty,custom_email,max=255"`
@@ -53,14 +54,15 @@ type UpdateAccountEndpoint struct{}
 
 func (e *UpdateAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAccountRequest, *apiresource.Account] {
 	return (&apiendpoint.APIEndpoint[*UpdateAccountRequest, *apiresource.Account]{
-		Title:             "Update Account",
-		Method:            http.MethodPatch,
-		Route:             "/v1/identity/accounts/{id}",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeAccount,
+		Title:               "Update Account",
+		Method:              http.MethodPatch,
+		Route:               "/v1/identity/accounts/{id}",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeAccount,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAccount, Action: types.ActionUpdate}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAccountRequest) (*apiresource.Account, *apierror.APIError) {
 			return svc.(AccountSvc).UpdateAccount
 		},

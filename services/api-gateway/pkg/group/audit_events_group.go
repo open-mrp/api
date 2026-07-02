@@ -35,7 +35,7 @@ func (*AuditEventsEndpointGroup) Materialize(config *AuditEventsEndpointGroupCon
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
-		Title:        "Audit Event Management",
+		Title:        "Audit Event",
 		Description:  "List and retrieve audit events.",
 		ResourceType: &apiresource.AuditEvent{},
 	}

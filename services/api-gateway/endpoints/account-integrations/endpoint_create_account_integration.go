@@ -56,6 +56,8 @@ func (e *CreateAccountIntegrationEndpoint) Materialize() *apiendpoint.APIEndpoin
 		Route:             "/v1/settings/integrations",
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
+		AgentTool:         true,
+		RequiredRoleType:  constants.RoleTypeAdmin,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeAccountIntegration,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateAccountIntegrationRequest) (*apiresource.AccountIntegration, *apierror.APIError) {

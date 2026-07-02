@@ -37,7 +37,14 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 	r.AddMiddleware(loggingMiddleware)
 	r.AddMiddleware(middleware.CORSMiddleware())
 	r.AddMiddleware(middleware.RateLimitMiddleware(config.TrustedProxyHops))
-	r.AddMiddleware(middleware.AuthMiddleware(authMiddlewareConfig))
+	if config.Internal {
+		// Internal listener: trust the agent identity supplied by agent-service (gated by the shared service token) instead of validating a user credential against auth-service.
+		r.AddMiddleware(middleware.InternalAuthMiddleware(&middleware.InternalAuthMiddlewareConfig{
+			ServiceToken: config.InternalServiceToken,
+		}))
+	} else {
+		r.AddMiddleware(middleware.AuthMiddleware(authMiddlewareConfig))
+	}
 	r.AddMiddleware(middleware.SubscriptionMiddleware())
 	r.AddMiddleware(middleware.SandboxBillingMiddleware())
 	r.AddMiddleware(middleware.VersionMiddleware())
@@ -195,6 +202,14 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 		registry.RegisterGroup(accountIntegrationsGroup.APIEndpointGroup)
 	}
 
+	// HubSpot Sync (backfill/reconciliation)
+	hubspotSyncGroup := (&httpgroup.HubspotSyncEndpointGroup{}).Materialize(&httpgroup.HubspotSyncEndpointGroupConfig{
+		CoreClient: config.CoreClient,
+	})
+	if hubspotSyncGroup != nil {
+		registry.RegisterGroup(hubspotSyncGroup.APIEndpointGroup)
+	}
+
 	// Carriers
 	carriersGroup := (&httpgroup.CarriersEndpointGroup{}).Materialize(&httpgroup.CarriersEndpointGroupConfig{
 		CoreClient: config.CoreClient,
@@ -273,6 +288,14 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 	})
 	if customersGroup != nil {
 		registry.RegisterGroup(customersGroup.APIEndpointGroup)
+	}
+
+	// Contacts
+	contactsGroup := (&httpgroup.ContactsEndpointGroup{}).Materialize(&httpgroup.ContactsEndpointGroupConfig{
+		CoreClient: config.CoreClient,
+	})
+	if contactsGroup != nil {
+		registry.RegisterGroup(contactsGroup.APIEndpointGroup)
 	}
 
 	// Deliveries
@@ -619,26 +642,133 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 		registry.RegisterGroup(settlementsGroup.APIEndpointGroup)
 	}
 
+	// Notifications (in-app bell feed)
+	if config.NotificationClient != nil {
+		notificationsGroup := (&httpgroup.NotificationsEndpointGroup{}).Materialize(&httpgroup.NotificationsEndpointGroupConfig{
+			NotificationClient: config.NotificationClient,
+		})
+		if notificationsGroup != nil {
+			registry.RegisterGroup(notificationsGroup.APIEndpointGroup)
+		}
+
+		// Announcements (broadcast feed)
+		announcementsGroup := (&httpgroup.AnnouncementsEndpointGroup{}).Materialize(&httpgroup.AnnouncementsEndpointGroupConfig{
+			NotificationClient: config.NotificationClient,
+		})
+		if announcementsGroup != nil {
+			registry.RegisterGroup(announcementsGroup.APIEndpointGroup)
+		}
+
+		// Conversations (1:1 chat)
+		conversationsGroup := (&httpgroup.ConversationsEndpointGroup{}).Materialize(&httpgroup.ConversationsEndpointGroupConfig{
+			NotificationClient: config.NotificationClient,
+		})
+		if conversationsGroup != nil {
+			registry.RegisterGroup(conversationsGroup.APIEndpointGroup)
+		}
+
+		// Support Routes (which group conversation handles a relationship's support)
+		supportRoutesGroup := (&httpgroup.SupportRoutesEndpointGroup{}).Materialize(&httpgroup.SupportRoutesEndpointGroupConfig{
+			NotificationClient: config.NotificationClient,
+		})
+		if supportRoutesGroup != nil {
+			registry.RegisterGroup(supportRoutesGroup.APIEndpointGroup)
+		}
+
+		// Unified resource search (e.g. chat @-mention picker)
+		searchGroup := (&httpgroup.SearchEndpointGroup{}).Materialize(&httpgroup.SearchEndpointGroupConfig{
+			CoreClient:         config.CoreClient,
+			NotificationClient: config.NotificationClient,
+			AgentClient:        config.AgentClient,
+		})
+		if searchGroup != nil {
+			registry.RegisterGroup(searchGroup.APIEndpointGroup)
+		}
+
+		// Messages (send, list, edit, delete)
+		messagesGroup := (&httpgroup.MessagesEndpointGroup{}).Materialize(&httpgroup.MessagesEndpointGroupConfig{
+			NotificationClient: config.NotificationClient,
+		})
+		if messagesGroup != nil {
+			registry.RegisterGroup(messagesGroup.APIEndpointGroup)
+		}
+
+		// Conversation participants (members and agents)
+		conversationParticipantsGroup := (&httpgroup.ConversationParticipantsEndpointGroup{}).Materialize(&httpgroup.ConversationParticipantsEndpointGroupConfig{
+			NotificationClient: config.NotificationClient,
+		})
+		if conversationParticipantsGroup != nil {
+			registry.RegisterGroup(conversationParticipantsGroup.APIEndpointGroup)
+		}
+
+		// Messaging groups (reusable rosters that seed conversations)
+		messagingGroupsGroup := (&httpgroup.MessagingGroupsEndpointGroup{}).Materialize(&httpgroup.MessagingGroupsEndpointGroupConfig{
+			NotificationClient: config.NotificationClient,
+		})
+		if messagingGroupsGroup != nil {
+			registry.RegisterGroup(messagingGroupsGroup.APIEndpointGroup)
+		}
+
+		// Message attachments (presigned upload targets)
+		messageAttachmentsGroup := (&httpgroup.MessageAttachmentsEndpointGroup{}).Materialize(&httpgroup.MessageAttachmentsEndpointGroupConfig{
+			NotificationClient: config.NotificationClient,
+		})
+		if messageAttachmentsGroup != nil {
+			registry.RegisterGroup(messageAttachmentsGroup.APIEndpointGroup)
+		}
+
+		// Message blocks (block/unblock direct messaging)
+		messageBlocksGroup := (&httpgroup.MessageBlocksEndpointGroup{}).Materialize(&httpgroup.MessageBlocksEndpointGroupConfig{
+			NotificationClient: config.NotificationClient,
+		})
+		if messageBlocksGroup != nil {
+			registry.RegisterGroup(messageBlocksGroup.APIEndpointGroup)
+		}
+
+		// Notification preferences (per-category channel toggles)
+		notificationPreferencesGroup := (&httpgroup.NotificationPreferencesEndpointGroup{}).Materialize(&httpgroup.NotificationPreferencesEndpointGroupConfig{
+			NotificationClient: config.NotificationClient,
+		})
+		if notificationPreferencesGroup != nil {
+			registry.RegisterGroup(notificationPreferencesGroup.APIEndpointGroup)
+		}
+
+		// Messaging contacts (the messaging directory)
+		messagingContactsGroup := (&httpgroup.MessagingContactsEndpointGroup{}).Materialize(&httpgroup.MessagingContactsEndpointGroupConfig{
+			NotificationClient: config.NotificationClient,
+		})
+		if messagingContactsGroup != nil {
+			registry.RegisterGroup(messagingContactsGroup.APIEndpointGroup)
+		}
+
+		// Email domains (register + verify sending/receiving domains)
+		emailDomainsGroup := (&httpgroup.EmailDomainsEndpointGroup{}).Materialize(&httpgroup.EmailDomainsEndpointGroupConfig{
+			NotificationClient: config.NotificationClient,
+		})
+		if emailDomainsGroup != nil {
+			registry.RegisterGroup(emailDomainsGroup.APIEndpointGroup)
+		}
+
+		// Email inboxes (routable inboxes bound to chat conversations)
+		emailInboxesGroup := (&httpgroup.EmailInboxesEndpointGroup{}).Materialize(&httpgroup.EmailInboxesEndpointGroupConfig{
+			NotificationClient: config.NotificationClient,
+		})
+		if emailInboxesGroup != nil {
+			registry.RegisterGroup(emailInboxesGroup.APIEndpointGroup)
+		}
+	}
+
 	// Agents
 	if config.AgentClient != nil {
 		agentsGroup := (&httpgroup.AgentsEndpointGroup{}).Materialize(&httpgroup.AgentsEndpointGroupConfig{
 			AgentClient: config.AgentClient,
-			CoreClient:  config.CoreClient,
 		})
 		if agentsGroup != nil {
 			registry.RegisterGroup(agentsGroup.APIEndpointGroup)
 		}
 
-		agentAlertsGroup := (&httpgroup.AgentAlertsEndpointGroup{}).Materialize(&httpgroup.AgentAlertsEndpointGroupConfig{
-			AgentClient: config.AgentClient,
-		})
-		if agentAlertsGroup != nil {
-			registry.RegisterGroup(agentAlertsGroup.APIEndpointGroup)
-		}
-
 		agentRunsGroup := (&httpgroup.AgentRunsEndpointGroup{}).Materialize(&httpgroup.AgentRunsEndpointGroupConfig{
 			AgentClient: config.AgentClient,
-			CoreClient:  config.CoreClient,
 		})
 		if agentRunsGroup != nil {
 			registry.RegisterGroup(agentRunsGroup.APIEndpointGroup)

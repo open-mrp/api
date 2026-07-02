@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -22,13 +23,14 @@ type AnalyzeOpenBatchesEndpoint struct{}
 
 func (e *AnalyzeOpenBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeOpenBatchesRequest, *apiresource.AnalyzeOpenBatchesResponse] {
 	return (&apiendpoint.APIEndpoint[*AnalyzeOpenBatchesRequest, *apiresource.AnalyzeOpenBatchesResponse]{
-		Title:             "Analyze Open Batches",
-		Method:            http.MethodPut,
-		Route:             "/v1/core/analytics/open-batches",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
+		Title:               "Analyze Open Batches",
+		Method:              http.MethodPut,
+		Route:               "/v1/core/analytics/open-batches",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionRead}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeOpenBatchesRequest) (*apiresource.AnalyzeOpenBatchesResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeOpenBatches
 		},

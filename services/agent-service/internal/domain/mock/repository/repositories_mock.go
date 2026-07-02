@@ -193,75 +193,6 @@ func (mr *MockAgentDefinitionRepoMockRecorder) Update(ctx, params any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockAgentDefinitionRepo)(nil).Update), ctx, params)
 }
 
-// MockToolDefinitionRepo is a mock of ToolDefinitionRepo interface.
-type MockToolDefinitionRepo struct {
-	ctrl     *gomock.Controller
-	recorder *MockToolDefinitionRepoMockRecorder
-	isgomock struct{}
-}
-
-// MockToolDefinitionRepoMockRecorder is the mock recorder for MockToolDefinitionRepo.
-type MockToolDefinitionRepoMockRecorder struct {
-	mock *MockToolDefinitionRepo
-}
-
-// NewMockToolDefinitionRepo creates a new mock instance.
-func NewMockToolDefinitionRepo(ctrl *gomock.Controller) *MockToolDefinitionRepo {
-	mock := &MockToolDefinitionRepo{ctrl: ctrl}
-	mock.recorder = &MockToolDefinitionRepoMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockToolDefinitionRepo) EXPECT() *MockToolDefinitionRepoMockRecorder {
-	return m.recorder
-}
-
-// GetByID mocks base method.
-func (m *MockToolDefinitionRepo) GetByID(ctx context.Context, id string) (*sqlc.ToolDefinition, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByID", ctx, id)
-	ret0, _ := ret[0].(*sqlc.ToolDefinition)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetByID indicates an expected call of GetByID.
-func (mr *MockToolDefinitionRepoMockRecorder) GetByID(ctx, id any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockToolDefinitionRepo)(nil).GetByID), ctx, id)
-}
-
-// ListAll mocks base method.
-func (m *MockToolDefinitionRepo) ListAll(ctx context.Context) ([]sqlc.ListToolDefinitionsRow, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListAll", ctx)
-	ret0, _ := ret[0].([]sqlc.ListToolDefinitionsRow)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// ListAll indicates an expected call of ListAll.
-func (mr *MockToolDefinitionRepoMockRecorder) ListAll(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAll", reflect.TypeOf((*MockToolDefinitionRepo)(nil).ListAll), ctx)
-}
-
-// ListToolGroups mocks base method.
-func (m *MockToolDefinitionRepo) ListToolGroups(ctx context.Context) ([]sqlc.ToolGroup, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListToolGroups", ctx)
-	ret0, _ := ret[0].([]sqlc.ToolGroup)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// ListToolGroups indicates an expected call of ListToolGroups.
-func (mr *MockToolDefinitionRepoMockRecorder) ListToolGroups(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListToolGroups", reflect.TypeOf((*MockToolDefinitionRepo)(nil).ListToolGroups), ctx)
-}
-
 // MockAgentDefinitionToolRepo is a mock of AgentDefinitionToolRepo interface.
 type MockAgentDefinitionToolRepo struct {
 	ctrl     *gomock.Controller
@@ -510,18 +441,76 @@ func (mr *MockAgentRunRepoMockRecorder) ListByAccountFiltered(ctx, params any) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByAccountFiltered", reflect.TypeOf((*MockAgentRunRepo)(nil).ListByAccountFiltered), ctx, params)
 }
 
-// UpdateAllowedToolSlugs mocks base method.
-func (m *MockAgentRunRepo) UpdateAllowedToolSlugs(ctx context.Context, id string, slugsJSON []byte) *apierror.APIError {
+// MarkAutoRetrying mocks base method.
+func (m *MockAgentRunRepo) MarkAutoRetrying(ctx context.Context, id string) (int32, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateAllowedToolSlugs", ctx, id, slugsJSON)
+	ret := m.ctrl.Call(m, "MarkAutoRetrying", ctx, id)
+	ret0, _ := ret[0].(int32)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// MarkAutoRetrying indicates an expected call of MarkAutoRetrying.
+func (mr *MockAgentRunRepoMockRecorder) MarkAutoRetrying(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkAutoRetrying", reflect.TypeOf((*MockAgentRunRepo)(nil).MarkAutoRetrying), ctx, id)
+}
+
+// MarkCancelledByUser mocks base method.
+func (m *MockAgentRunRepo) MarkCancelledByUser(ctx context.Context, id string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkCancelledByUser", ctx, id)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
-// UpdateAllowedToolSlugs indicates an expected call of UpdateAllowedToolSlugs.
-func (mr *MockAgentRunRepoMockRecorder) UpdateAllowedToolSlugs(ctx, id, slugsJSON any) *gomock.Call {
+// MarkCancelledByUser indicates an expected call of MarkCancelledByUser.
+func (mr *MockAgentRunRepoMockRecorder) MarkCancelledByUser(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAllowedToolSlugs", reflect.TypeOf((*MockAgentRunRepo)(nil).UpdateAllowedToolSlugs), ctx, id, slugsJSON)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkCancelledByUser", reflect.TypeOf((*MockAgentRunRepo)(nil).MarkCancelledByUser), ctx, id)
+}
+
+// MarkDivergedFromConversation mocks base method.
+func (m *MockAgentRunRepo) MarkDivergedFromConversation(ctx context.Context, id string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkDivergedFromConversation", ctx, id)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// MarkDivergedFromConversation indicates an expected call of MarkDivergedFromConversation.
+func (mr *MockAgentRunRepoMockRecorder) MarkDivergedFromConversation(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkDivergedFromConversation", reflect.TypeOf((*MockAgentRunRepo)(nil).MarkDivergedFromConversation), ctx, id)
+}
+
+// MarkRetrying mocks base method.
+func (m *MockAgentRunRepo) MarkRetrying(ctx context.Context, id string) (int32, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkRetrying", ctx, id)
+	ret0, _ := ret[0].(int32)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// MarkRetrying indicates an expected call of MarkRetrying.
+func (mr *MockAgentRunRepoMockRecorder) MarkRetrying(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkRetrying", reflect.TypeOf((*MockAgentRunRepo)(nil).MarkRetrying), ctx, id)
+}
+
+// UpdateCancelled mocks base method.
+func (m *MockAgentRunRepo) UpdateCancelled(ctx context.Context, params sqlc.UpdateAgentRunCancelledParams) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateCancelled", ctx, params)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// UpdateCancelled indicates an expected call of UpdateCancelled.
+func (mr *MockAgentRunRepoMockRecorder) UpdateCancelled(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCancelled", reflect.TypeOf((*MockAgentRunRepo)(nil).UpdateCancelled), ctx, params)
 }
 
 // UpdateCompleted mocks base method.
@@ -553,11 +542,12 @@ func (mr *MockAgentRunRepoMockRecorder) UpdateFailed(ctx, params any) *gomock.Ca
 }
 
 // UpdateStarted mocks base method.
-func (m *MockAgentRunRepo) UpdateStarted(ctx context.Context, id string) *apierror.APIError {
+func (m *MockAgentRunRepo) UpdateStarted(ctx context.Context, id string) (int64, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateStarted", ctx, id)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
 }
 
 // UpdateStarted indicates an expected call of UpdateStarted.
@@ -646,6 +636,20 @@ func (m *MockAgentActionRepo) ListByRun(ctx context.Context, runID string) ([]sq
 func (mr *MockAgentActionRepoMockRecorder) ListByRun(ctx, runID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByRun", reflect.TypeOf((*MockAgentActionRepo)(nil).ListByRun), ctx, runID)
+}
+
+// MarkReviewed mocks base method.
+func (m *MockAgentActionRepo) MarkReviewed(ctx context.Context, params sqlc.MarkAgentActionReviewedParams) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkReviewed", ctx, params)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// MarkReviewed indicates an expected call of MarkReviewed.
+func (mr *MockAgentActionRepoMockRecorder) MarkReviewed(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkReviewed", reflect.TypeOf((*MockAgentActionRepo)(nil).MarkReviewed), ctx, params)
 }
 
 // UpdateStatus mocks base method.
@@ -884,103 +888,6 @@ func (m *MockAgentMemoryRepo) Update(ctx context.Context, params sqlc.UpdateAgen
 func (mr *MockAgentMemoryRepoMockRecorder) Update(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockAgentMemoryRepo)(nil).Update), ctx, params)
-}
-
-// MockAgentAlertRepo is a mock of AgentAlertRepo interface.
-type MockAgentAlertRepo struct {
-	ctrl     *gomock.Controller
-	recorder *MockAgentAlertRepoMockRecorder
-	isgomock struct{}
-}
-
-// MockAgentAlertRepoMockRecorder is the mock recorder for MockAgentAlertRepo.
-type MockAgentAlertRepoMockRecorder struct {
-	mock *MockAgentAlertRepo
-}
-
-// NewMockAgentAlertRepo creates a new mock instance.
-func NewMockAgentAlertRepo(ctrl *gomock.Controller) *MockAgentAlertRepo {
-	mock := &MockAgentAlertRepo{ctrl: ctrl}
-	mock.recorder = &MockAgentAlertRepoMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockAgentAlertRepo) EXPECT() *MockAgentAlertRepoMockRecorder {
-	return m.recorder
-}
-
-// Acknowledge mocks base method.
-func (m *MockAgentAlertRepo) Acknowledge(ctx context.Context, params sqlc.AcknowledgeAgentAlertParams) *apierror.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Acknowledge", ctx, params)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
-}
-
-// Acknowledge indicates an expected call of Acknowledge.
-func (mr *MockAgentAlertRepoMockRecorder) Acknowledge(ctx, params any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Acknowledge", reflect.TypeOf((*MockAgentAlertRepo)(nil).Acknowledge), ctx, params)
-}
-
-// GetByID mocks base method.
-func (m *MockAgentAlertRepo) GetByID(ctx context.Context, id string) (*sqlc.GetAgentAlertByIDRow, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByID", ctx, id)
-	ret0, _ := ret[0].(*sqlc.GetAgentAlertByIDRow)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetByID indicates an expected call of GetByID.
-func (mr *MockAgentAlertRepoMockRecorder) GetByID(ctx, id any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockAgentAlertRepo)(nil).GetByID), ctx, id)
-}
-
-// Insert mocks base method.
-func (m *MockAgentAlertRepo) Insert(ctx context.Context, params sqlc.InsertAgentAlertParams) *apierror.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Insert", ctx, params)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
-}
-
-// Insert indicates an expected call of Insert.
-func (mr *MockAgentAlertRepoMockRecorder) Insert(ctx, params any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Insert", reflect.TypeOf((*MockAgentAlertRepo)(nil).Insert), ctx, params)
-}
-
-// ListByAccount mocks base method.
-func (m *MockAgentAlertRepo) ListByAccount(ctx context.Context, accountID string, limit int32) ([]sqlc.AgentAlert, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByAccount", ctx, accountID, limit)
-	ret0, _ := ret[0].([]sqlc.AgentAlert)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// ListByAccount indicates an expected call of ListByAccount.
-func (mr *MockAgentAlertRepoMockRecorder) ListByAccount(ctx, accountID, limit any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByAccount", reflect.TypeOf((*MockAgentAlertRepo)(nil).ListByAccount), ctx, accountID, limit)
-}
-
-// ListByAccountCursor mocks base method.
-func (m *MockAgentAlertRepo) ListByAccountCursor(ctx context.Context, params sqlc.ListAgentAlertsByAccountCursorParams) ([]sqlc.ListAgentAlertsByAccountCursorRow, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByAccountCursor", ctx, params)
-	ret0, _ := ret[0].([]sqlc.ListAgentAlertsByAccountCursorRow)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// ListByAccountCursor indicates an expected call of ListByAccountCursor.
-func (mr *MockAgentAlertRepoMockRecorder) ListByAccountCursor(ctx, params any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByAccountCursor", reflect.TypeOf((*MockAgentAlertRepo)(nil).ListByAccountCursor), ctx, params)
 }
 
 // MockAgentTokenUsageRepo is a mock of AgentTokenUsageRepo interface.

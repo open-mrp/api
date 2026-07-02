@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -22,13 +23,15 @@ type DeleteAccountGroupEndpoint struct{}
 
 func (e *DeleteAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAccountGroupRequest, *apiresource.EmptyResource] {
 	return (&apiendpoint.APIEndpoint[*DeleteAccountGroupRequest, *apiresource.EmptyResource]{
-		Title:             "Delete Account Group",
-		Method:            http.MethodDelete,
-		Route:             "/v1/sales/account-groups/{id}",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
+		Title:               "Delete Account Group",
+		Method:              http.MethodDelete,
+		Route:               "/v1/sales/account-groups/{id}",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainCustomerGroups, Action: types.ActionDelete}},
+		Preview:             true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteAccountGroupRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(AccountGroupSvc).DeleteAccountGroup
 		},

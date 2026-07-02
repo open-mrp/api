@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -45,6 +46,11 @@ func (e *EmailRecordEndpoint) Materialize() *apiendpoint.APIEndpoint[*EmailRecor
 		SuccessStatusCode: http.StatusAccepted,
 		Public:            false,
 		Preview:           true,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainInvoices, Action: types.ActionRead},
+			{Domain: types.PermissionDomainSalesOrders, Action: types.ActionRead},
+			{Domain: types.PermissionDomainPurchaseOrders, Action: types.ActionRead},
+		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *EmailRecordRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(UtilsSvc).EmailRecord
 		},

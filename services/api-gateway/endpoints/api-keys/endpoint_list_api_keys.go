@@ -34,6 +34,8 @@ func (e *ListAPIKeysEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAPIKey
 		Route:             "/v1/auth/api-keys",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
+		AgentTool:         true,
+		RequiredRoleType:  constants.RoleTypeAdmin,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeAPIKey,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAPIKeysRequest) (*apiresource.List[apiresource.APIKey], *apierror.APIError) {

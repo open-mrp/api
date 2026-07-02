@@ -1,4 +1,4 @@
-.PHONY: help dev sqlc proto buf-lint db-dump test test-verbose test-sql-prepare-smoke install-tools docs mocks lint gosec gosec-fast govet static-check check-format jaeger-tracing connect-minikube connect-eks version validate-openapi-specs httpie local-db local-db-down local-db-nuke seed-core seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook view-otel e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns openapi openapi-quiet stainless openapi-stainless openapi-stainless-quiet install-stlc stlc-internal-sdk stlc-public-typescript-sdk stlc-public-python-sdk stlc-public-go-sdk stlc-public-sdks stlc-sdks sdk-yalc
+.PHONY: help dev sqlc proto buf-lint db-dump test test-verbose test-sql-prepare-smoke install-tools docs mocks lint gosec gosec-fast govet static-check check-format jaeger-tracing connect-minikube connect-eks version validate-openapi-specs httpie local-db local-db-down local-db-nuke setup teardown seed-core seed-user-photos seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook view-otel e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns openapi openapi-quiet gen-agent-tools stainless openapi-stainless openapi-stainless-quiet generate generate-quiet install-stlc stlc-internal-sdk stlc-public-typescript-sdk stlc-public-python-sdk stlc-public-go-sdk stlc-public-sdks stlc-sdks sdk-yalc
 
 # Include .env file if it exists (optional for CI)
 -include .env
@@ -58,6 +58,9 @@ openapi-quiet: ## Generate OpenAPI specifications without informational output (
 	@mkdir -p specs
 	@cd tools && GOTOOLCHAIN=go1.26.2 go run ./apidocs --name api --skip-stainless --quiet
 
+gen-agent-tools: ## Generate the agent-service endpoint-tool catalog + DB seed from endpoints flagged AgentTool=true
+	@cd tools && GOTOOLCHAIN=go1.26.2 go run ./apidocs --agent-tools --root ..
+
 stainless: ## Generate Stainless SDK configs only (no OpenAPI specs)
 	@cd tools && GOTOOLCHAIN=go1.26.2 go run ./apidocs --name api --only-stainless
 
@@ -68,6 +71,14 @@ openapi-stainless: ## Generate both OpenAPI specs and Stainless SDK configs
 openapi-stainless-quiet: ## Generate both OpenAPI specs and Stainless SDK configs (no informational output)
 	@mkdir -p specs
 	@cd tools && GOTOOLCHAIN=go1.26.2 go run ./apidocs --name api --quiet
+
+generate: ## Generate OpenAPI specs, Stainless configs, and agent tools
+	@mkdir -p specs
+	@cd tools && GOTOOLCHAIN=go1.26.2 go run ./apidocs --name api --with-agent-tools
+
+generate-quiet: ## Generate OpenAPI specs, Stainless configs, and agent tools (no informational output)
+	@mkdir -p specs
+	@cd tools && GOTOOLCHAIN=go1.26.2 go run ./apidocs --name api --with-agent-tools --quiet
 
 httpie: ## Generate HTTPie workspace file
 	@mkdir -p httpie
@@ -145,6 +156,12 @@ local-db-nuke: ## Tear down local databases, clean up Stripe resources, and dele
 	fi
 	@docker compose down -v --remove-orphans
 
+setup: ## Start minikube and local databases
+	@minikube start && $(MAKE) local-db
+
+teardown: ## Delete minikube, nuke local databases, and tear down the E2E stack
+	@minikube delete && $(MAKE) local-db-nuke && $(MAKE) e2e-down
+
 migrate-agent-db: ## Apply migrations to the agent-service PostgreSQL database
 	@GOOSE_DRIVER=postgres GOOSE_DBSTRING="$$AGENT_DB_URL" \
 		goose -dir services/agent-service/db/migrations up
@@ -155,6 +172,9 @@ seed-agent-db: ## Seed agent-service DB with e2e test data
 
 seed-core: ## Seed core-service DB with sample data
 	@./scripts/seed-core-db.sh $(ARGS)
+
+seed-user-photos: ## Upload seeded account-users' avatar images to the user-photos S3 bucket
+	@./scripts/seed-user-photos.sh
 
 seed-stripe: ## Create Stripe test subscription for seeded account
 	@./scripts/seed-stripe-subscription.sh
@@ -268,12 +288,12 @@ e2e-up: openapi-quiet ## Start the E2E stack (isolated services + seeded DBs)
 	@./scripts/run-quiet.sh "Building E2E service images" docker compose -f docker-compose.e2e.yml build --parallel
 	@./scripts/run-quiet.sh "Starting E2E databases" docker compose -f docker-compose.e2e.yml up -d --wait mysql-e2e postgres-e2e rabbitmq
 	@./scripts/setup-e2e-db.sh
-	@./scripts/run-quiet.sh "Starting E2E services" docker compose -f docker-compose.e2e.yml up -d --wait
+	@./scripts/run-quiet.sh "Starting E2E services" ./scripts/start-e2e-services.sh
 
 e2e-up-ci: openapi-quiet ## Start the E2E stack using pre-built images (for CI)
 	@./scripts/run-quiet.sh "Starting E2E databases" docker compose -f docker-compose.e2e.yml up -d --wait mysql-e2e postgres-e2e rabbitmq
 	@./scripts/setup-e2e-db.sh
-	@./scripts/run-quiet.sh "Starting E2E services" docker compose -f docker-compose.e2e.yml up -d --wait
+	@./scripts/run-quiet.sh "Starting E2E services" ./scripts/start-e2e-services.sh
 
 e2e: e2e-up ## Run API E2E tests against the full stack
 	@echo "Running API E2E tests..."

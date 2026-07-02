@@ -34,9 +34,7 @@ type UserSvcConfig struct {
 	// NotificationPublisher (required) publishes notification messages to the outbox.
 	NotificationPublisher domain.NotificationPublisher
 
-	// TxManager (optional; default: nil) wraps multi-step operations in database
-	// transactions. It is not validated at construction; transactional code paths
-	// panic at runtime if it is unset.
+	// TxManager (optional; default: nil) wraps multi-step operations in database transactions. It is not validated at construction; transactional code paths panic at runtime if it is unset.
 	TxManager TransactionManager
 }
 
@@ -66,11 +64,7 @@ func NewUserSvc(config *UserSvcConfig) domain.UserSvc {
 	}
 }
 
-func (c *UserSvcConfig) WithDefaults(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, coreClient domain.AuthCoreClient) *UserSvcConfig {
-	if c == nil {
-		c = &UserSvcConfig{}
-	}
-
+func BuildUserSvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, coreClient domain.AuthCoreClient) *UserSvcConfig {
 	repoFactory := repository.NewRepoFactory(queries)
 	notificationPublisher := event.NewOutboxNotificationPublisher()
 
@@ -269,8 +263,7 @@ func (s *userSvcImpl) Register(ctx context.Context, input domain.RegisterInput) 
 	}
 }
 
-// MagicLogin exchanges a magic-login token for auth tokens, logging the user
-// in without a password.
+// MagicLogin exchanges a magic-login token for auth tokens, logging the user in without a password.
 //
 //  1. Decode and validate the magic-login JWT.
 //  2. Look up the user by the token's subject.

@@ -277,8 +277,7 @@ func GetClientIPFromMetadata(md metadata.MD) string {
 	return values[0]
 }
 
-// ClientIPUnaryServerInterceptor extracts the client IP from gRPC metadata and
-// adds it to the context for downstream use (e.g. audit events).
+// ClientIPUnaryServerInterceptor extracts the client IP from gRPC metadata and adds it to the context for downstream use (e.g. audit events).
 func ClientIPUnaryServerInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		md, ok := metadata.FromIncomingContext(ctx)

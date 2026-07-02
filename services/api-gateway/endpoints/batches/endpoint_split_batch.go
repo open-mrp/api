@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
 )
@@ -70,13 +71,14 @@ type SplitBatchEndpoint struct{}
 
 func (e *SplitBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*SplitBatchRequest, *apiresource.Batch] {
 	return (&apiendpoint.APIEndpoint[*SplitBatchRequest, *apiresource.Batch]{
-		Title:             "Split Batch",
-		Method:            http.MethodPost,
-		ContentType:       "application/json",
-		Route:             "/v1/operations/batches/actions/split",
-		SuccessStatusCode: http.StatusCreated,
-		Public:            false,
-		Preview:           true,
+		Title:               "Split Batch",
+		Method:              http.MethodPost,
+		ContentType:         "application/json",
+		Route:               "/v1/operations/batches/actions/split",
+		SuccessStatusCode:   http.StatusCreated,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionCreate}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *SplitBatchRequest) (*apiresource.Batch, *apierror.APIError) {
 			return svc.(BatchSvc).SplitBatch
 		},

@@ -43,7 +43,7 @@ type Address struct {
 	Phone *string `json:"phone"`
 	// Email address associated with the address.
 	Email *string `json:"email"`
-	// Address type.
+	// How the address is used.
 	//
 	// - `standard`: a normal shipping or billing address.
 	// - `drop_ship`: an address an order is shipped to directly, typically a third party or end customer rather than the account itself.

@@ -10,7 +10,7 @@ import (
 
 const SampleEnterpriseInquiryID = "enir_01ec571c64ecd75aaf4662fcd4"
 
-// Enterprise plan upgrade request.
+// A submitted request to upgrade to an enterprise plan, routed to the sales team for follow-up.
 type EnterpriseInquiry struct {
 	// Enterprise inquiry ID.
 	ID string `json:"id" validate:"required"`

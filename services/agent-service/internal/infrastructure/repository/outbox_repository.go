@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	agentdb "github.com/augno/api/services/agent-service/internal/infrastructure/db"
 	"github.com/augno/api/services/agent-service/internal/infrastructure/sqlc"
@@ -50,6 +51,12 @@ func (r *outboxRepoImpl) Create(ctx context.Context, input messaging.OutboxMessa
 		maxAttempts = 25
 	}
 
+	// Defer first delivery by DelaySeconds (0 = available now). Column9 is the next_run_at interval offset; it is rendered server-side as now() + ('<n>' || ' seconds')::interval, mirroring the enqueuer's retry-backoff scheduling so a re-enqueued message is not republished into a still-failing dependency.
+	delaySecs := input.DelaySeconds
+	if delaySecs < 0 {
+		delaySecs = 0
+	}
+
 	result, err := r.queries.CreateOutboxMessage(ctx, sqlc.CreateOutboxMessageParams{
 		MessageID:       messageID,
 		ServiceName:     input.ServiceName,
@@ -59,6 +66,7 @@ func (r *outboxRepoImpl) Create(ctx context.Context, input messaging.OutboxMessa
 		Headers:         nil,
 		Payload:         payloadJSON,
 		MaxAttempts:     int32(maxAttempts), // #nosec G115 - small config value
+		Column9:         agentdb.PgText(strconv.Itoa(delaySecs)),
 		RequestID:       agentdb.PgText(input.Payload.RequestID),
 		ParentMessageID: agentdb.PgText(input.Payload.ParentMessageID),
 	})

@@ -206,36 +206,6 @@ func (s *billingSvcImpl) GetAccountUsage(ctx context.Context, accountID string) 
 	tokenBilling, tokenErr := tokenBillingRepo.GetByAccountAndPeriod(ctx, accountID, periodStart)
 	if tokenErr == nil && tokenBilling != nil {
 		usage.EstimatedAgentSpendCents = estimateTokenCostCents(tokenBilling.TotalInputTokens, tokenBilling.TotalOutputTokens)
-
-		var includedTokens int64
-		if v, ok := limitMap["agent_tokens_included"]; ok && v != nil {
-			includedTokens = int64(*v)
-		}
-
-		var additionalTokens int64
-		additionalTokens, _ = tokenBillingRepo.GetCompletedTokensByAccount(ctx, accountID)
-
-		totalAvailable := includedTokens + additionalTokens
-
-		var billingPeriodEnd time.Time
-		if subInfo.SubscriptionCurrentPeriodEnd != nil {
-			billingPeriodEnd = *subInfo.SubscriptionCurrentPeriodEnd
-		} else {
-			now := time.Now().UTC()
-			billingPeriodEnd = time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, time.UTC)
-		}
-
-		usage.AgentTokenDetail = &domain.AgentTokenDetail{
-			IncludedTokens:              includedTokens,
-			UsedTokens:                  tokenBilling.TotalTokens,
-			InputTokens:                 tokenBilling.TotalInputTokens,
-			OutputTokens:                tokenBilling.TotalOutputTokens,
-			AdditionalTokensPurchased:   additionalTokens,
-			TotalAvailable:              totalAvailable,
-			CurrentPeriodCost:           float64(estimateTokenCostCents(tokenBilling.TotalInputTokens, tokenBilling.TotalOutputTokens)) / 100.0,
-			BillingPeriodEnd:            billingPeriodEnd,
-			OverageCostPerMillionTokens: 15.0,
-		}
 	}
 
 	return usage, nil

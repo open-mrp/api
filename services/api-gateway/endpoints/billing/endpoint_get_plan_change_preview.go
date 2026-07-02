@@ -27,6 +27,7 @@ func (e *GetPlanChangePreviewEndpoint) Materialize() *apiendpoint.APIEndpoint[*G
 		Route:             "/v1/billing/plans/{id}/proration",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		RequiredRoleType:  constants.RoleTypeAdmin,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypePlanChangeProration,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetPlanProrationRequest) (*apiresource.PlanChangeProration, *apierror.APIError) {

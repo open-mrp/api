@@ -14,10 +14,14 @@ func init() {
 		ObjectType: constants.ObjectTypeCustomer,
 		Load:       resourceloaders.LoadCustomers,
 		Subs: []resourcekit.SubField{
-			{Key: "credit_limit", Populate: populateCreditLimitOnCustomer},
+			// credit_limit is a Quantity built inline from the customer proto; declaring its Target lets the
+			// resolver recurse into credit_limit.unit (the Quantity's unit_id is stashed under ObjectTypeQuantity).
+			{Key: "credit_limit", Target: constants.ObjectTypeQuantity, ExtractRefs: extractCreditLimitRefFromCustomer, Populate: populateCreditLimitOnCustomer},
 			{Key: "contact_info", Populate: populateContactInfoOnCustomer},
 			{Key: "freight_preferences", Populate: populateFreightPreferencesOnCustomer},
-			{Key: "freight_preferences.carrier", Populate: populateCarrierOnCustomerFP},
+			// freight_preferences.carrier is fetched by id via LoadCarriers (not built inline) so the loaded
+			// Carrier carries its service_level_ids preview, enabling the nested freight_preferences.carrier.service_levels include.
+			{Key: "freight_preferences.carrier", Target: constants.ObjectTypeCarrier, Cardinality: resourcekit.CardinalityOnePtr, ExtractIDs: extractFPCarrierIDFromCustomer, Populate: populateCarrierOnCustomerFP},
 			{Key: "freight_preferences.service_level", Populate: populateServiceLevelOnCustomerFP},
 			{Key: "defaults", Populate: populateDefaultsOnCustomer},
 			{Key: "defaults.payment_term", Populate: populatePaymentTermOnCustomerDefaults},
@@ -48,6 +52,15 @@ func populateCreditLimitOnCustomer(ctx context.Context, parent any, _ map[string
 		return
 	}
 	c.CreditLimit = v.(*apiresource.Quantity)
+}
+
+// extractCreditLimitRefFromCustomer returns the inline credit_limit Quantity (attached by populateCreditLimitOnCustomer) so the resolver can recurse into credit_limit.unit.
+func extractCreditLimitRefFromCustomer(_ context.Context, parent any) []any {
+	c := parent.(*apiresource.Customer)
+	if c.CreditLimit == nil {
+		return nil
+	}
+	return []any{c.CreditLimit}
 }
 
 func populateContactInfoOnCustomer(ctx context.Context, parent any, _ map[string]any) {
@@ -160,16 +173,28 @@ func populateChildAccountsOnCustomer(ctx context.Context, parent any, loaded map
 	c.ChildAccounts = apiresource.NewList(items, apiresource.PageInfo{})
 }
 
-func populateCarrierOnCustomerFP(ctx context.Context, parent any, _ map[string]any) {
+// extractFPCarrierIDFromCustomer returns the customer's default-carrier id (stashed by stashCustomerMeta) so the resolver fetches the full Carrier via LoadCarriers — which carries the service_level_ids preview the nested freight_preferences.carrier.service_levels include needs.
+func extractFPCarrierIDFromCustomer(ctx context.Context, parent any) []string {
+	c := parent.(*apiresource.Customer)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeCustomer, c.ID, "fp_carrier_id")
+	if id == "" {
+		return nil
+	}
+	return []string{id}
+}
+
+func populateCarrierOnCustomerFP(ctx context.Context, parent any, loaded map[string]any) {
 	c := parent.(*apiresource.Customer)
 	if c.FreightPreferences == nil {
 		return
 	}
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeCustomer, c.ID, "fp_carrier")
-	if !ok {
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeCustomer, c.ID, "fp_carrier_id")
+	if id == "" {
 		return
 	}
-	c.FreightPreferences.Carrier = v.(*apiresource.Carrier)
+	if v, ok := loaded[id]; ok {
+		c.FreightPreferences.Carrier = v.(*apiresource.Carrier)
+	}
 }
 
 func populateServiceLevelOnCustomerFP(ctx context.Context, parent any, _ map[string]any) {

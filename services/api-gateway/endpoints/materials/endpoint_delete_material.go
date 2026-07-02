@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -22,13 +23,15 @@ type DeleteMaterialEndpoint struct{}
 
 func (e *DeleteMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteMaterialRequest, *apiresource.Material] {
 	return (&apiendpoint.APIEndpoint[*DeleteMaterialRequest, *apiresource.Material]{
-		Title:             "Delete Material",
-		Method:            http.MethodDelete,
-		ContentType:       "application/json",
-		Route:             "/v1/catalog/materials/{id}",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
+		Title:               "Delete Material",
+		Method:              http.MethodDelete,
+		ContentType:         "application/json",
+		Route:               "/v1/catalog/materials/{id}",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMaterials, Action: types.ActionDelete}, {Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate}},
+		Preview:             true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteMaterialRequest) (*apiresource.Material, *apierror.APIError) {
 			return svc.(MaterialSvc).DeleteMaterial
 		},

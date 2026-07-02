@@ -16,6 +16,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/header"
 	httptransport "github.com/augno/api/services/api-gateway/internal/http"
 	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
@@ -45,14 +46,20 @@ type APIEndpoint[TReq, TResp any] struct {
 	Method string `json:"method" yaml:"method"`
 	Route  string `json:"route" yaml:"route"`
 	// SDKMethodKey overrides the generated Stainless method key for this endpoint. When empty, codegen derives the key from the route + method.
-	SDKMethodKey      string                                    `json:"sdk_method_key,omitempty" yaml:"sdk_method_key,omitempty"`
-	ContentType       string                                    `json:"content_type" yaml:"content_type"`
-	SuccessStatusCode int                                       `json:"success_status_code" yaml:"success_status_code"`
-	Public            bool                                      `json:"-" yaml:"-"`
-	Preview           bool                                      `json:"-" yaml:"-"`
-	ServiceHandler    func(svc any) ServiceHandler[TReq, TResp] `json:"-" yaml:"-"`
-	Extras            APIEndpointExtras                         `json:"-" yaml:"-"`
-	MinVersion        *version.APIVersion                       `json:"-" yaml:"-"`
+	SDKMethodKey      string `json:"sdk_method_key,omitempty" yaml:"sdk_method_key,omitempty"`
+	ContentType       string `json:"content_type" yaml:"content_type"`
+	SuccessStatusCode int    `json:"success_status_code" yaml:"success_status_code"`
+	Public            bool   `json:"-" yaml:"-"`
+	Preview           bool   `json:"-" yaml:"-"`
+	// AgentTool, when true, marks this endpoint for inclusion in the generated agent-tool catalog so agents can invoke it. Defaults to false; flagging an endpoint is the opt-in to expose it as an agent capability.
+	AgentTool bool `json:"-" yaml:"-"`
+	// RequiredPermissions declares the any-of permission set this endpoint requires, using typed domain/action constants (e.g. {types.PermissionDomainCustomers, types.ActionRead}) so typos are caught by the compiler. The gateway gate rejects callers who hold none of the listed permissions; holding one is enough to reach the handler. Agent tools and OpenAPI docs surface the same declaration.
+	RequiredPermissions types.AnyOfPermissions `json:"-" yaml:"-"`
+	// RequiredRoleType, when set, declares that the endpoint requires the caller to have a specific role type (e.g. constants.RoleTypeAdmin) rather than (or in addition to) a permission. The zero value means no role-type requirement.
+	RequiredRoleType constants.RoleType                        `json:"-" yaml:"-"`
+	ServiceHandler   func(svc any) ServiceHandler[TReq, TResp] `json:"-" yaml:"-"`
+	Extras           APIEndpointExtras                         `json:"-" yaml:"-"`
+	MinVersion       *version.APIVersion                       `json:"-" yaml:"-"`
 	// ObjectType identifies the API resource type this endpoint operates on. Used for version transformations. Only endpoints with an ObjectType get transformations applied.
 	ObjectType constants.ObjectType `json:"-" yaml:"-"`
 	// LocationFunc returns the Location header value for 201 Created responses.
@@ -109,6 +116,10 @@ func (e *APIEndpoint[TReq, TResp]) IsPublic() bool {
 	return e.Public
 }
 
+func (e *APIEndpoint[TReq, TResp]) IsAgentTool() bool {
+	return e.AgentTool
+}
+
 func (e *APIEndpoint[TReq, TResp]) WithService(g *APIEndpointGroup, svc any) *APIEndpoint[TReq, TResp] {
 	e.group = g
 	e.service = svc
@@ -156,6 +167,29 @@ func (e *APIEndpoint[TReq, TResp]) ensureSensitivePaths() {
 	})
 }
 
+// authorize enforces the endpoint's declared RequiredRoleType and RequiredPermissions against the caller's identity. Permissions use OR (any-of) semantics — the caller must hold at least one. Admins and customer/supplier-relation actors bypass (the latter are authorized by relation downstream). Endpoints that declare neither are unrestricted here (authorization happens downstream). Returns nil when the request may proceed.
+func (e *APIEndpoint[TReq, TResp]) authorize(ctx context.Context) *apierror.APIError {
+	if e.RequiredRoleType == "" && len(e.RequiredPermissions) == 0 {
+		return nil
+	}
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return apierror.NewAuthorizationError("You do not have permission to access this resource.")
+	}
+	// Customer- and supplier-relation actors carry no permission set and no role
+	// type; their access is relation-scoped (e.g. a customer may read an order
+	// only when they are the buyer) and authorized entirely in the downstream
+	// service. Rejecting them here would false-reject callers who could be
+	// authorized, so skip the coarse gate and defer to the precise downstream check.
+	if identity.IsRelationActor() {
+		return nil
+	}
+	if apiErr := identity.CheckHasRoleType(e.RequiredRoleType); apiErr != nil {
+		return apiErr
+	}
+	return identity.CheckHasAnyPermission(e.RequiredPermissions...)
+}
+
 func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	e.ensureSensitivePaths()
@@ -169,6 +203,16 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 				return
 			}
 		}
+	}
+
+	// Authorization gate: fast-reject callers that hold none of the endpoint's
+	// declared permissions or lack its required role. This is a coarse "OR" gate
+	// (it never rejects anyone who could be authorized); the precise, possibly
+	// relation-dependent check still runs in the downstream service.
+	if apiErr := e.authorize(ctx); apiErr != nil {
+		span := trace.SpanFromContext(ctx)
+		recordAndRespondAPIError(ctx, w, span, "authorization", apiErr)
+		return
 	}
 
 	if rl, ok := appctx.GetRequestLog(ctx); ok {
@@ -554,6 +598,7 @@ type APIEndpointer interface {
 	GetMethod() string
 	GetRoute() string
 	IsPublic() bool
+	IsAgentTool() bool
 	GetHandler() http.HandlerFunc
 	IsServiceBound() bool
 	GetRequestType() reflect.Type

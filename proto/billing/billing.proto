@@ -153,18 +153,6 @@ message SubscriptionInfo {
   optional google.protobuf.Timestamp current_period_end = 3;
 }
 
-message AgentTokenUsageDetail {
-  int64 included_tokens = 1;
-  int64 used_tokens = 2;
-  int64 input_tokens = 3;
-  int64 output_tokens = 4;
-  int64 additional_tokens_purchased = 5;
-  int64 total_available = 6;
-  double current_period_cost = 7;
-  google.protobuf.Timestamp billing_period_end = 8;
-  double overage_cost_per_million_tokens = 9;
-}
-
 message GetAccountUsageResponse {
   UsageItem seats = 1;
   UsageItem invoices = 2;
@@ -172,7 +160,8 @@ message GetAccountUsageResponse {
   UsageItem sandboxes = 4;
   optional SubscriptionInfo subscription = 5;
   UsageItem agent_tokens = 6;
-  AgentTokenUsageDetail agent_token_detail = 7;
+  reserved 7; // was agent_token_detail; token counts are never surfaced
+  reserved "agent_token_detail";
   int64 estimated_agent_spend_cents = 8;
 }
 

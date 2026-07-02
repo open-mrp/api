@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -22,13 +23,15 @@ type DeleteUnitGroupUnitEndpoint struct{}
 
 func (e *DeleteUnitGroupUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteUnitGroupUnitRequest, *apiresource.EmptyResource] {
 	return (&apiendpoint.APIEndpoint[*DeleteUnitGroupUnitRequest, *apiresource.EmptyResource]{
-		Title:             "Delete Unit Group Associated Unit",
-		Method:            http.MethodDelete,
-		Route:             "/v1/catalog/unit-groups/{unit_group_id}/units/{id}",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
+		Title:               "Delete Unit Group Associated Unit",
+		Method:              http.MethodDelete,
+		Route:               "/v1/catalog/unit-groups/{unit_group_id}/units/{id}",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainUnitGroups, Action: types.ActionDelete}},
+		Preview:             true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteUnitGroupUnitRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(UnitGroupSvc).DeleteUnitGroupUnit
 		},

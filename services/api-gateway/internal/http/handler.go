@@ -624,8 +624,7 @@ func reflectHTTPRouterParam(r *http.Request) func(string) string {
 // unwrapEnumWrapper extracts the inner value of a field.Optional[T]/field.Clearable[T] for enum validation. It returns an addressable copy of the wrapped value and true when the wrapper holds a concrete value (IsSet); unset or cleared wrappers return false so the caller skips them.
 func unwrapEnumWrapper(fv reflect.Value) (reflect.Value, bool) {
 	if !fv.CanAddr() {
-		// Methods are value receivers, but Value() returns a copy we cannot address;
-		// make an addressable copy so MethodByName can be called.
+		// Methods are value receivers, but Value() returns a copy we cannot address; make an addressable copy so MethodByName can be called.
 		tmp := reflect.New(fv.Type())
 		tmp.Elem().Set(fv)
 		fv = tmp.Elem()
@@ -655,6 +654,18 @@ func tryContextPathMap(ctx context.Context) map[string]string {
 		return m
 	}
 	return nil
+}
+
+// enumParamName resolves the public parameter name for an enum field, preferring the json tag (request body) then the query tag (query parameter), falling back to the exported Go field name. Query-param structs tag fields with `query:"..."`, so without this the reported param would be the Go field name (e.g. "Status" instead of "statuses").
+func enumParamName(sf reflect.StructField) string {
+	for _, tag := range []string{"json", "query"} {
+		if v := sf.Tag.Get(tag); v != "" && v != "-" {
+			if name := strings.Split(v, ",")[0]; name != "" {
+				return name
+			}
+		}
+	}
+	return sf.Name
 }
 
 func ValidateEnumFields(dst any) *apierror.APIError {
@@ -696,6 +707,53 @@ func ValidateEnumFields(dst any) *apierror.APIError {
 		if ft.Kind() == reflect.Struct {
 			if apiErr := ValidateEnumFields(fv.Addr().Interface()); apiErr != nil {
 				return apiErr
+			}
+			continue
+		}
+
+		// Enum slice fields (e.g. list filter query params) reject unrecognized values with 400, consistent with scalar enum validation below.
+		if ft.Kind() == reflect.Slice {
+			et := ft.Elem()
+			if et.Kind() != reflect.String || et.Name() == "" || et.Name() == "string" {
+				continue
+			}
+			ptrType := reflect.PointerTo(et)
+			method, ok := ptrType.MethodByName("EnumValues")
+			if !ok {
+				continue
+			}
+			if method.Type.NumIn() != 1 || method.Type.NumOut() != 1 {
+				continue
+			}
+			outType := method.Type.Out(0)
+			if outType.Kind() != reflect.Slice || outType.Elem().Kind() != reflect.String {
+				continue
+			}
+			for k := 0; k < fv.Len(); k++ {
+				elem := fv.Index(k)
+				results := method.Func.Call([]reflect.Value{elem.Addr()})
+				if len(results) != 1 {
+					continue
+				}
+				validValues := results[0]
+				currentValue := elem.String()
+				isValid := false
+				var allowedValues []string
+				for j := 0; j < validValues.Len(); j++ {
+					val := validValues.Index(j).String()
+					allowedValues = append(allowedValues, val)
+					if val == currentValue {
+						isValid = true
+						break
+					}
+				}
+				if !isValid {
+					fieldName := enumParamName(sf)
+					return apierror.NewParameterInvalidError(
+						fmt.Sprintf("Field '%s' must be one of: %s", fieldName, strings.Join(allowedValues, ", ")),
+						fieldName,
+					)
+				}
 			}
 			continue
 		}

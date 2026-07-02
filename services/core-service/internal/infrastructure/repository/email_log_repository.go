@@ -45,6 +45,7 @@ func mapEmailLogRow(
 	hasSent bool,
 	subject, filename, sesMessageID, sentByID gosql.NullString,
 	sentByName, sentByUsername, sentByEmail gosql.NullString,
+	sentByAPIKeyID, sentByAPIKeyName gosql.NullString,
 	createdAt, updatedAt time.Time,
 ) *domain.EmailLog {
 	el := &domain.EmailLog{
@@ -65,6 +66,10 @@ func mapEmailLogRow(
 	}
 
 	if sentByID.Valid {
+		// Resolve the actor's type from which reference table the sender id
+		// matched: an api_key type_id join takes precedence, otherwise the
+		// sender is a user. The type must reflect the true actor kind — it was
+		// previously hardcoded to "user", mislabeling api-key-sent emails.
 		actor := &domain.EmailLogActor{
 			ID:        sentByID.String,
 			ActorType: string(constants.ActorTypeUser),
@@ -73,6 +78,14 @@ func mapEmailLogRow(
 		if sentByEmail.Valid && sentByEmail.String != "" {
 			handle := sentByEmail.String
 			actor.Handle = &handle
+		}
+		if sentByAPIKeyID.Valid {
+			actor.ActorType = string(constants.ActorTypeAPIKey)
+			actor.Name = nil
+			actor.Handle = nil
+			if sentByAPIKeyName.Valid && sentByAPIKeyName.String != "" {
+				actor.Name = &sentByAPIKeyName.String
+			}
 		}
 		el.SentBy = actor
 	}
@@ -85,6 +98,7 @@ func mapForwardEmailLogRow(row sqlc.ListEmailLogsForwardRow) *domain.EmailLog {
 		row.ID, row.HasSent,
 		row.Subject, row.Filename, row.SesMessageID, row.SentByID,
 		row.SentByName, row.SentByUsername, row.SentByEmail,
+		row.SentByApiKeyID, row.SentByApiKeyName,
 		row.CreatedAt, row.UpdatedAt,
 	)
 }
@@ -94,6 +108,7 @@ func mapBackwardEmailLogRow(row sqlc.ListEmailLogsBackwardRow) *domain.EmailLog 
 		row.ID, row.HasSent,
 		row.Subject, row.Filename, row.SesMessageID, row.SentByID,
 		row.SentByName, row.SentByUsername, row.SentByEmail,
+		row.SentByApiKeyID, row.SentByApiKeyName,
 		row.CreatedAt, row.UpdatedAt,
 	)
 }
@@ -103,6 +118,7 @@ func mapGetEmailLogRow(row sqlc.GetEmailLogRow) *domain.EmailLog {
 		row.ID, row.HasSent,
 		row.Subject, row.Filename, row.SesMessageID, row.SentByID,
 		row.SentByName, row.SentByUsername, row.SentByEmail,
+		row.SentByApiKeyID, row.SentByApiKeyName,
 		row.CreatedAt, row.UpdatedAt,
 	)
 }

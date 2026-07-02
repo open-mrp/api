@@ -20,7 +20,7 @@ type SysProperty struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sys_property"`
-	// System property type.
+	// The kind of counter this property tracks.
 	Type *SysPropertyType `json:"type" validate:"required"`
 	// Current counter value.
 	Value int32 `json:"value" validate:"required"`

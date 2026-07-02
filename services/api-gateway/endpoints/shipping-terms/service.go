@@ -97,12 +97,24 @@ func (m *shippingTermSvcImpl) CreateShippingTerm(ctx context.Context, req *Creat
 		FreeShippingServiceLevelIds: req.FreeShippingServiceLevelIDs,
 	}
 	if q, ok := req.FlatRate.Value(); ok {
+		if q.Value == "" {
+			return nil, apierror.NewMissingFieldError("Field 'flat_rate.value' is required.", "flat_rate.value")
+		}
+		if q.UnitID == "" {
+			return nil, apierror.NewMissingFieldError("Field 'flat_rate.unit_id' is required.", "flat_rate.unit_id")
+		}
 		pbReq.FlatRate = &pb.QuantityInput{
 			Value:  q.Value,
 			UnitId: q.UnitID,
 		}
 	}
 	if q, ok := req.MinimumOrderValue.Value(); ok {
+		if q.Value == "" {
+			return nil, apierror.NewMissingFieldError("Field 'minimum_order_value.value' is required.", "minimum_order_value.value")
+		}
+		if q.UnitID == "" {
+			return nil, apierror.NewMissingFieldError("Field 'minimum_order_value.unit_id' is required.", "minimum_order_value.unit_id")
+		}
 		pbReq.MinimumOrderValue = &pb.QuantityInput{
 			Value:  q.Value,
 			UnitId: q.UnitID,
@@ -129,6 +141,22 @@ func (m *shippingTermSvcImpl) UpdateShippingTerm(ctx context.Context, req *Updat
 	if t, ok := req.Type.Value(); ok {
 		ts := string(t)
 		pbReq.Type = &ts
+	}
+	if q, ok := req.FlatRate.Value(); ok {
+		if q.Value == "" {
+			return nil, apierror.NewMissingFieldError("Field 'flat_rate.value' is required.", "flat_rate.value")
+		}
+		if q.UnitID == "" {
+			return nil, apierror.NewMissingFieldError("Field 'flat_rate.unit_id' is required.", "flat_rate.unit_id")
+		}
+	}
+	if q, ok := req.MinimumOrderValue.Value(); ok {
+		if q.Value == "" {
+			return nil, apierror.NewMissingFieldError("Field 'minimum_order_value.value' is required.", "minimum_order_value.value")
+		}
+		if q.UnitID == "" {
+			return nil, apierror.NewMissingFieldError("Field 'minimum_order_value.unit_id' is required.", "minimum_order_value.unit_id")
+		}
 	}
 	pbReq.FlatRate = apirequest.QuantityFieldToProto(req.FlatRate)
 	pbReq.MinimumOrderValue = apirequest.QuantityFieldToProto(req.MinimumOrderValue)

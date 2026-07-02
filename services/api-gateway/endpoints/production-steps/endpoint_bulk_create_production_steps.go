@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
 )
@@ -55,11 +56,11 @@ type BulkCreateProductionStepInput struct {
 	OverheadRate float64 `json:"overhead_rate" validate:"required,gt=0"`
 	// Allowance correction factor applied to labor time in cost calculations.
 	//
-	// Defaults to `0`.
+	// When omitted, no allowance adjustment is applied.
 	Allowances field.Optional[float64] `json:"allowances,omitzero"`
 	// Leveling correction factor applied to labor time in cost calculations.
 	//
-	// Defaults to `0`.
+	// When omitted, no leveling adjustment is applied.
 	LevelingFactor field.Optional[float64] `json:"leveling_factor,omitzero"`
 	// Name of an existing scanning station to assign to the step.
 	//
@@ -107,13 +108,14 @@ type BulkCreateProductionStepsEndpoint struct{}
 
 func (e *BulkCreateProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkCreateProductionStepsRequest, *apiresource.BulkCreateProductionStepsResponse] {
 	return (&apiendpoint.APIEndpoint[*BulkCreateProductionStepsRequest, *apiresource.BulkCreateProductionStepsResponse]{
-		Title:             "Bulk Create Production Steps",
-		Method:            http.MethodPost,
-		Route:             "/v1/operations/production-steps/actions/bulk-create",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusCreated,
-		Public:            false,
-		Preview:           true,
+		Title:               "Bulk Create Production Steps",
+		Method:              http.MethodPost,
+		Route:               "/v1/operations/production-steps/actions/bulk-create",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusCreated,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProductionSteps, Action: types.ActionCreate}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkCreateProductionStepsRequest) (*apiresource.BulkCreateProductionStepsResponse, *apierror.APIError) {
 			return svc.(ProductionStepSvc).BulkCreateProductionSteps
 		},

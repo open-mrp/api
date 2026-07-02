@@ -182,10 +182,6 @@ AND (
     OR so.created_at <= sqlc.narg('end_date')
 )
 AND (
-    sqlc.arg('exclude_internal_orders') = false
-    OR so.buyer_account_id != so.owner_account_id
-)
-AND (
     sqlc.narg('cursor_created_at') IS NULL
     OR so.created_at < sqlc.narg('cursor_created_at')
     OR (so.created_at = sqlc.narg('cursor_created_at') AND so.id < sqlc.narg('cursor_id'))
@@ -372,10 +368,6 @@ AND (
 AND (
     sqlc.narg('end_date') IS NULL
     OR so.created_at <= sqlc.narg('end_date')
-)
-AND (
-    sqlc.arg('exclude_internal_orders') = false
-    OR so.buyer_account_id != so.owner_account_id
 )
 AND (
     so.created_at > sqlc.arg('cursor_created_at')
@@ -812,27 +804,14 @@ AND owner_account_id = sqlc.arg('owner_account_id')
 AND seller_account_id = sqlc.arg('owner_account_id')
 AND buyer_account_id IN (sqlc.slice('buyer_account_ids'));
 
--- name: GetNextOrderNumber :one
-SELECT GREATEST(
-    COALESCE(
-        (SELECT MAX(CAST(sp.value AS UNSIGNED))
-         FROM sys_property sp
-         WHERE sp.account_id = sqlc.arg('account_id')
-         AND sp.sys_property_type_code = 'sales_order_number'),
-        0
-    ),
-    COALESCE(
-        (SELECT MAX(CAST(so.number AS UNSIGNED))
-         FROM sales_order so
-         WHERE so.owner_account_id = sqlc.arg('account_id')),
-        0
-    )
-) + 1 AS next_number;
-
--- name: UpdateNextOrderNumber :exec
+-- name: AllocateNextOrderNumber :execresult
+-- Atomically reserves the next sales-order number for the account and returns it via LAST_INSERT_ID.
+-- The single upsert holds a row lock on the per-account counter, so concurrent creates serialize
+-- and never collide on the same number (the old read-MAX-then-write pattern raced). Read the reserved
+-- number back with the statement result's LastInsertId().
 INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created_at, updated_at)
-VALUES (sqlc.arg('id'), sqlc.arg('account_id'), 'sales_order_number', sqlc.arg('value'), NOW(3), NOW(3))
-ON DUPLICATE KEY UPDATE value = sqlc.arg('value'), updated_at = NOW(3);
+VALUES (sqlc.arg('id'), sqlc.arg('account_id'), 'sales_order_number', LAST_INSERT_ID(1), NOW(3), NOW(3))
+ON DUPLICATE KEY UPDATE value = LAST_INSERT_ID(value + 1), updated_at = NOW(3);
 
 -- name: GetSalesOrderPickID :one
 SELECT pk.id
@@ -1068,10 +1047,6 @@ AND (
 AND (
     sqlc.narg('end_date') IS NULL
     OR so.created_at <= sqlc.narg('end_date')
-)
-AND (
-    sqlc.arg('exclude_internal_orders') = false
-    OR so.buyer_account_id != so.owner_account_id
 )
 ORDER BY so.created_at DESC, so.id DESC
 LIMIT ?;

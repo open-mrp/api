@@ -14,7 +14,7 @@ var SampleSalesOrderStatusCode = constants.SalesOrderStatusCodeEstimate
 
 const SampleSalesOrderStatusName = "Estimate"
 
-// Sales order status lookup value.
+// A lookup value describing where a sales order is in its lifecycle, from estimate through fulfillment.
 type SalesOrderStatus struct {
 	// Sales order status ID.
 	ID string `json:"id" validate:"required"`
@@ -26,9 +26,11 @@ type SalesOrderStatus struct {
 	// - `issued`: the order has been issued and is being fulfilled.
 	// - `fulfilled`: the order has been completed and closed.
 	Code constants.SalesOrderStatusCode `json:"code" validate:"required"`
-	// Display name.
+	// Human-readable name of the status.
 	Name string `json:"name" validate:"required"`
-	// The owner of this status value; sales order statuses are platform-defined.
+	// Owner of this status value.
+	//
+	// Sales order statuses are platform-provided and shared across all accounts, so the owner is always the Augno system owner.
 	Owner *Owner `json:"owner" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

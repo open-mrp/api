@@ -7,6 +7,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -33,13 +34,14 @@ type AnalyzeSalesEndpoint struct{}
 
 func (e *AnalyzeSalesEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeSalesRequest, *apiresource.AnalyzeSalesResponse] {
 	return (&apiendpoint.APIEndpoint[*AnalyzeSalesRequest, *apiresource.AnalyzeSalesResponse]{
-		Title:             "Analyze Sales",
-		Method:            http.MethodPut,
-		Route:             "/v1/core/analytics/sales",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
+		Title:               "Analyze Sales",
+		Method:              http.MethodPut,
+		Route:               "/v1/core/analytics/sales",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeSalesRequest) (*apiresource.AnalyzeSalesResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeSales
 		},

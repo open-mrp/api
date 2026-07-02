@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -26,11 +27,11 @@ type CreateAccountPriceRequest struct {
 	// Item category IDs to constrain this price to.
 	//
 	// When empty, the price is not restricted by item category.
-	CategoryIDs []string `json:"category_ids"`
+	CategoryIDs []string `json:"category_ids,omitzero"`
 	// Attribute IDs to constrain this price to.
 	//
 	// When set, the price applies only to items that have every listed attribute.
-	AttributeIDs []string `json:"attribute_ids"`
+	AttributeIDs []string `json:"attribute_ids,omitzero"`
 }
 
 var sampleCreateAccountPriceRequest = &CreateAccountPriceRequest{
@@ -62,6 +63,9 @@ func (e *CreateAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeAccountPrice,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainDiscounts, Action: types.ActionCreate},
+		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateAccountPriceRequest) (*apiresource.AccountPrice, *apierror.APIError) {
 			return svc.(AccountPriceSvc).CreateAccountPrice
 		},

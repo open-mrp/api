@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -55,6 +56,9 @@ func (e *CreateMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateMa
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeMachine,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainMachines, Action: types.ActionCreate},
+		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeMachine,
 			Fields:     []string{"department"},

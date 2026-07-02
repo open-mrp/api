@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -56,14 +57,16 @@ type UpdateShippingTermEndpoint struct{}
 
 func (e *UpdateShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateShippingTermRequest, *apiresource.ShippingTerm] {
 	return (&apiendpoint.APIEndpoint[*UpdateShippingTermRequest, *apiresource.ShippingTerm]{
-		Title:             "Update Shipping Term",
-		Method:            http.MethodPatch,
-		Route:             "/v1/operations/shipping-terms/{id}",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeShippingTerm,
+		Title:               "Update Shipping Term",
+		Method:              http.MethodPatch,
+		Route:               "/v1/operations/shipping-terms/{id}",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainShippingTerms, Action: types.ActionUpdate}},
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeShippingTerm,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeShippingTerm,
 			Fields:     []string{"owner", "owner.account", "flat_rate.unit", "minimum_order_value.unit", "free_shipping_service_levels"},

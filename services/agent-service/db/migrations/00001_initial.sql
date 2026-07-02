@@ -181,25 +181,6 @@ CREATE TABLE agent_memory (
 
 CREATE INDEX agent_memory_content_idx ON agent_memory USING gin (to_tsvector('english', content));
 
-CREATE TABLE agent_alert (
-    id              varchar(191) NOT NULL,
-    account_id      varchar(191) NOT NULL,
-    agent_run_id    varchar(191) DEFAULT NULL,
-    agent_action_id varchar(191) DEFAULT NULL,
-    severity_code   varchar(50) NOT NULL,
-    status_code     varchar(50) NOT NULL,
-    title           varchar(255) NOT NULL,
-    message         text,
-    metadata        jsonb NOT NULL,
-    acknowledged_at                timestamptz DEFAULT NULL,
-    acknowledged_by_actor_id       varchar(255) DEFAULT NULL,
-    acknowledged_by_actor_type     varchar(50) DEFAULT NULL,
-    acknowledged_by_actor_name     varchar(255) DEFAULT NULL,
-    created_at      timestamptz NOT NULL DEFAULT now(),
-    updated_at      timestamptz NOT NULL DEFAULT now(),
-    PRIMARY KEY (id)
-);
-
 CREATE TABLE agent_token_usage (
     id             varchar(191) NOT NULL,
     account_id     varchar(191) NOT NULL,
@@ -324,7 +305,6 @@ DROP TABLE IF EXISTS message_inbox;
 DROP TABLE IF EXISTS message_outbox;
 DROP TABLE IF EXISTS agent_account_status;
 DROP TABLE IF EXISTS agent_token_usage;
-DROP TABLE IF EXISTS agent_alert;
 DROP TABLE IF EXISTS agent_memory;
 DROP TABLE IF EXISTS agent_artifact;
 DROP TABLE IF EXISTS agent_action;

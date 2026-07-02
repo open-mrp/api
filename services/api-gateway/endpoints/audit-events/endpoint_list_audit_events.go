@@ -7,6 +7,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -28,6 +29,8 @@ type ListAuditEventsRequest struct {
 	//
 	// Matches the event's `actor.id`: a user ID for `user` actors or an API key ID for `api_key` actors.
 	ActorIDs []string `query:"actor_ids"`
+	// Filter by the actor type.
+	ActorTypes []constants.ActorType `query:"actor_types"`
 	// Filter by the mutation type recorded on the event.
 	Actions []constants.AuditAction `query:"actions"`
 	// Filter by the _acting_ account: the account that performed the mutation.
@@ -45,14 +48,16 @@ type ListAuditEventsEndpoint struct{}
 
 func (e *ListAuditEventsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAuditEventsRequest, *apiresource.List[apiresource.AuditEvent]] {
 	return (&apiendpoint.APIEndpoint[*ListAuditEventsRequest, *apiresource.List[apiresource.AuditEvent]]{
-		Title:             "List Audit Events",
-		Method:            http.MethodGet,
-		ContentType:       "application/json",
-		Route:             "/v1/core/audit-events",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeAuditEvent,
+		Title:               "List Audit Events",
+		Method:              http.MethodGet,
+		ContentType:         "application/json",
+		Route:               "/v1/core/audit-events",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAuditEvents, Action: types.ActionRead}},
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeAuditEvent,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAuditEvent,
 			Fields:     []string{"account", "actor", "changes", "metadata", "request"},

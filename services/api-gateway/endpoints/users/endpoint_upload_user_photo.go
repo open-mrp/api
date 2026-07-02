@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -33,6 +34,9 @@ func (e *UploadUserPhotoEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upload
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainTeamUsers, Action: types.ActionUpdate},
+		},
 		Extras: apiendpoint.APIEndpointExtras{
 			SkipRequestBodyParsing: true,
 		},

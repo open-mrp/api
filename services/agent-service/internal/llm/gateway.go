@@ -41,9 +41,10 @@ func (p *GatewayProvider) CompleteWithTools(ctx context.Context, req *ToolReques
 
 	// Build request body
 	body := gatewayRequest{
-		Model:    gatewayModel,
-		Messages: convertMessagesToGateway(req.System, req.Messages),
-		Tools:    convertToolsToGateway(req.Tools),
+		Model:           gatewayModel,
+		Messages:        convertMessagesToGateway(req.System, req.Messages),
+		Tools:           convertToolsToGateway(req.Tools),
+		ReasoningEffort: req.ReasoningEffort,
 	}
 	maxTokens := req.MaxTokens
 	if maxTokens <= 0 {
@@ -93,26 +94,40 @@ func (p *GatewayProvider) CompleteWithTools(ctx context.Context, req *ToolReques
 
 // GatewayModelName prefixes a model name with its provider for the Stripe AI Gateway. Model names already match Stripe's naming convention (e.g. "claude-sonnet-4", "gpt-4o").
 func GatewayModelName(model string) string {
+	return modelProvider(model) + "/" + model
+}
+
+// modelProvider maps a model id to its Stripe AI Gateway provider slug.
+func modelProvider(model string) string {
 	switch {
 	case strings.HasPrefix(model, "claude-"):
-		return "anthropic/" + model
-	case strings.HasPrefix(model, "gpt-"), strings.HasPrefix(model, "o1"), strings.HasPrefix(model, "o3"):
-		return "openai/" + model
+		return "anthropic"
+	case strings.HasPrefix(model, "gemini-"):
+		return "google"
+	case strings.HasPrefix(model, "grok-"):
+		return "xai"
+	case strings.HasPrefix(model, "gpt-"),
+		strings.HasPrefix(model, "codex-"),
+		strings.HasPrefix(model, "o1"),
+		strings.HasPrefix(model, "o3"),
+		strings.HasPrefix(model, "o4"):
+		return "openai"
 	default:
-		return "anthropic/" + model
+		return "anthropic"
 	}
 }
 
 // --- Request types ---
 
 type gatewayRequest struct {
-	Model         string                `json:"model"`
-	Messages      []gatewayMessage      `json:"messages"`
-	Tools         []gatewayTool         `json:"tools,omitempty"`
-	MaxTokens     *int                  `json:"max_tokens,omitempty"`
-	Temperature   *float64              `json:"temperature,omitempty"`
-	Stream        bool                  `json:"stream,omitempty"`
-	StreamOptions *gatewayStreamOptions `json:"stream_options,omitempty"`
+	Model           string                `json:"model"`
+	Messages        []gatewayMessage      `json:"messages"`
+	Tools           []gatewayTool         `json:"tools,omitempty"`
+	MaxTokens       *int                  `json:"max_tokens,omitempty"`
+	Temperature     *float64              `json:"temperature,omitempty"`
+	ReasoningEffort string                `json:"reasoning_effort,omitempty"`
+	Stream          bool                  `json:"stream,omitempty"`
+	StreamOptions   *gatewayStreamOptions `json:"stream_options,omitempty"`
 }
 
 type gatewayMessage struct {
@@ -185,6 +200,9 @@ type gatewayStreamChoice struct {
 type gatewayStreamDelta struct {
 	Content   string                 `json:"content,omitempty"`
 	ToolCalls []gatewayToolCallDelta `json:"tool_calls,omitempty"`
+	// ReasoningContent (some providers) / Reasoning (others) carry native model reasoning on the OpenAI-compatible surface. Either, when present, is streamed as a reasoning_delta.
+	ReasoningContent string `json:"reasoning_content,omitempty"`
+	Reasoning        string `json:"reasoning,omitempty"`
 }
 
 type gatewayToolCallDelta struct {
@@ -210,11 +228,12 @@ func (p *GatewayProvider) StreamCompleteWithTools(ctx context.Context, req *Tool
 	gatewayModel := GatewayModelName(req.Model)
 
 	body := gatewayRequest{
-		Model:         gatewayModel,
-		Messages:      convertMessagesToGateway(req.System, req.Messages),
-		Tools:         convertToolsToGateway(req.Tools),
-		Stream:        true,
-		StreamOptions: &gatewayStreamOptions{IncludeUsage: true},
+		Model:           gatewayModel,
+		Messages:        convertMessagesToGateway(req.System, req.Messages),
+		Tools:           convertToolsToGateway(req.Tools),
+		ReasoningEffort: req.ReasoningEffort,
+		Stream:          true,
+		StreamOptions:   &gatewayStreamOptions{IncludeUsage: true},
 	}
 	maxTokens := req.MaxTokens
 	if maxTokens <= 0 {
@@ -277,6 +296,12 @@ func (p *GatewayProvider) StreamCompleteWithTools(ctx context.Context, req *Tool
 		for _, choice := range chunk.Choices {
 			delta := choice.Delta
 
+			if rc := delta.ReasoningContent; rc != "" {
+				callback(StreamEvent{Type: "reasoning_delta", ReasoningDelta: rc})
+			} else if delta.Reasoning != "" {
+				callback(StreamEvent{Type: "reasoning_delta", ReasoningDelta: delta.Reasoning})
+			}
+
 			if delta.Content != "" {
 				callback(StreamEvent{Type: "content_delta", ContentDelta: delta.Content})
 				contentBuilder.WriteString(delta.Content)
@@ -315,7 +340,11 @@ func (p *GatewayProvider) StreamCompleteWithTools(ctx context.Context, req *Tool
 			outputTokens = chunk.Usage.CompletionTokens
 		}
 	}
+	scanErr := scanner.Err()
 	_ = httpResp.Body.Close()
+	if scanErr != nil {
+		return nil, fmt.Errorf("error reading gateway stream: %w", scanErr)
+	}
 
 	callback(StreamEvent{
 		Type:         "done",
@@ -337,7 +366,7 @@ func (p *GatewayProvider) StreamCompleteWithTools(ctx context.Context, req *Tool
 		toolCalls = append(toolCalls, ToolCall{
 			ID:    tc.ID,
 			Name:  tc.Name,
-			Input: json.RawMessage(tc.Input),
+			Input: normalizeToolInput(json.RawMessage(tc.Input)),
 		})
 	}
 
@@ -359,6 +388,16 @@ func (p *GatewayProvider) StreamCompleteWithTools(ctx context.Context, req *Tool
 }
 
 // --- Conversion helpers ---
+
+// normalizeToolInput ensures a tool call's input is a valid JSON object.
+// Tool calls with no arguments (e.g. a streamed call whose argument deltas were empty, or a stored event missing its "input" metadata) leave Input empty or null. The Anthropic API requires tool_use.input to be a dictionary, so default such cases to an empty object to avoid an invalid_request_error on replay.
+func normalizeToolInput(input json.RawMessage) json.RawMessage {
+	trimmed := bytes.TrimSpace(input)
+	if len(trimmed) == 0 || string(trimmed) == "null" {
+		return json.RawMessage("{}")
+	}
+	return input
+}
 
 func convertMessagesToGateway(systemPrompt string, messages []Message) []gatewayMessage {
 	var out []gatewayMessage
@@ -400,7 +439,7 @@ func convertSingleMessageToGateway(m Message) []gatewayMessage {
 					Type: "function",
 					Function: gatewayFunctionCall{
 						Name:      tu.Name,
-						Arguments: string(tu.Input),
+						Arguments: string(normalizeToolInput(tu.Input)),
 					},
 				}
 			}
@@ -462,7 +501,7 @@ func convertGatewayResponse(resp *gatewayResponse) *ToolResponse {
 		result.ToolCalls = append(result.ToolCalls, ToolCall{
 			ID:    tc.ID,
 			Name:  tc.Function.Name,
-			Input: json.RawMessage(tc.Function.Arguments),
+			Input: normalizeToolInput(json.RawMessage(tc.Function.Arguments)),
 		})
 	}
 

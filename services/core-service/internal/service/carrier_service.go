@@ -117,12 +117,12 @@ func (s *carrierSvcImpl) getShippoClient(ctx context.Context, accountID string) 
 
 	plaintext, err := crypto.DecryptAESGCM(encryptedCreds, s.encryptionKey, []byte(accountID))
 	if err != nil {
-		return nil, apierror.NewInternalError(err, "Failed to decrypt Shippo credentials.")
+		return nil, apierror.NewValidationError("Shippo integration is misconfigured. Please reconnect Shippo.")
 	}
 
 	var creds domain.ShippoCredentials
 	if err := json.Unmarshal([]byte(plaintext), &creds); err != nil {
-		return nil, apierror.NewInternalError(err, "Failed to parse Shippo credentials.")
+		return nil, apierror.NewValidationError("Shippo integration is misconfigured. Please reconnect Shippo.")
 	}
 
 	return s.shippoFactory.Build(creds.APIKey), nil
@@ -368,13 +368,21 @@ func (s *carrierSvcImpl) CreateCarrier(ctx context.Context, params domain.Create
 			}
 
 			if !accountCtx.IsSandbox {
+				code := *params.Code
+
+				// UPS/USPS require an account number. Validate this pure input requirement before acquiring the Shippo client so a missing account number yields a specific 400 regardless of integration state.
+				if code != string(constants.CarrierCodeFedEx) {
+					if params.AccountNumber == nil || *params.AccountNumber == "" {
+						return nil, tracing.Trace(span, apierror.NewValidationError("Account number is required for this carrier."))
+					}
+				}
+
 				// Foreign mutation: call Shippo API
 				shippoClient, apiErr := s.getShippoClient(ctx, params.AccountID)
 				if apiErr != nil {
 					return nil, tracing.Trace(span, apiErr)
 				}
 
-				code := *params.Code
 				var shippoAccount *domain.ShippoCarrierAccount
 
 				if code == string(constants.CarrierCodeFedEx) {
@@ -385,9 +393,6 @@ func (s *carrierSvcImpl) CreateCarrier(ctx context.Context, params domain.Create
 					}
 				} else {
 					// UPS/USPS — connect with account number
-					if params.AccountNumber == nil || *params.AccountNumber == "" {
-						return nil, tracing.Trace(span, apierror.NewValidationError("Account number is required for this carrier."))
-					}
 					connectParams := map[string]string{
 						"account_number": *params.AccountNumber,
 					}

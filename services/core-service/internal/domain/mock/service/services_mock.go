@@ -2504,6 +2504,21 @@ func (mr *MockProductSvcMockRecorder) ExportProducts(ctx, params any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExportProducts", reflect.TypeOf((*MockProductSvc)(nil).ExportProducts), ctx, params)
 }
 
+// FindContactsByEmail mocks base method.
+func (m *MockProductSvc) FindContactsByEmail(ctx context.Context, email string) ([]domain.ContactMatch, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindContactsByEmail", ctx, email)
+	ret0, _ := ret[0].([]domain.ContactMatch)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// FindContactsByEmail indicates an expected call of FindContactsByEmail.
+func (mr *MockProductSvcMockRecorder) FindContactsByEmail(ctx, email any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindContactsByEmail", reflect.TypeOf((*MockProductSvc)(nil).FindContactsByEmail), ctx, email)
+}
+
 // GetCustomerByEmail mocks base method.
 func (m *MockProductSvc) GetCustomerByEmail(ctx context.Context, ownerAccountID, email string) (*domain.CustomerByEmail, *apierror.APIError) {
 	m.ctrl.T.Helper()

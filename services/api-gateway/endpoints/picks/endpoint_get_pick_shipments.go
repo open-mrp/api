@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -35,6 +36,9 @@ func (e *GetPickShipmentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetPi
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainPicks, Action: types.ActionRead},
+		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetPickShipmentsRequest) (*apiresource.PickShipmentsResponse, *apierror.APIError) {
 			return svc.(PickSvc).GetPickShipments
 		},

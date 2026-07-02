@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	types "github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -33,7 +34,10 @@ func (e *ListAllocationEntriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
-		ObjectType:        constants.ObjectTypeAllocationEntry,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainSettlements, Action: types.ActionRead},
+		},
+		ObjectType: constants.ObjectTypeAllocationEntry,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAllocationEntriesRequest) (*apiresource.List[apiresource.AllocationEntry], *apierror.APIError) {
 			return svc.(TransactionAllocationSvc).ListAllocationEntries
 		},

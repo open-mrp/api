@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -16,7 +17,7 @@ import (
 type UpdateRegistrationFlowRequest struct {
 	// Registration flow ID.
 	RegistrationFlowID string `path:"id" validate:"required"`
-	// Display name.
+	// Display name of the registration flow.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// IDs of the customer groups to set as this flow's options.
 	//
@@ -64,7 +65,10 @@ func (e *UpdateRegistrationFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
-		ObjectType:        constants.ObjectTypeRegistrationFlow,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainAccount, Action: types.ActionUpdate},
+		},
+		ObjectType: constants.ObjectTypeRegistrationFlow,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateRegistrationFlowRequest) (*apiresource.RegistrationFlow, *apierror.APIError) {
 			return svc.(RegistrationFlowSvc).UpdateRegistrationFlow
 		},

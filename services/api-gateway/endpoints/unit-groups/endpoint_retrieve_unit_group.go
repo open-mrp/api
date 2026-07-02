@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -21,14 +22,16 @@ type RetrieveUnitGroupEndpoint struct{}
 
 func (e *RetrieveUnitGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveUnitGroupRequest, *apiresource.UnitGroup] {
 	return (&apiendpoint.APIEndpoint[*RetrieveUnitGroupRequest, *apiresource.UnitGroup]{
-		Title:             "Retrieve Unit Group",
-		Method:            http.MethodGet,
-		Route:             "/v1/catalog/unit-groups/{id}",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeUnitGroup,
+		Title:               "Retrieve Unit Group",
+		Method:              http.MethodGet,
+		Route:               "/v1/catalog/unit-groups/{id}",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainUnitGroups, Action: types.ActionRead}},
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeUnitGroup,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveUnitGroupRequest) (*apiresource.UnitGroup, *apierror.APIError) {
 			return svc.(UnitGroupSvc).GetUnitGroup
 		},

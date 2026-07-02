@@ -7,6 +7,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -35,6 +36,9 @@ func (e *ListReceivablesByCustomerEndpoint) Materialize() *apiendpoint.APIEndpoi
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeReceivableEntry,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},
+		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListReceivablesByCustomerRequest) (*apiresource.List[apiresource.ReceivableEntry], *apierror.APIError) {
 			return svc.(ReceivableSvc).ListReceivablesByCustomer
 		},

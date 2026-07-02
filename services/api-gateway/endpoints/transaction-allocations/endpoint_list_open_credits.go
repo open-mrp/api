@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	types "github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -33,7 +34,10 @@ func (e *ListOpenCreditsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListOp
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
-		ObjectType:        constants.ObjectTypeOpenCreditEntry,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainSettlements, Action: types.ActionRead},
+		},
+		ObjectType: constants.ObjectTypeOpenCreditEntry,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListOpenCreditsRequest) (*apiresource.List[apiresource.OpenCreditEntry], *apierror.APIError) {
 			return svc.(TransactionAllocationSvc).ListOpenCredits
 		},

@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -26,13 +27,14 @@ type AnalyzeDemandForecastEndpoint struct{}
 
 func (e *AnalyzeDemandForecastEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeDemandForecastRequest, *apiresource.AnalyzeDemandForecastResponse] {
 	return (&apiendpoint.APIEndpoint[*AnalyzeDemandForecastRequest, *apiresource.AnalyzeDemandForecastResponse]{
-		Title:             "Analyze Demand Forecast",
-		Method:            http.MethodPut,
-		Route:             "/v1/core/analytics/demand-forecast",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
+		Title:               "Analyze Demand Forecast",
+		Method:              http.MethodPut,
+		Route:               "/v1/core/analytics/demand-forecast",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeDemandForecastRequest) (*apiresource.AnalyzeDemandForecastResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeDemandForecast
 		},

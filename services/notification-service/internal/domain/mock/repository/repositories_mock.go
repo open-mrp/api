@@ -13,8 +13,10 @@ import (
 	context "context"
 	json "encoding/json"
 	reflect "reflect"
+	time "time"
 
 	domain "github.com/augno/api/services/notification-service/internal/domain"
+	constants "github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -70,6 +72,2344 @@ func (m *MockEmailLogRepo) FindBySesMessageID(ctx context.Context, sesMessageID 
 func (mr *MockEmailLogRepoMockRecorder) FindBySesMessageID(ctx, sesMessageID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindBySesMessageID", reflect.TypeOf((*MockEmailLogRepo)(nil).FindBySesMessageID), ctx, sesMessageID)
+}
+
+// MockEmailDomainRepo is a mock of EmailDomainRepo interface.
+type MockEmailDomainRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockEmailDomainRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockEmailDomainRepoMockRecorder is the mock recorder for MockEmailDomainRepo.
+type MockEmailDomainRepoMockRecorder struct {
+	mock *MockEmailDomainRepo
+}
+
+// NewMockEmailDomainRepo creates a new mock instance.
+func NewMockEmailDomainRepo(ctrl *gomock.Controller) *MockEmailDomainRepo {
+	mock := &MockEmailDomainRepo{ctrl: ctrl}
+	mock.recorder = &MockEmailDomainRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockEmailDomainRepo) EXPECT() *MockEmailDomainRepoMockRecorder {
+	return m.recorder
+}
+
+// Create mocks base method.
+func (m *MockEmailDomainRepo) Create(ctx context.Context, id, accountID string, input *domain.CreateEmailDomainInput) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", ctx, id, accountID, input)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockEmailDomainRepoMockRecorder) Create(ctx, id, accountID, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockEmailDomainRepo)(nil).Create), ctx, id, accountID, input)
+}
+
+// GetByDomain mocks base method.
+func (m *MockEmailDomainRepo) GetByDomain(ctx context.Context, arg1 string) (*domain.EmailDomain, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByDomain", ctx, arg1)
+	ret0, _ := ret[0].(*domain.EmailDomain)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetByDomain indicates an expected call of GetByDomain.
+func (mr *MockEmailDomainRepoMockRecorder) GetByDomain(ctx, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByDomain", reflect.TypeOf((*MockEmailDomainRepo)(nil).GetByDomain), ctx, arg1)
+}
+
+// GetByID mocks base method.
+func (m *MockEmailDomainRepo) GetByID(ctx context.Context, id, accountID string) (*domain.EmailDomain, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByID", ctx, id, accountID)
+	ret0, _ := ret[0].(*domain.EmailDomain)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetByID indicates an expected call of GetByID.
+func (mr *MockEmailDomainRepoMockRecorder) GetByID(ctx, id, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockEmailDomainRepo)(nil).GetByID), ctx, id, accountID)
+}
+
+// ListByAccount mocks base method.
+func (m *MockEmailDomainRepo) ListByAccount(ctx context.Context, accountID string) ([]*domain.EmailDomain, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListByAccount", ctx, accountID)
+	ret0, _ := ret[0].([]*domain.EmailDomain)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListByAccount indicates an expected call of ListByAccount.
+func (mr *MockEmailDomainRepoMockRecorder) ListByAccount(ctx, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByAccount", reflect.TypeOf((*MockEmailDomainRepo)(nil).ListByAccount), ctx, accountID)
+}
+
+// MarkVerified mocks base method.
+func (m *MockEmailDomainRepo) MarkVerified(ctx context.Context, id, accountID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkVerified", ctx, id, accountID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// MarkVerified indicates an expected call of MarkVerified.
+func (mr *MockEmailDomainRepoMockRecorder) MarkVerified(ctx, id, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkVerified", reflect.TypeOf((*MockEmailDomainRepo)(nil).MarkVerified), ctx, id, accountID)
+}
+
+// UpdateStatus mocks base method.
+func (m *MockEmailDomainRepo) UpdateStatus(ctx context.Context, id, accountID, status string, dkimTokens []string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateStatus", ctx, id, accountID, status, dkimTokens)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// UpdateStatus indicates an expected call of UpdateStatus.
+func (mr *MockEmailDomainRepoMockRecorder) UpdateStatus(ctx, id, accountID, status, dkimTokens any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStatus", reflect.TypeOf((*MockEmailDomainRepo)(nil).UpdateStatus), ctx, id, accountID, status, dkimTokens)
+}
+
+// MockEmailInboxRepo is a mock of EmailInboxRepo interface.
+type MockEmailInboxRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockEmailInboxRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockEmailInboxRepoMockRecorder is the mock recorder for MockEmailInboxRepo.
+type MockEmailInboxRepoMockRecorder struct {
+	mock *MockEmailInboxRepo
+}
+
+// NewMockEmailInboxRepo creates a new mock instance.
+func NewMockEmailInboxRepo(ctrl *gomock.Controller) *MockEmailInboxRepo {
+	mock := &MockEmailInboxRepo{ctrl: ctrl}
+	mock.recorder = &MockEmailInboxRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockEmailInboxRepo) EXPECT() *MockEmailInboxRepoMockRecorder {
+	return m.recorder
+}
+
+// Create mocks base method.
+func (m *MockEmailInboxRepo) Create(ctx context.Context, id, accountID string, input *domain.CreateEmailInboxInput) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", ctx, id, accountID, input)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockEmailInboxRepoMockRecorder) Create(ctx, id, accountID, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockEmailInboxRepo)(nil).Create), ctx, id, accountID, input)
+}
+
+// Delete mocks base method.
+func (m *MockEmailInboxRepo) Delete(ctx context.Context, id, accountID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", ctx, id, accountID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockEmailInboxRepoMockRecorder) Delete(ctx, id, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockEmailInboxRepo)(nil).Delete), ctx, id, accountID)
+}
+
+// GetByAddress mocks base method.
+func (m *MockEmailInboxRepo) GetByAddress(ctx context.Context, address string) (*domain.EmailInbox, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByAddress", ctx, address)
+	ret0, _ := ret[0].(*domain.EmailInbox)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetByAddress indicates an expected call of GetByAddress.
+func (mr *MockEmailInboxRepoMockRecorder) GetByAddress(ctx, address any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByAddress", reflect.TypeOf((*MockEmailInboxRepo)(nil).GetByAddress), ctx, address)
+}
+
+// GetByID mocks base method.
+func (m *MockEmailInboxRepo) GetByID(ctx context.Context, id, accountID string) (*domain.EmailInbox, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByID", ctx, id, accountID)
+	ret0, _ := ret[0].(*domain.EmailInbox)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetByID indicates an expected call of GetByID.
+func (mr *MockEmailInboxRepoMockRecorder) GetByID(ctx, id, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockEmailInboxRepo)(nil).GetByID), ctx, id, accountID)
+}
+
+// ListByAccount mocks base method.
+func (m *MockEmailInboxRepo) ListByAccount(ctx context.Context, accountID string) ([]*domain.EmailInbox, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListByAccount", ctx, accountID)
+	ret0, _ := ret[0].([]*domain.EmailInbox)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListByAccount indicates an expected call of ListByAccount.
+func (mr *MockEmailInboxRepoMockRecorder) ListByAccount(ctx, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByAccount", reflect.TypeOf((*MockEmailInboxRepo)(nil).ListByAccount), ctx, accountID)
+}
+
+// Update mocks base method.
+func (m *MockEmailInboxRepo) Update(ctx context.Context, id, accountID string, input *domain.UpdateEmailInboxInput) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Update", ctx, id, accountID, input)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockEmailInboxRepoMockRecorder) Update(ctx, id, accountID, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockEmailInboxRepo)(nil).Update), ctx, id, accountID, input)
+}
+
+// MockEmailMessageRepo is a mock of EmailMessageRepo interface.
+type MockEmailMessageRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockEmailMessageRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockEmailMessageRepoMockRecorder is the mock recorder for MockEmailMessageRepo.
+type MockEmailMessageRepoMockRecorder struct {
+	mock *MockEmailMessageRepo
+}
+
+// NewMockEmailMessageRepo creates a new mock instance.
+func NewMockEmailMessageRepo(ctrl *gomock.Controller) *MockEmailMessageRepo {
+	mock := &MockEmailMessageRepo{ctrl: ctrl}
+	mock.recorder = &MockEmailMessageRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockEmailMessageRepo) EXPECT() *MockEmailMessageRepoMockRecorder {
+	return m.recorder
+}
+
+// FindThreadConversation mocks base method.
+func (m *MockEmailMessageRepo) FindThreadConversation(ctx context.Context, rfcMessageIDs []string) (*domain.EmailThreadMatch, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindThreadConversation", ctx, rfcMessageIDs)
+	ret0, _ := ret[0].(*domain.EmailThreadMatch)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// FindThreadConversation indicates an expected call of FindThreadConversation.
+func (mr *MockEmailMessageRepoMockRecorder) FindThreadConversation(ctx, rfcMessageIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindThreadConversation", reflect.TypeOf((*MockEmailMessageRepo)(nil).FindThreadConversation), ctx, rfcMessageIDs)
+}
+
+// GetByRfcID mocks base method.
+func (m *MockEmailMessageRepo) GetByRfcID(ctx context.Context, rfcMessageID string) (*domain.EmailMessage, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByRfcID", ctx, rfcMessageID)
+	ret0, _ := ret[0].(*domain.EmailMessage)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetByRfcID indicates an expected call of GetByRfcID.
+func (mr *MockEmailMessageRepoMockRecorder) GetByRfcID(ctx, rfcMessageID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByRfcID", reflect.TypeOf((*MockEmailMessageRepo)(nil).GetByRfcID), ctx, rfcMessageID)
+}
+
+// GetLatestInbound mocks base method.
+func (m *MockEmailMessageRepo) GetLatestInbound(ctx context.Context, conversationID string) (*domain.EmailMessage, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetLatestInbound", ctx, conversationID)
+	ret0, _ := ret[0].(*domain.EmailMessage)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetLatestInbound indicates an expected call of GetLatestInbound.
+func (mr *MockEmailMessageRepoMockRecorder) GetLatestInbound(ctx, conversationID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestInbound", reflect.TypeOf((*MockEmailMessageRepo)(nil).GetLatestInbound), ctx, conversationID)
+}
+
+// TryInsert mocks base method.
+func (m *MockEmailMessageRepo) TryInsert(ctx context.Context, input *domain.CreateEmailMessageInput) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TryInsert", ctx, input)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// TryInsert indicates an expected call of TryInsert.
+func (mr *MockEmailMessageRepoMockRecorder) TryInsert(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryInsert", reflect.TypeOf((*MockEmailMessageRepo)(nil).TryInsert), ctx, input)
+}
+
+// MockSupportRouteRepo is a mock of SupportRouteRepo interface.
+type MockSupportRouteRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockSupportRouteRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockSupportRouteRepoMockRecorder is the mock recorder for MockSupportRouteRepo.
+type MockSupportRouteRepoMockRecorder struct {
+	mock *MockSupportRouteRepo
+}
+
+// NewMockSupportRouteRepo creates a new mock instance.
+func NewMockSupportRouteRepo(ctrl *gomock.Controller) *MockSupportRouteRepo {
+	mock := &MockSupportRouteRepo{ctrl: ctrl}
+	mock.recorder = &MockSupportRouteRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockSupportRouteRepo) EXPECT() *MockSupportRouteRepoMockRecorder {
+	return m.recorder
+}
+
+// Delete mocks base method.
+func (m *MockSupportRouteRepo) Delete(ctx context.Context, accountID, relationAccountID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", ctx, accountID, relationAccountID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockSupportRouteRepoMockRecorder) Delete(ctx, accountID, relationAccountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockSupportRouteRepo)(nil).Delete), ctx, accountID, relationAccountID)
+}
+
+// Get mocks base method.
+func (m *MockSupportRouteRepo) Get(ctx context.Context, accountID, relationAccountID string) (*domain.SupportRoute, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", ctx, accountID, relationAccountID)
+	ret0, _ := ret[0].(*domain.SupportRoute)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockSupportRouteRepoMockRecorder) Get(ctx, accountID, relationAccountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockSupportRouteRepo)(nil).Get), ctx, accountID, relationAccountID)
+}
+
+// Resolve mocks base method.
+func (m *MockSupportRouteRepo) Resolve(ctx context.Context, accountID, relationAccountID string) (*domain.SupportRoute, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Resolve", ctx, accountID, relationAccountID)
+	ret0, _ := ret[0].(*domain.SupportRoute)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Resolve indicates an expected call of Resolve.
+func (mr *MockSupportRouteRepoMockRecorder) Resolve(ctx, accountID, relationAccountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Resolve", reflect.TypeOf((*MockSupportRouteRepo)(nil).Resolve), ctx, accountID, relationAccountID)
+}
+
+// Upsert mocks base method.
+func (m *MockSupportRouteRepo) Upsert(ctx context.Context, id, accountID, relationAccountID, groupConversationID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Upsert", ctx, id, accountID, relationAccountID, groupConversationID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Upsert indicates an expected call of Upsert.
+func (mr *MockSupportRouteRepoMockRecorder) Upsert(ctx, id, accountID, relationAccountID, groupConversationID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upsert", reflect.TypeOf((*MockSupportRouteRepo)(nil).Upsert), ctx, id, accountID, relationAccountID, groupConversationID)
+}
+
+// MockNotificationRepo is a mock of NotificationRepo interface.
+type MockNotificationRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockNotificationRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockNotificationRepoMockRecorder is the mock recorder for MockNotificationRepo.
+type MockNotificationRepoMockRecorder struct {
+	mock *MockNotificationRepo
+}
+
+// NewMockNotificationRepo creates a new mock instance.
+func NewMockNotificationRepo(ctrl *gomock.Controller) *MockNotificationRepo {
+	mock := &MockNotificationRepo{ctrl: ctrl}
+	mock.recorder = &MockNotificationRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockNotificationRepo) EXPECT() *MockNotificationRepoMockRecorder {
+	return m.recorder
+}
+
+// CountUnseen mocks base method.
+func (m *MockNotificationRepo) CountUnseen(ctx context.Context, recipientAccountUserID string) (int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CountUnseen", ctx, recipientAccountUserID)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CountUnseen indicates an expected call of CountUnseen.
+func (mr *MockNotificationRepoMockRecorder) CountUnseen(ctx, recipientAccountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountUnseen", reflect.TypeOf((*MockNotificationRepo)(nil).CountUnseen), ctx, recipientAccountUserID)
+}
+
+// CountUnseenByUserAccounts mocks base method.
+func (m *MockNotificationRepo) CountUnseenByUserAccounts(ctx context.Context, userID string) ([]domain.AccountUnread, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CountUnseenByUserAccounts", ctx, userID)
+	ret0, _ := ret[0].([]domain.AccountUnread)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CountUnseenByUserAccounts indicates an expected call of CountUnseenByUserAccounts.
+func (mr *MockNotificationRepoMockRecorder) CountUnseenByUserAccounts(ctx, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountUnseenByUserAccounts", reflect.TypeOf((*MockNotificationRepo)(nil).CountUnseenByUserAccounts), ctx, userID)
+}
+
+// Create mocks base method.
+func (m *MockNotificationRepo) Create(ctx context.Context, notification *domain.Notification) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", ctx, notification)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockNotificationRepoMockRecorder) Create(ctx, notification any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockNotificationRepo)(nil).Create), ctx, notification)
+}
+
+// CreateBatch mocks base method.
+func (m *MockNotificationRepo) CreateBatch(ctx context.Context, notifications []*domain.Notification) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateBatch", ctx, notifications)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// CreateBatch indicates an expected call of CreateBatch.
+func (mr *MockNotificationRepoMockRecorder) CreateBatch(ctx, notifications any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateBatch", reflect.TypeOf((*MockNotificationRepo)(nil).CreateBatch), ctx, notifications)
+}
+
+// DismissByConversation mocks base method.
+func (m *MockNotificationRepo) DismissByConversation(ctx context.Context, recipientAccountUserID, conversationID string) (int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DismissByConversation", ctx, recipientAccountUserID, conversationID)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// DismissByConversation indicates an expected call of DismissByConversation.
+func (mr *MockNotificationRepoMockRecorder) DismissByConversation(ctx, recipientAccountUserID, conversationID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DismissByConversation", reflect.TypeOf((*MockNotificationRepo)(nil).DismissByConversation), ctx, recipientAccountUserID, conversationID)
+}
+
+// DismissBySourceMessage mocks base method.
+func (m *MockNotificationRepo) DismissBySourceMessage(ctx context.Context, accountID, sourceMessageID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DismissBySourceMessage", ctx, accountID, sourceMessageID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// DismissBySourceMessage indicates an expected call of DismissBySourceMessage.
+func (mr *MockNotificationRepoMockRecorder) DismissBySourceMessage(ctx, accountID, sourceMessageID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DismissBySourceMessage", reflect.TypeOf((*MockNotificationRepo)(nil).DismissBySourceMessage), ctx, accountID, sourceMessageID)
+}
+
+// GetByID mocks base method.
+func (m *MockNotificationRepo) GetByID(ctx context.Context, id, recipientAccountUserID string) (*domain.Notification, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByID", ctx, id, recipientAccountUserID)
+	ret0, _ := ret[0].(*domain.Notification)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetByID indicates an expected call of GetByID.
+func (mr *MockNotificationRepoMockRecorder) GetByID(ctx, id, recipientAccountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockNotificationRepo)(nil).GetByID), ctx, id, recipientAccountUserID)
+}
+
+// List mocks base method.
+func (m *MockNotificationRepo) List(ctx context.Context, filter domain.NotificationListFilter) ([]*domain.Notification, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, filter)
+	ret0, _ := ret[0].([]*domain.Notification)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockNotificationRepoMockRecorder) List(ctx, filter any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockNotificationRepo)(nil).List), ctx, filter)
+}
+
+// ListMessagingContacts mocks base method.
+func (m *MockNotificationRepo) ListMessagingContacts(ctx context.Context, accountID, query string) ([]*domain.MessagingContact, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListMessagingContacts", ctx, accountID, query)
+	ret0, _ := ret[0].([]*domain.MessagingContact)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListMessagingContacts indicates an expected call of ListMessagingContacts.
+func (mr *MockNotificationRepoMockRecorder) ListMessagingContacts(ctx, accountID, query any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListMessagingContacts", reflect.TypeOf((*MockNotificationRepo)(nil).ListMessagingContacts), ctx, accountID, query)
+}
+
+// MarkAllSeen mocks base method.
+func (m *MockNotificationRepo) MarkAllSeen(ctx context.Context, recipientAccountUserID string) (int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkAllSeen", ctx, recipientAccountUserID)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// MarkAllSeen indicates an expected call of MarkAllSeen.
+func (mr *MockNotificationRepoMockRecorder) MarkAllSeen(ctx, recipientAccountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkAllSeen", reflect.TypeOf((*MockNotificationRepo)(nil).MarkAllSeen), ctx, recipientAccountUserID)
+}
+
+// MarkDismissed mocks base method.
+func (m *MockNotificationRepo) MarkDismissed(ctx context.Context, id, recipientAccountUserID string) (*domain.Notification, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkDismissed", ctx, id, recipientAccountUserID)
+	ret0, _ := ret[0].(*domain.Notification)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// MarkDismissed indicates an expected call of MarkDismissed.
+func (mr *MockNotificationRepoMockRecorder) MarkDismissed(ctx, id, recipientAccountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkDismissed", reflect.TypeOf((*MockNotificationRepo)(nil).MarkDismissed), ctx, id, recipientAccountUserID)
+}
+
+// MarkRead mocks base method.
+func (m *MockNotificationRepo) MarkRead(ctx context.Context, id, recipientAccountUserID string) (*domain.Notification, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkRead", ctx, id, recipientAccountUserID)
+	ret0, _ := ret[0].(*domain.Notification)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// MarkRead indicates an expected call of MarkRead.
+func (mr *MockNotificationRepoMockRecorder) MarkRead(ctx, id, recipientAccountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkRead", reflect.TypeOf((*MockNotificationRepo)(nil).MarkRead), ctx, id, recipientAccountUserID)
+}
+
+// MarkSeen mocks base method.
+func (m *MockNotificationRepo) MarkSeen(ctx context.Context, id, recipientAccountUserID string) (*domain.Notification, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkSeen", ctx, id, recipientAccountUserID)
+	ret0, _ := ret[0].(*domain.Notification)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// MarkSeen indicates an expected call of MarkSeen.
+func (mr *MockNotificationRepoMockRecorder) MarkSeen(ctx, id, recipientAccountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkSeen", reflect.TypeOf((*MockNotificationRepo)(nil).MarkSeen), ctx, id, recipientAccountUserID)
+}
+
+// ResolveAccountUserID mocks base method.
+func (m *MockNotificationRepo) ResolveAccountUserID(ctx context.Context, userID, accountID string) (string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResolveAccountUserID", ctx, userID, accountID)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ResolveAccountUserID indicates an expected call of ResolveAccountUserID.
+func (mr *MockNotificationRepoMockRecorder) ResolveAccountUserID(ctx, userID, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveAccountUserID", reflect.TypeOf((*MockNotificationRepo)(nil).ResolveAccountUserID), ctx, userID, accountID)
+}
+
+// ResolveRecipientContact mocks base method.
+func (m *MockNotificationRepo) ResolveRecipientContact(ctx context.Context, accountUserID string) (*domain.RecipientContact, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResolveRecipientContact", ctx, accountUserID)
+	ret0, _ := ret[0].(*domain.RecipientContact)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ResolveRecipientContact indicates an expected call of ResolveRecipientContact.
+func (mr *MockNotificationRepoMockRecorder) ResolveRecipientContact(ctx, accountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveRecipientContact", reflect.TypeOf((*MockNotificationRepo)(nil).ResolveRecipientContact), ctx, accountUserID)
+}
+
+// ResolveUserID mocks base method.
+func (m *MockNotificationRepo) ResolveUserID(ctx context.Context, accountUserID string) (string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResolveUserID", ctx, accountUserID)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ResolveUserID indicates an expected call of ResolveUserID.
+func (mr *MockNotificationRepoMockRecorder) ResolveUserID(ctx, accountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveUserID", reflect.TypeOf((*MockNotificationRepo)(nil).ResolveUserID), ctx, accountUserID)
+}
+
+// MockAnnouncementRepo is a mock of AnnouncementRepo interface.
+type MockAnnouncementRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockAnnouncementRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockAnnouncementRepoMockRecorder is the mock recorder for MockAnnouncementRepo.
+type MockAnnouncementRepoMockRecorder struct {
+	mock *MockAnnouncementRepo
+}
+
+// NewMockAnnouncementRepo creates a new mock instance.
+func NewMockAnnouncementRepo(ctrl *gomock.Controller) *MockAnnouncementRepo {
+	mock := &MockAnnouncementRepo{ctrl: ctrl}
+	mock.recorder = &MockAnnouncementRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockAnnouncementRepo) EXPECT() *MockAnnouncementRepoMockRecorder {
+	return m.recorder
+}
+
+// CountUnseen mocks base method.
+func (m *MockAnnouncementRepo) CountUnseen(ctx context.Context, accountUserID string, accountID *string) (int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CountUnseen", ctx, accountUserID, accountID)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CountUnseen indicates an expected call of CountUnseen.
+func (mr *MockAnnouncementRepoMockRecorder) CountUnseen(ctx, accountUserID, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountUnseen", reflect.TypeOf((*MockAnnouncementRepo)(nil).CountUnseen), ctx, accountUserID, accountID)
+}
+
+// CountUnseenByUserAccounts mocks base method.
+func (m *MockAnnouncementRepo) CountUnseenByUserAccounts(ctx context.Context, userID string) ([]domain.AccountUnread, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CountUnseenByUserAccounts", ctx, userID)
+	ret0, _ := ret[0].([]domain.AccountUnread)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CountUnseenByUserAccounts indicates an expected call of CountUnseenByUserAccounts.
+func (mr *MockAnnouncementRepoMockRecorder) CountUnseenByUserAccounts(ctx, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountUnseenByUserAccounts", reflect.TypeOf((*MockAnnouncementRepo)(nil).CountUnseenByUserAccounts), ctx, userID)
+}
+
+// Create mocks base method.
+func (m *MockAnnouncementRepo) Create(ctx context.Context, id string, input *domain.CreateAnnouncementInput) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", ctx, id, input)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockAnnouncementRepoMockRecorder) Create(ctx, id, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockAnnouncementRepo)(nil).Create), ctx, id, input)
+}
+
+// GetActiveByID mocks base method.
+func (m *MockAnnouncementRepo) GetActiveByID(ctx context.Context, id, accountUserID string, accountID *string) (*domain.Announcement, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetActiveByID", ctx, id, accountUserID, accountID)
+	ret0, _ := ret[0].(*domain.Announcement)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetActiveByID indicates an expected call of GetActiveByID.
+func (mr *MockAnnouncementRepoMockRecorder) GetActiveByID(ctx, id, accountUserID, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActiveByID", reflect.TypeOf((*MockAnnouncementRepo)(nil).GetActiveByID), ctx, id, accountUserID, accountID)
+}
+
+// ListActive mocks base method.
+func (m *MockAnnouncementRepo) ListActive(ctx context.Context, filter domain.AnnouncementListFilter) ([]*domain.Announcement, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListActive", ctx, filter)
+	ret0, _ := ret[0].([]*domain.Announcement)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListActive indicates an expected call of ListActive.
+func (mr *MockAnnouncementRepoMockRecorder) ListActive(ctx, filter any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListActive", reflect.TypeOf((*MockAnnouncementRepo)(nil).ListActive), ctx, filter)
+}
+
+// MarkDismissed mocks base method.
+func (m *MockAnnouncementRepo) MarkDismissed(ctx context.Context, announcementID, accountUserID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkDismissed", ctx, announcementID, accountUserID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// MarkDismissed indicates an expected call of MarkDismissed.
+func (mr *MockAnnouncementRepoMockRecorder) MarkDismissed(ctx, announcementID, accountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkDismissed", reflect.TypeOf((*MockAnnouncementRepo)(nil).MarkDismissed), ctx, announcementID, accountUserID)
+}
+
+// MarkRead mocks base method.
+func (m *MockAnnouncementRepo) MarkRead(ctx context.Context, announcementID, accountUserID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkRead", ctx, announcementID, accountUserID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// MarkRead indicates an expected call of MarkRead.
+func (mr *MockAnnouncementRepoMockRecorder) MarkRead(ctx, announcementID, accountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkRead", reflect.TypeOf((*MockAnnouncementRepo)(nil).MarkRead), ctx, announcementID, accountUserID)
+}
+
+// MarkSeen mocks base method.
+func (m *MockAnnouncementRepo) MarkSeen(ctx context.Context, announcementID, accountUserID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkSeen", ctx, announcementID, accountUserID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// MarkSeen indicates an expected call of MarkSeen.
+func (mr *MockAnnouncementRepoMockRecorder) MarkSeen(ctx, announcementID, accountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkSeen", reflect.TypeOf((*MockAnnouncementRepo)(nil).MarkSeen), ctx, announcementID, accountUserID)
+}
+
+// MockConversationRepo is a mock of ConversationRepo interface.
+type MockConversationRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockConversationRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockConversationRepoMockRecorder is the mock recorder for MockConversationRepo.
+type MockConversationRepoMockRecorder struct {
+	mock *MockConversationRepo
+}
+
+// NewMockConversationRepo creates a new mock instance.
+func NewMockConversationRepo(ctrl *gomock.Controller) *MockConversationRepo {
+	mock := &MockConversationRepo{ctrl: ctrl}
+	mock.recorder = &MockConversationRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockConversationRepo) EXPECT() *MockConversationRepoMockRecorder {
+	return m.recorder
+}
+
+// AdvanceAfterMessage mocks base method.
+func (m *MockConversationRepo) AdvanceAfterMessage(ctx context.Context, id, lastMessageID string, lastMessageAt time.Time) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AdvanceAfterMessage", ctx, id, lastMessageID, lastMessageAt)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// AdvanceAfterMessage indicates an expected call of AdvanceAfterMessage.
+func (mr *MockConversationRepoMockRecorder) AdvanceAfterMessage(ctx, id, lastMessageID, lastMessageAt any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AdvanceAfterMessage", reflect.TypeOf((*MockConversationRepo)(nil).AdvanceAfterMessage), ctx, id, lastMessageID, lastMessageAt)
+}
+
+// Assign mocks base method.
+func (m *MockConversationRepo) Assign(ctx context.Context, id, accountID string, assigneeAccountUserID, assignedGroupID *string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Assign", ctx, id, accountID, assigneeAccountUserID, assignedGroupID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Assign indicates an expected call of Assign.
+func (mr *MockConversationRepoMockRecorder) Assign(ctx, id, accountID, assigneeAccountUserID, assignedGroupID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Assign", reflect.TypeOf((*MockConversationRepo)(nil).Assign), ctx, id, accountID, assigneeAccountUserID, assignedGroupID)
+}
+
+// BindInbox mocks base method.
+func (m *MockConversationRepo) BindInbox(ctx context.Context, id, accountID, inboxID, externalAddress string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BindInbox", ctx, id, accountID, inboxID, externalAddress)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// BindInbox indicates an expected call of BindInbox.
+func (mr *MockConversationRepoMockRecorder) BindInbox(ctx, id, accountID, inboxID, externalAddress any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BindInbox", reflect.TypeOf((*MockConversationRepo)(nil).BindInbox), ctx, id, accountID, inboxID, externalAddress)
+}
+
+// Create mocks base method.
+func (m *MockConversationRepo) Create(ctx context.Context, id string, input *domain.CreateConversationInput, accountID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", ctx, id, input, accountID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockConversationRepoMockRecorder) Create(ctx, id, input, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockConversationRepo)(nil).Create), ctx, id, input, accountID)
+}
+
+// CreateCustomerSupport mocks base method.
+func (m *MockConversationRepo) CreateCustomerSupport(ctx context.Context, id, vendorAccountID, customerAccountID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateCustomerSupport", ctx, id, vendorAccountID, customerAccountID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// CreateCustomerSupport indicates an expected call of CreateCustomerSupport.
+func (mr *MockConversationRepoMockRecorder) CreateCustomerSupport(ctx, id, vendorAccountID, customerAccountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateCustomerSupport", reflect.TypeOf((*MockConversationRepo)(nil).CreateCustomerSupport), ctx, id, vendorAccountID, customerAccountID)
+}
+
+// CreateDMKey mocks base method.
+func (m *MockConversationRepo) CreateDMKey(ctx context.Context, accountID, dmKey, conversationID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateDMKey", ctx, accountID, dmKey, conversationID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateDMKey indicates an expected call of CreateDMKey.
+func (mr *MockConversationRepoMockRecorder) CreateDMKey(ctx, accountID, dmKey, conversationID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDMKey", reflect.TypeOf((*MockConversationRepo)(nil).CreateDMKey), ctx, accountID, dmKey, conversationID)
+}
+
+// GetByID mocks base method.
+func (m *MockConversationRepo) GetByID(ctx context.Context, id, accountID string) (*domain.Conversation, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByID", ctx, id, accountID)
+	ret0, _ := ret[0].(*domain.Conversation)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetByID indicates an expected call of GetByID.
+func (mr *MockConversationRepoMockRecorder) GetByID(ctx, id, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockConversationRepo)(nil).GetByID), ctx, id, accountID)
+}
+
+// GetCustomerSupport mocks base method.
+func (m *MockConversationRepo) GetCustomerSupport(ctx context.Context, vendorAccountID, customerAccountID string) (*domain.Conversation, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCustomerSupport", ctx, vendorAccountID, customerAccountID)
+	ret0, _ := ret[0].(*domain.Conversation)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetCustomerSupport indicates an expected call of GetCustomerSupport.
+func (mr *MockConversationRepoMockRecorder) GetCustomerSupport(ctx, vendorAccountID, customerAccountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCustomerSupport", reflect.TypeOf((*MockConversationRepo)(nil).GetCustomerSupport), ctx, vendorAccountID, customerAccountID)
+}
+
+// GetDMConversationID mocks base method.
+func (m *MockConversationRepo) GetDMConversationID(ctx context.Context, accountID, dmKey string) (string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDMConversationID", ctx, accountID, dmKey)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetDMConversationID indicates an expected call of GetDMConversationID.
+func (mr *MockConversationRepoMockRecorder) GetDMConversationID(ctx, accountID, dmKey any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDMConversationID", reflect.TypeOf((*MockConversationRepo)(nil).GetDMConversationID), ctx, accountID, dmKey)
+}
+
+// ListByResource mocks base method.
+func (m *MockConversationRepo) ListByResource(ctx context.Context, accountID, resourceType, resourceID string, limit int32) ([]*domain.Conversation, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListByResource", ctx, accountID, resourceType, resourceID, limit)
+	ret0, _ := ret[0].([]*domain.Conversation)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListByResource indicates an expected call of ListByResource.
+func (mr *MockConversationRepoMockRecorder) ListByResource(ctx, accountID, resourceType, resourceID, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByResource", reflect.TypeOf((*MockConversationRepo)(nil).ListByResource), ctx, accountID, resourceType, resourceID, limit)
+}
+
+// ListForUser mocks base method.
+func (m *MockConversationRepo) ListForUser(ctx context.Context, filter domain.ConversationListFilter) ([]*domain.Conversation, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListForUser", ctx, filter)
+	ret0, _ := ret[0].([]*domain.Conversation)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListForUser indicates an expected call of ListForUser.
+func (mr *MockConversationRepoMockRecorder) ListForUser(ctx, filter any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListForUser", reflect.TypeOf((*MockConversationRepo)(nil).ListForUser), ctx, filter)
+}
+
+// ListInbox mocks base method.
+func (m *MockConversationRepo) ListInbox(ctx context.Context, filter domain.SupportInboxFilter) ([]*domain.Conversation, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListInbox", ctx, filter)
+	ret0, _ := ret[0].([]*domain.Conversation)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListInbox indicates an expected call of ListInbox.
+func (mr *MockConversationRepoMockRecorder) ListInbox(ctx, filter any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInbox", reflect.TypeOf((*MockConversationRepo)(nil).ListInbox), ctx, filter)
+}
+
+// LockSequence mocks base method.
+func (m *MockConversationRepo) LockSequence(ctx context.Context, id, accountID string) (int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LockSequence", ctx, id, accountID)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// LockSequence indicates an expected call of LockSequence.
+func (mr *MockConversationRepoMockRecorder) LockSequence(ctx, id, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockSequence", reflect.TypeOf((*MockConversationRepo)(nil).LockSequence), ctx, id, accountID)
+}
+
+// PromoteToCustomerCase mocks base method.
+func (m *MockConversationRepo) PromoteToCustomerCase(ctx context.Context, id, accountID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PromoteToCustomerCase", ctx, id, accountID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// PromoteToCustomerCase indicates an expected call of PromoteToCustomerCase.
+func (mr *MockConversationRepoMockRecorder) PromoteToCustomerCase(ctx, id, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PromoteToCustomerCase", reflect.TypeOf((*MockConversationRepo)(nil).PromoteToCustomerCase), ctx, id, accountID)
+}
+
+// RedactMessages mocks base method.
+func (m *MockConversationRepo) RedactMessages(ctx context.Context, conversationID string) (int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RedactMessages", ctx, conversationID)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// RedactMessages indicates an expected call of RedactMessages.
+func (mr *MockConversationRepoMockRecorder) RedactMessages(ctx, conversationID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RedactMessages", reflect.TypeOf((*MockConversationRepo)(nil).RedactMessages), ctx, conversationID)
+}
+
+// SetLegalHold mocks base method.
+func (m *MockConversationRepo) SetLegalHold(ctx context.Context, id, accountID string, hold bool) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetLegalHold", ctx, id, accountID, hold)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SetLegalHold indicates an expected call of SetLegalHold.
+func (mr *MockConversationRepoMockRecorder) SetLegalHold(ctx, id, accountID, hold any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetLegalHold", reflect.TypeOf((*MockConversationRepo)(nil).SetLegalHold), ctx, id, accountID, hold)
+}
+
+// SetWorkflowStatus mocks base method.
+func (m *MockConversationRepo) SetWorkflowStatus(ctx context.Context, id, accountID, status string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetWorkflowStatus", ctx, id, accountID, status)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SetWorkflowStatus indicates an expected call of SetWorkflowStatus.
+func (mr *MockConversationRepoMockRecorder) SetWorkflowStatus(ctx, id, accountID, status any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetWorkflowStatus", reflect.TypeOf((*MockConversationRepo)(nil).SetWorkflowStatus), ctx, id, accountID, status)
+}
+
+// Update mocks base method.
+func (m *MockConversationRepo) Update(ctx context.Context, id, accountID string, title *string, isArchived *bool, clearTitle bool) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Update", ctx, id, accountID, title, isArchived, clearTitle)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockConversationRepoMockRecorder) Update(ctx, id, accountID, title, isArchived, clearTitle any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockConversationRepo)(nil).Update), ctx, id, accountID, title, isArchived, clearTitle)
+}
+
+// MockConversationLinkRepo is a mock of ConversationLinkRepo interface.
+type MockConversationLinkRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockConversationLinkRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockConversationLinkRepoMockRecorder is the mock recorder for MockConversationLinkRepo.
+type MockConversationLinkRepoMockRecorder struct {
+	mock *MockConversationLinkRepo
+}
+
+// NewMockConversationLinkRepo creates a new mock instance.
+func NewMockConversationLinkRepo(ctrl *gomock.Controller) *MockConversationLinkRepo {
+	mock := &MockConversationLinkRepo{ctrl: ctrl}
+	mock.recorder = &MockConversationLinkRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockConversationLinkRepo) EXPECT() *MockConversationLinkRepoMockRecorder {
+	return m.recorder
+}
+
+// Create mocks base method.
+func (m *MockConversationLinkRepo) Create(ctx context.Context, l *domain.ConversationLink) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", ctx, l)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockConversationLinkRepoMockRecorder) Create(ctx, l any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockConversationLinkRepo)(nil).Create), ctx, l)
+}
+
+// Delete mocks base method.
+func (m *MockConversationLinkRepo) Delete(ctx context.Context, linkID, conversationID, accountID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", ctx, linkID, conversationID, accountID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockConversationLinkRepoMockRecorder) Delete(ctx, linkID, conversationID, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockConversationLinkRepo)(nil).Delete), ctx, linkID, conversationID, accountID)
+}
+
+// List mocks base method.
+func (m *MockConversationLinkRepo) List(ctx context.Context, conversationID, accountID string) ([]*domain.ConversationLink, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, conversationID, accountID)
+	ret0, _ := ret[0].([]*domain.ConversationLink)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockConversationLinkRepoMockRecorder) List(ctx, conversationID, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockConversationLinkRepo)(nil).List), ctx, conversationID, accountID)
+}
+
+// MockMessagingGroupRepo is a mock of MessagingGroupRepo interface.
+type MockMessagingGroupRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockMessagingGroupRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockMessagingGroupRepoMockRecorder is the mock recorder for MockMessagingGroupRepo.
+type MockMessagingGroupRepoMockRecorder struct {
+	mock *MockMessagingGroupRepo
+}
+
+// NewMockMessagingGroupRepo creates a new mock instance.
+func NewMockMessagingGroupRepo(ctrl *gomock.Controller) *MockMessagingGroupRepo {
+	mock := &MockMessagingGroupRepo{ctrl: ctrl}
+	mock.recorder = &MockMessagingGroupRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockMessagingGroupRepo) EXPECT() *MockMessagingGroupRepoMockRecorder {
+	return m.recorder
+}
+
+// AddMember mocks base method.
+func (m_2 *MockMessagingGroupRepo) AddMember(ctx context.Context, m *domain.MessagingGroupMember) *apierror.APIError {
+	m_2.ctrl.T.Helper()
+	ret := m_2.ctrl.Call(m_2, "AddMember", ctx, m)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// AddMember indicates an expected call of AddMember.
+func (mr *MockMessagingGroupRepoMockRecorder) AddMember(ctx, m any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddMember", reflect.TypeOf((*MockMessagingGroupRepo)(nil).AddMember), ctx, m)
+}
+
+// ClearConversationGroup mocks base method.
+func (m *MockMessagingGroupRepo) ClearConversationGroup(ctx context.Context, accountID, groupID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClearConversationGroup", ctx, accountID, groupID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// ClearConversationGroup indicates an expected call of ClearConversationGroup.
+func (mr *MockMessagingGroupRepoMockRecorder) ClearConversationGroup(ctx, accountID, groupID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearConversationGroup", reflect.TypeOf((*MockMessagingGroupRepo)(nil).ClearConversationGroup), ctx, accountID, groupID)
+}
+
+// Create mocks base method.
+func (m *MockMessagingGroupRepo) Create(ctx context.Context, g *domain.MessagingGroup) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", ctx, g)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockMessagingGroupRepoMockRecorder) Create(ctx, g any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockMessagingGroupRepo)(nil).Create), ctx, g)
+}
+
+// Delete mocks base method.
+func (m *MockMessagingGroupRepo) Delete(ctx context.Context, id, accountID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", ctx, id, accountID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockMessagingGroupRepoMockRecorder) Delete(ctx, id, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockMessagingGroupRepo)(nil).Delete), ctx, id, accountID)
+}
+
+// DeleteMembers mocks base method.
+func (m *MockMessagingGroupRepo) DeleteMembers(ctx context.Context, groupID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteMembers", ctx, groupID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// DeleteMembers indicates an expected call of DeleteMembers.
+func (mr *MockMessagingGroupRepoMockRecorder) DeleteMembers(ctx, groupID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteMembers", reflect.TypeOf((*MockMessagingGroupRepo)(nil).DeleteMembers), ctx, groupID)
+}
+
+// Get mocks base method.
+func (m *MockMessagingGroupRepo) Get(ctx context.Context, id, accountID string) (*domain.MessagingGroup, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", ctx, id, accountID)
+	ret0, _ := ret[0].(*domain.MessagingGroup)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockMessagingGroupRepoMockRecorder) Get(ctx, id, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockMessagingGroupRepo)(nil).Get), ctx, id, accountID)
+}
+
+// List mocks base method.
+func (m *MockMessagingGroupRepo) List(ctx context.Context, accountID string) ([]*domain.MessagingGroup, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, accountID)
+	ret0, _ := ret[0].([]*domain.MessagingGroup)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockMessagingGroupRepoMockRecorder) List(ctx, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockMessagingGroupRepo)(nil).List), ctx, accountID)
+}
+
+// ListMembers mocks base method.
+func (m *MockMessagingGroupRepo) ListMembers(ctx context.Context, groupID string) ([]*domain.MessagingGroupMember, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListMembers", ctx, groupID)
+	ret0, _ := ret[0].([]*domain.MessagingGroupMember)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListMembers indicates an expected call of ListMembers.
+func (mr *MockMessagingGroupRepoMockRecorder) ListMembers(ctx, groupID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListMembers", reflect.TypeOf((*MockMessagingGroupRepo)(nil).ListMembers), ctx, groupID)
+}
+
+// RemoveMember mocks base method.
+func (m *MockMessagingGroupRepo) RemoveMember(ctx context.Context, memberID, groupID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveMember", ctx, memberID, groupID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// RemoveMember indicates an expected call of RemoveMember.
+func (mr *MockMessagingGroupRepoMockRecorder) RemoveMember(ctx, memberID, groupID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveMember", reflect.TypeOf((*MockMessagingGroupRepo)(nil).RemoveMember), ctx, memberID, groupID)
+}
+
+// Rename mocks base method.
+func (m *MockMessagingGroupRepo) Rename(ctx context.Context, id, accountID, name string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Rename", ctx, id, accountID, name)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Rename indicates an expected call of Rename.
+func (mr *MockMessagingGroupRepoMockRecorder) Rename(ctx, id, accountID, name any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rename", reflect.TypeOf((*MockMessagingGroupRepo)(nil).Rename), ctx, id, accountID, name)
+}
+
+// Touch mocks base method.
+func (m *MockMessagingGroupRepo) Touch(ctx context.Context, id, accountID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Touch", ctx, id, accountID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Touch indicates an expected call of Touch.
+func (mr *MockMessagingGroupRepoMockRecorder) Touch(ctx, id, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Touch", reflect.TypeOf((*MockMessagingGroupRepo)(nil).Touch), ctx, id, accountID)
+}
+
+// MockParticipantRepo is a mock of ParticipantRepo interface.
+type MockParticipantRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockParticipantRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockParticipantRepoMockRecorder is the mock recorder for MockParticipantRepo.
+type MockParticipantRepoMockRecorder struct {
+	mock *MockParticipantRepo
+}
+
+// NewMockParticipantRepo creates a new mock instance.
+func NewMockParticipantRepo(ctrl *gomock.Controller) *MockParticipantRepo {
+	mock := &MockParticipantRepo{ctrl: ctrl}
+	mock.recorder = &MockParticipantRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockParticipantRepo) EXPECT() *MockParticipantRepoMockRecorder {
+	return m.recorder
+}
+
+// AdvanceReadCursor mocks base method.
+func (m *MockParticipantRepo) AdvanceReadCursor(ctx context.Context, conversationID, accountUserID, lastReadMessageID string, sequence int64) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AdvanceReadCursor", ctx, conversationID, accountUserID, lastReadMessageID, sequence)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// AdvanceReadCursor indicates an expected call of AdvanceReadCursor.
+func (mr *MockParticipantRepoMockRecorder) AdvanceReadCursor(ctx, conversationID, accountUserID, lastReadMessageID, sequence any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AdvanceReadCursor", reflect.TypeOf((*MockParticipantRepo)(nil).AdvanceReadCursor), ctx, conversationID, accountUserID, lastReadMessageID, sequence)
+}
+
+// AdvanceReadCursorByID mocks base method.
+func (m *MockParticipantRepo) AdvanceReadCursorByID(ctx context.Context, participantID, lastReadMessageID string, sequence int64) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AdvanceReadCursorByID", ctx, participantID, lastReadMessageID, sequence)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// AdvanceReadCursorByID indicates an expected call of AdvanceReadCursorByID.
+func (mr *MockParticipantRepoMockRecorder) AdvanceReadCursorByID(ctx, participantID, lastReadMessageID, sequence any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AdvanceReadCursorByID", reflect.TypeOf((*MockParticipantRepo)(nil).AdvanceReadCursorByID), ctx, participantID, lastReadMessageID, sequence)
+}
+
+// Create mocks base method.
+func (m *MockParticipantRepo) Create(ctx context.Context, p *domain.ConversationParticipant) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", ctx, p)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockParticipantRepoMockRecorder) Create(ctx, p any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockParticipantRepo)(nil).Create), ctx, p)
+}
+
+// CreateAgent mocks base method.
+func (m *MockParticipantRepo) CreateAgent(ctx context.Context, id, accountID string, input *domain.AddAgentParticipantInput) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateAgent", ctx, id, accountID, input)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// CreateAgent indicates an expected call of CreateAgent.
+func (mr *MockParticipantRepoMockRecorder) CreateAgent(ctx, id, accountID, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAgent", reflect.TypeOf((*MockParticipantRepo)(nil).CreateAgent), ctx, id, accountID, input)
+}
+
+// CreateCustomer mocks base method.
+func (m *MockParticipantRepo) CreateCustomer(ctx context.Context, id, conversationID, vendorAccountID, customerAccountID, accountUserID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateCustomer", ctx, id, conversationID, vendorAccountID, customerAccountID, accountUserID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// CreateCustomer indicates an expected call of CreateCustomer.
+func (mr *MockParticipantRepoMockRecorder) CreateCustomer(ctx, id, conversationID, vendorAccountID, customerAccountID, accountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateCustomer", reflect.TypeOf((*MockParticipantRepo)(nil).CreateCustomer), ctx, id, conversationID, vendorAccountID, customerAccountID, accountUserID)
+}
+
+// Get mocks base method.
+func (m *MockParticipantRepo) Get(ctx context.Context, conversationID, accountUserID string) (*domain.ConversationParticipant, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", ctx, conversationID, accountUserID)
+	ret0, _ := ret[0].(*domain.ConversationParticipant)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockParticipantRepoMockRecorder) Get(ctx, conversationID, accountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockParticipantRepo)(nil).Get), ctx, conversationID, accountUserID)
+}
+
+// GetByAgentConfigID mocks base method.
+func (m *MockParticipantRepo) GetByAgentConfigID(ctx context.Context, conversationID, agentConfigID string) (*domain.ConversationParticipant, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByAgentConfigID", ctx, conversationID, agentConfigID)
+	ret0, _ := ret[0].(*domain.ConversationParticipant)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetByAgentConfigID indicates an expected call of GetByAgentConfigID.
+func (mr *MockParticipantRepoMockRecorder) GetByAgentConfigID(ctx, conversationID, agentConfigID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByAgentConfigID", reflect.TypeOf((*MockParticipantRepo)(nil).GetByAgentConfigID), ctx, conversationID, agentConfigID)
+}
+
+// GetByID mocks base method.
+func (m *MockParticipantRepo) GetByID(ctx context.Context, participantID, conversationID string) (*domain.ConversationParticipant, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByID", ctx, participantID, conversationID)
+	ret0, _ := ret[0].(*domain.ConversationParticipant)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetByID indicates an expected call of GetByID.
+func (mr *MockParticipantRepoMockRecorder) GetByID(ctx, participantID, conversationID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockParticipantRepo)(nil).GetByID), ctx, participantID, conversationID)
+}
+
+// GetByRelationAccount mocks base method.
+func (m *MockParticipantRepo) GetByRelationAccount(ctx context.Context, conversationID, customerAccountID string) (*domain.ConversationParticipant, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByRelationAccount", ctx, conversationID, customerAccountID)
+	ret0, _ := ret[0].(*domain.ConversationParticipant)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetByRelationAccount indicates an expected call of GetByRelationAccount.
+func (mr *MockParticipantRepoMockRecorder) GetByRelationAccount(ctx, conversationID, customerAccountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByRelationAccount", reflect.TypeOf((*MockParticipantRepo)(nil).GetByRelationAccount), ctx, conversationID, customerAccountID)
+}
+
+// Hide mocks base method.
+func (m *MockParticipantRepo) Hide(ctx context.Context, conversationID, accountUserID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Hide", ctx, conversationID, accountUserID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Hide indicates an expected call of Hide.
+func (mr *MockParticipantRepoMockRecorder) Hide(ctx, conversationID, accountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Hide", reflect.TypeOf((*MockParticipantRepo)(nil).Hide), ctx, conversationID, accountUserID)
+}
+
+// Leave mocks base method.
+func (m *MockParticipantRepo) Leave(ctx context.Context, conversationID, accountUserID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Leave", ctx, conversationID, accountUserID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Leave indicates an expected call of Leave.
+func (mr *MockParticipantRepoMockRecorder) Leave(ctx, conversationID, accountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Leave", reflect.TypeOf((*MockParticipantRepo)(nil).Leave), ctx, conversationID, accountUserID)
+}
+
+// List mocks base method.
+func (m *MockParticipantRepo) List(ctx context.Context, conversationID string) ([]*domain.ConversationParticipant, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, conversationID)
+	ret0, _ := ret[0].([]*domain.ConversationParticipant)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockParticipantRepoMockRecorder) List(ctx, conversationID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockParticipantRepo)(nil).List), ctx, conversationID)
+}
+
+// ListAll mocks base method.
+func (m *MockParticipantRepo) ListAll(ctx context.Context, conversationID string) ([]*domain.ConversationParticipant, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAll", ctx, conversationID)
+	ret0, _ := ret[0].([]*domain.ConversationParticipant)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListAll indicates an expected call of ListAll.
+func (mr *MockParticipantRepoMockRecorder) ListAll(ctx, conversationID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAll", reflect.TypeOf((*MockParticipantRepo)(nil).ListAll), ctx, conversationID)
+}
+
+// Reactivate mocks base method.
+func (m *MockParticipantRepo) Reactivate(ctx context.Context, conversationID, accountUserID, role string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Reactivate", ctx, conversationID, accountUserID, role)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Reactivate indicates an expected call of Reactivate.
+func (mr *MockParticipantRepoMockRecorder) Reactivate(ctx, conversationID, accountUserID, role any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Reactivate", reflect.TypeOf((*MockParticipantRepo)(nil).Reactivate), ctx, conversationID, accountUserID, role)
+}
+
+// ReactivateAgent mocks base method.
+func (m *MockParticipantRepo) ReactivateAgent(ctx context.Context, participantID string, input *domain.AddAgentParticipantInput) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReactivateAgent", ctx, participantID, input)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// ReactivateAgent indicates an expected call of ReactivateAgent.
+func (mr *MockParticipantRepoMockRecorder) ReactivateAgent(ctx, participantID, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReactivateAgent", reflect.TypeOf((*MockParticipantRepo)(nil).ReactivateAgent), ctx, participantID, input)
+}
+
+// SetMute mocks base method.
+func (m *MockParticipantRepo) SetMute(ctx context.Context, conversationID, accountUserID string, isMuted bool, mutedUntil *time.Time) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetMute", ctx, conversationID, accountUserID, isMuted, mutedUntil)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SetMute indicates an expected call of SetMute.
+func (mr *MockParticipantRepoMockRecorder) SetMute(ctx, conversationID, accountUserID, isMuted, mutedUntil any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetMute", reflect.TypeOf((*MockParticipantRepo)(nil).SetMute), ctx, conversationID, accountUserID, isMuted, mutedUntil)
+}
+
+// SetRole mocks base method.
+func (m *MockParticipantRepo) SetRole(ctx context.Context, conversationID, accountUserID, role string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetRole", ctx, conversationID, accountUserID, role)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SetRole indicates an expected call of SetRole.
+func (mr *MockParticipantRepoMockRecorder) SetRole(ctx, conversationID, accountUserID, role any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRole", reflect.TypeOf((*MockParticipantRepo)(nil).SetRole), ctx, conversationID, accountUserID, role)
+}
+
+// SetState mocks base method.
+func (m *MockParticipantRepo) SetState(ctx context.Context, conversationID, accountUserID, membership string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetState", ctx, conversationID, accountUserID, membership)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SetState indicates an expected call of SetState.
+func (mr *MockParticipantRepoMockRecorder) SetState(ctx, conversationID, accountUserID, membership any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetState", reflect.TypeOf((*MockParticipantRepo)(nil).SetState), ctx, conversationID, accountUserID, membership)
+}
+
+// SetStateByID mocks base method.
+func (m *MockParticipantRepo) SetStateByID(ctx context.Context, participantID, conversationID, state string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetStateByID", ctx, participantID, conversationID, state)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SetStateByID indicates an expected call of SetStateByID.
+func (mr *MockParticipantRepoMockRecorder) SetStateByID(ctx, participantID, conversationID, state any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetStateByID", reflect.TypeOf((*MockParticipantRepo)(nil).SetStateByID), ctx, participantID, conversationID, state)
+}
+
+// Unhide mocks base method.
+func (m *MockParticipantRepo) Unhide(ctx context.Context, conversationID, accountUserID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Unhide", ctx, conversationID, accountUserID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Unhide indicates an expected call of Unhide.
+func (mr *MockParticipantRepoMockRecorder) Unhide(ctx, conversationID, accountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unhide", reflect.TypeOf((*MockParticipantRepo)(nil).Unhide), ctx, conversationID, accountUserID)
+}
+
+// MockMessageRepo is a mock of MessageRepo interface.
+type MockMessageRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockMessageRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockMessageRepoMockRecorder is the mock recorder for MockMessageRepo.
+type MockMessageRepoMockRecorder struct {
+	mock *MockMessageRepo
+}
+
+// NewMockMessageRepo creates a new mock instance.
+func NewMockMessageRepo(ctrl *gomock.Controller) *MockMessageRepo {
+	mock := &MockMessageRepo{ctrl: ctrl}
+	mock.recorder = &MockMessageRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockMessageRepo) EXPECT() *MockMessageRepoMockRecorder {
+	return m.recorder
+}
+
+// CancelScheduled mocks base method.
+func (m *MockMessageRepo) CancelScheduled(ctx context.Context, id, accountID, accountUserID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CancelScheduled", ctx, id, accountID, accountUserID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CancelScheduled indicates an expected call of CancelScheduled.
+func (mr *MockMessageRepoMockRecorder) CancelScheduled(ctx, id, accountID, accountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelScheduled", reflect.TypeOf((*MockMessageRepo)(nil).CancelScheduled), ctx, id, accountID, accountUserID)
+}
+
+// ClaimScheduled mocks base method.
+func (m *MockMessageRepo) ClaimScheduled(ctx context.Context, id, lockOwner string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClaimScheduled", ctx, id, lockOwner)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ClaimScheduled indicates an expected call of ClaimScheduled.
+func (mr *MockMessageRepoMockRecorder) ClaimScheduled(ctx, id, lockOwner any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClaimScheduled", reflect.TypeOf((*MockMessageRepo)(nil).ClaimScheduled), ctx, id, lockOwner)
+}
+
+// CountVisibleAfter mocks base method.
+func (m *MockMessageRepo) CountVisibleAfter(ctx context.Context, conversationID string, afterSequence int64) (int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CountVisibleAfter", ctx, conversationID, afterSequence)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CountVisibleAfter indicates an expected call of CountVisibleAfter.
+func (mr *MockMessageRepoMockRecorder) CountVisibleAfter(ctx, conversationID, afterSequence any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountVisibleAfter", reflect.TypeOf((*MockMessageRepo)(nil).CountVisibleAfter), ctx, conversationID, afterSequence)
+}
+
+// Create mocks base method.
+func (m_2 *MockMessageRepo) Create(ctx context.Context, m *domain.Message) (bool, *apierror.APIError) {
+	m_2.ctrl.T.Helper()
+	ret := m_2.ctrl.Call(m_2, "Create", ctx, m)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockMessageRepoMockRecorder) Create(ctx, m any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockMessageRepo)(nil).Create), ctx, m)
+}
+
+// CreateDraft mocks base method.
+func (m_2 *MockMessageRepo) CreateDraft(ctx context.Context, m *domain.Message) *apierror.APIError {
+	m_2.ctrl.T.Helper()
+	ret := m_2.ctrl.Call(m_2, "CreateDraft", ctx, m)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// CreateDraft indicates an expected call of CreateDraft.
+func (mr *MockMessageRepoMockRecorder) CreateDraft(ctx, m any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDraft", reflect.TypeOf((*MockMessageRepo)(nil).CreateDraft), ctx, m)
+}
+
+// CreateScheduled mocks base method.
+func (m_2 *MockMessageRepo) CreateScheduled(ctx context.Context, m *domain.Message) *apierror.APIError {
+	m_2.ctrl.T.Helper()
+	ret := m_2.ctrl.Call(m_2, "CreateScheduled", ctx, m)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// CreateScheduled indicates an expected call of CreateScheduled.
+func (mr *MockMessageRepoMockRecorder) CreateScheduled(ctx, m any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateScheduled", reflect.TypeOf((*MockMessageRepo)(nil).CreateScheduled), ctx, m)
+}
+
+// GetByClientID mocks base method.
+func (m *MockMessageRepo) GetByClientID(ctx context.Context, conversationID, clientMessageID string) (*domain.Message, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByClientID", ctx, conversationID, clientMessageID)
+	ret0, _ := ret[0].(*domain.Message)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetByClientID indicates an expected call of GetByClientID.
+func (mr *MockMessageRepoMockRecorder) GetByClientID(ctx, conversationID, clientMessageID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByClientID", reflect.TypeOf((*MockMessageRepo)(nil).GetByClientID), ctx, conversationID, clientMessageID)
+}
+
+// GetByID mocks base method.
+func (m *MockMessageRepo) GetByID(ctx context.Context, id, accountID string) (*domain.Message, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByID", ctx, id, accountID)
+	ret0, _ := ret[0].(*domain.Message)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetByID indicates an expected call of GetByID.
+func (mr *MockMessageRepoMockRecorder) GetByID(ctx, id, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockMessageRepo)(nil).GetByID), ctx, id, accountID)
+}
+
+// GetByIDs mocks base method.
+func (m *MockMessageRepo) GetByIDs(ctx context.Context, ids []string) ([]*domain.Message, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByIDs", ctx, ids)
+	ret0, _ := ret[0].([]*domain.Message)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetByIDs indicates an expected call of GetByIDs.
+func (mr *MockMessageRepoMockRecorder) GetByIDs(ctx, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByIDs", reflect.TypeOf((*MockMessageRepo)(nil).GetByIDs), ctx, ids)
+}
+
+// GetLastVisible mocks base method.
+func (m *MockMessageRepo) GetLastVisible(ctx context.Context, conversationID string) (*domain.Message, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetLastVisible", ctx, conversationID)
+	ret0, _ := ret[0].(*domain.Message)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetLastVisible indicates an expected call of GetLastVisible.
+func (mr *MockMessageRepoMockRecorder) GetLastVisible(ctx, conversationID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLastVisible", reflect.TypeOf((*MockMessageRepo)(nil).GetLastVisible), ctx, conversationID)
+}
+
+// List mocks base method.
+func (m *MockMessageRepo) List(ctx context.Context, filter domain.MessageListFilter) ([]*domain.Message, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, filter)
+	ret0, _ := ret[0].([]*domain.Message)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockMessageRepoMockRecorder) List(ctx, filter any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockMessageRepo)(nil).List), ctx, filter)
+}
+
+// ListDrafts mocks base method.
+func (m *MockMessageRepo) ListDrafts(ctx context.Context, conversationID, accountID string, status *string) ([]*domain.Message, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDrafts", ctx, conversationID, accountID, status)
+	ret0, _ := ret[0].([]*domain.Message)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListDrafts indicates an expected call of ListDrafts.
+func (mr *MockMessageRepoMockRecorder) ListDrafts(ctx, conversationID, accountID, status any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDrafts", reflect.TypeOf((*MockMessageRepo)(nil).ListDrafts), ctx, conversationID, accountID, status)
+}
+
+// ListDueScheduled mocks base method.
+func (m *MockMessageRepo) ListDueScheduled(ctx context.Context, limit int32) ([]*domain.Message, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDueScheduled", ctx, limit)
+	ret0, _ := ret[0].([]*domain.Message)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListDueScheduled indicates an expected call of ListDueScheduled.
+func (mr *MockMessageRepoMockRecorder) ListDueScheduled(ctx, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDueScheduled", reflect.TypeOf((*MockMessageRepo)(nil).ListDueScheduled), ctx, limit)
+}
+
+// ListScheduledByConversation mocks base method.
+func (m *MockMessageRepo) ListScheduledByConversation(ctx context.Context, conversationID, accountID, accountUserID string, limit int32) ([]*domain.Message, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListScheduledByConversation", ctx, conversationID, accountID, accountUserID, limit)
+	ret0, _ := ret[0].([]*domain.Message)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListScheduledByConversation indicates an expected call of ListScheduledByConversation.
+func (mr *MockMessageRepoMockRecorder) ListScheduledByConversation(ctx, conversationID, accountID, accountUserID, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListScheduledByConversation", reflect.TypeOf((*MockMessageRepo)(nil).ListScheduledByConversation), ctx, conversationID, accountID, accountUserID, limit)
+}
+
+// MarkScheduledFailed mocks base method.
+func (m *MockMessageRepo) MarkScheduledFailed(ctx context.Context, id, status string, lastError *string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkScheduledFailed", ctx, id, status, lastError)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// MarkScheduledFailed indicates an expected call of MarkScheduledFailed.
+func (mr *MockMessageRepoMockRecorder) MarkScheduledFailed(ctx, id, status, lastError any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkScheduledFailed", reflect.TypeOf((*MockMessageRepo)(nil).MarkScheduledFailed), ctx, id, status, lastError)
+}
+
+// PromoteDraft mocks base method.
+func (m *MockMessageRepo) PromoteDraft(ctx context.Context, id, accountID, kind string, sequence int64, approvedByAccountUserID, preview *string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PromoteDraft", ctx, id, accountID, kind, sequence, approvedByAccountUserID, preview)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// PromoteDraft indicates an expected call of PromoteDraft.
+func (mr *MockMessageRepoMockRecorder) PromoteDraft(ctx, id, accountID, kind, sequence, approvedByAccountUserID, preview any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PromoteDraft", reflect.TypeOf((*MockMessageRepo)(nil).PromoteDraft), ctx, id, accountID, kind, sequence, approvedByAccountUserID, preview)
+}
+
+// PromoteScheduled mocks base method.
+func (m *MockMessageRepo) PromoteScheduled(ctx context.Context, id string, sequence int64) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PromoteScheduled", ctx, id, sequence)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// PromoteScheduled indicates an expected call of PromoteScheduled.
+func (mr *MockMessageRepoMockRecorder) PromoteScheduled(ctx, id, sequence any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PromoteScheduled", reflect.TypeOf((*MockMessageRepo)(nil).PromoteScheduled), ctx, id, sequence)
+}
+
+// SetDraftStatus mocks base method.
+func (m *MockMessageRepo) SetDraftStatus(ctx context.Context, id, accountID, status string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetDraftStatus", ctx, id, accountID, status)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// SetDraftStatus indicates an expected call of SetDraftStatus.
+func (mr *MockMessageRepoMockRecorder) SetDraftStatus(ctx, id, accountID, status any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDraftStatus", reflect.TypeOf((*MockMessageRepo)(nil).SetDraftStatus), ctx, id, accountID, status)
+}
+
+// SetStreamingBody mocks base method.
+func (m *MockMessageRepo) SetStreamingBody(ctx context.Context, id, accountID string, body, preview *string, state string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetStreamingBody", ctx, id, accountID, body, preview, state)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// SetStreamingBody indicates an expected call of SetStreamingBody.
+func (mr *MockMessageRepoMockRecorder) SetStreamingBody(ctx, id, accountID, body, preview, state any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetStreamingBody", reflect.TypeOf((*MockMessageRepo)(nil).SetStreamingBody), ctx, id, accountID, body, preview, state)
+}
+
+// SoftDelete mocks base method.
+func (m *MockMessageRepo) SoftDelete(ctx context.Context, id, accountID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SoftDelete", ctx, id, accountID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SoftDelete indicates an expected call of SoftDelete.
+func (mr *MockMessageRepoMockRecorder) SoftDelete(ctx, id, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SoftDelete", reflect.TypeOf((*MockMessageRepo)(nil).SoftDelete), ctx, id, accountID)
+}
+
+// SupersedeDraftsForThread mocks base method.
+func (m *MockMessageRepo) SupersedeDraftsForThread(ctx context.Context, conversationID, sourceThreadMessageID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SupersedeDraftsForThread", ctx, conversationID, sourceThreadMessageID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SupersedeDraftsForThread indicates an expected call of SupersedeDraftsForThread.
+func (mr *MockMessageRepoMockRecorder) SupersedeDraftsForThread(ctx, conversationID, sourceThreadMessageID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SupersedeDraftsForThread", reflect.TypeOf((*MockMessageRepo)(nil).SupersedeDraftsForThread), ctx, conversationID, sourceThreadMessageID)
+}
+
+// UpdateBody mocks base method.
+func (m *MockMessageRepo) UpdateBody(ctx context.Context, id, accountID string, body, preview *string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateBody", ctx, id, accountID, body, preview)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// UpdateBody indicates an expected call of UpdateBody.
+func (mr *MockMessageRepoMockRecorder) UpdateBody(ctx, id, accountID, body, preview any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateBody", reflect.TypeOf((*MockMessageRepo)(nil).UpdateBody), ctx, id, accountID, body, preview)
+}
+
+// UpdateDraftContent mocks base method.
+func (m *MockMessageRepo) UpdateDraftContent(ctx context.Context, id, accountID, body string, subject, preview *string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateDraftContent", ctx, id, accountID, body, subject, preview)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// UpdateDraftContent indicates an expected call of UpdateDraftContent.
+func (mr *MockMessageRepoMockRecorder) UpdateDraftContent(ctx, id, accountID, body, subject, preview any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDraftContent", reflect.TypeOf((*MockMessageRepo)(nil).UpdateDraftContent), ctx, id, accountID, body, subject, preview)
+}
+
+// MockMessageReportRepo is a mock of MessageReportRepo interface.
+type MockMessageReportRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockMessageReportRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockMessageReportRepoMockRecorder is the mock recorder for MockMessageReportRepo.
+type MockMessageReportRepoMockRecorder struct {
+	mock *MockMessageReportRepo
+}
+
+// NewMockMessageReportRepo creates a new mock instance.
+func NewMockMessageReportRepo(ctrl *gomock.Controller) *MockMessageReportRepo {
+	mock := &MockMessageReportRepo{ctrl: ctrl}
+	mock.recorder = &MockMessageReportRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockMessageReportRepo) EXPECT() *MockMessageReportRepoMockRecorder {
+	return m.recorder
+}
+
+// Create mocks base method.
+func (m *MockMessageReportRepo) Create(ctx context.Context, report *domain.MessageReport) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", ctx, report)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockMessageReportRepoMockRecorder) Create(ctx, report any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockMessageReportRepo)(nil).Create), ctx, report)
+}
+
+// MockBlockRepo is a mock of BlockRepo interface.
+type MockBlockRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockBlockRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockBlockRepoMockRecorder is the mock recorder for MockBlockRepo.
+type MockBlockRepoMockRecorder struct {
+	mock *MockBlockRepo
+}
+
+// NewMockBlockRepo creates a new mock instance.
+func NewMockBlockRepo(ctrl *gomock.Controller) *MockBlockRepo {
+	mock := &MockBlockRepo{ctrl: ctrl}
+	mock.recorder = &MockBlockRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockBlockRepo) EXPECT() *MockBlockRepoMockRecorder {
+	return m.recorder
+}
+
+// Create mocks base method.
+func (m *MockBlockRepo) Create(ctx context.Context, id, accountID, blockerAccountUserID, blockedAccountUserID string) (*domain.MessageBlock, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", ctx, id, accountID, blockerAccountUserID, blockedAccountUserID)
+	ret0, _ := ret[0].(*domain.MessageBlock)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockBlockRepoMockRecorder) Create(ctx, id, accountID, blockerAccountUserID, blockedAccountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockBlockRepo)(nil).Create), ctx, id, accountID, blockerAccountUserID, blockedAccountUserID)
+}
+
+// Delete mocks base method.
+func (m *MockBlockRepo) Delete(ctx context.Context, blockerAccountUserID, blockedAccountUserID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", ctx, blockerAccountUserID, blockedAccountUserID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockBlockRepoMockRecorder) Delete(ctx, blockerAccountUserID, blockedAccountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockBlockRepo)(nil).Delete), ctx, blockerAccountUserID, blockedAccountUserID)
+}
+
+// ExistsBetween mocks base method.
+func (m *MockBlockRepo) ExistsBetween(ctx context.Context, a, b string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExistsBetween", ctx, a, b)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ExistsBetween indicates an expected call of ExistsBetween.
+func (mr *MockBlockRepoMockRecorder) ExistsBetween(ctx, a, b any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExistsBetween", reflect.TypeOf((*MockBlockRepo)(nil).ExistsBetween), ctx, a, b)
+}
+
+// List mocks base method.
+func (m *MockBlockRepo) List(ctx context.Context, blockerAccountUserID string) ([]*domain.MessageBlock, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, blockerAccountUserID)
+	ret0, _ := ret[0].([]*domain.MessageBlock)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockBlockRepoMockRecorder) List(ctx, blockerAccountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockBlockRepo)(nil).List), ctx, blockerAccountUserID)
+}
+
+// MockMessageAttachmentRepo is a mock of MessageAttachmentRepo interface.
+type MockMessageAttachmentRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockMessageAttachmentRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockMessageAttachmentRepoMockRecorder is the mock recorder for MockMessageAttachmentRepo.
+type MockMessageAttachmentRepoMockRecorder struct {
+	mock *MockMessageAttachmentRepo
+}
+
+// NewMockMessageAttachmentRepo creates a new mock instance.
+func NewMockMessageAttachmentRepo(ctrl *gomock.Controller) *MockMessageAttachmentRepo {
+	mock := &MockMessageAttachmentRepo{ctrl: ctrl}
+	mock.recorder = &MockMessageAttachmentRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockMessageAttachmentRepo) EXPECT() *MockMessageAttachmentRepoMockRecorder {
+	return m.recorder
+}
+
+// Create mocks base method.
+func (m *MockMessageAttachmentRepo) Create(ctx context.Context, a *domain.MessageAttachment) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", ctx, a)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockMessageAttachmentRepoMockRecorder) Create(ctx, a any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockMessageAttachmentRepo)(nil).Create), ctx, a)
+}
+
+// DeleteByID mocks base method.
+func (m *MockMessageAttachmentRepo) DeleteByID(ctx context.Context, id string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteByID", ctx, id)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// DeleteByID indicates an expected call of DeleteByID.
+func (mr *MockMessageAttachmentRepoMockRecorder) DeleteByID(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteByID", reflect.TypeOf((*MockMessageAttachmentRepo)(nil).DeleteByID), ctx, id)
+}
+
+// ListByConversation mocks base method.
+func (m *MockMessageAttachmentRepo) ListByConversation(ctx context.Context, conversationID string) ([]*domain.MessageAttachment, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListByConversation", ctx, conversationID)
+	ret0, _ := ret[0].([]*domain.MessageAttachment)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListByConversation indicates an expected call of ListByConversation.
+func (mr *MockMessageAttachmentRepoMockRecorder) ListByConversation(ctx, conversationID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByConversation", reflect.TypeOf((*MockMessageAttachmentRepo)(nil).ListByConversation), ctx, conversationID)
+}
+
+// ListByMessageIDs mocks base method.
+func (m *MockMessageAttachmentRepo) ListByMessageIDs(ctx context.Context, messageIDs []string) ([]*domain.MessageAttachment, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListByMessageIDs", ctx, messageIDs)
+	ret0, _ := ret[0].([]*domain.MessageAttachment)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListByMessageIDs indicates an expected call of ListByMessageIDs.
+func (mr *MockMessageAttachmentRepoMockRecorder) ListByMessageIDs(ctx, messageIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByMessageIDs", reflect.TypeOf((*MockMessageAttachmentRepo)(nil).ListByMessageIDs), ctx, messageIDs)
+}
+
+// MockNotificationPreferenceRepo is a mock of NotificationPreferenceRepo interface.
+type MockNotificationPreferenceRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockNotificationPreferenceRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockNotificationPreferenceRepoMockRecorder is the mock recorder for MockNotificationPreferenceRepo.
+type MockNotificationPreferenceRepoMockRecorder struct {
+	mock *MockNotificationPreferenceRepo
+}
+
+// NewMockNotificationPreferenceRepo creates a new mock instance.
+func NewMockNotificationPreferenceRepo(ctrl *gomock.Controller) *MockNotificationPreferenceRepo {
+	mock := &MockNotificationPreferenceRepo{ctrl: ctrl}
+	mock.recorder = &MockNotificationPreferenceRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockNotificationPreferenceRepo) EXPECT() *MockNotificationPreferenceRepoMockRecorder {
+	return m.recorder
+}
+
+// GetByUserCategory mocks base method.
+func (m *MockNotificationPreferenceRepo) GetByUserCategory(ctx context.Context, accountUserID, category string) (*domain.NotificationPreference, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByUserCategory", ctx, accountUserID, category)
+	ret0, _ := ret[0].(*domain.NotificationPreference)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetByUserCategory indicates an expected call of GetByUserCategory.
+func (mr *MockNotificationPreferenceRepoMockRecorder) GetByUserCategory(ctx, accountUserID, category any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByUserCategory", reflect.TypeOf((*MockNotificationPreferenceRepo)(nil).GetByUserCategory), ctx, accountUserID, category)
+}
+
+// GetEffective mocks base method.
+func (m *MockNotificationPreferenceRepo) GetEffective(ctx context.Context, accountUserID, category string) (*domain.EffectiveNotificationPreference, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEffective", ctx, accountUserID, category)
+	ret0, _ := ret[0].(*domain.EffectiveNotificationPreference)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetEffective indicates an expected call of GetEffective.
+func (mr *MockNotificationPreferenceRepoMockRecorder) GetEffective(ctx, accountUserID, category any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEffective", reflect.TypeOf((*MockNotificationPreferenceRepo)(nil).GetEffective), ctx, accountUserID, category)
+}
+
+// List mocks base method.
+func (m *MockNotificationPreferenceRepo) List(ctx context.Context, accountUserID string) ([]*domain.NotificationPreference, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, accountUserID)
+	ret0, _ := ret[0].([]*domain.NotificationPreference)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockNotificationPreferenceRepoMockRecorder) List(ctx, accountUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockNotificationPreferenceRepo)(nil).List), ctx, accountUserID)
+}
+
+// Upsert mocks base method.
+func (m *MockNotificationPreferenceRepo) Upsert(ctx context.Context, id, accountID, accountUserID string, input *domain.UpsertNotificationPreferenceInput) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Upsert", ctx, id, accountID, accountUserID, input)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Upsert indicates an expected call of Upsert.
+func (mr *MockNotificationPreferenceRepoMockRecorder) Upsert(ctx, id, accountID, accountUserID, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upsert", reflect.TypeOf((*MockNotificationPreferenceRepo)(nil).Upsert), ctx, id, accountID, accountUserID, input)
+}
+
+// MockDeletedRecordRepo is a mock of DeletedRecordRepo interface.
+type MockDeletedRecordRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockDeletedRecordRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockDeletedRecordRepoMockRecorder is the mock recorder for MockDeletedRecordRepo.
+type MockDeletedRecordRepoMockRecorder struct {
+	mock *MockDeletedRecordRepo
+}
+
+// NewMockDeletedRecordRepo creates a new mock instance.
+func NewMockDeletedRecordRepo(ctrl *gomock.Controller) *MockDeletedRecordRepo {
+	mock := &MockDeletedRecordRepo{ctrl: ctrl}
+	mock.recorder = &MockDeletedRecordRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockDeletedRecordRepo) EXPECT() *MockDeletedRecordRepoMockRecorder {
+	return m.recorder
+}
+
+// Create mocks base method.
+func (m *MockDeletedRecordRepo) Create(ctx context.Context, resourceType constants.DeletedRecordResourceType, resourceID string, data any) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", ctx, resourceType, resourceID, data)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockDeletedRecordRepoMockRecorder) Create(ctx, resourceType, resourceID, data any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockDeletedRecordRepo)(nil).Create), ctx, resourceType, resourceID, data)
+}
+
+// Exists mocks base method.
+func (m *MockDeletedRecordRepo) Exists(ctx context.Context, resourceType constants.DeletedRecordResourceType, resourceID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Exists", ctx, resourceType, resourceID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Exists indicates an expected call of Exists.
+func (mr *MockDeletedRecordRepoMockRecorder) Exists(ctx, resourceType, resourceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exists", reflect.TypeOf((*MockDeletedRecordRepo)(nil).Exists), ctx, resourceType, resourceID)
 }
 
 // MockIdempotencyKeyRepo is a mock of IdempotencyKeyRepo interface.

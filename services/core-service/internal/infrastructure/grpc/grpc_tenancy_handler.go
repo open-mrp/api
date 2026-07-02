@@ -85,6 +85,7 @@ func tenancyCurrentAccountToProto(ca *domain.TenancyCurrentAccount) *pb.TenancyC
 		Role:                     tenancyRoleToProto(ca.Role),
 		InternalStripeCustomerId: ca.InternalStripeCustomerID,
 		AccountPlan:              tenancyAccountPlanToProto(ca.AccountPlan),
+		AccountUserId:            ca.AccountUserID,
 	}
 	if ca.Slug != nil {
 		proto.Slug = ca.Slug

@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -57,13 +58,15 @@ type CreatePartEndpoint struct{}
 
 func (e *CreatePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePartRequest, *apiresource.Part] {
 	return (&apiendpoint.APIEndpoint[*CreatePartRequest, *apiresource.Part]{
-		Title:             "Create Part",
-		Method:            http.MethodPost,
-		Route:             "/v1/catalog/parts",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusCreated,
-		Public:            true,
-		Preview:           true,
+		Title:               "Create Part",
+		Method:              http.MethodPost,
+		Route:               "/v1/catalog/parts",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusCreated,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainParts, Action: types.ActionCreate}, {Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate}},
+		Preview:             true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreatePartRequest) (*apiresource.Part, *apierror.APIError) {
 			return svc.(PartSvc).CreatePart
 		},

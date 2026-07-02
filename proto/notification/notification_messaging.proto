@@ -1,0 +1,237 @@
+syntax = "proto3";
+
+// MessagingService is the in-app notifications + messaging (chat) contract for the
+// notification-service. This file covers the Phase-1 surface: the per-user notification
+// "bell" feed (list, unread count, seen/read/dismiss) and admin/system notification
+// sends (targeted or broadcast). Conversations, messages, participants, and the realtime
+// path are added in later phases.
+//
+// Caller identity is propagated over gRPC metadata (see shared/rpc, shared/appctx); the
+// service derives the recipient from identity.actor.id and the tenant from
+// identity.target.account_id. Requests therefore do not embed the recipient/account.
+package notification;
+
+option go_package = "shared/proto/notification;notification";
+
+import "google/protobuf/timestamp.proto";
+
+service MessagingService {
+  // SendNotification creates a notification for a single target user, or fans out a
+  // broadcast to all active users in the account. Admin/system only.
+  rpc SendNotification(SendNotificationRequest) returns (SendNotificationResponse);
+
+  // ListNotifications returns the caller's notification feed (cursor-paginated).
+  rpc ListNotifications(ListNotificationsRequest) returns (ListNotificationsResponse);
+
+  // GetNotification returns a single notification owned by the caller.
+  rpc GetNotification(GetNotificationRequest) returns (NotificationInfo);
+
+  // GetUnreadCount returns the caller's unread tallies (bell + conversations + total).
+  rpc GetUnreadCount(GetUnreadCountRequest) returns (GetUnreadCountResponse);
+
+  // GetUnreadSummary returns the caller's unread totals across every account they belong to.
+  rpc GetUnreadSummary(GetUnreadSummaryRequest) returns (GetUnreadSummaryResponse);
+
+  // MarkNotificationSeen sets seen_at (idempotent). "Seen" = surfaced in the dropdown.
+  rpc MarkNotificationSeen(MarkNotificationRequest) returns (NotificationInfo);
+  // MarkNotificationRead sets read_at (idempotent). "Read" = explicitly opened.
+  rpc MarkNotificationRead(MarkNotificationRequest) returns (NotificationInfo);
+  // MarkNotificationDismissed sets dismissed_at (idempotent). "Dismissed" = swiped away.
+  rpc MarkNotificationDismissed(MarkNotificationRequest) returns (NotificationInfo);
+  // MarkAllNotificationsSeen marks every unseen notification for the caller as seen.
+  rpc MarkAllNotificationsSeen(MarkAllNotificationsSeenRequest) returns (MarkAllNotificationsSeenResponse);
+
+  // ListAnnouncements returns the caller's active broadcast announcements (cursor-paginated).
+  rpc ListAnnouncements(ListAnnouncementsRequest) returns (ListAnnouncementsResponse);
+  // GetAnnouncement returns a single active announcement visible to the caller.
+  rpc GetAnnouncement(GetAnnouncementRequest) returns (AnnouncementInfo);
+  // MarkAnnouncementSeen/Read/Dismissed transition the caller's per-user receipt (idempotent).
+  rpc MarkAnnouncementSeen(MarkAnnouncementRequest) returns (AnnouncementInfo);
+  rpc MarkAnnouncementRead(MarkAnnouncementRequest) returns (AnnouncementInfo);
+  rpc MarkAnnouncementDismissed(MarkAnnouncementRequest) returns (AnnouncementInfo);
+
+  // ── Phase 4: notification channel preferences ──
+  // ListNotificationPreferences returns the caller's channel preferences (global + per-category).
+  rpc ListNotificationPreferences(ListNotificationPreferencesRequest) returns (ListNotificationPreferencesResponse);
+  // UpsertNotificationPreference creates or replaces the caller's preference for a category.
+  rpc UpsertNotificationPreference(UpsertNotificationPreferenceRequest) returns (NotificationPreferenceInfo);
+}
+
+message NotificationPreferenceInfo {
+  string id = 1;
+  string account_id = 2;
+  string account_user_id = 3;
+  string category = 4; // empty = global default
+  bool in_app_enabled = 5;
+  bool email_enabled = 6;
+  bool push_enabled = 7;
+  string digest = 8; // instant | hourly | daily | off
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+message ListNotificationPreferencesRequest {}
+
+message ListNotificationPreferencesResponse {
+  repeated NotificationPreferenceInfo preferences = 1;
+}
+
+message UpsertNotificationPreferenceRequest {
+  string category = 1; // empty = global default
+  bool in_app_enabled = 2;
+  bool email_enabled = 3;
+  bool push_enabled = 4;
+  string digest = 5;
+}
+
+// NotificationInfo is the wire representation of a per-user bell-feed notification.
+message NotificationInfo {
+  string id = 1;
+  string account_id = 2;
+  string recipient_account_user_id = 3;
+  string category = 4;
+  optional string source_message_id = 5;
+  optional string conversation_id = 6;
+  string title = 7;
+  optional string body = 8;
+  optional string template_key = 9;
+  bytes template_params = 10; // raw JSON; absent when empty
+  optional string link_resource_type = 11;
+  optional string link_resource_id = 12;
+  string priority = 13;
+  optional google.protobuf.Timestamp seen_at = 14;
+  optional google.protobuf.Timestamp read_at = 15;
+  optional google.protobuf.Timestamp dismissed_at = 16;
+  google.protobuf.Timestamp created_at = 17;
+  google.protobuf.Timestamp updated_at = 18;
+  // Polymorphic sender: user | group | system | agent | apikey.
+  optional string sender_type = 19;
+  optional string sender_id = 20;
+  optional string sender_name = 21;
+}
+
+// PageInfo carries keyset pagination cursors (notification package scope).
+message PageInfo {
+  optional string next_cursor = 1;
+  optional string prev_cursor = 2;
+  bool has_next_page = 3;
+  bool has_prev_page = 4;
+}
+
+message SendNotificationRequest {
+  string category = 1;
+  // Polymorphic target. target_type is "account_user" (one user) or "account" (broadcast to
+  // all users in the account); target_id is the corresponding id.
+  string target_type = 2;
+  string target_id = 3;
+  string title = 4;
+  optional string body = 5;
+  optional string template_key = 6;
+  bytes template_params = 7;
+  optional string link_resource_type = 8;
+  optional string link_resource_id = 9;
+  optional string priority = 10;
+  // Sender attribution is derived from the caller's identity by the service, not supplied
+  // by the client.
+}
+
+message SendNotificationResponse {
+  // enqueued is the number of notifications created (1 for targeted) or recipients
+  // enqueued for fan-out (broadcast).
+  int64 enqueued = 1;
+}
+
+message ListNotificationsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string category = 3;
+  // Filter by lifecycle status: "unseen", "seen", "read", or "dismissed". Omit for the
+  // default active feed (all non-dismissed notifications).
+  optional string status = 4;
+  // Free-text search over title/body.
+  optional string search = 5;
+  // Filter by sender id(s).
+  repeated string sender_ids = 6;
+  // Filter by sender type(s): user | group | system | agent | apikey.
+  repeated string sender_types = 7;
+}
+
+message ListNotificationsResponse {
+  repeated NotificationInfo notifications = 1;
+  PageInfo page_info = 2;
+}
+
+message GetNotificationRequest {
+  string id = 1;
+}
+
+message GetUnreadCountRequest {}
+
+message GetUnreadCountResponse {
+  int64 notifications = 1;
+  int64 conversations = 2;
+  int64 total = 3;
+}
+
+message GetUnreadSummaryRequest {}
+
+message UnreadSummaryAccount {
+  string account_id = 1;
+  int64 unread = 2;
+}
+
+message GetUnreadSummaryResponse {
+  int64 total = 1;
+  repeated UnreadSummaryAccount accounts = 2;
+}
+
+message MarkNotificationRequest {
+  string id = 1;
+}
+
+message MarkAllNotificationsSeenRequest {}
+
+message MarkAllNotificationsSeenResponse {
+  int64 updated = 1;
+}
+
+// AnnouncementInfo is the wire representation of a broadcast announcement plus the caller's
+// per-user receipt state.
+message AnnouncementInfo {
+  string id = 1;
+  string scope = 2; // platform | account
+  optional string account_id = 3;
+  string category = 4;
+  optional string template_key = 5;
+  bytes template_params = 6; // raw JSON; absent when empty
+  string title = 7;
+  optional string body = 8;
+  optional string link_resource_type = 9;
+  optional string link_resource_id = 10;
+  string priority = 11;
+  google.protobuf.Timestamp publish_at = 12;
+  optional google.protobuf.Timestamp expires_at = 13;
+  google.protobuf.Timestamp created_at = 14;
+  google.protobuf.Timestamp updated_at = 15;
+  optional google.protobuf.Timestamp seen_at = 16;
+  optional google.protobuf.Timestamp read_at = 17;
+  optional google.protobuf.Timestamp dismissed_at = 18;
+}
+
+message ListAnnouncementsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+}
+
+message ListAnnouncementsResponse {
+  repeated AnnouncementInfo announcements = 1;
+  PageInfo page_info = 2;
+}
+
+message GetAnnouncementRequest {
+  string id = 1;
+}
+
+message MarkAnnouncementRequest {
+  string id = 1;
+}

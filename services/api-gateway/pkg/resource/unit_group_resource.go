@@ -14,7 +14,9 @@ type UnitGroup struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=unit_group"`
-	// Display name.
+	// Display name of the unit group.
+	//
+	// Unique within the account.
 	Name string `json:"name" validate:"required"`
 	// Free-form notes about the unit group.
 	Notes *string `json:"notes"`

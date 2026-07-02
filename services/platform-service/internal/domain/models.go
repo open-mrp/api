@@ -67,8 +67,7 @@ type IdempotencyKey struct {
 	StepData        json.RawMessage
 }
 
-// RequestLogRead is the enriched read model for request logs, including
-// resolved actor details, account name, and idempotency key value.
+// RequestLogRead is the enriched read model for request logs, including resolved actor details, account name, and idempotency key value.
 type RequestLogRead struct {
 	ID               string
 	Method           string
@@ -116,10 +115,7 @@ type ListRequestLogsFilter struct {
 	StatusCodes       []int32
 	StatusCodeClasses []int32
 	ErrorCodes        []string
-	// ActorAccountIDs filters by request_log.account_id: the account the actor
-	// belongs to. TargetAccountIDs filters by request_log.target_account_id: the
-	// account the request acted upon. Both narrow within the caller's
-	// actor-or-target security scope.
+	// ActorAccountIDs filters by request_log.account_id: the account the actor belongs to. TargetAccountIDs filters by request_log.target_account_id: the account the request acted upon. Both narrow within the caller's actor-or-target security scope.
 	ActorAccountIDs  []string
 	TargetAccountIDs []string
 	ActorIDs         []string
@@ -187,8 +183,7 @@ type AuditEvent struct {
 	IdentityType string
 	AccountID    string
 	// TargetAccountID is the account the audited mutation was performed against
-	// (the Augno-Account targeted by the originating request). Nullable until the
-	// backfill + non-null migration land.
+	// (the Augno-Account targeted by the originating request). Nullable until the backfill + non-null migration land.
 	TargetAccountID *string
 
 	Action       constants.AuditAction
@@ -209,8 +204,7 @@ type AuditEvent struct {
 type AuditEventRead struct {
 	AuditEvent
 	Actor *AuditActor
-	// Target account details, resolved from target_account_id for the `account`
-	// sub-resource. Nil when the event has no target account (pre-backfill rows).
+	// Target account details, resolved from target_account_id for the `account` sub-resource. Nil when the event has no target account (pre-backfill rows).
 	AccountName      *string
 	AccountCreatedAt *time.Time
 	AccountUpdatedAt *time.Time
@@ -223,11 +217,9 @@ type ListAuditEventsFilter struct {
 	ResourceTypes []string
 	ResourceIDs   []string
 	ActorIDs      []string
+	ActorTypes    []string
 	Actions       []string
-	// ActorAccountIDs filters by audit_event.account_id: the account that
-	// performed the mutation. TargetAccountIDs filters by
-	// audit_event.target_account_id: the account the mutation targeted. Both
-	// narrow within the caller's actor-or-target security scope.
+	// ActorAccountIDs filters by audit_event.account_id: the account that performed the mutation. TargetAccountIDs filters by audit_event.target_account_id: the account the mutation targeted. Both narrow within the caller's actor-or-target security scope.
 	ActorAccountIDs  []string
 	TargetAccountIDs []string
 	Query            *string

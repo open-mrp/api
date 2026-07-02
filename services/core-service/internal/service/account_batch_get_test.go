@@ -48,7 +48,13 @@ func TestBatchGetAccountsByIDs_FiltersToCallerAccount(t *testing.T) {
 		GetByIDs(gomock.Any(), []string{targetAcct}).
 		Return(nil, nil)
 
-	svc := &accountSvcImpl{accountRepo: mockRepo}
+	// The smuggled ids are checked for an account_relation; with none, they are
+	// dropped and never reach GetByIDs.
+	mockRelationRepo := repositorymock.NewMockAccountRelationRepo(ctrl)
+	mockRelationRepo.EXPECT().HasRelation(gomock.Any(), targetAcct, "acct_other_1").Return(false, nil)
+	mockRelationRepo.EXPECT().HasRelation(gomock.Any(), targetAcct, "acct_other_2").Return(false, nil)
+
+	svc := &accountSvcImpl{accountRepo: mockRepo, accountRelationRepo: mockRelationRepo}
 
 	ctx := internalAdminCtx(targetAcct)
 	_, apiErr := svc.BatchGetAccountsByIDs(ctx, []string{
@@ -71,7 +77,13 @@ func TestBatchGetAccountsByIDs_NoMatchingIDs_ShortCircuits(t *testing.T) {
 	mockRepo := repositorymock.NewMockAccountRepo(ctrl)
 	// Zero EXPECT calls — repo must not be touched.
 
-	svc := &accountSvcImpl{accountRepo: mockRepo}
+	// Both smuggled ids have no relation to the caller, so after filtering the
+	// allowed set is empty and the account repo is never consulted.
+	mockRelationRepo := repositorymock.NewMockAccountRelationRepo(ctrl)
+	mockRelationRepo.EXPECT().HasRelation(gomock.Any(), targetAcct, "acct_other_1").Return(false, nil)
+	mockRelationRepo.EXPECT().HasRelation(gomock.Any(), targetAcct, "acct_other_2").Return(false, nil)
+
+	svc := &accountSvcImpl{accountRepo: mockRepo, accountRelationRepo: mockRelationRepo}
 	ctx := internalAdminCtx(targetAcct)
 	result, apiErr := svc.BatchGetAccountsByIDs(ctx, []string{"acct_other_1", "acct_other_2"})
 	require.Nil(t, apiErr)

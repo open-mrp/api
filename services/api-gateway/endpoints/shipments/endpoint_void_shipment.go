@@ -6,6 +6,8 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	types "github.com/augno/api/services/auth-service/pkg/types"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -22,13 +24,15 @@ type VoidShipmentEndpoint struct{}
 
 func (e *VoidShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*VoidShipmentRequest, *apiresource.Shipment] {
 	return (&apiendpoint.APIEndpoint[*VoidShipmentRequest, *apiresource.Shipment]{
-		Title:             "Void Shipment",
-		Method:            http.MethodPost,
-		Route:             "/v1/operations/shipments/{id}/actions/void",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
+		Title:               "Void Shipment",
+		Method:              http.MethodPost,
+		Route:               "/v1/operations/shipments/{id}/actions/void",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainShipments, Action: types.ActionUpdate}},
+		ObjectType:          constants.ObjectTypeShipment,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *VoidShipmentRequest) (*apiresource.Shipment, *apierror.APIError) {
 			return svc.(ShipmentSvc).VoidShipment
 		},

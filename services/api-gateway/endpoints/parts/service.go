@@ -167,8 +167,10 @@ func (m *partSvcImpl) DeletePart(ctx context.Context, req *DeletePartRequest) (*
 		return nil, apiErr
 	}
 
-	result := PartPresenter(resp.Part)
-	return &result, nil
+	// Gated build: the expandable item stays nil and populates only when the caller requests it via ?include=item. PartPresenter would embed it unconditionally and is reserved for the Excel export path.
+	result := resourceloaders.PartFromProto(resp.Part)
+	resourceloaders.StashPartMeta(ctx, resp.Part)
+	return result, nil
 }
 
 func (m *partSvcImpl) ExportParts(ctx context.Context, req *ExportPartsRequest) (*httptransport.FileDownload, *apierror.APIError) {

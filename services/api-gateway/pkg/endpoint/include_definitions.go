@@ -21,19 +21,27 @@ func init() {
 	})
 
 	RegisterIncludes(&ObjectIncludes{
-		ObjectType: constants.ObjectTypeAgentAlert,
+		ObjectType: constants.ObjectTypeAgentRun,
 		Fields: []IncludeFieldDef{
-			{Key: "run", ObjectType: constants.ObjectTypeAgentRun},
-			{Key: "action", ObjectType: constants.ObjectTypeAgentAction},
+			{Key: "triggered_by", ObjectType: constants.ObjectTypeActor},
+			{Key: "actions", ObjectType: constants.ObjectTypeAgentAction},
+			{Key: "definition", ObjectType: constants.ObjectTypeAgentDefinition},
+			{Key: "steps", ObjectType: constants.ObjectTypeAgentRunStep},
 		},
 	})
 
 	RegisterIncludes(&ObjectIncludes{
-		ObjectType: constants.ObjectTypeAgentRun,
+		ObjectType: constants.ObjectTypeNotification,
 		Fields: []IncludeFieldDef{
-			{Key: "actions", ObjectType: constants.ObjectTypeAgentAction},
-			{Key: "definition", ObjectType: constants.ObjectTypeAgentDefinition},
-			{Key: "steps", ObjectType: constants.ObjectTypeAgentRunStep},
+			{Key: "sender", ObjectType: constants.ObjectTypeActor},
+			{Key: "resource", ObjectType: constants.ObjectTypeEntity},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeAnnouncement,
+		Fields: []IncludeFieldDef{
+			{Key: "resource", ObjectType: constants.ObjectTypeEntity},
 		},
 	})
 
@@ -102,6 +110,37 @@ func init() {
 			{Key: "user", ObjectType: constants.ObjectTypeUser},
 			{Key: "role", ObjectType: constants.ObjectTypeRole},
 			{Key: "department", ObjectType: constants.ObjectTypeDepartment},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeContactMatch,
+		Fields: []IncludeFieldDef{
+			{
+				Key:        "account_user",
+				ObjectType: constants.ObjectTypeAccountUser,
+				Children: []IncludeFieldDef{
+					{Key: "user", ObjectType: constants.ObjectTypeUser},
+					{Key: "role", ObjectType: constants.ObjectTypeRole},
+					{Key: "department", ObjectType: constants.ObjectTypeDepartment},
+				},
+			},
+			{Key: "account", ObjectType: constants.ObjectTypeAccount},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeMessagingBlock,
+		Fields: []IncludeFieldDef{
+			{
+				Key:        "blocked_user",
+				ObjectType: constants.ObjectTypeAccountUser,
+				Children: []IncludeFieldDef{
+					{Key: "user", ObjectType: constants.ObjectTypeUser},
+					{Key: "role", ObjectType: constants.ObjectTypeRole},
+					{Key: "department", ObjectType: constants.ObjectTypeDepartment},
+				},
+			},
 		},
 	})
 
@@ -671,6 +710,59 @@ func init() {
 		ObjectType: constants.ObjectTypeProductionFlow,
 		Fields: []IncludeFieldDef{
 			{Key: "steps", ObjectType: constants.ObjectTypeProductionStep},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeConversation,
+		Fields: []IncludeFieldDef{
+			{Key: "assignee", ObjectType: constants.ObjectTypeActor},
+			{Key: "group", ObjectType: constants.ObjectTypeMessagingGroup},
+			{Key: "participants", ObjectType: constants.ObjectTypeConversationParticipant},
+			{Key: "topic", ObjectType: constants.ObjectTypeEntity},
+			{Key: "last_message", ObjectType: constants.ObjectTypeChatMessage},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeConversationLink,
+		Fields: []IncludeFieldDef{
+			{Key: "conversation", ObjectType: constants.ObjectTypeConversation},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeChatMessage,
+		Fields: []IncludeFieldDef{
+			{Key: "sender", ObjectType: constants.ObjectTypeActor},
+			{Key: "author", ObjectType: constants.ObjectTypeActor},
+			{Key: "resource", ObjectType: constants.ObjectTypeEntity},
+			{Key: "attachments", ObjectType: constants.ObjectTypeMessageAttachment},
+			{Key: "conversation", ObjectType: constants.ObjectTypeConversation},
+			{Key: "reply_to", ObjectType: constants.ObjectTypeChatMessage},
+			{Key: "agent_run", ObjectType: constants.ObjectTypeAgentRun},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeMessageAttachment,
+		Fields: []IncludeFieldDef{
+			{Key: "resource", ObjectType: constants.ObjectTypeEntity},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeAttachmentUploadTarget,
+		Fields: []IncludeFieldDef{
+			{Key: "attachment", ObjectType: constants.ObjectTypeMessageAttachment},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeEmailInbox,
+		Fields: []IncludeFieldDef{
+			{Key: "email_domain", ObjectType: constants.ObjectTypeEmailDomain},
+			{Key: "agent_config", ObjectType: constants.ObjectTypeAgentDefinition},
 		},
 	})
 }

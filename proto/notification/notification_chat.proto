@@ -1,0 +1,700 @@
+syntax = "proto3";
+
+// ChatService is the conversations + messages (1:1 DM in Phase 2) contract for the
+// notification-service. Identity is propagated over gRPC metadata; reads are participant-scoped.
+package notification;
+
+option go_package = "shared/proto/notification;notification";
+
+import "google/protobuf/timestamp.proto";
+import "notification/notification_messaging.proto";
+
+service ChatService {
+  // CreateConversation creates a DM (deduped by participant pair) or other conversation type.
+  rpc CreateConversation(CreateConversationRequest) returns (ConversationInfo);
+  // ListConversations returns the caller's conversations (most-recently-active first).
+  rpc ListConversations(ListConversationsRequest) returns (ListConversationsResponse);
+  // GetConversation returns one conversation (with participants) the caller belongs to.
+  rpc GetConversation(GetConversationRequest) returns (ConversationInfo);
+  // BatchGetConversations returns the requested conversations the caller belongs to (for ?include= expansion). Conversations the caller cannot access are omitted.
+  rpc BatchGetConversations(BatchGetConversationsRequest) returns (BatchGetConversationsResponse);
+  // ContactSupport returns (creating if needed) the calling customer's support conversation.
+  rpc ContactSupport(ContactSupportRequest) returns (ConversationInfo);
+  // GetSupportAvailability reports whether the calling customer can contact support (the vendor has a
+  // configured route with at least one recipient). The portal gates the feature on this.
+  rpc GetSupportAvailability(GetSupportAvailabilityRequest) returns (SupportAvailabilityInfo);
+
+  // ── Support routing: which group conversation handles a relationship's inbound support ──
+  // SetSupportRoute designates the group conversation that receives a relationship's support; its
+  // participants become the deterministic recipients seated on the customer's support thread.
+  rpc SetSupportRoute(SetSupportRouteRequest) returns (SupportRouteInfo);
+  // ClearSupportRoute removes the route for a scope (account default or a specific relation).
+  rpc ClearSupportRoute(ClearSupportRouteRequest) returns (ChatAck);
+  // GetSupportRoute returns the route for an exact scope in the caller's account, if any.
+  rpc GetSupportRoute(GetSupportRouteRequest) returns (SupportRouteInfo);
+  // SendMessage posts a message (idempotent on client_message_id).
+  rpc SendMessage(SendMessageRequest) returns (MessageInfo);
+  // ListMessages returns a conversation's messages, keyset-paginated by sequence.
+  rpc ListMessages(ListMessagesRequest) returns (ListMessagesResponse);
+  // BatchGetMessages returns the requested messages from conversations the caller belongs to (for ?include= expansion). Messages the caller cannot access are omitted.
+  rpc BatchGetMessages(BatchGetMessagesRequest) returns (BatchGetMessagesResponse);
+  // MarkConversationRead advances the caller's read cursor and returns the unread count.
+  rpc MarkConversationRead(MarkConversationReadRequest) returns (MarkConversationReadResponse);
+  // IsParticipant reports whether the account_user is an active participant (WS authz).
+  rpc IsParticipant(IsParticipantRequest) returns (IsParticipantResponse);
+  // SendTyping broadcasts an ephemeral typing indicator to the conversation's live subscribers.
+  // Best-effort and not persisted (published directly to the realtime fanout, bypassing the outbox).
+  rpc SendTyping(SendTypingRequest) returns (ChatAck);
+
+  // ── Phase 3: group management, lifecycle, edit/delete, blocks ──
+  rpc UpdateConversation(UpdateConversationRequest) returns (ConversationInfo);
+  rpc AddParticipant(AddParticipantRequest) returns (ConversationInfo);
+  rpc RemoveParticipant(RemoveParticipantRequest) returns (ChatAck);
+  rpc UpdateParticipantRole(UpdateParticipantRoleRequest) returns (ConversationInfo);
+  rpc LeaveConversation(LeaveConversationRequest) returns (ChatAck);
+  rpc HideConversation(HideConversationRequest) returns (ChatAck);
+  rpc UnhideConversation(UnhideConversationRequest) returns (ChatAck);
+  rpc SetMute(SetMuteRequest) returns (ConversationInfo);
+  rpc Block(BlockRequest) returns (BlockInfo);
+  rpc Unblock(UnblockRequest) returns (ChatAck);
+  rpc ListBlocks(ListBlocksRequest) returns (ListBlocksResponse);
+
+  // ── Messaging directory + abuse reports ──
+  // ListContacts returns the caller's messageable targets (the messaging directory).
+  rpc ListContacts(ListContactsRequest) returns (ListContactsResponse);
+  // ReportConversation persists a minimal abuse report against a conversation/message.
+  rpc ReportConversation(ReportConversationRequest) returns (MessageReportInfo);
+
+  // ── Phase 4: attachment upload pipeline ──
+  rpc CreateAttachmentUploadURL(CreateAttachmentUploadURLRequest) returns (AttachmentUploadTargetInfo);
+
+  // ── Phase 5: scheduled messages (status=scheduled message rows) ──
+  rpc ScheduleMessage(ScheduleMessageRequest) returns (MessageInfo);
+  rpc ListScheduledMessages(ListScheduledMessagesRequest) returns (ListScheduledMessagesResponse);
+  rpc CancelScheduledMessage(CancelScheduledMessageRequest) returns (MessageInfo);
+
+  // ── Phase 5: agents as participants ──
+  rpc AddAgentParticipant(AddAgentParticipantRequest) returns (ParticipantInfo);
+  rpc RemoveAgentParticipant(RemoveAgentParticipantRequest) returns (ChatAck);
+
+  // ── Phase 6: GDPR redaction + legal hold ──
+  rpc SetLegalHold(SetLegalHoldRequest) returns (ConversationInfo);
+  rpc RedactConversation(RedactConversationRequest) returns (ConversationInfo);
+
+  // ── External customer-service cases: triage, assignment, links, drafts ──
+  // (A staff customer-visible reply is the folded-in SendMessage path, visibility=external.)
+  // UpdateConversationWorkflow sets an external case's triage lane.
+  rpc UpdateConversationWorkflow(UpdateConversationWorkflowRequest) returns (ConversationInfo);
+  // AssignConversation sets or clears the owning user/team for an external case.
+  rpc AssignConversation(AssignConversationRequest) returns (ConversationInfo);
+  // ListInbox lists external customer-facing cases for the support inbox.
+  rpc ListInbox(ListInboxRequest) returns (ListConversationsResponse);
+  // ListConversationsByResource lists conversations linked to a business record (topic or link).
+  rpc ListConversationsByResource(ListConversationsByResourceRequest) returns (ListConversationsResponse);
+  // AddConversationLink links a business record to a conversation.
+  rpc AddConversationLink(AddConversationLinkRequest) returns (ConversationLinkInfo);
+  // RemoveConversationLink removes a business-record link from a conversation.
+  rpc RemoveConversationLink(RemoveConversationLinkRequest) returns (ChatAck);
+  // ListConversationLinks lists a conversation's business-record links.
+  rpc ListConversationLinks(ListConversationLinksRequest) returns (ListConversationLinksResponse);
+  // CreateReplyDraft proposes a customer-reply draft on an external case (a message at status=draft).
+  rpc CreateReplyDraft(CreateReplyDraftRequest) returns (MessageInfo);
+  // ListReplyDrafts lists a case's reply drafts (optionally filtered by status).
+  rpc ListReplyDrafts(ListReplyDraftsRequest) returns (ListReplyDraftsResponse);
+  // UpdateReplyDraft edits a still-open draft's body/subject.
+  rpc UpdateReplyDraft(UpdateReplyDraftRequest) returns (MessageInfo);
+  // RejectReplyDraft discards an open draft without sending.
+  rpc RejectReplyDraft(RejectReplyDraftRequest) returns (MessageInfo);
+  // ApproveAndSendReplyDraft promotes an open draft to a sent customer-visible message in place.
+  rpc ApproveAndSendReplyDraft(ApproveAndSendReplyDraftRequest) returns (MessageInfo);
+
+  // ── Reusable groups (rosters): named member sets that seed many conversations ──
+  // CreateMessagingGroup creates a named roster of users and/or agents.
+  rpc CreateMessagingGroup(CreateMessagingGroupRequest) returns (MessagingGroupInfo);
+  // ListMessagingGroups returns the account's rosters (most-recently-updated first).
+  rpc ListMessagingGroups(ListMessagingGroupsRequest) returns (ListMessagingGroupsResponse);
+  // GetMessagingGroup returns one roster with its members.
+  rpc GetMessagingGroup(GetMessagingGroupRequest) returns (MessagingGroupInfo);
+  // UpdateMessagingGroup renames a roster.
+  rpc UpdateMessagingGroup(UpdateMessagingGroupRequest) returns (MessagingGroupInfo);
+  // DeleteMessagingGroup deletes a roster (nulling group_id on any conversations it seeded).
+  rpc DeleteMessagingGroup(DeleteMessagingGroupRequest) returns (ChatAck);
+  // AddMessagingGroupMember adds a user or agent to a roster.
+  rpc AddMessagingGroupMember(AddMessagingGroupMemberRequest) returns (MessagingGroupInfo);
+  // RemoveMessagingGroupMember removes a member from a roster.
+  rpc RemoveMessagingGroupMember(RemoveMessagingGroupMemberRequest) returns (MessagingGroupInfo);
+}
+
+message SetLegalHoldRequest {
+  string conversation_id = 1;
+  bool legal_hold = 2;
+}
+
+message RedactConversationRequest {
+  string conversation_id = 1;
+}
+
+message AddAgentParticipantRequest {
+  string conversation_id = 1;
+  string agent_config_id = 2;
+  optional string trigger_policy = 3; // mention | keyword | always (default mention)
+  repeated string trigger_keywords = 4;
+}
+
+message RemoveAgentParticipantRequest {
+  string conversation_id = 1;
+  string participant_id = 2;
+}
+
+
+message ScheduleMessageRequest {
+  string conversation_id = 1;
+  string body = 2;
+  google.protobuf.Timestamp scheduled_for = 3;
+}
+
+message ListScheduledMessagesRequest {
+  string conversation_id = 1;
+}
+
+message ListScheduledMessagesResponse {
+  repeated MessageInfo scheduled_messages = 1;
+}
+
+message CancelScheduledMessageRequest {
+  string id = 1;
+}
+
+message CreateAttachmentUploadURLRequest {
+  string conversation_id = 1;
+  string filename = 2;
+  optional string content_type = 3;
+}
+
+message AttachmentUploadTargetInfo {
+  AttachmentInfo attachment = 1;
+  string upload_url = 2;
+  string s3_key = 3;
+  google.protobuf.Timestamp expires_at = 4;
+}
+
+// AttachmentInput is one attachment supplied on a send-message request.
+message AttachmentInput {
+  string kind = 1; // file | image | link | resource
+  optional string s3_key = 2;
+  optional string filename = 3;
+  optional string content_type = 4;
+  optional int64 size_bytes = 5;
+  optional string url = 6;
+  optional string resource_type = 7;
+  optional string resource_id = 8;
+}
+
+// AttachmentInfo is an attachment as returned on a message (url is a presigned download link).
+message AttachmentInfo {
+  string id = 1;
+  string kind = 2;
+  optional string url = 3;
+  optional string filename = 4;
+  optional string content_type = 5;
+  optional int64 size_bytes = 6;
+  optional string resource_type = 7;
+  optional string resource_id = 8;
+  google.protobuf.Timestamp created_at = 9;
+}
+
+message ChatAck {}
+
+message UpdateConversationRequest {
+  string conversation_id = 1;
+  optional string title = 2;
+  optional string status = 3; // active | archived
+  // clear_title sets title to NULL; title is ignored when true. Absent title with clear_title false leaves the column unchanged.
+  bool clear_title = 4;
+}
+
+message AddParticipantRequest {
+  string conversation_id = 1;
+  string account_user_id = 2;
+  optional string role = 3;
+}
+
+message RemoveParticipantRequest {
+  string conversation_id = 1;
+  string participant_id = 2;
+}
+
+message UpdateParticipantRoleRequest {
+  string conversation_id = 1;
+  string participant_id = 2;
+  string role = 3;
+}
+
+message LeaveConversationRequest {
+  string conversation_id = 1;
+}
+
+message HideConversationRequest {
+  string conversation_id = 1;
+}
+
+message UnhideConversationRequest {
+  string conversation_id = 1;
+}
+
+message SetMuteRequest {
+  string conversation_id = 1;
+  bool muted = 2;
+  optional google.protobuf.Timestamp muted_until = 3;
+}
+
+message BlockRequest {
+  string blocked_account_user_id = 1;
+}
+
+message UnblockRequest {
+  string blocked_account_user_id = 1;
+}
+
+message ListBlocksRequest {}
+
+message BlockInfo {
+  string id = 1;
+  string account_id = 2;
+  string blocker_account_user_id = 3;
+  string blocked_account_user_id = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+message ListBlocksResponse {
+  repeated BlockInfo blocks = 1;
+}
+
+message ListContactsRequest {
+  string query = 1;
+}
+
+// ContactInfo is one entry in the messaging directory. type is "user" (account_user_id set) or
+// "support" (no account_user_id; the customer-facing support contact).
+message ContactInfo {
+  string type = 1;
+  optional string account_user_id = 2;
+  string name = 3;
+}
+
+message ListContactsResponse {
+  repeated ContactInfo contacts = 1;
+}
+
+message ReportConversationRequest {
+  string conversation_id = 1;
+  optional string message_id = 2;
+  string reason = 3;
+}
+
+message MessageReportInfo {
+  string id = 1;
+  string conversation_id = 2;
+  optional string message_id = 3;
+  string reason = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+message ConversationInfo {
+  string id = 1;
+  string account_id = 2;
+  string type = 3;
+  optional string title = 4;
+  optional string topic_resource_type = 5;
+  optional string topic_resource_id = 6;
+  reserved 7; // was agent_run_id — runs no longer bind to a conversation; see message.agent_run_id
+  optional string last_message_id = 8;
+  optional google.protobuf.Timestamp last_message_at = 9;
+  string status = 10; // active | archived
+  int64 unread = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+  repeated ParticipantInfo participants = 14;
+  bool legal_hold = 15;
+  // The most recent message in the conversation, embedded for inbox list previews so
+  // clients don't issue an N+1 fetch per row. Absent when the conversation has no messages.
+  optional MessageInfo last_message = 16;
+  // Whether the conversation is hidden for the calling participant.
+  bool hidden = 17;
+  // Audience: "internal" (team-only) or "customer" (external customer-facing case).
+  string audience = 18;
+  // Customer-service case triage (audience=customer only; absent on internal conversations).
+  optional string workflow_status = 19;
+  // Single polymorphic case owner: an account_user or an account_group (type + id).
+  optional string assignee_resource_type = 20;
+  optional string assignee_resource_id = 21;
+  // The email inbox this case is bridged to, when applicable (replies route through it).
+  optional string email_inbox_id = 22;
+  // Secondary business-record links on the conversation.
+  repeated ConversationLinkInfo links = 23;
+  // The reusable roster (messaging_group.id) this conversation was seeded from, if any. Provenance
+  // only — members were snapshotted at create time and are not driven by the group thereafter.
+  optional string group_id = 24;
+}
+
+message ParticipantInfo {
+  string id = 1;
+  string conversation_id = 2;
+  string account_id = 3;
+  string participant_type = 4;
+  optional string account_user_id = 5;
+  optional string agent_config_id = 6;
+  string role = 7;
+  string membership = 8;
+  string notifications = 9;
+  int64 last_read_sequence = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+  optional string agent_trigger_policy = 13;
+  repeated string agent_trigger_keywords = 14;
+  optional string relation_account_id = 15;
+  // Resolved (not persisted): display name of a customer participant's account_user, for staff viewers.
+  optional string account_user_display_name = 16;
+}
+
+message MessageInfo {
+  string id = 1;
+  string conversation_id = 2;
+  string account_id = 3;
+  int64 sequence = 4;
+  string kind = 5;
+  optional string sender_participant_id = 6;
+  optional string sender_account_user_id = 7;
+  optional string client_message_id = 8;
+  optional string body = 9;
+  optional string preview = 10;
+  optional string link_resource_type = 11;
+  optional string link_resource_id = 12;
+  optional string reply_to_message_id = 13;
+  optional google.protobuf.Timestamp edited_at = 14;
+  optional google.protobuf.Timestamp deleted_at = 15;
+  google.protobuf.Timestamp created_at = 16;
+  google.protobuf.Timestamp updated_at = 17;
+  reserved 18, 19, 20, 21; // was sender_identity_* — the sender-identity persona feature was removed
+  repeated AttachmentInfo attachments = 22;
+  // The agent that authored this message, when the sender is an agent participant. Resolved (like
+  // sender_account_user_id) from the sender participant; the message author is a polymorphic actor
+  // (account user OR agent), so exactly one of sender_account_user_id / sender_agent_config_id is set.
+  optional string sender_agent_config_id = 23;
+  // The agent run that produced this message, when it was posted by an agent reply. Lets the client
+  // deep-link from an agent message to its run for additional context. Resolved, not persisted on read.
+  optional string agent_run_id = 24;
+  // The streaming state of the message: "streaming" while an agent reply is still being generated (the
+  // body fills in via realtime updates), "complete" once finalized. Empty/"complete" for normal
+  // messages. Lets the client render a single bubble that streams in, rather than a transient live
+  // bubble swapped for the persisted reply.
+  optional string streaming_state = 25;
+  // The audience of this message inside the conversation: "internal" (team-only note), "external"
+  // (sent to/from an external party), or "system". Customer payloads only ever carry external/system.
+  string visibility = 26;
+  // The lifecycle state: "sent" (timeline), "scheduled" (future delivery), "draft" (customer-reply
+  // draft), or a terminal "canceled"/"rejected"/"failed"/"superseded". Only "sent" messages occupy the
+  // timeline and carry a sequence (sequence is 0/unset for draft/scheduled rows).
+  string status = 27;
+  // The future delivery time for a status=scheduled message.
+  optional google.protobuf.Timestamp scheduled_for = 28;
+  // How the message was delivered (or, for a draft, how it will be on approve): "message" | "email".
+  optional string channel = 29;
+  // The customer-reply draft email subject (email channel); unset for ordinary messages.
+  optional string subject = 30;
+  // The internal thread message a draft was composed from (draft provenance).
+  optional string source_thread_message_id = 31;
+  // The account_user who approved a draft on send.
+  optional string approved_by_account_user_id = 32;
+  // Read-time customer-facing anonymization: when set (e.g. "Customer Service"), the message is
+  // presented to a customer-relation viewer as a single branded party instead of the individual staff
+  // author (whose sender_account_user_id/sender_agent_config_id are cleared). Presentation-only, never persisted.
+  optional string sender_alias_name = 33;
+  // Resolved (not persisted): contact display name for a customer-participant message author (staff viewers).
+  optional string sender_display_name = 34;
+}
+
+message CreateConversationRequest {
+  string type = 1;
+  repeated string participant_account_user_ids = 2;
+  optional string title = 3;
+  optional string topic_resource_type = 4;
+  optional string topic_resource_id = 5;
+  // When set, seed the conversation from a reusable roster (messaging_group.id): its members are
+  // snapshotted into participants (in addition to any participant_account_user_ids) and the
+  // conversation records this group_id as provenance. Agent members default to mention trigger.
+  optional string group_id = 6;
+}
+
+message ListConversationsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string type = 3;
+  string status = 4;
+}
+
+message ListConversationsResponse {
+  repeated ConversationInfo conversations = 1;
+  PageInfo page_info = 2;
+}
+
+message GetConversationRequest {
+  string id = 1;
+}
+
+message BatchGetConversationsRequest {
+  repeated string ids = 1;
+}
+
+message BatchGetConversationsResponse {
+  repeated ConversationInfo conversations = 1;
+}
+
+message BatchGetMessagesRequest {
+  repeated string ids = 1;
+}
+
+message BatchGetMessagesResponse {
+  repeated MessageInfo messages = 1;
+}
+
+message ContactSupportRequest {}
+
+message GetSupportAvailabilityRequest {}
+
+message SupportAvailabilityInfo {
+  bool available = 1;
+}
+
+// SupportRouteInfo is the group conversation designated to handle a relationship's support. scope is
+// the relation_account_id: "" = account default for any customer; a concrete account id = override.
+message SupportRouteInfo {
+  string id = 1;
+  string account_id = 2;
+  string relation_account_id = 3;
+  string group_conversation_id = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+message SetSupportRouteRequest {
+  string relation_account_id = 1; // "" = account default
+  string group_conversation_id = 2;
+}
+
+message ClearSupportRouteRequest {
+  string relation_account_id = 1; // "" = account default
+}
+
+message GetSupportRouteRequest {
+  string relation_account_id = 1; // "" = account default
+}
+
+// ── External customer-service cases: drafts, links, triage ──
+
+
+message ConversationLinkInfo {
+  string id = 1;
+  string account_id = 2;
+  string conversation_id = 3;
+  string resource_type = 4;
+  string resource_id = 5;
+  optional string created_by_participant_id = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+
+message UpdateConversationWorkflowRequest {
+  string conversation_id = 1;
+  string workflow_status = 2;
+}
+
+message AssignConversationRequest {
+  string conversation_id = 1;
+  // Single polymorphic case owner (account_user or account_group). Omit both to clear the assignment.
+  optional string assignee_resource_type = 2;
+  optional string assignee_resource_id = 3;
+}
+
+message ListInboxRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string workflow_status = 3;
+  // Filter to cases owned by this assignee (a user or a team), matched by id.
+  optional string assignee_resource_id = 4;
+  reserved 5; // was assigned_group_id — folded into the single polymorphic assignee_resource_id
+  bool unassigned = 6;
+  bool include_archived = 7;
+}
+
+message ListConversationsByResourceRequest {
+  string resource_type = 1;
+  string resource_id = 2;
+  int32 limit = 3;
+}
+
+message AddConversationLinkRequest {
+  string conversation_id = 1;
+  string resource_type = 2;
+  string resource_id = 3;
+}
+
+message RemoveConversationLinkRequest {
+  string conversation_id = 1;
+  string link_id = 2;
+}
+
+message ListConversationLinksRequest {
+  string conversation_id = 1;
+}
+
+message ListConversationLinksResponse {
+  repeated ConversationLinkInfo links = 1;
+}
+
+message CreateReplyDraftRequest {
+  string conversation_id = 1;
+  string channel = 2; // message | email
+  string body = 3;
+  optional string subject = 4;
+  optional string source_thread_message_id = 5;
+}
+
+message ListReplyDraftsRequest {
+  string conversation_id = 1;
+  optional string status = 2;
+}
+
+message ListReplyDraftsResponse {
+  repeated MessageInfo drafts = 1;
+}
+
+message UpdateReplyDraftRequest {
+  string draft_id = 1;
+  string body = 2;
+  optional string subject = 3;
+}
+
+message RejectReplyDraftRequest {
+  string draft_id = 1;
+}
+
+message ApproveAndSendReplyDraftRequest {
+  string draft_id = 1;
+  string client_message_id = 2;
+}
+
+// ── Reusable groups (rosters) ──
+
+message MessagingGroupMemberInfo {
+  string id = 1;
+  string group_id = 2;
+  string member_type = 3; // user | agent
+  optional string account_user_id = 4;
+  optional string agent_config_id = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+message MessagingGroupInfo {
+  string id = 1;
+  string account_id = 2;
+  string name = 3;
+  optional string created_by_account_user_id = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+  repeated MessagingGroupMemberInfo members = 7;
+}
+
+message CreateMessagingGroupRequest {
+  string name = 1;
+  repeated string member_account_user_ids = 2;
+  repeated string member_agent_config_ids = 3;
+}
+
+message ListMessagingGroupsRequest {}
+
+message ListMessagingGroupsResponse {
+  repeated MessagingGroupInfo groups = 1;
+}
+
+message GetMessagingGroupRequest {
+  string group_id = 1;
+}
+
+message UpdateMessagingGroupRequest {
+  string group_id = 1;
+  string name = 2;
+}
+
+message DeleteMessagingGroupRequest {
+  string group_id = 1;
+}
+
+message AddMessagingGroupMemberRequest {
+  string group_id = 1;
+  string member_type = 2; // user | agent
+  optional string account_user_id = 3;
+  optional string agent_config_id = 4;
+}
+
+message RemoveMessagingGroupMemberRequest {
+  string group_id = 1;
+  string member_id = 2;
+}
+
+message SendMessageRequest {
+  string conversation_id = 1;
+  optional string body = 2;
+  string client_message_id = 3;
+  optional string reply_to_message_id = 4;
+  optional string link_resource_type = 5;
+  optional string link_resource_id = 6;
+  repeated AttachmentInput attachments = 8;
+  // mention_account_user_ids are the account_users explicitly @mentioned; a mention delivers a bell
+  // even when the recipient has muted the conversation.
+  repeated string mention_account_user_ids = 9;
+  // visibility requests the message audience on an external case: internal, external, or system.
+  // Empty defaults to internal. Customer-visible sends are permission-gated at the gateway. A
+  // customer-visible staff send is the folded-in reply-customer path: branded "Customer Service" and,
+  // for an email-bridged case, delivered as outbound mail.
+  optional string visibility = 10;
+  // subject + cc apply only to a customer reply on an email-bridged case (visibility=external).
+  optional string subject = 11;
+  repeated string cc = 12;
+}
+
+message ListMessagesRequest {
+  string conversation_id = 1;
+  optional string cursor = 2;
+  int32 limit = 3;
+  optional int64 after_sequence = 4;
+}
+
+message ListMessagesResponse {
+  repeated MessageInfo messages = 1;
+  PageInfo page_info = 2;
+}
+
+message MarkConversationReadRequest {
+  string conversation_id = 1;
+  int64 up_to_sequence = 2;
+}
+
+message MarkConversationReadResponse {
+  int64 unread_count = 1;
+}
+
+message IsParticipantRequest {
+  string conversation_id = 1;
+  // The caller's user id (us_) and account; the service resolves the account_user membership.
+  string user_id = 2;
+  string account_id = 3;
+}
+
+message IsParticipantResponse {
+  bool is_participant = 1;
+}
+
+message SendTypingRequest {
+  string conversation_id = 1;
+}

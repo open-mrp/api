@@ -34,6 +34,7 @@ func (t *accountUserForgePreview2To1) ObjectTypes() []constants.ObjectType {
 		constants.ObjectTypeShipment,
 		constants.ObjectTypeSettlement,
 		constants.ObjectTypePurchaseOrder,
+		constants.ObjectTypeContactMatch,
 	}
 }
 
@@ -53,6 +54,8 @@ func (t *accountUserForgePreview2To1) ForcedIncludes(objectType constants.Object
 		return []string{"responsible_user.user"}
 	case constants.ObjectTypeShipment:
 		return []string{"shipped_by.user"}
+	case constants.ObjectTypeContactMatch:
+		return []string{"account_user.user"}
 	}
 	return nil
 }

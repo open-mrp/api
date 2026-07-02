@@ -196,8 +196,7 @@ func (s *utilsSvcImpl) CheckDuplicate(ctx context.Context, params domain.CheckDu
 	}, nil
 }
 
-// EmailRecord emails a record (invoice, sales order, or purchase order) to the
-// configured recipients. POST endpoint — uses idempotency keys.
+// EmailRecord emails a record (invoice, sales order, or purchase order) to the configured recipients. POST endpoint — uses idempotency keys.
 func (s *utilsSvcImpl) EmailRecord(ctx context.Context, params domain.EmailRecordParams) *apierror.APIError {
 	ctx, span := utilsSvcTracer.Start(ctx, "service.utils.email_record")
 	defer span.End()

@@ -35,7 +35,7 @@ func (*TerritoriesEndpointGroup) Materialize(config *TerritoriesEndpointGroupCon
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
-		Title:        "Territory Management",
+		Title:        "Territory",
 		Description:  "List and manage territories for accounts.",
 		ResourceType: &apiresource.Territory{},
 	}

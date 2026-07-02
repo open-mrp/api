@@ -118,8 +118,7 @@ func TracedConsumer(delivery amqp.Delivery, queueName string, handler func(conte
 	return nil
 }
 
-// normalizeMessagingName converts a routing key or queue name into a clean,
-// lowercase span-name suffix. It applies the following transformations:
+// normalizeMessagingName converts a routing key or queue name into a clean, lowercase span-name suffix. It applies the following transformations:
 //   - Slashes are replaced with dots (e.g. "notification/cmd" → "notification.cmd").
 //   - Spaces are replaced with underscores.
 //   - PascalCase boundaries get underscore separators (e.g. "SendEmail" → "send_email").

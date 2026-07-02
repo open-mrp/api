@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -23,14 +24,15 @@ type DeleteSettlementEndpoint struct{}
 
 func (e *DeleteSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSettlementRequest, *apiresource.Settlement] {
 	return (&apiendpoint.APIEndpoint[*DeleteSettlementRequest, *apiresource.Settlement]{
-		Title:             "Delete Settlement",
-		Method:            http.MethodDelete,
-		ContentType:       "application/json",
-		Route:             "/v1/finance/settlements/{id}",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeSettlement,
+		Title:               "Delete Settlement",
+		Method:              http.MethodDelete,
+		ContentType:         "application/json",
+		Route:               "/v1/finance/settlements/{id}",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainSettlements, Action: types.ActionDelete}},
+		ObjectType:          constants.ObjectTypeSettlement,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteSettlementRequest) (*apiresource.Settlement, *apierror.APIError) {
 			return svc.(SettlementSvc).DeleteSettlement
 		},

@@ -46,7 +46,7 @@ func (*AuthEndpointGroup) Materialize(config *AuthEndpointGroupConfig) *AuthEndp
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
-		Title:       "Authentication and Token Management",
+		Title:       "Authentication",
 		Description: "User authentication and token lifecycle operations, including login, registration, password management, and token refresh.",
 	}
 

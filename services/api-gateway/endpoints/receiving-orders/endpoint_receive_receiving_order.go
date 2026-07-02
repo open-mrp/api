@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -30,7 +31,10 @@ func (e *ReceiveReceivingOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
-		ObjectType:        constants.ObjectTypeReceivingOrder,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainReceivingOrders, Action: types.ActionUpdate},
+		},
+		ObjectType: constants.ObjectTypeReceivingOrder,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ReceiveReceivingOrderRequest) (*apiresource.ReceivingOrder, *apierror.APIError) {
 			return svc.(ReceivingOrderSvc).ReceiveReceivingOrder
 		},

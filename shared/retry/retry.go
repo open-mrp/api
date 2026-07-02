@@ -141,8 +141,7 @@ func CalculateDelay(cfg *Config, attempt int) time.Duration {
 	return time.Duration(delay)
 }
 
-// WithBackoff executes operation and retries it up to MaxRetries times on failure,
-// sleeping with exponential backoff between attempts. The retry loop:
+// WithBackoff executes operation and retries it up to MaxRetries times on failure, sleeping with exponential backoff between attempts. The retry loop:
 //
 //  1. Calls operation(). On success (nil error), returns nil immediately.
 //  2. On failure, computes the backoff delay via [CalculateDelay] and sleeps. If the context is cancelled during the sleep, returns ctx.Err() instead of continuing.

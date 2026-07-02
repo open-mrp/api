@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -34,13 +35,14 @@ type InitializeBatchEndpoint struct{}
 
 func (e *InitializeBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*InitializeBatchRequest, *apiresource.Batch] {
 	return (&apiendpoint.APIEndpoint[*InitializeBatchRequest, *apiresource.Batch]{
-		Title:             "Initialize Batch",
-		Method:            http.MethodPost,
-		ContentType:       "application/json",
-		Route:             "/v1/operations/batches/actions/initialize",
-		SuccessStatusCode: http.StatusCreated,
-		Public:            false,
-		Preview:           true,
+		Title:               "Initialize Batch",
+		Method:              http.MethodPost,
+		ContentType:         "application/json",
+		Route:               "/v1/operations/batches/actions/initialize",
+		SuccessStatusCode:   http.StatusCreated,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionCreate}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *InitializeBatchRequest) (*apiresource.Batch, *apierror.APIError) {
 			return svc.(BatchSvc).InitializeBatch
 		},

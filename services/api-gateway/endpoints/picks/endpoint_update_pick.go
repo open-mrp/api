@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -46,6 +47,9 @@ func (e *UpdatePickEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePickR
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypePick,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainPicks, Action: types.ActionUpdate},
+		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdatePickRequest) (*apiresource.Pick, *apierror.APIError) {
 			return svc.(PickSvc).UpdatePick
 		},

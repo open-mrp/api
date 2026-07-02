@@ -35,7 +35,7 @@ func (*RegistrationFlowsEndpointGroup) Materialize(config *RegistrationFlowsEndp
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
-		Title:        "Registration Flows Management",
+		Title:        "Registration Flows",
 		Description:  "List and manage registration flows.",
 		ResourceType: &apiresource.RegistrationFlow{},
 	}

@@ -7,6 +7,7 @@ import (
 
 	httptransport "github.com/augno/api/services/api-gateway/internal/http"
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -38,6 +39,9 @@ func (e *ExportInventoryChangeLogsEndpoint) Materialize() *apiendpoint.APIEndpoi
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainInventoryLogs, Action: types.ActionRead},
+		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportInventoryChangeLogsRequest) (*httptransport.FileDownload, *apierror.APIError) {
 			return svc.(InventoryChangeLogSvc).ExportInventoryChangeLogs
 		},

@@ -170,8 +170,10 @@ func (m *materialSvcImpl) DeleteMaterial(ctx context.Context, req *DeleteMateria
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	result := MaterialPresenter(resp.Material)
-	return &result, nil
+	// Gated build: the expandable item stays nil and populates only when the caller requests it via ?include=item. MaterialPresenter would embed it unconditionally and is reserved for the Excel export path.
+	result := resourceloaders.MaterialFromProto(resp.Material)
+	resourceloaders.StashMaterialMeta(ctx, resp.Material)
+	return result, nil
 }
 
 func (m *materialSvcImpl) ExportMaterials(ctx context.Context, req *ExportMaterialsRequest) (*httptransport.FileDownload, *apierror.APIError) {

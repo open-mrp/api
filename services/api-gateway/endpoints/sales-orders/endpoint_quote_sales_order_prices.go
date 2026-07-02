@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -24,7 +25,9 @@ type QuoteSalesOrderPricesRequest struct {
 type QuoteSalesOrderLineInput struct {
 	// ID of the product to price.
 	ProductID string `json:"product_id" validate:"required"`
-	// Quantity ordered. The unit must belong to the product's unit group.
+	// Quantity ordered.
+	//
+	// The unit must belong to the product's unit group.
 	Quantity apirequest.QuantityInput `json:"quantity" validate:"required"`
 }
 
@@ -83,10 +86,7 @@ func (*QuoteSalesOrderPricesResponse) SchemaExample() any {
 
 // Calculates the unit price for each line without creating an order.
 //
-// Use this to display prices to users as they build an order. Prices are computed
-// server-side from the product's list price, contracted account prices, and applicable
-// discounts — the same logic used when an order is created. Internal price overrides are
-// not accepted here; the calculated price is always returned.
+// Use this to display prices to users as they build an order. Prices are computed server-side from the product's list price, contracted account prices, and applicable discounts — the same logic used when an order is created. Internal price overrides are not accepted here; the calculated price is always returned.
 type QuoteSalesOrderPricesEndpoint struct{}
 
 func (e *QuoteSalesOrderPricesEndpoint) Materialize() *apiendpoint.APIEndpoint[*QuoteSalesOrderPricesRequest, *QuoteSalesOrderPricesResponse] {
@@ -98,6 +98,9 @@ func (e *QuoteSalesOrderPricesEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainSalesOrders, Action: types.ActionRead},
+		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *QuoteSalesOrderPricesRequest) (*QuoteSalesOrderPricesResponse, *apierror.APIError) {
 			return svc.(SalesOrderSvc).QuoteSalesOrderPrices
 		},

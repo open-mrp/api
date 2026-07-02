@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -23,14 +24,15 @@ type RetrieveTerritoryEndpoint struct{}
 
 func (e *RetrieveTerritoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveTerritoryRequest, *apiresource.Territory] {
 	return (&apiendpoint.APIEndpoint[*RetrieveTerritoryRequest, *apiresource.Territory]{
-		Title:             "Retrieve Territory",
-		Method:            http.MethodGet,
-		Route:             "/v1/sales/accounts/{account_id}/territories/{id}",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeTerritory,
+		Title:               "Retrieve Territory",
+		Method:              http.MethodGet,
+		Route:               "/v1/sales/accounts/{account_id}/territories/{id}",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeTerritory,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainTerritories, Action: types.ActionRead}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveTerritoryRequest) (*apiresource.Territory, *apierror.APIError) {
 			return svc.(TerritorySvc).GetTerritory
 		},

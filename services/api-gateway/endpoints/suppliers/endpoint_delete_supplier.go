@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/augno/api/services/auth-service/pkg/types"
+
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
@@ -29,6 +31,10 @@ func (e *DeleteSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteS
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		// Single delete checks suppliers:update downstream (Dashboard convention), not suppliers:delete.
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate},
+		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteSupplierRequest) (*apiresource.SupplierDetail, *apierror.APIError) {
 			return svc.(SupplierSvc).DeleteSupplier
 		},

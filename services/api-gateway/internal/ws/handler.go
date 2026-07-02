@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 
@@ -8,11 +9,12 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/cookie"
 	"github.com/augno/api/shared/contracts"
 	pb "github.com/augno/api/shared/proto/auth"
+	notifpb "github.com/augno/api/shared/proto/notification"
 	"github.com/coder/websocket"
 )
 
-// NewHandler returns an http.HandlerFunc that upgrades HTTP connections to WebSocket, authenticates via cookie + account ID query param, and starts the client read/write pumps.
-func NewHandler(hub *Hub, authClient *grpcclient.AuthServiceClient) http.HandlerFunc {
+// NewHandler returns an http.HandlerFunc that upgrades HTTP connections to WebSocket, authenticates via cookie + account ID query param, and starts the client read/write pumps. notificationClient may be nil (conversation-subscribe authz is then unavailable).
+func NewHandler(hub *Hub, authClient *grpcclient.AuthServiceClient, notificationClient *grpcclient.NotificationServiceClient) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Extract access token from cookie.
 		accessToken, apiErr := cookie.GetAccessTokenFromRequest(r)
@@ -29,7 +31,7 @@ func NewHandler(hub *Hub, authClient *grpcclient.AuthServiceClient) http.Handler
 		}
 
 		// Validate via gRPC auth-service (same as AuthMiddleware).
-		_, err := authClient.Client.ValidateCredential(r.Context(), &pb.Credential{
+		identity, err := authClient.Client.ValidateCredential(r.Context(), &pb.Credential{
 			Token:           accessToken,
 			TargetAccountId: &accountID,
 		})
@@ -39,6 +41,15 @@ func NewHandler(hub *Hub, authClient *grpcclient.AuthServiceClient) http.Handler
 				http.Error(w, "unauthorized", http.StatusUnauthorized)
 				return
 			}
+		}
+
+		// The actor id is the user id (us_), used as the key for the per-user notification topic.
+		userID := identity.GetActor().GetId()
+
+		// Reject actors with no personal user identity (e.g. api-key actors): they have no bell feed and no account_user to authorize conversation subscriptions, so the socket would only ever subscribe to empty-keyed topics. Closing here avoids a useless, mis-keyed connection.
+		if userID == "" {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
 		}
 
 		// Clear the server's write deadline so the long-lived WebSocket connection doesn't get killed by the default httpWriteTimeout.
@@ -56,7 +67,27 @@ func NewHandler(hub *Hub, authClient *grpcclient.AuthServiceClient) http.Handler
 			return
 		}
 
-		client := NewClient(conn, hub, accountID)
+		// Build the conversation-subscribe authz gate from the connection's user + account.
+		var checkParticipant ParticipantChecker
+		if notificationClient != nil {
+			checkParticipant = func(ctx context.Context, conversationID string) (bool, error) {
+				resp, err := notificationClient.ChatClient.IsParticipant(ctx, &notifpb.IsParticipantRequest{
+					ConversationId: conversationID,
+					UserId:         userID,
+					AccountId:      accountID,
+				})
+				if err != nil {
+					return false, err
+				}
+				return resp.GetIsParticipant(), nil
+			}
+		}
+
+		client := NewClient(conn, hub, accountID, userID, checkParticipant)
+		// Auto-subscribe on connect: the per-user bell topic, the account broadcast topic (announcements), and the account-independent user topic (cross-account unread hints).
+		client.SubscribeUserTopic()
+		client.SubscribeAccountTopic()
+		client.SubscribeUserGlobalTopic()
 
 		go client.WritePump(r.Context())
 		client.ReadPump(r.Context())

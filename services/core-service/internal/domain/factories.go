@@ -24,6 +24,7 @@ type RepoFactory interface {
 	NewUserRepo() UserRepo
 	NewAccountPriceRepo() AccountPriceRepo
 	NewAccountIntegrationRepo() AccountIntegrationRepo
+	NewHubspotSyncRepo() HubspotSyncRepo
 	NewSalesTargetRepo() SalesTargetRepo
 	NewAdjustmentTypeRepo() AdjustmentTypeRepo
 	NewPropertyRepo() PropertyRepo

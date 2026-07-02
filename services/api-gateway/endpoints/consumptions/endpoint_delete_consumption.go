@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -33,6 +34,9 @@ func (e *DeleteConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeConsumption,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainProductionSteps, Action: types.ActionDelete},
+		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteConsumptionRequest) (*apiresource.Consumption, *apierror.APIError) {
 			return svc.(ConsumptionSvc).DeleteConsumption
 		},

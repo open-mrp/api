@@ -19,18 +19,18 @@ import (
 
 // stubEventLogRepo implements EventLogRepo for tests.
 type stubEventLogRepo struct {
-	existsFn func(ctx context.Context, eventID, objectID string) (bool, error)
-	insertFn func(ctx context.Context, eventID, eventType, objectID string) error
+	existsFn func(ctx context.Context, eventID, objectID string) (bool, *apierror.APIError)
+	insertFn func(ctx context.Context, eventID, eventType, objectID string) *apierror.APIError
 }
 
-func (s *stubEventLogRepo) Exists(ctx context.Context, eventID, objectID string) (bool, error) {
+func (s *stubEventLogRepo) Exists(ctx context.Context, eventID, objectID string) (bool, *apierror.APIError) {
 	if s.existsFn != nil {
 		return s.existsFn(ctx, eventID, objectID)
 	}
 	return false, nil
 }
 
-func (s *stubEventLogRepo) Insert(ctx context.Context, eventID, eventType, objectID string) error {
+func (s *stubEventLogRepo) Insert(ctx context.Context, eventID, eventType, objectID string) *apierror.APIError {
 	if s.insertFn != nil {
 		return s.insertFn(ctx, eventID, eventType, objectID)
 	}
@@ -153,7 +153,7 @@ func TestHandleStripeWebhook_V1CustomerDeleted(t *testing.T) {
 
 	var insertCalled bool
 	eventLog := &stubEventLogRepo{
-		insertFn: func(_ context.Context, eventID, eventType, objectID string) error {
+		insertFn: func(_ context.Context, eventID, eventType, objectID string) *apierror.APIError {
 			insertCalled = true
 			assert.Equal(t, "evt_del", eventID)
 			assert.Equal(t, "customer.deleted", eventType)
@@ -207,7 +207,7 @@ func TestHandleStripeWebhook_V2ServicingActivated(t *testing.T) {
 func TestHandleStripeWebhook_DuplicateEventSkipped(t *testing.T) {
 	t.Parallel()
 	eventLog := &stubEventLogRepo{
-		existsFn: func(_ context.Context, eventID, objectID string) (bool, error) {
+		existsFn: func(_ context.Context, eventID, objectID string) (bool, *apierror.APIError) {
 			return true, nil
 		},
 	}
@@ -244,7 +244,7 @@ func TestHandleStripeWebhook_InsertCalledAfterSuccess(t *testing.T) {
 		eventID, eventType, objectID string
 	}
 	eventLog := &stubEventLogRepo{
-		insertFn: func(_ context.Context, eventID, eventType, objectID string) error {
+		insertFn: func(_ context.Context, eventID, eventType, objectID string) *apierror.APIError {
 			insertArgs.eventID = eventID
 			insertArgs.eventType = eventType
 			insertArgs.objectID = objectID
@@ -272,7 +272,7 @@ func TestHandleStripeWebhook_HandlerError_NoInsert(t *testing.T) {
 
 	var insertCalled bool
 	eventLog := &stubEventLogRepo{
-		insertFn: func(_ context.Context, _, _, _ string) error {
+		insertFn: func(_ context.Context, _, _, _ string) *apierror.APIError {
 			insertCalled = true
 			return nil
 		},

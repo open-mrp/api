@@ -8,7 +8,7 @@ import (
 const SampleStripeCustomerID = "cus_OG9R5zKr5xJHHp"
 const SampleBillingPortalURL = "https://billing.stripe.com/p/session/test_YWNjdF8xTTJKVGtMa3E0Z3Bic"
 
-// Usage metric with current value and optional limit.
+// A usage metric with its current value and any applicable limit.
 type UsageItem struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=usage_item"`
@@ -18,32 +18,6 @@ type UsageItem struct {
 	//
 	// Null means unlimited.
 	Limit *int `json:"limit"`
-}
-
-// Detailed agent token usage breakdown.
-type AgentTokenDetail struct {
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=agent_token_detail"`
-	// Tokens included in the plan.
-	IncludedTokens int64 `json:"included_tokens"`
-	// Tokens used in the current billing period.
-	UsedTokens int64 `json:"used_tokens"`
-	// Input tokens used in the current billing period.
-	InputTokens int64 `json:"input_tokens"`
-	// Output tokens used in the current billing period.
-	OutputTokens int64 `json:"output_tokens"`
-	// Additional tokens purchased via token packs.
-	AdditionalTokensPurchased int64 `json:"additional_tokens_purchased"`
-	// Total tokens available (included + purchased).
-	TotalAvailable int64 `json:"total_available"`
-	// Estimated cost in dollars for the current billing period.
-	//
-	// This is a rough estimate for display purposes; the actual billed amount is calculated by the billing provider and may differ.
-	CurrentPeriodCost float64 `json:"current_period_cost"`
-	// When the current billing period ends (ISO 8601).
-	BillingPeriodEnd string `json:"billing_period_end"`
-	// Cost in dollars per million tokens for usage beyond the available token balance.
-	OverageCostPerMillionTokens float64 `json:"overage_cost_per_million_tokens"`
 }
 
 // Account usage metrics across all resource types.
@@ -64,8 +38,6 @@ type AccountUsageResponse struct {
 	Subscription *SubscriptionInfo `json:"subscription"`
 	// Estimated agent LLM spending for the current month.
 	AgentSpend *AgentSpendInfo `json:"agent_spend"`
-	// Detailed agent token usage breakdown.
-	AgentTokenDetail *AgentTokenDetail `json:"agent_token_detail"`
 }
 
 // Subscription status information.
@@ -104,7 +76,7 @@ type SwitchPlanResponse struct {
 	Success bool `json:"success"`
 	// ID of the billing intent committed for the switch.
 	//
-	// Set to the committed billing intent ID for paid plan changes. Null for switches to the free plan, where no intent is surfaced.
+	// Present for paid plan changes; null when switching to the free plan, which commits no billing intent.
 	IntentID *string `json:"intent_id"`
 }
 
@@ -178,27 +150,13 @@ var SampleSubscriptionInfo = &SubscriptionInfo{
 	CollectionStatus: "current",
 }
 
-var SampleAgentTokenDetail = &AgentTokenDetail{
-	Object:                      constants.ObjectTypeAgentTokenDetail,
-	IncludedTokens:              1000000,
-	UsedTokens:                  350000,
-	InputTokens:                 200000,
-	OutputTokens:                150000,
-	AdditionalTokensPurchased:   0,
-	TotalAvailable:              1000000,
-	CurrentPeriodCost:           1.85,
-	BillingPeriodEnd:            "2026-04-01T00:00:00Z",
-	OverageCostPerMillionTokens: 15.0,
-}
-
 var SampleAccountUsageResponse = &AccountUsageResponse{
-	Object:           constants.ObjectTypeAccountUsageResponse,
-	Seats:            *SampleUsageItem,
-	Invoices:         *SampleUsageItemUnlimited,
-	Batches:          *SampleUsageItemUnlimited,
-	Sandboxes:        *SampleUsageItem,
-	Subscription:     SampleSubscriptionInfo,
-	AgentTokenDetail: SampleAgentTokenDetail,
+	Object:       constants.ObjectTypeAccountUsageResponse,
+	Seats:        *SampleUsageItem,
+	Invoices:     *SampleUsageItemUnlimited,
+	Batches:      *SampleUsageItemUnlimited,
+	Sandboxes:    *SampleUsageItem,
+	Subscription: SampleSubscriptionInfo,
 }
 
 var SampleBillingPortalSessionResponse = &BillingPortalSessionResponse{
@@ -255,10 +213,6 @@ var sampleCapCents int64 = 5000
 var SampleSpendingCapResponse = &SpendingCapResponse{
 	Object:   constants.ObjectTypeSpendingCapResponse,
 	CapCents: &sampleCapCents,
-}
-
-func (*AgentTokenDetail) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SampleAgentTokenDetail)
 }
 
 func (*SpendingCapResponse) SchemaExample() any {

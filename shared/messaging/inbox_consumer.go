@@ -3,19 +3,13 @@ package messaging
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"log/slog"
 
 	"github.com/augno/api/shared/contracts"
+	"github.com/augno/api/shared/db"
 	"github.com/augno/api/shared/tracing"
-	"github.com/go-sql-driver/mysql"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"go.opentelemetry.io/otel/trace"
-)
-
-const (
-	// mysqlDuplicateEntryCode is the MySQL error number for unique constraint violations. The inbox table has a unique index on (message_id, handler), so a duplicate insert surfaces as this error code.
-	mysqlDuplicateEntryCode = 1062
 )
 
 // InboxConsumer wraps message handlers with inbox-based deduplication to achieve exactly-once processing semantics. For each incoming AMQP delivery it:
@@ -85,9 +79,11 @@ func (c *InboxConsumer) Wrap(handler string, fn MessageHandler) MessageHandler {
 
 		recordID, err := c.repo.TryInsert(ctx, input)
 		if err != nil {
-			// Check if this is a duplicate entry error
-			var mysqlErr *mysql.MySQLError
-			if errors.As(err, &mysqlErr) && mysqlErr.Number == mysqlDuplicateEntryCode {
+			// A duplicate (message_id, handler) means this delivery is a redelivery — route to the
+			// dedup path. db.IsDuplicateEntry covers both MySQL (1062) and PostgreSQL (23505), so this
+			// works for inbox tables on either engine; a MySQL-only check silently fell through here for
+			// Postgres-backed services (e.g. agent-service), defeating deduplication entirely.
+			if db.IsDuplicateEntry(err) {
 				return c.handleDuplicate(ctx, messageID, handler, fn, msg)
 			}
 			// Some other error - let the handler proceed but log the issue

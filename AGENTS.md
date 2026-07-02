@@ -72,16 +72,19 @@ services/[name]/
 
 PlanetScale (MySQL) with safe migrations. Schema in `shared/db/migrations/0001_initial.sql`.
 
+**Schema source of truth is the Prisma schema in `dashboard/packages/db`** — `0001_initial.sql` is synced from it. Do **not** hand-write a migration file or edit the api SQL dump directly.
+
 To add/modify schema:
 
-1. Edit migration file
-2. Run `make sqlc [service]` for affected services
-3. Create PlanetScale deploy request for production
+1. Edit the Prisma schema in `dashboard/packages/db` to describe the new table/column/index.
+2. **Hand off to the human** — they update Prisma, generate/create the migrations, and sync `0001_initial.sql`, then pass it back.
+3. Once the synced schema is back, run `make sqlc [service]` for affected services to regenerate DB code, and continue.
 
 ## Code Style
 
 - Do not create README files, examples, or comments unless explicitly requested
-- Use Conventional Commits (feat:, fix:, feat!:)
+- **Comments: never hard-wrap a prose paragraph across multiple `//` lines** — one paragraph is one physical line (let the editor soft-wrap). Distinct paragraphs get a blank `//` separator; numbered/TODO lists may use one line per item. Internal doc comments explain business intent, side effects, ordering/transactionality, idempotency, and failure modes — not the mechanics. See `docs/patterns/comment-conventions.md`.
+- **Commits must follow the Conventional Commits conventions in `README.md` (the "Committing" section).** release-please parses these prefixes (feat:, fix:, feat!:, etc.) to calculate the next version — a non-conforming prefix is ignored, so the change won't make it into a Release PR and no release gets cut.
 - Review `/docs` to see all important patterns and conventions.
 
 ## End-to-end (e2e) tests
@@ -358,4 +361,5 @@ For deeper dives, review the following docs:
 - `docs/patterns/e2e-test-patterns.md` — E2E test conventions (CRUD lifecycle, field assertions, omitted fields, expandable fields, helpers, checklist)
 - `docs/patterns/production-step-graph-patterns.md` — `_parent_child_production_steps`: **`A` = downstream, `B` = upstream** (Prisma-aligned); flow SQL and seeds must stay consistent
 - `docs/patterns/main-delegates-to-run-pattern.md` — main() → Run() delegation pattern
+- `docs/patterns/comment-conventions.md` — internal-code comment style: one paragraph per physical line (no hard-wrapping), what doc comments must convey (intent/side effects/idempotency/failure modes), config-field optionality docs, actionable TODOs
 - `docs/api-migration-instructions.md` — Dashboard API → Go API migration context

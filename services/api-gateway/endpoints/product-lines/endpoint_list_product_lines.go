@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -26,8 +27,19 @@ func (e *ListProductLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListP
 		Route:             "/v1/catalog/product-lines",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeProductLine,
+		AgentTool:         true,
+		// Reads gate on the relation helper (checkProductLineReadPermission), which
+		// requires product_lines:read on the own account but customers:read /
+		// suppliers:read when an internal actor reads a customer's or supplier's
+		// product lines. Declare the full OR-set so the gateway gate doesn't
+		// false-reject those relation-scoped reads.
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainProductLines, Action: types.ActionRead},
+			{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},
+			{Domain: types.PermissionDomainSuppliers, Action: types.ActionRead},
+		},
+		Preview:    true,
+		ObjectType: constants.ObjectTypeProductLine,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListProductLinesRequest) (*apiresource.List[apiresource.ProductLine], *apierror.APIError) {
 			return svc.(ProductLineSvc).ListProductLines
 		},

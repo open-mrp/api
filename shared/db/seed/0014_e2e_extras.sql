@@ -290,6 +290,34 @@ INSERT IGNORE INTO account_integration (id, account_id, integration_code, name, 
     ('acin_01seedintegration2', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'quickbooks', 'QuickBooks Integration', 'seed-placeholder-credentials', 1, NOW(), NOW());
 
 -- ============================================================
+-- HUBSPOT SYNC (1 job + 1 pending company review so the
+-- hubspot-sync read endpoints resolve {id}/{review_id} and the
+-- company-reviews list returns a real item)
+-- ============================================================
+
+INSERT IGNORE INTO hubspot_sync_job (id, account_id, status, dry_run, counts, created_at, updated_at) VALUES
+    ('igjb_01seedhubspotjob1', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'review_pending', 1,
+     '{"customers_total":120,"companies_confident":80,"companies_ambiguous":12,"companies_to_create":28,"contacts_with_email":95}',
+     NOW(), NOW());
+
+INSERT IGNORE INTO hubspot_company_review (id, job_id, account_id, augno_customer_id, customer_name, candidate_matches, status, created_at, updated_at) VALUES
+    ('igrv_01seedhubspotrev1', 'igjb_01seedhubspotjob1', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k09wm2fgevdsc344gpbcj30f', 'E2E Review Customer',
+     '[{"hubspot_id":"hs_company_1001","name":"Acme Co","domain":"acme.example"}]', 'pending', NOW(), NOW());
+
+-- ============================================================
+-- EMAIL BRIDGE (1 verified domain + 1 active inbox so the
+-- email-domains/email-inboxes list endpoints return a real item
+-- and the update/{id} endpoints resolve their path param)
+-- ============================================================
+
+INSERT IGNORE INTO email_domain (id, account_id, domain, status, dkim_tokens, verified_at, created_at, updated_at) VALUES
+    ('emdom_01seeddomain1_00', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'mail.e2e.augno.com', 'verified',
+     '["sel1._domainkey.mail.e2e.augno.com","sel2._domainkey.mail.e2e.augno.com"]', NOW(), NOW(), NOW());
+
+INSERT IGNORE INTO email_inbox (id, account_id, email_domain_id, address, from_name, status, agent_config_id, created_at, updated_at) VALUES
+    ('eminb_01seedinbox1_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'emdom_01seeddomain1_00', 'support@mail.e2e.augno.com', 'E2E Support', 'active', 'agdf_01seede2e_orderbot0', NOW(), NOW());
+
+-- ============================================================
 -- AUDIT EVENTS (2 rows so audit event tests don't skip)
 -- ============================================================
 
@@ -318,6 +346,17 @@ INSERT IGNORE INTO audit_event (type_id, actor_id, actor_type, identity_type, ac
 -- Backfill request_id + target_account_id on re-seed when INSERT IGNORE skips existing rows.
 UPDATE audit_event SET request_id = 'rqlog_01seedreqlog1_000' WHERE type_id = 'adev_01seedauditevent02' AND (request_id IS NULL OR request_id = '');
 UPDATE audit_event SET target_account_id = 'ac_01k0a5smf9ekb8rqg12555zjqa' WHERE type_id IN ('adev_01seedauditevent01', 'adev_01seedauditevent02') AND target_account_id IS NULL;
+
+-- Audit event that populates source_ip + idempotency_key_id (both columns exist
+-- but are NULL on every other seed row). source_ip is a stable test value
+-- (SeedAuditEventSourceIP); idempotency_key_id reuses idk_01seedreqlogik001 so the
+-- joined idempotency_key surfaces as 'e2e-seed-idempotency-key-01'
+-- (SeedAuditEventIdempotencyKey). Far-future occurred_at keeps it a stable
+-- GET-by-id target (SeedAuditEventWithSourceIPID).
+INSERT IGNORE INTO audit_event (type_id, actor_id, actor_type, identity_type, account_id, target_account_id, action, resource_type, resource_id, changes, metadata, service_name, request_id, idempotency_key_id, source_ip, occurred_at, created_at) VALUES
+    ('adev_01seedsrcipkey0', 'us_1wjfmmbwg8l7', 'user', 'user', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'update', 'unit', 'un_01seedpair000000000', '[{"field":"name","old_value":"Pair","new_value":"Pair"}]', NULL, 'core-service', NULL, 'idk_01seedreqlogik001', '198.51.100.42', DATE_ADD(NOW(), INTERVAL 9 YEAR), DATE_ADD(NOW(), INTERVAL 9 YEAR));
+-- Re-seed-safe backfill in case the row pre-exists without these columns set.
+UPDATE audit_event SET idempotency_key_id = 'idk_01seedreqlogik001', source_ip = '198.51.100.42' WHERE type_id = 'adev_01seedsrcipkey0' AND (source_ip IS NULL OR source_ip = '');
 
 -- Search + multi-actor fixtures.
 --  * adev_01seedsearchtgt01 carries a distinctive resource_id and request_id so
@@ -490,6 +529,40 @@ INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status
     ('rqlog_01flttypekey0', 'GET', 'rqlog-filter-e2e.test', '/filtertest/actortypes', '/filtertest/actortypes', 200, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'apky_pajbskcck3cabxajdh8h8', 'api_key', 'api_key',  '2022-01-01 00:00:00', NOW()),
     ('rqlog_01flttypeint0', 'GET', 'rqlog-filter-e2e.test', '/filtertest/actortypes', '/filtertest/actortypes', 200, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', NULL,                        'internal','internal', '2022-01-01 00:00:00', NOW());
 
+-- infra-scrub cohort — agent requests come through the gateway's internal listener,
+-- so their stored host (internal k8s service name:port) and client_ip (pod IP) are
+-- internal infrastructure that must NEVER reach customers. The customer-facing
+-- presenter rewrites host -> the public API host and drops client_ip for
+-- identity_type='agent' (apiresource.RequestLog.ScrubInternalInfra), while user/
+-- api_key logs keep theirs. The agent's actor_id is the agent definition
+-- agdf_01infraseedagent (seeded in agent-service), whose name + slug the request-logs
+-- presenter hydrates onto the actor. api_version is set so the customer-facing log
+-- shows the version the agent's internal call carried (the agent client sends
+-- Augno-Version). The agent row's id is also referenced by an audit_event
+-- (request_id) below so the audit-event ?include=request path is covered too. These
+-- rows are fetched by the normalized_route scope filter and by id (both
+-- date-independent), so they are dated in the past (like the other filter cohorts) to
+-- stay OUT of the default recent listing. See crud_request_logs_test.go /
+-- crud_audit_events_test.go.
+INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, api_version, client_ip_string, user_agent, occurred_at, created_at) VALUES
+    ('rqlog_01infraagent0', 'GET', 'api-gateway-internal:8091', '/v1/sales/customers', '/filtertest/infra-scrub', 200, 295867, 0, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'agdf_01infraseedagent', 'internal', 'agent', '1.0.forge-preview.2', '10.244.0.18',  'Go-http-client/1.1', '2022-01-01 00:00:00', NOW()),
+    ('rqlog_01infrauser00', 'GET', 'api.augno.com',             '/v1/sales/customers', '/filtertest/infra-scrub', 200, 15000,  1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7',       'user',     'user',  '1.0.forge-preview.2', '198.51.100.7', 'Mozilla/5.0',        '2022-01-01 00:00:00', NOW());
+
+-- referrer is the only optional request_log field no seed row sets; put it on the
+-- stable infra-scrub user row (SeedReqLogInfraUserID) so the allFields test can
+-- assert a non-null referrer (SeedRequestLogReferrerValue). Re-seed-safe UPDATE
+-- because the INSERT above omits the column.
+UPDATE request_log SET referrer = 'https://dashboard.augno.com/inbox' WHERE id = 'rqlog_01infrauser00' AND (referrer IS NULL OR referrer = '');
+
+-- Audit event whose request_id points at the agent request_log above, so the
+-- audit-event ?include=request expansion is exercised against an internal/agent log.
+-- The embedded request_log must be scrubbed there too (it never carries host/ip).
+-- Fetched by id, so the past date keeps it out of default audit-event listings.
+INSERT IGNORE INTO audit_event (type_id, actor_id, actor_type, identity_type, account_id, target_account_id, action, resource_type, resource_id, changes, metadata, service_name, request_id, occurred_at, created_at) VALUES
+    ('adev_01infraauditreq0', 'us_1wjfmmbwg8l7', 'user', 'user', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'update', 'customer', 'ac_01seedcustomer2_acct0', NULL, NULL, 'api-gateway', 'rqlog_01infraagent0', '2022-01-01 00:00:00', NOW());
+-- Backfill request_id on re-seed when INSERT IGNORE skips the existing audit row.
+UPDATE audit_event SET request_id = 'rqlog_01infraagent0' WHERE type_id = 'adev_01infraauditreq0' AND (request_id IS NULL OR request_id = '');
+
 -- normalized_routes cohort — scope host=rqlog-route-e2e.test (the route is the
 -- dimension under test, so the host is the scope), vary normalized_route.
 INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, occurred_at, created_at) VALUES
@@ -609,6 +682,16 @@ INSERT IGNORE INTO account (id, name, account_type_code, onboarding_status_code,
 
 INSERT IGNORE INTO account_relation (id, owner_account_id, counterparty_account_id, account_relation_role_code, external_number, parent_account_relation_id, is_edi_enabled, priority_code, account_status_code, commission_status_code, freight_status_code, shipping_term_id, payment_term_id, account_group_id, created_at, updated_at) VALUES
     ('acre_01seedchild_rel002', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01seedchild_acct0002', 'customer', 'CHILD-002', 'acre_01seedhouseacct0000', 0, 'normal', 'normal', 'commission_applied', 'billed_freight', 'prepaid_billed', 'pytm_01seednet3000000', 'acgp_01k0a413mjeth8pe1g70t0thax', NOW(), NOW());
+
+-- A user + account_user scoped to child account 1, distinct from the seed
+-- account. Used as the cross-account block target (SeedChildAccountUserID): the
+-- block-resolution path resolves account_user -> user_id without an account
+-- filter, so this row lets the messaging_blocks cross-account test pin down
+-- actual behavior. Named user so ?include=blocked_user resolves a real name.
+INSERT IGNORE INTO user (id, email, name, username, status_code) VALUES
+    ('us_childblktgt00', 'child-block-target@e2e.augno.com', 'Blocked Child User', 'childblocktgt', 'active');
+INSERT IGNORE INTO account_user (id, user_id, account_id, status_code) VALUES
+    ('acus_childblktgt', 'us_childblktgt00', 'ac_01seedchild_acct0001', 'active');
 
 -- ============================================================
 -- PURCHASE ORDERS (e2e include coverage)

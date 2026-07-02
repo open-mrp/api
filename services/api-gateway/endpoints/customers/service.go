@@ -490,7 +490,9 @@ func stashCustomerMeta(ctx context.Context, cust *apiresource.Customer, c *pb.Cu
 	fp := buildFreightPreferences(c)
 	meta.Set(constants.ObjectTypeCustomer, cust.ID, "freight_preferences", fp)
 	if c.DefaultCarrier != nil {
-		meta.Set(constants.ObjectTypeCustomer, cust.ID, "fp_carrier", fp.Carrier)
+		// Stash only the FK id: the carrier sub fetches the full Carrier via LoadCarriers (so its
+		// service_level_ids preview is available for freight_preferences.carrier.service_levels). Never fabricate.
+		meta.Set(constants.ObjectTypeCustomer, cust.ID, "fp_carrier_id", c.DefaultCarrier.Id)
 		fp.Carrier = nil
 	}
 	if c.DefaultServiceLevel != nil {

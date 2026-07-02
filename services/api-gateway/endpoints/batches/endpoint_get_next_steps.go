@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -33,13 +34,14 @@ type GetPossibleNextStepsEndpoint struct{}
 
 func (e *GetPossibleNextStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetPossibleNextStepsRequest, *apiresource.List[apiresource.ScanningProductionStepInfo]] {
 	return (&apiendpoint.APIEndpoint[*GetPossibleNextStepsRequest, *apiresource.List[apiresource.ScanningProductionStepInfo]]{
-		Title:             "Get Possible Next Steps",
-		Method:            http.MethodPost,
-		ContentType:       "application/json",
-		Route:             "/v1/operations/batches/{id}/next-steps",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
+		Title:               "Get Possible Next Steps",
+		Method:              http.MethodPost,
+		ContentType:         "application/json",
+		Route:               "/v1/operations/batches/{id}/next-steps",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionRead}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetPossibleNextStepsRequest) (*apiresource.List[apiresource.ScanningProductionStepInfo], *apierror.APIError) {
 			return svc.(BatchSvc).GetPossibleNextSteps
 		},

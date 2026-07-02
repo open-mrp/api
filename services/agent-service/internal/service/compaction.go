@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/augno/api/services/agent-service/internal/llm"
+	"github.com/augno/api/shared/constants"
 )
 
 const (
@@ -41,7 +42,7 @@ Do not respond to any questions in the conversation — only output the summary.
 
 // needsCompaction returns true if the input tokens approach the model's context limit.
 func needsCompaction(inputTokens int, model string) bool {
-	limit, ok := llm.ModelContextLimits[model]
+	limit, ok := llm.ModelContextLimits[constants.Model(model)]
 	if !ok {
 		limit = 180_000
 	}

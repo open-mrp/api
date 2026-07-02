@@ -169,6 +169,14 @@ func sampleQueryExampleForOpenAPIName(openAPIParam string) any {
 		return apiresource.SampleAccountID
 	case "supplier_id":
 		return apiresource.SampleSupplierID
+	case "assignee_resource_id":
+		return apiresource.SampleAccountUserID
+	case "resource_id":
+		return apiresource.SampleSalesOrderID
+	case "topic_resource_type":
+		return string(constants.ObjectTypeSalesOrder)
+	case "topic_resource_id":
+		return apiresource.SampleSalesOrderID
 	case "agent_definition_id":
 		return apiresource.SampleAgentDefinitionID
 	case "trend_type":
@@ -208,8 +216,11 @@ func sampleQueryExampleForOpenAPIName(openAPIParam string) any {
 		"item_ids":             apiresource.SampleItemID,
 		"machine_ids":          apiresource.SampleMachineID,
 		"scanning_station_ids": apiresource.SampleScanningStationID,
+		"sender_ids":           apiresource.SampleAccountUserID,
 		"input_step_ids":       apiresource.SampleProductionStepID,
 		"output_step_ids":      apiresource.SampleProductionStepID,
+		"customer":             apiresource.SampleCustomerID,
+		"relation_account_id":  apiresource.SampleCustomerID,
 	}
 	if sid, ok := idSamples[base]; ok {
 		return []any{sid}

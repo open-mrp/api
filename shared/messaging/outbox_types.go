@@ -35,6 +35,8 @@ type OutboxMessageInput struct {
 	Payload contracts.AmqpMessage
 	// MaxAttempts caps how many times the enqueuer will retry publishing before giving up.
 	MaxAttempts int
+	// DelaySeconds (optional; default 0 = available immediately) defers first delivery by scheduling next_run_at that many seconds into the future. Used for backoff on re-enqueue (e.g. bounded auto-retry of a transient failure) so the message is not republished into a still-failing dependency. Not every service's outbox Create honors this; today only agent-service does.
+	DelaySeconds int
 }
 
 // OutboxMessage represents a row in the outbox table as read by the Enqueuer. It includes all columns needed for locking, publishing, retry scheduling, and failure tracking.

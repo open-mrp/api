@@ -10,6 +10,7 @@ import (
 	agentdb "github.com/augno/api/services/agent-service/internal/infrastructure/db"
 	"github.com/augno/api/services/agent-service/internal/infrastructure/sqlc"
 	agentpagination "github.com/augno/api/services/agent-service/internal/pagination"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/contracts"
 	apierror "github.com/augno/api/shared/errors"
@@ -204,16 +205,48 @@ func (h *agentHandler) ContinueRun(ctx context.Context, req *pb.ContinueRunReque
 	defer finalizeIdempotency()
 
 	runID, apiErr := h.agentDefSvc.ContinueRun(ctx, domain.ContinueRunParams{
-		AgentRunID:        req.AgentRunId,
-		Message:           req.Message,
-		ApprovedToolSlugs: req.ApprovedToolSlugs,
-		AllowedToolSlugs:  req.AllowedToolSlugs,
+		AgentRunID:          req.AgentRunId,
+		Message:             req.Message,
+		ApprovedToolSlugs:   req.ApprovedToolSlugs,
+		RejectedToolSlugs:   req.RejectedToolSlugs,
+		ApprovedToolCallIDs: req.ApprovedToolCallIds,
+		RejectedToolCallIDs: req.RejectedToolCallIds,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
 	return &pb.ContinueRunResponse{
+		AgentRunId: runID,
+	}, nil
+}
+
+func (h *agentHandler) RetryRun(ctx context.Context, req *pb.RetryRunRequest) (*pb.RetryRunResponse, error) {
+	ctx, span := tracing.StartSpan(ctx, handlerTracer, "grpc.retry_run")
+	defer span.End()
+
+	if err := h.checkPlanAccess(ctx); err != nil {
+		return nil, err
+	}
+
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "request is required")
+	}
+	if req.AgentRunId == "" {
+		return nil, status.Error(codes.InvalidArgument, "agent_run_id is required")
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	runID, apiErr := h.agentDefSvc.RetryRun(ctx, domain.RetryRunParams{
+		AgentRunID: req.AgentRunId,
+	})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.RetryRunResponse{
 		AgentRunId: runID,
 	}, nil
 }
@@ -245,7 +278,7 @@ func (h *agentHandler) CreateCustomAgent(ctx context.Context, req *pb.CreateCust
 	tools := make([]domain.ToolLinkParams, len(req.Tools))
 	for i, t := range req.Tools {
 		tools[i] = domain.ToolLinkParams{
-			ToolID:        t.ToolId,
+			ToolSlug:      t.ToolSlug,
 			ConfigJSON:    t.ConfigJson,
 			SortOrder:     t.SortOrder,
 			RequireReview: t.RequireReview,
@@ -290,7 +323,7 @@ func (h *agentHandler) UpdateCustomAgent(ctx context.Context, req *pb.UpdateCust
 		tools = make([]domain.ToolLinkParams, len(req.Tools))
 		for i, t := range req.Tools {
 			tools[i] = domain.ToolLinkParams{
-				ToolID:        t.ToolId,
+				ToolSlug:      t.ToolSlug,
 				ConfigJSON:    t.ConfigJson,
 				SortOrder:     t.SortOrder,
 				RequireReview: t.RequireReview,
@@ -303,10 +336,12 @@ func (h *agentHandler) UpdateCustomAgent(ctx context.Context, req *pb.UpdateCust
 		Name:              req.Name,
 		Slug:              req.Slug,
 		Description:       req.Description,
+		ClearDescription:  req.ClearDescription,
 		CategoryCode:      req.CategoryCode,
 		TriggerType:       req.TriggerType,
 		ConfigJSON:        req.ConfigJson,
 		RoleID:            req.RoleId,
+		ClearRoleID:       req.ClearRoleId,
 		Tools:             tools,
 		ToolsProvided:     req.ToolsProvided,
 		Includes:          req.Includes,
@@ -418,6 +453,7 @@ func (h *agentHandler) ListAvailableTools(ctx context.Context, req *pb.ListAvail
 			q := req.GetQuery()
 			params.Query = &q
 		}
+		params.PaginateResource = req.GetPaginateResource()
 	}
 
 	results, groups, apiErr := h.agentDefSvc.ListAvailableTools(ctx, params)
@@ -428,7 +464,7 @@ func (h *agentHandler) ListAvailableTools(ctx context.Context, req *pb.ListAvail
 	pbTools := make([]*pb.AvailableToolInfo, 0, len(results))
 	for _, t := range results {
 		pbTools = append(pbTools, &pb.AvailableToolInfo{
-			Id:                  t.ID,
+			Slug:                t.Slug,
 			DisplayName:         t.DisplayName,
 			Description:         t.Description,
 			ConfigSchemaJson:    string(t.ConfigSchema),
@@ -436,6 +472,8 @@ func (h *agentHandler) ListAvailableTools(ctx context.Context, req *pb.ListAvail
 			GroupId:             t.GroupID,
 			GroupName:           t.GroupName,
 			RequiredPermissions: t.RequiredPermissions,
+			RequiredRoleType:    t.RequiredRoleType,
+			Mutating:            t.Mutating,
 		})
 	}
 
@@ -452,6 +490,37 @@ func (h *agentHandler) ListAvailableTools(ctx context.Context, req *pb.ListAvail
 	}
 
 	return &pb.ListAvailableToolsResponse{Tools: pbTools, Groups: pbGroups}, nil
+}
+
+func (h *agentHandler) ListAvailableModels(ctx context.Context, _ *pb.ListAvailableModelsRequest) (*pb.ListAvailableModelsResponse, error) {
+	ctx, span := tracing.StartSpan(ctx, handlerTracer, "grpc.list_available_models")
+	defer span.End()
+
+	if err := h.checkPlanAccess(ctx); err != nil {
+		return nil, err
+	}
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainAgents, types.ActionRead); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	models := make([]*pb.AvailableModelInfo, 0, len(domain.AvailableModels))
+	for _, m := range domain.AvailableModels {
+		models = append(models, &pb.AvailableModelInfo{
+			Code:     string(m.Code),
+			Name:     m.Name,
+			Provider: m.Provider,
+		})
+	}
+
+	return &pb.ListAvailableModelsResponse{Models: models}, nil
 }
 
 func (h *agentHandler) UpdateAgentAccountStatus(ctx context.Context, req *pb.UpdateAgentAccountStatusRequest) (*pb.UpdateAgentAccountStatusResponse, error) {
@@ -599,6 +668,17 @@ func (h *agentHandler) GetRun(ctx context.Context, req *pb.GetRunRequest) (*pb.G
 		return nil, status.Error(codes.InvalidArgument, "agent_run_id is required")
 	}
 
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainAgentRuns, types.ActionRead); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
 	accountID, err := getAccountIDFromContext(ctx)
 	if err != nil {
 		return nil, err
@@ -665,6 +745,17 @@ func (h *agentHandler) ListRuns(ctx context.Context, req *pb.ListRunsRequest) (*
 
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "request is required")
+	}
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainAgentRuns, types.ActionRead); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
 	accountID, err := getAccountIDFromContext(ctx)
@@ -786,6 +877,17 @@ func (h *agentHandler) ListTokenUsage(ctx context.Context, req *pb.ListTokenUsag
 		return nil, status.Error(codes.InvalidArgument, "request is required")
 	}
 
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainAgents, types.ActionRead); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
 	accountID, err := getAccountIDFromContext(ctx)
 	if err != nil {
 		return nil, err
@@ -888,6 +990,17 @@ func (h *agentHandler) ListAgentMemories(ctx context.Context, req *pb.ListAgentM
 		return nil, status.Error(codes.InvalidArgument, "request is required")
 	}
 
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainAgentMemories, types.ActionRead); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
 	accountID, err := getAccountIDFromContext(ctx)
 	if err != nil {
 		return nil, err
@@ -967,6 +1080,17 @@ func (h *agentHandler) GetAgentMemory(ctx context.Context, req *pb.GetAgentMemor
 		return nil, status.Error(codes.InvalidArgument, "id is required")
 	}
 
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainAgentMemories, types.ActionRead); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
 	accountID, err := getAccountIDFromContext(ctx)
 	if err != nil {
 		return nil, err
@@ -995,6 +1119,18 @@ func (h *agentHandler) BatchGetAgentMemoriesByIDs(ctx context.Context, req *pb.B
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "request is required")
 	}
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainAgentMemories, types.ActionRead); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
 	accountID, err := getAccountIDFromContext(ctx)
 	if err != nil {
 		return nil, err
@@ -1067,14 +1203,16 @@ func (h *agentHandler) UpdateAgentMemory(ctx context.Context, req *pb.UpdateAgen
 	defer finalizeIdempotency()
 
 	result, apiErr := h.agentDefSvc.UpdateAgentMemory(ctx, domain.UpdateAgentMemoryParams{
-		MemoryID:     req.Id,
-		Category:     req.Category,
-		Content:      req.Content,
-		MetadataJSON: req.MetadataJson,
-		EntityType:   req.EntityType,
-		EntityID:     req.EntityId,
-		Importance:   req.Importance,
-		ExpiresAt:    req.ExpiresAt,
+		MemoryID:       req.Id,
+		Category:       req.Category,
+		Content:        req.Content,
+		MetadataJSON:   req.MetadataJson,
+		EntityType:     req.EntityType,
+		EntityID:       req.EntityId,
+		Importance:     req.Importance,
+		ExpiresAt:      req.ExpiresAt,
+		ClearEntity:    req.ClearEntity,
+		ClearExpiresAt: req.ClearExpiresAt,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
@@ -1122,293 +1260,6 @@ func domainMemoryToProto(m *domain.AgentMemoryInfo) *pb.AgentMemoryInfo {
 	}
 }
 
-func domainAlertToProto(a *domain.AgentAlertInfo) *pb.AgentAlertInfo {
-	info := &pb.AgentAlertInfo{
-		Id:                      a.ID,
-		AccountId:               a.AccountID,
-		AgentRunId:              a.AgentRunID,
-		AgentActionId:           a.AgentActionID,
-		SeverityCode:            a.SeverityCode,
-		StatusCode:              a.StatusCode,
-		Title:                   a.Title,
-		Message:                 a.Message,
-		MetadataJson:            a.Metadata,
-		AcknowledgedAt:          a.AcknowledgedAt,
-		AcknowledgedBy:          a.AcknowledgedBy,
-		AcknowledgedByActorType: a.AcknowledgedByActorType,
-		AcknowledgedByActorName: a.AcknowledgedByActorName,
-		CreatedAt:               a.CreatedAt,
-		UpdatedAt:               a.UpdatedAt,
-	}
-	if a.RunStatusCode != "" {
-		info.RunStatusCode = &a.RunStatusCode
-	}
-	if a.RunTriggerType != "" {
-		info.RunTriggerType = &a.RunTriggerType
-	}
-	if a.RunCreatedAt != "" {
-		info.RunCreatedAt = &a.RunCreatedAt
-	}
-	if a.RunUpdatedAt != "" {
-		info.RunUpdatedAt = &a.RunUpdatedAt
-	}
-	if a.ActionToolSlug != "" {
-		info.ActionToolSlug = &a.ActionToolSlug
-	}
-	if a.ActionStatusCode != "" {
-		info.ActionStatusCode = &a.ActionStatusCode
-	}
-	if a.ActionCreatedAt != "" {
-		info.ActionCreatedAt = &a.ActionCreatedAt
-	}
-	if a.ActionUpdatedAt != "" {
-		info.ActionUpdatedAt = &a.ActionUpdatedAt
-	}
-	return info
-}
-
-func sqlcGetAlertRowToProto(a *sqlc.GetAgentAlertByIDRow) *pb.AgentAlertInfo {
-	var metadataStr string
-	if a.Metadata != nil {
-		metadataStr = string(a.Metadata)
-	}
-	info := &pb.AgentAlertInfo{
-		Id:                      a.ID,
-		AccountId:               a.AccountID,
-		AgentRunId:              formatPgText(a.AgentRunID),
-		AgentActionId:           formatPgText(a.AgentActionID),
-		SeverityCode:            a.SeverityCode,
-		StatusCode:              a.StatusCode,
-		Title:                   a.Title,
-		Message:                 formatPgText(a.Message),
-		MetadataJson:            metadataStr,
-		AcknowledgedAt:          formatPgTimestamp(a.AcknowledgedAt),
-		AcknowledgedBy:          formatPgText(a.AcknowledgedByActorID),
-		AcknowledgedByActorType: formatPgText(a.AcknowledgedByActorType),
-		AcknowledgedByActorName: formatPgText(a.AcknowledgedByActorName),
-		CreatedAt:               formatPgTimestamp(a.CreatedAt),
-		UpdatedAt:               formatPgTimestamp(a.UpdatedAt),
-	}
-	if a.RunStatusCode.Valid && a.RunStatusCode.String != "" {
-		info.RunStatusCode = &a.RunStatusCode.String
-	}
-	if a.RunTriggerType.Valid && a.RunTriggerType.String != "" {
-		info.RunTriggerType = &a.RunTriggerType.String
-	}
-	if a.RunCreatedAt.Valid {
-		s := a.RunCreatedAt.Time.Format("2006-01-02T15:04:05.000Z")
-		info.RunCreatedAt = &s
-	}
-	if a.RunUpdatedAt.Valid {
-		s := a.RunUpdatedAt.Time.Format("2006-01-02T15:04:05.000Z")
-		info.RunUpdatedAt = &s
-	}
-	if a.ActionToolSlug.Valid && a.ActionToolSlug.String != "" {
-		info.ActionToolSlug = &a.ActionToolSlug.String
-	}
-	if a.ActionStatusCode.Valid && a.ActionStatusCode.String != "" {
-		info.ActionStatusCode = &a.ActionStatusCode.String
-	}
-	if a.ActionCreatedAt.Valid {
-		s := a.ActionCreatedAt.Time.Format("2006-01-02T15:04:05.000Z")
-		info.ActionCreatedAt = &s
-	}
-	if a.ActionUpdatedAt.Valid {
-		s := a.ActionUpdatedAt.Time.Format("2006-01-02T15:04:05.000Z")
-		info.ActionUpdatedAt = &s
-	}
-	return info
-}
-
-func sqlcListAlertRowToProto(a *sqlc.ListAgentAlertsByAccountCursorRow) *pb.AgentAlertInfo {
-	var metadataStr string
-	if a.Metadata != nil {
-		metadataStr = string(a.Metadata)
-	}
-	info := &pb.AgentAlertInfo{
-		Id:                      a.ID,
-		AccountId:               a.AccountID,
-		AgentRunId:              formatPgText(a.AgentRunID),
-		AgentActionId:           formatPgText(a.AgentActionID),
-		SeverityCode:            a.SeverityCode,
-		StatusCode:              a.StatusCode,
-		Title:                   a.Title,
-		Message:                 formatPgText(a.Message),
-		MetadataJson:            metadataStr,
-		AcknowledgedAt:          formatPgTimestamp(a.AcknowledgedAt),
-		AcknowledgedBy:          formatPgText(a.AcknowledgedByActorID),
-		AcknowledgedByActorType: formatPgText(a.AcknowledgedByActorType),
-		AcknowledgedByActorName: formatPgText(a.AcknowledgedByActorName),
-		CreatedAt:               formatPgTimestamp(a.CreatedAt),
-		UpdatedAt:               formatPgTimestamp(a.UpdatedAt),
-	}
-	if a.RunStatusCode.Valid && a.RunStatusCode.String != "" {
-		info.RunStatusCode = &a.RunStatusCode.String
-	}
-	if a.RunTriggerType.Valid && a.RunTriggerType.String != "" {
-		info.RunTriggerType = &a.RunTriggerType.String
-	}
-	if a.RunCreatedAt.Valid {
-		s := a.RunCreatedAt.Time.Format("2006-01-02T15:04:05.000Z")
-		info.RunCreatedAt = &s
-	}
-	if a.RunUpdatedAt.Valid {
-		s := a.RunUpdatedAt.Time.Format("2006-01-02T15:04:05.000Z")
-		info.RunUpdatedAt = &s
-	}
-	if a.ActionToolSlug.Valid && a.ActionToolSlug.String != "" {
-		info.ActionToolSlug = &a.ActionToolSlug.String
-	}
-	if a.ActionStatusCode.Valid && a.ActionStatusCode.String != "" {
-		info.ActionStatusCode = &a.ActionStatusCode.String
-	}
-	if a.ActionCreatedAt.Valid {
-		s := a.ActionCreatedAt.Time.Format("2006-01-02T15:04:05.000Z")
-		info.ActionCreatedAt = &s
-	}
-	if a.ActionUpdatedAt.Valid {
-		s := a.ActionUpdatedAt.Time.Format("2006-01-02T15:04:05.000Z")
-		info.ActionUpdatedAt = &s
-	}
-	return info
-}
-
-func (h *agentHandler) ListAgentAlerts(ctx context.Context, req *pb.ListAgentAlertsRequest) (*pb.ListAgentAlertsResponse, error) {
-	ctx, span := tracing.StartSpan(ctx, handlerTracer, "grpc.list_agent_alerts")
-	defer span.End()
-
-	if err := h.checkPlanAccess(ctx); err != nil {
-		return nil, err
-	}
-
-	if req == nil {
-		return nil, status.Error(codes.InvalidArgument, "request is required")
-	}
-
-	accountID, err := getAccountIDFromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	limit := req.Limit
-	if limit <= 0 {
-		limit = 100
-	}
-	if limit > 1000 {
-		limit = 1000
-	}
-
-	filterQuery := false
-	search := pgtype.Text{}
-	if req.GetQuery() != "" {
-		filterQuery = true
-		search = pgtype.Text{String: req.GetQuery(), Valid: true}
-	}
-
-	alertRepo := h.repos.NewAgentAlertRepo()
-
-	cursorID, cursorDir, apiErr := agentpagination.ParseOptionalStringCursor(req.Cursor)
-	if apiErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-	}
-
-	params := sqlc.ListAgentAlertsByAccountCursorParams{
-		AccountID:      accountID,
-		FilterSeverity: req.SeverityCode != "",
-		SeverityCode:   req.SeverityCode,
-		FilterStatus:   req.StatusCode != "",
-		StatusCode:     req.StatusCode,
-		FilterQuery:    filterQuery,
-		Search:         search,
-		HasCursor:      cursorID != "",
-		CursorID:       cursorID,
-		Lim:            limit + 1,
-	}
-	rows, repoErr := alertRepo.ListByAccountCursor(ctx, params)
-	if repoErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(repoErr)
-	}
-
-	rows, pageInfo := pagination.BuildPageString(
-		rows,
-		limit,
-		cursorDir,
-		func(a sqlc.ListAgentAlertsByAccountCursorRow) time.Time { return a.CreatedAt.Time },
-		func(a sqlc.ListAgentAlertsByAccountCursorRow) string { return a.ID },
-	)
-
-	pbAlerts := make([]*pb.AgentAlertInfo, len(rows))
-	for i := range rows {
-		pbAlerts[i] = sqlcListAlertRowToProto(&rows[i])
-	}
-
-	return &pb.ListAgentAlertsResponse{
-		Alerts:   pbAlerts,
-		PageInfo: agentpagination.ToProtoPageInfo(pageInfo),
-	}, nil
-}
-
-func (h *agentHandler) GetAgentAlert(ctx context.Context, req *pb.GetAgentAlertRequest) (*pb.GetAgentAlertResponse, error) {
-	ctx, span := tracing.StartSpan(ctx, handlerTracer, "grpc.get_agent_alert")
-	defer span.End()
-
-	if err := h.checkPlanAccess(ctx); err != nil {
-		return nil, err
-	}
-
-	if req == nil {
-		return nil, status.Error(codes.InvalidArgument, "request is required")
-	}
-	if req.Id == "" {
-		return nil, status.Error(codes.InvalidArgument, "id is required")
-	}
-
-	accountID, err := getAccountIDFromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	alertRepo := h.repos.NewAgentAlertRepo()
-	alert, alertErr := alertRepo.GetByID(ctx, req.Id)
-	if alertErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewResourceNotFoundError("Agent alert not found."))
-	}
-
-	if alert.AccountID != accountID {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewResourceNotFoundError("Agent alert not found."))
-	}
-
-	return &pb.GetAgentAlertResponse{Alert: sqlcGetAlertRowToProto(alert)}, nil
-}
-
-func (h *agentHandler) AcknowledgeAgentAlert(ctx context.Context, req *pb.AcknowledgeAgentAlertRequest) (*pb.AcknowledgeAgentAlertResponse, error) {
-	ctx, span := tracing.StartSpan(ctx, handlerTracer, "grpc.acknowledge_agent_alert")
-	defer span.End()
-
-	if err := h.checkPlanAccess(ctx); err != nil {
-		return nil, err
-	}
-
-	if req == nil {
-		return nil, status.Error(codes.InvalidArgument, "request is required")
-	}
-	if req.Id == "" {
-		return nil, status.Error(codes.InvalidArgument, "id is required")
-	}
-
-	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
-	defer finalizeIdempotency()
-
-	result, apiErr := h.agentDefSvc.AcknowledgeAgentAlert(ctx, domain.AcknowledgeAgentAlertParams{
-		AlertID: req.Id,
-	})
-	if apiErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-	}
-
-	return &pb.AcknowledgeAgentAlertResponse{Alert: domainAlertToProto(result)}, nil
-}
-
 // nestedIncludes filters an includes slice to the sub-paths under a parent key, stripped of the parent prefix. For includes=["definition.role","config"] and parent="definition" it returns ["role"]. Returns nil when nothing matches.
 func nestedIncludes(includes []string, parent string) []string {
 	prefix := parent + "."
@@ -1440,7 +1291,7 @@ func domainToProtoAgentDefinition(info *domain.AgentDefinitionInfo) *pb.AgentDef
 	for _, t := range info.Tools {
 		pbTools = append(pbTools, &pb.AgentDefinitionToolInfo{
 			Id:                  t.ID,
-			ToolId:              t.ToolID,
+			ToolSlug:            t.ToolSlug,
 			DisplayName:         t.DisplayName,
 			Description:         t.Description,
 			ConfigSchemaJson:    string(t.ConfigSchema),

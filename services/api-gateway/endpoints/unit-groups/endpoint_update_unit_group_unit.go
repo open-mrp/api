@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -46,14 +47,16 @@ type UpdateUnitGroupUnitEndpoint struct{}
 
 func (e *UpdateUnitGroupUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateUnitGroupUnitRequest, *apiresource.UnitGroupUnit] {
 	return (&apiendpoint.APIEndpoint[*UpdateUnitGroupUnitRequest, *apiresource.UnitGroupUnit]{
-		Title:             "Update Unit Group Associated Unit",
-		Method:            http.MethodPatch,
-		Route:             "/v1/catalog/unit-groups/{unit_group_id}/units/{id}",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeUnitGroupUnit,
+		Title:               "Update Unit Group Associated Unit",
+		Method:              http.MethodPatch,
+		Route:               "/v1/catalog/unit-groups/{unit_group_id}/units/{id}",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainUnitGroups, Action: types.ActionUpdate}},
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeUnitGroupUnit,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateUnitGroupUnitRequest) (*apiresource.UnitGroupUnit, *apierror.APIError) {
 			return svc.(UnitGroupSvc).UpdateUnitGroupUnit
 		},

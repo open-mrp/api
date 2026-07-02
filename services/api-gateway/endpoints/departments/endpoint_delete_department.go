@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -31,6 +32,9 @@ func (e *DeleteDepartmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Delet
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteDepartmentRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(DepartmentSvc).DeleteDepartment
+		},
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainDepartments, Action: types.ActionDelete},
 		},
 	})
 }

@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -22,13 +23,15 @@ type DeleteSandboxEndpoint struct{}
 
 func (e *DeleteSandboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSandboxRequest, *apiresource.EmptyResource] {
 	return (&apiendpoint.APIEndpoint[*DeleteSandboxRequest, *apiresource.EmptyResource]{
-		Title:             "Delete Sandbox",
-		Method:            http.MethodDelete,
-		Route:             "/v1/core/sandboxes/{id}",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusAccepted,
-		Public:            true,
-		Preview:           true,
+		Title:               "Delete Sandbox",
+		Method:              http.MethodDelete,
+		Route:               "/v1/core/sandboxes/{id}",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusAccepted,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainSandbox, Action: types.ActionDelete}},
+		Preview:             true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteSandboxRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(SandboxSvc).DeleteSandbox
 		},

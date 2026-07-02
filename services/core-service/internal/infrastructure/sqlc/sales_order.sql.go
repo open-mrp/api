@@ -12,6 +12,25 @@ import (
 	"time"
 )
 
+const allocateNextOrderNumber = `-- name: AllocateNextOrderNumber :execresult
+INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created_at, updated_at)
+VALUES (?, ?, 'sales_order_number', LAST_INSERT_ID(1), NOW(3), NOW(3))
+ON DUPLICATE KEY UPDATE value = LAST_INSERT_ID(value + 1), updated_at = NOW(3)
+`
+
+type AllocateNextOrderNumberParams struct {
+	ID        string
+	AccountID string
+}
+
+// Atomically reserves the next sales-order number for the account and returns it via LAST_INSERT_ID.
+// The single upsert holds a row lock on the per-account counter, so concurrent creates serialize
+// and never collide on the same number (the old read-MAX-then-write pattern raced). Read the reserved
+// number back with the statement result's LastInsertId().
+func (q *Queries) AllocateNextOrderNumber(ctx context.Context, arg AllocateNextOrderNumberParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, allocateNextOrderNumber, arg.ID, arg.AccountID)
+}
+
 const checkSalesOrderPaymentStatus = `-- name: CheckSalesOrderPaymentStatus :one
 SELECT (
   EXISTS(
@@ -513,35 +532,6 @@ func (q *Queries) GetAccountOriginAddress(ctx context.Context, accountID string)
 		&i.Email,
 	)
 	return i, err
-}
-
-const getNextOrderNumber = `-- name: GetNextOrderNumber :one
-SELECT GREATEST(
-    COALESCE(
-        (SELECT MAX(CAST(sp.value AS UNSIGNED))
-         FROM sys_property sp
-         WHERE sp.account_id = ?
-         AND sp.sys_property_type_code = 'sales_order_number'),
-        0
-    ),
-    COALESCE(
-        (SELECT MAX(CAST(so.number AS UNSIGNED))
-         FROM sales_order so
-         WHERE so.owner_account_id = ?),
-        0
-    )
-) + 1 AS next_number
-`
-
-type GetNextOrderNumberParams struct {
-	AccountID string
-}
-
-func (q *Queries) GetNextOrderNumber(ctx context.Context, arg GetNextOrderNumberParams) (int32, error) {
-	row := q.db.QueryRowContext(ctx, getNextOrderNumber, arg.AccountID, arg.AccountID)
-	var next_number int32
-	err := row.Scan(&next_number)
-	return next_number, err
 }
 
 const getOrderAcknowledgementRecipients = `-- name: GetOrderAcknowledgementRecipients :many
@@ -2041,10 +2031,6 @@ AND (
     OR so.created_at <= ?
 )
 AND (
-    ? = false
-    OR so.buyer_account_id != so.owner_account_id
-)
-AND (
     so.created_at > ?
     OR (so.created_at = ? AND so.id > ?)
 )
@@ -2069,7 +2055,6 @@ type ListSalesOrdersBackwardParams struct {
 	SalesRepIds                []sql.NullString
 	StartDate                  sql.NullTime
 	EndDate                    sql.NullTime
-	ExcludeInternalOrders      interface{}
 	CursorCreatedAt            time.Time
 	CursorID                   string
 	Limit                      int32
@@ -2242,7 +2227,6 @@ func (q *Queries) ListSalesOrdersBackward(ctx context.Context, arg ListSalesOrde
 	queryParams = append(queryParams, arg.StartDate)
 	queryParams = append(queryParams, arg.EndDate)
 	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.ExcludeInternalOrders)
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
@@ -2535,10 +2519,6 @@ AND (
     OR so.created_at <= ?
 )
 AND (
-    ? = false
-    OR so.buyer_account_id != so.owner_account_id
-)
-AND (
     ? IS NULL
     OR so.created_at < ?
     OR (so.created_at = ? AND so.id < ?)
@@ -2564,7 +2544,6 @@ type ListSalesOrdersForwardParams struct {
 	SalesRepIds                []sql.NullString
 	StartDate                  sql.NullTime
 	EndDate                    sql.NullTime
-	ExcludeInternalOrders      interface{}
 	CursorCreatedAt            sql.NullTime
 	CursorID                   sql.NullString
 	Limit                      int32
@@ -2740,7 +2719,6 @@ func (q *Queries) ListSalesOrdersForward(ctx context.Context, arg ListSalesOrder
 	queryParams = append(queryParams, arg.StartDate)
 	queryParams = append(queryParams, arg.EndDate)
 	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.ExcludeInternalOrders)
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorCreatedAt)
@@ -2978,10 +2956,6 @@ AND (
     ? IS NULL
     OR so.created_at <= ?
 )
-AND (
-    ? = false
-    OR so.buyer_account_id != so.owner_account_id
-)
 ORDER BY so.created_at DESC, so.id DESC
 LIMIT ?
 `
@@ -3005,7 +2979,6 @@ type SearchSalesOrderIDsParams struct {
 	SalesRepIds                []sql.NullString
 	StartDate                  sql.NullTime
 	EndDate                    sql.NullTime
-	ExcludeInternalOrders      interface{}
 	Limit                      int32
 }
 
@@ -3096,7 +3069,6 @@ func (q *Queries) SearchSalesOrderIDs(ctx context.Context, arg SearchSalesOrderI
 	queryParams = append(queryParams, arg.StartDate)
 	queryParams = append(queryParams, arg.EndDate)
 	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.ExcludeInternalOrders)
 	queryParams = append(queryParams, arg.Limit)
 	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
@@ -3134,28 +3106,6 @@ type SetSalesOrderProductionRunIDParams struct {
 
 func (q *Queries) SetSalesOrderProductionRunID(ctx context.Context, arg SetSalesOrderProductionRunIDParams) error {
 	_, err := q.db.ExecContext(ctx, setSalesOrderProductionRunID, arg.ProductionRunID, arg.ID, arg.AccountID)
-	return err
-}
-
-const updateNextOrderNumber = `-- name: UpdateNextOrderNumber :exec
-INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created_at, updated_at)
-VALUES (?, ?, 'sales_order_number', ?, NOW(3), NOW(3))
-ON DUPLICATE KEY UPDATE value = ?, updated_at = NOW(3)
-`
-
-type UpdateNextOrderNumberParams struct {
-	ID        string
-	AccountID string
-	Value     int32
-}
-
-func (q *Queries) UpdateNextOrderNumber(ctx context.Context, arg UpdateNextOrderNumberParams) error {
-	_, err := q.db.ExecContext(ctx, updateNextOrderNumber,
-		arg.ID,
-		arg.AccountID,
-		arg.Value,
-		arg.Value,
-	)
 	return err
 }
 

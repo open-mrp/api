@@ -20,8 +20,8 @@ const (
 	seedUserName     = "John Doe"
 	seedUserPassword = "Testing123!" // #nosec G101 - Test constant, not a production credential
 
-	seedUser2Email    = "smartinez@augno.com"
-	seedUser2Username = "smartinez"
+	seedUser2Email    = "user2@augno.com"
+	seedUser2Username = "user2"
 	seedUser2Name     = "Sarah Martinez"
 )
 

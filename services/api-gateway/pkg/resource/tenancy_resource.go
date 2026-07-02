@@ -50,9 +50,11 @@ type TenancyCurrentAccount struct {
 	InternalStripeCustomerID *string `json:"internal_stripe_customer_id"`
 	// Full plan details for this account, including limits and features.
 	AccountPlan *TenancyAccountPlan `json:"account_plan"`
+	// ID of the authenticated user's membership record within this account.
+	AccountUserID string `json:"account_user_id"`
 }
 
-// TenancyAccountPlan is the resolved plan for the current account.
+// The resolved subscription plan for the current account, including its limits and features.
 type TenancyAccountPlan struct {
 	// Plan ID.
 	TypeID string `json:"type_id" validate:"required"`
@@ -76,7 +78,7 @@ type TenancyAccountPlan struct {
 	Features map[string]bool `json:"features"`
 }
 
-// TenancyPendingRegistration represents an in-progress registration session for the authenticated user.
+// An in-progress registration session, present only partway through signup before an account exists.
 type TenancyPendingRegistration struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=tenancy_pending_registration"`
@@ -136,6 +138,7 @@ var SampleTenancy = &Tenancy{
 		OnboardingStatus: "active",
 		Plan:             string(constants.PublicPlanCodeStarter),
 		Role:             SampleRole,
+		AccountUserID:    SampleAccountUserID,
 		AccountPlan: &TenancyAccountPlan{
 			TypeID:        SamplePlanTypeIDStarter,
 			Object:        constants.ObjectTypeAccountPlan,

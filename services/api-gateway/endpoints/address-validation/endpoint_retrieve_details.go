@@ -18,7 +18,7 @@ type RetrieveAddressDetailsRequest struct {
 	SessionToken *string `query:"session_token"` // #nosec G117 -- not a secret, Google Maps session correlation token
 }
 
-// Returns parsed address components for a Google Places ID.
+// Returns the full parsed address for a place returned by address autocomplete.
 type RetrieveAddressDetailsEndpoint struct{}
 
 func (e *RetrieveAddressDetailsEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAddressDetailsRequest, *apiresource.AddressDetailsResult] {

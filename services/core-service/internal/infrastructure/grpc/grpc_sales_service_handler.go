@@ -466,20 +466,19 @@ func (h *salesGRPCHandler) ListSalesOrders(ctx context.Context, req *pb.ListSale
 	}
 
 	params := domain.ListSalesOrdersParams{
-		Cursor:                req.Cursor,
-		Limit:                 req.Limit,
-		Query:                 req.Query,
-		StatusCodes:           req.StatusCodes,
-		ItemIDs:               req.ItemIds,
-		ProductLineIDs:        req.ProductLineIds,
-		CustomerIDs:           req.CustomerIds,
-		CustomerGroupIDs:      req.CustomerGroupIds,
-		SalesRepIDs:           req.SalesRepIds,
-		StartDate:             req.StartDate,
-		EndDate:               req.EndDate,
-		ExcludeInternalOrders: req.ExcludeInternalOrders,
-		BuyerAccountID:        req.BuyerAccountId,
-		Includes:              req.Includes,
+		Cursor:           req.Cursor,
+		Limit:            req.Limit,
+		Query:            req.Query,
+		StatusCodes:      req.StatusCodes,
+		ItemIDs:          req.ItemIds,
+		ProductLineIDs:   req.ProductLineIds,
+		CustomerIDs:      req.CustomerIds,
+		CustomerGroupIDs: req.CustomerGroupIds,
+		SalesRepIDs:      req.SalesRepIds,
+		StartDate:        req.StartDate,
+		EndDate:          req.EndDate,
+		BuyerAccountID:   req.BuyerAccountId,
+		Includes:         req.Includes,
 	}
 
 	result, apiErr := h.salesOrderSvc.ListSalesOrders(ctx, params)
@@ -582,7 +581,6 @@ func (h *salesGRPCHandler) CreateSalesOrder(ctx context.Context, req *pb.CreateS
 			ProductDescription: l.ProductDescription,
 			QuantityValue:      l.QuantityValue,
 			QuantityUnitID:     l.QuantityUnitId,
-			EdiLineItemID:      l.EdiLineItemId,
 		}
 		if l.UnitPriceValue != nil {
 			line.UnitPrice = &domain.RateValue{

@@ -35,7 +35,7 @@ func (*LocationsEndpointGroup) Materialize(config *LocationsEndpointGroupConfig)
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
-		Title:        "Location Management",
+		Title:        "Location",
 		Description:  "List and manage locations.",
 		ResourceType: &apiresource.Location{},
 	}

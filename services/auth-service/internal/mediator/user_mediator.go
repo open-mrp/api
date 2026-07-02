@@ -264,9 +264,7 @@ func (s *userMedImpl) ValidateCredential(ctx context.Context, authToken string, 
 	}
 
 	// Otherwise, validate it as a user credential.
-	// User requests always include Augno-Actor-Account to identify the
-	// user's own account. When it matches the target the user is internal;
-	// when it differs the user is accessing cross-account (customer/supplier).
+	// User requests always include Augno-Actor-Account to identify the user's own account. When it matches the target the user is internal; when it differs the user is accessing cross-account (customer/supplier).
 	if actorAccountID != nil {
 		// Validate the user is a member of their actor account.
 		identity, apiErr := s.validateUserCredential(ctx, span, authToken, actorAccountID, true)
@@ -280,9 +278,7 @@ func (s *userMedImpl) ValidateCredential(ctx context.Context, authToken string, 
 		}
 
 		// Cross-account — look up the relation to determine customer/supplier.
-		// Pass the validated actor account so the owner-side lookup is constrained to it;
-		// without this, any account the user belongs to that owns a relation to the target
-		// would match and the caller could keep an unrelated actor's permissions.
+		// Pass the validated actor account so the owner-side lookup is constrained to it; without this, any account the user belongs to that owns a relation to the target would match and the caller could keep an unrelated actor's permissions.
 		accountRelation, hasRelation, apiErr := s.coreClient.GetAccountRelationByUserID(ctx, *targetAccountID, *actorAccountID, identity.Actor.ID)
 		if apiErr != nil {
 			return nil, apiErr
@@ -302,8 +298,7 @@ func (s *userMedImpl) ValidateCredential(ctx context.Context, authToken string, 
 		}
 
 		// Owner-side: the user's actor account owns the relation (e.g. merchant targeting customer).
-		// Keep the actor's own account permissions. The SQL constraint above guarantees the
-		// relation's owner equals the supplied actor account, so retaining actor permissions is safe.
+		// Keep the actor's own account permissions. The SQL constraint above guarantees the relation's owner equals the supplied actor account, so retaining actor permissions is safe.
 		if accountRelation.IsOwnerSide {
 			relationType := accountRelation.AccountRelationRoleCode
 			identity.Target.AccountID = *targetAccountID
@@ -475,8 +470,7 @@ func (s *userMedImpl) validateUserCredential(ctx context.Context, span trace.Spa
 	// This user isn't associated with the target account, but they may have a relationship with it
 	if !hasAccess {
 		// No actor account is supplied on this path, so owner-side relations must not match.
-		// Passing "" as actorAccountID skips the owner-side fallback in core-service; we also
-		// reject defensively below in case the contract ever changes.
+		// Passing "" as actorAccountID skips the owner-side fallback in core-service; we also reject defensively below in case the contract ever changes.
 		accountRelation, hasRelation, err := s.coreClient.GetAccountRelationByUserID(ctx, finalTargetAccountID, "", userModel.ID)
 		if err != nil {
 			return nil, err
@@ -487,8 +481,7 @@ func (s *userMedImpl) validateUserCredential(ctx context.Context, span trace.Spa
 			return nil, tracing.Trace(span, apierror.NewAuthorizationError(errNoAccountAccess(finalTargetAccountID)))
 		}
 
-		// Owner-side relations have no validated actor account to bind to; the related-user
-		// identity builder would mis-attribute the actor account to the counterparty.
+		// Owner-side relations have no validated actor account to bind to; the related-user identity builder would mis-attribute the actor account to the counterparty.
 		if accountRelation.IsOwnerSide {
 			return nil, tracing.Trace(span, apierror.NewAuthorizationError(errNoAccountAccess(finalTargetAccountID)))
 		}

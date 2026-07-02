@@ -10,11 +10,12 @@ import (
 func TestAvailableToolPresenter(t *testing.T) {
 	t.Parallel()
 	tool := &pb.AvailableToolInfo{
-		Id:               "tdef_01f0c4d04780ace864e6cc3a74",
-		DisplayName:      "Search Products",
-		Description:      "Search for products by keyword or phrase",
+		Slug:             "lookup_customer",
+		DisplayName:      "Lookup Customer",
+		Description:      "Look up a customer by their email address.",
 		ConfigSchemaJson: `{}`,
 		Category:         "built_in",
+		Mutating:         true,
 	}
 
 	result := availableToolFromProto(tool)

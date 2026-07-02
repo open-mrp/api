@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	types "github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
 )
@@ -99,13 +100,14 @@ type EstimateRateEndpoint struct{}
 
 func (e *EstimateRateEndpoint) Materialize() *apiendpoint.APIEndpoint[*EstimateRateRequest, *apiresource.EstimateRateResult] {
 	return (&apiendpoint.APIEndpoint[*EstimateRateRequest, *apiresource.EstimateRateResult]{
-		Title:             "Estimate Rate",
-		Method:            http.MethodPost,
-		Route:             "/v1/operations/shipments/actions/estimate-rate",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
+		Title:               "Estimate Rate",
+		Method:              http.MethodPost,
+		Route:               "/v1/operations/shipments/actions/estimate-rate",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainShipments, Action: types.ActionRead}, {Domain: types.PermissionDomainCustomers, Action: types.ActionRead}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionRead}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *EstimateRateRequest) (*apiresource.EstimateRateResult, *apierror.APIError) {
 			return svc.(ShipmentSvc).EstimateRate
 		},

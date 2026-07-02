@@ -340,6 +340,7 @@ AND (? = false OR ae.target_account_id IN (/*SLICE:target_account_ids*/?))
 AND (? = false OR ae.resource_type IN (/*SLICE:resource_types*/?))
 AND (? = false OR ae.resource_id IN (/*SLICE:resource_ids*/?))
 AND (? = false OR ae.actor_id IN (/*SLICE:actor_ids*/?))
+AND (? = false OR ae.identity_type IN (/*SLICE:actor_types*/?))
 AND (? = false OR ae.action IN (/*SLICE:actions*/?))
 AND (? IS NULL OR ae.occurred_at >= ?)
 AND (? IS NULL OR ae.occurred_at <= ?)
@@ -373,6 +374,8 @@ type ListAuditEventsBackwardParams struct {
 	ResourceIds                []string
 	IncludeActorIDFilter       interface{}
 	ActorIds                   []string
+	IncludeActorTypeFilter     interface{}
+	ActorTypes                 []string
 	IncludeActionFilter        interface{}
 	Actions                    []string
 	StartDate                  sql.NullTime
@@ -465,6 +468,15 @@ func (q *Queries) ListAuditEventsBackward(ctx context.Context, arg ListAuditEven
 		query = strings.Replace(query, "/*SLICE:actor_ids*/?", strings.Repeat(",?", len(arg.ActorIds))[1:], 1)
 	} else {
 		query = strings.Replace(query, "/*SLICE:actor_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeActorTypeFilter)
+	if len(arg.ActorTypes) > 0 {
+		for _, v := range arg.ActorTypes {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:actor_types*/?", strings.Repeat(",?", len(arg.ActorTypes))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:actor_types*/?", "NULL", 1)
 	}
 	queryParams = append(queryParams, arg.IncludeActionFilter)
 	if len(arg.Actions) > 0 {
@@ -573,6 +585,7 @@ AND (? = false OR ae.target_account_id IN (/*SLICE:target_account_ids*/?))
 AND (? = false OR ae.resource_type IN (/*SLICE:resource_types*/?))
 AND (? = false OR ae.resource_id IN (/*SLICE:resource_ids*/?))
 AND (? = false OR ae.actor_id IN (/*SLICE:actor_ids*/?))
+AND (? = false OR ae.identity_type IN (/*SLICE:actor_types*/?))
 AND (? = false OR ae.action IN (/*SLICE:actions*/?))
 AND (? IS NULL OR ae.occurred_at >= ?)
 AND (? IS NULL OR ae.occurred_at <= ?)
@@ -607,6 +620,8 @@ type ListAuditEventsForwardParams struct {
 	ResourceIds                []string
 	IncludeActorIDFilter       interface{}
 	ActorIds                   []string
+	IncludeActorTypeFilter     interface{}
+	ActorTypes                 []string
 	IncludeActionFilter        interface{}
 	Actions                    []string
 	StartDate                  sql.NullTime
@@ -699,6 +714,15 @@ func (q *Queries) ListAuditEventsForward(ctx context.Context, arg ListAuditEvent
 		query = strings.Replace(query, "/*SLICE:actor_ids*/?", strings.Repeat(",?", len(arg.ActorIds))[1:], 1)
 	} else {
 		query = strings.Replace(query, "/*SLICE:actor_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeActorTypeFilter)
+	if len(arg.ActorTypes) > 0 {
+		for _, v := range arg.ActorTypes {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:actor_types*/?", strings.Repeat(",?", len(arg.ActorTypes))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:actor_types*/?", "NULL", 1)
 	}
 	queryParams = append(queryParams, arg.IncludeActionFilter)
 	if len(arg.Actions) > 0 {

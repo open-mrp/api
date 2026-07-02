@@ -8,8 +8,8 @@ import (
 
 // RunnerSvc orchestrates agent run execution.
 type RunnerSvc interface {
-	ExecuteRun(ctx context.Context, runID, configID, accountID, triggerType string) error
-	ContinueRun(ctx context.Context, runID, accountID, message string, approvedToolSlugs []string, allowedToolSlugs []string, actorID, actorType, actorName string) error
+	ExecuteRun(ctx context.Context, runID, configID, accountID, triggerType string) *apierror.APIError
+	ContinueRun(ctx context.Context, runID, accountID, message string, approvedToolSlugs []string, approveAllPending bool, rejectedToolSlugs []string, approvedToolCallIDs, rejectedToolCallIDs []string, actorID, actorType, actorName, replyToMessageID string) *apierror.APIError
 }
 
 // SchedulerSvc manages periodic agent scheduling.
@@ -66,12 +66,22 @@ type AgentDefinitionSvc interface {
 	// TriggerRun creates an agent run and publishes an outbox message to execute it.
 	TriggerRun(ctx context.Context, params TriggerRunParams) (string, *apierror.APIError)
 
+	// CreateChatRun creates a chat-linked agent run (conversation_id + trigger_message_id, trigger_type=chat, input=Message) for an agent definition and publishes the execute command.
+	// Service-internal — called by the chat-run consumer when notification-service signals that an agent participant's trigger fired.
+	CreateChatRun(ctx context.Context, in ChatRunInput) *apierror.APIError
+
 	// CancelRun cancels a pending or running agent run.
 	CancelRun(ctx context.Context, params CancelRunParams) *apierror.APIError
 
-	// ContinueRun continues an agent run that is awaiting input and publishes
-	// an outbox message to resume execution.
+	// ContinueRun continues an agent run that is awaiting input, with idempotency support.
+	//
+	// 1. Validate the run exists, belongs to the account, and is awaiting input.
+	// 2. Update status to running and create an outbox message atomically.
+	// 3. Cache the success response for idempotent replay.
 	ContinueRun(ctx context.Context, params ContinueRunParams) (string, *apierror.APIError)
+
+	// RetryRun re-attempts a failed run by resuming its existing transcript — no new user message is added, so the agent picks up with full knowledge of what it already did (including any tool results), minimizing duplicate side effects vs. a fresh re-run. The atomic status→running transition (guarded on status='failed' and bounded by retry_count) is the source of truth that prevents double-retry races.
+	RetryRun(ctx context.Context, params RetryRunParams) (string, *apierror.APIError)
 
 	// CreateAgentMemory creates a new agent memory record.
 	CreateAgentMemory(ctx context.Context, params CreateAgentMemoryParams) (*AgentMemoryInfo, *apierror.APIError)
@@ -81,7 +91,4 @@ type AgentDefinitionSvc interface {
 
 	// DeleteAgentMemory deletes an agent memory record.
 	DeleteAgentMemory(ctx context.Context, params DeleteAgentMemoryParams) *apierror.APIError
-
-	// AcknowledgeAgentAlert acknowledges an agent alert.
-	AcknowledgeAgentAlert(ctx context.Context, params AcknowledgeAgentAlertParams) (*AgentAlertInfo, *apierror.APIError)
 }

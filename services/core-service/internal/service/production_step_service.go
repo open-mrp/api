@@ -295,8 +295,7 @@ var validLaborTimeUnits = map[string]bool{
 }
 
 // BulkCreateProductionSteps creates multiple production steps in a single operation.
-// Steps that already exist (by name) are updated; new ones are created. Individual row
-// failures are captured in the results rather than failing the whole operation.
+// Steps that already exist (by name) are updated; new ones are created. Individual row failures are captured in the results rather than failing the whole operation.
 func (s *productionStepSvcImpl) BulkCreateProductionSteps(ctx context.Context, params domain.BulkCreateProductionStepsParams) ([]domain.BulkCreateProductionStepResult, *apierror.APIError) {
 	ctx, span := productionStepSvcTracer.Start(ctx, "service.production_step.bulk_create")
 	defer span.End()

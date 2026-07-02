@@ -236,6 +236,11 @@ func (s *productLineSvcImpl) CreateProductLine(ctx context.Context, params domai
 				return apierror.NewConflictErrorWithParam("A product line with this name already exists.", "name")
 			}
 
+			// Validate the referenced unit group exists before persisting so a bogus unit_group_id is rejected and the tx rolls back instead of committing a dangling reference.
+			if _, apiErr := txRepo.GetUnitGroup(txCtx, params.UnitGroupID, nil); apiErr != nil {
+				return apiErr
+			}
+
 			created, apiErr := txRepo.Create(txCtx, productLineID, params)
 			if apiErr != nil {
 				return apiErr
@@ -334,6 +339,13 @@ func (s *productLineSvcImpl) UpdateProductLine(ctx context.Context, params domai
 				}
 				if exists {
 					return apierror.NewConflictErrorWithParam("A product line with this name already exists.", "name")
+				}
+			}
+
+			// Validate the referenced unit group exists before persisting so a bogus unit_group_id is rejected and the tx rolls back instead of committing a dangling reference.
+			if params.UnitGroupID != nil && *params.UnitGroupID != "" {
+				if _, apiErr := txRepo.GetUnitGroup(txCtx, *params.UnitGroupID, nil); apiErr != nil {
+					return apiErr
 				}
 			}
 

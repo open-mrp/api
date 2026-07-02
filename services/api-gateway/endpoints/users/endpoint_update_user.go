@@ -8,6 +8,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -17,9 +18,9 @@ import (
 type UpdateUserRequest struct {
 	// User ID.
 	UserID string `path:"id" validate:"required"`
-	// Display name.
+	// The user's full display name.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Profile image URL.
+	// URL of the user's profile image.
 	ImageUrl field.Optional[string] `json:"image_url,omitzero" validate:"omitempty,max=2083"`
 	// Timestamp recording when the user's email address was verified.
 	EmailVerified field.Optional[time.Time] `json:"email_verified,omitzero"`
@@ -49,6 +50,9 @@ func (e *UpdateUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateUserR
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeUser,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainTeamUsers, Action: types.ActionUpdate},
+		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateUserRequest) (*apiresource.User, *apierror.APIError) {
 			return svc.(UserSvc).UpdateUser
 		},

@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -16,21 +17,22 @@ type CancelRunRequest struct {
 	AgentRunID string `path:"id" validate:"required"`
 }
 
-// Cancels a pending or running agent run.
+// Cancels an in-progress agent run.
 //
-// Only runs in the `pending` or `running` status can be cancelled; cancelling a run in any other status returns a validation error.
+// A run can be cancelled while it is working or paused waiting on the user — `pending`, `running`, `awaiting_input`, or `awaiting_approval`. Cancelling a run in a terminal status (`completed`, `failed`, `cancelled`) returns a validation error.
 type CancelRunEndpoint struct{}
 
 func (e *CancelRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*CancelRunRequest, *apiresource.AgentRun] {
 	return (&apiendpoint.APIEndpoint[*CancelRunRequest, *apiresource.AgentRun]{
-		Title:             "Cancel Agent Run",
-		Method:            http.MethodPost,
-		ContentType:       "application/json",
-		Route:             "/v1/ai/runs/{id}/actions/cancel",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeAgentRun,
+		Title:               "Cancel Agent Run",
+		Method:              http.MethodPost,
+		ContentType:         "application/json",
+		Route:               "/v1/ai/runs/{id}/actions/cancel",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeAgentRun,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAgentRuns, Action: types.ActionUpdate}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CancelRunRequest) (*apiresource.AgentRun, *apierror.APIError) {
 			return svc.(AgentRunSvc).CancelAgentRun
 		},

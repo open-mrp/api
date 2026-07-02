@@ -258,9 +258,7 @@ func (m *docAPIKeyMedImpl) createDocAPIKey(ctx context.Context, sandboxAccountID
 		return nil, tracing.Trace(span, genErr)
 	}
 
-	// Create a new doc API key record for the sandbox account. The unique key
-	// on owner_account_id makes concurrent creates lose with a ResourceExists
-	// error, which the service retries to return the winner's key.
+	// Create a new doc API key record for the sandbox account. The unique key on owner_account_id makes concurrent creates lose with a ResourceExists error, which the service retries to return the winner's key.
 	if _, createDocErr := m.repos.NewDocAPIKeyRepo().Create(ctx, &apikey.DocAPIKey{
 		TypeID:          typeID,
 		APIKeyID:        apiKey.TypeID,

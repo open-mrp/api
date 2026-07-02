@@ -32,6 +32,8 @@ type APIKeyRepo interface {
 	FindByTypeID(ctx context.Context, typeID string, includes []string) (*apikey.APIKey, *apierror.APIError)
 	Touch(ctx context.Context, apiKeyID int64) *apierror.APIError
 	Create(ctx context.Context, apiKey *apikey.APIKey) (int64, *apierror.APIError)
+	// CountRoleForOwner returns the number of roles matching roleID that are visible to ownerAccountID (system roles with a NULL account_id, or roles owned by the account). Used to validate a referenced role_id before persisting an API key.
+	CountRoleForOwner(ctx context.Context, roleID string, ownerAccountID string) (int64, *apierror.APIError)
 	GetByIDs(ctx context.Context, ownerAccountID string, ids []string) ([]*apikey.APIKey, *apierror.APIError)
 	// Revoke marks an API key as revoked. A nil revokeAt revokes immediately using the database clock; a non-nil revokeAt schedules a future revocation. Scoped to ownerAccountID; returns a not-found error if the key does not exist for the given owner.
 	Revoke(ctx context.Context, typeID string, ownerAccountID string, revokeAt *time.Time) *apierror.APIError

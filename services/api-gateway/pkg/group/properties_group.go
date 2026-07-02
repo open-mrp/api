@@ -35,7 +35,7 @@ func (*PropertiesEndpointGroup) Materialize(config *PropertiesEndpointGroupConfi
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
-		Title:        "Properties Management",
+		Title:        "Properties",
 		Description:  "List and manage properties and their attributes.",
 		ResourceType: &apiresource.Property{},
 	}

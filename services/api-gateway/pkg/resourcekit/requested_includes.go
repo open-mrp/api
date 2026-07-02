@@ -25,6 +25,20 @@ func RequestedIncludes(ctx context.Context) []string {
 	return nil
 }
 
+// RequestedIncludeSet returns the client's requested include paths as a set for cheap membership
+// checks (e.g. gating per-field name hydration). Nil when nothing was requested.
+func RequestedIncludeSet(ctx context.Context) map[string]bool {
+	requested := RequestedIncludes(ctx)
+	if len(requested) == 0 {
+		return nil
+	}
+	set := make(map[string]bool, len(requested))
+	for _, r := range requested {
+		set[r] = true
+	}
+	return set
+}
+
 // FilterIncludes returns the subset of supported includes that the client
 // requested, preserving the order of supported. supported is the set a given
 // backend call understands (historically passed verbatim, which over-fetched);

@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -30,14 +31,15 @@ type ListSettlementsEndpoint struct{}
 
 func (e *ListSettlementsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSettlementsRequest, *apiresource.List[apiresource.SettlementSummary]] {
 	return (&apiendpoint.APIEndpoint[*ListSettlementsRequest, *apiresource.List[apiresource.SettlementSummary]]{
-		Title:             "List Settlements",
-		Method:            http.MethodGet,
-		ContentType:       "application/json",
-		Route:             "/v1/finance/settlements",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeSettlementSummary,
+		Title:               "List Settlements",
+		Method:              http.MethodGet,
+		ContentType:         "application/json",
+		Route:               "/v1/finance/settlements",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainSettlements, Action: types.ActionRead}},
+		ObjectType:          constants.ObjectTypeSettlementSummary,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListSettlementsRequest) (*apiresource.List[apiresource.SettlementSummary], *apierror.APIError) {
 			return svc.(SettlementSvc).ListSettlements
 		},

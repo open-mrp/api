@@ -63,6 +63,8 @@ type AccountUserRepo interface {
 	GetDetailByAccountAndID(ctx context.Context, accountID, accountUserID string, includes []string) (*AccountUserDetail, *apierror.APIError)
 	Create(ctx context.Context, id, accountID, userID string, roleID, departmentID *string) *apierror.APIError
 	Update(ctx context.Context, accountUserID string, roleID, departmentID *string) *apierror.APIError
+	// ReactivateRemovedAccountUser reactivates a previously soft-removed link for (accountID, userID), setting its role/department, and returns the reactivated account_user id. Returns resource_not_found when no removed link exists.
+	ReactivateRemovedAccountUser(ctx context.Context, accountID, userID string, roleID, departmentID *string) (string, *apierror.APIError)
 	SoftDelete(ctx context.Context, accountUserID string) *apierror.APIError
 	UpdateStatus(ctx context.Context, accountUserID string, status constants.AccountUserStatus) *apierror.APIError
 	CountByRoleID(ctx context.Context, accountID, roleID string) (int64, *apierror.APIError)
@@ -102,6 +104,7 @@ type AccountRelationRepo interface {
 	FindByCounterpartyAccountAndUserID(ctx context.Context, counterpartyAccountID, ownerAccountID, userID string) (*AccountRelation, *apierror.APIError)
 	FindByCounterpartyAccountAndAPIKeyID(ctx context.Context, counterpartyAccountID string, apiKeyID int64) (*AccountRelation, *apierror.APIError)
 	FindCustomerByEmail(ctx context.Context, ownerAccountID, email string) (*CustomerByEmail, *apierror.APIError)
+	FindContactsByEmail(ctx context.Context, ownerAccountID, email string) ([]ContactMatch, *apierror.APIError)
 	HasRelation(ctx context.Context, ownerAccountID, counterpartyAccountID string) (bool, *apierror.APIError)
 	CountOtherOwnerRelations(ctx context.Context, counterpartyAccountID, excludeOwnerAccountID string) (int64, *apierror.APIError)
 	FindRelationByOwnerAndCounterparty(ctx context.Context, ownerAccountID, counterpartyAccountID string) (string, *apierror.APIError)
@@ -220,8 +223,7 @@ type RegistrationRepo interface {
 type UnitRepo interface {
 	List(ctx context.Context, params ListUnitsParams) (*ListUnitsResult, *apierror.APIError)
 	Get(ctx context.Context, params GetUnitParams) (*Unit, *apierror.APIError)
-	// GetCurrencyBaseUnitID returns the global currency base unit ID used as the
-	// numerator unit when building monetary price rates.
+	// GetCurrencyBaseUnitID returns the global currency base unit ID used as the numerator unit when building monetary price rates.
 	GetCurrencyBaseUnitID(ctx context.Context) (string, *apierror.APIError)
 	// GetDimensionCodes returns a unit-id → unit_dimension_code map for the given IDs. Used to enforce unit-type constraints (e.g., currency-only numerator on cost rates) before persisting rate rows.
 	GetDimensionCodes(ctx context.Context, ids []string) (map[string]string, *apierror.APIError)
@@ -361,6 +363,23 @@ type AccountIntegrationRepo interface {
 	Delete(ctx context.Context, params DeleteAccountIntegrationParams) (*AccountIntegration, *apierror.APIError)
 	GetEncryptedCredentials(ctx context.Context, accountID string, code constants.IntegrationCode) (credentials string, isActive bool, err *apierror.APIError)
 	HasIntegration(ctx context.Context, accountID string, code constants.IntegrationCode) (bool, *apierror.APIError)
+}
+
+// HubspotSyncRepo persists the HubSpot backfill state: jobs (state machine), the generic Augno->HubSpot id mapping, and the company-match review queue.
+type HubspotSyncRepo interface {
+	CreateJob(ctx context.Context, params CreateHubspotSyncJobParams) (*HubspotSyncJob, *apierror.APIError)
+	GetJob(ctx context.Context, accountID, id string) (*HubspotSyncJob, *apierror.APIError)
+	GetLatestJobForAccount(ctx context.Context, accountID string) (*HubspotSyncJob, *apierror.APIError)
+	UpdateJob(ctx context.Context, params UpdateHubspotSyncJobParams) *apierror.APIError
+
+	UpsertRecord(ctx context.Context, params UpsertHubspotSyncRecordParams) *apierror.APIError
+	GetRecord(ctx context.Context, accountID, augnoType, augnoID string) (*HubspotSyncRecord, *apierror.APIError)
+
+	CreateReview(ctx context.Context, params CreateHubspotCompanyReviewParams) (*HubspotCompanyReview, *apierror.APIError)
+	GetReview(ctx context.Context, accountID, id string) (*HubspotCompanyReview, *apierror.APIError)
+	ListReviewsForJob(ctx context.Context, jobID string, status *string) ([]*HubspotCompanyReview, *apierror.APIError)
+	CountPendingReviews(ctx context.Context, jobID string) (int64, *apierror.APIError)
+	ResolveReview(ctx context.Context, params ResolveHubspotCompanyReviewParams) *apierror.APIError
 }
 
 type SalesTargetRepo interface {

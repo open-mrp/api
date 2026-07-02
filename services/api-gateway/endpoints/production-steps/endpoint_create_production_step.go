@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -39,7 +40,7 @@ type CreateProductionStepRequest struct {
 	// The item and quantity this step produces.
 	Production CreateProductionInput `json:"production" validate:"required"`
 	// Materials consumed by the step.
-	Consumptions []CreateConsumptionInput `json:"consumptions"`
+	Consumptions []CreateConsumptionInput `json:"consumptions,omitzero"`
 }
 
 // Rate configuration input.
@@ -126,14 +127,15 @@ type CreateProductionStepEndpoint struct{}
 
 func (e *CreateProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductionStepRequest, *apiresource.ProductionStep] {
 	return (&apiendpoint.APIEndpoint[*CreateProductionStepRequest, *apiresource.ProductionStep]{
-		Title:             "Create Production Step",
-		Method:            http.MethodPost,
-		ContentType:       "application/json",
-		Route:             "/v1/operations/production-steps",
-		SuccessStatusCode: http.StatusCreated,
-		Public:            false,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeProductionStep,
+		Title:               "Create Production Step",
+		Method:              http.MethodPost,
+		ContentType:         "application/json",
+		Route:               "/v1/operations/production-steps",
+		SuccessStatusCode:   http.StatusCreated,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProductionSteps, Action: types.ActionCreate}},
+		ObjectType:          constants.ObjectTypeProductionStep,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateProductionStepRequest) (*apiresource.ProductionStep, *apierror.APIError) {
 			return svc.(ProductionStepSvc).CreateProductionStep
 		},

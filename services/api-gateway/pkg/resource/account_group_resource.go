@@ -17,6 +17,11 @@ type AccountGroup struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_group"`
+	// How this account group is used.
+	//
+	// - `pricing_group`: used for pricing rules, such as a "Preferred" group that receives a special discount.
+	// - `type_group`: used to categorize accounts, such as "Consumers" or "Distributors".
+	Type constants.AccountGroupType `json:"type" validate:"required"`
 	// Display name of the account group.
 	//
 	// Unique within the account.
@@ -33,11 +38,6 @@ type AccountGroup struct {
 	// - `free_freight`: customers within this group will not have to pay for freight.
 	// - `billed_freight`: freight will be applied to any order within this account group, unless overridden elsewhere.
 	FreightPolicy constants.FreightPolicy `json:"freight_policy" validate:"required"`
-	// How this account group is used.
-	//
-	// - `pricing_group`: used for pricing rules, such as a "Preferred" group that receives a special discount.
-	// - `type_group`: used to categorize accounts, such as "Consumers" or "Distributors".
-	Type constants.AccountGroupType `json:"type" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
@@ -47,11 +47,11 @@ type AccountGroup struct {
 var SampleAccountGroup = &AccountGroup{
 	ID:               SampleAccountGroupID,
 	Object:           constants.ObjectTypeAccountGroup,
+	Type:             constants.AccountGroupTypeTypeGroup,
 	Name:             SampleAccountGroupName,
 	Description:      nil,
 	CommissionPolicy: constants.CommissionPolicyApplied,
 	FreightPolicy:    constants.FreightPolicyBilled,
-	Type:             constants.AccountGroupTypeTypeGroup,
 	CreatedAt:        timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:        timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

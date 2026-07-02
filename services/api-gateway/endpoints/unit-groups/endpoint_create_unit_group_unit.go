@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -53,8 +54,12 @@ func (e *CreateUnitGroupUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cr
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeUnitGroupUnit,
+		AgentTool:         true,
+		// Adding/updating a unit within a group is a sub-resource mutation of the
+		// parent group, so the downstream UpsertUnitGroupUnit checks unit_groups:update.
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainUnitGroups, Action: types.ActionUpdate}},
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeUnitGroupUnit,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateUnitGroupUnitRequest) (*apiresource.UnitGroupUnit, *apierror.APIError) {
 			return svc.(UnitGroupSvc).CreateUnitGroupUnit
 		},

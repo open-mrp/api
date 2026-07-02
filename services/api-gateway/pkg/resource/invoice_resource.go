@@ -38,7 +38,9 @@ type Invoice struct {
 	PriorityCode constants.PriorityCode `json:"priority" validate:"required"`
 	// Payment term governing when the invoice is due.
 	PaymentTerm *PaymentTerm `json:"payment_term" expandable:"true"`
-	// Payment status of the invoice, derived from its paid-in-full and overpaid flags rather than computed directly from allocations.
+	// Payment status of the invoice.
+	//
+	// Derived from the invoice's paid-in-full and overpaid flags rather than computed directly from its allocations.
 	//
 	// - `overpaid`: the applied allocations exceed the invoiced amount.
 	// - `partially_paid`: reserved for a future signal and not currently emitted.
@@ -180,7 +182,9 @@ type InvoiceForPayment struct {
 	CustomerPO *string `json:"customer_po"`
 	// Customer associated with this invoice.
 	Customer *Customer `json:"customer" expandable:"true"`
-	// Whether the billed customer is a child of a parent account (i.e. it has a parent account). When true, `parent_account` identifies that parent.
+	// Whether the billed customer is a child of a parent account.
+	//
+	// When `true`, `parent_account` identifies that parent.
 	IsParentAccount bool `json:"is_parent_account"`
 	// The customer's parent account, when the billed customer is a child account.
 	ParentAccount *Account `json:"parent_account" expandable:"true"`

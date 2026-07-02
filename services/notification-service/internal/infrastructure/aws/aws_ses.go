@@ -58,19 +58,31 @@ func (s *sesEmailSenderImpl) Send(ctx context.Context, data domain.EmailData) (*
 	}
 
 	recipients := data.To
+	cc := data.Cc
 	if s.platformMode == constants.PlatformModeDevelopment {
 		recipients = []string{EmailTestingRecipient}
+		cc = nil
+	}
+
+	// The bridge sends as the inbox address (a DKIM-verified customer domain); everything else sends as the default noreply@ sender.
+	sender := EmailSenderSource
+	if data.From != nil && *data.From != "" {
+		sender = *data.From
 	}
 
 	rawMessage, err := generateRawEmail(rawEmailInput{
 		Subject:     data.Subject,
 		Body:        data.Body,
 		Recipients:  recipients,
+		Cc:          cc,
 		Attachment:  data.Attachment,
 		Filename:    data.Filename,
-		SenderEmail: EmailSenderSource,
-		IsHtml:      true,
+		SenderEmail: sender,
+		IsHtml:      !data.PlainText,
 		ReplyTo:     data.SendAs,
+		InReplyTo:   data.InReplyTo,
+		References:  data.References,
+		MessageID:   data.MessageID,
 	})
 
 	if err != nil {
@@ -80,12 +92,13 @@ func (s *sesEmailSenderImpl) Send(ctx context.Context, data domain.EmailData) (*
 		return nil, apiErr
 	}
 
+	destinations := append(append([]string{}, recipients...), cc...)
 	input := &ses.SendRawEmailInput{
 		RawMessage: &sestypes.RawMessage{
 			Data: rawMessage,
 		},
-		Source:       aws.String(EmailSenderSource),
-		Destinations: recipients,
+		Source:       aws.String(sender),
+		Destinations: destinations,
 	}
 
 	response, err := s.client.SendRawEmail(ctx, input)
@@ -100,15 +113,29 @@ func (s *sesEmailSenderImpl) Send(ctx context.Context, data domain.EmailData) (*
 	return response.MessageId, nil
 }
 
+// bracketReferences angle-brackets each whitespace-separated message-id in a References value (the ledger stores them bare), producing a valid rfc822 References header.
+func bracketReferences(refs string) string {
+	parts := strings.Fields(refs)
+	for i, p := range parts {
+		p = strings.Trim(p, "<>")
+		parts[i] = "<" + p + ">"
+	}
+	return strings.Join(parts, " ")
+}
+
 type rawEmailInput struct {
 	Subject     string
 	Body        string
 	Recipients  []string
+	Cc          []string
 	Attachment  []byte
 	Filename    *string
 	SenderEmail string
 	IsHtml      bool
 	ReplyTo     *string
+	InReplyTo   *string
+	References  *string
+	MessageID   *string
 }
 
 func generateRawEmail(input rawEmailInput) ([]byte, error) {
@@ -142,8 +169,21 @@ func generateRawEmail(input rawEmailInput) ([]byte, error) {
 		fmt.Sprintf("To: %s", strings.Join(input.Recipients, ",")),
 	}
 
+	if len(input.Cc) > 0 {
+		headers = append(headers, fmt.Sprintf("Cc: %s", strings.Join(input.Cc, ",")))
+	}
 	if input.ReplyTo != nil {
 		headers = append(headers, fmt.Sprintf("Reply-To: %s", *input.ReplyTo))
+	}
+	// rfc822 threading: angle-bracket the message-ids so mail clients group the reply into the thread.
+	if input.MessageID != nil && *input.MessageID != "" {
+		headers = append(headers, fmt.Sprintf("Message-ID: <%s>", *input.MessageID))
+	}
+	if input.InReplyTo != nil && *input.InReplyTo != "" {
+		headers = append(headers, fmt.Sprintf("In-Reply-To: <%s>", *input.InReplyTo))
+	}
+	if input.References != nil && *input.References != "" {
+		headers = append(headers, fmt.Sprintf("References: %s", bracketReferences(*input.References)))
 	}
 
 	headers = append(headers, fmt.Sprintf("Subject: %s", input.Subject))

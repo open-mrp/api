@@ -6,6 +6,7 @@ import (
 
 	httptransport "github.com/augno/api/services/api-gateway/internal/http"
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -17,13 +18,14 @@ type ExportItemsEndpoint struct{}
 
 func (e *ExportItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportItemsRequest, *httptransport.FileDownload] {
 	return (&apiendpoint.APIEndpoint[*ExportItemsRequest, *httptransport.FileDownload]{
-		Title:             "Export Items",
-		Method:            http.MethodGet,
-		ContentType:       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-		Route:             "/v1/catalog/items/actions/export",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
+		Title:               "Export Items",
+		Method:              http.MethodGet,
+		ContentType:         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		Route:               "/v1/catalog/items/actions/export",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionRead}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportItemsRequest) (*httptransport.FileDownload, *apierror.APIError) {
 			return svc.(ItemSvc).ExportItems
 		},

@@ -14,8 +14,6 @@ import (
 type AccountUser struct {
 	// Account user ID.
 	ID string `json:"id" validate:"required"`
-	// Underlying user.
-	User *User `json:"user" expandable:"true"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_user"`
 	// Account user status.
@@ -28,6 +26,8 @@ type AccountUser struct {
 	Role *Role `json:"role" expandable:"true"`
 	// Assigned department.
 	Department *Department `json:"department" expandable:"true"`
+	// Underlying user.
+	User *User `json:"user" expandable:"true"`
 	// When the user last accessed this account.
 	LastUsedAt *time.Time `json:"last_used_at"`
 	// When the account user was created.
@@ -40,10 +40,10 @@ const SampleAccountUserID = "acus_01ea9983ddb41dacc44ecf997c"
 
 var SampleAccountUser = &AccountUser{
 	ID:        SampleAccountUserID,
-	User:      SampleUser,
 	Object:    constants.ObjectTypeAccountUser,
 	Status:    constants.AccountUserStatusActive,
 	Role:      SampleRole,
+	User:      SampleUser,
 	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

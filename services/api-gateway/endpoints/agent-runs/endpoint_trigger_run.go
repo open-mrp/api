@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -40,14 +41,15 @@ type TriggerRunEndpoint struct{}
 
 func (e *TriggerRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*TriggerRunRequest, *apiresource.AgentRun] {
 	return (&apiendpoint.APIEndpoint[*TriggerRunRequest, *apiresource.AgentRun]{
-		Title:             "Trigger Agent Run",
-		Method:            http.MethodPost,
-		Route:             "/v1/ai/runs",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusCreated,
-		Public:            false,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeAgentRun,
+		Title:               "Trigger Agent Run",
+		Method:              http.MethodPost,
+		Route:               "/v1/ai/runs",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusCreated,
+		Public:              false,
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeAgentRun,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAgentRuns, Action: types.ActionCreate}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *TriggerRunRequest) (*apiresource.AgentRun, *apierror.APIError) {
 			return svc.(AgentRunSvc).TriggerAgentRun
 		},

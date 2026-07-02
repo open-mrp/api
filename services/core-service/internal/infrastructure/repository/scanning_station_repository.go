@@ -351,6 +351,8 @@ func (r *scanningStationRepoImpl) Create(ctx context.Context, id string, params 
 		ScanningStationTypeCode: string(params.Type),
 		MaterialCheckRequired:   operatorRequirementToBool(params.OperatorRequirement),
 		DepartmentID:            params.DepartmentID,
+		LabelSizeCode:           toNullString(params.LabelSizeCode),
+		LabelTypeCode:           toNullString(params.LabelTypeCode),
 		AccountID:               params.AccountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {

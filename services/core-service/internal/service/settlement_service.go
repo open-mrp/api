@@ -495,9 +495,7 @@ func (s *settlementSvcImpl) updatePaymentStatuses(ctx context.Context, settlemen
 	// For now, mark all as fully allocated since we just created allocations
 	_ = repo.UpdateTransactionsFullyAllocated(ctx, transactionIDs, true)
 
-	// Recompute each affected invoice's paid-in-full / over-paid flags from the
-	// full set of allocations against the invoice's invoiced total (allocations
-	// from any settlement count, not just this one).
+	// Recompute each affected invoice's paid-in-full / over-paid flags from the full set of allocations against the invoice's invoiced total (allocations from any settlement count, not just this one).
 	flags, apiErr := repo.GetInvoicePaymentFlags(ctx, invoiceIDs)
 	if apiErr != nil {
 		return

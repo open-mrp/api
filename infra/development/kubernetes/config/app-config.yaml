@@ -10,9 +10,18 @@ data:
     ACCOUNT_PHOTOS_BUCKET: "augno-org-logos-dev-us-east-2"
     USER_PHOTOS_BUCKET: "augno-user-photos-dev-us-east-2"
     SHIPPING_LABELS_BUCKET: "augno-shipping-labels-dev-us-east-2"
+    CHAT_BUCKET: "augno-chat-attachments-dev-us-east-2"
+    # Inbound email bridge (dev). Pinned to us-east-1 (SES receiving region). The QUEUE_URL is printed
+    # by the dev setup script (scripts/dev-email-bridge-setup.sh) — paste the real account id in.
+    INBOUND_EMAIL_BUCKET: "augno-notification-inbound-email-dev"
+    INBOUND_EMAIL_QUEUE_URL: "https://sqs.us-east-1.amazonaws.com/AWS_ACCOUNT_ID/augno-notification-inbound-email-dev"
+    INBOUND_EMAIL_REGION: "us-east-1"
     AUTH_SERVICE_URL: "auth-service:9092"
     CORE_SERVICE_URL: "core-service:9092"
     NOTIFICATION_SERVICE_URL: "notification-service:9092"
     BILLING_SERVICE_URL: "billing-service:9092"
     PLATFORM_SERVICE_URL: "platform-service:9092"
     AGENT_SERVICE_URL: "agent-service:9092"
+    # api-gateway internal listener (agent-service → api-gateway endpoint-tools).
+    INTERNAL_PORT: "8091"
+    API_GATEWAY_INTERNAL_URL: "http://api-gateway-internal:8091"

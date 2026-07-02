@@ -35,7 +35,7 @@ func (*CarriersEndpointGroup) Materialize(config *CarriersEndpointGroupConfig) *
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
-		Title:        "Carriers Management",
+		Title:        "Carriers",
 		Description:  "List and manage carriers and their Shippo integrations.",
 		ResourceType: &apiresource.Carrier{},
 	}

@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	types "github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -21,13 +22,14 @@ type ListShipmentLinesEndpoint struct{}
 
 func (e *ListShipmentLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListShipmentLinesRequest, *apiresource.List[apiresource.ShipmentLine]] {
 	return (&apiendpoint.APIEndpoint[*ListShipmentLinesRequest, *apiresource.List[apiresource.ShipmentLine]]{
-		Title:             "List Shipment Lines",
-		Method:            http.MethodGet,
-		ContentType:       "application/json",
-		Route:             "/v1/operations/shipments/{shipment_id}/lines",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
+		Title:               "List Shipment Lines",
+		Method:              http.MethodGet,
+		ContentType:         "application/json",
+		Route:               "/v1/operations/shipments/{shipment_id}/lines",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainShipments, Action: types.ActionRead}, {Domain: types.PermissionDomainCustomers, Action: types.ActionRead}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionRead}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListShipmentLinesRequest) (*apiresource.List[apiresource.ShipmentLine], *apierror.APIError) {
 			return svc.(ShipmentSvc).ListShipmentLines
 		},

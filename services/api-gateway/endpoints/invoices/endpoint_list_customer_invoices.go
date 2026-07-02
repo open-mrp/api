@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -34,6 +35,11 @@ func (e *ListCustomerInvoicesEndpoint) Materialize() *apiendpoint.APIEndpoint[*L
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeInvoiceForPayment,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainInvoices, Action: types.ActionRead},
+			{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},
+			{Domain: types.PermissionDomainSuppliers, Action: types.ActionRead},
+		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListCustomerInvoicesRequest) (*apiresource.List[apiresource.InvoiceForPayment], *apierror.APIError) {
 			return svc.(InvoiceSvc).ListCustomerInvoices
 		},

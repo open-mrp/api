@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
 )
@@ -63,13 +64,14 @@ type BulkCreateItemsEndpoint struct{}
 
 func (e *BulkCreateItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkCreateItemsRequest, *apiresource.BulkCreateItemsResponse] {
 	return (&apiendpoint.APIEndpoint[*BulkCreateItemsRequest, *apiresource.BulkCreateItemsResponse]{
-		Title:             "Bulk Create Items",
-		Method:            http.MethodPost,
-		Route:             "/v1/catalog/items/actions/bulk-create",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusCreated,
-		Public:            false,
-		Preview:           true,
+		Title:               "Bulk Create Items",
+		Method:              http.MethodPost,
+		Route:               "/v1/catalog/items/actions/bulk-create",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusCreated,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionCreate}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkCreateItemsRequest) (*apiresource.BulkCreateItemsResponse, *apierror.APIError) {
 			return svc.(ItemSvc).BulkCreateItems
 		},

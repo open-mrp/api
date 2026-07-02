@@ -94,6 +94,10 @@ func (r *repoFactoryImpl) NewAccountIntegrationRepo() domain.AccountIntegrationR
 	return NewAccountIntegrationRepo(r.queries)
 }
 
+func (r *repoFactoryImpl) NewHubspotSyncRepo() domain.HubspotSyncRepo {
+	return NewHubspotSyncRepo(r.queries)
+}
+
 func (r *repoFactoryImpl) NewSalesTargetRepo() domain.SalesTargetRepo {
 	return NewSalesTargetRepo(r.queries)
 }

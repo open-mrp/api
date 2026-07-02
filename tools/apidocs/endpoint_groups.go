@@ -8,6 +8,7 @@ import (
 	authpb "github.com/augno/api/shared/proto/auth"
 	billingpb "github.com/augno/api/shared/proto/billing"
 	pbgrpc "github.com/augno/api/shared/proto/core"
+	notificationpb "github.com/augno/api/shared/proto/notification"
 	platformpb "github.com/augno/api/shared/proto/platform"
 )
 
@@ -45,6 +46,9 @@ func openAPIEndpointGroups() []apiendpoint.APIEndpointGroup {
 		ShippingCase: struct {
 			pbgrpc.CoreShippingCaseServiceClient
 		}{},
+		HubspotSync: struct {
+			pbgrpc.CoreHubspotSyncServiceClient
+		}{},
 	}
 
 	billingClient := &grpcclient.BillingServiceClient{
@@ -65,6 +69,21 @@ func openAPIEndpointGroups() []apiendpoint.APIEndpointGroup {
 
 	agentClient := &grpcclient.AgentServiceClient{
 		Client: struct{ agentpb.AgentServiceClient }{},
+	}
+
+	notificationClient := &grpcclient.NotificationServiceClient{
+		Client: struct {
+			notificationpb.NotificationServiceClient
+		}{},
+		MessagingClient: struct {
+			notificationpb.MessagingServiceClient
+		}{},
+		ChatClient: struct {
+			notificationpb.ChatServiceClient
+		}{},
+		EmailBridgeClient: struct {
+			notificationpb.EmailBridgeServiceClient
+		}{},
 	}
 
 	return []apiendpoint.APIEndpointGroup{
@@ -112,10 +131,47 @@ func openAPIEndpointGroups() []apiendpoint.APIEndpointGroup {
 		}).APIEndpointGroup,
 		*(&httpgroup.AgentsEndpointGroup{}).Materialize(&httpgroup.AgentsEndpointGroupConfig{
 			AgentClient: agentClient,
-			CoreClient:  coreClient,
 		}).APIEndpointGroup,
-		*(&httpgroup.AgentAlertsEndpointGroup{}).Materialize(&httpgroup.AgentAlertsEndpointGroupConfig{
-			AgentClient: agentClient,
+		*(&httpgroup.NotificationsEndpointGroup{}).Materialize(&httpgroup.NotificationsEndpointGroupConfig{
+			NotificationClient: notificationClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.AnnouncementsEndpointGroup{}).Materialize(&httpgroup.AnnouncementsEndpointGroupConfig{
+			NotificationClient: notificationClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.ConversationsEndpointGroup{}).Materialize(&httpgroup.ConversationsEndpointGroupConfig{
+			NotificationClient: notificationClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.SearchEndpointGroup{}).Materialize(&httpgroup.SearchEndpointGroupConfig{
+			CoreClient:         coreClient,
+			NotificationClient: notificationClient,
+			AgentClient:        agentClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.MessagesEndpointGroup{}).Materialize(&httpgroup.MessagesEndpointGroupConfig{
+			NotificationClient: notificationClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.ConversationParticipantsEndpointGroup{}).Materialize(&httpgroup.ConversationParticipantsEndpointGroupConfig{
+			NotificationClient: notificationClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.MessagingGroupsEndpointGroup{}).Materialize(&httpgroup.MessagingGroupsEndpointGroupConfig{
+			NotificationClient: notificationClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.MessageAttachmentsEndpointGroup{}).Materialize(&httpgroup.MessageAttachmentsEndpointGroupConfig{
+			NotificationClient: notificationClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.MessageBlocksEndpointGroup{}).Materialize(&httpgroup.MessageBlocksEndpointGroupConfig{
+			NotificationClient: notificationClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.NotificationPreferencesEndpointGroup{}).Materialize(&httpgroup.NotificationPreferencesEndpointGroupConfig{
+			NotificationClient: notificationClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.MessagingContactsEndpointGroup{}).Materialize(&httpgroup.MessagingContactsEndpointGroupConfig{
+			NotificationClient: notificationClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.EmailDomainsEndpointGroup{}).Materialize(&httpgroup.EmailDomainsEndpointGroupConfig{
+			NotificationClient: notificationClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.EmailInboxesEndpointGroup{}).Materialize(&httpgroup.EmailInboxesEndpointGroupConfig{
+			NotificationClient: notificationClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.AgentRunsEndpointGroup{}).Materialize(&httpgroup.AgentRunsEndpointGroupConfig{
 			AgentClient: agentClient,
@@ -131,6 +187,9 @@ func openAPIEndpointGroups() []apiendpoint.APIEndpointGroup {
 		}).APIEndpointGroup,
 		*(&httpgroup.AccountGroupsEndpointGroup{}).Materialize(&httpgroup.AccountGroupsEndpointGroupConfig{
 			CoreClient: coreClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.SupportRoutesEndpointGroup{}).Materialize(&httpgroup.SupportRoutesEndpointGroupConfig{
+			NotificationClient: notificationClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.AccountPricesEndpointGroup{}).Materialize(&httpgroup.AccountPricesEndpointGroupConfig{
 			CoreClient: coreClient,
@@ -169,6 +228,9 @@ func openAPIEndpointGroups() []apiendpoint.APIEndpointGroup {
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.AccountIntegrationsEndpointGroup{}).Materialize(&httpgroup.AccountIntegrationsEndpointGroupConfig{
+			CoreClient: coreClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.HubspotSyncEndpointGroup{}).Materialize(&httpgroup.HubspotSyncEndpointGroupConfig{
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.PrioritiesEndpointGroup{}).Materialize(&httpgroup.PrioritiesEndpointGroupConfig{
@@ -220,6 +282,9 @@ func openAPIEndpointGroups() []apiendpoint.APIEndpointGroup {
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.CustomersEndpointGroup{}).Materialize(&httpgroup.CustomersEndpointGroupConfig{
+			CoreClient: coreClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.ContactsEndpointGroup{}).Materialize(&httpgroup.ContactsEndpointGroupConfig{
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.CustomerProductLineAccessEndpointGroup{}).Materialize(&httpgroup.CustomerProductLineAccessEndpointGroupConfig{

@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/contracts"
 	apierror "github.com/augno/api/shared/errors"
@@ -44,14 +45,16 @@ type ListMemoriesEndpoint struct{}
 
 func (e *ListMemoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMemoriesRequest, *apiresource.List[apiresource.AgentMemory]] {
 	return (&apiendpoint.APIEndpoint[*ListMemoriesRequest, *apiresource.List[apiresource.AgentMemory]]{
-		Title:             "List Agent Memories",
-		Method:            http.MethodGet,
-		ContentType:       "application/json",
-		Route:             "/v1/ai/memories",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeAgentMemory,
+		Title:               "List Agent Memories",
+		Method:              http.MethodGet,
+		ContentType:         "application/json",
+		Route:               "/v1/ai/memories",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		AgentTool:           true,
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeAgentMemory,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAgentMemories, Action: types.ActionRead}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListMemoriesRequest) (*apiresource.List[apiresource.AgentMemory], *apierror.APIError) {
 			return svc.(AgentMemorySvc).ListMemories
 		},

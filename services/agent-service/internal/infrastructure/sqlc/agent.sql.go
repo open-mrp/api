@@ -11,33 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const acknowledgeAgentAlert = `-- name: AcknowledgeAgentAlert :exec
-UPDATE agent_alert
-SET status_code = 'acknowledged', acknowledged_at = now(),
-    acknowledged_by_actor_id = $1, acknowledged_by_actor_type = $2, acknowledged_by_actor_name = $3,
-    updated_at = now()
-WHERE id = $4 AND account_id = $5
-`
-
-type AcknowledgeAgentAlertParams struct {
-	AcknowledgedByActorID   pgtype.Text
-	AcknowledgedByActorType pgtype.Text
-	AcknowledgedByActorName pgtype.Text
-	ID                      string
-	AccountID               string
-}
-
-func (q *Queries) AcknowledgeAgentAlert(ctx context.Context, arg AcknowledgeAgentAlertParams) error {
-	_, err := q.db.Exec(ctx, acknowledgeAgentAlert,
-		arg.AcknowledgedByActorID,
-		arg.AcknowledgedByActorType,
-		arg.AcknowledgedByActorName,
-		arg.ID,
-		arg.AccountID,
-	)
-	return err
-}
-
 const deleteAgentAccountStatus = `-- name: DeleteAgentAccountStatus :exec
 DELETE FROM agent_account_status
 WHERE account_id = $1 AND agent_definition_id = $2
@@ -130,83 +103,6 @@ func (q *Queries) GetAgentActionByID(ctx context.Context, id string) (AgentActio
 		&i.ExecutedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const getAgentAlertByID = `-- name: GetAgentAlertByID :one
-SELECT
-    aa.id, aa.account_id, aa.agent_run_id, aa.agent_action_id,
-    aa.severity_code, aa.status_code, aa.title, aa.message, aa.metadata,
-    aa.acknowledged_at, aa.acknowledged_by_actor_id, aa.acknowledged_by_actor_type,
-    aa.acknowledged_by_actor_name, aa.created_at, aa.updated_at,
-    ar.status_code AS run_status_code,
-    ar.trigger_type AS run_trigger_type,
-    ar.created_at AS run_created_at,
-    ar.updated_at AS run_updated_at,
-    act.tool_slug AS action_tool_slug,
-    act.status_code AS action_status_code,
-    act.created_at AS action_created_at,
-    act.updated_at AS action_updated_at
-FROM agent_alert aa
-LEFT JOIN agent_run ar ON ar.id = aa.agent_run_id
-LEFT JOIN agent_action act ON act.id = aa.agent_action_id
-WHERE aa.id = $1
-`
-
-type GetAgentAlertByIDRow struct {
-	ID                      string
-	AccountID               string
-	AgentRunID              pgtype.Text
-	AgentActionID           pgtype.Text
-	SeverityCode            string
-	StatusCode              string
-	Title                   string
-	Message                 pgtype.Text
-	Metadata                []byte
-	AcknowledgedAt          pgtype.Timestamptz
-	AcknowledgedByActorID   pgtype.Text
-	AcknowledgedByActorType pgtype.Text
-	AcknowledgedByActorName pgtype.Text
-	CreatedAt               pgtype.Timestamptz
-	UpdatedAt               pgtype.Timestamptz
-	RunStatusCode           pgtype.Text
-	RunTriggerType          pgtype.Text
-	RunCreatedAt            pgtype.Timestamptz
-	RunUpdatedAt            pgtype.Timestamptz
-	ActionToolSlug          pgtype.Text
-	ActionStatusCode        pgtype.Text
-	ActionCreatedAt         pgtype.Timestamptz
-	ActionUpdatedAt         pgtype.Timestamptz
-}
-
-func (q *Queries) GetAgentAlertByID(ctx context.Context, id string) (GetAgentAlertByIDRow, error) {
-	row := q.db.QueryRow(ctx, getAgentAlertByID, id)
-	var i GetAgentAlertByIDRow
-	err := row.Scan(
-		&i.ID,
-		&i.AccountID,
-		&i.AgentRunID,
-		&i.AgentActionID,
-		&i.SeverityCode,
-		&i.StatusCode,
-		&i.Title,
-		&i.Message,
-		&i.Metadata,
-		&i.AcknowledgedAt,
-		&i.AcknowledgedByActorID,
-		&i.AcknowledgedByActorType,
-		&i.AcknowledgedByActorName,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.RunStatusCode,
-		&i.RunTriggerType,
-		&i.RunCreatedAt,
-		&i.RunUpdatedAt,
-		&i.ActionToolSlug,
-		&i.ActionStatusCode,
-		&i.ActionCreatedAt,
-		&i.ActionUpdatedAt,
 	)
 	return i, err
 }
@@ -315,7 +211,7 @@ func (q *Queries) GetAgentDefinitionByAccountAndSlug(ctx context.Context, arg Ge
 
 const getAgentDefinitionByID = `-- name: GetAgentDefinitionByID :one
 
-SELECT id, account_id, name, slug, description, definition_type, category_code, trigger_type, is_active, config, role_id, created_at, updated_at FROM agent_definition WHERE id = $1
+SELECT id, account_id, name, slug, description, definition_type, category_code, trigger_type, is_active, config, role_id, created_at, updated_at FROM agent_definition WHERE id = $1 AND is_active = true
 `
 
 // Agent Definition queries
@@ -434,7 +330,7 @@ func (q *Queries) GetAgentMemoryByID(ctx context.Context, id string) (AgentMemor
 }
 
 const getAgentRunByID = `-- name: GetAgentRunByID :one
-SELECT id, account_id, agent_definition_id, agent_config_id, status_code, trigger_type, input, output, error_message, started_at, completed_at, duration_ms, total_input_tokens, total_output_tokens, triggered_by_actor_id, triggered_by_identity_type, triggered_by_actor_name, allowed_tool_slugs, created_at, updated_at FROM agent_run WHERE id = $1
+SELECT id, account_id, agent_definition_id, agent_config_id, status_code, trigger_type, input, output, error_message, started_at, completed_at, duration_ms, total_input_tokens, total_output_tokens, triggered_by_actor_id, triggered_by_identity_type, triggered_by_actor_name, allowed_tool_slugs, created_at, updated_at, conversation_id, trigger_message_id, diverged_from_conversation, retry_count FROM agent_run WHERE id = $1
 `
 
 func (q *Queries) GetAgentRunByID(ctx context.Context, id string) (AgentRun, error) {
@@ -461,6 +357,10 @@ func (q *Queries) GetAgentRunByID(ctx context.Context, id string) (AgentRun, err
 		&i.AllowedToolSlugs,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ConversationID,
+		&i.TriggerMessageID,
+		&i.DivergedFromConversation,
+		&i.RetryCount,
 	)
 	return i, err
 }
@@ -492,7 +392,7 @@ func (q *Queries) GetAgentTokenUsageByAccountAndDate(ctx context.Context, arg Ge
 }
 
 const getLastRunByConfigID = `-- name: GetLastRunByConfigID :one
-SELECT id, account_id, agent_definition_id, agent_config_id, status_code, trigger_type, input, output, error_message, started_at, completed_at, duration_ms, total_input_tokens, total_output_tokens, triggered_by_actor_id, triggered_by_identity_type, triggered_by_actor_name, allowed_tool_slugs, created_at, updated_at FROM agent_run
+SELECT id, account_id, agent_definition_id, agent_config_id, status_code, trigger_type, input, output, error_message, started_at, completed_at, duration_ms, total_input_tokens, total_output_tokens, triggered_by_actor_id, triggered_by_identity_type, triggered_by_actor_name, allowed_tool_slugs, created_at, updated_at, conversation_id, trigger_message_id, diverged_from_conversation, retry_count FROM agent_run
 WHERE agent_config_id = $1
 ORDER BY created_at DESC
 LIMIT 1
@@ -522,6 +422,10 @@ func (q *Queries) GetLastRunByConfigID(ctx context.Context, agentConfigID pgtype
 		&i.AllowedToolSlugs,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ConversationID,
+		&i.TriggerMessageID,
+		&i.DivergedFromConversation,
+		&i.RetryCount,
 	)
 	return i, err
 }
@@ -561,31 +465,6 @@ func (q *Queries) GetMonthlyTokenUsageByAccount(ctx context.Context, arg GetMont
 	return i, err
 }
 
-const getToolDefinitionByID = `-- name: GetToolDefinitionByID :one
-
-SELECT id, display_name, description, config_schema, slug, input_schema, category, tool_group_id, required_permissions, created_at, updated_at FROM tool_definition WHERE id = $1
-`
-
-// Tool Definition queries
-func (q *Queries) GetToolDefinitionByID(ctx context.Context, id string) (ToolDefinition, error) {
-	row := q.db.QueryRow(ctx, getToolDefinitionByID, id)
-	var i ToolDefinition
-	err := row.Scan(
-		&i.ID,
-		&i.DisplayName,
-		&i.Description,
-		&i.ConfigSchema,
-		&i.Slug,
-		&i.InputSchema,
-		&i.Category,
-		&i.ToolGroupID,
-		&i.RequiredPermissions,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
 const insertAgentAction = `-- name: InsertAgentAction :exec
 
 INSERT INTO agent_action (id, account_id, agent_run_id, tool_slug, status_code, label, description, input, output, requires_review)
@@ -618,40 +497,6 @@ func (q *Queries) InsertAgentAction(ctx context.Context, arg InsertAgentActionPa
 		arg.Input,
 		arg.Output,
 		arg.RequiresReview,
-	)
-	return err
-}
-
-const insertAgentAlert = `-- name: InsertAgentAlert :exec
-
-INSERT INTO agent_alert (id, account_id, agent_run_id, agent_action_id, severity_code, status_code, title, message, metadata)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-`
-
-type InsertAgentAlertParams struct {
-	ID            string
-	AccountID     string
-	AgentRunID    pgtype.Text
-	AgentActionID pgtype.Text
-	SeverityCode  string
-	StatusCode    string
-	Title         string
-	Message       pgtype.Text
-	Metadata      []byte
-}
-
-// Agent Alert queries
-func (q *Queries) InsertAgentAlert(ctx context.Context, arg InsertAgentAlertParams) error {
-	_, err := q.db.Exec(ctx, insertAgentAlert,
-		arg.ID,
-		arg.AccountID,
-		arg.AgentRunID,
-		arg.AgentActionID,
-		arg.SeverityCode,
-		arg.StatusCode,
-		arg.Title,
-		arg.Message,
-		arg.Metadata,
 	)
 	return err
 }
@@ -758,25 +603,28 @@ func (q *Queries) InsertAgentDefinition(ctx context.Context, arg InsertAgentDefi
 
 const insertAgentDefinitionTool = `-- name: InsertAgentDefinitionTool :exec
 
-INSERT INTO agent_definition_tool (id, agent_definition_id, tool_definition_id, config, sort_order, require_review)
+INSERT INTO agent_definition_tool (id, agent_definition_id, tool_slug, config, sort_order, require_review)
 VALUES ($1, $2, $3, $4, $5, $6)
 `
 
 type InsertAgentDefinitionToolParams struct {
 	ID                string
 	AgentDefinitionID string
-	ToolDefinitionID  string
+	ToolSlug          string
 	Config            []byte
 	SortOrder         int32
 	RequireReview     bool
 }
 
 // Agent Definition Tool queries
+// Tool definitions (built-in tools) live in the code catalog (agents.BuiltinTools);
+// agent_definition_tool references them by slug. Display metadata is resolved from
+// the catalog, so these queries only touch agent_definition_tool.
 func (q *Queries) InsertAgentDefinitionTool(ctx context.Context, arg InsertAgentDefinitionToolParams) error {
 	_, err := q.db.Exec(ctx, insertAgentDefinitionTool,
 		arg.ID,
 		arg.AgentDefinitionID,
-		arg.ToolDefinitionID,
+		arg.ToolSlug,
 		arg.Config,
 		arg.SortOrder,
 		arg.RequireReview,
@@ -820,8 +668,8 @@ func (q *Queries) InsertAgentMemory(ctx context.Context, arg InsertAgentMemoryPa
 
 const insertAgentRun = `-- name: InsertAgentRun :exec
 
-INSERT INTO agent_run (id, account_id, agent_definition_id, agent_config_id, status_code, trigger_type, input, output, triggered_by_actor_id, triggered_by_identity_type, triggered_by_actor_name)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+INSERT INTO agent_run (id, account_id, agent_definition_id, agent_config_id, status_code, trigger_type, input, output, triggered_by_actor_id, triggered_by_identity_type, triggered_by_actor_name, conversation_id, trigger_message_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 `
 
 type InsertAgentRunParams struct {
@@ -836,6 +684,8 @@ type InsertAgentRunParams struct {
 	TriggeredByActorID      pgtype.Text
 	TriggeredByIdentityType pgtype.Text
 	TriggeredByActorName    pgtype.Text
+	ConversationID          pgtype.Text
+	TriggerMessageID        pgtype.Text
 }
 
 // Agent Run queries
@@ -852,6 +702,8 @@ func (q *Queries) InsertAgentRun(ctx context.Context, arg InsertAgentRunParams) 
 		arg.TriggeredByActorID,
 		arg.TriggeredByIdentityType,
 		arg.TriggeredByActorName,
+		arg.ConversationID,
+		arg.TriggerMessageID,
 	)
 	return err
 }
@@ -1040,178 +892,6 @@ func (q *Queries) ListAgentActionsByRun(ctx context.Context, agentRunID string) 
 			&i.ExecutedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listAgentAlertsByAccount = `-- name: ListAgentAlertsByAccount :many
-SELECT id, account_id, agent_run_id, agent_action_id, severity_code, status_code, title, message, metadata, acknowledged_at, acknowledged_by_actor_id, acknowledged_by_actor_type, acknowledged_by_actor_name, created_at, updated_at FROM agent_alert WHERE account_id = $1 ORDER BY created_at DESC LIMIT $2
-`
-
-type ListAgentAlertsByAccountParams struct {
-	AccountID string
-	Limit     int32
-}
-
-func (q *Queries) ListAgentAlertsByAccount(ctx context.Context, arg ListAgentAlertsByAccountParams) ([]AgentAlert, error) {
-	rows, err := q.db.Query(ctx, listAgentAlertsByAccount, arg.AccountID, arg.Limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []AgentAlert
-	for rows.Next() {
-		var i AgentAlert
-		if err := rows.Scan(
-			&i.ID,
-			&i.AccountID,
-			&i.AgentRunID,
-			&i.AgentActionID,
-			&i.SeverityCode,
-			&i.StatusCode,
-			&i.Title,
-			&i.Message,
-			&i.Metadata,
-			&i.AcknowledgedAt,
-			&i.AcknowledgedByActorID,
-			&i.AcknowledgedByActorType,
-			&i.AcknowledgedByActorName,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listAgentAlertsByAccountCursor = `-- name: ListAgentAlertsByAccountCursor :many
-SELECT
-    aa.id, aa.account_id, aa.agent_run_id, aa.agent_action_id,
-    aa.severity_code, aa.status_code, aa.title, aa.message, aa.metadata,
-    aa.acknowledged_at, aa.acknowledged_by_actor_id, aa.acknowledged_by_actor_type,
-    aa.acknowledged_by_actor_name, aa.created_at, aa.updated_at,
-    ar.status_code AS run_status_code,
-    ar.trigger_type AS run_trigger_type,
-    ar.created_at AS run_created_at,
-    ar.updated_at AS run_updated_at,
-    act.tool_slug AS action_tool_slug,
-    act.status_code AS action_status_code,
-    act.created_at AS action_created_at,
-    act.updated_at AS action_updated_at
-FROM agent_alert aa
-LEFT JOIN agent_run ar ON ar.id = aa.agent_run_id
-LEFT JOIN agent_action act ON act.id = aa.agent_action_id
-WHERE aa.account_id = $1
-  AND ($2::boolean = false OR aa.severity_code = $3)
-  AND ($4::boolean = false OR aa.status_code = $5)
-  AND ($6::boolean = false OR (
-    aa.id ILIKE '%' || $7 || '%'
-    OR aa.title ILIKE '%' || $7 || '%'
-    OR COALESCE(aa.message, '') ILIKE '%' || $7 || '%'
-  ))
-  AND ($8::boolean = false OR (aa.created_at, aa.id) < (
-    (SELECT cr.created_at FROM agent_alert cr WHERE cr.id = $9),
-    $9
-  ))
-ORDER BY aa.created_at DESC, aa.id DESC
-LIMIT $10
-`
-
-type ListAgentAlertsByAccountCursorParams struct {
-	AccountID      string
-	FilterSeverity bool
-	SeverityCode   string
-	FilterStatus   bool
-	StatusCode     string
-	FilterQuery    bool
-	Search         pgtype.Text
-	HasCursor      bool
-	CursorID       string
-	Lim            int32
-}
-
-type ListAgentAlertsByAccountCursorRow struct {
-	ID                      string
-	AccountID               string
-	AgentRunID              pgtype.Text
-	AgentActionID           pgtype.Text
-	SeverityCode            string
-	StatusCode              string
-	Title                   string
-	Message                 pgtype.Text
-	Metadata                []byte
-	AcknowledgedAt          pgtype.Timestamptz
-	AcknowledgedByActorID   pgtype.Text
-	AcknowledgedByActorType pgtype.Text
-	AcknowledgedByActorName pgtype.Text
-	CreatedAt               pgtype.Timestamptz
-	UpdatedAt               pgtype.Timestamptz
-	RunStatusCode           pgtype.Text
-	RunTriggerType          pgtype.Text
-	RunCreatedAt            pgtype.Timestamptz
-	RunUpdatedAt            pgtype.Timestamptz
-	ActionToolSlug          pgtype.Text
-	ActionStatusCode        pgtype.Text
-	ActionCreatedAt         pgtype.Timestamptz
-	ActionUpdatedAt         pgtype.Timestamptz
-}
-
-func (q *Queries) ListAgentAlertsByAccountCursor(ctx context.Context, arg ListAgentAlertsByAccountCursorParams) ([]ListAgentAlertsByAccountCursorRow, error) {
-	rows, err := q.db.Query(ctx, listAgentAlertsByAccountCursor,
-		arg.AccountID,
-		arg.FilterSeverity,
-		arg.SeverityCode,
-		arg.FilterStatus,
-		arg.StatusCode,
-		arg.FilterQuery,
-		arg.Search,
-		arg.HasCursor,
-		arg.CursorID,
-		arg.Lim,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListAgentAlertsByAccountCursorRow
-	for rows.Next() {
-		var i ListAgentAlertsByAccountCursorRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.AccountID,
-			&i.AgentRunID,
-			&i.AgentActionID,
-			&i.SeverityCode,
-			&i.StatusCode,
-			&i.Title,
-			&i.Message,
-			&i.Metadata,
-			&i.AcknowledgedAt,
-			&i.AcknowledgedByActorID,
-			&i.AcknowledgedByActorType,
-			&i.AcknowledgedByActorName,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.RunStatusCode,
-			&i.RunTriggerType,
-			&i.RunCreatedAt,
-			&i.RunUpdatedAt,
-			&i.ActionToolSlug,
-			&i.ActionStatusCode,
-			&i.ActionCreatedAt,
-			&i.ActionUpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -1673,7 +1353,7 @@ func (q *Queries) ListAgentRunEventsByRunID(ctx context.Context, agentRunID stri
 }
 
 const listAgentRunsByAccount = `-- name: ListAgentRunsByAccount :many
-SELECT id, account_id, agent_definition_id, agent_config_id, status_code, trigger_type, input, output, error_message, started_at, completed_at, duration_ms, total_input_tokens, total_output_tokens, triggered_by_actor_id, triggered_by_identity_type, triggered_by_actor_name, allowed_tool_slugs, created_at, updated_at FROM agent_run WHERE account_id = $1 ORDER BY created_at DESC LIMIT $2
+SELECT id, account_id, agent_definition_id, agent_config_id, status_code, trigger_type, input, output, error_message, started_at, completed_at, duration_ms, total_input_tokens, total_output_tokens, triggered_by_actor_id, triggered_by_identity_type, triggered_by_actor_name, allowed_tool_slugs, created_at, updated_at, conversation_id, trigger_message_id, diverged_from_conversation, retry_count FROM agent_run WHERE account_id = $1 ORDER BY created_at DESC LIMIT $2
 `
 
 type ListAgentRunsByAccountParams struct {
@@ -1711,6 +1391,10 @@ func (q *Queries) ListAgentRunsByAccount(ctx context.Context, arg ListAgentRunsB
 			&i.AllowedToolSlugs,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ConversationID,
+			&i.TriggerMessageID,
+			&i.DivergedFromConversation,
+			&i.RetryCount,
 		); err != nil {
 			return nil, err
 		}
@@ -1723,7 +1407,7 @@ func (q *Queries) ListAgentRunsByAccount(ctx context.Context, arg ListAgentRunsB
 }
 
 const listAgentRunsByAccountFiltered = `-- name: ListAgentRunsByAccountFiltered :many
-SELECT ar.id, ar.account_id, ar.agent_definition_id, ar.agent_config_id, ar.status_code, ar.trigger_type, ar.input, ar.output, ar.error_message, ar.started_at, ar.completed_at, ar.duration_ms, ar.total_input_tokens, ar.total_output_tokens, ar.triggered_by_actor_id, ar.triggered_by_identity_type, ar.triggered_by_actor_name, ar.allowed_tool_slugs, ar.created_at, ar.updated_at FROM agent_run ar
+SELECT ar.id, ar.account_id, ar.agent_definition_id, ar.agent_config_id, ar.status_code, ar.trigger_type, ar.input, ar.output, ar.error_message, ar.started_at, ar.completed_at, ar.duration_ms, ar.total_input_tokens, ar.total_output_tokens, ar.triggered_by_actor_id, ar.triggered_by_identity_type, ar.triggered_by_actor_name, ar.allowed_tool_slugs, ar.created_at, ar.updated_at, ar.conversation_id, ar.trigger_message_id, ar.diverged_from_conversation, ar.retry_count FROM agent_run ar
 WHERE ar.account_id = $1
   AND ($2::boolean = false OR ar.status_code = $3)
   AND ($4::boolean = false OR ar.agent_definition_id = $5)
@@ -1794,6 +1478,10 @@ func (q *Queries) ListAgentRunsByAccountFiltered(ctx context.Context, arg ListAg
 			&i.AllowedToolSlugs,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ConversationID,
+			&i.TriggerMessageID,
+			&i.DivergedFromConversation,
+			&i.RetryCount,
 		); err != nil {
 			return nil, err
 		}
@@ -1967,127 +1655,22 @@ func (q *Queries) ListMemoriesByEntity(ctx context.Context, arg ListMemoriesByEn
 	return items, nil
 }
 
-const listToolDefinitions = `-- name: ListToolDefinitions :many
-SELECT td.id, td.display_name, td.description, td.config_schema, td.slug, td.input_schema, td.category, td.tool_group_id, td.required_permissions, td.created_at, td.updated_at, tg.name AS group_name, tg.slug AS group_slug
-FROM tool_definition td
-LEFT JOIN tool_group tg ON tg.id = td.tool_group_id
-ORDER BY tg.sort_order ASC, td.display_name ASC
-`
-
-type ListToolDefinitionsRow struct {
-	ID                  string
-	DisplayName         string
-	Description         pgtype.Text
-	ConfigSchema        []byte
-	Slug                pgtype.Text
-	InputSchema         []byte
-	Category            string
-	ToolGroupID         pgtype.Text
-	RequiredPermissions []byte
-	CreatedAt           pgtype.Timestamptz
-	UpdatedAt           pgtype.Timestamptz
-	GroupName           pgtype.Text
-	GroupSlug           pgtype.Text
-}
-
-func (q *Queries) ListToolDefinitions(ctx context.Context) ([]ListToolDefinitionsRow, error) {
-	rows, err := q.db.Query(ctx, listToolDefinitions)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListToolDefinitionsRow
-	for rows.Next() {
-		var i ListToolDefinitionsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.DisplayName,
-			&i.Description,
-			&i.ConfigSchema,
-			&i.Slug,
-			&i.InputSchema,
-			&i.Category,
-			&i.ToolGroupID,
-			&i.RequiredPermissions,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.GroupName,
-			&i.GroupSlug,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listToolGroups = `-- name: ListToolGroups :many
-SELECT id, name, description, slug, icon, sort_order, created_at, updated_at FROM tool_group ORDER BY sort_order ASC, name ASC
-`
-
-func (q *Queries) ListToolGroups(ctx context.Context) ([]ToolGroup, error) {
-	rows, err := q.db.Query(ctx, listToolGroups)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ToolGroup
-	for rows.Next() {
-		var i ToolGroup
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Description,
-			&i.Slug,
-			&i.Icon,
-			&i.SortOrder,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listToolsByAgentDefinitionID = `-- name: ListToolsByAgentDefinitionID :many
-SELECT adt.id, adt.agent_definition_id, adt.tool_definition_id, adt.config, adt.sort_order, adt.require_review, adt.created_at, adt.updated_at,
-       td.display_name AS tool_display_name, td.description AS tool_description, td.config_schema AS tool_config_schema, td.category AS tool_category,
-       td.slug AS tool_slug, td.input_schema AS tool_input_schema, td.tool_group_id, td.required_permissions,
-       tg.name AS tool_group_name, tg.slug AS tool_group_slug
-FROM agent_definition_tool adt
-JOIN tool_definition td ON td.id = adt.tool_definition_id
-LEFT JOIN tool_group tg ON tg.id = td.tool_group_id
-WHERE adt.agent_definition_id = $1
-ORDER BY adt.sort_order ASC
+SELECT id, agent_definition_id, tool_slug, config, sort_order, require_review, created_at, updated_at
+FROM agent_definition_tool
+WHERE agent_definition_id = $1
+ORDER BY sort_order ASC
 `
 
 type ListToolsByAgentDefinitionIDRow struct {
-	ID                  string
-	AgentDefinitionID   string
-	ToolDefinitionID    string
-	Config              []byte
-	SortOrder           int32
-	RequireReview       bool
-	CreatedAt           pgtype.Timestamptz
-	UpdatedAt           pgtype.Timestamptz
-	ToolDisplayName     string
-	ToolDescription     pgtype.Text
-	ToolConfigSchema    []byte
-	ToolCategory        string
-	ToolSlug            pgtype.Text
-	ToolInputSchema     []byte
-	ToolGroupID         pgtype.Text
-	RequiredPermissions []byte
-	ToolGroupName       pgtype.Text
-	ToolGroupSlug       pgtype.Text
+	ID                string
+	AgentDefinitionID string
+	ToolSlug          string
+	Config            []byte
+	SortOrder         int32
+	RequireReview     bool
+	CreatedAt         pgtype.Timestamptz
+	UpdatedAt         pgtype.Timestamptz
 }
 
 func (q *Queries) ListToolsByAgentDefinitionID(ctx context.Context, agentDefinitionID string) ([]ListToolsByAgentDefinitionIDRow, error) {
@@ -2102,22 +1685,12 @@ func (q *Queries) ListToolsByAgentDefinitionID(ctx context.Context, agentDefinit
 		if err := rows.Scan(
 			&i.ID,
 			&i.AgentDefinitionID,
-			&i.ToolDefinitionID,
+			&i.ToolSlug,
 			&i.Config,
 			&i.SortOrder,
 			&i.RequireReview,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.ToolDisplayName,
-			&i.ToolDescription,
-			&i.ToolConfigSchema,
-			&i.ToolCategory,
-			&i.ToolSlug,
-			&i.ToolInputSchema,
-			&i.ToolGroupID,
-			&i.RequiredPermissions,
-			&i.ToolGroupName,
-			&i.ToolGroupSlug,
 		); err != nil {
 			return nil, err
 		}
@@ -2127,6 +1700,94 @@ func (q *Queries) ListToolsByAgentDefinitionID(ctx context.Context, agentDefinit
 		return nil, err
 	}
 	return items, nil
+}
+
+const markAgentActionReviewed = `-- name: MarkAgentActionReviewed :exec
+UPDATE agent_action
+SET status_code = $1,
+    reviewed_at = now(),
+    reviewed_by = $2,
+    reviewed_by_actor_type = $3,
+    reviewed_by_actor_name = $4,
+    updated_at = now()
+WHERE id = $5
+`
+
+type MarkAgentActionReviewedParams struct {
+	StatusCode          string
+	ReviewedBy          pgtype.Text
+	ReviewedByActorType pgtype.Text
+	ReviewedByActorName pgtype.Text
+	ID                  string
+}
+
+func (q *Queries) MarkAgentActionReviewed(ctx context.Context, arg MarkAgentActionReviewedParams) error {
+	_, err := q.db.Exec(ctx, markAgentActionReviewed,
+		arg.StatusCode,
+		arg.ReviewedBy,
+		arg.ReviewedByActorType,
+		arg.ReviewedByActorName,
+		arg.ID,
+	)
+	return err
+}
+
+const markAgentRunAutoRetrying = `-- name: MarkAgentRunAutoRetrying :one
+UPDATE agent_run
+SET retry_count = retry_count + 1, error_message = NULL, updated_at = now()
+WHERE id = $1 AND status_code = 'running'
+RETURNING retry_count
+`
+
+// Bump the retry counter for a run the runner is about to transparently re-enqueue after a transient,
+// whole-chain-unavailable failure. Unlike MarkAgentRunRetrying (manual path, guarded on 'failed'), this
+// fires mid-flight before the run is ever marked failed, so it guards on 'running' and leaves the status
+// 'running' — the run is not surfaced as failed, it is simply re-queued. The guard makes this a no-op
+// (no rows) if the run already left the running state, preventing a double re-enqueue.
+func (q *Queries) MarkAgentRunAutoRetrying(ctx context.Context, id string) (int32, error) {
+	row := q.db.QueryRow(ctx, markAgentRunAutoRetrying, id)
+	var retry_count int32
+	err := row.Scan(&retry_count)
+	return retry_count, err
+}
+
+const markAgentRunCancelledByUser = `-- name: MarkAgentRunCancelledByUser :exec
+UPDATE agent_run
+SET status_code = 'cancelled', completed_at = NULL, duration_ms = NULL, updated_at = now()
+WHERE id = $1
+`
+
+func (q *Queries) MarkAgentRunCancelledByUser(ctx context.Context, id string) error {
+	_, err := q.db.Exec(ctx, markAgentRunCancelledByUser, id)
+	return err
+}
+
+const markAgentRunDivergedFromConversation = `-- name: MarkAgentRunDivergedFromConversation :exec
+UPDATE agent_run
+SET diverged_from_conversation = true, updated_at = now()
+WHERE id = $1
+`
+
+func (q *Queries) MarkAgentRunDivergedFromConversation(ctx context.Context, id string) error {
+	_, err := q.db.Exec(ctx, markAgentRunDivergedFromConversation, id)
+	return err
+}
+
+const markAgentRunRetrying = `-- name: MarkAgentRunRetrying :one
+UPDATE agent_run
+SET status_code = 'running', retry_count = retry_count + 1, error_message = NULL, updated_at = now()
+WHERE id = $1 AND status_code = 'failed'
+RETURNING retry_count
+`
+
+// Atomically move a failed run back to running and bump its retry counter. The status guard makes this
+// a no-op (returns no rows) when the run isn't failed, preventing double-retry races. Clears the prior
+// error so a successful re-attempt doesn't leave a stale error_message behind.
+func (q *Queries) MarkAgentRunRetrying(ctx context.Context, id string) (int32, error) {
+	row := q.db.QueryRow(ctx, markAgentRunRetrying, id)
+	var retry_count int32
+	err := row.Scan(&retry_count)
+	return retry_count, err
 }
 
 const softDeleteAgentDefinition = `-- name: SoftDeleteAgentDefinition :exec
@@ -2180,37 +1841,41 @@ const updateAgentDefinition = `-- name: UpdateAgentDefinition :exec
 UPDATE agent_definition SET
     name = COALESCE($1, name),
     slug = COALESCE($2, slug),
-    description = COALESCE($3, description),
-    category_code = COALESCE($4, category_code),
-    trigger_type = COALESCE($5, trigger_type),
-    config = CASE WHEN $6::boolean THEN $7 ELSE config END,
-    role_id = COALESCE($8, role_id),
+    description = CASE WHEN $3::boolean THEN NULL ELSE COALESCE($4, description) END,
+    category_code = COALESCE($5, category_code),
+    trigger_type = COALESCE($6, trigger_type),
+    config = CASE WHEN $7::boolean THEN $8 ELSE config END,
+    role_id = CASE WHEN $9::boolean THEN NULL ELSE COALESCE($10, role_id) END,
     updated_at = now()
-WHERE id = $9 AND account_id = $10
+WHERE id = $11 AND account_id = $12
 `
 
 type UpdateAgentDefinitionParams struct {
-	Name         pgtype.Text
-	Slug         pgtype.Text
-	Description  pgtype.Text
-	CategoryCode pgtype.Text
-	TriggerType  pgtype.Text
-	UpdateConfig bool
-	NewConfig    []byte
-	RoleID       pgtype.Text
-	ID           string
-	AccountID    pgtype.Text
+	Name             pgtype.Text
+	Slug             pgtype.Text
+	ClearDescription bool
+	Description      pgtype.Text
+	CategoryCode     pgtype.Text
+	TriggerType      pgtype.Text
+	UpdateConfig     bool
+	NewConfig        []byte
+	ClearRoleID      bool
+	RoleID           pgtype.Text
+	ID               string
+	AccountID        pgtype.Text
 }
 
 func (q *Queries) UpdateAgentDefinition(ctx context.Context, arg UpdateAgentDefinitionParams) error {
 	_, err := q.db.Exec(ctx, updateAgentDefinition,
 		arg.Name,
 		arg.Slug,
+		arg.ClearDescription,
 		arg.Description,
 		arg.CategoryCode,
 		arg.TriggerType,
 		arg.UpdateConfig,
 		arg.NewConfig,
+		arg.ClearRoleID,
 		arg.RoleID,
 		arg.ID,
 		arg.AccountID,
@@ -2220,60 +1885,80 @@ func (q *Queries) UpdateAgentDefinition(ctx context.Context, arg UpdateAgentDefi
 
 const updateAgentMemory = `-- name: UpdateAgentMemory :exec
 UPDATE agent_memory
-SET category = $2, content = $3, metadata = $4, entity_type = $5,
-    entity_id = $6, importance = $7, expires_at = $8, updated_at = now()
-WHERE id = $1 AND account_id = $9
+SET category = COALESCE($1, category),
+    content = COALESCE($2, content),
+    metadata = COALESCE($3, metadata),
+    entity_type = CASE WHEN $4::boolean THEN NULL ELSE COALESCE($5, entity_type) END,
+    entity_id = CASE WHEN $4::boolean THEN NULL ELSE COALESCE($6, entity_id) END,
+    importance = COALESCE($7, importance),
+    expires_at = CASE WHEN $8::boolean THEN NULL ELSE COALESCE($9, expires_at) END,
+    updated_at = now()
+WHERE id = $10 AND account_id = $11
 `
 
 type UpdateAgentMemoryParams struct {
-	ID         string
-	Category   string
-	Content    string
-	Metadata   []byte
-	EntityType pgtype.Text
-	EntityID   pgtype.Text
-	Importance float64
-	ExpiresAt  pgtype.Timestamptz
-	AccountID  string
+	Category       pgtype.Text
+	Content        pgtype.Text
+	Metadata       []byte
+	ClearEntity    bool
+	EntityType     pgtype.Text
+	EntityID       pgtype.Text
+	Importance     pgtype.Float8
+	ClearExpiresAt bool
+	ExpiresAt      pgtype.Timestamptz
+	ID             string
+	AccountID      string
 }
 
 func (q *Queries) UpdateAgentMemory(ctx context.Context, arg UpdateAgentMemoryParams) error {
 	_, err := q.db.Exec(ctx, updateAgentMemory,
-		arg.ID,
 		arg.Category,
 		arg.Content,
 		arg.Metadata,
+		arg.ClearEntity,
 		arg.EntityType,
 		arg.EntityID,
 		arg.Importance,
+		arg.ClearExpiresAt,
 		arg.ExpiresAt,
+		arg.ID,
 		arg.AccountID,
 	)
 	return err
 }
 
-const updateAgentRunAllowedToolSlugs = `-- name: UpdateAgentRunAllowedToolSlugs :exec
+const updateAgentRunCancelled = `-- name: UpdateAgentRunCancelled :exec
 UPDATE agent_run
-SET allowed_tool_slugs = $1, updated_at = now()
-WHERE id = $2
+SET status_code = 'cancelled', output = $1, total_input_tokens = $2, total_output_tokens = $3,
+    updated_at = now()
+WHERE id = $4
 `
 
-type UpdateAgentRunAllowedToolSlugsParams struct {
-	AllowedToolSlugs []byte
-	ID               string
+type UpdateAgentRunCancelledParams struct {
+	Output            []byte
+	TotalInputTokens  int64
+	TotalOutputTokens int64
+	ID                string
 }
 
-func (q *Queries) UpdateAgentRunAllowedToolSlugs(ctx context.Context, arg UpdateAgentRunAllowedToolSlugsParams) error {
-	_, err := q.db.Exec(ctx, updateAgentRunAllowedToolSlugs, arg.AllowedToolSlugs, arg.ID)
+func (q *Queries) UpdateAgentRunCancelled(ctx context.Context, arg UpdateAgentRunCancelledParams) error {
+	_, err := q.db.Exec(ctx, updateAgentRunCancelled,
+		arg.Output,
+		arg.TotalInputTokens,
+		arg.TotalOutputTokens,
+		arg.ID,
+	)
 	return err
 }
 
 const updateAgentRunCompleted = `-- name: UpdateAgentRunCompleted :exec
 UPDATE agent_run
-SET status_code = $1, output = $2, completed_at = now(),
-    duration_ms = $3, total_input_tokens = $4, total_output_tokens = $5,
+SET status_code = $1, output = $2,
+    completed_at = CASE WHEN $1 = 'completed' THEN now() ELSE NULL END,
+    duration_ms = CASE WHEN $1 = 'completed' THEN $3 ELSE NULL END,
+    total_input_tokens = $4, total_output_tokens = $5,
     updated_at = now()
-WHERE id = $6
+WHERE id = $6 AND status_code != 'cancelled'
 `
 
 type UpdateAgentRunCompletedParams struct {
@@ -2315,17 +2000,20 @@ func (q *Queries) UpdateAgentRunFailed(ctx context.Context, arg UpdateAgentRunFa
 	return err
 }
 
-const updateAgentRunStarted = `-- name: UpdateAgentRunStarted :exec
+const updateAgentRunStarted = `-- name: UpdateAgentRunStarted :execrows
 
 UPDATE agent_run
 SET status_code = 'running', started_at = now(), updated_at = now()
-WHERE id = $1
+WHERE id = $1 AND status_code = 'pending'
 `
 
 // Run lifecycle queries
-func (q *Queries) UpdateAgentRunStarted(ctx context.Context, id string) error {
-	_, err := q.db.Exec(ctx, updateAgentRunStarted, id)
-	return err
+func (q *Queries) UpdateAgentRunStarted(ctx context.Context, id string) (int64, error) {
+	result, err := q.db.Exec(ctx, updateAgentRunStarted, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const updateAgentRunStatus = `-- name: UpdateAgentRunStatus :exec

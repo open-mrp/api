@@ -143,6 +143,7 @@ func Run(
 	resourceloaders.SetCorePickingClient(coreClient.Picking)
 	resourceloaders.SetCoreShippingClient(coreClient.Shipping)
 	resourceloaders.SetCoreReceivingClient(coreClient.Receiving)
+	resourceloaders.SetCoreProductionRunClient(coreClient.ProductionRun)
 	resourceloaders.SetAuthClient(authClient.Client)
 
 	// Billing Service
@@ -181,6 +182,18 @@ func Run(
 		return err
 	}
 
+	// Notification Service
+	notificationClient, err := grpcclient.NewNotificationServiceClientWithURL(cfg.NotificationServiceURI)
+	if err != nil {
+		return err
+	}
+	defer notificationClient.Close()
+
+	logger.Info("Waiting for Notification Service to be ready...")
+	if err := notificationClient.WaitForReady(ctx); err != nil {
+		return err
+	}
+
 	// Wire the agent client into the resourcekit loaders for agent-* resources.
 	resourceloaders.SetAgentClient(agentClient.Client)
 
@@ -190,19 +203,25 @@ func Run(
 	// Wire the audit client into the resourcekit loaders for created_by resolution.
 	resourceloaders.SetAuditClient(platformClient.AuditClient)
 
+	// Wire the chat client into the resourcekit loaders for a message's expandable conversation / reply_to references.
+	resourceloaders.SetChatClient(notificationClient.ChatClient)
+
+	// Wire the email bridge client into the resourcekit loaders for an email inbox's expandable email_domain reference.
+	resourceloaders.SetEmailBridgeClient(notificationClient.EmailBridgeClient)
+
 	// Initialize the request log publisher.
 	reqLogPublisher := publisher.NewRequestLogOutboxPublisher(repository.NewOutboxRepo(queries), cfg.FrontendURL, cfg.PlatformMode)
 
 	// Initialize the main router.
-	mainBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "main ", authClient, coreClient, billingClient, platformClient, agentClient, reqLogPublisher, stdout, cfg.TrustedProxyHops)
+	mainBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "main ", authClient, coreClient, billingClient, platformClient, agentClient, notificationClient, reqLogPublisher, stdout, cfg.TrustedProxyHops)
 	mainRouter := router.NewMainRouter(mainBaseCfg)
 
 	// Initialize the auth router.
-	authBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "auth ", authClient, coreClient, billingClient, platformClient, agentClient, reqLogPublisher, stdout, cfg.TrustedProxyHops)
+	authBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "auth ", authClient, coreClient, billingClient, platformClient, agentClient, notificationClient, reqLogPublisher, stdout, cfg.TrustedProxyHops)
 	authRouter := router.NewAuthRouter(authBaseCfg)
 
 	// Initialize the webhook router (no auth, minimal middleware).
-	webhookBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "webhook ", authClient, coreClient, billingClient, platformClient, agentClient, reqLogPublisher, stdout, cfg.TrustedProxyHops)
+	webhookBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "webhook ", authClient, coreClient, billingClient, platformClient, agentClient, notificationClient, reqLogPublisher, stdout, cfg.TrustedProxyHops)
 	webhookRouter := router.NewWebhookRouter(webhookBaseCfg)
 
 	// Initialize WebSocket hub and event consumer.
@@ -213,10 +232,13 @@ func Run(
 	if err := ws.StartRunCompletedConsumer(ctx, rabbitmq, wsHub); err != nil {
 		return err
 	}
+	if err := ws.StartNotificationConsumer(ctx, rabbitmq, wsHub); err != nil {
+		return err
+	}
 
 	// Initialize the HTTP server.
 	mux := http.NewServeMux()
-	mux.HandleFunc("/v1/ws", ws.NewHandler(wsHub, authClient))
+	mux.HandleFunc("/v1/ws", ws.NewHandler(wsHub, authClient, notificationClient))
 	mux.Handle("/v1/webhooks/", webhookRouter)
 	mux.Handle("/v1/auth/", authRouter)
 	mux.Handle("/", mainRouter)
@@ -230,6 +252,24 @@ func Run(
 		ErrorLog:     slog.NewLogLogger(logger.Handler(), slog.LevelError),
 	}
 
+	// Initialize the trusted internal listener (agent traffic). Only started when a
+	// service token is configured. It must never be exposed behind the public ALB.
+	var internalServer *http.Server
+	if cfg.InternalServiceToken != "" {
+		internalBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "internal ", authClient, coreClient, billingClient, platformClient, agentClient, notificationClient, reqLogPublisher, stdout, cfg.TrustedProxyHops)
+		internalRouter := router.NewInternalRouter(internalBaseCfg, cfg.InternalServiceToken)
+		internalMux := http.NewServeMux()
+		internalMux.Handle("/", internalRouter)
+		internalServer = &http.Server{
+			Addr:         fmt.Sprintf(":%d", cfg.InternalPort),
+			Handler:      internalMux,
+			IdleTimeout:  httpIdleTimeout,
+			ReadTimeout:  httpReadTimeout,
+			WriteTimeout: httpWriteTimeout,
+			ErrorLog:     slog.NewLogLogger(logger.Handler(), slog.LevelError),
+		}
+	}
+
 	// Start the HTTP server.
 	serverErr := make(chan error, 1)
 	go func() {
@@ -237,11 +277,23 @@ func Run(
 		serverErr <- server.ListenAndServe()
 	}()
 
+	if internalServer != nil {
+		go func() {
+			logger.Info("internal server starting", "addr", internalServer.Addr)
+			serverErr <- internalServer.ListenAndServe()
+		}()
+	}
+
 	select {
 	case <-ctx.Done():
 		logger.Info("shutdown signal received", "addr", server.Addr)
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), httpShutdownTimeout)
 		defer cancel()
+		if internalServer != nil {
+			if err := internalServer.Shutdown(shutdownCtx); err != nil {
+				logger.Error("error shutting down internal http server", "err", err)
+			}
+		}
 		if err := server.Shutdown(shutdownCtx); err != nil {
 			logger.Error("error shutting down http server", "err", err)
 			return fmt.Errorf("shutdown http server: %w", err)

@@ -18,7 +18,7 @@ type OrderDiscount struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=order_discount"`
-	// Display name.
+	// Display name of the discount.
 	Name string `json:"name" validate:"required"`
 	// The code entered to apply this discount to an order.
 	//

@@ -5,9 +5,9 @@ import (
 	"github.com/augno/api/shared/constants"
 )
 
-// CreatedBy describes who created a resource and their relationship to the
-// account that owns it. Resolved from the resource's create audit event when
-// the `created_by` field is included.
+// CreatedBy describes who created a resource and their relationship to the account that owns it.
+//
+// It is resolved from the resource's create audit event.
 type CreatedBy struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=created_by"`
@@ -17,7 +17,9 @@ type CreatedBy struct {
 	// - `customer`: created by a customer of the owning account.
 	// - `system`: created automatically with no human actor (e.g. an EDI import).
 	Relation constants.CreatedByRelation `json:"relation" validate:"required"`
-	// The actor who created the resource. Null when `relation` is `system`.
+	// The actor who created the resource.
+	//
+	// Absent when `relation` is `system`, since no human or programmatic actor performed the action.
 	Actor *Actor `json:"actor"`
 }
 

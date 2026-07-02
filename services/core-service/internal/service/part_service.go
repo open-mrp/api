@@ -272,9 +272,7 @@ func (s *partSvcImpl) CreatePart(ctx context.Context, params domain.CreatePartPa
 				return apiErr
 			}
 
-			// Insert rates for item (unit_value, unit_cost, burn_rate). Caller-supplied
-			// inputs override the defaults; unit_price and unit_cost additionally enforce
-			// the currency-numerator / non-currency-denominator rule.
+			// Insert rates for item (unit_value, unit_cost, burn_rate). Caller-supplied inputs override the defaults; unit_price and unit_cost additionally enforce the currency-numerator / non-currency-denominator rule.
 			txUnitRepo := txSvc.repos.NewUnitRepo()
 
 			unitValueValue, unitValueNum, unitValueDen := "0", baseUnitID, baseUnitID
@@ -303,8 +301,7 @@ func (s *partSvcImpl) CreatePart(ctx context.Context, params domain.CreatePartPa
 				return apiErr
 			}
 
-			// Burn rate is always initialized to "0" per day; it is recomputed
-			// from inventory history by the burn-rate mediator.
+			// Burn rate is always initialized to "0" per day; it is recomputed from inventory history by the burn-rate mediator.
 			if apiErr := txPartRepo.InsertRate(txCtx, burnRateRateID, "0", baseUnitID, "day"); apiErr != nil {
 				return apiErr
 			}
@@ -436,8 +433,7 @@ func (s *partSvcImpl) UpdatePart(ctx context.Context, params domain.UpdatePartPa
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *partSvcImpl) *apierror.APIError {
 			txPartRepo := txSvc.repos.NewPartRepo()
 
-			// Fetch the part before update for audit diff (same includes as the
-			// post-update fetch so include-only fields cannot produce false diffs).
+			// Fetch the part before update for audit diff (same includes as the post-update fetch so include-only fields cannot produce false diffs).
 			old, apiErr := txPartRepo.Get(txCtx, domain.GetPartParams{AccountID: params.AccountID, PartID: params.PartID, Includes: params.Includes})
 			if apiErr != nil {
 				return apiErr

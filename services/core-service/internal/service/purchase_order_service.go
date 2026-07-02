@@ -312,8 +312,7 @@ func (s *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, params d
 				return apiErr
 			}
 
-			// Create the order
-			// buyer_account_id = owner_account_id (our account), seller_account_id = supplier_account_id
+			// Create the order buyer_account_id = owner_account_id (our account), seller_account_id = supplier_account_id
 			createParams := domain.CreatePurchaseOrderParams{
 				AccountID:             params.AccountID,
 				SupplierAccountID:     params.SupplierAccountID,

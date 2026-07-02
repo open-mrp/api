@@ -41,8 +41,7 @@ type UserSvcConfig struct {
 	// S3Client (required) is the object store client used for file storage.
 	S3Client s3client.ObjectStore
 
-	// UserPhotosBucket (optional; default: "") is the S3 bucket for user photos. It is not validated
-	// at construction.
+	// UserPhotosBucket (optional; default: "") is the S3 bucket for user photos. It is not validated at construction.
 	UserPhotosBucket string
 }
 
@@ -299,8 +298,15 @@ func (s *userSvcImpl) GetUserPhotoURL(ctx context.Context, userID string) (*stri
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
-	if apiErr := identity.CheckIsAuthenticated(); apiErr != nil {
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
+	}
+
+	// A user may always fetch their own photo; fetching another user's photo requires team_users:read. Mirrors GetUser / UpdateUser cross-user gating; without this any authenticated session could resolve any user's photo URL.
+	if identity.Actor == nil || identity.Actor.ID != userID {
+		if apiErr := identity.CheckHasPermission(types.PermissionDomainTeamUsers, types.ActionRead); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 	}
 
 	accountUserRepo := s.repos.NewAccountUserRepo()

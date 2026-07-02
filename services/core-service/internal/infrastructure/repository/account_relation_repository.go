@@ -250,6 +250,59 @@ func (r *accountRelationRepoImpl) FindCustomerByEmail(ctx context.Context, owner
 	}, nil
 }
 
+func (r *accountRelationRepoImpl) FindContactsByEmail(ctx context.Context, ownerAccountID, email string) ([]domain.ContactMatch, *apierror.APIError) {
+	ctx, span := accountRelationRepoTracer.Start(ctx, "repository.account_relation.find_contacts_by_email")
+	defer span.End()
+
+	rows, err := r.queries.FindContactsByEmail(ctx, sqlc.FindContactsByEmailParams{
+		OwnerAccountID: ownerAccountID,
+		Email:          sql.NullString{String: email, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	matches := make([]domain.ContactMatch, 0, len(rows))
+	for _, row := range rows {
+		m := domain.ContactMatch{
+			AccountUserID: row.AccountUserID,
+			UserID:        row.UserID,
+			AccountID:     row.AccountID,
+			StatusCode:    row.StatusCode,
+			CreatedAt:     row.CreatedAt,
+			UpdatedAt:     row.UpdatedAt,
+			Email:         row.Email.String,
+			Relationship:  sqlValueToString(row.Relationship),
+		}
+		if row.RoleID.Valid {
+			roleID := row.RoleID.String
+			m.RoleID = &roleID
+		}
+		if row.DepartmentID.Valid {
+			departmentID := row.DepartmentID.String
+			m.DepartmentID = &departmentID
+		}
+		if row.LastUsedAt.Valid {
+			lastUsedAt := row.LastUsedAt.Time
+			m.LastUsedAt = &lastUsedAt
+		}
+		matches = append(matches, m)
+	}
+	return matches, nil
+}
+
+// sqlValueToString coerces a dynamically-typed scan target (sqlc types CASE/COALESCE expressions as interface{}) to a string. The MySQL driver yields []byte for character results.
+func sqlValueToString(v interface{}) string {
+	switch t := v.(type) {
+	case string:
+		return t
+	case []byte:
+		return string(t)
+	default:
+		return ""
+	}
+}
+
 func (r *accountRelationRepoImpl) FindCustomerAccountsByVendorAndUser(ctx context.Context, vendorAccountID, userID string) ([]domain.CustomerAccountSummary, *apierror.APIError) {
 	ctx, span := accountRelationRepoTracer.Start(ctx, "repository.account_relation.find_customer_accounts_by_vendor_and_user")
 	defer span.End()

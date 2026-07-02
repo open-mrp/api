@@ -9,7 +9,7 @@ import (
 //
 // Like Actor and Entity, it carries just enough to identify and label the referenced record without embedding its full resource. The optional status and metadata fields hold type-specific detail that varies by the kind of record referenced.
 type Record struct {
-	// Record ID.
+	// Unique identifier for the record.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=record"`

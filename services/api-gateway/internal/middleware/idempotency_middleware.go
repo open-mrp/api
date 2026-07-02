@@ -151,9 +151,7 @@ func (r *responseRecorder) HasCookies() bool {
 }
 
 type IdempotencyMiddlewareConfig struct {
-	// PlatformClient (optional; default: nil) is the platform-service gRPC client
-	// used to persist and replay idempotency keys. When nil, idempotency keys are
-	// still propagated on the request context but requests are not deduplicated.
+	// PlatformClient (optional; default: nil) is the platform-service gRPC client used to persist and replay idempotency keys. When nil, idempotency keys are still propagated on the request context but requests are not deduplicated.
 	PlatformClient *grpcclient.PlatformServiceClient
 }
 
@@ -214,7 +212,7 @@ func IdempotencyMiddleware(config *IdempotencyMiddlewareConfig) func(http.Handle
 				actorID = nil
 				identityType = string(types.IdentityActorTypeUnauthenticated)
 			}
-			if identity != nil && identity.Target != nil && identity.Target.AccountID != "" {
+			if identity.IsTargetAccountSet() {
 				targetAccountID = &identity.Target.AccountID
 			}
 

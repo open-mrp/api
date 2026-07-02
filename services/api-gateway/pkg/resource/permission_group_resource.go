@@ -19,7 +19,7 @@ type Permission struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=permission"`
 	// Permission code in `{domain}:{action}` format, such as `customers:read`.
 	Code string `json:"code" validate:"required"`
-	// Display name.
+	// Human-readable name for the permission.
 	Name string `json:"name" validate:"required"`
 	// Human-readable description of what this permission controls.
 	Description *string `json:"description"`
@@ -54,7 +54,7 @@ type PermissionGroup struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=permission_group"`
 	// Unique code identifying the permission group, such as `customers`.
 	Code string `json:"code" validate:"required"`
-	// Display name.
+	// Human-readable name for the permission group.
 	Name string `json:"name" validate:"required"`
 	// Free-form description of the permission group.
 	Description *string `json:"description"`

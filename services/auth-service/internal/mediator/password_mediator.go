@@ -236,9 +236,7 @@ func (s *passwordMedImpl) RequestReset(ctx context.Context, identifier string, a
 	return s.sendPasswordResetEmail(ctx, user, accountSlug)
 }
 
-// sendPasswordResetEmail mints a short-lived password reset JWT (15 minutes),
-// builds a reset link optionally scoped to an account slug, and publishes the
-// password reset email via the outbox. Caller must ensure user.Email is non-nil.
+// sendPasswordResetEmail mints a short-lived password reset JWT (15 minutes), builds a reset link optionally scoped to an account slug, and publishes the password reset email via the outbox. Caller must ensure user.Email is non-nil.
 func (s *passwordMedImpl) sendPasswordResetEmail(ctx context.Context, user *types.User, accountSlug *string) *apierror.APIError {
 	ctx, span := passwordMedTracer.Start(ctx, "mediator.password.send_password_reset_email")
 	defer span.End()

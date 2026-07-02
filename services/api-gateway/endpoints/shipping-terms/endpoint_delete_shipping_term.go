@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -22,13 +23,15 @@ type DeleteShippingTermEndpoint struct{}
 
 func (e *DeleteShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteShippingTermRequest, *apiresource.EmptyResource] {
 	return (&apiendpoint.APIEndpoint[*DeleteShippingTermRequest, *apiresource.EmptyResource]{
-		Title:             "Delete Shipping Term",
-		Method:            http.MethodDelete,
-		Route:             "/v1/operations/shipping-terms/{id}",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
+		Title:               "Delete Shipping Term",
+		Method:              http.MethodDelete,
+		Route:               "/v1/operations/shipping-terms/{id}",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainShippingTerms, Action: types.ActionDelete}},
+		Preview:             true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteShippingTermRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ShippingTermSvc).DeleteShippingTerm
 		},

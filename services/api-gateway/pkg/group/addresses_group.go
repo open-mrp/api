@@ -35,7 +35,7 @@ func (*AddressesEndpointGroup) Materialize(config *AddressesEndpointGroupConfig)
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
-		Title:        "Address Management",
+		Title:        "Address",
 		Description:  "List and manage addresses for accounts.",
 		ResourceType: &apiresource.Address{},
 	}

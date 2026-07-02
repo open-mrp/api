@@ -35,7 +35,7 @@ func (*RequestLogsEndpointGroup) Materialize(config *RequestLogsEndpointGroupCon
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
-		Title:        "Request Log Management",
+		Title:        "Request Log",
 		Description:  "List and retrieve request logs.",
 		ResourceType: &apiresource.RequestLog{},
 	}

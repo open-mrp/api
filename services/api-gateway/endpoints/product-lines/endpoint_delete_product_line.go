@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -22,13 +23,15 @@ type DeleteProductLineEndpoint struct{}
 
 func (e *DeleteProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteProductLineRequest, *apiresource.EmptyResource] {
 	return (&apiendpoint.APIEndpoint[*DeleteProductLineRequest, *apiresource.EmptyResource]{
-		Title:             "Delete Product Line",
-		Method:            http.MethodDelete,
-		Route:             "/v1/catalog/product-lines/{id}",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
+		Title:               "Delete Product Line",
+		Method:              http.MethodDelete,
+		Route:               "/v1/catalog/product-lines/{id}",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProductLines, Action: types.ActionDelete}},
+		Preview:             true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteProductLineRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ProductLineSvc).DeleteProductLine
 		},

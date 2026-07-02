@@ -61,19 +61,62 @@ func (r *agentRunRepoImpl) UpdateStatus(ctx context.Context, id, status string) 
 	return nil
 }
 
-func (r *agentRunRepoImpl) UpdateStarted(ctx context.Context, id string) *apierror.APIError {
-	ctx, span := tracing.StartSpan(ctx, runRepoTracer, "repository.agent_run.update_started")
+func (r *agentRunRepoImpl) MarkCancelledByUser(ctx context.Context, id string) *apierror.APIError {
+	ctx, span := tracing.StartSpan(ctx, runRepoTracer, "repository.agent_run.mark_cancelled_by_user")
 	defer span.End()
-	if apiErr := db.MapSQLError(r.queries.UpdateAgentRunStarted(ctx, id)); apiErr != nil {
+	if apiErr := db.MapSQLError(r.queries.MarkAgentRunCancelledByUser(ctx, id)); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 	return nil
+}
+
+// MarkRetrying atomically transitions a failed run back to running and increments its retry counter, returning the new count. The underlying query guards on status='failed', so a run that isn't failed
+// (already retried, or never failed) yields no rows — surfaced here as a not-found error for the caller to treat as "not retryable".
+func (r *agentRunRepoImpl) MarkRetrying(ctx context.Context, id string) (int32, *apierror.APIError) {
+	ctx, span := tracing.StartSpan(ctx, runRepoTracer, "repository.agent_run.mark_retrying")
+	defer span.End()
+	count, err := r.queries.MarkAgentRunRetrying(ctx, id)
+	if err != nil {
+		return 0, tracing.Trace(span, db.MapSQLError(err))
+	}
+	return count, nil
+}
+
+// MarkAutoRetrying increments a still-running run's retry counter (clearing any stale error) so the runner can transparently re-enqueue it after a transient, whole-chain-unavailable failure. The underlying query guards on status='running' and leaves the status running, so a run that already left the running state yields no rows — surfaced here as a not-found error for the caller to treat as "not retryable".
+func (r *agentRunRepoImpl) MarkAutoRetrying(ctx context.Context, id string) (int32, *apierror.APIError) {
+	ctx, span := tracing.StartSpan(ctx, runRepoTracer, "repository.agent_run.mark_auto_retrying")
+	defer span.End()
+	count, err := r.queries.MarkAgentRunAutoRetrying(ctx, id)
+	if err != nil {
+		return 0, tracing.Trace(span, db.MapSQLError(err))
+	}
+	return count, nil
+}
+
+// UpdateStarted atomically claims a pending run for execution, flipping it to 'running' and stamping started_at. The query guards on status='pending', so the returned row count is 1 for the delivery that wins the claim and 0 for a duplicate (already-started, completed, or cancelled) run — letting the caller drop a redelivered execute_run command instead of running it a second time.
+func (r *agentRunRepoImpl) UpdateStarted(ctx context.Context, id string) (int64, *apierror.APIError) {
+	ctx, span := tracing.StartSpan(ctx, runRepoTracer, "repository.agent_run.update_started")
+	defer span.End()
+	rows, err := r.queries.UpdateAgentRunStarted(ctx, id)
+	if err != nil {
+		return 0, tracing.Trace(span, db.MapSQLError(err))
+	}
+	return rows, nil
 }
 
 func (r *agentRunRepoImpl) UpdateCompleted(ctx context.Context, params sqlc.UpdateAgentRunCompletedParams) *apierror.APIError {
 	ctx, span := tracing.StartSpan(ctx, runRepoTracer, "repository.agent_run.update_completed")
 	defer span.End()
 	if apiErr := db.MapSQLError(r.queries.UpdateAgentRunCompleted(ctx, params)); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
+}
+
+func (r *agentRunRepoImpl) UpdateCancelled(ctx context.Context, params sqlc.UpdateAgentRunCancelledParams) *apierror.APIError {
+	ctx, span := tracing.StartSpan(ctx, runRepoTracer, "repository.agent_run.update_cancelled")
+	defer span.End()
+	if apiErr := db.MapSQLError(r.queries.UpdateAgentRunCancelled(ctx, params)); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 	return nil
@@ -88,13 +131,10 @@ func (r *agentRunRepoImpl) UpdateFailed(ctx context.Context, params sqlc.UpdateA
 	return nil
 }
 
-func (r *agentRunRepoImpl) UpdateAllowedToolSlugs(ctx context.Context, id string, slugsJSON []byte) *apierror.APIError {
-	ctx, span := tracing.StartSpan(ctx, runRepoTracer, "repository.agent_run.update_allowed_tool_slugs")
+func (r *agentRunRepoImpl) MarkDivergedFromConversation(ctx context.Context, id string) *apierror.APIError {
+	ctx, span := tracing.StartSpan(ctx, runRepoTracer, "repository.agent_run.mark_diverged_from_conversation")
 	defer span.End()
-	if apiErr := db.MapSQLError(r.queries.UpdateAgentRunAllowedToolSlugs(ctx, sqlc.UpdateAgentRunAllowedToolSlugsParams{
-		AllowedToolSlugs: slugsJSON,
-		ID:               id,
-	})); apiErr != nil {
+	if apiErr := db.MapSQLError(r.queries.MarkAgentRunDivergedFromConversation(ctx, id)); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 	return nil

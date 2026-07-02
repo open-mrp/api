@@ -2,7 +2,7 @@
 INSERT INTO message_outbox (
     message_id, service_name, message_type, destination, routing_key,
     headers, payload, status, max_attempts, next_run_at, request_id, parent_message_id
-) VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8, now(), $9, $10)
+) VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8, now() + ($9 || ' seconds')::interval, $10, $11)
 RETURNING id;
 
 -- name: AcquireOutboxMessages :exec

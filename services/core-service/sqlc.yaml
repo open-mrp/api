@@ -18,4 +18,16 @@ sql:
             go_type:
               import: "github.com/augno/api/shared/db"
               type: "NullableRawMessage"
+          - column: "hubspot_sync_job.cursors"
+            go_type:
+              import: "github.com/augno/api/shared/db"
+              type: "NullableRawMessage"
+          - column: "hubspot_sync_job.counts"
+            go_type:
+              import: "github.com/augno/api/shared/db"
+              type: "NullableRawMessage"
+          - column: "hubspot_company_review.candidate_matches"
+            go_type:
+              import: "github.com/augno/api/shared/db"
+              type: "NullableRawMessage"
 

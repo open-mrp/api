@@ -81,6 +81,24 @@ Services running in minikube cannot reach `localhost` on the host machine. The K
 
 The seed script hardcodes the Docker Compose connection details, so no `.env` configuration is needed — just run `make local-db` before `make dev`.
 
+#### Agent endpoint-tools (optional)
+
+Agents can invoke api-gateway endpoints flagged `AgentTool: true` (see `make gen-agent-tools`). This uses a dedicated **internal** api-gateway listener on port 8091, reached over the `api-gateway-internal` ClusterIP Service and gated by a shared token. The token is optional in dev: when it is absent the internal listener does not start and the endpoint-tools are simply unavailable (the rest of the agent works normally).
+
+To enable it locally, add an `internal-service-token` secret to your `infra/development/kubernetes/config/secrets.yaml`:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: internal-service-token
+type: Opaque
+stringData:
+  token: "dev-internal-token" # any non-empty value in dev
+```
+
+Both `api-gateway` and `agent-service` already consume this secret (as `INTERNAL_SERVICE_TOKEN`) and the `API_GATEWAY_INTERNAL_URL` config value. In production the token is generated and delivered by Terraform (`infra/production/terraform/internal_service_token.tf`).
+
 ### Common Commands
 
 Arguments like `auth`, `notification`, or `logging` can be passed to target specific services.

@@ -20,7 +20,7 @@ type Account struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account"`
-	// Display name.
+	// The account's display name.
 	Name string `json:"name" validate:"required"`
 	// Default billing address.
 	DefaultBillingAddress *Address `json:"default_billing_address" expandable:"true"`
@@ -121,7 +121,7 @@ type PublicAccount struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=public_account"`
-	// Display name.
+	// The account's display name.
 	Name string `json:"name" validate:"required"`
 	// Portal slug.
 	Slug string `json:"slug" validate:"required"`

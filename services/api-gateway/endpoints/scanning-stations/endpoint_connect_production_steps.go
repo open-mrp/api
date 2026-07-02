@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -35,13 +36,14 @@ type ConnectProductionStepsEndpoint struct{}
 
 func (e *ConnectProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ConnectProductionStepsRequest, *apiresource.EmptyResource] {
 	return (&apiendpoint.APIEndpoint[*ConnectProductionStepsRequest, *apiresource.EmptyResource]{
-		Title:             "Connect Production Steps to Scanning Station",
-		Method:            http.MethodPut,
-		ContentType:       "application/json",
-		Route:             "/v1/operations/scanning-stations/{id}/production-steps",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
+		Title:               "Connect Production Steps to Scanning Station",
+		Method:              http.MethodPut,
+		ContentType:         "application/json",
+		Route:               "/v1/operations/scanning-stations/{id}/production-steps",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainScanningStations, Action: types.ActionUpdate}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ConnectProductionStepsRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ScanningStationSvc).ConnectProductionSteps
 		},

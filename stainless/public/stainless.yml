@@ -151,6 +151,8 @@ resources:
           page_info: '#/components/schemas/PageInfo'
           role: '#/components/schemas/Role'
   core:
+    methods:
+      retrieve_search: get /v1/core/search
     subresources:
       sandboxes:
         methods:
@@ -202,6 +204,9 @@ resources:
         models:
           email_log: '#/components/schemas/EmailLog'
           list_email_log: '#/components/schemas/List_EmailLog'
+    models:
+      entity: '#/components/schemas/Entity'
+      list_entity: '#/components/schemas/List_Entity'
   catalog:
     subresources:
       units:
@@ -353,6 +358,227 @@ resources:
           list_product: '#/components/schemas/List_Product'
           product: '#/components/schemas/Product'
           update_product_request: '#/components/schemas/UpdateProductRequest'
+  messaging:
+    methods:
+      retrieve_contacts: get /v1/messaging/contacts
+    subresources:
+      notifications:
+        methods:
+          create: post /v1/messaging/notifications
+          list: get /v1/messaging/notifications
+          retrieve: get /v1/messaging/notifications/{id}
+          retrieve_unread_count: get /v1/messaging/notifications/unread-count
+          retrieve_unread_summary: get /v1/messaging/notifications/unread-summary
+        subresources:
+          actions:
+            methods:
+              seen: post /v1/messaging/notifications/{id}/actions/seen
+              read: post /v1/messaging/notifications/{id}/actions/read
+              dismiss: post /v1/messaging/notifications/{id}/actions/dismiss
+              mark_all_seen: post /v1/messaging/notifications/actions/mark-all-seen
+        models:
+          list_notification: '#/components/schemas/List_Notification'
+          list_notification_unread_summary_account: '#/components/schemas/List_NotificationUnreadSummaryAccount'
+          notification: '#/components/schemas/Notification'
+          notification_send_result: '#/components/schemas/NotificationSendResult'
+          notification_target_input: '#/components/schemas/NotificationTargetInput'
+          notification_unread_count: '#/components/schemas/NotificationUnreadCount'
+          notification_unread_summary: '#/components/schemas/NotificationUnreadSummary'
+          notification_unread_summary_account: '#/components/schemas/NotificationUnreadSummaryAccount'
+          send_notification_request: '#/components/schemas/SendNotificationRequest'
+      announcements:
+        methods:
+          list: get /v1/messaging/announcements
+          retrieve: get /v1/messaging/announcements/{id}
+        subresources:
+          actions:
+            methods:
+              seen: post /v1/messaging/announcements/{id}/actions/seen
+              read: post /v1/messaging/announcements/{id}/actions/read
+              dismiss: post /v1/messaging/announcements/{id}/actions/dismiss
+        models:
+          announcement: '#/components/schemas/Announcement'
+          list_announcement: '#/components/schemas/List_Announcement'
+      conversations:
+        methods:
+          create: post /v1/messaging/conversations
+          list: get /v1/messaging/conversations
+          retrieve: get /v1/messaging/conversations/{id}
+          update: patch /v1/messaging/conversations/{id}
+        subresources:
+          actions:
+            methods:
+              set_legal_hold: post /v1/messaging/conversations/{id}/actions/set-legal-hold
+              redact: post /v1/messaging/conversations/{id}/actions/redact
+              read: post /v1/messaging/conversations/{id}/actions/read
+              archive: post /v1/messaging/conversations/{id}/actions/archive
+              unarchive: post /v1/messaging/conversations/{id}/actions/unarchive
+              leave: post /v1/messaging/conversations/{id}/actions/leave
+              hide: post /v1/messaging/conversations/{id}/actions/hide
+              unhide: post /v1/messaging/conversations/{id}/actions/unhide
+              mute: post /v1/messaging/conversations/{id}/actions/mute
+              unmute: post /v1/messaging/conversations/{id}/actions/unmute
+              set_status: post /v1/messaging/conversations/{id}/actions/set-status
+              assign: post /v1/messaging/conversations/{id}/actions/assign
+              report: post /v1/messaging/conversations/{id}/actions/report
+            models:
+              assign_conversation_request: '#/components/schemas/AssignConversationRequest'
+              mark_conversation_read_request: '#/components/schemas/MarkConversationReadRequest'
+              mute_conversation_request: '#/components/schemas/MuteConversationRequest'
+              report_conversation_request: '#/components/schemas/ReportConversationRequest'
+              set_legal_hold_request: '#/components/schemas/SetLegalHoldRequest'
+              set_workflow_status_request: '#/components/schemas/SetWorkflowStatusRequest'
+          links:
+            methods:
+              create: post /v1/messaging/conversations/{id}/links
+              delete: delete /v1/messaging/conversations/{id}/links/{link_id}
+              list: get /v1/messaging/conversations/{id}/links
+            models:
+              add_conversation_link_request: '#/components/schemas/AddConversationLinkRequest'
+              conversation_link: '#/components/schemas/ConversationLink'
+              list_conversation_link: '#/components/schemas/List_ConversationLink'
+          messages:
+            methods:
+              create: post /v1/messaging/conversations/{id}/messages
+              list: get /v1/messaging/conversations/{id}/messages
+            models:
+              list_message: '#/components/schemas/List_Message'
+              message_attachment_input: '#/components/schemas/MessageAttachmentInput'
+              send_message_request: '#/components/schemas/SendMessageRequest'
+          participants:
+            methods:
+              create: post /v1/messaging/conversations/{id}/participants
+              delete: delete /v1/messaging/conversations/{id}/participants/{pid}
+            subresources:
+              actions:
+                methods:
+                  set_role: post /v1/messaging/conversations/{id}/participants/{pid}/actions/set-role
+                models:
+                  update_participant_role_request: '#/components/schemas/UpdateParticipantRoleRequest'
+            models:
+              add_participant_request: '#/components/schemas/AddParticipantRequest'
+          attachments:
+            subresources:
+              actions:
+                methods:
+                  upload_url: post /v1/messaging/conversations/{id}/attachments/actions/upload-url
+                models:
+                  attachment_upload_target: '#/components/schemas/AttachmentUploadTarget'
+                  create_attachment_upload_url_request: '#/components/schemas/CreateAttachmentUploadURLRequest'
+        models:
+          agent_action: '#/components/schemas/AgentAction'
+          agent_definition: '#/components/schemas/AgentDefinition'
+          agent_definition_config: '#/components/schemas/AgentDefinitionConfig'
+          agent_definition_tool: '#/components/schemas/AgentDefinitionTool'
+          agent_run: '#/components/schemas/AgentRun'
+          agent_run_step: '#/components/schemas/AgentRunStep'
+          available_tool: '#/components/schemas/AvailableTool'
+          conversation: '#/components/schemas/Conversation'
+          conversation_participant: '#/components/schemas/ConversationParticipant'
+          create_conversation_request: '#/components/schemas/CreateConversationRequest'
+          list_agent_action: '#/components/schemas/List_AgentAction'
+          list_agent_definition_tool: '#/components/schemas/List_AgentDefinitionTool'
+          list_agent_run_step: '#/components/schemas/List_AgentRunStep'
+          list_conversation: '#/components/schemas/List_Conversation'
+          list_conversation_participant: '#/components/schemas/List_ConversationParticipant'
+          list_message_attachment: '#/components/schemas/List_MessageAttachment'
+          list_messaging_group_member: '#/components/schemas/List_MessagingGroupMember'
+          message: '#/components/schemas/Message'
+          message_attachment: '#/components/schemas/MessageAttachment'
+          messaging_group: '#/components/schemas/MessagingGroup'
+          messaging_group_member: '#/components/schemas/MessagingGroupMember'
+          trigger_config: '#/components/schemas/TriggerConfig'
+          update_conversation_request: '#/components/schemas/UpdateConversationRequest'
+      messages:
+        methods:
+          update: patch /v1/messaging/messages/{id}
+        subresources:
+          actions:
+            methods:
+              approve_send: post /v1/messaging/messages/{id}/actions/approve-send
+              reject: post /v1/messaging/messages/{id}/actions/reject
+              cancel: post /v1/messaging/messages/{id}/actions/cancel
+            models:
+              approve_send_draft_request: '#/components/schemas/ApproveSendDraftRequest'
+        models:
+          update_draft_request: '#/components/schemas/UpdateDraftRequest'
+      groups:
+        methods:
+          create: post /v1/messaging/groups
+          list: get /v1/messaging/groups
+          retrieve: get /v1/messaging/groups/{id}
+          update: patch /v1/messaging/groups/{id}
+          delete: delete /v1/messaging/groups/{id}
+        subresources:
+          members:
+            methods:
+              create: post /v1/messaging/groups/{id}/members
+              delete: delete /v1/messaging/groups/{id}/members/{member_id}
+            models:
+              add_messaging_group_member_request: '#/components/schemas/AddMessagingGroupMemberRequest'
+        models:
+          create_messaging_group_request: '#/components/schemas/CreateMessagingGroupRequest'
+          list_messaging_group: '#/components/schemas/List_MessagingGroup'
+          update_messaging_group_request: '#/components/schemas/UpdateMessagingGroupRequest'
+      blocks:
+        methods:
+          create: post /v1/messaging/blocks
+          delete: delete /v1/messaging/blocks/{id}
+          list: get /v1/messaging/blocks
+        models:
+          account_user: '#/components/schemas/AccountUser'
+          block_request: '#/components/schemas/BlockRequest'
+          consumption: '#/components/schemas/Consumption'
+          department: '#/components/schemas/Department'
+          list_consumption: '#/components/schemas/List_Consumption'
+          list_location: '#/components/schemas/List_Location'
+          list_machine: '#/components/schemas/List_Machine'
+          list_messaging_block: '#/components/schemas/List_MessagingBlock'
+          list_production_step: '#/components/schemas/List_ProductionStep'
+          list_scanning_station: '#/components/schemas/List_ScanningStation'
+          location: '#/components/schemas/Location'
+          location_type_code: '#/components/schemas/LocationTypeCode'
+          machine: '#/components/schemas/Machine'
+          messaging_block: '#/components/schemas/MessagingBlock'
+          production_output: '#/components/schemas/ProductionOutput'
+          production_step: '#/components/schemas/ProductionStep'
+          scanning_station: '#/components/schemas/ScanningStation'
+          user: '#/components/schemas/User'
+      preferences:
+        methods:
+          list: get /v1/messaging/preferences
+          update: put /v1/messaging/preferences
+        models:
+          list_notification_preference: '#/components/schemas/List_NotificationPreference'
+          notification_preference: '#/components/schemas/NotificationPreference'
+          upsert_notification_preference_request: '#/components/schemas/UpsertNotificationPreferenceRequest'
+      email_domains:
+        methods:
+          create: post /v1/messaging/email-domains
+          list: get /v1/messaging/email-domains
+          retrieve: get /v1/messaging/email-domains/{id}
+        subresources:
+          actions:
+            methods:
+              verify: post /v1/messaging/email-domains/{id}/actions/verify
+        models:
+          create_email_domain_request: '#/components/schemas/CreateEmailDomainRequest'
+          email_domain: '#/components/schemas/EmailDomain'
+          list_email_domain: '#/components/schemas/List_EmailDomain'
+      email_inboxes:
+        methods:
+          create: post /v1/messaging/email-inboxes
+          list: get /v1/messaging/email-inboxes
+          retrieve: get /v1/messaging/email-inboxes/{id}
+          update: patch /v1/messaging/email-inboxes/{id}
+          delete: delete /v1/messaging/email-inboxes/{id}
+        models:
+          create_email_inbox_request: '#/components/schemas/CreateEmailInboxRequest'
+          email_inbox: '#/components/schemas/EmailInbox'
+          list_email_inbox: '#/components/schemas/List_EmailInbox'
+          update_email_inbox_request: '#/components/schemas/UpdateEmailInboxRequest'
+    models:
+      list_actor: '#/components/schemas/List_Actor'
   sales:
     subresources:
       account_groups:
@@ -406,35 +632,29 @@ resources:
             models:
               merge_customers_request: '#/components/schemas/MergeCustomersRequest'
         models:
-          account_user: '#/components/schemas/AccountUser'
           carrier: '#/components/schemas/Carrier'
-          consumption: '#/components/schemas/Consumption'
           create_customer_request: '#/components/schemas/CreateCustomerRequest'
           customer: '#/components/schemas/Customer'
           customer_contact_info: '#/components/schemas/CustomerContactInfo'
           customer_defaults: '#/components/schemas/CustomerDefaults'
           customer_freight_preferences: '#/components/schemas/CustomerFreightPreferences'
           customer_notification_preferences: '#/components/schemas/CustomerNotificationPreferences'
-          department: '#/components/schemas/Department'
-          list_consumption: '#/components/schemas/List_Consumption'
           list_customer: '#/components/schemas/List_Customer'
-          list_location: '#/components/schemas/List_Location'
-          list_machine: '#/components/schemas/List_Machine'
-          list_production_step: '#/components/schemas/List_ProductionStep'
-          list_scanning_station: '#/components/schemas/List_ScanningStation'
           list_service_level: '#/components/schemas/List_ServiceLevel'
-          location: '#/components/schemas/Location'
-          location_type_code: '#/components/schemas/LocationTypeCode'
-          machine: '#/components/schemas/Machine'
           payment_term: '#/components/schemas/PaymentTerm'
-          production_output: '#/components/schemas/ProductionOutput'
-          production_step: '#/components/schemas/ProductionStep'
           quantity_input: '#/components/schemas/QuantityInput'
-          scanning_station: '#/components/schemas/ScanningStation'
           service_level: '#/components/schemas/ServiceLevel'
           shipping_term: '#/components/schemas/ShippingTerm'
           update_customer_request: '#/components/schemas/UpdateCustomerRequest'
-          user: '#/components/schemas/User'
+      contacts:
+        subresources:
+          actions:
+            methods:
+              find_by_email: post /v1/sales/contacts/actions/find-by-email
+            models:
+              contact_match: '#/components/schemas/ContactMatch'
+              find_contact_by_email_request: '#/components/schemas/FindContactByEmailRequest'
+              list_contact_match: '#/components/schemas/List_ContactMatch'
       sales_orders:
         methods:
           retrieve_statuses: get /v1/sales/sales-orders/statuses

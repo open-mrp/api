@@ -5,6 +5,8 @@ type PermissionDomain string
 const (
 	PermissionDomainAgents                        PermissionDomain = "agents"
 	PermissionDomainAgentRuns                     PermissionDomain = "agent_runs"
+	PermissionDomainAgentMemories                 PermissionDomain = "agent_memories"
+	PermissionDomainAlerts                        PermissionDomain = "alerts"
 	PermissionDomainAccount                       PermissionDomain = "self"
 	PermissionDomainDeliveries                    PermissionDomain = "deliveries"
 	PermissionDomainLocations                     PermissionDomain = "locations"
@@ -72,6 +74,7 @@ const (
 	PermissionDomainAdjustmentTypes               PermissionDomain = "adjustment_types"
 	PermissionDomainPriorities                    PermissionDomain = "priorities"
 	PermissionDomainProductTypes                  PermissionDomain = "product_types"
+	PermissionDomainMessaging                     PermissionDomain = "messaging"
 )
 
 type Action string
@@ -82,3 +85,17 @@ const (
 	ActionUpdate Action = "update"
 	ActionDelete Action = "delete"
 )
+
+// Permission is a single required permission: a domain paired with an action. Declaring permissions with these typed constants (instead of raw "<domain>:<action>" strings) is checked by the compiler, preventing typos.
+type Permission struct {
+	Domain PermissionDomain
+	Action Action
+}
+
+// AnyOfPermissions lists permissions where holding any one satisfies the requirement. API gateway endpoints declare this shape on RequiredPermissions: the coarse gate rejects callers who hold none of the listed permissions; handlers may still apply finer per-resource checks (for example unified search skips types the caller cannot read).
+type AnyOfPermissions []Permission
+
+// String renders the permission in canonical "<domain>:<action>" form.
+func (p Permission) String() string {
+	return string(p.Domain) + ":" + string(p.Action)
+}

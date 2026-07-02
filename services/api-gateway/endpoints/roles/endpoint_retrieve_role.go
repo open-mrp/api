@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -21,13 +22,15 @@ type RetrieveRoleEndpoint struct{}
 
 func (e *RetrieveRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveRoleRequest, *apiresource.Role] {
 	return (&apiendpoint.APIEndpoint[*RetrieveRoleRequest, *apiresource.Role]{
-		Title:             "Retrieve Role",
-		Method:            http.MethodGet,
-		ContentType:       "application/json",
-		Route:             "/v1/identity/roles/{id}",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
+		Title:               "Retrieve Role",
+		Method:              http.MethodGet,
+		ContentType:         "application/json",
+		Route:               "/v1/identity/roles/{id}",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainRoles, Action: types.ActionRead}},
+		Preview:             true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveRoleRequest) (*apiresource.Role, *apierror.APIError) {
 			return svc.(RoleSvc).GetRole
 		},

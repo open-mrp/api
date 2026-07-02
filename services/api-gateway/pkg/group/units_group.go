@@ -35,7 +35,7 @@ func (*UnitsEndpointGroup) Materialize(config *UnitsEndpointGroupConfig) *UnitsE
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
-		Title:        "Units Management",
+		Title:        "Units",
 		Description:  "List and manage units.",
 		ResourceType: &apiresource.Unit{},
 	}

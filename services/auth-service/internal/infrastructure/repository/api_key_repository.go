@@ -81,6 +81,21 @@ func (r *apiKeyRepoImpl) Create(ctx context.Context, apiKey *apikey.APIKey) (int
 	return id, nil
 }
 
+func (r *apiKeyRepoImpl) CountRoleForOwner(ctx context.Context, roleID string, ownerAccountID string) (int64, *apierror.APIError) {
+	ctx, span := apiKeyRepoTracer.Start(ctx, "repository.api_key.count_role_for_owner")
+	defer span.End()
+
+	count, err := r.db.CountRoleForOwner(ctx, sqlc.CountRoleForOwnerParams{
+		RoleID:         roleID,
+		OwnerAccountID: gosql.NullString{String: ownerAccountID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return 0, tracing.Trace(span, apiErr)
+	}
+
+	return count, nil
+}
+
 func (r *apiKeyRepoImpl) List(ctx context.Context, input domain.APIKeyListRepoInput) (*domain.APIKeyListRepoResult, *apierror.APIError) {
 	ctx, span := apiKeyRepoTracer.Start(ctx, "repository.api_key.list")
 	defer span.End()

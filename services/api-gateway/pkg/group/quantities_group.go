@@ -35,7 +35,7 @@ func (*QuantitiesEndpointGroup) Materialize(config *QuantitiesEndpointGroupConfi
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
-		Title:        "Quantities Management",
+		Title:        "Quantities",
 		Description:  "Manage quantity records.",
 		ResourceType: &apiresource.Quantity{},
 	}

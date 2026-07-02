@@ -57,7 +57,7 @@ type AddressDetailsResult struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=address_details_result"`
 	// Parsed address components.
 	Address *AddressComponents `json:"address" validate:"required"`
-	// Formatted full address string.
+	// Full address formatted as a single line.
 	FormattedAddress string `json:"formatted_address" validate:"required"`
 }
 

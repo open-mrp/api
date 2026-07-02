@@ -432,6 +432,7 @@ type ProductSvc interface {
 	SearchProducts(ctx context.Context, accountID, query string) ([]ProductInfo, *apierror.APIError)
 	ListProducts(ctx context.Context, accountID string) ([]ProductInfo, *apierror.APIError)
 	GetCustomerByEmail(ctx context.Context, ownerAccountID, email string) (*CustomerByEmail, *apierror.APIError)
+	FindContactsByEmail(ctx context.Context, email string) ([]ContactMatch, *apierror.APIError)
 
 	// ListProductsFull returns a paginated list of products for the caller's account.
 	ListProductsFull(ctx context.Context, params ListProductsFullParams) (*ListProductsFullResult, *apierror.APIError)
@@ -657,8 +658,7 @@ type ChildAccountSvc interface {
 	// RemoveChildAccount removes a child account relationship from the target account.
 	RemoveChildAccount(ctx context.Context, childAccountID string) *apierror.APIError
 
-	// BatchGetChildAccountsByIDs returns child account relations matching the
-	// input relation IDs. Used by the api-gateway resourcekit include resolver.
+	// BatchGetChildAccountsByIDs returns child account relations matching the input relation IDs. Used by the api-gateway resourcekit include resolver.
 	BatchGetChildAccountsByIDs(ctx context.Context, relationIDs []string) ([]*ChildAccount, *apierror.APIError)
 }
 
@@ -687,8 +687,7 @@ type ItemCategorySvc interface {
 	// ChangeItemCategoryUnitGroup changes the unit group of an item category.
 	ChangeItemCategoryUnitGroup(ctx context.Context, params ChangeItemCategoryUnitGroupParams) *apierror.APIError
 
-	// BatchGetItemCategoriesByIDs returns item categories by ID for the api-gateway
-	// include resolver. Always populates properties and unit group with full tree.
+	// BatchGetItemCategoriesByIDs returns item categories by ID for the api-gateway include resolver. Always populates properties and unit group with full tree.
 	BatchGetItemCategoriesByIDs(ctx context.Context, ids []string) ([]*ItemCategoryFull, *apierror.APIError)
 }
 

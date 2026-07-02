@@ -183,6 +183,8 @@ func (r *auditEventRepoImpl) List(ctx context.Context, callerAccountID string, f
 	resourceIDs := ensureStringSlice(filter.ResourceIDs)
 	includeActorIDFilter := len(filter.ActorIDs) > 0
 	actorIDs := ensureStringSlice(filter.ActorIDs)
+	includeActorTypeFilter := len(filter.ActorTypes) > 0
+	actorTypes := ensureStringSlice(filter.ActorTypes)
 	includeActionFilter := len(filter.Actions) > 0
 	actions := ensureStringSlice(filter.Actions)
 	includeActorAccountFilter := len(filter.ActorAccountIDs) > 0
@@ -222,6 +224,8 @@ func (r *auditEventRepoImpl) List(ctx context.Context, callerAccountID string, f
 			ResourceIds:                resourceIDs,
 			IncludeActorIDFilter:       includeActorIDFilter,
 			ActorIds:                   actorIDs,
+			IncludeActorTypeFilter:     includeActorTypeFilter,
+			ActorTypes:                 actorTypes,
 			IncludeActionFilter:        includeActionFilter,
 			Actions:                    actions,
 			StartDate:                  startDate,

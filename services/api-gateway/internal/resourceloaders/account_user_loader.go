@@ -50,6 +50,34 @@ func LoadAccountUsers(ctx context.Context, ids []string) (map[string]any, *apier
 	return out, nil
 }
 
+// AccountUserName is a resolved display name + handle (email) + profile photo for an account user,
+// plus the assigned role id (for callers that expose ?include=role on actors built from these ids).
+type AccountUserName struct {
+	Name     *string
+	Email    *string
+	ImageURL *string
+	RoleID   *string
+}
+
+// LoadAccountUserNames batch-resolves account_user ids to their display name + email, for hydrating polymorphic actors (e.g. conversation participants) that only carry ids.
+func LoadAccountUserNames(ctx context.Context, ids []string) (map[string]AccountUserName, *apierror.APIError) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	resp, apiErr := grpcutil.CallRPC(ctx, accountUserLoaderTracer, "loader.account_users.names", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.BatchGetAccountUsersByIDsResponse, error) {
+			return coreClient.BatchGetAccountUsersByIDs(ctx, &pb.BatchGetAccountUsersByIDsRequest{Ids: ids}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	out := make(map[string]AccountUserName, len(resp.AccountUsers))
+	for _, au := range resp.AccountUsers {
+		out[au.Id] = AccountUserName{Name: au.Name, Email: au.Email, ImageURL: au.ImageUrl, RoleID: au.RoleId}
+	}
+	return out, nil
+}
+
 func accountUserFromProto(au *pb.AccountUserDetail) *apiresource.AccountUser {
 	return &apiresource.AccountUser{
 		ID:         au.Id,

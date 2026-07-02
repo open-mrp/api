@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"reflect"
 	"time"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
@@ -331,37 +332,16 @@ func (s *accountSvcImpl) UpdateAccountSubscription(ctx context.Context, accountI
 
 		var changes []audit.FieldChange
 		if planCode != "" && string(oldPlanCode) != planCode {
-			oldPlanJSON, _ := json.Marshal(string(oldPlanCode))
-			newPlanJSON, _ := json.Marshal(planCode)
-			changes = append(changes, audit.FieldChange{
-				Field:    "plan_code",
-				OldValue: json.RawMessage(oldPlanJSON),
-				NewValue: json.RawMessage(newPlanJSON),
-			})
+			changes = append(changes, audit.NewFieldChange("plan_code", string(oldPlanCode), planCode))
 		}
 		if status != nil {
-			statusJSON, _ := json.Marshal(*status)
-			changes = append(changes, audit.FieldChange{
-				Field:    "subscription_status",
-				OldValue: json.RawMessage("null"),
-				NewValue: json.RawMessage(statusJSON),
-			})
+			changes = append(changes, audit.NewFieldChange("subscription_status", nil, *status))
 		}
 		if servicingStatus != nil {
-			sJSON, _ := json.Marshal(*servicingStatus)
-			changes = append(changes, audit.FieldChange{
-				Field:    "servicing_status",
-				OldValue: json.RawMessage("null"),
-				NewValue: json.RawMessage(sJSON),
-			})
+			changes = append(changes, audit.NewFieldChange("servicing_status", nil, *servicingStatus))
 		}
 		if collectionStatus != nil {
-			cJSON, _ := json.Marshal(*collectionStatus)
-			changes = append(changes, audit.FieldChange{
-				Field:    "collection_status",
-				OldValue: json.RawMessage("null"),
-				NewValue: json.RawMessage(cJSON),
-			})
+			changes = append(changes, audit.NewFieldChange("collection_status", nil, *collectionStatus))
 		}
 
 		if len(changes) > 0 {
@@ -769,15 +749,9 @@ func (s *accountSvcImpl) UpdateAgentSpendingCap(ctx context.Context, capCents *i
 				return apiErr
 			}
 
-			oldCapJSON, _ := json.Marshal(oldCap)
-			newCapJSON, _ := json.Marshal(capCents)
-
-			changes := []audit.FieldChange{
-				{
-					Field:    "agent_monthly_spending_cap_cents",
-					OldValue: json.RawMessage(oldCapJSON),
-					NewValue: json.RawMessage(newCapJSON),
-				},
+			var changes []audit.FieldChange
+			if !reflect.DeepEqual(oldCap, capCents) {
+				changes = append(changes, audit.NewFieldChange("agent_monthly_spending_cap_cents", oldCap, capCents))
 			}
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
@@ -829,7 +803,7 @@ func (s *accountSvcImpl) GetAccount(ctx context.Context, accountID string) (*dom
 	return s.accountRepo.GetByID(ctx, accountID)
 }
 
-// BatchGetAccountsByIDs returns accounts matching the input IDs that the caller is authorized to read. Authorization mirrors GetAccount: the caller can only access their own account. IDs that do not match the caller's target account are silently dropped (matching the "missing IDs are absent" loader contract used by the api-gateway resourcekit resolver).
+// BatchGetAccountsByIDs returns accounts matching the input IDs that the caller is authorized to read. The caller can always read their own target account, plus any requested account they have an account_relation to (customer/supplier), so relationship-scoped includes (e.g. ContactMatch.account for a customer/supplier match) hydrate cross-account. IDs the caller neither owns nor relates to are silently dropped (matching the "missing IDs are absent" loader contract used by the api-gateway resourcekit resolver).
 func (s *accountSvcImpl) BatchGetAccountsByIDs(ctx context.Context, ids []string) ([]*domain.Account, *apierror.APIError) {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.batch_get_by_ids")
 	defer span.End()
@@ -848,12 +822,19 @@ func (s *accountSvcImpl) BatchGetAccountsByIDs(ctx context.Context, ids []string
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
-	// Authorization: the caller can only read their own account. Filter the input IDs to just the target account ID; everything else is silently dropped (the resolver treats absence as "field stays nil").
-	allowed := make([]string, 0, 1)
+	// Authorization: always allow the caller's own target account; additionally allow any requested id the caller has an account_relation to (customer/supplier), so relationship-scoped includes hydrate cross-account. Everything else is silently dropped (the resolver treats absence as "field stays nil").
+	allowed := make([]string, 0, len(ids))
 	for _, id := range ids {
 		if id == identity.Target.AccountID {
 			allowed = append(allowed, id)
-			break
+			continue
+		}
+		hasRelation, apiErr := s.accountRelationRepo.HasRelation(ctx, identity.Target.AccountID, id)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		if hasRelation {
+			allowed = append(allowed, id)
 		}
 	}
 	if len(allowed) == 0 {

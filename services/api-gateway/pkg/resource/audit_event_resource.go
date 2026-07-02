@@ -43,13 +43,15 @@ type AuditEvent struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=audit_event"`
-	// Mutation type.
+	// The type of action this event records.
 	//
 	// - `create`: the resource was created.
 	// - `update`: one or more fields were changed.
 	// - `delete`: the resource was deleted.
 	// - `restore`: a previously deleted resource was restored.
 	// - `archive`: the resource was archived.
+	// - `approve`: a human approved a gated action, such as allowing a review-gated agent tool to run.
+	// - `deny`: a human denied a gated action, such as rejecting a review-gated agent tool.
 	Action constants.AuditAction `json:"action" validate:"required"`
 	// Resource type of the audited entity.
 	ResourceType constants.ObjectType `json:"resource_type" validate:"required"`

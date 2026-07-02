@@ -48,6 +48,21 @@ func (m *MockAPIKeyRepo) EXPECT() *MockAPIKeyRepoMockRecorder {
 	return m.recorder
 }
 
+// CountRoleForOwner mocks base method.
+func (m *MockAPIKeyRepo) CountRoleForOwner(ctx context.Context, roleID, ownerAccountID string) (int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CountRoleForOwner", ctx, roleID, ownerAccountID)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CountRoleForOwner indicates an expected call of CountRoleForOwner.
+func (mr *MockAPIKeyRepoMockRecorder) CountRoleForOwner(ctx, roleID, ownerAccountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountRoleForOwner", reflect.TypeOf((*MockAPIKeyRepo)(nil).CountRoleForOwner), ctx, roleID, ownerAccountID)
+}
+
 // Create mocks base method.
 func (m *MockAPIKeyRepo) Create(ctx context.Context, apiKey *apikey.APIKey) (int64, *apierror.APIError) {
 	m.ctrl.T.Helper()

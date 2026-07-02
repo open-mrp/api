@@ -12,7 +12,9 @@ import (
 
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/services/core-service/internal/event"
+	"github.com/augno/api/services/core-service/internal/hubspotsync"
 	"github.com/augno/api/services/core-service/internal/infrastructure/grpc"
+	"github.com/augno/api/services/core-service/internal/infrastructure/hubspot"
 	"github.com/augno/api/services/core-service/internal/infrastructure/repository"
 	"github.com/augno/api/services/core-service/internal/infrastructure/shippo"
 	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
@@ -225,12 +227,15 @@ func Run(
 
 	var shippoFactory domain.ShippoClientFactory
 	var stripeCheckoutFactory domain.StripeCheckoutClientFactory
+	var hubspotFactory domain.HubspotClientFactory
 	if cfg.PlatformMode.IsTest() {
 		shippoFactory = &stub.ShippoClientFactory{}
 		stripeCheckoutFactory = &stub.StripeCheckoutClientFactory{}
+		hubspotFactory = &stub.HubspotClientFactory{}
 	} else {
 		shippoFactory = shippo.NewClientFactory()
 		stripeCheckoutFactory = stripeinfra.NewCheckoutClientFactory()
+		hubspotFactory = hubspot.NewClientFactory()
 	}
 
 	var integrationEncryptionKey []byte
@@ -247,6 +252,14 @@ func Run(
 		TxManager:       txManager,
 		EncryptionKey:   integrationEncryptionKey,
 		EncryptionKeyID: cfg.IntegrationEncryptionKeyID,
+	})
+
+	hubspotSync := hubspotsync.NewService(repoFactory, hubspotFactory, integrationEncryptionKey, hubspotsync.Config{})
+	hubspotSyncSvc := service.NewHubspotSyncSvc(&service.HubspotSyncSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+		Publisher:       event.NewOutboxHubspotSyncPublisher(),
 	})
 
 	carrierSvc := service.NewCarrierSvc(&service.CarrierSvcConfig{
@@ -604,8 +617,13 @@ func Run(
 		return err
 	}
 
-	salesOrderCreatedConsumer := event.NewSalesOrderCreatedConsumer(rabbitmq, inboxRepo, repoFactory)
+	salesOrderCreatedConsumer := event.NewSalesOrderCreatedConsumer(rabbitmq, inboxRepo, hubspotSync)
 	if err := salesOrderCreatedConsumer.Listen(ctx); err != nil {
+		return err
+	}
+
+	hubspotSyncConsumer := event.NewHubspotSyncConsumer(rabbitmq, inboxRepo, hubspotSync)
+	if err := hubspotSyncConsumer.Listen(ctx); err != nil {
 		return err
 	}
 
@@ -635,6 +653,7 @@ func Run(
 	grpc.RegisterReceivingService(srv, receivingOrderSvc, receivingOrderLineSvc)
 	grpc.RegisterProductionRunService(srv, productionRunSvc)
 	grpc.RegisterProductionStepService(srv, productionStepSvc, productionSvc)
+	grpc.RegisterHubspotSyncService(srv, hubspotSyncSvc)
 	grpc.RegisterMeasureService(srv, measureSvc)
 	grpc.RegisterUtilsService(srv, utilsSvc)
 	grpc.RegisterUserService(srv, userSvc)

@@ -16,6 +16,8 @@ func (m *AccountGroupType) StringPtr() *string { return stringPtrEnum(m) }
 func (m *AccountIntegrationStatus) StringPtr() *string {
 	return stringPtrEnum(m)
 }
+func (m *HubspotSyncJobStatus) StringPtr() *string       { return stringPtrEnum(m) }
+func (m *HubspotCompanyReviewStatus) StringPtr() *string { return stringPtrEnum(m) }
 func (m *AccountRelationNotificationType) StringPtr() *string {
 	return stringPtrEnum(m)
 }
@@ -73,7 +75,6 @@ func (p *Protocol) StringPtr() *string {
 func (m *AgentDefinitionType) StringPtr() *string { return stringPtrEnum(m) }
 func (m *ShippingTermType) StringPtr() *string    { return stringPtrEnum(m) }
 func (s *ShipmentStatus) StringPtr() *string      { return stringPtrEnum(s) }
-func (s *AgentAlertStatus) StringPtr() *string    { return stringPtrEnum(s) }
 func (m *SalesOrderStatusCode) StringPtr() *string {
 	return stringPtrEnum(m)
 }
@@ -97,7 +98,9 @@ func (m *SysPropertyTypeCode) StringPtr() *string { return stringPtrEnum(m) }
 func (s *AgentActionStatus) StringPtr() *string   { return stringPtrEnum(s) }
 func (s *APIKeyStatus) StringPtr() *string        { return stringPtrEnum(s) }
 func (m *AgentAccountStatus) StringPtr() *string  { return stringPtrEnum(m) }
-func (s *ToolSlug) StringPtr() *string            { return stringPtrEnum(s) }
+func (s *Tool) StringPtr() *string                { return stringPtrEnum(s) }
+func (m *Model) StringPtr() *string               { return stringPtrEnum(m) }
+func (t *ModelTier) StringPtr() *string           { return stringPtrEnum(t) }
 
 func (m *AuditAction) StringPtr() *string               { return stringPtrEnum(m) }
 func (m *DeletedRecordResourceType) StringPtr() *string { return stringPtrEnum(m) }

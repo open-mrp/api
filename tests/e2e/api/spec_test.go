@@ -273,6 +273,18 @@ func isExcludedPath(path string) bool {
 // pagination tests because they use offset pagination or no pagination at all.
 var excludedPaginationOperations = map[string]bool{
 	"list-sales-targets": true, // uses offset pagination, not cursor
+	// Active announcements are per-account_user; the API-key harness has no feed data to
+	// paginate. Covered by messaging_announcements_test.go.
+	"list-announcements": true,
+	// Chat is participant-scoped and requires an account_user (API keys have none).
+	// Covered by messaging_chat_test.go.
+	"list-conversations": true,
+	"list-messages":      true,
+	"list-blocks":        true,
+	// Notification preferences are per-account_user. Covered by messaging_preferences_test.go.
+	"list-notification-preferences": true,
+	// Scheduled messages are per-account_user. Covered by messaging_scheduled_test.go.
+	"list-scheduled-messages": true,
 }
 
 // excludedListOperations are operationIDs omitted from list endpoint tests.
@@ -280,19 +292,98 @@ var excludedPaginationOperations = map[string]bool{
 var excludedListOperations = map[string]bool{
 	"list-carrier-options":     true,
 	"list-address-suggestions": true, // requires mandatory `input` query param
+	// Per-user notification feed: scoped to the caller's account_user, which the API-key
+	// harness has none of, so the generic tests (which assume API-key-visible seed data)
+	// don't apply. Covered end-to-end by messaging_notifications_test.go.
+	"list-notifications": true,
+	// Active announcements: depend on broadcast sends + per-user receipts the API-key harness
+	// can't produce, so the generic tests have no seed data. Covered by messaging_announcements_test.go.
+	"list-announcements": true,
+	// Chat is participant-scoped and requires an account_user. Covered by messaging_chat_test.go.
+	"list-conversations": true,
+	"list-messages":      true,
+	"list-blocks":        true,
+	// Notification preferences are per-account_user. Covered by messaging_preferences_test.go.
+	"list-notification-preferences": true,
+	// Scheduled messages are per-account_user. Covered by messaging_scheduled_test.go.
+	"list-scheduled-messages": true,
+	// External customer-service cases are participant/admin-scoped and need a real customer-support
+	// case (audience=customer) the API-key harness can't provision; by-record requires mandatory
+	// resource_type/resource_id query params. Covered end-to-end by messaging_external_cases_test.go.
+	"list-inbox":                   true,
+	"list-links":                   true,
+	"list-reply-drafts":            true,
+	"list-conversations-by-record": true,
+	// Messaging groups (reusable rosters) are account_user-scoped; the API-key harness returns 403.
+	// Covered by messaging_groups_test.go.
+	"list-messaging-groups": true,
+	// The messageable-contacts directory returns the caller's full (non-paginated) set and is
+	// account_user-shaped; the generic list/pagination assertions don't apply. Covered by
+	// messaging_contacts_test.go.
+	"list-messaging-contacts": true,
 }
 
 // excludedUpdateOperations are operationIDs omitted from update endpoint tests.
 // These are stale OpenAPI entries removed from runtime routing.
 var excludedUpdateOperations = map[string]bool{
 	"update-carrier-option": true,
+	// Chat edits are participant-scoped (account_user required). Covered by messaging_chat tests.
+	"update-conversation": true,
+	"edit-message":        true,
+	// Legal hold needs a real conversation id and internal-actor permission. Covered by
+	// messaging_redaction_test.go.
+	"set-legal-hold": true,
+	// Reply drafts need a real external case + draft id. Covered by messaging_external_cases_test.go.
+	"update-reply-draft": true,
+	// Messaging groups (reusable rosters) are account_user-scoped and need a real group id the
+	// API-key harness can't seed. Covered by messaging_groups_test.go.
+	"update-messaging-group": true,
 }
 
 // excludedCreateOperations are operationIDs omitted from POST body write tests.
-var excludedCreateOperations = map[string]bool{}
+var excludedCreateOperations = map[string]bool{
+	// Chat creates require an active account_user (API keys have none) and reference real
+	// participant/conversation ids. Covered end-to-end by messaging_chat_test.go.
+	"create-conversation": true,
+	"send-message":        true,
+	"add-participant":     true,
+	"block-user":          true,
+	// Conversation action POSTs are participant-scoped and need real conversation/participant
+	// ids the API-key harness can't resolve. Covered by messaging_chat tests.
+	"mark-conversation-read":       true,
+	"mute-conversation":            true,
+	"update-participant-role":      true,
+	"create-attachment-upload-url": true,
+	"schedule-message":             true,
+	"add-agent-participant":        true,
+	// Redaction needs a real conversation id and internal-actor permission. Covered by
+	// messaging_redaction_test.go.
+	"redact-conversation": true,
+	// Reporting needs a real conversation id the API-key harness can't resolve. Covered by
+	// messaging_reports_test.go.
+	"report-conversation": true,
+	// External customer-service case actions need a real customer-support case (audience=customer) +
+	// participant/admin context the API-key harness can't provision. Covered by
+	// messaging_external_cases_test.go.
+	"reply-to-customer":            true,
+	"set-case-status":              true,
+	"assign-case":                  true,
+	"link-record":                  true,
+	"create-reply-draft":           true,
+	"approve-and-send-reply-draft": true,
+	// Legal hold is a POST action needing a real conversation id + internal-actor permission the
+	// API-key harness can't resolve. Covered by messaging_redaction_test.go.
+	"set-legal-hold": true,
+	// Adding a roster member needs a real messaging-group id the API-key harness can't seed, and is
+	// account_user-scoped. Covered by messaging_groups_test.go.
+	"add-messaging-group-member": true,
+}
 
 // excludedPutOperations are operationIDs omitted from PUT body write tests.
-var excludedPutOperations = map[string]bool{}
+var excludedPutOperations = map[string]bool{
+	// Upsert requires an account_user actor. Covered by messaging_preferences_test.go.
+	"upsert-notification-preference": true,
+}
 
 // isExcludedFromPagination returns true if the path or operationID should be
 // excluded from pagination tests.

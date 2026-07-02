@@ -17,12 +17,20 @@ var (
 )
 
 const (
-	envPort         = "PORT"
-	envPlatformMode = "PLATFORM"
-	envDBURL        = "DB_URL"
-	envAWSRegion    = "AWS_REGION"
-	envRabbitMQURI  = "RABBITMQ_URI"
+	envPort                 = "PORT"
+	envPlatformMode         = "PLATFORM"
+	envDBURL                = "DB_URL"
+	envAWSRegion            = "AWS_REGION"
+	envRabbitMQURI          = "RABBITMQ_URI"
+	envChatBucket           = "CHAT_BUCKET"
+	envInboundEmailBucket   = "INBOUND_EMAIL_BUCKET"
+	envInboundEmailQueueURL = "INBOUND_EMAIL_QUEUE_URL"
+	envInboundEmailRegion   = "INBOUND_EMAIL_REGION"
 )
+
+// defaultInboundEmailRegion is where SES receives inbound mail. SES email receiving is not offered in
+// us-east-2 (the cluster region), so the inbound bucket/queue and their clients target us-east-1.
+const defaultInboundEmailRegion = "us-east-1"
 
 // config represents the configuration for the notification service.
 type config struct {
@@ -41,6 +49,22 @@ type config struct {
 
 	// RabbitMQURI (optional; default: "amqp://guest:guest@rabbitmq:5672/") is the RabbitMQ connection URI.
 	RabbitMQURI string
+
+	// ChatBucket (required) is the S3 bucket for chat message attachments. Not enforced when PlatformMode is "test".
+	ChatBucket string
+
+	// InboundEmailBucket (optional) is the S3 bucket SES writes raw inbound emails to. When set
+	// together with InboundEmailQueueURL, the inbound-email consumer runs; left empty (e.g. local dev
+	// without AWS) the consumer is skipped.
+	InboundEmailBucket string
+
+	// InboundEmailQueueURL (optional) is the SQS queue URL carrying S3 object-created events for
+	// inbound emails. Pairs with InboundEmailBucket to enable the inbound-email consumer.
+	InboundEmailQueueURL string
+
+	// InboundEmailRegion (optional; default: "us-east-1") is the region of the inbound-email bucket +
+	// SQS queue. Distinct from AWSRegion because SES email receiving is not available in us-east-2.
+	InboundEmailRegion string
 }
 
 // withDefaults sets the default values for the configuration.
@@ -61,11 +85,15 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 	}
 
 	return &config{
-		Port:         port,
-		PlatformMode: platformMode,
-		DBURL:        env.GetEnv(envDBURL, getenv),
-		AWSRegion:    env.GetEnv(envAWSRegion, getenv),
-		RabbitMQURI:  cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
+		Port:                 port,
+		PlatformMode:         platformMode,
+		DBURL:                env.GetEnv(envDBURL, getenv),
+		AWSRegion:            env.GetEnv(envAWSRegion, getenv),
+		RabbitMQURI:          cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
+		ChatBucket:           env.GetEnv(envChatBucket, getenv),
+		InboundEmailBucket:   env.GetEnv(envInboundEmailBucket, getenv),
+		InboundEmailQueueURL: env.GetEnv(envInboundEmailQueueURL, getenv),
+		InboundEmailRegion:   cmp.Or(env.GetEnv(envInboundEmailRegion, getenv), defaultInboundEmailRegion),
 	}
 }
 
@@ -82,6 +110,9 @@ func (c *config) validate() error {
 	}
 	if !c.PlatformMode.IsTest() && c.AWSRegion == "" {
 		return fmt.Errorf("notification-service: the provided AWS region is empty")
+	}
+	if !c.PlatformMode.IsTest() && c.ChatBucket == "" {
+		return fmt.Errorf("notification-service: the provided chat bucket is empty")
 	}
 	return nil
 }

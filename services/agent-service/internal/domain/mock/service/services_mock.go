@@ -43,24 +43,24 @@ func (m *MockRunnerSvc) EXPECT() *MockRunnerSvcMockRecorder {
 }
 
 // ContinueRun mocks base method.
-func (m *MockRunnerSvc) ContinueRun(ctx context.Context, runID, accountID, message string, approvedToolSlugs, allowedToolSlugs []string, actorID, actorType, actorName string) error {
+func (m *MockRunnerSvc) ContinueRun(ctx context.Context, runID, accountID, message string, approvedToolSlugs []string, approveAllPending bool, rejectedToolSlugs, approvedToolCallIDs, rejectedToolCallIDs []string, actorID, actorType, actorName, replyToMessageID string) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ContinueRun", ctx, runID, accountID, message, approvedToolSlugs, allowedToolSlugs, actorID, actorType, actorName)
-	ret0, _ := ret[0].(error)
+	ret := m.ctrl.Call(m, "ContinueRun", ctx, runID, accountID, message, approvedToolSlugs, approveAllPending, rejectedToolSlugs, approvedToolCallIDs, rejectedToolCallIDs, actorID, actorType, actorName, replyToMessageID)
+	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
 // ContinueRun indicates an expected call of ContinueRun.
-func (mr *MockRunnerSvcMockRecorder) ContinueRun(ctx, runID, accountID, message, approvedToolSlugs, allowedToolSlugs, actorID, actorType, actorName any) *gomock.Call {
+func (mr *MockRunnerSvcMockRecorder) ContinueRun(ctx, runID, accountID, message, approvedToolSlugs, approveAllPending, rejectedToolSlugs, approvedToolCallIDs, rejectedToolCallIDs, actorID, actorType, actorName, replyToMessageID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContinueRun", reflect.TypeOf((*MockRunnerSvc)(nil).ContinueRun), ctx, runID, accountID, message, approvedToolSlugs, allowedToolSlugs, actorID, actorType, actorName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContinueRun", reflect.TypeOf((*MockRunnerSvc)(nil).ContinueRun), ctx, runID, accountID, message, approvedToolSlugs, approveAllPending, rejectedToolSlugs, approvedToolCallIDs, rejectedToolCallIDs, actorID, actorType, actorName, replyToMessageID)
 }
 
 // ExecuteRun mocks base method.
-func (m *MockRunnerSvc) ExecuteRun(ctx context.Context, runID, configID, accountID, triggerType string) error {
+func (m *MockRunnerSvc) ExecuteRun(ctx context.Context, runID, configID, accountID, triggerType string) *apierror.APIError {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ExecuteRun", ctx, runID, configID, accountID, triggerType)
-	ret0, _ := ret[0].(error)
+	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
@@ -144,21 +144,6 @@ func (m *MockAgentDefinitionSvc) EXPECT() *MockAgentDefinitionSvcMockRecorder {
 	return m.recorder
 }
 
-// AcknowledgeAgentAlert mocks base method.
-func (m *MockAgentDefinitionSvc) AcknowledgeAgentAlert(ctx context.Context, params domain.AcknowledgeAgentAlertParams) (*domain.AgentAlertInfo, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AcknowledgeAgentAlert", ctx, params)
-	ret0, _ := ret[0].(*domain.AgentAlertInfo)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// AcknowledgeAgentAlert indicates an expected call of AcknowledgeAgentAlert.
-func (mr *MockAgentDefinitionSvcMockRecorder) AcknowledgeAgentAlert(ctx, params any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AcknowledgeAgentAlert", reflect.TypeOf((*MockAgentDefinitionSvc)(nil).AcknowledgeAgentAlert), ctx, params)
-}
-
 // CancelRun mocks base method.
 func (m *MockAgentDefinitionSvc) CancelRun(ctx context.Context, params domain.CancelRunParams) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -201,6 +186,20 @@ func (m *MockAgentDefinitionSvc) CreateAgentMemory(ctx context.Context, params d
 func (mr *MockAgentDefinitionSvcMockRecorder) CreateAgentMemory(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAgentMemory", reflect.TypeOf((*MockAgentDefinitionSvc)(nil).CreateAgentMemory), ctx, params)
+}
+
+// CreateChatRun mocks base method.
+func (m *MockAgentDefinitionSvc) CreateChatRun(ctx context.Context, in domain.ChatRunInput) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateChatRun", ctx, in)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// CreateChatRun indicates an expected call of CreateChatRun.
+func (mr *MockAgentDefinitionSvcMockRecorder) CreateChatRun(ctx, in any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateChatRun", reflect.TypeOf((*MockAgentDefinitionSvc)(nil).CreateChatRun), ctx, in)
 }
 
 // CreateCustomAgent mocks base method.
@@ -290,6 +289,21 @@ func (m *MockAgentDefinitionSvc) ListAvailableTools(ctx context.Context, params 
 func (mr *MockAgentDefinitionSvcMockRecorder) ListAvailableTools(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAvailableTools", reflect.TypeOf((*MockAgentDefinitionSvc)(nil).ListAvailableTools), ctx, params)
+}
+
+// RetryRun mocks base method.
+func (m *MockAgentDefinitionSvc) RetryRun(ctx context.Context, params domain.RetryRunParams) (string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RetryRun", ctx, params)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// RetryRun indicates an expected call of RetryRun.
+func (mr *MockAgentDefinitionSvcMockRecorder) RetryRun(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RetryRun", reflect.TypeOf((*MockAgentDefinitionSvc)(nil).RetryRun), ctx, params)
 }
 
 // TriggerRun mocks base method.

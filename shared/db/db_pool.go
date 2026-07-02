@@ -29,7 +29,7 @@ type Config struct {
 	// DBURI (required) is the database connection URI.
 	DBURI string
 
-	// TracingEnabled (optional; default: true) specifies whether tracing is enabled. The zero value (false) is treated as "unset" by withDefaults and replaced with true, so tracing cannot be disabled via this config.
+	// TracingEnabled (optional; default: true) specifies whether tracing is enabled. The zero value (false) is treated as "unset" by WithDefaults and replaced with true, so tracing cannot be disabled via this config.
 	TracingEnabled bool
 
 	// ConnectionMaxLifetime (optional; default: 30m) is the maximum lifetime of a connection.
@@ -45,8 +45,8 @@ type Config struct {
 	MaxIdleConnections int
 }
 
-// withDefaults sets the default values for the configuration.
-func (c *Config) withDefaults() *Config {
+// WithDefaults returns a new Config with all zero-value optional fields replaced by production defaults. It is safe to call on a nil receiver. The original Config is not mutated; a copy is always returned.
+func (c *Config) WithDefaults() *Config {
 	if c == nil {
 		c = &Config{}
 	}
@@ -74,7 +74,7 @@ func (c *Config) validate() error {
 
 // NewDbPool creates a new instrumented SQL database connection pool for MySQL with default parameters and tracing.
 func NewDbPool(config *Config) (*sql.DB, error) {
-	config = config.withDefaults()
+	config = config.WithDefaults()
 	if err := config.validate(); err != nil {
 		return nil, err
 	}

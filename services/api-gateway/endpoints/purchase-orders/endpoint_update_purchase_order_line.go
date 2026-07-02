@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
 )
@@ -17,9 +18,9 @@ type UpdatePurchaseOrderLineRequest struct {
 	PurchaseOrderID string `path:"id" validate:"required"`
 	// Purchase order line ID.
 	PurchaseOrderLineID string `path:"line_id" validate:"required"`
-	// Product ID.
+	// ID of the product ordered on this line.
 	ProductID field.Optional[string] `json:"product_id,omitzero" validate:"omitempty"`
-	// ID of the catalog item to link this line to.
+	// ID of the inventory item to tie this line to.
 	ItemID field.Optional[string] `json:"item_id,omitzero" validate:"omitempty"`
 	// SKU of the ordered product.
 	ProductSKU field.Optional[string] `json:"product_sku,omitzero" validate:"omitempty,max=255"`
@@ -72,6 +73,10 @@ func (e *UpdatePurchaseOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainPurchaseOrders, Action: types.ActionUpdate},
+			{Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate},
+		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdatePurchaseOrderLineRequest) (*apiresource.PurchaseOrderLine, *apierror.APIError) {
 			return svc.(PurchaseOrderSvc).UpdatePurchaseOrderLine
 		},

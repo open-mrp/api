@@ -35,8 +35,7 @@ func (r *agentTokenBillingRepoImpl) UpsertAgentTokenBilling(ctx context.Context,
 		TotalTokens:       params.TotalTokens,
 	})
 	if err != nil {
-		span.RecordError(err)
-		return db.MapSQLError(err)
+		return tracing.Trace(span, db.MapSQLError(err))
 	}
 	return nil
 }
@@ -50,8 +49,7 @@ func (r *agentTokenBillingRepoImpl) GetByAccountAndPeriod(ctx context.Context, a
 		PeriodStart: periodStart,
 	})
 	if err != nil {
-		span.RecordError(err)
-		return nil, db.MapSQLError(err)
+		return nil, tracing.Trace(span, db.MapSQLError(err))
 	}
 
 	var stripeMeteredItemID *string
@@ -84,8 +82,7 @@ func (r *agentTokenBillingRepoImpl) GetUsageSummary(ctx context.Context, account
 		PeriodStart: periodStart,
 	})
 	if err != nil {
-		span.RecordError(err)
-		return 0, db.MapSQLError(err)
+		return 0, tracing.Trace(span, db.MapSQLError(err))
 	}
 	return totalTokens, nil
 }
@@ -96,8 +93,7 @@ func (r *agentTokenBillingRepoImpl) GetCompletedTokensByAccount(ctx context.Cont
 
 	totalTokens, err := r.queries.GetCompletedTokensByAccount(ctx, accountID)
 	if err != nil {
-		span.RecordError(err)
-		return 0, db.MapSQLError(err)
+		return 0, tracing.Trace(span, db.MapSQLError(err))
 	}
 	return totalTokens, nil
 }

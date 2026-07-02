@@ -1,14 +1,14 @@
 package agents
 
+import "github.com/augno/api/shared/constants"
+
 func RegisterTools(registry *ToolHandlerRegistry) {
-	registry.Register("save_memory", HandleSaveMemory)
-	registry.Register("create_alert", HandleCreateAlert)
-	registry.Register("search_products", HandleSearchProducts)
-	registry.Register("list_products", HandleListProducts)
-	registry.Register("lookup_customer", HandleLookupCustomer)
-	registry.Register("create_artifact", HandleCreateArtifact)
-	registry.Register("update_memory", HandleUpdateMemory)
-	registry.Register("delete_memory", HandleDeleteMemory)
-	registry.Register("read_doc", HandleReadDoc)
-	registry.Register("fetch_url", HandleFetchURL)
+	registry.Register(string(constants.ToolCreateArtifact), HandleCreateArtifact)
+	registry.Register(string(constants.ToolReadDoc), HandleReadDoc)
+	registry.Register(string(constants.ToolFetchUrl), HandleFetchURL)
+	registry.Register(string(constants.ToolSendEmail), HandleSendEmail)
+	registry.Register(string(constants.ToolDraftReply), HandleDraftReply)
+
+	// Generated tools that proxy to api-gateway endpoints flagged AgentTool=true.
+	RegisterEndpointTools(registry)
 }

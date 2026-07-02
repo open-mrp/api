@@ -207,6 +207,15 @@ func (s *unitGroupSvcImpl) CreateUnitGroup(ctx context.Context, params domain.Cr
 				return apiErr
 			}
 
+			// Validate the base unit shares the group's dimension.
+			baseUnit, apiErr := txSvc.repos.NewUnitQueryRepo().Find(txCtx, params.AccountID, params.BaseUnitID)
+			if apiErr != nil {
+				return apiErr
+			}
+			if baseUnit.Type != params.Type {
+				return apierror.NewValidationErrorWithParam("Base unit type does not match the unit group type.", "base_unit_id")
+			}
+
 			if _, apiErr := txRepo.Create(txCtx, unitGroupID, params); apiErr != nil {
 				return apiErr
 			}
@@ -225,6 +234,7 @@ func (s *unitGroupSvcImpl) CreateUnitGroup(ctx context.Context, params domain.Cr
 					DiscountPercentage: uc.DiscountPercentage,
 					DiscountFixed:      uc.DiscountFixed,
 					IsVisible:          uc.IsVisible,
+					IsVisibleProvided:  true,
 				})
 				if apiErr != nil {
 					return apiErr
@@ -306,8 +316,7 @@ func (s *unitGroupSvcImpl) UpdateUnitGroup(ctx context.Context, params domain.Up
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *unitGroupSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewUnitGroupRepo()
 
-			// Load with the same includes as the post-update fetch so
-			// include-gated fields cannot produce false audit diffs.
+			// Load with the same includes as the post-update fetch so include-gated fields cannot produce false audit diffs.
 			existing, apiErr := txRepo.Get(txCtx, domain.GetUnitGroupParams{
 				AccountID:   params.AccountID,
 				UnitGroupID: params.UnitGroupID,
@@ -337,6 +346,17 @@ func (s *unitGroupSvcImpl) UpdateUnitGroup(ctx context.Context, params domain.Up
 				}
 			}
 
+			// Validate the base unit shares the group's dimension when it is being changed.
+			if params.BaseUnitID != nil {
+				baseUnit, apiErr := txSvc.repos.NewUnitQueryRepo().Find(txCtx, params.AccountID, *params.BaseUnitID)
+				if apiErr != nil {
+					return apiErr
+				}
+				if baseUnit.Type != existing.Type {
+					return apierror.NewValidationErrorWithParam("Base unit type does not match the unit group type.", "base_unit_id")
+				}
+			}
+
 			params.Notes = params.Notes.BackfillUnsetPtr(existing.Notes)
 
 			updated, apiErr := txRepo.Update(txCtx, params)
@@ -359,6 +379,7 @@ func (s *unitGroupSvcImpl) UpdateUnitGroup(ctx context.Context, params domain.Up
 						DiscountPercentage: uc.DiscountPercentage,
 						DiscountFixed:      uc.DiscountFixed,
 						IsVisible:          uc.IsVisible,
+						IsVisibleProvided:  true,
 					})
 					if apiErr != nil {
 						return apiErr
@@ -543,8 +564,10 @@ func (s *unitGroupSvcImpl) UpsertUnitGroupUnit(ctx context.Context, params domai
 
 			isUpdate := work.UnitID == "" || work.DiscountPercentage == "" || work.DiscountFixed == ""
 			if isUpdate {
+				found := false
 				for _, uc := range existing.UnitConversions {
 					if uc.ID == work.UnitGroupUnitID {
+						found = true
 						if work.UnitID == "" {
 							work.UnitID = uc.UnitID
 						}
@@ -554,9 +577,22 @@ func (s *unitGroupSvcImpl) UpsertUnitGroupUnit(ctx context.Context, params domai
 						if work.DiscountFixed == "" {
 							work.DiscountFixed = uc.DiscountFixed
 						}
+						if !work.IsVisibleProvided {
+							work.IsVisible = uc.IsVisible
+							work.IsVisibleProvided = true
+						}
 						break
 					}
 				}
+				if !found {
+					return apierror.NewResourceNotFoundError("Unit group unit not found.")
+				}
+			}
+
+			// Default visibility to true when the caller did not provide it and no prior value was backfilled (create path).
+			if !work.IsVisibleProvided {
+				work.IsVisible = true
+				work.IsVisibleProvided = true
 			}
 
 			if work.UnitID != "" {

@@ -5,10 +5,12 @@ package api_test
 // Seed data constants from shared/db/seed/ and tools/apidocs/httpie_seed_data.go.
 // These are IDs and values known to exist after seeding.
 const (
-	SeedAPIKey    = "aug_sk_prod_u6Xh5ZpaUruMAU12EPAs4z_rSA4zJM5NbRqAtalvXMoRWOUPohFKJtX7ZUFUOp36IVwdiUCZu"
-	SeedAccountID = "ac_01k0a5smf9ekb8rqg12555zjqa"
-	SeedUserID    = "us_1wjfmmbwg8l7"
-	SeedUser2ID   = "us_6p7460uuwibz"
+	SeedAPIKey      = "aug_sk_prod_u6Xh5ZpaUruMAU12EPAs4z_rSA4zJM5NbRqAtalvXMoRWOUPohFKJtX7ZUFUOp36IVwdiUCZu"
+	SeedAccountID   = "ac_01k0a5smf9ekb8rqg12555zjqa"
+	SeedAccountSlug = "acme-inc" // account_portal.slug owned by SeedAccountID (registration account_slug tests)
+	SeedUserID      = "us_1wjfmmbwg8l7"
+	SeedAdmin2ID    = "us_2ndadmin0000" // Mike Johnson, second Admin in SeedAccountID
+	SeedUser2ID     = "us_6p7460uuwibz"
 
 	// Customers
 	SeedCustomerAccountID  = "ac_01k09wm2fgevdsc344gpbcj30f"
@@ -63,6 +65,7 @@ const (
 
 	// Units
 	SeedUnitID          = "un_01seedpair000000000"
+	SeedSystemUnitID    = "each" // global system unit (account_id IS NULL, abbreviation "ea"); modify/delete → 400 "system units cannot be modified/deleted"
 	SeedUnitGroupID     = "ungp_01k0a5ecy9edg9za40dnccw53n"
 	SeedUnitGroupUnitID = "ungpun_01seedsocksea000"
 
@@ -74,6 +77,7 @@ const (
 	SeedDepartmentID      = "dp_01k0a5r01yfx3sj1vy9qgv3dc0"
 	SeedMachineID         = "mc_01k0a52fb6eqhtbx9hdxj3vvnh"
 	SeedLocationID        = "sglc_01seedbuilding0000"
+	SeedLocationParentID  = "sglc_01seedcampus00000" // parent of SeedLocationID (type=campus); for ?include=parent on the stable fixture
 	SeedScanningStationID = "sgsn_01k0a8201zegarjfsjaw5n7yfv"
 
 	// Operations
@@ -121,18 +125,29 @@ const (
 	SeedPickLineID           = "pkln_01seediss_ln1_0000"
 	SeedReceivingOrderLineID = "rcln_01seedrecvln1_0000"
 	SeedInvoiceID            = "iv_01k09wnac0e1ar211e0sy0ba4g"
+	// Purchase order (sales_order row, type=purchase_order; seeded in 0014_e2e_extras.sql).
+	SeedPurchaseOrderID     = "or_01seedpurchord1_000"
+	SeedPurchaseOrderNumber = "PO-001"
 
 	// Auth
-	SeedAdminRoleID    = "rl_mtg88e6u6fbu"
-	SeedSalesRepRoleID = "rl_hh6mrlkv08n8"
-	SeedScannerRoleID  = "rl_scanner"
-	SeedAPIKeyID       = "apky_pajbskcck3cabxajdh8h8"
-	SeedAccountUserID  = "acus_s83fjhyfmqen"
+	SeedAdminRoleID         = "rl_mtg88e6u6fbu"
+	SeedSalesRepRoleID      = "rl_hh6mrlkv08n8"
+	SeedScannerRoleID       = "rl_scanner"
+	SeedAPIKeyID            = "apky_pajbskcck3cabxajdh8h8"
+	SeedAccountUserID       = "acus_s83fjhyfmqen"
+	SeedAdmin2AccountUserID = "acus_2ndadmin000"  // Mike Johnson (us_2ndadmin0000, Admin) in SeedAccountID
+	SeedAccountUser2ID      = "acus_ubdx4zebgl6p" // Sarah Martinez (us_6p7460uuwibz, Sales Rep) in SeedAccountID
 
 	// Batches, sales targets, integrations (seeded in 0014_e2e_extras.sql)
 	SeedBatchID              = "bt_01seedbatch1_0000000"
 	SeedSalesTargetID        = "tg_01seedtarget1_000000"
 	SeedAccountIntegrationID = "acin_01seedintegration1"
+
+	// HubSpot sync (0014_e2e_extras.sql): one review_pending job with one
+	// pending company review, so the hubspot-sync read endpoints resolve their
+	// {id}/{review_id} path params and the company-reviews list returns an item.
+	SeedHubspotSyncJobID       = "igjb_01seedhubspotjob1"
+	SeedHubspotCompanyReviewID = "igrv_01seedhubspotrev1"
 
 	// Priorities
 	SeedPriorityID   = "pi_01seednormal0000000000"
@@ -204,6 +219,35 @@ const (
 	SeedReqLogFilterTypeAPIKey      = "rqlog_01flttypekey0" // identity_type=api_key
 	SeedReqLogFilterTypeInternal    = "rqlog_01flttypeint0" // identity_type=internal (excluded)
 
+	// infra-scrub cohort (scope normalized_route=/filtertest/infra-scrub). The
+	// agent log carries an internal host + pod IP that must be scrubbed in
+	// customer-facing responses; the user log keeps its real (public) host + IP.
+	// SeedAuditEventInfraAgentID embeds the agent log via request_id.
+	SeedReqLogInfraScrubRoute = "/filtertest/infra-scrub"
+	SeedReqLogInfraAgentID    = "rqlog_01infraagent0"       // identity_type=agent -> scrubbed
+	SeedReqLogInfraAgentHost  = "api-gateway-internal:8091" // internal host that must NOT leak
+	SeedReqLogInfraAgentIP    = "10.244.0.18"               // pod IP that must NOT leak
+	// The agent actor on SeedReqLogInfraAgentID. Its name + handle(slug) are
+	// resolved from agent-service (agdf_01infraseedagent), not joined in
+	// platform-service, so ?include=actor must hydrate them.
+	SeedReqLogInfraAgentActorID     = "agdf_01infraseedagent"
+	SeedReqLogInfraAgentActorName   = "Infra Scrub Agent"
+	SeedReqLogInfraAgentActorHandle = "infra_scrub_agent"
+	// api_version the agent's internal call carried; must survive into the
+	// customer-facing log (it is not internal infrastructure, so not scrubbed).
+	SeedReqLogInfraAgentAPIVersion = "1.0.forge-preview.2"
+	SeedReqLogInfraUserID          = "rqlog_01infrauser00" // identity_type=user -> preserved
+	SeedReqLogInfraUserHost        = "api.augno.com"
+	SeedReqLogInfraUserIP          = "198.51.100.7"
+	// RedactedRequestLogHost mirrors apiresource.RedactedRequestLogHost (kept as a
+	// literal so the e2e suite stays a black-box client of the API): the public API
+	// host shown in place of the internal listener hostname for agent requests.
+	SeedReqLogRedactedHost = "https://api.augno.com"
+
+	// Audit event whose request_id points at SeedReqLogInfraAgentID, covering the
+	// audit-event ?include=request expansion of an internal/agent request_log.
+	SeedAuditEventInfraAgentID = "adev_01infraauditreq0"
+
 	// normalized_routes cohort (scope host=rqlog-route-e2e.test).
 	SeedReqLogFilterRouteHost = "rqlog-route-e2e.test"
 	SeedReqLogFilterRouteA    = "/filtertest/route-a"
@@ -273,6 +317,21 @@ const (
 	SeedTransactionID           = "tx_01seedtransaction00"
 	SeedTransactionAllocationID = "txal_01seedtxalloc0000"
 
+	// Static transaction methods/types (hardcoded rows in
+	// services/api-gateway/endpoints/transactions/service.go; not DB-seeded, IDs
+	// derived via seedID(prefix, suffix)).
+	SeedTransactionMethodCashID     = "txmd_01seedcash00000000"
+	SeedTransactionMethodCheckID    = "txmd_01seedcheck0000000"
+	SeedTransactionTypePaymentID    = "txtp_01seedpayment000000"
+	SeedTransactionTypeCreditMemoID = "txtp_01seedcreditmemo000"
+	SeedTransactionTypeAdjustmentID = "txtp_01seedadjustment000"
+	SeedTransactionTypeRebateID     = "txtp_01seedrebate0000000"
+
+	// Adjustment types (fixed rows, shared/db/seed/0001_static_types.sql).
+	SeedAdjustmentTypeID   = "ajtp_01seeddiscount00000"
+	SeedAdjustmentTypeCode = "discount"
+	SeedAdjustmentTypeName = "Discount"
+
 	// Discounts/Pricing (seeded in 0010/0011)
 	SeedOrderDiscountID     = "ords_01seedpct10discount"
 	SeedAccountPriceID      = "acpr_01seedaccprice0000"
@@ -288,6 +347,10 @@ const (
 	SeedEmailLogID1 = "emlog_01seedemaillog1_0"
 	SeedEmailLogID2 = "emlog_01seedemaillog2_0"
 
+	// Email Bridge (domain + inbox seeded in 0014_e2e_extras.sql)
+	SeedEmailDomainID = "emdom_01seeddomain1_00"
+	SeedEmailInboxID  = "eminb_01seedinbox1_000"
+
 	// Territories (seeded in 0014_e2e_extras.sql)
 	SeedTerritoryID = "tr_01seedterritory1_000"
 
@@ -300,14 +363,21 @@ const (
 	SeedChildRelationID1       = "acre_01seedchild_rel001"
 	SeedChildAccountID2        = "ac_01seedchild_acct0002"
 	SeedChildRelationID2       = "acre_01seedchild_rel002"
+	// account_user scoped to SeedChildAccountID1 (user "Blocked Child User"), for
+	// the messaging_blocks cross-account block target.
+	SeedChildAccountUserID = "acus_childblktgt"
 
 	// Agents (seeded in agent-service 00001_seed_e2e_data.sql)
-	SeedAgentDefinitionID       = "agdf_01seede2e_orderbot0"
-	SeedCustomAgentDefinitionID = "agdf_01seede2e_custom00"
-	SeedAgentConfigID           = "agcf_01seede2e_ordercfg0"
-	SeedAgentMemoryID           = "agmm_01seede2e_memory01"
-	SeedAgentRunID              = "agrn_01seede2e_run00001" // run #1 has agent_definition + config (needed for include=definition.config)
-	SeedAgentAlertID            = "agal_01seede2e_alert002" // alert #2 has agent_run_id + agent_action_id populated
+	SeedAgentDefinitionID         = "agdf_01seede2e_orderbot0"
+	SeedCustomAgentDefinitionID   = "agdf_01seede2e_custom00"
+	SeedInactiveAgentDefinitionID = "agdf_01seede2e_inact00" // custom, status=inactive, no role/tools
+	SeedAgentConfigID             = "agcf_01seede2e_ordercfg0"
+	SeedAgentMemoryID             = "agmm_01seede2e_memory01"
+	SeedAgentRunID                = "agrn_01seede2e_run00001" // run #1 has agent_definition + config (needed for include=definition.config)
+	// Dedicated terminal-state runs for the one-shot retry/continue happy paths.
+	// Do not reuse for other tests — Retry/Continue flip them permanently.
+	SeedAgentRunFailedID        = "agrn_01seede2e_runfail1" // status=failed, for retry-success path
+	SeedAgentRunAwaitingInputID = "agrn_01seede2e_runawti1" // status=awaiting_input, for continue-success path
 
 	// Audit / Observability (seeded in 0014_e2e_extras.sql)
 	SeedAuditEventID = "adev_01seedauditevent02" // event #2 has metadata populated
@@ -328,6 +398,14 @@ const (
 	SeedInventoryChangeLogID    = "ivcl_01seedwss000000000" // seeded in 0007_items.sql, enriched in 0014_e2e_extras.sql
 	SeedRequestLogErrorID       = "rqlog_01seedreqlog4_000" // has error_code=validation_failed for filter tests
 	SeedRequestLogQueryParamsID = "rqlog_01seedreqlog5_000" // has query_json populated for include=query_params tests
+	// referrer set on SeedReqLogInfraUserID (rqlog_01infrauser00) — only seed row
+	// that populates the otherwise-always-null referrer field.
+	SeedRequestLogReferrerValue = "https://dashboard.augno.com/inbox"
+	// Audit event that populates source_ip + idempotency_key_id (NULL on all other
+	// seed rows). The joined idempotency_key surfaces as the key string.
+	SeedAuditEventWithSourceIPID = "adev_01seedsrcipkey0"
+	SeedAuditEventSourceIP       = "198.51.100.42"
+	SeedAuditEventIdempotencyKey = "e2e-seed-idempotency-key-01"
 
 	// Tenant B (seeded in 0015_tenant_b_e2e.sql) — used for tenant isolation tests
 	SeedTenantBAccountID = "ac_tenant2_e2e_isolati"
@@ -361,6 +439,7 @@ var pathParamSeeds = map[string]string{
 	"line_id":            SeedSalesOrderLineID,
 	"receiving_order_id": SeedReceivingOrderID,
 	"target_id":          SeedSalesTargetID,
+	"review_id":          SeedHubspotCompanyReviewID,
 	// session_id is excluded from test discovery (excludedPaths in spec.go)
 }
 
@@ -392,6 +471,7 @@ var pathSpecificIDSeeds = map[string]string{
 	"/v1/finance/transactions/":                                          SeedTransactionID,
 	"/v1/identity/account-users/":                                        SeedAccountUserID,
 	"/v1/identity/accounts/":                                             SeedAccountID,
+	"/v1/settings/integrations/hubspot/sync/":                            SeedHubspotSyncJobID, // longer prefix wins over /v1/settings/integrations/
 	"/v1/settings/integrations/":                                         SeedAccountIntegrationID,
 	"/v1/identity/roles/":                                                SeedSalesRepRoleID, // account-owned so owner.account include populates
 	"/v1/identity/users/":                                                SeedUserID,
@@ -427,7 +507,6 @@ var pathSpecificIDSeeds = map[string]string{
 	"/v1/sales/volume-discounts/":                                        SeedVolumeDiscountID,
 
 	"/v1/ai/agents/":                        SeedCustomAgentDefinitionID,
-	"/v1/ai/alerts/":                        SeedAgentAlertID,
 	"/v1/ai/memories/":                      SeedAgentMemoryID,
 	"/v1/ai/runs/":                          SeedAgentRunID,
 	"/v1/auth/api-keys/":                    SeedAPIKeyID,
@@ -439,6 +518,9 @@ var pathSpecificIDSeeds = map[string]string{
 	"/v1/operations/receiving-orders/":                            SeedReceivingOrderID,
 	"/v1/operations/suppliers/{supplier_id}/materials/":           SeedMaterialID,
 	"/v1/operations/suppliers/":                                   SeedSupplierAccountID,
+	"/v1/messaging/email-inboxes/":                                SeedEmailInboxID,
+	"/v1/messaging/email-domains/":                                SeedEmailDomainID,
+	"/v1/operations/location-types/":                              "building", // static type row; {id} accepts the code
 	"/v1/sales/account-statuses/":                                 SeedAccountStatusID,
 	"/v1/sales/accounts/{account_id}/territories/":                SeedTerritoryID,
 	"/v1/sales/accounts/":                                         SeedCustomerAccountID,

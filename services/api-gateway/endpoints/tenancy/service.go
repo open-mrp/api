@@ -70,7 +70,7 @@ func (m *tenancySvcImpl) GetTenancy(ctx context.Context, req *GetTenancyRequest)
 	pbReq := &pb.GetTenancyRequest{
 		UserId: identity.Actor.ID,
 	}
-	if identity.Target != nil && identity.Target.AccountID != "" {
+	if identity.IsTargetAccountSet() {
 		pbReq.TargetAccountId = &identity.Target.AccountID
 	}
 
@@ -91,11 +91,13 @@ func (m *tenancySvcImpl) SwitchAccount(ctx context.Context, req *SwitchAccountRe
 		return nil, apiErr
 	}
 
+	if apiErr := identity.CheckHasUserActor(); apiErr != nil {
+		return nil, apiErr
+	}
+
 	pbReq := &pb.SwitchTenancyAccountRequest{
 		AccountId: req.AccountID,
-	}
-	if identity != nil && identity.Actor != nil {
-		pbReq.UserId = identity.Actor.ID
+		UserId:    identity.Actor.ID,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, tenancySvcTracer, "service.tenancy.switch_account", domain.ServiceName,
@@ -125,7 +127,7 @@ func (m *tenancySvcImpl) GetCurrentUser(ctx context.Context, req *GetCurrentUser
 	pbReq := &pb.GetCurrentUserRequest{
 		UserId: identity.Actor.ID,
 	}
-	if identity.Target != nil && identity.Target.AccountID != "" {
+	if identity.IsTargetAccountSet() {
 		pbReq.TargetAccountId = &identity.Target.AccountID
 	}
 
@@ -146,11 +148,13 @@ func (m *tenancySvcImpl) ListCustomerAccounts(ctx context.Context, req *ListCust
 		return nil, apiErr
 	}
 
+	if apiErr := identity.CheckHasUserActor(); apiErr != nil {
+		return nil, apiErr
+	}
+
 	pbReq := &pb.ListCustomerAccountsForUserRequest{
 		VendorAccountId: req.VendorAccountID,
-	}
-	if identity != nil && identity.Actor != nil {
-		pbReq.UserId = identity.Actor.ID
+		UserId:          identity.Actor.ID,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, tenancySvcTracer, "service.tenancy.list_customer_accounts", domain.ServiceName,
@@ -237,6 +241,7 @@ func tenancyFromProto(resp *pb.GetTenancyResponse) *apiresource.Tenancy {
 			Slug:                     resp.CurrentAccount.Slug,
 			InternalStripeCustomerID: resp.CurrentAccount.InternalStripeCustomerId,
 			AccountPlan:              tenancyAccountPlanFromProto(resp.CurrentAccount.AccountPlan),
+			AccountUserID:            resp.CurrentAccount.AccountUserId,
 		}
 
 		if resp.CurrentAccount.Role != nil {

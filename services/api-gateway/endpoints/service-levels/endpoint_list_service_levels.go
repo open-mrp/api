@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -28,8 +29,19 @@ func (e *ListServiceLevelsEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		Route:             "/v1/operations/carriers/{carrier_id}/service-levels",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeServiceLevel,
+		AgentTool:         true,
+		// Service-level reads reuse the carrier relation helper
+		// (checkCarrierReadPermission), which requires carriers:read on the own
+		// account but customers:read / suppliers:read when an internal actor reads a
+		// customer's or supplier's data. Declare the full OR-set so the gateway gate
+		// doesn't false-reject those relation-scoped reads.
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainCarriers, Action: types.ActionRead},
+			{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},
+			{Domain: types.PermissionDomainSuppliers, Action: types.ActionRead},
+		},
+		Preview:    true,
+		ObjectType: constants.ObjectTypeServiceLevel,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListServiceLevelsRequest) (*apiresource.List[apiresource.ServiceLevel], *apierror.APIError) {
 			return svc.(ServiceLevelSvc).ListServiceLevels
 		},

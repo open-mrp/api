@@ -28,6 +28,22 @@ spec:
           ports:
               - protocol: TCP
                 port: 9092
+        # billing-service gRPC (Stripe customer resolution, spend tracking)
+        - to:
+              - podSelector:
+                    matchLabels:
+                        app: billing-service
+          ports:
+              - protocol: TCP
+                port: 9092
+        # api-gateway internal HTTP listener (endpoint-tools)
+        - to:
+              - podSelector:
+                    matchLabels:
+                        app: api-gateway
+          ports:
+              - protocol: TCP
+                port: 8091
         # RabbitMQ (async messaging)
         - to:
               - podSelector:

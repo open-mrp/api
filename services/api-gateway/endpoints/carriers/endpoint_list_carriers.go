@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -26,8 +27,14 @@ func (e *ListCarriersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCarri
 		Route:             "/v1/operations/carriers",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeCarrier,
+		AgentTool:         true,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainCarriers, Action: types.ActionRead},
+			{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},
+			{Domain: types.PermissionDomainSuppliers, Action: types.ActionRead},
+		},
+		Preview:    true,
+		ObjectType: constants.ObjectTypeCarrier,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListCarriersRequest) (*apiresource.List[apiresource.Carrier], *apierror.APIError) {
 			return svc.(CarrierSvc).ListCarriers
 		},

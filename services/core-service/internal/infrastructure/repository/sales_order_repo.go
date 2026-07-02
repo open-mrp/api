@@ -4,7 +4,6 @@ import (
 	"context"
 	gosql "database/sql"
 	"errors"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -48,11 +47,7 @@ func (r *salesOrderRepoImpl) NoteFirstShipAt(ctx context.Context, accountID, sal
 	return nil
 }
 
-// buildSalesOrderSearchParams builds the free-text search term for the list
-// queries, which match it as an EXACT value against the sales order number and
-// the customer PO number (not a substring/LIKE). Customer-name search was
-// removed deliberately — it forced a full table scan; filter by customer via
-// the customer_ids query param instead.
+// buildSalesOrderSearchParams builds the free-text search term for the list queries, which match it as an EXACT value against the sales order number and the customer PO number (not a substring/LIKE). Customer-name search was removed deliberately — it forced a full table scan; filter by customer via the customer_ids query param instead.
 func buildSalesOrderSearchParams(query *string) gosql.NullString {
 	if query == nil || *query == "" {
 		return gosql.NullString{}
@@ -125,12 +120,7 @@ func (r *salesOrderRepoImpl) List(ctx context.Context, params domain.ListSalesOr
 		buyerAccountID = gosql.NullString{String: *params.BuyerAccountID, Valid: true}
 	}
 
-	// Free-text search (`q=`) is an exact-match lookup on order number / customer
-	// PO. It resolves through dedicated index seeks (a UNION, since the platform
-	// won't index_merge an OR) and hydrates the few matches, instead of scanning
-	// the whole account through the browse-list query. Search still applies the
-	// active list filters (status tab, customer, etc.); it only bypasses the
-	// pagination cursor.
+	// Free-text search (`q=`) is an exact-match lookup on order number / customer PO. It resolves through dedicated index seeks (a UNION, since the platform won't index_merge an OR) and hydrates the few matches, instead of scanning the whole account through the browse-list query. Search still applies the active list filters (status tab, customer, etc.); it only bypasses the pagination cursor.
 	if searchQuery.Valid {
 		return r.searchList(ctx, params, buyerAccountID, searchQuery.String)
 	}
@@ -172,7 +162,6 @@ func (r *salesOrderRepoImpl) List(ctx context.Context, params domain.ListSalesOr
 				SalesRepIds:                salesRepIDs,
 				StartDate:                  startDate,
 				EndDate:                    endDate,
-				ExcludeInternalOrders:      params.ExcludeInternalOrders,
 				CursorCreatedAt:            cur.OccurredAt,
 				CursorID:                   cur.ID,
 				Limit:                      params.Limit + 1,
@@ -209,7 +198,6 @@ func (r *salesOrderRepoImpl) List(ctx context.Context, params domain.ListSalesOr
 			SalesRepIds:                salesRepIDs,
 			StartDate:                  startDate,
 			EndDate:                    endDate,
-			ExcludeInternalOrders:      params.ExcludeInternalOrders,
 			CursorCreatedAt:            gosql.NullTime{Time: cur.OccurredAt, Valid: true},
 			CursorID:                   gosql.NullString{String: cur.ID, Valid: true},
 			Limit:                      params.Limit + 1,
@@ -246,7 +234,6 @@ func (r *salesOrderRepoImpl) List(ctx context.Context, params domain.ListSalesOr
 		SalesRepIds:                salesRepIDs,
 		StartDate:                  startDate,
 		EndDate:                    endDate,
-		ExcludeInternalOrders:      params.ExcludeInternalOrders,
 		Limit:                      params.Limit + 1,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -264,10 +251,7 @@ func (r *salesOrderRepoImpl) List(ctx context.Context, params domain.ListSalesOr
 	return &domain.ListSalesOrdersResult{SalesOrders: result, PageInfo: pageInfo}, nil
 }
 
-// searchList resolves an exact-match free-text search to its matching sales
-// orders. It seeks the order number / customer PO indexes via SearchSalesOrderIDs
-// (a UNION of two single-column equality seeks) and hydrates each match, instead
-// of scanning the account through the browse-list query.
+// searchList resolves an exact-match free-text search to its matching sales orders. It seeks the order number / customer PO indexes via SearchSalesOrderIDs (a UNION of two single-column equality seeks) and hydrates each match, instead of scanning the account through the browse-list query.
 func (r *salesOrderRepoImpl) searchList(
 	ctx context.Context,
 	params domain.ListSalesOrdersParams,
@@ -303,15 +287,13 @@ func (r *salesOrderRepoImpl) searchList(
 		SalesRepIds:                salesRepIDs,
 		StartDate:                  parseDateString(params.StartDate),
 		EndDate:                    parseDateString(params.EndDate),
-		ExcludeInternalOrders:      params.ExcludeInternalOrders,
 		Limit:                      params.Limit + 1,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Hydrate the matches (already newest-first). Exact search returns at most a
-	// handful of rows, so per-id fetches are cheap and reuse the detail shape.
+	// Hydrate the matches (already newest-first). Exact search returns at most a handful of rows, so per-id fetches are cheap and reuse the detail shape.
 	orders := make([]*domain.SalesOrder, 0, len(idRows))
 	for _, idRow := range idRows {
 		so, apiErr := r.Get(ctx, params.AccountID, idRow.ID)
@@ -325,9 +307,7 @@ func (r *salesOrderRepoImpl) searchList(
 	return &domain.ListSalesOrdersResult{SalesOrders: result, PageInfo: pageInfo}, nil
 }
 
-// attachLineCounts batch-loads the line-item count for each order on the page in
-// a single query and sets LineCount, replacing the per-row correlated subquery the
-// list query previously carried. Orders with no lines keep the zero default.
+// attachLineCounts batch-loads the line-item count for each order on the page in a single query and sets LineCount, replacing the per-row correlated subquery the list query previously carried. Orders with no lines keep the zero default.
 func (r *salesOrderRepoImpl) attachLineCounts(ctx context.Context, orders []*domain.SalesOrder) *apierror.APIError {
 	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.attach_line_counts")
 	defer span.End()
@@ -417,9 +397,7 @@ func (r *salesOrderRepoImpl) GetShipmentIDs(ctx context.Context, salesOrderID st
 	return ids, nil
 }
 
-// GetContactsByOrders resolves the email recipients for a set of sales orders in a
-// single batched query, grouping them per order by notification type so list pages
-// avoid a per-order N+1.
+// GetContactsByOrders resolves the email recipients for a set of sales orders in a single batched query, grouping them per order by notification type so list pages avoid a per-order N+1.
 func (r *salesOrderRepoImpl) GetContactsByOrders(ctx context.Context, salesOrderIDs []string) (map[string]*domain.SalesOrderContacts, *apierror.APIError) {
 	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_contacts_by_orders")
 	defer span.End()
@@ -602,9 +580,7 @@ func (r *salesOrderRepoImpl) IsDuplicateOrderNumber(ctx context.Context, account
 	return cnt > 0, nil
 }
 
-// AreAllLineProductLinesCommissionExempt reports whether every product line among
-// the given products is commission-exempt (and at least one product has a product
-// line). Mirrors Dashboard's "productLines.length > 0 && every(isCommissionExempt)".
+// AreAllLineProductLinesCommissionExempt reports whether every product line among the given products is commission-exempt (and at least one product has a product line). Mirrors Dashboard's "productLines.length > 0 && every(isCommissionExempt)".
 func (r *salesOrderRepoImpl) AreAllLineProductLinesCommissionExempt(ctx context.Context, productIDs []string) (bool, *apierror.APIError) {
 	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.are_all_line_product_lines_commission_exempt")
 	defer span.End()
@@ -621,8 +597,7 @@ func (r *salesOrderRepoImpl) AreAllLineProductLinesCommissionExempt(ctx context.
 	return row.Total > 0 && row.Total == row.Exempt, nil
 }
 
-// GetAccountOriginAddress returns the seller account's default billing address as a
-// ship-from origin for shipping-rate estimation, or nil when the account has none.
+// GetAccountOriginAddress returns the seller account's default billing address as a ship-from origin for shipping-rate estimation, or nil when the account has none.
 func (r *salesOrderRepoImpl) GetAccountOriginAddress(ctx context.Context, accountID string) (*domain.ShippingAddress, *apierror.APIError) {
 	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_account_origin_address")
 	defer span.End()
@@ -648,8 +623,7 @@ func (r *salesOrderRepoImpl) GetAccountOriginAddress(ctx context.Context, accoun
 	}, nil
 }
 
-// GetProductTypesAndLines returns the product type code + product line for each of
-// the given products, used to estimate parcel weight and gather freight exemptions.
+// GetProductTypesAndLines returns the product type code + product line for each of the given products, used to estimate parcel weight and gather freight exemptions.
 func (r *salesOrderRepoImpl) GetProductTypesAndLines(ctx context.Context, productIDs []string) ([]domain.ProductTypeLine, *apierror.APIError) {
 	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_product_types_and_lines")
 	defer span.End()
@@ -714,28 +688,26 @@ func (r *salesOrderRepoImpl) GetNextOrderNumber(ctx context.Context, accountID s
 	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_next_order_number")
 	defer span.End()
 
-	nextNumber, err := r.queries.GetNextOrderNumber(ctx, sqlc.GetNextOrderNumberParams{
-		AccountID: accountID,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return "", tracing.Trace(span, apiErr)
-	}
-
 	sysPropertyID, apiErr := id.GenID(id.SysPropertyIDPrefix, nil)
 	if apiErr != nil {
 		return "", tracing.Trace(span, apiErr)
 	}
 
-	err = r.queries.UpdateNextOrderNumber(ctx, sqlc.UpdateNextOrderNumberParams{
+	// Atomically reserve the next number: the upsert row-locks the per-account counter and returns the
+	// reserved value via LAST_INSERT_ID, so concurrent creates serialize instead of racing on MAX+1.
+	res, err := r.queries.AllocateNextOrderNumber(ctx, sqlc.AllocateNextOrderNumberParams{
 		ID:        sysPropertyID,
 		AccountID: accountID,
-		Value:     nextNumber,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return "", tracing.Trace(span, apiErr)
 	}
+	number, err := res.LastInsertId()
+	if err != nil {
+		return "", tracing.Trace(span, apierror.NewInternalError(err, "Failed to read the reserved order number."))
+	}
 
-	return fmt.Sprintf("%d", nextNumber), nil
+	return strconv.FormatInt(number, 10), nil
 }
 
 func (r *salesOrderRepoImpl) GetPickID(ctx context.Context, salesOrderID string) (*string, *apierror.APIError) {
@@ -1247,9 +1219,7 @@ func mapGetSalesOrderForCustomerRow(row sqlc.GetSalesOrderForCustomerRow) *domai
 	return so
 }
 
-// listSalesOrderRow carries the shared column set returned by the forward and
-// backward list queries. Both queries now project the same full detail shape as
-// GetSalesOrder (plus line_count), so their rows map through one helper.
+// listSalesOrderRow carries the shared column set returned by the forward and backward list queries. Both queries now project the same full detail shape as GetSalesOrder (plus line_count), so their rows map through one helper.
 type listSalesOrderRow struct {
 	ID                          string
 	Number                      string
@@ -1345,8 +1315,7 @@ type listSalesOrderRow struct {
 	PickID                      gosql.NullString
 }
 
-// mapListSalesOrderRow maps a shared list row into a full domain.SalesOrder,
-// mirroring mapGetSalesOrderRow so list and detail return the same shape.
+// mapListSalesOrderRow maps a shared list row into a full domain.SalesOrder, mirroring mapGetSalesOrderRow so list and detail return the same shape.
 func mapListSalesOrderRow(row listSalesOrderRow) *domain.SalesOrder {
 	so := &domain.SalesOrder{
 		ID:                   row.ID,
@@ -1674,10 +1643,7 @@ func (r *salesOrderRepoImpl) CheckPaymentStatus(ctx context.Context, salesOrderI
 	return result.Valid && result.Bool, nil
 }
 
-// GetPaymentStatuses computes the 3-state payment status for a batch of sales
-// orders in a single query, keyed by sales order ID. Orders with no payment
-// activity (or not found / not owned by the account) are absent from the map;
-// callers should treat a missing entry as "unpaid".
+// GetPaymentStatuses computes the 3-state payment status for a batch of sales orders in a single query, keyed by sales order ID. Orders with no payment activity (or not found / not owned by the account) are absent from the map; callers should treat a missing entry as "unpaid".
 func (r *salesOrderRepoImpl) GetPaymentStatuses(ctx context.Context, accountID string, salesOrderIDs []string) (map[string]constants.SalesOrderPaymentStatus, *apierror.APIError) {
 	ctx, span := tracing.StartSpan(ctx, salesOrderRepoTracer, "repository.sales_order.get_payment_statuses")
 	defer span.End()

@@ -415,7 +415,7 @@ message ListSalesOrdersRequest {
   repeated string sales_rep_ids = 9;
   optional string start_date = 10;
   optional string end_date = 11;
-  bool exclude_internal_orders = 12;
+  reserved 12; // formerly exclude_internal_orders
   // If set, filters orders by buyer_account_id (for customer actor access).
   optional string buyer_account_id = 13;
   // Includes to expand (e.g. "lines"); inline-joined fields are always present.
@@ -479,8 +479,9 @@ message SalesOrderEmailContactInput {
 message CreateSalesOrderLineInput {
   string product_id = 1;
   // item_id (2) removed: the item is derived from the product. unit_cost (10-12)
-  // removed: cost is pulled from the item on the backend.
-  reserved 2, 10, 11, 12;
+  // removed: cost is pulled from the item on the backend. edi_line_item_id (13)
+  // removed: not accepted on sales-order create.
+  reserved 2, 10, 11, 12, 13;
   // product_sku / product_description default to the product's when omitted.
   optional string product_sku = 3;
   optional string product_description = 4;
@@ -491,7 +492,6 @@ message CreateSalesOrderLineInput {
   optional string unit_price_value = 7;
   optional string unit_price_numerator_unit_id = 8;
   optional string unit_price_denominator_unit_id = 9;
-  optional string edi_line_item_id = 13;
 }
 
 message CreateSalesOrderResponse {

@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -37,14 +38,16 @@ type UpdateItemCategoryEndpoint struct{}
 
 func (e *UpdateItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateItemCategoryRequest, *apiresource.ItemCategory] {
 	return (&apiendpoint.APIEndpoint[*UpdateItemCategoryRequest, *apiresource.ItemCategory]{
-		Title:             "Update Item Category",
-		Method:            http.MethodPatch,
-		Route:             "/v1/catalog/item-categories/{id}",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeItemCategory,
+		Title:               "Update Item Category",
+		Method:              http.MethodPatch,
+		Route:               "/v1/catalog/item-categories/{id}",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainCategories, Action: types.ActionUpdate}},
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeItemCategory,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError) {
 			return svc.(ItemCategorySvc).UpdateItemCategory
 		},

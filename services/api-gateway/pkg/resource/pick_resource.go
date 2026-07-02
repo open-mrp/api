@@ -17,7 +17,7 @@ type Pick struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=pick"`
-	// Pick number.
+	// Human-readable number that identifies the pick, distinct from the `id`.
 	Number string `json:"number" validate:"required"`
 	// The sales order this pick fulfills.
 	SalesOrder *SalesOrder `json:"sales_order" expandable:"true"`

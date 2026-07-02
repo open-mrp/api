@@ -117,7 +117,7 @@ INSERT IGNORE INTO shipment (id, number, sales_order_id, carrier_id, shipping_ad
 -- The self-relation acre_01seedhouseacct0000 (owner == counterparty == this
 -- account, in 0010_customers.sql) satisfies the list query's inner
 -- account_relation join, so this order is returned by the list endpoint.
--- Unblocks: exclude_internal_orders.
+-- Unblocks: internal-order visibility (created_by include, customer-portal access).
 INSERT IGNORE INTO sales_order (id, number, sales_order_status_code, sales_order_type_code, priority_code, billing_address_id, shipping_address_id, buyer_account_id, seller_account_id, owner_account_id, payment_term_id, shipping_term_id, issued_at, created_at, updated_at) VALUES
     ('or_01seedfcsointernal', 'ORD-E2E-INTERNAL', 'issued', 'sales_order', 'normal', 'ad_01k09wnac0e1ar211e0sy0ba4g', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'pytm_01seednet3000000', 'prepaid_billed', DATE_ADD(NOW(), INTERVAL 9 YEAR), DATE_ADD(NOW(), INTERVAL 9 YEAR), DATE_ADD(NOW(), INTERVAL 9 YEAR));
 

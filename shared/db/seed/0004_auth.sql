@@ -8,8 +8,10 @@ SET @password_hash = '$2a$10$w68CrxLdi9fdVttqNZMAZesPa2dJlsUrGNy39boKJXz81hyvX0m
 -- All permissions default to the 'admin' permission group
 INSERT IGNORE INTO permission (id, code, name, permission_group_code, created_at, updated_at) VALUES
     ('self', 'self', 'Self', 'self', NOW(), NOW()),
+    ('messaging', 'messaging', 'Messaging', 'self', NOW(), NOW()),
+    ('alerts', 'alerts', 'Alerts', 'self', NOW(), NOW()),
     ('deliveries', 'deliveries', 'Deliveries', 'admin', NOW(), NOW()),
-    ('storage_locations', 'storage_locations', 'Storage Locations', 'admin', NOW(), NOW()),
+    ('locations', 'locations', 'Locations', 'inventory', NOW(), NOW()),
     ('settlements', 'settlements', 'Settlements', 'admin', NOW(), NOW()),
     ('transactions', 'transactions', 'Transactions', 'admin', NOW(), NOW()),
     ('batches', 'batches', 'Batches', 'admin', NOW(), NOW()),
@@ -68,8 +70,15 @@ INSERT IGNORE INTO permission (id, code, name, permission_group_code, created_at
     ('request_logs', 'request_logs', 'Request Logs', 'admin', NOW(), NOW()),
     ('audit_events', 'audit_events', 'Audit Events', 'admin', NOW(), NOW()),
     ('sandboxes', 'sandboxes', 'Sandboxes', 'admin', NOW(), NOW()),
-    ('agents', 'agents', 'Agents', 'admin', NOW(), NOW()),
-    ('agent_runs', 'agent_runs', 'Agent Runs', 'admin', NOW(), NOW());
+    ('api_keys', 'api_keys', 'Api Keys', 'admin', NOW(), NOW()),
+    ('integrations', 'integrations', 'Integrations', 'admin', NOW(), NOW()),
+    ('priorities', 'priorities', 'Priorities', 'admin', NOW(), NOW()),
+    ('addresses', 'addresses', 'Addresses', 'customers', NOW(), NOW()),
+    ('adjustment_types', 'adjustment_types', 'Adjustment Types', 'inventory', NOW(), NOW()),
+    ('product_types', 'product_types', 'Product Types', 'products', NOW(), NOW()),
+    ('agents', 'agents', 'Agents', 'teams', NOW(), NOW()),
+    ('agent_runs', 'agent_runs', 'Agent Runs', 'teams', NOW(), NOW()),
+    ('agent_memories', 'agent_memories', 'Agent Memories', 'teams', NOW(), NOW());
 
 -- Roles
 INSERT IGNORE INTO role (id, name, role_type_code, account_id, created_at, updated_at) VALUES
@@ -80,8 +89,9 @@ INSERT IGNORE INTO role (id, name, role_type_code, account_id, created_at, updat
 -- Admin role permissions (full CRUD on ALL permission domains)
 INSERT IGNORE INTO role_permission (id, role_id, permission_code, `create`, `read`, `update`, `delete`, created_at, updated_at) VALUES
     ('rlpm_01seedadm_self000', 'rl_mtg88e6u6fbu', 'self', 1, 1, 1, 1, NOW(), NOW()),
+    ('rlpm_01seedadm_msg0000', 'rl_mtg88e6u6fbu', 'messaging', 1, 1, 1, 1, NOW(), NOW()),
     ('rlpm_01seedadm_deliv00', 'rl_mtg88e6u6fbu', 'deliveries', 1, 1, 1, 1, NOW(), NOW()),
-    ('rlpm_01seedadm_storloc', 'rl_mtg88e6u6fbu', 'storage_locations', 1, 1, 1, 1, NOW(), NOW()),
+    ('rlpm_01seedadm_loc0000', 'rl_mtg88e6u6fbu', 'locations', 1, 1, 1, 1, NOW(), NOW()),
     ('rlpm_01seedadm_settl00', 'rl_mtg88e6u6fbu', 'settlements', 1, 1, 1, 1, NOW(), NOW()),
     ('rlpm_01seedadm_trans00', 'rl_mtg88e6u6fbu', 'transactions', 1, 1, 1, 1, NOW(), NOW()),
     ('rlpm_01seedadm_batch00', 'rl_mtg88e6u6fbu', 'batches', 1, 1, 1, 1, NOW(), NOW()),
@@ -140,12 +150,21 @@ INSERT IGNORE INTO role_permission (id, role_id, permission_code, `create`, `rea
     ('rlpm_01seedadm_reqlg00', 'rl_mtg88e6u6fbu', 'request_logs', 1, 1, 1, 1, NOW(), NOW()),
     ('rlpm_01seedadm_audit00', 'rl_mtg88e6u6fbu', 'audit_events', 1, 1, 1, 1, NOW(), NOW()),
     ('rlpm_01seedadm_sandbo0', 'rl_mtg88e6u6fbu', 'sandboxes', 1, 1, 1, 1, NOW(), NOW()),
+    ('rlpm_01seedadm_apiky00', 'rl_mtg88e6u6fbu', 'api_keys', 1, 1, 1, 1, NOW(), NOW()),
+    ('rlpm_01seedadm_integ00', 'rl_mtg88e6u6fbu', 'integrations', 1, 1, 1, 1, NOW(), NOW()),
+    ('rlpm_01seedadm_prior00', 'rl_mtg88e6u6fbu', 'priorities', 1, 1, 1, 1, NOW(), NOW()),
+    ('rlpm_01seedadm_addres0', 'rl_mtg88e6u6fbu', 'addresses', 1, 1, 1, 1, NOW(), NOW()),
+    ('rlpm_01seedadm_adjtyp0', 'rl_mtg88e6u6fbu', 'adjustment_types', 1, 1, 1, 1, NOW(), NOW()),
+    ('rlpm_01seedadm_prdtyp0', 'rl_mtg88e6u6fbu', 'product_types', 1, 1, 1, 1, NOW(), NOW()),
     ('rlpm_01seedadm_agents0', 'rl_mtg88e6u6fbu', 'agents', 1, 1, 1, 1, NOW(), NOW()),
-    ('rlpm_01seedadm_agentr0', 'rl_mtg88e6u6fbu', 'agent_runs', 1, 1, 1, 1, NOW(), NOW());
+    ('rlpm_01seedadm_agentr0', 'rl_mtg88e6u6fbu', 'agent_runs', 1, 1, 1, 1, NOW(), NOW()),
+    ('rlpm_01seedadm_agentm0', 'rl_mtg88e6u6fbu', 'agent_memories', 1, 1, 1, 1, NOW(), NOW()),
+    ('rlpm_01seedadm_alerts0', 'rl_mtg88e6u6fbu', 'alerts', 1, 1, 1, 1, NOW(), NOW());
 
--- Sales Rep role permissions (only sales_orders)
+-- Sales Rep role permissions (sales_orders + receive/manage own notifications)
 INSERT IGNORE INTO role_permission (id, role_id, permission_code, `create`, `read`, `update`, `delete`, created_at, updated_at) VALUES
-    ('rlpm_01seedsrep_salord', 'rl_hh6mrlkv08n8', 'sales_orders', 1, 1, 1, 1, NOW(), NOW());
+    ('rlpm_01seedsrep_salord', 'rl_hh6mrlkv08n8', 'sales_orders', 1, 1, 1, 1, NOW(), NOW()),
+    ('rlpm_01seedsrep_msg000', 'rl_hh6mrlkv08n8', 'messaging', 1, 1, 1, 1, NOW(), NOW());
 
 -- Scanner role permissions
 INSERT IGNORE INTO role_permission (id, role_id, permission_code, `create`, `read`, `update`, `delete`, created_at, updated_at) VALUES
@@ -160,16 +179,22 @@ INSERT IGNORE INTO role_permission (id, role_id, permission_code, `create`, `rea
 -- us_fltactor3 is a third member used only as a distinct request-log actor so the
 -- request-log actor_ids filter tests can prove that filtering by two members
 -- (User1 + User2) includes both and excludes a third (see crud_request_logs_test.go).
-INSERT IGNORE INTO user (id, name, username, email, hashed_password, email_verified, created_at, updated_at) VALUES
-    ('us_1wjfmmbwg8l7', 'John Doe', 'jdoe', 'dane@augno.com', @password_hash, NOW(), NOW(), NOW()),
-    ('us_6p7460uuwibz', 'Sarah Martinez', 'smartinez', 'smartinez@augno.com', @password_hash, NOW(), NOW(), NOW()),
-    ('us_fltactor3', 'Filter Test User 3', 'ftuser3', 'ftuser3@augno.com', @password_hash, NOW(), NOW(), NOW());
+-- image_url mirrors what UploadUserPhoto persists: a relative path that is the
+-- authoritative "avatar exists" signal (resolveImageURL presigns the matching
+-- {account_id}/{user_id}.png object). The bytes are uploaded by
+-- scripts/seed-user-photos.sh (make seed-user-photos). us_fltactor3 has no avatar.
+INSERT IGNORE INTO user (id, name, username, email, hashed_password, email_verified, image_url, created_at, updated_at) VALUES
+    ('us_1wjfmmbwg8l7', 'John Doe', 'jdoe', 'dane@augno.com', @password_hash, NOW(), '/v1/core/users/us_1wjfmmbwg8l7/photo', NOW(), NOW()),
+    ('us_2ndadmin0000', 'Mike Johnson', 'mjohnson', 'mjohnson@augno.com', @password_hash, NOW(), '/v1/core/users/us_2ndadmin0000/photo', NOW(), NOW()),
+    ('us_6p7460uuwibz', 'Sarah Martinez', 'user2', 'user2@augno.com', @password_hash, NOW(), '/v1/core/users/us_6p7460uuwibz/photo', NOW(), NOW()),
+    ('us_fltactor3', 'Filter Test User 3', 'ftuser3', 'ftuser3@augno.com', @password_hash, NOW(), NULL, NOW(), NOW());
 
 -- Account-user associations. The admin account-user (SeedAccountUserID) is
 -- pinned to the Knitting department so `?include=department` resolves on the
 -- seeded account_user GET/LIST responses.
 INSERT IGNORE INTO account_user (id, user_id, role_id, account_id, department_id, last_used_at, created_at, updated_at) VALUES
     ('acus_s83fjhyfmqen', 'us_1wjfmmbwg8l7', 'rl_mtg88e6u6fbu', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'dp_01k0a5r01yfx3sj1vy9qgv3dc0', NOW(), NOW(), NOW()),
+    ('acus_2ndadmin000', 'us_2ndadmin0000', 'rl_mtg88e6u6fbu', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'dp_01k0a5r01yfx3sj1vy9qgv3dc0', NOW(), NOW(), NOW()),
     ('acus_ubdx4zebgl6p', 'us_6p7460uuwibz', 'rl_hh6mrlkv08n8', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'dp_01k0a5r01yfx3sj1vy9qgv3dc0', NOW(), NOW(), NOW()),
     ('acus_fltactor300', 'us_fltactor3', 'rl_hh6mrlkv08n8', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'dp_01k0a5r01yfx3sj1vy9qgv3dc0', NOW(), NOW(), NOW());
 

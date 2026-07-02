@@ -81,7 +81,17 @@ func (m *serviceLevelSvcImpl) ListServiceLevels(ctx context.Context, req *ListSe
 }
 
 func (m *serviceLevelSvcImpl) GetServiceLevel(ctx context.Context, req *RetrieveServiceLevelRequest) (*apiresource.ServiceLevel, *apierror.APIError) {
-	return loadServiceLevelByID(ctx, req.ServiceLevelID)
+	resp, apiErr := grpcutil.CallRPC(ctx, serviceLevelSvcTracer, "service.service_levels.get", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetServiceLevelResponse, error) {
+			return m.coreClient.GetServiceLevel(ctx, &pb.GetServiceLevelRequest{
+				CarrierId: req.CarrierID,
+				Id:        req.ServiceLevelID,
+			}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	return loadServiceLevelByID(ctx, resp.ServiceLevel.Id)
 }
 
 func (m *serviceLevelSvcImpl) CreateServiceLevel(ctx context.Context, req *CreateServiceLevelRequest) (*apiresource.ServiceLevel, *apierror.APIError) {

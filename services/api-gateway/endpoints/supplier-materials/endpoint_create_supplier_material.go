@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
 )
@@ -53,6 +54,9 @@ func (e *CreateSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainSuppliers, Action: types.ActionCreate},
+		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateSupplierMaterialRequest) (*apiresource.SupplierMaterial, *apierror.APIError) {
 			return svc.(SupplierMaterialSvc).CreateSupplierMaterial
 		},

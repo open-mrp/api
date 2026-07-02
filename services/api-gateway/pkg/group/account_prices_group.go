@@ -35,7 +35,7 @@ func (*AccountPricesEndpointGroup) Materialize(config *AccountPricesEndpointGrou
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
-		Title:        "Account Prices Management",
+		Title:        "Account Prices",
 		Description:  "List and manage account prices.",
 		ResourceType: &apiresource.AccountPrice{},
 	}

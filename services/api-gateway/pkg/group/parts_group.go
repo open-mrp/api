@@ -35,7 +35,7 @@ func (*PartsEndpointGroup) Materialize(config *PartsEndpointGroupConfig) *PartsE
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
-		Title:        "Parts Management",
+		Title:        "Parts",
 		Description:  "List and manage parts.",
 		ResourceType: &apiresource.Part{},
 	}

@@ -29,6 +29,7 @@ func (e *SwitchPlanEndpoint) Materialize() *apiendpoint.APIEndpoint[*SwitchPlanR
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		RequiredRoleType:  constants.RoleTypeAdmin,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeSwitchPlanResponse,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *SwitchPlanRequest) (*apiresource.SwitchPlanResponse, *apierror.APIError) {

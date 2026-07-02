@@ -54,6 +54,7 @@ type TenancyCurrentAccount struct {
 	Role                     *TenancyRole
 	InternalStripeCustomerID *string
 	AccountPlan              *TenancyAccountPlan
+	AccountUserID            string
 }
 
 // TenancyAccountPlan is the fully-resolved plan for the current account, including its limits and features.

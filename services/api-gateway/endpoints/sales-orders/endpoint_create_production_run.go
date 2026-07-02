@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -52,13 +53,14 @@ type CreateProductionRunEndpoint struct{}
 
 func (e *CreateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductionRunRequest, *CreateProductionRunResponse] {
 	return (&apiendpoint.APIEndpoint[*CreateProductionRunRequest, *CreateProductionRunResponse]{
-		Title:             "Create Production Run from Sales Order",
-		Method:            http.MethodPost,
-		ContentType:       "application/json",
-		Route:             "/v1/sales/sales-orders/{id}/actions/create-production-run",
-		SuccessStatusCode: http.StatusCreated,
-		Public:            false,
-		Preview:           true,
+		Title:               "Create Production Run from Sales Order",
+		Method:              http.MethodPost,
+		ContentType:         "application/json",
+		Route:               "/v1/sales/sales-orders/{id}/actions/create-production-run",
+		SuccessStatusCode:   http.StatusCreated,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProductionRuns, Action: types.ActionCreate}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateProductionRunRequest) (*CreateProductionRunResponse, *apierror.APIError) {
 			return svc.(SalesOrderSvc).CreateSalesOrderProductionRun
 		},

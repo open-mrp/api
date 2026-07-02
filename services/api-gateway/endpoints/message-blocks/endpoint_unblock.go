@@ -1,0 +1,38 @@
+package blockep
+
+import (
+	"context"
+	"net/http"
+
+	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
+	apierror "github.com/augno/api/shared/errors"
+)
+
+// Request to remove a block the caller created.
+type UnblockRequest struct {
+	// The account user to unblock.
+	//
+	// This is the ID of the blocked account user, not the block record's own ID.
+	BlockedAccountUserID string `path:"id" validate:"required"`
+}
+
+// Removes a block.
+type UnblockEndpoint struct{}
+
+func (e *UnblockEndpoint) Materialize() *apiendpoint.APIEndpoint[*UnblockRequest, *apiresource.EmptyResource] {
+	return (&apiendpoint.APIEndpoint[*UnblockRequest, *apiresource.EmptyResource]{
+		Title:               "Unblock User",
+		Method:              http.MethodDelete,
+		ContentType:         "application/json",
+		Route:               "/v1/messaging/blocks/{id}",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionDelete}},
+		ServiceHandler: func(svc any) func(ctx context.Context, req *UnblockRequest) (*apiresource.EmptyResource, *apierror.APIError) {
+			return svc.(BlockSvc).Unblock
+		},
+	})
+}

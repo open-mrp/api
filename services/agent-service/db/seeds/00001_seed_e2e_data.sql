@@ -5,8 +5,8 @@
 -- Agent definitions (system-level, no account_id)
 INSERT INTO agent_definition (id, name, slug, description, definition_type, category_code, trigger_type, is_active, config)
 VALUES
-    ('agdf_01seede2e_orderbot0', 'Order Processing Bot', 'order_processing_bot', 'Processes incoming orders automatically', 'system', 'operations', 'event', true, '{"model":"claude-sonnet-4-20250514","max_tokens":4096}'),
-    ('agdf_01seede2e_csbot0000', 'Customer Service Bot', 'customer_service_bot', 'Handles customer inquiries', 'system', 'customer_service', 'manual', true, '{"model":"claude-sonnet-4-20250514","max_tokens":4096}')
+    ('agdf_01seede2e_orderbot0', 'Order Processing Bot', 'order_processing_bot', 'Processes incoming orders automatically', 'system', 'operations', 'event', true, '{"model":"claude-sonnet-4","max_tokens":4096}'),
+    ('agdf_01seede2e_csbot0000', 'Customer Service Bot', 'customer_service_bot', 'Handles customer inquiries', 'system', 'customer_service', 'manual', true, '{"model":"claude-sonnet-4","max_tokens":4096}')
 ON CONFLICT (id) DO NOTHING;
 
 -- Custom agent definition (account-scoped, updatable via PATCH).
@@ -14,7 +14,7 @@ ON CONFLICT (id) DO NOTHING;
 -- ?include=role and ?include=role.permissions populate nested data.
 INSERT INTO agent_definition (id, account_id, name, slug, description, definition_type, category_code, trigger_type, is_active, config, role_id)
 VALUES
-    ('agdf_01seede2e_custom00', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'Custom Test Agent', 'custom_test_agent', 'A custom agent for e2e update tests', 'custom', 'operations', 'manual', true, '{"model":"claude-sonnet-4-20250514","max_tokens":4096}', 'rl_mtg88e6u6fbu')
+    ('agdf_01seede2e_custom00', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'Custom Test Agent', 'custom_test_agent', 'A custom agent for e2e update tests', 'custom', 'operations', 'manual', true, '{"model":"claude-sonnet-4","max_tokens":4096}', 'rl_mtg88e6u6fbu')
 ON CONFLICT (id) DO NOTHING;
 
 -- Second custom agent definition whose per-account status is 'inactive' (set in
@@ -23,18 +23,27 @@ ON CONFLICT (id) DO NOTHING;
 -- TestArrayFilters_UnionExclusion.
 INSERT INTO agent_definition (id, account_id, name, slug, description, definition_type, category_code, trigger_type, is_active, config)
 VALUES
-    ('agdf_01seede2e_inact00', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'Inactive Test Agent', 'inactive_test_agent', 'A custom agent that is inactive for e2e status-filter coverage', 'custom', 'operations', 'manual', true, '{"model":"claude-sonnet-4-20250514","max_tokens":4096}')
+    ('agdf_01seede2e_inact00', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'Inactive Test Agent', 'inactive_test_agent', 'A custom agent that is inactive for e2e status-filter coverage', 'custom', 'operations', 'manual', true, '{"model":"claude-sonnet-4","max_tokens":4096}')
+ON CONFLICT (id) DO NOTHING;
+
+-- Agent definition referenced as the actor of the infra-scrub request log
+-- (rqlog_01infraagent0 in shared/db/seed/0014_e2e_extras.sql). The request-logs
+-- presenter resolves an agent actor's name + handle(slug) from agent-service, so
+-- this row must exist for ?include=actor to hydrate them.
+INSERT INTO agent_definition (id, account_id, name, slug, description, definition_type, category_code, trigger_type, is_active, config)
+VALUES
+    ('agdf_01infraseedagent', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'Infra Scrub Agent', 'infra_scrub_agent', 'Agent that made the internal request used for infra-scrub coverage', 'custom', 'operations', 'event', true, '{"model":"claude-sonnet-4","max_tokens":4096}')
 ON CONFLICT (id) DO NOTHING;
 
 -- Agent definition tools — attaches two system tools to the custom agent so
 -- `?include=tools` returns a populated list on the GET/LIST responses. Also
 -- attaches one tool to orderbot0 so get-run?include=definition.tools resolves
 -- against SeedAgentRunID (run #1, which targets orderbot0).
-INSERT INTO agent_definition_tool (id, agent_definition_id, tool_definition_id, config, sort_order, require_review)
+INSERT INTO agent_definition_tool (id, agent_definition_id, tool_slug, config, sort_order, require_review)
 VALUES
-    ('agdtl_01seede2e_tool001', 'agdf_01seede2e_custom00', 'tdef_01k0b1seed0savememory0000', '{}', 0, false),
-    ('agdtl_01seede2e_tool002', 'agdf_01seede2e_custom00', 'tdef_01k0b1seed0createalert000', '{}', 1, false),
-    ('agdtl_01seede2e_tool003', 'agdf_01seede2e_orderbot0', 'tdef_01k0b1seed0createalert000', '{}', 0, false)
+    ('agdtl_01seede2e_tool001', 'agdf_01seede2e_custom00', 'save_memory', '{}', 0, false),
+    ('agdtl_01seede2e_tool002', 'agdf_01seede2e_custom00', 'create_alert', '{}', 1, false),
+    ('agdtl_01seede2e_tool003', 'agdf_01seede2e_orderbot0', 'create_alert', '{}', 0, false)
 ON CONFLICT (id) DO NOTHING;
 
 -- orderbot0 is a system definition but still needs a role_id so
@@ -65,7 +74,11 @@ INSERT INTO agent_run (id, account_id, agent_definition_id, agent_config_id, sta
 VALUES
     ('agrn_01seede2e_run00001', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'agdf_01seede2e_orderbot0', 'agcf_01seede2e_ordercfg0', 'completed', 'manual', '{"prompt":"Process order ORD-001"}', '{"result":"Order processed successfully"}', now() - interval '1 hour', now() - interval '59 minutes', 60000, 500, 200, 'us_1wjfmmbwg8l7', 'internal', 'Admin User', '[]'),
     ('agrn_01seede2e_run00002', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'agdf_01seede2e_csbot0000', 'agcf_01seede2e_cscfg0000', 'completed', 'manual', '{"prompt":"Check customer status"}', '{"result":"Customer is in good standing"}', now() - interval '30 minutes', now() - interval '29 minutes', 45000, 400, 150, 'us_1wjfmmbwg8l7', 'internal', 'Admin User', '[]'),
-    ('agrn_01seede2e_run00003', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'agdf_01seede2e_custom00', NULL,                     'completed', 'manual', '{"prompt":"Custom agent trigger"}', '{"result":"Custom agent completed"}',          now() - interval '15 minutes', now() - interval '14 minutes', 30000, 300, 100, 'us_1wjfmmbwg8l7', 'internal', 'Admin User', '["save_memory","create_alert"]')
+    ('agrn_01seede2e_run00003', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'agdf_01seede2e_custom00', NULL,                     'completed', 'manual', '{"prompt":"Custom agent trigger"}', '{"result":"Custom agent completed"}',          now() - interval '15 minutes', now() - interval '14 minutes', 30000, 300, 100, 'us_1wjfmmbwg8l7', 'internal', 'Admin User', '["save_memory","create_alert"]'),
+    -- runfail1: dedicated terminal 'failed' run for the retry-success happy path (SeedAgentRunFailedID). Do not reuse for other tests — Retry flips it permanently.
+    ('agrn_01seede2e_runfail1', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'agdf_01seede2e_orderbot0', 'agcf_01seede2e_ordercfg0', 'failed',         'manual', '{"prompt":"Process order that fails"}', '{}',                                     now() - interval '10 minutes', now() - interval '9 minutes', 60000, 100, 0, 'us_1wjfmmbwg8l7', 'internal', 'Admin User', '[]'),
+    -- runawti1: dedicated 'awaiting_input' run for the continue-success happy path (SeedAgentRunAwaitingInputID). Do not reuse — Continue flips it permanently.
+    ('agrn_01seede2e_runawti1', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'agdf_01seede2e_orderbot0', 'agcf_01seede2e_ordercfg0', 'awaiting_input', 'manual', '{"prompt":"Need more info"}', '{}',                                     now() - interval '5 minutes', NULL, NULL, 100, 0, 'us_1wjfmmbwg8l7', 'internal', 'Admin User', '[]')
 ON CONFLICT (id) DO NOTHING;
 
 -- Agent actions. Run #3 exercises `list-runs/actions` and the alert→action
@@ -82,15 +95,6 @@ INSERT INTO agent_run_event (id, agent_run_id, account_id, step_type, title, con
 VALUES
     ('agev_01seede2e_event001', 'agrn_01seede2e_run00001', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'message',   'User prompt received', 'Process order ORD-001',                    1, 20,    NULL,                     '{}', 'internal', 'Admin User'),
     ('agev_01seede2e_event002', 'agrn_01seede2e_run00001', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'tool_call', 'Queued order for fulfillment', 'create_alert invoked with ORD-001', 2, 30000, 'agac_01seede2e_action02', '{}', 'internal', 'Admin User')
-ON CONFLICT (id) DO NOTHING;
-
--- Agent alerts — first alert stays linked to run 1 only; second alert references
--- run 3 AND the saved action so `?include=run` and `?include=action` both
--- resolve on at least one list item.
-INSERT INTO agent_alert (id, account_id, agent_run_id, agent_action_id, severity_code, status_code, title, message, metadata)
-VALUES
-    ('agal_01seede2e_alert001', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'agrn_01seede2e_run00001', NULL,                     'info',    'open', 'Order processed',           'Order ORD-001 was processed automatically', '{}'),
-    ('agal_01seede2e_alert002', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'agrn_01seede2e_run00003', 'agac_01seede2e_action01', 'warning', 'open', 'Customer preference flagged','Save-memory action surfaced a customer preference review.', '{}')
 ON CONFLICT (id) DO NOTHING;
 
 -- Agent account statuses (marks definitions as active for the test account)
@@ -111,7 +115,6 @@ ON CONFLICT (id) DO NOTHING;
 
 -- +goose Down
 DELETE FROM agent_token_usage WHERE id LIKE 'agtu_01seede2e_%';
-DELETE FROM agent_alert WHERE id LIKE 'agal_01seede2e_%';
 DELETE FROM agent_run WHERE id LIKE 'agrn_01seede2e_%';
 DELETE FROM agent_memory WHERE id LIKE 'agmm_01seede2e_%';
 DELETE FROM agent_account_status WHERE id LIKE 'agas_01seede2e_%';

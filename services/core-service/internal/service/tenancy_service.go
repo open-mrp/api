@@ -225,12 +225,16 @@ func (s *tenancySvcImpl) GetCurrentUser(ctx context.Context, userID string, targ
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	if targetAccountID != nil && user.ImageURL != nil {
-		// A non-null user.image_url is the authoritative avatar existence signal (set only on photo upload), so we presign directly instead of doing an S3 HeadObject — presigning is a local SigV4 operation with no network I/O, keeping /me off the S3 critical path. On any signing error we simply leave the persisted image_url value in place.
-		key := *targetAccountID + "/" + userID + ".png"
-		if url, apiErr := s.s3Client.GetPresignedURL(ctx, s.userPhotosBucket, key, 60*time.Minute); apiErr == nil {
-			user.ImageURL = &url
+	if user.ImageURL != nil {
+		// A non-null user.image_url is only an avatar-existence signal (a sentinel path or a normalized legacy URL — see normalizeUserImageURL), never a browser-servable URL. The only servable form is a freshly presigned URL for the account-scoped key {account}/{user}.png, which we presign directly rather than doing an S3 HeadObject — presigning is a local SigV4 operation with no network I/O, keeping /me off the S3 critical path. /me is account-agnostic on bootstrap (called before an account is selected, so no Augno-Account header → no targetAccountID), so when there is no target account, or signing fails, we return a nil image_url instead of the unservable stored value. Clients fall back to initials and pick up the real avatar when they refetch /me with an account selected.
+		var presigned *string
+		if targetAccountID != nil {
+			key := *targetAccountID + "/" + userID + ".png"
+			if url, apiErr := s.s3Client.GetPresignedURL(ctx, s.userPhotosBucket, key, 60*time.Minute); apiErr == nil {
+				presigned = &url
+			}
 		}
+		user.ImageURL = presigned
 	}
 
 	return user, nil
@@ -404,6 +408,7 @@ func (s *tenancySvcImpl) buildTenancyResponse(ctx context.Context, currentAccoun
 			Role:                     role,
 			InternalStripeCustomerID: currentAccount.InternalStripeCustomerID,
 			AccountPlan:              accountPlan,
+			AccountUserID:            currentAccount.AccountUserID,
 		},
 		Sandboxes:           sandboxes,
 		OwnerAccount:        ownerAccount,

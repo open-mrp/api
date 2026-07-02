@@ -2,6 +2,7 @@ package resourceregistry
 
 import (
 	"context"
+	"time"
 
 	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
@@ -37,9 +38,27 @@ func init() {
 			{Key: "order_discount", Populate: populateOrderDiscountOnSO},
 			{Key: "totals", Populate: populateTotalsOnSO},
 			{Key: "contacts", Populate: populateContactsOnSO},
-			{Key: "related.pick", Populate: populatePickOnSORelated},
-			{Key: "related.production_run", Populate: populateProductionRunOnSORelated},
-			{Key: "related.shipments", Populate: populateShipmentsOnSORelated},
+			{
+				Key:         "related.pick",
+				Target:      constants.ObjectTypePick,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractIDs:  extractPickIDFromSORelated,
+				Populate:    populatePickOnSORelated,
+			},
+			{
+				Key:         "related.production_run",
+				Target:      constants.ObjectTypeProductionRun,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractIDs:  extractProductionRunIDFromSORelated,
+				Populate:    populateProductionRunOnSORelated,
+			},
+			{
+				Key:         "related.shipments",
+				Target:      constants.ObjectTypeShipment,
+				Cardinality: resourcekit.CardinalityList,
+				ExtractIDs:  extractShipmentIDsFromSORelated,
+				Populate:    populateShipmentsOnSORelated,
+			},
 			{
 				Key:         "lines",
 				Target:      constants.ObjectTypeSalesOrderLine,
@@ -101,34 +120,97 @@ func ensureSORelated(so *apiresource.SalesOrder) *apiresource.SalesOrderRelated 
 	return so.Related
 }
 
-func populatePickOnSORelated(ctx context.Context, parent any, _ map[string]any) {
-	so := parent.(*apiresource.SalesOrder)
-	related := ensureSORelated(so)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "related_pick")
-	if !ok {
-		return
+// openClosedStatus maps a finished/completed timestamp to the open/closed status that picks and production runs expose (closed once done, open until then), matching their list-endpoint status filters.
+func openClosedStatus(done *time.Time) string {
+	if done != nil {
+		return "closed"
 	}
-	related.Pick = v.(*apiresource.Record)
+	return "open"
 }
 
-func populateProductionRunOnSORelated(ctx context.Context, parent any, _ map[string]any) {
+func extractPickIDFromSORelated(ctx context.Context, parent any) []string {
 	so := parent.(*apiresource.SalesOrder)
-	related := ensureSORelated(so)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "related_production_run")
-	if !ok {
-		return
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeSalesOrder, so.ID, "related_pick_id")
+	if id == "" {
+		return nil
 	}
-	related.ProductionRun = v.(*apiresource.Record)
+	return []string{id}
 }
 
-func populateShipmentsOnSORelated(ctx context.Context, parent any, _ map[string]any) {
+func populatePickOnSORelated(ctx context.Context, parent any, loaded map[string]any) {
 	so := parent.(*apiresource.SalesOrder)
-	related := ensureSORelated(so)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSalesOrder, so.ID, "related_shipments")
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeSalesOrder, so.ID, "related_pick_id")
+	if id == "" {
+		return
+	}
+	v, ok := loaded[id]
 	if !ok {
 		return
 	}
-	related.Shipments = v.(*apiresource.List[apiresource.Record])
+	p := v.(*apiresource.Pick)
+	rec := apiresource.NewRecord(id, constants.RecordTypePick)
+	rec.Number = &p.Number
+	status := openClosedStatus(p.FinishedAt)
+	rec.Status = &status
+	ensureSORelated(so).Pick = rec
+}
+
+func extractProductionRunIDFromSORelated(ctx context.Context, parent any) []string {
+	so := parent.(*apiresource.SalesOrder)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeSalesOrder, so.ID, "related_production_run_id")
+	if id == "" {
+		return nil
+	}
+	return []string{id}
+}
+
+func populateProductionRunOnSORelated(ctx context.Context, parent any, loaded map[string]any) {
+	so := parent.(*apiresource.SalesOrder)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeSalesOrder, so.ID, "related_production_run_id")
+	if id == "" {
+		return
+	}
+	v, ok := loaded[id]
+	if !ok {
+		return
+	}
+	pr := v.(*apiresource.ProductionRunDetail)
+	rec := apiresource.NewRecord(id, constants.RecordTypeProductionRun)
+	rec.Number = &pr.Number
+	status := openClosedStatus(pr.CompletedAt)
+	rec.Status = &status
+	ensureSORelated(so).ProductionRun = rec
+}
+
+func extractShipmentIDsFromSORelated(ctx context.Context, parent any) []string {
+	so := parent.(*apiresource.SalesOrder)
+	ids, _ := resourcekit.GetLoadMeta(ctx).GetStrings(constants.ObjectTypeSalesOrder, so.ID, "related_shipment_ids")
+	return ids
+}
+
+func populateShipmentsOnSORelated(ctx context.Context, parent any, loaded map[string]any) {
+	so := parent.(*apiresource.SalesOrder)
+	ids, _ := resourcekit.GetLoadMeta(ctx).GetStrings(constants.ObjectTypeSalesOrder, so.ID, "related_shipment_ids")
+	if len(ids) == 0 {
+		return
+	}
+	records := make([]apiresource.Record, 0, len(ids))
+	for _, id := range ids {
+		v, ok := loaded[id]
+		if !ok {
+			continue
+		}
+		s := v.(*apiresource.Shipment)
+		rec := apiresource.NewRecord(id, constants.RecordTypeShipment)
+		rec.Number = &s.Number
+		status := string(s.Status)
+		rec.Status = &status
+		records = append(records, *rec)
+	}
+	if len(records) == 0 {
+		return
+	}
+	ensureSORelated(so).Shipments = apiresource.NewList(records, apiresource.PageInfo{})
 }
 
 func extractCustomerIDFromSO(ctx context.Context, parent any) []string {

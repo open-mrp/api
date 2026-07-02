@@ -88,5 +88,8 @@ func requestLogFromProto(rl *pb.RequestLogInfo) *apiresource.RequestLog {
 		result.Actor = apiresource.NewActor(rl.Actor.Id, actorType, rl.Actor.Name, handle)
 	}
 
+	// Never expose internal infrastructure (internal listener host, pod IP) for agent requests — including when this request_log is embedded as another resource's sub-resource (e.g. an audit event's "request").
+	result.ScrubInternalInfra(rl.IdentityType)
+
 	return result
 }

@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -21,13 +22,15 @@ type RetrieveRequestLogEndpoint struct{}
 
 func (e *RetrieveRequestLogEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveRequestLogRequest, *apiresource.RequestLog] {
 	return (&apiendpoint.APIEndpoint[*RetrieveRequestLogRequest, *apiresource.RequestLog]{
-		Title:             "Retrieve Request Log",
-		Method:            http.MethodGet,
-		Route:             "/v1/core/request-logs/{id}",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
+		Title:               "Retrieve Request Log",
+		Method:              http.MethodGet,
+		Route:               "/v1/core/request-logs/{id}",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainRequestLogs, Action: types.ActionRead}},
+		Preview:             true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveRequestLogRequest) (*apiresource.RequestLog, *apierror.APIError) {
 			return svc.(RequestLogSvc).GetRequestLog
 		},

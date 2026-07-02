@@ -33,14 +33,12 @@ func LoadProperties(ctx context.Context, ids []string) (map[string]any, *apierro
 	for _, p := range resp.Properties {
 		out[p.Id] = PropertyFromProto(p)
 
-		if len(p.Attributes) > 0 {
-			attrs := make([]apiresource.Attribute, len(p.Attributes))
-			for i, a := range p.Attributes {
-				attrs[i] = *AttributeFromProto(a)
-			}
-			meta.Set(constants.ObjectTypeProperty, p.Id, "attributes_list",
-				apiresource.NewList(attrs, apiresource.PageInfo{}))
+		attrs := make([]apiresource.Attribute, len(p.Attributes))
+		for i, a := range p.Attributes {
+			attrs[i] = *AttributeFromProto(a)
 		}
+		meta.Set(constants.ObjectTypeProperty, p.Id, "attributes_list",
+			apiresource.NewList(attrs, apiresource.PageInfo{}))
 	}
 	return out, nil
 }

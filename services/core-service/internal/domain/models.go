@@ -106,6 +106,21 @@ type CustomerByEmail struct {
 	UserName              string
 }
 
+// ContactMatch is an account user matched by email on an account the caller has a relationship with — one of its customers, suppliers, or its own account. Relationship is "customer", "supplier", or "self".
+type ContactMatch struct {
+	AccountUserID string
+	UserID        string
+	AccountID     string
+	RoleID        *string
+	DepartmentID  *string
+	StatusCode    string
+	LastUsedAt    *time.Time
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	Email         string
+	Relationship  string
+}
+
 // UserRecord represents a row from the user table.
 type UserRecord struct {
 	ID             string

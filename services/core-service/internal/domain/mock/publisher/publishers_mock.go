@@ -56,6 +56,96 @@ func (mr *MockNotificationPublisherMockRecorder) PublishSendEmail(ctx, data any)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishSendEmail", reflect.TypeOf((*MockNotificationPublisher)(nil).PublishSendEmail), ctx, data)
 }
 
+// MockSalesOrderEventPublisher is a mock of SalesOrderEventPublisher interface.
+type MockSalesOrderEventPublisher struct {
+	ctrl     *gomock.Controller
+	recorder *MockSalesOrderEventPublisherMockRecorder
+	isgomock struct{}
+}
+
+// MockSalesOrderEventPublisherMockRecorder is the mock recorder for MockSalesOrderEventPublisher.
+type MockSalesOrderEventPublisherMockRecorder struct {
+	mock *MockSalesOrderEventPublisher
+}
+
+// NewMockSalesOrderEventPublisher creates a new mock instance.
+func NewMockSalesOrderEventPublisher(ctrl *gomock.Controller) *MockSalesOrderEventPublisher {
+	mock := &MockSalesOrderEventPublisher{ctrl: ctrl}
+	mock.recorder = &MockSalesOrderEventPublisherMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockSalesOrderEventPublisher) EXPECT() *MockSalesOrderEventPublisherMockRecorder {
+	return m.recorder
+}
+
+// PublishSalesOrderCreated mocks base method.
+func (m *MockSalesOrderEventPublisher) PublishSalesOrderCreated(ctx context.Context, data messaging.SalesOrderCreatedData) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PublishSalesOrderCreated", ctx, data)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// PublishSalesOrderCreated indicates an expected call of PublishSalesOrderCreated.
+func (mr *MockSalesOrderEventPublisherMockRecorder) PublishSalesOrderCreated(ctx, data any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishSalesOrderCreated", reflect.TypeOf((*MockSalesOrderEventPublisher)(nil).PublishSalesOrderCreated), ctx, data)
+}
+
+// MockHubspotSyncPublisher is a mock of HubspotSyncPublisher interface.
+type MockHubspotSyncPublisher struct {
+	ctrl     *gomock.Controller
+	recorder *MockHubspotSyncPublisherMockRecorder
+	isgomock struct{}
+}
+
+// MockHubspotSyncPublisherMockRecorder is the mock recorder for MockHubspotSyncPublisher.
+type MockHubspotSyncPublisherMockRecorder struct {
+	mock *MockHubspotSyncPublisher
+}
+
+// NewMockHubspotSyncPublisher creates a new mock instance.
+func NewMockHubspotSyncPublisher(ctrl *gomock.Controller) *MockHubspotSyncPublisher {
+	mock := &MockHubspotSyncPublisher{ctrl: ctrl}
+	mock.recorder = &MockHubspotSyncPublisherMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockHubspotSyncPublisher) EXPECT() *MockHubspotSyncPublisherMockRecorder {
+	return m.recorder
+}
+
+// PublishExecute mocks base method.
+func (m *MockHubspotSyncPublisher) PublishExecute(ctx context.Context, data messaging.HubspotSyncCommandData) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PublishExecute", ctx, data)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// PublishExecute indicates an expected call of PublishExecute.
+func (mr *MockHubspotSyncPublisherMockRecorder) PublishExecute(ctx, data any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishExecute", reflect.TypeOf((*MockHubspotSyncPublisher)(nil).PublishExecute), ctx, data)
+}
+
+// PublishPreview mocks base method.
+func (m *MockHubspotSyncPublisher) PublishPreview(ctx context.Context, data messaging.HubspotSyncCommandData) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PublishPreview", ctx, data)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// PublishPreview indicates an expected call of PublishPreview.
+func (mr *MockHubspotSyncPublisherMockRecorder) PublishPreview(ctx, data any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishPreview", reflect.TypeOf((*MockHubspotSyncPublisher)(nil).PublishPreview), ctx, data)
+}
+
 // MockBillingPublisher is a mock of BillingPublisher interface.
 type MockBillingPublisher struct {
 	ctrl     *gomock.Controller

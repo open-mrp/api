@@ -1,7 +1,7 @@
 -- Agent Definition queries
 
 -- name: GetAgentDefinitionByID :one
-SELECT * FROM agent_definition WHERE id = $1;
+SELECT * FROM agent_definition WHERE id = $1 AND is_active = true;
 
 -- name: GetAgentDefinitionBySlug :one
 SELECT * FROM agent_definition WHERE slug = $1;
@@ -17,11 +17,11 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
 UPDATE agent_definition SET
     name = COALESCE(sqlc.narg('name'), name),
     slug = COALESCE(sqlc.narg('slug'), slug),
-    description = COALESCE(sqlc.narg('description'), description),
+    description = CASE WHEN sqlc.arg('clear_description')::boolean THEN NULL ELSE COALESCE(sqlc.narg('description'), description) END,
     category_code = COALESCE(sqlc.narg('category_code'), category_code),
     trigger_type = COALESCE(sqlc.narg('trigger_type'), trigger_type),
     config = CASE WHEN sqlc.arg('update_config')::boolean THEN sqlc.arg('new_config') ELSE config END,
-    role_id = COALESCE(sqlc.narg('role_id'), role_id),
+    role_id = CASE WHEN sqlc.arg('clear_role_id')::boolean THEN NULL ELSE COALESCE(sqlc.narg('role_id'), role_id) END,
     updated_at = now()
 WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id');
 
@@ -72,39 +72,23 @@ LIMIT @lim;
 SELECT * FROM agent_definition
 WHERE slug = $1 AND (account_id IS NULL OR account_id = $2) AND is_active = true;
 
--- Tool Definition queries
-
--- name: GetToolDefinitionByID :one
-SELECT * FROM tool_definition WHERE id = $1;
-
--- name: ListToolGroups :many
-SELECT * FROM tool_group ORDER BY sort_order ASC, name ASC;
-
--- name: ListToolDefinitions :many
-SELECT td.*, tg.name AS group_name, tg.slug AS group_slug
-FROM tool_definition td
-LEFT JOIN tool_group tg ON tg.id = td.tool_group_id
-ORDER BY tg.sort_order ASC, td.display_name ASC;
-
 -- Agent Definition Tool queries
+-- Tool definitions (built-in tools) live in the code catalog (agents.BuiltinTools);
+-- agent_definition_tool references them by slug. Display metadata is resolved from
+-- the catalog, so these queries only touch agent_definition_tool.
 
 -- name: InsertAgentDefinitionTool :exec
-INSERT INTO agent_definition_tool (id, agent_definition_id, tool_definition_id, config, sort_order, require_review)
+INSERT INTO agent_definition_tool (id, agent_definition_id, tool_slug, config, sort_order, require_review)
 VALUES ($1, $2, $3, $4, $5, $6);
 
 -- name: DeleteAgentDefinitionToolsByAgentID :exec
 DELETE FROM agent_definition_tool WHERE agent_definition_id = $1;
 
 -- name: ListToolsByAgentDefinitionID :many
-SELECT adt.id, adt.agent_definition_id, adt.tool_definition_id, adt.config, adt.sort_order, adt.require_review, adt.created_at, adt.updated_at,
-       td.display_name AS tool_display_name, td.description AS tool_description, td.config_schema AS tool_config_schema, td.category AS tool_category,
-       td.slug AS tool_slug, td.input_schema AS tool_input_schema, td.tool_group_id, td.required_permissions,
-       tg.name AS tool_group_name, tg.slug AS tool_group_slug
-FROM agent_definition_tool adt
-JOIN tool_definition td ON td.id = adt.tool_definition_id
-LEFT JOIN tool_group tg ON tg.id = td.tool_group_id
-WHERE adt.agent_definition_id = $1
-ORDER BY adt.sort_order ASC;
+SELECT id, agent_definition_id, tool_slug, config, sort_order, require_review, created_at, updated_at
+FROM agent_definition_tool
+WHERE agent_definition_id = $1
+ORDER BY sort_order ASC;
 
 -- Agent Config queries
 
@@ -124,8 +108,8 @@ UPDATE agent_config SET is_enabled = $1, updated_at = now() WHERE id = $2;
 -- Agent Run queries
 
 -- name: InsertAgentRun :exec
-INSERT INTO agent_run (id, account_id, agent_definition_id, agent_config_id, status_code, trigger_type, input, output, triggered_by_actor_id, triggered_by_identity_type, triggered_by_actor_name)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
+INSERT INTO agent_run (id, account_id, agent_definition_id, agent_config_id, status_code, trigger_type, input, output, triggered_by_actor_id, triggered_by_identity_type, triggered_by_actor_name, conversation_id, trigger_message_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13);
 
 -- name: GetAgentRunByID :one
 SELECT * FROM agent_run WHERE id = $1;
@@ -138,12 +122,45 @@ UPDATE agent_run
 SET status_code = $1, updated_at = now()
 WHERE id = $2;
 
+-- name: MarkAgentRunCancelledByUser :exec
+UPDATE agent_run
+SET status_code = 'cancelled', completed_at = NULL, duration_ms = NULL, updated_at = now()
+WHERE id = $1;
+
+-- name: MarkAgentRunRetrying :one
+-- Atomically move a failed run back to running and bump its retry counter. The status guard makes this
+-- a no-op (returns no rows) when the run isn't failed, preventing double-retry races. Clears the prior
+-- error so a successful re-attempt doesn't leave a stale error_message behind.
+UPDATE agent_run
+SET status_code = 'running', retry_count = retry_count + 1, error_message = NULL, updated_at = now()
+WHERE id = $1 AND status_code = 'failed'
+RETURNING retry_count;
+
+-- name: MarkAgentRunAutoRetrying :one
+-- Bump the retry counter for a run the runner is about to transparently re-enqueue after a transient,
+-- whole-chain-unavailable failure. Unlike MarkAgentRunRetrying (manual path, guarded on 'failed'), this
+-- fires mid-flight before the run is ever marked failed, so it guards on 'running' and leaves the status
+-- 'running' — the run is not surfaced as failed, it is simply re-queued. The guard makes this a no-op
+-- (no rows) if the run already left the running state, preventing a double re-enqueue.
+UPDATE agent_run
+SET retry_count = retry_count + 1, error_message = NULL, updated_at = now()
+WHERE id = $1 AND status_code = 'running'
+RETURNING retry_count;
+
 -- name: UpdateAgentRunCompleted :exec
 UPDATE agent_run
-SET status_code = $1, output = $2, completed_at = now(),
-    duration_ms = $3, total_input_tokens = $4, total_output_tokens = $5,
+SET status_code = $1, output = $2,
+    completed_at = CASE WHEN $1 = 'completed' THEN now() ELSE NULL END,
+    duration_ms = CASE WHEN $1 = 'completed' THEN $3 ELSE NULL END,
+    total_input_tokens = $4, total_output_tokens = $5,
     updated_at = now()
-WHERE id = $6;
+WHERE id = $6 AND status_code != 'cancelled';
+
+-- name: UpdateAgentRunCancelled :exec
+UPDATE agent_run
+SET status_code = 'cancelled', output = $1, total_input_tokens = $2, total_output_tokens = $3,
+    updated_at = now()
+WHERE id = $4;
 
 -- name: UpdateAgentRunFailed :exec
 UPDATE agent_run
@@ -151,10 +168,10 @@ SET status_code = 'failed', error_message = $1, completed_at = now(),
     duration_ms = $2, updated_at = now()
 WHERE id = $3;
 
--- name: UpdateAgentRunAllowedToolSlugs :exec
+-- name: MarkAgentRunDivergedFromConversation :exec
 UPDATE agent_run
-SET allowed_tool_slugs = $1, updated_at = now()
-WHERE id = $2;
+SET diverged_from_conversation = true, updated_at = now()
+WHERE id = $1;
 
 -- Agent Action queries
 
@@ -172,6 +189,16 @@ SELECT * FROM agent_action WHERE agent_run_id = $1 ORDER BY created_at ASC;
 UPDATE agent_action
 SET status_code = $1, output = $2, executed_at = now(), updated_at = now()
 WHERE id = $3;
+
+-- name: MarkAgentActionReviewed :exec
+UPDATE agent_action
+SET status_code = $1,
+    reviewed_at = now(),
+    reviewed_by = $2,
+    reviewed_by_actor_type = $3,
+    reviewed_by_actor_name = $4,
+    updated_at = now()
+WHERE id = $5;
 
 -- Agent Artifact queries
 
@@ -196,73 +223,6 @@ SELECT * FROM agent_memory WHERE id = $1;
 
 -- name: ListAgentMemoriesByAccount :many
 SELECT * FROM agent_memory WHERE account_id = $1 ORDER BY created_at DESC LIMIT $2;
-
--- Agent Alert queries
-
--- name: InsertAgentAlert :exec
-INSERT INTO agent_alert (id, account_id, agent_run_id, agent_action_id, severity_code, status_code, title, message, metadata)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
-
--- name: GetAgentAlertByID :one
-SELECT
-    aa.id, aa.account_id, aa.agent_run_id, aa.agent_action_id,
-    aa.severity_code, aa.status_code, aa.title, aa.message, aa.metadata,
-    aa.acknowledged_at, aa.acknowledged_by_actor_id, aa.acknowledged_by_actor_type,
-    aa.acknowledged_by_actor_name, aa.created_at, aa.updated_at,
-    ar.status_code AS run_status_code,
-    ar.trigger_type AS run_trigger_type,
-    ar.created_at AS run_created_at,
-    ar.updated_at AS run_updated_at,
-    act.tool_slug AS action_tool_slug,
-    act.status_code AS action_status_code,
-    act.created_at AS action_created_at,
-    act.updated_at AS action_updated_at
-FROM agent_alert aa
-LEFT JOIN agent_run ar ON ar.id = aa.agent_run_id
-LEFT JOIN agent_action act ON act.id = aa.agent_action_id
-WHERE aa.id = $1;
-
--- name: ListAgentAlertsByAccount :many
-SELECT * FROM agent_alert WHERE account_id = $1 ORDER BY created_at DESC LIMIT $2;
-
--- name: ListAgentAlertsByAccountCursor :many
-SELECT
-    aa.id, aa.account_id, aa.agent_run_id, aa.agent_action_id,
-    aa.severity_code, aa.status_code, aa.title, aa.message, aa.metadata,
-    aa.acknowledged_at, aa.acknowledged_by_actor_id, aa.acknowledged_by_actor_type,
-    aa.acknowledged_by_actor_name, aa.created_at, aa.updated_at,
-    ar.status_code AS run_status_code,
-    ar.trigger_type AS run_trigger_type,
-    ar.created_at AS run_created_at,
-    ar.updated_at AS run_updated_at,
-    act.tool_slug AS action_tool_slug,
-    act.status_code AS action_status_code,
-    act.created_at AS action_created_at,
-    act.updated_at AS action_updated_at
-FROM agent_alert aa
-LEFT JOIN agent_run ar ON ar.id = aa.agent_run_id
-LEFT JOIN agent_action act ON act.id = aa.agent_action_id
-WHERE aa.account_id = @account_id
-  AND (@filter_severity::boolean = false OR aa.severity_code = @severity_code)
-  AND (@filter_status::boolean = false OR aa.status_code = @status_code)
-  AND (@filter_query::boolean = false OR (
-    aa.id ILIKE '%' || @search || '%'
-    OR aa.title ILIKE '%' || @search || '%'
-    OR COALESCE(aa.message, '') ILIKE '%' || @search || '%'
-  ))
-  AND (@has_cursor::boolean = false OR (aa.created_at, aa.id) < (
-    (SELECT cr.created_at FROM agent_alert cr WHERE cr.id = @cursor_id),
-    @cursor_id
-  ))
-ORDER BY aa.created_at DESC, aa.id DESC
-LIMIT @lim;
-
--- name: AcknowledgeAgentAlert :exec
-UPDATE agent_alert
-SET status_code = 'acknowledged', acknowledged_at = now(),
-    acknowledged_by_actor_id = $1, acknowledged_by_actor_type = $2, acknowledged_by_actor_name = $3,
-    updated_at = now()
-WHERE id = $4 AND account_id = $5;
 
 -- Agent Token Usage queries
 
@@ -338,9 +298,15 @@ LIMIT $3;
 
 -- name: UpdateAgentMemory :exec
 UPDATE agent_memory
-SET category = $2, content = $3, metadata = $4, entity_type = $5,
-    entity_id = $6, importance = $7, expires_at = $8, updated_at = now()
-WHERE id = $1 AND account_id = $9;
+SET category = COALESCE(sqlc.narg('category'), category),
+    content = COALESCE(sqlc.narg('content'), content),
+    metadata = COALESCE(sqlc.narg('metadata'), metadata),
+    entity_type = CASE WHEN sqlc.arg('clear_entity')::boolean THEN NULL ELSE COALESCE(sqlc.narg('entity_type'), entity_type) END,
+    entity_id = CASE WHEN sqlc.arg('clear_entity')::boolean THEN NULL ELSE COALESCE(sqlc.narg('entity_id'), entity_id) END,
+    importance = COALESCE(sqlc.narg('importance'), importance),
+    expires_at = CASE WHEN sqlc.arg('clear_expires_at')::boolean THEN NULL ELSE COALESCE(sqlc.narg('expires_at'), expires_at) END,
+    updated_at = now()
+WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id');
 
 -- name: DeleteAgentMemory :exec
 DELETE FROM agent_memory WHERE id = $1 AND account_id = $2;
@@ -423,7 +389,7 @@ SELECT COALESCE(MAX(sequence), -1)::int FROM agent_run_event WHERE agent_run_id 
 
 -- Run lifecycle queries
 
--- name: UpdateAgentRunStarted :exec
+-- name: UpdateAgentRunStarted :execrows
 UPDATE agent_run
 SET status_code = 'running', started_at = now(), updated_at = now()
-WHERE id = $1;
+WHERE id = $1 AND status_code = 'pending';

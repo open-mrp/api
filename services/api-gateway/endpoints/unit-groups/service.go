@@ -15,6 +15,7 @@ import (
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -223,7 +224,7 @@ func (m *unitGroupSvcImpl) CreateUnitGroupUnit(ctx context.Context, req *CreateU
 		UnitId:             req.UnitID,
 		DiscountPercentage: discountPct,
 		DiscountFixed:      discountFixed,
-		IsVisible:          isVisible,
+		IsVisible:          proto.Bool(isVisible),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, unitGroupSvcTracer, "service.unit_groups.create_unit", domain.ServiceName,
@@ -254,7 +255,7 @@ func (m *unitGroupSvcImpl) UpdateUnitGroupUnit(ctx context.Context, req *UpdateU
 		pbReq.DiscountFixed = strconv.FormatFloat(v, 'f', -1, 64)
 	}
 	if v, ok := req.CustomerPortalVisibility.Value(); ok {
-		pbReq.IsVisible = v == constants.CustomerPortalVisibilityVisible
+		pbReq.IsVisible = proto.Bool(v == constants.CustomerPortalVisibilityVisible)
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, unitGroupSvcTracer, "service.unit_groups.update_unit", domain.ServiceName,

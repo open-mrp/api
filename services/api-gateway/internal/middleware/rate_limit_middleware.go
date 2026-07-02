@@ -187,12 +187,13 @@ func RateLimitMiddlewareWithConfig(limit int, window time.Duration, trustedProxy
 func rateLimitMiddleware(rateLimiter *RateLimiter, trustedProxyHops int) func(http.HandlerFunc) http.HandlerFunc {
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
-			// Skip rate limiting for health checks and test mode.
+			// Skip rate limiting for health checks and non-production modes. In development every request shares one localhost IP, so the per-IP limit would throttle normal app usage
+			// (a single chat page fires a burst of messaging queries, and React Query retries each rejected one — a self-sustaining storm); in test it would slow e2e runs.
 			if r.URL.Path == "/healthz" {
 				next.ServeHTTP(w, r)
 				return
 			}
-			if platform, ok := appctx.GetPlatformFromContext(r.Context()); ok && platform.IsTest() {
+			if platform, ok := appctx.GetPlatformFromContext(r.Context()); ok && (platform.IsTest() || platform.IsDevelopment()) {
 				next.ServeHTTP(w, r)
 				return
 			}

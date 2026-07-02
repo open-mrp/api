@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+// Package core defines the gRPC service for the HubSpot backfill/reconciliation feature.
+package core;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "shared/proto/core;core";
+
+service CoreHubspotSyncService {
+  // StartHubspotBackfill creates a backfill job and kicks off the read-only preview pass.
+  rpc StartHubspotBackfill(StartHubspotBackfillRequest) returns (HubspotSyncJobResponse);
+  // GetCurrentHubspotSyncJob returns the account's most recent backfill job (for resuming after a refresh).
+  rpc GetCurrentHubspotSyncJob(GetCurrentHubspotSyncJobRequest) returns (HubspotSyncJobResponse);
+  // GetHubspotSyncJob returns a backfill job (status + dry-run report).
+  rpc GetHubspotSyncJob(GetHubspotSyncJobRequest) returns (HubspotSyncJobResponse);
+  // ListHubspotCompanyReviews returns a job's company-match review queue.
+  rpc ListHubspotCompanyReviews(ListHubspotCompanyReviewsRequest) returns (ListHubspotCompanyReviewsResponse);
+  // ResolveHubspotCompanyReview records a human resolution (link / create_new / skip) for one review.
+  rpc ResolveHubspotCompanyReview(ResolveHubspotCompanyReviewRequest) returns (HubspotCompanyReviewResponse);
+  // ExecuteHubspotSync kicks off the write phase for a reviewed job.
+  rpc ExecuteHubspotSync(ExecuteHubspotSyncRequest) returns (HubspotSyncJobResponse);
+}
+
+message HubspotSyncJobInfo {
+  string id = 1;
+  string status = 2;
+  bool dry_run = 3;
+  optional google.protobuf.Timestamp golive_cutoff_at = 4;
+  // JSON-encoded dry-run report (PreviewCounts).
+  string counts_json = 5;
+  optional string last_error = 6;
+  optional google.protobuf.Timestamp started_at = 7;
+  optional google.protobuf.Timestamp completed_at = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+message HubspotCompanyReviewInfo {
+  string id = 1;
+  string job_id = 2;
+  string augno_customer_id = 3;
+  string customer_name = 4;
+  // JSON-encoded array of candidate HubSpot companies ([{hubspot_id,name,domain}]).
+  string candidate_matches_json = 5;
+  string status = 6;
+  optional string resolution = 7;
+  optional string resolved_hubspot_id = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+message StartHubspotBackfillRequest {
+  bool dry_run = 1;
+  optional google.protobuf.Timestamp golive_cutoff_at = 2;
+}
+
+message GetCurrentHubspotSyncJobRequest {}
+
+message GetHubspotSyncJobRequest {
+  string id = 1;
+}
+
+message HubspotSyncJobResponse {
+  HubspotSyncJobInfo job = 1;
+}
+
+message ListHubspotCompanyReviewsRequest {
+  string job_id = 1;
+  optional string status = 2;
+}
+
+message ListHubspotCompanyReviewsResponse {
+  repeated HubspotCompanyReviewInfo reviews = 1;
+}
+
+message ResolveHubspotCompanyReviewRequest {
+  string job_id = 1;
+  string review_id = 2;
+  // One of: link, create_new, skip.
+  string action = 3;
+  optional string resolved_hubspot_id = 4;
+}
+
+message HubspotCompanyReviewResponse {
+  HubspotCompanyReviewInfo review = 1;
+}
+
+message ExecuteHubspotSyncRequest {
+  string id = 1;
+}

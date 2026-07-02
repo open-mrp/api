@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -37,14 +38,15 @@ type CreateProductTypeEndpoint struct{}
 
 func (e *CreateProductTypeEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductTypeRequest, *apiresource.ProductType] {
 	return (&apiendpoint.APIEndpoint[*CreateProductTypeRequest, *apiresource.ProductType]{
-		Title:             "Create Product Type",
-		Method:            http.MethodPost,
-		ContentType:       "application/json",
-		Route:             "/v1/catalog/product-types",
-		SuccessStatusCode: http.StatusCreated,
-		Public:            false,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeProductType,
+		Title:               "Create Product Type",
+		Method:              http.MethodPost,
+		ContentType:         "application/json",
+		Route:               "/v1/catalog/product-types",
+		SuccessStatusCode:   http.StatusCreated,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProductTypes, Action: types.ActionCreate}},
+		ObjectType:          constants.ObjectTypeProductType,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateProductTypeRequest) (*apiresource.ProductType, *apierror.APIError) {
 			return svc.(ProductTypeSvc).CreateProductType
 		},

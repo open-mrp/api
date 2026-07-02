@@ -34,6 +34,42 @@ func LoadCustomers(ctx context.Context, ids []string) (map[string]any, *apierror
 	return out, nil
 }
 
+// HydrateCustomerEntities fills in the display Name (customer name) and Handle (customer number) on entity references that point to a customer, which the bare entity_type/entity_id pair cannot supply. The entities are mutated in place via one batched BatchGetCustomersByIDs call. Best-effort: nil entries, non-customer entities, unresolved/deleted ids, or a failed customer fetch leave the entity as a plain id/type reference.
+func HydrateCustomerEntities(ctx context.Context, entities []*apiresource.Entity) {
+	seen := make(map[string]struct{})
+	ids := make([]string, 0)
+	for _, e := range entities {
+		if e == nil || e.Type != constants.ObjectTypeCustomer {
+			continue
+		}
+		if _, ok := seen[e.ID]; ok {
+			continue
+		}
+		seen[e.ID] = struct{}{}
+		ids = append(ids, e.ID)
+	}
+	if len(ids) == 0 {
+		return
+	}
+	loaded, apiErr := LoadCustomers(ctx, ids)
+	if apiErr != nil {
+		return
+	}
+	for _, e := range entities {
+		if e == nil || e.Type != constants.ObjectTypeCustomer {
+			continue
+		}
+		c, ok := loaded[e.ID].(*apiresource.Customer)
+		if !ok {
+			continue
+		}
+		name := c.Name
+		number := c.Number
+		e.Name = &name
+		e.Handle = &number
+	}
+}
+
 func customerReferenceFromProto(c *pb.CustomerProto) *apiresource.Customer {
 	edi := constants.EDIStatusDisabled
 	if c.IsEdiEnabled {

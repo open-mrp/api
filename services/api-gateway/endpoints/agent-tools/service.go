@@ -51,10 +51,12 @@ func NewAgentToolSvc(config *AgentToolSvcConfig) AgentToolSvc {
 }
 
 func (m *agentToolSvcImpl) ListTools(ctx context.Context, req *ListToolsRequest) (*apiresource.List[apiresource.AvailableTool], *apierror.APIError) {
+	paginateResource := "tools"
 	pbReq := &pb.ListAvailableToolsRequest{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
+		Cursor:           req.Cursor,
+		Limit:            req.Limit,
+		Query:            req.Query,
+		PaginateResource: &paginateResource,
 	}
 
 	resp, rpcErr := grpcutil.CallRPC(ctx, toolSvcTracer, "service.agent_tools.list", domain.ServiceName,
@@ -74,10 +76,12 @@ func (m *agentToolSvcImpl) ListTools(ctx context.Context, req *ListToolsRequest)
 }
 
 func (m *agentToolSvcImpl) ListToolGroups(ctx context.Context, req *ListToolGroupsRequest) (*apiresource.List[apiresource.ToolGroup], *apierror.APIError) {
+	paginateResource := "tool_groups"
 	pbReq := &pb.ListAvailableToolsRequest{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
+		Cursor:           req.Cursor,
+		Limit:            req.Limit,
+		Query:            req.Query,
+		PaginateResource: &paginateResource,
 	}
 
 	resp, rpcErr := grpcutil.CallRPC(ctx, toolSvcTracer, "service.agent_tools.list_groups", domain.ServiceName,
@@ -118,14 +122,21 @@ func availableToolFromProto(t *pb.AvailableToolInfo) apiresource.AvailableTool {
 		perms = []string{}
 	}
 
+	var roleType *string
+	if t.RequiredRoleType != "" {
+		roleType = &t.RequiredRoleType
+	}
+
 	return apiresource.AvailableTool{
-		ID:                  t.Id,
+		Slug:                t.Slug,
 		Object:              constants.ObjectTypeAvailableTool,
 		Name:                t.DisplayName,
 		Description:         &t.Description,
 		ConfigSchema:        json.RawMessage(t.ConfigSchemaJson),
 		Category:            t.Category,
 		RequiredPermissions: perms,
+		RequiredRoleType:    roleType,
+		Mutating:            t.Mutating,
 	}
 }
 

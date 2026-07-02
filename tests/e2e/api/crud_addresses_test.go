@@ -80,6 +80,12 @@ func TestAddresses_CRUD(t *testing.T) {
 	assert.Equal(t, newName, jsonField(updated, "name"))
 	assert.Equal(t, newPhone, jsonField(updated, "phone"))
 
+	emptyNameStatus, emptyNameBody, err := apiClient.Patch(addressesPath+"/"+id, map[string]any{
+		"name": "",
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 400, emptyNameStatus, emptyNameBody)
+
 	// DELETE
 	delStatus, delBody, err := apiClient.Delete(addressesPath + "/" + id)
 	require.NoError(t, err)

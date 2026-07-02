@@ -497,6 +497,30 @@ func (r *accountUserRepoImpl) Update(ctx context.Context, accountUserID string, 
 	return nil
 }
 
+func (r *accountUserRepoImpl) ReactivateRemovedAccountUser(ctx context.Context, accountID, userID string, roleID, departmentID *string) (string, *apierror.APIError) {
+	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.reactivate_removed")
+	defer span.End()
+
+	removedID, err := r.queries.FindRemovedAccountUserIDByAccountAndUserID(ctx, sqlc.FindRemovedAccountUserIDByAccountAndUserIDParams{
+		AccountID: accountID,
+		UserID:    userID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return "", tracing.Trace(span, apiErr)
+	}
+
+	if err := r.queries.ReactivateRemovedAccountUser(ctx, sqlc.ReactivateRemovedAccountUserParams{
+		RoleID:       db.NullStringPtr(roleID),
+		DepartmentID: db.NullStringPtr(departmentID),
+		AccountID:    accountID,
+		UserID:       userID,
+	}); err != nil {
+		return "", tracing.Trace(span, db.MapSQLError(err))
+	}
+
+	return removedID, nil
+}
+
 func (r *accountUserRepoImpl) SoftDelete(ctx context.Context, accountUserID string) *apierror.APIError {
 	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.soft_delete")
 	defer span.End()

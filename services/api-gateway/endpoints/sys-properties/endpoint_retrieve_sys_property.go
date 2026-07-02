@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -29,6 +30,9 @@ func (e *RetrieveSysPropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeSysProperty,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainSystemProperties, Action: types.ActionRead},
+		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveSysPropertyRequest) (*apiresource.SysProperty, *apierror.APIError) {
 			return svc.(SysPropertySvc).GetSysProperty
 		},

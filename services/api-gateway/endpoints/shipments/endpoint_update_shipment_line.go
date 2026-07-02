@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	types "github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
 )
@@ -37,13 +38,14 @@ type UpdateShipmentLineEndpoint struct{}
 
 func (e *UpdateShipmentLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateShipmentLineRequest, *apiresource.ShipmentLine] {
 	return (&apiendpoint.APIEndpoint[*UpdateShipmentLineRequest, *apiresource.ShipmentLine]{
-		Title:             "Update Shipment Line",
-		Method:            http.MethodPatch,
-		Route:             "/v1/operations/shipments/{shipment_id}/lines/{id}",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
+		Title:               "Update Shipment Line",
+		Method:              http.MethodPatch,
+		Route:               "/v1/operations/shipments/{shipment_id}/lines/{id}",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainShipments, Action: types.ActionUpdate}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateShipmentLineRequest) (*apiresource.ShipmentLine, *apierror.APIError) {
 			return svc.(ShipmentSvc).UpdateShipmentLine
 		},

@@ -994,6 +994,38 @@ func (h *gRPCHandler) GetCustomerByEmail(ctx context.Context, req *pb.GetCustome
 	}, nil
 }
 
+func (h *gRPCHandler) FindContactsByEmail(ctx context.Context, req *pb.FindContactsByEmailRequest) (*pb.FindContactsByEmailResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	matches, apiErr := h.productSvc.FindContactsByEmail(ctx, req.Email)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	resp := &pb.FindContactsByEmailResponse{Matches: make([]*pb.ContactMatchInfo, 0, len(matches))}
+	for _, m := range matches {
+		info := &pb.ContactMatchInfo{
+			AccountUserId: m.AccountUserID,
+			UserId:        m.UserID,
+			AccountId:     m.AccountID,
+			RoleId:        m.RoleID,
+			DepartmentId:  m.DepartmentID,
+			StatusCode:    m.StatusCode,
+			CreatedAt:     timestamppb.New(m.CreatedAt),
+			UpdatedAt:     timestamppb.New(m.UpdatedAt),
+			Email:         m.Email,
+			Relationship:  m.Relationship,
+		}
+		if m.LastUsedAt != nil {
+			info.LastUsedAt = timestamppb.New(*m.LastUsedAt)
+		}
+		resp.Matches = append(resp.Matches, info)
+	}
+	return resp, nil
+}
+
 func paymentTermToProto(pt *domain.PaymentTerm) *pb.PaymentTermInfo {
 	return &pb.PaymentTermInfo{
 		Id:        pt.ID,

@@ -35,7 +35,7 @@ func (*AccountUsersEndpointGroup) Materialize(config *AccountUsersEndpointGroupC
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
-		Title:        "Account Users Management",
+		Title:        "Account Users",
 		Description:  "List and manage account users.",
 		ResourceType: &apiresource.AccountUser{},
 	}

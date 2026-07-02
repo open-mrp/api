@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -23,14 +24,15 @@ type SyncOptionsEndpoint struct{}
 
 func (e *SyncOptionsEndpoint) Materialize() *apiendpoint.APIEndpoint[*SyncOptionsRequest, *apiresource.Carrier] {
 	return (&apiendpoint.APIEndpoint[*SyncOptionsRequest, *apiresource.Carrier]{
-		Title:             "Sync Carrier Service Levels",
-		Method:            http.MethodPost,
-		ContentType:       "application/json",
-		Route:             "/v1/operations/carriers/{id}/actions/sync-options",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeCarrier,
+		Title:               "Sync Carrier Service Levels",
+		Method:              http.MethodPost,
+		ContentType:         "application/json",
+		Route:               "/v1/operations/carriers/{id}/actions/sync-options",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainCarriers, Action: types.ActionUpdate}},
+		ObjectType:          constants.ObjectTypeCarrier,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *SyncOptionsRequest) (*apiresource.Carrier, *apierror.APIError) {
 			return svc.(CarrierSvc).SyncOptions
 		},

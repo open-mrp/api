@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -22,13 +23,15 @@ type DeleteLocationEndpoint struct{}
 
 func (e *DeleteLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteLocationRequest, *apiresource.EmptyResource] {
 	return (&apiendpoint.APIEndpoint[*DeleteLocationRequest, *apiresource.EmptyResource]{
-		Title:             "Delete Location",
-		Method:            http.MethodDelete,
-		ContentType:       "application/json",
-		Route:             "/v1/operations/locations/{id}",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
+		Title:               "Delete Location",
+		Method:              http.MethodDelete,
+		ContentType:         "application/json",
+		Route:               "/v1/operations/locations/{id}",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainLocations, Action: types.ActionDelete}},
+		Preview:             true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteLocationRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(LocationSvc).DeleteLocation
 		},

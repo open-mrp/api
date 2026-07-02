@@ -74,6 +74,17 @@ var purgeTargets = []tableColumn{
 	{"transaction", "account_id"},
 	{"unit", "account_id"},
 	{"unit_group", "account_id"},
+	// Messaging substrate (in-app notifications, announcements, chat). announcement uses a nullable account_id (NULL = platform-wide), so this only removes account-scoped rows.
+	{"announcement", "account_id"},
+	{"conversation", "account_id"},
+	{"conversation_dm_key", "account_id"},
+	{"conversation_participant", "account_id"},
+	{"message", "account_id"},
+	{"message_attachment", "account_id"},
+	{"messaging_block", "account_id"},
+	{"notification", "account_id"},
+	{"notification_preference", "account_id"},
+	{"scheduled_message", "account_id"},
 }
 
 type PurgeRepo struct {
@@ -110,6 +121,9 @@ var prePurgeJoinDeletes = []string{
 	"DELETE r FROM rate r JOIN item i ON r.id = i.unit_cost_id WHERE i.account_id = ?",
 	"DELETE r FROM rate r JOIN item i ON r.id = i.burn_rate_id WHERE i.account_id = ?",
 	"DELETE ugu FROM unit_group_unit ugu JOIN unit_group ug ON ugu.unit_group_id = ug.id WHERE ug.account_id = ?",
+	// Messaging receipt tables have no account_id column; delete via their account-scoped parents.
+	"DELETE mr FROM message_receipt mr JOIN message m ON mr.message_id = m.id WHERE m.account_id = ?",
+	"DELETE ar FROM announcement_receipt ar JOIN announcement a ON ar.announcement_id = a.id WHERE a.account_id = ?",
 }
 
 func (r *PurgeRepo) PurgeAccountData(ctx context.Context, accountID string) error {

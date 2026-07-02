@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	types "github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -31,7 +32,7 @@ func (*UpdateTransactionAllocationRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateTransactionAllocationRequest)
 }
 
-// Partially updates a transaction allocation.
+// Updates the amount of a transaction allocation applied to its invoice.
 type UpdateTransactionAllocationEndpoint struct{}
 
 func (e *UpdateTransactionAllocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateTransactionAllocationRequest, *apiresource.TransactionAllocation] {
@@ -43,7 +44,10 @@ func (e *UpdateTransactionAllocationEndpoint) Materialize() *apiendpoint.APIEndp
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
-		ObjectType:        constants.ObjectTypeTransactionAllocation,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainSettlements, Action: types.ActionUpdate},
+		},
+		ObjectType: constants.ObjectTypeTransactionAllocation,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateTransactionAllocationRequest) (*apiresource.TransactionAllocation, *apierror.APIError) {
 			return svc.(TransactionAllocationSvc).UpdateTransactionAllocation
 		},

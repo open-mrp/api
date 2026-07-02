@@ -74,8 +74,11 @@ func NewRouter() *router {
 			if pathMatches {
 				allowedMethods = append(allowedMethods, route.Method)
 				if route.Method == req.Method {
-					matchedRoute = &router.routes[i]
-					matchedParams = params
+					// Prefer the most specific match: a literal segment (e.g. /sync/current) must win over a parameterized one (/sync/{id}) regardless of registration order, otherwise a `{id}` route silently shadows a sibling static route.
+					if matchedRoute == nil || len(route.PathParams) < len(matchedRoute.PathParams) {
+						matchedRoute = &router.routes[i]
+						matchedParams = params
+					}
 				} else if req.Method == http.MethodOptions && matchedRoute == nil {
 					matchedRoute = &router.routes[i]
 					matchedParams = params

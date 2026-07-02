@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/augno/api/services/auth-service/pkg/types"
+
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
@@ -37,6 +39,9 @@ func (e *ListSuppliersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSupp
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainSuppliers, Action: types.ActionRead},
+		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListSuppliersRequest) (*apiresource.List[apiresource.SupplierSummary], *apierror.APIError) {
 			return svc.(SupplierSvc).ListSuppliers
 		},

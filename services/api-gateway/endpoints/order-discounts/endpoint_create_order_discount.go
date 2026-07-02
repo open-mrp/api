@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/augno/api/services/auth-service/pkg/types"
+
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
@@ -14,7 +16,7 @@ import (
 
 // Request to create an order discount.
 type CreateOrderDiscountRequest struct {
-	// Display name.
+	// Display name of the discount.
 	Name string `json:"name" validate:"required,max=255"`
 	// The code entered to apply this discount to an order.
 	//
@@ -61,6 +63,9 @@ func (e *CreateOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cr
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeOrderDiscount,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainDiscounts, Action: types.ActionCreate},
+		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateOrderDiscountRequest) (*apiresource.OrderDiscount, *apierror.APIError) {
 			return svc.(OrderDiscountSvc).CreateOrderDiscount
 		},

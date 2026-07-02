@@ -20,6 +20,7 @@ type CoreServiceClient struct {
 	Receiving      pb.CoreReceivingServiceClient
 	Shipping       pb.CoreShippingServiceClient
 	ShippingCase   pb.CoreShippingCaseServiceClient
+	HubspotSync    pb.CoreHubspotSyncServiceClient
 	grpcConn       *contracts.GRPCClientConn
 }
 
@@ -41,6 +42,7 @@ func NewCoreServiceClientWithURL(url string) (*CoreServiceClient, error) {
 		Receiving:      pb.NewCoreReceivingServiceClient(conn),
 		Shipping:       pb.NewCoreShippingServiceClient(conn),
 		ShippingCase:   pb.NewCoreShippingCaseServiceClient(conn),
+		HubspotSync:    pb.NewCoreHubspotSyncServiceClient(conn),
 		grpcConn:       grpcConn,
 	}, nil
 }

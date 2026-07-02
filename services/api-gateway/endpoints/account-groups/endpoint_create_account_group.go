@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -55,14 +56,16 @@ type CreateAccountGroupEndpoint struct{}
 
 func (e *CreateAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAccountGroupRequest, *apiresource.AccountGroup] {
 	return (&apiendpoint.APIEndpoint[*CreateAccountGroupRequest, *apiresource.AccountGroup]{
-		Title:             "Create Account Group",
-		Method:            http.MethodPost,
-		ContentType:       "application/json",
-		Route:             "/v1/sales/account-groups",
-		SuccessStatusCode: http.StatusCreated,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeAccountGroup,
+		Title:               "Create Account Group",
+		Method:              http.MethodPost,
+		ContentType:         "application/json",
+		Route:               "/v1/sales/account-groups",
+		SuccessStatusCode:   http.StatusCreated,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainCustomerGroups, Action: types.ActionCreate}},
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeAccountGroup,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateAccountGroupRequest) (*apiresource.AccountGroup, *apierror.APIError) {
 			return svc.(AccountGroupSvc).CreateAccountGroup
 		},

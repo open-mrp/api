@@ -53,6 +53,69 @@ type ShippoClientFactory interface {
 	Build(apiKey string) ShippoClient
 }
 
+// HubspotCompany is the subset of a HubSpot company the sync reads or writes.
+type HubspotCompany struct {
+	ID     string
+	Name   string
+	Domain string
+	// Lifecycle, when non-empty, sets the company's lifecyclestage (e.g. "customer"). Empty leaves it unchanged.
+	Lifecycle string
+}
+
+// HubspotContact is the subset of a HubSpot contact the sync reads or writes.
+type HubspotContact struct {
+	ID        string
+	Email     string
+	FirstName string
+	LastName  string
+	Phone     string
+	// Lifecycle, when non-empty, sets the contact's lifecyclestage. Empty leaves it unchanged.
+	Lifecycle string
+}
+
+// HubspotDeal is the subset of a HubSpot deal the sync reads or writes.
+type HubspotDeal struct {
+	ID   string
+	Name string
+	// Amount is the deal value as a decimal string, written to HubSpot's standard `amount` property.
+	Amount    string
+	CloseDate time.Time
+	// PipelineID and StageID select the deal's pipeline and stage (e.g. Closed Won).
+	PipelineID string
+	StageID    string
+	// SalesOrderID is the Augno order id, stored on the deal's augno_sales_order_id property for idempotent upserts.
+	SalesOrderID string
+}
+
+// HubspotClient performs HubSpot CRM operations for a single account's connected integration.
+type HubspotClient interface {
+	// EnsureDealProperties creates any custom deal properties the sync depends on (e.g. augno_sales_order_id) if absent. Idempotent.
+	EnsureDealProperties(ctx context.Context) *apierror.APIError
+
+	SearchCompaniesByDomain(ctx context.Context, domain string) ([]HubspotCompany, *apierror.APIError)
+	SearchCompaniesByName(ctx context.Context, name string) ([]HubspotCompany, *apierror.APIError)
+	// ListCompanies returns one page of companies and the cursor for the next page ("" when exhausted). Used by the backfill.
+	ListCompanies(ctx context.Context, cursor string) (page []HubspotCompany, next string, err *apierror.APIError)
+	CreateCompany(ctx context.Context, company HubspotCompany) (*HubspotCompany, *apierror.APIError)
+	UpdateCompany(ctx context.Context, id string, company HubspotCompany) *apierror.APIError
+
+	// UpsertContactByEmail creates or updates a contact keyed on email (HubSpot's native dedupe key).
+	UpsertContactByEmail(ctx context.Context, contact HubspotContact) (*HubspotContact, *apierror.APIError)
+
+	// SearchDealBySalesOrderID finds an existing deal by its augno_sales_order_id property, or returns (nil, nil).
+	SearchDealBySalesOrderID(ctx context.Context, salesOrderID string) (*HubspotDeal, *apierror.APIError)
+	CreateDeal(ctx context.Context, deal HubspotDeal) (*HubspotDeal, *apierror.APIError)
+	UpdateDeal(ctx context.Context, id string, deal HubspotDeal) *apierror.APIError
+
+	// Associate links two CRM objects using the default association type (e.g. deals→companies). Types are HubSpot plural object names.
+	Associate(ctx context.Context, fromType, fromID, toType, toID string) *apierror.APIError
+}
+
+// HubspotClientFactory builds HubspotClient instances from a decrypted access token.
+type HubspotClientFactory interface {
+	Build(accessToken string) HubspotClient
+}
+
 // StripeCheckoutSession represents the result of creating a Stripe checkout session.
 type StripeCheckoutSession struct {
 	URL string

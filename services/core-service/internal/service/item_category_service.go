@@ -136,6 +136,10 @@ func (s *itemCategorySvcImpl) BatchGetItemCategoriesByIDs(ctx context.Context, i
 
 		unitGroup, apiErr := repo.GetUnitGroup(ctx, cat.UnitGroupID, allIncludes)
 		if apiErr != nil {
+			// An orphaned unit_group reference (the unit group was deleted after the category was created) must not fail the whole batch and 404 the entire list. Surface the category with a nil unit_group instead.
+			if apierror.IsNotFound(apiErr) {
+				continue
+			}
 			return nil, tracing.Trace(span, apiErr)
 		}
 		cat.UnitGroup = unitGroup
@@ -256,6 +260,19 @@ func (s *itemCategorySvcImpl) CreateItemCategory(ctx context.Context, params dom
 	}
 
 	params.AccountID = identity.Target.AccountID
+
+	// Validate the referenced unit group exists (and belongs to this account)
+	// before creating. Vitess does not enforce this FK at the DB level, so an
+	// unvalidated unit_group_id would otherwise be persisted silently and the
+	// category would render with unit_group=null instead of rejecting the request.
+	if params.UnitGroupID != "" {
+		if _, apiErr := s.repos.NewUnitGroupRepo().Get(ctx, domain.GetUnitGroupParams{
+			AccountID:   params.AccountID,
+			UnitGroupID: params.UnitGroupID,
+		}); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
 
 	meds := s.mediators()
 

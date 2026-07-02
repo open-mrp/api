@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -22,13 +23,14 @@ type GetBatchFlowEndpoint struct{}
 
 func (e *GetBatchFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetBatchFlowRequest, *apiresource.List[apiresource.BatchFlowNode]] {
 	return (&apiendpoint.APIEndpoint[*GetBatchFlowRequest, *apiresource.List[apiresource.BatchFlowNode]]{
-		Title:             "Get Batch Flow",
-		Method:            http.MethodGet,
-		ContentType:       "application/json",
-		Route:             "/v1/operations/batches/{id}/flow",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
+		Title:               "Get Batch Flow",
+		Method:              http.MethodGet,
+		ContentType:         "application/json",
+		Route:               "/v1/operations/batches/{id}/flow",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionRead}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetBatchFlowRequest) (*apiresource.List[apiresource.BatchFlowNode], *apierror.APIError) {
 			return svc.(BatchSvc).GetBatchFlow
 		},

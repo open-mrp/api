@@ -148,20 +148,19 @@ type SalesOrderContacts struct {
 
 // ListSalesOrdersParams holds the parameters for listing sales orders.
 type ListSalesOrdersParams struct {
-	Cursor                *string
-	Limit                 int32
-	Query                 *string
-	StatusCodes           []string
-	ItemIDs               []string
-	ProductLineIDs        []string
-	CustomerIDs           []string
-	CustomerGroupIDs      []string
-	SalesRepIDs           []string
-	StartDate             *string
-	EndDate               *string
-	ExcludeInternalOrders bool
-	AccountID             string
-	BuyerAccountID        *string
+	Cursor           *string
+	Limit            int32
+	Query            *string
+	StatusCodes      []string
+	ItemIDs          []string
+	ProductLineIDs   []string
+	CustomerIDs      []string
+	CustomerGroupIDs []string
+	SalesRepIDs      []string
+	StartDate        *string
+	EndDate          *string
+	AccountID        string
+	BuyerAccountID   *string
 	// Includes to expand (e.g. "lines"); inline-joined fields are always present.
 	Includes []string
 }
@@ -233,8 +232,7 @@ type CreateSalesOrderLineInput struct {
 	ProductSKU         *string
 	ProductDescription *string
 	// UnitPrice is an optional override, honored only for internal actors.
-	UnitPrice     *RateValue
-	EdiLineItemID *string
+	UnitPrice *RateValue
 }
 
 // UpdateSalesOrderParams holds the parameters for updating a sales order.

@@ -128,26 +128,30 @@ func (m *agentMemorySvcImpl) UpdateMemory(ctx context.Context, req *UpdateMemory
 		Id: req.ID,
 	}
 	if v, ok := req.Category.Value(); ok {
-		pbReq.Category = v
+		pbReq.Category = &v
 	}
 	if v, ok := req.Content.Value(); ok {
-		pbReq.Content = v
+		pbReq.Content = &v
 	}
 	if v, ok := req.Importance.Value(); ok {
-		pbReq.Importance = v
+		pbReq.Importance = &v
 	}
 	if req.Metadata != nil {
-		pbReq.MetadataJson = string(req.Metadata)
+		s := string(req.Metadata)
+		pbReq.MetadataJson = &s
 	}
 	if v, ok := req.EntityType.Value(); ok {
-		pbReq.EntityType = v
+		pbReq.EntityType = &v
 	}
 	if v, ok := req.EntityID.Value(); ok {
-		pbReq.EntityId = v
+		pbReq.EntityId = &v
 	}
+	// Either entity field sent as null unscopes the memory (both columns cleared together).
+	pbReq.ClearEntity = req.EntityType.IsClear() || req.EntityID.IsClear()
 	if v, ok := req.ExpiresAt.Value(); ok {
-		pbReq.ExpiresAt = v
+		pbReq.ExpiresAt = &v
 	}
+	pbReq.ClearExpiresAt = req.ExpiresAt.IsClear()
 	resp, rpcErr := grpcutil.CallRPC(ctx, memorySvcTracer, "service.agent_memories.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateAgentMemoryResponse, error) {
 			return m.agentClient.UpdateAgentMemory(ctx, pbReq, opts...)

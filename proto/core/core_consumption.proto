@@ -448,6 +448,7 @@ message TenancyCurrentAccountProto {
   optional TenancyRoleProto role = 7;
   optional string internal_stripe_customer_id = 8;
   optional TenancyAccountPlanProto account_plan = 9;
+  string account_user_id = 10;
 }
 message TenancyAccountSummaryProto {
   string id = 1;

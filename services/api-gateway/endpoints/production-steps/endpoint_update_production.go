@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -50,14 +51,15 @@ type UpdateProductionEndpoint struct{}
 
 func (e *UpdateProductionEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateProductionRequest, *apiresource.ProductionOutput] {
 	return (&apiendpoint.APIEndpoint[*UpdateProductionRequest, *apiresource.ProductionOutput]{
-		Title:             "Update Production",
-		Method:            http.MethodPatch,
-		ContentType:       "application/json",
-		Route:             "/v1/operations/production-steps/{production_step_id}/productions/{id}",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeProduction,
+		Title:               "Update Production",
+		Method:              http.MethodPatch,
+		ContentType:         "application/json",
+		Route:               "/v1/operations/production-steps/{production_step_id}/productions/{id}",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProductionSteps, Action: types.ActionUpdate}},
+		ObjectType:          constants.ObjectTypeProduction,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateProductionRequest) (*apiresource.ProductionOutput, *apierror.APIError) {
 			return svc.(ProductionStepSvc).UpdateProduction
 		},

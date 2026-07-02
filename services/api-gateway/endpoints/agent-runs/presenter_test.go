@@ -71,7 +71,7 @@ func TestAgentRunPresenter(t *testing.T) {
 			Id:             "agdf_01abc",
 			Name:           "Email Order Agent",
 			Slug:           "email_order",
-			Description:    "Processes incoming emails.",
+			Description:    new("Processes incoming emails."),
 			DefinitionType: "system",
 			CategoryCode:   "order_processing",
 			TriggerType:    "event",

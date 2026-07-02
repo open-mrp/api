@@ -20,17 +20,6 @@ func TestIncludesFor_AgentDefinition(t *testing.T) {
 	assert.Equal(t, IncludeField{Key: "role", ObjectType: constants.ObjectTypeRole, JSONPaths: []string{"role"}}, cfg.Fields[2])
 }
 
-func TestIncludesFor_AgentAlert(t *testing.T) {
-	t.Parallel()
-	cfg := IncludesFor(IncludesParams{
-		ObjectType: constants.ObjectTypeAgentAlert,
-		Fields:     []string{"run", "action"},
-	})
-	require.Len(t, cfg.Fields, 2)
-	assert.Equal(t, IncludeField{Key: "run", ObjectType: constants.ObjectTypeAgentRun, JSONPaths: []string{"run"}}, cfg.Fields[0])
-	assert.Equal(t, IncludeField{Key: "action", ObjectType: constants.ObjectTypeAgentAction, JSONPaths: []string{"action"}}, cfg.Fields[1])
-}
-
 func TestIncludesFor_AgentRun_Subset(t *testing.T) {
 	t.Parallel()
 	cfg := IncludesFor(IncludesParams{

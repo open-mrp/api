@@ -6,6 +6,6 @@ type AccountStripeWebhookRequest struct {
 	RawBody []byte `rawbody:"true"`
 	// Stripe-Signature header value for payload verification.
 	Signature string `header:"Stripe-Signature"`
-	// Account ID from the URL path.
+	// The account these Stripe webhook events belong to.
 	AccountID string `path:"account_id" validate:"required"`
 }

@@ -47,7 +47,6 @@ type ResolvedSalesOrderLine struct {
 	QuantityUnitID     string
 	UnitPrice          RateValue
 	UnitCost           RateValue
-	EdiLineItemID      *string
 }
 
 // --- Pricing data bundle loaded from the repository -------------------------
@@ -97,8 +96,7 @@ type PricingUnitGroupUnit struct {
 	DiscountFixed      string
 }
 
-// PricingAccountPrice is an absolute price override for a product line and
-// recipient. The recipient is either the buyer or its parent account.
+// PricingAccountPrice is an absolute price override for a product line and recipient. The recipient is either the buyer or its parent account.
 type PricingAccountPrice struct {
 	ID            string
 	ProductLineID string
@@ -110,8 +108,7 @@ type PricingAccountPrice struct {
 	CreatedAt         time.Time
 }
 
-// PricingVolumeDiscount is a quantity discount applicable to the buyer, with its
-// tiers and the set of units a line quantity may be normalized into.
+// PricingVolumeDiscount is a quantity discount applicable to the buyer, with its tiers and the set of units a line quantity may be normalized into.
 type PricingVolumeDiscount struct {
 	ID                   string
 	MatchesCustomerGroup bool
@@ -129,8 +126,7 @@ type PricingVolumeDiscountTier struct {
 	DiscountPercentage string
 }
 
-// PricingBundle is everything the engine needs for a single computation, keyed
-// for O(1) lookup. Loaded in one repository call.
+// PricingBundle is everything the engine needs for a single computation, keyed for O(1) lookup. Loaded in one repository call.
 type PricingBundle struct {
 	// Products keyed by product id (only products that exist for the account).
 	Products map[string]*PricingProduct

@@ -32,6 +32,9 @@ service AgentService {
   // ListAvailableTools returns all available platform tools.
   rpc ListAvailableTools(ListAvailableToolsRequest) returns (ListAvailableToolsResponse);
 
+  // ListAvailableModels returns the catalog of LLM models agents may use.
+  rpc ListAvailableModels(ListAvailableModelsRequest) returns (ListAvailableModelsResponse);
+
   // UpdateAgentAccountStatus upserts the per-account status for an agent definition.
   rpc UpdateAgentAccountStatus(UpdateAgentAccountStatusRequest) returns (UpdateAgentAccountStatusResponse);
 
@@ -43,6 +46,9 @@ service AgentService {
 
   // ContinueRun continues an agent run that is awaiting input.
   rpc ContinueRun(ContinueRunRequest) returns (ContinueRunResponse);
+
+  // RetryRun re-attempts a failed run by resuming its transcript (no new user message).
+  rpc RetryRun(RetryRunRequest) returns (RetryRunResponse);
 
   // ListTokenUsage returns a paginated list of daily agent token usage records.
   rpc ListTokenUsage(ListTokenUsageRequest) returns (ListTokenUsageResponse);
@@ -64,15 +70,6 @@ service AgentService {
 
   // Returns agent memories by ID for the api-gateway include resolver.
   rpc BatchGetAgentMemoriesByIDs(BatchGetAgentMemoriesByIDsRequest) returns (BatchGetAgentMemoriesByIDsResponse);
-
-  // ListAgentAlerts returns a paginated list of agent alerts for an account.
-  rpc ListAgentAlerts(ListAgentAlertsRequest) returns (ListAgentAlertsResponse);
-
-  // GetAgentAlert returns a single agent alert by ID.
-  rpc GetAgentAlert(GetAgentAlertRequest) returns (GetAgentAlertResponse);
-
-  // AcknowledgeAgentAlert marks an alert as acknowledged.
-  rpc AcknowledgeAgentAlert(AcknowledgeAgentAlertRequest) returns (AcknowledgeAgentAlertResponse);
 
 }
 
@@ -106,7 +103,7 @@ message CancelRunResponse {
 }
 
 message AgentToolConfig {
-  string tool_id = 1;
+  string tool_slug = 1;
   string config_json = 2;
   int32 sort_order = 3;
   bool require_review = 4;
@@ -140,6 +137,10 @@ message UpdateCustomAgentRequest {
   repeated string includes = 9;
   optional string role_id = 10;
   bool tools_provided = 11;
+  // clear_description sets description to NULL; description is ignored when true.
+  bool clear_description = 12;
+  // clear_role_id detaches the role (sets role_id to NULL); role_id is ignored when true.
+  bool clear_role_id = 13;
 }
 
 message UpdateCustomAgentResponse {
@@ -182,11 +183,24 @@ message ListAvailableToolsRequest {
   optional string cursor = 1;
   int32 limit = 2;
   optional string query = 3;
+  optional string paginate_resource = 4;
 }
 
 message ListAvailableToolsResponse {
   repeated AvailableToolInfo tools = 1;
   repeated ToolGroupInfo groups = 2;
+}
+
+message ListAvailableModelsRequest {}
+
+message ListAvailableModelsResponse {
+  repeated AvailableModelInfo models = 1;
+}
+
+message AvailableModelInfo {
+  string code = 1;
+  string name = 2;
+  string provider = 3;
 }
 
 message UpdateAgentAccountStatusRequest {
@@ -211,7 +225,7 @@ message AgentDefinitionInfo {
   string id = 1;
   string name = 2;
   string slug = 3;
-  string description = 4;
+  optional string description = 4;
   string definition_type = 5;
   string category_code = 6;
   string trigger_type = 7;
@@ -228,7 +242,7 @@ message AgentDefinitionInfo {
 
 message AgentDefinitionToolInfo {
   string id = 1;
-  string tool_id = 2;
+  string tool_slug = 2;
   string display_name = 3;
   string description = 4;
   string config_schema_json = 5;
@@ -242,7 +256,7 @@ message AgentDefinitionToolInfo {
 }
 
 message AvailableToolInfo {
-  string id = 1;
+  string slug = 1;
   string display_name = 2;
   string description = 3;
   string config_schema_json = 4;
@@ -250,6 +264,11 @@ message AvailableToolInfo {
   string group_id = 6;
   string group_name = 7;
   repeated string required_permissions = 8;
+  string required_role_type = 9;
+  // mutating reports whether invoking the tool changes server state (any
+  // endpoint-tool whose HTTP method is not GET). The UI defaults such tools to
+  // requiring human review when they are attached to an agent.
+  bool mutating = 10;
 }
 
 message ToolGroupInfo {
@@ -362,9 +381,23 @@ message ContinueRunRequest {
   string message = 2;
   repeated string approved_tool_slugs = 3;
   repeated string allowed_tool_slugs = 4;
+  // Review-gated tools the human denied this resume. The run continues: each denied tool is answered with a synthetic "denied by user" result so the agent proceeds without it (instead of cancelling the run).
+  repeated string rejected_tool_slugs = 5;
+  // Per-call approval: the tool_use_ids of individual blocked calls the human approved. Unlike approved_tool_slugs (which approves EVERY pending call of that slug), these target one specific call, so two calls of the same slug with different inputs can be decided independently. The runner resolves each id to its recorded input via the tool_blocked events and matches the retried call on (slug + input).
+  repeated string approved_tool_call_ids = 6;
+  // Per-call rejection: the tool_use_ids of individual blocked calls the human denied. Same targeting semantics as approved_tool_call_ids.
+  repeated string rejected_tool_call_ids = 7;
 }
 
 message ContinueRunResponse {
+  string agent_run_id = 1;
+}
+
+message RetryRunRequest {
+  string agent_run_id = 1;
+}
+
+message RetryRunResponse {
   string agent_run_id = 1;
 }
 
@@ -441,13 +474,18 @@ message CreateAgentMemoryResponse {
 
 message UpdateAgentMemoryRequest {
   string id = 1;
-  string category = 2;
-  string content = 3;
-  string metadata_json = 4;
-  string entity_type = 5;
-  string entity_id = 6;
-  double importance = 7;
-  string expires_at = 8;
+  // All fields are partial: an absent field leaves the column unchanged.
+  optional string category = 2;
+  optional string content = 3;
+  optional string metadata_json = 4;
+  optional string entity_type = 5;
+  optional string entity_id = 6;
+  optional double importance = 7;
+  optional string expires_at = 8;
+  // clear_entity sets entity_type AND entity_id to NULL (unscopes the memory); the entity fields are ignored when true.
+  bool clear_entity = 9;
+  // clear_expires_at sets expires_at to NULL (makes the memory permanent); expires_at is ignored when true.
+  bool clear_expires_at = 10;
 }
 
 message UpdateAgentMemoryResponse {
@@ -471,57 +509,3 @@ message DeleteAgentMemoryResponse {
   bool success = 1;
 }
 
-message AgentAlertInfo {
-  string id = 1;
-  string account_id = 2;
-  string agent_run_id = 3;
-  string agent_action_id = 4;
-  string severity_code = 5;
-  string status_code = 6;
-  string title = 7;
-  string message = 8;
-  string metadata_json = 9;
-  string acknowledged_at = 10;
-  string acknowledged_by = 11;
-  string created_at = 12;
-  string updated_at = 13;
-  string acknowledged_by_actor_type = 14;
-  string acknowledged_by_actor_name = 15;
-  optional string run_status_code = 16;
-  optional string run_trigger_type = 17;
-  optional string run_created_at = 18;
-  optional string run_updated_at = 19;
-  optional string action_tool_slug = 20;
-  optional string action_status_code = 21;
-  optional string action_created_at = 22;
-  optional string action_updated_at = 23;
-}
-
-message ListAgentAlertsRequest {
-  optional string cursor = 1;
-  int32 limit = 2;
-  string severity_code = 3;
-  string status_code = 4;
-  optional string query = 5;
-}
-
-message ListAgentAlertsResponse {
-  repeated AgentAlertInfo alerts = 1;
-  PageInfo page_info = 2;
-}
-
-message GetAgentAlertRequest {
-  string id = 1;
-}
-
-message GetAgentAlertResponse {
-  AgentAlertInfo alert = 1;
-}
-
-message AcknowledgeAgentAlertRequest {
-  string id = 1;
-}
-
-message AcknowledgeAgentAlertResponse {
-  AgentAlertInfo alert = 1;
-}

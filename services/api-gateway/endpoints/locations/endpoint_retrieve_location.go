@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -21,13 +22,15 @@ type RetrieveLocationEndpoint struct{}
 
 func (e *RetrieveLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveLocationRequest, *apiresource.Location] {
 	return (&apiendpoint.APIEndpoint[*RetrieveLocationRequest, *apiresource.Location]{
-		Title:             "Retrieve Location",
-		Method:            http.MethodGet,
-		ContentType:       "application/json",
-		Route:             "/v1/operations/locations/{id}",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
+		Title:               "Retrieve Location",
+		Method:              http.MethodGet,
+		ContentType:         "application/json",
+		Route:               "/v1/operations/locations/{id}",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainLocations, Action: types.ActionRead}},
+		Preview:             true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveLocationRequest) (*apiresource.Location, *apierror.APIError) {
 			return svc.(LocationSvc).GetLocation
 		},

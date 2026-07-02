@@ -47,7 +47,7 @@ func (p *Publisher) Publish(
 	if !ok || identity == nil {
 		return apierror.NewInvariantViolationError("Identity not found in context.")
 	}
-	if identity.Target == nil || identity.Target.AccountID == "" {
+	if !identity.IsTargetAccountSet() {
 		return apierror.NewAuthenticationError("The Augno-Account header is required.")
 	}
 	if outboxRepo == nil {

@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -105,14 +106,16 @@ type UpdateCustomerEndpoint struct{}
 
 func (e *UpdateCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateCustomerRequest, *apiresource.Customer] {
 	return (&apiendpoint.APIEndpoint[*UpdateCustomerRequest, *apiresource.Customer]{
-		Title:             "Update Customer",
-		Method:            http.MethodPatch,
-		ContentType:       "application/json",
-		Route:             "/v1/sales/customers/{id}",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeCustomer,
+		Title:               "Update Customer",
+		Method:              http.MethodPatch,
+		ContentType:         "application/json",
+		Route:               "/v1/sales/customers/{id}",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate}},
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeCustomer,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateCustomerRequest) (*apiresource.Customer, *apierror.APIError) {
 			return svc.(CustomerSvc).UpdateCustomer
 		},
@@ -124,6 +127,7 @@ func (e *UpdateCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateC
 				"type",
 				"parent_account",
 				"freight_preferences.carrier",
+				"freight_preferences.carrier.service_levels",
 				"freight_preferences.service_level",
 				"defaults.payment_term",
 				"defaults.shipping_term",
@@ -137,6 +141,7 @@ func (e *UpdateCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateC
 				"price_groups",
 				"child_accounts",
 				"credit_limit",
+				"credit_limit.unit",
 			},
 		}),
 	})

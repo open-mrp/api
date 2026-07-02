@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -18,7 +19,7 @@ type UpdateVolumeDiscountTierInput struct {
 	//
 	// Omit to create a new tier.
 	ID field.Optional[string] `json:"id,omitzero" validate:"omitempty"`
-	// Display name.
+	// Display name of the tier.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// Percentage taken off the price once the threshold is met, as a decimal string (e.g. `5` for 5%).
 	DiscountPercentage field.Optional[string] `json:"discount_percentage,omitzero" format:"decimal"`
@@ -32,7 +33,7 @@ type UpdateVolumeDiscountTierInput struct {
 type UpdateVolumeDiscountRequest struct {
 	// Volume discount ID.
 	VolumeDiscountID string `path:"id" validate:"required"`
-	// Display name.
+	// Display name of the volume discount.
 	//
 	// Must be unique within the account.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
@@ -106,7 +107,10 @@ func (e *UpdateVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*U
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
-		ObjectType:        constants.ObjectTypeVolumeDiscount,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainDiscounts, Action: types.ActionUpdate},
+		},
+		ObjectType: constants.ObjectTypeVolumeDiscount,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateVolumeDiscountRequest) (*apiresource.VolumeDiscount, *apierror.APIError) {
 			return svc.(VolumeDiscountSvc).UpdateVolumeDiscount
 		},

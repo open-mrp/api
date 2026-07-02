@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -29,7 +30,12 @@ func (e *ListCatalogProductLinesEndpoint) Materialize() *apiendpoint.APIEndpoint
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
-		ObjectType:        constants.ObjectTypeCatalogProductLine,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainProducts, Action: types.ActionRead},
+			{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},
+			{Domain: types.PermissionDomainSuppliers, Action: types.ActionRead},
+		},
+		ObjectType: constants.ObjectTypeCatalogProductLine,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListCatalogProductLinesRequest) (*apiresource.List[apiresource.CatalogProductLine], *apierror.APIError) {
 			return svc.(CatalogSvc).ListCatalogProductLines
 		},

@@ -7,6 +7,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -55,14 +56,16 @@ type ListCustomersEndpoint struct{}
 
 func (e *ListCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCustomersRequest, *apiresource.List[apiresource.Customer]] {
 	return (&apiendpoint.APIEndpoint[*ListCustomersRequest, *apiresource.List[apiresource.Customer]]{
-		Title:             "List Customers",
-		Method:            http.MethodGet,
-		ContentType:       "application/json",
-		Route:             "/v1/sales/customers",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeCustomer,
+		Title:               "List Customers",
+		Method:              http.MethodGet,
+		ContentType:         "application/json",
+		Route:               "/v1/sales/customers",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainCustomers, Action: types.ActionRead}},
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeCustomer,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListCustomersRequest) (*apiresource.List[apiresource.Customer], *apierror.APIError) {
 			return svc.(CustomerSvc).ListCustomers
 		},
@@ -74,6 +77,7 @@ func (e *ListCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCust
 				"type",
 				"parent_account",
 				"freight_preferences.carrier",
+				"freight_preferences.carrier.service_levels",
 				"freight_preferences.service_level",
 				"defaults.payment_term",
 				"defaults.shipping_term",
@@ -87,6 +91,7 @@ func (e *ListCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCust
 				"price_groups",
 				"child_accounts",
 				"credit_limit",
+				"credit_limit.unit",
 			},
 		}),
 	})

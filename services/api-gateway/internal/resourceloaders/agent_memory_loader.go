@@ -30,9 +30,13 @@ func LoadAgentMemories(ctx context.Context, ids []string) (map[string]any, *apie
 		return nil, apiErr
 	}
 	out := make(map[string]any, len(resp.Memories))
+	entities := make([]*apiresource.Entity, 0, len(resp.Memories))
 	for _, m := range resp.Memories {
-		out[m.Id] = AgentMemoryFromProto(m)
+		mem := AgentMemoryFromProto(m)
+		out[m.Id] = mem
+		entities = append(entities, mem.Entity)
 	}
+	HydrateCustomerEntities(ctx, entities)
 	return out, nil
 }
 

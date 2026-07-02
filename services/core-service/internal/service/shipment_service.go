@@ -53,8 +53,7 @@ type ShipmentSvcConfig struct {
 	// TxManager (required) wraps multi-step operations in database transactions.
 	TxManager TransactionManager
 
-	// ShippoFactory (optional; default: nil) builds Shippo shipping clients. It is not validated
-	// at construction; shipping code paths panic at runtime if it is unset.
+	// ShippoFactory (optional; default: nil) builds Shippo shipping clients. It is not validated at construction; shipping code paths panic at runtime if it is unset.
 	ShippoFactory domain.ShippoClientFactory
 
 	// EncryptionKey (optional; default: nil) decrypts stored integration credentials (e.g. the Shippo API key). It is not validated at construction; live-rate code paths fail at runtime if it is unset while a Shippo integration is configured.
@@ -700,8 +699,7 @@ func (s *shipmentSvcImpl) VoidShipment(ctx context.Context, params domain.VoidSh
 			}
 			if invoiceID != nil {
 				// TODO: Reverse inventory allocations by invoice (LIFO reversal).
-				// The Dashboard performs a complex LIFO reversal of inventory allocations
-				// for each invoice line's item. This involves:
+				// The Dashboard performs a complex LIFO reversal of inventory allocations for each invoice line's item. This involves:
 				// 1. For each sale-type invoice line, find allocations for the order+item (newest first)
 				// 2. Delete or reduce allocations, updating receipt/issue statuses
 				// 3. Create new reserved issues for any unallocated quantity

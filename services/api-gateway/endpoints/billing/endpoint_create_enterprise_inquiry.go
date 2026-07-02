@@ -21,6 +21,7 @@ func (e *CreateEnterpriseInquiryEndpoint) Materialize() *apiendpoint.APIEndpoint
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
+		RequiredRoleType:  constants.RoleTypeAdmin,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeEnterpriseInquiry,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.EmptyResource) (*apiresource.EnterpriseInquiry, *apierror.APIError) {

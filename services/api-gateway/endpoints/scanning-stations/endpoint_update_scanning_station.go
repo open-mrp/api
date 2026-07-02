@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -54,14 +55,16 @@ type UpdateScanningStationEndpoint struct{}
 
 func (e *UpdateScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateScanningStationRequest, *apiresource.ScanningStation] {
 	return (&apiendpoint.APIEndpoint[*UpdateScanningStationRequest, *apiresource.ScanningStation]{
-		Title:             "Update Scanning Station",
-		Method:            http.MethodPatch,
-		ContentType:       "application/json",
-		Route:             "/v1/operations/scanning-stations/{id}",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeScanningStation,
+		Title:               "Update Scanning Station",
+		Method:              http.MethodPatch,
+		ContentType:         "application/json",
+		Route:               "/v1/operations/scanning-stations/{id}",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainScanningStations, Action: types.ActionUpdate}},
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeScanningStation,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateScanningStationRequest) (*apiresource.ScanningStation, *apierror.APIError) {
 			return svc.(ScanningStationSvc).UpdateScanningStation
 		},

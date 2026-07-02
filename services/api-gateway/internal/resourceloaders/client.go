@@ -9,6 +9,7 @@ import (
 	agentpb "github.com/augno/api/shared/proto/agent"
 	authpb "github.com/augno/api/shared/proto/auth"
 	pb "github.com/augno/api/shared/proto/core"
+	notifpb "github.com/augno/api/shared/proto/notification"
 	platformpb "github.com/augno/api/shared/proto/platform"
 )
 
@@ -26,8 +27,7 @@ func SetCoreClient(c pb.CoreServiceClient) {
 	coreClient = c
 }
 
-// SetCoreSalesClient is called once at startup with the CoreSalesService
-// client.
+// SetCoreSalesClient is called once at startup with the CoreSalesService client.
 func SetCoreSalesClient(c pb.CoreSalesServiceClient) {
 	coreSalesClient = c
 }
@@ -77,6 +77,14 @@ func SetCoreReceivingClient(c pb.CoreReceivingServiceClient) {
 	coreReceivingClient = c
 }
 
+// coreProductionRunClient is the CoreProductionRunService client used by LoadProductionRuns (the sales order's related.production_run reference). Set at startup.
+var coreProductionRunClient pb.CoreProductionRunServiceClient
+
+// SetCoreProductionRunClient is called once at startup with the CoreProductionRunService client.
+func SetCoreProductionRunClient(c pb.CoreProductionRunServiceClient) {
+	coreProductionRunClient = c
+}
+
 // authClient is the AuthService client used by loaders whose RPCs live in auth.proto (api-key, etc.). Set at startup alongside coreClient.
 var authClient authpb.AuthServiceClient
 
@@ -99,6 +107,31 @@ var auditClient platformpb.AuditServiceClient
 // SetAuditClient is called once at startup with the AuditService client.
 func SetAuditClient(c platformpb.AuditServiceClient) {
 	auditClient = c
+}
+
+// chatClient is the notification-service ChatService client used by LoadConversations / LoadMessages to resolve a message's expandable conversation and reply_to references. Set at startup.
+var chatClient notifpb.ChatServiceClient
+
+// SetChatClient is called once at startup with the ChatService client.
+func SetChatClient(c notifpb.ChatServiceClient) {
+	chatClient = c
+}
+
+// emailBridgeClient is the notification-service EmailBridgeService client used by LoadEmailDomains to resolve an email inbox's expandable email_domain reference. Set at startup.
+var emailBridgeClient notifpb.EmailBridgeServiceClient
+
+// SetEmailBridgeClient is called once at startup with the EmailBridgeService client.
+func SetEmailBridgeClient(c notifpb.EmailBridgeServiceClient) {
+	emailBridgeClient = c
+}
+
+// orEmptyStrSlice normalizes a nil slice to a non-nil empty slice so required
+// array fields serialize as `[]` rather than `null`.
+func orEmptyStrSlice(s []string) []string {
+	if s == nil {
+		return []string{}
+	}
+	return s
 }
 
 // ownerShellFromAccountID builds an Owner shell without a stub Account. nil/empty → system-owned; non-empty → account-owned with Account left nil (populated only when owner.account is explicitly included).

@@ -28,7 +28,7 @@ type Shipment struct {
 	//
 	// Individual shipping cases carry their own per-case tracking numbers.
 	MasterTrackingNumber *string `json:"master_tracking_number"`
-	// Shipment status code.
+	// Current status of the shipment.
 	//
 	// - `packed`: the shipment has been packed but not yet dispatched.
 	// - `shipped`: the shipment has left the facility (`shipped_at` is set).

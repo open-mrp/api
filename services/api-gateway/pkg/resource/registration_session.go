@@ -28,14 +28,14 @@ type RegistrationSessionUser struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=user"`
 	// Email address.
 	Email string `json:"email" validate:"required"`
-	// Timestamp when the user's email address was verified.
-	//
-	// Set once the `verification` step completes; until then the email is still pending verification.
-	EmailVerifiedAt *time.Time `json:"email_verified_at"`
 	// The user's display name.
 	//
 	// Provided by the registrant during the `user_details` step.
 	Name *string `json:"name"`
+	// Timestamp when the user's email address was verified.
+	//
+	// Set once the `verification` step completes; until then the email is still pending verification.
+	EmailVerifiedAt *time.Time `json:"email_verified_at"`
 }
 
 // Account data within a registration session.
@@ -190,8 +190,8 @@ var SampleRegistrationSessionUser = &RegistrationSessionUser{
 	ID:              new(SampleUserID),
 	Object:          constants.ObjectTypeUser,
 	Email:           SampleUserEmail,
-	EmailVerifiedAt: timeutil.TimestampToTimePtr(sampleExpiresAtTimestamp),
 	Name:            new(SampleUserName),
+	EmailVerifiedAt: timeutil.TimestampToTimePtr(sampleExpiresAtTimestamp),
 }
 
 var SampleRegistrationSessionAccount = &RegistrationSessionAccount{

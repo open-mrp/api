@@ -7,20 +7,21 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
 // Request to create a registration flow.
 type CreateRegistrationFlowRequest struct {
-	// Display name.
+	// Display name of the registration flow.
 	Name string `json:"name" validate:"required,max=255"`
 	// IDs of the customer groups offered as options in this flow.
-	CustomerGroupIDs []string `json:"customer_group_ids"`
+	CustomerGroupIDs []string `json:"customer_group_ids,omitzero"`
 	// IDs of the payment terms offered as options in this flow.
-	PaymentTermIDs []string `json:"payment_term_ids"`
+	PaymentTermIDs []string `json:"payment_term_ids,omitzero"`
 	// IDs of the shipping terms offered as options in this flow.
-	ShippingTermIDs []string `json:"shipping_term_ids"`
+	ShippingTermIDs []string `json:"shipping_term_ids,omitzero"`
 }
 
 var sampleCreateRegistrationFlowRequest = &CreateRegistrationFlowRequest{
@@ -46,7 +47,10 @@ func (e *CreateRegistrationFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
-		ObjectType:        constants.ObjectTypeRegistrationFlow,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainAccount, Action: types.ActionUpdate},
+		},
+		ObjectType: constants.ObjectTypeRegistrationFlow,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateRegistrationFlowRequest) (*apiresource.RegistrationFlow, *apierror.APIError) {
 			return svc.(RegistrationFlowSvc).CreateRegistrationFlow
 		},

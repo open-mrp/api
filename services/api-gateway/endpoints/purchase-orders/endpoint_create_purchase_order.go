@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -130,7 +131,10 @@ func (e *CreatePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cr
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
-		ObjectType:        constants.ObjectTypePurchaseOrder,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainPurchaseOrders, Action: types.ActionCreate},
+		},
+		ObjectType: constants.ObjectTypePurchaseOrder,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreatePurchaseOrderRequest) (*apiresource.PurchaseOrder, *apierror.APIError) {
 			return svc.(PurchaseOrderSvc).CreatePurchaseOrder
 		},

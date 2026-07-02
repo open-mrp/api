@@ -136,6 +136,8 @@ func (h *gRPCHandler) CreateScanningStation(ctx context.Context, req *pb.CreateS
 		Type:                constants.ScanningStationType(req.Type),
 		OperatorRequirement: constants.OperatorRequirement(req.OperatorRequirement),
 		DepartmentID:        req.DepartmentId,
+		LabelSizeCode:       req.LabelSizeCode,
+		LabelTypeCode:       req.LabelTypeCode,
 		Includes:            req.Includes,
 	}
 

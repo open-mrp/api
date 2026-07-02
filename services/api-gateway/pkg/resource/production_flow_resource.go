@@ -26,7 +26,7 @@ type ProductionFlowStep struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=production_step"`
 	// Production step name.
 	Name string `json:"name" validate:"required"`
-	// Notes.
+	// Free-form notes about this step.
 	Notes *string `json:"notes"`
 	// The item and quantity this step produces.
 	Production *ProductionFlowProduction `json:"production" expandable:"true"`

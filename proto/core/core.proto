@@ -111,6 +111,9 @@ service CoreService {
   // Resolves an email to a customer account_relation (used by agent-service).
   rpc GetCustomerByEmail(GetCustomerByEmailRequest) returns (GetCustomerByEmailResponse);
 
+  // Resolves an email to the contacts (account users) on accounts the caller has a relationship with — its customers, suppliers, or its own account. Owner is taken from the request identity.
+  rpc FindContactsByEmail(FindContactsByEmailRequest) returns (FindContactsByEmailResponse);
+
   // Returns a paginated list of payment terms (account-specific and default).
   rpc ListPaymentTerms(ListPaymentTermsRequest) returns (ListPaymentTermsResponse);
 

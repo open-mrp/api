@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -56,14 +57,15 @@ type CreateSettlementEndpoint struct{}
 
 func (e *CreateSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSettlementRequest, *apiresource.Settlement] {
 	return (&apiendpoint.APIEndpoint[*CreateSettlementRequest, *apiresource.Settlement]{
-		Title:             "Create Settlement",
-		Method:            http.MethodPost,
-		ContentType:       "application/json",
-		Route:             "/v1/finance/settlements",
-		SuccessStatusCode: http.StatusCreated,
-		Public:            false,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeSettlement,
+		Title:               "Create Settlement",
+		Method:              http.MethodPost,
+		ContentType:         "application/json",
+		Route:               "/v1/finance/settlements",
+		SuccessStatusCode:   http.StatusCreated,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainSettlements, Action: types.ActionCreate}},
+		ObjectType:          constants.ObjectTypeSettlement,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateSettlementRequest) (*apiresource.Settlement, *apierror.APIError) {
 			return svc.(SettlementSvc).CreateSettlement
 		},

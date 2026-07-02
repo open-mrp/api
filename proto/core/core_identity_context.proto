@@ -409,6 +409,26 @@ message CustomerInfo {
   string email = 6;
   string user_name = 7;
 }
+message FindContactsByEmailRequest {
+  string email = 1;
+}
+message FindContactsByEmailResponse {
+  repeated ContactMatchInfo matches = 1;
+}
+message ContactMatchInfo {
+  string account_user_id = 1;
+  string user_id = 2;
+  string account_id = 3;
+  optional string role_id = 4;
+  optional string department_id = 5;
+  string status_code = 6;
+  optional google.protobuf.Timestamp last_used_at = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+  string email = 10;
+  // How the caller relates to the account this contact belongs to: "customer", "supplier", or "self".
+  string relationship = 11;
+}
 message CustomerProto {
   string id = 1;
   string name = 2;

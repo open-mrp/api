@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -23,14 +24,16 @@ type RetrievePriorityEndpoint struct{}
 
 func (e *RetrievePriorityEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrievePriorityRequest, *apiresource.Priority] {
 	return (&apiendpoint.APIEndpoint[*RetrievePriorityRequest, *apiresource.Priority]{
-		Title:             "Retrieve Priority",
-		Method:            http.MethodGet,
-		ContentType:       "application/json",
-		Route:             "/v1/sales/priorities/{id}",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypePriority,
+		Title:               "Retrieve Priority",
+		Method:              http.MethodGet,
+		ContentType:         "application/json",
+		Route:               "/v1/sales/priorities/{id}",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainPriorities, Action: types.ActionRead}},
+		Preview:             true,
+		ObjectType:          constants.ObjectTypePriority,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrievePriorityRequest) (*apiresource.Priority, *apierror.APIError) {
 			return svc.(PrioritySvc).GetPriority
 		},

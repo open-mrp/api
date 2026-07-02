@@ -7,10 +7,11 @@ import (
 
 	httptransport "github.com/augno/api/services/api-gateway/internal/http"
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ExportMaterialsRequest is the request to export materials as an Excel file.
+// Request to export materials as an Excel file.
 type ExportMaterialsRequest struct {
 	// Free-text search query matched against materials.
 	Query *string `query:"q"`
@@ -29,13 +30,14 @@ type ExportMaterialsEndpoint struct{}
 
 func (e *ExportMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportMaterialsRequest, *httptransport.FileDownload] {
 	return (&apiendpoint.APIEndpoint[*ExportMaterialsRequest, *httptransport.FileDownload]{
-		Title:             "Export Materials",
-		Method:            http.MethodGet,
-		ContentType:       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-		Route:             "/v1/catalog/materials/actions/export",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
+		Title:               "Export Materials",
+		Method:              http.MethodGet,
+		ContentType:         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		Route:               "/v1/catalog/materials/actions/export",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMaterials, Action: types.ActionRead}, {Domain: types.PermissionDomainCustomers, Action: types.ActionRead}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionRead}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportMaterialsRequest) (*httptransport.FileDownload, *apierror.APIError) {
 			return svc.(MaterialSvc).ExportMaterials
 		},

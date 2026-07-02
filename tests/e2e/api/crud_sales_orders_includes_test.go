@@ -48,7 +48,7 @@ func TestSalesOrders_IncludeContacts(t *testing.T) {
 	assert.Equal(t, "order_contact", jsonField(contacts, "object"))
 	// ORD-001 is seeded with one invoice and one acknowledgement recipient.
 	assert.Contains(t, jsonStringSlice(contacts, "invoice"), "dane@augno.com")
-	assert.Contains(t, jsonStringSlice(contacts, "acknowledgement"), "smartinez@augno.com")
+	assert.Contains(t, jsonStringSlice(contacts, "acknowledgement"), "user2@augno.com")
 }
 
 func TestSalesOrders_List_IncludeContacts(t *testing.T) {
@@ -59,7 +59,7 @@ func TestSalesOrders_List_IncludeContacts(t *testing.T) {
 	require.NotNil(t, contacts, "contacts should be populated on the list row with ?include=contacts")
 	assert.Equal(t, "order_contact", jsonField(contacts, "object"))
 	assert.Contains(t, jsonStringSlice(contacts, "invoice"), "dane@augno.com")
-	assert.Contains(t, jsonStringSlice(contacts, "acknowledgement"), "smartinez@augno.com")
+	assert.Contains(t, jsonStringSlice(contacts, "acknowledgement"), "user2@augno.com")
 }
 
 func TestSalesOrders_IncludeCustomer(t *testing.T) {

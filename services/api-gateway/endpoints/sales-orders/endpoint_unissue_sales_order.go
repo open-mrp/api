@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -34,14 +35,15 @@ type UnissueSalesOrderEndpoint struct{}
 
 func (e *UnissueSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*UnissueSalesOrderRequest, *apiresource.SalesOrder] {
 	return (&apiendpoint.APIEndpoint[*UnissueSalesOrderRequest, *apiresource.SalesOrder]{
-		Title:             "Unissue Sales Order",
-		Method:            http.MethodPut,
-		ContentType:       "application/json",
-		Route:             "/v1/sales/sales-orders/{id}/actions/unissue",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeSalesOrder,
+		Title:               "Unissue Sales Order",
+		Method:              http.MethodPut,
+		ContentType:         "application/json",
+		Route:               "/v1/sales/sales-orders/{id}/actions/unissue",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionUpdate}},
+		ObjectType:          constants.ObjectTypeSalesOrder,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UnissueSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError) {
 			return svc.(SalesOrderSvc).UnissueSalesOrder
 		},

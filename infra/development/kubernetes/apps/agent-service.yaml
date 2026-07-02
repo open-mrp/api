@@ -61,6 +61,11 @@ spec:
                 configMapKeyRef:
                   key: CORE_SERVICE_URL
                   name: app-config
+            - name: NOTIFICATION_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: NOTIFICATION_SERVICE_URL
+                  name: app-config
             - name: CURSOR_HMAC_KEY
               valueFrom:
                 secretKeyRef:
@@ -76,6 +81,19 @@ spec:
                 configMapKeyRef:
                   key: BILLING_SERVICE_URL
                   name: app-config
+            - name: API_GATEWAY_INTERNAL_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: API_GATEWAY_INTERNAL_URL
+                  name: app-config
+            # Both URL and token must be present for endpoint-tools to be wired;
+            # optional secret keeps pods healthy before the secret is provisioned.
+            - name: INTERNAL_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: internal-service-token
+                  key: token
+                  optional: true
             - name: AWS_REGION
               valueFrom:
                 configMapKeyRef:

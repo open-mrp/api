@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -19,7 +20,7 @@ type UpdateAddressRequest struct {
 	// Address ID.
 	AddressID string `path:"id" validate:"required"`
 	// Display name of the address.
-	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
+	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,min=1,max=255"`
 	// Phone number associated with the address.
 	//
 	// Send `null` to clear.
@@ -27,8 +28,8 @@ type UpdateAddressRequest struct {
 	// Email address associated with the address.
 	//
 	// Send `null` to clear.
-	Email field.Clearable[string] `json:"email,omitzero" validate:"omitempty,max=255"`
-	// Address type.
+	Email field.Clearable[string] `json:"email,omitzero" validate:"omitempty,custom_email,max=255"`
+	// How the address is used.
 	//
 	// - `standard`: a normal shipping or billing address.
 	// - `drop_ship`: an address an order is shipped to directly, typically a third party or end customer rather than the account itself.
@@ -66,14 +67,16 @@ type UpdateAddressEndpoint struct{}
 
 func (e *UpdateAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAddressRequest, *apiresource.Address] {
 	return (&apiendpoint.APIEndpoint[*UpdateAddressRequest, *apiresource.Address]{
-		Title:             "Update Address",
-		Method:            http.MethodPatch,
-		Route:             "/v1/sales/addresses/{id}",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeAddress,
+		Title:               "Update Address",
+		Method:              http.MethodPatch,
+		Route:               "/v1/sales/addresses/{id}",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAddresses, Action: types.ActionUpdate}, {Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate}},
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeAddress,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAddressRequest) (*apiresource.Address, *apierror.APIError) {
 			return svc.(AddressSvc).UpdateAddress
 		},

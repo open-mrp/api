@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -21,14 +22,16 @@ type RetrievePropertyEndpoint struct{}
 
 func (e *RetrievePropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrievePropertyRequest, *apiresource.Property] {
 	return (&apiendpoint.APIEndpoint[*RetrievePropertyRequest, *apiresource.Property]{
-		Title:             "Retrieve Property",
-		Method:            http.MethodGet,
-		ContentType:       "application/json",
-		Route:             CatalogPropertyRoute,
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeProperty,
+		Title:               "Retrieve Property",
+		Method:              http.MethodGet,
+		ContentType:         "application/json",
+		Route:               CatalogPropertyRoute,
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProperties, Action: types.ActionRead}},
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeProperty,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeProperty,
 			Fields:     []string{"attributes"},

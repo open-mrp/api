@@ -4,6 +4,8 @@ import (
 	"context"
 
 	"github.com/augno/api/services/billing-service/internal/infrastructure/sqlc"
+	"github.com/augno/api/shared/db"
+	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/tracing"
 )
@@ -18,7 +20,7 @@ func NewStripeEventLogRepo(queries *sqlc.Queries) *StripeEventLogRepo {
 	return &StripeEventLogRepo{queries: queries}
 }
 
-func (r *StripeEventLogRepo) Exists(ctx context.Context, eventID, objectID string) (bool, error) {
+func (r *StripeEventLogRepo) Exists(ctx context.Context, eventID, objectID string) (bool, *apierror.APIError) {
 	ctx, span := stripeEventLogRepoTracer.Start(ctx, "repository.stripe_event_log.exists")
 	defer span.End()
 
@@ -26,22 +28,20 @@ func (r *StripeEventLogRepo) Exists(ctx context.Context, eventID, objectID strin
 		EventID:  eventID,
 		ObjectID: objectID,
 	})
-	if err != nil {
-		span.RecordError(err)
-		return false, err
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
 	}
 
 	return exists, nil
 }
 
-func (r *StripeEventLogRepo) Insert(ctx context.Context, eventID, eventType, objectID string) error {
+func (r *StripeEventLogRepo) Insert(ctx context.Context, eventID, eventType, objectID string) *apierror.APIError {
 	ctx, span := stripeEventLogRepoTracer.Start(ctx, "repository.stripe_event_log.insert")
 	defer span.End()
 
 	recordID, genErr := id.GenID(id.StripeEventLogIDPrefix, nil)
 	if genErr != nil {
-		span.RecordError(genErr)
-		return genErr
+		return tracing.Trace(span, apierror.NewInternalError(genErr, "Failed to generate stripe event log ID."))
 	}
 
 	insertErr := r.queries.InsertStripeEventLog(ctx, sqlc.InsertStripeEventLogParams{
@@ -50,9 +50,8 @@ func (r *StripeEventLogRepo) Insert(ctx context.Context, eventID, eventType, obj
 		EventType: eventType,
 		ObjectID:  objectID,
 	})
-	if insertErr != nil {
-		span.RecordError(insertErr)
-		return insertErr
+	if apiErr := db.MapSQLError(insertErr); apiErr != nil {
+		return tracing.Trace(span, apiErr)
 	}
 
 	return nil

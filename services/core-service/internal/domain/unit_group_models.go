@@ -93,7 +93,9 @@ type UpsertUnitGroupUnitParams struct {
 	DiscountPercentage string
 	DiscountFixed      string
 	IsVisible          bool
-	Includes           []string
+	// IsVisibleProvided reports whether the caller supplied is_visible. When false, the upsert preserves the stored value on update (or defaults to true on create) rather than clobbering it to false.
+	IsVisibleProvided bool
+	Includes          []string
 }
 
 type DeleteUnitGroupUnitParams struct {

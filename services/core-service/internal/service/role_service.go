@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"slices"
@@ -517,9 +516,7 @@ func (s *roleSvcImpl) BatchGetRolesByIDs(ctx context.Context, ids []string) ([]*
 	return result, nil
 }
 
-// permissionSummary is a lightweight, stable representation of a role permission
-// used for audit diff comparison. It excludes metadata fields (ID, RoleID,
-// timestamps) that change on every delete+recreate cycle.
+// permissionSummary is a lightweight, stable representation of a role permission used for audit diff comparison. It excludes metadata fields (ID, RoleID, timestamps) that change on every delete+recreate cycle.
 type permissionSummary struct {
 	PermissionCode string `json:"permission_code"`
 	Create         bool   `json:"create"`
@@ -559,12 +556,6 @@ func computePermissionsChange(oldPerms, newPerms []*domain.RolePermission) *audi
 		return nil
 	}
 
-	oldJSON, _ := json.Marshal(oldSummaries)
-	newJSON, _ := json.Marshal(newSummaries)
-
-	return &audit.FieldChange{
-		Field:    "permissions",
-		OldValue: json.RawMessage(oldJSON),
-		NewValue: json.RawMessage(newJSON),
-	}
+	change := audit.NewFieldChange("permissions", oldSummaries, newSummaries)
+	return &change
 }

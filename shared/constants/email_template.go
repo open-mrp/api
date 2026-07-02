@@ -38,6 +38,9 @@ const (
 	EmailTemplateOrderAcknowledgement EmailTemplate = "order_acknowledgement"
 	// EmailTemplateAlreadyRegistered indicates that the email template is for an already registered email with a magic login link.
 	EmailTemplateAlreadyRegistered EmailTemplate = "already_registered"
+
+	// EmailTemplateChatMessage notifies a user by email of a new chat message (the in-app/email bridge).
+	EmailTemplateChatMessage EmailTemplate = "chat_message"
 )
 
 func (t EmailTemplate) IsValid() bool {
@@ -58,12 +61,13 @@ func (t EmailTemplate) IsValid() bool {
 		EmailTemplateStatementOfAccount,
 		EmailTemplateInvoice,
 		EmailTemplateOrderAcknowledgement,
-		EmailTemplateAlreadyRegistered:
+		EmailTemplateAlreadyRegistered,
+		EmailTemplateChatMessage:
 		return true
 	}
 	return false
 }
 
 func (t EmailTemplate) EnumValues() []string {
-	return []string{string(EmailTemplateWelcome), string(EmailTemplatePasswordReset), string(EmailTemplatePasswordUpdated), string(EmailTemplateRegistrationVerify), string(EmailTemplateRegistrationVerifyExisting), string(EmailTemplateEnterpriseRequest), string(EmailTemplateInternalErrorAlert), string(EmailTemplateNewRegistrationAlert), string(EmailTemplatePlanChangeAlert), string(EmailTemplateRegistrationLimitAlert), string(EmailTemplateNewUserWelcome), string(EmailTemplateOrderCheckout), string(EmailTemplatePurchaseOrderSubmission), string(EmailTemplateStatementOfAccount), string(EmailTemplateInvoice), string(EmailTemplateOrderAcknowledgement), string(EmailTemplateAlreadyRegistered)}
+	return []string{string(EmailTemplateWelcome), string(EmailTemplatePasswordReset), string(EmailTemplatePasswordUpdated), string(EmailTemplateRegistrationVerify), string(EmailTemplateRegistrationVerifyExisting), string(EmailTemplateEnterpriseRequest), string(EmailTemplateInternalErrorAlert), string(EmailTemplateNewRegistrationAlert), string(EmailTemplatePlanChangeAlert), string(EmailTemplateRegistrationLimitAlert), string(EmailTemplateNewUserWelcome), string(EmailTemplateOrderCheckout), string(EmailTemplatePurchaseOrderSubmission), string(EmailTemplateStatementOfAccount), string(EmailTemplateInvoice), string(EmailTemplateOrderAcknowledgement), string(EmailTemplateAlreadyRegistered), string(EmailTemplateChatMessage)}
 }

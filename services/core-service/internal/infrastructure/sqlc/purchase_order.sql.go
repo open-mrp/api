@@ -12,6 +12,24 @@ import (
 	"time"
 )
 
+const allocateNextPurchaseOrderNumber = `-- name: AllocateNextPurchaseOrderNumber :execresult
+INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created_at, updated_at)
+VALUES (?, ?, 'purchase_order_number', LAST_INSERT_ID(1), NOW(3), NOW(3))
+ON DUPLICATE KEY UPDATE value = LAST_INSERT_ID(value + 1), updated_at = NOW(3)
+`
+
+type AllocateNextPurchaseOrderNumberParams struct {
+	ID        string
+	AccountID string
+}
+
+// Atomically reserves the next purchase-order number for the account and returns it via LAST_INSERT_ID.
+// The single upsert holds a row lock on the per-account counter, so concurrent creates serialize and
+// never collide (the old read-MAX-then-write pattern raced). Read it back with LastInsertId().
+func (q *Queries) AllocateNextPurchaseOrderNumber(ctx context.Context, arg AllocateNextPurchaseOrderNumberParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, allocateNextPurchaseOrderNumber, arg.ID, arg.AccountID)
+}
+
 const createOrderEmailContact = `-- name: CreateOrderEmailContact :exec
 INSERT INTO order_email_contact (id, sales_order_id, account_user_id, notification_type_code, created_at, updated_at)
 VALUES (?, ?, ?, ?, NOW(3), NOW(3))
@@ -129,23 +147,6 @@ DELETE FROM sales_order_line WHERE sales_order_id = ?
 func (q *Queries) DeletePurchaseOrderLinesBySalesOrder(ctx context.Context, salesOrderID string) error {
 	_, err := q.db.ExecContext(ctx, deletePurchaseOrderLinesBySalesOrder, salesOrderID)
 	return err
-}
-
-const getNextPurchaseOrderNumber = `-- name: GetNextPurchaseOrderNumber :one
-SELECT COALESCE(
-    (SELECT MAX(CAST(sp.value AS UNSIGNED)) + 1
-     FROM sys_property sp
-     WHERE sp.account_id = ?
-     AND sp.sys_property_type_code = 'purchase_order_number'),
-    1
-) AS next_number
-`
-
-func (q *Queries) GetNextPurchaseOrderNumber(ctx context.Context, accountID string) (interface{}, error) {
-	row := q.db.QueryRowContext(ctx, getNextPurchaseOrderNumber, accountID)
-	var next_number interface{}
-	err := row.Scan(&next_number)
-	return next_number, err
 }
 
 const getOrderEmailContacts = `-- name: GetOrderEmailContacts :many
@@ -1055,28 +1056,6 @@ type MarkPurchaseOrderSubmissionSentParams struct {
 
 func (q *Queries) MarkPurchaseOrderSubmissionSent(ctx context.Context, arg MarkPurchaseOrderSubmissionSentParams) error {
 	_, err := q.db.ExecContext(ctx, markPurchaseOrderSubmissionSent, arg.ID, arg.AccountID)
-	return err
-}
-
-const updateNextPurchaseOrderNumber = `-- name: UpdateNextPurchaseOrderNumber :exec
-INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created_at, updated_at)
-VALUES (?, ?, 'purchase_order_number', ?, NOW(3), NOW(3))
-ON DUPLICATE KEY UPDATE value = ?, updated_at = NOW(3)
-`
-
-type UpdateNextPurchaseOrderNumberParams struct {
-	ID        string
-	AccountID string
-	Value     int32
-}
-
-func (q *Queries) UpdateNextPurchaseOrderNumber(ctx context.Context, arg UpdateNextPurchaseOrderNumberParams) error {
-	_, err := q.db.ExecContext(ctx, updateNextPurchaseOrderNumber,
-		arg.ID,
-		arg.AccountID,
-		arg.Value,
-		arg.Value,
-	)
 	return err
 }
 

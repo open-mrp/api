@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -24,13 +25,15 @@ type DeleteAttributeEndpoint struct{}
 
 func (e *DeleteAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAttributeRequest, *apiresource.EmptyResource] {
 	return (&apiendpoint.APIEndpoint[*DeleteAttributeRequest, *apiresource.EmptyResource]{
-		Title:             "Delete Attribute",
-		Method:            http.MethodDelete,
-		Route:             CatalogPropertyAttributeRoute,
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
+		Title:               "Delete Attribute",
+		Method:              http.MethodDelete,
+		Route:               CatalogPropertyAttributeRoute,
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProperties, Action: types.ActionDelete}},
+		Preview:             true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteAttributeRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(PropertySvc).DeleteAttribute
 		},

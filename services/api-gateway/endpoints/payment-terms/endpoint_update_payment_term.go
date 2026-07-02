@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -37,14 +38,16 @@ type UpdatePaymentTermEndpoint struct{}
 
 func (e *UpdatePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePaymentTermRequest, *apiresource.PaymentTerm] {
 	return (&apiendpoint.APIEndpoint[*UpdatePaymentTermRequest, *apiresource.PaymentTerm]{
-		Title:             "Update Payment Term",
-		Method:            http.MethodPatch,
-		Route:             "/v1/finance/payment-terms/{id}",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypePaymentTerm,
+		Title:               "Update Payment Term",
+		Method:              http.MethodPatch,
+		Route:               "/v1/finance/payment-terms/{id}",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainPaymentTerms, Action: types.ActionUpdate}},
+		Preview:             true,
+		ObjectType:          constants.ObjectTypePaymentTerm,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdatePaymentTermRequest) (*apiresource.PaymentTerm, *apierror.APIError) {
 			return svc.(PaymentTermSvc).UpdatePaymentTerm
 		},

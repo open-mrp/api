@@ -17,6 +17,99 @@ import (
 	gomock "go.uber.org/mock/gomock"
 )
 
+// MockGatewayClient is a mock of GatewayClient interface.
+type MockGatewayClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockGatewayClientMockRecorder
+	isgomock struct{}
+}
+
+// MockGatewayClientMockRecorder is the mock recorder for MockGatewayClient.
+type MockGatewayClientMockRecorder struct {
+	mock *MockGatewayClient
+}
+
+// NewMockGatewayClient creates a new mock instance.
+func NewMockGatewayClient(ctrl *gomock.Controller) *MockGatewayClient {
+	mock := &MockGatewayClient{ctrl: ctrl}
+	mock.recorder = &MockGatewayClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockGatewayClient) EXPECT() *MockGatewayClientMockRecorder {
+	return m.recorder
+}
+
+// Do mocks base method.
+func (m *MockGatewayClient) Do(ctx context.Context, req domain.GatewayRequest) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Do", ctx, req)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Do indicates an expected call of Do.
+func (mr *MockGatewayClientMockRecorder) Do(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Do", reflect.TypeOf((*MockGatewayClient)(nil).Do), ctx, req)
+}
+
+// MockNotificationClient is a mock of NotificationClient interface.
+type MockNotificationClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockNotificationClientMockRecorder
+	isgomock struct{}
+}
+
+// MockNotificationClientMockRecorder is the mock recorder for MockNotificationClient.
+type MockNotificationClientMockRecorder struct {
+	mock *MockNotificationClient
+}
+
+// NewMockNotificationClient creates a new mock instance.
+func NewMockNotificationClient(ctrl *gomock.Controller) *MockNotificationClient {
+	mock := &MockNotificationClient{ctrl: ctrl}
+	mock.recorder = &MockNotificationClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockNotificationClient) EXPECT() *MockNotificationClientMockRecorder {
+	return m.recorder
+}
+
+// PostReplyDraft mocks base method.
+func (m *MockNotificationClient) PostReplyDraft(ctx context.Context, in domain.PostReplyDraftRequest) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PostReplyDraft", ctx, in)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PostReplyDraft indicates an expected call of PostReplyDraft.
+func (mr *MockNotificationClientMockRecorder) PostReplyDraft(ctx, in any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostReplyDraft", reflect.TypeOf((*MockNotificationClient)(nil).PostReplyDraft), ctx, in)
+}
+
+// SendInboxReply mocks base method.
+func (m *MockNotificationClient) SendInboxReply(ctx context.Context, in domain.SendInboxReplyRequest) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendInboxReply", ctx, in)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SendInboxReply indicates an expected call of SendInboxReply.
+func (mr *MockNotificationClientMockRecorder) SendInboxReply(ctx, in any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendInboxReply", reflect.TypeOf((*MockNotificationClient)(nil).SendInboxReply), ctx, in)
+}
+
 // MockCoreClient is a mock of CoreClient interface.
 type MockCoreClient struct {
 	ctrl     *gomock.Controller
@@ -56,21 +149,6 @@ func (mr *MockCoreClientMockRecorder) GetAccountContext(ctx, accountID any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountContext", reflect.TypeOf((*MockCoreClient)(nil).GetAccountContext), ctx, accountID)
 }
 
-// GetCustomerByEmail mocks base method.
-func (m *MockCoreClient) GetCustomerByEmail(ctx context.Context, ownerAccountID, email string) (*domain.CustomerResult, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCustomerByEmail", ctx, ownerAccountID, email)
-	ret0, _ := ret[0].(*domain.CustomerResult)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetCustomerByEmail indicates an expected call of GetCustomerByEmail.
-func (mr *MockCoreClientMockRecorder) GetCustomerByEmail(ctx, ownerAccountID, email any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCustomerByEmail", reflect.TypeOf((*MockCoreClient)(nil).GetCustomerByEmail), ctx, ownerAccountID, email)
-}
-
 // GetRolePermissions mocks base method.
 func (m *MockCoreClient) GetRolePermissions(ctx context.Context, roleID string) (map[string]bool, error) {
 	m.ctrl.T.Helper()
@@ -84,36 +162,6 @@ func (m *MockCoreClient) GetRolePermissions(ctx context.Context, roleID string) 
 func (mr *MockCoreClientMockRecorder) GetRolePermissions(ctx, roleID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRolePermissions", reflect.TypeOf((*MockCoreClient)(nil).GetRolePermissions), ctx, roleID)
-}
-
-// ListProducts mocks base method.
-func (m *MockCoreClient) ListProducts(ctx context.Context, accountID string) ([]domain.ProductResult, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListProducts", ctx, accountID)
-	ret0, _ := ret[0].([]domain.ProductResult)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListProducts indicates an expected call of ListProducts.
-func (mr *MockCoreClientMockRecorder) ListProducts(ctx, accountID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListProducts", reflect.TypeOf((*MockCoreClient)(nil).ListProducts), ctx, accountID)
-}
-
-// SearchProducts mocks base method.
-func (m *MockCoreClient) SearchProducts(ctx context.Context, accountID, query string) ([]domain.ProductResult, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SearchProducts", ctx, accountID, query)
-	ret0, _ := ret[0].([]domain.ProductResult)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// SearchProducts indicates an expected call of SearchProducts.
-func (mr *MockCoreClientMockRecorder) SearchProducts(ctx, accountID, query any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchProducts", reflect.TypeOf((*MockCoreClient)(nil).SearchProducts), ctx, accountID, query)
 }
 
 // MockBillingCustomerResolver is a mock of BillingCustomerResolver interface.

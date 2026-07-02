@@ -514,8 +514,7 @@ func (s *itemSvcImpl) withTx(ctx context.Context, fn func(context.Context, *item
 	})
 }
 
-// itemAuditIncludes merges user-requested includes with the includes required
-// for correct audit change tracking (attributes).
+// itemAuditIncludes merges user-requested includes with the includes required for correct audit change tracking (attributes).
 func itemAuditIncludes(userIncludes []string) []string {
 	auditRequired := []string{"attributes"}
 	merged := make([]string, len(auditRequired))
@@ -695,8 +694,7 @@ func (s *itemSvcImpl) AddItemAttribute(ctx context.Context, itemID, attributeID 
 
 			changes := audit.ComputeChanges(old, item)
 
-			// Adding an already-associated attribute is a documented no-op;
-			// skip the publish when nothing actually changed.
+			// Adding an already-associated attribute is a documented no-op; skip the publish when nothing actually changed.
 			if len(changes) > 0 {
 				if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 					ServiceName:  domain.ServiceName,
@@ -940,8 +938,7 @@ func (s *itemSvcImpl) ChangeItemCategory(ctx context.Context, itemID, categoryID
 
 			changes := audit.ComputeChanges(itemForValidation, item)
 
-			// Re-assigning the item's current category is a no-op; skip the
-			// publish when nothing actually changed.
+			// Re-assigning the item's current category is a no-op; skip the publish when nothing actually changed.
 			if len(changes) > 0 {
 				if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 					ServiceName:  domain.ServiceName,
@@ -1220,8 +1217,7 @@ func (s *itemSvcImpl) UpdateItemInventory(ctx context.Context, params domain.Upd
 				return apiErr
 			}
 
-			// Empty when delta is zero (reconcile to the same quantity), in
-			// which case the publisher skips the event as a no-op.
+			// Empty when delta is zero (reconcile to the same quantity), in which case the publisher skips the event as a no-op.
 			var changes []audit.FieldChange
 			if !delta.IsZero() {
 				changes = append(changes, audit.NewFieldChange("quantity", currentQty, currentQty.Add(delta)))
@@ -1270,10 +1266,7 @@ func (s *itemSvcImpl) BulkCreateItems(ctx context.Context, params domain.BulkCre
 
 	accountID := identity.Target.AccountID
 
-	// The duplicate-SKU path in bulkCreateSingleItem updates an existing item in
-	// place. That is an update-class mutation, so it must additionally require
-	// items:update; otherwise a create-only actor could modify existing catalog
-	// records by submitting bulk-create rows with existing SKUs.
+	// The duplicate-SKU path in bulkCreateSingleItem updates an existing item in place. That is an update-class mutation, so it must additionally require items:update; otherwise a create-only actor could modify existing catalog records by submitting bulk-create rows with existing SKUs.
 	canUpdateItems := identity.CheckHasPermission(types.PermissionDomainItems, types.ActionUpdate) == nil
 
 	// Validate item type.
@@ -1320,10 +1313,7 @@ func (s *itemSvcImpl) BulkCreateItems(ctx context.Context, params domain.BulkCre
 	}
 }
 
-// bulkUpsertExistingItem updates an existing item in place during a bulk-create
-// operation, matching Dashboard's updateExistingProduct behavior: writes the new
-// description, product_line_id, category_id, and unit_value rate rather than
-// erroring on duplicate SKU.
+// bulkUpsertExistingItem updates an existing item in place during a bulk-create operation, matching Dashboard's updateExistingProduct behavior: writes the new description, product_line_id, category_id, and unit_value rate rather than erroring on duplicate SKU.
 func (s *itemSvcImpl) bulkUpsertExistingItem(ctx context.Context, accountID, itemID, unitValueRateID string, input domain.BulkCreateItemInput) *apierror.APIError {
 	return s.withTx(ctx, func(txCtx context.Context, txSvc *itemSvcImpl) *apierror.APIError {
 		txItemRepo := txSvc.repos.NewItemRepo()
@@ -1339,8 +1329,7 @@ func (s *itemSvcImpl) bulkUpsertExistingItem(ctx context.Context, accountID, ite
 			return apiErr
 		}
 
-		// Move the item between categories when the input supplies a new category,
-		// keeping rate units consistent with the new category's base unit.
+		// Move the item between categories when the input supplies a new category, keeping rate units consistent with the new category's base unit.
 		if input.ItemCategoryID != "" {
 			item, apiErr := txItemRepo.Get(txCtx, domain.GetItemParams{
 				AccountID: accountID,
@@ -1375,8 +1364,7 @@ func (s *itemSvcImpl) bulkUpsertExistingItem(ctx context.Context, accountID, ite
 			}
 		}
 
-		// Move the product to the new product line when supplied. Only applies to
-		// product-type bulk uploads; materials/parts don't have a product line.
+		// Move the product to the new product line when supplied. Only applies to product-type bulk uploads; materials/parts don't have a product line.
 		if input.ProductLineID != nil && *input.ProductLineID != "" {
 			if _, apiErr := txSvc.repos.NewProductRepo().ChangeProductLine(txCtx, domain.ChangeProductProductLineParams{
 				AccountID:     accountID,
@@ -1390,10 +1378,7 @@ func (s *itemSvcImpl) bulkUpsertExistingItem(ctx context.Context, accountID, ite
 			}
 		}
 
-		// Note: bulk input currently doesn't carry a unit price, so there's nothing
-		// to write into the unit_value rate. unitValueRateID is accepted on the
-		// signature so callers can add a price field later without changing the
-		// repo surface.
+		// Note: bulk input currently doesn't carry a unit price, so there's nothing to write into the unit_value rate. unitValueRateID is accepted on the signature so callers can add a price field later without changing the repo surface.
 		_ = unitValueRateID
 
 		// Replace attributes when supplied: clears existing, then re-adds from input.
@@ -1424,16 +1409,13 @@ func (s *itemSvcImpl) bulkCreateSingleItem(ctx context.Context, accountID, itemT
 		return domain.BulkCreateItemResult{SKU: sku, Success: false, Error: &msg}
 	}
 
-	// When the SKU already exists in the account, upsert the existing item's
-	// description + unit_value rather than failing (matches Dashboard's bulk behavior).
+	// When the SKU already exists in the account, upsert the existing item's description + unit_value rather than failing (matches Dashboard's bulk behavior).
 	existingItemID, existingRateID, apiErr := s.repos.NewItemRepo().FindBySKU(ctx, accountID, input.SKU)
 	if apiErr != nil {
 		return errResult(input.SKU, "Failed to look up existing SKU.")
 	}
 	if existingItemID != nil && existingRateID != nil {
-		// The upsert path mutates an existing item; gate it on items:update so
-		// a create-only actor cannot modify existing catalog records by passing
-		// an existing SKU.
+		// The upsert path mutates an existing item; gate it on items:update so a create-only actor cannot modify existing catalog records by passing an existing SKU.
 		if !canUpdateItems {
 			return errResult(input.SKU, "You do not have permission to update an existing item with this SKU.")
 		}
@@ -1810,8 +1792,7 @@ func (s *itemSvcImpl) BulkReconcileItems(ctx context.Context, params domain.Bulk
 
 		// Fetch physical inventory for all valid items before batch processing.
 		// This matches the Dashboard pattern which bulk-fetches inventory before processing.
-		// Uses physical inventory (receipts - open issues) instead of ATP to match Dashboard's
-		// physicalInventory metric.
+		// Uses physical inventory (receipts - open issues) instead of ATP to match Dashboard's physicalInventory metric.
 		invQueryRepo := s.repos.NewInventoryQueryRepo()
 		physicalInvMap := make(map[string]float64)
 		for _, d := range validItems {
@@ -1821,8 +1802,7 @@ func (s *itemSvcImpl) BulkReconcileItems(ctx context.Context, params domain.Bulk
 			}
 			physInv, fetchErr := invQueryRepo.FetchPhysicalInventory(ctx, item.ItemID, accountID)
 			if fetchErr != nil {
-				// Skip items where inventory cannot be fetched, matching Dashboard behavior
-				// where items with no currentInventory are silently skipped.
+				// Skip items where inventory cannot be fetched, matching Dashboard behavior where items with no currentInventory are silently skipped.
 				continue
 			}
 			physicalInvMap[item.ItemID] = physInv
@@ -1842,8 +1822,7 @@ func (s *itemSvcImpl) BulkReconcileItems(ctx context.Context, params domain.Bulk
 
 					currentQty, ok := physicalInvMap[item.ItemID]
 					if !ok {
-						// Item has no inventory data; skip silently (matches Dashboard behavior
-						// where items without currentInventory are skipped without error).
+						// Item has no inventory data; skip silently (matches Dashboard behavior where items without currentInventory are skipped without error).
 						continue
 					}
 
@@ -1896,8 +1875,7 @@ func (s *itemSvcImpl) BulkReconcileItems(ctx context.Context, params domain.Bulk
 						PreviousQuantity: currentQty, NewQuantity: newQty,
 					})
 
-					// Empty when the reconciled quantity equals the current
-					// quantity; the publisher skips the event as a no-op.
+					// Empty when the reconciled quantity equals the current quantity; the publisher skips the event as a no-op.
 					var changes []audit.FieldChange
 					if delta != 0 {
 						changes = append(changes, audit.NewFieldChange("quantity", currentQty, newQty))

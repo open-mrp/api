@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	types "github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -34,14 +35,15 @@ type ShipShipmentEndpoint struct{}
 
 func (e *ShipShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*ShipShipmentRequest, *apiresource.Shipment] {
 	return (&apiendpoint.APIEndpoint[*ShipShipmentRequest, *apiresource.Shipment]{
-		Title:             "Ship Shipment",
-		Method:            http.MethodPost,
-		Route:             "/v1/operations/shipments/{id}/actions/ship",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeShipment,
+		Title:               "Ship Shipment",
+		Method:              http.MethodPost,
+		Route:               "/v1/operations/shipments/{id}/actions/ship",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainShipments, Action: types.ActionUpdate}},
+		ObjectType:          constants.ObjectTypeShipment,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ShipShipmentRequest) (*apiresource.Shipment, *apierror.APIError) {
 			return svc.(ShipmentSvc).ShipShipment
 		},

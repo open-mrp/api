@@ -25,6 +25,7 @@ func (e *ListTransactionTypesEndpoint) Materialize() *apiendpoint.APIEndpoint[*L
 		Route:             "/v1/finance/transaction-types",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListTransactionTypesRequest) (*apiresource.List[apiresource.TransactionType], *apierror.APIError) {
 			return svc.(TransactionSvc).ListTransactionTypes

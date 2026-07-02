@@ -54,7 +54,6 @@ type AccountUsage struct {
 	Sandboxes                UsageItem
 	Subscription             *SubscriptionInfoResult
 	EstimatedAgentSpendCents int64
-	AgentTokenDetail         *AgentTokenDetail
 }
 
 type PlanChangePreview struct {
@@ -122,18 +121,6 @@ func (k *IdempotencyKey) HasResponse() bool {
 
 func (k *IdempotencyKey) IsFinished() bool {
 	return k.RecoveryPoint == string(RecoveryPointFinished)
-}
-
-type AgentTokenDetail struct {
-	IncludedTokens              int64
-	UsedTokens                  int64
-	InputTokens                 int64
-	OutputTokens                int64
-	AdditionalTokensPurchased   int64
-	TotalAvailable              int64
-	CurrentPeriodCost           float64
-	BillingPeriodEnd            time.Time
-	OverageCostPerMillionTokens float64
 }
 
 type AgentTokenBilling struct {

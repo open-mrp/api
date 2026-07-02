@@ -7,6 +7,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -35,13 +36,15 @@ type ListProductsEndpoint struct{}
 
 func (e *ListProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListProductsRequest, *apiresource.List[apiresource.Product]] {
 	return (&apiendpoint.APIEndpoint[*ListProductsRequest, *apiresource.List[apiresource.Product]]{
-		Title:             "List Products",
-		Method:            http.MethodGet,
-		ContentType:       "application/json",
-		Route:             "/v1/catalog/products",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
+		Title:               "List Products",
+		Method:              http.MethodGet,
+		ContentType:         "application/json",
+		Route:               "/v1/catalog/products",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionRead}, {Domain: types.PermissionDomainCustomers, Action: types.ActionRead}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionRead}},
+		Preview:             true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListProductsRequest) (*apiresource.List[apiresource.Product], *apierror.APIError) {
 			return svc.(ProductSvc).ListProducts
 		},

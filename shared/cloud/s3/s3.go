@@ -20,7 +20,15 @@ import (
 type ObjectStore interface {
 	Upload(ctx context.Context, bucket, key string, body io.Reader, contentType string) *apierror.APIError
 	GetPresignedURL(ctx context.Context, bucket, key string, expiry time.Duration) (string, *apierror.APIError)
+	// GetPresignedPutURL generates a presigned PUT URL so a client can upload directly to the bucket, keeping large media off the API request path.
+	GetPresignedPutURL(ctx context.Context, bucket, key, contentType string, expiry time.Duration) (string, *apierror.APIError)
 	FileExists(ctx context.Context, bucket, key string) (bool, *apierror.APIError)
+	// Get fetches an object's full bytes. Used to read a raw inbound email the SES receipt rule stored.
+	Get(ctx context.Context, bucket, key string) ([]byte, *apierror.APIError)
+	// Delete removes an object. It is idempotent: deleting an already-absent key is not an error, so a reaper can re-attempt after a crash between the object delete and the DB row delete.
+	Delete(ctx context.Context, bucket, key string) *apierror.APIError
+	// Copy copies an object within a bucket (srcKey → dstKey). Used to promote a staged upload to its permanent key on attach; it is idempotent (re-copying overwrites the destination).
+	Copy(ctx context.Context, bucket, srcKey, dstKey string) *apierror.APIError
 }
 
 var s3Tracer = tracing.GetTracer("shared.cloud.s3")
@@ -89,6 +97,83 @@ func (c *Client) GetPresignedURL(ctx context.Context, bucket, key string, expiry
 	}
 
 	return result.URL, nil
+}
+
+// GetPresignedPutURL generates a presigned PUT URL for direct client upload. The client must send the same Content-Type header when uploading. SSE-AES256 is applied on the bucket default.
+func (c *Client) GetPresignedPutURL(ctx context.Context, bucket, key, contentType string, expiry time.Duration) (string, *apierror.APIError) {
+	ctx, span := s3Tracer.Start(ctx, "s3.get_presigned_put_url")
+	defer span.End()
+
+	if expiry == 0 {
+		expiry = defaultPresignExpiry
+	}
+
+	input := &s3.PutObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	}
+	if contentType != "" {
+		input.ContentType = aws.String(contentType)
+	}
+	result, err := c.presigner.PresignPutObject(ctx, input, s3.WithPresignExpires(expiry))
+	if err != nil {
+		return "", tracing.Trace(span, apierror.NewInternalError(err, "Failed to generate presigned upload URL."))
+	}
+
+	return result.URL, nil
+}
+
+// Delete removes an object from S3. S3 DeleteObject is idempotent — it returns success for a missing key — so this is safe to re-run after a partial purge.
+func (c *Client) Delete(ctx context.Context, bucket, key string) *apierror.APIError {
+	ctx, span := s3Tracer.Start(ctx, "s3.delete")
+	defer span.End()
+
+	_, err := c.client.DeleteObject(ctx, &s3.DeleteObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to delete object from S3."))
+	}
+	return nil
+}
+
+// Copy copies an object within a bucket. The destination inherits SSE-AES256 from the bucket default. Idempotent: re-copying overwrites the destination, so an attach retry is safe.
+func (c *Client) Copy(ctx context.Context, bucket, srcKey, dstKey string) *apierror.APIError {
+	ctx, span := s3Tracer.Start(ctx, "s3.copy")
+	defer span.End()
+
+	_, err := c.client.CopyObject(ctx, &s3.CopyObjectInput{
+		Bucket:               aws.String(bucket),
+		CopySource:           aws.String(bucket + "/" + srcKey),
+		Key:                  aws.String(dstKey),
+		ServerSideEncryption: s3types.ServerSideEncryptionAes256,
+	})
+	if err != nil {
+		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to copy object in S3."))
+	}
+	return nil
+}
+
+// Get fetches an object's full bytes. The caller owns the returned slice; objects are expected to be modest (raw emails), so the whole body is read into memory.
+func (c *Client) Get(ctx context.Context, bucket, key string) ([]byte, *apierror.APIError) {
+	ctx, span := s3Tracer.Start(ctx, "s3.get")
+	defer span.End()
+
+	out, err := c.client.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to read object from S3."))
+	}
+	defer out.Body.Close()
+
+	data, err := io.ReadAll(out.Body)
+	if err != nil {
+		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to read object body from S3."))
+	}
+	return data, nil
 }
 
 // FileExists checks whether an object exists in S3.

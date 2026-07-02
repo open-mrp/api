@@ -27,6 +27,7 @@ func (e *RetrieveAccountStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Route:             "/v1/sales/account-statuses/{id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeAccountStatus,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAccountStatusRequest) (*apiresource.AccountStatus, *apierror.APIError) {

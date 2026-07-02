@@ -95,7 +95,7 @@ func (m *billingSvcImpl) GetAccountUsage(ctx context.Context, _ *apiresource.Emp
 	// downstream GetAccountContext RPC is unguarded (auth bootstrap plumbing),
 	// so require an authenticated identity here before calling it.
 	identity, idErr := httptransport.GetIdentity(ctx)
-	if idErr == nil && identity.IsAuthenticated() && identity.Target != nil && identity.Target.AccountID != "" {
+	if idErr == nil && identity.IsAuthenticated() && identity.IsTargetAccountSet() {
 		acctResp, capErr := grpcutil.CallRPC(ctx, billingSvcTracer, "service.billing.get_spending_cap_for_usage", domain.ServiceName,
 			func(ctx context.Context, opts ...grpc.CallOption) (*corepb.GetAccountContextResponse, error) {
 				return m.coreClient.GetAccountContext(ctx, &corepb.GetAccountContextRequest{
@@ -209,7 +209,7 @@ func (m *billingSvcImpl) GetSpendingCap(ctx context.Context, _ *apiresource.Empt
 	if apiErr := identity.CheckIsAuthenticated(); apiErr != nil {
 		return nil, apiErr
 	}
-	if identity.Target == nil || identity.Target.AccountID == "" {
+	if !identity.IsTargetAccountSet() {
 		return nil, apierror.NewAuthenticationError("Missing account context")
 	}
 
@@ -397,26 +397,6 @@ func accountUsageFromProto(resp *pb.GetAccountUsageResponse) *apiresource.Accoun
 	result.AgentSpend = &apiresource.AgentSpendInfo{
 		Object:              constants.ObjectTypeAgentSpendInfo,
 		EstimatedSpendCents: resp.EstimatedAgentSpendCents,
-	}
-
-	if resp.AgentTokenDetail != nil {
-		d := resp.AgentTokenDetail
-		billingPeriodEnd := ""
-		if d.BillingPeriodEnd != nil {
-			billingPeriodEnd = d.BillingPeriodEnd.AsTime().UTC().Format("2006-01-02T15:04:05Z")
-		}
-		result.AgentTokenDetail = &apiresource.AgentTokenDetail{
-			Object:                      constants.ObjectTypeAgentTokenDetail,
-			IncludedTokens:              d.IncludedTokens,
-			UsedTokens:                  d.UsedTokens,
-			InputTokens:                 d.InputTokens,
-			OutputTokens:                d.OutputTokens,
-			AdditionalTokensPurchased:   d.AdditionalTokensPurchased,
-			TotalAvailable:              d.TotalAvailable,
-			CurrentPeriodCost:           d.CurrentPeriodCost,
-			BillingPeriodEnd:            billingPeriodEnd,
-			OverageCostPerMillionTokens: d.OverageCostPerMillionTokens,
-		}
 	}
 
 	return result

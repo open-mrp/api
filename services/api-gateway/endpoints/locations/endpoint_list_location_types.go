@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -19,13 +20,15 @@ type ListLocationTypesEndpoint struct{}
 
 func (e *ListLocationTypesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListLocationTypesRequest, *apiresource.List[apiresource.LocationType]] {
 	return (&apiendpoint.APIEndpoint[*ListLocationTypesRequest, *apiresource.List[apiresource.LocationType]]{
-		Title:             "List Location Types",
-		Method:            http.MethodGet,
-		ContentType:       "application/json",
-		Route:             "/v1/operations/location-types",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
+		Title:               "List Location Types",
+		Method:              http.MethodGet,
+		ContentType:         "application/json",
+		Route:               "/v1/operations/location-types",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainLocations, Action: types.ActionRead}},
+		Preview:             true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListLocationTypesRequest) (*apiresource.List[apiresource.LocationType], *apierror.APIError) {
 			return svc.(LocationSvc).ListLocationTypes
 		},

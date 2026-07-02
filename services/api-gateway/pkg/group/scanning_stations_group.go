@@ -35,7 +35,7 @@ func (*ScanningStationsEndpointGroup) Materialize(config *ScanningStationsEndpoi
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
-		Title:        "Scanning Stations Management",
+		Title:        "Scanning Stations",
 		Description:  "List and manage scanning stations.",
 		ResourceType: &apiresource.ScanningStation{},
 	}

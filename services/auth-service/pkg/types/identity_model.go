@@ -86,6 +86,16 @@ func (i *Identity) IsInternalActor() bool {
 	return i.IsActorSet() && i.Actor.RelationType == IdentityRelationTypeInternal
 }
 
+// IsRelationActor reports whether the actor reaches the target account through a
+// customer or supplier account relation rather than as an internal member. Such
+// actors carry no permission set (their Permissions map is intentionally empty);
+// their access is relation-scoped and authorized in the downstream service, so
+// the coarse gateway permission gate must not reject them.
+func (i *Identity) IsRelationActor() bool {
+	return i.IsActorSet() &&
+		(i.Actor.RelationType == IdentityRelationTypeCustomer || i.Actor.RelationType == IdentityRelationTypeSupplier)
+}
+
 // IsInternalUser checks that the identity is authenticated, has a valid actor, is of type internal, and has a valid actor account
 func (i *Identity) IsInternalUser() bool {
 	return i.IsActorSet() && i.IsTargetAccountSet() && i.Actor.RelationType == IdentityRelationTypeInternal && *i.Actor.AccountID == i.Target.AccountID

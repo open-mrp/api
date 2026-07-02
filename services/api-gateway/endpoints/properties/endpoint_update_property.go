@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -33,14 +34,16 @@ type UpdatePropertyEndpoint struct{}
 
 func (e *UpdatePropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePropertyRequest, *apiresource.Property] {
 	return (&apiendpoint.APIEndpoint[*UpdatePropertyRequest, *apiresource.Property]{
-		Title:             "Update Property",
-		Method:            http.MethodPatch,
-		ContentType:       "application/json",
-		Route:             CatalogPropertyRoute,
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeProperty,
+		Title:               "Update Property",
+		Method:              http.MethodPatch,
+		ContentType:         "application/json",
+		Route:               CatalogPropertyRoute,
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProperties, Action: types.ActionUpdate}},
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeProperty,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeProperty,
 			Fields:     []string{"attributes"},

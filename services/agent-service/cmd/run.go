@@ -7,12 +7,14 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/augno/api/services/agent-service/internal/agents"
 	"github.com/augno/api/services/agent-service/internal/domain"
 	"github.com/augno/api/services/agent-service/internal/event"
 	agentdb "github.com/augno/api/services/agent-service/internal/infrastructure/db"
 	agentgrpc "github.com/augno/api/services/agent-service/internal/infrastructure/grpc"
+	"github.com/augno/api/services/agent-service/internal/infrastructure/httpgateway"
 	"github.com/augno/api/services/agent-service/internal/infrastructure/repository"
 	"github.com/augno/api/services/agent-service/internal/infrastructure/sqlc"
 	"github.com/augno/api/services/agent-service/internal/infrastructure/stub"
@@ -70,6 +72,9 @@ func Run(
 	enqueuer, err := messaging.NewEnqueuer(&messaging.EnqueuerConfig{
 		ServiceName:  domain.ServiceName,
 		PlatformMode: cfg.PlatformMode,
+		// Chat runs kick the enqueuer (OutboxNotifier below) so they start instantly; this caps the
+		// worst case if a kick is ever missed at 2s instead of the default 5s idle ceiling.
+		MaxPollInterval: 2 * time.Second,
 	}, outboxRepo, rabbitmq, leaseSvc)
 	if err != nil {
 		return err
@@ -115,18 +120,44 @@ func Run(
 
 	// LLM providers (stubbed in test mode)
 	var providers map[string]llm.LLMProvider
+	// Every provider routes through the single Stripe AI Gateway; the keys just mirror inferProvider.
 	if cfg.PlatformMode.IsTest() {
 		stubProvider := &stub.LLMProvider{}
 		providers = map[string]llm.LLMProvider{
 			"anthropic": stubProvider,
 			"openai":    stubProvider,
+			"google":    stubProvider,
+			"xai":       stubProvider,
 		}
 	} else {
+		// Anthropic models use the native Messages API (real thinking blocks + signatures for
+		// reasoning streaming); the rest use the OpenAI-compatible /chat/completions surface. Both
+		// route through the Stripe AI Gateway, so usage is metered per customer either way.
 		gateway := llm.NewGatewayProvider(cfg.StripeSecretKey)
+		anthropicNative := llm.NewAnthropicMessagesProvider(cfg.StripeSecretKey)
 		providers = map[string]llm.LLMProvider{
-			"anthropic": gateway,
+			"anthropic": anthropicNative,
 			"openai":    gateway,
+			"google":    gateway,
+			"xai":       gateway,
 		}
+	}
+
+	// Gateway client for generated endpoint-tools (optional; only when configured).
+	var gatewayClient domain.GatewayClient
+	if cfg.GatewayInternalURL != "" && cfg.InternalServiceToken != "" {
+		gatewayClient = httpgateway.NewClient(cfg.GatewayInternalURL, cfg.InternalServiceToken)
+	}
+
+	// Notification-service client for the agent's email reply/draft tools (optional).
+	var notificationClient domain.NotificationClient
+	if cfg.NotificationServiceURL != "" {
+		nc, err := agentgrpc.NewAgentNotificationClient(cfg.NotificationServiceURL)
+		if err != nil {
+			return err
+		}
+		defer nc.Close()
+		notificationClient = nc
 	}
 
 	// Repo factory
@@ -138,13 +169,15 @@ func Run(
 
 	// Runner service
 	runner := service.NewRunnerSvc(&service.RunnerConfig{
-		Repos:         repoFactory,
-		ToolRegistry:  toolRegistry,
-		LLMProviders:  providers,
-		OutboxRepo:    repoFactory.NewOutboxRepo(),
-		CoreClient:    coreClient,
-		Broker:        rabbitmq,
-		BillingClient: billingClient,
+		Repos:              repoFactory,
+		ToolRegistry:       toolRegistry,
+		LLMProviders:       providers,
+		OutboxRepo:         repoFactory.NewOutboxRepo(),
+		CoreClient:         coreClient,
+		GatewayClient:      gatewayClient,
+		NotificationClient: notificationClient,
+		Broker:             rabbitmq,
+		BillingClient:      billingClient,
 	})
 
 	// Run consumer
@@ -180,7 +213,14 @@ func Run(
 		MediatorFactory: mediatorFactory,
 		TxManager:       txManager,
 		PlanGate:        planGate,
+		OutboxNotifier:  enqueuer,
 	})
+
+	// Chat-run consumer: notification-service signals an agent participant's trigger fired.
+	chatRunConsumer := event.NewChatRunConsumer(rabbitmq, inboxRepo, agentDefSvc)
+	if err := chatRunConsumer.Listen(ctx); err != nil {
+		return err
+	}
 
 	// gRPC server
 	server, err := contracts.NewGRPCServer(domain.ServiceName, nil, nil)

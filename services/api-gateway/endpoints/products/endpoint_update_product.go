@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -21,11 +22,11 @@ type UpdateProductRequest struct {
 	//
 	// Must be unique within the account; the update fails with a conflict error if another item already uses it.
 	SKU field.Optional[string] `json:"sku,omitzero" validate:"omitempty,max=255"`
-	// Description.
+	// Free-form description of the product.
 	//
 	// Send `null` to clear.
 	Description field.Clearable[string] `json:"description,omitzero"`
-	// Notes.
+	// Free-form notes about the product.
 	//
 	// Send `null` to clear.
 	Notes field.Clearable[string] `json:"notes,omitzero"`
@@ -55,13 +56,15 @@ type UpdateProductEndpoint struct{}
 
 func (e *UpdateProductEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateProductRequest, *apiresource.Product] {
 	return (&apiendpoint.APIEndpoint[*UpdateProductRequest, *apiresource.Product]{
-		Title:             "Update Product",
-		Method:            http.MethodPatch,
-		Route:             "/v1/catalog/products/{id}",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
+		Title:               "Update Product",
+		Method:              http.MethodPatch,
+		Route:               "/v1/catalog/products/{id}",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionUpdate}},
+		Preview:             true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateProductRequest) (*apiresource.Product, *apierror.APIError) {
 			return svc.(ProductSvc).UpdateProduct
 		},

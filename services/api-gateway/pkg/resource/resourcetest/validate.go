@@ -15,13 +15,9 @@ var validate *validator.Validate
 func init() {
 	validate = validator.New()
 	noop := func(fl validator.FieldLevel) bool { return true }
-	// Register no-ops for the "enum" tag and all enum value fragments that
-	// the validator might interpret as separate tags. The "enum" tag is
-	// handled separately via reflection in handler.go; without these no-ops
-	// the validator panics on unknown tags.
+	// Register no-ops for the "enum" tag and all enum value fragments that the validator might interpret as separate tags. The "enum" tag is handled separately via reflection in handler.go; without these no-ops the validator panics on unknown tags.
 	//
-	// For example, `validate:"required,enum=user,api_key"` is parsed by
-	// the validator as three tags: "required", "enum=user", and "api_key".
+	// For example, `validate:"required,enum=user,api_key"` is parsed by the validator as three tags: "required", "enum=user", and "api_key".
 	_ = validate.RegisterValidation("enum", noop)
 	// Tags that appear as OR-fragments or comma-fragments in enum values.
 	// e.g. "enum=user,api_key" → tags "enum=user" and "api_key"
@@ -296,6 +292,54 @@ func validatePopulatedExpandableValue(t *testing.T, path string, v reflect.Value
 	case reflect.Slice:
 		for i := 0; i < v.Len(); i++ {
 			validatePopulatedExpandableValue(t, fmt.Sprintf("%s[%d]", path, i), v.Index(i))
+		}
+	}
+}
+
+// AssertExpandablesNil asserts that every expandable:"true" field reachable from resource is unset (nil pointer/slice/map, or zero value). This encodes the include contract: base mappers and gated *FromProto builders must leave expandable sub-resources empty so they are populated only when the caller explicitly requests them via ?include=. A non-nil expandable field returned straight from a mapper is the over-hydration bug this guards against (e.g. a sales-order line carrying a half-populated product stub, or a deleted product embedding its item/product_line).
+//
+// It recurses through non-expandable nested structs, pointers, and slices so an embedded resource (e.g. an order line inside a list) is checked too.
+func AssertExpandablesNil(t *testing.T, name string, resource any) {
+	t.Helper()
+	rv := reflect.ValueOf(resource)
+	for rv.Kind() == reflect.Pointer {
+		if rv.IsNil() {
+			return
+		}
+		rv = rv.Elem()
+	}
+	if rv.Kind() != reflect.Struct {
+		return
+	}
+	rt := rv.Type()
+	for i := 0; i < rv.NumField(); i++ {
+		fv := rv.Field(i)
+		ft := rt.Field(i)
+		if !ft.IsExported() {
+			continue
+		}
+		if ft.Tag.Get("expandable") == "true" {
+			if !fv.IsZero() {
+				t.Errorf("%s: expandable field %s (json:%q) is set — base mappers must leave it unset until requested via ?include=",
+					name, ft.Name, resolveJSONNameFromType(rt, ft.Name))
+			}
+			continue
+		}
+		// Recurse into non-expandable nested structs/pointers/slices, which may themselves carry expandable fields.
+		switch fv.Kind() {
+		case reflect.Pointer:
+			if !fv.IsNil() && fv.Elem().Kind() == reflect.Struct {
+				AssertExpandablesNil(t, name+"."+ft.Name, fv.Interface())
+			}
+		case reflect.Struct:
+			AssertExpandablesNil(t, name+"."+ft.Name, fv.Interface())
+		case reflect.Slice:
+			for j := 0; j < fv.Len(); j++ {
+				el := fv.Index(j)
+				if el.Kind() == reflect.Pointer || el.Kind() == reflect.Struct {
+					AssertExpandablesNil(t, fmt.Sprintf("%s.%s[%d]", name, ft.Name, j), el.Interface())
+				}
+			}
 		}
 	}
 }

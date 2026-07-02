@@ -56,3 +56,12 @@ func (r *agentActionRepoImpl) UpdateStatus(ctx context.Context, params sqlc.Upda
 	}
 	return nil
 }
+
+func (r *agentActionRepoImpl) MarkReviewed(ctx context.Context, params sqlc.MarkAgentActionReviewedParams) *apierror.APIError {
+	ctx, span := tracing.StartSpan(ctx, actionRepoTracer, "repository.agent_action.mark_reviewed")
+	defer span.End()
+	if apiErr := db.MapSQLError(r.queries.MarkAgentActionReviewed(ctx, params)); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
+}

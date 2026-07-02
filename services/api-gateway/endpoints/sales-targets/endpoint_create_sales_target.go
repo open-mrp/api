@@ -8,6 +8,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -50,6 +51,9 @@ func (e *CreateSalesTargetEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeSalesTarget,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainSalesTargets, Action: types.ActionCreate},
+		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateSalesTargetRequest) (*apiresource.SalesTarget, *apierror.APIError) {
 			return svc.(SalesTargetSvc).CreateSalesTarget
 		},

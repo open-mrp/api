@@ -35,7 +35,7 @@ func (*ServiceLevelsEndpointGroup) Materialize(config *ServiceLevelsEndpointGrou
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
-		Title:        "Service Levels Management",
+		Title:        "Service Levels",
 		Description:  "List and manage service levels (shipping service levels).",
 		ResourceType: &apiresource.ServiceLevel{},
 	}

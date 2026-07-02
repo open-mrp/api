@@ -40,6 +40,23 @@ const (
 	// NotificationEventEmailFailed is an event that indicates that an email has failed to send.
 	NotificationEventEmailFailed AmqpRoutingKey = "notification.event.email_failed"
 
+	// In-app messaging / notifications
+
+	// NotificationCmdFanout instructs notification-service to turn an alert/message intent into a message plus per-recipient notification rows (system/agent/event alerts, broadcasts).
+	NotificationCmdFanout AmqpRoutingKey = "notification.cmd.fanout"
+	// NotificationCmdSendMessage is the async chat-send path used for heavy group/broadcast fan-out.
+	NotificationCmdSendMessage AmqpRoutingKey = "notification.cmd.send_message"
+	// NotificationCmdAgentReply instructs notification-service to post an agent's reply into a conversation as the agent participant (attributed + linked to the producing run). Emitted by agent-service after a chat-triggered run. Carries a Phase ("start" creates the streaming row,
+	// "final"/empty finalizes it) so the reply renders as one record that streams in.
+	NotificationCmdAgentReply AmqpRoutingKey = "notification.cmd.agent_reply"
+	// NotificationCmdAgentReplyPatch streams a partial body into an in-flight agent reply message while the run is still producing tokens. Best-effort (published straight to the exchange, not the outbox): patches are lossy by design — they carry the full accumulated body (last-write-wins) and
+	// NotificationCmdAgentReply's "final" phase reconciles the persisted row.
+	NotificationCmdAgentReplyPatch AmqpRoutingKey = "notification.cmd.agent_reply_patch"
+	// NotificationEventDelivered carries a best-effort realtime push to the gateways (bell + live chat).
+	NotificationEventDelivered AmqpRoutingKey = "notification.event.delivered"
+	// NotificationEventConversationUpdated carries unread/last-message/typing updates to the gateways.
+	NotificationEventConversationUpdated AmqpRoutingKey = "notification.event.conversation_updated"
+
 	// Core
 
 	// CoreCmdPurgeAccountData is a command to purge all account-scoped data for a deleted sandbox account.
@@ -50,6 +67,12 @@ const (
 
 	// CoreCmdExecuteProductionStep is a command to execute production step side-effects (inventory updates, reservation management) after a batch mutation such as initialize, move, merge, or split.
 	CoreCmdExecuteProductionStep AmqpRoutingKey = "core.cmd.execute_production_step"
+
+	// CoreCmdHubspotSyncPreview is a command to run the read-only matching pass of a HubSpot backfill job out-of-band so the triggering request returns immediately.
+	CoreCmdHubspotSyncPreview AmqpRoutingKey = "core.cmd.hubspot_sync_preview"
+
+	// CoreCmdHubspotSyncExecute is a command to run the write phase of a reviewed HubSpot backfill job.
+	CoreCmdHubspotSyncExecute AmqpRoutingKey = "core.cmd.hubspot_sync_execute"
 
 	// CoreEventSalesOrderCreated is an event indicating a sales order was created. Consumers use it to run out-of-band side effects (e.g. syncing the order to a third-party CRM such as HubSpot) without blocking the create response.
 	CoreEventSalesOrderCreated AmqpRoutingKey = "core.event.sales_order_created"
@@ -68,12 +91,13 @@ const (
 
 	// AgentCmdExecuteRun is a command to execute an agent run.
 	AgentCmdExecuteRun AmqpRoutingKey = "agent.cmd.execute_run"
-	// AgentCmdProcessEmail is a command to process an inbound email via an agent.
-	AgentCmdProcessEmail AmqpRoutingKey = "agent.cmd.process_email"
 	// AgentCmdExecuteAction is a command to execute a proposed agent action.
 	AgentCmdExecuteAction AmqpRoutingKey = "agent.cmd.execute_action"
 	// AgentCmdContinueRun is a command to continue an agent run awaiting input.
 	AgentCmdContinueRun AmqpRoutingKey = "agent.cmd.continue_run"
+	// AgentCmdChatRun starts an agent run from a chat message: agent-service creates a chat-linked run
+	// (conversation_id + trigger_message_id) and executes it. Emitted by notification-service when an agent participant's trigger policy fires.
+	AgentCmdChatRun AmqpRoutingKey = "agent.cmd.chat_run"
 	// AgentEventRunCompleted is an event indicating an agent run has finished.
 	AgentEventRunCompleted AmqpRoutingKey = "agent.event.run_completed"
 	// AgentEventRunStep is an event carrying a single run step for real-time WebSocket streaming to the frontend.

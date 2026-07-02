@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -26,14 +27,16 @@ type ChangeItemCategoryUnitGroupEndpoint struct{}
 
 func (e *ChangeItemCategoryUnitGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*ChangeItemCategoryUnitGroupRequest, *apiresource.EmptyResource] {
 	return (&apiendpoint.APIEndpoint[*ChangeItemCategoryUnitGroupRequest, *apiresource.EmptyResource]{
-		Title:             "Change Item Category Unit Group",
-		Method:            http.MethodPut,
-		Route:             "/v1/catalog/item-categories/{id}/unit-groups/{unit_group_id}",
-		SDKMethodKey:      "change_unit_group",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
+		Title:               "Change Item Category Unit Group",
+		Method:              http.MethodPut,
+		Route:               "/v1/catalog/item-categories/{id}/unit-groups/{unit_group_id}",
+		SDKMethodKey:        "change_unit_group",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainCategories, Action: types.ActionUpdate}},
+		Preview:             true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ChangeItemCategoryUnitGroupRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ItemCategorySvc).ChangeItemCategoryUnitGroup
 		},

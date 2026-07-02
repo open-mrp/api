@@ -27,6 +27,8 @@ func (e *RetrieveAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retriev
 		Route:             "/v1/auth/api-keys/{id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
+		AgentTool:         true,
+		RequiredRoleType:  constants.RoleTypeAdmin,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeAPIKey,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAPIKeyRequest) (*apiresource.APIKey, *apierror.APIError) {

@@ -1,0 +1,149 @@
+syntax = "proto3";
+
+// EmailBridgeService is the notification-service contract for the chat↔email bridge configuration:
+// the self-serve customer-domain verification flow (register a domain with SES, surface the DKIM
+// records, poll until verified) and CRUD over the routable inboxes that bind inbound mail to chat
+// conversations. Caller identity is propagated over gRPC metadata; the account is derived from
+// identity.target.account_id, so requests do not embed it.
+package notification;
+
+option go_package = "shared/proto/notification;notification";
+
+import "google/protobuf/timestamp.proto";
+
+service EmailBridgeService {
+  // CreateEmailDomain registers a customer-owned domain with SES (Easy DKIM) and returns the DKIM
+  // records the customer must publish; the domain starts in status=pending.
+  rpc CreateEmailDomain(CreateEmailDomainRequest) returns (EmailDomainInfo);
+  // ListEmailDomains returns the caller account's registered domains.
+  rpc ListEmailDomains(ListEmailDomainsRequest) returns (ListEmailDomainsResponse);
+  // GetEmailDomain returns a single domain owned by the caller account.
+  rpc GetEmailDomain(GetEmailDomainRequest) returns (EmailDomainInfo);
+  // VerifyEmailDomain re-polls SES and flips the domain to verified once DKIM is confirmed.
+  rpc VerifyEmailDomain(VerifyEmailDomainRequest) returns (EmailDomainInfo);
+
+  // CreateEmailInbox provisions a routable inbox address on a verified domain.
+  rpc CreateEmailInbox(CreateEmailInboxRequest) returns (EmailInboxInfo);
+  // ListEmailInboxes returns the caller account's inboxes.
+  rpc ListEmailInboxes(ListEmailInboxesRequest) returns (ListEmailInboxesResponse);
+  // GetEmailInbox returns a single inbox owned by the caller account.
+  rpc GetEmailInbox(GetEmailInboxRequest) returns (EmailInboxInfo);
+  // UpdateEmailInbox edits an inbox's from-name, status, and default agent trigger config.
+  rpc UpdateEmailInbox(UpdateEmailInboxRequest) returns (EmailInboxInfo);
+  // DeleteEmailInbox removes an inbox.
+  rpc DeleteEmailInbox(DeleteEmailInboxRequest) returns (EmailBridgeAck);
+
+  // SendInboxReply sends an agent's outbound email reply through the conversation's bound inbox
+  // (SES, threaded under the latest inbound mail) and posts it into the thread. Called by
+  // agent-service when an approved send_email tool executes.
+  rpc SendInboxReply(SendInboxReplyRequest) returns (EmailMessageRef);
+  // PostReplyDraft proposes an agent's customer reply as a real status=draft message held for human
+  // approval (channel resolved from the case: email if bridged, else a portal message). Called by
+  // agent-service when the draft_customer_reply tool executes; the draft surfaces in the reply-drafts
+  // bar for a human to edit/approve/send.
+  rpc PostReplyDraft(PostReplyDraftRequest) returns (EmailMessageRef);
+}
+
+message SendInboxReplyRequest {
+  string conversation_id = 1;
+  string subject = 2;
+  string body = 3;
+  repeated string cc = 4;
+  string agent_config_id = 5;
+  string agent_run_id = 6;
+}
+
+message PostReplyDraftRequest {
+  string conversation_id = 1;
+  string body = 2;
+  // subject is used only when the case is email-bridged (the outbound email subject); ignored otherwise.
+  string subject = 3;
+  string agent_config_id = 4;
+  string agent_run_id = 5;
+  // source_thread_message_id records the internal note the draft was composed from (provenance).
+  string source_thread_message_id = 6;
+}
+
+message EmailMessageRef {
+  string message_id = 1;
+  string conversation_id = 2;
+}
+
+message EmailDomainInfo {
+  string id = 1;
+  string account_id = 2;
+  string domain = 3;
+  string status = 4; // pending | verified | failed
+  repeated string dkim_tokens = 5;
+  google.protobuf.Timestamp verified_at = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message EmailInboxInfo {
+  string id = 1;
+  string account_id = 2;
+  string email_domain_id = 3;
+  string address = 4;
+  optional string from_name = 5;
+  string status = 6; // active | disabled
+  optional string agent_config_id = 7;
+  optional string agent_trigger_policy = 8; // mention | keyword | always
+  repeated string agent_trigger_keywords = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+message CreateEmailDomainRequest {
+  string domain = 1;
+}
+
+message ListEmailDomainsRequest {}
+
+message ListEmailDomainsResponse {
+  repeated EmailDomainInfo domains = 1;
+}
+
+message GetEmailDomainRequest {
+  string id = 1;
+}
+
+message VerifyEmailDomainRequest {
+  string id = 1;
+}
+
+message CreateEmailInboxRequest {
+  string email_domain_id = 1;
+  string address = 2;
+  optional string from_name = 3;
+  optional string agent_config_id = 4;
+  optional string agent_trigger_policy = 5;
+  repeated string agent_trigger_keywords = 6;
+}
+
+message ListEmailInboxesRequest {}
+
+message ListEmailInboxesResponse {
+  repeated EmailInboxInfo inboxes = 1;
+}
+
+message GetEmailInboxRequest {
+  string id = 1;
+}
+
+message UpdateEmailInboxRequest {
+  string id = 1;
+  optional string from_name = 2;
+  string status = 3;
+  optional string agent_config_id = 4;
+  optional string agent_trigger_policy = 5;
+  repeated string agent_trigger_keywords = 6;
+}
+
+message DeleteEmailInboxRequest {
+  string id = 1;
+}
+
+message EmailBridgeAck {
+  bool ok = 1;
+}

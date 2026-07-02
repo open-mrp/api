@@ -35,7 +35,7 @@ func (*SysPropertiesEndpointGroup) Materialize(config *SysPropertiesEndpointGrou
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
-		Title:        "System Properties Management",
+		Title:        "System Properties",
 		Description:  "List and manage system properties (auto-incrementing counters).",
 		ResourceType: &apiresource.SysProperty{},
 	}

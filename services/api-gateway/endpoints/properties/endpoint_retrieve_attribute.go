@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -23,14 +24,16 @@ type RetrieveAttributeEndpoint struct{}
 
 func (e *RetrieveAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAttributeRequest, *apiresource.Attribute] {
 	return (&apiendpoint.APIEndpoint[*RetrieveAttributeRequest, *apiresource.Attribute]{
-		Title:             "Retrieve Attribute",
-		Method:            http.MethodGet,
-		ContentType:       "application/json",
-		Route:             CatalogPropertyAttributeRoute,
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeAttribute,
+		Title:               "Retrieve Attribute",
+		Method:              http.MethodGet,
+		ContentType:         "application/json",
+		Route:               CatalogPropertyAttributeRoute,
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProperties, Action: types.ActionRead}},
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeAttribute,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAttributeRequest) (*apiresource.Attribute, *apierror.APIError) {
 			return svc.(PropertySvc).GetAttribute
 		},

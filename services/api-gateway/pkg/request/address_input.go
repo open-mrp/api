@@ -9,12 +9,12 @@ import (
 // Address details used to create an address, either directly or inline on another resource.
 type AddressInput struct {
 	// Display name of the address.
-	Name string `json:"name" validate:"required,max=255"`
+	Name string `json:"name" validate:"required,min=1,max=255"`
 	// Phone number associated with the address.
 	Phone field.Optional[string] `json:"phone,omitzero" validate:"omitempty,max=255"`
 	// Email address associated with the address.
 	Email field.Optional[string] `json:"email,omitzero" validate:"omitempty,custom_email,max=255"`
-	// Address type.
+	// How the address is used.
 	//
 	// - `standard`: a normal shipping or billing address.
 	// - `drop_ship`: an address an order is shipped to directly, typically a third party or end customer rather than the account itself.

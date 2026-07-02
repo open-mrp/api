@@ -198,6 +198,14 @@ func (s *scanningStationSvcImpl) CreateScanningStation(ctx context.Context, para
 				return apierror.NewConflictErrorWithParam("A scanning station with this name already exists.", "name")
 			}
 
+			// Verify the referenced department exists for the account so a nonexistent or cross-account department 404s instead of persisting a dangling reference (mirrors CreateMachine).
+			if _, apiErr := txSvc.repos.NewDepartmentRepo().Get(txCtx, domain.GetDepartmentParams{
+				AccountID:    params.AccountID,
+				DepartmentID: params.DepartmentID,
+			}); apiErr != nil {
+				return apiErr
+			}
+
 			created, apiErr := txRepo.Create(txCtx, scanningStationID, params)
 			if apiErr != nil {
 				return apiErr

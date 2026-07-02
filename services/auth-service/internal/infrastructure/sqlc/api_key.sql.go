@@ -12,6 +12,25 @@ import (
 	"time"
 )
 
+const countRoleForOwner = `-- name: CountRoleForOwner :one
+SELECT COUNT(*) FROM role
+WHERE id = ?
+AND (account_id IS NULL OR account_id = ?)
+`
+
+type CountRoleForOwnerParams struct {
+	RoleID         string
+	OwnerAccountID sql.NullString
+}
+
+// Counts roles visible to the owner account: system roles (account_id IS NULL) or roles owned by the account. Used to validate a referenced role_id before persisting an API key.
+func (q *Queries) CountRoleForOwner(ctx context.Context, arg CountRoleForOwnerParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countRoleForOwner, arg.RoleID, arg.OwnerAccountID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createAPIKey = `-- name: CreateAPIKey :execresult
 INSERT INTO api_key (
     type_id,
@@ -404,8 +423,8 @@ WHERE api_key.owner_account_id = ?
 AND (api_key.name LIKE CONCAT('%', ?, '%') OR ? = '')
 AND (
     (? = true AND (api_key.revoked_at IS NULL OR api_key.revoked_at > NOW(3)) AND (api_key.expires_at IS NULL OR api_key.expires_at > NOW(3)))
-    OR (? = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW(3) AND (api_key.revoked_at IS NULL OR api_key.revoked_at > NOW(3)) AND api_key.expires_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
-    OR (? = true AND api_key.revoked_at IS NOT NULL AND api_key.revoked_at <= NOW(3) AND api_key.revoked_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+    OR (? = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW(3) AND (api_key.revoked_at IS NULL OR api_key.revoked_at > NOW(3)))
+    OR (? = true AND api_key.revoked_at IS NOT NULL AND api_key.revoked_at <= NOW(3))
 )
 AND (
     api_key.created_at > ?
@@ -501,8 +520,8 @@ WHERE api_key.owner_account_id = ?
 AND (api_key.name LIKE CONCAT('%', ?, '%') OR ? = '')
 AND (
     (? = true AND (api_key.revoked_at IS NULL OR api_key.revoked_at > NOW(3)) AND (api_key.expires_at IS NULL OR api_key.expires_at > NOW(3)))
-    OR (? = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW(3) AND (api_key.revoked_at IS NULL OR api_key.revoked_at > NOW(3)) AND api_key.expires_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
-    OR (? = true AND api_key.revoked_at IS NOT NULL AND api_key.revoked_at <= NOW(3) AND api_key.revoked_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+    OR (? = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW(3) AND (api_key.revoked_at IS NULL OR api_key.revoked_at > NOW(3)))
+    OR (? = true AND api_key.revoked_at IS NOT NULL AND api_key.revoked_at <= NOW(3))
 )
 AND (
     api_key.created_at > ?
@@ -578,8 +597,8 @@ WHERE api_key.owner_account_id = ?
 AND (api_key.name LIKE CONCAT('%', ?, '%') OR ? = '')
 AND (
     (? = true AND (api_key.revoked_at IS NULL OR api_key.revoked_at > NOW(3)) AND (api_key.expires_at IS NULL OR api_key.expires_at > NOW(3)))
-    OR (? = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW(3) AND (api_key.revoked_at IS NULL OR api_key.revoked_at > NOW(3)) AND api_key.expires_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
-    OR (? = true AND api_key.revoked_at IS NOT NULL AND api_key.revoked_at <= NOW(3) AND api_key.revoked_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+    OR (? = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW(3) AND (api_key.revoked_at IS NULL OR api_key.revoked_at > NOW(3)))
+    OR (? = true AND api_key.revoked_at IS NOT NULL AND api_key.revoked_at <= NOW(3))
 )
 AND (
     ? IS NULL
@@ -661,8 +680,8 @@ WHERE api_key.owner_account_id = ?
 AND (api_key.name LIKE CONCAT('%', ?, '%') OR ? = '')
 AND (
     (? = true AND (api_key.revoked_at IS NULL OR api_key.revoked_at > NOW(3)) AND (api_key.expires_at IS NULL OR api_key.expires_at > NOW(3)))
-    OR (? = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW(3) AND (api_key.revoked_at IS NULL OR api_key.revoked_at > NOW(3)) AND api_key.expires_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
-    OR (? = true AND api_key.revoked_at IS NOT NULL AND api_key.revoked_at <= NOW(3) AND api_key.revoked_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+    OR (? = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW(3) AND (api_key.revoked_at IS NULL OR api_key.revoked_at > NOW(3)))
+    OR (? = true AND api_key.revoked_at IS NOT NULL AND api_key.revoked_at <= NOW(3))
 )
 AND (
     ? IS NULL

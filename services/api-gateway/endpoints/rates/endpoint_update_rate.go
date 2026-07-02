@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -55,7 +56,11 @@ func (e *UpdateRateEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateRateR
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
-		ObjectType:        constants.ObjectTypeRate,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainItems, Action: types.ActionUpdate},
+			{Domain: types.PermissionDomainProductionSteps, Action: types.ActionUpdate},
+		},
+		ObjectType: constants.ObjectTypeRate,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateRateRequest) (*apiresource.Rate, *apierror.APIError) {
 			return svc.(RateSvc).UpdateRate
 		},

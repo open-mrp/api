@@ -35,7 +35,7 @@ func (*ProductionStepsEndpointGroup) Materialize(config *ProductionStepsEndpoint
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
-		Title:        "Production Steps Management",
+		Title:        "Production Steps",
 		Description:  "Manage production steps, their rates, productions, and consumptions.",
 		ResourceType: &apiresource.ProductionStep{},
 	}

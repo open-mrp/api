@@ -8,6 +8,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -100,6 +101,9 @@ func (e *UpdateSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Updat
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeSalesOrder,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainSalesOrders, Action: types.ActionUpdate},
+		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError) {
 			return svc.(SalesOrderSvc).UpdateSalesOrder
 		},

@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/augno/api/services/auth-service/pkg/types"
+
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -31,6 +33,9 @@ func (e *DeleteOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*De
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeOrderDiscount,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainDiscounts, Action: types.ActionDelete},
+		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteOrderDiscountRequest) (*apiresource.OrderDiscount, *apierror.APIError) {
 			return svc.(OrderDiscountSvc).DeleteOrderDiscount
 		},

@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -58,6 +59,9 @@ func (e *CreateDepartmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Creat
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateDepartmentRequest) (*apiresource.Department, *apierror.APIError) {
 			return svc.(DepartmentSvc).CreateDepartment
+		},
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainDepartments, Action: types.ActionCreate},
 		},
 		LocationFunc: func(resp *apiresource.Department) string {
 			return "/v1/operations/departments/" + resp.ID

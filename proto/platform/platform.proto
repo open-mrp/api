@@ -329,6 +329,8 @@ message ListAuditEventsRequest {
   // the mutation was performed against. Narrows within the caller's
   // actor-or-target scope.
   repeated string target_account_ids = 14;
+  // Filter by the actor identity_type (user/api_key/agent/group).
+  repeated string actor_types = 15;
 }
 
 message ListAuditEventsResponse {

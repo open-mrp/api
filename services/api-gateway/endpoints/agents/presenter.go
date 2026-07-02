@@ -16,13 +16,33 @@ func unmarshalConfig(configJSON string) *apiresource.AgentDefinitionConfig {
 	if configJSON == "" {
 		return nil
 	}
-	var cfg apiresource.AgentDefinitionConfig
-	_ = json.Unmarshal([]byte(configJSON), &cfg)
-	cfg.Object = constants.ObjectTypeAgentDefinitionConfig
+	// Read the persisted config into an intermediate wire shape and translate
+	// into the public resource. Provider is derived at runtime and not surfaced.
+	var wire struct {
+		SystemPrompt       *string                    `json:"system_prompt"`
+		Tier               *string                    `json:"tier"`
+		Temperature        *float64                   `json:"temperature"`
+		TriggerConfig      *apiresource.TriggerConfig `json:"trigger_config"`
+		EndpointToolSlugs  []string                   `json:"endpoint_tool_slugs"`
+		EndpointToolReview map[string]bool            `json:"endpoint_tool_review"`
+	}
+	_ = json.Unmarshal([]byte(configJSON), &wire)
+	cfg := &apiresource.AgentDefinitionConfig{
+		Object:             constants.ObjectTypeAgentDefinitionConfig,
+		SystemPrompt:       wire.SystemPrompt,
+		Temperature:        wire.Temperature,
+		TriggerConfig:      wire.TriggerConfig,
+		EndpointToolSlugs:  wire.EndpointToolSlugs,
+		EndpointToolReview: wire.EndpointToolReview,
+	}
+	if wire.Tier != nil {
+		t := constants.ModelTier(*wire.Tier)
+		cfg.Tier = &t
+	}
 	if cfg.TriggerConfig != nil {
 		cfg.TriggerConfig.Object = constants.ObjectTypeTriggerConfig
 	}
-	return &cfg
+	return cfg
 }
 
 func AgentDefinitionPresenter(a *pb.AgentDefinitionInfo) apiresource.AgentDefinition {
@@ -38,24 +58,23 @@ func AgentDefinitionPresenter(a *pb.AgentDefinitionInfo) apiresource.AgentDefini
 	return apiresource.AgentDefinition{
 		ID:             a.Id,
 		Object:         constants.ObjectTypeAgentDefinition,
-		Name:           a.Name,
-		Slug:           a.Slug,
-		Description:    &a.Description,
 		DefinitionType: constants.AgentDefinitionType(a.DefinitionType),
 		CategoryCode:   a.CategoryCode,
 		TriggerType:    constants.AgentTriggerType(a.TriggerType),
-		IsEditable:     a.IsEditable,
+		Name:           a.Name,
+		Slug:           a.Slug,
+		Description:    a.Description,
+		Editability:    constants.EditabilityFromBool(a.IsEditable),
 		AccountStatus:  accountStatus,
 		CreatedAt:      timeutil.TimestampToTime(a.CreatedAt),
 		UpdatedAt:      timeutil.TimestampToTime(a.UpdatedAt),
 	}
 }
 
-// roleInfo is retained for signature compatibility but no longer used: the role
-// is loaded with real data via LoadRoles when ?include=role is requested.
-// TODO: drop the resolveRole/ResolvedRole pre-fetch plumbing (agents + agent-runs)
-// now that includes load roles on demand.
-func StashAgentDefinitionMeta(meta *resourcekit.LoadMeta, a *pb.AgentDefinitionInfo, _ *ResolvedRole) {
+// StashAgentDefinitionMeta stashes the definition's expandable sub-resources (config, tools, and the
+// role FK id) into the request-scoped load meta. The role is loaded with real data via LoadRoles only
+// when ?include=role is requested; never fabricate role data here.
+func StashAgentDefinitionMeta(meta *resourcekit.LoadMeta, a *pb.AgentDefinitionInfo) {
 	if a == nil {
 		return
 	}
@@ -68,7 +87,7 @@ func StashAgentDefinitionMeta(meta *resourcekit.LoadMeta, a *pb.AgentDefinitionI
 			ID:     t.Id,
 			Object: constants.ObjectTypeAgentDefinitionTool,
 			Tool: apiresource.AvailableTool{
-				ID:                  t.ToolId,
+				Slug:                t.ToolSlug,
 				Object:              constants.ObjectTypeAvailableTool,
 				Name:                t.DisplayName,
 				Description:         &t.Description,
@@ -76,9 +95,9 @@ func StashAgentDefinitionMeta(meta *resourcekit.LoadMeta, a *pb.AgentDefinitionI
 				Category:            t.Category,
 				RequiredPermissions: orEmptyStrSlice(t.RequiredPermissions),
 			},
-			Config:        json.RawMessage(t.ConfigJson),
-			SortOrder:     t.SortOrder,
-			RequireReview: t.RequireReview,
+			Config:            json.RawMessage(t.ConfigJson),
+			SortOrder:         t.SortOrder,
+			ReviewRequirement: constants.ReviewRequirementFromBool(t.RequireReview),
 		}
 	}
 	meta.Set(constants.ObjectTypeAgentDefinition, a.Id, "tools", apiresource.NewList(toolItems, apiresource.PageInfo{}))
@@ -91,7 +110,7 @@ func StashAgentDefinitionMeta(meta *resourcekit.LoadMeta, a *pb.AgentDefinitionI
 	}
 }
 
-func AgentDefinitionListPresenter(ctx context.Context, resp *pb.ListAgentDefinitionsResponse, roleResolver func(roleID string) *ResolvedRole) *apiresource.List[apiresource.AgentDefinition] {
+func AgentDefinitionListPresenter(ctx context.Context, resp *pb.ListAgentDefinitionsResponse) *apiresource.List[apiresource.AgentDefinition] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.AgentDefinition](nil, apiresource.PageInfo{})
 	}
@@ -99,51 +118,11 @@ func AgentDefinitionListPresenter(ctx context.Context, resp *pb.ListAgentDefinit
 	meta := resourcekit.GetLoadMeta(ctx)
 	agents := make([]apiresource.AgentDefinition, len(resp.Agents))
 	for i, a := range resp.Agents {
-		var roleInfo *ResolvedRole
-		if roleResolver != nil {
-			roleInfo = roleResolver(a.RoleId)
-		}
 		agents[i] = AgentDefinitionPresenter(a)
-		StashAgentDefinitionMeta(meta, a, roleInfo)
+		StashAgentDefinitionMeta(meta, a)
 	}
 
 	return apiresource.NewList(agents, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
-}
-
-func AgentTokenUsagePresenter(u *pb.AgentTokenUsageInfo) apiresource.AgentTokenUsage {
-	if u == nil {
-		return apiresource.AgentTokenUsage{}
-	}
-
-	return apiresource.AgentTokenUsage{
-		ID:           u.Id,
-		Object:       constants.ObjectTypeAgentTokenUsage,
-		Date:         u.Date,
-		InputTokens:  u.InputTokens,
-		OutputTokens: u.OutputTokens,
-		TotalCost:    u.TotalCost,
-		RunCount:     u.RunCount,
-		CreatedAt:    timeutil.TimestampToTime(u.CreatedAt),
-		UpdatedAt:    timeutil.TimestampToTime(u.UpdatedAt),
-	}
-}
-
-func AgentTokenUsageListPresenter(ctx context.Context, resp *pb.ListTokenUsageResponse) *apiresource.List[apiresource.AgentTokenUsage] {
-	if resp == nil {
-		return apiresource.NewList[apiresource.AgentTokenUsage](nil, apiresource.PageInfo{})
-	}
-
-	usage := make([]apiresource.AgentTokenUsage, len(resp.Usage))
-	for i, u := range resp.Usage {
-		usage[i] = AgentTokenUsagePresenter(u)
-	}
-
-	pageInfo := apiresource.PageInfo{}
-	if resp.PageInfo != nil {
-		pageInfo = grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)
-	}
-
-	return apiresource.NewList(usage, pageInfo)
 }
 
 func orEmptyStrSlice(s []string) []string {

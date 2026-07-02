@@ -28,16 +28,24 @@ func LoadMaterials(ctx context.Context, ids []string) (map[string]any, *apierror
 		return nil, apiErr
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
 	out := make(map[string]any, len(resp.Materials))
 	for _, m := range resp.Materials {
-		out[m.Id] = materialFromProto(m)
-		meta.Set(constants.ObjectTypeMaterial, m.Id, "item_id", m.ItemId)
+		out[m.Id] = MaterialFromProto(m)
+		StashMaterialMeta(ctx, m)
 	}
 	return out, nil
 }
 
-func materialFromProto(m *pb.MaterialInfo) *apiresource.Material {
+// StashMaterialMeta records the id needed to populate a material's expandable item when the include resolver runs. Pair it with MaterialFromProto so includes work without leaking the nested item.
+func StashMaterialMeta(ctx context.Context, m *pb.MaterialInfo) {
+	if m == nil {
+		return
+	}
+	resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeMaterial, m.Id, "item_id", m.ItemId)
+}
+
+// MaterialFromProto builds the gated Material resource: the expandable item is left nil and populated only when explicitly requested via the include resolver. Use this — never the full MaterialPresenter — when building a JSON API response.
+func MaterialFromProto(m *pb.MaterialInfo) *apiresource.Material {
 	return &apiresource.Material{
 		ID:         m.Id,
 		Object:     constants.ObjectTypeMaterial,

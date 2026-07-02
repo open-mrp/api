@@ -29,8 +29,7 @@ func (r *accountUsageRepoImpl) GetLimitsByAccountID(ctx context.Context, account
 
 	rows, err := r.queries.GetLimitsByAccountID(ctx, accountID)
 	if err != nil {
-		span.RecordError(err)
-		return nil, db.MapSQLError(err)
+		return nil, tracing.Trace(span, db.MapSQLError(err))
 	}
 
 	limits := make([]domain.PlanLimit, len(rows))
@@ -55,8 +54,7 @@ func (r *accountUsageRepoImpl) CountUsersByAccountID(ctx context.Context, accoun
 
 	cnt, err := r.queries.CountUsersByAccountID(ctx, accountID)
 	if err != nil {
-		span.RecordError(err)
-		return 0, db.MapSQLError(err)
+		return 0, tracing.Trace(span, db.MapSQLError(err))
 	}
 	return int(cnt), nil
 }
@@ -67,8 +65,7 @@ func (r *accountUsageRepoImpl) CountSandboxesByAccountID(ctx context.Context, ac
 
 	cnt, err := r.queries.CountSandboxesByAccountID(ctx, accountID)
 	if err != nil {
-		span.RecordError(err)
-		return 0, db.MapSQLError(err)
+		return 0, tracing.Trace(span, db.MapSQLError(err))
 	}
 	return int(cnt), nil
 }
@@ -82,8 +79,7 @@ func (r *accountUsageRepoImpl) CountInvoicesByAccountID(ctx context.Context, acc
 		CreatedAt: periodStart,
 	})
 	if err != nil {
-		span.RecordError(err)
-		return 0, db.MapSQLError(err)
+		return 0, tracing.Trace(span, db.MapSQLError(err))
 	}
 	return int(cnt), nil
 }
@@ -97,8 +93,7 @@ func (r *accountUsageRepoImpl) CountBatchesByAccountID(ctx context.Context, acco
 		CreatedAt: periodStart,
 	})
 	if err != nil {
-		span.RecordError(err)
-		return 0, db.MapSQLError(err)
+		return 0, tracing.Trace(span, db.MapSQLError(err))
 	}
 	return int(cnt), nil
 }
@@ -109,8 +104,7 @@ func (r *accountUsageRepoImpl) GetAccountSubscriptionInfo(ctx context.Context, a
 
 	row, err := r.queries.GetAccountSubscriptionInfo(ctx, accountID)
 	if err != nil {
-		span.RecordError(err)
-		return nil, db.MapSQLError(err)
+		return nil, tracing.Trace(span, db.MapSQLError(err))
 	}
 
 	info := &domain.AccountSubscriptionInfo{}
@@ -152,8 +146,7 @@ func (r *accountUsageRepoImpl) GetStripeCustomerIDByAccountID(ctx context.Contex
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
-		span.RecordError(err)
-		return nil, db.MapSQLError(err)
+		return nil, tracing.Trace(span, db.MapSQLError(err))
 	}
 
 	if row.Valid {
@@ -168,8 +161,7 @@ func (r *accountUsageRepoImpl) GetAccountNameAndPlanCode(ctx context.Context, ac
 
 	row, err := r.queries.GetAccountNameAndPlanCode(ctx, accountID)
 	if err != nil {
-		span.RecordError(err)
-		return "", "", db.MapSQLError(err)
+		return "", "", tracing.Trace(span, db.MapSQLError(err))
 	}
 
 	return row.Name, row.PlanCode, nil
@@ -181,8 +173,7 @@ func (r *accountUsageRepoImpl) GetUserEmailByID(ctx context.Context, userID stri
 
 	row, err := r.queries.GetUserEmailByID(ctx, userID)
 	if err != nil {
-		span.RecordError(err)
-		return "", nil, db.MapSQLError(err)
+		return "", nil, tracing.Trace(span, db.MapSQLError(err))
 	}
 
 	var email string
@@ -204,8 +195,7 @@ func (r *accountUsageRepoImpl) GetAdminEmailByAccountID(ctx context.Context, acc
 
 	row, err := r.queries.GetAdminEmailByAccountID(ctx, accountID)
 	if err != nil {
-		span.RecordError(err)
-		return "", db.MapSQLError(err)
+		return "", tracing.Trace(span, db.MapSQLError(err))
 	}
 
 	if row.Valid {
@@ -223,8 +213,7 @@ func (r *accountUsageRepoImpl) UpdateStripeCustomerIDByAccountID(ctx context.Con
 		AccountID:                accountID,
 	})
 	if err != nil {
-		span.RecordError(err)
-		return db.MapSQLError(err)
+		return tracing.Trace(span, db.MapSQLError(err))
 	}
 
 	return nil

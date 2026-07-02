@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -24,13 +25,14 @@ type GetItemTrendsEndpoint struct{}
 
 func (e *GetItemTrendsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetItemTrendsRequest, *apiresource.ItemTrends] {
 	return (&apiendpoint.APIEndpoint[*GetItemTrendsRequest, *apiresource.ItemTrends]{
-		Title:             "Get Item Trends",
-		Method:            http.MethodGet,
-		ContentType:       "application/json",
-		Route:             "/v1/catalog/items/{id}/trends",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
+		Title:               "Get Item Trends",
+		Method:              http.MethodGet,
+		ContentType:         "application/json",
+		Route:               "/v1/catalog/items/{id}/trends",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionRead}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetItemTrendsRequest) (*apiresource.ItemTrends, *apierror.APIError) {
 			return svc.(ItemSvc).GetItemTrends
 		},

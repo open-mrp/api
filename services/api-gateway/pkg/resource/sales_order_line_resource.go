@@ -30,7 +30,9 @@ type SalesOrderLine struct {
 	QuantityOrdered *Quantity `json:"quantity_ordered" expandable:"true"`
 	// Price charged per unit.
 	UnitPrice *Rate `json:"unit_price" expandable:"true"`
-	// Internal cost per unit, used to derive line profitability rather than what the customer is charged.
+	// Internal cost per unit.
+	//
+	// Reflects what the business pays for the item, not what the customer is charged, and is used to derive line profitability.
 	UnitCost *Rate `json:"unit_cost" expandable:"true"`
 	// Derived monetary totals for this line.
 	Totals *SalesOrderTotals `json:"totals" expandable:"true"`

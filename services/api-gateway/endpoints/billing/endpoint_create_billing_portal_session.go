@@ -21,6 +21,7 @@ func (e *CreateBillingPortalSessionEndpoint) Materialize() *apiendpoint.APIEndpo
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		RequiredRoleType:  constants.RoleTypeAdmin,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeBillingPortalSessionResponse,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.EmptyResource) (*apiresource.BillingPortalSessionResponse, *apierror.APIError) {

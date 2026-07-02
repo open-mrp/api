@@ -14,6 +14,7 @@ func init() {
 		ObjectType: constants.ObjectTypeAgentRun,
 		Load:       resourceloaders.LoadAgentRuns,
 		Subs: []resourcekit.SubField{
+			{Key: "triggered_by", Populate: populateTriggeredByOnAgentRun},
 			{Key: "actions", Populate: populateActionsOnAgentRun},
 			{
 				Key:         "definition",
@@ -24,6 +25,15 @@ func init() {
 			{Key: "steps", Populate: populateStepsOnAgentRun},
 		},
 	})
+}
+
+func populateTriggeredByOnAgentRun(ctx context.Context, parent any, _ map[string]any) {
+	r := parent.(*apiresource.AgentRun)
+	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeAgentRun, r.ID, "triggered_by")
+	if !ok {
+		return
+	}
+	r.TriggeredBy = v.(*apiresource.Actor)
 }
 
 func populateActionsOnAgentRun(ctx context.Context, parent any, _ map[string]any) {

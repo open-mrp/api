@@ -389,9 +389,30 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 				}
 			}
 
-			// Create the account_user link.
-			if apiErr := txAccountUserRepo.Create(txCtx, accountUserID, params.AccountID, userID, params.RoleID, params.DepartmentID); apiErr != nil {
-				return apiErr
+			// Validate the referenced department exists for the account so a bogus department_id 404s instead of persisting a dangling reference (mirrors the role_id existence check above).
+			if params.DepartmentID != nil {
+				if _, apiErr := txSvc.repos.NewDepartmentRepo().Get(txCtx, domain.GetDepartmentParams{AccountID: params.AccountID, DepartmentID: *params.DepartmentID}); apiErr != nil {
+					return apiErr
+				}
+			}
+
+			// Re-adding a previously soft-removed member: the removed row retains the UNIQUE (user_id, account_id) key, so a fresh INSERT would collide. Reactivate that row in place and treat it as the created link instead.
+			reactivated := false
+			if existingUser != nil {
+				reactivatedID, reErr := txAccountUserRepo.ReactivateRemovedAccountUser(txCtx, params.AccountID, userID, params.RoleID, params.DepartmentID)
+				if reErr == nil {
+					accountUserID = reactivatedID
+					reactivated = true
+				} else if reErr.Code != apierror.ErrorCodeResourceNotFound {
+					return reErr
+				}
+			}
+
+			// Create the account_user link when there was no removed link to reactivate.
+			if !reactivated {
+				if apiErr := txAccountUserRepo.Create(txCtx, accountUserID, params.AccountID, userID, params.RoleID, params.DepartmentID); apiErr != nil {
+					return apiErr
+				}
 			}
 
 			// Auto-disable external target users when the target account has an active billing plan.
@@ -627,6 +648,15 @@ func (s *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, params domai
 
 			roleID := params.RoleID.StringPtrAfterBackfill(old.RoleID)
 			departmentID := params.DepartmentID.StringPtrAfterBackfill(old.DepartmentID)
+
+			// Validate the referenced department exists for the account when it is being set so a bogus department_id 404s instead of persisting a dangling reference.
+			if params.DepartmentID.IsSet() {
+				if deptID, ok := params.DepartmentID.Value(); ok && deptID != "" {
+					if _, apiErr := txSvc.repos.NewDepartmentRepo().Get(txCtx, domain.GetDepartmentParams{AccountID: params.AccountID, DepartmentID: deptID}); apiErr != nil {
+						return apiErr
+					}
+				}
+			}
 
 			if apiErr := txAccountUserRepo.Update(txCtx, params.AccountUserID, roleID, departmentID); apiErr != nil {
 				return apiErr
@@ -996,14 +1026,28 @@ func (s *accountUserSvcImpl) BatchGetAccountUsersByIDs(ctx context.Context, ids 
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := identity.CheckHasPermission(types.PermissionDomainTeamUsers, types.ActionRead); apiErr != nil {
+	if apiErr := checkAccountUserReadPermission(identity); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return s.repos.NewAccountUserRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
+	if identity.IsExternalTarget() {
+		meds := s.mediators()
+		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+
+	users, apiErr := s.repos.NewAccountUserRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	for _, item := range users {
+		item.ImageURL = s.resolveImageURL(ctx, identity.Target.AccountID, item.UserID, item.ImageURL != nil)
+	}
+	return users, nil
 }
 
 func stringOrDefault(s *string, def string) string {

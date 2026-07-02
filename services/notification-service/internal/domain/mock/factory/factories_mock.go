@@ -13,6 +13,7 @@ import (
 	reflect "reflect"
 
 	domain "github.com/augno/api/services/notification-service/internal/domain"
+	messaging "github.com/augno/api/shared/messaging"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -40,6 +41,104 @@ func (m *MockRepoFactory) EXPECT() *MockRepoFactoryMockRecorder {
 	return m.recorder
 }
 
+// NewAnnouncementRepo mocks base method.
+func (m *MockRepoFactory) NewAnnouncementRepo() domain.AnnouncementRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewAnnouncementRepo")
+	ret0, _ := ret[0].(domain.AnnouncementRepo)
+	return ret0
+}
+
+// NewAnnouncementRepo indicates an expected call of NewAnnouncementRepo.
+func (mr *MockRepoFactoryMockRecorder) NewAnnouncementRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewAnnouncementRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewAnnouncementRepo))
+}
+
+// NewBlockRepo mocks base method.
+func (m *MockRepoFactory) NewBlockRepo() domain.BlockRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewBlockRepo")
+	ret0, _ := ret[0].(domain.BlockRepo)
+	return ret0
+}
+
+// NewBlockRepo indicates an expected call of NewBlockRepo.
+func (mr *MockRepoFactoryMockRecorder) NewBlockRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewBlockRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewBlockRepo))
+}
+
+// NewConversationLinkRepo mocks base method.
+func (m *MockRepoFactory) NewConversationLinkRepo() domain.ConversationLinkRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewConversationLinkRepo")
+	ret0, _ := ret[0].(domain.ConversationLinkRepo)
+	return ret0
+}
+
+// NewConversationLinkRepo indicates an expected call of NewConversationLinkRepo.
+func (mr *MockRepoFactoryMockRecorder) NewConversationLinkRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewConversationLinkRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewConversationLinkRepo))
+}
+
+// NewConversationRepo mocks base method.
+func (m *MockRepoFactory) NewConversationRepo() domain.ConversationRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewConversationRepo")
+	ret0, _ := ret[0].(domain.ConversationRepo)
+	return ret0
+}
+
+// NewConversationRepo indicates an expected call of NewConversationRepo.
+func (mr *MockRepoFactoryMockRecorder) NewConversationRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewConversationRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewConversationRepo))
+}
+
+// NewDeletedRecordRepo mocks base method.
+func (m *MockRepoFactory) NewDeletedRecordRepo() domain.DeletedRecordRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewDeletedRecordRepo")
+	ret0, _ := ret[0].(domain.DeletedRecordRepo)
+	return ret0
+}
+
+// NewDeletedRecordRepo indicates an expected call of NewDeletedRecordRepo.
+func (mr *MockRepoFactoryMockRecorder) NewDeletedRecordRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewDeletedRecordRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewDeletedRecordRepo))
+}
+
+// NewEmailDomainRepo mocks base method.
+func (m *MockRepoFactory) NewEmailDomainRepo() domain.EmailDomainRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewEmailDomainRepo")
+	ret0, _ := ret[0].(domain.EmailDomainRepo)
+	return ret0
+}
+
+// NewEmailDomainRepo indicates an expected call of NewEmailDomainRepo.
+func (mr *MockRepoFactoryMockRecorder) NewEmailDomainRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewEmailDomainRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewEmailDomainRepo))
+}
+
+// NewEmailInboxRepo mocks base method.
+func (m *MockRepoFactory) NewEmailInboxRepo() domain.EmailInboxRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewEmailInboxRepo")
+	ret0, _ := ret[0].(domain.EmailInboxRepo)
+	return ret0
+}
+
+// NewEmailInboxRepo indicates an expected call of NewEmailInboxRepo.
+func (mr *MockRepoFactoryMockRecorder) NewEmailInboxRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewEmailInboxRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewEmailInboxRepo))
+}
+
 // NewEmailLogRepo mocks base method.
 func (m *MockRepoFactory) NewEmailLogRepo() domain.EmailLogRepo {
 	m.ctrl.T.Helper()
@@ -54,6 +153,20 @@ func (mr *MockRepoFactoryMockRecorder) NewEmailLogRepo() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewEmailLogRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewEmailLogRepo))
 }
 
+// NewEmailMessageRepo mocks base method.
+func (m *MockRepoFactory) NewEmailMessageRepo() domain.EmailMessageRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewEmailMessageRepo")
+	ret0, _ := ret[0].(domain.EmailMessageRepo)
+	return ret0
+}
+
+// NewEmailMessageRepo indicates an expected call of NewEmailMessageRepo.
+func (mr *MockRepoFactoryMockRecorder) NewEmailMessageRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewEmailMessageRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewEmailMessageRepo))
+}
+
 // NewIdempotencyKeyRepo mocks base method.
 func (m *MockRepoFactory) NewIdempotencyKeyRepo() domain.IdempotencyKeyRepo {
 	m.ctrl.T.Helper()
@@ -66,4 +179,130 @@ func (m *MockRepoFactory) NewIdempotencyKeyRepo() domain.IdempotencyKeyRepo {
 func (mr *MockRepoFactoryMockRecorder) NewIdempotencyKeyRepo() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewIdempotencyKeyRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewIdempotencyKeyRepo))
+}
+
+// NewMessageAttachmentRepo mocks base method.
+func (m *MockRepoFactory) NewMessageAttachmentRepo() domain.MessageAttachmentRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewMessageAttachmentRepo")
+	ret0, _ := ret[0].(domain.MessageAttachmentRepo)
+	return ret0
+}
+
+// NewMessageAttachmentRepo indicates an expected call of NewMessageAttachmentRepo.
+func (mr *MockRepoFactoryMockRecorder) NewMessageAttachmentRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewMessageAttachmentRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewMessageAttachmentRepo))
+}
+
+// NewMessageRepo mocks base method.
+func (m *MockRepoFactory) NewMessageRepo() domain.MessageRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewMessageRepo")
+	ret0, _ := ret[0].(domain.MessageRepo)
+	return ret0
+}
+
+// NewMessageRepo indicates an expected call of NewMessageRepo.
+func (mr *MockRepoFactoryMockRecorder) NewMessageRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewMessageRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewMessageRepo))
+}
+
+// NewMessageReportRepo mocks base method.
+func (m *MockRepoFactory) NewMessageReportRepo() domain.MessageReportRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewMessageReportRepo")
+	ret0, _ := ret[0].(domain.MessageReportRepo)
+	return ret0
+}
+
+// NewMessageReportRepo indicates an expected call of NewMessageReportRepo.
+func (mr *MockRepoFactoryMockRecorder) NewMessageReportRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewMessageReportRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewMessageReportRepo))
+}
+
+// NewMessagingGroupRepo mocks base method.
+func (m *MockRepoFactory) NewMessagingGroupRepo() domain.MessagingGroupRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewMessagingGroupRepo")
+	ret0, _ := ret[0].(domain.MessagingGroupRepo)
+	return ret0
+}
+
+// NewMessagingGroupRepo indicates an expected call of NewMessagingGroupRepo.
+func (mr *MockRepoFactoryMockRecorder) NewMessagingGroupRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewMessagingGroupRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewMessagingGroupRepo))
+}
+
+// NewNotificationPreferenceRepo mocks base method.
+func (m *MockRepoFactory) NewNotificationPreferenceRepo() domain.NotificationPreferenceRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewNotificationPreferenceRepo")
+	ret0, _ := ret[0].(domain.NotificationPreferenceRepo)
+	return ret0
+}
+
+// NewNotificationPreferenceRepo indicates an expected call of NewNotificationPreferenceRepo.
+func (mr *MockRepoFactoryMockRecorder) NewNotificationPreferenceRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewNotificationPreferenceRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewNotificationPreferenceRepo))
+}
+
+// NewNotificationRepo mocks base method.
+func (m *MockRepoFactory) NewNotificationRepo() domain.NotificationRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewNotificationRepo")
+	ret0, _ := ret[0].(domain.NotificationRepo)
+	return ret0
+}
+
+// NewNotificationRepo indicates an expected call of NewNotificationRepo.
+func (mr *MockRepoFactoryMockRecorder) NewNotificationRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewNotificationRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewNotificationRepo))
+}
+
+// NewOutboxRepo mocks base method.
+func (m *MockRepoFactory) NewOutboxRepo() messaging.OutboxRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewOutboxRepo")
+	ret0, _ := ret[0].(messaging.OutboxRepo)
+	return ret0
+}
+
+// NewOutboxRepo indicates an expected call of NewOutboxRepo.
+func (mr *MockRepoFactoryMockRecorder) NewOutboxRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewOutboxRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewOutboxRepo))
+}
+
+// NewParticipantRepo mocks base method.
+func (m *MockRepoFactory) NewParticipantRepo() domain.ParticipantRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewParticipantRepo")
+	ret0, _ := ret[0].(domain.ParticipantRepo)
+	return ret0
+}
+
+// NewParticipantRepo indicates an expected call of NewParticipantRepo.
+func (mr *MockRepoFactoryMockRecorder) NewParticipantRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewParticipantRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewParticipantRepo))
+}
+
+// NewSupportRouteRepo mocks base method.
+func (m *MockRepoFactory) NewSupportRouteRepo() domain.SupportRouteRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewSupportRouteRepo")
+	ret0, _ := ret[0].(domain.SupportRouteRepo)
+	return ret0
+}
+
+// NewSupportRouteRepo indicates an expected call of NewSupportRouteRepo.
+func (mr *MockRepoFactoryMockRecorder) NewSupportRouteRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewSupportRouteRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewSupportRouteRepo))
 }

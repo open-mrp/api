@@ -15,7 +15,7 @@ func TestAgentDefinitionPresenter(t *testing.T) {
 		Id:             "agdf_01abc",
 		Name:           "Email Order Agent",
 		Slug:           "email_order",
-		Description:    "Processes incoming emails.",
+		Description:    new("Processes incoming emails."),
 		DefinitionType: "system",
 		CategoryCode:   "order_processing",
 		TriggerType:    "event",
@@ -24,9 +24,9 @@ func TestAgentDefinitionPresenter(t *testing.T) {
 		Tools: []*pb.AgentDefinitionToolInfo{
 			{
 				Id:               "agdftl_01abc",
-				ToolId:           "tdef_01f0c4d04780ace864e6cc3a74",
-				DisplayName:      "Search Products",
-				Description:      "Search for products by keyword or phrase",
+				ToolSlug:         "lookup_customer",
+				DisplayName:      "Lookup Customer",
+				Description:      "Look up a customer by their email address.",
 				ConfigSchemaJson: `{}`,
 				Category:         "built_in",
 				ConfigJson:       `{}`,
@@ -54,7 +54,7 @@ func TestAgentDefinitionPresenter_NoRole(t *testing.T) {
 		Id:             "agdf_01abc",
 		Name:           "Email Order Agent",
 		Slug:           "email_order",
-		Description:    "Processes incoming emails.",
+		Description:    new("Processes incoming emails."),
 		DefinitionType: "system",
 		CategoryCode:   "order_processing",
 		TriggerType:    "event",
@@ -68,23 +68,4 @@ func TestAgentDefinitionPresenter_NoRole(t *testing.T) {
 
 	result := AgentDefinitionPresenter(def)
 	resourcetest.ValidateExpandableStubs(t, "AgentDefinition(NoRole)", result)
-}
-
-func TestAgentTokenUsagePresenter(t *testing.T) {
-	t.Parallel()
-	now := "2026-01-01T00:00:00Z"
-
-	usage := &pb.AgentTokenUsageInfo{
-		Id:           "agtu_01abc",
-		Date:         "2026-01-01",
-		InputTokens:  100,
-		OutputTokens: 200,
-		TotalCost:    0.01,
-		RunCount:     1,
-		CreatedAt:    now,
-		UpdatedAt:    now,
-	}
-
-	result := AgentTokenUsagePresenter(usage)
-	resourcetest.ValidateResourceStruct(t, "AgentTokenUsage", result)
 }

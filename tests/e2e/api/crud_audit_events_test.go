@@ -27,19 +27,23 @@ func TestAuditEvents_List(t *testing.T) {
 
 func TestAuditEvents_ListSearchByResourceType(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(auditEventsPath, url.Values{"q": {"unit"}})
+	// Search matches the token across resource_type, action, resource_id and
+	// request_id. request_id is only surfaced via ?include=request, so hydrate it
+	// too — otherwise a legitimate request_id-only match (random request ids can
+	// contain the token, e.g. "rq_d21r`unit`01...") looks like a spurious hit.
+	list, _, err := apiClient.GetList(auditEventsPath, url.Values{"q": {"unit"}, "include": {"request"}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Search for 'unit' should return at least 1 result")
 
-	// Search matches the token across resource_type, action, resource_id and
-	// request_id. Every result must contain "unit" in at least one of the fields
-	// visible on the list item (request_id is only exposed via ?include=request).
 	for _, item := range list.Data {
 		m := parseJSON(item)
 		fields := []string{
 			jsonField(m, "resource_type"),
 			jsonField(m, "action"),
 			jsonField(m, "resource_id"),
+		}
+		if req := jsonObject(m, "request"); req != nil {
+			fields = append(fields, jsonField(req, "id"))
 		}
 		var matched bool
 		for _, f := range fields {
@@ -49,7 +53,7 @@ func TestAuditEvents_ListSearchByResourceType(t *testing.T) {
 			}
 		}
 		assert.True(t, matched,
-			"Search result should contain 'unit' in resource_type/action/resource_id; got resource_type=%q action=%q resource_id=%q",
+			"Search result should contain 'unit' in resource_type/action/resource_id/request_id; got resource_type=%q action=%q resource_id=%q",
 			fields[0], fields[1], fields[2],
 		)
 	}
@@ -98,13 +102,15 @@ func TestAuditEvents_FilterByMultipleResourceTypes(t *testing.T) {
 	}
 }
 
-func TestAuditEvents_FilterByResourceTypeNoMatch(t *testing.T) {
+func TestAuditEvents_FilterByInvalidResourceTypeRejected(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(auditEventsPath, url.Values{
+	// Unrecognized enum values in a list filter are rejected with 400 (platform convention).
+	status, body, err := apiClient.GetListRaw(auditEventsPath, url.Values{
 		"resource_types": {"zzz_definitely_not_a_real_resource_type"},
 	})
 	require.NoError(t, err)
-	assertEmptyListData(t, list.Data)
+	requireStatus(t, 400, status, body)
+	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 }
 
 // --- Multi-value filters ---
@@ -160,13 +166,15 @@ func TestAuditEvents_FilterByMultipleActions(t *testing.T) {
 	}
 }
 
-func TestAuditEvents_FilterByMultipleActionsAllImpossible(t *testing.T) {
+func TestAuditEvents_FilterByInvalidActionsRejected(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(auditEventsPath, url.Values{
+	// Unrecognized enum values in a list filter are rejected with 400 (platform convention).
+	status, body, err := apiClient.GetListRaw(auditEventsPath, url.Values{
 		"actions": {"zzz_no_match_a", "zzz_no_match_b"},
 	})
 	require.NoError(t, err)
-	assertEmptyListData(t, list.Data, "Filter by impossible actions should return no results")
+	requireStatus(t, 400, status, body)
+	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 }
 
 func TestAuditEvents_FilterBySingleResourceID(t *testing.T) {
@@ -718,4 +726,34 @@ func TestAuditEvents_FilterByTargetAccountIDs_NarrowsWithinScope(t *testing.T) {
 	assertAuditEventMembership(t, list.Data,
 		[]string{SeedAuditScopeTargetID, SeedAuditScopeBothID},
 		[]string{SeedAuditScopeActorID, SeedAuditScopeNeitherID})
+}
+
+// TestAuditEvents_IncludeRequest_ScrubsInternalAgentInfra guards the SECOND
+// presenter chokepoint: when an audit event embeds a request_log via
+// ?include=request, an internal/agent request_log must have its internal host and
+// pod IP scrubbed there too (resourceloaders.requestLogFromProto). Without this,
+// the audit-event expansion would leak internal infrastructure the direct
+// request-logs endpoint already hides.
+func TestAuditEvents_IncludeRequest_ScrubsInternalAgentInfra(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.GetListRaw(
+		auditEventsPath+"/"+SeedAuditEventInfraAgentID,
+		url.Values{"include": {"request"}},
+	)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	got := parseJSON(body)
+	req := jsonObject(got, "request")
+	require.NotNil(t, req, "request sub-resource should be present with ?include=request")
+	assert.Equal(t, "request_log", jsonField(req, "object"))
+	assert.Equal(t, SeedReqLogInfraAgentID, jsonField(req, "id"),
+		"the embedded request should be the seeded agent request_log")
+
+	assert.Equal(t, SeedReqLogRedactedHost, jsonField(req, "host"),
+		"embedded agent request_log host must be scrubbed")
+	assert.NotEqual(t, SeedReqLogInfraAgentHost, jsonField(req, "host"),
+		"internal k8s host must never leak via an audit-event include")
+	assert.Nil(t, req["client_ip"],
+		"pod IP must never leak via an audit-event include")
 }

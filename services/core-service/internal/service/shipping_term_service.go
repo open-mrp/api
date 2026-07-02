@@ -78,6 +78,27 @@ func (s *shippingTermSvcImpl) withTx(ctx context.Context, fn func(context.Contex
 	})
 }
 
+// validateServiceLevelsExist verifies every supplied free-shipping service level id resolves to a carrier_option visible to the account, rejecting the whole request if any is unknown.
+func (s *shippingTermSvcImpl) validateServiceLevelsExist(ctx context.Context, accountID string, ids []string) *apierror.APIError {
+	if len(ids) == 0 {
+		return nil
+	}
+	found, apiErr := s.repos.NewCarrierRepo().GetOptionsByIDs(ctx, accountID, ids)
+	if apiErr != nil {
+		return apiErr
+	}
+	got := make(map[string]struct{}, len(found))
+	for _, o := range found {
+		got[o.ID] = struct{}{}
+	}
+	for _, serviceLevelID := range ids {
+		if _, ok := got[serviceLevelID]; !ok {
+			return apierror.NewValidationErrorWithParam("Free shipping service level not found.", "free_shipping_service_level_ids")
+		}
+	}
+	return nil
+}
+
 func (s *shippingTermSvcImpl) BatchGetShippingTermsByIDs(ctx context.Context, ids []string) ([]*domain.ShippingTerm, *apierror.APIError) {
 	ctx, span := shippingTermSvcTracer.Start(ctx, "service.shipping_term.batch_get_by_ids")
 	defer span.End()
@@ -185,6 +206,21 @@ func (s *shippingTermSvcImpl) CreateShippingTerm(ctx context.Context, params dom
 		var result *domain.ShippingTerm
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *shippingTermSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewShippingTermRepo()
+
+			// Validate related references exist before persisting so a bogus unit_id or service level id is rejected instead of being silently dropped on read.
+			if params.FlatRate != nil {
+				if _, apiErr := txSvc.repos.NewUnitQueryRepo().Find(txCtx, params.AccountID, params.FlatRate.UnitID); apiErr != nil {
+					return apiErr
+				}
+			}
+			if params.MinimumOrderValue != nil {
+				if _, apiErr := txSvc.repos.NewUnitQueryRepo().Find(txCtx, params.AccountID, params.MinimumOrderValue.UnitID); apiErr != nil {
+					return apiErr
+				}
+			}
+			if apiErr := txSvc.validateServiceLevelsExist(txCtx, params.AccountID, params.FreeShippingServiceLevelIDs); apiErr != nil {
+				return apiErr
+			}
 
 			// Insert flat rate quantity if provided
 			if params.FlatRate != nil {
@@ -311,6 +347,26 @@ func (s *shippingTermSvcImpl) UpdateShippingTerm(ctx context.Context, params dom
 			}
 			if shippingTerm.AccountID == nil {
 				return apierror.NewAuthorizationError("Default shipping term cannot be updated.")
+			}
+
+			// Validate related references exist before persisting so a bogus unit_id or service level id is rejected instead of being silently dropped on read.
+			if params.FlatRate.IsSet() {
+				qv, _ := params.FlatRate.Value()
+				if _, apiErr := txSvc.repos.NewUnitQueryRepo().Find(txCtx, params.AccountID, qv.UnitID); apiErr != nil {
+					return apiErr
+				}
+			}
+			if params.MinimumOrderValue.IsSet() {
+				qv, _ := params.MinimumOrderValue.Value()
+				if _, apiErr := txSvc.repos.NewUnitQueryRepo().Find(txCtx, params.AccountID, qv.UnitID); apiErr != nil {
+					return apiErr
+				}
+			}
+			if params.FreeShippingServiceLevelIDs.IsSet() {
+				serviceLevelIDs, _ := params.FreeShippingServiceLevelIDs.Value()
+				if apiErr := txSvc.validateServiceLevelsExist(txCtx, params.AccountID, serviceLevelIDs); apiErr != nil {
+					return apiErr
+				}
 			}
 
 			switch {

@@ -48,8 +48,7 @@ func (r *idempotencyKeyRepoImpl) SetResponse(ctx context.Context, params domain.
 		})
 	}
 	if err != nil {
-		span.RecordError(err)
-		return db.MapSQLError(err)
+		return tracing.Trace(span, db.MapSQLError(err))
 	}
 	return nil
 }
@@ -171,8 +170,7 @@ func (r *idempotencyKeyRepoImpl) ReleaseLock(ctx context.Context, id string) *ap
 	defer span.End()
 
 	if err := r.shared.ReleaseIdempotencyKeyLock(ctx, id); err != nil {
-		span.RecordError(err)
-		return db.MapSQLError(err)
+		return tracing.Trace(span, db.MapSQLError(err))
 	}
 	return nil
 }
@@ -186,8 +184,7 @@ func (r *idempotencyKeyRepoImpl) AdvanceRecoveryPoint(ctx context.Context, param
 		RequestParams: db.NullableRawMessage(params.StepData),
 		TypeID:        params.ID,
 	}); err != nil {
-		span.RecordError(err)
-		return db.MapSQLError(err)
+		return tracing.Trace(span, db.MapSQLError(err))
 	}
 	return nil
 }
@@ -198,8 +195,7 @@ func (r *idempotencyKeyRepoImpl) GetRecoveryPoint(ctx context.Context, id string
 
 	row, err := r.shared.GetRecoveryPoint(ctx, id)
 	if err != nil {
-		span.RecordError(err)
-		return nil, db.MapSQLError(err)
+		return nil, tracing.Trace(span, db.MapSQLError(err))
 	}
 
 	return &domain.GetRecoveryPointResult{

@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -36,14 +37,15 @@ type UpdateAgentStatusEndpoint struct{}
 
 func (e *UpdateAgentStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAgentStatusRequest, *apiresource.AgentDefinition] {
 	return (&apiendpoint.APIEndpoint[*UpdateAgentStatusRequest, *apiresource.AgentDefinition]{
-		Title:             "Update Agent Status",
-		Method:            http.MethodPut,
-		Route:             "/v1/ai/agents/{id}/status",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeAgentDefinition,
+		Title:               "Update Agent Status",
+		Method:              http.MethodPut,
+		Route:               "/v1/ai/agents/{id}/status",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeAgentDefinition,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAgents, Action: types.ActionUpdate}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAgentStatusRequest) (*apiresource.AgentDefinition, *apierror.APIError) {
 			return svc.(AgentSvc).UpdateAgentStatus
 		},

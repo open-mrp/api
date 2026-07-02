@@ -8,6 +8,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -15,10 +16,10 @@ import (
 
 // Tool to attach to an agent definition.
 type ToolInput struct {
-	// ID of the tool to attach.
+	// The tool to attach.
 	//
-	// Available tool IDs can be discovered with the List Tools endpoint (`GET /v1/ai/tools`).
-	ToolID string `json:"tool_id" validate:"required"`
+	// Available tools can be discovered with the List Tools endpoint (`GET /v1/ai/tools`).
+	Tool constants.Tool `json:"tool" validate:"required"`
 	// JSON-encoded configuration for this tool instance.
 	//
 	// The expected structure depends on the tool (see the tool's `config_schema`).
@@ -30,7 +31,7 @@ type ToolInput struct {
 }
 
 var sampleToolInput = &ToolInput{
-	ToolID:        apiresource.SampleAvailableToolID,
+	Tool:          apiresource.SampleAvailableToolSlug,
 	SortOrder:     field.Some(int32(1)),
 	RequireReview: field.Some(true),
 }
@@ -52,7 +53,7 @@ type TriggerConfigInput struct {
 	// IANA timezone for the cron schedule (e.g. `America/New_York`).
 	Timezone field.Optional[string] `json:"timezone,omitzero" validate:"omitempty,max=255"`
 	// Event types that trigger this agent (e.g. `["email.received", "order.created"]`).
-	EventFilters []string `json:"event_filters"`
+	EventFilters []string `json:"event_filters,omitzero"`
 }
 
 var sampleTriggerConfigInput = &TriggerConfigInput{
@@ -67,24 +68,33 @@ func (*TriggerConfigInput) SchemaExample() any {
 type ConfigInput struct {
 	// System prompt / instructions for the agent.
 	SystemPrompt field.Optional[string] `json:"system_prompt,omitzero"`
-	// LLM model identifier (e.g. `claude-sonnet-4`).
-	Model field.Optional[string] `json:"model,omitzero" validate:"omitempty,max=255"`
-	// LLM provider name (e.g. `anthropic`, `openai`).
+	// Intelligence/cost tier for the agent's reasoning.
 	//
-	// Inferred from `model` if omitted.
-	Provider field.Optional[string] `json:"provider,omitzero" validate:"omitempty,max=255"`
+	// Selects how capable (and how expensive) a model the agent uses, without pinning a specific model:
+	// - `frontier`: the most capable and most expensive.
+	// - `high`: for normal planning, synthesis, customer-facing reasoning.
+	// - `balanced`: for research, summarization, classification, structured extraction, and light tool use.
+	// - `cheap`: for simple transforms, validation, formatting, keyword lookup, and routing.
+	Tier field.Optional[constants.ModelTier] `json:"tier,omitzero" default:"high"`
 	// LLM sampling temperature between 0 and 1.
 	Temperature field.Optional[float64] `json:"temperature,omitzero" validate:"omitempty,min=0,max=1"`
 	// Trigger-specific configuration.
 	//
 	// Required contents depend on the agent's `trigger_type`; see the trigger config schema.
 	TriggerConfig field.Optional[TriggerConfigInput] `json:"trigger_config,omitzero"`
+	// API-endpoint tools the agent may discover and use, by slug (e.g. `create_account_group`).
+	//
+	// These are the tools listed by the List Tools endpoint with category `api_endpoint`. The single entry `*` grants the entire endpoint-tool catalog. Omit or leave empty to grant none.
+	EndpointToolSlugs []string `json:"endpoint_tool_slugs,omitzero"`
+	// Per-endpoint-tool human-review overrides, keyed by tool slug.
+	//
+	// Set a slug to `true` to require human approval before the agent may execute that endpoint-tool; the run pauses in `awaiting_approval` until approved via the Continue Agent Run endpoint. Slugs omitted from the map do not require review.
+	EndpointToolReview field.Optional[map[string]bool] `json:"endpoint_tool_review,omitzero"`
 }
 
 var sampleConfigInput = &ConfigInput{
 	SystemPrompt:  field.Some("You are an order processing agent. Parse incoming emails and create draft orders."),
-	Model:         field.Some("claude-sonnet-4"),
-	Provider:      field.Some("anthropic"),
+	Tier:          field.Some(constants.ModelTierHigh),
 	Temperature:   field.Some(0.2),
 	TriggerConfig: field.Some(*sampleTriggerConfigInput),
 }
@@ -154,14 +164,15 @@ type CreateAgentEndpoint struct{}
 
 func (e *CreateAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAgentRequest, *apiresource.AgentDefinition] {
 	return (&apiendpoint.APIEndpoint[*CreateAgentRequest, *apiresource.AgentDefinition]{
-		Title:             "Create Agent",
-		Method:            http.MethodPost,
-		Route:             "/v1/ai/agents",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusCreated,
-		Public:            false,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeAgentDefinition,
+		Title:               "Create Agent",
+		Method:              http.MethodPost,
+		Route:               "/v1/ai/agents",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusCreated,
+		Public:              false,
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeAgentDefinition,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAgents, Action: types.ActionCreate}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateAgentRequest) (*apiresource.AgentDefinition, *apierror.APIError) {
 			return svc.(AgentSvc).CreateAgent
 		},

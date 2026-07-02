@@ -20,12 +20,15 @@ const (
 	envDBURL                  = "DB_URL"
 	envRabbitMQURI            = "RABBITMQ_URI"
 	envCoreServiceURL         = "CORE_SERVICE_URL"
+	envNotificationServiceURL = "NOTIFICATION_SERVICE_URL"
 	envCursorHMACKey          = "CURSOR_HMAC_KEY"   // #nosec G101 - Env var name, not a credential
 	envStripeAPIKey           = "STRIPE_SECRET_KEY" // #nosec G101 - Env var name, not a credential
 	envAgentArtifactsBucket   = "AGENT_ARTIFACTS_BUCKET"
 	envAgentInboundMailBucket = "AGENT_INBOUND_EMAIL_BUCKET"
 	envBillingServiceURL      = "BILLING_SERVICE_URL"
 	envPlatformMode           = "PLATFORM"
+	envGatewayInternalURL     = "API_GATEWAY_INTERNAL_URL"
+	envInternalSvcToken       = "INTERNAL_SERVICE_TOKEN" // #nosec G101 - Env var name, not a credential
 )
 
 // config represents the configuration for the agent service.
@@ -45,6 +48,10 @@ type config struct {
 	// CoreServiceURL (required) is the core service address for gRPC.
 	CoreServiceURL string
 
+	// NotificationServiceURL (optional) is the notification-service address for gRPC, used by the
+	// agent's email reply/draft tools. When empty, those tools are unavailable.
+	NotificationServiceURL string
+
 	// CursorHMACKey (required) is the HMAC key used to sign and verify pagination cursors.
 	CursorHMACKey []byte
 
@@ -60,6 +67,12 @@ type config struct {
 
 	// BillingServiceURL (required) is the billing service address for gRPC.
 	BillingServiceURL string
+
+	// GatewayInternalURL (optional; default: "") is the api-gateway internal listener base URL used by generated endpoint-tools. When empty (together with InternalServiceToken), endpoint-tools are not wired.
+	GatewayInternalURL string
+
+	// InternalServiceToken (optional; default: "") is the shared secret presented to the gateway internal listener.
+	InternalServiceToken string
 }
 
 func (c *config) withDefaults(getenv func(string) string) *config {
@@ -83,11 +96,14 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		RabbitMQURI:            cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
 		PlatformMode:           platformMode,
 		CoreServiceURL:         env.GetEnv(envCoreServiceURL, getenv),
+		NotificationServiceURL: env.GetEnv(envNotificationServiceURL, getenv),
 		CursorHMACKey:          []byte(env.GetEnv(envCursorHMACKey, getenv)),
 		StripeSecretKey:        env.GetEnv(envStripeAPIKey, getenv),
 		AgentArtifactsBucket:   env.GetEnv(envAgentArtifactsBucket, getenv),
 		AgentInboundMailBucket: env.GetEnv(envAgentInboundMailBucket, getenv),
 		BillingServiceURL:      env.GetEnv(envBillingServiceURL, getenv),
+		GatewayInternalURL:     env.GetEnv(envGatewayInternalURL, getenv),
+		InternalServiceToken:   env.GetEnv(envInternalSvcToken, getenv),
 	}
 }
 

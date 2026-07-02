@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -28,14 +29,15 @@ type ListAgentsEndpoint struct{}
 
 func (e *ListAgentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAgentsRequest, *apiresource.List[apiresource.AgentDefinition]] {
 	return (&apiendpoint.APIEndpoint[*ListAgentsRequest, *apiresource.List[apiresource.AgentDefinition]]{
-		Title:             "List Agents",
-		Method:            http.MethodGet,
-		ContentType:       "application/json",
-		Route:             "/v1/ai/agents",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeAgentDefinition,
+		Title:               "List Agents",
+		Method:              http.MethodGet,
+		ContentType:         "application/json",
+		Route:               "/v1/ai/agents",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeAgentDefinition,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAgents, Action: types.ActionRead}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAgentsRequest) (*apiresource.List[apiresource.AgentDefinition], *apierror.APIError) {
 			return svc.(AgentSvc).ListAgents
 		},

@@ -35,7 +35,7 @@ func (*SupplierMaterialsEndpointGroup) Materialize(config *SupplierMaterialsEndp
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
-		Title:        "Supplier Materials Management",
+		Title:        "Supplier Materials",
 		Description:  "List and manage supplier material associations.",
 		ResourceType: &apiresource.SupplierMaterial{},
 	}

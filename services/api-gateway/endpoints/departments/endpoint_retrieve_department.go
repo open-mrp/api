@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -30,6 +31,9 @@ func (e *RetrieveDepartmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveDepartmentRequest) (*apiresource.Department, *apierror.APIError) {
 			return svc.(DepartmentSvc).GetDepartment
+		},
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainDepartments, Action: types.ActionRead},
 		},
 		ObjectType: constants.ObjectTypeDepartment,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{

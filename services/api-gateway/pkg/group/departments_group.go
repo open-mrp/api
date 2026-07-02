@@ -35,7 +35,7 @@ func (*DepartmentsEndpointGroup) Materialize(config *DepartmentsEndpointGroupCon
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
-		Title:        "Departments Management",
+		Title:        "Departments",
 		Description:  "List and manage departments.",
 		ResourceType: &apiresource.Department{},
 	}

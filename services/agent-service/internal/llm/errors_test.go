@@ -87,6 +87,41 @@ func TestNewGatewayError_ContextWindowNotRetryable(t *testing.T) {
 	}
 }
 
+func TestNewGatewayError_PaymentRequiredIsBillingLimit(t *testing.T) {
+	t.Parallel()
+	ge := NewGatewayError(402, "payment required", nil)
+	if !ge.IsBillingLimitError() {
+		t.Error("expected 402 to be a billing-limit error")
+	}
+	if ge.Retryable {
+		t.Error("expected billing-limit error to not be retryable")
+	}
+}
+
+func TestNewGatewayError_BillingBody429NotRetryable(t *testing.T) {
+	t.Parallel()
+	// A 429 is normally retryable, but a billing/quota body reclassifies it as a non-retryable
+	// account-wide limit so the run stops cleanly instead of failing over across every model.
+	ge := NewGatewayError(429, `{"error":{"message":"You have exceeded your spending limit","type":"insufficient_quota"}}`, nil)
+	if !ge.IsBillingLimitError() {
+		t.Error("expected quota body to be a billing-limit error")
+	}
+	if ge.Retryable {
+		t.Error("expected billing-limit 429 to not be retryable")
+	}
+}
+
+func TestNewGatewayError_RateLimit429StillRetryable(t *testing.T) {
+	t.Parallel()
+	ge := NewGatewayError(429, `{"error":{"message":"rate limited","type":"rate_limit_error"}}`, nil)
+	if ge.IsBillingLimitError() {
+		t.Error("expected a plain rate-limit 429 to not be a billing-limit error")
+	}
+	if !ge.Retryable {
+		t.Error("expected a plain rate-limit 429 to remain retryable")
+	}
+}
+
 func TestGatewayError_RetryAfterSeconds(t *testing.T) {
 	t.Parallel()
 	headers := http.Header{}

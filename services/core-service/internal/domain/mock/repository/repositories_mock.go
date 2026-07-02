@@ -749,6 +749,21 @@ func (mr *MockAccountUserRepoMockRecorder) MarkUsedByAccountAndUser(ctx, account
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkUsedByAccountAndUser", reflect.TypeOf((*MockAccountUserRepo)(nil).MarkUsedByAccountAndUser), ctx, accountID, userID)
 }
 
+// ReactivateRemovedAccountUser mocks base method.
+func (m *MockAccountUserRepo) ReactivateRemovedAccountUser(ctx context.Context, accountID, userID string, roleID, departmentID *string) (string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReactivateRemovedAccountUser", ctx, accountID, userID, roleID, departmentID)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ReactivateRemovedAccountUser indicates an expected call of ReactivateRemovedAccountUser.
+func (mr *MockAccountUserRepoMockRecorder) ReactivateRemovedAccountUser(ctx, accountID, userID, roleID, departmentID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReactivateRemovedAccountUser", reflect.TypeOf((*MockAccountUserRepo)(nil).ReactivateRemovedAccountUser), ctx, accountID, userID, roleID, departmentID)
+}
+
 // ReactivateUsers mocks base method.
 func (m *MockAccountUserRepo) ReactivateUsers(ctx context.Context, accountID string, limit int32) (int64, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -1270,6 +1285,21 @@ func (m *MockAccountRelationRepo) FindByOwnerAccountAndUserID(ctx context.Contex
 func (mr *MockAccountRelationRepoMockRecorder) FindByOwnerAccountAndUserID(ctx, ownerAccountID, userID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindByOwnerAccountAndUserID", reflect.TypeOf((*MockAccountRelationRepo)(nil).FindByOwnerAccountAndUserID), ctx, ownerAccountID, userID)
+}
+
+// FindContactsByEmail mocks base method.
+func (m *MockAccountRelationRepo) FindContactsByEmail(ctx context.Context, ownerAccountID, email string) ([]domain.ContactMatch, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindContactsByEmail", ctx, ownerAccountID, email)
+	ret0, _ := ret[0].([]domain.ContactMatch)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// FindContactsByEmail indicates an expected call of FindContactsByEmail.
+func (mr *MockAccountRelationRepoMockRecorder) FindContactsByEmail(ctx, ownerAccountID, email any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindContactsByEmail", reflect.TypeOf((*MockAccountRelationRepo)(nil).FindContactsByEmail), ctx, ownerAccountID, email)
 }
 
 // FindCustomerAccountsByVendorAndUser mocks base method.
@@ -4228,6 +4258,192 @@ func (m *MockAccountIntegrationRepo) UpdateCredentials(ctx context.Context, acco
 func (mr *MockAccountIntegrationRepoMockRecorder) UpdateCredentials(ctx, accountID, id, name, encryptedCredentials any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCredentials", reflect.TypeOf((*MockAccountIntegrationRepo)(nil).UpdateCredentials), ctx, accountID, id, name, encryptedCredentials)
+}
+
+// MockHubspotSyncRepo is a mock of HubspotSyncRepo interface.
+type MockHubspotSyncRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockHubspotSyncRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockHubspotSyncRepoMockRecorder is the mock recorder for MockHubspotSyncRepo.
+type MockHubspotSyncRepoMockRecorder struct {
+	mock *MockHubspotSyncRepo
+}
+
+// NewMockHubspotSyncRepo creates a new mock instance.
+func NewMockHubspotSyncRepo(ctrl *gomock.Controller) *MockHubspotSyncRepo {
+	mock := &MockHubspotSyncRepo{ctrl: ctrl}
+	mock.recorder = &MockHubspotSyncRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockHubspotSyncRepo) EXPECT() *MockHubspotSyncRepoMockRecorder {
+	return m.recorder
+}
+
+// CountPendingReviews mocks base method.
+func (m *MockHubspotSyncRepo) CountPendingReviews(ctx context.Context, jobID string) (int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CountPendingReviews", ctx, jobID)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CountPendingReviews indicates an expected call of CountPendingReviews.
+func (mr *MockHubspotSyncRepoMockRecorder) CountPendingReviews(ctx, jobID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountPendingReviews", reflect.TypeOf((*MockHubspotSyncRepo)(nil).CountPendingReviews), ctx, jobID)
+}
+
+// CreateJob mocks base method.
+func (m *MockHubspotSyncRepo) CreateJob(ctx context.Context, params domain.CreateHubspotSyncJobParams) (*domain.HubspotSyncJob, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateJob", ctx, params)
+	ret0, _ := ret[0].(*domain.HubspotSyncJob)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CreateJob indicates an expected call of CreateJob.
+func (mr *MockHubspotSyncRepoMockRecorder) CreateJob(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateJob", reflect.TypeOf((*MockHubspotSyncRepo)(nil).CreateJob), ctx, params)
+}
+
+// CreateReview mocks base method.
+func (m *MockHubspotSyncRepo) CreateReview(ctx context.Context, params domain.CreateHubspotCompanyReviewParams) (*domain.HubspotCompanyReview, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateReview", ctx, params)
+	ret0, _ := ret[0].(*domain.HubspotCompanyReview)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CreateReview indicates an expected call of CreateReview.
+func (mr *MockHubspotSyncRepoMockRecorder) CreateReview(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateReview", reflect.TypeOf((*MockHubspotSyncRepo)(nil).CreateReview), ctx, params)
+}
+
+// GetJob mocks base method.
+func (m *MockHubspotSyncRepo) GetJob(ctx context.Context, accountID, id string) (*domain.HubspotSyncJob, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetJob", ctx, accountID, id)
+	ret0, _ := ret[0].(*domain.HubspotSyncJob)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetJob indicates an expected call of GetJob.
+func (mr *MockHubspotSyncRepoMockRecorder) GetJob(ctx, accountID, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetJob", reflect.TypeOf((*MockHubspotSyncRepo)(nil).GetJob), ctx, accountID, id)
+}
+
+// GetLatestJobForAccount mocks base method.
+func (m *MockHubspotSyncRepo) GetLatestJobForAccount(ctx context.Context, accountID string) (*domain.HubspotSyncJob, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetLatestJobForAccount", ctx, accountID)
+	ret0, _ := ret[0].(*domain.HubspotSyncJob)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetLatestJobForAccount indicates an expected call of GetLatestJobForAccount.
+func (mr *MockHubspotSyncRepoMockRecorder) GetLatestJobForAccount(ctx, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestJobForAccount", reflect.TypeOf((*MockHubspotSyncRepo)(nil).GetLatestJobForAccount), ctx, accountID)
+}
+
+// GetRecord mocks base method.
+func (m *MockHubspotSyncRepo) GetRecord(ctx context.Context, accountID, augnoType, augnoID string) (*domain.HubspotSyncRecord, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRecord", ctx, accountID, augnoType, augnoID)
+	ret0, _ := ret[0].(*domain.HubspotSyncRecord)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetRecord indicates an expected call of GetRecord.
+func (mr *MockHubspotSyncRepoMockRecorder) GetRecord(ctx, accountID, augnoType, augnoID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRecord", reflect.TypeOf((*MockHubspotSyncRepo)(nil).GetRecord), ctx, accountID, augnoType, augnoID)
+}
+
+// GetReview mocks base method.
+func (m *MockHubspotSyncRepo) GetReview(ctx context.Context, accountID, id string) (*domain.HubspotCompanyReview, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetReview", ctx, accountID, id)
+	ret0, _ := ret[0].(*domain.HubspotCompanyReview)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetReview indicates an expected call of GetReview.
+func (mr *MockHubspotSyncRepoMockRecorder) GetReview(ctx, accountID, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReview", reflect.TypeOf((*MockHubspotSyncRepo)(nil).GetReview), ctx, accountID, id)
+}
+
+// ListReviewsForJob mocks base method.
+func (m *MockHubspotSyncRepo) ListReviewsForJob(ctx context.Context, jobID string, status *string) ([]*domain.HubspotCompanyReview, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListReviewsForJob", ctx, jobID, status)
+	ret0, _ := ret[0].([]*domain.HubspotCompanyReview)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListReviewsForJob indicates an expected call of ListReviewsForJob.
+func (mr *MockHubspotSyncRepoMockRecorder) ListReviewsForJob(ctx, jobID, status any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListReviewsForJob", reflect.TypeOf((*MockHubspotSyncRepo)(nil).ListReviewsForJob), ctx, jobID, status)
+}
+
+// ResolveReview mocks base method.
+func (m *MockHubspotSyncRepo) ResolveReview(ctx context.Context, params domain.ResolveHubspotCompanyReviewParams) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResolveReview", ctx, params)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// ResolveReview indicates an expected call of ResolveReview.
+func (mr *MockHubspotSyncRepoMockRecorder) ResolveReview(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveReview", reflect.TypeOf((*MockHubspotSyncRepo)(nil).ResolveReview), ctx, params)
+}
+
+// UpdateJob mocks base method.
+func (m *MockHubspotSyncRepo) UpdateJob(ctx context.Context, params domain.UpdateHubspotSyncJobParams) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateJob", ctx, params)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// UpdateJob indicates an expected call of UpdateJob.
+func (mr *MockHubspotSyncRepoMockRecorder) UpdateJob(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateJob", reflect.TypeOf((*MockHubspotSyncRepo)(nil).UpdateJob), ctx, params)
+}
+
+// UpsertRecord mocks base method.
+func (m *MockHubspotSyncRepo) UpsertRecord(ctx context.Context, params domain.UpsertHubspotSyncRecordParams) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpsertRecord", ctx, params)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// UpsertRecord indicates an expected call of UpsertRecord.
+func (mr *MockHubspotSyncRepoMockRecorder) UpsertRecord(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertRecord", reflect.TypeOf((*MockHubspotSyncRepo)(nil).UpsertRecord), ctx, params)
 }
 
 // MockSalesTargetRepo is a mock of SalesTargetRepo interface.

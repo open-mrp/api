@@ -31,7 +31,7 @@ type RegistrationFlow struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=registration_flow"`
-	// Display name.
+	// Display name of the registration flow.
 	Name string `json:"name" validate:"required"`
 	// Customer groups a registering customer can be placed into.
 	CustomerGroupOptions *List[RegistrationFlowOption] `json:"customer_group_options" validate:"required"`

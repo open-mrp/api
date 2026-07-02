@@ -15,11 +15,7 @@ func init() {
 		Load:       stubLoadSalesOrderLines,
 		Subs: []resourcekit.SubField{
 			{
-				// The product ID is stashed in meta (not on a prebuilt stub) so
-				// the line's `product` field stays nil unless lines.product is
-				// requested. Loading via LoadProducts (rather than recursing into
-				// a stub) also stashes the product's item_id/product_line_id meta
-				// so nested includes (lines.product.item / lines.product.product_line) resolve.
+				// The product id is stashed in meta (not on a prebuilt stub) so the line's product field stays nil unless lines.product is requested. Loading via LoadProducts (rather than recursing into a stub) also stashes the product's item_id/product_line_id meta so nested includes (lines.product.item / lines.product.product_line) resolve.
 				Key:         "product",
 				Target:      constants.ObjectTypeProduct,
 				Cardinality: resourcekit.CardinalityOnePtr,

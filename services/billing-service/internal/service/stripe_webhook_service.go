@@ -21,8 +21,7 @@ type StripeWebhookSvcConfig struct {
 	// StripeClient (required) is the Stripe API client used to verify webhooks.
 	StripeClient domain.StripeClient
 
-	// VerboseErrors (optional; default: false) includes the underlying Stripe
-	// error in 400 responses when true (e.g. in dev).
+	// VerboseErrors (optional; default: false) includes the underlying Stripe error in 400 responses when true (e.g. in dev).
 	VerboseErrors bool
 }
 

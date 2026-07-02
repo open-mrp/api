@@ -22,10 +22,13 @@ SELECT
     u.name AS sent_by_name,
     u.username AS sent_by_username,
     u.email AS sent_by_email,
+    ak.type_id AS sent_by_api_key_id,
+    ak.name AS sent_by_api_key_name,
     el.created_at,
     el.updated_at
 FROM email_log el
 LEFT JOIN user u ON el.sent_by_id = u.id
+LEFT JOIN api_key ak ON el.sent_by_id = ak.type_id
 WHERE el.id = ?
 AND el.account_id = ?
 `
@@ -36,17 +39,19 @@ type GetEmailLogParams struct {
 }
 
 type GetEmailLogRow struct {
-	ID             string
-	HasSent        bool
-	Subject        sql.NullString
-	Filename       sql.NullString
-	SesMessageID   sql.NullString
-	SentByID       sql.NullString
-	SentByName     sql.NullString
-	SentByUsername sql.NullString
-	SentByEmail    sql.NullString
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID               string
+	HasSent          bool
+	Subject          sql.NullString
+	Filename         sql.NullString
+	SesMessageID     sql.NullString
+	SentByID         sql.NullString
+	SentByName       sql.NullString
+	SentByUsername   sql.NullString
+	SentByEmail      sql.NullString
+	SentByApiKeyID   sql.NullString
+	SentByApiKeyName sql.NullString
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 func (q *Queries) GetEmailLog(ctx context.Context, arg GetEmailLogParams) (GetEmailLogRow, error) {
@@ -62,6 +67,8 @@ func (q *Queries) GetEmailLog(ctx context.Context, arg GetEmailLogParams) (GetEm
 		&i.SentByName,
 		&i.SentByUsername,
 		&i.SentByEmail,
+		&i.SentByApiKeyID,
+		&i.SentByApiKeyName,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -109,10 +116,13 @@ SELECT
     u.name AS sent_by_name,
     u.username AS sent_by_username,
     u.email AS sent_by_email,
+    ak.type_id AS sent_by_api_key_id,
+    ak.name AS sent_by_api_key_name,
     el.created_at,
     el.updated_at
 FROM email_log el
 LEFT JOIN user u ON el.sent_by_id = u.id
+LEFT JOIN api_key ak ON el.sent_by_id = ak.type_id
 WHERE el.account_id = ?
 AND (
     ? IS NULL
@@ -140,17 +150,19 @@ type ListEmailLogsBackwardParams struct {
 }
 
 type ListEmailLogsBackwardRow struct {
-	ID             string
-	HasSent        bool
-	Subject        sql.NullString
-	Filename       sql.NullString
-	SesMessageID   sql.NullString
-	SentByID       sql.NullString
-	SentByName     sql.NullString
-	SentByUsername sql.NullString
-	SentByEmail    sql.NullString
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID               string
+	HasSent          bool
+	Subject          sql.NullString
+	Filename         sql.NullString
+	SesMessageID     sql.NullString
+	SentByID         sql.NullString
+	SentByName       sql.NullString
+	SentByUsername   sql.NullString
+	SentByEmail      sql.NullString
+	SentByApiKeyID   sql.NullString
+	SentByApiKeyName sql.NullString
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 func (q *Queries) ListEmailLogsBackward(ctx context.Context, arg ListEmailLogsBackwardParams) ([]ListEmailLogsBackwardRow, error) {
@@ -181,6 +193,8 @@ func (q *Queries) ListEmailLogsBackward(ctx context.Context, arg ListEmailLogsBa
 			&i.SentByName,
 			&i.SentByUsername,
 			&i.SentByEmail,
+			&i.SentByApiKeyID,
+			&i.SentByApiKeyName,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -208,10 +222,13 @@ SELECT
     u.name AS sent_by_name,
     u.username AS sent_by_username,
     u.email AS sent_by_email,
+    ak.type_id AS sent_by_api_key_id,
+    ak.name AS sent_by_api_key_name,
     el.created_at,
     el.updated_at
 FROM email_log el
 LEFT JOIN user u ON el.sent_by_id = u.id
+LEFT JOIN api_key ak ON el.sent_by_id = ak.type_id
 WHERE el.account_id = ?
 AND (
     ? IS NULL
@@ -240,17 +257,19 @@ type ListEmailLogsForwardParams struct {
 }
 
 type ListEmailLogsForwardRow struct {
-	ID             string
-	HasSent        bool
-	Subject        sql.NullString
-	Filename       sql.NullString
-	SesMessageID   sql.NullString
-	SentByID       sql.NullString
-	SentByName     sql.NullString
-	SentByUsername sql.NullString
-	SentByEmail    sql.NullString
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID               string
+	HasSent          bool
+	Subject          sql.NullString
+	Filename         sql.NullString
+	SesMessageID     sql.NullString
+	SentByID         sql.NullString
+	SentByName       sql.NullString
+	SentByUsername   sql.NullString
+	SentByEmail      sql.NullString
+	SentByApiKeyID   sql.NullString
+	SentByApiKeyName sql.NullString
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 func (q *Queries) ListEmailLogsForward(ctx context.Context, arg ListEmailLogsForwardParams) ([]ListEmailLogsForwardRow, error) {
@@ -282,6 +301,8 @@ func (q *Queries) ListEmailLogsForward(ctx context.Context, arg ListEmailLogsFor
 			&i.SentByName,
 			&i.SentByUsername,
 			&i.SentByEmail,
+			&i.SentByApiKeyID,
+			&i.SentByApiKeyName,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

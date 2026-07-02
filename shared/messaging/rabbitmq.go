@@ -81,7 +81,8 @@ type RabbitMQConfig struct {
 	ReconnectDelay time.Duration
 }
 
-func (c *RabbitMQConfig) withDefaults() *RabbitMQConfig {
+// WithDefaults returns a new RabbitMQConfig with all zero-value optional fields replaced by production defaults. It is safe to call on a nil receiver. The original config is not mutated; a copy is always returned.
+func (c *RabbitMQConfig) WithDefaults() *RabbitMQConfig {
 	if c == nil {
 		c = &RabbitMQConfig{}
 	}
@@ -127,7 +128,7 @@ func (c *RabbitMQConfig) validate() error {
 
 // NewRabbitMQ creates a new rabbitMQ client connected to the given AMQP URI. It dials the broker with exponential backoff, declares the full exchange/queue topology, and verifies the connection is ready. On success the returned client is guaranteed to have an open connection and channel.
 func NewRabbitMQ(ctx context.Context, config *RabbitMQConfig) (MessageBroker, error) {
-	config = config.withDefaults()
+	config = config.WithDefaults()
 	if err := config.validate(); err != nil {
 		return nil, err
 	}
@@ -558,6 +559,33 @@ func (r *rabbitMQ) setupExchangesAndQueues() error {
 		return err
 	}
 
+	// In-app messaging fan-out command queue (handled by notification-service)
+	if err := r.declareAndBindQueue(
+		NotificationCmdFanoutQueue,
+		[]string{string(contracts.NotificationCmdFanout), string(contracts.NotificationCmdSendMessage)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
+	// Agent chat-reply command queue (handled by notification-service)
+	if err := r.declareAndBindQueue(
+		NotificationCmdAgentReplyQueue,
+		[]string{string(contracts.NotificationCmdAgentReply)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
+	// Agent chat-reply streaming patch queue (handled by notification-service). Best-effort partial body updates for an in-flight streaming reply; not inbox-deduped.
+	if err := r.declareAndBindQueue(
+		NotificationCmdAgentReplyPatchQueue,
+		[]string{string(contracts.NotificationCmdAgentReplyPatch)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
 	// Request log event queue (handled by platform-service)
 	if err := r.declareAndBindQueue(
 		LoggingEventRequestLogQueue,
@@ -612,6 +640,15 @@ func (r *rabbitMQ) setupExchangesAndQueues() error {
 		return err
 	}
 
+	// Core HubSpot sync command queue (handled by core-service) — bound to both preview and execute commands
+	if err := r.declareAndBindQueue(
+		CoreCmdHubspotSyncQueue,
+		[]string{string(contracts.CoreCmdHubspotSyncPreview), string(contracts.CoreCmdHubspotSyncExecute)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
 	// Billing stripe webhook event queue (handled by billing-service)
 	if err := r.declareAndBindQueue(
 		BillingEventStripeWebhookQueue,
@@ -648,10 +685,10 @@ func (r *rabbitMQ) setupExchangesAndQueues() error {
 		return err
 	}
 
-	// Agent command queue: process email (handled by agent-service)
+	// Agent command queue: chat run (from notification-service — start an agent run from a chat mention)
 	if err := r.declareAndBindQueue(
-		AgentCmdProcessEmailQueue,
-		[]string{string(contracts.AgentCmdProcessEmail)},
+		AgentCmdChatRunQueue,
+		[]string{string(contracts.AgentCmdChatRun)},
 		ApplicationExchange,
 	); err != nil {
 		return err
@@ -688,6 +725,15 @@ func (r *rabbitMQ) setupExchangesAndQueues() error {
 	if err := r.declareAndBindQueue(
 		AgentEventRunStepQueue,
 		[]string{string(contracts.AgentEventRunStep)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
+	// Notification realtime-delivery queue (for WebSocket fan-out of the bell + live chat)
+	if err := r.declareAndBindQueue(
+		NotificationEventDeliveredQueue,
+		[]string{string(contracts.NotificationEventDelivered), string(contracts.NotificationEventConversationUpdated)},
 		ApplicationExchange,
 	); err != nil {
 		return err

@@ -49,6 +49,8 @@ func (e *CreateAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAPI
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
+		AgentTool:         false,
+		RequiredRoleType:  constants.RoleTypeAdmin,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeCreatedAPIKey,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateAPIKeyRequest) (*apiresource.CreatedAPIKey, *apierror.APIError) {

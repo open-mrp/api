@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -28,7 +29,10 @@ func (e *RetrievePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
-		ObjectType:        constants.ObjectTypePurchaseOrder,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainPurchaseOrders, Action: types.ActionRead},
+		},
+		ObjectType: constants.ObjectTypePurchaseOrder,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrievePurchaseOrderRequest) (*apiresource.PurchaseOrder, *apierror.APIError) {
 			return svc.(PurchaseOrderSvc).GetPurchaseOrder
 		},

@@ -270,6 +270,9 @@ func buildMinimalActor(actorID string, identityType sql.NullString) *domain.Requ
 		return &domain.RequestLogActor{ID: actorID, ActorType: constants.ActorTypeUser}
 	case "api_key":
 		return &domain.RequestLogActor{ID: actorID, ActorType: constants.ActorTypeAPIKey}
+	case "agent":
+		// actor_id holds the agent definition id; its display name lives in agent-service (a separate datastore), so it cannot be joined here and is resolved by the api-gateway presenter instead.
+		return &domain.RequestLogActor{ID: actorID, ActorType: constants.ActorTypeAgent}
 	}
 	return nil
 }
@@ -371,6 +374,12 @@ func mapRowToRequestLogRead(row *sqlc.FindRequestLogByIDRow) *domain.RequestLogR
 				RoleID:        db.StringFromNullString(row.ApiKeyRoleID),
 				RoleName:      db.StringFromNullString(row.ApiKeyRoleName),
 				RoleType:      db.StringFromNullString(row.ApiKeyRoleTypeCode),
+			}
+		case "agent":
+			// actor_id holds the agent definition id; its display name lives in agent-service (a separate datastore) and is resolved by the api-gateway presenter, so there is nothing to join here.
+			rl.Actor = &domain.RequestLogActor{
+				ID:        actorID,
+				ActorType: constants.ActorTypeAgent,
 			}
 		}
 	}

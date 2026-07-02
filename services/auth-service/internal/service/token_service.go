@@ -63,11 +63,7 @@ func NewTokenSvc(config *TokenSvcConfig) domain.TokenSvc {
 	}
 }
 
-func (c *TokenSvcConfig) WithDefaults(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, coreClient domain.AuthCoreClient) *TokenSvcConfig {
-	if c == nil {
-		c = &TokenSvcConfig{}
-	}
-
+func BuildTokenSvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, coreClient domain.AuthCoreClient) *TokenSvcConfig {
 	repoFactory := repository.NewRepoFactory(queries)
 	notificationPublisher := event.NewOutboxNotificationPublisher()
 

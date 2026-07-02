@@ -112,8 +112,7 @@ func (s *receivingOrderSvcImpl) ListReceivingOrders(ctx context.Context, params 
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Expand lines per order only when requested (so the list can serve the
-	// lines.order_line.product.item array filter).
+	// Expand lines per order only when requested (so the list can serve the lines.order_line.product.item array filter).
 	for _, include := range params.Includes {
 		if include == "lines" {
 			for _, ro := range result.ReceivingOrders {

@@ -51,6 +51,7 @@ func (e *ValidateAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*Valida
 		Route:             "/v1/core/addresses/actions/validate",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeValidatedAddress,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ValidateAddressRequest) (*apiresource.ValidatedAddress, *apierror.APIError) {

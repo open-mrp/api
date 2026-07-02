@@ -35,7 +35,7 @@ func (*ShipmentsEndpointGroup) Materialize(config *ShipmentsEndpointGroupConfig)
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
-		Title:        "Shipment Management",
+		Title:        "Shipment",
 		Description:  "List and manage shipments, shipment lines, and shipping operations.",
 		ResourceType: &apiresource.Shipment{},
 	}

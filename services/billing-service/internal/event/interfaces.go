@@ -17,8 +17,8 @@ type WebhookCoreClient interface {
 
 // EventLogRepo defines the event log operations needed by the webhook consumer.
 type EventLogRepo interface {
-	Exists(ctx context.Context, eventID, objectID string) (bool, error)
-	Insert(ctx context.Context, eventID, eventType, objectID string) error
+	Exists(ctx context.Context, eventID, objectID string) (bool, *apierror.APIError)
+	Insert(ctx context.Context, eventID, eventType, objectID string) *apierror.APIError
 }
 
 // WebhookNotificationClient defines the notification operations needed by the webhook consumer.

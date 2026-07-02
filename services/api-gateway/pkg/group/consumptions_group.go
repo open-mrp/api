@@ -35,7 +35,7 @@ func (*ConsumptionsEndpointGroup) Materialize(config *ConsumptionsEndpointGroupC
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
-		Title:        "Consumptions Management",
+		Title:        "Consumptions",
 		Description:  "Manage consumptions within production steps.",
 		ResourceType: &apiresource.Consumption{},
 	}

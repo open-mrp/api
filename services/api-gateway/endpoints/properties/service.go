@@ -182,7 +182,17 @@ func (m *propertySvcImpl) ListAttributes(ctx context.Context, req *ListAttribute
 }
 
 func (m *propertySvcImpl) GetAttribute(ctx context.Context, req *RetrieveAttributeRequest) (*apiresource.Attribute, *apierror.APIError) {
-	return loadAttributeByID(ctx, req.AttributeID)
+	resp, apiErr := grpcutil.CallRPC(ctx, propertySvcTracer, "service.attributes.get", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetAttributeResponse, error) {
+			return m.coreClient.GetAttribute(ctx, &pb.GetAttributeRequest{
+				PropertyId: req.PropertyID,
+				Id:         req.AttributeID,
+			}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	return loadAttributeByID(ctx, resp.Attribute.Id)
 }
 
 func (m *propertySvcImpl) CreateAttribute(ctx context.Context, req *CreateAttributeRequest) (*apiresource.Attribute, *apierror.APIError) {
@@ -195,6 +205,9 @@ func (m *propertySvcImpl) CreateAttribute(ctx context.Context, req *CreateAttrib
 
 	var sortOrder int32 = -1
 	if v, ok := req.SortOrder.Value(); ok {
+		if v < 1 {
+			return nil, apierror.NewValidationErrorWithParam("Field 'sort_order' must be at least 1.", "sort_order")
+		}
 		sortOrder = v
 	}
 
@@ -222,6 +235,10 @@ func (m *propertySvcImpl) UpdateAttribute(ctx context.Context, req *UpdateAttrib
 	if c, ok := req.ColorCode.Value(); ok {
 		s := string(c)
 		colorCode = &s
+	}
+
+	if v, ok := req.SortOrder.Value(); ok && v < 1 {
+		return nil, apierror.NewValidationErrorWithParam("Field 'sort_order' must be at least 1.", "sort_order")
 	}
 
 	pbReq := &pb.UpdateAttributeRequest{

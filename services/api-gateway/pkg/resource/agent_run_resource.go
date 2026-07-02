@@ -19,6 +19,13 @@ type AgentRun struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=agent_run"`
+	// How this run was initiated.
+	//
+	// - `scheduled`: started by the agent's cron schedule.
+	// - `event`: started in response to a platform event.
+	// - `manual`: started by an explicit request; see `triggered_by`.
+	// - `chat`: started by a message in a conversation, with the agent's reply posted back into that conversation.
+	TriggerType constants.AgentTriggerType `json:"trigger_type" validate:"required"`
 	// Current run status.
 	//
 	// - `pending`: queued but not yet started.
@@ -29,44 +36,34 @@ type AgentRun struct {
 	// - `failed`: stopped after an error; see `error_message`.
 	// - `cancelled`: stopped before completion by a user.
 	Status constants.AgentRunStatus `json:"status" validate:"required"`
-	// How this run was initiated.
-	//
-	// - `scheduled`: started by the agent's cron schedule.
-	// - `event`: started in response to a platform event.
-	// - `manual`: started by an explicit request; see `triggered_by`.
-	TriggerType constants.AgentTriggerType `json:"trigger_type" validate:"required"`
+	// Full agent definition for this run.
+	Definition *AgentDefinition `json:"definition" expandable:"true"`
 	// Input provided to the agent at the start of the run, as JSON.
 	Input json.RawMessage `json:"input"`
 	// Final output produced by the agent, as JSON.
 	//
-	// `null` until the run completes.
+	// Populated only once the run has completed successfully.
 	Output json.RawMessage `json:"output"`
 	// Error message if the run failed.
 	ErrorMessage *string `json:"error_message"`
+	// Actor that triggered this run.
+	//
+	// Null for scheduled or event-triggered runs.
+	TriggeredBy *Actor `json:"triggered_by" expandable:"true"`
 	// When the run started executing.
 	StartedAt *time.Time `json:"started_at"`
 	// When the run completed.
 	CompletedAt *time.Time `json:"completed_at"`
 	// Duration in milliseconds.
 	DurationMs *int32 `json:"duration_ms"`
-	// Total LLM input tokens consumed across all model calls in this run.
-	TotalInputTokens *int64 `json:"total_input_tokens"`
-	// Total LLM output tokens generated across all model calls in this run.
-	TotalOutputTokens *int64 `json:"total_output_tokens"`
-	// Actor that triggered this run.
-	//
-	// Null for scheduled or event-triggered runs.
-	TriggeredBy *Actor `json:"triggered_by"`
+	// Actions performed during this run.
+	Actions *List[AgentAction] `json:"actions" expandable:"true"`
+	// Timeline steps for this run.
+	Steps *List[AgentRunStep] `json:"steps" expandable:"true"`
 	// When this run was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// When this run was last updated.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
-	// Actions performed during this run.
-	Actions *List[AgentAction] `json:"actions" expandable:"true"`
-	// Full agent definition for this run.
-	Definition *AgentDefinition `json:"definition" expandable:"true"`
-	// Timeline steps for this run.
-	Steps *List[AgentRunStep] `json:"steps" expandable:"true"`
 }
 
 // A single event in an agent run's execution timeline.
@@ -83,10 +80,10 @@ type AgentRunStep struct {
 	Content *string `json:"content"`
 	// Zero-based position of this step within the run's timeline.
 	Sequence int32 `json:"sequence"`
-	// Duration in milliseconds.
-	DurationMs *int32 `json:"duration_ms"`
 	// Actor who produced this step.
 	Actor *Actor `json:"actor"`
+	// Duration in milliseconds.
+	DurationMs *int32 `json:"duration_ms"`
 	// Additional structured data for the step, as JSON.
 	Metadata json.RawMessage `json:"metadata"`
 	// When this step was created.
@@ -109,20 +106,18 @@ func (*AgentRunStep) SchemaExample() any {
 }
 
 var SampleAgentRun = &AgentRun{
-	ID:                SampleAgentRunID,
-	Object:            constants.ObjectTypeAgentRun,
-	Status:            constants.AgentRunStatusCompleted,
-	TriggerType:       constants.AgentTriggerTypeManual,
-	TriggeredBy:       SampleActor,
-	Input:             json.RawMessage(`{"message":"Process order #1234"}`),
-	Output:            json.RawMessage(`{"response":"Order processed successfully"}`),
-	DurationMs:        new(int32(1250)),
-	TotalInputTokens:  new(int64(500)),
-	TotalOutputTokens: new(int64(300)),
-	CreatedAt:         timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:         timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
-	Actions:           NewList([]AgentAction{*SampleAgentAction}, PageInfo{}),
-	Steps:             NewList([]AgentRunStep{*SampleAgentRunStep}, PageInfo{}),
+	ID:          SampleAgentRunID,
+	Object:      constants.ObjectTypeAgentRun,
+	TriggerType: constants.AgentTriggerTypeManual,
+	Status:      constants.AgentRunStatusCompleted,
+	TriggeredBy: SampleActor,
+	Input:       json.RawMessage(`{"message":"Process order #1234"}`),
+	Output:      json.RawMessage(`{"response":"Order processed successfully"}`),
+	DurationMs:  new(int32(1250)),
+	Actions:     NewList([]AgentAction{*SampleAgentAction}, PageInfo{}),
+	Steps:       NewList([]AgentRunStep{*SampleAgentRunStep}, PageInfo{}),
+	CreatedAt:   timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:   timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*AgentRun) SchemaExample() any {

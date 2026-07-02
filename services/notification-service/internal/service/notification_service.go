@@ -59,11 +59,7 @@ func NewNotificationSvc(config *NotificationSvcConfig) domain.NotificationSvc {
 	}
 }
 
-func (c *NotificationSvcConfig) WithDefaults(repoFactory domain.RepoFactory, platformMode constants.PlatformMode, awsRegion string, templateRenderer email.TemplateRenderer) (*NotificationSvcConfig, *apierror.APIError) {
-	if c == nil {
-		c = &NotificationSvcConfig{}
-	}
-
+func BuildNotificationSvcConfig(repoFactory domain.RepoFactory, platformMode constants.PlatformMode, awsRegion string, templateRenderer email.TemplateRenderer) (*NotificationSvcConfig, *apierror.APIError) {
 	var emailSender domain.EmailSender
 	if platformMode.IsTest() {
 		emailSender = &stub.EmailSender{}

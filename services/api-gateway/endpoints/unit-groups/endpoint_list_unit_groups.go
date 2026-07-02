@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -13,7 +14,7 @@ import (
 // Request to list unit groups.
 type ListUnitGroupsRequest struct {
 	apiresource.PaginationRequest
-	// Filter by unit dimension (e.g. `mass`).
+	// Filter by unit dimension.
 	Type *constants.UnitType `query:"type"`
 }
 
@@ -22,14 +23,16 @@ type ListUnitGroupsEndpoint struct{}
 
 func (e *ListUnitGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListUnitGroupsRequest, *apiresource.List[apiresource.UnitGroup]] {
 	return (&apiendpoint.APIEndpoint[*ListUnitGroupsRequest, *apiresource.List[apiresource.UnitGroup]]{
-		Title:             "List Unit Groups",
-		Method:            http.MethodGet,
-		ContentType:       "application/json",
-		Route:             "/v1/catalog/unit-groups",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeUnitGroup,
+		Title:               "List Unit Groups",
+		Method:              http.MethodGet,
+		ContentType:         "application/json",
+		Route:               "/v1/catalog/unit-groups",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainUnitGroups, Action: types.ActionRead}},
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeUnitGroup,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListUnitGroupsRequest) (*apiresource.List[apiresource.UnitGroup], *apierror.APIError) {
 			return svc.(UnitGroupSvc).ListUnitGroups
 		},

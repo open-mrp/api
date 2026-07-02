@@ -62,6 +62,8 @@ type CreateScanningStationParams struct {
 	Type                constants.ScanningStationType
 	OperatorRequirement constants.OperatorRequirement
 	DepartmentID        string
+	LabelSizeCode       *string
+	LabelTypeCode       *string
 	Includes            []string
 }
 

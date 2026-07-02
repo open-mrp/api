@@ -31,6 +31,7 @@ func (e *AutocompleteAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*Au
 		Route:             "/v1/core/addresses/suggestions",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeAddressSuggestion,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AutocompleteAddressRequest) (*apiresource.List[apiresource.AddressSuggestion], *apierror.APIError) {

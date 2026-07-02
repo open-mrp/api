@@ -6,6 +6,7 @@ import (
 	"time"
 
 	agentep "github.com/augno/api/services/api-gateway/endpoints/agents"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
@@ -14,28 +15,21 @@ import (
 )
 
 func AgentRunPresenter(r *pb.AgentRunInfo) apiresource.AgentRun {
-	return AgentRunPresenterWithRole(r, nil)
-}
-
-func AgentRunPresenterWithRole(r *pb.AgentRunInfo, role *resolvedRole) apiresource.AgentRun {
 	if r == nil {
 		return apiresource.AgentRun{}
 	}
 
 	run := apiresource.AgentRun{
-		ID:                r.Id,
-		Object:            constants.ObjectTypeAgentRun,
-		Status:            constants.AgentRunStatus(r.StatusCode),
-		TriggerType:       constants.AgentTriggerType(r.TriggerType),
-		ErrorMessage:      ptrStringOrNil(r.ErrorMessage),
-		DurationMs:        ptrInt32OrNil(r.DurationMs),
-		TotalInputTokens:  ptrInt64OrNil(r.TotalInputTokens),
-		TotalOutputTokens: ptrInt64OrNil(r.TotalOutputTokens),
-		TriggeredBy:       lightActorPresenter(r),
-		StartedAt:         timeutil.TimestampToTimePtr(r.StartedAt),
-		CompletedAt:       timeutil.TimestampToTimePtr(r.CompletedAt),
-		CreatedAt:         timeutil.TimestampToTime(r.CreatedAt),
-		UpdatedAt:         timeutil.TimestampToTime(r.UpdatedAt),
+		ID:           r.Id,
+		Object:       constants.ObjectTypeAgentRun,
+		TriggerType:  constants.AgentTriggerType(r.TriggerType),
+		Status:       constants.AgentRunStatus(r.StatusCode),
+		ErrorMessage: ptrStringOrNil(r.ErrorMessage),
+		DurationMs:   ptrInt32OrNil(r.DurationMs),
+		StartedAt:    timeutil.TimestampToTimePtr(r.StartedAt),
+		CompletedAt:  timeutil.TimestampToTimePtr(r.CompletedAt),
+		CreatedAt:    timeutil.TimestampToTime(r.CreatedAt),
+		UpdatedAt:    timeutil.TimestampToTime(r.UpdatedAt),
 	}
 
 	if r.Input != "" {
@@ -48,32 +42,33 @@ func AgentRunPresenterWithRole(r *pb.AgentRunInfo, role *resolvedRole) apiresour
 	return run
 }
 
-func stashAgentRunMeta(ctx context.Context, run *apiresource.AgentRun, r *pb.AgentRunInfo, role *resolvedRole) {
+func stashAgentRunMeta(ctx context.Context, run *apiresource.AgentRun, r *pb.AgentRunInfo) {
 	if r == nil {
 		return
 	}
 
 	meta := resourcekit.GetLoadMeta(ctx)
 
+	// triggered_by is expandable: left nil on the base resource, stashed for ?include=triggered_by.
+	if triggeredBy := lightActorPresenter(r); triggeredBy != nil {
+		meta.Set(constants.ObjectTypeAgentRun, run.ID, "triggered_by", triggeredBy)
+	}
+
 	if len(r.Actions) > 0 {
 		actions := make([]apiresource.AgentAction, len(r.Actions))
+		entities := make([]*apiresource.Entity, len(r.Actions))
 		for i, a := range r.Actions {
 			actions[i] = agentActionPresenter(a, r.Id, timeutil.TimestampToTime(r.CreatedAt), timeutil.TimestampToTime(r.UpdatedAt))
+			entities[i] = actions[i].Entity
 		}
+		resourceloaders.HydrateCustomerEntities(ctx, entities)
 		meta.Set(constants.ObjectTypeAgentRun, run.ID, "actions", apiresource.NewList(actions, apiresource.PageInfo{}))
 	}
 
 	if r.Definition != nil {
-		var agentRole *agentep.ResolvedRole
-		if role != nil {
-			agentRole = &agentep.ResolvedRole{
-				Name:     role.Name,
-				RoleType: role.RoleType,
-			}
-		}
 		def := agentep.AgentDefinitionPresenter(r.Definition)
 		meta.Set(constants.ObjectTypeAgentRun, run.ID, "definition", &def)
-		agentep.StashAgentDefinitionMeta(meta, r.Definition, agentRole)
+		agentep.StashAgentDefinitionMeta(meta, r.Definition)
 	}
 
 	if len(r.Steps) > 0 {
@@ -133,13 +128,13 @@ func agentActionPresenter(a *pb.AgentActionInfo, agentRunID string, runCreatedAt
 		runUpdatedAt = timeutil.TimestampToTime(a.UpdatedAt)
 	}
 
+	// run is a reference sub-object to the parent run. Never fabricate its status/trigger_type: set
+	// them only from real data the proto carries (api-resource-conventions.md — no placeholder stubs).
 	run := &apiresource.AgentRun{
-		ID:          runID,
-		Object:      constants.ObjectTypeAgentRun,
-		Status:      constants.AgentRunStatusPending,
-		TriggerType: constants.AgentTriggerTypeManual,
-		CreatedAt:   runCreatedAt,
-		UpdatedAt:   runUpdatedAt,
+		ID:        runID,
+		Object:    constants.ObjectTypeAgentRun,
+		CreatedAt: runCreatedAt,
+		UpdatedAt: runUpdatedAt,
 	}
 	if a.RunStatusCode != nil {
 		run.Status = constants.AgentRunStatus(*a.RunStatusCode)
@@ -149,21 +144,21 @@ func agentActionPresenter(a *pb.AgentActionInfo, agentRunID string, runCreatedAt
 	}
 
 	action := apiresource.AgentAction{
-		ID:             a.Id,
-		Object:         constants.ObjectTypeAgentAction,
-		Run:            run,
-		ToolSlug:       constants.ToolSlug(a.ToolSlug),
-		Status:         constants.AgentActionStatus(a.StatusCode),
-		Label:          ptrStringOrNil(a.Label),
-		Description:    ptrStringOrNil(a.Description),
-		ErrorMessage:   ptrStringOrNil(a.ErrorMessage),
-		Entity:         entityPresenter(a.EntityType, a.EntityId),
-		RequiresReview: a.RequiresReview,
-		ReviewedBy:     reviewedByPresenter(a),
-		ReviewedAt:     timeutil.TimestampToTimePtr(a.ReviewedAt),
-		ExecutedAt:     timeutil.TimestampToTimePtr(a.ExecutedAt),
-		CreatedAt:      timeutil.TimestampToTime(a.CreatedAt),
-		UpdatedAt:      timeutil.TimestampToTime(a.UpdatedAt),
+		ID:                a.Id,
+		Object:            constants.ObjectTypeAgentAction,
+		Tool:              constants.Tool(a.ToolSlug),
+		Status:            constants.AgentActionStatus(a.StatusCode),
+		Label:             ptrStringOrNil(a.Label),
+		Description:       ptrStringOrNil(a.Description),
+		Run:               run,
+		ErrorMessage:      ptrStringOrNil(a.ErrorMessage),
+		Entity:            entityPresenter(a.EntityType, a.EntityId),
+		ReviewRequirement: constants.ReviewRequirementFromBool(a.RequiresReview),
+		ReviewedBy:        reviewedByPresenter(a),
+		ReviewedAt:        timeutil.TimestampToTimePtr(a.ReviewedAt),
+		ExecutedAt:        timeutil.TimestampToTimePtr(a.ExecutedAt),
+		CreatedAt:         timeutil.TimestampToTime(a.CreatedAt),
+		UpdatedAt:         timeutil.TimestampToTime(a.UpdatedAt),
 	}
 
 	if a.Input != "" {
@@ -208,13 +203,6 @@ func ptrStringOrNil(s string) *string {
 }
 
 func ptrInt32OrNil(v int32) *int32 {
-	if v == 0 {
-		return nil
-	}
-	return &v
-}
-
-func ptrInt64OrNil(v int64) *int64 {
 	if v == 0 {
 		return nil
 	}

@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -23,14 +24,15 @@ type RetrieveProductionEndpoint struct{}
 
 func (e *RetrieveProductionEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveProductionRequest, *apiresource.ProductionOutput] {
 	return (&apiendpoint.APIEndpoint[*RetrieveProductionRequest, *apiresource.ProductionOutput]{
-		Title:             "Retrieve Production",
-		Method:            http.MethodGet,
-		ContentType:       "application/json",
-		Route:             "/v1/operations/production-steps/{production_step_id}/productions/{id}",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeProduction,
+		Title:               "Retrieve Production",
+		Method:              http.MethodGet,
+		ContentType:         "application/json",
+		Route:               "/v1/operations/production-steps/{production_step_id}/productions/{id}",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProductionSteps, Action: types.ActionRead}},
+		ObjectType:          constants.ObjectTypeProduction,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveProductionRequest) (*apiresource.ProductionOutput, *apierror.APIError) {
 			return svc.(ProductionStepSvc).GetProduction
 		},

@@ -19,7 +19,7 @@ type VolumeDiscount struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=volume_discount"`
-	// Display name.
+	// Display name of the volume discount.
 	//
 	// Must be unique within the account.
 	Name string `json:"name" validate:"required"`
@@ -59,7 +59,7 @@ type VolumeDiscountTier struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=volume_discount_tier"`
-	// Display name.
+	// Display name of the tier.
 	Name string `json:"name" validate:"required"`
 	// Percentage taken off the price once the threshold is met, as a decimal string.
 	//

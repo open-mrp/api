@@ -10,7 +10,7 @@ import (
 type Owner struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=owner"`
-	// Owner type, identifying where the resource came from.
+	// Where this resource came from.
 	//
 	// - `system`: a platform-provided default shared across all accounts; not editable.
 	// - `account`: created and owned by a specific account; the `account` field identifies which.

@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -50,14 +51,16 @@ type CreateAttributeEndpoint struct{}
 
 func (e *CreateAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAttributeRequest, *apiresource.Attribute] {
 	return (&apiendpoint.APIEndpoint[*CreateAttributeRequest, *apiresource.Attribute]{
-		Title:             "Create Attribute",
-		Method:            http.MethodPost,
-		ContentType:       "application/json",
-		Route:             CatalogPropertyAttributesRoute,
-		SuccessStatusCode: http.StatusCreated,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeAttribute,
+		Title:               "Create Attribute",
+		Method:              http.MethodPost,
+		ContentType:         "application/json",
+		Route:               CatalogPropertyAttributesRoute,
+		SuccessStatusCode:   http.StatusCreated,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProperties, Action: types.ActionCreate}},
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeAttribute,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateAttributeRequest) (*apiresource.Attribute, *apierror.APIError) {
 			return svc.(PropertySvc).CreateAttribute
 		},

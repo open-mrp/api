@@ -321,8 +321,7 @@ func (r *analyticsRepoImpl) getDemandForecastImpl(ctx context.Context, params do
 }
 
 // seasonalEMAForecast implements the Seasonal EMA forecasting algorithm.
-// It computes seasonal factors, deseasonalizes the data, applies EMA, and generates
-// forecast points with confidence bounds.
+// It computes seasonal factors, deseasonalizes the data, applies EMA, and generates forecast points with confidence bounds.
 func seasonalEMAForecast(
 	completeMonths []forecastMonth,
 	numForecastMonths int,

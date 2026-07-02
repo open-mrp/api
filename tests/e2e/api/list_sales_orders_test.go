@@ -24,8 +24,8 @@ import (
 // Each test exercises a distinct code path of the list query: exact-match
 // search (the new behavior — exact on number/customer_po_number, no substring,
 // no customer name), the status_codes "all" wildcard, customer_group_ids, the
-// start_date/end_date range, exclude_internal_orders, the batched line_count
-// path, and several filters combined.
+// start_date/end_date range, the batched line_count path, and several filters
+// combined.
 //
 // Seed data lives in shared/db/seed/0016_e2e_filter_coverage.sql; the
 // SeedInternalSalesOrderID / SeedPOSalesOrderID orders use a far-future
@@ -167,24 +167,6 @@ func TestListSalesOrders_EndDateExcludesEverything(t *testing.T) {
 	list, _, err := apiClient.GetList(salesOrdersPath, url.Values{"end_date": {"2000-01-01"}})
 	require.NoError(t, err)
 	assertEmptyListData(t, list.Data, "no orders exist before 2000-01-01")
-}
-
-// --- exclude_internal_orders ---
-
-func TestListSalesOrders_ExcludeInternalOrders(t *testing.T) {
-	t.Parallel()
-	// Scope to the far-future seed orders so the assertion is immune to the
-	// "now"-ish orders parallel tests churn. The internal order (buyer == owner)
-	// is present by default and dropped when exclude_internal_orders=true, while
-	// the external PO order survives either way.
-	scoped := url.Values{"start_date": {futureDate()}}
-
-	assertListContainsID(t, salesOrdersPath, scoped, SeedInternalSalesOrderID)
-
-	excluded := url.Values{"start_date": {futureDate()}, "exclude_internal_orders": {"true"}}
-	assert.Nil(t, listFindByField(t, salesOrdersPath, excluded, "id", SeedInternalSalesOrderID),
-		"internal order (buyer == owner) must be excluded when exclude_internal_orders=true")
-	assertListContainsID(t, salesOrdersPath, excluded, SeedPOSalesOrderID)
 }
 
 // --- line_count (batched attachLineCounts path) ---

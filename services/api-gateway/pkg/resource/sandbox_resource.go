@@ -17,7 +17,7 @@ type Sandbox struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sandbox"`
-	// Display name.
+	// Display name of the sandbox.
 	Name string `json:"name" validate:"required"`
 	// The production account that owns this sandbox.
 	OwnerAccount *Account `json:"owner_account" expandable:"true"`

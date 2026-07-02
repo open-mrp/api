@@ -10,6 +10,8 @@ import (
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
+
+	"github.com/augno/api/services/auth-service/pkg/types"
 )
 
 // Request to partially update a quantity.
@@ -53,7 +55,11 @@ func (e *UpdateQuantityEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateQ
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
-		ObjectType:        constants.ObjectTypeQuantity,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainItems, Action: types.ActionUpdate},
+			{Domain: types.PermissionDomainProductionSteps, Action: types.ActionUpdate},
+		},
+		ObjectType: constants.ObjectTypeQuantity,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateQuantityRequest) (*apiresource.Quantity, *apierror.APIError) {
 			return svc.(QuantitySvc).UpdateQuantity
 		},

@@ -21,6 +21,7 @@ func (e *EnsureBillingCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		RequiredRoleType:  constants.RoleTypeAdmin,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeEnsureBillingCustomerResponse,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.EmptyResource) (*apiresource.EnsureBillingCustomerResponse, *apierror.APIError) {

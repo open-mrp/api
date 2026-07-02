@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/augno/api/services/auth-service/pkg/types"
+
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
@@ -38,6 +40,9 @@ func (e *BulkDeleteSuppliersEndpoint) Materialize() *apiendpoint.APIEndpoint[*Bu
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainSuppliers, Action: types.ActionDelete},
+		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkDeleteSuppliersRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(SupplierSvc).BulkDeleteSuppliers
 		},

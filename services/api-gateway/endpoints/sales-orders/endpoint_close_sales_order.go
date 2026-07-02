@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -34,14 +35,15 @@ type CloseSalesOrderEndpoint struct{}
 
 func (e *CloseSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*CloseSalesOrderRequest, *apiresource.SalesOrder] {
 	return (&apiendpoint.APIEndpoint[*CloseSalesOrderRequest, *apiresource.SalesOrder]{
-		Title:             "Close Sales Order",
-		Method:            http.MethodPut,
-		ContentType:       "application/json",
-		Route:             "/v1/sales/sales-orders/{id}/actions/close",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeSalesOrder,
+		Title:               "Close Sales Order",
+		Method:              http.MethodPut,
+		ContentType:         "application/json",
+		Route:               "/v1/sales/sales-orders/{id}/actions/close",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionUpdate}},
+		ObjectType:          constants.ObjectTypeSalesOrder,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CloseSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError) {
 			return svc.(SalesOrderSvc).CloseSalesOrder
 		},

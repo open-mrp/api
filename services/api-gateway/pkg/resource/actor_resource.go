@@ -5,9 +5,9 @@ import (
 	"github.com/augno/api/shared/constants"
 )
 
-// Reference to an actor (user, API key, or agent).
+// Reference to an actor — the user, API key, agent, or group identity associated with an action.
 type Actor struct {
-	// Actor ID.
+	// Unique identifier of the actor.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=actor"`
@@ -16,6 +16,7 @@ type Actor struct {
 	// - `user`: a human user account.
 	// - `api_key`: a programmatic caller authenticating with an API key.
 	// - `agent`: an automated agent acting on the account's behalf.
+	// - `group`: a shared group identity, such as a "Customer Service" persona, rather than a single individual.
 	Type constants.ActorType `json:"type" validate:"required"`
 	// The actor's display name.
 	Name *string `json:"name"`
@@ -24,8 +25,12 @@ type Actor struct {
 	// - For `user` actors: the user's email address.
 	// - For `api_key` actors: the redacted key value.
 	//
-	// Agent actors carry no handle.
+	// Other actor types carry no handle.
 	Handle *string `json:"handle"`
+	// URL of the actor's profile photo, if one is set.
+	//
+	// Only populated for `user` actors.
+	AvatarURL *string `json:"avatar_url"`
 	// Assigned role.
 	Role *Role `json:"role" expandable:"true"`
 }
@@ -42,12 +47,13 @@ func NewActor(id string, actorType constants.ActorType, name, handle *string) *A
 }
 
 var SampleActor = &Actor{
-	ID:     SampleUserID,
-	Object: constants.ObjectTypeActor,
-	Type:   constants.ActorTypeUser,
-	Name:   new(SampleUserName),
-	Handle: new(SampleUserEmail),
-	Role:   SampleRole,
+	ID:        SampleUserID,
+	Object:    constants.ObjectTypeActor,
+	Type:      constants.ActorTypeUser,
+	Name:      new(SampleUserName),
+	Handle:    new(SampleUserEmail),
+	AvatarURL: new(SampleUserImageUrl),
+	Role:      SampleRole,
 }
 
 func (*Actor) SchemaExample() any {

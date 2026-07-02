@@ -11,7 +11,6 @@ import (
 	"github.com/augno/api/shared/safeconv"
 
 	"google.golang.org/grpc"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type billingHandler struct {
@@ -242,21 +241,6 @@ func (h *billingHandler) GetAccountUsage(ctx context.Context, req *pb.GetAccount
 		resp.Subscription = &pb.SubscriptionInfo{
 			ServicingStatus:  result.Subscription.ServicingStatus,
 			CollectionStatus: result.Subscription.CollectionStatus,
-		}
-	}
-
-	if result.AgentTokenDetail != nil {
-		d := result.AgentTokenDetail
-		resp.AgentTokenDetail = &pb.AgentTokenUsageDetail{
-			IncludedTokens:              d.IncludedTokens,
-			UsedTokens:                  d.UsedTokens,
-			InputTokens:                 d.InputTokens,
-			OutputTokens:                d.OutputTokens,
-			AdditionalTokensPurchased:   d.AdditionalTokensPurchased,
-			TotalAvailable:              d.TotalAvailable,
-			CurrentPeriodCost:           d.CurrentPeriodCost,
-			BillingPeriodEnd:            timestamppb.New(d.BillingPeriodEnd),
-			OverageCostPerMillionTokens: d.OverageCostPerMillionTokens,
 		}
 	}
 

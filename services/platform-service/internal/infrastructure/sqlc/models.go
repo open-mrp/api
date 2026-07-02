@@ -319,6 +319,36 @@ type AgentTokenBilling struct {
 	UpdatedAt              time.Time
 }
 
+type Announcement struct {
+	ID               string
+	Scope            string
+	AccountID        sql.NullString
+	Category         string
+	TemplateKey      sql.NullString
+	TemplateParams   json.RawMessage
+	Title            string
+	Body             sql.NullString
+	LinkResourceType sql.NullString
+	LinkResourceID   sql.NullString
+	Priority         string
+	Audience         json.RawMessage
+	PublishAt        time.Time
+	ExpiresAt        sql.NullTime
+	CreatedBy        sql.NullString
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+}
+
+type AnnouncementReceipt struct {
+	ID             string
+	AnnouncementID string
+	AccountUserID  string
+	SeenAt         sql.NullTime
+	ReadAt         sql.NullTime
+	DismissedAt    sql.NullTime
+	CreatedAt      time.Time
+}
+
 type ApiKey struct {
 	ID             int64
 	TypeID         string
@@ -455,6 +485,71 @@ type Consumption struct {
 	Instructions     sql.NullString
 }
 
+type Conversation struct {
+	ID                     string
+	AccountID              string
+	Type                   string
+	Title                  sql.NullString
+	TopicResourceType      sql.NullString
+	TopicResourceID        sql.NullString
+	CreatedByParticipantID sql.NullString
+	NextSequence           int64
+	LastMessageID          sql.NullString
+	LastMessageAt          sql.NullTime
+	IsArchived             bool
+	LegalHold              bool
+	Metadata               json.RawMessage
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
+	EmailExternalAddress   sql.NullString
+	EmailInboxID           sql.NullString
+	Audience               string
+	WorkflowStatus         sql.NullString
+	GroupID                sql.NullString
+	AssigneeResourceType   sql.NullString
+	AssigneeResourceID     sql.NullString
+}
+
+type ConversationDmKey struct {
+	AccountID      string
+	DmKey          string
+	ConversationID string
+}
+
+type ConversationLink struct {
+	ID                     string
+	AccountID              string
+	ConversationID         string
+	ResourceType           string
+	ResourceID             string
+	CreatedByParticipantID sql.NullString
+	CreatedAt              time.Time
+}
+
+type ConversationParticipant struct {
+	ID                   string
+	ConversationID       string
+	AccountID            string
+	ParticipantType      string
+	AccountUserID        sql.NullString
+	AgentConfigID        sql.NullString
+	Role                 string
+	Membership           string
+	Notifications        string
+	MutedUntil           sql.NullTime
+	LastReadMessageID    sql.NullString
+	LastReadSequence     int64
+	LastReadAt           sql.NullTime
+	LastSeenAt           sql.NullTime
+	HiddenAt             sql.NullTime
+	AgentTriggerPolicy   sql.NullString
+	AgentTriggerKeywords json.RawMessage
+	JoinedAt             time.Time
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+	RelationAccountID    sql.NullString
+}
+
 type DcLocation struct {
 	ID             string
 	Location       string
@@ -541,6 +636,31 @@ type EdiRun struct {
 	UpdatedAt    time.Time
 }
 
+type EmailDomain struct {
+	ID         string
+	AccountID  string
+	Domain     string
+	Status     string
+	DkimTokens json.RawMessage
+	VerifiedAt sql.NullTime
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
+type EmailInbox struct {
+	ID                   string
+	AccountID            string
+	EmailDomainID        string
+	Address              string
+	FromName             sql.NullString
+	Status               string
+	AgentConfigID        sql.NullString
+	AgentTriggerPolicy   sql.NullString
+	AgentTriggerKeywords json.RawMessage
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+}
+
 type EmailLog struct {
 	ID           string
 	HasSent      bool
@@ -551,6 +671,26 @@ type EmailLog struct {
 	Subject      sql.NullString
 	Filename     sql.NullString
 	SesMessageID sql.NullString
+}
+
+type EmailMessage struct {
+	ID             string
+	AccountID      string
+	ConversationID string
+	MessageID      string
+	EmailInboxID   string
+	Direction      string
+	RfcMessageID   string
+	InReplyTo      sql.NullString
+	References     sql.NullString
+	FromAddr       string
+	ToAddrs        string
+	CcAddrs        sql.NullString
+	Subject        sql.NullString
+	RawS3Key       sql.NullString
+	SesMessageID   sql.NullString
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 type EmailRecipient struct {
@@ -600,6 +740,49 @@ type HubspotAccountUserLink struct {
 	UpdatedAt         time.Time
 	OwnerAccountID    string
 	CustomerAccountID string
+}
+
+type HubspotCompanyReview struct {
+	ID                string
+	JobID             string
+	AccountID         string
+	AugnoCustomerID   string
+	CustomerName      string
+	CandidateMatches  json.RawMessage
+	Status            string
+	Resolution        sql.NullString
+	ResolvedHubspotID sql.NullString
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+type HubspotSyncJob struct {
+	ID             string
+	AccountID      string
+	Status         string
+	DryRun         bool
+	GoliveCutoffAt sql.NullTime
+	Cursors        json.RawMessage
+	Counts         json.RawMessage
+	LastError      sql.NullString
+	StartedAt      sql.NullTime
+	CompletedAt    sql.NullTime
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+type HubspotSyncRecord struct {
+	ID           string
+	AccountID    string
+	AugnoType    string
+	AugnoID      string
+	HubspotType  string
+	HubspotID    string
+	SyncHash     sql.NullString
+	LastSyncedAt sql.NullTime
+	LastError    sql.NullString
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 type IdempotencyKey struct {
@@ -856,6 +1039,61 @@ type Material struct {
 	LeadTimeID   string
 }
 
+type Message struct {
+	ID                      string
+	ConversationID          string
+	AccountID               string
+	Sequence                sql.NullInt64
+	Kind                    string
+	SenderParticipantID     sql.NullString
+	ClientMessageID         sql.NullString
+	Body                    sql.NullString
+	Preview                 sql.NullString
+	EventType               sql.NullString
+	TemplateKey             sql.NullString
+	TemplateParams          json.RawMessage
+	LinkResourceType        sql.NullString
+	LinkResourceID          sql.NullString
+	ReplyToMessageID        sql.NullString
+	EditedAt                sql.NullTime
+	DeletedAt               sql.NullTime
+	Metadata                json.RawMessage
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
+	AgentRunID              sql.NullString
+	StreamingState          string
+	Visibility              string
+	ApprovedByAccountUserID sql.NullString
+	Channel                 sql.NullString
+	LastError               sql.NullString
+	LockOwner               sql.NullString
+	LockedAt                sql.NullTime
+	ScheduledAttempts       int32
+	ScheduledFor            sql.NullTime
+	SourceThreadMessageID   sql.NullString
+	Status                  string
+	Subject                 sql.NullString
+}
+
+type MessageAttachment struct {
+	ID           string
+	MessageID    string
+	AccountID    string
+	Kind         string
+	S3Key        sql.NullString
+	Url          sql.NullString
+	ThumbnailUrl sql.NullString
+	Filename     sql.NullString
+	ContentType  sql.NullString
+	SizeBytes    sql.NullInt64
+	ResourceType sql.NullString
+	ResourceID   sql.NullString
+	DeletedAt    sql.NullTime
+	S3PurgedAt   sql.NullTime
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
 type MessageInbox struct {
 	ID              int64
 	MessageID       string
@@ -893,6 +1131,92 @@ type MessageOutbox struct {
 	ParentMessageID sql.NullString
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
+}
+
+type MessageReceipt struct {
+	ID             string
+	MessageID      string
+	ConversationID string
+	AccountUserID  string
+	DeliveredAt    sql.NullTime
+	ReadAt         sql.NullTime
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+type MessagingBlock struct {
+	ID                   string
+	AccountID            string
+	BlockerAccountUserID string
+	BlockedAccountUserID string
+	CreatedAt            time.Time
+}
+
+type MessagingGroup struct {
+	ID                     string
+	AccountID              string
+	Name                   string
+	CreatedByAccountUserID sql.NullString
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
+}
+
+type MessagingGroupMember struct {
+	ID            string
+	GroupID       string
+	AccountID     string
+	MemberType    string
+	AccountUserID sql.NullString
+	AgentConfigID sql.NullString
+	CreatedAt     time.Time
+}
+
+type MessagingReport struct {
+	ID                    string
+	AccountID             string
+	ConversationID        string
+	MessageID             sql.NullString
+	ReporterAccountUserID string
+	Reason                string
+	CreatedAt             time.Time
+}
+
+type Notification struct {
+	ID                     string
+	AccountID              string
+	RecipientAccountUserID string
+	Category               string
+	SourceMessageID        sql.NullString
+	ConversationID         sql.NullString
+	Title                  string
+	Body                   sql.NullString
+	TemplateKey            sql.NullString
+	TemplateParams         json.RawMessage
+	LinkResourceType       sql.NullString
+	LinkResourceID         sql.NullString
+	Priority               string
+	SeenAt                 sql.NullTime
+	ReadAt                 sql.NullTime
+	DismissedAt            sql.NullTime
+	Metadata               json.RawMessage
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
+	SenderID               sql.NullString
+	SenderName             sql.NullString
+	SenderType             sql.NullString
+}
+
+type NotificationPreference struct {
+	ID            string
+	AccountID     string
+	AccountUserID string
+	Category      string
+	InAppEnabled  bool
+	EmailEnabled  bool
+	PushEnabled   bool
+	Digest        string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 type OnboardingStatus struct {
@@ -1513,6 +1837,15 @@ type SupplierMaterial struct {
 	SupplierDescription sql.NullString
 	IsActive            bool
 	OwnerAccountID      string
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+}
+
+type SupportRoute struct {
+	ID                  string
+	AccountID           string
+	RelationAccountID   string
+	GroupConversationID string
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
 }

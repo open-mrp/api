@@ -7,20 +7,20 @@ import (
 
 // Freight describes the carrier selection and freight billing for a record.
 //
-// It is a generic, reusable sub-resource shared by anything that carries shipping configuration — e.g. a sales order's chosen freight, or a customer's default freight preferences. It is itself expanded via its parent (e.g. include[]=freight); when present, the full carrier and service level are included.
+// It is a generic, reusable sub-resource shared by anything that carries shipping configuration — for example a sales order's chosen freight, or a customer's default freight preferences.
 type Freight struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=freight"`
-	// Freight policy (who arranges and pays for freight).
+	// How freight is arranged and billed for the record.
 	//
-	// Populated where a policy applies, such as customer defaults; null otherwise.
+	// Populated where a freight policy applies, such as a customer's default preferences.
 	//
 	// - `free_freight`: no shipping cost to the buyer.
 	// - `billed_freight`: freight is billed to the buyer.
 	Policy *constants.FreightPolicy `json:"policy"`
-	// Carrier.
+	// The shipping carrier selected to fulfill the shipment.
 	Carrier *Carrier `json:"carrier"`
-	// Service level.
+	// The carrier service level selected for the shipment (e.g. ground, overnight).
 	ServiceLevel *ServiceLevel `json:"service_level"`
 	// Which party the carrier bills for the shipment.
 	//

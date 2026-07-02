@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -29,13 +30,14 @@ type CloseBatchEndpoint struct{}
 
 func (e *CloseBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*CloseBatchRequest, *apiresource.Batch] {
 	return (&apiendpoint.APIEndpoint[*CloseBatchRequest, *apiresource.Batch]{
-		Title:             "Close Batch",
-		Method:            http.MethodPost,
-		ContentType:       "application/json",
-		Route:             "/v1/operations/batches/actions/close",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
+		Title:               "Close Batch",
+		Method:              http.MethodPost,
+		ContentType:         "application/json",
+		Route:               "/v1/operations/batches/actions/close",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionDelete}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CloseBatchRequest) (*apiresource.Batch, *apierror.APIError) {
 			return svc.(BatchSvc).CloseBatch
 		},

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/augno/api/services/agent-service/internal/agents"
 	"github.com/augno/api/services/agent-service/internal/domain"
 	agentdb "github.com/augno/api/services/agent-service/internal/infrastructure/db"
 	"github.com/augno/api/services/agent-service/internal/infrastructure/sqlc"
@@ -58,6 +59,7 @@ type agentDefSvcImpl struct {
 	txManager       TransactionManager
 	mediatorFactory domain.MediatorFactory
 	planGate        PlanGate
+	outboxNotifier  messaging.OutboxNotifier
 }
 
 type AgentDefinitionSvcConfig struct {
@@ -70,9 +72,18 @@ type AgentDefinitionSvcConfig struct {
 	// TxManager (required) wraps multi-step operations in database transactions.
 	TxManager TransactionManager
 
-	// PlanGate (optional; default: nil) checks whether an account's plan allows
-	// agents. When nil, plan gating is skipped and all accounts are allowed.
+	// PlanGate (optional; default: nil) checks whether an account's plan allows agents. When nil, plan gating is skipped and all accounts are allowed.
 	PlanGate PlanGate
+
+	// OutboxNotifier (optional; default: nil) wakes the outbox enqueuer the instant a chat run is enqueued, so the run starts (and its "thinking" indicator appears) without waiting out the enqueuer's idle poll backoff. When nil, the run is still picked up on the next poll.
+	OutboxNotifier messaging.OutboxNotifier
+}
+
+func (c *AgentDefinitionSvcConfig) WithDefaults() *AgentDefinitionSvcConfig {
+	if c == nil {
+		c = &AgentDefinitionSvcConfig{}
+	}
+	return c
 }
 
 func (c *AgentDefinitionSvcConfig) validate() error {
@@ -89,6 +100,7 @@ func (c *AgentDefinitionSvcConfig) validate() error {
 }
 
 func NewAgentDefinitionSvc(config *AgentDefinitionSvcConfig) domain.AgentDefinitionSvc {
+	config = config.WithDefaults()
 	if err := config.validate(); err != nil {
 		panic(err)
 	}
@@ -98,11 +110,19 @@ func NewAgentDefinitionSvc(config *AgentDefinitionSvcConfig) domain.AgentDefinit
 		mediatorFactory: config.MediatorFactory,
 		txManager:       config.TxManager,
 		planGate:        config.PlanGate,
+		outboxNotifier:  config.OutboxNotifier,
 	}
 }
 
 func (s *agentDefSvcImpl) mediators() domain.Mediators {
 	return s.mediatorFactory.Build(s.repos)
+}
+
+// kickOutbox wakes the outbox enqueuer so a just-committed command (e.g. a chat-run execution) is published immediately rather than on the enqueuer's next idle poll, which can be up to MaxPollInterval away. No-op when no notifier was injected. Call only after the writing transaction has committed — kicking mid-transaction would race the poll against an as-yet-invisible row.
+func (s *agentDefSvcImpl) kickOutbox() {
+	if s.outboxNotifier != nil {
+		s.outboxNotifier.Notify()
+	}
 }
 
 func (s *agentDefSvcImpl) withTx(ctx context.Context, fn func(context.Context, *agentDefSvcImpl) *apierror.APIError) *apierror.APIError {
@@ -112,6 +132,7 @@ func (s *agentDefSvcImpl) withTx(ctx context.Context, fn func(context.Context, *
 			mediatorFactory: s.mediatorFactory,
 			txManager:       s.txManager,
 			planGate:        s.planGate,
+			outboxNotifier:  s.outboxNotifier,
 		}
 		return fn(txCtx, txSvc)
 	})
@@ -131,7 +152,7 @@ func (s *agentDefSvcImpl) CreateCustomAgent(ctx context.Context, params domain.C
 
 	identity, ok := appctx.GetIdentityFromContext(ctx)
 	if !ok || identity == nil {
-		return nil, apierror.NewInvariantViolationError("Identity not found in context.")
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
 	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
@@ -161,13 +182,14 @@ func (s *agentDefSvcImpl) CreateCustomAgent(ctx context.Context, params domain.C
 		return cached.Data, cached.Error
 
 	case domain.RecoveryPointStarted:
-		toolDefRepo := s.repos.NewToolDefinitionRepo()
-
 		for _, t := range params.Tools {
-			if _, apiErr := toolDefRepo.GetByID(ctx, t.ToolID); apiErr != nil {
+			if _, ok := agents.LookupBuiltinTool(t.ToolSlug); !ok {
 				return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
-					apierror.NewValidationErrorWithParam("Tool not found: "+t.ToolID, "tools"))
+					apierror.NewValidationErrorWithParam("Tool not found: "+t.ToolSlug, "tools"))
 			}
+		}
+		if apiErr := validateEndpointToolSlugs(params.ConfigJSON); apiErr != nil {
+			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 		}
 
 		defID, genErr := id.GenID(id.AgentDefinitionIDPrefix, nil)
@@ -214,7 +236,7 @@ func (s *agentDefSvcImpl) CreateCustomAgent(ctx context.Context, params domain.C
 				if apiErr := adtRepo.Insert(txCtx, sqlc.InsertAgentDefinitionToolParams{
 					ID:                linkID,
 					AgentDefinitionID: defID,
-					ToolDefinitionID:  t.ToolID,
+					ToolSlug:          t.ToolSlug,
 					Config:            toolConfig,
 					SortOrder:         t.SortOrder,
 					RequireReview:     t.RequireReview,
@@ -282,7 +304,7 @@ func (s *agentDefSvcImpl) UpdateCustomAgent(ctx context.Context, params domain.U
 
 	identity, ok := appctx.GetIdentityFromContext(ctx)
 	if !ok || identity == nil {
-		return nil, apierror.NewInvariantViolationError("Identity not found in context.")
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
 	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
@@ -313,7 +335,6 @@ func (s *agentDefSvcImpl) UpdateCustomAgent(ctx context.Context, params domain.U
 
 	case domain.RecoveryPointStarted:
 		defRepo := s.repos.NewAgentDefinitionRepo()
-		toolDefRepo := s.repos.NewToolDefinitionRepo()
 
 		def, apiErr := defRepo.GetByID(ctx, params.AgentDefinitionID)
 		if apiErr != nil {
@@ -331,10 +352,16 @@ func (s *agentDefSvcImpl) UpdateCustomAgent(ctx context.Context, params domain.U
 
 		if params.ToolsProvided {
 			for _, t := range params.Tools {
-				if _, toolErr := toolDefRepo.GetByID(ctx, t.ToolID); toolErr != nil {
+				if _, ok := agents.LookupBuiltinTool(t.ToolSlug); !ok {
 					return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
-						apierror.NewValidationErrorWithParam("Tool not found: "+t.ToolID, "tools"))
+						apierror.NewValidationErrorWithParam("Tool not found: "+t.ToolSlug, "tools"))
 				}
+			}
+		}
+
+		if params.ConfigJSON != nil {
+			if apiErr := validateEndpointToolSlugs(*params.ConfigJSON); apiErr != nil {
+				return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 			}
 		}
 
@@ -358,17 +385,25 @@ func (s *agentDefSvcImpl) UpdateCustomAgent(ctx context.Context, params domain.U
 				return apiErr
 			}
 
+			// An empty description is stored as NULL, never "" (matches the create path's PgText behavior).
+			descUpdate := agentdb.PgText("")
+			if params.Description != nil {
+				descUpdate = agentdb.PgText(*params.Description)
+			}
+
 			if updateErr := txDefRepo.Update(txCtx, sqlc.UpdateAgentDefinitionParams{
-				Name:         agentdb.PgTextPtr(params.Name),
-				Slug:         agentdb.PgTextPtr(params.Slug),
-				Description:  agentdb.PgTextPtr(params.Description),
-				CategoryCode: agentdb.PgTextPtr(params.CategoryCode),
-				TriggerType:  agentdb.PgTextPtr(params.TriggerType),
-				UpdateConfig: updateConfig,
-				NewConfig:    configBytes,
-				RoleID:       agentdb.PgTextPtr(params.RoleID),
-				ID:           params.AgentDefinitionID,
-				AccountID:    agentdb.PgText(accountID),
+				Name:             agentdb.PgTextPtr(params.Name),
+				Slug:             agentdb.PgTextPtr(params.Slug),
+				Description:      descUpdate,
+				ClearDescription: params.ClearDescription,
+				CategoryCode:     agentdb.PgTextPtr(params.CategoryCode),
+				TriggerType:      agentdb.PgTextPtr(params.TriggerType),
+				UpdateConfig:     updateConfig,
+				NewConfig:        configBytes,
+				RoleID:           agentdb.PgTextPtr(params.RoleID),
+				ClearRoleID:      params.ClearRoleID,
+				ID:               params.AgentDefinitionID,
+				AccountID:        agentdb.PgText(accountID),
 			}); updateErr != nil {
 				return updateErr
 			}
@@ -390,7 +425,7 @@ func (s *agentDefSvcImpl) UpdateCustomAgent(ctx context.Context, params domain.U
 					if insertErr := txAdtRepo.Insert(txCtx, sqlc.InsertAgentDefinitionToolParams{
 						ID:                linkID,
 						AgentDefinitionID: params.AgentDefinitionID,
-						ToolDefinitionID:  t.ToolID,
+						ToolSlug:          t.ToolSlug,
 						Config:            toolConfig,
 						SortOrder:         t.SortOrder,
 						RequireReview:     t.RequireReview,
@@ -400,7 +435,7 @@ func (s *agentDefSvcImpl) UpdateCustomAgent(ctx context.Context, params domain.U
 				}
 			}
 
-			built, apiErr := txSvc.buildResult(txCtx, params.AgentDefinitionID, mergeIncludes(params.Includes, auditIncludes))
+			built, apiErr := txSvc.buildResultForAccount(txCtx, params.AgentDefinitionID, accountID, mergeIncludes(params.Includes, auditIncludes))
 			if apiErr != nil {
 				return apiErr
 			}
@@ -443,7 +478,7 @@ func (s *agentDefSvcImpl) DeleteCustomAgent(ctx context.Context, params domain.D
 
 	identity, ok := appctx.GetIdentityFromContext(ctx)
 	if !ok || identity == nil {
-		return apierror.NewInvariantViolationError("Identity not found in context.")
+		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
 	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
@@ -528,7 +563,7 @@ func (s *agentDefSvcImpl) GetAgentDefinition(ctx context.Context, agentDefinitio
 
 	identity, ok := appctx.GetIdentityFromContext(ctx)
 	if !ok || identity == nil {
-		return nil, apierror.NewInvariantViolationError("Identity not found in context.")
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
 	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
@@ -567,7 +602,7 @@ func (s *agentDefSvcImpl) ListAgentDefinitions(ctx context.Context, params domai
 
 	identity, ok := appctx.GetIdentityFromContext(ctx)
 	if !ok || identity == nil {
-		return nil, apierror.NewInvariantViolationError("Identity not found in context.")
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
 	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
@@ -691,7 +726,7 @@ func (s *agentDefSvcImpl) ListAvailableTools(ctx context.Context, params domain.
 
 	identity, ok := appctx.GetIdentityFromContext(ctx)
 	if !ok || identity == nil {
-		return nil, nil, apierror.NewInvariantViolationError("Identity not found in context.")
+		return nil, nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
 	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
@@ -701,61 +736,13 @@ func (s *agentDefSvcImpl) ListAvailableTools(ctx context.Context, params domain.
 		return nil, nil, tracing.Trace(span, apiErr)
 	}
 
-	toolDefRepo := s.repos.NewToolDefinitionRepo()
-	tools, apiErr := toolDefRepo.ListAll(ctx)
-	if apiErr != nil {
-		return nil, nil, apiErr
-	}
+	// Built-in tools come from the code catalog (agents.BuiltinTools); they carry category "built_in" and a selection grants the tool via an agent_definition_tool link keyed by slug.
+	results, domainGroups := builtinToolCatalogInfos()
 
-	results := make([]domain.AvailableToolInfo, 0, len(tools))
-	for _, t := range tools {
-		desc := ""
-		if t.Description.Valid {
-			desc = t.Description.String
-		}
-		var groupID string
-		if t.ToolGroupID.Valid {
-			groupID = t.ToolGroupID.String
-		}
-		var groupName string
-		if t.GroupName.Valid {
-			groupName = t.GroupName.String
-		}
-		results = append(results, domain.AvailableToolInfo{
-			ID:                  t.ID,
-			DisplayName:         t.DisplayName,
-			Description:         desc,
-			ConfigSchema:        t.ConfigSchema,
-			Category:            t.Category,
-			GroupID:             groupID,
-			GroupName:           groupName,
-			RequiredPermissions: unmarshalPermissions(t.RequiredPermissions),
-		})
-	}
-
-	groups, groupErr := toolDefRepo.ListToolGroups(ctx)
-	if groupErr != nil {
-		return nil, nil, groupErr
-	}
-	domainGroups := make([]domain.ToolGroupInfo, 0, len(groups))
-	for _, g := range groups {
-		desc := ""
-		if g.Description.Valid {
-			desc = g.Description.String
-		}
-		icon := ""
-		if g.Icon.Valid {
-			icon = g.Icon.String
-		}
-		domainGroups = append(domainGroups, domain.ToolGroupInfo{
-			ID:          g.ID,
-			Name:        g.Name,
-			Description: desc,
-			Slug:        g.Slug,
-			Icon:        icon,
-			SortOrder:   g.SortOrder,
-		})
-	}
+	// Append the code-defined endpoint-tools (and their groups) so the catalog the UI shows includes every agent-grantable API operation. These carry category "api_endpoint"; selecting one grants it via the agent's endpoint_tool_slugs rather than a tool link.
+	etTools, etGroups := endpointToolCatalogInfos()
+	results = append(results, etTools...)
+	domainGroups = append(domainGroups, etGroups...)
 
 	// Apply query filter to tools and groups.
 	if params.Query != nil && *params.Query != "" {
@@ -777,53 +764,141 @@ func (s *agentDefSvcImpl) ListAvailableTools(ctx context.Context, params domain.
 		domainGroups = filteredGroups
 	}
 
-	// Apply cursor-based pagination to tools.
-	if params.Cursor != nil && *params.Cursor != "" {
-		cursor := *params.Cursor
-		idx := -1
-		for i, t := range results {
-			if t.ID == cursor {
-				idx = i
-				break
+	// Each list route paginates exactly one resource type, so the cursor and limit must be scoped to that resource: a tools cursor only slices tools and a tool-groups cursor only slices groups. This prevents one resource's cursor from leaking into the other's slice and, critically, keeps a groups page from truncating the full tools set that feeds each group's ?include=tools.
+	if params.PaginateResource == "tool_groups" {
+		// Apply cursor-based pagination to groups only, validating the cursor against group ids.
+		if params.Cursor != nil && *params.Cursor != "" {
+			cursor := *params.Cursor
+			gIdx := -1
+			for i, g := range domainGroups {
+				if g.ID == cursor {
+					gIdx = i
+					break
+				}
+			}
+
+			if gIdx == -1 {
+				return nil, nil, apierror.NewValidationError("Invalid pagination cursor.")
+			}
+
+			if gIdx+1 < len(domainGroups) {
+				domainGroups = domainGroups[gIdx+1:]
+			} else {
+				domainGroups = nil
 			}
 		}
 
-		gIdx := -1
-		for i, g := range domainGroups {
-			if g.ID == cursor {
-				gIdx = i
-				break
-			}
-		}
-
-		if idx == -1 && gIdx == -1 {
-			return nil, nil, apierror.NewValidationError("Invalid pagination cursor.")
-		}
-
-		if idx >= 0 && idx+1 < len(results) {
-			results = results[idx+1:]
-		} else {
-			results = nil
-		}
-
-		if gIdx >= 0 && gIdx+1 < len(domainGroups) {
-			domainGroups = domainGroups[gIdx+1:]
-		} else if gIdx >= 0 {
-			domainGroups = nil
-		}
-	}
-
-	// Apply limit to tools and groups.
-	if params.Limit > 0 {
-		if int(params.Limit) < len(results) {
-			results = results[:params.Limit]
-		}
-		if int(params.Limit) < len(domainGroups) {
+		// Apply limit to groups only; leave the full tools set intact so each returned group's ?include=tools stays complete.
+		if params.Limit > 0 && int(params.Limit) < len(domainGroups) {
 			domainGroups = domainGroups[:params.Limit]
+		}
+	} else {
+		// Default ("tools"): apply cursor-based pagination to tools only, validating the cursor against tool slugs.
+		if params.Cursor != nil && *params.Cursor != "" {
+			cursor := *params.Cursor
+			idx := -1
+			for i, t := range results {
+				if t.Slug == cursor {
+					idx = i
+					break
+				}
+			}
+
+			if idx == -1 {
+				return nil, nil, apierror.NewValidationError("Invalid pagination cursor.")
+			}
+
+			if idx+1 < len(results) {
+				results = results[idx+1:]
+			} else {
+				results = nil
+			}
+		}
+
+		// Apply limit to tools only; leave groups untouched.
+		if params.Limit > 0 && int(params.Limit) < len(results) {
+			results = results[:params.Limit]
 		}
 	}
 
 	return results, domainGroups, nil
+}
+
+// builtinToolCatalogInfos turns the code-defined built-in tool catalog (agents.BuiltinTools) into AvailableToolInfo entries plus their groups, for the tool-selection UI. Tools carry category "built_in"; a selection is persisted as an agent_definition_tool link keyed by the tool slug.
+func builtinToolCatalogInfos() ([]domain.AvailableToolInfo, []domain.ToolGroupInfo) {
+	tools := make([]domain.AvailableToolInfo, 0, len(agents.BuiltinTools))
+	for _, d := range agents.BuiltinTools {
+		tools = append(tools, domain.AvailableToolInfo{
+			Slug:                string(d.Slug),
+			DisplayName:         d.DisplayName,
+			Description:         d.Description,
+			ConfigSchema:        json.RawMessage(`{}`),
+			Category:            "built_in",
+			GroupID:             d.Group.ID,
+			GroupName:           d.Group.Name,
+			RequiredPermissions: d.RequiredPermissions,
+			Mutating:            d.Mutating,
+		})
+	}
+
+	catalogGroups := agents.BuiltinToolGroups()
+	groups := make([]domain.ToolGroupInfo, 0, len(catalogGroups))
+	for _, g := range catalogGroups {
+		groups = append(groups, domain.ToolGroupInfo{
+			ID:        g.ID,
+			Name:      g.Name,
+			Slug:      g.Slug,
+			Icon:      g.Icon,
+			SortOrder: g.SortOrder,
+		})
+	}
+	return tools, groups
+}
+
+// endpointToolCatalogInfos turns the generated endpoint-tool catalog into AvailableToolInfo entries plus their groups, for the tool-selection UI. Tools carry category "api_endpoint" so the frontend can route a selection into the agent's endpoint_tool_slugs grant.
+func endpointToolCatalogInfos() ([]domain.AvailableToolInfo, []domain.ToolGroupInfo) {
+	tools := make([]domain.AvailableToolInfo, 0, len(agents.EndpointTools))
+	groupSeen := map[string]bool{}
+	groupOrder := make([]string, 0)
+	for _, d := range agents.EndpointTools {
+		groupID, _ := endpointToolGroupID(d.Group)
+		tools = append(tools, domain.AvailableToolInfo{
+			Slug:                d.Slug,
+			DisplayName:         d.DisplayName,
+			Description:         d.Description,
+			ConfigSchema:        json.RawMessage(`{}`),
+			Category:            "api_endpoint",
+			GroupID:             groupID,
+			GroupName:           d.Group,
+			RequiredPermissions: d.RequiredPermissions,
+			RequiredRoleType:    d.RequiredRoleType,
+			Mutating:            d.Mutating(),
+		})
+		if d.Group != "" && !groupSeen[d.Group] {
+			groupSeen[d.Group] = true
+			groupOrder = append(groupOrder, d.Group)
+		}
+	}
+
+	slices.Sort(groupOrder)
+	groups := make([]domain.ToolGroupInfo, 0, len(groupOrder))
+	for i, name := range groupOrder {
+		groupID, groupSlug := endpointToolGroupID(name)
+		groups = append(groups, domain.ToolGroupInfo{
+			ID:        groupID,
+			Name:      name,
+			Slug:      groupSlug,
+			Icon:      "api",
+			SortOrder: int32(100 + i), // after the built-in groups (sort_order 0-4)
+		})
+	}
+	return tools, groups
+}
+
+// endpointToolGroupID derives a stable group id + slug for an endpoint-tool group name (e.g. "Sales Orders" -> tgrp_api_sales_orders / api_sales_orders), namespaced with an "api_" prefix so it never collides with the built-in tool group ids (tgrp_builtin_*).
+func endpointToolGroupID(group string) (id, slug string) {
+	slug = "api_" + strings.ToLower(strings.ReplaceAll(group, " ", "_"))
+	return "tgrp_" + slug, slug
 }
 
 func (s *agentDefSvcImpl) UpdateAgentAccountStatus(ctx context.Context, params domain.UpdateAgentAccountStatusParams) (*domain.AgentAccountStatusInfo, *apierror.APIError) {
@@ -832,7 +907,7 @@ func (s *agentDefSvcImpl) UpdateAgentAccountStatus(ctx context.Context, params d
 
 	identity, ok := appctx.GetIdentityFromContext(ctx)
 	if !ok || identity == nil {
-		return nil, apierror.NewInvariantViolationError("Identity not found in context.")
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
 	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
@@ -936,16 +1011,322 @@ func (s *agentDefSvcImpl) UpdateAgentAccountStatus(ctx context.Context, params d
 // 2. Find or create a config for the account + definition.
 // 3. Insert the agent run record and outbox message within a transaction.
 // 4. Cache the success response for idempotent replay.
+// Terminal markers a dead run's transcript ends with. They're stripped when an heir run inherits the transcript so it doesn't re-read the response that killed the original. These must match the step types written by emitFailureEvent / cancelledResult in runner.go.
+const (
+	stepTypeError     = "error"
+	stepTypeCancelled = "cancelled"
+)
+
+// continueChatRun handles a reply to an agent's message (the user replied to the run that produced it).
+// It either resumes that run, or — when the run died — forks an heir run that inherits its work. Returns false (so CreateChatRun starts a clean run seeded with conversation history) when the run is missing, owned by another account, diverged, or still in-flight/completed and so neither resumable nor a useful base to inherit from.
+func (s *agentDefSvcImpl) continueChatRun(ctx context.Context, in domain.ChatRunInput) (bool, *apierror.APIError) {
+	run, runErr := s.repos.NewAgentRunRepo().GetByID(ctx, in.ContinueRunID)
+	if runErr != nil || run.AccountID != in.AccountID {
+		return false, nil
+	}
+	// A run that took an off-conversation turn (free-text typed into the agent-run console) carries private fork context the conversation never saw. Whatever its status, never resume it or inherit its transcript here — fall through to a clean run seeded from the conversation's own history, which by construction excludes the fork.
+	if run.DivergedFromConversation {
+		return false, nil
+	}
+
+	switch run.StatusCode {
+	case domain.RunStatusAwaitingInput, domain.RunStatusAwaitingApproval:
+		// Still live and waiting on us — take the next turn on the same run.
+		apiErr := s.withTx(ctx, func(txCtx context.Context, txSvc *agentDefSvcImpl) *apierror.APIError {
+			if updErr := txSvc.repos.NewAgentRunRepo().UpdateStatus(txCtx, run.ID, domain.RunStatusRunning); updErr != nil {
+				return updErr
+			}
+			return txSvc.enqueueChatContinue(txCtx, run.ID, in.AccountID, in.Message, in.TriggerMessageID)
+		})
+		if apiErr != nil {
+			return false, apiErr
+		}
+		return true, nil
+	case domain.RunStatusFailed, domain.RunStatusCancelled:
+		// The run died, but its work shouldn't be thrown away. Fork an heir run that inherits the dead transcript (minus the failure tail) and drive the reply through it as the next turn.
+		return s.forkDeadChatRun(ctx, in, run)
+	default:
+		// running / pending / completed → neither resumable nor a clean base; start a fresh run.
+		return false, nil
+	}
+}
+
+// enqueueChatContinue writes the outbox command that drives runID's next turn from message and posts the result back into the conversation (ReplyToMessageID threads the reply under the trigger). Must run inside a withTx callback — it uses the transactional repos on s.
+func (s *agentDefSvcImpl) enqueueChatContinue(ctx context.Context, runID, accountID, message, replyToMessageID string) *apierror.APIError {
+	length := id.IDLength22
+	msgID, genErr := id.GenID(id.MessageIDPrefix, &length)
+	if genErr != nil {
+		return apierror.NewInternalError(genErr, "Failed to generate continuation message id.")
+	}
+	dataBytes, _ := json.Marshal(messaging.AgentContinueRunData{
+		AgentRunID:       runID,
+		AccountID:        accountID,
+		Message:          message,
+		ReplyToMessageID: replyToMessageID,
+	})
+	if _, outboxErr := s.repos.NewOutboxRepo().Create(ctx, messaging.OutboxMessageInput{
+		MessageID:   msgID,
+		ServiceName: domain.ServiceName,
+		MessageType: string(contracts.AgentCmdContinueRun),
+		Destination: messaging.ApplicationExchange,
+		RoutingKey:  string(contracts.AgentCmdContinueRun),
+		Payload:     contracts.AmqpMessage{Data: dataBytes, MessageID: msgID},
+		MaxAttempts: 3,
+	}); outboxErr != nil {
+		return apierror.NewInternalError(outboxErr, "Failed to enqueue chat continuation.")
+	}
+	return nil
+}
+
+// forkDeadChatRun handles a reply to a failed or cancelled chat run. Resuming it is impossible and starting from scratch throws away everything it did, so instead an heir run is created that inherits the dead run's transcript with the terminal failure/cancel markers stripped — "the failed responses".
+// The reply is then driven through the heir as its next turn; the heir reconstructs the copied transcript via the normal continue path, so the agent resumes exactly where the dead run left off.
+func (s *agentDefSvcImpl) forkDeadChatRun(ctx context.Context, in domain.ChatRunInput, dead *sqlc.AgentRun) (bool, *apierror.APIError) {
+	// The dead run is terminal, so its event log is immutable — safe to read before the transaction.
+	events, evErr := s.repos.NewAgentRunEventRepo().ListByRunID(ctx, dead.ID)
+	if evErr != nil {
+		return false, evErr
+	}
+
+	heirID, genErr := id.GenID(id.AgentRunIDPrefix, nil)
+	if genErr != nil {
+		return false, genErr
+	}
+	heirInput, _ := json.Marshal(struct {
+		Message string `json:"message"`
+	}{Message: in.Message})
+
+	var triggerMessageID pgtype.Text
+	if in.TriggerMessageID != "" {
+		triggerMessageID = agentdb.PgText(in.TriggerMessageID)
+	}
+
+	apiErr := s.withTx(ctx, func(txCtx context.Context, txSvc *agentDefSvcImpl) *apierror.APIError {
+		runRepo := txSvc.repos.NewAgentRunRepo()
+		if insErr := runRepo.Insert(txCtx, sqlc.InsertAgentRunParams{
+			ID:                heirID,
+			AccountID:         dead.AccountID,
+			AgentDefinitionID: dead.AgentDefinitionID,
+			AgentConfigID:     dead.AgentConfigID,
+			StatusCode:        domain.RunStatusPending,
+			TriggerType:       string(constants.AgentTriggerTypeChat),
+			Input:             heirInput,
+			Output:            json.RawMessage(`{}`),
+			ConversationID:    dead.ConversationID,
+			TriggerMessageID:  triggerMessageID,
+		}); insErr != nil {
+			return insErr
+		}
+		if copyErr := txSvc.copyTranscript(txCtx, events, heirID, dead.AccountID); copyErr != nil {
+			return copyErr
+		}
+		// The continue turn requires a running run (ContinueRun asserts it); also stamps started_at. The heir was just inserted as 'pending' in this same tx, so the guarded claim always wins (1 row); 0 would mean a concurrent claim and must abort.
+		claimed, startErr := runRepo.UpdateStarted(txCtx, heirID)
+		if startErr != nil {
+			return startErr
+		}
+		if claimed == 0 {
+			return apierror.NewInternalError(fmt.Errorf("heir run %s could not be claimed", heirID), "Failed to start heir run.")
+		}
+		return txSvc.enqueueChatContinue(txCtx, heirID, dead.AccountID, in.Message, in.TriggerMessageID)
+	})
+	if apiErr != nil {
+		return false, apiErr
+	}
+	return true, nil
+}
+
+// copyTranscript clones a dead run's transcript events onto the heir run, re-sequenced from zero with fresh ids. The terminal failure markers (error / cancelled) are dropped so the heir doesn't inherit the response that killed the original. agent_action_id is cleared — the linked actions belong to the dead run — while tool-level results (including legitimate tool errors the agent already saw) are kept so it retains the context of what it already tried. Runs inside a withTx callback (transactional repo).
+func (s *agentDefSvcImpl) copyTranscript(ctx context.Context, events []sqlc.AgentRunEvent, heirID, accountID string) *apierror.APIError {
+	eventRepo := s.repos.NewAgentRunEventRepo()
+	seq := int32(0)
+	for _, e := range events {
+		if e.StepType == stepTypeError || e.StepType == stepTypeCancelled {
+			continue
+		}
+		evID, genErr := id.GenID(id.AgentRunEventIDPrefix, nil)
+		if genErr != nil {
+			return apierror.NewInternalError(genErr, "Failed to generate heir event id.")
+		}
+		metadata := e.Metadata
+		if metadata == nil {
+			metadata = json.RawMessage(`{}`)
+		}
+		if insErr := eventRepo.Insert(ctx, sqlc.InsertAgentRunEventParams{
+			ID:         evID,
+			AgentRunID: heirID,
+			AccountID:  accountID,
+			StepType:   e.StepType,
+			Title:      e.Title,
+			Content:    e.Content,
+			Sequence:   seq,
+			DurationMs: e.DurationMs,
+			Metadata:   metadata,
+			ActorID:    e.ActorID,
+			ActorType:  e.ActorType,
+			ActorName:  e.ActorName,
+			// AgentActionID intentionally left null: those actions belong to the dead run.
+		}); insErr != nil {
+			return insErr
+		}
+		seq++
+	}
+	return nil
+}
+
+func (s *agentDefSvcImpl) CreateChatRun(ctx context.Context, in domain.ChatRunInput) *apierror.APIError {
+	ctx, span := agentDefSvcTracer.Start(ctx, "service.agent_definition.create_chat_run")
+	defer span.End()
+
+	if in.AccountID == "" || in.AgentDefinitionID == "" || in.ConversationID == "" {
+		return nil
+	}
+
+	// A reply to an agent's message continues that run instead of starting a new one. If the run is gone or no longer continuable (still running a prior turn, or terminal), fall through to a fresh run.
+	if in.ContinueRunID != "" {
+		continued, apiErr := s.continueChatRun(ctx, in)
+		if apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+		if continued {
+			// The continuation command committed inside continueChatRun — kick the enqueuer so the next turn starts at once.
+			s.kickOutbox()
+			return nil
+		}
+	}
+
+	defRepo := s.repos.NewAgentDefinitionRepo()
+	configRepo := s.repos.NewAgentConfigRepo()
+
+	def, defErr := defRepo.GetByID(ctx, in.AgentDefinitionID)
+	if defErr != nil {
+		return tracing.Trace(span, defErr)
+	}
+
+	// Ensure a per-account config exists (mirrors TriggerRun); the run needs a config id.
+	config, cfgErr := configRepo.GetByAccountAndDefinition(ctx, in.AccountID, def.ID)
+	if cfgErr != nil {
+		configID, genErr := id.GenID(id.AgentConfigIDPrefix, nil)
+		if genErr != nil {
+			return tracing.Trace(span, genErr)
+		}
+		if insertErr := configRepo.Insert(ctx, sqlc.InsertAgentConfigParams{
+			ID:                configID,
+			AccountID:         in.AccountID,
+			AgentDefinitionID: def.ID,
+			IsEnabled:         true,
+			Config:            json.RawMessage(`{}`),
+		}); insertErr != nil {
+			return tracing.Trace(span, insertErr)
+		}
+		config, cfgErr = configRepo.GetByAccountAndDefinition(ctx, in.AccountID, def.ID)
+		if cfgErr != nil {
+			return tracing.Trace(span, cfgErr)
+		}
+	}
+
+	runID, genErr := id.GenID(id.AgentRunIDPrefix, nil)
+	if genErr != nil {
+		return tracing.Trace(span, genErr)
+	}
+	// Fill in display names for history turns authored by *other* agents — notif-service carries their definition ids since it can't resolve agent names itself.
+	s.resolveHistoryAgentNames(ctx, defRepo, in.History)
+	runInput, _ := json.Marshal(struct {
+		Message string                      `json:"message"`
+		History []domain.ChatHistoryMessage `json:"history,omitempty"`
+	}{Message: in.Message, History: in.History})
+	length := id.IDLength22
+	msgID, msgGenErr := id.GenID(id.MessageIDPrefix, &length)
+	if msgGenErr != nil {
+		return tracing.Trace(span, msgGenErr)
+	}
+
+	var triggerMessageID pgtype.Text
+	if in.TriggerMessageID != "" {
+		triggerMessageID = agentdb.PgText(in.TriggerMessageID)
+	}
+
+	if apiErr := s.withTx(ctx, func(txCtx context.Context, txSvc *agentDefSvcImpl) *apierror.APIError {
+		txRunRepo := txSvc.repos.NewAgentRunRepo()
+		txOutbox := txSvc.repos.NewOutboxRepo()
+
+		if insertErr := txRunRepo.Insert(txCtx, sqlc.InsertAgentRunParams{
+			ID:                runID,
+			AccountID:         in.AccountID,
+			AgentDefinitionID: def.ID,
+			AgentConfigID:     agentdb.PgText(config.ID),
+			StatusCode:        domain.RunStatusPending,
+			TriggerType:       string(constants.AgentTriggerTypeChat),
+			Input:             runInput,
+			Output:            json.RawMessage(`{}`),
+			ConversationID:    agentdb.PgText(in.ConversationID),
+			TriggerMessageID:  triggerMessageID,
+		}); insertErr != nil {
+			return insertErr
+		}
+
+		data := messaging.AgentExecuteRunData{
+			AgentRunID:    runID,
+			AgentConfigID: config.ID,
+			AccountID:     in.AccountID,
+			TriggerType:   string(constants.AgentTriggerTypeChat),
+		}
+		dataBytes, _ := json.Marshal(data)
+		if _, outboxErr := txOutbox.Create(txCtx, messaging.OutboxMessageInput{
+			MessageID:   msgID,
+			ServiceName: domain.ServiceName,
+			MessageType: string(contracts.AgentCmdExecuteRun),
+			Destination: messaging.ApplicationExchange,
+			RoutingKey:  string(contracts.AgentCmdExecuteRun),
+			Payload:     contracts.AmqpMessage{Data: dataBytes, MessageID: msgID},
+			MaxAttempts: 3,
+		}); outboxErr != nil {
+			return apierror.NewInternalError(outboxErr, "Failed to enqueue chat run execution.")
+		}
+		return nil
+	}); apiErr != nil {
+		return apiErr
+	}
+
+	// Run row + execute command are committed — wake the enqueuer so the run starts (and its live "thinking" indicator appears) right away instead of after an idle poll backoff.
+	s.kickOutbox()
+	return nil
+}
+
+// resolveHistoryAgentNames fills in the display Name for chat-history turns authored by other agents.
+// notif-service carries those turns' agent-definition ids (it can't resolve agent names — definitions live here), so each is looked up by id (deduped; the window holds only a handful of distinct agents) and stamped with the agent's name, falling back to a generic label when unresolvable.
+func (s *agentDefSvcImpl) resolveHistoryAgentNames(ctx context.Context, defRepo domain.AgentDefinitionRepo, history []domain.ChatHistoryMessage) {
+	const fallbackAgentName = "another assistant"
+	resolved := make(map[string]string)
+	for i := range history {
+		h := &history[i]
+		if h.AgentConfigID == "" || h.Name != "" {
+			continue
+		}
+		name, ok := resolved[h.AgentConfigID]
+		if !ok {
+			name = fallbackAgentName
+			if def, err := defRepo.GetByID(ctx, h.AgentConfigID); err == nil && def != nil && def.Name != "" {
+				name = def.Name
+			}
+			resolved[h.AgentConfigID] = name
+		}
+		h.Name = name
+	}
+}
+
 func (s *agentDefSvcImpl) TriggerRun(ctx context.Context, params domain.TriggerRunParams) (string, *apierror.APIError) {
 	ctx, span := agentDefSvcTracer.Start(ctx, "service.agent_definition.trigger_run")
 	defer span.End()
 
 	identity, ok := appctx.GetIdentityFromContext(ctx)
 	if !ok || identity == nil {
-		return "", apierror.NewInvariantViolationError("Identity not found in context.")
+		return "", tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
 	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return "", tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainAgentRuns, types.ActionCreate); apiErr != nil {
 		return "", tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
@@ -1077,6 +1458,21 @@ func (s *agentDefSvcImpl) TriggerRun(ctx context.Context, params domain.TriggerR
 				return apierror.NewInternalError(outboxErr, "Failed to write outbox message.")
 			}
 
+			// Audit the newly-created run atomically with its insert, so the run's lifecycle start is recorded even though this is a Public:false endpoint. Changes are built explicitly (not via ComputeChanges) because a run has no hand-written domain struct to carry audit tags — its sqlc model is regenerated.
+			if auditErr := audit.NewPublisher().Publish(txCtx, txOutbox, audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       constants.AuditActionCreate,
+				ResourceType: constants.ObjectTypeAgentRun,
+				ResourceID:   runID,
+				Changes: []audit.FieldChange{
+					audit.NewFieldChange("status_code", nil, domain.RunStatusPending),
+					audit.NewFieldChange("trigger_type", nil, string(constants.AgentTriggerTypeManual)),
+					audit.NewFieldChange("agent_definition_id", nil, def.ID),
+				},
+			}); auditErr != nil {
+				return auditErr
+			}
+
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, runID)
 		})
 
@@ -1098,10 +1494,13 @@ func (s *agentDefSvcImpl) CancelRun(ctx context.Context, params domain.CancelRun
 
 	identity, ok := appctx.GetIdentityFromContext(ctx)
 	if !ok || identity == nil {
-		return apierror.NewInvariantViolationError("Identity not found in context.")
+		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
 	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainAgentRuns, types.ActionUpdate); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
@@ -1138,16 +1537,85 @@ func (s *agentDefSvcImpl) CancelRun(ctx context.Context, params domain.CancelRun
 			return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
 				apierror.NewResourceNotFoundError("Agent run not found."))
 		}
-		if run.StatusCode != domain.RunStatusPending && run.StatusCode != domain.RunStatusRunning {
+		// A run can be stopped while it is doing or waiting to do work: actively running/pending, or paused awaiting the user (a chat run between turns, or one blocked on tool approval). Only the terminal states (completed/failed/cancelled/timed_out) reject — there is nothing left to stop.
+		if !domain.RunStatusIsCancellable(run.StatusCode) {
 			return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
 				apierror.NewValidationError("Run cannot be cancelled (status: "+run.StatusCode+")."))
 		}
 
+		// Cancelling a run that is paused on tool approval is the human *denying* the gated tool(s): the deny control in the UI resolves the approval by cancelling the run. Capture it (and the actor) so we can audit the denial and mark the pending actions rejected — the mirror of the approval path in
+		// ContinueRun.
+		wasApprovalDenial := run.StatusCode == domain.RunStatusAwaitingApproval
+
+		var actorID, actorType, actorName string
+		if identity.Actor != nil {
+			actorID = identity.Actor.ID
+			actorType = string(identity.Type)
+			if identity.Actor.Name != nil {
+				actorName = *identity.Actor.Name
+			}
+		}
+
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *agentDefSvcImpl) *apierror.APIError {
 			txRunRepo := txSvc.repos.NewAgentRunRepo()
-			if updateErr := txRunRepo.UpdateStatus(txCtx, params.AgentRunID, domain.RunStatusCancelled); updateErr != nil {
+			if updateErr := txRunRepo.MarkCancelledByUser(txCtx, params.AgentRunID); updateErr != nil {
 				return updateErr
 			}
+
+			// Audit the denial — who rejected which gated tool(s) — and mark those pending actions rejected, written atomically with the status→cancelled transition via the same tx outbox. An empty slug set means "deny all pending"; the audit records the concrete denied set when known.
+			if wasApprovalDenial {
+				txActionRepo := txSvc.repos.NewAgentActionRepo()
+				txOutbox := txSvc.repos.NewOutboxRepo()
+
+				deniedSlugs := make([]string, 0)
+				seen := make(map[string]bool)
+				if pending, listErr := txActionRepo.ListByRun(txCtx, params.AgentRunID); listErr == nil {
+					for _, a := range pending {
+						if a.StatusCode != domain.ActionStatusPendingReview {
+							continue
+						}
+						if !seen[a.ToolSlug] {
+							seen[a.ToolSlug] = true
+							deniedSlugs = append(deniedSlugs, a.ToolSlug)
+						}
+						_ = txActionRepo.MarkReviewed(txCtx, sqlc.MarkAgentActionReviewedParams{
+							ID:                  a.ID,
+							StatusCode:          domain.ActionStatusRejected,
+							ReviewedBy:          agentdb.PgText(actorID),
+							ReviewedByActorType: agentdb.PgText(actorType),
+							ReviewedByActorName: agentdb.PgText(actorName),
+						})
+					}
+				}
+
+				metadata := map[string]any{}
+				if len(deniedSlugs) > 0 {
+					metadata["denied_tool_slugs"] = deniedSlugs
+				} else {
+					metadata["denied_all_pending"] = true
+				}
+				if auditErr := audit.NewPublisher().Publish(txCtx, txOutbox, audit.EventData{
+					ServiceName:  domain.ServiceName,
+					Action:       constants.AuditActionDeny,
+					ResourceType: constants.ObjectTypeAgentRun,
+					ResourceID:   params.AgentRunID,
+					Metadata:     metadata,
+				}); auditErr != nil {
+					return auditErr
+				}
+			} else {
+				// Plain cancel (not an approval denial): audit the status→cancelled transition atomically with the update. The denial path above publishes its own governance event, so only the plain case is instrumented here to avoid double-publishing.
+				if auditErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+					ServiceName:  domain.ServiceName,
+					Action:       constants.AuditActionUpdate,
+					ResourceType: constants.ObjectTypeAgentRun,
+					ResourceID:   params.AgentRunID,
+					Changes:      []audit.FieldChange{audit.NewFieldChange("status_code", run.StatusCode, domain.RunStatusCancelled)},
+				}); auditErr != nil {
+					return auditErr
+				}
+			}
+
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, struct{}{})
 		})
 
@@ -1173,10 +1641,13 @@ func (s *agentDefSvcImpl) ContinueRun(ctx context.Context, params domain.Continu
 
 	identity, ok := appctx.GetIdentityFromContext(ctx)
 	if !ok || identity == nil {
-		return "", apierror.NewInvariantViolationError("Identity not found in context.")
+		return "", tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
 	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return "", tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainAgentRuns, types.ActionUpdate); apiErr != nil {
 		return "", tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
@@ -1221,6 +1692,9 @@ func (s *agentDefSvcImpl) ContinueRun(ctx context.Context, params domain.Continu
 				apierror.NewValidationError(fmt.Sprintf("Run is not awaiting input or approval (status: %s).", run.StatusCode)))
 		}
 
+		// Resuming from awaiting_approval is a human approval decision (a tool gated on review was let through), distinct from a plain message continuation out of awaiting_input. Capture it now to audit the approval below.
+		wasApproval := run.StatusCode == domain.RunStatusAwaitingApproval
+
 		length := id.IDLength22
 		msgID, msgGenErr := id.GenID(id.MessageIDPrefix, &length)
 		if msgGenErr != nil {
@@ -1245,15 +1719,25 @@ func (s *agentDefSvcImpl) ContinueRun(ctx context.Context, params domain.Continu
 				return updateErr
 			}
 
+			// "Approve all" is the only case where empty slugs means approve: a real approval (the run was awaiting_approval) with no specific slugs, no per-call ids, no rejections, and no typed message. Anything else
+			// (per-tool approval names slugs or call ids; a rejection names them; a console continuation carries a message) must not blanket-approve.
+			approveAllPending := wasApproval &&
+				len(params.ApprovedToolSlugs) == 0 && len(params.ApprovedToolCallIDs) == 0 &&
+				len(params.RejectedToolSlugs) == 0 && len(params.RejectedToolCallIDs) == 0 &&
+				strings.TrimSpace(params.Message) == ""
+
 			data := messaging.AgentContinueRunData{
-				AgentRunID:        params.AgentRunID,
-				AccountID:         accountID,
-				Message:           params.Message,
-				ApprovedToolSlugs: params.ApprovedToolSlugs,
-				AllowedToolSlugs:  params.AllowedToolSlugs,
-				ActorID:           actorID,
-				ActorType:         actorType,
-				ActorName:         actorName,
+				AgentRunID:          params.AgentRunID,
+				AccountID:           accountID,
+				Message:             params.Message,
+				ApprovedToolSlugs:   params.ApprovedToolSlugs,
+				ApproveAllPending:   approveAllPending,
+				RejectedToolSlugs:   params.RejectedToolSlugs,
+				ApprovedToolCallIDs: params.ApprovedToolCallIDs,
+				RejectedToolCallIDs: params.RejectedToolCallIDs,
+				ActorID:             actorID,
+				ActorType:           actorType,
+				ActorName:           actorName,
 			}
 			dataBytes, _ := json.Marshal(data)
 
@@ -1272,6 +1756,49 @@ func (s *agentDefSvcImpl) ContinueRun(ctx context.Context, params domain.Continu
 				return apierror.NewInternalError(outboxErr, "Failed to write outbox message.")
 			}
 
+			// Audit the human review decision(s) on this run — who let which gated tool(s) run and who denied which. Attributed to the deciding user (ctx identity) and written atomically with the status→running transition via the same tx outbox. A single resume can both approve some tools and reject others, so each decision is its own event. Only emitted for a real review resume — a plain message continuation out of awaiting_input is neither an approval nor a rejection.
+			if wasApproval {
+				if len(params.ApprovedToolSlugs) > 0 || len(params.ApprovedToolCallIDs) > 0 || approveAllPending {
+					metadata := map[string]any{}
+					if len(params.ApprovedToolSlugs) > 0 {
+						metadata["approved_tool_slugs"] = params.ApprovedToolSlugs
+					}
+					if len(params.ApprovedToolCallIDs) > 0 {
+						metadata["approved_tool_call_ids"] = params.ApprovedToolCallIDs
+					}
+					if len(params.ApprovedToolSlugs) == 0 && len(params.ApprovedToolCallIDs) == 0 {
+						metadata["approved_all_pending"] = true
+					}
+					if auditErr := audit.NewPublisher().Publish(txCtx, txOutbox, audit.EventData{
+						ServiceName:  domain.ServiceName,
+						Action:       constants.AuditActionApprove,
+						ResourceType: constants.ObjectTypeAgentRun,
+						ResourceID:   params.AgentRunID,
+						Metadata:     metadata,
+					}); auditErr != nil {
+						return auditErr
+					}
+				}
+				if len(params.RejectedToolSlugs) > 0 || len(params.RejectedToolCallIDs) > 0 {
+					denyMeta := map[string]any{}
+					if len(params.RejectedToolSlugs) > 0 {
+						denyMeta["denied_tool_slugs"] = params.RejectedToolSlugs
+					}
+					if len(params.RejectedToolCallIDs) > 0 {
+						denyMeta["denied_tool_call_ids"] = params.RejectedToolCallIDs
+					}
+					if auditErr := audit.NewPublisher().Publish(txCtx, txOutbox, audit.EventData{
+						ServiceName:  domain.ServiceName,
+						Action:       constants.AuditActionDeny,
+						ResourceType: constants.ObjectTypeAgentRun,
+						ResourceID:   params.AgentRunID,
+						Metadata:     denyMeta,
+					}); auditErr != nil {
+						return auditErr
+					}
+				}
+			}
+
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, params.AgentRunID)
 		})
 
@@ -1279,11 +1806,182 @@ func (s *agentDefSvcImpl) ContinueRun(ctx context.Context, params domain.Continu
 			return "", meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 		}
 
+		// Kick the enqueuer so the resume command (e.g. a chat tool-approval) is published immediately rather than waiting out the enqueuer's idle backoff — otherwise the thinking bubble lags ~MaxPollInterval after the user approves. Post-commit only: the outbox row must be visible to the poll.
+		s.kickOutbox()
+
 		return params.AgentRunID, nil
 
 	default:
 		return "", tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
 	}
+}
+
+// RetryRun re-attempts a failed run by resuming its existing transcript — no new user message is added, so the agent picks up with full knowledge of what it already did (including any tool results), minimizing duplicate side effects vs. a fresh re-run. The atomic status→running transition (guarded on status='failed' and bounded by retry_count) is the source of truth that prevents double-retry races.
+func (s *agentDefSvcImpl) RetryRun(ctx context.Context, params domain.RetryRunParams) (string, *apierror.APIError) {
+	ctx, span := agentDefSvcTracer.Start(ctx, "service.agent_definition.retry_run")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return "", tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return "", tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainAgentRuns, types.ActionUpdate); apiErr != nil {
+		return "", tracing.Trace(span, apiErr)
+	}
+	if !identity.IsTargetAccountSet() {
+		return "", tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
+	}
+	accountID := identity.Target.AccountID
+
+	meds := s.mediators()
+
+	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
+	if apiErr != nil {
+		return "", apiErr
+	}
+
+	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
+	case domain.RecoveryPointFinished:
+		cached, err := idempotency.UnmarshalCachedResponse[string](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		if err != nil {
+			return "", tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
+		}
+		if cached.Error != nil {
+			return "", cached.Error
+		}
+		if cached.Data != nil {
+			return *cached.Data, nil
+		}
+		return "", nil
+
+	case domain.RecoveryPointStarted:
+		runRepo := s.repos.NewAgentRunRepo()
+		run, runErr := runRepo.GetByID(ctx, params.AgentRunID)
+		if runErr != nil || run.AccountID != accountID {
+			return "", meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
+				apierror.NewResourceNotFoundError("Agent run not found."))
+		}
+		if run.StatusCode != domain.RunStatusFailed {
+			return "", meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
+				apierror.NewValidationError(fmt.Sprintf("Only failed runs can be retried (status: %s).", run.StatusCode)))
+		}
+		if int(run.RetryCount) >= domain.MaxManualRetries {
+			return "", meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
+				apierror.NewValidationError(fmt.Sprintf("This run has already been retried the maximum of %d times.", domain.MaxManualRetries)))
+		}
+
+		var actorID, actorType, actorName string
+		if identity.Actor != nil {
+			actorID = identity.Actor.ID
+			actorType = string(identity.Type)
+			if identity.Actor.Name != nil {
+				actorName = *identity.Actor.Name
+			}
+		}
+		// Reply back into the original thread by replying to the trigger message — this also flags the resumed turn as conversation-originated so its reply is posted rather than kept private.
+		replyTo := ""
+		if run.TriggerMessageID.Valid {
+			replyTo = run.TriggerMessageID.String
+		}
+
+		length := id.IDLength22
+		msgID, msgGenErr := id.GenID(id.MessageIDPrefix, &length)
+		if msgGenErr != nil {
+			return "", meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, msgGenErr)
+		}
+
+		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *agentDefSvcImpl) *apierror.APIError {
+			txRunRepo := txSvc.repos.NewAgentRunRepo()
+			txOutbox := txSvc.repos.NewOutboxRepo()
+
+			if _, markErr := txRunRepo.MarkRetrying(txCtx, params.AgentRunID); markErr != nil {
+				return apierror.NewValidationError("This run is no longer in a failed state and can't be retried.")
+			}
+
+			data := messaging.AgentContinueRunData{
+				AgentRunID:       params.AgentRunID,
+				AccountID:        accountID,
+				Message:          "", // resume: re-attempt the existing transcript, no new user input
+				ActorID:          actorID,
+				ActorType:        actorType,
+				ActorName:        actorName,
+				ReplyToMessageID: replyTo,
+			}
+			dataBytes, _ := json.Marshal(data)
+
+			if _, outboxErr := txOutbox.Create(txCtx, messaging.OutboxMessageInput{
+				MessageID:   msgID,
+				ServiceName: domain.ServiceName,
+				MessageType: string(contracts.AgentCmdContinueRun),
+				Destination: messaging.ApplicationExchange,
+				RoutingKey:  string(contracts.AgentCmdContinueRun),
+				Payload: contracts.AmqpMessage{
+					Data:      dataBytes,
+					MessageID: msgID,
+				},
+				MaxAttempts: 3,
+			}); outboxErr != nil {
+				return apierror.NewInternalError(outboxErr, "Failed to write outbox message.")
+			}
+
+			// Audit the retry status transition (failed→running) atomically with the mark-retrying update, so the run's lifecycle change is recorded on this Public:false endpoint.
+			if auditErr := audit.NewPublisher().Publish(txCtx, txOutbox, audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       constants.AuditActionUpdate,
+				ResourceType: constants.ObjectTypeAgentRun,
+				ResourceID:   params.AgentRunID,
+				Changes:      []audit.FieldChange{audit.NewFieldChange("status_code", run.StatusCode, domain.RunStatusRunning)},
+			}); auditErr != nil {
+				return auditErr
+			}
+
+			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, params.AgentRunID)
+		})
+
+		if apiErr != nil {
+			return "", meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
+		}
+
+		// Kick the enqueuer so the resume command is published immediately rather than waiting out the enqueuer's idle backoff. Post-commit only: the outbox row must be visible to the poll.
+		s.kickOutbox()
+
+		return params.AgentRunID, nil
+
+	default:
+		return "", tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
+	}
+}
+
+// validateEndpointToolSlugs rejects any endpoint_tool_slugs (or endpoint_tool_review key) entry in the agent config JSON that is not a known endpoint-tool. The wildcard
+// "*" (grant the whole catalog) is always allowed in the slug list. An empty/absent list or review map is valid.
+func validateEndpointToolSlugs(configJSON string) *apierror.APIError {
+	if configJSON == "" {
+		return nil
+	}
+	var cfg struct {
+		EndpointToolSlugs  []string        `json:"endpoint_tool_slugs"`
+		EndpointToolReview map[string]bool `json:"endpoint_tool_review"`
+	}
+	if err := json.Unmarshal([]byte(configJSON), &cfg); err != nil {
+		return apierror.NewValidationErrorWithParam("Invalid agent config.", "config")
+	}
+	for _, slug := range cfg.EndpointToolSlugs {
+		if slug == "*" {
+			continue
+		}
+		if _, ok := agents.LookupEndpointTool(slug); !ok {
+			return apierror.NewValidationErrorWithParam("Tool not found: "+slug, "tools")
+		}
+	}
+	for slug := range cfg.EndpointToolReview {
+		if _, ok := agents.LookupEndpointTool(slug); !ok {
+			return apierror.NewValidationErrorWithParam("Tool not found: "+slug, "tools")
+		}
+	}
+	return nil
 }
 
 // CreateAgentMemory creates a new agent memory record, with idempotency support.
@@ -1293,10 +1991,13 @@ func (s *agentDefSvcImpl) CreateAgentMemory(ctx context.Context, params domain.C
 
 	identity, ok := appctx.GetIdentityFromContext(ctx)
 	if !ok || identity == nil {
-		return nil, apierror.NewInvariantViolationError("Identity not found in context.")
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
 	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainAgentMemories, types.ActionCreate); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
@@ -1399,10 +2100,13 @@ func (s *agentDefSvcImpl) UpdateAgentMemory(ctx context.Context, params domain.U
 
 	identity, ok := appctx.GetIdentityFromContext(ctx)
 	if !ok || identity == nil {
-		return nil, apierror.NewInvariantViolationError("Identity not found in context.")
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
 	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainAgentMemories, types.ActionUpdate); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
@@ -1426,21 +2130,25 @@ func (s *agentDefSvcImpl) UpdateAgentMemory(ctx context.Context, params domain.U
 		return cached.Data, cached.Error
 
 	case domain.RecoveryPointStarted:
+		// Partial update: only provided fields change. A nil metadata narg → COALESCE keeps the current value (no more "{}" wipe).
 		var metadata []byte
-		if params.MetadataJSON != "" {
-			metadata = []byte(params.MetadataJSON)
-		} else {
-			metadata = []byte("{}")
+		if params.MetadataJSON != nil {
+			metadata = []byte(*params.MetadataJSON)
 		}
 
 		var expiresAt pgtype.Timestamptz
-		if params.ExpiresAt != "" {
-			t, parseErr := parseTimestamp(params.ExpiresAt)
+		if params.ExpiresAt != nil && *params.ExpiresAt != "" {
+			t, parseErr := parseTimestamp(*params.ExpiresAt)
 			if parseErr != nil {
 				return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
 					apierror.NewValidationErrorWithParam("Invalid expires_at: "+parseErr.Error(), "expires_at"))
 			}
 			expiresAt = pgtype.Timestamptz{Time: t, Valid: true}
+		}
+
+		var importance pgtype.Float8
+		if params.Importance != nil {
+			importance = pgtype.Float8{Float64: *params.Importance, Valid: true}
 		}
 
 		var result *domain.AgentMemoryInfo
@@ -1460,15 +2168,17 @@ func (s *agentDefSvcImpl) UpdateAgentMemory(ctx context.Context, params domain.U
 			old := sqlcMemoryToDomain(oldMemory)
 
 			if updateErr := memoryRepo.Update(txCtx, sqlc.UpdateAgentMemoryParams{
-				ID:         params.MemoryID,
-				Category:   params.Category,
-				Content:    params.Content,
-				Metadata:   metadata,
-				EntityType: pgtype.Text{String: params.EntityType, Valid: params.EntityType != ""},
-				EntityID:   pgtype.Text{String: params.EntityID, Valid: params.EntityID != ""},
-				Importance: params.Importance,
-				ExpiresAt:  expiresAt,
-				AccountID:  accountID,
+				ID:             params.MemoryID,
+				Category:       agentdb.PgTextPtr(params.Category),
+				Content:        agentdb.PgTextPtr(params.Content),
+				Metadata:       metadata,
+				ClearEntity:    params.ClearEntity,
+				EntityType:     agentdb.PgTextPtr(params.EntityType),
+				EntityID:       agentdb.PgTextPtr(params.EntityID),
+				Importance:     importance,
+				ClearExpiresAt: params.ClearExpiresAt,
+				ExpiresAt:      expiresAt,
+				AccountID:      accountID,
 			}); updateErr != nil {
 				return updateErr
 			}
@@ -1517,10 +2227,13 @@ func (s *agentDefSvcImpl) DeleteAgentMemory(ctx context.Context, params domain.D
 
 	identity, ok := appctx.GetIdentityFromContext(ctx)
 	if !ok || identity == nil {
-		return apierror.NewInvariantViolationError("Identity not found in context.")
+		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
 	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainAgentMemories, types.ActionDelete); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
@@ -1534,18 +2247,22 @@ func (s *agentDefSvcImpl) DeleteAgentMemory(ctx context.Context, params domain.D
 		oldMemory, getErr := memoryRepo.GetByID(txCtx, params.MemoryID)
 		if getErr != nil {
 			if apierror.IsNotFound(getErr) {
-				// The account-scoped delete has always been a silent no-op for
-				// missing rows; keep repeat deletes idempotent successes.
+				// The account-scoped delete has always been a silent no-op for missing rows; keep repeat deletes idempotent successes.
 				return nil
 			}
 			return getErr
 		}
 		if oldMemory.AccountID != accountID {
-			// A memory owned by another account is invisible to the caller;
-			// treat it as already deleted rather than leaking its existence.
+			// A memory owned by another account is invisible to the caller; treat it as already deleted rather than leaking its existence.
 			return nil
 		}
 		old := sqlcMemoryToDomain(oldMemory)
+
+		// Snapshot the row into deleted_record before the hard delete so it is recoverable and
+		// repeat/racing deletes are distinguishable from "never existed" (deleted-record convention).
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeAgentMemory, old.ID, old); apiErr != nil {
+			return apiErr
+		}
 
 		if deleteErr := memoryRepo.Delete(txCtx, params.MemoryID, accountID); deleteErr != nil {
 			return deleteErr
@@ -1567,96 +2284,6 @@ func (s *agentDefSvcImpl) DeleteAgentMemory(ctx context.Context, params domain.D
 	}
 
 	return nil
-}
-
-// AcknowledgeAgentAlert acknowledges an agent alert, with idempotency support.
-func (s *agentDefSvcImpl) AcknowledgeAgentAlert(ctx context.Context, params domain.AcknowledgeAgentAlertParams) (*domain.AgentAlertInfo, *apierror.APIError) {
-	ctx, span := agentDefSvcTracer.Start(ctx, "service.agent_definition.acknowledge_agent_alert")
-	defer span.End()
-
-	identity, ok := appctx.GetIdentityFromContext(ctx)
-	if !ok || identity == nil {
-		return nil, apierror.NewInvariantViolationError("Identity not found in context.")
-	}
-
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
-	}
-	accountID := identity.Target.AccountID
-
-	meds := s.mediators()
-
-	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
-	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.AgentAlertInfo](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
-		if err != nil {
-			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
-		}
-		return cached.Data, cached.Error
-
-	case domain.RecoveryPointStarted:
-		alertRepo := s.repos.NewAgentAlertRepo()
-		alert, alertErr := alertRepo.GetByID(ctx, params.AlertID)
-		if alertErr != nil {
-			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
-				apierror.NewResourceNotFoundError("Agent alert not found."))
-		}
-		if alert.AccountID != accountID {
-			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
-				apierror.NewResourceNotFoundError("Agent alert not found."))
-		}
-
-		acknowledgedBy := ""
-		acknowledgedByActorType := ""
-		acknowledgedByActorName := ""
-		if identity.Actor != nil {
-			acknowledgedBy = identity.Actor.ID
-			acknowledgedByActorType = string(identity.Type)
-			if identity.Actor.Name != nil {
-				acknowledgedByActorName = *identity.Actor.Name
-			}
-		}
-
-		var result *domain.AgentAlertInfo
-		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *agentDefSvcImpl) *apierror.APIError {
-			txAlertRepo := txSvc.repos.NewAgentAlertRepo()
-
-			if ackErr := txAlertRepo.Acknowledge(txCtx, sqlc.AcknowledgeAgentAlertParams{
-				AcknowledgedByActorID:   pgtype.Text{String: acknowledgedBy, Valid: acknowledgedBy != ""},
-				AcknowledgedByActorType: pgtype.Text{String: acknowledgedByActorType, Valid: acknowledgedByActorType != ""},
-				AcknowledgedByActorName: pgtype.Text{String: acknowledgedByActorName, Valid: acknowledgedByActorName != ""},
-				ID:                      params.AlertID,
-				AccountID:               accountID,
-			}); ackErr != nil {
-				return ackErr
-			}
-
-			updated, getErr := txAlertRepo.GetByID(txCtx, params.AlertID)
-			if getErr != nil {
-				return getErr
-			}
-			result = sqlcGetAlertRowToDomain(updated)
-
-			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
-		})
-
-		if apiErr != nil {
-			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
-		}
-
-		return result, nil
-
-	default:
-		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
-	}
 }
 
 func sqlcMemoryToDomain(m *sqlc.AgentMemory) *domain.AgentMemoryInfo {
@@ -1695,52 +2322,6 @@ func sqlcMemoryToDomain(m *sqlc.AgentMemory) *domain.AgentMemoryInfo {
 		ExpiresAt:  expiresAt,
 		CreatedAt:  createdAt,
 		UpdatedAt:  updatedAt,
-	}
-}
-
-func alertPgText(t pgtype.Text) string {
-	if t.Valid {
-		return t.String
-	}
-	return ""
-}
-
-func alertPgTs(t pgtype.Timestamptz) string {
-	if t.Valid {
-		return t.Time.Format("2006-01-02T15:04:05.000Z")
-	}
-	return ""
-}
-
-func sqlcGetAlertRowToDomain(a *sqlc.GetAgentAlertByIDRow) *domain.AgentAlertInfo {
-	var metadataStr string
-	if a.Metadata != nil {
-		metadataStr = string(a.Metadata)
-	}
-	return &domain.AgentAlertInfo{
-		ID:                      a.ID,
-		AccountID:               a.AccountID,
-		AgentRunID:              alertPgText(a.AgentRunID),
-		AgentActionID:           alertPgText(a.AgentActionID),
-		SeverityCode:            a.SeverityCode,
-		StatusCode:              a.StatusCode,
-		Title:                   a.Title,
-		Message:                 alertPgText(a.Message),
-		Metadata:                metadataStr,
-		AcknowledgedAt:          alertPgTs(a.AcknowledgedAt),
-		AcknowledgedBy:          alertPgText(a.AcknowledgedByActorID),
-		AcknowledgedByActorType: alertPgText(a.AcknowledgedByActorType),
-		AcknowledgedByActorName: alertPgText(a.AcknowledgedByActorName),
-		CreatedAt:               alertPgTs(a.CreatedAt),
-		UpdatedAt:               alertPgTs(a.UpdatedAt),
-		RunStatusCode:           alertPgText(a.RunStatusCode),
-		RunTriggerType:          alertPgText(a.RunTriggerType),
-		RunCreatedAt:            alertPgTs(a.RunCreatedAt),
-		RunUpdatedAt:            alertPgTs(a.RunUpdatedAt),
-		ActionToolSlug:          alertPgText(a.ActionToolSlug),
-		ActionStatusCode:        alertPgText(a.ActionStatusCode),
-		ActionCreatedAt:         alertPgTs(a.ActionCreatedAt),
-		ActionUpdatedAt:         alertPgTs(a.ActionUpdatedAt),
 	}
 }
 
@@ -1810,24 +2391,8 @@ func includesContains(includes []string, key string) bool {
 	return slices.Contains(includes, key)
 }
 
-func unmarshalPermissions(data []byte) []string {
-	if len(data) == 0 {
-		return nil
-	}
-	var perms []string
-	if err := json.Unmarshal(data, &perms); err != nil {
-		return nil
-	}
-	return perms
-}
-
 // sqlToAgentDefinitionInfo converts sqlc rows into a domain AgentDefinitionInfo. When includes is non-nil, fields not listed are set to nil.
 func sqlToAgentDefinitionInfo(def *sqlc.AgentDefinition, tools []sqlc.ListToolsByAgentDefinitionIDRow, accountStatus *sqlc.AgentAccountStatus, includes []string) *domain.AgentDefinitionInfo {
-	desc := ""
-	if def.Description.Valid {
-		desc = def.Description.String
-	}
-
 	var roleID string
 	if def.RoleID.Valid {
 		roleID = def.RoleID.String
@@ -1837,32 +2402,24 @@ func sqlToAgentDefinitionInfo(def *sqlc.AgentDefinition, tools []sqlc.ListToolsB
 	if includesContains(includes, "tools") {
 		domainTools = make([]domain.AgentDefinitionToolInfo, 0, len(tools))
 		for _, t := range tools {
-			toolDesc := ""
-			if t.ToolDescription.Valid {
-				toolDesc = t.ToolDescription.String
+			// Linked tools are built-in tools, granted by slug. Display metadata comes from the code catalog (agents.BuiltinTools), not the database.
+			info := domain.AgentDefinitionToolInfo{
+				ID:            t.ID,
+				ToolSlug:      t.ToolSlug,
+				Category:      "built_in",
+				ConfigSchema:  json.RawMessage(`{}`),
+				Config:        t.Config,
+				SortOrder:     t.SortOrder,
+				RequireReview: t.RequireReview,
 			}
-			var groupID string
-			if t.ToolGroupID.Valid {
-				groupID = t.ToolGroupID.String
+			if bt, ok := agents.LookupBuiltinTool(t.ToolSlug); ok {
+				info.DisplayName = bt.DisplayName
+				info.Description = bt.Description
+				info.GroupID = bt.Group.ID
+				info.GroupName = bt.Group.Name
+				info.RequiredPermissions = bt.RequiredPermissions
 			}
-			var groupName string
-			if t.ToolGroupName.Valid {
-				groupName = t.ToolGroupName.String
-			}
-			domainTools = append(domainTools, domain.AgentDefinitionToolInfo{
-				ID:                  t.ID,
-				ToolID:              t.ToolDefinitionID,
-				DisplayName:         t.ToolDisplayName,
-				Description:         toolDesc,
-				ConfigSchema:        t.ToolConfigSchema,
-				Category:            t.ToolCategory,
-				Config:              t.Config,
-				SortOrder:           t.SortOrder,
-				RequireReview:       t.RequireReview,
-				GroupID:             groupID,
-				GroupName:           groupName,
-				RequiredPermissions: unmarshalPermissions(t.RequiredPermissions),
-			})
+			domainTools = append(domainTools, info)
 		}
 	}
 
@@ -1887,7 +2444,7 @@ func sqlToAgentDefinitionInfo(def *sqlc.AgentDefinition, tools []sqlc.ListToolsB
 		ID:             def.ID,
 		Name:           def.Name,
 		Slug:           def.Slug,
-		Description:    desc,
+		Description:    agentdb.StringFromPgText(def.Description),
 		DefinitionType: def.DefinitionType,
 		CategoryCode:   def.CategoryCode,
 		TriggerType:    def.TriggerType,

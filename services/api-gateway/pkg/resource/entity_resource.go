@@ -43,8 +43,9 @@ var SampleUserEntity = &Entity{
 var SampleCustomerEntity = &Entity{
 	ID:     SampleCustomerID,
 	Object: constants.ObjectTypeEntity,
-	Type:   constants.ObjectTypeAccount,
+	Type:   constants.ObjectTypeCustomer,
 	Name:   new(SampleCustomerName),
+	Handle: new(SampleCustomerNumber),
 }
 
 func (*Entity) SchemaExample() any {

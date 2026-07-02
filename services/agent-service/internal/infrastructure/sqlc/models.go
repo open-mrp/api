@@ -41,24 +41,6 @@ type AgentAction struct {
 	UpdatedAt           pgtype.Timestamptz
 }
 
-type AgentAlert struct {
-	ID                      string
-	AccountID               string
-	AgentRunID              pgtype.Text
-	AgentActionID           pgtype.Text
-	SeverityCode            string
-	StatusCode              string
-	Title                   string
-	Message                 pgtype.Text
-	Metadata                []byte
-	AcknowledgedAt          pgtype.Timestamptz
-	AcknowledgedByActorID   pgtype.Text
-	AcknowledgedByActorType pgtype.Text
-	AcknowledgedByActorName pgtype.Text
-	CreatedAt               pgtype.Timestamptz
-	UpdatedAt               pgtype.Timestamptz
-}
-
 type AgentArtifact struct {
 	ID            string
 	AccountID     string
@@ -104,12 +86,12 @@ type AgentDefinition struct {
 type AgentDefinitionTool struct {
 	ID                string
 	AgentDefinitionID string
-	ToolDefinitionID  string
 	Config            []byte
 	SortOrder         int32
 	RequireReview     bool
 	CreatedAt         pgtype.Timestamptz
 	UpdatedAt         pgtype.Timestamptz
+	ToolSlug          string
 }
 
 type AgentMemory struct {
@@ -127,26 +109,30 @@ type AgentMemory struct {
 }
 
 type AgentRun struct {
-	ID                      string
-	AccountID               string
-	AgentDefinitionID       string
-	AgentConfigID           pgtype.Text
-	StatusCode              string
-	TriggerType             string
-	Input                   []byte
-	Output                  []byte
-	ErrorMessage            pgtype.Text
-	StartedAt               pgtype.Timestamptz
-	CompletedAt             pgtype.Timestamptz
-	DurationMs              pgtype.Int4
-	TotalInputTokens        int64
-	TotalOutputTokens       int64
-	TriggeredByActorID      pgtype.Text
-	TriggeredByIdentityType pgtype.Text
-	TriggeredByActorName    pgtype.Text
-	AllowedToolSlugs        []byte
-	CreatedAt               pgtype.Timestamptz
-	UpdatedAt               pgtype.Timestamptz
+	ID                       string
+	AccountID                string
+	AgentDefinitionID        string
+	AgentConfigID            pgtype.Text
+	StatusCode               string
+	TriggerType              string
+	Input                    []byte
+	Output                   []byte
+	ErrorMessage             pgtype.Text
+	StartedAt                pgtype.Timestamptz
+	CompletedAt              pgtype.Timestamptz
+	DurationMs               pgtype.Int4
+	TotalInputTokens         int64
+	TotalOutputTokens        int64
+	TriggeredByActorID       pgtype.Text
+	TriggeredByIdentityType  pgtype.Text
+	TriggeredByActorName     pgtype.Text
+	AllowedToolSlugs         []byte
+	CreatedAt                pgtype.Timestamptz
+	UpdatedAt                pgtype.Timestamptz
+	ConversationID           pgtype.Text
+	TriggerMessageID         pgtype.Text
+	DivergedFromConversation bool
+	RetryCount               int32
 }
 
 type AgentRunEvent struct {
@@ -251,29 +237,4 @@ type TaskLease struct {
 	Holder     string
 	AcquiredAt pgtype.Timestamptz
 	ExpiresAt  pgtype.Timestamptz
-}
-
-type ToolDefinition struct {
-	ID                  string
-	DisplayName         string
-	Description         pgtype.Text
-	ConfigSchema        []byte
-	Slug                pgtype.Text
-	InputSchema         []byte
-	Category            string
-	ToolGroupID         pgtype.Text
-	RequiredPermissions []byte
-	CreatedAt           pgtype.Timestamptz
-	UpdatedAt           pgtype.Timestamptz
-}
-
-type ToolGroup struct {
-	ID          string
-	Name        string
-	Description pgtype.Text
-	Slug        string
-	Icon        pgtype.Text
-	SortOrder   int32
-	CreatedAt   pgtype.Timestamptz
-	UpdatedAt   pgtype.Timestamptz
 }

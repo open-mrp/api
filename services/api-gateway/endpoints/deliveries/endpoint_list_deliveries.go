@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -42,6 +43,9 @@ func (e *ListDeliveriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListDel
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeDelivery,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainDeliveries, Action: types.ActionRead},
+		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListDeliveriesRequest) (*apiresource.List[apiresource.Delivery], *apierror.APIError) {
 			return svc.(DeliverySvc).ListDeliveries
 		},

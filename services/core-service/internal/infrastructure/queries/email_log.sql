@@ -9,10 +9,13 @@ SELECT
     u.name AS sent_by_name,
     u.username AS sent_by_username,
     u.email AS sent_by_email,
+    ak.type_id AS sent_by_api_key_id,
+    ak.name AS sent_by_api_key_name,
     el.created_at,
     el.updated_at
 FROM email_log el
 LEFT JOIN user u ON el.sent_by_id = u.id
+LEFT JOIN api_key ak ON el.sent_by_id = ak.type_id
 WHERE el.account_id = sqlc.arg('account_id')
 AND (
     sqlc.narg('search_query') IS NULL
@@ -42,10 +45,13 @@ SELECT
     u.name AS sent_by_name,
     u.username AS sent_by_username,
     u.email AS sent_by_email,
+    ak.type_id AS sent_by_api_key_id,
+    ak.name AS sent_by_api_key_name,
     el.created_at,
     el.updated_at
 FROM email_log el
 LEFT JOIN user u ON el.sent_by_id = u.id
+LEFT JOIN api_key ak ON el.sent_by_id = ak.type_id
 WHERE el.account_id = sqlc.arg('account_id')
 AND (
     sqlc.narg('search_query') IS NULL
@@ -74,10 +80,13 @@ SELECT
     u.name AS sent_by_name,
     u.username AS sent_by_username,
     u.email AS sent_by_email,
+    ak.type_id AS sent_by_api_key_id,
+    ak.name AS sent_by_api_key_name,
     el.created_at,
     el.updated_at
 FROM email_log el
 LEFT JOIN user u ON el.sent_by_id = u.id
+LEFT JOIN api_key ak ON el.sent_by_id = ak.type_id
 WHERE el.id = sqlc.arg('id')
 AND el.account_id = sqlc.arg('account_id');
 

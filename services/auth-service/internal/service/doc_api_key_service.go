@@ -57,11 +57,7 @@ func NewDocAPIKeySvc(config *DocAPIKeySvcConfig) domain.DocAPIKeySvc {
 	}
 }
 
-func (c *DocAPIKeySvcConfig) WithDefaults(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, coreClient domain.AuthCoreClient, encryptionKey []byte) *DocAPIKeySvcConfig {
-	if c == nil {
-		c = &DocAPIKeySvcConfig{}
-	}
-
+func BuildDocAPIKeySvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, coreClient domain.AuthCoreClient, encryptionKey []byte) *DocAPIKeySvcConfig {
 	repoFactory := repository.NewRepoFactory(queries)
 
 	mediatorFactory := mediator.NewMediatorFactory(&mediator.MediatorFactoryConfig{
@@ -98,8 +94,7 @@ func (s *docAPIKeySvcImpl) withTx(ctx context.Context, fn func(context.Context, 
 	})
 }
 
-// GetOrCreateDocAPIKey returns an existing doc API key for the caller's sandbox account,
-// or creates one if none exists.
+// GetOrCreateDocAPIKey returns an existing doc API key for the caller's sandbox account, or creates one if none exists.
 //
 //  1. Extract the identity from the context and verify the caller is an internal user
 //     targeting a sandbox account.

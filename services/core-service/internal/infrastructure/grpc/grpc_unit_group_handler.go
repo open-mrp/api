@@ -227,8 +227,11 @@ func (h *gRPCHandler) UpsertUnitGroupUnit(ctx context.Context, req *pb.UpsertUni
 		UnitID:             req.UnitId,
 		DiscountPercentage: req.DiscountPercentage,
 		DiscountFixed:      req.DiscountFixed,
-		IsVisible:          req.IsVisible,
+		IsVisibleProvided:  req.IsVisible != nil,
 		Includes:           req.Includes,
+	}
+	if req.IsVisible != nil {
+		params.IsVisible = *req.IsVisible
 	}
 
 	result, apiErr := h.unitGroupSvc.UpsertUnitGroupUnit(ctx, params)

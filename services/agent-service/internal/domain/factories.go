@@ -11,9 +11,7 @@ type RepoFactory interface {
 	NewAgentActionRepo() AgentActionRepo
 	NewAgentArtifactRepo() AgentArtifactRepo
 	NewAgentMemoryRepo() AgentMemoryRepo
-	NewAgentAlertRepo() AgentAlertRepo
 	NewAgentTokenUsageRepo() AgentTokenUsageRepo
-	NewToolDefinitionRepo() ToolDefinitionRepo
 	NewAgentDefinitionToolRepo() AgentDefinitionToolRepo
 	NewAgentAccountStatusRepo() AgentAccountStatusRepo
 	NewAgentRunEventRepo() AgentRunEventRepo

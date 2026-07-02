@@ -1,0 +1,40 @@
+package conversationep
+
+import (
+	"context"
+	"net/http"
+
+	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
+	"github.com/augno/api/shared/constants"
+	apierror "github.com/augno/api/shared/errors"
+)
+
+// Request for the Hide Conversation action.
+type HideConversationRequest struct {
+	// Conversation ID.
+	ConversationID string `path:"id" validate:"required"`
+}
+
+// Hides a conversation from the caller's own list without affecting other participants.
+type HideConversationEndpoint struct{}
+
+func (e *HideConversationEndpoint) Materialize() *apiendpoint.APIEndpoint[*HideConversationRequest, *apiresource.Conversation] {
+	return (&apiendpoint.APIEndpoint[*HideConversationRequest, *apiresource.Conversation]{
+		Title:               "Hide Conversation",
+		Method:              http.MethodPost,
+		ContentType:         "application/json",
+		Route:               "/v1/messaging/conversations/{id}/actions/hide",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		Preview:             true,
+		AgentTool:           false,
+		ObjectType:          constants.ObjectTypeConversation,
+		IncludeConfig:       conversationIncludeConfig(),
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionUpdate}},
+		ServiceHandler: func(svc any) func(ctx context.Context, req *HideConversationRequest) (*apiresource.Conversation, *apierror.APIError) {
+			return svc.(ConversationSvc).HideConversation
+		},
+	})
+}

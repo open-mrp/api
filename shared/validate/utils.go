@@ -1,6 +1,6 @@
 // Package validate provides request-level input validation for the platform. It wraps the go-playground/validator library with custom validation tags and human-readable error formatting that maps directly to the API's error response contract ([apierror.APIError] with a Param field).
 //
-// Six custom validator tags are registered at init time:
+// Seven custom validator tags are registered at init time:
 //
 //   - "password":          8–72 characters, at least one lowercase letter, one uppercase letter, one digit, and one special character.
 //   - "username":          3–255 characters, alphanumeric (upper and lower), underscores, and hyphens only ([a-zA-Z0-9_-]).
@@ -8,6 +8,7 @@
 //   - "custom_email":      stricter email validation than the built-in "email" tag, enforcing RFC length limits, TLD format, and no consecutive dots.
 //   - "nonzero_decimal":   the field, parsed as a decimal string, must not equal zero.
 //   - "max_days_ahead=N":  a time.Time (or field.Optional[time.Time]) no more than N days in the future. Past/zero values pass.
+//   - "multiple_of=N":     a numeric field (or field.Optional[float64]) that is a whole multiple of N (e.g. multiple_of=0.1). Zero/unset values pass.
 //
 // All custom tags treat empty/zero values as valid — combine with "required" when the field must be present.
 //
@@ -16,6 +17,7 @@ package validate
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -55,7 +57,9 @@ func init() {
 	_ = validate.RegisterValidation("identifier", validateUsernameOrEmail)
 	_ = validate.RegisterValidation("custom_email", validateCustomEmail)
 	_ = validate.RegisterValidation("nonzero_decimal", validateNonzeroDecimal)
+	_ = validate.RegisterValidation("decimal", validateDecimal)
 	_ = validate.RegisterValidation("max_days_ahead", validateMaxDaysAhead)
+	_ = validate.RegisterValidation("multiple_of", validateMultipleOf)
 }
 
 // validatePassword implements the "password" struct tag. A valid password is 8–72 bytes long and contains at least one lowercase letter, one uppercase letter, one ASCII digit, and one special character (from the hasSpecialChar set). Empty strings pass (combine with "required" to enforce presence). The 72-byte upper bound matches bcrypt's maximum input length.
@@ -112,8 +116,7 @@ func validateUsernameOrEmail(fl validator.FieldLevel) bool {
 	return usernameOnlyRegex.MatchString(value)
 }
 
-// isValidEmail performs multi-step email validation that is stricter than the
-// built-in "email" tag:
+// isValidEmail performs multi-step email validation that is stricter than the built-in "email" tag:
 //
 //  1. Total length <= 254 characters (RFC 5321 path limit).
 //  2. Exactly one "@" separating local-part and domain.
@@ -187,6 +190,23 @@ func validateNonzeroDecimal(fl validator.FieldLevel) bool {
 	return !d.IsZero()
 }
 
+// validateDecimal implements the "decimal" struct tag. It parses the field value as a decimal string and returns false only when it is present but not a parseable decimal. Empty strings and zero pass — combine with "required" to enforce presence. Unlike "nonzero_decimal", zero is a valid value. Supports both string and *string fields.
+func validateDecimal(fl validator.FieldLevel) bool {
+	field := fl.Field()
+	if field.Kind() == reflect.Pointer {
+		if field.IsNil() {
+			return true
+		}
+		field = field.Elem()
+	}
+	s := field.String()
+	if s == "" {
+		return true
+	}
+	_, err := decimal.NewFromString(s)
+	return err == nil
+}
+
 // validateMaxDaysAhead implements the "max_days_ahead" struct tag for time.Time fields (and field.Optional[time.Time], which the custom type func unwraps to the inner time.Time or nil). It fails only when the value is more than N days in the future, where N is the tag parameter (e.g. max_days_ahead=30). Unset/zero and past values pass — combine with "required" to enforce presence.
 func validateMaxDaysAhead(fl validator.FieldLevel) bool {
 	field := fl.Field()
@@ -208,6 +228,38 @@ func validateMaxDaysAhead(fl validator.FieldLevel) bool {
 		return false
 	}
 	return !t.After(time.Now().Add(time.Duration(days) * 24 * time.Hour))
+}
+
+// validateMultipleOf implements the "multiple_of=N" struct tag for numeric fields (and field.Optional[float64], unwrapped by the custom type func). It passes when the value is a whole multiple of N within floating-point tolerance. Zero/unset values pass — combine with "required" to enforce presence.
+func validateMultipleOf(fl validator.FieldLevel) bool {
+	f := fl.Field()
+	if !f.IsValid() {
+		return true
+	}
+	if f.Kind() == reflect.Pointer {
+		if f.IsNil() {
+			return true
+		}
+		f = f.Elem()
+	}
+	var value float64
+	switch f.Kind() {
+	case reflect.Float32, reflect.Float64:
+		value = f.Float()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		value = float64(f.Int())
+	default:
+		return true
+	}
+	if value == 0 {
+		return true
+	}
+	step, err := strconv.ParseFloat(fl.Param(), 64)
+	if err != nil || step == 0 {
+		return false
+	}
+	ratio := value / step
+	return math.Abs(ratio-math.Round(ratio)) < 1e-9
 }
 
 // Validate runs all struct-tag validations on v and returns a user-facing [apierror.APIError] on failure (nil on success). When a single field fails, the error's Param is set to that field's JSON/form/query name so the client can highlight the offending input. When multiple fields fail, the error message lists all violations and Param is set to the first failing field.
@@ -314,8 +366,12 @@ func formatFieldError(fieldErr validator.FieldError, structValue any) string {
 		return fmt.Sprintf("%s '%s' must be a valid email address.", source, fieldName)
 	case "nonzero_decimal":
 		return fmt.Sprintf("%s '%s' must not be zero.", source, fieldName)
+	case "decimal":
+		return fmt.Sprintf("%s '%s' must be a valid decimal number.", source, fieldName)
 	case "max_days_ahead":
 		return fmt.Sprintf("%s '%s' must be no more than %s days in the future.", source, fieldName, fieldErr.Param())
+	case "multiple_of":
+		return fmt.Sprintf("%s '%s' must be a multiple of %s.", source, fieldName, fieldErr.Param())
 	default:
 		return fmt.Sprintf("%s '%s' is invalid (%s).", source, fieldName, fieldErr.Tag())
 	}

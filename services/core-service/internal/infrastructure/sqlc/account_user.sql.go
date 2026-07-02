@@ -280,6 +280,25 @@ func (q *Queries) FindLastUsedAccountID(ctx context.Context, userID string) (str
 	return account_id, err
 }
 
+const findRemovedAccountUserIDByAccountAndUserID = `-- name: FindRemovedAccountUserIDByAccountAndUserID :one
+SELECT id
+FROM account_user
+WHERE account_id = ? AND user_id = ? AND status_code = 'removed'
+LIMIT 1
+`
+
+type FindRemovedAccountUserIDByAccountAndUserIDParams struct {
+	AccountID string
+	UserID    string
+}
+
+func (q *Queries) FindRemovedAccountUserIDByAccountAndUserID(ctx context.Context, arg FindRemovedAccountUserIDByAccountAndUserIDParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, findRemovedAccountUserIDByAccountAndUserID, arg.AccountID, arg.UserID)
+	var id string
+	err := row.Scan(&id)
+	return id, err
+}
+
 const findTenancyAccountsByUserID = `-- name: FindTenancyAccountsByUserID :many
 SELECT
     a.id AS account_id,
@@ -1336,6 +1355,32 @@ type ReactivateAccountUsersParams struct {
 
 func (q *Queries) ReactivateAccountUsers(ctx context.Context, arg ReactivateAccountUsersParams) (sql.Result, error) {
 	return q.db.ExecContext(ctx, reactivateAccountUsers, arg.AccountID, arg.Limit)
+}
+
+const reactivateRemovedAccountUser = `-- name: ReactivateRemovedAccountUser :exec
+UPDATE account_user
+SET status_code = 'active',
+    role_id = ?,
+    department_id = ?,
+    updated_at = NOW(3)
+WHERE account_id = ? AND user_id = ? AND status_code = 'removed'
+`
+
+type ReactivateRemovedAccountUserParams struct {
+	RoleID       sql.NullString
+	DepartmentID sql.NullString
+	AccountID    string
+	UserID       string
+}
+
+func (q *Queries) ReactivateRemovedAccountUser(ctx context.Context, arg ReactivateRemovedAccountUserParams) error {
+	_, err := q.db.ExecContext(ctx, reactivateRemovedAccountUser,
+		arg.RoleID,
+		arg.DepartmentID,
+		arg.AccountID,
+		arg.UserID,
+	)
+	return err
 }
 
 const resolveAccountUserID = `-- name: ResolveAccountUserID :one

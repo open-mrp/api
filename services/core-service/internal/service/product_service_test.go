@@ -49,6 +49,7 @@ type ProductSvcTestSuite struct {
 	productLineRepo     *repositorymock.MockProductLineRepo
 	deletedRecordRepo   *repositorymock.MockDeletedRecordRepo
 	accountRelationRepo *repositorymock.MockAccountRelationRepo
+	attributeRepo       *repositorymock.MockAttributeRepo
 	unitRepo            *repositorymock.MockUnitRepo
 	repoFactory         *factorymock.MockRepoFactory
 	mediatorFactory     *factorymock.MockMediatorFactory
@@ -65,6 +66,7 @@ func (s *ProductSvcTestSuite) SetupSuite() {
 	s.productLineRepo = repositorymock.NewMockProductLineRepo(s.ctrl)
 	s.deletedRecordRepo = repositorymock.NewMockDeletedRecordRepo(s.ctrl)
 	s.accountRelationRepo = repositorymock.NewMockAccountRelationRepo(s.ctrl)
+	s.attributeRepo = repositorymock.NewMockAttributeRepo(s.ctrl)
 	s.unitRepo = repositorymock.NewMockUnitRepo(s.ctrl)
 
 	s.repoFactory = factorymock.NewMockRepoFactory(s.ctrl)
@@ -74,6 +76,7 @@ func (s *ProductSvcTestSuite) SetupSuite() {
 	s.repoFactory.EXPECT().NewProductLineRepo().Return(s.productLineRepo).AnyTimes()
 	s.repoFactory.EXPECT().NewDeletedRecordRepo().Return(s.deletedRecordRepo).AnyTimes()
 	s.repoFactory.EXPECT().NewAccountRelationRepo().Return(s.accountRelationRepo).AnyTimes()
+	s.repoFactory.EXPECT().NewAttributeRepo().Return(s.attributeRepo).AnyTimes()
 	s.repoFactory.EXPECT().NewUnitRepo().Return(s.unitRepo).AnyTimes()
 	s.repoFactory.EXPECT().NewOutboxRepo().Return(&productStubOutboxRepo{}).AnyTimes()
 
@@ -305,6 +308,12 @@ func (s *ProductSvcTestSuite) TestCreateProduct_Success() {
 		}).
 		Times(1)
 
+	// Both attributes are existence-checked in the account scope before linking.
+	s.attributeRepo.EXPECT().
+		GetByIDs(gomock.Any(), "ac_test123", []string{"attr_red", "attr_large"}).
+		Return([]*domain.Attribute{{ID: "attr_red"}, {ID: "attr_large"}}, nil).
+		Times(1)
+
 	// Two attributes supplied → two AddAttribute calls, in order.
 	s.itemRepo.EXPECT().
 		AddAttribute(gomock.Any(), gomock.AssignableToTypeOf(domain.AddItemAttributeParams{})).
@@ -429,6 +438,13 @@ func (s *ProductSvcTestSuite) TestCreateProduct_SkipsBlankAttributeIDs() {
 		DoAndReturn(func(_ context.Context, _, itemID string, _ domain.CreateProductParams) (*domain.ProductFull, *apierror.APIError) {
 			return s.createdProduct(itemID), nil
 		}).
+		Times(1)
+
+	// Blank ids are ignored by the existence check; only the non-blank one is
+	// validated and then linked.
+	s.attributeRepo.EXPECT().
+		GetByIDs(gomock.Any(), "ac_test123", []string{"", "attr_only", ""}).
+		Return([]*domain.Attribute{{ID: "attr_only"}}, nil).
 		Times(1)
 
 	// Only the single non-blank attribute should be linked.
@@ -964,6 +980,12 @@ func (s *ProductSvcTestSuite) TestChangeProductLine_Success() {
 		Get(gomock.Any(), domain.GetProductFullParams{AccountID: "ac_test123", ProductID: "it_1"}).
 		Return(old, nil).
 		Times(1)
+	// The target product line's existence is validated in the account scope
+	// before the update is applied.
+	s.productLineRepo.EXPECT().
+		Get(gomock.Any(), domain.GetProductLineParams{AccountID: "ac_test123", ProductLineID: "pl_new"}).
+		Return(&domain.ProductLineFull{ID: "pl_new"}, nil).
+		Times(1)
 	s.productRepo.EXPECT().
 		ChangeProductLine(gomock.Any(), gomock.AssignableToTypeOf(domain.ChangeProductProductLineParams{})).
 		DoAndReturn(func(_ context.Context, params domain.ChangeProductProductLineParams) (*domain.ProductFull, *apierror.APIError) {
@@ -1052,10 +1074,11 @@ func (s *ProductSvcTestSuite) TestChangeProductLine_IdempotencyReplay_ReturnsCac
 }
 
 func (s *ProductSvcTestSuite) TestChangeProductLine_ProductLineCrossAccount_Rejected() {
-	// Express allowed binding a product to any productLineID without account
-	// scoping — a security gap. Go's repo scopes the UPDATE by account_id, so
-	// a cross-account target line surfaces as a repo-level not-found. This test
-	// locks that behavior in at the service boundary.
+	// Binding a product to an arbitrary productLineID without account scoping is
+	// a security gap. The target product line's existence is validated in the
+	// caller's account scope before the update, so a cross-account target line
+	// surfaces as a not-found and the update is never attempted. This test locks
+	// that behavior in at the service boundary.
 	ctx := productIdempotencyCtx(internalProductIdentityCtx("ac_test123"))
 
 	s.expectIdempotencyStarted()
@@ -1063,11 +1086,12 @@ func (s *ProductSvcTestSuite) TestChangeProductLine_ProductLineCrossAccount_Reje
 		Get(gomock.Any(), gomock.Any()).
 		Return(s.existingProduct("it_1", "SKU-1"), nil).
 		Times(1)
-	s.productRepo.EXPECT().
-		ChangeProductLine(gomock.Any(), gomock.Any()).
-		Return(nil, apierror.NewResourceNotFoundError("Product not found.")).
+	// The cross-account line is not visible in the caller's account, so the
+	// existence check rejects it and ChangeProductLine is never called.
+	s.productLineRepo.EXPECT().
+		Get(gomock.Any(), domain.GetProductLineParams{AccountID: "ac_test123", ProductLineID: "pl_from_other_account"}).
+		Return(nil, apierror.NewResourceNotFoundError("Product line not found.")).
 		Times(1)
-	s.expectCacheError()
 
 	result, err := s.productSvc.ChangeProductProductLine(ctx, domain.ChangeProductProductLineParams{
 		ProductID:     "it_1",

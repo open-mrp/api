@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -22,13 +23,14 @@ type DeleteProductionStepEndpoint struct{}
 
 func (e *DeleteProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteProductionStepRequest, *apiresource.EmptyResource] {
 	return (&apiendpoint.APIEndpoint[*DeleteProductionStepRequest, *apiresource.EmptyResource]{
-		Title:             "Delete Production Step",
-		Method:            http.MethodDelete,
-		Route:             "/v1/operations/production-steps/{id}",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
+		Title:               "Delete Production Step",
+		Method:              http.MethodDelete,
+		Route:               "/v1/operations/production-steps/{id}",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProductionSteps, Action: types.ActionDelete}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteProductionStepRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ProductionStepSvc).DeleteProductionStep
 		},

@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -49,13 +50,14 @@ type CheckoutSalesOrderEndpoint struct{}
 
 func (e *CheckoutSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*CheckoutSalesOrderRequest, *CheckoutSalesOrderResponse] {
 	return (&apiendpoint.APIEndpoint[*CheckoutSalesOrderRequest, *CheckoutSalesOrderResponse]{
-		Title:             "Checkout Sales Order",
-		Method:            http.MethodPost,
-		ContentType:       "application/json",
-		Route:             "/v1/sales/sales-orders/{id}/checkout",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
+		Title:               "Checkout Sales Order",
+		Method:              http.MethodPost,
+		ContentType:         "application/json",
+		Route:               "/v1/sales/sales-orders/{id}/checkout",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionUpdate}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CheckoutSalesOrderRequest) (*CheckoutSalesOrderResponse, *apierror.APIError) {
 			return svc.(SalesOrderSvc).CheckoutSalesOrder
 		},

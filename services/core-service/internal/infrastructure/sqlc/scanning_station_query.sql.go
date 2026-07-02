@@ -271,10 +271,14 @@ INSERT INTO scanning_station (
     scanning_station_type_code,
     material_check_required,
     department_id,
+    label_size_code,
+    label_type_code,
     account_id,
     created_at,
     updated_at
 ) VALUES (
+    ?,
+    ?,
     ?,
     ?,
     ?,
@@ -294,6 +298,8 @@ type InsertScanningStationParams struct {
 	ScanningStationTypeCode string
 	MaterialCheckRequired   bool
 	DepartmentID            string
+	LabelSizeCode           sql.NullString
+	LabelTypeCode           sql.NullString
 	AccountID               string
 }
 
@@ -305,6 +311,8 @@ func (q *Queries) InsertScanningStation(ctx context.Context, arg InsertScanningS
 		arg.ScanningStationTypeCode,
 		arg.MaterialCheckRequired,
 		arg.DepartmentID,
+		arg.LabelSizeCode,
+		arg.LabelTypeCode,
 		arg.AccountID,
 	)
 	return err

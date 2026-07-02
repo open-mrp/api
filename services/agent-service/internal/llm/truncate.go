@@ -2,6 +2,8 @@ package llm
 
 import (
 	"fmt"
+
+	"github.com/augno/api/shared/constants"
 )
 
 // ModelLimits defines the context window and output token reservation per model.
@@ -11,24 +13,30 @@ type ModelLimits struct {
 }
 
 // ModelContextLimits defines the maximum prompt token budget per model. These are set conservatively below the absolute API limits to leave headroom for token-estimation inaccuracy and output tokens.
-var ModelContextLimits = map[string]int{
-	"claude-sonnet-4":  180000,
-	"claude-haiku-4.5": 180000,
-	"gpt-4o":           115000,
-	"gpt-4o-mini":      115000,
+var ModelContextLimits = map[constants.Model]int{
+	constants.ModelClaudeOpus48:   180000,
+	constants.ModelClaudeSonnet46: 180000,
+	constants.ModelClaudeSonnet4:  180000,
+	constants.ModelClaudeHaiku45:  180000,
+	constants.ModelGPT55:          115000,
+	constants.ModelGPT4o:          115000,
+	constants.ModelGPT4oMini:      115000,
 }
 
 // ModelLimitsMap provides structured limits per model, including output reservation.
-var ModelLimitsMap = map[string]ModelLimits{
-	"claude-sonnet-4":  {ContextLimit: 180000, OutputReserve: 8192},
-	"claude-haiku-4.5": {ContextLimit: 180000, OutputReserve: 8192},
-	"gpt-4o":           {ContextLimit: 115000, OutputReserve: 4096},
-	"gpt-4o-mini":      {ContextLimit: 115000, OutputReserve: 4096},
+var ModelLimitsMap = map[constants.Model]ModelLimits{
+	constants.ModelClaudeOpus48:   {ContextLimit: 180000, OutputReserve: 8192},
+	constants.ModelClaudeSonnet46: {ContextLimit: 180000, OutputReserve: 8192},
+	constants.ModelClaudeSonnet4:  {ContextLimit: 180000, OutputReserve: 8192},
+	constants.ModelClaudeHaiku45:  {ContextLimit: 180000, OutputReserve: 8192},
+	constants.ModelGPT55:          {ContextLimit: 115000, OutputReserve: 4096},
+	constants.ModelGPT4o:          {ContextLimit: 115000, OutputReserve: 4096},
+	constants.ModelGPT4oMini:      {ContextLimit: 115000, OutputReserve: 4096},
 }
 
 // GetModelLimits returns the ModelLimits for the given model, falling back to defaults.
 func GetModelLimits(model string) ModelLimits {
-	if ml, ok := ModelLimitsMap[model]; ok {
+	if ml, ok := ModelLimitsMap[constants.Model(model)]; ok {
 		return ml
 	}
 	return ModelLimits{ContextLimit: defaultContextLimit, OutputReserve: 4096}
@@ -116,7 +124,7 @@ func estimateToolDefsTokens(tools []ToolDefinition) int {
 //  4. Drop old assistant+tool messages from the middle (user messages preserved)
 //  5. Drop old messages from the middle as a last resort
 func TruncateMessages(system string, messages []Message, tools []ToolDefinition, model string) []Message {
-	limit, ok := ModelContextLimits[model]
+	limit, ok := ModelContextLimits[constants.Model(model)]
 	if !ok {
 		limit = defaultContextLimit
 	}

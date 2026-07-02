@@ -40,7 +40,7 @@ func (*APIKeysEndpointGroup) Materialize(config *APIKeysEndpointGroupConfig) *AP
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
-		Title:        "API Key Management",
+		Title:        "API Key",
 		Description:  "Create and manage API keys for programmatic access.",
 		ResourceType: &apiresource.APIKey{},
 	}

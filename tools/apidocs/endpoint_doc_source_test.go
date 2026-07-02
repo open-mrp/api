@@ -188,10 +188,6 @@ func buildAllGroups() []apiendpoint.APIEndpointGroup {
 		}).APIEndpointGroup,
 		*(&httpgroup.AgentsEndpointGroup{}).Materialize(&httpgroup.AgentsEndpointGroupConfig{
 			AgentClient: agentClient,
-			CoreClient:  coreClient,
-		}).APIEndpointGroup,
-		*(&httpgroup.AgentAlertsEndpointGroup{}).Materialize(&httpgroup.AgentAlertsEndpointGroupConfig{
-			AgentClient: agentClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.AgentRunsEndpointGroup{}).Materialize(&httpgroup.AgentRunsEndpointGroupConfig{
 			AgentClient: agentClient,

@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -26,8 +27,12 @@ func (e *ListToolGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListToo
 		Route:             "/v1/ai/tool-groups",
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeToolGroup,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainAgents, Action: types.ActionRead},
+		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeToolGroup,
 			Fields:     []string{"tools"},

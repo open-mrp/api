@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -42,6 +43,9 @@ func (e *CreateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cr
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeProductionRun,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainProductionRuns, Action: types.ActionCreate},
+		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateProductionRunRequest) (*apiresource.ProductionRunDetail, *apierror.APIError) {
 			return svc.(ProductionRunSvc).CreateProductionRun
 		},

@@ -11,6 +11,8 @@ import (
 // routeSegmentToSampleID maps the route path segment immediately before a generic
 // {id} parameter to a documentation sample ID from apiresource.
 var routeSegmentToSampleID = map[string]string{
+	"announcements":           apiresource.SampleAnnouncementID,
+	"notifications":           apiresource.SampleNotificationID,
 	"units":                   apiresource.SampleUnitID,
 	"unit-groups":             apiresource.SampleUnitGroupID,
 	"properties":              apiresource.SamplePropertyID,
@@ -57,10 +59,10 @@ var routeSegmentToSampleID = map[string]string{
 	"scanning-stations":       apiresource.SampleScanningStationID,
 	"permission-groups":       apiresource.SamplePermissionGroupID,
 	"account-integrations":    apiresource.SampleAccountIntegrationID,
+	"sync":                    apiresource.SampleHubspotSyncJobID,
 	"account-prices":          apiresource.SampleAccountPriceID,
 	"account-users":           apiresource.SampleAccountUserID,
 	"agents":                  apiresource.SampleAgentDefinitionID,
-	"agent-alerts":            apiresource.SampleAgentAlertID,
 	"agent-runs":              apiresource.SampleAgentRunID,
 	"memories":                apiresource.SampleAgentMemoryID,
 	"agent-memories":          apiresource.SampleAgentMemoryID,
@@ -83,6 +85,11 @@ var routeSegmentToSampleID = map[string]string{
 	"inventory-change-logs":   apiresource.SampleInventoryChangeLogID,
 	"sales-order-statuses":    apiresource.SampleSalesOrderStatusID,
 	"edi-runs":                apiresource.SampleEDIRunID,
+	"conversations":           apiresource.SampleConversationID,
+	"messages":                apiresource.SampleMessageID,
+	"email-domains":           apiresource.SampleEmailDomainID,
+	"email-inboxes":           apiresource.SampleEmailInboxID,
+	"groups":                  apiresource.SampleMessagingGroupID,
 }
 
 // pathParamToSampleID maps non-generic path parameter names to sample IDs.
@@ -97,9 +104,12 @@ var pathParamToSampleID = map[string]string{
 	"shipment_id":        apiresource.SampleShipmentID,
 	"account_group_id":   apiresource.SampleAccountGroupID,
 	"session_id":         apiresource.SampleRegistrationSessionID,
+	"review_id":          apiresource.SampleHubspotCompanyReviewID,
 	"carrier_id":         apiresource.SampleCarrierID,
+	"pid":                apiresource.SampleConversationParticipantID,
 	"slug":               apiresource.SampleAccountPortalSlug,
 	"place_id":           "ChIJN1gggt_t2Z44AR4PVM_67p73Y",
+	"member_id":          apiresource.SampleMessagingGroupMemberID,
 }
 
 // fieldNameSampleIDs maps request struct field names to sample IDs when they do
@@ -129,7 +139,6 @@ var fieldNameSampleIDs = map[string]string{
 	"SandboxID":            apiresource.SampleSandboxID,
 	"AgentDefinitionID":    apiresource.SampleAgentDefinitionID,
 	"AgentRunID":           apiresource.SampleAgentRunID,
-	"AlertID":              apiresource.SampleAgentAlertID,
 	"ConsumptionID":        apiresource.SampleConsumptionID,
 	"ProductionStepID":     apiresource.SampleProductionStepID,
 	"ReceivingOrderID":     apiresource.SampleReceivingOrderID,
@@ -140,6 +149,8 @@ var fieldNameSampleIDs = map[string]string{
 	"AccountUserID":        apiresource.SampleAccountUserID,
 	"AccountPriceID":       apiresource.SampleAccountPriceID,
 	"AccountIntegrationID": apiresource.SampleAccountIntegrationID,
+	"JobID":                apiresource.SampleHubspotSyncJobID,
+	"ReviewID":             apiresource.SampleHubspotCompanyReviewID,
 	"AccountStatusID":      apiresource.SampleAccountStatusID,
 	"ProductLineID":        apiresource.SampleProductLineID,
 	"ProductTypeID":        apiresource.SampleProductTypeID,
@@ -159,6 +170,9 @@ var fieldNameSampleIDs = map[string]string{
 	"ChildAccountID":       apiresource.SampleCustomerID,
 	"AssociatedUnitID":     apiresource.SampleUnitID,
 	"LineID":               apiresource.SampleSalesOrderLineID,
+	"ConversationID":       apiresource.SampleConversationID,
+	"MessageID":            apiresource.SampleMessageID,
+	"ParticipantID":        apiresource.SampleConversationParticipantID,
 	"PlaceID":              "ChIJN1gggt_t2Z44AR4PVM_67p73Y",
 	"ID":                   "", // resolved from route segment when path param is "id"
 }

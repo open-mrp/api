@@ -16,17 +16,11 @@ type AgentsEndpointGroup struct {
 type AgentsEndpointGroupConfig struct {
 	// AgentClient (required) is the agent-service gRPC client.
 	AgentClient *grpcclient.AgentServiceClient
-
-	// CoreClient (required) is the core-service gRPC client.
-	CoreClient *grpcclient.CoreServiceClient
 }
 
 func (c *AgentsEndpointGroupConfig) validate() error {
 	if c.AgentClient == nil {
 		return fmt.Errorf("agents endpoint group: agent client is required")
-	}
-	if c.CoreClient == nil {
-		return fmt.Errorf("agents endpoint group: core client is required")
 	}
 	return nil
 }
@@ -38,11 +32,10 @@ func (*AgentsEndpointGroup) Materialize(config *AgentsEndpointGroupConfig) *Agen
 
 	agentSvc := agentep.NewAgentSvc(&agentep.AgentSvcConfig{
 		AgentClient: config.AgentClient.Client,
-		CoreClient:  config.CoreClient.Client,
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
-		Title:        "Agent Management",
+		Title:        "Agent",
 		Description:  "List, create, update, and delete agent definitions.",
 		ResourceType: &apiresource.AgentDefinition{},
 	}
@@ -54,7 +47,6 @@ func (*AgentsEndpointGroup) Materialize(config *AgentsEndpointGroupConfig) *Agen
 		apiendpoint.From(&agentep.UpdateAgentEndpoint{}).WithService(inner, agentSvc),
 		apiendpoint.From(&agentep.DeleteAgentEndpoint{}).WithService(inner, agentSvc),
 		apiendpoint.From(&agentep.UpdateAgentStatusEndpoint{}).WithService(inner, agentSvc),
-		apiendpoint.From(&agentep.ListUsageEndpoint{}).WithService(inner, agentSvc),
 	}
 
 	return &AgentsEndpointGroup{inner}

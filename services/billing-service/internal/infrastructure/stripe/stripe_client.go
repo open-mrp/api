@@ -546,8 +546,7 @@ func (c *stripeClientImpl) VoidBillingIntent(ctx context.Context, intentID strin
 	return nil
 }
 
-// parseBillingIntentConflict checks if a Stripe error indicates a billing intent
-// conflict and extracts the conflicting intent ID from the message.
+// parseBillingIntentConflict checks if a Stripe error indicates a billing intent conflict and extracts the conflicting intent ID from the message.
 func parseBillingIntentConflict(err error) (string, bool) {
 	if err == nil {
 		return "", false

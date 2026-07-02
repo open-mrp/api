@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -22,13 +23,15 @@ type DisableAccountUserEndpoint struct{}
 
 func (e *DisableAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*DisableAccountUserRequest, *apiresource.EmptyResource] {
 	return (&apiendpoint.APIEndpoint[*DisableAccountUserRequest, *apiresource.EmptyResource]{
-		Title:             "Disable Account User",
-		Method:            http.MethodPut,
-		ContentType:       "application/json",
-		Route:             "/v1/identity/account-users/{id}/actions/disable",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
+		Title:               "Disable Account User",
+		Method:              http.MethodPut,
+		ContentType:         "application/json",
+		Route:               "/v1/identity/account-users/{id}/actions/disable",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainTeamUsers, Action: types.ActionUpdate}, {Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate}},
+		Preview:             true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DisableAccountUserRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(AccountUserSvc).DisableAccountUser
 		},

@@ -40,6 +40,8 @@ func Run(
 	rootDir := flags.String("root", "..", "Project root directory (paths are relative to this)")
 	transformsPath := flags.String("transforms", "tools/apidocs/transforms.json", "Path to transforms JSON file")
 	httpieMode := flags.Bool("httpie", false, "Generate HTTPie workspace file instead of OpenAPI specs")
+	agentToolsMode := flags.Bool("agent-tools", false, "Generate the agent-service endpoint-tool catalog + seed instead of OpenAPI specs")
+	withAgentTools := flags.Bool("with-agent-tools", false, "Also generate the agent-service endpoint-tool catalog (after OpenAPI specs and Stainless configs)")
 	skipStainless := flags.Bool("skip-stainless", false, "Skip Stainless config generation (only generate OpenAPI specs)")
 	onlyStainless := flags.Bool("only-stainless", false, "Only generate Stainless configs (skip OpenAPI specs)")
 	quiet := flags.Bool("quiet", false, "Suppress informational output")
@@ -85,6 +87,10 @@ func Run(
 		return generateHTTPieWorkspace(groups, "httpie/httpie-space.json")
 	}
 
+	if *agentToolsMode {
+		return generateAgentTools(groups)
+	}
+
 	if !*onlyStainless {
 		start := time.Now()
 		if err := generate(groups, "specs/public_openapi_spec.json", true, transforms, ver); err != nil {
@@ -97,7 +103,15 @@ func Run(
 	}
 
 	if !*skipStainless {
-		return generateStainlessConfigs(groups, ver)
+		if err := generateStainlessConfigs(groups, ver); err != nil {
+			return err
+		}
+	}
+
+	if *withAgentTools {
+		if err := generateAgentTools(groups); err != nil {
+			return err
+		}
 	}
 
 	return nil

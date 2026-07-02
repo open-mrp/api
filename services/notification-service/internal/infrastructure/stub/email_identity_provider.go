@@ -1,0 +1,18 @@
+package stub
+
+import (
+	"context"
+
+	apierror "github.com/augno/api/shared/errors"
+)
+
+// EmailIdentityProvider is a no-op EmailIdentityProvider for test mode: it returns placeholder DKIM tokens and reports every domain as already verified so the bridge can be exercised without SES.
+type EmailIdentityProvider struct{}
+
+func (p *EmailIdentityProvider) RegisterDomain(_ context.Context, _ string) ([]string, *apierror.APIError) {
+	return []string{"stub1._domainkey", "stub2._domainkey", "stub3._domainkey"}, nil
+}
+
+func (p *EmailIdentityProvider) DomainVerified(_ context.Context, _ string) (bool, *apierror.APIError) {
+	return true, nil
+}

@@ -102,8 +102,7 @@ func (c *ExecuteProductionStepConsumer) handleMessage(ctx context.Context, msg a
 
 // executeProductionStep implements the core logic ported from dashboard/apps/api/src/repositories/production-step.repo.ts:1142-1434.
 //
-// Since batch service events always use partUsageType=produced and undo=false,
-// this consumer only implements that path.
+// Since batch service events always use partUsageType=produced and undo=false, this consumer only implements that path.
 func (c *ExecuteProductionStepConsumer) executeProductionStep(ctx context.Context, accountID string, evt domain.ExecuteProductionStepEvent) error {
 	stepRepo := c.repos.NewProductionStepQueryRepo()
 	unitConvRepo := c.repos.NewUnitConversionRepo()

@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -23,14 +24,16 @@ type ChangeProductProductLineEndpoint struct{}
 
 func (e *ChangeProductProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*ChangeProductProductLineRequest, *apiresource.Product] {
 	return (&apiendpoint.APIEndpoint[*ChangeProductProductLineRequest, *apiresource.Product]{
-		Title:             "Change Product Product Line",
-		Method:            http.MethodPut,
-		Route:             "/v1/catalog/products/{id}/product-line/{product_line_id}",
-		SDKMethodKey:      "change_product_line",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
+		Title:               "Change Product Product Line",
+		Method:              http.MethodPut,
+		Route:               "/v1/catalog/products/{id}/product-line/{product_line_id}",
+		SDKMethodKey:        "change_product_line",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionUpdate}},
+		Preview:             true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ChangeProductProductLineRequest) (*apiresource.Product, *apierror.APIError) {
 			return svc.(ProductSvc).ChangeProductProductLine
 		},

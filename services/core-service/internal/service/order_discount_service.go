@@ -132,8 +132,7 @@ func (s *orderDiscountSvcImpl) GetOrderDiscount(ctx context.Context, orderDiscou
 	})
 }
 
-// BatchGetOrderDiscountsByIDs returns order discounts matching the input IDs
-// that the caller's account is authorized to read. Account-scoped.
+// BatchGetOrderDiscountsByIDs returns order discounts matching the input IDs that the caller's account is authorized to read. Account-scoped.
 func (s *orderDiscountSvcImpl) BatchGetOrderDiscountsByIDs(ctx context.Context, ids []string) ([]*domain.OrderDiscount, *apierror.APIError) {
 	ctx, span := orderDiscountSvcTracer.Start(ctx, "service.order_discount.batch_get_by_ids")
 	defer span.End()

@@ -35,7 +35,7 @@ func (*PaymentTermsEndpointGroup) Materialize(config *PaymentTermsEndpointGroupC
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
-		Title:        "Payment Terms Management",
+		Title:        "Payment Terms",
 		Description:  "List and manage payment terms.",
 		ResourceType: &apiresource.PaymentTerm{},
 	}

@@ -7,6 +7,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -35,14 +36,15 @@ type ListProductionStepsEndpoint struct{}
 
 func (e *ListProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListProductionStepsRequest, *apiresource.List[apiresource.ProductionStep]] {
 	return (&apiendpoint.APIEndpoint[*ListProductionStepsRequest, *apiresource.List[apiresource.ProductionStep]]{
-		Title:             "List Production Steps",
-		Method:            http.MethodGet,
-		ContentType:       "application/json",
-		Route:             "/v1/operations/production-steps",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeProductionStep,
+		Title:               "List Production Steps",
+		Method:              http.MethodGet,
+		ContentType:         "application/json",
+		Route:               "/v1/operations/production-steps",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProductionSteps, Action: types.ActionRead}},
+		ObjectType:          constants.ObjectTypeProductionStep,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListProductionStepsRequest) (*apiresource.List[apiresource.ProductionStep], *apierror.APIError) {
 			return svc.(ProductionStepSvc).ListProductionSteps
 		},

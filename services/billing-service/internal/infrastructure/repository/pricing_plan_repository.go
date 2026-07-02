@@ -218,8 +218,7 @@ func (r *pricingPlanRepoImpl) GetPlanByTypeID(ctx context.Context, typeID string
 
 	row, err := r.queries.GetPlanByTypeID(ctx, typeID)
 	if err != nil {
-		span.RecordError(err)
-		return nil, db.MapSQLError(err)
+		return nil, tracing.Trace(span, db.MapSQLError(err))
 	}
 
 	plan := mapGetPlanByTypeIDRow(row)
@@ -232,8 +231,7 @@ func (r *pricingPlanRepoImpl) GetPlanByCode(ctx context.Context, planCode string
 
 	row, err := r.queries.GetPlanByCode(ctx, planCode)
 	if err != nil {
-		span.RecordError(err)
-		return nil, db.MapSQLError(err)
+		return nil, tracing.Trace(span, db.MapSQLError(err))
 	}
 
 	plan := mapGetPlanByCodeRow(row)
@@ -266,8 +264,7 @@ func (r *pricingPlanRepoImpl) ListPricingPlans(ctx context.Context, cursor *stri
 				Limit:           limit + 1,
 			})
 			if err != nil {
-				span.RecordError(err)
-				return nil, pagination.PageInfo{}, db.MapSQLError(err)
+				return nil, pagination.PageInfo{}, tracing.Trace(span, db.MapSQLError(err))
 			}
 			plans := make([]domain.PricingPlan, len(rows))
 			for i, row := range rows {
@@ -285,8 +282,7 @@ func (r *pricingPlanRepoImpl) ListPricingPlans(ctx context.Context, cursor *stri
 			Limit:           limit + 1,
 		})
 		if err != nil {
-			span.RecordError(err)
-			return nil, pagination.PageInfo{}, db.MapSQLError(err)
+			return nil, pagination.PageInfo{}, tracing.Trace(span, db.MapSQLError(err))
 		}
 		plans := make([]domain.PricingPlan, len(rows))
 		for i, row := range rows {
@@ -302,8 +298,7 @@ func (r *pricingPlanRepoImpl) ListPricingPlans(ctx context.Context, cursor *stri
 		Limit:       limit + 1,
 	})
 	if err != nil {
-		span.RecordError(err)
-		return nil, pagination.PageInfo{}, db.MapSQLError(err)
+		return nil, pagination.PageInfo{}, tracing.Trace(span, db.MapSQLError(err))
 	}
 
 	plans := make([]domain.PricingPlan, len(rows))
@@ -320,8 +315,7 @@ func (r *pricingPlanRepoImpl) GetPlanLimitsByTypeID(ctx context.Context, typeID 
 
 	rows, err := r.queries.GetPlanLimitsByTypeID(ctx, typeID)
 	if err != nil {
-		span.RecordError(err)
-		return nil, db.MapSQLError(err)
+		return nil, tracing.Trace(span, db.MapSQLError(err))
 	}
 
 	limits := make([]domain.PlanLimit, len(rows))

@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -21,13 +22,15 @@ type RetrieveItemEndpoint struct{}
 
 func (e *RetrieveItemEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveItemRequest, *apiresource.Item] {
 	return (&apiendpoint.APIEndpoint[*RetrieveItemRequest, *apiresource.Item]{
-		Title:             "Retrieve Item",
-		Method:            http.MethodGet,
-		ContentType:       "application/json",
-		Route:             "/v1/catalog/items/{id}",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
+		Title:               "Retrieve Item",
+		Method:              http.MethodGet,
+		ContentType:         "application/json",
+		Route:               "/v1/catalog/items/{id}",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionRead}},
+		Preview:             true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveItemRequest) (*apiresource.Item, *apierror.APIError) {
 			return svc.(ItemSvc).GetItem
 		},

@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -21,13 +22,15 @@ type RetrieveEmailLogEndpoint struct{}
 
 func (e *RetrieveEmailLogEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveEmailLogRequest, *apiresource.EmailLog] {
 	return (&apiendpoint.APIEndpoint[*RetrieveEmailLogRequest, *apiresource.EmailLog]{
-		Title:             "Retrieve Email Log",
-		Method:            http.MethodGet,
-		ContentType:       "application/json",
-		Route:             "/v1/core/email-logs/{id}",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
+		Title:               "Retrieve Email Log",
+		Method:              http.MethodGet,
+		ContentType:         "application/json",
+		Route:               "/v1/core/email-logs/{id}",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainEmailLogs, Action: types.ActionRead}},
+		Preview:             true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveEmailLogRequest) (*apiresource.EmailLog, *apierror.APIError) {
 			return svc.(EmailLogSvc).GetEmailLog
 		},

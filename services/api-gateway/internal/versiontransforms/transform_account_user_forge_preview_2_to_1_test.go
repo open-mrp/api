@@ -136,6 +136,36 @@ func TestTransform_NestedAccountUser_Downgrade(t *testing.T) {
 	}
 }
 
+func TestTransform_NestedAccountUserInContactMatch_Downgrade(t *testing.T) {
+	t.Parallel()
+	tr := &accountUserForgePreview2To1{}
+
+	payload := map[string]any{
+		"object": "list",
+		"data": []any{
+			map[string]any{
+				"id":           "acus_123",
+				"object":       "contact_match",
+				"email":        "jane@example.com",
+				"relationship": "customer",
+				"account_user": accountUserPreview2Payload(),
+			},
+		},
+	}
+
+	result := tr.Transform(constants.ObjectTypeContactMatch, payload)
+
+	cm := result["data"].([]any)[0].(map[string]any)
+	au := cm["account_user"].(map[string]any)
+	if au["name"] != "Jane Doe" {
+		t.Errorf("Expected nested contact_match account user name hoisted, got %v", au["name"])
+	}
+	user := au["user"].(map[string]any)
+	if user["object"] != "entity" {
+		t.Errorf("Expected nested user demoted to entity, got %v", user["object"])
+	}
+}
+
 func TestTransformRequest_IsIdentity(t *testing.T) {
 	t.Parallel()
 	tr := &accountUserForgePreview2To1{}
@@ -165,6 +195,11 @@ func TestForcedIncludes(t *testing.T) {
 	keys = tr.ForcedIncludes(constants.ObjectTypeCustomer)
 	if len(keys) != 1 || keys[0] != "defaults.sales_rep.user" {
 		t.Errorf("Expected forced include [defaults.sales_rep.user] for customer, got %v", keys)
+	}
+
+	keys = tr.ForcedIncludes(constants.ObjectTypeContactMatch)
+	if len(keys) != 1 || keys[0] != "account_user.user" {
+		t.Errorf("Expected forced include [account_user.user] for contact_match, got %v", keys)
 	}
 
 	if keys := tr.ForcedIncludes(constants.ObjectTypePurchaseOrder); keys != nil {

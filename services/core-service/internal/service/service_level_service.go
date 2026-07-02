@@ -290,6 +290,13 @@ func (s *serviceLevelSvcImpl) UpdateServiceLevel(ctx context.Context, params dom
 				return apiErr
 			}
 			if !isInCarrier {
+				wasDeleted, deletedCheckErr := txSvc.repos.NewDeletedRecordRepo().Exists(txCtx, constants.DeletedRecordResourceTypeServiceLevel, params.ServiceLevelID)
+				if deletedCheckErr != nil {
+					return deletedCheckErr
+				}
+				if wasDeleted {
+					return apierror.NewAlreadyDeletedError("This service level has already been deleted and can no longer be modified.")
+				}
 				return apierror.NewResourceNotFoundError("Service level not found.")
 			}
 
@@ -380,6 +387,13 @@ func (s *serviceLevelSvcImpl) DeleteServiceLevel(ctx context.Context, carrierID,
 		return tracing.Trace(span, apiErr)
 	}
 	if !isInCarrier {
+		wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeServiceLevel, serviceLevelID)
+		if deletedCheckErr != nil {
+			return tracing.Trace(span, deletedCheckErr)
+		}
+		if wasDeleted {
+			return tracing.Trace(span, apierror.NewAlreadyDeletedError("This service level has already been deleted and can no longer be modified."))
+		}
 		return tracing.Trace(span, apierror.NewResourceNotFoundError("Service level not found."))
 	}
 

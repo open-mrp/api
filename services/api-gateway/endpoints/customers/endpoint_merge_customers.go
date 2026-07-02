@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -36,14 +37,16 @@ type MergeCustomersEndpoint struct{}
 
 func (e *MergeCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*MergeCustomersRequest, *apiresource.Customer] {
 	return (&apiendpoint.APIEndpoint[*MergeCustomersRequest, *apiresource.Customer]{
-		Title:             "Merge Customers",
-		Method:            http.MethodPost,
-		Route:             "/v1/sales/customers/{id}/actions/merge",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeCustomer,
+		Title:               "Merge Customers",
+		Method:              http.MethodPost,
+		Route:               "/v1/sales/customers/{id}/actions/merge",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate}, {Domain: types.PermissionDomainCustomers, Action: types.ActionDelete}},
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeCustomer,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *MergeCustomersRequest) (*apiresource.Customer, *apierror.APIError) {
 			return svc.(CustomerSvc).MergeCustomers
 		},
@@ -55,6 +58,7 @@ func (e *MergeCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*MergeCu
 				"type",
 				"parent_account",
 				"freight_preferences.carrier",
+				"freight_preferences.carrier.service_levels",
 				"freight_preferences.service_level",
 				"defaults.payment_term",
 				"defaults.shipping_term",
@@ -68,6 +72,7 @@ func (e *MergeCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*MergeCu
 				"price_groups",
 				"child_accounts",
 				"credit_limit",
+				"credit_limit.unit",
 			},
 		}),
 	})

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/contracts"
@@ -39,6 +40,13 @@ func (m *mockEnqueuerRepo) MarkPublished(_ context.Context, ids []int64) error {
 	defer m.mu.Unlock()
 	m.publishedCalls = append(m.publishedCalls, ids)
 	return nil
+}
+
+// pushBatch appends a batch the poll loop can later acquire, safe to call while the loop runs.
+func (m *mockEnqueuerRepo) pushBatch(b []*OutboxMessage) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.batches = append(m.batches, b)
 }
 
 func (m *mockEnqueuerRepo) MarkFailed(_ context.Context, id int64, _ string, _ int) error {
@@ -103,7 +111,7 @@ func newTestEnqueuer(t *testing.T, repo OutboxEnqueuerRepo, broker MessageBroker
 		BatchSize:    batchSize,
 	}).WithDefaults()
 
-	e := &Enqueuer{config: *cfg, repo: repo, broker: broker}
+	e := &Enqueuer{config: *cfg, repo: repo, broker: broker, notify: make(chan struct{}, 1)}
 	e.ctx, e.cancel = context.WithCancel(context.Background())
 	t.Cleanup(e.cancel)
 	return e
@@ -203,6 +211,73 @@ func TestEnqueuerDrainPendingStopsOnContextCancel(t *testing.T) {
 
 	if repo.acquireCalls() != 0 {
 		t.Errorf("expected no acquire calls after cancel, got %d", repo.acquireCalls())
+	}
+}
+
+// Notify must be non-blocking and coalescing: repeated kicks collapse to a single pending wake-up
+// (the drain that follows handles every available row), and a kick on a nil enqueuer is a safe no-op.
+func TestEnqueuerNotifyIsNonBlockingAndCoalescing(t *testing.T) {
+	t.Parallel()
+
+	e := newTestEnqueuer(t, &mockEnqueuerRepo{}, &mockEnqueuerBroker{}, 1)
+
+	// Several kicks with no reader draining must not block and must leave exactly one pending signal.
+	for range 5 {
+		e.Notify()
+	}
+	if got := len(e.notify); got != 1 {
+		t.Fatalf("expected 1 coalesced pending notify, got %d", got)
+	}
+
+	// nil receiver must not panic.
+	var nilEnq *Enqueuer
+	nilEnq.Notify()
+}
+
+// A Notify kick must wake the poll loop to drain at once, even when the poll timer is set so far out
+// that it would never fire on its own — this is the property that lets a chat run start immediately
+// instead of waiting out the idle poll backoff.
+func TestEnqueuerNotifyWakesIdlePollLoop(t *testing.T) {
+	t.Parallel()
+
+	repo := &mockEnqueuerRepo{}
+	broker := &mockEnqueuerBroker{}
+
+	// Production mode (no test-mode initial drain) + an hour-long interval, so the ONLY thing that can
+	// trigger a drain during this test is a Notify kick.
+	cfg := (&EnqueuerConfig{
+		ServiceName:     "test-service",
+		PlatformMode:    constants.PlatformModeProduction,
+		BatchSize:       10,
+		PollInterval:    time.Hour,
+		MaxPollInterval: time.Hour,
+	}).WithDefaults()
+	e := &Enqueuer{config: *cfg, repo: repo, broker: broker, notify: make(chan struct{}, 1)}
+	e.ctx, e.cancel = context.WithCancel(context.Background())
+
+	e.wg.Add(1)
+	go e.pollLoop()
+	defer func() {
+		e.cancel()
+		e.wg.Wait()
+	}()
+
+	// Enqueue work while the loop idles on its hour-long timer, then kick it.
+	repo.pushBatch(outboxBatch(0, 3))
+	e.Notify()
+
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		broker.mu.Lock()
+		n := len(broker.published)
+		broker.mu.Unlock()
+		if n == 3 {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("Notify did not wake the poll loop: published %d/3 within deadline", n)
+		}
+		time.Sleep(2 * time.Millisecond)
 	}
 }
 

@@ -173,14 +173,13 @@ func TestRequestLogs_ListFilterByActorType(t *testing.T) {
 	}
 }
 
-func TestRequestLogs_ListFilterByActorTypeImpossible(t *testing.T) {
+func TestRequestLogs_ListFilterByInvalidActorTypeRejected(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(requestLogsPath, url.Values{"actor_types": {"zzz_no_such_type"}})
-	if err != nil {
-		t.Fatal("Request logs endpoint not accessible")
-		return
-	}
-	assertEmptyListData(t, list.Data, "Filtering by impossible actor_type should return no results")
+	// Unrecognized enum values in a list filter are rejected with 400 (platform convention).
+	status, body, err := apiClient.GetListRaw(requestLogsPath, url.Values{"actor_types": {"zzz_no_such_type"}})
+	require.NoError(t, err)
+	requireStatus(t, 400, status, body)
+	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 }
 
 func TestRequestLogs_ListFilterByActorIDSingle(t *testing.T) {
@@ -267,14 +266,13 @@ func TestRequestLogs_ListFilterByIdempotencyKeyImpossible(t *testing.T) {
 	assertEmptyListData(t, list.Data, "Filtering by non-existent idempotency key should return no results")
 }
 
-func TestRequestLogs_ListFilterNoResults(t *testing.T) {
+func TestRequestLogs_ListFilterByInvalidMethodRejected(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(requestLogsPath, url.Values{"methods": {"ZZZZ"}})
-	if err != nil {
-		t.Fatal("Request logs endpoint not accessible")
-		return
-	}
-	assertEmptyListData(t, list.Data, "Filtering by impossible method should return no results")
+	// Unrecognized enum values in a list filter are rejected with 400 (platform convention).
+	status, body, err := apiClient.GetListRaw(requestLogsPath, url.Values{"methods": {"ZZZZ"}})
+	require.NoError(t, err)
+	requireStatus(t, 400, status, body)
+	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 }
 
 // --- Multi-value filters ---
@@ -613,13 +611,15 @@ func TestRequestLogs_ListFilterByMultipleHosts(t *testing.T) {
 	}
 }
 
-func TestRequestLogs_ListFilterByMultipleErrorCodesAllImpossible(t *testing.T) {
+func TestRequestLogs_ListFilterByInvalidErrorCodesRejected(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
+	// Unrecognized enum values in a list filter are rejected with 400 (platform convention).
+	status, body, err := apiClient.GetListRaw(requestLogsPath, url.Values{
 		"error_codes": {"zzz_no_match_a", "zzz_no_match_b"},
 	})
 	require.NoError(t, err)
-	assertEmptyListData(t, list.Data, "Filter by impossible error codes should return no results")
+	requireStatus(t, 400, status, body)
+	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 }
 
 func TestRequestLogs_ListFilterByNormalizedRoutesImpossible(t *testing.T) {
@@ -1393,4 +1393,82 @@ func TestRequestLogs_FilterByDateRange_IncludesOnlyMiddle(t *testing.T) {
 	assertRequestLogMembership(t, list.Data,
 		[]string{SeedReqLogFilterDateMid},
 		[]string{SeedReqLogFilterDateOld, SeedReqLogFilterDateNew})
+}
+
+// --- Internal-infra scrubbing (security) ---
+
+// TestRequestLogs_InternalAgent_ScrubsInfra asserts that an agent request log
+// (identity_type=agent, made through the gateway's internal listener) never
+// exposes its internal host (k8s service name:port) or pod IP to customers, while
+// a user request log in the same cohort keeps its real public host + client IP.
+// Covers the list/get presenter chokepoint (requestLogFromProto).
+func TestRequestLogs_InternalAgent_ScrubsInfra(t *testing.T) {
+	t.Parallel()
+	list := fetchScopedRequestLogs(t, url.Values{
+		"normalized_routes": {SeedReqLogInfraScrubRoute},
+	})
+	require.Len(t, list.Data, 2, "infra-scrub cohort should be exactly the agent + user rows")
+
+	byID := make(map[string]map[string]any, len(list.Data))
+	for _, item := range list.Data {
+		m := parseJSON(item)
+		byID[jsonField(m, "id")] = m
+	}
+
+	agent := byID[SeedReqLogInfraAgentID]
+	require.NotNil(t, agent, "agent request log should be in scope")
+	assert.Equal(t, SeedReqLogRedactedHost, jsonField(agent, "host"),
+		"agent log host must be scrubbed to the redacted placeholder")
+	assert.NotEqual(t, SeedReqLogInfraAgentHost, jsonField(agent, "host"),
+		"internal k8s host must never appear in a customer-facing response")
+	assert.Nil(t, agent["client_ip"], "agent log client_ip (pod IP) must be scrubbed to null")
+
+	user := byID[SeedReqLogInfraUserID]
+	require.NotNil(t, user, "user request log should be in scope")
+	assert.Equal(t, SeedReqLogInfraUserHost, jsonField(user, "host"),
+		"user log host must be preserved (not over-scrubbed)")
+	assert.Equal(t, SeedReqLogInfraUserIP, jsonField(user, "client_ip"),
+		"user log client_ip must be preserved (not over-scrubbed)")
+}
+
+// TestRequestLogs_InternalAgent_ScrubsInfra_GetByID exercises the single-resource
+// retrieve presenter (which also surfaces request/response bodies) for the agent log.
+func TestRequestLogs_InternalAgent_ScrubsInfra_GetByID(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.GetListRaw(requestLogsPath+"/"+SeedReqLogInfraAgentID, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	got := parseJSON(body)
+	assert.Equal(t, SeedReqLogInfraAgentID, jsonField(got, "id"))
+	assert.Equal(t, SeedReqLogRedactedHost, jsonField(got, "host"))
+	assert.NotEqual(t, SeedReqLogInfraAgentHost, jsonField(got, "host"),
+		"internal k8s host must never appear on retrieve")
+	assert.Nil(t, got["client_ip"], "pod IP must be scrubbed to null on retrieve")
+	assert.Equal(t, SeedReqLogInfraAgentAPIVersion, jsonField(got, "api_version"),
+		"api_version is not internal infra and must remain visible on agent logs")
+}
+
+// TestRequestLogs_AgentActor_Hydrates asserts that an agent actor on a request log
+// is hydrated with its display name + handle(slug) from agent-service when expanded
+// via ?include=actor. Agent definitions live in a separate datastore, so (unlike
+// user/api_key actors) their names cannot be joined in platform-service and must be
+// resolved by the api-gateway presenter.
+func TestRequestLogs_AgentActor_Hydrates(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.GetListRaw(requestLogsPath+"/"+SeedReqLogInfraAgentID, url.Values{
+		"include": {"actor"},
+	})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	got := parseJSON(body)
+	actor := jsonObject(got, "actor")
+	require.NotNil(t, actor, "actor should be present with ?include=actor")
+	assert.Equal(t, "agent", jsonField(actor, "type"))
+	assert.Equal(t, SeedReqLogInfraAgentActorID, jsonField(actor, "id"))
+	assert.Equal(t, SeedReqLogInfraAgentActorName, jsonField(actor, "name"),
+		"agent actor name must be hydrated from agent-service")
+	assert.Equal(t, SeedReqLogInfraAgentActorHandle, jsonField(actor, "handle"),
+		"agent actor handle must be hydrated to the agent slug")
 }

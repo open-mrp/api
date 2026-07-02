@@ -35,7 +35,7 @@ func (*EDIDCLocationsEndpointGroup) Materialize(config *EDIDCLocationsEndpointGr
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
-		Title:        "DC Locations Management",
+		Title:        "DC Locations",
 		Description:  "List and manage DC locations.",
 		ResourceType: &apiresource.DCLocation{},
 	}

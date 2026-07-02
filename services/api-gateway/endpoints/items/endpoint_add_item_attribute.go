@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -25,13 +26,15 @@ type AddItemAttributeEndpoint struct{}
 
 func (e *AddItemAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddItemAttributeRequest, *apiresource.Item] {
 	return (&apiendpoint.APIEndpoint[*AddItemAttributeRequest, *apiresource.Item]{
-		Title:             "Add Item Attribute",
-		Method:            http.MethodPut,
-		ContentType:       "application/json",
-		Route:             "/v1/catalog/items/{id}/attributes/{attribute_id}",
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
+		Title:               "Add Item Attribute",
+		Method:              http.MethodPut,
+		ContentType:         "application/json",
+		Route:               "/v1/catalog/items/{id}/attributes/{attribute_id}",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionUpdate}},
+		Preview:             true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AddItemAttributeRequest) (*apiresource.Item, *apierror.APIError) {
 			return svc.(ItemSvc).AddItemAttribute
 		},

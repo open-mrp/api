@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -20,14 +21,16 @@ type ListPropertiesEndpoint struct{}
 
 func (e *ListPropertiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPropertiesRequest, *apiresource.List[apiresource.Property]] {
 	return (&apiendpoint.APIEndpoint[*ListPropertiesRequest, *apiresource.List[apiresource.Property]]{
-		Title:             "List Properties",
-		Method:            http.MethodGet,
-		ContentType:       "application/json",
-		Route:             CatalogPropertiesRoute,
-		SuccessStatusCode: http.StatusOK,
-		Public:            true,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeProperty,
+		Title:               "List Properties",
+		Method:              http.MethodGet,
+		ContentType:         "application/json",
+		Route:               CatalogPropertiesRoute,
+		SuccessStatusCode:   http.StatusOK,
+		Public:              true,
+		AgentTool:           true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProperties, Action: types.ActionRead}},
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeProperty,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeProperty,
 			Fields:     []string{"attributes"},

@@ -84,11 +84,7 @@ func NewRegistrationSessionSvc(config *RegistrationSessionSvcConfig) domain.Regi
 	}
 }
 
-func (c *RegistrationSessionSvcConfig) WithDefaults(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, coreClient domain.AuthCoreClient, billingClient domain.AuthBillingClient) *RegistrationSessionSvcConfig {
-	if c == nil {
-		c = &RegistrationSessionSvcConfig{}
-	}
-
+func BuildRegistrationSessionSvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, coreClient domain.AuthCoreClient, billingClient domain.AuthBillingClient) *RegistrationSessionSvcConfig {
 	repoFactory := repository.NewRepoFactory(queries)
 	notificationPublisher := event.NewOutboxNotificationPublisher()
 

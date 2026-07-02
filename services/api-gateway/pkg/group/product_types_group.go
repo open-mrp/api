@@ -35,7 +35,7 @@ func (*ProductTypesEndpointGroup) Materialize(config *ProductTypesEndpointGroupC
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
-		Title:        "Product Types Management",
+		Title:        "Product Types",
 		Description:  "List and manage product types.",
 		ResourceType: &apiresource.ProductType{},
 	}

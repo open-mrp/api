@@ -46,6 +46,14 @@ func (suite *APIKeyMedTestSuite) SetupSuite() {
 	suite.repoFactory = factorymock.NewMockRepoFactory(suite.ctrl)
 	suite.repoFactory.EXPECT().NewAPIKeyRepo().Return(suite.apiKeyRepo).AnyTimes()
 
+	// Create validates the referenced role exists via CountRoleForOwner before
+	// persisting; every Create test here uses a valid role, so default to a
+	// visible-role count of 1.
+	suite.apiKeyRepo.EXPECT().
+		CountRoleForOwner(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(int64(1), nil).
+		AnyTimes()
+
 	coreClientMock := clientmock.NewMockAuthCoreClient(suite.ctrl)
 
 	apiKeyMedConfig := &APIKeyMedConfig{

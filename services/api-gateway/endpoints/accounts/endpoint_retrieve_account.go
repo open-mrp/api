@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -21,14 +22,15 @@ type RetrieveAccountEndpoint struct{}
 
 func (e *RetrieveAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAccountRequest, *apiresource.Account] {
 	return (&apiendpoint.APIEndpoint[*RetrieveAccountRequest, *apiresource.Account]{
-		Title:             "Retrieve Account",
-		Method:            http.MethodGet,
-		Route:             "/v1/identity/accounts/{id}",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
-		ObjectType:        constants.ObjectTypeAccount,
+		Title:               "Retrieve Account",
+		Method:              http.MethodGet,
+		Route:               "/v1/identity/accounts/{id}",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		ObjectType:          constants.ObjectTypeAccount,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAccount, Action: types.ActionRead}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAccountRequest) (*apiresource.Account, *apierror.APIError) {
 			return svc.(AccountSvc).GetAccount
 		},

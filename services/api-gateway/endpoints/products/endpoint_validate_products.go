@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -32,14 +33,15 @@ type ValidateProductsEndpoint struct{}
 
 func (e *ValidateProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ValidateProductsRequest, *apiresource.ValidateProductsResponse] {
 	return (&apiendpoint.APIEndpoint[*ValidateProductsRequest, *apiresource.ValidateProductsResponse]{
-		Title:             "Validate Products",
-		Method:            http.MethodPut,
-		Route:             "/v1/catalog/products/actions/validate",
-		ContentType:       "application/json",
-		SuccessStatusCode: http.StatusOK,
-		ObjectType:        constants.ObjectTypeProduct,
-		Public:            false,
-		Preview:           true,
+		Title:               "Validate Products",
+		Method:              http.MethodPut,
+		Route:               "/v1/catalog/products/actions/validate",
+		ContentType:         "application/json",
+		SuccessStatusCode:   http.StatusOK,
+		ObjectType:          constants.ObjectTypeProduct,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionRead}, {Domain: types.PermissionDomainCustomers, Action: types.ActionRead}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionRead}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ValidateProductsRequest) (*apiresource.ValidateProductsResponse, *apierror.APIError) {
 			return svc.(ProductSvc).ValidateProducts
 		},

@@ -238,6 +238,230 @@ func (mr *MockShippoClientFactoryMockRecorder) Build(apiKey any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Build", reflect.TypeOf((*MockShippoClientFactory)(nil).Build), apiKey)
 }
 
+// MockHubspotClient is a mock of HubspotClient interface.
+type MockHubspotClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockHubspotClientMockRecorder
+	isgomock struct{}
+}
+
+// MockHubspotClientMockRecorder is the mock recorder for MockHubspotClient.
+type MockHubspotClientMockRecorder struct {
+	mock *MockHubspotClient
+}
+
+// NewMockHubspotClient creates a new mock instance.
+func NewMockHubspotClient(ctrl *gomock.Controller) *MockHubspotClient {
+	mock := &MockHubspotClient{ctrl: ctrl}
+	mock.recorder = &MockHubspotClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockHubspotClient) EXPECT() *MockHubspotClientMockRecorder {
+	return m.recorder
+}
+
+// Associate mocks base method.
+func (m *MockHubspotClient) Associate(ctx context.Context, fromType, fromID, toType, toID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Associate", ctx, fromType, fromID, toType, toID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Associate indicates an expected call of Associate.
+func (mr *MockHubspotClientMockRecorder) Associate(ctx, fromType, fromID, toType, toID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Associate", reflect.TypeOf((*MockHubspotClient)(nil).Associate), ctx, fromType, fromID, toType, toID)
+}
+
+// CreateCompany mocks base method.
+func (m *MockHubspotClient) CreateCompany(ctx context.Context, company domain.HubspotCompany) (*domain.HubspotCompany, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateCompany", ctx, company)
+	ret0, _ := ret[0].(*domain.HubspotCompany)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CreateCompany indicates an expected call of CreateCompany.
+func (mr *MockHubspotClientMockRecorder) CreateCompany(ctx, company any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateCompany", reflect.TypeOf((*MockHubspotClient)(nil).CreateCompany), ctx, company)
+}
+
+// CreateDeal mocks base method.
+func (m *MockHubspotClient) CreateDeal(ctx context.Context, deal domain.HubspotDeal) (*domain.HubspotDeal, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateDeal", ctx, deal)
+	ret0, _ := ret[0].(*domain.HubspotDeal)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CreateDeal indicates an expected call of CreateDeal.
+func (mr *MockHubspotClientMockRecorder) CreateDeal(ctx, deal any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDeal", reflect.TypeOf((*MockHubspotClient)(nil).CreateDeal), ctx, deal)
+}
+
+// EnsureDealProperties mocks base method.
+func (m *MockHubspotClient) EnsureDealProperties(ctx context.Context) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureDealProperties", ctx)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// EnsureDealProperties indicates an expected call of EnsureDealProperties.
+func (mr *MockHubspotClientMockRecorder) EnsureDealProperties(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureDealProperties", reflect.TypeOf((*MockHubspotClient)(nil).EnsureDealProperties), ctx)
+}
+
+// ListCompanies mocks base method.
+func (m *MockHubspotClient) ListCompanies(ctx context.Context, cursor string) ([]domain.HubspotCompany, string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListCompanies", ctx, cursor)
+	ret0, _ := ret[0].([]domain.HubspotCompany)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(*apierror.APIError)
+	return ret0, ret1, ret2
+}
+
+// ListCompanies indicates an expected call of ListCompanies.
+func (mr *MockHubspotClientMockRecorder) ListCompanies(ctx, cursor any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCompanies", reflect.TypeOf((*MockHubspotClient)(nil).ListCompanies), ctx, cursor)
+}
+
+// SearchCompaniesByDomain mocks base method.
+func (m *MockHubspotClient) SearchCompaniesByDomain(ctx context.Context, arg1 string) ([]domain.HubspotCompany, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SearchCompaniesByDomain", ctx, arg1)
+	ret0, _ := ret[0].([]domain.HubspotCompany)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// SearchCompaniesByDomain indicates an expected call of SearchCompaniesByDomain.
+func (mr *MockHubspotClientMockRecorder) SearchCompaniesByDomain(ctx, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchCompaniesByDomain", reflect.TypeOf((*MockHubspotClient)(nil).SearchCompaniesByDomain), ctx, arg1)
+}
+
+// SearchCompaniesByName mocks base method.
+func (m *MockHubspotClient) SearchCompaniesByName(ctx context.Context, name string) ([]domain.HubspotCompany, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SearchCompaniesByName", ctx, name)
+	ret0, _ := ret[0].([]domain.HubspotCompany)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// SearchCompaniesByName indicates an expected call of SearchCompaniesByName.
+func (mr *MockHubspotClientMockRecorder) SearchCompaniesByName(ctx, name any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchCompaniesByName", reflect.TypeOf((*MockHubspotClient)(nil).SearchCompaniesByName), ctx, name)
+}
+
+// SearchDealBySalesOrderID mocks base method.
+func (m *MockHubspotClient) SearchDealBySalesOrderID(ctx context.Context, salesOrderID string) (*domain.HubspotDeal, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SearchDealBySalesOrderID", ctx, salesOrderID)
+	ret0, _ := ret[0].(*domain.HubspotDeal)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// SearchDealBySalesOrderID indicates an expected call of SearchDealBySalesOrderID.
+func (mr *MockHubspotClientMockRecorder) SearchDealBySalesOrderID(ctx, salesOrderID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchDealBySalesOrderID", reflect.TypeOf((*MockHubspotClient)(nil).SearchDealBySalesOrderID), ctx, salesOrderID)
+}
+
+// UpdateCompany mocks base method.
+func (m *MockHubspotClient) UpdateCompany(ctx context.Context, id string, company domain.HubspotCompany) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateCompany", ctx, id, company)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// UpdateCompany indicates an expected call of UpdateCompany.
+func (mr *MockHubspotClientMockRecorder) UpdateCompany(ctx, id, company any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCompany", reflect.TypeOf((*MockHubspotClient)(nil).UpdateCompany), ctx, id, company)
+}
+
+// UpdateDeal mocks base method.
+func (m *MockHubspotClient) UpdateDeal(ctx context.Context, id string, deal domain.HubspotDeal) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateDeal", ctx, id, deal)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// UpdateDeal indicates an expected call of UpdateDeal.
+func (mr *MockHubspotClientMockRecorder) UpdateDeal(ctx, id, deal any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDeal", reflect.TypeOf((*MockHubspotClient)(nil).UpdateDeal), ctx, id, deal)
+}
+
+// UpsertContactByEmail mocks base method.
+func (m *MockHubspotClient) UpsertContactByEmail(ctx context.Context, contact domain.HubspotContact) (*domain.HubspotContact, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpsertContactByEmail", ctx, contact)
+	ret0, _ := ret[0].(*domain.HubspotContact)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// UpsertContactByEmail indicates an expected call of UpsertContactByEmail.
+func (mr *MockHubspotClientMockRecorder) UpsertContactByEmail(ctx, contact any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertContactByEmail", reflect.TypeOf((*MockHubspotClient)(nil).UpsertContactByEmail), ctx, contact)
+}
+
+// MockHubspotClientFactory is a mock of HubspotClientFactory interface.
+type MockHubspotClientFactory struct {
+	ctrl     *gomock.Controller
+	recorder *MockHubspotClientFactoryMockRecorder
+	isgomock struct{}
+}
+
+// MockHubspotClientFactoryMockRecorder is the mock recorder for MockHubspotClientFactory.
+type MockHubspotClientFactoryMockRecorder struct {
+	mock *MockHubspotClientFactory
+}
+
+// NewMockHubspotClientFactory creates a new mock instance.
+func NewMockHubspotClientFactory(ctrl *gomock.Controller) *MockHubspotClientFactory {
+	mock := &MockHubspotClientFactory{ctrl: ctrl}
+	mock.recorder = &MockHubspotClientFactoryMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockHubspotClientFactory) EXPECT() *MockHubspotClientFactoryMockRecorder {
+	return m.recorder
+}
+
+// Build mocks base method.
+func (m *MockHubspotClientFactory) Build(accessToken string) domain.HubspotClient {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Build", accessToken)
+	ret0, _ := ret[0].(domain.HubspotClient)
+	return ret0
+}
+
+// Build indicates an expected call of Build.
+func (mr *MockHubspotClientFactoryMockRecorder) Build(accessToken any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Build", reflect.TypeOf((*MockHubspotClientFactory)(nil).Build), accessToken)
+}
+
 // MockStripeCheckoutClient is a mock of StripeCheckoutClient interface.
 type MockStripeCheckoutClient struct {
 	ctrl     *gomock.Controller

@@ -33,10 +33,6 @@ type APIKey struct {
 	RedactedValue string `json:"redacted_value" validate:"required"`
 	// Role assigned to the key, which determines the permissions of requests made with it.
 	Role *Role `json:"role" expandable:"true"`
-	// Creation timestamp.
-	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// Last updated timestamp.
-	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 	// When the key was last used to authenticate a request.
 	//
 	// Updated at most once every 24 hours, so it may lag the key's most recent use. `null` if the key has never been used.
@@ -49,6 +45,10 @@ type APIKey struct {
 	//
 	// A future timestamp means revocation was scheduled (for example, during rotation) and the key continues to authenticate requests until that time. `null` if the key has not been revoked.
 	RevokedAt *time.Time `json:"revoked_at"`
+	// Creation timestamp.
+	CreatedAt time.Time `json:"created_at" validate:"required"`
+	// Last updated timestamp.
+	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
 // Result of creating an API key, with the full secret value.
@@ -69,11 +69,11 @@ var SampleAPIKey = &APIKey{
 	Name:          SampleAPIKeyName,
 	RedactedValue: SampleProdAPIKeyRedactedValue,
 	Role:          SampleRole,
-	CreatedAt:     timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:     timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 	LastUsedAt:    timeutil.TimestampToTimePtr(sampleUpdatedAtTimestamp),
 	ExpiresAt:     timeutil.TimestampToTimePtr(sampleExpiresAtTimestamp),
 	RevokedAt:     nil,
+	CreatedAt:     timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:     timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 var SampleCreatedAPIKey = &CreatedAPIKey{

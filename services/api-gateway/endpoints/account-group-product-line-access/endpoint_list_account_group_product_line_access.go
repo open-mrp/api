@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -28,6 +29,9 @@ func (e *ListAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint.A
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeAccountGroupProductLineAccess,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainProductLineAccess, Action: types.ActionRead},
+		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAccountGroupProductLineAccessRequest) (*apiresource.List[apiresource.AccountGroupProductLineAccess], *apierror.APIError) {
 			return svc.(AccountGroupProductLineAccessSvc).ListAccountGroupProductLineAccess
 		},

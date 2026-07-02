@@ -101,7 +101,7 @@ func extractIdentityAttrs(identity *types.Identity) []slog.Attr {
 		}
 	}
 
-	if identity.Target != nil && identity.Target.AccountID != "" {
+	if identity.IsTargetAccountSet() {
 		attrs = append(attrs, slog.String("target_account_id", identity.Target.AccountID))
 	}
 

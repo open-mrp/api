@@ -14,8 +14,7 @@ import (
 
 var apiKeyMedTracer = tracing.GetTracer("auth-service.api_key_mediator")
 
-// maxRevokeScheduleWindow caps how far in the future a rotation may schedule the
-// old key's revocation. Beyond this, the request is rejected.
+// maxRevokeScheduleWindow caps how far in the future a rotation may schedule the old key's revocation. Beyond this, the request is rejected.
 const maxRevokeScheduleWindow = 30 * 24 * time.Hour
 
 type apiKeyMedImpl struct {
@@ -137,6 +136,17 @@ func (s *apiKeyMedImpl) Create(ctx context.Context, input domain.APIKeyCreateInp
 	ctx, span := apiKeyMedTracer.Start(ctx, "mediator.api_key.create")
 	defer span.End()
 
+	apiKeyRepo := s.repos.NewAPIKeyRepo()
+
+	// Validate the referenced role exists and is visible to the owner account before persisting; otherwise the key would reference a nonexistent role and could never resolve permissions.
+	roleCount, apiErr := apiKeyRepo.CountRoleForOwner(ctx, input.RoleID, input.OwnerAccountID)
+	if apiErr != nil {
+		return "", nil, tracing.Trace(span, apiErr)
+	}
+	if roleCount == 0 {
+		return "", nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Role not found."))
+	}
+
 	parsedKey, apiErr := apikey.GenParsedAPIKey(input.AccountMode, nil)
 	if apiErr != nil {
 		return "", nil, apiErr
@@ -161,7 +171,6 @@ func (s *apiKeyMedImpl) Create(ctx context.Context, input domain.APIKeyCreateInp
 		ExpiresAt:      input.ExpiresAt,
 	}
 
-	apiKeyRepo := s.repos.NewAPIKeyRepo()
 	_, apiErr = apiKeyRepo.Create(ctx, apiKeyModel)
 	if apiErr != nil {
 		return "", nil, apiErr
@@ -178,9 +187,7 @@ func (s *apiKeyMedImpl) Create(ctx context.Context, input domain.APIKeyCreateInp
 
 // Revoke revokes an API key by its type ID.
 //
-// Scoped to ownerAccountID: returns a not-found error if the key does not
-// exist for the given owner. This enforces tenant boundaries at the
-// persistence layer as a backstop to service-layer ownership checks.
+// Scoped to ownerAccountID: returns a not-found error if the key does not exist for the given owner. This enforces tenant boundaries at the persistence layer as a backstop to service-layer ownership checks.
 func (s *apiKeyMedImpl) Revoke(ctx context.Context, apiKeyTypeID string, ownerAccountID string) *apierror.APIError {
 	ctx, span := apiKeyMedTracer.Start(ctx, "mediator.api_key.revoke")
 	defer span.End()
@@ -189,8 +196,7 @@ func (s *apiKeyMedImpl) Revoke(ctx context.Context, apiKeyTypeID string, ownerAc
 	return s.repos.NewAPIKeyRepo().Revoke(ctx, apiKeyTypeID, ownerAccountID, nil)
 }
 
-// Rotate revokes the specified API key and creates a replacement with the same name,
-// owner account, and role.
+// Rotate revokes the specified API key and creates a replacement with the same name, owner account, and role.
 //
 //  1. Look up the existing API key by type ID.
 //  2. Revoke the existing key. By default revocation is immediate; a future
@@ -199,8 +205,7 @@ func (s *apiKeyMedImpl) Revoke(ctx context.Context, apiKeyTypeID string, ownerAc
 //     past/now RevokeAt collapses to immediate.
 //  3. Create a new key using the old key's properties, with an optionally overridden expiration.
 //
-// Scoped to OwnerAccountID: returns a not-found error if the key does not
-// exist for the requested owner.
+// Scoped to OwnerAccountID: returns a not-found error if the key does not exist for the requested owner.
 func (s *apiKeyMedImpl) Rotate(ctx context.Context, input domain.APIKeyRotateInput) (string, *apikey.APIKey, *apierror.APIError) {
 	ctx, span := apiKeyMedTracer.Start(ctx, "mediator.api_key.rotate")
 	defer span.End()
@@ -219,10 +224,7 @@ func (s *apiKeyMedImpl) Rotate(ctx context.Context, input domain.APIKeyRotateInp
 		return "", nil, apierror.NewRevokedAPIKeyError(apikey.ErrAPIKeyRevoked)
 	}
 
-	// Determine when the old key is revoked. Default is immediate (nil — the
-	// database clock is used); a future RevokeAt schedules revocation (the old
-	// key keeps working until then), capped at maxRevokeScheduleWindow. A
-	// past/now RevokeAt collapses to immediate.
+	// Determine when the old key is revoked. Default is immediate (nil — the database clock is used); a future RevokeAt schedules revocation (the old key keeps working until then), capped at maxRevokeScheduleWindow. A past/now RevokeAt collapses to immediate.
 	var revokeAt *time.Time
 	now := time.Now().UTC()
 	if input.RevokeAt != nil && input.RevokeAt.After(now) {

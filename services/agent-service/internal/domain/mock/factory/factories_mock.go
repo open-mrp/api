@@ -69,20 +69,6 @@ func (mr *MockRepoFactoryMockRecorder) NewAgentActionRepo() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewAgentActionRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewAgentActionRepo))
 }
 
-// NewAgentAlertRepo mocks base method.
-func (m *MockRepoFactory) NewAgentAlertRepo() domain.AgentAlertRepo {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewAgentAlertRepo")
-	ret0, _ := ret[0].(domain.AgentAlertRepo)
-	return ret0
-}
-
-// NewAgentAlertRepo indicates an expected call of NewAgentAlertRepo.
-func (mr *MockRepoFactoryMockRecorder) NewAgentAlertRepo() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewAgentAlertRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewAgentAlertRepo))
-}
-
 // NewAgentArtifactRepo mocks base method.
 func (m *MockRepoFactory) NewAgentArtifactRepo() domain.AgentArtifactRepo {
 	m.ctrl.T.Helper()
@@ -235,18 +221,4 @@ func (m *MockRepoFactory) NewOutboxRepo() messaging.OutboxRepo {
 func (mr *MockRepoFactoryMockRecorder) NewOutboxRepo() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewOutboxRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewOutboxRepo))
-}
-
-// NewToolDefinitionRepo mocks base method.
-func (m *MockRepoFactory) NewToolDefinitionRepo() domain.ToolDefinitionRepo {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewToolDefinitionRepo")
-	ret0, _ := ret[0].(domain.ToolDefinitionRepo)
-	return ret0
-}
-
-// NewToolDefinitionRepo indicates an expected call of NewToolDefinitionRepo.
-func (mr *MockRepoFactoryMockRecorder) NewToolDefinitionRepo() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewToolDefinitionRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewToolDefinitionRepo))
 }

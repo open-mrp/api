@@ -128,6 +128,22 @@ func (s *productSvcImpl) GetCustomerByEmail(ctx context.Context, ownerAccountID,
 	return s.repos.NewAccountRelationRepo().FindCustomerByEmail(ctx, ownerAccountID, email)
 }
 
+// FindContactsByEmail resolves an email to the contacts (account users) on accounts the caller has a relationship with — its customers, suppliers, or its own account. The owner account is taken from the request identity.
+func (s *productSvcImpl) FindContactsByEmail(ctx context.Context, email string) ([]domain.ContactMatch, *apierror.APIError) {
+	ctx, span := productSvcTracer.Start(ctx, "service.product.find_contacts_by_email")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainCustomers, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return s.repos.NewAccountRelationRepo().FindContactsByEmail(ctx, identity.Target.AccountID, email)
+}
+
 // ListProductsFull returns a paginated list of products for the caller's account. Supports both internal and customer actors. Customers only see portal-ready products from their accessible product lines.
 func (s *productSvcImpl) ListProductsFull(ctx context.Context, params domain.ListProductsFullParams) (*domain.ListProductsFullResult, *apierror.APIError) {
 	ctx, span := productSvcTracer.Start(ctx, "service.product.list_full")
@@ -431,12 +447,39 @@ func (s *productSvcImpl) CreateProduct(ctx context.Context, params domain.Create
 				return apiErr
 			}
 
+			// Validate the referenced product line exists for the account before persisting so a bogus product_line_id is rejected instead of stored as a dangling reference.
+			if params.ProductLineID != nil && *params.ProductLineID != "" {
+				if _, apiErr := txSvc.repos.NewProductLineRepo().Get(txCtx, domain.GetProductLineParams{AccountID: params.AccountID, ProductLineID: *params.ProductLineID}); apiErr != nil {
+					return apiErr
+				}
+			}
+
 			// Insert product record.
 			created, apiErr := txProductRepo.Create(txCtx, productID, itemID, params)
 			if apiErr != nil {
 				return apiErr
 			}
 			result = created
+
+			// Validate all caller-supplied attributes exist for the account before linking so bogus attribute_ids are rejected instead of silently dropped (and no orphaned join rows are created).
+			if len(params.AttributeIDs) > 0 {
+				found, apiErr := txSvc.repos.NewAttributeRepo().GetByIDs(txCtx, params.AccountID, params.AttributeIDs)
+				if apiErr != nil {
+					return apiErr
+				}
+				got := make(map[string]struct{}, len(found))
+				for _, a := range found {
+					got[a.ID] = struct{}{}
+				}
+				for _, attrID := range params.AttributeIDs {
+					if attrID == "" {
+						continue
+					}
+					if _, ok := got[attrID]; !ok {
+						return apierror.NewResourceNotFoundError("Attribute not found.")
+					}
+				}
+			}
 
 			// Link caller-supplied attributes to the new item (matches Dashboard behavior).
 			for _, attrID := range params.AttributeIDs {
@@ -733,6 +776,13 @@ func (s *productSvcImpl) ChangeProductProductLine(ctx context.Context, params do
 		})
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
+		}
+
+		// Validate the target product line exists for the account so a nonexistent product_line_id 404s instead of persisting a dangling reference.
+		if params.ProductLineID != "" {
+			if _, apiErr := s.repos.NewProductLineRepo().Get(ctx, domain.GetProductLineParams{AccountID: params.AccountID, ProductLineID: params.ProductLineID}); apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
 		}
 
 		var result *domain.ProductFull

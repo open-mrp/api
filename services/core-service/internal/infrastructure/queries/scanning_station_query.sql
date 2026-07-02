@@ -95,6 +95,8 @@ INSERT INTO scanning_station (
     scanning_station_type_code,
     material_check_required,
     department_id,
+    label_size_code,
+    label_type_code,
     account_id,
     created_at,
     updated_at
@@ -105,6 +107,8 @@ INSERT INTO scanning_station (
     sqlc.arg('scanning_station_type_code'),
     sqlc.arg('material_check_required'),
     sqlc.arg('department_id'),
+    sqlc.narg('label_size_code'),
+    sqlc.narg('label_type_code'),
     sqlc.arg('account_id'),
     NOW(3),
     NOW(3)

@@ -17,21 +17,14 @@ type AgentAction struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=agent_action"`
-	// Agent run this action belongs to.
-	Run *AgentRun `json:"run" validate:"required" expandable:"true"`
-	// Slug of the tool the agent invoked for this action.
+	// The tool the agent invoked for this action.
 	//
-	// - `save_memory`: store an observation about a customer or product.
-	// - `update_memory`: update an existing memory entry.
-	// - `delete_memory`: delete a memory entry.
-	// - `create_alert`: raise an alert that requires human attention.
-	// - `search_products`: search for products by keyword.
-	// - `list_products`: list all products in the account catalog.
-	// - `lookup_customer`: look up a customer by email.
 	// - `create_artifact`: create an artifact such as a report, document, or data export.
 	// - `read_doc`: read Augno documentation pages.
 	// - `fetch_url`: fetch content from a public URL.
-	ToolSlug constants.ToolSlug `json:"tool_slug" validate:"required"`
+	// - `draft_reply`: propose a reply to the case's external party as a draft held for human approval (not sent).
+	// - `send_email`: send an email reply through the conversation's bound inbox.
+	Tool constants.Tool `json:"tool" validate:"required"`
 	// Current action status.
 	//
 	// - `pending_review`: awaiting human review before it can execute.
@@ -45,20 +38,22 @@ type AgentAction struct {
 	Label *string `json:"label"`
 	// Longer description of what the action does.
 	Description *string `json:"description"`
+	// Agent run this action belongs to.
+	Run *AgentRun `json:"run" validate:"required" expandable:"true"`
 	// Arguments passed to the tool, as JSON.
 	//
-	// Shape depends on `tool_slug`.
+	// Shape depends on `tool`.
 	Input json.RawMessage `json:"input"`
 	// Result returned by the tool, as JSON.
 	//
-	// Recorded when the tool runs, so it is present even while the action is still `pending_review` or `auto_approved`; the shape depends on `tool_slug`, and it is `{}` when the tool returned no output.
+	// Recorded when the tool runs, so it is present even while the action is still `pending_review` or `auto_approved`; the shape depends on `tool`, and it is `{}` when the tool returned no output.
 	Output json.RawMessage `json:"output"`
 	// Error message if the action failed.
 	ErrorMessage *string `json:"error_message"`
-	// The resource this action operated on, when the tool targets a specific entity (e.g. the customer for `lookup_customer`).
+	// The resource this action operated on, when the tool targets a specific entity such as a customer or product.
 	Entity *Entity `json:"entity"`
 	// Whether this action must be reviewed by a human before it can execute.
-	RequiresReview bool `json:"requires_review"`
+	ReviewRequirement constants.ReviewRequirement `json:"review_requirement" validate:"required"`
 	// When a human review decision was recorded for the action.
 	ReviewedAt *time.Time `json:"reviewed_at"`
 	// Who reviewed the action.
@@ -72,17 +67,15 @@ type AgentAction struct {
 }
 
 var SampleAgentAction = &AgentAction{
-	ID:     SampleAgentActionID,
-	Object: constants.ObjectTypeAgentAction,
-	Run: &AgentRun{
-		ID:     SampleAgentRunID,
-		Object: constants.ObjectTypeAgentRun,
-	},
-	ToolSlug:  constants.ToolSlugSearchProducts,
-	Status:    constants.AgentActionStatusExecuted,
-	Label:     new("Search Products"),
-	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:                SampleAgentActionID,
+	Object:            constants.ObjectTypeAgentAction,
+	Tool:              constants.ToolReadDoc,
+	Status:            constants.AgentActionStatusExecuted,
+	Label:             new("Read Doc"),
+	Run:               &AgentRun{ID: SampleAgentRunID, Object: constants.ObjectTypeAgentRun},
+	ReviewRequirement: constants.ReviewRequirementNotRequired,
+	CreatedAt:         timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:         timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*AgentAction) SchemaExample() any {

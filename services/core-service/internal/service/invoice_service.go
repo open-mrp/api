@@ -108,8 +108,7 @@ func (s *invoiceSvcImpl) ListInvoices(ctx context.Context, params domain.ListInv
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Expand lines per invoice only when requested (so the list can serve the
-	// lines.item array filter).
+	// Expand lines per invoice only when requested (so the list can serve the lines.item array filter).
 	for _, include := range params.Includes {
 		if include == "lines" {
 			for _, inv := range result.Invoices {

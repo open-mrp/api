@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -34,13 +35,14 @@ type GetRemainingQuantityToSplitEndpoint struct{}
 
 func (e *GetRemainingQuantityToSplitEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetRemainingQuantityToSplitRequest, *apiresource.Quantity] {
 	return (&apiendpoint.APIEndpoint[*GetRemainingQuantityToSplitRequest, *apiresource.Quantity]{
-		Title:             "Get Remaining Quantity to Split",
-		Method:            http.MethodPost,
-		ContentType:       "application/json",
-		Route:             "/v1/operations/batches/remaining-quantities",
-		SuccessStatusCode: http.StatusOK,
-		Public:            false,
-		Preview:           true,
+		Title:               "Get Remaining Quantity to Split",
+		Method:              http.MethodPost,
+		ContentType:         "application/json",
+		Route:               "/v1/operations/batches/remaining-quantities",
+		SuccessStatusCode:   http.StatusOK,
+		Public:              false,
+		Preview:             true,
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionRead}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetRemainingQuantityToSplitRequest) (*apiresource.Quantity, *apierror.APIError) {
 			return svc.(BatchSvc).GetRemainingQuantityToSplit
 		},

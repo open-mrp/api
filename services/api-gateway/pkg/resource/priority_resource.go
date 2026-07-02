@@ -24,7 +24,7 @@ type Priority struct {
 	// - `normal`: default urgency for most orders and picks.
 	// - `high`: highest urgency; worked ahead of normal and low.
 	Code constants.PriorityCode `json:"code" validate:"required"`
-	// Display name.
+	// Display name of the priority level.
 	Name string `json:"name" validate:"required"`
 	// Owner of this resource.
 	//

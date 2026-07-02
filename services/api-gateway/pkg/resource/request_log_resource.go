@@ -30,7 +30,7 @@ type RequestLog struct {
 	//
 	// Usually `api.augno.com`.
 	Host string `json:"host" validate:"required"`
-	// Non-normalized request path.
+	// The exact path the request was made to, including path parameter values.
 	Path string `json:"path" validate:"required"`
 	// The route template the request matched, with path parameters left as placeholders.
 	//
@@ -107,4 +107,30 @@ var SampleRequestLog = &RequestLog{
 
 func (*RequestLog) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleRequestLog)
+}
+
+// RedactedRequestLogHost is the host shown for internal/agent request logs in
+// customer-facing responses, so the gateway's internal listener hostname (a k8s
+// service name:port) never leaks. We surface the public API host the agent's call
+// is logically equivalent to, rather than a meaningless "internal" placeholder. The
+// true internal host stays in platform-service storage for operator debugging.
+const RedactedRequestLogHost = "https://api.augno.com"
+
+// internalListenerIdentityType is the request_log.identity_type stamped on requests
+// authenticated by the gateway's trusted internal listener (agents). It is the
+// signal that a log may carry internal infrastructure details (internal host, pod IP).
+const internalListenerIdentityType = "agent"
+
+// ScrubInternalInfra blanks fields that expose internal infrastructure — the
+// internal listener host and the in-cluster client (pod) IP — when the log
+// represents an internal/agent request (identityType == "agent"). Every
+// customer-facing presenter that renders a request_log MUST call this; the real
+// values remain in platform-service storage for operators. No-op for external
+// (user/api_key) requests, whose host/IP are legitimately customer-visible.
+func (r *RequestLog) ScrubInternalInfra(identityType *string) {
+	if r == nil || identityType == nil || *identityType != internalListenerIdentityType {
+		return
+	}
+	r.Host = RedactedRequestLogHost
+	r.ClientIP = nil
 }

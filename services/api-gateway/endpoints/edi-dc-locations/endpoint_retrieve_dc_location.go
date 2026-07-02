@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -28,7 +29,10 @@ func (e *RetrieveDCLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
-		ObjectType:        constants.ObjectTypeDCLocation,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainEdiRuns, Action: types.ActionRead},
+		},
+		ObjectType: constants.ObjectTypeDCLocation,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveDCLocationRequest) (*apiresource.DCLocation, *apierror.APIError) {
 			return svc.(EDIDCLocationSvc).GetDCLocation
 		},

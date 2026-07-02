@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -58,6 +59,9 @@ func (e *UpdateConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeConsumption,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainProductionSteps, Action: types.ActionUpdate},
+		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateConsumptionRequest) (*apiresource.Consumption, *apierror.APIError) {
 			return svc.(ConsumptionSvc).UpdateConsumption
 		},

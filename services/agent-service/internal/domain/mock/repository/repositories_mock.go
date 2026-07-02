@@ -499,6 +499,21 @@ func (mr *MockAgentRunRepoMockRecorder) MarkRetrying(ctx, id any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkRetrying", reflect.TypeOf((*MockAgentRunRepo)(nil).MarkRetrying), ctx, id)
 }
 
+// ReapStalledRuns mocks base method.
+func (m *MockAgentRunRepo) ReapStalledRuns(ctx context.Context, cutoff time.Time, errorMessage string) ([]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReapStalledRuns", ctx, cutoff, errorMessage)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ReapStalledRuns indicates an expected call of ReapStalledRuns.
+func (mr *MockAgentRunRepoMockRecorder) ReapStalledRuns(ctx, cutoff, errorMessage any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReapStalledRuns", reflect.TypeOf((*MockAgentRunRepo)(nil).ReapStalledRuns), ctx, cutoff, errorMessage)
+}
+
 // UpdateCancelled mocks base method.
 func (m *MockAgentRunRepo) UpdateCancelled(ctx context.Context, params sqlc.UpdateAgentRunCancelledParams) *apierror.APIError {
 	m.ctrl.T.Helper()

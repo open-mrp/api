@@ -1790,6 +1790,48 @@ func (q *Queries) MarkAgentRunRetrying(ctx context.Context, id string) (int32, e
 	return retry_count, err
 }
 
+const reapStalledRuns = `-- name: ReapStalledRuns :many
+UPDATE agent_run
+SET status_code = 'failed', error_message = $1, completed_at = now(), updated_at = now()
+WHERE status_code = 'running' AND started_at IS NOT NULL AND started_at < $2
+RETURNING id, account_id
+`
+
+type ReapStalledRunsParams struct {
+	ErrorMessage pgtype.Text
+	StartedAt    pgtype.Timestamptz
+}
+
+type ReapStalledRunsRow struct {
+	ID        string
+	AccountID string
+}
+
+// Safety net for runs orphaned by a process kill (OOM/liveness/SIGTERM) mid-flight: the goroutine that
+// would finalize them is gone, so they are stuck in 'running' forever. Fail any run that has been 'running'
+// since before the cutoff so its status (and any chat bubble keyed to it) resolves instead of hanging.
+// Guarded on status_code = 'running' so it never disturbs a run that has since paused/completed/cancelled.
+// Returns the reaped ids for logging.
+func (q *Queries) ReapStalledRuns(ctx context.Context, arg ReapStalledRunsParams) ([]ReapStalledRunsRow, error) {
+	rows, err := q.db.Query(ctx, reapStalledRuns, arg.ErrorMessage, arg.StartedAt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ReapStalledRunsRow
+	for rows.Next() {
+		var i ReapStalledRunsRow
+		if err := rows.Scan(&i.ID, &i.AccountID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const softDeleteAgentDefinition = `-- name: SoftDeleteAgentDefinition :exec
 UPDATE agent_definition
 SET is_active = false, updated_at = now()

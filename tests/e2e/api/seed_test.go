@@ -20,6 +20,12 @@ const (
 	SeedAccountRelationID  = "acre_01seedcustomer00000"
 	SeedRegistrationFlowID = "mock-registration-flow"
 
+	// account_user belonging to SeedCustomerAccountID (the buyer/customer account),
+	// user "Jane Doe" <dev@augno.com>. A valid order email-contact recipient, which
+	// must resolve within the BUYER's account (not the seller/acting account).
+	SeedCustomerAccountUserID = "acus_01seedcustuser00000"
+	SeedCustomerUserEmail     = "dev@augno.com"
+
 	// Customer portal API key (owned by customer account, targets vendor account)
 	SeedCustomerAPIKey = "aug_sk_prod_CustPortalE2eTestKey1_CustomerPortalE2eTestSecretValueForAuthTestingPurpose12345efS0Og"
 	SeedAddressID      = "ad_01k09wnac0e1ar211e0sy0ba4g"

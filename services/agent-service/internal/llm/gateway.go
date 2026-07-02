@@ -7,23 +7,46 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"sort"
 	"strings"
+	"sync/atomic"
+	"time"
 )
 
 const defaultGatewayBaseURL = "https://llm.stripe.com"
+
+// streamIdleTimeout is the maximum gap tolerated between chunks of a streaming gateway response before the read is treated as a dead connection and aborted. A live stream emits reasoning/content/tool deltas continuously, so a full minute of silence reliably means the connection was silently severed (commonly by an egress NAT/firewall dropping a long-lived flow without a FIN/RST) rather than a legitimately slow model.
+const streamIdleTimeout = 60 * time.Second
 
 // GatewayProvider routes all LLM calls through the Stripe AI Gateway, which uses the OpenAI-compatible /chat/completions endpoint for all providers.
 type GatewayProvider struct {
 	httpClient   *http.Client
 	stripeAPIKey string
 	baseURL      string
+	// streamIdleTimeout overrides the package default for the streaming idle watchdog; zero means use streamIdleTimeout. Exists so tests can shrink it.
+	idleTimeout time.Duration
 }
 
 func NewGatewayProvider(stripeAPIKey string) *GatewayProvider {
 	return &GatewayProvider{
-		httpClient:   &http.Client{},
+		// No client-level Timeout: a hard deadline would cap legitimately long streams. Liveness is enforced per-read by the idle watchdog in StreamCompleteWithTools and by the caller's per-attempt deadline. ResponseHeaderTimeout bounds only the wait for response headers (before the body streams), catching a gateway that accepts the connection but never replies. TCP keepalives let the OS surface a dead peer on otherwise-idle connections.
+		httpClient: &http.Client{
+			Transport: &http.Transport{
+				Proxy: http.ProxyFromEnvironment,
+				DialContext: (&net.Dialer{
+					Timeout:   10 * time.Second,
+					KeepAlive: 30 * time.Second,
+				}).DialContext,
+				ForceAttemptHTTP2:     true,
+				MaxIdleConns:          100,
+				IdleConnTimeout:       90 * time.Second,
+				TLSHandshakeTimeout:   10 * time.Second,
+				ExpectContinueTimeout: 1 * time.Second,
+				ResponseHeaderTimeout: 30 * time.Second,
+			},
+		},
 		stripeAPIKey: stripeAPIKey,
 		baseURL:      defaultGatewayBaseURL,
 	}
@@ -249,7 +272,11 @@ func (p *GatewayProvider) StreamCompleteWithTools(ctx context.Context, req *Tool
 		return nil, fmt.Errorf("failed to marshal gateway request: %w", err)
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, p.baseURL+"/chat/completions", bytes.NewReader(bodyBytes))
+	// Derive a cancellable context so the idle watchdog below can abort a stalled read. Without it, a silently-severed streaming connection would block scanner.Scan() forever.
+	streamCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	httpReq, err := http.NewRequestWithContext(streamCtx, http.MethodPost, p.baseURL+"/chat/completions", bytes.NewReader(bodyBytes))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create gateway request: %w", err)
 	}
@@ -269,6 +296,36 @@ func (p *GatewayProvider) StreamCompleteWithTools(ctx context.Context, req *Tool
 		return nil, NewGatewayError(httpResp.StatusCode, string(respBody), httpResp.Header)
 	}
 
+	// Idle watchdog: reset on every chunk; if no data arrives for idleTimeout, cancel the read so a dead connection surfaces as an error instead of blocking forever.
+	idleTimeout := p.idleTimeout
+	if idleTimeout <= 0 {
+		idleTimeout = streamIdleTimeout
+	}
+	var idleStalled atomic.Bool
+	idleReset := make(chan struct{}, 1)
+	go func() {
+		timer := time.NewTimer(idleTimeout)
+		defer timer.Stop()
+		for {
+			select {
+			case <-streamCtx.Done():
+				return
+			case <-timer.C:
+				idleStalled.Store(true)
+				cancel()
+				return
+			case <-idleReset:
+				if !timer.Stop() {
+					select {
+					case <-timer.C:
+					default:
+					}
+				}
+				timer.Reset(idleTimeout)
+			}
+		}
+	}()
+
 	var contentBuilder strings.Builder
 	toolCallMap := make(map[int]*ToolCall)
 	var finishReason string
@@ -276,6 +333,11 @@ func (p *GatewayProvider) StreamCompleteWithTools(ctx context.Context, req *Tool
 
 	scanner := bufio.NewScanner(httpResp.Body)
 	for scanner.Scan() {
+		// Signal liveness to the idle watchdog (non-blocking; a single pending reset suffices).
+		select {
+		case idleReset <- struct{}{}:
+		default:
+		}
 		line := scanner.Text()
 		if line == "" {
 			continue
@@ -342,7 +404,12 @@ func (p *GatewayProvider) StreamCompleteWithTools(ctx context.Context, req *Tool
 	}
 	scanErr := scanner.Err()
 	_ = httpResp.Body.Close()
+	cancel() // stream drained — stop the watchdog
 	if scanErr != nil {
+		if idleStalled.Load() {
+			// A mid-stream stall is an upstream/network failure, not a client error. Return it as a retryable gateway error (504) so the caller's retry/failover path handles it rather than hard-failing the run.
+			return nil, NewGatewayError(http.StatusGatewayTimeout, "gateway stream stalled: no data received", nil)
+		}
 		return nil, fmt.Errorf("error reading gateway stream: %w", scanErr)
 	}
 

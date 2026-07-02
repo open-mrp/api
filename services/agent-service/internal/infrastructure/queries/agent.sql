@@ -168,6 +168,17 @@ SET status_code = 'failed', error_message = $1, completed_at = now(),
     duration_ms = $2, updated_at = now()
 WHERE id = $3;
 
+-- name: ReapStalledRuns :many
+-- Safety net for runs orphaned by a process kill (OOM/liveness/SIGTERM) mid-flight: the goroutine that
+-- would finalize them is gone, so they are stuck in 'running' forever. Fail any run that has been 'running'
+-- since before the cutoff so its status (and any chat bubble keyed to it) resolves instead of hanging.
+-- Guarded on status_code = 'running' so it never disturbs a run that has since paused/completed/cancelled.
+-- Returns the reaped ids for logging.
+UPDATE agent_run
+SET status_code = 'failed', error_message = $1, completed_at = now(), updated_at = now()
+WHERE status_code = 'running' AND started_at IS NOT NULL AND started_at < $2
+RETURNING id, account_id;
+
 -- name: MarkAgentRunDivergedFromConversation :exec
 UPDATE agent_run
 SET diverged_from_conversation = true, updated_at = now()

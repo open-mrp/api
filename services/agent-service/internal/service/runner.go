@@ -30,6 +30,9 @@ import (
 
 const maxToolLoopIterations = 20
 
+// llmCallTimeout bounds a single LLM turn (streaming or not) as a backstop against a connection that stalls without a clean close — e.g. a streaming response silently severed by an egress NAT/firewall, where the read would otherwise block forever and pin the run in "running". The gateway streaming path has a tighter idle watchdog (streamIdleTimeout); this is the absolute ceiling for the whole attempt. One turn caps at 4096 output tokens, so minutes is generous.
+const llmCallTimeout = 5 * time.Minute
+
 var runnerTracer = tracing.GetTracer("agent-service.runner")
 
 // agentConfig is the subset of AgentDefinitionConfig relevant to execution.
@@ -816,6 +819,9 @@ func derefStr(s *string) string {
 // completeWithRetry performs one LLM call (streaming-aware) and retries on a retryable gateway error (429/529/5xx) with backoff, honoring Retry-After. Returns the response or the last error; the caller decides whether to fail over to another model.
 func (s *runnerSvc) completeWithRetry(ctx context.Context, runID, accountID string, seq *int, provider llm.LLMProvider, llmReq *llm.ToolRequest, retryCfg *retry.Config) (*llm.ToolResponse, error) {
 	callLLM := func() (*llm.ToolResponse, error) {
+		// Bound each attempt so a stalled connection surfaces as an error instead of hanging the run forever. A fresh deadline per attempt means retries/failover aren't starved by an earlier slow call.
+		callCtx, cancel := context.WithTimeout(ctx, llmCallTimeout)
+		defer cancel()
 		if sp, ok := provider.(llm.StreamingLLMProvider); ok {
 			// Two independent live streams flushed on the same cadence (20 chars or 50ms): the answer (content_delta) and the reasoning (reasoning_delta). Reasoning is also accumulated so a persisted "thinking" step can be recorded for providers that don't return signed thinking blocks (the OpenAI-compat path).
 			var deltaSeq int
@@ -846,7 +852,7 @@ func (s *runnerSvc) completeWithRetry(ctx context.Context, runID, accountID stri
 				rBuf.Reset()
 				rLastFlush = time.Now()
 			}
-			r, err := sp.StreamCompleteWithTools(ctx, llmReq, func(ev llm.StreamEvent) {
+			r, err := sp.StreamCompleteWithTools(callCtx, llmReq, func(ev llm.StreamEvent) {
 				switch ev.Type {
 				case "content_delta":
 					if ev.ContentDelta == "" {
@@ -889,7 +895,7 @@ func (s *runnerSvc) completeWithRetry(ctx context.Context, runID, accountID stri
 			}
 			return r, err
 		}
-		return provider.CompleteWithTools(ctx, llmReq)
+		return provider.CompleteWithTools(callCtx, llmReq)
 	}
 
 	resp, llmErr := callLLM()

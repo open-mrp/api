@@ -1506,23 +1506,23 @@ func (s *salesOrderSvcImpl) validateSalesOrderReferences(ctx context.Context, pa
 			return mapSalesOrderReferenceError(apiErr, "Sales rep not found.", "sales_rep_id")
 		}
 	}
-	if apiErr := s.validateEmailContactAccountUsers(ctx, params.AccountID, params.AcknowledgementEmailContacts, "acknowledgement_email_contacts"); apiErr != nil {
+	// Order-acknowledgement and invoice email contacts are recipients on the buyer (customer) side, so their account_user_id must resolve within the buyer's account, not the acting seller account.
+	if apiErr := s.validateEmailContactAccountUsers(ctx, params.BuyerAccountID, params.AcknowledgementEmailContacts, "acknowledgement_email_contacts"); apiErr != nil {
 		return apiErr
 	}
-	if apiErr := s.validateEmailContactAccountUsers(ctx, params.AccountID, params.InvoiceEmailContacts, "invoice_email_contacts"); apiErr != nil {
+	if apiErr := s.validateEmailContactAccountUsers(ctx, params.BuyerAccountID, params.InvoiceEmailContacts, "invoice_email_contacts"); apiErr != nil {
 		return apiErr
 	}
 	return nil
 }
 
-// validateEmailContactAccountUsers rejects an order email-contact whose
-// account_user_id does not exist, rather than silently dropping the reference.
-func (s *salesOrderSvcImpl) validateEmailContactAccountUsers(ctx context.Context, accountID string, contacts []domain.SalesOrderEmailContactInput, param string) *apierror.APIError {
+// validateEmailContactAccountUsers rejects an order email-contact whose account_user_id does not exist in the buyer's account, rather than silently dropping the reference. buyerAccountID scopes the lookup: these contacts are customer-side recipients, so an account_user of the seller (acting) account is not a valid contact.
+func (s *salesOrderSvcImpl) validateEmailContactAccountUsers(ctx context.Context, buyerAccountID string, contacts []domain.SalesOrderEmailContactInput, param string) *apierror.APIError {
 	for _, c := range contacts {
 		if c.AccountUserID == "" {
 			continue
 		}
-		if _, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, accountID, c.AccountUserID, nil); apiErr != nil {
+		if _, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, buyerAccountID, c.AccountUserID, nil); apiErr != nil {
 			return mapSalesOrderReferenceError(apiErr, "Email contact account user not found.", param)
 		}
 	}

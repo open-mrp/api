@@ -38,6 +38,13 @@ func TimeFromPgTimestamptz(t pgtype.Timestamptz) *time.Time {
 	return &t.Time
 }
 
+func PgTimestamptz(t time.Time) pgtype.Timestamptz {
+	if t.IsZero() {
+		return pgtype.Timestamptz{}
+	}
+	return pgtype.Timestamptz{Time: t, Valid: true}
+}
+
 func PgDate(t time.Time) pgtype.Date {
 	if t.IsZero() {
 		return pgtype.Date{}

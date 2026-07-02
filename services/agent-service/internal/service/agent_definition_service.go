@@ -1042,11 +1042,11 @@ func (s *agentDefSvcImpl) continueChatRun(ctx context.Context, in domain.ChatRun
 			return false, apiErr
 		}
 		return true, nil
-	case domain.RunStatusFailed, domain.RunStatusCancelled:
-		// The run died, but its work shouldn't be thrown away. Fork an heir run that inherits the dead transcript (minus the failure tail) and drive the reply through it as the next turn.
+	case domain.RunStatusFailed, domain.RunStatusCancelled, domain.RunStatusCompleted:
+		// The run reached a terminal state, but its work shouldn't be thrown away. Fork an heir run that inherits the transcript (minus any failure/cancel tail) and drive the reply through it as the next turn — so replying to a finished agent message continues that agent with full context instead of starting a blank run.
 		return s.forkDeadChatRun(ctx, in, run)
 	default:
-		// running / pending / completed → neither resumable nor a clean base; start a fresh run.
+		// running / pending → still in-flight, so neither resumable nor a clean base; start a fresh run.
 		return false, nil
 	}
 }

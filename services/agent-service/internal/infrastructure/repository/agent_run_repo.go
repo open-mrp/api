@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	agentdb "github.com/augno/api/services/agent-service/internal/infrastructure/db"
 	"github.com/augno/api/services/agent-service/internal/infrastructure/sqlc"
@@ -129,6 +130,24 @@ func (r *agentRunRepoImpl) UpdateFailed(ctx context.Context, params sqlc.UpdateA
 		return tracing.Trace(span, apiErr)
 	}
 	return nil
+}
+
+// ReapStalledRuns fails every run that has been 'running' since before cutoff, returning the reaped run ids. It is the safety net for runs orphaned by a process kill mid-flight (the in-process goroutine that would have finalized them is gone), which would otherwise sit in 'running' forever.
+func (r *agentRunRepoImpl) ReapStalledRuns(ctx context.Context, cutoff time.Time, errorMessage string) ([]string, *apierror.APIError) {
+	ctx, span := tracing.StartSpan(ctx, runRepoTracer, "repository.agent_run.reap_stalled_runs")
+	defer span.End()
+	rows, err := r.queries.ReapStalledRuns(ctx, sqlc.ReapStalledRunsParams{
+		ErrorMessage: agentdb.PgText(errorMessage),
+		StartedAt:    agentdb.PgTimestamptz(cutoff),
+	})
+	if err != nil {
+		return nil, tracing.Trace(span, db.MapSQLError(err))
+	}
+	ids := make([]string, 0, len(rows))
+	for _, row := range rows {
+		ids = append(ids, row.ID)
+	}
+	return ids, nil
 }
 
 func (r *agentRunRepoImpl) MarkDivergedFromConversation(ctx context.Context, id string) *apierror.APIError {

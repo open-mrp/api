@@ -37,8 +37,8 @@ func (f *fakeOutbox) Create(_ context.Context, in messaging.OutboxMessageInput) 
 // continueChatRun decides whether a conversation reply resumes the replied-to run or falls through to a
 // fresh one. These cases cover the bail-outs that return false (caller then starts a clean run seeded
 // with conversation history) — a missing/foreign run, a diverged run (poisoned by a private console
-// turn), and a completed run (nothing to resume, no failure to inherit). Failed/cancelled runs do NOT
-// fall through — they fork an heir; see TestForkDeadChatRun.
+// turn), and an in-flight run (running/pending: nothing to resume yet, not terminal to inherit). Terminal
+// runs — failed/cancelled/completed — do NOT fall through; they fork an heir; see TestForkDeadChatRun.
 func TestContinueChatRun_FallsThrough(t *testing.T) {
 	t.Parallel()
 
@@ -63,8 +63,12 @@ func TestContinueChatRun_FallsThrough(t *testing.T) {
 			run:  &sqlc.AgentRun{ID: "agr_1", AccountID: acct, StatusCode: domain.RunStatusAwaitingInput, DivergedFromConversation: true},
 		},
 		{
-			name: "completed run starts fresh",
-			run:  &sqlc.AgentRun{ID: "agr_1", AccountID: acct, StatusCode: domain.RunStatusCompleted},
+			name: "running run starts fresh",
+			run:  &sqlc.AgentRun{ID: "agr_1", AccountID: acct, StatusCode: domain.RunStatusRunning},
+		},
+		{
+			name: "pending run starts fresh",
+			run:  &sqlc.AgentRun{ID: "agr_1", AccountID: acct, StatusCode: domain.RunStatusPending},
 		},
 	}
 
@@ -93,10 +97,11 @@ func TestContinueChatRun_FallsThrough(t *testing.T) {
 	}
 }
 
-// A reply to a failed or cancelled chat run forks an heir run that inherits the dead run's transcript
-// minus the terminal failure markers ("the failed responses"), then drives the reply through it. This
-// verifies the heir is created from the dead run's identity, the transcript is copied/re-sequenced with
-// error+cancelled events dropped and action links cleared, and the reply is enqueued as the heir's turn.
+// A reply to a terminal chat run (failed, cancelled, or completed) forks an heir run that inherits the
+// dead run's transcript minus the terminal failure markers ("the failed responses"), then drives the
+// reply through it. This verifies the heir is created from the dead run's identity, the transcript is
+// copied/re-sequenced with error+cancelled events dropped and action links cleared, and the reply is
+// enqueued as the heir's turn.
 func TestForkDeadChatRun(t *testing.T) {
 	t.Parallel()
 
@@ -110,7 +115,7 @@ func TestForkDeadChatRun(t *testing.T) {
 		reply     = "actually, also do X"
 	)
 
-	for _, deadStatus := range []string{domain.RunStatusFailed, domain.RunStatusCancelled} {
+	for _, deadStatus := range []string{domain.RunStatusFailed, domain.RunStatusCancelled, domain.RunStatusCompleted} {
 		t.Run(deadStatus, func(t *testing.T) {
 			t.Parallel()
 			ctrl := gomock.NewController(t)

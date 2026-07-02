@@ -25,6 +25,9 @@ var schedulerTracer = tracing.GetTracer("agent-service.scheduler")
 const (
 	schedulerLeaseName = "agent-scheduler"
 	schedulerLeaseTTL  = 90 * time.Second
+
+	// stalledRunThreshold is how long a run may sit in 'running' before the reaper considers it orphaned (its finalizing goroutine died with the process) and fails it. It is deliberately well above any legitimate run wall-clock — a single LLM turn is capped at minutes and the tool loop is bounded — so a healthy in-flight run is never reaped.
+	stalledRunThreshold = 30 * time.Minute
 )
 
 type SchedulerConfig struct {
@@ -126,6 +129,7 @@ func (s *schedulerSvc) pollLoop(ctx context.Context) {
 		case <-ticker.C:
 			_ = s.lease.WithLease(ctx, schedulerLeaseName, schedulerLeaseTTL, func(leaseCtx context.Context) error {
 				s.checkSchedules(leaseCtx)
+				s.reapStalledRuns(leaseCtx)
 				return nil
 			})
 		}
@@ -205,6 +209,22 @@ func (s *schedulerSvc) checkSchedules(ctx context.Context) {
 				"error", scheduleErr,
 			)
 		}
+	}
+}
+
+// reapStalledRuns is a safety net for runs orphaned by a process kill (OOM/liveness/SIGTERM) mid-flight: the in-process goroutine that would have finalized them died with the pod, so they would otherwise sit in 'running' forever. It fails any run whose started_at is older than stalledRunThreshold. Runs under the same lease as scheduling so exactly one pod reaps per tick. Best-effort: an error is logged and retried on the next tick.
+func (s *schedulerSvc) reapStalledRuns(ctx context.Context) {
+	ctx, span := tracing.StartSpan(ctx, schedulerTracer, "service.scheduler.reap_stalled_runs")
+	defer span.End()
+
+	cutoff := time.Now().Add(-stalledRunThreshold)
+	reaped, apiErr := s.repos.NewAgentRunRepo().ReapStalledRuns(ctx, cutoff, "Run failed: the agent worker was interrupted before it could finish (for example a deploy or restart). Please try again.")
+	if apiErr != nil {
+		slog.Error("Reaper: failed to reap stalled runs", "error", apiErr)
+		return
+	}
+	if len(reaped) > 0 {
+		slog.Warn("Reaper: failed stalled runs orphaned mid-flight", "count", len(reaped), "run_ids", reaped, "threshold", stalledRunThreshold)
 	}
 }
 

@@ -51,6 +51,8 @@ type AgentRunRepo interface {
 	UpdateFailed(ctx context.Context, params sqlc.UpdateAgentRunFailedParams) *apierror.APIError
 	MarkDivergedFromConversation(ctx context.Context, id string) *apierror.APIError
 	GetLastByConfigID(ctx context.Context, configID string) (*sqlc.AgentRun, *apierror.APIError)
+	// ReapStalledRuns fails every run stuck in 'running' since before cutoff (orphaned by a process kill mid-flight) and returns the reaped run ids.
+	ReapStalledRuns(ctx context.Context, cutoff time.Time, errorMessage string) ([]string, *apierror.APIError)
 }
 
 type AgentActionRepo interface {

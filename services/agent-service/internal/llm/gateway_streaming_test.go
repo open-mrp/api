@@ -2,11 +2,13 @@ package llm
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestStreamCompleteWithTools_ContentOnly(t *testing.T) {
@@ -255,5 +257,60 @@ func TestStreamCompleteWithTools_UsageFromFinalChunk(t *testing.T) {
 	}
 	if doneEvent.OutputTokens != 17 {
 		t.Errorf("expected done OutputTokens 17, got %d", doneEvent.OutputTokens)
+	}
+}
+
+// TestStreamCompleteWithTools_IdleStallAborts verifies the idle watchdog aborts a
+// stream that goes silent mid-flight (as when an egress NAT/firewall silently drops
+// a long-lived connection) instead of blocking forever, and surfaces it as a
+// retryable gateway error so the run fails over / retries rather than hanging in "running".
+func TestStreamCompleteWithTools_IdleStallAborts(t *testing.T) {
+	t.Parallel()
+
+	// Sends one delta, flushes, then holds the connection open with no further bytes
+	// and never sends [DONE] — a stalled/dead stream.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, `data: {"choices":[{"delta":{"content":"Hi"},"finish_reason":null}]}`+"\n\n")
+		if f, ok := w.(http.Flusher); ok {
+			f.Flush()
+		}
+		<-r.Context().Done() // release the handler once the client aborts the read
+	}))
+	defer srv.Close()
+
+	provider := &GatewayProvider{
+		httpClient:   srv.Client(),
+		stripeAPIKey: "sk_test_fake",
+		baseURL:      srv.URL,
+		idleTimeout:  50 * time.Millisecond,
+	}
+
+	ctx := WithStripeCustomerID(context.Background(), "cus_stall")
+
+	start := time.Now()
+	_, err := provider.StreamCompleteWithTools(ctx, &ToolRequest{
+		Model:    "claude-sonnet-4",
+		Messages: []Message{{Role: "user", Content: "Hi"}},
+	}, func(ev StreamEvent) {})
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatal("expected an error from a stalled stream, got nil")
+	}
+	var ge *GatewayError
+	if !errors.As(err, &ge) {
+		t.Fatalf("expected *GatewayError, got %T: %v", err, err)
+	}
+	if !ge.Retryable {
+		t.Errorf("expected stall error to be retryable, got %+v", ge)
+	}
+	if ge.StatusCode != http.StatusGatewayTimeout {
+		t.Errorf("expected status 504, got %d", ge.StatusCode)
+	}
+	// Should abort shortly after idleTimeout, not hang.
+	if elapsed > 2*time.Second {
+		t.Errorf("watchdog took too long to abort: %s", elapsed)
 	}
 }

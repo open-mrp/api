@@ -25,14 +25,14 @@ import (
 // (crud_sales_orders_create_test.go), minimalSalesOrderCreateBody / createE2EAddress
 // (helpers_test.go), and getCustomerPortalClient (customer_portal_access_test.go).
 //
-// Two confirmed backend bugs are pinned here as tests asserting the CORRECT
-// desired behavior (they currently fail red against the live stack — see the
-// doc comments on TestCovSalesSalesOrders_UnvalidatedForeignKeysAcceptedBug and
-// TestCovSalesSalesOrders_NonexistentEmailContactAccountUserAcceptedBug):
-// service_level_id / payment_term_id / shipping_term_id / sales_rep_id / an
-// email-contact account_user_id are never existence-checked at create time, so
-// a garbage id is silently accepted (201) and stored as a dangling reference
-// instead of being rejected with 400/404.
+// Caller-supplied references are existence-checked at create time rather than
+// silently accepted as dangling ids: service_level_id / payment_term_id /
+// shipping_term_id / sales_rep_id are validated against the acting (seller)
+// account (see TestCovSalesSalesOrders_UnvalidatedForeignKeysAcceptedBug), while
+// order email-contact account_user_id values are validated against the BUYER's
+// account, since those are customer-side recipients (see
+// TestCovSalesSalesOrders_NonexistentEmailContactAccountUserRejected and
+// TestCovSalesSalesOrders_EmailContactFromSellerAccountRejected).
 
 const covSalesSalesOrdersStatusesPath = "/v1/sales/sales-orders/statuses"
 
@@ -41,7 +41,11 @@ const covSalesSalesOrdersStatusesPath = "/v1/sales/sales-orders/statuses"
 // carrier_billing_account_number, sales_rep_id, order_discount_id, promised_at,
 // line-level product_sku/product_description overrides, and both email-contact
 // lists), for a buyer with product-line access to SeedProductID.
-func covSalesSalesOrdersFullCreateBody(buyerAccountID, billAddrID, shipAddrID, poNumber string) map[string]any {
+//
+// emailContactUserID is the account_user used for both email-contact lists; it
+// must belong to the buyer's account (order email contacts are customer-side
+// recipients), so callers pass a user of buyerAccountID, not a seller user.
+func covSalesSalesOrdersFullCreateBody(buyerAccountID, billAddrID, shipAddrID, poNumber, emailContactUserID string) map[string]any {
 	return map[string]any{
 		"buyer_account_id":               buyerAccountID,
 		"customer_purchase_order_number": poNumber,
@@ -66,8 +70,8 @@ func covSalesSalesOrdersFullCreateBody(buyerAccountID, billAddrID, shipAddrID, p
 				"product_description": "Custom desc",
 			},
 		},
-		"acknowledgement_email_contacts": []map[string]any{{"account_user_id": SeedAccountUserID}},
-		"invoice_email_contacts":         []map[string]any{{"account_user_id": SeedAccountUserID}},
+		"acknowledgement_email_contacts": []map[string]any{{"account_user_id": emailContactUserID}},
+		"invoice_email_contacts":         []map[string]any{{"account_user_id": emailContactUserID}},
 	}
 }
 
@@ -77,12 +81,15 @@ func covSalesSalesOrdersFullCreateBody(buyerAccountID, billAddrID, shipAddrID, p
 
 func TestCovSalesSalesOrders_CreateAllFields(t *testing.T) {
 	t.Parallel()
-	customerID := setupOrderCustomer(t)
+	// Use the seeded customer as the buyer: order email contacts must reference a
+	// user of the buyer's account, and SeedCustomerAccountID owns SeedCustomerAccountUserID
+	// (a freshly created customer has no account_users to reference).
+	customerID := SeedCustomerAccountID
 	bill := createE2EAddress(t, "E2E AllFields Bill")
 	ship := createE2EAddress(t, "E2E AllFields Ship")
 	po := uniqueName("PO")
 
-	createResp, err := apiClient.PostFull(salesOrdersPath, covSalesSalesOrdersFullCreateBody(customerID, bill, ship, po), newIdempotencyKey())
+	createResp, err := apiClient.PostFull(salesOrdersPath, covSalesSalesOrdersFullCreateBody(customerID, bill, ship, po, SeedCustomerAccountUserID), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
@@ -172,8 +179,8 @@ func TestCovSalesSalesOrders_CreateAllFields(t *testing.T) {
 	contacts := jsonObject(full, "contacts")
 	require.NotNil(t, contacts)
 	assert.Equal(t, "order_contact", jsonField(contacts, "object"))
-	assert.Contains(t, jsonStringSlice(contacts, "acknowledgement"), "dane@augno.com")
-	assert.Contains(t, jsonStringSlice(contacts, "invoice"), "dane@augno.com")
+	assert.Contains(t, jsonStringSlice(contacts, "acknowledgement"), SeedCustomerUserEmail)
+	assert.Contains(t, jsonStringSlice(contacts, "invoice"), SeedCustomerUserEmail)
 
 	totals := jsonObject(full, "totals")
 	require.NotNil(t, totals)
@@ -585,15 +592,12 @@ func TestCovSalesSalesOrders_UnvalidatedForeignKeysAcceptedBug(t *testing.T) {
 	}
 }
 
-// TestCovSalesSalesOrders_NonexistentEmailContactAccountUserAcceptedBug
-// documents the same class of confirmed bug for email-contact account_user_id
-// values: a nonexistent id is silently dropped (the order is still created,
-// and the resulting contacts.acknowledgement/invoice arrays are simply empty)
-// rather than the create being rejected.
-func TestCovSalesSalesOrders_NonexistentEmailContactAccountUserAcceptedBug(t *testing.T) {
+// TestCovSalesSalesOrders_NonexistentEmailContactAccountUserRejected asserts that
+// a nonexistent email-contact account_user_id is rejected at create time (400/404)
+// rather than silently dropped and the order created with empty contacts.
+func TestCovSalesSalesOrders_NonexistentEmailContactAccountUserRejected(t *testing.T) {
 	t.Parallel()
-	customerID := setupOrderCustomer(t)
-	body := minimalSalesOrderCreateBody(t, customerID)
+	body := minimalSalesOrderCreateBody(t, SeedCustomerAccountID)
 	body["acknowledgement_email_contacts"] = []map[string]any{{"account_user_id": "acus_00000000000000000000"}}
 
 	status, respBody, err := apiClient.Post(salesOrdersPath, body, newIdempotencyKey())
@@ -603,7 +607,7 @@ func TestCovSalesSalesOrders_NonexistentEmailContactAccountUserAcceptedBug(t *te
 		deleteOrder(t, id)
 	}
 	assert.True(t, status == 400 || status == 404,
-		"a nonexistent acknowledgement_email_contacts[].account_user_id should be rejected with 400/404, got %d: %s (confirmed backend bug: unvalidated account_user_id silently dropped on create)",
+		"a nonexistent acknowledgement_email_contacts[].account_user_id should be rejected with 400/404, got %d: %s",
 		status, string(respBody))
 }
 
@@ -613,10 +617,12 @@ func TestCovSalesSalesOrders_NonexistentEmailContactAccountUserAcceptedBug(t *te
 
 func TestCovSalesSalesOrders_EmailContactsPopulateContacts(t *testing.T) {
 	t.Parallel()
-	customerID := setupOrderCustomer(t)
+	// Email contacts must be users of the buyer's account, so this uses the seeded
+	// customer (which owns SeedCustomerAccountUserID) as the buyer.
+	customerID := SeedCustomerAccountID
 	body := minimalSalesOrderCreateBody(t, customerID)
-	body["acknowledgement_email_contacts"] = []map[string]any{{"account_user_id": SeedAccountUserID}}
-	body["invoice_email_contacts"] = []map[string]any{{"account_user_id": SeedAccountUserID}}
+	body["acknowledgement_email_contacts"] = []map[string]any{{"account_user_id": SeedCustomerAccountUserID}}
+	body["invoice_email_contacts"] = []map[string]any{{"account_user_id": SeedCustomerAccountUserID}}
 
 	status, respBody, err := apiClient.Post(salesOrdersPath, body, newIdempotencyKey())
 	require.NoError(t, err)
@@ -630,8 +636,29 @@ func TestCovSalesSalesOrders_EmailContactsPopulateContacts(t *testing.T) {
 	contacts := jsonObject(parseJSON(gBody), "contacts")
 	require.NotNil(t, contacts)
 	assert.Equal(t, "order_contact", jsonField(contacts, "object"))
-	assert.Contains(t, jsonStringSlice(contacts, "acknowledgement"), "dane@augno.com")
-	assert.Contains(t, jsonStringSlice(contacts, "invoice"), "dane@augno.com")
+	assert.Contains(t, jsonStringSlice(contacts, "acknowledgement"), SeedCustomerUserEmail)
+	assert.Contains(t, jsonStringSlice(contacts, "invoice"), SeedCustomerUserEmail)
+}
+
+// TestCovSalesSalesOrders_EmailContactFromSellerAccountRejected is the direct
+// regression for the account-scoping fix: an order email-contact account_user_id
+// must resolve within the BUYER's account. SeedAccountUserID is a valid user of
+// the seller (acting) account but NOT of the buyer, so it must be rejected rather
+// than accepted and stored as a cross-account recipient.
+func TestCovSalesSalesOrders_EmailContactFromSellerAccountRejected(t *testing.T) {
+	t.Parallel()
+	body := minimalSalesOrderCreateBody(t, SeedCustomerAccountID)
+	body["acknowledgement_email_contacts"] = []map[string]any{{"account_user_id": SeedAccountUserID}}
+
+	status, respBody, err := apiClient.Post(salesOrdersPath, body, newIdempotencyKey())
+	require.NoError(t, err)
+	if status == 201 {
+		id := jsonField(parseJSON(respBody), "id")
+		deleteOrder(t, id)
+	}
+	assert.Equalf(t, 400, status,
+		"a seller-account account_user_id must be rejected as an order email contact (recipients are buyer-side), got %d: %s",
+		status, string(respBody))
 }
 
 // TestCovSalesSalesOrders_LineUnitPriceOverride_InternalHonoredCustomerIgnored

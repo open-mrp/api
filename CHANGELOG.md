@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.32.1](https://github.com/Augno/api/compare/v0.32.0...v0.32.1) (2026-07-02)
+
+
+### Bug Fixes
+
+* agent action approval getting stuck ([cc280e0](https://github.com/Augno/api/commit/cc280e0aa1fd822759ea8c761da90af929e63b64))
+
 ## [0.32.0](https://github.com/Augno/api/compare/v0.31.3...v0.32.0) (2026-07-02)
 
 

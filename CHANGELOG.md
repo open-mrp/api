@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.38.0](https://github.com/Augno/api/compare/v0.37.0...v0.38.0) (2026-07-03)
+
+
+### Features
+
+* uk on machine account_id, name ([#400](https://github.com/Augno/api/issues/400)) ([9d7cd77](https://github.com/Augno/api/commit/9d7cd7796aac7638047699309bd5bdba717fda56))
+
+
+### Bug Fixes
+
+* implement topology spread constraints for improved service resilience across Kubernetes deployments ([#401](https://github.com/Augno/api/issues/401)) ([cf85137](https://github.com/Augno/api/commit/cf851371c424a066cd2df2a44d21950e6f744355))
+
 ## [0.37.0](https://github.com/Augno/api/compare/v0.36.0...v0.37.0) (2026-07-03)
 
 

@@ -122,9 +122,9 @@ const createMessage = `-- name: CreateMessage :exec
 INSERT INTO message (
     id, conversation_id, account_id, sequence, kind, visibility, channel,
     sender_participant_id, client_message_id,
-    body, preview, event_type, link_resource_type, link_resource_id,
+    body, preview, subject, event_type, link_resource_type, link_resource_id,
     agent_run_id, reply_to_message_id, streaming_state, metadata, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))
 `
 
 type CreateMessageParams struct {
@@ -139,6 +139,7 @@ type CreateMessageParams struct {
 	ClientMessageID     sql.NullString
 	Body                sql.NullString
 	Preview             sql.NullString
+	Subject             sql.NullString
 	EventType           sql.NullString
 	LinkResourceType    sql.NullString
 	LinkResourceID      sql.NullString
@@ -163,6 +164,7 @@ func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) er
 		arg.ClientMessageID,
 		arg.Body,
 		arg.Preview,
+		arg.Subject,
 		arg.EventType,
 		arg.LinkResourceType,
 		arg.LinkResourceID,
@@ -211,7 +213,7 @@ func (q *Queries) CreateScheduledMessage(ctx context.Context, arg CreateSchedule
 }
 
 const getLastVisibleMessage = `-- name: GetLastVisibleMessage :one
-SELECT id, conversation_id, account_id, sequence, kind, sender_participant_id, client_message_id, body, preview, event_type, template_key, template_params, link_resource_type, link_resource_id, reply_to_message_id, edited_at, deleted_at, metadata, created_at, updated_at, agent_run_id, streaming_state, visibility, approved_by_account_user_id, channel, last_error, lock_owner, locked_at, scheduled_attempts, scheduled_for, source_thread_message_id, status, subject FROM message
+SELECT id, conversation_id, account_id, sequence, kind, status, visibility, sender_participant_id, client_message_id, body, subject, channel, preview, event_type, template_key, template_params, link_resource_type, link_resource_id, agent_run_id, reply_to_message_id, source_thread_message_id, approved_by_account_user_id, streaming_state, scheduled_for, scheduled_attempts, last_error, locked_at, lock_owner, edited_at, deleted_at, metadata, created_at, updated_at FROM message
 WHERE conversation_id = ? AND status = 'sent' AND visibility <> 'internal' AND deleted_at IS NULL
 ORDER BY sequence DESC
 LIMIT 1
@@ -228,40 +230,40 @@ func (q *Queries) GetLastVisibleMessage(ctx context.Context, conversationID stri
 		&i.AccountID,
 		&i.Sequence,
 		&i.Kind,
+		&i.Status,
+		&i.Visibility,
 		&i.SenderParticipantID,
 		&i.ClientMessageID,
 		&i.Body,
+		&i.Subject,
+		&i.Channel,
 		&i.Preview,
 		&i.EventType,
 		&i.TemplateKey,
 		&i.TemplateParams,
 		&i.LinkResourceType,
 		&i.LinkResourceID,
+		&i.AgentRunID,
 		&i.ReplyToMessageID,
+		&i.SourceThreadMessageID,
+		&i.ApprovedByAccountUserID,
+		&i.StreamingState,
+		&i.ScheduledFor,
+		&i.ScheduledAttempts,
+		&i.LastError,
+		&i.LockedAt,
+		&i.LockOwner,
 		&i.EditedAt,
 		&i.DeletedAt,
 		&i.Metadata,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.AgentRunID,
-		&i.StreamingState,
-		&i.Visibility,
-		&i.ApprovedByAccountUserID,
-		&i.Channel,
-		&i.LastError,
-		&i.LockOwner,
-		&i.LockedAt,
-		&i.ScheduledAttempts,
-		&i.ScheduledFor,
-		&i.SourceThreadMessageID,
-		&i.Status,
-		&i.Subject,
 	)
 	return i, err
 }
 
 const getMessageByClientID = `-- name: GetMessageByClientID :one
-SELECT id, conversation_id, account_id, sequence, kind, sender_participant_id, client_message_id, body, preview, event_type, template_key, template_params, link_resource_type, link_resource_id, reply_to_message_id, edited_at, deleted_at, metadata, created_at, updated_at, agent_run_id, streaming_state, visibility, approved_by_account_user_id, channel, last_error, lock_owner, locked_at, scheduled_attempts, scheduled_for, source_thread_message_id, status, subject FROM message
+SELECT id, conversation_id, account_id, sequence, kind, status, visibility, sender_participant_id, client_message_id, body, subject, channel, preview, event_type, template_key, template_params, link_resource_type, link_resource_id, agent_run_id, reply_to_message_id, source_thread_message_id, approved_by_account_user_id, streaming_state, scheduled_for, scheduled_attempts, last_error, locked_at, lock_owner, edited_at, deleted_at, metadata, created_at, updated_at FROM message
 WHERE conversation_id = ? AND client_message_id = ?
 `
 
@@ -280,40 +282,40 @@ func (q *Queries) GetMessageByClientID(ctx context.Context, arg GetMessageByClie
 		&i.AccountID,
 		&i.Sequence,
 		&i.Kind,
+		&i.Status,
+		&i.Visibility,
 		&i.SenderParticipantID,
 		&i.ClientMessageID,
 		&i.Body,
+		&i.Subject,
+		&i.Channel,
 		&i.Preview,
 		&i.EventType,
 		&i.TemplateKey,
 		&i.TemplateParams,
 		&i.LinkResourceType,
 		&i.LinkResourceID,
+		&i.AgentRunID,
 		&i.ReplyToMessageID,
+		&i.SourceThreadMessageID,
+		&i.ApprovedByAccountUserID,
+		&i.StreamingState,
+		&i.ScheduledFor,
+		&i.ScheduledAttempts,
+		&i.LastError,
+		&i.LockedAt,
+		&i.LockOwner,
 		&i.EditedAt,
 		&i.DeletedAt,
 		&i.Metadata,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.AgentRunID,
-		&i.StreamingState,
-		&i.Visibility,
-		&i.ApprovedByAccountUserID,
-		&i.Channel,
-		&i.LastError,
-		&i.LockOwner,
-		&i.LockedAt,
-		&i.ScheduledAttempts,
-		&i.ScheduledFor,
-		&i.SourceThreadMessageID,
-		&i.Status,
-		&i.Subject,
 	)
 	return i, err
 }
 
 const getMessageByID = `-- name: GetMessageByID :one
-SELECT id, conversation_id, account_id, sequence, kind, sender_participant_id, client_message_id, body, preview, event_type, template_key, template_params, link_resource_type, link_resource_id, reply_to_message_id, edited_at, deleted_at, metadata, created_at, updated_at, agent_run_id, streaming_state, visibility, approved_by_account_user_id, channel, last_error, lock_owner, locked_at, scheduled_attempts, scheduled_for, source_thread_message_id, status, subject FROM message
+SELECT id, conversation_id, account_id, sequence, kind, status, visibility, sender_participant_id, client_message_id, body, subject, channel, preview, event_type, template_key, template_params, link_resource_type, link_resource_id, agent_run_id, reply_to_message_id, source_thread_message_id, approved_by_account_user_id, streaming_state, scheduled_for, scheduled_attempts, last_error, locked_at, lock_owner, edited_at, deleted_at, metadata, created_at, updated_at FROM message
 WHERE id = ? AND account_id = ?
 `
 
@@ -331,40 +333,40 @@ func (q *Queries) GetMessageByID(ctx context.Context, arg GetMessageByIDParams) 
 		&i.AccountID,
 		&i.Sequence,
 		&i.Kind,
+		&i.Status,
+		&i.Visibility,
 		&i.SenderParticipantID,
 		&i.ClientMessageID,
 		&i.Body,
+		&i.Subject,
+		&i.Channel,
 		&i.Preview,
 		&i.EventType,
 		&i.TemplateKey,
 		&i.TemplateParams,
 		&i.LinkResourceType,
 		&i.LinkResourceID,
+		&i.AgentRunID,
 		&i.ReplyToMessageID,
+		&i.SourceThreadMessageID,
+		&i.ApprovedByAccountUserID,
+		&i.StreamingState,
+		&i.ScheduledFor,
+		&i.ScheduledAttempts,
+		&i.LastError,
+		&i.LockedAt,
+		&i.LockOwner,
 		&i.EditedAt,
 		&i.DeletedAt,
 		&i.Metadata,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.AgentRunID,
-		&i.StreamingState,
-		&i.Visibility,
-		&i.ApprovedByAccountUserID,
-		&i.Channel,
-		&i.LastError,
-		&i.LockOwner,
-		&i.LockedAt,
-		&i.ScheduledAttempts,
-		&i.ScheduledFor,
-		&i.SourceThreadMessageID,
-		&i.Status,
-		&i.Subject,
 	)
 	return i, err
 }
 
 const getMessagesByIDs = `-- name: GetMessagesByIDs :many
-SELECT id, conversation_id, account_id, sequence, kind, sender_participant_id, client_message_id, body, preview, event_type, template_key, template_params, link_resource_type, link_resource_id, reply_to_message_id, edited_at, deleted_at, metadata, created_at, updated_at, agent_run_id, streaming_state, visibility, approved_by_account_user_id, channel, last_error, lock_owner, locked_at, scheduled_attempts, scheduled_for, source_thread_message_id, status, subject FROM message
+SELECT id, conversation_id, account_id, sequence, kind, status, visibility, sender_participant_id, client_message_id, body, subject, channel, preview, event_type, template_key, template_params, link_resource_type, link_resource_id, agent_run_id, reply_to_message_id, source_thread_message_id, approved_by_account_user_id, streaming_state, scheduled_for, scheduled_attempts, last_error, locked_at, lock_owner, edited_at, deleted_at, metadata, created_at, updated_at FROM message
 WHERE id IN (/*SLICE:ids*/?)
 `
 
@@ -395,34 +397,34 @@ func (q *Queries) GetMessagesByIDs(ctx context.Context, ids []string) ([]Message
 			&i.AccountID,
 			&i.Sequence,
 			&i.Kind,
+			&i.Status,
+			&i.Visibility,
 			&i.SenderParticipantID,
 			&i.ClientMessageID,
 			&i.Body,
+			&i.Subject,
+			&i.Channel,
 			&i.Preview,
 			&i.EventType,
 			&i.TemplateKey,
 			&i.TemplateParams,
 			&i.LinkResourceType,
 			&i.LinkResourceID,
+			&i.AgentRunID,
 			&i.ReplyToMessageID,
+			&i.SourceThreadMessageID,
+			&i.ApprovedByAccountUserID,
+			&i.StreamingState,
+			&i.ScheduledFor,
+			&i.ScheduledAttempts,
+			&i.LastError,
+			&i.LockedAt,
+			&i.LockOwner,
 			&i.EditedAt,
 			&i.DeletedAt,
 			&i.Metadata,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.AgentRunID,
-			&i.StreamingState,
-			&i.Visibility,
-			&i.ApprovedByAccountUserID,
-			&i.Channel,
-			&i.LastError,
-			&i.LockOwner,
-			&i.LockedAt,
-			&i.ScheduledAttempts,
-			&i.ScheduledFor,
-			&i.SourceThreadMessageID,
-			&i.Status,
-			&i.Subject,
 		); err != nil {
 			return nil, err
 		}
@@ -438,7 +440,7 @@ func (q *Queries) GetMessagesByIDs(ctx context.Context, ids []string) ([]Message
 }
 
 const listDraftMessagesByConversation = `-- name: ListDraftMessagesByConversation :many
-SELECT id, conversation_id, account_id, sequence, kind, sender_participant_id, client_message_id, body, preview, event_type, template_key, template_params, link_resource_type, link_resource_id, reply_to_message_id, edited_at, deleted_at, metadata, created_at, updated_at, agent_run_id, streaming_state, visibility, approved_by_account_user_id, channel, last_error, lock_owner, locked_at, scheduled_attempts, scheduled_for, source_thread_message_id, status, subject FROM message
+SELECT id, conversation_id, account_id, sequence, kind, status, visibility, sender_participant_id, client_message_id, body, subject, channel, preview, event_type, template_key, template_params, link_resource_type, link_resource_id, agent_run_id, reply_to_message_id, source_thread_message_id, approved_by_account_user_id, streaming_state, scheduled_for, scheduled_attempts, last_error, locked_at, lock_owner, edited_at, deleted_at, metadata, created_at, updated_at FROM message
 WHERE conversation_id = ? AND account_id = ?
   AND status IN ('draft', 'rejected', 'superseded')
   AND (? IS NULL OR status = ?)
@@ -473,34 +475,34 @@ func (q *Queries) ListDraftMessagesByConversation(ctx context.Context, arg ListD
 			&i.AccountID,
 			&i.Sequence,
 			&i.Kind,
+			&i.Status,
+			&i.Visibility,
 			&i.SenderParticipantID,
 			&i.ClientMessageID,
 			&i.Body,
+			&i.Subject,
+			&i.Channel,
 			&i.Preview,
 			&i.EventType,
 			&i.TemplateKey,
 			&i.TemplateParams,
 			&i.LinkResourceType,
 			&i.LinkResourceID,
+			&i.AgentRunID,
 			&i.ReplyToMessageID,
+			&i.SourceThreadMessageID,
+			&i.ApprovedByAccountUserID,
+			&i.StreamingState,
+			&i.ScheduledFor,
+			&i.ScheduledAttempts,
+			&i.LastError,
+			&i.LockedAt,
+			&i.LockOwner,
 			&i.EditedAt,
 			&i.DeletedAt,
 			&i.Metadata,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.AgentRunID,
-			&i.StreamingState,
-			&i.Visibility,
-			&i.ApprovedByAccountUserID,
-			&i.Channel,
-			&i.LastError,
-			&i.LockOwner,
-			&i.LockedAt,
-			&i.ScheduledAttempts,
-			&i.ScheduledFor,
-			&i.SourceThreadMessageID,
-			&i.Status,
-			&i.Subject,
 		); err != nil {
 			return nil, err
 		}
@@ -516,7 +518,7 @@ func (q *Queries) ListDraftMessagesByConversation(ctx context.Context, arg ListD
 }
 
 const listDueScheduledMessages = `-- name: ListDueScheduledMessages :many
-SELECT id, conversation_id, account_id, sequence, kind, sender_participant_id, client_message_id, body, preview, event_type, template_key, template_params, link_resource_type, link_resource_id, reply_to_message_id, edited_at, deleted_at, metadata, created_at, updated_at, agent_run_id, streaming_state, visibility, approved_by_account_user_id, channel, last_error, lock_owner, locked_at, scheduled_attempts, scheduled_for, source_thread_message_id, status, subject FROM message
+SELECT id, conversation_id, account_id, sequence, kind, status, visibility, sender_participant_id, client_message_id, body, subject, channel, preview, event_type, template_key, template_params, link_resource_type, link_resource_id, agent_run_id, reply_to_message_id, source_thread_message_id, approved_by_account_user_id, streaming_state, scheduled_for, scheduled_attempts, last_error, locked_at, lock_owner, edited_at, deleted_at, metadata, created_at, updated_at FROM message
 WHERE status = 'scheduled'
   AND scheduled_for <= NOW(3)
   AND deleted_at IS NULL
@@ -542,34 +544,34 @@ func (q *Queries) ListDueScheduledMessages(ctx context.Context, limit int32) ([]
 			&i.AccountID,
 			&i.Sequence,
 			&i.Kind,
+			&i.Status,
+			&i.Visibility,
 			&i.SenderParticipantID,
 			&i.ClientMessageID,
 			&i.Body,
+			&i.Subject,
+			&i.Channel,
 			&i.Preview,
 			&i.EventType,
 			&i.TemplateKey,
 			&i.TemplateParams,
 			&i.LinkResourceType,
 			&i.LinkResourceID,
+			&i.AgentRunID,
 			&i.ReplyToMessageID,
+			&i.SourceThreadMessageID,
+			&i.ApprovedByAccountUserID,
+			&i.StreamingState,
+			&i.ScheduledFor,
+			&i.ScheduledAttempts,
+			&i.LastError,
+			&i.LockedAt,
+			&i.LockOwner,
 			&i.EditedAt,
 			&i.DeletedAt,
 			&i.Metadata,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.AgentRunID,
-			&i.StreamingState,
-			&i.Visibility,
-			&i.ApprovedByAccountUserID,
-			&i.Channel,
-			&i.LastError,
-			&i.LockOwner,
-			&i.LockedAt,
-			&i.ScheduledAttempts,
-			&i.ScheduledFor,
-			&i.SourceThreadMessageID,
-			&i.Status,
-			&i.Subject,
 		); err != nil {
 			return nil, err
 		}
@@ -585,7 +587,7 @@ func (q *Queries) ListDueScheduledMessages(ctx context.Context, limit int32) ([]
 }
 
 const listMessages = `-- name: ListMessages :many
-SELECT id, conversation_id, account_id, sequence, kind, sender_participant_id, client_message_id, body, preview, event_type, template_key, template_params, link_resource_type, link_resource_id, reply_to_message_id, edited_at, deleted_at, metadata, created_at, updated_at, agent_run_id, streaming_state, visibility, approved_by_account_user_id, channel, last_error, lock_owner, locked_at, scheduled_attempts, scheduled_for, source_thread_message_id, status, subject FROM message
+SELECT id, conversation_id, account_id, sequence, kind, status, visibility, sender_participant_id, client_message_id, body, subject, channel, preview, event_type, template_key, template_params, link_resource_type, link_resource_id, agent_run_id, reply_to_message_id, source_thread_message_id, approved_by_account_user_id, streaming_state, scheduled_for, scheduled_attempts, last_error, locked_at, lock_owner, edited_at, deleted_at, metadata, created_at, updated_at FROM message
 WHERE conversation_id = ?
   AND status = 'sent'
   AND (? IS NULL OR sequence < ?)
@@ -626,34 +628,34 @@ func (q *Queries) ListMessages(ctx context.Context, arg ListMessagesParams) ([]M
 			&i.AccountID,
 			&i.Sequence,
 			&i.Kind,
+			&i.Status,
+			&i.Visibility,
 			&i.SenderParticipantID,
 			&i.ClientMessageID,
 			&i.Body,
+			&i.Subject,
+			&i.Channel,
 			&i.Preview,
 			&i.EventType,
 			&i.TemplateKey,
 			&i.TemplateParams,
 			&i.LinkResourceType,
 			&i.LinkResourceID,
+			&i.AgentRunID,
 			&i.ReplyToMessageID,
+			&i.SourceThreadMessageID,
+			&i.ApprovedByAccountUserID,
+			&i.StreamingState,
+			&i.ScheduledFor,
+			&i.ScheduledAttempts,
+			&i.LastError,
+			&i.LockedAt,
+			&i.LockOwner,
 			&i.EditedAt,
 			&i.DeletedAt,
 			&i.Metadata,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.AgentRunID,
-			&i.StreamingState,
-			&i.Visibility,
-			&i.ApprovedByAccountUserID,
-			&i.Channel,
-			&i.LastError,
-			&i.LockOwner,
-			&i.LockedAt,
-			&i.ScheduledAttempts,
-			&i.ScheduledFor,
-			&i.SourceThreadMessageID,
-			&i.Status,
-			&i.Subject,
 		); err != nil {
 			return nil, err
 		}
@@ -669,7 +671,7 @@ func (q *Queries) ListMessages(ctx context.Context, arg ListMessagesParams) ([]M
 }
 
 const listMessagesVisible = `-- name: ListMessagesVisible :many
-SELECT id, conversation_id, account_id, sequence, kind, sender_participant_id, client_message_id, body, preview, event_type, template_key, template_params, link_resource_type, link_resource_id, reply_to_message_id, edited_at, deleted_at, metadata, created_at, updated_at, agent_run_id, streaming_state, visibility, approved_by_account_user_id, channel, last_error, lock_owner, locked_at, scheduled_attempts, scheduled_for, source_thread_message_id, status, subject FROM message
+SELECT id, conversation_id, account_id, sequence, kind, status, visibility, sender_participant_id, client_message_id, body, subject, channel, preview, event_type, template_key, template_params, link_resource_type, link_resource_id, agent_run_id, reply_to_message_id, source_thread_message_id, approved_by_account_user_id, streaming_state, scheduled_for, scheduled_attempts, last_error, locked_at, lock_owner, edited_at, deleted_at, metadata, created_at, updated_at FROM message
 WHERE conversation_id = ?
   AND status = 'sent'
   AND visibility <> 'internal'
@@ -710,34 +712,34 @@ func (q *Queries) ListMessagesVisible(ctx context.Context, arg ListMessagesVisib
 			&i.AccountID,
 			&i.Sequence,
 			&i.Kind,
+			&i.Status,
+			&i.Visibility,
 			&i.SenderParticipantID,
 			&i.ClientMessageID,
 			&i.Body,
+			&i.Subject,
+			&i.Channel,
 			&i.Preview,
 			&i.EventType,
 			&i.TemplateKey,
 			&i.TemplateParams,
 			&i.LinkResourceType,
 			&i.LinkResourceID,
+			&i.AgentRunID,
 			&i.ReplyToMessageID,
+			&i.SourceThreadMessageID,
+			&i.ApprovedByAccountUserID,
+			&i.StreamingState,
+			&i.ScheduledFor,
+			&i.ScheduledAttempts,
+			&i.LastError,
+			&i.LockedAt,
+			&i.LockOwner,
 			&i.EditedAt,
 			&i.DeletedAt,
 			&i.Metadata,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.AgentRunID,
-			&i.StreamingState,
-			&i.Visibility,
-			&i.ApprovedByAccountUserID,
-			&i.Channel,
-			&i.LastError,
-			&i.LockOwner,
-			&i.LockedAt,
-			&i.ScheduledAttempts,
-			&i.ScheduledFor,
-			&i.SourceThreadMessageID,
-			&i.Status,
-			&i.Subject,
 		); err != nil {
 			return nil, err
 		}
@@ -753,7 +755,7 @@ func (q *Queries) ListMessagesVisible(ctx context.Context, arg ListMessagesVisib
 }
 
 const listScheduledMessagesByConversation = `-- name: ListScheduledMessagesByConversation :many
-SELECT m.id, m.conversation_id, m.account_id, m.sequence, m.kind, m.sender_participant_id, m.client_message_id, m.body, m.preview, m.event_type, m.template_key, m.template_params, m.link_resource_type, m.link_resource_id, m.reply_to_message_id, m.edited_at, m.deleted_at, m.metadata, m.created_at, m.updated_at, m.agent_run_id, m.streaming_state, m.visibility, m.approved_by_account_user_id, m.channel, m.last_error, m.lock_owner, m.locked_at, m.scheduled_attempts, m.scheduled_for, m.source_thread_message_id, m.status, m.subject FROM message m
+SELECT m.id, m.conversation_id, m.account_id, m.sequence, m.kind, m.status, m.visibility, m.sender_participant_id, m.client_message_id, m.body, m.subject, m.channel, m.preview, m.event_type, m.template_key, m.template_params, m.link_resource_type, m.link_resource_id, m.agent_run_id, m.reply_to_message_id, m.source_thread_message_id, m.approved_by_account_user_id, m.streaming_state, m.scheduled_for, m.scheduled_attempts, m.last_error, m.locked_at, m.lock_owner, m.edited_at, m.deleted_at, m.metadata, m.created_at, m.updated_at FROM message m
 JOIN conversation_participant p ON p.id = m.sender_participant_id
 WHERE m.account_id = ?
   AND m.conversation_id = ?
@@ -793,34 +795,34 @@ func (q *Queries) ListScheduledMessagesByConversation(ctx context.Context, arg L
 			&i.AccountID,
 			&i.Sequence,
 			&i.Kind,
+			&i.Status,
+			&i.Visibility,
 			&i.SenderParticipantID,
 			&i.ClientMessageID,
 			&i.Body,
+			&i.Subject,
+			&i.Channel,
 			&i.Preview,
 			&i.EventType,
 			&i.TemplateKey,
 			&i.TemplateParams,
 			&i.LinkResourceType,
 			&i.LinkResourceID,
+			&i.AgentRunID,
 			&i.ReplyToMessageID,
+			&i.SourceThreadMessageID,
+			&i.ApprovedByAccountUserID,
+			&i.StreamingState,
+			&i.ScheduledFor,
+			&i.ScheduledAttempts,
+			&i.LastError,
+			&i.LockedAt,
+			&i.LockOwner,
 			&i.EditedAt,
 			&i.DeletedAt,
 			&i.Metadata,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.AgentRunID,
-			&i.StreamingState,
-			&i.Visibility,
-			&i.ApprovedByAccountUserID,
-			&i.Channel,
-			&i.LastError,
-			&i.LockOwner,
-			&i.LockedAt,
-			&i.ScheduledAttempts,
-			&i.ScheduledFor,
-			&i.SourceThreadMessageID,
-			&i.Status,
-			&i.Subject,
 		); err != nil {
 			return nil, err
 		}

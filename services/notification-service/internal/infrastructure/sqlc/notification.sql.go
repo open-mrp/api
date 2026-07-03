@@ -127,7 +127,7 @@ func (q *Queries) DismissNotificationsBySourceMessage(ctx context.Context, arg D
 }
 
 const getNotificationByID = `-- name: GetNotificationByID :one
-SELECT id, account_id, recipient_account_user_id, category, source_message_id, conversation_id, title, body, template_key, template_params, link_resource_type, link_resource_id, priority, seen_at, read_at, dismissed_at, metadata, created_at, updated_at, sender_id, sender_name, sender_type FROM notification
+SELECT id, account_id, recipient_account_user_id, category, source_message_id, conversation_id, title, body, template_key, template_params, link_resource_type, link_resource_id, sender_type, sender_id, sender_name, priority, seen_at, read_at, dismissed_at, metadata, created_at, updated_at FROM notification
 WHERE id = ? AND recipient_account_user_id = ?
 `
 
@@ -152,6 +152,9 @@ func (q *Queries) GetNotificationByID(ctx context.Context, arg GetNotificationBy
 		&i.TemplateParams,
 		&i.LinkResourceType,
 		&i.LinkResourceID,
+		&i.SenderType,
+		&i.SenderID,
+		&i.SenderName,
 		&i.Priority,
 		&i.SeenAt,
 		&i.ReadAt,
@@ -159,15 +162,12 @@ func (q *Queries) GetNotificationByID(ctx context.Context, arg GetNotificationBy
 		&i.Metadata,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.SenderID,
-		&i.SenderName,
-		&i.SenderType,
 	)
 	return i, err
 }
 
 const listNotifications = `-- name: ListNotifications :many
-SELECT id, account_id, recipient_account_user_id, category, source_message_id, conversation_id, title, body, template_key, template_params, link_resource_type, link_resource_id, priority, seen_at, read_at, dismissed_at, metadata, created_at, updated_at, sender_id, sender_name, sender_type FROM notification
+SELECT id, account_id, recipient_account_user_id, category, source_message_id, conversation_id, title, body, template_key, template_params, link_resource_type, link_resource_id, sender_type, sender_id, sender_name, priority, seen_at, read_at, dismissed_at, metadata, created_at, updated_at FROM notification
 WHERE recipient_account_user_id = ?
   AND (? IS NULL OR category = ?)
   AND (
@@ -274,6 +274,9 @@ func (q *Queries) ListNotifications(ctx context.Context, arg ListNotificationsPa
 			&i.TemplateParams,
 			&i.LinkResourceType,
 			&i.LinkResourceID,
+			&i.SenderType,
+			&i.SenderID,
+			&i.SenderName,
 			&i.Priority,
 			&i.SeenAt,
 			&i.ReadAt,
@@ -281,9 +284,6 @@ func (q *Queries) ListNotifications(ctx context.Context, arg ListNotificationsPa
 			&i.Metadata,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.SenderID,
-			&i.SenderName,
-			&i.SenderType,
 		); err != nil {
 			return nil, err
 		}

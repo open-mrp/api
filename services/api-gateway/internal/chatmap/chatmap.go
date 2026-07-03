@@ -259,8 +259,18 @@ func SenderActorFromProto(m *pb.MessageInfo) *apiresource.Actor {
 	if m.SenderAgentConfigId != nil && *m.SenderAgentConfigId != "" {
 		return apiresource.NewActor(*m.SenderAgentConfigId, constants.ActorTypeAgent, nil, nil)
 	}
+	// An inbound email's sender is an external customer with no account_user/agent id — only a resolved
+	// display name ("Name <addr>") the notification service lifted from the mail headers. Surface it as a
+	// synthetic party so the timeline shows who the email is from rather than an unattributed bubble.
+	if m.SenderDisplayName != nil && *m.SenderDisplayName != "" {
+		return apiresource.NewActor(externalEmailSenderActorID, constants.ActorTypeGroup, m.SenderDisplayName, nil)
+	}
 	return nil
 }
+
+// externalEmailSenderActorID is the stable synthetic id for the sender of an inbound email — an external
+// party with no account_user id. Like customerServiceActorID it is a display-only actor (non-navigable).
+const externalEmailSenderActorID = "external_email_sender"
 
 // AttachmentFromProto maps a message attachment to its API resource.
 func AttachmentFromProto(ctx context.Context, a *pb.AttachmentInfo) apiresource.MessageAttachment {

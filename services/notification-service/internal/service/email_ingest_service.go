@@ -151,6 +151,8 @@ func (s *conversationSvcImpl) IngestInboundEmail(ctx context.Context, in domain.
 			ClientMessageID: &clientMsgID,
 			Body:            &body,
 			Preview:         strPtrIfNotEmpty(messagePreview(&body, 0, false)),
+			// Carry the email subject on the message (not just the ledger) so the timeline can show the original subject line alongside the body.
+			Subject: strPtrIfNotEmpty(in.Subject),
 			// Stash the external sender so read/history/agent-dispatch can attribute it — the customer isn't a participant, so participant-based sender resolution finds no author.
 			Metadata:  marshalExternalSenderMeta(in.FromName, in.From),
 			CreatedAt: now,

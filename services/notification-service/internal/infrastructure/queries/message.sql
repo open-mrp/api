@@ -4,9 +4,9 @@
 INSERT INTO message (
     id, conversation_id, account_id, sequence, kind, visibility, channel,
     sender_participant_id, client_message_id,
-    body, preview, event_type, link_resource_type, link_resource_id,
+    body, preview, subject, event_type, link_resource_type, link_resource_id,
     agent_run_id, reply_to_message_id, streaming_state, metadata, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3));
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3));
 
 -- name: CreateDraftMessage :exec
 -- Inserts a customer-reply draft (status='draft', no timeline sequence yet). Held at visibility

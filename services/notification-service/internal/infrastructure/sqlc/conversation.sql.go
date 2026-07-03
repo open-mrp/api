@@ -293,7 +293,7 @@ func (q *Queries) CreateParticipant(ctx context.Context, arg CreateParticipantPa
 }
 
 const getConversationByID = `-- name: GetConversationByID :one
-SELECT id, account_id, type, title, topic_resource_type, topic_resource_id, created_by_participant_id, next_sequence, last_message_id, last_message_at, is_archived, legal_hold, metadata, created_at, updated_at, email_external_address, email_inbox_id, audience, workflow_status, group_id, assignee_resource_type, assignee_resource_id FROM conversation
+SELECT id, account_id, type, audience, title, group_id, topic_resource_type, topic_resource_id, created_by_participant_id, next_sequence, last_message_id, last_message_at, is_archived, legal_hold, workflow_status, assignee_resource_type, assignee_resource_id, email_inbox_id, email_external_address, metadata, created_at, updated_at FROM conversation
 WHERE id = ? AND account_id = ?
 `
 
@@ -309,7 +309,9 @@ func (q *Queries) GetConversationByID(ctx context.Context, arg GetConversationBy
 		&i.ID,
 		&i.AccountID,
 		&i.Type,
+		&i.Audience,
 		&i.Title,
+		&i.GroupID,
 		&i.TopicResourceType,
 		&i.TopicResourceID,
 		&i.CreatedByParticipantID,
@@ -318,22 +320,20 @@ func (q *Queries) GetConversationByID(ctx context.Context, arg GetConversationBy
 		&i.LastMessageAt,
 		&i.IsArchived,
 		&i.LegalHold,
+		&i.WorkflowStatus,
+		&i.AssigneeResourceType,
+		&i.AssigneeResourceID,
+		&i.EmailInboxID,
+		&i.EmailExternalAddress,
 		&i.Metadata,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.EmailExternalAddress,
-		&i.EmailInboxID,
-		&i.Audience,
-		&i.WorkflowStatus,
-		&i.GroupID,
-		&i.AssigneeResourceType,
-		&i.AssigneeResourceID,
 	)
 	return i, err
 }
 
 const getCustomerSupportConversation = `-- name: GetCustomerSupportConversation :one
-SELECT c.id, c.account_id, c.type, c.title, c.topic_resource_type, c.topic_resource_id, c.created_by_participant_id, c.next_sequence, c.last_message_id, c.last_message_at, c.is_archived, c.legal_hold, c.metadata, c.created_at, c.updated_at, c.email_external_address, c.email_inbox_id, c.audience, c.workflow_status, c.group_id, c.assignee_resource_type, c.assignee_resource_id FROM conversation c
+SELECT c.id, c.account_id, c.type, c.audience, c.title, c.group_id, c.topic_resource_type, c.topic_resource_id, c.created_by_participant_id, c.next_sequence, c.last_message_id, c.last_message_at, c.is_archived, c.legal_hold, c.workflow_status, c.assignee_resource_type, c.assignee_resource_id, c.email_inbox_id, c.email_external_address, c.metadata, c.created_at, c.updated_at FROM conversation c
 JOIN conversation_participant p ON p.conversation_id = c.id
 WHERE c.account_id = ? AND c.audience = 'customer'
   AND p.participant_type = 'customer' AND p.relation_account_id = ?
@@ -354,7 +354,9 @@ func (q *Queries) GetCustomerSupportConversation(ctx context.Context, arg GetCus
 		&i.ID,
 		&i.AccountID,
 		&i.Type,
+		&i.Audience,
 		&i.Title,
+		&i.GroupID,
 		&i.TopicResourceType,
 		&i.TopicResourceID,
 		&i.CreatedByParticipantID,
@@ -363,16 +365,14 @@ func (q *Queries) GetCustomerSupportConversation(ctx context.Context, arg GetCus
 		&i.LastMessageAt,
 		&i.IsArchived,
 		&i.LegalHold,
+		&i.WorkflowStatus,
+		&i.AssigneeResourceType,
+		&i.AssigneeResourceID,
+		&i.EmailInboxID,
+		&i.EmailExternalAddress,
 		&i.Metadata,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.EmailExternalAddress,
-		&i.EmailInboxID,
-		&i.Audience,
-		&i.WorkflowStatus,
-		&i.GroupID,
-		&i.AssigneeResourceType,
-		&i.AssigneeResourceID,
 	)
 	return i, err
 }
@@ -395,7 +395,7 @@ func (q *Queries) GetDMConversationID(ctx context.Context, arg GetDMConversation
 }
 
 const getParticipant = `-- name: GetParticipant :one
-SELECT id, conversation_id, account_id, participant_type, account_user_id, agent_config_id, role, membership, notifications, muted_until, last_read_message_id, last_read_sequence, last_read_at, last_seen_at, hidden_at, agent_trigger_policy, agent_trigger_keywords, joined_at, created_at, updated_at, relation_account_id FROM conversation_participant
+SELECT id, conversation_id, account_id, participant_type, account_user_id, agent_config_id, role, membership, notifications, muted_until, last_read_message_id, last_read_sequence, last_read_at, last_seen_at, hidden_at, agent_trigger_policy, agent_trigger_keywords, relation_account_id, joined_at, created_at, updated_at FROM conversation_participant
 WHERE conversation_id = ? AND account_user_id = ?
 `
 
@@ -425,16 +425,16 @@ func (q *Queries) GetParticipant(ctx context.Context, arg GetParticipantParams) 
 		&i.HiddenAt,
 		&i.AgentTriggerPolicy,
 		&i.AgentTriggerKeywords,
+		&i.RelationAccountID,
 		&i.JoinedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.RelationAccountID,
 	)
 	return i, err
 }
 
 const getParticipantByAgentConfigID = `-- name: GetParticipantByAgentConfigID :one
-SELECT id, conversation_id, account_id, participant_type, account_user_id, agent_config_id, role, membership, notifications, muted_until, last_read_message_id, last_read_sequence, last_read_at, last_seen_at, hidden_at, agent_trigger_policy, agent_trigger_keywords, joined_at, created_at, updated_at, relation_account_id FROM conversation_participant
+SELECT id, conversation_id, account_id, participant_type, account_user_id, agent_config_id, role, membership, notifications, muted_until, last_read_message_id, last_read_sequence, last_read_at, last_seen_at, hidden_at, agent_trigger_policy, agent_trigger_keywords, relation_account_id, joined_at, created_at, updated_at FROM conversation_participant
 WHERE conversation_id = ? AND agent_config_id = ?
 `
 
@@ -464,16 +464,16 @@ func (q *Queries) GetParticipantByAgentConfigID(ctx context.Context, arg GetPart
 		&i.HiddenAt,
 		&i.AgentTriggerPolicy,
 		&i.AgentTriggerKeywords,
+		&i.RelationAccountID,
 		&i.JoinedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.RelationAccountID,
 	)
 	return i, err
 }
 
 const getParticipantByID = `-- name: GetParticipantByID :one
-SELECT id, conversation_id, account_id, participant_type, account_user_id, agent_config_id, role, membership, notifications, muted_until, last_read_message_id, last_read_sequence, last_read_at, last_seen_at, hidden_at, agent_trigger_policy, agent_trigger_keywords, joined_at, created_at, updated_at, relation_account_id FROM conversation_participant
+SELECT id, conversation_id, account_id, participant_type, account_user_id, agent_config_id, role, membership, notifications, muted_until, last_read_message_id, last_read_sequence, last_read_at, last_seen_at, hidden_at, agent_trigger_policy, agent_trigger_keywords, relation_account_id, joined_at, created_at, updated_at FROM conversation_participant
 WHERE id = ? AND conversation_id = ?
 `
 
@@ -503,16 +503,16 @@ func (q *Queries) GetParticipantByID(ctx context.Context, arg GetParticipantByID
 		&i.HiddenAt,
 		&i.AgentTriggerPolicy,
 		&i.AgentTriggerKeywords,
+		&i.RelationAccountID,
 		&i.JoinedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.RelationAccountID,
 	)
 	return i, err
 }
 
 const getParticipantByRelationAccount = `-- name: GetParticipantByRelationAccount :one
-SELECT id, conversation_id, account_id, participant_type, account_user_id, agent_config_id, role, membership, notifications, muted_until, last_read_message_id, last_read_sequence, last_read_at, last_seen_at, hidden_at, agent_trigger_policy, agent_trigger_keywords, joined_at, created_at, updated_at, relation_account_id FROM conversation_participant
+SELECT id, conversation_id, account_id, participant_type, account_user_id, agent_config_id, role, membership, notifications, muted_until, last_read_message_id, last_read_sequence, last_read_at, last_seen_at, hidden_at, agent_trigger_policy, agent_trigger_keywords, relation_account_id, joined_at, created_at, updated_at FROM conversation_participant
 WHERE conversation_id = ? AND relation_account_id = ?
 `
 
@@ -542,10 +542,10 @@ func (q *Queries) GetParticipantByRelationAccount(ctx context.Context, arg GetPa
 		&i.HiddenAt,
 		&i.AgentTriggerPolicy,
 		&i.AgentTriggerKeywords,
+		&i.RelationAccountID,
 		&i.JoinedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.RelationAccountID,
 	)
 	return i, err
 }
@@ -583,7 +583,7 @@ func (q *Queries) LeaveConversation(ctx context.Context, arg LeaveConversationPa
 }
 
 const listAllParticipants = `-- name: ListAllParticipants :many
-SELECT id, conversation_id, account_id, participant_type, account_user_id, agent_config_id, role, membership, notifications, muted_until, last_read_message_id, last_read_sequence, last_read_at, last_seen_at, hidden_at, agent_trigger_policy, agent_trigger_keywords, joined_at, created_at, updated_at, relation_account_id FROM conversation_participant
+SELECT id, conversation_id, account_id, participant_type, account_user_id, agent_config_id, role, membership, notifications, muted_until, last_read_message_id, last_read_sequence, last_read_at, last_seen_at, hidden_at, agent_trigger_policy, agent_trigger_keywords, relation_account_id, joined_at, created_at, updated_at FROM conversation_participant
 WHERE conversation_id = ?
 `
 
@@ -617,10 +617,10 @@ func (q *Queries) ListAllParticipants(ctx context.Context, conversationID string
 			&i.HiddenAt,
 			&i.AgentTriggerPolicy,
 			&i.AgentTriggerKeywords,
+			&i.RelationAccountID,
 			&i.JoinedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.RelationAccountID,
 		); err != nil {
 			return nil, err
 		}
@@ -672,7 +672,7 @@ func (q *Queries) ListConversationAttachments(ctx context.Context, conversationI
 }
 
 const listConversationsByResource = `-- name: ListConversationsByResource :many
-SELECT c.id, c.account_id, c.type, c.title, c.topic_resource_type, c.topic_resource_id, c.created_by_participant_id, c.next_sequence, c.last_message_id, c.last_message_at, c.is_archived, c.legal_hold, c.metadata, c.created_at, c.updated_at, c.email_external_address, c.email_inbox_id, c.audience, c.workflow_status, c.group_id, c.assignee_resource_type, c.assignee_resource_id FROM conversation c
+SELECT c.id, c.account_id, c.type, c.audience, c.title, c.group_id, c.topic_resource_type, c.topic_resource_id, c.created_by_participant_id, c.next_sequence, c.last_message_id, c.last_message_at, c.is_archived, c.legal_hold, c.workflow_status, c.assignee_resource_type, c.assignee_resource_id, c.email_inbox_id, c.email_external_address, c.metadata, c.created_at, c.updated_at FROM conversation c
 WHERE c.account_id = ?
   AND (
     (c.topic_resource_type = ? AND c.topic_resource_id = ?)
@@ -718,7 +718,9 @@ func (q *Queries) ListConversationsByResource(ctx context.Context, arg ListConve
 			&i.ID,
 			&i.AccountID,
 			&i.Type,
+			&i.Audience,
 			&i.Title,
+			&i.GroupID,
 			&i.TopicResourceType,
 			&i.TopicResourceID,
 			&i.CreatedByParticipantID,
@@ -727,16 +729,14 @@ func (q *Queries) ListConversationsByResource(ctx context.Context, arg ListConve
 			&i.LastMessageAt,
 			&i.IsArchived,
 			&i.LegalHold,
+			&i.WorkflowStatus,
+			&i.AssigneeResourceType,
+			&i.AssigneeResourceID,
+			&i.EmailInboxID,
+			&i.EmailExternalAddress,
 			&i.Metadata,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.EmailExternalAddress,
-			&i.EmailInboxID,
-			&i.Audience,
-			&i.WorkflowStatus,
-			&i.GroupID,
-			&i.AssigneeResourceType,
-			&i.AssigneeResourceID,
 		); err != nil {
 			return nil, err
 		}
@@ -753,7 +753,7 @@ func (q *Queries) ListConversationsByResource(ctx context.Context, arg ListConve
 
 const listConversationsForUser = `-- name: ListConversationsForUser :many
 SELECT
-    c.id, c.account_id, c.type, c.title, c.topic_resource_type, c.topic_resource_id, c.created_by_participant_id, c.next_sequence, c.last_message_id, c.last_message_at, c.is_archived, c.legal_hold, c.metadata, c.created_at, c.updated_at, c.email_external_address, c.email_inbox_id, c.audience, c.workflow_status, c.group_id, c.assignee_resource_type, c.assignee_resource_id,
+    c.id, c.account_id, c.type, c.audience, c.title, c.group_id, c.topic_resource_type, c.topic_resource_id, c.created_by_participant_id, c.next_sequence, c.last_message_id, c.last_message_at, c.is_archived, c.legal_hold, c.workflow_status, c.assignee_resource_type, c.assignee_resource_id, c.email_inbox_id, c.email_external_address, c.metadata, c.created_at, c.updated_at,
     p.id AS participant_id,
     p.last_read_sequence AS participant_last_read_sequence,
     p.hidden_at AS participant_hidden_at
@@ -793,7 +793,9 @@ type ListConversationsForUserRow struct {
 	ID                          string
 	AccountID                   string
 	Type                        string
+	Audience                    string
 	Title                       sql.NullString
+	GroupID                     sql.NullString
 	TopicResourceType           sql.NullString
 	TopicResourceID             sql.NullString
 	CreatedByParticipantID      sql.NullString
@@ -802,16 +804,14 @@ type ListConversationsForUserRow struct {
 	LastMessageAt               sql.NullTime
 	IsArchived                  bool
 	LegalHold                   bool
+	WorkflowStatus              sql.NullString
+	AssigneeResourceType        sql.NullString
+	AssigneeResourceID          sql.NullString
+	EmailInboxID                sql.NullString
+	EmailExternalAddress        sql.NullString
 	Metadata                    db.NullableRawMessage
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time
-	EmailExternalAddress        sql.NullString
-	EmailInboxID                sql.NullString
-	Audience                    string
-	WorkflowStatus              sql.NullString
-	GroupID                     sql.NullString
-	AssigneeResourceType        sql.NullString
-	AssigneeResourceID          sql.NullString
 	ParticipantID               string
 	ParticipantLastReadSequence int64
 	ParticipantHiddenAt         sql.NullTime
@@ -855,7 +855,9 @@ func (q *Queries) ListConversationsForUser(ctx context.Context, arg ListConversa
 			&i.ID,
 			&i.AccountID,
 			&i.Type,
+			&i.Audience,
 			&i.Title,
+			&i.GroupID,
 			&i.TopicResourceType,
 			&i.TopicResourceID,
 			&i.CreatedByParticipantID,
@@ -864,16 +866,14 @@ func (q *Queries) ListConversationsForUser(ctx context.Context, arg ListConversa
 			&i.LastMessageAt,
 			&i.IsArchived,
 			&i.LegalHold,
+			&i.WorkflowStatus,
+			&i.AssigneeResourceType,
+			&i.AssigneeResourceID,
+			&i.EmailInboxID,
+			&i.EmailExternalAddress,
 			&i.Metadata,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.EmailExternalAddress,
-			&i.EmailInboxID,
-			&i.Audience,
-			&i.WorkflowStatus,
-			&i.GroupID,
-			&i.AssigneeResourceType,
-			&i.AssigneeResourceID,
 			&i.ParticipantID,
 			&i.ParticipantLastReadSequence,
 			&i.ParticipantHiddenAt,
@@ -892,7 +892,7 @@ func (q *Queries) ListConversationsForUser(ctx context.Context, arg ListConversa
 }
 
 const listParticipants = `-- name: ListParticipants :many
-SELECT id, conversation_id, account_id, participant_type, account_user_id, agent_config_id, role, membership, notifications, muted_until, last_read_message_id, last_read_sequence, last_read_at, last_seen_at, hidden_at, agent_trigger_policy, agent_trigger_keywords, joined_at, created_at, updated_at, relation_account_id FROM conversation_participant
+SELECT id, conversation_id, account_id, participant_type, account_user_id, agent_config_id, role, membership, notifications, muted_until, last_read_message_id, last_read_sequence, last_read_at, last_seen_at, hidden_at, agent_trigger_policy, agent_trigger_keywords, relation_account_id, joined_at, created_at, updated_at FROM conversation_participant
 WHERE conversation_id = ? AND membership = 'active'
 `
 
@@ -923,10 +923,10 @@ func (q *Queries) ListParticipants(ctx context.Context, conversationID string) (
 			&i.HiddenAt,
 			&i.AgentTriggerPolicy,
 			&i.AgentTriggerKeywords,
+			&i.RelationAccountID,
 			&i.JoinedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.RelationAccountID,
 		); err != nil {
 			return nil, err
 		}
@@ -942,7 +942,7 @@ func (q *Queries) ListParticipants(ctx context.Context, conversationID string) (
 }
 
 const listSupportInbox = `-- name: ListSupportInbox :many
-SELECT id, account_id, type, title, topic_resource_type, topic_resource_id, created_by_participant_id, next_sequence, last_message_id, last_message_at, is_archived, legal_hold, metadata, created_at, updated_at, email_external_address, email_inbox_id, audience, workflow_status, group_id, assignee_resource_type, assignee_resource_id FROM conversation
+SELECT id, account_id, type, audience, title, group_id, topic_resource_type, topic_resource_id, created_by_participant_id, next_sequence, last_message_id, last_message_at, is_archived, legal_hold, workflow_status, assignee_resource_type, assignee_resource_id, email_inbox_id, email_external_address, metadata, created_at, updated_at FROM conversation
 WHERE account_id = ?
   AND audience = 'customer'
   AND is_archived = ?
@@ -998,7 +998,9 @@ func (q *Queries) ListSupportInbox(ctx context.Context, arg ListSupportInboxPara
 			&i.ID,
 			&i.AccountID,
 			&i.Type,
+			&i.Audience,
 			&i.Title,
+			&i.GroupID,
 			&i.TopicResourceType,
 			&i.TopicResourceID,
 			&i.CreatedByParticipantID,
@@ -1007,16 +1009,14 @@ func (q *Queries) ListSupportInbox(ctx context.Context, arg ListSupportInboxPara
 			&i.LastMessageAt,
 			&i.IsArchived,
 			&i.LegalHold,
+			&i.WorkflowStatus,
+			&i.AssigneeResourceType,
+			&i.AssigneeResourceID,
+			&i.EmailInboxID,
+			&i.EmailExternalAddress,
 			&i.Metadata,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.EmailExternalAddress,
-			&i.EmailInboxID,
-			&i.Audience,
-			&i.WorkflowStatus,
-			&i.GroupID,
-			&i.AssigneeResourceType,
-			&i.AssigneeResourceID,
 		); err != nil {
 			return nil, err
 		}

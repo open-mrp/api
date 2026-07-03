@@ -1,12 +1,68 @@
 package event
 
 import (
+	"encoding/base64"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestParseInboundEmail_DecodesBase64Body(t *testing.T) {
+	plain := "Begin forwarded message:\nFrom: carl@customer.com\nWhat was on my last order?"
+	// Wrap the base64 at 76 columns with CRLF folding, exactly like a mail client encodes it.
+	b64 := base64.StdEncoding.EncodeToString([]byte(plain))
+	var wrapped strings.Builder
+	for i := 0; i < len(b64); i += 76 {
+		end := min(i+76, len(b64))
+		wrapped.WriteString(b64[i:end])
+		wrapped.WriteString("\r\n")
+	}
+
+	// Multipart forward with a base64-encoded text/plain part — the shape a forwarded email arrives in.
+	raw := strings.Join([]string{
+		"From: forwarder@sellerco.com",
+		"To: support@sellerco.com",
+		"Subject: Fwd: What was on my last order",
+		"Message-ID: <b64@x>",
+		"Content-Type: multipart/alternative; boundary=BOUND",
+		"",
+		"--BOUND",
+		"Content-Type: text/plain; charset=UTF-8",
+		"Content-Transfer-Encoding: base64",
+		"",
+		wrapped.String(),
+		"--BOUND--",
+		"",
+	}, "\r\n")
+
+	in, err := parseInboundEmail([]byte(raw), "k")
+	require.NoError(t, err)
+	assert.Contains(t, in.TextBody, "What was on my last order", "base64 body must be decoded to readable text")
+	assert.Contains(t, in.TextBody, "carl@customer.com")
+	assert.NotContains(t, in.TextBody, b64[:20], "the raw base64 must not survive into the body")
+}
+
+func TestParseInboundEmail_DecodesQuotedPrintableBody(t *testing.T) {
+	raw := strings.Join([]string{
+		"From: cust@x.com",
+		"To: support@sellerco.com",
+		"Subject: hi",
+		"Message-ID: <qp@x>",
+		"Content-Type: text/plain; charset=UTF-8",
+		"Content-Transfer-Encoding: quoted-printable",
+		"",
+		"Price is 40=C2=A0dollars =3D cheap=",
+		"",
+	}, "\r\n")
+
+	in, err := parseInboundEmail([]byte(raw), "k")
+	require.NoError(t, err)
+	assert.Contains(t, in.TextBody, "40")
+	assert.Contains(t, in.TextBody, "= cheap", "quoted-printable =3D must decode to '='")
+	assert.NotContains(t, in.TextBody, "=3D", "raw quoted-printable escapes must not survive")
+}
 
 func TestParseInboundEmail_PlainText(t *testing.T) {
 	raw := strings.Join([]string{

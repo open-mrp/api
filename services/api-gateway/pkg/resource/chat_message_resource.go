@@ -51,7 +51,9 @@ type Message struct {
 	//
 	// `null` for templated or deleted messages.
 	Body *string `json:"body"`
-	// The email subject of a customer-reply `draft` on an email-bridged case.
+	// The email subject line
+	//
+	// On an email-bridged case, the original subject of an inbound email, or the subject a customer-reply `draft`/outbound message is sent with.
 	Subject *string `json:"subject"`
 	// The actor that sent the message, as displayed. When the message was posted under a sender identity (a persona / group), this is that persona; otherwise it is the authoring user.
 	//

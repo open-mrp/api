@@ -489,7 +489,9 @@ type Conversation struct {
 	ID                     string
 	AccountID              string
 	Type                   string
+	Audience               string
 	Title                  sql.NullString
+	GroupID                sql.NullString
 	TopicResourceType      sql.NullString
 	TopicResourceID        sql.NullString
 	CreatedByParticipantID sql.NullString
@@ -498,16 +500,14 @@ type Conversation struct {
 	LastMessageAt          sql.NullTime
 	IsArchived             bool
 	LegalHold              bool
+	WorkflowStatus         sql.NullString
+	AssigneeResourceType   sql.NullString
+	AssigneeResourceID     sql.NullString
+	EmailInboxID           sql.NullString
+	EmailExternalAddress   sql.NullString
 	Metadata               db.NullableRawMessage
 	CreatedAt              time.Time
 	UpdatedAt              time.Time
-	EmailExternalAddress   sql.NullString
-	EmailInboxID           sql.NullString
-	Audience               string
-	WorkflowStatus         sql.NullString
-	GroupID                sql.NullString
-	AssigneeResourceType   sql.NullString
-	AssigneeResourceID     sql.NullString
 }
 
 type ConversationDmKey struct {
@@ -544,10 +544,10 @@ type ConversationParticipant struct {
 	HiddenAt             sql.NullTime
 	AgentTriggerPolicy   sql.NullString
 	AgentTriggerKeywords db.NullableRawMessage
+	RelationAccountID    sql.NullString
 	JoinedAt             time.Time
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
-	RelationAccountID    sql.NullString
 }
 
 type DcLocation struct {
@@ -741,49 +741,6 @@ type HubspotAccountUserLink struct {
 	UpdatedAt         time.Time
 	OwnerAccountID    string
 	CustomerAccountID string
-}
-
-type HubspotCompanyReview struct {
-	ID                string
-	JobID             string
-	AccountID         string
-	AugnoCustomerID   string
-	CustomerName      string
-	CandidateMatches  json.RawMessage
-	Status            string
-	Resolution        sql.NullString
-	ResolvedHubspotID sql.NullString
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
-}
-
-type HubspotSyncJob struct {
-	ID             string
-	AccountID      string
-	Status         string
-	DryRun         bool
-	GoliveCutoffAt sql.NullTime
-	Cursors        json.RawMessage
-	Counts         json.RawMessage
-	LastError      sql.NullString
-	StartedAt      sql.NullTime
-	CompletedAt    sql.NullTime
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-}
-
-type HubspotSyncRecord struct {
-	ID           string
-	AccountID    string
-	AugnoType    string
-	AugnoID      string
-	HubspotType  string
-	HubspotID    string
-	SyncHash     sql.NullString
-	LastSyncedAt sql.NullTime
-	LastError    sql.NullString
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
 }
 
 type IdempotencyKey struct {
@@ -1022,6 +979,7 @@ type Lot struct {
 
 type Machine struct {
 	ID               string
+	AccountID        string
 	Name             string
 	Notes            sql.NullString
 	CreatedAt        time.Time
@@ -1046,34 +1004,34 @@ type Message struct {
 	AccountID               string
 	Sequence                sql.NullInt64
 	Kind                    string
+	Status                  string
+	Visibility              string
 	SenderParticipantID     sql.NullString
 	ClientMessageID         sql.NullString
 	Body                    sql.NullString
+	Subject                 sql.NullString
+	Channel                 sql.NullString
 	Preview                 sql.NullString
 	EventType               sql.NullString
 	TemplateKey             sql.NullString
 	TemplateParams          db.NullableRawMessage
 	LinkResourceType        sql.NullString
 	LinkResourceID          sql.NullString
+	AgentRunID              sql.NullString
 	ReplyToMessageID        sql.NullString
+	SourceThreadMessageID   sql.NullString
+	ApprovedByAccountUserID sql.NullString
+	StreamingState          string
+	ScheduledFor            sql.NullTime
+	ScheduledAttempts       int32
+	LastError               sql.NullString
+	LockedAt                sql.NullTime
+	LockOwner               sql.NullString
 	EditedAt                sql.NullTime
 	DeletedAt               sql.NullTime
 	Metadata                db.NullableRawMessage
 	CreatedAt               time.Time
 	UpdatedAt               time.Time
-	AgentRunID              sql.NullString
-	StreamingState          string
-	Visibility              string
-	ApprovedByAccountUserID sql.NullString
-	Channel                 sql.NullString
-	LastError               sql.NullString
-	LockOwner               sql.NullString
-	LockedAt                sql.NullTime
-	ScheduledAttempts       int32
-	ScheduledFor            sql.NullTime
-	SourceThreadMessageID   sql.NullString
-	Status                  string
-	Subject                 sql.NullString
 }
 
 type MessageAttachment struct {
@@ -1195,6 +1153,9 @@ type Notification struct {
 	TemplateParams         db.NullableRawMessage
 	LinkResourceType       sql.NullString
 	LinkResourceID         sql.NullString
+	SenderType             sql.NullString
+	SenderID               sql.NullString
+	SenderName             sql.NullString
 	Priority               string
 	SeenAt                 sql.NullTime
 	ReadAt                 sql.NullTime
@@ -1202,9 +1163,6 @@ type Notification struct {
 	Metadata               db.NullableRawMessage
 	CreatedAt              time.Time
 	UpdatedAt              time.Time
-	SenderID               sql.NullString
-	SenderName             sql.NullString
-	SenderType             sql.NullString
 }
 
 type NotificationPreference struct {

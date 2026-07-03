@@ -1,12 +1,15 @@
 package event
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"log/slog"
 	"mime"
 	"mime/multipart"
+	"mime/quotedprintable"
 	"net/mail"
 	"net/url"
 	"regexp"
@@ -235,16 +238,18 @@ func parseReferences(v string) []string {
 	return out
 }
 
-// extractText returns a best-effort plain-text body: the first text/plain part of a multipart message, falling back to the raw decoded body (HTML stripped) otherwise.
+// extractText returns a best-effort plain-text body: the first text/plain part of a multipart message, falling back to the raw decoded body (HTML stripped) otherwise. Each part is decoded per its Content-Transfer-Encoding first — forwarded mail is commonly re-encoded as base64, which would otherwise be stored as unreadable gibberish.
 func extractText(msg *mail.Message, contentType string) string {
 	mediaType, params, err := mime.ParseMediaType(contentType)
 	if err != nil || !strings.HasPrefix(mediaType, "multipart/") {
 		raw, _ := io.ReadAll(msg.Body)
+		raw = decodeTransferEncoding(raw, msg.Header.Get("Content-Transfer-Encoding"))
 		return cleanText(string(raw), mediaType)
 	}
 	boundary := params["boundary"]
 	if boundary == "" {
 		raw, _ := io.ReadAll(msg.Body)
+		raw = decodeTransferEncoding(raw, msg.Header.Get("Content-Transfer-Encoding"))
 		return cleanText(string(raw), mediaType)
 	}
 	mr := multipart.NewReader(msg.Body, boundary)
@@ -256,6 +261,7 @@ func extractText(msg *mail.Message, contentType string) string {
 		}
 		pt, _, _ := mime.ParseMediaType(part.Header.Get("Content-Type"))
 		data, _ := io.ReadAll(part)
+		data = decodeTransferEncoding(data, part.Header.Get("Content-Transfer-Encoding"))
 		switch {
 		case strings.HasPrefix(pt, "text/plain"):
 			return strings.TrimSpace(string(data))
@@ -264,6 +270,34 @@ func extractText(msg *mail.Message, contentType string) string {
 		}
 	}
 	return strings.TrimSpace(htmlFallback)
+}
+
+// decodeTransferEncoding decodes a MIME body per its Content-Transfer-Encoding header. Go's mail/multipart
+// readers hand back the raw encoded bytes, so a base64- or quoted-printable-encoded body (how mail clients
+// commonly re-encode a forwarded message) must be decoded here or it is stored as gibberish. 7bit/8bit/binary
+// and unknown/absent encodings pass through unchanged. A decode failure falls back to the raw bytes.
+func decodeTransferEncoding(data []byte, encoding string) []byte {
+	switch strings.ToLower(strings.TrimSpace(encoding)) {
+	case "base64":
+		// Mail wraps base64 at ~76 columns; strip the folding whitespace the strict decoder rejects.
+		clean := strings.Map(func(r rune) rune {
+			if r == '\r' || r == '\n' || r == ' ' || r == '\t' {
+				return -1
+			}
+			return r
+		}, string(data))
+		if decoded, err := base64.StdEncoding.DecodeString(clean); err == nil {
+			return decoded
+		}
+		return data
+	case "quoted-printable":
+		if decoded, err := io.ReadAll(quotedprintable.NewReader(bytes.NewReader(data))); err == nil {
+			return decoded
+		}
+		return data
+	default:
+		return data
+	}
 }
 
 func cleanText(body, mediaType string) string {

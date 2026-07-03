@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.37.0](https://github.com/Augno/api/compare/v0.36.0...v0.37.0) (2026-07-03)
+
+
+### Features
+
+* enhance email handling by attributing external senders in conversation service ([62cf4bd](https://github.com/Augno/api/commit/62cf4bd18d346135d10ae47c1f19d0884752e0b1))
+
 ## [0.36.0](https://github.com/Augno/api/compare/v0.35.0...v0.36.0) (2026-07-03)
 
 

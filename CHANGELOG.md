@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.38.1](https://github.com/Augno/api/compare/v0.38.0...v0.38.1) (2026-07-03)
+
+
+### Bug Fixes
+
+* add network policy rule for notification-service to prevent dial timeouts ([d6bde12](https://github.com/Augno/api/commit/d6bde12af2fd7a47afd597f25f091a7a4d6e99aa))
+
 ## [0.38.0](https://github.com/Augno/api/compare/v0.37.0...v0.38.0) (2026-07-03)
 
 

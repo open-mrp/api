@@ -162,6 +162,7 @@ func (r *emailInboxRepoImpl) Create(ctx context.Context, id, accountID string, i
 		AgentConfigID:        db.NullStringPtr(input.AgentConfigID),
 		AgentTriggerPolicy:   db.NullStringPtr(input.AgentTriggerPolicy),
 		AgentTriggerKeywords: marshalStringSlice(input.AgentTriggerKeywords),
+		GroupID:              db.NullStringPtr(input.GroupID),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
@@ -231,6 +232,7 @@ func (r *emailInboxRepoImpl) Update(ctx context.Context, id, accountID string, i
 		AgentConfigID:        db.NullStringPtr(input.AgentConfigID),
 		AgentTriggerPolicy:   db.NullStringPtr(input.AgentTriggerPolicy),
 		AgentTriggerKeywords: marshalStringSlice(input.AgentTriggerKeywords),
+		GroupID:              db.NullStringPtr(input.GroupID),
 		ID:                   id,
 		AccountID:            accountID,
 	})
@@ -261,6 +263,7 @@ func emailInboxFromRow(row sqlc.EmailInbox) *domain.EmailInbox {
 		AgentConfigID:        db.StringFromNullString(row.AgentConfigID),
 		AgentTriggerPolicy:   db.StringFromNullString(row.AgentTriggerPolicy),
 		AgentTriggerKeywords: unmarshalStringSlice(row.AgentTriggerKeywords),
+		GroupID:              db.StringFromNullString(row.GroupID),
 		CreatedAt:            row.CreatedAt,
 		UpdatedAt:            row.UpdatedAt,
 	}

@@ -143,13 +143,7 @@ func parseInboundEmail(raw []byte, s3Key string) (domain.IngestInboundEmailInput
 		return s
 	}
 
-	fromAddr, fromName := "", ""
-	if addr, perr := mail.ParseAddress(h.Get("From")); perr == nil {
-		fromAddr = addr.Address
-		fromName = decode(addr.Name)
-	} else {
-		fromAddr = strings.TrimSpace(h.Get("From"))
-	}
+	fromAddr, fromName := resolveInboundSender(h, decode)
 
 	body := extractText(msg, h.Get("Content-Type"))
 
@@ -164,6 +158,34 @@ func parseInboundEmail(raw []byte, s3Key string) (domain.IngestInboundEmailInput
 		References:   parseReferences(h.Get("References")),
 		RawS3Key:     s3Key,
 	}, nil
+}
+
+// resolveInboundSender resolves the true author (address + display name) of an inbound mail. The From
+// header is authoritative for mail that reaches us directly, but an auto-forwarder or mailing list
+// (Google Workspace routing, Google Groups, Microsoft 365) that rewrites From to the forwarding mailbox
+// preserves the original author only in an X-Original-From / X-Original-Sender header — and Google's
+// consumer forwarder records it in X-Forwarded-For ("<orig-sender> <forward-target>"). We prefer those
+// original-author headers when present (they don't exist on direct mail, so the common path is
+// unaffected), then fall back to From, and finally Reply-To when From itself is unparseable. This keeps
+// the recorded sender — and the reply target derived from it — the customer rather than the forwarder.
+func resolveInboundSender(h mail.Header, decode func(string) string) (addr, name string) {
+	for _, hdr := range []string{"X-Original-From", "X-Original-Sender", "From"} {
+		if a, err := mail.ParseAddress(h.Get(hdr)); err == nil {
+			return a.Address, decode(a.Name)
+		}
+	}
+	if v := h.Get("X-Forwarded-For"); v != "" {
+		if fields := strings.Fields(v); len(fields) > 0 {
+			if a, err := mail.ParseAddress(fields[0]); err == nil {
+				return a.Address, decode(a.Name)
+			}
+		}
+	}
+	if a, err := mail.ParseAddress(h.Get("Reply-To")); err == nil {
+		return a.Address, decode(a.Name)
+	}
+	// Nothing parsed cleanly: keep whatever the From header literally held (may be empty).
+	return strings.TrimSpace(h.Get("From")), ""
 }
 
 // candidateRecipients collects every address the mail could have been delivered to — across the

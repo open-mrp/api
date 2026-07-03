@@ -22,7 +22,7 @@ type tokenRateKey struct {
 
 // GetAgentTokenSpendCents reconstructs the marked-up cost the customer will be billed for metered LLM tokens since the given time. Stripe does not expose a preview/upcoming invoice for v2 pricing plan subscriptions, so we compute the same figure Stripe bills: cost = Σ over (model, token_type) of usage_quantity × rate_card_unit_amount. Rate card unit_amount is denominated in cents per token and already includes the plan's markup, so no local price table is involved.
 func (c *stripeClientImpl) GetAgentTokenSpendCents(ctx context.Context, customerID, rateCardID string, since time.Time) (int64, error) {
-	ctx, span := stripeClientTracer.Start(ctx, "stripe_client.get_agent_token_spend_cents")
+	_, span := stripeClientTracer.Start(ctx, "stripe_client.get_agent_token_spend_cents")
 	defer span.End()
 
 	rates, meterID, err := c.fetchRateCardTokenRates(rateCardID)

@@ -37,8 +37,10 @@ type EmailInbox struct {
 	AgentConfigID        *string
 	AgentTriggerPolicy   *string
 	AgentTriggerKeywords []string
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
+	// GroupID is the reusable roster (messaging_group) whose members are seated as participants on each new email thread this inbox opens. Nil = no team seeded (only the bound agent, if any).
+	GroupID   *string
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 type EmailMessage struct {
@@ -74,6 +76,7 @@ type CreateEmailInboxInput struct {
 	AgentConfigID        *string
 	AgentTriggerPolicy   *string
 	AgentTriggerKeywords []string
+	GroupID              *string
 }
 
 type UpdateEmailInboxInput struct {
@@ -82,6 +85,7 @@ type UpdateEmailInboxInput struct {
 	AgentConfigID        *string
 	AgentTriggerPolicy   *string
 	AgentTriggerKeywords []string
+	GroupID              *string
 }
 
 // CreateEmailMessageInput records one rfc822 message against a conversation. The unique RfcMessageID collapses at-least-once redelivery to a no-op.

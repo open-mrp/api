@@ -625,7 +625,7 @@ func conversationLinkToProto(l *domain.ConversationLink) *pb.ConversationLinkInf
 }
 
 func participantToProto(p *domain.ConversationParticipant) *pb.ParticipantInfo {
-	return &pb.ParticipantInfo{
+	info := &pb.ParticipantInfo{
 		Id:                     p.ID,
 		ConversationId:         p.ConversationID,
 		AccountId:              p.AccountID,
@@ -636,6 +636,7 @@ func participantToProto(p *domain.ConversationParticipant) *pb.ParticipantInfo {
 		Membership:             p.Membership,
 		Notifications:          p.Notifications,
 		LastReadSequence:       p.LastReadSequence,
+		LastReadMessageId:      p.LastReadMessageID,
 		CreatedAt:              timestamppb.New(p.CreatedAt),
 		UpdatedAt:              timestamppb.New(p.UpdatedAt),
 		AgentTriggerPolicy:     p.AgentTriggerPolicy,
@@ -643,6 +644,10 @@ func participantToProto(p *domain.ConversationParticipant) *pb.ParticipantInfo {
 		RelationAccountId:      p.RelationAccountID,
 		AccountUserDisplayName: p.AccountUserDisplayName,
 	}
+	if p.LastReadAt != nil {
+		info.LastReadAt = timestamppb.New(*p.LastReadAt)
+	}
+	return info
 }
 
 func messageToProto(m *domain.Message) *pb.MessageInfo {

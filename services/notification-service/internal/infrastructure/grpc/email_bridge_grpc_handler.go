@@ -123,6 +123,7 @@ func (h *emailBridgeGRPCHandler) CreateEmailInbox(ctx context.Context, req *pb.C
 		AgentConfigID:        req.AgentConfigId,
 		AgentTriggerPolicy:   req.AgentTriggerPolicy,
 		AgentTriggerKeywords: req.AgentTriggerKeywords,
+		GroupID:              req.GroupId,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
@@ -166,6 +167,7 @@ func (h *emailBridgeGRPCHandler) UpdateEmailInbox(ctx context.Context, req *pb.U
 		AgentConfigID:        req.AgentConfigId,
 		AgentTriggerPolicy:   req.AgentTriggerPolicy,
 		AgentTriggerKeywords: req.AgentTriggerKeywords,
+		GroupID:              req.GroupId,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
@@ -207,6 +209,7 @@ func (h *emailBridgeGRPCHandler) emailInboxToProto(i *domain.EmailInbox) *pb.Ema
 		AgentConfigId:        i.AgentConfigID,
 		AgentTriggerPolicy:   i.AgentTriggerPolicy,
 		AgentTriggerKeywords: i.AgentTriggerKeywords,
+		GroupId:              i.GroupID,
 		CreatedAt:            timestamppb.New(i.CreatedAt),
 		UpdatedAt:            timestamppb.New(i.UpdatedAt),
 	}

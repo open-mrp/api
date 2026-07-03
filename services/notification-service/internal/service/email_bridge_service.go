@@ -143,6 +143,10 @@ func (s *emailBridgeSvcImpl) CreateInbox(ctx context.Context, input domain.Creat
 		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("The domain must be verified before adding an inbox.", "email_domain_id"))
 	}
 
+	if apiErr := s.validateInboxGroup(ctx, accountID, input.GroupID); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	inboxID, apiErr := id.GenID(id.EmailInboxIDPrefix, nil)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -186,10 +190,29 @@ func (s *emailBridgeSvcImpl) UpdateInbox(ctx context.Context, inboxID string, in
 	if input.Status != domain.EmailInboxStatusActive && input.Status != domain.EmailInboxStatusDisabled {
 		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("Invalid inbox status.", "status"))
 	}
+	if apiErr := s.validateInboxGroup(ctx, accountID, input.GroupID); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 	if apiErr := s.repoFactory.NewEmailInboxRepo().Update(ctx, inboxID, accountID, &input); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	return s.repoFactory.NewEmailInboxRepo().GetByID(ctx, inboxID, accountID)
+}
+
+// validateInboxGroup ensures a group_id set on an inbox names a roster the caller's account owns, so a new
+// email thread can seat its members. A blank/nil group_id is allowed (no team seeded). The account scope on
+// MessagingGroupRepo.Get is what prevents pointing an inbox at another tenant's roster.
+func (s *emailBridgeSvcImpl) validateInboxGroup(ctx context.Context, accountID string, groupID *string) *apierror.APIError {
+	if groupID == nil || strings.TrimSpace(*groupID) == "" {
+		return nil
+	}
+	if _, apiErr := s.repoFactory.NewMessagingGroupRepo().Get(ctx, strings.TrimSpace(*groupID), accountID); apiErr != nil {
+		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+			return apierror.NewParameterInvalidError("The group does not exist.", "group_id")
+		}
+		return apiErr
+	}
+	return nil
 }
 
 func (s *emailBridgeSvcImpl) DeleteInbox(ctx context.Context, inboxID string) *apierror.APIError {

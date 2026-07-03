@@ -82,6 +82,7 @@ func emailInboxFromProto(ctx context.Context, i *pb.EmailInboxInfo) *apiresource
 		Status:               i.Status,
 		AgentTriggerPolicy:   i.AgentTriggerPolicy,
 		AgentTriggerKeywords: emptyIfNil(i.AgentTriggerKeywords),
+		GroupID:              i.GroupId,
 		CreatedAt:            grpcutil.TimestampToTime(i.CreatedAt),
 		UpdatedAt:            grpcutil.TimestampToTime(i.UpdatedAt),
 	}
@@ -164,6 +165,7 @@ func (s *emailBridgeSvcImpl) CreateInbox(ctx context.Context, req *CreateEmailIn
 		AgentConfigId:        req.AgentConfigID.Ptr(),
 		AgentTriggerPolicy:   req.AgentTriggerPolicy.Ptr(),
 		AgentTriggerKeywords: req.AgentTriggerKeywords,
+		GroupId:              req.GroupID.Ptr(),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, emailBridgeSvcTracer, "service.email_bridge.create_inbox", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.EmailInboxInfo, error) {
@@ -210,6 +212,7 @@ func (s *emailBridgeSvcImpl) UpdateInbox(ctx context.Context, req *UpdateEmailIn
 		AgentConfigId:        req.AgentConfigID.Ptr(),
 		AgentTriggerPolicy:   req.AgentTriggerPolicy.Ptr(),
 		AgentTriggerKeywords: req.AgentTriggerKeywords,
+		GroupId:              req.GroupID.Ptr(),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, emailBridgeSvcTracer, "service.email_bridge.update_inbox", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.EmailInboxInfo, error) {

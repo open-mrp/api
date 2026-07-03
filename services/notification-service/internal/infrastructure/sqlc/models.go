@@ -657,6 +657,7 @@ type EmailInbox struct {
 	AgentConfigID        sql.NullString
 	AgentTriggerPolicy   sql.NullString
 	AgentTriggerKeywords db.NullableRawMessage
+	GroupID              sql.NullString
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
 }

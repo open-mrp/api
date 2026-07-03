@@ -15,8 +15,8 @@ import (
 const createEmailInbox = `-- name: CreateEmailInbox :exec
 INSERT INTO email_inbox (
     id, account_id, email_domain_id, address, from_name, status,
-    agent_config_id, agent_trigger_policy, agent_trigger_keywords, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, NOW(3), NOW(3))
+    agent_config_id, agent_trigger_policy, agent_trigger_keywords, group_id, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, NOW(3), NOW(3))
 `
 
 type CreateEmailInboxParams struct {
@@ -28,6 +28,7 @@ type CreateEmailInboxParams struct {
 	AgentConfigID        sql.NullString
 	AgentTriggerPolicy   sql.NullString
 	AgentTriggerKeywords db.NullableRawMessage
+	GroupID              sql.NullString
 }
 
 func (q *Queries) CreateEmailInbox(ctx context.Context, arg CreateEmailInboxParams) error {
@@ -40,6 +41,7 @@ func (q *Queries) CreateEmailInbox(ctx context.Context, arg CreateEmailInboxPara
 		arg.AgentConfigID,
 		arg.AgentTriggerPolicy,
 		arg.AgentTriggerKeywords,
+		arg.GroupID,
 	)
 	return err
 }
@@ -63,7 +65,7 @@ func (q *Queries) DeleteEmailInbox(ctx context.Context, arg DeleteEmailInboxPara
 }
 
 const getEmailInboxByAddress = `-- name: GetEmailInboxByAddress :one
-SELECT id, account_id, email_domain_id, address, from_name, status, agent_config_id, agent_trigger_policy, agent_trigger_keywords, created_at, updated_at FROM email_inbox
+SELECT id, account_id, email_domain_id, address, from_name, status, agent_config_id, agent_trigger_policy, agent_trigger_keywords, group_id, created_at, updated_at FROM email_inbox
 WHERE address = ?
 `
 
@@ -81,6 +83,7 @@ func (q *Queries) GetEmailInboxByAddress(ctx context.Context, address string) (E
 		&i.AgentConfigID,
 		&i.AgentTriggerPolicy,
 		&i.AgentTriggerKeywords,
+		&i.GroupID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -88,7 +91,7 @@ func (q *Queries) GetEmailInboxByAddress(ctx context.Context, address string) (E
 }
 
 const getEmailInboxByID = `-- name: GetEmailInboxByID :one
-SELECT id, account_id, email_domain_id, address, from_name, status, agent_config_id, agent_trigger_policy, agent_trigger_keywords, created_at, updated_at FROM email_inbox
+SELECT id, account_id, email_domain_id, address, from_name, status, agent_config_id, agent_trigger_policy, agent_trigger_keywords, group_id, created_at, updated_at FROM email_inbox
 WHERE id = ? AND account_id = ?
 `
 
@@ -110,6 +113,7 @@ func (q *Queries) GetEmailInboxByID(ctx context.Context, arg GetEmailInboxByIDPa
 		&i.AgentConfigID,
 		&i.AgentTriggerPolicy,
 		&i.AgentTriggerKeywords,
+		&i.GroupID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -117,7 +121,7 @@ func (q *Queries) GetEmailInboxByID(ctx context.Context, arg GetEmailInboxByIDPa
 }
 
 const getEmailInboxByIDSystem = `-- name: GetEmailInboxByIDSystem :one
-SELECT id, account_id, email_domain_id, address, from_name, status, agent_config_id, agent_trigger_policy, agent_trigger_keywords, created_at, updated_at FROM email_inbox
+SELECT id, account_id, email_domain_id, address, from_name, status, agent_config_id, agent_trigger_policy, agent_trigger_keywords, group_id, created_at, updated_at FROM email_inbox
 WHERE id = ?
 `
 
@@ -136,6 +140,7 @@ func (q *Queries) GetEmailInboxByIDSystem(ctx context.Context, id string) (Email
 		&i.AgentConfigID,
 		&i.AgentTriggerPolicy,
 		&i.AgentTriggerKeywords,
+		&i.GroupID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -143,7 +148,7 @@ func (q *Queries) GetEmailInboxByIDSystem(ctx context.Context, id string) (Email
 }
 
 const listEmailInboxesByAccount = `-- name: ListEmailInboxesByAccount :many
-SELECT id, account_id, email_domain_id, address, from_name, status, agent_config_id, agent_trigger_policy, agent_trigger_keywords, created_at, updated_at FROM email_inbox
+SELECT id, account_id, email_domain_id, address, from_name, status, agent_config_id, agent_trigger_policy, agent_trigger_keywords, group_id, created_at, updated_at FROM email_inbox
 WHERE account_id = ?
 ORDER BY created_at DESC, id DESC
 `
@@ -167,6 +172,7 @@ func (q *Queries) ListEmailInboxesByAccount(ctx context.Context, accountID strin
 			&i.AgentConfigID,
 			&i.AgentTriggerPolicy,
 			&i.AgentTriggerKeywords,
+			&i.GroupID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -185,7 +191,7 @@ func (q *Queries) ListEmailInboxesByAccount(ctx context.Context, accountID strin
 
 const updateEmailInbox = `-- name: UpdateEmailInbox :exec
 UPDATE email_inbox
-SET from_name = COALESCE(?, from_name), status = ?, agent_config_id = COALESCE(?, agent_config_id), agent_trigger_policy = COALESCE(?, agent_trigger_policy), agent_trigger_keywords = COALESCE(?, agent_trigger_keywords), updated_at = NOW(3)
+SET from_name = COALESCE(?, from_name), status = ?, agent_config_id = COALESCE(?, agent_config_id), agent_trigger_policy = COALESCE(?, agent_trigger_policy), agent_trigger_keywords = COALESCE(?, agent_trigger_keywords), group_id = COALESCE(?, group_id), updated_at = NOW(3)
 WHERE id = ? AND account_id = ?
 `
 
@@ -195,6 +201,7 @@ type UpdateEmailInboxParams struct {
 	AgentConfigID        sql.NullString
 	AgentTriggerPolicy   sql.NullString
 	AgentTriggerKeywords db.NullableRawMessage
+	GroupID              sql.NullString
 	ID                   string
 	AccountID            string
 }
@@ -206,6 +213,7 @@ func (q *Queries) UpdateEmailInbox(ctx context.Context, arg UpdateEmailInboxPara
 		arg.AgentConfigID,
 		arg.AgentTriggerPolicy,
 		arg.AgentTriggerKeywords,
+		arg.GroupID,
 		arg.ID,
 		arg.AccountID,
 	)

@@ -104,6 +104,15 @@ func ParticipantFromProto(p *pb.ParticipantInfo) apiresource.ConversationPartici
 		Role:          constants.ParticipantRole(p.Role),
 		Membership:    constants.ParticipantMembership(p.Membership),
 		Notifications: constants.ParticipantNotifications(p.Notifications),
+		ReadCursor: apiresource.ReadCursor{
+			Object:    constants.ObjectTypeReadCursor,
+			Sequence:  p.LastReadSequence,
+			MessageID: p.LastReadMessageId,
+		},
+	}
+	if p.LastReadAt != nil {
+		t := p.LastReadAt.AsTime()
+		result.ReadCursor.ReadAt = &t
 	}
 	// One polymorphic actor: a user or an agent. A customer participant (an external contact on a
 	// support case) carries the account_user of the person who opened the case, so it resolves through

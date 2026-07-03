@@ -42,20 +42,22 @@ type Conversation struct {
 
 // ConversationParticipant is a membership row plus the participant's per-user state.
 type ConversationParticipant struct {
-	ID               string
-	ConversationID   string `audit:"conversation_id"`
-	AccountID        string
-	ParticipantType  string  `audit:"participant_type"`
-	AccountUserID    *string `audit:"account_user_id"`
-	AgentConfigID    *string `audit:"agent_config_id"`
-	Role             string  `audit:"role"`
-	Membership       string  `audit:"membership"`
-	Notifications    string  `audit:"notifications"`
-	LastReadSequence int64
-	HiddenAt         *time.Time
-	JoinedAt         time.Time
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID                string
+	ConversationID    string `audit:"conversation_id"`
+	AccountID         string
+	ParticipantType   string  `audit:"participant_type"`
+	AccountUserID     *string `audit:"account_user_id"`
+	AgentConfigID     *string `audit:"agent_config_id"`
+	Role              string  `audit:"role"`
+	Membership        string  `audit:"membership"`
+	Notifications     string  `audit:"notifications"`
+	LastReadSequence  int64
+	LastReadMessageID *string
+	LastReadAt        *time.Time
+	HiddenAt          *time.Time
+	JoinedAt          time.Time
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 	// Agent-participant trigger config (participant_type=agent only).
 	AgentTriggerPolicy   *string  `audit:"agent_trigger_policy"`
 	AgentTriggerKeywords []string `audit:"agent_trigger_keywords"`

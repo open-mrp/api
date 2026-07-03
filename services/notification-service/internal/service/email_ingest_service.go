@@ -231,23 +231,76 @@ func (s *conversationSvcImpl) createEmailThreadConversation(txCtx context.Contex
 		return "", wfErr
 	}
 
-	// Seat the inbox's agent. Email has no @mention, so the inbox's policy (default "always") decides whether every inbound message triggers a run.
+	partRepo := f.NewParticipantRepo()
+	seenAgents := map[string]bool{}
+	seatAgent := func(agentConfigID, policy string, keywords []string) *apierror.APIError {
+		if agentConfigID == "" || seenAgents[agentConfigID] {
+			return nil
+		}
+		seenAgents[agentConfigID] = true
+		pid, pgenErr := id.GenID(id.ConversationParticipantIDPrefix, nil)
+		if pgenErr != nil {
+			return pgenErr
+		}
+		return partRepo.CreateAgent(txCtx, pid, inbox.AccountID, &domain.AddAgentParticipantInput{
+			ConversationID:  conversationID,
+			AgentConfigID:   agentConfigID,
+			TriggerPolicy:   policy,
+			TriggerKeywords: keywords,
+		})
+	}
+
+	// Seat the inbox's triage agent first. Email has no @mention, so the inbox's policy (default "always") decides whether every inbound message triggers a run.
 	if inbox.AgentConfigID != nil && *inbox.AgentConfigID != "" {
 		policy := string(constants.AgentTriggerPolicyAlways)
 		if inbox.AgentTriggerPolicy != nil && *inbox.AgentTriggerPolicy != "" {
 			policy = *inbox.AgentTriggerPolicy
 		}
-		pid, pgenErr := id.GenID(id.ConversationParticipantIDPrefix, nil)
-		if pgenErr != nil {
-			return "", pgenErr
-		}
-		if cErr := f.NewParticipantRepo().CreateAgent(txCtx, pid, inbox.AccountID, &domain.AddAgentParticipantInput{
-			ConversationID:  conversationID,
-			AgentConfigID:   *inbox.AgentConfigID,
-			TriggerPolicy:   policy,
-			TriggerKeywords: inbox.AgentTriggerKeywords,
-		}); cErr != nil {
+		if cErr := seatAgent(*inbox.AgentConfigID, policy, inbox.AgentTriggerKeywords); cErr != nil {
 			return "", cErr
+		}
+	}
+
+	// Seat the inbox's roster (messaging_group): its human members join the case so the team can read, edit,
+	// and approve alongside the agent; any agent members are seated too (defaulting to @mention so they don't
+	// all auto-run on every inbound — the inbox's own triage agent already covers that). A snapshot: later
+	// roster edits don't reach this thread. The group is fetched fresh; a since-deleted group seats nobody.
+	if inbox.GroupID != nil && *inbox.GroupID != "" {
+		members, apiErr := f.NewMessagingGroupRepo().ListMembers(txCtx, *inbox.GroupID)
+		if apiErr != nil {
+			return "", apiErr
+		}
+		seenUsers := map[string]bool{}
+		for _, gm := range members {
+			switch gm.MemberType {
+			case domain.MessagingGroupMemberTypeUser:
+				if gm.AccountUserID == nil || *gm.AccountUserID == "" || seenUsers[*gm.AccountUserID] {
+					continue
+				}
+				seenUsers[*gm.AccountUserID] = true
+				pid, pgenErr := id.GenID(id.ConversationParticipantIDPrefix, nil)
+				if pgenErr != nil {
+					return "", pgenErr
+				}
+				acus := *gm.AccountUserID
+				if cErr := partRepo.Create(txCtx, &domain.ConversationParticipant{
+					ID:              pid,
+					ConversationID:  conversationID,
+					AccountID:       inbox.AccountID,
+					ParticipantType: string(constants.ParticipantTypeUser),
+					AccountUserID:   &acus,
+					Role:            string(constants.ParticipantRoleMember),
+				}); cErr != nil {
+					return "", cErr
+				}
+			case domain.MessagingGroupMemberTypeAgent:
+				if gm.AgentConfigID == nil {
+					continue
+				}
+				if cErr := seatAgent(*gm.AgentConfigID, string(constants.AgentTriggerPolicyMention), nil); cErr != nil {
+					return "", cErr
+				}
+			}
 		}
 	}
 	return conversationID, nil

@@ -45,6 +45,10 @@ type EmailInbox struct {
 	AgentTriggerPolicy *string `json:"agent_trigger_policy"`
 	// Keywords that fire the agent when `agent_trigger_policy` is `keyword`.
 	AgentTriggerKeywords []string `json:"agent_trigger_keywords"`
+	// The messaging group (roster) whose members are added to every conversation this inbox opens.
+	//
+	// Everyone in the group — the human team plus any agents — is seated on each new email thread so they can read, edit, and approve replies alongside the bound agent. `null` when no group is set.
+	GroupID *string `json:"group_id"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.

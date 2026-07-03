@@ -125,6 +125,26 @@ type ConversationParticipant struct {
 	AgentTriggerPolicy *constants.AgentTriggerPolicy `json:"agent_trigger_policy"`
 	// For agent participants with a keyword/mention policy, the keywords that trigger it.
 	AgentTriggerKeywords []string `json:"agent_trigger_keywords"`
+	// The participant's read position in the conversation (read receipts): how far they have read.
+	ReadCursor ReadCursor `json:"read_cursor"`
+}
+
+// A participant's read position in a conversation — the basis for read receipts ("who has seen this").
+type ReadCursor struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=read_cursor"`
+	// The sequence number of the last message the participant has read in the conversation.
+	//
+	// A message is "seen" by this participant when its `sequence` is `<=` this value. `0` means they have not read any message in the conversation yet.
+	Sequence int64 `json:"sequence"`
+	// The id of the last message the participant has read.
+	//
+	// `null` if they have not read any message yet.
+	MessageID *string `json:"message_id"`
+	// When the participant last advanced their read cursor.
+	//
+	// `null` if they have not read any message yet.
+	ReadAt *time.Time `json:"read_at"`
 }
 
 var SampleConversationParticipant = &ConversationParticipant{
@@ -135,6 +155,7 @@ var SampleConversationParticipant = &ConversationParticipant{
 	Role:          constants.ParticipantRoleMember,
 	Membership:    constants.ParticipantMembershipActive,
 	Notifications: constants.ParticipantNotificationsUnmuted,
+	ReadCursor:    ReadCursor{Object: constants.ObjectTypeReadCursor, Sequence: 12},
 }
 
 func (*ConversationParticipant) SchemaExample() any {

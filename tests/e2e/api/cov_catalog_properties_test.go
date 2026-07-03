@@ -350,8 +350,15 @@ func TestCovCatalogProperties_AttributeOmittedFields(t *testing.T) {
 	})
 
 	t.Run("UpdatePreservesOmittedFields", func(t *testing.T) {
+		// Use a dedicated property, not the shared SeedPropertyID: deleting an
+		// attribute renumbers its siblings' sort_order (ShiftOrdersDown), so a
+		// parallel test that creates and deletes attributes on the seed property
+		// would shift this attribute's sort_order out from under the assertion.
+		prop := createAndCleanup(t, propertiesPath, map[string]any{"name": uniqueName("e2e-covprop-pres")})
+		propID := jsonField(prop, "id")
+
 		value := uniqueName("e2e-covattr-pres")
-		created := createAndCleanup(t, attributesPath(SeedPropertyID), map[string]any{
+		created := createAndCleanup(t, attributesPath(propID), map[string]any{
 			"value": value,
 			"color": "purple",
 		})
@@ -359,7 +366,7 @@ func TestCovCatalogProperties_AttributeOmittedFields(t *testing.T) {
 		origSortOrder := jsonField(created, "sort_order")
 
 		newValue := uniqueName("e2e-covattr-pres-u")
-		patchStatus, patchBody, err := apiClient.Patch(attributePath(SeedPropertyID, id), map[string]any{"value": newValue}, newIdempotencyKey())
+		patchStatus, patchBody, err := apiClient.Patch(attributePath(propID, id), map[string]any{"value": newValue}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 200, patchStatus, patchBody)
 

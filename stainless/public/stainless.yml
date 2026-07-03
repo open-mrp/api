@@ -487,6 +487,7 @@ resources:
           message_attachment: '#/components/schemas/MessageAttachment'
           messaging_group: '#/components/schemas/MessagingGroup'
           messaging_group_member: '#/components/schemas/MessagingGroupMember'
+          read_cursor: '#/components/schemas/ReadCursor'
           trigger_config: '#/components/schemas/TriggerConfig'
           update_conversation_request: '#/components/schemas/UpdateConversationRequest'
       messages:

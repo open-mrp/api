@@ -34,6 +34,8 @@ type UpdateEmailInboxRequest struct {
 	AgentTriggerPolicy field.Optional[string] `json:"agent_trigger_policy,omitzero"`
 	// Keywords that fire the agent when the trigger policy is `keyword`.
 	AgentTriggerKeywords []string `json:"agent_trigger_keywords,omitzero"`
+	// The messaging group (roster) whose members are seated on every conversation this inbox opens.
+	GroupID field.Optional[string] `json:"group_id,omitzero"`
 }
 
 var sampleUpdateEmailInboxFromName = "Acme Support"

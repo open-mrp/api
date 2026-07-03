@@ -96,6 +96,8 @@ message EmailInboxInfo {
   // domain can't repoint its apex MX at SES forward their support address here instead. Unset when the
   // receiving subdomain isn't configured.
   optional string forwarding_address = 12;
+  // Reusable roster (messaging_group) whose members are seated on every new thread this inbox opens.
+  optional string group_id = 13;
 }
 
 message CreateEmailDomainRequest {
@@ -123,6 +125,7 @@ message CreateEmailInboxRequest {
   optional string agent_config_id = 4;
   optional string agent_trigger_policy = 5;
   repeated string agent_trigger_keywords = 6;
+  optional string group_id = 7;
 }
 
 message ListEmailInboxesRequest {}
@@ -142,6 +145,7 @@ message UpdateEmailInboxRequest {
   optional string agent_config_id = 4;
   optional string agent_trigger_policy = 5;
   repeated string agent_trigger_keywords = 6;
+  optional string group_id = 7;
 }
 
 message DeleteEmailInboxRequest {

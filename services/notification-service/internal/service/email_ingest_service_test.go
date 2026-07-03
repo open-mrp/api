@@ -66,6 +66,65 @@ func TestIngestInboundEmail_ResolvesForwardingAddress(t *testing.T) {
 	require.Nil(t, apiErr)
 }
 
+func TestCreateEmailThreadConversation_SeatsGroupMembersDeduped(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	convRepo := repositorymock.NewMockConversationRepo(ctrl)
+	convRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), "ac_1").Return(nil)
+	convRepo.EXPECT().BindInbox(gomock.Any(), gomock.Any(), "ac_1", "emix_1", "cust@out.com").Return(nil)
+	convRepo.EXPECT().SetWorkflowStatus(gomock.Any(), gomock.Any(), "ac_1", gomock.Any()).Return(nil)
+
+	partRepo := repositorymock.NewMockParticipantRepo(ctrl)
+	var seatedUsers []string
+	var seatedAgents []string
+	partRepo.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, p *domain.ConversationParticipant) *apierror.APIError {
+			require.NotNil(t, p.AccountUserID)
+			seatedUsers = append(seatedUsers, *p.AccountUserID)
+			return nil
+		}).AnyTimes()
+	partRepo.EXPECT().CreateAgent(gomock.Any(), gomock.Any(), "ac_1", gomock.Any()).DoAndReturn(
+		func(_ context.Context, _, _ string, in *domain.AddAgentParticipantInput) *apierror.APIError {
+			seatedAgents = append(seatedAgents, in.AgentConfigID)
+			return nil
+		}).AnyTimes()
+
+	groupRepo := repositorymock.NewMockMessagingGroupRepo(ctrl)
+	// The roster carries two humans and two agents — one of which duplicates the inbox's own triage agent.
+	groupRepo.EXPECT().ListMembers(gomock.Any(), "mggp_1").Return([]*domain.MessagingGroupMember{
+		{MemberType: domain.MessagingGroupMemberTypeUser, AccountUserID: ptr("acus_1")},
+		{MemberType: domain.MessagingGroupMemberTypeUser, AccountUserID: ptr("acus_2")},
+		{MemberType: domain.MessagingGroupMemberTypeAgent, AgentConfigID: ptr("agdf_inbox")},
+		{MemberType: domain.MessagingGroupMemberTypeAgent, AgentConfigID: ptr("agdf_extra")},
+	}, nil)
+
+	factory := factorymock.NewMockRepoFactory(ctrl)
+	factory.EXPECT().NewConversationRepo().Return(convRepo).AnyTimes()
+	factory.EXPECT().NewParticipantRepo().Return(partRepo).AnyTimes()
+	factory.EXPECT().NewMessagingGroupRepo().Return(groupRepo).AnyTimes()
+
+	svc := &conversationSvcImpl{}
+	inbox := &domain.EmailInbox{
+		ID:            "emix_1",
+		AccountID:     "ac_1",
+		Address:       "support@x.com",
+		Status:        domain.EmailInboxStatusActive,
+		AgentConfigID: ptr("agdf_inbox"),
+		GroupID:       ptr("mggp_1"),
+	}
+	convID, apiErr := svc.createEmailThreadConversation(context.Background(), factory, inbox, domain.IngestInboundEmailInput{
+		From:    "cust@out.com",
+		Subject: "Help",
+	})
+	require.Nil(t, apiErr)
+	require.NotEmpty(t, convID)
+
+	// Both humans seated; the inbox's triage agent seated exactly once (the roster's duplicate collapses),
+	// plus the roster's extra agent — three participants for four member rows + the inbox agent.
+	assert.ElementsMatch(t, []string{"acus_1", "acus_2"}, seatedUsers)
+	assert.ElementsMatch(t, []string{"agdf_inbox", "agdf_extra"}, seatedAgents)
+}
+
 func TestIngestInboundEmail_DedupAlreadyIngested(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	inboxRepo := repositorymock.NewMockEmailInboxRepo(ctrl)

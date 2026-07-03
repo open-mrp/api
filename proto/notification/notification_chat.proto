@@ -355,6 +355,10 @@ message ParticipantInfo {
   optional string relation_account_id = 15;
   // Resolved (not persisted): display name of a customer participant's account_user, for staff viewers.
   optional string account_user_display_name = 16;
+  // Read cursor: the id of the last message this participant has read (read receipts).
+  optional string last_read_message_id = 17;
+  // When this participant last advanced their read cursor.
+  optional google.protobuf.Timestamp last_read_at = 18;
 }
 
 message MessageInfo {

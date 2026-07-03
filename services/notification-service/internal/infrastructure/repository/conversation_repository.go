@@ -709,6 +709,8 @@ func participantFromRow(row sqlc.ConversationParticipant) *domain.ConversationPa
 		Membership:           row.Membership,
 		Notifications:        row.Notifications,
 		LastReadSequence:     row.LastReadSequence,
+		LastReadMessageID:    db.StringFromNullString(row.LastReadMessageID),
+		LastReadAt:           db.TimeFromNullTime(row.LastReadAt),
 		JoinedAt:             row.JoinedAt,
 		CreatedAt:            row.CreatedAt,
 		UpdatedAt:            row.UpdatedAt,

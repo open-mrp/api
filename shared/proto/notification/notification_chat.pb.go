@@ -2020,8 +2020,12 @@ type ParticipantInfo struct {
 	RelationAccountId    *string                `protobuf:"bytes,15,opt,name=relation_account_id,json=relationAccountId,proto3,oneof" json:"relation_account_id,omitempty"`
 	// Resolved (not persisted): display name of a customer participant's account_user, for staff viewers.
 	AccountUserDisplayName *string `protobuf:"bytes,16,opt,name=account_user_display_name,json=accountUserDisplayName,proto3,oneof" json:"account_user_display_name,omitempty"`
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	// Read cursor: the id of the last message this participant has read (read receipts).
+	LastReadMessageId *string `protobuf:"bytes,17,opt,name=last_read_message_id,json=lastReadMessageId,proto3,oneof" json:"last_read_message_id,omitempty"`
+	// When this participant last advanced their read cursor.
+	LastReadAt    *timestamppb.Timestamp `protobuf:"bytes,18,opt,name=last_read_at,json=lastReadAt,proto3,oneof" json:"last_read_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ParticipantInfo) Reset() {
@@ -2164,6 +2168,20 @@ func (x *ParticipantInfo) GetAccountUserDisplayName() string {
 		return *x.AccountUserDisplayName
 	}
 	return ""
+}
+
+func (x *ParticipantInfo) GetLastReadMessageId() string {
+	if x != nil && x.LastReadMessageId != nil {
+		return *x.LastReadMessageId
+	}
+	return ""
+}
+
+func (x *ParticipantInfo) GetLastReadAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.LastReadAt
+	}
+	return nil
 }
 
 type MessageInfo struct {
@@ -5377,7 +5395,7 @@ const file_notification_notification_chat_proto_rawDesc = "" +
 	"\x17_assignee_resource_typeB\x17\n" +
 	"\x15_assignee_resource_idB\x11\n" +
 	"\x0f_email_inbox_idB\v\n" +
-	"\t_group_idJ\x04\b\a\x10\b\"\xc5\x06\n" +
+	"\t_group_idJ\x04\b\a\x10\b\"\xe8\a\n" +
 	"\x0fParticipantInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0fconversation_id\x18\x02 \x01(\tR\x0econversationId\x12\x1d\n" +
@@ -5400,12 +5418,17 @@ const file_notification_notification_chat_proto_rawDesc = "" +
 	"\x14agent_trigger_policy\x18\r \x01(\tH\x02R\x12agentTriggerPolicy\x88\x01\x01\x124\n" +
 	"\x16agent_trigger_keywords\x18\x0e \x03(\tR\x14agentTriggerKeywords\x123\n" +
 	"\x13relation_account_id\x18\x0f \x01(\tH\x03R\x11relationAccountId\x88\x01\x01\x12>\n" +
-	"\x19account_user_display_name\x18\x10 \x01(\tH\x04R\x16accountUserDisplayName\x88\x01\x01B\x12\n" +
+	"\x19account_user_display_name\x18\x10 \x01(\tH\x04R\x16accountUserDisplayName\x88\x01\x01\x124\n" +
+	"\x14last_read_message_id\x18\x11 \x01(\tH\x05R\x11lastReadMessageId\x88\x01\x01\x12A\n" +
+	"\flast_read_at\x18\x12 \x01(\v2\x1a.google.protobuf.TimestampH\x06R\n" +
+	"lastReadAt\x88\x01\x01B\x12\n" +
 	"\x10_account_user_idB\x12\n" +
 	"\x10_agent_config_idB\x17\n" +
 	"\x15_agent_trigger_policyB\x16\n" +
 	"\x14_relation_account_idB\x1c\n" +
-	"\x1a_account_user_display_name\"\x9b\x0e\n" +
+	"\x1a_account_user_display_nameB\x17\n" +
+	"\x15_last_read_message_idB\x0f\n" +
+	"\r_last_read_at\"\x9b\x0e\n" +
 	"\vMessageInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0fconversation_id\x18\x02 \x01(\tR\x0econversationId\x12\x1d\n" +
@@ -5869,144 +5892,145 @@ var file_notification_notification_chat_proto_depIdxs = []int32{
 	49, // 15: notification.ConversationInfo.links:type_name -> notification.ConversationLinkInfo
 	82, // 16: notification.ParticipantInfo.created_at:type_name -> google.protobuf.Timestamp
 	82, // 17: notification.ParticipantInfo.updated_at:type_name -> google.protobuf.Timestamp
-	82, // 18: notification.MessageInfo.edited_at:type_name -> google.protobuf.Timestamp
-	82, // 19: notification.MessageInfo.deleted_at:type_name -> google.protobuf.Timestamp
-	82, // 20: notification.MessageInfo.created_at:type_name -> google.protobuf.Timestamp
-	82, // 21: notification.MessageInfo.updated_at:type_name -> google.protobuf.Timestamp
-	11, // 22: notification.MessageInfo.attachments:type_name -> notification.AttachmentInfo
-	82, // 23: notification.MessageInfo.scheduled_for:type_name -> google.protobuf.Timestamp
-	31, // 24: notification.ListConversationsResponse.conversations:type_name -> notification.ConversationInfo
-	83, // 25: notification.ListConversationsResponse.page_info:type_name -> notification.PageInfo
-	31, // 26: notification.BatchGetConversationsResponse.conversations:type_name -> notification.ConversationInfo
-	33, // 27: notification.BatchGetMessagesResponse.messages:type_name -> notification.MessageInfo
-	82, // 28: notification.SupportRouteInfo.created_at:type_name -> google.protobuf.Timestamp
-	82, // 29: notification.SupportRouteInfo.updated_at:type_name -> google.protobuf.Timestamp
-	82, // 30: notification.ConversationLinkInfo.created_at:type_name -> google.protobuf.Timestamp
-	49, // 31: notification.ListConversationLinksResponse.links:type_name -> notification.ConversationLinkInfo
-	33, // 32: notification.ListReplyDraftsResponse.drafts:type_name -> notification.MessageInfo
-	82, // 33: notification.MessagingGroupMemberInfo.created_at:type_name -> google.protobuf.Timestamp
-	82, // 34: notification.MessagingGroupInfo.created_at:type_name -> google.protobuf.Timestamp
-	82, // 35: notification.MessagingGroupInfo.updated_at:type_name -> google.protobuf.Timestamp
-	64, // 36: notification.MessagingGroupInfo.members:type_name -> notification.MessagingGroupMemberInfo
-	65, // 37: notification.ListMessagingGroupsResponse.groups:type_name -> notification.MessagingGroupInfo
-	10, // 38: notification.SendMessageRequest.attachments:type_name -> notification.AttachmentInput
-	33, // 39: notification.ListMessagesResponse.messages:type_name -> notification.MessageInfo
-	83, // 40: notification.ListMessagesResponse.page_info:type_name -> notification.PageInfo
-	34, // 41: notification.ChatService.CreateConversation:input_type -> notification.CreateConversationRequest
-	35, // 42: notification.ChatService.ListConversations:input_type -> notification.ListConversationsRequest
-	37, // 43: notification.ChatService.GetConversation:input_type -> notification.GetConversationRequest
-	38, // 44: notification.ChatService.BatchGetConversations:input_type -> notification.BatchGetConversationsRequest
-	42, // 45: notification.ChatService.ContactSupport:input_type -> notification.ContactSupportRequest
-	43, // 46: notification.ChatService.GetSupportAvailability:input_type -> notification.GetSupportAvailabilityRequest
-	46, // 47: notification.ChatService.SetSupportRoute:input_type -> notification.SetSupportRouteRequest
-	47, // 48: notification.ChatService.ClearSupportRoute:input_type -> notification.ClearSupportRouteRequest
-	48, // 49: notification.ChatService.GetSupportRoute:input_type -> notification.GetSupportRouteRequest
-	74, // 50: notification.ChatService.SendMessage:input_type -> notification.SendMessageRequest
-	75, // 51: notification.ChatService.ListMessages:input_type -> notification.ListMessagesRequest
-	40, // 52: notification.ChatService.BatchGetMessages:input_type -> notification.BatchGetMessagesRequest
-	77, // 53: notification.ChatService.MarkConversationRead:input_type -> notification.MarkConversationReadRequest
-	79, // 54: notification.ChatService.IsParticipant:input_type -> notification.IsParticipantRequest
-	81, // 55: notification.ChatService.SendTyping:input_type -> notification.SendTypingRequest
-	13, // 56: notification.ChatService.UpdateConversation:input_type -> notification.UpdateConversationRequest
-	14, // 57: notification.ChatService.AddParticipant:input_type -> notification.AddParticipantRequest
-	15, // 58: notification.ChatService.RemoveParticipant:input_type -> notification.RemoveParticipantRequest
-	16, // 59: notification.ChatService.UpdateParticipantRole:input_type -> notification.UpdateParticipantRoleRequest
-	17, // 60: notification.ChatService.LeaveConversation:input_type -> notification.LeaveConversationRequest
-	18, // 61: notification.ChatService.HideConversation:input_type -> notification.HideConversationRequest
-	19, // 62: notification.ChatService.UnhideConversation:input_type -> notification.UnhideConversationRequest
-	20, // 63: notification.ChatService.SetMute:input_type -> notification.SetMuteRequest
-	21, // 64: notification.ChatService.Block:input_type -> notification.BlockRequest
-	22, // 65: notification.ChatService.Unblock:input_type -> notification.UnblockRequest
-	23, // 66: notification.ChatService.ListBlocks:input_type -> notification.ListBlocksRequest
-	26, // 67: notification.ChatService.ListContacts:input_type -> notification.ListContactsRequest
-	29, // 68: notification.ChatService.ReportConversation:input_type -> notification.ReportConversationRequest
-	8,  // 69: notification.ChatService.CreateAttachmentUploadURL:input_type -> notification.CreateAttachmentUploadURLRequest
-	4,  // 70: notification.ChatService.ScheduleMessage:input_type -> notification.ScheduleMessageRequest
-	5,  // 71: notification.ChatService.ListScheduledMessages:input_type -> notification.ListScheduledMessagesRequest
-	7,  // 72: notification.ChatService.CancelScheduledMessage:input_type -> notification.CancelScheduledMessageRequest
-	2,  // 73: notification.ChatService.AddAgentParticipant:input_type -> notification.AddAgentParticipantRequest
-	3,  // 74: notification.ChatService.RemoveAgentParticipant:input_type -> notification.RemoveAgentParticipantRequest
-	0,  // 75: notification.ChatService.SetLegalHold:input_type -> notification.SetLegalHoldRequest
-	1,  // 76: notification.ChatService.RedactConversation:input_type -> notification.RedactConversationRequest
-	50, // 77: notification.ChatService.UpdateConversationWorkflow:input_type -> notification.UpdateConversationWorkflowRequest
-	51, // 78: notification.ChatService.AssignConversation:input_type -> notification.AssignConversationRequest
-	52, // 79: notification.ChatService.ListInbox:input_type -> notification.ListInboxRequest
-	53, // 80: notification.ChatService.ListConversationsByResource:input_type -> notification.ListConversationsByResourceRequest
-	54, // 81: notification.ChatService.AddConversationLink:input_type -> notification.AddConversationLinkRequest
-	55, // 82: notification.ChatService.RemoveConversationLink:input_type -> notification.RemoveConversationLinkRequest
-	56, // 83: notification.ChatService.ListConversationLinks:input_type -> notification.ListConversationLinksRequest
-	58, // 84: notification.ChatService.CreateReplyDraft:input_type -> notification.CreateReplyDraftRequest
-	59, // 85: notification.ChatService.ListReplyDrafts:input_type -> notification.ListReplyDraftsRequest
-	61, // 86: notification.ChatService.UpdateReplyDraft:input_type -> notification.UpdateReplyDraftRequest
-	62, // 87: notification.ChatService.RejectReplyDraft:input_type -> notification.RejectReplyDraftRequest
-	63, // 88: notification.ChatService.ApproveAndSendReplyDraft:input_type -> notification.ApproveAndSendReplyDraftRequest
-	66, // 89: notification.ChatService.CreateMessagingGroup:input_type -> notification.CreateMessagingGroupRequest
-	67, // 90: notification.ChatService.ListMessagingGroups:input_type -> notification.ListMessagingGroupsRequest
-	69, // 91: notification.ChatService.GetMessagingGroup:input_type -> notification.GetMessagingGroupRequest
-	70, // 92: notification.ChatService.UpdateMessagingGroup:input_type -> notification.UpdateMessagingGroupRequest
-	71, // 93: notification.ChatService.DeleteMessagingGroup:input_type -> notification.DeleteMessagingGroupRequest
-	72, // 94: notification.ChatService.AddMessagingGroupMember:input_type -> notification.AddMessagingGroupMemberRequest
-	73, // 95: notification.ChatService.RemoveMessagingGroupMember:input_type -> notification.RemoveMessagingGroupMemberRequest
-	31, // 96: notification.ChatService.CreateConversation:output_type -> notification.ConversationInfo
-	36, // 97: notification.ChatService.ListConversations:output_type -> notification.ListConversationsResponse
-	31, // 98: notification.ChatService.GetConversation:output_type -> notification.ConversationInfo
-	39, // 99: notification.ChatService.BatchGetConversations:output_type -> notification.BatchGetConversationsResponse
-	31, // 100: notification.ChatService.ContactSupport:output_type -> notification.ConversationInfo
-	44, // 101: notification.ChatService.GetSupportAvailability:output_type -> notification.SupportAvailabilityInfo
-	45, // 102: notification.ChatService.SetSupportRoute:output_type -> notification.SupportRouteInfo
-	12, // 103: notification.ChatService.ClearSupportRoute:output_type -> notification.ChatAck
-	45, // 104: notification.ChatService.GetSupportRoute:output_type -> notification.SupportRouteInfo
-	33, // 105: notification.ChatService.SendMessage:output_type -> notification.MessageInfo
-	76, // 106: notification.ChatService.ListMessages:output_type -> notification.ListMessagesResponse
-	41, // 107: notification.ChatService.BatchGetMessages:output_type -> notification.BatchGetMessagesResponse
-	78, // 108: notification.ChatService.MarkConversationRead:output_type -> notification.MarkConversationReadResponse
-	80, // 109: notification.ChatService.IsParticipant:output_type -> notification.IsParticipantResponse
-	12, // 110: notification.ChatService.SendTyping:output_type -> notification.ChatAck
-	31, // 111: notification.ChatService.UpdateConversation:output_type -> notification.ConversationInfo
-	31, // 112: notification.ChatService.AddParticipant:output_type -> notification.ConversationInfo
-	12, // 113: notification.ChatService.RemoveParticipant:output_type -> notification.ChatAck
-	31, // 114: notification.ChatService.UpdateParticipantRole:output_type -> notification.ConversationInfo
-	12, // 115: notification.ChatService.LeaveConversation:output_type -> notification.ChatAck
-	12, // 116: notification.ChatService.HideConversation:output_type -> notification.ChatAck
-	12, // 117: notification.ChatService.UnhideConversation:output_type -> notification.ChatAck
-	31, // 118: notification.ChatService.SetMute:output_type -> notification.ConversationInfo
-	24, // 119: notification.ChatService.Block:output_type -> notification.BlockInfo
-	12, // 120: notification.ChatService.Unblock:output_type -> notification.ChatAck
-	25, // 121: notification.ChatService.ListBlocks:output_type -> notification.ListBlocksResponse
-	28, // 122: notification.ChatService.ListContacts:output_type -> notification.ListContactsResponse
-	30, // 123: notification.ChatService.ReportConversation:output_type -> notification.MessageReportInfo
-	9,  // 124: notification.ChatService.CreateAttachmentUploadURL:output_type -> notification.AttachmentUploadTargetInfo
-	33, // 125: notification.ChatService.ScheduleMessage:output_type -> notification.MessageInfo
-	6,  // 126: notification.ChatService.ListScheduledMessages:output_type -> notification.ListScheduledMessagesResponse
-	33, // 127: notification.ChatService.CancelScheduledMessage:output_type -> notification.MessageInfo
-	32, // 128: notification.ChatService.AddAgentParticipant:output_type -> notification.ParticipantInfo
-	12, // 129: notification.ChatService.RemoveAgentParticipant:output_type -> notification.ChatAck
-	31, // 130: notification.ChatService.SetLegalHold:output_type -> notification.ConversationInfo
-	31, // 131: notification.ChatService.RedactConversation:output_type -> notification.ConversationInfo
-	31, // 132: notification.ChatService.UpdateConversationWorkflow:output_type -> notification.ConversationInfo
-	31, // 133: notification.ChatService.AssignConversation:output_type -> notification.ConversationInfo
-	36, // 134: notification.ChatService.ListInbox:output_type -> notification.ListConversationsResponse
-	36, // 135: notification.ChatService.ListConversationsByResource:output_type -> notification.ListConversationsResponse
-	49, // 136: notification.ChatService.AddConversationLink:output_type -> notification.ConversationLinkInfo
-	12, // 137: notification.ChatService.RemoveConversationLink:output_type -> notification.ChatAck
-	57, // 138: notification.ChatService.ListConversationLinks:output_type -> notification.ListConversationLinksResponse
-	33, // 139: notification.ChatService.CreateReplyDraft:output_type -> notification.MessageInfo
-	60, // 140: notification.ChatService.ListReplyDrafts:output_type -> notification.ListReplyDraftsResponse
-	33, // 141: notification.ChatService.UpdateReplyDraft:output_type -> notification.MessageInfo
-	33, // 142: notification.ChatService.RejectReplyDraft:output_type -> notification.MessageInfo
-	33, // 143: notification.ChatService.ApproveAndSendReplyDraft:output_type -> notification.MessageInfo
-	65, // 144: notification.ChatService.CreateMessagingGroup:output_type -> notification.MessagingGroupInfo
-	68, // 145: notification.ChatService.ListMessagingGroups:output_type -> notification.ListMessagingGroupsResponse
-	65, // 146: notification.ChatService.GetMessagingGroup:output_type -> notification.MessagingGroupInfo
-	65, // 147: notification.ChatService.UpdateMessagingGroup:output_type -> notification.MessagingGroupInfo
-	12, // 148: notification.ChatService.DeleteMessagingGroup:output_type -> notification.ChatAck
-	65, // 149: notification.ChatService.AddMessagingGroupMember:output_type -> notification.MessagingGroupInfo
-	65, // 150: notification.ChatService.RemoveMessagingGroupMember:output_type -> notification.MessagingGroupInfo
-	96, // [96:151] is the sub-list for method output_type
-	41, // [41:96] is the sub-list for method input_type
-	41, // [41:41] is the sub-list for extension type_name
-	41, // [41:41] is the sub-list for extension extendee
-	0,  // [0:41] is the sub-list for field type_name
+	82, // 18: notification.ParticipantInfo.last_read_at:type_name -> google.protobuf.Timestamp
+	82, // 19: notification.MessageInfo.edited_at:type_name -> google.protobuf.Timestamp
+	82, // 20: notification.MessageInfo.deleted_at:type_name -> google.protobuf.Timestamp
+	82, // 21: notification.MessageInfo.created_at:type_name -> google.protobuf.Timestamp
+	82, // 22: notification.MessageInfo.updated_at:type_name -> google.protobuf.Timestamp
+	11, // 23: notification.MessageInfo.attachments:type_name -> notification.AttachmentInfo
+	82, // 24: notification.MessageInfo.scheduled_for:type_name -> google.protobuf.Timestamp
+	31, // 25: notification.ListConversationsResponse.conversations:type_name -> notification.ConversationInfo
+	83, // 26: notification.ListConversationsResponse.page_info:type_name -> notification.PageInfo
+	31, // 27: notification.BatchGetConversationsResponse.conversations:type_name -> notification.ConversationInfo
+	33, // 28: notification.BatchGetMessagesResponse.messages:type_name -> notification.MessageInfo
+	82, // 29: notification.SupportRouteInfo.created_at:type_name -> google.protobuf.Timestamp
+	82, // 30: notification.SupportRouteInfo.updated_at:type_name -> google.protobuf.Timestamp
+	82, // 31: notification.ConversationLinkInfo.created_at:type_name -> google.protobuf.Timestamp
+	49, // 32: notification.ListConversationLinksResponse.links:type_name -> notification.ConversationLinkInfo
+	33, // 33: notification.ListReplyDraftsResponse.drafts:type_name -> notification.MessageInfo
+	82, // 34: notification.MessagingGroupMemberInfo.created_at:type_name -> google.protobuf.Timestamp
+	82, // 35: notification.MessagingGroupInfo.created_at:type_name -> google.protobuf.Timestamp
+	82, // 36: notification.MessagingGroupInfo.updated_at:type_name -> google.protobuf.Timestamp
+	64, // 37: notification.MessagingGroupInfo.members:type_name -> notification.MessagingGroupMemberInfo
+	65, // 38: notification.ListMessagingGroupsResponse.groups:type_name -> notification.MessagingGroupInfo
+	10, // 39: notification.SendMessageRequest.attachments:type_name -> notification.AttachmentInput
+	33, // 40: notification.ListMessagesResponse.messages:type_name -> notification.MessageInfo
+	83, // 41: notification.ListMessagesResponse.page_info:type_name -> notification.PageInfo
+	34, // 42: notification.ChatService.CreateConversation:input_type -> notification.CreateConversationRequest
+	35, // 43: notification.ChatService.ListConversations:input_type -> notification.ListConversationsRequest
+	37, // 44: notification.ChatService.GetConversation:input_type -> notification.GetConversationRequest
+	38, // 45: notification.ChatService.BatchGetConversations:input_type -> notification.BatchGetConversationsRequest
+	42, // 46: notification.ChatService.ContactSupport:input_type -> notification.ContactSupportRequest
+	43, // 47: notification.ChatService.GetSupportAvailability:input_type -> notification.GetSupportAvailabilityRequest
+	46, // 48: notification.ChatService.SetSupportRoute:input_type -> notification.SetSupportRouteRequest
+	47, // 49: notification.ChatService.ClearSupportRoute:input_type -> notification.ClearSupportRouteRequest
+	48, // 50: notification.ChatService.GetSupportRoute:input_type -> notification.GetSupportRouteRequest
+	74, // 51: notification.ChatService.SendMessage:input_type -> notification.SendMessageRequest
+	75, // 52: notification.ChatService.ListMessages:input_type -> notification.ListMessagesRequest
+	40, // 53: notification.ChatService.BatchGetMessages:input_type -> notification.BatchGetMessagesRequest
+	77, // 54: notification.ChatService.MarkConversationRead:input_type -> notification.MarkConversationReadRequest
+	79, // 55: notification.ChatService.IsParticipant:input_type -> notification.IsParticipantRequest
+	81, // 56: notification.ChatService.SendTyping:input_type -> notification.SendTypingRequest
+	13, // 57: notification.ChatService.UpdateConversation:input_type -> notification.UpdateConversationRequest
+	14, // 58: notification.ChatService.AddParticipant:input_type -> notification.AddParticipantRequest
+	15, // 59: notification.ChatService.RemoveParticipant:input_type -> notification.RemoveParticipantRequest
+	16, // 60: notification.ChatService.UpdateParticipantRole:input_type -> notification.UpdateParticipantRoleRequest
+	17, // 61: notification.ChatService.LeaveConversation:input_type -> notification.LeaveConversationRequest
+	18, // 62: notification.ChatService.HideConversation:input_type -> notification.HideConversationRequest
+	19, // 63: notification.ChatService.UnhideConversation:input_type -> notification.UnhideConversationRequest
+	20, // 64: notification.ChatService.SetMute:input_type -> notification.SetMuteRequest
+	21, // 65: notification.ChatService.Block:input_type -> notification.BlockRequest
+	22, // 66: notification.ChatService.Unblock:input_type -> notification.UnblockRequest
+	23, // 67: notification.ChatService.ListBlocks:input_type -> notification.ListBlocksRequest
+	26, // 68: notification.ChatService.ListContacts:input_type -> notification.ListContactsRequest
+	29, // 69: notification.ChatService.ReportConversation:input_type -> notification.ReportConversationRequest
+	8,  // 70: notification.ChatService.CreateAttachmentUploadURL:input_type -> notification.CreateAttachmentUploadURLRequest
+	4,  // 71: notification.ChatService.ScheduleMessage:input_type -> notification.ScheduleMessageRequest
+	5,  // 72: notification.ChatService.ListScheduledMessages:input_type -> notification.ListScheduledMessagesRequest
+	7,  // 73: notification.ChatService.CancelScheduledMessage:input_type -> notification.CancelScheduledMessageRequest
+	2,  // 74: notification.ChatService.AddAgentParticipant:input_type -> notification.AddAgentParticipantRequest
+	3,  // 75: notification.ChatService.RemoveAgentParticipant:input_type -> notification.RemoveAgentParticipantRequest
+	0,  // 76: notification.ChatService.SetLegalHold:input_type -> notification.SetLegalHoldRequest
+	1,  // 77: notification.ChatService.RedactConversation:input_type -> notification.RedactConversationRequest
+	50, // 78: notification.ChatService.UpdateConversationWorkflow:input_type -> notification.UpdateConversationWorkflowRequest
+	51, // 79: notification.ChatService.AssignConversation:input_type -> notification.AssignConversationRequest
+	52, // 80: notification.ChatService.ListInbox:input_type -> notification.ListInboxRequest
+	53, // 81: notification.ChatService.ListConversationsByResource:input_type -> notification.ListConversationsByResourceRequest
+	54, // 82: notification.ChatService.AddConversationLink:input_type -> notification.AddConversationLinkRequest
+	55, // 83: notification.ChatService.RemoveConversationLink:input_type -> notification.RemoveConversationLinkRequest
+	56, // 84: notification.ChatService.ListConversationLinks:input_type -> notification.ListConversationLinksRequest
+	58, // 85: notification.ChatService.CreateReplyDraft:input_type -> notification.CreateReplyDraftRequest
+	59, // 86: notification.ChatService.ListReplyDrafts:input_type -> notification.ListReplyDraftsRequest
+	61, // 87: notification.ChatService.UpdateReplyDraft:input_type -> notification.UpdateReplyDraftRequest
+	62, // 88: notification.ChatService.RejectReplyDraft:input_type -> notification.RejectReplyDraftRequest
+	63, // 89: notification.ChatService.ApproveAndSendReplyDraft:input_type -> notification.ApproveAndSendReplyDraftRequest
+	66, // 90: notification.ChatService.CreateMessagingGroup:input_type -> notification.CreateMessagingGroupRequest
+	67, // 91: notification.ChatService.ListMessagingGroups:input_type -> notification.ListMessagingGroupsRequest
+	69, // 92: notification.ChatService.GetMessagingGroup:input_type -> notification.GetMessagingGroupRequest
+	70, // 93: notification.ChatService.UpdateMessagingGroup:input_type -> notification.UpdateMessagingGroupRequest
+	71, // 94: notification.ChatService.DeleteMessagingGroup:input_type -> notification.DeleteMessagingGroupRequest
+	72, // 95: notification.ChatService.AddMessagingGroupMember:input_type -> notification.AddMessagingGroupMemberRequest
+	73, // 96: notification.ChatService.RemoveMessagingGroupMember:input_type -> notification.RemoveMessagingGroupMemberRequest
+	31, // 97: notification.ChatService.CreateConversation:output_type -> notification.ConversationInfo
+	36, // 98: notification.ChatService.ListConversations:output_type -> notification.ListConversationsResponse
+	31, // 99: notification.ChatService.GetConversation:output_type -> notification.ConversationInfo
+	39, // 100: notification.ChatService.BatchGetConversations:output_type -> notification.BatchGetConversationsResponse
+	31, // 101: notification.ChatService.ContactSupport:output_type -> notification.ConversationInfo
+	44, // 102: notification.ChatService.GetSupportAvailability:output_type -> notification.SupportAvailabilityInfo
+	45, // 103: notification.ChatService.SetSupportRoute:output_type -> notification.SupportRouteInfo
+	12, // 104: notification.ChatService.ClearSupportRoute:output_type -> notification.ChatAck
+	45, // 105: notification.ChatService.GetSupportRoute:output_type -> notification.SupportRouteInfo
+	33, // 106: notification.ChatService.SendMessage:output_type -> notification.MessageInfo
+	76, // 107: notification.ChatService.ListMessages:output_type -> notification.ListMessagesResponse
+	41, // 108: notification.ChatService.BatchGetMessages:output_type -> notification.BatchGetMessagesResponse
+	78, // 109: notification.ChatService.MarkConversationRead:output_type -> notification.MarkConversationReadResponse
+	80, // 110: notification.ChatService.IsParticipant:output_type -> notification.IsParticipantResponse
+	12, // 111: notification.ChatService.SendTyping:output_type -> notification.ChatAck
+	31, // 112: notification.ChatService.UpdateConversation:output_type -> notification.ConversationInfo
+	31, // 113: notification.ChatService.AddParticipant:output_type -> notification.ConversationInfo
+	12, // 114: notification.ChatService.RemoveParticipant:output_type -> notification.ChatAck
+	31, // 115: notification.ChatService.UpdateParticipantRole:output_type -> notification.ConversationInfo
+	12, // 116: notification.ChatService.LeaveConversation:output_type -> notification.ChatAck
+	12, // 117: notification.ChatService.HideConversation:output_type -> notification.ChatAck
+	12, // 118: notification.ChatService.UnhideConversation:output_type -> notification.ChatAck
+	31, // 119: notification.ChatService.SetMute:output_type -> notification.ConversationInfo
+	24, // 120: notification.ChatService.Block:output_type -> notification.BlockInfo
+	12, // 121: notification.ChatService.Unblock:output_type -> notification.ChatAck
+	25, // 122: notification.ChatService.ListBlocks:output_type -> notification.ListBlocksResponse
+	28, // 123: notification.ChatService.ListContacts:output_type -> notification.ListContactsResponse
+	30, // 124: notification.ChatService.ReportConversation:output_type -> notification.MessageReportInfo
+	9,  // 125: notification.ChatService.CreateAttachmentUploadURL:output_type -> notification.AttachmentUploadTargetInfo
+	33, // 126: notification.ChatService.ScheduleMessage:output_type -> notification.MessageInfo
+	6,  // 127: notification.ChatService.ListScheduledMessages:output_type -> notification.ListScheduledMessagesResponse
+	33, // 128: notification.ChatService.CancelScheduledMessage:output_type -> notification.MessageInfo
+	32, // 129: notification.ChatService.AddAgentParticipant:output_type -> notification.ParticipantInfo
+	12, // 130: notification.ChatService.RemoveAgentParticipant:output_type -> notification.ChatAck
+	31, // 131: notification.ChatService.SetLegalHold:output_type -> notification.ConversationInfo
+	31, // 132: notification.ChatService.RedactConversation:output_type -> notification.ConversationInfo
+	31, // 133: notification.ChatService.UpdateConversationWorkflow:output_type -> notification.ConversationInfo
+	31, // 134: notification.ChatService.AssignConversation:output_type -> notification.ConversationInfo
+	36, // 135: notification.ChatService.ListInbox:output_type -> notification.ListConversationsResponse
+	36, // 136: notification.ChatService.ListConversationsByResource:output_type -> notification.ListConversationsResponse
+	49, // 137: notification.ChatService.AddConversationLink:output_type -> notification.ConversationLinkInfo
+	12, // 138: notification.ChatService.RemoveConversationLink:output_type -> notification.ChatAck
+	57, // 139: notification.ChatService.ListConversationLinks:output_type -> notification.ListConversationLinksResponse
+	33, // 140: notification.ChatService.CreateReplyDraft:output_type -> notification.MessageInfo
+	60, // 141: notification.ChatService.ListReplyDrafts:output_type -> notification.ListReplyDraftsResponse
+	33, // 142: notification.ChatService.UpdateReplyDraft:output_type -> notification.MessageInfo
+	33, // 143: notification.ChatService.RejectReplyDraft:output_type -> notification.MessageInfo
+	33, // 144: notification.ChatService.ApproveAndSendReplyDraft:output_type -> notification.MessageInfo
+	65, // 145: notification.ChatService.CreateMessagingGroup:output_type -> notification.MessagingGroupInfo
+	68, // 146: notification.ChatService.ListMessagingGroups:output_type -> notification.ListMessagingGroupsResponse
+	65, // 147: notification.ChatService.GetMessagingGroup:output_type -> notification.MessagingGroupInfo
+	65, // 148: notification.ChatService.UpdateMessagingGroup:output_type -> notification.MessagingGroupInfo
+	12, // 149: notification.ChatService.DeleteMessagingGroup:output_type -> notification.ChatAck
+	65, // 150: notification.ChatService.AddMessagingGroupMember:output_type -> notification.MessagingGroupInfo
+	65, // 151: notification.ChatService.RemoveMessagingGroupMember:output_type -> notification.MessagingGroupInfo
+	97, // [97:152] is the sub-list for method output_type
+	42, // [42:97] is the sub-list for method input_type
+	42, // [42:42] is the sub-list for extension type_name
+	42, // [42:42] is the sub-list for extension extendee
+	0,  // [0:42] is the sub-list for field type_name
 }
 
 func init() { file_notification_notification_chat_proto_init() }

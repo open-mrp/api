@@ -121,3 +121,44 @@ func TestParseInboundEmail_CollectsAllCandidateRecipients(t *testing.T) {
 		"cc@elsewhere.com",          // To
 	}, in.Recipients, "delivery headers first, duplicates dropped")
 }
+
+func TestParseInboundEmail_SenderFromForwardedHeaders(t *testing.T) {
+	mkRaw := func(headers ...string) []byte {
+		return []byte(strings.Join(append(headers,
+			"Subject: hi", "Message-ID: <m@x>", "Content-Type: text/plain", "", "body", "",
+		), "\r\n"))
+	}
+
+	// Direct mail: From is the author.
+	in, err := parseInboundEmail(mkRaw(`From: "Jane Doe" <jane@theirco.com>`), "k")
+	require.NoError(t, err)
+	assert.Equal(t, "jane@theirco.com", in.From)
+	assert.Equal(t, "Jane Doe", in.FromName)
+
+	// A mailing list / forwarder rewrote From to itself; the real author survives in X-Original-Sender.
+	in, err = parseInboundEmail(mkRaw(
+		"From: support@theirco.com",
+		`X-Original-Sender: "Carl Customer" <carl@customer.com>`,
+	), "k")
+	require.NoError(t, err)
+	assert.Equal(t, "carl@customer.com", in.From, "prefer the original author over the forwarder")
+	assert.Equal(t, "Carl Customer", in.FromName)
+
+	// Google consumer forwarding: original envelope sender is the first token of X-Forwarded-For.
+	in, err = parseInboundEmail(mkRaw(
+		"From: forwarder@gmail.com",
+		"X-Forwarded-For: dana@customer.com forwarder@gmail.com",
+	), "k")
+	require.NoError(t, err)
+	// From parses, so it wins over X-Forwarded-For — X-Forwarded-For is only a fallback when From is
+	// unparseable. Assert From is honored (no original-author header present).
+	assert.Equal(t, "forwarder@gmail.com", in.From)
+
+	// From unparseable → fall back to Reply-To.
+	in, err = parseInboundEmail(mkRaw(
+		"From: (garbage no address)",
+		"Reply-To: real@customer.com",
+	), "k")
+	require.NoError(t, err)
+	assert.Equal(t, "real@customer.com", in.From)
+}

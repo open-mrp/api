@@ -3,6 +3,7 @@ package aws
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -15,6 +16,7 @@ import (
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ses"
 	sestypes "github.com/aws/aws-sdk-go-v2/service/ses/types"
+	"github.com/aws/smithy-go"
 	"go.opentelemetry.io/otel/codes"
 )
 
@@ -104,13 +106,27 @@ func (s *sesEmailSenderImpl) Send(ctx context.Context, data domain.EmailData) (*
 	response, err := s.client.SendRawEmail(ctx, input)
 
 	if err != nil {
-		apiErr := apierror.NewInternalError(err, "Failed to send email.")
+		apiErr := classifySESSendError(err, sender)
 		span.RecordError(apiErr)
 		span.SetStatus(codes.Error, apiErr.Error())
 		return nil, apiErr
 	}
 
 	return response.MessageId, nil
+}
+
+// classifySESSendError turns a SendRawEmail failure into an APIError that names the real cause. SES collapses several distinct problems into MessageRejected — the most common on this bridge is the sending identity (the inbox's From address/domain) not being verified for sending in this region, or the SES account still being in the sandbox (which only lets you send to verified recipients). Left as a bare "Failed to send email." internal error, these look identical to a transient outage, so the agent and the approving teammate can't tell that the fix is a config change (verify the domain / leave the sandbox) rather than a retry. We log the full SES code+message and put an actionable summary on the error the caller surfaces.
+func classifySESSendError(err error, sender string) *apierror.APIError {
+	var apiSESErr smithy.APIError
+	if errors.As(err, &apiSESErr) {
+		code := apiSESErr.ErrorCode()
+		msg := apiSESErr.ErrorMessage()
+		if code == "MessageRejected" || strings.Contains(strings.ToLower(msg), "not verified") {
+			return apierror.NewInternalError(err, fmt.Sprintf("Email could not be sent from %q: %s. The sending domain likely isn't verified for sending in SES, or the SES account is still in the sandbox.", sender, msg))
+		}
+		return apierror.NewInternalError(err, fmt.Sprintf("Email could not be sent (SES %s): %s.", code, msg))
+	}
+	return apierror.NewInternalError(err, "Failed to send email.")
 }
 
 // bracketReferences angle-brackets each whitespace-separated message-id in a References value (the ledger stores them bare), producing a valid rfc822 References header.

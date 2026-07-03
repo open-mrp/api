@@ -368,8 +368,10 @@ type EmailInboxInfo struct {
 	// domain can't repoint its apex MX at SES forward their support address here instead. Unset when the
 	// receiving subdomain isn't configured.
 	ForwardingAddress *string `protobuf:"bytes,12,opt,name=forwarding_address,json=forwardingAddress,proto3,oneof" json:"forwarding_address,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Reusable roster (messaging_group) whose members are seated on every new thread this inbox opens.
+	GroupId       *string `protobuf:"bytes,13,opt,name=group_id,json=groupId,proto3,oneof" json:"group_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *EmailInboxInfo) Reset() {
@@ -482,6 +484,13 @@ func (x *EmailInboxInfo) GetUpdatedAt() *timestamppb.Timestamp {
 func (x *EmailInboxInfo) GetForwardingAddress() string {
 	if x != nil && x.ForwardingAddress != nil {
 		return *x.ForwardingAddress
+	}
+	return ""
+}
+
+func (x *EmailInboxInfo) GetGroupId() string {
+	if x != nil && x.GroupId != nil {
+		return *x.GroupId
 	}
 	return ""
 }
@@ -706,6 +715,7 @@ type CreateEmailInboxRequest struct {
 	AgentConfigId        *string                `protobuf:"bytes,4,opt,name=agent_config_id,json=agentConfigId,proto3,oneof" json:"agent_config_id,omitempty"`
 	AgentTriggerPolicy   *string                `protobuf:"bytes,5,opt,name=agent_trigger_policy,json=agentTriggerPolicy,proto3,oneof" json:"agent_trigger_policy,omitempty"`
 	AgentTriggerKeywords []string               `protobuf:"bytes,6,rep,name=agent_trigger_keywords,json=agentTriggerKeywords,proto3" json:"agent_trigger_keywords,omitempty"`
+	GroupId              *string                `protobuf:"bytes,7,opt,name=group_id,json=groupId,proto3,oneof" json:"group_id,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -780,6 +790,13 @@ func (x *CreateEmailInboxRequest) GetAgentTriggerKeywords() []string {
 		return x.AgentTriggerKeywords
 	}
 	return nil
+}
+
+func (x *CreateEmailInboxRequest) GetGroupId() string {
+	if x != nil && x.GroupId != nil {
+		return *x.GroupId
+	}
+	return ""
 }
 
 type ListEmailInboxesRequest struct {
@@ -914,6 +931,7 @@ type UpdateEmailInboxRequest struct {
 	AgentConfigId        *string                `protobuf:"bytes,4,opt,name=agent_config_id,json=agentConfigId,proto3,oneof" json:"agent_config_id,omitempty"`
 	AgentTriggerPolicy   *string                `protobuf:"bytes,5,opt,name=agent_trigger_policy,json=agentTriggerPolicy,proto3,oneof" json:"agent_trigger_policy,omitempty"`
 	AgentTriggerKeywords []string               `protobuf:"bytes,6,rep,name=agent_trigger_keywords,json=agentTriggerKeywords,proto3" json:"agent_trigger_keywords,omitempty"`
+	GroupId              *string                `protobuf:"bytes,7,opt,name=group_id,json=groupId,proto3,oneof" json:"group_id,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -988,6 +1006,13 @@ func (x *UpdateEmailInboxRequest) GetAgentTriggerKeywords() []string {
 		return x.AgentTriggerKeywords
 	}
 	return nil
+}
+
+func (x *UpdateEmailInboxRequest) GetGroupId() string {
+	if x != nil && x.GroupId != nil {
+		return *x.GroupId
+	}
+	return ""
 }
 
 type DeleteEmailInboxRequest struct {
@@ -1116,7 +1141,7 @@ const file_notification_notification_email_bridge_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xd1\x04\n" +
+	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xfe\x04\n" +
 	"\x0eEmailInboxInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -1133,12 +1158,14 @@ const file_notification_notification_email_bridge_proto_rawDesc = "" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x122\n" +
-	"\x12forwarding_address\x18\f \x01(\tH\x03R\x11forwardingAddress\x88\x01\x01B\f\n" +
+	"\x12forwarding_address\x18\f \x01(\tH\x03R\x11forwardingAddress\x88\x01\x01\x12\x1e\n" +
+	"\bgroup_id\x18\r \x01(\tH\x04R\agroupId\x88\x01\x01B\f\n" +
 	"\n" +
 	"_from_nameB\x12\n" +
 	"\x10_agent_config_idB\x17\n" +
 	"\x15_agent_trigger_policyB\x15\n" +
-	"\x13_forwarding_address\"2\n" +
+	"\x13_forwarding_addressB\v\n" +
+	"\t_group_id\"2\n" +
 	"\x18CreateEmailDomainRequest\x12\x16\n" +
 	"\x06domain\x18\x01 \x01(\tR\x06domain\"\x19\n" +
 	"\x17ListEmailDomainsRequest\"S\n" +
@@ -1147,34 +1174,38 @@ const file_notification_notification_email_bridge_proto_rawDesc = "" +
 	"\x15GetEmailDomainRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"*\n" +
 	"\x18VerifyEmailDomainRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\xd2\x02\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xff\x02\n" +
 	"\x17CreateEmailInboxRequest\x12&\n" +
 	"\x0femail_domain_id\x18\x01 \x01(\tR\remailDomainId\x12\x18\n" +
 	"\aaddress\x18\x02 \x01(\tR\aaddress\x12 \n" +
 	"\tfrom_name\x18\x03 \x01(\tH\x00R\bfromName\x88\x01\x01\x12+\n" +
 	"\x0fagent_config_id\x18\x04 \x01(\tH\x01R\ragentConfigId\x88\x01\x01\x125\n" +
 	"\x14agent_trigger_policy\x18\x05 \x01(\tH\x02R\x12agentTriggerPolicy\x88\x01\x01\x124\n" +
-	"\x16agent_trigger_keywords\x18\x06 \x03(\tR\x14agentTriggerKeywordsB\f\n" +
+	"\x16agent_trigger_keywords\x18\x06 \x03(\tR\x14agentTriggerKeywords\x12\x1e\n" +
+	"\bgroup_id\x18\a \x01(\tH\x03R\agroupId\x88\x01\x01B\f\n" +
 	"\n" +
 	"_from_nameB\x12\n" +
 	"\x10_agent_config_idB\x17\n" +
-	"\x15_agent_trigger_policy\"\x19\n" +
+	"\x15_agent_trigger_policyB\v\n" +
+	"\t_group_id\"\x19\n" +
 	"\x17ListEmailInboxesRequest\"R\n" +
 	"\x18ListEmailInboxesResponse\x126\n" +
 	"\ainboxes\x18\x01 \x03(\v2\x1c.notification.EmailInboxInfoR\ainboxes\"&\n" +
 	"\x14GetEmailInboxRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\xb8\x02\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xe5\x02\n" +
 	"\x17UpdateEmailInboxRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12 \n" +
 	"\tfrom_name\x18\x02 \x01(\tH\x00R\bfromName\x88\x01\x01\x12\x16\n" +
 	"\x06status\x18\x03 \x01(\tR\x06status\x12+\n" +
 	"\x0fagent_config_id\x18\x04 \x01(\tH\x01R\ragentConfigId\x88\x01\x01\x125\n" +
 	"\x14agent_trigger_policy\x18\x05 \x01(\tH\x02R\x12agentTriggerPolicy\x88\x01\x01\x124\n" +
-	"\x16agent_trigger_keywords\x18\x06 \x03(\tR\x14agentTriggerKeywordsB\f\n" +
+	"\x16agent_trigger_keywords\x18\x06 \x03(\tR\x14agentTriggerKeywords\x12\x1e\n" +
+	"\bgroup_id\x18\a \x01(\tH\x03R\agroupId\x88\x01\x01B\f\n" +
 	"\n" +
 	"_from_nameB\x12\n" +
 	"\x10_agent_config_idB\x17\n" +
-	"\x15_agent_trigger_policy\")\n" +
+	"\x15_agent_trigger_policyB\v\n" +
+	"\t_group_id\")\n" +
 	"\x17DeleteEmailInboxRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\" \n" +
 	"\x0eEmailBridgeAck\x12\x0e\n" +

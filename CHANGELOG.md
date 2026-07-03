@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.36.0](https://github.com/Augno/api/compare/v0.35.0...v0.36.0) (2026-07-03)
+
+
+### Features
+
+* nonnull account id on machine ([#397](https://github.com/Augno/api/issues/397)) ([f4cf46d](https://github.com/Augno/api/commit/f4cf46ddf7f0f37ceef0b3a5543aefb335b5e8ef))
+
 ## [0.35.0](https://github.com/Augno/api/compare/v0.34.0...v0.35.0) (2026-07-03)
 
 

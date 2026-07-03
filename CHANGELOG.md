@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.35.0](https://github.com/Augno/api/compare/v0.34.0...v0.35.0) (2026-07-03)
+
+
+### Features
+
+* UK for depatment, product_line, scanning_station, production_step; nullable machine account_id ([#396](https://github.com/Augno/api/issues/396)) ([3b3d06b](https://github.com/Augno/api/commit/3b3d06b2f957164185d40382f898ba0bedf699fa))
+
+
+### Bug Fixes
+
+* notify participants of conversation updates when read cursor advances ([fffa05f](https://github.com/Augno/api/commit/fffa05f085782f56d1c377b5929c095a1f2840c9))
+
 ## [0.34.0](https://github.com/Augno/api/compare/v0.33.0...v0.34.0) (2026-07-03)
 
 

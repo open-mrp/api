@@ -12,10 +12,10 @@ INSERT IGNORE INTO department (id, name, account_id, created_at, updated_at) VAL
     ('dp_01gf7a8200e57vj5reeb7y4fhn', 'Inspection', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
 
 -- Machines (all in knitting department)
-INSERT IGNORE INTO machine (id, name, serial_number, department_id, created_at, updated_at) VALUES
-    ('mc_01k0a52fb6eqhtbx9hdxj3vvnh', 'Knitting Machine 1', 'J24-001', 'dp_01k0a5r01yfx3sj1vy9qgv3dc0', NOW(), NOW()),
-    ('mc_01k0a52r3vf9p9tn962fkszst5', 'Knitting Machine 2', 'J24-002', 'dp_01k0a5r01yfx3sj1vy9qgv3dc0', NOW(), NOW()),
-    ('mc_01k0a52zcjfbzaxy9xtdeym16p', 'Knitting Machine 3', 'J24-003', 'dp_01k0a5r01yfx3sj1vy9qgv3dc0', NOW(), NOW());
+INSERT IGNORE INTO machine (id, account_id, name, serial_number, department_id, created_at, updated_at) VALUES
+    ('mc_01k0a52fb6eqhtbx9hdxj3vvnh', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'Knitting Machine 1', 'J24-001', 'dp_01k0a5r01yfx3sj1vy9qgv3dc0', NOW(), NOW()),
+    ('mc_01k0a52r3vf9p9tn962fkszst5', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'Knitting Machine 2', 'J24-002', 'dp_01k0a5r01yfx3sj1vy9qgv3dc0', NOW(), NOW()),
+    ('mc_01k0a52zcjfbzaxy9xtdeym16p', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'Knitting Machine 3', 'J24-003', 'dp_01k0a5r01yfx3sj1vy9qgv3dc0', NOW(), NOW());
 
 -- Scanning stations (with label_type_code and label_size_code)
 INSERT IGNORE INTO scanning_station (id, name, scanning_station_type_code, material_check_required, label_type_code, label_size_code, department_id, account_id, created_at, updated_at) VALUES

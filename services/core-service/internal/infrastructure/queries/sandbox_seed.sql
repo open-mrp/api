@@ -2011,25 +2011,25 @@ INSERT INTO `scanning_station` (`id`, `name`, `notes`, `department_id`, `account
 -- SECTION 20: MACHINES
 -- ============================================================================
 
-INSERT INTO `machine` (`id`, `name`, `notes`, `serial_number`, `department_id`, `production_step_id`) VALUES
+INSERT INTO `machine` (`id`, `account_id`, `name`, `notes`, `serial_number`, `department_id`, `production_step_id`) VALUES
   -- Knitting (2 machines)
-  (@mach1, 'Lonati GL616 #1',        NULL, 'LNT-KNT-001', @dept1, NULL),
-  (@mach2, 'Lonati GL616 #2',        NULL, 'LNT-KNT-002', @dept1, NULL),
+  (@mach1, '@account_id', 'Lonati GL616 #1',        NULL, 'LNT-KNT-001', @dept1, NULL),
+  (@mach2, '@account_id', 'Lonati GL616 #2',        NULL, 'LNT-KNT-002', @dept1, NULL),
   -- Linking (2 machines)
-  (@mach3, 'Rosso RSM-08 #1',        NULL, 'RSO-LNK-001', @dept2, NULL),
-  (@mach4, 'Rosso RSM-08 #2',        NULL, 'RSO-LNK-002', @dept2, NULL),
+  (@mach3, '@account_id', 'Rosso RSM-08 #1',        NULL, 'RSO-LNK-001', @dept2, NULL),
+  (@mach4, '@account_id', 'Rosso RSM-08 #2',        NULL, 'RSO-LNK-002', @dept2, NULL),
   -- Wet Processing (2 machines)
-  (@mach5, 'Tonello G1 Washer #1',   NULL, 'TNL-WSH-001', @dept3, NULL),
-  (@mach6, 'Tonello G1 Washer #2',   NULL, 'TNL-WSH-002', @dept3, NULL),
+  (@mach5, '@account_id', 'Tonello G1 Washer #1',   NULL, 'TNL-WSH-001', @dept3, NULL),
+  (@mach6, '@account_id', 'Tonello G1 Washer #2',   NULL, 'TNL-WSH-002', @dept3, NULL),
   -- Dyeing (2 machines)
-  (@mach7, 'Thies iCone 200 #1',     NULL, 'THS-DYE-001', @dept4, NULL),
-  (@mach8, 'Thies iCone 200 #2',     NULL, 'THS-DYE-002', @dept4, NULL),
+  (@mach7, '@account_id', 'Thies iCone 200 #1',     NULL, 'THS-DYE-001', @dept4, NULL),
+  (@mach8, '@account_id', 'Thies iCone 200 #2',     NULL, 'THS-DYE-002', @dept4, NULL),
   -- Finishing (2 machines)
-  (@mach9, 'Cortese Boarding Press #1', NULL, 'CRT-FIN-001', @dept5, NULL),
-  (@mach10, 'Cortese Boarding Press #2', NULL, 'CRT-FIN-002', @dept5, NULL),
+  (@mach9, '@account_id', 'Cortese Boarding Press #1', NULL, 'CRT-FIN-001', @dept5, NULL),
+  (@mach10, '@account_id', 'Cortese Boarding Press #2', NULL, 'CRT-FIN-002', @dept5, NULL),
   -- Packaging (2 machines)
-  (@mach11, 'Sato CL4NX Label Printer',  NULL, 'SAT-PKG-001', @dept6, NULL),
-  (@mach12, 'Lantech Q-300 Case Sealer',  NULL, 'LNT-PKG-002', @dept6, NULL);
+  (@mach11, '@account_id', 'Sato CL4NX Label Printer',  NULL, 'SAT-PKG-001', @dept6, NULL),
+  (@mach12, '@account_id', 'Lantech Q-300 Case Sealer',  NULL, 'LNT-PKG-002', @dept6, NULL);
 
 
 -- ============================================================================

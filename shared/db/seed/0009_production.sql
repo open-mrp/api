@@ -169,8 +169,8 @@ UPDATE machine SET production_step_id = 'prs_01k0a51qxceydax5036pegvzzy' WHERE i
 
 -- Sew Large Sock: machine on the sewing department so GET /production-steps/{id} includes
 -- (machines + in_steps) can be exercised against the same seeded step as graph mid-nodes.
-INSERT IGNORE INTO machine (id, name, serial_number, department_id, production_step_id, created_at, updated_at) VALUES
-    ('mc_01seedsewlgmachine0', 'Sewing Machine 1', 'JUKI-001', 'dp_01k0a5r01yek6v7xnt0mxzzz8m', 'prs_01k0a56yc1e8wag6wexn4pp8t9', NOW(3), NOW(3));
+INSERT IGNORE INTO machine (id, account_id, name, serial_number, department_id, production_step_id, created_at, updated_at) VALUES
+    ('mc_01seedsewlgmachine0', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'Sewing Machine 1', 'JUKI-001', 'dp_01k0a5r01yek6v7xnt0mxzzz8m', 'prs_01k0a56yc1e8wag6wexn4pp8t9', NOW(3), NOW(3));
 
 -- ============================================================
 -- PRODUCTION RUN (seeded for e2e / OpenAPI list path resolution)

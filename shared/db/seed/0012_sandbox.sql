@@ -210,7 +210,7 @@ INSERT IGNORE INTO scanning_station (id, name, scanning_station_type_code, mater
 -- ============================================================
 -- Sandbox machines (all in knitting department)
 -- ============================================================
-INSERT IGNORE INTO machine (id, name, serial_number, department_id, created_at, updated_at) VALUES
-    ('mc_01seedsb_machine1000', 'Knitting Machine 1', 'J24-001', 'dp_01seedsb_knitting000', NOW(), NOW()),
-    ('mc_01seedsb_machine2000', 'Knitting Machine 2', 'J24-002', 'dp_01seedsb_knitting000', NOW(), NOW()),
-    ('mc_01seedsb_machine3000', 'Knitting Machine 3', 'J24-003', 'dp_01seedsb_knitting000', NOW(), NOW());
+INSERT IGNORE INTO machine (id, account_id, name, serial_number, department_id, created_at, updated_at) VALUES
+    ('mc_01seedsb_machine1000', 'ac_sandbox_01k0a5smf9ekb8rqg12555zjqb', 'Knitting Machine 1', 'J24-001', 'dp_01seedsb_knitting000', NOW(), NOW()),
+    ('mc_01seedsb_machine2000', 'ac_sandbox_01k0a5smf9ekb8rqg12555zjqb', 'Knitting Machine 2', 'J24-002', 'dp_01seedsb_knitting000', NOW(), NOW()),
+    ('mc_01seedsb_machine3000', 'ac_sandbox_01k0a5smf9ekb8rqg12555zjqb', 'Knitting Machine 3', 'J24-003', 'dp_01seedsb_knitting000', NOW(), NOW());

@@ -1672,6 +1672,81 @@ CREATE TABLE `hubspot_account_user_link` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `hubspot_company_review`
+--
+
+DROP TABLE IF EXISTS `hubspot_company_review`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `hubspot_company_review` (
+  `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `job_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `augno_customer_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `customer_name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `candidate_matches` json DEFAULT NULL,
+  `status` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending',
+  `resolution` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `resolved_hubspot_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `hubspot_company_review_job_id_augno_customer_id_key` (`job_id`,`augno_customer_id`),
+  KEY `hubspot_company_review_job_id_status_idx` (`job_id`,`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `hubspot_sync_job`
+--
+
+DROP TABLE IF EXISTS `hubspot_sync_job`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `hubspot_sync_job` (
+  `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `status` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'previewing',
+  `dry_run` tinyint(1) NOT NULL DEFAULT '1',
+  `golive_cutoff_at` datetime(3) DEFAULT NULL,
+  `cursors` json DEFAULT NULL,
+  `counts` json DEFAULT NULL,
+  `last_error` text COLLATE utf8mb4_unicode_ci,
+  `started_at` datetime(3) DEFAULT NULL,
+  `completed_at` datetime(3) DEFAULT NULL,
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  KEY `hubspot_sync_job_account_id_status_idx` (`account_id`,`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `hubspot_sync_record`
+--
+
+DROP TABLE IF EXISTS `hubspot_sync_record`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `hubspot_sync_record` (
+  `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `augno_type` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `augno_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `hubspot_type` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `hubspot_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `sync_hash` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `last_synced_at` datetime(3) DEFAULT NULL,
+  `last_error` text COLLATE utf8mb4_unicode_ci,
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `hubspot_sync_record_account_id_augno_type_augno_id_key` (`account_id`,`augno_type`,`augno_id`),
+  KEY `hubspot_sync_record_account_id_hubspot_type_hubspot_id_idx` (`account_id`,`hubspot_type`,`hubspot_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `idempotency_key`
 --
 
@@ -2153,6 +2228,7 @@ CREATE TABLE `machine` (
   `serial_number` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `department_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`id`),
+  UNIQUE KEY `machine_account_id_name_key` (`account_id`,`name`),
   KEY `machine_department_id_idx` (`department_id`),
   KEY `machine_production_step_id_idx` (`production_step_id`),
   FULLTEXT KEY `machine_name_idx` (`name`)
@@ -4192,7 +4268,7 @@ CREATE TABLE `user` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-07-03 10:51:54
+-- Dump completed on 2026-07-03 11:45:49
 
 -- +goose Down
 
@@ -4297,6 +4373,9 @@ DROP TABLE IF EXISTS `inventory_issue`;
 DROP TABLE IF EXISTS `inventory_change_log`;
 DROP TABLE IF EXISTS `inventory_allocation`;
 DROP TABLE IF EXISTS `idempotency_key`;
+DROP TABLE IF EXISTS `hubspot_sync_record`;
+DROP TABLE IF EXISTS `hubspot_sync_job`;
+DROP TABLE IF EXISTS `hubspot_company_review`;
 DROP TABLE IF EXISTS `hubspot_account_user_link`;
 DROP TABLE IF EXISTS `geolocation`;
 DROP TABLE IF EXISTS `error_log`;

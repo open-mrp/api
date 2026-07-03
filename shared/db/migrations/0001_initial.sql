@@ -1,6 +1,6 @@
 -- +goose Up
 
--- MySQL dump 10.13  Distrib 9.6.0, for macos26.2 (arm64)
+-- MySQL dump 10.13  Distrib 5.7.24, for osx11.1 (x86_64)
 --
 -- Host: 127.0.0.1    Database: augno
 -- ------------------------------------------------------
@@ -9,7 +9,7 @@
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!50503 SET NAMES utf8mb4 */;
+/*!40101 SET NAMES utf8 */;
 /*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
 /*!40103 SET TIME_ZONE='+00:00' */;
 /*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
@@ -23,7 +23,7 @@
 
 DROP TABLE IF EXISTS `InventoryIssueStatus`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `InventoryIssueStatus` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -41,7 +41,7 @@ CREATE TABLE `InventoryIssueStatus` (
 
 DROP TABLE IF EXISTS `_batch_flow`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `_batch_flow` (
   `A` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `B` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -56,7 +56,7 @@ CREATE TABLE `_batch_flow` (
 
 DROP TABLE IF EXISTS `_batches_machines`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `_batches_machines` (
   `A` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `B` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -71,7 +71,7 @@ CREATE TABLE `_batches_machines` (
 
 DROP TABLE IF EXISTS `_departments_picks`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `_departments_picks` (
   `A` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `B` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -86,7 +86,7 @@ CREATE TABLE `_departments_picks` (
 
 DROP TABLE IF EXISTS `_item_attributes`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `_item_attributes` (
   `A` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `B` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -101,7 +101,7 @@ CREATE TABLE `_item_attributes` (
 
 DROP TABLE IF EXISTS `_item_categories_properties`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `_item_categories_properties` (
   `A` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `B` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -116,7 +116,7 @@ CREATE TABLE `_item_categories_properties` (
 
 DROP TABLE IF EXISTS `_item_categories_quantity_discounts`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `_item_categories_quantity_discounts` (
   `A` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `B` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -131,7 +131,7 @@ CREATE TABLE `_item_categories_quantity_discounts` (
 
 DROP TABLE IF EXISTS `_parent_child_production_steps`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `_parent_child_production_steps` (
   `A` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `B` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -146,7 +146,7 @@ CREATE TABLE `_parent_child_production_steps` (
 
 DROP TABLE IF EXISTS `_payment_terms_registration_flows`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `_payment_terms_registration_flows` (
   `A` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `B` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -161,7 +161,7 @@ CREATE TABLE `_payment_terms_registration_flows` (
 
 DROP TABLE IF EXISTS `_product_lines_quantity_discounts`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `_product_lines_quantity_discounts` (
   `A` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `B` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -176,7 +176,7 @@ CREATE TABLE `_product_lines_quantity_discounts` (
 
 DROP TABLE IF EXISTS `_quantity_discounts_attributes`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `_quantity_discounts_attributes` (
   `A` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `B` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -191,7 +191,7 @@ CREATE TABLE `_quantity_discounts_attributes` (
 
 DROP TABLE IF EXISTS `_quantity_discounts_units`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `_quantity_discounts_units` (
   `A` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `B` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -206,7 +206,7 @@ CREATE TABLE `_quantity_discounts_units` (
 
 DROP TABLE IF EXISTS `_registration_flows_shipping_terms`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `_registration_flows_shipping_terms` (
   `A` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `B` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -221,7 +221,7 @@ CREATE TABLE `_registration_flows_shipping_terms` (
 
 DROP TABLE IF EXISTS `account`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `account` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -253,7 +253,7 @@ CREATE TABLE `account` (
 
 DROP TABLE IF EXISTS `account_address`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `account_address` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -272,7 +272,7 @@ CREATE TABLE `account_address` (
 
 DROP TABLE IF EXISTS `account_billing`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `account_billing` (
   `id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_plan_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -300,7 +300,7 @@ CREATE TABLE `account_billing` (
 
 DROP TABLE IF EXISTS `account_branding`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `account_branding` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `owner_account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -326,7 +326,7 @@ CREATE TABLE `account_branding` (
 
 DROP TABLE IF EXISTS `account_group`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `account_group` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `owner_account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -354,7 +354,7 @@ CREATE TABLE `account_group` (
 
 DROP TABLE IF EXISTS `account_group_product_line`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `account_group_product_line` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_group_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -373,7 +373,7 @@ CREATE TABLE `account_group_product_line` (
 
 DROP TABLE IF EXISTS `account_group_quantity_discount`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `account_group_quantity_discount` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_group_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -392,7 +392,7 @@ CREATE TABLE `account_group_quantity_discount` (
 
 DROP TABLE IF EXISTS `account_integration`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `account_integration` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -416,7 +416,7 @@ CREATE TABLE `account_integration` (
 
 DROP TABLE IF EXISTS `account_inventory_setting`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `account_inventory_setting` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -435,7 +435,7 @@ CREATE TABLE `account_inventory_setting` (
 
 DROP TABLE IF EXISTS `account_plan`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `account_plan` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `type_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -462,7 +462,7 @@ CREATE TABLE `account_plan` (
   KEY `account_plan_plan_type_code_effective_at_idx` (`plan_type_code`,`effective_at`),
   KEY `account_plan_is_publicly_visible_created_at_id_idx` (`is_publicly_visible`,`created_at` DESC,`id` DESC),
   FULLTEXT KEY `account_plan_name_idx` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=97 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -471,7 +471,7 @@ CREATE TABLE `account_plan` (
 
 DROP TABLE IF EXISTS `account_plan_feature`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `account_plan_feature` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `account_plan_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -481,7 +481,7 @@ CREATE TABLE `account_plan_feature` (
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_plan_feature_account_plan_id_key_key` (`account_plan_id`,`key`)
-) ENGINE=InnoDB AUTO_INCREMENT=289 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=89 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -490,7 +490,7 @@ CREATE TABLE `account_plan_feature` (
 
 DROP TABLE IF EXISTS `account_plan_limit`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `account_plan_limit` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `account_plan_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -500,7 +500,7 @@ CREATE TABLE `account_plan_limit` (
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_plan_limit_account_plan_id_key_key` (`account_plan_id`,`key`)
-) ENGINE=InnoDB AUTO_INCREMENT=385 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=118 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -509,7 +509,7 @@ CREATE TABLE `account_plan_limit` (
 
 DROP TABLE IF EXISTS `account_portal`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `account_portal` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `owner_account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -528,7 +528,7 @@ CREATE TABLE `account_portal` (
 
 DROP TABLE IF EXISTS `account_price`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `account_price` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -552,7 +552,7 @@ CREATE TABLE `account_price` (
 
 DROP TABLE IF EXISTS `account_price_attribute`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `account_price_attribute` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_price_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -571,7 +571,7 @@ CREATE TABLE `account_price_attribute` (
 
 DROP TABLE IF EXISTS `account_price_item_category`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `account_price_item_category` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_price_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -590,7 +590,7 @@ CREATE TABLE `account_price_item_category` (
 
 DROP TABLE IF EXISTS `account_relation`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `account_relation` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `owner_account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -652,7 +652,7 @@ CREATE TABLE `account_relation` (
 
 DROP TABLE IF EXISTS `account_relation_notification_preference`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `account_relation_notification_preference` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_relation_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -673,7 +673,7 @@ CREATE TABLE `account_relation_notification_preference` (
 
 DROP TABLE IF EXISTS `account_relation_notification_type`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `account_relation_notification_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -691,7 +691,7 @@ CREATE TABLE `account_relation_notification_type` (
 
 DROP TABLE IF EXISTS `account_relation_price_group`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `account_relation_price_group` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_relation_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -710,7 +710,7 @@ CREATE TABLE `account_relation_price_group` (
 
 DROP TABLE IF EXISTS `account_relation_product_line`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `account_relation_product_line` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_relation_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -729,7 +729,7 @@ CREATE TABLE `account_relation_product_line` (
 
 DROP TABLE IF EXISTS `account_status`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `account_status` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -748,7 +748,7 @@ CREATE TABLE `account_status` (
 
 DROP TABLE IF EXISTS `account_user`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `account_user` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `user_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -774,7 +774,7 @@ CREATE TABLE `account_user` (
 
 DROP TABLE IF EXISTS `action_type`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `action_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -793,7 +793,7 @@ CREATE TABLE `action_type` (
 
 DROP TABLE IF EXISTS `address`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `address` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -819,7 +819,7 @@ CREATE TABLE `address` (
 
 DROP TABLE IF EXISTS `adjustment_type`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `adjustment_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -838,7 +838,7 @@ CREATE TABLE `adjustment_type` (
 
 DROP TABLE IF EXISTS `agent_token_billing`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `agent_token_billing` (
   `id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -863,23 +863,23 @@ CREATE TABLE `agent_token_billing` (
 
 DROP TABLE IF EXISTS `announcement`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `announcement` (
-  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `scope` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `category` varchar(60) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `template_key` varchar(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `scope` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `category` varchar(60) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `template_key` varchar(120) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `template_params` json DEFAULT NULL,
-  `title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `body` varchar(2048) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `link_resource_type` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `link_resource_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `priority` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'normal',
+  `title` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `body` varchar(2048) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `link_resource_type` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `link_resource_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `priority` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'normal',
   `audience` json DEFAULT NULL,
   `publish_at` datetime(3) NOT NULL,
   `expires_at` datetime(3) DEFAULT NULL,
-  `created_by` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `created_by` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
@@ -894,11 +894,11 @@ CREATE TABLE `announcement` (
 
 DROP TABLE IF EXISTS `announcement_receipt`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `announcement_receipt` (
-  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `announcement_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `account_user_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `announcement_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_user_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
   `seen_at` datetime(3) DEFAULT NULL,
   `read_at` datetime(3) DEFAULT NULL,
   `dismissed_at` datetime(3) DEFAULT NULL,
@@ -914,7 +914,7 @@ CREATE TABLE `announcement_receipt` (
 
 DROP TABLE IF EXISTS `api_key`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `api_key` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `type_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -939,7 +939,7 @@ CREATE TABLE `api_key` (
   KEY `api_key_owner_account_id_expires_at_created_at_id_idx` (`owner_account_id`,`expires_at`,`created_at` DESC,`id` DESC),
   KEY `api_key_owner_account_id_created_at_id_idx` (`owner_account_id`,`created_at` DESC,`id` DESC),
   FULLTEXT KEY `api_key_name_idx` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=65 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -948,7 +948,7 @@ CREATE TABLE `api_key` (
 
 DROP TABLE IF EXISTS `attribute`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `attribute` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `text` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -973,7 +973,7 @@ CREATE TABLE `attribute` (
 
 DROP TABLE IF EXISTS `audit_event`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `audit_event` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `type_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1005,7 +1005,7 @@ CREATE TABLE `audit_event` (
   KEY `audit_event_account_id_resource_type_occurred_at_type_id_idx` (`account_id`,`resource_type`,`occurred_at` DESC,`type_id` DESC),
   KEY `audit_event_account_id_actor_id_occurred_at_type_id_idx` (`account_id`,`actor_id`,`occurred_at` DESC,`type_id` DESC),
   KEY `audit_event_target_account_idx` (`target_account_id`,`occurred_at` DESC,`type_id` DESC)
-) ENGINE=InnoDB AUTO_INCREMENT=197 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=70 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1014,7 +1014,7 @@ CREATE TABLE `audit_event` (
 
 DROP TABLE IF EXISTS `batch`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `batch` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -1051,7 +1051,7 @@ CREATE TABLE `batch` (
 
 DROP TABLE IF EXISTS `carrier`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `carrier` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -1078,7 +1078,7 @@ CREATE TABLE `carrier` (
 
 DROP TABLE IF EXISTS `carrier_option`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `carrier_option` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1105,7 +1105,7 @@ CREATE TABLE `carrier_option` (
 
 DROP TABLE IF EXISTS `change_log`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `change_log` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -1131,7 +1131,7 @@ CREATE TABLE `change_log` (
 
 DROP TABLE IF EXISTS `color`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `color` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -1152,7 +1152,7 @@ CREATE TABLE `color` (
 
 DROP TABLE IF EXISTS `consumption`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `consumption` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -1176,36 +1176,36 @@ CREATE TABLE `consumption` (
 
 DROP TABLE IF EXISTS `conversation`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `conversation` (
-  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `type` varchar(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `topic_resource_type` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `topic_resource_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `created_by_participant_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `type` varchar(40) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `audience` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'internal',
+  `title` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `group_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `topic_resource_type` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `topic_resource_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `created_by_participant_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `next_sequence` bigint NOT NULL DEFAULT '1',
-  `last_message_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `last_message_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `last_message_at` datetime(3) DEFAULT NULL,
   `is_archived` tinyint(1) NOT NULL DEFAULT '0',
   `legal_hold` tinyint(1) NOT NULL DEFAULT '0',
+  `workflow_status` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `assignee_resource_type` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `assignee_resource_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `email_inbox_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `email_external_address` varchar(320) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `metadata` json DEFAULT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-  `email_external_address` varchar(320) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `email_inbox_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `audience` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'internal',
-  `workflow_status` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `group_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `assignee_resource_type` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `assignee_resource_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `conversation_account_type_lastmsg_idx` (`account_id`,`type`,`last_message_at` DESC,`id` DESC),
-  KEY `conversation_email_inbox_idx` (`email_inbox_id`),
   KEY `conversation_topic_idx` (`account_id`,`topic_resource_type`,`topic_resource_id`,`audience`),
-  KEY `conversation_group_idx` (`account_id`,`group_id`),
-  KEY `conversation_inbox_idx` (`account_id`,`audience`,`is_archived`,`last_message_at` DESC,`id` DESC)
+  KEY `conversation_email_inbox_idx` (`email_inbox_id`),
+  KEY `conversation_inbox_idx` (`account_id`,`audience`,`is_archived`,`last_message_at` DESC,`id` DESC),
+  KEY `conversation_group_idx` (`account_id`,`group_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -1215,11 +1215,11 @@ CREATE TABLE `conversation` (
 
 DROP TABLE IF EXISTS `conversation_dm_key`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `conversation_dm_key` (
-  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `dm_key` varchar(383) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `conversation_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `dm_key` varchar(383) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `conversation_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`account_id`,`dm_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -1230,14 +1230,14 @@ CREATE TABLE `conversation_dm_key` (
 
 DROP TABLE IF EXISTS `conversation_link`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `conversation_link` (
-  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `conversation_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `resource_type` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `resource_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `created_by_participant_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `conversation_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `resource_type` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `resource_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_by_participant_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
   UNIQUE KEY `cvlk_conv_resource_uq` (`conversation_id`,`resource_type`,`resource_id`),
@@ -1251,29 +1251,29 @@ CREATE TABLE `conversation_link` (
 
 DROP TABLE IF EXISTS `conversation_participant`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `conversation_participant` (
-  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `conversation_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `participant_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `account_user_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `agent_config_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `role` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'member',
-  `membership` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'active',
-  `notifications` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'unmuted',
+  `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `conversation_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `participant_type` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_user_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `agent_config_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `role` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'member',
+  `membership` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'active',
+  `notifications` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'unmuted',
   `muted_until` datetime(3) DEFAULT NULL,
-  `last_read_message_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `last_read_message_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `last_read_sequence` bigint NOT NULL DEFAULT '0',
   `last_read_at` datetime(3) DEFAULT NULL,
   `last_seen_at` datetime(3) DEFAULT NULL,
   `hidden_at` datetime(3) DEFAULT NULL,
-  `agent_trigger_policy` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `agent_trigger_policy` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `agent_trigger_keywords` json DEFAULT NULL,
+  `relation_account_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `joined_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-  `relation_account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `cvpt_conv_user_uq` (`conversation_id`,`account_user_id`),
   UNIQUE KEY `cvpt_conv_agent_uq` (`conversation_id`,`agent_config_id`),
@@ -1290,7 +1290,7 @@ CREATE TABLE `conversation_participant` (
 
 DROP TABLE IF EXISTS `dc_location`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `dc_location` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `location` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1311,7 +1311,7 @@ CREATE TABLE `dc_location` (
 
 DROP TABLE IF EXISTS `deleted_record`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `deleted_record` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `deleted_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -1330,7 +1330,7 @@ CREATE TABLE `deleted_record` (
 
 DROP TABLE IF EXISTS `delivery`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `delivery` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `number` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1356,7 +1356,7 @@ CREATE TABLE `delivery` (
 
 DROP TABLE IF EXISTS `delivery_line`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `delivery_line` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `delivery_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1385,7 +1385,7 @@ CREATE TABLE `delivery_line` (
 
 DROP TABLE IF EXISTS `delivery_status`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `delivery_status` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1403,7 +1403,7 @@ CREATE TABLE `delivery_status` (
 
 DROP TABLE IF EXISTS `department`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `department` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1413,7 +1413,7 @@ CREATE TABLE `department` (
   `location_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `department_account_id_idx` (`account_id`),
+  UNIQUE KEY `department_account_id_name_key` (`account_id`,`name`),
   KEY `department_location_id_idx` (`location_id`),
   FULLTEXT KEY `department_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -1425,7 +1425,7 @@ CREATE TABLE `department` (
 
 DROP TABLE IF EXISTS `doc_api_key`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `doc_api_key` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `type_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1447,7 +1447,7 @@ CREATE TABLE `doc_api_key` (
 
 DROP TABLE IF EXISTS `edi_run`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `edi_run` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `completed_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -1468,12 +1468,12 @@ CREATE TABLE `edi_run` (
 
 DROP TABLE IF EXISTS `email_domain`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `email_domain` (
-  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `domain` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending',
+  `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `domain` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `status` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending',
   `dkim_tokens` json DEFAULT NULL,
   `verified_at` datetime(3) DEFAULT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -1490,20 +1490,20 @@ CREATE TABLE `email_domain` (
 
 DROP TABLE IF EXISTS `email_inbox`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `email_inbox` (
-  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `email_domain_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `address` varchar(320) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `from_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'active',
-  `agent_config_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `agent_trigger_policy` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `email_domain_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `address` varchar(320) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `from_name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `status` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'active',
+  `agent_config_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `agent_trigger_policy` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `agent_trigger_keywords` json DEFAULT NULL,
+  `group_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-  `group_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `email_inbox_address_uq` (`address`),
   KEY `email_inbox_account_idx` (`account_id`),
@@ -1517,7 +1517,7 @@ CREATE TABLE `email_inbox` (
 
 DROP TABLE IF EXISTS `email_log`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `email_log` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `has_sent` tinyint(1) NOT NULL DEFAULT '0',
@@ -1542,30 +1542,30 @@ CREATE TABLE `email_log` (
 
 DROP TABLE IF EXISTS `email_message`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `email_message` (
-  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `conversation_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `message_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `email_inbox_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `direction` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `rfc_message_id` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `in_reply_to` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `references` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  `from_addr` varchar(320) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `to_addrs` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `cc_addrs` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  `subject` varchar(998) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `raw_s3_key` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `ses_message_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `conversation_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `message_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `email_inbox_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `direction` varchar(10) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `rfc_message_id` varchar(512) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `in_reply_to` varchar(512) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `references` text COLLATE utf8mb4_unicode_ci,
+  `from_addr` varchar(320) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `to_addrs` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `cc_addrs` text COLLATE utf8mb4_unicode_ci,
+  `subject` varchar(998) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `raw_s3_key` varchar(512) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `ses_message_id` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
   UNIQUE KEY `email_message_rfc_uq` (`rfc_message_id`),
+  KEY `email_message_conv_idx` (`conversation_id`,`direction`,`created_at` DESC),
   KEY `email_message_in_reply_to_idx` (`in_reply_to`),
-  KEY `email_message_message_idx` (`message_id`),
-  KEY `email_message_conv_idx` (`conversation_id`,`direction`,`created_at` DESC)
+  KEY `email_message_message_idx` (`message_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -1575,7 +1575,7 @@ CREATE TABLE `email_message` (
 
 DROP TABLE IF EXISTS `email_recipient`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `email_recipient` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `email` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1594,7 +1594,7 @@ CREATE TABLE `email_recipient` (
 
 DROP TABLE IF EXISTS `error_log`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `error_log` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `affected_user_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -1629,7 +1629,7 @@ CREATE TABLE `error_log` (
 
 DROP TABLE IF EXISTS `geolocation`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `geolocation` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `street_line_1` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -1656,7 +1656,7 @@ CREATE TABLE `geolocation` (
 
 DROP TABLE IF EXISTS `hubspot_account_user_link`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `hubspot_account_user_link` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_user_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1672,87 +1672,12 @@ CREATE TABLE `hubspot_account_user_link` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `hubspot_company_review`
---
-
-DROP TABLE IF EXISTS `hubspot_company_review`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `hubspot_company_review` (
-  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `job_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `augno_customer_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `customer_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `candidate_matches` json DEFAULT NULL,
-  `status` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending',
-  `resolution` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `resolved_hubspot_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `hubspot_company_review_job_id_augno_customer_id_key` (`job_id`,`augno_customer_id`),
-  KEY `hubspot_company_review_job_id_status_idx` (`job_id`,`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `hubspot_sync_job`
---
-
-DROP TABLE IF EXISTS `hubspot_sync_job`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `hubspot_sync_job` (
-  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `status` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'previewing',
-  `dry_run` tinyint(1) NOT NULL DEFAULT '1',
-  `golive_cutoff_at` datetime(3) DEFAULT NULL,
-  `cursors` json DEFAULT NULL,
-  `counts` json DEFAULT NULL,
-  `last_error` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  `started_at` datetime(3) DEFAULT NULL,
-  `completed_at` datetime(3) DEFAULT NULL,
-  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-  PRIMARY KEY (`id`),
-  KEY `hubspot_sync_job_account_id_status_idx` (`account_id`,`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `hubspot_sync_record`
---
-
-DROP TABLE IF EXISTS `hubspot_sync_record`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `hubspot_sync_record` (
-  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `augno_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `augno_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `hubspot_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `hubspot_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `sync_hash` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `last_synced_at` datetime(3) DEFAULT NULL,
-  `last_error` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `hubspot_sync_record_account_id_augno_type_augno_id_key` (`account_id`,`augno_type`,`augno_id`),
-  KEY `hubspot_sync_record_account_id_hubspot_type_hubspot_id_idx` (`account_id`,`hubspot_type`,`hubspot_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
 -- Table structure for table `idempotency_key`
 --
 
 DROP TABLE IF EXISTS `idempotency_key`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `idempotency_key` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `type_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1783,7 +1708,7 @@ CREATE TABLE `idempotency_key` (
   KEY `idempotency_key_target_account_id_idx` (`target_account_id`),
   KEY `idempotency_key_lock_expires_at_idx` (`lock_expires_at`),
   KEY `idempotency_key_expires_at_idx` (`expires_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=785 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1792,7 +1717,7 @@ CREATE TABLE `idempotency_key` (
 
 DROP TABLE IF EXISTS `inventory_allocation`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `inventory_allocation` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `inventory_receipt_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1817,7 +1742,7 @@ CREATE TABLE `inventory_allocation` (
 
 DROP TABLE IF EXISTS `inventory_change_log`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `inventory_change_log` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `item_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1850,7 +1775,7 @@ CREATE TABLE `inventory_change_log` (
 
 DROP TABLE IF EXISTS `inventory_issue`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `inventory_issue` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1882,7 +1807,7 @@ CREATE TABLE `inventory_issue` (
 
 DROP TABLE IF EXISTS `inventory_log`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `inventory_log` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `item_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1904,7 +1829,7 @@ CREATE TABLE `inventory_log` (
 
 DROP TABLE IF EXISTS `inventory_policy_type`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `inventory_policy_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1922,7 +1847,7 @@ CREATE TABLE `inventory_policy_type` (
 
 DROP TABLE IF EXISTS `inventory_receipt`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `inventory_receipt` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `owner_account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1960,7 +1885,7 @@ CREATE TABLE `inventory_receipt` (
 
 DROP TABLE IF EXISTS `inventory_receipt_status`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `inventory_receipt_status` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1978,7 +1903,7 @@ CREATE TABLE `inventory_receipt_status` (
 
 DROP TABLE IF EXISTS `invoice`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `invoice` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `number` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2009,7 +1934,7 @@ CREATE TABLE `invoice` (
 
 DROP TABLE IF EXISTS `invoice_line`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `invoice_line` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `invoice_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2031,7 +1956,7 @@ CREATE TABLE `invoice_line` (
 
 DROP TABLE IF EXISTS `item`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `item` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `sku` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2070,7 +1995,7 @@ CREATE TABLE `item` (
 
 DROP TABLE IF EXISTS `item_category`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `item_category` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2094,7 +2019,7 @@ CREATE TABLE `item_category` (
 
 DROP TABLE IF EXISTS `item_category_type`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `item_category_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -2113,7 +2038,7 @@ CREATE TABLE `item_category_type` (
 
 DROP TABLE IF EXISTS `item_type`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `item_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -2132,7 +2057,7 @@ CREATE TABLE `item_type` (
 
 DROP TABLE IF EXISTS `journal_posting`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `journal_posting` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_transaction_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2154,7 +2079,7 @@ CREATE TABLE `journal_posting` (
 
 DROP TABLE IF EXISTS `label_size`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `label_size` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2173,7 +2098,7 @@ CREATE TABLE `label_size` (
 
 DROP TABLE IF EXISTS `label_type`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `label_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2192,7 +2117,7 @@ CREATE TABLE `label_type` (
 
 DROP TABLE IF EXISTS `lot`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `lot` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2216,7 +2141,7 @@ CREATE TABLE `lot` (
 
 DROP TABLE IF EXISTS `machine`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `machine` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2226,6 +2151,7 @@ CREATE TABLE `machine` (
   `production_step_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `serial_number` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `department_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `machine_department_id_idx` (`department_id`),
   KEY `machine_production_step_id_idx` (`production_step_id`),
@@ -2239,7 +2165,7 @@ CREATE TABLE `machine` (
 
 DROP TABLE IF EXISTS `material`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `material` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -2260,50 +2186,50 @@ CREATE TABLE `material` (
 
 DROP TABLE IF EXISTS `message`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `message` (
-  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `conversation_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `conversation_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
   `sequence` bigint DEFAULT NULL,
-  `kind` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'chat',
-  `sender_participant_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `client_message_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `body` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  `preview` varchar(280) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `event_type` varchar(80) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `template_key` varchar(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `kind` varchar(30) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'chat',
+  `status` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'sent',
+  `visibility` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'internal',
+  `sender_participant_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `client_message_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `body` text COLLATE utf8mb4_unicode_ci,
+  `subject` varchar(998) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `channel` varchar(10) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `preview` varchar(280) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `event_type` varchar(80) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `template_key` varchar(120) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `template_params` json DEFAULT NULL,
-  `link_resource_type` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `link_resource_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `reply_to_message_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `link_resource_type` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `link_resource_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `agent_run_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `reply_to_message_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `source_thread_message_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `approved_by_account_user_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `streaming_state` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'complete',
+  `scheduled_for` datetime(3) DEFAULT NULL,
+  `scheduled_attempts` int NOT NULL DEFAULT '0',
+  `last_error` text COLLATE utf8mb4_unicode_ci,
+  `locked_at` datetime(3) DEFAULT NULL,
+  `lock_owner` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `edited_at` datetime(3) DEFAULT NULL,
   `deleted_at` datetime(3) DEFAULT NULL,
   `metadata` json DEFAULT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-  `agent_run_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `streaming_state` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'complete',
-  `visibility` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'internal',
-  `approved_by_account_user_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `channel` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `last_error` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  `lock_owner` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `locked_at` datetime(3) DEFAULT NULL,
-  `scheduled_attempts` int NOT NULL DEFAULT '0',
-  `scheduled_for` datetime(3) DEFAULT NULL,
-  `source_thread_message_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'sent',
-  `subject` varchar(998) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `message_conv_seq_uq` (`conversation_id`,`sequence`),
   UNIQUE KEY `message_client_dedup_uq` (`conversation_id`,`client_message_id`),
   KEY `message_conv_created_idx` (`conversation_id`,`created_at` DESC,`id` DESC),
+  KEY `message_reply_idx` (`conversation_id`,`reply_to_message_id`),
   KEY `message_link_idx` (`account_id`,`link_resource_type`,`link_resource_id`),
   KEY `message_event_idx` (`account_id`,`event_type`,`created_at`),
-  KEY `message_purge_idx` (`deleted_at`),
   KEY `message_agent_run_idx` (`account_id`,`agent_run_id`),
-  KEY `message_reply_idx` (`conversation_id`,`reply_to_message_id`),
+  KEY `message_purge_idx` (`deleted_at`),
   KEY `message_status_sched_idx` (`status`,`scheduled_for`),
   KEY `message_conv_status_idx` (`conversation_id`,`status`),
   KEY `message_acct_status_sched_idx` (`account_id`,`status`,`scheduled_for`,`id`)
@@ -2316,20 +2242,20 @@ CREATE TABLE `message` (
 
 DROP TABLE IF EXISTS `message_attachment`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `message_attachment` (
-  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `message_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `kind` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `s3_key` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `url` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `thumbnail_url` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `filename` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `content_type` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `message_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `kind` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `s3_key` varchar(512) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `url` varchar(1024) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `thumbnail_url` varchar(1024) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `filename` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `content_type` varchar(128) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `size_bytes` bigint DEFAULT NULL,
-  `resource_type` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `resource_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `resource_type` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `resource_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `deleted_at` datetime(3) DEFAULT NULL,
   `s3_purged_at` datetime(3) DEFAULT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -2346,7 +2272,7 @@ CREATE TABLE `message_attachment` (
 
 DROP TABLE IF EXISTS `message_inbox`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `message_inbox` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `message_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2366,7 +2292,7 @@ CREATE TABLE `message_inbox` (
   KEY `message_inbox_processed_at_idx` (`processed_at`),
   KEY `message_inbox_request_id_idx` (`request_id`),
   KEY `message_inbox_parent_message_id_idx` (`parent_message_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=13481 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=121 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2375,7 +2301,7 @@ CREATE TABLE `message_inbox` (
 
 DROP TABLE IF EXISTS `message_outbox`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `message_outbox` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `message_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2405,7 +2331,7 @@ CREATE TABLE `message_outbox` (
   KEY `message_outbox_lock_expires_at_idx` (`lock_expires_at`),
   KEY `message_outbox_request_id_idx` (`request_id`),
   KEY `message_outbox_parent_message_id_idx` (`parent_message_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=14177 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=196 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2414,12 +2340,12 @@ CREATE TABLE `message_outbox` (
 
 DROP TABLE IF EXISTS `message_receipt`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `message_receipt` (
-  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `message_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `conversation_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `account_user_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `message_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `conversation_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_user_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
   `delivered_at` datetime(3) DEFAULT NULL,
   `read_at` datetime(3) DEFAULT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -2436,12 +2362,12 @@ CREATE TABLE `message_receipt` (
 
 DROP TABLE IF EXISTS `messaging_block`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `messaging_block` (
-  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `blocker_account_user_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `blocked_account_user_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `blocker_account_user_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `blocked_account_user_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
   UNIQUE KEY `msgblock_pair_uq` (`blocker_account_user_id`,`blocked_account_user_id`),
@@ -2455,12 +2381,12 @@ CREATE TABLE `messaging_block` (
 
 DROP TABLE IF EXISTS `messaging_group`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `messaging_group` (
-  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `created_by_account_user_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_by_account_user_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
@@ -2474,14 +2400,14 @@ CREATE TABLE `messaging_group` (
 
 DROP TABLE IF EXISTS `messaging_group_member`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `messaging_group_member` (
-  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `group_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `member_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `account_user_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `agent_config_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `group_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `member_type` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_user_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `agent_config_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
   UNIQUE KEY `mggm_group_user_uq` (`group_id`,`account_user_id`),
@@ -2496,14 +2422,14 @@ CREATE TABLE `messaging_group_member` (
 
 DROP TABLE IF EXISTS `messaging_report`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `messaging_report` (
-  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `conversation_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `message_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `reporter_account_user_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `reason` varchar(2048) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `conversation_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `message_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `reporter_account_user_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `reason` varchar(2048) COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
   KEY `msgreport_conv_idx` (`conversation_id`),
@@ -2517,38 +2443,38 @@ CREATE TABLE `messaging_report` (
 
 DROP TABLE IF EXISTS `notification`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `notification` (
-  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `recipient_account_user_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `category` varchar(60) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `source_message_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `conversation_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `body` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `template_key` varchar(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `recipient_account_user_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `category` varchar(60) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `source_message_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `conversation_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `title` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `body` varchar(1024) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `template_key` varchar(120) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `template_params` json DEFAULT NULL,
-  `link_resource_type` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `link_resource_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `priority` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'normal',
+  `link_resource_type` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `link_resource_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `sender_type` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `sender_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `sender_name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `priority` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'normal',
   `seen_at` datetime(3) DEFAULT NULL,
   `read_at` datetime(3) DEFAULT NULL,
   `dismissed_at` datetime(3) DEFAULT NULL,
   `metadata` json DEFAULT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-  `sender_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `sender_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `sender_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `nf_recipient_feed_idx` (`recipient_account_user_id`,`dismissed_at`,`created_at` DESC,`id` DESC),
+  KEY `nf_recipient_unseen_idx` (`recipient_account_user_id`,`seen_at`,`dismissed_at`),
   KEY `nf_source_message_idx` (`source_message_id`),
   KEY `nf_dedup_idx` (`recipient_account_user_id`,`category`,`link_resource_type`,`link_resource_id`),
-  KEY `nf_recipient_unseen_idx` (`recipient_account_user_id`,`seen_at`,`dismissed_at`),
-  KEY `notification_purge_idx` (`created_at`,`read_at`,`dismissed_at`),
   KEY `nf_recipient_category_created_idx` (`recipient_account_user_id`,`category`,`created_at` DESC,`id` DESC),
   KEY `nf_recipient_sender_created_idx` (`recipient_account_user_id`,`sender_type`,`sender_id`,`created_at` DESC,`id` DESC),
+  KEY `notification_purge_idx` (`created_at`,`read_at`,`dismissed_at`),
   KEY `nf_recipient_conversation_idx` (`recipient_account_user_id`,`conversation_id`,`dismissed_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -2559,16 +2485,16 @@ CREATE TABLE `notification` (
 
 DROP TABLE IF EXISTS `notification_preference`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `notification_preference` (
-  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `account_user_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `category` varchar(60) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_user_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `category` varchar(60) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
   `in_app_enabled` tinyint(1) NOT NULL DEFAULT '1',
   `email_enabled` tinyint(1) NOT NULL DEFAULT '1',
   `push_enabled` tinyint(1) NOT NULL DEFAULT '0',
-  `digest` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'instant',
+  `digest` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'instant',
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
@@ -2582,7 +2508,7 @@ CREATE TABLE `notification_preference` (
 
 DROP TABLE IF EXISTS `onboarding_status`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `onboarding_status` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2601,7 +2527,7 @@ CREATE TABLE `onboarding_status` (
 
 DROP TABLE IF EXISTS `order_discount`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `order_discount` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2627,7 +2553,7 @@ CREATE TABLE `order_discount` (
 
 DROP TABLE IF EXISTS `order_email_contact`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `order_email_contact` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `sales_order_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2648,7 +2574,7 @@ CREATE TABLE `order_email_contact` (
 
 DROP TABLE IF EXISTS `order_payment_intent`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `order_payment_intent` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `payment_intent_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2666,7 +2592,7 @@ CREATE TABLE `order_payment_intent` (
 
 DROP TABLE IF EXISTS `part`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `part` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -2683,7 +2609,7 @@ CREATE TABLE `part` (
 
 DROP TABLE IF EXISTS `payment_term`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `payment_term` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT '1',
@@ -2703,7 +2629,7 @@ CREATE TABLE `payment_term` (
 
 DROP TABLE IF EXISTS `permission`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `permission` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2725,7 +2651,7 @@ CREATE TABLE `permission` (
 
 DROP TABLE IF EXISTS `permission_group`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `permission_group` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2745,7 +2671,7 @@ CREATE TABLE `permission_group` (
 
 DROP TABLE IF EXISTS `pick`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `pick` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `number` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2768,7 +2694,7 @@ CREATE TABLE `pick` (
 
 DROP TABLE IF EXISTS `pick_line`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `pick_line` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `pick_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2790,7 +2716,7 @@ CREATE TABLE `pick_line` (
 
 DROP TABLE IF EXISTS `priority`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `priority` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2809,7 +2735,7 @@ CREATE TABLE `priority` (
 
 DROP TABLE IF EXISTS `product`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `product` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -2831,7 +2757,7 @@ CREATE TABLE `product` (
 
 DROP TABLE IF EXISTS `product_line`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `product_line` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2844,8 +2770,8 @@ CREATE TABLE `product_line` (
   `is_commission_exempt` tinyint(1) NOT NULL DEFAULT '0',
   `is_freight_exempt` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
+  UNIQUE KEY `product_line_account_id_name_key` (`account_id`,`name`),
   KEY `product_line_unit_group_id_idx` (`unit_group_id`),
-  KEY `product_line_account_id_idx` (`account_id`),
   FULLTEXT KEY `product_line_name_idx` (`name`),
   FULLTEXT KEY `product_line_description_idx` (`description`),
   FULLTEXT KEY `product_line_name_description_idx` (`name`,`description`)
@@ -2858,7 +2784,7 @@ CREATE TABLE `product_line` (
 
 DROP TABLE IF EXISTS `product_line_target`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `product_line_target` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `start_date` datetime(3) NOT NULL,
@@ -2883,7 +2809,7 @@ CREATE TABLE `product_line_target` (
 
 DROP TABLE IF EXISTS `product_type`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `product_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2902,7 +2828,7 @@ CREATE TABLE `product_type` (
 
 DROP TABLE IF EXISTS `production`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `production` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -2923,7 +2849,7 @@ CREATE TABLE `production` (
 
 DROP TABLE IF EXISTS `production_run`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `production_run` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `responsible_user_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2947,7 +2873,7 @@ CREATE TABLE `production_run` (
 
 DROP TABLE IF EXISTS `production_step`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `production_step` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2966,9 +2892,9 @@ CREATE TABLE `production_step` (
   UNIQUE KEY `production_step_labor_rate_id_key` (`labor_rate_id`),
   UNIQUE KEY `production_step_labor_time_id_key` (`labor_time_id`),
   UNIQUE KEY `production_step_overhead_rate_id_key` (`overhead_rate_id`),
+  UNIQUE KEY `production_step_account_id_name_key` (`account_id`,`name`),
   KEY `production_step_department_id_idx` (`department_id`),
   KEY `production_step_scanning_station_id_idx` (`scanning_station_id`),
-  KEY `production_step_account_id_idx` (`account_id`),
   KEY `production_step_account_id_scanning_station_id_created_at_id_idx` (`account_id`,`scanning_station_id`,`created_at` DESC,`id` DESC),
   FULLTEXT KEY `production_step_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -2980,7 +2906,7 @@ CREATE TABLE `production_step` (
 
 DROP TABLE IF EXISTS `property`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `property` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3000,7 +2926,7 @@ CREATE TABLE `property` (
 
 DROP TABLE IF EXISTS `quantity`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `quantity` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `value` decimal(65,30) NOT NULL,
@@ -3018,7 +2944,7 @@ CREATE TABLE `quantity` (
 
 DROP TABLE IF EXISTS `quantity_discount`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `quantity_discount` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3037,7 +2963,7 @@ CREATE TABLE `quantity_discount` (
 
 DROP TABLE IF EXISTS `quantity_discount_tier`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `quantity_discount_tier` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `discount_percentage` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
@@ -3060,7 +2986,7 @@ CREATE TABLE `quantity_discount_tier` (
 
 DROP TABLE IF EXISTS `rate`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `rate` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `value` decimal(65,30) NOT NULL,
@@ -3080,7 +3006,7 @@ CREATE TABLE `rate` (
 
 DROP TABLE IF EXISTS `receiving_order`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `receiving_order` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `number` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3102,7 +3028,7 @@ CREATE TABLE `receiving_order` (
 
 DROP TABLE IF EXISTS `receiving_order_line`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `receiving_order_line` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `receiving_order_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3124,7 +3050,7 @@ CREATE TABLE `receiving_order_line` (
 
 DROP TABLE IF EXISTS `refresh_token`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `refresh_token` (
   `token` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `user_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3143,7 +3069,7 @@ CREATE TABLE `refresh_token` (
 
 DROP TABLE IF EXISTS `registration_flow`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `registration_flow` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3162,7 +3088,7 @@ CREATE TABLE `registration_flow` (
 
 DROP TABLE IF EXISTS `registration_queue`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `registration_queue` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `email` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3186,7 +3112,7 @@ CREATE TABLE `registration_queue` (
 
 DROP TABLE IF EXISTS `registration_session`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `registration_session` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `type_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3223,7 +3149,7 @@ CREATE TABLE `registration_session` (
 
 DROP TABLE IF EXISTS `request_log`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `request_log` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `method` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3280,7 +3206,7 @@ CREATE TABLE `request_log` (
 
 DROP TABLE IF EXISTS `role`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `role` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3301,7 +3227,7 @@ CREATE TABLE `role` (
 
 DROP TABLE IF EXISTS `role_permission`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `role_permission` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `create` tinyint(1) NOT NULL DEFAULT '0',
@@ -3324,7 +3250,7 @@ CREATE TABLE `role_permission` (
 
 DROP TABLE IF EXISTS `role_type`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `role_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3343,7 +3269,7 @@ CREATE TABLE `role_type` (
 
 DROP TABLE IF EXISTS `sales_order`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `sales_order` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `billing_address_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3415,7 +3341,7 @@ CREATE TABLE `sales_order` (
 
 DROP TABLE IF EXISTS `sales_order_line`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `sales_order_line` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `product_sku` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3449,7 +3375,7 @@ CREATE TABLE `sales_order_line` (
 
 DROP TABLE IF EXISTS `sales_order_status`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `sales_order_status` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3468,7 +3394,7 @@ CREATE TABLE `sales_order_status` (
 
 DROP TABLE IF EXISTS `sales_order_type`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `sales_order_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3487,7 +3413,7 @@ CREATE TABLE `sales_order_type` (
 
 DROP TABLE IF EXISTS `sandbox_account`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `sandbox_account` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `type_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3499,7 +3425,7 @@ CREATE TABLE `sandbox_account` (
   UNIQUE KEY `sandbox_account_type_id_key` (`type_id`),
   UNIQUE KEY `sandbox_account_account_id_key` (`account_id`),
   KEY `sandbox_account_owner_account_id_idx` (`owner_account_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -3508,7 +3434,7 @@ CREATE TABLE `sandbox_account` (
 
 DROP TABLE IF EXISTS `scanning_station`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `scanning_station` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3522,8 +3448,8 @@ CREATE TABLE `scanning_station` (
   `label_type_code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `material_check_required` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
+  UNIQUE KEY `scanning_station_account_id_name_key` (`account_id`,`name`),
   KEY `scanning_station_department_id_idx` (`department_id`),
-  KEY `scanning_station_account_id_idx` (`account_id`),
   KEY `scanning_station_scanning_station_type_code_idx` (`scanning_station_type_code`),
   KEY `scanning_station_label_size_code_idx` (`label_size_code`),
   KEY `scanning_station_label_type_code_idx` (`label_type_code`),
@@ -3537,7 +3463,7 @@ CREATE TABLE `scanning_station` (
 
 DROP TABLE IF EXISTS `scanning_station_type`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `scanning_station_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -3556,7 +3482,7 @@ CREATE TABLE `scanning_station_type` (
 
 DROP TABLE IF EXISTS `service_idempotency_key`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `service_idempotency_key` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `type_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3582,7 +3508,7 @@ CREATE TABLE `service_idempotency_key` (
   KEY `service_idempotency_key_idempotency_key_idx` (`idempotency_key`),
   KEY `service_idempotency_key_lock_expires_at_idx` (`lock_expires_at`),
   KEY `service_idempotency_key_expires_at_idx` (`expires_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=90 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -3591,7 +3517,7 @@ CREATE TABLE `service_idempotency_key` (
 
 DROP TABLE IF EXISTS `settlement`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `settlement` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `responsible_user_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -3616,7 +3542,7 @@ CREATE TABLE `settlement` (
 
 DROP TABLE IF EXISTS `shipment`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `shipment` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `bill_of_lading` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -3662,7 +3588,7 @@ CREATE TABLE `shipment` (
 
 DROP TABLE IF EXISTS `shipment_line`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `shipment_line` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `shipment_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3684,7 +3610,7 @@ CREATE TABLE `shipment_line` (
 
 DROP TABLE IF EXISTS `shipment_status`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `shipment_status` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3703,7 +3629,7 @@ CREATE TABLE `shipment_status` (
 
 DROP TABLE IF EXISTS `shipping_case`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `shipping_case` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `number` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3742,7 +3668,7 @@ CREATE TABLE `shipping_case` (
 
 DROP TABLE IF EXISTS `shipping_term`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `shipping_term` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3767,7 +3693,7 @@ CREATE TABLE `shipping_term` (
 
 DROP TABLE IF EXISTS `shipping_term_free_shipping_rule`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `shipping_term_free_shipping_rule` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `shipping_term_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3785,7 +3711,7 @@ CREATE TABLE `shipping_term_free_shipping_rule` (
 
 DROP TABLE IF EXISTS `storage_location`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `storage_location` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3810,7 +3736,7 @@ CREATE TABLE `storage_location` (
 
 DROP TABLE IF EXISTS `storage_location_type`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `storage_location_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3829,7 +3755,7 @@ CREATE TABLE `storage_location_type` (
 
 DROP TABLE IF EXISTS `stripe_event_log`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `stripe_event_log` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `event_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3851,7 +3777,7 @@ CREATE TABLE `stripe_event_log` (
 
 DROP TABLE IF EXISTS `supplier_material`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `supplier_material` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `material_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3878,12 +3804,12 @@ CREATE TABLE `supplier_material` (
 
 DROP TABLE IF EXISTS `support_route`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `support_route` (
-  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `relation_account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
-  `group_conversation_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `relation_account_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `group_conversation_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
@@ -3897,7 +3823,7 @@ CREATE TABLE `support_route` (
 
 DROP TABLE IF EXISTS `sys_property`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `sys_property` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `sys_property_type_code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3918,7 +3844,7 @@ CREATE TABLE `sys_property` (
 
 DROP TABLE IF EXISTS `sys_property_type`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `sys_property_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3937,7 +3863,7 @@ CREATE TABLE `sys_property_type` (
 
 DROP TABLE IF EXISTS `target`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `target` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `start_date` datetime(3) NOT NULL,
@@ -3960,7 +3886,7 @@ CREATE TABLE `target` (
 
 DROP TABLE IF EXISTS `task_leases`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `task_leases` (
   `name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `holder` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3977,7 +3903,7 @@ CREATE TABLE `task_leases` (
 
 DROP TABLE IF EXISTS `territory`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `territory` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `start_zipcode` int DEFAULT NULL,
@@ -4002,7 +3928,7 @@ CREATE TABLE `territory` (
 
 DROP TABLE IF EXISTS `token_pack_purchase`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `token_pack_purchase` (
   `id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4027,7 +3953,7 @@ CREATE TABLE `token_pack_purchase` (
 
 DROP TABLE IF EXISTS `transaction`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `transaction` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `customer_account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4069,7 +3995,7 @@ CREATE TABLE `transaction` (
 
 DROP TABLE IF EXISTS `transaction_allocation`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `transaction_allocation` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `transaction_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4095,7 +4021,7 @@ CREATE TABLE `transaction_allocation` (
 
 DROP TABLE IF EXISTS `transaction_method`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `transaction_method` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4114,7 +4040,7 @@ CREATE TABLE `transaction_method` (
 
 DROP TABLE IF EXISTS `transaction_type`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `transaction_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4134,7 +4060,7 @@ CREATE TABLE `transaction_type` (
 
 DROP TABLE IF EXISTS `unit`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `unit` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4165,7 +4091,7 @@ CREATE TABLE `unit` (
 
 DROP TABLE IF EXISTS `unit_group`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `unit_group` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4190,7 +4116,7 @@ CREATE TABLE `unit_group` (
 
 DROP TABLE IF EXISTS `unit_group_unit`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `unit_group_unit` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -4212,7 +4138,7 @@ CREATE TABLE `unit_group_unit` (
 
 DROP TABLE IF EXISTS `unit_type`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `unit_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -4231,7 +4157,7 @@ CREATE TABLE `unit_type` (
 
 DROP TABLE IF EXISTS `user`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `user` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `email` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -4266,7 +4192,7 @@ CREATE TABLE `user` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-07-03  9:26:38
+-- Dump completed on 2026-07-03 10:31:16
 
 -- +goose Down
 
@@ -4371,9 +4297,6 @@ DROP TABLE IF EXISTS `inventory_issue`;
 DROP TABLE IF EXISTS `inventory_change_log`;
 DROP TABLE IF EXISTS `inventory_allocation`;
 DROP TABLE IF EXISTS `idempotency_key`;
-DROP TABLE IF EXISTS `hubspot_sync_record`;
-DROP TABLE IF EXISTS `hubspot_sync_job`;
-DROP TABLE IF EXISTS `hubspot_company_review`;
 DROP TABLE IF EXISTS `hubspot_account_user_link`;
 DROP TABLE IF EXISTS `geolocation`;
 DROP TABLE IF EXISTS `error_log`;

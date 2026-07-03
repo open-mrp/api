@@ -34,10 +34,36 @@ func TestIngestInboundEmail_UnknownInboxDropped(t *testing.T) {
 
 	// Unknown inbox is dropped (acked) without error so the SQS message isn't retried forever.
 	apiErr := svc.IngestInboundEmail(context.Background(), domain.IngestInboundEmailInput{
-		Recipient:    "support@augno-test.com",
+		Recipients:   []string{"support@augno-test.com"},
 		RfcMessageID: "m1@x",
 	})
 	assert.Nil(t, apiErr)
+}
+
+func TestIngestInboundEmail_ResolvesForwardingAddress(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	inboxRepo := repositorymock.NewMockEmailInboxRepo(ctrl)
+	// A forwarded email: the forward target (<inbox_id>@inbound.augno.com) lands in Delivered-To and
+	// resolves the inbox by id — even though the customer's real inbox address (testing@sellerco.com) is
+	// all that survives in the To header. GetByAddress is never consulted for the matching candidate.
+	inboxRepo.EXPECT().GetByIDSystem(gomock.Any(), "emix_1").
+		Return(&domain.EmailInbox{ID: "emix_1", AccountID: "ac_1", Address: "testing@sellerco.com", Status: domain.EmailInboxStatusActive}, nil)
+
+	emailMsgRepo := repositorymock.NewMockEmailMessageRepo(ctrl)
+	// Short-circuit on the dedup guard so the test targets resolution, not the full threading path.
+	emailMsgRepo.EXPECT().GetByRfcID(gomock.Any(), "fwd@x").
+		Return(&domain.EmailMessage{ID: "emmg_1"}, nil)
+
+	factory := factorymock.NewMockRepoFactory(ctrl)
+	factory.EXPECT().NewEmailInboxRepo().Return(inboxRepo).AnyTimes()
+	factory.EXPECT().NewEmailMessageRepo().Return(emailMsgRepo).AnyTimes()
+	svc := &conversationSvcImpl{repoFactory: factory, inboundEmailDomain: "inbound.augno.com"}
+
+	apiErr := svc.IngestInboundEmail(context.Background(), domain.IngestInboundEmailInput{
+		Recipients:   []string{"emix_1@inbound.augno.com", "testing@sellerco.com"},
+		RfcMessageID: "fwd@x",
+	})
+	require.Nil(t, apiErr)
 }
 
 func TestIngestInboundEmail_DedupAlreadyIngested(t *testing.T) {
@@ -58,7 +84,7 @@ func TestIngestInboundEmail_DedupAlreadyIngested(t *testing.T) {
 	// A redelivered email (rfc id already in the ledger) is acked with no further work — no tx, no
 	// thread lookup, no message create.
 	apiErr := svc.IngestInboundEmail(context.Background(), domain.IngestInboundEmailInput{
-		Recipient:    "support@augno-test.com",
+		Recipients:   []string{"support@augno-test.com"},
 		RfcMessageID: "dup@x",
 	})
 	require.Nil(t, apiErr)

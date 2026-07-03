@@ -22,7 +22,7 @@ func TestParseInboundEmail_PlainText(t *testing.T) {
 
 	in, err := parseInboundEmail([]byte(raw), "inbound/x")
 	require.NoError(t, err)
-	assert.Equal(t, "support@augno-test.com", in.Recipient)
+	assert.Equal(t, []string{"support@augno-test.com"}, in.Recipients)
 	assert.Equal(t, "jane@theirco.com", in.From)
 	assert.Equal(t, "Jane Customer", in.FromName)
 	assert.Equal(t, "Where is my order?", in.Subject)
@@ -96,11 +96,15 @@ func TestParseInboundEmail_Threading(t *testing.T) {
 	assert.Equal(t, []string{"root@augno-test.com", "orig@augno-test.com"}, in.References)
 }
 
-func TestParseInboundEmail_DeliveredToWins(t *testing.T) {
+func TestParseInboundEmail_CollectsAllCandidateRecipients(t *testing.T) {
+	// Every delivery/recipient header contributes a candidate, delivery headers first, de-duplicated.
+	// Under forwarding the original inbox address survives only in To/Cc while a forward target lands in
+	// Delivered-To, so ingestion must see them all rather than trusting one "delivered" header.
 	raw := strings.Join([]string{
 		"From: jane@theirco.com",
-		"Delivered-To: support@augno-test.com",
-		"To: jane@theirco.com, cc@elsewhere.com",
+		"Delivered-To: in_01hf@inbound.augno.com",
+		"To: support@sellerco.com, cc@elsewhere.com",
+		"Cc: support@sellerco.com", // duplicate collapses
 		"Subject: envelope recipient",
 		"Message-ID: <m3@theirco.com>",
 		"Content-Type: text/plain",
@@ -111,5 +115,9 @@ func TestParseInboundEmail_DeliveredToWins(t *testing.T) {
 
 	in, err := parseInboundEmail([]byte(raw), "inbound/d")
 	require.NoError(t, err)
-	assert.Equal(t, "support@augno-test.com", in.Recipient, "Delivered-To preferred over To")
+	assert.Equal(t, []string{
+		"in_01hf@inbound.augno.com", // Delivered-To first
+		"support@sellerco.com",       // To
+		"cc@elsewhere.com",          // To
+	}, in.Recipients, "delivery headers first, duplicates dropped")
 }

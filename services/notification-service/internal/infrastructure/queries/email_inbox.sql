@@ -13,6 +13,12 @@ WHERE id = ? AND account_id = ?;
 SELECT * FROM email_inbox
 WHERE address = ?;
 
+-- name: GetEmailInboxByIDSystem :one
+-- Inbound routing (system, no account scope): resolve the inbox whose per-inbox forwarding address
+-- (<inbox_id>@<inbound domain>) a forwarded email was delivered to. IDs are globally unique.
+SELECT * FROM email_inbox
+WHERE id = ?;
+
 -- name: ListEmailInboxesByAccount :many
 SELECT * FROM email_inbox
 WHERE account_id = ?

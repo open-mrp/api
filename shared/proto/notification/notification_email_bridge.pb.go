@@ -364,8 +364,12 @@ type EmailInboxInfo struct {
 	AgentTriggerKeywords []string               `protobuf:"bytes,9,rep,name=agent_trigger_keywords,json=agentTriggerKeywords,proto3" json:"agent_trigger_keywords,omitempty"`
 	CreatedAt            *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt            *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// Per-inbox forwarding address (<inbox_id>@<Augno receiving subdomain>). Customers whose corporate
+	// domain can't repoint its apex MX at SES forward their support address here instead. Unset when the
+	// receiving subdomain isn't configured.
+	ForwardingAddress *string `protobuf:"bytes,12,opt,name=forwarding_address,json=forwardingAddress,proto3,oneof" json:"forwarding_address,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *EmailInboxInfo) Reset() {
@@ -473,6 +477,13 @@ func (x *EmailInboxInfo) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *EmailInboxInfo) GetForwardingAddress() string {
+	if x != nil && x.ForwardingAddress != nil {
+		return *x.ForwardingAddress
+	}
+	return ""
 }
 
 type CreateEmailDomainRequest struct {
@@ -1105,7 +1116,7 @@ const file_notification_notification_email_bridge_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x86\x04\n" +
+	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xd1\x04\n" +
 	"\x0eEmailInboxInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -1121,11 +1132,13 @@ const file_notification_notification_email_bridge_proto_rawDesc = "" +
 	"created_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\f\n" +
+	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x122\n" +
+	"\x12forwarding_address\x18\f \x01(\tH\x03R\x11forwardingAddress\x88\x01\x01B\f\n" +
 	"\n" +
 	"_from_nameB\x12\n" +
 	"\x10_agent_config_idB\x17\n" +
-	"\x15_agent_trigger_policy\"2\n" +
+	"\x15_agent_trigger_policyB\x15\n" +
+	"\x13_forwarding_address\"2\n" +
 	"\x18CreateEmailDomainRequest\x12\x16\n" +
 	"\x06domain\x18\x01 \x01(\tR\x06domain\"\x19\n" +
 	"\x17ListEmailDomainsRequest\"S\n" +

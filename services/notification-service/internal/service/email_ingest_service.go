@@ -23,14 +23,16 @@ func (s *conversationSvcImpl) IngestInboundEmail(ctx context.Context, in domain.
 		return tracing.Trace(span, apierror.NewParameterMissingError("An rfc message id is required.", "rfc_message_id"))
 	}
 
-	// Resolve the inbox the mail was delivered to. Unknown/disabled inboxes are dropped (acked) — a catch-all SES rule can deliver mail for addresses we don't host a thread for.
-	inbox, apiErr := s.repoFactory.NewEmailInboxRepo().GetByAddress(ctx, strings.ToLower(strings.TrimSpace(in.Recipient)))
+	// Resolve the inbox the mail was delivered to, trying every candidate recipient. Unknown/disabled
+	// inboxes are dropped (acked) — a catch-all SES rule can deliver mail for addresses we don't host a
+	// thread for.
+	inbox, apiErr := s.resolveInbox(ctx, in.Recipients)
 	if apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-			slog.WarnContext(ctx, "inbound email for unknown inbox dropped", "recipient", in.Recipient)
-			return nil
-		}
 		return tracing.Trace(span, apiErr)
+	}
+	if inbox == nil {
+		slog.WarnContext(ctx, "inbound email for unknown inbox dropped", "recipients", in.Recipients)
+		return nil
 	}
 	if inbox.Status != domain.EmailInboxStatusActive {
 		slog.WarnContext(ctx, "inbound email for disabled inbox dropped", "inbox", inbox.ID)
@@ -123,7 +125,7 @@ func (s *conversationSvcImpl) IngestInboundEmail(ctx context.Context, in domain.
 			InReplyTo:      strPtrIfNotEmpty(in.InReplyTo),
 			References:     strPtrIfNotEmpty(strings.Join(in.References, " ")),
 			FromAddr:       in.From,
-			ToAddrs:        in.Recipient,
+			ToAddrs:        inbox.Address,
 			Subject:        strPtrIfNotEmpty(in.Subject),
 			RawS3Key:       strPtrIfNotEmpty(in.RawS3Key),
 		})
@@ -159,6 +161,43 @@ func (s *conversationSvcImpl) IngestInboundEmail(ctx context.Context, in domain.
 
 	s.kickOutbox()
 	return nil
+}
+
+// resolveInbox finds the inbox an inbound mail belongs to by trying each candidate recipient in order.
+// A candidate on the Augno receiving subdomain is a per-inbox forwarding address whose local part is the
+// inbox id (resolved by id, no account scope); any other candidate is matched directly as an inbox
+// address. The first candidate that resolves to a known inbox wins. A nil inbox with nil error means no
+// candidate matched — the caller drops (acks) the mail. This tolerates forwarding, where the original
+// inbox address survives only in To/Cc and the forwarding address only in the delivery headers.
+func (s *conversationSvcImpl) resolveInbox(ctx context.Context, recipients []string) (*domain.EmailInbox, *apierror.APIError) {
+	repo := s.repoFactory.NewEmailInboxRepo()
+	forwardSuffix := ""
+	if s.inboundEmailDomain != "" {
+		forwardSuffix = "@" + strings.ToLower(strings.TrimSpace(s.inboundEmailDomain))
+	}
+	for _, r := range recipients {
+		r = strings.ToLower(strings.TrimSpace(r))
+		if r == "" {
+			continue
+		}
+		var (
+			inbox  *domain.EmailInbox
+			apiErr *apierror.APIError
+		)
+		if forwardSuffix != "" && strings.HasSuffix(r, forwardSuffix) {
+			// Per-inbox forwarding address: <inbox_id>@<inbound domain>. The local part is the inbox id.
+			inbox, apiErr = repo.GetByIDSystem(ctx, strings.TrimSuffix(r, forwardSuffix))
+		} else {
+			inbox, apiErr = repo.GetByAddress(ctx, r)
+		}
+		if apiErr == nil {
+			return inbox, nil
+		}
+		if apiErr.Code != apierror.ErrorCodeResourceNotFound {
+			return nil, apiErr
+		}
+	}
+	return nil, nil
 }
 
 // createEmailThreadConversation creates the conversation backing a new email thread: a group bound to the inbox, with the inbox's configured agent added as a participant (so it triages inbound mail).

@@ -16,11 +16,14 @@ type emailBridgeGRPCHandler struct {
 	pb.UnimplementedEmailBridgeServiceServer
 	emailBridgeSvc domain.EmailBridgeSvc
 	chatSvc        domain.ConversationSvc
+	// inboundEmailDomain is the Augno SES receiving subdomain used to render each inbox's forwarding
+	// address (<inbox_id>@<domain>). Empty when the subdomain isn't configured → forwarding_address unset.
+	inboundEmailDomain string
 }
 
-// NewEmailBridgeGRPCHandler registers the EmailBridgeService (domain verification + inbox CRUD + agent send/draft) handler. chatSvc backs the outbound send + draft RPCs.
-func NewEmailBridgeGRPCHandler(server *grpc.Server, emailBridgeSvc domain.EmailBridgeSvc, chatSvc domain.ConversationSvc) *emailBridgeGRPCHandler {
-	handler := &emailBridgeGRPCHandler{emailBridgeSvc: emailBridgeSvc, chatSvc: chatSvc}
+// NewEmailBridgeGRPCHandler registers the EmailBridgeService (domain verification + inbox CRUD + agent send/draft) handler. chatSvc backs the outbound send + draft RPCs. inboundEmailDomain renders per-inbox forwarding addresses (empty to omit them).
+func NewEmailBridgeGRPCHandler(server *grpc.Server, emailBridgeSvc domain.EmailBridgeSvc, chatSvc domain.ConversationSvc, inboundEmailDomain string) *emailBridgeGRPCHandler {
+	handler := &emailBridgeGRPCHandler{emailBridgeSvc: emailBridgeSvc, chatSvc: chatSvc, inboundEmailDomain: inboundEmailDomain}
 	pb.RegisterEmailBridgeServiceServer(server, handler)
 	return handler
 }
@@ -124,7 +127,7 @@ func (h *emailBridgeGRPCHandler) CreateEmailInbox(ctx context.Context, req *pb.C
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
-	return emailInboxToProto(inbox), nil
+	return h.emailInboxToProto(inbox), nil
 }
 
 func (h *emailBridgeGRPCHandler) ListEmailInboxes(ctx context.Context, req *pb.ListEmailInboxesRequest) (*pb.ListEmailInboxesResponse, error) {
@@ -137,7 +140,7 @@ func (h *emailBridgeGRPCHandler) ListEmailInboxes(ctx context.Context, req *pb.L
 	}
 	out := make([]*pb.EmailInboxInfo, 0, len(inboxes))
 	for _, i := range inboxes {
-		out = append(out, emailInboxToProto(i))
+		out = append(out, h.emailInboxToProto(i))
 	}
 	return &pb.ListEmailInboxesResponse{Inboxes: out}, nil
 }
@@ -150,7 +153,7 @@ func (h *emailBridgeGRPCHandler) GetEmailInbox(ctx context.Context, req *pb.GetE
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
-	return emailInboxToProto(inbox), nil
+	return h.emailInboxToProto(inbox), nil
 }
 
 func (h *emailBridgeGRPCHandler) UpdateEmailInbox(ctx context.Context, req *pb.UpdateEmailInboxRequest) (*pb.EmailInboxInfo, error) {
@@ -167,7 +170,7 @@ func (h *emailBridgeGRPCHandler) UpdateEmailInbox(ctx context.Context, req *pb.U
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
-	return emailInboxToProto(inbox), nil
+	return h.emailInboxToProto(inbox), nil
 }
 
 func (h *emailBridgeGRPCHandler) DeleteEmailInbox(ctx context.Context, req *pb.DeleteEmailInboxRequest) (*pb.EmailBridgeAck, error) {
@@ -193,8 +196,8 @@ func emailDomainToProto(d *domain.EmailDomain) *pb.EmailDomainInfo {
 	}
 }
 
-func emailInboxToProto(i *domain.EmailInbox) *pb.EmailInboxInfo {
-	return &pb.EmailInboxInfo{
+func (h *emailBridgeGRPCHandler) emailInboxToProto(i *domain.EmailInbox) *pb.EmailInboxInfo {
+	out := &pb.EmailInboxInfo{
 		Id:                   i.ID,
 		AccountId:            i.AccountID,
 		EmailDomainId:        i.EmailDomainID,
@@ -207,6 +210,14 @@ func emailInboxToProto(i *domain.EmailInbox) *pb.EmailInboxInfo {
 		CreatedAt:            timestamppb.New(i.CreatedAt),
 		UpdatedAt:            timestamppb.New(i.UpdatedAt),
 	}
+	// The forwarding address is derived, not stored: the inbox id is the local part on the Augno receiving
+	// subdomain. Customers who can't repoint their apex MX forward their support address here; ingestion
+	// resolves it back to this inbox by id (see resolveInbox). Omitted when the subdomain isn't configured.
+	if h.inboundEmailDomain != "" {
+		addr := i.ID + "@" + h.inboundEmailDomain
+		out.ForwardingAddress = &addr
+	}
+	return out
 }
 
 func nullableTimestamp(t *time.Time) *timestamppb.Timestamp {

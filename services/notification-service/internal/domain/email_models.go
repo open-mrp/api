@@ -134,7 +134,11 @@ type PostReplyDraftInput struct {
 
 // IngestInboundEmailInput is the parsed inbound email the consumer hands to the conversation service to thread, dedup, persist as a message, and dispatch to the inbox's agent.
 type IngestInboundEmailInput struct {
-	Recipient    string // the inbox address the mail was delivered to
+	// Recipients are all candidate delivery addresses parsed from the mail (To, Cc, Delivered-To,
+	// X-Original-To), lowercased and de-duplicated. Ingestion resolves the inbox by matching these — by
+	// inbox address, or by the per-inbox forwarding address (<inbox_id>@<inbound domain>) when forwarded —
+	// rather than trusting a single "delivered" header, which a forwarding hop can rewrite to its own target.
+	Recipients   []string
 	From         string // sender email address
 	FromName     string // sender display name (may be empty)
 	Subject      string

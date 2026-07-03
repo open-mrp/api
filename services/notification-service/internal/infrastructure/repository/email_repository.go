@@ -195,6 +195,19 @@ func (r *emailInboxRepoImpl) GetByAddress(ctx context.Context, address string) (
 	return emailInboxFromRow(row), nil
 }
 
+func (r *emailInboxRepoImpl) GetByIDSystem(ctx context.Context, id string) (*domain.EmailInbox, *apierror.APIError) {
+	ctx, span := emailRepoTracer.Start(ctx, "repository.email_inbox.get_by_id_system")
+	defer span.End()
+	row, err := r.db.GetEmailInboxByIDSystem(ctx, id)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+			return nil, apiErr
+		}
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return emailInboxFromRow(row), nil
+}
+
 func (r *emailInboxRepoImpl) ListByAccount(ctx context.Context, accountID string) ([]*domain.EmailInbox, *apierror.APIError) {
 	ctx, span := emailRepoTracer.Start(ctx, "repository.email_inbox.list_by_account")
 	defer span.End()

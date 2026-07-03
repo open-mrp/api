@@ -27,6 +27,10 @@ type EmailInbox struct {
 	EmailDomain *EmailDomain `json:"email_domain" validate:"required" expandable:"true"`
 	// The full inbox address (e.g. `support@acme.com`).
 	Address string `json:"address" validate:"required"`
+	// A forwarding address on an Augno-owned domain that also routes to this inbox.
+	//
+	// Use this when your domain's mail is hosted elsewhere (e.g. Google Workspace, Microsoft 365) and you cannot point its MX records at Augno: forward mail from `address` to this address instead, and it will still be threaded into a conversation. `null` when domain forwarding is not configured.
+	ForwardingAddress *string `json:"forwarding_address"`
 	// The display name used in the `From` header of outbound mail.
 	FromName *string `json:"from_name"`
 	// The agent that handles mail for this inbox, when one is bound.

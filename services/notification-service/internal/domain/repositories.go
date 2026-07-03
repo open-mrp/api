@@ -30,6 +30,9 @@ type EmailInboxRepo interface {
 	GetByID(ctx context.Context, id, accountID string) (*EmailInbox, *apierror.APIError)
 	// GetByAddress resolves the inbox for inbound routing; address is globally unique (no account scope).
 	GetByAddress(ctx context.Context, address string) (*EmailInbox, *apierror.APIError)
+	// GetByIDSystem resolves an inbox by id for inbound routing (no account scope), used to match mail
+	// delivered to a per-inbox forwarding address (<inbox_id>@<inbound domain>). IDs are globally unique.
+	GetByIDSystem(ctx context.Context, id string) (*EmailInbox, *apierror.APIError)
 	ListByAccount(ctx context.Context, accountID string) ([]*EmailInbox, *apierror.APIError)
 	Update(ctx context.Context, id, accountID string, input *UpdateEmailInboxInput) *apierror.APIError
 	Delete(ctx context.Context, id, accountID string) (bool, *apierror.APIError)

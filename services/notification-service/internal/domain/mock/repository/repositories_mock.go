@@ -268,6 +268,21 @@ func (mr *MockEmailInboxRepoMockRecorder) GetByID(ctx, id, accountID any) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockEmailInboxRepo)(nil).GetByID), ctx, id, accountID)
 }
 
+// GetByIDSystem mocks base method.
+func (m *MockEmailInboxRepo) GetByIDSystem(ctx context.Context, id string) (*domain.EmailInbox, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByIDSystem", ctx, id)
+	ret0, _ := ret[0].(*domain.EmailInbox)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetByIDSystem indicates an expected call of GetByIDSystem.
+func (mr *MockEmailInboxRepoMockRecorder) GetByIDSystem(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByIDSystem", reflect.TypeOf((*MockEmailInboxRepo)(nil).GetByIDSystem), ctx, id)
+}
+
 // ListByAccount mocks base method.
 func (m *MockEmailInboxRepo) ListByAccount(ctx context.Context, accountID string) ([]*domain.EmailInbox, *apierror.APIError) {
 	m.ctrl.T.Helper()

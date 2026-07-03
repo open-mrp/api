@@ -26,6 +26,7 @@ const (
 	envInboundEmailBucket   = "INBOUND_EMAIL_BUCKET"
 	envInboundEmailQueueURL = "INBOUND_EMAIL_QUEUE_URL"
 	envInboundEmailRegion   = "INBOUND_EMAIL_REGION"
+	envInboundEmailDomain   = "INBOUND_EMAIL_DOMAIN"
 )
 
 // defaultInboundEmailRegion is where SES receives inbound mail. SES email receiving is not offered in
@@ -65,6 +66,13 @@ type config struct {
 	// InboundEmailRegion (optional; default: "us-east-1") is the region of the inbound-email bucket +
 	// SQS queue. Distinct from AWSRegion because SES email receiving is not available in us-east-2.
 	InboundEmailRegion string
+
+	// InboundEmailDomain (optional) is the Augno-owned subdomain set up for SES receiving (e.g.
+	// "inbound.augno.com"). It lets a customer whose corporate domain can't repoint its apex MX at SES
+	// (Google/M365/Barracuda) instead forward their support address to <inbox_id>@<this domain>. When set,
+	// inbound routing also matches mail delivered to that per-inbox forwarding address; left empty, only
+	// direct-to-domain (customer MX → SES) inboxes are matched.
+	InboundEmailDomain string
 }
 
 // withDefaults sets the default values for the configuration.
@@ -94,6 +102,7 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		InboundEmailBucket:   env.GetEnv(envInboundEmailBucket, getenv),
 		InboundEmailQueueURL: env.GetEnv(envInboundEmailQueueURL, getenv),
 		InboundEmailRegion:   cmp.Or(env.GetEnv(envInboundEmailRegion, getenv), defaultInboundEmailRegion),
+		InboundEmailDomain:   env.GetEnv(envInboundEmailDomain, getenv),
 	}
 }
 

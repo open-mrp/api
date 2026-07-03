@@ -77,6 +77,7 @@ func emailInboxFromProto(ctx context.Context, i *pb.EmailInboxInfo) *apiresource
 		ID:                   i.Id,
 		Object:               constants.ObjectTypeEmailInbox,
 		Address:              i.Address,
+		ForwardingAddress:    i.ForwardingAddress,
 		FromName:             i.FromName,
 		Status:               i.Status,
 		AgentTriggerPolicy:   i.AgentTriggerPolicy,

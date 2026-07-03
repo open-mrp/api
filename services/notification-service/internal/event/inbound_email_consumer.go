@@ -151,11 +151,10 @@ func parseInboundEmail(raw []byte, s3Key string) (domain.IngestInboundEmailInput
 		fromAddr = strings.TrimSpace(h.Get("From"))
 	}
 
-	recipient := firstRecipient(h)
 	body := extractText(msg, h.Get("Content-Type"))
 
 	return domain.IngestInboundEmailInput{
-		Recipient:    recipient,
+		Recipients:   candidateRecipients(h),
 		From:         fromAddr,
 		FromName:     fromName,
 		Subject:      decode(h.Get("Subject")),
@@ -167,18 +166,36 @@ func parseInboundEmail(raw []byte, s3Key string) (domain.IngestInboundEmailInput
 	}, nil
 }
 
-// firstRecipient resolves the inbox address the mail was delivered to, preferring the SES
-// Delivered-To / X-Original-To headers (the actual envelope recipient) over the To header (which can list many addresses including cc'd parties).
-func firstRecipient(h mail.Header) string {
-	for _, hdr := range []string{"Delivered-To", "X-Original-To", "To"} {
-		if v := h.Get(hdr); v != "" {
-			if addrs, err := mail.ParseAddressList(v); err == nil && len(addrs) > 0 {
-				return strings.ToLower(addrs[0].Address)
-			}
-			return strings.ToLower(strings.TrimSpace(v))
+// candidateRecipients collects every address the mail could have been delivered to — across the
+// delivery headers (Delivered-To, X-Original-To) and the visible recipient headers (To, Cc) — lowercased
+// and de-duplicated. Ingestion matches these against known inboxes rather than trusting one "delivered"
+// header: a forwarding hop (M365/Barracuda) rewrites Delivered-To/X-Original-To to its own forward target,
+// so the original inbox address survives only in To/Cc, while the per-inbox forwarding address survives
+// only in the delivery headers. Collecting all of them lets either routing path resolve.
+func candidateRecipients(h mail.Header) []string {
+	seen := map[string]bool{}
+	var out []string
+	add := func(addr string) {
+		addr = strings.ToLower(strings.TrimSpace(addr))
+		if addr != "" && !seen[addr] {
+			seen[addr] = true
+			out = append(out, addr)
 		}
 	}
-	return ""
+	for _, hdr := range []string{"Delivered-To", "X-Original-To", "To", "Cc"} {
+		v := h.Get(hdr)
+		if v == "" {
+			continue
+		}
+		if addrs, err := mail.ParseAddressList(v); err == nil {
+			for _, a := range addrs {
+				add(a.Address)
+			}
+			continue
+		}
+		add(v)
+	}
+	return out
 }
 
 // parseReferences splits the References header (whitespace-separated message-ids) and strips the angle brackets.

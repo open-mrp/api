@@ -125,7 +125,7 @@ func Run(
 			return apiErr
 		}
 	}
-	chatSvc := service.NewConversationSvc(repoFactory, txManager, objectStore, cfg.ChatBucket, rabbitmq, enqueuer, bridgeEmailSender)
+	chatSvc := service.NewConversationSvc(repoFactory, txManager, objectStore, cfg.ChatBucket, rabbitmq, enqueuer, bridgeEmailSender, cfg.InboundEmailDomain)
 
 	var emailIdentityProvider domain.EmailIdentityProvider
 	if cfg.PlatformMode.IsTest() {
@@ -218,7 +218,7 @@ func Run(
 	notificationgrpc.NewGRPCHandler(server.Server(), notificationSvc)
 	notificationgrpc.NewMessagingGRPCHandler(server.Server(), messagingSvc)
 	notificationgrpc.NewChatGRPCHandler(server.Server(), chatSvc)
-	notificationgrpc.NewEmailBridgeGRPCHandler(server.Server(), emailBridgeSvc, chatSvc)
+	notificationgrpc.NewEmailBridgeGRPCHandler(server.Server(), emailBridgeSvc, chatSvc, cfg.InboundEmailDomain)
 
 	logger.Info("Notification service started", "port", cfg.Port)
 

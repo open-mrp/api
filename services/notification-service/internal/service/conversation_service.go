@@ -52,10 +52,15 @@ type conversationSvcImpl struct {
 	createLimiter       *ratelimit.Limiter
 	// bridgeEmailSender sends outbound mail for the email bridge (SES, in the receiving region so the reply comes from the same DKIM-verified identity). May be nil in tests/dev without AWS, in which case SendInboxReply errors out.
 	bridgeEmailSender domain.EmailSender
+	// inboundEmailDomain is the Augno-owned SES receiving subdomain (e.g. "inbound.augno.com"). When set,
+	// inbound routing also resolves mail addressed to <inbox_id>@<this domain> (the per-inbox forwarding
+	// address) back to its inbox, so customers who can't repoint their apex MX can forward instead. Empty
+	// disables forwarding-address matching (direct customer-MX inboxes still resolve by address).
+	inboundEmailDomain string
 }
 
 // NewConversationSvc constructs the chat (conversations + messages) service. objectStore and chatBucket back the attachment upload pipeline (presigned PUT/GET against the chat bucket); broker carries ephemeral typing events to the realtime fanout (outside the outbox); outboxNotifier wakes the outbox enqueuer after a message commits so agent dispatch isn't delayed by the idle poll backoff (may be nil); bridgeEmailSender sends outbound email-bridge replies via SES (may be nil where the bridge isn't configured).
-func NewConversationSvc(repoFactory domain.RepoFactory, txManager TransactionManager, objectStore s3.ObjectStore, chatBucket string, broker messaging.MessageBroker, outboxNotifier messaging.OutboxNotifier, bridgeEmailSender domain.EmailSender) domain.ConversationSvc {
+func NewConversationSvc(repoFactory domain.RepoFactory, txManager TransactionManager, objectStore s3.ObjectStore, chatBucket string, broker messaging.MessageBroker, outboxNotifier messaging.OutboxNotifier, bridgeEmailSender domain.EmailSender, inboundEmailDomain string) domain.ConversationSvc {
 	// Rates are static, known-valid configs, so a construction error is a programming error: fail fast at init.
 	sendLimiter, err := ratelimit.New(&ratelimit.Config{Capacity: 300, RefillPerSec: 50})
 	if err != nil {
@@ -80,6 +85,7 @@ func NewConversationSvc(repoFactory domain.RepoFactory, txManager TransactionMan
 		customerSendLimiter: customerSendLimiter,
 		createLimiter:       createLimiter,
 		bridgeEmailSender:   bridgeEmailSender,
+		inboundEmailDomain:  inboundEmailDomain,
 	}
 }
 

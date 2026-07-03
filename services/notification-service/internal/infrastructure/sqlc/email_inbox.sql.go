@@ -116,6 +116,32 @@ func (q *Queries) GetEmailInboxByID(ctx context.Context, arg GetEmailInboxByIDPa
 	return i, err
 }
 
+const getEmailInboxByIDSystem = `-- name: GetEmailInboxByIDSystem :one
+SELECT id, account_id, email_domain_id, address, from_name, status, agent_config_id, agent_trigger_policy, agent_trigger_keywords, created_at, updated_at FROM email_inbox
+WHERE id = ?
+`
+
+// Inbound routing (system, no account scope): resolve the inbox whose per-inbox forwarding address
+// (<inbox_id>@<inbound domain>) a forwarded email was delivered to. IDs are globally unique.
+func (q *Queries) GetEmailInboxByIDSystem(ctx context.Context, id string) (EmailInbox, error) {
+	row := q.db.QueryRowContext(ctx, getEmailInboxByIDSystem, id)
+	var i EmailInbox
+	err := row.Scan(
+		&i.ID,
+		&i.AccountID,
+		&i.EmailDomainID,
+		&i.Address,
+		&i.FromName,
+		&i.Status,
+		&i.AgentConfigID,
+		&i.AgentTriggerPolicy,
+		&i.AgentTriggerKeywords,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const listEmailInboxesByAccount = `-- name: ListEmailInboxesByAccount :many
 SELECT id, account_id, email_domain_id, address, from_name, status, agent_config_id, agent_trigger_policy, agent_trigger_keywords, created_at, updated_at FROM email_inbox
 WHERE account_id = ?

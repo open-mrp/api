@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.33.0](https://github.com/Augno/api/compare/v0.32.2...v0.33.0) (2026-07-03)
+
+
+### Features
+
+* add support for per-inbox forwarding addresses in email service ([7de11cc](https://github.com/Augno/api/commit/7de11ccd53d5af52e721e9e0aa97817973a0e430))
+
 ## [0.32.2](https://github.com/Augno/api/compare/v0.32.1...v0.32.2) (2026-07-02)
 
 

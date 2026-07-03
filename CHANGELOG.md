@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.34.0](https://github.com/Augno/api/compare/v0.33.0...v0.34.0) (2026-07-03)
+
+
+### Features
+
+* add group ID support for email inboxes to manage messaging groups ([fbff4bc](https://github.com/Augno/api/commit/fbff4bc2ce0db212bcb3ec76e7b4573a4e01a68c))
+
 ## [0.33.0](https://github.com/Augno/api/compare/v0.32.2...v0.33.0) (2026-07-03)
 
 

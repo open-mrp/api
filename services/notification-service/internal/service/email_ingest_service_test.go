@@ -125,6 +125,41 @@ func TestCreateEmailThreadConversation_SeatsGroupMembersDeduped(t *testing.T) {
 	assert.ElementsMatch(t, []string{"agdf_inbox", "agdf_extra"}, seatedAgents)
 }
 
+func TestExternalSenderMetadata_RoundTrip(t *testing.T) {
+	meta := marshalExternalSenderMeta("  Jane Doe  ", "  jane@x.com  ")
+	name, addr := externalSenderFromMetadata(meta)
+	assert.Equal(t, "Jane Doe", name)
+	assert.Equal(t, "jane@x.com", addr)
+	assert.Equal(t, "Jane Doe <jane@x.com>", externalSenderLabel(name, addr))
+
+	assert.Equal(t, "bob@x.com", externalSenderLabel("", "bob@x.com"), "address-only falls back to the address")
+	assert.Nil(t, marshalExternalSenderMeta("", ""), "no sender → no metadata (column stays NULL)")
+
+	n, a := externalSenderFromMetadata(nil)
+	assert.Empty(t, n)
+	assert.Empty(t, a)
+}
+
+func TestResolveSenders_ExternalEmailAttribution(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	// An inbound email has no participant author; the sender lives on the message metadata, not a roster row.
+	participantRepo := repositorymock.NewMockParticipantRepo(ctrl)
+	participantRepo.EXPECT().ListAll(gomock.Any(), "cv_x").
+		Return([]*domain.ConversationParticipant{}, nil).AnyTimes()
+	factory := factorymock.NewMockRepoFactory(ctrl)
+	factory.EXPECT().NewParticipantRepo().Return(participantRepo).AnyTimes()
+	svc := &conversationSvcImpl{repoFactory: factory}
+
+	msg := &domain.Message{
+		ID:             "mg_x",
+		ConversationID: "cv_x",
+		Metadata:       marshalExternalSenderMeta("Carl Customer", "carl@customer.com"),
+	}
+	svc.resolveSenders(context.Background(), "cv_x", "ac_x", []*domain.Message{msg}, false)
+	require.NotNil(t, msg.SenderDisplayName, "the external email sender must be surfaced as a display name")
+	assert.Equal(t, "Carl Customer <carl@customer.com>", *msg.SenderDisplayName)
+}
+
 func TestIngestInboundEmail_DedupAlreadyIngested(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	inboxRepo := repositorymock.NewMockEmailInboxRepo(ctrl)

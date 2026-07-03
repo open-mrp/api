@@ -1355,6 +1355,14 @@ func (s *conversationSvcImpl) dispatchAgents(ctx context.Context, f domain.RepoF
 	if msg.Body != nil {
 		body = *msg.Body
 	}
+	// The message handed to the agent as its trigger. For an inbound email the sender is an external
+	// customer (not a participant), so attribute the body with who wrote it — otherwise the agent replies
+	// blind, not knowing the customer. Kept separate from `body` so trigger-keyword matching still runs
+	// against the raw customer text, not the prefix.
+	agentMessage := body
+	if name, addr := externalSenderFromMetadata(msg.Metadata); name != "" || addr != "" {
+		agentMessage = fmt.Sprintf("%s (received via email) wrote:\n\n%s", externalSenderLabel(name, addr), body)
+	}
 	// Replying directly to an agent's message addresses that agent — continue the run that produced the replied-to message (no re-mention needed), iMessage-style. Resolve the reply target once.
 	replyAgentConfigID, replyRunID := s.replyTargetAgent(ctx, f, conversationID, accountID, msg)
 
@@ -1401,7 +1409,7 @@ func (s *conversationSvcImpl) dispatchAgents(ctx context.Context, f domain.RepoF
 			AgentDefinitionID: *p.AgentConfigID,
 			ConversationID:    conversationID,
 			TriggerMessageID:  triggerMessageID,
-			Message:           body,
+			Message:           agentMessage,
 			History:           hist,
 			ContinueRunID:     continueRunID,
 		}); apiErr != nil {
@@ -1499,6 +1507,9 @@ func (s *conversationSvcImpl) buildChatHistory(ctx context.Context, conversation
 			e.agentConfigID = *m.SenderAgentConfigID
 		} else if m.SenderAccountUserID != nil {
 			e.name = resolveName(*m.SenderAccountUserID)
+		} else if m.SenderDisplayName != nil && *m.SenderDisplayName != "" {
+			// An inbound email turn: attribute it to the external sender resolveSenders surfaced, so the agent knows who wrote each prior message rather than seeing an unattributed body.
+			e.name = *m.SenderDisplayName
 		}
 		entries = append(entries, e)
 	}
@@ -1967,6 +1978,14 @@ func (s *conversationSvcImpl) resolveSenders(ctx context.Context, conversationID
 			}
 			if name != "" {
 				m.SenderDisplayName = &name
+			}
+		}
+		// An inbound email has no participant author (the customer is external); its sender was stashed on
+		// the message metadata at ingest. Surface it as the display name so the timeline shows who wrote it.
+		if author == nil {
+			if name, addr := externalSenderFromMetadata(m.Metadata); name != "" || addr != "" {
+				label := externalSenderLabel(name, addr)
+				m.SenderDisplayName = &label
 			}
 		}
 	}

@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log/slog"
 	"strings"
 	"time"
@@ -12,6 +14,56 @@ import (
 	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/tracing"
 )
+
+// messageExternalSender is stashed on an inbound email message's metadata so the read, chat-history, and
+// agent-dispatch paths can attribute the sender. The emailing customer is an external party, not a
+// conversation participant, so the usual participant-based sender resolution (resolveSenders) finds no
+// author and the message would otherwise be a bare, unattributed body — leaving the agent (and the UI)
+// unable to tell who wrote it.
+type messageExternalSender struct {
+	Name    string `json:"external_sender_name,omitempty"`
+	Address string `json:"external_sender_address,omitempty"`
+}
+
+// marshalExternalSenderMeta encodes an inbound email's sender for stashing on message.metadata. Returns nil when neither name nor address is known (so the metadata column stays NULL).
+func marshalExternalSenderMeta(name, address string) json.RawMessage {
+	name = strings.TrimSpace(name)
+	address = strings.TrimSpace(address)
+	if name == "" && address == "" {
+		return nil
+	}
+	b, err := json.Marshal(messageExternalSender{Name: name, Address: address})
+	if err != nil {
+		return nil
+	}
+	return b
+}
+
+// externalSenderFromMetadata reads a stashed external sender back off a message's metadata. Returns empty strings for any message that carries none (every non-email message).
+func externalSenderFromMetadata(meta json.RawMessage) (name, address string) {
+	if len(meta) == 0 {
+		return "", ""
+	}
+	var s messageExternalSender
+	if err := json.Unmarshal(meta, &s); err != nil {
+		return "", ""
+	}
+	return s.Name, s.Address
+}
+
+// externalSenderLabel renders a sender for display/attribution: "Name <addr>", or whichever part is known.
+func externalSenderLabel(name, address string) string {
+	name = strings.TrimSpace(name)
+	address = strings.TrimSpace(address)
+	switch {
+	case name != "" && address != "":
+		return fmt.Sprintf("%s <%s>", name, address)
+	case name != "":
+		return name
+	default:
+		return address
+	}
+}
 
 // IngestInboundEmail threads a parsed inbound email into the conversation bound to its inbox, records it in the email_message ledger for at-least-once dedup, and dispatches it to the inbox's agent.
 // It is a system operation (no caller identity): the account is taken from the resolved inbox.
@@ -99,7 +151,9 @@ func (s *conversationSvcImpl) IngestInboundEmail(ctx context.Context, in domain.
 			ClientMessageID: &clientMsgID,
 			Body:            &body,
 			Preview:         strPtrIfNotEmpty(messagePreview(&body, 0, false)),
-			CreatedAt:       now,
+			// Stash the external sender so read/history/agent-dispatch can attribute it — the customer isn't a participant, so participant-based sender resolution finds no author.
+			Metadata:  marshalExternalSenderMeta(in.FromName, in.From),
+			CreatedAt: now,
 		}
 		inserted, createErr := f.NewMessageRepo().Create(txCtx, msg)
 		if createErr != nil {

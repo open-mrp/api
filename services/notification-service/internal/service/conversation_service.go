@@ -2378,6 +2378,11 @@ func (s *conversationSvcImpl) MarkConversationRead(ctx context.Context, conversa
 		if apiErr := s.repoFactory.NewParticipantRepo().AdvanceReadCursorByID(ctx, part.ID, "", target); apiErr != nil {
 			return 0, tracing.Trace(span, apiErr)
 		}
+		// The cursor genuinely advanced — tell the other participants so their read receipts ("Seen")
+		// update live. Reuse conversation.updated (clients refetch the conversation, picking up every
+		// participant's read cursor). Gated on an actual advance so routine re-marks — e.g. focusing an
+		// already-read thread — don't fan a broadcast out to everyone.
+		s.fanoutConversationEvent(ctx, conversationID, accountID, "conversation.updated", "")
 	}
 
 	effectiveCursor := part.LastReadSequence

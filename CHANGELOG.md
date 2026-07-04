@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.39.0](https://github.com/Augno/api/compare/v0.38.1...v0.39.0) (2026-07-04)
+
+
+### Features
+
+* add DeleteEmailDomain functionality to EmailBridgeService ([#404](https://github.com/Augno/api/issues/404)) ([444f917](https://github.com/Augno/api/commit/444f9171dfcee60c91986f90c21df052e99f9c9f))
+
+
+### Bug Fixes
+
+* implement SwitchAccountDefaultAddressToRelation method to manage default address transitions for non-active accounts ([6a712b0](https://github.com/Augno/api/commit/6a712b04792389914e39f6da2b6fec1e85b38af6))
+
 ## [0.38.1](https://github.com/Augno/api/compare/v0.38.0...v0.38.1) (2026-07-03)
 
 

@@ -34,8 +34,9 @@ func (q *Queries) CheckAddressInAccount(ctx context.Context, arg CheckAddressInA
 
 const checkAddressUsedAsAccountDefault = `-- name: CheckAddressUsedAsAccountDefault :one
 SELECT a.name FROM account a
-WHERE a.default_billing_address_id = ?
-   OR a.default_shipping_address_id = ?
+WHERE (a.default_billing_address_id = ?
+    OR a.default_shipping_address_id = ?)
+  AND a.onboarding_status_code = 'active'
 LIMIT 1
 `
 
@@ -43,6 +44,10 @@ type CheckAddressUsedAsAccountDefaultParams struct {
 	AddressID sql.NullString
 }
 
+// Only an active account's default billing/shipping address blocks deletion. A
+// non-active (e.g. unclaimed, vendor-managed) account's default does not: the address
+// can be deleted and its account defaults are switched over to the account-relation
+// defaults by SwitchAccountDefaultAddressToRelation.
 func (q *Queries) CheckAddressUsedAsAccountDefault(ctx context.Context, arg CheckAddressUsedAsAccountDefaultParams) (string, error) {
 	row := q.db.QueryRowContext(ctx, checkAddressUsedAsAccountDefault, arg.AddressID, arg.AddressID)
 	var name string
@@ -699,6 +704,51 @@ func (q *Queries) ListAddressesForward(ctx context.Context, arg ListAddressesFor
 		return nil, err
 	}
 	return items, nil
+}
+
+const switchAccountDefaultAddressToRelation = `-- name: SwitchAccountDefaultAddressToRelation :exec
+UPDATE account a
+SET default_billing_address_id = CASE
+        WHEN a.default_billing_address_id = ? THEN (
+            SELECT ar.default_billing_address_id FROM account_relation ar
+            WHERE ar.counterparty_account_id = a.id
+              AND ar.default_billing_address_id IS NOT NULL
+              AND ar.default_billing_address_id <> ?
+            ORDER BY ar.created_at ASC, ar.id ASC LIMIT 1)
+        ELSE a.default_billing_address_id END,
+    default_shipping_address_id = CASE
+        WHEN a.default_shipping_address_id = ? THEN (
+            SELECT ar.default_shipping_address_id FROM account_relation ar
+            WHERE ar.counterparty_account_id = a.id
+              AND ar.default_shipping_address_id IS NOT NULL
+              AND ar.default_shipping_address_id <> ?
+            ORDER BY ar.created_at ASC, ar.id ASC LIMIT 1)
+        ELSE a.default_shipping_address_id END,
+    updated_at = NOW(3)
+WHERE a.default_billing_address_id = ?
+   OR a.default_shipping_address_id = ?
+`
+
+type SwitchAccountDefaultAddressToRelationParams struct {
+	AddressID sql.NullString
+}
+
+// When a non-active account's default billing/shipping address is deleted, realign each
+// affected default to the account-relation default (owner→this account), so the account
+// keeps a valid default instead of a dangling pointer (there are no FKs to cascade). The
+// relation default is only adopted when it exists and is not the address being deleted;
+// otherwise the pointer falls back to NULL. Only the column(s) that pointed at the deleted
+// address are touched. For a non-active (unclaimed) account there is exactly one relation.
+func (q *Queries) SwitchAccountDefaultAddressToRelation(ctx context.Context, arg SwitchAccountDefaultAddressToRelationParams) error {
+	_, err := q.db.ExecContext(ctx, switchAccountDefaultAddressToRelation,
+		arg.AddressID,
+		arg.AddressID,
+		arg.AddressID,
+		arg.AddressID,
+		arg.AddressID,
+		arg.AddressID,
+	)
+	return err
 }
 
 const updateAddress = `-- name: UpdateAddress :execresult

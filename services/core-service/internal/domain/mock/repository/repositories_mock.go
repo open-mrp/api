@@ -3766,6 +3766,20 @@ func (mr *MockAddressRepoMockRecorder) RelinkGeolocation(ctx, addressID, geoloca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RelinkGeolocation", reflect.TypeOf((*MockAddressRepo)(nil).RelinkGeolocation), ctx, addressID, geolocationID)
 }
 
+// SwitchAccountDefaultAddressToRelation mocks base method.
+func (m *MockAddressRepo) SwitchAccountDefaultAddressToRelation(ctx context.Context, addressID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SwitchAccountDefaultAddressToRelation", ctx, addressID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SwitchAccountDefaultAddressToRelation indicates an expected call of SwitchAccountDefaultAddressToRelation.
+func (mr *MockAddressRepoMockRecorder) SwitchAccountDefaultAddressToRelation(ctx, addressID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SwitchAccountDefaultAddressToRelation", reflect.TypeOf((*MockAddressRepo)(nil).SwitchAccountDefaultAddressToRelation), ctx, addressID)
+}
+
 // Update mocks base method.
 func (m *MockAddressRepo) Update(ctx context.Context, params domain.UpdateAddressParams) (*domain.Address, *apierror.APIError) {
 	m.ctrl.T.Helper()

@@ -541,7 +541,16 @@ func (s *addressSvcImpl) DeleteAddress(ctx context.Context, params domain.Delete
 			return apiErr
 		}
 
-		if apiErr := txSvc.repos.NewAddressRepo().Delete(txCtx, params); apiErr != nil {
+		txRepo := txSvc.repos.NewAddressRepo()
+
+		// A non-active account may still default to this address (CheckAddressNotInUse only blocks
+		// active-account defaults). Switch those defaults over to the account-relation defaults first
+		// so the account keeps a valid default instead of a pointer to the row we're about to delete.
+		if apiErr := txRepo.SwitchAccountDefaultAddressToRelation(txCtx, params.AddressID); apiErr != nil {
+			return apiErr
+		}
+
+		if apiErr := txRepo.Delete(txCtx, params); apiErr != nil {
 			return apiErr
 		}
 

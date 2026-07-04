@@ -475,6 +475,19 @@ func (r *addressRepoImpl) CheckAddressNotInUse(ctx context.Context, addressID st
 	return nil
 }
 
+func (r *addressRepoImpl) SwitchAccountDefaultAddressToRelation(ctx context.Context, addressID string) *apierror.APIError {
+	ctx, span := addressRepoTracer.Start(ctx, "repository.address.switch_account_default_to_relation")
+	defer span.End()
+
+	err := r.queries.SwitchAccountDefaultAddressToRelation(ctx, sqlc.SwitchAccountDefaultAddressToRelationParams{
+		AddressID: gosql.NullString{String: addressID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
+}
+
 func toNullBool(b *bool) gosql.NullBool {
 	if b == nil {
 		return gosql.NullBool{}

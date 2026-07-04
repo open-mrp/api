@@ -182,20 +182,20 @@ INSERT IGNORE INTO role_permission (id, role_id, permission_code, `create`, `rea
 INSERT IGNORE INTO role (id, name, role_type_code, account_id, created_at, updated_at) VALUES
     ('rl_7vafmsquekgt', 'Customer', 'user', NULL, NOW(), NOW());
 
--- Customer role permissions (portal capabilities: enter/view orders, manage own
--- addresses/profile, view catalog/invoices/shipments, messaging).
+-- Customer role permissions. Only two are functionally REQUIRED by the portal:
+-- addresses:create/read/update (own-account address book) and purchase_orders:create
+-- (order entry). The remaining reads are inert today (those portal calls run as a
+-- relation actor and are relation-scoped, so the permission is never consulted) and
+-- are kept only as future-proofing. Keep in sync with cmd/backfill-customer-role.
 INSERT IGNORE INTO role_permission (id, role_id, permission_code, `create`, `read`, `update`, `delete`, created_at, updated_at) VALUES
-    ('rlpm_customer_purord0', 'rl_7vafmsquekgt', 'purchase_orders', 1, 1, 1, 0, NOW(), NOW()),
+    ('rlpm_customer_addr000', 'rl_7vafmsquekgt', 'addresses', 1, 1, 1, 0, NOW(), NOW()),
+    ('rlpm_customer_purord0', 'rl_7vafmsquekgt', 'purchase_orders', 1, 1, 0, 0, NOW(), NOW()),
     ('rlpm_customer_salord0', 'rl_7vafmsquekgt', 'sales_orders', 0, 1, 0, 0, NOW(), NOW()),
-    ('rlpm_customer_addr000', 'rl_7vafmsquekgt', 'addresses', 1, 1, 1, 1, NOW(), NOW()),
-    ('rlpm_customer_self000', 'rl_7vafmsquekgt', 'self', 0, 1, 1, 0, NOW(), NOW()),
-    ('rlpm_customer_accts00', 'rl_7vafmsquekgt', 'accounts', 0, 1, 1, 0, NOW(), NOW()),
-    ('rlpm_customer_contac0', 'rl_7vafmsquekgt', 'contacts', 0, 1, 1, 0, NOW(), NOW()),
     ('rlpm_customer_prods00', 'rl_7vafmsquekgt', 'products', 0, 1, 0, 0, NOW(), NOW()),
     ('rlpm_customer_invoic0', 'rl_7vafmsquekgt', 'invoices', 0, 1, 0, 0, NOW(), NOW()),
     ('rlpm_customer_ship000', 'rl_7vafmsquekgt', 'shipments', 0, 1, 0, 0, NOW(), NOW()),
     ('rlpm_customer_disc000', 'rl_7vafmsquekgt', 'discounts', 0, 1, 0, 0, NOW(), NOW()),
-    ('rlpm_customer_msg0000', 'rl_7vafmsquekgt', 'messaging', 1, 1, 0, 0, NOW(), NOW());
+    ('rlpm_customer_msg0000', 'rl_7vafmsquekgt', 'messaging', 0, 1, 0, 0, NOW(), NOW());
 
 -- Users
 -- us_fltactor3 is a third member used only as a distinct request-log actor so the

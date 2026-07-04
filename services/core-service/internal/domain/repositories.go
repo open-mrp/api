@@ -325,6 +325,12 @@ type AddressRepo interface {
 	UpdateGeolocation(ctx context.Context, geolocationID string, params UpdateAddressParams) *apierror.APIError
 	RelinkGeolocation(ctx context.Context, addressID, geolocationID string) *apierror.APIError
 	CheckAddressNotInUse(ctx context.Context, addressID string) *apierror.APIError
+	// SwitchAccountDefaultAddressToRelation realigns any account default billing/shipping pointer at
+	// the given address to the account-relation default (owner→this account), falling back to NULL
+	// when the relation has no usable default. It keeps a non-active account from being left with a
+	// dangling default when the address is deleted (there are no FKs to cascade). Call inside the
+	// delete transaction.
+	SwitchAccountDefaultAddressToRelation(ctx context.Context, addressID string) *apierror.APIError
 }
 
 type AccountStatusRepo interface {

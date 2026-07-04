@@ -298,17 +298,27 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 			txAccountUserRepo := txSvc.repos.NewAccountUserRepo()
 			txRoleRepo := txSvc.repos.NewRoleRepo()
 
-			// Scanning station users must always use the scanner role, regardless of what was provided.
-			if isScanningStation {
+			// Determine the new user's role, in precedence order.
+			switch {
+			case identity.IsTargetCustomerAccount():
+				// Users added to a customer (portal) account always get the global
+				// Customer role so their portal capabilities are permission-driven.
+				// This takes precedence over any provided/inferred role — customer
+				// accounts don't use scanner or sales-rep roles — and mirrors the
+				// portal self-registration path.
+				customerRoleID := constants.GlobalCustomerRoleID
+				params.RoleID = &customerRoleID
+
+			case isScanningStation:
+				// Scanning station users must always use the scanner role, regardless of what was provided.
 				scannerRole, apiErr := txRoleRepo.FindByTypeCode(txCtx, string(constants.RoleTypeScanner), params.AccountID)
 				if apiErr != nil {
 					return apiErr
 				}
 				params.RoleID = &scannerRole.ID
-			}
 
-			// Sales-rep inference (mirrors Express): when the caller provides a role whose type is sales_rep, normalize to the canonical sales-rep role for the account. Skipped on the scanner path because the role has already been forced above.
-			if !isScanningStation && params.RoleID != nil {
+			case params.RoleID != nil:
+				// Sales-rep inference (mirrors Express): when the caller provides a role whose type is sales_rep, normalize to the canonical sales-rep role for the account.
 				providedRole, apiErr := txRoleRepo.Get(txCtx, *params.RoleID, params.AccountID)
 				if apiErr != nil {
 					return apiErr

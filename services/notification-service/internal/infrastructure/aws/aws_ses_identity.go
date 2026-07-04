@@ -56,3 +56,15 @@ func (s *sesIdentityProviderImpl) DomainVerified(ctx context.Context, domainName
 	}
 	return attr.DkimVerificationStatus == sestypes.VerificationStatusSuccess, nil
 }
+
+func (s *sesIdentityProviderImpl) DeleteDomain(ctx context.Context, domainName string) *apierror.APIError {
+	ctx, span := sesIdentityTracer.Start(ctx, "aws.ses_identity.delete_domain")
+	defer span.End()
+
+	// DeleteIdentity is idempotent: SES returns success even when the identity no longer exists, so a
+	// retried domain deletion is safe.
+	if _, err := s.client.DeleteIdentity(ctx, &ses.DeleteIdentityInput{Identity: &domainName}); err != nil {
+		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to delete the email domain identity from SES."))
+	}
+	return nil
+}

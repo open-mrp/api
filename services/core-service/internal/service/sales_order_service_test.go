@@ -175,6 +175,13 @@ func salesOrderInternalCtx(accountID string) context.Context {
 }
 
 func salesOrderCustomerCtx(targetAccountID, customerAccountID string) context.Context {
+	return salesOrderCustomerCtxWithPerms(targetAccountID, customerAccountID, map[string]bool{})
+}
+
+// salesOrderCustomerCtxWithPerms builds a customer relation-actor identity that
+// carries its own-account permissions (mirrors the post-redesign auth mediator,
+// which no longer strips a counterparty-side customer's permissions).
+func salesOrderCustomerCtxWithPerms(targetAccountID, customerAccountID string, perms map[string]bool) context.Context {
 	return appctx.WithIdentity(context.Background(), &types.Identity{
 		Type:   types.IdentityActorTypeUser,
 		Target: &types.IdentityTarget{AccountID: targetAccountID},
@@ -182,7 +189,7 @@ func salesOrderCustomerCtx(targetAccountID, customerAccountID string) context.Co
 			RelationType: types.IdentityRelationTypeCustomer,
 			ID:           "usr_customer",
 			AccountID:    &customerAccountID,
-			Permissions:  map[string]bool{},
+			Permissions:  perms,
 		},
 	})
 }
@@ -519,6 +526,54 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_RejectsNonInternalActo
 	suite.NotNil(apiErr)
 	// CheckIsInternalActor returns an auth / permission-ish error; assert we reject the request.
 	suite.NotEqual(apierror.ErrorCodeResourceNotFound, apiErr.Code)
+}
+
+// A customer entering an order for their own account but WITHOUT purchase_orders:create
+// is rejected at the authorization gate (before any repo work).
+func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_CustomerWithoutPurchaseOrderPermissionRejected() {
+	ctx := salesOrderCustomerCtxWithPerms("ac_target", "ac_customer", map[string]bool{})
+
+	params := baseCreateOrderParams()
+	params.BuyerAccountID = "ac_customer" // self-scope satisfied, so we reach the permission check
+
+	_, apiErr := suite.svc.CreateSalesOrder(ctx, params)
+	suite.Require().NotNil(apiErr)
+	suite.Equal(apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+}
+
+// A customer holding purchase_orders:create for their own buyer account clears
+// authorization; we prove it by letting the flow proceed to (and fail at) the
+// plan-limit stage, which runs only after the auth switch passes.
+func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_CustomerWithPurchaseOrderPermissionPassesAuthorization() {
+	ctx := salesOrderIdempotencyCtx(
+		salesOrderCustomerCtxWithPerms("ac_target", "ac_customer", map[string]bool{"purchase_orders:create": true}),
+		"/core.CoreService/CreateSalesOrder",
+	)
+
+	// Customer note-fold lookup (no note → nothing folded).
+	suite.customerRepo.EXPECT().Get(gomock.Any(), "ac_target", "ac_customer", gomock.Any()).
+		Return(&domain.Customer{}, nil).Times(1)
+
+	// Plan limit exceeded → rejected AFTER authorization, on the target account.
+	planID := "plan_basic"
+	periodEnd := time.Now().Add(15 * 24 * time.Hour)
+	max := int32(10)
+	suite.accountRepo.EXPECT().GetAccountContext(gomock.Any(), "ac_target").
+		Return(&domain.AccountContext{IsSandbox: false}, nil).Times(1)
+	suite.accountRepo.EXPECT().GetPlanIDAndPeriodEnd(gomock.Any(), "ac_target").
+		Return(&planID, &periodEnd, nil).Times(1)
+	suite.accountRepo.EXPECT().ListPlanLimits(gomock.Any(), planID).
+		Return(map[string]*int32{"invoices_maximum": &max}, nil).Times(1)
+	suite.invoiceRepo.EXPECT().CountSince(gomock.Any(), "ac_target", gomock.Any()).
+		Return(int64(10), nil).Times(1)
+
+	params := baseCreateOrderParams()
+	params.BuyerAccountID = "ac_customer"
+
+	_, apiErr := suite.svc.CreateSalesOrder(ctx, params)
+	suite.Require().NotNil(apiErr)
+	// Not an auth rejection — we reached and failed the plan-limit check.
+	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
 }
 
 func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_PlanLimitExceeded_NonSandbox() {

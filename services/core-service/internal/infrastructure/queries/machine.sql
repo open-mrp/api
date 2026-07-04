@@ -82,6 +82,7 @@ AND d.account_id = sqlc.arg('account_id');
 -- name: InsertMachine :exec
 INSERT INTO machine (
     id,
+    account_id,
     name,
     serial_number,
     notes,
@@ -91,6 +92,7 @@ INSERT INTO machine (
     updated_at
 ) VALUES (
     sqlc.arg('id'),
+    sqlc.arg('account_id'),
     sqlc.arg('name'),
     sqlc.arg('serial_number'),
     sqlc.narg('notes'),

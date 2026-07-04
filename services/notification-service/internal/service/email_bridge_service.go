@@ -115,6 +115,45 @@ func (s *emailBridgeSvcImpl) VerifyDomain(ctx context.Context, domainID string) 
 	return s.repoFactory.NewEmailDomainRepo().GetByID(ctx, domainID, accountID)
 }
 
+func (s *emailBridgeSvcImpl) DeleteDomain(ctx context.Context, domainID string) *apierror.APIError {
+	ctx, span := emailBridgeSvcTracer.Start(ctx, "service.email_bridge.delete_domain")
+	defer span.End()
+	accountID, apiErr := s.accountID(ctx)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	// Resolve the domain first so we can enforce ownership and read its name for the SES identity delete.
+	dom, apiErr := s.repoFactory.NewEmailDomainRepo().GetByID(ctx, domainID, accountID)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	// A domain with inboxes on it can't be deleted — the inboxes would be left orphaned and unroutable.
+	inboxCount, apiErr := s.repoFactory.NewEmailInboxRepo().CountByDomain(ctx, accountID, domainID)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if inboxCount > 0 {
+		return tracing.Trace(span, apierror.NewConflictErrorWithParam("Delete the inboxes on this domain before deleting the domain.", "id"))
+	}
+
+	// Delete the SES identity first (foreign mutation). It is idempotent, so if the row delete below fails
+	// the whole operation can be retried safely.
+	if apiErr := s.identityProvider.DeleteDomain(ctx, dom.Domain); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	deleted, apiErr := s.repoFactory.NewEmailDomainRepo().Delete(ctx, domainID, accountID)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if !deleted {
+		return tracing.Trace(span, apierror.NewResourceNotFoundError("Email domain not found."))
+	}
+	return nil
+}
+
 func (s *emailBridgeSvcImpl) CreateInbox(ctx context.Context, input domain.CreateEmailInboxInput) (*domain.EmailInbox, *apierror.APIError) {
 	ctx, span := emailBridgeSvcTracer.Start(ctx, "service.email_bridge.create_inbox")
 	defer span.End()

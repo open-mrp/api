@@ -16,3 +16,7 @@ func (p *EmailIdentityProvider) RegisterDomain(_ context.Context, _ string) ([]s
 func (p *EmailIdentityProvider) DomainVerified(_ context.Context, _ string) (bool, *apierror.APIError) {
 	return true, nil
 }
+
+func (p *EmailIdentityProvider) DeleteDomain(_ context.Context, _ string) *apierror.APIError {
+	return nil
+}

@@ -45,6 +45,10 @@ func (p *stubIdentityProvider) DomainVerified(_ context.Context, _ string) (bool
 	return p.verified, nil
 }
 
+func (p *stubIdentityProvider) DeleteDomain(_ context.Context, _ string) *apierror.APIError {
+	return nil
+}
+
 func newEmailBridgeSvc(t *testing.T, domainRepo *repositorymock.MockEmailDomainRepo, inboxRepo *repositorymock.MockEmailInboxRepo, provider domain.EmailIdentityProvider) *emailBridgeSvcImpl {
 	t.Helper()
 	ctrl := gomock.NewController(t)
@@ -104,6 +108,37 @@ func TestVerifyDomain_FlipsWhenSESConfirms(t *testing.T) {
 	dom, apiErr := svc.VerifyDomain(emailBridgeCtx(), "emdn_1")
 	require.Nil(t, apiErr)
 	assert.Equal(t, domain.EmailDomainStatusVerified, dom.Status)
+}
+
+func TestDeleteDomain_BlocksWhenInboxesExist(t *testing.T) {
+	domainRepo := repositorymock.NewMockEmailDomainRepo(gomock.NewController(t))
+	inboxRepo := repositorymock.NewMockEmailInboxRepo(gomock.NewController(t))
+	domainRepo.EXPECT().GetByID(gomock.Any(), "emdn_1", ebTestAccountID).Return(&domain.EmailDomain{
+		ID: "emdn_1", AccountID: ebTestAccountID, Domain: "theirco.com", Status: domain.EmailDomainStatusVerified,
+	}, nil)
+	inboxRepo.EXPECT().CountByDomain(gomock.Any(), ebTestAccountID, "emdn_1").Return(int64(2), nil)
+	// The SES identity must not be deleted and the row must not be removed while inboxes remain.
+	svc := newEmailBridgeSvc(t, domainRepo, inboxRepo, &stubIdentityProvider{})
+
+	apiErr := svc.DeleteDomain(emailBridgeCtx(), "emdn_1")
+	require.NotNil(t, apiErr)
+	assert.Equal(t, apierror.ErrorCodeResourceConflict, apiErr.Code)
+}
+
+func TestDeleteDomain_DeletesWhenNoInboxes(t *testing.T) {
+	domainRepo := repositorymock.NewMockEmailDomainRepo(gomock.NewController(t))
+	inboxRepo := repositorymock.NewMockEmailInboxRepo(gomock.NewController(t))
+	gomock.InOrder(
+		domainRepo.EXPECT().GetByID(gomock.Any(), "emdn_1", ebTestAccountID).Return(&domain.EmailDomain{
+			ID: "emdn_1", AccountID: ebTestAccountID, Domain: "theirco.com", Status: domain.EmailDomainStatusVerified,
+		}, nil),
+		inboxRepo.EXPECT().CountByDomain(gomock.Any(), ebTestAccountID, "emdn_1").Return(int64(0), nil),
+		domainRepo.EXPECT().Delete(gomock.Any(), "emdn_1", ebTestAccountID).Return(true, nil),
+	)
+	svc := newEmailBridgeSvc(t, domainRepo, inboxRepo, &stubIdentityProvider{})
+
+	apiErr := svc.DeleteDomain(emailBridgeCtx(), "emdn_1")
+	require.Nil(t, apiErr)
 }
 
 func TestVerifyDomain_NoFlipWhenSESPending(t *testing.T) {

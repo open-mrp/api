@@ -188,18 +188,24 @@ func (q *Queries) InsertAccountRelationForCustomer(ctx context.Context, arg Inse
 }
 
 const insertAccountUserForCustomerRegistration = `-- name: InsertAccountUserForCustomerRegistration :exec
-INSERT INTO account_user (id, account_id, user_id, last_used_at, created_at, updated_at)
-VALUES (?, ?, ?, NOW(3), NOW(3), NOW(3))
+INSERT INTO account_user (id, account_id, user_id, role_id, last_used_at, created_at, updated_at)
+VALUES (?, ?, ?, ?, NOW(3), NOW(3), NOW(3))
 `
 
 type InsertAccountUserForCustomerRegistrationParams struct {
 	ID        string
 	AccountID string
 	UserID    string
+	RoleID    sql.NullString
 }
 
 func (q *Queries) InsertAccountUserForCustomerRegistration(ctx context.Context, arg InsertAccountUserForCustomerRegistrationParams) error {
-	_, err := q.db.ExecContext(ctx, insertAccountUserForCustomerRegistration, arg.ID, arg.AccountID, arg.UserID)
+	_, err := q.db.ExecContext(ctx, insertAccountUserForCustomerRegistration,
+		arg.ID,
+		arg.AccountID,
+		arg.UserID,
+		arg.RoleID,
+	)
 	return err
 }
 

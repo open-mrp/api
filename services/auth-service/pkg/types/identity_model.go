@@ -88,9 +88,12 @@ func (i *Identity) IsInternalActor() bool {
 
 // IsRelationActor reports whether the actor reaches the target account through a
 // customer or supplier account relation rather than as an internal member. Such
-// actors carry no permission set (their Permissions map is intentionally empty);
-// their access is relation-scoped and authorized in the downstream service, so
-// the coarse gateway permission gate must not reject them.
+// actors may carry their OWN-account role permissions (used by downstream services
+// to authorize customer-side capabilities, e.g. purchase_orders:create for a
+// portal order); those permissions apply to the actor's own account, not the
+// target owner's. Their RoleID/RoleType are cleared (no admin bypass). The coarse
+// gateway permission gate declares owner-side domains, so it must not reject
+// relation actors — their access is authorized in the downstream service.
 func (i *Identity) IsRelationActor() bool {
 	return i.IsActorSet() &&
 		(i.Actor.RelationType == IdentityRelationTypeCustomer || i.Actor.RelationType == IdentityRelationTypeSupplier)

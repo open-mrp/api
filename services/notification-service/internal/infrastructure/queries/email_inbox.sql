@@ -24,6 +24,10 @@ SELECT * FROM email_inbox
 WHERE account_id = ?
 ORDER BY created_at DESC, id DESC;
 
+-- name: CountEmailInboxesByDomain :one
+SELECT COUNT(*) FROM email_inbox
+WHERE account_id = ? AND email_domain_id = ?;
+
 -- name: UpdateEmailInbox :exec
 UPDATE email_inbox
 SET from_name = COALESCE(?, from_name), status = ?, agent_config_id = COALESCE(?, agent_config_id), agent_trigger_policy = COALESCE(?, agent_trigger_policy), agent_trigger_keywords = COALESCE(?, agent_trigger_keywords), group_id = COALESCE(?, group_id), updated_at = NOW(3)

@@ -34,8 +34,11 @@ func buildOwnedAPIKeyIdentityWithRelation(apiKeyModel *apikey.APIKey, targetAcco
 	}
 }
 
-func buildRelatedAPIKeyIdentity(apiKeyModel *apikey.APIKey, accountRelation *domain.AuthAccountRelation, actorType types.IdentityRelationType, targetAccountID string, accountMode constants.AccountMode, subscriptionStatus *string) *types.Identity {
+func buildRelatedAPIKeyIdentity(apiKeyModel *apikey.APIKey, accountRelation *domain.AuthAccountRelation, actorType types.IdentityRelationType, targetAccountID string, permissions map[string]bool, accountMode constants.AccountMode, subscriptionStatus *string) *types.Identity {
 	relationType := accountRelation.AccountRelationRoleCode
+	if permissions == nil {
+		permissions = map[string]bool{}
+	}
 	return &types.Identity{
 		Type: types.IdentityActorTypeAPIKey,
 		Target: &types.IdentityTarget{
@@ -47,9 +50,11 @@ func buildRelatedAPIKeyIdentity(apiKeyModel *apikey.APIKey, accountRelation *dom
 			ID:           apiKeyModel.TypeID,
 			Name:         &apiKeyModel.Name,
 			AccountID:    &accountRelation.CounterpartyAccountID,
-			RoleID:       nil,
-			RoleType:     nil,
-			Permissions:  map[string]bool{},
+			// RoleID/RoleType cleared so IsAdmin()/IsRoleSet() stay false; only the
+			// carried own-account permissions authorize customer/supplier-side actions.
+			RoleID:      nil,
+			RoleType:    nil,
+			Permissions: permissions,
 		},
 		AccountMode:        accountMode,
 		SubscriptionStatus: subscriptionStatus,

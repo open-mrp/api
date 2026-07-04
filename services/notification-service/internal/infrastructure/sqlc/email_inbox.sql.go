@@ -12,6 +12,23 @@ import (
 	"github.com/augno/api/shared/db"
 )
 
+const countEmailInboxesByDomain = `-- name: CountEmailInboxesByDomain :one
+SELECT COUNT(*) FROM email_inbox
+WHERE account_id = ? AND email_domain_id = ?
+`
+
+type CountEmailInboxesByDomainParams struct {
+	AccountID     string
+	EmailDomainID string
+}
+
+func (q *Queries) CountEmailInboxesByDomain(ctx context.Context, arg CountEmailInboxesByDomainParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countEmailInboxesByDomain, arg.AccountID, arg.EmailDomainID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createEmailInbox = `-- name: CreateEmailInbox :exec
 INSERT INTO email_inbox (
     id, account_id, email_domain_id, address, from_name, status,

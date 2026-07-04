@@ -131,12 +131,21 @@ func (i *Identity) CheckHasPermission(domain PermissionDomain, action Action) *a
 }
 
 // CheckHasAnyPermission passes if the identity holds AT LEAST ONE of the given permissions (or is an admin). It is the coarse "OR" gate used by the api-gateway to fast-reject callers that hold none of an endpoint's declared permissions; the precise, possibly relation-dependent check still happens in the downstream service.
+//
+// Relation actors (customer/supplier) always fail this check: their carried role
+// permissions apply to their OWN account, not the target/owner account this check
+// authorizes against, so they hold no permissions here. Customer/supplier-side
+// capabilities (e.g. a portal order) are authorized separately via
+// CheckHasRelationCapability, which reads those same carried permissions.
 func (i *Identity) CheckHasAnyPermission(perms ...Permission) *apierror.APIError {
 	if len(perms) == 0 {
 		return nil
 	}
 	if i == nil || i.Actor == nil {
 		return apierror.NewAuthorizationError("You do not have permission to access this resource.")
+	}
+	if i.IsRelationActor() {
+		return apierror.NewAuthorizationError(i.getPermissionErrorMessage(perms[0].Domain, perms[0].Action))
 	}
 	if i.IsAdmin() {
 		return nil
@@ -149,6 +158,22 @@ func (i *Identity) CheckHasAnyPermission(perms ...Permission) *apierror.APIError
 	// Reuse the single-permission message for the first declared permission; it
 	// names the domain/action the caller is missing.
 	return apierror.NewAuthorizationError(i.getPermissionErrorMessage(perms[0].Domain, perms[0].Action))
+}
+
+// CheckHasRelationCapability reports whether a customer/supplier relation actor holds
+// the given permission in their OWN account (from their carried role). Use this ONLY
+// for explicitly customer/supplier-side authorization (e.g. a portal order create);
+// never for operations scoped to the target/owner account — for those a relation actor
+// holds no permissions (see CheckHasAnyPermission). Non-relation actors are rejected so
+// callers don't accidentally use it as a general permission check.
+func (i *Identity) CheckHasRelationCapability(domain PermissionDomain, action Action) *apierror.APIError {
+	if i == nil || i.Actor == nil || !i.IsRelationActor() {
+		return apierror.NewAuthorizationError(i.getPermissionErrorMessage(domain, action))
+	}
+	if hasPerm, ok := i.Actor.Permissions[Permission{Domain: domain, Action: action}.String()]; ok && hasPerm {
+		return nil
+	}
+	return apierror.NewAuthorizationError(i.getPermissionErrorMessage(domain, action))
 }
 
 // CheckHasRoleType passes if the identity has the given role type (or is an admin, who may do anything).

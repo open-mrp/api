@@ -12,12 +12,12 @@ import (
 )
 
 // Coverage for /v1/messaging/email-domains: create -> get -> verify lifecycle
-// for SES DKIM domain registration. This resource is intentionally narrow:
-// no PATCH, no DELETE (domains are immutable once registered; only
-// status/verified_at/dkim_tokens change server-side via the verify action),
-// and no expandable fields or list query params (list is always the full,
-// unfiltered, unpaginated account result set) — those categories are marked
-// `na` in the comments below rather than silently skipped.
+// for SES DKIM domain registration, plus delete (deregistration). This resource
+// has no PATCH (a domain's mutable fields — status/verified_at/dkim_tokens —
+// change server-side only via the verify action), and no expandable fields or
+// list query params (list is always the full, unfiltered, unpaginated account
+// result set) — those categories are marked `na` in the comments below rather
+// than silently skipped.
 
 const covMessagingEmailDomainsPath = "/v1/messaging/email-domains"
 
@@ -325,19 +325,23 @@ func TestCovMessagingEmailDomains_VerifyNotFound(t *testing.T) {
 	requireErrorResponse(t, body, "resource_not_found", "invalid_request_error")
 }
 
-// TestCovMessagingEmailDomains_DeleteNotAllowed documents (rather than
-// silently omitting) that this resource has no DELETE route: it is
-// immutable once created. Method routing returns 405, not 404.
-func TestCovMessagingEmailDomains_DeleteNotAllowed(t *testing.T) {
+// TestCovMessagingEmailDomains_Delete covers deregistering a domain: DELETE
+// returns 200 and the domain is then gone (a subsequent GET is 404).
+func TestCovMessagingEmailDomains_Delete(t *testing.T) {
 	t.Parallel()
-	domain := covMessagingEmailDomainsUniqueDomain("e2e-domain-nodel")
+	domain := covMessagingEmailDomainsUniqueDomain("e2e-domain-del")
 	created := covMessagingEmailDomainsCreate(t, domain)
 	id := jsonField(created, "id")
 	require.NotEmpty(t, id)
 
 	status, body, err := apiClient.Delete(covMessagingEmailDomainsPath + "/" + id)
 	require.NoError(t, err)
-	assert.Equal(t, 405, status, "DELETE should not be routed for email domains: %s", string(body))
+	requireStatus(t, 200, status, body)
+
+	// The domain is deregistered and no longer retrievable.
+	getStatus, getBody, err := apiClient.GetListRaw(covMessagingEmailDomainsPath+"/"+id, nil)
+	require.NoError(t, err)
+	requireStatus(t, 404, getStatus, getBody)
 }
 
 // TestCovMessagingEmailDomains_NoAuth covers the unauthenticated/no-account

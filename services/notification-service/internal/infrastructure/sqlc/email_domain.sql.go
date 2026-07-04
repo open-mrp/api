@@ -34,6 +34,24 @@ func (q *Queries) CreateEmailDomain(ctx context.Context, arg CreateEmailDomainPa
 	return err
 }
 
+const deleteEmailDomain = `-- name: DeleteEmailDomain :execrows
+DELETE FROM email_domain
+WHERE id = ? AND account_id = ?
+`
+
+type DeleteEmailDomainParams struct {
+	ID        string
+	AccountID string
+}
+
+func (q *Queries) DeleteEmailDomain(ctx context.Context, arg DeleteEmailDomainParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteEmailDomain, arg.ID, arg.AccountID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const getEmailDomainByDomain = `-- name: GetEmailDomainByDomain :one
 SELECT id, account_id, domain, status, dkim_tokens, verified_at, created_at, updated_at FROM email_domain
 WHERE domain = ?

@@ -45,6 +45,7 @@ func (*EmailDomainsEndpointGroup) Materialize(config *EmailDomainsEndpointGroupC
 		apiendpoint.From(&emailbridgeep.ListEmailDomainsEndpoint{}).WithService(inner, emailBridgeSvc),
 		apiendpoint.From(&emailbridgeep.GetEmailDomainEndpoint{}).WithService(inner, emailBridgeSvc),
 		apiendpoint.From(&emailbridgeep.VerifyEmailDomainEndpoint{}).WithService(inner, emailBridgeSvc),
+		apiendpoint.From(&emailbridgeep.DeleteEmailDomainEndpoint{}).WithService(inner, emailBridgeSvc),
 	}
 
 	return &EmailDomainsEndpointGroup{inner}

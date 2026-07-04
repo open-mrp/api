@@ -232,6 +232,7 @@ func (r *machineRepoImpl) Create(ctx context.Context, id string, params domain.C
 
 	err := r.queries.InsertMachine(ctx, sqlc.InsertMachineParams{
 		ID:           id,
+		AccountID:    params.AccountID,
 		Name:         params.Name,
 		SerialNumber: params.SerialNumber,
 		Notes:        machToNullString(params.Notes),

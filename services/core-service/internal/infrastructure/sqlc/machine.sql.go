@@ -197,6 +197,7 @@ func (q *Queries) GetMachinesByIDs(ctx context.Context, arg GetMachinesByIDsPara
 const insertMachine = `-- name: InsertMachine :exec
 INSERT INTO machine (
     id,
+    account_id,
     name,
     serial_number,
     notes,
@@ -210,6 +211,7 @@ INSERT INTO machine (
     ?,
     ?,
     ?,
+    ?,
     NULL,
     NOW(3),
     NOW(3)
@@ -218,6 +220,7 @@ INSERT INTO machine (
 
 type InsertMachineParams struct {
 	ID           string
+	AccountID    string
 	Name         string
 	SerialNumber string
 	Notes        sql.NullString
@@ -227,6 +230,7 @@ type InsertMachineParams struct {
 func (q *Queries) InsertMachine(ctx context.Context, arg InsertMachineParams) error {
 	_, err := q.db.ExecContext(ctx, insertMachine,
 		arg.ID,
+		arg.AccountID,
 		arg.Name,
 		arg.SerialNumber,
 		arg.Notes,

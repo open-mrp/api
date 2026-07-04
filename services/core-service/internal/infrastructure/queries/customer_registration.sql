@@ -9,8 +9,8 @@ AND ar.account_relation_role_code = 'customer'
 LIMIT 1;
 
 -- name: InsertAccountUserForCustomerRegistration :exec
-INSERT INTO account_user (id, account_id, user_id, last_used_at, created_at, updated_at)
-VALUES (sqlc.arg('id'), sqlc.arg('account_id'), sqlc.arg('user_id'), NOW(3), NOW(3), NOW(3));
+INSERT INTO account_user (id, account_id, user_id, role_id, last_used_at, created_at, updated_at)
+VALUES (sqlc.arg('id'), sqlc.arg('account_id'), sqlc.arg('user_id'), sqlc.arg('role_id'), NOW(3), NOW(3), NOW(3));
 
 -- name: GetNextCustomerNumber :one
 SELECT COALESCE(

@@ -112,6 +112,16 @@ func (h *emailBridgeGRPCHandler) VerifyEmailDomain(ctx context.Context, req *pb.
 	return emailDomainToProto(dom), nil
 }
 
+func (h *emailBridgeGRPCHandler) DeleteEmailDomain(ctx context.Context, req *pb.DeleteEmailDomainRequest) (*pb.EmailBridgeAck, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	if apiErr := h.emailBridgeSvc.DeleteDomain(ctx, req.Id); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	return &pb.EmailBridgeAck{Ok: true}, nil
+}
+
 func (h *emailBridgeGRPCHandler) CreateEmailInbox(ctx context.Context, req *pb.CreateEmailInboxRequest) (*pb.EmailInboxInfo, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

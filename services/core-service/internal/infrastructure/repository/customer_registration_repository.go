@@ -7,6 +7,7 @@ import (
 
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/id"
@@ -47,6 +48,9 @@ func (r *customerRegistrationRepoImpl) CreateAccountUserLink(ctx context.Context
 		ID:        linkID,
 		AccountID: accountID,
 		UserID:    userID,
+		// New customer-portal users get the global Customer role so their portal
+		// capabilities are permission-driven from the start.
+		RoleID: gosql.NullString{String: constants.GlobalCustomerRoleID, Valid: true},
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)

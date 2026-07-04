@@ -13,6 +13,8 @@ type EmailBridgeSvc interface {
 	GetDomain(ctx context.Context, id string) (*EmailDomain, *apierror.APIError)
 	// VerifyDomain re-polls SES and flips the domain to verified once DKIM is confirmed.
 	VerifyDomain(ctx context.Context, id string) (*EmailDomain, *apierror.APIError)
+	// DeleteDomain deregisters a domain (deleting its SES identity) once it has no inboxes bound to it.
+	DeleteDomain(ctx context.Context, id string) *apierror.APIError
 
 	CreateInbox(ctx context.Context, input CreateEmailInboxInput) (*EmailInbox, *apierror.APIError)
 	ListInboxes(ctx context.Context) ([]*EmailInbox, *apierror.APIError)
@@ -28,4 +30,7 @@ type EmailIdentityProvider interface {
 	RegisterDomain(ctx context.Context, domain string) (dkimTokens []string, apiErr *apierror.APIError)
 	// DomainVerified reports whether SES has confirmed the domain's DKIM verification.
 	DomainVerified(ctx context.Context, domain string) (bool, *apierror.APIError)
+	// DeleteDomain deletes the domain's SES identity. It is idempotent: deleting an already-removed
+	// identity is a no-op, so a failed domain deletion can be safely retried.
+	DeleteDomain(ctx context.Context, domain string) *apierror.APIError
 }

@@ -489,7 +489,9 @@ type Conversation struct {
 	ID                     string
 	AccountID              string
 	Type                   string
+	Audience               string
 	Title                  sql.NullString
+	GroupID                sql.NullString
 	TopicResourceType      sql.NullString
 	TopicResourceID        sql.NullString
 	CreatedByParticipantID sql.NullString
@@ -498,16 +500,14 @@ type Conversation struct {
 	LastMessageAt          sql.NullTime
 	IsArchived             bool
 	LegalHold              bool
+	WorkflowStatus         sql.NullString
+	AssigneeResourceType   sql.NullString
+	AssigneeResourceID     sql.NullString
+	EmailInboxID           sql.NullString
+	EmailExternalAddress   sql.NullString
 	Metadata               json.RawMessage
 	CreatedAt              time.Time
 	UpdatedAt              time.Time
-	EmailExternalAddress   sql.NullString
-	EmailInboxID           sql.NullString
-	Audience               string
-	WorkflowStatus         sql.NullString
-	GroupID                sql.NullString
-	AssigneeResourceType   sql.NullString
-	AssigneeResourceID     sql.NullString
 }
 
 type ConversationDmKey struct {
@@ -544,10 +544,10 @@ type ConversationParticipant struct {
 	HiddenAt             sql.NullTime
 	AgentTriggerPolicy   sql.NullString
 	AgentTriggerKeywords json.RawMessage
+	RelationAccountID    sql.NullString
 	JoinedAt             time.Time
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
-	RelationAccountID    sql.NullString
 }
 
 type DcLocation struct {
@@ -657,6 +657,7 @@ type EmailInbox struct {
 	AgentConfigID        sql.NullString
 	AgentTriggerPolicy   sql.NullString
 	AgentTriggerKeywords json.RawMessage
+	GroupID              sql.NullString
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
 }
@@ -1021,6 +1022,7 @@ type Lot struct {
 
 type Machine struct {
 	ID               string
+	AccountID        string
 	Name             string
 	Notes            sql.NullString
 	CreatedAt        time.Time
@@ -1045,34 +1047,34 @@ type Message struct {
 	AccountID               string
 	Sequence                sql.NullInt64
 	Kind                    string
+	Status                  string
+	Visibility              string
 	SenderParticipantID     sql.NullString
 	ClientMessageID         sql.NullString
 	Body                    sql.NullString
+	Subject                 sql.NullString
+	Channel                 sql.NullString
 	Preview                 sql.NullString
 	EventType               sql.NullString
 	TemplateKey             sql.NullString
 	TemplateParams          json.RawMessage
 	LinkResourceType        sql.NullString
 	LinkResourceID          sql.NullString
+	AgentRunID              sql.NullString
 	ReplyToMessageID        sql.NullString
+	SourceThreadMessageID   sql.NullString
+	ApprovedByAccountUserID sql.NullString
+	StreamingState          string
+	ScheduledFor            sql.NullTime
+	ScheduledAttempts       int32
+	LastError               sql.NullString
+	LockedAt                sql.NullTime
+	LockOwner               sql.NullString
 	EditedAt                sql.NullTime
 	DeletedAt               sql.NullTime
 	Metadata                json.RawMessage
 	CreatedAt               time.Time
 	UpdatedAt               time.Time
-	AgentRunID              sql.NullString
-	StreamingState          string
-	Visibility              string
-	ApprovedByAccountUserID sql.NullString
-	Channel                 sql.NullString
-	LastError               sql.NullString
-	LockOwner               sql.NullString
-	LockedAt                sql.NullTime
-	ScheduledAttempts       int32
-	ScheduledFor            sql.NullTime
-	SourceThreadMessageID   sql.NullString
-	Status                  string
-	Subject                 sql.NullString
 }
 
 type MessageAttachment struct {
@@ -1194,6 +1196,9 @@ type Notification struct {
 	TemplateParams         json.RawMessage
 	LinkResourceType       sql.NullString
 	LinkResourceID         sql.NullString
+	SenderType             sql.NullString
+	SenderID               sql.NullString
+	SenderName             sql.NullString
 	Priority               string
 	SeenAt                 sql.NullTime
 	ReadAt                 sql.NullTime
@@ -1201,9 +1206,6 @@ type Notification struct {
 	Metadata               json.RawMessage
 	CreatedAt              time.Time
 	UpdatedAt              time.Time
-	SenderID               sql.NullString
-	SenderName             sql.NullString
-	SenderType             sql.NullString
 }
 
 type NotificationPreference struct {

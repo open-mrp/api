@@ -95,18 +95,19 @@ func (s *addressSvcImpl) ListAddresses(ctx context.Context, params domain.ListAd
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	accountID, apiErr := resolveAddressAccountScope(identity)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
-	if identity.IsExternalTarget() {
+	if identity.IsInternalActor() && identity.IsExternalTarget() {
 		meds := s.mediators()
 		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 	}
 
-	params.AccountID = identity.Target.AccountID
+	params.AccountID = accountID
 
 	return s.repos.NewAddressRepo().List(ctx, params)
 }
@@ -127,18 +128,19 @@ func (s *addressSvcImpl) GetAddress(ctx context.Context, params domain.GetAddres
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	accountID, apiErr := resolveAddressAccountScope(identity)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
-	if identity.IsExternalTarget() {
+	if identity.IsInternalActor() && identity.IsExternalTarget() {
 		meds := s.mediators()
 		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 	}
 
-	params.AccountID = identity.Target.AccountID
+	params.AccountID = accountID
 
 	return s.repos.NewAddressRepo().Get(ctx, params)
 }
@@ -158,10 +160,11 @@ func (s *addressSvcImpl) BatchGetAddressesByIDs(ctx context.Context, ids []strin
 	if apiErr := checkAddressReadPermission(identity); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	accountID, apiErr := resolveAddressAccountScope(identity)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
-	if identity.IsExternalTarget() {
+	if identity.IsInternalActor() && identity.IsExternalTarget() {
 		meds := s.mediators()
 		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
@@ -170,7 +173,7 @@ func (s *addressSvcImpl) BatchGetAddressesByIDs(ctx context.Context, ids []strin
 	if len(ids) == 0 {
 		return nil, nil
 	}
-	return s.repos.NewAddressRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
+	return s.repos.NewAddressRepo().GetByIDs(ctx, accountID, ids)
 }
 
 func (s *addressSvcImpl) CreateAddress(ctx context.Context, params domain.CreateAddressParams) (*domain.Address, *apierror.APIError) {
@@ -189,18 +192,22 @@ func (s *addressSvcImpl) CreateAddress(ctx context.Context, params domain.Create
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	accountID, apiErr := resolveAddressAccountScope(identity)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
-	if identity.IsExternalTarget() {
+	// Only internal actors reach across accounts (a merchant creating an address in
+	// a customer/supplier account they own); relation actors are scoped to their own
+	// account above, so no cross-account edit check applies to them.
+	if identity.IsInternalActor() && identity.IsExternalTarget() {
 		meds := s.mediators()
 		if apiErr := meds.EditAccess.CheckEditAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 	}
 
-	params.AccountID = identity.Target.AccountID
+	params.AccountID = accountID
 
 	normalizedName, apiErr := normalizeAddressName(params.Name)
 	if apiErr != nil {
@@ -291,18 +298,19 @@ func (s *addressSvcImpl) UpdateAddress(ctx context.Context, params domain.Update
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	accountID, apiErr := resolveAddressAccountScope(identity)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
-	if identity.IsExternalTarget() {
+	if identity.IsInternalActor() && identity.IsExternalTarget() {
 		meds := s.mediators()
 		if apiErr := meds.EditAccess.CheckEditAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 	}
 
-	params.AccountID = identity.Target.AccountID
+	params.AccountID = accountID
 
 	normalizedName, apiErr := normalizeOptionalAddressName(params.Name)
 	if apiErr != nil {
@@ -484,18 +492,19 @@ func (s *addressSvcImpl) DeleteAddress(ctx context.Context, params domain.Delete
 		return tracing.Trace(span, apiErr)
 	}
 
-	if !identity.IsTargetAccountSet() {
-		return tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	accountID, apiErr := resolveAddressAccountScope(identity)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
 	}
 
-	if identity.IsExternalTarget() {
+	if identity.IsInternalActor() && identity.IsExternalTarget() {
 		meds := s.mediators()
 		if apiErr := meds.EditAccess.CheckEditAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
 			return tracing.Trace(span, apiErr)
 		}
 	}
 
-	params.AccountID = identity.Target.AccountID
+	params.AccountID = accountID
 
 	repo := s.repos.NewAddressRepo()
 
@@ -558,7 +567,31 @@ func (s *addressSvcImpl) DeleteAddress(ctx context.Context, params domain.Delete
 	return nil
 }
 
-// checkAddressReadPermission checks the appropriate read permission based on the identity context. Internal actors need addresses:read for their own account, or customers:read / suppliers:read for external accounts.
+// resolveAddressAccountScope determines which account an address operation is
+// scoped to, mirroring the Dashboard's assertCanActOnAccount /
+// resolveAccountForAddressOwnership:
+//   - Internal actors operate on the target account (their own account, or a
+//     customer/supplier account they own). Cross-account access is separately
+//     guarded by EditAccess (writes) / ReadAccess (reads) at the call site.
+//   - Customer/supplier relation actors operate only on their OWN account. Portal
+//     and order addresses live in the actor's (buyer) account, not the
+//     counterparty account they are transacting with, so the target account (e.g.
+//     the merchant the customer is ordering from) must not be used as the scope.
+func resolveAddressAccountScope(identity *types.Identity) (string, *apierror.APIError) {
+	if identity.IsInternalActor() {
+		if !identity.IsTargetAccountSet() {
+			return "", apierror.NewAuthenticationError("The Augno-Account-ID header is required.")
+		}
+		return identity.Target.AccountID, nil
+	}
+	actorAccountID := identity.ActorAccountID()
+	if actorAccountID == nil {
+		return "", apierror.NewAuthorizationError("You must be assigned to an account to manage addresses.")
+	}
+	return *actorAccountID, nil
+}
+
+// checkAddressReadPermission checks the appropriate read permission based on the identity context. For a cross-account target the check is precise (customers:read / suppliers:read). For the actor's own account it accepts any of the read permissions the read endpoints declare, so the downstream check never rejects a caller the coarse gateway gate admitted.
 func checkAddressReadPermission(identity *types.Identity) *apierror.APIError {
 	if !identity.IsInternalActor() {
 		return nil
@@ -574,10 +607,16 @@ func checkAddressReadPermission(identity *types.Identity) *apierror.APIError {
 	if identity.IsTargetSupplierAccount() {
 		return identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionRead)
 	}
-	return identity.CheckHasPermission(types.PermissionDomainAddresses, types.ActionRead)
+	// Own-account: accept any read permission the read endpoints declare, so the
+	// downstream check never rejects a caller the coarse gateway gate admitted.
+	return identity.CheckHasAnyPermission(
+		types.Permission{Domain: types.PermissionDomainAddresses, Action: types.ActionRead},
+		types.Permission{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},
+		types.Permission{Domain: types.PermissionDomainSuppliers, Action: types.ActionRead},
+	)
 }
 
-// checkAddressWritePermission checks the appropriate write permission based on the identity context. Internal actors need addresses:{action} for their own account, or customers:update / suppliers:update for external accounts.
+// checkAddressWritePermission checks the appropriate write permission based on the identity context. For a cross-account target the check is precise (customers:update / suppliers:update). For the actor's own account it accepts any of the write permissions the write endpoints declare, so the downstream check never rejects a caller the coarse gateway gate admitted.
 func checkAddressWritePermission(identity *types.Identity, action types.Action) *apierror.APIError {
 	if !identity.IsInternalActor() {
 		return nil
@@ -592,7 +631,15 @@ func checkAddressWritePermission(identity *types.Identity, action types.Action) 
 	if identity.IsTargetSupplierAccount() {
 		return identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionUpdate)
 	}
-	return identity.CheckHasPermission(types.PermissionDomainAddresses, action)
+	// Own-account: accept any write permission the write endpoints declare, so the
+	// downstream check never rejects a caller the coarse gateway gate admitted. This
+	// mirrors the legacy Dashboard, which gated own-account address writes on
+	// customers:update rather than a dedicated addresses domain.
+	return identity.CheckHasAnyPermission(
+		types.Permission{Domain: types.PermissionDomainAddresses, Action: action},
+		types.Permission{Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate},
+		types.Permission{Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate},
+	)
 }
 
 func coalesceStringPtr(update *string, existing *string) *string {

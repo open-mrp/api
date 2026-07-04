@@ -707,6 +707,50 @@ func (x *VerifyEmailDomainRequest) GetId() string {
 	return ""
 }
 
+type DeleteEmailDomainRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteEmailDomainRequest) Reset() {
+	*x = DeleteEmailDomainRequest{}
+	mi := &file_notification_notification_email_bridge_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteEmailDomainRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteEmailDomainRequest) ProtoMessage() {}
+
+func (x *DeleteEmailDomainRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_notification_notification_email_bridge_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteEmailDomainRequest.ProtoReflect.Descriptor instead.
+func (*DeleteEmailDomainRequest) Descriptor() ([]byte, []int) {
+	return file_notification_notification_email_bridge_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *DeleteEmailDomainRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
 type CreateEmailInboxRequest struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
 	EmailDomainId        string                 `protobuf:"bytes,1,opt,name=email_domain_id,json=emailDomainId,proto3" json:"email_domain_id,omitempty"`
@@ -722,7 +766,7 @@ type CreateEmailInboxRequest struct {
 
 func (x *CreateEmailInboxRequest) Reset() {
 	*x = CreateEmailInboxRequest{}
-	mi := &file_notification_notification_email_bridge_proto_msgTypes[10]
+	mi := &file_notification_notification_email_bridge_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -734,7 +778,7 @@ func (x *CreateEmailInboxRequest) String() string {
 func (*CreateEmailInboxRequest) ProtoMessage() {}
 
 func (x *CreateEmailInboxRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_email_bridge_proto_msgTypes[10]
+	mi := &file_notification_notification_email_bridge_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -747,7 +791,7 @@ func (x *CreateEmailInboxRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateEmailInboxRequest.ProtoReflect.Descriptor instead.
 func (*CreateEmailInboxRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_email_bridge_proto_rawDescGZIP(), []int{10}
+	return file_notification_notification_email_bridge_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *CreateEmailInboxRequest) GetEmailDomainId() string {
@@ -807,7 +851,7 @@ type ListEmailInboxesRequest struct {
 
 func (x *ListEmailInboxesRequest) Reset() {
 	*x = ListEmailInboxesRequest{}
-	mi := &file_notification_notification_email_bridge_proto_msgTypes[11]
+	mi := &file_notification_notification_email_bridge_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -819,7 +863,7 @@ func (x *ListEmailInboxesRequest) String() string {
 func (*ListEmailInboxesRequest) ProtoMessage() {}
 
 func (x *ListEmailInboxesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_email_bridge_proto_msgTypes[11]
+	mi := &file_notification_notification_email_bridge_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -832,7 +876,7 @@ func (x *ListEmailInboxesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListEmailInboxesRequest.ProtoReflect.Descriptor instead.
 func (*ListEmailInboxesRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_email_bridge_proto_rawDescGZIP(), []int{11}
+	return file_notification_notification_email_bridge_proto_rawDescGZIP(), []int{12}
 }
 
 type ListEmailInboxesResponse struct {
@@ -844,7 +888,7 @@ type ListEmailInboxesResponse struct {
 
 func (x *ListEmailInboxesResponse) Reset() {
 	*x = ListEmailInboxesResponse{}
-	mi := &file_notification_notification_email_bridge_proto_msgTypes[12]
+	mi := &file_notification_notification_email_bridge_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -856,7 +900,7 @@ func (x *ListEmailInboxesResponse) String() string {
 func (*ListEmailInboxesResponse) ProtoMessage() {}
 
 func (x *ListEmailInboxesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_email_bridge_proto_msgTypes[12]
+	mi := &file_notification_notification_email_bridge_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -869,7 +913,7 @@ func (x *ListEmailInboxesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListEmailInboxesResponse.ProtoReflect.Descriptor instead.
 func (*ListEmailInboxesResponse) Descriptor() ([]byte, []int) {
-	return file_notification_notification_email_bridge_proto_rawDescGZIP(), []int{12}
+	return file_notification_notification_email_bridge_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ListEmailInboxesResponse) GetInboxes() []*EmailInboxInfo {
@@ -888,7 +932,7 @@ type GetEmailInboxRequest struct {
 
 func (x *GetEmailInboxRequest) Reset() {
 	*x = GetEmailInboxRequest{}
-	mi := &file_notification_notification_email_bridge_proto_msgTypes[13]
+	mi := &file_notification_notification_email_bridge_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -900,7 +944,7 @@ func (x *GetEmailInboxRequest) String() string {
 func (*GetEmailInboxRequest) ProtoMessage() {}
 
 func (x *GetEmailInboxRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_email_bridge_proto_msgTypes[13]
+	mi := &file_notification_notification_email_bridge_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -913,7 +957,7 @@ func (x *GetEmailInboxRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetEmailInboxRequest.ProtoReflect.Descriptor instead.
 func (*GetEmailInboxRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_email_bridge_proto_rawDescGZIP(), []int{13}
+	return file_notification_notification_email_bridge_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *GetEmailInboxRequest) GetId() string {
@@ -938,7 +982,7 @@ type UpdateEmailInboxRequest struct {
 
 func (x *UpdateEmailInboxRequest) Reset() {
 	*x = UpdateEmailInboxRequest{}
-	mi := &file_notification_notification_email_bridge_proto_msgTypes[14]
+	mi := &file_notification_notification_email_bridge_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -950,7 +994,7 @@ func (x *UpdateEmailInboxRequest) String() string {
 func (*UpdateEmailInboxRequest) ProtoMessage() {}
 
 func (x *UpdateEmailInboxRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_email_bridge_proto_msgTypes[14]
+	mi := &file_notification_notification_email_bridge_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -963,7 +1007,7 @@ func (x *UpdateEmailInboxRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateEmailInboxRequest.ProtoReflect.Descriptor instead.
 func (*UpdateEmailInboxRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_email_bridge_proto_rawDescGZIP(), []int{14}
+	return file_notification_notification_email_bridge_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *UpdateEmailInboxRequest) GetId() string {
@@ -1024,7 +1068,7 @@ type DeleteEmailInboxRequest struct {
 
 func (x *DeleteEmailInboxRequest) Reset() {
 	*x = DeleteEmailInboxRequest{}
-	mi := &file_notification_notification_email_bridge_proto_msgTypes[15]
+	mi := &file_notification_notification_email_bridge_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1036,7 +1080,7 @@ func (x *DeleteEmailInboxRequest) String() string {
 func (*DeleteEmailInboxRequest) ProtoMessage() {}
 
 func (x *DeleteEmailInboxRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_email_bridge_proto_msgTypes[15]
+	mi := &file_notification_notification_email_bridge_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1049,7 +1093,7 @@ func (x *DeleteEmailInboxRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteEmailInboxRequest.ProtoReflect.Descriptor instead.
 func (*DeleteEmailInboxRequest) Descriptor() ([]byte, []int) {
-	return file_notification_notification_email_bridge_proto_rawDescGZIP(), []int{15}
+	return file_notification_notification_email_bridge_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *DeleteEmailInboxRequest) GetId() string {
@@ -1068,7 +1112,7 @@ type EmailBridgeAck struct {
 
 func (x *EmailBridgeAck) Reset() {
 	*x = EmailBridgeAck{}
-	mi := &file_notification_notification_email_bridge_proto_msgTypes[16]
+	mi := &file_notification_notification_email_bridge_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1080,7 +1124,7 @@ func (x *EmailBridgeAck) String() string {
 func (*EmailBridgeAck) ProtoMessage() {}
 
 func (x *EmailBridgeAck) ProtoReflect() protoreflect.Message {
-	mi := &file_notification_notification_email_bridge_proto_msgTypes[16]
+	mi := &file_notification_notification_email_bridge_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1093,7 +1137,7 @@ func (x *EmailBridgeAck) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EmailBridgeAck.ProtoReflect.Descriptor instead.
 func (*EmailBridgeAck) Descriptor() ([]byte, []int) {
-	return file_notification_notification_email_bridge_proto_rawDescGZIP(), []int{16}
+	return file_notification_notification_email_bridge_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *EmailBridgeAck) GetOk() bool {
@@ -1174,6 +1218,8 @@ const file_notification_notification_email_bridge_proto_rawDesc = "" +
 	"\x15GetEmailDomainRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"*\n" +
 	"\x18VerifyEmailDomainRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"*\n" +
+	"\x18DeleteEmailDomainRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\xff\x02\n" +
 	"\x17CreateEmailInboxRequest\x12&\n" +
 	"\x0femail_domain_id\x18\x01 \x01(\tR\remailDomainId\x12\x18\n" +
@@ -1209,12 +1255,13 @@ const file_notification_notification_email_bridge_proto_rawDesc = "" +
 	"\x17DeleteEmailInboxRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\" \n" +
 	"\x0eEmailBridgeAck\x12\x0e\n" +
-	"\x02ok\x18\x01 \x01(\bR\x02ok2\xf2\a\n" +
+	"\x02ok\x18\x01 \x01(\bR\x02ok2\xcd\b\n" +
 	"\x12EmailBridgeService\x12Z\n" +
 	"\x11CreateEmailDomain\x12&.notification.CreateEmailDomainRequest\x1a\x1d.notification.EmailDomainInfo\x12a\n" +
 	"\x10ListEmailDomains\x12%.notification.ListEmailDomainsRequest\x1a&.notification.ListEmailDomainsResponse\x12T\n" +
 	"\x0eGetEmailDomain\x12#.notification.GetEmailDomainRequest\x1a\x1d.notification.EmailDomainInfo\x12Z\n" +
-	"\x11VerifyEmailDomain\x12&.notification.VerifyEmailDomainRequest\x1a\x1d.notification.EmailDomainInfo\x12W\n" +
+	"\x11VerifyEmailDomain\x12&.notification.VerifyEmailDomainRequest\x1a\x1d.notification.EmailDomainInfo\x12Y\n" +
+	"\x11DeleteEmailDomain\x12&.notification.DeleteEmailDomainRequest\x1a\x1c.notification.EmailBridgeAck\x12W\n" +
 	"\x10CreateEmailInbox\x12%.notification.CreateEmailInboxRequest\x1a\x1c.notification.EmailInboxInfo\x12a\n" +
 	"\x10ListEmailInboxes\x12%.notification.ListEmailInboxesRequest\x1a&.notification.ListEmailInboxesResponse\x12Q\n" +
 	"\rGetEmailInbox\x12\".notification.GetEmailInboxRequest\x1a\x1c.notification.EmailInboxInfo\x12W\n" +
@@ -1235,7 +1282,7 @@ func file_notification_notification_email_bridge_proto_rawDescGZIP() []byte {
 	return file_notification_notification_email_bridge_proto_rawDescData
 }
 
-var file_notification_notification_email_bridge_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_notification_notification_email_bridge_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_notification_notification_email_bridge_proto_goTypes = []any{
 	(*SendInboxReplyRequest)(nil),    // 0: notification.SendInboxReplyRequest
 	(*PostReplyDraftRequest)(nil),    // 1: notification.PostReplyDraftRequest
@@ -1247,47 +1294,50 @@ var file_notification_notification_email_bridge_proto_goTypes = []any{
 	(*ListEmailDomainsResponse)(nil), // 7: notification.ListEmailDomainsResponse
 	(*GetEmailDomainRequest)(nil),    // 8: notification.GetEmailDomainRequest
 	(*VerifyEmailDomainRequest)(nil), // 9: notification.VerifyEmailDomainRequest
-	(*CreateEmailInboxRequest)(nil),  // 10: notification.CreateEmailInboxRequest
-	(*ListEmailInboxesRequest)(nil),  // 11: notification.ListEmailInboxesRequest
-	(*ListEmailInboxesResponse)(nil), // 12: notification.ListEmailInboxesResponse
-	(*GetEmailInboxRequest)(nil),     // 13: notification.GetEmailInboxRequest
-	(*UpdateEmailInboxRequest)(nil),  // 14: notification.UpdateEmailInboxRequest
-	(*DeleteEmailInboxRequest)(nil),  // 15: notification.DeleteEmailInboxRequest
-	(*EmailBridgeAck)(nil),           // 16: notification.EmailBridgeAck
-	(*timestamppb.Timestamp)(nil),    // 17: google.protobuf.Timestamp
+	(*DeleteEmailDomainRequest)(nil), // 10: notification.DeleteEmailDomainRequest
+	(*CreateEmailInboxRequest)(nil),  // 11: notification.CreateEmailInboxRequest
+	(*ListEmailInboxesRequest)(nil),  // 12: notification.ListEmailInboxesRequest
+	(*ListEmailInboxesResponse)(nil), // 13: notification.ListEmailInboxesResponse
+	(*GetEmailInboxRequest)(nil),     // 14: notification.GetEmailInboxRequest
+	(*UpdateEmailInboxRequest)(nil),  // 15: notification.UpdateEmailInboxRequest
+	(*DeleteEmailInboxRequest)(nil),  // 16: notification.DeleteEmailInboxRequest
+	(*EmailBridgeAck)(nil),           // 17: notification.EmailBridgeAck
+	(*timestamppb.Timestamp)(nil),    // 18: google.protobuf.Timestamp
 }
 var file_notification_notification_email_bridge_proto_depIdxs = []int32{
-	17, // 0: notification.EmailDomainInfo.verified_at:type_name -> google.protobuf.Timestamp
-	17, // 1: notification.EmailDomainInfo.created_at:type_name -> google.protobuf.Timestamp
-	17, // 2: notification.EmailDomainInfo.updated_at:type_name -> google.protobuf.Timestamp
-	17, // 3: notification.EmailInboxInfo.created_at:type_name -> google.protobuf.Timestamp
-	17, // 4: notification.EmailInboxInfo.updated_at:type_name -> google.protobuf.Timestamp
+	18, // 0: notification.EmailDomainInfo.verified_at:type_name -> google.protobuf.Timestamp
+	18, // 1: notification.EmailDomainInfo.created_at:type_name -> google.protobuf.Timestamp
+	18, // 2: notification.EmailDomainInfo.updated_at:type_name -> google.protobuf.Timestamp
+	18, // 3: notification.EmailInboxInfo.created_at:type_name -> google.protobuf.Timestamp
+	18, // 4: notification.EmailInboxInfo.updated_at:type_name -> google.protobuf.Timestamp
 	3,  // 5: notification.ListEmailDomainsResponse.domains:type_name -> notification.EmailDomainInfo
 	4,  // 6: notification.ListEmailInboxesResponse.inboxes:type_name -> notification.EmailInboxInfo
 	5,  // 7: notification.EmailBridgeService.CreateEmailDomain:input_type -> notification.CreateEmailDomainRequest
 	6,  // 8: notification.EmailBridgeService.ListEmailDomains:input_type -> notification.ListEmailDomainsRequest
 	8,  // 9: notification.EmailBridgeService.GetEmailDomain:input_type -> notification.GetEmailDomainRequest
 	9,  // 10: notification.EmailBridgeService.VerifyEmailDomain:input_type -> notification.VerifyEmailDomainRequest
-	10, // 11: notification.EmailBridgeService.CreateEmailInbox:input_type -> notification.CreateEmailInboxRequest
-	11, // 12: notification.EmailBridgeService.ListEmailInboxes:input_type -> notification.ListEmailInboxesRequest
-	13, // 13: notification.EmailBridgeService.GetEmailInbox:input_type -> notification.GetEmailInboxRequest
-	14, // 14: notification.EmailBridgeService.UpdateEmailInbox:input_type -> notification.UpdateEmailInboxRequest
-	15, // 15: notification.EmailBridgeService.DeleteEmailInbox:input_type -> notification.DeleteEmailInboxRequest
-	0,  // 16: notification.EmailBridgeService.SendInboxReply:input_type -> notification.SendInboxReplyRequest
-	1,  // 17: notification.EmailBridgeService.PostReplyDraft:input_type -> notification.PostReplyDraftRequest
-	3,  // 18: notification.EmailBridgeService.CreateEmailDomain:output_type -> notification.EmailDomainInfo
-	7,  // 19: notification.EmailBridgeService.ListEmailDomains:output_type -> notification.ListEmailDomainsResponse
-	3,  // 20: notification.EmailBridgeService.GetEmailDomain:output_type -> notification.EmailDomainInfo
-	3,  // 21: notification.EmailBridgeService.VerifyEmailDomain:output_type -> notification.EmailDomainInfo
-	4,  // 22: notification.EmailBridgeService.CreateEmailInbox:output_type -> notification.EmailInboxInfo
-	12, // 23: notification.EmailBridgeService.ListEmailInboxes:output_type -> notification.ListEmailInboxesResponse
-	4,  // 24: notification.EmailBridgeService.GetEmailInbox:output_type -> notification.EmailInboxInfo
-	4,  // 25: notification.EmailBridgeService.UpdateEmailInbox:output_type -> notification.EmailInboxInfo
-	16, // 26: notification.EmailBridgeService.DeleteEmailInbox:output_type -> notification.EmailBridgeAck
-	2,  // 27: notification.EmailBridgeService.SendInboxReply:output_type -> notification.EmailMessageRef
-	2,  // 28: notification.EmailBridgeService.PostReplyDraft:output_type -> notification.EmailMessageRef
-	18, // [18:29] is the sub-list for method output_type
-	7,  // [7:18] is the sub-list for method input_type
+	10, // 11: notification.EmailBridgeService.DeleteEmailDomain:input_type -> notification.DeleteEmailDomainRequest
+	11, // 12: notification.EmailBridgeService.CreateEmailInbox:input_type -> notification.CreateEmailInboxRequest
+	12, // 13: notification.EmailBridgeService.ListEmailInboxes:input_type -> notification.ListEmailInboxesRequest
+	14, // 14: notification.EmailBridgeService.GetEmailInbox:input_type -> notification.GetEmailInboxRequest
+	15, // 15: notification.EmailBridgeService.UpdateEmailInbox:input_type -> notification.UpdateEmailInboxRequest
+	16, // 16: notification.EmailBridgeService.DeleteEmailInbox:input_type -> notification.DeleteEmailInboxRequest
+	0,  // 17: notification.EmailBridgeService.SendInboxReply:input_type -> notification.SendInboxReplyRequest
+	1,  // 18: notification.EmailBridgeService.PostReplyDraft:input_type -> notification.PostReplyDraftRequest
+	3,  // 19: notification.EmailBridgeService.CreateEmailDomain:output_type -> notification.EmailDomainInfo
+	7,  // 20: notification.EmailBridgeService.ListEmailDomains:output_type -> notification.ListEmailDomainsResponse
+	3,  // 21: notification.EmailBridgeService.GetEmailDomain:output_type -> notification.EmailDomainInfo
+	3,  // 22: notification.EmailBridgeService.VerifyEmailDomain:output_type -> notification.EmailDomainInfo
+	17, // 23: notification.EmailBridgeService.DeleteEmailDomain:output_type -> notification.EmailBridgeAck
+	4,  // 24: notification.EmailBridgeService.CreateEmailInbox:output_type -> notification.EmailInboxInfo
+	13, // 25: notification.EmailBridgeService.ListEmailInboxes:output_type -> notification.ListEmailInboxesResponse
+	4,  // 26: notification.EmailBridgeService.GetEmailInbox:output_type -> notification.EmailInboxInfo
+	4,  // 27: notification.EmailBridgeService.UpdateEmailInbox:output_type -> notification.EmailInboxInfo
+	17, // 28: notification.EmailBridgeService.DeleteEmailInbox:output_type -> notification.EmailBridgeAck
+	2,  // 29: notification.EmailBridgeService.SendInboxReply:output_type -> notification.EmailMessageRef
+	2,  // 30: notification.EmailBridgeService.PostReplyDraft:output_type -> notification.EmailMessageRef
+	19, // [19:31] is the sub-list for method output_type
+	7,  // [7:19] is the sub-list for method input_type
 	7,  // [7:7] is the sub-list for extension type_name
 	7,  // [7:7] is the sub-list for extension extendee
 	0,  // [0:7] is the sub-list for field type_name
@@ -1299,15 +1349,15 @@ func file_notification_notification_email_bridge_proto_init() {
 		return
 	}
 	file_notification_notification_email_bridge_proto_msgTypes[4].OneofWrappers = []any{}
-	file_notification_notification_email_bridge_proto_msgTypes[10].OneofWrappers = []any{}
-	file_notification_notification_email_bridge_proto_msgTypes[14].OneofWrappers = []any{}
+	file_notification_notification_email_bridge_proto_msgTypes[11].OneofWrappers = []any{}
+	file_notification_notification_email_bridge_proto_msgTypes[15].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_notification_notification_email_bridge_proto_rawDesc), len(file_notification_notification_email_bridge_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   17,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

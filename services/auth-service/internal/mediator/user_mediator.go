@@ -307,11 +307,17 @@ func (s *userMedImpl) ValidateCredential(ctx context.Context, authToken string, 
 		}
 
 		// Counterparty-side: the user belongs to the counterparty (e.g. customer user targeting merchant).
-		// Strip actor permissions since they don't apply to the owner's account.
+		// Carry the actor's own-account role permissions so downstream services can
+		// authorize customer-side capabilities (e.g. a portal customer with
+		// purchase_orders:create may enter an order). These permissions apply to the
+		// actor's OWN account, never the target owner's — the gateway must keep
+		// bypassing relation actors (IsRelationActor), and services must check
+		// customer-appropriate domains rather than the owner's. RoleID/RoleType are
+		// cleared so IsAdmin()/IsRoleSet() stay false: no admin bypass leaks across
+		// the relation, only the explicit carried permissions count.
 		identity.Actor.RelationType = actorType
 		identity.Actor.RoleID = nil
 		identity.Actor.RoleType = nil
-		identity.Actor.Permissions = map[string]bool{}
 		identity.Target.AccountID = *targetAccountID
 		identity.Target.RelationType = &accountRelation.AccountRelationRoleCode
 
@@ -429,7 +435,28 @@ func (s *userMedImpl) validateAPIKeyCredential(ctx context.Context, span trace.S
 		return nil, tracing.Trace(span, apierror.NewInternalError(nil, "Failed to find account relation."))
 	}
 
-	return buildRelatedAPIKeyIdentity(apiKeyModel, accountRelation, actorType, finalTargetAccountID, accountMode, accountCtx.SubscriptionStatus), nil
+	// Carry the API key's OWN-account role permissions so downstream services can
+	// authorize customer/supplier-side capabilities (e.g. purchase_orders:create for a
+	// portal order), mirroring the user-credential path. The permissions apply to the
+	// actor's own account, not the target owner's; RoleID/RoleType stay cleared in the
+	// builder so no admin bypass leaks across the relation.
+	access, err := s.apiKeyMed.GetKeyAccountAccess(ctx, domain.APIKeyGetAccountAccessInput{
+		AccountMode:     accountMode,
+		APIKeyID:        apiKeyModel.ID,
+		TargetAccountID: apiKeyModel.OwnerAccountID,
+	})
+	if err != nil {
+		if err.Code == apierror.ErrorCodeResourceNotFound {
+			return nil, tracing.Trace(span, apierror.NewAuthorizationError(errNoAccountAccess(finalTargetAccountID)))
+		}
+		return nil, err
+	}
+	permissions := map[string]bool{}
+	if access != nil {
+		permissions = access.Permissions
+	}
+
+	return buildRelatedAPIKeyIdentity(apiKeyModel, accountRelation, actorType, finalTargetAccountID, permissions, accountMode, accountCtx.SubscriptionStatus), nil
 }
 
 func (s *userMedImpl) validateUserCredential(ctx context.Context, span trace.Span, authToken string, targetAccountID *string, requireAccountUser bool) (*types.Identity, *apierror.APIError) {

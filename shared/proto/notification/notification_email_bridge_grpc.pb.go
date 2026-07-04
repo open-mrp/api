@@ -30,6 +30,7 @@ const (
 	EmailBridgeService_ListEmailDomains_FullMethodName  = "/notification.EmailBridgeService/ListEmailDomains"
 	EmailBridgeService_GetEmailDomain_FullMethodName    = "/notification.EmailBridgeService/GetEmailDomain"
 	EmailBridgeService_VerifyEmailDomain_FullMethodName = "/notification.EmailBridgeService/VerifyEmailDomain"
+	EmailBridgeService_DeleteEmailDomain_FullMethodName = "/notification.EmailBridgeService/DeleteEmailDomain"
 	EmailBridgeService_CreateEmailInbox_FullMethodName  = "/notification.EmailBridgeService/CreateEmailInbox"
 	EmailBridgeService_ListEmailInboxes_FullMethodName  = "/notification.EmailBridgeService/ListEmailInboxes"
 	EmailBridgeService_GetEmailInbox_FullMethodName     = "/notification.EmailBridgeService/GetEmailInbox"
@@ -52,6 +53,8 @@ type EmailBridgeServiceClient interface {
 	GetEmailDomain(ctx context.Context, in *GetEmailDomainRequest, opts ...grpc.CallOption) (*EmailDomainInfo, error)
 	// VerifyEmailDomain re-polls SES and flips the domain to verified once DKIM is confirmed.
 	VerifyEmailDomain(ctx context.Context, in *VerifyEmailDomainRequest, opts ...grpc.CallOption) (*EmailDomainInfo, error)
+	// DeleteEmailDomain deregisters a domain (deleting its SES identity) once it has no inboxes.
+	DeleteEmailDomain(ctx context.Context, in *DeleteEmailDomainRequest, opts ...grpc.CallOption) (*EmailBridgeAck, error)
 	// CreateEmailInbox provisions a routable inbox address on a verified domain.
 	CreateEmailInbox(ctx context.Context, in *CreateEmailInboxRequest, opts ...grpc.CallOption) (*EmailInboxInfo, error)
 	// ListEmailInboxes returns the caller account's inboxes.
@@ -115,6 +118,16 @@ func (c *emailBridgeServiceClient) VerifyEmailDomain(ctx context.Context, in *Ve
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(EmailDomainInfo)
 	err := c.cc.Invoke(ctx, EmailBridgeService_VerifyEmailDomain_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *emailBridgeServiceClient) DeleteEmailDomain(ctx context.Context, in *DeleteEmailDomainRequest, opts ...grpc.CallOption) (*EmailBridgeAck, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(EmailBridgeAck)
+	err := c.cc.Invoke(ctx, EmailBridgeService_DeleteEmailDomain_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -204,6 +217,8 @@ type EmailBridgeServiceServer interface {
 	GetEmailDomain(context.Context, *GetEmailDomainRequest) (*EmailDomainInfo, error)
 	// VerifyEmailDomain re-polls SES and flips the domain to verified once DKIM is confirmed.
 	VerifyEmailDomain(context.Context, *VerifyEmailDomainRequest) (*EmailDomainInfo, error)
+	// DeleteEmailDomain deregisters a domain (deleting its SES identity) once it has no inboxes.
+	DeleteEmailDomain(context.Context, *DeleteEmailDomainRequest) (*EmailBridgeAck, error)
 	// CreateEmailInbox provisions a routable inbox address on a verified domain.
 	CreateEmailInbox(context.Context, *CreateEmailInboxRequest) (*EmailInboxInfo, error)
 	// ListEmailInboxes returns the caller account's inboxes.
@@ -244,6 +259,9 @@ func (UnimplementedEmailBridgeServiceServer) GetEmailDomain(context.Context, *Ge
 }
 func (UnimplementedEmailBridgeServiceServer) VerifyEmailDomain(context.Context, *VerifyEmailDomainRequest) (*EmailDomainInfo, error) {
 	return nil, status.Error(codes.Unimplemented, "method VerifyEmailDomain not implemented")
+}
+func (UnimplementedEmailBridgeServiceServer) DeleteEmailDomain(context.Context, *DeleteEmailDomainRequest) (*EmailBridgeAck, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteEmailDomain not implemented")
 }
 func (UnimplementedEmailBridgeServiceServer) CreateEmailInbox(context.Context, *CreateEmailInboxRequest) (*EmailInboxInfo, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateEmailInbox not implemented")
@@ -355,6 +373,24 @@ func _EmailBridgeService_VerifyEmailDomain_Handler(srv interface{}, ctx context.
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(EmailBridgeServiceServer).VerifyEmailDomain(ctx, req.(*VerifyEmailDomainRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EmailBridgeService_DeleteEmailDomain_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteEmailDomainRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EmailBridgeServiceServer).DeleteEmailDomain(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EmailBridgeService_DeleteEmailDomain_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EmailBridgeServiceServer).DeleteEmailDomain(ctx, req.(*DeleteEmailDomainRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -507,6 +543,10 @@ var EmailBridgeService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "VerifyEmailDomain",
 			Handler:    _EmailBridgeService_VerifyEmailDomain_Handler,
+		},
+		{
+			MethodName: "DeleteEmailDomain",
+			Handler:    _EmailBridgeService_DeleteEmailDomain_Handler,
 		},
 		{
 			MethodName: "CreateEmailInbox",

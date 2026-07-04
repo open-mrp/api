@@ -127,6 +127,16 @@ func (r *emailDomainRepoImpl) UpdateStatus(ctx context.Context, id, accountID, s
 	return nil
 }
 
+func (r *emailDomainRepoImpl) Delete(ctx context.Context, id, accountID string) (bool, *apierror.APIError) {
+	ctx, span := emailRepoTracer.Start(ctx, "repository.email_domain.delete")
+	defer span.End()
+	n, err := r.db.DeleteEmailDomain(ctx, sqlc.DeleteEmailDomainParams{ID: id, AccountID: accountID})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+	return n > 0, nil
+}
+
 func emailDomainFromRow(row sqlc.EmailDomain) *domain.EmailDomain {
 	return &domain.EmailDomain{
 		ID:         row.ID,
@@ -221,6 +231,16 @@ func (r *emailInboxRepoImpl) ListByAccount(ctx context.Context, accountID string
 		out = append(out, emailInboxFromRow(row))
 	}
 	return out, nil
+}
+
+func (r *emailInboxRepoImpl) CountByDomain(ctx context.Context, accountID, emailDomainID string) (int64, *apierror.APIError) {
+	ctx, span := emailRepoTracer.Start(ctx, "repository.email_inbox.count_by_domain")
+	defer span.End()
+	n, err := r.db.CountEmailInboxesByDomain(ctx, sqlc.CountEmailInboxesByDomainParams{AccountID: accountID, EmailDomainID: emailDomainID})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return 0, tracing.Trace(span, apiErr)
+	}
+	return n, nil
 }
 
 func (r *emailInboxRepoImpl) Update(ctx context.Context, id, accountID string, input *domain.UpdateEmailInboxInput) *apierror.APIError {

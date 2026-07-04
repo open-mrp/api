@@ -25,3 +25,7 @@ WHERE id = ? AND account_id = ?;
 UPDATE email_domain
 SET status = ?, dkim_tokens = ?, updated_at = NOW(3)
 WHERE id = ? AND account_id = ?;
+
+-- name: DeleteEmailDomain :execrows
+DELETE FROM email_domain
+WHERE id = ? AND account_id = ?;

@@ -21,6 +21,8 @@ service EmailBridgeService {
   rpc GetEmailDomain(GetEmailDomainRequest) returns (EmailDomainInfo);
   // VerifyEmailDomain re-polls SES and flips the domain to verified once DKIM is confirmed.
   rpc VerifyEmailDomain(VerifyEmailDomainRequest) returns (EmailDomainInfo);
+  // DeleteEmailDomain deregisters a domain (deleting its SES identity) once it has no inboxes.
+  rpc DeleteEmailDomain(DeleteEmailDomainRequest) returns (EmailBridgeAck);
 
   // CreateEmailInbox provisions a routable inbox address on a verified domain.
   rpc CreateEmailInbox(CreateEmailInboxRequest) returns (EmailInboxInfo);
@@ -115,6 +117,10 @@ message GetEmailDomainRequest {
 }
 
 message VerifyEmailDomainRequest {
+  string id = 1;
+}
+
+message DeleteEmailDomainRequest {
   string id = 1;
 }
 

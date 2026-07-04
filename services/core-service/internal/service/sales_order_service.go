@@ -298,7 +298,10 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Authorization (matches Dashboard): internal users need the create permission; customer users may self-create only for their own account; other actor types cannot create orders.
+	// Authorization: internal users need sales_orders:create; a customer entering an
+	// order on the portal may self-create only for their own account AND must hold
+	// purchase_orders:create (to them the order is a purchase — see the Customer
+	// role). Other actor types cannot create orders.
 	switch {
 	case identity.IsInternalUser():
 		if apiErr := identity.CheckHasPermission(types.PermissionDomainSalesOrders, types.ActionCreate); apiErr != nil {
@@ -308,6 +311,11 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 		actorAccountID := identity.ActorAccountID()
 		if actorAccountID == nil || params.BuyerAccountID != *actorAccountID {
 			return nil, tracing.Trace(span, apierror.NewAuthorizationError("You are not authorized to create an order for this customer."))
+		}
+		// Customer-side capability: authorized by the customer's OWN-account
+		// purchase_orders:create (their carried role), not an owner-account permission.
+		if apiErr := identity.CheckHasRelationCapability(types.PermissionDomainPurchaseOrders, types.ActionCreate); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
 		}
 	default:
 		return nil, tracing.Trace(span, apierror.NewAuthorizationError("You are not authorized to create sales orders."))

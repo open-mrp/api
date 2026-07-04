@@ -22,6 +22,8 @@ type EmailDomainRepo interface {
 	ListByAccount(ctx context.Context, accountID string) ([]*EmailDomain, *apierror.APIError)
 	MarkVerified(ctx context.Context, id, accountID string) *apierror.APIError
 	UpdateStatus(ctx context.Context, id, accountID, status string, dkimTokens []string) *apierror.APIError
+	// Delete removes a domain; deleted is false when no matching domain existed.
+	Delete(ctx context.Context, id, accountID string) (deleted bool, apiErr *apierror.APIError)
 }
 
 // EmailInboxRepo persists routable inbox addresses and resolves the inbox an inbound mail arrived at.
@@ -34,6 +36,8 @@ type EmailInboxRepo interface {
 	// delivered to a per-inbox forwarding address (<inbox_id>@<inbound domain>). IDs are globally unique.
 	GetByIDSystem(ctx context.Context, id string) (*EmailInbox, *apierror.APIError)
 	ListByAccount(ctx context.Context, accountID string) ([]*EmailInbox, *apierror.APIError)
+	// CountByDomain returns how many inboxes are bound to a domain, so a domain delete can be blocked while inboxes exist.
+	CountByDomain(ctx context.Context, accountID, emailDomainID string) (int64, *apierror.APIError)
 	Update(ctx context.Context, id, accountID string, input *UpdateEmailInboxInput) *apierror.APIError
 	Delete(ctx context.Context, id, accountID string) (bool, *apierror.APIError)
 }

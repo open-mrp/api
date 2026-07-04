@@ -129,6 +129,83 @@ func TestValidateCredential_APIKeyOwnedAccount(t *testing.T) {
 	}
 }
 
+// TestValidateCredential_APIKeyCounterpartySideCarriesPermissions confirms a
+// counterparty-side API key (e.g. a customer's key targeting a merchant) carries its
+// own-account role permissions so downstream services can authorize customer-side
+// capabilities (e.g. purchase_orders:create). RoleID/RoleType are cleared.
+func TestValidateCredential_APIKeyCounterpartySideCarriesPermissions(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repoFactory := factorymock.NewMockRepoFactory(ctrl)
+	apiKeyMed := mediatormock.NewMockAPIKeyMed(ctrl)
+	coreClient := clientmock.NewMockAuthCoreClient(ctrl)
+
+	apiKey := &apikey.APIKey{
+		ID:             7,
+		TypeID:         "apky_customer",
+		KeyID:          "api-cust",
+		Name:           "Customer Key",
+		OwnerAccountID: "acct-customer",
+		RoleID:         "role-cust",
+		RoleType:       "user",
+	}
+	parsedKey := &apikey.ParsedAPIKey{AccountMode: constants.AccountModeProduction, ID: "api-cust", Secret: "secret", Checksum: "abc"}
+	touchDone := make(chan struct{}, 1)
+
+	apiKeyMed.EXPECT().FindAndValidate(gomock.Any(), "aug_sk_cust").Return(apiKey, nil)
+	apiKeyMed.EXPECT().ParseKey(gomock.Any(), "aug_sk_cust").Return(parsedKey, nil)
+	apiKeyMed.EXPECT().TouchIfNotRecent(gomock.Any(), apiKey).DoAndReturn(func(context.Context, *apikey.APIKey) *apierror.APIError {
+		touchDone <- struct{}{}
+		return nil
+	})
+	coreClient.EXPECT().GetAccountContext(gomock.Any(), "acct-merchant").Return(&domain.AccountContext{
+		AccountID:   "acct-merchant",
+		AccountMode: constants.AccountModeProduction,
+	}, nil)
+	coreClient.EXPECT().GetAccountRelationByAPIKeyID(gomock.Any(), "acct-merchant", apiKey.ID).Return(&domain.AuthAccountRelation{
+		ID:                      "rel-M-C",
+		CounterpartyAccountID:   "acct-customer",
+		AccountRelationRoleCode: types.IdentityRelationTypeCustomer,
+		IsOwnerSide:             false,
+	}, true, nil)
+	// The new own-account permission lookup for the counterparty key.
+	apiKeyMed.EXPECT().GetKeyAccountAccess(gomock.Any(), domain.APIKeyGetAccountAccessInput{
+		AccountMode: constants.AccountModeProduction, APIKeyID: apiKey.ID, TargetAccountID: "acct-customer",
+	}).Return(&domain.APIKeyAccountAccess{
+		APIKeyID:    apiKey.TypeID,
+		AccountID:   "acct-customer",
+		RoleID:      &apiKey.RoleID,
+		Permissions: map[string]bool{"purchase_orders:create": true},
+	}, nil)
+
+	med := &userMedImpl{repos: repoFactory, apiKeyMed: apiKeyMed, coreClient: coreClient, jwtSecret: testutil.JWTSecret}
+
+	identity, err := med.ValidateCredential(context.Background(), "aug_sk_cust", new("acct-merchant"), nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	select {
+	case <-touchDone:
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("expected TouchIfNotRecent to be called")
+	}
+
+	if identity.Actor.RelationType != types.IdentityRelationTypeCustomer {
+		t.Fatalf("expected customer relation actor, got %s", identity.Actor.RelationType)
+	}
+	if identity.Target == nil || identity.Target.AccountID != "acct-merchant" {
+		t.Fatalf("expected target acct-merchant, got %+v", identity.Target)
+	}
+	if !identity.Actor.Permissions["purchase_orders:create"] {
+		t.Fatalf("expected carried permission purchase_orders:create, got %+v", identity.Actor.Permissions)
+	}
+	if identity.Actor.RoleID != nil || identity.Actor.RoleType != nil {
+		t.Fatalf("expected RoleID/RoleType cleared, got roleID=%v roleType=%v", identity.Actor.RoleID, identity.Actor.RoleType)
+	}
+}
+
 func TestValidateCredential_APIKeyRelationMissing(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
@@ -563,6 +640,87 @@ func TestValidateCredential_UserToken_OwnerSideRelationConstrainedToActorAccount
 	}
 	if !identity.Actor.Permissions["product_line:read"] {
 		t.Fatalf("expected actor permissions to be preserved on owner-side, got %+v", identity.Actor.Permissions)
+	}
+}
+
+// TestValidateCredential_UserToken_CounterpartySideCarriesPermissions confirms that a
+// counterparty-side relation actor (e.g. a customer targeting a merchant) now KEEPS its
+// own-account role permissions so downstream services can authorize customer-side
+// capabilities (e.g. purchase_orders:create for a portal order). RoleID/RoleType are
+// cleared so no admin bypass leaks across the relation.
+func TestValidateCredential_UserToken_CounterpartySideCarriesPermissions(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repoFactory := factorymock.NewMockRepoFactory(ctrl)
+	userRepo := repositorymock.NewMockUserRepo(ctrl)
+	repoFactory.EXPECT().NewUserRepo().Return(userRepo)
+
+	apiKeyMed := mediatormock.NewMockAPIKeyMed(ctrl)
+	coreClient := clientmock.NewMockAuthCoreClient(ctrl)
+
+	userID := "user-cust"
+	actorAccountID := "acct-Customer"
+	targetAccountID := "acct-Merchant"
+	name := "Customer User"
+	userModel := &types.User{ID: userID, Name: &name}
+
+	validToken, encErr := token.EncodeJWT(context.Background(), testutil.JWTSecret, userID, time.Hour, token.JWTTypeAccess)
+	if encErr != nil {
+		t.Fatalf("failed to encode test token: %v", encErr)
+	}
+
+	roleType := "user"
+	roleID := "role-cust"
+	userRepo.EXPECT().Find(gomock.Any(), userID).Return(userModel, nil)
+	coreClient.EXPECT().GetAccountContext(gomock.Any(), actorAccountID).Return(&domain.AccountContext{
+		AccountID:   actorAccountID,
+		AccountMode: constants.AccountModeProduction,
+	}, nil)
+	coreClient.EXPECT().GetUserAccountAccess(gomock.Any(), userID, actorAccountID).Return(&domain.AccountUserAccess{
+		AccountUserID: "acu-cust",
+		AccountID:     actorAccountID,
+		RoleID:        &roleID,
+		RoleType:      &roleType,
+		Permissions:   map[string]bool{"purchase_orders:create": true},
+	}, true, nil)
+	coreClient.EXPECT().MarkAccountUserUsed(gomock.Any(), "acu-cust").Return(nil).AnyTimes()
+	// Counterparty-side: the user belongs to the customer account; the merchant owns the relation.
+	coreClient.EXPECT().GetAccountRelationByUserID(gomock.Any(), targetAccountID, actorAccountID, userID).Return(&domain.AuthAccountRelation{
+		ID:                      "rel-M-C",
+		CounterpartyAccountID:   actorAccountID,
+		AccountRelationRoleCode: types.IdentityRelationTypeCustomer,
+		IsOwnerSide:             false,
+	}, true, nil)
+
+	med := &userMedImpl{
+		repos:      repoFactory,
+		apiKeyMed:  apiKeyMed,
+		coreClient: coreClient,
+		jwtSecret:  testutil.JWTSecret,
+	}
+
+	identity, err := med.ValidateCredential(context.Background(), validToken, &targetAccountID, &actorAccountID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if identity == nil || identity.Actor == nil {
+		t.Fatal("expected identity with actor, got nil")
+	}
+	if identity.Actor.RelationType != types.IdentityRelationTypeCustomer {
+		t.Fatalf("expected customer relation actor, got %s", identity.Actor.RelationType)
+	}
+	if identity.Target == nil || identity.Target.AccountID != targetAccountID {
+		t.Fatalf("expected target account %s, got %+v", targetAccountID, identity.Target)
+	}
+	// Permissions must be CARRIED (post-redesign), not stripped.
+	if !identity.Actor.Permissions["purchase_orders:create"] {
+		t.Fatalf("expected carried permission purchase_orders:create, got %+v", identity.Actor.Permissions)
+	}
+	// RoleID/RoleType cleared so IsAdmin()/IsRoleSet() stay false.
+	if identity.Actor.RoleID != nil || identity.Actor.RoleType != nil {
+		t.Fatalf("expected RoleID/RoleType cleared, got roleID=%v roleType=%v", identity.Actor.RoleID, identity.Actor.RoleType)
 	}
 }
 

@@ -23,6 +23,7 @@ type EmailBridgeSvc interface {
 	ListDomains(ctx context.Context, req *ListEmailDomainsRequest) (*apiresource.List[apiresource.EmailDomain], *apierror.APIError)
 	GetDomain(ctx context.Context, req *GetEmailDomainRequest) (*apiresource.EmailDomain, *apierror.APIError)
 	VerifyDomain(ctx context.Context, req *VerifyEmailDomainRequest) (*apiresource.EmailDomain, *apierror.APIError)
+	DeleteDomain(ctx context.Context, req *DeleteEmailDomainRequest) (*apiresource.EmptyResource, *apierror.APIError)
 
 	CreateInbox(ctx context.Context, req *CreateEmailInboxRequest) (*apiresource.EmailInbox, *apierror.APIError)
 	ListInboxes(ctx context.Context, req *ListEmailInboxesRequest) (*apiresource.List[apiresource.EmailInbox], *apierror.APIError)
@@ -155,6 +156,18 @@ func (s *emailBridgeSvcImpl) VerifyDomain(ctx context.Context, req *VerifyEmailD
 		return nil, apiErr
 	}
 	return emailDomainFromProto(resp), nil
+}
+
+func (s *emailBridgeSvcImpl) DeleteDomain(ctx context.Context, req *DeleteEmailDomainRequest) (*apiresource.EmptyResource, *apierror.APIError) {
+	pbReq := &pb.DeleteEmailDomainRequest{Id: req.ID}
+	_, apiErr := grpcutil.CallRPC(ctx, emailBridgeSvcTracer, "service.email_bridge.delete_domain", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.EmailBridgeAck, error) {
+			return s.emailBridgeClient.DeleteEmailDomain(ctx, pbReq, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	return &apiresource.EmptyResource{}, nil
 }
 
 func (s *emailBridgeSvcImpl) CreateInbox(ctx context.Context, req *CreateEmailInboxRequest) (*apiresource.EmailInbox, *apierror.APIError) {

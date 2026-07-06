@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.40.0](https://github.com/Augno/api/compare/v0.39.0...v0.40.0) (2026-07-06)
+
+
+### Features
+
+* custom order portal domains ([#406](https://github.com/Augno/api/issues/406)) ([9c6323f](https://github.com/Augno/api/commit/9c6323f37b1a17c5c2af1355d13eb81f1f0ee806))
+
 ## [0.39.0](https://github.com/Augno/api/compare/v0.38.1...v0.39.0) (2026-07-04)
 
 

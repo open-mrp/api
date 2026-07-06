@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.41.0](https://github.com/Augno/api/compare/v0.40.0...v0.41.0) (2026-07-06)
+
+
+### Features
+
+* integrate WS_TICKET_SECRET for custom portal domains and update dashboard SDK usage ([128be48](https://github.com/Augno/api/commit/128be48b1308d3bec811fcaa7dd0a64262cb17c3))
+
 ## [0.40.0](https://github.com/Augno/api/compare/v0.39.0...v0.40.0) (2026-07-06)
 
 

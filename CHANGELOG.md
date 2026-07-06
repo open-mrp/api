@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.41.1](https://github.com/Augno/api/compare/v0.41.0...v0.41.1) (2026-07-06)
+
+
+### Bug Fixes
+
+* agent runs silent failures ([#409](https://github.com/Augno/api/issues/409)) ([d41e463](https://github.com/Augno/api/commit/d41e4633d14eba38e16b6a306fa2e26b1552b5dd))
+
 ## [0.41.0](https://github.com/Augno/api/compare/v0.40.0...v0.41.0) (2026-07-06)
 
 

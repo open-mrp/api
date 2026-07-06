@@ -4,7 +4,7 @@ Feature state: fully implemented and verified offline (unit tests, sqlc prepare 
 
 ## Blocked on externals
 
-- [ ] **Swap dashboard to typed SDK** — `dashboard/apps/frontend/src/app/_lib/api/client/portal-domain.api.ts` uses raw `augnoClient.get/post/delete` with local types (marked with a `TODO`). Once the Stainless internal SDK regenerates from `specs/internal_openapi_spec.json` with a `settings.portalDomains` resource, switch to the typed client and delete the local types.
+- [x] **Swap dashboard to typed SDK** — `dashboard/apps/frontend/src/app/_lib/api/client/portal-domain.api.ts` now calls `augnoClient.settings.portalDomains.{list,create,delete}` and `.actions.verify`, and re-exports `PortalDomain`/`DNSRecord` from the SDK. Local types deleted. `dns_records` is nullable in the SDK type, so `PortalDomainSection.tsx` guards it. Frontend `check-types` green.
 
 
 
@@ -22,8 +22,8 @@ Feature state: fully implemented and verified offline (unit tests, sqlc prepare 
 
 ## Rollout (ordered)
 
-1. [ ] **core-service env (BEFORE deploying this code)**: `VERCEL_API_TOKEN`, `VERCEL_PROJECT_ID` (+ `VERCEL_TEAM_ID` if team-scoped) — config validation hard-requires the first two in production; startup fails without them.
-2. [ ] **api-gateway env**: `WS_TICKET_SECRET` (strong random string, shared across replicas). Optional — without it, custom-domain portals work but get no live WS notifications (`/v1/ws/ticket` returns 501 and clients back off).
+1. [x] **core-service env (BEFORE deploying this code)**: `VERCEL_API_TOKEN`, `VERCEL_PROJECT_ID` (+ `VERCEL_TEAM_ID` if team-scoped) — config validation hard-requires the first two in production; startup fails without them. Wired via `secrets.tf` (`vercel_credentials`) → `core-service.yaml` env; values live in the `prod/api` Secrets Manager blob.
+2. [x] **api-gateway env**: `WS_TICKET_SECRET` (strong random string, shared across replicas). Optional — without it, custom-domain portals work but get no live WS notifications (`/v1/ws/ticket` returns 501 and clients back off). Wired via `secrets.tf` (`ws_ticket_secret`) → `api-gateway.yaml` env (`optional: true`); value in the `prod/api` blob.
 3. [ ] **Vercel project env**: `API_ORIGIN` (e.g. `https://api.augno.com`) and optionally `NEXT_PUBLIC_PRIMARY_HOSTS` (comma-separated extra first-party hosts).
 4. [ ] Ship backend + settings UI first (inert until DNS points anywhere), frontend proxy/cookie changes second (backward-compatible for `*.augno.com`).
 

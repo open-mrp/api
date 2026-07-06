@@ -141,6 +141,7 @@ func Run(
 	resourceloaders.SetCorePurchaseClient(coreClient.Purchase)
 	resourceloaders.SetFulfillmentClient(coreClient.Fulfillment)
 	resourceloaders.SetCorePickingClient(coreClient.Picking)
+	resourceloaders.SetPortalDomainClient(coreClient.PortalDomain)
 	resourceloaders.SetCoreShippingClient(coreClient.Shipping)
 	resourceloaders.SetCoreReceivingClient(coreClient.Receiving)
 	resourceloaders.SetCoreProductionRunClient(coreClient.ProductionRun)
@@ -238,7 +239,8 @@ func Run(
 
 	// Initialize the HTTP server.
 	mux := http.NewServeMux()
-	mux.HandleFunc("/v1/ws", ws.NewHandler(wsHub, authClient, notificationClient))
+	mux.HandleFunc("/v1/ws", ws.NewHandler(wsHub, authClient, notificationClient, []byte(cfg.WSTicketSecret)))
+	mux.HandleFunc("/v1/ws/ticket", ws.NewTicketHandler(authClient, []byte(cfg.WSTicketSecret)))
 	mux.Handle("/v1/webhooks/", webhookRouter)
 	mux.Handle("/v1/auth/", authRouter)
 	mux.Handle("/", mainRouter)

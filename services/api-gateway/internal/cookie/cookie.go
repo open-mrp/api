@@ -28,7 +28,7 @@ type cookieOptions struct {
 	Domain   string
 }
 
-func getCookieOptions(isProduction bool, path string) cookieOptions {
+func getCookieOptions(isProduction bool, path, externalHost string) cookieOptions {
 	var sameSite http.SameSite
 	if isProduction {
 		sameSite = http.SameSiteLaxMode
@@ -42,12 +42,23 @@ func getCookieOptions(isProduction bool, path string) cookieOptions {
 		Path:     path,
 	}
 
-	// Use a wildcard domain for production to support subdomains
-	if isProduction {
+	// First-party hosts share the wildcard domain so sessions span *.augno.com. Requests proxied from a customer's custom portal domain (external host outside augno.com) get host-only cookies instead: the browser scopes them to that domain, which both makes auth work there and isolates sessions per tenant domain. When the external host is unknown, production keeps the legacy wildcard behavior.
+	if isProduction && isAugnoHost(externalHost) {
 		opts.Domain = ".augno.com"
 	}
 
 	return opts
+}
+
+// isAugnoHost reports whether the external request host is a first-party augno.com host. An empty host (middleware not in the chain) is treated as first-party to preserve legacy behavior.
+func isAugnoHost(host string) bool {
+	return host == "" || host == "augno.com" || strings.HasSuffix(host, ".augno.com")
+}
+
+// externalHostFromContext reads the browser-facing host captured by ExternalHostMiddleware; empty when unset.
+func externalHostFromContext(ctx context.Context) string {
+	host, _ := appctx.GetExternalHost(ctx)
+	return host
 }
 
 func setAccessTokenCookie(w http.ResponseWriter, token string, opts cookieOptions) {
@@ -87,10 +98,11 @@ func MakeAuthCookies(ctx context.Context, accessToken, refreshToken string) []*h
 		panic("platform not found in context")
 	}
 	isProduction := platform == constants.PlatformModeProduction
+	externalHost := externalHostFromContext(ctx)
 
 	return []*http.Cookie{
-		makeAccessTokenCookie(accessToken, getCookieOptions(isProduction, "/")),
-		makeRefreshTokenCookie(refreshToken, getCookieOptions(isProduction, authRoutePrefix)),
+		makeAccessTokenCookie(accessToken, getCookieOptions(isProduction, "/", externalHost)),
+		makeRefreshTokenCookie(refreshToken, getCookieOptions(isProduction, authRoutePrefix, externalHost)),
 	}
 }
 
@@ -100,7 +112,8 @@ func MakeAccessTokenCookie(ctx context.Context, accessToken string) *http.Cookie
 		panic("platform not found in context")
 	}
 	isProduction := platform == constants.PlatformModeProduction
-	return makeAccessTokenCookie(accessToken, getCookieOptions(isProduction, "/"))
+	externalHost := externalHostFromContext(ctx)
+	return makeAccessTokenCookie(accessToken, getCookieOptions(isProduction, "/", externalHost))
 }
 
 func MakeClearAuthCookies(ctx context.Context) []*http.Cookie {
@@ -109,10 +122,11 @@ func MakeClearAuthCookies(ctx context.Context) []*http.Cookie {
 		panic("platform not found in context")
 	}
 	isProduction := platform == constants.PlatformModeProduction
+	externalHost := externalHostFromContext(ctx)
 
 	return []*http.Cookie{
-		makeClearAccessTokenCookie(getCookieOptions(isProduction, "/")),
-		makeClearRefreshTokenCookie(getCookieOptions(isProduction, authRoutePrefix)),
+		makeClearAccessTokenCookie(getCookieOptions(isProduction, "/", externalHost)),
+		makeClearRefreshTokenCookie(getCookieOptions(isProduction, authRoutePrefix, externalHost)),
 	}
 }
 

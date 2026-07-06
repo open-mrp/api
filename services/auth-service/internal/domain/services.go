@@ -27,6 +27,8 @@ type RegisterInput struct {
 	Email       string
 	Password    string  // #nosec G117 - Struct field, not a hardcoded credential
 	AccountSlug *string // Portal context for the "already registered" magic login link.
+	// PortalBaseURL is the base URL of the account's verified custom portal domain, resolved server-side by the gateway. When set, email links use it instead of the slug-prefixed dashboard URL.
+	PortalBaseURL *string
 }
 
 type AuthSvc interface {
@@ -72,7 +74,7 @@ type PasswordSvc interface {
 	ResetPassword(ctx context.Context, token, newPassword string) (*LoginResult, *apierror.APIError)
 
 	// RequestPasswordReset initiates a password reset flow for the identifier.
-	RequestPasswordReset(ctx context.Context, identifier string, accountSlug *string) *apierror.APIError
+	RequestPasswordReset(ctx context.Context, identifier string, accountSlug, portalBaseURL *string) *apierror.APIError
 }
 
 type CreateRegistrationSessionInput struct {

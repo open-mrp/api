@@ -68,6 +68,8 @@ message PublicAccountInfo {
   optional string default_billing_address_id = 4;
   optional string support_email = 5;
   optional string logo_url = 6;
+  // The account's verified custom portal domain (e.g. shop.acme.com), when one exists.
+  optional string portal_domain = 7;
 }
 message GetAccountRequest {
   string id = 1;

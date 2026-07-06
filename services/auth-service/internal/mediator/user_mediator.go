@@ -182,7 +182,7 @@ func (s *userMedImpl) ValidateMagicLoginToken(ctx context.Context, magicToken st
 }
 
 // SendAlreadyRegisteredEmail generates a magic login token and sends the "already registered" email so the user can log in with one click. This must be called outside a transaction so the outbox message is not rolled back.
-func (s *userMedImpl) SendAlreadyRegisteredEmail(ctx context.Context, user *types.User, accountSlug *string) {
+func (s *userMedImpl) SendAlreadyRegisteredEmail(ctx context.Context, user *types.User, accountSlug, portalBaseURL *string) {
 	if user.Email == nil {
 		return
 	}
@@ -192,10 +192,14 @@ func (s *userMedImpl) SendAlreadyRegisteredEmail(ctx context.Context, user *type
 		return
 	}
 
+	// A verified custom portal domain serves the portal without the slug path prefix, so its links drop the slug segment.
 	var loginURL string
-	if accountSlug != nil && *accountSlug != "" {
+	switch {
+	case portalBaseURL != nil && *portalBaseURL != "":
+		loginURL = fmt.Sprintf("%s%s?t=%s", *portalBaseURL, constants.DashboardPathMagicLogin, magicToken)
+	case accountSlug != nil && *accountSlug != "":
 		loginURL = fmt.Sprintf("%s/%s%s?t=%s", s.frontendURL, *accountSlug, constants.DashboardPathMagicLogin, magicToken)
-	} else {
+	default:
 		loginURL = fmt.Sprintf("%s%s?t=%s", s.frontendURL, constants.DashboardPathMagicLogin, magicToken)
 	}
 

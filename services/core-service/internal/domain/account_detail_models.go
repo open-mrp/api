@@ -45,6 +45,8 @@ type PublicAccountBySlug struct {
 	DefaultBillingAddressID *string
 	SupportEmail            *string
 	LogoURL                 *string
+	// PortalDomain is the account's verified custom portal domain (e.g. shop.acme.com), when one exists.
+	PortalDomain *string
 }
 
 // UpdateAccountParams holds the optional fields for updating an account.

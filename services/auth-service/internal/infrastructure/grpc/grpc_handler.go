@@ -83,10 +83,11 @@ func (h *gRPCHandler) Register(ctx context.Context, req *pb.RegisterRequest) (*p
 	defer finalizeIdempotency()
 
 	result, apiErr := h.userSvc.Register(ctx, domain.RegisterInput{
-		Name:        req.Name,
-		Email:       req.Email,
-		Password:    req.Password,
-		AccountSlug: req.AccountSlug,
+		Name:          req.Name,
+		Email:         req.Email,
+		Password:      req.Password,
+		AccountSlug:   req.AccountSlug,
+		PortalBaseURL: req.PortalBaseUrl,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
@@ -142,7 +143,7 @@ func (h *gRPCHandler) RequestPasswordReset(ctx context.Context, req *pb.RequestP
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
-	apiErr := h.passwordSvc.RequestPasswordReset(ctx, req.Identifier, req.AccountSlug)
+	apiErr := h.passwordSvc.RequestPasswordReset(ctx, req.Identifier, req.AccountSlug, req.PortalBaseUrl)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}

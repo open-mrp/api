@@ -1281,3 +1281,20 @@ type PricingRepo interface {
 	// LoadPricingBundle fetches, in a small number of queries, all product list prices, unit conversion data, unit-group discounts, account-price overrides (for the buyer and its parent account), and applicable volume discounts.
 	LoadPricingBundle(ctx context.Context, params LoadPricingBundleParams) (*PricingBundle, *apierror.APIError)
 }
+
+// PortalDomainRepo persists customer portal custom domains. The single-row getters return (nil, nil) when no matching row exists so callers can distinguish absence from failure.
+type PortalDomainRepo interface {
+	Create(ctx context.Context, portalDomainID, accountID, domainName string) (*PortalDomain, *apierror.APIError)
+	GetByID(ctx context.Context, accountID, portalDomainID string) (*PortalDomain, *apierror.APIError)
+	GetByAccountID(ctx context.Context, accountID string) (*PortalDomain, *apierror.APIError)
+	// GetByDomain looks a domain up without account scoping; used for global-uniqueness checks.
+	GetByDomain(ctx context.Context, domainName string) (*PortalDomain, *apierror.APIError)
+	ListByAccount(ctx context.Context, accountID string) ([]*PortalDomain, *apierror.APIError)
+	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*PortalDomain, *apierror.APIError)
+	// UpdateProviderState persists the latest required DNS records and status reported by the serving provider.
+	UpdateProviderState(ctx context.Context, portalDomainID string, status constants.PortalDomainStatus, dnsRecords []PortalDNSRecord) *apierror.APIError
+	MarkVerified(ctx context.Context, portalDomainID string) *apierror.APIError
+	Delete(ctx context.Context, accountID, portalDomainID string) (bool, *apierror.APIError)
+	// ResolveVerifiedHost returns the public account whose verified portal domain matches the given host, or a not-found error.
+	ResolveVerifiedHost(ctx context.Context, domainName string) (*PublicAccountBySlug, *apierror.APIError)
+}

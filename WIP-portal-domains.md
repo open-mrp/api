@@ -1,0 +1,47 @@
+# WIP: Custom Portal Domains — Remaining TODOs
+
+Feature state: fully implemented and verified offline (unit tests, sqlc prepare smoke against real schema, apidocs/OpenAPI tests, frontend typecheck/lint/build all green) across `api/` and `dashboard/`. What remains is live verification, rollout, and a few deferred items.
+
+## Blocked on externals
+
+- [ ] **Swap dashboard to typed SDK** — `dashboard/apps/frontend/src/app/_lib/api/client/portal-domain.api.ts` uses raw `augnoClient.get/post/delete` with local types (marked with a `TODO`). Once the Stainless internal SDK regenerates from `specs/internal_openapi_spec.json` with a `settings.portalDomains` resource, switch to the typed client and delete the local types.
+
+
+
+## Live verification (before shipping)
+
+- [ ] **Local smoke with stub provider** — `make dev`, then:
+  - `POST /v1/settings/portal-domains {"domain":"shop.example.com"}` with an `Idempotency-Key` (replay it → expect the cached response).
+  - `POST /v1/settings/portal-domains/{id}/actions/verify` twice (stub reports verified on the 2nd provider check).
+  - Unauthenticated `GET /v1/settings/portal-hosts/shop.example.com` → public account with `slug`.
+  - Frontend: visit `shop.lvh.me:3000` (lvh.me resolves to 127.0.0.1 and is NOT a primary host) → proxy resolves the host, portal renders, login sets host-only cookies, `/v1/*` proxies same-origin.
+- [ ] **Staging end-to-end with a real domain** — add domain in Account Settings → publish CNAME to `cname.vercel-dns.com` → verify action → Vercel issues TLS → portal renders on the domain → customer login works → password-reset email links to the custom domain → live notifications connect via WS ticket.
+- [ ] **Confirm Vercel API versions/payloads** against current docs at first real use: `POST /v10/projects/{id}/domains`, `GET /v9/projects/{id}/domains/{domain}` + `POST .../verify`, `GET /v6/domains/{domain}/config` (implemented in `services/core-service/internal/infrastructure/vercel/vercel_domains_client.go`).
+
+
+
+## Rollout (ordered)
+
+1. [ ] **core-service env (BEFORE deploying this code)**: `VERCEL_API_TOKEN`, `VERCEL_PROJECT_ID` (+ `VERCEL_TEAM_ID` if team-scoped) — config validation hard-requires the first two in production; startup fails without them.
+2. [ ] **api-gateway env**: `WS_TICKET_SECRET` (strong random string, shared across replicas). Optional — without it, custom-domain portals work but get no live WS notifications (`/v1/ws/ticket` returns 501 and clients back off).
+3. [ ] **Vercel project env**: `API_ORIGIN` (e.g. `https://api.augno.com`) and optionally `NEXT_PUBLIC_PRIMARY_HOSTS` (comma-separated extra first-party hosts).
+4. [ ] Ship backend + settings UI first (inert until DNS points anywhere), frontend proxy/cookie changes second (backward-compatible for `*.augno.com`).
+
+
+
+## Deferred / phase 2
+
+- [ ] **Canonical redirect**: when an account has a verified custom domain, optionally 308 portal paths on `augno.com/[slug]/...` to the custom domain (needs a slug→domain hint in the branding lookup — `PublicAccountInfo.portal_domain` already carries it).
+- [ ] **DNS drift reconcile job**: DB stays `verified` if a customer later breaks their DNS (Vercel stops routing regardless). A periodic reconcile that re-polls `GetDomainState` and flips status back to `pending` was explicitly scoped out (repo has no background-poller precedent for domains).
+- [ ] **Server-rendered portal auth pages** (`(customer)/[accountSlug]/auth/`*) still emit slug-prefixed hrefs on custom domains; the proxy's 308 canonicalization covers the clicks. Converting them to use the base-path helper would remove the extra redirect hop.
+- [ ] **Multiple domains per account**: schema supports relaxing (drop `portal_domain_account_uq`, keep an index; add `is_primary`); Create's cardinality check and the settings UI would need updating.
+
+
+
+## Key references
+
+- Plan: `~/.claude/plans/i-want-to-allow-sprightly-tiger.md`
+- Provider seam: `services/core-service/internal/domain/clients.go` (`PortalDomainProvider`) — swap point if serving ever moves off Vercel.
+- WS tickets: `services/api-gateway/internal/ws/ticket.go` (+ `ticket_handler.go`), frontend `dashboard/apps/frontend/src/app/_lib/ws/ws-auth.ts`.
+- Host routing: `dashboard/apps/frontend/src/proxy.ts` (Next 16 — middleware lives here, not middleware.ts).
+

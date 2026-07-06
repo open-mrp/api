@@ -393,3 +393,7 @@ func (r *repoFactoryImpl) NewScanningStationRepo() domain.ScanningStationRepo {
 func (r *repoFactoryImpl) NewPricingRepo() domain.PricingRepo {
 	return NewPricingRepo(r.queries)
 }
+
+func (r *repoFactoryImpl) NewPortalDomainRepo() domain.PortalDomainRepo {
+	return NewPortalDomainRepo(r.queries)
+}

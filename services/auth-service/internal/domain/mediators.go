@@ -162,7 +162,7 @@ type PasswordMed interface {
 	//
 	// Side effects:
 	//   - Sends a password reset email.
-	RequestReset(ctx context.Context, identifier string, accountSlug *string) *apierror.APIError
+	RequestReset(ctx context.Context, identifier string, accountSlug, portalBaseURL *string) *apierror.APIError
 
 	// ValidatePasswordResetToken validates a password reset token and returns the associated user.
 	//
@@ -251,7 +251,7 @@ type UserMed interface {
 	ValidateMagicLoginToken(ctx context.Context, token string) (*types.User, *apierror.APIError)
 
 	// SendAlreadyRegisteredEmail generates a magic login token and sends the "already registered" email so the user can log in with one click. This must be called outside a transaction so the outbox message is not rolled back.
-	SendAlreadyRegisteredEmail(ctx context.Context, user *types.User, accountSlug *string)
+	SendAlreadyRegisteredEmail(ctx context.Context, user *types.User, accountSlug, portalBaseURL *string)
 
 	// ValidateCredential validates credentials provided by a request and returns an identity.
 	//

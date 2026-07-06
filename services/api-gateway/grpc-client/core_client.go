@@ -21,6 +21,7 @@ type CoreServiceClient struct {
 	Shipping       pb.CoreShippingServiceClient
 	ShippingCase   pb.CoreShippingCaseServiceClient
 	HubspotSync    pb.CoreHubspotSyncServiceClient
+	PortalDomain   pb.CorePortalDomainServiceClient
 	grpcConn       *contracts.GRPCClientConn
 }
 
@@ -43,6 +44,7 @@ func NewCoreServiceClientWithURL(url string) (*CoreServiceClient, error) {
 		Shipping:       pb.NewCoreShippingServiceClient(conn),
 		ShippingCase:   pb.NewCoreShippingCaseServiceClient(conn),
 		HubspotSync:    pb.NewCoreHubspotSyncServiceClient(conn),
+		PortalDomain:   pb.NewCorePortalDomainServiceClient(conn),
 		grpcConn:       grpcConn,
 	}, nil
 }

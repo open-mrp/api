@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+// Package core defines the gRPC service for customer portal custom domain management.
+package core;
+
+import "google/protobuf/timestamp.proto";
+import "core/core_accounts_carriers.proto";
+
+option go_package = "shared/proto/core;core";
+
+service CorePortalDomainService {
+  // CreatePortalDomain registers a custom domain for the caller's account portal.
+  rpc CreatePortalDomain(CreatePortalDomainRequest) returns (CreatePortalDomainResponse);
+
+  // GetPortalDomain returns a single portal domain by its ID.
+  rpc GetPortalDomain(GetPortalDomainRequest) returns (GetPortalDomainResponse);
+
+  // ListPortalDomains returns the portal domains for the caller's account.
+  rpc ListPortalDomains(ListPortalDomainsRequest) returns (ListPortalDomainsResponse);
+
+  // VerifyPortalDomain re-checks the domain with the serving provider and marks it verified when DNS is correctly configured.
+  rpc VerifyPortalDomain(VerifyPortalDomainRequest) returns (VerifyPortalDomainResponse);
+
+  // DeletePortalDomain removes a portal domain from the provider and deletes it.
+  rpc DeletePortalDomain(DeletePortalDomainRequest) returns (DeletePortalDomainResponse);
+
+  // ResolvePortalHost resolves a verified custom domain to its public account (unauthenticated).
+  rpc ResolvePortalHost(ResolvePortalHostRequest) returns (ResolvePortalHostResponse);
+
+  // BatchGetPortalDomainsByIDs returns portal domains for the given IDs scoped to the caller's account.
+  rpc BatchGetPortalDomainsByIDs(BatchGetPortalDomainsByIDsRequest) returns (BatchGetPortalDomainsByIDsResponse);
+}
+
+// PortalDomainInfo represents a customer portal custom domain resource.
+message PortalDomainInfo {
+  string id = 1;
+  string account_id = 2;
+  string domain = 3;
+  // pending | verified | failed
+  string status = 4;
+  repeated PortalDNSRecord dns_records = 5;
+  optional google.protobuf.Timestamp verified_at = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+// PortalDNSRecord is a DNS record the customer must publish for the domain to route and verify.
+message PortalDNSRecord {
+  // Record type, e.g. CNAME, A, TXT.
+  string type = 1;
+  string name = 2;
+  string value = 3;
+  // Why the record is needed: routing | ownership.
+  string reason = 4;
+}
+
+message CreatePortalDomainRequest {
+  string domain = 1;
+}
+
+message CreatePortalDomainResponse {
+  PortalDomainInfo portal_domain = 1;
+}
+
+message GetPortalDomainRequest {
+  string id = 1;
+}
+
+message GetPortalDomainResponse {
+  PortalDomainInfo portal_domain = 1;
+}
+
+message ListPortalDomainsRequest {}
+
+message ListPortalDomainsResponse {
+  repeated PortalDomainInfo portal_domains = 1;
+}
+
+message VerifyPortalDomainRequest {
+  string id = 1;
+}
+
+message VerifyPortalDomainResponse {
+  PortalDomainInfo portal_domain = 1;
+}
+
+message DeletePortalDomainRequest {
+  string id = 1;
+}
+
+message DeletePortalDomainResponse {}
+
+message ResolvePortalHostRequest {
+  string domain = 1;
+}
+
+message ResolvePortalHostResponse {
+  PublicAccountInfo account = 1;
+}
+
+message BatchGetPortalDomainsByIDsRequest {
+  repeated string ids = 1;
+}
+
+message BatchGetPortalDomainsByIDsResponse {
+  repeated PortalDomainInfo portal_domains = 1;
+}

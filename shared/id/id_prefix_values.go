@@ -424,6 +424,9 @@ var (
 	InventoryIssueIDPrefix      = composePrefix(VocInventory, VocIssue)
 	InventoryAllocationIDPrefix = composePrefix(VocInventory, VocAllocation)
 
+	// Portal-related prefix values
+	PortalDomainIDPrefix = composePrefix(VocPortal, VocDomain)
+
 	// Registration-related prefix values
 	RegistrationFlowIDPrefix = composePrefix(VocRegistration, VocFlow)
 

@@ -87,6 +87,7 @@ var routeSegmentToSampleID = map[string]string{
 	"edi-runs":                apiresource.SampleEDIRunID,
 	"conversations":           apiresource.SampleConversationID,
 	"messages":                apiresource.SampleMessageID,
+	"portal-domains":          apiresource.SamplePortalDomainID,
 	"email-domains":           apiresource.SampleEmailDomainID,
 	"email-inboxes":           apiresource.SampleEmailInboxID,
 	"groups":                  apiresource.SampleMessagingGroupID,

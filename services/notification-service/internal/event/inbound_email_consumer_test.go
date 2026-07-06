@@ -22,8 +22,8 @@ func TestParseInboundEmail_DecodesBase64Body(t *testing.T) {
 
 	// Multipart forward with a base64-encoded text/plain part — the shape a forwarded email arrives in.
 	raw := strings.Join([]string{
-		"From: forwarder@sellerco.com",
-		"To: support@sellerco.com",
+		"From: forwarder@acme.com",
+		"To: support@acme.com",
 		"Subject: Fwd: What was on my last order",
 		"Message-ID: <b64@x>",
 		"Content-Type: multipart/alternative; boundary=BOUND",
@@ -47,7 +47,7 @@ func TestParseInboundEmail_DecodesBase64Body(t *testing.T) {
 func TestParseInboundEmail_DecodesQuotedPrintableBody(t *testing.T) {
 	raw := strings.Join([]string{
 		"From: cust@x.com",
-		"To: support@sellerco.com",
+		"To: support@acme.com",
 		"Subject: hi",
 		"Message-ID: <qp@x>",
 		"Content-Type: text/plain; charset=UTF-8",
@@ -159,8 +159,8 @@ func TestParseInboundEmail_CollectsAllCandidateRecipients(t *testing.T) {
 	raw := strings.Join([]string{
 		"From: jane@theirco.com",
 		"Delivered-To: in_01hf@inbound.augno.com",
-		"To: support@sellerco.com, cc@elsewhere.com",
-		"Cc: support@sellerco.com", // duplicate collapses
+		"To: support@acme.com, cc@elsewhere.com",
+		"Cc: support@acme.com", // duplicate collapses
 		"Subject: envelope recipient",
 		"Message-ID: <m3@theirco.com>",
 		"Content-Type: text/plain",
@@ -173,7 +173,7 @@ func TestParseInboundEmail_CollectsAllCandidateRecipients(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []string{
 		"in_01hf@inbound.augno.com", // Delivered-To first
-		"support@sellerco.com",       // To
+		"support@acme.com",          // To
 		"cc@elsewhere.com",          // To
 	}, in.Recipients, "delivery headers first, duplicates dropped")
 }

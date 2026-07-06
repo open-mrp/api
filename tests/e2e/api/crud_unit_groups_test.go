@@ -48,9 +48,10 @@ func TestUnitGroups_ListResponseShape(t *testing.T) {
 
 func TestUnitGroups_ListPagination(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(unitGroupsPath, url.Values{"limit": {"1"}})
-	require.NoError(t, err)
-	assert.Len(t, list.Data, 1)
+	// System unit groups (currency/time) are always present and undeletable,
+	// so a limit=1 page always has a stable row to land on; retry absorbs the
+	// hydration race when a parallel test deletes the newest row mid-request.
+	assertListPageLen(t, unitGroupsPath, url.Values{"limit": {"1"}}, 1)
 }
 
 func TestUnitGroups_ListCursorPagination(t *testing.T) {

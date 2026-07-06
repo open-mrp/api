@@ -1323,6 +1323,17 @@ type PickLine struct {
 	PackedAt         sql.NullTime
 }
 
+type PortalDomain struct {
+	ID         string
+	AccountID  string
+	Domain     string
+	Status     string
+	DnsRecords db.NullableRawMessage
+	VerifiedAt sql.NullTime
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
 type Priority struct {
 	ID        string
 	Name      string

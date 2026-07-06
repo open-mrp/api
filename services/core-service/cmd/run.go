@@ -20,6 +20,7 @@ import (
 	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
 	stripeinfra "github.com/augno/api/services/core-service/internal/infrastructure/stripe"
 	"github.com/augno/api/services/core-service/internal/infrastructure/stub"
+	"github.com/augno/api/services/core-service/internal/infrastructure/vercel"
 	"github.com/augno/api/services/core-service/internal/mediator"
 	"github.com/augno/api/services/core-service/internal/service"
 	s3client "github.com/augno/api/shared/cloud/s3"
@@ -237,6 +238,20 @@ func Run(
 		stripeCheckoutFactory = stripeinfra.NewCheckoutClientFactory()
 		hubspotFactory = hubspot.NewClientFactory()
 	}
+
+	// The stub also backs non-production runs without Vercel credentials so make dev works out of the box; config validation guarantees the credentials in production.
+	var portalDomainProvider domain.PortalDomainProvider
+	if cfg.PlatformMode.IsTest() || cfg.VercelAPIToken == "" {
+		portalDomainProvider = stub.NewPortalDomainProvider()
+	} else {
+		portalDomainProvider = vercel.NewPortalDomainProvider(cfg.VercelAPIToken, cfg.VercelProjectID, cfg.VercelTeamID)
+	}
+	portalDomainSvc := service.NewPortalDomainSvc(&service.PortalDomainSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+		Provider:        portalDomainProvider,
+	})
 
 	var integrationEncryptionKey []byte
 	if cfg.IntegrationEncryptionKey != "" {
@@ -635,6 +650,7 @@ func Run(
 	grpc.RegisterAddressService(srv, addressSvc, addressValidationSvc)
 	grpc.RegisterCarrierService(srv, carrierSvc, serviceLevelSvc)
 	grpc.RegisterShippingCaseService(srv, shippingCaseSvc)
+	grpc.RegisterPortalDomainService(srv, portalDomainSvc)
 	grpc.RegisterMiscService(srv, accountIntegrationSvc, adjustmentTypeSvc, emailLogSvc, inventoryChangeLogSvc, prioritySvc)
 	grpc.RegisterAccountUserService(srv, accountUserSvc)
 	grpc.RegisterAnalyticsService(srv, analyticsSvc)

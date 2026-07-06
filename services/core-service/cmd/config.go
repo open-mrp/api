@@ -31,6 +31,9 @@ const (
 	envShippingLabelsBucket       = "SHIPPING_LABELS_BUCKET"
 	envFrontendURL                = "FRONTEND_URL"
 	envAuthServiceURL             = "AUTH_SERVICE_URL"
+	envVercelAPIToken             = "VERCEL_API_TOKEN" // #nosec G101 - Env var name, not a credential
+	envVercelProjectID            = "VERCEL_PROJECT_ID"
+	envVercelTeamID               = "VERCEL_TEAM_ID"
 )
 
 // config represents the configuration for the core service.
@@ -81,6 +84,15 @@ type config struct {
 
 	// AuthServiceURL (required) is the gRPC address of auth-service.
 	AuthServiceURL string
+
+	// VercelAPIToken (required in production) authenticates portal custom domain calls to the Vercel API. When empty outside production, the stub portal domain provider is used instead.
+	VercelAPIToken string
+
+	// VercelProjectID (required in production) is the Vercel project that serves the dashboard frontend; portal custom domains are attached to it.
+	VercelProjectID string
+
+	// VercelTeamID (optional) scopes Vercel API calls to a team; empty for personal-scope tokens.
+	VercelTeamID string
 }
 
 // withDefaults sets the default values for the configuration.
@@ -114,6 +126,9 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		ShippingLabelsBucket:       env.GetEnv(envShippingLabelsBucket, getenv),
 		FrontendURL:                env.GetEnv(envFrontendURL, getenv),
 		AuthServiceURL:             env.GetEnv(envAuthServiceURL, getenv),
+		VercelAPIToken:             env.GetEnv(envVercelAPIToken, getenv),
+		VercelProjectID:            env.GetEnv(envVercelProjectID, getenv),
+		VercelTeamID:               env.GetEnv(envVercelTeamID, getenv),
 	}
 }
 
@@ -166,6 +181,15 @@ func (c *config) validate() error {
 		}
 		if c.ShippingLabelsBucket == "" {
 			return fmt.Errorf("core-service: SHIPPING_LABELS_BUCKET is required")
+		}
+	}
+
+	if c.PlatformMode.IsProduction() {
+		if c.VercelAPIToken == "" {
+			return fmt.Errorf("core-service: VERCEL_API_TOKEN is required")
+		}
+		if c.VercelProjectID == "" {
+			return fmt.Errorf("core-service: VERCEL_PROJECT_ID is required")
 		}
 	}
 	return nil

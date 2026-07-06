@@ -200,6 +200,8 @@ message RegisterRequest {
   // When registering from a customer portal, the account slug scopes the
   // magic-login link in the "already registered" email.
   optional string account_slug = 4;
+  // Base URL of the account's verified custom portal domain (e.g. https://shop.acme.com). Resolved server-side by the gateway, never taken from the client; when set, email links use it instead of the slug-prefixed dashboard URL.
+  optional string portal_base_url = 5;
 }
 
 message MagicLoginRequest {
@@ -218,6 +220,8 @@ message RequestPasswordResetRequest {
   string identifier = 1;
   // Scopes the reset email's branding/links to a specific account context.
   optional string account_slug = 2;
+  // Base URL of the account's verified custom portal domain. Resolved server-side by the gateway, never taken from the client; when set, the reset link uses it instead of the slug-prefixed dashboard URL.
+  optional string portal_base_url = 3;
 }
 
 message ResetPasswordRequest {

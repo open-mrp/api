@@ -131,7 +131,7 @@ func TestGetRefreshTokenFromRequest(t *testing.T) {
 func TestCookiePaths(t *testing.T) {
 	t.Parallel()
 	w := httptest.NewRecorder()
-	opts := getCookieOptions(false, "/")
+	opts := getCookieOptions(false, "/", "")
 	setAccessTokenCookie(w, "access", opts)
 
 	cookies := w.Result().Cookies()
@@ -149,7 +149,7 @@ func TestCookiePaths(t *testing.T) {
 	}
 
 	w = httptest.NewRecorder()
-	opts = getCookieOptions(false, authRoutePrefix)
+	opts = getCookieOptions(false, authRoutePrefix, "")
 	setRefreshTokenCookie(w, "refresh", opts)
 
 	cookies = w.Result().Cookies()
@@ -172,6 +172,7 @@ func TestCookieDomains(t *testing.T) {
 	tests := []struct {
 		name         string
 		isProduction bool
+		externalHost string
 		wantDomain   string
 	}{
 		{
@@ -184,11 +185,35 @@ func TestCookieDomains(t *testing.T) {
 			isProduction: false,
 			wantDomain:   "",
 		},
+		{
+			name:         "Production first-party host keeps wildcard domain",
+			isProduction: true,
+			externalHost: "app.augno.com",
+			wantDomain:   ".augno.com",
+		},
+		{
+			name:         "Production apex host keeps wildcard domain",
+			isProduction: true,
+			externalHost: "augno.com",
+			wantDomain:   ".augno.com",
+		},
+		{
+			name:         "Production custom portal domain gets host-only cookie",
+			isProduction: true,
+			externalHost: "shop.acme.com",
+			wantDomain:   "",
+		},
+		{
+			name:         "Lookalike domain does not get the wildcard",
+			isProduction: true,
+			externalHost: "evilaugno.com",
+			wantDomain:   "",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			opts := getCookieOptions(tt.isProduction, "/")
+			opts := getCookieOptions(tt.isProduction, "/", tt.externalHost)
 			if opts.Domain != tt.wantDomain {
 				t.Errorf("getCookieOptions() domain = %q, want %q", opts.Domain, tt.wantDomain)
 			}

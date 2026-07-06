@@ -34,6 +34,7 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 	r.AddMiddleware(middleware.TracingMiddleware())
 	r.AddMiddleware(middleware.IPBlockMiddleware(config.TrustedProxyHops))
 	r.AddMiddleware(middleware.PlatformMiddleware(config.PlatformMode))
+	r.AddMiddleware(middleware.ExternalHostMiddleware())
 	r.AddMiddleware(loggingMiddleware)
 	r.AddMiddleware(middleware.CORSMiddleware())
 	r.AddMiddleware(middleware.RateLimitMiddleware(config.TrustedProxyHops))
@@ -128,6 +129,14 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 	})
 	if accountsGroup != nil {
 		registry.RegisterGroup(accountsGroup.APIEndpointGroup)
+	}
+
+	// Portal Domains (custom domains for customer portals)
+	portalDomainsGroup := (&httpgroup.PortalDomainsEndpointGroup{}).Materialize(&httpgroup.PortalDomainsEndpointGroupConfig{
+		CoreClient: config.CoreClient,
+	})
+	if portalDomainsGroup != nil {
+		registry.RegisterGroup(portalDomainsGroup.APIEndpointGroup)
 	}
 
 	// Account Statuses
@@ -851,6 +860,7 @@ func (r *router) InitWebhookEndpointGroups(config WebhookRouterConfig) {
 	r.AddMiddleware(middleware.TracingMiddleware())
 	r.AddMiddleware(middleware.IPBlockMiddleware(config.TrustedProxyHops))
 	r.AddMiddleware(middleware.PlatformMiddleware(config.PlatformMode))
+	r.AddMiddleware(middleware.ExternalHostMiddleware())
 	r.AddMiddleware(middleware.RateLimitMiddlewareWithConfig(100, time.Second, config.TrustedProxyHops))
 	r.AddMiddleware(loggingMiddleware)
 	r.AddMiddleware(middleware.RecoverMiddleware())
@@ -887,6 +897,7 @@ func (r *router) InitAuthEndpointGroups(config AuthRouterConfig) {
 	r.AddMiddleware(middleware.TracingMiddleware())
 	r.AddMiddleware(middleware.IPBlockMiddleware(config.TrustedProxyHops))
 	r.AddMiddleware(middleware.PlatformMiddleware(config.PlatformMode))
+	r.AddMiddleware(middleware.ExternalHostMiddleware())
 	r.AddMiddleware(loggingMiddleware)
 	r.AddMiddleware(middleware.CORSMiddleware())
 	r.AddMiddleware(middleware.RateLimitMiddleware(config.TrustedProxyHops))

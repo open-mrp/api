@@ -38,6 +38,7 @@ const (
 	envRabbitMQURI            = "RABBITMQ_URI"
 	envFrontendURL            = "FRONTEND_URL"
 	envTrustedProxyHops       = "TRUSTED_PROXY_HOPS"
+	envWSTicketSecret         = "WS_TICKET_SECRET" // #nosec G101 - Env var name, not a credential
 )
 
 // config represents the configuration for the API gateway.
@@ -53,6 +54,9 @@ type config struct {
 
 	// InternalServiceToken (optional; default: "") is the shared secret that gates the internal listener's identity trust. When empty, the internal listener is not started.
 	InternalServiceToken string
+
+	// WSTicketSecret (optional; default: "") signs short-lived WebSocket connection tickets used by custom portal domains, where the auth cookie is not sent on the cross-origin WS handshake. When empty, ticket minting and ticket-based WS auth are disabled and WS auth is cookie-only. Must be shared across gateway replicas.
+	WSTicketSecret string
 
 	// AuthServiceURI (optional; default: "auth-service:9092") is the auth service address for gRPC.
 	AuthServiceURI string
@@ -122,6 +126,7 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		Port:                   port,
 		InternalPort:           internalPort,
 		InternalServiceToken:   env.GetEnv(envInternalSvcToken, getenv),
+		WSTicketSecret:         env.GetEnv(envWSTicketSecret, getenv),
 		AuthServiceURI:         cmp.Or(env.GetEnv(envAuthServiceURL, getenv), defaultAuthServiceURI),
 		CoreServiceURI:         cmp.Or(env.GetEnv(envCoreServiceURL, getenv), defaultCoreServiceURI),
 		BillingServiceURI:      cmp.Or(env.GetEnv(envBillingServiceURL, getenv), defaultBillingServiceURI),

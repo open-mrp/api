@@ -113,7 +113,7 @@ func (s *passwordSvcImpl) withTx(ctx context.Context, fn func(context.Context, *
 //
 // Side effects:
 //   - Sends a password reset email if the identifier matches a known user.
-func (s *passwordSvcImpl) RequestPasswordReset(ctx context.Context, identifier string, accountSlug *string) *apierror.APIError {
+func (s *passwordSvcImpl) RequestPasswordReset(ctx context.Context, identifier string, accountSlug, portalBaseURL *string) *apierror.APIError {
 	ctx, span := passwordSvcTracer.Start(ctx, "service.password.request_password_reset")
 	defer span.End()
 
@@ -135,7 +135,7 @@ func (s *passwordSvcImpl) RequestPasswordReset(ctx context.Context, identifier s
 	case domain.RecoveryPointStarted:
 		apiErr = s.withTx(ctx, func(txCtx context.Context, svc *passwordSvcImpl) *apierror.APIError {
 			txMeds := svc.mediators()
-			if err := txMeds.Password.RequestReset(txCtx, identifier, accountSlug); err != nil {
+			if err := txMeds.Password.RequestReset(txCtx, identifier, accountSlug, portalBaseURL); err != nil {
 				return err
 			}
 			return txMeds.Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, struct{}{})

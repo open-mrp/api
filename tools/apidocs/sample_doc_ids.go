@@ -74,6 +74,7 @@ func documentedAugnoIDs() map[string]struct{} {
 		apiresource.SampleDepartmentID:              {},
 		apiresource.SampleEmailLogID:                {},
 		apiresource.SampleEmailDomainID:             {},
+		apiresource.SamplePortalDomainID:            {},
 		apiresource.SampleEmailInboxID:              {},
 		apiresource.SampleMessagingGroupID:          {},
 		apiresource.SampleMessagingGroupMemberID:    {},

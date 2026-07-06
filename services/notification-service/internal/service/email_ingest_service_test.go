@@ -44,10 +44,10 @@ func TestIngestInboundEmail_ResolvesForwardingAddress(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	inboxRepo := repositorymock.NewMockEmailInboxRepo(ctrl)
 	// A forwarded email: the forward target (<inbox_id>@inbound.augno.com) lands in Delivered-To and
-	// resolves the inbox by id — even though the customer's real inbox address (testing@sellerco.com) is
+	// resolves the inbox by id — even though the customer's real inbox address (testing@acme.com) is
 	// all that survives in the To header. GetByAddress is never consulted for the matching candidate.
 	inboxRepo.EXPECT().GetByIDSystem(gomock.Any(), "emix_1").
-		Return(&domain.EmailInbox{ID: "emix_1", AccountID: "ac_1", Address: "testing@sellerco.com", Status: domain.EmailInboxStatusActive}, nil)
+		Return(&domain.EmailInbox{ID: "emix_1", AccountID: "ac_1", Address: "testing@acme.com", Status: domain.EmailInboxStatusActive}, nil)
 
 	emailMsgRepo := repositorymock.NewMockEmailMessageRepo(ctrl)
 	// Short-circuit on the dedup guard so the test targets resolution, not the full threading path.
@@ -60,7 +60,7 @@ func TestIngestInboundEmail_ResolvesForwardingAddress(t *testing.T) {
 	svc := &conversationSvcImpl{repoFactory: factory, inboundEmailDomain: "inbound.augno.com"}
 
 	apiErr := svc.IngestInboundEmail(context.Background(), domain.IngestInboundEmailInput{
-		Recipients:   []string{"emix_1@inbound.augno.com", "testing@sellerco.com"},
+		Recipients:   []string{"emix_1@inbound.augno.com", "testing@acme.com"},
 		RfcMessageID: "fwd@x",
 	})
 	require.Nil(t, apiErr)

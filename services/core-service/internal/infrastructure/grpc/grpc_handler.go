@@ -2289,6 +2289,7 @@ func publicAccountToProto(a *domain.PublicAccountBySlug) *pb.PublicAccountInfo {
 		DefaultBillingAddressId: a.DefaultBillingAddressID,
 		SupportEmail:            a.SupportEmail,
 		LogoUrl:                 a.LogoURL,
+		PortalDomain:            a.PortalDomain,
 	}
 }
 

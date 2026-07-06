@@ -209,7 +209,7 @@ func (s *userSvcImpl) Register(ctx context.Context, input domain.RegisterInput) 
 		}
 		if existingUser != nil {
 			publishCtx := event.WithRepos(ctx, s.repos)
-			meds.User.SendAlreadyRegisteredEmail(publishCtx, existingUser, input.AccountSlug)
+			meds.User.SendAlreadyRegisteredEmail(publishCtx, existingUser, input.AccountSlug, input.PortalBaseURL)
 			regErr := apierror.NewValidationError("Unable to process registration. If you already have an account, we will email you a magic login link.")
 			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, regErr)
 		}

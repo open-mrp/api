@@ -1374,6 +1374,16 @@ type StripeWebhookSvc interface {
 	HandleAccountStripeWebhook(ctx context.Context, params HandleStripeWebhookParams) *apierror.APIError
 }
 
+type PortalDomainSvc interface {
+	CreatePortalDomain(ctx context.Context, domainName string) (*PortalDomain, *apierror.APIError)
+	GetPortalDomain(ctx context.Context, portalDomainID string) (*PortalDomain, *apierror.APIError)
+	ListPortalDomains(ctx context.Context) ([]*PortalDomain, *apierror.APIError)
+	VerifyPortalDomain(ctx context.Context, portalDomainID string) (*PortalDomain, *apierror.APIError)
+	DeletePortalDomain(ctx context.Context, portalDomainID string) *apierror.APIError
+	ResolvePortalHost(ctx context.Context, domainName string) (*PublicAccountBySlug, *apierror.APIError)
+	BatchGetPortalDomainsByIDs(ctx context.Context, ids []string) ([]*PortalDomain, *apierror.APIError)
+}
+
 // CreateAccountParams holds the parameters for creating a production account during registration.
 type CreateAccountParams struct {
 	ID                   string

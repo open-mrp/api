@@ -91,6 +91,24 @@ func loginThrottleKey(identifier string) string {
 	return "login:" + strings.ToLower(strings.TrimSpace(identifier))
 }
 
+// resolvePortalBaseURL maps a portal slug to the account's verified custom portal domain base URL (https://<domain>), or nil when the account has none. The lookup is best-effort: any failure falls back to slug-prefixed dashboard links rather than failing the auth flow, and the value is resolved server-side so email links can never be steered by client input.
+func (m *authSvcImpl) resolvePortalBaseURL(ctx context.Context, accountSlug *string) *string {
+	if accountSlug == nil || *accountSlug == "" {
+		return nil
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, authSvcTracer, "service.auth.resolve_portal_base_url", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*corepb.GetAccountBySlugResponse, error) {
+			return m.coreClient.GetAccountBySlug(ctx, &corepb.GetAccountBySlugRequest{Slug: *accountSlug}, opts...)
+		})
+	if apiErr != nil || resp.Account == nil || resp.Account.PortalDomain == nil || *resp.Account.PortalDomain == "" {
+		return nil
+	}
+
+	baseURL := "https://" + *resp.Account.PortalDomain
+	return &baseURL
+}
+
 func (m *authSvcImpl) Login(ctx context.Context, req *LoginRequest) (*apiresource.User, *apierror.APIError) {
 	throttleKey := loginThrottleKey(req.Identifier)
 	if allowed, _ := m.loginFailureLimiter.Check(throttleKey); !allowed {
@@ -120,10 +138,11 @@ func (m *authSvcImpl) Register(ctx context.Context, req *RegisterRequest) (*apir
 	resp, apiErr := grpcutil.CallRPC(ctx, authSvcTracer, "service.auth.register", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.LoginResponse, error) {
 			return m.authClient.Register(ctx, &pb.RegisterRequest{
-				Email:       req.Email,
-				Password:    req.Password,
-				Name:        req.Name,
-				AccountSlug: req.AccountSlug.Ptr(),
+				Email:         req.Email,
+				Password:      req.Password,
+				Name:          req.Name,
+				AccountSlug:   req.AccountSlug.Ptr(),
+				PortalBaseUrl: m.resolvePortalBaseURL(ctx, req.AccountSlug.Ptr()),
 			}, opts...)
 		})
 
@@ -176,8 +195,9 @@ func (m *authSvcImpl) RequestPasswordReset(ctx context.Context, req *RequestPass
 	_, apiErr := grpcutil.CallRPC(ctx, authSvcTracer, "service.auth.request_password_reset", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 			return m.authClient.RequestPasswordReset(ctx, &pb.RequestPasswordResetRequest{
-				Identifier:  req.Identifier,
-				AccountSlug: req.AccountSlug.Ptr(),
+				Identifier:    req.Identifier,
+				AccountSlug:   req.AccountSlug.Ptr(),
+				PortalBaseUrl: m.resolvePortalBaseURL(ctx, req.AccountSlug.Ptr()),
 			}, opts...)
 		})
 

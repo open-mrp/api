@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"time"
 
 	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
 	"github.com/augno/api/services/api-gateway/internal/cookie"
@@ -13,16 +14,9 @@ import (
 	"github.com/coder/websocket"
 )
 
-// NewHandler returns an http.HandlerFunc that upgrades HTTP connections to WebSocket, authenticates via cookie + account ID query param, and starts the client read/write pumps. notificationClient may be nil (conversation-subscribe authz is then unavailable).
-func NewHandler(hub *Hub, authClient *grpcclient.AuthServiceClient, notificationClient *grpcclient.NotificationServiceClient) http.HandlerFunc {
+// NewHandler returns an http.HandlerFunc that upgrades HTTP connections to WebSocket, authenticates the connection, and starts the client read/write pumps. Authentication is cookie-based (cookie + account ID query param) for first-party origins; connections from custom portal domains cannot send the auth cookie cross-origin, so they instead present a short-lived ticket minted by the cookie-authenticated ticket endpoint. notificationClient may be nil (conversation-subscribe authz is then unavailable). ticketSecret may be nil (ticket auth is then disabled).
+func NewHandler(hub *Hub, authClient *grpcclient.AuthServiceClient, notificationClient *grpcclient.NotificationServiceClient, ticketSecret []byte) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Extract access token from cookie.
-		accessToken, apiErr := cookie.GetAccessTokenFromRequest(r)
-		if apiErr != nil {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
-			return
-		}
-
 		// Extract account ID from query param.
 		accountID := r.URL.Query().Get("accountId")
 		if accountID == "" {
@@ -30,21 +24,38 @@ func NewHandler(hub *Hub, authClient *grpcclient.AuthServiceClient, notification
 			return
 		}
 
-		// Validate via gRPC auth-service (same as AuthMiddleware).
-		identity, err := authClient.Client.ValidateCredential(r.Context(), &pb.Credential{
-			Token:           accessToken,
-			TargetAccountId: &accountID,
-		})
-		if err != nil {
-			apiErr := contracts.ConvertGRPCError(r.Context(), err, "auth-service")
+		var userID string
+		if ticket := r.URL.Query().Get("ticket"); ticket != "" && len(ticketSecret) > 0 {
+			ticketUserID, ticketAccountID, err := VerifyTicket(ticketSecret, ticket, time.Now())
+			if err != nil || ticketAccountID != accountID {
+				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				return
+			}
+			userID = ticketUserID
+		} else {
+			// Extract access token from cookie.
+			accessToken, apiErr := cookie.GetAccessTokenFromRequest(r)
 			if apiErr != nil {
 				http.Error(w, "unauthorized", http.StatusUnauthorized)
 				return
 			}
-		}
 
-		// The actor id is the user id (us_), used as the key for the per-user notification topic.
-		userID := identity.GetActor().GetId()
+			// Validate via gRPC auth-service (same as AuthMiddleware).
+			identity, err := authClient.Client.ValidateCredential(r.Context(), &pb.Credential{
+				Token:           accessToken,
+				TargetAccountId: &accountID,
+			})
+			if err != nil {
+				apiErr := contracts.ConvertGRPCError(r.Context(), err, "auth-service")
+				if apiErr != nil {
+					http.Error(w, "unauthorized", http.StatusUnauthorized)
+					return
+				}
+			}
+
+			// The actor id is the user id (us_), used as the key for the per-user notification topic.
+			userID = identity.GetActor().GetId()
+		}
 
 		// Reject actors with no personal user identity (e.g. api-key actors): they have no bell feed and no account_user to authorize conversation subscriptions, so the socket would only ever subscribe to empty-keyed topics. Closing here avoids a useless, mis-keyed connection.
 		if userID == "" {

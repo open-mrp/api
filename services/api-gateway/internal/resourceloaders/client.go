@@ -61,6 +61,14 @@ func SetCorePickingClient(c pb.CorePickingServiceClient) {
 	corePickingClient = c
 }
 
+// portalDomainClient is the CorePortalDomainService client used by LoadPortalDomains. Set at startup.
+var portalDomainClient pb.CorePortalDomainServiceClient
+
+// SetPortalDomainClient is called once at startup with the CorePortalDomainService client.
+func SetPortalDomainClient(c pb.CorePortalDomainServiceClient) {
+	portalDomainClient = c
+}
+
 // coreShippingClient is the CoreShippingService client used by LoadShipments (shipment include resolution). Set at startup.
 var coreShippingClient pb.CoreShippingServiceClient
 

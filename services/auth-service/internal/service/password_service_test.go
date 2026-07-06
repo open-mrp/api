@@ -84,7 +84,7 @@ func (suite *PasswordSvcTestSuite) TestRequestPasswordReset_Success() {
 		Return(idempotencyKey, nil).
 		Times(1)
 	suite.passwordMed.EXPECT().
-		RequestReset(gomock.Any(), identifier, accountSlug).
+		RequestReset(gomock.Any(), identifier, accountSlug, nil).
 		Return(nil).
 		Times(1)
 	suite.idempotencyMed.EXPECT().
@@ -92,7 +92,7 @@ func (suite *PasswordSvcTestSuite) TestRequestPasswordReset_Success() {
 		Return(nil).
 		Times(1)
 
-	apiErr := suite.passwordSvc.RequestPasswordReset(ctx, identifier, accountSlug)
+	apiErr := suite.passwordSvc.RequestPasswordReset(ctx, identifier, accountSlug, nil)
 
 	suite.Nil(apiErr)
 }

@@ -26,6 +26,11 @@ INSERT IGNORE INTO account_branding (id, owner_account_id, support_email, logo_u
 INSERT IGNORE INTO account_portal (id, owner_account_id, slug, created_at, updated_at) VALUES
     ('acpo_01seedacmeportal000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'acme-inc', NOW(), NOW());
 
+-- Custom portal domain (verified) for the Acme account
+INSERT IGNORE INTO portal_domain (id, account_id, domain, status, dns_records, verified_at, created_at, updated_at) VALUES
+    ('podn_01seedacmeportaldm', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'shop.acme.com', 'verified',
+     '[{"type":"CNAME","name":"shop.acme.com","value":"cname.vercel-dns.com","reason":"routing"}]', NOW(), NOW(), NOW());
+
 -- Carriers (from mockCarriers — delivery and will_call)
 INSERT IGNORE INTO carrier (id, code, name, account_id, created_at, updated_at) VALUES
     ('delivery', 'delivery', 'Delivery', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),

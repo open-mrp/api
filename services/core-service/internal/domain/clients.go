@@ -151,3 +151,20 @@ type CheckoutLineItem struct {
 type StripeCheckoutClientFactory interface {
 	Build(apiKey string) StripeCheckoutClient
 }
+
+// PortalDomainProviderState is the serving provider's view of a portal domain: whether it is verified and routing, and which DNS records the customer must publish.
+type PortalDomainProviderState struct {
+	Verified      bool
+	Misconfigured bool
+	DNSRecords    []PortalDNSRecord
+}
+
+// PortalDomainProvider is the serving/TLS provider (Vercel) for customer portal custom domains. All methods are idempotent so the provider-registration phase of a create can be safely retried.
+type PortalDomainProvider interface {
+	// AddDomain attaches the domain to the portal project and returns its current state. Adding an already-attached domain succeeds.
+	AddDomain(ctx context.Context, domain string) (*PortalDomainProviderState, *apierror.APIError)
+	// GetDomainState returns the domain's verification/configuration state and currently required DNS records.
+	GetDomainState(ctx context.Context, domain string) (*PortalDomainProviderState, *apierror.APIError)
+	// RemoveDomain detaches the domain from the portal project. Removing an unknown domain succeeds.
+	RemoveDomain(ctx context.Context, domain string) *apierror.APIError
+}

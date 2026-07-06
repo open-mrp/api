@@ -210,6 +210,7 @@ func apply(ctx context.Context, pool *sql.DB, backfillWhere string, stdout io.Wr
 		}
 	}
 
+	// #nosec G202 -- backfillWhere is composed only from the compile-time const predicates above (selected by the -skip-subscribed flag); no runtime or user input enters the SQL.
 	res, err := tx.ExecContext(ctx,
 		"UPDATE account_user au SET au.role_id = ?, au.updated_at = NOW(3) WHERE"+backfillWhere+" AND (au.role_id IS NULL OR au.role_id <> ?)",
 		constants.GlobalCustomerRoleID, constants.GlobalCustomerRoleID,

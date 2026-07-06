@@ -30,4 +30,8 @@ sql:
             go_type:
               import: "github.com/augno/api/shared/db"
               type: "NullableRawMessage"
+          - column: "portal_domain.dns_records"
+            go_type:
+              import: "github.com/augno/api/shared/db"
+              type: "NullableRawMessage"
 

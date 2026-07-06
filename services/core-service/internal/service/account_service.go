@@ -843,12 +843,25 @@ func (s *accountSvcImpl) BatchGetAccountsByIDs(ctx context.Context, ids []string
 	return s.accountRepo.GetByIDs(ctx, allowed)
 }
 
-// GetAccountBySlug returns a minimal public account by portal slug (unauthenticated).
+// GetAccountBySlug returns a minimal public account by portal slug (unauthenticated). When the account has a verified custom portal domain it is included so callers (e.g. auth email links) can target it.
 func (s *accountSvcImpl) GetAccountBySlug(ctx context.Context, slug string) (*domain.PublicAccountBySlug, *apierror.APIError) {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_account_by_slug")
 	defer span.End()
 
-	return s.accountRepo.GetBySlug(ctx, slug)
+	account, apiErr := s.accountRepo.GetBySlug(ctx, slug)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	portalDomain, apiErr := s.repos.NewPortalDomainRepo().GetByAccountID(ctx, account.ID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if portalDomain != nil && portalDomain.Status == constants.PortalDomainStatusVerified {
+		account.PortalDomain = &portalDomain.Domain
+	}
+
+	return account, nil
 }
 
 // UpdateAccount partially updates an account's name, branding fields, and/or portal slug.

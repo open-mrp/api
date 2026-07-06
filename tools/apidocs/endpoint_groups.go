@@ -49,6 +49,9 @@ func openAPIEndpointGroups() []apiendpoint.APIEndpointGroup {
 		HubspotSync: struct {
 			pbgrpc.CoreHubspotSyncServiceClient
 		}{},
+		PortalDomain: struct {
+			pbgrpc.CorePortalDomainServiceClient
+		}{},
 	}
 
 	billingClient := &grpcclient.BillingServiceClient{
@@ -225,6 +228,9 @@ func openAPIEndpointGroups() []apiendpoint.APIEndpointGroup {
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.AccountsEndpointGroup{}).Materialize(&httpgroup.AccountsEndpointGroupConfig{
+			CoreClient: coreClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.PortalDomainsEndpointGroup{}).Materialize(&httpgroup.PortalDomainsEndpointGroupConfig{
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.AccountIntegrationsEndpointGroup{}).Materialize(&httpgroup.AccountIntegrationsEndpointGroupConfig{

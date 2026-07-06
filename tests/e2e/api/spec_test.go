@@ -321,6 +321,11 @@ var excludedListOperations = map[string]bool{
 	// account_user-shaped; the generic list/pagination assertions don't apply. Covered by
 	// messaging_contacts_test.go.
 	"list-messaging-contacts": true,
+	// A portal domain is a single-slot-per-account resource that every dedicated test creates and
+	// then deletes (via t.Cleanup) to keep the slot free, so there is no standing row for the generic
+	// list-schema test to read — it always sees an empty list. Covered end-to-end, including the
+	// resource shape, by cov_settings_portal-domains_test.go.
+	"list-portal-domains": true,
 }
 
 // excludedUpdateOperations are operationIDs omitted from update endpoint tests.

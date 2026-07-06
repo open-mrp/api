@@ -36,7 +36,7 @@ message PortalDomainInfo {
   string id = 1;
   string account_id = 2;
   string domain = 3;
-  // pending | verified | failed
+  // pending | securing | verified | failed
   string status = 4;
   repeated PortalDNSRecord dns_records = 5;
   optional google.protobuf.Timestamp verified_at = 6;

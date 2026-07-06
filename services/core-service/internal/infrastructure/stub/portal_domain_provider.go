@@ -10,7 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// PortalDomainProvider is an in-memory portal domain provider for test/dev mode. A domain reports unverified on its first state read and verified from the second read onward, so tests can exercise both the pending and verified paths of the verify action.
+// PortalDomainProvider is an in-memory portal domain provider for test/dev mode. A domain walks the real lifecycle across successive state reads: read #1 is unverified (pending), read #2 is verified+routing but not yet serving (securing, as if the TLS certificate were still issuing), and reads #3+ are verified and serving. This lets tests exercise the pending, securing, and verified paths of the verify action.
 type PortalDomainProvider struct {
 	mu         sync.Mutex
 	stateReads map[string]int
@@ -24,6 +24,7 @@ func (p *PortalDomainProvider) AddDomain(_ context.Context, domainName string) (
 	return &domain.PortalDomainProviderState{
 		Verified:      false,
 		Misconfigured: true,
+		Serving:       false,
 		DNSRecords:    stubDNSRecords(domainName),
 	}, nil
 }
@@ -31,12 +32,16 @@ func (p *PortalDomainProvider) AddDomain(_ context.Context, domainName string) (
 func (p *PortalDomainProvider) GetDomainState(_ context.Context, domainName string) (*domain.PortalDomainProviderState, *apierror.APIError) {
 	p.mu.Lock()
 	p.stateReads[domainName]++
-	verified := p.stateReads[domainName] > 1
+	reads := p.stateReads[domainName]
 	p.mu.Unlock()
+
+	verified := reads > 1
+	serving := reads > 2
 
 	return &domain.PortalDomainProviderState{
 		Verified:      verified,
 		Misconfigured: !verified,
+		Serving:       serving,
 		DNSRecords:    stubDNSRecords(domainName),
 	}, nil
 }

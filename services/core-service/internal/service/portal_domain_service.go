@@ -205,12 +205,13 @@ func (s *portalDomainSvcImpl) completeCreateProviderPhase(ctx context.Context, a
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *portalDomainSvcImpl) *apierror.APIError {
 		txRepo := txSvc.repos.NewPortalDomainRepo()
 
-		if apiErr := txRepo.UpdateProviderState(txCtx, row.ID, constants.PortalDomainStatusPending, state.DNSRecords); apiErr != nil {
+		target := portalDomainStatusFromState(state)
+		if apiErr := txRepo.UpdateProviderState(txCtx, row.ID, target, state.DNSRecords); apiErr != nil {
 			return apiErr
 		}
 
-		// A domain that was previously verified on the provider (e.g. removed and re-added) can come back immediately verified.
-		if state.Verified && !state.Misconfigured {
+		// A domain that was previously verified on the provider (e.g. removed and re-added) can come back immediately serving.
+		if target == constants.PortalDomainStatusVerified {
 			if apiErr := txRepo.MarkVerified(txCtx, row.ID); apiErr != nil {
 				return apiErr
 			}
@@ -320,19 +321,28 @@ func (s *portalDomainSvcImpl) VerifyPortalDomain(ctx context.Context, portalDoma
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *portalDomainSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewPortalDomainRepo()
 
-			if apiErr := txRepo.UpdateProviderState(txCtx, row.ID, row.Status, state.DNSRecords); apiErr != nil {
+			target := portalDomainStatusFromState(state)
+			if apiErr := txRepo.UpdateProviderState(txCtx, row.ID, target, state.DNSRecords); apiErr != nil {
 				return apiErr
 			}
 
-			if state.Verified && !state.Misconfigured {
+			// Stamp verified_at only when the certificate is live and the domain is actually serving.
+			if target == constants.PortalDomainStatusVerified {
 				if apiErr := txRepo.MarkVerified(txCtx, row.ID); apiErr != nil {
 					return apiErr
 				}
+			}
 
-				updated, apiErr := txRepo.GetByID(txCtx, accountID, row.ID)
-				if apiErr != nil {
-					return apiErr
-				}
+			updated, apiErr := txRepo.GetByID(txCtx, accountID, row.ID)
+			if apiErr != nil {
+				return apiErr
+			}
+			if updated == nil {
+				return apierror.NewInvariantViolationError("Portal domain row missing after verify.")
+			}
+
+			// Audit any status transition (pending → securing → verified).
+			if target != row.Status {
 				if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 					ServiceName:  domain.ServiceName,
 					Action:       constants.AuditActionUpdate,
@@ -342,14 +352,8 @@ func (s *portalDomainSvcImpl) VerifyPortalDomain(ctx context.Context, portalDoma
 				}); apiErr != nil {
 					return apiErr
 				}
-				result = updated
-			} else {
-				updated, apiErr := txRepo.GetByID(txCtx, accountID, row.ID)
-				if apiErr != nil {
-					return apiErr
-				}
-				result = updated
 			}
+			result = updated
 
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
 		})
@@ -439,6 +443,18 @@ func (s *portalDomainSvcImpl) BatchGetPortalDomainsByIDs(ctx context.Context, id
 }
 
 // portalDomainWriteScope authorizes portal domain mutations: internal actors with account-settings update permission, scoped to their target account.
+// portalDomainStatusFromState maps the serving provider's view to a stored status. A domain that is not yet verified-and-routing is pending; once it routes but does not yet answer over HTTPS (its TLS certificate is still being issued) it is securing; once it serves it is verified.
+func portalDomainStatusFromState(state *domain.PortalDomainProviderState) constants.PortalDomainStatus {
+	switch {
+	case state.Verified && !state.Misconfigured && state.Serving:
+		return constants.PortalDomainStatusVerified
+	case state.Verified && !state.Misconfigured:
+		return constants.PortalDomainStatusSecuring
+	default:
+		return constants.PortalDomainStatusPending
+	}
+}
+
 func portalDomainWriteScope(ctx context.Context) (*types.Identity, string, *apierror.APIError) {
 	return portalDomainScope(ctx, types.ActionUpdate)
 }

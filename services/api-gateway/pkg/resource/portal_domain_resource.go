@@ -28,7 +28,7 @@ type DNSRecord struct {
 
 // A custom domain that serves the account's customer portal (e.g. `shop.acme.com`).
 //
-// After creation the domain starts in `pending`; publish the returned DNS records, then poll the verify action until it flips to `verified`. Once verified, the customer portal is served on the domain with TLS provisioned automatically.
+// After creation the domain starts in `pending`; publish the returned DNS records, then poll the verify action. Once DNS is correct the domain moves to `securing` while its TLS certificate is issued — it is not yet reachable over HTTPS during this window — and finally to `verified` once the certificate is live and the portal is served on the domain.
 type PortalDomain struct {
 	// Portal domain ID.
 	ID string `json:"id" validate:"required"`
@@ -39,7 +39,8 @@ type PortalDomain struct {
 	// Verification status.
 	//
 	// - pending domains await DNS configuration
-	// - verified domains serve the portal
+	// - securing domains have correct DNS and are waiting on TLS certificate issuance; the portal is not yet reachable over HTTPS
+	// - verified domains serve the portal over HTTPS
 	// - failed domains were rejected and cannot be used
 	Status constants.PortalDomainStatus `json:"status" validate:"required"`
 	// The DNS records the customer must publish for the domain to route and verify.

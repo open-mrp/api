@@ -130,7 +130,7 @@ func TestClientDo_OmitsIdempotencyKeyWhenEmpty(t *testing.T) {
 	}
 }
 
-func TestClientDo_ReturnsErrorBodyForNon2xx(t *testing.T) {
+func TestClientDo_ReturnsErrorForNon2xx(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		_, _ = w.Write([]byte(`{"error":"bad"}`))
@@ -143,10 +143,15 @@ func TestClientDo_ReturnsErrorBodyForNon2xx(t *testing.T) {
 		Path:     "/v1/x",
 		Identity: &types.Identity{Type: types.IdentityActorTypeAgent},
 	})
-	if err != nil {
-		t.Fatalf("HTTP error responses should not return a Go error: %v", err)
+	// A non-2xx must surface as a Go error so the runner marks the tool result is_error — otherwise a failed write reads as a success.
+	if err == nil {
+		t.Fatalf("non-2xx should return a Go error, got out=%q err=nil", out)
 	}
-	if want := "Request failed with HTTP 400"; !strings.Contains(out, want) {
-		t.Errorf("result %q should contain %q", out, want)
+	if want := "HTTP 400"; !strings.Contains(err.Error(), want) {
+		t.Errorf("error %q should contain %q", err.Error(), want)
+	}
+	// The response body must ride along in the error so the model can self-correct.
+	if want := `{"error":"bad"}`; !strings.Contains(err.Error(), want) {
+		t.Errorf("error %q should contain the response body %q", err.Error(), want)
 	}
 }

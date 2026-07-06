@@ -46,7 +46,7 @@ func NewClient(baseURL, serviceToken string) *Client {
 	}
 }
 
-// Do issues the request, forwarding the agent identity and service token on the internal headers. HTTP error responses (4xx/5xx) are returned as the result string so the LLM can self-correct; only transport/encoding failures return a Go error.
+// Do issues the request, forwarding the agent identity and service token on the internal headers. A non-2xx response (4xx/5xx) returns a Go error whose message carries the response body — the caller (runner) turns that into an is_error tool result so the model sees the failure as a failure rather than treating an error body as a successful write. The body is still surfaced in the error text so the model can self-correct.
 func (c *Client) Do(ctx context.Context, gr domain.GatewayRequest) (string, error) {
 	u := c.baseURL + gr.Path
 	if len(gr.Query) > 0 {
@@ -90,11 +90,12 @@ func (c *Client) Do(ctx context.Context, gr domain.GatewayRequest) (string, erro
 	}
 
 	out := string(body)
-	if resp.StatusCode >= http.StatusBadRequest {
-		out = fmt.Sprintf("Request failed with HTTP %d: %s", resp.StatusCode, out)
-	}
 	if len(out) > maxOutputBytes {
 		out = out[:maxOutputBytes] + "\n...[response truncated]"
+	}
+	if resp.StatusCode >= http.StatusBadRequest {
+		// Return an error, not a (body, nil) success, so the runner records this as an is_error tool result. Otherwise a failed write (validation error, 404, conflict) reads to the runner and the model as a completed action — the "agent said it updated it but nothing changed" bug.
+		return "", fmt.Errorf("gateway returned HTTP %d: %s", resp.StatusCode, out)
 	}
 	return out, nil
 }

@@ -152,11 +152,13 @@ type StripeCheckoutClientFactory interface {
 	Build(apiKey string) StripeCheckoutClient
 }
 
-// PortalDomainProviderState is the serving provider's view of a portal domain: whether it is verified and routing, and which DNS records the customer must publish.
+// PortalDomainProviderState is the serving provider's view of a portal domain: whether it is verified and routing, whether it is actually serving over HTTPS, and which DNS records the customer must publish.
 type PortalDomainProviderState struct {
 	Verified      bool
 	Misconfigured bool
-	DNSRecords    []PortalDNSRecord
+	// Serving reports whether the domain answers over HTTPS with a valid TLS certificate. It is only meaningful once the domain is verified and routing (not misconfigured); until the certificate is issued a routed domain is verified+routing but not yet serving.
+	Serving    bool
+	DNSRecords []PortalDNSRecord
 }
 
 // PortalDomainProvider is the serving/TLS provider (Vercel) for customer portal custom domains. All methods are idempotent so the provider-registration phase of a create can be safely retried.

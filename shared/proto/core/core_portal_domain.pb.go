@@ -31,7 +31,7 @@ type PortalDomainInfo struct {
 	Id        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	AccountId string                 `protobuf:"bytes,2,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
 	Domain    string                 `protobuf:"bytes,3,opt,name=domain,proto3" json:"domain,omitempty"`
-	// pending | verified | failed
+	// pending | securing | verified | failed
 	Status        string                 `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
 	DnsRecords    []*PortalDNSRecord     `protobuf:"bytes,5,rep,name=dns_records,json=dnsRecords,proto3" json:"dns_records,omitempty"`
 	VerifiedAt    *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=verified_at,json=verifiedAt,proto3,oneof" json:"verified_at,omitempty"`

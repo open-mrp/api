@@ -143,7 +143,33 @@ func (p *providerImpl) GetDomainState(ctx context.Context, domainName string) (*
 		state.Misconfigured = true
 	}
 
+	// Vercel reports routing (misconfigured) but exposes no reliable certificate-ready signal, and it issues the TLS certificate asynchronously after DNS becomes correct. Probe the domain over HTTPS to distinguish "routed, certificate still issuing" from "actually serving". Only probe once routing is confirmed: at that point DNS points at Vercel's anycast target, so the probe cannot be steered at an internal host.
+	if dom.Verified && !state.Misconfigured {
+		state.Serving = p.probeServing(ctx, domainName)
+	}
+
 	return state, nil
+}
+
+// probeServing reports whether the domain answers an HTTPS request with a valid TLS certificate. A transport error (TLS handshake failure while the certificate is still issuing, or an unreachable host) reads as not-yet-serving; any HTTP response — including a redirect or error status — means the certificate is live and the domain is serving.
+func (p *providerImpl) probeServing(ctx context.Context, domainName string) bool {
+	req, err := http.NewRequestWithContext(ctx, http.MethodHead, "https://"+domainName+"/", nil)
+	if err != nil {
+		return false
+	}
+
+	client := &http.Client{
+		Timeout: 5 * time.Second,
+		// Do not follow redirects: a single successful request proves the TLS certificate is live, which is all we need.
+		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+	}
+
+	resp, err := client.Do(req) // #nosec G704 -- host is a customer domain already confirmed by Vercel to route at its anycast target
+	if err != nil {
+		return false
+	}
+	closeBody(resp)
+	return true
 }
 
 func (p *providerImpl) RemoveDomain(ctx context.Context, domainName string) *apierror.APIError {

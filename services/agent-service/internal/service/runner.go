@@ -1499,6 +1499,12 @@ func (s *runnerSvc) runAgentLoop(
 	}, nil
 }
 
+// runResumedLoop finishes a resumed turn: it first executes any approved-but-blocked tool calls directly (so an approval actually performs its write instead of depending on the model to re-issue the call — see resumeApprovedBlockedCalls) and then runs the agent loop over the reconstructed transcript. ContinueRun's resume tail is exactly this call; keeping the two steps together in one method means the "execute on approval, then continue" contract is exercised end to end in tests rather than only wired inline.
+func (s *runnerSvc) runResumedLoop(ctx context.Context, run *sqlc.AgentRun, accountID string, identity *types.Identity, systemPrompt string, modelChain []string, toolDefs []llm.ToolDefinition, temperature float64, messages []llm.Message, seq *int, runCtx *domain.HandlerRunContext, events []sqlc.AgentRunEvent, spendingCapCents *int64, currentMonthSpendCents int64) (*domain.RunResult, error) {
+	s.resumeApprovedBlockedCalls(ctx, run, accountID, seq, runCtx, messages, events)
+	return s.runAgentLoop(ctx, run, accountID, identity, systemPrompt, modelChain, toolDefs, temperature, messages, seq, runCtx, spendingCapCents, currentMonthSpendCents)
+}
+
 // approvesReviewedTool reports whether a ContinueRun resume approves a given pending review-gated tool — the single authority for what a resume lets through. A per-tool approval names the slugs (and only those pass; approveAllPending is ignored when slugs are present); an "Approve all" sets approveAllPending with no slugs; everything else — most importantly a typed-message continuation or a retry, which both arrive with no slugs and approveAllPending=false — approves NOTHING, so the tool stays blocked and re-prompts.
 // Pure by design: this is the security-critical rule, kept unit-testable without standing up a full run.
 func approvesReviewedTool(toolSlug string, approvedToolSlugs []string, approveAllPending bool) bool {
@@ -1923,8 +1929,8 @@ func (s *runnerSvc) ContinueRun(ctx context.Context, runID, accountID, message s
 		exposeEndpointTool(slug)
 	}
 
-	// Execute the agent loop
-	result, err := s.runAgentLoop(ctx, run, accountID, agentIdentity, systemPrompt, modelChain, toolDefs, temperature, messages, &seq, runCtx, bc.spendingCapCents, bc.currentSpendCents)
+	// Finish the resumed turn: execute any tool calls this resume approved (rather than trusting the model to re-issue them — this is what makes an approval actually perform the write), then run the agent loop.
+	result, err := s.runResumedLoop(ctx, run, accountID, agentIdentity, systemPrompt, modelChain, toolDefs, temperature, messages, &seq, runCtx, events, bc.spendingCapCents, bc.currentSpendCents)
 	if err != nil {
 		// Transient, side-effect-free failures are re-enqueued with backoff instead of surfaced as a terminal failure.
 		if s.maybeAutoRetry(ctx, runRepo, run, err) {
@@ -1989,10 +1995,99 @@ func (s *runnerSvc) ContinueRun(ctx context.Context, runID, accountID, message s
 	return nil
 }
 
+// resumeApprovedBlockedCalls executes the tool calls that were paused for human review and have now been approved, directly — instead of leaving the run to depend on the model re-issuing the identical call after approval. The model does that unreliably: it often assumes approval alone executed the action and reports success while no call ever ran (the "agent said it updated the customer but nothing changed" bug). For each approved blocked call this runs the tool now, emits a tool_result event (for the timeline and for a truthful transcript on any later resume), and rewrites the "[REQUIRES APPROVAL]" placeholder in this turn's in-memory transcript with the real outcome so the model continues from what actually happened. Approvals it satisfies are consumed so a stray re-issue re-blocks rather than double-executing.
+func (s *runnerSvc) resumeApprovedBlockedCalls(ctx context.Context, run *sqlc.AgentRun, accountID string, seq *int, runCtx *domain.HandlerRunContext, messages []llm.Message, events []sqlc.AgentRunEvent) {
+	executedSlugs := make(map[string]bool)
+	executedKeys := make(map[string]bool)
+	for _, e := range events {
+		if e.StepType != "tool_blocked" || e.Metadata == nil {
+			continue
+		}
+		var meta struct {
+			ToolUseID string          `json:"tool_use_id"`
+			ToolName  string          `json:"tool_name"`
+			Input     json.RawMessage `json:"input"`
+		}
+		if err := json.Unmarshal(e.Metadata, &meta); err != nil || meta.ToolUseID == "" {
+			continue
+		}
+		// Only run calls this resume actually approved (by slug/approve-all or by this call's slug+input key) — the same gate the loop uses.
+		key := toolCallApprovalKey(meta.ToolName, meta.Input)
+		if !runCtx.OneTimeApprovedSlugs[meta.ToolName] && !runCtx.OneTimeApprovedKeys[key] {
+			continue
+		}
+		// Idempotency guard: skip a call an earlier resume already executed (it has a tool_result event), so re-approving or a re-delivered continuation can't double-run it.
+		if hasToolResultEvent(events, meta.ToolUseID) {
+			executedSlugs[meta.ToolName] = true
+			executedKeys[key] = true
+			continue
+		}
+
+		toolStart := time.Now()
+		result, err := s.handleToolCall(ctx, llm.ToolCall{ID: meta.ToolUseID, Name: meta.ToolName, Input: meta.Input}, runCtx)
+		durMs := safeconv.Int64ToInt32(time.Since(toolStart).Milliseconds())
+
+		if err != nil {
+			resultMeta, _ := json.Marshal(map[string]any{"tool_use_id": meta.ToolUseID, "is_error": true, "full_result": err.Error()})
+			truncated := truncateString(err.Error(), 500)
+			s.emitEvent(ctx, run.ID, accountID, seq, "tool_result", meta.ToolName+" result", &truncated, &durMs, nil, resultMeta)
+			rewriteToolResult(messages, meta.ToolUseID, fmt.Sprintf("Error: %s", err.Error()), true)
+		} else {
+			trunc := llm.TruncateToolOutputResult(result, meta.ToolName)
+			resultMeta, _ := json.Marshal(map[string]any{"tool_use_id": meta.ToolUseID, "is_error": false, "full_result": trunc.Content})
+			truncatedEvent := truncateString(trunc.Content, 500)
+			s.emitEvent(ctx, run.ID, accountID, seq, "tool_result", meta.ToolName+" result", &truncatedEvent, &durMs, nil, resultMeta)
+			rewriteToolResult(messages, meta.ToolUseID, trunc.Content, false)
+		}
+		executedSlugs[meta.ToolName] = true
+		executedKeys[key] = true
+	}
+
+	// Consume the approvals we just satisfied. Without this the slug/key stays armed and the model re-issuing the same call (new tool_use_id) would sail through the guard and write a second time.
+	for slug := range executedSlugs {
+		delete(runCtx.OneTimeApprovedSlugs, slug)
+	}
+	for key := range executedKeys {
+		delete(runCtx.OneTimeApprovedKeys, key)
+	}
+}
+
+// rewriteToolResult replaces the content of the tool_result block for toolUseID in the reconstructed transcript. Used to swap an approval placeholder for the tool's real outcome. Returns whether a block was found.
+func rewriteToolResult(messages []llm.Message, toolUseID, content string, isError bool) bool {
+	for i := range messages {
+		for j := range messages[i].ToolResults {
+			if messages[i].ToolResults[j].ToolUseID == toolUseID {
+				messages[i].ToolResults[j].Content = content
+				messages[i].ToolResults[j].IsError = isError
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// hasToolResultEvent reports whether any tool_result event was recorded for toolUseID — i.e. the call already executed on an earlier turn.
+func hasToolResultEvent(events []sqlc.AgentRunEvent, toolUseID string) bool {
+	for _, e := range events {
+		if e.StepType != "tool_result" || e.Metadata == nil {
+			continue
+		}
+		var meta struct {
+			ToolUseID string `json:"tool_use_id"`
+		}
+		if err := json.Unmarshal(e.Metadata, &meta); err == nil && meta.ToolUseID == toolUseID {
+			return true
+		}
+	}
+	return false
+}
+
 // reconstructMessages rebuilds LLM message history from stored events.
 func reconstructMessages(events []sqlc.AgentRunEvent) []llm.Message {
 	var messages []llm.Message
 	var pendingAssistant *llm.Message
+	// Where each tool_use_id's result block lives, so a later terminal event for the same call overwrites the earlier block in place rather than appending a second one. A call that was paused for approval (tool_blocked) and then executed on resume (tool_result) emits two terminal events with the same id — without last-wins overwrite the transcript would carry two tool_result blocks for one tool_use_id and the Anthropic API rejects the next call.
+	resultLoc := make(map[string][2]int)
 
 	for _, event := range events {
 		switch event.StepType {
@@ -2084,28 +2179,28 @@ func reconstructMessages(events []sqlc.AgentRunEvent) []llm.Message {
 				continue
 			}
 
+			// Last-wins: if this call already has a result block (e.g. an earlier tool_blocked placeholder that a resume then executed), overwrite it in place so the transcript carries exactly one, current result per tool_use_id.
+			if loc, ok := resultLoc[toolUseID]; ok {
+				messages[loc[0]].ToolResults[loc[1]].Content = fullResult
+				messages[loc[0]].ToolResults[loc[1]].IsError = isError
+				continue
+			}
+
+			block := llm.ToolResultBlock{ToolUseID: toolUseID, Content: fullResult, IsError: isError}
 			// Find or create the last user message with tool results
 			if len(messages) > 0 {
 				last := &messages[len(messages)-1]
 				if last.Role == "user" && len(last.ToolResults) > 0 {
-					last.ToolResults = append(last.ToolResults, llm.ToolResultBlock{
-						ToolUseID: toolUseID,
-						Content:   fullResult,
-						IsError:   isError,
-					})
+					last.ToolResults = append(last.ToolResults, block)
+					resultLoc[toolUseID] = [2]int{len(messages) - 1, len(last.ToolResults) - 1}
 					continue
 				}
 			}
 			messages = append(messages, llm.Message{
-				Role: "user",
-				ToolResults: []llm.ToolResultBlock{
-					{
-						ToolUseID: toolUseID,
-						Content:   fullResult,
-						IsError:   isError,
-					},
-				},
+				Role:        "user",
+				ToolResults: []llm.ToolResultBlock{block},
 			})
+			resultLoc[toolUseID] = [2]int{len(messages) - 1, 0}
 		}
 	}
 

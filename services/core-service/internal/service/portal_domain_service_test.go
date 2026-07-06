@@ -209,9 +209,9 @@ func (suite *PortalDomainSvcTestSuite) TestVerifyPortalDomain_MarksVerifiedWhenP
 
 	suite.expectIdempotencyKey(domain.RecoveryPointStarted)
 	suite.portalDomainRepo.EXPECT().GetByID(gomock.Any(), testPortalAccountID, testPortalDomainID).Return(pendingPortalDomain(), nil).Times(1)
-	suite.provider.EXPECT().GetDomainState(gomock.Any(), testPortalHost).Return(&domain.PortalDomainProviderState{Verified: true, Misconfigured: false, DNSRecords: routing}, nil)
+	suite.provider.EXPECT().GetDomainState(gomock.Any(), testPortalHost).Return(&domain.PortalDomainProviderState{Verified: true, Misconfigured: false, Serving: true, DNSRecords: routing}, nil)
 
-	suite.portalDomainRepo.EXPECT().UpdateProviderState(gomock.Any(), testPortalDomainID, constants.PortalDomainStatusPending, routing).Return(nil)
+	suite.portalDomainRepo.EXPECT().UpdateProviderState(gomock.Any(), testPortalDomainID, constants.PortalDomainStatusVerified, routing).Return(nil)
 	suite.portalDomainRepo.EXPECT().MarkVerified(gomock.Any(), testPortalDomainID).Return(nil)
 	verified := pendingPortalDomain()
 	verified.Status = constants.PortalDomainStatusVerified
@@ -224,6 +224,28 @@ func (suite *PortalDomainSvcTestSuite) TestVerifyPortalDomain_MarksVerifiedWhenP
 	suite.Nil(apiErr)
 	suite.Equal(constants.PortalDomainStatusVerified, result.Status)
 	suite.NotNil(result.VerifiedAt)
+}
+
+func (suite *PortalDomainSvcTestSuite) TestVerifyPortalDomain_SecuringWhileCertificateIssues() {
+	ctx := portalDomainInternalCtx(testPortalAccountID)
+	routing := []domain.PortalDNSRecord{{Type: "CNAME", Name: testPortalHost, Value: "cname.vercel-dns.com", Reason: "routing"}}
+
+	// DNS is correct (verified + routing) but the domain does not yet answer over HTTPS: the TLS certificate is still issuing, so the domain moves to securing, not verified, and verified_at is not stamped.
+	suite.expectIdempotencyKey(domain.RecoveryPointStarted)
+	suite.portalDomainRepo.EXPECT().GetByID(gomock.Any(), testPortalAccountID, testPortalDomainID).Return(pendingPortalDomain(), nil).Times(1)
+	suite.provider.EXPECT().GetDomainState(gomock.Any(), testPortalHost).Return(&domain.PortalDomainProviderState{Verified: true, Misconfigured: false, Serving: false, DNSRecords: routing}, nil)
+
+	suite.portalDomainRepo.EXPECT().UpdateProviderState(gomock.Any(), testPortalDomainID, constants.PortalDomainStatusSecuring, routing).Return(nil)
+	// No MarkVerified while securing.
+	securing := pendingPortalDomain()
+	securing.Status = constants.PortalDomainStatusSecuring
+	suite.portalDomainRepo.EXPECT().GetByID(gomock.Any(), testPortalAccountID, testPortalDomainID).Return(securing, nil).Times(1)
+	suite.idempotencyMed.EXPECT().CacheSuccessResponse(gomock.Any(), "idk_test", gomock.Any()).Return(nil)
+
+	result, apiErr := suite.svc.VerifyPortalDomain(ctx, testPortalDomainID)
+	suite.Nil(apiErr)
+	suite.Equal(constants.PortalDomainStatusSecuring, result.Status)
+	suite.Nil(result.VerifiedAt)
 }
 
 func (suite *PortalDomainSvcTestSuite) TestVerifyPortalDomain_StaysPendingWhenMisconfigured() {

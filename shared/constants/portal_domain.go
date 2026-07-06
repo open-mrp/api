@@ -6,7 +6,9 @@ type PortalDomainStatus string
 const (
 	// PortalDomainStatusPending indicates the domain is registered and awaiting correct DNS configuration.
 	PortalDomainStatusPending PortalDomainStatus = "pending"
-	// PortalDomainStatusVerified indicates the domain's DNS is confirmed and the portal is served on it.
+	// PortalDomainStatusSecuring indicates DNS is configured correctly and the serving provider is issuing the domain's TLS certificate. The portal is not yet reachable over HTTPS; this clears to verified once the certificate is live.
+	PortalDomainStatusSecuring PortalDomainStatus = "securing"
+	// PortalDomainStatusVerified indicates the domain's DNS is confirmed, its TLS certificate is live, and the portal is served on it.
 	PortalDomainStatusVerified PortalDomainStatus = "verified"
 	// PortalDomainStatusFailed indicates the domain was terminally rejected and cannot be used.
 	PortalDomainStatusFailed PortalDomainStatus = "failed"
@@ -14,7 +16,7 @@ const (
 
 func (s PortalDomainStatus) IsValid() bool {
 	switch s {
-	case PortalDomainStatusPending, PortalDomainStatusVerified, PortalDomainStatusFailed:
+	case PortalDomainStatusPending, PortalDomainStatusSecuring, PortalDomainStatusVerified, PortalDomainStatusFailed:
 		return true
 	default:
 		return false
@@ -22,7 +24,7 @@ func (s PortalDomainStatus) IsValid() bool {
 }
 
 func (s PortalDomainStatus) EnumValues() []string {
-	return []string{string(PortalDomainStatusPending), string(PortalDomainStatusVerified), string(PortalDomainStatusFailed)}
+	return []string{string(PortalDomainStatusPending), string(PortalDomainStatusSecuring), string(PortalDomainStatusVerified), string(PortalDomainStatusFailed)}
 }
 
 func (s *PortalDomainStatus) StringPtr() *string {

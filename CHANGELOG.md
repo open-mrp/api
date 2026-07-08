@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.41.2](https://github.com/Augno/api/compare/v0.41.1...v0.41.2) (2026-07-08)
+
+
+### Bug Fixes
+
+* customer portal working with custom domains ([#411](https://github.com/Augno/api/issues/411)) ([4e8cd62](https://github.com/Augno/api/commit/4e8cd620ca7e5758a0facf7977840ee93e2333c0))
+
 ## [0.41.1](https://github.com/Augno/api/compare/v0.41.0...v0.41.1) (2026-07-06)
 
 

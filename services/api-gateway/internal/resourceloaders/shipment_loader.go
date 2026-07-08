@@ -27,6 +27,9 @@ func LoadShipments(ctx context.Context, ids []string) (map[string]any, *apierror
 				return coreShippingClient.GetShipment(ctx, &pb.GetShipmentRequest{Id: id}, opts...)
 			})
 		if apiErr != nil {
+			if omitOnUnauthorized(apiErr) {
+				return out, nil
+			}
 			return nil, apiErr
 		}
 		if resp.Shipment == nil {

@@ -210,6 +210,35 @@ func TestCustomerPortalAccess_ListSalesOrders(t *testing.T) {
 		"customer must not see the vendor's internal order (%s)", SeedInternalSalesOrderID)
 }
 
+// TestCustomerPortalAccess_OrderRetrieveOmitsInternalRelated verifies that a
+// customer portal actor can retrieve an order they bought even when the request
+// asks to expand the seller's internal-only related resources. related.pick /
+// related.shipments / related.production_run are backed by RPCs that require an
+// internal actor; before the fix, resolving any of them for a customer failed
+// the ENTIRE retrieve with insufficient_permissions ("You must be an internal
+// user for this account to access this resource."). The dashboard portal sent
+// these includes as part of its shared order-detail include set. The include is
+// now omitted (best-effort, like created_by/customer) rather than 403ing the
+// order. ORD-001 (or_01k0a8bs2yejxbsvqhrx4drkq1) is bought by the seed customer
+// and has both a pick and a shipment, so the loaders actually fire.
+func TestCustomerPortalAccess_OrderRetrieveOmitsInternalRelated(t *testing.T) {
+	t.Parallel()
+	client := getCustomerPortalClient()
+
+	status, body, err := client.GetListRaw("/v1/sales/sales-orders/or_01k0a8bs2yejxbsvqhrx4drkq1", url.Values{
+		"include": {"related.pick,related.shipments,related.production_run"},
+	})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	parsed := parseJSON(body)
+	assert.Equal(t, "sales_order", jsonField(parsed, "object"))
+	assert.Equal(t, "or_01k0a8bs2yejxbsvqhrx4drkq1", jsonField(parsed, "id"))
+	// The customer cannot see the seller's internal related resources, so the
+	// group is omitted entirely rather than partially populated.
+	assert.Nil(t, parsed["related"], "internal-only related resources must be omitted for a customer, not 403 the retrieve")
+}
+
 // TestCustomerPortalAccess_CannotCreateProductLine verifies that customer
 // portal users cannot create product lines (write access restricted to internal actors).
 func TestCustomerPortalAccess_CannotCreateProductLine(t *testing.T) {

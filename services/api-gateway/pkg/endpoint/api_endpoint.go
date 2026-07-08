@@ -174,7 +174,15 @@ func (e *APIEndpoint[TReq, TResp]) authorize(ctx context.Context) *apierror.APIE
 	}
 	identity, ok := appctx.GetIdentityFromContext(ctx)
 	if !ok || identity == nil {
-		return apierror.NewAuthorizationError("You do not have permission to access this resource.")
+		return apierror.NewAuthenticationError("You must be authenticated to access this resource.")
+	}
+	// An unauthenticated caller (no session cookie or token resolves to an
+	// unauthenticated identity, not an error) gets a 401 here rather than being
+	// carried into the permission check, where a nil actor would surface as a
+	// misleading generic 403. Returning 401 tells the client to (re)authenticate
+	// instead of implying it is missing some permission.
+	if apiErr := identity.CheckIsAuthenticated(); apiErr != nil {
+		return apiErr
 	}
 	// Customer- and supplier-relation actors carry no permission set and no role
 	// type; their access is relation-scoped (e.g. a customer may read an order

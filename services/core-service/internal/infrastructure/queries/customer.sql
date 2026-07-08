@@ -777,14 +777,23 @@ WHERE owner_account_id = sqlc.arg('owner_account_id')
   AND account_relation_role_code = 'customer';
 
 -- name: GetFrequentlyOrderedProducts :many
-WITH ranked AS (
+-- Greatest-n-per-group is expressed with a NOT EXISTS anti-join instead of a
+-- ROW_NUMBER() window function on purpose: Vitess (PlanetScale) cannot plan a
+-- window function inside a server-side prepared statement and fails the query
+-- with "[BUG] unrecognized prepare statement". Because interpolateParams=false,
+-- every sqlc query runs as a prepared statement, so the window-function form
+-- worked on the vanilla MySQL used in dev/e2e but broke in production. The
+-- anti-join keeps, per item, the (item, unit) row whose order_count is the
+-- highest, breaking ties on the smallest unit_id so exactly one row survives
+-- per item.
+SELECT c.item_id, c.product_name, c.unit_id, c.unit_abbreviation, c.order_count
+FROM (
     SELECT
         fg.item_id AS item_id,
         it.description AS product_name,
         u.id AS unit_id,
         u.abbreviation AS unit_abbreviation,
-        COUNT(*) AS order_count,
-        ROW_NUMBER() OVER (PARTITION BY fg.item_id ORDER BY COUNT(*) DESC) AS rn
+        COUNT(*) AS order_count
     FROM sales_order_line sol
     JOIN sales_order so ON so.id = sol.sales_order_id
     JOIN product fg ON fg.id = sol.product_id
@@ -796,11 +805,30 @@ WITH ranked AS (
       AND fg.product_type_code = 'sale'
       AND fg.is_portal_ready = 1
     GROUP BY fg.item_id, it.description, u.id, u.abbreviation
+) c
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM (
+        SELECT
+            fg2.item_id AS item_id,
+            u2.id AS unit_id,
+            COUNT(*) AS order_count
+        FROM sales_order_line sol2
+        JOIN sales_order so2 ON so2.id = sol2.sales_order_id
+        JOIN product fg2 ON fg2.id = sol2.product_id
+        JOIN quantity q2 ON q2.id = sol2.quantity_id
+        JOIN unit u2 ON u2.id = q2.unit_id
+        WHERE so2.owner_account_id = sqlc.arg('owner_account_id')
+          AND so2.buyer_account_id = sqlc.arg('buyer_account_id')
+          AND fg2.product_type_code = 'sale'
+          AND fg2.is_portal_ready = 1
+        GROUP BY fg2.item_id, u2.id
+    ) c2
+    WHERE c2.item_id = c.item_id
+      AND (c2.order_count > c.order_count
+           OR (c2.order_count = c.order_count AND c2.unit_id < c.unit_id))
 )
-SELECT item_id, product_name, unit_id, unit_abbreviation, order_count
-FROM ranked
-WHERE rn = 1
-ORDER BY order_count DESC
+ORDER BY c.order_count DESC
 LIMIT 12;
 
 -- name: MergeCustomerOrders :exec

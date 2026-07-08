@@ -29,6 +29,9 @@ func LoadProductionRuns(ctx context.Context, ids []string) (map[string]any, *api
 				return coreProductionRunClient.GetProductionRun(ctx, &pb.GetProductionRunRequest{Id: id}, opts...)
 			})
 		if apiErr != nil {
+			if omitOnUnauthorized(apiErr) {
+				return out, nil
+			}
 			return nil, apiErr
 		}
 		if resp.ProductionRun == nil {

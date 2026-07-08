@@ -141,8 +141,11 @@ func (i *Identity) CheckHasAnyPermission(perms ...Permission) *apierror.APIError
 	if len(perms) == 0 {
 		return nil
 	}
-	if i == nil || i.Actor == nil {
-		return apierror.NewAuthorizationError("You do not have permission to access this resource.")
+	// An unauthenticated caller isn't missing a permission — it isn't signed in.
+	// Return a 401 so the message names the real problem (and the client knows to
+	// authenticate) instead of the generic "no permission" 403.
+	if !i.IsAuthenticated() {
+		return i.CheckIsAuthenticated()
 	}
 	if i.IsRelationActor() {
 		return apierror.NewAuthorizationError(i.getPermissionErrorMessage(perms[0].Domain, perms[0].Action))
@@ -150,9 +153,11 @@ func (i *Identity) CheckHasAnyPermission(perms ...Permission) *apierror.APIError
 	if i.IsAdmin() {
 		return nil
 	}
-	for _, p := range perms {
-		if hasPerm, ok := i.Actor.Permissions[p.String()]; ok && hasPerm {
-			return nil
+	if i.Actor != nil {
+		for _, p := range perms {
+			if hasPerm, ok := i.Actor.Permissions[p.String()]; ok && hasPerm {
+				return nil
+			}
 		}
 	}
 	// Reuse the single-permission message for the first declared permission; it
@@ -181,13 +186,15 @@ func (i *Identity) CheckHasRoleType(roleType constants.RoleType) *apierror.APIEr
 	if roleType == "" {
 		return nil
 	}
-	if i == nil || i.Actor == nil {
-		return apierror.NewAuthorizationError("You do not have permission to access this resource.")
+	// Unauthenticated callers get a 401, not a role-based 403 — they aren't signed
+	// in, so the required-role message would be misleading.
+	if !i.IsAuthenticated() {
+		return i.CheckIsAuthenticated()
 	}
 	if i.IsAdmin() {
 		return nil
 	}
-	if i.Actor.RoleType != nil && *i.Actor.RoleType == string(roleType) {
+	if i.Actor != nil && i.Actor.RoleType != nil && *i.Actor.RoleType == string(roleType) {
 		return nil
 	}
 	return apierror.NewAuthorizationError("You do not have the required role to access this resource.")

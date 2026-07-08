@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"math"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
@@ -843,6 +844,22 @@ func (s *accountSvcImpl) BatchGetAccountsByIDs(ctx context.Context, ids []string
 	return s.accountRepo.GetByIDs(ctx, allowed)
 }
 
+// presignedLogoURL converts a stored branding logo S3 key into a presigned download URL. Branding must still render without a logo, so it returns nil (best-effort) when there is no logo or signing fails, and passes through values that are already absolute URLs.
+func (s *accountSvcImpl) presignedLogoURL(ctx context.Context, logoKey *string) *string {
+	if logoKey == nil || *logoKey == "" {
+		return nil
+	}
+	if strings.HasPrefix(*logoKey, "http://") || strings.HasPrefix(*logoKey, "https://") {
+		return logoKey
+	}
+	url, apiErr := s.s3Client.GetPresignedURL(ctx, s.accountPhotosBucket, *logoKey, time.Hour)
+	if apiErr != nil {
+		slog.WarnContext(ctx, "Failed to presign account logo URL", "error", apiErr)
+		return nil
+	}
+	return &url
+}
+
 // GetAccountBySlug returns a minimal public account by portal slug (unauthenticated). When the account has a verified custom portal domain it is included so callers (e.g. auth email links) can target it.
 func (s *accountSvcImpl) GetAccountBySlug(ctx context.Context, slug string) (*domain.PublicAccountBySlug, *apierror.APIError) {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_account_by_slug")
@@ -852,6 +869,7 @@ func (s *accountSvcImpl) GetAccountBySlug(ctx context.Context, slug string) (*do
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
+	account.LogoURL = s.presignedLogoURL(ctx, account.LogoURL)
 
 	portalDomain, apiErr := s.repos.NewPortalDomainRepo().GetByAccountID(ctx, account.ID)
 	if apiErr != nil {
@@ -886,7 +904,7 @@ func (s *accountSvcImpl) GetPortalProfileBySlug(ctx context.Context, slug string
 		ID:           account.ID,
 		Name:         account.Name,
 		Slug:         account.Slug,
-		LogoURL:      account.LogoURL,
+		LogoURL:      s.presignedLogoURL(ctx, account.LogoURL),
 		SupportEmail: account.SupportEmail,
 	}
 

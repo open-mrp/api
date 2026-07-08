@@ -2,11 +2,13 @@ package apiendpoint
 
 import (
 	"context"
+	"net/http"
 	"testing"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
+	apierror "github.com/augno/api/shared/errors"
 )
 
 func ctxWithPerms(perms map[string]bool, roleType string) context.Context {
@@ -83,8 +85,29 @@ func TestAuthorize_RoleType(t *testing.T) {
 
 func TestAuthorize_MissingIdentity_Rejected(t *testing.T) {
 	read := types.AnyOfPermissions{{Domain: types.PermissionDomainCustomers, Action: types.ActionRead}}
-	if err := ep(read, "").authorize(context.Background()); err == nil {
-		t.Error("a permissioned endpoint with no identity in context should be rejected")
+	err := ep(read, "").authorize(context.Background())
+	if err == nil {
+		t.Fatal("a permissioned endpoint with no identity in context should be rejected")
+	}
+	// No identity means unauthenticated, not under-permissioned → 401, not 403.
+	if got := apierror.GetHTTPStatusCode(err.Code); got != http.StatusUnauthorized {
+		t.Errorf("missing identity should yield 401, got %d", got)
+	}
+}
+
+// An unauthenticated caller (no session cookie/token resolves to an
+// unauthenticated identity) must get a 401 so the client knows to authenticate,
+// not a generic 403 that reads as a missing permission. Regression guard for the
+// flood of unattributed "You do not have permission" 403s in the request logs.
+func TestAuthorize_Unauthenticated_Returns401(t *testing.T) {
+	read := types.AnyOfPermissions{{Domain: types.PermissionDomainCustomers, Action: types.ActionRead}}
+	ctx := appctx.WithIdentity(context.Background(), types.GetUnauthenticatedIdentity(nil))
+	err := ep(read, "").authorize(ctx)
+	if err == nil {
+		t.Fatal("unauthenticated caller should be rejected from a permissioned endpoint")
+	}
+	if got := apierror.GetHTTPStatusCode(err.Code); got != http.StatusUnauthorized {
+		t.Errorf("unauthenticated caller should yield 401, got %d (%q)", got, err.PublicMessage)
 	}
 }
 

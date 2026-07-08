@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.41.3](https://github.com/Augno/api/compare/v0.41.2...v0.41.3) (2026-07-08)
+
+
+### Bug Fixes
+
+* add back missing Stripe webhook processing and transaction management ([#413](https://github.com/Augno/api/issues/413)) ([d3bb9e1](https://github.com/Augno/api/commit/d3bb9e1e4de6b1db9415480c1e111231de1d3c41))
+
 ## [0.41.2](https://github.com/Augno/api/compare/v0.41.1...v0.41.2) (2026-07-08)
 
 

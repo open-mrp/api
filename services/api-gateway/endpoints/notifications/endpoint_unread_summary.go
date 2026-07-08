@@ -29,6 +29,7 @@ func (e *UnreadSummaryEndpoint) Materialize() *apiendpoint.APIEndpoint[*UnreadSu
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeNotificationUnreadSummary,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionRead}},
+		Extras:              apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UnreadSummaryRequest) (*apiresource.NotificationUnreadSummary, *apierror.APIError) {
 			return svc.(NotificationSvc).GetUnreadSummary
 		},

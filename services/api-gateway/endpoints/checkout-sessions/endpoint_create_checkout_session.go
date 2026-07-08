@@ -68,6 +68,7 @@ func (e *CreateCheckoutSessionEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateCheckoutSessionRequest) (*CheckoutSessionResponse, *apierror.APIError) {
 			return svc.(CheckoutSessionSvc).CreateCheckoutSession
 		},

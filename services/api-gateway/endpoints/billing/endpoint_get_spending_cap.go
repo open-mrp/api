@@ -28,6 +28,7 @@ func (e *GetSpendingCapEndpoint) Materialize() *apiendpoint.APIEndpoint[*apireso
 		// Account-scoped read; mirrors retrieve_account's account:read (self:read) gate.
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAccount, Action: types.ActionRead}},
 		ObjectType:          constants.ObjectTypeSpendingCapResponse,
+		Extras:              apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.EmptyResource) (*apiresource.SpendingCapResponse, *apierror.APIError) {
 			return svc.(BillingSvc).GetSpendingCap
 		},

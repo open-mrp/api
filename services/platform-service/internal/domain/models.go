@@ -36,6 +36,7 @@ type RequestLog struct {
 	APIVersion           *string
 	TraceID              *string
 	PublicEndpoint       bool
+	Hidden               bool
 	BodyJSON             *string
 	ResponseJSON         *string
 }

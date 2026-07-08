@@ -31,7 +31,7 @@ func (e *ListAuditEventResourceTypesEndpoint) Materialize() *apiendpoint.APIEndp
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAuditEvents, Action: types.ActionRead}},
 		Preview:             true,
 		Extras: apiendpoint.APIEndpointExtras{
-			SkipRequestLogging: true,
+			HideFromRequestLog: true,
 		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAuditEventResourceTypesRequest) (*apiresource.List[constants.ObjectType], *apierror.APIError) {
 			return svc.(AuditEventSvc).ListAuditEventResourceTypes

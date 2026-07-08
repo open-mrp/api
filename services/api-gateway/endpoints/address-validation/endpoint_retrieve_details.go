@@ -31,6 +31,7 @@ func (e *RetrieveAddressDetailsEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeAddressDetailsResult,
+		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAddressDetailsRequest) (*apiresource.AddressDetailsResult, *apierror.APIError) {
 			return svc.(AddressValidationSvc).GetAddressDetails
 		},

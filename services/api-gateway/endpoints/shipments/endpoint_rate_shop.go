@@ -92,6 +92,7 @@ func (e *RateShopEndpoint) Materialize() *apiendpoint.APIEndpoint[*RateShopReque
 		Public:              false,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainShipments, Action: types.ActionRead}, {Domain: types.PermissionDomainCustomers, Action: types.ActionRead}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionRead}},
+		Extras:              apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RateShopRequest) (*apiresource.RateShopResult, *apierror.APIError) {
 			return svc.(ShipmentSvc).RateShop
 		},

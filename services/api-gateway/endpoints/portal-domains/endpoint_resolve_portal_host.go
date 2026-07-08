@@ -30,6 +30,7 @@ func (e *ResolvePortalHostEndpoint) Materialize() *apiendpoint.APIEndpoint[*Reso
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ObjectType:        constants.ObjectTypePublicAccount,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ResolvePortalHostRequest) (*apiresource.PublicAccount, *apierror.APIError) {
 			return svc.(PortalDomainSvc).ResolvePortalHost

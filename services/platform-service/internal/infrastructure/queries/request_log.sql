@@ -90,10 +90,12 @@ INSERT INTO request_log (
         api_version,
         trace_id,
         public_endpoint,
+        hidden,
         request_body_json,
         response_body_json
     )
 VALUES (
+        ?,
         ?,
         ?,
         ?,

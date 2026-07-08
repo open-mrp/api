@@ -42,10 +42,12 @@ INSERT INTO request_log (
         api_version,
         trace_id,
         public_endpoint,
+        hidden,
         request_body_json,
         response_body_json
     )
 VALUES (
+        ?,
         ?,
         ?,
         ?,
@@ -106,6 +108,7 @@ type CreateRequestLogParams struct {
 	ApiVersion           sql.NullString
 	TraceID              sql.NullString
 	PublicEndpoint       bool
+	Hidden               bool
 	RequestBodyJson      db.NullableRawMessage
 	ResponseBodyJson     db.NullableRawMessage
 }
@@ -139,6 +142,7 @@ func (q *Queries) CreateRequestLog(ctx context.Context, arg CreateRequestLogPara
 		arg.ApiVersion,
 		arg.TraceID,
 		arg.PublicEndpoint,
+		arg.Hidden,
 		arg.RequestBodyJson,
 		arg.ResponseBodyJson,
 	)

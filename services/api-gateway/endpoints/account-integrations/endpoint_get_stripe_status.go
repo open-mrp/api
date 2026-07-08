@@ -24,6 +24,7 @@ func (e *GetStripeStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetStr
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetStripeStatusRequest) (*apiresource.StripeStatus, *apierror.APIError) {
 			return svc.(AccountIntegrationSvc).GetStripeStatus
 		},

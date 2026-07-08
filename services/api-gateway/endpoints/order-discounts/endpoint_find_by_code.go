@@ -53,6 +53,7 @@ func (e *FindOrderDiscountByCodeEndpoint) Materialize() *apiendpoint.APIEndpoint
 			{Domain: types.PermissionDomainDiscounts, Action: types.ActionRead},
 		},
 		ObjectType: constants.ObjectTypeOrderDiscount,
+		Extras:     apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *FindOrderDiscountByCodeRequest) (*apiresource.OrderDiscount, *apierror.APIError) {
 			return svc.(OrderDiscountSvc).FindOrderDiscountByCode
 		},

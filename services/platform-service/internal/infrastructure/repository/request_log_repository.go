@@ -78,6 +78,7 @@ func (r *requestLogRepoImpl) Create(ctx context.Context, rl *domain.RequestLog) 
 		ApiVersion:           db.NullStringPtr(rl.APIVersion),
 		TraceID:              db.NullStringPtr(rl.TraceID),
 		PublicEndpoint:       rl.PublicEndpoint,
+		Hidden:               rl.Hidden,
 		RequestBodyJson:      bodyJSON,
 		ResponseBodyJson:     responseJSON,
 	})

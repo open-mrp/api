@@ -36,7 +36,7 @@ func (e *ListCustomerAccountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*L
 			return svc.(TenancySvc).ListCustomerAccounts
 		},
 		Extras: apiendpoint.APIEndpointExtras{
-			SkipRequestLogging: true,
+			HideFromRequestLog: true,
 		},
 	})
 }

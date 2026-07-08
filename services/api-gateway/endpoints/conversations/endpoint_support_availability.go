@@ -30,6 +30,7 @@ func (e *SupportAvailabilityEndpoint) Materialize() *apiendpoint.APIEndpoint[*Su
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ObjectType:        constants.ObjectTypeSupportAvailability,
 		// Parity with Contact Support: this probes the same create-a-support-thread capability, so the
 		// same relation actors who can open support can check availability first.

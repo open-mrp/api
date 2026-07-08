@@ -33,7 +33,7 @@ func (e *ProcessAccountWebhookEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Preview:           true,
 		Extras: apiendpoint.APIEndpointExtras{
 			SkipRequestBodyParsing: true,
-			SkipRequestLogging:     true,
+			HideFromRequestLog:     true,
 		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AccountStripeWebhookRequest) (*apiresource.WebhookResponse, *apierror.APIError) {
 			return svc.(WebhookSvc).ProcessAccountWebhook

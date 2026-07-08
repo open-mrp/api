@@ -20,6 +20,8 @@ func TestBuildListQuery_NoFiltersEmitsOnlyBaselinePredicates(t *testing.T) {
 	sql, _ := buildListQuery(queryModeBase, pagination.DirectionForward, "acc_1", emptyFilter(), false, false, false, nil, 101)
 
 	mustContain(t, sql, "WHERE (rl.account_id = ? OR rl.target_account_id = ?)")
+	// Hidden logs (e.g. HideFromRequestLog endpoints) are always excluded from listings.
+	mustContain(t, sql, "rl.hidden = FALSE")
 	mustContain(t, sql, "ORDER BY rl.occurred_at DESC, rl.id DESC LIMIT ?")
 
 	forbidden := []string{

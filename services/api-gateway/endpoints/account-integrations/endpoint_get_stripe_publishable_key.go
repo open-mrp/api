@@ -26,6 +26,7 @@ func (e *GetStripePublishableKeyEndpoint) Materialize() *apiendpoint.APIEndpoint
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetStripePublishableKeyRequest) (*apiresource.StripePublishableKey, *apierror.APIError) {
 			return svc.(AccountIntegrationSvc).GetStripePublishableKey
 		},

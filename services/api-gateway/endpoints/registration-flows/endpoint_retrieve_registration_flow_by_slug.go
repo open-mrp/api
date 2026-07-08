@@ -28,6 +28,7 @@ func (e *RetrieveRegistrationFlowBySlugEndpoint) Materialize() *apiendpoint.APIE
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ObjectType:        constants.ObjectTypeRegistrationFlow,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveRegistrationFlowBySlugRequest) (*apiresource.RegistrationFlow, *apierror.APIError) {
 			return svc.(RegistrationFlowSvc).GetRegistrationFlowBySlug

@@ -66,6 +66,7 @@ func (p *requestLogOutboxPublisher) Create(ctx context.Context, rl *appctx.Reque
 		ApiVersion:           rl.APIVersion,
 		TraceId:              rl.TraceID,
 		PublicEndpoint:       rl.PublicEndpoint,
+		Hidden:               rl.Hidden,
 		BodyJson:             rl.BodyJSON,
 		ResponseJson:         rl.ResponseJSON,
 	}

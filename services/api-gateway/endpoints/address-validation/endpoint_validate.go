@@ -56,6 +56,7 @@ func (e *ValidateAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*Valida
 		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeValidatedAddress,
+		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ValidateAddressRequest) (*apiresource.ValidatedAddress, *apierror.APIError) {
 			return svc.(AddressValidationSvc).ValidateAddress
 		},

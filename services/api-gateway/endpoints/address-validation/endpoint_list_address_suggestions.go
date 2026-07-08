@@ -34,6 +34,7 @@ func (e *AutocompleteAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*Au
 		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeAddressSuggestion,
+		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AutocompleteAddressRequest) (*apiresource.List[apiresource.AddressSuggestion], *apierror.APIError) {
 			return svc.(AddressValidationSvc).AutocompleteAddress
 		},

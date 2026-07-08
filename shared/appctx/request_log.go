@@ -38,6 +38,7 @@ type RequestLog struct {
 	BodyJSON                *string         `json:"body_json,omitempty"`
 	ResponseJSON            *string         `json:"response_json,omitempty"`
 	SkipSave                bool            `json:"-"`
+	Hidden                  bool            `json:"-"` // persisted but omitted from the default request-log listing; set from the endpoint's HideFromRequestLog flag
 	SensitiveResponseFields map[string]bool `json:"-"`
 }
 

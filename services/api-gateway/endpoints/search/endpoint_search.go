@@ -38,6 +38,7 @@ func (e *SearchEndpoint) Materialize() *apiendpoint.APIEndpoint[*SearchRequest, 
 		AgentTool:           true,
 		RequiredPermissions: searchReadPermissions,
 		ObjectType:          constants.ObjectTypeEntity,
+		Extras:              apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *SearchRequest) (*apiresource.List[apiresource.Entity], *apierror.APIError) {
 			return svc.(SearchSvc).Search
 		},

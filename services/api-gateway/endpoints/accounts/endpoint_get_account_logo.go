@@ -29,6 +29,7 @@ func (e *GetAccountLogoURLEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetA
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetAccountLogoURLRequest) (*apiresource.AccountLogoURL, *apierror.APIError) {
 			return svc.(AccountSvc).GetAccountLogoURL
 		},

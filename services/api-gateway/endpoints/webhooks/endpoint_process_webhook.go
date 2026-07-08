@@ -23,7 +23,7 @@ func (e *ProcessWebhookEndpoint) Materialize() *apiendpoint.APIEndpoint[*apireso
 		Preview:           true,
 		Extras: apiendpoint.APIEndpointExtras{
 			SkipRequestBodyParsing: true,
-			SkipRequestLogging:     true,
+			HideFromRequestLog:     true,
 		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.StripeWebhookRequest) (*apiresource.WebhookResponse, *apierror.APIError) {
 			return svc.(WebhookSvc).ProcessWebhook

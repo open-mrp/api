@@ -1555,6 +1555,7 @@ type RequestLog struct {
 	LatencyUs            int64
 	TargetAccountID      sql.NullString
 	PublicEndpoint       bool
+	Hidden               bool
 	ApiVersion           sql.NullString
 	AccountID            sql.NullString
 	ActorID              sql.NullString

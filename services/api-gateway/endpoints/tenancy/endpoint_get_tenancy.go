@@ -32,7 +32,7 @@ func (e *GetTenancyEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetTenancyR
 			return svc.(TenancySvc).GetTenancy
 		},
 		Extras: apiendpoint.APIEndpointExtras{
-			SkipRequestLogging: true,
+			HideFromRequestLog: true,
 		},
 	})
 }

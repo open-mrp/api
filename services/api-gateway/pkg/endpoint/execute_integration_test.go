@@ -130,6 +130,38 @@ func TestExecute_SkipRequestLogging_setsSkipSaveOnRequestLog(t *testing.T) {
 	}
 }
 
+func TestExecute_HideFromRequestLog_setsHiddenButNotSkipSave(t *testing.T) {
+	t.Parallel()
+	ep := &APIEndpoint[*stubRequest, *stubResponse]{
+		Method:            http.MethodGet,
+		Route:             "/v1/things",
+		SuccessStatusCode: http.StatusOK,
+		Extras:            APIEndpointExtras{HideFromRequestLog: true},
+		ServiceHandler: func(svc any) func(context.Context, *stubRequest) (*stubResponse, *apierror.APIError) {
+			return func(context.Context, *stubRequest) (*stubResponse, *apierror.APIError) {
+				return &stubResponse{ID: "th_1"}, nil
+			}
+		},
+	}
+	bindHandler(ep)
+
+	rl := &appctx.RequestLog{ID: "rq_hidden"}
+	ctx := appctx.WithRequestLog(context.Background(), rl)
+	r := httptest.NewRequest(http.MethodGet, "/v1/things", nil)
+	r = r.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	ep.Execute(w, r)
+
+	// Hidden persists the log (SkipSave stays false) but flags it for omission from listings.
+	if !rl.Hidden {
+		t.Fatal("expected RequestLog.Hidden")
+	}
+	if rl.SkipSave {
+		t.Fatal("expected RequestLog.SkipSave to stay false for a hidden (still-persisted) log")
+	}
+}
+
 func TestExecute_olderAPIVersionRunsTransformAndDecodesJSON(t *testing.T) {
 	t.Parallel()
 

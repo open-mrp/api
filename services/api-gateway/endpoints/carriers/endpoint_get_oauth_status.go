@@ -31,6 +31,7 @@ func (e *GetOAuthStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetOAut
 		Public:              false,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainCarriers, Action: types.ActionRead}},
+		Extras:              apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetOAuthStatusRequest) (*apiresource.OAuthStatusResponse, *apierror.APIError) {
 			return svc.(CarrierSvc).GetOAuthStatus
 		},

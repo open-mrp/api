@@ -41,6 +41,7 @@ func (e *ListNotificationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeNotification,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionRead}},
+		Extras:              apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListNotificationsRequest) (*apiresource.List[apiresource.Notification], *apierror.APIError) {
 			return svc.(NotificationSvc).ListNotifications
 		},

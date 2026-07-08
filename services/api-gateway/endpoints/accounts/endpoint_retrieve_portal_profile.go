@@ -30,6 +30,7 @@ func (e *RetrievePortalProfileEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ObjectType:        constants.ObjectTypePortalProfile,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrievePortalProfileRequest) (*apiresource.PortalProfile, *apierror.APIError) {
 			return svc.(AccountSvc).GetPortalProfileBySlug

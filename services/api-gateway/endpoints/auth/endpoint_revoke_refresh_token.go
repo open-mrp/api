@@ -39,7 +39,7 @@ func (e *RevokeRefreshTokenEndpoint) Materialize() *apiendpoint.APIEndpoint[*Rev
 			return svc.(AuthSvc).RevokeRefreshToken
 		},
 		Extras: apiendpoint.APIEndpointExtras{
-			SkipRequestLogging: true,
+			HideFromRequestLog: true,
 		},
 	})
 }

@@ -98,6 +98,7 @@ func (e *QuoteSalesOrderPricesEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainSalesOrders, Action: types.ActionRead},
 		},

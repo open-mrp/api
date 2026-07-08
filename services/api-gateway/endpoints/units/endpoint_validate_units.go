@@ -44,6 +44,7 @@ func (e *ValidateUnitsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Validate
 			{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},
 			{Domain: types.PermissionDomainSuppliers, Action: types.ActionRead},
 		},
+		Extras: apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ValidateUnitsRequest) (*apiresource.ValidateUnitsResponse, *apierror.APIError) {
 			return svc.(UnitSvc).ValidateUnits
 		},

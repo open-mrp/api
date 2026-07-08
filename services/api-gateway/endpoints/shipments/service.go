@@ -7,6 +7,7 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
@@ -277,7 +278,61 @@ func (m *shipmentSvcImpl) RateShop(ctx context.Context, req *RateShopRequest) (*
 		return nil, apiErr
 	}
 
-	return rateShopFromProto(resp), nil
+	// The core RateShop RPC only echoes back carrier/service-level ids and names, so batch-hydrate the full resources here — otherwise fields like service_level_token and customer_portal_visibility come back empty.
+	carriers, serviceLevels, apiErr := m.loadRateShopResources(ctx, resp)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return rateShopFromProto(resp, carriers, serviceLevels), nil
+}
+
+// loadRateShopResources batch-loads the full Carrier and ServiceLevel resources referenced by a rate-shop response, keyed by id, via the shared resource loaders.
+func (m *shipmentSvcImpl) loadRateShopResources(ctx context.Context, resp *pb.RateShopResponse) (map[string]*apiresource.Carrier, map[string]*apiresource.ServiceLevel, *apierror.APIError) {
+	if resp == nil || len(resp.Options) == 0 {
+		return nil, nil, nil
+	}
+
+	carrierIDs := uniqueStrings(resp.Options, func(o *pb.RateShopOptionInfo) string { return o.CarrierId })
+	serviceLevelIDs := uniqueStrings(resp.Options, func(o *pb.RateShopOptionInfo) string { return o.ServiceLevelId })
+
+	carrierMap, apiErr := resourceloaders.LoadCarriers(ctx, carrierIDs)
+	if apiErr != nil {
+		return nil, nil, apiErr
+	}
+	serviceLevelMap, apiErr := resourceloaders.LoadServiceLevels(ctx, serviceLevelIDs)
+	if apiErr != nil {
+		return nil, nil, apiErr
+	}
+
+	carriers := make(map[string]*apiresource.Carrier, len(carrierMap))
+	for id, v := range carrierMap {
+		if c, ok := v.(*apiresource.Carrier); ok {
+			carriers[id] = c
+		}
+	}
+	serviceLevels := make(map[string]*apiresource.ServiceLevel, len(serviceLevelMap))
+	for id, v := range serviceLevelMap {
+		if sl, ok := v.(*apiresource.ServiceLevel); ok {
+			serviceLevels[id] = sl
+		}
+	}
+	return carriers, serviceLevels, nil
+}
+
+// uniqueStrings collects the distinct non-empty keys returned by keyOf across options, preserving first-seen order.
+func uniqueStrings(options []*pb.RateShopOptionInfo, keyOf func(*pb.RateShopOptionInfo) string) []string {
+	seen := make(map[string]bool, len(options))
+	out := make([]string, 0, len(options))
+	for _, o := range options {
+		k := keyOf(o)
+		if k == "" || seen[k] {
+			continue
+		}
+		seen[k] = true
+		out = append(out, k)
+	}
+	return out
 }
 
 func (m *shipmentSvcImpl) ListShipmentLines(ctx context.Context, req *ListShipmentLinesRequest) (*apiresource.List[apiresource.ShipmentLine], *apierror.APIError) {
@@ -730,25 +785,33 @@ func estimateRateFromProto(resp *pb.EstimateRateResponse) *apiresource.EstimateR
 	}
 }
 
-func rateShopFromProto(resp *pb.RateShopResponse) *apiresource.RateShopResult {
+func rateShopFromProto(resp *pb.RateShopResponse, carriers map[string]*apiresource.Carrier, serviceLevels map[string]*apiresource.ServiceLevel) *apiresource.RateShopResult {
 	if resp == nil {
 		return nil
 	}
 
 	options := make([]apiresource.RateShopOption, len(resp.Options))
 	for i, opt := range resp.Options {
-		options[i] = apiresource.RateShopOption{
-			Object: constants.ObjectTypeRateShopOption,
-			Carrier: &apiresource.Carrier{
+		carrier := carriers[opt.CarrierId]
+		if carrier == nil {
+			carrier = &apiresource.Carrier{
 				ID:     opt.CarrierId,
 				Object: constants.ObjectTypeCarrier,
 				Name:   opt.CarrierName,
-			},
-			ServiceLevel: &apiresource.ServiceLevel{
+			}
+		}
+		serviceLevel := serviceLevels[opt.ServiceLevelId]
+		if serviceLevel == nil {
+			serviceLevel = &apiresource.ServiceLevel{
 				ID:     opt.ServiceLevelId,
 				Object: constants.ObjectTypeServiceLevel,
 				Name:   opt.ServiceLevelName,
-			},
+			}
+		}
+		options[i] = apiresource.RateShopOption{
+			Object:        constants.ObjectTypeRateShopOption,
+			Carrier:       carrier,
+			ServiceLevel:  serviceLevel,
 			Rate:          opt.Rate,
 			EstimatedDays: opt.EstimatedDays,
 		}

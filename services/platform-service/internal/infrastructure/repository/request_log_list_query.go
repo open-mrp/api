@@ -90,6 +90,9 @@ func buildListQuery(
 	inner.WriteString(" WHERE (rl.account_id = ? OR rl.target_account_id = ?)")
 	args = append(args, callerAccountID, callerAccountID)
 
+	// Hidden logs (e.g. high-frequency polling endpoints flagged HideFromRequestLog) are persisted but omitted from listings. hidden is low-cardinality, so this rides the existing cursor indexes as a residual filter rather than needing its own index.
+	inner.WriteString(" AND rl.hidden = FALSE")
+
 	if f.Query != nil && *f.Query != "" {
 		like := "%" + db.EscapeLike(*f.Query) + "%"
 		// Match the log's own id (exact) plus a substring search across the request route (both the literal path and the normalized route) and the error message. Searching rl.path lets a caller paste a resource id that appeared in a URL (e.g. /v1/catalog/items/it_123) and find every log that touched it; rl.normalized_route covers route-template searches (e.g. "catalog/items").

@@ -80,7 +80,7 @@ func (e *ListRequestLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRe
 			Fields:     []string{"account", "actor", "actor.role"},
 		}),
 		Extras: apiendpoint.APIEndpointExtras{
-			SkipRequestLogging: true,
+			HideFromRequestLog: true,
 		},
 	})
 }

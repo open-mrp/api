@@ -40,7 +40,7 @@ func (e *RetrieveRequestLogEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 			Fields:     []string{"account", "actor", "actor.role", "actor.role.permissions", "query_params", "request_body", "response_body"},
 		}),
 		Extras: apiendpoint.APIEndpointExtras{
-			SkipRequestLogging: true,
+			HideFromRequestLog: true,
 		},
 	})
 }

@@ -63,7 +63,7 @@ func (e *ListAuditEventsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAu
 			Fields:     []string{"account", "actor", "changes", "metadata", "request"},
 		}),
 		Extras: apiendpoint.APIEndpointExtras{
-			SkipRequestLogging: true,
+			HideFromRequestLog: true,
 		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAuditEventsRequest) (*apiresource.List[apiresource.AuditEvent], *apierror.APIError) {
 			return svc.(AuditEventSvc).ListAuditEvents

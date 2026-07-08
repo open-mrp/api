@@ -29,6 +29,7 @@ func (e *GetUserPhotoURLEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetUse
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetUserPhotoURLRequest) (*apiresource.UserPhotoURL, *apierror.APIError) {
 			return svc.(UserSvc).GetUserPhotoURL
 		},

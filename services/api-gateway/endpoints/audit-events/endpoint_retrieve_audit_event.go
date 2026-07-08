@@ -37,7 +37,7 @@ func (e *RetrieveAuditEventEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 			Fields:     []string{"account", "actor", "changes", "metadata", "request"},
 		}),
 		Extras: apiendpoint.APIEndpointExtras{
-			SkipRequestLogging: true,
+			HideFromRequestLog: true,
 		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAuditEventRequest) (*apiresource.AuditEvent, *apierror.APIError) {
 			return svc.(AuditEventSvc).GetAuditEvent

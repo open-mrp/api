@@ -31,6 +31,7 @@ func (e *ListAnnouncementsEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeAnnouncement,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionRead}},
+		Extras:              apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAnnouncementsRequest) (*apiresource.List[apiresource.Announcement], *apierror.APIError) {
 			return svc.(AnnouncementSvc).ListAnnouncements
 		},

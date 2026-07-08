@@ -29,6 +29,7 @@ func (e *UnreadCountEndpoint) Materialize() *apiendpoint.APIEndpoint[*UnreadCoun
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeNotificationUnreadCount,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionRead}},
+		Extras:              apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UnreadCountRequest) (*apiresource.NotificationUnreadCount, *apierror.APIError) {
 			return svc.(NotificationSvc).GetUnreadCount
 		},

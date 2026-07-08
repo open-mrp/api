@@ -113,6 +113,7 @@ func mapEventToDomain(event *loggingpb.RequestLog) *domain.RequestLog {
 		APIVersion:           event.ApiVersion,
 		TraceID:              event.TraceId,
 		PublicEndpoint:       event.GetPublicEndpoint(),
+		Hidden:               event.GetHidden(),
 		BodyJSON:             event.BodyJson,
 		ResponseJSON:         event.ResponseJson,
 	}

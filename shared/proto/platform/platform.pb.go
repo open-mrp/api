@@ -748,7 +748,9 @@ type RequestLog struct {
 	// Absent for shielded endpoints and requests with no body.
 	BodyJson *string `protobuf:"bytes,28,opt,name=body_json,json=bodyJson,proto3,oneof" json:"body_json,omitempty"`
 	// Absent for shielded endpoints and responses exceeding 256 KB.
-	ResponseJson  *string `protobuf:"bytes,29,opt,name=response_json,json=responseJson,proto3,oneof" json:"response_json,omitempty"`
+	ResponseJson *string `protobuf:"bytes,29,opt,name=response_json,json=responseJson,proto3,oneof" json:"response_json,omitempty"`
+	// When true, the log is persisted but omitted from the default request-log listing.
+	Hidden        bool `protobuf:"varint,30,opt,name=hidden,proto3" json:"hidden,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -984,6 +986,13 @@ func (x *RequestLog) GetResponseJson() string {
 		return *x.ResponseJson
 	}
 	return ""
+}
+
+func (x *RequestLog) GetHidden() bool {
+	if x != nil {
+		return x.Hidden
+	}
+	return false
 }
 
 type CreateRequestLogRequest struct {
@@ -2810,7 +2819,7 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\x0erecovery_point\x18\x01 \x01(\tR\rrecoveryPoint\x12 \n" +
 	"\tstep_data\x18\x02 \x01(\fH\x00R\bstepData\x88\x01\x01B\f\n" +
 	"\n" +
-	"_step_data\"\x9a\v\n" +
+	"_step_data\"\xb2\v\n" +
 	"\n" +
 	"RequestLog\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
@@ -2854,7 +2863,8 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\btrace_id\x18\x1a \x01(\tH\x10R\atraceId\x88\x01\x01\x12'\n" +
 	"\x0fpublic_endpoint\x18\x1b \x01(\bR\x0epublicEndpoint\x12 \n" +
 	"\tbody_json\x18\x1c \x01(\tH\x11R\bbodyJson\x88\x01\x01\x12(\n" +
-	"\rresponse_json\x18\x1d \x01(\tH\x12R\fresponseJson\x88\x01\x01B\r\n" +
+	"\rresponse_json\x18\x1d \x01(\tH\x12R\fresponseJson\x88\x01\x01\x12\x16\n" +
+	"\x06hidden\x18\x1e \x01(\bR\x06hiddenB\r\n" +
 	"\v_query_jsonB\r\n" +
 	"\v_account_idB\x14\n" +
 	"\x12_target_account_idB\f\n" +

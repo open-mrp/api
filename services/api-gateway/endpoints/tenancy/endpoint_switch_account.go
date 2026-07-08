@@ -44,7 +44,7 @@ func (e *SwitchAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*SwitchAc
 			return svc.(TenancySvc).SwitchAccount
 		},
 		Extras: apiendpoint.APIEndpointExtras{
-			SkipRequestLogging: true,
+			HideFromRequestLog: true,
 		},
 	})
 }

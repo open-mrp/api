@@ -30,7 +30,7 @@ func (e *GetCurrentUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetCurr
 			return svc.(TenancySvc).GetCurrentUser
 		},
 		Extras: apiendpoint.APIEndpointExtras{
-			SkipRequestLogging: true,
+			HideFromRequestLog: true,
 		},
 	})
 }

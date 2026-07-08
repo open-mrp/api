@@ -42,6 +42,7 @@ func (e *ValidateProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Valid
 		Public:              false,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionRead}, {Domain: types.PermissionDomainCustomers, Action: types.ActionRead}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionRead}},
+		Extras:              apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ValidateProductsRequest) (*apiresource.ValidateProductsResponse, *apierror.APIError) {
 			return svc.(ProductSvc).ValidateProducts
 		},

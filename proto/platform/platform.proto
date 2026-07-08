@@ -191,6 +191,8 @@ message RequestLog {
   optional string body_json = 28;
   // Absent for shielded endpoints and responses exceeding 256 KB.
   optional string response_json = 29;
+  // When true, the log is persisted but omitted from the default request-log listing.
+  bool hidden = 30;
 }
 
 message CreateRequestLogRequest {

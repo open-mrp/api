@@ -43,7 +43,7 @@ func (e *SubmitFeedbackEndpoint) Materialize() *apiendpoint.APIEndpoint[*SubmitF
 		Public:            false,
 		Preview:           true,
 		Extras: apiendpoint.APIEndpointExtras{
-			SkipRequestLogging: true,
+			HideFromRequestLog: true,
 		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *SubmitFeedbackRequest) (*apiresource.MessageResource, *apierror.APIError) {
 			return svc.(UtilsSvc).SubmitFeedback

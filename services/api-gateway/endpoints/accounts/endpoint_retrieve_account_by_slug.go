@@ -30,6 +30,7 @@ func (e *RetrieveAccountBySlugEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ObjectType:        constants.ObjectTypePublicAccount,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAccountBySlugRequest) (*apiresource.PublicAccount, *apierror.APIError) {
 			return svc.(AccountSvc).GetAccountBySlug

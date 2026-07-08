@@ -33,6 +33,8 @@ import (
 type APIEndpointExtras struct {
 	SkipRequestBodyParsing bool `json:"skip_request_body_parsing" yaml:"skip_request_body_parsing"`
 	SkipRequestLogging     bool `json:"skip_request_logging" yaml:"skip_request_logging"`
+	// HideFromRequestLog persists the request log but omits it from the default request-log listing. Use for high-frequency polling endpoints that would otherwise flood the log (e.g. notification unread-count). Unlike SkipRequestLogging the row is still saved.
+	HideFromRequestLog bool `json:"hide_from_request_log" yaml:"hide_from_request_log"`
 }
 
 type ServiceHandler[TReq, TResp any] = func(ctx context.Context, req TReq) (TResp, *apierror.APIError)
@@ -226,6 +228,9 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 	if rl, ok := appctx.GetRequestLog(ctx); ok {
 		if e.Extras.SkipRequestLogging {
 			rl.SkipSave = true
+		}
+		if e.Extras.HideFromRequestLog {
+			rl.Hidden = true
 		}
 		if len(e.sensitiveRespPaths) > 0 {
 			rl.SensitiveResponseFields = maps.Clone(e.sensitiveRespPaths)

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.41.5](https://github.com/Augno/api/compare/v0.41.4...v0.41.5) (2026-07-08)
+
+
+### Bug Fixes
+
+* update URLs to use the new domain for various services and tests ([ebe2766](https://github.com/Augno/api/commit/ebe27660bff58ffeae1acbc6c70dc5e7d72c0ce4))
+
 ## [0.41.4](https://github.com/Augno/api/compare/v0.41.3...v0.41.4) (2026-07-08)
 
 

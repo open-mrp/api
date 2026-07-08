@@ -99,7 +99,7 @@ var SampleRequestLog = &RequestLog{
 	APIVersion:       new(SampleRequestLogAPIVersion),
 	ClientIP:         new(SampleRequestLogClientIP),
 	UserAgent:        new(SampleRequestLogUserAgent),
-	Referrer:         new("https://app.augno.com"),
+	Referrer:         new("https://www.augno.com"),
 	OccurredAt:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	CreatedAt:        timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	Account:          SampleAccount,

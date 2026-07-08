@@ -78,7 +78,7 @@ type OAuthResponse struct {
 
 var SampleOAuthResponse = &OAuthResponse{
 	Object:   constants.ObjectTypeOAuthResponse,
-	OAuthURL: "https://oauth.fedex.com/authorize?client_id=abc123&redirect_uri=https://app.augno.com/carriers/oauth/callback",
+	OAuthURL: "https://oauth.fedex.com/authorize?client_id=abc123&redirect_uri=https://www.augno.com/carriers/oauth/callback",
 }
 
 func (*OAuthResponse) SchemaExample() any {

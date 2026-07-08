@@ -494,8 +494,13 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 					if logoURL != nil {
 						emailParams["LogoURL"] = *logoURL
 					}
-					if slug != nil {
-						emailParams["LoginLink"] = "https://app.augno.com/" + *slug + "/login"
+					// A verified custom portal domain serves the portal without the slug path prefix, so the login link targets the custom domain directly and drops the slug segment. Best-effort: fall back to the slug-prefixed dashboard link on any lookup failure.
+					portalDomain, _ := txSvc.repos.NewPortalDomainRepo().GetByAccountID(txCtx, actorAccountID)
+					switch {
+					case portalDomain != nil && portalDomain.Status == constants.PortalDomainStatusVerified:
+						emailParams["LoginLink"] = "https://" + portalDomain.Domain + "/login"
+					case slug != nil:
+						emailParams["LoginLink"] = "https://www.augno.com/" + *slug + "/login"
 					}
 					subject = "Welcome to the " + accountName + " platform"
 				}

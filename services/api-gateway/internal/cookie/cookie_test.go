@@ -188,7 +188,7 @@ func TestCookieDomains(t *testing.T) {
 		{
 			name:         "Production first-party host keeps wildcard domain",
 			isProduction: true,
-			externalHost: "app.augno.com",
+			externalHost: "docs.augno.com",
 			wantDomain:   ".augno.com",
 		},
 		{

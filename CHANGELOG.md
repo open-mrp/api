@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.41.6](https://github.com/Augno/api/compare/v0.41.5...v0.41.6) (2026-07-08)
+
+
+### Bug Fixes
+
+* issue with request logs ([c67d01a](https://github.com/Augno/api/commit/c67d01a9cefac8e09dac337d7a23daa581fa9a9b))
+
 ## [0.41.5](https://github.com/Augno/api/compare/v0.41.4...v0.41.5) (2026-07-08)
 
 

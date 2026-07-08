@@ -507,3 +507,9 @@ AND (sqlc.narg('type') IS NULL OR t.transaction_type_code = sqlc.narg('type'));
 
 -- name: GetDollarUnitIDForTransaction :one
 SELECT id FROM unit WHERE abbreviation = '$' LIMIT 1;
+
+-- name: UpdateTransactionFundsReceivedByStripePaymentIDs :exec
+UPDATE transaction
+SET funds_received_at = sqlc.arg('funds_received_at'), updated_at = NOW(3)
+WHERE account_id = sqlc.arg('account_id')
+  AND stripe_payment_id IN (sqlc.slice('stripe_payment_ids'));

@@ -276,7 +276,7 @@ stripe-webhook: ## Run the Stripe webhook listener
 stripe-webhook-account: ACCOUNT ?= ac_01k0a5smf9ekb8rqg12555zjqa
 stripe-webhook-account: ## Forward a vendor account's Stripe webhooks to the per-account endpoint. Usage: make stripe-webhook-account [ACCOUNT=<account_id>] [API_KEY=sk_test_...]
 	@echo "Forwarding Stripe webhooks for account $(ACCOUNT)"
-	@stripe listen $(if $(API_KEY),--api-key $(API_KEY)) --events payment_intent.succeeded --forward-to localhost:8081/v1/webhooks/stripe/accounts/$(ACCOUNT)
+	@stripe listen $(if $(API_KEY),--api-key $(API_KEY)) --events payment_intent.succeeded,payment_intent.payment_failed,payment_intent.canceled,payout.paid --forward-to localhost:8081/v1/webhooks/stripe/accounts/$(ACCOUNT)
 
 check-format: ## Check formatting
 	@echo "Checking formatting..."

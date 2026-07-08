@@ -52,6 +52,12 @@ type SalesOrderSvcTestSuite struct {
 	productionRunQueryRepo   *repositorymock.MockProductionRunQueryRepo
 	territoryRepo            *repositorymock.MockTerritoryRepo
 	unitRepo                 *repositorymock.MockUnitRepo
+	carrierRepo              *repositorymock.MockCarrierRepo
+	serviceLevelRepo         *repositorymock.MockServiceLevelRepo
+	shippingTermRepo         *repositorymock.MockShippingTermRepo
+	paymentTermRepo          *repositorymock.MockPaymentTermRepo
+	transactionRepo          *repositorymock.MockTransactionRepo
+	opiRepo                  *repositorymock.MockOrderPaymentIntentRepo
 
 	// Collaborators.
 	checkoutFactory *clientmock.MockStripeCheckoutClientFactory
@@ -90,6 +96,12 @@ func (suite *SalesOrderSvcTestSuite) SetupTest() {
 	suite.productionRunQueryRepo = repositorymock.NewMockProductionRunQueryRepo(suite.ctrl)
 	suite.territoryRepo = repositorymock.NewMockTerritoryRepo(suite.ctrl)
 	suite.unitRepo = repositorymock.NewMockUnitRepo(suite.ctrl)
+	suite.carrierRepo = repositorymock.NewMockCarrierRepo(suite.ctrl)
+	suite.serviceLevelRepo = repositorymock.NewMockServiceLevelRepo(suite.ctrl)
+	suite.shippingTermRepo = repositorymock.NewMockShippingTermRepo(suite.ctrl)
+	suite.paymentTermRepo = repositorymock.NewMockPaymentTermRepo(suite.ctrl)
+	suite.transactionRepo = repositorymock.NewMockTransactionRepo(suite.ctrl)
+	suite.opiRepo = repositorymock.NewMockOrderPaymentIntentRepo(suite.ctrl)
 
 	suite.checkoutFactory = clientmock.NewMockStripeCheckoutClientFactory(suite.ctrl)
 	suite.checkoutClient = clientmock.NewMockStripeCheckoutClient(suite.ctrl)
@@ -115,7 +127,13 @@ func (suite *SalesOrderSvcTestSuite) SetupTest() {
 	suite.repoFactory.EXPECT().NewProductionRunQueryRepo().Return(suite.productionRunQueryRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewTerritoryRepo().Return(suite.territoryRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewUnitRepo().Return(suite.unitRepo).AnyTimes()
+	suite.repoFactory.EXPECT().NewCarrierRepo().Return(suite.carrierRepo).AnyTimes()
+	suite.repoFactory.EXPECT().NewServiceLevelRepo().Return(suite.serviceLevelRepo).AnyTimes()
+	suite.repoFactory.EXPECT().NewShippingTermRepo().Return(suite.shippingTermRepo).AnyTimes()
+	suite.repoFactory.EXPECT().NewPaymentTermRepo().Return(suite.paymentTermRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewOutboxRepo().Return(&stubOutboxRepo{}).AnyTimes()
+	suite.repoFactory.EXPECT().NewTransactionRepo().Return(suite.transactionRepo).AnyTimes()
+	suite.repoFactory.EXPECT().NewOrderPaymentIntentRepo().Return(suite.opiRepo).AnyTimes()
 
 	suite.idempotencyMed = mediatormock.NewMockIdempotencyMed(suite.ctrl)
 	suite.readAccessMed = mediatormock.NewMockReadAccessMed(suite.ctrl)
@@ -404,15 +422,44 @@ func (suite *SalesOrderSvcTestSuite) TestGetSalesOrder_LinesInclude() {
 
 // --- CreateSalesOrder ---
 
+// customerWithOrderDefaults returns a buyer customer relation populated with the
+// carrier / service level / shipping term / payment term defaults the create path
+// falls back to when the request omits them. The IDs line up with the reference-
+// validation mocks (svcl_default in particular) so a defaulted order validates.
+func customerWithOrderDefaults() *domain.Customer {
+	// Deliberately distinct from the IDs baseCreateOrderParams supplies (cr_default /
+	// shtm_default / pmtm_default) so a test that nils the request fields can prove the
+	// value came from the customer default. The service level keeps svcl_default so it
+	// matches the specific reference-validation mock.
+	carrier := "cr_cust_default"
+	serviceLevel := "svcl_default"
+	shippingTerm := "shtm_cust_default"
+	paymentTerm := "pmtm_cust_default"
+	return &domain.Customer{
+		DefaultCarrierID:      &carrier,
+		DefaultServiceLevelID: &serviceLevel,
+		DefaultShippingTermID: &shippingTerm,
+		DefaultPaymentTermID:  &paymentTerm,
+	}
+}
+
 // baseCreateOrderParams returns a valid set of create params (addresses, lines,
 // priority, type). Individual tests mutate specific fields.
 func baseCreateOrderParams() domain.CreateSalesOrderParams {
+	carrierID := "cr_default"
+	serviceLevelID := "svcl_default"
+	shippingTermID := "shtm_default"
+	paymentTermID := "pmtm_default"
 	return domain.CreateSalesOrderParams{
 		BuyerAccountID:       "ac_buyer",
 		SalesOrderStatusCode: string(constants.SalesOrderStatusCodeEstimate),
 		PriorityCode:         "normal",
 		BillToAddressID:      "ad_bill",
 		ShipToAddressID:      "ad_ship",
+		CarrierID:            &carrierID,
+		ServiceLevelID:       &serviceLevelID,
+		ShippingTermID:       &shippingTermID,
+		PaymentTermID:        &paymentTermID,
 		Lines: []domain.CreateSalesOrderLineInput{
 			{
 				ProductID:      "prod_1",
@@ -467,8 +514,9 @@ func (suite *SalesOrderSvcTestSuite) expectCreateOrderResolutionChain(accountID 
 		Return(false, nil).AnyTimes()
 	suite.orderRepo.EXPECT().AreAllLineProductLinesCommissionExempt(gomock.Any(), gomock.Any()).
 		Return(false, nil).AnyTimes()
+	// The customer carries the carrier / service level / shipping term / payment term defaults that the create path applies when the request omits them (matching the Dashboard create form). These are what let a base order — which supplies none of them — resolve to a readable order.
 	suite.customerRepo.EXPECT().Get(gomock.Any(), accountID, "ac_buyer", gomock.Any()).
-		Return(&domain.Customer{}, nil).AnyTimes()
+		Return(customerWithOrderDefaults(), nil).AnyTimes()
 	suite.territoryRepo.EXPECT().FindSalesRepByZipcode(gomock.Any(), accountID, int32(90001)).
 		Return(nil, nil).AnyTimes()
 	suite.territoryRepo.EXPECT().FindSalesRepByState(gomock.Any(), accountID, "CA").
@@ -487,12 +535,24 @@ func (suite *SalesOrderSvcTestSuite) expectCreateOrderResolutionChain(accountID 
 		Return(nil, nil).AnyTimes()
 }
 
+func (suite *SalesOrderSvcTestSuite) expectCreateOrderReferenceValidationMocks(accountID string) {
+	suite.serviceLevelRepo.EXPECT().Get(gomock.Any(), accountID, "svcl_default").
+		Return(&domain.ServiceLevel{}, nil).AnyTimes()
+	suite.shippingTermRepo.EXPECT().Get(gomock.Any(), gomock.Any()).
+		Return(&domain.ShippingTerm{}, nil).AnyTimes()
+	suite.paymentTermRepo.EXPECT().Get(gomock.Any(), gomock.Any()).
+		Return(&domain.PaymentTerm{}, nil).AnyTimes()
+	suite.carrierRepo.EXPECT().Get(gomock.Any(), gomock.Any()).
+		Return(&domain.Carrier{}, nil).AnyTimes()
+}
+
 // expectCreateOrderHappyRepoChain wires up every non-discretionary repo call in
 // the create happy path. Tests that exercise the happy path call this to avoid
 // re-declaring the whole chain; tests that exercise a specific branch (plan
 // limit, duplicate number, etc.) set up only the calls relevant to their check.
 func (suite *SalesOrderSvcTestSuite) expectCreateOrderHappyRepoChain(accountID string) {
 	suite.expectCreateOrderResolutionChain(accountID)
+	suite.expectCreateOrderReferenceValidationMocks(accountID)
 
 	// Order-number allocation + duplicate check now run inside the write transaction.
 	suite.orderRepo.EXPECT().GetNextOrderNumber(gomock.Any(), accountID).Return("1001", nil).Times(1)
@@ -628,6 +688,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_DuplicateOrderNumber()
 
 	// The order number is allocated inside the write transaction (after the read-only resolution above), so a duplicate auto-generated number is detected there and rolls the transaction back instead of consuming the number.
 	suite.expectCreateOrderResolutionChain("ac_test")
+	suite.expectCreateOrderReferenceValidationMocks("ac_test")
 	suite.orderRepo.EXPECT().GetNextOrderNumber(gomock.Any(), "ac_test").Return("1001", nil).Times(1)
 	suite.orderRepo.EXPECT().IsDuplicateOrderNumber(gomock.Any(), "ac_test", "1001", (*string)(nil)).
 		Return(true, nil).Times(1)
@@ -707,7 +768,9 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_SalesRepResolvedFromCu
 		Return(false, nil).Times(1)
 	suite.orderRepo.EXPECT().AreAllLineProductLinesCommissionExempt(gomock.Any(), gomock.Any()).
 		Return(false, nil).Times(1)
-	// Get is called by both sales-rep resolution and the shipping-rate cascade.
+	// Get is called by both sales-rep resolution and the shipping-rate cascade. The request supplies
+	// carrier / service level / shipping term / payment term (via baseCreateOrderParams), so the customer
+	// only needs the default sales rep here.
 	suite.customerRepo.EXPECT().Get(gomock.Any(), "ac_test", "ac_buyer", gomock.Any()).
 		Return(&domain.Customer{DefaultSalesRepID: &repID}, nil).AnyTimes()
 	// Line resolution (pricing + cost + unit-group validation) loads the bundle.
@@ -721,6 +784,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_SalesRepResolvedFromCu
 		Return(nil, nil).AnyTimes()
 	suite.unitRepo.EXPECT().GetByIDs(gomock.Any(), "ac_test", gomock.Any()).
 		Return(nil, nil).AnyTimes()
+	suite.expectCreateOrderReferenceValidationMocks("ac_test")
 	// Zipcode / state lookups must NOT happen.
 
 	suite.orderRepo.EXPECT().
@@ -742,6 +806,121 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_SalesRepResolvedFromCu
 
 	_, apiErr := suite.svc.CreateSalesOrder(ctx, baseCreateOrderParams())
 	suite.Nil(apiErr)
+}
+
+// When the request omits carrier / service level / shipping term / payment term, the
+// create path fills them from the buyer's customer-relation defaults, so the persisted
+// order carries the references the read adapter requires.
+func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_AppliesCustomerDefaultsWhenOmitted() {
+	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/CreateSalesOrder")
+
+	suite.expectPlanLimitAllows()
+	suite.expectIdempotencyStarted()
+	suite.expectCreateOrderResolutionChain("ac_test")
+	suite.expectCreateOrderReferenceValidationMocks("ac_test")
+	suite.orderRepo.EXPECT().GetNextOrderNumber(gomock.Any(), "ac_test").Return("1001", nil).Times(1)
+	suite.orderRepo.EXPECT().IsDuplicateOrderNumber(gomock.Any(), "ac_test", "1001", (*string)(nil)).Return(false, nil).Times(1)
+
+	suite.orderRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, id string, p domain.CreateSalesOrderParams) (*domain.SalesOrder, *apierror.APIError) {
+			suite.Require().NotNil(p.CarrierID)
+			suite.Equal("cr_cust_default", *p.CarrierID)
+			suite.Require().NotNil(p.ServiceLevelID)
+			suite.Equal("svcl_default", *p.ServiceLevelID)
+			suite.Require().NotNil(p.ShippingTermID)
+			suite.Equal("shtm_cust_default", *p.ShippingTermID)
+			suite.Require().NotNil(p.PaymentTermID)
+			suite.Equal("pmtm_cust_default", *p.PaymentTermID)
+			return &domain.SalesOrder{ID: id, Number: p.Number}, nil
+		}).Times(1)
+	suite.lineRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(&domain.SalesOrderLine{}, nil).Times(1)
+	suite.productRepo.EXPECT().GetSystemProduct(gomock.Any(), "ac_test", "shipping").
+		Return(&domain.SystemProductInfo{ProductID: "prod_ship", ProductSKU: "SHIP", QuantityUnitID: "un_ea"}, nil).Times(1)
+	suite.unitRepo.EXPECT().GetCurrencyBaseUnitID(gomock.Any()).Return("un_usd", nil).Times(1)
+	suite.lineRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(&domain.SalesOrderLine{}, nil).Times(1)
+	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", gomock.Any()).
+		Return(&domain.SalesOrder{ID: "or_new", Number: "1001"}, nil).Times(1)
+	suite.expectCacheSuccess()
+
+	// Omit every field that has a customer default so the create path must fall back to the customer relation.
+	params := baseCreateOrderParams()
+	params.CarrierID = nil
+	params.ServiceLevelID = nil
+	params.ShippingTermID = nil
+	params.PaymentTermID = nil
+
+	_, apiErr := suite.svc.CreateSalesOrder(ctx, params)
+	suite.Nil(apiErr)
+}
+
+// A caller-supplied carrier / shipping term / payment term must win over the customer
+// default (the default is only a fallback, never an override).
+func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_RequestValuesOverrideCustomerDefaults() {
+	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/CreateSalesOrder")
+
+	suite.expectPlanLimitAllows()
+	suite.expectIdempotencyStarted()
+	suite.expectCreateOrderResolutionChain("ac_test")
+	suite.expectCreateOrderReferenceValidationMocks("ac_test")
+	suite.serviceLevelRepo.EXPECT().Get(gomock.Any(), "ac_test", "svcl_req").Return(&domain.ServiceLevel{}, nil).AnyTimes()
+	suite.orderRepo.EXPECT().GetNextOrderNumber(gomock.Any(), "ac_test").Return("1001", nil).Times(1)
+	suite.orderRepo.EXPECT().IsDuplicateOrderNumber(gomock.Any(), "ac_test", "1001", (*string)(nil)).Return(false, nil).Times(1)
+
+	suite.orderRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, id string, p domain.CreateSalesOrderParams) (*domain.SalesOrder, *apierror.APIError) {
+			suite.Equal("cr_req", *p.CarrierID)
+			suite.Equal("svcl_req", *p.ServiceLevelID)
+			suite.Equal("shpt_req", *p.ShippingTermID)
+			suite.Equal("pyt_req", *p.PaymentTermID)
+			return &domain.SalesOrder{ID: id, Number: p.Number}, nil
+		}).Times(1)
+	suite.lineRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(&domain.SalesOrderLine{}, nil).Times(1)
+	suite.productRepo.EXPECT().GetSystemProduct(gomock.Any(), "ac_test", "shipping").
+		Return(&domain.SystemProductInfo{ProductID: "prod_ship", ProductSKU: "SHIP", QuantityUnitID: "un_ea"}, nil).Times(1)
+	suite.unitRepo.EXPECT().GetCurrencyBaseUnitID(gomock.Any()).Return("un_usd", nil).Times(1)
+	suite.lineRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(&domain.SalesOrderLine{}, nil).Times(1)
+	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", gomock.Any()).
+		Return(&domain.SalesOrder{ID: "or_new", Number: "1001"}, nil).Times(1)
+	suite.expectCacheSuccess()
+
+	params := baseCreateOrderParams()
+	carrier, serviceLevel, shippingTerm, paymentTerm := "cr_req", "svcl_req", "shpt_req", "pyt_req"
+	params.CarrierID = &carrier
+	params.ServiceLevelID = &serviceLevel
+	params.ShippingTermID = &shippingTerm
+	params.PaymentTermID = &paymentTerm
+
+	_, apiErr := suite.svc.CreateSalesOrder(ctx, params)
+	suite.Nil(apiErr)
+}
+
+// When neither the request nor the customer supplies a carrier, the create is rejected
+// with a field-scoped 400 (before allocating an order number) rather than persisting an
+// order that 500s on read.
+func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_MissingCarrierWithoutCustomerDefault_Rejected() {
+	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/CreateSalesOrder")
+
+	suite.expectPlanLimitAllows()
+	suite.expectIdempotencyStarted()
+
+	suite.addressRepo.EXPECT().IsInAccount(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
+	suite.addressRepo.EXPECT().Get(gomock.Any(), gomock.Any()).
+		Return(&domain.Address{Geolocation: &domain.Geolocation{State: new("CA"), PostalCode: new("90001")}}, nil).AnyTimes()
+	// Customer relation has no defaults, so the omitted carrier cannot be filled.
+	suite.customerRepo.EXPECT().Get(gomock.Any(), "ac_test", "ac_buyer", gomock.Any()).
+		Return(&domain.Customer{}, nil).AnyTimes()
+
+	// The order number must never be allocated when the create fails validation.
+	suite.orderRepo.EXPECT().GetNextOrderNumber(gomock.Any(), gomock.Any()).Times(0)
+	suite.expectCacheError()
+
+	params := baseCreateOrderParams()
+	params.CarrierID = nil // and the customer has no default carrier
+
+	_, apiErr := suite.svc.CreateSalesOrder(ctx, params)
+	suite.Require().NotNil(apiErr)
+	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+	suite.Equal("carrier_id", apiErr.Param)
 }
 
 // --- UpdateSalesOrder ---

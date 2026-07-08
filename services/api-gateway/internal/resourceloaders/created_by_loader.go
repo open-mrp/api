@@ -32,9 +32,11 @@ func LoadCreatedBySalesOrders(ctx context.Context, orderIDs []string) (map[strin
 		return nil, apiErr
 	}
 
+	agentNames := loadCreatorAgentNames(ctx, resp.Creators)
+
 	out := make(map[string]any, len(orderIDs))
 	for _, c := range resp.Creators {
-		out[c.ResourceId] = createdByFromAuditActor(c.Actor)
+		out[c.ResourceId] = createdByFromAuditActor(c.Actor, agentNames)
 	}
 	// Resources with no create audit event resolve to system (no human actor).
 	for _, id := range orderIDs {
@@ -45,8 +47,34 @@ func LoadCreatedBySalesOrders(ctx context.Context, orderIDs []string) (map[strin
 	return out, nil
 }
 
-// createdByFromAuditActor maps a create-event actor to a CreatedBy. AuditActor.Type carries the relation (internal/customer/supplier); only internal/customer map to a named creator — anything else is presented as system rather than inventing a value.
-func createdByFromAuditActor(a *pb.AuditActor) *apiresource.CreatedBy {
+// loadCreatorAgentNames resolves display names for agent creators. Audit rows only carry names for users and API keys (agent definitions live in the agent-service, outside the audit store's reach), so agent actors are resolved here. Best-effort: an unresolved agent keeps a nil name rather than failing the include.
+func loadCreatorAgentNames(ctx context.Context, creators []*pb.ResourceCreator) map[string]AgentDefinitionName {
+	var agentIDs []string
+	seen := make(map[string]struct{})
+	for _, c := range creators {
+		a := c.Actor
+		if a == nil || constants.ActorType(a.ActorType) != constants.ActorTypeAgent || (a.Name != nil && *a.Name != "") {
+			continue
+		}
+		if _, ok := seen[a.Id]; ok {
+			continue
+		}
+		seen[a.Id] = struct{}{}
+		agentIDs = append(agentIDs, a.Id)
+	}
+	if len(agentIDs) == 0 {
+		return nil
+	}
+
+	names, apiErr := LoadAgentDefinitionNames(ctx, agentIDs)
+	if apiErr != nil {
+		return nil
+	}
+	return names
+}
+
+// createdByFromAuditActor maps a create-event actor to a CreatedBy. AuditActor.Type carries the relation (internal/customer/supplier); only internal/customer map to a named creator — anything else is presented as system rather than inventing a value. Agent actors get their display name from agentNames, since the audit store cannot resolve it.
+func createdByFromAuditActor(a *pb.AuditActor, agentNames map[string]AgentDefinitionName) *apiresource.CreatedBy {
 	if a == nil {
 		return apiresource.SystemCreatedBy()
 	}
@@ -54,6 +82,10 @@ func createdByFromAuditActor(a *pb.AuditActor) *apiresource.CreatedBy {
 	if relation != constants.CreatedByRelationInternal && relation != constants.CreatedByRelationCustomer {
 		return apiresource.SystemCreatedBy()
 	}
-	actor := apiresource.NewActor(a.Id, constants.ActorType(a.ActorType), a.Name, a.Handle)
+	name := a.Name
+	if def, ok := agentNames[a.Id]; ok && (name == nil || *name == "") {
+		name = &def.Name
+	}
+	actor := apiresource.NewActor(a.Id, constants.ActorType(a.ActorType), name, a.Handle)
 	return apiresource.NewCreatedBy(relation, actor)
 }

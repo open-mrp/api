@@ -1099,7 +1099,10 @@ type SettlementRepo interface {
 
 type TransactionRepo interface {
 	Create(ctx context.Context, txID, number, typeCode, accountID, customerAccountID string, stripePaymentID *string, methodCode *string, adjustmentTypeCode *string, responsibleUserID *string, note *string, amountValue string, amountUnitID string) *apierror.APIError
+	// FindByStripePaymentID returns the transaction linked to the given Stripe payment intent, or nil when none exists.
 	FindByStripePaymentID(ctx context.Context, stripePaymentID string) (*TransactionRecord, *apierror.APIError)
+	// UpdateFundsReceivedByStripePaymentIDs stamps funds_received_at on every transaction of the account whose stripe_payment_id is in the given set (called when a Stripe payout lands).
+	UpdateFundsReceivedByStripePaymentIDs(ctx context.Context, accountID string, stripePaymentIDs []string, fundsReceivedAt time.Time) *apierror.APIError
 	UpdateNote(ctx context.Context, txID, note string) *apierror.APIError
 	Delete(ctx context.Context, txID string) *apierror.APIError
 	DeleteAllocations(ctx context.Context, transactionID string) *apierror.APIError

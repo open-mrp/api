@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -413,6 +414,11 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 				return nil, cacheErr(apiErr)
 			}
 			params.OrderDiscountID = &resolvedDiscountID
+		}
+
+		// Fill carrier, service level, shipping term, and payment term from the buyer's customer-relation defaults whenever the caller omits them, mirroring the Dashboard create form (which pre-fills these from the selected customer). Carrier, shipping term, and payment term are mandatory on a readable order — the Dashboard order adapter rejects any order missing one — so an API create that omits them without a customer default to fall back on is failed here rather than persisted as a record that 500s on every read.
+		if apiErr := s.applyCustomerOrderDefaults(ctx, &params); apiErr != nil {
+			return nil, cacheErr(apiErr)
 		}
 
 		// Reject caller-supplied foreign keys that don't exist. Vitess does not
@@ -1649,6 +1655,41 @@ func computeDiscountAmount(discount *domain.OrderDiscount, total decimal.Decimal
 	return amount.Round(2)
 }
 
+// applyCustomerOrderDefaults fills the carrier, service level, shipping term, and payment term the caller omitted from the buyer's customer-relation defaults, matching the Dashboard create form which pre-fills these from the selected customer. Carrier, shipping term, and payment term are mandatory on a readable order (the Dashboard order adapter throws when any is absent), so when neither the request nor a customer default supplies one, this fails with a 400 instead of persisting an order that cannot be read back. The default service level is only adopted alongside a defaulted carrier, so the two never end up referencing different carriers.
+func (s *salesOrderSvcImpl) applyCustomerOrderDefaults(ctx context.Context, params *domain.CreateSalesOrderParams) *apierror.APIError {
+	if params.CarrierID == nil || params.ServiceLevelID == nil || params.ShippingTermID == nil || params.PaymentTermID == nil {
+		customer, apiErr := s.repos.NewCustomerRepo().Get(ctx, params.AccountID, params.BuyerAccountID, nil)
+		if apiErr != nil {
+			return apiErr
+		}
+		if customer != nil {
+			if params.CarrierID == nil {
+				params.CarrierID = customer.DefaultCarrierID
+				if params.ServiceLevelID == nil {
+					params.ServiceLevelID = customer.DefaultServiceLevelID
+				}
+			}
+			if params.ShippingTermID == nil {
+				params.ShippingTermID = customer.DefaultShippingTermID
+			}
+			if params.PaymentTermID == nil {
+				params.PaymentTermID = customer.DefaultPaymentTermID
+			}
+		}
+	}
+
+	if params.CarrierID == nil {
+		return apierror.NewValidationErrorWithParam("Carrier is required and the customer has no default carrier.", "carrier_id")
+	}
+	if params.ShippingTermID == nil {
+		return apierror.NewValidationErrorWithParam("Shipping term is required and the customer has no default shipping term.", "shipping_term_id")
+	}
+	if params.PaymentTermID == nil {
+		return apierror.NewValidationErrorWithParam("Payment term is required and the customer has no default payment term.", "payment_term_id")
+	}
+	return nil
+}
+
 // resolveSalesRepID auto-assigns a sales rep when the caller omits one. Resolution order (matches Dashboard): commission-exempt customer/group → none; all line product-lines commission-exempt → none; customer default → zipcode territory → state territory → none. Returns nil when no match is found; any lookup error is swallowed (rep stays unset rather than failing the order).
 func (s *salesOrderSvcImpl) resolveSalesRepID(ctx context.Context, accountID, buyerAccountID string, lines []domain.CreateSalesOrderLineInput, shipToState, shipToPostalCode *string) *string {
 	customerRepo := s.repos.NewCustomerRepo()
@@ -2185,11 +2226,32 @@ func (s *salesOrderSvcImpl) ProcessAccountStripeWebhook(ctx context.Context, acc
 		return tracing.Trace(span, apiErr)
 	}
 
-	// Both checkout flows (embedded portal checkout and the emailed checkout link) stamp the order reference on the payment intent metadata, so payment_intent.succeeded is the single event type that covers order payments. Everything else is acknowledged without action.
-	if event.Type != "payment_intent.succeeded" || paymentIntent == nil || paymentIntent.ID == "" {
+	// Event coverage mirrors the retired legacy webhook: succeeded links the payment and records the receivables transaction, failed/canceled roll that back, and payout.paid stamps when funds actually land. Anything else is acknowledged without action.
+	switch event.Type {
+	case "payment_intent.succeeded":
+		if paymentIntent == nil || paymentIntent.ID == "" {
+			return nil
+		}
+		return tracing.Trace(span, s.handleAccountPaymentIntentSucceeded(ctx, accountID, paymentIntent))
+	case "payment_intent.payment_failed":
+		if paymentIntent == nil || paymentIntent.ID == "" {
+			return nil
+		}
+		return tracing.Trace(span, s.handleAccountPaymentIntentFailed(ctx, paymentIntent.ID))
+	case "payment_intent.canceled":
+		if paymentIntent == nil || paymentIntent.ID == "" {
+			return nil
+		}
+		return tracing.Trace(span, s.handleAccountPaymentIntentCanceled(ctx, paymentIntent.ID))
+	case "payout.paid":
+		return tracing.Trace(span, s.handleAccountPayoutPaid(ctx, accountID, checkoutClient, event.RawJSON))
+	default:
 		return nil
 	}
+}
 
+// handleAccountPaymentIntentSucceeded links the payment intent to its order and records the receivables payment transaction, mirroring the legacy webhook. Both steps are idempotent so Stripe retries and duplicate deliveries are safe.
+func (s *salesOrderSvcImpl) handleAccountPaymentIntentSucceeded(ctx context.Context, accountID string, paymentIntent *domain.StripePaymentIntent) *apierror.APIError {
 	orderID := paymentIntent.Metadata["orderID"]
 	if orderID == "" {
 		slog.InfoContext(ctx, "account stripe webhook payment intent has no orderID metadata, skipping",
@@ -2201,7 +2263,8 @@ func (s *salesOrderSvcImpl) ProcessAccountStripeWebhook(ctx context.Context, acc
 
 	// The metadata originates from the vendor's own Stripe account, so it cannot be trusted to reference the vendor's orders. Resolve the order scoped to this account and acknowledge (without linking) anything that doesn't match, rather than erroring, so Stripe doesn't retry.
 	orderRepo := s.repos.NewSalesOrderRepo()
-	if _, apiErr := orderRepo.Get(ctx, accountID, orderID); apiErr != nil {
+	order, apiErr := orderRepo.Get(ctx, accountID, orderID)
+	if apiErr != nil {
 		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
 			slog.WarnContext(ctx, "account stripe webhook references an unknown order for this account, skipping",
 				"account_id", accountID,
@@ -2210,10 +2273,141 @@ func (s *salesOrderSvcImpl) ProcessAccountStripeWebhook(ctx context.Context, acc
 			)
 			return nil
 		}
-		return tracing.Trace(span, apiErr)
+		return apiErr
 	}
 
-	return s.RecordOrderPayment(ctx, orderID, paymentIntent.ID)
+	return s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
+		if apiErr := txSvc.RecordOrderPayment(txCtx, orderID, paymentIntent.ID); apiErr != nil {
+			return apiErr
+		}
+
+		// The receivables transaction is only recorded when the metadata's customer matches the order's buyer, mirroring the legacy guards.
+		customerID := paymentIntent.Metadata["customerID"]
+		if customerID == "" || order.BuyerAccountID != customerID {
+			return nil
+		}
+
+		txRepo := txSvc.repos.NewTransactionRepo()
+		existing, apiErr := txRepo.FindByStripePaymentID(txCtx, paymentIntent.ID)
+		if apiErr != nil {
+			return apiErr
+		}
+		if existing != nil {
+			return nil
+		}
+
+		txID, apiErr := id.GenID(id.TransactionIDPrefix, nil)
+		if apiErr != nil {
+			return apiErr
+		}
+		number, apiErr := txRepo.FetchAndIncrementTransactionNumber(txCtx, accountID)
+		if apiErr != nil {
+			return apiErr
+		}
+		dollarUnitID, apiErr := txRepo.GetDollarUnitID(txCtx)
+		if apiErr != nil {
+			return apiErr
+		}
+
+		amount := decimal.NewFromInt(paymentIntent.Amount).Div(decimal.NewFromInt(100)).String()
+		note := "Payment captured by Stripe"
+		return txRepo.Create(txCtx, txID, number, string(constants.TransactionTypePayment), accountID, customerID, &paymentIntent.ID, stripeTransactionMethodCode(paymentIntent.PaymentMethodTypes), nil, nil, &note, amount, dollarUnitID)
+	})
+}
+
+// handleAccountPaymentIntentFailed marks the recorded transaction as failed and unwinds its allocations and the order link. Mirrors the legacy webhook: a payment intent with no recorded transaction is a no-op.
+func (s *salesOrderSvcImpl) handleAccountPaymentIntentFailed(ctx context.Context, paymentIntentID string) *apierror.APIError {
+	return s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
+		txRepo := txSvc.repos.NewTransactionRepo()
+		record, apiErr := txRepo.FindByStripePaymentID(txCtx, paymentIntentID)
+		if apiErr != nil {
+			return apiErr
+		}
+		if record == nil {
+			return nil
+		}
+
+		if apiErr := txRepo.UpdateNote(txCtx, record.ID, "Payment failed in Stripe"); apiErr != nil {
+			return apiErr
+		}
+		if apiErr := txRepo.DeleteAllocations(txCtx, record.ID); apiErr != nil {
+			return apiErr
+		}
+		return txSvc.unlinkOrderPaymentIntent(txCtx, paymentIntentID)
+	})
+}
+
+// handleAccountPaymentIntentCanceled deletes the recorded transaction entirely along with its allocations, amount, and the order link. Mirrors the legacy webhook: a payment intent with no recorded transaction is a no-op.
+func (s *salesOrderSvcImpl) handleAccountPaymentIntentCanceled(ctx context.Context, paymentIntentID string) *apierror.APIError {
+	return s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
+		txRepo := txSvc.repos.NewTransactionRepo()
+		record, apiErr := txRepo.FindByStripePaymentID(txCtx, paymentIntentID)
+		if apiErr != nil {
+			return apiErr
+		}
+		if record == nil {
+			return nil
+		}
+
+		if apiErr := txRepo.DeleteAllocations(txCtx, record.ID); apiErr != nil {
+			return apiErr
+		}
+		if apiErr := txRepo.Delete(txCtx, record.ID); apiErr != nil {
+			return apiErr
+		}
+		if apiErr := txRepo.DeleteQuantity(txCtx, record.AmountID); apiErr != nil {
+			return apiErr
+		}
+		return txSvc.unlinkOrderPaymentIntent(txCtx, paymentIntentID)
+	})
+}
+
+// handleAccountPayoutPaid stamps funds_received_at on every transaction funded by the payout, resolved by walking the payout's balance transactions in Stripe.
+func (s *salesOrderSvcImpl) handleAccountPayoutPaid(ctx context.Context, accountID string, checkoutClient domain.StripeCheckoutClient, rawObject []byte) *apierror.APIError {
+	var payout struct {
+		ID          string `json:"id"`
+		ArrivalDate int64  `json:"arrival_date"`
+	}
+	if err := json.Unmarshal(rawObject, &payout); err != nil || payout.ID == "" {
+		slog.WarnContext(ctx, "account stripe webhook payout event could not be parsed, skipping", "account_id", accountID)
+		return nil
+	}
+
+	ids, apiErr := checkoutClient.ListPayoutPaymentIntentIDs(ctx, payout.ID)
+	if apiErr != nil {
+		return apiErr
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+
+	return s.repos.NewTransactionRepo().UpdateFundsReceivedByStripePaymentIDs(ctx, accountID, ids, time.Unix(payout.ArrivalDate, 0))
+}
+
+// unlinkOrderPaymentIntent removes the order↔payment-intent link if one exists.
+func (s *salesOrderSvcImpl) unlinkOrderPaymentIntent(ctx context.Context, paymentIntentID string) *apierror.APIError {
+	opiRepo := s.repos.NewOrderPaymentIntentRepo()
+	link, apiErr := opiRepo.FindByPaymentIntentID(ctx, paymentIntentID)
+	if apiErr != nil {
+		return apiErr
+	}
+	if link == nil {
+		return nil
+	}
+	return opiRepo.Delete(ctx, link.ID)
+}
+
+// stripeTransactionMethodCode maps Stripe payment method types to the internal transaction method code, mirroring the legacy webhook's mapping and precedence: card, then US bank account, then Link (which reads as credit card).
+func stripeTransactionMethodCode(methods []string) *string {
+	if slices.Contains(methods, "card") || (!slices.Contains(methods, "us_bank_account") && slices.Contains(methods, "link")) {
+		code := string(domain.TransactionMethodCreditCard)
+		return &code
+	}
+	if slices.Contains(methods, "us_bank_account") {
+		code := string(domain.TransactionMethodACH)
+		return &code
+	}
+	return nil
 }
 
 func (s *salesOrderSvcImpl) CreateSalesOrderProductionRun(ctx context.Context, params domain.CreateSalesOrderProductionRunParams) (*domain.CreateSalesOrderProductionRunResult, *apierror.APIError) {

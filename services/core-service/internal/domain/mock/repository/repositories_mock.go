@@ -13496,6 +13496,20 @@ func (mr *MockTransactionRepoMockRecorder) Update(ctx, params any) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockTransactionRepo)(nil).Update), ctx, params)
 }
 
+// UpdateFundsReceivedByStripePaymentIDs mocks base method.
+func (m *MockTransactionRepo) UpdateFundsReceivedByStripePaymentIDs(ctx context.Context, accountID string, stripePaymentIDs []string, fundsReceivedAt time.Time) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateFundsReceivedByStripePaymentIDs", ctx, accountID, stripePaymentIDs, fundsReceivedAt)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// UpdateFundsReceivedByStripePaymentIDs indicates an expected call of UpdateFundsReceivedByStripePaymentIDs.
+func (mr *MockTransactionRepoMockRecorder) UpdateFundsReceivedByStripePaymentIDs(ctx, accountID, stripePaymentIDs, fundsReceivedAt any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateFundsReceivedByStripePaymentIDs", reflect.TypeOf((*MockTransactionRepo)(nil).UpdateFundsReceivedByStripePaymentIDs), ctx, accountID, stripePaymentIDs, fundsReceivedAt)
+}
+
 // UpdateNote mocks base method.
 func (m *MockTransactionRepo) UpdateNote(ctx context.Context, txID, note string) *apierror.APIError {
 	m.ctrl.T.Helper()

@@ -191,6 +191,7 @@ func (c *checkoutClientImpl) ConstructWebhookEvent(payload []byte, signature, we
 	if event.Data == nil {
 		return webhookEvent, nil, nil
 	}
+	webhookEvent.RawJSON = event.Data.Raw
 
 	var pi gostripe.PaymentIntent
 	if err := pi.UnmarshalJSON(event.Data.Raw); err != nil {
@@ -211,4 +212,46 @@ func (c *checkoutClientImpl) ConstructWebhookEvent(payload []byte, signature, we
 	}
 
 	return webhookEvent, paymentIntent, nil
+}
+
+func (c *checkoutClientImpl) ListPayoutPaymentIntentIDs(ctx context.Context, payoutID string) ([]string, *apierror.APIError) {
+	_, span := checkoutClientTracer.Start(ctx, "stripe_checkout_client.list_payout_payment_intent_ids")
+	defer span.End()
+
+	// A dedicated client keeps the per-account key scoped for the duration of the multi-call walk, unlike the global-key swap used for single calls elsewhere in this file.
+	sc := gostripe.NewClient(c.apiKey)
+
+	params := &gostripe.BalanceTransactionListParams{Payout: gostripe.String(payoutID)}
+	params.Limit = gostripe.Int64(100)
+
+	seen := make(map[string]struct{})
+	ids := make([]string, 0, 8)
+
+	for bt, err := range sc.V1BalanceTransactions.List(ctx, params) {
+		if err != nil {
+			span.RecordError(err)
+			return nil, apierror.NewInternalError(err, fmt.Sprintf("Failed to list payout balance transactions: %v", err))
+		}
+		if bt.Type != gostripe.BalanceTransactionTypeCharge && bt.Type != gostripe.BalanceTransactionTypePayment {
+			continue
+		}
+		if bt.Source == nil || bt.Source.ID == "" {
+			continue
+		}
+		charge, err := sc.V1Charges.Retrieve(ctx, bt.Source.ID, nil)
+		if err != nil {
+			span.RecordError(err)
+			return nil, apierror.NewInternalError(err, fmt.Sprintf("Failed to resolve charge for payout balance transaction: %v", err))
+		}
+		if charge.PaymentIntent == nil || charge.PaymentIntent.ID == "" {
+			continue
+		}
+		if _, ok := seen[charge.PaymentIntent.ID]; ok {
+			continue
+		}
+		seen[charge.PaymentIntent.ID] = struct{}{}
+		ids = append(ids, charge.PaymentIntent.ID)
+	}
+
+	return ids, nil
 }

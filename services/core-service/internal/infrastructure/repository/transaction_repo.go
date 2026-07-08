@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -77,6 +78,10 @@ func (r *transactionRepoImpl) FindByStripePaymentID(ctx context.Context, stripeP
 	defer span.End()
 
 	row, err := r.queries.FindTransactionByStripePaymentID(ctx, gosql.NullString{String: stripePaymentID, Valid: true})
+	if errors.Is(err, gosql.ErrNoRows) {
+		// A payment intent with no recorded transaction is the caller's normal existence-check case, not an error.
+		return nil, nil
+	}
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -86,6 +91,31 @@ func (r *transactionRepoImpl) FindByStripePaymentID(ctx context.Context, stripeP
 		Number:   row.Number,
 		AmountID: row.AmountID,
 	}, nil
+}
+
+func (r *transactionRepoImpl) UpdateFundsReceivedByStripePaymentIDs(ctx context.Context, accountID string, stripePaymentIDs []string, fundsReceivedAt time.Time) *apierror.APIError {
+	ctx, span := transactionRepoTracer.Start(ctx, "repository.transaction.update_funds_received_by_stripe_payment_ids")
+	defer span.End()
+
+	if len(stripePaymentIDs) == 0 {
+		return nil
+	}
+
+	err := r.queries.UpdateTransactionFundsReceivedByStripePaymentIDs(ctx, sqlc.UpdateTransactionFundsReceivedByStripePaymentIDsParams{
+		FundsReceivedAt: gosql.NullTime{Time: fundsReceivedAt, Valid: true},
+		AccountID:       accountID,
+		StripePaymentIds: func() []gosql.NullString {
+			out := make([]gosql.NullString, len(stripePaymentIDs))
+			for i, id := range stripePaymentIDs {
+				out[i] = gosql.NullString{String: id, Valid: true}
+			}
+			return out
+		}(),
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
 }
 
 func (r *transactionRepoImpl) UpdateNote(ctx context.Context, txID, note string) *apierror.APIError {

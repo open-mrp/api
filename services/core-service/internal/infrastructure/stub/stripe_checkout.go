@@ -31,3 +31,7 @@ func (s *stripeCheckoutClient) CreateStripeCustomer(_ context.Context, _ domain.
 func (s *stripeCheckoutClient) ConstructWebhookEvent(_ []byte, _, _ string) (*domain.StripeWebhookEvent, *domain.StripePaymentIntent, *apierror.APIError) {
 	return &domain.StripeWebhookEvent{}, &domain.StripePaymentIntent{}, nil
 }
+
+func (s *stripeCheckoutClient) ListPayoutPaymentIntentIDs(_ context.Context, _ string) ([]string, *apierror.APIError) {
+	return nil, nil
+}

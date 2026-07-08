@@ -1512,6 +1512,36 @@ func (q *Queries) UpdateTransaction(ctx context.Context, arg UpdateTransactionPa
 	return err
 }
 
+const updateTransactionFundsReceivedByStripePaymentIDs = `-- name: UpdateTransactionFundsReceivedByStripePaymentIDs :exec
+UPDATE transaction
+SET funds_received_at = ?, updated_at = NOW(3)
+WHERE account_id = ?
+  AND stripe_payment_id IN (/*SLICE:stripe_payment_ids*/?)
+`
+
+type UpdateTransactionFundsReceivedByStripePaymentIDsParams struct {
+	FundsReceivedAt  sql.NullTime
+	AccountID        string
+	StripePaymentIds []sql.NullString
+}
+
+func (q *Queries) UpdateTransactionFundsReceivedByStripePaymentIDs(ctx context.Context, arg UpdateTransactionFundsReceivedByStripePaymentIDsParams) error {
+	query := updateTransactionFundsReceivedByStripePaymentIDs
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.FundsReceivedAt)
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.StripePaymentIds) > 0 {
+		for _, v := range arg.StripePaymentIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:stripe_payment_ids*/?", strings.Repeat(",?", len(arg.StripePaymentIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:stripe_payment_ids*/?", "NULL", 1)
+	}
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
+	return err
+}
+
 const updateTransactionNote = `-- name: UpdateTransactionNote :exec
 UPDATE transaction SET note = ?, updated_at = NOW(3)
 WHERE id = ?

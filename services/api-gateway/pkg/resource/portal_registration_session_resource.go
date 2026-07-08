@@ -8,6 +8,8 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
+const SamplePortalRegistrationSessionID = "porgse_017513382536fd23a343e958ef"
+
 // PortalRegistrationSessionData is the scratch form data accumulated across a buyer's registration steps, echoed back so a resumed session restores the form.
 type PortalRegistrationSessionData struct {
 	// Resource type identifier.
@@ -69,7 +71,7 @@ type PortalRegistrationSession struct {
 }
 
 var samplePortalRegistrationSession = &PortalRegistrationSession{
-	ID:              "porgse_018e88072d1320808dc9aab42",
+	ID:              SamplePortalRegistrationSessionID,
 	Object:          constants.ObjectTypePortalRegistrationSession,
 	SellerAccountID: SampleAccountID,
 	SellerSlug:      SampleAccountPortalSlug,

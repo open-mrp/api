@@ -7,6 +7,7 @@ package sqlc
 
 import (
 	"context"
+	"strings"
 )
 
 const deleteOrderPaymentIntent = `-- name: DeleteOrderPaymentIntent :exec
@@ -52,4 +53,57 @@ type InsertOrderPaymentIntentParams struct {
 func (q *Queries) InsertOrderPaymentIntent(ctx context.Context, arg InsertOrderPaymentIntentParams) error {
 	_, err := q.db.ExecContext(ctx, insertOrderPaymentIntent, arg.ID, arg.PaymentIntentID, arg.SalesOrderID)
 	return err
+}
+
+const listOrderPaymentIntentIDsBySalesOrderIDs = `-- name: ListOrderPaymentIntentIDsBySalesOrderIDs :many
+SELECT opi.sales_order_id, opi.payment_intent_id
+FROM order_payment_intent opi
+JOIN sales_order so ON so.id = opi.sales_order_id
+WHERE opi.sales_order_id IN (/*SLICE:sales_order_ids*/?)
+  AND so.owner_account_id = ?
+ORDER BY opi.created_at ASC
+`
+
+type ListOrderPaymentIntentIDsBySalesOrderIDsParams struct {
+	SalesOrderIds []string
+	AccountID     string
+}
+
+type ListOrderPaymentIntentIDsBySalesOrderIDsRow struct {
+	SalesOrderID    string
+	PaymentIntentID string
+}
+
+func (q *Queries) ListOrderPaymentIntentIDsBySalesOrderIDs(ctx context.Context, arg ListOrderPaymentIntentIDsBySalesOrderIDsParams) ([]ListOrderPaymentIntentIDsBySalesOrderIDsRow, error) {
+	query := listOrderPaymentIntentIDsBySalesOrderIDs
+	var queryParams []interface{}
+	if len(arg.SalesOrderIds) > 0 {
+		for _, v := range arg.SalesOrderIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", strings.Repeat(",?", len(arg.SalesOrderIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListOrderPaymentIntentIDsBySalesOrderIDsRow
+	for rows.Next() {
+		var i ListOrderPaymentIntentIDsBySalesOrderIDsRow
+		if err := rows.Scan(&i.SalesOrderID, &i.PaymentIntentID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

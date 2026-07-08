@@ -105,7 +105,7 @@ func (r *notificationRepoImpl) List(ctx context.Context, filter domain.Notificat
 	ctx, span := notificationRepoTracer.Start(ctx, "repository.notification.list")
 	defer span.End()
 
-	var status interface{}
+	var status any
 	if filter.Status != nil {
 		status = *filter.Status
 	}

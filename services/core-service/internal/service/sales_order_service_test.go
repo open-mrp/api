@@ -265,11 +265,17 @@ func (suite *SalesOrderSvcTestSuite) TestListSalesOrders_InternalActor() {
 		Return(map[string]constants.SalesOrderPaymentStatus{"or_1": constants.SalesOrderPaymentStatusPaid}, nil).
 		Times(1)
 
+	suite.orderRepo.EXPECT().
+		GetPaymentIntentIDs(gomock.Any(), "ac_test", []string{"or_1"}).
+		Return(map[string][]string{"or_1": {"pi_1"}}, nil).
+		Times(1)
+
 	result, apiErr := suite.svc.ListSalesOrders(ctx, domain.ListSalesOrdersParams{Limit: 10})
 	suite.Nil(apiErr)
 	suite.NotNil(result)
 	suite.Len(result.SalesOrders, 1)
 	suite.Equal(constants.SalesOrderPaymentStatusPaid, result.SalesOrders[0].PaymentStatus)
+	suite.Equal([]string{"pi_1"}, result.SalesOrders[0].PaymentIntentIDs)
 }
 
 func (suite *SalesOrderSvcTestSuite) TestListSalesOrders_CustomerActorScopedToOwnAccount() {
@@ -327,10 +333,16 @@ func (suite *SalesOrderSvcTestSuite) TestGetSalesOrder_InternalActor() {
 		Return(map[string]constants.SalesOrderPaymentStatus{"or_1": constants.SalesOrderPaymentStatusPaid}, nil).
 		Times(1)
 
+	suite.orderRepo.EXPECT().
+		GetPaymentIntentIDs(gomock.Any(), "ac_test", []string{"or_1"}).
+		Return(map[string][]string{"or_1": {"pi_1"}}, nil).
+		Times(1)
+
 	result, apiErr := suite.svc.GetSalesOrder(ctx, domain.GetSalesOrderParams{SalesOrderID: "or_1"})
 	suite.Nil(apiErr)
 	suite.Equal("or_1", result.ID)
 	suite.Equal(constants.SalesOrderPaymentStatusPaid, result.PaymentStatus)
+	suite.Equal([]string{"pi_1"}, result.PaymentIntentIDs)
 }
 
 func (suite *SalesOrderSvcTestSuite) TestGetSalesOrder_CustomerActorUsesGetForCustomer() {
@@ -349,6 +361,11 @@ func (suite *SalesOrderSvcTestSuite) TestGetSalesOrder_CustomerActorUsesGetForCu
 		Return(map[string]constants.SalesOrderPaymentStatus{"or_1": constants.SalesOrderPaymentStatusUnpaid}, nil).
 		Times(1)
 
+	suite.orderRepo.EXPECT().
+		GetPaymentIntentIDs(gomock.Any(), "ac_target", []string{"or_1"}).
+		Return(map[string][]string{}, nil).
+		Times(1)
+
 	result, apiErr := suite.svc.GetSalesOrder(ctx, domain.GetSalesOrderParams{SalesOrderID: "or_1"})
 	suite.Nil(apiErr)
 	suite.Equal("or_1", result.ID)
@@ -365,6 +382,11 @@ func (suite *SalesOrderSvcTestSuite) TestGetSalesOrder_LinesInclude() {
 	suite.orderRepo.EXPECT().
 		GetPaymentStatuses(gomock.Any(), "ac_test", []string{"or_1"}).
 		Return(map[string]constants.SalesOrderPaymentStatus{"or_1": constants.SalesOrderPaymentStatusPaid}, nil).
+		Times(1)
+
+	suite.orderRepo.EXPECT().
+		GetPaymentIntentIDs(gomock.Any(), "ac_test", []string{"or_1"}).
+		Return(map[string][]string{}, nil).
 		Times(1)
 
 	suite.orderRepo.EXPECT().

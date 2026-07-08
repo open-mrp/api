@@ -240,3 +240,96 @@ func TestCustomerPortalAccess_CannotCreateUnitGroup(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 403, status, "customer should not be able to create unit groups: %s", string(body))
 }
+
+// TestCustomerPortalAccess_SalesOrderLineUnitsHydrated verifies that a sales order's line
+// quantity/rate UNIT sub-objects hydrate for a customer relation actor when requested via
+// nested includes. Regression: the gateway built the line quantity/rate stubs without stashing
+// their unit FKs, so ?include=lines.quantity_ordered.unit (and unit_price.numerator_unit)
+// returned null — which broke unit display and the client-side order total on the portal.
+func TestCustomerPortalAccess_SalesOrderLineUnitsHydrated(t *testing.T) {
+	t.Parallel()
+	client := getCustomerPortalClient()
+
+	// Seed estimate EST-001 (or_01k0a8bs2yfhev5begay245wez): owned by the vendor, bought by the
+	// seed customer, whose lines carry quantity units (pair / each) and unit prices.
+	status, body, err := client.GetListRaw("/v1/sales/sales-orders/or_01k0a8bs2yfhev5begay245wez", url.Values{
+		"include": {"lines,lines.quantity_ordered,lines.quantity_ordered.unit,lines.unit_price,lines.unit_price.numerator_unit,lines.unit_price.denominator_unit"},
+	})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	parsed := parseJSON(body)
+	linesObj := jsonObject(parsed, "lines")
+	require.NotNil(t, linesObj, "lines must be present")
+	data, ok := linesObj["data"].([]any)
+	require.True(t, ok, "lines.data must be an array")
+	require.NotEmpty(t, data, "seed estimate has lines")
+
+	for i, raw := range data {
+		line := raw.(map[string]any)
+
+		qty := jsonObject(line, "quantity_ordered")
+		require.NotNil(t, qty, "line %d: quantity_ordered", i)
+		unit := jsonObject(qty, "unit")
+		require.NotNil(t, unit, "line %d: quantity_ordered.unit must be hydrated (regression: was null)", i)
+		assert.Equal(t, "unit", jsonField(unit, "object"), "line %d: quantity_ordered.unit object", i)
+		assert.NotEmpty(t, jsonField(unit, "id"), "line %d: quantity_ordered.unit.id", i)
+		assert.NotEmpty(t, jsonField(unit, "abbreviation"), "line %d: quantity_ordered.unit.abbreviation", i)
+
+		if up := jsonObject(line, "unit_price"); up != nil {
+			num := jsonObject(up, "numerator_unit")
+			require.NotNil(t, num, "line %d: unit_price.numerator_unit must be hydrated (regression: was null)", i)
+			assert.NotEmpty(t, jsonField(num, "id"), "line %d: unit_price.numerator_unit.id", i)
+			den := jsonObject(up, "denominator_unit")
+			require.NotNil(t, den, "line %d: unit_price.denominator_unit must be hydrated", i)
+			assert.NotEmpty(t, jsonField(den, "id"), "line %d: unit_price.denominator_unit.id", i)
+		}
+	}
+}
+
+// TestCustomerPortalAccess_FrequentlyOrderedProductsHydrated verifies the frequently-ordered
+// list returns FULLY-hydrated item and unit resources for a customer relation actor, rather
+// than the partial stubs it used to emit. Regression guards:
+//   - the gateway used to build a stub item{id, sku} where sku was actually the item
+//     DESCRIPTION, breaking the portal "quick reorder" SKU lookup ("Could not find product ...").
+//   - every other item/unit field was the Go zero value, serializing as ""/null/zero timestamps.
+func TestCustomerPortalAccess_FrequentlyOrderedProductsHydrated(t *testing.T) {
+	t.Parallel()
+	client := getCustomerPortalClient()
+
+	status, body, err := client.GetListRaw("/v1/sales/customers/"+SeedCustomerAccountID+"/frequently-ordered-products", nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	parsed := parseJSON(body)
+	assert.Equal(t, "list", jsonField(parsed, "object"))
+	data, ok := parsed["data"].([]any)
+	require.True(t, ok, "data must be an array")
+	require.NotEmpty(t, data, "seed customer has order history with the vendor, so the list must not be empty")
+
+	for i, raw := range data {
+		row := raw.(map[string]any)
+		assert.Equal(t, "frequently_ordered_product", jsonField(row, "object"), "row %d object", i)
+
+		item := jsonObject(row, "item")
+		require.NotNil(t, item, "row %d: item must be present", i)
+		assert.Equal(t, "item", jsonField(item, "object"), "row %d: item must be a hydrated item resource", i)
+		assert.NotEmpty(t, jsonField(item, "id"), "row %d: item.id must be set", i)
+
+		sku := jsonField(item, "sku")
+		assert.NotEmpty(t, sku, "row %d: item.sku must be populated (regression: was empty/stubbed)", i)
+		if desc := jsonField(item, "description"); desc != "" {
+			assert.NotEqualf(t, desc, sku, "row %d: item.sku must not equal item.description (regression: description mapped into sku)", i)
+		}
+		// A zero timestamp proves a stub was serialized instead of the real hydrated DB row.
+		assert.NotEqual(t, "0001-01-01T00:00:00Z", jsonField(item, "created_at"), "row %d: item.created_at must be a real timestamp", i)
+		assert.NotEqual(t, "0001-01-01T00:00:00Z", jsonField(item, "updated_at"), "row %d: item.updated_at must be a real timestamp", i)
+
+		if unit := jsonObject(row, "unit"); unit != nil {
+			assert.Equal(t, "unit", jsonField(unit, "object"), "row %d: unit must be a hydrated unit resource", i)
+			assert.NotEmpty(t, jsonField(unit, "id"), "row %d: unit.id must be set", i)
+			assert.NotEmpty(t, jsonField(unit, "abbreviation"), "row %d: unit.abbreviation must be set", i)
+			assert.NotEqual(t, "0001-01-01T00:00:00Z", jsonField(unit, "created_at"), "row %d: unit.created_at must be a real timestamp", i)
+		}
+	}
+}

@@ -1334,6 +1334,22 @@ type PortalDomain struct {
 	UpdatedAt  time.Time
 }
 
+type PortalRegistrationSession struct {
+	ID                 int64
+	TypeID             string
+	UserID             string
+	SellerAccountID    string
+	SellerSlug         string
+	IsExistingCustomer sql.NullBool
+	Step               string
+	CustomerID         sql.NullString
+	SessionData        json.RawMessage
+	CompletedAt        sql.NullTime
+	AbandonedAt        sql.NullTime
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+}
+
 type Priority struct {
 	ID        string
 	Name      string

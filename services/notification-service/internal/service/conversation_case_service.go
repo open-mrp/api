@@ -14,6 +14,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/idempotency"
+	"github.com/augno/api/shared/ptrutil"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -523,14 +524,14 @@ func (s *conversationSvcImpl) promoteDraftViaEmail(ctx context.Context, draft *d
 		return apiErr
 	}
 	rfcMessageID := fmt.Sprintf("%s@%s", emID, addressDomain(inbox.Address))
-	references := buildReferences(strDeref(latest.References), latest.RfcMessageID)
+	references := buildReferences(ptrutil.Deref(latest.References), latest.RfcMessageID)
 	to := latest.FromAddr
 
 	sesMessageID, apiErr := s.bridgeEmailSender.Send(ctx, domain.EmailData{
 		To:         []string{to},
 		Subject:    subject,
 		Body:       body,
-		From:       ptr(fromHeader(inbox)),
+		From:       new(fromHeader(inbox)),
 		InReplyTo:  &latest.RfcMessageID,
 		References: &references,
 		MessageID:  &rfcMessageID,

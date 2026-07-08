@@ -871,6 +871,8 @@ type SalesOrderRepo interface {
 	DeletePickBySalesOrder(ctx context.Context, salesOrderID string) *apierror.APIError
 	CheckPaymentStatus(ctx context.Context, salesOrderID string) (bool, *apierror.APIError)
 	GetPaymentStatuses(ctx context.Context, accountID string, salesOrderIDs []string) (map[string]constants.SalesOrderPaymentStatus, *apierror.APIError)
+	// GetPaymentIntentIDs returns the Stripe payment intent IDs linked to each of the given orders (scoped to the owning account), keyed by sales order ID. Orders with no payments are absent from the map.
+	GetPaymentIntentIDs(ctx context.Context, accountID string, salesOrderIDs []string) (map[string][]string, *apierror.APIError)
 	GetLinesForBOM(ctx context.Context, salesOrderID string) ([]SalesOrderLineForBOM, *apierror.APIError)
 	SetProductionRunID(ctx context.Context, accountID, salesOrderID, productionRunID string) *apierror.APIError
 	GetSaleLinesForIssue(ctx context.Context, salesOrderID string) ([]SalesOrderSaleLineForIssue, *apierror.APIError)
@@ -1283,6 +1285,17 @@ type PricingRepo interface {
 }
 
 // PortalDomainRepo persists customer portal custom domains. The single-row getters return (nil, nil) when no matching row exists so callers can distinguish absence from failure.
+// PortalRegistrationSessionRepo persists a buyer's customer-portal registration session.
+type PortalRegistrationSessionRepo interface {
+	Create(ctx context.Context, typeID string, params CreatePortalRegistrationSessionParams) (*PortalRegistrationSession, *apierror.APIError)
+	GetByTypeID(ctx context.Context, typeID string) (*PortalRegistrationSession, *apierror.APIError)
+	// GetIncomplete returns the newest non-completed, non-abandoned session for the (user, seller) pair, or nil.
+	GetIncomplete(ctx context.Context, userID, sellerAccountID string) (*PortalRegistrationSession, *apierror.APIError)
+	Update(ctx context.Context, params UpdatePortalRegistrationSessionParams) (*PortalRegistrationSession, *apierror.APIError)
+	Complete(ctx context.Context, typeID, customerID string) (*PortalRegistrationSession, *apierror.APIError)
+	Abandon(ctx context.Context, typeID string) *apierror.APIError
+}
+
 type PortalDomainRepo interface {
 	Create(ctx context.Context, portalDomainID, accountID, domainName string) (*PortalDomain, *apierror.APIError)
 	GetByID(ctx context.Context, accountID, portalDomainID string) (*PortalDomain, *apierror.APIError)

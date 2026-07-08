@@ -511,11 +511,63 @@ func (c *clientImpl) createShipmentForRates(ctx context.Context, carrierAccountO
 	return &shipment, nil
 }
 
+// resolvePublishedRateCarrierAccountID maps a BYOA (bring-your-own-account) carrier account object ID to the carrier's Shippo default (published/retail) account object ID, mirroring Dashboard's resolvePublishedRateCarrierAccountId. BYOA accounts return the account's negotiated rates; customer-facing estimates should quote published rates instead. Best-effort: if the BYOA account cannot be read or no Shippo default account exists for that carrier, the original BYOA object ID is returned so a quote is still produced.
+func (c *clientImpl) resolvePublishedRateCarrierAccountID(ctx context.Context, byoaObjectID string) string {
+	byoa, apiErr := c.GetCarrierAccount(ctx, byoaObjectID)
+	if apiErr != nil {
+		return byoaObjectID
+	}
+	defaultAcct, apiErr := c.findDefaultCarrierAccount(ctx, byoa.Carrier)
+	if apiErr == nil && defaultAcct != nil && defaultAcct.ObjectID != "" {
+		return defaultAcct.ObjectID
+	}
+	return byoaObjectID
+}
+
+// findDefaultCarrierAccount returns Shippo's built-in default account for a carrier type (published/retail rates), preferring an active account. Returns nil when no default account exists for the carrier.
+func (c *clientImpl) findDefaultCarrierAccount(ctx context.Context, carrier string) (*domain.ShippoCarrierAccount, *apierror.APIError) {
+	resp, apiErr := c.doRequest(ctx, http.MethodGet, "/carrier_accounts/?results=100", nil)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, nil
+	}
+
+	var listResp CarrierAccountListResponse
+	if err := json.NewDecoder(resp.Body).Decode(&listResp); err != nil {
+		return nil, nil
+	}
+
+	var match *CarrierAccount
+	for i := range listResp.Results {
+		a := &listResp.Results[i]
+		if a.Carrier == carrier && a.IsShippoAccount {
+			if a.Active {
+				match = a
+				break
+			}
+			if match == nil {
+				match = a
+			}
+		}
+	}
+
+	if match == nil {
+		return nil, nil
+	}
+	return mapCarrierAccount(match), nil
+}
+
 func (c *clientImpl) FetchShippingRate(ctx context.Context, params domain.FetchShippingRateParams) (float64, *apierror.APIError) {
 	ctx, span := shippoTracer.Start(ctx, "shippo.fetch_shipping_rate")
 	defer span.End()
 
-	shipment, apiErr := c.createShipmentForRates(ctx, params.CarrierAccountObjectID, params.FromAddress, params.ToAddress, params.Parcels)
+	// Customer-facing estimates quote the carrier's Shippo default (published/retail) account rather than the BYOA account's negotiated rates.
+	carrierAccountObjectID := c.resolvePublishedRateCarrierAccountID(ctx, params.CarrierAccountObjectID)
+	shipment, apiErr := c.createShipmentForRates(ctx, carrierAccountObjectID, params.FromAddress, params.ToAddress, params.Parcels)
 	if apiErr != nil {
 		return 0, tracing.Trace(span, apiErr)
 	}
@@ -573,7 +625,9 @@ func (c *clientImpl) FetchAllShippingRates(ctx context.Context, params domain.Fe
 	ctx, span := shippoTracer.Start(ctx, "shippo.fetch_all_shipping_rates")
 	defer span.End()
 
-	shipment, apiErr := c.createShipmentForRates(ctx, params.CarrierAccountObjectID, params.FromAddress, params.ToAddress, params.Parcels)
+	// Customer-facing estimates quote the carrier's Shippo default (published/retail) account rather than the BYOA account's negotiated rates.
+	carrierAccountObjectID := c.resolvePublishedRateCarrierAccountID(ctx, params.CarrierAccountObjectID)
+	shipment, apiErr := c.createShipmentForRates(ctx, carrierAccountObjectID, params.FromAddress, params.ToAddress, params.Parcels)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}

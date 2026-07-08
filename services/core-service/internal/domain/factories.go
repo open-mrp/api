@@ -99,6 +99,7 @@ type RepoFactory interface {
 	NewScanningStationRepo() ScanningStationRepo
 	NewPricingRepo() PricingRepo
 	NewPortalDomainRepo() PortalDomainRepo
+	NewPortalRegistrationSessionRepo() PortalRegistrationSessionRepo
 }
 
 // Mediators groups all mediator dependencies built for a specific repository factory.

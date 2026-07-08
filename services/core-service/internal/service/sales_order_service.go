@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 	"time"
@@ -21,6 +22,7 @@ import (
 	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/idempotency"
 	"github.com/augno/api/shared/messaging"
+	"github.com/augno/api/shared/ptrutil"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -155,7 +157,7 @@ func (s *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, params domain.L
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Populate the derived payment status for the whole page in one batched query (no per-order N+1), defaulting any order without payment activity to unpaid.
+	// Populate the derived payment status and linked payment intent IDs for the whole page in batched queries (no per-order N+1), defaulting any order without payment activity to unpaid.
 	if len(result.SalesOrders) > 0 {
 		orderIDs := make([]string, len(result.SalesOrders))
 		for i, order := range result.SalesOrders {
@@ -165,12 +167,17 @@ func (s *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, params domain.L
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
+		paymentIntentIDs, apiErr := repo.GetPaymentIntentIDs(ctx, params.AccountID, orderIDs)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 		for _, order := range result.SalesOrders {
 			if status, ok := statuses[order.ID]; ok {
 				order.PaymentStatus = status
 			} else {
 				order.PaymentStatus = constants.SalesOrderPaymentStatusUnpaid
 			}
+			order.PaymentIntentIDs = paymentIntentIDs[order.ID]
 		}
 	}
 
@@ -249,7 +256,7 @@ func (s *salesOrderSvcImpl) GetSalesOrder(ctx context.Context, params domain.Get
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Populate the derived payment status (always present on the resource).
+	// Populate the derived payment status and linked payment intent IDs (always present on the resource).
 	statuses, apiErr := repo.GetPaymentStatuses(ctx, params.AccountID, []string{order.ID})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -259,6 +266,11 @@ func (s *salesOrderSvcImpl) GetSalesOrder(ctx context.Context, params domain.Get
 	} else {
 		order.PaymentStatus = constants.SalesOrderPaymentStatusUnpaid
 	}
+	paymentIntentIDs, apiErr := repo.GetPaymentIntentIDs(ctx, params.AccountID, []string{order.ID})
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	order.PaymentIntentIDs = paymentIntentIDs[order.ID]
 
 	if includesSalesOrderLines(params.Includes) {
 		lines, apiErr := repo.GetLines(ctx, params.SalesOrderID)
@@ -1330,8 +1342,8 @@ func (s *salesOrderSvcImpl) estimateOrderShippingRate(ctx context.Context, param
 
 	rate, apiErr := estimateShippingRate(ctx, s.repos, s.shippoFactory, s.encryptionKey, domain.EstimateRateParams{
 		AccountID:      params.AccountID,
-		CarrierID:      derefString(params.CarrierID),
-		ServiceLevelID: derefString(params.ServiceLevelID),
+		CarrierID:      ptrutil.Deref(params.CarrierID),
+		ServiceLevelID: ptrutil.Deref(params.ServiceLevelID),
 		ProductLineIDs: productLineIDs,
 		CustomerID:     &params.BuyerAccountID,
 		FromAddress:    from,
@@ -1716,21 +1728,14 @@ func (s *salesOrderSvcImpl) resolveOrderAddress(ctx context.Context, addressRepo
 func shippingAddressFromDomain(a *domain.Address) domain.ShippingAddress {
 	out := domain.ShippingAddress{Name: a.Name, Phone: a.Phone, Email: a.Email}
 	if a.Geolocation != nil {
-		out.Street1 = derefString(a.Geolocation.StreetLine1)
+		out.Street1 = ptrutil.Deref(a.Geolocation.StreetLine1)
 		out.Street2 = a.Geolocation.StreetLine2
-		out.City = derefString(a.Geolocation.Locality)
-		out.State = derefString(a.Geolocation.State)
-		out.Zip = derefString(a.Geolocation.PostalCode)
+		out.City = ptrutil.Deref(a.Geolocation.Locality)
+		out.State = ptrutil.Deref(a.Geolocation.State)
+		out.Zip = ptrutil.Deref(a.Geolocation.PostalCode)
 		out.Country = a.Geolocation.Country
 	}
 	return out
-}
-
-func derefString(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
 }
 
 // createOrderEmailContacts writes order_email_contact rows for the given contacts + notification type.
@@ -2025,7 +2030,21 @@ func (s *salesOrderSvcImpl) CreateCustomerCheckoutSession(ctx context.Context, p
 				return nil, tracing.Trace(span, apiErr)
 			}
 			if customerEmail == nil || *customerEmail == "" {
-				return nil, tracing.Trace(span, apierror.NewInternalError(nil, "Customer email not found."))
+				// A customer account may not carry its own email; fall back to the acting portal
+				// user's email, matching the legacy checkout flow (which used the current user's
+				// email when the customer had none).
+				if identity.Actor != nil && identity.Actor.ID != "" {
+					actorUser, apiErr := s.repos.NewUserRepo().FindByID(ctx, identity.Actor.ID)
+					if apiErr != nil {
+						return nil, tracing.Trace(span, apiErr)
+					}
+					if actorUser != nil && actorUser.Email != nil && *actorUser.Email != "" {
+						customerEmail = actorUser.Email
+					}
+				}
+			}
+			if customerEmail == nil || *customerEmail == "" {
+				return nil, tracing.Trace(span, apierror.NewInternalError(nil, "No email found for customer or current user."))
 			}
 
 			// Get customer details
@@ -2132,6 +2151,69 @@ func (s *salesOrderSvcImpl) RecordOrderPayment(ctx context.Context, salesOrderID
 		return tracing.Trace(span, apiErr)
 	}
 	return nil
+}
+
+func (s *salesOrderSvcImpl) ProcessAccountStripeWebhook(ctx context.Context, accountID string, rawPayload []byte, signature string) *apierror.APIError {
+	ctx, span := salesOrderSvcTracer.Start(ctx, "service.sales_order.process_account_stripe_webhook")
+	defer span.End()
+
+	integrationRepo := s.repos.NewAccountIntegrationRepo()
+	encryptedCreds, isActive, apiErr := integrationRepo.GetEncryptedCredentials(ctx, accountID, constants.IntegrationCodeStripe)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if !isActive {
+		return tracing.Trace(span, apierror.NewValidationError("Stripe integration is not active for this account."))
+	}
+
+	// Decrypt Stripe credentials. The credential blob is sealed with the account ID as additional authenticated data (matching how both this service and the legacy dashboard API encrypt integration credentials), so the same account ID must be supplied here.
+	decrypted, err := crypto.DecryptAESGCM(encryptedCreds, s.encryptionKey, []byte(accountID))
+	if err != nil {
+		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to decrypt Stripe credentials."))
+	}
+	var stripeCreds domain.StripeCredentials
+	if err := json.Unmarshal(decrypted, &stripeCreds); err != nil {
+		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to parse Stripe credentials."))
+	}
+	if stripeCreds.WebhookSecret == "" {
+		return tracing.Trace(span, apierror.NewValidationError("Stripe integration has no webhook secret configured for this account."))
+	}
+
+	checkoutClient := s.checkoutClientFactory.Build(stripeCreds.PrivateKey)
+	event, paymentIntent, apiErr := checkoutClient.ConstructWebhookEvent(rawPayload, signature, stripeCreds.WebhookSecret)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	// Both checkout flows (embedded portal checkout and the emailed checkout link) stamp the order reference on the payment intent metadata, so payment_intent.succeeded is the single event type that covers order payments. Everything else is acknowledged without action.
+	if event.Type != "payment_intent.succeeded" || paymentIntent == nil || paymentIntent.ID == "" {
+		return nil
+	}
+
+	orderID := paymentIntent.Metadata["orderID"]
+	if orderID == "" {
+		slog.InfoContext(ctx, "account stripe webhook payment intent has no orderID metadata, skipping",
+			"account_id", accountID,
+			"payment_intent_id", paymentIntent.ID,
+		)
+		return nil
+	}
+
+	// The metadata originates from the vendor's own Stripe account, so it cannot be trusted to reference the vendor's orders. Resolve the order scoped to this account and acknowledge (without linking) anything that doesn't match, rather than erroring, so Stripe doesn't retry.
+	orderRepo := s.repos.NewSalesOrderRepo()
+	if _, apiErr := orderRepo.Get(ctx, accountID, orderID); apiErr != nil {
+		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+			slog.WarnContext(ctx, "account stripe webhook references an unknown order for this account, skipping",
+				"account_id", accountID,
+				"order_id", orderID,
+				"payment_intent_id", paymentIntent.ID,
+			)
+			return nil
+		}
+		return tracing.Trace(span, apiErr)
+	}
+
+	return s.RecordOrderPayment(ctx, orderID, paymentIntent.ID)
 }
 
 func (s *salesOrderSvcImpl) CreateSalesOrderProductionRun(ctx context.Context, params domain.CreateSalesOrderProductionRunParams) (*domain.CreateSalesOrderProductionRunResult, *apierror.APIError) {

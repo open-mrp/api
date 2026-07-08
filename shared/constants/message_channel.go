@@ -31,11 +31,6 @@ func (c *MessageChannel) StringPtr() *string {
 	return &s
 }
 
-func MessageChannelPtr(c MessageChannel) *string {
-	s := string(c)
-	return &s
-}
-
 // ResolveMessageChannel normalizes a stored channel value (including legacy "portal") and infers email from kind when absent.
 func ResolveMessageChannel(stored *string, kind string) MessageChannel {
 	if stored != nil && *stored != "" {

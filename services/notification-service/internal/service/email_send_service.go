@@ -10,6 +10,7 @@ import (
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/id"
+	"github.com/augno/api/shared/ptrutil"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -63,7 +64,7 @@ func (s *conversationSvcImpl) deliverInboxReply(ctx context.Context, conversatio
 
 	// Outbound rfc Message-ID, on the inbox's domain so replies thread back to us.
 	rfcMessageID := fmt.Sprintf("%s@%s", emID, addressDomain(inbox.Address))
-	references := buildReferences(strDeref(latest.References), latest.RfcMessageID)
+	references := buildReferences(ptrutil.Deref(latest.References), latest.RfcMessageID)
 	to := latest.FromAddr
 
 	sesMessageID, apiErr := s.bridgeEmailSender.Send(ctx, domain.EmailData{
@@ -71,7 +72,7 @@ func (s *conversationSvcImpl) deliverInboxReply(ctx context.Context, conversatio
 		Cc:         cc,
 		Subject:    subject,
 		Body:       body,
-		From:       ptr(fromHeader(inbox)),
+		From:       new(fromHeader(inbox)),
 		InReplyTo:  &latest.RfcMessageID,
 		References: &references,
 		MessageID:  &rfcMessageID,
@@ -97,12 +98,12 @@ func (s *conversationSvcImpl) deliverInboxReply(ctx context.Context, conversatio
 			Sequence:            seq,
 			Kind:                string(constants.MessageKindEmail),
 			Visibility:          string(constants.MessageVisibilityExternal),
-			Channel:             constants.MessageChannelPtr(constants.MessageChannelEmail),
+			Channel:             new(string(constants.MessageChannelEmail)),
 			SenderParticipantID: &senderPart.ID,
 			AgentRunID:          strPtrIfNotEmpty(agentRunID),
 			Body:                &msgBody,
 			Preview:             strPtrIfNotEmpty(messagePreview(&msgBody, 0, false)),
-			StreamingState:      ptr(messageStreamingStateComplete),
+			StreamingState:      new(messageStreamingStateComplete),
 			CreatedAt:           now,
 			SenderAgentConfigID: strPtrIfNotEmpty(agentConfigID),
 		}
@@ -253,13 +254,4 @@ func buildReferences(priorRefs string, latestID string) string {
 		out = append(out, latestID)
 	}
 	return strings.Join(out, " ")
-}
-
-func ptr[T any](v T) *T { return &v }
-
-func strDeref(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
 }

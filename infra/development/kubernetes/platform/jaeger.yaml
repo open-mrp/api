@@ -18,6 +18,19 @@ spec:
                   env:
                     - name: QUERY_UI_CONFIG
                       value: /etc/jaeger/jaeger-ui.json
+                    # Cap the in-memory trace store. all-in-one keeps every span in RAM with
+                    # no default limit, so a request storm (or just a long-running dev session)
+                    # grows it unbounded until it exhausts the whole minikube VM. 50k traces is
+                    # plenty for local debugging and bounds RAM to a few hundred MB.
+                    - name: MEMORY_MAX_TRACES
+                      value: "50000"
+                  resources:
+                    requests:
+                      memory: 256Mi
+                    # Hard ceiling so a trace burst OOM-kills (and restarts) only Jaeger
+                    # instead of taking down every service on the node.
+                    limits:
+                      memory: 1Gi
                   ports:
                       - containerPort: 16686
                         name: ui

@@ -79,7 +79,21 @@ VALUES
     ('agrn_01seede2e_runfail1', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'agdf_01seede2e_orderbot0', 'agcf_01seede2e_ordercfg0', 'failed',         'manual', '{"prompt":"Process order that fails"}', '{}',                                     now() - interval '10 minutes', now() - interval '9 minutes', 60000, 100, 0, 'us_1wjfmmbwg8l7', 'internal', 'Admin User', '[]'),
     -- runawti1: dedicated 'awaiting_input' run for the continue-success happy path (SeedAgentRunAwaitingInputID). Do not reuse — Continue flips it permanently.
     ('agrn_01seede2e_runawti1', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'agdf_01seede2e_orderbot0', 'agcf_01seede2e_ordercfg0', 'awaiting_input', 'manual', '{"prompt":"Need more info"}', '{}',                                     now() - interval '5 minutes', NULL, NULL, 100, 0, 'us_1wjfmmbwg8l7', 'internal', 'Admin User', '[]')
-ON CONFLICT (id) DO NOTHING;
+-- Restore the canonical lifecycle state on reseed. Retry/continue tests flip runfail1/runawti1
+-- permanently (failed→running→…, awaiting_input→running→…), and the e2e Postgres volume persists
+-- across local `make e2e` runs, so a plain DO NOTHING would leave those rows in their mutated state
+-- and the retry/continue happy-path tests would fail on re-run. Resetting the mutable columns makes
+-- reseeding restore the fixture regardless of what a prior run did.
+ON CONFLICT (id) DO UPDATE SET
+    status_code         = EXCLUDED.status_code,
+    output              = EXCLUDED.output,
+    error_message       = NULL,
+    started_at          = EXCLUDED.started_at,
+    completed_at        = EXCLUDED.completed_at,
+    duration_ms         = EXCLUDED.duration_ms,
+    total_input_tokens  = EXCLUDED.total_input_tokens,
+    total_output_tokens = EXCLUDED.total_output_tokens,
+    updated_at          = now();
 
 -- Agent actions. Run #3 exercises `list-runs/actions` and the alert→action
 -- link. Run #1 carries one action + step events so `get-run/actions` and

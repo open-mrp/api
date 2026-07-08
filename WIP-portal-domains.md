@@ -36,6 +36,43 @@ Feature state: fully implemented and verified offline (unit tests, sqlc prepare 
 
 
 
+## Customer-portal → Go API migration (custom-domain support)
+
+Custom portal domains proxy all same-origin `/v1|/v2` to the Go API, so every legacy Express `callApi` used in the customer portal 404s there. Migrating the whole portal data surface off `callApi` onto the Go SDK. Direction: the portal consumes **lightweight portal-specific types**, not the heavy shared domain objects — fetch only what the portal renders.
+
+### Backend changes
+- **Rate-shop origin → server-side.** `POST /v1/operations/shipments/actions/rate-shop`: `from_address` made optional (`field.Optional[AddressInput]`); when omitted, core resolves the seller's ship-from origin via `GetAccountOriginAddress`. Portal no longer sends the seller address. (`endpoint_rate_shop.go` + `service.go` + core `shipment_service.go`.)
+- **NEW authenticated endpoint** `GET /v1/settings/portal-profiles/{slug}` → `PortalProfile {id,name,slug,logo_url,support_email,address}`. Serves the seller's letterhead address to logged-in portal pages; resolves the seller's own address server-side (works unauthenticated-caller-safe, no cross-account loader). New `core_portal.proto` + core RPC `GetPortalProfileBySlug` + gateway endpoint/resource/presenter + `portal_profile` object type.
+
+### Frontend call migrations (legacy `callApi` → Go SDK)
+| # | Frontend fn | Go route | SDK method | Notes |
+|---|---|---|---|---|
+| 1 | `fetchAccountBySlug` | `GET /v1/settings/branding/{slug}` | `settings.retrieveBranding` | public; fixes reported `/v1/accounts/slug/*` 404 |
+| 2 | `fetchSellerProfile` | `GET /v1/settings/portal-profiles/{slug}` | `settings.retrievePortalProfiles` | NEW; authenticated; letterhead address |
+| 3 | logo `<img>` (5 sites) | — | uses `logo_url` | presigned; dropped `/v1/accounts/{id}/logo` |
+| 4 | `fetchRegistrationFlowBySlug` | `GET /v1/sales/registration-flows/by-slug/{slug}` | `sales.registrationFlows.retrieveBySlug` | |
+| 5 | `fetchPortalProfile` | `GET /v1/sales/customers/{id}` | `sales.customers.retrieve` | lean includes → `PortalCustomer` |
+| 6 | `fetchPortalFrequentlyOrderedProducts` | `GET /v1/sales/customers/{id}/frequently-ordered-products` | `sales.customers.retrieveFrequentlyOrderedProducts` | lightweight `PortalFrequentlyOrderedProduct` (itemID/sku/description); full product hydrated on add. Legacy `fetchFrequentlyOrderedProducts` kept for internal `(user)` dashboard |
+| 7 | `fetchCustomerUsers` | `GET /v1/identity/account-users` | `identity.accountUsers.list` | notif-pref gap flagged |
+| 8 | `createCheckoutSession` | `POST /v1/sales/checkout-sessions` | `sales.checkoutSessions` | dollars→cents ×100 verified |
+| 9 | `fetchCustomerInventory` | `PUT /v1/core/analytics/inventory-receipts` | `core.analytics.updateInventoryReceipts` | lightweight refactor (was stubbed) |
+| 10 | `fetchCatalogProducts` | `GET /v1/catalog/catalog/product-lines/{id}/products` | `catalog.catalog.productLines.retrieveProducts` | |
+| 11 | `findDiscountByCode` | `POST /v1/sales/order-discounts/actions/find-by-code` | `sales.orderDiscounts.actions.findByCode` | |
+| 12 | `validateUnits` | `PUT /v1/catalog/units/actions/validate` | `catalog.units.actions.validate` | |
+| 13 | `rateShop` | `POST /v1/operations/shipments/actions/rate-shop` | `operations.shipments.actions.rateShop` | origin dropped (server-side) |
+| 14 | `fetchCustomerOrder`/`fetchOrder` | `GET /v1/sales/sales-orders/{id}` | `sales.salesOrders.retrieve` | order detail via `mapSalesOrderToOrder` adapter (heavy Order kept so OrderUtils/checkout UI unchanged); letterhead account switched to `useSellerProfile` (portal-profiles). Parity note: per-line invoiced/picked *quantities* not in Go response → progress bars read 0% |
+| 15 | `registerCustomer` | `POST /v1/sales/customers/registration` | `sales.customers.registration` | migrated to Go one-shot (custom domains now work). Session-based flow (below) built server-side |
+
+### Session-based registration (net-new feature)
+Full-stack backend + API + SDK **done and green**; frontend wizard is the last piece.
+- **Prisma** `portal_registration_session` (scoped to `(user, seller)`; you generated the Go migration) → sqlc.
+- **Constants**: `PortalRegistrationSessionIDPrefix` (`porgse_`), object types `portal_registration_session` + `..._data`, `PortalRegistrationStep` enum.
+- **Core-service**: domain + repo + `PortalRegistrationSessionSvc` (create-or-resume w/ `(user,seller)` dedupe + 7-day logical TTL, ownership-checked get/update, forward-only steps, complete → delegates to existing `RegisterCustomer` via a `CustomerRegistrar` seam, abandon) + gRPC (5 RPCs, `core_portal.proto`) + run.go wiring.
+- **Gateway**: `PortalRegistrationSession` resource, service, 5 endpoints (`POST /v1/sales/portal-registration-sessions`, `GET`/`PATCH /{id}`, `POST /{id}/actions/{complete,abandon}`), group + registration. `openapi` + Stainless + SDK regenerated → `sales.portalRegistrationSessions.{create,retrieve,update,actions.complete,actions.abandon}`.
+- **E2E (done)**: `tests/e2e/api/crud_portal_registration_sessions_test.go` — 13 tests, all green against the e2e stack. Each test registers a fresh email-verified buyer (`newPortalBuyerClient`, no account) so `(buyer, seller)` session spaces are isolated and parallel-safe. Covers: create shape (`porgse_` id, step `customer_details`), resume dedup (same id), update persists step+data (GET reflects), forward-only step guard (400), unknown id (404), **ownership (403 not-yours vs 404 absent — deliberate split)**, abandon (not resumed after), complete-after-abandon (400), create validation (missing→400 / unknown slug→404), full new-customer completion journey (+ idempotent replay + no-update-after-complete), existing-customer completion by number (`SeedCustomerNumber`). Required creating the `portal_registration_session` table + rebuilding core-service/api-gateway e2e images.
+- **Frontend (done)**: `_lib/api/client/registration-session.api.ts` wraps create-or-resume/update/complete/abandon. `CreateCustomerPageContent` now: create-or-resume on mount (React Query), restores saved fields + jumps to the furthest step on resume, persists each step on Next (non-blocking), and on submit does final update → complete (backend registers from the session). `ExistingCustomerRegistrationForm` routes existing-customer linking through the same session (`is_existing_customer=true` + `customer_number`). One-shot `registerCustomer` kept only as a no-session fallback. `check-types` + `lint` green. **SDK yalc-linked → `bun run sdk:unlink` before commit.**
+| 16 | `updateUser` (profile) | — | deferred | read-only; no self-service `/v1/identity/me` yet |
+
 ## Key references
 
 - Plan: `~/.claude/plans/i-want-to-allow-sprightly-tiger.md`

@@ -233,7 +233,7 @@ func (w *CleanupWorker) runCleanup(ctx context.Context) {
 func (w *CleanupWorker) cleanupTable(ctx context.Context, tableName string, deleteFunc func(ctx context.Context, limit int) (int64, error)) int64 {
 	var totalDeleted int64
 
-	for batch := 0; batch < w.config.MaxBatchesPerRun; batch++ {
+	for range w.config.MaxBatchesPerRun {
 		if ctx.Err() != nil {
 			break
 		}

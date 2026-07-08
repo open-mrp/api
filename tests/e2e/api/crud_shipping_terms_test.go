@@ -46,9 +46,11 @@ func TestShippingTerms_ListResponseShape(t *testing.T) {
 
 func TestShippingTerms_ListPagination(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(shippingTermsPath, url.Values{"limit": {"1"}})
-	require.NoError(t, err)
-	assert.Len(t, list.Data, 1)
+	// Shipping terms is a heavily create/delete-churned shared list, so a limit=1
+	// page can hydrate empty when a parallel test deletes the newest row between
+	// the id-fetch and the batch-hydrate. assertListPageLen retries to ride that
+	// out; the seeded SeedShippingTermID guarantees a floor of one undeletable row.
+	assertListPageLen(t, shippingTermsPath, url.Values{"limit": {"1"}}, 1)
 }
 
 func TestShippingTerms_ListCursorPagination(t *testing.T) {

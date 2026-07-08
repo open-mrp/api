@@ -23,6 +23,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/messaging"
+	"github.com/augno/api/shared/ptrutil"
 	"github.com/augno/api/shared/retry"
 	"github.com/augno/api/shared/safeconv"
 	"github.com/augno/api/shared/tracing"
@@ -791,7 +792,7 @@ func (s *runnerSvc) executeAgent(
 		CoreClient:               s.coreClient,
 		GatewayClient:            s.gatewayClient,
 		NotificationClient:       s.notificationClient,
-		ConversationID:           derefStr(agentdb.StringFromPgText(run.ConversationID)),
+		ConversationID:           ptrutil.Deref(agentdb.StringFromPgText(run.ConversationID)),
 		Identity:                 identity,
 		RequireReviewBySlug:      requireReviewBySlug,
 		AlwaysAllowedSlugs:       make(map[string]bool),
@@ -802,14 +803,6 @@ func (s *runnerSvc) executeAgent(
 
 	return s.runAgentLoop(ctx, run, accountID, identity, systemPrompt, modelChain, toolDefs, temperature, messages, &seq, runCtx, bc.spendingCapCents, bc.currentSpendCents)
 
-}
-
-// derefStr returns the pointed-to string, or "" when nil.
-func derefStr(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
 }
 
 // completeWithRetry performs one LLM call (streaming-aware) and retries on a retryable gateway error (429/529/5xx) with backoff, honoring Retry-After. Returns the response or the last error; the caller decides whether to fail over to another model.
@@ -1866,7 +1859,7 @@ func (s *runnerSvc) ContinueRun(ctx context.Context, runID, accountID, message s
 		CoreClient:               s.coreClient,
 		GatewayClient:            s.gatewayClient,
 		NotificationClient:       s.notificationClient,
-		ConversationID:           derefStr(agentdb.StringFromPgText(run.ConversationID)),
+		ConversationID:           ptrutil.Deref(agentdb.StringFromPgText(run.ConversationID)),
 		Identity:                 agentIdentity,
 		RequireReviewBySlug:      requireReviewBySlug,
 		AlwaysAllowedSlugs:       alwaysAllowed,

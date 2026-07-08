@@ -109,10 +109,10 @@ type SalesOrder struct {
 	Status constants.SalesOrderStatusCode `json:"status" validate:"required"`
 	// Fulfillment priority, used to rank orders on the shop floor.
 	Priority constants.PriorityCode `json:"priority" validate:"required"`
-	// Payment state of the order.
-	//
-	// Payment tracking is not yet wired up, so this currently always reports `unpaid`.
+	// Payment state of the order, derived from settlement allocations, invoices, and Stripe payments.
 	PaymentStatus constants.SalesOrderPaymentStatus `json:"payment_status" validate:"required"`
+	// Stripe payment intent IDs recorded against this order.
+	PaymentIntentIDs []string `json:"payment_intent_ids"`
 	// Whether an order acknowledgment has been sent to the customer.
 	AcknowledgmentStatus constants.AcknowledgmentStatus `json:"acknowledgment_status" validate:"required"`
 	// Associated customer.
@@ -178,6 +178,7 @@ var SampleSalesOrder = &SalesOrder{
 	Status:                      constants.SalesOrderStatusCodeEstimate,
 	Priority:                    SamplePriorityCode,
 	PaymentStatus:               constants.SalesOrderPaymentStatusUnpaid,
+	PaymentIntentIDs:            []string{},
 	AcknowledgmentStatus:        constants.AcknowledgmentStatusNotSent,
 	Customer:                    SampleCustomer,
 	SalesRep:                    SampleActor,

@@ -12,6 +12,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/idempotency"
+	"github.com/augno/api/shared/ptrutil"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -474,8 +475,8 @@ func (s *productionRunSvcImpl) AddBatchesToProductionRun(ctx context.Context, pa
 					Quantity:          input.Quantity,
 					Seconds:           input.Seconds,
 					Waste:             input.Waste,
-					ProductionStepID:  derefStringOrEmpty(input.ProductionStepID),
-					ScanningStationID: derefStringOrEmpty(input.ScanningStationID),
+					ProductionStepID:  ptrutil.Deref(input.ProductionStepID),
+					ScanningStationID: ptrutil.Deref(input.ScanningStationID),
 				})
 				if apiErr != nil {
 					return apiErr
@@ -524,11 +525,4 @@ func (s *productionRunSvcImpl) ListBatchesByProductionRun(ctx context.Context, p
 
 	repo := s.repos.NewProductionRunRepo()
 	return repo.ListBatchesByRun(ctx, params)
-}
-
-func derefStringOrEmpty(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
 }

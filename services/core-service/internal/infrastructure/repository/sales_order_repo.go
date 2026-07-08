@@ -1675,6 +1675,31 @@ func (r *salesOrderRepoImpl) GetPaymentStatuses(ctx context.Context, accountID s
 	return statuses, nil
 }
 
+// GetPaymentIntentIDs returns the Stripe payment intent IDs linked to each of the given orders in a single query, keyed by sales order ID. Orders with no payments (or not owned by the account) are absent from the map.
+func (r *salesOrderRepoImpl) GetPaymentIntentIDs(ctx context.Context, accountID string, salesOrderIDs []string) (map[string][]string, *apierror.APIError) {
+	ctx, span := tracing.StartSpan(ctx, salesOrderRepoTracer, "repository.sales_order.get_payment_intent_ids")
+	defer span.End()
+
+	ids := make(map[string][]string, len(salesOrderIDs))
+	if len(salesOrderIDs) == 0 {
+		return ids, nil
+	}
+
+	rows, err := r.queries.ListOrderPaymentIntentIDsBySalesOrderIDs(ctx, sqlc.ListOrderPaymentIntentIDsBySalesOrderIDsParams{
+		SalesOrderIds: salesOrderIDs,
+		AccountID:     accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	for _, row := range rows {
+		ids[row.SalesOrderID] = append(ids[row.SalesOrderID], row.PaymentIntentID)
+	}
+
+	return ids, nil
+}
+
 func (r *salesOrderRepoImpl) GetLinesForBOM(ctx context.Context, salesOrderID string) ([]domain.SalesOrderLineForBOM, *apierror.APIError) {
 	ctx, span := tracing.StartSpan(ctx, salesOrderRepoTracer, "repository.sales_order.get_lines_for_bom")
 	defer span.End()

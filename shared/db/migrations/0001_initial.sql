@@ -2809,6 +2809,34 @@ CREATE TABLE `portal_domain` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `portal_registration_session`
+--
+
+DROP TABLE IF EXISTS `portal_registration_session`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `portal_registration_session` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `type_id` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `user_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `seller_account_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `seller_slug` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `is_existing_customer` tinyint(1) DEFAULT NULL,
+  `step` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `customer_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `session_data` json NOT NULL,
+  `completed_at` datetime(3) DEFAULT NULL,
+  `abandoned_at` datetime(3) DEFAULT NULL,
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `portal_registration_session_type_id_key` (`type_id`),
+  KEY `portal_registration_session_seller_account_id_idx` (`seller_account_id`),
+  KEY `portal_registration_session_user_id_seller_account_id_comple_idx` (`user_id`,`seller_account_id`,`completed_at`,`created_at` DESC,`id` DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `priority`
 --
 
@@ -4290,7 +4318,7 @@ CREATE TABLE `user` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-07-06  9:01:50
+-- Dump completed on 2026-07-06 13:10:05
 
 -- +goose Down
 
@@ -4354,6 +4382,7 @@ DROP TABLE IF EXISTS `product_line_target`;
 DROP TABLE IF EXISTS `product_line`;
 DROP TABLE IF EXISTS `product`;
 DROP TABLE IF EXISTS `priority`;
+DROP TABLE IF EXISTS `portal_registration_session`;
 DROP TABLE IF EXISTS `portal_domain`;
 DROP TABLE IF EXISTS `pick_line`;
 DROP TABLE IF EXISTS `pick`;

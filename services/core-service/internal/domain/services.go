@@ -564,6 +564,7 @@ type AccountSvc interface {
 
 	// GetAccountBySlug returns a minimal public account by portal slug (unauthenticated).
 	GetAccountBySlug(ctx context.Context, slug string) (*PublicAccountBySlug, *apierror.APIError)
+	GetPortalProfileBySlug(ctx context.Context, slug string) (*PortalProfile, *apierror.APIError)
 
 	// UpdateAccount partially updates an account's name, branding, and/or portal slug.
 	UpdateAccount(ctx context.Context, params UpdateAccountParams) (*Account, *apierror.APIError)
@@ -991,8 +992,11 @@ type SalesOrderSvc interface {
 	// CreateCustomerCheckoutSession creates an embedded Stripe checkout session for a customer actor.
 	CreateCustomerCheckoutSession(ctx context.Context, params CreateCustomerCheckoutSessionParams) (*CreateCustomerCheckoutSessionResult, *apierror.APIError)
 
-	// RecordOrderPayment links a succeeded Stripe payment intent to a sales order (called from the billing-service on checkout.session.completed). Idempotent: a payment intent already linked is a no-op.
+	// RecordOrderPayment links a succeeded Stripe payment intent to a sales order (called from ProcessAccountStripeWebhook and from the billing-service's platform webhook consumer). Idempotent: a payment intent already linked is a no-op.
 	RecordOrderPayment(ctx context.Context, salesOrderID, paymentIntentID string) *apierror.APIError
+
+	// ProcessAccountStripeWebhook verifies a webhook event from an account's connected Stripe account against the account's stored webhook secret, then links succeeded payment intents to their sales orders via RecordOrderPayment. Events that are not order payments are acknowledged and ignored so Stripe does not retry them.
+	ProcessAccountStripeWebhook(ctx context.Context, accountID string, rawPayload []byte, signature string) *apierror.APIError
 }
 
 type SalesOrderLineSvc interface {
@@ -1382,6 +1386,21 @@ type PortalDomainSvc interface {
 	DeletePortalDomain(ctx context.Context, portalDomainID string) *apierror.APIError
 	ResolvePortalHost(ctx context.Context, domainName string) (*PublicAccountBySlug, *apierror.APIError)
 	BatchGetPortalDomainsByIDs(ctx context.Context, ids []string) ([]*PortalDomain, *apierror.APIError)
+}
+
+// CustomerRegistrar registers the authenticated buyer as a customer of a seller account. Implemented by the registration-flow service; injected into the portal registration-session service so completion reuses the existing one-shot registration logic.
+type CustomerRegistrar interface {
+	RegisterCustomer(ctx context.Context, params RegisterCustomerParams) *apierror.APIError
+}
+
+// PortalRegistrationSessionSvc drives a buyer's session-based registration into a seller's customer portal.
+type PortalRegistrationSessionSvc interface {
+	// CreateOrResumeSession returns the buyer's active session for the seller (resuming a non-expired incomplete one), or starts a new one.
+	CreateOrResumeSession(ctx context.Context, sellerSlug string) (*PortalRegistrationSession, *apierror.APIError)
+	GetSession(ctx context.Context, typeID string) (*PortalRegistrationSession, *apierror.APIError)
+	UpdateSession(ctx context.Context, params UpdatePortalRegistrationSessionParams) (*PortalRegistrationSession, *apierror.APIError)
+	CompleteSession(ctx context.Context, typeID string) (*PortalRegistrationSession, *apierror.APIError)
+	AbandonSession(ctx context.Context, typeID string) (*PortalRegistrationSession, *apierror.APIError)
 }
 
 // CreateAccountParams holds the parameters for creating a production account during registration.

@@ -127,6 +127,9 @@ type SalesOrder struct {
 	// Derived payment state (always populated): computed from settlement allocations vs. invoiced amounts plus any Stripe payment intent.
 	PaymentStatus constants.SalesOrderPaymentStatus
 
+	// Stripe payment intent IDs recorded against this order (always populated).
+	PaymentIntentIDs []string
+
 	// Lines (populated when included)
 	Lines []*SalesOrderLine
 

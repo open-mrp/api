@@ -12,6 +12,11 @@ spec:
         metadata:
             labels:
                 app: rabbitmq
+            annotations:
+                # Bump this when rabbitmq.conf changes: the config lives in a
+                # ConfigMap, which pods only read at startup, so a template
+                # change is needed to force a restart.
+                augno.dev/config-rev: "2"
         spec:
             containers:
                 - name: rabbitmq
@@ -109,9 +114,13 @@ data:
         listeners.tcp.default = 5672
         management.tcp.port = 15672
 
-        # Memory and disk safety limits (tune for your container limits)
+        # Memory and disk safety limits. RabbitMQ computes relative limits
+        # against TOTAL HOST memory (the minikube VM, ~16GB), not the container
+        # cgroup, so disk_free_limit.relative = 1.5 demanded ~25GB of free disk
+        # and put the broker into a permanent disk alarm that silently blocked
+        # every publisher (July 2026). Use an absolute limit sized for dev.
         vm_memory_high_watermark.relative = 0.4
-        disk_free_limit.relative = 1.5
+        disk_free_limit.absolute = 1GB
 
         # Optional: log to stdout
         log.console = true

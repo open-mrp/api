@@ -13,6 +13,7 @@ import (
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/crypto"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/ptrutil"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -256,7 +257,7 @@ func (s *service) syncCompany(ctx context.Context, client domain.HubspotClient, 
 // syncContact upserts the order's primary contact (bill-to email, falling back to the customer email) and associates it to the company.
 func (s *service) syncContact(ctx context.Context, client domain.HubspotClient, accountID string, order *domain.SalesOrder, customer *domain.Customer, companyID string, promoteLifecycle bool) (string, *apierror.APIError) {
 	email := firstNonEmpty(order.BillToEmail, customer.Email)
-	fullName := firstNonEmptyStr(deref(order.BillToName), customer.Name)
+	fullName := firstNonEmptyStr(ptrutil.Deref(order.BillToName), customer.Name)
 	phone := firstNonEmpty(order.BillToPhone, customer.Phone)
 	return s.upsertContact(ctx, client, accountID, customer.ID, email, fullName, phone, companyID, promoteLifecycle)
 }

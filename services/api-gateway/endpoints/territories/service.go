@@ -10,6 +10,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
+	"github.com/augno/api/shared/ptrutil"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -149,9 +150,9 @@ func (m *territorySvcImpl) UpdateTerritory(ctx context.Context, req *UpdateTerri
 		EndZipcode:        req.EndZipcode.Ptr(),
 		SalesRepId:        req.SalesRepID.Ptr(),
 		ProductLineId:     req.ProductLineID.Ptr(),
-		ClearProductLine:  derefBool(req.ClearProductLine.Ptr()),
-		ClearStartZipcode: derefBool(req.ClearStartZipcode.Ptr()),
-		ClearEndZipcode:   derefBool(req.ClearEndZipcode.Ptr()),
+		ClearProductLine:  ptrutil.Deref(req.ClearProductLine.Ptr()),
+		ClearStartZipcode: ptrutil.Deref(req.ClearStartZipcode.Ptr()),
+		ClearEndZipcode:   ptrutil.Deref(req.ClearEndZipcode.Ptr()),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, territorySvcTracer, "service.territories.update", domain.ServiceName,
@@ -182,11 +183,4 @@ func (m *territorySvcImpl) DeleteTerritory(ctx context.Context, req *DeleteTerri
 	}
 
 	return &apiresource.EmptyResource{}, nil
-}
-
-func derefBool(b *bool) bool {
-	if b == nil {
-		return false
-	}
-	return *b
 }

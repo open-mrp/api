@@ -137,7 +137,11 @@ func (s *volumeDiscountSvcImpl) GetVolumeDiscount(ctx context.Context, params do
 
 	if identity.IsExternalTarget() {
 		meds := s.mediators()
-		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+		// Counterparty-aware to match the sibling ListVolumeDiscounts: a customer-portal
+		// relation actor may read a volume discount on the vendor they buy from. The
+		// owner-side CheckReadAccess only allows the actor->target direction and would
+		// wrongly reject the counterparty.
+		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 	}

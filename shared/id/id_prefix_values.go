@@ -430,6 +430,8 @@ var (
 	// Registration-related prefix values
 	RegistrationFlowIDPrefix = composePrefix(VocRegistration, VocFlow)
 
+	PortalRegistrationSessionIDPrefix = composePrefix(VocPortal, VocRegistration, VocSession)
+
 	// Onboarding-related prefix values
 	OnboardingStatusIDPrefix = composePrefix(VocOnboarding, VocStatus)
 

@@ -197,7 +197,7 @@ func newNano(name string, attempt int) string {
 	out := make([]byte, 26)
 	out[0] = '0'
 	out[1] = '1'
-	for i := 0; i < 24; i++ {
+	for i := range 24 {
 		out[i+2] = s[i]
 	}
 	return string(out)

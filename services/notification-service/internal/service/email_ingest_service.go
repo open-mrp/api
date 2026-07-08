@@ -147,7 +147,7 @@ func (s *conversationSvcImpl) IngestInboundEmail(ctx context.Context, in domain.
 			Sequence:        seq,
 			Kind:            string(constants.MessageKindEmail),
 			Visibility:      string(constants.MessageVisibilityExternal),
-			Channel:         constants.MessageChannelPtr(constants.MessageChannelEmail),
+			Channel:         new(string(constants.MessageChannelEmail)),
 			ClientMessageID: &clientMsgID,
 			Body:            &body,
 			Preview:         strPtrIfNotEmpty(messagePreview(&body, 0, false)),

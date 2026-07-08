@@ -70,7 +70,7 @@ func pruneOldToolResults(messages []llm.Message) int {
 
 	// Walk forward through unprotected messages, pruning tool results.
 	freed := 0
-	for i := 0; i < protectFrom; i++ {
+	for i := range protectFrom {
 		for j := range messages[i].ToolResults {
 			orig := messages[i].ToolResults[j].Content
 			if orig == prunedPlaceholder || len(orig) < 100 {

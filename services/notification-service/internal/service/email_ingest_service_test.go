@@ -92,10 +92,10 @@ func TestCreateEmailThreadConversation_SeatsGroupMembersDeduped(t *testing.T) {
 	groupRepo := repositorymock.NewMockMessagingGroupRepo(ctrl)
 	// The roster carries two humans and two agents — one of which duplicates the inbox's own triage agent.
 	groupRepo.EXPECT().ListMembers(gomock.Any(), "mggp_1").Return([]*domain.MessagingGroupMember{
-		{MemberType: domain.MessagingGroupMemberTypeUser, AccountUserID: ptr("acus_1")},
-		{MemberType: domain.MessagingGroupMemberTypeUser, AccountUserID: ptr("acus_2")},
-		{MemberType: domain.MessagingGroupMemberTypeAgent, AgentConfigID: ptr("agdf_inbox")},
-		{MemberType: domain.MessagingGroupMemberTypeAgent, AgentConfigID: ptr("agdf_extra")},
+		{MemberType: domain.MessagingGroupMemberTypeUser, AccountUserID: new("acus_1")},
+		{MemberType: domain.MessagingGroupMemberTypeUser, AccountUserID: new("acus_2")},
+		{MemberType: domain.MessagingGroupMemberTypeAgent, AgentConfigID: new("agdf_inbox")},
+		{MemberType: domain.MessagingGroupMemberTypeAgent, AgentConfigID: new("agdf_extra")},
 	}, nil)
 
 	factory := factorymock.NewMockRepoFactory(ctrl)
@@ -109,8 +109,8 @@ func TestCreateEmailThreadConversation_SeatsGroupMembersDeduped(t *testing.T) {
 		AccountID:     "ac_1",
 		Address:       "support@x.com",
 		Status:        domain.EmailInboxStatusActive,
-		AgentConfigID: ptr("agdf_inbox"),
-		GroupID:       ptr("mggp_1"),
+		AgentConfigID: new("agdf_inbox"),
+		GroupID:       new("mggp_1"),
 	}
 	convID, apiErr := svc.createEmailThreadConversation(context.Background(), factory, inbox, domain.IngestInboundEmailInput{
 		From:    "cust@out.com",

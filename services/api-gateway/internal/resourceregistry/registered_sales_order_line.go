@@ -22,12 +22,42 @@ func init() {
 				ExtractIDs:  extractProductIDFromSOLine,
 				Populate:    populateProductOnSOLine,
 			},
-			{Key: "quantity_ordered", Populate: populateQuantityOrderedOnSOLine},
-			{Key: "unit_price", Populate: populateUnitPriceOnSOLine},
-			{Key: "unit_cost", Populate: populateUnitCostOnSOLine},
+			// quantity_ordered / unit_price / unit_cost are populated inline from stashed
+			// proto data (value + display_value). Target + ExtractRefs let the resolver
+			// recurse into the populated Quantity/Rate so their own unit sub-fields
+			// (quantity_ordered.unit, unit_price.numerator_unit, ...) resolve via LoadUnits —
+			// the unit FKs are stashed on the Quantity/Rate in stashSalesOrderLineMeta. Mirrors
+			// how customer.credit_limit (also a Quantity) enables credit_limit.unit.
+			{Key: "quantity_ordered", Target: constants.ObjectTypeQuantity, Cardinality: resourcekit.CardinalityOnePtr, ExtractRefs: extractQuantityOrderedRefFromSOLine, Populate: populateQuantityOrderedOnSOLine},
+			{Key: "unit_price", Target: constants.ObjectTypeRate, Cardinality: resourcekit.CardinalityOnePtr, ExtractRefs: extractUnitPriceRefFromSOLine, Populate: populateUnitPriceOnSOLine},
+			{Key: "unit_cost", Target: constants.ObjectTypeRate, Cardinality: resourcekit.CardinalityOnePtr, ExtractRefs: extractUnitCostRefFromSOLine, Populate: populateUnitCostOnSOLine},
 			{Key: "totals", Populate: populateTotalsOnSOLine},
 		},
 	})
+}
+
+func extractQuantityOrderedRefFromSOLine(_ context.Context, parent any) []any {
+	l := parent.(*apiresource.SalesOrderLine)
+	if l.QuantityOrdered == nil {
+		return nil
+	}
+	return []any{l.QuantityOrdered}
+}
+
+func extractUnitPriceRefFromSOLine(_ context.Context, parent any) []any {
+	l := parent.(*apiresource.SalesOrderLine)
+	if l.UnitPrice == nil {
+		return nil
+	}
+	return []any{l.UnitPrice}
+}
+
+func extractUnitCostRefFromSOLine(_ context.Context, parent any) []any {
+	l := parent.(*apiresource.SalesOrderLine)
+	if l.UnitCost == nil {
+		return nil
+	}
+	return []any{l.UnitCost}
 }
 
 func populateQuantityOrderedOnSOLine(ctx context.Context, parent any, _ map[string]any) {

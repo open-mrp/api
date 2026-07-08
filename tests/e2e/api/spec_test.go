@@ -343,6 +343,10 @@ var excludedUpdateOperations = map[string]bool{
 	// Messaging groups (reusable rosters) are account_user-scoped and need a real group id the
 	// API-key harness can't seed. Covered by messaging_groups_test.go.
 	"update-messaging-group": true,
+	// Portal registration sessions are scoped to an authenticated buyer (cookie auth) and a
+	// seller slug; the API-key harness has no buyer persona to own a session, so {id} can't be
+	// resolved. Covered end-to-end by crud_portal_registration_sessions_test.go.
+	"update-portal-registration-session": true,
 }
 
 // excludedCreateOperations are operationIDs omitted from POST body write tests.

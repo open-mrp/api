@@ -27,6 +27,7 @@ type accountIntegrationSvcImpl struct {
 	txManager       TransactionManager
 	encryptionKey   []byte
 	encryptionKeyID string
+	platformMode    constants.PlatformMode
 }
 
 type AccountIntegrationSvcConfig struct {
@@ -44,6 +45,9 @@ type AccountIntegrationSvcConfig struct {
 
 	// EncryptionKeyID (required) identifies the active encryption key version.
 	EncryptionKeyID string
+
+	// PlatformMode is the deployment mode. In development it relaxes the live-key requirement for Stripe credentials so local, production-type accounts can integrate against Stripe's test environment.
+	PlatformMode constants.PlatformMode
 }
 
 func (c *AccountIntegrationSvcConfig) validate() error {
@@ -76,6 +80,7 @@ func NewAccountIntegrationSvc(config *AccountIntegrationSvcConfig) domain.Accoun
 		txManager:       config.TxManager,
 		encryptionKey:   config.EncryptionKey,
 		encryptionKeyID: config.EncryptionKeyID,
+		platformMode:    config.PlatformMode,
 	}
 }
 
@@ -95,6 +100,7 @@ func (s *accountIntegrationSvcImpl) withTx(ctx context.Context, fn func(context.
 			txManager:       s.txManager,
 			encryptionKey:   s.encryptionKey,
 			encryptionKeyID: s.encryptionKeyID,
+			platformMode:    s.platformMode,
 		}
 		return fn(txCtx, txSvc)
 	})
@@ -301,6 +307,11 @@ func (s *accountIntegrationSvcImpl) validateStripeCredentials(span trace.Span, c
 	}
 	if !strings.HasPrefix(creds.WebhookSecret, "whsec_") {
 		return tracing.Trace(span, apierror.NewValidationErrorWithParam("Stripe webhook secret must start with 'whsec_'.", "credentials"))
+	}
+
+	// Local development accounts are seeded as production-type (non-sandbox) accounts, which would otherwise force live keys. In development mode accept either test or live keys so integrations can be exercised against Stripe's test environment.
+	if s.platformMode.IsDevelopment() {
+		return nil
 	}
 
 	if isSandbox {

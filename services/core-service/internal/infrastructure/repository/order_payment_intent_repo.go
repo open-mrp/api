@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	gosql "database/sql"
+	"errors"
 
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
@@ -40,6 +42,10 @@ func (r *orderPaymentIntentRepoImpl) FindByPaymentIntentID(ctx context.Context, 
 	defer span.End()
 
 	row, err := r.queries.FindOrderPaymentIntentByPaymentIntentID(ctx, paymentIntentID)
+	if errors.Is(err, gosql.ErrNoRows) {
+		// A payment intent that isn't linked yet is the caller's normal idempotency-check case, not an error.
+		return nil, nil
+	}
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}

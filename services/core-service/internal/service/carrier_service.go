@@ -197,7 +197,13 @@ func (s *carrierSvcImpl) BatchGetCarriersByIDs(ctx context.Context, ids []string
 	}
 	if identity.IsExternalTarget() {
 		meds := s.mediators()
-		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+		// Counterparty-aware: this batch endpoint hydrates the customer-portal customer-detail
+		// read (freight_preferences.carrier is the customer's own default carrier). A customer
+		// relation actor reaches the target→actor direction of the relation, so the owner-side
+		// CheckReadAccess would reject them. Results stay scoped to Target.AccountID (below) and
+		// the IDs come from the caller's own already-authorized customer record, so this does not
+		// widen access beyond the counterparty's own referenced carriers.
+		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 	}
@@ -256,7 +262,10 @@ func (s *carrierSvcImpl) BatchGetServiceLevelsByIDs(ctx context.Context, ids []s
 	}
 	if identity.IsExternalTarget() {
 		meds := s.mediators()
-		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+		// Counterparty-aware: hydrates ?include=service_levels for a customer-portal
+		// relation actor reading their own default carrier's options. Results are scoped
+		// to Target.AccountID; the owner-side CheckReadAccess would wrongly reject them.
+		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 	}

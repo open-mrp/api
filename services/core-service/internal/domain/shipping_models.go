@@ -38,6 +38,11 @@ type ShippingAddress struct {
 	Email   *string
 }
 
+// IsEmpty reports whether no meaningful address was provided, so callers can fall back to a resolved origin.
+func (a ShippingAddress) IsEmpty() bool {
+	return a.Street1 == "" && a.City == "" && a.State == "" && a.Zip == ""
+}
+
 // Parcel represents a package for rate estimation.
 type Parcel struct {
 	Weight string

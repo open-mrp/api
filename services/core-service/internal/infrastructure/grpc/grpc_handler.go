@@ -10,6 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
+	"github.com/augno/api/shared/ptrutil"
 
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -66,6 +67,7 @@ type gRPCHandler struct {
 	measureSvc                       domain.MeasureSvc
 	receivableSvc                    domain.ReceivableSvc
 	registrationFlowSvc              domain.RegistrationFlowSvc
+	portalRegistrationSessionSvc     domain.PortalRegistrationSessionSvc
 	scanningStationSvc               domain.ScanningStationSvc
 	settlementSvc                    domain.SettlementSvc
 	locationSvc                      domain.LocationSvc
@@ -264,6 +266,10 @@ func RegisterSysPropertyService(server *grpc.Server, sysPropertySvc domain.SysPr
 
 func RegisterRegistrationFlowService(server *grpc.Server, registrationFlowSvc domain.RegistrationFlowSvc) {
 	handler.registrationFlowSvc = registrationFlowSvc
+}
+
+func RegisterPortalRegistrationSessionService(server *grpc.Server, svc domain.PortalRegistrationSessionSvc) {
+	handler.portalRegistrationSessionSvc = svc
 }
 
 func RegisterShippingService(server *grpc.Server, shipmentSvc domain.ShipmentSvc, shipmentLineSvc domain.ShipmentLineSvc) {
@@ -718,12 +724,12 @@ func (h *gRPCHandler) CompleteRegistration(ctx context.Context, req *pb.Complete
 		if req.AccountData.BusinessAddress != nil {
 			addr := req.AccountData.BusinessAddress
 			input.BusinessAddress = &domain.RegistrationAddress{
-				Line1:      derefStr(addr.Line1),
-				Line2:      derefStr(addr.Line2),
-				City:       derefStr(addr.City),
-				State:      derefStr(addr.State),
-				PostalCode: derefStr(addr.PostalCode),
-				Country:    derefStr(addr.Country),
+				Line1:      ptrutil.Deref(addr.Line1),
+				Line2:      ptrutil.Deref(addr.Line2),
+				City:       ptrutil.Deref(addr.City),
+				State:      ptrutil.Deref(addr.State),
+				PostalCode: ptrutil.Deref(addr.PostalCode),
+				Country:    ptrutil.Deref(addr.Country),
 			}
 		}
 	}
@@ -2063,13 +2069,6 @@ func accountIntegrationToProto(ai *domain.AccountIntegration) *pb.AccountIntegra
 	}
 }
 
-func derefStr(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
-}
-
 func adjustmentTypeToProto(at *domain.AdjustmentType) *pb.AdjustmentTypeInfo {
 	return &pb.AdjustmentTypeInfo{
 		Id:        at.ID,
@@ -2172,6 +2171,155 @@ func (h *gRPCHandler) GetAccountBySlug(ctx context.Context, req *pb.GetAccountBy
 	return &pb.GetAccountBySlugResponse{
 		Account: publicAccountToProto(account),
 	}, nil
+}
+
+func (h *gRPCHandler) GetPortalProfileBySlug(ctx context.Context, req *pb.GetPortalProfileBySlugRequest) (*pb.GetPortalProfileBySlugResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	profile, apiErr := h.accountSvc.GetPortalProfileBySlug(ctx, req.Slug)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.GetPortalProfileBySlugResponse{
+		Profile: portalProfileToProto(profile),
+	}, nil
+}
+
+func portalProfileToProto(p *domain.PortalProfile) *pb.PortalProfileInfo {
+	if p == nil {
+		return nil
+	}
+	return &pb.PortalProfileInfo{
+		Id:           p.ID,
+		Name:         p.Name,
+		Slug:         p.Slug,
+		LogoUrl:      p.LogoURL,
+		SupportEmail: p.SupportEmail,
+		Address:      addressToProto(p.Address),
+	}
+}
+
+func (h *gRPCHandler) CreateOrResumePortalRegistrationSession(ctx context.Context, req *pb.CreateOrResumePortalRegistrationSessionRequest) (*pb.PortalRegistrationSessionResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	session, apiErr := h.portalRegistrationSessionSvc.CreateOrResumeSession(ctx, req.SellerSlug)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	return &pb.PortalRegistrationSessionResponse{Session: portalRegistrationSessionToProto(session)}, nil
+}
+
+func (h *gRPCHandler) GetPortalRegistrationSession(ctx context.Context, req *pb.GetPortalRegistrationSessionRequest) (*pb.PortalRegistrationSessionResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	session, apiErr := h.portalRegistrationSessionSvc.GetSession(ctx, req.TypeId)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	return &pb.PortalRegistrationSessionResponse{Session: portalRegistrationSessionToProto(session)}, nil
+}
+
+func (h *gRPCHandler) UpdatePortalRegistrationSession(ctx context.Context, req *pb.UpdatePortalRegistrationSessionRequest) (*pb.PortalRegistrationSessionResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	session, apiErr := h.portalRegistrationSessionSvc.UpdateSession(ctx, domain.UpdatePortalRegistrationSessionParams{
+		TypeID:             req.TypeId,
+		Step:               constants.PortalRegistrationStep(req.Step),
+		SessionData:        portalRegistrationSessionDataFromProto(req.SessionData),
+		IsExistingCustomer: req.IsExistingCustomer,
+	})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	return &pb.PortalRegistrationSessionResponse{Session: portalRegistrationSessionToProto(session)}, nil
+}
+
+func (h *gRPCHandler) CompletePortalRegistrationSession(ctx context.Context, req *pb.CompletePortalRegistrationSessionRequest) (*pb.PortalRegistrationSessionResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	session, apiErr := h.portalRegistrationSessionSvc.CompleteSession(ctx, req.TypeId)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	return &pb.PortalRegistrationSessionResponse{Session: portalRegistrationSessionToProto(session)}, nil
+}
+
+func (h *gRPCHandler) AbandonPortalRegistrationSession(ctx context.Context, req *pb.AbandonPortalRegistrationSessionRequest) (*pb.PortalRegistrationSessionResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	session, apiErr := h.portalRegistrationSessionSvc.AbandonSession(ctx, req.TypeId)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	return &pb.PortalRegistrationSessionResponse{Session: portalRegistrationSessionToProto(session)}, nil
+}
+
+func portalRegistrationSessionDataFromProto(d *pb.PortalRegistrationSessionData) domain.PortalRegistrationSessionData {
+	if d == nil {
+		return domain.PortalRegistrationSessionData{}
+	}
+	return domain.PortalRegistrationSessionData{
+		CustomerName:      d.CustomerName,
+		CustomerNumber:    d.CustomerNumber,
+		CustomerGroupID:   d.CustomerGroupId,
+		PaymentTermID:     d.PaymentTermId,
+		ShippingTermID:    d.ShippingTermId,
+		Phone:             d.Phone,
+		AddressName:       d.AddressName,
+		AddressStreet1:    d.AddressStreet_1,
+		AddressStreet2:    d.AddressStreet_2,
+		AddressLocality:   d.AddressLocality,
+		AddressState:      d.AddressState,
+		AddressPostalCode: d.AddressPostalCode,
+		AddressCountry:    d.AddressCountry,
+	}
+}
+
+func portalRegistrationSessionToProto(s *domain.PortalRegistrationSession) *pb.PortalRegistrationSessionInfo {
+	if s == nil {
+		return nil
+	}
+	info := &pb.PortalRegistrationSessionInfo{
+		Id:                 s.ID,
+		UserId:             s.UserID,
+		SellerAccountId:    s.SellerAccountID,
+		SellerSlug:         s.SellerSlug,
+		IsExistingCustomer: s.IsExistingCustomer,
+		Step:               string(s.Step),
+		CustomerId:         s.CustomerID,
+		SessionData: &pb.PortalRegistrationSessionData{
+			CustomerName:      s.SessionData.CustomerName,
+			CustomerNumber:    s.SessionData.CustomerNumber,
+			CustomerGroupId:   s.SessionData.CustomerGroupID,
+			PaymentTermId:     s.SessionData.PaymentTermID,
+			ShippingTermId:    s.SessionData.ShippingTermID,
+			Phone:             s.SessionData.Phone,
+			AddressName:       s.SessionData.AddressName,
+			AddressStreet_1:   s.SessionData.AddressStreet1,
+			AddressStreet_2:   s.SessionData.AddressStreet2,
+			AddressLocality:   s.SessionData.AddressLocality,
+			AddressState:      s.SessionData.AddressState,
+			AddressPostalCode: s.SessionData.AddressPostalCode,
+			AddressCountry:    s.SessionData.AddressCountry,
+		},
+		CreatedAt: timestamppb.New(s.CreatedAt),
+		UpdatedAt: timestamppb.New(s.UpdatedAt),
+	}
+	if s.CompletedAt != nil {
+		info.CompletedAt = timestamppb.New(*s.CompletedAt)
+	}
+	if s.AbandonedAt != nil {
+		info.AbandonedAt = timestamppb.New(*s.AbandonedAt)
+	}
+	return info
 }
 
 func (h *gRPCHandler) UpdateAccount(ctx context.Context, req *pb.UpdateAccountRequest) (*pb.UpdateAccountResponse, error) {

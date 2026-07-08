@@ -200,6 +200,7 @@ func buildAllGroups() []apiendpoint.APIEndpointGroup {
 		}).APIEndpointGroup,
 		*(&httpgroup.WebhooksEndpointGroup{}).Materialize(&httpgroup.WebhooksEndpointGroupConfig{
 			BillingClient: billingClient,
+			CoreClient:    coreClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.AccountGroupsEndpointGroup{}).Materialize(&httpgroup.AccountGroupsEndpointGroupConfig{
 			CoreClient: coreClient,

@@ -177,7 +177,8 @@ func (c *checkoutClientImpl) CreateStripeCustomer(ctx context.Context, params do
 }
 
 func (c *checkoutClientImpl) ConstructWebhookEvent(payload []byte, signature, webhookSecret string) (*domain.StripeWebhookEvent, *domain.StripePaymentIntent, *apierror.APIError) {
-	event, err := gostripe.ConstructEvent(payload, signature, webhookSecret)
+	// Vendors pin their own Stripe API version, which will rarely match the version this SDK expects, so the default version-equality check would reject nearly every per-account event. Only version-stable fields (id, metadata, amount, payment_method_types) are read from the payload, which makes ignoring the mismatch safe.
+	event, err := gostripe.ConstructEvent(payload, signature, webhookSecret, gostripe.WithIgnoreAPIVersionMismatch())
 	if err != nil {
 		return nil, nil, apierror.NewValidationError(fmt.Sprintf("Failed to verify webhook signature: %v", err))
 	}

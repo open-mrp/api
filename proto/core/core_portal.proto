@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+// CoreService portal message types (imported by core.proto). Serves the
+// authenticated customer-portal seller profile, which includes the seller's
+// public letterhead address — distinct from the minimal, unauthenticated
+// PublicAccountInfo used by public auth pages.
+package core;
+
+import "google/protobuf/timestamp.proto";
+import "core/core_analytics.proto";
+option go_package = "shared/proto/core;core";
+
+// PortalProfileInfo is the seller's portal-facing profile for authenticated
+// customer-portal pages: identity plus the public letterhead address.
+message PortalProfileInfo {
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+  optional string logo_url = 4;
+  optional string support_email = 5;
+  // The seller's default billing address, used as the portal letterhead. Null when the account has none.
+  AddressInfo address = 6;
+}
+
+message GetPortalProfileBySlugRequest {
+  string slug = 1;
+}
+
+message GetPortalProfileBySlugResponse {
+  PortalProfileInfo profile = 1;
+}
+
+// Buyer customer-portal registration session.
+
+message PortalRegistrationSessionData {
+  string customer_name = 1;
+  string customer_number = 2;
+  string customer_group_id = 3;
+  string payment_term_id = 4;
+  string shipping_term_id = 5;
+  string phone = 6;
+  string address_name = 7;
+  string address_street_1 = 8;
+  string address_street_2 = 9;
+  string address_locality = 10;
+  string address_state = 11;
+  string address_postal_code = 12;
+  string address_country = 13;
+}
+
+message PortalRegistrationSessionInfo {
+  string id = 1;
+  string user_id = 2;
+  string seller_account_id = 3;
+  string seller_slug = 4;
+  optional bool is_existing_customer = 5;
+  string step = 6;
+  optional string customer_id = 7;
+  PortalRegistrationSessionData session_data = 8;
+  optional google.protobuf.Timestamp completed_at = 9;
+  optional google.protobuf.Timestamp abandoned_at = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+message CreateOrResumePortalRegistrationSessionRequest {
+  string seller_slug = 1;
+}
+
+message GetPortalRegistrationSessionRequest {
+  string type_id = 1;
+}
+
+message UpdatePortalRegistrationSessionRequest {
+  string type_id = 1;
+  string step = 2;
+  PortalRegistrationSessionData session_data = 3;
+  optional bool is_existing_customer = 4;
+}
+
+message CompletePortalRegistrationSessionRequest {
+  string type_id = 1;
+}
+
+message AbandonPortalRegistrationSessionRequest {
+  string type_id = 1;
+}
+
+message PortalRegistrationSessionResponse {
+  PortalRegistrationSessionInfo session = 1;
+}

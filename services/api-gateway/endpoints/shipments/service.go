@@ -13,6 +13,7 @@ import (
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
+	"github.com/augno/api/shared/ptrutil"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -251,10 +252,17 @@ func (m *shipmentSvcImpl) RateShop(ctx context.Context, req *RateShopRequest) (*
 		}
 	}
 
+	// Origin is optional: when the caller omits it, core resolves the account's
+	// ship-from origin server-side, so leave From nil here.
+	var fromProto *pb.AddressInput
+	if fromAddr, ok := req.FromAddress.Value(); ok {
+		fromProto = addressInputToProto(fromAddr)
+	}
+
 	pbReq := &pb.RateShopRequest{
 		ProductLineIds: req.ProductLineIDs,
 		CustomerId:     req.CustomerID.Ptr(),
-		From:           addressInputToProto(req.FromAddress),
+		From:           fromProto,
 		To:             addressInputToProto(req.ToAddress),
 		Parcels:        parcels,
 		OrderTotal:     req.OrderTotal.Ptr(),
@@ -385,11 +393,11 @@ func (m *shipmentSvcImpl) DeleteShipmentLine(ctx context.Context, req *DeleteShi
 func addressInputToProto(a apirequest.AddressInput) *pb.AddressInput {
 	return &pb.AddressInput{
 		Name:    a.Name,
-		Street1: derefStr(a.StreetLine1.Ptr()),
+		Street1: ptrutil.Deref(a.StreetLine1.Ptr()),
 		Street2: a.StreetLine2.Ptr(),
-		City:    derefStr(a.Locality.Ptr()),
-		State:   derefStr(a.State.Ptr()),
-		Zip:     derefStr(a.PostalCode.Ptr()),
+		City:    ptrutil.Deref(a.Locality.Ptr()),
+		State:   ptrutil.Deref(a.State.Ptr()),
+		Zip:     ptrutil.Deref(a.PostalCode.Ptr()),
 		Country: a.Country,
 		Phone:   a.Phone.Ptr(),
 		Email:   a.Email.Ptr(),
@@ -555,7 +563,7 @@ func shipmentFreightFromProto(s *pb.ShipmentInfo) *apiresource.Freight {
 		sl := &apiresource.ServiceLevel{
 			ID:     *s.ServiceLevelId,
 			Object: constants.ObjectTypeServiceLevel,
-			Name:   derefStr(s.ServiceLevelName),
+			Name:   ptrutil.Deref(s.ServiceLevelName),
 		}
 		if s.ServiceLevelIsPortalEnabled != nil && *s.ServiceLevelIsPortalEnabled {
 			sl.CustomerPortalVisibility = constants.CustomerPortalVisibilityVisible
@@ -752,11 +760,4 @@ func rateShopFromProto(resp *pb.RateShopResponse) *apiresource.RateShopResult {
 		ExemptionType: resp.ExemptionType,
 		FlatRate:      resp.FlatRate,
 	}
-}
-
-func derefStr(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
 }

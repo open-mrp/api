@@ -42,6 +42,7 @@ func (*AccountsEndpointGroup) Materialize(config *AccountsEndpointGroupConfig) *
 
 	getAccountEndpoint := apiendpoint.From(&accountep.RetrieveAccountEndpoint{}).WithService(inner, accountSvc)
 	getAccountBySlugEndpoint := apiendpoint.From(&accountep.RetrieveAccountBySlugEndpoint{}).WithService(inner, accountSvc)
+	getPortalProfileEndpoint := apiendpoint.From(&accountep.RetrievePortalProfileEndpoint{}).WithService(inner, accountSvc)
 	updateAccountEndpoint := apiendpoint.From(&accountep.UpdateAccountEndpoint{}).WithService(inner, accountSvc)
 	uploadAccountPhotoEndpoint := apiendpoint.From(&accountep.UploadAccountPhotoEndpoint{}).WithService(inner, accountSvc)
 	getAccountLogoURLEndpoint := apiendpoint.From(&accountep.GetAccountLogoURLEndpoint{}).WithService(inner, accountSvc)
@@ -49,6 +50,7 @@ func (*AccountsEndpointGroup) Materialize(config *AccountsEndpointGroupConfig) *
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		getAccountEndpoint,
 		getAccountBySlugEndpoint,
+		getPortalProfileEndpoint,
 		updateAccountEndpoint,
 		uploadAccountPhotoEndpoint,
 		getAccountLogoURLEndpoint,

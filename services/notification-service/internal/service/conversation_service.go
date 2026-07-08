@@ -25,6 +25,7 @@ import (
 	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/idempotency"
 	"github.com/augno/api/shared/messaging"
+	"github.com/augno/api/shared/ptrutil"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -1024,7 +1025,7 @@ func (s *conversationSvcImpl) SendMessage(ctx context.Context, input domain.Send
 	isCustomerReply := visibility == string(constants.MessageVisibilityExternal) && !rc.isCustomer
 	if isCustomerReply && conv.EmailInboxID != nil && *conv.EmailInboxID != "" {
 		subject := caseEmailSubject(input.Subject, conv.Title)
-		sent, apiErr := s.deliverInboxReply(ctx, input.ConversationID, part, "", "", strDeref(input.Body), subject, input.Cc)
+		sent, apiErr := s.deliverInboxReply(ctx, input.ConversationID, part, "", "", ptrutil.Deref(input.Body), subject, input.Cc)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
@@ -1064,7 +1065,7 @@ func (s *conversationSvcImpl) SendMessage(ctx context.Context, input domain.Send
 			Sequence:            seq,
 			Kind:                string(constants.MessageKindChat),
 			Visibility:          visibility,
-			Channel:             constants.MessageChannelPtr(constants.MessageChannelMessage),
+			Channel:             new(string(constants.MessageChannelMessage)),
 			SenderParticipantID: &part.ID,
 			ClientMessageID:     &clientMsgID,
 			Body:                input.Body,
@@ -1777,7 +1778,7 @@ func (s *conversationSvcImpl) createAgentReplyTx(txCtx context.Context, f domain
 		AccountID:           in.AccountID,
 		Sequence:            seq,
 		Kind:                string(constants.MessageKindAgent),
-		Channel:             constants.MessageChannelPtr(constants.MessageChannelMessage),
+		Channel:             new(string(constants.MessageChannelMessage)),
 		SenderParticipantID: &part.ID,
 		AgentRunID:          strPtrIfNotEmpty(in.AgentRunID),
 		ClientMessageID:     strPtrIfNotEmpty(in.ClientMessageID),
@@ -2216,7 +2217,7 @@ func (s *conversationSvcImpl) ScheduleMessage(ctx context.Context, input domain.
 			ID:                  scheduledID,
 			ConversationID:      input.ConversationID,
 			AccountID:           accountID,
-			Channel:             constants.MessageChannelPtr(constants.MessageChannelMessage),
+			Channel:             new(string(constants.MessageChannelMessage)),
 			SenderParticipantID: &part.ID,
 			Body:                &body,
 			Preview:             strPtrIfNotEmpty(truncatePreview(input.Body)),
@@ -2312,18 +2313,18 @@ func (s *conversationSvcImpl) deliverScheduledMessage(ctx context.Context, sm *d
 	repo := s.repoFactory.NewMessageRepo()
 
 	if sm.SenderParticipantID == nil || *sm.SenderParticipantID == "" {
-		_ = repo.MarkScheduledFailed(ctx, sm.ID, string(constants.MessageStatusFailed), ptr("scheduled message has no sender participant"))
+		_ = repo.MarkScheduledFailed(ctx, sm.ID, string(constants.MessageStatusFailed), new("scheduled message has no sender participant"))
 		return false
 	}
 
 	// Re-validate the conversation still exists and the sender is still an active participant.
 	if _, apiErr := s.repoFactory.NewConversationRepo().GetByID(ctx, sm.ConversationID, sm.AccountID); apiErr != nil {
-		_ = repo.MarkScheduledFailed(ctx, sm.ID, string(constants.MessageStatusCanceled), ptr("conversation no longer exists"))
+		_ = repo.MarkScheduledFailed(ctx, sm.ID, string(constants.MessageStatusCanceled), new("conversation no longer exists"))
 		return false
 	}
 	part, apiErr := s.repoFactory.NewParticipantRepo().GetByID(ctx, *sm.SenderParticipantID, sm.ConversationID)
 	if apiErr != nil || part.Membership != string(constants.ParticipantMembershipActive) {
-		_ = repo.MarkScheduledFailed(ctx, sm.ID, string(constants.MessageStatusCanceled), ptr("sender is no longer an active participant"))
+		_ = repo.MarkScheduledFailed(ctx, sm.ID, string(constants.MessageStatusCanceled), new("sender is no longer an active participant"))
 		return false
 	}
 
@@ -2367,7 +2368,7 @@ func (s *conversationSvcImpl) deliverScheduledMessage(ctx context.Context, sm *d
 	})
 	if apiErr != nil {
 		// Release any claim and leave it scheduled to retry next tick.
-		_ = repo.MarkScheduledFailed(ctx, sm.ID, string(constants.MessageStatusScheduled), ptr(apiErr.PublicMessage))
+		_ = repo.MarkScheduledFailed(ctx, sm.ID, string(constants.MessageStatusScheduled), new(apiErr.PublicMessage))
 		return false
 	}
 	return true
@@ -2875,7 +2876,7 @@ func (s *conversationSvcImpl) postSystemEvent(ctx context.Context, conversationI
 			AccountID:           accountID,
 			Sequence:            seq,
 			Kind:                string(constants.MessageKindSystemEvent),
-			Channel:             constants.MessageChannelPtr(constants.MessageChannelMessage),
+			Channel:             new(string(constants.MessageChannelMessage)),
 			SenderParticipantID: &senderParticipantID,
 			EventType:           &et,
 			Body:                &body,
@@ -2925,7 +2926,7 @@ func (s *conversationSvcImpl) PostConversationSystemEvent(ctx context.Context, i
 			AccountID:       in.AccountID,
 			Sequence:        seq,
 			Kind:            string(constants.MessageKindSystemEvent),
-			Channel:         constants.MessageChannelPtr(constants.MessageChannelMessage),
+			Channel:         new(string(constants.MessageChannelMessage)),
 			EventType:       &et,
 			Body:            &body,
 			Preview:         strPtrIfNotEmpty(truncatePreview(body)),

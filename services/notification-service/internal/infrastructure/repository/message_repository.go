@@ -246,7 +246,7 @@ func messageFromRow(row sqlc.Message) *domain.Message {
 		ClientMessageID:         db.StringFromNullString(row.ClientMessageID),
 		Body:                    db.StringFromNullString(row.Body),
 		Subject:                 db.StringFromNullString(row.Subject),
-		Channel:                 constants.MessageChannelPtr(constants.ResolveMessageChannel(db.StringFromNullString(row.Channel), row.Kind)),
+		Channel:                 new(string(constants.ResolveMessageChannel(db.StringFromNullString(row.Channel), row.Kind))),
 		SourceThreadMessageID:   db.StringFromNullString(row.SourceThreadMessageID),
 		ApprovedByAccountUserID: db.StringFromNullString(row.ApprovedByAccountUserID),
 		ScheduledFor:            db.TimeFromNullTime(row.ScheduledFor),
@@ -484,7 +484,7 @@ func (r *messageRepoImpl) MarkScheduledFailed(ctx context.Context, id, status st
 
 func resolveCreateChannel(m *domain.Message) *string {
 	if m.Channel != nil && *m.Channel != "" {
-		return constants.MessageChannelPtr(constants.ResolveMessageChannel(m.Channel, m.Kind))
+		return new(string(constants.ResolveMessageChannel(m.Channel, m.Kind)))
 	}
-	return constants.MessageChannelPtr(constants.ResolveMessageChannel(nil, m.Kind))
+	return new(string(constants.ResolveMessageChannel(nil, m.Kind)))
 }

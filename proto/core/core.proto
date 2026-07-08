@@ -13,6 +13,7 @@ import public "core/core_identity_context.proto";
 import public "core/core_analytics.proto";
 import public "core/core_account_groups.proto";
 import public "core/core_accounts_carriers.proto";
+import public "core/core_portal.proto";
 import public "core/core_items.proto";
 import public "core/core_consumption.proto";
 import public "core/core_users_territories.proto";
@@ -317,6 +318,16 @@ service CoreService {
 
   // Returns a public account by its portal slug (unauthenticated).
   rpc GetAccountBySlug(GetAccountBySlugRequest) returns (GetAccountBySlugResponse);
+
+  // Returns the authenticated seller portal profile (identity + letterhead address) by portal slug.
+  rpc GetPortalProfileBySlug(GetPortalProfileBySlugRequest) returns (GetPortalProfileBySlugResponse);
+
+  // Buyer customer-portal registration sessions.
+  rpc CreateOrResumePortalRegistrationSession(CreateOrResumePortalRegistrationSessionRequest) returns (PortalRegistrationSessionResponse);
+  rpc GetPortalRegistrationSession(GetPortalRegistrationSessionRequest) returns (PortalRegistrationSessionResponse);
+  rpc UpdatePortalRegistrationSession(UpdatePortalRegistrationSessionRequest) returns (PortalRegistrationSessionResponse);
+  rpc CompletePortalRegistrationSession(CompletePortalRegistrationSessionRequest) returns (PortalRegistrationSessionResponse);
+  rpc AbandonPortalRegistrationSession(AbandonPortalRegistrationSessionRequest) returns (PortalRegistrationSessionResponse);
 
   // Partially updates an account's name, branding, and portal fields.
   rpc UpdateAccount(UpdateAccountRequest) returns (UpdateAccountResponse);

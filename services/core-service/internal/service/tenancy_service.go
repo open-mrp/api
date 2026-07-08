@@ -10,6 +10,7 @@ import (
 	"github.com/augno/api/shared/appctx"
 	s3client "github.com/augno/api/shared/cloud/s3"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/ptrutil"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -281,8 +282,8 @@ func (s *tenancySvcImpl) buildTenancyResponse(ctx context.Context, currentAccoun
 	if currentAccount.RoleID != nil {
 		role = &domain.TenancyRole{
 			ID:       *currentAccount.RoleID,
-			Name:     derefStr(currentAccount.RoleName),
-			RoleType: derefStr(currentAccount.RoleType),
+			Name:     ptrutil.Deref(currentAccount.RoleName),
+			RoleType: ptrutil.Deref(currentAccount.RoleType),
 		}
 		if currentAccount.RoleCreatedAt != nil {
 			role.CreatedAt = *currentAccount.RoleCreatedAt
@@ -440,11 +441,4 @@ func filterActiveAccounts(allAccounts []domain.TenancyAccount, statusMap map[str
 		result = append(result, a)
 	}
 	return result
-}
-
-func derefStr(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
 }

@@ -16,10 +16,6 @@ service BillingService {
   // ProcessWebhookEvent verifies and processes an incoming Stripe webhook event.
   rpc ProcessWebhookEvent(ProcessWebhookEventRequest) returns (ProcessWebhookEventResponse);
 
-  // ProcessAccountWebhookEvent verifies and processes an incoming Stripe webhook
-  // event for a specific account using the account's Stripe credentials.
-  rpc ProcessAccountWebhookEvent(ProcessAccountWebhookEventRequest) returns (ProcessWebhookEventResponse);
-
   // CreateCustomer creates a Stripe customer for a registration session.
   rpc CreateCustomer(CreateCustomerRequest) returns (CreateCustomerResponse);
 
@@ -126,12 +122,6 @@ message ProcessWebhookEventRequest {
 message ProcessWebhookEventResponse {
   bool success = 1;
   bool is_duplicate = 2;
-}
-
-message ProcessAccountWebhookEventRequest {
-  bytes raw_payload = 1;
-  string stripe_signature = 2;
-  string account_id = 3;
 }
 
 message CreateCustomerRequest {

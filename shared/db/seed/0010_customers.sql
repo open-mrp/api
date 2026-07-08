@@ -39,8 +39,9 @@ WHERE id = 'ac_01k09wm2fgevdsc344gpbcj30f'
 INSERT IGNORE INTO user (id, name, username, email, hashed_password, email_verified, created_at, updated_at) VALUES
     ('us_01seedcustuser000000', 'Jane Doe', 'dev@augno.com', 'dev@augno.com', '$2a$10$w68CrxLdi9fdVttqNZMAZesPa2dJlsUrGNy39boKJXz81hyvX0m6y', NOW(), NOW(), NOW());
 
-INSERT IGNORE INTO account_user (id, user_id, account_id, created_at, updated_at) VALUES
-    ('acus_01seedcustuser00000', 'us_01seedcustuser000000', 'ac_01k09wm2fgevdsc344gpbcj30f', NOW(), NOW());
+-- role_id is the global Customer role (constants.GlobalCustomerRoleID), matching what cmd/backfill-customer-role assigns to every active account_user of a customer account in production. Without it this user has no permissions and internal-own-account reads (e.g. messaging:read for the notifications unread-count) 403.
+INSERT IGNORE INTO account_user (id, user_id, account_id, role_id, created_at, updated_at) VALUES
+    ('acus_01seedcustuser00000', 'us_01seedcustuser000000', 'ac_01k09wm2fgevdsc344gpbcj30f', 'rl_7vafmsquekgt', NOW(), NOW());
 
 -- Customer API key (owned by customer account, used for customer portal e2e tests)
 -- HMAC computed as: createHmac('sha256', 'pepper').update(secret).digest()

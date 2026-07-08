@@ -24,7 +24,9 @@ type RateShopRequest struct {
 	// A freight-exempt customer or a free-freight shipping term returns no options with `exemption_type` set to `freight_exempt`; a flat-rate shipping term replaces carrier rates with the flat rate.
 	CustomerID field.Optional[string] `json:"customer_id,omitzero"`
 	// Origin address.
-	FromAddress apirequest.AddressInput `json:"from_address" validate:"required"`
+	//
+	// When omitted, the account's configured ship-from origin is used.
+	FromAddress field.Optional[apirequest.AddressInput] `json:"from_address,omitzero"`
 	// Destination address.
 	ToAddress apirequest.AddressInput `json:"to_address" validate:"required"`
 	// Parcels to rate shop.
@@ -45,14 +47,14 @@ var (
 )
 
 var sampleRateShopRequest = &RateShopRequest{
-	FromAddress: apirequest.AddressInput{
+	FromAddress: field.Some(apirequest.AddressInput{
 		Name:        "Origin Warehouse",
 		StreetLine1: field.SomePtr(&sampleRateShopFromStreetLine1),
 		Locality:    field.SomePtr(&sampleRateShopFromLocality),
 		State:       field.SomePtr(&sampleRateShopFromState),
 		PostalCode:  field.SomePtr(&sampleRateShopFromPostalCode),
 		Country:     apiresource.SampleAddressCountry,
-	},
+	}),
 	ToAddress: apirequest.AddressInput{
 		Name:        "Destination",
 		StreetLine1: field.SomePtr(&sampleRateShopToStreetLine1),

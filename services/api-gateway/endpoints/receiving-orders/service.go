@@ -11,6 +11,7 @@ import (
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
+	"github.com/augno/api/shared/ptrutil"
 	"github.com/augno/api/shared/safeconv"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -325,21 +326,13 @@ func stashReceivingOrderFKs(ctx context.Context, id string, supplierID, supplier
 		meta.Set(constants.ObjectTypeReceivingOrder, id, "supplier", &apiresource.Supplier{
 			ID:     *supplierID,
 			Object: constants.ObjectTypeSupplier,
-			Name:   derefOrEmpty(supplierName),
-			Number: derefOrEmpty(supplierNumber),
+			Name:   ptrutil.Deref(supplierName),
+			Number: ptrutil.Deref(supplierNumber),
 		})
 	}
 	if purchaseOrderID != "" {
 		meta.Set(constants.ObjectTypeReceivingOrder, id, "purchase_order_id", purchaseOrderID)
 	}
-}
-
-// derefOrEmpty returns the pointed-to string or "" if nil.
-func derefOrEmpty(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
 }
 
 func receivingOrderLineFromProto(info *pb.ReceivingOrderLineInfo) apiresource.ReceivingOrderLine {

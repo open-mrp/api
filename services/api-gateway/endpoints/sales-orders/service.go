@@ -71,7 +71,7 @@ type salesOrderSvcImpl struct {
 
 var salesOrderEpSvcTracer = tracing.GetTracer("api-gateway.endpoints.sales-orders.service")
 
-var salesOrderIncludes = []string{"customer", "sales_rep", "bill_to_address", "ship_to_address", "freight", "payment_term", "shipping_term", "order_discount", "totals", "contacts", "related.pick", "related.production_run", "related.shipments", "lines", "lines.product", "lines.quantity_ordered", "lines.unit_price", "lines.unit_cost", "lines.totals"}
+var salesOrderIncludes = []string{"customer", "sales_rep", "bill_to_address", "ship_to_address", "freight", "payment_term", "shipping_term", "order_discount", "totals", "contacts", "related.pick", "related.production_run", "related.shipments", "lines", "lines.product", "lines.quantity_ordered", "lines.quantity_ordered.unit", "lines.unit_price", "lines.unit_price.numerator_unit", "lines.unit_price.denominator_unit", "lines.unit_cost", "lines.unit_cost.numerator_unit", "lines.unit_cost.denominator_unit", "lines.totals"}
 
 func (c *SalesOrderSvcConfig) validate() error {
 	if c.CoreClient == nil {
@@ -494,6 +494,7 @@ func salesOrderDetailFromProto(info *pb.SalesOrderInfo) apiresource.SalesOrder {
 		Note:                        info.Note,
 		AcknowledgmentStatus:        acknowledgmentStatusFromBool(info.IsAcknowledgmentSent),
 		PaymentStatus:               salesOrderPaymentStatusFromProto(info.PaymentStatus),
+		PaymentIntentIDs:            paymentIntentIDsFromProto(info.PaymentIntentIds),
 		Status:                      constants.SalesOrderStatusCode(info.StatusCode),
 		Priority:                    constants.PriorityCode(info.PriorityCode),
 		LineCount:                   info.LineCount,
@@ -588,6 +589,14 @@ func acknowledgmentStatusFromBool(sent bool) constants.AcknowledgmentStatus {
 		return constants.AcknowledgmentStatusSent
 	}
 	return constants.AcknowledgmentStatusNotSent
+}
+
+// paymentIntentIDsFromProto guarantees a non-nil slice so the field serializes as an empty JSON array rather than null.
+func paymentIntentIDsFromProto(ids []string) []string {
+	if ids == nil {
+		return []string{}
+	}
+	return ids
 }
 
 // salesOrderPaymentStatusFromProto maps the proto payment status to the resource
@@ -920,10 +929,32 @@ func stashSalesOrderLineMeta(meta *resourcekit.LoadMeta, info *pb.SalesOrderLine
 	if info.ProductId != nil {
 		meta.Set(constants.ObjectTypeSalesOrderLine, line.ID, "product_id", *info.ProductId)
 	}
-	meta.Set(constants.ObjectTypeSalesOrderLine, line.ID, "quantity_ordered", buildLineQuantityOrdered(info))
-	meta.Set(constants.ObjectTypeSalesOrderLine, line.ID, "unit_price", buildLineUnitPrice(info, line.CreatedAt, line.UpdatedAt))
+	// Quantity + its unit. quantity_ordered.unit is expandable: the proto carries only the
+	// unit FK, so stash it on the Quantity for LoadUnits to hydrate on ?include=...unit.
+	qty := buildLineQuantityOrdered(info)
+	meta.Set(constants.ObjectTypeSalesOrderLine, line.ID, "quantity_ordered", qty)
+	if info.QuantityUnitId != "" {
+		meta.Set(constants.ObjectTypeQuantity, qty.ID, "unit_id", info.QuantityUnitId)
+	}
+
+	// Unit price + its numerator/denominator units (unit_price.numerator_unit, ...).
+	unitPrice := buildLineUnitPrice(info, line.CreatedAt, line.UpdatedAt)
+	meta.Set(constants.ObjectTypeSalesOrderLine, line.ID, "unit_price", unitPrice)
+	if info.UnitPriceNumeratorUnitId != "" {
+		meta.Set(constants.ObjectTypeRate, unitPrice.ID, "numerator_unit_id", info.UnitPriceNumeratorUnitId)
+	}
+	if info.UnitPriceDenominatorUnitId != "" {
+		meta.Set(constants.ObjectTypeRate, unitPrice.ID, "denominator_unit_id", info.UnitPriceDenominatorUnitId)
+	}
+
 	if unitCost := buildLineUnitCost(info, line.CreatedAt, line.UpdatedAt); unitCost != nil {
 		meta.Set(constants.ObjectTypeSalesOrderLine, line.ID, "unit_cost", unitCost)
+		if info.UnitCostNumeratorUnitId != nil && *info.UnitCostNumeratorUnitId != "" {
+			meta.Set(constants.ObjectTypeRate, unitCost.ID, "numerator_unit_id", *info.UnitCostNumeratorUnitId)
+		}
+		if info.UnitCostDenominatorUnitId != nil && *info.UnitCostDenominatorUnitId != "" {
+			meta.Set(constants.ObjectTypeRate, unitCost.ID, "denominator_unit_id", *info.UnitCostDenominatorUnitId)
+		}
 	}
 	meta.Set(constants.ObjectTypeSalesOrderLine, line.ID, "totals", buildLineTotals(info))
 }

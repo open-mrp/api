@@ -8,6 +8,7 @@ import (
 
 	"github.com/augno/api/services/core-service/internal/domain"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/ptrutil"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -151,7 +152,7 @@ func (s *service) executeCustomerCompany(ctx context.Context, client domain.Hubs
 		companyID = mapping.HubspotID
 	case review != nil && review.Status == ReviewStatusSkipped:
 		return nil
-	case review != nil && review.Status == ReviewStatusResolved && deref(review.Resolution) == ReviewResolutionLink:
+	case review != nil && review.Status == ReviewStatusResolved && ptrutil.Deref(review.Resolution) == ReviewResolutionLink:
 		if review.ResolvedHubspotID == nil {
 			return apierror.NewInternalError(nil, "Resolved company review is missing the linked HubSpot company id.")
 		}
@@ -167,7 +168,7 @@ func (s *service) executeCustomerCompany(ctx context.Context, client domain.Hubs
 		}
 	}
 
-	if _, apiErr := s.upsertContact(ctx, client, accountID, customer.ID, deref(customer.Email), customer.Name, deref(customer.Phone), companyID, false); apiErr != nil {
+	if _, apiErr := s.upsertContact(ctx, client, accountID, customer.ID, ptrutil.Deref(customer.Email), customer.Name, ptrutil.Deref(customer.Phone), companyID, false); apiErr != nil {
 		return apiErr
 	}
 	return nil

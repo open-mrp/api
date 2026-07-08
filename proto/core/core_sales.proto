@@ -102,12 +102,25 @@ service CoreSalesService {
   // RecordOrderPayment links a succeeded Stripe payment intent to a sales order.
   // Called by the billing-service when a checkout session completes. Idempotent.
   rpc RecordOrderPayment(RecordOrderPaymentRequest) returns (google.protobuf.Empty);
+
+  // ProcessAccountStripeWebhook verifies a Stripe webhook event signed with an
+  // account's own webhook secret and links succeeded payment intents to their
+  // sales orders. Idempotent.
+  rpc ProcessAccountStripeWebhook(ProcessAccountStripeWebhookRequest) returns (google.protobuf.Empty);
 }
 
 // RecordOrderPaymentRequest links a Stripe payment intent to a sales order.
 message RecordOrderPaymentRequest {
   string sales_order_id = 1;
   string payment_intent_id = 2;
+}
+
+// ProcessAccountStripeWebhookRequest carries a raw Stripe webhook payload from
+// an account's connected Stripe account for verification and processing.
+message ProcessAccountStripeWebhookRequest {
+  string account_id = 1;
+  bytes raw_payload = 2;
+  string stripe_signature = 3;
 }
 
 // OrderDiscountInfo represents an order discount resource returned by the core-service.
@@ -356,6 +369,8 @@ message SalesOrderInfo {
   repeated string invoice_emails = 95;
   // Order acknowledgement email recipients (populated when contacts is included).
   repeated string acknowledgement_emails = 96;
+  // Stripe payment intent IDs recorded against this order. Always populated.
+  repeated string payment_intent_ids = 97;
 }
 
 // SalesOrderLineInfo represents a sales order line.

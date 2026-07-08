@@ -10,6 +10,7 @@ import (
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
+	"github.com/augno/api/shared/ptrutil"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -185,11 +186,11 @@ func (m *registrationFlowSvcImpl) RegisterCustomer(ctx context.Context, req *Reg
 
 	if addr, ok := req.Address.Value(); ok {
 		pbReq.Address = &pb.RegisterCustomerAddressInput{
-			StreetLine_1: derefStr(addr.StreetLine1.Ptr()),
+			StreetLine_1: ptrutil.Deref(addr.StreetLine1.Ptr()),
 			StreetLine_2: addr.StreetLine2.Ptr(),
-			Locality:     derefStr(addr.Locality.Ptr()),
-			State:        derefStr(addr.State.Ptr()),
-			PostalCode:   derefStr(addr.PostalCode.Ptr()),
+			Locality:     ptrutil.Deref(addr.Locality.Ptr()),
+			State:        ptrutil.Deref(addr.State.Ptr()),
+			PostalCode:   ptrutil.Deref(addr.PostalCode.Ptr()),
 			Country:      addr.Country,
 			Name:         &addr.Name,
 		}
@@ -205,13 +206,6 @@ func (m *registrationFlowSvcImpl) RegisterCustomer(ctx context.Context, req *Reg
 	}
 
 	return &apiresource.EmptyResource{}, nil
-}
-
-func derefStr(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
 }
 
 func registrationFlowOptionFromProto(opt *pb.RegistrationFlowOptionInfo) apiresource.RegistrationFlowOption {

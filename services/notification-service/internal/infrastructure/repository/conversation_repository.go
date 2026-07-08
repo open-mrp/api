@@ -307,7 +307,7 @@ func (r *conversationRepoImpl) ListInbox(ctx context.Context, filter domain.Supp
 	defer span.End()
 
 	// Unassigned is a presence-only narg (used solely in an IS NULL guard); pass any non-nil value to enable the "no assignee" filter, nil to disable it.
-	var unassigned interface{}
+	var unassigned any
 	if filter.Unassigned {
 		unassigned = true
 	}

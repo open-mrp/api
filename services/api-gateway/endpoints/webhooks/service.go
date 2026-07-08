@@ -11,8 +11,10 @@ import (
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/billing"
+	corepb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type WebhookSvc interface {
@@ -23,10 +25,14 @@ type WebhookSvc interface {
 type WebhookSvcConfig struct {
 	// BillingClient (required) is the billing-service gRPC client.
 	BillingClient pb.BillingServiceClient
+
+	// SalesClient (required) is the core-service sales gRPC client, which verifies and records per-account Stripe webhook events.
+	SalesClient corepb.CoreSalesServiceClient
 }
 
 type webhookSvcImpl struct {
 	billingClient pb.BillingServiceClient
+	salesClient   corepb.CoreSalesServiceClient
 }
 
 var webhookSvcTracer = tracing.GetTracer("api-gateway.endpoints.webhooks.service")
@@ -34,6 +40,9 @@ var webhookSvcTracer = tracing.GetTracer("api-gateway.endpoints.webhooks.service
 func (c *WebhookSvcConfig) validate() error {
 	if c.BillingClient == nil {
 		return fmt.Errorf("webhook endpoint service: billing client is required")
+	}
+	if c.SalesClient == nil {
+		return fmt.Errorf("webhook endpoint service: sales client is required")
 	}
 	return nil
 }
@@ -45,6 +54,7 @@ func NewWebhookSvc(config *WebhookSvcConfig) WebhookSvc {
 
 	return &webhookSvcImpl{
 		billingClient: config.BillingClient,
+		salesClient:   config.SalesClient,
 	}
 }
 
@@ -90,15 +100,15 @@ func (m *webhookSvcImpl) ProcessAccountWebhook(ctx context.Context, req *Account
 		"signature_length", len(req.Signature),
 	)
 
-	pbReq := &pb.ProcessAccountWebhookEventRequest{
+	pbReq := &corepb.ProcessAccountStripeWebhookRequest{
 		RawPayload:      req.RawBody,
 		StripeSignature: req.Signature,
 		AccountId:       req.AccountID,
 	}
 
 	_, apiErr := grpcutil.CallRPC(ctx, webhookSvcTracer, "service.webhooks.process_account_webhook", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ProcessWebhookEventResponse, error) {
-			return m.billingClient.ProcessAccountWebhookEvent(ctx, pbReq, opts...)
+		func(ctx context.Context, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+			return m.salesClient.ProcessAccountStripeWebhook(ctx, pbReq, opts...)
 		})
 
 	if apiErr != nil {

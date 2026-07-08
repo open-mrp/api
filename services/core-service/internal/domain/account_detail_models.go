@@ -49,6 +49,16 @@ type PublicAccountBySlug struct {
 	PortalDomain *string
 }
 
+// PortalProfile is the authenticated seller portal profile: identity plus the seller's public letterhead address. Served to logged-in customer-portal pages, unlike the minimal, unauthenticated PublicAccountBySlug.
+type PortalProfile struct {
+	ID           string
+	Name         string
+	Slug         string
+	LogoURL      *string
+	SupportEmail *string
+	Address      *Address
+}
+
 // UpdateAccountParams holds the optional fields for updating an account.
 type UpdateAccountParams struct {
 	AccountID       string

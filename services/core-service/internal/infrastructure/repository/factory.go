@@ -397,3 +397,7 @@ func (r *repoFactoryImpl) NewPricingRepo() domain.PricingRepo {
 func (r *repoFactoryImpl) NewPortalDomainRepo() domain.PortalDomainRepo {
 	return NewPortalDomainRepo(r.queries)
 }
+
+func (r *repoFactoryImpl) NewPortalRegistrationSessionRepo() domain.PortalRegistrationSessionRepo {
+	return NewPortalRegistrationSessionRepo(r.queries)
+}

@@ -604,6 +604,22 @@ resources:
               list_sales_target: '#/components/schemas/List_SalesTarget'
               sales_target: '#/components/schemas/SalesTarget'
               upsert_sales_target_request: '#/components/schemas/UpsertSalesTargetRequest'
+      portal_registration_sessions:
+        methods:
+          create: post /v1/sales/portal-registration-sessions
+          retrieve: get /v1/sales/portal-registration-sessions/{id}
+          update: patch /v1/sales/portal-registration-sessions/{id}
+        subresources:
+          actions:
+            methods:
+              complete: post /v1/sales/portal-registration-sessions/{id}/actions/complete
+              abandon: post /v1/sales/portal-registration-sessions/{id}/actions/abandon
+        models:
+          create_or_resume_portal_registration_session_request: '#/components/schemas/CreateOrResumePortalRegistrationSessionRequest'
+          portal_registration_session: '#/components/schemas/PortalRegistrationSession'
+          portal_registration_session_data: '#/components/schemas/PortalRegistrationSessionData'
+          portal_registration_session_data_input: '#/components/schemas/PortalRegistrationSessionDataInput'
+          update_portal_registration_session_request: '#/components/schemas/UpdatePortalRegistrationSessionRequest'
       priorities:
         methods:
           list: get /v1/sales/priorities
@@ -736,6 +752,8 @@ resources:
   settings:
     methods:
       retrieve_branding: get /v1/settings/branding/{slug}
+      retrieve_portal_profiles: get /v1/settings/portal-profiles/{slug}
+      retrieve_portal_hosts: get /v1/settings/portal-hosts/{domain}
     subresources:
       properties:
         methods:
@@ -749,6 +767,22 @@ resources:
           sys_property_type: '#/components/schemas/SysPropertyType'
           sys_property_value: '#/components/schemas/SysPropertyValue'
           update_sys_property_request: '#/components/schemas/UpdateSysPropertyRequest'
+      portal_domains:
+        methods:
+          create: post /v1/settings/portal-domains
+          list: get /v1/settings/portal-domains
+          retrieve: get /v1/settings/portal-domains/{id}
+          delete: delete /v1/settings/portal-domains/{id}
+        subresources:
+          actions:
+            methods:
+              verify: post /v1/settings/portal-domains/{id}/actions/verify
+        models:
+          create_portal_domain_request: '#/components/schemas/CreatePortalDomainRequest'
+          dns_record: '#/components/schemas/DNSRecord'
+          list_dns_record: '#/components/schemas/List_DNSRecord'
+          list_portal_domain: '#/components/schemas/List_PortalDomain'
+          portal_domain: '#/components/schemas/PortalDomain'
       integrations:
         methods:
           list: get /v1/settings/integrations
@@ -800,6 +834,7 @@ resources:
           list_account_integration: '#/components/schemas/List_AccountIntegration'
           update_account_integration_request: '#/components/schemas/UpdateAccountIntegrationRequest'
     models:
+      portal_profile: '#/components/schemas/PortalProfile'
       public_account: '#/components/schemas/PublicAccount'
   catalog:
     subresources:
@@ -1254,6 +1289,7 @@ resources:
           create: post /v1/messaging/email-domains
           list: get /v1/messaging/email-domains
           retrieve: get /v1/messaging/email-domains/{id}
+          delete: delete /v1/messaging/email-domains/{id}
         subresources:
           actions:
             methods:

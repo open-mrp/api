@@ -103,7 +103,7 @@ info "Seeding core-service data..."
 PLAN_CODE="enterprise"
 PLAN_ID="acpl_01seed000enterprise00002"
 
-for seed_file in shared/db/seed/*.sql; do
+for seed_file in shared/db/seed/*.sql shared/db/seed/e2e/*.sql; do
     if [ ! -f "$seed_file" ]; then
         continue
     fi

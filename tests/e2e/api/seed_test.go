@@ -15,6 +15,7 @@ const (
 	// Customers
 	SeedCustomerAccountID  = "ac_01k09wm2fgevdsc344gpbcj30f"
 	SeedCustomerName       = "Global Manufacturing Solutions"
+	SeedCustomerNumber     = "45678" // acre_01seedcustomer00000 relation number (acme → GMS); existing-customer registration lookup
 	SeedCustomerGroupID    = "acgp_01k0a413mjeth8pe1g70t0thax"
 	SeedCustomerGroupName  = "DME"
 	SeedAccountRelationID  = "acre_01seedcustomer00000"
@@ -54,7 +55,7 @@ const (
 	SeedPropertyName                        = "Color"
 	SeedAttributeID                         = "at_01seedbeige00000000"
 
-	// Catalog search rank fixtures (shared/db/seed/0014_e2e_extras.sql; list ?q=621).
+	// Catalog search rank fixtures (shared/db/seed/e2e/0014_e2e_extras.sql; list ?q=621).
 	SeedSearchRankQuery             = "621"
 	SeedPartSearchRankExactSKU      = "621"
 	SeedPartSearchRankTokenSKU      = "rkpt7f3a 621"
@@ -118,7 +119,7 @@ const (
 	// NO settlement allocation -> paid. Regression fixture for the reported bug
 	// where allocation-derived logic showed it unpaid.
 	SeedPaidNoAllocOrderID = "or_01seedpaidnoalloc00"
-	// List filter-coverage orders (shared/db/seed/0016_e2e_filter_coverage.sql).
+	// List filter-coverage orders (shared/db/seed/e2e/0016_e2e_filter_coverage.sql).
 	// Both use a far-future created_at so they stay on the first list page.
 	SeedInternalSalesOrderID = "or_01seedfcsointernal" // buyer == owner == SeedAccountID
 	SeedPOSalesOrderID       = "or_01seedfcsopo00000"  // carries SeedSalesOrderPONumber

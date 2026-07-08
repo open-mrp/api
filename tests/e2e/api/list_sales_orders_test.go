@@ -27,7 +27,7 @@ import (
 // start_date/end_date range, the batched line_count path, and several filters
 // combined.
 //
-// Seed data lives in shared/db/seed/0016_e2e_filter_coverage.sql; the
+// Seed data lives in shared/db/seed/e2e/0016_e2e_filter_coverage.sql; the
 // SeedInternalSalesOrderID / SeedPOSalesOrderID orders use a far-future
 // created_at so they stay on the first list page under parallel churn.
 

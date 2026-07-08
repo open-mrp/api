@@ -139,6 +139,14 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 		registry.RegisterGroup(portalDomainsGroup.APIEndpointGroup)
 	}
 
+	// Portal Registration Sessions
+	portalRegistrationSessionsGroup := (&httpgroup.PortalRegistrationSessionsEndpointGroup{}).Materialize(&httpgroup.PortalRegistrationSessionsEndpointGroupConfig{
+		CoreClient: config.CoreClient,
+	})
+	if portalRegistrationSessionsGroup != nil {
+		registry.RegisterGroup(portalRegistrationSessionsGroup.APIEndpointGroup)
+	}
+
 	// Account Statuses
 	accountStatusesGroup := (&httpgroup.AccountStatusesEndpointGroup{}).Materialize(&httpgroup.AccountStatusesEndpointGroupConfig{
 		CoreClient: config.CoreClient,
@@ -868,6 +876,7 @@ func (r *router) InitWebhookEndpointGroups(config WebhookRouterConfig) {
 	// Webhooks
 	webhooksGroup := (&httpgroup.WebhooksEndpointGroup{}).Materialize(&httpgroup.WebhooksEndpointGroupConfig{
 		BillingClient: config.BillingClient,
+		CoreClient:    config.CoreClient,
 	})
 	if webhooksGroup != nil {
 		registry.RegisterGroup(webhooksGroup.APIEndpointGroup)

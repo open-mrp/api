@@ -864,6 +864,45 @@ func (s *accountSvcImpl) GetAccountBySlug(ctx context.Context, slug string) (*do
 	return account, nil
 }
 
+// GetPortalProfileBySlug returns the authenticated seller portal profile (identity + letterhead address) by portal slug. Requires an assigned actor; the address is the seller account's own default billing address, resolved server-side so no cross-account scope is needed.
+func (s *accountSvcImpl) GetPortalProfileBySlug(ctx context.Context, slug string) (*domain.PortalProfile, *apierror.APIError) {
+	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_portal_profile_by_slug")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	account, apiErr := s.accountRepo.GetBySlug(ctx, slug)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	profile := &domain.PortalProfile{
+		ID:           account.ID,
+		Name:         account.Name,
+		Slug:         account.Slug,
+		LogoURL:      account.LogoURL,
+		SupportEmail: account.SupportEmail,
+	}
+
+	if account.DefaultBillingAddressID != nil && *account.DefaultBillingAddressID != "" {
+		addrs, apiErr := s.repos.NewAddressRepo().GetByIDs(ctx, account.ID, []string{*account.DefaultBillingAddressID})
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		if len(addrs) > 0 {
+			profile.Address = addrs[0]
+		}
+	}
+
+	return profile, nil
+}
+
 // UpdateAccount partially updates an account's name, branding fields, and/or portal slug.
 func (s *accountSvcImpl) UpdateAccount(ctx context.Context, params domain.UpdateAccountParams) (*domain.Account, *apierror.APIError) {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.update_account")

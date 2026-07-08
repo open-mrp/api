@@ -1,5 +1,14 @@
 package ptrutil
 
+// Deref returns the value of the given pointer as long as it's non-nil, and the zero value of T otherwise.
+func Deref[T any](ptr *T) T {
+	if ptr != nil {
+		return *ptr
+	}
+	var zero T
+	return zero
+}
+
 // ValOrDefault returns the value of the given pointer as long as it's non-nil, and the specified default value otherwise.
 func ValOrDefault[T any](ptr *T, defaultVal T) T {
 	if ptr != nil {

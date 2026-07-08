@@ -276,6 +276,7 @@ func salesOrderToProto(o *domain.SalesOrder) *pb.SalesOrderInfo {
 		InvoiceEmails:         o.InvoiceEmails,
 		AcknowledgementEmails: o.AcknowledgementEmails,
 		PaymentStatus:         string(o.PaymentStatus),
+		PaymentIntentIds:      o.PaymentIntentIDs,
 		CreatedAt:             timestamppb.New(o.CreatedAt),
 		UpdatedAt:             timestamppb.New(o.UpdatedAt),
 	}
@@ -930,6 +931,19 @@ func (h *salesGRPCHandler) RecordOrderPayment(ctx context.Context, req *pb.Recor
 	}
 
 	apiErr := h.salesOrderSvc.RecordOrderPayment(ctx, req.SalesOrderId, req.PaymentIntentId)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (h *salesGRPCHandler) ProcessAccountStripeWebhook(ctx context.Context, req *pb.ProcessAccountStripeWebhookRequest) (*emptypb.Empty, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	apiErr := h.salesOrderSvc.ProcessAccountStripeWebhook(ctx, req.AccountId, req.RawPayload, req.StripeSignature)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}

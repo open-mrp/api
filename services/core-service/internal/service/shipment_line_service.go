@@ -96,7 +96,10 @@ func (s *shipmentLineSvcImpl) ListShipmentLines(ctx context.Context, params doma
 
 	if identity.IsExternalTarget() {
 		meds := s.mediators()
-		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+		// Counterparty-aware: a customer-portal relation actor may read the shipment lines
+		// of their own order. Data stays scoped to Target.AccountID; the owner-side
+		// CheckReadAccess only allows the actor->target direction and wrongly rejects them.
+		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 	}
@@ -138,7 +141,10 @@ func (s *shipmentLineSvcImpl) GetShipmentLine(ctx context.Context, accountID, sh
 
 	if identity.IsExternalTarget() {
 		meds := s.mediators()
-		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+		// Counterparty-aware: a customer-portal relation actor may read the shipment lines
+		// of their own order. Data stays scoped to Target.AccountID; the owner-side
+		// CheckReadAccess only allows the actor->target direction and wrongly rejects them.
+		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 	}

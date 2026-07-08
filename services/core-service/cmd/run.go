@@ -267,6 +267,7 @@ func Run(
 		TxManager:       txManager,
 		EncryptionKey:   integrationEncryptionKey,
 		EncryptionKeyID: cfg.IntegrationEncryptionKeyID,
+		PlatformMode:    cfg.PlatformMode,
 	})
 
 	hubspotSync := hubspotsync.NewService(repoFactory, hubspotFactory, integrationEncryptionKey, hubspotsync.Config{})
@@ -583,6 +584,11 @@ func Run(
 		TxManager:       txManager,
 	})
 
+	portalRegistrationSessionSvc := service.NewPortalRegistrationSessionSvc(&service.PortalRegistrationSessionSvcConfig{
+		Repos:     repoFactory,
+		Registrar: registrationFlowSvc,
+	})
+
 	territorySvc := service.NewTerritorySvc(&service.TerritorySvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
@@ -678,6 +684,7 @@ func Run(
 	grpc.RegisterSupplierService(srv, supplierSvc)
 	grpc.RegisterSysPropertyService(srv, sysPropertySvc)
 	grpc.RegisterRegistrationFlowService(srv, registrationFlowSvc)
+	grpc.RegisterPortalRegistrationSessionService(srv, portalRegistrationSessionSvc)
 	grpc.RegisterTerritoryService(srv, territorySvc)
 	grpc.RegisterShippingService(srv, shipmentSvc, shipmentLineSvc)
 	grpc.RegisterAccountService(srv, accountSvc, sandboxSvc, accountStatusSvc)

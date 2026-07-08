@@ -187,6 +187,7 @@ func openAPIEndpointGroups() []apiendpoint.APIEndpointGroup {
 		}).APIEndpointGroup,
 		*(&httpgroup.WebhooksEndpointGroup{}).Materialize(&httpgroup.WebhooksEndpointGroupConfig{
 			BillingClient: billingClient,
+			CoreClient:    coreClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.AccountGroupsEndpointGroup{}).Materialize(&httpgroup.AccountGroupsEndpointGroupConfig{
 			CoreClient: coreClient,
@@ -231,6 +232,9 @@ func openAPIEndpointGroups() []apiendpoint.APIEndpointGroup {
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.PortalDomainsEndpointGroup{}).Materialize(&httpgroup.PortalDomainsEndpointGroupConfig{
+			CoreClient: coreClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.PortalRegistrationSessionsEndpointGroup{}).Materialize(&httpgroup.PortalRegistrationSessionsEndpointGroupConfig{
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.AccountIntegrationsEndpointGroup{}).Materialize(&httpgroup.AccountIntegrationsEndpointGroupConfig{

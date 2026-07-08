@@ -17,6 +17,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/messaging"
+	"github.com/augno/api/shared/ptrutil"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -108,11 +109,11 @@ func (s *messagingSvcImpl) SendNotification(ctx context.Context, input domain.Se
 		Category:                input.Category,
 		Kind:                    "alert",
 		Title:                   input.Title,
-		TemplateKey:             ptrToStr(input.TemplateKey),
+		TemplateKey:             ptrutil.Deref(input.TemplateKey),
 		TemplateParams:          input.TemplateParams,
-		LinkResourceType:        ptrToStr(input.LinkResourceType),
-		LinkResourceID:          ptrToStr(input.LinkResourceID),
-		Priority:                ptrToStr(input.Priority),
+		LinkResourceType:        ptrutil.Deref(input.LinkResourceType),
+		LinkResourceID:          ptrutil.Deref(input.LinkResourceID),
+		Priority:                ptrutil.Deref(input.Priority),
 		RecipientAccountUserIDs: []string{input.TargetID},
 	}
 	if input.Body != nil {
@@ -529,7 +530,7 @@ func (s *messagingSvcImpl) createBroadcastAnnouncement(ctx context.Context, iden
 		TemplateParams:   input.TemplateParams,
 		LinkResourceType: input.LinkResourceType,
 		LinkResourceID:   input.LinkResourceID,
-		Priority:         ptrToStr(input.Priority),
+		Priority:         ptrutil.Deref(input.Priority),
 		PublishAt:        time.Now(),
 		CreatedBy:        &createdBy,
 	}
@@ -673,13 +674,6 @@ func decodeCursor(cursor *string) (*time.Time, *string, *apierror.APIError) {
 		return nil, nil, apierror.NewParameterInvalidError("The cursor is invalid.", "cursor")
 	}
 	return &createdAt, &parts[1], nil
-}
-
-func ptrToStr(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
 }
 
 func strPtrIfNotEmpty(s string) *string {

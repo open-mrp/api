@@ -58,7 +58,7 @@ func TestCovCoreSearch_EntityFields_PurchaseOrder(t *testing.T) {
 
 	row := parseJSON(list.Data[0])
 	assertIDFormat(t, jsonField(row, "id"), "or")
-	assert.Equal(t, "or_01seedpurchord1_000", jsonField(row, "id")) // seed shared/db/seed/0014_e2e_extras.sql:704
+	assert.Equal(t, "or_01seedpurchord1_000", jsonField(row, "id")) // seed shared/db/seed/e2e/0014_e2e_extras.sql:704
 	assertObjectField(t, row, "entity")
 	assert.Equal(t, "purchase_order", jsonField(row, "type"))
 	assert.Equal(t, "PO-001", jsonField(row, "name"))

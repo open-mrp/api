@@ -33,7 +33,7 @@ func TestCovCoreAuditEvents_GetNotFound(t *testing.T) {
 
 // TestCovCoreAuditEvents_GetResponseShape closes the id-format/created_at gap.
 // It deliberately does NOT reuse the "adev_..." seed fixtures for the id-prefix
-// check: those are hand-authored literal ids in shared/db/seed/0014_e2e_extras.sql
+// check: those are hand-authored literal ids in shared/db/seed/e2e/0014_e2e_extras.sql
 // and don't reflect the real generator prefix. Verified live: the generator
 // (shared/id/id_prefix_values.go AuditEventIDPrefix = composePrefix(VocAudit,
 // VocEvent) = "au"+"ev") issues real ids like "auev_9uwb6800ic1tffc437p", so this

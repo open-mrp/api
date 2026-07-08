@@ -829,13 +829,14 @@ func estimateShippingRate(ctx context.Context, repos domain.RepoFactory, shippoF
 	// Check customer-level freight exemptions and shipping term logic.
 	if params.CustomerID != nil {
 		customerRepo := repos.NewCustomerRepo()
-		customer, apiErr := customerRepo.Get(ctx, params.AccountID, *params.CustomerID, nil)
+		// Price groups carry their own freight policy, so they must be hydrated to evaluate group-level freight exemption below.
+		customer, apiErr := customerRepo.Get(ctx, params.AccountID, *params.CustomerID, []string{"price_groups"})
 		if apiErr != nil {
 			return 0, apiErr
 		}
 
-		// Customer or customer group is freight exempt.
-		if customer.FreightPolicy == constants.FreightPolicyFree {
+		// Customer, its type group, or any price group is freight exempt.
+		if isCustomerOrGroupFreightExempt(customer) {
 			return 0, nil
 		}
 
@@ -944,6 +945,22 @@ func estimateShippingRate(ctx context.Context, repos domain.RepoFactory, shippoF
 	return rate, nil
 }
 
+// isCustomerOrGroupFreightExempt reports whether the customer, its type group, or any of its price groups is freight exempt, mirroring Dashboard's CustomerUtils.isCustomerOrGroupFreightExempt. PriceGroups must be hydrated on the customer for the group check to be meaningful.
+func isCustomerOrGroupFreightExempt(customer *domain.Customer) bool {
+	if customer.FreightPolicy == constants.FreightPolicyFree {
+		return true
+	}
+	if customer.TypeGroupFreightPolicy != nil && *customer.TypeGroupFreightPolicy == constants.FreightPolicyFree {
+		return true
+	}
+	for _, pg := range customer.PriceGroups {
+		if pg.FreightPolicy == constants.FreightPolicyFree {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *shipmentSvcImpl) RateShop(ctx context.Context, params domain.RateShopParams) (*domain.RateShopResult, *apierror.APIError) {
 	ctx, span := shipmentSvcTracer.Start(ctx, "service.shipment.rate_shop")
 	defer span.End()
@@ -980,6 +997,18 @@ func (s *shipmentSvcImpl) RateShop(ctx context.Context, params domain.RateShopPa
 	}
 
 	params.AccountID = identity.Target.AccountID
+
+	// Origin (ship-from) defaults to the seller account's configured origin (its default billing address) when the caller omits it — customer portals never send the seller's address.
+	if params.FromAddress.IsEmpty() {
+		origin, apiErr := s.repos.NewSalesOrderRepo().GetAccountOriginAddress(ctx, params.AccountID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		if origin != nil {
+			params.FromAddress = *origin
+		}
+	}
+
 	freightExemptResult := &domain.RateShopResult{
 		Options:       []*domain.RateShopOption{},
 		ExemptionType: new("freight_exempt"),
@@ -1008,22 +1037,25 @@ func (s *shipmentSvcImpl) RateShop(ctx context.Context, params domain.RateShopPa
 	if params.CustomerID != nil {
 		customerRepo := s.repos.NewCustomerRepo()
 		var apiErr *apierror.APIError
-		customer, apiErr = customerRepo.Get(ctx, params.AccountID, *params.CustomerID, nil)
+		// Price groups carry their own freight policy, so they must be hydrated to evaluate group-level freight exemption below.
+		customer, apiErr = customerRepo.Get(ctx, params.AccountID, *params.CustomerID, []string{"price_groups"})
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 
-		// Customer or customer group is freight exempt.
-		if customer.FreightPolicy == constants.FreightPolicyFree {
+		// Customer, its type group, or any price group is freight exempt.
+		if isCustomerOrGroupFreightExempt(customer) {
 			return freightExemptResult, nil
 		}
 
 		// 3. Check shipping term freight exemption.
 		if customer.DefaultShippingTermID != nil {
 			shippingTermRepo := s.repos.NewShippingTermRepo()
+			// The free-shipping service levels drive the per-option free-shipping rules applied during post-processing and are only hydrated when this include is requested.
 			shippingTerm, apiErr = shippingTermRepo.Get(ctx, domain.GetShippingTermParams{
 				AccountID:      params.AccountID,
 				ShippingTermID: *customer.DefaultShippingTermID,
+				Includes:       []string{"free_shipping_service_levels"},
 			})
 			if apiErr != nil {
 				return nil, tracing.Trace(span, apiErr)
@@ -1058,7 +1090,8 @@ func (s *shipmentSvcImpl) RateShop(ctx context.Context, params domain.RateShopPa
 		}
 	}
 
-	hasFlatRate := flatRateValue != nil
+	// A flat rate only applies when the term is not a carrier-rate term (mirrors Dashboard's `!isCarrierRate && !!flatRate`); a carrier-rate term keeps live carrier rates even if a stray flat-rate value is stored.
+	hasFlatRate := flatRateValue != nil && shippingTerm != nil && shippingTerm.Type != constants.ShippingTermTypeCarrierRateFreight
 	hasMinimumOrder := minimumOrderValue != nil
 	isMinimumOrderMet := hasMinimumOrder && params.OrderTotal != nil && *params.OrderTotal > *minimumOrderValue
 	hasFreeShippingRules := len(freeShippingOptionIDs) > 0
@@ -1103,30 +1136,40 @@ func (s *shipmentSvcImpl) RateShop(ctx context.Context, params domain.RateShopPa
 		carriers = filtered
 	}
 
-	// 5. Check if account has Shippo integration.
-	integrationRepo := s.repos.NewAccountIntegrationRepo()
-	hasShippoIntegration, apiErr := integrationRepo.HasIntegration(ctx, params.AccountID, constants.IntegrationCodeShippo)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+	// 5. Build a Shippo client only if a carrier actually needs live Shippo rates.
+	needsShippo := false
+	for _, carrier := range carriers {
+		if carrier.ShippoCarrierAccountID != nil && *carrier.ShippoCarrierAccountID != "" {
+			needsShippo = true
+			break
+		}
 	}
 
 	var shippoClient domain.ShippoClient
-	if hasShippoIntegration {
-		encryptedCreds, _, apiErr := integrationRepo.GetEncryptedCredentials(ctx, params.AccountID, constants.IntegrationCodeShippo)
+	if needsShippo {
+		integrationRepo := s.repos.NewAccountIntegrationRepo()
+		hasShippoIntegration, apiErr := integrationRepo.HasIntegration(ctx, params.AccountID, constants.IntegrationCodeShippo)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
-		apiKey, apiErr := decryptShippoAPIKey(encryptedCreds, s.encryptionKey, params.AccountID)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
+
+		if hasShippoIntegration {
+			encryptedCreds, _, apiErr := integrationRepo.GetEncryptedCredentials(ctx, params.AccountID, constants.IntegrationCodeShippo)
+			if apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
+			apiKey, apiErr := decryptShippoAPIKey(encryptedCreds, s.encryptionKey, params.AccountID)
+			if apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
+			shippoClient = s.shippoFactory.Build(apiKey)
 		}
-		shippoClient = s.shippoFactory.Build(apiKey)
 	}
 
 	// 6. For each carrier, fetch rates.
 	var allOptions []*domain.RateShopOption
 	for _, carrier := range carriers {
-		if carrier.ShippoCarrierAccountID == nil || *carrier.ShippoCarrierAccountID == "" || shippoClient == nil {
+		if carrier.ShippoCarrierAccountID == nil || *carrier.ShippoCarrierAccountID == "" {
 			// Non-Shippo carrier: include each option with rate 0.
 			for _, opt := range carrier.ServiceLevels {
 				allOptions = append(allOptions, &domain.RateShopOption{
@@ -1137,6 +1180,11 @@ func (s *shipmentSvcImpl) RateShop(ctx context.Context, params domain.RateShopPa
 					Rate:             0,
 				})
 			}
+			continue
+		}
+
+		// Carrier is Shippo-configured but the account has no live Shippo integration: contribute no options, mirroring Dashboard's fetchAllShippoRates returning an empty list (a Shippo carrier is never surfaced at a fabricated rate of 0).
+		if shippoClient == nil {
 			continue
 		}
 

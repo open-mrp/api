@@ -292,7 +292,7 @@ func (r *accountRelationRepoImpl) FindContactsByEmail(ctx context.Context, owner
 }
 
 // sqlValueToString coerces a dynamically-typed scan target (sqlc types CASE/COALESCE expressions as interface{}) to a string. The MySQL driver yields []byte for character results.
-func sqlValueToString(v interface{}) string {
+func sqlValueToString(v any) string {
 	switch t := v.(type) {
 	case string:
 		return t

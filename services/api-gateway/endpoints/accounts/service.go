@@ -18,6 +18,7 @@ import (
 type AccountSvc interface {
 	GetAccount(ctx context.Context, req *RetrieveAccountRequest) (*apiresource.Account, *apierror.APIError)
 	GetAccountBySlug(ctx context.Context, req *RetrieveAccountBySlugRequest) (*apiresource.PublicAccount, *apierror.APIError)
+	GetPortalProfileBySlug(ctx context.Context, req *RetrievePortalProfileRequest) (*apiresource.PortalProfile, *apierror.APIError)
 	UpdateAccount(ctx context.Context, req *UpdateAccountRequest) (*apiresource.Account, *apierror.APIError)
 	UploadAccountPhoto(ctx context.Context, req *UploadAccountPhotoRequest) (*apiresource.AccountPhotoUploadResult, *apierror.APIError)
 	GetAccountLogoURL(ctx context.Context, req *GetAccountLogoURLRequest) (*apiresource.AccountLogoURL, *apierror.APIError)
@@ -87,6 +88,77 @@ func (m *accountSvcImpl) GetAccountBySlug(ctx context.Context, req *RetrieveAcco
 
 	result := publicAccountFromProto(resp.Account)
 	return &result, nil
+}
+
+func (m *accountSvcImpl) GetPortalProfileBySlug(ctx context.Context, req *RetrievePortalProfileRequest) (*apiresource.PortalProfile, *apierror.APIError) {
+	pbReq := &pb.GetPortalProfileBySlugRequest{
+		Slug: req.Slug,
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, accountSvcTracer, "service.accounts.get_portal_profile_by_slug", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetPortalProfileBySlugResponse, error) {
+			return m.coreClient.GetPortalProfileBySlug(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	result := portalProfileFromProto(resp.Profile)
+	return &result, nil
+}
+
+func portalProfileFromProto(p *pb.PortalProfileInfo) apiresource.PortalProfile {
+	if p == nil {
+		return apiresource.PortalProfile{}
+	}
+
+	return apiresource.PortalProfile{
+		ID:           p.Id,
+		Object:       constants.ObjectTypePortalProfile,
+		Name:         p.Name,
+		Slug:         p.Slug,
+		LogoURL:      p.LogoUrl,
+		SupportEmail: p.SupportEmail,
+		Address:      portalProfileAddressFromProto(p.Address),
+	}
+}
+
+func portalProfileAddressFromProto(a *pb.AddressInfo) *apiresource.Address {
+	if a == nil {
+		return nil
+	}
+	addressType := constants.AddressTypeStandard
+	if a.IsDropShip {
+		addressType = constants.AddressTypeDropShip
+	}
+	return &apiresource.Address{
+		ID:          a.Id,
+		Object:      constants.ObjectTypeAddress,
+		Name:        a.Name,
+		Phone:       a.Phone,
+		Email:       a.Email,
+		Type:        addressType,
+		Geolocation: portalProfileGeolocationFromProto(a.Geolocation),
+		CreatedAt:   grpcutil.TimestampToTime(a.CreatedAt),
+		UpdatedAt:   grpcutil.TimestampToTime(a.UpdatedAt),
+	}
+}
+
+func portalProfileGeolocationFromProto(g *pb.GeolocationInfo) *apiresource.Geolocation {
+	if g == nil {
+		return nil
+	}
+	return &apiresource.Geolocation{
+		ID:          g.Id,
+		Object:      constants.ObjectTypeGeolocation,
+		StreetLine1: g.StreetLine_1,
+		StreetLine2: g.StreetLine_2,
+		Locality:    g.Locality,
+		State:       g.State,
+		PostalCode:  g.PostalCode,
+		Country:     g.Country,
+	}
 }
 
 func (m *accountSvcImpl) UpdateAccount(ctx context.Context, req *UpdateAccountRequest) (*apiresource.Account, *apierror.APIError) {

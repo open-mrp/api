@@ -7,6 +7,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	pb "github.com/augno/api/shared/proto/core"
+	"github.com/augno/api/shared/ptrutil"
 )
 
 // BatchQuantityPresenter converts a proto BatchQuantityInfo to an apiresource.Quantity.
@@ -40,13 +41,6 @@ func BatchQuantityPresenter(q *pb.BatchQuantityInfo) *apiresource.Quantity {
 	}
 }
 
-func derefStr(s *string) string {
-	if s != nil {
-		return *s
-	}
-	return ""
-}
-
 // BatchPresenter converts a proto BatchInfo to an apiresource.Batch.
 func BatchPresenter(b *pb.BatchInfo) apiresource.Batch {
 	if b == nil {
@@ -67,7 +61,7 @@ func BatchPresenter(b *pb.BatchInfo) apiresource.Batch {
 		scanningStation = &apiresource.ScanningStation{
 			ID:     *b.ScanningStationId,
 			Object: constants.ObjectTypeScanningStation,
-			Name:   derefStr(b.ScanningStationName),
+			Name:   ptrutil.Deref(b.ScanningStationName),
 		}
 	}
 
@@ -76,7 +70,7 @@ func BatchPresenter(b *pb.BatchInfo) apiresource.Batch {
 		productionStep = &apiresource.ProductionStep{
 			ID:     *b.ProductionStepId,
 			Object: constants.ObjectTypeProductionStep,
-			Name:   derefStr(b.ProductionStepName),
+			Name:   ptrutil.Deref(b.ProductionStepName),
 		}
 	}
 
@@ -85,7 +79,7 @@ func BatchPresenter(b *pb.BatchInfo) apiresource.Batch {
 		productionRun = &apiresource.ProductionRun{
 			ID:     *b.ProductionRunId,
 			Object: constants.ObjectTypeProductionRun,
-			Number: derefStr(b.ProductionRunNumber),
+			Number: ptrutil.Deref(b.ProductionRunNumber),
 		}
 	}
 
@@ -103,7 +97,7 @@ func BatchPresenter(b *pb.BatchInfo) apiresource.Batch {
 		department = &apiresource.Department{
 			ID:     *b.DepartmentId,
 			Object: constants.ObjectTypeDepartment,
-			Name:   derefStr(b.DepartmentName),
+			Name:   ptrutil.Deref(b.DepartmentName),
 		}
 	}
 
@@ -159,7 +153,7 @@ func BaseBatchPresenter(b *pb.BaseBatchInfo) apiresource.Batch {
 		scanningStation = &apiresource.ScanningStation{
 			ID:     *b.ScanningStationId,
 			Object: constants.ObjectTypeScanningStation,
-			Name:   derefStr(b.ScanningStationName),
+			Name:   ptrutil.Deref(b.ScanningStationName),
 		}
 	}
 
@@ -168,7 +162,7 @@ func BaseBatchPresenter(b *pb.BaseBatchInfo) apiresource.Batch {
 		productionStep = &apiresource.ProductionStep{
 			ID:     *b.ProductionStepId,
 			Object: constants.ObjectTypeProductionStep,
-			Name:   derefStr(b.ProductionStepName),
+			Name:   ptrutil.Deref(b.ProductionStepName),
 		}
 	}
 
@@ -177,7 +171,7 @@ func BaseBatchPresenter(b *pb.BaseBatchInfo) apiresource.Batch {
 		productionRun = &apiresource.ProductionRun{
 			ID:     *b.ProductionRunId,
 			Object: constants.ObjectTypeProductionRun,
-			Number: derefStr(b.ProductionRunNumber),
+			Number: ptrutil.Deref(b.ProductionRunNumber),
 		}
 	}
 
@@ -186,7 +180,7 @@ func BaseBatchPresenter(b *pb.BaseBatchInfo) apiresource.Batch {
 		department = &apiresource.Department{
 			ID:     *b.DepartmentId,
 			Object: constants.ObjectTypeDepartment,
-			Name:   derefStr(b.DepartmentName),
+			Name:   ptrutil.Deref(b.DepartmentName),
 		}
 	}
 

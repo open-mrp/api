@@ -17,6 +17,7 @@ import (
 	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/idempotency"
 	"github.com/augno/api/shared/messaging"
+	"github.com/augno/api/shared/ptrutil"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -475,7 +476,7 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 			// Send welcome email if user has an email and we generated a password for them. Suppliers are skipped: there is no supplier portal yet, so a supplier-relation user has nowhere to log in and does not need their generated password.
 			if params.Email != nil && generatedPassword != "" && !identity.IsTargetSupplierAccount() {
 				emailParams := map[string]any{
-					"Name":     stringOrDefault(params.Name, "there"),
+					"Name":     ptrutil.ValOrDefault(params.Name, "there"),
 					"Password": generatedPassword,
 				}
 
@@ -1058,13 +1059,6 @@ func (s *accountUserSvcImpl) BatchGetAccountUsersByIDs(ctx context.Context, ids 
 		item.ImageURL = s.resolveImageURL(ctx, identity.Target.AccountID, item.UserID, item.ImageURL != nil)
 	}
 	return users, nil
-}
-
-func stringOrDefault(s *string, def string) string {
-	if s == nil {
-		return def
-	}
-	return *s
 }
 
 // checkAccountUserReadPermission checks the appropriate read permission based on the target context. Internal actors targeting a customer account need customers:read; supplier account needs suppliers:read; own account needs team:read.

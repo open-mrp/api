@@ -15,6 +15,7 @@ import (
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/idempotency"
+	"github.com/augno/api/shared/ptrutil"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -189,7 +190,7 @@ func (s *billingSvcImpl) GetAccountUsage(ctx context.Context, accountID string) 
 	if subInfo.ServicingStatus != nil {
 		usage.Subscription = &domain.SubscriptionInfoResult{
 			ServicingStatus:  *subInfo.ServicingStatus,
-			CollectionStatus: derefStr(subInfo.CollectionStatus),
+			CollectionStatus: ptrutil.Deref(subInfo.CollectionStatus),
 		}
 	} else if subInfo.SubscriptionStatus != nil {
 		// Fallback to v1 status during migration transition
@@ -1318,11 +1319,4 @@ func formatAmount(cents int64) string {
 		return fmt.Sprintf("-$%d.%02d", dollars, remainder)
 	}
 	return fmt.Sprintf("$%d.%02d", dollars, remainder)
-}
-
-func derefStr(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
 }

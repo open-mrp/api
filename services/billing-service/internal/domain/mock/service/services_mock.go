@@ -118,6 +118,21 @@ func (mr *MockBillingSvcMockRecorder) GetAccountUsage(ctx, accountID any) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountUsage", reflect.TypeOf((*MockBillingSvc)(nil).GetAccountUsage), ctx, accountID)
 }
 
+// GetAgentSpendCents mocks base method.
+func (m *MockBillingSvc) GetAgentSpendCents(ctx context.Context, accountID string) (int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAgentSpendCents", ctx, accountID)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetAgentSpendCents indicates an expected call of GetAgentSpendCents.
+func (mr *MockBillingSvcMockRecorder) GetAgentSpendCents(ctx, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAgentSpendCents", reflect.TypeOf((*MockBillingSvc)(nil).GetAgentSpendCents), ctx, accountID)
+}
+
 // GetPlanByCode mocks base method.
 func (m *MockBillingSvc) GetPlanByCode(ctx context.Context, planCode string) (*domain.PricingPlan, *apierror.APIError) {
 	m.ctrl.T.Helper()

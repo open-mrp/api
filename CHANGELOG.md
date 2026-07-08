@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.41.4](https://github.com/Augno/api/compare/v0.41.3...v0.41.4) (2026-07-08)
+
+
+### Bug Fixes
+
+* handle unauthorized access in resource loaders and improve SQL query for frequently ordered products ([50302de](https://github.com/Augno/api/commit/50302defe5766f2ff2d24db520e68a93b7531620))
+
 ## [0.41.3](https://github.com/Augno/api/compare/v0.41.2...v0.41.3) (2026-07-08)
 
 

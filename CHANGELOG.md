@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.41.7](https://github.com/Augno/api/compare/v0.41.6...v0.41.7) (2026-07-09)
+
+
+### Bug Fixes
+
+* retry transient DB connection loss during credential validation ([#420](https://github.com/Augno/api/issues/420)) ([a62e858](https://github.com/Augno/api/commit/a62e858e625e946e3ee8bd28f0738c44134d4d36))
+* sales order related items ([#418](https://github.com/Augno/api/issues/418)) ([5fb1105](https://github.com/Augno/api/commit/5fb110589c530e1a41b7a41031e8c0425a442733))
+
 ## [0.41.6](https://github.com/Augno/api/compare/v0.41.5...v0.41.6) (2026-07-08)
 
 

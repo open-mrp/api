@@ -1584,7 +1584,6 @@ type RequestLog struct {
 	LatencyUs            int64
 	TargetAccountID      sql.NullString
 	PublicEndpoint       bool
-	Hidden               bool
 	ApiVersion           sql.NullString
 	AccountID            sql.NullString
 	ActorID              sql.NullString
@@ -1602,6 +1601,7 @@ type RequestLog struct {
 	StackTrace           sql.NullString
 	InternalErrorMessage sql.NullString
 	TraceID              sql.NullString
+	Hidden               bool
 }
 
 type Role struct {

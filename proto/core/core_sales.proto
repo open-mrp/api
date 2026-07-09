@@ -361,6 +361,7 @@ message SalesOrderInfo {
   // IDs of shipments linked to this order (populated when related.shipments is
   // requested). The gateway builds the related.shipments record list from these.
   repeated string shipment_ids = 93;
+  repeated string invoice_ids = 98;
   // Derived payment state: "unpaid", "partially_paid", or "paid". Always
   // populated; computed from settlement allocations vs. invoiced amounts plus
   // any Stripe payment intent.

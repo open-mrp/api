@@ -849,6 +849,7 @@ type SalesOrderRepo interface {
 	GetForCustomer(ctx context.Context, accountID, buyerAccountID, salesOrderID string) (*SalesOrder, *apierror.APIError)
 	GetLines(ctx context.Context, salesOrderID string) ([]*SalesOrderLine, *apierror.APIError)
 	GetShipmentIDs(ctx context.Context, salesOrderID string) ([]string, *apierror.APIError)
+	GetInvoiceIDs(ctx context.Context, salesOrderID string) ([]string, *apierror.APIError)
 	GetContactsByOrders(ctx context.Context, salesOrderIDs []string) (map[string]*SalesOrderContacts, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreateSalesOrderParams) (*SalesOrder, *apierror.APIError)
 	Update(ctx context.Context, params UpdateSalesOrderParams) (*SalesOrder, *apierror.APIError)

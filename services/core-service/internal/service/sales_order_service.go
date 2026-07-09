@@ -203,6 +203,16 @@ func (s *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, params domain.L
 		}
 	}
 
+	if includesSalesOrderInvoices(params.Includes) {
+		for _, order := range result.SalesOrders {
+			ids, apiErr := repo.GetInvoiceIDs(ctx, order.ID)
+			if apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
+			order.InvoiceIDs = ids
+		}
+	}
+
 	if includesSalesOrderContacts(params.Includes) {
 		if apiErr := attachSalesOrderContacts(ctx, repo, result.SalesOrders); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
@@ -287,6 +297,14 @@ func (s *salesOrderSvcImpl) GetSalesOrder(ctx context.Context, params domain.Get
 			return nil, tracing.Trace(span, apiErr)
 		}
 		order.ShipmentIDs = ids
+	}
+
+	if includesSalesOrderInvoices(params.Includes) {
+		ids, apiErr := repo.GetInvoiceIDs(ctx, params.SalesOrderID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		order.InvoiceIDs = ids
 	}
 
 	if includesSalesOrderContacts(params.Includes) {
@@ -2596,6 +2614,15 @@ func includesSalesOrderLines(includes []string) bool {
 func includesSalesOrderShipments(includes []string) bool {
 	for _, inc := range includes {
 		if inc == "related.shipments" {
+			return true
+		}
+	}
+	return false
+}
+
+func includesSalesOrderInvoices(includes []string) bool {
+	for _, inc := range includes {
+		if inc == "related.invoices" {
 			return true
 		}
 	}

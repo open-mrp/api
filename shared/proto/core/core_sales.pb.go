@@ -1467,6 +1467,7 @@ type SalesOrderInfo struct {
 	// IDs of shipments linked to this order (populated when related.shipments is
 	// requested). The gateway builds the related.shipments record list from these.
 	ShipmentIds []string `protobuf:"bytes,93,rep,name=shipment_ids,json=shipmentIds,proto3" json:"shipment_ids,omitempty"`
+	InvoiceIds  []string `protobuf:"bytes,98,rep,name=invoice_ids,json=invoiceIds,proto3" json:"invoice_ids,omitempty"`
 	// Derived payment state: "unpaid", "partially_paid", or "paid". Always
 	// populated; computed from settlement allocations vs. invoiced amounts plus
 	// any Stripe payment intent.
@@ -2158,6 +2159,13 @@ func (x *SalesOrderInfo) GetLineCount() int32 {
 func (x *SalesOrderInfo) GetShipmentIds() []string {
 	if x != nil {
 		return x.ShipmentIds
+	}
+	return nil
+}
+
+func (x *SalesOrderInfo) GetInvoiceIds() []string {
+	if x != nil {
+		return x.InvoiceIds
 	}
 	return nil
 }
@@ -6178,7 +6186,7 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"&BatchGetSalesOrderStatusesByIDsRequest\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\"w\n" +
 	"'BatchGetSalesOrderStatusesByIDsResponse\x12L\n" +
-	"\x14sales_order_statuses\x18\x01 \x03(\v2\x1a.core.SalesOrderStatusInfoR\x12salesOrderStatuses\"\xa56\n" +
+	"\x14sales_order_statuses\x18\x01 \x03(\v2\x1a.core.SalesOrderStatusInfoR\x12salesOrderStatuses\"\xc66\n" +
 	"\x0eSalesOrderInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x121\n" +
@@ -6287,7 +6295,9 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\x18shipping_term_updated_at\x18[ \x01(\v2\x1a.google.protobuf.TimestampHIR\x15shippingTermUpdatedAt\x88\x01\x01\x12\x1d\n" +
 	"\n" +
 	"line_count\x18\\ \x01(\x05R\tlineCount\x12!\n" +
-	"\fshipment_ids\x18] \x03(\tR\vshipmentIds\x12%\n" +
+	"\fshipment_ids\x18] \x03(\tR\vshipmentIds\x12\x1f\n" +
+	"\vinvoice_ids\x18b \x03(\tR\n" +
+	"invoiceIds\x12%\n" +
 	"\x0epayment_status\x18^ \x01(\tR\rpaymentStatus\x12%\n" +
 	"\x0einvoice_emails\x18_ \x03(\tR\rinvoiceEmails\x125\n" +
 	"\x16acknowledgement_emails\x18` \x03(\tR\x15acknowledgementEmails\x12,\n" +

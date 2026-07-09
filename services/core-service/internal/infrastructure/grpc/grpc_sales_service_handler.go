@@ -273,6 +273,7 @@ func salesOrderToProto(o *domain.SalesOrder) *pb.SalesOrderInfo {
 		ServiceLevelName:      o.ServiceLevelName,
 		LineCount:             o.LineCount,
 		ShipmentIds:           o.ShipmentIDs,
+		InvoiceIds:            o.InvoiceIDs,
 		InvoiceEmails:         o.InvoiceEmails,
 		AcknowledgementEmails: o.AcknowledgementEmails,
 		PaymentStatus:         string(o.PaymentStatus),

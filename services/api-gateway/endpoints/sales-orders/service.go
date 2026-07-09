@@ -71,7 +71,7 @@ type salesOrderSvcImpl struct {
 
 var salesOrderEpSvcTracer = tracing.GetTracer("api-gateway.endpoints.sales-orders.service")
 
-var salesOrderIncludes = []string{"customer", "sales_rep", "bill_to_address", "ship_to_address", "freight", "payment_term", "shipping_term", "order_discount", "totals", "contacts", "related.pick", "related.production_run", "related.shipments", "lines", "lines.product", "lines.quantity_ordered", "lines.quantity_ordered.unit", "lines.unit_price", "lines.unit_price.numerator_unit", "lines.unit_price.denominator_unit", "lines.unit_cost", "lines.unit_cost.numerator_unit", "lines.unit_cost.denominator_unit", "lines.totals"}
+var salesOrderIncludes = []string{"customer", "sales_rep", "bill_to_address", "ship_to_address", "freight", "payment_term", "shipping_term", "order_discount", "totals", "contacts", "related.pick", "related.production_run", "related.shipments", "related.invoices", "lines", "lines.product", "lines.quantity_ordered", "lines.quantity_ordered.unit", "lines.unit_price", "lines.unit_price.numerator_unit", "lines.unit_price.denominator_unit", "lines.unit_cost", "lines.unit_cost.numerator_unit", "lines.unit_cost.denominator_unit", "lines.totals"}
 
 func (c *SalesOrderSvcConfig) validate() error {
 	if c.CoreClient == nil {
@@ -673,6 +673,9 @@ func stashSalesOrderMeta(ctx context.Context, info *pb.SalesOrderInfo, d *apires
 	}
 	if len(info.ShipmentIds) > 0 {
 		meta.Set(constants.ObjectTypeSalesOrder, d.ID, "related_shipment_ids", info.ShipmentIds)
+	}
+	if len(info.InvoiceIds) > 0 {
+		meta.Set(constants.ObjectTypeSalesOrder, d.ID, "related_invoice_ids", info.InvoiceIds)
 	}
 
 	// Bill-to address

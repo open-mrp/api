@@ -60,6 +60,13 @@ func init() {
 				Populate:    populateShipmentsOnSORelated,
 			},
 			{
+				Key:         "related.invoices",
+				Target:      constants.ObjectTypeInvoice,
+				Cardinality: resourcekit.CardinalityList,
+				ExtractIDs:  extractInvoiceIDsFromSORelated,
+				Populate:    populateInvoicesOnSORelated,
+			},
+			{
 				Key:         "lines",
 				Target:      constants.ObjectTypeSalesOrderLine,
 				ExtractRefs: extractLineRefsFromSO,
@@ -211,6 +218,37 @@ func populateShipmentsOnSORelated(ctx context.Context, parent any, loaded map[st
 		return
 	}
 	ensureSORelated(so).Shipments = apiresource.NewList(records, apiresource.PageInfo{})
+}
+
+func extractInvoiceIDsFromSORelated(ctx context.Context, parent any) []string {
+	so := parent.(*apiresource.SalesOrder)
+	ids, _ := resourcekit.GetLoadMeta(ctx).GetStrings(constants.ObjectTypeSalesOrder, so.ID, "related_invoice_ids")
+	return ids
+}
+
+func populateInvoicesOnSORelated(ctx context.Context, parent any, loaded map[string]any) {
+	so := parent.(*apiresource.SalesOrder)
+	ids, _ := resourcekit.GetLoadMeta(ctx).GetStrings(constants.ObjectTypeSalesOrder, so.ID, "related_invoice_ids")
+	if len(ids) == 0 {
+		return
+	}
+	records := make([]apiresource.Record, 0, len(ids))
+	for _, id := range ids {
+		v, ok := loaded[id]
+		if !ok {
+			continue
+		}
+		inv := v.(*apiresource.Invoice)
+		rec := apiresource.NewRecord(id, constants.RecordTypeInvoice)
+		rec.Number = &inv.Number
+		status := string(inv.PaymentStatus)
+		rec.Status = &status
+		records = append(records, *rec)
+	}
+	if len(records) == 0 {
+		return
+	}
+	ensureSORelated(so).Invoices = apiresource.NewList(records, apiresource.PageInfo{})
 }
 
 func extractCustomerIDFromSO(ctx context.Context, parent any) []string {

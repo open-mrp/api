@@ -341,6 +341,7 @@ func init() {
 					{Key: "pick", ObjectType: constants.ObjectTypeRecord},
 					{Key: "production_run", ObjectType: constants.ObjectTypeRecord},
 					{Key: "shipments", ObjectType: constants.ObjectTypeRecord},
+					{Key: "invoices", ObjectType: constants.ObjectTypeRecord},
 				},
 			},
 			{Key: "lines", ObjectType: constants.ObjectTypeSalesOrderLine},

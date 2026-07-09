@@ -534,6 +534,36 @@ func (q *Queries) GetAccountOriginAddress(ctx context.Context, accountID string)
 	return i, err
 }
 
+const getInvoiceIDsBySalesOrder = `-- name: GetInvoiceIDsBySalesOrder :many
+SELECT inv.id
+FROM invoice inv
+WHERE inv.sales_order_id = ?
+ORDER BY inv.created_at, inv.id
+`
+
+func (q *Queries) GetInvoiceIDsBySalesOrder(ctx context.Context, salesOrderID string) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getInvoiceIDsBySalesOrder, salesOrderID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getOrderAcknowledgementRecipients = `-- name: GetOrderAcknowledgementRecipients :many
 SELECT u.email FROM order_email_contact oec
 JOIN account_user au ON au.id = oec.account_user_id

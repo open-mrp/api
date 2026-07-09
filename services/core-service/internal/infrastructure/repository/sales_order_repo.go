@@ -397,6 +397,17 @@ func (r *salesOrderRepoImpl) GetShipmentIDs(ctx context.Context, salesOrderID st
 	return ids, nil
 }
 
+func (r *salesOrderRepoImpl) GetInvoiceIDs(ctx context.Context, salesOrderID string) ([]string, *apierror.APIError) {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_invoice_ids")
+	defer span.End()
+
+	ids, err := r.queries.GetInvoiceIDsBySalesOrder(ctx, salesOrderID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return ids, nil
+}
+
 // GetContactsByOrders resolves the email recipients for a set of sales orders in a single batched query, grouping them per order by notification type so list pages avoid a per-order N+1.
 func (r *salesOrderRepoImpl) GetContactsByOrders(ctx context.Context, salesOrderIDs []string) (map[string]*domain.SalesOrderContacts, *apierror.APIError) {
 	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_contacts_by_orders")

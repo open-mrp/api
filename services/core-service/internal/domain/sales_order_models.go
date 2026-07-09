@@ -136,6 +136,8 @@ type SalesOrder struct {
 	// IDs of shipments linked to this order (populated when related.shipments is included).
 	ShipmentIDs []string
 
+	InvoiceIDs []string
+
 	// Invoice email recipients (populated when contacts is included).
 	InvoiceEmails []string
 

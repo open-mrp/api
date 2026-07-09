@@ -81,6 +81,7 @@ type SalesOrderRelated struct {
 	ProductionRun *Record `json:"production_run" expandable:"true"`
 	// Associated shipments, as lightweight record references.
 	Shipments *List[Record] `json:"shipments" expandable:"true"`
+	Invoices  *List[Record] `json:"invoices" expandable:"true"`
 }
 
 // Full sales order resource.

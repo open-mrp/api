@@ -1123,6 +1123,12 @@ FROM shipment s
 WHERE s.sales_order_id = sqlc.arg('sales_order_id')
 ORDER BY s.created_at, s.id;
 
+-- name: GetInvoiceIDsBySalesOrder :many
+SELECT inv.id
+FROM invoice inv
+WHERE inv.sales_order_id = sqlc.arg('sales_order_id')
+ORDER BY inv.created_at, inv.id;
+
 -- name: CountCommissionExemptProductLines :one
 -- For the given products, returns the number that have a product line (total) and
 -- how many of those product lines are commission-exempt (exempt). Mirrors Dashboard's

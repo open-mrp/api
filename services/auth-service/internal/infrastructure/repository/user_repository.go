@@ -25,10 +25,18 @@ func (r *userRepoImpl) Find(ctx context.Context, identifier string) (*types.User
 	ctx, span := userRepoTracer.Start(ctx, "repository.user.find")
 	defer span.End()
 
-	userModel, err := r.db.FindUserByIdentifier(ctx, sqlc.FindUserByIdentifierParams{
-		ID:       identifier,
-		Username: db.NullString(identifier),
-		Email:    db.NullString(identifier),
+	// Every authenticated request funnels through this lookup, so a dropped
+	// database connection (Vitess tablet failover, killed connection) must not
+	// surface as a 500. The read is idempotent, making a short retry safe.
+	var userModel sqlc.User
+	err := db.WithConnRetry(ctx, nil, "user.find_by_identifier", func() error {
+		var findErr error
+		userModel, findErr = r.db.FindUserByIdentifier(ctx, sqlc.FindUserByIdentifierParams{
+			ID:       identifier,
+			Username: db.NullString(identifier),
+			Email:    db.NullString(identifier),
+		})
+		return findErr
 	})
 
 	if apiErr := db.MapSQLError(err); apiErr != nil {

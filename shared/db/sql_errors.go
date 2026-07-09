@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"errors"
 	"net"
 	"strings"
@@ -48,7 +49,16 @@ func MapSQLError(err error) *apierror.APIError {
 			return apierror.NewInternalError(err, "Database request timed out.")
 		case 1040, 2002, 2006: // too many connections / conn refused / server gone
 			return apierror.NewInternalError(err, "Database unavailable.")
+		case 1053, 1927, 2013: // server shutdown / connection killed / lost conn during query
+			// Vitess/PlanetScale surfaces tablet failovers and dropped vttablet
+			// connections as these codes (e.g. 2013 "Lost connection to MySQL
+			// server during query" wrapping a gRPC Canceled/EOF).
+			return apierror.NewInternalError(err, "Database connection lost.")
 		}
+	}
+
+	if errors.Is(err, driver.ErrBadConn) || errors.Is(err, mysql.ErrInvalidConn) {
+		return apierror.NewInternalError(err, "Database connection lost.")
 	}
 
 	var pgErr *pgconn.PgError
@@ -116,6 +126,24 @@ func IsRetryableLockConflict(err error) bool {
 	}
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && (pgErr.Code == "40P01" || pgErr.Code == "40001")
+}
+
+// IsRetryableConnectionError reports whether err is a transient connection-level failure (connection refused, server gone away, connection killed, or lost mid-query — e.g. a Vitess tablet failover) that is safe to retry for an idempotent operation. It returns false when the caller's own context is canceled or past its deadline, since retrying then is pointless.
+func IsRetryableConnectionError(err error) bool {
+	if err == nil || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return false
+	}
+	if errors.Is(err, driver.ErrBadConn) || errors.Is(err, mysql.ErrInvalidConn) {
+		return true
+	}
+	var mysqlErr *mysql.MySQLError
+	if errors.As(err, &mysqlErr) {
+		switch mysqlErr.Number {
+		case 1053, 1927, 2002, 2006, 2013: // server shutdown / conn killed / conn refused / server gone / lost conn during query
+			return true
+		}
+	}
+	return false
 }
 
 // IsDuplicateEntry reports whether err is a MySQL 1062 (duplicate entry) error.

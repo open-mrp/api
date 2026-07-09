@@ -1,6 +1,10 @@
 package db
 
 import (
+	"context"
+	"database/sql"
+	"database/sql/driver"
+	"fmt"
 	"testing"
 
 	"github.com/go-sql-driver/mysql"
@@ -220,6 +224,94 @@ func TestIsRetryableLockConflict(t *testing.T) {
 	t.Run("returns false for non-lock errors", func(t *testing.T) {
 		err := &mysql.MySQLError{Number: 1062, Message: "Duplicate entry"}
 		assert.False(t, IsRetryableLockConflict(err))
+	})
+}
+
+func TestMapSQLError_ConnectionLoss(t *testing.T) {
+	t.Parallel()
+
+	t.Run("lost connection during query returns connection lost", func(t *testing.T) {
+		err := &mysql.MySQLError{Number: 2013, Message: "Lost connection to MySQL server during query"}
+		result := MapSQLError(err)
+		assert.NotNil(t, result)
+		assert.Equal(t, apierror.ErrorCodeInternalError, result.Code)
+		assert.Equal(t, "Database connection lost.", result.InternalMessage)
+	})
+
+	t.Run("connection killed returns connection lost", func(t *testing.T) {
+		err := &mysql.MySQLError{Number: 1927, Message: "Connection was killed"}
+		result := MapSQLError(err)
+		assert.NotNil(t, result)
+		assert.Equal(t, "Database connection lost.", result.InternalMessage)
+	})
+
+	t.Run("server shutdown returns connection lost", func(t *testing.T) {
+		err := &mysql.MySQLError{Number: 1053, Message: "Server shutdown in progress"}
+		result := MapSQLError(err)
+		assert.NotNil(t, result)
+		assert.Equal(t, "Database connection lost.", result.InternalMessage)
+	})
+
+	t.Run("driver bad connection returns connection lost", func(t *testing.T) {
+		result := MapSQLError(driver.ErrBadConn)
+		assert.NotNil(t, result)
+		assert.Equal(t, "Database connection lost.", result.InternalMessage)
+	})
+
+	t.Run("invalid connection returns connection lost", func(t *testing.T) {
+		result := MapSQLError(mysql.ErrInvalidConn)
+		assert.NotNil(t, result)
+		assert.Equal(t, "Database connection lost.", result.InternalMessage)
+	})
+}
+
+func TestIsRetryableConnectionError(t *testing.T) {
+	t.Parallel()
+
+	t.Run("returns true for lost connection during query", func(t *testing.T) {
+		err := &mysql.MySQLError{Number: 2013, Message: "Lost connection to MySQL server during query"}
+		assert.True(t, IsRetryableConnectionError(err))
+	})
+
+	t.Run("returns true for wrapped connection error", func(t *testing.T) {
+		err := fmt.Errorf("query failed: %w", &mysql.MySQLError{Number: 2006, Message: "MySQL server has gone away"})
+		assert.True(t, IsRetryableConnectionError(err))
+	})
+
+	t.Run("returns true for driver bad connection", func(t *testing.T) {
+		assert.True(t, IsRetryableConnectionError(driver.ErrBadConn))
+	})
+
+	t.Run("returns true for invalid connection", func(t *testing.T) {
+		assert.True(t, IsRetryableConnectionError(mysql.ErrInvalidConn))
+	})
+
+	t.Run("returns false for nil", func(t *testing.T) {
+		assert.False(t, IsRetryableConnectionError(nil))
+	})
+
+	t.Run("returns false for no rows", func(t *testing.T) {
+		assert.False(t, IsRetryableConnectionError(sql.ErrNoRows))
+	})
+
+	t.Run("returns false for duplicate entry", func(t *testing.T) {
+		err := &mysql.MySQLError{Number: 1062, Message: "Duplicate entry"}
+		assert.False(t, IsRetryableConnectionError(err))
+	})
+
+	t.Run("returns false for lock conflicts", func(t *testing.T) {
+		err := &mysql.MySQLError{Number: 1213, Message: "Deadlock found"}
+		assert.False(t, IsRetryableConnectionError(err))
+	})
+
+	t.Run("returns false when context is canceled", func(t *testing.T) {
+		err := fmt.Errorf("query failed: %w", context.Canceled)
+		assert.False(t, IsRetryableConnectionError(err))
+	})
+
+	t.Run("returns false when deadline exceeded", func(t *testing.T) {
+		err := fmt.Errorf("query failed: %w", context.DeadlineExceeded)
+		assert.False(t, IsRetryableConnectionError(err))
 	})
 }
 

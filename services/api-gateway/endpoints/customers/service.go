@@ -72,6 +72,8 @@ type CustomerSvc interface {
 	DeleteCustomer(ctx context.Context, req *DeleteCustomerRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	BulkDeleteCustomers(ctx context.Context, req *BulkDeleteCustomersRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	GetFrequentlyOrderedProducts(ctx context.Context, req *GetFrequentlyOrderedProductsRequest) (*apiresource.List[apiresource.FrequentlyOrderedProduct], *apierror.APIError)
+	ListNotificationRecipients(ctx context.Context, req *ListNotificationRecipientsRequest) (*apiresource.List[apiresource.OrderNotificationRecipient], *apierror.APIError)
+	UpdateNotificationRecipients(ctx context.Context, req *UpdateNotificationRecipientsRequest) (*apiresource.List[apiresource.OrderNotificationRecipient], *apierror.APIError)
 	MergeCustomers(ctx context.Context, req *MergeCustomersRequest) (*apiresource.Customer, *apierror.APIError)
 	UpdateCustomer(ctx context.Context, req *UpdateCustomerRequest) (*apiresource.Customer, *apierror.APIError)
 }
@@ -349,6 +351,96 @@ func (m *customerSvcImpl) GetFrequentlyOrderedProducts(ctx context.Context, req 
 	}
 
 	return apiresource.NewList(products, apiresource.PageInfo{}), nil
+}
+
+func (m *customerSvcImpl) ListNotificationRecipients(ctx context.Context, req *ListNotificationRecipientsRequest) (*apiresource.List[apiresource.OrderNotificationRecipient], *apierror.APIError) {
+	pbReq := &pb.ListCustomerNotificationRecipientsRequest{
+		CustomerId: req.CustomerID,
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, customerSvcTracer, "service.customers.list_notification_recipients", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListCustomerNotificationRecipientsResponse, error) {
+			return m.coreClient.ListCustomerNotificationRecipients(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return buildNotificationRecipients(ctx, resp.Recipients), nil
+}
+
+func (m *customerSvcImpl) UpdateNotificationRecipients(ctx context.Context, req *UpdateNotificationRecipientsRequest) (*apiresource.List[apiresource.OrderNotificationRecipient], *apierror.APIError) {
+	recipients := make([]*pb.CustomerNotificationRecipientInputProto, len(req.Recipients))
+	for i, r := range req.Recipients {
+		codes := make([]string, len(r.NotificationTypes))
+		for j, t := range r.NotificationTypes {
+			codes[j] = string(t)
+		}
+		recipients[i] = &pb.CustomerNotificationRecipientInputProto{
+			AccountUserId:         r.AccountUserID,
+			NotificationTypeCodes: codes,
+		}
+	}
+
+	pbReq := &pb.UpdateCustomerNotificationRecipientsRequest{
+		CustomerId: req.CustomerID,
+		Recipients: recipients,
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, customerSvcTracer, "service.customers.update_notification_recipients", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateCustomerNotificationRecipientsResponse, error) {
+			return m.coreClient.UpdateCustomerNotificationRecipients(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return buildNotificationRecipients(ctx, resp.Recipients), nil
+}
+
+// buildNotificationRecipients maps the core-service recipients into the API resource.
+// account_user is expandable and is hydrated inline only when ?include=account_user is
+// requested. Hydration happens in core-service (the recipients belong to the customer's
+// account, which the gateway's target-scoped account-user loader can't reach); the account
+// user's name/email live on its `user` sub-resource, which is not exposed here because the
+// global user loader is internal-only (portal relation actors can't use it) — clients resolve
+// names from the customer's own account-users list instead.
+func buildNotificationRecipients(ctx context.Context, protoRecipients []*pb.CustomerNotificationRecipientProto) *apiresource.List[apiresource.OrderNotificationRecipient] {
+	includeAccountUser := resourcekit.RequestedIncludeSet(ctx)["account_user"]
+
+	recipients := make([]apiresource.OrderNotificationRecipient, 0, len(protoRecipients))
+	for _, r := range protoRecipients {
+		notifTypes := make([]constants.AccountRelationNotificationType, 0, len(r.NotificationTypeCodes))
+		for _, code := range r.NotificationTypeCodes {
+			notifTypes = append(notifTypes, constants.AccountRelationNotificationType(code))
+		}
+		recipient := apiresource.OrderNotificationRecipient{
+			Object:            constants.ObjectTypeOrderNotificationRecipient,
+			NotificationTypes: notifTypes,
+		}
+		if includeAccountUser && r.AccountUser != nil {
+			recipient.AccountUser = accountUserFromRecipientProto(r.AccountUser)
+		}
+		recipients = append(recipients, recipient)
+	}
+
+	return apiresource.NewList(recipients, apiresource.PageInfo{})
+}
+
+// accountUserFromRecipientProto builds the base AccountUser resource from the hydrated proto
+// detail. Profile fields (name/email) live on the expandable `user` sub-resource and are left
+// unset here; clients resolve them via the account-users list scoped to the customer's account.
+func accountUserFromRecipientProto(au *pb.AccountUserDetail) *apiresource.AccountUser {
+	return &apiresource.AccountUser{
+		ID:         au.Id,
+		Object:     constants.ObjectTypeAccountUser,
+		Status:     constants.AccountUserStatus(au.StatusCode),
+		LastUsedAt: grpcutil.TimestampToTimePtr(au.LastUsedAt),
+		CreatedAt:  grpcutil.TimestampToTime(au.CreatedAt),
+		UpdatedAt:  grpcutil.TimestampToTime(au.UpdatedAt),
+	}
 }
 
 func (m *customerSvcImpl) MergeCustomers(ctx context.Context, req *MergeCustomersRequest) (*apiresource.Customer, *apierror.APIError) {

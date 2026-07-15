@@ -528,6 +528,58 @@ func (h *gRPCHandler) GetFrequentlyOrderedProducts(ctx context.Context, req *pb.
 	}, nil
 }
 
+func (h *gRPCHandler) ListCustomerNotificationRecipients(ctx context.Context, req *pb.ListCustomerNotificationRecipientsRequest) (*pb.ListCustomerNotificationRecipientsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	recipients, apiErr := h.customerSvc.ListCustomerNotificationRecipients(ctx, req.CustomerId)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.ListCustomerNotificationRecipientsResponse{
+		Recipients: notificationRecipientsToProto(recipients),
+	}, nil
+}
+
+func (h *gRPCHandler) UpdateCustomerNotificationRecipients(ctx context.Context, req *pb.UpdateCustomerNotificationRecipientsRequest) (*pb.UpdateCustomerNotificationRecipientsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	recipients := make([]domain.NotificationRecipientInput, len(req.Recipients))
+	for i, r := range req.Recipients {
+		recipients[i] = domain.NotificationRecipientInput{
+			AccountUserID:         r.AccountUserId,
+			NotificationTypeCodes: r.NotificationTypeCodes,
+		}
+	}
+
+	updated, apiErr := h.customerSvc.UpdateCustomerNotificationRecipients(ctx, domain.UpdateCustomerNotificationRecipientsParams{
+		CustomerAccountID: req.CustomerId,
+		Recipients:        recipients,
+	})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.UpdateCustomerNotificationRecipientsResponse{
+		Recipients: notificationRecipientsToProto(updated),
+	}, nil
+}
+
+func notificationRecipientsToProto(recipients []domain.NotificationRecipient) []*pb.CustomerNotificationRecipientProto {
+	out := make([]*pb.CustomerNotificationRecipientProto, len(recipients))
+	for i, r := range recipients {
+		out[i] = &pb.CustomerNotificationRecipientProto{
+			AccountUser:           accountUserDetailToProto(r.AccountUser),
+			NotificationTypeCodes: r.NotificationTypeCodes,
+		}
+	}
+	return out
+}
+
 func (h *gRPCHandler) MergeCustomers(ctx context.Context, req *pb.MergeCustomersRequest) (*pb.MergeCustomersResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

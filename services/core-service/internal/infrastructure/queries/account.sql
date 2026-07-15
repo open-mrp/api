@@ -206,6 +206,7 @@ SELECT
     ab.support_email AS branding_support_email,
     ab.phone_number AS branding_phone_number,
     ab.logo_url AS branding_logo_url,
+    ab.favicon_url AS branding_favicon_url,
     ab.facebook_handle AS branding_facebook_handle,
     ab.instagram_handle AS branding_instagram_handle,
     ab.linkedin_handle AS branding_linkedin_handle,
@@ -237,6 +238,7 @@ SELECT
     ab.support_email AS branding_support_email,
     ab.phone_number AS branding_phone_number,
     ab.logo_url AS branding_logo_url,
+    ab.favicon_url AS branding_favicon_url,
     ab.facebook_handle AS branding_facebook_handle,
     ab.instagram_handle AS branding_instagram_handle,
     ab.linkedin_handle AS branding_linkedin_handle,
@@ -260,7 +262,8 @@ SELECT
     a.default_billing_address_id,
     ap.slug,
     ab.support_email,
-    ab.logo_url
+    ab.logo_url,
+    ab.favicon_url
 FROM account_portal ap
 JOIN account a ON a.id = ap.owner_account_id
 LEFT JOIN account_branding ab ON ab.owner_account_id = a.id
@@ -296,3 +299,9 @@ UPDATE account_branding SET logo_url = sqlc.arg('logo_url'), updated_at = NOW(3)
 
 -- name: GetAccountBrandingLogoKey :one
 SELECT logo_url FROM account_branding WHERE owner_account_id = sqlc.arg('account_id');
+
+-- name: UpdateAccountBrandingFaviconURL :exec
+UPDATE account_branding SET favicon_url = sqlc.arg('favicon_url'), updated_at = NOW(3) WHERE owner_account_id = sqlc.arg('account_id');
+
+-- name: GetAccountBrandingFaviconKey :one
+SELECT favicon_url FROM account_branding WHERE owner_account_id = sqlc.arg('account_id');

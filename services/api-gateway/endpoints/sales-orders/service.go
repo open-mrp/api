@@ -6,12 +6,15 @@ import (
 	"strings"
 	"time"
 
+	productionrunep "github.com/augno/api/services/api-gateway/endpoints/production-runs"
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"github.com/shopspring/decimal"
@@ -54,10 +57,12 @@ type SalesOrderSvc interface {
 	OpenSalesOrder(ctx context.Context, req *OpenSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError)
 	CheckoutSalesOrder(ctx context.Context, req *CheckoutSalesOrderRequest) (*CheckoutSalesOrderResponse, *apierror.APIError)
 	QuoteSalesOrderPrices(ctx context.Context, req *QuoteSalesOrderPricesRequest) (*QuoteSalesOrderPricesResponse, *apierror.APIError)
-	CreateSalesOrderProductionRun(ctx context.Context, req *CreateProductionRunRequest) (*CreateProductionRunResponse, *apierror.APIError)
+	QuoteSalesOrderFreight(ctx context.Context, req *QuoteSalesOrderFreightRequest) (*QuoteSalesOrderFreightResponse, *apierror.APIError)
+	CreateSalesOrderProductionRun(ctx context.Context, req *CreateProductionRunRequest) (*apiresource.ProductionRun, *apierror.APIError)
 	CreateSalesOrderLine(ctx context.Context, req *CreateSalesOrderLineRequest) (*apiresource.SalesOrderLine, *apierror.APIError)
 	UpdateSalesOrderLine(ctx context.Context, req *UpdateSalesOrderLineRequest) (*apiresource.SalesOrderLine, *apierror.APIError)
 	DeleteSalesOrderLine(ctx context.Context, req *DeleteSalesOrderLineRequest) (*apiresource.EmptyResource, *apierror.APIError)
+	ReorderSalesOrderLines(ctx context.Context, req *ReorderSalesOrderLinesRequest) (*apiresource.EmptyResource, *apierror.APIError)
 }
 
 type SalesOrderSvcConfig struct {
@@ -118,10 +123,13 @@ func (m *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, req *ListSalesO
 	}
 
 	orders := make([]apiresource.SalesOrder, len(resp.SalesOrders))
+	orderIDs := make([]string, len(resp.SalesOrders))
 	for i, o := range resp.SalesOrders {
 		orders[i] = salesOrderDetailFromProto(o)
 		stashSalesOrderMeta(ctx, o, &orders[i])
+		orderIDs[i] = orders[i].ID
 	}
+	hydrateSalesReps(ctx, orderIDs)
 
 	return apiresource.NewList(orders, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
@@ -143,6 +151,7 @@ func (m *salesOrderSvcImpl) GetSalesOrder(ctx context.Context, req *RetrieveSale
 
 	result := salesOrderDetailFromProto(resp.SalesOrder)
 	stashSalesOrderMeta(ctx, resp.SalesOrder, &result)
+	hydrateSalesReps(ctx, []string{result.ID})
 	return &result, nil
 }
 
@@ -205,31 +214,41 @@ func (m *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, req *CreateSal
 
 	result := salesOrderDetailFromProto(resp.SalesOrder)
 	stashSalesOrderMeta(ctx, resp.SalesOrder, &result)
+	hydrateSalesReps(ctx, []string{result.ID})
 	return &result, nil
 }
 
 func (m *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, req *UpdateSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError) {
-	var carrierBillingType *string
-	if v, ok := req.CarrierBillingType.Value(); ok {
+	// Clearable enum: map Clearable[CarrierBillingType] to a StringPatch (clear vs set vs leave).
+	var carrierBillingTypePatch *pb.StringPatch
+	switch {
+	case req.CarrierBillingType.IsClear():
+		carrierBillingTypePatch = &pb.StringPatch{Clear: true}
+	case req.CarrierBillingType.IsSet():
+		v, _ := req.CarrierBillingType.Value()
 		s := string(v)
-		carrierBillingType = &s
+		carrierBillingTypePatch = &pb.StringPatch{Value: &s}
 	}
 
 	pbReq := &pb.UpdateSalesOrderRequest{
-		Id:                           req.SalesOrderID,
-		CustomerPoNumber:             req.CustomerPurchaseOrderNumber.Ptr(),
-		Note:                         req.Note.Ptr(),
+		Id: req.SalesOrderID,
+		// Clearable nullable fields → *Patch (clear / set / leave).
+		CustomerPoNumber:      field.StringClearableToProto(req.CustomerPurchaseOrderNumber),
+		Note:                  field.StringClearableToProto(req.Note),
+		ServiceLevelId:        field.StringClearableToProto(req.ServiceLevelID),
+		CarrierBillingType:    carrierBillingTypePatch,
+		CarrierBillingAccount: field.StringClearableToProto(req.CarrierBillingAccountNumber),
+		SalesRepId:            field.StringClearableToProto(req.SalesRepID),
+		OrderDiscountId:       field.StringClearableToProto(req.OrderDiscountID),
+		PromisedAt:            field.TimestampClearableToProto(req.PromisedAt),
+		// Non-nullable optional fields → *string (set or leave; not clearable).
 		CarrierId:                    req.CarrierID.Ptr(),
-		ServiceLevelId:               req.ServiceLevelID.Ptr(),
-		CarrierBillingType:           carrierBillingType,
-		CarrierBillingAccount:        req.CarrierBillingAccountNumber.Ptr(),
 		PriorityCode:                 req.PriorityCode.Ptr(),
-		SalesRepId:                   req.SalesRepID.Ptr(),
 		ShippingTermId:               req.ShippingTermID.Ptr(),
 		PaymentTermId:                req.PaymentTermID.Ptr(),
-		OrderDiscountId:              req.OrderDiscountID.Ptr(),
 		BillingAddressId:             req.BillingAddressID.Ptr(),
 		ShippingAddressId:            req.ShippingAddressID.Ptr(),
+		CustomerId:                   req.CustomerID.Ptr(),
 		AcknowledgementEmailContacts: toSalesOrderEmailContactList(req.AcknowledgementEmailContacts.Ptr()),
 		InvoiceEmailContacts:         toSalesOrderEmailContactList(req.InvoiceEmailContacts.Ptr()),
 		Includes:                     resourcekit.FilterIncludes(ctx, salesOrderIncludes...),
@@ -250,6 +269,7 @@ func (m *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, req *UpdateSal
 
 	result := salesOrderDetailFromProto(resp.SalesOrder)
 	stashSalesOrderMeta(ctx, resp.SalesOrder, &result)
+	hydrateSalesReps(ctx, []string{result.ID})
 	return &result, nil
 }
 
@@ -286,15 +306,15 @@ func (m *salesOrderSvcImpl) IssueSalesOrder(ctx context.Context, req *IssueSales
 }
 
 func (m *salesOrderSvcImpl) UnissueSalesOrder(ctx context.Context, req *UnissueSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError) {
-	return m.changeSalesOrderStatus(ctx, req.SalesOrderID, constants.SalesOrderStatusChangeUnissue, req.NotifyCustomer)
+	return m.changeSalesOrderStatus(ctx, req.SalesOrderID, constants.SalesOrderStatusChangeUnissue, false)
 }
 
 func (m *salesOrderSvcImpl) CloseSalesOrder(ctx context.Context, req *CloseSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError) {
-	return m.changeSalesOrderStatus(ctx, req.SalesOrderID, constants.SalesOrderStatusChangeClose, req.NotifyCustomer)
+	return m.changeSalesOrderStatus(ctx, req.SalesOrderID, constants.SalesOrderStatusChangeClose, false)
 }
 
 func (m *salesOrderSvcImpl) OpenSalesOrder(ctx context.Context, req *OpenSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError) {
-	return m.changeSalesOrderStatus(ctx, req.SalesOrderID, constants.SalesOrderStatusChangeOpen, req.NotifyCustomer)
+	return m.changeSalesOrderStatus(ctx, req.SalesOrderID, constants.SalesOrderStatusChangeOpen, false)
 }
 
 // changeSalesOrderStatus performs a sales order status transition via the core
@@ -318,15 +338,14 @@ func (m *salesOrderSvcImpl) changeSalesOrderStatus(ctx context.Context, id strin
 
 	result := salesOrderDetailFromProto(resp.SalesOrder)
 	stashSalesOrderMeta(ctx, resp.SalesOrder, &result)
+	hydrateSalesReps(ctx, []string{result.ID})
 	return &result, nil
 }
 
 func (m *salesOrderSvcImpl) CheckoutSalesOrder(ctx context.Context, req *CheckoutSalesOrderRequest) (*CheckoutSalesOrderResponse, *apierror.APIError) {
 	pbReq := &pb.CheckoutSalesOrderRequest{
-		Id:         req.SalesOrderID,
-		Email:      req.Email,
-		SuccessUrl: req.SuccessURL.Ptr(),
-		CancelUrl:  req.CancelURL.Ptr(),
+		Id:    req.SalesOrderID,
+		Email: req.Email,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.checkout", domain.ServiceName,
@@ -366,23 +385,123 @@ func (m *salesOrderSvcImpl) QuoteSalesOrderPrices(ctx context.Context, req *Quot
 		return nil, apiErr
 	}
 
+	unitIDs := make([]string, 0, len(resp.Lines)*2)
+	productIDs := make([]string, 0, len(resp.Lines))
+	for _, l := range resp.Lines {
+		unitIDs = append(unitIDs, l.UnitPriceNumeratorUnitId, l.UnitPriceDenominatorUnitId)
+		productIDs = append(productIDs, l.ProductId)
+	}
+	units, apiErr := m.hydrateQuoteUnits(ctx, unitIDs...)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	products, apiErr := m.hydrateQuoteProducts(ctx, productIDs...)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
 	out := make([]QuotedSalesOrderLine, len(resp.Lines))
 	for i, l := range resp.Lines {
 		out[i] = QuotedSalesOrderLine{
-			ProductID:                  l.ProductId,
-			UnitPriceValue:             l.UnitPriceValue,
-			UnitPriceNumeratorUnitID:   l.UnitPriceNumeratorUnitId,
-			UnitPriceDenominatorUnitID: l.UnitPriceDenominatorUnitId,
+			Object:    constants.ObjectTypeSalesOrderPriceQuoteLine,
+			Product:   products[l.ProductId],
+			UnitPrice: newSalesOrderQuoteRate(l.UnitPriceValue, units[l.UnitPriceNumeratorUnitId], units[l.UnitPriceDenominatorUnitId]),
 		}
 	}
 
 	return &QuoteSalesOrderPricesResponse{
 		Object: constants.ObjectTypeSalesOrderPriceQuote,
-		Lines:  out,
+		Lines:  apiresource.NewList(out, apiresource.PageInfo{}),
 	}, nil
 }
 
-func (m *salesOrderSvcImpl) CreateSalesOrderProductionRun(ctx context.Context, req *CreateProductionRunRequest) (*CreateProductionRunResponse, *apierror.APIError) {
+// hydrateQuoteUnits batch-loads fully presented Unit resources for the given unit IDs so quote rates present their units the same way persisted resources do. The core quote RPCs return only unit IDs, so the gateway resolves them here. Returns a lookup keyed by unit ID; a missing ID simply maps to nil.
+func (m *salesOrderSvcImpl) hydrateQuoteUnits(ctx context.Context, ids ...string) (map[string]*apiresource.Unit, *apierror.APIError) {
+	unique := make([]string, 0, len(ids))
+	seen := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		if id == "" {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		unique = append(unique, id)
+	}
+	if len(unique) == 0 {
+		return map[string]*apiresource.Unit{}, nil
+	}
+
+	loaded, apiErr := resourceloaders.LoadUnits(ctx, unique)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	out := make(map[string]*apiresource.Unit, len(loaded))
+	for id, v := range loaded {
+		if u, ok := v.(*apiresource.Unit); ok {
+			out[id] = u
+		}
+	}
+	return out, nil
+}
+
+// hydrateQuoteProducts batch-loads fully presented Product resources for the given product IDs so quote lines present the priced product the same way persisted resources do. The core quote RPC returns only product IDs, so the gateway resolves them here. Returns a lookup keyed by product ID; a missing ID simply maps to nil.
+func (m *salesOrderSvcImpl) hydrateQuoteProducts(ctx context.Context, ids ...string) (map[string]*apiresource.Product, *apierror.APIError) {
+	unique := make([]string, 0, len(ids))
+	seen := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		if id == "" {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		unique = append(unique, id)
+	}
+	if len(unique) == 0 {
+		return map[string]*apiresource.Product{}, nil
+	}
+
+	loaded, apiErr := resourceloaders.LoadProducts(ctx, unique)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	out := make(map[string]*apiresource.Product, len(loaded))
+	for id, v := range loaded {
+		if p, ok := v.(*apiresource.Product); ok {
+			out[id] = p
+		}
+	}
+	return out, nil
+}
+
+func (m *salesOrderSvcImpl) QuoteSalesOrderFreight(ctx context.Context, req *QuoteSalesOrderFreightRequest) (*QuoteSalesOrderFreightResponse, *apierror.APIError) {
+	pbReq := &pb.QuoteSalesOrderFreightRequest{Id: req.SalesOrderID}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.quote_freight", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.QuoteSalesOrderFreightResponse, error) {
+			return m.coreClient.QuoteSalesOrderFreight(ctx, pbReq, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	units, apiErr := m.hydrateQuoteUnits(ctx, resp.UnitPriceNumeratorUnitId, resp.UnitPriceDenominatorUnitId)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return &QuoteSalesOrderFreightResponse{
+		Object:    constants.ObjectTypeSalesOrderFreightQuote,
+		UnitPrice: newSalesOrderQuoteRate(resp.UnitPriceValue, units[resp.UnitPriceNumeratorUnitId], units[resp.UnitPriceDenominatorUnitId]),
+	}, nil
+}
+
+func (m *salesOrderSvcImpl) CreateSalesOrderProductionRun(ctx context.Context, req *CreateProductionRunRequest) (*apiresource.ProductionRun, *apierror.APIError) {
 	pbReq := &pb.CreateSalesOrderProductionRunRequest{Id: req.SalesOrderID}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.create_production_run", domain.ServiceName,
@@ -393,30 +512,27 @@ func (m *salesOrderSvcImpl) CreateSalesOrderProductionRun(ctx context.Context, r
 		return nil, apiErr
 	}
 
-	return &CreateProductionRunResponse{
-		Object: constants.ObjectTypeCreateProductionRunResponse,
-		ProductionRun: CreateProductionRunResponseRef{
-			ID:     resp.ProductionRunId,
-			Object: constants.ObjectTypeProductionRun,
-		},
-	}, nil
+	meta := resourcekit.GetLoadMeta(ctx)
+	run := productionrunep.ProductionRunFromProto(resp.ProductionRun)
+	productionrunep.StashProductionRunMeta(meta, resp.ProductionRun)
+	return &run, nil
 }
 
 func (m *salesOrderSvcImpl) CreateSalesOrderLine(ctx context.Context, req *CreateSalesOrderLineRequest) (*apiresource.SalesOrderLine, *apierror.APIError) {
 	pbReq := &pb.CreateSalesOrderLineRequest{
-		SalesOrderId:               req.SalesOrderID,
-		ProductId:                  req.ProductID,
-		ItemId:                     req.ItemID.Ptr(),
-		ProductSku:                 req.ProductSKU,
-		ProductDescription:         req.ProductDescription.Ptr(),
-		QuantityValue:              req.QuantityValue,
-		QuantityUnitId:             req.QuantityUnitID,
-		UnitPriceValue:             req.UnitPriceValue,
-		UnitPriceNumeratorUnitId:   req.UnitPriceNumeratorUnitID,
-		UnitPriceDenominatorUnitId: req.UnitPriceDenominatorUnitID,
-		UnitCostValue:              req.UnitCostValue.Ptr(),
-		UnitCostNumeratorUnitId:    req.UnitCostNumeratorUnitID.Ptr(),
-		UnitCostDenominatorUnitId:  req.UnitCostDenominatorUnitID.Ptr(),
+		SalesOrderId:       req.SalesOrderID,
+		ProductId:          req.ProductID,
+		ProductSku:         req.ProductSKU,
+		ProductDescription: req.ProductDescription.Ptr(),
+		QuantityValue:      req.Quantity.Value,
+		QuantityUnitId:     req.Quantity.UnitID,
+	}
+	// Unit price is an optional override. Leave it empty when omitted so the core
+	// service prices the line from the product (unit cost is always server-derived).
+	if up, ok := req.UnitPrice.Value(); ok {
+		pbReq.UnitPriceValue = up.Value
+		pbReq.UnitPriceNumeratorUnitId = up.NumeratorUnitID
+		pbReq.UnitPriceDenominatorUnitId = up.DenominatorUnitID
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.create_line", domain.ServiceName,
@@ -432,11 +548,27 @@ func (m *salesOrderSvcImpl) CreateSalesOrderLine(ctx context.Context, req *Creat
 	return &result, nil
 }
 
+func (m *salesOrderSvcImpl) ReorderSalesOrderLines(ctx context.Context, req *ReorderSalesOrderLinesRequest) (*apiresource.EmptyResource, *apierror.APIError) {
+	pbReq := &pb.ReorderSalesOrderLinesRequest{
+		SalesOrderId: req.SalesOrderID,
+		LineIds:      req.LineIDs,
+	}
+
+	_, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.reorder_lines", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ReorderSalesOrderLinesResponse, error) {
+			return m.coreClient.ReorderSalesOrderLines(ctx, pbReq, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return &apiresource.EmptyResource{}, nil
+}
+
 func (m *salesOrderSvcImpl) UpdateSalesOrderLine(ctx context.Context, req *UpdateSalesOrderLineRequest) (*apiresource.SalesOrderLine, *apierror.APIError) {
 	pbReq := &pb.UpdateSalesOrderLineRequest{
 		SalesOrderId:       req.SalesOrderID,
 		Id:                 req.SalesOrderLineID,
-		ItemId:             req.ItemID.Ptr(),
 		ProductSku:         req.ProductSKU.Ptr(),
 		ProductDescription: req.ProductDescription.Ptr(),
 	}
@@ -552,20 +684,26 @@ func withLinesForTotals(includes []string) []string {
 	return includes
 }
 
-// salesOrderTotalsFromLines derives the order's monetary totals and pick/
-// fulfillment progress from its line data. Returns nil when no lines are present
-// on the proto (i.e. the `lines` include was not requested). This mirrors the
-// totals the legacy frontend computed client-side from the order's lines.
-func salesOrderTotalsFromLines(lines []*pb.SalesOrderLineInfo) *apiresource.SalesOrderTotals {
-	if len(lines) == 0 {
+// salesOrderTotalsFromOrder derives the order's monetary totals — with per-stage
+// completion progress — from its line data and the order-level fulfillment
+// aggregate. The stage amounts are summed from the lines; the completion
+// fractions come from the order's PickedCompletion/PackedCompletion/
+// InvoicedCompletion, computed server-side over all line items. Returns nil when
+// no lines are present on the proto (i.e. the `lines` include was not requested),
+// since the amounts cannot be derived without them.
+func salesOrderTotalsFromOrder(info *pb.SalesOrderInfo) *apiresource.SalesOrderTotals {
+	if len(info.Lines) == 0 {
 		return nil
 	}
 
-	var totalOrdered, totalPacked, totalInvoiced decimal.Decimal
+	var totalOrdered, totalPicked, totalPacked, totalInvoiced decimal.Decimal
 
-	for _, l := range lines {
+	for _, l := range info.Lines {
 		price := parseDecimal(l.UnitPriceValue)
 		totalOrdered = totalOrdered.Add(price.Mul(parseDecimal(l.QuantityValue)))
+		if l.QuantityPickedValue != nil {
+			totalPicked = totalPicked.Add(price.Mul(parseDecimal(*l.QuantityPickedValue)))
+		}
 		if l.QuantityPackedValue != nil {
 			totalPacked = totalPacked.Add(price.Mul(parseDecimal(*l.QuantityPackedValue)))
 		}
@@ -577,8 +715,9 @@ func salesOrderTotalsFromLines(lines []*pb.SalesOrderLineInfo) *apiresource.Sale
 	return &apiresource.SalesOrderTotals{
 		Object:   constants.ObjectTypeSalesOrderTotals,
 		Ordered:  totalOrdered.String(),
-		Packed:   totalPacked.String(),
-		Invoiced: totalInvoiced.String(),
+		Picked:   apiresource.SalesOrderStageTotal{Object: constants.ObjectTypeSalesOrderStageTotal, Amount: totalPicked.String(), Completion: info.PickedCompletion},
+		Packed:   apiresource.SalesOrderStageTotal{Object: constants.ObjectTypeSalesOrderStageTotal, Amount: totalPacked.String(), Completion: info.PackedCompletion},
+		Invoiced: apiresource.SalesOrderStageTotal{Object: constants.ObjectTypeSalesOrderStageTotal, Amount: totalInvoiced.String(), Completion: info.InvoicedCompletion},
 	}
 }
 
@@ -649,8 +788,9 @@ func stashSalesOrderMeta(ctx context.Context, info *pb.SalesOrderInfo, d *apires
 			apiresource.NewActor(*info.SalesRepId, constants.ActorTypeUser, info.SalesRepName, nil))
 	}
 
-	// Totals (expandable) — derived from line data when lines are present.
-	if totals := salesOrderTotalsFromLines(info.Lines); totals != nil {
+	// Totals (expandable) — monetary amounts from line data plus order-level
+	// completion progress; populated only when lines are present.
+	if totals := salesOrderTotalsFromOrder(info); totals != nil {
 		meta.Set(constants.ObjectTypeSalesOrder, d.ID, "totals", totals)
 	}
 
@@ -843,6 +983,30 @@ func stashSalesOrderMeta(ctx context.Context, info *pb.SalesOrderInfo, d *apires
 	meta.Set(constants.ObjectTypeSalesOrder, d.ID, "lines", apiresource.NewList(lines, apiresource.PageInfo{}))
 }
 
+// hydrateSalesReps batch-fills each order's sales-rep actor with the rep's display
+// name, handle (email), and avatar URL. The backend only ships the rep's id and name
+// on SalesOrderInfo, so handle/avatar_url would otherwise always be null. The actors
+// are stashed as pointers in the load meta, so mutating them here also updates the
+// object the sales_rep populate step later attaches to each order. Runs only when the
+// caller requested ?include=sales_rep (skips the extra core lookup otherwise) and
+// batches all reps into a single account-user fetch. Best-effort: on failure each rep
+// keeps its id + name.
+func hydrateSalesReps(ctx context.Context, orderIDs []string) {
+	if !resourcekit.RequestedIncludeSet(ctx)["sales_rep"] {
+		return
+	}
+	meta := resourcekit.GetLoadMeta(ctx)
+	actors := make([]*apiresource.Actor, 0, len(orderIDs))
+	for _, id := range orderIDs {
+		if v, ok := meta.Get(constants.ObjectTypeSalesOrder, id, "sales_rep"); ok {
+			if a, ok := v.(*apiresource.Actor); ok {
+				actors = append(actors, a)
+			}
+		}
+	}
+	resourceloaders.HydrateActorNames(ctx, actors)
+}
+
 func salesOrderLineDetailFromProto(info *pb.SalesOrderLineInfo) apiresource.SalesOrderLine {
 	l := apiresource.SalesOrderLine{
 		ID:                 info.Id,
@@ -907,10 +1071,15 @@ func buildLineUnitCost(info *pb.SalesOrderLineInfo, createdAt, updatedAt time.Ti
 	}
 }
 
-// buildLineTotals derives the per-line monetary totals (ordered/packed/invoiced).
+// buildLineTotals derives the per-line monetary totals, pairing each downstream
+// stage's amount with its completion (stage quantity / ordered quantity).
 func buildLineTotals(info *pb.SalesOrderLineInfo) *apiresource.SalesOrderTotals {
 	price := parseDecimal(info.UnitPriceValue)
-	var packed, invoiced decimal.Decimal
+	ordered := parseDecimal(info.QuantityValue)
+	var picked, packed, invoiced decimal.Decimal
+	if info.QuantityPickedValue != nil {
+		picked = parseDecimal(*info.QuantityPickedValue)
+	}
 	if info.QuantityPackedValue != nil {
 		packed = parseDecimal(*info.QuantityPackedValue)
 	}
@@ -919,10 +1088,27 @@ func buildLineTotals(info *pb.SalesOrderLineInfo) *apiresource.SalesOrderTotals 
 	}
 	return &apiresource.SalesOrderTotals{
 		Object:   constants.ObjectTypeSalesOrderTotals,
-		Ordered:  price.Mul(parseDecimal(info.QuantityValue)).String(),
-		Packed:   price.Mul(packed).String(),
-		Invoiced: price.Mul(invoiced).String(),
+		Ordered:  price.Mul(ordered).String(),
+		Picked:   apiresource.SalesOrderStageTotal{Object: constants.ObjectTypeSalesOrderStageTotal, Amount: price.Mul(picked).String(), Completion: completionFraction(picked, ordered)},
+		Packed:   apiresource.SalesOrderStageTotal{Object: constants.ObjectTypeSalesOrderStageTotal, Amount: price.Mul(packed).String(), Completion: completionFraction(packed, ordered)},
+		Invoiced: apiresource.SalesOrderStageTotal{Object: constants.ObjectTypeSalesOrderStageTotal, Amount: price.Mul(invoiced).String(), Completion: completionFraction(invoiced, ordered)},
 	}
+}
+
+// completionFraction returns part/whole as a float in [0,1], or 0 when whole is
+// zero. It mirrors the order-level completion aggregate for a single line.
+func completionFraction(part, whole decimal.Decimal) float64 {
+	if whole.IsZero() {
+		return 0
+	}
+	f := part.Div(whole).InexactFloat64()
+	if f < 0 {
+		return 0
+	}
+	if f > 1 {
+		return 1
+	}
+	return f
 }
 
 // stashSalesOrderLineMeta stashes a line's expandable sub-resources

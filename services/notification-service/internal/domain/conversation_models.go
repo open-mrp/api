@@ -216,6 +216,9 @@ type AgentReplyInput struct {
 	MessageID string
 	// ReplyToMessageID threads the reply under the message that triggered the run (mention/keyword).
 	ReplyToMessageID string
+	// Failed marks a reply that resolves an errored run. ErrorCode is the machine-readable api-error code (e.g. "agent_spending_cap_reached"); both are recorded on the message so the client can flag the failure and react (e.g. prompt to raise the spending limit).
+	Failed    bool
+	ErrorCode string
 }
 
 // AgentReplyPatchInput is a best-effort partial-body update for an in-flight streaming agent reply, addressing the row by MessageID. Body is the full accumulated answer so far.

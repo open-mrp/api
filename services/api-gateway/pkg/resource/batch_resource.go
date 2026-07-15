@@ -21,11 +21,11 @@ const SampleMachineID = "mc_0177d18f55a1615f783d3bf8d0"
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
-// ProductionRun — production run reference
+// ProductionRunReference — production run reference
 // ---------------------------------------------------------------------------
 
 // Minimal reference to the production run a batch was created under.
-type ProductionRun struct {
+type ProductionRunReference struct {
 	// Production run ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
@@ -34,14 +34,14 @@ type ProductionRun struct {
 	Number string `json:"number" validate:"required"`
 }
 
-var SampleProductionRun = &ProductionRun{
+var SampleProductionRunReference = &ProductionRunReference{
 	ID:     SampleProductionRunID,
 	Object: constants.ObjectTypeProductionRun,
 	Number: "PR-001",
 }
 
-func (*ProductionRun) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SampleProductionRun)
+func (*ProductionRunReference) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleProductionRunReference)
 }
 
 // ---------------------------------------------------------------------------
@@ -109,7 +109,7 @@ type Batch struct {
 	// The production run the batch was created under.
 	//
 	// `null` for batches created by move, merge, or split operations.
-	ProductionRun *ProductionRun `json:"production_run" expandable:"true"`
+	ProductionRun *ProductionRunReference `json:"production_run" expandable:"true"`
 	// Machines used to produce the batch.
 	Machines *List[Machine] `json:"machines" expandable:"true"`
 	// Lot numbers that trace the batch's consumed materials and its production run.
@@ -140,7 +140,7 @@ var SampleBatch = &Batch{
 	ScanningStation: SampleScanningStation,
 	Department:      SampleDepartment,
 	ProductionStep:  nil,
-	ProductionRun:   SampleProductionRun,
+	ProductionRun:   SampleProductionRunReference,
 	Machines:        NewList([]Machine{*SampleMachine}, PageInfo{}),
 	Lots:            NewList([]BatchLot{*SampleBatchLot}, PageInfo{}),
 	InputBatches:    NewList([]BatchReference{}, PageInfo{}),

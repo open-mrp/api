@@ -335,6 +335,7 @@ func (r *accountRepoImpl) GetByID(ctx context.Context, accountID string) (*domai
 			SupportEmail:    db.StringFromNullString(row.BrandingSupportEmail),
 			PhoneNumber:     db.StringFromNullString(row.BrandingPhoneNumber),
 			LogoURL:         db.StringFromNullString(row.BrandingLogoUrl),
+			FaviconURL:      db.StringFromNullString(row.BrandingFaviconUrl),
 			FacebookHandle:  db.StringFromNullString(row.BrandingFacebookHandle),
 			InstagramHandle: db.StringFromNullString(row.BrandingInstagramHandle),
 			LinkedInHandle:  db.StringFromNullString(row.BrandingLinkedinHandle),
@@ -422,6 +423,7 @@ func (r *accountRepoImpl) GetBySlug(ctx context.Context, slug string) (*domain.P
 		DefaultBillingAddressID: db.StringFromNullString(row.DefaultBillingAddressID),
 		SupportEmail:            db.StringFromNullString(row.SupportEmail),
 		LogoURL:                 db.StringFromNullString(row.LogoUrl),
+		FaviconURL:              db.StringFromNullString(row.FaviconUrl),
 	}, nil
 }
 
@@ -527,6 +529,40 @@ func (r *accountRepoImpl) GetBrandingLogoKey(ctx context.Context, accountID stri
 	defer span.End()
 
 	result, err := r.queries.GetAccountBrandingLogoKey(ctx, accountID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+			return nil, nil
+		}
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if !result.Valid {
+		return nil, nil
+	}
+
+	return &result.String, nil
+}
+
+func (r *accountRepoImpl) UpdateBrandingFaviconURL(ctx context.Context, accountID, faviconURL string) *apierror.APIError {
+	ctx, span := accountRepoTracer.Start(ctx, "repository.account.update_branding_favicon_url")
+	defer span.End()
+
+	err := r.queries.UpdateAccountBrandingFaviconURL(ctx, sqlc.UpdateAccountBrandingFaviconURLParams{
+		FaviconUrl: sql.NullString{String: faviconURL, Valid: true},
+		AccountID:  accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
+}
+
+func (r *accountRepoImpl) GetBrandingFaviconKey(ctx context.Context, accountID string) (*string, *apierror.APIError) {
+	ctx, span := accountRepoTracer.Start(ctx, "repository.account.get_branding_favicon_key")
+	defer span.End()
+
+	result, err := r.queries.GetAccountBrandingFaviconKey(ctx, accountID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
 			return nil, nil

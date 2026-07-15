@@ -7,12 +7,14 @@ import (
 
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/core-service/internal/domain"
+	"github.com/augno/api/services/core-service/internal/event"
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/audit"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/idempotency"
+	"github.com/augno/api/shared/messaging"
 	"github.com/augno/api/shared/tracing"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -451,6 +453,17 @@ func (s *registrationFlowSvcImpl) registerExistingCustomer(
 			return apiErr
 		}
 
+		// Notify the seller's customer-service group that a buyer joined an existing customer account. Emitted in-tx so it commits atomically with the registration.
+		if apiErr := event.NewCustomerRegisteredPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), messaging.CustomerRegisteredData{
+			SellerAccountID:    ownerAccountID,
+			CustomerAccountID:  customerAccountID,
+			CustomerNumber:     customerNumber,
+			RegistrantUserID:   userID,
+			IsExistingCustomer: true,
+		}); apiErr != nil {
+			return apiErr
+		}
+
 		return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKeyTypeID, nil)
 	})
 
@@ -550,6 +563,17 @@ func (s *registrationFlowSvcImpl) registerNewCustomer(
 		}
 
 		if apiErr := txRepo.CreateAccountUserLink(txCtx, accountUserID, customerAccountID, userID); apiErr != nil {
+			return apiErr
+		}
+
+		// Notify the seller's customer-service group that a new customer registered on the portal. Emitted in-tx so it commits atomically with the registration.
+		if apiErr := event.NewCustomerRegisteredPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), messaging.CustomerRegisteredData{
+			SellerAccountID:   ownerAccountID,
+			CustomerAccountID: customerAccountID,
+			CustomerName:      strings.TrimSpace(*data.Name),
+			CustomerNumber:    customerNumber,
+			RegistrantUserID:  userID,
+		}); apiErr != nil {
 			return apiErr
 		}
 

@@ -218,6 +218,9 @@ func (h *billingHandler) GetAccountUsage(ctx context.Context, req *pb.GetAccount
 		Batches:                  &pb.UsageItem{Current: safeconv.IntToInt32(result.Batches.Current)},
 		Sandboxes:                &pb.UsageItem{Current: safeconv.IntToInt32(result.Sandboxes.Current)},
 		EstimatedAgentSpendCents: result.EstimatedAgentSpendCents,
+		PlanName:                 result.PlanName,
+		BaseFeeCents:             result.BaseFeeCents,
+		BaseFeeInterval:          result.BaseFeeInterval,
 	}
 
 	if result.Seats.Limit != nil {
@@ -382,7 +385,21 @@ func (h *billingHandler) GetAgentSpend(ctx context.Context, req *pb.GetAgentSpen
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
-	return &pb.GetAgentSpendResponse{EstimatedSpendCents: cents}, nil
+	rates, apiErr := h.billingSvc.GetAgentTokenRates(ctx, accountID)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	pbRates := make([]*pb.TokenRate, 0, len(rates))
+	for _, r := range rates {
+		pbRates = append(pbRates, &pb.TokenRate{
+			Model:           r.Model,
+			TokenType:       r.TokenType,
+			UnitAmountCents: r.UnitAmountCents,
+		})
+	}
+
+	return &pb.GetAgentSpendResponse{EstimatedSpendCents: cents, TokenRates: pbRates}, nil
 }
 
 func (h *billingHandler) SwitchPlan(ctx context.Context, req *pb.SwitchPlanRequest) (*pb.SwitchPlanResponse, error) {

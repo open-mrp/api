@@ -311,10 +311,14 @@ func (r *conversationRepoImpl) ListInbox(ctx context.Context, filter domain.Supp
 	if filter.Unassigned {
 		unassigned = true
 	}
+	// Hide resolved cases from the default triage view, but keep them visible when the caller filters to a
+	// specific status (e.g. the "Resolved" lane) or opens the archived view.
+	hideResolved := filter.WorkflowStatus == nil && !filter.IncludeArchived
 	rows, err := r.db.ListSupportInbox(ctx, sqlc.ListSupportInboxParams{
 		AccountID:           filter.AccountID,
 		IsArchived:          filter.IncludeArchived,
 		WorkflowStatus:      db.NullStringPtr(filter.WorkflowStatus),
+		HideResolved:        hideResolved,
 		AssigneeResourceID:  db.NullStringPtr(filter.AssigneeResourceID),
 		Unassigned:          unassigned,
 		CursorLastMessageAt: db.NullTimePtr(filter.CursorLastMessageAt),

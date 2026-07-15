@@ -26,6 +26,8 @@ type SalesOrderLineSvcTestSuite struct {
 	orderRepo         *repositorymock.MockSalesOrderRepo
 	lineRepo          *repositorymock.MockSalesOrderLineRepo
 	pickLineRepo      *repositorymock.MockPickLineRepo
+	pickRepo          *repositorymock.MockPickRepo
+	pricingRepo       *repositorymock.MockPricingRepo
 	deletedRecordRepo *repositorymock.MockDeletedRecordRepo
 	repoFactory       *factorymock.MockRepoFactory
 	mediatorFactory   *factorymock.MockMediatorFactory
@@ -40,12 +42,16 @@ func (suite *SalesOrderLineSvcTestSuite) SetupTest() {
 	suite.orderRepo = repositorymock.NewMockSalesOrderRepo(suite.ctrl)
 	suite.lineRepo = repositorymock.NewMockSalesOrderLineRepo(suite.ctrl)
 	suite.pickLineRepo = repositorymock.NewMockPickLineRepo(suite.ctrl)
+	suite.pickRepo = repositorymock.NewMockPickRepo(suite.ctrl)
+	suite.pricingRepo = repositorymock.NewMockPricingRepo(suite.ctrl)
 	suite.deletedRecordRepo = repositorymock.NewMockDeletedRecordRepo(suite.ctrl)
 
 	suite.repoFactory = factorymock.NewMockRepoFactory(suite.ctrl)
 	suite.repoFactory.EXPECT().NewSalesOrderRepo().Return(suite.orderRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewSalesOrderLineRepo().Return(suite.lineRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewPickLineRepo().Return(suite.pickLineRepo).AnyTimes()
+	suite.repoFactory.EXPECT().NewPickRepo().Return(suite.pickRepo).AnyTimes()
+	suite.repoFactory.EXPECT().NewPricingRepo().Return(suite.pricingRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewDeletedRecordRepo().Return(suite.deletedRecordRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewOutboxRepo().Return(&stubOutboxRepo{}).AnyTimes()
 
@@ -135,6 +141,50 @@ func (suite *SalesOrderLineSvcTestSuite) expectCacheError() {
 		Times(1)
 }
 
+// createLinePricingBundle is a minimal pricing bundle for the create-line product
+// ("prod_test", priced $10/ea, cost $4/ea) so resolveSalesOrderCreateLines validates the
+// unit and prices the line without a real pricing repo.
+func createLinePricingBundle() *domain.PricingBundle {
+	return &domain.PricingBundle{
+		Products: map[string]*domain.PricingProduct{
+			"prod_test": {
+				ProductID:                  "prod_test",
+				ItemID:                     "it_test",
+				SKU:                        "SKU-PROD",
+				UnitCost:                   "4",
+				UnitCostNumeratorUnitID:    "un_usd",
+				UnitCostDenominatorUnitID:  "un_ea",
+				UnitValue:                  "10",
+				UnitValueNumeratorUnitID:   "un_usd",
+				UnitValueDenominatorUnitID: "un_ea",
+				CategoryUnitGroupID:        "ug_test",
+			},
+		},
+		Units: map[string]*domain.PricingUnit{"un_ea": {ID: "un_ea", IsBaseUnit: true}},
+		UnitGroupUnits: map[string]map[string]*domain.PricingUnitGroupUnit{
+			"ug_test": {"un_ea": {UnitGroupID: "ug_test", UnitID: "un_ea"}},
+		},
+	}
+}
+
+// expectResequence mocks the line re-sequence a delete performs. It returns a single line
+// already at position 1, so no SetLineItemNumber calls are needed (re-sequence is a no-op).
+func (suite *SalesOrderLineSvcTestSuite) expectResequence() {
+	suite.lineRepo.EXPECT().
+		GetLineOrder(gomock.Any(), "or_test").
+		Return([]*domain.SalesOrderLinePosition{{ID: "orl_rem", LineItemNumber: 1, IsSystem: true}}, nil).
+		Times(1)
+}
+
+// expectCreateLinePricing mocks the one pricing-bundle load a create performs to resolve
+// the line's price/cost from the product.
+func (suite *SalesOrderLineSvcTestSuite) expectCreateLinePricing() {
+	suite.pricingRepo.EXPECT().
+		LoadPricingBundle(gomock.Any(), gomock.Any()).
+		Return(createLinePricingBundle(), nil).
+		Times(1)
+}
+
 // baseCreateLineParams returns a valid set of create-line params that every
 // CreateSalesOrderLine test can start from and mutate.
 func baseCreateLineParams() domain.CreateSalesOrderLineParams {
@@ -166,6 +216,9 @@ func (suite *SalesOrderLineSvcTestSuite) TestCreateSalesOrderLine_Success_NoPick
 		Return(&domain.SalesOrder{ID: "or_test"}, nil).
 		Times(1)
 
+	// The line is priced from the product before being persisted.
+	suite.expectCreateLinePricing()
+
 	// Create returns the persisted line. Assert price rounding happened before reaching the repo.
 	suite.lineRepo.EXPECT().
 		Create(gomock.Any(), gomock.Any(), gomock.Any()).
@@ -191,6 +244,49 @@ func (suite *SalesOrderLineSvcTestSuite) TestCreateSalesOrderLine_Success_NoPick
 	suite.Equal("or_test", result.SalesOrderID)
 }
 
+// When the caller omits the unit price, the line is priced server-side from the product
+// (list price $10/ea here) and the unit cost is derived from the product — no caller price.
+func (suite *SalesOrderLineSvcTestSuite) TestCreateSalesOrderLine_CalculatesPriceWhenOmitted() {
+	ctx := salesOrderLineIdempotencyCtx(
+		salesOrderLineCtx("ac_test"),
+		"/core.CoreService/CreateSalesOrderLine",
+	)
+
+	suite.expectIdempotencyStarted()
+
+	params := baseCreateLineParams()
+	params.UnitPriceValue = "" // omitted → server-calculated
+	params.UnitPriceNumeratorUnitID = ""
+	params.UnitPriceDenominatorUnitID = ""
+
+	suite.orderRepo.EXPECT().
+		Get(gomock.Any(), "ac_test", "or_test").
+		Return(&domain.SalesOrder{ID: "or_test", BuyerAccountID: "ac_buyer"}, nil).
+		Times(1)
+
+	suite.expectCreateLinePricing()
+
+	suite.lineRepo.EXPECT().
+		Create(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, id string, p domain.CreateSalesOrderLineParams) (*domain.SalesOrderLine, *apierror.APIError) {
+			suite.Equal("10", p.UnitPriceValue, "price calculated from the product list price")
+			suite.Equal("un_usd", p.UnitPriceNumeratorUnitID)
+			suite.Equal("un_ea", p.UnitPriceDenominatorUnitID)
+			suite.NotNil(p.UnitCostValue)
+			suite.Equal("4", *p.UnitCostValue, "cost derived from the product")
+			suite.NotNil(p.ItemID)
+			suite.Equal("it_test", *p.ItemID, "item derived from the product")
+			return &domain.SalesOrderLine{ID: id}, nil
+		}).
+		Times(1)
+
+	suite.orderRepo.EXPECT().GetPickID(gomock.Any(), "or_test").Return(nil, nil).Times(1)
+	suite.expectCacheSuccess()
+
+	_, apiErr := suite.svc.CreateSalesOrderLine(ctx, params)
+	suite.Nil(apiErr)
+}
+
 func (suite *SalesOrderLineSvcTestSuite) TestCreateSalesOrderLine_RoundsUnitPriceAndCostToCent() {
 	ctx := salesOrderLineIdempotencyCtx(
 		salesOrderLineCtx("ac_test"),
@@ -200,25 +296,23 @@ func (suite *SalesOrderLineSvcTestSuite) TestCreateSalesOrderLine_RoundsUnitPric
 	suite.expectIdempotencyStarted()
 
 	params := baseCreateLineParams()
-	params.UnitPriceValue = "1.234" // rounds to 1.23
-	cost := "2.1899999"             // rounds to 2.19
-	params.UnitCostValue = &cost
-	numID := "un_usd"
-	denID := "un_ea"
-	params.UnitCostNumeratorUnitID = &numID
-	params.UnitCostDenominatorUnitID = &denID
+	params.UnitPriceValue = "1.234" // internal override, rounds to 1.23
 
 	suite.orderRepo.EXPECT().
 		Get(gomock.Any(), "ac_test", "or_test").
 		Return(&domain.SalesOrder{ID: "or_test"}, nil).
 		Times(1)
 
+	suite.expectCreateLinePricing()
+
 	suite.lineRepo.EXPECT().
 		Create(gomock.Any(), gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, id string, p domain.CreateSalesOrderLineParams) (*domain.SalesOrderLine, *apierror.APIError) {
+			// The internal override is rounded to the cent and honored as the unit price.
 			suite.Equal("1.23", p.UnitPriceValue)
+			// The unit cost is always derived from the product (never the caller's input).
 			suite.NotNil(p.UnitCostValue)
-			suite.Equal("2.19", *p.UnitCostValue)
+			suite.Equal("4", *p.UnitCostValue)
 			return &domain.SalesOrderLine{ID: id}, nil
 		}).
 		Times(1)
@@ -243,20 +337,23 @@ func (suite *SalesOrderLineSvcTestSuite) TestCreateSalesOrderLine_CreatesPickLin
 		Return(&domain.SalesOrder{ID: "or_test"}, nil).
 		Times(1)
 
+	suite.expectCreateLinePricing()
+
+	saleType := string(constants.ProductTypeCodeSale)
 	suite.lineRepo.EXPECT().
 		Create(gomock.Any(), gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, id string, _ domain.CreateSalesOrderLineParams) (*domain.SalesOrderLine, *apierror.APIError) {
-			return &domain.SalesOrderLine{ID: id, SalesOrderID: "or_test"}, nil
+			return &domain.SalesOrderLine{ID: id, SalesOrderID: "or_test", ProductTypeCode: &saleType}, nil
 		}).
 		Times(1)
 
 	pickID := "pk_test"
 	suite.orderRepo.EXPECT().GetPickID(gomock.Any(), "or_test").Return(&pickID, nil).Times(1)
 
-	// Active pick → remaining quantity pulled from the repo.
+	// Outstanding (ordered 10 - packed 0) > 0 → a new placeholder pick line is created.
 	suite.pickLineRepo.EXPECT().
-		CalculateRemainingForOrderLine(gomock.Any(), gomock.Any()).
-		Return("10", "un_ea", nil).
+		GetOrderLinePackProgress(gomock.Any(), gomock.Any()).
+		Return("10", "0", "un_ea", nil).
 		Times(1)
 
 	// No unpacked pick line exists yet, so a new one must be created.
@@ -265,8 +362,9 @@ func (suite *SalesOrderLineSvcTestSuite) TestCreateSalesOrderLine_CreatesPickLin
 		Return(false, nil).
 		Times(1)
 
+	// The placeholder pick line is seeded at 0 picked (outstanding is only the >0 guard).
 	suite.lineRepo.EXPECT().
-		CreateQuantity(gomock.Any(), gomock.Any(), "10", "un_ea").
+		CreateQuantity(gomock.Any(), gomock.Any(), "0", "un_ea").
 		Return(nil).
 		Times(1)
 
@@ -274,6 +372,9 @@ func (suite *SalesOrderLineSvcTestSuite) TestCreateSalesOrderLine_CreatesPickLin
 		CreateForRemaining(gomock.Any(), gomock.Any(), gomock.Any(), pickID, gomock.Any()).
 		Return(nil).
 		Times(1)
+
+	// Outstanding work means the pick is reopened.
+	suite.pickRepo.EXPECT().ClearFinishedAt(gomock.Any(), "ac_test", pickID).Return(nil).Times(1)
 
 	suite.expectCacheSuccess()
 
@@ -294,24 +395,29 @@ func (suite *SalesOrderLineSvcTestSuite) TestCreateSalesOrderLine_SkipsPickLineW
 		Return(&domain.SalesOrder{ID: "or_test"}, nil).
 		Times(1)
 
+	suite.expectCreateLinePricing()
+
+	saleType := string(constants.ProductTypeCodeSale)
 	suite.lineRepo.EXPECT().
 		Create(gomock.Any(), gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, id string, _ domain.CreateSalesOrderLineParams) (*domain.SalesOrderLine, *apierror.APIError) {
-			return &domain.SalesOrderLine{ID: id}, nil
+			return &domain.SalesOrderLine{ID: id, ProductTypeCode: &saleType}, nil
 		}).
 		Times(1)
 
 	pickID := "pk_test"
 	suite.orderRepo.EXPECT().GetPickID(gomock.Any(), "or_test").Return(&pickID, nil).Times(1)
 	suite.pickLineRepo.EXPECT().
-		CalculateRemainingForOrderLine(gomock.Any(), gomock.Any()).
-		Return("5", "un_ea", nil).
+		GetOrderLinePackProgress(gomock.Any(), gomock.Any()).
+		Return("5", "0", "un_ea", nil).
 		Times(1)
 	// An unpacked pick line is already present → skip creating another.
 	suite.pickLineRepo.EXPECT().
 		HasUnpackedPickLineForOrderLine(gomock.Any(), gomock.Any()).
 		Return(true, nil).
 		Times(1)
+	// Outstanding work still means the pick is reopened.
+	suite.pickRepo.EXPECT().ClearFinishedAt(gomock.Any(), "ac_test", pickID).Return(nil).Times(1)
 
 	suite.expectCacheSuccess()
 
@@ -478,8 +584,9 @@ func (suite *SalesOrderLineSvcTestSuite) TestUpdateSalesOrderLine_RecomputesPick
 
 	suite.expectIdempotencyStarted()
 
+	saleType := string(constants.ProductTypeCodeSale)
 	suite.lineRepo.EXPECT().IsInOrder(gomock.Any(), "orl_test", "or_test", "ac_test").Return(true, nil).Times(1)
-	suite.lineRepo.EXPECT().Get(gomock.Any(), "orl_test").Return(&domain.SalesOrderLine{ID: "orl_test"}, nil).Times(1)
+	suite.lineRepo.EXPECT().Get(gomock.Any(), "orl_test").Return(&domain.SalesOrderLine{ID: "orl_test", ProductTypeCode: &saleType}, nil).Times(1)
 	suite.lineRepo.EXPECT().
 		Update(gomock.Any(), gomock.Any()).
 		Return(&domain.SalesOrderLine{ID: "orl_test"}, nil).
@@ -487,19 +594,84 @@ func (suite *SalesOrderLineSvcTestSuite) TestUpdateSalesOrderLine_RecomputesPick
 
 	pickID := "pk_test"
 	suite.orderRepo.EXPECT().GetPickID(gomock.Any(), "or_test").Return(&pickID, nil).Times(1)
+	// Outstanding (ordered 13 - packed 10) > 0 → open a placeholder pick line + reopen.
 	suite.pickLineRepo.EXPECT().
-		CalculateRemainingForOrderLine(gomock.Any(), "orl_test").
-		Return("3", "un_ea", nil).
+		GetOrderLinePackProgress(gomock.Any(), "orl_test").
+		Return("13", "10", "un_ea", nil).
 		Times(1)
 	suite.pickLineRepo.EXPECT().
 		HasUnpackedPickLineForOrderLine(gomock.Any(), "orl_test").
 		Return(false, nil).
 		Times(1)
-	suite.lineRepo.EXPECT().CreateQuantity(gomock.Any(), gomock.Any(), "3", "un_ea").Return(nil).Times(1)
+	// Placeholder pick line seeded at 0 picked (outstanding is only the >0 guard).
+	suite.lineRepo.EXPECT().CreateQuantity(gomock.Any(), gomock.Any(), "0", "un_ea").Return(nil).Times(1)
 	suite.pickLineRepo.EXPECT().
 		CreateForRemaining(gomock.Any(), gomock.Any(), gomock.Any(), pickID, "orl_test").
 		Return(nil).
 		Times(1)
+	suite.pickRepo.EXPECT().ClearFinishedAt(gomock.Any(), "ac_test", pickID).Return(nil).Times(1)
+
+	suite.expectCacheSuccess()
+
+	_, apiErr := suite.svc.UpdateSalesOrderLine(ctx, baseUpdateLineParams())
+	suite.Nil(apiErr)
+}
+
+// A decrease that drops the order line back to (or below) the already-packed quantity
+// leaves no outstanding work: the open remainder pick line is deleted and the pick is
+// finished when everything left is packed.
+func (suite *SalesOrderLineSvcTestSuite) TestUpdateSalesOrderLine_DeletesOpenPickLineOnDecrease() {
+	ctx := salesOrderLineIdempotencyCtx(
+		salesOrderLineCtx("ac_test"),
+		"/core.CoreService/UpdateSalesOrderLine",
+	)
+
+	suite.expectIdempotencyStarted()
+
+	saleType := string(constants.ProductTypeCodeSale)
+	suite.lineRepo.EXPECT().IsInOrder(gomock.Any(), "orl_test", "or_test", "ac_test").Return(true, nil).Times(1)
+	suite.lineRepo.EXPECT().Get(gomock.Any(), "orl_test").Return(&domain.SalesOrderLine{ID: "orl_test", ProductTypeCode: &saleType}, nil).Times(1)
+	suite.lineRepo.EXPECT().Update(gomock.Any(), gomock.Any()).Return(&domain.SalesOrderLine{ID: "orl_test"}, nil).Times(1)
+
+	pickID := "pk_test"
+	suite.orderRepo.EXPECT().GetPickID(gomock.Any(), "or_test").Return(&pickID, nil).Times(1)
+	// Outstanding (ordered 10 - packed 10) <= 0 → the open remainder line is surplus.
+	suite.pickLineRepo.EXPECT().
+		GetOrderLinePackProgress(gomock.Any(), "orl_test").
+		Return("10", "10", "un_ea", nil).
+		Times(1)
+	suite.pickLineRepo.EXPECT().DeleteUnpackedForOrderLine(gomock.Any(), "orl_test").Return(nil).Times(1)
+	suite.pickRepo.EXPECT().MarkFinishedIfAllPacked(gomock.Any(), pickID).Return(nil).Times(1)
+
+	suite.expectCacheSuccess()
+
+	_, apiErr := suite.svc.UpdateSalesOrderLine(ctx, baseUpdateLineParams())
+	suite.Nil(apiErr)
+}
+
+// A freight/credit (system) line is never picked, so updating one on a picked order
+// must NOT seed a placeholder pick line — matching legacy, which gates pick-line
+// creation on product.productType === 'sale'.
+func (suite *SalesOrderLineSvcTestSuite) TestUpdateSalesOrderLine_SkipsPickLineForSystemLine() {
+	ctx := salesOrderLineIdempotencyCtx(
+		salesOrderLineCtx("ac_test"),
+		"/core.CoreService/UpdateSalesOrderLine",
+	)
+
+	suite.expectIdempotencyStarted()
+
+	shippingType := string(constants.ProductTypeCodeShipping)
+	suite.lineRepo.EXPECT().IsInOrder(gomock.Any(), "orl_test", "or_test", "ac_test").Return(true, nil).Times(1)
+	suite.lineRepo.EXPECT().Get(gomock.Any(), "orl_test").Return(&domain.SalesOrderLine{ID: "orl_test", ProductTypeCode: &shippingType}, nil).Times(1)
+	suite.lineRepo.EXPECT().
+		Update(gomock.Any(), gomock.Any()).
+		Return(&domain.SalesOrderLine{ID: "orl_test"}, nil).
+		Times(1)
+
+	pickID := "pk_test"
+	suite.orderRepo.EXPECT().GetPickID(gomock.Any(), "or_test").Return(&pickID, nil).Times(1)
+	// No CalculateRemainingForOrderLine / CreateForRemaining expectations: gomock.Finish
+	// fails if pick-line creation is attempted for this system line.
 
 	suite.expectCacheSuccess()
 
@@ -524,7 +696,7 @@ func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_Success() {
 		Times(1)
 
 	suite.lineRepo.EXPECT().
-		HasShippedAgainstOrderLine(gomock.Any(), "orl_test").
+		HasShipmentAgainstOrderLine(gomock.Any(), "orl_test").
 		Return(false, nil).
 		Times(1)
 
@@ -546,6 +718,79 @@ func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_Success() {
 
 	suite.lineRepo.EXPECT().
 		DeleteCascade(gomock.Any(), "orl_test").
+		Return(nil).
+		Times(1)
+
+	suite.expectResequence()
+
+	// An estimate order has no pick, so the pick reconciliation is a no-op.
+	suite.orderRepo.EXPECT().GetPickID(gomock.Any(), "or_test").Return(nil, nil).Times(1)
+
+	apiErr := suite.svc.DeleteSalesOrderLine(ctx, domain.DeleteSalesOrderLineParams{
+		SalesOrderLineID: "orl_test",
+		SalesOrderID:     "or_test",
+	})
+	suite.Nil(apiErr)
+}
+
+// Deleting a line from an issued order whose pick still has other lines finishes the
+// pick when everything that remains is packed.
+func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_FinishesPickWhenLinesRemain() {
+	ctx := salesOrderLineCtx("ac_test")
+
+	suite.lineRepo.EXPECT().IsInOrder(gomock.Any(), "orl_test", "or_test", "ac_test").Return(true, nil).Times(1)
+	suite.orderRepo.EXPECT().
+		Get(gomock.Any(), "ac_test", "or_test").
+		Return(&domain.SalesOrder{ID: "or_test", SalesOrderStatusCode: string(constants.SalesOrderStatusCodeIssued)}, nil).
+		Times(1)
+	suite.lineRepo.EXPECT().HasShipmentAgainstOrderLine(gomock.Any(), "orl_test").Return(false, nil).Times(1)
+	suite.orderRepo.EXPECT().HasShippedShipment(gomock.Any(), "or_test").Return(false, nil).Times(1)
+	suite.lineRepo.EXPECT().Get(gomock.Any(), "orl_test").Return(&domain.SalesOrderLine{ID: "orl_test"}, nil).Times(1)
+	suite.deletedRecordRepo.EXPECT().Create(gomock.Any(), constants.DeletedRecordResourceTypeSalesOrderLine, "orl_test", gomock.Any()).Return(nil).Times(1)
+	suite.lineRepo.EXPECT().DeleteCascade(gomock.Any(), "orl_test").Return(nil).Times(1)
+
+	suite.expectResequence()
+
+	pickID := "pk_test"
+	suite.orderRepo.EXPECT().GetPickID(gomock.Any(), "or_test").Return(&pickID, nil).Times(1)
+	// Two lines remain in the pick → finish it if everything left is packed.
+	suite.pickRepo.EXPECT().CountLines(gomock.Any(), pickID).Return(int64(2), nil).Times(1)
+	suite.pickRepo.EXPECT().MarkFinishedIfAllPacked(gomock.Any(), pickID).Return(nil).Times(1)
+
+	apiErr := suite.svc.DeleteSalesOrderLine(ctx, domain.DeleteSalesOrderLineParams{
+		SalesOrderLineID: "orl_test",
+		SalesOrderID:     "or_test",
+	})
+	suite.Nil(apiErr)
+}
+
+// Deleting the last line that leaves the pick empty deletes the pick and reverts the
+// order to estimate, releasing reserved inventory.
+func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_UnissuesWhenPickEmptied() {
+	ctx := salesOrderLineCtx("ac_test")
+
+	suite.lineRepo.EXPECT().IsInOrder(gomock.Any(), "orl_test", "or_test", "ac_test").Return(true, nil).Times(1)
+	suite.orderRepo.EXPECT().
+		Get(gomock.Any(), "ac_test", "or_test").
+		Return(&domain.SalesOrder{ID: "or_test", Number: "SO-1", SalesOrderStatusCode: string(constants.SalesOrderStatusCodeIssued)}, nil).
+		Times(1)
+	suite.lineRepo.EXPECT().HasShipmentAgainstOrderLine(gomock.Any(), "orl_test").Return(false, nil).Times(1)
+	suite.orderRepo.EXPECT().HasShippedShipment(gomock.Any(), "or_test").Return(false, nil).Times(1)
+	suite.lineRepo.EXPECT().Get(gomock.Any(), "orl_test").Return(&domain.SalesOrderLine{ID: "orl_test"}, nil).Times(1)
+	suite.deletedRecordRepo.EXPECT().Create(gomock.Any(), constants.DeletedRecordResourceTypeSalesOrderLine, "orl_test", gomock.Any()).Return(nil).Times(1)
+	suite.lineRepo.EXPECT().DeleteCascade(gomock.Any(), "orl_test").Return(nil).Times(1)
+
+	suite.expectResequence()
+
+	pickID := "pk_test"
+	suite.orderRepo.EXPECT().GetPickID(gomock.Any(), "or_test").Return(&pickID, nil).Times(1)
+	// No lines remain → tear down the pick and unissue the order.
+	suite.pickRepo.EXPECT().CountLines(gomock.Any(), pickID).Return(int64(0), nil).Times(1)
+	suite.orderRepo.EXPECT().DeletePickBySalesOrder(gomock.Any(), "or_test").Return(nil).Times(1)
+	suite.orderRepo.EXPECT().DeleteInventoryAllocationsByReservedIssues(gomock.Any(), "ac_test", "or_test").Return(nil).Times(1)
+	suite.orderRepo.EXPECT().DeleteReservedInventoryIssues(gomock.Any(), "ac_test", "or_test").Return(nil).Times(1)
+	suite.orderRepo.EXPECT().
+		UpdateStatus(gomock.Any(), "ac_test", "or_test", string(constants.SalesOrderStatusCodeEstimate), nil, nil).
 		Return(nil).
 		Times(1)
 
@@ -587,7 +832,7 @@ func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_BlockedWhenHas
 		Times(1)
 
 	suite.lineRepo.EXPECT().
-		HasShippedAgainstOrderLine(gomock.Any(), "orl_test").
+		HasShipmentAgainstOrderLine(gomock.Any(), "orl_test").
 		Return(false, nil).
 		Times(1)
 
@@ -626,7 +871,7 @@ func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_BlockedWhenOrd
 	suite.Equal(apierror.ErrorCodeResourceConflict, apiErr.Code)
 }
 
-func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_BlockedWhenShippedAgainst() {
+func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_BlockedWhenShipmentAgainst() {
 	ctx := salesOrderLineCtx("ac_test")
 
 	suite.lineRepo.EXPECT().
@@ -639,9 +884,10 @@ func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_BlockedWhenShi
 		Return(&domain.SalesOrder{ID: "or_test", SalesOrderStatusCode: string(constants.SalesOrderStatusCodeIssued)}, nil).
 		Times(1)
 
-	// A shipment has already gone out against this line → deletion must be blocked.
+	// The line is part of a shipment (packed or shipped) → deletion is blocked, and the
+	// line's pick lines are NOT re-sequenced or reconciled (the guard returns first).
 	suite.lineRepo.EXPECT().
-		HasShippedAgainstOrderLine(gomock.Any(), "orl_test").
+		HasShipmentAgainstOrderLine(gomock.Any(), "orl_test").
 		Return(true, nil).
 		Times(1)
 
@@ -683,7 +929,7 @@ func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_AlreadyDeleted
 		Times(1)
 
 	suite.lineRepo.EXPECT().
-		HasShippedAgainstOrderLine(gomock.Any(), "orl_test").
+		HasShipmentAgainstOrderLine(gomock.Any(), "orl_test").
 		Return(false, nil).
 		Times(1)
 
@@ -713,4 +959,107 @@ func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_AlreadyDeleted
 	// `AlreadyDeletedError` is a specific construction; the stable assertion is the error message,
 	// which the endpoint layer relies on to render the 409 response.
 	suite.Contains(apiErr.PublicMessage, "already been deleted")
+}
+
+// --- ReorderSalesOrderLines ---
+
+// reorderPositions is the standard fixture: two product lines (A, B) followed by
+// a freight (system) line (F), in their current positions.
+func reorderPositions() []*domain.SalesOrderLinePosition {
+	return []*domain.SalesOrderLinePosition{
+		{ID: "orln_a", LineItemNumber: 1, IsSystem: false},
+		{ID: "orln_b", LineItemNumber: 2, IsSystem: false},
+		{ID: "orln_f", LineItemNumber: 3, IsSystem: true},
+	}
+}
+
+func (suite *SalesOrderLineSvcTestSuite) TestReorderSalesOrderLines_Success_KeepsSystemLinesAtBottom() {
+	ctx := salesOrderLineCtx("ac_test")
+
+	suite.orderRepo.EXPECT().
+		Get(gomock.Any(), "ac_test", "or_test").
+		Return(&domain.SalesOrder{ID: "or_test"}, nil).
+		Times(1)
+
+	suite.lineRepo.EXPECT().
+		GetLineOrder(gomock.Any(), "or_test").
+		Return(reorderPositions(), nil).
+		Times(1)
+
+	// Swap A and B: B moves to 1, A moves to 2. The freight line stays at 3 and is
+	// never touched because its number does not change.
+	suite.lineRepo.EXPECT().SetLineItemNumber(gomock.Any(), "orln_b", int32(1)).Return(nil).Times(1)
+	suite.lineRepo.EXPECT().SetLineItemNumber(gomock.Any(), "orln_a", int32(2)).Return(nil).Times(1)
+
+	suite.lineRepo.EXPECT().
+		List(gomock.Any(), "or_test").
+		Return([]*domain.SalesOrderLine{{ID: "orln_b"}, {ID: "orln_a"}, {ID: "orln_f"}}, nil).
+		Times(1)
+
+	result, apiErr := suite.svc.ReorderSalesOrderLines(ctx, domain.ReorderSalesOrderLinesParams{
+		SalesOrderID: "or_test",
+		LineIDs:      []string{"orln_b", "orln_a"},
+	})
+
+	suite.Nil(apiErr)
+	suite.Require().Len(result, 3)
+	suite.Equal("orln_b", result[0].ID)
+	suite.Equal("orln_f", result[2].ID)
+}
+
+func (suite *SalesOrderLineSvcTestSuite) TestReorderSalesOrderLines_RejectsIncludingSystemLine() {
+	ctx := salesOrderLineCtx("ac_test")
+
+	suite.orderRepo.EXPECT().
+		Get(gomock.Any(), "ac_test", "or_test").
+		Return(&domain.SalesOrder{ID: "or_test"}, nil).
+		Times(1)
+	suite.lineRepo.EXPECT().GetLineOrder(gomock.Any(), "or_test").Return(reorderPositions(), nil).Times(1)
+
+	// Submitting the freight line among the product ordering is rejected — count matches
+	// the product-line count but the freight ID is not a product line.
+	_, apiErr := suite.svc.ReorderSalesOrderLines(ctx, domain.ReorderSalesOrderLinesParams{
+		SalesOrderID: "or_test",
+		LineIDs:      []string{"orln_a", "orln_f"},
+	})
+
+	suite.NotNil(apiErr)
+	suite.Contains(apiErr.PublicMessage, "does not belong")
+}
+
+func (suite *SalesOrderLineSvcTestSuite) TestReorderSalesOrderLines_RejectsWrongCount() {
+	ctx := salesOrderLineCtx("ac_test")
+
+	suite.orderRepo.EXPECT().
+		Get(gomock.Any(), "ac_test", "or_test").
+		Return(&domain.SalesOrder{ID: "or_test"}, nil).
+		Times(1)
+	suite.lineRepo.EXPECT().GetLineOrder(gomock.Any(), "or_test").Return(reorderPositions(), nil).Times(1)
+
+	// Only one of the two product lines is supplied.
+	_, apiErr := suite.svc.ReorderSalesOrderLines(ctx, domain.ReorderSalesOrderLinesParams{
+		SalesOrderID: "or_test",
+		LineIDs:      []string{"orln_a"},
+	})
+
+	suite.NotNil(apiErr)
+	suite.Contains(apiErr.PublicMessage, "exactly once")
+}
+
+func (suite *SalesOrderLineSvcTestSuite) TestReorderSalesOrderLines_RejectsDuplicate() {
+	ctx := salesOrderLineCtx("ac_test")
+
+	suite.orderRepo.EXPECT().
+		Get(gomock.Any(), "ac_test", "or_test").
+		Return(&domain.SalesOrder{ID: "or_test"}, nil).
+		Times(1)
+	suite.lineRepo.EXPECT().GetLineOrder(gomock.Any(), "or_test").Return(reorderPositions(), nil).Times(1)
+
+	_, apiErr := suite.svc.ReorderSalesOrderLines(ctx, domain.ReorderSalesOrderLinesParams{
+		SalesOrderID: "or_test",
+		LineIDs:      []string{"orln_a", "orln_a"},
+	})
+
+	suite.NotNil(apiErr)
+	suite.Contains(apiErr.PublicMessage, "Duplicate")
 }

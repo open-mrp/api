@@ -131,6 +131,24 @@ func (q *Queries) DeleteShipmentLinesBySalesOrderLine(ctx context.Context, sales
 	return err
 }
 
+const getFirstSystemLineNumber = `-- name: GetFirstSystemLineNumber :one
+SELECT CAST(COALESCE(MIN(sol.line_item_number), 0) AS SIGNED) AS first_system_number
+FROM sales_order_line sol
+JOIN product p ON p.id = sol.product_id
+WHERE sol.sales_order_id = ?
+AND p.product_type_code IN ('shipping', 'credit')
+`
+
+// Lowest line_item_number occupied by a credit or freight (shipping) line on the
+// order, or 0 when the order has none. These "system" lines are kept at the
+// bottom of the line list, so a newly added product line slots in just above them.
+func (q *Queries) GetFirstSystemLineNumber(ctx context.Context, salesOrderID string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getFirstSystemLineNumber, salesOrderID)
+	var first_system_number int64
+	err := row.Scan(&first_system_number)
+	return first_system_number, err
+}
+
 const getNextLineItemNumber = `-- name: GetNextLineItemNumber :one
 SELECT COALESCE(MAX(line_item_number), 0) + 1 AS next_number
 FROM sales_order_line
@@ -187,6 +205,8 @@ SELECT
     uc_nu.abbreviation AS unit_cost_numerator_unit_abbreviation,
     uc_du.id AS unit_cost_denominator_unit_id,
     uc_du.abbreviation AS unit_cost_denominator_unit_abbreviation,
+    -- Product type
+    p.product_type_code AS product_type_code,
     -- Timestamps
     sol.created_at,
     sol.updated_at
@@ -200,6 +220,7 @@ LEFT JOIN rate uc ON uc.id = sol.unit_cost_id
 LEFT JOIN unit uc_nu ON uc_nu.id = uc.numerator_unit_id
 LEFT JOIN unit uc_du ON uc_du.id = uc.denominator_unit_id
 LEFT JOIN item i ON i.id = sol.item_id
+LEFT JOIN product p ON p.id = sol.product_id
 WHERE sol.id = ?
 `
 
@@ -233,6 +254,7 @@ type GetSalesOrderLineRow struct {
 	UnitCostNumeratorUnitAbbreviation    sql.NullString
 	UnitCostDenominatorUnitID            sql.NullString
 	UnitCostDenominatorUnitAbbreviation  sql.NullString
+	ProductTypeCode                      sql.NullString
 	CreatedAt                            time.Time
 	UpdatedAt                            time.Time
 }
@@ -270,26 +292,70 @@ func (q *Queries) GetSalesOrderLine(ctx context.Context, salesOrderLineID string
 		&i.UnitCostNumeratorUnitAbbreviation,
 		&i.UnitCostDenominatorUnitID,
 		&i.UnitCostDenominatorUnitAbbreviation,
+		&i.ProductTypeCode,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
 }
 
-const hasShippedAgainstOrderLine = `-- name: HasShippedAgainstOrderLine :one
-SELECT EXISTS(
-    SELECT 1 FROM shipment_line sl
-    JOIN shipment s ON s.id = sl.shipment_id
-    WHERE sl.sales_order_line_id = ?
-    AND s.shipped_at IS NOT NULL
-) AS has_shipped
+const getSalesOrderLineOrder = `-- name: GetSalesOrderLineOrder :many
+SELECT
+    sol.id,
+    sol.line_item_number,
+    p.product_type_code
+FROM sales_order_line sol
+LEFT JOIN product p ON p.id = sol.product_id
+WHERE sol.sales_order_id = ?
+ORDER BY sol.line_item_number ASC
 `
 
-func (q *Queries) HasShippedAgainstOrderLine(ctx context.Context, salesOrderLineID string) (bool, error) {
-	row := q.db.QueryRowContext(ctx, hasShippedAgainstOrderLine, salesOrderLineID)
-	var has_shipped bool
-	err := row.Scan(&has_shipped)
-	return has_shipped, err
+type GetSalesOrderLineOrderRow struct {
+	ID              string
+	LineItemNumber  sql.NullInt32
+	ProductTypeCode sql.NullString
+}
+
+// Lists the order's lines in current display order along with whether each is a
+// credit/freight system line, for reorder validation and re-sequencing. Lines
+// with no product (custom lines) are treated as regular product lines.
+func (q *Queries) GetSalesOrderLineOrder(ctx context.Context, salesOrderID string) ([]GetSalesOrderLineOrderRow, error) {
+	rows, err := q.db.QueryContext(ctx, getSalesOrderLineOrder, salesOrderID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetSalesOrderLineOrderRow
+	for rows.Next() {
+		var i GetSalesOrderLineOrderRow
+		if err := rows.Scan(&i.ID, &i.LineItemNumber, &i.ProductTypeCode); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const hasShipmentAgainstOrderLine = `-- name: HasShipmentAgainstOrderLine :one
+SELECT EXISTS(
+    SELECT 1 FROM shipment_line sl
+    WHERE sl.sales_order_line_id = ?
+) AS has_shipment
+`
+
+// Whether the order line is part of any shipment (packed or shipped). A line packed
+// into a shipment must not be deletable, so this does NOT filter on shipped_at.
+func (q *Queries) HasShipmentAgainstOrderLine(ctx context.Context, salesOrderLineID string) (bool, error) {
+	row := q.db.QueryRowContext(ctx, hasShipmentAgainstOrderLine, salesOrderLineID)
+	var has_shipment bool
+	err := row.Scan(&has_shipment)
+	return has_shipment, err
 }
 
 const isLineInOrder = `-- name: IsLineInOrder :one
@@ -315,6 +381,39 @@ func (q *Queries) IsLineInOrder(ctx context.Context, arg IsLineInOrderParams) (b
 	return exists, err
 }
 
+const isSystemLineProduct = `-- name: IsSystemLineProduct :one
+SELECT EXISTS(
+    SELECT 1 FROM product
+    WHERE id = ?
+    AND product_type_code IN ('shipping', 'credit')
+) AS is_system
+`
+
+// Whether the product is a credit or freight (shipping) system product, which are
+// always kept at the bottom of the line list rather than slotted above.
+func (q *Queries) IsSystemLineProduct(ctx context.Context, productID string) (bool, error) {
+	row := q.db.QueryRowContext(ctx, isSystemLineProduct, productID)
+	var is_system bool
+	err := row.Scan(&is_system)
+	return is_system, err
+}
+
+const setSalesOrderLineItemNumber = `-- name: SetSalesOrderLineItemNumber :exec
+UPDATE sales_order_line
+SET line_item_number = ?, updated_at = NOW(3)
+WHERE id = ?
+`
+
+type SetSalesOrderLineItemNumberParams struct {
+	LineItemNumber sql.NullInt32
+	ID             string
+}
+
+func (q *Queries) SetSalesOrderLineItemNumber(ctx context.Context, arg SetSalesOrderLineItemNumberParams) error {
+	_, err := q.db.ExecContext(ctx, setSalesOrderLineItemNumber, arg.LineItemNumber, arg.ID)
+	return err
+}
+
 const setSalesOrderLineUnitCost = `-- name: SetSalesOrderLineUnitCost :exec
 UPDATE sales_order_line SET unit_cost_id = ?, updated_at = NOW(3)
 WHERE id = ?
@@ -327,6 +426,25 @@ type SetSalesOrderLineUnitCostParams struct {
 
 func (q *Queries) SetSalesOrderLineUnitCost(ctx context.Context, arg SetSalesOrderLineUnitCostParams) error {
 	_, err := q.db.ExecContext(ctx, setSalesOrderLineUnitCost, arg.UnitCostID, arg.ID)
+	return err
+}
+
+const shiftSalesOrderLineNumbersAtOrAbove = `-- name: ShiftSalesOrderLineNumbersAtOrAbove :exec
+UPDATE sales_order_line
+SET line_item_number = line_item_number + 1, updated_at = NOW(3)
+WHERE sales_order_id = ?
+AND line_item_number >= ?
+`
+
+type ShiftSalesOrderLineNumbersAtOrAboveParams struct {
+	SalesOrderID       string
+	FromLineItemNumber sql.NullInt32
+}
+
+// Pushes every line at or below the given position down by one to open a slot for
+// a line being inserted above the credit/freight block.
+func (q *Queries) ShiftSalesOrderLineNumbersAtOrAbove(ctx context.Context, arg ShiftSalesOrderLineNumbersAtOrAboveParams) error {
+	_, err := q.db.ExecContext(ctx, shiftSalesOrderLineNumbersAtOrAbove, arg.SalesOrderID, arg.FromLineItemNumber)
 	return err
 }
 

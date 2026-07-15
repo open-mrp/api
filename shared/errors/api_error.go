@@ -45,6 +45,9 @@ const (
 	// ErrorCodePaymentRequired indicates the account's subscription is in a non-active state (past_due, canceled, unpaid) and must be resolved before the account can continue using the platform.
 	ErrorCodePaymentRequired ErrorCode = "payment_required"
 
+	// ErrorCodeAgentSpendingCapReached indicates the account has reached its configured monthly agent (LLM) spending cap, so the run was refused. The caller must raise or remove the cap to continue running agents.
+	ErrorCodeAgentSpendingCapReached ErrorCode = "agent_spending_cap_reached"
+
 	// --- Validation errors (400) ---
 
 	// ErrorCodeValidationFailed is a general validation failure indicating that the request is invalid.
@@ -127,6 +130,7 @@ func (c ErrorCode) IsValid() bool {
 	switch c {
 	case ErrorCodeExpiredToken, ErrorCodeExpiredAPIKey, ErrorCodeRevokedAPIKey,
 		ErrorCodeInvalidCredentials, ErrorCodeInsufficientPerms, ErrorCodePaymentRequired,
+		ErrorCodeAgentSpendingCapReached,
 		ErrorCodeValidationFailed, ErrorCodeMissingField, ErrorCodeInvalidFormat,
 		ErrorCodeMethodNotAllowed, ErrorCodeResourceNotFound, ErrorCodeResourceExists,
 		ErrorCodeResourceConflict, ErrorCodeResourceGone, ErrorCodeIdempotencyInProgress,
@@ -151,6 +155,7 @@ func (c ErrorCode) EnumValues() []string {
 		string(ErrorCodeInvalidCredentials),
 		string(ErrorCodeInsufficientPerms),
 		string(ErrorCodePaymentRequired),
+		string(ErrorCodeAgentSpendingCapReached),
 		string(ErrorCodeValidationFailed),
 		string(ErrorCodeMissingField),
 		string(ErrorCodeInvalidFormat),
@@ -427,6 +432,11 @@ func NewAuthenticationError(publicMessage string) *APIError {
 	return NewAPIError(ErrorCodeInvalidCredentials, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLInvalidCredentials))
 }
 
+// NewExpiredTokenError creates a 401 error when a JWT access token or refresh token has passed its expiration date. Distinct from NewAuthenticationError so that routine token-rotation traffic (a short-lived access token expiring, the client silently refreshing) can be told apart from genuine bad credentials.
+func NewExpiredTokenError(publicMessage string) *APIError {
+	return NewAPIError(ErrorCodeExpiredToken, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLExpiredToken))
+}
+
 // NewExpiredAPIKeyError creates a 401 error when an API key has passed its expiration date.
 func NewExpiredAPIKeyError(publicMessage string) *APIError {
 	return NewAPIError(ErrorCodeExpiredAPIKey, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLExpiredAPIKey))
@@ -450,6 +460,11 @@ func NewPaymentRequiredError(publicMessage string) *APIError {
 // NewLimitExceededError creates a 403 Forbidden error when an account has reached a plan-imposed resource limit (e.g. maximum sandbox accounts).
 func NewLimitExceededError(publicMessage string) *APIError {
 	return NewAPIError(ErrorCodeLimitExceeded, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLLimitExceeded))
+}
+
+// NewAgentSpendingCapReachedError creates a 402 Payment Required error when an agent run is refused because the account has reached its monthly agent spending cap. Clients should prompt the user to raise or remove the cap.
+func NewAgentSpendingCapReachedError(publicMessage string) *APIError {
+	return NewAPIError(ErrorCodeAgentSpendingCapReached, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLAgentSpendingCap))
 }
 
 // NewRegistrationClosedError creates a 403 Forbidden error when public registration for a plan code has reached its capacity.
@@ -625,7 +640,7 @@ func GetHTTPStatusCode(code ErrorCode) int {
 		return http.StatusUnauthorized
 	case ErrorCodeInsufficientPerms, ErrorCodeLimitExceeded, ErrorCodeRegistrationClosed:
 		return http.StatusForbidden
-	case ErrorCodePaymentRequired:
+	case ErrorCodePaymentRequired, ErrorCodeAgentSpendingCapReached:
 		return http.StatusPaymentRequired
 	case ErrorCodeValidationFailed, ErrorCodeMissingField, ErrorCodeInvalidFormat,
 		ErrorCodeParameterMissing, ErrorCodeParameterInvalid, ErrorCodeParameterUnknown,

@@ -68,6 +68,12 @@ var SampleUnit = &Unit{
 	UpdatedAt:         timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
+// SampleCurrencyUnit is a fully presented US Dollar unit for embedding in rate examples as a numerator (price) unit.
+var SampleCurrencyUnit = newSampleUnit("US Dollar", "$", constants.UnitTypeCurrency)
+
+// SampleEachUnit is a fully presented discrete-count unit for embedding in rate examples as a per-each denominator.
+var SampleEachUnit = newSampleUnit("Each", "ea", constants.UnitTypeQuantity)
+
 func (*Unit) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleUnit)
 }

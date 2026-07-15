@@ -765,6 +765,201 @@ func (s *customerSvcImpl) GetFrequentlyOrderedProducts(ctx context.Context, cust
 	return s.repos.NewCustomerRepo().GetFrequentlyOrderedProducts(ctx, ownerAccountID, customerAccountID)
 }
 
+// managedOrderNotificationTypeCodes are the notification types the customer-facing recipient endpoints manage. Purchase-order submission prefs (the reverse direction) are intentionally excluded so they are preserved across updates.
+var managedOrderNotificationTypeCodes = []string{
+	string(constants.AccountRelationNotificationTypeInvoice),
+	string(constants.AccountRelationNotificationTypeOrderAcknowledgement),
+}
+
+// authorizeCustomerNotificationRecipientAccess resolves the caller identity and gates access to a customer relationship's notification recipients. Read (write=false) mirrors GetFrequentlyOrderedProducts; write additionally requires the order-placing capability (customer users) or Customers/Suppliers update (internal actors).
+func (s *customerSvcImpl) authorizeCustomerNotificationRecipientAccess(ctx context.Context, customerAccountID string, write bool) (*types.Identity, *apierror.APIError) {
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, apierror.NewInvariantViolationError("Identity not found in context.")
+	}
+	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
+		return nil, apiErr
+	}
+	if !identity.IsTargetAccountSet() {
+		return nil, apierror.NewAuthenticationError("The Augno-Account-ID header is required.")
+	}
+
+	if identity.IsCustomerUser() {
+		// Customer users may only read or manage the recipients on their own relationship.
+		if customerAccountID != *identity.ActorAccountID() {
+			return nil, apierror.NewResourceNotFoundError("Customer not found.")
+		}
+		if write {
+			// Managing order-notification recipients is a customer-side capability tied to placing orders.
+			if apiErr := identity.CheckHasRelationCapability(types.PermissionDomainPurchaseOrders, types.ActionCreate); apiErr != nil {
+				return nil, apiErr
+			}
+		}
+	} else if identity.IsInternalActor() {
+		action := types.ActionRead
+		if write {
+			action = types.ActionUpdate
+		}
+		domainCode := types.PermissionDomainCustomers
+		if identity.IsTargetSupplierAccount() {
+			domainCode = types.PermissionDomainSuppliers
+		}
+		if apiErr := identity.CheckHasPermission(domainCode, action); apiErr != nil {
+			return nil, apiErr
+		}
+	} else {
+		return nil, apierror.NewAuthorizationError("You do not have access to this customer.")
+	}
+
+	if identity.IsExternalTarget() {
+		meds := s.mediators()
+		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+			return nil, apiErr
+		}
+	}
+
+	return identity, nil
+}
+
+// ListCustomerNotificationRecipients returns the default order-notification recipients configured for a customer relationship. Supports both internal and customer actors.
+func (s *customerSvcImpl) ListCustomerNotificationRecipients(ctx context.Context, customerAccountID string) ([]domain.NotificationRecipient, *apierror.APIError) {
+	ctx, span := customerSvcTracer.Start(ctx, "service.customer.list_notification_recipients")
+	defer span.End()
+
+	identity, apiErr := s.authorizeCustomerNotificationRecipientAccess(ctx, customerAccountID, false)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	relationID, apiErr := s.repos.NewAccountRelationRepo().FindRelationByOwnerAndCounterparty(ctx, identity.Target.AccountID, customerAccountID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	recipients, apiErr := s.hydrateNotificationRecipients(ctx, customerAccountID, relationID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return recipients, nil
+}
+
+// hydrateNotificationRecipients lists a relation's stored recipient refs and resolves each to a
+// full account user on the customer's account. Recipients whose account user no longer exists are
+// dropped. Account-user resolution is scoped to customerAccountID (the buyer), which is why it
+// happens here rather than through the gateway's target-scoped account-user loader.
+func (s *customerSvcImpl) hydrateNotificationRecipients(ctx context.Context, customerAccountID, relationID string) ([]domain.NotificationRecipient, *apierror.APIError) {
+	refs, apiErr := s.repos.NewAccountRelationRepo().ListNotificationRecipients(ctx, relationID)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	if len(refs) == 0 {
+		return nil, nil
+	}
+
+	ids := make([]string, 0, len(refs))
+	for _, ref := range refs {
+		ids = append(ids, ref.AccountUserID)
+	}
+
+	details, apiErr := s.repos.NewAccountUserRepo().GetByIDs(ctx, customerAccountID, ids)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	detailByID := make(map[string]*domain.AccountUserDetail, len(details))
+	for _, d := range details {
+		detailByID[d.ID] = d
+	}
+
+	recipients := make([]domain.NotificationRecipient, 0, len(refs))
+	for _, ref := range refs {
+		detail, ok := detailByID[ref.AccountUserID]
+		if !ok {
+			// Account user was removed since it was configured; drop it rather than emit a stub.
+			continue
+		}
+		recipients = append(recipients, domain.NotificationRecipient{
+			AccountUser:           detail,
+			NotificationTypeCodes: ref.NotificationTypeCodes,
+		})
+	}
+
+	return recipients, nil
+}
+
+// UpdateCustomerNotificationRecipients replaces the managed (invoice / order acknowledgement) default recipients for a customer relationship. The provided list is the full desired set.
+func (s *customerSvcImpl) UpdateCustomerNotificationRecipients(ctx context.Context, params domain.UpdateCustomerNotificationRecipientsParams) ([]domain.NotificationRecipient, *apierror.APIError) {
+	ctx, span := customerSvcTracer.Start(ctx, "service.customer.update_notification_recipients")
+	defer span.End()
+
+	identity, apiErr := s.authorizeCustomerNotificationRecipientAccess(ctx, params.CustomerAccountID, true)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	// Validate the requested recipients before touching the database: every notification type must be a managed order type, and every account user must belong to the customer's account.
+	for _, r := range params.Recipients {
+		if r.AccountUserID == "" {
+			return nil, tracing.Trace(span, apierror.NewValidationError("Each notification recipient must reference an account user."))
+		}
+		if len(r.NotificationTypeCodes) == 0 {
+			return nil, tracing.Trace(span, apierror.NewValidationError("Each notification recipient must include at least one notification type."))
+		}
+		for _, code := range r.NotificationTypeCodes {
+			if !slices.Contains(managedOrderNotificationTypeCodes, code) {
+				return nil, tracing.Trace(span, apierror.NewValidationError(fmt.Sprintf("Notification type %q is not supported for customer order notifications.", code)))
+			}
+		}
+		if _, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, params.CustomerAccountID, r.AccountUserID, nil); apiErr != nil {
+			if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+				return nil, tracing.Trace(span, apierror.NewValidationError("Notification recipient account user not found on this account."))
+			}
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+
+	relationID, apiErr := s.repos.NewAccountRelationRepo().FindRelationByOwnerAndCounterparty(ctx, identity.Target.AccountID, params.CustomerAccountID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *customerSvcImpl) *apierror.APIError {
+		relationRepo := txSvc.repos.NewAccountRelationRepo()
+		// Replace the managed set: drop existing invoice/acknowledgement prefs for the relation, then insert the requested set. PO-submission prefs are left untouched.
+		if apiErr := relationRepo.DeleteNotificationPreferencesByTypes(txCtx, relationID, managedOrderNotificationTypeCodes); apiErr != nil {
+			return apiErr
+		}
+		seen := make(map[string]struct{})
+		for _, r := range params.Recipients {
+			for _, code := range r.NotificationTypeCodes {
+				key := r.AccountUserID + "\x00" + code
+				if _, ok := seen[key]; ok {
+					continue
+				}
+				seen[key] = struct{}{}
+				prefID, apiErr := id.GenID(id.AccountRelationNotificationPreferenceIDPrefix, nil)
+				if apiErr != nil {
+					return apiErr
+				}
+				if apiErr := relationRepo.CreateNotificationPreference(txCtx, prefID, relationID, r.AccountUserID, code); apiErr != nil {
+					return apiErr
+				}
+			}
+		}
+		return nil
+	})
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	recipients, apiErr := s.hydrateNotificationRecipients(ctx, params.CustomerAccountID, relationID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return recipients, nil
+}
+
 // MergeCustomers merges source customers into a target customer.
 func (s *customerSvcImpl) MergeCustomers(ctx context.Context, params domain.MergeCustomersParams) (*domain.Customer, *apierror.APIError) {
 	ctx, span := customerSvcTracer.Start(ctx, "service.customer.merge")

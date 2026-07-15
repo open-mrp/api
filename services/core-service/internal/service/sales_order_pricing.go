@@ -15,8 +15,14 @@ import (
 // computeSalesOrderLinePrices prices every line of a sales order at once. The volume-discount stage sums quantities across all lines that share a chosen discount, so the whole line set must be priced together.
 //
 // When the caller is an internal actor and provides an explicit OverrideUnitPrice for a line, that override is used verbatim. Otherwise the unit price is computed from the list price through the unit-conversion discount, base->ordered-unit conversion, volume discount, and account-price override stages (in that order of increasing precedence).
-func (s *salesOrderSvcImpl) computeSalesOrderLinePrices(
+// The pricing engine is a set of free functions (not methods) so that both the
+// sales-order service and the sales-order-line service can price lines the same way —
+// a single line added to an existing order is priced identically to a line created
+// with the order. They take the RepoFactory directly since the only state they need is
+// the pricing repository.
+func computeSalesOrderLinePrices(
 	ctx context.Context,
+	repos domain.RepoFactory,
 	ownerAccountID, buyerAccountID string,
 	isInternalActor bool,
 	lines []domain.SalesOrderPriceLineInput,
@@ -39,7 +45,7 @@ func (s *salesOrderSvcImpl) computeSalesOrderLinePrices(
 		orderedUnitIDs = append(orderedUnitIDs, l.QuantityUnitID)
 	}
 
-	bundle, apiErr := s.repos.NewPricingRepo().LoadPricingBundle(ctx, domain.LoadPricingBundleParams{
+	bundle, apiErr := repos.NewPricingRepo().LoadPricingBundle(ctx, domain.LoadPricingBundleParams{
 		OwnerAccountID: ownerAccountID,
 		BuyerAccountID: buyerAccountID,
 		ProductIDs:     productIDs,
@@ -60,7 +66,7 @@ func (s *salesOrderSvcImpl) computeSalesOrderLinePrices(
 			continue
 		}
 
-		price := s.computeUnitPrice(bundle, line, lines)
+		price := computeUnitPrice(bundle, line, lines)
 		out[i] = price
 	}
 
@@ -68,8 +74,9 @@ func (s *salesOrderSvcImpl) computeSalesOrderLinePrices(
 }
 
 // resolveSalesOrderCreateLines resolves a set of create-line inputs against the pricing bundle in one pass: validates that each line's quantity unit belongs to the product's unit group, defaults the SKU/description from the product, derives the item and unit cost, and computes the unit price (honoring an internal actor's override when provided). All lines are resolved together so the volume-discount stage can sum quantities across the order.
-func (s *salesOrderSvcImpl) resolveSalesOrderCreateLines(
+func resolveSalesOrderCreateLines(
 	ctx context.Context,
+	repos domain.RepoFactory,
 	ownerAccountID, buyerAccountID string,
 	isInternalActor bool,
 	lines []domain.CreateSalesOrderLineInput,
@@ -96,7 +103,7 @@ func (s *salesOrderSvcImpl) resolveSalesOrderCreateLines(
 		}
 	}
 
-	bundle, apiErr := s.repos.NewPricingRepo().LoadPricingBundle(ctx, domain.LoadPricingBundleParams{
+	bundle, apiErr := repos.NewPricingRepo().LoadPricingBundle(ctx, domain.LoadPricingBundleParams{
 		OwnerAccountID: ownerAccountID,
 		BuyerAccountID: buyerAccountID,
 		ProductIDs:     productIDs,
@@ -130,7 +137,7 @@ func (s *salesOrderSvcImpl) resolveSalesOrderCreateLines(
 		if isInternalActor && line.UnitPrice != nil {
 			price = domain.SalesOrderLinePrice(*line.UnitPrice)
 		} else {
-			price = s.computeUnitPrice(bundle, priceInputs[i], priceInputs)
+			price = computeUnitPrice(bundle, priceInputs[i], priceInputs)
 		}
 
 		sku := product.SKU
@@ -162,7 +169,7 @@ func (s *salesOrderSvcImpl) resolveSalesOrderCreateLines(
 }
 
 // computeUnitPrice ports the pricing algorithm for a single line.
-func (s *salesOrderSvcImpl) computeUnitPrice(
+func computeUnitPrice(
 	bundle *domain.PricingBundle,
 	line domain.SalesOrderPriceLineInput,
 	allLines []domain.SalesOrderPriceLineInput,
@@ -221,9 +228,9 @@ func (s *salesOrderSvcImpl) computeUnitPrice(
 
 	// --- C. Volume discount multiplier --------------------------------------
 	final := converted
-	if discount := s.selectVolumeDiscount(bundle, product, line, allLines); discount != nil {
+	if discount := selectVolumeDiscount(bundle, product, line, allLines); discount != nil {
 		multiplier := decimal.NewFromInt(1)
-		summedQty := s.sumQuantityForDiscount(bundle, discount, allLines)
+		summedQty := sumQuantityForDiscount(bundle, discount, allLines)
 		for _, tier := range discount.Tiers {
 			threshold := parseDecimal(tier.Threshold)
 			if summedQty.GreaterThanOrEqual(threshold) {
@@ -238,7 +245,7 @@ func (s *salesOrderSvcImpl) computeUnitPrice(
 	numeratorUnitID := currencyUnitID
 
 	// --- D. account_price absolute override (beats everything; not rounded) --
-	if override := s.selectAccountPrice(bundle, product); override != nil {
+	if override := selectAccountPrice(bundle, product); override != nil {
 		value = parseDecimal(override.UnitValue)
 		numeratorUnitID = override.NumeratorUnitID
 		denominatorUnitID = override.DenominatorUnitID
@@ -252,7 +259,7 @@ func (s *salesOrderSvcImpl) computeUnitPrice(
 }
 
 // selectAccountPrice returns the applicable account-price override, last match wins (the bundle is ordered created_at ASC). A product with no product line never matches an account price.
-func (s *salesOrderSvcImpl) selectAccountPrice(bundle *domain.PricingBundle, product *domain.PricingProduct) *domain.PricingAccountPrice {
+func selectAccountPrice(bundle *domain.PricingBundle, product *domain.PricingProduct) *domain.PricingAccountPrice {
 	if product.ProductLineID == nil || *product.ProductLineID == "" {
 		return nil
 	}
@@ -283,7 +290,7 @@ func (s *salesOrderSvcImpl) selectAccountPrice(bundle *domain.PricingBundle, pro
 }
 
 // selectVolumeDiscount chooses the applicable discount for a line: customer-group matching discounts first, then the highest total multiplier among the met tiers. Returns nil if none apply.
-func (s *salesOrderSvcImpl) selectVolumeDiscount(
+func selectVolumeDiscount(
 	bundle *domain.PricingBundle,
 	product *domain.PricingProduct,
 	line domain.SalesOrderPriceLineInput,
@@ -297,7 +304,7 @@ func (s *salesOrderSvcImpl) selectVolumeDiscount(
 		if !discountMatchesProduct(d, product) {
 			continue // this product is outside the discount's scope
 		}
-		summed := s.sumQuantityForDiscount(bundle, d, allLines)
+		summed := sumQuantityForDiscount(bundle, d, allLines)
 		multiplier, anyTierMet := discountMultiplier(d, summed)
 		if !anyTierMet {
 			continue
@@ -356,7 +363,7 @@ func discountMultiplier(d *domain.PricingVolumeDiscount, summedQty decimal.Decim
 }
 
 // sumQuantityForDiscount sums the ordered quantity across all lines, each normalized into one of the discount's acceptable units. On conversion failure the line contributes 0.
-func (s *salesOrderSvcImpl) sumQuantityForDiscount(
+func sumQuantityForDiscount(
 	bundle *domain.PricingBundle,
 	discount *domain.PricingVolumeDiscount,
 	allLines []domain.SalesOrderPriceLineInput,

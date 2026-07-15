@@ -259,10 +259,15 @@ func (r *productRepoImpl) GetSystemProduct(ctx context.Context, accountID, produ
 			return nil, tracing.Trace(span, apiErr)
 		}
 	}
+	var description *string
+	if row.ProductDescription.Valid {
+		description = &row.ProductDescription.String
+	}
 	return &domain.SystemProductInfo{
-		ProductID:      row.ProductID,
-		ProductSKU:     row.ProductSku,
-		QuantityUnitID: row.QuantityUnitID,
+		ProductID:          row.ProductID,
+		ProductSKU:         row.ProductSku,
+		ProductDescription: description,
+		QuantityUnitID:     row.QuantityUnitID,
 	}, nil
 }
 

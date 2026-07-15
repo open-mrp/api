@@ -37,6 +37,12 @@ const (
 	// CoreEventSalesOrderCreatedQueue carries sales-order-created events back to the core-service for out-of-band processing (e.g. CRM sync). Messages on this queue contain a SalesOrderCreatedData payload.
 	CoreEventSalesOrderCreatedQueue = "core_event_sales_order_created"
 
+	// CoreEventSalesOrderShippingUpdatedQueue carries sales-order shipping-changed events back to the core-service, which re-syncs the order's shipment records' carrier / service level / ship-to. Messages contain a SalesOrderShippingUpdatedData payload.
+	CoreEventSalesOrderShippingUpdatedQueue = "core_event_sales_order_shipping_updated"
+
+	// CoreEventCustomerRegisteredQueue carries customer-registered events to the notification-service, which notifies the seller's customer-service support-route group. Messages contain a CustomerRegisteredData payload.
+	CoreEventCustomerRegisteredQueue = "core_event_customer_registered"
+
 	// CoreCmdHubspotSyncQueue carries HubSpot backfill commands (preview and execute) to the core-service, which runs the long-running matching/sync passes out-of-band. Bound to both the preview and execute routing keys; the consumer dispatches on routing key. Messages contain a HubspotSyncCommandData payload.
 	CoreCmdHubspotSyncQueue = "core_cmd_hubspot_sync"
 
@@ -230,6 +236,30 @@ type SalesOrderCreatedData struct {
 	StatusCode string `json:"status_code"`
 }
 
+// SalesOrderShippingUpdatedData is the payload for CoreEventSalesOrderShippingUpdatedQueue messages. It identifies an order whose carrier / service level / ship-to changed; the consumer re-fetches the order and syncs its shipment records to the order's current shipping fields.
+type SalesOrderShippingUpdatedData struct {
+	// SalesOrderID is the type-prefixed ID of the updated order.
+	SalesOrderID string `json:"sales_order_id"`
+	// AccountID is the owner/seller account the order belongs to.
+	AccountID string `json:"account_id"`
+}
+
+// CustomerRegisteredData is the payload for CoreEventCustomerRegisteredQueue messages. It identifies a buyer who completed portal registration so the notification-service consumer can notify the seller's customer-service support-route group. All display fields the consumer needs are carried here — the consumer (notification-service) has no core-service client to re-fetch them.
+type CustomerRegisteredData struct {
+	// SellerAccountID is the seller/vendor account whose portal the buyer registered on. The support route is resolved against this account.
+	SellerAccountID string `json:"seller_account_id"`
+	// CustomerAccountID is the buyer's customer account (the notification links to it).
+	CustomerAccountID string `json:"customer_account_id"`
+	// CustomerName is the customer's display name (best-effort; may be empty for an existing-customer join, in which case the consumer falls back to the number).
+	CustomerName string `json:"customer_name,omitempty"`
+	// CustomerNumber is the seller-facing customer number.
+	CustomerNumber string `json:"customer_number,omitempty"`
+	// RegistrantUserID is the user (us_) who registered.
+	RegistrantUserID string `json:"registrant_user_id,omitempty"`
+	// IsExistingCustomer is true when the buyer joined an existing customer account rather than creating a new one.
+	IsExistingCustomer bool `json:"is_existing_customer,omitempty"`
+}
+
 // HubspotSyncCommandData is the payload for CoreCmdHubspotSyncQueue messages (both preview and execute). It identifies the backfill job to run; the consumer dispatches on the message's routing key.
 type HubspotSyncCommandData struct {
 	// JobID is the type-prefixed HubSpot sync job id (e.g. "igjb_...").
@@ -277,6 +307,8 @@ type AgentReplyData struct {
 	Phase string `json:"phase,omitempty"`
 	// Failed marks a "final" reply that resolves an errored run (the body is the user-facing error).
 	Failed bool `json:"failed,omitempty"`
+	// ErrorCode is the machine-readable api-error code for a failed reply (e.g. "agent_spending_cap_reached"), carried onto the message so the client can react (e.g. prompt to raise the spending limit). Empty for non-cap or non-failed replies.
+	ErrorCode string `json:"error_code,omitempty"`
 	// ReplyToMessageID threads the reply under the message that triggered the run (a mention or keyword), so it renders as a reply. Empty for continuation turns (already in a reply thread).
 	ReplyToMessageID string `json:"reply_to_message_id,omitempty"`
 	// ApprovalEvent marks this as a tool-approval notice rather than an agent reply: the consumer posts it as a senderless system_event (Body = "{approver} approved {tools}") that renders as a timeline divider, not an agent bubble. AgentConfigID/AgentRunID are not required in this mode.

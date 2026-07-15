@@ -111,7 +111,7 @@ func resumeAndRun(t *testing.T, priorEvents []sqlc.AgentRunEvent, runCtx *domain
 		context.Background(), run, "acc_test", nil,
 		"you are a test agent", []string{"claude-test"},
 		toolDefsFor(toolNames...), 0,
-		messages, &seq, runCtx, priorEvents, nil, 0,
+		messages, &seq, runCtx, priorEvents, nil, 0, nil,
 	)
 	if err != nil {
 		t.Fatalf("runResumedLoop returned error: %v", err)
@@ -327,7 +327,7 @@ func TestRunAgentLoop_ErroringToolIsNotRecordedAsSuccess(t *testing.T) {
 	run := &sqlc.AgentRun{ID: "agr_test", StatusCode: domain.RunStatusRunning}
 	result, err := runner.runAgentLoop(context.Background(), run, "acc_test", nil,
 		"sys", []string{"claude-test"}, toolDefsFor(guardSafeTool), 0,
-		[]llm.Message{{Role: "user", Content: "go"}}, &seq, runCtx, nil, 0)
+		[]llm.Message{{Role: "user", Content: "go"}}, &seq, runCtx, nil, 0, nil)
 	if err != nil {
 		t.Fatalf("runAgentLoop: %v", err)
 	}
@@ -363,7 +363,7 @@ func TestRunAgentLoop_SucceedingToolRecordedAsSuccess(t *testing.T) {
 	run := &sqlc.AgentRun{ID: "agr_test", StatusCode: domain.RunStatusRunning}
 	result, err := runner.runAgentLoop(context.Background(), run, "acc_test", nil,
 		"sys", []string{"claude-test"}, toolDefsFor(guardSafeTool), 0,
-		[]llm.Message{{Role: "user", Content: "go"}}, &seq, runCtx, nil, 0)
+		[]llm.Message{{Role: "user", Content: "go"}}, &seq, runCtx, nil, 0, nil)
 	if err != nil {
 		t.Fatalf("runAgentLoop: %v", err)
 	}

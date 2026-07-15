@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -24,6 +25,7 @@ import (
 	"github.com/augno/api/shared/idempotency"
 	"github.com/augno/api/shared/messaging"
 	"github.com/augno/api/shared/ptrutil"
+	"github.com/augno/api/shared/textutil"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -172,6 +174,10 @@ func (s *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, params domain.L
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
+		progress, apiErr := repo.GetFulfillmentProgress(ctx, orderIDs)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 		for _, order := range result.SalesOrders {
 			if status, ok := statuses[order.ID]; ok {
 				order.PaymentStatus = status
@@ -179,6 +185,10 @@ func (s *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, params domain.L
 				order.PaymentStatus = constants.SalesOrderPaymentStatusUnpaid
 			}
 			order.PaymentIntentIDs = paymentIntentIDs[order.ID]
+			p := progress[order.ID]
+			order.PickedCompletion = p.PickedCompletion
+			order.PackedCompletion = p.PackedCompletion
+			order.InvoicedCompletion = p.InvoicedCompletion
 		}
 	}
 
@@ -282,6 +292,15 @@ func (s *salesOrderSvcImpl) GetSalesOrder(ctx context.Context, params domain.Get
 		return nil, tracing.Trace(span, apiErr)
 	}
 	order.PaymentIntentIDs = paymentIntentIDs[order.ID]
+
+	progress, apiErr := repo.GetFulfillmentProgress(ctx, []string{order.ID})
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	p := progress[order.ID]
+	order.PickedCompletion = p.PickedCompletion
+	order.PackedCompletion = p.PackedCompletion
+	order.InvoicedCompletion = p.InvoicedCompletion
 
 	if includesSalesOrderLines(params.Includes) {
 		lines, apiErr := repo.GetLines(ctx, params.SalesOrderID)
@@ -416,8 +435,9 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 		// Resolve everything else that only requires reads (and the live Shippo call) BEFORE opening the write transaction, so the external rate lookup never holds a DB transaction open across network latency. The transaction below performs only the inserts.
 		addressRepo := s.repos.NewAddressRepo()
 
-		// Reference the existing bill-to / ship-to addresses by ID (matching Dashboard, which only accepts address IDs; addresses are persisted separately). Each must belong to the order's owner or buyer account. The resolved ship-to feeds the sales-rep territory + shipping-rate logic below.
-		if _, apiErr := s.resolveOrderAddress(ctx, addressRepo, params.AccountID, params.BuyerAccountID, params.BillToAddressID); apiErr != nil {
+		// Reference the existing bill-to / ship-to addresses by ID (matching Dashboard, which only accepts address IDs; addresses are persisted separately). Each must belong to the order's owner or buyer account. The resolved ship-to feeds the sales-rep territory + shipping-rate logic below; the bill-to supplies the third-party freight-billing address.
+		billAddr, apiErr := s.resolveOrderAddress(ctx, addressRepo, params.AccountID, params.BuyerAccountID, params.BillToAddressID)
+		if apiErr != nil {
 			return nil, cacheErr(apiErr)
 		}
 		shipAddr, apiErr := s.resolveOrderAddress(ctx, addressRepo, params.AccountID, params.BuyerAccountID, params.ShipToAddressID)
@@ -455,7 +475,7 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 		}
 
 		// Resolve every line against the product/pricing data: validate the quantity unit against the product's unit group, default SKU/description from the product, derive the item + unit cost, and compute the unit price (internal actors may override via the line's unit_price; customer submissions are ignored and the price is computed server-side).
-		resolvedLines, apiErr := s.resolveSalesOrderCreateLines(ctx, params.AccountID, params.BuyerAccountID, identity.IsInternalUser(), params.Lines)
+		resolvedLines, apiErr := resolveSalesOrderCreateLines(ctx, s.repos, params.AccountID, params.BuyerAccountID, identity.IsInternalUser(), params.Lines)
 		if apiErr != nil {
 			return nil, cacheErr(apiErr)
 		}
@@ -464,7 +484,7 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 		orderTotal := calculateResolvedLinesTotal(resolvedLines)
 
 		// Estimate the shipping rate via the freight-exemption / flat-rate / minimum-order / live-Shippo cascade (matches Dashboard). This is the only external call in the create path; computing it here on the outer receiver keeps the live Shippo HTTP request out of the transaction and uses the real Shippo factory.
-		shippingRate, apiErr := s.estimateOrderShippingRate(ctx, params, shipAddr, orderTotal)
+		shippingRate, apiErr := s.estimateOrderShippingRate(ctx, params, billAddr, shipAddr, orderTotal)
 		if apiErr != nil {
 			return nil, cacheErr(apiErr)
 		}
@@ -665,6 +685,7 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 		return cached.Data, cached.Error
 
 	case domain.RecoveryPointStarted:
+		// Freight is no longer re-estimated automatically on ship-to / carrier / service-level changes. Users refresh freight explicitly via the quote-freight endpoint (QuoteSalesOrderFreight) and approve the new price, so an order update never silently overwrites the shipping line.
 		var result *domain.SalesOrder
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewSalesOrderRepo()
@@ -675,15 +696,25 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 				return apiErr
 			}
 
-			// Backfill nullable fields that use direct assignment (not COALESCE) in SQL. When the caller omits a field (nil), we preserve the existing value. When the caller sends ptr("") the gateway maps it to SQL NULL to clear the field.
+			// sales_rep_id references account_user.id. Reject a caller-supplied value that
+			// isn't a real account_user for this account — otherwise a user id (or any other
+			// id) is stored unvalidated and no join resolves it, silently blanking the rep.
+			// Only an explicitly-set value is checked; omit/clear skip the lookup.
+			if repID, ok := params.SalesRepID.Value(); ok && repID != "" {
+				if _, apiErr := txSvc.repos.NewAccountUserRepo().GetDetailByAccountAndID(txCtx, params.AccountID, repID, nil); apiErr != nil {
+					return mapSalesOrderReferenceError(apiErr, "Sales rep not found.", "sales_rep_id")
+				}
+			}
+
+			// Decide whether the caller changed carrier / service level / ship-to BEFORE the
+			// backfill below rewrites omitted fields to the existing values.
+			shippingChanged := salesOrderShippingChanged(existing, params)
+
+			// Non-nullable optional FKs: when the caller omits a field (nil), preserve the
+			// existing value. These cannot be cleared — an empty value would set an invalid
+			// FK, not null the column.
 			if params.CarrierID == nil {
 				params.CarrierID = existing.CarrierID
-			}
-			if params.ServiceLevelID == nil {
-				params.ServiceLevelID = existing.ServiceLevelID
-			}
-			if params.SalesRepID == nil {
-				params.SalesRepID = existing.SalesRepID
 			}
 			if params.ShippingTermID == nil {
 				params.ShippingTermID = existing.ShippingTermID
@@ -691,12 +722,22 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 			if params.PaymentTermID == nil {
 				params.PaymentTermID = existing.PaymentTermID
 			}
-			if params.OrderDiscountID == nil {
-				params.OrderDiscountID = existing.OrderDiscountID
-			}
 			if params.BuyerAccountID == nil {
 				params.BuyerAccountID = &existing.BuyerAccountID
 			}
+
+			// Clearable nullable fields: backfill an unset (omitted) field from the existing
+			// order so the repo's plain narg keeps it; an explicit clear resolves to NULL,
+			// and a set value overwrites. This is how the three-state (set/clear/leave)
+			// survives to the SQL — an empty string is a real value, never a clear.
+			params.CustomerPONumber = params.CustomerPONumber.BackfillUnsetPtr(existing.CustomerPONumber)
+			params.Note = params.Note.BackfillUnsetPtr(existing.Note)
+			params.ServiceLevelID = params.ServiceLevelID.BackfillUnsetPtr(existing.ServiceLevelID)
+			params.CarrierBillingType = params.CarrierBillingType.BackfillUnsetPtr(existing.CarrierBillingType)
+			params.CarrierBillingAccount = params.CarrierBillingAccount.BackfillUnsetPtr(existing.CarrierBillingAccount)
+			params.SalesRepID = params.SalesRepID.BackfillUnsetPtr(existing.SalesRepID)
+			params.OrderDiscountID = params.OrderDiscountID.BackfillUnsetPtr(existing.OrderDiscountID)
+			params.PromisedAt = params.PromisedAt.BackfillUnsetPtr(existing.PromisedAt)
 
 			// Validate order number uniqueness if being updated
 			if params.Number != nil {
@@ -756,6 +797,23 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 				return apiErr
 			}
 
+			// When the order's carrier, service level, or ship-to changed, re-sync the
+			// order's existing shipment records out-of-band via the outbox (matching
+			// legacy updateCarrierByOrder / updateShipToByOrder, which cascaded these
+			// edits to shipments synchronously). Emitting inside the tx keeps the event
+			// atomic with the update.
+			if shippingChanged && txSvc.salesOrderPublisher != nil {
+				// The outbox publisher reads the RepoFactory from the context (as the create
+				// flow does at the top of its tx); inject it before publishing.
+				pubCtx := event.WithRepos(txCtx, txSvc.repos)
+				if apiErr := txSvc.salesOrderPublisher.PublishSalesOrderShippingUpdated(pubCtx, messaging.SalesOrderShippingUpdatedData{
+					SalesOrderID: updated.ID,
+					AccountID:    params.AccountID,
+				}); apiErr != nil {
+					return apiErr
+				}
+			}
+
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
 		})
 
@@ -804,7 +862,7 @@ func (s *salesOrderSvcImpl) DeleteSalesOrder(ctx context.Context, params domain.
 		}
 		return tracing.Trace(span, apiErr)
 	}
-	if order.CompletedAt != nil {
+	if order.CompletedAt != nil || order.SalesOrderStatusCode == string(constants.SalesOrderStatusCodeFulfilled) {
 		return tracing.Trace(span, apierror.NewValidationError("Cannot delete a fulfilled sales order."))
 	}
 
@@ -987,7 +1045,8 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 					return apiErr
 				}
 
-				if apiErr := txLineRepo.CreateQuantity(txCtx, pickQtyID, line.QuantityValue, line.QuantityUnitID); apiErr != nil {
+				// Pick lines start at 0 picked: a pick line's quantity is the amount picked so far (quantity_picked = SUM(pick_line.value)), filled in later by the pick action — matching legacy and v2's own pack-path placeholder. Seeding it with the ordered quantity would make the order read as fully picked the instant it is issued and break PickAllLines / remaining-quantity math.
+				if apiErr := txLineRepo.CreateQuantity(txCtx, pickQtyID, "0", line.QuantityUnitID); apiErr != nil {
 					return apiErr
 				}
 
@@ -1100,9 +1159,14 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 				return apiErr
 			}
 
-			// Mark pick as packed if one exists
+			// Closing the order also closes its pick: pack every still-open pick line and
+			// mark the pick finished, so the pick reads as complete alongside the order.
 			if order.PickID != nil {
-				if apiErr := txSvc.repos.NewPickRepo().UpdateFinishedAt(txCtx, params.AccountID, *order.PickID, now); apiErr != nil {
+				txPickRepo := txSvc.repos.NewPickRepo()
+				if apiErr := txPickRepo.CloseOpenPickLines(txCtx, *order.PickID); apiErr != nil {
+					return apiErr
+				}
+				if apiErr := txPickRepo.UpdateFinishedAt(txCtx, params.AccountID, *order.PickID, now); apiErr != nil {
 					return apiErr
 				}
 			}
@@ -1141,9 +1205,16 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 				return apiErr
 			}
 
-			// Mark pick as unpacked if one exists
+			// Reopening the order reopens its pick: clear the pick's finished flag and reopen
+			// (unpack) every pick line that is not yet complete — its picked quantity is below
+			// the ordered quantity — so outstanding lines can be worked again. Fully-picked
+			// lines stay packed.
 			if order.PickID != nil {
-				if apiErr := txSvc.repos.NewPickRepo().ClearFinishedAt(txCtx, params.AccountID, *order.PickID); apiErr != nil {
+				txPickRepo := txSvc.repos.NewPickRepo()
+				if apiErr := txPickRepo.ReopenIncompletePickLines(txCtx, *order.PickID); apiErr != nil {
+					return apiErr
+				}
+				if apiErr := txPickRepo.ClearFinishedAt(txCtx, params.AccountID, *order.PickID); apiErr != nil {
 					return apiErr
 				}
 			}
@@ -1178,7 +1249,7 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 
 	// On successful issue transition, optionally send acknowledgement email to the contacts on the order (matching Dashboard behavior).
 	if params.StatusChange == "issue" && params.SendEmail {
-		if apiErr := s.sendOrderAcknowledgementEmail(ctx, params.AccountID, params.SalesOrderID, order.Number); apiErr != nil {
+		if apiErr := s.sendOrderAcknowledgementEmail(ctx, params.AccountID, params.SalesOrderID); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 	}
@@ -1200,13 +1271,28 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 	return updatedOrder, nil
 }
 
+// portalRegisterLink returns the customer-portal registration URL for the account, or "" when the account has no customer portal configured. A verified custom portal domain is targeted directly; otherwise the slug-prefixed frontend URL is used. Best-effort: lookup failures yield "".
+func (s *salesOrderSvcImpl) portalRegisterLink(ctx context.Context, accountID string) string {
+	// Path mirrors the frontend's FrontendPaths.register ("/auth/register").
+	const registerPath = "/auth/register"
+	if domain, _ := s.repos.NewPortalDomainRepo().GetByAccountID(ctx, accountID); domain != nil && domain.Status == constants.PortalDomainStatusVerified {
+		return "https://" + domain.Domain + registerPath
+	}
+	slug, _ := s.repos.NewAccountRepo().GetPortalSlug(ctx, accountID)
+	if slug != nil && strings.TrimSpace(*slug) != "" && s.frontendURL != "" {
+		return fmt.Sprintf("%s/%s%s", s.frontendURL, *slug, registerPath)
+	}
+	return ""
+}
+
 // sendOrderAcknowledgementEmail publishes the order-acknowledgement email to the contacts configured for the order and marks the order as acknowledged. No-ops if there are no recipients or the notification publisher is not configured.
-func (s *salesOrderSvcImpl) sendOrderAcknowledgementEmail(ctx context.Context, accountID, salesOrderID, orderNumber string) *apierror.APIError {
+func (s *salesOrderSvcImpl) sendOrderAcknowledgementEmail(ctx context.Context, accountID, salesOrderID string) *apierror.APIError {
 	if s.notificationPublisher == nil {
 		return nil
 	}
 
-	recipients, apiErr := s.repos.NewSalesOrderRepo().GetAcknowledgementRecipients(ctx, salesOrderID)
+	repo := s.repos.NewSalesOrderRepo()
+	recipients, apiErr := repo.GetAcknowledgementRecipients(ctx, salesOrderID)
 	if apiErr != nil {
 		return apiErr
 	}
@@ -1214,24 +1300,55 @@ func (s *salesOrderSvcImpl) sendOrderAcknowledgementEmail(ctx context.Context, a
 		return nil
 	}
 
-	accountName, apiErr := s.repos.NewAccountRepo().GetName(ctx, accountID)
+	order, apiErr := repo.Get(ctx, accountID, salesOrderID)
+	if apiErr != nil {
+		return apiErr
+	}
+	lines, apiErr := repo.GetLines(ctx, salesOrderID)
 	if apiErr != nil {
 		return apiErr
 	}
 
+	// The seller's branding (logo, contact) and origin address power the email
+	// letterhead/footer and the PDF letterhead. Both are best-effort: the
+	// acknowledgement still sends with a blank letterhead if either lookup fails.
+	account, _ := s.repos.NewAccountRepo().GetByID(ctx, accountID)
+	originAddr, _ := repo.GetAccountOriginAddress(ctx, accountID)
+
+	data := buildOrderAcknowledgementData(order, lines, account, originAddr)
+	// The acknowledgement recipients are shown as contact emails under Bill To.
+	data.ContactEmails = recipients
+	// Gate the "Order Online" CTA on the account having a customer portal.
+	data.OrderOnlineLink = s.portalRegisterLink(ctx, accountID)
+	// Fetch the logo bytes for the PDF letterhead (best-effort; the email uses the URL).
+	if data.LogoURL != "" {
+		data.LogoImageType, data.LogoImage = fetchAckLogoImage(ctx, data.LogoURL)
+	}
+
 	emailData := messaging.EmailSendData{
 		To:         recipients,
-		Subject:    fmt.Sprintf("Sales Order %s", orderNumber),
+		Subject:    fmt.Sprintf("Sales Order %s", data.OrderNumber),
 		TemplateID: constants.EmailTemplateOrderAcknowledgement,
-		Params: map[string]any{
-			"order_number": orderNumber,
-			"account_name": accountName,
-		},
-		AccountID: &accountID,
+		Params:     data.emailParams(),
+		AccountID:  &accountID,
+	}
+
+	// Attach the generated order-acknowledgement PDF, matching legacy (which attached a
+	// rendered PDF of the order). A PDF failure degrades gracefully to an attachment-free
+	// email rather than blocking the acknowledgement.
+	if pdfBytes, err := buildOrderAcknowledgementPDF(data); err == nil {
+		encoded := base64.StdEncoding.EncodeToString(pdfBytes)
+		filename := "order-acknowledgement-" + data.OrderNumber + ".pdf"
+		contentType := "application/pdf"
+		emailData.AttachmentData = &encoded
+		emailData.AttachmentFilename = &filename
+		emailData.AttachmentContentType = &contentType
 	}
 
 	return s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
-		if apiErr := s.notificationPublisher.PublishSendEmail(txCtx, emailData); apiErr != nil {
+		// The outbox publisher reads the RepoFactory from the context; inject it before publishing.
+		pubCtx := event.WithRepos(txCtx, txSvc.repos)
+		if apiErr := s.notificationPublisher.PublishSendEmail(pubCtx, emailData); apiErr != nil {
 			return apiErr
 		}
 		return txSvc.repos.NewSalesOrderRepo().MarkAcknowledgementSent(txCtx, accountID, salesOrderID)
@@ -1310,11 +1427,18 @@ func (s *salesOrderSvcImpl) synthesizeShippingLine(ctx context.Context, orderID 
 		return apiErr
 	}
 
+	// Carry the shipping product's description onto the line (matches product lines, which default their description from the product). Falls back to the SKU so the freight line is never left blank when the system product has no description configured.
+	description := shippingProduct.ProductDescription
+	if description == nil || *description == "" {
+		description = &shippingProduct.ProductSKU
+	}
+
 	_, apiErr = s.repos.NewSalesOrderLineRepo().Create(ctx, lineID, domain.CreateSalesOrderLineParams{
 		SalesOrderID:               orderID,
 		AccountID:                  params.AccountID,
 		ProductID:                  shippingProduct.ProductID,
 		ProductSKU:                 shippingProduct.ProductSKU,
+		ProductDescription:         description,
 		QuantityValue:              "1",
 		QuantityUnitID:             shippingProduct.QuantityUnitID,
 		UnitPriceValue:             rate,
@@ -1324,8 +1448,136 @@ func (s *salesOrderSvcImpl) synthesizeShippingLine(ctx context.Context, orderID 
 	return apiErr
 }
 
+// estimateFreightForOrder re-estimates an existing order's freight (shipping) charge from its CURRENT persisted ship-to, carrier, service level, and lines, using the same freight-exemption / flat-rate / minimum-order / live-Shippo cascade as the create path. Returns the rate rounded to cents (matching Dashboard's update path). Read-only: it does not mutate the order — the caller (the quote-freight endpoint) returns it for the user to review and approve. Runs on the outer receiver so the live Shippo call stays out of any write transaction.
+func (s *salesOrderSvcImpl) estimateFreightForOrder(ctx context.Context, accountID, salesOrderID string) (string, *apierror.APIError) {
+	existing, apiErr := s.repos.NewSalesOrderRepo().Get(ctx, accountID, salesOrderID)
+	if apiErr != nil {
+		return "", apiErr
+	}
+
+	shipAddr, apiErr := s.resolveOrderAddress(ctx, s.repos.NewAddressRepo(), accountID, existing.BuyerAccountID, existing.ShippingAddressID)
+	if apiErr != nil {
+		return "", apiErr
+	}
+
+	// Identify the synthesized shipping / discount lines so they are excluded from the weight and minimum-order-total inputs (they are not product lines).
+	var shippingProductID, creditProductID string
+	if shippingProduct, apiErr := s.repos.NewProductRepo().GetSystemProduct(ctx, accountID, "shipping"); apiErr != nil {
+		return "", apiErr
+	} else if shippingProduct != nil {
+		shippingProductID = shippingProduct.ProductID
+	}
+	if creditProduct, apiErr := s.repos.NewProductRepo().GetSystemProduct(ctx, accountID, "credit"); apiErr != nil {
+		return "", apiErr
+	} else if creditProduct != nil {
+		creditProductID = creditProduct.ProductID
+	}
+
+	lines, apiErr := s.repos.NewSalesOrderRepo().GetLines(ctx, salesOrderID)
+	if apiErr != nil {
+		return "", apiErr
+	}
+
+	// Rebuild the create-path line inputs (product lines only) that drive the parcel weight and product-line freight exemption, and sum the minimum-order total.
+	lineInputs := make([]domain.CreateSalesOrderLineInput, 0, len(lines))
+	total := decimal.Zero
+	for _, l := range lines {
+		if l.ProductID == nil {
+			continue
+		}
+		// The minimum-order total mirrors legacy update's calculateTotalOrdered: it sums EVERY line, including the order's existing shipping charge and the (negative) discount line — not just the product lines.
+		if qty, err := decimal.NewFromString(l.QuantityValue); err == nil {
+			if price, err := decimal.NewFromString(l.UnitPriceValue); err == nil {
+				total = total.Add(qty.Mul(price))
+			}
+		}
+		// Weight + product-line freight-exemption inputs are the product lines only — exclude the synthesized shipping / discount lines, matching the create path.
+		if *l.ProductID == shippingProductID || *l.ProductID == creditProductID {
+			continue
+		}
+		lineInputs = append(lineInputs, domain.CreateSalesOrderLineInput{
+			ProductID:      *l.ProductID,
+			QuantityValue:  l.QuantityValue,
+			QuantityUnitID: l.QuantityUnitID,
+		})
+	}
+	orderTotal, _ := total.Round(2).Float64()
+
+	// Resolve the bill-to for third-party freight billing, mirroring the create path.
+	billAddr, apiErr := s.resolveOrderAddress(ctx, s.repos.NewAddressRepo(), accountID, existing.BuyerAccountID, existing.BillingAddressID)
+	if apiErr != nil {
+		return "", apiErr
+	}
+
+	rateStr, apiErr := s.estimateOrderShippingRate(ctx, domain.CreateSalesOrderParams{
+		AccountID:             accountID,
+		BuyerAccountID:        existing.BuyerAccountID,
+		CarrierID:             existing.CarrierID,
+		ServiceLevelID:        existing.ServiceLevelID,
+		CarrierBillingType:    existing.CarrierBillingType,
+		CarrierBillingAccount: existing.CarrierBillingAccount,
+		Lines:                 lineInputs,
+	}, billAddr, shipAddr, orderTotal)
+	if apiErr != nil {
+		return "", apiErr
+	}
+
+	rate, err := decimal.NewFromString(rateStr)
+	if err != nil {
+		return "", apierror.NewInternalError(err, "Issue parsing the estimated shipping rate.")
+	}
+	return rate.Round(2).String(), nil
+}
+
+// ptrStringChanged reports whether two optional string values differ (one nil and the other not, or both set to different values).
+func ptrStringChanged(a, b *string) bool {
+	if a == nil && b == nil {
+		return false
+	}
+	if a == nil || b == nil {
+		return true
+	}
+	return *a != *b
+}
+
+// salesOrderShippingChanged reports whether the update request changes the order's
+// carrier, service level, or ship-to address versus the existing order. It reads the
+// raw request params (before backfill), so an omitted field never counts as a change.
+func salesOrderShippingChanged(existing *domain.SalesOrder, params domain.UpdateSalesOrderParams) bool {
+	if params.CarrierID != nil && ptrStringChanged(existing.CarrierID, params.CarrierID) {
+		return true
+	}
+	if params.ShippingAddressID != nil && existing.ShippingAddressID != *params.ShippingAddressID {
+		return true
+	}
+	if params.ServiceLevelID.WasProvided() {
+		if params.ServiceLevelID.IsClear() {
+			return existing.ServiceLevelID != nil
+		}
+		if v, ok := params.ServiceLevelID.Value(); ok {
+			return existing.ServiceLevelID == nil || *existing.ServiceLevelID != v
+		}
+	}
+	return false
+}
+
 // estimateOrderShippingRate computes the posted shipping rate for a new order using the shared freight-exemption / flat-rate / minimum-order / live-Shippo cascade, mirroring Dashboard's estimatePostedShippingRate. Returns the rate as a decimal string (not rounded to cents, matching Dashboard's create path). The live Shippo rate already includes the 10% markup applied by the Shippo client.
-func (s *salesOrderSvcImpl) estimateOrderShippingRate(ctx context.Context, params domain.CreateSalesOrderParams, shipTo domain.ShippingAddress, orderTotal float64) (string, *apierror.APIError) {
+func (s *salesOrderSvcImpl) estimateOrderShippingRate(ctx context.Context, params domain.CreateSalesOrderParams, billTo, shipTo domain.ShippingAddress, orderTotal float64) (string, *apierror.APIError) {
+	// Third-party-billed orders pass the third party's account + bill-to country/zip
+	// through to the carrier, matching Dashboard's createShippingLine.
+	var billing *domain.ShippingBilling
+	if params.CarrierBillingType != nil && *params.CarrierBillingType == string(constants.CarrierBillingTypeThirdParty) {
+		account := ""
+		if params.CarrierBillingAccount != nil {
+			account = *params.CarrierBillingAccount
+		}
+		billing = &domain.ShippingBilling{
+			Type:    "THIRD_PARTY",
+			Account: account,
+			Country: billTo.Country,
+			Zip:     billTo.Zip,
+		}
+	}
 	productIDs := make([]string, 0, len(params.Lines))
 	for _, l := range params.Lines {
 		if l.ProductID != "" {
@@ -1356,7 +1608,10 @@ func (s *salesOrderSvcImpl) estimateOrderShippingRate(ctx context.Context, param
 		return "", apiErr
 	}
 
-	// Origin (ship-from) = the seller account's default billing address.
+	// Origin (ship-from) = the seller account's default billing address. When absent
+	// this stays the zero value; estimateShippingRate refuses to quote a live Shippo
+	// rate from an empty origin (rather than silently returning a bad/zero rate) but
+	// still short-circuits freight-exempt / no-carrier orders to 0 without it.
 	var from domain.ShippingAddress
 	if fromAddr, apiErr := s.repos.NewSalesOrderRepo().GetAccountOriginAddress(ctx, params.AccountID); apiErr != nil {
 		return "", apiErr
@@ -1373,6 +1628,7 @@ func (s *salesOrderSvcImpl) estimateOrderShippingRate(ctx context.Context, param
 		FromAddress:    from,
 		ToAddress:      shipTo,
 		OrderTotal:     &orderTotal,
+		Billing:        billing,
 		Parcels: []domain.Parcel{{
 			Weight: strconv.FormatFloat(weight, 'f', -1, 64),
 			Length: "23.5",
@@ -1494,7 +1750,7 @@ func (s *salesOrderSvcImpl) QuoteSalesOrderLinePrices(ctx context.Context, param
 
 	accountID := identity.Target.AccountID
 
-	prices, apiErr := s.computeSalesOrderLinePrices(ctx, accountID, params.BuyerAccountID, identity.IsInternalUser(), params.Lines)
+	prices, apiErr := computeSalesOrderLinePrices(ctx, s.repos, accountID, params.BuyerAccountID, identity.IsInternalUser(), params.Lines)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -1504,6 +1760,49 @@ func (s *salesOrderSvcImpl) QuoteSalesOrderLinePrices(ctx context.Context, param
 		out[i] = domain.SalesOrderLineQuote{ProductID: l.ProductID, UnitPrice: domain.RateValue(prices[i])}
 	}
 	return out, nil
+}
+
+func (s *salesOrderSvcImpl) QuoteSalesOrderFreight(ctx context.Context, params domain.QuoteSalesOrderFreightParams) (*domain.SalesOrderFreightQuote, *apierror.APIError) {
+	ctx, span := salesOrderSvcTracer.Start(ctx, "service.sales_order.quote_freight")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainSalesOrders, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	accountID := identity.Target.AccountID
+
+	rate, apiErr := s.estimateFreightForOrder(ctx, accountID, params.SalesOrderID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	// The freight rate is currency (numerator) per shipping unit (denominator). Source the units from the account's shipping system product / currency base unit, matching how the shipping line is stored (see synthesizeShippingLine). The units may be empty when the account has no shipping product configured; the caller applies the value onto the existing shipping line, whose units already match.
+	currencyUnitID, apiErr := s.repos.NewUnitRepo().GetCurrencyBaseUnitID(ctx)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	var denominatorUnitID string
+	if shippingProduct, apiErr := s.repos.NewProductRepo().GetSystemProduct(ctx, accountID, "shipping"); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	} else if shippingProduct != nil {
+		denominatorUnitID = shippingProduct.QuantityUnitID
+	}
+
+	return &domain.SalesOrderFreightQuote{
+		UnitPrice: domain.RateValue{
+			Value:             rate,
+			NumeratorUnitID:   currencyUnitID,
+			DenominatorUnitID: denominatorUnitID,
+		},
+	}, nil
 }
 
 // resolveOrderDiscountID resolves a caller-supplied order-discount reference — which may be either the discount's ID or its unique code — to the discount's ID.
@@ -1910,45 +2209,71 @@ func (s *salesOrderSvcImpl) CheckoutSalesOrder(ctx context.Context, params domai
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to parse Stripe credentials."))
 		}
 
-		// Build checkout line items from order lines
-		checkoutItems := make([]domain.CheckoutLineItem, 0, len(lines))
-		for _, line := range lines {
-			unitPrice, parseErr := decimal.NewFromString(line.UnitPriceValue)
-			if parseErr != nil {
-				continue
-			}
-			qty, parseErr := decimal.NewFromString(line.QuantityValue)
-			if parseErr != nil {
-				continue
-			}
-			// Convert unit price to cents
-			amountCents := unitPrice.Mul(decimal.NewFromInt(100)).IntPart()
-			qtyInt := qty.IntPart()
-			if qtyInt <= 0 {
-				qtyInt = 1
-			}
-
-			name := line.ProductSKU
-			desc := ""
-			if line.ProductDescription != nil {
-				desc = *line.ProductDescription
-			}
-
-			checkoutItems = append(checkoutItems, domain.CheckoutLineItem{
-				Name:        name,
-				Description: desc,
-				AmountCents: amountCents,
-				Quantity:    qtyInt,
-			})
+		// Resolve the buyer's Stripe customer. Legacy requires the counterparty to
+		// already be a Stripe customer and bills the session to it
+		// (order.svc.ts:298-343 → stripe.ts createOneTimeCheckoutSession), rather than
+		// passing a bare customer_email — so the payment method can be saved onto the
+		// customer and the charge is attributed correctly.
+		stripeCustomerID, _, apiErr := s.repos.NewCustomerRepo().GetStripeCustomerID(ctx, params.AccountID, order.BuyerAccountID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
 		}
+		if stripeCustomerID == nil || *stripeCustomerID == "" {
+			return nil, tracing.Trace(span, apierror.NewValidationError("Customer is not a Stripe customer."))
+		}
+
+		// Charge a single aggregate line item for the order's net total — the sum of
+		// every line's extended price (including the negative discount credit line and
+		// the shipping line), rounded once to the nearest cent. This matches legacy
+		// calculateTotalOrdered + stripe.ts. Emitting one Stripe line item per order
+		// line would send the discount line's negative unit_amount, which Stripe
+		// rejects, failing checkout for every discounted order.
+		total := decimal.Zero
+		for _, line := range lines {
+			unitPrice, err1 := decimal.NewFromString(line.UnitPriceValue)
+			qty, err2 := decimal.NewFromString(line.QuantityValue)
+			if err1 != nil || err2 != nil {
+				continue
+			}
+			total = total.Add(unitPrice.Mul(qty))
+		}
+		amountCents := total.Mul(decimal.NewFromInt(100)).Round(0).IntPart()
+
+		description := ""
+		if order.CustomerPONumber != nil && *order.CustomerPONumber != "" {
+			description = fmt.Sprintf("PO #%s", *order.CustomerPONumber)
+		}
+		checkoutItems := []domain.CheckoutLineItem{{
+			Name:        fmt.Sprintf("SO #%s", textutil.FormatRecordNumber(order.Number)),
+			Description: description,
+			AmountCents: amountCents,
+			Quantity:    1,
+		}}
+
+		// Build the checkout success/cancel redirect URLs server-side from the
+		// account's portal slug. These are never accepted from the caller: Stripe
+		// redirects the customer to them verbatim after checkout, so a caller-supplied
+		// URL would turn the emailed checkout link into an open-redirect/phishing
+		// vector. Both land on the customer-portal order page (mirroring the embedded
+		// checkout return URL) with a payment-result query param the page reads.
+		slug, apiErr := s.repos.NewAccountRepo().GetPortalSlug(ctx, params.AccountID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		if slug == nil || *slug == "" {
+			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Account portal slug not found."))
+		}
+		orderPageURL := fmt.Sprintf("%s/%s/dashboard/sales-orders/%s", s.frontendURL, *slug, order.ID)
+		successURL := orderPageURL + "?payment=success"
+		cancelURL := orderPageURL + "?payment=cancelled"
 
 		// Create Stripe checkout session (foreign mutation)
 		checkoutClient := s.checkoutClientFactory.Build(stripeCreds.PrivateKey)
 		checkoutSession, apiErr := checkoutClient.CreateOneTimeCheckoutSession(ctx, domain.CreateCheckoutSessionParams{
-			CustomerEmail: params.Email,
-			LineItems:     checkoutItems,
-			SuccessURL:    params.SuccessURL,
-			CancelURL:     params.CancelURL,
+			StripeCustomerID: *stripeCustomerID,
+			LineItems:        checkoutItems,
+			SuccessURL:       &successURL,
+			CancelURL:        &cancelURL,
 			PaymentIntentMetadata: map[string]string{
 				"orderID":    order.ID,
 				"customerID": order.BuyerAccountID,
@@ -1965,7 +2290,9 @@ func (s *salesOrderSvcImpl) CheckoutSalesOrder(ctx context.Context, params domai
 		// In transaction: send email + cache response
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
 			if s.notificationPublisher != nil {
-				if pubErr := s.notificationPublisher.PublishSendEmail(txCtx, messaging.EmailSendData{
+				// The outbox publisher reads the RepoFactory from the context; inject it before publishing.
+				pubCtx := event.WithRepos(txCtx, txSvc.repos)
+				if pubErr := s.notificationPublisher.PublishSendEmail(pubCtx, messaging.EmailSendData{
 					To:         []string{params.Email},
 					Subject:    "Your Order Checkout - " + order.Number,
 					TemplateID: constants.EmailTemplateOrderCheckout,
@@ -2503,20 +2830,39 @@ func (s *salesOrderSvcImpl) CreateSalesOrderProductionRun(ctx context.Context, p
 			return nil, tracing.Trace(span, apiErr)
 		}
 
-		// Calculate material demand for each line (used for inventory reservation below)
+		// Calculate the aggregated material demand across all item-backed lines (one reservation per material).
 		materialDemandRepo := s.repos.NewMaterialDemandRepo()
-		allDemands := make([]domain.MaterialDemandItem, 0)
+		demandLines := make([]domain.MaterialDemandLineInput, 0, len(bomLines))
 		for _, line := range bomLines {
-			demands, apiErr := materialDemandRepo.GetMaterialDemand(ctx, params.AccountID, line.ItemID, line.QuantityValue, line.QuantityUnitID)
-			if apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			allDemands = append(allDemands, demands...)
+			demandLines = append(demandLines, domain.MaterialDemandLineInput{
+				ItemID:  line.ItemID,
+				Measure: line.QuantityValue,
+				UnitID:  line.QuantityUnitID,
+			})
+		}
+		allDemands, apiErr := materialDemandRepo.GetMaterialDemandForOrder(ctx, params.AccountID, demandLines)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
 		}
 
-		result := &domain.CreateSalesOrderProductionRunResult{
-			ProductionRunID: runID,
+		// Compute the batches to create by walking each line's production-flow graph and
+		// finding the material-only production blocks (matches legacy getBaseBatches). This
+		// replaces the naive one-batch-per-line approach. Done here (outside the tx) since it
+		// reads the flow + unit graphs.
+		batchLines := make([]domain.ProductionBatchLineInput, 0, len(bomLines))
+		for _, line := range bomLines {
+			batchLines = append(batchLines, domain.ProductionBatchLineInput{
+				ProducedItemID: line.ItemID,
+				OrderedMeasure: line.QuantityValue,
+				OrderedUnitID:  line.QuantityUnitID,
+			})
 		}
+		batchItems, apiErr := s.computeProductionBatchItems(ctx, params.AccountID, batchLines)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+
+		result := &domain.CreateSalesOrderProductionRunResult{}
 
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
 			txRunRepo := txSvc.repos.NewProductionRunQueryRepo()
@@ -2528,8 +2874,8 @@ func (s *salesOrderSvcImpl) CreateSalesOrderProductionRun(ctx context.Context, p
 				return apiErr
 			}
 
-			// Create batch records for each order line that has items
-			for _, line := range bomLines {
+			// Create one batch per material-only production block (see computeProductionBatchItems).
+			for _, item := range batchItems {
 				batchID, apiErr := id.GenID(id.BatchIDPrefix, nil)
 				if apiErr != nil {
 					return apiErr
@@ -2537,11 +2883,11 @@ func (s *salesOrderSvcImpl) CreateSalesOrderProductionRun(ctx context.Context, p
 
 				_, apiErr = txBatchRepo.Create(txCtx, batchID, domain.CreateBatchParams{
 					AccountID:       params.AccountID,
-					ItemID:          line.ItemID,
+					ItemID:          item.ItemID,
 					ProductionRunID: runID,
 					Quantity: domain.CreateQuantityParams{
-						Measure: line.QuantityValue,
-						UnitID:  line.QuantityUnitID,
+						Measure: item.Measure,
+						UnitID:  item.UnitID,
 					},
 				})
 				if apiErr != nil {
@@ -2587,6 +2933,17 @@ func (s *salesOrderSvcImpl) CreateSalesOrderProductionRun(ctx context.Context, p
 					}
 				}
 			}
+
+			// Load the created run (with its batch count and responsible-user join) so the
+			// response is the full production run resource, not just its id.
+			createdRun, apiErr := txSvc.repos.NewProductionRunRepo().Get(txCtx, domain.GetProductionRunParams{
+				ProductionRunID: runID,
+				AccountID:       params.AccountID,
+			})
+			if apiErr != nil {
+				return apiErr
+			}
+			result.ProductionRun = createdRun
 
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
 		})

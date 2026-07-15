@@ -14,6 +14,7 @@ import (
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/pagination"
 	"github.com/augno/api/shared/safeconv"
@@ -337,6 +338,48 @@ func (r *salesOrderRepoImpl) attachLineCounts(ctx context.Context, orders []*dom
 	return nil
 }
 
+// GetFulfillmentProgress batch-aggregates each order's ordered/picked/packed/invoiced quantities over its sale-type lines in one query and derives the picked/packed/invoiced completion fractions (fulfilled / ordered, clamped to 0..1). Orders with no sale lines are absent from the map, so callers default them to zero.
+func (r *salesOrderRepoImpl) GetFulfillmentProgress(ctx context.Context, salesOrderIDs []string) (map[string]domain.SalesOrderFulfillmentProgress, *apierror.APIError) {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_fulfillment_progress")
+	defer span.End()
+
+	if len(salesOrderIDs) == 0 {
+		return map[string]domain.SalesOrderFulfillmentProgress{}, nil
+	}
+
+	rows, err := r.queries.GetSalesOrderFulfillmentProgress(ctx, salesOrderIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	progress := make(map[string]domain.SalesOrderFulfillmentProgress, len(rows))
+	for _, row := range rows {
+		ordered := parseDecimalOrZero(decimalToString(row.QuantityOrdered))
+		progress[row.SalesOrderID] = domain.SalesOrderFulfillmentProgress{
+			PickedCompletion:   completionFraction(decimalToString(row.QuantityPicked), ordered),
+			PackedCompletion:   completionFraction(decimalToString(row.QuantityPacked), ordered),
+			InvoicedCompletion: completionFraction(decimalToString(row.QuantityInvoiced), ordered),
+		}
+	}
+
+	return progress, nil
+}
+
+// completionFraction returns fulfilled / ordered as a float in [0, 1]. Returns 0 when ordered is non-positive so an order with no orderable quantity reads as 0% rather than dividing by zero.
+func completionFraction(fulfilled string, ordered decimal.Decimal) float64 {
+	if !ordered.IsPositive() {
+		return 0
+	}
+	frac, _ := parseDecimalOrZero(fulfilled).Div(ordered).Float64()
+	if frac < 0 {
+		return 0
+	}
+	if frac > 1 {
+		return 1
+	}
+	return frac
+}
+
 func (r *salesOrderRepoImpl) Get(ctx context.Context, accountID, salesOrderID string) (*domain.SalesOrder, *apierror.APIError) {
 	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get")
 	defer span.End()
@@ -485,31 +528,35 @@ func (r *salesOrderRepoImpl) Update(ctx context.Context, params domain.UpdateSal
 	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.update")
 	defer span.End()
 
+	// Clearable[time.Time]: Set → value, Clear (or unset) → NULL. The service backfills
+	// unset from the existing order first, so an omitted field never reaches here as unset.
 	promisedAtNull := gosql.NullTime{}
-	if params.PromisedAt != nil {
-		promisedAtNull = gosql.NullTime{Time: *params.PromisedAt, Valid: true}
+	if v, ok := params.PromisedAt.Value(); ok {
+		promisedAtNull = gosql.NullTime{Time: v, Valid: true}
 	}
 
 	err := r.queries.UpdateSalesOrder(ctx, sqlc.UpdateSalesOrderParams{
-		Number:                toNullString(params.Number),
-		CustomerPoNumber:      toNullString(params.CustomerPONumber),
-		Note:                  toNullString(params.Note),
-		CarrierID:             toNullString(params.CarrierID),
-		CarrierOptionID:       toNullString(params.ServiceLevelID),
-		CarrierBillingType:    toNullString(params.CarrierBillingType),
-		CarrierBillingAccount: toNullString(params.CarrierBillingAccount),
-		PriorityCode:          toNullString(params.PriorityCode),
-		SalesRepID:            toNullString(params.SalesRepID),
-		ShippingTermID:        toNullString(params.ShippingTermID),
-		PaymentTermID:         toNullString(params.PaymentTermID),
-		OrderDiscountID:       toNullString(params.OrderDiscountID),
-		IsAcknowledgmentSent:  toNullBool(params.IsAcknowledgmentSent),
+		Number: toNullString(params.Number),
+		// Clearable fields → NullString (Set → value, Clear → NULL); SQL uses plain narg.
+		CustomerPoNumber:      field.StringToNullString(params.CustomerPONumber),
+		Note:                  field.StringToNullString(params.Note),
+		CarrierOptionID:       field.StringToNullString(params.ServiceLevelID),
+		CarrierBillingType:    field.StringToNullString(params.CarrierBillingType),
+		CarrierBillingAccount: field.StringToNullString(params.CarrierBillingAccount),
+		SalesRepID:            field.StringToNullString(params.SalesRepID),
+		OrderDiscountID:       field.StringToNullString(params.OrderDiscountID),
 		PromisedAt:            promisedAtNull,
-		BuyerAccountID:        toNullString(params.BuyerAccountID),
-		BillingAddressID:      toNullString(params.BillingAddressID),
-		ShippingAddressID:     toNullString(params.ShippingAddressID),
-		ID:                    params.SalesOrderID,
-		AccountID:             params.AccountID,
+		// Optional *string fields (set or leave; backfilled by the service).
+		CarrierID:            toNullString(params.CarrierID),
+		PriorityCode:         toNullString(params.PriorityCode),
+		ShippingTermID:       toNullString(params.ShippingTermID),
+		PaymentTermID:        toNullString(params.PaymentTermID),
+		IsAcknowledgmentSent: toNullBool(params.IsAcknowledgmentSent),
+		BuyerAccountID:       toNullString(params.BuyerAccountID),
+		BillingAddressID:     toNullString(params.BillingAddressID),
+		ShippingAddressID:    toNullString(params.ShippingAddressID),
+		ID:                   params.SalesOrderID,
+		AccountID:            params.AccountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -966,6 +1013,16 @@ func (r *salesOrderRepoImpl) DeleteInventoryAllocationsByReservedIssues(ctx cont
 func (r *salesOrderRepoImpl) DeleteReservedInventoryIssues(ctx context.Context, accountID, salesOrderID string) *apierror.APIError {
 	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.delete_reserved_inventory_issues")
 	defer span.End()
+
+	// Delete the reserved issues' quantity rows first (referenced only by inventory_issue.quantity_id); otherwise they orphan in the quantity table once the issues are gone.
+	if err := r.queries.DeleteReservedInventoryIssueQuantitiesBySalesOrder(ctx, sqlc.DeleteReservedInventoryIssueQuantitiesBySalesOrderParams{
+		SalesOrderID: gosql.NullString{String: salesOrderID, Valid: true},
+		AccountID:    accountID,
+	}); err != nil {
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+	}
 
 	err := r.queries.DeleteReservedInventoryIssuesBySalesOrder(ctx, sqlc.DeleteReservedInventoryIssuesBySalesOrderParams{
 		SalesOrderID: gosql.NullString{String: salesOrderID, Valid: true},

@@ -606,7 +606,7 @@ INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status
 INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, error_code, error_message, occurred_at, created_at) VALUES
     ('rqlog_01flterrnf000', 'GET',  'rqlog-filter-e2e.test', '/filtertest/errors', '/filtertest/errors', 404, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', 'resource_not_found', 'Resource not found.', '2022-01-01 00:00:00', NOW()),
     ('rqlog_01flterrvf000', 'POST', 'rqlog-filter-e2e.test', '/filtertest/errors', '/filtertest/errors', 422, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', 'validation_failed',  'Validation failed.', '2022-01-01 00:00:00', NOW()),
-    ('rqlog_01flterrua000', 'GET',  'rqlog-filter-e2e.test', '/filtertest/errors', '/filtertest/errors', 401, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', 'unauthorized',       'Unauthorized.',      '2022-01-01 00:00:00', NOW());
+    ('rqlog_01flterrua000', 'GET',  'rqlog-filter-e2e.test', '/filtertest/errors', '/filtertest/errors', 401, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', 'invalid_credentials', 'Unauthorized.',      '2022-01-01 00:00:00', NOW());
 
 -- ============================================================
 -- ADDRESSES linked to OWNER ACCOUNT (for /v1/sales/addresses pagination)

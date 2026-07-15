@@ -10,7 +10,7 @@ import (
 	"github.com/augno/api/shared/pagination"
 )
 
-// emptyFilter represents the no-filter case — only target_account_id, cursor,
+// emptyFilter represents the no-filter case — only the scope branches, cursor,
 // ORDER BY, and LIMIT should appear in the generated SQL.
 func emptyFilter() *domain.ListRequestLogsFilter {
 	return &domain.ListRequestLogsFilter{}
@@ -19,7 +19,16 @@ func emptyFilter() *domain.ListRequestLogsFilter {
 func TestBuildListQuery_NoFiltersEmitsOnlyBaselinePredicates(t *testing.T) {
 	sql, _ := buildListQuery(queryModeBase, pagination.DirectionForward, "acc_1", emptyFilter(), false, false, false, nil, 101)
 
-	mustContain(t, sql, "WHERE (rl.account_id = ? OR rl.target_account_id = ?)")
+	// The dual-scope security filter is a UNION of two single-column keyset
+	// branches, not a single `account_id = ? OR target_account_id = ?`. The OR
+	// form forces an index_merge + filesort that times out on page 2 of a large
+	// request_log; see buildListQuery.
+	mustContain(t, sql, "WHERE rl.account_id = ?")
+	mustContain(t, sql, "WHERE rl.target_account_id = ?")
+	mustContain(t, sql, ") UNION (")
+	if strings.Contains(sql, "rl.account_id = ? OR rl.target_account_id = ?") {
+		t.Errorf("scope must be a UNION of single-column branches, not an OR; SQL:\n%s", sql)
+	}
 	// Hidden logs (e.g. HideFromRequestLog endpoints) are always excluded from listings.
 	mustContain(t, sql, "rl.hidden = FALSE")
 	mustContain(t, sql, "ORDER BY rl.occurred_at DESC, rl.id DESC LIMIT ?")
@@ -69,6 +78,26 @@ func TestBuildListQuery_ActorTypesEmitsInPredicate(t *testing.T) {
 	mustContain(t, sql, "rl.identity_type IN (?, ?)")
 	if !containsArg(args, "user") || !containsArg(args, "api_key") {
 		t.Errorf("expected 'user' and 'api_key' in args; got %#v", args)
+	}
+}
+
+// ExcludeErrorCodes must emit a NOT IN guarded by an IS NULL disjunct. error_code
+// is NULL for successful requests, and a bare `NULL NOT IN (...)` evaluates to NULL
+// (falsy), which would silently drop every 2xx row — so the IS NULL branch is
+// load-bearing, not cosmetic.
+func TestBuildListQuery_ExcludeErrorCodesGuardsNullRows(t *testing.T) {
+	f := emptyFilter()
+	f.ExcludeErrorCodes = []string{"expired_token"}
+
+	sql, args := buildListQuery(queryModeBase, pagination.DirectionForward, "acc_1", f, false, false, false, nil, 101)
+
+	mustContain(t, sql, "(rl.error_code IS NULL OR rl.error_code NOT IN (?))")
+	if !containsArg(args, "expired_token") {
+		t.Errorf("expected 'expired_token' in args; got %#v", args)
+	}
+	// Guard against a regression to a bare NOT IN that would drop successful rows.
+	if strings.Contains(sql, "rl.error_code NOT IN") && !strings.Contains(sql, "rl.error_code IS NULL OR") {
+		t.Errorf("exclude predicate must keep NULL error_code rows; SQL:\n%s", sql)
 	}
 }
 
@@ -199,11 +228,14 @@ func TestBuildListQuery_SliceFiltersExpandToMatchingPlaceholderCounts(t *testing
 	mustContain(t, sql, normalizedRouteColumnExpr+" IN (?, ?)")
 	mustContain(t, sql, "rl.host IN (?)")
 
-	// 3 JSON-include booleans (query/request/response) + 2 caller-account scope
-	// binds (account_id OR target_account_id) + 2 methods + 3 status codes +
-	// 1 error code + 2 actor account ids + 1 target account id + 3 actor ids +
-	// 1 actor type + 2 routes + 1 host + limit = 22
-	want := 3 + 2 + 2 + 3 + 1 + 2 + 1 + 3 + 1 + 2 + 1 + 1
+	// The dual-scope filter is a UNION of two keyset branches, so every per-branch
+	// bind appears twice. Per branch: 3 JSON-include booleans (query/request/
+	// response) + 1 scope-account bind + 2 methods + 3 status codes + 1 error code
+	// + 2 actor account ids + 1 target account id + 3 actor ids + 1 actor type +
+	// 2 routes + 1 host + branch LIMIT = 21. Two branches (42) + the outer LIMIT
+	// (1) = 43.
+	perBranch := 3 + 1 + 2 + 3 + 1 + 2 + 1 + 3 + 1 + 2 + 1 + 1
+	want := perBranch*2 + 1
 	if len(args) != want {
 		t.Errorf("unexpected arg count: got %d, want %d; args=%#v", len(args), want, args)
 	}

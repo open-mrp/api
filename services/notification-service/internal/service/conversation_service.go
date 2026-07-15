@@ -599,17 +599,22 @@ func (s *conversationSvcImpl) SupportAvailability(ctx context.Context) (bool, *a
 
 // resolveSupportContact resolves the group conversation designated to handle this vendor↔customer relationship's support (a per-relation override winning over the account default) and returns its active human participants' account_user ids to seat. Best-effort: no configured route or any resolution error yields no recipients rather than failing the customer's request, so support remains reachable via the existing open lazy-join path.
 func (s *conversationSvcImpl) resolveSupportContact(ctx context.Context, vendorAccountID, customerAccountID string) []string {
-	route, apiErr := s.repoFactory.NewSupportRouteRepo().Resolve(ctx, vendorAccountID, customerAccountID)
+	return resolveSupportRecipients(ctx, s.repoFactory, vendorAccountID, customerAccountID)
+}
+
+// resolveSupportRecipients resolves the support-route group designated to handle this vendor↔customer relationship (a per-relation override winning over the account default) and returns its active human participants' account_user ids. Best-effort: no configured route or any resolution error yields no recipients rather than an error, so callers degrade gracefully.
+func resolveSupportRecipients(ctx context.Context, repoFactory domain.RepoFactory, vendorAccountID, customerAccountID string) []string {
+	route, apiErr := repoFactory.NewSupportRouteRepo().Resolve(ctx, vendorAccountID, customerAccountID)
 	if apiErr != nil {
-		slog.WarnContext(ctx, "failed to resolve support route; falling back to open lazy-join", "error", apiErr.Error(), "vendor_account_id", vendorAccountID)
+		slog.WarnContext(ctx, "failed to resolve support route", "error", apiErr.Error(), "vendor_account_id", vendorAccountID)
 		return nil
 	}
 	if route == nil {
 		return nil
 	}
-	participants, apiErr := s.repoFactory.NewParticipantRepo().List(ctx, route.GroupConversationID)
+	participants, apiErr := repoFactory.NewParticipantRepo().List(ctx, route.GroupConversationID)
 	if apiErr != nil {
-		slog.WarnContext(ctx, "failed to list support group participants; falling back to open lazy-join", "error", apiErr.Error(), "group_conversation_id", route.GroupConversationID)
+		slog.WarnContext(ctx, "failed to list support group participants", "error", apiErr.Error(), "group_conversation_id", route.GroupConversationID)
 		return nil
 	}
 	var recipients []string
@@ -1190,8 +1195,14 @@ func (s *conversationSvcImpl) fanoutMessageNotifications(ctx context.Context, f 
 
 	senderType, senderID, senderName := s.messageSenderAttribution(ctx, f, msg, senderAcus)
 	var conversationTitle string
-	if conv, apiErr := f.NewConversationRepo().GetByID(ctx, msg.ConversationID, accountID); apiErr == nil && conv.Title != nil {
-		conversationTitle = *conv.Title
+	var isCustomerCase bool
+	if conv, apiErr := f.NewConversationRepo().GetByID(ctx, msg.ConversationID, accountID); apiErr == nil {
+		if conv.Title != nil {
+			conversationTitle = *conv.Title
+		}
+		// Customer-facing cases live in the support inbox, not team messages; tag their notifications so the
+		// client routes the link there (see the notification resource link built by the gateway).
+		isCustomerCase = conv.Audience == string(constants.ConversationAudienceCustomer)
 	}
 
 	title := "New message"
@@ -1253,6 +1264,11 @@ func (s *conversationSvcImpl) fanoutMessageNotifications(ctx context.Context, f 
 				SenderID:               strPtrIfNotEmpty(senderID),
 				SenderName:             strPtrIfNotEmpty(senderName),
 				Priority:               string(priority),
+			}
+			if isCustomerCase {
+				supportCaseType := string(constants.ObjectTypeSupportCase)
+				n.LinkResourceType = &supportCaseType
+				n.LinkResourceID = &msg.ConversationID
 			}
 			if apiErr := notifRepo.Create(ctx, n); apiErr != nil {
 				return apiErr
@@ -1683,6 +1699,12 @@ func (s *conversationSvcImpl) PostAgentReplyComplete(ctx context.Context, in dom
 		if getErr != nil {
 			return getErr
 		}
+		// A failed run resolves its streaming bubble to the error text; record the failure marker + code so the client can flag the message and react (e.g. prompt to raise the spending cap).
+		if in.Failed {
+			if metaErr := f.NewMessageRepo().SetMessageMetadata(txCtx, in.MessageID, in.AccountID, agentFailureMetadata(in.ErrorCode)); metaErr != nil {
+				return metaErr
+			}
+		}
 		// Resolved (not persisted) so the bell notification attributes to the agent.
 		msg.SenderAgentConfigID = strPtrIfNotEmpty(in.AgentConfigID)
 		msg.SenderAgentName = strPtrIfNotEmpty(in.AgentName)
@@ -1736,6 +1758,19 @@ func (s *conversationSvcImpl) resolveAgentReplyParticipant(ctx context.Context, 
 
 // createAgentReplyTx inserts a kind=agent reply (streaming or complete) within a tx for the already- resolved participant: it locks the conversation sequence, creates the row, advances the cursor, and pushes message.created. The bell is fired by the caller (deferred to completion for a streamed reply).
 // Returns nil (no message) when the row already exists (idempotent redelivery).
+// agentFailureMetadata builds the message metadata recorded on an agent reply that resolves a failed run: a flag the client uses to mark the message as a failure, plus the machine-readable error code (when present) it can react to (e.g. prompt to raise the spending limit on agent_spending_cap_reached).
+func agentFailureMetadata(errorCode string) json.RawMessage {
+	m := map[string]any{"agent_run_failed": true}
+	if errorCode != "" {
+		m["error_code"] = errorCode
+	}
+	b, err := json.Marshal(m)
+	if err != nil {
+		return nil
+	}
+	return b
+}
+
 func (s *conversationSvcImpl) createAgentReplyTx(txCtx context.Context, f domain.RepoFactory, in domain.AgentReplyInput, part *domain.ConversationParticipant, streaming bool) (*domain.Message, *apierror.APIError) {
 	messageID := in.MessageID
 	if messageID == "" {
@@ -1790,6 +1825,9 @@ func (s *conversationSvcImpl) createAgentReplyTx(txCtx context.Context, f domain
 		// Resolved (not persisted) so the bell notification attributes to the agent.
 		SenderAgentConfigID: &agentConfigID,
 		SenderAgentName:     strPtrIfNotEmpty(in.AgentName),
+	}
+	if in.Failed {
+		msg.Metadata = agentFailureMetadata(in.ErrorCode)
 	}
 	inserted, createErr := f.NewMessageRepo().Create(txCtx, msg)
 	if createErr != nil {
@@ -2613,8 +2651,9 @@ func (s *conversationSvcImpl) createGroup(ctx context.Context, input domain.Crea
 		seenAgents[a] = struct{}{}
 		agents = append(agents, a)
 	}
-	// A group needs at least one other participant — a human member or an agent.
-	if len(members) == 0 && len(agents) == 0 {
+	// A group normally needs at least one other participant — a human member or an agent — but a record-anchored discussion may start solo: the creator posts and loops in the team afterward (via @mention or by adding participants).
+	hasTopic := input.TopicResourceID != nil && *input.TopicResourceID != ""
+	if len(members) == 0 && len(agents) == 0 && !hasTopic {
 		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("A group requires at least one other participant.", "participant_account_user_ids"))
 	}
 

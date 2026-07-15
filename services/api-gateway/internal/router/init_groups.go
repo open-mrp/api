@@ -852,6 +852,14 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 		registry.RegisterGroup(utilsGroup.APIEndpointGroup)
 	}
 
+	// Records (cross-record document generation, e.g. pack lists)
+	recordsGroup := (&httpgroup.RecordsEndpointGroup{}).Materialize(&httpgroup.RecordsEndpointGroupConfig{
+		CoreClient: config.CoreClient,
+	})
+	if recordsGroup != nil {
+		registry.RegisterGroup(recordsGroup.APIEndpointGroup)
+	}
+
 	registry.RegisterEndpoints(r)
 }
 

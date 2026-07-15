@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/augno/api/services/notification-service/internal/domain"
@@ -650,6 +651,24 @@ func participantToProto(p *domain.ConversationParticipant) *pb.ParticipantInfo {
 	return info
 }
 
+// agentFailureFromMetadata reads the agent-reply failure marker + error code recorded on a message's metadata (see agentFailureMetadata in the conversation service), so the client can flag a failed reply and react to a specific code.
+func agentFailureFromMetadata(metadata json.RawMessage) (bool, *string) {
+	if len(metadata) == 0 {
+		return false, nil
+	}
+	var meta struct {
+		AgentRunFailed bool   `json:"agent_run_failed"`
+		ErrorCode      string `json:"error_code"`
+	}
+	if err := json.Unmarshal(metadata, &meta); err != nil || !meta.AgentRunFailed {
+		return false, nil
+	}
+	if meta.ErrorCode == "" {
+		return true, nil
+	}
+	return true, &meta.ErrorCode
+}
+
 func messageToProto(m *domain.Message) *pb.MessageInfo {
 	info := &pb.MessageInfo{
 		Id:                      m.ID,
@@ -678,6 +697,10 @@ func messageToProto(m *domain.Message) *pb.MessageInfo {
 		UpdatedAt:               timestamppb.New(m.UpdatedAt),
 		SenderAliasName:         m.SenderAlias,
 		SenderDisplayName:       m.SenderDisplayName,
+	}
+	if failed, code := agentFailureFromMetadata(m.Metadata); failed {
+		info.AgentRunFailed = true
+		info.AgentErrorCode = code
 	}
 	if m.ScheduledFor != nil {
 		info.ScheduledFor = timestamppb.New(*m.ScheduledFor)

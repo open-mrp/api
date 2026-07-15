@@ -98,6 +98,12 @@ type Message struct {
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last update timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
+	// Whether this message is an agent reply that resolved a failed run.
+	AgentRunFailed bool `json:"agent_run_failed"`
+	// Machine-readable error code for a failed agent reply (e.g. `agent_spending_cap_reached`).
+	//
+	// `null` when the reply did not fail or carried no specific code.
+	AgentErrorCode *string `json:"agent_error_code"`
 }
 
 var SampleMessage = &Message{

@@ -477,17 +477,44 @@ AND quantity_id IN (
 );
 
 -- name: MarkPickFinishedIfAllPacked :exec
+-- Finish a pick only when every one of its lines is packed. An unpacked line is
+-- outstanding work regardless of its picked quantity: a partial pack leaves a
+-- zero-quantity remainder pick line for the not-yet-picked balance, and that line
+-- must keep the pick open (and editable) until it too is picked and packed. The
+-- earlier `q.value > 0` guard ignored those remainder lines, so it finished picks
+-- that still had quantity left to pick — freezing the remainder line in the UI.
 UPDATE pick pk SET
     pk.finished_at = NOW(3),
     pk.updated_at = NOW(3)
 WHERE pk.id = sqlc.arg('pick_id')
 AND NOT EXISTS (
     SELECT 1 FROM pick_line pl
-    JOIN quantity q ON q.id = pl.quantity_id
     WHERE pl.pick_id = pk.id
     AND pl.packed_at IS NULL
-    AND q.value > 0
 );
+
+-- name: CloseOpenPickLines :exec
+-- Pack every still-open (unpacked) pick line — including zero-quantity remainder lines.
+-- Used when an order is closed (fulfilled): the pick's open lines are marked done so the
+-- pick reads as complete alongside the order.
+UPDATE pick_line SET
+    packed_at = NOW(3),
+    updated_at = NOW(3)
+WHERE pick_id = sqlc.arg('pick_id')
+AND packed_at IS NULL;
+
+-- name: ReopenIncompletePickLines :exec
+-- Reopen (unpack) pick lines that are not complete — the pick line's picked quantity is
+-- less than its order line's ordered quantity. Fully-picked lines stay packed. Used when a
+-- fulfilled order is reopened so outstanding lines can be worked again.
+UPDATE pick_line pl
+JOIN quantity q ON q.id = pl.quantity_id
+JOIN sales_order_line sol ON sol.id = pl.sales_order_line_id
+JOIN quantity sol_q ON sol_q.id = sol.quantity_id
+SET pl.packed_at = NULL,
+    pl.updated_at = NOW(3)
+WHERE pl.pick_id = sqlc.arg('pick_id')
+AND q.value < sol_q.value;
 
 -- name: CountShipmentsByOrder :one
 SELECT COUNT(*) AS total FROM shipment
@@ -603,6 +630,36 @@ SELECT EXISTS(
     WHERE sales_order_line_id = sqlc.arg('sales_order_line_id')
     AND packed_at IS NULL
 ) AS has_unpacked;
+
+-- name: GetOrderLinePackProgress :one
+-- The ordered quantity and the total already packed (shipped-committed) for an
+-- order line. outstanding = ordered - packed drives pick reconciliation on a
+-- quantity change: > 0 means an open pick line is still needed; <= 0 means the
+-- packed lines already cover the order, so any open pick line is surplus.
+SELECT
+    sol_q.value AS ordered_value,
+    sol_q.unit_id AS unit_id,
+    COALESCE(SUM(CASE WHEN pl.packed_at IS NOT NULL THEN pl_q.value ELSE 0 END), 0) AS packed_value
+FROM sales_order_line sol
+JOIN quantity sol_q ON sol_q.id = sol.quantity_id
+LEFT JOIN pick_line pl ON pl.sales_order_line_id = sol.id
+LEFT JOIN quantity pl_q ON pl_q.id = pl.quantity_id
+WHERE sol.id = sqlc.arg('sales_order_line_id')
+GROUP BY sol.id, sol_q.value, sol_q.unit_id;
+
+-- name: DeleteQuantitiesByUnpackedPickLinesForLine :exec
+DELETE q FROM quantity q
+JOIN pick_line pl ON pl.quantity_id = q.id
+WHERE pl.sales_order_line_id = sqlc.arg('sales_order_line_id')
+AND pl.packed_at IS NULL;
+
+-- name: DeleteUnpackedPickLinesForLine :exec
+DELETE FROM pick_line
+WHERE sales_order_line_id = sqlc.arg('sales_order_line_id')
+AND packed_at IS NULL;
+
+-- name: CountPickLinesByPick :one
+SELECT COUNT(*) AS total FROM pick_line WHERE pick_id = sqlc.arg('pick_id');
 
 -- name: UnpackPickLinesByShipment :exec
 UPDATE pick_line SET

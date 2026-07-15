@@ -2197,6 +2197,7 @@ func portalProfileToProto(p *domain.PortalProfile) *pb.PortalProfileInfo {
 		Name:         p.Name,
 		Slug:         p.Slug,
 		LogoUrl:      p.LogoURL,
+		FaviconUrl:   p.FaviconURL,
 		SupportEmail: p.SupportEmail,
 		Address:      addressToProto(p.Address),
 	}
@@ -2319,7 +2320,39 @@ func portalRegistrationSessionToProto(s *domain.PortalRegistrationSession) *pb.P
 	if s.AbandonedAt != nil {
 		info.AbandonedAt = timestamppb.New(*s.AbandonedAt)
 	}
+	info.Status = string(s.DeriveStatus(time.Now()))
 	return info
+}
+
+func (h *gRPCHandler) ListPortalRegistrationSessions(ctx context.Context, req *pb.ListPortalRegistrationSessionsRequest) (*pb.ListPortalRegistrationSessionsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	result, apiErr := h.portalRegistrationSessionSvc.ListSessions(ctx, domain.ListPortalRegistrationSessionsParams{
+		Cursor:       req.Cursor,
+		Limit:        req.Limit,
+		StatusFilter: req.Status,
+		SearchTerm:   req.Search,
+	})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	sessions := make([]*pb.PortalRegistrationSessionInfo, len(result.Sessions))
+	for i, s := range result.Sessions {
+		sessions[i] = portalRegistrationSessionToProto(s)
+	}
+
+	return &pb.ListPortalRegistrationSessionsResponse{
+		Sessions: sessions,
+		PageInfo: &pb.PageInfo{
+			NextCursor:  result.PageInfo.NextCursor,
+			PrevCursor:  result.PageInfo.PrevCursor,
+			HasNextPage: result.PageInfo.HasNextPage,
+			HasPrevPage: result.PageInfo.HasPrevPage,
+		},
+	}, nil
 }
 
 func (h *gRPCHandler) UpdateAccount(ctx context.Context, req *pb.UpdateAccountRequest) (*pb.UpdateAccountResponse, error) {
@@ -2383,6 +2416,36 @@ func (h *gRPCHandler) GetAccountLogoURL(ctx context.Context, req *pb.GetAccountL
 	}, nil
 }
 
+func (h *gRPCHandler) UploadAccountFavicon(ctx context.Context, req *pb.UploadAccountFaviconRequest) (*pb.UploadAccountFaviconResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	apiErr := h.accountSvc.UploadAccountFavicon(ctx, req.Id, req.File, req.ContentType)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.UploadAccountFaviconResponse{
+		Success: true,
+	}, nil
+}
+
+func (h *gRPCHandler) GetAccountFaviconURL(ctx context.Context, req *pb.GetAccountFaviconURLRequest) (*pb.GetAccountFaviconURLResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	url, apiErr := h.accountSvc.GetAccountFaviconURL(ctx, req.Id)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.GetAccountFaviconURLResponse{
+		Url: url,
+	}, nil
+}
+
 func accountToProto(a *domain.Account) *pb.AccountInfo {
 	info := &pb.AccountInfo{
 		Id:                       a.ID,
@@ -2410,6 +2473,7 @@ func accountBrandingToProto(b *domain.AccountBranding) *pb.AccountBrandingInfo {
 		SupportEmail:    b.SupportEmail,
 		PhoneNumber:     b.PhoneNumber,
 		LogoUrl:         b.LogoURL,
+		FaviconUrl:      b.FaviconURL,
 		FacebookHandle:  b.FacebookHandle,
 		InstagramHandle: b.InstagramHandle,
 		LinkedinHandle:  b.LinkedInHandle,
@@ -2438,6 +2502,7 @@ func publicAccountToProto(a *domain.PublicAccountBySlug) *pb.PublicAccountInfo {
 		SupportEmail:            a.SupportEmail,
 		LogoUrl:                 a.LogoURL,
 		PortalDomain:            a.PortalDomain,
+		FaviconUrl:              a.FaviconURL,
 	}
 }
 

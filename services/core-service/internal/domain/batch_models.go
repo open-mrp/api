@@ -28,6 +28,8 @@ type LightUnit struct {
 type LightItem struct {
 	ID  string
 	SKU string
+	// Type is the item_type_code (e.g. "material", "part", "finished_good"). Populated where the query provides it; empty otherwise.
+	Type string
 }
 
 // LightScanningStation is a lightweight scanning station reference returned as a sub-resource.

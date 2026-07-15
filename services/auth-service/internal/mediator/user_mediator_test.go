@@ -366,11 +366,12 @@ func TestValidateCredential_UserExpiredToken(t *testing.T) {
 	if identity != nil {
 		t.Fatalf("expected nil identity on error, got %+v", identity)
 	}
-	if err.PublicMessage != token.ErrInvalidJWT {
-		t.Fatalf("expected invalid JWT message, got %s", err.PublicMessage)
+	// An expired token surfaces as the distinct expired_token code (not the generic invalid_credentials) so request-log review can filter out routine token-rotation noise while keeping genuine auth failures visible.
+	if err.PublicMessage != token.ErrExpiredJWT {
+		t.Fatalf("expected expired JWT message, got %s", err.PublicMessage)
 	}
-	if err.Code != apierror.ErrorCodeInvalidCredentials {
-		t.Fatalf("expected invalid credentials code, got %s", err.Code)
+	if err.Code != apierror.ErrorCodeExpiredToken {
+		t.Fatalf("expected expired token code, got %s", err.Code)
 	}
 	if err.Type != apierror.ErrorTypeInvalidRequest {
 		t.Fatalf("expected invalid request type, got %s", err.Type)

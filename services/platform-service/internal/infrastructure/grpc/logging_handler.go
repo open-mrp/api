@@ -94,6 +94,7 @@ func (h *loggingHandler) ListRequestLogs(ctx context.Context, req *pb.ListReques
 		StatusCodes:       req.StatusCodes,
 		StatusCodeClasses: req.StatusCodeClasses,
 		ErrorCodes:        req.ErrorCodes,
+		ExcludeErrorCodes: req.ExcludeErrorCodes,
 		ActorAccountIDs:   req.ActorAccountIds,
 		TargetAccountIDs:  req.TargetAccountIds,
 		ActorIDs:          req.ActorIds,

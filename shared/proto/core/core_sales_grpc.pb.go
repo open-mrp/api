@@ -43,6 +43,7 @@ const (
 	CoreSalesService_ChangeSalesOrderStatus_FullMethodName          = "/core.CoreSalesService/ChangeSalesOrderStatus"
 	CoreSalesService_CheckoutSalesOrder_FullMethodName              = "/core.CoreSalesService/CheckoutSalesOrder"
 	CoreSalesService_QuoteSalesOrderLinePrices_FullMethodName       = "/core.CoreSalesService/QuoteSalesOrderLinePrices"
+	CoreSalesService_QuoteSalesOrderFreight_FullMethodName          = "/core.CoreSalesService/QuoteSalesOrderFreight"
 	CoreSalesService_CreateSalesOrderProductionRun_FullMethodName   = "/core.CoreSalesService/CreateSalesOrderProductionRun"
 	CoreSalesService_CreateSalesOrderLine_FullMethodName            = "/core.CoreSalesService/CreateSalesOrderLine"
 	CoreSalesService_ListVolumeDiscounts_FullMethodName             = "/core.CoreSalesService/ListVolumeDiscounts"
@@ -52,6 +53,7 @@ const (
 	CoreSalesService_DeleteVolumeDiscount_FullMethodName            = "/core.CoreSalesService/DeleteVolumeDiscount"
 	CoreSalesService_UpdateSalesOrderLine_FullMethodName            = "/core.CoreSalesService/UpdateSalesOrderLine"
 	CoreSalesService_DeleteSalesOrderLine_FullMethodName            = "/core.CoreSalesService/DeleteSalesOrderLine"
+	CoreSalesService_ReorderSalesOrderLines_FullMethodName          = "/core.CoreSalesService/ReorderSalesOrderLines"
 	CoreSalesService_CreateCustomerCheckoutSession_FullMethodName   = "/core.CoreSalesService/CreateCustomerCheckoutSession"
 	CoreSalesService_RecordOrderPayment_FullMethodName              = "/core.CoreSalesService/RecordOrderPayment"
 	CoreSalesService_ProcessAccountStripeWebhook_FullMethodName     = "/core.CoreSalesService/ProcessAccountStripeWebhook"
@@ -100,6 +102,9 @@ type CoreSalesServiceClient interface {
 	// QuoteSalesOrderLinePrices computes the unit price for each line without creating
 	// an order, used to display prices to users (incl. the customer portal).
 	QuoteSalesOrderLinePrices(ctx context.Context, in *QuoteSalesOrderLinePricesRequest, opts ...grpc.CallOption) (*QuoteSalesOrderLinePricesResponse, error)
+	// QuoteSalesOrderFreight re-estimates the freight (shipping) charge for an existing
+	// order from its current ship-to, carrier, service level, and lines, without mutating it.
+	QuoteSalesOrderFreight(ctx context.Context, in *QuoteSalesOrderFreightRequest, opts ...grpc.CallOption) (*QuoteSalesOrderFreightResponse, error)
 	// CreateSalesOrderProductionRun creates a production run from a sales order.
 	CreateSalesOrderProductionRun(ctx context.Context, in *CreateSalesOrderProductionRunRequest, opts ...grpc.CallOption) (*CreateSalesOrderProductionRunResponse, error)
 	// CreateSalesOrderLine creates a new line on a sales order.
@@ -118,6 +123,9 @@ type CoreSalesServiceClient interface {
 	UpdateSalesOrderLine(ctx context.Context, in *UpdateSalesOrderLineRequest, opts ...grpc.CallOption) (*UpdateSalesOrderLineResponse, error)
 	// DeleteSalesOrderLine deletes a sales order line.
 	DeleteSalesOrderLine(ctx context.Context, in *DeleteSalesOrderLineRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// ReorderSalesOrderLines re-sequences a sales order's product lines to match the
+	// given order, keeping credit/freight lines at the bottom of the list.
+	ReorderSalesOrderLines(ctx context.Context, in *ReorderSalesOrderLinesRequest, opts ...grpc.CallOption) (*ReorderSalesOrderLinesResponse, error)
 	// CreateCustomerCheckoutSession creates a checkout session for a customer order.
 	CreateCustomerCheckoutSession(ctx context.Context, in *CreateCustomerCheckoutSessionRequest, opts ...grpc.CallOption) (*CreateCustomerCheckoutSessionResponse, error)
 	// RecordOrderPayment links a succeeded Stripe payment intent to a sales order.
@@ -327,6 +335,16 @@ func (c *coreSalesServiceClient) QuoteSalesOrderLinePrices(ctx context.Context, 
 	return out, nil
 }
 
+func (c *coreSalesServiceClient) QuoteSalesOrderFreight(ctx context.Context, in *QuoteSalesOrderFreightRequest, opts ...grpc.CallOption) (*QuoteSalesOrderFreightResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QuoteSalesOrderFreightResponse)
+	err := c.cc.Invoke(ctx, CoreSalesService_QuoteSalesOrderFreight_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *coreSalesServiceClient) CreateSalesOrderProductionRun(ctx context.Context, in *CreateSalesOrderProductionRunRequest, opts ...grpc.CallOption) (*CreateSalesOrderProductionRunResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateSalesOrderProductionRunResponse)
@@ -417,6 +435,16 @@ func (c *coreSalesServiceClient) DeleteSalesOrderLine(ctx context.Context, in *D
 	return out, nil
 }
 
+func (c *coreSalesServiceClient) ReorderSalesOrderLines(ctx context.Context, in *ReorderSalesOrderLinesRequest, opts ...grpc.CallOption) (*ReorderSalesOrderLinesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReorderSalesOrderLinesResponse)
+	err := c.cc.Invoke(ctx, CoreSalesService_ReorderSalesOrderLines_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *coreSalesServiceClient) CreateCustomerCheckoutSession(ctx context.Context, in *CreateCustomerCheckoutSessionRequest, opts ...grpc.CallOption) (*CreateCustomerCheckoutSessionResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateCustomerCheckoutSessionResponse)
@@ -490,6 +518,9 @@ type CoreSalesServiceServer interface {
 	// QuoteSalesOrderLinePrices computes the unit price for each line without creating
 	// an order, used to display prices to users (incl. the customer portal).
 	QuoteSalesOrderLinePrices(context.Context, *QuoteSalesOrderLinePricesRequest) (*QuoteSalesOrderLinePricesResponse, error)
+	// QuoteSalesOrderFreight re-estimates the freight (shipping) charge for an existing
+	// order from its current ship-to, carrier, service level, and lines, without mutating it.
+	QuoteSalesOrderFreight(context.Context, *QuoteSalesOrderFreightRequest) (*QuoteSalesOrderFreightResponse, error)
 	// CreateSalesOrderProductionRun creates a production run from a sales order.
 	CreateSalesOrderProductionRun(context.Context, *CreateSalesOrderProductionRunRequest) (*CreateSalesOrderProductionRunResponse, error)
 	// CreateSalesOrderLine creates a new line on a sales order.
@@ -508,6 +539,9 @@ type CoreSalesServiceServer interface {
 	UpdateSalesOrderLine(context.Context, *UpdateSalesOrderLineRequest) (*UpdateSalesOrderLineResponse, error)
 	// DeleteSalesOrderLine deletes a sales order line.
 	DeleteSalesOrderLine(context.Context, *DeleteSalesOrderLineRequest) (*emptypb.Empty, error)
+	// ReorderSalesOrderLines re-sequences a sales order's product lines to match the
+	// given order, keeping credit/freight lines at the bottom of the list.
+	ReorderSalesOrderLines(context.Context, *ReorderSalesOrderLinesRequest) (*ReorderSalesOrderLinesResponse, error)
 	// CreateCustomerCheckoutSession creates a checkout session for a customer order.
 	CreateCustomerCheckoutSession(context.Context, *CreateCustomerCheckoutSessionRequest) (*CreateCustomerCheckoutSessionResponse, error)
 	// RecordOrderPayment links a succeeded Stripe payment intent to a sales order.
@@ -584,6 +618,9 @@ func (UnimplementedCoreSalesServiceServer) CheckoutSalesOrder(context.Context, *
 func (UnimplementedCoreSalesServiceServer) QuoteSalesOrderLinePrices(context.Context, *QuoteSalesOrderLinePricesRequest) (*QuoteSalesOrderLinePricesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method QuoteSalesOrderLinePrices not implemented")
 }
+func (UnimplementedCoreSalesServiceServer) QuoteSalesOrderFreight(context.Context, *QuoteSalesOrderFreightRequest) (*QuoteSalesOrderFreightResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method QuoteSalesOrderFreight not implemented")
+}
 func (UnimplementedCoreSalesServiceServer) CreateSalesOrderProductionRun(context.Context, *CreateSalesOrderProductionRunRequest) (*CreateSalesOrderProductionRunResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateSalesOrderProductionRun not implemented")
 }
@@ -610,6 +647,9 @@ func (UnimplementedCoreSalesServiceServer) UpdateSalesOrderLine(context.Context,
 }
 func (UnimplementedCoreSalesServiceServer) DeleteSalesOrderLine(context.Context, *DeleteSalesOrderLineRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteSalesOrderLine not implemented")
+}
+func (UnimplementedCoreSalesServiceServer) ReorderSalesOrderLines(context.Context, *ReorderSalesOrderLinesRequest) (*ReorderSalesOrderLinesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReorderSalesOrderLines not implemented")
 }
 func (UnimplementedCoreSalesServiceServer) CreateCustomerCheckoutSession(context.Context, *CreateCustomerCheckoutSessionRequest) (*CreateCustomerCheckoutSessionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateCustomerCheckoutSession not implemented")
@@ -983,6 +1023,24 @@ func _CoreSalesService_QuoteSalesOrderLinePrices_Handler(srv interface{}, ctx co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CoreSalesService_QuoteSalesOrderFreight_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QuoteSalesOrderFreightRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreSalesServiceServer).QuoteSalesOrderFreight(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreSalesService_QuoteSalesOrderFreight_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreSalesServiceServer).QuoteSalesOrderFreight(ctx, req.(*QuoteSalesOrderFreightRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CoreSalesService_CreateSalesOrderProductionRun_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateSalesOrderProductionRunRequest)
 	if err := dec(in); err != nil {
@@ -1145,6 +1203,24 @@ func _CoreSalesService_DeleteSalesOrderLine_Handler(srv interface{}, ctx context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CoreSalesService_ReorderSalesOrderLines_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReorderSalesOrderLinesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreSalesServiceServer).ReorderSalesOrderLines(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreSalesService_ReorderSalesOrderLines_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreSalesServiceServer).ReorderSalesOrderLines(ctx, req.(*ReorderSalesOrderLinesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CoreSalesService_CreateCustomerCheckoutSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateCustomerCheckoutSessionRequest)
 	if err := dec(in); err != nil {
@@ -1283,6 +1359,10 @@ var CoreSalesService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _CoreSalesService_QuoteSalesOrderLinePrices_Handler,
 		},
 		{
+			MethodName: "QuoteSalesOrderFreight",
+			Handler:    _CoreSalesService_QuoteSalesOrderFreight_Handler,
+		},
+		{
 			MethodName: "CreateSalesOrderProductionRun",
 			Handler:    _CoreSalesService_CreateSalesOrderProductionRun_Handler,
 		},
@@ -1317,6 +1397,10 @@ var CoreSalesService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteSalesOrderLine",
 			Handler:    _CoreSalesService_DeleteSalesOrderLine_Handler,
+		},
+		{
+			MethodName: "ReorderSalesOrderLines",
+			Handler:    _CoreSalesService_ReorderSalesOrderLines_Handler,
 		},
 		{
 			MethodName: "CreateCustomerCheckoutSession",

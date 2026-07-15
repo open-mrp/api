@@ -103,6 +103,8 @@ message ShipmentInfo {
   string carrier_name = 15;
   optional string service_level_id = 16;
   optional string service_level_name = 17;
+  // Carrier code (e.g. "ups", "fedex", "usps"), used to build a tracking URL.
+  optional string carrier_code = 68;
   string shipping_address_id = 18;
   optional string shipping_address_name = 19;
   optional string shipped_by_id = 20;

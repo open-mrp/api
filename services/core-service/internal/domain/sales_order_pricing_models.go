@@ -37,6 +37,17 @@ type SalesOrderLineQuote struct {
 	UnitPrice RateValue
 }
 
+// QuoteSalesOrderFreightParams identifies the existing order whose freight is re-estimated.
+type QuoteSalesOrderFreightParams struct {
+	AccountID    string
+	SalesOrderID string
+}
+
+// SalesOrderFreightQuote is the freshly estimated freight (shipping) charge for an order, expressed as currency (numerator) per shipping unit (denominator). No order is mutated.
+type SalesOrderFreightQuote struct {
+	UnitPrice RateValue
+}
+
 // ResolvedSalesOrderLine is a fully resolved create-line: the caller's product + quantity, with the SKU/description defaulted from the product, the item derived from the product, the unit cost pulled from the item, and the unit price computed server-side (or taken from an internal override). Produced by resolving the create line inputs against the pricing bundle in one pass.
 type ResolvedSalesOrderLine struct {
 	ProductID          string

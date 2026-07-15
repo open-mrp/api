@@ -207,6 +207,50 @@ func (r *accountRelationRepoImpl) ListNotificationPreferences(ctx context.Contex
 	return prefs, nil
 }
 
+func (r *accountRelationRepoImpl) ListNotificationRecipients(ctx context.Context, accountRelationID string) ([]domain.NotificationRecipientRef, *apierror.APIError) {
+	ctx, span := accountRelationRepoTracer.Start(ctx, "repository.account_relation.list_notification_recipients")
+	defer span.End()
+
+	rows, err := r.queries.ListNotificationPreferencesByRelation(ctx, accountRelationID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	// Collapse the flat (recipient, type) rows into one entry per recipient, preserving the query's ordering.
+	indexByUser := make(map[string]int, len(rows))
+	refs := make([]domain.NotificationRecipientRef, 0, len(rows))
+	for _, row := range rows {
+		idx, ok := indexByUser[row.RecipientAccountUserID]
+		if !ok {
+			idx = len(refs)
+			indexByUser[row.RecipientAccountUserID] = idx
+			refs = append(refs, domain.NotificationRecipientRef{AccountUserID: row.RecipientAccountUserID})
+		}
+		refs[idx].NotificationTypeCodes = append(refs[idx].NotificationTypeCodes, row.NotificationTypeCode)
+	}
+
+	return refs, nil
+}
+
+func (r *accountRelationRepoImpl) DeleteNotificationPreferencesByTypes(ctx context.Context, accountRelationID string, notificationTypeCodes []string) *apierror.APIError {
+	ctx, span := accountRelationRepoTracer.Start(ctx, "repository.account_relation.delete_notification_preferences_by_types")
+	defer span.End()
+
+	if len(notificationTypeCodes) == 0 {
+		return nil
+	}
+
+	err := r.queries.DeleteNotificationPreferencesByRelationAndTypes(ctx, sqlc.DeleteNotificationPreferencesByRelationAndTypesParams{
+		AccountRelationID:     accountRelationID,
+		NotificationTypeCodes: notificationTypeCodes,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
+}
+
 func (r *accountRelationRepoImpl) DeleteNotificationPreference(ctx context.Context, accountRelationID, recipientAccountUserID, notificationTypeCode string) *apierror.APIError {
 	ctx, span := accountRelationRepoTracer.Start(ctx, "repository.account_relation.delete_notification_preference")
 	defer span.End()

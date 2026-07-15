@@ -54,6 +54,12 @@ type AccountUsage struct {
 	Sandboxes                UsageItem
 	Subscription             *SubscriptionInfoResult
 	EstimatedAgentSpendCents int64
+	// PlanName is the pricing plan's display name resolved live from Stripe; empty when the account has no Stripe pricing plan.
+	PlanName string
+	// BaseFeeCents is the flat base fee charged per BaseFeeInterval, resolved from the plan's license fee component; 0 when the plan has no base fee.
+	BaseFeeCents int64
+	// BaseFeeInterval is the interval the base fee is charged on (e.g. "month"); empty when there is no base fee.
+	BaseFeeInterval string
 }
 
 type PlanChangePreview struct {

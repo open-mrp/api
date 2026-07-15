@@ -133,10 +133,14 @@ type StripeCheckoutClient interface {
 
 // CreateCheckoutSessionParams holds the parameters for creating a Stripe checkout session.
 type CreateCheckoutSessionParams struct {
-	CustomerEmail string
-	LineItems     []CheckoutLineItem
-	SuccessURL    *string
-	CancelURL     *string
+	// StripeCustomerID, when set, bills the session to that existing Stripe customer
+	// (and enables saving the payment method). When empty, CustomerEmail is used
+	// instead. Stripe rejects supplying both, so exactly one is sent.
+	StripeCustomerID string
+	CustomerEmail    string
+	LineItems        []CheckoutLineItem
+	SuccessURL       *string
+	CancelURL        *string
 	// Metadata to attach to the payment intent (e.g. orderID, customerID).
 	PaymentIntentMetadata map[string]string
 }

@@ -7,6 +7,8 @@ package core;
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
 import "core/core.proto";
+import "core/core_patch.proto";
+import "core/core_production_run.proto";
 
 option go_package = "shared/proto/core;core";
 
@@ -69,6 +71,10 @@ service CoreSalesService {
   // an order, used to display prices to users (incl. the customer portal).
   rpc QuoteSalesOrderLinePrices(QuoteSalesOrderLinePricesRequest) returns (QuoteSalesOrderLinePricesResponse);
 
+  // QuoteSalesOrderFreight re-estimates the freight (shipping) charge for an existing
+  // order from its current ship-to, carrier, service level, and lines, without mutating it.
+  rpc QuoteSalesOrderFreight(QuoteSalesOrderFreightRequest) returns (QuoteSalesOrderFreightResponse);
+
   // CreateSalesOrderProductionRun creates a production run from a sales order.
   rpc CreateSalesOrderProductionRun(CreateSalesOrderProductionRunRequest) returns (CreateSalesOrderProductionRunResponse);
 
@@ -95,6 +101,10 @@ service CoreSalesService {
 
   // DeleteSalesOrderLine deletes a sales order line.
   rpc DeleteSalesOrderLine(DeleteSalesOrderLineRequest) returns (google.protobuf.Empty);
+
+  // ReorderSalesOrderLines re-sequences a sales order's product lines to match the
+  // given order, keeping credit/freight lines at the bottom of the list.
+  rpc ReorderSalesOrderLines(ReorderSalesOrderLinesRequest) returns (ReorderSalesOrderLinesResponse);
 
   // CreateCustomerCheckoutSession creates a checkout session for a customer order.
   rpc CreateCustomerCheckoutSession(CreateCustomerCheckoutSessionRequest) returns (CreateCustomerCheckoutSessionResponse);
@@ -372,6 +382,12 @@ message SalesOrderInfo {
   repeated string acknowledgement_emails = 96;
   // Stripe payment intent IDs recorded against this order. Always populated.
   repeated string payment_intent_ids = 97;
+  // Fulfillment progress as fractions between 0 and 1, aggregated over the
+  // order's sale-type lines (quantity fulfilled / quantity ordered). Always
+  // populated (independent of the lines include); 0 when there are no sale lines.
+  double picked_completion = 101;
+  double packed_completion = 102;
+  double invoiced_completion = 103;
 }
 
 // SalesOrderLineInfo represents a sales order line.
@@ -415,6 +431,8 @@ message SalesOrderLineInfo {
   reserved 30; // formerly completed_at (removed from sales order lines)
   google.protobuf.Timestamp created_at = 31;
   google.protobuf.Timestamp updated_at = 32;
+  // Product type code (e.g. "sale", "service", "shipping", "credit", "tax"), used to distinguish physical sale lines from charge/adjustment lines.
+  optional string product_type_code = 33;
 }
 
 // --- Sales Order Request/Response messages ---
@@ -516,17 +534,19 @@ message CreateSalesOrderResponse {
 
 message UpdateSalesOrderRequest {
   string id = 1;
-  optional string customer_po_number = 2;
-  optional string note = 3;
+  // Clearable nullable fields use *Patch (clear vs set vs leave); non-nullable
+  // fields that can be changed but not cleared stay `optional`.
+  StringPatch customer_po_number = 2;
+  StringPatch note = 3;
   optional string carrier_id = 4;
-  optional string service_level_id = 5;
-  optional string carrier_billing_type = 6;
-  optional string carrier_billing_account = 7;
+  StringPatch service_level_id = 5;
+  StringPatch carrier_billing_type = 6;
+  StringPatch carrier_billing_account = 7;
   optional string priority_code = 8;
-  optional string sales_rep_id = 9;
+  StringPatch sales_rep_id = 9;
   optional string shipping_term_id = 10;
   optional string payment_term_id = 11;
-  optional string order_discount_id = 12;
+  StringPatch order_discount_id = 12;
   // Address references. To change an address's contents, callers use the
   // update-address endpoint; the order update only re-points to an address ID.
   reserved 13 to 26;
@@ -535,7 +555,7 @@ message UpdateSalesOrderRequest {
   // Additional updatable fields
   optional string number = 27;
   optional bool is_acknowledgment_sent = 28;
-  optional google.protobuf.Timestamp promised_at = 29;
+  TimestampPatch promised_at = 29;
   optional string customer_id = 30;
   // When set, replaces the acknowledgement email contacts on the order.
   // An empty list clears all acknowledgement contacts; nil/unset leaves existing contacts untouched.
@@ -576,8 +596,9 @@ message ChangeSalesOrderStatusResponse {
 message CheckoutSalesOrderRequest {
   string id = 1;
   string email = 2;
-  optional string success_url = 3;
-  optional string cancel_url = 4;
+  // The checkout success and cancel redirect URLs are constructed server-side
+  // from the account's portal slug, not accepted from the caller, to prevent
+  // open-redirect/phishing via the hosted checkout link.
 }
 
 message CheckoutSalesOrderResponse {
@@ -606,12 +627,22 @@ message QuoteSalesOrderLinePricesResponse {
   repeated SalesOrderLineQuote lines = 1;
 }
 
+message QuoteSalesOrderFreightRequest {
+  string id = 1;
+}
+
+message QuoteSalesOrderFreightResponse {
+  string unit_price_value = 1;
+  string unit_price_numerator_unit_id = 2;
+  string unit_price_denominator_unit_id = 3;
+}
+
 message CreateSalesOrderProductionRunRequest {
   string id = 1;
 }
 
 message CreateSalesOrderProductionRunResponse {
-  string production_run_id = 1;
+  ProductionRunInfo production_run = 1;
 }
 
 message CreateSalesOrderLineRequest {
@@ -660,6 +691,17 @@ message UpdateSalesOrderLineResponse {
 message DeleteSalesOrderLineRequest {
   string sales_order_id = 1;
   string id = 2;
+}
+
+message ReorderSalesOrderLinesRequest {
+  string sales_order_id = 1;
+  // Line IDs in the desired display order. Credit/freight lines are kept at the
+  // bottom regardless of their position here.
+  repeated string line_ids = 2;
+}
+
+message ReorderSalesOrderLinesResponse {
+  repeated SalesOrderLineInfo lines = 1;
 }
 
 // --- Volume Discount messages ---

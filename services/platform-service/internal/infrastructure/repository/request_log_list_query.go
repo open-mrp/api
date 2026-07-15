@@ -55,7 +55,9 @@ var requestLogRLBaseColumns = []string{
 
 // buildListQuery assembles the dynamic list SQL for a request_log listing. Filter predicates are omitted entirely when the caller did not supply a value — no OR-sentinel or CASE-WHEN wrappers — so MySQL sees only the predicates that actually narrow the result set.
 //
-// limit is applied inside the ORDER BY block; callers are expected to pass limit+1 to support "has next page" detection.
+// The dual-scope security filter (a log is visible when the caller's account is either the acting account `rl.account_id` OR the request's target `rl.target_account_id`) is expressed as a UNION of two single-scope keyset branches rather than `WHERE (account_id = ? OR target_account_id = ?)`. The OR form forces MySQL/Vitess into an index_merge that cannot satisfy `ORDER BY occurred_at DESC`, so it filesorts the caller's entire partition on every page — the second page (and any page with selective filters) times out on a large request_log. Splitting the scope lets each branch walk its own `(scope, occurred_at DESC, id DESC)` composite index in order, use the cursor as a real range bound, and stop at LIMIT before any enrichment join. UNION (not UNION ALL) drops the duplicate that appears for rows whose acting account IS the target account (the common single-account case); every row carries a distinct rl.id in the SELECT list, so two genuinely different rows can never collapse.
+//
+// limit is applied inside each branch and again on the outer query; callers pass limit+1 to support "has next page" detection. Each branch returns at most limit+1 rows, so the merged temp table MySQL builds for the UNION is bounded at 2*(limit+1) rows regardless of table size.
 func buildListQuery(
 	mode queryMode,
 	dir pagination.Direction,
@@ -65,216 +67,232 @@ func buildListQuery(
 	cursor *pagination.StringCursor,
 	limit int32,
 ) (string, []any) {
-	var inner strings.Builder
 	var args []any
 
-	// SELECT + FROM for the inner query (for actor mode this is the derived table body; for base/full it's the final query).
-	inner.WriteString("SELECT ")
-	inner.WriteString(strings.Join(requestLogRLBaseColumns, ", "))
-	args = append(args, includeQueryJSON, includeRequestBody, includeResponseBody)
-
-	switch mode {
-	case queryModeActor, queryModeFull:
-		// Both actor and full mode wrap the inner block in a derived table (see the wrapper below). The inner block selects only the rl.* base columns from request_log alone — actor_id is the raw value the API exposes, so no account_user translation join is needed here. Keeping the expensive user / api_key / role / account / idempotency_key joins out of the inner block lets the WHERE + ORDER BY + LIMIT run against request_log alone, so MySQL/Vitess uses the (target_account_id, occurred_at DESC, id DESC) index and LIMITs before any enrichment join happens.
-		inner.WriteString(" FROM request_log rl")
-	case queryModeBase:
-		// Base mode still pulls idempotency_key via a LEFT JOIN; that join is indexed and cheap.
-		inner.WriteString(", ik.idempotency_key")
-		inner.WriteString(
-			" FROM request_log rl" +
-				" LEFT JOIN idempotency_key ik ON rl.idempotency_key_id = ik.type_id",
-		)
+	// writeScopeBranch emits one keyset branch scoped to a single account column (rl.account_id or rl.target_account_id). It selects only the rl.* base columns from request_log alone — no enrichment joins — so the WHERE + ORDER BY + LIMIT ride the branch's (scope, occurred_at DESC, id DESC) composite and LIMIT before any join happens. It appends the branch's bind args (JSON-include booleans, scope id, filter values, cursor values, LIMIT) to args in the exact left-to-right order the placeholders appear.
+	writeScopeBranch := func(scopeColumn string) string {
+		var b strings.Builder
+		b.WriteString("SELECT ")
+		b.WriteString(strings.Join(requestLogRLBaseColumns, ", "))
+		args = append(args, includeQueryJSON, includeRequestBody, includeResponseBody)
+		b.WriteString(" FROM request_log rl")
+		b.WriteString(" WHERE rl.")
+		b.WriteString(scopeColumn)
+		b.WriteString(" = ?")
+		args = append(args, callerAccountID)
+		// Hidden logs (e.g. high-frequency polling endpoints flagged HideFromRequestLog) are persisted but omitted from listings. hidden is low-cardinality, so this rides the branch's cursor index as a residual filter rather than needing its own index.
+		b.WriteString(" AND rl.hidden = FALSE")
+		writeFilterPredicates(&b, &args, f)
+		writeCursorPredicate(&b, &args, dir, cursor)
+		writeScopeOrderAndLimit(&b, &args, dir, limit)
+		return b.String()
 	}
 
-	// WHERE — only emit predicates the caller supplied. The security scope returns every log where the caller's account is either the acting account (rl.account_id) or the account the request targeted (rl.target_account_id). MySQL/Vitess satisfies the OR via index_merge over the per-side cursor indexes: (account_id, occurred_at DESC, id DESC) and (target_account_id, occurred_at DESC, id DESC).
-	inner.WriteString(" WHERE (rl.account_id = ? OR rl.target_account_id = ?)")
-	args = append(args, callerAccountID, callerAccountID)
+	// Merge the two scope branches into a derived table, then run the outer projection + enrichment joins over only the ≤ 2*(limit+1) surviving rows. args are already populated in placeholder order by the two writeScopeBranch calls below; the outer SELECT/joins add no placeholders until the final LIMIT.
+	union := "(" + writeScopeBranch("account_id") + ") UNION (" + writeScopeBranch("target_account_id") + ")"
 
-	// Hidden logs (e.g. high-frequency polling endpoints flagged HideFromRequestLog) are persisted but omitted from listings. hidden is low-cardinality, so this rides the existing cursor indexes as a residual filter rather than needing its own index.
-	inner.WriteString(" AND rl.hidden = FALSE")
+	var outer strings.Builder
+	switch mode {
+	case queryModeBase:
+		// Base mode pulls idempotency_key via a LEFT JOIN over the merged set; that join is indexed and cheap.
+		outer.WriteString("SELECT " + derivedRequestLogRLColumns + ", ik.idempotency_key")
+		outer.WriteString(" FROM (")
+		outer.WriteString(union)
+		outer.WriteString(") rl")
+		outer.WriteString(" LEFT JOIN idempotency_key ik ON rl.idempotency_key_id = ik.type_id")
+	case queryModeActor, queryModeFull:
+		// actor_id is the raw actor key exposed by the API: the user_id for a user actor (the outer user join keys on u.id = rl.actor_id, and the account_user join used for the role keys on au.user_id = rl.actor_id) or the api_key.type_id for an api_key actor (the api_key join keys on ak.type_id).
+		outer.WriteString("SELECT " + derivedRequestLogRLColumns + ", ")
+		outer.WriteString("u.email AS user_email, u.name AS user_name, ")
+		outer.WriteString("ak.type_id AS api_key_type_id, ak.redacted_value AS api_key_redacted_value, ak.name AS api_key_name")
+		if mode == queryModeFull {
+			outer.WriteString(
+				", au.role_id AS user_role_id, r_user.name AS user_role_name, r_user.role_type_code AS user_role_type_code, " +
+					"r_key.id AS api_key_role_id, r_key.name AS api_key_role_name, r_key.role_type_code AS api_key_role_type_code, " +
+					"a.name AS account_name, a.created_at AS account_created_at, a.updated_at AS account_updated_at, ik.idempotency_key",
+			)
+		}
+		outer.WriteString(" FROM (")
+		outer.WriteString(union)
+		outer.WriteString(") rl")
+		outer.WriteString(
+			" LEFT JOIN `user` u ON u.id = rl.actor_id AND rl.identity_type = 'user'" +
+				" LEFT JOIN api_key ak ON rl.actor_id = ak.type_id AND rl.identity_type = 'api_key'",
+		)
+		if mode == queryModeFull {
+			outer.WriteString(
+				" LEFT JOIN account_user au ON au.user_id = rl.actor_id AND au.account_id = rl.target_account_id AND rl.identity_type = 'user'" +
+					" LEFT JOIN role r_user ON au.role_id = r_user.id" +
+					" LEFT JOIN role r_key ON ak.role_id = r_key.id" +
+					" LEFT JOIN account a ON rl.target_account_id = a.id" +
+					" LEFT JOIN idempotency_key ik ON rl.idempotency_key_id = ik.type_id",
+			)
+		}
+	}
 
+	// Re-sort and re-LIMIT the merged set: each branch is individually ordered + capped, but the UNION does not preserve order, so the outer query restores the global keyset order and trims to limit+1.
+	writeScopeOrderAndLimit(&outer, &args, dir, limit)
+	return outer.String(), args
+}
+
+// writeFilterPredicates appends the caller-supplied filter predicates (and their bind args) shared by both scope branches. Predicates are omitted entirely when the caller did not supply a value, so MySQL sees only the predicates that actually narrow the result set. Both branches must emit identical filter SQL so the UNION column/placeholder shapes line up.
+func writeFilterPredicates(sb *strings.Builder, args *[]any, f *domain.ListRequestLogsFilter) {
 	if f.Query != nil && *f.Query != "" {
 		like := "%" + db.EscapeLike(*f.Query) + "%"
 		// Match the log's own id (exact) plus a substring search across the request route (both the literal path and the normalized route) and the error message. Searching rl.path lets a caller paste a resource id that appeared in a URL (e.g. /v1/catalog/items/it_123) and find every log that touched it; rl.normalized_route covers route-template searches (e.g. "catalog/items").
-		inner.WriteString(" AND (rl.id = ? OR rl.path LIKE ? OR rl.normalized_route LIKE ? OR rl.error_message LIKE ?)")
-		args = append(args, *f.Query, like, like, like)
+		sb.WriteString(" AND (rl.id = ? OR rl.path LIKE ? OR rl.normalized_route LIKE ? OR rl.error_message LIKE ?)")
+		*args = append(*args, *f.Query, like, like, like)
 	}
 	if f.StartDate != nil {
-		inner.WriteString(" AND rl.occurred_at >= ?")
-		args = append(args, *f.StartDate)
+		sb.WriteString(" AND rl.occurred_at >= ?")
+		*args = append(*args, *f.StartDate)
 	}
 	if f.EndDate != nil {
-		inner.WriteString(" AND rl.occurred_at <= ?")
-		args = append(args, *f.EndDate)
+		sb.WriteString(" AND rl.occurred_at <= ?")
+		*args = append(*args, *f.EndDate)
 	}
 	if len(f.Methods) > 0 {
-		inner.WriteString(" AND rl.method IN (")
-		inner.WriteString(placeholders(len(f.Methods)))
-		inner.WriteString(")")
+		sb.WriteString(" AND rl.method IN (")
+		sb.WriteString(placeholders(len(f.Methods)))
+		sb.WriteString(")")
 		for _, m := range f.Methods {
-			args = append(args, m)
+			*args = append(*args, m)
 		}
 	}
 	if len(f.StatusCodes) > 0 || len(f.StatusCodeClasses) > 0 {
 		// Specific codes and whole classes are OR'd together (then AND'd with the rest of the filters): status_codes=401 + status_code_classes=5 matches 401 and any 5xx. Classes use FLOOR(status_code/100) so a class matches every code in its range, not just the curated ones the UI lists.
-		inner.WriteString(" AND (")
+		sb.WriteString(" AND (")
 		if len(f.StatusCodes) > 0 {
-			inner.WriteString("rl.status_code IN (")
-			inner.WriteString(placeholders(len(f.StatusCodes)))
-			inner.WriteString(")")
+			sb.WriteString("rl.status_code IN (")
+			sb.WriteString(placeholders(len(f.StatusCodes)))
+			sb.WriteString(")")
 			for _, sc := range f.StatusCodes {
-				args = append(args, sc)
+				*args = append(*args, sc)
 			}
 		}
 		if len(f.StatusCodeClasses) > 0 {
 			if len(f.StatusCodes) > 0 {
-				inner.WriteString(" OR ")
+				sb.WriteString(" OR ")
 			}
-			inner.WriteString("FLOOR(rl.status_code / 100) IN (")
-			inner.WriteString(placeholders(len(f.StatusCodeClasses)))
-			inner.WriteString(")")
+			sb.WriteString("FLOOR(rl.status_code / 100) IN (")
+			sb.WriteString(placeholders(len(f.StatusCodeClasses)))
+			sb.WriteString(")")
 			for _, c := range f.StatusCodeClasses {
-				args = append(args, c)
+				*args = append(*args, c)
 			}
 		}
-		inner.WriteString(")")
+		sb.WriteString(")")
 	}
 	if len(f.ErrorCodes) > 0 {
-		inner.WriteString(" AND rl.error_code IN (")
-		inner.WriteString(placeholders(len(f.ErrorCodes)))
-		inner.WriteString(")")
+		sb.WriteString(" AND rl.error_code IN (")
+		sb.WriteString(placeholders(len(f.ErrorCodes)))
+		sb.WriteString(")")
 		for _, ec := range f.ErrorCodes {
-			args = append(args, ec)
+			*args = append(*args, ec)
+		}
+	}
+	if len(f.ExcludeErrorCodes) > 0 {
+		// Drop logs whose error_code is in this set. error_code is NULL for successful requests, and `NULL NOT IN (...)` is NULL (not TRUE), which would drop every 2xx row — so the IS NULL disjunct explicitly keeps them, ensuring a default "hide expired_token" filter still shows all non-error traffic.
+		sb.WriteString(" AND (rl.error_code IS NULL OR rl.error_code NOT IN (")
+		sb.WriteString(placeholders(len(f.ExcludeErrorCodes)))
+		sb.WriteString("))")
+		for _, ec := range f.ExcludeErrorCodes {
+			*args = append(*args, ec)
 		}
 	}
 	if len(f.ActorAccountIDs) > 0 {
 		// Narrow to logs whose acting account is one of these (within scope).
-		inner.WriteString(" AND rl.account_id IN (")
-		inner.WriteString(placeholders(len(f.ActorAccountIDs)))
-		inner.WriteString(")")
+		sb.WriteString(" AND rl.account_id IN (")
+		sb.WriteString(placeholders(len(f.ActorAccountIDs)))
+		sb.WriteString(")")
 		for _, id := range f.ActorAccountIDs {
-			args = append(args, id)
+			*args = append(*args, id)
 		}
 	}
 	if len(f.TargetAccountIDs) > 0 {
 		// Narrow to logs whose target account is one of these (within scope).
-		inner.WriteString(" AND rl.target_account_id IN (")
-		inner.WriteString(placeholders(len(f.TargetAccountIDs)))
-		inner.WriteString(")")
+		sb.WriteString(" AND rl.target_account_id IN (")
+		sb.WriteString(placeholders(len(f.TargetAccountIDs)))
+		sb.WriteString(")")
 		for _, id := range f.TargetAccountIDs {
-			args = append(args, id)
+			*args = append(*args, id)
 		}
 	}
 	if len(f.ActorIDs) > 0 {
 		// Filter on the bare rl.actor_id column so the predicate is sargable and can use the (target_account_id, actor_id, occurred_at DESC, id DESC) index. actor_id stores the raw id the API exposes (user_id for user actors, api_key.type_id for api_key actors), so the caller's ids match directly — no translation needed.
-		inner.WriteString(" AND rl.actor_id IN (")
-		inner.WriteString(placeholders(len(f.ActorIDs)))
-		inner.WriteString(")")
+		sb.WriteString(" AND rl.actor_id IN (")
+		sb.WriteString(placeholders(len(f.ActorIDs)))
+		sb.WriteString(")")
 		for _, id := range f.ActorIDs {
-			args = append(args, id)
+			*args = append(*args, id)
 		}
 	}
 	if len(f.ActorTypes) > 0 {
-		inner.WriteString(" AND rl.identity_type IN (")
-		inner.WriteString(placeholders(len(f.ActorTypes)))
-		inner.WriteString(")")
+		sb.WriteString(" AND rl.identity_type IN (")
+		sb.WriteString(placeholders(len(f.ActorTypes)))
+		sb.WriteString(")")
 		for _, t := range f.ActorTypes {
-			args = append(args, t)
+			*args = append(*args, t)
 		}
 	}
 	if len(f.NormalizedRoutes) > 0 {
 		// Compare on route shape (param names collapsed to `{}`) so the filter is immune to param-name drift between the stored router templates and the spec-derived templates callers send. See normalizeRouteParams.
-		inner.WriteString(" AND ")
-		inner.WriteString(normalizedRouteColumnExpr)
-		inner.WriteString(" IN (")
-		inner.WriteString(placeholders(len(f.NormalizedRoutes)))
-		inner.WriteString(")")
+		sb.WriteString(" AND ")
+		sb.WriteString(normalizedRouteColumnExpr)
+		sb.WriteString(" IN (")
+		sb.WriteString(placeholders(len(f.NormalizedRoutes)))
+		sb.WriteString(")")
 		for _, r := range f.NormalizedRoutes {
-			args = append(args, normalizeRouteParams(r))
+			*args = append(*args, normalizeRouteParams(r))
 		}
 	}
 	if len(f.Hosts) > 0 {
-		inner.WriteString(" AND rl.host IN (")
-		inner.WriteString(placeholders(len(f.Hosts)))
-		inner.WriteString(")")
+		sb.WriteString(" AND rl.host IN (")
+		sb.WriteString(placeholders(len(f.Hosts)))
+		sb.WriteString(")")
 		for _, h := range f.Hosts {
-			args = append(args, h)
+			*args = append(*args, h)
 		}
 	}
 	if f.MinLatencyUs != nil {
-		inner.WriteString(" AND rl.latency_us >= ?")
-		args = append(args, *f.MinLatencyUs)
+		sb.WriteString(" AND rl.latency_us >= ?")
+		*args = append(*args, *f.MinLatencyUs)
 	}
 	if f.PublicEndpoint != nil {
-		inner.WriteString(" AND rl.public_endpoint = ?")
-		args = append(args, *f.PublicEndpoint)
+		sb.WriteString(" AND rl.public_endpoint = ?")
+		*args = append(*args, *f.PublicEndpoint)
 	}
 	if f.IdempotencyKey != nil && *f.IdempotencyKey != "" {
-		inner.WriteString(
+		sb.WriteString(
 			" AND EXISTS (SELECT 1 FROM idempotency_key ik2 WHERE ik2.type_id = rl.idempotency_key_id AND ik2.idempotency_key = ?)",
 		)
-		args = append(args, *f.IdempotencyKey)
+		*args = append(*args, *f.IdempotencyKey)
 	}
+}
 
-	// Cursor predicate — matches the direction semantics used by the previous sqlc queries: forward pages older (DESC), backward pages newer (ASC).
-	if cursor != nil {
-		switch dir {
-		case pagination.DirectionBackward:
-			inner.WriteString(" AND (rl.occurred_at > ? OR (rl.occurred_at = ? AND rl.id > ?))")
-			args = append(args, cursor.OccurredAt, cursor.OccurredAt, cursor.ID)
-		default:
-			inner.WriteString(" AND (rl.occurred_at < ? OR (rl.occurred_at = ? AND rl.id < ?))")
-			args = append(args, cursor.OccurredAt, cursor.OccurredAt, cursor.ID)
-		}
+// writeCursorPredicate appends the keyset cursor comparison (and its bind args). Direction semantics match the previous sqlc queries: forward pages older (DESC), backward pages newer (ASC).
+func writeCursorPredicate(sb *strings.Builder, args *[]any, dir pagination.Direction, cursor *pagination.StringCursor) {
+	if cursor == nil {
+		return
 	}
+	switch dir {
+	case pagination.DirectionBackward:
+		sb.WriteString(" AND (rl.occurred_at > ? OR (rl.occurred_at = ? AND rl.id > ?))")
+		*args = append(*args, cursor.OccurredAt, cursor.OccurredAt, cursor.ID)
+	default:
+		sb.WriteString(" AND (rl.occurred_at < ? OR (rl.occurred_at = ? AND rl.id < ?))")
+		*args = append(*args, cursor.OccurredAt, cursor.OccurredAt, cursor.ID)
+	}
+}
 
+// writeScopeOrderAndLimit appends the keyset ORDER BY and a `LIMIT ?` (binding limit). Used both inside each scope branch and on the outer query so the two stay in lockstep.
+func writeScopeOrderAndLimit(sb *strings.Builder, args *[]any, dir pagination.Direction, limit int32) {
 	if dir == pagination.DirectionBackward {
-		inner.WriteString(" ORDER BY rl.occurred_at ASC, rl.id ASC LIMIT ?")
+		sb.WriteString(" ORDER BY rl.occurred_at ASC, rl.id ASC LIMIT ?")
 	} else {
-		inner.WriteString(" ORDER BY rl.occurred_at DESC, rl.id DESC LIMIT ?")
+		sb.WriteString(" ORDER BY rl.occurred_at DESC, rl.id DESC LIMIT ?")
 	}
-	args = append(args, limit)
-
-	if mode == queryModeBase {
-		return inner.String(), args
-	}
-
-	// Actor and full mode: wrap the inner block as a derived table so MySQL/Vitess picks up the (target_account_id, occurred_at DESC, id DESC) index, runs the LIMIT, *then* nested-loop joins the enrichment tables on only the (≤ limit) matching rows. Without this the optimizer filesorts the whole target_account_id partition before the LIMIT, which times out on a large request_log table.
-	//
-	// actor_id is the raw actor key exposed by the API: the user_id for a user actor (the outer user join keys on u.id = rl.actor_id, and the account_user join used for the role keys on au.user_id = rl.actor_id) or the api_key.type_id for an api_key actor (the api_key join keys on ak.type_id).
-	var outer strings.Builder
-	outer.WriteString("SELECT " + derivedRequestLogRLColumns + ", ")
-	outer.WriteString("u.email AS user_email, u.name AS user_name, ")
-	outer.WriteString("ak.type_id AS api_key_type_id, ak.redacted_value AS api_key_redacted_value, ak.name AS api_key_name")
-	if mode == queryModeFull {
-		outer.WriteString(
-			", au.role_id AS user_role_id, r_user.name AS user_role_name, r_user.role_type_code AS user_role_type_code, " +
-				"r_key.id AS api_key_role_id, r_key.name AS api_key_role_name, r_key.role_type_code AS api_key_role_type_code, " +
-				"a.name AS account_name, a.created_at AS account_created_at, a.updated_at AS account_updated_at, ik.idempotency_key",
-		)
-	}
-	outer.WriteString(" FROM (")
-	outer.WriteString(inner.String())
-	outer.WriteString(
-		") rl" +
-			" LEFT JOIN `user` u ON u.id = rl.actor_id AND rl.identity_type = 'user'" +
-			" LEFT JOIN api_key ak ON rl.actor_id = ak.type_id AND rl.identity_type = 'api_key'",
-	)
-	if mode == queryModeFull {
-		outer.WriteString(
-			" LEFT JOIN account_user au ON au.user_id = rl.actor_id AND au.account_id = rl.target_account_id AND rl.identity_type = 'user'" +
-				" LEFT JOIN role r_user ON au.role_id = r_user.id" +
-				" LEFT JOIN role r_key ON ak.role_id = r_key.id" +
-				" LEFT JOIN account a ON rl.target_account_id = a.id" +
-				" LEFT JOIN idempotency_key ik ON rl.idempotency_key_id = ik.type_id",
-		)
-	}
-	if dir == pagination.DirectionBackward {
-		outer.WriteString(" ORDER BY rl.occurred_at ASC, rl.id ASC")
-	} else {
-		outer.WriteString(" ORDER BY rl.occurred_at DESC, rl.id DESC")
-	}
-	return outer.String(), args
+	*args = append(*args, limit)
 }
 
 // derivedRequestLogRLColumns is the rl.* projection the actor/full outer query selects from the derived table. It mirrors requestLogRLBaseColumns column-for-column (the JSON columns are already COALESCE'd inside the derived table, so here they are plain rl.<alias> references).

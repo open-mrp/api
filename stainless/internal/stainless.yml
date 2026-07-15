@@ -255,6 +255,13 @@ resources:
           update: patch /v1/identity/accounts/{id}
           update_photo: put /v1/identity/accounts/{id}/photo
           retrieve_logo: get /v1/identity/accounts/{id}/logo
+        subresources:
+          favicon:
+            methods:
+              update: put /v1/identity/accounts/{id}/favicon
+              list: get /v1/identity/accounts/{id}/favicon
+            models:
+              account_favicon_url: '#/components/schemas/AccountFaviconURL'
         models:
           account_logo_url: '#/components/schemas/AccountLogoURL'
           account_photo_upload_result: '#/components/schemas/AccountPhotoUploadResult'
@@ -421,6 +428,21 @@ resources:
           message_resource: '#/components/schemas/MessageResource'
           request_demo_request: '#/components/schemas/RequestDemoRequest'
           submit_feedback_request: '#/components/schemas/SubmitFeedbackRequest'
+      records:
+        subresources:
+          actions:
+            methods:
+              generate_pack_list: post /v1/core/records/actions/generate-pack-list
+            models:
+              gen_pack_list_request: '#/components/schemas/GenPackListRequest'
+              list_pack_list_back_order: '#/components/schemas/List_PackListBackOrder'
+              list_pack_list_case: '#/components/schemas/List_PackListCase'
+              list_pack_list_line_item: '#/components/schemas/List_PackListLineItem'
+              pack_list: '#/components/schemas/PackList'
+              pack_list_back_order: '#/components/schemas/PackListBackOrder'
+              pack_list_case: '#/components/schemas/PackListCase'
+              pack_list_line_item: '#/components/schemas/PackListLineItem'
+              pack_list_party: '#/components/schemas/PackListParty'
     models:
       entity: '#/components/schemas/Entity'
       list_entity: '#/components/schemas/List_Entity'
@@ -502,6 +524,15 @@ resources:
             models:
               bulk_delete_customers_request: '#/components/schemas/BulkDeleteCustomersRequest'
               merge_customers_request: '#/components/schemas/MergeCustomersRequest'
+          notification_recipients:
+            methods:
+              list: get /v1/sales/customers/{id}/notification-recipients
+              update: patch /v1/sales/customers/{id}/notification-recipients
+            models:
+              list_order_notification_recipient: '#/components/schemas/List_OrderNotificationRecipient'
+              notification_recipient_input: '#/components/schemas/NotificationRecipientInput'
+              order_notification_recipient: '#/components/schemas/OrderNotificationRecipient'
+              update_notification_recipients_request: '#/components/schemas/UpdateNotificationRecipientsRequest'
         models:
           account_group: '#/components/schemas/AccountGroup'
           address_input: '#/components/schemas/AddressInput'
@@ -607,6 +638,7 @@ resources:
       portal_registration_sessions:
         methods:
           create: post /v1/sales/portal-registration-sessions
+          list: get /v1/sales/portal-registration-sessions
           retrieve: get /v1/sales/portal-registration-sessions/{id}
           update: patch /v1/sales/portal-registration-sessions/{id}
         subresources:
@@ -616,6 +648,7 @@ resources:
               abandon: post /v1/sales/portal-registration-sessions/{id}/actions/abandon
         models:
           create_or_resume_portal_registration_session_request: '#/components/schemas/CreateOrResumePortalRegistrationSessionRequest'
+          list_portal_registration_session: '#/components/schemas/List_PortalRegistrationSession'
           portal_registration_session: '#/components/schemas/PortalRegistrationSession'
           portal_registration_session_data: '#/components/schemas/PortalRegistrationSessionData'
           portal_registration_session_data_input: '#/components/schemas/PortalRegistrationSessionDataInput'
@@ -671,23 +704,26 @@ resources:
               unissue: put /v1/sales/sales-orders/{id}/actions/unissue
               close: put /v1/sales/sales-orders/{id}/actions/close
               open: put /v1/sales/sales-orders/{id}/actions/open
+              quote_freight: post /v1/sales/sales-orders/{id}/actions/quote-freight
               create_production_run: post /v1/sales/sales-orders/{id}/actions/create-production-run
             models:
               bulk_delete_sales_orders_request: '#/components/schemas/BulkDeleteSalesOrdersRequest'
-              close_sales_order_request: '#/components/schemas/CloseSalesOrderRequest'
-              create_production_run_response: '#/components/schemas/CreateProductionRunResponse'
-              create_production_run_response_ref: '#/components/schemas/CreateProductionRunResponseRef'
               issue_sales_order_request: '#/components/schemas/IssueSalesOrderRequest'
-              open_sales_order_request: '#/components/schemas/OpenSalesOrderRequest'
-              unissue_sales_order_request: '#/components/schemas/UnissueSalesOrderRequest'
+              production_run: '#/components/schemas/ProductionRun'
+              quote_sales_order_freight_response: '#/components/schemas/QuoteSalesOrderFreightResponse'
           lines:
             methods:
               create: post /v1/sales/sales-orders/{id}/lines
               update: patch /v1/sales/sales-orders/{id}/lines/{line_id}
               delete: delete /v1/sales/sales-orders/{id}/lines/{line_id}
+            subresources:
+              actions:
+                methods:
+                  reorder: post /v1/sales/sales-orders/{id}/lines/actions/reorder
+                models:
+                  reorder_sales_order_lines_request: '#/components/schemas/ReorderSalesOrderLinesRequest'
             models:
               create_sales_order_line_request: '#/components/schemas/CreateSalesOrderLineRequest'
-              order_line_input: '#/components/schemas/OrderLineInput'
               update_sales_order_line_request: '#/components/schemas/UpdateSalesOrderLineRequest'
         models:
           checkout_sales_order_request: '#/components/schemas/CheckoutSalesOrderRequest'
@@ -696,6 +732,7 @@ resources:
           create_sales_order_request: '#/components/schemas/CreateSalesOrderRequest'
           created_by: '#/components/schemas/CreatedBy'
           freight: '#/components/schemas/Freight'
+          list_quoted_sales_order_line: '#/components/schemas/List_QuotedSalesOrderLine'
           list_record: '#/components/schemas/List_Record'
           list_sales_order: '#/components/schemas/List_SalesOrder'
           list_sales_order_line: '#/components/schemas/List_SalesOrderLine'
@@ -711,7 +748,9 @@ resources:
           sales_order: '#/components/schemas/SalesOrder'
           sales_order_email_contact_input: '#/components/schemas/SalesOrderEmailContactInput'
           sales_order_line: '#/components/schemas/SalesOrderLine'
+          sales_order_quote_rate: '#/components/schemas/SalesOrderQuoteRate'
           sales_order_related: '#/components/schemas/SalesOrderRelated'
+          sales_order_stage_total: '#/components/schemas/SalesOrderStageTotal'
           sales_order_status: '#/components/schemas/SalesOrderStatus'
           sales_order_totals: '#/components/schemas/SalesOrderTotals'
           update_sales_order_request: '#/components/schemas/UpdateSalesOrderRequest'
@@ -1337,10 +1376,13 @@ resources:
       read_cursor: '#/components/schemas/ReadCursor'
       support_availability: '#/components/schemas/SupportAvailability'
   webhooks:
-    methods:
-      stripe: post /v1/webhooks/stripe
-    models:
-      webhook_response: '#/components/schemas/WebhookResponse'
+    subresources:
+      stripe:
+        methods:
+          create: post /v1/webhooks/stripe
+          accounts: post /v1/webhooks/stripe/accounts/{account_id}
+        models:
+          webhook_response: '#/components/schemas/WebhookResponse'
   finance:
     methods:
       retrieve_transaction_types: get /v1/finance/transaction-types
@@ -1574,7 +1616,7 @@ resources:
           list_batch_lot: '#/components/schemas/List_BatchLot'
           list_batch_reference: '#/components/schemas/List_BatchReference'
           list_scanning_production_step_info: '#/components/schemas/List_ScanningProductionStepInfo'
-          production_run: '#/components/schemas/ProductionRun'
+          production_run_reference: '#/components/schemas/ProductionRunReference'
           scanning_production_step_info: '#/components/schemas/ScanningProductionStepInfo'
       scanning_stations:
         methods:
@@ -1747,9 +1789,7 @@ resources:
               add_batches_to_production_run_request: '#/components/schemas/AddBatchesToProductionRunRequest'
         models:
           create_production_run_request: '#/components/schemas/CreateProductionRunRequest'
-          list_production_run_summary: '#/components/schemas/List_ProductionRunSummary'
-          production_run_detail: '#/components/schemas/ProductionRunDetail'
-          production_run_summary: '#/components/schemas/ProductionRunSummary'
+          list_production_run: '#/components/schemas/List_ProductionRun'
           update_production_run_request: '#/components/schemas/UpdateProductionRunRequest'
       purchase_orders:
         methods:
@@ -1779,6 +1819,7 @@ resources:
           create_purchase_order_line_input: '#/components/schemas/CreatePurchaseOrderLineInput'
           create_purchase_order_request: '#/components/schemas/CreatePurchaseOrderRequest'
           list_purchase_order: '#/components/schemas/List_PurchaseOrder'
+          order_line_input: '#/components/schemas/OrderLineInput'
           update_purchase_order_request: '#/components/schemas/UpdatePurchaseOrderRequest'
       picks:
         methods:

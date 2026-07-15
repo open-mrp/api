@@ -289,6 +289,21 @@ func (mr *MockAccountUsageRepoMockRecorder) GetAccountNameAndPlanCode(ctx, accou
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountNameAndPlanCode", reflect.TypeOf((*MockAccountUsageRepo)(nil).GetAccountNameAndPlanCode), ctx, accountID)
 }
 
+// GetAccountStripePricingPlanID mocks base method.
+func (m *MockAccountUsageRepo) GetAccountStripePricingPlanID(ctx context.Context, accountID string) (*string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAccountStripePricingPlanID", ctx, accountID)
+	ret0, _ := ret[0].(*string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetAccountStripePricingPlanID indicates an expected call of GetAccountStripePricingPlanID.
+func (mr *MockAccountUsageRepoMockRecorder) GetAccountStripePricingPlanID(ctx, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountStripePricingPlanID", reflect.TypeOf((*MockAccountUsageRepo)(nil).GetAccountStripePricingPlanID), ctx, accountID)
+}
+
 // GetAccountSubscriptionInfo mocks base method.
 func (m *MockAccountUsageRepo) GetAccountSubscriptionInfo(ctx context.Context, accountID string) (*domain.AccountSubscriptionInfo, *apierror.APIError) {
 	m.ctrl.T.Helper()

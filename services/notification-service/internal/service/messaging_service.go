@@ -233,6 +233,49 @@ func (s *messagingSvcImpl) FanOut(ctx context.Context, dedupeSeed string, data m
 	return nil
 }
 
+// NotifyCustomerRegistered fans a "new customer registered on the portal" bell notification out to the seller's customer-service group — the active human participants of the account's support-route group (the same group that receives inbound portal queries). The notification links to the new customer so the team can follow up. Best-effort: if the account has no support route configured, there are no recipients and this no-ops. seed makes the per-recipient rows idempotent across redelivery.
+func (s *messagingSvcImpl) NotifyCustomerRegistered(ctx context.Context, seed string, data messaging.CustomerRegisteredData) *apierror.APIError {
+	ctx, span := messagingSvcTracer.Start(ctx, "service.messaging.notify_customer_registered")
+	defer span.End()
+
+	if data.SellerAccountID == "" || data.CustomerAccountID == "" {
+		return nil
+	}
+
+	recipients := resolveSupportRecipients(ctx, s.repoFactory, data.SellerAccountID, data.CustomerAccountID)
+	if len(recipients) == 0 {
+		return nil
+	}
+
+	name := strings.TrimSpace(data.CustomerName)
+	if name == "" {
+		name = strings.TrimSpace(data.CustomerNumber)
+	}
+	if name == "" {
+		name = "A new customer"
+	}
+
+	var body string
+	if data.IsExistingCustomer {
+		body = name + " registered for portal access on an existing customer account."
+	} else {
+		body = name + " registered on your customer portal."
+	}
+
+	return tracing.Trace(span, s.FanOut(ctx, seed, messaging.AlertFanoutData{
+		AccountID:               data.SellerAccountID,
+		Category:                string(constants.NotificationCategoryCustomerRegistered),
+		Kind:                    "alert",
+		Title:                   "New customer registration",
+		Body:                    body,
+		LinkResourceType:        string(constants.ObjectTypeCustomer),
+		LinkResourceID:          data.CustomerAccountID,
+		Priority:                string(constants.NotificationPriorityNormal),
+		SenderType:              string(constants.NotificationSenderTypeSystem),
+		RecipientAccountUserIDs: recipients,
+	}))
+}
+
 // recipientRef pairs the account_user id a notification row is keyed by with the user id its realtime push targets (the WS user-topic).
 type recipientRef struct {
 	accountUserID string

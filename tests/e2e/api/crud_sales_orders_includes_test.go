@@ -273,3 +273,88 @@ func TestSalesOrders_IncludeCreatedBy_SystemFallback(t *testing.T) {
 	assert.Equal(t, "system", jsonField(createdBy, "relation"))
 	assert.Nil(t, createdBy["actor"], "actor should be null for a system creator")
 }
+
+// ──────────────────────────────────────────────
+// SalesOrder — sales_rep include
+// ──────────────────────────────────────────────
+//
+// sales_rep is an expandable Actor. The backend only ships the rep's id and name
+// on the order; the gateway hydrates the rep's display name, handle (email), and
+// avatar URL from core-service when ?include=sales_rep is requested. ORD-001 is
+// seeded with sales_rep_id = SeedAccountUserID (John Doe / dane@augno.com, who has
+// a seeded avatar), so the hydrated fields resolve with real data.
+
+func TestSalesOrders_SalesRep_OmittedByDefault(t *testing.T) {
+	t.Parallel()
+
+	status, body, err := apiClient.GetListRaw(salesOrdersPath+"/"+SeedSalesOrderID, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assert.Nil(t, parseJSON(body)["sales_rep"], "sales_rep should be null without ?include=sales_rep")
+
+	row := salesOrderListRow(t, nil)
+	assert.Nil(t, row["sales_rep"], "sales_rep should be null on a list row without ?include=sales_rep")
+}
+
+// assertSeedSalesRepActor pins the fully hydrated shape of ORD-001's sales rep:
+// the id/object/type plus the default-populated name, handle, and avatar_url that
+// the gateway resolves from core-service.
+func assertSeedSalesRepActor(t *testing.T, salesRep map[string]any) {
+	t.Helper()
+	require.NotNil(t, salesRep, "sales_rep should be present with ?include=sales_rep")
+	assert.Equal(t, "actor", jsonField(salesRep, "object"))
+	assert.Equal(t, "user", jsonField(salesRep, "type"))
+	assert.Equal(t, SeedAccountUserID, jsonField(salesRep, "id"))
+	// Name, handle (email), and avatar_url are hydrated by default — the fix under test.
+	assert.Equal(t, "John Doe", jsonField(salesRep, "name"))
+	assert.Equal(t, "dane@augno.com", jsonField(salesRep, "handle"))
+	assert.NotEmpty(t, jsonField(salesRep, "avatar_url"), "avatar_url should be hydrated for a rep with a seeded avatar")
+}
+
+func TestSalesOrders_IncludeSalesRep_Retrieve(t *testing.T) {
+	t.Parallel()
+
+	status, body, err := apiClient.GetListRaw(salesOrdersPath+"/"+SeedSalesOrderID, url.Values{"include": {"sales_rep"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	assertSeedSalesRepActor(t, jsonObject(parseJSON(body), "sales_rep"))
+}
+
+func TestSalesOrders_IncludeSalesRep_List(t *testing.T) {
+	t.Parallel()
+
+	row := salesOrderListRow(t, url.Values{"include": {"sales_rep"}})
+	assertSeedSalesRepActor(t, jsonObject(row, "sales_rep"))
+}
+
+// sales_rep_id references account_user.id (acus_), not the user id. The update path
+// must reject a user id (which no join resolves and which would silently blank the
+// rep) and accept a real account_user id, hydrating it to name/handle/avatar.
+func TestSalesOrders_UpdateSalesRep_RejectsUserIDAcceptsAccountUser(t *testing.T) {
+	t.Parallel()
+	customerID := setupOrderCustomer(t)
+
+	status, body, err := apiClient.Post(salesOrdersPath, minimalSalesOrderCreateBody(t, customerID), newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, body)
+	orderID := jsonField(parseJSON(body), "id")
+	deleteOrder(t, orderID)
+
+	// A user id (us_) is the wrong id space — it must be rejected, not stored.
+	badStatus, badBody, err := apiClient.Patch(salesOrdersPath+"/"+orderID,
+		map[string]any{"sales_rep_id": SeedUserID}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 400, badStatus, badBody)
+
+	// The matching account_user id is accepted and hydrates on read.
+	okStatus, okBody, err := apiClient.Patch(salesOrdersPath+"/"+orderID,
+		map[string]any{"sales_rep_id": SeedAccountUserID}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, okStatus, okBody)
+
+	getStatus, getBody, err := apiClient.GetListRaw(salesOrdersPath+"/"+orderID, url.Values{"include": {"sales_rep"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, getStatus, getBody)
+	assertSeedSalesRepActor(t, jsonObject(parseJSON(getBody), "sales_rep"))
+}

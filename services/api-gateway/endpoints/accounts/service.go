@@ -22,6 +22,8 @@ type AccountSvc interface {
 	UpdateAccount(ctx context.Context, req *UpdateAccountRequest) (*apiresource.Account, *apierror.APIError)
 	UploadAccountPhoto(ctx context.Context, req *UploadAccountPhotoRequest) (*apiresource.AccountPhotoUploadResult, *apierror.APIError)
 	GetAccountLogoURL(ctx context.Context, req *GetAccountLogoURLRequest) (*apiresource.AccountLogoURL, *apierror.APIError)
+	UploadAccountFavicon(ctx context.Context, req *UploadAccountFaviconRequest) (*apiresource.EmptyResource, *apierror.APIError)
+	GetAccountFaviconURL(ctx context.Context, req *GetAccountFaviconURLRequest) (*apiresource.AccountFaviconURL, *apierror.APIError)
 }
 
 type AccountSvcConfig struct {
@@ -119,6 +121,7 @@ func portalProfileFromProto(p *pb.PortalProfileInfo) apiresource.PortalProfile {
 		Name:         p.Name,
 		Slug:         p.Slug,
 		LogoURL:      p.LogoUrl,
+		FaviconURL:   p.FaviconUrl,
 		SupportEmail: p.SupportEmail,
 		Address:      portalProfileAddressFromProto(p.Address),
 	}
@@ -232,6 +235,45 @@ func (m *accountSvcImpl) GetAccountLogoURL(ctx context.Context, req *GetAccountL
 	}, nil
 }
 
+func (m *accountSvcImpl) UploadAccountFavicon(ctx context.Context, req *UploadAccountFaviconRequest) (*apiresource.EmptyResource, *apierror.APIError) {
+	pbReq := &pb.UploadAccountFaviconRequest{
+		Id:          req.AccountID,
+		File:        req.RawBody,
+		ContentType: req.ContentType,
+	}
+
+	_, apiErr := grpcutil.CallRPC(ctx, accountSvcTracer, "service.accounts.upload_favicon", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UploadAccountFaviconResponse, error) {
+			return m.coreClient.UploadAccountFavicon(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return &apiresource.EmptyResource{}, nil
+}
+
+func (m *accountSvcImpl) GetAccountFaviconURL(ctx context.Context, req *GetAccountFaviconURLRequest) (*apiresource.AccountFaviconURL, *apierror.APIError) {
+	pbReq := &pb.GetAccountFaviconURLRequest{
+		Id: req.AccountID,
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, accountSvcTracer, "service.accounts.get_favicon_url", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetAccountFaviconURLResponse, error) {
+			return m.coreClient.GetAccountFaviconURL(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return &apiresource.AccountFaviconURL{
+		Object: constants.ObjectTypeAccountFaviconURL,
+		URL:    resp.Url,
+	}, nil
+}
+
 func accountFromProto(a *pb.AccountInfo) apiresource.Account {
 	if a == nil {
 		return apiresource.Account{}
@@ -258,6 +300,7 @@ func stashAccountMeta(meta *resourcekit.LoadMeta, a *pb.AccountInfo) {
 			SupportEmail:    a.Branding.SupportEmail,
 			PhoneNumber:     a.Branding.PhoneNumber,
 			LogoURL:         a.Branding.LogoUrl,
+			FaviconURL:      a.Branding.FaviconUrl,
 			FacebookHandle:  a.Branding.FacebookHandle,
 			InstagramHandle: a.Branding.InstagramHandle,
 			LinkedInHandle:  a.Branding.LinkedinHandle,
@@ -291,5 +334,7 @@ func publicAccountFromProto(a *pb.PublicAccountInfo) apiresource.PublicAccount {
 		Slug:         a.Slug,
 		SupportEmail: a.SupportEmail,
 		LogoURL:      a.LogoUrl,
+		PortalDomain: a.PortalDomain,
+		FaviconURL:   a.FaviconUrl,
 	}
 }

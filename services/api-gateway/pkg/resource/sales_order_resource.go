@@ -47,16 +47,28 @@ var SampleSalesOrderStatusDetail = &SalesOrderStatusDetail{
 	Name:   "Estimate",
 }
 
-// SalesOrderTotals holds the derived monetary totals for a sales order or one of its lines, following the lifecycle ordered -> packed -> invoiced.
+// SalesOrderStageTotal pairs a fulfillment stage's monetary amount with its completion progress.
+type SalesOrderStageTotal struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order_stage_total"`
+	// Amount for this stage as a decimal string (unit price x quantity at this stage).
+	Amount string `json:"amount" validate:"required" format:"decimal"`
+	// Progress to completion for this stage, as a fraction between 0 and 1: quantity at this stage divided by quantity ordered. `0` when nothing has reached this stage yet.
+	Completion float64 `json:"completion"`
+}
+
+// SalesOrderTotals holds the derived monetary totals for a sales order or one of its lines, following the lifecycle ordered -> picked -> packed -> invoiced. Each downstream stage carries both its monetary amount and its completion progress against the ordered baseline.
 type SalesOrderTotals struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order_totals"`
-	// Total ordered amount as a decimal string (unit price x quantity ordered).
+	// Total ordered amount as a decimal string (unit price x quantity ordered). This is the baseline the stage completions are measured against.
 	Ordered string `json:"ordered" validate:"required" format:"decimal"`
-	// Total packed amount as a decimal string (unit price x quantity packed).
-	Packed string `json:"packed" validate:"required" format:"decimal"`
-	// Total invoiced amount as a decimal string (unit price x quantity invoiced).
-	Invoiced string `json:"invoiced" validate:"required" format:"decimal"`
+	// Picked amount and completion.
+	Picked SalesOrderStageTotal `json:"picked"`
+	// Packed amount and completion.
+	Packed SalesOrderStageTotal `json:"packed"`
+	// Invoiced amount and completion.
+	Invoiced SalesOrderStageTotal `json:"invoiced"`
 }
 
 // OrderContact groups a sales order's email recipients by notification purpose.
@@ -75,13 +87,14 @@ type OrderContact struct {
 type SalesOrderRelated struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order_related"`
-	// Associated pick, as a lightweight record reference.
+	// Associated pick.
 	Pick *Record `json:"pick" expandable:"true"`
-	// Associated production run, as a lightweight record reference.
+	// Associated production run.
 	ProductionRun *Record `json:"production_run" expandable:"true"`
-	// Associated shipments, as lightweight record references.
+	// Associated shipments.
 	Shipments *List[Record] `json:"shipments" expandable:"true"`
-	Invoices  *List[Record] `json:"invoices" expandable:"true"`
+	// Associated invoices.
+	Invoices *List[Record] `json:"invoices" expandable:"true"`
 }
 
 // Full sales order resource.
@@ -138,7 +151,7 @@ type SalesOrder struct {
 	Lines *List[SalesOrderLine] `json:"lines" expandable:"true"`
 	// Number of order lines on this order, returned even when the `lines` list itself is not expanded.
 	LineCount int32 `json:"line_count"`
-	// Derived monetary totals.
+	// Derived monetary totals and per-stage fulfillment progress.
 	Totals *SalesOrderTotals `json:"totals" expandable:"true"`
 	// Records related to this order (pick, production run, shipments).
 	Related *SalesOrderRelated `json:"related"`
@@ -165,9 +178,10 @@ var sampleNote = "Rush order"
 
 var SampleSalesOrderTotals = &SalesOrderTotals{
 	Object:   constants.ObjectTypeSalesOrderTotals,
-	Ordered:  "1234.560000000000000000000000000000",
-	Packed:   "0.000000000000000000000000000000",
-	Invoiced: "0.000000000000000000000000000000",
+	Ordered:  "1234.56",
+	Picked:   SalesOrderStageTotal{Object: constants.ObjectTypeSalesOrderStageTotal, Amount: "617.280000000000000000000000000000", Completion: 0.5},
+	Packed:   SalesOrderStageTotal{Object: constants.ObjectTypeSalesOrderStageTotal, Amount: "308.640000000000000000000000000000", Completion: 0.25},
+	Invoiced: SalesOrderStageTotal{Object: constants.ObjectTypeSalesOrderStageTotal, Amount: "0.000000000000000000000000000000", Completion: 0},
 }
 
 var SampleSalesOrder = &SalesOrder{

@@ -62,6 +62,11 @@ func (m *requestLogSvcImpl) ListRequestLogs(ctx context.Context, req *ListReques
 		errorCodes[i] = string(ec)
 	}
 
+	excludeErrorCodes := make([]string, len(req.ExcludeErrorCodes))
+	for i, ec := range req.ExcludeErrorCodes {
+		excludeErrorCodes[i] = string(ec)
+	}
+
 	actorTypes := make([]string, len(req.ActorTypes))
 	for i, at := range req.ActorTypes {
 		actorTypes[i] = string(at)
@@ -73,6 +78,7 @@ func (m *requestLogSvcImpl) ListRequestLogs(ctx context.Context, req *ListReques
 		StatusCodes:       req.StatusCodes,
 		StatusCodeClasses: req.StatusCodeClasses,
 		ErrorCodes:        errorCodes,
+		ExcludeErrorCodes: excludeErrorCodes,
 		ActorAccountIds:   req.ActorAccountIDs,
 		TargetAccountIds:  req.TargetAccountIDs,
 		ActorIds:          req.ActorIDs,

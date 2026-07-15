@@ -29,13 +29,11 @@ type ListProductionRunsRequest struct {
 	EndDate *string `query:"end_date"`
 }
 
-// TODO: stop returning ProductionRunSummary; return the full ProductionRun apiresource and use proper includes values to control expansion.
-
 // Returns a paginated list of production runs.
 type ListProductionRunsEndpoint struct{}
 
-func (e *ListProductionRunsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListProductionRunsRequest, *apiresource.List[apiresource.ProductionRunSummary]] {
-	return (&apiendpoint.APIEndpoint[*ListProductionRunsRequest, *apiresource.List[apiresource.ProductionRunSummary]]{
+func (e *ListProductionRunsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListProductionRunsRequest, *apiresource.List[apiresource.ProductionRun]] {
+	return (&apiendpoint.APIEndpoint[*ListProductionRunsRequest, *apiresource.List[apiresource.ProductionRun]]{
 		Title:             "List Production Runs",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
@@ -47,7 +45,7 @@ func (e *ListProductionRunsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Lis
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainProductionRuns, Action: types.ActionRead},
 		},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *ListProductionRunsRequest) (*apiresource.List[apiresource.ProductionRunSummary], *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *ListProductionRunsRequest) (*apiresource.List[apiresource.ProductionRun], *apierror.APIError) {
 			return svc.(ProductionRunSvc).ListProductionRuns
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{

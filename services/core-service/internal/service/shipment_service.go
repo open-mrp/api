@@ -160,11 +160,25 @@ func (s *shipmentSvcImpl) GetShipment(ctx context.Context, params domain.GetShip
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := identity.CheckHasPermission(types.PermissionDomainShipments, types.ActionRead); apiErr != nil {
+	if apiErr := checkShipmentReadPermission(identity); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
+	}
+
+	if identity.IsExternalTarget() {
+		meds := s.mediators()
+		// Counterparty-aware: a customer-portal relation actor may read shipments on
+		// orders they bought. Data stays scoped to Target.AccountID; the owner-side
+		// CheckReadAccess only allows the actor->target direction and wrongly rejects them.
+		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 	}
 
 	params.AccountID = identity.Target.AccountID
@@ -172,6 +186,14 @@ func (s *shipmentSvcImpl) GetShipment(ctx context.Context, params domain.GetShip
 	shipment, apiErr := s.repos.NewShipmentRepo().Get(ctx, params)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
+	}
+
+	// Buyer scope: customer actors may only retrieve shipments for orders they bought.
+	if identity.IsCustomerUser() {
+		actorAccountID := identity.ActorAccountID()
+		if actorAccountID == nil || shipment.CustomerID != *actorAccountID {
+			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Shipment not found."))
+		}
 	}
 
 	// Load includes
@@ -840,12 +862,14 @@ func estimateShippingRate(ctx context.Context, repos domain.RepoFactory, shippoF
 			return 0, nil
 		}
 
-		// Check the customer's default shipping term.
+		// Check the customer's default shipping term. The free-shipping service-level
+		// allowlist must be loaded so the minimum-order branch below can honor it.
 		if customer.DefaultShippingTermID != nil {
 			shippingTermRepo := repos.NewShippingTermRepo()
 			shippingTerm, apiErr := shippingTermRepo.Get(ctx, domain.GetShippingTermParams{
 				AccountID:      params.AccountID,
 				ShippingTermID: *customer.DefaultShippingTermID,
+				Includes:       []string{"free_shipping_service_levels"},
 			})
 			if apiErr != nil {
 				return 0, apiErr
@@ -865,14 +889,20 @@ func estimateShippingRate(ctx context.Context, repos domain.RepoFactory, shippoF
 				return flatRate, nil
 			}
 
-			// Shipping term has a minimum order value: free shipping if order exceeds threshold.
+			// Shipping term has a minimum order value: free shipping over the threshold,
+			// but only for the term's allowlisted service levels (or when it has no
+			// allowlist). A non-allowlisted service selection over the threshold falls
+			// through to the live carrier rate rather than shipping free. Matches legacy
+			// order.repo.ts (freeShippingCarrierOptionIDs gating).
 			if shippingTerm.MinimumOrderValue != nil && params.OrderTotal != nil {
 				minValue, err := strconv.ParseFloat(shippingTerm.MinimumOrderValue.Value, 64)
 				if err != nil {
 					return 0, apierror.NewInternalError(err, "Failed to parse minimum order value.")
 				}
 				if *params.OrderTotal > minValue {
-					return 0, nil
+					if len(shippingTerm.FreeShippingServiceLevelIDs) == 0 || slices.Contains(shippingTerm.FreeShippingServiceLevelIDs, params.ServiceLevelID) {
+						return 0, nil
+					}
 				}
 			}
 		}
@@ -929,6 +959,14 @@ func estimateShippingRate(ctx context.Context, repos domain.RepoFactory, shippoF
 		return 0, apiErr
 	}
 
+	// A live rate requires a real ship-from address. Refuse to quote from an empty
+	// origin (matches legacy, which fails order create with "Bill to address not
+	// found" when the seller account has no default bill-to) rather than sending an
+	// empty from-address to Shippo and returning a meaningless rate.
+	if params.FromAddress.Zip == "" || params.FromAddress.Country == "" {
+		return 0, apierror.NewValidationError("Cannot estimate shipping: the account has no default billing (ship-from) address.")
+	}
+
 	shippoClient := shippoFactory.Build(apiKey)
 
 	rate, apiErr := shippoClient.FetchShippingRate(ctx, domain.FetchShippingRateParams{
@@ -937,6 +975,7 @@ func estimateShippingRate(ctx context.Context, repos domain.RepoFactory, shippoF
 		FromAddress:            params.FromAddress,
 		ToAddress:              params.ToAddress,
 		Parcels:                params.Parcels,
+		Billing:                params.Billing,
 	})
 	if apiErr != nil {
 		return 0, apiErr

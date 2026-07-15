@@ -30,6 +30,7 @@ type Shipment struct {
 	CustomerUpdatedAt            time.Time
 	CarrierID                    string `audit:"carrier_id"`
 	CarrierName                  string `audit:"carrier_name"`
+	CarrierCode                  *string
 	CarrierIsPortalEnabled       *bool
 	CarrierCreatedAt             *time.Time
 	CarrierUpdatedAt             *time.Time
@@ -153,6 +154,15 @@ type UpdateShipmentParams struct {
 	CarrierID            *string
 	ServiceLevelID       *string
 	Includes             []string
+}
+
+// SyncShipmentShippingParams re-points every shipment on an order to the order's current carrier, service level, and ship-to. Used by the out-of-band shipping-updated consumer.
+type SyncShipmentShippingParams struct {
+	AccountID         string
+	SalesOrderID      string
+	CarrierID         string
+	ServiceLevelID    *string
+	ShippingAddressID string
 }
 
 // DeleteShipmentParams holds the parameters for deleting a shipment.

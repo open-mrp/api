@@ -22,6 +22,7 @@ type PortalRegistrationSessionSvc interface {
 	Update(ctx context.Context, req *UpdatePortalRegistrationSessionRequest) (*apiresource.PortalRegistrationSession, *apierror.APIError)
 	Complete(ctx context.Context, req *CompletePortalRegistrationSessionRequest) (*apiresource.PortalRegistrationSession, *apierror.APIError)
 	Abandon(ctx context.Context, req *AbandonPortalRegistrationSessionRequest) (*apiresource.PortalRegistrationSession, *apierror.APIError)
+	List(ctx context.Context, req *ListPortalRegistrationSessionsRequest) (*apiresource.List[apiresource.PortalRegistrationSession], *apierror.APIError)
 }
 
 type PortalRegistrationSessionSvcConfig struct {
@@ -109,6 +110,35 @@ func (s *portalRegSessionSvcImpl) Abandon(ctx context.Context, req *AbandonPorta
 	return portalRegistrationSessionFromProto(resp.Session), nil
 }
 
+func (s *portalRegSessionSvcImpl) List(ctx context.Context, req *ListPortalRegistrationSessionsRequest) (*apiresource.List[apiresource.PortalRegistrationSession], *apierror.APIError) {
+	resp, apiErr := grpcutil.CallRPC(ctx, portalRegSessionSvcTracer, "service.portal_registration_sessions.list", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListPortalRegistrationSessionsResponse, error) {
+			return s.coreClient.ListPortalRegistrationSessions(ctx, &pb.ListPortalRegistrationSessionsRequest{
+				Cursor: req.Cursor,
+				Limit:  req.Limit,
+				Status: req.Status,
+				Search: req.Query,
+			}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	return portalRegistrationSessionListFromProto(ctx, resp), nil
+}
+
+func portalRegistrationSessionListFromProto(ctx context.Context, resp *pb.ListPortalRegistrationSessionsResponse) *apiresource.List[apiresource.PortalRegistrationSession] {
+	if resp == nil {
+		return apiresource.NewList[apiresource.PortalRegistrationSession](nil, apiresource.PageInfo{})
+	}
+	sessions := make([]apiresource.PortalRegistrationSession, 0, len(resp.Sessions))
+	for _, s := range resp.Sessions {
+		if mapped := portalRegistrationSessionFromProto(s); mapped != nil {
+			sessions = append(sessions, *mapped)
+		}
+	}
+	return apiresource.NewList(sessions, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
+}
+
 func portalRegistrationSessionDataToProto(d *PortalRegistrationSessionDataInput) *pb.PortalRegistrationSessionData {
 	if d == nil {
 		return &pb.PortalRegistrationSessionData{}
@@ -139,8 +169,10 @@ func portalRegistrationSessionFromProto(s *pb.PortalRegistrationSessionInfo) *ap
 		Object:             constants.ObjectTypePortalRegistrationSession,
 		SellerAccountID:    s.SellerAccountId,
 		SellerSlug:         s.SellerSlug,
+		UserID:             s.UserId,
 		IsExistingCustomer: s.IsExistingCustomer,
 		Step:               constants.PortalRegistrationStep(s.Step),
+		Status:             constants.PortalRegistrationStatus(s.Status),
 		CustomerID:         s.CustomerId,
 		CreatedAt:          s.CreatedAt.AsTime(),
 		UpdatedAt:          s.UpdatedAt.AsTime(),

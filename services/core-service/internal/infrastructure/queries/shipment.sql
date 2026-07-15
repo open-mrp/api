@@ -214,6 +214,7 @@ SELECT
     COALESCE(so.carrier_billing_account, ar.carrier_billing_account) AS carrier_billing_account,
     s.carrier_id,
     cr.name AS carrier_name,
+    cr.code AS carrier_code,
     cr.is_portal_enabled AS carrier_is_portal_enabled,
     cr.created_at AS carrier_created_at,
     cr.updated_at AS carrier_updated_at,
@@ -335,3 +336,15 @@ SELECT EXISTS(
     WHERE id = sqlc.arg('id')
     AND account_id = sqlc.arg('account_id')
 ) AS `exists`;
+
+-- name: SyncShipmentShippingForOrder :exec
+-- Re-points every shipment on an order to the order's current carrier, service level,
+-- and ship-to address. Run out-of-band after a sales-order shipping change to keep the
+-- order's shipments in sync (matching legacy updateCarrierByOrder / updateShipToByOrder).
+UPDATE shipment
+SET carrier_id = sqlc.arg('carrier_id'),
+    carrier_option_id = sqlc.narg('carrier_option_id'),
+    shipping_address_id = sqlc.arg('shipping_address_id'),
+    updated_at = NOW(3)
+WHERE sales_order_id = sqlc.arg('sales_order_id')
+AND account_id = sqlc.arg('account_id');

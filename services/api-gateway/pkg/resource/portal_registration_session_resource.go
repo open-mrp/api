@@ -52,10 +52,14 @@ type PortalRegistrationSession struct {
 	SellerAccountID string `json:"seller_account_id" validate:"required"`
 	// The seller's portal slug.
 	SellerSlug string `json:"seller_slug" validate:"required"`
+	// The user who registered.
+	UserID string `json:"user_id" validate:"required"`
 	// Whether the buyer is linking an existing customer record vs. creating a new one.
 	IsExistingCustomer *bool `json:"is_existing_customer"`
 	// The current registration step.
 	Step constants.PortalRegistrationStep `json:"step" validate:"required"`
+	// Derived lifecycle status, so customer service can spot registrations that stalled.
+	Status constants.PortalRegistrationStatus `json:"status" validate:"required"`
 	// The customer account created/linked on completion.
 	CustomerID *string `json:"customer_id"`
 	// Scratch form data accumulated across steps.
@@ -75,7 +79,9 @@ var samplePortalRegistrationSession = &PortalRegistrationSession{
 	Object:          constants.ObjectTypePortalRegistrationSession,
 	SellerAccountID: SampleAccountID,
 	SellerSlug:      SampleAccountPortalSlug,
+	UserID:          SampleUserID,
 	Step:            constants.PortalRegistrationStepCustomerDetails,
+	Status:          constants.PortalRegistrationStatusInProgress,
 	SessionData: &PortalRegistrationSessionData{
 		Object:       constants.ObjectTypePortalRegistrationSessionData,
 		CustomerName: "Acme Corp",

@@ -945,6 +945,28 @@ func (q *Queries) SetDraftMessageStatus(ctx context.Context, arg SetDraftMessage
 	return result.RowsAffected()
 }
 
+const setMessageMetadata = `-- name: SetMessageMetadata :execrows
+UPDATE message
+SET metadata = ?, updated_at = NOW(3)
+WHERE id = ? AND account_id = ?
+`
+
+type SetMessageMetadataParams struct {
+	Metadata  db.NullableRawMessage
+	ID        string
+	AccountID string
+}
+
+// Sets a message's metadata JSON (used to record an agent reply's failure marker + error code when a
+// streaming reply is finalized as failed). Does NOT touch edited_at — this is a system annotation.
+func (q *Queries) SetMessageMetadata(ctx context.Context, arg SetMessageMetadataParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setMessageMetadata, arg.Metadata, arg.ID, arg.AccountID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const setMessageStreamingBody = `-- name: SetMessageStreamingBody :execrows
 UPDATE message
 SET body = ?, preview = ?, streaming_state = ?, updated_at = NOW(3)

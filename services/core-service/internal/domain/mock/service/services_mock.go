@@ -3001,6 +3001,21 @@ func (mr *MockAccountSvcMockRecorder) GetAccountContext(ctx, accountID any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountContext", reflect.TypeOf((*MockAccountSvc)(nil).GetAccountContext), ctx, accountID)
 }
 
+// GetAccountFaviconURL mocks base method.
+func (m *MockAccountSvc) GetAccountFaviconURL(ctx context.Context, accountID string) (*string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAccountFaviconURL", ctx, accountID)
+	ret0, _ := ret[0].(*string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetAccountFaviconURL indicates an expected call of GetAccountFaviconURL.
+func (mr *MockAccountSvcMockRecorder) GetAccountFaviconURL(ctx, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountFaviconURL", reflect.TypeOf((*MockAccountSvc)(nil).GetAccountFaviconURL), ctx, accountID)
+}
+
 // GetAccountLogoURL mocks base method.
 func (m *MockAccountSvc) GetAccountLogoURL(ctx context.Context, accountID string) (*string, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -3194,6 +3209,20 @@ func (m *MockAccountSvc) UpdateAgentSpendingCap(ctx context.Context, capCents *i
 func (mr *MockAccountSvcMockRecorder) UpdateAgentSpendingCap(ctx, capCents any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAgentSpendingCap", reflect.TypeOf((*MockAccountSvc)(nil).UpdateAgentSpendingCap), ctx, capCents)
+}
+
+// UploadAccountFavicon mocks base method.
+func (m *MockAccountSvc) UploadAccountFavicon(ctx context.Context, accountID string, file []byte, contentType string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UploadAccountFavicon", ctx, accountID, file, contentType)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// UploadAccountFavicon indicates an expected call of UploadAccountFavicon.
+func (mr *MockAccountSvcMockRecorder) UploadAccountFavicon(ctx, accountID, file, contentType any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadAccountFavicon", reflect.TypeOf((*MockAccountSvc)(nil).UploadAccountFavicon), ctx, accountID, file, contentType)
 }
 
 // UploadAccountPhoto mocks base method.
@@ -4013,6 +4042,21 @@ func (mr *MockCustomerSvcMockRecorder) GetFrequentlyOrderedProducts(ctx, custome
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFrequentlyOrderedProducts", reflect.TypeOf((*MockCustomerSvc)(nil).GetFrequentlyOrderedProducts), ctx, customerAccountID)
 }
 
+// ListCustomerNotificationRecipients mocks base method.
+func (m *MockCustomerSvc) ListCustomerNotificationRecipients(ctx context.Context, customerAccountID string) ([]domain.NotificationRecipient, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListCustomerNotificationRecipients", ctx, customerAccountID)
+	ret0, _ := ret[0].([]domain.NotificationRecipient)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListCustomerNotificationRecipients indicates an expected call of ListCustomerNotificationRecipients.
+func (mr *MockCustomerSvcMockRecorder) ListCustomerNotificationRecipients(ctx, customerAccountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCustomerNotificationRecipients", reflect.TypeOf((*MockCustomerSvc)(nil).ListCustomerNotificationRecipients), ctx, customerAccountID)
+}
+
 // ListCustomers mocks base method.
 func (m *MockCustomerSvc) ListCustomers(ctx context.Context, params domain.ListCustomersParams) (*domain.ListCustomersResult, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -4056,6 +4100,21 @@ func (m *MockCustomerSvc) UpdateCustomer(ctx context.Context, params domain.Upda
 func (mr *MockCustomerSvcMockRecorder) UpdateCustomer(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCustomer", reflect.TypeOf((*MockCustomerSvc)(nil).UpdateCustomer), ctx, params)
+}
+
+// UpdateCustomerNotificationRecipients mocks base method.
+func (m *MockCustomerSvc) UpdateCustomerNotificationRecipients(ctx context.Context, params domain.UpdateCustomerNotificationRecipientsParams) ([]domain.NotificationRecipient, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateCustomerNotificationRecipients", ctx, params)
+	ret0, _ := ret[0].([]domain.NotificationRecipient)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// UpdateCustomerNotificationRecipients indicates an expected call of UpdateCustomerNotificationRecipients.
+func (mr *MockCustomerSvcMockRecorder) UpdateCustomerNotificationRecipients(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCustomerNotificationRecipients", reflect.TypeOf((*MockCustomerSvc)(nil).UpdateCustomerNotificationRecipients), ctx, params)
 }
 
 // MockAnalyticsSvc is a mock of AnalyticsSvc interface.
@@ -5610,6 +5669,21 @@ func (mr *MockSalesOrderSvcMockRecorder) ProcessAccountStripeWebhook(ctx, accoun
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProcessAccountStripeWebhook", reflect.TypeOf((*MockSalesOrderSvc)(nil).ProcessAccountStripeWebhook), ctx, accountID, rawPayload, signature)
 }
 
+// QuoteSalesOrderFreight mocks base method.
+func (m *MockSalesOrderSvc) QuoteSalesOrderFreight(ctx context.Context, params domain.QuoteSalesOrderFreightParams) (*domain.SalesOrderFreightQuote, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "QuoteSalesOrderFreight", ctx, params)
+	ret0, _ := ret[0].(*domain.SalesOrderFreightQuote)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// QuoteSalesOrderFreight indicates an expected call of QuoteSalesOrderFreight.
+func (mr *MockSalesOrderSvcMockRecorder) QuoteSalesOrderFreight(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QuoteSalesOrderFreight", reflect.TypeOf((*MockSalesOrderSvc)(nil).QuoteSalesOrderFreight), ctx, params)
+}
+
 // QuoteSalesOrderLinePrices mocks base method.
 func (m *MockSalesOrderSvc) QuoteSalesOrderLinePrices(ctx context.Context, params domain.QuoteSalesOrderLinePricesParams) ([]domain.SalesOrderLineQuote, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -5705,6 +5779,21 @@ func (m *MockSalesOrderLineSvc) DeleteSalesOrderLine(ctx context.Context, params
 func (mr *MockSalesOrderLineSvcMockRecorder) DeleteSalesOrderLine(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSalesOrderLine", reflect.TypeOf((*MockSalesOrderLineSvc)(nil).DeleteSalesOrderLine), ctx, params)
+}
+
+// ReorderSalesOrderLines mocks base method.
+func (m *MockSalesOrderLineSvc) ReorderSalesOrderLines(ctx context.Context, params domain.ReorderSalesOrderLinesParams) ([]*domain.SalesOrderLine, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReorderSalesOrderLines", ctx, params)
+	ret0, _ := ret[0].([]*domain.SalesOrderLine)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ReorderSalesOrderLines indicates an expected call of ReorderSalesOrderLines.
+func (mr *MockSalesOrderLineSvcMockRecorder) ReorderSalesOrderLines(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReorderSalesOrderLines", reflect.TypeOf((*MockSalesOrderLineSvc)(nil).ReorderSalesOrderLines), ctx, params)
 }
 
 // UpdateSalesOrderLine mocks base method.
@@ -9021,6 +9110,21 @@ func (m *MockPortalRegistrationSessionSvc) GetSession(ctx context.Context, typeI
 func (mr *MockPortalRegistrationSessionSvcMockRecorder) GetSession(ctx, typeID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSession", reflect.TypeOf((*MockPortalRegistrationSessionSvc)(nil).GetSession), ctx, typeID)
+}
+
+// ListSessions mocks base method.
+func (m *MockPortalRegistrationSessionSvc) ListSessions(ctx context.Context, params domain.ListPortalRegistrationSessionsParams) (*domain.ListPortalRegistrationSessionsResult, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListSessions", ctx, params)
+	ret0, _ := ret[0].(*domain.ListPortalRegistrationSessionsResult)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListSessions indicates an expected call of ListSessions.
+func (mr *MockPortalRegistrationSessionSvcMockRecorder) ListSessions(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSessions", reflect.TypeOf((*MockPortalRegistrationSessionSvc)(nil).ListSessions), ctx, params)
 }
 
 // UpdateSession mocks base method.

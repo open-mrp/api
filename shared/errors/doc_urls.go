@@ -4,11 +4,13 @@ const (
 	docsBaseURL = "https://docs.augno.com"
 
 	// Auth & authorization
+	docURLExpiredToken       = docsBaseURL + "/api/errors#expired_token"
 	docURLExpiredAPIKey      = docsBaseURL + "/api/errors#api_key_expired"
 	docURLRevokedAPIKey      = docsBaseURL + "/api/errors#api_key_revoked"
 	docURLInvalidCredentials = docsBaseURL + "/api/errors#invalid_credentials"
 	docURLInsufficientPerms  = docsBaseURL + "/api/errors#insufficient_permissions"
 	docURLPaymentRequired    = docsBaseURL + "/api/errors#payment_required"
+	docURLAgentSpendingCap   = docsBaseURL + "/api/errors#agent_spending_cap_reached"
 
 	// Validation
 	docURLValidationFailed = docsBaseURL + "/api/errors#validation_failed"

@@ -131,14 +131,16 @@ func (m *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, req *Cre
 			ItemId:                     l.ItemID.Ptr(),
 			ProductSku:                 l.ProductSKU,
 			ProductDescription:         l.ProductDescription.Ptr(),
-			QuantityValue:              l.QuantityValue,
-			QuantityUnitId:             l.QuantityUnitID,
-			UnitPriceValue:             l.UnitPriceValue,
-			UnitPriceNumeratorUnitId:   l.UnitPriceNumeratorUnitID,
-			UnitPriceDenominatorUnitId: l.UnitPriceDenominatorUnitID,
-			UnitCostValue:              l.UnitCostValue.Ptr(),
-			UnitCostNumeratorUnitId:    l.UnitCostNumeratorUnitID.Ptr(),
-			UnitCostDenominatorUnitId:  l.UnitCostDenominatorUnitID.Ptr(),
+			QuantityValue:              l.Quantity.Value,
+			QuantityUnitId:             l.Quantity.UnitID,
+			UnitPriceValue:             l.UnitPrice.Value,
+			UnitPriceNumeratorUnitId:   l.UnitPrice.NumeratorUnitID,
+			UnitPriceDenominatorUnitId: l.UnitPrice.DenominatorUnitID,
+		}
+		if uc, ok := l.UnitCost.Value(); ok {
+			lines[i].UnitCostValue = &uc.Value
+			lines[i].UnitCostNumeratorUnitId = &uc.NumeratorUnitID
+			lines[i].UnitCostDenominatorUnitId = &uc.DenominatorUnitID
 		}
 	}
 
@@ -268,14 +270,16 @@ func (m *purchaseOrderSvcImpl) CreatePurchaseOrderLine(ctx context.Context, req 
 		ItemId:                     req.ItemID.Ptr(),
 		ProductSku:                 req.ProductSKU,
 		ProductDescription:         req.ProductDescription.Ptr(),
-		QuantityValue:              req.QuantityValue,
-		QuantityUnitId:             req.QuantityUnitID,
-		UnitPriceValue:             req.UnitPriceValue,
-		UnitPriceNumeratorUnitId:   req.UnitPriceNumeratorUnitID,
-		UnitPriceDenominatorUnitId: req.UnitPriceDenominatorUnitID,
-		UnitCostValue:              req.UnitCostValue.Ptr(),
-		UnitCostNumeratorUnitId:    req.UnitCostNumeratorUnitID.Ptr(),
-		UnitCostDenominatorUnitId:  req.UnitCostDenominatorUnitID.Ptr(),
+		QuantityValue:              req.Quantity.Value,
+		QuantityUnitId:             req.Quantity.UnitID,
+		UnitPriceValue:             req.UnitPrice.Value,
+		UnitPriceNumeratorUnitId:   req.UnitPrice.NumeratorUnitID,
+		UnitPriceDenominatorUnitId: req.UnitPrice.DenominatorUnitID,
+	}
+	if uc, ok := req.UnitCost.Value(); ok {
+		pbReq.UnitCostValue = &uc.Value
+		pbReq.UnitCostNumeratorUnitId = &uc.NumeratorUnitID
+		pbReq.UnitCostDenominatorUnitId = &uc.DenominatorUnitID
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, purchaseOrderEpSvcTracer, "service.purchase_orders.create_line", domain.ServiceName,

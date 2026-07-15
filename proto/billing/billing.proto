@@ -159,6 +159,12 @@ message GetAccountUsageResponse {
   reserved 7; // was agent_token_detail; token counts are never surfaced
   reserved "agent_token_detail";
   int64 estimated_agent_spend_cents = 8;
+  // Plan display name resolved live from Stripe (e.g. the pricing plan's display_name). Empty when the account has no Stripe pricing plan.
+  string plan_name = 9;
+  // Flat base fee in cents charged per base_fee_interval, resolved from the pricing plan's license fee component. 0 when the plan has no base fee (e.g. per-seat pricing).
+  int64 base_fee_cents = 10;
+  // Billing interval the base fee is charged on (e.g. "month", "year"). Empty when there is no base fee.
+  string base_fee_interval = 11;
 }
 
 // Intentionally empty; account is identified by the caller's identity metadata.
@@ -202,8 +208,20 @@ message GetAgentSpendRequest {
   optional string account_id = 1;
 }
 
+// A marked-up per-token price from the account's plan rate card, used to price a run's usage against the cap with the same rates Stripe bills.
+message TokenRate {
+  // Gateway model name the rate applies to (e.g. "anthropic/claude-sonnet-4.6").
+  string model = 1;
+  // Token type the rate applies to: input, output, cached_input, or cached_output.
+  string token_type = 2;
+  // Price in cents per token, markup included.
+  double unit_amount_cents = 3;
+}
+
 message GetAgentSpendResponse {
   int64 estimated_spend_cents = 1;
+  // Marked-up per-token rates from the account's plan rate card. Empty when the plan has no rate card. Lets the caller price in-flight usage against the cap without a per-turn round trip.
+  repeated TokenRate token_rates = 2;
 }
 
 message EnsureBillingCustomerRequest {

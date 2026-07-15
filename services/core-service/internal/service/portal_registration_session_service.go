@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
@@ -14,7 +15,12 @@ import (
 )
 
 // portalRegistrationSessionTTL bounds how long an incomplete session can be resumed. Applied logically at read time (no cleanup job), mirroring the SaaS registration session.
-const portalRegistrationSessionTTL = 7 * 24 * time.Hour
+const portalRegistrationSessionTTL = constants.PortalRegistrationSessionTTL
+
+const (
+	defaultPortalRegistrationSessionPageSize int32 = 20
+	maxPortalRegistrationSessionPageSize     int32 = 100
+)
 
 var portalRegSessionSvcTracer = tracing.GetTracer("core-service.portal_registration_session_service")
 
@@ -131,6 +137,40 @@ func (s *portalRegistrationSessionSvcImpl) GetSession(ctx context.Context, typeI
 		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Registration session has expired."))
 	}
 	return session, nil
+}
+
+// ListSessions returns the seller account's buyer-registration sessions for the customer-service follow-up view. Seller-facing: requires an internal actor with account read permission and is scoped to the caller's account (a different authorization model from the buyer-owned single-session reads above).
+func (s *portalRegistrationSessionSvcImpl) ListSessions(ctx context.Context, params domain.ListPortalRegistrationSessionsParams) (*domain.ListPortalRegistrationSessionsResult, *apierror.APIError) {
+	ctx, span := portalRegSessionSvcTracer.Start(ctx, "service.portal_registration_session.list")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainAccount, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if params.StatusFilter != nil && !constants.PortalRegistrationStatus(*params.StatusFilter).IsValid() {
+		return nil, tracing.Trace(span, apierror.NewValidationError("Invalid registration status filter."))
+	}
+
+	if params.Limit <= 0 {
+		params.Limit = defaultPortalRegistrationSessionPageSize
+	}
+	if params.Limit > maxPortalRegistrationSessionPageSize {
+		params.Limit = maxPortalRegistrationSessionPageSize
+	}
+
+	params.SellerAccountID = identity.Target.AccountID
+	// Single-source the resume TTL: an incomplete session created before this instant reads as expired.
+	params.ExpiryThreshold = time.Now().Add(-portalRegistrationSessionTTL)
+
+	return s.repos.NewPortalRegistrationSessionRepo().ListSessions(ctx, params)
 }
 
 func (s *portalRegistrationSessionSvcImpl) UpdateSession(ctx context.Context, params domain.UpdatePortalRegistrationSessionParams) (*domain.PortalRegistrationSession, *apierror.APIError) {

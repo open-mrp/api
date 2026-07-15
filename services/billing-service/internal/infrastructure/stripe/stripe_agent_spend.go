@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/augno/api/services/billing-service/internal/domain"
 	"github.com/stripe/stripe-go/v84"
 )
 
@@ -56,6 +57,28 @@ func (c *stripeClientImpl) GetAgentTokenSpendCents(ctx context.Context, customer
 	}
 
 	return int64(math.Round(totalCents)), nil
+}
+
+// GetRateCardTokenRates returns every marked-up per-token rate on a rate card as a flat slice, for callers that need the rates themselves (e.g. to price in-flight usage against a spending cap) rather than a computed total.
+func (c *stripeClientImpl) GetRateCardTokenRates(ctx context.Context, rateCardID string) ([]domain.TokenRate, error) {
+	_, span := stripeClientTracer.Start(ctx, "stripe_client.get_rate_card_token_rates")
+	defer span.End()
+
+	rates, _, err := c.fetchRateCardTokenRates(rateCardID)
+	if err != nil {
+		span.RecordError(err)
+		return nil, err
+	}
+
+	out := make([]domain.TokenRate, 0, len(rates))
+	for key, unitAmountCents := range rates {
+		out = append(out, domain.TokenRate{
+			Model:           key.model,
+			TokenType:       key.tokenType,
+			UnitAmountCents: unitAmountCents,
+		})
+	}
+	return out, nil
 }
 
 // fetchRateCardTokenRates loads every rate on the rate card, keyed by (model, token_type), and returns the token meter id the rates are attached to. unit_amount is returned verbatim (cents per token).

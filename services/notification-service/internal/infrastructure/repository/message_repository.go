@@ -222,6 +222,20 @@ func (r *messageRepoImpl) SetStreamingBody(ctx context.Context, id, accountID st
 	return rows > 0, nil
 }
 
+func (r *messageRepoImpl) SetMessageMetadata(ctx context.Context, id, accountID string, metadata json.RawMessage) *apierror.APIError {
+	ctx, span := messageRepoTracer.Start(ctx, "repository.message.set_message_metadata")
+	defer span.End()
+	_, err := r.db.SetMessageMetadata(ctx, sqlc.SetMessageMetadataParams{
+		Metadata:  db.NullableRawMessage(metadata),
+		ID:        id,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
+}
+
 func (r *messageRepoImpl) SoftDelete(ctx context.Context, id, accountID string) *apierror.APIError {
 	ctx, span := messageRepoTracer.Start(ctx, "repository.message.soft_delete")
 	defer span.End()

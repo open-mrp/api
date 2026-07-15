@@ -12,6 +12,7 @@ LIMIT 20;
 SELECT
     p.id AS product_id,
     i.sku AS product_sku,
+    i.description AS product_description,
     ug.base_unit_id AS quantity_unit_id
 FROM product p
 JOIN item i ON i.id = p.item_id

@@ -84,16 +84,16 @@ INSERT IGNORE INTO sales_order (id, number, sales_order_status_code, sales_order
 -- ============================================================
 
 -- Estimate lines
-INSERT IGNORE INTO sales_order_line (id, product_sku, product_description, product_id, item_id, sales_order_id, quantity_id, unit_price_id, unit_cost_id, created_at, updated_at) VALUES
-    ('orln_01seedest_ln1_0000', 'SCK-006', 'Large beige sock', 'pd_01k0a65nx5e67rd1rahv4tdnrp', 'it_01k0a7100ae85v16mmxx5gx2w3', 'or_01k0a8bs2yfhev5begay245wez', 'qu_01seedest_ln1_qty00', 'rt_01seedest_ln1_price', 'rt_01seedest_ln1_cost0', NOW(), NOW()),
-    ('orln_01seedest_ln2_0000', 'SCK-004', 'Large black sock', 'pd_01k0a65nx5eeavcs322b06pgr8', 'it_01k0a7100af709nn7sgg8tbxte', 'or_01k0a8bs2yfhev5begay245wez', 'qu_01seedest_ln2_qty00', 'rt_01seedest_ln2_price', 'rt_01seedest_ln2_cost0', NOW(), NOW()),
-    ('orln_01seedest_ln3_0000', 'Freight', 'Charges for shipping', 'pd_01k0a65nx5fj1bxedew2jvjpwz', 'it_01k0a71009fc5szdjy8mn2nzq5', 'or_01k0a8bs2yfhev5begay245wez', 'qu_01seedest_ln3_qty00', 'rt_01seedest_ln3_price', 'rt_01seedest_ln3_cost0', NOW(), NOW());
+INSERT IGNORE INTO sales_order_line (id, product_sku, product_description, product_id, item_id, sales_order_id, quantity_id, unit_price_id, unit_cost_id, line_item_number, created_at, updated_at) VALUES
+    ('orln_01seedest_ln1_0000', 'SCK-006', 'Large beige sock', 'pd_01k0a65nx5e67rd1rahv4tdnrp', 'it_01k0a7100ae85v16mmxx5gx2w3', 'or_01k0a8bs2yfhev5begay245wez', 'qu_01seedest_ln1_qty00', 'rt_01seedest_ln1_price', 'rt_01seedest_ln1_cost0', 1, NOW(), NOW()),
+    ('orln_01seedest_ln2_0000', 'SCK-004', 'Large black sock', 'pd_01k0a65nx5eeavcs322b06pgr8', 'it_01k0a7100af709nn7sgg8tbxte', 'or_01k0a8bs2yfhev5begay245wez', 'qu_01seedest_ln2_qty00', 'rt_01seedest_ln2_price', 'rt_01seedest_ln2_cost0', 2, NOW(), NOW()),
+    ('orln_01seedest_ln3_0000', 'Freight', 'Charges for shipping', 'pd_01k0a65nx5fj1bxedew2jvjpwz', 'it_01k0a71009fc5szdjy8mn2nzq5', 'or_01k0a8bs2yfhev5begay245wez', 'qu_01seedest_ln3_qty00', 'rt_01seedest_ln3_price', 'rt_01seedest_ln3_cost0', 3, NOW(), NOW());
 
 -- Issued order lines
-INSERT IGNORE INTO sales_order_line (id, product_sku, product_description, product_id, item_id, sales_order_id, quantity_id, unit_price_id, unit_cost_id, created_at, updated_at) VALUES
-    ('orln_01seediss_ln1_0000', 'SCK-001', 'Small white sock', 'pd_01k0a65nx2e2crfxrvryyxnmdh', 'it_01k0a7100aeysrs9vxpeq14yxj', 'or_01k0a8bs2yejxbsvqhrx4drkq1', 'qu_01seediss_ln1_qty00', 'rt_01seediss_ln1_price', 'rt_01seediss_ln1_cost0', NOW(), NOW()),
-    ('orln_01seediss_ln2_0000', 'SCK-002', 'Large white sock', 'pd_01k0a65nx5e3haz2fgfm34hmcz', 'it_01k0a7100aedgv8416p4p2v9ks', 'or_01k0a8bs2yejxbsvqhrx4drkq1', 'qu_01seediss_ln2_qty00', 'rt_01seediss_ln2_price', 'rt_01seediss_ln2_cost0', NOW(), NOW()),
-    ('orln_01seediss_ln3_0000', 'Freight', 'Charges for shipping', 'pd_01k0a65nx5fj1bxedew2jvjpwz', 'it_01k0a71009fc5szdjy8mn2nzq5', 'or_01k0a8bs2yejxbsvqhrx4drkq1', 'qu_01seediss_ln3_qty00', 'rt_01seediss_ln3_price', 'rt_01seediss_ln3_cost0', NOW(), NOW());
+INSERT IGNORE INTO sales_order_line (id, product_sku, product_description, product_id, item_id, sales_order_id, quantity_id, unit_price_id, unit_cost_id, line_item_number, created_at, updated_at) VALUES
+    ('orln_01seediss_ln1_0000', 'SCK-001', 'Small white sock', 'pd_01k0a65nx2e2crfxrvryyxnmdh', 'it_01k0a7100aeysrs9vxpeq14yxj', 'or_01k0a8bs2yejxbsvqhrx4drkq1', 'qu_01seediss_ln1_qty00', 'rt_01seediss_ln1_price', 'rt_01seediss_ln1_cost0', 1, NOW(), NOW()),
+    ('orln_01seediss_ln2_0000', 'SCK-002', 'Large white sock', 'pd_01k0a65nx5e3haz2fgfm34hmcz', 'it_01k0a7100aedgv8416p4p2v9ks', 'or_01k0a8bs2yejxbsvqhrx4drkq1', 'qu_01seediss_ln2_qty00', 'rt_01seediss_ln2_price', 'rt_01seediss_ln2_cost0', 2, NOW(), NOW()),
+    ('orln_01seediss_ln3_0000', 'Freight', 'Charges for shipping', 'pd_01k0a65nx5fj1bxedew2jvjpwz', 'it_01k0a71009fc5szdjy8mn2nzq5', 'or_01k0a8bs2yejxbsvqhrx4drkq1', 'qu_01seediss_ln3_qty00', 'rt_01seediss_ln3_price', 'rt_01seediss_ln3_cost0', 3, NOW(), NOW());
 
 -- Email contacts for ORD-001 (SeedSalesOrderID): one invoice recipient (John Doe /
 -- dane@augno.com) and one acknowledgement recipient (Sarah Martinez /
@@ -103,16 +103,16 @@ INSERT IGNORE INTO order_email_contact (id, sales_order_id, account_user_id, not
     ('oec_01seediss_acknowled', 'or_01k0a8bs2yejxbsvqhrx4drkq1', 'acus_ubdx4zebgl6p', 'order_acknowledgement', NOW(), NOW());
 
 -- Packed order lines
-INSERT IGNORE INTO sales_order_line (id, product_sku, product_description, product_id, item_id, sales_order_id, quantity_id, unit_price_id, unit_cost_id, created_at, updated_at) VALUES
-    ('orln_01seedpck_ln1_0000', 'SCK-003', 'Small black sock', 'pd_01k0a65nx5fjz8m1s3ytayfdby', 'it_01k0a7100afdnr1b41917qs27k', 'or_01k0a8bs2ye3f9p8sj0m4dfmwe', 'qu_01seedpck_ln1_qty00', 'rt_01seedpck_ln1_price', 'rt_01seedpck_ln1_cost0', NOW(), NOW()),
-    ('orln_01seedpck_ln2_0000', 'SCK-005', 'Small beige sock', 'pd_01k0a65nx5fwmt17sqp317ekyr', 'it_01k0a7100aef2997gw0t7nxd9d', 'or_01k0a8bs2ye3f9p8sj0m4dfmwe', 'qu_01seedpck_ln2_qty00', 'rt_01seedpck_ln2_price', 'rt_01seedpck_ln2_cost0', NOW(), NOW()),
-    ('orln_01seedpck_ln3_0000', 'Freight', 'Charges for shipping', 'pd_01k0a65nx5fj1bxedew2jvjpwz', 'it_01k0a71009fc5szdjy8mn2nzq5', 'or_01k0a8bs2ye3f9p8sj0m4dfmwe', 'qu_01seedpck_ln3_qty00', 'rt_01seedpck_ln3_price', 'rt_01seedpck_ln3_cost0', NOW(), NOW());
+INSERT IGNORE INTO sales_order_line (id, product_sku, product_description, product_id, item_id, sales_order_id, quantity_id, unit_price_id, unit_cost_id, line_item_number, created_at, updated_at) VALUES
+    ('orln_01seedpck_ln1_0000', 'SCK-003', 'Small black sock', 'pd_01k0a65nx5fjz8m1s3ytayfdby', 'it_01k0a7100afdnr1b41917qs27k', 'or_01k0a8bs2ye3f9p8sj0m4dfmwe', 'qu_01seedpck_ln1_qty00', 'rt_01seedpck_ln1_price', 'rt_01seedpck_ln1_cost0', 1, NOW(), NOW()),
+    ('orln_01seedpck_ln2_0000', 'SCK-005', 'Small beige sock', 'pd_01k0a65nx5fwmt17sqp317ekyr', 'it_01k0a7100aef2997gw0t7nxd9d', 'or_01k0a8bs2ye3f9p8sj0m4dfmwe', 'qu_01seedpck_ln2_qty00', 'rt_01seedpck_ln2_price', 'rt_01seedpck_ln2_cost0', 2, NOW(), NOW()),
+    ('orln_01seedpck_ln3_0000', 'Freight', 'Charges for shipping', 'pd_01k0a65nx5fj1bxedew2jvjpwz', 'it_01k0a71009fc5szdjy8mn2nzq5', 'or_01k0a8bs2ye3f9p8sj0m4dfmwe', 'qu_01seedpck_ln3_qty00', 'rt_01seedpck_ln3_price', 'rt_01seedpck_ln3_cost0', 3, NOW(), NOW());
 
 -- Fulfilled order lines
-INSERT IGNORE INTO sales_order_line (id, product_sku, product_description, product_id, item_id, sales_order_id, quantity_id, unit_price_id, unit_cost_id, created_at, updated_at) VALUES
-    ('orln_01seedful_ln1_0000', 'SCK-005', 'Small beige sock', 'pd_01k0a65nx5fwmt17sqp317ekyr', 'it_01k0a7100aef2997gw0t7nxd9d', 'or_01k0a8bs2yf909wjkd7ecd6x4z', 'qu_01seedful_ln1_qty00', 'rt_01seedful_ln1_price', 'rt_01seedful_ln1_cost0', NOW(), NOW()),
-    ('orln_01seedful_ln2_0000', 'SCK-006', 'Large beige sock', 'pd_01k0a65nx5e67rd1rahv4tdnrp', 'it_01k0a7100ae85v16mmxx5gx2w3', 'or_01k0a8bs2yf909wjkd7ecd6x4z', 'qu_01seedful_ln2_qty00', 'rt_01seedful_ln2_price', 'rt_01seedful_ln2_cost0', NOW(), NOW()),
-    ('orln_01seedful_ln3_0000', 'Freight', 'Charges for shipping', 'pd_01k0a65nx5fj1bxedew2jvjpwz', 'it_01k0a71009fc5szdjy8mn2nzq5', 'or_01k0a8bs2yf909wjkd7ecd6x4z', 'qu_01seedful_ln3_qty00', 'rt_01seedful_ln3_price', 'rt_01seedful_ln3_cost0', NOW(), NOW());
+INSERT IGNORE INTO sales_order_line (id, product_sku, product_description, product_id, item_id, sales_order_id, quantity_id, unit_price_id, unit_cost_id, line_item_number, created_at, updated_at) VALUES
+    ('orln_01seedful_ln1_0000', 'SCK-005', 'Small beige sock', 'pd_01k0a65nx5fwmt17sqp317ekyr', 'it_01k0a7100aef2997gw0t7nxd9d', 'or_01k0a8bs2yf909wjkd7ecd6x4z', 'qu_01seedful_ln1_qty00', 'rt_01seedful_ln1_price', 'rt_01seedful_ln1_cost0', 1, NOW(), NOW()),
+    ('orln_01seedful_ln2_0000', 'SCK-006', 'Large beige sock', 'pd_01k0a65nx5e67rd1rahv4tdnrp', 'it_01k0a7100ae85v16mmxx5gx2w3', 'or_01k0a8bs2yf909wjkd7ecd6x4z', 'qu_01seedful_ln2_qty00', 'rt_01seedful_ln2_price', 'rt_01seedful_ln2_cost0', 2, NOW(), NOW()),
+    ('orln_01seedful_ln3_0000', 'Freight', 'Charges for shipping', 'pd_01k0a65nx5fj1bxedew2jvjpwz', 'it_01k0a71009fc5szdjy8mn2nzq5', 'or_01k0a8bs2yf909wjkd7ecd6x4z', 'qu_01seedful_ln3_qty00', 'rt_01seedful_ln3_price', 'rt_01seedful_ln3_cost0', 3, NOW(), NOW());
 
 -- ============================================================
 -- PICKS

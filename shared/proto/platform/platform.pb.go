@@ -1178,8 +1178,11 @@ type ListRequestLogsRequest struct {
 	// Filter by the target account (request_log.target_account_id): the account
 	// the request acted upon. Narrows within the caller's actor-or-target scope.
 	TargetAccountIds []string `protobuf:"bytes,21,rep,name=target_account_ids,json=targetAccountIds,proto3" json:"target_account_ids,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Exclude logs whose error_code is in this set (AND'd with the rest as a
+	// NOT IN). Used to hide routine noise such as expired_token 401s.
+	ExcludeErrorCodes []string `protobuf:"bytes,22,rep,name=exclude_error_codes,json=excludeErrorCodes,proto3" json:"exclude_error_codes,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ListRequestLogsRequest) Reset() {
@@ -1334,6 +1337,13 @@ func (x *ListRequestLogsRequest) GetActorAccountIds() []string {
 func (x *ListRequestLogsRequest) GetTargetAccountIds() []string {
 	if x != nil {
 		return x.TargetAccountIds
+	}
+	return nil
+}
+
+func (x *ListRequestLogsRequest) GetExcludeErrorCodes() []string {
+	if x != nil {
+		return x.ExcludeErrorCodes
 	}
 	return nil
 }
@@ -2899,7 +2909,7 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\rhas_next_page\x18\x03 \x01(\bR\vhasNextPage\x12\"\n" +
 	"\rhas_prev_page\x18\x04 \x01(\bR\vhasPrevPageB\x0e\n" +
 	"\f_next_cursorB\x0e\n" +
-	"\f_prev_cursor\"\xd0\x06\n" +
+	"\f_prev_cursor\"\x80\a\n" +
 	"\x16ListRequestLogsRequest\x12>\n" +
 	"\n" +
 	"start_date\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\tstartDate\x88\x01\x01\x12:\n" +
@@ -2921,7 +2931,8 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\x0fidempotency_key\x18\x12 \x01(\tH\x05R\x0eidempotencyKey\x88\x01\x01\x12.\n" +
 	"\x13status_code_classes\x18\x13 \x03(\x05R\x11statusCodeClasses\x12*\n" +
 	"\x11actor_account_ids\x18\x14 \x03(\tR\x0factorAccountIds\x12,\n" +
-	"\x12target_account_ids\x18\x15 \x03(\tR\x10targetAccountIdsB\r\n" +
+	"\x12target_account_ids\x18\x15 \x03(\tR\x10targetAccountIds\x12.\n" +
+	"\x13exclude_error_codes\x18\x16 \x03(\tR\x11excludeErrorCodesB\r\n" +
 	"\v_start_dateB\v\n" +
 	"\t_end_dateB\t\n" +
 	"\a_cursorB\b\n" +

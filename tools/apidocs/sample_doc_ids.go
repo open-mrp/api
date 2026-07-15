@@ -126,6 +126,7 @@ func documentedAugnoIDs() map[string]struct{} {
 		apiresource.SampleRolePermissionID:            {},
 		apiresource.SampleSalesOrderID:                {},
 		apiresource.SampleSalesOrderLineID:            {},
+		apiresource.SampleSalesOrderLineID2:           {},
 		apiresource.SampleSalesOrderStatusID:          {},
 		apiresource.SampleSalesTargetID:               {},
 		apiresource.SampleSandboxID:                   {},

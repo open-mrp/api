@@ -1185,6 +1185,26 @@ func TestRequestLogs_FilterByErrorCodes_IncludesAndExcludes(t *testing.T) {
 	}
 }
 
+// TestRequestLogs_ExcludeByErrorCodes_DropsMatchingRows covers the
+// exclude_error_codes negative filter: passing the Auth cohort row's error_code
+// should drop only that row, leaving the other two cohort rows. This is the filter
+// the dashboard uses to hide routine expired_token 401 noise while keeping other
+// auth failures.
+func TestRequestLogs_ExcludeByErrorCodes_DropsMatchingRows(t *testing.T) {
+	t.Parallel()
+	list := fetchScopedRequestLogs(t, url.Values{
+		"normalized_routes":   {SeedReqLogFilterErrorsRoute},
+		"exclude_error_codes": {"invalid_credentials"},
+	})
+	assert.Len(t, list.Data, 2, "scope + exclude_error_codes=[invalid_credentials] should return the two non-excluded cohort rows")
+	assertRequestLogMembership(t, list.Data,
+		[]string{SeedReqLogFilterErrorNotFound, SeedReqLogFilterErrorValidate},
+		[]string{SeedReqLogFilterErrorAuth})
+	for _, item := range list.Data {
+		assert.NotEqual(t, "invalid_credentials", jsonField(parseJSON(item), "error_code"))
+	}
+}
+
 // TestRequestLogs_FilterByActorAccountIDs_IncludesAndExcludes covers the
 // actor_account_ids filter, which matches the acting account_id column. That
 // column is not surfaced in the response (the API exposes target_account_id as
@@ -1248,6 +1268,142 @@ func TestRequestLogs_FilterByTargetAccountIDs_NarrowsWithinScope(t *testing.T) {
 	assertRequestLogMembership(t, list.Data,
 		[]string{SeedReqLogScopeTarget, SeedReqLogScopeBoth},
 		[]string{SeedReqLogScopeActor, SeedReqLogScopeNeither})
+}
+
+// --- Dual-scope pagination (OR -> UNION rewrite) ---
+//
+// The security scope (a log is visible when the caller's account is the acting
+// account OR the target account) is executed as a UNION of two single-scope keyset
+// branches, not `WHERE (account_id = ? OR target_account_id = ?)`. The OR form
+// forced an index_merge that could not satisfy ORDER BY occurred_at, so the second
+// page (and any page with selective filters) filesorted the caller's whole partition
+// and timed out. These tests exercise pagination *through* that UNION: correct dedup
+// of a row that matches both branches, no dropped rows across a page boundary, stable
+// keyset ordering, and the forward/backward cursor branches — the correctness risks
+// the rewrite introduces. All /filtertest cohorts share one occurred_at, so paging
+// rides entirely on the id tiebreak, precisely the code path that changed.
+
+// assertStrictlyDescendingIDs asserts ids are in strictly descending order. With a
+// shared occurred_at across the cohort, the keyset order (occurred_at DESC, id DESC)
+// reduces to id DESC, so any equal or ascending pair means the merged UNION order or
+// the cursor tiebreak is wrong.
+func assertStrictlyDescendingIDs(t *testing.T, ids []string) {
+	t.Helper()
+	for i := 1; i < len(ids); i++ {
+		assert.Truef(t, ids[i-1] > ids[i],
+			"request-log ids must be strictly descending across pages (equal occurred_at -> id DESC tiebreak); got %v, out of order at index %d", ids, i)
+	}
+}
+
+// paginateAllRequestLogIDs walks every page of a cohort-scoped list one row per page
+// (limit=1), following next_page_url, and returns the ids in page order. It fails the
+// test if any id repeats — the UNION must emit a row whose acting account IS its
+// target account (matching both branches) exactly once — or if paging fails to
+// terminate, which would signal a cursor that never advances.
+func paginateAllRequestLogIDs(t *testing.T, params url.Values) []string {
+	t.Helper()
+	params.Set("limit", "1")
+	list, _, err := apiClient.GetList(requestLogsPath, params)
+	require.NoError(t, err)
+
+	var ordered []string
+	seen := make(map[string]bool)
+	const maxPages = 50
+	for page := 0; ; page++ {
+		require.LessOrEqualf(t, page, maxPages, "pagination did not terminate within %d pages — cursor may not be advancing", maxPages)
+		requirePageLen(t, list.Data, 1)
+		id := DataItemField(list.Data[0], "id")
+		require.NotEmpty(t, id)
+		require.Falsef(t, seen[id], "request log %s returned on more than one page — UNION dedup / cursor regression; order so far: %v", id, ordered)
+		seen[id] = true
+		ordered = append(ordered, id)
+
+		if !list.PageInfo.HasNextPage || list.PageInfo.NextPageURL == nil {
+			break
+		}
+		list, _, err = apiClient.GetListFromPageURL(list.PageInfo.NextPageURL)
+		require.NoError(t, err)
+	}
+	return ordered
+}
+
+// TestRequestLogs_DualScopePagination_DedupsAndCoversAllRows is the headline
+// regression guard for the reported "page 1 ok, page 2 times out" bug. It pages the
+// /filtertest/scope cohort one row at a time. The "both" row (account_id == target ==
+// seed) matches both UNION branches, so a broken dedup returns it twice and a desynced
+// per-branch cursor drops an in-scope row across the page boundary. The walk must
+// cover every in-scope row exactly once, never the out-of-scope row, in keyset order.
+func TestRequestLogs_DualScopePagination_DedupsAndCoversAllRows(t *testing.T) {
+	t.Parallel()
+	ids := paginateAllRequestLogIDs(t, url.Values{
+		"normalized_routes": {SeedReqLogScopeRoute},
+	})
+	assert.ElementsMatch(t,
+		[]string{SeedReqLogScopeActor, SeedReqLogScopeTarget, SeedReqLogScopeBoth}, ids,
+		"paging must cover the actor-side, target-side, and both-sided rows exactly once each")
+	assert.NotContains(t, ids, SeedReqLogScopeNeither, "the out-of-scope row must never paginate into view")
+	assertStrictlyDescendingIDs(t, ids)
+}
+
+// TestRequestLogs_MultiFilterPagination_MatchesSinglePage reproduces the reported
+// trigger — a particular actor AND a particular error code, then paging to the next
+// page — against the /filtertest/errors cohort. It cross-checks the paginated walk
+// (limit=1 through the UNION-wrapped filtered query) against the single-page result:
+// identical ids in identical order. This is the multi-filter + cursor interaction
+// that previously index_merge+filesorted and timed out on page 2.
+func TestRequestLogs_MultiFilterPagination_MatchesSinglePage(t *testing.T) {
+	t.Parallel()
+	filter := func() url.Values {
+		return url.Values{
+			"normalized_routes": {SeedReqLogFilterErrorsRoute},
+			"actor_ids":         {SeedUserID},
+			"error_codes":       {"resource_not_found", "validation_failed"},
+		}
+	}
+
+	single := fetchScopedRequestLogs(t, filter())
+	require.Len(t, single.Data, 2, "actor + two error codes should select exactly two cohort rows on one page")
+	assertRequestLogMembership(t, single.Data,
+		[]string{SeedReqLogFilterErrorNotFound, SeedReqLogFilterErrorValidate},
+		[]string{SeedReqLogFilterErrorAuth})
+	wantOrder := make([]string, len(single.Data))
+	for i, item := range single.Data {
+		wantOrder[i] = DataItemField(item, "id")
+	}
+
+	paged := paginateAllRequestLogIDs(t, filter())
+	assert.Equal(t, wantOrder, paged,
+		"paging one row at a time under the same filters must return the same rows in the same order as a single page")
+}
+
+// TestRequestLogs_DualScopePagination_BackwardReturnsPriorPage walks forward two pages
+// through the scope cohort, then follows previous_page_url back and asserts it returns
+// page 1's row. Backward paging uses the mirrored ASC cursor branch of the UNION
+// rewrite (writeCursorPredicate / writeScopeOrderAndLimit), which the forward-only
+// tests never exercise.
+func TestRequestLogs_DualScopePagination_BackwardReturnsPriorPage(t *testing.T) {
+	t.Parallel()
+	page1, _, err := apiClient.GetList(requestLogsPath, url.Values{
+		"normalized_routes": {SeedReqLogScopeRoute},
+		"limit":             {"1"},
+	})
+	require.NoError(t, err)
+	requirePageLen(t, page1.Data, 1)
+	require.True(t, page1.PageInfo.HasNextPage, "3-row cohort at limit=1 must have a next page")
+	require.NotNil(t, page1.PageInfo.NextPageURL)
+	page1ID := DataItemField(page1.Data[0], "id")
+
+	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
+	require.NoError(t, err)
+	requirePageLen(t, page2.Data, 1)
+	require.NotEqual(t, page1ID, DataItemField(page2.Data[0], "id"))
+	require.NotNil(t, page2.PageInfo.PreviousPageURL, "page 2 must offer a previous_page_url")
+
+	back, _, err := apiClient.GetListFromPageURL(page2.PageInfo.PreviousPageURL)
+	require.NoError(t, err)
+	requirePageLen(t, back.Data, 1)
+	assert.Equal(t, page1ID, DataItemField(back.Data[0], "id"),
+		"previous_page_url from page 2 must return page 1's row back through the UNION")
 }
 
 // TestRequestLogs_FilterByActorIDs_IncludesAndExcludes is the headline case: three

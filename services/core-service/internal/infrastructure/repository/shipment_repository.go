@@ -288,6 +288,9 @@ func (r *shipmentRepoImpl) Get(ctx context.Context, params domain.GetShipmentPar
 		UpdatedAt:         row.UpdatedAt,
 	}
 
+	if row.CarrierCode.Valid {
+		shipment.CarrierCode = &row.CarrierCode.String
+	}
 	if row.Note.Valid {
 		shipment.Note = &row.Note.String
 	}
@@ -401,6 +404,24 @@ func (r *shipmentRepoImpl) Update(ctx context.Context, params domain.UpdateShipm
 		ShipmentID: params.ShipmentID,
 		AccountID:  params.AccountID,
 	})
+}
+
+// SyncShippingForOrder re-points every shipment on an order to the given carrier, service level, and ship-to address. Used by the out-of-band shipping-updated consumer to keep shipments in sync with the order.
+func (r *shipmentRepoImpl) SyncShippingForOrder(ctx context.Context, params domain.SyncShipmentShippingParams) *apierror.APIError {
+	ctx, span := shipmentRepoTracer.Start(ctx, "repository.shipment.sync_shipping_for_order")
+	defer span.End()
+
+	err := r.queries.SyncShipmentShippingForOrder(ctx, sqlc.SyncShipmentShippingForOrderParams{
+		CarrierID:         params.CarrierID,
+		CarrierOptionID:   toNullString(params.ServiceLevelID),
+		ShippingAddressID: params.ShippingAddressID,
+		SalesOrderID:      params.SalesOrderID,
+		AccountID:         params.AccountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
 }
 
 func (r *shipmentRepoImpl) Delete(ctx context.Context, accountID, shipmentID string) *apierror.APIError {

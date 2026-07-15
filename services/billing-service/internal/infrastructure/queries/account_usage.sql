@@ -51,6 +51,13 @@ JOIN account_billing ab ON a.account_billing_id = ab.id
 JOIN account_plan ap ON ab.account_plan_id = ap.type_id
 WHERE a.id = ?;
 
+-- name: GetAccountStripePricingPlanID :one
+SELECT ap.stripe_pricing_plan_id
+FROM account a
+JOIN account_billing ab ON a.account_billing_id = ab.id
+JOIN account_plan ap ON ab.account_plan_id = ap.type_id
+WHERE a.id = ?;
+
 -- name: GetUserEmailByID :one
 SELECT email, name AS display_name
 FROM `user`

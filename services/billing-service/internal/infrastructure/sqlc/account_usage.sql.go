@@ -107,6 +107,21 @@ func (q *Queries) GetAccountNameAndPlanCode(ctx context.Context, id string) (Get
 	return i, err
 }
 
+const getAccountStripePricingPlanID = `-- name: GetAccountStripePricingPlanID :one
+SELECT ap.stripe_pricing_plan_id
+FROM account a
+JOIN account_billing ab ON a.account_billing_id = ab.id
+JOIN account_plan ap ON ab.account_plan_id = ap.type_id
+WHERE a.id = ?
+`
+
+func (q *Queries) GetAccountStripePricingPlanID(ctx context.Context, id string) (sql.NullString, error) {
+	row := q.db.QueryRowContext(ctx, getAccountStripePricingPlanID, id)
+	var stripe_pricing_plan_id sql.NullString
+	err := row.Scan(&stripe_pricing_plan_id)
+	return stripe_pricing_plan_id, err
+}
+
 const getAccountSubscriptionInfo = `-- name: GetAccountSubscriptionInfo :one
 SELECT
     ab.subscription_status,

@@ -328,6 +328,8 @@ service CoreService {
   rpc UpdatePortalRegistrationSession(UpdatePortalRegistrationSessionRequest) returns (PortalRegistrationSessionResponse);
   rpc CompletePortalRegistrationSession(CompletePortalRegistrationSessionRequest) returns (PortalRegistrationSessionResponse);
   rpc AbandonPortalRegistrationSession(AbandonPortalRegistrationSessionRequest) returns (PortalRegistrationSessionResponse);
+  // Seller-facing: lists the account's buyer registration sessions (including stalled/expired ones) for customer-service follow-up.
+  rpc ListPortalRegistrationSessions(ListPortalRegistrationSessionsRequest) returns (ListPortalRegistrationSessionsResponse);
 
   // Partially updates an account's name, branding, and portal fields.
   rpc UpdateAccount(UpdateAccountRequest) returns (UpdateAccountResponse);
@@ -337,6 +339,12 @@ service CoreService {
 
   // Returns a presigned S3 URL for the account's logo.
   rpc GetAccountLogoURL(GetAccountLogoURLRequest) returns (GetAccountLogoURLResponse);
+
+  // Uploads a favicon image for an account's customer portal to S3.
+  rpc UploadAccountFavicon(UploadAccountFaviconRequest) returns (UploadAccountFaviconResponse);
+
+  // Returns a presigned S3 URL for the account's portal favicon.
+  rpc GetAccountFaviconURL(GetAccountFaviconURLRequest) returns (GetAccountFaviconURLResponse);
 
   // Returns a paginated list of properties for the caller's account.
   rpc ListProperties(ListPropertiesRequest) returns (ListPropertiesResponse);
@@ -558,6 +566,10 @@ service CoreService {
   rpc BulkDeleteCustomers(BulkDeleteCustomersRequest) returns (google.protobuf.Empty);
   // Returns the most frequently ordered products for a customer.
   rpc GetFrequentlyOrderedProducts(GetFrequentlyOrderedProductsRequest) returns (GetFrequentlyOrderedProductsResponse);
+  // Returns the default order-notification recipients configured for a customer relationship.
+  rpc ListCustomerNotificationRecipients(ListCustomerNotificationRecipientsRequest) returns (ListCustomerNotificationRecipientsResponse);
+  // Replaces the default order-notification recipients configured for a customer relationship.
+  rpc UpdateCustomerNotificationRecipients(UpdateCustomerNotificationRecipientsRequest) returns (UpdateCustomerNotificationRecipientsResponse);
   rpc UpdateCustomer(UpdateCustomerRequest) returns (UpdateCustomerResponse);
   // Merges source customers into a target customer.
   rpc MergeCustomers(MergeCustomersRequest) returns (MergeCustomersResponse);

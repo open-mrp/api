@@ -73,3 +73,15 @@ func (s *StripeClient) ReportMeterEvent(_ context.Context, _, _ string, _ int, _
 func (s *StripeClient) GetAgentTokenSpendCents(_ context.Context, _, _ string, _ time.Time) (int64, error) {
 	return 0, nil
 }
+
+func (s *StripeClient) GetRateCardTokenRates(_ context.Context, _ string) ([]domain.TokenRate, error) {
+	return nil, nil
+}
+
+func (s *StripeClient) CreateCreditGrant(_ context.Context, _ string, _ int64, _, _ string) (string, error) {
+	return "", nil
+}
+
+func (s *StripeClient) GetCreditGrantBalanceCents(_ context.Context, _ string) (int64, error) {
+	return 0, nil
+}

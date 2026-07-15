@@ -20,6 +20,7 @@ type AccountBranding struct {
 	SupportEmail    *string `audit:"support_email"`
 	PhoneNumber     *string `audit:"phone_number"`
 	LogoURL         *string `audit:"logo_url"`
+	FaviconURL      *string `audit:"favicon_url"`
 	FacebookHandle  *string `audit:"facebook_handle"`
 	InstagramHandle *string `audit:"instagram_handle"`
 	LinkedInHandle  *string `audit:"linkedin_handle"`
@@ -45,6 +46,7 @@ type PublicAccountBySlug struct {
 	DefaultBillingAddressID *string
 	SupportEmail            *string
 	LogoURL                 *string
+	FaviconURL              *string
 	// PortalDomain is the account's verified custom portal domain (e.g. shop.acme.com), when one exists.
 	PortalDomain *string
 }
@@ -55,6 +57,7 @@ type PortalProfile struct {
 	Name         string
 	Slug         string
 	LogoURL      *string
+	FaviconURL   *string
 	SupportEmail *string
 	Address      *Address
 }

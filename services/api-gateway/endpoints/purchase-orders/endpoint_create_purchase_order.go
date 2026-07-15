@@ -101,13 +101,10 @@ var sampleCreatePurchaseOrderRequest = &CreatePurchaseOrderRequest{
 	Lines: []CreatePurchaseOrderLineInput{
 		{
 			OrderLineInput: apirequest.OrderLineInput{
-				ProductID:                  apiresource.SampleProductID,
-				ProductSKU:                 "RAW-100",
-				QuantityValue:              "500",
-				QuantityUnitID:             apiresource.SampleUnitID,
-				UnitPriceValue:             "12.50",
-				UnitPriceNumeratorUnitID:   apiresource.SampleUnitID,
-				UnitPriceDenominatorUnitID: apiresource.SampleUnitID,
+				ProductID:  apiresource.SampleProductID,
+				ProductSKU: "RAW-100",
+				Quantity:   apirequest.QuantityInput{Value: "500", UnitID: apiresource.SampleUnitID},
+				UnitPrice:  apirequest.RateInput{Value: "12.50", NumeratorUnitID: apiresource.SampleUnitID, DenominatorUnitID: apiresource.SampleUnitID},
 			},
 		},
 	},

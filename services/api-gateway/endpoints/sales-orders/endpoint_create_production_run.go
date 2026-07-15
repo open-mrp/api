@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
@@ -18,51 +17,31 @@ type CreateProductionRunRequest struct {
 	SalesOrderID string `path:"id" validate:"required"`
 }
 
-// Lightweight reference to a production run.
-type CreateProductionRunResponseRef struct {
-	// Production run ID.
-	ID string `json:"id" validate:"required"`
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=production_run"`
-}
-
-// Result of creating a production run.
-type CreateProductionRunResponse struct {
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=create_production_run_response"`
-	// Created production run.
-	ProductionRun CreateProductionRunResponseRef `json:"production_run" validate:"required"`
-}
-
-var sampleCreateProductionRunResponse = &CreateProductionRunResponse{
-	Object: constants.ObjectTypeCreateProductionRunResponse,
-	ProductionRun: CreateProductionRunResponseRef{
-		ID:     apiresource.SampleProductionRunID,
-		Object: constants.ObjectTypeProductionRun,
-	},
-}
-
-func (*CreateProductionRunResponse) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(sampleCreateProductionRunResponse)
-}
-
 // Creates a production run from a sales order.
 //
 // Creates a batch for each of the order's item-backed lines, reserves the material inventory required to produce them, and links the run to the order. An order can have at most one production run.
 type CreateProductionRunEndpoint struct{}
 
-func (e *CreateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductionRunRequest, *CreateProductionRunResponse] {
-	return (&apiendpoint.APIEndpoint[*CreateProductionRunRequest, *CreateProductionRunResponse]{
+func (e *CreateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductionRunRequest, *apiresource.ProductionRun] {
+	return (&apiendpoint.APIEndpoint[*CreateProductionRunRequest, *apiresource.ProductionRun]{
 		Title:               "Create Production Run from Sales Order",
 		Method:              http.MethodPost,
 		ContentType:         "application/json",
 		Route:               "/v1/sales/sales-orders/{id}/actions/create-production-run",
 		SuccessStatusCode:   http.StatusCreated,
-		Public:              false,
+		Public:              true,
 		Preview:             true,
+		ObjectType:          constants.ObjectTypeProductionRun,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProductionRuns, Action: types.ActionCreate}},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateProductionRunRequest) (*CreateProductionRunResponse, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateProductionRunRequest) (*apiresource.ProductionRun, *apierror.APIError) {
 			return svc.(SalesOrderSvc).CreateSalesOrderProductionRun
 		},
+		LocationFunc: func(resp *apiresource.ProductionRun) string {
+			return "/v1/operations/production-runs/" + resp.ID
+		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeProductionRun,
+			Fields:     []string{"responsible_user", "responsible_user.user"},
+		}),
 	})
 }

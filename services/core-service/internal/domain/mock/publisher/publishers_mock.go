@@ -94,6 +94,20 @@ func (mr *MockSalesOrderEventPublisherMockRecorder) PublishSalesOrderCreated(ctx
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishSalesOrderCreated", reflect.TypeOf((*MockSalesOrderEventPublisher)(nil).PublishSalesOrderCreated), ctx, data)
 }
 
+// PublishSalesOrderShippingUpdated mocks base method.
+func (m *MockSalesOrderEventPublisher) PublishSalesOrderShippingUpdated(ctx context.Context, data messaging.SalesOrderShippingUpdatedData) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PublishSalesOrderShippingUpdated", ctx, data)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// PublishSalesOrderShippingUpdated indicates an expected call of PublishSalesOrderShippingUpdated.
+func (mr *MockSalesOrderEventPublisherMockRecorder) PublishSalesOrderShippingUpdated(ctx, data any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishSalesOrderShippingUpdated", reflect.TypeOf((*MockSalesOrderEventPublisher)(nil).PublishSalesOrderShippingUpdated), ctx, data)
+}
+
 // MockHubspotSyncPublisher is a mock of HubspotSyncPublisher interface.
 type MockHubspotSyncPublisher struct {
 	ctrl     *gomock.Controller

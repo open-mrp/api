@@ -118,6 +118,21 @@ func (mr *MockStripeClientMockRecorder) CreateBillingProfile(ctx, customerID, id
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateBillingProfile", reflect.TypeOf((*MockStripeClient)(nil).CreateBillingProfile), ctx, customerID, idempotencyKey)
 }
 
+// CreateCreditGrant mocks base method.
+func (m *MockStripeClient) CreateCreditGrant(ctx context.Context, customerID string, amountCents int64, name, idempotencyKey string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateCreditGrant", ctx, customerID, amountCents, name, idempotencyKey)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateCreditGrant indicates an expected call of CreateCreditGrant.
+func (mr *MockStripeClientMockRecorder) CreateCreditGrant(ctx, customerID, amountCents, name, idempotencyKey any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateCreditGrant", reflect.TypeOf((*MockStripeClient)(nil).CreateCreditGrant), ctx, customerID, amountCents, name, idempotencyKey)
+}
+
 // CreateCustomer mocks base method.
 func (m *MockStripeClient) CreateCustomer(ctx context.Context, email, name, idempotencyKey string, metadata map[string]string) (*domain.StripeCustomer, error) {
 	m.ctrl.T.Helper()
@@ -193,6 +208,21 @@ func (mr *MockStripeClientMockRecorder) GetAgentTokenSpendCents(ctx, customerID,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAgentTokenSpendCents", reflect.TypeOf((*MockStripeClient)(nil).GetAgentTokenSpendCents), ctx, customerID, rateCardID, since)
 }
 
+// GetCreditGrantBalanceCents mocks base method.
+func (m *MockStripeClient) GetCreditGrantBalanceCents(ctx context.Context, customerID string) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCreditGrantBalanceCents", ctx, customerID)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCreditGrantBalanceCents indicates an expected call of GetCreditGrantBalanceCents.
+func (mr *MockStripeClientMockRecorder) GetCreditGrantBalanceCents(ctx, customerID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCreditGrantBalanceCents", reflect.TypeOf((*MockStripeClient)(nil).GetCreditGrantBalanceCents), ctx, customerID)
+}
+
 // GetPricingPlan mocks base method.
 func (m *MockStripeClient) GetPricingPlan(ctx context.Context, pricingPlanID string) (*domain.StripePricingPlan, error) {
 	m.ctrl.T.Helper()
@@ -206,6 +236,21 @@ func (m *MockStripeClient) GetPricingPlan(ctx context.Context, pricingPlanID str
 func (mr *MockStripeClientMockRecorder) GetPricingPlan(ctx, pricingPlanID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPricingPlan", reflect.TypeOf((*MockStripeClient)(nil).GetPricingPlan), ctx, pricingPlanID)
+}
+
+// GetRateCardTokenRates mocks base method.
+func (m *MockStripeClient) GetRateCardTokenRates(ctx context.Context, rateCardID string) ([]domain.TokenRate, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRateCardTokenRates", ctx, rateCardID)
+	ret0, _ := ret[0].([]domain.TokenRate)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRateCardTokenRates indicates an expected call of GetRateCardTokenRates.
+func (mr *MockStripeClientMockRecorder) GetRateCardTokenRates(ctx, rateCardID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRateCardTokenRates", reflect.TypeOf((*MockStripeClient)(nil).GetRateCardTokenRates), ctx, rateCardID)
 }
 
 // GetSetupIntent mocks base method.

@@ -58,6 +58,13 @@ UPDATE message
 SET body = ?, preview = ?, streaming_state = ?, updated_at = NOW(3)
 WHERE id = ? AND account_id = ? AND streaming_state = 'streaming';
 
+-- name: SetMessageMetadata :execrows
+-- Sets a message's metadata JSON (used to record an agent reply's failure marker + error code when a
+-- streaming reply is finalized as failed). Does NOT touch edited_at — this is a system annotation.
+UPDATE message
+SET metadata = ?, updated_at = NOW(3)
+WHERE id = ? AND account_id = ?;
+
 -- name: SoftDeleteMessage :exec
 -- Tombstones a message: clears the body/preview and sets deleted_at.
 UPDATE message

@@ -844,17 +844,17 @@ func (s *accountSvcImpl) BatchGetAccountsByIDs(ctx context.Context, ids []string
 	return s.accountRepo.GetByIDs(ctx, allowed)
 }
 
-// presignedLogoURL converts a stored branding logo S3 key into a presigned download URL. Branding must still render without a logo, so it returns nil (best-effort) when there is no logo or signing fails, and passes through values that are already absolute URLs.
-func (s *accountSvcImpl) presignedLogoURL(ctx context.Context, logoKey *string) *string {
-	if logoKey == nil || *logoKey == "" {
+// presignedBrandingURL converts a stored branding asset S3 key (logo or favicon) into a presigned download URL. Branding must still render without the asset, so it returns nil (best-effort) when there is no key or signing fails, and passes through values that are already absolute URLs.
+func (s *accountSvcImpl) presignedBrandingURL(ctx context.Context, key *string) *string {
+	if key == nil || *key == "" {
 		return nil
 	}
-	if strings.HasPrefix(*logoKey, "http://") || strings.HasPrefix(*logoKey, "https://") {
-		return logoKey
+	if strings.HasPrefix(*key, "http://") || strings.HasPrefix(*key, "https://") {
+		return key
 	}
-	url, apiErr := s.s3Client.GetPresignedURL(ctx, s.accountPhotosBucket, *logoKey, time.Hour)
+	url, apiErr := s.s3Client.GetPresignedURL(ctx, s.accountPhotosBucket, *key, time.Hour)
 	if apiErr != nil {
-		slog.WarnContext(ctx, "Failed to presign account logo URL", "error", apiErr)
+		slog.WarnContext(ctx, "Failed to presign account branding URL", "error", apiErr)
 		return nil
 	}
 	return &url
@@ -869,7 +869,8 @@ func (s *accountSvcImpl) GetAccountBySlug(ctx context.Context, slug string) (*do
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	account.LogoURL = s.presignedLogoURL(ctx, account.LogoURL)
+	account.LogoURL = s.presignedBrandingURL(ctx, account.LogoURL)
+	account.FaviconURL = s.presignedBrandingURL(ctx, account.FaviconURL)
 
 	portalDomain, apiErr := s.repos.NewPortalDomainRepo().GetByAccountID(ctx, account.ID)
 	if apiErr != nil {
@@ -904,7 +905,8 @@ func (s *accountSvcImpl) GetPortalProfileBySlug(ctx context.Context, slug string
 		ID:           account.ID,
 		Name:         account.Name,
 		Slug:         account.Slug,
-		LogoURL:      s.presignedLogoURL(ctx, account.LogoURL),
+		LogoURL:      s.presignedBrandingURL(ctx, account.LogoURL),
+		FaviconURL:   s.presignedBrandingURL(ctx, account.FaviconURL),
 		SupportEmail: account.SupportEmail,
 	}
 
@@ -1095,6 +1097,83 @@ func (s *accountSvcImpl) GetAccountLogoURL(ctx context.Context, accountID string
 	}
 
 	url, apiErr := s.s3Client.GetPresignedURL(ctx, s.accountPhotosBucket, *logoKey, time.Hour)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return &url, nil
+}
+
+// UploadAccountFavicon uploads a customer-portal favicon to S3 and updates the branding record.
+func (s *accountSvcImpl) UploadAccountFavicon(ctx context.Context, accountID string, file []byte, contentType string) *apierror.APIError {
+	ctx, span := accountSvcTracer.Start(ctx, "service.account.upload_account_favicon")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainAccount, types.ActionUpdate); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	if accountID != identity.Target.AccountID {
+		return tracing.Trace(span, apierror.NewAuthorizationError("You can only update your own account."))
+	}
+
+	if contentType == "" {
+		contentType = "image/png"
+	}
+
+	s3Key := accountID + "/favicon.png"
+
+	if apiErr := s.s3Client.Upload(ctx, s.accountPhotosBucket, s3Key, bytes.NewReader(file), contentType); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	if apiErr := s.accountRepo.UpdateBrandingFaviconURL(ctx, accountID, s3Key); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
+}
+
+// GetAccountFaviconURL returns a presigned S3 URL for the account's customer-portal favicon.
+func (s *accountSvcImpl) GetAccountFaviconURL(ctx context.Context, accountID string) (*string, *apierror.APIError) {
+	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_account_favicon_url")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsAuthenticated(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	faviconKey, apiErr := s.accountRepo.GetBrandingFaviconKey(ctx, accountID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if faviconKey == nil {
+		return nil, nil
+	}
+
+	exists, apiErr := s.s3Client.FileExists(ctx, s.accountPhotosBucket, *faviconKey)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if !exists {
+		return nil, nil
+	}
+
+	url, apiErr := s.s3Client.GetPresignedURL(ctx, s.accountPhotosBucket, *faviconKey, time.Hour)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}

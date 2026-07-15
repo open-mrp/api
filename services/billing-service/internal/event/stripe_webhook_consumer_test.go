@@ -87,6 +87,18 @@ func (s *stubStripeClient) GetAgentTokenSpendCents(context.Context, string, stri
 	return 0, nil
 }
 
+func (s *stubStripeClient) GetRateCardTokenRates(context.Context, string) ([]domain.TokenRate, error) {
+	return nil, nil
+}
+
+func (s *stubStripeClient) CreateCreditGrant(context.Context, string, int64, string, string) (string, error) {
+	return "", nil
+}
+
+func (s *stubStripeClient) GetCreditGrantBalanceCents(context.Context, string) (int64, error) {
+	return 0, nil
+}
+
 func (s *stubStripeClient) FetchObject(ctx context.Context, objectURL string) ([]byte, error) {
 	if s.fetchObjectFn != nil {
 		return s.fetchObjectFn(ctx, objectURL)

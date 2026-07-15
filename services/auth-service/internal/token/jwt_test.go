@@ -168,8 +168,12 @@ func TestDecodeJWT_ExpiredToken(t *testing.T) {
 	if decodeErr == nil {
 		t.Fatal("DecodeJWT() expected error for expired token but got none")
 	}
-	if decodeErr.PublicMessage != ErrInvalidJWT {
-		t.Errorf("Expected error message to be '%s', got: %s", ErrInvalidJWT, decodeErr.PublicMessage)
+	// An expired token surfaces as the distinct expired_token code (not the generic invalid_credentials) so request-log review can filter out routine token-rotation noise.
+	if decodeErr.PublicMessage != ErrExpiredJWT {
+		t.Errorf("Expected error message to be '%s', got: %s", ErrExpiredJWT, decodeErr.PublicMessage)
+	}
+	if decodeErr.Code != apierror.ErrorCodeExpiredToken {
+		t.Errorf("Expected error code to be '%s', got: %s", apierror.ErrorCodeExpiredToken, decodeErr.Code)
 	}
 }
 

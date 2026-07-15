@@ -36,7 +36,7 @@ func (*AccountsEndpointGroup) Materialize(config *AccountsEndpointGroupConfig) *
 
 	inner := &apiendpoint.APIEndpointGroup{
 		Title:        "Account",
-		Description:  "Manage account details, branding, portal, and logo.",
+		Description:  "Manage account details, branding, portal, logo, and favicon.",
 		ResourceType: &apiresource.Account{},
 	}
 
@@ -46,6 +46,8 @@ func (*AccountsEndpointGroup) Materialize(config *AccountsEndpointGroupConfig) *
 	updateAccountEndpoint := apiendpoint.From(&accountep.UpdateAccountEndpoint{}).WithService(inner, accountSvc)
 	uploadAccountPhotoEndpoint := apiendpoint.From(&accountep.UploadAccountPhotoEndpoint{}).WithService(inner, accountSvc)
 	getAccountLogoURLEndpoint := apiendpoint.From(&accountep.GetAccountLogoURLEndpoint{}).WithService(inner, accountSvc)
+	uploadAccountFaviconEndpoint := apiendpoint.From(&accountep.UploadAccountFaviconEndpoint{}).WithService(inner, accountSvc)
+	getAccountFaviconURLEndpoint := apiendpoint.From(&accountep.GetAccountFaviconURLEndpoint{}).WithService(inner, accountSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		getAccountEndpoint,
@@ -54,6 +56,8 @@ func (*AccountsEndpointGroup) Materialize(config *AccountsEndpointGroupConfig) *
 		updateAccountEndpoint,
 		uploadAccountPhotoEndpoint,
 		getAccountLogoURLEndpoint,
+		uploadAccountFaviconEndpoint,
+		getAccountFaviconURLEndpoint,
 	}
 
 	return &AccountsEndpointGroup{inner}

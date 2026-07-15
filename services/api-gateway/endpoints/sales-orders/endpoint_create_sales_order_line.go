@@ -15,24 +15,27 @@ import (
 )
 
 // Request to create a line on a sales order.
+//
+// This mirrors the create-order line shape (not the shared purchase-order OrderLineInput): the unit price is optional and, when omitted, the line is priced server-side from the product. The unit cost is always resolved server-side from the product.
 type CreateSalesOrderLineRequest struct {
 	// Sales order ID.
 	SalesOrderID string `path:"id" validate:"required"`
-	apirequest.OrderLineInput
+	// ID of the product being ordered.
+	ProductID string `json:"product_id" validate:"required"`
+	// The product SKU recorded on the line.
+	ProductSKU string `json:"product_sku" validate:"required,max=255"`
+	// The product description recorded on the line.
+	ProductDescription field.Optional[string] `json:"product_description,omitzero"`
+	// Quantity ordered.
+	Quantity apirequest.QuantityInput `json:"quantity" validate:"required"`
+	// Unit price override. When omitted, the line is priced server-side from the product's pricing rules (customer price, unit-conversion and volume discounts, account-price overrides) — the same pricing applied when the order is created. An explicit value is honored only for internal users.
+	UnitPrice field.Optional[apirequest.RateInput] `json:"unit_price,omitzero"`
 }
 
-var sampleCreateSOLineItemID = apiresource.SampleItemID
 var sampleCreateSalesOrderLineRequest = &CreateSalesOrderLineRequest{
-	OrderLineInput: apirequest.OrderLineInput{
-		ProductID:                  apiresource.SampleProductID,
-		ItemID:                     field.Some(sampleCreateSOLineItemID),
-		ProductSKU:                 "WIDGET-001",
-		QuantityValue:              "10",
-		QuantityUnitID:             apiresource.SampleUnitID,
-		UnitPriceValue:             "25.00",
-		UnitPriceNumeratorUnitID:   apiresource.SampleUnitID,
-		UnitPriceDenominatorUnitID: apiresource.SampleUnitID,
-	},
+	ProductID:  apiresource.SampleProductID,
+	ProductSKU: "WIDGET-001",
+	Quantity:   apirequest.QuantityInput{Value: "10", UnitID: apiresource.SampleUnitID},
 }
 
 func (*CreateSalesOrderLineRequest) SchemaExample() any {
@@ -49,7 +52,7 @@ func (e *CreateSalesOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*C
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/{id}/lines",
 		SuccessStatusCode: http.StatusCreated,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeSalesOrderLine,
 		RequiredPermissions: []types.Permission{

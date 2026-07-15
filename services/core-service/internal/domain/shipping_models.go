@@ -11,6 +11,20 @@ type EstimateRateParams struct {
 	ToAddress      ShippingAddress
 	Parcels        []Parcel
 	OrderTotal     *float64
+	// Billing, when set, bills freight to a third party (matches Dashboard's
+	// createShippingLine, which passes THIRD_PARTY billing to Shippo for
+	// third-party-billed orders).
+	Billing *ShippingBilling
+}
+
+// ShippingBilling carries third-party freight-billing details passed through to
+// the carrier (Shippo) when the order is billed to a third party.
+type ShippingBilling struct {
+	// Type is the Shippo billing type, e.g. "THIRD_PARTY".
+	Type    string
+	Account string
+	Country string
+	Zip     string
 }
 
 // RateShopParams holds the parameters for rate shopping.
@@ -58,6 +72,8 @@ type FetchShippingRateParams struct {
 	FromAddress            ShippingAddress
 	ToAddress              ShippingAddress
 	Parcels                []Parcel
+	// Billing, when set, bills freight to a third party (Shippo shipment extra).
+	Billing *ShippingBilling
 }
 
 // FetchAllShippingRatesParams contains the parameters for fetching all shipping rates.

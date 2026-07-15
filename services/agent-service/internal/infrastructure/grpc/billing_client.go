@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/augno/api/services/agent-service/internal/domain"
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/contracts"
 	"github.com/augno/api/shared/id"
@@ -69,8 +70,8 @@ func (c *AgentBillingClient) GetStripeCustomerID(ctx context.Context, accountID 
 	return resp.StripeCustomerId, nil
 }
 
-// GetAgentSpendCents returns the account's marked-up token spend for the current billing period, as Stripe will bill it. Used to enforce the spending cap against the same figure the dashboard shows.
-func (c *AgentBillingClient) GetAgentSpendCents(ctx context.Context, accountID string) (int64, error) {
+// GetAgentSpend returns the account's marked-up token spend for the current billing period (as Stripe will bill it) plus the plan's marked-up per-token rates. Used to enforce the spending cap against the same figures the dashboard shows and Stripe bills.
+func (c *AgentBillingClient) GetAgentSpend(ctx context.Context, accountID string) (int64, []domain.AgentTokenRate, error) {
 	ctx = rpc.PrepareServiceCallCtx(ctx)
 
 	resp, apiErr := rpc.CallRPC(ctx, billingClientTracer, "billing_client.get_agent_spend", billingServiceName,
@@ -80,8 +81,17 @@ func (c *AgentBillingClient) GetAgentSpendCents(ctx context.Context, accountID s
 			}, opts...)
 		})
 	if apiErr != nil {
-		return 0, apiErr
+		return 0, nil, apiErr
 	}
 
-	return resp.EstimatedSpendCents, nil
+	rates := make([]domain.AgentTokenRate, 0, len(resp.TokenRates))
+	for _, r := range resp.TokenRates {
+		rates = append(rates, domain.AgentTokenRate{
+			Model:           r.Model,
+			TokenType:       r.TokenType,
+			UnitAmountCents: r.UnitAmountCents,
+		})
+	}
+
+	return resp.EstimatedSpendCents, rates, nil
 }

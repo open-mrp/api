@@ -158,6 +158,20 @@ type billingContext struct {
 	spendingCapCents  *int64 // nil = no cap
 	currentSpendCents int64  // estimated spend so far this month
 	model             string // for cost estimation during loop
+	// tokenRates are the plan's marked-up per-token rates (nil when no cap or no rate card), used to price this run's usage against the cap with the same rates Stripe bills.
+	tokenRates map[llm.TokenRateKey]float64
+}
+
+// buildTokenRateMap indexes the plan's marked-up rates by (gateway model, token type) for O(1) per-turn lookup.
+func buildTokenRateMap(rates []domain.AgentTokenRate) map[llm.TokenRateKey]float64 {
+	if len(rates) == 0 {
+		return nil
+	}
+	m := make(map[llm.TokenRateKey]float64, len(rates))
+	for _, r := range rates {
+		m[llm.TokenRateKey{Model: r.Model, TokenType: r.TokenType}] = r.UnitAmountCents
+	}
+	return m
 }
 
 func (s *runnerSvc) resolveBillingContext(ctx context.Context, accountID, model string) (*billingContext, error) {
@@ -192,16 +206,17 @@ func (s *runnerSvc) resolveBillingContext(ctx context.Context, accountID, model 
 
 	// If a cap is set, read the current period spend as Stripe will bill it — the same marked-up figure the dashboard shows — so the cap and the displayed number agree. The in-loop gate adds this run's per-turn estimate on top of this baseline to avoid a Stripe round trip per turn.
 	if bc.spendingCapCents != nil {
-		spendCents, spendErr := s.billingClient.GetAgentSpendCents(ctx, billingAccountID)
+		spendCents, rates, spendErr := s.billingClient.GetAgentSpend(ctx, billingAccountID)
 		if spendErr != nil {
 			return nil, fmt.Errorf("failed to resolve current agent spend: %w", spendErr)
 		}
 
 		bc.currentSpendCents = spendCents
+		bc.tokenRates = buildTokenRateMap(rates)
 
 		if bc.currentSpendCents >= *bc.spendingCapCents {
 			capDollars := float64(*bc.spendingCapCents) / 100.0
-			return nil, fmt.Errorf("monthly agent spending cap of $%.2f has been reached", capDollars)
+			return nil, apierror.NewAgentSpendingCapReachedError(fmt.Sprintf("Monthly agent spending cap of $%.2f has been reached. Raise your spending limit to run agents.", capDollars))
 		}
 	}
 
@@ -372,7 +387,7 @@ func (s *runnerSvc) ExecuteRun(ctx context.Context, runID, configID, accountID, 
 	// Resolve billing context and inject Stripe customer ID. This must run after the identity is in context: the billing service resolves the Stripe customer from the caller's identity, so resolving billing earlier would send the gRPC call without identity metadata and fail.
 	bc, billingErr := s.resolveBillingContext(ctx, accountID, modelChain[0])
 	if billingErr != nil {
-		return s.failRun(ctx, runRepo, runID, startTime, billingErr.Error())
+		return s.failRunFromErr(ctx, runRepo, runID, startTime, billingErr)
 	}
 	ctx = llm.WithStripeCustomerID(ctx, bc.stripeCustomerID)
 
@@ -801,7 +816,7 @@ func (s *runnerSvc) executeAgent(
 		RevealedToolSlugs:        make(map[string]bool),
 	}
 
-	return s.runAgentLoop(ctx, run, accountID, identity, systemPrompt, modelChain, toolDefs, temperature, messages, &seq, runCtx, bc.spendingCapCents, bc.currentSpendCents)
+	return s.runAgentLoop(ctx, run, accountID, identity, systemPrompt, modelChain, toolDefs, temperature, messages, &seq, runCtx, bc.spendingCapCents, bc.currentSpendCents, bc.tokenRates)
 
 }
 
@@ -1030,6 +1045,7 @@ func (s *runnerSvc) runAgentLoop(
 	runCtx *domain.HandlerRunContext,
 	spendingCapCents *int64,
 	currentMonthSpendCents int64,
+	tokenRates map[llm.TokenRateKey]float64,
 ) (*domain.RunResult, error) {
 	if len(modelChain) == 0 {
 		return nil, fmt.Errorf("no model chain provided")
@@ -1154,8 +1170,11 @@ func (s *runnerSvc) runAgentLoop(
 		totalInputTokens += resp.InputTokens
 		totalOutputTokens += resp.OutputTokens
 
-		// Accumulate estimated cost for this iteration and check spending cap.
-		iterCostCents := llm.EstimateTokenCostCents(resp.InputTokens, resp.OutputTokens, modelName)
+		// Accumulate estimated cost for this iteration and check spending cap. Price at the plan's marked-up rate-card rates (what Stripe bills) so the cap matches the customer's real bill; fall back to base pricing only when a rate for this model is unavailable.
+		iterCostCents, ok := llm.MarkedUpTokenCostCents(resp.InputTokens, resp.OutputTokens, llm.GatewayModelName(modelName), tokenRates)
+		if !ok {
+			iterCostCents = llm.EstimateTokenCostCents(resp.InputTokens, resp.OutputTokens, modelName)
+		}
 		runSpendCents += iterCostCents
 		if spendingCapCents != nil && (currentMonthSpendCents+runSpendCents) >= *spendingCapCents {
 			capDollars := float64(*spendingCapCents) / 100.0
@@ -1493,9 +1512,9 @@ func (s *runnerSvc) runAgentLoop(
 }
 
 // runResumedLoop finishes a resumed turn: it first executes any approved-but-blocked tool calls directly (so an approval actually performs its write instead of depending on the model to re-issue the call — see resumeApprovedBlockedCalls) and then runs the agent loop over the reconstructed transcript. ContinueRun's resume tail is exactly this call; keeping the two steps together in one method means the "execute on approval, then continue" contract is exercised end to end in tests rather than only wired inline.
-func (s *runnerSvc) runResumedLoop(ctx context.Context, run *sqlc.AgentRun, accountID string, identity *types.Identity, systemPrompt string, modelChain []string, toolDefs []llm.ToolDefinition, temperature float64, messages []llm.Message, seq *int, runCtx *domain.HandlerRunContext, events []sqlc.AgentRunEvent, spendingCapCents *int64, currentMonthSpendCents int64) (*domain.RunResult, error) {
+func (s *runnerSvc) runResumedLoop(ctx context.Context, run *sqlc.AgentRun, accountID string, identity *types.Identity, systemPrompt string, modelChain []string, toolDefs []llm.ToolDefinition, temperature float64, messages []llm.Message, seq *int, runCtx *domain.HandlerRunContext, events []sqlc.AgentRunEvent, spendingCapCents *int64, currentMonthSpendCents int64, tokenRates map[llm.TokenRateKey]float64) (*domain.RunResult, error) {
 	s.resumeApprovedBlockedCalls(ctx, run, accountID, seq, runCtx, messages, events)
-	return s.runAgentLoop(ctx, run, accountID, identity, systemPrompt, modelChain, toolDefs, temperature, messages, seq, runCtx, spendingCapCents, currentMonthSpendCents)
+	return s.runAgentLoop(ctx, run, accountID, identity, systemPrompt, modelChain, toolDefs, temperature, messages, seq, runCtx, spendingCapCents, currentMonthSpendCents, tokenRates)
 }
 
 // approvesReviewedTool reports whether a ContinueRun resume approves a given pending review-gated tool — the single authority for what a resume lets through. A per-tool approval names the slugs (and only those pass; approveAllPending is ignored when slugs are present); an "Approve all" sets approveAllPending with no slugs; everything else — most importantly a typed-message continuation or a retry, which both arrive with no slugs and approveAllPending=false — approves NOTHING, so the tool stays blocked and re-prompts.
@@ -1784,7 +1803,7 @@ func (s *runnerSvc) ContinueRun(ctx context.Context, runID, accountID, message s
 	// Resolve billing context and inject Stripe customer ID. This must run after the identity is in context: the billing service resolves the Stripe customer from the caller's identity, so resolving billing earlier would send the gRPC call without identity metadata and fail.
 	bc, billingErr := s.resolveBillingContext(ctx, accountID, modelChain[0])
 	if billingErr != nil {
-		return s.failRun(ctx, runRepo, runID, startTime, billingErr.Error())
+		return s.failRunFromErr(ctx, runRepo, runID, startTime, billingErr)
 	}
 	ctx = llm.WithStripeCustomerID(ctx, bc.stripeCustomerID)
 
@@ -1923,7 +1942,7 @@ func (s *runnerSvc) ContinueRun(ctx context.Context, runID, accountID, message s
 	}
 
 	// Finish the resumed turn: execute any tool calls this resume approved (rather than trusting the model to re-issue them — this is what makes an approval actually perform the write), then run the agent loop.
-	result, err := s.runResumedLoop(ctx, run, accountID, agentIdentity, systemPrompt, modelChain, toolDefs, temperature, messages, &seq, runCtx, events, bc.spendingCapCents, bc.currentSpendCents)
+	result, err := s.runResumedLoop(ctx, run, accountID, agentIdentity, systemPrompt, modelChain, toolDefs, temperature, messages, &seq, runCtx, events, bc.spendingCapCents, bc.currentSpendCents, bc.tokenRates)
 	if err != nil {
 		// Transient, side-effect-free failures are re-enqueued with backoff instead of surfaced as a terminal failure.
 		if s.maybeAutoRetry(ctx, runRepo, run, err) {
@@ -2469,11 +2488,11 @@ func (s *runnerSvc) writeChatComplete(ctx context.Context, run *sqlc.AgentRun, r
 		Response string `json:"response"`
 	}
 	_ = json.Unmarshal(result.Output, &out)
-	s.finalizeChatReply(ctx, run, runID, accountID, out.Response, replyToMessageID, false)
+	s.finalizeChatReply(ctx, run, runID, accountID, out.Response, replyToMessageID, false, "")
 }
 
 // finalizeChatReply sends the terminal "final" reply for a turn. When a stream is in flight it addresses the existing record (and always finalizes, even on an empty body, so a started bubble never orphans); otherwise it creates a fresh message and preserves the legacy "drop empty replies" behavior.
-func (s *runnerSvc) finalizeChatReply(ctx context.Context, run *sqlc.AgentRun, runID, accountID, body, replyToMessageID string, failed bool) {
+func (s *runnerSvc) finalizeChatReply(ctx context.Context, run *sqlc.AgentRun, runID, accountID, body, replyToMessageID string, failed bool, errorCode string) {
 	if !chatTurnFromConversation(ctx) {
 		return
 	}
@@ -2513,6 +2532,7 @@ func (s *runnerSvc) finalizeChatReply(ctx context.Context, run *sqlc.AgentRun, r
 		ReplyToMessageID: replyToMessageID,
 		Phase:            "final",
 		Failed:           failed,
+		ErrorCode:        errorCode,
 	})
 }
 
@@ -2769,6 +2789,20 @@ func (s *runnerSvc) revertAutoRetry(ctx context.Context, runRepo domain.AgentRun
 }
 
 func (s *runnerSvc) failRun(ctx context.Context, runRepo domain.AgentRunRepo, runID string, startTime time.Time, errMsg string) *apierror.APIError {
+	return s.failRunWithCode(ctx, runRepo, runID, startTime, errMsg, "")
+}
+
+// failRunFromErr fails a run, propagating a machine-readable error code when err is a typed APIError (e.g. the spending-cap error) so the client can react programmatically — surfacing the code on the terminal failure event and returning the same typed error.
+func (s *runnerSvc) failRunFromErr(ctx context.Context, runRepo domain.AgentRunRepo, runID string, startTime time.Time, err error) *apierror.APIError {
+	var apiErr *apierror.APIError
+	if errors.As(err, &apiErr) {
+		return s.failRunWithCode(ctx, runRepo, runID, startTime, apiErr.PublicMessage, string(apiErr.Code))
+	}
+	return s.failRunWithCode(ctx, runRepo, runID, startTime, err.Error(), "")
+}
+
+// failRunWithCode marks a run failed and surfaces the failure to users. errorCode, when set, is a machine-readable ErrorCode carried on the terminal failure event (and reflected in the returned APIError) so clients can distinguish e.g. a spending-cap stop from a generic failure.
+func (s *runnerSvc) failRunWithCode(ctx context.Context, runRepo domain.AgentRunRepo, runID string, startTime time.Time, errMsg, errorCode string) *apierror.APIError {
 	durationMs := safeconv.Int64ToInt32(time.Since(startTime).Milliseconds())
 	if failErr := runRepo.UpdateFailed(ctx, sqlc.UpdateAgentRunFailedParams{
 		ErrorMessage: agentdb.PgText(errMsg),
@@ -2781,36 +2815,48 @@ func (s *runnerSvc) failRun(ctx context.Context, runRepo domain.AgentRunRepo, ru
 	// Surface the failure to users. Without this, a failed run just stops: the timeline ends with no terminal marker, the live run view never updates, and a chat-triggered run looks silently dropped.
 	// Loaded once and reused for both the timeline event and the chat reply. Best-effort.
 	if run, loadErr := runRepo.GetByID(ctx, runID); loadErr == nil && run != nil {
-		s.emitFailureEvent(ctx, run, errMsg)
-		s.writeChatFailureReply(ctx, run, runID, run.AccountID)
+		s.emitFailureEvent(ctx, run, errMsg, errorCode)
+		s.writeChatFailureReply(ctx, run, runID, run.AccountID, errMsg, errorCode)
 	}
 
+	if errorCode == string(apierror.ErrorCodeAgentSpendingCapReached) {
+		return apierror.NewAgentSpendingCapReachedError(errMsg)
+	}
 	return apierror.NewInternalError(errors.New(errMsg), "agent run failed: "+errMsg)
 }
 
 // emitFailureEvent appends a terminal "error" step to the run timeline so the run-detail view and the live stream show that the work was attempted and failed, instead of the run ending with no marker.
 // The raw error (which may carry internal/provider detail) is kept in metadata for operators; the user-facing content is generic.
-func (s *runnerSvc) emitFailureEvent(ctx context.Context, run *sqlc.AgentRun, errMsg string) {
+func (s *runnerSvc) emitFailureEvent(ctx context.Context, run *sqlc.AgentRun, errMsg, errorCode string) {
 	maxSeq, err := s.repos.NewAgentRunEventRepo().GetMaxSequence(ctx, run.ID)
 	if err != nil {
 		return
 	}
 	seq := int(maxSeq) + 1
 	content := "The run failed before it could finish."
-	meta, _ := json.Marshal(map[string]any{"error": errMsg})
+	metaMap := map[string]any{"error": errMsg}
+	// error_code lets the client react programmatically (e.g. prompt to raise the spending cap on agent_spending_cap_reached) rather than parsing the message.
+	if errorCode != "" {
+		metaMap["error_code"] = errorCode
+	}
+	meta, _ := json.Marshal(metaMap)
 	// Terminal: also drives a run_complete WS frame so the live run view leaves its loading state.
 	s.emitTerminalEvent(ctx, run.ID, run.AccountID, &seq, "error", "Run failed", &content, nil, nil, meta)
 }
 
 // writeChatFailureReply posts a brief, user-facing failure notice into the run's conversation so the thread learns the work failed instead of assuming it was silently dropped. The detailed error is kept on the run's error_message for operators; chat sees only a generic message (raw errors may contain internal/provider detail). No-op for runs without a conversation.
-func (s *runnerSvc) writeChatFailureReply(ctx context.Context, run *sqlc.AgentRun, runID, accountID string) {
+func (s *runnerSvc) writeChatFailureReply(ctx context.Context, run *sqlc.AgentRun, runID, accountID, errMsg, errorCode string) {
 	// Gating (conversation turn + linked conversation) is handled in finalizeChatReply. If a streaming bubble was already posted for this turn, this resolves it to the error message rather than leaving it stuck "thinking".
 	var replyTo string
 	if tid := agentdb.StringFromPgText(run.TriggerMessageID); tid != nil {
 		replyTo = *tid
 	}
-	const msg = "Sorry — I ran into an error and couldn't finish that request. Please try again."
-	s.finalizeChatReply(ctx, run, runID, accountID, msg, replyTo, true)
+	// The spending-cap message is a user-safe public message, so surface it verbatim (with a raise-limit prompt keyed off the code); other errors may carry internal detail, so chat sees only a generic notice.
+	msg := "Sorry — I ran into an error and couldn't finish that request. Please try again."
+	if errorCode == string(apierror.ErrorCodeAgentSpendingCapReached) && errMsg != "" {
+		msg = errMsg
+	}
+	s.finalizeChatReply(ctx, run, runID, accountID, msg, replyTo, true, errorCode)
 }
 
 // resolveAllowedEndpointTools turns an agent's configured endpoint_tool_slugs allow-list into the concrete set of catalog slugs it may use. The single entry "*" grants the whole catalog; otherwise only slugs that exist in the catalog are included.

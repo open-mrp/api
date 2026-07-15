@@ -16,13 +16,9 @@ import (
 type OpenSalesOrderRequest struct {
 	// Sales order ID.
 	SalesOrderID string `path:"id" validate:"required"`
-	// Whether to notify the customer.
-	//
-	// Reserved for future use; no notification email is currently sent for this action.
-	NotifyCustomer bool `json:"notify_customer"`
 }
 
-var sampleOpenSalesOrderRequest = &OpenSalesOrderRequest{NotifyCustomer: false}
+var sampleOpenSalesOrderRequest = &OpenSalesOrderRequest{}
 
 func (*OpenSalesOrderRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleOpenSalesOrderRequest)
@@ -40,7 +36,7 @@ func (e *OpenSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*OpenSal
 		ContentType:         "application/json",
 		Route:               "/v1/sales/sales-orders/{id}/actions/open",
 		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
+		Public:              true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionUpdate}},
 		ObjectType:          constants.ObjectTypeSalesOrder,

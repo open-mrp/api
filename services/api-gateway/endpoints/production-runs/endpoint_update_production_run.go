@@ -43,8 +43,8 @@ func (*UpdateProductionRunRequest) SchemaExample() any {
 // Fails if the run has been completed.
 type UpdateProductionRunEndpoint struct{}
 
-func (e *UpdateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateProductionRunRequest, *apiresource.ProductionRunDetail] {
-	return (&apiendpoint.APIEndpoint[*UpdateProductionRunRequest, *apiresource.ProductionRunDetail]{
+func (e *UpdateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateProductionRunRequest, *apiresource.ProductionRun] {
+	return (&apiendpoint.APIEndpoint[*UpdateProductionRunRequest, *apiresource.ProductionRun]{
 		Title:             "Update Production Run",
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
@@ -56,7 +56,7 @@ func (e *UpdateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*Up
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainProductionRuns, Action: types.ActionUpdate},
 		},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateProductionRunRequest) (*apiresource.ProductionRunDetail, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateProductionRunRequest) (*apiresource.ProductionRun, *apierror.APIError) {
 			return svc.(ProductionRunSvc).UpdateProductionRun
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{

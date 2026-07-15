@@ -1303,6 +1303,20 @@ func (mr *MockMessagingSvcMockRecorder) MarkSeen(ctx, id any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkSeen", reflect.TypeOf((*MockMessagingSvc)(nil).MarkSeen), ctx, id)
 }
 
+// NotifyCustomerRegistered mocks base method.
+func (m *MockMessagingSvc) NotifyCustomerRegistered(ctx context.Context, seed string, data messaging.CustomerRegisteredData) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NotifyCustomerRegistered", ctx, seed, data)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// NotifyCustomerRegistered indicates an expected call of NotifyCustomerRegistered.
+func (mr *MockMessagingSvcMockRecorder) NotifyCustomerRegistered(ctx, seed, data any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyCustomerRegistered", reflect.TypeOf((*MockMessagingSvc)(nil).NotifyCustomerRegistered), ctx, seed, data)
+}
+
 // SendNotification mocks base method.
 func (m *MockMessagingSvc) SendNotification(ctx context.Context, input domain.SendNotificationInput) (int64, *apierror.APIError) {
 	m.ctrl.T.Helper()

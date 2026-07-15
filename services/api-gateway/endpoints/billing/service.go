@@ -399,5 +399,9 @@ func accountUsageFromProto(resp *pb.GetAccountUsageResponse) *apiresource.Accoun
 		EstimatedSpendCents: resp.EstimatedAgentSpendCents,
 	}
 
+	result.PlanName = resp.PlanName
+	result.BaseFeeCents = resp.BaseFeeCents
+	result.BaseFeeInterval = resp.BaseFeeInterval
+
 	return result
 }

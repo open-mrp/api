@@ -849,8 +849,14 @@ type GetAccountUsageResponse struct {
 	Subscription             *SubscriptionInfo      `protobuf:"bytes,5,opt,name=subscription,proto3,oneof" json:"subscription,omitempty"`
 	AgentTokens              *UsageItem             `protobuf:"bytes,6,opt,name=agent_tokens,json=agentTokens,proto3" json:"agent_tokens,omitempty"`
 	EstimatedAgentSpendCents int64                  `protobuf:"varint,8,opt,name=estimated_agent_spend_cents,json=estimatedAgentSpendCents,proto3" json:"estimated_agent_spend_cents,omitempty"`
-	unknownFields            protoimpl.UnknownFields
-	sizeCache                protoimpl.SizeCache
+	// Plan display name resolved live from Stripe (e.g. the pricing plan's display_name). Empty when the account has no Stripe pricing plan.
+	PlanName string `protobuf:"bytes,9,opt,name=plan_name,json=planName,proto3" json:"plan_name,omitempty"`
+	// Flat base fee in cents charged per base_fee_interval, resolved from the pricing plan's license fee component. 0 when the plan has no base fee (e.g. per-seat pricing).
+	BaseFeeCents int64 `protobuf:"varint,10,opt,name=base_fee_cents,json=baseFeeCents,proto3" json:"base_fee_cents,omitempty"`
+	// Billing interval the base fee is charged on (e.g. "month", "year"). Empty when there is no base fee.
+	BaseFeeInterval string `protobuf:"bytes,11,opt,name=base_fee_interval,json=baseFeeInterval,proto3" json:"base_fee_interval,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *GetAccountUsageResponse) Reset() {
@@ -930,6 +936,27 @@ func (x *GetAccountUsageResponse) GetEstimatedAgentSpendCents() int64 {
 		return x.EstimatedAgentSpendCents
 	}
 	return 0
+}
+
+func (x *GetAccountUsageResponse) GetPlanName() string {
+	if x != nil {
+		return x.PlanName
+	}
+	return ""
+}
+
+func (x *GetAccountUsageResponse) GetBaseFeeCents() int64 {
+	if x != nil {
+		return x.BaseFeeCents
+	}
+	return 0
+}
+
+func (x *GetAccountUsageResponse) GetBaseFeeInterval() string {
+	if x != nil {
+		return x.BaseFeeInterval
+	}
+	return ""
 }
 
 // Intentionally empty; account is identified by the caller's identity metadata.
@@ -1363,16 +1390,82 @@ func (x *GetAgentSpendRequest) GetAccountId() string {
 	return ""
 }
 
+// A marked-up per-token price from the account's plan rate card, used to price a run's usage against the cap with the same rates Stripe bills.
+type TokenRate struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Gateway model name the rate applies to (e.g. "anthropic/claude-sonnet-4.6").
+	Model string `protobuf:"bytes,1,opt,name=model,proto3" json:"model,omitempty"`
+	// Token type the rate applies to: input, output, cached_input, or cached_output.
+	TokenType string `protobuf:"bytes,2,opt,name=token_type,json=tokenType,proto3" json:"token_type,omitempty"`
+	// Price in cents per token, markup included.
+	UnitAmountCents float64 `protobuf:"fixed64,3,opt,name=unit_amount_cents,json=unitAmountCents,proto3" json:"unit_amount_cents,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *TokenRate) Reset() {
+	*x = TokenRate{}
+	mi := &file_billing_billing_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TokenRate) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TokenRate) ProtoMessage() {}
+
+func (x *TokenRate) ProtoReflect() protoreflect.Message {
+	mi := &file_billing_billing_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TokenRate.ProtoReflect.Descriptor instead.
+func (*TokenRate) Descriptor() ([]byte, []int) {
+	return file_billing_billing_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *TokenRate) GetModel() string {
+	if x != nil {
+		return x.Model
+	}
+	return ""
+}
+
+func (x *TokenRate) GetTokenType() string {
+	if x != nil {
+		return x.TokenType
+	}
+	return ""
+}
+
+func (x *TokenRate) GetUnitAmountCents() float64 {
+	if x != nil {
+		return x.UnitAmountCents
+	}
+	return 0
+}
+
 type GetAgentSpendResponse struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
 	EstimatedSpendCents int64                  `protobuf:"varint,1,opt,name=estimated_spend_cents,json=estimatedSpendCents,proto3" json:"estimated_spend_cents,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// Marked-up per-token rates from the account's plan rate card. Empty when the plan has no rate card. Lets the caller price in-flight usage against the cap without a per-turn round trip.
+	TokenRates    []*TokenRate `protobuf:"bytes,2,rep,name=token_rates,json=tokenRates,proto3" json:"token_rates,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetAgentSpendResponse) Reset() {
 	*x = GetAgentSpendResponse{}
-	mi := &file_billing_billing_proto_msgTypes[24]
+	mi := &file_billing_billing_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1384,7 +1477,7 @@ func (x *GetAgentSpendResponse) String() string {
 func (*GetAgentSpendResponse) ProtoMessage() {}
 
 func (x *GetAgentSpendResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_billing_billing_proto_msgTypes[24]
+	mi := &file_billing_billing_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1397,7 +1490,7 @@ func (x *GetAgentSpendResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAgentSpendResponse.ProtoReflect.Descriptor instead.
 func (*GetAgentSpendResponse) Descriptor() ([]byte, []int) {
-	return file_billing_billing_proto_rawDescGZIP(), []int{24}
+	return file_billing_billing_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *GetAgentSpendResponse) GetEstimatedSpendCents() int64 {
@@ -1405,6 +1498,13 @@ func (x *GetAgentSpendResponse) GetEstimatedSpendCents() int64 {
 		return x.EstimatedSpendCents
 	}
 	return 0
+}
+
+func (x *GetAgentSpendResponse) GetTokenRates() []*TokenRate {
+	if x != nil {
+		return x.TokenRates
+	}
+	return nil
 }
 
 type EnsureBillingCustomerRequest struct {
@@ -1416,7 +1516,7 @@ type EnsureBillingCustomerRequest struct {
 
 func (x *EnsureBillingCustomerRequest) Reset() {
 	*x = EnsureBillingCustomerRequest{}
-	mi := &file_billing_billing_proto_msgTypes[25]
+	mi := &file_billing_billing_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1428,7 +1528,7 @@ func (x *EnsureBillingCustomerRequest) String() string {
 func (*EnsureBillingCustomerRequest) ProtoMessage() {}
 
 func (x *EnsureBillingCustomerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_billing_billing_proto_msgTypes[25]
+	mi := &file_billing_billing_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1441,7 +1541,7 @@ func (x *EnsureBillingCustomerRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnsureBillingCustomerRequest.ProtoReflect.Descriptor instead.
 func (*EnsureBillingCustomerRequest) Descriptor() ([]byte, []int) {
-	return file_billing_billing_proto_rawDescGZIP(), []int{25}
+	return file_billing_billing_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *EnsureBillingCustomerRequest) GetAccountId() string {
@@ -1463,7 +1563,7 @@ type EnsureBillingCustomerResponse struct {
 
 func (x *EnsureBillingCustomerResponse) Reset() {
 	*x = EnsureBillingCustomerResponse{}
-	mi := &file_billing_billing_proto_msgTypes[26]
+	mi := &file_billing_billing_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1475,7 +1575,7 @@ func (x *EnsureBillingCustomerResponse) String() string {
 func (*EnsureBillingCustomerResponse) ProtoMessage() {}
 
 func (x *EnsureBillingCustomerResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_billing_billing_proto_msgTypes[26]
+	mi := &file_billing_billing_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1488,7 +1588,7 @@ func (x *EnsureBillingCustomerResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnsureBillingCustomerResponse.ProtoReflect.Descriptor instead.
 func (*EnsureBillingCustomerResponse) Descriptor() ([]byte, []int) {
-	return file_billing_billing_proto_rawDescGZIP(), []int{26}
+	return file_billing_billing_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *EnsureBillingCustomerResponse) GetStripeCustomerId() string {
@@ -1521,7 +1621,7 @@ type SwitchPlanRequest struct {
 
 func (x *SwitchPlanRequest) Reset() {
 	*x = SwitchPlanRequest{}
-	mi := &file_billing_billing_proto_msgTypes[27]
+	mi := &file_billing_billing_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1533,7 +1633,7 @@ func (x *SwitchPlanRequest) String() string {
 func (*SwitchPlanRequest) ProtoMessage() {}
 
 func (x *SwitchPlanRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_billing_billing_proto_msgTypes[27]
+	mi := &file_billing_billing_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1546,7 +1646,7 @@ func (x *SwitchPlanRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SwitchPlanRequest.ProtoReflect.Descriptor instead.
 func (*SwitchPlanRequest) Descriptor() ([]byte, []int) {
-	return file_billing_billing_proto_rawDescGZIP(), []int{27}
+	return file_billing_billing_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *SwitchPlanRequest) GetPlanId() string {
@@ -1566,7 +1666,7 @@ type SwitchPlanResponse struct {
 
 func (x *SwitchPlanResponse) Reset() {
 	*x = SwitchPlanResponse{}
-	mi := &file_billing_billing_proto_msgTypes[28]
+	mi := &file_billing_billing_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1578,7 +1678,7 @@ func (x *SwitchPlanResponse) String() string {
 func (*SwitchPlanResponse) ProtoMessage() {}
 
 func (x *SwitchPlanResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_billing_billing_proto_msgTypes[28]
+	mi := &file_billing_billing_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1591,7 +1691,7 @@ func (x *SwitchPlanResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SwitchPlanResponse.ProtoReflect.Descriptor instead.
 func (*SwitchPlanResponse) Descriptor() ([]byte, []int) {
-	return file_billing_billing_proto_rawDescGZIP(), []int{28}
+	return file_billing_billing_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *SwitchPlanResponse) GetSuccess() bool {
@@ -1617,7 +1717,7 @@ type SetupBillingProfileRequest struct {
 
 func (x *SetupBillingProfileRequest) Reset() {
 	*x = SetupBillingProfileRequest{}
-	mi := &file_billing_billing_proto_msgTypes[29]
+	mi := &file_billing_billing_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1629,7 +1729,7 @@ func (x *SetupBillingProfileRequest) String() string {
 func (*SetupBillingProfileRequest) ProtoMessage() {}
 
 func (x *SetupBillingProfileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_billing_billing_proto_msgTypes[29]
+	mi := &file_billing_billing_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1642,7 +1742,7 @@ func (x *SetupBillingProfileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetupBillingProfileRequest.ProtoReflect.Descriptor instead.
 func (*SetupBillingProfileRequest) Descriptor() ([]byte, []int) {
-	return file_billing_billing_proto_rawDescGZIP(), []int{29}
+	return file_billing_billing_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *SetupBillingProfileRequest) GetAccountId() string {
@@ -1662,7 +1762,7 @@ type SetupBillingProfileResponse struct {
 
 func (x *SetupBillingProfileResponse) Reset() {
 	*x = SetupBillingProfileResponse{}
-	mi := &file_billing_billing_proto_msgTypes[30]
+	mi := &file_billing_billing_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1674,7 +1774,7 @@ func (x *SetupBillingProfileResponse) String() string {
 func (*SetupBillingProfileResponse) ProtoMessage() {}
 
 func (x *SetupBillingProfileResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_billing_billing_proto_msgTypes[30]
+	mi := &file_billing_billing_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1687,7 +1787,7 @@ func (x *SetupBillingProfileResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetupBillingProfileResponse.ProtoReflect.Descriptor instead.
 func (*SetupBillingProfileResponse) Descriptor() ([]byte, []int) {
-	return file_billing_billing_proto_rawDescGZIP(), []int{30}
+	return file_billing_billing_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *SetupBillingProfileResponse) GetBillingProfileId() string {
@@ -1714,7 +1814,7 @@ type SubscribeToPricingPlanRequest struct {
 
 func (x *SubscribeToPricingPlanRequest) Reset() {
 	*x = SubscribeToPricingPlanRequest{}
-	mi := &file_billing_billing_proto_msgTypes[31]
+	mi := &file_billing_billing_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1726,7 +1826,7 @@ func (x *SubscribeToPricingPlanRequest) String() string {
 func (*SubscribeToPricingPlanRequest) ProtoMessage() {}
 
 func (x *SubscribeToPricingPlanRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_billing_billing_proto_msgTypes[31]
+	mi := &file_billing_billing_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1739,7 +1839,7 @@ func (x *SubscribeToPricingPlanRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubscribeToPricingPlanRequest.ProtoReflect.Descriptor instead.
 func (*SubscribeToPricingPlanRequest) Descriptor() ([]byte, []int) {
-	return file_billing_billing_proto_rawDescGZIP(), []int{31}
+	return file_billing_billing_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *SubscribeToPricingPlanRequest) GetStripeCustomerId() string {
@@ -1765,7 +1865,7 @@ type SubscribeToPricingPlanResponse struct {
 
 func (x *SubscribeToPricingPlanResponse) Reset() {
 	*x = SubscribeToPricingPlanResponse{}
-	mi := &file_billing_billing_proto_msgTypes[32]
+	mi := &file_billing_billing_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1777,7 +1877,7 @@ func (x *SubscribeToPricingPlanResponse) String() string {
 func (*SubscribeToPricingPlanResponse) ProtoMessage() {}
 
 func (x *SubscribeToPricingPlanResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_billing_billing_proto_msgTypes[32]
+	mi := &file_billing_billing_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1790,7 +1890,7 @@ func (x *SubscribeToPricingPlanResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubscribeToPricingPlanResponse.ProtoReflect.Descriptor instead.
 func (*SubscribeToPricingPlanResponse) Descriptor() ([]byte, []int) {
-	return file_billing_billing_proto_rawDescGZIP(), []int{32}
+	return file_billing_billing_proto_rawDescGZIP(), []int{33}
 }
 
 type CreateSetupIntentRequest struct {
@@ -1803,7 +1903,7 @@ type CreateSetupIntentRequest struct {
 
 func (x *CreateSetupIntentRequest) Reset() {
 	*x = CreateSetupIntentRequest{}
-	mi := &file_billing_billing_proto_msgTypes[33]
+	mi := &file_billing_billing_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1815,7 +1915,7 @@ func (x *CreateSetupIntentRequest) String() string {
 func (*CreateSetupIntentRequest) ProtoMessage() {}
 
 func (x *CreateSetupIntentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_billing_billing_proto_msgTypes[33]
+	mi := &file_billing_billing_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1828,7 +1928,7 @@ func (x *CreateSetupIntentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSetupIntentRequest.ProtoReflect.Descriptor instead.
 func (*CreateSetupIntentRequest) Descriptor() ([]byte, []int) {
-	return file_billing_billing_proto_rawDescGZIP(), []int{33}
+	return file_billing_billing_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *CreateSetupIntentRequest) GetCustomerId() string {
@@ -1856,7 +1956,7 @@ type CreateSetupIntentResponse struct {
 
 func (x *CreateSetupIntentResponse) Reset() {
 	*x = CreateSetupIntentResponse{}
-	mi := &file_billing_billing_proto_msgTypes[34]
+	mi := &file_billing_billing_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1868,7 +1968,7 @@ func (x *CreateSetupIntentResponse) String() string {
 func (*CreateSetupIntentResponse) ProtoMessage() {}
 
 func (x *CreateSetupIntentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_billing_billing_proto_msgTypes[34]
+	mi := &file_billing_billing_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1881,7 +1981,7 @@ func (x *CreateSetupIntentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSetupIntentResponse.ProtoReflect.Descriptor instead.
 func (*CreateSetupIntentResponse) Descriptor() ([]byte, []int) {
-	return file_billing_billing_proto_rawDescGZIP(), []int{34}
+	return file_billing_billing_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *CreateSetupIntentResponse) GetSetupIntentId() string {
@@ -1914,7 +2014,7 @@ type GetSetupIntentStatusRequest struct {
 
 func (x *GetSetupIntentStatusRequest) Reset() {
 	*x = GetSetupIntentStatusRequest{}
-	mi := &file_billing_billing_proto_msgTypes[35]
+	mi := &file_billing_billing_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1926,7 +2026,7 @@ func (x *GetSetupIntentStatusRequest) String() string {
 func (*GetSetupIntentStatusRequest) ProtoMessage() {}
 
 func (x *GetSetupIntentStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_billing_billing_proto_msgTypes[35]
+	mi := &file_billing_billing_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1939,7 +2039,7 @@ func (x *GetSetupIntentStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSetupIntentStatusRequest.ProtoReflect.Descriptor instead.
 func (*GetSetupIntentStatusRequest) Descriptor() ([]byte, []int) {
-	return file_billing_billing_proto_rawDescGZIP(), []int{35}
+	return file_billing_billing_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *GetSetupIntentStatusRequest) GetSetupIntentId() string {
@@ -1959,7 +2059,7 @@ type GetSetupIntentStatusResponse struct {
 
 func (x *GetSetupIntentStatusResponse) Reset() {
 	*x = GetSetupIntentStatusResponse{}
-	mi := &file_billing_billing_proto_msgTypes[36]
+	mi := &file_billing_billing_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1971,7 +2071,7 @@ func (x *GetSetupIntentStatusResponse) String() string {
 func (*GetSetupIntentStatusResponse) ProtoMessage() {}
 
 func (x *GetSetupIntentStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_billing_billing_proto_msgTypes[36]
+	mi := &file_billing_billing_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1984,7 +2084,7 @@ func (x *GetSetupIntentStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSetupIntentStatusResponse.ProtoReflect.Descriptor instead.
 func (*GetSetupIntentStatusResponse) Descriptor() ([]byte, []int) {
-	return file_billing_billing_proto_rawDescGZIP(), []int{36}
+	return file_billing_billing_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *GetSetupIntentStatusResponse) GetStatus() string {
@@ -2010,7 +2110,7 @@ type ValidateStripePricingPlanRequest struct {
 
 func (x *ValidateStripePricingPlanRequest) Reset() {
 	*x = ValidateStripePricingPlanRequest{}
-	mi := &file_billing_billing_proto_msgTypes[37]
+	mi := &file_billing_billing_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2022,7 +2122,7 @@ func (x *ValidateStripePricingPlanRequest) String() string {
 func (*ValidateStripePricingPlanRequest) ProtoMessage() {}
 
 func (x *ValidateStripePricingPlanRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_billing_billing_proto_msgTypes[37]
+	mi := &file_billing_billing_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2035,7 +2135,7 @@ func (x *ValidateStripePricingPlanRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidateStripePricingPlanRequest.ProtoReflect.Descriptor instead.
 func (*ValidateStripePricingPlanRequest) Descriptor() ([]byte, []int) {
-	return file_billing_billing_proto_rawDescGZIP(), []int{37}
+	return file_billing_billing_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *ValidateStripePricingPlanRequest) GetPlanCode() string {
@@ -2054,7 +2154,7 @@ type ValidateStripePricingPlanResponse struct {
 
 func (x *ValidateStripePricingPlanResponse) Reset() {
 	*x = ValidateStripePricingPlanResponse{}
-	mi := &file_billing_billing_proto_msgTypes[38]
+	mi := &file_billing_billing_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2066,7 +2166,7 @@ func (x *ValidateStripePricingPlanResponse) String() string {
 func (*ValidateStripePricingPlanResponse) ProtoMessage() {}
 
 func (x *ValidateStripePricingPlanResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_billing_billing_proto_msgTypes[38]
+	mi := &file_billing_billing_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2079,7 +2179,7 @@ func (x *ValidateStripePricingPlanResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ValidateStripePricingPlanResponse.ProtoReflect.Descriptor instead.
 func (*ValidateStripePricingPlanResponse) Descriptor() ([]byte, []int) {
-	return file_billing_billing_proto_rawDescGZIP(), []int{38}
+	return file_billing_billing_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *ValidateStripePricingPlanResponse) GetValid() bool {
@@ -2165,7 +2265,7 @@ const file_billing_billing_proto_rawDesc = "" +
 	"\x10servicing_status\x18\x01 \x01(\tR\x0fservicingStatus\x12+\n" +
 	"\x11collection_status\x18\x02 \x01(\tR\x10collectionStatus\x12M\n" +
 	"\x12current_period_end\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\x10currentPeriodEnd\x88\x01\x01B\x15\n" +
-	"\x13_current_period_end\"\xb8\x03\n" +
+	"\x13_current_period_end\"\xa7\x04\n" +
 	"\x17GetAccountUsageResponse\x12(\n" +
 	"\x05seats\x18\x01 \x01(\v2\x12.billing.UsageItemR\x05seats\x12.\n" +
 	"\binvoices\x18\x02 \x01(\v2\x12.billing.UsageItemR\binvoices\x12,\n" +
@@ -2173,7 +2273,11 @@ const file_billing_billing_proto_rawDesc = "" +
 	"\tsandboxes\x18\x04 \x01(\v2\x12.billing.UsageItemR\tsandboxes\x12B\n" +
 	"\fsubscription\x18\x05 \x01(\v2\x19.billing.SubscriptionInfoH\x00R\fsubscription\x88\x01\x01\x125\n" +
 	"\fagent_tokens\x18\x06 \x01(\v2\x12.billing.UsageItemR\vagentTokens\x12=\n" +
-	"\x1bestimated_agent_spend_cents\x18\b \x01(\x03R\x18estimatedAgentSpendCentsB\x0f\n" +
+	"\x1bestimated_agent_spend_cents\x18\b \x01(\x03R\x18estimatedAgentSpendCents\x12\x1b\n" +
+	"\tplan_name\x18\t \x01(\tR\bplanName\x12$\n" +
+	"\x0ebase_fee_cents\x18\n" +
+	" \x01(\x03R\fbaseFeeCents\x12*\n" +
+	"\x11base_fee_interval\x18\v \x01(\tR\x0fbaseFeeIntervalB\x0f\n" +
 	"\r_subscriptionJ\x04\b\a\x10\bR\x12agent_token_detail\"#\n" +
 	"!CreateBillingPortalSessionRequest\"6\n" +
 	"\"CreateBillingPortalSessionResponse\x12\x10\n" +
@@ -2201,9 +2305,16 @@ const file_billing_billing_proto_rawDesc = "" +
 	"\x14GetAgentSpendRequest\x12\"\n" +
 	"\n" +
 	"account_id\x18\x01 \x01(\tH\x00R\taccountId\x88\x01\x01B\r\n" +
-	"\v_account_id\"K\n" +
+	"\v_account_id\"l\n" +
+	"\tTokenRate\x12\x14\n" +
+	"\x05model\x18\x01 \x01(\tR\x05model\x12\x1d\n" +
+	"\n" +
+	"token_type\x18\x02 \x01(\tR\ttokenType\x12*\n" +
+	"\x11unit_amount_cents\x18\x03 \x01(\x01R\x0funitAmountCents\"\x80\x01\n" +
 	"\x15GetAgentSpendResponse\x122\n" +
-	"\x15estimated_spend_cents\x18\x01 \x01(\x03R\x13estimatedSpendCents\"Q\n" +
+	"\x15estimated_spend_cents\x18\x01 \x01(\x03R\x13estimatedSpendCents\x123\n" +
+	"\vtoken_rates\x18\x02 \x03(\v2\x12.billing.TokenRateR\n" +
+	"tokenRates\"Q\n" +
 	"\x1cEnsureBillingCustomerRequest\x12\"\n" +
 	"\n" +
 	"account_id\x18\x01 \x01(\tH\x00R\taccountId\x88\x01\x01B\r\n" +
@@ -2280,7 +2391,7 @@ func file_billing_billing_proto_rawDescGZIP() []byte {
 	return file_billing_billing_proto_rawDescData
 }
 
-var file_billing_billing_proto_msgTypes = make([]protoimpl.MessageInfo, 40)
+var file_billing_billing_proto_msgTypes = make([]protoimpl.MessageInfo, 41)
 var file_billing_billing_proto_goTypes = []any{
 	(*PricingPlan)(nil),                        // 0: billing.PricingPlan
 	(*PlanLimit)(nil),                          // 1: billing.PlanLimit
@@ -2306,31 +2417,32 @@ var file_billing_billing_proto_goTypes = []any{
 	(*RequestEnterpriseUpgradeRequest)(nil),    // 21: billing.RequestEnterpriseUpgradeRequest
 	(*RequestEnterpriseUpgradeResponse)(nil),   // 22: billing.RequestEnterpriseUpgradeResponse
 	(*GetAgentSpendRequest)(nil),               // 23: billing.GetAgentSpendRequest
-	(*GetAgentSpendResponse)(nil),              // 24: billing.GetAgentSpendResponse
-	(*EnsureBillingCustomerRequest)(nil),       // 25: billing.EnsureBillingCustomerRequest
-	(*EnsureBillingCustomerResponse)(nil),      // 26: billing.EnsureBillingCustomerResponse
-	(*SwitchPlanRequest)(nil),                  // 27: billing.SwitchPlanRequest
-	(*SwitchPlanResponse)(nil),                 // 28: billing.SwitchPlanResponse
-	(*SetupBillingProfileRequest)(nil),         // 29: billing.SetupBillingProfileRequest
-	(*SetupBillingProfileResponse)(nil),        // 30: billing.SetupBillingProfileResponse
-	(*SubscribeToPricingPlanRequest)(nil),      // 31: billing.SubscribeToPricingPlanRequest
-	(*SubscribeToPricingPlanResponse)(nil),     // 32: billing.SubscribeToPricingPlanResponse
-	(*CreateSetupIntentRequest)(nil),           // 33: billing.CreateSetupIntentRequest
-	(*CreateSetupIntentResponse)(nil),          // 34: billing.CreateSetupIntentResponse
-	(*GetSetupIntentStatusRequest)(nil),        // 35: billing.GetSetupIntentStatusRequest
-	(*GetSetupIntentStatusResponse)(nil),       // 36: billing.GetSetupIntentStatusResponse
-	(*ValidateStripePricingPlanRequest)(nil),   // 37: billing.ValidateStripePricingPlanRequest
-	(*ValidateStripePricingPlanResponse)(nil),  // 38: billing.ValidateStripePricingPlanResponse
-	nil,                           // 39: billing.CreateCustomerRequest.MetadataEntry
-	(*timestamppb.Timestamp)(nil), // 40: google.protobuf.Timestamp
+	(*TokenRate)(nil),                          // 24: billing.TokenRate
+	(*GetAgentSpendResponse)(nil),              // 25: billing.GetAgentSpendResponse
+	(*EnsureBillingCustomerRequest)(nil),       // 26: billing.EnsureBillingCustomerRequest
+	(*EnsureBillingCustomerResponse)(nil),      // 27: billing.EnsureBillingCustomerResponse
+	(*SwitchPlanRequest)(nil),                  // 28: billing.SwitchPlanRequest
+	(*SwitchPlanResponse)(nil),                 // 29: billing.SwitchPlanResponse
+	(*SetupBillingProfileRequest)(nil),         // 30: billing.SetupBillingProfileRequest
+	(*SetupBillingProfileResponse)(nil),        // 31: billing.SetupBillingProfileResponse
+	(*SubscribeToPricingPlanRequest)(nil),      // 32: billing.SubscribeToPricingPlanRequest
+	(*SubscribeToPricingPlanResponse)(nil),     // 33: billing.SubscribeToPricingPlanResponse
+	(*CreateSetupIntentRequest)(nil),           // 34: billing.CreateSetupIntentRequest
+	(*CreateSetupIntentResponse)(nil),          // 35: billing.CreateSetupIntentResponse
+	(*GetSetupIntentStatusRequest)(nil),        // 36: billing.GetSetupIntentStatusRequest
+	(*GetSetupIntentStatusResponse)(nil),       // 37: billing.GetSetupIntentStatusResponse
+	(*ValidateStripePricingPlanRequest)(nil),   // 38: billing.ValidateStripePricingPlanRequest
+	(*ValidateStripePricingPlanResponse)(nil),  // 39: billing.ValidateStripePricingPlanResponse
+	nil,                           // 40: billing.CreateCustomerRequest.MetadataEntry
+	(*timestamppb.Timestamp)(nil), // 41: google.protobuf.Timestamp
 }
 var file_billing_billing_proto_depIdxs = []int32{
 	1,  // 0: billing.PricingPlan.limits:type_name -> billing.PlanLimit
 	0,  // 1: billing.ListPricingPlansResponse.plans:type_name -> billing.PricingPlan
 	3,  // 2: billing.ListPricingPlansResponse.page_info:type_name -> billing.PageInfo
 	0,  // 3: billing.GetPlanByCodeResponse.plan:type_name -> billing.PricingPlan
-	39, // 4: billing.CreateCustomerRequest.metadata:type_name -> billing.CreateCustomerRequest.MetadataEntry
-	40, // 5: billing.SubscriptionInfo.current_period_end:type_name -> google.protobuf.Timestamp
+	40, // 4: billing.CreateCustomerRequest.metadata:type_name -> billing.CreateCustomerRequest.MetadataEntry
+	41, // 5: billing.SubscriptionInfo.current_period_end:type_name -> google.protobuf.Timestamp
 	12, // 6: billing.GetAccountUsageResponse.seats:type_name -> billing.UsageItem
 	12, // 7: billing.GetAccountUsageResponse.invoices:type_name -> billing.UsageItem
 	12, // 8: billing.GetAccountUsageResponse.batches:type_name -> billing.UsageItem
@@ -2339,43 +2451,44 @@ var file_billing_billing_proto_depIdxs = []int32{
 	12, // 11: billing.GetAccountUsageResponse.agent_tokens:type_name -> billing.UsageItem
 	18, // 12: billing.PlanChangePreview.line_items:type_name -> billing.PlanChangePreviewLineItem
 	19, // 13: billing.PreviewPlanChangeResponse.preview:type_name -> billing.PlanChangePreview
-	2,  // 14: billing.BillingService.ListPricingPlans:input_type -> billing.ListPricingPlansRequest
-	5,  // 15: billing.BillingService.GetPlanByCode:input_type -> billing.GetPlanByCodeRequest
-	7,  // 16: billing.BillingService.ProcessWebhookEvent:input_type -> billing.ProcessWebhookEventRequest
-	9,  // 17: billing.BillingService.CreateCustomer:input_type -> billing.CreateCustomerRequest
-	11, // 18: billing.BillingService.GetAccountUsage:input_type -> billing.GetAccountUsageRequest
-	15, // 19: billing.BillingService.CreateBillingPortalSession:input_type -> billing.CreateBillingPortalSessionRequest
-	17, // 20: billing.BillingService.PreviewPlanChange:input_type -> billing.PreviewPlanChangeRequest
-	21, // 21: billing.BillingService.RequestEnterpriseUpgrade:input_type -> billing.RequestEnterpriseUpgradeRequest
-	25, // 22: billing.BillingService.EnsureBillingCustomer:input_type -> billing.EnsureBillingCustomerRequest
-	23, // 23: billing.BillingService.GetAgentSpend:input_type -> billing.GetAgentSpendRequest
-	27, // 24: billing.BillingService.SwitchPlan:input_type -> billing.SwitchPlanRequest
-	29, // 25: billing.BillingService.SetupBillingProfile:input_type -> billing.SetupBillingProfileRequest
-	31, // 26: billing.BillingService.SubscribeToPricingPlan:input_type -> billing.SubscribeToPricingPlanRequest
-	33, // 27: billing.BillingService.CreateSetupIntent:input_type -> billing.CreateSetupIntentRequest
-	35, // 28: billing.BillingService.GetSetupIntentStatus:input_type -> billing.GetSetupIntentStatusRequest
-	37, // 29: billing.BillingService.ValidateStripePricingPlan:input_type -> billing.ValidateStripePricingPlanRequest
-	4,  // 30: billing.BillingService.ListPricingPlans:output_type -> billing.ListPricingPlansResponse
-	6,  // 31: billing.BillingService.GetPlanByCode:output_type -> billing.GetPlanByCodeResponse
-	8,  // 32: billing.BillingService.ProcessWebhookEvent:output_type -> billing.ProcessWebhookEventResponse
-	10, // 33: billing.BillingService.CreateCustomer:output_type -> billing.CreateCustomerResponse
-	14, // 34: billing.BillingService.GetAccountUsage:output_type -> billing.GetAccountUsageResponse
-	16, // 35: billing.BillingService.CreateBillingPortalSession:output_type -> billing.CreateBillingPortalSessionResponse
-	20, // 36: billing.BillingService.PreviewPlanChange:output_type -> billing.PreviewPlanChangeResponse
-	22, // 37: billing.BillingService.RequestEnterpriseUpgrade:output_type -> billing.RequestEnterpriseUpgradeResponse
-	26, // 38: billing.BillingService.EnsureBillingCustomer:output_type -> billing.EnsureBillingCustomerResponse
-	24, // 39: billing.BillingService.GetAgentSpend:output_type -> billing.GetAgentSpendResponse
-	28, // 40: billing.BillingService.SwitchPlan:output_type -> billing.SwitchPlanResponse
-	30, // 41: billing.BillingService.SetupBillingProfile:output_type -> billing.SetupBillingProfileResponse
-	32, // 42: billing.BillingService.SubscribeToPricingPlan:output_type -> billing.SubscribeToPricingPlanResponse
-	34, // 43: billing.BillingService.CreateSetupIntent:output_type -> billing.CreateSetupIntentResponse
-	36, // 44: billing.BillingService.GetSetupIntentStatus:output_type -> billing.GetSetupIntentStatusResponse
-	38, // 45: billing.BillingService.ValidateStripePricingPlan:output_type -> billing.ValidateStripePricingPlanResponse
-	30, // [30:46] is the sub-list for method output_type
-	14, // [14:30] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	24, // 14: billing.GetAgentSpendResponse.token_rates:type_name -> billing.TokenRate
+	2,  // 15: billing.BillingService.ListPricingPlans:input_type -> billing.ListPricingPlansRequest
+	5,  // 16: billing.BillingService.GetPlanByCode:input_type -> billing.GetPlanByCodeRequest
+	7,  // 17: billing.BillingService.ProcessWebhookEvent:input_type -> billing.ProcessWebhookEventRequest
+	9,  // 18: billing.BillingService.CreateCustomer:input_type -> billing.CreateCustomerRequest
+	11, // 19: billing.BillingService.GetAccountUsage:input_type -> billing.GetAccountUsageRequest
+	15, // 20: billing.BillingService.CreateBillingPortalSession:input_type -> billing.CreateBillingPortalSessionRequest
+	17, // 21: billing.BillingService.PreviewPlanChange:input_type -> billing.PreviewPlanChangeRequest
+	21, // 22: billing.BillingService.RequestEnterpriseUpgrade:input_type -> billing.RequestEnterpriseUpgradeRequest
+	26, // 23: billing.BillingService.EnsureBillingCustomer:input_type -> billing.EnsureBillingCustomerRequest
+	23, // 24: billing.BillingService.GetAgentSpend:input_type -> billing.GetAgentSpendRequest
+	28, // 25: billing.BillingService.SwitchPlan:input_type -> billing.SwitchPlanRequest
+	30, // 26: billing.BillingService.SetupBillingProfile:input_type -> billing.SetupBillingProfileRequest
+	32, // 27: billing.BillingService.SubscribeToPricingPlan:input_type -> billing.SubscribeToPricingPlanRequest
+	34, // 28: billing.BillingService.CreateSetupIntent:input_type -> billing.CreateSetupIntentRequest
+	36, // 29: billing.BillingService.GetSetupIntentStatus:input_type -> billing.GetSetupIntentStatusRequest
+	38, // 30: billing.BillingService.ValidateStripePricingPlan:input_type -> billing.ValidateStripePricingPlanRequest
+	4,  // 31: billing.BillingService.ListPricingPlans:output_type -> billing.ListPricingPlansResponse
+	6,  // 32: billing.BillingService.GetPlanByCode:output_type -> billing.GetPlanByCodeResponse
+	8,  // 33: billing.BillingService.ProcessWebhookEvent:output_type -> billing.ProcessWebhookEventResponse
+	10, // 34: billing.BillingService.CreateCustomer:output_type -> billing.CreateCustomerResponse
+	14, // 35: billing.BillingService.GetAccountUsage:output_type -> billing.GetAccountUsageResponse
+	16, // 36: billing.BillingService.CreateBillingPortalSession:output_type -> billing.CreateBillingPortalSessionResponse
+	20, // 37: billing.BillingService.PreviewPlanChange:output_type -> billing.PreviewPlanChangeResponse
+	22, // 38: billing.BillingService.RequestEnterpriseUpgrade:output_type -> billing.RequestEnterpriseUpgradeResponse
+	27, // 39: billing.BillingService.EnsureBillingCustomer:output_type -> billing.EnsureBillingCustomerResponse
+	25, // 40: billing.BillingService.GetAgentSpend:output_type -> billing.GetAgentSpendResponse
+	29, // 41: billing.BillingService.SwitchPlan:output_type -> billing.SwitchPlanResponse
+	31, // 42: billing.BillingService.SetupBillingProfile:output_type -> billing.SetupBillingProfileResponse
+	33, // 43: billing.BillingService.SubscribeToPricingPlan:output_type -> billing.SubscribeToPricingPlanResponse
+	35, // 44: billing.BillingService.CreateSetupIntent:output_type -> billing.CreateSetupIntentResponse
+	37, // 45: billing.BillingService.GetSetupIntentStatus:output_type -> billing.GetSetupIntentStatusResponse
+	39, // 46: billing.BillingService.ValidateStripePricingPlan:output_type -> billing.ValidateStripePricingPlanResponse
+	31, // [31:47] is the sub-list for method output_type
+	15, // [15:31] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_billing_billing_proto_init() }
@@ -2391,18 +2504,18 @@ func file_billing_billing_proto_init() {
 	file_billing_billing_proto_msgTypes[13].OneofWrappers = []any{}
 	file_billing_billing_proto_msgTypes[14].OneofWrappers = []any{}
 	file_billing_billing_proto_msgTypes[23].OneofWrappers = []any{}
-	file_billing_billing_proto_msgTypes[25].OneofWrappers = []any{}
 	file_billing_billing_proto_msgTypes[26].OneofWrappers = []any{}
-	file_billing_billing_proto_msgTypes[28].OneofWrappers = []any{}
+	file_billing_billing_proto_msgTypes[27].OneofWrappers = []any{}
 	file_billing_billing_proto_msgTypes[29].OneofWrappers = []any{}
-	file_billing_billing_proto_msgTypes[36].OneofWrappers = []any{}
+	file_billing_billing_proto_msgTypes[30].OneofWrappers = []any{}
+	file_billing_billing_proto_msgTypes[37].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_billing_billing_proto_rawDesc), len(file_billing_billing_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   40,
+			NumMessages:   41,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

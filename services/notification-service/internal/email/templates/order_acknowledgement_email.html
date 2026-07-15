@@ -2,20 +2,111 @@
 <html>
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Order Acknowledgement</title>
 </head>
-<body style="font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5;">
-    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 8px;">
-        <h2 style="color: #333333; margin-top: 0;">Sales Order {{.order_number}}</h2>
-        <p style="color: #666666; line-height: 1.6;">
-            Thank you for your order. We have received your sales order <strong>{{.order_number}}</strong>
-            and it is being processed.
-        </p>
-        <p style="color: #666666; line-height: 1.6;">
-            If you have any questions about your order, please contact us.
-        </p>
-        <hr style="border: none; border-top: 1px solid #eeeeee; margin: 20px 0;">
-        <p style="color: #999999; font-size: 12px;">Sent by {{.account_name}}</p>
-    </div>
+<body style="margin: 0; padding: 24px 12px; background-color: #f5f6f8; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1a2233;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 640px; margin: 0 auto;">
+        <tr><td>
+            <!-- Card -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border: 1px solid #e6e8eb; border-radius: 10px;">
+                <tr><td style="padding: 32px;">
+
+                    {{if .logo_url}}
+                    <div style="text-align: center; margin: 0 0 24px;">
+                        <img src="{{.logo_url}}" alt="{{.account_name}} Logo" style="height: 50px; width: auto; max-height: 50px;">
+                    </div>
+                    {{end}}
+
+                    <!-- Header -->
+                    <h1 style="margin: 0 0 12px; text-align: center; font-size: 1.7rem; font-weight: 700; letter-spacing: 0.06em; color: #1a2233;">Thanks for your order!</h1>
+                    <p style="margin: 0 auto 28px; max-width: 460px; text-align: center; font-size: 1rem; font-weight: 500; line-height: 1.6; color: #6b7280;">
+                        We are pleased to confirm that we have received your order and it is currently being processed. We will send you another email once it has shipped.
+                    </p>
+
+                    <hr style="border: none; border-top: 1px solid #eef1f5; margin: 0 0 24px;">
+
+                    <!-- Order summary + ship to -->
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                            <td width="55%" valign="top" style="padding-right: 12px;">
+                                <p style="margin: 0 0 8px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #8a94a6;">Order Summary</p>
+                                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size: 0.82rem; font-weight: 700; color: #1a2233;">
+                                    <tr><td style="padding: 3px 0;">Order Number</td><td style="padding: 3px 0; text-align: right;">{{.order_number}}</td></tr>
+                                    <tr><td style="padding: 3px 0;">Order Date</td><td style="padding: 3px 0; text-align: right;">{{.order_date}}</td></tr>
+                                    <tr><td style="padding: 3px 0;">Order Total</td><td style="padding: 3px 0; text-align: right;">{{.order_total}}</td></tr>
+                                </table>
+                            </td>
+                            {{if .has_ship_to}}
+                            <td width="45%" valign="top">
+                                <p style="margin: 0 0 8px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #8a94a6;">Ship To</p>
+                                <div style="font-size: 0.82rem; font-weight: 700; line-height: 1.5; color: #1a2233;">
+                                    {{if .ship_to_name}}<div>{{.ship_to_name}}</div>{{end}}
+                                    {{if .ship_to_line1}}<div>{{.ship_to_line1}}</div>{{end}}
+                                    {{if .ship_to_line2}}<div>{{.ship_to_line2}}</div>{{end}}
+                                    {{if .ship_to_csz}}<div>{{.ship_to_csz}}</div>{{end}}
+                                </div>
+                            </td>
+                            {{end}}
+                        </tr>
+                    </table>
+
+                    <!-- Line items -->
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0 0; border-collapse: collapse;">
+                        <thead>
+                            <tr>
+                                <th align="left" style="padding: 8px 6px; border-bottom: 2px solid #eef1f5; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #6b7280;">Product</th>
+                                <th align="right" style="padding: 8px 6px; border-bottom: 2px solid #eef1f5; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #6b7280;">Quantity</th>
+                                <th align="right" style="padding: 8px 6px; border-bottom: 2px solid #eef1f5; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #6b7280;">Price</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{range .lines}}
+                            <tr>
+                                <td align="left" style="padding: 10px 6px; border-bottom: 1px solid #f0f2f5; font-size: 0.85rem; color: #1a2233;">
+                                    <div style="font-weight: 700;">{{.sku}}</div>
+                                    {{if .description}}<div style="color: #8a94a6; font-size: 0.8rem;">{{.description}}</div>{{end}}
+                                </td>
+                                <td align="right" valign="top" style="padding: 10px 6px; border-bottom: 1px solid #f0f2f5; font-size: 0.85rem; color: #1a2233;">{{.qty}}</td>
+                                <td align="right" valign="top" style="padding: 10px 6px; border-bottom: 1px solid #f0f2f5; font-size: 0.85rem; font-weight: 700; color: #c0392b;">{{.total}}</td>
+                            </tr>
+                            {{end}}
+                        </tbody>
+                    </table>
+
+                    <!-- Order total -->
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 12px 0 0;">
+                        <tr>
+                            <td align="right" style="font-size: 0.9rem; font-weight: 700; color: #1a2233;">Order Total:&nbsp;&nbsp;</td>
+                            <td align="right" width="30%" style="font-size: 0.9rem; font-weight: 700; color: #c0392b;">{{.order_total}}</td>
+                        </tr>
+                    </table>
+
+                    {{if .order_online_link}}
+                    <hr style="border: none; border-top: 1px solid #eef1f5; margin: 28px 0 24px;">
+                    <div style="text-align: center;">
+                        <p style="margin: 0 0 16px; font-size: 0.95rem; font-weight: 600; color: #1a2233;">Want to order online? Click the button below:</p>
+                        <a href="{{.order_online_link}}" style="display: inline-block; background-color: #1a2233; color: #ffffff; font-size: 0.9rem; font-weight: 700; text-decoration: none; padding: 12px 28px; border-radius: 6px;">Order Online</a>
+                        {{if .customer_number}}
+                        <p style="margin: 16px auto 0; max-width: 440px; font-size: 0.8rem; line-height: 1.6; color: #8a94a6;">
+                            If you are logging in for the first time, you will need your customer number <strong style="color: #1a2233;">{{.customer_number}}</strong> to link your account.
+                        </p>
+                        {{end}}
+                    </div>
+                    {{end}}
+
+                </td></tr>
+            </table>
+
+            <!-- Footer -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0 0;">
+                <tr><td style="text-align: center; font-size: 0.78rem; line-height: 1.7; color: #9aa4b2;">
+                    {{if .account_email}}<div>Email: <a href="mailto:{{.account_email}}" style="color: #6b7280; text-decoration: none;">{{.account_email}}</a></div>{{end}}
+                    {{if .account_website}}<div>Website: <a href="{{.account_website}}" style="color: #6b7280; text-decoration: none;">{{.account_website}}</a></div>{{end}}
+                    <div style="margin-top: 6px;">&copy; {{.year}} {{.account_name}}. All rights reserved.</div>
+                </td></tr>
+            </table>
+        </td></tr>
+    </table>
 </body>
 </html>

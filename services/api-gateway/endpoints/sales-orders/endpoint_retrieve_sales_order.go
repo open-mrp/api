@@ -27,7 +27,7 @@ func (e *RetrieveSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/{id}",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeSalesOrder,
 		RequiredPermissions: []types.Permission{

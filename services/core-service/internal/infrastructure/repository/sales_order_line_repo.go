@@ -6,9 +6,11 @@ import (
 
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/id"
+	"github.com/augno/api/shared/safeconv"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -77,14 +79,17 @@ func (r *salesOrderLineRepoImpl) Create(ctx context.Context, lineID string, para
 		unitCostID = gosql.NullString{String: costID, Valid: true}
 	}
 
-	// Get next line item number
-	lineItemNumber, err := r.queries.GetNextLineItemNumber(ctx, params.SalesOrderID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
+	// Determine where the new line sits. Regular product lines slot in just above
+	// any credit/freight lines, which are kept at the bottom of the list so the line
+	// order does not look odd. Credit/freight lines themselves, and any line on an
+	// order that has none, append to the end.
+	lineItemNumber, apiErr := r.resolveNewLineItemNumber(ctx, params.SalesOrderID, params.ProductID)
+	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
 	// Create quantity record
-	err = r.queries.CreateOrderLineQuantity(ctx, sqlc.CreateOrderLineQuantityParams{
+	err := r.queries.CreateOrderLineQuantity(ctx, sqlc.CreateOrderLineQuantityParams{
 		ID:     quantityID,
 		Value:  params.QuantityValue,
 		UnitID: params.QuantityUnitID,
@@ -137,6 +142,44 @@ func (r *salesOrderLineRepoImpl) Create(ctx context.Context, lineID string, para
 
 	// Re-fetch the created line
 	return r.Get(ctx, lineID)
+}
+
+// resolveNewLineItemNumber computes the line_item_number for a line being added to an order. A credit/freight (shipping) line, or any line on an order that has none, appends to the end. A regular product line slots in at the first credit/freight line's position, pushing that block down by one so credit/freight stay at the bottom. Callers run this inside the create transaction so the shift and insert are atomic.
+func (r *salesOrderLineRepoImpl) resolveNewLineItemNumber(ctx context.Context, salesOrderID, productID string) (int32, *apierror.APIError) {
+	nextNumber, err := r.queries.GetNextLineItemNumber(ctx, salesOrderID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return 0, apiErr
+	}
+
+	// Credit/freight lines always append to the end.
+	if productID != "" {
+		isSystem, err := r.queries.IsSystemLineProduct(ctx, productID)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return 0, apiErr
+		}
+		if isSystem {
+			return nextNumber, nil
+		}
+	}
+
+	firstSystem, err := r.queries.GetFirstSystemLineNumber(ctx, salesOrderID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return 0, apiErr
+	}
+	// No credit/freight lines on the order: append to the end.
+	if firstSystem <= 0 {
+		return nextNumber, nil
+	}
+
+	// Open a slot at the credit/freight block by pushing it (and anything after) down.
+	firstSystemLine := safeconv.Int64ToInt32(firstSystem)
+	if apiErr := db.MapSQLError(r.queries.ShiftSalesOrderLineNumbersAtOrAbove(ctx, sqlc.ShiftSalesOrderLineNumbersAtOrAboveParams{
+		SalesOrderID:       salesOrderID,
+		FromLineItemNumber: gosql.NullInt32{Int32: firstSystemLine, Valid: true},
+	})); apiErr != nil {
+		return 0, apiErr
+	}
+	return firstSystemLine, nil
 }
 
 func (r *salesOrderLineRepoImpl) Update(ctx context.Context, params domain.UpdateSalesOrderLineParams) (*domain.SalesOrderLine, *apierror.APIError) {
@@ -288,16 +331,16 @@ func (r *salesOrderLineRepoImpl) GetNextLineItemNumber(ctx context.Context, sale
 	return nextNumber, nil
 }
 
-func (r *salesOrderLineRepoImpl) HasShippedAgainstOrderLine(ctx context.Context, salesOrderLineID string) (bool, *apierror.APIError) {
-	ctx, span := salesOrderLineRepoTracer.Start(ctx, "repository.sales_order_line.has_shipped_against_order_line")
+func (r *salesOrderLineRepoImpl) HasShipmentAgainstOrderLine(ctx context.Context, salesOrderLineID string) (bool, *apierror.APIError) {
+	ctx, span := salesOrderLineRepoTracer.Start(ctx, "repository.sales_order_line.has_shipment_against_order_line")
 	defer span.End()
 
-	hasShipped, err := r.queries.HasShippedAgainstOrderLine(ctx, salesOrderLineID)
+	hasShipment, err := r.queries.HasShipmentAgainstOrderLine(ctx, salesOrderLineID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return false, tracing.Trace(span, apiErr)
 	}
 
-	return hasShipped, nil
+	return hasShipment, nil
 }
 
 func (r *salesOrderLineRepoImpl) DeleteCascade(ctx context.Context, salesOrderLineID string) *apierror.APIError {
@@ -330,6 +373,44 @@ func (r *salesOrderLineRepoImpl) DeleteCascade(ctx context.Context, salesOrderLi
 
 	// Delete the sales order line itself
 	err = r.queries.DeleteSalesOrderLine(ctx, salesOrderLineID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
+}
+
+func (r *salesOrderLineRepoImpl) GetLineOrder(ctx context.Context, salesOrderID string) ([]*domain.SalesOrderLinePosition, *apierror.APIError) {
+	ctx, span := salesOrderLineRepoTracer.Start(ctx, "repository.sales_order_line.get_line_order")
+	defer span.End()
+
+	rows, err := r.queries.GetSalesOrderLineOrder(ctx, salesOrderID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	positions := make([]*domain.SalesOrderLinePosition, len(rows))
+	for i, row := range rows {
+		positions[i] = &domain.SalesOrderLinePosition{
+			ID:             row.ID,
+			LineItemNumber: row.LineItemNumber.Int32,
+			IsSystem: row.ProductTypeCode.Valid &&
+				(row.ProductTypeCode.String == string(constants.ProductTypeCodeShipping) ||
+					row.ProductTypeCode.String == string(constants.ProductTypeCodeCredit)),
+		}
+	}
+
+	return positions, nil
+}
+
+func (r *salesOrderLineRepoImpl) SetLineItemNumber(ctx context.Context, salesOrderLineID string, lineItemNumber int32) *apierror.APIError {
+	ctx, span := salesOrderLineRepoTracer.Start(ctx, "repository.sales_order_line.set_line_item_number")
+	defer span.End()
+
+	err := r.queries.SetSalesOrderLineItemNumber(ctx, sqlc.SetSalesOrderLineItemNumberParams{
+		LineItemNumber: gosql.NullInt32{Int32: lineItemNumber, Valid: true},
+		ID:             salesOrderLineID,
+	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
@@ -382,6 +463,9 @@ func mapSalesOrderLineRow(row sqlc.GetSalesOrderLineRow) *domain.SalesOrderLine 
 	}
 	if row.ProductID.Valid {
 		line.ProductID = &row.ProductID.String
+	}
+	if row.ProductTypeCode.Valid {
+		line.ProductTypeCode = &row.ProductTypeCode.String
 	}
 	if row.ItemID.Valid {
 		line.ItemID = &row.ItemID.String
@@ -455,6 +539,9 @@ func mapSalesOrderLinesRow(row sqlc.GetSalesOrderLinesRow) *domain.SalesOrderLin
 	}
 	if row.ProductID.Valid {
 		line.ProductID = &row.ProductID.String
+	}
+	if row.ProductTypeCode.Valid {
+		line.ProductTypeCode = &row.ProductTypeCode.String
 	}
 	if row.ItemID.Valid {
 		line.ItemID = &row.ItemID.String

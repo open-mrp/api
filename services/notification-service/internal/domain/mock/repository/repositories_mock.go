@@ -2047,6 +2047,20 @@ func (mr *MockMessageRepoMockRecorder) SetDraftStatus(ctx, id, accountID, status
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDraftStatus", reflect.TypeOf((*MockMessageRepo)(nil).SetDraftStatus), ctx, id, accountID, status)
 }
 
+// SetMessageMetadata mocks base method.
+func (m *MockMessageRepo) SetMessageMetadata(ctx context.Context, id, accountID string, metadata json.RawMessage) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetMessageMetadata", ctx, id, accountID, metadata)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SetMessageMetadata indicates an expected call of SetMessageMetadata.
+func (mr *MockMessageRepoMockRecorder) SetMessageMetadata(ctx, id, accountID, metadata any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetMessageMetadata", reflect.TypeOf((*MockMessageRepo)(nil).SetMessageMetadata), ctx, id, accountID, metadata)
+}
+
 // SetStreamingBody mocks base method.
 func (m *MockMessageRepo) SetStreamingBody(ctx context.Context, id, accountID string, body, preview *string, state string) (bool, *apierror.APIError) {
 	m.ctrl.T.Helper()

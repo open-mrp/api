@@ -88,6 +88,7 @@ SELECT
     COALESCE(so.carrier_billing_account, ar.carrier_billing_account) AS carrier_billing_account,
     s.carrier_id,
     cr.name AS carrier_name,
+    cr.code AS carrier_code,
     cr.is_portal_enabled AS carrier_is_portal_enabled,
     cr.created_at AS carrier_created_at,
     cr.updated_at AS carrier_updated_at,
@@ -179,6 +180,7 @@ type GetShipmentRow struct {
 	CarrierBillingAccount        sql.NullString
 	CarrierID                    string
 	CarrierName                  string
+	CarrierCode                  sql.NullString
 	CarrierIsPortalEnabled       bool
 	CarrierCreatedAt             time.Time
 	CarrierUpdatedAt             time.Time
@@ -250,6 +252,7 @@ func (q *Queries) GetShipment(ctx context.Context, arg GetShipmentParams) (GetSh
 		&i.CarrierBillingAccount,
 		&i.CarrierID,
 		&i.CarrierName,
+		&i.CarrierCode,
 		&i.CarrierIsPortalEnabled,
 		&i.CarrierCreatedAt,
 		&i.CarrierUpdatedAt,
@@ -886,6 +889,38 @@ type MarkShipmentVoidedParams struct {
 
 func (q *Queries) MarkShipmentVoided(ctx context.Context, arg MarkShipmentVoidedParams) error {
 	_, err := q.db.ExecContext(ctx, markShipmentVoided, arg.ID, arg.AccountID)
+	return err
+}
+
+const syncShipmentShippingForOrder = `-- name: SyncShipmentShippingForOrder :exec
+UPDATE shipment
+SET carrier_id = ?,
+    carrier_option_id = ?,
+    shipping_address_id = ?,
+    updated_at = NOW(3)
+WHERE sales_order_id = ?
+AND account_id = ?
+`
+
+type SyncShipmentShippingForOrderParams struct {
+	CarrierID         string
+	CarrierOptionID   sql.NullString
+	ShippingAddressID string
+	SalesOrderID      string
+	AccountID         string
+}
+
+// Re-points every shipment on an order to the order's current carrier, service level,
+// and ship-to address. Run out-of-band after a sales-order shipping change to keep the
+// order's shipments in sync (matching legacy updateCarrierByOrder / updateShipToByOrder).
+func (q *Queries) SyncShipmentShippingForOrder(ctx context.Context, arg SyncShipmentShippingForOrderParams) error {
+	_, err := q.db.ExecContext(ctx, syncShipmentShippingForOrder,
+		arg.CarrierID,
+		arg.CarrierOptionID,
+		arg.ShippingAddressID,
+		arg.SalesOrderID,
+		arg.AccountID,
+	)
 	return err
 }
 

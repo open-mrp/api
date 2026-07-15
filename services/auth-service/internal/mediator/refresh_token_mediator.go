@@ -62,7 +62,7 @@ func (s *refreshTokenMedImpl) Validate(ctx context.Context, refreshToken string)
 	}
 
 	if refreshTokenModel.IsExpired() {
-		return "", tracing.Trace(span, apierror.NewAuthenticationError(ErrExpiredRefreshToken))
+		return "", tracing.Trace(span, apierror.NewExpiredTokenError(ErrExpiredRefreshToken))
 	}
 
 	return refreshTokenModel.UserID, nil
@@ -121,7 +121,7 @@ func (s *refreshTokenMedImpl) Revoke(ctx context.Context, refreshToken string) *
 	}
 
 	if refreshTokenModel.IsExpired() {
-		return tracing.Trace(span, apierror.NewAuthenticationError(ErrExpiredRefreshToken))
+		return tracing.Trace(span, apierror.NewExpiredTokenError(ErrExpiredRefreshToken))
 	}
 
 	err = refreshTokenRepo.Revoke(ctx, refreshToken)

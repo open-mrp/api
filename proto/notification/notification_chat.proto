@@ -416,6 +416,10 @@ message MessageInfo {
   optional string sender_alias_name = 33;
   // Resolved (not persisted): contact display name for a customer-participant message author (staff viewers).
   optional string sender_display_name = 34;
+  // True when this message is an agent reply that resolved a failed run (from message metadata). Lets the client flag the message as a failure.
+  bool agent_run_failed = 35;
+  // Machine-readable api-error code for a failed agent reply (e.g. "agent_spending_cap_reached"), from message metadata. Empty when there is no specific code. Lets the client react (e.g. prompt to raise the spending limit).
+  optional string agent_error_code = 36;
 }
 
 message CreateConversationRequest {

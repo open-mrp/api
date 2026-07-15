@@ -17,6 +17,8 @@ import (
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/crypto"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
+	"github.com/shopspring/decimal"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -50,6 +52,7 @@ type SalesOrderSvcTestSuite struct {
 	pickRepo                 *repositorymock.MockPickRepo
 	productRepo              *repositorymock.MockProductRepo
 	productionRunQueryRepo   *repositorymock.MockProductionRunQueryRepo
+	productionRunRepo        *repositorymock.MockProductionRunRepo
 	territoryRepo            *repositorymock.MockTerritoryRepo
 	unitRepo                 *repositorymock.MockUnitRepo
 	carrierRepo              *repositorymock.MockCarrierRepo
@@ -58,6 +61,9 @@ type SalesOrderSvcTestSuite struct {
 	paymentTermRepo          *repositorymock.MockPaymentTermRepo
 	transactionRepo          *repositorymock.MockTransactionRepo
 	opiRepo                  *repositorymock.MockOrderPaymentIntentRepo
+	productionFlowRepo       *repositorymock.MockProductionFlowRepo
+	productionStepQueryRepo  *repositorymock.MockProductionStepQueryRepo
+	unitConversionRepo       *repositorymock.MockUnitConversionRepo
 
 	// Collaborators.
 	checkoutFactory *clientmock.MockStripeCheckoutClientFactory
@@ -94,6 +100,7 @@ func (suite *SalesOrderSvcTestSuite) SetupTest() {
 	suite.pickRepo = repositorymock.NewMockPickRepo(suite.ctrl)
 	suite.productRepo = repositorymock.NewMockProductRepo(suite.ctrl)
 	suite.productionRunQueryRepo = repositorymock.NewMockProductionRunQueryRepo(suite.ctrl)
+	suite.productionRunRepo = repositorymock.NewMockProductionRunRepo(suite.ctrl)
 	suite.territoryRepo = repositorymock.NewMockTerritoryRepo(suite.ctrl)
 	suite.unitRepo = repositorymock.NewMockUnitRepo(suite.ctrl)
 	suite.carrierRepo = repositorymock.NewMockCarrierRepo(suite.ctrl)
@@ -102,6 +109,9 @@ func (suite *SalesOrderSvcTestSuite) SetupTest() {
 	suite.paymentTermRepo = repositorymock.NewMockPaymentTermRepo(suite.ctrl)
 	suite.transactionRepo = repositorymock.NewMockTransactionRepo(suite.ctrl)
 	suite.opiRepo = repositorymock.NewMockOrderPaymentIntentRepo(suite.ctrl)
+	suite.productionFlowRepo = repositorymock.NewMockProductionFlowRepo(suite.ctrl)
+	suite.productionStepQueryRepo = repositorymock.NewMockProductionStepQueryRepo(suite.ctrl)
+	suite.unitConversionRepo = repositorymock.NewMockUnitConversionRepo(suite.ctrl)
 
 	suite.checkoutFactory = clientmock.NewMockStripeCheckoutClientFactory(suite.ctrl)
 	suite.checkoutClient = clientmock.NewMockStripeCheckoutClient(suite.ctrl)
@@ -125,6 +135,7 @@ func (suite *SalesOrderSvcTestSuite) SetupTest() {
 	suite.repoFactory.EXPECT().NewPickRepo().Return(suite.pickRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewProductRepo().Return(suite.productRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewProductionRunQueryRepo().Return(suite.productionRunQueryRepo).AnyTimes()
+	suite.repoFactory.EXPECT().NewProductionRunRepo().Return(suite.productionRunRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewTerritoryRepo().Return(suite.territoryRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewUnitRepo().Return(suite.unitRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewCarrierRepo().Return(suite.carrierRepo).AnyTimes()
@@ -134,6 +145,9 @@ func (suite *SalesOrderSvcTestSuite) SetupTest() {
 	suite.repoFactory.EXPECT().NewOutboxRepo().Return(&stubOutboxRepo{}).AnyTimes()
 	suite.repoFactory.EXPECT().NewTransactionRepo().Return(suite.transactionRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewOrderPaymentIntentRepo().Return(suite.opiRepo).AnyTimes()
+	suite.repoFactory.EXPECT().NewProductionFlowRepo().Return(suite.productionFlowRepo).AnyTimes()
+	suite.repoFactory.EXPECT().NewProductionStepQueryRepo().Return(suite.productionStepQueryRepo).AnyTimes()
+	suite.repoFactory.EXPECT().NewUnitConversionRepo().Return(suite.unitConversionRepo).AnyTimes()
 
 	suite.idempotencyMed = mediatormock.NewMockIdempotencyMed(suite.ctrl)
 	suite.readAccessMed = mediatormock.NewMockReadAccessMed(suite.ctrl)
@@ -288,6 +302,11 @@ func (suite *SalesOrderSvcTestSuite) TestListSalesOrders_InternalActor() {
 		Return(map[string][]string{"or_1": {"pi_1"}}, nil).
 		Times(1)
 
+	suite.orderRepo.EXPECT().
+		GetFulfillmentProgress(gomock.Any(), []string{"or_1"}).
+		Return(map[string]domain.SalesOrderFulfillmentProgress{"or_1": {PickedCompletion: 1, PackedCompletion: 0.5, InvoicedCompletion: 0.25}}, nil).
+		Times(1)
+
 	result, apiErr := suite.svc.ListSalesOrders(ctx, domain.ListSalesOrdersParams{Limit: 10})
 	suite.Nil(apiErr)
 	suite.NotNil(result)
@@ -356,6 +375,11 @@ func (suite *SalesOrderSvcTestSuite) TestGetSalesOrder_InternalActor() {
 		Return(map[string][]string{"or_1": {"pi_1"}}, nil).
 		Times(1)
 
+	suite.orderRepo.EXPECT().
+		GetFulfillmentProgress(gomock.Any(), []string{"or_1"}).
+		Return(map[string]domain.SalesOrderFulfillmentProgress{"or_1": {PickedCompletion: 1, PackedCompletion: 0.5, InvoicedCompletion: 0.25}}, nil).
+		Times(1)
+
 	result, apiErr := suite.svc.GetSalesOrder(ctx, domain.GetSalesOrderParams{SalesOrderID: "or_1"})
 	suite.Nil(apiErr)
 	suite.Equal("or_1", result.ID)
@@ -384,6 +408,11 @@ func (suite *SalesOrderSvcTestSuite) TestGetSalesOrder_CustomerActorUsesGetForCu
 		Return(map[string][]string{}, nil).
 		Times(1)
 
+	suite.orderRepo.EXPECT().
+		GetFulfillmentProgress(gomock.Any(), []string{"or_1"}).
+		Return(map[string]domain.SalesOrderFulfillmentProgress{}, nil).
+		Times(1)
+
 	result, apiErr := suite.svc.GetSalesOrder(ctx, domain.GetSalesOrderParams{SalesOrderID: "or_1"})
 	suite.Nil(apiErr)
 	suite.Equal("or_1", result.ID)
@@ -405,6 +434,11 @@ func (suite *SalesOrderSvcTestSuite) TestGetSalesOrder_LinesInclude() {
 	suite.orderRepo.EXPECT().
 		GetPaymentIntentIDs(gomock.Any(), "ac_test", []string{"or_1"}).
 		Return(map[string][]string{}, nil).
+		Times(1)
+
+	suite.orderRepo.EXPECT().
+		GetFulfillmentProgress(gomock.Any(), []string{"or_1"}).
+		Return(map[string]domain.SalesOrderFulfillmentProgress{"or_1": {PickedCompletion: 1}}, nil).
 		Times(1)
 
 	suite.orderRepo.EXPECT().
@@ -946,10 +980,13 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_PreservesNullableField
 	suite.orderRepo.EXPECT().
 		Update(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, p domain.UpdateSalesOrderParams) (*domain.SalesOrder, *apierror.APIError) {
+			// Optional FK (still *string): backfilled to the existing value.
 			suite.Require().NotNil(p.CarrierID)
 			suite.Equal("cr_existing", *p.CarrierID)
-			suite.Require().NotNil(p.OrderDiscountID)
-			suite.Equal("odsc_existing", *p.OrderDiscountID)
+			// Clearable FK: an omitted field is backfilled to the existing value (Set), not cleared.
+			discount, ok := p.OrderDiscountID.Value()
+			suite.Require().True(ok)
+			suite.Equal("odsc_existing", discount)
 			return &domain.SalesOrder{ID: "or_1"}, nil
 		}).Times(1)
 
@@ -957,7 +994,36 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_PreservesNullableField
 
 	_, apiErr := suite.svc.UpdateSalesOrder(ctx, domain.UpdateSalesOrderParams{
 		SalesOrderID: "or_1",
-		Note:         new("updated note"),
+		Note:         field.Set("updated note"),
+	})
+	suite.Nil(apiErr)
+}
+
+// An explicit clear (JSON null → field.Clear) must reach the repo as a cleared field
+// (→ SQL NULL), NOT be backfilled to the existing value. This is the core of the
+// three-state contract: omit = leave, null = clear, value = set.
+func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_ClearsNullableField() {
+	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/UpdateSalesOrder")
+
+	suite.expectIdempotencyStarted()
+
+	existingNote := "old note"
+	suite.orderRepo.EXPECT().
+		Get(gomock.Any(), "ac_test", "or_1").
+		Return(&domain.SalesOrder{ID: "or_1", BuyerAccountID: "ac_buyer", Note: &existingNote}, nil).Times(1)
+
+	suite.orderRepo.EXPECT().
+		Update(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, p domain.UpdateSalesOrderParams) (*domain.SalesOrder, *apierror.APIError) {
+			suite.True(p.Note.IsClear(), "an explicit clear must not be backfilled to the existing value")
+			return &domain.SalesOrder{ID: "or_1"}, nil
+		}).Times(1)
+
+	suite.expectCacheSuccess()
+
+	_, apiErr := suite.svc.UpdateSalesOrder(ctx, domain.UpdateSalesOrderParams{
+		SalesOrderID: "or_1",
+		Note:         field.Clear[string](),
 	})
 	suite.Nil(apiErr)
 }
@@ -987,10 +1053,11 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_DuplicateOrderNumberRe
 }
 
 func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_ShippingAddressRepointsOrder() {
-	// Supplying a shipping_address_id re-points the order to an existing address
-	// via the order update. The service must NOT mutate any address or
-	// geolocation records — editing an address is a separate concern handled by
-	// the update-address endpoint.
+	// Supplying a shipping_address_id re-points the order to an existing address via the
+	// order update. The service must NOT mutate any address or geolocation record — editing
+	// an address is a separate concern. It also must NOT re-estimate or overwrite the
+	// shipping line: freight is refreshed only on demand via QuoteSalesOrderFreight, so an
+	// address change never silently changes the freight price.
 	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/UpdateSalesOrder")
 
 	suite.expectIdempotencyStarted()
@@ -1005,6 +1072,8 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_ShippingAddressRepoint
 		})).
 		Return(&domain.SalesOrder{ID: "or_1"}, nil).Times(1)
 
+	// No GetLines / lineRepo.Update / shipping-rate cascade is expected: the shipping line is
+	// left untouched. gomock fails the test if any of those are called.
 	suite.expectCacheSuccess()
 
 	_, apiErr := suite.svc.UpdateSalesOrder(ctx, domain.UpdateSalesOrderParams{
@@ -1012,6 +1081,70 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_ShippingAddressRepoint
 		ShippingAddressID: new("addr_new"),
 	})
 	suite.Nil(apiErr)
+}
+
+func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_NoRepriceWhenShippingUnchanged() {
+	// An update that touches neither ship-to, carrier, nor service level must NOT
+	// re-estimate shipping: no address resolution, no shipping-rate cascade, no line
+	// update. Only setting a scalar like the note leaves the shipping line untouched.
+	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/UpdateSalesOrder")
+
+	suite.expectIdempotencyStarted()
+
+	suite.orderRepo.EXPECT().
+		Get(gomock.Any(), "ac_test", "or_1").
+		Return(&domain.SalesOrder{ID: "or_1", ShippingAddressID: "addr_ship", BuyerAccountID: "ac_buyer"}, nil).Times(1)
+
+	suite.orderRepo.EXPECT().
+		Update(gomock.Any(), gomock.Any()).
+		Return(&domain.SalesOrder{ID: "or_1"}, nil).Times(1)
+
+	suite.expectCacheSuccess()
+
+	_, apiErr := suite.svc.UpdateSalesOrder(ctx, domain.UpdateSalesOrderParams{
+		SalesOrderID: "or_1",
+		Note:         field.Set("just a note"),
+	})
+	suite.Nil(apiErr)
+}
+
+// --- QuoteSalesOrderFreight ---
+
+func (suite *SalesOrderSvcTestSuite) TestQuoteSalesOrderFreight_NoCarrierReturnsZeroReadOnly() {
+	// Re-quoting freight for an order with no carrier runs the same cascade as create and
+	// yields 0 (no carrier → no live rate). The units come from the account's shipping
+	// system product / currency base unit. It is read-only: no lineRepo.Update must be
+	// called (gomock fails the test if it is).
+	ctx := salesOrderInternalCtx("ac_test")
+
+	suite.orderRepo.EXPECT().
+		Get(gomock.Any(), "ac_test", "or_1").
+		Return(&domain.SalesOrder{ID: "or_1", ShippingAddressID: "addr_ship", BuyerAccountID: "ac_buyer"}, nil).AnyTimes()
+
+	suite.expectCreateOrderResolutionChain("ac_test")
+	suite.expectCreateOrderReferenceValidationMocks("ac_test")
+	suite.productRepo.EXPECT().GetSystemProduct(gomock.Any(), "ac_test", "shipping").
+		Return(&domain.SystemProductInfo{ProductID: "prod_ship", QuantityUnitID: "un_ea"}, nil).AnyTimes()
+	suite.productRepo.EXPECT().GetSystemProduct(gomock.Any(), "ac_test", "credit").
+		Return(nil, nil).AnyTimes()
+	suite.orderRepo.EXPECT().GetLines(gomock.Any(), "or_1").
+		Return([]*domain.SalesOrderLine{{ID: "sol_ship", ProductID: new("prod_ship"), QuantityValue: "1", UnitPriceValue: "0"}}, nil).AnyTimes()
+	suite.unitRepo.EXPECT().GetCurrencyBaseUnitID(gomock.Any()).Return("un_usd", nil).AnyTimes()
+
+	quote, apiErr := suite.svc.QuoteSalesOrderFreight(ctx, domain.QuoteSalesOrderFreightParams{SalesOrderID: "or_1"})
+	suite.Nil(apiErr)
+	suite.Require().NotNil(quote)
+	suite.Equal("0", quote.UnitPrice.Value)
+	suite.Equal("un_usd", quote.UnitPrice.NumeratorUnitID)
+	suite.Equal("un_ea", quote.UnitPrice.DenominatorUnitID)
+}
+
+func (suite *SalesOrderSvcTestSuite) TestQuoteSalesOrderFreight_RequiresInternalActor() {
+	// A customer actor cannot re-quote freight (internal-only action).
+	ctx := salesOrderCustomerCtx("ac_test", "ac_buyer")
+
+	_, apiErr := suite.svc.QuoteSalesOrderFreight(ctx, domain.QuoteSalesOrderFreightParams{SalesOrderID: "or_1"})
+	suite.NotNil(apiErr)
 }
 
 // --- DeleteSalesOrder ---
@@ -1107,7 +1240,8 @@ func (suite *SalesOrderSvcTestSuite) TestChangeStatus_IssueFromEstimate_CreatesP
 			{ID: "orl_1", ItemID: &itemID, QuantityValue: "5", QuantityUnitID: "un_ea"},
 		}, nil).Times(1)
 	suite.orderRepo.EXPECT().DeleteReservedInventoryIssues(gomock.Any(), "ac_test", "or_1").Return(nil).Times(1)
-	suite.lineRepo.EXPECT().CreateQuantity(gomock.Any(), gomock.Any(), "5", "un_ea").Return(nil).Times(1)
+	// Pick line seeded at 0 picked; the reserved inventory issue reserves the full ordered qty (5).
+	suite.lineRepo.EXPECT().CreateQuantity(gomock.Any(), gomock.Any(), "0", "un_ea").Return(nil).Times(1)
 	suite.orderRepo.EXPECT().CreatePickLine(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), "orl_1").Return(nil).Times(1)
 	suite.lineRepo.EXPECT().CreateQuantity(gomock.Any(), gomock.Any(), "5", "un_ea").Return(nil).Times(1)
 	suite.orderRepo.EXPECT().
@@ -1145,8 +1279,9 @@ func (suite *SalesOrderSvcTestSuite) TestChangeStatus_IssueWithoutItemID_SkipsIn
 		}, nil).Times(1)
 	suite.orderRepo.EXPECT().DeleteReservedInventoryIssues(gomock.Any(), "ac_test", "or_1").Return(nil).Times(1)
 
-	// Pick line is created for the non-item line, but NO CreateReservedInventoryIssue.
-	suite.lineRepo.EXPECT().CreateQuantity(gomock.Any(), gomock.Any(), "1", "un_ea").Return(nil).Times(1)
+	// Pick line is created for the non-item line at 0 picked (its quantity is the
+	// amount picked so far, not the ordered qty), but NO CreateReservedInventoryIssue.
+	suite.lineRepo.EXPECT().CreateQuantity(gomock.Any(), gomock.Any(), "0", "un_ea").Return(nil).Times(1)
 	suite.orderRepo.EXPECT().CreatePickLine(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), "orl_1").Return(nil).Times(1)
 
 	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
@@ -1217,7 +1352,8 @@ func (suite *SalesOrderSvcTestSuite) TestChangeStatus_Close_MarksPickPacked() {
 		UpdateStatus(gomock.Any(), "ac_test", "or_1", "fulfilled", &issuedAt, gomock.Any()).
 		Return(nil).Times(1)
 
-	// Pick packed.
+	// Closing packs every open pick line, then marks the pick finished.
+	suite.pickRepo.EXPECT().CloseOpenPickLines(gomock.Any(), "pk_1").Return(nil).Times(1)
 	suite.pickRepo.EXPECT().
 		UpdateFinishedAt(gomock.Any(), "ac_test", "pk_1", gomock.Any()).
 		Return(nil).Times(1)
@@ -1247,6 +1383,8 @@ func (suite *SalesOrderSvcTestSuite) TestChangeStatus_Open_ReopensFulfilled() {
 		UpdateStatus(gomock.Any(), "ac_test", "or_1", "issued", &issuedAt, (*time.Time)(nil)).
 		Return(nil).Times(1)
 
+	// Reopening reopens incomplete pick lines, then clears the pick's finished flag.
+	suite.pickRepo.EXPECT().ReopenIncompletePickLines(gomock.Any(), "pk_1").Return(nil).Times(1)
 	suite.pickRepo.EXPECT().ClearFinishedAt(gomock.Any(), "ac_test", "pk_1").Return(nil).Times(1)
 
 	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
@@ -1286,10 +1424,22 @@ func (suite *SalesOrderSvcTestSuite) TestChangeStatus_IssueWithSendEmailFiresNot
 	suite.orderRepo.EXPECT().GetSaleLinesForIssue(gomock.Any(), "or_1").Return(nil, nil).Times(1)
 	suite.orderRepo.EXPECT().DeleteReservedInventoryIssues(gomock.Any(), "ac_test", "or_1").Return(nil).Times(1)
 
-	// Email branch: recipients fetched, account name resolved, email published, ack marked sent.
+	// Email branch: recipients fetched, order/lines/seller branding loaded, email published, ack marked sent.
 	suite.orderRepo.EXPECT().GetAcknowledgementRecipients(gomock.Any(), "or_1").
 		Return([]string{"buyer@example.com"}, nil).Times(1)
-	suite.accountRepo.EXPECT().GetName(gomock.Any(), "ac_test").Return("Test Seller", nil).Times(1)
+	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
+		Return(&domain.SalesOrder{ID: "or_1", Number: "1001"}, nil).Times(1)
+	suite.orderRepo.EXPECT().GetLines(gomock.Any(), "or_1").Return(nil, nil).Times(1)
+	suite.accountRepo.EXPECT().GetByID(gomock.Any(), "ac_test").
+		Return(&domain.Account{ID: "ac_test", Name: "Test Seller"}, nil).Times(1)
+	suite.orderRepo.EXPECT().GetAccountOriginAddress(gomock.Any(), "ac_test").
+		Return(nil, nil).Times(1)
+
+	portalDomainRepo := repositorymock.NewMockPortalDomainRepo(suite.ctrl)
+	suite.repoFactory.EXPECT().NewPortalDomainRepo().Return(portalDomainRepo).AnyTimes()
+	portalDomainRepo.EXPECT().GetByAccountID(gomock.Any(), "ac_test").Return(nil, nil).Times(1)
+	suite.accountRepo.EXPECT().GetPortalSlug(gomock.Any(), "ac_test").Return(nil, nil).Times(1)
+
 	suite.notifier.EXPECT().PublishSendEmail(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 	suite.orderRepo.EXPECT().MarkAcknowledgementSent(gomock.Any(), "ac_test", "or_1").Return(nil).Times(1)
 
@@ -1350,21 +1500,47 @@ func (suite *SalesOrderSvcTestSuite) TestCheckoutSalesOrder_Success() {
 		Return(&domain.SalesOrder{ID: "or_1", Number: "1001", BuyerAccountID: "ac_buyer"}, nil).Times(1)
 	suite.orderRepo.EXPECT().GetLines(gomock.Any(), "or_1").
 		Return([]*domain.SalesOrderLine{
-			{ProductSKU: "SKU-1", QuantityValue: "2", UnitPriceValue: "19.99"},
+			// Fractional quantity: the line's full extended price must be charged, not a
+			// truncated integer quantity (2.5 → 2 would under-charge).
+			{ProductSKU: "SKU-1", QuantityValue: "2.5", UnitPriceValue: "20.00"},
+			// A negative-priced discount credit line must net into the single aggregate
+			// charge, never become its own (negative) Stripe line item.
+			{ProductSKU: "DISCOUNT", QuantityValue: "1", UnitPriceValue: "-10.00"},
 		}, nil).Times(1)
+
+	// The buyer must already be a Stripe customer; the session bills to it (not a bare email).
+	stripeCustomerID := "cus_123"
+	stripeEmail := "buyer@example.com"
+	suite.customerRepo.EXPECT().GetStripeCustomerID(gomock.Any(), "ac_test", "ac_buyer").
+		Return(&stripeCustomerID, &stripeEmail, nil).Times(1)
+
+	// Success/cancel URLs are built server-side from the account's portal slug, never
+	// from caller input, so the emailed checkout link can't be turned into an open redirect.
+	portalSlug := "acme"
+	suite.accountRepo.EXPECT().GetPortalSlug(gomock.Any(), "ac_test").Return(&portalSlug, nil).Times(1)
 
 	suite.checkoutFactory.EXPECT().Build("sk_test_xxx").Return(suite.checkoutClient).Times(1)
 	suite.checkoutClient.EXPECT().
 		CreateOneTimeCheckoutSession(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, params domain.CreateCheckoutSessionParams) (*domain.StripeCheckoutSession, *apierror.APIError) {
-			suite.Equal("buyer@example.com", params.CustomerEmail)
+			// Session is billed to the resolved Stripe customer, not a bare email.
+			suite.Equal("cus_123", params.StripeCustomerID)
+			suite.Empty(params.CustomerEmail)
 			suite.Require().Len(params.LineItems, 1)
-			// 19.99 → 1999 cents, qty 2.
-			suite.Equal(int64(1999), params.LineItems[0].AmountCents)
-			suite.Equal(int64(2), params.LineItems[0].Quantity)
+			// Single aggregate line item: (2.5 × $20.00) + (1 × -$10.00) = $40.00 → 4000 cents.
+			suite.Equal(int64(4000), params.LineItems[0].AmountCents)
+			suite.Equal(int64(1), params.LineItems[0].Quantity)
+			// Label uses the zero-padded record number (formatRecordNumber("1001")).
+			suite.Equal("SO #001001", params.LineItems[0].Name)
 			// Metadata must carry orderID + customerID for webhook correlation.
 			suite.Equal("or_1", params.PaymentIntentMetadata["orderID"])
 			suite.Equal("ac_buyer", params.PaymentIntentMetadata["customerID"])
+			// Redirect URLs point at the customer-portal order page, derived from
+			// FrontendURL + portal slug + order id — not anything caller-supplied.
+			suite.Require().NotNil(params.SuccessURL)
+			suite.Require().NotNil(params.CancelURL)
+			suite.Equal("https://dash.test/acme/dashboard/sales-orders/or_1?payment=success", *params.SuccessURL)
+			suite.Equal("https://dash.test/acme/dashboard/sales-orders/or_1?payment=cancelled", *params.CancelURL)
 			return &domain.StripeCheckoutSession{URL: "https://checkout.stripe.com/test"}, nil
 		}).Times(1)
 
@@ -1461,8 +1637,22 @@ func (suite *SalesOrderSvcTestSuite) TestCreateProductionRun_SuccessUsesBOMLines
 
 	suite.productionRunQueryRepo.EXPECT().GetNextNumber(gomock.Any(), "ac_test").Return("PR-001", nil).Times(1)
 	suite.materialDemandRepo.EXPECT().
-		GetMaterialDemand(gomock.Any(), "ac_test", "itm_1", gomock.Any(), "un_ea").
+		GetMaterialDemandForOrder(gomock.Any(), "ac_test", []domain.MaterialDemandLineInput{{ItemID: "itm_1", UnitID: "un_ea"}}).
 		Return([]domain.MaterialDemandItem{}, nil).Times(1)
+
+	// Batch computation walks itm_1's production flow: a single material-only step
+	// producing itm_1 from a material yields one batch for itm_1.
+	suite.productionFlowRepo.EXPECT().FindStepsByProducedItem(gomock.Any(), "ac_test", "itm_1").Return([]string{"step_1"}, nil).Times(1)
+	suite.productionFlowRepo.EXPECT().GetAllStepEdgesForAccount(gomock.Any(), "ac_test").Return(nil, nil).Times(1)
+	suite.productionFlowRepo.EXPECT().GetFlowStep(gomock.Any(), "ac_test", "step_1").
+		Return(&domain.ProductionFlowStep{
+			ID:         "step_1",
+			Production: domain.StepProduction{ProducedItem: domain.LightItem{ID: "itm_1"}, Quantity: domain.BatchQuantity{Measure: decimal.NewFromInt(1), Unit: domain.LightUnit{ID: "un_ea"}}},
+		}, nil).Times(1)
+	suite.productionStepQueryRepo.EXPECT().Find(gomock.Any(), "ac_test", "step_1").
+		Return(&domain.ProductionStepDetail{Consumptions: []domain.StepConsumption{{ConsumedItem: domain.LightItem{ID: "mat_1", Type: "material"}, Quantity: domain.BatchQuantity{Measure: decimal.NewFromInt(1), Unit: domain.LightUnit{ID: "un_ea"}}}}}, nil).Times(1)
+	suite.unitConversionRepo.EXPECT().GetUnitFactors(gomock.Any(), "ac_test", gomock.Any()).
+		Return(map[string]domain.UnitFactors{"un_ea": {IsBaseUnit: true}}, nil).Times(1)
 
 	// Inside the transaction: create run + batch + link.
 	suite.productionRunQueryRepo.EXPECT().
@@ -1474,11 +1664,16 @@ func (suite *SalesOrderSvcTestSuite) TestCreateProductionRun_SuccessUsesBOMLines
 	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
 		Return(&domain.SalesOrder{ID: "or_1"}, nil).Times(1)
 
+	// The created run is reloaded so the response carries the full production run resource.
+	suite.productionRunRepo.EXPECT().Get(gomock.Any(), gomock.Any()).
+		Return(&domain.ProductionRun{ID: "pnrn_1", Number: "PR-001", BatchCount: 1}, nil).Times(1)
+
 	suite.expectCacheSuccess()
 
 	result, apiErr := suite.svc.CreateSalesOrderProductionRun(ctx, domain.CreateSalesOrderProductionRunParams{
 		SalesOrderID: "or_1",
 	})
 	suite.Nil(apiErr)
-	suite.NotEmpty(result.ProductionRunID)
+	suite.Require().NotNil(result.ProductionRun)
+	suite.Equal("pnrn_1", result.ProductionRun.ID)
 }

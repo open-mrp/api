@@ -77,6 +77,12 @@ const (
 	// CoreEventSalesOrderCreated is an event indicating a sales order was created. Consumers use it to run out-of-band side effects (e.g. syncing the order to a third-party CRM such as HubSpot) without blocking the create response.
 	CoreEventSalesOrderCreated AmqpRoutingKey = "core.event.sales_order_created"
 
+	// CoreEventSalesOrderShippingUpdated indicates a sales order's carrier, service level, or ship-to address changed. The core-service consumer re-syncs the order's existing shipment records to match, out-of-band from the update response.
+	CoreEventSalesOrderShippingUpdated AmqpRoutingKey = "core.event.sales_order_shipping_updated"
+
+	// CoreEventCustomerRegistered indicates a buyer completed registration on a seller's customer portal (a brand-new customer account or a new login joining an existing one). The notification-service consumer notifies the seller's customer-service support-route group so they can follow up.
+	CoreEventCustomerRegistered AmqpRoutingKey = "core.event.customer_registered"
+
 	// Logging
 
 	// LoggingEventRequestLogged is an event that indicates that a request has been logged.

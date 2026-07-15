@@ -59,6 +59,7 @@ type AccountBranding struct {
 	OwnerAccountID  string
 	SupportEmail    sql.NullString
 	LogoUrl         sql.NullString
+	FaviconUrl      sql.NullString
 	PhoneNumber     sql.NullString
 	FacebookHandle  sql.NullString
 	InstagramHandle sql.NullString

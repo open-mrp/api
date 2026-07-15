@@ -51,12 +51,20 @@ func (c *checkoutClientImpl) CreateOneTimeCheckoutSession(ctx context.Context, p
 
 	sessParams := &gostripe.CheckoutSessionParams{
 		Mode:               gostripe.String(string(gostripe.CheckoutSessionModePayment)),
-		CustomerEmail:      gostripe.String(params.CustomerEmail),
 		LineItems:          lineItems,
 		PaymentMethodTypes: gostripe.StringSlice([]string{"card"}),
-		SavedPaymentMethodOptions: &gostripe.CheckoutSessionSavedPaymentMethodOptionsParams{
+	}
+
+	// Bill the session to an existing Stripe customer when we have one (and only
+	// then offer to save the payment method, matching the legacy dashboard) —
+	// otherwise fall back to a bare customer_email. Stripe rejects both together.
+	if params.StripeCustomerID != "" {
+		sessParams.Customer = gostripe.String(params.StripeCustomerID)
+		sessParams.SavedPaymentMethodOptions = &gostripe.CheckoutSessionSavedPaymentMethodOptionsParams{
 			PaymentMethodSave: gostripe.String("enabled"),
-		},
+		}
+	} else {
+		sessParams.CustomerEmail = gostripe.String(params.CustomerEmail)
 	}
 
 	if len(params.PaymentIntentMetadata) > 0 {

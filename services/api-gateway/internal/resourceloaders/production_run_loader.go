@@ -45,8 +45,8 @@ func LoadProductionRuns(ctx context.Context, ids []string) (map[string]any, *api
 	return out, nil
 }
 
-func productionRunReferenceFromProto(info *pb.ProductionRunInfo) *apiresource.ProductionRunDetail {
-	return &apiresource.ProductionRunDetail{
+func productionRunReferenceFromProto(info *pb.ProductionRunInfo) *apiresource.ProductionRun {
+	return &apiresource.ProductionRun{
 		ID:          info.Id,
 		Object:      constants.ObjectTypeProductionRun,
 		Number:      info.Number,

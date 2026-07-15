@@ -131,9 +131,12 @@ const (
 	CoreService_UpdatePortalRegistrationSession_FullMethodName            = "/core.CoreService/UpdatePortalRegistrationSession"
 	CoreService_CompletePortalRegistrationSession_FullMethodName          = "/core.CoreService/CompletePortalRegistrationSession"
 	CoreService_AbandonPortalRegistrationSession_FullMethodName           = "/core.CoreService/AbandonPortalRegistrationSession"
+	CoreService_ListPortalRegistrationSessions_FullMethodName             = "/core.CoreService/ListPortalRegistrationSessions"
 	CoreService_UpdateAccount_FullMethodName                              = "/core.CoreService/UpdateAccount"
 	CoreService_UploadAccountPhoto_FullMethodName                         = "/core.CoreService/UploadAccountPhoto"
 	CoreService_GetAccountLogoURL_FullMethodName                          = "/core.CoreService/GetAccountLogoURL"
+	CoreService_UploadAccountFavicon_FullMethodName                       = "/core.CoreService/UploadAccountFavicon"
+	CoreService_GetAccountFaviconURL_FullMethodName                       = "/core.CoreService/GetAccountFaviconURL"
 	CoreService_ListProperties_FullMethodName                             = "/core.CoreService/ListProperties"
 	CoreService_GetProperty_FullMethodName                                = "/core.CoreService/GetProperty"
 	CoreService_CreateProperty_FullMethodName                             = "/core.CoreService/CreateProperty"
@@ -231,6 +234,8 @@ const (
 	CoreService_DeleteCustomer_FullMethodName                             = "/core.CoreService/DeleteCustomer"
 	CoreService_BulkDeleteCustomers_FullMethodName                        = "/core.CoreService/BulkDeleteCustomers"
 	CoreService_GetFrequentlyOrderedProducts_FullMethodName               = "/core.CoreService/GetFrequentlyOrderedProducts"
+	CoreService_ListCustomerNotificationRecipients_FullMethodName         = "/core.CoreService/ListCustomerNotificationRecipients"
+	CoreService_UpdateCustomerNotificationRecipients_FullMethodName       = "/core.CoreService/UpdateCustomerNotificationRecipients"
 	CoreService_UpdateCustomer_FullMethodName                             = "/core.CoreService/UpdateCustomer"
 	CoreService_MergeCustomers_FullMethodName                             = "/core.CoreService/MergeCustomers"
 	CoreService_AnalyzeSales_FullMethodName                               = "/core.CoreService/AnalyzeSales"
@@ -608,12 +613,18 @@ type CoreServiceClient interface {
 	UpdatePortalRegistrationSession(ctx context.Context, in *UpdatePortalRegistrationSessionRequest, opts ...grpc.CallOption) (*PortalRegistrationSessionResponse, error)
 	CompletePortalRegistrationSession(ctx context.Context, in *CompletePortalRegistrationSessionRequest, opts ...grpc.CallOption) (*PortalRegistrationSessionResponse, error)
 	AbandonPortalRegistrationSession(ctx context.Context, in *AbandonPortalRegistrationSessionRequest, opts ...grpc.CallOption) (*PortalRegistrationSessionResponse, error)
+	// Seller-facing: lists the account's buyer registration sessions (including stalled/expired ones) for customer-service follow-up.
+	ListPortalRegistrationSessions(ctx context.Context, in *ListPortalRegistrationSessionsRequest, opts ...grpc.CallOption) (*ListPortalRegistrationSessionsResponse, error)
 	// Partially updates an account's name, branding, and portal fields.
 	UpdateAccount(ctx context.Context, in *UpdateAccountRequest, opts ...grpc.CallOption) (*UpdateAccountResponse, error)
 	// Uploads a logo image for an account to S3.
 	UploadAccountPhoto(ctx context.Context, in *UploadAccountPhotoRequest, opts ...grpc.CallOption) (*UploadAccountPhotoResponse, error)
 	// Returns a presigned S3 URL for the account's logo.
 	GetAccountLogoURL(ctx context.Context, in *GetAccountLogoURLRequest, opts ...grpc.CallOption) (*GetAccountLogoURLResponse, error)
+	// Uploads a favicon image for an account's customer portal to S3.
+	UploadAccountFavicon(ctx context.Context, in *UploadAccountFaviconRequest, opts ...grpc.CallOption) (*UploadAccountFaviconResponse, error)
+	// Returns a presigned S3 URL for the account's portal favicon.
+	GetAccountFaviconURL(ctx context.Context, in *GetAccountFaviconURLRequest, opts ...grpc.CallOption) (*GetAccountFaviconURLResponse, error)
 	// Returns a paginated list of properties for the caller's account.
 	ListProperties(ctx context.Context, in *ListPropertiesRequest, opts ...grpc.CallOption) (*ListPropertiesResponse, error)
 	// Returns a single property by ID.
@@ -790,6 +801,10 @@ type CoreServiceClient interface {
 	BulkDeleteCustomers(ctx context.Context, in *BulkDeleteCustomersRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Returns the most frequently ordered products for a customer.
 	GetFrequentlyOrderedProducts(ctx context.Context, in *GetFrequentlyOrderedProductsRequest, opts ...grpc.CallOption) (*GetFrequentlyOrderedProductsResponse, error)
+	// Returns the default order-notification recipients configured for a customer relationship.
+	ListCustomerNotificationRecipients(ctx context.Context, in *ListCustomerNotificationRecipientsRequest, opts ...grpc.CallOption) (*ListCustomerNotificationRecipientsResponse, error)
+	// Replaces the default order-notification recipients configured for a customer relationship.
+	UpdateCustomerNotificationRecipients(ctx context.Context, in *UpdateCustomerNotificationRecipientsRequest, opts ...grpc.CallOption) (*UpdateCustomerNotificationRecipientsResponse, error)
 	UpdateCustomer(ctx context.Context, in *UpdateCustomerRequest, opts ...grpc.CallOption) (*UpdateCustomerResponse, error)
 	// Merges source customers into a target customer.
 	MergeCustomers(ctx context.Context, in *MergeCustomersRequest, opts ...grpc.CallOption) (*MergeCustomersResponse, error)
@@ -2049,6 +2064,16 @@ func (c *coreServiceClient) AbandonPortalRegistrationSession(ctx context.Context
 	return out, nil
 }
 
+func (c *coreServiceClient) ListPortalRegistrationSessions(ctx context.Context, in *ListPortalRegistrationSessionsRequest, opts ...grpc.CallOption) (*ListPortalRegistrationSessionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListPortalRegistrationSessionsResponse)
+	err := c.cc.Invoke(ctx, CoreService_ListPortalRegistrationSessions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *coreServiceClient) UpdateAccount(ctx context.Context, in *UpdateAccountRequest, opts ...grpc.CallOption) (*UpdateAccountResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(UpdateAccountResponse)
@@ -2073,6 +2098,26 @@ func (c *coreServiceClient) GetAccountLogoURL(ctx context.Context, in *GetAccoun
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetAccountLogoURLResponse)
 	err := c.cc.Invoke(ctx, CoreService_GetAccountLogoURL_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) UploadAccountFavicon(ctx context.Context, in *UploadAccountFaviconRequest, opts ...grpc.CallOption) (*UploadAccountFaviconResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UploadAccountFaviconResponse)
+	err := c.cc.Invoke(ctx, CoreService_UploadAccountFavicon_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) GetAccountFaviconURL(ctx context.Context, in *GetAccountFaviconURLRequest, opts ...grpc.CallOption) (*GetAccountFaviconURLResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetAccountFaviconURLResponse)
+	err := c.cc.Invoke(ctx, CoreService_GetAccountFaviconURL_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -3043,6 +3088,26 @@ func (c *coreServiceClient) GetFrequentlyOrderedProducts(ctx context.Context, in
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetFrequentlyOrderedProductsResponse)
 	err := c.cc.Invoke(ctx, CoreService_GetFrequentlyOrderedProducts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) ListCustomerNotificationRecipients(ctx context.Context, in *ListCustomerNotificationRecipientsRequest, opts ...grpc.CallOption) (*ListCustomerNotificationRecipientsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListCustomerNotificationRecipientsResponse)
+	err := c.cc.Invoke(ctx, CoreService_ListCustomerNotificationRecipients_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) UpdateCustomerNotificationRecipients(ctx context.Context, in *UpdateCustomerNotificationRecipientsRequest, opts ...grpc.CallOption) (*UpdateCustomerNotificationRecipientsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateCustomerNotificationRecipientsResponse)
+	err := c.cc.Invoke(ctx, CoreService_UpdateCustomerNotificationRecipients_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -4909,12 +4974,18 @@ type CoreServiceServer interface {
 	UpdatePortalRegistrationSession(context.Context, *UpdatePortalRegistrationSessionRequest) (*PortalRegistrationSessionResponse, error)
 	CompletePortalRegistrationSession(context.Context, *CompletePortalRegistrationSessionRequest) (*PortalRegistrationSessionResponse, error)
 	AbandonPortalRegistrationSession(context.Context, *AbandonPortalRegistrationSessionRequest) (*PortalRegistrationSessionResponse, error)
+	// Seller-facing: lists the account's buyer registration sessions (including stalled/expired ones) for customer-service follow-up.
+	ListPortalRegistrationSessions(context.Context, *ListPortalRegistrationSessionsRequest) (*ListPortalRegistrationSessionsResponse, error)
 	// Partially updates an account's name, branding, and portal fields.
 	UpdateAccount(context.Context, *UpdateAccountRequest) (*UpdateAccountResponse, error)
 	// Uploads a logo image for an account to S3.
 	UploadAccountPhoto(context.Context, *UploadAccountPhotoRequest) (*UploadAccountPhotoResponse, error)
 	// Returns a presigned S3 URL for the account's logo.
 	GetAccountLogoURL(context.Context, *GetAccountLogoURLRequest) (*GetAccountLogoURLResponse, error)
+	// Uploads a favicon image for an account's customer portal to S3.
+	UploadAccountFavicon(context.Context, *UploadAccountFaviconRequest) (*UploadAccountFaviconResponse, error)
+	// Returns a presigned S3 URL for the account's portal favicon.
+	GetAccountFaviconURL(context.Context, *GetAccountFaviconURLRequest) (*GetAccountFaviconURLResponse, error)
 	// Returns a paginated list of properties for the caller's account.
 	ListProperties(context.Context, *ListPropertiesRequest) (*ListPropertiesResponse, error)
 	// Returns a single property by ID.
@@ -5091,6 +5162,10 @@ type CoreServiceServer interface {
 	BulkDeleteCustomers(context.Context, *BulkDeleteCustomersRequest) (*emptypb.Empty, error)
 	// Returns the most frequently ordered products for a customer.
 	GetFrequentlyOrderedProducts(context.Context, *GetFrequentlyOrderedProductsRequest) (*GetFrequentlyOrderedProductsResponse, error)
+	// Returns the default order-notification recipients configured for a customer relationship.
+	ListCustomerNotificationRecipients(context.Context, *ListCustomerNotificationRecipientsRequest) (*ListCustomerNotificationRecipientsResponse, error)
+	// Replaces the default order-notification recipients configured for a customer relationship.
+	UpdateCustomerNotificationRecipients(context.Context, *UpdateCustomerNotificationRecipientsRequest) (*UpdateCustomerNotificationRecipientsResponse, error)
 	UpdateCustomer(context.Context, *UpdateCustomerRequest) (*UpdateCustomerResponse, error)
 	// Merges source customers into a target customer.
 	MergeCustomers(context.Context, *MergeCustomersRequest) (*MergeCustomersResponse, error)
@@ -5622,6 +5697,9 @@ func (UnimplementedCoreServiceServer) CompletePortalRegistrationSession(context.
 func (UnimplementedCoreServiceServer) AbandonPortalRegistrationSession(context.Context, *AbandonPortalRegistrationSessionRequest) (*PortalRegistrationSessionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AbandonPortalRegistrationSession not implemented")
 }
+func (UnimplementedCoreServiceServer) ListPortalRegistrationSessions(context.Context, *ListPortalRegistrationSessionsRequest) (*ListPortalRegistrationSessionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListPortalRegistrationSessions not implemented")
+}
 func (UnimplementedCoreServiceServer) UpdateAccount(context.Context, *UpdateAccountRequest) (*UpdateAccountResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateAccount not implemented")
 }
@@ -5630,6 +5708,12 @@ func (UnimplementedCoreServiceServer) UploadAccountPhoto(context.Context, *Uploa
 }
 func (UnimplementedCoreServiceServer) GetAccountLogoURL(context.Context, *GetAccountLogoURLRequest) (*GetAccountLogoURLResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetAccountLogoURL not implemented")
+}
+func (UnimplementedCoreServiceServer) UploadAccountFavicon(context.Context, *UploadAccountFaviconRequest) (*UploadAccountFaviconResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UploadAccountFavicon not implemented")
+}
+func (UnimplementedCoreServiceServer) GetAccountFaviconURL(context.Context, *GetAccountFaviconURLRequest) (*GetAccountFaviconURLResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetAccountFaviconURL not implemented")
 }
 func (UnimplementedCoreServiceServer) ListProperties(context.Context, *ListPropertiesRequest) (*ListPropertiesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListProperties not implemented")
@@ -5921,6 +6005,12 @@ func (UnimplementedCoreServiceServer) BulkDeleteCustomers(context.Context, *Bulk
 }
 func (UnimplementedCoreServiceServer) GetFrequentlyOrderedProducts(context.Context, *GetFrequentlyOrderedProductsRequest) (*GetFrequentlyOrderedProductsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetFrequentlyOrderedProducts not implemented")
+}
+func (UnimplementedCoreServiceServer) ListCustomerNotificationRecipients(context.Context, *ListCustomerNotificationRecipientsRequest) (*ListCustomerNotificationRecipientsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListCustomerNotificationRecipients not implemented")
+}
+func (UnimplementedCoreServiceServer) UpdateCustomerNotificationRecipients(context.Context, *UpdateCustomerNotificationRecipientsRequest) (*UpdateCustomerNotificationRecipientsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateCustomerNotificationRecipients not implemented")
 }
 func (UnimplementedCoreServiceServer) UpdateCustomer(context.Context, *UpdateCustomerRequest) (*UpdateCustomerResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateCustomer not implemented")
@@ -8310,6 +8400,24 @@ func _CoreService_AbandonPortalRegistrationSession_Handler(srv interface{}, ctx 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CoreService_ListPortalRegistrationSessions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListPortalRegistrationSessionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).ListPortalRegistrationSessions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_ListPortalRegistrationSessions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).ListPortalRegistrationSessions(ctx, req.(*ListPortalRegistrationSessionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CoreService_UpdateAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(UpdateAccountRequest)
 	if err := dec(in); err != nil {
@@ -8360,6 +8468,42 @@ func _CoreService_GetAccountLogoURL_Handler(srv interface{}, ctx context.Context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CoreServiceServer).GetAccountLogoURL(ctx, req.(*GetAccountLogoURLRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_UploadAccountFavicon_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UploadAccountFaviconRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).UploadAccountFavicon(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_UploadAccountFavicon_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).UploadAccountFavicon(ctx, req.(*UploadAccountFaviconRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_GetAccountFaviconURL_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAccountFaviconURLRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).GetAccountFaviconURL(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_GetAccountFaviconURL_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).GetAccountFaviconURL(ctx, req.(*GetAccountFaviconURLRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -10106,6 +10250,42 @@ func _CoreService_GetFrequentlyOrderedProducts_Handler(srv interface{}, ctx cont
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CoreServiceServer).GetFrequentlyOrderedProducts(ctx, req.(*GetFrequentlyOrderedProductsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_ListCustomerNotificationRecipients_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCustomerNotificationRecipientsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).ListCustomerNotificationRecipients(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_ListCustomerNotificationRecipients_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).ListCustomerNotificationRecipients(ctx, req.(*ListCustomerNotificationRecipientsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_UpdateCustomerNotificationRecipients_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateCustomerNotificationRecipientsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).UpdateCustomerNotificationRecipients(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_UpdateCustomerNotificationRecipients_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).UpdateCustomerNotificationRecipients(ctx, req.(*UpdateCustomerNotificationRecipientsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -13504,6 +13684,10 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _CoreService_AbandonPortalRegistrationSession_Handler,
 		},
 		{
+			MethodName: "ListPortalRegistrationSessions",
+			Handler:    _CoreService_ListPortalRegistrationSessions_Handler,
+		},
+		{
 			MethodName: "UpdateAccount",
 			Handler:    _CoreService_UpdateAccount_Handler,
 		},
@@ -13514,6 +13698,14 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetAccountLogoURL",
 			Handler:    _CoreService_GetAccountLogoURL_Handler,
+		},
+		{
+			MethodName: "UploadAccountFavicon",
+			Handler:    _CoreService_UploadAccountFavicon_Handler,
+		},
+		{
+			MethodName: "GetAccountFaviconURL",
+			Handler:    _CoreService_GetAccountFaviconURL_Handler,
 		},
 		{
 			MethodName: "ListProperties",
@@ -13902,6 +14094,14 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetFrequentlyOrderedProducts",
 			Handler:    _CoreService_GetFrequentlyOrderedProducts_Handler,
+		},
+		{
+			MethodName: "ListCustomerNotificationRecipients",
+			Handler:    _CoreService_ListCustomerNotificationRecipients_Handler,
+		},
+		{
+			MethodName: "UpdateCustomerNotificationRecipients",
+			Handler:    _CoreService_UpdateCustomerNotificationRecipients_Handler,
 		},
 		{
 			MethodName: "UpdateCustomer",

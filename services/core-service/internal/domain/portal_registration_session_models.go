@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/augno/api/shared/constants"
+	"github.com/augno/api/shared/pagination"
 )
 
 // PortalRegistrationSessionData is the scratch form data accumulated across the buyer registration steps, persisted as JSON on the session so a resumed session restores exactly where the buyer left off.
@@ -55,4 +56,39 @@ type UpdatePortalRegistrationSessionParams struct {
 	Step               constants.PortalRegistrationStep
 	SessionData        PortalRegistrationSessionData
 	IsExistingCustomer *bool
+}
+
+// DeriveStatus computes the session's lifecycle status as of now: completed/abandoned take precedence over the derived in-progress-vs-expired split (an incomplete session past its resume TTL reads as expired). now is passed in so callers control the clock (testability).
+func (s *PortalRegistrationSession) DeriveStatus(now time.Time) constants.PortalRegistrationStatus {
+	switch {
+	case s.CompletedAt != nil:
+		return constants.PortalRegistrationStatusCompleted
+	case s.AbandonedAt != nil:
+		return constants.PortalRegistrationStatusAbandoned
+	case now.Sub(s.CreatedAt) >= constants.PortalRegistrationSessionTTL:
+		return constants.PortalRegistrationStatusExpired
+	default:
+		return constants.PortalRegistrationStatusInProgress
+	}
+}
+
+// ListPortalRegistrationSessionsParams lists a seller's buyer-registration sessions for the customer-service follow-up view.
+type ListPortalRegistrationSessionsParams struct {
+	// SellerAccountID scopes the list to one seller account.
+	SellerAccountID string
+	// Cursor / Limit drive keyset pagination.
+	Cursor *string
+	Limit  int32
+	// StatusFilter, when set, restricts to one derived status (in_progress | completed | abandoned | expired).
+	StatusFilter *string
+	// SearchTerm, when set, matches the registrant's captured customer name/number or the session id.
+	SearchTerm *string
+	// ExpiryThreshold is the created-at boundary (now - TTL) below which an incomplete session counts as expired. Supplied by the service so the TTL is single-sourced.
+	ExpiryThreshold time.Time
+}
+
+// ListPortalRegistrationSessionsResult is a page of registration sessions.
+type ListPortalRegistrationSessionsResult struct {
+	Sessions []*PortalRegistrationSession
+	PageInfo pagination.PageInfo
 }

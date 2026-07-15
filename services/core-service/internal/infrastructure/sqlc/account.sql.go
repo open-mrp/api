@@ -196,6 +196,17 @@ func (q *Queries) GetAccountBrandingByAccountID(ctx context.Context, ownerAccoun
 	return logo_url, err
 }
 
+const getAccountBrandingFaviconKey = `-- name: GetAccountBrandingFaviconKey :one
+SELECT favicon_url FROM account_branding WHERE owner_account_id = ?
+`
+
+func (q *Queries) GetAccountBrandingFaviconKey(ctx context.Context, accountID string) (sql.NullString, error) {
+	row := q.db.QueryRowContext(ctx, getAccountBrandingFaviconKey, accountID)
+	var favicon_url sql.NullString
+	err := row.Scan(&favicon_url)
+	return favicon_url, err
+}
+
 const getAccountBrandingLogoKey = `-- name: GetAccountBrandingLogoKey :one
 SELECT logo_url FROM account_branding WHERE owner_account_id = ?
 `
@@ -219,6 +230,7 @@ SELECT
     ab.support_email AS branding_support_email,
     ab.phone_number AS branding_phone_number,
     ab.logo_url AS branding_logo_url,
+    ab.favicon_url AS branding_favicon_url,
     ab.facebook_handle AS branding_facebook_handle,
     ab.instagram_handle AS branding_instagram_handle,
     ab.linkedin_handle AS branding_linkedin_handle,
@@ -247,6 +259,7 @@ type GetAccountByIDRow struct {
 	BrandingSupportEmail     sql.NullString
 	BrandingPhoneNumber      sql.NullString
 	BrandingLogoUrl          sql.NullString
+	BrandingFaviconUrl       sql.NullString
 	BrandingFacebookHandle   sql.NullString
 	BrandingInstagramHandle  sql.NullString
 	BrandingLinkedinHandle   sql.NullString
@@ -274,6 +287,7 @@ func (q *Queries) GetAccountByID(ctx context.Context, accountID string) (GetAcco
 		&i.BrandingSupportEmail,
 		&i.BrandingPhoneNumber,
 		&i.BrandingLogoUrl,
+		&i.BrandingFaviconUrl,
 		&i.BrandingFacebookHandle,
 		&i.BrandingInstagramHandle,
 		&i.BrandingLinkedinHandle,
@@ -446,6 +460,7 @@ SELECT
     ab.support_email AS branding_support_email,
     ab.phone_number AS branding_phone_number,
     ab.logo_url AS branding_logo_url,
+    ab.favicon_url AS branding_favicon_url,
     ab.facebook_handle AS branding_facebook_handle,
     ab.instagram_handle AS branding_instagram_handle,
     ab.linkedin_handle AS branding_linkedin_handle,
@@ -474,6 +489,7 @@ type GetAccountsByIDsRow struct {
 	BrandingSupportEmail     sql.NullString
 	BrandingPhoneNumber      sql.NullString
 	BrandingLogoUrl          sql.NullString
+	BrandingFaviconUrl       sql.NullString
 	BrandingFacebookHandle   sql.NullString
 	BrandingInstagramHandle  sql.NullString
 	BrandingLinkedinHandle   sql.NullString
@@ -520,6 +536,7 @@ func (q *Queries) GetAccountsByIDs(ctx context.Context, ids []string) ([]GetAcco
 			&i.BrandingSupportEmail,
 			&i.BrandingPhoneNumber,
 			&i.BrandingLogoUrl,
+			&i.BrandingFaviconUrl,
 			&i.BrandingFacebookHandle,
 			&i.BrandingInstagramHandle,
 			&i.BrandingLinkedinHandle,
@@ -566,7 +583,8 @@ SELECT
     a.default_billing_address_id,
     ap.slug,
     ab.support_email,
-    ab.logo_url
+    ab.logo_url,
+    ab.favicon_url
 FROM account_portal ap
 JOIN account a ON a.id = ap.owner_account_id
 LEFT JOIN account_branding ab ON ab.owner_account_id = a.id
@@ -580,6 +598,7 @@ type GetPublicAccountBySlugRow struct {
 	Slug                    string
 	SupportEmail            sql.NullString
 	LogoUrl                 sql.NullString
+	FaviconUrl              sql.NullString
 }
 
 func (q *Queries) GetPublicAccountBySlug(ctx context.Context, slug string) (GetPublicAccountBySlugRow, error) {
@@ -592,6 +611,7 @@ func (q *Queries) GetPublicAccountBySlug(ctx context.Context, slug string) (GetP
 		&i.Slug,
 		&i.SupportEmail,
 		&i.LogoUrl,
+		&i.FaviconUrl,
 	)
 	return i, err
 }
@@ -749,6 +769,20 @@ func (q *Queries) UpdateAccountBranding(ctx context.Context, arg UpdateAccountBr
 		arg.WebsiteUrl,
 		arg.AccountID,
 	)
+}
+
+const updateAccountBrandingFaviconURL = `-- name: UpdateAccountBrandingFaviconURL :exec
+UPDATE account_branding SET favicon_url = ?, updated_at = NOW(3) WHERE owner_account_id = ?
+`
+
+type UpdateAccountBrandingFaviconURLParams struct {
+	FaviconUrl sql.NullString
+	AccountID  string
+}
+
+func (q *Queries) UpdateAccountBrandingFaviconURL(ctx context.Context, arg UpdateAccountBrandingFaviconURLParams) error {
+	_, err := q.db.ExecContext(ctx, updateAccountBrandingFaviconURL, arg.FaviconUrl, arg.AccountID)
+	return err
 }
 
 const updateAccountBrandingLogoURL = `-- name: UpdateAccountBrandingLogoURL :exec

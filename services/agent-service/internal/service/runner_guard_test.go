@@ -133,6 +133,7 @@ func runGuardLoop(t *testing.T, responses []*llm.ToolResponse, toolNames []strin
 		runCtx,
 		nil, // no spending cap
 		0,
+		nil, // no token rates
 	)
 	if err != nil {
 		t.Fatalf("runAgentLoop returned error: %v", err)

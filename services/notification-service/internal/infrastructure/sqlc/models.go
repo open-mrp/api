@@ -59,6 +59,7 @@ type AccountBranding struct {
 	OwnerAccountID  string
 	SupportEmail    sql.NullString
 	LogoUrl         sql.NullString
+	FaviconUrl      sql.NullString
 	PhoneNumber     sql.NullString
 	FacebookHandle  sql.NullString
 	InstagramHandle sql.NullString
@@ -743,6 +744,49 @@ type HubspotAccountUserLink struct {
 	CustomerAccountID string
 }
 
+type HubspotCompanyReview struct {
+	ID                string
+	JobID             string
+	AccountID         string
+	AugnoCustomerID   string
+	CustomerName      string
+	CandidateMatches  json.RawMessage
+	Status            string
+	Resolution        sql.NullString
+	ResolvedHubspotID sql.NullString
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+type HubspotSyncJob struct {
+	ID             string
+	AccountID      string
+	Status         string
+	DryRun         bool
+	GoliveCutoffAt sql.NullTime
+	Cursors        json.RawMessage
+	Counts         json.RawMessage
+	LastError      sql.NullString
+	StartedAt      sql.NullTime
+	CompletedAt    sql.NullTime
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+type HubspotSyncRecord struct {
+	ID           string
+	AccountID    string
+	AugnoType    string
+	AugnoID      string
+	HubspotType  string
+	HubspotID    string
+	SyncHash     sql.NullString
+	LastSyncedAt sql.NullTime
+	LastError    sql.NullString
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
 type IdempotencyKey struct {
 	ID              int64
 	TypeID          string
@@ -1280,6 +1324,33 @@ type PickLine struct {
 	PackedAt         sql.NullTime
 }
 
+type PortalDomain struct {
+	ID         string
+	AccountID  string
+	Domain     string
+	Status     string
+	DnsRecords json.RawMessage
+	VerifiedAt sql.NullTime
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
+type PortalRegistrationSession struct {
+	ID                 int64
+	TypeID             string
+	UserID             string
+	SellerAccountID    string
+	SellerSlug         string
+	IsExistingCustomer sql.NullBool
+	Step               string
+	CustomerID         sql.NullString
+	SessionData        json.RawMessage
+	CompletedAt        sql.NullTime
+	AbandonedAt        sql.NullTime
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+}
+
 type Priority struct {
 	ID        string
 	Name      string
@@ -1514,7 +1585,6 @@ type RequestLog struct {
 	LatencyUs            int64
 	TargetAccountID      sql.NullString
 	PublicEndpoint       bool
-	Hidden               bool
 	ApiVersion           sql.NullString
 	AccountID            sql.NullString
 	ActorID              sql.NullString
@@ -1532,6 +1602,7 @@ type RequestLog struct {
 	StackTrace           sql.NullString
 	InternalErrorMessage sql.NullString
 	TraceID              sql.NullString
+	Hidden               bool
 }
 
 type Role struct {

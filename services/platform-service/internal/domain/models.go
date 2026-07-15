@@ -116,6 +116,8 @@ type ListRequestLogsFilter struct {
 	StatusCodes       []int32
 	StatusCodeClasses []int32
 	ErrorCodes        []string
+	// ExcludeErrorCodes drops logs whose error_code is in this set (NOT IN), used to hide routine noise such as expired_token 401s.
+	ExcludeErrorCodes []string
 	// ActorAccountIDs filters by request_log.account_id: the account the actor belongs to. TargetAccountIDs filters by request_log.target_account_id: the account the request acted upon. Both narrow within the caller's actor-or-target security scope.
 	ActorAccountIDs  []string
 	TargetAccountIDs []string

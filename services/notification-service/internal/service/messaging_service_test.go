@@ -13,6 +13,7 @@ import (
 	factorymock "github.com/augno/api/services/notification-service/internal/domain/mock/factory"
 	repositorymock "github.com/augno/api/services/notification-service/internal/domain/mock/repository"
 	"github.com/augno/api/shared/appctx"
+	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/contracts"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/messaging"
@@ -357,6 +358,85 @@ func TestFanOut_ResolvesRecipientUserIDs(t *testing.T) {
 	require.NotNil(t, captured[0].SenderType)
 	assert.Equal(t, "agent", *captured[0].SenderType)
 	require.Len(t, outbox.inputs, 1)
+}
+
+func TestNotifyCustomerRegistered_FansOutToSupportGroup(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	notifRepo := repositorymock.NewMockNotificationRepo(ctrl)
+	outbox := &fakeOutboxRepo{}
+	supportRepo := repositorymock.NewMockSupportRouteRepo(ctrl)
+	participantRepo := repositorymock.NewMockParticipantRepo(ctrl)
+
+	factory := factorymock.NewMockRepoFactory(ctrl)
+	factory.EXPECT().NewNotificationRepo().Return(notifRepo).AnyTimes()
+	factory.EXPECT().NewOutboxRepo().Return(outbox).AnyTimes()
+	factory.EXPECT().NewSupportRouteRepo().Return(supportRepo).AnyTimes()
+	factory.EXPECT().NewParticipantRepo().Return(participantRepo).AnyTimes()
+	svc := NewMessagingSvc(factory)
+
+	// The account's support route points at a group conversation; its active human participants are the recipients.
+	supportRepo.EXPECT().Resolve(gomock.Any(), "acc_seller", "acc_customer").
+		Return(&domain.SupportRoute{GroupConversationID: "conv_support"}, nil)
+	acusA, acusB := "acus_cs1", "acus_cs2"
+	agentCfg := "agtc_bot"
+	participantRepo.EXPECT().List(gomock.Any(), "conv_support").Return([]*domain.ConversationParticipant{
+		{ParticipantType: string(constants.ParticipantTypeUser), AccountUserID: &acusA},
+		{ParticipantType: string(constants.ParticipantTypeUser), AccountUserID: &acusB},
+		{ParticipantType: "agent", AgentConfigID: &agentCfg}, // non-user participants are ignored
+	}, nil)
+
+	notifRepo.EXPECT().ResolveUserID(gomock.Any(), acusA).Return("us_cs1", nil)
+	notifRepo.EXPECT().ResolveUserID(gomock.Any(), acusB).Return("us_cs2", nil)
+
+	var captured []*domain.Notification
+	notifRepo.EXPECT().CreateBatch(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, ns []*domain.Notification) *apierror.APIError {
+			captured = ns
+			return nil
+		})
+
+	apiErr := svc.NotifyCustomerRegistered(context.Background(), "msg_seed", messaging.CustomerRegisteredData{
+		SellerAccountID:   "acc_seller",
+		CustomerAccountID: "acc_customer",
+		CustomerName:      "Acme Corp",
+		CustomerNumber:    "1001",
+	})
+	require.Nil(t, apiErr)
+
+	require.Len(t, captured, 2, "one notification per human support-group member")
+	assert.Equal(t, string(constants.NotificationCategoryCustomerRegistered), captured[0].Category)
+	assert.Equal(t, "acc_seller", captured[0].AccountID)
+	require.NotNil(t, captured[0].LinkResourceType)
+	assert.Equal(t, string(constants.ObjectTypeCustomer), *captured[0].LinkResourceType)
+	require.NotNil(t, captured[0].LinkResourceID)
+	assert.Equal(t, "acc_customer", *captured[0].LinkResourceID, "notification links to the new customer for follow-up")
+	require.NotNil(t, captured[0].Body)
+	assert.Contains(t, *captured[0].Body, "Acme Corp")
+	require.Len(t, outbox.inputs, 2, "one realtime push per recipient")
+}
+
+func TestNotifyCustomerRegistered_NoRouteIsNoOp(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	notifRepo := repositorymock.NewMockNotificationRepo(ctrl)
+	outbox := &fakeOutboxRepo{}
+	supportRepo := repositorymock.NewMockSupportRouteRepo(ctrl)
+
+	factory := factorymock.NewMockRepoFactory(ctrl)
+	factory.EXPECT().NewNotificationRepo().Return(notifRepo).AnyTimes()
+	factory.EXPECT().NewOutboxRepo().Return(outbox).AnyTimes()
+	factory.EXPECT().NewSupportRouteRepo().Return(supportRepo).AnyTimes()
+	svc := NewMessagingSvc(factory)
+
+	// No support route configured for the account → no recipients → no notification rows written.
+	supportRepo.EXPECT().Resolve(gomock.Any(), "acc_seller", "acc_customer").Return(nil, nil)
+
+	apiErr := svc.NotifyCustomerRegistered(context.Background(), "seed", messaging.CustomerRegisteredData{
+		SellerAccountID:   "acc_seller",
+		CustomerAccountID: "acc_customer",
+		CustomerName:      "Acme Corp",
+	})
+	require.Nil(t, apiErr)
+	assert.Empty(t, outbox.inputs, "no support route means nothing is written")
 }
 
 func TestFanOut_BroadcastAndEmptyAreNoOps(t *testing.T) {

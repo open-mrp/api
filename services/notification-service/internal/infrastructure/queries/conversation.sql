@@ -258,6 +258,10 @@ WHERE account_id = sqlc.arg('account_id')
   AND audience = 'customer'
   AND is_archived = sqlc.arg('is_archived')
   AND (sqlc.narg('workflow_status') IS NULL OR workflow_status = sqlc.narg('workflow_status'))
+  -- Resolved cases are done: keep them out of the default triage view. The repository sets hide_resolved
+  -- only when no explicit status is requested and the archived view is off, so the "Resolved" lane
+  -- (workflow_status='resolved') and the archived view still surface them.
+  AND (sqlc.arg('hide_resolved') = FALSE OR workflow_status <> 'resolved')
   AND (sqlc.narg('assignee_resource_id') IS NULL OR assignee_resource_id = sqlc.narg('assignee_resource_id'))
   AND (sqlc.narg('unassigned') IS NULL OR assignee_resource_id IS NULL)
   AND (

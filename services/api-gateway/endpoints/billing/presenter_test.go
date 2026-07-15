@@ -68,6 +68,9 @@ func TestAccountUsagePresenter(t *testing.T) {
 			CollectionStatus: "current",
 		},
 		EstimatedAgentSpendCents: 4500,
+		PlanName:                 "Founder",
+		BaseFeeCents:             100,
+		BaseFeeInterval:          "month",
 	}
 
 	result := accountUsageFromProto(resp)

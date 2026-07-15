@@ -574,6 +574,12 @@ type AccountSvc interface {
 
 	// GetAccountLogoURL returns a presigned S3 URL for the account's logo, or nil if none.
 	GetAccountLogoURL(ctx context.Context, accountID string) (*string, *apierror.APIError)
+
+	// UploadAccountFavicon uploads a customer-portal favicon to S3 and updates the branding record.
+	UploadAccountFavicon(ctx context.Context, accountID string, file []byte, contentType string) *apierror.APIError
+
+	// GetAccountFaviconURL returns a presigned S3 URL for the account's customer-portal favicon, or nil if none.
+	GetAccountFaviconURL(ctx context.Context, accountID string) (*string, *apierror.APIError)
 }
 
 // CompleteRegistrationInput carries the data needed to finalize a registration.
@@ -752,6 +758,12 @@ type CustomerSvc interface {
 
 	// GetFrequentlyOrderedProducts returns the most frequently ordered products for a customer.
 	GetFrequentlyOrderedProducts(ctx context.Context, customerAccountID string) ([]*FrequentlyOrderedProduct, *apierror.APIError)
+
+	// ListCustomerNotificationRecipients returns the default order-notification recipients configured for a customer relationship.
+	ListCustomerNotificationRecipients(ctx context.Context, customerAccountID string) ([]NotificationRecipient, *apierror.APIError)
+
+	// UpdateCustomerNotificationRecipients replaces the default order-notification recipients configured for a customer relationship.
+	UpdateCustomerNotificationRecipients(ctx context.Context, params UpdateCustomerNotificationRecipientsParams) ([]NotificationRecipient, *apierror.APIError)
 
 	// UpdateCustomer partially updates a customer.
 	UpdateCustomer(ctx context.Context, params UpdateCustomerParams) (*Customer, *apierror.APIError)
@@ -986,6 +998,9 @@ type SalesOrderSvc interface {
 	CheckoutSalesOrder(ctx context.Context, params CheckoutSalesOrderParams) (*CheckoutSalesOrderResult, *apierror.APIError)
 	QuoteSalesOrderLinePrices(ctx context.Context, params QuoteSalesOrderLinePricesParams) ([]SalesOrderLineQuote, *apierror.APIError)
 
+	// QuoteSalesOrderFreight re-estimates an existing order's freight charge from its current ship-to, carrier, service level, and lines, without mutating the order.
+	QuoteSalesOrderFreight(ctx context.Context, params QuoteSalesOrderFreightParams) (*SalesOrderFreightQuote, *apierror.APIError)
+
 	// CreateSalesOrderProductionRun creates a production run from a sales order.
 	CreateSalesOrderProductionRun(ctx context.Context, params CreateSalesOrderProductionRunParams) (*CreateSalesOrderProductionRunResult, *apierror.APIError)
 
@@ -1008,6 +1023,9 @@ type SalesOrderLineSvc interface {
 
 	// DeleteSalesOrderLine deletes a sales order line and cascades to pick/shipment/invoice lines.
 	DeleteSalesOrderLine(ctx context.Context, params DeleteSalesOrderLineParams) *apierror.APIError
+
+	// ReorderSalesOrderLines re-sequences the order's product lines to match the given order, keeping credit/freight lines at the bottom. Returns the order's lines in their new order.
+	ReorderSalesOrderLines(ctx context.Context, params ReorderSalesOrderLinesParams) ([]*SalesOrderLine, *apierror.APIError)
 }
 
 type PurchaseOrderSvc interface {
@@ -1401,6 +1419,8 @@ type PortalRegistrationSessionSvc interface {
 	UpdateSession(ctx context.Context, params UpdatePortalRegistrationSessionParams) (*PortalRegistrationSession, *apierror.APIError)
 	CompleteSession(ctx context.Context, typeID string) (*PortalRegistrationSession, *apierror.APIError)
 	AbandonSession(ctx context.Context, typeID string) (*PortalRegistrationSession, *apierror.APIError)
+	// ListSessions returns the seller account's registration sessions for the customer-service follow-up view (seller-facing; scoped to the caller's account).
+	ListSessions(ctx context.Context, params ListPortalRegistrationSessionsParams) (*ListPortalRegistrationSessionsResult, *apierror.APIError)
 }
 
 // CreateAccountParams holds the parameters for creating a production account during registration.

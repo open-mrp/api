@@ -11,6 +11,7 @@ type SalesOrderLine struct {
 	ProductSKU         string  `audit:"product_sku"`
 	ProductDescription *string `audit:"product_description"`
 	ProductID          *string `audit:"product_id"`
+	ProductTypeCode    *string `audit:"product_type_code"`
 	ItemID             *string `audit:"item_id"`
 	ItemSKU            *string `audit:"item_sku"`
 	SalesOrderID       string
@@ -93,4 +94,19 @@ type DeleteSalesOrderLineParams struct {
 	SalesOrderLineID string
 	SalesOrderID     string
 	AccountID        string
+}
+
+// ReorderSalesOrderLinesParams holds the parameters for re-sequencing a sales order's lines.
+type ReorderSalesOrderLinesParams struct {
+	SalesOrderID string
+	AccountID    string
+	// LineIDs are the order's product-line IDs in the desired display order. Credit/freight lines are kept at the bottom and must not appear here.
+	LineIDs []string
+}
+
+// SalesOrderLinePosition is a line's current position and whether it is a credit/freight (system) line, used when re-sequencing.
+type SalesOrderLinePosition struct {
+	ID             string
+	LineItemNumber int32
+	IsSystem       bool
 }

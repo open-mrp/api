@@ -162,6 +162,21 @@ func (mr *MockAccountRepoMockRecorder) GetAgentSpendingCap(ctx, accountID any) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAgentSpendingCap", reflect.TypeOf((*MockAccountRepo)(nil).GetAgentSpendingCap), ctx, accountID)
 }
 
+// GetBrandingFaviconKey mocks base method.
+func (m *MockAccountRepo) GetBrandingFaviconKey(ctx context.Context, accountID string) (*string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBrandingFaviconKey", ctx, accountID)
+	ret0, _ := ret[0].(*string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetBrandingFaviconKey indicates an expected call of GetBrandingFaviconKey.
+func (mr *MockAccountRepoMockRecorder) GetBrandingFaviconKey(ctx, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBrandingFaviconKey", reflect.TypeOf((*MockAccountRepo)(nil).GetBrandingFaviconKey), ctx, accountID)
+}
+
 // GetBrandingLogoKey mocks base method.
 func (m *MockAccountRepo) GetBrandingLogoKey(ctx context.Context, accountID string) (*string, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -430,6 +445,20 @@ func (m *MockAccountRepo) UpdateBranding(ctx context.Context, accountID string, 
 func (mr *MockAccountRepoMockRecorder) UpdateBranding(ctx, accountID, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateBranding", reflect.TypeOf((*MockAccountRepo)(nil).UpdateBranding), ctx, accountID, params)
+}
+
+// UpdateBrandingFaviconURL mocks base method.
+func (m *MockAccountRepo) UpdateBrandingFaviconURL(ctx context.Context, accountID, faviconURL string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateBrandingFaviconURL", ctx, accountID, faviconURL)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// UpdateBrandingFaviconURL indicates an expected call of UpdateBrandingFaviconURL.
+func (mr *MockAccountRepoMockRecorder) UpdateBrandingFaviconURL(ctx, accountID, faviconURL any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateBrandingFaviconURL", reflect.TypeOf((*MockAccountRepo)(nil).UpdateBrandingFaviconURL), ctx, accountID, faviconURL)
 }
 
 // UpdateBrandingLogoURL mocks base method.
@@ -1227,6 +1256,20 @@ func (mr *MockAccountRelationRepoMockRecorder) DeleteNotificationPreference(ctx,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteNotificationPreference", reflect.TypeOf((*MockAccountRelationRepo)(nil).DeleteNotificationPreference), ctx, accountRelationID, recipientAccountUserID, notificationTypeCode)
 }
 
+// DeleteNotificationPreferencesByTypes mocks base method.
+func (m *MockAccountRelationRepo) DeleteNotificationPreferencesByTypes(ctx context.Context, accountRelationID string, notificationTypeCodes []string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteNotificationPreferencesByTypes", ctx, accountRelationID, notificationTypeCodes)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// DeleteNotificationPreferencesByTypes indicates an expected call of DeleteNotificationPreferencesByTypes.
+func (mr *MockAccountRelationRepoMockRecorder) DeleteNotificationPreferencesByTypes(ctx, accountRelationID, notificationTypeCodes any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteNotificationPreferencesByTypes", reflect.TypeOf((*MockAccountRelationRepo)(nil).DeleteNotificationPreferencesByTypes), ctx, accountRelationID, notificationTypeCodes)
+}
+
 // FindByCounterpartyAccountAndAPIKeyID mocks base method.
 func (m *MockAccountRelationRepo) FindByCounterpartyAccountAndAPIKeyID(ctx context.Context, counterpartyAccountID string, apiKeyID int64) (*domain.AccountRelation, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -1435,6 +1478,21 @@ func (m *MockAccountRelationRepo) ListNotificationPreferences(ctx context.Contex
 func (mr *MockAccountRelationRepoMockRecorder) ListNotificationPreferences(ctx, accountRelationID, recipientAccountUserID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNotificationPreferences", reflect.TypeOf((*MockAccountRelationRepo)(nil).ListNotificationPreferences), ctx, accountRelationID, recipientAccountUserID)
+}
+
+// ListNotificationRecipients mocks base method.
+func (m *MockAccountRelationRepo) ListNotificationRecipients(ctx context.Context, accountRelationID string) ([]domain.NotificationRecipientRef, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListNotificationRecipients", ctx, accountRelationID)
+	ret0, _ := ret[0].([]domain.NotificationRecipientRef)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListNotificationRecipients indicates an expected call of ListNotificationRecipients.
+func (mr *MockAccountRelationRepoMockRecorder) ListNotificationRecipients(ctx, accountRelationID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNotificationRecipients", reflect.TypeOf((*MockAccountRelationRepo)(nil).ListNotificationRecipients), ctx, accountRelationID)
 }
 
 // SetParentRelation mocks base method.
@@ -7617,6 +7675,21 @@ func (mr *MockMaterialDemandRepoMockRecorder) GetMaterialDemand(ctx, accountID, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaterialDemand", reflect.TypeOf((*MockMaterialDemandRepo)(nil).GetMaterialDemand), ctx, accountID, productItemID, measure, unitID)
 }
 
+// GetMaterialDemandForOrder mocks base method.
+func (m *MockMaterialDemandRepo) GetMaterialDemandForOrder(ctx context.Context, accountID string, lines []domain.MaterialDemandLineInput) ([]domain.MaterialDemandItem, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMaterialDemandForOrder", ctx, accountID, lines)
+	ret0, _ := ret[0].([]domain.MaterialDemandItem)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetMaterialDemandForOrder indicates an expected call of GetMaterialDemandForOrder.
+func (mr *MockMaterialDemandRepoMockRecorder) GetMaterialDemandForOrder(ctx, accountID, lines any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaterialDemandForOrder", reflect.TypeOf((*MockMaterialDemandRepo)(nil).GetMaterialDemandForOrder), ctx, accountID, lines)
+}
+
 // MockUnitConversionRepo is a mock of UnitConversionRepo interface.
 type MockUnitConversionRepo struct {
 	ctrl     *gomock.Controller
@@ -7654,6 +7727,21 @@ func (m *MockUnitConversionRepo) ConvertValue(ctx context.Context, measure decim
 func (mr *MockUnitConversionRepoMockRecorder) ConvertValue(ctx, measure, fromUnitID, toUnitID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConvertValue", reflect.TypeOf((*MockUnitConversionRepo)(nil).ConvertValue), ctx, measure, fromUnitID, toUnitID)
+}
+
+// GetUnitFactors mocks base method.
+func (m *MockUnitConversionRepo) GetUnitFactors(ctx context.Context, accountID string, unitIDs []string) (map[string]domain.UnitFactors, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUnitFactors", ctx, accountID, unitIDs)
+	ret0, _ := ret[0].(map[string]domain.UnitFactors)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetUnitFactors indicates an expected call of GetUnitFactors.
+func (mr *MockUnitConversionRepoMockRecorder) GetUnitFactors(ctx, accountID, unitIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUnitFactors", reflect.TypeOf((*MockUnitConversionRepo)(nil).GetUnitFactors), ctx, accountID, unitIDs)
 }
 
 // MockProductionFlowRepo is a mock of ProductionFlowRepo interface.
@@ -10240,6 +10328,36 @@ func (mr *MockSalesOrderRepoMockRecorder) GetForCustomer(ctx, accountID, buyerAc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetForCustomer", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetForCustomer), ctx, accountID, buyerAccountID, salesOrderID)
 }
 
+// GetFulfillmentProgress mocks base method.
+func (m *MockSalesOrderRepo) GetFulfillmentProgress(ctx context.Context, salesOrderIDs []string) (map[string]domain.SalesOrderFulfillmentProgress, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetFulfillmentProgress", ctx, salesOrderIDs)
+	ret0, _ := ret[0].(map[string]domain.SalesOrderFulfillmentProgress)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetFulfillmentProgress indicates an expected call of GetFulfillmentProgress.
+func (mr *MockSalesOrderRepoMockRecorder) GetFulfillmentProgress(ctx, salesOrderIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFulfillmentProgress", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetFulfillmentProgress), ctx, salesOrderIDs)
+}
+
+// GetInvoiceIDs mocks base method.
+func (m *MockSalesOrderRepo) GetInvoiceIDs(ctx context.Context, salesOrderID string) ([]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetInvoiceIDs", ctx, salesOrderID)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetInvoiceIDs indicates an expected call of GetInvoiceIDs.
+func (mr *MockSalesOrderRepoMockRecorder) GetInvoiceIDs(ctx, salesOrderID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInvoiceIDs", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetInvoiceIDs), ctx, salesOrderID)
+}
+
 // GetLines mocks base method.
 func (m *MockSalesOrderRepo) GetLines(ctx context.Context, salesOrderID string) ([]*domain.SalesOrderLine, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -10631,6 +10749,21 @@ func (mr *MockSalesOrderLineRepoMockRecorder) Get(ctx, salesOrderLineID any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockSalesOrderLineRepo)(nil).Get), ctx, salesOrderLineID)
 }
 
+// GetLineOrder mocks base method.
+func (m *MockSalesOrderLineRepo) GetLineOrder(ctx context.Context, salesOrderID string) ([]*domain.SalesOrderLinePosition, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetLineOrder", ctx, salesOrderID)
+	ret0, _ := ret[0].([]*domain.SalesOrderLinePosition)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetLineOrder indicates an expected call of GetLineOrder.
+func (mr *MockSalesOrderLineRepoMockRecorder) GetLineOrder(ctx, salesOrderID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLineOrder", reflect.TypeOf((*MockSalesOrderLineRepo)(nil).GetLineOrder), ctx, salesOrderID)
+}
+
 // GetNextLineItemNumber mocks base method.
 func (m *MockSalesOrderLineRepo) GetNextLineItemNumber(ctx context.Context, salesOrderID string) (int32, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -10646,19 +10779,19 @@ func (mr *MockSalesOrderLineRepoMockRecorder) GetNextLineItemNumber(ctx, salesOr
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNextLineItemNumber", reflect.TypeOf((*MockSalesOrderLineRepo)(nil).GetNextLineItemNumber), ctx, salesOrderID)
 }
 
-// HasShippedAgainstOrderLine mocks base method.
-func (m *MockSalesOrderLineRepo) HasShippedAgainstOrderLine(ctx context.Context, salesOrderLineID string) (bool, *apierror.APIError) {
+// HasShipmentAgainstOrderLine mocks base method.
+func (m *MockSalesOrderLineRepo) HasShipmentAgainstOrderLine(ctx context.Context, salesOrderLineID string) (bool, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HasShippedAgainstOrderLine", ctx, salesOrderLineID)
+	ret := m.ctrl.Call(m, "HasShipmentAgainstOrderLine", ctx, salesOrderLineID)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
-// HasShippedAgainstOrderLine indicates an expected call of HasShippedAgainstOrderLine.
-func (mr *MockSalesOrderLineRepoMockRecorder) HasShippedAgainstOrderLine(ctx, salesOrderLineID any) *gomock.Call {
+// HasShipmentAgainstOrderLine indicates an expected call of HasShipmentAgainstOrderLine.
+func (mr *MockSalesOrderLineRepoMockRecorder) HasShipmentAgainstOrderLine(ctx, salesOrderLineID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasShippedAgainstOrderLine", reflect.TypeOf((*MockSalesOrderLineRepo)(nil).HasShippedAgainstOrderLine), ctx, salesOrderLineID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasShipmentAgainstOrderLine", reflect.TypeOf((*MockSalesOrderLineRepo)(nil).HasShipmentAgainstOrderLine), ctx, salesOrderLineID)
 }
 
 // IsInOrder mocks base method.
@@ -10689,6 +10822,20 @@ func (m *MockSalesOrderLineRepo) List(ctx context.Context, salesOrderID string) 
 func (mr *MockSalesOrderLineRepoMockRecorder) List(ctx, salesOrderID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockSalesOrderLineRepo)(nil).List), ctx, salesOrderID)
+}
+
+// SetLineItemNumber mocks base method.
+func (m *MockSalesOrderLineRepo) SetLineItemNumber(ctx context.Context, salesOrderLineID string, lineItemNumber int32) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetLineItemNumber", ctx, salesOrderLineID, lineItemNumber)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SetLineItemNumber indicates an expected call of SetLineItemNumber.
+func (mr *MockSalesOrderLineRepoMockRecorder) SetLineItemNumber(ctx, salesOrderLineID, lineItemNumber any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetLineItemNumber", reflect.TypeOf((*MockSalesOrderLineRepo)(nil).SetLineItemNumber), ctx, salesOrderLineID, lineItemNumber)
 }
 
 // Update mocks base method.
@@ -12239,6 +12386,35 @@ func (mr *MockPickRepoMockRecorder) ClearFinishedAt(ctx, accountID, pickID any) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearFinishedAt", reflect.TypeOf((*MockPickRepo)(nil).ClearFinishedAt), ctx, accountID, pickID)
 }
 
+// CloseOpenPickLines mocks base method.
+func (m *MockPickRepo) CloseOpenPickLines(ctx context.Context, pickID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CloseOpenPickLines", ctx, pickID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// CloseOpenPickLines indicates an expected call of CloseOpenPickLines.
+func (mr *MockPickRepoMockRecorder) CloseOpenPickLines(ctx, pickID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseOpenPickLines", reflect.TypeOf((*MockPickRepo)(nil).CloseOpenPickLines), ctx, pickID)
+}
+
+// CountLines mocks base method.
+func (m *MockPickRepo) CountLines(ctx context.Context, pickID string) (int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CountLines", ctx, pickID)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CountLines indicates an expected call of CountLines.
+func (mr *MockPickRepoMockRecorder) CountLines(ctx, pickID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountLines", reflect.TypeOf((*MockPickRepo)(nil).CountLines), ctx, pickID)
+}
+
 // CountShipmentsByOrder mocks base method.
 func (m *MockPickRepo) CountShipmentsByOrder(ctx context.Context, salesOrderID string) (int64, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -12516,6 +12692,20 @@ func (mr *MockPickRepoMockRecorder) PickAllLines(ctx, pickID any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PickAllLines", reflect.TypeOf((*MockPickRepo)(nil).PickAllLines), ctx, pickID)
 }
 
+// ReopenIncompletePickLines mocks base method.
+func (m *MockPickRepo) ReopenIncompletePickLines(ctx context.Context, pickID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReopenIncompletePickLines", ctx, pickID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// ReopenIncompletePickLines indicates an expected call of ReopenIncompletePickLines.
+func (mr *MockPickRepoMockRecorder) ReopenIncompletePickLines(ctx, pickID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReopenIncompletePickLines", reflect.TypeOf((*MockPickRepo)(nil).ReopenIncompletePickLines), ctx, pickID)
+}
+
 // UpdateFinishedAt mocks base method.
 func (m *MockPickRepo) UpdateFinishedAt(ctx context.Context, accountID, pickID string, finishedAt time.Time) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -12612,6 +12802,20 @@ func (mr *MockPickLineRepoMockRecorder) CreateForRemaining(ctx, id, quantityID, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateForRemaining", reflect.TypeOf((*MockPickLineRepo)(nil).CreateForRemaining), ctx, id, quantityID, pickID, orderLineID)
 }
 
+// DeleteUnpackedForOrderLine mocks base method.
+func (m *MockPickLineRepo) DeleteUnpackedForOrderLine(ctx context.Context, orderLineID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteUnpackedForOrderLine", ctx, orderLineID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// DeleteUnpackedForOrderLine indicates an expected call of DeleteUnpackedForOrderLine.
+func (mr *MockPickLineRepoMockRecorder) DeleteUnpackedForOrderLine(ctx, orderLineID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteUnpackedForOrderLine", reflect.TypeOf((*MockPickLineRepo)(nil).DeleteUnpackedForOrderLine), ctx, orderLineID)
+}
+
 // Get mocks base method.
 func (m *MockPickLineRepo) Get(ctx context.Context, pickLineID string) (*domain.PickLine, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -12625,6 +12829,23 @@ func (m *MockPickLineRepo) Get(ctx context.Context, pickLineID string) (*domain.
 func (mr *MockPickLineRepoMockRecorder) Get(ctx, pickLineID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockPickLineRepo)(nil).Get), ctx, pickLineID)
+}
+
+// GetOrderLinePackProgress mocks base method.
+func (m *MockPickLineRepo) GetOrderLinePackProgress(ctx context.Context, orderLineID string) (string, string, string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOrderLinePackProgress", ctx, orderLineID)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(string)
+	ret3, _ := ret[3].(*apierror.APIError)
+	return ret0, ret1, ret2, ret3
+}
+
+// GetOrderLinePackProgress indicates an expected call of GetOrderLinePackProgress.
+func (mr *MockPickLineRepoMockRecorder) GetOrderLinePackProgress(ctx, orderLineID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOrderLinePackProgress", reflect.TypeOf((*MockPickLineRepo)(nil).GetOrderLinePackProgress), ctx, orderLineID)
 }
 
 // HasUnpackedPickLineForOrderLine mocks base method.
@@ -14296,6 +14517,20 @@ func (mr *MockShipmentRepoMockRecorder) MarkVoided(ctx, accountID, shipmentID an
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkVoided", reflect.TypeOf((*MockShipmentRepo)(nil).MarkVoided), ctx, accountID, shipmentID)
 }
 
+// SyncShippingForOrder mocks base method.
+func (m *MockShipmentRepo) SyncShippingForOrder(ctx context.Context, params domain.SyncShipmentShippingParams) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SyncShippingForOrder", ctx, params)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SyncShippingForOrder indicates an expected call of SyncShippingForOrder.
+func (mr *MockShipmentRepoMockRecorder) SyncShippingForOrder(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncShippingForOrder", reflect.TypeOf((*MockShipmentRepo)(nil).SyncShippingForOrder), ctx, params)
+}
+
 // Update mocks base method.
 func (m *MockShipmentRepo) Update(ctx context.Context, params domain.UpdateShipmentParams) (*domain.Shipment, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -15628,6 +15863,21 @@ func (m *MockPortalRegistrationSessionRepo) GetIncomplete(ctx context.Context, u
 func (mr *MockPortalRegistrationSessionRepoMockRecorder) GetIncomplete(ctx, userID, sellerAccountID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIncomplete", reflect.TypeOf((*MockPortalRegistrationSessionRepo)(nil).GetIncomplete), ctx, userID, sellerAccountID)
+}
+
+// ListSessions mocks base method.
+func (m *MockPortalRegistrationSessionRepo) ListSessions(ctx context.Context, params domain.ListPortalRegistrationSessionsParams) (*domain.ListPortalRegistrationSessionsResult, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListSessions", ctx, params)
+	ret0, _ := ret[0].(*domain.ListPortalRegistrationSessionsResult)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListSessions indicates an expected call of ListSessions.
+func (mr *MockPortalRegistrationSessionRepoMockRecorder) ListSessions(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSessions", reflect.TypeOf((*MockPortalRegistrationSessionRepo)(nil).ListSessions), ctx, params)
 }
 
 // Update mocks base method.

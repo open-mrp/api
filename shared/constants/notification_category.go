@@ -19,6 +19,8 @@ const (
 	NotificationCategoryAgentAlert NotificationCategory = "agent.alert"
 	// NotificationCategorySystemBroadcast is a targeted system message to a user.
 	NotificationCategorySystemBroadcast NotificationCategory = "system.broadcast"
+	// NotificationCategoryCustomerRegistered indicates a buyer completed registration on the account's customer portal; sent to the customer-service support group.
+	NotificationCategoryCustomerRegistered NotificationCategory = "customer.registered"
 )
 
 func (c NotificationCategory) IsValid() bool {
@@ -29,7 +31,8 @@ func (c NotificationCategory) IsValid() bool {
 		NotificationCategoryOrderUpdated,
 		NotificationCategoryAgentRunCompleted,
 		NotificationCategoryAgentAlert,
-		NotificationCategorySystemBroadcast:
+		NotificationCategorySystemBroadcast,
+		NotificationCategoryCustomerRegistered:
 		return true
 	default:
 		return false
@@ -45,6 +48,7 @@ func (c NotificationCategory) EnumValues() []string {
 		string(NotificationCategoryAgentRunCompleted),
 		string(NotificationCategoryAgentAlert),
 		string(NotificationCategorySystemBroadcast),
+		string(NotificationCategoryCustomerRegistered),
 	}
 }
 

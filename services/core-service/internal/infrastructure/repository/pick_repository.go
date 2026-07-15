@@ -538,6 +538,37 @@ func (r *pickRepoImpl) MarkFinishedIfAllPacked(ctx context.Context, pickID strin
 	return nil
 }
 
+func (r *pickRepoImpl) CloseOpenPickLines(ctx context.Context, pickID string) *apierror.APIError {
+	ctx, span := pickRepoTracer.Start(ctx, "repository.pick.close_open_pick_lines")
+	defer span.End()
+
+	if err := r.queries.CloseOpenPickLines(ctx, pickID); err != nil {
+		return tracing.Trace(span, db.MapSQLError(err))
+	}
+	return nil
+}
+
+func (r *pickRepoImpl) ReopenIncompletePickLines(ctx context.Context, pickID string) *apierror.APIError {
+	ctx, span := pickRepoTracer.Start(ctx, "repository.pick.reopen_incomplete_pick_lines")
+	defer span.End()
+
+	if err := r.queries.ReopenIncompletePickLines(ctx, pickID); err != nil {
+		return tracing.Trace(span, db.MapSQLError(err))
+	}
+	return nil
+}
+
+func (r *pickRepoImpl) CountLines(ctx context.Context, pickID string) (int64, *apierror.APIError) {
+	ctx, span := pickRepoTracer.Start(ctx, "repository.pick.count_lines")
+	defer span.End()
+
+	count, err := r.queries.CountPickLinesByPick(ctx, pickID)
+	if err != nil {
+		return 0, tracing.Trace(span, db.MapSQLError(err))
+	}
+	return count, nil
+}
+
 func (r *pickRepoImpl) CountShipmentsByOrder(ctx context.Context, salesOrderID string) (int64, *apierror.APIError) {
 	ctx, span := pickRepoTracer.Start(ctx, "repository.pick.count_shipments_by_order")
 	defer span.End()

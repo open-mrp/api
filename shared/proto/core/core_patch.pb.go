@@ -15,6 +15,7 @@ import (
 
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -192,11 +193,63 @@ func (x *QuantityPatch) GetUnitId() string {
 	return ""
 }
 
+type TimestampPatch struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Clear         bool                   `protobuf:"varint,1,opt,name=clear,proto3" json:"clear,omitempty"`
+	Value         *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=value,proto3,oneof" json:"value,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TimestampPatch) Reset() {
+	*x = TimestampPatch{}
+	mi := &file_core_core_patch_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TimestampPatch) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TimestampPatch) ProtoMessage() {}
+
+func (x *TimestampPatch) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_patch_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TimestampPatch.ProtoReflect.Descriptor instead.
+func (*TimestampPatch) Descriptor() ([]byte, []int) {
+	return file_core_core_patch_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *TimestampPatch) GetClear() bool {
+	if x != nil {
+		return x.Clear
+	}
+	return false
+}
+
+func (x *TimestampPatch) GetValue() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Value
+	}
+	return nil
+}
+
 var File_core_core_patch_proto protoreflect.FileDescriptor
 
 const file_core_core_patch_proto_rawDesc = "" +
 	"\n" +
-	"\x15core/core_patch.proto\x12\x04core\"H\n" +
+	"\x15core/core_patch.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\"H\n" +
 	"\vStringPatch\x12\x14\n" +
 	"\x05clear\x18\x01 \x01(\bR\x05clear\x12\x19\n" +
 	"\x05value\x18\x02 \x01(\tH\x00R\x05value\x88\x01\x01B\b\n" +
@@ -210,7 +263,11 @@ const file_core_core_patch_proto_rawDesc = "" +
 	"\aunit_id\x18\x03 \x01(\tH\x01R\x06unitId\x88\x01\x01B\b\n" +
 	"\x06_valueB\n" +
 	"\n" +
-	"\b_unit_idB\x18Z\x16shared/proto/core;coreb\x06proto3"
+	"\b_unit_id\"g\n" +
+	"\x0eTimestampPatch\x12\x14\n" +
+	"\x05clear\x18\x01 \x01(\bR\x05clear\x125\n" +
+	"\x05value\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\x05value\x88\x01\x01B\b\n" +
+	"\x06_valueB\x18Z\x16shared/proto/core;coreb\x06proto3"
 
 var (
 	file_core_core_patch_proto_rawDescOnce sync.Once
@@ -224,18 +281,21 @@ func file_core_core_patch_proto_rawDescGZIP() []byte {
 	return file_core_core_patch_proto_rawDescData
 }
 
-var file_core_core_patch_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_core_core_patch_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_core_core_patch_proto_goTypes = []any{
-	(*StringPatch)(nil),     // 0: core.StringPatch
-	(*StringListPatch)(nil), // 1: core.StringListPatch
-	(*QuantityPatch)(nil),   // 2: core.QuantityPatch
+	(*StringPatch)(nil),           // 0: core.StringPatch
+	(*StringListPatch)(nil),       // 1: core.StringListPatch
+	(*QuantityPatch)(nil),         // 2: core.QuantityPatch
+	(*TimestampPatch)(nil),        // 3: core.TimestampPatch
+	(*timestamppb.Timestamp)(nil), // 4: google.protobuf.Timestamp
 }
 var file_core_core_patch_proto_depIdxs = []int32{
-	0, // [0:0] is the sub-list for method output_type
-	0, // [0:0] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	4, // 0: core.TimestampPatch.value:type_name -> google.protobuf.Timestamp
+	1, // [1:1] is the sub-list for method output_type
+	1, // [1:1] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_core_core_patch_proto_init() }
@@ -245,13 +305,14 @@ func file_core_core_patch_proto_init() {
 	}
 	file_core_core_patch_proto_msgTypes[0].OneofWrappers = []any{}
 	file_core_core_patch_proto_msgTypes[2].OneofWrappers = []any{}
+	file_core_core_patch_proto_msgTypes[3].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_patch_proto_rawDesc), len(file_core_core_patch_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

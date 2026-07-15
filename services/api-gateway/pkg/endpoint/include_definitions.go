@@ -130,6 +130,13 @@ func init() {
 	})
 
 	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeOrderNotificationRecipient,
+		Fields: []IncludeFieldDef{
+			{Key: "account_user", ObjectType: constants.ObjectTypeAccountUser},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypeMessagingBlock,
 		Fields: []IncludeFieldDef{
 			{

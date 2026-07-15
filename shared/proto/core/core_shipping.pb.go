@@ -298,24 +298,26 @@ func (x *ShipmentSummaryInfo) GetLines() []*ShipmentLineInfo {
 
 // ShipmentInfo represents a full shipment resource.
 type ShipmentInfo struct {
-	state                       protoimpl.MessageState    `protogen:"open.v1"`
-	Id                          string                    `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Number                      string                    `protobuf:"bytes,2,opt,name=number,proto3" json:"number,omitempty"`
-	Note                        *string                   `protobuf:"bytes,3,opt,name=note,proto3,oneof" json:"note,omitempty"`
-	BillOfLading                *string                   `protobuf:"bytes,4,opt,name=bill_of_lading,json=billOfLading,proto3,oneof" json:"bill_of_lading,omitempty"`
-	MasterTrackingNumber        *string                   `protobuf:"bytes,5,opt,name=master_tracking_number,json=masterTrackingNumber,proto3,oneof" json:"master_tracking_number,omitempty"`
-	StatusCode                  string                    `protobuf:"bytes,6,opt,name=status_code,json=statusCode,proto3" json:"status_code,omitempty"`
-	StatusName                  string                    `protobuf:"bytes,7,opt,name=status_name,json=statusName,proto3" json:"status_name,omitempty"`
-	ShippedAt                   *timestamppb.Timestamp    `protobuf:"bytes,8,opt,name=shipped_at,json=shippedAt,proto3" json:"shipped_at,omitempty"`
-	SalesOrderId                string                    `protobuf:"bytes,9,opt,name=sales_order_id,json=salesOrderId,proto3" json:"sales_order_id,omitempty"`
-	SalesOrderNumber            string                    `protobuf:"bytes,10,opt,name=sales_order_number,json=salesOrderNumber,proto3" json:"sales_order_number,omitempty"`
-	CustomerId                  string                    `protobuf:"bytes,11,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
-	CustomerName                string                    `protobuf:"bytes,12,opt,name=customer_name,json=customerName,proto3" json:"customer_name,omitempty"`
-	CustomerNumber              string                    `protobuf:"bytes,13,opt,name=customer_number,json=customerNumber,proto3" json:"customer_number,omitempty"`
-	CarrierId                   string                    `protobuf:"bytes,14,opt,name=carrier_id,json=carrierId,proto3" json:"carrier_id,omitempty"`
-	CarrierName                 string                    `protobuf:"bytes,15,opt,name=carrier_name,json=carrierName,proto3" json:"carrier_name,omitempty"`
-	ServiceLevelId              *string                   `protobuf:"bytes,16,opt,name=service_level_id,json=serviceLevelId,proto3,oneof" json:"service_level_id,omitempty"`
-	ServiceLevelName            *string                   `protobuf:"bytes,17,opt,name=service_level_name,json=serviceLevelName,proto3,oneof" json:"service_level_name,omitempty"`
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	Id                   string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Number               string                 `protobuf:"bytes,2,opt,name=number,proto3" json:"number,omitempty"`
+	Note                 *string                `protobuf:"bytes,3,opt,name=note,proto3,oneof" json:"note,omitempty"`
+	BillOfLading         *string                `protobuf:"bytes,4,opt,name=bill_of_lading,json=billOfLading,proto3,oneof" json:"bill_of_lading,omitempty"`
+	MasterTrackingNumber *string                `protobuf:"bytes,5,opt,name=master_tracking_number,json=masterTrackingNumber,proto3,oneof" json:"master_tracking_number,omitempty"`
+	StatusCode           string                 `protobuf:"bytes,6,opt,name=status_code,json=statusCode,proto3" json:"status_code,omitempty"`
+	StatusName           string                 `protobuf:"bytes,7,opt,name=status_name,json=statusName,proto3" json:"status_name,omitempty"`
+	ShippedAt            *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=shipped_at,json=shippedAt,proto3" json:"shipped_at,omitempty"`
+	SalesOrderId         string                 `protobuf:"bytes,9,opt,name=sales_order_id,json=salesOrderId,proto3" json:"sales_order_id,omitempty"`
+	SalesOrderNumber     string                 `protobuf:"bytes,10,opt,name=sales_order_number,json=salesOrderNumber,proto3" json:"sales_order_number,omitempty"`
+	CustomerId           string                 `protobuf:"bytes,11,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	CustomerName         string                 `protobuf:"bytes,12,opt,name=customer_name,json=customerName,proto3" json:"customer_name,omitempty"`
+	CustomerNumber       string                 `protobuf:"bytes,13,opt,name=customer_number,json=customerNumber,proto3" json:"customer_number,omitempty"`
+	CarrierId            string                 `protobuf:"bytes,14,opt,name=carrier_id,json=carrierId,proto3" json:"carrier_id,omitempty"`
+	CarrierName          string                 `protobuf:"bytes,15,opt,name=carrier_name,json=carrierName,proto3" json:"carrier_name,omitempty"`
+	ServiceLevelId       *string                `protobuf:"bytes,16,opt,name=service_level_id,json=serviceLevelId,proto3,oneof" json:"service_level_id,omitempty"`
+	ServiceLevelName     *string                `protobuf:"bytes,17,opt,name=service_level_name,json=serviceLevelName,proto3,oneof" json:"service_level_name,omitempty"`
+	// Carrier code (e.g. "ups", "fedex", "usps"), used to build a tracking URL.
+	CarrierCode                 *string                   `protobuf:"bytes,68,opt,name=carrier_code,json=carrierCode,proto3,oneof" json:"carrier_code,omitempty"`
 	ShippingAddressId           string                    `protobuf:"bytes,18,opt,name=shipping_address_id,json=shippingAddressId,proto3" json:"shipping_address_id,omitempty"`
 	ShippingAddressName         *string                   `protobuf:"bytes,19,opt,name=shipping_address_name,json=shippingAddressName,proto3,oneof" json:"shipping_address_name,omitempty"`
 	ShippedById                 *string                   `protobuf:"bytes,20,opt,name=shipped_by_id,json=shippedById,proto3,oneof" json:"shipped_by_id,omitempty"`
@@ -523,6 +525,13 @@ func (x *ShipmentInfo) GetServiceLevelId() string {
 func (x *ShipmentInfo) GetServiceLevelName() string {
 	if x != nil && x.ServiceLevelName != nil {
 		return *x.ServiceLevelName
+	}
+	return ""
+}
+
+func (x *ShipmentInfo) GetCarrierCode() string {
+	if x != nil && x.CarrierCode != nil {
+		return *x.CarrierCode
 	}
 	return ""
 }
@@ -3038,7 +3047,7 @@ const file_core_core_shipping_proto_rawDesc = "" +
 	"\x14_customer_created_atB\x16\n" +
 	"\x14_customer_updated_atB\x19\n" +
 	"\x17_sales_order_created_atB\x19\n" +
-	"\x17_sales_order_updated_at\"\xa6(\n" +
+	"\x17_sales_order_updated_at\"\xdf(\n" +
 	"\fShipmentInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12\x17\n" +
@@ -3062,14 +3071,16 @@ const file_core_core_shipping_proto_rawDesc = "" +
 	"carrier_id\x18\x0e \x01(\tR\tcarrierId\x12!\n" +
 	"\fcarrier_name\x18\x0f \x01(\tR\vcarrierName\x12-\n" +
 	"\x10service_level_id\x18\x10 \x01(\tH\x03R\x0eserviceLevelId\x88\x01\x01\x121\n" +
-	"\x12service_level_name\x18\x11 \x01(\tH\x04R\x10serviceLevelName\x88\x01\x01\x12.\n" +
+	"\x12service_level_name\x18\x11 \x01(\tH\x04R\x10serviceLevelName\x88\x01\x01\x12&\n" +
+	"\fcarrier_code\x18D \x01(\tH\x05R\vcarrierCode\x88\x01\x01\x12.\n" +
 	"\x13shipping_address_id\x18\x12 \x01(\tR\x11shippingAddressId\x127\n" +
-	"\x15shipping_address_name\x18\x13 \x01(\tH\x05R\x13shippingAddressName\x88\x01\x01\x12'\n" +
-	"\rshipped_by_id\x18\x14 \x01(\tH\x06R\vshippedById\x88\x01\x01\x12+\n" +
-	"\x0fshipped_by_name\x18\x15 \x01(\tH\aR\rshippedByName\x88\x01\x01\x12\"\n" +
+	"\x15shipping_address_name\x18\x13 \x01(\tH\x06R\x13shippingAddressName\x88\x01\x01\x12'\n" +
+	"\rshipped_by_id\x18\x14 \x01(\tH\aR\vshippedById\x88\x01\x01\x12+\n" +
+	"\x0fshipped_by_name\x18\x15 \x01(\tH\bR\rshippedByName\x88\x01\x01\x12\"\n" +
 	"\n" +
-	"invoice_id\x18\x16 \x01(\tH\bR\tinvoiceId\x88\x01\x01\x12*\n" +
-	"\x0einvoice_number\x18\x17 \x01(\tH\tR\rinvoiceNumber\x88\x01\x01\x12\x1d\n" +
+	"invoice_id\x18\x16 \x01(\tH\tR\tinvoiceId\x88\x01\x01\x12*\n" +
+	"\x0einvoice_number\x18\x17 \x01(\tH\n" +
+	"R\rinvoiceNumber\x88\x01\x01\x12\x1d\n" +
 	"\n" +
 	"account_id\x18\x18 \x01(\tR\taccountId\x129\n" +
 	"\n" +
@@ -3078,52 +3089,52 @@ const file_core_core_shipping_proto_rawDesc = "" +
 	"updated_at\x18\x1a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12,\n" +
 	"\x05lines\x18\x1b \x03(\v2\x16.core.ShipmentLineInfoR\x05lines\x12C\n" +
 	"\x0eshipping_cases\x18\x1c \x03(\v2\x1c.core.ShippingCaseDetailInfoR\rshippingCases\x121\n" +
-	"\x12customer_po_number\x18\x1d \x01(\tH\n" +
-	"R\x10customerPoNumber\x88\x01\x01\x125\n" +
-	"\x14carrier_billing_type\x18\x1e \x01(\tH\vR\x12carrierBillingType\x88\x01\x01\x12;\n" +
-	"\x17carrier_billing_account\x18\x1f \x01(\tH\fR\x15carrierBillingAccount\x88\x01\x01\x12\x1c\n" +
-	"\apick_id\x18  \x01(\tH\rR\x06pickId\x88\x01\x01\x12;\n" +
-	"\x17billing_address_country\x18! \x01(\tH\x0eR\x15billingAddressCountry\x88\x01\x01\x123\n" +
-	"\x13billing_address_zip\x18\" \x01(\tH\x0fR\x11billingAddressZip\x88\x01\x01\x12>\n" +
-	"\x19carrier_is_portal_enabled\x18# \x01(\bH\x10R\x16carrierIsPortalEnabled\x88\x01\x01\x12I\n" +
-	"\x1fservice_level_is_portal_enabled\x18$ \x01(\bH\x11R\x1bserviceLevelIsPortalEnabled\x88\x01\x01\x123\n" +
-	"\x13service_level_token\x18% \x01(\tH\x12R\x11serviceLevelToken\x88\x01\x01\x125\n" +
-	"\x14customer_status_code\x18& \x01(\tH\x13R\x12customerStatusCode\x88\x01\x01\x12A\n" +
-	"\x1acustomer_commission_policy\x18' \x01(\tH\x14R\x18customerCommissionPolicy\x88\x01\x01\x12$\n" +
-	"\vpick_number\x18( \x01(\tH\x15R\n" +
+	"\x12customer_po_number\x18\x1d \x01(\tH\vR\x10customerPoNumber\x88\x01\x01\x125\n" +
+	"\x14carrier_billing_type\x18\x1e \x01(\tH\fR\x12carrierBillingType\x88\x01\x01\x12;\n" +
+	"\x17carrier_billing_account\x18\x1f \x01(\tH\rR\x15carrierBillingAccount\x88\x01\x01\x12\x1c\n" +
+	"\apick_id\x18  \x01(\tH\x0eR\x06pickId\x88\x01\x01\x12;\n" +
+	"\x17billing_address_country\x18! \x01(\tH\x0fR\x15billingAddressCountry\x88\x01\x01\x123\n" +
+	"\x13billing_address_zip\x18\" \x01(\tH\x10R\x11billingAddressZip\x88\x01\x01\x12>\n" +
+	"\x19carrier_is_portal_enabled\x18# \x01(\bH\x11R\x16carrierIsPortalEnabled\x88\x01\x01\x12I\n" +
+	"\x1fservice_level_is_portal_enabled\x18$ \x01(\bH\x12R\x1bserviceLevelIsPortalEnabled\x88\x01\x01\x123\n" +
+	"\x13service_level_token\x18% \x01(\tH\x13R\x11serviceLevelToken\x88\x01\x01\x125\n" +
+	"\x14customer_status_code\x18& \x01(\tH\x14R\x12customerStatusCode\x88\x01\x01\x12A\n" +
+	"\x1acustomer_commission_policy\x18' \x01(\tH\x15R\x18customerCommissionPolicy\x88\x01\x01\x12$\n" +
+	"\vpick_number\x18( \x01(\tH\x16R\n" +
 	"pickNumber\x88\x01\x01\x12X\n" +
-	"\x18service_level_created_at\x18) \x01(\v2\x1a.google.protobuf.TimestampH\x16R\x15serviceLevelCreatedAt\x88\x01\x01\x12X\n" +
-	"\x18service_level_updated_at\x18* \x01(\v2\x1a.google.protobuf.TimestampH\x17R\x15serviceLevelUpdatedAt\x88\x01\x01\x12M\n" +
-	"\x12carrier_created_at\x18+ \x01(\v2\x1a.google.protobuf.TimestampH\x18R\x10carrierCreatedAt\x88\x01\x01\x12M\n" +
-	"\x12carrier_updated_at\x18, \x01(\v2\x1a.google.protobuf.TimestampH\x19R\x10carrierUpdatedAt\x88\x01\x01\x12O\n" +
-	"\x13customer_created_at\x18- \x01(\v2\x1a.google.protobuf.TimestampH\x1aR\x11customerCreatedAt\x88\x01\x01\x12O\n" +
-	"\x13customer_updated_at\x18. \x01(\v2\x1a.google.protobuf.TimestampH\x1bR\x11customerUpdatedAt\x88\x01\x01\x12T\n" +
-	"\x16sales_order_created_at\x18/ \x01(\v2\x1a.google.protobuf.TimestampH\x1cR\x13salesOrderCreatedAt\x88\x01\x01\x12T\n" +
-	"\x16sales_order_updated_at\x180 \x01(\v2\x1a.google.protobuf.TimestampH\x1dR\x13salesOrderUpdatedAt\x88\x01\x01\x12^\n" +
-	"\x1bshipping_address_created_at\x181 \x01(\v2\x1a.google.protobuf.TimestampH\x1eR\x18shippingAddressCreatedAt\x88\x01\x01\x12^\n" +
-	"\x1bshipping_address_updated_at\x182 \x01(\v2\x1a.google.protobuf.TimestampH\x1fR\x18shippingAddressUpdatedAt\x88\x01\x01\x12/\n" +
-	"\x11shipped_by_status\x183 \x01(\tH R\x0fshippedByStatus\x88\x01\x01\x12R\n" +
-	"\x15shipped_by_created_at\x184 \x01(\v2\x1a.google.protobuf.TimestampH!R\x12shippedByCreatedAt\x88\x01\x01\x12R\n" +
-	"\x15shipped_by_updated_at\x185 \x01(\v2\x1a.google.protobuf.TimestampH\"R\x12shippedByUpdatedAt\x88\x01\x01\x12M\n" +
-	"\x12invoice_created_at\x186 \x01(\v2\x1a.google.protobuf.TimestampH#R\x10invoiceCreatedAt\x88\x01\x01\x12M\n" +
-	"\x12invoice_updated_at\x187 \x01(\v2\x1a.google.protobuf.TimestampH$R\x10invoiceUpdatedAt\x88\x01\x01\x12G\n" +
-	"\x0fpick_created_at\x188 \x01(\v2\x1a.google.protobuf.TimestampH%R\rpickCreatedAt\x88\x01\x01\x12G\n" +
-	"\x0fpick_updated_at\x189 \x01(\v2\x1a.google.protobuf.TimestampH&R\rpickUpdatedAt\x88\x01\x01\x12G\n" +
-	"\x1eshipping_address_street_line_1\x18: \x01(\tH'R\x1ashippingAddressStreetLine1\x88\x01\x01\x12G\n" +
-	"\x1eshipping_address_street_line_2\x18; \x01(\tH(R\x1ashippingAddressStreetLine2\x88\x01\x01\x12?\n" +
-	"\x19shipping_address_locality\x18< \x01(\tH)R\x17shippingAddressLocality\x88\x01\x01\x129\n" +
-	"\x16shipping_address_state\x18= \x01(\tH*R\x14shippingAddressState\x88\x01\x01\x12D\n" +
-	"\x1cshipping_address_postal_code\x18> \x01(\tH+R\x19shippingAddressPostalCode\x88\x01\x01\x12=\n" +
-	"\x18shipping_address_country\x18? \x01(\tH,R\x16shippingAddressCountry\x88\x01\x01\x129\n" +
-	"\x16shipping_address_phone\x18@ \x01(\tH-R\x14shippingAddressPhone\x88\x01\x01\x129\n" +
-	"\x16shipping_address_email\x18A \x01(\tH.R\x14shippingAddressEmail\x88\x01\x01\x12E\n" +
-	"\x1dshipping_address_is_drop_ship\x18B \x01(\bH/R\x19shippingAddressIsDropShip\x88\x01\x01\x12J\n" +
-	"\x1fshipping_address_geolocation_id\x18C \x01(\tH0R\x1cshippingAddressGeolocationId\x88\x01\x01B\a\n" +
+	"\x18service_level_created_at\x18) \x01(\v2\x1a.google.protobuf.TimestampH\x17R\x15serviceLevelCreatedAt\x88\x01\x01\x12X\n" +
+	"\x18service_level_updated_at\x18* \x01(\v2\x1a.google.protobuf.TimestampH\x18R\x15serviceLevelUpdatedAt\x88\x01\x01\x12M\n" +
+	"\x12carrier_created_at\x18+ \x01(\v2\x1a.google.protobuf.TimestampH\x19R\x10carrierCreatedAt\x88\x01\x01\x12M\n" +
+	"\x12carrier_updated_at\x18, \x01(\v2\x1a.google.protobuf.TimestampH\x1aR\x10carrierUpdatedAt\x88\x01\x01\x12O\n" +
+	"\x13customer_created_at\x18- \x01(\v2\x1a.google.protobuf.TimestampH\x1bR\x11customerCreatedAt\x88\x01\x01\x12O\n" +
+	"\x13customer_updated_at\x18. \x01(\v2\x1a.google.protobuf.TimestampH\x1cR\x11customerUpdatedAt\x88\x01\x01\x12T\n" +
+	"\x16sales_order_created_at\x18/ \x01(\v2\x1a.google.protobuf.TimestampH\x1dR\x13salesOrderCreatedAt\x88\x01\x01\x12T\n" +
+	"\x16sales_order_updated_at\x180 \x01(\v2\x1a.google.protobuf.TimestampH\x1eR\x13salesOrderUpdatedAt\x88\x01\x01\x12^\n" +
+	"\x1bshipping_address_created_at\x181 \x01(\v2\x1a.google.protobuf.TimestampH\x1fR\x18shippingAddressCreatedAt\x88\x01\x01\x12^\n" +
+	"\x1bshipping_address_updated_at\x182 \x01(\v2\x1a.google.protobuf.TimestampH R\x18shippingAddressUpdatedAt\x88\x01\x01\x12/\n" +
+	"\x11shipped_by_status\x183 \x01(\tH!R\x0fshippedByStatus\x88\x01\x01\x12R\n" +
+	"\x15shipped_by_created_at\x184 \x01(\v2\x1a.google.protobuf.TimestampH\"R\x12shippedByCreatedAt\x88\x01\x01\x12R\n" +
+	"\x15shipped_by_updated_at\x185 \x01(\v2\x1a.google.protobuf.TimestampH#R\x12shippedByUpdatedAt\x88\x01\x01\x12M\n" +
+	"\x12invoice_created_at\x186 \x01(\v2\x1a.google.protobuf.TimestampH$R\x10invoiceCreatedAt\x88\x01\x01\x12M\n" +
+	"\x12invoice_updated_at\x187 \x01(\v2\x1a.google.protobuf.TimestampH%R\x10invoiceUpdatedAt\x88\x01\x01\x12G\n" +
+	"\x0fpick_created_at\x188 \x01(\v2\x1a.google.protobuf.TimestampH&R\rpickCreatedAt\x88\x01\x01\x12G\n" +
+	"\x0fpick_updated_at\x189 \x01(\v2\x1a.google.protobuf.TimestampH'R\rpickUpdatedAt\x88\x01\x01\x12G\n" +
+	"\x1eshipping_address_street_line_1\x18: \x01(\tH(R\x1ashippingAddressStreetLine1\x88\x01\x01\x12G\n" +
+	"\x1eshipping_address_street_line_2\x18; \x01(\tH)R\x1ashippingAddressStreetLine2\x88\x01\x01\x12?\n" +
+	"\x19shipping_address_locality\x18< \x01(\tH*R\x17shippingAddressLocality\x88\x01\x01\x129\n" +
+	"\x16shipping_address_state\x18= \x01(\tH+R\x14shippingAddressState\x88\x01\x01\x12D\n" +
+	"\x1cshipping_address_postal_code\x18> \x01(\tH,R\x19shippingAddressPostalCode\x88\x01\x01\x12=\n" +
+	"\x18shipping_address_country\x18? \x01(\tH-R\x16shippingAddressCountry\x88\x01\x01\x129\n" +
+	"\x16shipping_address_phone\x18@ \x01(\tH.R\x14shippingAddressPhone\x88\x01\x01\x129\n" +
+	"\x16shipping_address_email\x18A \x01(\tH/R\x14shippingAddressEmail\x88\x01\x01\x12E\n" +
+	"\x1dshipping_address_is_drop_ship\x18B \x01(\bH0R\x19shippingAddressIsDropShip\x88\x01\x01\x12J\n" +
+	"\x1fshipping_address_geolocation_id\x18C \x01(\tH1R\x1cshippingAddressGeolocationId\x88\x01\x01B\a\n" +
 	"\x05_noteB\x11\n" +
 	"\x0f_bill_of_ladingB\x19\n" +
 	"\x17_master_tracking_numberB\x13\n" +
 	"\x11_service_level_idB\x15\n" +
-	"\x13_service_level_nameB\x18\n" +
+	"\x13_service_level_nameB\x0f\n" +
+	"\r_carrier_codeB\x18\n" +
 	"\x16_shipping_address_nameB\x10\n" +
 	"\x0e_shipped_by_idB\x12\n" +
 	"\x10_shipped_by_nameB\r\n" +

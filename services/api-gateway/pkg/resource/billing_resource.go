@@ -38,6 +38,18 @@ type AccountUsageResponse struct {
 	Subscription *SubscriptionInfo `json:"subscription"`
 	// Estimated agent LLM spending for the current month.
 	AgentSpend *AgentSpendInfo `json:"agent_spend"`
+	// Display name of the plan the account is actually billed on, resolved live from Stripe (e.g. `Founder`).
+	//
+	// Empty when the account has no Stripe pricing plan.
+	PlanName string `json:"plan_name"`
+	// Flat base fee in cents charged each `base_fee_interval`, resolved live from Stripe.
+	//
+	// `0` when the plan is priced per seat rather than a flat base fee.
+	BaseFeeCents int64 `json:"base_fee_cents"`
+	// Interval the base fee recurs on (e.g. `month`).
+	//
+	// Empty when there is no base fee.
+	BaseFeeInterval string `json:"base_fee_interval"`
 }
 
 // Subscription status information.
@@ -157,13 +169,16 @@ var SampleAgentSpendInfo = &AgentSpendInfo{
 }
 
 var SampleAccountUsageResponse = &AccountUsageResponse{
-	Object:       constants.ObjectTypeAccountUsageResponse,
-	Seats:        *SampleUsageItem,
-	Invoices:     *SampleUsageItemUnlimited,
-	Batches:      *SampleUsageItemUnlimited,
-	Sandboxes:    *SampleUsageItem,
-	Subscription: SampleSubscriptionInfo,
-	AgentSpend:   SampleAgentSpendInfo,
+	Object:          constants.ObjectTypeAccountUsageResponse,
+	Seats:           *SampleUsageItem,
+	Invoices:        *SampleUsageItemUnlimited,
+	Batches:         *SampleUsageItemUnlimited,
+	Sandboxes:       *SampleUsageItem,
+	Subscription:    SampleSubscriptionInfo,
+	AgentSpend:      SampleAgentSpendInfo,
+	PlanName:        "Founder",
+	BaseFeeCents:    100,
+	BaseFeeInterval: "month",
 }
 
 var SampleBillingPortalSessionResponse = &BillingPortalSessionResponse{

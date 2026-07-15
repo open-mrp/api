@@ -59,7 +59,7 @@ func TestRelatedProductionRun_PopulatesNumberAndStatus(t *testing.T) {
 
 	completed := time.Now()
 	populateProductionRunOnSORelated(ctx, so, map[string]any{
-		"pr_1": &apiresource.ProductionRunDetail{ID: "pr_1", Number: "1", CompletedAt: &completed},
+		"pr_1": &apiresource.ProductionRun{ID: "pr_1", Number: "1", CompletedAt: &completed},
 	})
 
 	rec := so.Related.ProductionRun

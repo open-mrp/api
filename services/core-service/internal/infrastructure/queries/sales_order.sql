@@ -684,6 +684,8 @@ SELECT
     uc_nu.abbreviation AS unit_cost_numerator_unit_abbreviation,
     uc_du.id AS unit_cost_denominator_unit_id,
     uc_du.abbreviation AS unit_cost_denominator_unit_abbreviation,
+    -- Product type
+    p.product_type_code AS product_type_code,
     -- Timestamps
     sol.created_at,
     sol.updated_at
@@ -697,6 +699,7 @@ LEFT JOIN rate uc ON uc.id = sol.unit_cost_id
 LEFT JOIN unit uc_nu ON uc_nu.id = uc.numerator_unit_id
 LEFT JOIN unit uc_du ON uc_du.id = uc.denominator_unit_id
 LEFT JOIN item i ON i.id = sol.item_id
+LEFT JOIN product p ON p.id = sol.product_id
 WHERE sol.sales_order_id = sqlc.arg('sales_order_id')
 ORDER BY sol.line_item_number ASC;
 
@@ -725,19 +728,21 @@ INSERT INTO sales_order (
 -- name: UpdateSalesOrder :exec
 UPDATE sales_order SET
     number = COALESCE(sqlc.narg('number'), number),
-    customer_po_number = COALESCE(sqlc.narg('customer_po_number'), customer_po_number),
-    note = COALESCE(sqlc.narg('note'), note),
+    -- Clearable fields use plain narg (no COALESCE): the service backfills an omitted
+    -- field from the existing row, so NULL here means an explicit clear, not "leave".
+    customer_po_number = sqlc.narg('customer_po_number'),
+    note = sqlc.narg('note'),
     carrier_id = sqlc.narg('carrier_id'),
     carrier_option_id = sqlc.narg('carrier_option_id'),
-    carrier_billing_type = COALESCE(sqlc.narg('carrier_billing_type'), carrier_billing_type),
-    carrier_billing_account = COALESCE(sqlc.narg('carrier_billing_account'), carrier_billing_account),
+    carrier_billing_type = sqlc.narg('carrier_billing_type'),
+    carrier_billing_account = sqlc.narg('carrier_billing_account'),
     priority_code = COALESCE(sqlc.narg('priority_code'), priority_code),
     sales_rep_id = sqlc.narg('sales_rep_id'),
     shipping_term_id = sqlc.narg('shipping_term_id'),
     payment_term_id = sqlc.narg('payment_term_id'),
     order_discount_id = sqlc.narg('order_discount_id'),
     is_acknowledgment_sent = COALESCE(sqlc.narg('is_acknowledgment_sent'), is_acknowledgment_sent),
-    promised_at = COALESCE(sqlc.narg('promised_at'), promised_at),
+    promised_at = sqlc.narg('promised_at'),
     buyer_account_id = sqlc.narg('buyer_account_id'),
     billing_address_id = COALESCE(sqlc.narg('billing_address_id'), billing_address_id),
     shipping_address_id = COALESCE(sqlc.narg('shipping_address_id'), shipping_address_id),
@@ -866,6 +871,16 @@ DELETE FROM order_email_contact
 WHERE sales_order_id = sqlc.arg('sales_order_id')
 AND notification_type_code = sqlc.arg('notification_type_code');
 
+-- name: DeleteReservedInventoryIssueQuantitiesBySalesOrder :exec
+-- The quantity rows created for each reserved issue on issue() are referenced only by
+-- inventory_issue.quantity_id, so they must be deleted via this join BEFORE the issues are
+-- deleted — otherwise unissuing (or re-issuing) leaves them orphaned in the quantity table.
+DELETE q FROM quantity q
+JOIN inventory_issue ii ON ii.quantity_id = q.id
+WHERE ii.order_id = sqlc.arg('sales_order_id')
+AND ii.account_id = sqlc.arg('account_id')
+AND ii.status_code = 'reserved';
+
 -- name: DeleteReservedInventoryIssuesBySalesOrder :exec
 DELETE FROM inventory_issue
 WHERE order_id = sqlc.arg('sales_order_id')
@@ -972,6 +987,40 @@ FROM (
 SELECT sol.sales_order_id, COUNT(*) AS line_count
 FROM sales_order_line sol
 WHERE sol.sales_order_id IN (sqlc.slice('sales_order_ids'))
+GROUP BY sol.sales_order_id;
+
+-- name: GetSalesOrderFulfillmentProgress :many
+-- Aggregates ordered/picked/packed/invoiced quantities per sales order over its
+-- sale-type lines in one batched pass, keyed by sales order ID. Backs the
+-- order-level picked/packed/invoiced completion fractions on both the list and
+-- detail endpoints without loading each order's lines. Only product_type_code =
+-- 'sale' lines are counted (freight/credit system lines and product-less custom
+-- lines are excluded), matching the frontend's completion math. The picked/
+-- packed/invoiced totals reuse the same per-line correlated subqueries as
+-- GetSalesOrderLines. Orders with no sale lines are absent from the result.
+SELECT
+    sol.sales_order_id,
+    COALESCE(SUM(q.value), 0) AS quantity_ordered,
+    COALESCE(SUM(
+        (SELECT COALESCE(SUM(plq.value), 0) FROM pick_line pl
+            JOIN quantity plq ON plq.id = pl.quantity_id
+            WHERE pl.sales_order_line_id = sol.id)
+    ), 0) AS quantity_picked,
+    COALESCE(SUM(
+        (SELECT COALESCE(SUM(plq2.value), 0) FROM pick_line pl2
+            JOIN quantity plq2 ON plq2.id = pl2.quantity_id
+            WHERE pl2.sales_order_line_id = sol.id AND pl2.packed_at IS NOT NULL)
+    ), 0) AS quantity_packed,
+    COALESCE(SUM(
+        (SELECT COALESCE(SUM(ilq.value), 0) FROM invoice_line il
+            JOIN quantity ilq ON ilq.id = il.quantity_id
+            WHERE il.sales_order_line_id = sol.id)
+    ), 0) AS quantity_invoiced
+FROM sales_order_line sol
+JOIN quantity q ON q.id = sol.quantity_id
+JOIN product p ON p.id = sol.product_id
+WHERE sol.sales_order_id IN (sqlc.slice('sales_order_ids'))
+AND p.product_type_code = 'sale'
 GROUP BY sol.sales_order_id;
 
 -- name: SearchSalesOrderIDs :many

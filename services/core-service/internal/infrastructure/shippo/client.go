@@ -459,7 +459,7 @@ func applyShippingMarkup(rate float64) float64 {
 	return rate * shippingRateMarkup
 }
 
-func (c *clientImpl) createShipmentForRates(ctx context.Context, carrierAccountObjectID string, from, to domain.ShippingAddress, parcels []domain.Parcel) (*ShipmentResponse, *apierror.APIError) {
+func (c *clientImpl) createShipmentForRates(ctx context.Context, carrierAccountObjectID string, from, to domain.ShippingAddress, parcels []domain.Parcel, billing *domain.ShippingBilling) (*ShipmentResponse, *apierror.APIError) {
 	shipmentParcels := make([]TestParcel, len(parcels))
 	for i, p := range parcels {
 		shipmentParcels[i] = TestParcel{
@@ -491,6 +491,19 @@ func (c *clientImpl) createShipmentForRates(ctx context.Context, carrierAccountO
 		},
 		Parcels:         shipmentParcels,
 		CarrierAccounts: []string{carrierAccountObjectID},
+	}
+
+	// Third-party freight billing: forward the third party's account + address to the
+	// carrier via the Shippo shipment `extra.billing` object (matches Dashboard).
+	if billing != nil && billing.Type != "" {
+		shipmentReq.Extra = &ShipmentExtra{
+			Billing: &ShipmentBilling{
+				Type:    billing.Type,
+				Account: billing.Account,
+				Country: billing.Country,
+				Zip:     billing.Zip,
+			},
+		}
 	}
 
 	resp, apiErr := c.doRequest(ctx, http.MethodPost, "/shipments/", shipmentReq)
@@ -567,7 +580,7 @@ func (c *clientImpl) FetchShippingRate(ctx context.Context, params domain.FetchS
 
 	// Customer-facing estimates quote the carrier's Shippo default (published/retail) account rather than the BYOA account's negotiated rates.
 	carrierAccountObjectID := c.resolvePublishedRateCarrierAccountID(ctx, params.CarrierAccountObjectID)
-	shipment, apiErr := c.createShipmentForRates(ctx, carrierAccountObjectID, params.FromAddress, params.ToAddress, params.Parcels)
+	shipment, apiErr := c.createShipmentForRates(ctx, carrierAccountObjectID, params.FromAddress, params.ToAddress, params.Parcels, params.Billing)
 	if apiErr != nil {
 		return 0, tracing.Trace(span, apiErr)
 	}
@@ -627,7 +640,7 @@ func (c *clientImpl) FetchAllShippingRates(ctx context.Context, params domain.Fe
 
 	// Customer-facing estimates quote the carrier's Shippo default (published/retail) account rather than the BYOA account's negotiated rates.
 	carrierAccountObjectID := c.resolvePublishedRateCarrierAccountID(ctx, params.CarrierAccountObjectID)
-	shipment, apiErr := c.createShipmentForRates(ctx, carrierAccountObjectID, params.FromAddress, params.ToAddress, params.Parcels)
+	shipment, apiErr := c.createShipmentForRates(ctx, carrierAccountObjectID, params.FromAddress, params.ToAddress, params.Parcels, nil)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}

@@ -20,8 +20,6 @@ type UpdateSalesOrderLineRequest struct {
 	SalesOrderID string `path:"id" validate:"required"`
 	// Sales order line ID.
 	SalesOrderLineID string `path:"line_id" validate:"required"`
-	// Item ID.
-	ItemID field.Optional[string] `json:"item_id,omitzero" validate:"omitempty"`
 	// Product SKU.
 	ProductSKU field.Optional[string] `json:"product_sku,omitzero" validate:"omitempty,max=255"`
 	// Product description.
@@ -34,9 +32,7 @@ type UpdateSalesOrderLineRequest struct {
 	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero" validate:"omitempty"`
 }
 
-var sampleUpdateSOLineItemID = apiresource.SampleItemID
 var sampleUpdateSalesOrderLineRequest = &UpdateSalesOrderLineRequest{
-	ItemID: field.Some(sampleUpdateSOLineItemID),
 	Quantity: field.Some(apirequest.QuantityInput{
 		Value:  "20",
 		UnitID: apiresource.SampleUnitID,
@@ -62,7 +58,7 @@ func (e *UpdateSalesOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*U
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/{id}/lines/{line_id}",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeSalesOrderLine,
 		RequiredPermissions: []types.Permission{

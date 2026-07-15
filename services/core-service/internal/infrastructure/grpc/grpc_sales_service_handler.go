@@ -5,6 +5,7 @@ import (
 
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/shared/contracts"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -278,6 +279,9 @@ func salesOrderToProto(o *domain.SalesOrder) *pb.SalesOrderInfo {
 		AcknowledgementEmails: o.AcknowledgementEmails,
 		PaymentStatus:         string(o.PaymentStatus),
 		PaymentIntentIds:      o.PaymentIntentIDs,
+		PickedCompletion:      o.PickedCompletion,
+		PackedCompletion:      o.PackedCompletion,
+		InvoicedCompletion:    o.InvoicedCompletion,
 		CreatedAt:             timestamppb.New(o.CreatedAt),
 		UpdatedAt:             timestamppb.New(o.UpdatedAt),
 	}
@@ -431,6 +435,7 @@ func salesOrderLineToProto(l *domain.SalesOrderLine) *pb.SalesOrderLineInfo {
 		ProductSku:                           l.ProductSKU,
 		ProductDescription:                   l.ProductDescription,
 		ProductId:                            l.ProductID,
+		ProductTypeCode:                      l.ProductTypeCode,
 		ItemId:                               l.ItemID,
 		ItemSku:                              l.ItemSKU,
 		EdiLineItemId:                        l.EdiLineItemID,
@@ -639,29 +644,26 @@ func (h *salesGRPCHandler) UpdateSalesOrder(ctx context.Context, req *pb.UpdateS
 	defer finalizeIdempotency()
 
 	params := domain.UpdateSalesOrderParams{
-		SalesOrderID:          req.Id,
-		Number:                req.Number,
-		CustomerPONumber:      req.CustomerPoNumber,
-		Note:                  req.Note,
-		CarrierID:             req.CarrierId,
-		ServiceLevelID:        req.ServiceLevelId,
-		CarrierBillingType:    req.CarrierBillingType,
-		CarrierBillingAccount: req.CarrierBillingAccount,
-		PriorityCode:          req.PriorityCode,
-		SalesRepID:            req.SalesRepId,
-		ShippingTermID:        req.ShippingTermId,
-		PaymentTermID:         req.PaymentTermId,
-		OrderDiscountID:       req.OrderDiscountId,
-		IsAcknowledgmentSent:  req.IsAcknowledgmentSent,
-		BuyerAccountID:        req.CustomerId,
-		BillingAddressID:      req.BillingAddressId,
-		ShippingAddressID:     req.ShippingAddressId,
-		Includes:              req.Includes,
-	}
-
-	if req.PromisedAt != nil {
-		t := req.PromisedAt.AsTime()
-		params.PromisedAt = &t
+		SalesOrderID:         req.Id,
+		Number:               req.Number,
+		CarrierID:            req.CarrierId,
+		PriorityCode:         req.PriorityCode,
+		ShippingTermID:       req.ShippingTermId,
+		PaymentTermID:        req.PaymentTermId,
+		IsAcknowledgmentSent: req.IsAcknowledgmentSent,
+		BuyerAccountID:       req.CustomerId,
+		BillingAddressID:     req.BillingAddressId,
+		ShippingAddressID:    req.ShippingAddressId,
+		Includes:             req.Includes,
+		// Clearable fields (StringPatch / TimestampPatch → Clearable).
+		CustomerPONumber:      field.StringClearableFromProto(req.CustomerPoNumber),
+		Note:                  field.StringClearableFromProto(req.Note),
+		ServiceLevelID:        field.StringClearableFromProto(req.ServiceLevelId),
+		CarrierBillingType:    field.StringClearableFromProto(req.CarrierBillingType),
+		CarrierBillingAccount: field.StringClearableFromProto(req.CarrierBillingAccount),
+		SalesRepID:            field.StringClearableFromProto(req.SalesRepId),
+		OrderDiscountID:       field.StringClearableFromProto(req.OrderDiscountId),
+		PromisedAt:            field.TimestampClearableFromProto(req.PromisedAt),
 	}
 
 	if list := req.AcknowledgementEmailContacts; list != nil {
@@ -747,8 +749,6 @@ func (h *salesGRPCHandler) CheckoutSalesOrder(ctx context.Context, req *pb.Check
 	result, apiErr := h.salesOrderSvc.CheckoutSalesOrder(ctx, domain.CheckoutSalesOrderParams{
 		SalesOrderID: req.Id,
 		Email:        req.Email,
-		SuccessURL:   req.SuccessUrl,
-		CancelURL:    req.CancelUrl,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
@@ -794,6 +794,25 @@ func (h *salesGRPCHandler) QuoteSalesOrderLinePrices(ctx context.Context, req *p
 	return &pb.QuoteSalesOrderLinePricesResponse{Lines: respLines}, nil
 }
 
+func (h *salesGRPCHandler) QuoteSalesOrderFreight(ctx context.Context, req *pb.QuoteSalesOrderFreightRequest) (*pb.QuoteSalesOrderFreightResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	quote, apiErr := h.salesOrderSvc.QuoteSalesOrderFreight(ctx, domain.QuoteSalesOrderFreightParams{
+		SalesOrderID: req.Id,
+	})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.QuoteSalesOrderFreightResponse{
+		UnitPriceValue:             quote.UnitPrice.Value,
+		UnitPriceNumeratorUnitId:   quote.UnitPrice.NumeratorUnitID,
+		UnitPriceDenominatorUnitId: quote.UnitPrice.DenominatorUnitID,
+	}, nil
+}
+
 func (h *salesGRPCHandler) CreateSalesOrderProductionRun(ctx context.Context, req *pb.CreateSalesOrderProductionRunRequest) (*pb.CreateSalesOrderProductionRunResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
@@ -810,7 +829,7 @@ func (h *salesGRPCHandler) CreateSalesOrderProductionRun(ctx context.Context, re
 	}
 
 	return &pb.CreateSalesOrderProductionRunResponse{
-		ProductionRunId: result.ProductionRunID,
+		ProductionRun: productionRunToProto(result.ProductionRun),
 	}, nil
 }
 
@@ -899,6 +918,27 @@ func (h *salesGRPCHandler) DeleteSalesOrderLine(ctx context.Context, req *pb.Del
 	}
 
 	return &emptypb.Empty{}, nil
+}
+
+func (h *salesGRPCHandler) ReorderSalesOrderLines(ctx context.Context, req *pb.ReorderSalesOrderLinesRequest) (*pb.ReorderSalesOrderLinesResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	lines, apiErr := h.salesOrderLineSvc.ReorderSalesOrderLines(ctx, domain.ReorderSalesOrderLinesParams{
+		SalesOrderID: req.SalesOrderId,
+		LineIDs:      req.LineIds,
+	})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	respLines := make([]*pb.SalesOrderLineInfo, len(lines))
+	for i, line := range lines {
+		respLines[i] = salesOrderLineToProto(line)
+	}
+
+	return &pb.ReorderSalesOrderLinesResponse{Lines: respLines}, nil
 }
 
 func (h *salesGRPCHandler) CreateCustomerCheckoutSession(ctx context.Context, req *pb.CreateCustomerCheckoutSessionRequest) (*pb.CreateCustomerCheckoutSessionResponse, error) {

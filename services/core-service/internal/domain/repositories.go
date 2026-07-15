@@ -42,6 +42,8 @@ type AccountRepo interface {
 	ExistsPortalSlug(ctx context.Context, slug, excludeAccountID string) (bool, *apierror.APIError)
 	UpdateBrandingLogoURL(ctx context.Context, accountID, logoURL string) *apierror.APIError
 	GetBrandingLogoKey(ctx context.Context, accountID string) (*string, *apierror.APIError)
+	UpdateBrandingFaviconURL(ctx context.Context, accountID, faviconURL string) *apierror.APIError
+	GetBrandingFaviconKey(ctx context.Context, accountID string) (*string, *apierror.APIError)
 	ListPlanLimits(ctx context.Context, accountPlanID string) (map[string]*int32, *apierror.APIError)
 	ListPlanFeatures(ctx context.Context, accountPlanID string) (map[string]bool, *apierror.APIError)
 }
@@ -110,7 +112,9 @@ type AccountRelationRepo interface {
 	FindRelationByOwnerAndCounterparty(ctx context.Context, ownerAccountID, counterpartyAccountID string) (string, *apierror.APIError)
 	CreateNotificationPreference(ctx context.Context, id, accountRelationID, recipientAccountUserID string, notificationTypeCode string) *apierror.APIError
 	ListNotificationPreferences(ctx context.Context, accountRelationID, recipientAccountUserID string) ([]NotificationPreference, *apierror.APIError)
+	ListNotificationRecipients(ctx context.Context, accountRelationID string) ([]NotificationRecipientRef, *apierror.APIError)
 	DeleteNotificationPreference(ctx context.Context, accountRelationID, recipientAccountUserID, notificationTypeCode string) *apierror.APIError
+	DeleteNotificationPreferencesByTypes(ctx context.Context, accountRelationID string, notificationTypeCodes []string) *apierror.APIError
 	ListChildAccounts(ctx context.Context, params ListChildAccountsParams) (*ListChildAccountsResult, *apierror.APIError)
 	GetChildAccountDetail(ctx context.Context, ownerAccountID, counterpartyAccountID string) (*ChildAccount, *apierror.APIError)
 	GetChildAccountsByRelationIDs(ctx context.Context, ownerAccountID string, relationIDs []string) ([]*ChildAccount, *apierror.APIError)
@@ -122,9 +126,10 @@ type AccountRelationRepo interface {
 
 // SystemProductInfo holds the minimal info needed to synthesize an order line using one of the account's built-in system products (credit, shipping).
 type SystemProductInfo struct {
-	ProductID      string
-	ProductSKU     string
-	QuantityUnitID string
+	ProductID          string
+	ProductSKU         string
+	ProductDescription *string
+	QuantityUnitID     string
 }
 
 type ProductRepo interface {
@@ -663,12 +668,16 @@ type InventoryReservationRepo interface {
 type MaterialDemandRepo interface {
 	// GetMaterialDemand calculates the material demand for producing the given items.
 	GetMaterialDemand(ctx context.Context, accountID string, productItemID string, measure decimal.Decimal, unitID string) ([]MaterialDemandItem, *apierror.APIError)
+	// GetMaterialDemandForOrder calculates the aggregated material demand across a set of order lines (one entry per material).
+	GetMaterialDemandForOrder(ctx context.Context, accountID string, lines []MaterialDemandLineInput) ([]MaterialDemandItem, *apierror.APIError)
 }
 
 // UnitConversionRepo provides unit conversion capabilities.
 type UnitConversionRepo interface {
 	// ConvertValue converts a measure from one unit to another within the same unit group. Returns the converted measure.
 	ConvertValue(ctx context.Context, measure decimal.Decimal, fromUnitID, toUnitID string) (decimal.Decimal, *apierror.APIError)
+	// GetUnitFactors returns the base-conversion factors for each requested unit ID. Unknown IDs are omitted.
+	GetUnitFactors(ctx context.Context, accountID string, unitIDs []string) (map[string]UnitFactors, *apierror.APIError)
 }
 
 type ProductionFlowRepo interface {
@@ -874,6 +883,8 @@ type SalesOrderRepo interface {
 	GetPaymentStatuses(ctx context.Context, accountID string, salesOrderIDs []string) (map[string]constants.SalesOrderPaymentStatus, *apierror.APIError)
 	// GetPaymentIntentIDs returns the Stripe payment intent IDs linked to each of the given orders (scoped to the owning account), keyed by sales order ID. Orders with no payments are absent from the map.
 	GetPaymentIntentIDs(ctx context.Context, accountID string, salesOrderIDs []string) (map[string][]string, *apierror.APIError)
+	// GetFulfillmentProgress returns each order's picked/packed/invoiced completion fractions (0..1), aggregated over its sale-type lines, keyed by sales order ID. Orders with no sale lines are absent from the map.
+	GetFulfillmentProgress(ctx context.Context, salesOrderIDs []string) (map[string]SalesOrderFulfillmentProgress, *apierror.APIError)
 	GetLinesForBOM(ctx context.Context, salesOrderID string) ([]SalesOrderLineForBOM, *apierror.APIError)
 	SetProductionRunID(ctx context.Context, accountID, salesOrderID, productionRunID string) *apierror.APIError
 	GetSaleLinesForIssue(ctx context.Context, salesOrderID string) ([]SalesOrderSaleLineForIssue, *apierror.APIError)
@@ -897,9 +908,14 @@ type SalesOrderLineRepo interface {
 	Delete(ctx context.Context, salesOrderLineID string) *apierror.APIError
 	IsInOrder(ctx context.Context, salesOrderLineID, salesOrderID, accountID string) (bool, *apierror.APIError)
 	GetNextLineItemNumber(ctx context.Context, salesOrderID string) (int32, *apierror.APIError)
-	HasShippedAgainstOrderLine(ctx context.Context, salesOrderLineID string) (bool, *apierror.APIError)
+	// HasShipmentAgainstOrderLine reports whether the order line is part of any shipment (packed or shipped).
+	HasShipmentAgainstOrderLine(ctx context.Context, salesOrderLineID string) (bool, *apierror.APIError)
 	DeleteCascade(ctx context.Context, salesOrderLineID string) *apierror.APIError
 	CreateQuantity(ctx context.Context, quantityID, value, unitID string) *apierror.APIError
+	// GetLineOrder returns the order's lines in current display order, flagging credit/freight (system) lines.
+	GetLineOrder(ctx context.Context, salesOrderID string) ([]*SalesOrderLinePosition, *apierror.APIError)
+	// SetLineItemNumber sets a single line's line_item_number.
+	SetLineItemNumber(ctx context.Context, salesOrderLineID string, lineItemNumber int32) *apierror.APIError
 }
 
 type PurchaseOrderRepo interface {
@@ -1034,6 +1050,11 @@ type PickRepo interface {
 	FindLinesToPack(ctx context.Context, pickID string) ([]*PickLine, *apierror.APIError)
 	PackLines(ctx context.Context, pickID string) *apierror.APIError
 	MarkFinishedIfAllPacked(ctx context.Context, pickID string) *apierror.APIError
+	// CloseOpenPickLines packs every still-open pick line (used when the order is closed).
+	CloseOpenPickLines(ctx context.Context, pickID string) *apierror.APIError
+	// ReopenIncompletePickLines reopens pick lines whose picked quantity is below the ordered quantity (used when a fulfilled order is reopened).
+	ReopenIncompletePickLines(ctx context.Context, pickID string) *apierror.APIError
+	CountLines(ctx context.Context, pickID string) (int64, *apierror.APIError)
 	CountShipmentsByOrder(ctx context.Context, salesOrderID string) (int64, *apierror.APIError)
 	GetSalesOrderForPick(ctx context.Context, accountID, pickID string) (*PickSalesOrder, *apierror.APIError)
 	CreateShipment(ctx context.Context, params CreateShipmentFromPickParams) *apierror.APIError
@@ -1052,6 +1073,10 @@ type PickLineRepo interface {
 	CreateForRemaining(ctx context.Context, id, quantityID, pickID, orderLineID string) *apierror.APIError
 	CalculateRemainingForOrderLine(ctx context.Context, orderLineID string) (remainingValue string, unitID string, apiErr *apierror.APIError)
 	HasUnpackedPickLineForOrderLine(ctx context.Context, orderLineID string) (bool, *apierror.APIError)
+	// GetOrderLinePackProgress returns the order line's ordered quantity, the total already packed, and the quantity unit. outstanding = ordered - packed decides whether an open pick line is still needed.
+	GetOrderLinePackProgress(ctx context.Context, orderLineID string) (orderedValue string, packedValue string, unitID string, apiErr *apierror.APIError)
+	// DeleteUnpackedForOrderLine deletes every unpacked (open) pick line for the order line, along with their quantity rows. Packed lines are left untouched.
+	DeleteUnpackedForOrderLine(ctx context.Context, orderLineID string) *apierror.APIError
 	UnpackByShipment(ctx context.Context, shipmentID string) *apierror.APIError
 }
 
@@ -1182,6 +1207,7 @@ type ShipmentRepo interface {
 	List(ctx context.Context, params ListShipmentsParams) (*ListShipmentsResult, *apierror.APIError)
 	Get(ctx context.Context, params GetShipmentParams) (*Shipment, *apierror.APIError)
 	Update(ctx context.Context, params UpdateShipmentParams) (*Shipment, *apierror.APIError)
+	SyncShippingForOrder(ctx context.Context, params SyncShipmentShippingParams) *apierror.APIError
 	Delete(ctx context.Context, accountID, shipmentID string) *apierror.APIError
 	MarkShipped(ctx context.Context, accountID, shipmentID, shippedByID string) *apierror.APIError
 	MarkVoided(ctx context.Context, accountID, shipmentID string) *apierror.APIError
@@ -1298,6 +1324,8 @@ type PortalRegistrationSessionRepo interface {
 	Update(ctx context.Context, params UpdatePortalRegistrationSessionParams) (*PortalRegistrationSession, *apierror.APIError)
 	Complete(ctx context.Context, typeID, customerID string) (*PortalRegistrationSession, *apierror.APIError)
 	Abandon(ctx context.Context, typeID string) *apierror.APIError
+	// ListSessions returns a seller's registration sessions (keyset-paginated), for customer-service follow-up.
+	ListSessions(ctx context.Context, params ListPortalRegistrationSessionsParams) (*ListPortalRegistrationSessionsResult, *apierror.APIError)
 }
 
 type PortalDomainRepo interface {

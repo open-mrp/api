@@ -18,31 +18,31 @@ import (
 type UpdateSalesOrderRequest struct {
 	// Sales order ID.
 	SalesOrderID string `path:"id" validate:"required"`
-	// Customer's purchase order number.
-	CustomerPurchaseOrderNumber field.Optional[string] `json:"customer_purchase_order_number,omitzero" validate:"omitempty,max=255"`
-	// Order note.
-	Note field.Optional[string] `json:"note,omitzero"`
+	// Customer's purchase order number. Send `null` to clear.
+	CustomerPurchaseOrderNumber field.Clearable[string] `json:"customer_purchase_order_number,omitzero" validate:"omitempty,max=255"`
+	// Order note. Send `null` to clear.
+	Note field.Clearable[string] `json:"note,omitzero"`
 	// Carrier ID.
 	CarrierID field.Optional[string] `json:"carrier_id,omitzero" validate:"omitempty"`
-	// Service level ID.
-	ServiceLevelID field.Optional[string] `json:"service_level_id,omitzero" validate:"omitempty"`
-	// Who is billed for freight.
+	// Service level ID. Send `null` to clear.
+	ServiceLevelID field.Clearable[string] `json:"service_level_id,omitzero" validate:"omitempty"`
+	// Who is billed for freight. Send `null` to clear.
 	//
 	// - `sender`: the sender pays for shipping.
 	// - `third_party`: a third party pays for shipping, using the carrier billing account number.
-	CarrierBillingType field.Optional[constants.CarrierBillingType] `json:"carrier_billing_type,omitzero" validate:"omitempty"`
-	// Carrier billing account number.
-	CarrierBillingAccountNumber field.Optional[string] `json:"carrier_billing_account_number,omitzero" validate:"omitempty,max=255"`
+	CarrierBillingType field.Clearable[constants.CarrierBillingType] `json:"carrier_billing_type,omitzero" validate:"omitempty"`
+	// Carrier billing account number. Send `null` to clear.
+	CarrierBillingAccountNumber field.Clearable[string] `json:"carrier_billing_account_number,omitzero" validate:"omitempty,max=255"`
 	// New fulfillment priority for the order.
 	PriorityCode field.Optional[string] `json:"priority_code,omitzero" validate:"omitempty,max=255"`
-	// Sales rep ID.
-	SalesRepID field.Optional[string] `json:"sales_rep_id,omitzero" validate:"omitempty"`
+	// Sales rep ID. Send `null` to clear.
+	SalesRepID field.Clearable[string] `json:"sales_rep_id,omitzero" validate:"omitempty"`
 	// Shipping term ID.
 	ShippingTermID field.Optional[string] `json:"shipping_term_id,omitzero" validate:"omitempty"`
 	// Payment term ID.
 	PaymentTermID field.Optional[string] `json:"payment_term_id,omitzero" validate:"omitempty"`
-	// Order discount ID.
-	OrderDiscountID field.Optional[string] `json:"order_discount_id,omitzero" validate:"omitempty"`
+	// Order discount ID. Send `null` to clear.
+	OrderDiscountID field.Clearable[string] `json:"order_discount_id,omitzero" validate:"omitempty"`
 	// Billing address ID.
 	//
 	// Re-points the order to an existing address. To change an address's contents, use the update-address endpoint.
@@ -51,16 +51,12 @@ type UpdateSalesOrderRequest struct {
 	//
 	// Re-points the order to an existing address. To change an address's contents, use the update-address endpoint.
 	ShippingAddressID field.Optional[string] `json:"shipping_address_id,omitzero" validate:"omitempty"`
-	// Order number.
-	//
-	// Must be unique within your account.
-	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
 	// Acknowledgment status of the order.
 	//
 	// Set to `sent` to mark the acknowledgement as sent without emailing the customer, or `not_sent` to reset it.
 	AcknowledgmentStatus field.Optional[constants.AcknowledgmentStatus] `json:"acknowledgment_status,omitzero" validate:"omitempty"`
-	// Promised delivery date.
-	PromisedAt field.Optional[time.Time] `json:"promised_at,omitzero"`
+	// Promised delivery date. Send `null` to clear.
+	PromisedAt field.Clearable[time.Time] `json:"promised_at,omitzero"`
 	// Customer ID.
 	CustomerID field.Optional[string] `json:"customer_id,omitzero" validate:"omitempty"`
 	// Replaces the acknowledgement email contacts on the order.
@@ -78,7 +74,7 @@ var sampleUpdateSOCarrierID = apiresource.SampleCarrierID
 var sampleUpdateSOPriorityCode = string(constants.PriorityCodeNormal)
 var sampleUpdateSOShippingAddressID = apiresource.SampleAddressID
 var sampleUpdateSalesOrderRequest = &UpdateSalesOrderRequest{
-	Note:              field.Some(sampleUpdateSONote),
+	Note:              field.Set(sampleUpdateSONote),
 	CarrierID:         field.Some(sampleUpdateSOCarrierID),
 	PriorityCode:      field.Some(sampleUpdateSOPriorityCode),
 	ShippingAddressID: field.Some(sampleUpdateSOShippingAddressID),
@@ -98,7 +94,7 @@ func (e *UpdateSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Updat
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/{id}",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeSalesOrder,
 		RequiredPermissions: []types.Permission{

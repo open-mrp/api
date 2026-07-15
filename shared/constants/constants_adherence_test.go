@@ -167,6 +167,7 @@ var typeRegistry = map[string]any{
 	"PublicPlanCode":                  PublicPlanCode(""),
 	"RegistrationStep":                RegistrationStep(""),
 	"PortalRegistrationStep":          PortalRegistrationStep(""),
+	"PortalRegistrationStatus":        PortalRegistrationStatus(""),
 	"RoleType":                        RoleType(""),
 	"SandboxMode":                     SandboxMode(""),
 	"PortalDomainStatus":              PortalDomainStatus(""),

@@ -39,6 +39,7 @@ type PortalProfileInfo struct {
 	SupportEmail *string                `protobuf:"bytes,5,opt,name=support_email,json=supportEmail,proto3,oneof" json:"support_email,omitempty"`
 	// The seller's default billing address, used as the portal letterhead. Null when the account has none.
 	Address       *AddressInfo `protobuf:"bytes,6,opt,name=address,proto3" json:"address,omitempty"`
+	FaviconUrl    *string      `protobuf:"bytes,7,opt,name=favicon_url,json=faviconUrl,proto3,oneof" json:"favicon_url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -113,6 +114,13 @@ func (x *PortalProfileInfo) GetAddress() *AddressInfo {
 		return x.Address
 	}
 	return nil
+}
+
+func (x *PortalProfileInfo) GetFaviconUrl() string {
+	if x != nil && x.FaviconUrl != nil {
+		return *x.FaviconUrl
+	}
+	return ""
 }
 
 type GetPortalProfileBySlugRequest struct {
@@ -357,8 +365,10 @@ type PortalRegistrationSessionInfo struct {
 	AbandonedAt        *timestamppb.Timestamp         `protobuf:"bytes,10,opt,name=abandoned_at,json=abandonedAt,proto3,oneof" json:"abandoned_at,omitempty"`
 	CreatedAt          *timestamppb.Timestamp         `protobuf:"bytes,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt          *timestamppb.Timestamp         `protobuf:"bytes,12,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// Derived lifecycle status: in_progress | completed | abandoned | expired.
+	Status        string `protobuf:"bytes,13,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *PortalRegistrationSessionInfo) Reset() {
@@ -473,6 +483,13 @@ func (x *PortalRegistrationSessionInfo) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *PortalRegistrationSessionInfo) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
 }
 
 type CreateOrResumePortalRegistrationSessionRequest struct {
@@ -763,20 +780,145 @@ func (x *PortalRegistrationSessionResponse) GetSession() *PortalRegistrationSess
 	return nil
 }
 
+type ListPortalRegistrationSessionsRequest struct {
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Cursor *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
+	Limit  int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	// Optional derived-status filter: in_progress | completed | abandoned | expired.
+	Status *string `protobuf:"bytes,3,opt,name=status,proto3,oneof" json:"status,omitempty"`
+	// Optional free-text search matching the registrant's captured customer name/number or the session id.
+	Search        *string `protobuf:"bytes,4,opt,name=search,proto3,oneof" json:"search,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPortalRegistrationSessionsRequest) Reset() {
+	*x = ListPortalRegistrationSessionsRequest{}
+	mi := &file_core_core_portal_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPortalRegistrationSessionsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPortalRegistrationSessionsRequest) ProtoMessage() {}
+
+func (x *ListPortalRegistrationSessionsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_portal_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPortalRegistrationSessionsRequest.ProtoReflect.Descriptor instead.
+func (*ListPortalRegistrationSessionsRequest) Descriptor() ([]byte, []int) {
+	return file_core_core_portal_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *ListPortalRegistrationSessionsRequest) GetCursor() string {
+	if x != nil && x.Cursor != nil {
+		return *x.Cursor
+	}
+	return ""
+}
+
+func (x *ListPortalRegistrationSessionsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListPortalRegistrationSessionsRequest) GetStatus() string {
+	if x != nil && x.Status != nil {
+		return *x.Status
+	}
+	return ""
+}
+
+func (x *ListPortalRegistrationSessionsRequest) GetSearch() string {
+	if x != nil && x.Search != nil {
+		return *x.Search
+	}
+	return ""
+}
+
+type ListPortalRegistrationSessionsResponse struct {
+	state         protoimpl.MessageState           `protogen:"open.v1"`
+	Sessions      []*PortalRegistrationSessionInfo `protobuf:"bytes,1,rep,name=sessions,proto3" json:"sessions,omitempty"`
+	PageInfo      *PageInfo                        `protobuf:"bytes,2,opt,name=page_info,json=pageInfo,proto3" json:"page_info,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPortalRegistrationSessionsResponse) Reset() {
+	*x = ListPortalRegistrationSessionsResponse{}
+	mi := &file_core_core_portal_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPortalRegistrationSessionsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPortalRegistrationSessionsResponse) ProtoMessage() {}
+
+func (x *ListPortalRegistrationSessionsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_portal_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPortalRegistrationSessionsResponse.ProtoReflect.Descriptor instead.
+func (*ListPortalRegistrationSessionsResponse) Descriptor() ([]byte, []int) {
+	return file_core_core_portal_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *ListPortalRegistrationSessionsResponse) GetSessions() []*PortalRegistrationSessionInfo {
+	if x != nil {
+		return x.Sessions
+	}
+	return nil
+}
+
+func (x *ListPortalRegistrationSessionsResponse) GetPageInfo() *PageInfo {
+	if x != nil {
+		return x.PageInfo
+	}
+	return nil
+}
+
 var File_core_core_portal_proto protoreflect.FileDescriptor
 
 const file_core_core_portal_proto_rawDesc = "" +
 	"\n" +
-	"\x16core/core_portal.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x19core/core_analytics.proto\"\xe1\x01\n" +
+	"\x16core/core_portal.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x19core/core_analytics.proto\x1a core/core_identity_context.proto\"\x97\x02\n" +
 	"\x11PortalProfileInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
 	"\x04slug\x18\x03 \x01(\tR\x04slug\x12\x1e\n" +
 	"\blogo_url\x18\x04 \x01(\tH\x00R\alogoUrl\x88\x01\x01\x12(\n" +
 	"\rsupport_email\x18\x05 \x01(\tH\x01R\fsupportEmail\x88\x01\x01\x12+\n" +
-	"\aaddress\x18\x06 \x01(\v2\x11.core.AddressInfoR\aaddressB\v\n" +
+	"\aaddress\x18\x06 \x01(\v2\x11.core.AddressInfoR\aaddress\x12$\n" +
+	"\vfavicon_url\x18\a \x01(\tH\x02R\n" +
+	"faviconUrl\x88\x01\x01B\v\n" +
 	"\t_logo_urlB\x10\n" +
-	"\x0e_support_email\"3\n" +
+	"\x0e_support_emailB\x0e\n" +
+	"\f_favicon_url\"3\n" +
 	"\x1dGetPortalProfileBySlugRequest\x12\x12\n" +
 	"\x04slug\x18\x01 \x01(\tR\x04slug\"S\n" +
 	"\x1eGetPortalProfileBySlugResponse\x121\n" +
@@ -795,7 +937,7 @@ const file_core_core_portal_proto_rawDesc = "" +
 	" \x01(\tR\x0faddressLocality\x12#\n" +
 	"\raddress_state\x18\v \x01(\tR\faddressState\x12.\n" +
 	"\x13address_postal_code\x18\f \x01(\tR\x11addressPostalCode\x12'\n" +
-	"\x0faddress_country\x18\r \x01(\tR\x0eaddressCountry\"\x97\x05\n" +
+	"\x0faddress_country\x18\r \x01(\tR\x0eaddressCountry\"\xaf\x05\n" +
 	"\x1dPortalRegistrationSessionInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12*\n" +
@@ -813,7 +955,8 @@ const file_core_core_portal_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x17\n" +
+	"updated_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x16\n" +
+	"\x06status\x18\r \x01(\tR\x06statusB\x17\n" +
 	"\x15_is_existing_customerB\x0e\n" +
 	"\f_customer_idB\x0f\n" +
 	"\r_completed_atB\x0f\n" +
@@ -834,7 +977,18 @@ const file_core_core_portal_proto_rawDesc = "" +
 	"'AbandonPortalRegistrationSessionRequest\x12\x17\n" +
 	"\atype_id\x18\x01 \x01(\tR\x06typeId\"b\n" +
 	"!PortalRegistrationSessionResponse\x12=\n" +
-	"\asession\x18\x01 \x01(\v2#.core.PortalRegistrationSessionInfoR\asessionB\x18Z\x16shared/proto/core;coreb\x06proto3"
+	"\asession\x18\x01 \x01(\v2#.core.PortalRegistrationSessionInfoR\asession\"\xb5\x01\n" +
+	"%ListPortalRegistrationSessionsRequest\x12\x1b\n" +
+	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
+	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x1b\n" +
+	"\x06status\x18\x03 \x01(\tH\x01R\x06status\x88\x01\x01\x12\x1b\n" +
+	"\x06search\x18\x04 \x01(\tH\x02R\x06search\x88\x01\x01B\t\n" +
+	"\a_cursorB\t\n" +
+	"\a_statusB\t\n" +
+	"\a_search\"\x96\x01\n" +
+	"&ListPortalRegistrationSessionsResponse\x12?\n" +
+	"\bsessions\x18\x01 \x03(\v2#.core.PortalRegistrationSessionInfoR\bsessions\x12+\n" +
+	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfoB\x18Z\x16shared/proto/core;coreb\x06proto3"
 
 var (
 	file_core_core_portal_proto_rawDescOnce sync.Once
@@ -848,7 +1002,7 @@ func file_core_core_portal_proto_rawDescGZIP() []byte {
 	return file_core_core_portal_proto_rawDescData
 }
 
-var file_core_core_portal_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_core_core_portal_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_core_core_portal_proto_goTypes = []any{
 	(*PortalProfileInfo)(nil),                              // 0: core.PortalProfileInfo
 	(*GetPortalProfileBySlugRequest)(nil),                  // 1: core.GetPortalProfileBySlugRequest
@@ -861,24 +1015,29 @@ var file_core_core_portal_proto_goTypes = []any{
 	(*CompletePortalRegistrationSessionRequest)(nil),       // 8: core.CompletePortalRegistrationSessionRequest
 	(*AbandonPortalRegistrationSessionRequest)(nil),        // 9: core.AbandonPortalRegistrationSessionRequest
 	(*PortalRegistrationSessionResponse)(nil),              // 10: core.PortalRegistrationSessionResponse
-	(*AddressInfo)(nil),                                    // 11: core.AddressInfo
-	(*timestamppb.Timestamp)(nil),                          // 12: google.protobuf.Timestamp
+	(*ListPortalRegistrationSessionsRequest)(nil),          // 11: core.ListPortalRegistrationSessionsRequest
+	(*ListPortalRegistrationSessionsResponse)(nil),         // 12: core.ListPortalRegistrationSessionsResponse
+	(*AddressInfo)(nil),                                    // 13: core.AddressInfo
+	(*timestamppb.Timestamp)(nil),                          // 14: google.protobuf.Timestamp
+	(*PageInfo)(nil),                                       // 15: core.PageInfo
 }
 var file_core_core_portal_proto_depIdxs = []int32{
-	11, // 0: core.PortalProfileInfo.address:type_name -> core.AddressInfo
+	13, // 0: core.PortalProfileInfo.address:type_name -> core.AddressInfo
 	0,  // 1: core.GetPortalProfileBySlugResponse.profile:type_name -> core.PortalProfileInfo
 	3,  // 2: core.PortalRegistrationSessionInfo.session_data:type_name -> core.PortalRegistrationSessionData
-	12, // 3: core.PortalRegistrationSessionInfo.completed_at:type_name -> google.protobuf.Timestamp
-	12, // 4: core.PortalRegistrationSessionInfo.abandoned_at:type_name -> google.protobuf.Timestamp
-	12, // 5: core.PortalRegistrationSessionInfo.created_at:type_name -> google.protobuf.Timestamp
-	12, // 6: core.PortalRegistrationSessionInfo.updated_at:type_name -> google.protobuf.Timestamp
+	14, // 3: core.PortalRegistrationSessionInfo.completed_at:type_name -> google.protobuf.Timestamp
+	14, // 4: core.PortalRegistrationSessionInfo.abandoned_at:type_name -> google.protobuf.Timestamp
+	14, // 5: core.PortalRegistrationSessionInfo.created_at:type_name -> google.protobuf.Timestamp
+	14, // 6: core.PortalRegistrationSessionInfo.updated_at:type_name -> google.protobuf.Timestamp
 	3,  // 7: core.UpdatePortalRegistrationSessionRequest.session_data:type_name -> core.PortalRegistrationSessionData
 	4,  // 8: core.PortalRegistrationSessionResponse.session:type_name -> core.PortalRegistrationSessionInfo
-	9,  // [9:9] is the sub-list for method output_type
-	9,  // [9:9] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	4,  // 9: core.ListPortalRegistrationSessionsResponse.sessions:type_name -> core.PortalRegistrationSessionInfo
+	15, // 10: core.ListPortalRegistrationSessionsResponse.page_info:type_name -> core.PageInfo
+	11, // [11:11] is the sub-list for method output_type
+	11, // [11:11] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_core_core_portal_proto_init() }
@@ -887,16 +1046,18 @@ func file_core_core_portal_proto_init() {
 		return
 	}
 	file_core_core_analytics_proto_init()
+	file_core_core_identity_context_proto_init()
 	file_core_core_portal_proto_msgTypes[0].OneofWrappers = []any{}
 	file_core_core_portal_proto_msgTypes[4].OneofWrappers = []any{}
 	file_core_core_portal_proto_msgTypes[7].OneofWrappers = []any{}
+	file_core_core_portal_proto_msgTypes[11].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_portal_proto_rawDesc), len(file_core_core_portal_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

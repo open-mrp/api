@@ -405,5 +405,8 @@ func openAPIEndpointGroups() []apiendpoint.APIEndpointGroup {
 		*(&httpgroup.UtilsEndpointGroup{}).Materialize(&httpgroup.UtilsEndpointGroupConfig{
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
+		*(&httpgroup.RecordsEndpointGroup{}).Materialize(&httpgroup.RecordsEndpointGroupConfig{
+			CoreClient: coreClient,
+		}).APIEndpointGroup,
 	}
 }

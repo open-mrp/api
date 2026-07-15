@@ -76,6 +76,17 @@ WHERE account_relation_id = ? AND recipient_account_user_id = ?;
 DELETE FROM account_relation_notification_preference
 WHERE account_relation_id = ? AND recipient_account_user_id = ? AND notification_type_code = ?;
 
+-- name: ListNotificationPreferencesByRelation :many
+SELECT recipient_account_user_id, notification_type_code
+FROM account_relation_notification_preference
+WHERE account_relation_id = ?
+ORDER BY recipient_account_user_id, notification_type_code;
+
+-- name: DeleteNotificationPreferencesByRelationAndTypes :exec
+DELETE FROM account_relation_notification_preference
+WHERE account_relation_id = ?
+  AND notification_type_code IN (sqlc.slice('notification_type_codes'));
+
 -- name: FindCustomerAccountsByVendorAndUser :many
 SELECT a.id, a.name
 FROM account a

@@ -139,9 +139,18 @@ func (s *salesOrderLineSvcImpl) CreateSalesOrderLine(ctx context.Context, params
 			txLineRepo := txSvc.repos.NewSalesOrderLineRepo()
 			txPickLineRepo := txSvc.repos.NewPickLineRepo()
 
-			// Validate order exists
-			_, apiErr := txOrderRepo.Get(txCtx, params.AccountID, params.SalesOrderID)
+			// Validate order exists (and read its buyer for pricing).
+			order, apiErr := txOrderRepo.Get(txCtx, params.AccountID, params.SalesOrderID)
 			if apiErr != nil {
+				return apiErr
+			}
+
+			// Price the line server-side from the product when the caller did not supply a
+			// unit price — a line added to an existing order is priced identically to a line
+			// created with the order (customer price, discounts, account-price overrides). An
+			// explicit price from an internal user is honored as an override. The unit cost is
+			// always resolved from the product here, never taken as caller input.
+			if apiErr := resolveCreateLinePricing(txCtx, txSvc.repos, identity.IsInternalUser(), order.BuyerAccountID, &params); apiErr != nil {
 				return apiErr
 			}
 
@@ -164,13 +173,16 @@ func (s *salesOrderLineSvcImpl) CreateSalesOrderLine(ctx context.Context, params
 				return apiErr
 			}
 
-			// Create pick line for remaining quantity if the order has a pick
+			// Reconcile pick lines when the order has a pick and the new line is a sale
+			// line. Freight/credit (system) lines are never picked, so adding one must not
+			// seed a pick line.
 			pickID, apiErr := txOrderRepo.GetPickID(txCtx, params.SalesOrderID)
 			if apiErr != nil {
 				return apiErr
 			}
-			if pickID != nil {
-				if apiErr := createPickLineForRemainingQuantity(txCtx, txLineRepo, txPickLineRepo, lineID, *pickID); apiErr != nil {
+			isSaleLine := created.ProductTypeCode != nil && *created.ProductTypeCode == string(constants.ProductTypeCodeSale)
+			if pickID != nil && isSaleLine {
+				if apiErr := reconcilePickForOrderLine(txCtx, txLineRepo, txPickLineRepo, txSvc.repos.NewPickRepo(), params.AccountID, lineID, *pickID); apiErr != nil {
 					return apiErr
 				}
 			}
@@ -189,46 +201,167 @@ func (s *salesOrderLineSvcImpl) CreateSalesOrderLine(ctx context.Context, params
 	}
 }
 
-// createPickLineForRemainingQuantity creates a pick line for the remaining quantity of an order line that has not yet been picked, matching the legacy Dashboard behavior.
-func createPickLineForRemainingQuantity(ctx context.Context, lineRepo domain.SalesOrderLineRepo, pickLineRepo domain.PickLineRepo, orderLineID, pickID string) *apierror.APIError {
-	// Calculate remaining quantity to be picked
-	remainingValue, unitID, apiErr := pickLineRepo.CalculateRemainingForOrderLine(ctx, orderLineID)
+// resequenceOrderLines compacts an order's line_item_numbers to a contiguous 1..N in the
+// current display order — product lines first (keeping their relative order), then
+// credit/freight (system) lines. Run after removing a line so gaps close and freight/credit
+// stay at the bottom; without it a deleted product line leaves a hole and later additions
+// slot above the freight line.
+func resequenceOrderLines(ctx context.Context, repos domain.RepoFactory, salesOrderID string) *apierror.APIError {
+	lineRepo := repos.NewSalesOrderLineRepo()
+
+	positions, apiErr := lineRepo.GetLineOrder(ctx, salesOrderID)
 	if apiErr != nil {
 		return apiErr
 	}
 
-	// Skip if nothing left to pick
-	remainingFloat, err := strconv.ParseFloat(remainingValue, 64)
-	if err != nil || remainingFloat <= 0 {
-		return nil
+	// Product lines first (in current order), then system lines (in current order).
+	desired := make([]*domain.SalesOrderLinePosition, 0, len(positions))
+	for _, p := range positions {
+		if !p.IsSystem {
+			desired = append(desired, p)
+		}
+	}
+	for _, p := range positions {
+		if p.IsSystem {
+			desired = append(desired, p)
+		}
 	}
 
-	// Check if an unpacked pick line already exists
-	hasUnpacked, apiErr := pickLineRepo.HasUnpackedPickLineForOrderLine(ctx, orderLineID)
+	for i, p := range desired {
+		newNumber := int32(i + 1)
+		if p.LineItemNumber == newNumber {
+			continue
+		}
+		if apiErr := lineRepo.SetLineItemNumber(ctx, p.ID, newNumber); apiErr != nil {
+			return apiErr
+		}
+		if apiErr := audit.NewPublisher().Publish(ctx, repos.NewOutboxRepo(), audit.EventData{
+			ServiceName:  domain.ServiceName,
+			Action:       constants.AuditActionUpdate,
+			ResourceType: constants.ObjectTypeSalesOrderLine,
+			ResourceID:   p.ID,
+			Changes:      []audit.FieldChange{audit.NewFieldChange("line_item_number", p.LineItemNumber, newNumber)},
+		}); apiErr != nil {
+			return apiErr
+		}
+	}
+	return nil
+}
+
+// resolveCreateLinePricing fills a create-line's unit price, unit cost, item, and
+// SKU/description from the product's server-side pricing — the same engine order-create
+// uses (resolveSalesOrderCreateLines). When the caller supplied a unit price it is passed
+// through as an override (honored only for internal users); otherwise the line is priced
+// from the product. The unit cost is always product-derived, never caller input.
+func resolveCreateLinePricing(ctx context.Context, repos domain.RepoFactory, isInternalActor bool, buyerAccountID string, params *domain.CreateSalesOrderLineParams) *apierror.APIError {
+	var override *domain.RateValue
+	if params.UnitPriceValue != "" {
+		override = &domain.RateValue{
+			Value:             params.UnitPriceValue,
+			NumeratorUnitID:   params.UnitPriceNumeratorUnitID,
+			DenominatorUnitID: params.UnitPriceDenominatorUnitID,
+		}
+	}
+
+	var sku *string
+	if params.ProductSKU != "" {
+		sku = &params.ProductSKU
+	}
+
+	resolved, apiErr := resolveSalesOrderCreateLines(ctx, repos, params.AccountID, buyerAccountID, isInternalActor, []domain.CreateSalesOrderLineInput{{
+		ProductID:          params.ProductID,
+		QuantityValue:      params.QuantityValue,
+		QuantityUnitID:     params.QuantityUnitID,
+		ProductSKU:         sku,
+		ProductDescription: params.ProductDescription,
+		UnitPrice:          override,
+	}})
 	if apiErr != nil {
 		return apiErr
 	}
-	if hasUnpacked {
-		return nil
-	}
+	r := resolved[0]
 
-	// Generate IDs for the new pick line and its quantity
-	pickLineID, apiErr := id.GenID(id.PickLineIDPrefix, nil)
+	params.UnitPriceValue = r.UnitPrice.Value
+	params.UnitPriceNumeratorUnitID = r.UnitPrice.NumeratorUnitID
+	params.UnitPriceDenominatorUnitID = r.UnitPrice.DenominatorUnitID
+	params.ProductSKU = r.ProductSKU
+	params.ProductDescription = r.ProductDescription
+	if r.ItemID != "" {
+		params.ItemID = &r.ItemID
+	}
+	// Only attach a unit cost when the product actually carries one, so we never create a
+	// zero/empty cost rate for a product with no cost.
+	if r.UnitCost.Value != "" {
+		params.UnitCostValue = &r.UnitCost.Value
+		params.UnitCostNumeratorUnitID = &r.UnitCost.NumeratorUnitID
+		params.UnitCostDenominatorUnitID = &r.UnitCost.DenominatorUnitID
+	}
+	return nil
+}
+
+// reconcilePickForOrderLine keeps an order line's pick lines consistent with its
+// current ordered quantity after the line is created or its quantity changes. It is
+// only called for sale-type lines on orders that already have a pick.
+//
+// outstanding = ordered - already-packed drives the reconciliation:
+//   - outstanding > 0: quantity still needs picking. Ensure a single open (unpacked)
+//     pick line exists to hold it — seeded at 0 picked, filled later by the pick
+//     action (a pick line's quantity is the amount already picked, so seeding it with
+//     the remaining amount would make a line added to a picked order read as already
+//     picked) — and reopen the pick, since there is work left to do. This is the
+//     increase / add-a-line path and matches the legacy Dashboard behavior.
+//   - outstanding <= 0: the packed lines already cover the (possibly reduced) order,
+//     so any open pick line is surplus. Delete the open lines and finish the pick when
+//     everything that remains is packed. This is the decrease path — e.g. a line
+//     picked+packed at 10, bumped to 15 (opening a remainder line), then dropped back
+//     to 10 drops that now-unneeded remainder line.
+func reconcilePickForOrderLine(ctx context.Context, lineRepo domain.SalesOrderLineRepo, pickLineRepo domain.PickLineRepo, pickRepo domain.PickRepo, accountID, orderLineID, pickID string) *apierror.APIError {
+	orderedStr, packedStr, unitID, apiErr := pickLineRepo.GetOrderLinePackProgress(ctx, orderLineID)
 	if apiErr != nil {
 		return apiErr
 	}
-	quantityID, apiErr := id.GenID(id.QuantityIDPrefix, nil)
-	if apiErr != nil {
-		return apiErr
+
+	ordered, err := strconv.ParseFloat(orderedStr, 64)
+	if err != nil {
+		return apierror.NewInternalError(err, "Could not parse ordered quantity for pick reconciliation.")
+	}
+	packed, err := strconv.ParseFloat(packedStr, 64)
+	if err != nil {
+		return apierror.NewInternalError(err, "Could not parse packed quantity for pick reconciliation.")
 	}
 
-	// Create the quantity record
-	if apiErr := lineRepo.CreateQuantity(ctx, quantityID, remainingValue, unitID); apiErr != nil {
-		return apiErr
+	if ordered-packed > 0 {
+		// Ensure an open pick line exists for the outstanding quantity.
+		hasUnpacked, apiErr := pickLineRepo.HasUnpackedPickLineForOrderLine(ctx, orderLineID)
+		if apiErr != nil {
+			return apiErr
+		}
+		if !hasUnpacked {
+			pickLineID, apiErr := id.GenID(id.PickLineIDPrefix, nil)
+			if apiErr != nil {
+				return apiErr
+			}
+			quantityID, apiErr := id.GenID(id.QuantityIDPrefix, nil)
+			if apiErr != nil {
+				return apiErr
+			}
+			if apiErr := lineRepo.CreateQuantity(ctx, quantityID, "0", unitID); apiErr != nil {
+				return apiErr
+			}
+			if apiErr := pickLineRepo.CreateForRemaining(ctx, pickLineID, quantityID, pickID, orderLineID); apiErr != nil {
+				return apiErr
+			}
+		}
+		// There is outstanding work, so the pick is not finished.
+		return pickRepo.ClearFinishedAt(ctx, accountID, pickID)
 	}
 
-	// Create the pick line
-	return pickLineRepo.CreateForRemaining(ctx, pickLineID, quantityID, pickID, orderLineID)
+	// Packed already covers the order: drop any surplus open pick line, then finish the
+	// pick if every line that remains is packed.
+	if apiErr := pickLineRepo.DeleteUnpackedForOrderLine(ctx, orderLineID); apiErr != nil {
+		return apiErr
+	}
+	return pickRepo.MarkFinishedIfAllPacked(ctx, pickID)
 }
 
 // roundToNearestCent rounds a decimal string value to 2 decimal places.
@@ -334,13 +467,17 @@ func (s *salesOrderLineSvcImpl) UpdateSalesOrderLine(ctx context.Context, params
 				return apiErr
 			}
 
-			// Create pick line for remaining quantity if the order has a pick
+			// Reconcile pick lines with the new quantity when the order has a pick — but
+			// only for sale product lines. Freight/credit (system) lines are never picked,
+			// so updating one must not touch pick lines (matches legacy order-line.repo.ts,
+			// which gates this on product.productType === 'sale').
 			pickID, apiErr := txOrderRepo.GetPickID(txCtx, params.SalesOrderID)
 			if apiErr != nil {
 				return apiErr
 			}
-			if pickID != nil {
-				if apiErr := createPickLineForRemainingQuantity(txCtx, txLineRepo, txPickLineRepo, params.SalesOrderLineID, *pickID); apiErr != nil {
+			isSaleLine := old.ProductTypeCode != nil && *old.ProductTypeCode == string(constants.ProductTypeCodeSale)
+			if pickID != nil && isSaleLine {
+				if apiErr := reconcilePickForOrderLine(txCtx, txLineRepo, txPickLineRepo, txSvc.repos.NewPickRepo(), params.AccountID, params.SalesOrderLineID, *pickID); apiErr != nil {
 					return apiErr
 				}
 			}
@@ -400,30 +537,31 @@ func (s *salesOrderLineSvcImpl) DeleteSalesOrderLine(ctx context.Context, params
 		return tracing.Trace(span, apierror.NewResourceNotFoundError("Sales order line not found in this order."))
 	}
 
-	// Block deletion of lines from fulfilled/completed orders
+	// Block deletion of lines from a fulfilled order (hard block, no admin override).
 	order, apiErr := orderRepo.Get(ctx, params.AccountID, params.SalesOrderID)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
-	if order.SalesOrderStatusCode == string(constants.SalesOrderStatusCodeFulfilled) || order.CompletedAt != nil {
+	if order.SalesOrderStatusCode == string(constants.SalesOrderStatusCodeFulfilled) {
 		return tracing.Trace(span, apierror.NewResourceConflictError("Cannot delete lines from a fulfilled order."))
 	}
 
-	// Block deletion if this line has already been shipped against
-	hasShipped, apiErr := lineRepo.HasShippedAgainstOrderLine(ctx, params.SalesOrderLineID)
+	// Block deletion once the line is part of any shipment (packed or shipped). A packed
+	// line has a shipment_line, so deleting it would orphan committed shipment/pick state.
+	hasShipment, apiErr := lineRepo.HasShipmentAgainstOrderLine(ctx, params.SalesOrderLineID)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
-	if hasShipped {
-		return tracing.Trace(span, apierror.NewResourceConflictError("Cannot delete a line item that has been shipped against."))
+	if hasShipment {
+		return tracing.Trace(span, apierror.NewResourceConflictError("Cannot delete a line item that has a shipment against it."))
 	}
 
-	// Matches Dashboard's OrderUtils.isEditable gate: if the order has any shipped shipments (but isn't yet fulfilled/completed), only admins may delete lines.
+	// Matches Dashboard's OrderUtils.isEditable admin gate: a completed-but-not-fulfilled order, or an order with any shipped shipment, may still have lines deleted — but only by an admin.
 	hasShippedShipment, apiErr := orderRepo.HasShippedShipment(ctx, params.SalesOrderID)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
-	if hasShippedShipment {
+	if order.CompletedAt != nil || hasShippedShipment {
 		if apiErr := identity.CheckIsAdmin(); apiErr != nil {
 			return tracing.Trace(span, apiErr)
 		}
@@ -445,11 +583,15 @@ func (s *salesOrderLineSvcImpl) DeleteSalesOrderLine(ctx context.Context, params
 
 	return s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderLineSvcImpl) *apierror.APIError {
 		txLineRepo := txSvc.repos.NewSalesOrderLineRepo()
+		txOrderRepo := txSvc.repos.NewSalesOrderRepo()
+		txPickRepo := txSvc.repos.NewPickRepo()
 
 		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeSalesOrderLine, salesOrderLine.ID, salesOrderLine); apiErr != nil {
 			return apiErr
 		}
 
+		// DeleteCascade removes this line's pick lines (and their quantities) along with
+		// the line itself.
 		if apiErr := txLineRepo.DeleteCascade(txCtx, params.SalesOrderLineID); apiErr != nil {
 			return apiErr
 		}
@@ -466,8 +608,175 @@ func (s *salesOrderLineSvcImpl) DeleteSalesOrderLine(ctx context.Context, params
 			return apiErr
 		}
 
+		// Close the gap the removed line left: re-sequence the remaining lines to 1..N so
+		// product lines stay contiguous and credit/freight lines stay at the bottom.
+		// Otherwise a deleted product line leaves a hole that pushes later additions above
+		// the freight line (e.g. delete both product lines and freight stays numbered 3).
+		if apiErr := resequenceOrderLines(txCtx, txSvc.repos, params.SalesOrderID); apiErr != nil {
+			return apiErr
+		}
+
+		// Reconcile the order's pick now that this line's pick lines are gone.
+		pickID, apiErr := txOrderRepo.GetPickID(txCtx, params.SalesOrderID)
+		if apiErr != nil {
+			return apiErr
+		}
+		if pickID != nil {
+			lineCount, apiErr := txPickRepo.CountLines(txCtx, *pickID)
+			if apiErr != nil {
+				return apiErr
+			}
+			if lineCount == 0 {
+				// The pick has no lines left, so the order has nothing to fulfill: delete
+				// the empty pick and revert the order to estimate, releasing reserved
+				// inventory — the same teardown the unissue action performs.
+				if apiErr := txOrderRepo.DeletePickBySalesOrder(txCtx, params.SalesOrderID); apiErr != nil {
+					return apiErr
+				}
+				if apiErr := txOrderRepo.DeleteInventoryAllocationsByReservedIssues(txCtx, params.AccountID, params.SalesOrderID); apiErr != nil {
+					return apiErr
+				}
+				if apiErr := txOrderRepo.DeleteReservedInventoryIssues(txCtx, params.AccountID, params.SalesOrderID); apiErr != nil {
+					return apiErr
+				}
+				if apiErr := txOrderRepo.UpdateStatus(txCtx, params.AccountID, params.SalesOrderID, string(constants.SalesOrderStatusCodeEstimate), nil, nil); apiErr != nil {
+					return apiErr
+				}
+				if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+					ServiceName:  domain.ServiceName,
+					Action:       constants.AuditActionUpdate,
+					ResourceType: constants.ObjectTypeSalesOrder,
+					ResourceID:   order.ID,
+					Changes: audit.ComputeChanges(order, &domain.SalesOrder{
+						ID:                   order.ID,
+						Number:               order.Number,
+						SalesOrderStatusCode: string(constants.SalesOrderStatusCodeEstimate),
+					}),
+				}); apiErr != nil {
+					return apiErr
+				}
+			} else {
+				// Lines remain: finish the pick if every one that is left is packed.
+				if apiErr := txPickRepo.MarkFinishedIfAllPacked(txCtx, *pickID); apiErr != nil {
+					return apiErr
+				}
+			}
+		}
+
 		return nil
 	})
+}
+
+func (s *salesOrderLineSvcImpl) ReorderSalesOrderLines(ctx context.Context, params domain.ReorderSalesOrderLinesParams) ([]*domain.SalesOrderLine, *apierror.APIError) {
+	ctx, span := salesOrderLineSvcTracer.Start(ctx, "service.sales_order_line.reorder")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+
+	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := checkSalesOrderLineWritePermission(identity, types.ActionUpdate); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+
+	if identity.IsExternalTarget() {
+		meds := s.mediators()
+		if apiErr := meds.EditAccess.CheckEditAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+
+	params.AccountID = identity.Target.AccountID
+
+	var result []*domain.SalesOrderLine
+	apiErr := s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderLineSvcImpl) *apierror.APIError {
+		txOrderRepo := txSvc.repos.NewSalesOrderRepo()
+		txLineRepo := txSvc.repos.NewSalesOrderLineRepo()
+
+		// Validate the order exists and the account owns it.
+		if _, apiErr := txOrderRepo.Get(txCtx, params.AccountID, params.SalesOrderID); apiErr != nil {
+			return apiErr
+		}
+
+		positions, apiErr := txLineRepo.GetLineOrder(txCtx, params.SalesOrderID)
+		if apiErr != nil {
+			return apiErr
+		}
+
+		// Partition into product lines (reorderable) and credit/freight lines, which stay at the bottom in their current relative order.
+		productPositions := make(map[string]*domain.SalesOrderLinePosition, len(positions))
+		systemInOrder := make([]*domain.SalesOrderLinePosition, 0, len(positions))
+		currentByID := make(map[string]int32, len(positions))
+		for _, p := range positions {
+			currentByID[p.ID] = p.LineItemNumber
+			if p.IsSystem {
+				systemInOrder = append(systemInOrder, p)
+				continue
+			}
+			productPositions[p.ID] = p
+		}
+
+		// The submitted list must be exactly the order's product lines: no duplicates, unknown/foreign IDs, credit/freight lines, or omissions.
+		if len(params.LineIDs) != len(productPositions) {
+			return apierror.NewValidationError("The reordered list must contain every product line on the order exactly once.")
+		}
+		seen := make(map[string]bool, len(params.LineIDs))
+		for _, lineID := range params.LineIDs {
+			if seen[lineID] {
+				return apierror.NewValidationError("Duplicate line in the reordered list: " + lineID)
+			}
+			if _, ok := productPositions[lineID]; !ok {
+				return apierror.NewValidationError("Line does not belong to this order's product lines: " + lineID)
+			}
+			seen[lineID] = true
+		}
+
+		// Final order: submitted product lines first, then credit/freight lines. Assign contiguous numbers starting at 1.
+		desired := make([]string, 0, len(positions))
+		desired = append(desired, params.LineIDs...)
+		for _, p := range systemInOrder {
+			desired = append(desired, p.ID)
+		}
+
+		for i, lineID := range desired {
+			newNumber := int32(i + 1)
+			if currentByID[lineID] == newNumber {
+				continue
+			}
+			if apiErr := txLineRepo.SetLineItemNumber(txCtx, lineID, newNumber); apiErr != nil {
+				return apiErr
+			}
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       constants.AuditActionUpdate,
+				ResourceType: constants.ObjectTypeSalesOrderLine,
+				ResourceID:   lineID,
+				Changes:      []audit.FieldChange{audit.NewFieldChange("line_item_number", currentByID[lineID], newNumber)},
+			}); apiErr != nil {
+				return apiErr
+			}
+		}
+
+		lines, apiErr := txLineRepo.List(txCtx, params.SalesOrderID)
+		if apiErr != nil {
+			return apiErr
+		}
+		result = lines
+		return nil
+	})
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return result, nil
 }
 
 // checkSalesOrderLineWritePermission checks the appropriate write permission based on the identity context. Internal actors need sales_orders:{action} for their own account, or customers:update / suppliers:update for external accounts.

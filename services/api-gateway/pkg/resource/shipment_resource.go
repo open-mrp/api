@@ -206,7 +206,7 @@ var sampleShipmentInvoice = &Invoice{
 	BillingAddress: SampleAddress,
 	PriorityCode:   constants.PriorityCodeNormal,
 	PaymentStatus:  constants.InvoicePaymentStatusUnpaid,
-	TotalInvoiced:  "1234.560000000000000000000000000000",
+	TotalInvoiced:  "1234.56",
 	HasBeenSent:    true,
 	CreatedAt:      timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:      timeutil.TimestampToTime(sampleUpdatedAtTimestamp),

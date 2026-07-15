@@ -39,9 +39,6 @@ type BillingSvcConfig struct {
 
 	// IdempotencyMed (required) deduplicates billing operations.
 	IdempotencyMed domain.IdempotencyMed
-
-	// TokenRateCardIDsByPlan (optional) maps a plan_code to the Stripe rate card id whose rates price that plan's LLM token usage. Used to compute the agent spend a customer will actually be billed. Plans absent from the map (e.g. free) report zero agent spend.
-	TokenRateCardIDsByPlan map[string]string
 }
 
 type billingSvcImpl struct {
@@ -52,17 +49,26 @@ type billingSvcImpl struct {
 	notificationClient domain.NotificationClient
 	idempotencyMed     domain.IdempotencyMed
 
-	tokenRateCardIDsByPlan map[string]string
-
 	agentSpendCacheMu sync.Mutex
 	agentSpendCache   map[string]agentSpendCacheEntry
+
+	planCacheMu sync.Mutex
+	planCache   map[string]planCacheEntry
 }
 
 // agentSpendCacheTTL bounds how stale the displayed/cap-enforced agent spend can be. Short because the underlying Stripe read is a couple of API calls and the value drives both the dashboard figure and cap enforcement.
 const agentSpendCacheTTL = 60 * time.Second
 
+// planResolveTTL bounds how long a resolved Stripe pricing plan (rate card, display name, base fee) is reused. Long because a plan changes only when pricing is reconfigured, and re-resolving costs several Stripe calls.
+const planResolveTTL = time.Hour
+
 type agentSpendCacheEntry struct {
 	cents     int64
+	expiresAt time.Time
+}
+
+type planCacheEntry struct {
+	plan      *domain.StripePricingPlan
 	expiresAt time.Time
 }
 
@@ -94,14 +100,14 @@ func NewBillingSvc(config *BillingSvcConfig) domain.BillingSvc {
 	}
 
 	return &billingSvcImpl{
-		repos:                  config.Repos,
-		stripeClient:           config.StripeClient,
-		coreClient:             config.CoreClient,
-		frontendURL:            config.FrontendURL,
-		notificationClient:     config.NotificationClient,
-		idempotencyMed:         config.IdempotencyMed,
-		tokenRateCardIDsByPlan: config.TokenRateCardIDsByPlan,
-		agentSpendCache:        make(map[string]agentSpendCacheEntry),
+		repos:              config.Repos,
+		stripeClient:       config.StripeClient,
+		coreClient:         config.CoreClient,
+		frontendURL:        config.FrontendURL,
+		notificationClient: config.NotificationClient,
+		idempotencyMed:     config.IdempotencyMed,
+		agentSpendCache:    make(map[string]agentSpendCacheEntry),
+		planCache:          make(map[string]planCacheEntry),
 	}
 }
 
@@ -216,49 +222,84 @@ func (s *billingSvcImpl) GetAccountUsage(ctx context.Context, accountID string) 
 	usage.Invoices = domain.UsageItem{Current: invoiceCount, Limit: limitMap["invoices_maximum"]}
 	usage.Batches = domain.UsageItem{Current: batchCount, Limit: limitMap["batches_maximum"]}
 
-	usage.EstimatedAgentSpendCents = s.currentAgentSpendCents(ctx, accountID, periodStart)
+	spend, plan := s.currentAgentSpend(ctx, accountID, periodStart)
+	usage.EstimatedAgentSpendCents = spend
+	// Surface the plan name and base fee the customer is actually billed, from the same resolved Stripe plan.
+	if plan != nil {
+		usage.PlanName = plan.DisplayName
+		usage.BaseFeeCents = plan.BaseFeeCents
+		usage.BaseFeeInterval = plan.BaseFeeInterval
+	}
 
 	return usage, nil
 }
 
-// currentAgentSpendCents returns the marked-up token spend the account will be billed in Stripe for the current period, cached briefly. It resolves the account's plan to a rate card, then has the Stripe client price the customer's metered usage against that rate card. Any failure (no rate card for the plan, no Stripe customer, transient API error) yields 0 so the surrounding usage read still succeeds; the last known good value is preferred over 0 when available.
-func (s *billingSvcImpl) currentAgentSpendCents(ctx context.Context, accountID string, periodStart time.Time) int64 {
+// currentAgentSpend returns the marked-up token spend the account will be billed in Stripe for the current period (cached briefly) alongside the resolved Stripe pricing plan (for display). It resolves the account's pricing plan once: the plan supplies both the rate card that prices metered usage and the display name/base fee. Spend is 0 with a nil plan when the account has no Stripe pricing plan; on a transient Stripe/customer failure the last known good spend is preferred over 0.
+func (s *billingSvcImpl) currentAgentSpend(ctx context.Context, accountID string, periodStart time.Time) (int64, *domain.StripePricingPlan) {
 	s.agentSpendCacheMu.Lock()
 	cached, hasCached := s.agentSpendCache[accountID]
-	if hasCached && time.Now().Before(cached.expiresAt) {
-		s.agentSpendCacheMu.Unlock()
-		return cached.cents
-	}
 	s.agentSpendCacheMu.Unlock()
 
 	repo := s.repos.NewAccountUsageRepo()
 
-	_, planCode, planErr := repo.GetAccountNameAndPlanCode(ctx, accountID)
+	pricingPlanID, planErr := repo.GetAccountStripePricingPlanID(ctx, accountID)
 	if planErr != nil {
-		return s.agentSpendFallback(cached, hasCached)
+		return s.agentSpendFallback(cached, hasCached), nil
 	}
-	rateCardID := s.tokenRateCardIDsByPlan[planCode]
-	if rateCardID == "" {
-		// Plan has no token rate card (e.g. free); genuinely zero agent spend.
-		return 0
+	if pricingPlanID == nil || *pricingPlanID == "" {
+		// Plan has no Stripe pricing plan (e.g. free); genuinely zero agent spend, no plan details.
+		return 0, nil
+	}
+
+	plan := s.resolvePlan(ctx, *pricingPlanID)
+
+	if hasCached && time.Now().Before(cached.expiresAt) {
+		return cached.cents, plan
+	}
+
+	if plan == nil || plan.RateCardID == "" {
+		// Pricing plan has no token rate card, or Stripe was transiently unavailable resolving it. Prefer the last known good value over flipping the figure to 0.
+		return s.agentSpendFallback(cached, hasCached), plan
 	}
 
 	customerID, custErr := repo.GetStripeCustomerIDByAccountID(ctx, accountID)
 	if custErr != nil || customerID == nil || *customerID == "" {
-		return s.agentSpendFallback(cached, hasCached)
+		return s.agentSpendFallback(cached, hasCached), plan
 	}
 
-	cents, err := s.stripeClient.GetAgentTokenSpendCents(ctx, *customerID, rateCardID, periodStart)
+	cents, err := s.stripeClient.GetAgentTokenSpendCents(ctx, *customerID, plan.RateCardID, periodStart)
 	if err != nil {
 		slog.Error("failed to compute agent token spend from Stripe",
 			"account_id", accountID, "error", err.Error())
-		return s.agentSpendFallback(cached, hasCached)
+		return s.agentSpendFallback(cached, hasCached), plan
 	}
 
 	s.agentSpendCacheMu.Lock()
 	s.agentSpendCache[accountID] = agentSpendCacheEntry{cents: cents, expiresAt: time.Now().Add(agentSpendCacheTTL)}
 	s.agentSpendCacheMu.Unlock()
-	return cents
+	return cents, plan
+}
+
+// resolvePlan resolves and caches a Stripe pricing plan's billing details (rate card id for token pricing, display name, and base fee) from its id. Cached per pricing plan for planResolveTTL since a plan changes only when pricing is reconfigured. Returns nil when Stripe is transiently unavailable (not cached, so it retries next call).
+func (s *billingSvcImpl) resolvePlan(ctx context.Context, pricingPlanID string) *domain.StripePricingPlan {
+	s.planCacheMu.Lock()
+	if entry, ok := s.planCache[pricingPlanID]; ok && time.Now().Before(entry.expiresAt) {
+		s.planCacheMu.Unlock()
+		return entry.plan
+	}
+	s.planCacheMu.Unlock()
+
+	plan, err := s.stripeClient.GetPricingPlan(ctx, pricingPlanID)
+	if err != nil {
+		slog.Error("failed to resolve Stripe pricing plan",
+			"pricing_plan_id", pricingPlanID, "error", err.Error())
+		return nil
+	}
+
+	s.planCacheMu.Lock()
+	s.planCache[pricingPlanID] = planCacheEntry{plan: plan, expiresAt: time.Now().Add(planResolveTTL)}
+	s.planCacheMu.Unlock()
+	return plan
 }
 
 // agentSpendFallback returns the last known good spend when a fresh read fails, so a transient Stripe error doesn't flip the displayed figure to $0.
@@ -279,7 +320,33 @@ func (s *billingSvcImpl) GetAgentSpendCents(ctx context.Context, accountID strin
 		return 0, tracing.Trace(span, apiErr)
 	}
 
-	return s.currentAgentSpendCents(ctx, accountID, agentSpendPeriodStart(subInfo)), nil
+	cents, _ := s.currentAgentSpend(ctx, accountID, agentSpendPeriodStart(subInfo))
+	return cents, nil
+}
+
+// GetAgentTokenRates returns the marked-up per-token rates from the account's plan rate card so a caller can price in-flight usage against the cap with the same rates Stripe bills. Empty when the account has no pricing plan or rate card.
+func (s *billingSvcImpl) GetAgentTokenRates(ctx context.Context, accountID string) ([]domain.TokenRate, *apierror.APIError) {
+	ctx, span := tracing.StartSpan(ctx, billingSvcTracer, "service.billing.get_agent_token_rates")
+	defer span.End()
+
+	pricingPlanID, apiErr := s.repos.NewAccountUsageRepo().GetAccountStripePricingPlanID(ctx, accountID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if pricingPlanID == nil || *pricingPlanID == "" {
+		return nil, nil
+	}
+
+	plan := s.resolvePlan(ctx, *pricingPlanID)
+	if plan == nil || plan.RateCardID == "" {
+		return nil, nil
+	}
+
+	rates, err := s.stripeClient.GetRateCardTokenRates(ctx, plan.RateCardID)
+	if err != nil {
+		return nil, tracing.Trace(span, apierror.NewInternalError(err, "failed to fetch rate card token rates"))
+	}
+	return rates, nil
 }
 
 // agentSpendPeriodStart returns the start of the account's current billing period: one month before the subscription period end, or the calendar month start when there is no active subscription.

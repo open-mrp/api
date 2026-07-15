@@ -2,12 +2,14 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 
 	"github.com/shopspring/decimal"
 
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -95,4 +97,43 @@ func (r *unitConversionRepo) ConvertValue(ctx context.Context, measure decimal.D
 
 	targetValue := baseValue.Sub(toOffset).Div(toRatio)
 	return targetValue, nil
+}
+
+// GetUnitFactors returns each requested unit's base-conversion factors. Units not found (or unscoped) are omitted from the map.
+func (r *unitConversionRepo) GetUnitFactors(ctx context.Context, accountID string, unitIDs []string) (map[string]domain.UnitFactors, *apierror.APIError) {
+	seen := make(map[string]struct{}, len(unitIDs))
+	ids := make([]string, 0, len(unitIDs))
+	for _, id := range unitIDs {
+		if id == "" {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		ids = append(ids, id)
+	}
+
+	out := make(map[string]domain.UnitFactors, len(ids))
+	if len(ids) == 0 {
+		return out, nil
+	}
+
+	rows, err := r.queries.GetUnitsByIDsScoped(ctx, sqlc.GetUnitsByIDsScopedParams{
+		Ids:       ids,
+		AccountID: sql.NullString{String: accountID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, apiErr
+	}
+	for _, row := range rows {
+		out[row.ID] = domain.UnitFactors{
+			RatioNum:   parseDecimalOrZero(row.RatioNumerator),
+			RatioDen:   parseDecimalOrZero(row.RatioDenominator),
+			OffsetNum:  parseDecimalOrZero(row.OffsetNumerator),
+			OffsetDen:  parseDecimalOrZero(row.OffsetDenominator),
+			IsBaseUnit: row.IsBaseUnit,
+		}
+	}
+	return out, nil
 }

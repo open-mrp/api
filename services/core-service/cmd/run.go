@@ -643,6 +643,11 @@ func Run(
 		return err
 	}
 
+	salesOrderShippingUpdatedConsumer := event.NewSalesOrderShippingUpdatedConsumer(rabbitmq, inboxRepo, repoFactory)
+	if err := salesOrderShippingUpdatedConsumer.Listen(ctx); err != nil {
+		return err
+	}
+
 	hubspotSyncConsumer := event.NewHubspotSyncConsumer(rabbitmq, inboxRepo, hubspotSync)
 	if err := hubspotSyncConsumer.Listen(ctx); err != nil {
 		return err

@@ -25,12 +25,9 @@ func init() {
 	})
 }
 
-// productionRunID returns the run ID for either resource shape that shares the production_run object type (detail on Get/Create/Update, summary on List).
+// productionRunID returns the run ID for the production_run resource.
 func productionRunID(parent any) string {
-	switch pr := parent.(type) {
-	case *apiresource.ProductionRunDetail:
-		return pr.ID
-	case *apiresource.ProductionRunSummary:
+	if pr, ok := parent.(*apiresource.ProductionRun); ok {
 		return pr.ID
 	}
 	return ""
@@ -63,10 +60,7 @@ func populateResponsibleUserOnProductionRun(ctx context.Context, parent any, loa
 	if !ok {
 		return
 	}
-	switch pr := parent.(type) {
-	case *apiresource.ProductionRunDetail:
-		pr.ResponsibleUser = v.(*apiresource.AccountUser)
-	case *apiresource.ProductionRunSummary:
+	if pr, ok := parent.(*apiresource.ProductionRun); ok {
 		pr.ResponsibleUser = v.(*apiresource.AccountUser)
 	}
 }

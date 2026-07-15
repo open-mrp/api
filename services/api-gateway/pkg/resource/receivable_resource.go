@@ -44,7 +44,7 @@ var SampleReceivableEntry = ReceivableEntry{
 	Customer:         SampleCustomer,
 	PONumber:         nil,
 	InvoicedAt:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	RemainingBalance: "1234.560000000000000000000000000000",
+	RemainingBalance: "1234.56",
 	IsPaidInFull:     false,
 }
 

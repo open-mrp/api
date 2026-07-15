@@ -2239,8 +2239,12 @@ type MessageInfo struct {
 	SenderAliasName *string `protobuf:"bytes,33,opt,name=sender_alias_name,json=senderAliasName,proto3,oneof" json:"sender_alias_name,omitempty"`
 	// Resolved (not persisted): contact display name for a customer-participant message author (staff viewers).
 	SenderDisplayName *string `protobuf:"bytes,34,opt,name=sender_display_name,json=senderDisplayName,proto3,oneof" json:"sender_display_name,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// True when this message is an agent reply that resolved a failed run (from message metadata). Lets the client flag the message as a failure.
+	AgentRunFailed bool `protobuf:"varint,35,opt,name=agent_run_failed,json=agentRunFailed,proto3" json:"agent_run_failed,omitempty"`
+	// Machine-readable api-error code for a failed agent reply (e.g. "agent_spending_cap_reached"), from message metadata. Empty when there is no specific code. Lets the client react (e.g. prompt to raise the spending limit).
+	AgentErrorCode *string `protobuf:"bytes,36,opt,name=agent_error_code,json=agentErrorCode,proto3,oneof" json:"agent_error_code,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *MessageInfo) Reset() {
@@ -2479,6 +2483,20 @@ func (x *MessageInfo) GetSenderAliasName() string {
 func (x *MessageInfo) GetSenderDisplayName() string {
 	if x != nil && x.SenderDisplayName != nil {
 		return *x.SenderDisplayName
+	}
+	return ""
+}
+
+func (x *MessageInfo) GetAgentRunFailed() bool {
+	if x != nil {
+		return x.AgentRunFailed
+	}
+	return false
+}
+
+func (x *MessageInfo) GetAgentErrorCode() string {
+	if x != nil && x.AgentErrorCode != nil {
+		return *x.AgentErrorCode
 	}
 	return ""
 }
@@ -5428,7 +5446,7 @@ const file_notification_notification_chat_proto_rawDesc = "" +
 	"\x14_relation_account_idB\x1c\n" +
 	"\x1a_account_user_display_nameB\x17\n" +
 	"\x15_last_read_message_idB\x0f\n" +
-	"\r_last_read_at\"\x9b\x0e\n" +
+	"\r_last_read_at\"\x89\x0f\n" +
 	"\vMessageInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0fconversation_id\x18\x02 \x01(\tR\x0econversationId\x12\x1d\n" +
@@ -5468,7 +5486,9 @@ const file_notification_notification_chat_proto_rawDesc = "" +
 	"\x18source_thread_message_id\x18\x1f \x01(\tH\x10R\x15sourceThreadMessageId\x88\x01\x01\x12A\n" +
 	"\x1bapproved_by_account_user_id\x18  \x01(\tH\x11R\x17approvedByAccountUserId\x88\x01\x01\x12/\n" +
 	"\x11sender_alias_name\x18! \x01(\tH\x12R\x0fsenderAliasName\x88\x01\x01\x123\n" +
-	"\x13sender_display_name\x18\" \x01(\tH\x13R\x11senderDisplayName\x88\x01\x01B\x18\n" +
+	"\x13sender_display_name\x18\" \x01(\tH\x13R\x11senderDisplayName\x88\x01\x01\x12(\n" +
+	"\x10agent_run_failed\x18# \x01(\bR\x0eagentRunFailed\x12-\n" +
+	"\x10agent_error_code\x18$ \x01(\tH\x14R\x0eagentErrorCode\x88\x01\x01B\x18\n" +
 	"\x16_sender_participant_idB\x19\n" +
 	"\x17_sender_account_user_idB\x14\n" +
 	"\x12_client_message_idB\a\n" +
@@ -5492,7 +5512,8 @@ const file_notification_notification_chat_proto_rawDesc = "" +
 	"\x19_source_thread_message_idB\x1e\n" +
 	"\x1c_approved_by_account_user_idB\x14\n" +
 	"\x12_sender_alias_nameB\x16\n" +
-	"\x14_sender_display_nameJ\x04\b\x12\x10\x13J\x04\b\x13\x10\x14J\x04\b\x14\x10\x15J\x04\b\x15\x10\x16\"\xd6\x02\n" +
+	"\x14_sender_display_nameB\x13\n" +
+	"\x11_agent_error_codeJ\x04\b\x12\x10\x13J\x04\b\x13\x10\x14J\x04\b\x14\x10\x15J\x04\b\x15\x10\x16\"\xd6\x02\n" +
 	"\x19CreateConversationRequest\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12?\n" +
 	"\x1cparticipant_account_user_ids\x18\x02 \x03(\tR\x19participantAccountUserIds\x12\x19\n" +

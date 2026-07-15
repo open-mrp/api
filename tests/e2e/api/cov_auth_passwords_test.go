@@ -704,7 +704,9 @@ func TestCovAuthPasswords_ResetPassword_TokenValidity(t *testing.T) {
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 401, status, body)
-		requireErrorResponse(t, body, "invalid_credentials", "invalid_request_error")
+		// An expired token now surfaces as the specific expired_token code (previously
+		// collapsed into the generic invalid_credentials).
+		requireErrorResponse(t, body, "expired_token", "invalid_request_error")
 	})
 
 	t.Run("UnknownSubject", func(t *testing.T) {

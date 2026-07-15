@@ -42,6 +42,8 @@ type AccountUsageRepo interface {
 	GetAccountSubscriptionInfo(ctx context.Context, accountID string) (*AccountSubscriptionInfo, *apierror.APIError)
 	GetStripeCustomerIDByAccountID(ctx context.Context, accountID string) (*string, *apierror.APIError)
 	GetAccountNameAndPlanCode(ctx context.Context, accountID string) (name string, planCode string, apiErr *apierror.APIError)
+	// GetAccountStripePricingPlanID returns the Stripe pricing plan id (bpp_...) attached to the account's current plan, or nil when the plan has none (e.g. free). Resolved from the account's actual plan row so it stays correct when several plans share a plan_type_code.
+	GetAccountStripePricingPlanID(ctx context.Context, accountID string) (*string, *apierror.APIError)
 	GetUserEmailByID(ctx context.Context, userID string) (email string, displayName *string, apiErr *apierror.APIError)
 	GetAdminEmailByAccountID(ctx context.Context, accountID string) (string, *apierror.APIError)
 	UpdateStripeCustomerIDByAccountID(ctx context.Context, stripeCustomerID, accountID string) *apierror.APIError

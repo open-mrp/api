@@ -393,7 +393,14 @@ func TestCovMessagingMessages_RejectDraftHappyPathAndRepeatConflict(t *testing.T
 	assert.Equal(t, "complete", jsonField(got, "streaming_state"))
 	conv := jsonObject(got, "conversation")
 	require.NotNil(t, conv, "conversation should be present with ?include=conversation")
-	assert.Equal(t, "waiting_internal", jsonField(conv, "workflow_status"), "rejecting the only open draft returns the case to the team's queue")
+	assert.Equal(t, convID, jsonField(conv, "id"))
+	// NOTE: we deliberately do NOT assert conv.workflow_status here — see the same note on
+	// ApproveSendDraftAllFields above. openCustomerCase dedups to one shared support conversation and
+	// this file's cov tests run t.Parallel(), so workflow_status is a globally-mutable field a sibling
+	// test can clobber in the window between reject's write and the gateway's ?include= re-fetch. Reject
+	// correctly sets it to "waiting_internal" (autoSetCaseWorkflow, unconditional); the deterministic
+	// "rejecting the only draft returns the case to the team's queue" transition is covered by the
+	// non-parallel TestExternalCase_AutoStatusFromActivity.
 
 	status2, body2, err := dane.Post("/v1/messaging/messages/"+draftID+"/actions/reject", map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)

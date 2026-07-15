@@ -74,9 +74,9 @@ func BatchPresenter(b *pb.BatchInfo) apiresource.Batch {
 		}
 	}
 
-	var productionRun *apiresource.ProductionRun
+	var productionRun *apiresource.ProductionRunReference
 	if b.ProductionRunId != nil && *b.ProductionRunId != "" {
-		productionRun = &apiresource.ProductionRun{
+		productionRun = &apiresource.ProductionRunReference{
 			ID:     *b.ProductionRunId,
 			Object: constants.ObjectTypeProductionRun,
 			Number: ptrutil.Deref(b.ProductionRunNumber),
@@ -166,9 +166,9 @@ func BaseBatchPresenter(b *pb.BaseBatchInfo) apiresource.Batch {
 		}
 	}
 
-	var productionRun *apiresource.ProductionRun
+	var productionRun *apiresource.ProductionRunReference
 	if b.ProductionRunId != nil && *b.ProductionRunId != "" {
-		productionRun = &apiresource.ProductionRun{
+		productionRun = &apiresource.ProductionRunReference{
 			ID:     *b.ProductionRunId,
 			Object: constants.ObjectTypeProductionRun,
 			Number: ptrutil.Deref(b.ProductionRunNumber),

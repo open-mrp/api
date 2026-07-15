@@ -36,19 +36,41 @@ type QuoteSalesOrderPricesResponse struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order_price_quote"`
 	// Priced lines, in the same order as the request.
-	Lines []QuotedSalesOrderLine `json:"lines"`
+	Lines *apiresource.List[QuotedSalesOrderLine] `json:"lines"`
 }
 
 // One priced line in a quote response.
 type QuotedSalesOrderLine struct {
-	// ID of the product priced.
-	ProductID string `json:"product_id" validate:"required"`
-	// Calculated unit price, as a decimal string.
-	UnitPriceValue string `json:"unit_price_value" format:"decimal"`
-	// Unit ID for the unit price's numerator (the currency).
-	UnitPriceNumeratorUnitID string `json:"unit_price_numerator_unit_id"`
-	// Unit ID for the unit price's denominator (the unit being sold).
-	UnitPriceDenominatorUnitID string `json:"unit_price_denominator_unit_id"`
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order_price_quote_line"`
+	// The product priced.
+	Product *apiresource.Product `json:"product"`
+	// Calculated unit price.
+	UnitPrice *SalesOrderQuoteRate `json:"unit_price"`
+}
+
+// A per-unit rate on a sales-order quote.
+//
+// A lightweight, unpersisted variant of a rate: it carries no ID or timestamps because a quote is computed on demand and never stored.
+type SalesOrderQuoteRate struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order_quote_rate"`
+	// Decimal value of the rate, expressed as the amount of the numerator unit per one denominator unit.
+	Value string `json:"value" validate:"required" format:"decimal"`
+	// Unit of the rate's numerator (e.g. the currency of a price).
+	NumeratorUnit *apiresource.Unit `json:"numerator_unit"`
+	// Unit of the rate's denominator (the per-unit basis).
+	DenominatorUnit *apiresource.Unit `json:"denominator_unit"`
+}
+
+// newSalesOrderQuoteRate builds a quote rate from a value and its fully presented numerator/denominator units.
+func newSalesOrderQuoteRate(value string, numeratorUnit, denominatorUnit *apiresource.Unit) *SalesOrderQuoteRate {
+	return &SalesOrderQuoteRate{
+		Object:          constants.ObjectTypeSalesOrderQuoteRate,
+		Value:           value,
+		NumeratorUnit:   numeratorUnit,
+		DenominatorUnit: denominatorUnit,
+	}
 }
 
 var sampleQuoteSalesOrderPricesRequest = &QuoteSalesOrderPricesRequest{
@@ -70,14 +92,13 @@ func (*QuoteSalesOrderPricesRequest) SchemaExample() any {
 
 var sampleQuoteSalesOrderPricesResponse = &QuoteSalesOrderPricesResponse{
 	Object: constants.ObjectTypeSalesOrderPriceQuote,
-	Lines: []QuotedSalesOrderLine{
+	Lines: apiresource.NewList([]QuotedSalesOrderLine{
 		{
-			ProductID:                  apiresource.SampleProductID,
-			UnitPriceValue:             "25.00",
-			UnitPriceNumeratorUnitID:   apiresource.SampleUnitID,
-			UnitPriceDenominatorUnitID: apiresource.SampleUnitID,
+			Object:    constants.ObjectTypeSalesOrderPriceQuoteLine,
+			Product:   apiresource.SampleProduct,
+			UnitPrice: newSalesOrderQuoteRate("25.00", apiresource.SampleUnit, apiresource.SampleUnit),
 		},
-	},
+	}, apiresource.PageInfo{}),
 }
 
 func (*QuoteSalesOrderPricesResponse) SchemaExample() any {
@@ -96,7 +117,7 @@ func (e *QuoteSalesOrderPricesEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/price-quote",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		RequiredPermissions: []types.Permission{

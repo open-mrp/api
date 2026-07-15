@@ -16,13 +16,9 @@ import (
 type CloseSalesOrderRequest struct {
 	// Sales order ID.
 	SalesOrderID string `path:"id" validate:"required"`
-	// Whether to notify the customer.
-	//
-	// Reserved for future use; no notification email is currently sent for this action.
-	NotifyCustomer bool `json:"notify_customer"`
 }
 
-var sampleCloseSalesOrderRequest = &CloseSalesOrderRequest{NotifyCustomer: false}
+var sampleCloseSalesOrderRequest = &CloseSalesOrderRequest{}
 
 func (*CloseSalesOrderRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCloseSalesOrderRequest)
@@ -40,7 +36,7 @@ func (e *CloseSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*CloseS
 		ContentType:         "application/json",
 		Route:               "/v1/sales/sales-orders/{id}/actions/close",
 		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
+		Public:              true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionUpdate}},
 		ObjectType:          constants.ObjectTypeSalesOrder,

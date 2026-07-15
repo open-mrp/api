@@ -405,6 +405,27 @@ func (q *Queries) DeleteQuantitiesByPickLinesForLine(ctx context.Context, salesO
 	return err
 }
 
+const deleteReservedInventoryIssueQuantitiesBySalesOrder = `-- name: DeleteReservedInventoryIssueQuantitiesBySalesOrder :exec
+DELETE q FROM quantity q
+JOIN inventory_issue ii ON ii.quantity_id = q.id
+WHERE ii.order_id = ?
+AND ii.account_id = ?
+AND ii.status_code = 'reserved'
+`
+
+type DeleteReservedInventoryIssueQuantitiesBySalesOrderParams struct {
+	SalesOrderID sql.NullString
+	AccountID    string
+}
+
+// The quantity rows created for each reserved issue on issue() are referenced only by
+// inventory_issue.quantity_id, so they must be deleted via this join BEFORE the issues are
+// deleted — otherwise unissuing (or re-issuing) leaves them orphaned in the quantity table.
+func (q *Queries) DeleteReservedInventoryIssueQuantitiesBySalesOrder(ctx context.Context, arg DeleteReservedInventoryIssueQuantitiesBySalesOrderParams) error {
+	_, err := q.db.ExecContext(ctx, deleteReservedInventoryIssueQuantitiesBySalesOrder, arg.SalesOrderID, arg.AccountID)
+	return err
+}
+
 const deleteReservedInventoryIssuesBySalesOrder = `-- name: DeleteReservedInventoryIssuesBySalesOrder :exec
 DELETE FROM inventory_issue
 WHERE order_id = ?
@@ -1371,6 +1392,88 @@ func (q *Queries) GetSalesOrderForCustomer(ctx context.Context, arg GetSalesOrde
 	return i, err
 }
 
+const getSalesOrderFulfillmentProgress = `-- name: GetSalesOrderFulfillmentProgress :many
+SELECT
+    sol.sales_order_id,
+    COALESCE(SUM(q.value), 0) AS quantity_ordered,
+    COALESCE(SUM(
+        (SELECT COALESCE(SUM(plq.value), 0) FROM pick_line pl
+            JOIN quantity plq ON plq.id = pl.quantity_id
+            WHERE pl.sales_order_line_id = sol.id)
+    ), 0) AS quantity_picked,
+    COALESCE(SUM(
+        (SELECT COALESCE(SUM(plq2.value), 0) FROM pick_line pl2
+            JOIN quantity plq2 ON plq2.id = pl2.quantity_id
+            WHERE pl2.sales_order_line_id = sol.id AND pl2.packed_at IS NOT NULL)
+    ), 0) AS quantity_packed,
+    COALESCE(SUM(
+        (SELECT COALESCE(SUM(ilq.value), 0) FROM invoice_line il
+            JOIN quantity ilq ON ilq.id = il.quantity_id
+            WHERE il.sales_order_line_id = sol.id)
+    ), 0) AS quantity_invoiced
+FROM sales_order_line sol
+JOIN quantity q ON q.id = sol.quantity_id
+JOIN product p ON p.id = sol.product_id
+WHERE sol.sales_order_id IN (/*SLICE:sales_order_ids*/?)
+AND p.product_type_code = 'sale'
+GROUP BY sol.sales_order_id
+`
+
+type GetSalesOrderFulfillmentProgressRow struct {
+	SalesOrderID     string
+	QuantityOrdered  interface{}
+	QuantityPicked   interface{}
+	QuantityPacked   interface{}
+	QuantityInvoiced interface{}
+}
+
+// Aggregates ordered/picked/packed/invoiced quantities per sales order over its
+// sale-type lines in one batched pass, keyed by sales order ID. Backs the
+// order-level picked/packed/invoiced completion fractions on both the list and
+// detail endpoints without loading each order's lines. Only product_type_code =
+// 'sale' lines are counted (freight/credit system lines and product-less custom
+// lines are excluded), matching the frontend's completion math. The picked/
+// packed/invoiced totals reuse the same per-line correlated subqueries as
+// GetSalesOrderLines. Orders with no sale lines are absent from the result.
+func (q *Queries) GetSalesOrderFulfillmentProgress(ctx context.Context, salesOrderIds []string) ([]GetSalesOrderFulfillmentProgressRow, error) {
+	query := getSalesOrderFulfillmentProgress
+	var queryParams []interface{}
+	if len(salesOrderIds) > 0 {
+		for _, v := range salesOrderIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", strings.Repeat(",?", len(salesOrderIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetSalesOrderFulfillmentProgressRow
+	for rows.Next() {
+		var i GetSalesOrderFulfillmentProgressRow
+		if err := rows.Scan(
+			&i.SalesOrderID,
+			&i.QuantityOrdered,
+			&i.QuantityPicked,
+			&i.QuantityPacked,
+			&i.QuantityInvoiced,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getSalesOrderLineCounts = `-- name: GetSalesOrderLineCounts :many
 SELECT sol.sales_order_id, COUNT(*) AS line_count
 FROM sales_order_line sol
@@ -1462,6 +1565,8 @@ SELECT
     uc_nu.abbreviation AS unit_cost_numerator_unit_abbreviation,
     uc_du.id AS unit_cost_denominator_unit_id,
     uc_du.abbreviation AS unit_cost_denominator_unit_abbreviation,
+    -- Product type
+    p.product_type_code AS product_type_code,
     -- Timestamps
     sol.created_at,
     sol.updated_at
@@ -1475,6 +1580,7 @@ LEFT JOIN rate uc ON uc.id = sol.unit_cost_id
 LEFT JOIN unit uc_nu ON uc_nu.id = uc.numerator_unit_id
 LEFT JOIN unit uc_du ON uc_du.id = uc.denominator_unit_id
 LEFT JOIN item i ON i.id = sol.item_id
+LEFT JOIN product p ON p.id = sol.product_id
 WHERE sol.sales_order_id = ?
 ORDER BY sol.line_item_number ASC
 `
@@ -1509,6 +1615,7 @@ type GetSalesOrderLinesRow struct {
 	UnitCostNumeratorUnitAbbreviation    sql.NullString
 	UnitCostDenominatorUnitID            sql.NullString
 	UnitCostDenominatorUnitAbbreviation  sql.NullString
+	ProductTypeCode                      sql.NullString
 	CreatedAt                            time.Time
 	UpdatedAt                            time.Time
 }
@@ -1552,6 +1659,7 @@ func (q *Queries) GetSalesOrderLines(ctx context.Context, salesOrderID string) (
 			&i.UnitCostNumeratorUnitAbbreviation,
 			&i.UnitCostDenominatorUnitID,
 			&i.UnitCostDenominatorUnitAbbreviation,
+			&i.ProductTypeCode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -3142,19 +3250,21 @@ func (q *Queries) SetSalesOrderProductionRunID(ctx context.Context, arg SetSales
 const updateSalesOrder = `-- name: UpdateSalesOrder :exec
 UPDATE sales_order SET
     number = COALESCE(?, number),
-    customer_po_number = COALESCE(?, customer_po_number),
-    note = COALESCE(?, note),
+    -- Clearable fields use plain narg (no COALESCE): the service backfills an omitted
+    -- field from the existing row, so NULL here means an explicit clear, not "leave".
+    customer_po_number = ?,
+    note = ?,
     carrier_id = ?,
     carrier_option_id = ?,
-    carrier_billing_type = COALESCE(?, carrier_billing_type),
-    carrier_billing_account = COALESCE(?, carrier_billing_account),
+    carrier_billing_type = ?,
+    carrier_billing_account = ?,
     priority_code = COALESCE(?, priority_code),
     sales_rep_id = ?,
     shipping_term_id = ?,
     payment_term_id = ?,
     order_discount_id = ?,
     is_acknowledgment_sent = COALESCE(?, is_acknowledgment_sent),
-    promised_at = COALESCE(?, promised_at),
+    promised_at = ?,
     buyer_account_id = ?,
     billing_address_id = COALESCE(?, billing_address_id),
     shipping_address_id = COALESCE(?, shipping_address_id),

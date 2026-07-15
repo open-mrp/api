@@ -66,6 +66,30 @@ type NotificationPreference struct {
 	NotificationTypeCode string
 }
 
+// NotificationRecipientRef is a raw (recipient account user id, notification types) grouping from storage, before the account user is hydrated.
+type NotificationRecipientRef struct {
+	AccountUserID         string
+	NotificationTypeCodes []string
+}
+
+// NotificationRecipient is a default order-notification recipient for a customer relationship: the hydrated account user (on the customer's account) and the notification types they receive.
+type NotificationRecipient struct {
+	AccountUser           *AccountUserDetail
+	NotificationTypeCodes []string
+}
+
+// NotificationRecipientInput is a requested recipient when replacing a relationship's defaults: an account user id and the notification types to configure for them.
+type NotificationRecipientInput struct {
+	AccountUserID         string
+	NotificationTypeCodes []string
+}
+
+// UpdateCustomerNotificationRecipientsParams are the parameters for replacing a customer relationship's default order-notification recipients.
+type UpdateCustomerNotificationRecipientsParams struct {
+	CustomerAccountID string
+	Recipients        []NotificationRecipientInput
+}
+
 // NotificationPreferenceItem represents a single preference toggle.
 type NotificationPreferenceItem struct {
 	NotificationTypeCode string

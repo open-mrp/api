@@ -33,8 +33,8 @@ func (*CreateProductionRunRequest) SchemaExample() any {
 // The run number is assigned automatically as the next sequential number for the account.
 type CreateProductionRunEndpoint struct{}
 
-func (e *CreateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductionRunRequest, *apiresource.ProductionRunDetail] {
-	return (&apiendpoint.APIEndpoint[*CreateProductionRunRequest, *apiresource.ProductionRunDetail]{
+func (e *CreateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductionRunRequest, *apiresource.ProductionRun] {
+	return (&apiendpoint.APIEndpoint[*CreateProductionRunRequest, *apiresource.ProductionRun]{
 		Title:             "Create Production Run",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
@@ -46,10 +46,10 @@ func (e *CreateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cr
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainProductionRuns, Action: types.ActionCreate},
 		},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateProductionRunRequest) (*apiresource.ProductionRunDetail, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateProductionRunRequest) (*apiresource.ProductionRun, *apierror.APIError) {
 			return svc.(ProductionRunSvc).CreateProductionRun
 		},
-		LocationFunc: func(resp *apiresource.ProductionRunDetail) string {
+		LocationFunc: func(resp *apiresource.ProductionRun) string {
 			return "/v1/operations/production-runs/" + resp.ID
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{

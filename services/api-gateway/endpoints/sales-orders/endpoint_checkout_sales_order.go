@@ -9,7 +9,6 @@ import (
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/field"
 )
 
 // Request to create a checkout session for a sales order.
@@ -20,16 +19,12 @@ type CheckoutSalesOrderRequest struct {
 	//
 	// Also set as the customer email on the payment provider's checkout session.
 	Email string `json:"email" validate:"required,email"`
-	// URL the customer is redirected to after completing the checkout.
-	SuccessURL field.Optional[string] `json:"success_url,omitzero"`
-	// URL the customer is redirected to if they cancel the checkout.
-	CancelURL field.Optional[string] `json:"cancel_url,omitzero"`
 }
 
 // Checkout session result.
 type CheckoutSalesOrderResponse struct {
 	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=checkout_sales_order_response"`
+	Object constants.ObjectType `json:"object" validate:"required,enum=checkout_sales_order"`
 	// URL of the hosted payment page where the customer completes the checkout.
 	CheckoutURL string `json:"checkout_url" validate:"required"`
 }
@@ -55,7 +50,7 @@ func (e *CheckoutSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Che
 		ContentType:         "application/json",
 		Route:               "/v1/sales/sales-orders/{id}/checkout",
 		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
+		Public:              true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionUpdate}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CheckoutSalesOrderRequest) (*CheckoutSalesOrderResponse, *apierror.APIError) {

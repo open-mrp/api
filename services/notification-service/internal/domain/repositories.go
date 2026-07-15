@@ -245,6 +245,8 @@ type MessageRepo interface {
 	UpdateBody(ctx context.Context, id, accountID string, body, preview *string) *apierror.APIError
 	// SetStreamingBody streams a partial/final body into an in-flight agent reply (without marking it edited), optionally flipping streaming_state to "complete". applied is false when the row is no longer streaming (already complete/deleted) or doesn't exist — the caller skips the realtime push.
 	SetStreamingBody(ctx context.Context, id, accountID string, body, preview *string, state string) (applied bool, apiErr *apierror.APIError)
+	// SetMessageMetadata overwrites a message's metadata JSON — used to annotate a finalized agent reply with a failure marker + error code so the client can flag it and react.
+	SetMessageMetadata(ctx context.Context, id, accountID string, metadata json.RawMessage) *apierror.APIError
 	// SoftDelete tombstones a message (clears body/preview, sets deleted_at).
 	SoftDelete(ctx context.Context, id, accountID string) *apierror.APIError
 

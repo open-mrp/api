@@ -435,8 +435,11 @@ func TestCovMessagingNotifications_MarkDismissedIsIdempotent(t *testing.T) {
 	assert.Equal(t, dismissedAt1, jsonField(m2, "dismissed_at"), "repeat mark-dismiss must not move dismissed_at")
 }
 
+// Not parallel: mark-all-seen mutates the entire seed user's feed, so it must
+// run in the sequential phase — before any parallel test that asserts a fresh
+// notification is still unseen (e.g. OmittedFieldsDefaults) resumes. Its sibling
+// TestNotifications_MarkAllSeen is serial for the same reason.
 func TestCovMessagingNotifications_MarkAllSeenRepeatedIsStable(t *testing.T) {
-	t.Parallel()
 	user := notifUserClient(t)
 	title := uniqueName("e2e-cov-notif-markallidem")
 	sendNotif(t, user, "order.updated", title, nil)

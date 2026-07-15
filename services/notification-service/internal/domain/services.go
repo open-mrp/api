@@ -239,6 +239,8 @@ type MessagingSvc interface {
 	MarkAnnouncementDismissed(ctx context.Context, id string) (*Announcement, *apierror.APIError)
 	// FanOut materializes notification rows for an alert/message intent and emits the realtime push. Called by the fan-out consumer. dedupeSeed (the source message id) makes per-recipient inserts idempotent across redelivery.
 	FanOut(ctx context.Context, dedupeSeed string, data messaging.AlertFanoutData) *apierror.APIError
+	// NotifyCustomerRegistered fans a bell notification out to the seller's customer-service support-route group when a buyer registers on the portal. Called by the customer-registered consumer. seed makes per-recipient inserts idempotent across redelivery.
+	NotifyCustomerRegistered(ctx context.Context, seed string, data messaging.CustomerRegisteredData) *apierror.APIError
 	// ListNotificationPreferences returns the caller's channel preferences (global + per-category).
 	ListNotificationPreferences(ctx context.Context) ([]*NotificationPreference, *apierror.APIError)
 	// UpsertNotificationPreference creates or replaces the caller's preference for a category.

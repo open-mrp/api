@@ -17,6 +17,8 @@ type PortalProfile struct {
 	Slug string `json:"slug" validate:"required"`
 	// Logo URL.
 	LogoURL *string `json:"logo_url"`
+	// Customer-portal favicon URL.
+	FaviconURL *string `json:"favicon_url"`
 	// Support email address.
 	SupportEmail *string `json:"support_email"`
 	// The seller's letterhead address (its default billing address), or null when the account has none.

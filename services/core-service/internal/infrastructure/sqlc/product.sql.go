@@ -766,6 +766,7 @@ const getAccountSystemProduct = `-- name: GetAccountSystemProduct :one
 SELECT
     p.id AS product_id,
     i.sku AS product_sku,
+    i.description AS product_description,
     ug.base_unit_id AS quantity_unit_id
 FROM product p
 JOIN item i ON i.id = p.item_id
@@ -782,9 +783,10 @@ type GetAccountSystemProductParams struct {
 }
 
 type GetAccountSystemProductRow struct {
-	ProductID      string
-	ProductSku     string
-	QuantityUnitID string
+	ProductID          string
+	ProductSku         string
+	ProductDescription sql.NullString
+	QuantityUnitID     string
 }
 
 // Fetches the account's system product (e.g. credit, shipping) along with
@@ -792,7 +794,12 @@ type GetAccountSystemProductRow struct {
 func (q *Queries) GetAccountSystemProduct(ctx context.Context, arg GetAccountSystemProductParams) (GetAccountSystemProductRow, error) {
 	row := q.db.QueryRowContext(ctx, getAccountSystemProduct, arg.ProductTypeCode, arg.AccountID)
 	var i GetAccountSystemProductRow
-	err := row.Scan(&i.ProductID, &i.ProductSku, &i.QuantityUnitID)
+	err := row.Scan(
+		&i.ProductID,
+		&i.ProductSku,
+		&i.ProductDescription,
+		&i.QuantityUnitID,
+	)
 	return i, err
 }
 

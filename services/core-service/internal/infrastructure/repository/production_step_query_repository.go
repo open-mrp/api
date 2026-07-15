@@ -99,8 +99,9 @@ func mapStepConsumptionRow(row sqlc.GetProductionStepConsumptionsRow) (*domain.S
 	return &domain.StepConsumption{
 		ID: row.ID,
 		ConsumedItem: domain.LightItem{
-			ID:  row.ConsumedItemID,
-			SKU: row.ConsumedItemSku,
+			ID:   row.ConsumedItemID,
+			SKU:  row.ConsumedItemSku,
+			Type: row.ConsumedItemTypeCode,
 		},
 		Quantity: domain.BatchQuantity{
 			ID:      row.ConsumptionQuantityID,

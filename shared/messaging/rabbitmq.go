@@ -670,6 +670,24 @@ func (r *rabbitMQ) setupExchangesAndQueues() error {
 		return err
 	}
 
+	// Core sales order shipping-updated event queue (handled by core-service)
+	if err := r.declareAndBindQueue(
+		CoreEventSalesOrderShippingUpdatedQueue,
+		[]string{string(contracts.CoreEventSalesOrderShippingUpdated)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
+	// Core customer-registered event queue (handled by notification-service)
+	if err := r.declareAndBindQueue(
+		CoreEventCustomerRegisteredQueue,
+		[]string{string(contracts.CoreEventCustomerRegistered)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
 	// Core HubSpot sync command queue (handled by core-service) — bound to both preview and execute commands
 	if err := r.declareAndBindQueue(
 		CoreCmdHubspotSyncQueue,

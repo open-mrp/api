@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math"
 	"net/http"
 	"strings"
 	"unicode"
@@ -148,6 +149,7 @@ func (c *stripeClientImpl) GetPricingPlan(ctx context.Context, pricingPlanID str
 	var result struct {
 		ID          string `json:"id"`
 		LiveVersion string `json:"live_version"`
+		DisplayName string `json:"display_name"`
 	}
 	if err := json.Unmarshal(resp.RawJSON, &result); err != nil {
 		return nil, fmt.Errorf("failed to parse pricing plan response: %w", err)
@@ -159,29 +161,115 @@ func (c *stripeClientImpl) GetPricingPlan(ctx context.Context, pricingPlanID str
 	plan := &domain.StripePricingPlan{
 		ID:          result.ID,
 		LiveVersion: result.LiveVersion,
+		DisplayName: result.DisplayName,
 	}
 
-	// Fetch the version to get the license fee component ID
-	versionResp, err := stripe.RawRequest(http.MethodGet,
-		fmt.Sprintf("/v2/billing/pricing_plan_versions/%s", result.LiveVersion), "", nil)
-	if err == nil {
-		var version struct {
-			Components []struct {
-				ID   string `json:"id"`
-				Type string `json:"type"`
-			} `json:"components"`
+	// Fetch the plan's components (license fee + rate card) via the documented list endpoint. The pricing_plan_versions endpoint is not reliably available, so read /components directly.
+	var licenseFeeID string
+	compResp, err := stripe.RawRequest(http.MethodGet,
+		fmt.Sprintf("/v2/billing/pricing_plans/%s/components", pricingPlanID), "", nil)
+	if err != nil {
+		// Surface this: a failed components fetch leaves LicenseFeeComponentID/RateCardID empty, which silently zeroes downstream (agent spend, seat config).
+		slog.Warn("failed to fetch pricing plan components", "pricing_plan", pricingPlanID, "error", err.Error())
+	} else {
+		var parsed struct {
+			Data []map[string]any `json:"data"`
 		}
-		if parseErr := json.Unmarshal(versionResp.RawJSON, &version); parseErr == nil {
-			for _, comp := range version.Components {
-				if comp.Type == "license_fee" {
-					plan.LicenseFeeComponentID = comp.ID
-					break
+		if parseErr := json.Unmarshal(compResp.RawJSON, &parsed); parseErr == nil {
+			for _, comp := range parsed.Data {
+				typ, _ := comp["type"].(string)
+				id, _ := comp["id"].(string)
+				switch {
+				case strings.Contains(typ, "license_fee"):
+					if plan.LicenseFeeComponentID == "" {
+						plan.LicenseFeeComponentID = id
+					}
+					if licenseFeeID == "" {
+						licenseFeeID = extractLicenseFeeID(comp)
+					}
+				case strings.Contains(typ, "rate_card"):
+					if plan.RateCardID == "" {
+						plan.RateCardID = extractRateCardID(comp)
+					}
 				}
 			}
 		}
 	}
 
+	// The base fee (flat recurring charge) is the license fee's amount; fetch it from the license fee object.
+	if licenseFeeID != "" {
+		if cents, interval, feeErr := c.fetchLicenseFeeAmount(licenseFeeID); feeErr != nil {
+			slog.Warn("failed to fetch license fee amount", "license_fee", licenseFeeID, "error", feeErr.Error())
+		} else {
+			plan.BaseFeeCents = cents
+			plan.BaseFeeInterval = interval
+		}
+	}
+
 	return plan, nil
+}
+
+// fetchLicenseFeeAmount returns the flat recurring amount (in cents) and interval of a Stripe license fee. unit_amount is denominated in the currency's smallest unit (cents).
+func (c *stripeClientImpl) fetchLicenseFeeAmount(licenseFeeID string) (int64, string, error) {
+	resp, err := stripe.RawRequest(http.MethodGet,
+		fmt.Sprintf("/v2/billing/license_fees/%s", licenseFeeID), "", nil)
+	if err != nil {
+		return 0, "", fmt.Errorf("failed to fetch license fee: %w", err)
+	}
+	var parsed struct {
+		UnitAmount      json.Number `json:"unit_amount"`
+		ServiceInterval string      `json:"service_interval"`
+	}
+	if err := json.Unmarshal(resp.RawJSON, &parsed); err != nil {
+		return 0, "", fmt.Errorf("failed to parse license fee: %w", err)
+	}
+	// unit_amount is cents but comes as a decimal string (e.g. "100.0"), so parse as float and round to whole cents.
+	amount, err := parsed.UnitAmount.Float64()
+	if err != nil {
+		return 0, "", fmt.Errorf("license fee unit_amount not numeric: %w", err)
+	}
+	return int64(math.Round(amount)), parsed.ServiceInterval, nil
+}
+
+// extractLicenseFeeID pulls the license fee id (licf_...) out of a license_fee component, tolerating the nested-object and bare-string shapes the preview API uses.
+func extractLicenseFeeID(comp map[string]any) string {
+	switch lf := comp["license_fee"].(type) {
+	case string:
+		return lf
+	case map[string]any:
+		if id, ok := lf["id"].(string); ok {
+			return id
+		}
+	}
+	return ""
+}
+
+// extractRateCardID pulls the rate card id (rcd_...) out of a pricing-plan-version rate_card component, tolerating the shapes the preview API has used: the create-body style ("rate_card": {"id": "rcd_..."} or a bare "rate_card": "rcd_...") and the read-back style ("rate_card_component": {"rate_card": "rcd_..."}). Returns "" if none is present.
+func extractRateCardID(comp map[string]any) string {
+	switch rc := comp["rate_card"].(type) {
+	case string:
+		if rc != "" {
+			return rc
+		}
+	case map[string]any:
+		if id, ok := rc["id"].(string); ok && id != "" {
+			return id
+		}
+		if id, ok := rc["rate_card"].(string); ok && id != "" {
+			return id
+		}
+	}
+	if rcc, ok := comp["rate_card_component"].(map[string]any); ok {
+		if id, ok := rcc["rate_card"].(string); ok && id != "" {
+			return id
+		}
+		if inner, ok := rcc["rate_card"].(map[string]any); ok {
+			if id, ok := inner["id"].(string); ok && id != "" {
+				return id
+			}
+		}
+	}
+	return ""
 }
 
 func (c *stripeClientImpl) CreateBillingProfile(ctx context.Context, customerID, idempotencyKey string) (string, error) {

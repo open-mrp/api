@@ -9,6 +9,7 @@ import (
 )
 
 const SampleSalesOrderLineID = "orln_0142f9b74268973450b3a76ce3"
+const SampleSalesOrderLineID2 = "orln_0142f9b74268973450b3a76ce4"
 
 // Full sales order line resource.
 type SalesOrderLine struct {

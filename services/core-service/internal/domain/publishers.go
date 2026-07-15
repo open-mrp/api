@@ -17,6 +17,8 @@ type NotificationPublisher interface {
 type SalesOrderEventPublisher interface {
 	// PublishSalesOrderCreated writes a sales-order-created event to the outbox so out-of-band consumers (e.g. CRM sync) can react without blocking the create.
 	PublishSalesOrderCreated(ctx context.Context, data messaging.SalesOrderCreatedData) *apierror.APIError
+	// PublishSalesOrderShippingUpdated writes a sales-order shipping-changed event to the outbox so the shipment records are re-synced out-of-band from the update.
+	PublishSalesOrderShippingUpdated(ctx context.Context, data messaging.SalesOrderShippingUpdatedData) *apierror.APIError
 }
 
 // HubspotSyncPublisher publishes HubSpot backfill commands via the outbox pattern, so the command commits atomically with the job row.

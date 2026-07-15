@@ -52,10 +52,12 @@ func (*SalesOrdersEndpointGroup) Materialize(config *SalesOrdersEndpointGroupCon
 	openEndpoint := apiendpoint.From(&salesorderep.OpenSalesOrderEndpoint{}).WithService(inner, svc)
 	checkoutEndpoint := apiendpoint.From(&salesorderep.CheckoutSalesOrderEndpoint{}).WithService(inner, svc)
 	quotePricesEndpoint := apiendpoint.From(&salesorderep.QuoteSalesOrderPricesEndpoint{}).WithService(inner, svc)
+	quoteFreightEndpoint := apiendpoint.From(&salesorderep.QuoteSalesOrderFreightEndpoint{}).WithService(inner, svc)
 	createProductionRunEndpoint := apiendpoint.From(&salesorderep.CreateProductionRunEndpoint{}).WithService(inner, svc)
 	createLineEndpoint := apiendpoint.From(&salesorderep.CreateSalesOrderLineEndpoint{}).WithService(inner, svc)
 	updateLineEndpoint := apiendpoint.From(&salesorderep.UpdateSalesOrderLineEndpoint{}).WithService(inner, svc)
 	deleteLineEndpoint := apiendpoint.From(&salesorderep.DeleteSalesOrderLineEndpoint{}).WithService(inner, svc)
+	reorderLinesEndpoint := apiendpoint.From(&salesorderep.ReorderSalesOrderLinesEndpoint{}).WithService(inner, svc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,
@@ -70,10 +72,12 @@ func (*SalesOrdersEndpointGroup) Materialize(config *SalesOrdersEndpointGroupCon
 		openEndpoint,
 		checkoutEndpoint,
 		quotePricesEndpoint,
+		quoteFreightEndpoint,
 		createProductionRunEndpoint,
 		createLineEndpoint,
 		updateLineEndpoint,
 		deleteLineEndpoint,
+		reorderLinesEndpoint,
 	}
 
 	return &SalesOrdersEndpointGroup{inner}

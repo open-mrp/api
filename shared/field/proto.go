@@ -1,7 +1,10 @@
 package field
 
 import (
+	"time"
+
 	pb "github.com/augno/api/shared/proto/core"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // StringList is a type alias so slice type parameters work with patch fields.
@@ -71,4 +74,27 @@ func SliceClearableToStringListClearable(f Clearable[[]string]) Clearable[String
 // StringListSliceClearableToProto converts a []string field to protobuf.
 func StringListSliceClearableToProto(f Clearable[[]string]) *pb.StringListPatch {
 	return StringListClearableToProto(SliceClearableToStringListClearable(f))
+}
+
+// TimestampClearableToProto converts a time.Time field to protobuf. Returns nil when unset.
+func TimestampClearableToProto(f Clearable[time.Time]) *pb.TimestampPatch {
+	if f.IsUnset() {
+		return nil
+	}
+	if f.IsClear() {
+		return &pb.TimestampPatch{Clear: true}
+	}
+	val, _ := f.Value()
+	return &pb.TimestampPatch{Clear: false, Value: timestamppb.New(val)}
+}
+
+// TimestampClearableFromProto converts protobuf to a time.Time field. Nil means unset.
+func TimestampClearableFromProto(p *pb.TimestampPatch) Clearable[time.Time] {
+	if p == nil {
+		return Unset[time.Time]()
+	}
+	if p.Clear || p.Value == nil {
+		return Clear[time.Time]()
+	}
+	return Set(p.Value.AsTime())
 }

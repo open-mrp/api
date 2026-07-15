@@ -35,6 +35,23 @@ func IsShippoCarrier(code *string) bool {
 	}
 }
 
+// TrackingURL returns a carrier tracking deep-link for the given tracking number, or "" when the carrier isn't one we can build a link for (or the tracking number is empty). Mirrors the carrier deep-links used by the frontend.
+func TrackingURL(code CarrierCode, trackingNumber string) string {
+	if trackingNumber == "" {
+		return ""
+	}
+	switch code {
+	case CarrierCodeFedEx:
+		return "https://www.fedex.com/fedextrack/?trknbr=" + trackingNumber
+	case CarrierCodeUPS:
+		return "https://www.ups.com/track/?loc=en_US&tracknum=" + trackingNumber
+	case CarrierCodeUSPS:
+		return "https://tools.usps.com/go/TrackConfirmAction?tLabels=" + trackingNumber
+	default:
+		return ""
+	}
+}
+
 func (m CarrierCode) IsValid() bool {
 	switch m {
 	case CarrierCodeFedEx, CarrierCodeUPS, CarrierCodeUSPS, CarrierCodeWillCall, CarrierCodeDelivery, CarrierCodeLTL, CarrierCodeLTL1, CarrierCodeFreightCollect:

@@ -64,6 +64,8 @@ type AccountBranding struct {
 	PhoneNumber *string `json:"phone_number"`
 	// Logo URL.
 	LogoURL *string `json:"logo_url"`
+	// Customer-portal favicon URL.
+	FaviconURL *string `json:"favicon_url"`
 	// Facebook handle.
 	FacebookHandle *string `json:"facebook_handle"`
 	// Instagram handle.
@@ -86,6 +88,7 @@ var SampleAccountBranding = &AccountBranding{
 	SupportEmail:    new("support@acme.example.com"),
 	PhoneNumber:     new("+1-614-555-0100"),
 	LogoURL:         new("https://cdn.augno.com/branding/abr_01fa710842028837ac3ca9d590/logo.png"),
+	FaviconURL:      new("https://cdn.augno.com/branding/abr_01fa710842028837ac3ca9d590/favicon.png"),
 	FacebookHandle:  new("acmeinc"),
 	InstagramHandle: new("acmeinc"),
 	LinkedInHandle:  new("acme-inc"),
@@ -143,6 +146,10 @@ type PublicAccount struct {
 	SupportEmail *string `json:"support_email"`
 	// Logo URL.
 	LogoURL *string `json:"logo_url"`
+	// The account's verified custom portal domain (e.g. shop.acme.com), when one is connected and verified.
+	PortalDomain *string `json:"portal_domain"`
+	// Customer-portal favicon URL.
+	FaviconURL *string `json:"favicon_url"`
 }
 
 var SamplePublicAccount = &PublicAccount{
@@ -153,6 +160,8 @@ var SamplePublicAccount = &PublicAccount{
 	DefaultBillingAddress: SampleAddress,
 	SupportEmail:          new("support@acme.example.com"),
 	LogoURL:               new("https://cdn.augno.com/branding/abr_01fa710842028837ac3ca9d590/logo.png"),
+	PortalDomain:          new("shop.acme.com"),
+	FaviconURL:            new("https://cdn.augno.com/branding/abr_01fa710842028837ac3ca9d590/favicon.png"),
 }
 
 func (*PublicAccount) SchemaExample() any {
@@ -193,4 +202,23 @@ var SampleAccountPhotoUploadResult = &AccountPhotoUploadResult{
 
 func (*AccountPhotoUploadResult) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleAccountPhotoUploadResult)
+}
+
+// Presigned URL for an account's customer-portal favicon.
+type AccountFaviconURL struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=account_favicon_url"`
+	// Presigned URL for downloading the account's favicon.
+	//
+	// The URL expires one hour after it is generated, so fetch the favicon promptly rather than caching this URL.
+	URL *string `json:"url"`
+}
+
+var SampleAccountFaviconURL = &AccountFaviconURL{
+	Object: constants.ObjectTypeAccountFaviconURL,
+	URL:    new("https://augno-logos.s3.amazonaws.com/ac_01148680966698341a9c0976db/favicon.png?X-Amz-Expires=3600&X-Amz-Signature=example"),
+}
+
+func (*AccountFaviconURL) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleAccountFaviconURL)
 }

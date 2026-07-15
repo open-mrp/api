@@ -122,6 +122,9 @@ func shipmentToProto(s *domain.Shipment) *pb.ShipmentInfo {
 	if s.CarrierIsPortalEnabled != nil {
 		info.CarrierIsPortalEnabled = s.CarrierIsPortalEnabled
 	}
+	if s.CarrierCode != nil {
+		info.CarrierCode = s.CarrierCode
+	}
 	if s.CarrierCreatedAt != nil {
 		info.CarrierCreatedAt = timestamppb.New(*s.CarrierCreatedAt)
 	}

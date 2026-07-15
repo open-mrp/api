@@ -77,10 +77,24 @@ type TestParcel struct {
 
 // CreateShipmentRequest is used to create a test shipment to discover service levels.
 type CreateShipmentRequest struct {
-	AddressFrom     TestAddress  `json:"address_from"`
-	AddressTo       TestAddress  `json:"address_to"`
-	Parcels         []TestParcel `json:"parcels"`
-	CarrierAccounts []string     `json:"carrier_accounts"`
+	AddressFrom     TestAddress    `json:"address_from"`
+	AddressTo       TestAddress    `json:"address_to"`
+	Parcels         []TestParcel   `json:"parcels"`
+	CarrierAccounts []string       `json:"carrier_accounts"`
+	Extra           *ShipmentExtra `json:"extra,omitempty"`
+}
+
+// ShipmentExtra carries optional Shippo shipment options; only third-party billing is used here.
+type ShipmentExtra struct {
+	Billing *ShipmentBilling `json:"billing,omitempty"`
+}
+
+// ShipmentBilling is the Shippo third-party freight-billing block.
+type ShipmentBilling struct {
+	Type    string `json:"type"`
+	Account string `json:"account,omitempty"`
+	Country string `json:"country,omitempty"`
+	Zip     string `json:"zip,omitempty"`
 }
 
 // OAuthInitiateResponse represents the Shippo OAuth redirect response.

@@ -37,7 +37,7 @@ func (*ProductionRunsEndpointGroup) Materialize(config *ProductionRunsEndpointGr
 	inner := &apiendpoint.APIEndpointGroup{
 		Title:        "Production Runs",
 		Description:  "List, view, create, update, and delete production runs.",
-		ResourceType: &apiresource.ProductionRunDetail{},
+		ResourceType: &apiresource.ProductionRun{},
 	}
 
 	listEndpoint := apiendpoint.From(&productionrunep.ListProductionRunsEndpoint{}).WithService(inner, svc)

@@ -3,6 +3,8 @@ syntax = "proto3";
 // PATCH field wrappers shared across CoreService update RPCs.
 package core;
 
+import "google/protobuf/timestamp.proto";
+
 option go_package = "shared/proto/core;core";
 
 // Parent message field absent → no change.
@@ -23,4 +25,9 @@ message QuantityPatch {
   bool clear = 1;
   optional string value = 2;
   optional string unit_id = 3;
+}
+
+message TimestampPatch {
+  bool clear = 1;
+  optional google.protobuf.Timestamp value = 2;
 }

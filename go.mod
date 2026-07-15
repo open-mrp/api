@@ -15,6 +15,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.44.2
 	github.com/aws/smithy-go v1.27.3
 	github.com/coder/websocket v1.8.15
+	github.com/go-pdf/fpdf v0.9.0
 	github.com/go-playground/validator/v10 v10.30.3
 	github.com/go-sql-driver/mysql v1.10.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
@@ -31,6 +32,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.44.0
 	go.uber.org/mock v0.6.0
 	golang.org/x/crypto v0.53.0
+	golang.org/x/image v0.25.0
 	google.golang.org/protobuf v1.36.11
 )
 

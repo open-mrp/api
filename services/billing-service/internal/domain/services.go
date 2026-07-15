@@ -32,6 +32,9 @@ type BillingSvc interface {
 	// GetAgentSpendCents returns the marked-up token spend the account has accrued this billing period, as it will be billed in Stripe. This is the same figure surfaced on the dashboard; agent-service uses it to enforce the spending cap consistently.
 	GetAgentSpendCents(ctx context.Context, accountID string) (int64, *apierror.APIError)
 
+	// GetAgentTokenRates returns the marked-up per-token rates from the account's plan rate card, so agent-service can price a run's in-flight usage against the cap with the same rates Stripe bills (no per-turn round trip). Empty when the account has no pricing plan or rate card.
+	GetAgentTokenRates(ctx context.Context, accountID string) ([]TokenRate, *apierror.APIError)
+
 	// CreateBillingPortalSession creates a Stripe billing portal session for managing subscriptions. Returns the portal URL.
 	CreateBillingPortalSession(ctx context.Context, accountID string) (string, *apierror.APIError)
 

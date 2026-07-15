@@ -42,6 +42,7 @@ func (*PortalRegistrationSessionsEndpointGroup) Materialize(config *PortalRegist
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		apiendpoint.From(&portalregsessionep.CreateOrResumePortalRegistrationSessionEndpoint{}).WithService(inner, svc),
+		apiendpoint.From(&portalregsessionep.ListPortalRegistrationSessionsEndpoint{}).WithService(inner, svc),
 		apiendpoint.From(&portalregsessionep.GetPortalRegistrationSessionEndpoint{}).WithService(inner, svc),
 		apiendpoint.From(&portalregsessionep.UpdatePortalRegistrationSessionEndpoint{}).WithService(inner, svc),
 		apiendpoint.From(&portalregsessionep.CompletePortalRegistrationSessionEndpoint{}).WithService(inner, svc),

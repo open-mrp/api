@@ -46,6 +46,13 @@ type MaterialDemandItem struct {
 	UnitID  string
 }
 
+// MaterialDemandLineInput is one order line to explode when computing aggregated material demand.
+type MaterialDemandLineInput struct {
+	ItemID  string
+	Measure decimal.Decimal
+	UnitID  string
+}
+
 // CreateMaterialReservationParams holds parameters for creating a reserved inventory issue for a material demand linked to a sales order.
 type CreateMaterialReservationParams struct {
 	AccountID string

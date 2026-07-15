@@ -299,7 +299,7 @@ const (
 	SeedReqLogFilterErrorsRoute   = "/filtertest/errors"
 	SeedReqLogFilterErrorNotFound = "rqlog_01flterrnf000" // error_code=resource_not_found
 	SeedReqLogFilterErrorValidate = "rqlog_01flterrvf000" // error_code=validation_failed
-	SeedReqLogFilterErrorAuth     = "rqlog_01flterrua000" // error_code=unauthorized (excluded)
+	SeedReqLogFilterErrorAuth     = "rqlog_01flterrua000" // error_code=invalid_credentials (excluded)
 
 	// Sandboxes
 	SeedSandboxAccountID = "ac_sandbox_01k0a5smf9ekb8rqg12555zjqb"

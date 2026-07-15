@@ -6,6 +6,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/augno/api/shared/constants"
+	"github.com/augno/api/shared/field"
 	"github.com/augno/api/shared/pagination"
 )
 
@@ -143,6 +144,18 @@ type SalesOrder struct {
 
 	// Order acknowledgement email recipients (populated when contacts is included).
 	AcknowledgementEmails []string
+
+	// Fulfillment progress as fractions between 0 and 1 aggregated over the order's sale-type lines (always populated, independent of the lines include).
+	PickedCompletion   float64
+	PackedCompletion   float64
+	InvoicedCompletion float64
+}
+
+// SalesOrderFulfillmentProgress holds an order's picked/packed/invoiced completion fractions (0..1), aggregated over its sale-type lines.
+type SalesOrderFulfillmentProgress struct {
+	PickedCompletion   float64
+	PackedCompletion   float64
+	InvoicedCompletion float64
 }
 
 // SalesOrderContacts holds a sales order's email recipients grouped by notification type.
@@ -242,26 +255,29 @@ type CreateSalesOrderLineInput struct {
 
 // UpdateSalesOrderParams holds the parameters for updating a sales order.
 type UpdateSalesOrderParams struct {
-	SalesOrderID          string
-	AccountID             string
-	Includes              []string
-	Number                *string
-	BillingAddressID      *string
-	ShippingAddressID     *string
-	CustomerPONumber      *string
-	Note                  *string
-	CarrierID             *string
-	ServiceLevelID        *string
-	CarrierBillingType    *string
-	CarrierBillingAccount *string
-	PriorityCode          *string
-	SalesRepID            *string
-	ShippingTermID        *string
-	PaymentTermID         *string
-	OrderDiscountID       *string
-	IsAcknowledgmentSent  *bool
-	PromisedAt            *time.Time
-	BuyerAccountID        *string
+	SalesOrderID string
+	AccountID    string
+	Includes     []string
+	// Optional (set-or-leave; non-nullable — cannot be cleared).
+	Number               *string
+	BillingAddressID     *string
+	ShippingAddressID    *string
+	CarrierID            *string
+	PriorityCode         *string
+	ShippingTermID       *string
+	PaymentTermID        *string
+	IsAcknowledgmentSent *bool
+	BuyerAccountID       *string
+	// Clearable (set / clear / leave). The service backfills unset from the existing
+	// order, so a cleared field resolves to NULL and an unset field keeps its value.
+	CustomerPONumber      field.Clearable[string]
+	Note                  field.Clearable[string]
+	ServiceLevelID        field.Clearable[string]
+	CarrierBillingType    field.Clearable[string]
+	CarrierBillingAccount field.Clearable[string]
+	SalesRepID            field.Clearable[string]
+	OrderDiscountID       field.Clearable[string]
+	PromisedAt            field.Clearable[time.Time]
 	// When non-nil, replaces the acknowledgement email contacts on the order. Empty slice clears all contacts; nil leaves existing contacts untouched.
 	AcknowledgementEmailContacts *[]SalesOrderEmailContactInput
 	// When non-nil, replaces the invoice email contacts on the order. Empty slice clears all contacts; nil leaves existing contacts untouched.
@@ -294,8 +310,6 @@ type CheckoutSalesOrderParams struct {
 	SalesOrderID string
 	AccountID    string
 	Email        string
-	SuccessURL   *string
-	CancelURL    *string
 }
 
 // CheckoutSalesOrderResult holds the result of a checkout operation.
@@ -311,7 +325,7 @@ type CreateSalesOrderProductionRunParams struct {
 
 // CreateSalesOrderProductionRunResult holds the result of creating a production run.
 type CreateSalesOrderProductionRunResult struct {
-	ProductionRunID string
+	ProductionRun *ProductionRun
 }
 
 // SalesOrderLineForBOM represents a sales order line with BOM-relevant fields.

@@ -4,13 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/pagination"
 	"github.com/augno/api/shared/tracing"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var portalRegSessionRepoTracer = tracing.GetTracer("core-service.portal_registration_session_repository")
@@ -130,6 +133,99 @@ func (r *portalRegistrationSessionRepoImpl) Abandon(ctx context.Context, typeID 
 		}
 	}
 	return nil
+}
+
+func (r *portalRegistrationSessionRepoImpl) ListSessions(ctx context.Context, params domain.ListPortalRegistrationSessionsParams) (*domain.ListPortalRegistrationSessionsResult, *apierror.APIError) {
+	ctx, span := portalRegSessionRepoTracer.Start(ctx, "repository.portal_registration_session.list")
+	defer span.End()
+
+	statusArg := portalRegistrationStatusArg(params.StatusFilter)
+	searchArg := portalRegistrationSearchArg(params.SearchTerm)
+
+	var cursorDir *pagination.Direction
+	if params.Cursor != nil {
+		cur, err := pagination.DecodeStringCursor(*params.Cursor)
+		if err != nil {
+			return nil, tracing.Trace(span, apierror.NewValidationError("Invalid pagination cursor."))
+		}
+		cursorDir = &cur.Direction
+
+		if cur.Direction == pagination.DirectionBackward {
+			rows, err := r.queries.ListPortalRegistrationSessionsBackward(ctx, sqlc.ListPortalRegistrationSessionsBackwardParams{
+				SellerAccountID: params.SellerAccountID,
+				Status:          statusArg,
+				Search:          searchArg,
+				ExpiryThreshold: params.ExpiryThreshold,
+				CursorCreatedAt: cur.OccurredAt,
+				CursorID:        cur.ID,
+				Limit:           params.Limit + 1,
+			})
+			if apiErr := db.MapSQLError(err); apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
+			return r.buildSessionPage(span, rows, params.Limit, cursorDir)
+		}
+
+		rows, err := r.queries.ListPortalRegistrationSessionsForward(ctx, sqlc.ListPortalRegistrationSessionsForwardParams{
+			SellerAccountID: params.SellerAccountID,
+			Status:          statusArg,
+			Search:          searchArg,
+			ExpiryThreshold: params.ExpiryThreshold,
+			CursorCreatedAt: sql.NullTime{Time: cur.OccurredAt, Valid: true},
+			CursorID:        sql.NullString{String: cur.ID, Valid: true},
+			Limit:           params.Limit + 1,
+		})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		return r.buildSessionPage(span, rows, params.Limit, cursorDir)
+	}
+
+	rows, err := r.queries.ListPortalRegistrationSessionsForward(ctx, sqlc.ListPortalRegistrationSessionsForwardParams{
+		SellerAccountID: params.SellerAccountID,
+		Status:          statusArg,
+		Search:          searchArg,
+		ExpiryThreshold: params.ExpiryThreshold,
+		Limit:           params.Limit + 1,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return r.buildSessionPage(span, rows, params.Limit, cursorDir)
+}
+
+func (r *portalRegistrationSessionRepoImpl) buildSessionPage(span trace.Span, rows []sqlc.PortalRegistrationSession, limit int32, cursorDir *pagination.Direction) (*domain.ListPortalRegistrationSessionsResult, *apierror.APIError) {
+	sessions := make([]*domain.PortalRegistrationSession, len(rows))
+	for i, row := range rows {
+		session, apiErr := portalRegistrationSessionFromRow(row)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		sessions[i] = session
+	}
+	result, pageInfo := pagination.BuildPageString(sessions, limit, cursorDir, portalRegistrationSessionCreatedAt, portalRegistrationSessionID)
+	return &domain.ListPortalRegistrationSessionsResult{Sessions: result, PageInfo: pageInfo}, nil
+}
+
+func portalRegistrationSessionCreatedAt(s *domain.PortalRegistrationSession) time.Time {
+	return s.CreatedAt
+}
+func portalRegistrationSessionID(s *domain.PortalRegistrationSession) string { return s.ID }
+
+// portalRegistrationStatusArg maps the optional status filter to the sqlc interface{} narg: nil (no filter) becomes SQL NULL.
+func portalRegistrationStatusArg(f *string) interface{} {
+	if f == nil {
+		return nil
+	}
+	return *f
+}
+
+// portalRegistrationSearchArg maps the optional free-text search term to the sqlc interface{} narg: nil or empty (no search) becomes SQL NULL.
+func portalRegistrationSearchArg(s *string) interface{} {
+	if s == nil || *s == "" {
+		return nil
+	}
+	return *s
 }
 
 func nullBool(b *bool) sql.NullBool {

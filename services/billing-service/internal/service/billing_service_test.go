@@ -617,8 +617,8 @@ func (s *BillingSvcTestSuite) TestGetAccountUsage_HappyPath() {
 	}, nil)
 	s.accountUsageRepo.EXPECT().CountInvoicesByAccountID(anyCtx, accountID, gomock.Any()).Return(10, nil)
 	s.accountUsageRepo.EXPECT().CountBatchesByAccountID(anyCtx, accountID, gomock.Any()).Return(2, nil)
-	// Agent spend resolves the plan's rate card; the suite configures no rate cards, so spend is 0 without a Stripe call.
-	s.accountUsageRepo.EXPECT().GetAccountNameAndPlanCode(anyCtx, accountID).Return("Test Account", "pro", nil)
+	// Agent spend resolves the plan's rate card from its Stripe pricing plan; with no pricing plan the spend is 0 without any Stripe call.
+	s.accountUsageRepo.EXPECT().GetAccountStripePricingPlanID(anyCtx, accountID).Return(nil, nil)
 
 	usage, apiErr := s.billingSvc.GetAccountUsage(context.Background(), accountID)
 	s.Nil(apiErr)
@@ -641,13 +641,49 @@ func (s *BillingSvcTestSuite) TestGetAccountUsage_FreePlanNoSubscription() {
 	s.accountUsageRepo.EXPECT().GetAccountSubscriptionInfo(anyCtx, accountID).Return(&domain.AccountSubscriptionInfo{}, nil)
 	s.accountUsageRepo.EXPECT().CountInvoicesByAccountID(anyCtx, accountID, gomock.Any()).Return(0, nil)
 	s.accountUsageRepo.EXPECT().CountBatchesByAccountID(anyCtx, accountID, gomock.Any()).Return(0, nil)
-	// Free plan has no token rate card, so agent spend is 0 without a Stripe call.
-	s.accountUsageRepo.EXPECT().GetAccountNameAndPlanCode(anyCtx, accountID).Return("Free Account", "free", nil)
+	// Free plan has no Stripe pricing plan, so agent spend is 0 without a Stripe call.
+	s.accountUsageRepo.EXPECT().GetAccountStripePricingPlanID(anyCtx, accountID).Return(nil, nil)
 
 	usage, apiErr := s.billingSvc.GetAccountUsage(context.Background(), accountID)
 	s.Nil(apiErr)
 	s.Nil(usage.Subscription)
 	s.Equal(int64(0), usage.EstimatedAgentSpendCents)
+}
+
+func (s *BillingSvcTestSuite) TestGetAccountUsage_AgentSpendFromRateCard() {
+	accountID := "acct_paid"
+	now := time.Now().UTC()
+	periodEnd := now.Add(30 * 24 * time.Hour)
+
+	s.accountUsageRepo.EXPECT().GetLimitsByAccountID(anyCtx, accountID).Return([]domain.PlanLimit{
+		{Key: "seats_maximum", Value: new(10)},
+	}, nil)
+	s.accountUsageRepo.EXPECT().CountUsersByAccountID(anyCtx, accountID).Return(3, nil)
+	s.accountUsageRepo.EXPECT().CountSandboxesByAccountID(anyCtx, accountID).Return(1, nil)
+
+	servicingStatus := "active"
+	s.accountUsageRepo.EXPECT().GetAccountSubscriptionInfo(anyCtx, accountID).Return(&domain.AccountSubscriptionInfo{
+		ServicingStatus:              &servicingStatus,
+		SubscriptionCurrentPeriodEnd: &periodEnd,
+	}, nil)
+	s.accountUsageRepo.EXPECT().CountInvoicesByAccountID(anyCtx, accountID, gomock.Any()).Return(0, nil)
+	s.accountUsageRepo.EXPECT().CountBatchesByAccountID(anyCtx, accountID, gomock.Any()).Return(0, nil)
+
+	// The account's plan carries a Stripe pricing plan; the resolved plan supplies the rate card (token pricing) plus the display name and base fee.
+	s.accountUsageRepo.EXPECT().GetAccountStripePricingPlanID(anyCtx, accountID).Return(new("spp_123"), nil)
+	s.stripeClient.EXPECT().GetPricingPlan(anyCtx, "spp_123").Return(&domain.StripePricingPlan{
+		ID: "spp_123", LiveVersion: "v1", RateCardID: "rcd_pro",
+		DisplayName: "Founder", BaseFeeCents: 100, BaseFeeInterval: "month",
+	}, nil)
+	s.accountUsageRepo.EXPECT().GetStripeCustomerIDByAccountID(anyCtx, accountID).Return(new("cus_paid"), nil)
+	s.stripeClient.EXPECT().GetAgentTokenSpendCents(anyCtx, "cus_paid", "rcd_pro", gomock.Any()).Return(int64(4231), nil)
+
+	usage, apiErr := s.billingSvc.GetAccountUsage(context.Background(), accountID)
+	s.Nil(apiErr)
+	s.Equal(int64(4231), usage.EstimatedAgentSpendCents)
+	s.Equal("Founder", usage.PlanName)
+	s.Equal(int64(100), usage.BaseFeeCents)
+	s.Equal("month", usage.BaseFeeInterval)
 }
 
 // --- SetupBillingProfile tests ---

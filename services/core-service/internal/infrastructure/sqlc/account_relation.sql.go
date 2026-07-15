@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -42,6 +43,33 @@ type DeleteNotificationPreferenceParams struct {
 
 func (q *Queries) DeleteNotificationPreference(ctx context.Context, arg DeleteNotificationPreferenceParams) error {
 	_, err := q.db.ExecContext(ctx, deleteNotificationPreference, arg.AccountRelationID, arg.RecipientAccountUserID, arg.NotificationTypeCode)
+	return err
+}
+
+const deleteNotificationPreferencesByRelationAndTypes = `-- name: DeleteNotificationPreferencesByRelationAndTypes :exec
+DELETE FROM account_relation_notification_preference
+WHERE account_relation_id = ?
+  AND notification_type_code IN (/*SLICE:notification_type_codes*/?)
+`
+
+type DeleteNotificationPreferencesByRelationAndTypesParams struct {
+	AccountRelationID     string
+	NotificationTypeCodes []string
+}
+
+func (q *Queries) DeleteNotificationPreferencesByRelationAndTypes(ctx context.Context, arg DeleteNotificationPreferencesByRelationAndTypesParams) error {
+	query := deleteNotificationPreferencesByRelationAndTypes
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountRelationID)
+	if len(arg.NotificationTypeCodes) > 0 {
+		for _, v := range arg.NotificationTypeCodes {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:notification_type_codes*/?", strings.Repeat(",?", len(arg.NotificationTypeCodes))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:notification_type_codes*/?", "NULL", 1)
+	}
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 
@@ -444,6 +472,41 @@ func (q *Queries) ListNotificationPreferences(ctx context.Context, arg ListNotif
 	for rows.Next() {
 		var i ListNotificationPreferencesRow
 		if err := rows.Scan(&i.ID, &i.NotificationTypeCode); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listNotificationPreferencesByRelation = `-- name: ListNotificationPreferencesByRelation :many
+SELECT recipient_account_user_id, notification_type_code
+FROM account_relation_notification_preference
+WHERE account_relation_id = ?
+ORDER BY recipient_account_user_id, notification_type_code
+`
+
+type ListNotificationPreferencesByRelationRow struct {
+	RecipientAccountUserID string
+	NotificationTypeCode   string
+}
+
+func (q *Queries) ListNotificationPreferencesByRelation(ctx context.Context, accountRelationID string) ([]ListNotificationPreferencesByRelationRow, error) {
+	rows, err := q.db.QueryContext(ctx, listNotificationPreferencesByRelation, accountRelationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListNotificationPreferencesByRelationRow
+	for rows.Next() {
+		var i ListNotificationPreferencesByRelationRow
+		if err := rows.Scan(&i.RecipientAccountUserID, &i.NotificationTypeCode); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

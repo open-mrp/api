@@ -210,18 +210,14 @@ func TestCustomerPortalAccess_ListSalesOrders(t *testing.T) {
 		"customer must not see the vendor's internal order (%s)", SeedInternalSalesOrderID)
 }
 
-// TestCustomerPortalAccess_OrderRetrieveOmitsInternalRelated verifies that a
-// customer portal actor can retrieve an order they bought even when the request
-// asks to expand the seller's internal-only related resources. related.pick /
-// related.shipments / related.production_run are backed by RPCs that require an
-// internal actor; before the fix, resolving any of them for a customer failed
-// the ENTIRE retrieve with insufficient_permissions ("You must be an internal
-// user for this account to access this resource."). The dashboard portal sent
-// these includes as part of its shared order-detail include set. The include is
-// now omitted (best-effort, like created_by/customer) rather than 403ing the
-// order. ORD-001 (or_01k0a8bs2yejxbsvqhrx4drkq1) is bought by the seed customer
-// and has both a pick and a shipment, so the loaders actually fire.
-func TestCustomerPortalAccess_OrderRetrieveOmitsInternalRelated(t *testing.T) {
+// TestCustomerPortalAccess_OrderRetrieveRelatedShipments verifies that a customer
+// portal actor can retrieve an order they bought with related.shipments expanded
+// (for tracking), while seller-internal related.pick / related.production_run
+// remain omitted rather than 403ing the retrieve. Before customer-safe GetShipment,
+// resolving related.shipments also failed authorization and the include was dropped.
+// ORD-001 (or_01k0a8bs2yejxbsvqhrx4drkq1) is bought by the seed customer and has
+// both a pick and SHP-003, so the loaders actually fire.
+func TestCustomerPortalAccess_OrderRetrieveRelatedShipments(t *testing.T) {
 	t.Parallel()
 	client := getCustomerPortalClient()
 
@@ -234,9 +230,37 @@ func TestCustomerPortalAccess_OrderRetrieveOmitsInternalRelated(t *testing.T) {
 	parsed := parseJSON(body)
 	assert.Equal(t, "sales_order", jsonField(parsed, "object"))
 	assert.Equal(t, "or_01k0a8bs2yejxbsvqhrx4drkq1", jsonField(parsed, "id"))
-	// The customer cannot see the seller's internal related resources, so the
-	// group is omitted entirely rather than partially populated.
-	assert.Nil(t, parsed["related"], "internal-only related resources must be omitted for a customer, not 403 the retrieve")
+
+	related := jsonObject(parsed, "related")
+	require.NotNil(t, related, "related must be present so shipments can surface for tracking")
+	assertNilField(t, related, "pick")
+	assertNilField(t, related, "production_run")
+
+	shipments := jsonObject(related, "shipments")
+	require.NotNil(t, shipments, "related.shipments must populate for a customer on an order they bought")
+	assert.Equal(t, "list", jsonField(shipments, "object"))
+	data := jsonArray(shipments, "data")
+	require.NotEmpty(t, data, "ORD-001 seed has SHP-003")
+
+	var found bool
+	for _, item := range data {
+		rec, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		if jsonField(rec, "id") != "sh_01k0a87w33emw8pmkz1mf86cg2" {
+			continue
+		}
+		found = true
+		assert.Equal(t, "SHP-003", jsonField(rec, "number"))
+		assert.Equal(t, "packed", jsonField(rec, "status"))
+		// SHP-003 is packed without a tracking number; carrier metadata still previews.
+		meta := jsonObject(rec, "metadata")
+		if meta != nil {
+			assert.Equal(t, "packed", jsonField(meta, "status"))
+		}
+	}
+	assert.True(t, found, "related.shipments must include seed SHP-003 for ORD-001")
 }
 
 // TestCustomerPortalAccess_CannotCreateProductLine verifies that customer

@@ -117,17 +117,15 @@ func assertPrice(t *testing.T, got domain.SalesOrderLinePrice, wantValue, wantNu
 
 func TestComputeUnitPrice_ListPriceNoDiscounts(t *testing.T) {
 	t.Parallel()
-	svc := &salesOrderSvcImpl{}
 	product := basePricingProduct("10", nil, nil)
 	bundle := pricingTestBundle(product, map[string]*domain.PricingUnitGroupUnit{"ea": {UnitGroupID: "ug", UnitID: "ea"}}, nil, nil)
 
-	got := svc.computeUnitPrice(bundle, line("1", "ea"), []domain.SalesOrderPriceLineInput{line("1", "ea")})
+	got := computeUnitPrice(bundle, line("1", "ea"), []domain.SalesOrderPriceLineInput{line("1", "ea")})
 	assertPrice(t, got, "10", "usd", "ea")
 }
 
 func TestComputeUnitPrice_UnitConversionDiscount(t *testing.T) {
 	t.Parallel()
-	svc := &salesOrderSvcImpl{}
 	product := basePricingProduct("10", nil, nil)
 	// (10 - 1) * (1 - 0.1) = 8.1
 	groupUnits := map[string]*domain.PricingUnitGroupUnit{
@@ -135,13 +133,12 @@ func TestComputeUnitPrice_UnitConversionDiscount(t *testing.T) {
 	}
 	bundle := pricingTestBundle(product, groupUnits, nil, nil)
 
-	got := svc.computeUnitPrice(bundle, line("1", "ea"), []domain.SalesOrderPriceLineInput{line("1", "ea")})
+	got := computeUnitPrice(bundle, line("1", "ea"), []domain.SalesOrderPriceLineInput{line("1", "ea")})
 	assertPrice(t, got, "8.1", "usd", "ea")
 }
 
 func TestComputeUnitPrice_BaseToOrderedUnitConversion(t *testing.T) {
 	t.Parallel()
-	svc := &salesOrderSvcImpl{}
 	product := basePricingProduct("10", nil, nil) // $10 per each
 	// Ordered in dozens: price = 10 * 12 = 120 per dozen. No unit-conversion discount for "dz".
 	groupUnits := map[string]*domain.PricingUnitGroupUnit{
@@ -150,13 +147,12 @@ func TestComputeUnitPrice_BaseToOrderedUnitConversion(t *testing.T) {
 	}
 	bundle := pricingTestBundle(product, groupUnits, nil, nil)
 
-	got := svc.computeUnitPrice(bundle, line("1", "dz"), []domain.SalesOrderPriceLineInput{line("1", "dz")})
+	got := computeUnitPrice(bundle, line("1", "dz"), []domain.SalesOrderPriceLineInput{line("1", "dz")})
 	assertPrice(t, got, "120", "usd", "dz")
 }
 
 func TestComputeUnitPrice_VolumeDiscount_SingleAndMultipleTiers(t *testing.T) {
 	t.Parallel()
-	svc := &salesOrderSvcImpl{}
 	product := basePricingProduct("10", nil, nil)
 	groupUnits := map[string]*domain.PricingUnitGroupUnit{"ea": {UnitGroupID: "ug", UnitID: "ea"}}
 
@@ -165,7 +161,7 @@ func TestComputeUnitPrice_VolumeDiscount_SingleAndMultipleTiers(t *testing.T) {
 		ID: "vd", AcceptableUnitIDs: []string{"ea"},
 		Tiers: []domain.PricingVolumeDiscountTier{{Threshold: "5", DiscountPercentage: "0.2"}},
 	}}
-	got := svc.computeUnitPrice(pricingTestBundle(product, groupUnits, nil, single), line("10", "ea"), []domain.SalesOrderPriceLineInput{line("10", "ea")})
+	got := computeUnitPrice(pricingTestBundle(product, groupUnits, nil, single), line("10", "ea"), []domain.SalesOrderPriceLineInput{line("10", "ea")})
 	assertPrice(t, got, "8", "usd", "ea")
 
 	// Multiple tiers met: qty 10 >= both 5 and 10 -> 0.9 * 0.8 = 0.72 -> 10*0.72 = 7.2.
@@ -176,13 +172,12 @@ func TestComputeUnitPrice_VolumeDiscount_SingleAndMultipleTiers(t *testing.T) {
 			{Threshold: "10", DiscountPercentage: "0.2"},
 		},
 	}}
-	got = svc.computeUnitPrice(pricingTestBundle(product, groupUnits, nil, multi), line("10", "ea"), []domain.SalesOrderPriceLineInput{line("10", "ea")})
+	got = computeUnitPrice(pricingTestBundle(product, groupUnits, nil, multi), line("10", "ea"), []domain.SalesOrderPriceLineInput{line("10", "ea")})
 	assertPrice(t, got, "7.2", "usd", "ea")
 }
 
 func TestComputeUnitPrice_VolumeDiscount_ThresholdNotMet(t *testing.T) {
 	t.Parallel()
-	svc := &salesOrderSvcImpl{}
 	product := basePricingProduct("10", nil, nil)
 	groupUnits := map[string]*domain.PricingUnitGroupUnit{"ea": {UnitGroupID: "ug", UnitID: "ea"}}
 	discounts := []*domain.PricingVolumeDiscount{{
@@ -190,13 +185,12 @@ func TestComputeUnitPrice_VolumeDiscount_ThresholdNotMet(t *testing.T) {
 		Tiers: []domain.PricingVolumeDiscountTier{{Threshold: "100", DiscountPercentage: "0.5"}},
 	}}
 
-	got := svc.computeUnitPrice(pricingTestBundle(product, groupUnits, nil, discounts), line("10", "ea"), []domain.SalesOrderPriceLineInput{line("10", "ea")})
+	got := computeUnitPrice(pricingTestBundle(product, groupUnits, nil, discounts), line("10", "ea"), []domain.SalesOrderPriceLineInput{line("10", "ea")})
 	assertPrice(t, got, "10", "usd", "ea") // no tier met -> list price
 }
 
 func TestComputeUnitPrice_VolumeDiscount_SumsAcrossLines(t *testing.T) {
 	t.Parallel()
-	svc := &salesOrderSvcImpl{}
 	product := basePricingProduct("10", nil, nil)
 	groupUnits := map[string]*domain.PricingUnitGroupUnit{"ea": {UnitGroupID: "ug", UnitID: "ea"}}
 	// Threshold 10; each line is 6 (< 10) but the two lines sum to 12 (>= 10) -> discount applies.
@@ -206,7 +200,7 @@ func TestComputeUnitPrice_VolumeDiscount_SumsAcrossLines(t *testing.T) {
 	}}
 	allLines := []domain.SalesOrderPriceLineInput{line("6", "ea"), line("6", "ea")}
 
-	got := svc.computeUnitPrice(pricingTestBundle(product, groupUnits, nil, discounts), allLines[0], allLines)
+	got := computeUnitPrice(pricingTestBundle(product, groupUnits, nil, discounts), allLines[0], allLines)
 	assertPrice(t, got, "7.5", "usd", "ea") // 10 * (1 - 0.25)
 }
 
@@ -214,7 +208,6 @@ func TestComputeUnitPrice_VolumeDiscount_SumsAcrossLines(t *testing.T) {
 // sums quantity across) only the matching products, ignoring out-of-scope lines.
 func TestComputeUnitPrice_VolumeDiscount_ScopedAndSummedAcrossMatchingProducts(t *testing.T) {
 	t.Parallel()
-	svc := &salesOrderSvcImpl{}
 
 	mk := func(id, lineID string) *domain.PricingProduct {
 		pl := lineID
@@ -245,14 +238,13 @@ func TestComputeUnitPrice_VolumeDiscount_ScopedAndSummedAcrossMatchingProducts(t
 	}
 	// Both LTD products get 20% off (100 → 80) from the summed 11; the out-of-scope product
 	// is not in any discount → list price 100.
-	assertPrice(t, svc.computeUnitPrice(bundle, allLines[0], allLines), "80", "usd", "ea")
-	assertPrice(t, svc.computeUnitPrice(bundle, allLines[1], allLines), "80", "usd", "ea")
-	assertPrice(t, svc.computeUnitPrice(bundle, allLines[2], allLines), "100", "usd", "ea")
+	assertPrice(t, computeUnitPrice(bundle, allLines[0], allLines), "80", "usd", "ea")
+	assertPrice(t, computeUnitPrice(bundle, allLines[1], allLines), "80", "usd", "ea")
+	assertPrice(t, computeUnitPrice(bundle, allLines[2], allLines), "100", "usd", "ea")
 }
 
 func TestComputeUnitPrice_AccountPriceOverride_BeatsEverything(t *testing.T) {
 	t.Parallel()
-	svc := &salesOrderSvcImpl{}
 	pl := "pl"
 	product := basePricingProduct("10", &pl, nil)
 	product.ProductLineUnitGroupID = strptr("ug")
@@ -266,13 +258,12 @@ func TestComputeUnitPrice_AccountPriceOverride_BeatsEverything(t *testing.T) {
 		ID: "ap", ProductLineID: "pl", UnitValue: "3.5", NumeratorUnitID: "usd", DenominatorUnitID: "ea",
 	}}
 
-	got := svc.computeUnitPrice(pricingTestBundle(product, groupUnits, accountPrices, discounts), line("10", "ea"), []domain.SalesOrderPriceLineInput{line("10", "ea")})
+	got := computeUnitPrice(pricingTestBundle(product, groupUnits, accountPrices, discounts), line("10", "ea"), []domain.SalesOrderPriceLineInput{line("10", "ea")})
 	assertPrice(t, got, "3.5", "usd", "ea") // override, not 10*0.5
 }
 
 func TestComputeUnitPrice_AccountPrice_MatchingRules(t *testing.T) {
 	t.Parallel()
-	svc := &salesOrderSvcImpl{}
 	groupUnits := map[string]*domain.PricingUnitGroupUnit{"ea": {UnitGroupID: "ug", UnitID: "ea"}}
 	l := line("1", "ea")
 	all := []domain.SalesOrderPriceLineInput{l}
@@ -281,22 +272,22 @@ func TestComputeUnitPrice_AccountPrice_MatchingRules(t *testing.T) {
 	pl := "pl"
 	product := basePricingProduct("10", &pl, nil)
 	apWrongLine := []*domain.PricingAccountPrice{{ID: "ap", ProductLineID: "other", UnitValue: "3", NumeratorUnitID: "usd", DenominatorUnitID: "ea"}}
-	assertPrice(t, svc.computeUnitPrice(pricingTestBundle(product, groupUnits, apWrongLine, nil), l, all), "10", "usd", "ea")
+	assertPrice(t, computeUnitPrice(pricingTestBundle(product, groupUnits, apWrongLine, nil), l, all), "10", "usd", "ea")
 
 	// (b) Attribute not a subset of the product's -> no override.
 	productNoAttrs := basePricingProduct("10", &pl, []string{"a1"})
 	apNeedsAttrs := []*domain.PricingAccountPrice{{ID: "ap", ProductLineID: "pl", UnitValue: "3", NumeratorUnitID: "usd", DenominatorUnitID: "ea", AttributeIDs: []string{"a1", "a2"}}}
-	assertPrice(t, svc.computeUnitPrice(pricingTestBundle(productNoAttrs, groupUnits, apNeedsAttrs, nil), l, all), "10", "usd", "ea")
+	assertPrice(t, computeUnitPrice(pricingTestBundle(productNoAttrs, groupUnits, apNeedsAttrs, nil), l, all), "10", "usd", "ea")
 
 	// (c) Attributes are a subset -> override applies.
 	productWithAttrs := basePricingProduct("10", &pl, []string{"a1", "a2", "a3"})
 	apSubset := []*domain.PricingAccountPrice{{ID: "ap", ProductLineID: "pl", UnitValue: "3", NumeratorUnitID: "usd", DenominatorUnitID: "ea", AttributeIDs: []string{"a1", "a2"}}}
-	assertPrice(t, svc.computeUnitPrice(pricingTestBundle(productWithAttrs, groupUnits, apSubset, nil), l, all), "3", "usd", "ea")
+	assertPrice(t, computeUnitPrice(pricingTestBundle(productWithAttrs, groupUnits, apSubset, nil), l, all), "3", "usd", "ea")
 
 	// (d) Product with NO product line never matches an account price.
 	productNoLine := basePricingProduct("10", nil, nil)
 	apAnyLine := []*domain.PricingAccountPrice{{ID: "ap", ProductLineID: "pl", UnitValue: "3", NumeratorUnitID: "usd", DenominatorUnitID: "ea"}}
-	assertPrice(t, svc.computeUnitPrice(pricingTestBundle(productNoLine, groupUnits, apAnyLine, nil), l, all), "10", "usd", "ea")
+	assertPrice(t, computeUnitPrice(pricingTestBundle(productNoLine, groupUnits, apAnyLine, nil), l, all), "10", "usd", "ea")
 
 	// (e) Product with NO attributes must NOT match an attribute-gated price -> list price.
 	// This is exactly the state the _item_attributes A/B column bug produced for every
@@ -306,7 +297,7 @@ func TestComputeUnitPrice_AccountPrice_MatchingRules(t *testing.T) {
 	// actually load from the DB.
 	productNoAttr := basePricingProduct("10", &pl, nil)
 	apGated := []*domain.PricingAccountPrice{{ID: "ap", ProductLineID: "pl", UnitValue: "3", NumeratorUnitID: "usd", DenominatorUnitID: "ea", AttributeIDs: []string{"beige"}}}
-	assertPrice(t, svc.computeUnitPrice(pricingTestBundle(productNoAttr, groupUnits, apGated, nil), l, all), "10", "usd", "ea")
+	assertPrice(t, computeUnitPrice(pricingTestBundle(productNoAttr, groupUnits, apGated, nil), l, all), "10", "usd", "ea")
 }
 
 // TestComputeUnitPrice_AccountPrice_DisambiguatesByAttribute mirrors the real-world data
@@ -314,7 +305,6 @@ func TestComputeUnitPrice_AccountPrice_MatchingRules(t *testing.T) {
 // product line, distinguished ONLY by attribute. Exactly one must apply.
 func TestComputeUnitPrice_AccountPrice_DisambiguatesByAttribute(t *testing.T) {
 	t.Parallel()
-	svc := &salesOrderSvcImpl{}
 	pl := "pl"
 	groupUnits := map[string]*domain.PricingUnitGroupUnit{"ea": {UnitGroupID: "ug", UnitID: "ea"}}
 	l := line("1", "ea")
@@ -327,13 +317,12 @@ func TestComputeUnitPrice_AccountPrice_DisambiguatesByAttribute(t *testing.T) {
 		{ID: "ap_beige", ProductLineID: "pl", UnitValue: "144", NumeratorUnitID: "usd", DenominatorUnitID: "ea", AttributeIDs: []string{"beige"}},
 		{ID: "ap_large", ProductLineID: "pl", UnitValue: "170.40", NumeratorUnitID: "usd", DenominatorUnitID: "ea", AttributeIDs: []string{"large"}},
 	}
-	got := svc.computeUnitPrice(pricingTestBundle(product, groupUnits, accountPrices, nil), l, all)
+	got := computeUnitPrice(pricingTestBundle(product, groupUnits, accountPrices, nil), l, all)
 	assertPrice(t, got, "170.40", "usd", "ea") // only the {large}-gated price matches
 }
 
 func TestComputeUnitPrice_LastAccountPriceWins(t *testing.T) {
 	t.Parallel()
-	svc := &salesOrderSvcImpl{}
 	pl := "pl"
 	product := basePricingProduct("10", &pl, nil)
 	groupUnits := map[string]*domain.PricingUnitGroupUnit{"ea": {UnitGroupID: "ug", UnitID: "ea"}}
@@ -342,21 +331,19 @@ func TestComputeUnitPrice_LastAccountPriceWins(t *testing.T) {
 		{ID: "ap1", ProductLineID: "pl", UnitValue: "4", NumeratorUnitID: "usd", DenominatorUnitID: "ea"},
 		{ID: "ap2", ProductLineID: "pl", UnitValue: "5", NumeratorUnitID: "usd", DenominatorUnitID: "ea"},
 	}
-	got := svc.computeUnitPrice(pricingTestBundle(product, groupUnits, accountPrices, nil), line("1", "ea"), []domain.SalesOrderPriceLineInput{line("1", "ea")})
+	got := computeUnitPrice(pricingTestBundle(product, groupUnits, accountPrices, nil), line("1", "ea"), []domain.SalesOrderPriceLineInput{line("1", "ea")})
 	assertPrice(t, got, "5", "usd", "ea")
 }
 
 func TestComputeUnitPrice_UnknownProduct(t *testing.T) {
 	t.Parallel()
-	svc := &salesOrderSvcImpl{}
 	bundle := &domain.PricingBundle{Products: map[string]*domain.PricingProduct{}}
-	got := svc.computeUnitPrice(bundle, line("1", "ea"), []domain.SalesOrderPriceLineInput{line("1", "ea")})
+	got := computeUnitPrice(bundle, line("1", "ea"), []domain.SalesOrderPriceLineInput{line("1", "ea")})
 	assertPrice(t, got, "0", "", "ea")
 }
 
 func TestComputeUnitPrice_FullPrecedence(t *testing.T) {
 	t.Parallel()
-	svc := &salesOrderSvcImpl{}
 	pl := "pl"
 	// list 20, unit-conversion discount (fixed 2, 10%), ordered in dozens (x12), volume 0.5.
 	product := basePricingProduct("20", &pl, nil)
@@ -371,12 +358,12 @@ func TestComputeUnitPrice_FullPrecedence(t *testing.T) {
 	}}
 
 	// Without an account price: (20-2)*0.9 = 16.2; convert to dozen x12 = 194.4; volume *0.5 = 97.2.
-	got := svc.computeUnitPrice(pricingTestBundle(product, groupUnits, nil, discounts), line("1", "dz"), []domain.SalesOrderPriceLineInput{line("1", "dz")})
+	got := computeUnitPrice(pricingTestBundle(product, groupUnits, nil, discounts), line("1", "dz"), []domain.SalesOrderPriceLineInput{line("1", "dz")})
 	assertPrice(t, got, "97.2", "usd", "dz")
 
 	// With an account price: it overrides the whole chain.
 	accountPrices := []*domain.PricingAccountPrice{{ID: "ap", ProductLineID: "pl", UnitValue: "50", NumeratorUnitID: "usd", DenominatorUnitID: "dz"}}
-	got = svc.computeUnitPrice(pricingTestBundle(product, groupUnits, accountPrices, discounts), line("1", "dz"), []domain.SalesOrderPriceLineInput{line("1", "dz")})
+	got = computeUnitPrice(pricingTestBundle(product, groupUnits, accountPrices, discounts), line("1", "dz"), []domain.SalesOrderPriceLineInput{line("1", "dz")})
 	assertPrice(t, got, "50", "usd", "dz")
 }
 

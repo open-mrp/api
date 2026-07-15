@@ -19,8 +19,8 @@ type CreateConversationRequest struct {
 	Type constants.ConversationType `json:"type" validate:"required"`
 	// The other participant(s).
 	//
-	// For a direct message, exactly one account_user ID. For a group, the members to add — optional when `group_id` seeds the roster.
-	ParticipantAccountUserIDs []string `json:"participant_account_user_ids,omitzero" validate:"omitempty,min=1"`
+	// For a direct message, exactly one account_user ID. For a group, the members to add — optional when `group_id` seeds the roster or the conversation is anchored to a `topic_resource` (a record discussion can start solo).
+	ParticipantAccountUserIDs []string `json:"participant_account_user_ids,omitzero" validate:"omitempty,dive,required"`
 	// Seed a group conversation from a reusable roster.
 	//
 	// The roster's current members are copied into this conversation (in addition to any `participant_account_user_ids`); the conversation is independent afterward. Ignored for direct messages.

@@ -16,20 +16,10 @@ type OrderLineInput struct {
 	ProductSKU string `json:"product_sku" validate:"required,max=255"`
 	// The product description recorded on the line.
 	ProductDescription field.Optional[string] `json:"product_description,omitzero"`
-	// Quantity ordered, as a decimal string.
-	QuantityValue string `json:"quantity_value" validate:"required" format:"decimal"`
-	// ID of the unit of measure for the quantity.
-	QuantityUnitID string `json:"quantity_unit_id" validate:"required"`
-	// Price charged per unit, as a decimal string.
-	UnitPriceValue string `json:"unit_price_value" validate:"required" format:"decimal"`
-	// Unit ID for the unit price's numerator (the unit being charged, e.g. a currency unit).
-	UnitPriceNumeratorUnitID string `json:"unit_price_numerator_unit_id" validate:"required"`
-	// Unit ID for the unit price's denominator (the unit being sold, e.g. `each`).
-	UnitPriceDenominatorUnitID string `json:"unit_price_denominator_unit_id" validate:"required"`
-	// Internal cost per unit, as a decimal string.
-	UnitCostValue field.Optional[string] `json:"unit_cost_value,omitzero" format:"decimal"`
-	// Unit ID for the unit cost's numerator (the unit being charged, e.g. a currency unit).
-	UnitCostNumeratorUnitID field.Optional[string] `json:"unit_cost_numerator_unit_id,omitzero" validate:"omitempty"`
-	// Unit ID for the unit cost's denominator (the unit being costed, e.g. `each`).
-	UnitCostDenominatorUnitID field.Optional[string] `json:"unit_cost_denominator_unit_id,omitzero" validate:"omitempty"`
+	// Quantity ordered.
+	Quantity QuantityInput `json:"quantity" validate:"required"`
+	// Price charged per unit.
+	UnitPrice RateInput `json:"unit_price" validate:"required"`
+	// Internal cost per unit.
+	UnitCost field.Optional[RateInput] `json:"unit_cost,omitzero"`
 }

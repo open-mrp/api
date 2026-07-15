@@ -18,10 +18,10 @@ import (
 )
 
 type ProductionRunSvc interface {
-	ListProductionRuns(ctx context.Context, req *ListProductionRunsRequest) (*apiresource.List[apiresource.ProductionRunSummary], *apierror.APIError)
-	GetProductionRun(ctx context.Context, req *RetrieveProductionRunRequest) (*apiresource.ProductionRunDetail, *apierror.APIError)
-	CreateProductionRun(ctx context.Context, req *CreateProductionRunRequest) (*apiresource.ProductionRunDetail, *apierror.APIError)
-	UpdateProductionRun(ctx context.Context, req *UpdateProductionRunRequest) (*apiresource.ProductionRunDetail, *apierror.APIError)
+	ListProductionRuns(ctx context.Context, req *ListProductionRunsRequest) (*apiresource.List[apiresource.ProductionRun], *apierror.APIError)
+	GetProductionRun(ctx context.Context, req *RetrieveProductionRunRequest) (*apiresource.ProductionRun, *apierror.APIError)
+	CreateProductionRun(ctx context.Context, req *CreateProductionRunRequest) (*apiresource.ProductionRun, *apierror.APIError)
+	UpdateProductionRun(ctx context.Context, req *UpdateProductionRunRequest) (*apiresource.ProductionRun, *apierror.APIError)
 	DeleteProductionRun(ctx context.Context, req *DeleteProductionRunRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	AddBatchesToProductionRun(ctx context.Context, req *AddBatchesToProductionRunRequest) (*apiresource.List[apiresource.Batch], *apierror.APIError)
 	ListBatchesByProductionRun(ctx context.Context, req *ListBatchesByProductionRunRequest) (*apiresource.List[apiresource.Batch], *apierror.APIError)
@@ -55,7 +55,7 @@ func NewProductionRunSvc(config *ProductionRunSvcConfig) ProductionRunSvc {
 	}
 }
 
-func (m *productionRunSvcImpl) ListProductionRuns(ctx context.Context, req *ListProductionRunsRequest) (*apiresource.List[apiresource.ProductionRunSummary], *apierror.APIError) {
+func (m *productionRunSvcImpl) ListProductionRuns(ctx context.Context, req *ListProductionRunsRequest) (*apiresource.List[apiresource.ProductionRun], *apierror.APIError) {
 	pbReq := &pb.ListProductionRunsRequest{
 		Cursor:     req.Cursor,
 		Limit:      req.Limit,
@@ -79,7 +79,7 @@ func (m *productionRunSvcImpl) ListProductionRuns(ctx context.Context, req *List
 	return productionRunListFromProto(ctx, resp), nil
 }
 
-func (m *productionRunSvcImpl) GetProductionRun(ctx context.Context, req *RetrieveProductionRunRequest) (*apiresource.ProductionRunDetail, *apierror.APIError) {
+func (m *productionRunSvcImpl) GetProductionRun(ctx context.Context, req *RetrieveProductionRunRequest) (*apiresource.ProductionRun, *apierror.APIError) {
 	pbReq := &pb.GetProductionRunRequest{
 		Id: req.ProductionRunID,
 	}
@@ -94,12 +94,12 @@ func (m *productionRunSvcImpl) GetProductionRun(ctx context.Context, req *Retrie
 	}
 
 	meta := resourcekit.GetLoadMeta(ctx)
-	result := productionRunDetailFromProto(resp.ProductionRun)
-	stashProductionRunDetailMeta(meta, resp.ProductionRun)
+	result := ProductionRunFromProto(resp.ProductionRun)
+	StashProductionRunMeta(meta, resp.ProductionRun)
 	return &result, nil
 }
 
-func (m *productionRunSvcImpl) CreateProductionRun(ctx context.Context, req *CreateProductionRunRequest) (*apiresource.ProductionRunDetail, *apierror.APIError) {
+func (m *productionRunSvcImpl) CreateProductionRun(ctx context.Context, req *CreateProductionRunRequest) (*apiresource.ProductionRun, *apierror.APIError) {
 	pbReq := &pb.CreateProductionRunRequest{
 		ResponsibleUserId: req.ResponsibleUserID,
 	}
@@ -113,12 +113,12 @@ func (m *productionRunSvcImpl) CreateProductionRun(ctx context.Context, req *Cre
 	}
 
 	meta := resourcekit.GetLoadMeta(ctx)
-	result := productionRunDetailFromProto(resp.ProductionRun)
-	stashProductionRunDetailMeta(meta, resp.ProductionRun)
+	result := ProductionRunFromProto(resp.ProductionRun)
+	StashProductionRunMeta(meta, resp.ProductionRun)
 	return &result, nil
 }
 
-func (m *productionRunSvcImpl) UpdateProductionRun(ctx context.Context, req *UpdateProductionRunRequest) (*apiresource.ProductionRunDetail, *apierror.APIError) {
+func (m *productionRunSvcImpl) UpdateProductionRun(ctx context.Context, req *UpdateProductionRunRequest) (*apiresource.ProductionRun, *apierror.APIError) {
 	pbReq := &pb.UpdateProductionRunRequest{
 		Id:                req.ProductionRunID,
 		Number:            req.Number.Ptr(),
@@ -134,8 +134,8 @@ func (m *productionRunSvcImpl) UpdateProductionRun(ctx context.Context, req *Upd
 	}
 
 	meta := resourcekit.GetLoadMeta(ctx)
-	result := productionRunDetailFromProto(resp.ProductionRun)
-	stashProductionRunDetailMeta(meta, resp.ProductionRun)
+	result := ProductionRunFromProto(resp.ProductionRun)
+	StashProductionRunMeta(meta, resp.ProductionRun)
 	return &result, nil
 }
 
@@ -208,8 +208,8 @@ func (m *productionRunSvcImpl) ListBatchesByProductionRun(ctx context.Context, r
 	return listBatchesFromProto(ctx, resp), nil
 }
 
-func productionRunSummaryFromProto(info *pb.ProductionRunSummaryInfo) apiresource.ProductionRunSummary {
-	s := apiresource.ProductionRunSummary{
+func productionRunFromSummaryProto(info *pb.ProductionRunSummaryInfo) apiresource.ProductionRun {
+	s := apiresource.ProductionRun{
 		ID:         info.Id,
 		Object:     constants.ObjectTypeProductionRun,
 		Number:     info.Number,
@@ -228,11 +228,11 @@ func productionRunSummaryFromProto(info *pb.ProductionRunSummaryInfo) apiresourc
 	return s
 }
 
-func productionRunListFromProto(ctx context.Context, resp *pb.ListProductionRunsResponse) *apiresource.List[apiresource.ProductionRunSummary] {
+func productionRunListFromProto(ctx context.Context, resp *pb.ListProductionRunsResponse) *apiresource.List[apiresource.ProductionRun] {
 	meta := resourcekit.GetLoadMeta(ctx)
-	runs := make([]apiresource.ProductionRunSummary, len(resp.ProductionRuns))
+	runs := make([]apiresource.ProductionRun, len(resp.ProductionRuns))
 	for i, pr := range resp.ProductionRuns {
-		runs[i] = productionRunSummaryFromProto(pr)
+		runs[i] = productionRunFromSummaryProto(pr)
 		if pr.ResponsibleUserId != "" {
 			meta.Set(constants.ObjectTypeProductionRun, pr.Id, "responsible_user_id", pr.ResponsibleUserId)
 		}
@@ -241,8 +241,11 @@ func productionRunListFromProto(ctx context.Context, resp *pb.ListProductionRuns
 	return apiresource.NewList(runs, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }
 
-func productionRunDetailFromProto(info *pb.ProductionRunInfo) apiresource.ProductionRunDetail {
-	d := apiresource.ProductionRunDetail{
+// ProductionRunFromProto maps a core ProductionRunInfo to the ProductionRun API resource.
+// The responsible_user expandable is left nil; pair with StashProductionRunMeta so it
+// resolves on ?include=responsible_user.
+func ProductionRunFromProto(info *pb.ProductionRunInfo) apiresource.ProductionRun {
+	d := apiresource.ProductionRun{
 		ID:         info.Id,
 		Object:     constants.ObjectTypeProductionRun,
 		Number:     info.Number,
@@ -257,7 +260,9 @@ func productionRunDetailFromProto(info *pb.ProductionRunInfo) apiresource.Produc
 	return d
 }
 
-func stashProductionRunDetailMeta(meta *resourcekit.LoadMeta, info *pb.ProductionRunInfo) {
+// StashProductionRunMeta stashes the responsible_user FK id in LoadMeta so
+// LoadAccountUsers can resolve the expandable responsible_user on ?include=responsible_user.
+func StashProductionRunMeta(meta *resourcekit.LoadMeta, info *pb.ProductionRunInfo) {
 	if info == nil || info.ResponsibleUserId == "" {
 		return
 	}

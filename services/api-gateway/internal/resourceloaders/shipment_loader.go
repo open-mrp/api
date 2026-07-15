@@ -2,10 +2,12 @@ package resourceloaders
 
 import (
 	"context"
+	"time"
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -36,8 +38,42 @@ func LoadShipments(ctx context.Context, ids []string) (map[string]any, *apierror
 			continue
 		}
 		out[resp.Shipment.Id] = shipmentReferenceFromProto(resp.Shipment)
+		// Stash the record-reference metadata (tracking number/URL, carrier, status, ship
+		// date) so lightweight Record references to this shipment — e.g. a sales order's
+		// related.shipments — can carry a shipment preview without expanding the full resource.
+		if meta := shipmentRecordMetadata(resp.Shipment); len(meta) > 0 {
+			resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeShipment, resp.Shipment.Id, "record_metadata", meta)
+		}
 	}
 	return out, nil
+}
+
+// shipmentRecordMetadata builds the type-specific metadata surfaced on a shipment Record reference: the master tracking number, a carrier tracking deep-link, carrier name/code, status, and ship date. Keys are omitted when their source value is empty.
+func shipmentRecordMetadata(s *pb.ShipmentInfo) map[string]string {
+	meta := map[string]string{}
+	tracking := ""
+	if s.MasterTrackingNumber != nil {
+		tracking = *s.MasterTrackingNumber
+	}
+	if tracking != "" {
+		meta["tracking_number"] = tracking
+	}
+	if s.CarrierName != "" {
+		meta["carrier"] = s.CarrierName
+	}
+	if s.CarrierCode != nil && *s.CarrierCode != "" {
+		meta["carrier_code"] = *s.CarrierCode
+		if url := constants.TrackingURL(constants.CarrierCode(*s.CarrierCode), tracking); url != "" {
+			meta["tracking_url"] = url
+		}
+	}
+	if s.StatusCode != "" {
+		meta["status"] = s.StatusCode
+	}
+	if s.ShippedAt != nil {
+		meta["shipped_at"] = s.ShippedAt.AsTime().Format(time.RFC3339)
+	}
+	return meta
 }
 
 func shipmentReferenceFromProto(s *pb.ShipmentInfo) *apiresource.Shipment {

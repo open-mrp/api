@@ -85,6 +85,30 @@ message AccountUserDetail {
   optional google.protobuf.Timestamp department_created_at = 17;
   optional google.protobuf.Timestamp department_updated_at = 18;
 }
+
+// A default order-notification recipient input: the account user id and the notification types to configure for them.
+message CustomerNotificationRecipientInputProto {
+  string account_user_id = 1;
+  repeated string notification_type_codes = 2;
+}
+// A default order-notification recipient: the hydrated account user (on the customer's account) and the notification types they receive.
+message CustomerNotificationRecipientProto {
+  AccountUserDetail account_user = 1;
+  repeated string notification_type_codes = 2;
+}
+message ListCustomerNotificationRecipientsRequest {
+  string customer_id = 1;
+}
+message ListCustomerNotificationRecipientsResponse {
+  repeated CustomerNotificationRecipientProto recipients = 1;
+}
+message UpdateCustomerNotificationRecipientsRequest {
+  string customer_id = 1;
+  repeated CustomerNotificationRecipientInputProto recipients = 2;
+}
+message UpdateCustomerNotificationRecipientsResponse {
+  repeated CustomerNotificationRecipientProto recipients = 1;
+}
 message ListAccountUsersRequest {
   optional string cursor = 1;
   int32 limit = 2;

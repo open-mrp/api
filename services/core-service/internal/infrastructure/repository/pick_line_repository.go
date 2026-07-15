@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -148,9 +147,42 @@ func (r *pickLineRepoImpl) CalculateRemainingForOrderLine(ctx context.Context, o
 		return "", "", tracing.Trace(span, db.MapSQLError(err))
 	}
 
-	remainingValue := fmt.Sprintf("%v", row.RemainingValue)
+	// RemainingValue is sqlc-typed interface{} (the GREATEST/arithmetic result has no
+	// single column type), so the MySQL driver scans it as []byte. fmt.Sprintf("%v", …)
+	// on a []byte prints the byte-value array ("[53 46 …]"), which then fails ParseFloat
+	// in createPickLineForRemainingQuantity and silently suppresses the remainder pick
+	// line. decimalToString decodes the bytes back to the decimal string.
+	remainingValue := decimalToString(row.RemainingValue)
 
 	return remainingValue, row.UnitID, nil
+}
+
+func (r *pickLineRepoImpl) GetOrderLinePackProgress(ctx context.Context, orderLineID string) (string, string, string, *apierror.APIError) {
+	ctx, span := pickLineRepoTracer.Start(ctx, "repository.pick_line.get_pack_progress")
+	defer span.End()
+
+	row, err := r.queries.GetOrderLinePackProgress(ctx, orderLineID)
+	if err != nil {
+		return "", "", "", tracing.Trace(span, db.MapSQLError(err))
+	}
+
+	// PackedValue is a SUM(CASE ...) result, sqlc-typed interface{} and scanned as
+	// []byte by the driver — decode it explicitly (see CalculateRemainingForOrderLine).
+	return row.OrderedValue, decimalToString(row.PackedValue), row.UnitID, nil
+}
+
+func (r *pickLineRepoImpl) DeleteUnpackedForOrderLine(ctx context.Context, orderLineID string) *apierror.APIError {
+	ctx, span := pickLineRepoTracer.Start(ctx, "repository.pick_line.delete_unpacked_for_order_line")
+	defer span.End()
+
+	// Delete the quantity rows first (they are joined through the pick lines we are about to remove), then the pick lines.
+	if err := r.queries.DeleteQuantitiesByUnpackedPickLinesForLine(ctx, orderLineID); err != nil {
+		return tracing.Trace(span, db.MapSQLError(err))
+	}
+	if err := r.queries.DeleteUnpackedPickLinesForLine(ctx, orderLineID); err != nil {
+		return tracing.Trace(span, db.MapSQLError(err))
+	}
+	return nil
 }
 
 func (r *pickLineRepoImpl) HasUnpackedPickLineForOrderLine(ctx context.Context, orderLineID string) (bool, *apierror.APIError) {

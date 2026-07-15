@@ -181,7 +181,7 @@ func populateProductionRunOnSORelated(ctx context.Context, parent any, loaded ma
 	if !ok {
 		return
 	}
-	pr := v.(*apiresource.ProductionRunDetail)
+	pr := v.(*apiresource.ProductionRun)
 	rec := apiresource.NewRecord(id, constants.RecordTypeProductionRun)
 	rec.Number = &pr.Number
 	status := openClosedStatus(pr.CompletedAt)
@@ -212,6 +212,14 @@ func populateShipmentsOnSORelated(ctx context.Context, parent any, loaded map[st
 		rec.Number = &s.Number
 		status := string(s.Status)
 		rec.Status = &status
+		// Surface tracking number/URL, carrier, and ship date (stashed by the shipment
+		// loader) so the sales-order detail page can preview each linked shipment without
+		// expanding the full shipment resource.
+		if m, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeShipment, id, "record_metadata"); ok {
+			if meta, ok := m.(map[string]string); ok && len(meta) > 0 {
+				rec.Metadata = meta
+			}
+		}
 		records = append(records, *rec)
 	}
 	if len(records) == 0 {

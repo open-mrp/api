@@ -188,19 +188,20 @@ func (m *MockBillingCustomerResolver) EXPECT() *MockBillingCustomerResolverMockR
 	return m.recorder
 }
 
-// GetAgentSpendCents mocks base method.
-func (m *MockBillingCustomerResolver) GetAgentSpendCents(ctx context.Context, accountID string) (int64, error) {
+// GetAgentSpend mocks base method.
+func (m *MockBillingCustomerResolver) GetAgentSpend(ctx context.Context, accountID string) (int64, []domain.AgentTokenRate, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAgentSpendCents", ctx, accountID)
+	ret := m.ctrl.Call(m, "GetAgentSpend", ctx, accountID)
 	ret0, _ := ret[0].(int64)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].([]domain.AgentTokenRate)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
-// GetAgentSpendCents indicates an expected call of GetAgentSpendCents.
-func (mr *MockBillingCustomerResolverMockRecorder) GetAgentSpendCents(ctx, accountID any) *gomock.Call {
+// GetAgentSpend indicates an expected call of GetAgentSpend.
+func (mr *MockBillingCustomerResolverMockRecorder) GetAgentSpend(ctx, accountID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAgentSpendCents", reflect.TypeOf((*MockBillingCustomerResolver)(nil).GetAgentSpendCents), ctx, accountID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAgentSpend", reflect.TypeOf((*MockBillingCustomerResolver)(nil).GetAgentSpend), ctx, accountID)
 }
 
 // GetStripeCustomerID mocks base method.

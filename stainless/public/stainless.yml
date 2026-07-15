@@ -661,25 +661,69 @@ resources:
         methods:
           retrieve_statuses: get /v1/sales/sales-orders/statuses
           list: get /v1/sales/sales-orders
+          retrieve: get /v1/sales/sales-orders/{id}
           create: post /v1/sales/sales-orders
+          update: patch /v1/sales/sales-orders/{id}
+          delete: delete /v1/sales/sales-orders/{id}
+          checkout: post /v1/sales/sales-orders/{id}/checkout
+          price_quote: post /v1/sales/sales-orders/price-quote
+        subresources:
+          actions:
+            methods:
+              bulk_delete: post /v1/sales/sales-orders/actions/bulk-delete
+              issue: put /v1/sales/sales-orders/{id}/actions/issue
+              unissue: put /v1/sales/sales-orders/{id}/actions/unissue
+              close: put /v1/sales/sales-orders/{id}/actions/close
+              open: put /v1/sales/sales-orders/{id}/actions/open
+              quote_freight: post /v1/sales/sales-orders/{id}/actions/quote-freight
+              create_production_run: post /v1/sales/sales-orders/{id}/actions/create-production-run
+            models:
+              bulk_delete_sales_orders_request: '#/components/schemas/BulkDeleteSalesOrdersRequest'
+              issue_sales_order_request: '#/components/schemas/IssueSalesOrderRequest'
+              production_run: '#/components/schemas/ProductionRun'
+              quote_sales_order_freight_response: '#/components/schemas/QuoteSalesOrderFreightResponse'
+          lines:
+            methods:
+              create: post /v1/sales/sales-orders/{id}/lines
+              update: patch /v1/sales/sales-orders/{id}/lines/{line_id}
+              delete: delete /v1/sales/sales-orders/{id}/lines/{line_id}
+            subresources:
+              actions:
+                methods:
+                  reorder: post /v1/sales/sales-orders/{id}/lines/actions/reorder
+                models:
+                  reorder_sales_order_lines_request: '#/components/schemas/ReorderSalesOrderLinesRequest'
+            models:
+              create_sales_order_line_request: '#/components/schemas/CreateSalesOrderLineRequest'
+              update_sales_order_line_request: '#/components/schemas/UpdateSalesOrderLineRequest'
         models:
+          checkout_sales_order_request: '#/components/schemas/CheckoutSalesOrderRequest'
+          checkout_sales_order_response: '#/components/schemas/CheckoutSalesOrderResponse'
           create_sales_order_line_input: '#/components/schemas/CreateSalesOrderLineInput'
           create_sales_order_request: '#/components/schemas/CreateSalesOrderRequest'
           created_by: '#/components/schemas/CreatedBy'
           freight: '#/components/schemas/Freight'
+          list_quoted_sales_order_line: '#/components/schemas/List_QuotedSalesOrderLine'
           list_record: '#/components/schemas/List_Record'
           list_sales_order: '#/components/schemas/List_SalesOrder'
           list_sales_order_line: '#/components/schemas/List_SalesOrderLine'
           list_sales_order_status: '#/components/schemas/List_SalesOrderStatus'
           order_contact: '#/components/schemas/OrderContact'
           order_discount: '#/components/schemas/OrderDiscount'
+          quote_sales_order_line_input: '#/components/schemas/QuoteSalesOrderLineInput'
+          quote_sales_order_prices_request: '#/components/schemas/QuoteSalesOrderPricesRequest'
+          quote_sales_order_prices_response: '#/components/schemas/QuoteSalesOrderPricesResponse'
+          quoted_sales_order_line: '#/components/schemas/QuotedSalesOrderLine'
           record: '#/components/schemas/Record'
           sales_order: '#/components/schemas/SalesOrder'
           sales_order_email_contact_input: '#/components/schemas/SalesOrderEmailContactInput'
           sales_order_line: '#/components/schemas/SalesOrderLine'
+          sales_order_quote_rate: '#/components/schemas/SalesOrderQuoteRate'
           sales_order_related: '#/components/schemas/SalesOrderRelated'
+          sales_order_stage_total: '#/components/schemas/SalesOrderStageTotal'
           sales_order_status: '#/components/schemas/SalesOrderStatus'
           sales_order_totals: '#/components/schemas/SalesOrderTotals'
+          update_sales_order_request: '#/components/schemas/UpdateSalesOrderRequest'
   finance:
     methods:
       retrieve_transaction_types: get /v1/finance/transaction-types
@@ -785,6 +829,9 @@ resources:
           list_account_user: '#/components/schemas/List_AccountUser'
           notification_preference_item: '#/components/schemas/NotificationPreferenceItem'
           update_account_user_request: '#/components/schemas/UpdateAccountUserRequest'
+      accounts:
+        methods:
+          update_favicon: put /v1/identity/accounts/{id}/favicon
       roles:
         methods:
           list: get /v1/identity/roles

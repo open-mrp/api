@@ -29,6 +29,10 @@ type ListRequestLogsRequest struct {
 	StatusCodeClasses []int32 `query:"status_code_classes"`
 	// Filter by API error code.
 	ErrorCodes []apierror.ErrorCode `query:"error_codes"`
+	// Exclude request logs whose API error code is in this set.
+	//
+	// Applied as a negative filter after all other filters. Successful requests (which have no error code) are always kept. The dashboard uses this to hide routine `expired_token` 401s — the noise from short-lived access tokens expiring and clients silently refreshing — while still surfacing genuine auth failures like `invalid_credentials`.
+	ExcludeErrorCodes []apierror.ErrorCode `query:"exclude_error_codes"`
 	// Filter by the _acting_ account: the account the actor belongs to (the log's `account.id`).
 	//
 	// Results are always scoped to logs where your account is either the acting account or the target account; this narrows that set to specific acting accounts. For example, pass a customer's account ID to see only requests that customer's actors made against your account.

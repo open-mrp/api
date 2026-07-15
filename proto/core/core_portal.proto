@@ -8,6 +8,7 @@ package core;
 
 import "google/protobuf/timestamp.proto";
 import "core/core_analytics.proto";
+import "core/core_identity_context.proto";
 option go_package = "shared/proto/core;core";
 
 // PortalProfileInfo is the seller's portal-facing profile for authenticated
@@ -20,6 +21,7 @@ message PortalProfileInfo {
   optional string support_email = 5;
   // The seller's default billing address, used as the portal letterhead. Null when the account has none.
   AddressInfo address = 6;
+  optional string favicon_url = 7;
 }
 
 message GetPortalProfileBySlugRequest {
@@ -61,6 +63,8 @@ message PortalRegistrationSessionInfo {
   optional google.protobuf.Timestamp abandoned_at = 10;
   google.protobuf.Timestamp created_at = 11;
   google.protobuf.Timestamp updated_at = 12;
+  // Derived lifecycle status: in_progress | completed | abandoned | expired.
+  string status = 13;
 }
 
 message CreateOrResumePortalRegistrationSessionRequest {
@@ -88,4 +92,18 @@ message AbandonPortalRegistrationSessionRequest {
 
 message PortalRegistrationSessionResponse {
   PortalRegistrationSessionInfo session = 1;
+}
+
+message ListPortalRegistrationSessionsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  // Optional derived-status filter: in_progress | completed | abandoned | expired.
+  optional string status = 3;
+  // Optional free-text search matching the registrant's captured customer name/number or the session id.
+  optional string search = 4;
+}
+
+message ListPortalRegistrationSessionsResponse {
+  repeated PortalRegistrationSessionInfo sessions = 1;
+  PageInfo page_info = 2;
 }

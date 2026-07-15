@@ -155,6 +155,24 @@ func (r *accountUsageRepoImpl) GetStripeCustomerIDByAccountID(ctx context.Contex
 	return nil, nil
 }
 
+func (r *accountUsageRepoImpl) GetAccountStripePricingPlanID(ctx context.Context, accountID string) (*string, *apierror.APIError) {
+	ctx, span := tracing.StartSpan(ctx, accountUsageRepoTracer, "repository.account_usage.get_account_stripe_pricing_plan_id")
+	defer span.End()
+
+	row, err := r.queries.GetAccountStripePricingPlanID(ctx, accountID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, tracing.Trace(span, db.MapSQLError(err))
+	}
+
+	if row.Valid {
+		return &row.String, nil
+	}
+	return nil, nil
+}
+
 func (r *accountUsageRepoImpl) GetAccountNameAndPlanCode(ctx context.Context, accountID string) (string, string, *apierror.APIError) {
 	ctx, span := tracing.StartSpan(ctx, accountUsageRepoTracer, "repository.account_usage.get_account_name_and_plan_code")
 	defer span.End()

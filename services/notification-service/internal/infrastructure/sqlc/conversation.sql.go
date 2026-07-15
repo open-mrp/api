@@ -947,6 +947,10 @@ WHERE account_id = ?
   AND audience = 'customer'
   AND is_archived = ?
   AND (? IS NULL OR workflow_status = ?)
+  -- Resolved cases are done: keep them out of the default triage view. The repository sets hide_resolved
+  -- only when no explicit status is requested and the archived view is off, so the "Resolved" lane
+  -- (workflow_status='resolved') and the archived view still surface them.
+  AND (? = FALSE OR workflow_status <> 'resolved')
   AND (? IS NULL OR assignee_resource_id = ?)
   AND (? IS NULL OR assignee_resource_id IS NULL)
   AND (
@@ -962,6 +966,7 @@ type ListSupportInboxParams struct {
 	AccountID           string
 	IsArchived          bool
 	WorkflowStatus      sql.NullString
+	HideResolved        interface{}
 	AssigneeResourceID  sql.NullString
 	Unassigned          interface{}
 	CursorLastMessageAt sql.NullTime
@@ -978,6 +983,7 @@ func (q *Queries) ListSupportInbox(ctx context.Context, arg ListSupportInboxPara
 		arg.IsArchived,
 		arg.WorkflowStatus,
 		arg.WorkflowStatus,
+		arg.HideResolved,
 		arg.AssigneeResourceID,
 		arg.AssigneeResourceID,
 		arg.Unassigned,

@@ -31,6 +31,7 @@ type JWTClaims struct {
 
 const (
 	ErrInvalidJWT = "Invalid JWT."
+	ErrExpiredJWT = "Token has expired."
 )
 
 var (
@@ -95,6 +96,10 @@ func DecodeJWT(ctx context.Context, jwtSecret, tokenString string, expectedType 
 	}, jwt.WithIssuer(defaultJWTIssuer))
 
 	if err != nil {
+		// An expired token is a distinct, benign condition: the access token simply aged out and the client will refresh. Surface it as expired_token so request-log review can filter out the routine rotation noise, keeping the generic invalid_credentials for tokens that are actually malformed, wrongly signed, or forged.
+		if errors.Is(err, jwt.ErrTokenExpired) {
+			return nil, tracing.Trace(span, apierror.NewExpiredTokenError(ErrExpiredJWT))
+		}
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError(ErrInvalidJWT))
 	}
 

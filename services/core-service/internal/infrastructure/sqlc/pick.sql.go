@@ -54,6 +54,33 @@ func (q *Queries) ClearPickFinishedAt(ctx context.Context, arg ClearPickFinished
 	return err
 }
 
+const closeOpenPickLines = `-- name: CloseOpenPickLines :exec
+UPDATE pick_line SET
+    packed_at = NOW(3),
+    updated_at = NOW(3)
+WHERE pick_id = ?
+AND packed_at IS NULL
+`
+
+// Pack every still-open (unpacked) pick line — including zero-quantity remainder lines.
+// Used when an order is closed (fulfilled): the pick's open lines are marked done so the
+// pick reads as complete alongside the order.
+func (q *Queries) CloseOpenPickLines(ctx context.Context, pickID string) error {
+	_, err := q.db.ExecContext(ctx, closeOpenPickLines, pickID)
+	return err
+}
+
+const countPickLinesByPick = `-- name: CountPickLinesByPick :one
+SELECT COUNT(*) AS total FROM pick_line WHERE pick_id = ?
+`
+
+func (q *Queries) CountPickLinesByPick(ctx context.Context, pickID string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countPickLinesByPick, pickID)
+	var total int64
+	err := row.Scan(&total)
+	return total, err
+}
+
 const countPickShipmentNumbers = `-- name: CountPickShipmentNumbers :one
 SELECT COUNT(*) AS count FROM shipment s
 WHERE s.account_id = ?
@@ -400,6 +427,29 @@ func (q *Queries) DeleteDuplicatePickLines(ctx context.Context, arg DeleteDuplic
 	return err
 }
 
+const deleteQuantitiesByUnpackedPickLinesForLine = `-- name: DeleteQuantitiesByUnpackedPickLinesForLine :exec
+DELETE q FROM quantity q
+JOIN pick_line pl ON pl.quantity_id = q.id
+WHERE pl.sales_order_line_id = ?
+AND pl.packed_at IS NULL
+`
+
+func (q *Queries) DeleteQuantitiesByUnpackedPickLinesForLine(ctx context.Context, salesOrderLineID string) error {
+	_, err := q.db.ExecContext(ctx, deleteQuantitiesByUnpackedPickLinesForLine, salesOrderLineID)
+	return err
+}
+
+const deleteUnpackedPickLinesForLine = `-- name: DeleteUnpackedPickLinesForLine :exec
+DELETE FROM pick_line
+WHERE sales_order_line_id = ?
+AND packed_at IS NULL
+`
+
+func (q *Queries) DeleteUnpackedPickLinesForLine(ctx context.Context, salesOrderLineID string) error {
+	_, err := q.db.ExecContext(ctx, deleteUnpackedPickLinesForLine, salesOrderLineID)
+	return err
+}
+
 const findLinesToPack = `-- name: FindLinesToPack :many
 SELECT
     pl.id,
@@ -520,6 +570,36 @@ func (q *Queries) FindPickIDByShipmentOrder(ctx context.Context, arg FindPickIDB
 	var id string
 	err := row.Scan(&id)
 	return id, err
+}
+
+const getOrderLinePackProgress = `-- name: GetOrderLinePackProgress :one
+SELECT
+    sol_q.value AS ordered_value,
+    sol_q.unit_id AS unit_id,
+    COALESCE(SUM(CASE WHEN pl.packed_at IS NOT NULL THEN pl_q.value ELSE 0 END), 0) AS packed_value
+FROM sales_order_line sol
+JOIN quantity sol_q ON sol_q.id = sol.quantity_id
+LEFT JOIN pick_line pl ON pl.sales_order_line_id = sol.id
+LEFT JOIN quantity pl_q ON pl_q.id = pl.quantity_id
+WHERE sol.id = ?
+GROUP BY sol.id, sol_q.value, sol_q.unit_id
+`
+
+type GetOrderLinePackProgressRow struct {
+	OrderedValue string
+	UnitID       string
+	PackedValue  interface{}
+}
+
+// The ordered quantity and the total already packed (shipped-committed) for an
+// order line. outstanding = ordered - packed drives pick reconciliation on a
+// quantity change: > 0 means an open pick line is still needed; <= 0 means the
+// packed lines already cover the order, so any open pick line is surplus.
+func (q *Queries) GetOrderLinePackProgress(ctx context.Context, salesOrderLineID string) (GetOrderLinePackProgressRow, error) {
+	row := q.db.QueryRowContext(ctx, getOrderLinePackProgress, salesOrderLineID)
+	var i GetOrderLinePackProgressRow
+	err := row.Scan(&i.OrderedValue, &i.UnitID, &i.PackedValue)
+	return i, err
 }
 
 const getPick = `-- name: GetPick :one
@@ -1422,13 +1502,17 @@ UPDATE pick pk SET
 WHERE pk.id = ?
 AND NOT EXISTS (
     SELECT 1 FROM pick_line pl
-    JOIN quantity q ON q.id = pl.quantity_id
     WHERE pl.pick_id = pk.id
     AND pl.packed_at IS NULL
-    AND q.value > 0
 )
 `
 
+// Finish a pick only when every one of its lines is packed. An unpacked line is
+// outstanding work regardless of its picked quantity: a partial pack leaves a
+// zero-quantity remainder pick line for the not-yet-picked balance, and that line
+// must keep the pick open (and editable) until it too is picked and packed. The
+// earlier `q.value > 0` guard ignored those remainder lines, so it finished picks
+// that still had quantity left to pick — freezing the remainder line in the UI.
 func (q *Queries) MarkPickFinishedIfAllPacked(ctx context.Context, pickID string) error {
 	_, err := q.db.ExecContext(ctx, markPickFinishedIfAllPacked, pickID)
 	return err
@@ -1495,6 +1579,25 @@ AND pl.packed_at IS NULL
 
 func (q *Queries) PickRemainingQuantityForLine(ctx context.Context, pickLineID string) error {
 	_, err := q.db.ExecContext(ctx, pickRemainingQuantityForLine, pickLineID)
+	return err
+}
+
+const reopenIncompletePickLines = `-- name: ReopenIncompletePickLines :exec
+UPDATE pick_line pl
+JOIN quantity q ON q.id = pl.quantity_id
+JOIN sales_order_line sol ON sol.id = pl.sales_order_line_id
+JOIN quantity sol_q ON sol_q.id = sol.quantity_id
+SET pl.packed_at = NULL,
+    pl.updated_at = NOW(3)
+WHERE pl.pick_id = ?
+AND q.value < sol_q.value
+`
+
+// Reopen (unpack) pick lines that are not complete — the pick line's picked quantity is
+// less than its order line's ordered quantity. Fully-picked lines stay packed. Used when a
+// fulfilled order is reopened so outstanding lines can be worked again.
+func (q *Queries) ReopenIncompletePickLines(ctx context.Context, pickID string) error {
+	_, err := q.db.ExecContext(ctx, reopenIncompletePickLines, pickID)
 	return err
 }
 

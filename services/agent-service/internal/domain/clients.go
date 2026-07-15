@@ -72,6 +72,16 @@ type AccountContext struct {
 // BillingCustomerResolver resolves the Stripe customer ID for an account and the account's current agent spend.
 type BillingCustomerResolver interface {
 	GetStripeCustomerID(ctx context.Context, accountID string) (string, error)
-	// GetAgentSpendCents returns the account's marked-up token spend for the current billing period, as Stripe will bill it.
-	GetAgentSpendCents(ctx context.Context, accountID string) (int64, error)
+	// GetAgentSpend returns the account's marked-up token spend for the current billing period (as Stripe will bill it) together with the plan's marked-up per-token rates, so a run can price its in-flight usage against the cap without a per-turn round trip. rates is empty when the plan has no rate card.
+	GetAgentSpend(ctx context.Context, accountID string) (spendCents int64, rates []AgentTokenRate, err error)
+}
+
+// AgentTokenRate is a marked-up per-token price from the account's plan rate card.
+type AgentTokenRate struct {
+	// Model is the gateway model name the rate applies to (e.g. "anthropic/claude-sonnet-4.6").
+	Model string
+	// TokenType is the token type: input, output, cached_input, or cached_output.
+	TokenType string
+	// UnitAmountCents is the price in cents per token, markup included.
+	UnitAmountCents float64
 }

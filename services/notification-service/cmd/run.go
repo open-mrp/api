@@ -181,6 +181,11 @@ func Run(
 		return err
 	}
 
+	customerRegisteredConsumer := event.NewCustomerRegisteredConsumer(rabbitmq, messagingSvc, inboxRepo, consumerTracer)
+	if err := customerRegisteredConsumer.Listen(ctx); err != nil {
+		return err
+	}
+
 	agentReplyConsumer := event.NewAgentReplyConsumer(rabbitmq, chatSvc, inboxRepo, consumerTracer)
 	if err := agentReplyConsumer.Listen(ctx); err != nil {
 		return err

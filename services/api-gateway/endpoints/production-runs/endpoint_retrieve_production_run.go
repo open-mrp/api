@@ -22,8 +22,8 @@ type RetrieveProductionRunRequest struct {
 // Returns a production run by ID.
 type RetrieveProductionRunEndpoint struct{}
 
-func (e *RetrieveProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveProductionRunRequest, *apiresource.ProductionRunDetail] {
-	return (&apiendpoint.APIEndpoint[*RetrieveProductionRunRequest, *apiresource.ProductionRunDetail]{
+func (e *RetrieveProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveProductionRunRequest, *apiresource.ProductionRun] {
+	return (&apiendpoint.APIEndpoint[*RetrieveProductionRunRequest, *apiresource.ProductionRun]{
 		Title:             "Retrieve Production Run",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
@@ -35,7 +35,7 @@ func (e *RetrieveProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainProductionRuns, Action: types.ActionRead},
 		},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveProductionRunRequest) (*apiresource.ProductionRunDetail, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveProductionRunRequest) (*apiresource.ProductionRun, *apierror.APIError) {
 			return svc.(ProductionRunSvc).GetProductionRun
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{

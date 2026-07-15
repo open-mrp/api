@@ -9,6 +9,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"time"
 )
 
 const abandonPortalRegistrationSession = `-- name: AbandonPortalRegistrationSession :exec
@@ -141,6 +142,185 @@ func (q *Queries) GetPortalRegistrationSessionByTypeID(ctx context.Context, type
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const listPortalRegistrationSessionsBackward = `-- name: ListPortalRegistrationSessionsBackward :many
+SELECT id, type_id, user_id, seller_account_id, seller_slug, is_existing_customer, step, customer_id, session_data, completed_at, abandoned_at, created_at, updated_at FROM portal_registration_session prs
+WHERE prs.seller_account_id = ?
+AND (
+    ? IS NULL
+    OR (? = 'completed'   AND prs.completed_at IS NOT NULL)
+    OR (? = 'abandoned'   AND prs.abandoned_at IS NOT NULL)
+    OR (? = 'expired'     AND prs.completed_at IS NULL AND prs.abandoned_at IS NULL AND prs.created_at <  ?)
+    OR (? = 'in_progress' AND prs.completed_at IS NULL AND prs.abandoned_at IS NULL AND prs.created_at >= ?)
+)
+AND (
+    ? IS NULL
+    OR prs.type_id LIKE CONCAT('%', ?, '%')
+    OR prs.session_data->>'$.customer_name' LIKE CONCAT('%', ?, '%')
+    OR prs.session_data->>'$.customer_number' LIKE CONCAT('%', ?, '%')
+)
+AND (
+    prs.created_at > ?
+    OR (prs.created_at = ? AND prs.type_id > ?)
+)
+ORDER BY prs.created_at ASC, prs.type_id ASC
+LIMIT ?
+`
+
+type ListPortalRegistrationSessionsBackwardParams struct {
+	SellerAccountID string
+	Status          interface{}
+	ExpiryThreshold time.Time
+	Search          interface{}
+	CursorCreatedAt time.Time
+	CursorID        string
+	Limit           int32
+}
+
+func (q *Queries) ListPortalRegistrationSessionsBackward(ctx context.Context, arg ListPortalRegistrationSessionsBackwardParams) ([]PortalRegistrationSession, error) {
+	rows, err := q.db.QueryContext(ctx, listPortalRegistrationSessionsBackward,
+		arg.SellerAccountID,
+		arg.Status,
+		arg.Status,
+		arg.Status,
+		arg.Status,
+		arg.ExpiryThreshold,
+		arg.Status,
+		arg.ExpiryThreshold,
+		arg.Search,
+		arg.Search,
+		arg.Search,
+		arg.Search,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PortalRegistrationSession
+	for rows.Next() {
+		var i PortalRegistrationSession
+		if err := rows.Scan(
+			&i.ID,
+			&i.TypeID,
+			&i.UserID,
+			&i.SellerAccountID,
+			&i.SellerSlug,
+			&i.IsExistingCustomer,
+			&i.Step,
+			&i.CustomerID,
+			&i.SessionData,
+			&i.CompletedAt,
+			&i.AbandonedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPortalRegistrationSessionsForward = `-- name: ListPortalRegistrationSessionsForward :many
+SELECT id, type_id, user_id, seller_account_id, seller_slug, is_existing_customer, step, customer_id, session_data, completed_at, abandoned_at, created_at, updated_at FROM portal_registration_session prs
+WHERE prs.seller_account_id = ?
+AND (
+    ? IS NULL
+    OR (? = 'completed'   AND prs.completed_at IS NOT NULL)
+    OR (? = 'abandoned'   AND prs.abandoned_at IS NOT NULL)
+    OR (? = 'expired'     AND prs.completed_at IS NULL AND prs.abandoned_at IS NULL AND prs.created_at <  ?)
+    OR (? = 'in_progress' AND prs.completed_at IS NULL AND prs.abandoned_at IS NULL AND prs.created_at >= ?)
+)
+AND (
+    ? IS NULL
+    OR prs.type_id LIKE CONCAT('%', ?, '%')
+    OR prs.session_data->>'$.customer_name' LIKE CONCAT('%', ?, '%')
+    OR prs.session_data->>'$.customer_number' LIKE CONCAT('%', ?, '%')
+)
+AND (
+    ? IS NULL
+    OR prs.created_at < ?
+    OR (prs.created_at = ? AND prs.type_id < ?)
+)
+ORDER BY prs.created_at DESC, prs.type_id DESC
+LIMIT ?
+`
+
+type ListPortalRegistrationSessionsForwardParams struct {
+	SellerAccountID string
+	Status          interface{}
+	ExpiryThreshold time.Time
+	Search          interface{}
+	CursorCreatedAt sql.NullTime
+	CursorID        sql.NullString
+	Limit           int32
+}
+
+// Seller-facing registration activity, newest first. The optional status filter reproduces DeriveStatus in SQL: 'expired' vs 'in_progress' splits incomplete sessions on the created-at expiry threshold (now - TTL) supplied by the service. The optional search term matches the registrant's captured customer name/number.
+func (q *Queries) ListPortalRegistrationSessionsForward(ctx context.Context, arg ListPortalRegistrationSessionsForwardParams) ([]PortalRegistrationSession, error) {
+	rows, err := q.db.QueryContext(ctx, listPortalRegistrationSessionsForward,
+		arg.SellerAccountID,
+		arg.Status,
+		arg.Status,
+		arg.Status,
+		arg.Status,
+		arg.ExpiryThreshold,
+		arg.Status,
+		arg.ExpiryThreshold,
+		arg.Search,
+		arg.Search,
+		arg.Search,
+		arg.Search,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PortalRegistrationSession
+	for rows.Next() {
+		var i PortalRegistrationSession
+		if err := rows.Scan(
+			&i.ID,
+			&i.TypeID,
+			&i.UserID,
+			&i.SellerAccountID,
+			&i.SellerSlug,
+			&i.IsExistingCustomer,
+			&i.Step,
+			&i.CustomerID,
+			&i.SessionData,
+			&i.CompletedAt,
+			&i.AbandonedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updatePortalRegistrationSession = `-- name: UpdatePortalRegistrationSession :exec

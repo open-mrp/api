@@ -93,6 +93,8 @@ func (c *AgentReplyConsumer) handleAgentReply(ctx context.Context, msg amqp091.D
 		ClientMessageID:  data.ClientMessageID,
 		MessageID:        data.MessageID,
 		ReplyToMessageID: data.ReplyToMessageID,
+		Failed:           data.Failed,
+		ErrorCode:        data.ErrorCode,
 	}
 	// A streaming reply spans two phases: "start" posts the empty bubble; "final" finalizes it. Phase "" is the legacy single-shot create-and-complete.
 	var apiErr *apierror.APIError

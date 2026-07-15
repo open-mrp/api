@@ -37,7 +37,7 @@ func (e *BulkDeleteSalesOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		ContentType:         "application/json",
 		Route:               "/v1/sales/sales-orders/actions/bulk-delete",
 		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
+		Public:              true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionDelete}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkDeleteSalesOrdersRequest) (*apiresource.EmptyResource, *apierror.APIError) {

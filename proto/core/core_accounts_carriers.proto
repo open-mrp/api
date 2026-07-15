@@ -54,6 +54,7 @@ message AccountBrandingInfo {
   optional string website_url = 9;
   google.protobuf.Timestamp created_at = 10;
   google.protobuf.Timestamp updated_at = 11;
+  optional string favicon_url = 12;
 }
 message AccountPortalInfo {
   string id = 1;
@@ -70,6 +71,7 @@ message PublicAccountInfo {
   optional string logo_url = 6;
   // The account's verified custom portal domain (e.g. shop.acme.com), when one exists.
   optional string portal_domain = 7;
+  optional string favicon_url = 8;
 }
 message GetAccountRequest {
   string id = 1;
@@ -110,6 +112,20 @@ message GetAccountLogoURLRequest {
   string id = 1;
 }
 message GetAccountLogoURLResponse {
+  optional string url = 1;
+}
+message UploadAccountFaviconRequest {
+  string id = 1;
+  bytes file = 2;
+  string content_type = 3;
+}
+message UploadAccountFaviconResponse {
+  bool success = 1;
+}
+message GetAccountFaviconURLRequest {
+  string id = 1;
+}
+message GetAccountFaviconURLResponse {
   optional string url = 1;
 }
 message PropertyInfo {

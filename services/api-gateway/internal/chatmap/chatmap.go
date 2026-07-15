@@ -182,6 +182,8 @@ func MessageFromProto(m *pb.MessageInfo) apiresource.Message {
 		CreatedAt:       TsToTime(m.CreatedAt),
 		UpdatedAt:       TsToTime(m.UpdatedAt),
 		Channel:         constants.ResolveMessageChannel(m.Channel, m.Kind),
+		AgentRunFailed:  m.AgentRunFailed,
+		AgentErrorCode:  m.AgentErrorCode,
 	}
 	if m.Status == "" {
 		msg.Status = constants.MessageStatusSent

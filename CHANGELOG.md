@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.41.9](https://github.com/Augno/api/compare/v0.41.8...v0.41.9) (2026-07-15)
+
+
+### Bug Fixes
+
+* scope sales-order status-change audit events to mutated fields ([#423](https://github.com/Augno/api/issues/423)) ([a341020](https://github.com/Augno/api/commit/a34102028bf356a6aa8963cea438c95ebfdf75ae))
+
 ## [0.41.8](https://github.com/Augno/api/compare/v0.41.7...v0.41.8) (2026-07-15)
 
 

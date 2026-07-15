@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.41.8](https://github.com/Augno/api/compare/v0.41.7...v0.41.8) (2026-07-15)
+
+
+### Bug Fixes
+
+* implement sales order endpoints to the frontend ([#421](https://github.com/Augno/api/issues/421)) ([30b3194](https://github.com/Augno/api/commit/30b3194334b11273acb690e509a7c7287f554d29))
+
 ## [0.41.7](https://github.com/Augno/api/compare/v0.41.6...v0.41.7) (2026-07-09)
 
 

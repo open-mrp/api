@@ -1077,11 +1077,9 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 			}
 
 			changes := audit.ComputeChanges(order, &domain.SalesOrder{
-				ID:                   order.ID,
-				Number:               order.Number,
 				SalesOrderStatusCode: "issued",
 				IssuedAt:             &now,
-			})
+			}, "SalesOrderStatusCode", "IssuedAt")
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
@@ -1129,10 +1127,8 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 			}
 
 			changes := audit.ComputeChanges(order, &domain.SalesOrder{
-				ID:                   order.ID,
-				Number:               order.Number,
 				SalesOrderStatusCode: "estimate",
-			})
+			}, "SalesOrderStatusCode", "IssuedAt")
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
@@ -1172,12 +1168,9 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 			}
 
 			changes := audit.ComputeChanges(order, &domain.SalesOrder{
-				ID:                   order.ID,
-				Number:               order.Number,
 				SalesOrderStatusCode: "fulfilled",
-				IssuedAt:             order.IssuedAt,
 				CompletedAt:          &now,
-			})
+			}, "SalesOrderStatusCode", "CompletedAt")
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
@@ -1220,11 +1213,8 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 			}
 
 			changes := audit.ComputeChanges(order, &domain.SalesOrder{
-				ID:                   order.ID,
-				Number:               order.Number,
 				SalesOrderStatusCode: "issued",
-				IssuedAt:             order.IssuedAt,
-			})
+			}, "SalesOrderStatusCode", "CompletedAt")
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,

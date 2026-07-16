@@ -207,6 +207,12 @@ type NotificationSvc interface {
 	//   - If the email has already been logged, the operation is a no-op.
 	LogEmail(ctx context.Context, data EmailLogData) *apierror.APIError
 
+	// LogFailedEmail records an email that could not be sent, keyed on the outbox message ID so delivery retries do not each append a row.
+	//
+	// Behavior:
+	//   - If the email has already been logged for this message ID, the operation is a no-op.
+	LogFailedEmail(ctx context.Context, messageID string, data EmailSendData) *apierror.APIError
+
 	// SendEnterpriseRequest sends an enterprise upgrade request email to the sales team.
 	SendEnterpriseRequest(ctx context.Context, req *EnterpriseRequestData) *apierror.APIError
 }
@@ -289,11 +295,12 @@ type ListAnnouncementsInput struct {
 }
 
 type EmailLogData struct {
-	SesMessageID string  `json:"ses_message_id"`
-	AccountID    *string `json:"account_id,omitempty"`
-	SentByID     *string `json:"sent_by_id,omitempty"`
-	Subject      string  `json:"subject"`
-	Filename     *string `json:"filename,omitempty"`
+	SesMessageID string   `json:"ses_message_id"`
+	To           []string `json:"to,omitempty"`
+	AccountID    *string  `json:"account_id,omitempty"`
+	SentByID     *string  `json:"sent_by_id,omitempty"`
+	Subject      string   `json:"subject"`
+	Filename     *string  `json:"filename,omitempty"`
 }
 
 type EmailSendData struct {

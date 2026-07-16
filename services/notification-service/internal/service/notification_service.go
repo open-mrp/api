@@ -142,6 +142,54 @@ func (s *notificationSvcImpl) LogEmail(ctx context.Context, data domain.EmailLog
 		Subject:      new(data.Subject),
 		Filename:     data.Filename,
 		SesMessageID: new(data.SesMessageID),
+		Recipients:   data.To,
+	}
+
+	return s.emailLogRepo.Create(ctx, emailLog)
+}
+
+// LogFailedEmail records an email that could not be sent, so a failed send is visible in the email log rather than vanishing. It writes HasSent=false and no SES message ID, because the send never reached SES.
+//
+// Delivery is retried, so this deduplicates on the outbox message ID: every attempt for the same message resolves to the same placeholder and only the first attempt writes a row.
+func (s *notificationSvcImpl) LogFailedEmail(ctx context.Context, messageID string, data domain.EmailSendData) *apierror.APIError {
+	ctx, span := notificationSvcTracer.Start(ctx, "service.notification.log_failed_email")
+	defer span.End()
+
+	// Without a message ID there is no stable key, and each retry would append another row for the same email.
+	if messageID == "" {
+		return nil
+	}
+
+	placeholderID := "failed_" + messageID
+
+	existing, apiErr := s.emailLogRepo.FindBySesMessageID(ctx, placeholderID)
+	if apiErr != nil && apiErr.Code != apierror.ErrorCodeResourceNotFound {
+		return apiErr
+	}
+
+	if existing != nil {
+		return nil
+	}
+
+	logID, apiErr := id.GenID(id.EmailLogIDPrefix, nil)
+	if apiErr != nil {
+		return apiErr
+	}
+
+	accountID := ""
+	if data.AccountID != nil {
+		accountID = *data.AccountID
+	}
+
+	emailLog := &domain.EmailLog{
+		ID:           logID,
+		HasSent:      false,
+		AccountID:    accountID,
+		SentByID:     data.SentByID,
+		Subject:      new(data.Subject),
+		Filename:     data.Filename,
+		SesMessageID: &placeholderID,
+		Recipients:   data.To,
 	}
 
 	return s.emailLogRepo.Create(ctx, emailLog)
@@ -217,6 +265,7 @@ func (s *notificationSvcImpl) logSuppressedEmail(ctx context.Context, data domai
 		SentByID:     data.SentByID,
 		Subject:      &data.Subject,
 		SesMessageID: &placeholderID,
+		Recipients:   data.To,
 	}
 
 	if apiErr := s.emailLogRepo.Create(ctx, emailLog); apiErr != nil {

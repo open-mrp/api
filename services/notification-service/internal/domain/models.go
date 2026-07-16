@@ -13,8 +13,10 @@ type EmailLog struct {
 	Subject      *string
 	Filename     *string
 	SesMessageID *string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	// Recipients are the addresses the email was sent to, persisted as email_recipient rows. The list view reads and searches these, so a log written without them shows a blank recipients column.
+	Recipients []string
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }
 
 // Notification is a per-user bell-feed entry. It references a message or stands alone (an event/system alert). The bell feed is a projection over these rows.

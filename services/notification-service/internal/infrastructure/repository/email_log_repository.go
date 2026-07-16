@@ -7,6 +7,7 @@ import (
 	"github.com/augno/api/services/notification-service/internal/infrastructure/sqlc"
 	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -39,6 +40,30 @@ func (r *emailLogRepoImpl) Create(ctx context.Context, emailLog *domain.EmailLog
 		}
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return tracing.Trace(span, apiErr)
+		}
+	}
+
+	for _, email := range emailLog.Recipients {
+		if email == "" {
+			continue
+		}
+
+		recipientID, apiErr := id.GenID(id.EmailRecipientIDPrefix, nil)
+		if apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+
+		if err := r.db.CreateEmailRecipient(ctx, sqlc.CreateEmailRecipientParams{
+			ID:         recipientID,
+			Email:      email,
+			EmailLogID: db.NullString(emailLog.ID),
+		}); err != nil {
+			if db.IsDuplicateEntry(err) {
+				continue
+			}
+			if apiErr := db.MapSQLError(err); apiErr != nil {
+				return tracing.Trace(span, apiErr)
+			}
 		}
 	}
 

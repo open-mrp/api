@@ -10,6 +10,7 @@ import (
 )
 
 type EmailLogRepo interface {
+	// Create persists the log and one email_recipient row per address in emailLog.Recipients.
 	Create(ctx context.Context, emailLog *EmailLog) *apierror.APIError
 	FindBySesMessageID(ctx context.Context, sesMessageID string) (*EmailLog, *apierror.APIError)
 }

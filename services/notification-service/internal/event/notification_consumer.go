@@ -78,7 +78,7 @@ func (c *NotificationConsumer) handleCommandMessage(ctx context.Context, msg amq
 	}
 
 	if msg.RoutingKey == string(contracts.NotificationCmdSendEmail) {
-		return c.handleSendEmail(ctx, payload)
+		return c.handleSendEmail(ctx, amqpMsg.MessageID, payload)
 	}
 
 	return nil
@@ -115,13 +115,18 @@ func (c *NotificationConsumer) handleEventMessage(ctx context.Context, msg amqp0
 			return err
 		}
 
+		// publishEmailLogEvent and publishEmailStatus both publish to email_sent with different payload shapes, and this queue binds that key, so it receives both. The status payload has no ses_message_id and decodes into an all-zero EmailLogData, which would otherwise be logged as a blank row against every successful send. Only a log event carries a SES message ID.
+		if logData.SesMessageID == "" {
+			return nil
+		}
+
 		return c.handleEmailLog(ctx, logData)
 	}
 
 	return nil
 }
 
-func (c *NotificationConsumer) handleSendEmail(ctx context.Context, payload messaging.EmailSendData) error {
+func (c *NotificationConsumer) handleSendEmail(ctx context.Context, messageID string, payload messaging.EmailSendData) error {
 	ctx, span := c.tracer.Start(ctx, "consumer.send_email",
 		trace.WithAttributes(
 			attribute.String("email.template_id", string(payload.TemplateID)),
@@ -136,6 +141,7 @@ func (c *NotificationConsumer) handleSendEmail(ctx context.Context, payload mess
 	if apiErr != nil {
 		log.Printf("Failed to render email template %s: %v", payload.TemplateID, apiErr)
 		span.RecordError(apiErr)
+		c.logFailedEmail(ctx, messageID, payload)
 		return apiErr
 	}
 
@@ -164,6 +170,7 @@ func (c *NotificationConsumer) handleSendEmail(ctx context.Context, payload mess
 
 	if apiErr != nil {
 		span.RecordError(apiErr)
+		c.logFailedEmail(ctx, messageID, payload)
 		// Publish failure event
 		errorMsg := apiErr.PublicMessage
 		if apiErr.InternalMessage != "" {
@@ -191,13 +198,27 @@ func (c *NotificationConsumer) handleSendEmail(ctx context.Context, payload mess
 	return nil
 }
 
+// logFailedEmail records a send that failed so it is visible in the email log instead of disappearing. The caller returns the original send error either way, so a logging failure is reported and swallowed rather than masking why the email failed.
+func (c *NotificationConsumer) logFailedEmail(ctx context.Context, messageID string, payload messaging.EmailSendData) {
+	if apiErr := c.notificationSvc.LogFailedEmail(ctx, messageID, domain.EmailSendData{
+		To:        payload.To,
+		Subject:   payload.Subject,
+		AccountID: payload.AccountID,
+		SentByID:  payload.SentByID,
+		Filename:  payload.AttachmentFilename,
+	}); apiErr != nil {
+		log.Printf("Failed to log failed email: %v", apiErr)
+	}
+}
+
 func (c *NotificationConsumer) publishEmailLogEvent(ctx context.Context, sesMessageID string, payload messaging.EmailSendData) error {
 	logData := messaging.EmailLogData{
 		SesMessageID: sesMessageID,
+		To:           payload.To,
 		AccountID:    payload.AccountID,
 		SentByID:     payload.SentByID,
 		Subject:      payload.Subject,
-		Filename:     nil,
+		Filename:     payload.AttachmentFilename,
 	}
 
 	logJSON, err := json.Marshal(logData)
@@ -232,6 +253,7 @@ func (c *NotificationConsumer) handleEmailLog(ctx context.Context, logData messa
 		ctx,
 		domain.EmailLogData{
 			SesMessageID: logData.SesMessageID,
+			To:           logData.To,
 			AccountID:    logData.AccountID,
 			SentByID:     logData.SentByID,
 			Subject:      logData.Subject,

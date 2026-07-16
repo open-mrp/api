@@ -1026,6 +1026,20 @@ func (mr *MockNotificationSvcMockRecorder) LogEmail(ctx, data any) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LogEmail", reflect.TypeOf((*MockNotificationSvc)(nil).LogEmail), ctx, data)
 }
 
+// LogFailedEmail mocks base method.
+func (m *MockNotificationSvc) LogFailedEmail(ctx context.Context, messageID string, data domain.EmailSendData) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LogFailedEmail", ctx, messageID, data)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// LogFailedEmail indicates an expected call of LogFailedEmail.
+func (mr *MockNotificationSvcMockRecorder) LogFailedEmail(ctx, messageID, data any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LogFailedEmail", reflect.TypeOf((*MockNotificationSvc)(nil).LogFailedEmail), ctx, messageID, data)
+}
+
 // SendEmail mocks base method.
 func (m *MockNotificationSvc) SendEmail(ctx context.Context, data domain.EmailSendData) (*string, *apierror.APIError) {
 	m.ctrl.T.Helper()

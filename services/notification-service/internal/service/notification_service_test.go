@@ -182,6 +182,91 @@ func (suite *NotificationServiceTestSuite) TestSendEnterpriseRequest_SandboxAcco
 	suite.Nil(err)
 }
 
+// A failed send used to write nothing at all, so a dead email was indistinguishable from one that was never triggered.
+func (suite *NotificationServiceTestSuite) TestLogFailedEmail_WritesUnsentLogWithRecipients() {
+	ctx := context.Background()
+	accountID := "ac_123"
+
+	suite.emailLogRepo.EXPECT().
+		FindBySesMessageID(gomock.Any(), "failed_mg_abc").
+		Return(nil, apierror.NewResourceNotFoundError("not found"))
+
+	var created *domain.EmailLog
+	suite.emailLogRepo.EXPECT().
+		Create(gomock.Any(), gomock.Any()).
+		Do(func(_ context.Context, el *domain.EmailLog) { created = el }).
+		Return(nil)
+
+	apiErr := suite.notificationSvc.LogFailedEmail(ctx, "mg_abc", domain.EmailSendData{
+		To:        []string{"kurt@example.com", "ap@example.com"},
+		Subject:   "Your Order Checkout - 23124",
+		AccountID: &accountID,
+	})
+	suite.Nil(apiErr)
+
+	suite.Require().NotNil(created)
+	suite.False(created.HasSent, "a failed send must not be logged as sent")
+	suite.Equal(accountID, created.AccountID)
+	suite.Equal([]string{"kurt@example.com", "ap@example.com"}, created.Recipients)
+	suite.Require().NotNil(created.SesMessageID)
+	suite.Equal("failed_mg_abc", *created.SesMessageID)
+}
+
+// Delivery is retried, so without deduplication one dead email would litter the log with a row per attempt.
+func (suite *NotificationServiceTestSuite) TestLogFailedEmail_RetryDoesNotDuplicate() {
+	ctx := context.Background()
+
+	suite.emailLogRepo.EXPECT().
+		FindBySesMessageID(gomock.Any(), "failed_mg_abc").
+		Return(&domain.EmailLog{ID: "emlg_existing"}, nil)
+
+	suite.emailLogRepo.EXPECT().Create(gomock.Any(), gomock.Any()).Times(0)
+
+	apiErr := suite.notificationSvc.LogFailedEmail(ctx, "mg_abc", domain.EmailSendData{
+		Subject: "Your Order Checkout - 23124",
+	})
+	suite.Nil(apiErr)
+}
+
+// Without a message ID there is no stable dedup key, so logging would append a fresh row on every retry.
+func (suite *NotificationServiceTestSuite) TestLogFailedEmail_NoMessageIDSkips() {
+	ctx := context.Background()
+
+	suite.emailLogRepo.EXPECT().FindBySesMessageID(gomock.Any(), gomock.Any()).Times(0)
+	suite.emailLogRepo.EXPECT().Create(gomock.Any(), gomock.Any()).Times(0)
+
+	apiErr := suite.notificationSvc.LogFailedEmail(ctx, "", domain.EmailSendData{Subject: "x"})
+	suite.Nil(apiErr)
+}
+
+// Emails sent through the Go path were logged without recipients, leaving the list's recipient column blank and unsearchable.
+func (suite *NotificationServiceTestSuite) TestLogEmail_PersistsRecipients() {
+	ctx := context.Background()
+	accountID := "ac_123"
+
+	suite.emailLogRepo.EXPECT().
+		FindBySesMessageID(gomock.Any(), "ses_1").
+		Return(nil, apierror.NewResourceNotFoundError("not found"))
+
+	var created *domain.EmailLog
+	suite.emailLogRepo.EXPECT().
+		Create(gomock.Any(), gomock.Any()).
+		Do(func(_ context.Context, el *domain.EmailLog) { created = el }).
+		Return(nil)
+
+	apiErr := suite.notificationSvc.LogEmail(ctx, domain.EmailLogData{
+		SesMessageID: "ses_1",
+		To:           []string{"kurt@example.com"},
+		AccountID:    &accountID,
+		Subject:      "Sales Order 023144",
+	})
+	suite.Nil(apiErr)
+
+	suite.Require().NotNil(created)
+	suite.True(created.HasSent)
+	suite.Equal([]string{"kurt@example.com"}, created.Recipients)
+}
+
 func TestNotificationServiceTestSuite(t *testing.T) {
 	t.Parallel()
 	suite.Run(t, new(NotificationServiceTestSuite))

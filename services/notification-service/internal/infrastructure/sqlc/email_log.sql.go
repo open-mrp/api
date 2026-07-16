@@ -39,6 +39,22 @@ func (q *Queries) CreateEmailLog(ctx context.Context, arg CreateEmailLogParams) 
 	return err
 }
 
+const createEmailRecipient = `-- name: CreateEmailRecipient :exec
+INSERT INTO email_recipient (id, email, email_log_id, created_at, updated_at)
+VALUES (?, ?, ?, NOW(3), NOW(3))
+`
+
+type CreateEmailRecipientParams struct {
+	ID         string
+	Email      string
+	EmailLogID sql.NullString
+}
+
+func (q *Queries) CreateEmailRecipient(ctx context.Context, arg CreateEmailRecipientParams) error {
+	_, err := q.db.ExecContext(ctx, createEmailRecipient, arg.ID, arg.Email, arg.EmailLogID)
+	return err
+}
+
 const findEmailLogBySesMessageID = `-- name: FindEmailLogBySesMessageID :one
 SELECT id, has_sent, account_id, sent_by_id, subject, filename, ses_message_id, created_at, updated_at
 FROM email_log

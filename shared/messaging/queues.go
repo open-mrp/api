@@ -117,6 +117,8 @@ type EmailSendData struct {
 type EmailLogData struct {
 	// SesMessageID is the unique message identifier returned by SES, used to correlate delivery status events (bounces, complaints) back to this email.
 	SesMessageID string `json:"ses_message_id"`
+	// To are the recipient addresses, persisted as email_recipient rows so the log lists and searches by who received it.
+	To []string `json:"to,omitempty"`
 	// AccountID is the account context for audit logging.
 	AccountID *string `json:"account_id,omitempty"`
 	// SentByID is the agent who triggered the email for audit logging.

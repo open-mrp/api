@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Order Checkout</title>
+</head>
+<body style="font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 8px;">
+        <h2 style="color: #333333; margin-top: 0;">Thank you for your order!</h2>
+        <p style="color: #666666; line-height: 1.6;">Hello{{if .account_name}} {{.account_name}}{{end}},</p>
+        <p style="color: #666666; line-height: 1.6;">We appreciate your business. Please click the button below to pay for order {{.order_number}}:</p>
+        <p style="text-align: center; margin: 32px 0;">
+            <a href="{{.checkout_url}}" style="display: inline-block; padding: 14px 32px; background: #2563eb; color: #ffffff; border-radius: 6px; text-decoration: none; font-size: 18px; font-weight: 600;">Pay for your order</a>
+        </p>
+        <p style="color: #666666; line-height: 1.6;">If the button above doesn't work, copy and paste this link into your browser:</p>
+        <p style="color: #666666; line-height: 1.6; word-break: break-all;"><a href="{{.checkout_url}}" style="color: #2563eb;">{{.checkout_url}}</a></p>
+        <hr style="border: none; border-top: 1px solid #eeeeee; margin: 20px 0;">
+        <p style="color: #999999; font-size: 12px;">If you have any questions, feel free to reply to this email.</p>
+    </div>
+</body>
+</html>

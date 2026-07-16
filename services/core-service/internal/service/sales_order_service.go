@@ -2282,10 +2282,13 @@ func (s *salesOrderSvcImpl) CheckoutSalesOrder(ctx context.Context, params domai
 			if s.notificationPublisher != nil {
 				// The outbox publisher reads the RepoFactory from the context; inject it before publishing.
 				pubCtx := event.WithRepos(txCtx, txSvc.repos)
+				// Without AccountID the log row is written against account_id = '', and the email log lists by account, so the sent checkout link would never appear in it.
 				if pubErr := s.notificationPublisher.PublishSendEmail(pubCtx, messaging.EmailSendData{
 					To:         []string{params.Email},
 					Subject:    "Your Order Checkout - " + order.Number,
 					TemplateID: constants.EmailTemplateOrderCheckout,
+					AccountID:  &params.AccountID,
+					SentByID:   &identity.Actor.ID,
 					Params: map[string]any{
 						"checkout_url": checkoutSession.URL,
 						"order_number": order.Number,

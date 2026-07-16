@@ -18,6 +18,7 @@ import (
 	"github.com/augno/api/shared/crypto"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
+	"github.com/augno/api/shared/messaging"
 	"github.com/shopspring/decimal"
 
 	"github.com/stretchr/testify/suite"
@@ -1544,7 +1545,18 @@ func (suite *SalesOrderSvcTestSuite) TestCheckoutSalesOrder_Success() {
 			return &domain.StripeCheckoutSession{URL: "https://checkout.stripe.com/test"}, nil
 		}).Times(1)
 
-	suite.notifier.EXPECT().PublishSendEmail(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	// The email log lists by account, so a checkout email published without AccountID is logged against account_id = '' and never shows up there.
+	suite.notifier.EXPECT().
+		PublishSendEmail(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, data messaging.EmailSendData) *apierror.APIError {
+			suite.Require().NotNil(data.AccountID, "checkout email must carry the account, or its log row is orphaned")
+			suite.Equal("ac_test", *data.AccountID)
+			suite.Require().NotNil(data.SentByID, "checkout email must record who sent it")
+			suite.Equal("usr_test123", *data.SentByID)
+			suite.Equal([]string{"buyer@example.com"}, data.To)
+			suite.Equal(constants.EmailTemplateOrderCheckout, data.TemplateID)
+			return nil
+		}).Times(1)
 	suite.expectCacheSuccess()
 
 	result, apiErr := suite.svc.CheckoutSalesOrder(ctx, domain.CheckoutSalesOrderParams{

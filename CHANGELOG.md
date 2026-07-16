@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.41.11](https://github.com/Augno/api/compare/v0.41.10...v0.41.11) (2026-07-16)
+
+
+### Bug Fixes
+
+* add AccountID and SentByID to email notification for order checkout ([f60eccc](https://github.com/Augno/api/commit/f60eccc6bdfdeea297320d6d4d13b90930681c57))
+* enhance email logging with recipient tracking and failed email logging ([8c4b20a](https://github.com/Augno/api/commit/8c4b20aa687d901a45ed69d871178ffbb63c3511))
+
 ## [0.41.10](https://github.com/Augno/api/compare/v0.41.9...v0.41.10) (2026-07-16)
 
 

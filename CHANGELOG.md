@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.41.10](https://github.com/Augno/api/compare/v0.41.9...v0.41.10) (2026-07-16)
+
+
+### Bug Fixes
+
+* add order checkout email template to template renderer ([31f5811](https://github.com/Augno/api/commit/31f581191767d1fa2bf2e23ea1ff09019dbd3715))
+
 ## [0.41.9](https://github.com/Augno/api/compare/v0.41.8...v0.41.9) (2026-07-15)
 
 

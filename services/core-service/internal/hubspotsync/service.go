@@ -189,13 +189,17 @@ func (s *service) clientForAccount(ctx context.Context, accountID string) (domai
 		return nil, false, nil
 	}
 
+	// Unreadable credentials are a permanent condition: a blob that won't decrypt or parse will fail identically on every retry, so classifying these as internal errors (which the platform treats as transient) would redeliver every order for this account forever. Authentication errors are non-transient and name the fix.
 	plaintext, err := crypto.DecryptAESGCM(encrypted, s.encryptionKey, []byte(accountID))
 	if err != nil {
-		return nil, false, apierror.NewInternalError(err, "Failed to decrypt HubSpot credentials.")
+		return nil, false, apierror.NewAuthenticationError("The stored HubSpot credentials could not be decrypted. Reconnect the HubSpot integration.")
 	}
 	var creds domain.HubspotCredentials
 	if err := json.Unmarshal(plaintext, &creds); err != nil {
-		return nil, false, apierror.NewInternalError(err, "Failed to parse HubSpot credentials.")
+		return nil, false, apierror.NewAuthenticationError("The stored HubSpot credentials could not be read. Reconnect the HubSpot integration.")
+	}
+	if creds.AccessToken == "" {
+		return nil, false, apierror.NewAuthenticationError("The HubSpot integration has no access token. Reconnect the HubSpot integration.")
 	}
 	return s.clientFactory.Build(creds.AccessToken), true, nil
 }

@@ -12,6 +12,27 @@ import (
 	"github.com/augno/api/shared/db"
 )
 
+const claimHubspotSyncJobForExecute = `-- name: ClaimHubspotSyncJobForExecute :execresult
+UPDATE hubspot_sync_job SET
+    status = 'executing',
+    last_error = NULL,
+    started_at = NOW(3),
+    updated_at = NOW(3)
+WHERE id = ?
+AND account_id = ?
+AND status IN ('review_pending', 'failed')
+`
+
+type ClaimHubspotSyncJobForExecuteParams struct {
+	ID        string
+	AccountID string
+}
+
+// Compare-and-swap a job into the executing phase. Matching on the current status makes this the concurrency gate for execute: only one caller can win the transition, so a double-click cannot dispatch two execute commands for the same job.
+func (q *Queries) ClaimHubspotSyncJobForExecute(ctx context.Context, arg ClaimHubspotSyncJobForExecuteParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, claimHubspotSyncJobForExecute, arg.ID, arg.AccountID)
+}
+
 const getHubspotSyncJob = `-- name: GetHubspotSyncJob :one
 SELECT
     id,
@@ -101,12 +122,10 @@ INSERT INTO hubspot_sync_job (
     id,
     account_id,
     status,
-    dry_run,
     golive_cutoff_at,
     created_at,
     updated_at
 ) VALUES (
-    ?,
     ?,
     ?,
     ?,
@@ -120,16 +139,15 @@ type InsertHubspotSyncJobParams struct {
 	ID             string
 	AccountID      string
 	Status         string
-	DryRun         bool
 	GoliveCutoffAt sql.NullTime
 }
 
+// dry_run is intentionally omitted: the preview pass is the dry run, so the column is vestigial and left to its default.
 func (q *Queries) InsertHubspotSyncJob(ctx context.Context, arg InsertHubspotSyncJobParams) error {
 	_, err := q.db.ExecContext(ctx, insertHubspotSyncJob,
 		arg.ID,
 		arg.AccountID,
 		arg.Status,
-		arg.DryRun,
 		arg.GoliveCutoffAt,
 	)
 	return err
@@ -140,7 +158,7 @@ UPDATE hubspot_sync_job SET
     status = COALESCE(?, status),
     cursors = COALESCE(?, cursors),
     counts = COALESCE(?, counts),
-    last_error = ?,
+    last_error = NULLIF(COALESCE(?, last_error), ''),
     started_at = COALESCE(?, started_at),
     completed_at = COALESCE(?, completed_at),
     updated_at = NOW(3)
@@ -152,7 +170,7 @@ type UpdateHubspotSyncJobParams struct {
 	Status      sql.NullString
 	Cursors     db.NullableRawMessage
 	Counts      db.NullableRawMessage
-	LastError   sql.NullString
+	LastError   interface{}
 	StartedAt   sql.NullTime
 	CompletedAt sql.NullTime
 	ID          string

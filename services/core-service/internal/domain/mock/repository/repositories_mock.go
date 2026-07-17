@@ -4356,6 +4356,21 @@ func (m *MockHubspotSyncRepo) EXPECT() *MockHubspotSyncRepoMockRecorder {
 	return m.recorder
 }
 
+// ClaimJobForExecute mocks base method.
+func (m *MockHubspotSyncRepo) ClaimJobForExecute(ctx context.Context, accountID, jobID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClaimJobForExecute", ctx, accountID, jobID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ClaimJobForExecute indicates an expected call of ClaimJobForExecute.
+func (mr *MockHubspotSyncRepoMockRecorder) ClaimJobForExecute(ctx, accountID, jobID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClaimJobForExecute", reflect.TypeOf((*MockHubspotSyncRepo)(nil).ClaimJobForExecute), ctx, accountID, jobID)
+}
+
 // CountPendingReviews mocks base method.
 func (m *MockHubspotSyncRepo) CountPendingReviews(ctx context.Context, jobID string) (int64, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -4459,6 +4474,21 @@ func (m *MockHubspotSyncRepo) GetReview(ctx context.Context, accountID, id strin
 func (mr *MockHubspotSyncRepoMockRecorder) GetReview(ctx, accountID, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReview", reflect.TypeOf((*MockHubspotSyncRepo)(nil).GetReview), ctx, accountID, id)
+}
+
+// ListRecords mocks base method.
+func (m *MockHubspotSyncRepo) ListRecords(ctx context.Context, params domain.ListHubspotSyncRecordsParams) (*domain.ListHubspotSyncRecordsResult, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListRecords", ctx, params)
+	ret0, _ := ret[0].(*domain.ListHubspotSyncRecordsResult)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListRecords indicates an expected call of ListRecords.
+func (mr *MockHubspotSyncRepoMockRecorder) ListRecords(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRecords", reflect.TypeOf((*MockHubspotSyncRepo)(nil).ListRecords), ctx, params)
 }
 
 // ListReviewsForJob mocks base method.

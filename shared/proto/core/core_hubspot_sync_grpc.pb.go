@@ -28,6 +28,8 @@ const (
 	CoreHubspotSyncService_ListHubspotCompanyReviews_FullMethodName   = "/core.CoreHubspotSyncService/ListHubspotCompanyReviews"
 	CoreHubspotSyncService_ResolveHubspotCompanyReview_FullMethodName = "/core.CoreHubspotSyncService/ResolveHubspotCompanyReview"
 	CoreHubspotSyncService_ExecuteHubspotSync_FullMethodName          = "/core.CoreHubspotSyncService/ExecuteHubspotSync"
+	CoreHubspotSyncService_CancelHubspotSync_FullMethodName           = "/core.CoreHubspotSyncService/CancelHubspotSync"
+	CoreHubspotSyncService_ListHubspotSyncRecords_FullMethodName      = "/core.CoreHubspotSyncService/ListHubspotSyncRecords"
 )
 
 // CoreHubspotSyncServiceClient is the client API for CoreHubspotSyncService service.
@@ -46,6 +48,10 @@ type CoreHubspotSyncServiceClient interface {
 	ResolveHubspotCompanyReview(ctx context.Context, in *ResolveHubspotCompanyReviewRequest, opts ...grpc.CallOption) (*HubspotCompanyReviewResponse, error)
 	// ExecuteHubspotSync kicks off the write phase for a reviewed job.
 	ExecuteHubspotSync(ctx context.Context, in *ExecuteHubspotSyncRequest, opts ...grpc.CallOption) (*HubspotSyncJobResponse, error)
+	// CancelHubspotSync force-fails an in-flight job so the account can start a new one.
+	CancelHubspotSync(ctx context.Context, in *CancelHubspotSyncRequest, opts ...grpc.CallOption) (*HubspotSyncJobResponse, error)
+	// ListHubspotSyncRecords pages the Augno->HubSpot mappings the sync has written.
+	ListHubspotSyncRecords(ctx context.Context, in *ListHubspotSyncRecordsRequest, opts ...grpc.CallOption) (*ListHubspotSyncRecordsResponse, error)
 }
 
 type coreHubspotSyncServiceClient struct {
@@ -116,6 +122,26 @@ func (c *coreHubspotSyncServiceClient) ExecuteHubspotSync(ctx context.Context, i
 	return out, nil
 }
 
+func (c *coreHubspotSyncServiceClient) CancelHubspotSync(ctx context.Context, in *CancelHubspotSyncRequest, opts ...grpc.CallOption) (*HubspotSyncJobResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(HubspotSyncJobResponse)
+	err := c.cc.Invoke(ctx, CoreHubspotSyncService_CancelHubspotSync_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreHubspotSyncServiceClient) ListHubspotSyncRecords(ctx context.Context, in *ListHubspotSyncRecordsRequest, opts ...grpc.CallOption) (*ListHubspotSyncRecordsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListHubspotSyncRecordsResponse)
+	err := c.cc.Invoke(ctx, CoreHubspotSyncService_ListHubspotSyncRecords_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CoreHubspotSyncServiceServer is the server API for CoreHubspotSyncService service.
 // All implementations must embed UnimplementedCoreHubspotSyncServiceServer
 // for forward compatibility.
@@ -132,6 +158,10 @@ type CoreHubspotSyncServiceServer interface {
 	ResolveHubspotCompanyReview(context.Context, *ResolveHubspotCompanyReviewRequest) (*HubspotCompanyReviewResponse, error)
 	// ExecuteHubspotSync kicks off the write phase for a reviewed job.
 	ExecuteHubspotSync(context.Context, *ExecuteHubspotSyncRequest) (*HubspotSyncJobResponse, error)
+	// CancelHubspotSync force-fails an in-flight job so the account can start a new one.
+	CancelHubspotSync(context.Context, *CancelHubspotSyncRequest) (*HubspotSyncJobResponse, error)
+	// ListHubspotSyncRecords pages the Augno->HubSpot mappings the sync has written.
+	ListHubspotSyncRecords(context.Context, *ListHubspotSyncRecordsRequest) (*ListHubspotSyncRecordsResponse, error)
 	mustEmbedUnimplementedCoreHubspotSyncServiceServer()
 }
 
@@ -159,6 +189,12 @@ func (UnimplementedCoreHubspotSyncServiceServer) ResolveHubspotCompanyReview(con
 }
 func (UnimplementedCoreHubspotSyncServiceServer) ExecuteHubspotSync(context.Context, *ExecuteHubspotSyncRequest) (*HubspotSyncJobResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ExecuteHubspotSync not implemented")
+}
+func (UnimplementedCoreHubspotSyncServiceServer) CancelHubspotSync(context.Context, *CancelHubspotSyncRequest) (*HubspotSyncJobResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CancelHubspotSync not implemented")
+}
+func (UnimplementedCoreHubspotSyncServiceServer) ListHubspotSyncRecords(context.Context, *ListHubspotSyncRecordsRequest) (*ListHubspotSyncRecordsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListHubspotSyncRecords not implemented")
 }
 func (UnimplementedCoreHubspotSyncServiceServer) mustEmbedUnimplementedCoreHubspotSyncServiceServer() {
 }
@@ -290,6 +326,42 @@ func _CoreHubspotSyncService_ExecuteHubspotSync_Handler(srv interface{}, ctx con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CoreHubspotSyncService_CancelHubspotSync_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelHubspotSyncRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreHubspotSyncServiceServer).CancelHubspotSync(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreHubspotSyncService_CancelHubspotSync_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreHubspotSyncServiceServer).CancelHubspotSync(ctx, req.(*CancelHubspotSyncRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreHubspotSyncService_ListHubspotSyncRecords_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListHubspotSyncRecordsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreHubspotSyncServiceServer).ListHubspotSyncRecords(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreHubspotSyncService_ListHubspotSyncRecords_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreHubspotSyncServiceServer).ListHubspotSyncRecords(ctx, req.(*ListHubspotSyncRecordsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CoreHubspotSyncService_ServiceDesc is the grpc.ServiceDesc for CoreHubspotSyncService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -320,6 +392,14 @@ var CoreHubspotSyncService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ExecuteHubspotSync",
 			Handler:    _CoreHubspotSyncService_ExecuteHubspotSync_Handler,
+		},
+		{
+			MethodName: "CancelHubspotSync",
+			Handler:    _CoreHubspotSyncService_CancelHubspotSync_Handler,
+		},
+		{
+			MethodName: "ListHubspotSyncRecords",
+			Handler:    _CoreHubspotSyncService_ListHubspotSyncRecords_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

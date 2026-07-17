@@ -155,6 +155,7 @@ const (
 	// {id}/{review_id} path params and the company-reviews list returns an item.
 	SeedHubspotSyncJobID       = "igjb_01seedhubspotjob1"
 	SeedHubspotCompanyReviewID = "igrv_01seedhubspotrev1"
+	SeedHubspotSyncRecordID    = "igrd_01seedhubspotrec1"
 
 	// Priorities
 	SeedPriorityID   = "pi_01seednormal0000000000"

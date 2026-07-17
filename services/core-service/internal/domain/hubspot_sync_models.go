@@ -6,6 +6,7 @@ import (
 	"time"
 
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/pagination"
 )
 
 // HubspotSyncSvc is the application service for the HubSpot backfill: starting a job (which dispatches the preview command), reading job status, managing the company-review queue, and triggering execute. The target account and authorization are derived from the request identity.
@@ -15,13 +16,16 @@ type HubspotSyncSvc interface {
 	GetCurrentJob(ctx context.Context) (*HubspotSyncJob, *apierror.APIError)
 	GetJob(ctx context.Context, jobID string) (*HubspotSyncJob, *apierror.APIError)
 	ListReviews(ctx context.Context, jobID string, status *string) ([]*HubspotCompanyReview, *apierror.APIError)
+	// ListRecords returns what the sync has actually written to HubSpot for the caller's account — the mapping the engine keeps, which is otherwise invisible.
+	ListRecords(ctx context.Context, params ListHubspotSyncRecordsParams) (*ListHubspotSyncRecordsResult, *apierror.APIError)
 	ResolveReview(ctx context.Context, params ResolveHubspotReviewParams) (*HubspotCompanyReview, *apierror.APIError)
 	StartExecute(ctx context.Context, jobID string) (*HubspotSyncJob, *apierror.APIError)
+	// CancelJob force-fails an in-flight job, releasing the account to start a new backfill after a worker died without recording an outcome.
+	CancelJob(ctx context.Context, jobID string) (*HubspotSyncJob, *apierror.APIError)
 }
 
 // StartHubspotBackfillParams starts a backfill. GoLiveCutoffAt bounds which historical orders become deals (nil = no deal backfill).
 type StartHubspotBackfillParams struct {
-	DryRun         bool
 	GoLiveCutoffAt *time.Time
 }
 
@@ -37,7 +41,6 @@ type HubspotSyncJob struct {
 	ID             string
 	AccountID      string     `audit:"account_id"`
 	Status         string     `audit:"status"`
-	DryRun         bool       `audit:"dry_run"`
 	GoLiveCutoffAt *time.Time `audit:"go_live_cutoff_at"`
 	Cursors        json.RawMessage
 	Counts         json.RawMessage
@@ -51,17 +54,17 @@ type HubspotSyncJob struct {
 type CreateHubspotSyncJobParams struct {
 	AccountID      string
 	Status         string
-	DryRun         bool
 	GoLiveCutoffAt *time.Time
 }
 
-// UpdateHubspotSyncJobParams patches a job. Nil status/cursors/counts/timestamps leave the existing value unchanged; LastError is always written (pass nil to clear it).
+// UpdateHubspotSyncJobParams patches a job. Nil fields leave the existing value unchanged, so a partial write (a cursor checkpoint, say) cannot erase an unrelated column.
 type UpdateHubspotSyncJobParams struct {
-	ID          string
-	AccountID   string
-	Status      *string
-	Cursors     json.RawMessage
-	Counts      json.RawMessage
+	ID        string
+	AccountID string
+	Status    *string
+	Cursors   json.RawMessage
+	Counts    json.RawMessage
+	// LastError is three-way: nil preserves the stored error, a non-empty string replaces it, and an empty string clears it.
 	LastError   *string
 	StartedAt   *time.Time
 	CompletedAt *time.Time
@@ -69,10 +72,12 @@ type UpdateHubspotSyncJobParams struct {
 
 // HubspotSyncRecord maps one Augno entity to its HubSpot counterpart, making sync idempotent across replays and re-runs.
 type HubspotSyncRecord struct {
-	ID           string
-	AccountID    string
-	AugnoType    string
-	AugnoID      string
+	ID        string
+	AccountID string
+	AugnoType string
+	AugnoID   string
+	// AugnoName is the display name of the mapped Augno entity, resolved by the list query. Empty when the entity no longer exists or was not joined.
+	AugnoName    string
 	HubspotType  string
 	HubspotID    string
 	SyncHash     *string
@@ -80,6 +85,20 @@ type HubspotSyncRecord struct {
 	LastError    *string
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
+}
+
+// ListHubspotSyncRecordsParams pages the account's Augno->HubSpot mappings. AugnoType is required: it keeps the keyset on the (account_id, augno_type, augno_id) index.
+type ListHubspotSyncRecordsParams struct {
+	AccountID string
+	AugnoType string
+	Cursor    *string
+	Limit     int32
+}
+
+// ListHubspotSyncRecordsResult is one page of mappings.
+type ListHubspotSyncRecordsResult struct {
+	Items    []*HubspotSyncRecord
+	PageInfo pagination.PageInfo
 }
 
 type UpsertHubspotSyncRecordParams struct {

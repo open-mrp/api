@@ -4,6 +4,7 @@ syntax = "proto3";
 package core;
 
 import "google/protobuf/timestamp.proto";
+import "core/core_identity_context.proto";
 
 option go_package = "shared/proto/core;core";
 
@@ -20,12 +21,32 @@ service CoreHubspotSyncService {
   rpc ResolveHubspotCompanyReview(ResolveHubspotCompanyReviewRequest) returns (HubspotCompanyReviewResponse);
   // ExecuteHubspotSync kicks off the write phase for a reviewed job.
   rpc ExecuteHubspotSync(ExecuteHubspotSyncRequest) returns (HubspotSyncJobResponse);
+  // CancelHubspotSync force-fails an in-flight job so the account can start a new one.
+  rpc CancelHubspotSync(CancelHubspotSyncRequest) returns (HubspotSyncJobResponse);
+  // ListHubspotSyncRecords pages the Augno->HubSpot mappings the sync has written.
+  rpc ListHubspotSyncRecords(ListHubspotSyncRecordsRequest) returns (ListHubspotSyncRecordsResponse);
+}
+
+message HubspotSyncRecordInfo {
+  string id = 1;
+  string augno_type = 2;
+  string augno_id = 3;
+  // Display name of the mapped Augno entity; empty when it no longer exists.
+  string augno_name = 4;
+  string hubspot_type = 5;
+  string hubspot_id = 6;
+  optional google.protobuf.Timestamp last_synced_at = 7;
+  optional string last_error = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
 }
 
 message HubspotSyncJobInfo {
   string id = 1;
   string status = 2;
-  bool dry_run = 3;
+  // 3 held dry_run, which was never honored: the preview pass is the dry run, and execute always wrote for real.
+  reserved 3;
+  reserved "dry_run";
   optional google.protobuf.Timestamp golive_cutoff_at = 4;
   // JSON-encoded dry-run report (PreviewCounts).
   string counts_json = 5;
@@ -51,7 +72,8 @@ message HubspotCompanyReviewInfo {
 }
 
 message StartHubspotBackfillRequest {
-  bool dry_run = 1;
+  reserved 1;
+  reserved "dry_run";
   optional google.protobuf.Timestamp golive_cutoff_at = 2;
 }
 
@@ -88,4 +110,20 @@ message HubspotCompanyReviewResponse {
 
 message ExecuteHubspotSyncRequest {
   string id = 1;
+}
+
+message CancelHubspotSyncRequest {
+  string id = 1;
+}
+
+message ListHubspotSyncRecordsRequest {
+  // Which Augno entity type to list (e.g. customer). Required: it anchors the keyset index.
+  string augno_type = 1;
+  optional string cursor = 2;
+  int32 limit = 3;
+}
+
+message ListHubspotSyncRecordsResponse {
+  repeated HubspotSyncRecordInfo records = 1;
+  PageInfo page_info = 2;
 }

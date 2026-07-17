@@ -35,17 +35,18 @@ func (s *service) RunExecute(ctx context.Context, accountID, jobID string) *apie
 
 	syncRepo := s.repos.NewHubspotSyncRepo()
 
+	// StartExecute has already claimed the job into the executing state, so every failure from here on has to land on the job — returning bare would strand it as permanently in-flight with nothing to explain why.
 	job, apiErr := syncRepo.GetJob(ctx, accountID, jobID)
 	if apiErr != nil {
-		return tracing.Trace(span, apiErr)
+		return tracing.Trace(span, s.failJob(ctx, accountID, jobID, apiErr))
 	}
 
 	pending, apiErr := syncRepo.CountPendingReviews(ctx, jobID)
 	if apiErr != nil {
-		return tracing.Trace(span, apiErr)
+		return tracing.Trace(span, s.failJob(ctx, accountID, jobID, apiErr))
 	}
 	if pending > 0 {
-		return tracing.Trace(span, apierror.NewValidationError(fmt.Sprintf("Resolve all %d pending company reviews before executing the sync.", pending)))
+		return tracing.Trace(span, s.failJob(ctx, accountID, jobID, apierror.NewValidationError(fmt.Sprintf("Resolve all %d pending company reviews before executing the sync.", pending))))
 	}
 
 	client, connected, apiErr := s.clientForAccount(ctx, accountID)

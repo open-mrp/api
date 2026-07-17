@@ -382,9 +382,13 @@ type HubspotSyncRepo interface {
 	GetJob(ctx context.Context, accountID, id string) (*HubspotSyncJob, *apierror.APIError)
 	GetLatestJobForAccount(ctx context.Context, accountID string) (*HubspotSyncJob, *apierror.APIError)
 	UpdateJob(ctx context.Context, params UpdateHubspotSyncJobParams) *apierror.APIError
+	// ClaimJobForExecute atomically moves a review_pending/failed job to executing, reporting whether this caller won the transition. Losing means another execute already claimed the job.
+	ClaimJobForExecute(ctx context.Context, accountID, jobID string) (bool, *apierror.APIError)
 
 	UpsertRecord(ctx context.Context, params UpsertHubspotSyncRecordParams) *apierror.APIError
 	GetRecord(ctx context.Context, accountID, augnoType, augnoID string) (*HubspotSyncRecord, *apierror.APIError)
+	// ListRecords pages the account's mappings for one Augno type, resolving each entity's display name.
+	ListRecords(ctx context.Context, params ListHubspotSyncRecordsParams) (*ListHubspotSyncRecordsResult, *apierror.APIError)
 
 	CreateReview(ctx context.Context, params CreateHubspotCompanyReviewParams) (*HubspotCompanyReview, *apierror.APIError)
 	GetReview(ctx context.Context, accountID, id string) (*HubspotCompanyReview, *apierror.APIError)

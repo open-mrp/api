@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -112,7 +113,6 @@ func (s *hubspotSyncSvcImpl) StartBackfill(ctx context.Context, params domain.St
 			created, e := syncRepo.CreateJob(txCtx, domain.CreateHubspotSyncJobParams{
 				AccountID:      accountID,
 				Status:         hubspotsync.StatusPreviewing,
-				DryRun:         params.DryRun,
 				GoLiveCutoffAt: params.GoLiveCutoffAt,
 			})
 			if e != nil {
@@ -189,6 +189,19 @@ func (s *hubspotSyncSvcImpl) ListReviews(ctx context.Context, jobID string, stat
 	}
 	reviews, apiErr := s.repos.NewHubspotSyncRepo().ListReviewsForJob(ctx, jobID, status)
 	return reviews, tracing.Trace(span, apiErr)
+}
+
+// ListRecords returns the account's Augno->HubSpot mappings: what the sync has actually written. The account is taken from the identity, never the request, so a caller cannot read another tenant's mappings.
+func (s *hubspotSyncSvcImpl) ListRecords(ctx context.Context, params domain.ListHubspotSyncRecordsParams) (*domain.ListHubspotSyncRecordsResult, *apierror.APIError) {
+	ctx, span := hubspotSyncSvcTracer.Start(ctx, "service.hubspot_sync.list_records")
+	defer span.End()
+	identity, apiErr := s.authorize(ctx, types.ActionRead)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	params.AccountID = identity.Target.AccountID
+	result, apiErr := s.repos.NewHubspotSyncRepo().ListRecords(ctx, params)
+	return result, tracing.Trace(span, apiErr)
 }
 
 // ResolveReview records a human resolution for one ambiguous company review, under idempotency-key recovery points.
@@ -313,6 +326,10 @@ func (s *hubspotSyncSvcImpl) StartExecute(ctx context.Context, jobID string) (*d
 			if current.Status != hubspotsync.StatusReviewPending && current.Status != hubspotsync.StatusFailed {
 				return apierror.NewValidationError("The sync must be awaiting review (or a failed run) before it can be executed.")
 			}
+			// A job that failed during preview has no company matches for the customers it never reached, and no review rows for them either — so the pending-review gate below would pass and execute would blind-create a duplicate company for every one of them. RunPreview writes counts only once it has classified every customer, so counts is the completion marker.
+			if len(current.Counts) == 0 {
+				return apierror.NewValidationError("This sync's preview did not finish, so its company matches are incomplete. Start a new sync instead.")
+			}
 			pending, e := repo.CountPendingReviews(txCtx, jobID)
 			if e != nil {
 				return e
@@ -320,9 +337,98 @@ func (s *hubspotSyncSvcImpl) StartExecute(ctx context.Context, jobID string) (*d
 			if pending > 0 {
 				return apierror.NewValidationError(fmt.Sprintf("Resolve all %d pending company reviews before executing the sync.", pending))
 			}
-			job = current
+
+			// Claiming the job is what makes execute single-flight: the read above cannot serialize concurrent callers on its own, so without this a double-click would publish two execute commands and race two workers into creating duplicate HubSpot companies.
+			claimed, e := repo.ClaimJobForExecute(txCtx, accountID, jobID)
+			if e != nil {
+				return e
+			}
+			if !claimed {
+				return apierror.NewValidationError("This sync is already running.")
+			}
+			job, e = repo.GetJob(txCtx, accountID, jobID)
+			if e != nil {
+				return e
+			}
 
 			if e := s.publisher.PublishExecute(txCtx, messaging.HubspotSyncCommandData{JobID: jobID, AccountID: accountID}); e != nil {
+				return e
+			}
+			return meds.Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, job)
+		})
+		if apiErr != nil {
+			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
+		}
+		return job, nil
+
+	default:
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
+	}
+}
+
+// CancelJob force-fails an in-flight job so the account can start a new backfill. This is the escape hatch for a job whose worker died before it could record an outcome (pod restart, OOM, a lost status write): isJobInFlight blocks StartBackfill on such a job forever, and nothing else can move it. Cancelling stops the account from being wedged; it does not recall writes already made to HubSpot.
+func (s *hubspotSyncSvcImpl) CancelJob(ctx context.Context, jobID string) (*domain.HubspotSyncJob, *apierror.APIError) {
+	ctx, span := hubspotSyncSvcTracer.Start(ctx, "service.hubspot_sync.cancel_job")
+	defer span.End()
+	identity, apiErr := s.authorize(ctx, types.ActionUpdate)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	accountID := identity.Target.AccountID
+
+	meds := s.mediators()
+	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
+	case domain.RecoveryPointFinished:
+		cached, err := idempotency.UnmarshalCachedResponse[domain.HubspotSyncJob](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		if err != nil {
+			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
+		}
+		return cached.Data, cached.Error
+
+	case domain.RecoveryPointStarted:
+		var job *domain.HubspotSyncJob
+		apiErr = s.txManager.WithTx(ctx, func(txCtx context.Context, txRepos domain.RepoFactory) *apierror.APIError {
+			txCtx = event.WithRepos(txCtx, txRepos)
+			repo := txRepos.NewHubspotSyncRepo()
+
+			old, e := repo.GetJob(txCtx, accountID, jobID)
+			if e != nil {
+				return e
+			}
+			if !isJobInFlight(old.Status) {
+				return apierror.NewValidationError("Only a sync that is still in progress can be cancelled.")
+			}
+
+			now := time.Now().UTC()
+			cancelled := hubspotsync.StatusFailed
+			reason := "Cancelled by " + identity.Actor.ID + "."
+			if e := repo.UpdateJob(txCtx, domain.UpdateHubspotSyncJobParams{
+				ID:          jobID,
+				AccountID:   accountID,
+				Status:      &cancelled,
+				LastError:   &reason,
+				CompletedAt: &now,
+			}); e != nil {
+				return e
+			}
+			updated, e := repo.GetJob(txCtx, accountID, jobID)
+			if e != nil {
+				return e
+			}
+			job = updated
+
+			if e := audit.NewPublisher().Publish(txCtx, txRepos.NewOutboxRepo(), audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       constants.AuditActionUpdate,
+				ResourceType: constants.ObjectTypeHubspotSyncJob,
+				ResourceID:   updated.ID,
+				Changes:      audit.ComputeChanges(old, updated),
+			}); e != nil {
 				return e
 			}
 			return meds.Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, job)

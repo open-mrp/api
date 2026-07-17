@@ -22,8 +22,6 @@ type HubspotSyncJob struct {
 	// - `completed`: finished.
 	// - `failed`: stopped on an error (see `last_error`); re-run to resume.
 	Status constants.HubspotSyncJobStatus `json:"status" validate:"required"`
-	// Whether this run is in dry-run/preview mode.
-	DryRun bool `json:"dry_run"`
 	// Orders placed on or after this instant are backfilled as Closed-Won deals.
 	//
 	// When unset, no historical deals are created; companies and contacts still sync.
@@ -58,6 +56,34 @@ type HubspotSyncReport struct {
 	CompaniesToCreate int `json:"companies_to_create"`
 	// Customers with an email — contact upsert candidates.
 	ContactsWithEmail int `json:"contacts_with_email"`
+}
+
+// One Augno record that has been written to HubSpot, and where it landed.
+type HubspotSyncRecord struct {
+	// Sync record ID.
+	ID string `json:"id" validate:"required"`
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=hubspot_sync_record"`
+	// The kind of Augno record that was synced.
+	AugnoType constants.HubspotSyncRecordAugnoType `json:"augno_type" validate:"required"`
+	// ID of the Augno record that was synced.
+	AugnoID string `json:"augno_id" validate:"required"`
+	// Name of the Augno record that was synced.
+	//
+	// Empty when the record has since been deleted.
+	AugnoName string `json:"augno_name"`
+	// The kind of HubSpot object it maps to.
+	HubspotType constants.HubspotSyncRecordHubspotType `json:"hubspot_type" validate:"required"`
+	// ID of the HubSpot object it maps to.
+	HubspotID string `json:"hubspot_id" validate:"required"`
+	// When this record was last pushed to HubSpot.
+	LastSyncedAt *time.Time `json:"last_synced_at"`
+	// Failure detail from the last attempt to sync this record.
+	LastError *string `json:"last_error"`
+	// Creation timestamp.
+	CreatedAt time.Time `json:"created_at" validate:"required"`
+	// Last updated timestamp.
+	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
 // One customer that needs a human company-match decision before the backfill can write to HubSpot.
@@ -112,7 +138,6 @@ var SampleHubspotSyncJob = &HubspotSyncJob{
 	ID:             SampleHubspotSyncJobID,
 	Object:         constants.ObjectTypeHubspotSyncJob,
 	Status:         constants.HubspotSyncJobStatusReviewPending,
-	DryRun:         true,
 	GoLiveCutoffAt: &sampleHubspotGoLiveCutoffAt,
 	Report: &HubspotSyncReport{
 		Object:             constants.ObjectTypeHubspotSyncReport,
@@ -146,4 +171,23 @@ var SampleHubspotCompanyReview = &HubspotCompanyReview{
 
 func (*HubspotCompanyReview) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleHubspotCompanyReview)
+}
+
+var sampleHubspotSyncRecordSyncedAt = timeutil.TimestampToTime(sampleUpdatedAtTimestamp)
+
+var SampleHubspotSyncRecord = &HubspotSyncRecord{
+	ID:           "igrd_8k2mn4qp7wxz",
+	Object:       constants.ObjectTypeHubspotSyncRecord,
+	AugnoType:    constants.HubspotSyncRecordAugnoTypeCustomer,
+	AugnoID:      SampleCustomer.ID,
+	AugnoName:    SampleCustomer.Name,
+	HubspotType:  constants.HubspotSyncRecordHubspotTypeCompanies,
+	HubspotID:    "12345",
+	LastSyncedAt: &sampleHubspotSyncRecordSyncedAt,
+	CreatedAt:    timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:    timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+}
+
+func (*HubspotSyncRecord) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleHubspotSyncRecord)
 }

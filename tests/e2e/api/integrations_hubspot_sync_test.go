@@ -226,4 +226,36 @@ func TestHubspotSync_ReadThenResolve(t *testing.T) {
 			requireErrorResponse(t, body, "", "invalid_request_error")
 		}
 	})
+
+	t.Run("list-sync-records-returns-seed-mapping", func(t *testing.T) {
+		list, code, err := apiClient.GetList(hubspotSyncPath+"/records", url.Values{"augno_type": {"customer"}})
+		require.NoError(t, err)
+		require.Equal(t, 200, code, "listing sync records")
+
+		var seedRecord map[string]any
+		for _, raw := range list.Data {
+			rec := parseJSON(raw)
+			assertObjectField(t, rec, "hubspot_sync_record")
+			if jsonField(rec, "id") == SeedHubspotSyncRecordID {
+				seedRecord = rec
+			}
+		}
+		require.NotNil(t, seedRecord, "the seeded sync record is listed")
+		assert.Equal(t, "customer", jsonField(seedRecord, "augno_type"))
+		assert.Equal(t, "companies", jsonField(seedRecord, "hubspot_type"))
+		assert.Equal(t, "hs_company_1001", jsonField(seedRecord, "hubspot_id"))
+		// augno_name is resolved by joining the mapped customer, not stored on the record.
+		assert.NotEmpty(t, jsonField(seedRecord, "augno_name"), "the mapped customer's name is resolved")
+	})
+
+	t.Run("list-sync-records-cross-account-isolation", func(t *testing.T) {
+		tenantB := apiClient.WithBearerToken(SeedTenantBAPIKey, SeedTenantBAccountID)
+		list, code, err := tenantB.GetList(hubspotSyncPath+"/records", url.Values{"augno_type": {"customer"}})
+		require.NoError(t, err)
+		require.Equal(t, 200, code, "tenant B lists its own (empty) records, never the seed account's")
+		for _, raw := range list.Data {
+			assert.NotEqual(t, SeedHubspotSyncRecordID, DataItemField(raw, "id"),
+				"tenant B must not see the seed account's sync record")
+		}
+	})
 }

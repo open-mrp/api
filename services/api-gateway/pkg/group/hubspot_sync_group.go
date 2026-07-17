@@ -48,6 +48,8 @@ func (*HubspotSyncEndpointGroup) Materialize(config *HubspotSyncEndpointGroupCon
 	createNewReviewEndpoint := apiendpoint.From(&hubspotsyncep.CreateNewHubspotCompanyReviewEndpoint{}).WithService(inner, svc)
 	skipReviewEndpoint := apiendpoint.From(&hubspotsyncep.SkipHubspotCompanyReviewEndpoint{}).WithService(inner, svc)
 	executeEndpoint := apiendpoint.From(&hubspotsyncep.ExecuteHubspotSyncEndpoint{}).WithService(inner, svc)
+	cancelEndpoint := apiendpoint.From(&hubspotsyncep.CancelHubspotSyncEndpoint{}).WithService(inner, svc)
+	listRecordsEndpoint := apiendpoint.From(&hubspotsyncep.ListHubspotSyncRecordsEndpoint{}).WithService(inner, svc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		startEndpoint,
@@ -58,6 +60,8 @@ func (*HubspotSyncEndpointGroup) Materialize(config *HubspotSyncEndpointGroupCon
 		createNewReviewEndpoint,
 		skipReviewEndpoint,
 		executeEndpoint,
+		cancelEndpoint,
+		listRecordsEndpoint,
 	}
 
 	return &HubspotSyncEndpointGroup{inner}

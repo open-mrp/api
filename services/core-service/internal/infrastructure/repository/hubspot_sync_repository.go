@@ -5,12 +5,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/id"
+	"github.com/augno/api/shared/pagination"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -39,7 +41,6 @@ func (r *hubspotSyncRepoImpl) CreateJob(ctx context.Context, params domain.Creat
 		ID:             jobID,
 		AccountID:      params.AccountID,
 		Status:         params.Status,
-		DryRun:         params.DryRun,
 		GoliveCutoffAt: db.NullTimePtr(params.GoLiveCutoffAt),
 	}); err != nil {
 		return nil, tracing.Trace(span, db.MapSQLError(err))
@@ -93,6 +94,21 @@ func (r *hubspotSyncRepoImpl) UpdateJob(ctx context.Context, params domain.Updat
 	return nil
 }
 
+func (r *hubspotSyncRepoImpl) ClaimJobForExecute(ctx context.Context, accountID, jobID string) (bool, *apierror.APIError) {
+	ctx, span := hubspotSyncRepoTracer.Start(ctx, "repository.hubspot_sync.claim_job_for_execute")
+	defer span.End()
+
+	res, err := r.queries.ClaimHubspotSyncJobForExecute(ctx, sqlc.ClaimHubspotSyncJobForExecuteParams{ID: jobID, AccountID: accountID})
+	if err != nil {
+		return false, tracing.Trace(span, db.MapSQLError(err))
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return false, tracing.Trace(span, db.MapSQLError(err))
+	}
+	return affected > 0, nil
+}
+
 // --- Records ---
 
 func (r *hubspotSyncRepoImpl) UpsertRecord(ctx context.Context, params domain.UpsertHubspotSyncRecordParams) *apierror.APIError {
@@ -116,6 +132,56 @@ func (r *hubspotSyncRepoImpl) UpsertRecord(ctx context.Context, params domain.Up
 		return tracing.Trace(span, db.MapSQLError(err))
 	}
 	return nil
+}
+
+// ListRecords pages the account's mappings for one Augno type. Pagination is forward-only: the keyset rides the (account_id, augno_type, augno_id) unique index, and augno_id — not created_at — is the ordering key, so there is no backward branch to mirror.
+func (r *hubspotSyncRepoImpl) ListRecords(ctx context.Context, params domain.ListHubspotSyncRecordsParams) (*domain.ListHubspotSyncRecordsResult, *apierror.APIError) {
+	ctx, span := hubspotSyncRepoTracer.Start(ctx, "repository.hubspot_sync.list_records")
+	defer span.End()
+
+	var after sql.NullString
+	if params.Cursor != nil {
+		cur, err := pagination.DecodeStringCursor(*params.Cursor)
+		if err != nil {
+			return nil, tracing.Trace(span, apierror.NewValidationError("Invalid pagination cursor."))
+		}
+		after = sql.NullString{String: cur.ID, Valid: true}
+	}
+
+	// Over-fetch by one so BuildPageString can tell whether another page exists.
+	rows, err := r.queries.ListHubspotSyncRecords(ctx, sqlc.ListHubspotSyncRecordsParams{
+		AccountID: params.AccountID,
+		AugnoType: params.AugnoType,
+		Cursor:    after,
+		Limit:     params.Limit + 1,
+	})
+	if err != nil {
+		return nil, tracing.Trace(span, db.MapSQLError(err))
+	}
+
+	items := make([]*domain.HubspotSyncRecord, len(rows))
+	for i, row := range rows {
+		items[i] = &domain.HubspotSyncRecord{
+			ID:           row.ID,
+			AccountID:    row.AccountID,
+			AugnoType:    row.AugnoType,
+			AugnoID:      row.AugnoID,
+			AugnoName:    row.AugnoName,
+			HubspotType:  row.HubspotType,
+			HubspotID:    row.HubspotID,
+			SyncHash:     db.StringFromNullString(row.SyncHash),
+			LastSyncedAt: db.TimeFromNullTime(row.LastSyncedAt),
+			LastError:    db.StringFromNullString(row.LastError),
+			CreatedAt:    row.CreatedAt,
+			UpdatedAt:    row.UpdatedAt,
+		}
+	}
+
+	page, pageInfo := pagination.BuildPageString(items, params.Limit, nil,
+		func(r *domain.HubspotSyncRecord) time.Time { return r.CreatedAt },
+		func(r *domain.HubspotSyncRecord) string { return r.AugnoID },
+	)
+	return &domain.ListHubspotSyncRecordsResult{Items: page, PageInfo: pageInfo}, nil
 }
 
 // GetRecord returns the mapping for an Augno entity, or (nil, nil) when none exists.
@@ -238,7 +304,6 @@ func mapJob(row sqlc.HubspotSyncJob) *domain.HubspotSyncJob {
 		ID:             row.ID,
 		AccountID:      row.AccountID,
 		Status:         row.Status,
-		DryRun:         row.DryRun,
 		GoLiveCutoffAt: db.TimeFromNullTime(row.GoliveCutoffAt),
 		Cursors:        json.RawMessage(row.Cursors),
 		Counts:         json.RawMessage(row.Counts),

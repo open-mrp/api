@@ -843,6 +843,7 @@ resources:
                   create: post /v1/settings/integrations/hubspot/sync
                   retrieve_current: get /v1/settings/integrations/hubspot/sync/current
                   retrieve: get /v1/settings/integrations/hubspot/sync/{id}
+                  retrieve_records: get /v1/settings/integrations/hubspot/sync/records
                 subresources:
                   company_reviews:
                     methods:
@@ -863,9 +864,12 @@ resources:
                   actions:
                     methods:
                       execute: post /v1/settings/integrations/hubspot/sync/{id}/actions/execute
+                      cancel: post /v1/settings/integrations/hubspot/sync/{id}/actions/cancel
                 models:
                   hubspot_sync_job: '#/components/schemas/HubspotSyncJob'
+                  hubspot_sync_record: '#/components/schemas/HubspotSyncRecord'
                   hubspot_sync_report: '#/components/schemas/HubspotSyncReport'
+                  list_hubspot_sync_record: '#/components/schemas/List_HubspotSyncRecord'
                   start_hubspot_sync_request: '#/components/schemas/StartHubspotSyncRequest'
         models:
           account_integration: '#/components/schemas/AccountIntegration'

@@ -23,6 +23,8 @@ type HubspotSyncSvc interface {
 	StartSync(ctx context.Context, req *StartHubspotSyncRequest) (*apiresource.HubspotSyncJob, *apierror.APIError)
 	GetCurrentSyncJob(ctx context.Context, req *GetCurrentHubspotSyncRequest) (*apiresource.HubspotSyncJob, *apierror.APIError)
 	GetSyncJob(ctx context.Context, req *GetHubspotSyncJobRequest) (*apiresource.HubspotSyncJob, *apierror.APIError)
+	CancelSync(ctx context.Context, req *CancelHubspotSyncRequest) (*apiresource.HubspotSyncJob, *apierror.APIError)
+	ListSyncRecords(ctx context.Context, req *ListHubspotSyncRecordsRequest) (*apiresource.List[apiresource.HubspotSyncRecord], *apierror.APIError)
 	ListCompanyReviews(ctx context.Context, req *ListHubspotCompanyReviewsRequest) (*apiresource.List[apiresource.HubspotCompanyReview], *apierror.APIError)
 	LinkCompanyReview(ctx context.Context, req *LinkHubspotCompanyReviewRequest) (*apiresource.HubspotCompanyReview, *apierror.APIError)
 	CreateNewCompanyReview(ctx context.Context, req *CreateNewHubspotCompanyReviewRequest) (*apiresource.HubspotCompanyReview, *apierror.APIError)
@@ -57,7 +59,7 @@ func NewHubspotSyncSvc(config *HubspotSyncSvcConfig) HubspotSyncSvc {
 }
 
 func (m *hubspotSyncSvcImpl) StartSync(ctx context.Context, req *StartHubspotSyncRequest) (*apiresource.HubspotSyncJob, *apierror.APIError) {
-	pbReq := &pb.StartHubspotBackfillRequest{DryRun: true}
+	pbReq := &pb.StartHubspotBackfillRequest{}
 	if cutoff, ok := req.GoLiveCutoffAt.Value(); ok {
 		pbReq.GoliveCutoffAt = timestamppb.New(cutoff)
 	}
@@ -91,6 +93,36 @@ func (m *hubspotSyncSvcImpl) GetSyncJob(ctx context.Context, req *GetHubspotSync
 		return nil, apiErr
 	}
 	return hubspotSyncJobFromProto(resp.Job), nil
+}
+
+func (m *hubspotSyncSvcImpl) CancelSync(ctx context.Context, req *CancelHubspotSyncRequest) (*apiresource.HubspotSyncJob, *apierror.APIError) {
+	resp, apiErr := grpcutil.CallRPC(ctx, hubspotSyncSvcTracer, "service.hubspot-sync.cancel", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.HubspotSyncJobResponse, error) {
+			return m.coreClient.CancelHubspotSync(ctx, &pb.CancelHubspotSyncRequest{Id: req.JobID}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	return hubspotSyncJobFromProto(resp.Job), nil
+}
+
+func (m *hubspotSyncSvcImpl) ListSyncRecords(ctx context.Context, req *ListHubspotSyncRecordsRequest) (*apiresource.List[apiresource.HubspotSyncRecord], *apierror.APIError) {
+	resp, apiErr := grpcutil.CallRPC(ctx, hubspotSyncSvcTracer, "service.hubspot-sync.list_records", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListHubspotSyncRecordsResponse, error) {
+			return m.coreClient.ListHubspotSyncRecords(ctx, &pb.ListHubspotSyncRecordsRequest{
+				AugnoType: string(req.AugnoType),
+				Cursor:    req.Cursor,
+				Limit:     req.Limit,
+			}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	items := make([]apiresource.HubspotSyncRecord, 0, len(resp.Records))
+	for _, record := range resp.Records {
+		items = append(items, *hubspotSyncRecordFromProto(record))
+	}
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
 
 func (m *hubspotSyncSvcImpl) ListCompanyReviews(ctx context.Context, req *ListHubspotCompanyReviewsRequest) (*apiresource.List[apiresource.HubspotCompanyReview], *apierror.APIError) {
@@ -155,7 +187,6 @@ func hubspotSyncJobFromProto(p *pb.HubspotSyncJobInfo) *apiresource.HubspotSyncJ
 		ID:             p.Id,
 		Object:         constants.ObjectTypeHubspotSyncJob,
 		Status:         constants.HubspotSyncJobStatus(p.Status),
-		DryRun:         p.DryRun,
 		GoLiveCutoffAt: timePtr(p.GoliveCutoffAt),
 		LastError:      p.LastError,
 		StartedAt:      timePtr(p.StartedAt),
@@ -171,6 +202,22 @@ func hubspotSyncJobFromProto(p *pb.HubspotSyncJobInfo) *apiresource.HubspotSyncJ
 		}
 	}
 	return job
+}
+
+func hubspotSyncRecordFromProto(p *pb.HubspotSyncRecordInfo) *apiresource.HubspotSyncRecord {
+	return &apiresource.HubspotSyncRecord{
+		ID:           p.Id,
+		Object:       constants.ObjectTypeHubspotSyncRecord,
+		AugnoType:    constants.HubspotSyncRecordAugnoType(p.AugnoType),
+		AugnoID:      p.AugnoId,
+		AugnoName:    p.AugnoName,
+		HubspotType:  constants.HubspotSyncRecordHubspotType(p.HubspotType),
+		HubspotID:    p.HubspotId,
+		LastSyncedAt: timePtr(p.LastSyncedAt),
+		LastError:    p.LastError,
+		CreatedAt:    grpcutil.TimestampToTime(p.CreatedAt),
+		UpdatedAt:    grpcutil.TimestampToTime(p.UpdatedAt),
+	}
 }
 
 func hubspotCompanyReviewFromProto(p *pb.HubspotCompanyReviewInfo) *apiresource.HubspotCompanyReview {

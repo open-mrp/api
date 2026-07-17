@@ -185,14 +185,16 @@ func (s *service) loadCompanyIndex(ctx context.Context, client domain.HubspotCli
 		}
 		for _, company := range page {
 			candidate := CompanyCandidate{HubspotID: company.ID, Name: company.Name, Domain: company.Domain}
-			if d := strings.ToLower(strings.TrimSpace(company.Domain)); d != "" {
+			// Index through deriveDomain, the same normalizer the customer side uses. HubSpot's domain property is free text, so it routinely holds "www.acme.com" or "https://acme.com"; keying those verbatim would miss the customer's derived "acme.com" and create a duplicate company alongside the one we should have matched.
+			if d := deriveDomain(&company.Domain); d != "" {
 				byDomain[d] = append(byDomain[d], candidate)
 			}
 			if n := strings.ToLower(strings.TrimSpace(company.Name)); n != "" {
 				byName[n] = append(byName[n], candidate)
 			}
 		}
-		if next == "" {
+		// A cursor that fails to advance would spin here forever against a live portal, so treat a repeat as exhaustion rather than trusting the remote to terminate the loop.
+		if next == "" || next == cursor {
 			break
 		}
 		cursor = next

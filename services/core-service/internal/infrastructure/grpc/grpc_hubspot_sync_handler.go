@@ -28,7 +28,7 @@ func (h *hubspotSyncGRPCHandler) StartHubspotBackfill(ctx context.Context, req *
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
-	params := domain.StartHubspotBackfillParams{DryRun: req.DryRun}
+	params := domain.StartHubspotBackfillParams{}
 	if req.GoliveCutoffAt != nil {
 		t := req.GoliveCutoffAt.AsTime()
 		params.GoLiveCutoffAt = &t
@@ -110,11 +110,72 @@ func (h *hubspotSyncGRPCHandler) ExecuteHubspotSync(ctx context.Context, req *pb
 	return &pb.HubspotSyncJobResponse{Job: hubspotSyncJobToProto(job)}, nil
 }
 
+func (h *hubspotSyncGRPCHandler) CancelHubspotSync(ctx context.Context, req *pb.CancelHubspotSyncRequest) (*pb.HubspotSyncJobResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	job, apiErr := h.svc.CancelJob(ctx, req.Id)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	return &pb.HubspotSyncJobResponse{Job: hubspotSyncJobToProto(job)}, nil
+}
+
+func (h *hubspotSyncGRPCHandler) ListHubspotSyncRecords(ctx context.Context, req *pb.ListHubspotSyncRecordsRequest) (*pb.ListHubspotSyncRecordsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	result, apiErr := h.svc.ListRecords(ctx, domain.ListHubspotSyncRecordsParams{
+		AugnoType: req.AugnoType,
+		Cursor:    req.Cursor,
+		Limit:     req.Limit,
+	})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	records := make([]*pb.HubspotSyncRecordInfo, 0, len(result.Items))
+	for _, record := range result.Items {
+		records = append(records, hubspotSyncRecordToProto(record))
+	}
+	return &pb.ListHubspotSyncRecordsResponse{
+		Records: records,
+		PageInfo: &pb.PageInfo{
+			NextCursor:  result.PageInfo.NextCursor,
+			PrevCursor:  result.PageInfo.PrevCursor,
+			HasNextPage: result.PageInfo.HasNextPage,
+			HasPrevPage: result.PageInfo.HasPrevPage,
+		},
+	}, nil
+}
+
+func hubspotSyncRecordToProto(record *domain.HubspotSyncRecord) *pb.HubspotSyncRecordInfo {
+	info := &pb.HubspotSyncRecordInfo{
+		Id:          record.ID,
+		AugnoType:   record.AugnoType,
+		AugnoId:     record.AugnoID,
+		AugnoName:   record.AugnoName,
+		HubspotType: record.HubspotType,
+		HubspotId:   record.HubspotID,
+		LastError:   record.LastError,
+		CreatedAt:   timestamppb.New(record.CreatedAt),
+		UpdatedAt:   timestamppb.New(record.UpdatedAt),
+	}
+	if record.LastSyncedAt != nil {
+		info.LastSyncedAt = timestamppb.New(*record.LastSyncedAt)
+	}
+	return info
+}
+
 func hubspotSyncJobToProto(job *domain.HubspotSyncJob) *pb.HubspotSyncJobInfo {
 	info := &pb.HubspotSyncJobInfo{
 		Id:         job.ID,
 		Status:     job.Status,
-		DryRun:     job.DryRun,
 		CountsJson: string(job.Counts),
 		LastError:  job.LastError,
 		CreatedAt:  timestamppb.New(job.CreatedAt),

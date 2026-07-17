@@ -116,6 +116,8 @@ var typeRegistry = map[string]any{
 	"AccountIntegrationStatus":        AccountIntegrationStatus(""),
 	"HubspotSyncJobStatus":            HubspotSyncJobStatus(""),
 	"HubspotCompanyReviewStatus":      HubspotCompanyReviewStatus(""),
+	"HubspotSyncRecordAugnoType":      HubspotSyncRecordAugnoType(""),
+	"HubspotSyncRecordHubspotType":    HubspotSyncRecordHubspotType(""),
 	"AccountMode":                     AccountMode(""),
 	"AccountStatusCode":               AccountStatusCode(""),
 	"AccountTypeCode":                 AccountTypeCode(""),

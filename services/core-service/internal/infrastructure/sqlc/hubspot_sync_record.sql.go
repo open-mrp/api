@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"time"
 )
 
 const getHubspotSyncRecord = `-- name: GetHubspotSyncRecord :one
@@ -52,6 +53,97 @@ func (q *Queries) GetHubspotSyncRecord(ctx context.Context, arg GetHubspotSyncRe
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const listHubspotSyncRecords = `-- name: ListHubspotSyncRecords :many
+SELECT
+    r.id,
+    r.account_id,
+    r.augno_type,
+    r.augno_id,
+    r.hubspot_type,
+    r.hubspot_id,
+    r.sync_hash,
+    r.last_synced_at,
+    r.last_error,
+    r.created_at,
+    r.updated_at,
+    COALESCE(NULLIF(ar.alias, ''), a.name) AS augno_name
+FROM hubspot_sync_record r
+LEFT JOIN account_relation ar ON ar.owner_account_id = r.account_id AND ar.counterparty_account_id = r.augno_id
+LEFT JOIN account a ON a.id = r.augno_id
+WHERE r.account_id = ?
+AND r.augno_type = ?
+AND (? IS NULL OR r.augno_id > ?)
+ORDER BY r.augno_id ASC
+LIMIT ?
+`
+
+type ListHubspotSyncRecordsParams struct {
+	AccountID string
+	AugnoType string
+	Cursor    sql.NullString
+	Limit     int32
+}
+
+type ListHubspotSyncRecordsRow struct {
+	ID           string
+	AccountID    string
+	AugnoType    string
+	AugnoID      string
+	HubspotType  string
+	HubspotID    string
+	SyncHash     sql.NullString
+	LastSyncedAt sql.NullTime
+	LastError    sql.NullString
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	AugnoName    string
+}
+
+// Lists what the sync has actually written to HubSpot, newest mappings resolvable by name.
+// Keyset paginates on augno_id so the (account_id, augno_type, augno_id) unique key drives both the filter and the ordering; the joins are PK lookups off that. augno_type is required rather than optional precisely to keep that index prefix intact.
+// The customer joins are LEFT so a mapping whose customer was deleted still lists (with a null name) instead of vanishing.
+func (q *Queries) ListHubspotSyncRecords(ctx context.Context, arg ListHubspotSyncRecordsParams) ([]ListHubspotSyncRecordsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listHubspotSyncRecords,
+		arg.AccountID,
+		arg.AugnoType,
+		arg.Cursor,
+		arg.Cursor,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListHubspotSyncRecordsRow
+	for rows.Next() {
+		var i ListHubspotSyncRecordsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.AccountID,
+			&i.AugnoType,
+			&i.AugnoID,
+			&i.HubspotType,
+			&i.HubspotID,
+			&i.SyncHash,
+			&i.LastSyncedAt,
+			&i.LastError,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.AugnoName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const upsertHubspotSyncRecord = `-- name: UpsertHubspotSyncRecord :exec

@@ -29,6 +29,9 @@ const (
 
 	// maxRetries bounds retries on rate-limit (429) and server (5xx) responses. The inbox consumer provides the outer retry loop.
 	maxRetries = 3
+
+	// maxRetryAfter caps how long a Retry-After header can hold this goroutine. HubSpot's daily-limit 429 asks for seconds-until-midnight; past this cap it is cheaper to fail and let the queue redeliver than to occupy a consumer slot.
+	maxRetryAfter = 60 * time.Second
 )
 
 var hubspotTracer = tracing.GetTracer("core-service.hubspot_client")
@@ -102,7 +105,7 @@ func (c *clientImpl) doRequest(ctx context.Context, method, path string, body an
 	return lastResp, nil
 }
 
-// parseError reads a non-2xx response and maps it to an APIError. 429 and 5xx are transient (the inbox consumer will retry); other 4xx are permanent validation errors.
+// parseError reads a non-2xx response and maps it to an APIError. 429 and 5xx are transient (the inbox consumer will retry); other 4xx are permanent.
 func (c *clientImpl) parseError(resp *http.Response) *apierror.APIError {
 	defer resp.Body.Close()
 	b, _ := io.ReadAll(resp.Body)
@@ -119,6 +122,12 @@ func (c *clientImpl) parseError(resp *http.Response) *apierror.APIError {
 		return apierror.NewRateLimitExceededError("HubSpot API rate limit exceeded.")
 	case resp.StatusCode >= 500:
 		return apierror.NewInternalError(fmt.Errorf("hubspot status %d: %s", resp.StatusCode, msg), "HubSpot API server error.")
+	case resp.StatusCode == http.StatusUnauthorized:
+		// A rejected token is permanent (retrying cannot mint a valid one) but, unlike bad data, it means every sync for this account is dead until someone reconnects. Keep it distinguishable from a validation error so callers can say so rather than reporting an opaque HUBSPOT: message.
+		return apierror.NewAuthenticationError("HubSpot rejected the access token. Reconnect the HubSpot integration with a valid Private App token. (" + msg + ")")
+	case resp.StatusCode == http.StatusForbidden:
+		// 403 means the token is real but under-scoped, which is a different fix from 401's "get a new token". The token is only prefix-checked when saved, so this is the first point an operator learns a scope box was left unticked — name them rather than echoing HubSpot's generic message.
+		return apierror.NewAuthenticationError("The HubSpot Private App token is missing a required scope. It needs crm.objects.companies/contacts/deals read+write and crm.schemas.deals read+write. (" + msg + ")")
 	default:
 		return apierror.NewValidationError("HUBSPOT: " + msg)
 	}
@@ -474,17 +483,24 @@ func setIfNotEmpty(m map[string]string, key, value string) {
 	}
 }
 
-// parseRetryAfter returns the Retry-After header value in seconds, or 0 if absent/unparseable.
+// parseRetryAfter returns the Retry-After header value in seconds, or 0 if absent/unparseable. RFC 7231 permits either a delay in seconds or an HTTP-date; falling back to the default backoff on a date would hammer a server that asked for a long pause.
 func parseRetryAfter(resp *http.Response) int {
 	v := resp.Header.Get("Retry-After")
 	if v == "" {
 		return 0
 	}
-	secs, err := strconv.Atoi(v)
-	if err != nil || secs < 0 {
-		return 0
+	if secs, err := strconv.Atoi(v); err == nil {
+		if secs < 0 {
+			return 0
+		}
+		return secs
 	}
-	return secs
+	if when, err := http.ParseTime(v); err == nil {
+		if secs := int(time.Until(when).Seconds()); secs > 0 {
+			return secs
+		}
+	}
+	return 0
 }
 
 // backoff sleeps before the next retry, honoring Retry-After when provided, otherwise exponential (0.5s, 1s, 2s, ...). It returns the context error if the context is canceled.
@@ -492,6 +508,10 @@ func backoff(ctx context.Context, attempt, retryAfterSecs int) error {
 	delay := time.Duration(retryAfterSecs) * time.Second
 	if delay == 0 {
 		delay = 500 * time.Millisecond * (1 << attempt)
+	}
+	// A daily-limit 429 carries a Retry-After of seconds-until-midnight, which would park this worker for hours holding its consumer slot. Give up instead and let the queue redeliver, which reschedules the work without pinning a goroutine.
+	if delay > maxRetryAfter {
+		return fmt.Errorf("hubspot asked to retry after %s, beyond the %s cap", delay, maxRetryAfter)
 	}
 	timer := time.NewTimer(delay)
 	defer timer.Stop()

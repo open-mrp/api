@@ -7,6 +7,7 @@ import (
 
 	"github.com/augno/api/services/core-service/internal/hubspotsync"
 	"github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/messaging"
 	"github.com/augno/api/shared/tracing"
 
@@ -71,18 +72,25 @@ func (c *HubspotSyncConsumer) handleMessage(ctx context.Context, msg amqp.Delive
 	switch msg.RoutingKey {
 	case string(contracts.CoreCmdHubspotSyncPreview):
 		if apiErr := c.hubspotSync.RunPreview(ctx, data.AccountID, data.JobID); apiErr != nil {
-			// The engine has already recorded the failure on the job. Swallow so the message is acked (no poison-loop); the user re-triggers a fresh backfill.
-			log.Printf("[hubspot_sync] preview failed for job %s: %v", data.JobID, apiErr)
-			span.RecordError(apiErr)
+			return c.handleRunError(span, "preview", data.JobID, apiErr)
 		}
 	case string(contracts.CoreCmdHubspotSyncExecute):
 		if apiErr := c.hubspotSync.RunExecute(ctx, data.AccountID, data.JobID); apiErr != nil {
-			// The engine marks the job failed and checkpoints cursors. Swallow; the user re-triggers execute, which resumes from the checkpoint.
-			log.Printf("[hubspot_sync] execute failed for job %s: %v", data.JobID, apiErr)
-			span.RecordError(apiErr)
+			return c.handleRunError(span, "execute", data.JobID, apiErr)
 		}
 	default:
 		log.Printf("[hubspot_sync] unknown routing key %q; dropping", msg.RoutingKey)
 	}
+	return nil
+}
+
+// handleRunError decides whether a failed run is worth redelivering. Transient failures (HubSpot rate limits, 5xx, DB blips) are returned so the inbox retries with backoff — swallowing them would let a momentary hiccup permanently fail an entire backfill. Permanent failures are acked: the engine has already recorded them on the job, and redelivering could only reproduce them. The broker rejects to a dead-letter queue once retries are exhausted, so returning here cannot poison-loop the queue.
+func (c *HubspotSyncConsumer) handleRunError(span trace.Span, phase, jobID string, apiErr *apierror.APIError) error {
+	span.RecordError(apiErr)
+	if apiErr.IsTransient {
+		log.Printf("[hubspot_sync] %s hit a transient failure for job %s; retrying: %v", phase, jobID, apiErr)
+		return apiErr
+	}
+	log.Printf("[hubspot_sync] %s permanently failed for job %s: %v", phase, jobID, apiErr)
 	return nil
 }

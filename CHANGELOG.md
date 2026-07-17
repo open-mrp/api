@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.41.12](https://github.com/Augno/api/compare/v0.41.11...v0.41.12) (2026-07-17)
+
+
+### Bug Fixes
+
+* add CancelHubspotSync and ListHubspotSyncRecords RPCs, update HubspotSyncJob and HubspotSyncRecord models ([#427](https://github.com/Augno/api/issues/427)) ([7054976](https://github.com/Augno/api/commit/705497650cef34fc4d5e500572984a8c9791c34e))
+
 ## [0.41.11](https://github.com/Augno/api/compare/v0.41.10...v0.41.11) (2026-07-16)
 
 

@@ -130,6 +130,7 @@ type HubspotCompanyCandidate struct {
 }
 
 const SampleHubspotSyncJobID = "igjb_zwfvfjfxl4lj"
+const SampleHubspotSyncRecordID = "igrd_8k2mn4qp7wxz"
 const SampleHubspotCompanyReviewID = "igrv_mkhn7eo9qexh"
 
 var sampleHubspotGoLiveCutoffAt = timeutil.TimestampToTime(sampleCreatedAtTimestamp)
@@ -176,7 +177,7 @@ func (*HubspotCompanyReview) SchemaExample() any {
 var sampleHubspotSyncRecordSyncedAt = timeutil.TimestampToTime(sampleUpdatedAtTimestamp)
 
 var SampleHubspotSyncRecord = &HubspotSyncRecord{
-	ID:           "igrd_8k2mn4qp7wxz",
+	ID:           SampleHubspotSyncRecordID,
 	Object:       constants.ObjectTypeHubspotSyncRecord,
 	AugnoType:    constants.HubspotSyncRecordAugnoTypeCustomer,
 	AugnoID:      SampleCustomer.ID,

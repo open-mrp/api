@@ -147,7 +147,7 @@ INSERT INTO account_relation (
     ?, ?, ?, ?,
     ?, ?,
     ?, ?,
-    'applied', 'billed',
+    'commission_applied', 'billed_freight',
     NULL, ?,
     'normal', 'normal',
     NOW(3), NOW(3)

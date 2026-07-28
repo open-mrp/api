@@ -746,3 +746,20 @@ func TestValidateCustomEmailErrorMessage(t *testing.T) {
 		t.Errorf("expected error message to contain '%s', but got: %s", expectedMessage, err.PublicMessage)
 	}
 }
+
+// enumTagTestStruct mirrors a request struct carrying the "enum" tag. The tag is enforced by httptransport.ValidateEnumFields, not here, but it must not panic: go-playground panics on an unknown tag while building its struct cache, which would 500 the endpoint on every request.
+type enumTagTestStruct struct {
+	Bare  string `validate:"enum"`
+	Value string `validate:"required,enum=customer"`
+}
+
+func TestValidateEnumTagDoesNotPanic(t *testing.T) {
+	t.Parallel()
+	if err := Validate(&enumTagTestStruct{Bare: "anything", Value: "customer"}); err != nil {
+		t.Fatalf("expected the enum tag to be a no-op, got: %v", err)
+	}
+	// The tag must stay inert rather than rejecting values it does not recognize.
+	if err := Validate(&enumTagTestStruct{Bare: "", Value: "not_customer"}); err != nil {
+		t.Fatalf("expected the enum tag to be a no-op for unrecognized values, got: %v", err)
+	}
+}

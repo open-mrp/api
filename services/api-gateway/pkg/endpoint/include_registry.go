@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
 )
 
@@ -76,6 +77,11 @@ func IncludesFor(p IncludesParams) *IncludeConfig {
 		if !ok {
 			panic(fmt.Sprintf("include_registry: field %q not resolvable for %s (available: %s)",
 				key, p.ObjectType, resolvableKeys(resolvable)))
+		}
+		// A key deeper than the resolver's recursion cap advertises an include the resolver would reject at request time with a 500. Fail at startup instead.
+		if depth := strings.Count(key, ".") + 1; depth > resourcekit.DefaultMaxIncludeDepth {
+			panic(fmt.Sprintf("include_registry: field %q on %s is %d levels deep, exceeding the resolver's max include depth of %d",
+				key, p.ObjectType, depth, resourcekit.DefaultMaxIncludeDepth))
 		}
 		if p.PathPrefix != "" {
 			for i, path := range field.JSONPaths {

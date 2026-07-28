@@ -1,8 +1,11 @@
 package apiendpoint
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
+	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -107,6 +110,38 @@ func TestIncludesFor_PanicsOnEmptyFields(t *testing.T) {
 			ObjectType: constants.ObjectTypeAPIKey,
 			Fields:     []string{},
 		})
+	})
+}
+
+// TestIncludesFor_PanicsOnKeyDeeperThanResolver pins that a key the resolver would reject at request time is caught at startup instead. The chain is synthetic because no real resource graph is currently this deep.
+func TestIncludesFor_PanicsOnKeyDeeperThanResolver(t *testing.T) {
+	t.Parallel()
+
+	// A chain of distinct types deep enough to overshoot the resolver cap by one: link0 -> link1 -> ... The cycle-breaking in walkFields means a self-referencing type would not expand far enough.
+	depth := resourcekit.DefaultMaxIncludeDepth + 1
+	linkType := func(i int) constants.ObjectType {
+		return constants.ObjectType(fmt.Sprintf("test_deep_link_%d", i))
+	}
+	for i := 0; i <= depth; i++ {
+		oi := &ObjectIncludes{ObjectType: linkType(i)}
+		if i < depth {
+			oi.Fields = []IncludeFieldDef{{Key: "next", ObjectType: linkType(i + 1)}}
+		}
+		RegisterIncludes(oi)
+	}
+
+	segments := make([]string, depth)
+	for i := range segments {
+		segments[i] = "next"
+	}
+
+	// One segment short of the cap resolves fine.
+	require.NotPanics(t, func() {
+		IncludesFor(IncludesParams{ObjectType: linkType(0), Fields: []string{strings.Join(segments[:depth-1], ".")}})
+	})
+
+	assert.Panics(t, func() {
+		IncludesFor(IncludesParams{ObjectType: linkType(0), Fields: []string{strings.Join(segments, ".")}})
 	})
 }
 

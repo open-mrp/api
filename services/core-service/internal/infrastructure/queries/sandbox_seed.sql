@@ -2748,7 +2748,7 @@ INSERT INTO `production` (`id`, `item_id`, `quantity_id`, `production_step_id`) 
 -- ============================================================================
 
 INSERT INTO `account_group` (`id`, `owner_account_id`, `name`, `description`, `commission_status_code`, `freight_status_code`, `account_group_type_code`) VALUES
-  (@acgrp1, '@account_id', 'Wholesale', 'Wholesale distribution customers', 'applied', 'billed', 'type_group');
+  (@acgrp1, '@account_id', 'Wholesale', 'Wholesale distribution customers', 'commission_applied', 'billed_freight', 'type_group');
 
 
 -- ============================================================================
@@ -2822,9 +2822,9 @@ UPDATE `account` SET default_billing_address_id = @caddr3, default_shipping_addr
 UPDATE `account` SET default_billing_address_id = @caddr5, default_shipping_address_id = @caddr6 WHERE id = @cust3;
 
 INSERT INTO `account_relation` (`id`, `owner_account_id`, `counterparty_account_id`, `account_relation_role_code`, `external_number`, `priority_code`, `account_group_id`, `payment_term_id`, `shipping_term_id`, `default_carrier_id`, `default_carrier_option_id`, `default_billing_address_id`, `default_shipping_address_id`, `account_status_code`, `commission_status_code`, `freight_status_code`) VALUES
-  (@acrel1, '@account_id', @cust1, 'customer', 'CUST-001', 'normal', @acgrp1, @pytm1, @shtm1, 'delivery', NULL, @caddr1, @caddr2, 'normal', 'applied', 'billed'),
-  (@acrel2, '@account_id', @cust2, 'customer', 'CUST-002', 'normal', @acgrp1, @pytm1, @shtm1, 'delivery', NULL, @caddr3, @caddr4, 'normal', 'applied', 'billed'),
-  (@acrel3, '@account_id', @cust3, 'customer', 'CUST-003', 'normal', @acgrp1, @pytm2, @shtm1, 'delivery', NULL, @caddr5, @caddr6, 'normal', 'applied', 'billed');
+  (@acrel1, '@account_id', @cust1, 'customer', 'CUST-001', 'normal', @acgrp1, @pytm1, @shtm1, 'delivery', NULL, @caddr1, @caddr2, 'normal', 'commission_applied', 'billed_freight'),
+  (@acrel2, '@account_id', @cust2, 'customer', 'CUST-002', 'normal', @acgrp1, @pytm1, @shtm1, 'delivery', NULL, @caddr3, @caddr4, 'normal', 'commission_applied', 'billed_freight'),
+  (@acrel3, '@account_id', @cust3, 'customer', 'CUST-003', 'normal', @acgrp1, @pytm2, @shtm1, 'delivery', NULL, @caddr5, @caddr6, 'normal', 'commission_applied', 'billed_freight');
 
 
 -- ============================================================================

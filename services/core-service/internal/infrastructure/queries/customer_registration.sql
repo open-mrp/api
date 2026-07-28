@@ -69,7 +69,7 @@ INSERT INTO account_relation (
     sqlc.arg('alias'), sqlc.arg('external_number'), sqlc.arg('shipping_term_id'), sqlc.arg('payment_term_id'),
     sqlc.arg('default_billing_address_id'), sqlc.arg('default_shipping_address_id'),
     sqlc.arg('account_group_id'), sqlc.arg('stripe_email'),
-    'applied', 'billed',
+    'commission_applied', 'billed_freight',
     NULL, sqlc.narg('default_carrier_option_id'),
     'normal', 'normal',
     NOW(3), NOW(3)

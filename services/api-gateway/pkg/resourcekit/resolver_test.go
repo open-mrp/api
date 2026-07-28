@@ -5,6 +5,7 @@ import (
 	"errors"
 	"reflect"
 	"sort"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -360,11 +361,12 @@ func TestResolveIncludes_CycleViaMemoization(t *testing.T) {
 func TestResolveIncludes_DepthCap(t *testing.T) {
 	ResetForTest()
 	c := &counters{}
-	// Build a chain c1 -> c2 -> c3 -> ... -> c10 via parent_account.
+	// Build a parent_account chain long enough to overshoot the cap.
+	chain := DefaultMaxIncludeDepth + 3
 	var customers []*testCustomer
-	for i := 1; i <= 12; i++ {
+	for i := 1; i <= chain; i++ {
 		cust := &testCustomer{ID: id(i)}
-		if i < 12 {
+		if i < chain {
 			cust.ParentID = id(i + 1)
 		}
 		customers = append(customers, cust)
@@ -372,8 +374,12 @@ func TestResolveIncludes_DepthCap(t *testing.T) {
 	registerCustomerCycle(t, c, customers)
 
 	root := &testCustomer{ID: "c1", ParentID: "c2"}
-	// Path 6 levels deep (parent_account × 6) exceeds DefaultMaxIncludeDepth=5.
-	tree := ParseIncludeTree([]string{"parent_account.parent_account.parent_account.parent_account.parent_account.parent_account"})
+	// One segment past the cap: resolving the last hop enters the resolver at depth DefaultMaxIncludeDepth.
+	segments := make([]string, DefaultMaxIncludeDepth+1)
+	for i := range segments {
+		segments[i] = "parent_account"
+	}
+	tree := ParseIncludeTree([]string{strings.Join(segments, ".")})
 	err := ResolveIncludes(context.Background(), []any{root}, otCustomer, tree)
 	if err == nil {
 		t.Fatalf("expected depth-cap error, got nil")

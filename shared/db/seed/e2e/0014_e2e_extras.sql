@@ -304,9 +304,10 @@ INSERT IGNORE INTO hubspot_company_review (id, job_id, account_id, augno_custome
     ('igrv_01seedhubspotrev1', 'igjb_01seedhubspotjob1', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k09wm2fgevdsc344gpbcj30f', 'E2E Review Customer',
      '[{"hubspot_id":"hs_company_1001","name":"Acme Co","domain":"acme.example"}]', 'pending', NOW(), NOW());
 
--- One synced mapping so the sync-records list endpoint returns a real row. augno_id points at the same customer the review does, so the name join resolves.
+-- Two synced mappings so the sync-records list endpoint returns real rows and the pagination sweep (limit=1, then follow next_page_url) has a second page to walk. Both augno_ids point at real customers so the name join resolves; the list keysets on augno_id ASC, so ac_01k09... pages before ac_01seed....
 INSERT IGNORE INTO hubspot_sync_record (id, account_id, augno_type, augno_id, hubspot_type, hubspot_id, last_synced_at, created_at, updated_at) VALUES
-    ('igrd_01seedhubspotrec1', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'customer', 'ac_01k09wm2fgevdsc344gpbcj30f', 'companies', 'hs_company_1001', NOW(), NOW(), NOW());
+    ('igrd_01seedhubspotrec1', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'customer', 'ac_01k09wm2fgevdsc344gpbcj30f', 'companies', 'hs_company_1001', NOW(), NOW(), NOW()),
+    ('igrd_01seedhubspotrec2', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'customer', 'ac_01seedcust3_acct000', 'companies', 'hs_company_1002', NOW(), NOW(), NOW());
 
 -- ============================================================
 -- EMAIL BRIDGE (1 verified domain + 1 active inbox so the

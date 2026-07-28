@@ -128,6 +128,90 @@ func TestSalesOrders_IncludeLines(t *testing.T) {
 	assert.Equal(t, "list", jsonField(lines, "object"))
 }
 
+// firstSalesOrderLineProduct returns the product on the first order line that has one.
+func firstSalesOrderLineProduct(t *testing.T, order map[string]any) map[string]any {
+	t.Helper()
+	for _, raw := range jsonListData(order, "lines") {
+		line, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		if product := jsonObject(line, "product"); product != nil {
+			return product
+		}
+	}
+	t.Fatalf("no order line with an expanded product")
+	return nil
+}
+
+func TestSalesOrders_IncludeLineProductItemCategory(t *testing.T) {
+	t.Parallel()
+
+	// Without the nested include, the item is expanded but its category is not.
+	bare := getSalesOrder(t, SeedSalesOrderID, url.Values{"include": {"lines", "lines.product", "lines.product.item"}})
+	item := jsonObject(firstSalesOrderLineProduct(t, bare), "item")
+	require.NotNil(t, item, "item should be present with ?include=lines.product.item")
+	assertNilField(t, item, "category")
+
+	full := getSalesOrder(t, SeedSalesOrderID, url.Values{"include": {"lines", "lines.product", "lines.product.item", "lines.product.item.category"}})
+	item = jsonObject(firstSalesOrderLineProduct(t, full), "item")
+	require.NotNil(t, item)
+	category := jsonObject(item, "category")
+	require.NotNil(t, category, "category should be present with ?include=lines.product.item.category")
+	assert.Equal(t, "item_category", jsonField(category, "object"))
+	assert.NotEmpty(t, jsonField(category, "id"))
+}
+
+func TestSalesOrders_IncludeLineProductItemCategoryUnitGroup(t *testing.T) {
+	t.Parallel()
+
+	// The category resolves without its own sub-objects when they are not requested.
+	bare := getSalesOrder(t, SeedSalesOrderID, url.Values{"include": {"lines", "lines.product", "lines.product.item", "lines.product.item.category"}})
+	category := jsonObject(jsonObject(firstSalesOrderLineProduct(t, bare), "item"), "category")
+	require.NotNil(t, category)
+	assertNilField(t, category, "unit_group")
+	assertNilField(t, category, "properties")
+
+	full := getSalesOrder(t, SeedSalesOrderID, url.Values{"include": {
+		"lines", "lines.product", "lines.product.item", "lines.product.item.category",
+		"lines.product.item.category.properties",
+		"lines.product.item.category.unit_group",
+		"lines.product.item.category.unit_group.base_unit",
+		"lines.product.item.category.unit_group.associated_units",
+		"lines.product.item.category.unit_group.associated_units.unit",
+	}})
+	category = jsonObject(jsonObject(firstSalesOrderLineProduct(t, full), "item"), "category")
+	require.NotNil(t, category)
+
+	unitGroup := jsonObject(category, "unit_group")
+	require.NotNil(t, unitGroup, "unit_group should be present with ?include=lines.product.item.category.unit_group")
+	assert.Equal(t, "unit_group", jsonField(unitGroup, "object"))
+
+	baseUnit := jsonObject(unitGroup, "base_unit")
+	require.NotNil(t, baseUnit, "base_unit should be present with the nested include")
+	assert.Equal(t, "unit", jsonField(baseUnit, "object"))
+
+	associated := jsonListData(unitGroup, "associated_units")
+	require.NotEmpty(t, associated, "associated_units should be populated with the nested include")
+	first, ok := associated[0].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "unit_group_unit", jsonField(first, "object"))
+	assert.NotNil(t, jsonObject(first, "unit"), "associated_units[].unit should be populated with the nested include")
+
+	require.NotNil(t, jsonObject(category, "properties"), "properties should be present with the nested include")
+}
+
+func TestSalesOrders_List_IncludeLineProductItemCategory(t *testing.T) {
+	t.Parallel()
+
+	row := salesOrderListRow(t, url.Values{"include": {"lines", "lines.product", "lines.product.item", "lines.product.item.category"}})
+	item := jsonObject(firstSalesOrderLineProduct(t, row), "item")
+	require.NotNil(t, item)
+	category := jsonObject(item, "category")
+	require.NotNil(t, category, "category should be populated on the list row with ?include=lines.product.item.category")
+	assert.Equal(t, "item_category", jsonField(category, "object"))
+}
+
 // ──────────────────────────────────────────────
 // SalesOrder — List parity (no summary object)
 // ──────────────────────────────────────────────

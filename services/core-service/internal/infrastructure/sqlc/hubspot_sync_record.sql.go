@@ -68,7 +68,7 @@ SELECT
     r.last_error,
     r.created_at,
     r.updated_at,
-    COALESCE(NULLIF(ar.alias, ''), a.name) AS augno_name
+    COALESCE(NULLIF(ar.alias, ''), a.name, '') AS augno_name
 FROM hubspot_sync_record r
 LEFT JOIN account_relation ar ON ar.owner_account_id = r.account_id AND ar.counterparty_account_id = r.augno_id
 LEFT JOIN account a ON a.id = r.augno_id

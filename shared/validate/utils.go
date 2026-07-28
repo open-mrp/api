@@ -60,6 +60,8 @@ func init() {
 	_ = validate.RegisterValidation("decimal", validateDecimal)
 	_ = validate.RegisterValidation("max_days_ahead", validateMaxDaysAhead)
 	_ = validate.RegisterValidation("multiple_of", validateMultipleOf)
+	// "enum" is enforced by reflection in httptransport.ValidateEnumFields, which runs before this validator and knows the allowed values from the field's type. It is registered as a no-op only so the tag cannot panic: go-playground panics on an unknown tag while building its struct cache, so a single `validate:"enum"` on a request struct would 500 that endpoint on every request. The tag is common on response structs, where this validator never sees it.
+	_ = validate.RegisterValidation("enum", func(validator.FieldLevel) bool { return true })
 }
 
 // validatePassword implements the "password" struct tag. A valid password is 8–72 bytes long and contains at least one lowercase letter, one uppercase letter, one ASCII digit, and one special character (from the hasSpecialChar set). Empty strings pass (combine with "required" to enforce presence). The 72-byte upper bound matches bcrypt's maximum input length.

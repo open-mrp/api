@@ -8,19 +8,32 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
+	"github.com/augno/api/shared/contracts"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/pagination"
 )
 
 // Request to list the account's HubSpot sync records.
 type ListHubspotSyncRecordsRequest struct {
 	// Restrict the results to records of this Augno type.
-	AugnoType constants.HubspotSyncRecordAugnoType `query:"augno_type" default:"customer" validate:"enum"`
+	AugnoType constants.HubspotSyncRecordAugnoType `query:"augno_type" default:"customer"`
 	// Opaque cursor token identifying where the page of results starts.
 	//
 	// Use the `cursor` value embedded in a previous response's `next_page_url` to fetch the next page. Omit to start from the first page.
 	Cursor *string `query:"cursor"`
 	// Maximum number of results to return in a single page.
 	Limit int32 `query:"limit" default:"100" validate:"min=1,max=1000"`
+}
+
+var _ contracts.DocumentedType = (*ListHubspotSyncRecordsRequest)(nil)
+
+// SchemaExample documents this endpoint's list query parameters for OpenAPI. The cursor keysets on the record's augno_id, so it is a string cursor rather than the id-based one PaginationRequest documents.
+func (*ListHubspotSyncRecordsRequest) SchemaExample() any {
+	return map[string]any{
+		"augno_type": string(constants.HubspotSyncRecordAugnoTypeCustomer),
+		"cursor":     pagination.EncodeDocumentationStringCursor(apiresource.SampleAnalyticsPeriodStart, apiresource.SampleHubspotSyncRecordID),
+		"limit":      int64(100),
+	}
 }
 
 // Lists what the HubSpot sync has written — each Augno record and the HubSpot object it maps to.

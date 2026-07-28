@@ -36,14 +36,18 @@ func (c *checkoutClientImpl) CreateOneTimeCheckoutSession(ctx context.Context, p
 
 	lineItems := make([]*gostripe.CheckoutSessionLineItemParams, len(params.LineItems))
 	for i, item := range params.LineItems {
+		productData := &gostripe.CheckoutSessionLineItemPriceDataProductDataParams{
+			Name: gostripe.String(item.Name),
+		}
+		// Stripe rejects an empty description ("cannot be unset"), so only send it when present.
+		if item.Description != "" {
+			productData.Description = gostripe.String(item.Description)
+		}
 		lineItems[i] = &gostripe.CheckoutSessionLineItemParams{
 			PriceData: &gostripe.CheckoutSessionLineItemPriceDataParams{
-				Currency: gostripe.String("usd"),
-				ProductData: &gostripe.CheckoutSessionLineItemPriceDataProductDataParams{
-					Name:        gostripe.String(item.Name),
-					Description: gostripe.String(item.Description),
-				},
-				UnitAmount: new(item.AmountCents),
+				Currency:    gostripe.String("usd"),
+				ProductData: productData,
+				UnitAmount:  new(item.AmountCents),
 			},
 			Quantity: new(item.Quantity),
 		}

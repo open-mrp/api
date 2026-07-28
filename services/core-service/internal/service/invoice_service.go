@@ -252,9 +252,11 @@ func (s *invoiceSvcImpl) UpdateInvoice(ctx context.Context, params domain.Update
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
 				Action:       constants.AuditActionUpdate,
-				ResourceType: constants.ObjectTypeInvoice,
-				ResourceID:   updated.ID,
-				Changes:      changes,
+				ResourceType:     constants.ObjectTypeInvoice,
+				ResourceID:       updated.ID,
+				RootResourceType: constants.ObjectTypeSalesOrder,
+				RootResourceID:   updated.OrderID,
+				Changes:          changes,
 			}); apiErr != nil {
 				return apiErr
 			}

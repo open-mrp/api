@@ -251,9 +251,11 @@ func (s *pickSvcImpl) UpdatePick(ctx context.Context, params domain.UpdatePickPa
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
 				Action:       constants.AuditActionUpdate,
-				ResourceType: constants.ObjectTypePick,
-				ResourceID:   result.ID,
-				Changes:      changes,
+				ResourceType:     constants.ObjectTypePick,
+				ResourceID:       result.ID,
+				RootResourceType: constants.ObjectTypeSalesOrder,
+				RootResourceID:   result.SalesOrderID,
+				Changes:          changes,
 			}); apiErr != nil {
 				return apiErr
 			}
@@ -327,9 +329,11 @@ func (s *pickSvcImpl) PickAllLines(ctx context.Context, pickID string) (*domain.
 		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 			ServiceName:  domain.ServiceName,
 			Action:       constants.AuditActionUpdate,
-			ResourceType: constants.ObjectTypePick,
-			ResourceID:   result.ID,
-			Changes:      changes,
+			ResourceType:     constants.ObjectTypePick,
+			ResourceID:       result.ID,
+			RootResourceType: constants.ObjectTypeSalesOrder,
+			RootResourceID:   result.SalesOrderID,
+			Changes:          changes,
 		}); apiErr != nil {
 			return apiErr
 		}
@@ -411,9 +415,11 @@ func (s *pickSvcImpl) VoidPick(ctx context.Context, pickID string) (*domain.Pick
 		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 			ServiceName:  domain.ServiceName,
 			Action:       constants.AuditActionUpdate,
-			ResourceType: constants.ObjectTypePick,
-			ResourceID:   result.ID,
-			Changes:      changes,
+			ResourceType:     constants.ObjectTypePick,
+			ResourceID:       result.ID,
+			RootResourceType: constants.ObjectTypeSalesOrder,
+			RootResourceID:   result.SalesOrderID,
+			Changes:          changes,
 		}); apiErr != nil {
 			return apiErr
 		}
@@ -647,9 +653,11 @@ func (s *pickSvcImpl) PackPick(ctx context.Context, pickID string, shipmentCaseC
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
 				Action:       constants.AuditActionUpdate,
-				ResourceType: constants.ObjectTypePick,
-				ResourceID:   pick.ID,
-				Metadata:     map[string]any{"packed": true},
+				ResourceType:     constants.ObjectTypePick,
+				ResourceID:       pick.ID,
+				RootResourceType: constants.ObjectTypeSalesOrder,
+				RootResourceID:   pick.SalesOrderID,
+				Metadata:         map[string]any{"packed": true},
 			}); apiErr != nil {
 				return apiErr
 			}

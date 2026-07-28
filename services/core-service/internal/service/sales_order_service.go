@@ -617,9 +617,11 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
 				Action:       constants.AuditActionCreate,
-				ResourceType: constants.ObjectTypeSalesOrder,
-				ResourceID:   result.ID,
-				Changes:      changes,
+				ResourceType:     constants.ObjectTypeSalesOrder,
+				ResourceID:       result.ID,
+				RootResourceType: constants.ObjectTypeSalesOrder,
+				RootResourceID:   result.ID,
+				Changes:          changes,
 			}); apiErr != nil {
 				return apiErr
 			}
@@ -790,9 +792,11 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
 				Action:       constants.AuditActionUpdate,
-				ResourceType: constants.ObjectTypeSalesOrder,
-				ResourceID:   updated.ID,
-				Changes:      changes,
+				ResourceType:     constants.ObjectTypeSalesOrder,
+				ResourceID:       updated.ID,
+				RootResourceType: constants.ObjectTypeSalesOrder,
+				RootResourceID:   updated.ID,
+				Changes:          changes,
 			}); apiErr != nil {
 				return apiErr
 			}
@@ -882,9 +886,11 @@ func (s *salesOrderSvcImpl) DeleteSalesOrder(ctx context.Context, params domain.
 		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 			ServiceName:  domain.ServiceName,
 			Action:       constants.AuditActionDelete,
-			ResourceType: constants.ObjectTypeSalesOrder,
-			ResourceID:   order.ID,
-			Changes:      changes,
+			ResourceType:     constants.ObjectTypeSalesOrder,
+			ResourceID:       order.ID,
+			RootResourceType: constants.ObjectTypeSalesOrder,
+			RootResourceID:   order.ID,
+			Changes:          changes,
 		}); apiErr != nil {
 			return apiErr
 		}
@@ -949,9 +955,11 @@ func (s *salesOrderSvcImpl) BulkDeleteSalesOrders(ctx context.Context, params do
 				if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 					ServiceName:  domain.ServiceName,
 					Action:       constants.AuditActionDelete,
-					ResourceType: constants.ObjectTypeSalesOrder,
-					ResourceID:   order.ID,
-					Changes:      changes,
+					ResourceType:     constants.ObjectTypeSalesOrder,
+					ResourceID:       order.ID,
+					RootResourceType: constants.ObjectTypeSalesOrder,
+					RootResourceID:   order.ID,
+					Changes:          changes,
 				}); apiErr != nil {
 					return apiErr
 				}
@@ -1084,9 +1092,11 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
 				Action:       constants.AuditActionUpdate,
-				ResourceType: constants.ObjectTypeSalesOrder,
-				ResourceID:   order.ID,
-				Changes:      changes,
+				ResourceType:     constants.ObjectTypeSalesOrder,
+				ResourceID:       order.ID,
+				RootResourceType: constants.ObjectTypeSalesOrder,
+				RootResourceID:   order.ID,
+				Changes:          changes,
 			}); apiErr != nil {
 				return apiErr
 			}
@@ -1133,9 +1143,11 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
 				Action:       constants.AuditActionUpdate,
-				ResourceType: constants.ObjectTypeSalesOrder,
-				ResourceID:   order.ID,
-				Changes:      changes,
+				ResourceType:     constants.ObjectTypeSalesOrder,
+				ResourceID:       order.ID,
+				RootResourceType: constants.ObjectTypeSalesOrder,
+				RootResourceID:   order.ID,
+				Changes:          changes,
 			}); apiErr != nil {
 				return apiErr
 			}
@@ -1175,9 +1187,11 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
 				Action:       constants.AuditActionUpdate,
-				ResourceType: constants.ObjectTypeSalesOrder,
-				ResourceID:   order.ID,
-				Changes:      changes,
+				ResourceType:     constants.ObjectTypeSalesOrder,
+				ResourceID:       order.ID,
+				RootResourceType: constants.ObjectTypeSalesOrder,
+				RootResourceID:   order.ID,
+				Changes:          changes,
 			}); apiErr != nil {
 				return apiErr
 			}
@@ -1219,9 +1233,11 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
 				Action:       constants.AuditActionUpdate,
-				ResourceType: constants.ObjectTypeSalesOrder,
-				ResourceID:   order.ID,
-				Changes:      changes,
+				ResourceType:     constants.ObjectTypeSalesOrder,
+				ResourceID:       order.ID,
+				RootResourceType: constants.ObjectTypeSalesOrder,
+				RootResourceID:   order.ID,
+				Changes:          changes,
 			}); apiErr != nil {
 				return apiErr
 			}
@@ -2904,9 +2920,11 @@ func (s *salesOrderSvcImpl) CreateSalesOrderProductionRun(ctx context.Context, p
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
 				Action:       constants.AuditActionUpdate,
-				ResourceType: constants.ObjectTypeSalesOrder,
-				ResourceID:   order.ID,
-				Changes:      changes,
+				ResourceType:     constants.ObjectTypeSalesOrder,
+				ResourceID:       order.ID,
+				RootResourceType: constants.ObjectTypeSalesOrder,
+				RootResourceID:   order.ID,
+				Changes:          changes,
 			}); apiErr != nil {
 				return apiErr
 			}

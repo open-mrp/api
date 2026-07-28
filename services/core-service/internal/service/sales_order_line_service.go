@@ -166,9 +166,11 @@ func (s *salesOrderLineSvcImpl) CreateSalesOrderLine(ctx context.Context, params
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
 				Action:       constants.AuditActionCreate,
-				ResourceType: constants.ObjectTypeSalesOrderLine,
-				ResourceID:   created.ID,
-				Changes:      changes,
+				ResourceType:     constants.ObjectTypeSalesOrderLine,
+				ResourceID:       created.ID,
+				RootResourceType: constants.ObjectTypeSalesOrder,
+				RootResourceID:   created.SalesOrderID,
+				Changes:          changes,
 			}); apiErr != nil {
 				return apiErr
 			}
@@ -238,9 +240,11 @@ func resequenceOrderLines(ctx context.Context, repos domain.RepoFactory, salesOr
 		if apiErr := audit.NewPublisher().Publish(ctx, repos.NewOutboxRepo(), audit.EventData{
 			ServiceName:  domain.ServiceName,
 			Action:       constants.AuditActionUpdate,
-			ResourceType: constants.ObjectTypeSalesOrderLine,
-			ResourceID:   p.ID,
-			Changes:      []audit.FieldChange{audit.NewFieldChange("line_item_number", p.LineItemNumber, newNumber)},
+			ResourceType:     constants.ObjectTypeSalesOrderLine,
+			ResourceID:       p.ID,
+			RootResourceType: constants.ObjectTypeSalesOrder,
+			RootResourceID:   salesOrderID,
+			Changes:          []audit.FieldChange{audit.NewFieldChange("line_item_number", p.LineItemNumber, newNumber)},
 		}); apiErr != nil {
 			return apiErr
 		}
@@ -460,9 +464,11 @@ func (s *salesOrderLineSvcImpl) UpdateSalesOrderLine(ctx context.Context, params
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
 				Action:       constants.AuditActionUpdate,
-				ResourceType: constants.ObjectTypeSalesOrderLine,
-				ResourceID:   updated.ID,
-				Changes:      changes,
+				ResourceType:     constants.ObjectTypeSalesOrderLine,
+				ResourceID:       updated.ID,
+				RootResourceType: constants.ObjectTypeSalesOrder,
+				RootResourceID:   updated.SalesOrderID,
+				Changes:          changes,
 			}); apiErr != nil {
 				return apiErr
 			}
@@ -601,9 +607,11 @@ func (s *salesOrderLineSvcImpl) DeleteSalesOrderLine(ctx context.Context, params
 		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 			ServiceName:  domain.ServiceName,
 			Action:       constants.AuditActionDelete,
-			ResourceType: constants.ObjectTypeSalesOrderLine,
-			ResourceID:   salesOrderLine.ID,
-			Changes:      changes,
+			ResourceType:     constants.ObjectTypeSalesOrderLine,
+			ResourceID:       salesOrderLine.ID,
+			RootResourceType: constants.ObjectTypeSalesOrder,
+			RootResourceID:   salesOrderLine.SalesOrderID,
+			Changes:          changes,
 		}); apiErr != nil {
 			return apiErr
 		}
@@ -645,8 +653,10 @@ func (s *salesOrderLineSvcImpl) DeleteSalesOrderLine(ctx context.Context, params
 				if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 					ServiceName:  domain.ServiceName,
 					Action:       constants.AuditActionUpdate,
-					ResourceType: constants.ObjectTypeSalesOrder,
-					ResourceID:   order.ID,
+					ResourceType:     constants.ObjectTypeSalesOrder,
+					ResourceID:       order.ID,
+					RootResourceType: constants.ObjectTypeSalesOrder,
+					RootResourceID:   order.ID,
 					Changes: audit.ComputeChanges(order, &domain.SalesOrder{
 						ID:                   order.ID,
 						Number:               order.Number,
@@ -757,9 +767,11 @@ func (s *salesOrderLineSvcImpl) ReorderSalesOrderLines(ctx context.Context, para
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
 				Action:       constants.AuditActionUpdate,
-				ResourceType: constants.ObjectTypeSalesOrderLine,
-				ResourceID:   lineID,
-				Changes:      []audit.FieldChange{audit.NewFieldChange("line_item_number", currentByID[lineID], newNumber)},
+				ResourceType:     constants.ObjectTypeSalesOrderLine,
+				ResourceID:       lineID,
+				RootResourceType: constants.ObjectTypeSalesOrder,
+				RootResourceID:   params.SalesOrderID,
+				Changes:          []audit.FieldChange{audit.NewFieldChange("line_item_number", currentByID[lineID], newNumber)},
 			}); apiErr != nil {
 				return apiErr
 			}

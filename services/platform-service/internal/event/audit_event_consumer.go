@@ -113,11 +113,13 @@ func (c *AuditEventConsumer) handleMessage(ctx context.Context, msg amqp091.Deli
 		AccountID:       identity.Target.AccountID,
 		TargetAccountID: &targetAccountID,
 
-		Action:       payload.Action,
-		ResourceType: constants.ObjectType(payload.ResourceType),
-		ResourceID:   payload.ResourceID,
-		Changes:      changes,
-		Metadata:     metadataRaw,
+		Action:           payload.Action,
+		ResourceType:     constants.ObjectType(payload.ResourceType),
+		ResourceID:       payload.ResourceID,
+		RootResourceType: constants.ObjectType(payload.RootResourceType),
+		RootResourceID:   payload.RootResourceID,
+		Changes:          changes,
+		Metadata:         metadataRaw,
 
 		ServiceName: payload.ServiceName,
 		RequestID:   requestID,

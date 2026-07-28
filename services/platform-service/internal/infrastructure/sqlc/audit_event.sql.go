@@ -110,6 +110,8 @@ INSERT IGNORE INTO audit_event (
         action,
         resource_type,
         resource_id,
+        root_resource_type,
+        root_resource_id,
         changes,
         metadata,
         service_name,
@@ -119,6 +121,8 @@ INSERT IGNORE INTO audit_event (
         occurred_at
     )
 VALUES (
+        ?,
+        ?,
         ?,
         ?,
         ?,
@@ -148,6 +152,8 @@ type CreateAuditEventParams struct {
 	Action           string
 	ResourceType     string
 	ResourceID       string
+	RootResourceType sql.NullString
+	RootResourceID   sql.NullString
 	Changes          db.NullableRawMessage
 	Metadata         db.NullableRawMessage
 	ServiceName      string
@@ -168,6 +174,8 @@ func (q *Queries) CreateAuditEvent(ctx context.Context, arg CreateAuditEventPara
 		arg.Action,
 		arg.ResourceType,
 		arg.ResourceID,
+		arg.RootResourceType,
+		arg.RootResourceID,
 		arg.Changes,
 		arg.Metadata,
 		arg.ServiceName,
@@ -339,6 +347,7 @@ AND (? = false OR ae.account_id IN (/*SLICE:actor_account_ids*/?))
 AND (? = false OR ae.target_account_id IN (/*SLICE:target_account_ids*/?))
 AND (? = false OR ae.resource_type IN (/*SLICE:resource_types*/?))
 AND (? = false OR ae.resource_id IN (/*SLICE:resource_ids*/?))
+AND (? = false OR (ae.root_resource_type = ? AND ae.root_resource_id = ?))
 AND (? = false OR ae.actor_id IN (/*SLICE:actor_ids*/?))
 AND (? = false OR ae.identity_type IN (/*SLICE:actor_types*/?))
 AND (? = false OR ae.action IN (/*SLICE:actions*/?))
@@ -372,6 +381,9 @@ type ListAuditEventsBackwardParams struct {
 	ResourceTypes              []string
 	IncludeResourceIDFilter    interface{}
 	ResourceIds                []string
+	IncludeRootFilter          interface{}
+	RootResourceType           sql.NullString
+	RootResourceID             sql.NullString
 	IncludeActorIDFilter       interface{}
 	ActorIds                   []string
 	IncludeActorTypeFilter     interface{}
@@ -460,6 +472,9 @@ func (q *Queries) ListAuditEventsBackward(ctx context.Context, arg ListAuditEven
 	} else {
 		query = strings.Replace(query, "/*SLICE:resource_ids*/?", "NULL", 1)
 	}
+	queryParams = append(queryParams, arg.IncludeRootFilter)
+	queryParams = append(queryParams, arg.RootResourceType)
+	queryParams = append(queryParams, arg.RootResourceID)
 	queryParams = append(queryParams, arg.IncludeActorIDFilter)
 	if len(arg.ActorIds) > 0 {
 		for _, v := range arg.ActorIds {
@@ -584,6 +599,7 @@ AND (? = false OR ae.account_id IN (/*SLICE:actor_account_ids*/?))
 AND (? = false OR ae.target_account_id IN (/*SLICE:target_account_ids*/?))
 AND (? = false OR ae.resource_type IN (/*SLICE:resource_types*/?))
 AND (? = false OR ae.resource_id IN (/*SLICE:resource_ids*/?))
+AND (? = false OR (ae.root_resource_type = ? AND ae.root_resource_id = ?))
 AND (? = false OR ae.actor_id IN (/*SLICE:actor_ids*/?))
 AND (? = false OR ae.identity_type IN (/*SLICE:actor_types*/?))
 AND (? = false OR ae.action IN (/*SLICE:actions*/?))
@@ -618,6 +634,9 @@ type ListAuditEventsForwardParams struct {
 	ResourceTypes              []string
 	IncludeResourceIDFilter    interface{}
 	ResourceIds                []string
+	IncludeRootFilter          interface{}
+	RootResourceType           sql.NullString
+	RootResourceID             sql.NullString
 	IncludeActorIDFilter       interface{}
 	ActorIds                   []string
 	IncludeActorTypeFilter     interface{}
@@ -706,6 +725,9 @@ func (q *Queries) ListAuditEventsForward(ctx context.Context, arg ListAuditEvent
 	} else {
 		query = strings.Replace(query, "/*SLICE:resource_ids*/?", "NULL", 1)
 	}
+	queryParams = append(queryParams, arg.IncludeRootFilter)
+	queryParams = append(queryParams, arg.RootResourceType)
+	queryParams = append(queryParams, arg.RootResourceID)
 	queryParams = append(queryParams, arg.IncludeActorIDFilter)
 	if len(arg.ActorIds) > 0 {
 		for _, v := range arg.ActorIds {

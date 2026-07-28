@@ -25,6 +25,12 @@ type ListAuditEventsRequest struct {
 	ResourceTypes []constants.ObjectType `query:"resource_types"`
 	// Filter by the audited resource IDs.
 	ResourceIDs []string `query:"resource_ids"`
+	// Scope results to a root record's entire history tree.
+	//
+	// Every event whose root resource matches, including the root itself and all of its descendants (for example a sales order together with its lines, picks, shipments, and invoices). Both `root_resource_type` and `root_resource_id` must be supplied together.
+	RootResourceType *constants.ObjectType `query:"root_resource_type"`
+	// Filter by the root resource.
+	RootResourceID *string `query:"root_resource_id"`
 	// Filter by the actor identifier.
 	//
 	// Matches the event's `actor.id`: a user ID for `user` actors or an API key ID for `api_key` actors.

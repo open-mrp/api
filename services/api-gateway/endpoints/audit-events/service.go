@@ -72,6 +72,14 @@ func (m *auditEventSvcImpl) ListAuditEvents(ctx context.Context, req *ListAuditE
 		Includes:         resourcekit.FilterIncludes(ctx, "actor", "changes", "metadata"),
 	}
 
+	if req.RootResourceType != nil {
+		rt := string(*req.RootResourceType)
+		pbReq.RootResourceType = &rt
+	}
+	if req.RootResourceID != nil {
+		pbReq.RootResourceId = req.RootResourceID
+	}
+
 	if req.StartDate != nil && !req.StartDate.IsZero() {
 		pbReq.StartDate = timestamppb.New(*req.StartDate)
 	}

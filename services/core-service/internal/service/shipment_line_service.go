@@ -229,6 +229,12 @@ func (s *shipmentLineSvcImpl) CreateShipmentLine(ctx context.Context, params dom
 				return apierror.NewResourceNotFoundError("Shipment not found.")
 			}
 
+			// Resolve the parent sales order so the audit event can be scoped to the order's history tree.
+			rootShipment, apiErr := txShipmentRepo.Get(txCtx, domain.GetShipmentParams{AccountID: params.AccountID, ShipmentID: params.ShipmentID})
+			if apiErr != nil {
+				return apiErr
+			}
+
 			txLineRepo := txSvc.repos.NewShipmentLineRepo()
 
 			created, apiErr := txLineRepo.Create(txCtx, lineID, quantityID, params)
@@ -240,11 +246,13 @@ func (s *shipmentLineSvcImpl) CreateShipmentLine(ctx context.Context, params dom
 			changes := audit.ComputeChanges(nil, created)
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionCreate,
-				ResourceType: constants.ObjectTypeShipmentLine,
-				ResourceID:   created.ID,
-				Changes:      changes,
+				ServiceName:      domain.ServiceName,
+				Action:           constants.AuditActionCreate,
+				ResourceType:     constants.ObjectTypeShipmentLine,
+				ResourceID:       created.ID,
+				RootResourceType: constants.ObjectTypeSalesOrder,
+				RootResourceID:   rootShipment.SalesOrderID,
+				Changes:          changes,
 			}); apiErr != nil {
 				return apiErr
 			}
@@ -326,6 +334,12 @@ func (s *shipmentLineSvcImpl) UpdateShipmentLine(ctx context.Context, params dom
 				return apiErr
 			}
 
+			// Resolve the parent sales order so the audit event can be scoped to the order's history tree.
+			rootShipment, apiErr := txShipmentRepo.Get(txCtx, domain.GetShipmentParams{AccountID: params.AccountID, ShipmentID: params.ShipmentID})
+			if apiErr != nil {
+				return apiErr
+			}
+
 			// Backfill unchanged nullable fields with existing values. Since the SQL uses direct assignment (no COALESCE) for these fields, we must provide the existing value when the field was not sent.
 			if params.QuantityUnitID == nil {
 				params.QuantityUnitID = &old.QuantityUnitID
@@ -340,11 +354,13 @@ func (s *shipmentLineSvcImpl) UpdateShipmentLine(ctx context.Context, params dom
 			changes := audit.ComputeChanges(old, updated)
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
-				ResourceType: constants.ObjectTypeShipmentLine,
-				ResourceID:   updated.ID,
-				Changes:      changes,
+				ServiceName:      domain.ServiceName,
+				Action:           constants.AuditActionUpdate,
+				ResourceType:     constants.ObjectTypeShipmentLine,
+				ResourceID:       updated.ID,
+				RootResourceType: constants.ObjectTypeSalesOrder,
+				RootResourceID:   rootShipment.SalesOrderID,
+				Changes:          changes,
 			}); apiErr != nil {
 				return apiErr
 			}
@@ -406,6 +422,12 @@ func (s *shipmentLineSvcImpl) DeleteShipmentLine(ctx context.Context, params dom
 		return tracing.Trace(span, apiErr)
 	}
 
+	// Resolve the parent sales order so the audit event can be scoped to the order's history tree.
+	rootShipment, apiErr := s.repos.NewShipmentRepo().Get(ctx, domain.GetShipmentParams{AccountID: params.AccountID, ShipmentID: params.ShipmentID})
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *shipmentLineSvcImpl) *apierror.APIError {
 		txLineRepo := txSvc.repos.NewShipmentLineRepo()
 
@@ -420,11 +442,13 @@ func (s *shipmentLineSvcImpl) DeleteShipmentLine(ctx context.Context, params dom
 		changes := audit.ComputeChanges(shipmentLine, (*domain.ShipmentLine)(nil))
 
 		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-			ServiceName:  domain.ServiceName,
-			Action:       constants.AuditActionDelete,
-			ResourceType: constants.ObjectTypeShipmentLine,
-			ResourceID:   shipmentLine.ID,
-			Changes:      changes,
+			ServiceName:      domain.ServiceName,
+			Action:           constants.AuditActionDelete,
+			ResourceType:     constants.ObjectTypeShipmentLine,
+			ResourceID:       shipmentLine.ID,
+			RootResourceType: constants.ObjectTypeSalesOrder,
+			RootResourceID:   rootShipment.SalesOrderID,
+			Changes:          changes,
 		}); apiErr != nil {
 			return apiErr
 		}

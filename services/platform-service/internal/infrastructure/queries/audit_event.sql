@@ -96,6 +96,7 @@ AND (sqlc.arg('include_actor_account_filter') = false OR ae.account_id IN (sqlc.
 AND (sqlc.arg('include_target_account_filter') = false OR ae.target_account_id IN (sqlc.slice('target_account_ids')))
 AND (sqlc.arg('include_resource_type_filter') = false OR ae.resource_type IN (sqlc.slice('resource_types')))
 AND (sqlc.arg('include_resource_id_filter') = false OR ae.resource_id IN (sqlc.slice('resource_ids')))
+AND (sqlc.arg('include_root_filter') = false OR (ae.root_resource_type = sqlc.arg('root_resource_type') AND ae.root_resource_id = sqlc.arg('root_resource_id')))
 AND (sqlc.arg('include_actor_id_filter') = false OR ae.actor_id IN (sqlc.slice('actor_ids')))
 AND (sqlc.arg('include_actor_type_filter') = false OR ae.identity_type IN (sqlc.slice('actor_types')))
 AND (sqlc.arg('include_action_filter') = false OR ae.action IN (sqlc.slice('actions')))
@@ -155,6 +156,7 @@ AND (sqlc.arg('include_actor_account_filter') = false OR ae.account_id IN (sqlc.
 AND (sqlc.arg('include_target_account_filter') = false OR ae.target_account_id IN (sqlc.slice('target_account_ids')))
 AND (sqlc.arg('include_resource_type_filter') = false OR ae.resource_type IN (sqlc.slice('resource_types')))
 AND (sqlc.arg('include_resource_id_filter') = false OR ae.resource_id IN (sqlc.slice('resource_ids')))
+AND (sqlc.arg('include_root_filter') = false OR (ae.root_resource_type = sqlc.arg('root_resource_type') AND ae.root_resource_id = sqlc.arg('root_resource_id')))
 AND (sqlc.arg('include_actor_id_filter') = false OR ae.actor_id IN (sqlc.slice('actor_ids')))
 AND (sqlc.arg('include_actor_type_filter') = false OR ae.identity_type IN (sqlc.slice('actor_types')))
 AND (sqlc.arg('include_action_filter') = false OR ae.action IN (sqlc.slice('actions')))
@@ -190,6 +192,8 @@ INSERT IGNORE INTO audit_event (
         action,
         resource_type,
         resource_id,
+        root_resource_type,
+        root_resource_id,
         changes,
         metadata,
         service_name,
@@ -199,6 +203,8 @@ INSERT IGNORE INTO audit_event (
         occurred_at
     )
 VALUES (
+        ?,
+        ?,
         ?,
         ?,
         ?,

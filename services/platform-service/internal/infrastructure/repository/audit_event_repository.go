@@ -58,6 +58,8 @@ func (r *auditEventRepoImpl) Create(ctx context.Context, event *domain.AuditEven
 		Action:           string(event.Action),
 		ResourceType:     string(event.ResourceType),
 		ResourceID:       event.ResourceID,
+		RootResourceType: db.NullString(string(event.RootResourceType)),
+		RootResourceID:   db.NullString(event.RootResourceID),
 		Changes:          changesParam,
 		Metadata:         metadataParam,
 		ServiceName:      event.ServiceName,
@@ -191,6 +193,7 @@ func (r *auditEventRepoImpl) List(ctx context.Context, callerAccountID string, f
 	actorAccountIDs := ensureStringSlice(filter.ActorAccountIDs)
 	includeTargetAccountFilter := len(filter.TargetAccountIDs) > 0
 	targetAccountIDs := ensureNullStringSlice(filter.TargetAccountIDs)
+	includeRootFilter := filter.RootResourceType != "" && filter.RootResourceID != ""
 
 	searchQuery := sql.NullString{}
 	if filter.Query != nil && *filter.Query != "" {
@@ -222,6 +225,9 @@ func (r *auditEventRepoImpl) List(ctx context.Context, callerAccountID string, f
 			ResourceTypes:              resourceTypes,
 			IncludeResourceIDFilter:    includeResourceIDFilter,
 			ResourceIds:                resourceIDs,
+			IncludeRootFilter:          includeRootFilter,
+			RootResourceType:           db.NullString(filter.RootResourceType),
+			RootResourceID:             db.NullString(filter.RootResourceID),
 			IncludeActorIDFilter:       includeActorIDFilter,
 			ActorIds:                   actorIDs,
 			IncludeActorTypeFilter:     includeActorTypeFilter,
@@ -262,6 +268,9 @@ func (r *auditEventRepoImpl) List(ctx context.Context, callerAccountID string, f
 		ResourceTypes:              resourceTypes,
 		IncludeResourceIDFilter:    includeResourceIDFilter,
 		ResourceIds:                resourceIDs,
+		IncludeRootFilter:          includeRootFilter,
+		RootResourceType:           db.NullString(filter.RootResourceType),
+		RootResourceID:             db.NullString(filter.RootResourceID),
 		IncludeActorIDFilter:       includeActorIDFilter,
 		ActorIds:                   actorIDs,
 		IncludeActionFilter:        includeActionFilter,

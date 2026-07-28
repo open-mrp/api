@@ -1942,9 +1942,14 @@ type ListAuditEventsRequest struct {
 	// actor-or-target scope.
 	TargetAccountIds []string `protobuf:"bytes,14,rep,name=target_account_ids,json=targetAccountIds,proto3" json:"target_account_ids,omitempty"`
 	// Filter by the actor identity_type (user/api_key/agent/group).
-	ActorTypes    []string `protobuf:"bytes,15,rep,name=actor_types,json=actorTypes,proto3" json:"actor_types,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ActorTypes []string `protobuf:"bytes,15,rep,name=actor_types,json=actorTypes,proto3" json:"actor_types,omitempty"`
+	// Scope results to a root record's entire tree: all events whose
+	// root_resource_type/root_resource_id match (e.g. a sales_order and all of its
+	// lines, picks, shipments, and invoices). Both must be set together to apply.
+	RootResourceType *string `protobuf:"bytes,16,opt,name=root_resource_type,json=rootResourceType,proto3,oneof" json:"root_resource_type,omitempty"`
+	RootResourceId   *string `protobuf:"bytes,17,opt,name=root_resource_id,json=rootResourceId,proto3,oneof" json:"root_resource_id,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *ListAuditEventsRequest) Reset() {
@@ -2066,6 +2071,20 @@ func (x *ListAuditEventsRequest) GetActorTypes() []string {
 		return x.ActorTypes
 	}
 	return nil
+}
+
+func (x *ListAuditEventsRequest) GetRootResourceType() string {
+	if x != nil && x.RootResourceType != nil {
+		return *x.RootResourceType
+	}
+	return ""
+}
+
+func (x *ListAuditEventsRequest) GetRootResourceId() string {
+	if x != nil && x.RootResourceId != nil {
+		return *x.RootResourceId
+	}
+	return ""
 }
 
 type ListAuditEventsResponse struct {
@@ -3029,7 +3048,7 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\vaudit_event\x18\x01 \x01(\v2\x18.platform.AuditEventInfoR\n" +
 	"auditEvent\"4\n" +
 	"\x18CreateAuditEventResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xd0\x04\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xde\x05\n" +
 	"\x16ListAuditEventsRequest\x12>\n" +
 	"\n" +
 	"start_date\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\tstartDate\x88\x01\x01\x12:\n" +
@@ -3046,11 +3065,15 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\x11actor_account_ids\x18\r \x03(\tR\x0factorAccountIds\x12,\n" +
 	"\x12target_account_ids\x18\x0e \x03(\tR\x10targetAccountIds\x12\x1f\n" +
 	"\vactor_types\x18\x0f \x03(\tR\n" +
-	"actorTypesB\r\n" +
+	"actorTypes\x121\n" +
+	"\x12root_resource_type\x18\x10 \x01(\tH\x04R\x10rootResourceType\x88\x01\x01\x12-\n" +
+	"\x10root_resource_id\x18\x11 \x01(\tH\x05R\x0erootResourceId\x88\x01\x01B\r\n" +
 	"\v_start_dateB\v\n" +
 	"\t_end_dateB\t\n" +
 	"\a_cursorB\b\n" +
-	"\x06_queryJ\x04\b\a\x10\bJ\x04\b\f\x10\rR\n" +
+	"\x06_queryB\x15\n" +
+	"\x13_root_resource_typeB\x13\n" +
+	"\x11_root_resource_idJ\x04\b\a\x10\bJ\x04\b\f\x10\rR\n" +
 	"account_idR\vaccount_ids\"\x87\x01\n" +
 	"\x17ListAuditEventsResponse\x12;\n" +
 	"\faudit_events\x18\x01 \x03(\v2\x18.platform.AuditEventInfoR\vauditEvents\x12/\n" +

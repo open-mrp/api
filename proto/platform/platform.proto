@@ -336,6 +336,11 @@ message ListAuditEventsRequest {
   repeated string target_account_ids = 14;
   // Filter by the actor identity_type (user/api_key/agent/group).
   repeated string actor_types = 15;
+  // Scope results to a root record's entire tree: all events whose
+  // root_resource_type/root_resource_id match (e.g. a sales_order and all of its
+  // lines, picks, shipments, and invoices). Both must be set together to apply.
+  optional string root_resource_type = 16;
+  optional string root_resource_id = 17;
 }
 
 message ListAuditEventsResponse {

@@ -22,6 +22,8 @@ type auditEventOutboxPayload struct {
 	Action           constants.AuditAction `json:"action"`
 	ResourceType     constants.ObjectType  `json:"resource_type"`
 	ResourceID       string                `json:"resource_id"`
+	RootResourceType constants.ObjectType  `json:"root_resource_type,omitempty"`
+	RootResourceID   string                `json:"root_resource_id,omitempty"`
 	Changes          []FieldChange         `json:"changes"`
 	Metadata         map[string]any        `json:"metadata"`
 	ServiceName      string                `json:"service_name"`
@@ -80,6 +82,8 @@ func (p *Publisher) Publish(
 		Action:           data.Action,
 		ResourceType:     data.ResourceType,
 		ResourceID:       data.ResourceID,
+		RootResourceType: data.RootResourceType,
+		RootResourceID:   data.RootResourceID,
 		Changes:          data.Changes,
 		Metadata:         data.Metadata,
 		ServiceName:      data.ServiceName,

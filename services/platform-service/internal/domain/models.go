@@ -192,8 +192,11 @@ type AuditEvent struct {
 	Action       constants.AuditAction
 	ResourceType constants.ObjectType
 	ResourceID   string
-	Changes      []AuditFieldChange
-	Metadata     json.RawMessage
+	// RootResourceType / RootResourceID identify the root record this entity belongs to (e.g. the sales_order a line/pick/shipment/invoice hangs off of). Empty for top-level records. Backs the root-scoped history query.
+	RootResourceType constants.ObjectType
+	RootResourceID   string
+	Changes          []AuditFieldChange
+	Metadata         json.RawMessage
 
 	ServiceName      string
 	RequestID        *string
@@ -219,9 +222,12 @@ type ListAuditEventsFilter struct {
 	EndDate       *time.Time
 	ResourceTypes []string
 	ResourceIDs   []string
-	ActorIDs      []string
-	ActorTypes    []string
-	Actions       []string
+	// RootResourceType / RootResourceID scope results to a root record's entire tree (e.g. all events whose root_resource is a given sales_order). Both must be set together to apply.
+	RootResourceType string
+	RootResourceID   string
+	ActorIDs         []string
+	ActorTypes       []string
+	Actions          []string
 	// ActorAccountIDs filters by audit_event.account_id: the account that performed the mutation. TargetAccountIDs filters by audit_event.target_account_id: the account the mutation targeted. Both narrow within the caller's actor-or-target security scope.
 	ActorAccountIDs  []string
 	TargetAccountIDs []string

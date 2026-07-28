@@ -111,6 +111,12 @@ func (s *pickLineSvcImpl) UpdatePickLine(ctx context.Context, params domain.Upda
 		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Pick line not found."))
 	}
 
+	// Resolve the parent sales order so the audit event can be scoped to the order's history tree.
+	rootSalesOrder, apiErr := pickRepo.GetSalesOrderForPick(ctx, params.AccountID, params.PickID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	meds := s.mediators()
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
@@ -153,9 +159,11 @@ func (s *pickLineSvcImpl) UpdatePickLine(ctx context.Context, params domain.Upda
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
 				Action:       constants.AuditActionUpdate,
-				ResourceType: constants.ObjectTypePickLine,
-				ResourceID:   result.ID,
-				Changes:      changes,
+				ResourceType:     constants.ObjectTypePickLine,
+				ResourceID:       result.ID,
+				RootResourceType: constants.ObjectTypeSalesOrder,
+				RootResourceID:   rootSalesOrder.ID,
+				Changes:          changes,
 			}); apiErr != nil {
 				return apiErr
 			}
@@ -218,6 +226,12 @@ func (s *pickLineSvcImpl) PickPickLine(ctx context.Context, pickID, pickLineID s
 		return nil, tracing.Trace(span, apiErr)
 	}
 
+	// Resolve the parent sales order so the audit event can be scoped to the order's history tree.
+	rootSalesOrder, apiErr := pickRepo.GetSalesOrderForPick(ctx, accountID, pickID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	meds := s.mediators()
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
@@ -253,9 +267,11 @@ func (s *pickLineSvcImpl) PickPickLine(ctx context.Context, pickID, pickLineID s
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
 				Action:       constants.AuditActionUpdate,
-				ResourceType: constants.ObjectTypePickLine,
-				ResourceID:   result.ID,
-				Changes:      changes,
+				ResourceType:     constants.ObjectTypePickLine,
+				ResourceID:       result.ID,
+				RootResourceType: constants.ObjectTypeSalesOrder,
+				RootResourceID:   rootSalesOrder.ID,
+				Changes:          changes,
 			}); apiErr != nil {
 				return apiErr
 			}
@@ -322,6 +338,12 @@ func (s *pickLineSvcImpl) VoidPickLine(ctx context.Context, pickID, pickLineID s
 		return nil, tracing.Trace(span, apierror.NewValidationError("Cannot void a pick line that has already been packed."))
 	}
 
+	// Resolve the parent sales order so the audit event can be scoped to the order's history tree.
+	rootSalesOrder, apiErr := pickRepo.GetSalesOrderForPick(ctx, accountID, pickID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	meds := s.mediators()
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
@@ -357,9 +379,11 @@ func (s *pickLineSvcImpl) VoidPickLine(ctx context.Context, pickID, pickLineID s
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
 				Action:       constants.AuditActionUpdate,
-				ResourceType: constants.ObjectTypePickLine,
-				ResourceID:   result.ID,
-				Changes:      changes,
+				ResourceType:     constants.ObjectTypePickLine,
+				ResourceID:       result.ID,
+				RootResourceType: constants.ObjectTypeSalesOrder,
+				RootResourceID:   rootSalesOrder.ID,
+				Changes:          changes,
 			}); apiErr != nil {
 				return apiErr
 			}

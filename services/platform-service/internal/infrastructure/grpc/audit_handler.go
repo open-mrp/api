@@ -165,6 +165,8 @@ func (h *auditHandler) ListAuditEvents(ctx context.Context, req *pb.ListAuditEve
 		Actions:          req.Actions,
 		ActorAccountIDs:  req.ActorAccountIds,
 		TargetAccountIDs: req.TargetAccountIds,
+		RootResourceType: req.GetRootResourceType(),
+		RootResourceID:   req.GetRootResourceId(),
 		Query:            req.Query,
 		Cursor:           req.Cursor,
 		Limit:            req.Limit,

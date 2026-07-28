@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.41.13](https://github.com/Augno/api/compare/v0.41.12...v0.41.13) (2026-07-28)
+
+
+### Bug Fixes
+
+* tweak to documentation on search endpoint ([92f62bd](https://github.com/Augno/api/commit/92f62bd67d83fa44a949a9cebfb271b5d949ed67))
+
 ## [0.41.12](https://github.com/Augno/api/compare/v0.41.11...v0.41.12) (2026-07-17)
 
 

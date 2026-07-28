@@ -15,7 +15,7 @@ type SearchRequest struct {
 	apiresource.PaginationRequest
 	// Filter the search to specific resource types.
 	//
-	// Omit to search every supported type the caller can read.
+	// Attempting to read a type you do not have permission to read will result in a `403` error. Omit to search every supported type the caller can read.
 	Types []constants.ObjectType `query:"types"`
 	// Restrict the search to a single customer by their account ID.
 	//

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.41.15](https://github.com/Augno/api/compare/v0.41.14...v0.41.15) (2026-07-28)
+
+
+### Bug Fixes
+
+* add root resource filtering to audit events ([#432](https://github.com/Augno/api/issues/432)) ([685e297](https://github.com/Augno/api/commit/685e297e63e19665548c9c7984f07642a73b3fe0))
+
 ## [0.41.14](https://github.com/Augno/api/compare/v0.41.13...v0.41.14) (2026-07-28)
 
 

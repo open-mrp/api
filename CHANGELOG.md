@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.41.16](https://github.com/Augno/api/compare/v0.41.15...v0.41.16) (2026-07-29)
+
+
+### Bug Fixes
+
+* keep JSON payload columns out of request-log list sorts ([#434](https://github.com/Augno/api/issues/434)) ([f3f9a7a](https://github.com/Augno/api/commit/f3f9a7ae97ad3759017c77251d5cde300c9a8a9b))
+
 ## [0.41.15](https://github.com/Augno/api/compare/v0.41.14...v0.41.15) (2026-07-28)
 
 

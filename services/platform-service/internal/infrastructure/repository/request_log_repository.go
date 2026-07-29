@@ -181,6 +181,9 @@ func (r *requestLogRepoImpl) List(ctx context.Context, callerAccountID string, f
 		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to scan request logs."))
 	}
 
+	// The list SQL sorts only the (id, occurred_at) id page and joins the wide columns back without an outer ORDER BY (sorting rows that carry the JSON payload columns exhausts MySQL's sort buffer — see buildListQuery), so keyset order is restored here before pagination slices the page.
+	sortListResults(results, dir)
+
 	for _, read := range results {
 		applyRequestedJSONIncludes(read, includes)
 	}

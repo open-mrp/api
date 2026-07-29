@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/augno/api/services/platform-service/internal/domain"
@@ -27,6 +28,8 @@ const normalizedRouteColumnExpr = `REGEXP_REPLACE(rl.normalized_route, '\\{[^}]+
 // requestLogRLBaseColumns is the request_log SELECT list used by every list mode. Kept as a single slice so SELECT list and row scanners can't drift.
 //
 // JSON columns (query_json, request_body_json, response_body_json) are emitted as COALESCE(CASE WHEN ? THEN col ELSE NULL END, ”) so includeQueryJson / includeRequestBodyJson / includeResponseBodyJson boolean args control whether the payload is returned without changing the column count.
+//
+// This projection must only ever appear in the outermost SELECT, after all ORDER BYs have run — see buildListQuery.
 var requestLogRLBaseColumns = []string{
 	"rl.id",
 	"rl.method",
@@ -55,9 +58,11 @@ var requestLogRLBaseColumns = []string{
 
 // buildListQuery assembles the dynamic list SQL for a request_log listing. Filter predicates are omitted entirely when the caller did not supply a value — no OR-sentinel or CASE-WHEN wrappers — so MySQL sees only the predicates that actually narrow the result set.
 //
-// The dual-scope security filter (a log is visible when the caller's account is either the acting account `rl.account_id` OR the request's target `rl.target_account_id`) is expressed as a UNION of two single-scope keyset branches rather than `WHERE (account_id = ? OR target_account_id = ?)`. The OR form forces MySQL/Vitess into an index_merge that cannot satisfy `ORDER BY occurred_at DESC`, so it filesorts the caller's entire partition on every page — the second page (and any page with selective filters) times out on a large request_log. Splitting the scope lets each branch walk its own `(scope, occurred_at DESC, id DESC)` composite index in order, use the cursor as a real range bound, and stop at LIMIT before any enrichment join. UNION (not UNION ALL) drops the duplicate that appears for rows whose acting account IS the target account (the common single-account case); every row carries a distinct rl.id in the SELECT list, so two genuinely different rows can never collapse.
+// The dual-scope security filter (a log is visible when the caller's account is either the acting account `rl.account_id` OR the request's target `rl.target_account_id`) is expressed as a UNION of two single-scope keyset branches rather than `WHERE (account_id = ? OR target_account_id = ?)`. The OR form forces MySQL/Vitess into an index_merge that cannot satisfy `ORDER BY occurred_at DESC`, so it filesorts the caller's entire partition on every page — the second page (and any page with selective filters) times out on a large request_log. Splitting the scope lets each branch walk its own `(scope, occurred_at DESC, id DESC)` composite index in order, use the cursor as a real range bound, and stop at LIMIT before any enrichment join. UNION (not UNION ALL) drops the duplicate that appears for rows whose acting account IS the target account (the common single-account case); branches select the unique rl.id, so two genuinely different rows can never collapse.
 //
-// limit is applied inside each branch and again on the outer query; callers pass limit+1 to support "has next page" detection. Each branch returns at most limit+1 rows, so the merged temp table MySQL builds for the UNION is bounded at 2*(limit+1) rows regardless of table size.
+// Every sorted set — each branch's ORDER BY, the UNION's dedupe temp table, and the merged re-sort — carries only (id, occurred_at). The wide columns, in particular the three JSON payload columns, are projected by the outermost SELECT via a primary-key join back to request_log AFTER all ordering has happened. MySQL's filesort cannot pack JSON/TEXT addon columns: one oversized request/response body in a sort row blows sort_buffer_size and the whole query dies with error 1038 "Out of sort memory" (it cannot spill a single row to disk), so payload columns must never pass through an ORDER BY or a UNION temp table. This also makes each branch fully covered by its (scope, occurred_at DESC, id DESC) index. The trade-off: the outermost query has no ORDER BY (the join back to request_log does not guarantee it would preserve derived-table order anyway), so the caller must re-sort the ≤ limit+1 scanned rows by (occurred_at, id) in Go — see sortListResults.
+//
+// limit is applied inside each branch and again on the merged id set; callers pass limit+1 to support "has next page" detection. Each branch returns at most limit+1 rows, so the temp table MySQL builds for the UNION is bounded at 2*(limit+1) tiny rows regardless of table size, and the primary-key join back fans in at most limit+1 rows.
 func buildListQuery(
 	mode queryMode,
 	dir pagination.Direction,
@@ -67,43 +72,43 @@ func buildListQuery(
 	cursor *pagination.StringCursor,
 	limit int32,
 ) (string, []any) {
-	var args []any
+	// unionArgs collects binds for the id-page derived table only; the JSON-include booleans bind to the outer SELECT list, which precedes the derived table in the final SQL text, so the two groups are concatenated in text order at the end.
+	var unionArgs []any
 
-	// writeScopeBranch emits one keyset branch scoped to a single account column (rl.account_id or rl.target_account_id). It selects only the rl.* base columns from request_log alone — no enrichment joins — so the WHERE + ORDER BY + LIMIT ride the branch's (scope, occurred_at DESC, id DESC) composite and LIMIT before any join happens. It appends the branch's bind args (JSON-include booleans, scope id, filter values, cursor values, LIMIT) to args in the exact left-to-right order the placeholders appear.
+	// writeScopeBranch emits one keyset branch scoped to a single account column (rl.account_id or rl.target_account_id). It selects only the keyset pair (id, occurred_at) from request_log alone — no payload columns, no enrichment joins — so the WHERE + ORDER BY + LIMIT ride the branch's (scope, occurred_at DESC, id DESC) composite as a covering index and any residual-filter filesort handles only tiny rows. It appends the branch's bind args (scope id, filter values, cursor values, LIMIT) to unionArgs in the exact left-to-right order the placeholders appear.
 	writeScopeBranch := func(scopeColumn string) string {
 		var b strings.Builder
-		b.WriteString("SELECT ")
-		b.WriteString(strings.Join(requestLogRLBaseColumns, ", "))
-		args = append(args, includeQueryJSON, includeRequestBody, includeResponseBody)
+		b.WriteString("SELECT rl.id, rl.occurred_at")
 		b.WriteString(" FROM request_log rl")
 		b.WriteString(" WHERE rl.")
 		b.WriteString(scopeColumn)
 		b.WriteString(" = ?")
-		args = append(args, callerAccountID)
+		unionArgs = append(unionArgs, callerAccountID)
 		// Hidden logs (e.g. high-frequency polling endpoints flagged HideFromRequestLog) are persisted but omitted from listings. hidden is low-cardinality, so this rides the branch's cursor index as a residual filter rather than needing its own index.
 		b.WriteString(" AND rl.hidden = FALSE")
-		writeFilterPredicates(&b, &args, f)
-		writeCursorPredicate(&b, &args, dir, cursor)
-		writeScopeOrderAndLimit(&b, &args, dir, limit)
+		writeFilterPredicates(&b, &unionArgs, f)
+		writeCursorPredicate(&b, &unionArgs, dir, cursor)
+		writeScopeOrderAndLimit(&b, &unionArgs, "rl.", dir, limit)
 		return b.String()
 	}
 
-	// Merge the two scope branches into a derived table, then run the outer projection + enrichment joins over only the ≤ 2*(limit+1) surviving rows. args are already populated in placeholder order by the two writeScopeBranch calls below; the outer SELECT/joins add no placeholders until the final LIMIT.
-	union := "(" + writeScopeBranch("account_id") + ") UNION (" + writeScopeBranch("target_account_id") + ")"
+	// Merge the two scope branches, restore the global keyset order over the ≤ 2*(limit+1) merged ids (each branch is individually ordered + capped, but UNION does not preserve order), and trim to limit+1. This is the query's final sort; everything after it is a key lookup.
+	var page strings.Builder
+	page.WriteString("SELECT ks.id, ks.occurred_at FROM (")
+	page.WriteString("(" + writeScopeBranch("account_id") + ") UNION (" + writeScopeBranch("target_account_id") + ")")
+	page.WriteString(") ks")
+	writeScopeOrderAndLimit(&page, &unionArgs, "ks.", dir, limit)
 
 	var outer strings.Builder
+	outer.WriteString("SELECT ")
+	outer.WriteString(strings.Join(requestLogRLBaseColumns, ", "))
 	switch mode {
 	case queryModeBase:
-		// Base mode pulls idempotency_key via a LEFT JOIN over the merged set; that join is indexed and cheap.
-		outer.WriteString("SELECT " + derivedRequestLogRLColumns + ", ik.idempotency_key")
-		outer.WriteString(" FROM (")
-		outer.WriteString(union)
-		outer.WriteString(") rl")
-		outer.WriteString(" LEFT JOIN idempotency_key ik ON rl.idempotency_key_id = ik.type_id")
+		// Base mode pulls idempotency_key via a LEFT JOIN over the page; that join is indexed and cheap.
+		outer.WriteString(", ik.idempotency_key")
 	case queryModeActor, queryModeFull:
 		// actor_id is the raw actor key exposed by the API: the user_id for a user actor (the outer user join keys on u.id = rl.actor_id, and the account_user join used for the role keys on au.user_id = rl.actor_id) or the api_key.type_id for an api_key actor (the api_key join keys on ak.type_id).
-		outer.WriteString("SELECT " + derivedRequestLogRLColumns + ", ")
-		outer.WriteString("u.email AS user_email, u.name AS user_name, ")
+		outer.WriteString(", u.email AS user_email, u.name AS user_name, ")
 		outer.WriteString("ak.type_id AS api_key_type_id, ak.redacted_value AS api_key_redacted_value, ak.name AS api_key_name")
 		if mode == queryModeFull {
 			outer.WriteString(
@@ -112,9 +117,15 @@ func buildListQuery(
 					"a.name AS account_name, a.created_at AS account_created_at, a.updated_at AS account_updated_at, ik.idempotency_key",
 			)
 		}
-		outer.WriteString(" FROM (")
-		outer.WriteString(union)
-		outer.WriteString(") rl")
+	}
+	outer.WriteString(" FROM (")
+	outer.WriteString(page.String())
+	outer.WriteString(") page")
+	outer.WriteString(" JOIN request_log rl ON rl.id = page.id")
+	switch mode {
+	case queryModeBase:
+		outer.WriteString(" LEFT JOIN idempotency_key ik ON rl.idempotency_key_id = ik.type_id")
+	case queryModeActor, queryModeFull:
 		outer.WriteString(
 			" LEFT JOIN `user` u ON u.id = rl.actor_id AND rl.identity_type = 'user'" +
 				" LEFT JOIN api_key ak ON rl.actor_id = ak.type_id AND rl.identity_type = 'api_key'",
@@ -130,8 +141,10 @@ func buildListQuery(
 		}
 	}
 
-	// Re-sort and re-LIMIT the merged set: each branch is individually ordered + capped, but the UNION does not preserve order, so the outer query restores the global keyset order and trims to limit+1.
-	writeScopeOrderAndLimit(&outer, &args, dir, limit)
+	// Final args in SQL text order: the outer SELECT list's three JSON-include booleans come first, then the id-page derived table's binds.
+	args := make([]any, 0, len(unionArgs)+3)
+	args = append(args, includeQueryJSON, includeRequestBody, includeResponseBody)
+	args = append(args, unionArgs...)
 	return outer.String(), args
 }
 
@@ -285,22 +298,29 @@ func writeCursorPredicate(sb *strings.Builder, args *[]any, dir pagination.Direc
 	}
 }
 
-// writeScopeOrderAndLimit appends the keyset ORDER BY and a `LIMIT ?` (binding limit). Used both inside each scope branch and on the outer query so the two stay in lockstep.
-func writeScopeOrderAndLimit(sb *strings.Builder, args *[]any, dir pagination.Direction, limit int32) {
+// writeScopeOrderAndLimit appends the keyset ORDER BY and a `LIMIT ?` (binding limit) using the given table alias prefix (`"rl."` inside the scope branches, `"ks."` on the merged id page). Used in both places so the two stay in lockstep.
+func writeScopeOrderAndLimit(sb *strings.Builder, args *[]any, alias string, dir pagination.Direction, limit int32) {
 	if dir == pagination.DirectionBackward {
-		sb.WriteString(" ORDER BY rl.occurred_at ASC, rl.id ASC LIMIT ?")
+		sb.WriteString(" ORDER BY " + alias + "occurred_at ASC, " + alias + "id ASC LIMIT ?")
 	} else {
-		sb.WriteString(" ORDER BY rl.occurred_at DESC, rl.id DESC LIMIT ?")
+		sb.WriteString(" ORDER BY " + alias + "occurred_at DESC, " + alias + "id DESC LIMIT ?")
 	}
 	*args = append(*args, limit)
 }
 
-// derivedRequestLogRLColumns is the rl.* projection the actor/full outer query selects from the derived table. It mirrors requestLogRLBaseColumns column-for-column (the JSON columns are already COALESCE'd inside the derived table, so here they are plain rl.<alias> references).
-const derivedRequestLogRLColumns = "rl.id, rl.method, rl.host, rl.path, rl.normalized_route, " +
-	"rl.query_json, rl.status_code, rl.latency_us, rl.api_version, rl.actor_id, " +
-	"rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent, " +
-	"rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at, " +
-	"rl.idempotency_key_id, rl.request_body_json, rl.response_body_json, rl.target_account_id"
+// sortListResults restores keyset order over the scanned rows. The list query's outermost SELECT — the one carrying the JSON payload columns — deliberately has no ORDER BY (see buildListQuery), so row order out of the primary-key join is unspecified and pagination.BuildPageString needs its input in query order (forward = newest first, backward = oldest first; BuildPageString does the backward-page reversal itself). Ties on occurred_at break on the id column; ids are lowercase-alphanumeric, so byte order agrees with the column's utf8mb4_unicode_ci order the SQL cursor comparisons use.
+func sortListResults(results []*domain.RequestLogRead, dir pagination.Direction) {
+	slices.SortFunc(results, func(a, b *domain.RequestLogRead) int {
+		c := a.OccurredAt.Compare(b.OccurredAt)
+		if c == 0 {
+			c = strings.Compare(a.ID, b.ID)
+		}
+		if dir == pagination.DirectionBackward {
+			return c
+		}
+		return -c
+	})
+}
 
 // placeholders returns "?, ?, ?, ..." with n placeholders.
 func placeholders(n int) string {

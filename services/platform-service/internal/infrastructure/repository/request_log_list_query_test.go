@@ -32,6 +32,8 @@ func TestBuildListQuery_NoFiltersEmitsOnlyBaselinePredicates(t *testing.T) {
 	// Hidden logs (e.g. HideFromRequestLog endpoints) are always excluded from listings.
 	mustContain(t, sql, "rl.hidden = FALSE")
 	mustContain(t, sql, "ORDER BY rl.occurred_at DESC, rl.id DESC LIMIT ?")
+	// The merged id page is re-sorted and re-limited before the join back.
+	mustContain(t, sql, "ORDER BY ks.occurred_at DESC, ks.id DESC LIMIT ?")
 
 	forbidden := []string{
 		"rl.identity_type IN",
@@ -135,7 +137,8 @@ func TestBuildListQuery_ActorModeWrapsInDerivedTableWithUserAndApiKeyJoins(t *te
 	sql, _ := buildListQuery(queryModeActor, pagination.DirectionForward, "acc_1", emptyFilter(), false, false, false, nil, 101)
 
 	mustContain(t, sql, " FROM (")
-	mustContain(t, sql, ") rl")
+	mustContain(t, sql, ") page")
+	mustContain(t, sql, "JOIN request_log rl ON rl.id = page.id")
 	mustContain(t, sql, "LEFT JOIN `user` u ON u.id = rl.actor_id AND rl.identity_type = 'user'")
 	mustContain(t, sql, "LEFT JOIN api_key ak ON rl.actor_id = ak.type_id AND rl.identity_type = 'api_key'")
 
@@ -173,11 +176,12 @@ func TestBuildListQuery_FullModeWrapsInDerivedTableWithAllJoins(t *testing.T) {
 	sql, _ := buildListQuery(queryModeFull, pagination.DirectionForward, "acc_1", emptyFilter(), false, false, false, nil, 101)
 
 	mustContain(t, sql, " FROM (")
-	mustContain(t, sql, ") rl")
+	mustContain(t, sql, ") page")
+	mustContain(t, sql, "JOIN request_log rl ON rl.id = page.id")
 
 	// The LIMIT must live inside the derived table, ahead of the enrichment
 	// joins, so it is applied before any nested-loop join.
-	derivedTable := sql[strings.Index(sql, "FROM (")+len("FROM (") : strings.Index(sql, ") rl")]
+	derivedTable := sql[strings.Index(sql, "FROM (")+len("FROM (") : strings.Index(sql, ") page")]
 	mustContain(t, derivedTable, "ORDER BY rl.occurred_at DESC, rl.id DESC LIMIT ?")
 	for _, joined := range []string{"LEFT JOIN role r_user", "LEFT JOIN account a", "LEFT JOIN idempotency_key ik"} {
 		if strings.Contains(derivedTable, joined) {
@@ -228,16 +232,83 @@ func TestBuildListQuery_SliceFiltersExpandToMatchingPlaceholderCounts(t *testing
 	mustContain(t, sql, normalizedRouteColumnExpr+" IN (?, ?)")
 	mustContain(t, sql, "rl.host IN (?)")
 
-	// The dual-scope filter is a UNION of two keyset branches, so every per-branch
-	// bind appears twice. Per branch: 3 JSON-include booleans (query/request/
-	// response) + 1 scope-account bind + 2 methods + 3 status codes + 1 error code
-	// + 2 actor account ids + 1 target account id + 3 actor ids + 1 actor type +
-	// 2 routes + 1 host + branch LIMIT = 21. Two branches (42) + the outer LIMIT
-	// (1) = 43.
-	perBranch := 3 + 1 + 2 + 3 + 1 + 2 + 1 + 3 + 1 + 2 + 1 + 1
-	want := perBranch*2 + 1
+	// The 3 JSON-include booleans (query/request/response) bind once, in the outer
+	// SELECT list. The dual-scope filter is a UNION of two keyset branches, so every
+	// per-branch bind appears twice. Per branch: 1 scope-account bind + 2 methods +
+	// 3 status codes + 1 error code + 2 actor account ids + 1 target account id +
+	// 3 actor ids + 1 actor type + 2 routes + 1 host + branch LIMIT = 18. Include
+	// booleans (3) + two branches (36) + the merged id page's LIMIT (1) = 40.
+	perBranch := 1 + 2 + 3 + 1 + 2 + 1 + 3 + 1 + 2 + 1 + 1
+	want := 3 + perBranch*2 + 1
 	if len(args) != want {
 		t.Errorf("unexpected arg count: got %d, want %d; args=%#v", len(args), want, args)
+	}
+}
+
+// Every ORDER BY in the generated SQL must sort only the (id, occurred_at)
+// keyset pair. MySQL's filesort cannot pack JSON/TEXT addon columns, so a single
+// oversized request/response body inside a sorted row exceeds sort_buffer_size
+// and kills the query with error 1038 "Out of sort memory" — the production
+// failure this shape exists to prevent. The JSON payload columns may appear only
+// in the outermost SELECT, which joins back by primary key after all ordering.
+func TestBuildListQuery_PayloadColumnsNeverEnterASortedSet(t *testing.T) {
+	for _, mode := range []queryMode{queryModeBase, queryModeActor, queryModeFull} {
+		sql, args := buildListQuery(mode, pagination.DirectionForward, "acc_1", emptyFilter(), true, true, true, nil, 101)
+
+		pageEnd := strings.Index(sql, ") page")
+		if pageEnd < 0 {
+			t.Fatalf("expected an id-page derived table; SQL:\n%s", sql)
+		}
+		derived := sql[strings.Index(sql, "FROM (")+len("FROM (") : pageEnd]
+		for _, payload := range []string{"query_json", "request_body_json", "response_body_json", "error_message", "user_agent"} {
+			if strings.Contains(derived, payload) {
+				t.Errorf("wide column %q leaked into the sorted id page; SQL:\n%s", payload, sql)
+			}
+		}
+
+		// The outermost query (the only part that carries the JSON columns) must
+		// not sort — keyset order is restored in Go by sortListResults.
+		if outer := sql[pageEnd:]; strings.Contains(outer, "ORDER BY") {
+			t.Errorf("outermost query must not ORDER BY payload-carrying rows; SQL:\n%s", sql)
+		}
+
+		// The JSON-include booleans bind to the outer SELECT list, which precedes
+		// the derived table in text order — they must be the first three args.
+		if len(args) < 3 || args[0] != true || args[1] != true || args[2] != true {
+			t.Errorf("expected JSON-include booleans as leading args; got %#v", args)
+		}
+	}
+}
+
+func TestSortListResults_RestoresKeysetOrder(t *testing.T) {
+	t0 := time.Unix(1_700_000_000, 0).UTC()
+	mk := func(id string, at time.Time) *domain.RequestLogRead {
+		return &domain.RequestLogRead{ID: id, OccurredAt: at}
+	}
+	scrambled := func() []*domain.RequestLogRead {
+		return []*domain.RequestLogRead{
+			mk("rlog_b", t0),
+			mk("rlog_c", t0.Add(2*time.Second)),
+			mk("rlog_a", t0),
+			mk("rlog_d", t0.Add(time.Second)),
+		}
+	}
+
+	forward := scrambled()
+	sortListResults(forward, pagination.DirectionForward)
+	wantForward := []string{"rlog_c", "rlog_d", "rlog_b", "rlog_a"}
+	for i, want := range wantForward {
+		if forward[i].ID != want {
+			t.Fatalf("forward order[%d]: got %q, want %q", i, forward[i].ID, want)
+		}
+	}
+
+	backward := scrambled()
+	sortListResults(backward, pagination.DirectionBackward)
+	for i, j := 0, len(wantForward)-1; i < len(backward); i, j = i+1, j-1 {
+		if backward[i].ID != wantForward[j] {
+			t.Fatalf("backward order[%d]: got %q, want %q", i, backward[i].ID, wantForward[j])
+		}
 	}
 }
 

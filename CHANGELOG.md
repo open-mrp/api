@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.41.17](https://github.com/Augno/api/compare/v0.41.16...v0.41.17) (2026-07-31)
+
+
+### Bug Fixes
+
+* sync invoice line quantities when sales order line is updated ([#436](https://github.com/Augno/api/issues/436)) ([eb6a3df](https://github.com/Augno/api/commit/eb6a3df095dd4fcb101813e6131c8f3386646244))
+
 ## [0.41.16](https://github.com/Augno/api/compare/v0.41.15...v0.41.16) (2026-07-29)
 
 

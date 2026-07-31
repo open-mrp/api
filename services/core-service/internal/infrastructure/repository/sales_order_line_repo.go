@@ -291,6 +291,33 @@ func (r *salesOrderLineRepoImpl) Update(ctx context.Context, params domain.Updat
 	return r.Get(ctx, params.SalesOrderLineID)
 }
 
+func (r *salesOrderLineRepoImpl) SyncInvoiceLineQuantities(ctx context.Context, salesOrderLineID, previousQuantityValue, quantityValue, quantityUnitID string) *apierror.APIError {
+	ctx, span := salesOrderLineRepoTracer.Start(ctx, "repository.sales_order_line.sync_invoice_line_quantities")
+	defer span.End()
+
+	// Touch first: the guard matches on the pre-update value, which the sync below
+	// overwrites. Both statements run inside the caller's transaction.
+	err := r.queries.TouchInvoiceLinesBySalesOrderLine(ctx, sqlc.TouchInvoiceLinesBySalesOrderLineParams{
+		SalesOrderLineID: salesOrderLineID,
+		PreviousValue:    previousQuantityValue,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	_, err = r.queries.SyncInvoiceLineQuantitiesBySalesOrderLine(ctx, sqlc.SyncInvoiceLineQuantitiesBySalesOrderLineParams{
+		Value:            quantityValue,
+		UnitID:           quantityUnitID,
+		SalesOrderLineID: salesOrderLineID,
+		PreviousValue:    previousQuantityValue,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
+}
+
 func (r *salesOrderLineRepoImpl) Delete(ctx context.Context, salesOrderLineID string) *apierror.APIError {
 	ctx, span := salesOrderLineRepoTracer.Start(ctx, "repository.sales_order_line.delete")
 	defer span.End()

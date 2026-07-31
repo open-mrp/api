@@ -679,6 +679,122 @@ func (suite *SalesOrderLineSvcTestSuite) TestUpdateSalesOrderLine_SkipsPickLineF
 	suite.Nil(apiErr)
 }
 
+// Editing an order line's quantity must push the new value + unit into the invoice
+// lines referencing it — invoice lines snapshot quantity at creation and would
+// otherwise go stale.
+func (suite *SalesOrderLineSvcTestSuite) TestUpdateSalesOrderLine_SyncsInvoiceLineQuantities() {
+	ctx := salesOrderLineIdempotencyCtx(
+		salesOrderLineCtx("ac_test"),
+		"/core.CoreService/UpdateSalesOrderLine",
+	)
+
+	suite.expectIdempotencyStarted()
+
+	qty := "12"
+	unit := "un_cs"
+	params := domain.UpdateSalesOrderLineParams{
+		SalesOrderLineID: "orl_test",
+		SalesOrderID:     "or_test",
+		QuantityValue:    &qty,
+		QuantityUnitID:   &unit,
+	}
+
+	suite.lineRepo.EXPECT().IsInOrder(gomock.Any(), "orl_test", "or_test", "ac_test").Return(true, nil).Times(1)
+	suite.lineRepo.EXPECT().Get(gomock.Any(), "orl_test").Return(&domain.SalesOrderLine{ID: "orl_test", QuantityValue: "10", QuantityUnitID: "un_ea"}, nil).Times(1)
+	suite.lineRepo.EXPECT().
+		Update(gomock.Any(), gomock.Any()).
+		Return(&domain.SalesOrderLine{ID: "orl_test", QuantityValue: "12", QuantityUnitID: "un_cs"}, nil).
+		Times(1)
+
+	suite.orderRepo.EXPECT().GetPickID(gomock.Any(), "or_test").Return(nil, nil).Times(1)
+
+	// The sync must carry the pre-update value (the mirror guard) and the
+	// *updated* line's quantity value and unit.
+	suite.lineRepo.EXPECT().
+		SyncInvoiceLineQuantities(gomock.Any(), "orl_test", "10", "12", "un_cs").
+		Return(nil).
+		Times(1)
+
+	suite.expectCacheSuccess()
+
+	_, apiErr := suite.svc.UpdateSalesOrderLine(ctx, params)
+	suite.Nil(apiErr)
+}
+
+// A unit-only change (no value change) must still sync — this was the reported bug:
+// changing the unit on an order line left the invoice line showing the old unit.
+func (suite *SalesOrderLineSvcTestSuite) TestUpdateSalesOrderLine_SyncsInvoiceLineOnUnitOnlyChange() {
+	ctx := salesOrderLineIdempotencyCtx(
+		salesOrderLineCtx("ac_test"),
+		"/core.CoreService/UpdateSalesOrderLine",
+	)
+
+	suite.expectIdempotencyStarted()
+
+	unit := "un_cs"
+	params := domain.UpdateSalesOrderLineParams{
+		SalesOrderLineID: "orl_test",
+		SalesOrderID:     "or_test",
+		QuantityUnitID:   &unit,
+	}
+
+	suite.lineRepo.EXPECT().IsInOrder(gomock.Any(), "orl_test", "or_test", "ac_test").Return(true, nil).Times(1)
+	suite.lineRepo.EXPECT().Get(gomock.Any(), "orl_test").Return(&domain.SalesOrderLine{ID: "orl_test", QuantityValue: "10", QuantityUnitID: "un_ea"}, nil).Times(1)
+	suite.lineRepo.EXPECT().
+		Update(gomock.Any(), gomock.Any()).
+		Return(&domain.SalesOrderLine{ID: "orl_test", QuantityValue: "10", QuantityUnitID: "un_cs"}, nil).
+		Times(1)
+
+	suite.orderRepo.EXPECT().GetPickID(gomock.Any(), "or_test").Return(nil, nil).Times(1)
+
+	suite.lineRepo.EXPECT().
+		SyncInvoiceLineQuantities(gomock.Any(), "orl_test", "10", "10", "un_cs").
+		Return(nil).
+		Times(1)
+
+	suite.expectCacheSuccess()
+
+	_, apiErr := suite.svc.UpdateSalesOrderLine(ctx, params)
+	suite.Nil(apiErr)
+}
+
+// A sync failure must fail (and roll back) the whole update — a half-applied edit
+// where the order changed but the invoice didn't is exactly the drift this prevents.
+func (suite *SalesOrderLineSvcTestSuite) TestUpdateSalesOrderLine_FailsWhenInvoiceSyncFails() {
+	ctx := salesOrderLineIdempotencyCtx(
+		salesOrderLineCtx("ac_test"),
+		"/core.CoreService/UpdateSalesOrderLine",
+	)
+
+	suite.expectIdempotencyStarted()
+
+	qty := "12"
+	params := domain.UpdateSalesOrderLineParams{
+		SalesOrderLineID: "orl_test",
+		SalesOrderID:     "or_test",
+		QuantityValue:    &qty,
+	}
+
+	suite.lineRepo.EXPECT().IsInOrder(gomock.Any(), "orl_test", "or_test", "ac_test").Return(true, nil).Times(1)
+	suite.lineRepo.EXPECT().Get(gomock.Any(), "orl_test").Return(&domain.SalesOrderLine{ID: "orl_test", QuantityValue: "10", QuantityUnitID: "un_ea"}, nil).Times(1)
+	suite.lineRepo.EXPECT().
+		Update(gomock.Any(), gomock.Any()).
+		Return(&domain.SalesOrderLine{ID: "orl_test", QuantityValue: "12", QuantityUnitID: "un_ea"}, nil).
+		Times(1)
+
+	suite.orderRepo.EXPECT().GetPickID(gomock.Any(), "or_test").Return(nil, nil).Times(1)
+
+	suite.lineRepo.EXPECT().
+		SyncInvoiceLineQuantities(gomock.Any(), "orl_test", "10", "12", "un_ea").
+		Return(apierror.NewInternalError(nil, "boom")).
+		Times(1)
+
+	suite.expectCacheError()
+
+	_, apiErr := suite.svc.UpdateSalesOrderLine(ctx, params)
+	suite.NotNil(apiErr)
+}
+
 // --- DeleteSalesOrderLine ---
 
 func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_Success() {

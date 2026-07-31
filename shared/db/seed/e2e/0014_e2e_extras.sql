@@ -150,6 +150,38 @@ INSERT IGNORE INTO invoice_line (id, invoice_id, quantity_id, sales_order_line_i
     ('ivln_01seedpck_ln3_0000', 'iv_01seedsecondinvoice0', 'qu_01seedivln_pck_ln300', 'orln_01seedpck_ln3_0000', NOW(), NOW());
 
 -- ============================================================
+-- INVOICE-SYNC ORDER + INVOICE (order-line → invoice-line quantity sync e2e)
+-- Dedicated rows for tests that MUTATE the order line's quantity and assert the
+-- invoice line follows. No other test may assert on these values.
+-- ============================================================
+
+INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
+    ('qu_01seedsync_ln1_qty0', 25, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedsync_ivln1_q0', 25, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedsync_ivln2_q0', 10, 'un_01seedpair000000000', NOW(), NOW());
+
+INSERT IGNORE INTO rate (id, value, numerator_unit_id, denominator_unit_id, created_at, updated_at) VALUES
+    ('rt_01seedsync_ln1_prc0', 9, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_01seedsync_ln1_cst0', 8, 'dollar', 'un_01seedpair000000000', NOW(), NOW());
+
+INSERT IGNORE INTO sales_order (id, number, sales_order_status_code, sales_order_type_code, priority_code, carrier_id, billing_address_id, shipping_address_id, buyer_account_id, seller_account_id, owner_account_id, payment_term_id, shipping_term_id, issued_at, created_at, updated_at) VALUES
+    ('or_01seedsyncorder0000', 'ORD-SYNC-001', 'issued', 'sales_order', 'normal', 'delivery', 'ad_01k09wnac0e1ar211e0sy0ba4g', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'ac_01k09wm2fgevdsc344gpbcj30f', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'pytm_01seednet3000000', 'prepaid_billed', DATE_SUB(NOW(), INTERVAL 1 DAY), NOW(), NOW());
+
+INSERT IGNORE INTO sales_order_line (id, product_sku, product_description, product_id, item_id, sales_order_id, quantity_id, unit_price_id, unit_cost_id, line_item_number, created_at, updated_at) VALUES
+    ('orln_01seedsync_ln1_00', 'SCK-001', 'Small white sock', 'pd_01k0a65nx2e2crfxrvryyxnmdh', 'it_01k0a7100aeysrs9vxpeq14yxj', 'or_01seedsyncorder0000', 'qu_01seedsync_ln1_qty0', 'rt_01seedsync_ln1_prc0', 'rt_01seedsync_ln1_cst0', 1, NOW(), NOW());
+
+INSERT IGNORE INTO invoice (id, number, sales_order_id, billing_address_id, account_id, created_at, updated_at) VALUES
+    ('iv_01seedsyncinvoice00', 'INV-SYNC-001', 'or_01seedsyncorder0000', 'ad_01k09wnac0e1ar211e0sy0ba4g', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
+    ('iv_01seedsyncinvoice02', 'INV-SYNC-002', 'or_01seedsyncorder0000', 'ad_01k09wnac0e1ar211e0sy0ba4g', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+
+-- INV-SYNC-001's line mirrors the order line's full ordered quantity (25) and must
+-- follow order-line edits; INV-SYNC-002's line is a partial (shipped-snapshot style)
+-- quantity (10) and must NOT be touched by the sync.
+INSERT IGNORE INTO invoice_line (id, invoice_id, quantity_id, sales_order_line_id, created_at, updated_at) VALUES
+    ('ivln_01seedsync_ln1_00', 'iv_01seedsyncinvoice00', 'qu_01seedsync_ivln1_q0', 'orln_01seedsync_ln1_00', NOW(), NOW()),
+    ('ivln_01seedsync_ln2_00', 'iv_01seedsyncinvoice02', 'qu_01seedsync_ivln2_q0', 'orln_01seedsync_ln1_00', NOW(), NOW());
+
+-- ============================================================
 -- SHIPMENT LINES (2 rows for the packed shipment)
 -- ============================================================
 

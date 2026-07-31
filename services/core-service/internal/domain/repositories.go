@@ -914,6 +914,11 @@ type SalesOrderLineRepo interface {
 	GetNextLineItemNumber(ctx context.Context, salesOrderID string) (int32, *apierror.APIError)
 	// HasShipmentAgainstOrderLine reports whether the order line is part of any shipment (packed or shipped).
 	HasShipmentAgainstOrderLine(ctx context.Context, salesOrderLineID string) (bool, *apierror.APIError)
+	// SyncInvoiceLineQuantities pushes the order line's new quantity (value + unit) into the
+	// invoice lines referencing it that were mirroring the pre-update quantity, so invoices
+	// stay in sync with order-line edits. Invoice lines holding a different (partial-shipment
+	// snapshot) value are left untouched, matching legacy billing semantics.
+	SyncInvoiceLineQuantities(ctx context.Context, salesOrderLineID, previousQuantityValue, quantityValue, quantityUnitID string) *apierror.APIError
 	DeleteCascade(ctx context.Context, salesOrderLineID string) *apierror.APIError
 	CreateQuantity(ctx context.Context, quantityID, value, unitID string) *apierror.APIError
 	// GetLineOrder returns the order's lines in current display order, flagging credit/freight (system) lines.

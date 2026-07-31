@@ -488,6 +488,19 @@ func (s *salesOrderLineSvcImpl) UpdateSalesOrderLine(ctx context.Context, params
 				}
 			}
 
+			// Invoice lines snapshot the order line's quantity into their own quantity row
+			// when created and are never touched again, so a quantity or unit edit here
+			// would leave any existing invoice stale. Push the new quantity into the
+			// invoice lines that were mirroring the order line (their value still equals
+			// the pre-update value); partial-shipment snapshots keep their own quantity,
+			// matching legacy billing semantics. Unit price needs no sync — invoice reads
+			// resolve it live from the order line's rate.
+			if params.QuantityValue != nil || params.QuantityUnitID != nil {
+				if apiErr := txLineRepo.SyncInvoiceLineQuantities(txCtx, params.SalesOrderLineID, old.QuantityValue, updated.QuantityValue, updated.QuantityUnitID); apiErr != nil {
+					return apiErr
+				}
+			}
+
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
 		})
 

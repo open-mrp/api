@@ -397,6 +397,8 @@ type AuditEvent struct {
 	SourceIp         sql.NullString
 	OccurredAt       time.Time
 	CreatedAt        time.Time
+	RootResourceID   sql.NullString
+	RootResourceType sql.NullString
 }
 
 type Batch struct {

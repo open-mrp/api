@@ -162,6 +162,29 @@ DELETE FROM shipment_line WHERE sales_order_line_id = sqlc.arg('sales_order_line
 -- name: DeleteInvoiceLinesBySalesOrderLine :exec
 DELETE FROM invoice_line WHERE sales_order_line_id = sqlc.arg('sales_order_line_id');
 
+-- name: SyncInvoiceLineQuantitiesBySalesOrderLine :execrows
+-- Each invoice line snapshots its own quantity row at creation time; when the order
+-- line's quantity (value or unit) changes, push the new values into the invoice lines
+-- that were mirroring the order line so order and invoice never drift apart.
+-- Legacy semantics (dashboard invoice.repo.ts): a line billed either the full ordered
+-- quantity (order-created invoices, non-shipped items) or a partial shipped snapshot.
+-- Only the former follow the order line, so the sync is gated on the invoice line still
+-- holding the order line's pre-update value; partial snapshots are left untouched.
+UPDATE quantity SET value = sqlc.arg('value'), unit_id = sqlc.arg('unit_id'), updated_at = NOW(3)
+WHERE id IN (SELECT quantity_id FROM invoice_line WHERE sales_order_line_id = sqlc.arg('sales_order_line_id'))
+  AND value = sqlc.arg('previous_value');
+
+-- name: TouchInvoiceLinesBySalesOrderLine :exec
+-- Companion to SyncInvoiceLineQuantitiesBySalesOrderLine: bump updated_at on the invoice
+-- lines whose quantity row is about to be synced. Must run BEFORE the quantity update in
+-- the same transaction, while the rows still hold the pre-update value.
+UPDATE invoice_line SET updated_at = NOW(3)
+WHERE sales_order_line_id = sqlc.arg('sales_order_line_id')
+  AND EXISTS (
+    SELECT 1 FROM quantity q
+    WHERE q.id = invoice_line.quantity_id AND q.value = sqlc.arg('previous_value')
+  );
+
 -- name: CreateOrderLineQuantity :exec
 INSERT INTO quantity (id, value, unit_id, created_at, updated_at)
 VALUES (sqlc.arg('id'), sqlc.arg('value'), sqlc.arg('unit_id'), NOW(3), NOW(3));

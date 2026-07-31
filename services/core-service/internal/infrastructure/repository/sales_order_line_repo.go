@@ -291,30 +291,98 @@ func (r *salesOrderLineRepoImpl) Update(ctx context.Context, params domain.Updat
 	return r.Get(ctx, params.SalesOrderLineID)
 }
 
+// syncFulfillmentQuantityRows updates the given fulfillment quantity rows by primary
+// key: the unit is always relabeled to the order line's unit, and — when syncValue is
+// set — the value follows too, but only for rows still mirroring the order line's
+// pre-update value (partial snapshots keep the amount that actually moved). Rows that
+// changed get their owning line's updated_at bumped via touch. Per-PK updates are
+// deliberate: an UPDATE ... WHERE id IN (subquery) can't use the index on the
+// production-sized quantity table and locks every row it scans, which stalled the
+// whole update-line transaction until the request deadline.
+func (r *salesOrderLineRepoImpl) syncFulfillmentQuantityRows(
+	ctx context.Context,
+	quantityIDs []string,
+	previousQuantityValue, quantityValue, quantityUnitID string,
+	syncValue bool,
+	touch func(ctx context.Context, quantityID string) error,
+) *apierror.APIError {
+	for _, quantityID := range quantityIDs {
+		changed, err := r.queries.UpdateQuantityUnitByID(ctx, sqlc.UpdateQuantityUnitByIDParams{
+			UnitID: quantityUnitID,
+			ID:     quantityID,
+		})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return apiErr
+		}
+
+		if syncValue {
+			affected, err := r.queries.SyncQuantityValueByID(ctx, sqlc.SyncQuantityValueByIDParams{
+				Value:         quantityValue,
+				ID:            quantityID,
+				PreviousValue: previousQuantityValue,
+			})
+			if apiErr := db.MapSQLError(err); apiErr != nil {
+				return apiErr
+			}
+			changed += affected
+		}
+
+		if changed == 0 {
+			continue
+		}
+		if apiErr := db.MapSQLError(touch(ctx, quantityID)); apiErr != nil {
+			return apiErr
+		}
+	}
+
+	return nil
+}
+
 func (r *salesOrderLineRepoImpl) SyncInvoiceLineQuantities(ctx context.Context, salesOrderLineID, previousQuantityValue, quantityValue, quantityUnitID string) *apierror.APIError {
 	ctx, span := salesOrderLineRepoTracer.Start(ctx, "repository.sales_order_line.sync_invoice_line_quantities")
 	defer span.End()
 
-	// Touch first: the guard matches on the pre-update value, which the sync below
-	// overwrites. Both statements run inside the caller's transaction.
-	err := r.queries.TouchInvoiceLinesBySalesOrderLine(ctx, sqlc.TouchInvoiceLinesBySalesOrderLineParams{
-		SalesOrderLineID: salesOrderLineID,
-		PreviousValue:    previousQuantityValue,
-	})
+	quantityIDs, err := r.queries.GetInvoiceLineQuantityIDsBySalesOrderLine(ctx, salesOrderLineID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 
-	_, err = r.queries.SyncInvoiceLineQuantitiesBySalesOrderLine(ctx, sqlc.SyncInvoiceLineQuantitiesBySalesOrderLineParams{
-		Value:            quantityValue,
-		UnitID:           quantityUnitID,
-		SalesOrderLineID: salesOrderLineID,
-		PreviousValue:    previousQuantityValue,
-	})
+	if apiErr := r.syncFulfillmentQuantityRows(ctx, quantityIDs, previousQuantityValue, quantityValue, quantityUnitID, true, r.queries.TouchInvoiceLineByQuantityID); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
+}
+
+func (r *salesOrderLineRepoImpl) SyncShipmentLineQuantities(ctx context.Context, salesOrderLineID, previousQuantityValue, quantityValue, quantityUnitID string) *apierror.APIError {
+	ctx, span := salesOrderLineRepoTracer.Start(ctx, "repository.sales_order_line.sync_shipment_line_quantities")
+	defer span.End()
+
+	quantityIDs, err := r.queries.GetShipmentLineQuantityIDsBySalesOrderLine(ctx, salesOrderLineID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 
+	if apiErr := r.syncFulfillmentQuantityRows(ctx, quantityIDs, previousQuantityValue, quantityValue, quantityUnitID, true, r.queries.TouchShipmentLineByQuantityID); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
+}
+
+func (r *salesOrderLineRepoImpl) SyncPickLineQuantityUnits(ctx context.Context, salesOrderLineID, quantityUnitID string) *apierror.APIError {
+	ctx, span := salesOrderLineRepoTracer.Start(ctx, "repository.sales_order_line.sync_pick_line_quantity_units")
+	defer span.End()
+
+	quantityIDs, err := r.queries.GetPickLineQuantityIDsBySalesOrderLine(ctx, salesOrderLineID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	// Pick line quantities are picking progress (how much has been picked), not
+	// mirrors of the ordered amount — value changes are handled by the pick
+	// reconciliation in the service instead. Only the unit is relabeled here.
+	if apiErr := r.syncFulfillmentQuantityRows(ctx, quantityIDs, "", "", quantityUnitID, false, r.queries.TouchPickLineByQuantityID); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
 	return nil
 }
 

@@ -914,11 +914,19 @@ type SalesOrderLineRepo interface {
 	GetNextLineItemNumber(ctx context.Context, salesOrderID string) (int32, *apierror.APIError)
 	// HasShipmentAgainstOrderLine reports whether the order line is part of any shipment (packed or shipped).
 	HasShipmentAgainstOrderLine(ctx context.Context, salesOrderLineID string) (bool, *apierror.APIError)
-	// SyncInvoiceLineQuantities pushes the order line's new quantity (value + unit) into the
-	// invoice lines referencing it that were mirroring the pre-update quantity, so invoices
-	// stay in sync with order-line edits. Invoice lines holding a different (partial-shipment
-	// snapshot) value are left untouched, matching legacy billing semantics.
+	// SyncInvoiceLineQuantities keeps the invoice lines referencing the order line in sync
+	// with a quantity edit: their unit always follows the order line's unit (a unit edit is
+	// a correction, and rollups sum these values without conversion), while their value
+	// follows only when it still mirrors the pre-update ordered quantity — partial-shipment
+	// snapshots keep the amount that was actually billed.
 	SyncInvoiceLineQuantities(ctx context.Context, salesOrderLineID, previousQuantityValue, quantityValue, quantityUnitID string) *apierror.APIError
+	// SyncShipmentLineQuantities applies the same sync rule as SyncInvoiceLineQuantities to
+	// the shipment lines referencing the order line.
+	SyncShipmentLineQuantities(ctx context.Context, salesOrderLineID, previousQuantityValue, quantityValue, quantityUnitID string) *apierror.APIError
+	// SyncPickLineQuantityUnits relabels the pick line quantities referencing the order line
+	// to the given unit. Pick line values are picking progress and are reconciled separately,
+	// so only the unit follows a unit edit on the order line.
+	SyncPickLineQuantityUnits(ctx context.Context, salesOrderLineID, quantityUnitID string) *apierror.APIError
 	DeleteCascade(ctx context.Context, salesOrderLineID string) *apierror.APIError
 	CreateQuantity(ctx context.Context, quantityID, value, unitID string) *apierror.APIError
 	// GetLineOrder returns the order's lines in current display order, flagging credit/freight (system) lines.

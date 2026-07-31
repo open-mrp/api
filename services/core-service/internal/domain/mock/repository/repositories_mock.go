@@ -10882,6 +10882,34 @@ func (mr *MockSalesOrderLineRepoMockRecorder) SyncInvoiceLineQuantities(ctx, sal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncInvoiceLineQuantities", reflect.TypeOf((*MockSalesOrderLineRepo)(nil).SyncInvoiceLineQuantities), ctx, salesOrderLineID, previousQuantityValue, quantityValue, quantityUnitID)
 }
 
+// SyncPickLineQuantityUnits mocks base method.
+func (m *MockSalesOrderLineRepo) SyncPickLineQuantityUnits(ctx context.Context, salesOrderLineID, quantityUnitID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SyncPickLineQuantityUnits", ctx, salesOrderLineID, quantityUnitID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SyncPickLineQuantityUnits indicates an expected call of SyncPickLineQuantityUnits.
+func (mr *MockSalesOrderLineRepoMockRecorder) SyncPickLineQuantityUnits(ctx, salesOrderLineID, quantityUnitID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncPickLineQuantityUnits", reflect.TypeOf((*MockSalesOrderLineRepo)(nil).SyncPickLineQuantityUnits), ctx, salesOrderLineID, quantityUnitID)
+}
+
+// SyncShipmentLineQuantities mocks base method.
+func (m *MockSalesOrderLineRepo) SyncShipmentLineQuantities(ctx context.Context, salesOrderLineID, previousQuantityValue, quantityValue, quantityUnitID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SyncShipmentLineQuantities", ctx, salesOrderLineID, previousQuantityValue, quantityValue, quantityUnitID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SyncShipmentLineQuantities indicates an expected call of SyncShipmentLineQuantities.
+func (mr *MockSalesOrderLineRepoMockRecorder) SyncShipmentLineQuantities(ctx, salesOrderLineID, previousQuantityValue, quantityValue, quantityUnitID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncShipmentLineQuantities", reflect.TypeOf((*MockSalesOrderLineRepo)(nil).SyncShipmentLineQuantities), ctx, salesOrderLineID, previousQuantityValue, quantityValue, quantityUnitID)
+}
+
 // Update mocks base method.
 func (m *MockSalesOrderLineRepo) Update(ctx context.Context, params domain.UpdateSalesOrderLineParams) (*domain.SalesOrderLine, *apierror.APIError) {
 	m.ctrl.T.Helper()

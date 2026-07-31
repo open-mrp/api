@@ -162,28 +162,49 @@ DELETE FROM shipment_line WHERE sales_order_line_id = sqlc.arg('sales_order_line
 -- name: DeleteInvoiceLinesBySalesOrderLine :exec
 DELETE FROM invoice_line WHERE sales_order_line_id = sqlc.arg('sales_order_line_id');
 
--- name: SyncInvoiceLineQuantitiesBySalesOrderLine :execrows
--- Each invoice line snapshots its own quantity row at creation time; when the order
--- line's quantity (value or unit) changes, push the new values into the invoice lines
--- that were mirroring the order line so order and invoice never drift apart.
--- Legacy semantics (dashboard invoice.repo.ts): a line billed either the full ordered
--- quantity (order-created invoices, non-shipped items) or a partial shipped snapshot.
--- Only the former follow the order line, so the sync is gated on the invoice line still
--- holding the order line's pre-update value; partial snapshots are left untouched.
-UPDATE quantity SET value = sqlc.arg('value'), unit_id = sqlc.arg('unit_id'), updated_at = NOW(3)
-WHERE id IN (SELECT quantity_id FROM invoice_line WHERE sales_order_line_id = sqlc.arg('sales_order_line_id'))
-  AND value = sqlc.arg('previous_value');
+-- Quantity rows behind the pick/shipment/invoice lines fulfilling this order line,
+-- resolved via each table's sales_order_line_id index. The sync queries below then
+-- target each quantity row by primary key: an UPDATE ... WHERE id IN (subquery) locks
+-- every row the scan examines, which on the production-sized quantity table meant a
+-- full-table lock crawl that timed out the whole update-line request.
 
--- name: TouchInvoiceLinesBySalesOrderLine :exec
--- Companion to SyncInvoiceLineQuantitiesBySalesOrderLine: bump updated_at on the invoice
--- lines whose quantity row is about to be synced. Must run BEFORE the quantity update in
--- the same transaction, while the rows still hold the pre-update value.
-UPDATE invoice_line SET updated_at = NOW(3)
-WHERE sales_order_line_id = sqlc.arg('sales_order_line_id')
-  AND EXISTS (
-    SELECT 1 FROM quantity q
-    WHERE q.id = invoice_line.quantity_id AND q.value = sqlc.arg('previous_value')
-  );
+-- name: GetInvoiceLineQuantityIDsBySalesOrderLine :many
+SELECT quantity_id FROM invoice_line WHERE sales_order_line_id = sqlc.arg('sales_order_line_id');
+
+-- name: GetShipmentLineQuantityIDsBySalesOrderLine :many
+SELECT quantity_id FROM shipment_line WHERE sales_order_line_id = sqlc.arg('sales_order_line_id');
+
+-- name: GetPickLineQuantityIDsBySalesOrderLine :many
+SELECT quantity_id FROM pick_line WHERE sales_order_line_id = sqlc.arg('sales_order_line_id');
+
+-- name: UpdateQuantityUnitByID :execrows
+-- Relabels a fulfillment quantity row to the order line's unit. A unit edit on the
+-- order line is a data correction, and the pack/invoiced rollups sum these values
+-- without unit conversion, so every pick/shipment/invoice line quantity must stay in
+-- the order line's unit. Values are intentionally not converted.
+UPDATE quantity SET unit_id = sqlc.arg('unit_id'), updated_at = NOW(3)
+WHERE id = sqlc.arg('id') AND unit_id <> sqlc.arg('unit_id');
+
+-- name: SyncQuantityValueByID :execrows
+-- Pushes the order line's new quantity value into a fulfillment quantity row that was
+-- mirroring it. Legacy semantics (dashboard invoice.repo.ts): a line billed/shipped
+-- either the full ordered quantity or a partial snapshot. Only the former follow the
+-- order line, so the sync is gated on the row still holding the order line's
+-- pre-update value; partial snapshots keep the amount that actually moved.
+UPDATE quantity SET value = sqlc.arg('value'), updated_at = NOW(3)
+WHERE id = sqlc.arg('id') AND value = sqlc.arg('previous_value');
+
+-- Companions to the sync queries: bump updated_at on the owning line whose quantity
+-- row was just synced (quantity_id is UNIQUE on all three tables).
+
+-- name: TouchInvoiceLineByQuantityID :exec
+UPDATE invoice_line SET updated_at = NOW(3) WHERE quantity_id = sqlc.arg('quantity_id');
+
+-- name: TouchShipmentLineByQuantityID :exec
+UPDATE shipment_line SET updated_at = NOW(3) WHERE quantity_id = sqlc.arg('quantity_id');
+
+-- name: TouchPickLineByQuantityID :exec
+UPDATE pick_line SET updated_at = NOW(3) WHERE quantity_id = sqlc.arg('quantity_id');
 
 -- name: CreateOrderLineQuantity :exec
 INSERT INTO quantity (id, value, unit_id, created_at, updated_at)

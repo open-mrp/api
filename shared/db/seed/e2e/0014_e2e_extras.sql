@@ -181,6 +181,28 @@ INSERT IGNORE INTO invoice_line (id, invoice_id, quantity_id, sales_order_line_i
     ('ivln_01seedsync_ln1_00', 'iv_01seedsyncinvoice00', 'qu_01seedsync_ivln1_q0', 'orln_01seedsync_ln1_00', NOW(), NOW()),
     ('ivln_01seedsync_ln2_00', 'iv_01seedsyncinvoice02', 'qu_01seedsync_ivln2_q0', 'orln_01seedsync_ln1_00', NOW(), NOW());
 
+-- Fully-picked pick and shipped shipment for ORD-SYNC-001. The packed pick line's
+-- quantity (25 pair picked) is picking progress: only its UNIT follows order-line
+-- edits. The shipment line (25 pair) mirrors the full ordered quantity and follows
+-- edits the same way as the mirror invoice line.
+INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
+    ('qu_01seedsync_pkln1_q0', 25, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedsync_shln1_q0', 25, 'un_01seedpair000000000', NOW(), NOW());
+
+INSERT IGNORE INTO pick (id, number, sales_order_id, account_id, created_at, updated_at) VALUES
+    ('pk_01seedsyncpick00000', 'PICK-SYNC-001', 'or_01seedsyncorder0000', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+
+UPDATE pick SET finished_at = NOW() WHERE id = 'pk_01seedsyncpick00000' AND finished_at IS NULL;
+
+INSERT IGNORE INTO pick_line (id, pick_id, quantity_id, sales_order_line_id, packed_at, created_at, updated_at) VALUES
+    ('pkln_01seedsync_ln1_00', 'pk_01seedsyncpick00000', 'qu_01seedsync_pkln1_q0', 'orln_01seedsync_ln1_00', NOW(), NOW(), NOW());
+
+INSERT IGNORE INTO shipment (id, number, sales_order_id, carrier_id, shipping_address_id, shipment_status_code, shipped_at, shipped_by_id, account_id, created_at, updated_at) VALUES
+    ('sh_01seedsyncship00000', 'SHP-SYNC-001', 'or_01seedsyncorder0000', 'delivery', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'shipped', NOW(), 'acus_s83fjhyfmqen', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+
+INSERT IGNORE INTO shipment_line (id, shipment_id, sales_order_line_id, quantity_id, created_at, updated_at) VALUES
+    ('shln_01seedsync_ln1_00', 'sh_01seedsyncship00000', 'orln_01seedsync_ln1_00', 'qu_01seedsync_shln1_q0', NOW(), NOW());
+
 -- ============================================================
 -- SHIPMENT LINES (2 rows for the packed shipment)
 -- ============================================================

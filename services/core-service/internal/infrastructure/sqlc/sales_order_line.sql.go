@@ -149,6 +149,39 @@ func (q *Queries) GetFirstSystemLineNumber(ctx context.Context, salesOrderID str
 	return first_system_number, err
 }
 
+const getInvoiceLineQuantityIDsBySalesOrderLine = `-- name: GetInvoiceLineQuantityIDsBySalesOrderLine :many
+
+SELECT quantity_id FROM invoice_line WHERE sales_order_line_id = ?
+`
+
+// Quantity rows behind the pick/shipment/invoice lines fulfilling this order line,
+// resolved via each table's sales_order_line_id index. The sync queries below then
+// target each quantity row by primary key: an UPDATE ... WHERE id IN (subquery) locks
+// every row the scan examines, which on the production-sized quantity table meant a
+// full-table lock crawl that timed out the whole update-line request.
+func (q *Queries) GetInvoiceLineQuantityIDsBySalesOrderLine(ctx context.Context, salesOrderLineID string) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getInvoiceLineQuantityIDsBySalesOrderLine, salesOrderLineID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var quantity_id string
+		if err := rows.Scan(&quantity_id); err != nil {
+			return nil, err
+		}
+		items = append(items, quantity_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getNextLineItemNumber = `-- name: GetNextLineItemNumber :one
 SELECT COALESCE(MAX(line_item_number), 0) + 1 AS next_number
 FROM sales_order_line
@@ -160,6 +193,33 @@ func (q *Queries) GetNextLineItemNumber(ctx context.Context, salesOrderID string
 	var next_number int32
 	err := row.Scan(&next_number)
 	return next_number, err
+}
+
+const getPickLineQuantityIDsBySalesOrderLine = `-- name: GetPickLineQuantityIDsBySalesOrderLine :many
+SELECT quantity_id FROM pick_line WHERE sales_order_line_id = ?
+`
+
+func (q *Queries) GetPickLineQuantityIDsBySalesOrderLine(ctx context.Context, salesOrderLineID string) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getPickLineQuantityIDsBySalesOrderLine, salesOrderLineID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var quantity_id string
+		if err := rows.Scan(&quantity_id); err != nil {
+			return nil, err
+		}
+		items = append(items, quantity_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getSalesOrderLine = `-- name: GetSalesOrderLine :one
@@ -342,6 +402,33 @@ func (q *Queries) GetSalesOrderLineOrder(ctx context.Context, salesOrderID strin
 	return items, nil
 }
 
+const getShipmentLineQuantityIDsBySalesOrderLine = `-- name: GetShipmentLineQuantityIDsBySalesOrderLine :many
+SELECT quantity_id FROM shipment_line WHERE sales_order_line_id = ?
+`
+
+func (q *Queries) GetShipmentLineQuantityIDsBySalesOrderLine(ctx context.Context, salesOrderLineID string) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getShipmentLineQuantityIDsBySalesOrderLine, salesOrderLineID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var quantity_id string
+		if err := rows.Scan(&quantity_id); err != nil {
+			return nil, err
+		}
+		items = append(items, quantity_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const hasShipmentAgainstOrderLine = `-- name: HasShipmentAgainstOrderLine :one
 SELECT EXISTS(
     SELECT 1 FROM shipment_line sl
@@ -448,58 +535,57 @@ func (q *Queries) ShiftSalesOrderLineNumbersAtOrAbove(ctx context.Context, arg S
 	return err
 }
 
-const syncInvoiceLineQuantitiesBySalesOrderLine = `-- name: SyncInvoiceLineQuantitiesBySalesOrderLine :execrows
-UPDATE quantity SET value = ?, unit_id = ?, updated_at = NOW(3)
-WHERE id IN (SELECT quantity_id FROM invoice_line WHERE sales_order_line_id = ?)
-  AND value = ?
+const syncQuantityValueByID = `-- name: SyncQuantityValueByID :execrows
+UPDATE quantity SET value = ?, updated_at = NOW(3)
+WHERE id = ? AND value = ?
 `
 
-type SyncInvoiceLineQuantitiesBySalesOrderLineParams struct {
-	Value            string
-	UnitID           string
-	SalesOrderLineID string
-	PreviousValue    string
+type SyncQuantityValueByIDParams struct {
+	Value         string
+	ID            string
+	PreviousValue string
 }
 
-// Each invoice line snapshots its own quantity row at creation time; when the order
-// line's quantity (value or unit) changes, push the new values into the invoice lines
-// that were mirroring the order line so order and invoice never drift apart.
-// Legacy semantics (dashboard invoice.repo.ts): a line billed either the full ordered
-// quantity (order-created invoices, non-shipped items) or a partial shipped snapshot.
-// Only the former follow the order line, so the sync is gated on the invoice line still
-// holding the order line's pre-update value; partial snapshots are left untouched.
-func (q *Queries) SyncInvoiceLineQuantitiesBySalesOrderLine(ctx context.Context, arg SyncInvoiceLineQuantitiesBySalesOrderLineParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, syncInvoiceLineQuantitiesBySalesOrderLine,
-		arg.Value,
-		arg.UnitID,
-		arg.SalesOrderLineID,
-		arg.PreviousValue,
-	)
+// Pushes the order line's new quantity value into a fulfillment quantity row that was
+// mirroring it. Legacy semantics (dashboard invoice.repo.ts): a line billed/shipped
+// either the full ordered quantity or a partial snapshot. Only the former follow the
+// order line, so the sync is gated on the row still holding the order line's
+// pre-update value; partial snapshots keep the amount that actually moved.
+func (q *Queries) SyncQuantityValueByID(ctx context.Context, arg SyncQuantityValueByIDParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, syncQuantityValueByID, arg.Value, arg.ID, arg.PreviousValue)
 	if err != nil {
 		return 0, err
 	}
 	return result.RowsAffected()
 }
 
-const touchInvoiceLinesBySalesOrderLine = `-- name: TouchInvoiceLinesBySalesOrderLine :exec
-UPDATE invoice_line SET updated_at = NOW(3)
-WHERE sales_order_line_id = ?
-  AND EXISTS (
-    SELECT 1 FROM quantity q
-    WHERE q.id = invoice_line.quantity_id AND q.value = ?
-  )
+const touchInvoiceLineByQuantityID = `-- name: TouchInvoiceLineByQuantityID :exec
+
+UPDATE invoice_line SET updated_at = NOW(3) WHERE quantity_id = ?
 `
 
-type TouchInvoiceLinesBySalesOrderLineParams struct {
-	SalesOrderLineID string
-	PreviousValue    string
+// Companions to the sync queries: bump updated_at on the owning line whose quantity
+// row was just synced (quantity_id is UNIQUE on all three tables).
+func (q *Queries) TouchInvoiceLineByQuantityID(ctx context.Context, quantityID string) error {
+	_, err := q.db.ExecContext(ctx, touchInvoiceLineByQuantityID, quantityID)
+	return err
 }
 
-// Companion to SyncInvoiceLineQuantitiesBySalesOrderLine: bump updated_at on the invoice
-// lines whose quantity row is about to be synced. Must run BEFORE the quantity update in
-// the same transaction, while the rows still hold the pre-update value.
-func (q *Queries) TouchInvoiceLinesBySalesOrderLine(ctx context.Context, arg TouchInvoiceLinesBySalesOrderLineParams) error {
-	_, err := q.db.ExecContext(ctx, touchInvoiceLinesBySalesOrderLine, arg.SalesOrderLineID, arg.PreviousValue)
+const touchPickLineByQuantityID = `-- name: TouchPickLineByQuantityID :exec
+UPDATE pick_line SET updated_at = NOW(3) WHERE quantity_id = ?
+`
+
+func (q *Queries) TouchPickLineByQuantityID(ctx context.Context, quantityID string) error {
+	_, err := q.db.ExecContext(ctx, touchPickLineByQuantityID, quantityID)
+	return err
+}
+
+const touchShipmentLineByQuantityID = `-- name: TouchShipmentLineByQuantityID :exec
+UPDATE shipment_line SET updated_at = NOW(3) WHERE quantity_id = ?
+`
+
+func (q *Queries) TouchShipmentLineByQuantityID(ctx context.Context, quantityID string) error {
+	_, err := q.db.ExecContext(ctx, touchShipmentLineByQuantityID, quantityID)
 	return err
 }
 
@@ -543,6 +629,28 @@ func (q *Queries) UpdateOrderLineRateValue(ctx context.Context, arg UpdateOrderL
 		arg.ID,
 	)
 	return err
+}
+
+const updateQuantityUnitByID = `-- name: UpdateQuantityUnitByID :execrows
+UPDATE quantity SET unit_id = ?, updated_at = NOW(3)
+WHERE id = ? AND unit_id <> ?
+`
+
+type UpdateQuantityUnitByIDParams struct {
+	UnitID string
+	ID     string
+}
+
+// Relabels a fulfillment quantity row to the order line's unit. A unit edit on the
+// order line is a data correction, and the pack/invoiced rollups sum these values
+// without unit conversion, so every pick/shipment/invoice line quantity must stay in
+// the order line's unit. Values are intentionally not converted.
+func (q *Queries) UpdateQuantityUnitByID(ctx context.Context, arg UpdateQuantityUnitByIDParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateQuantityUnitByID, arg.UnitID, arg.ID, arg.UnitID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const updateSalesOrderLine = `-- name: UpdateSalesOrderLine :exec

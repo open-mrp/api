@@ -473,6 +473,33 @@ func (s *salesOrderLineSvcImpl) UpdateSalesOrderLine(ctx context.Context, params
 				return apiErr
 			}
 
+			// Keep downstream fulfillment records in sync with a quantity edit. Pick,
+			// shipment, and invoice lines each snapshot the order line's quantity into
+			// their own quantity row when created and are never touched again, so an
+			// edit here would leave them stale. The rules:
+			//   - Unit always follows on all three (a unit edit is a data correction,
+			//     and the pack/invoiced rollups sum these values without conversion).
+			//   - Value follows for shipment and invoice lines only when it still
+			//     mirrors the pre-update ordered quantity; partial snapshots keep the
+			//     amount that actually moved (legacy billing semantics).
+			//   - Pick line values are picking progress and are handled by the pick
+			//     reconciliation below instead.
+			// Unit price needs no sync — invoice reads resolve it live from the order
+			// line's rate.
+			if params.QuantityValue != nil || params.QuantityUnitID != nil {
+				if updated.QuantityUnitID != old.QuantityUnitID {
+					if apiErr := txLineRepo.SyncPickLineQuantityUnits(txCtx, params.SalesOrderLineID, updated.QuantityUnitID); apiErr != nil {
+						return apiErr
+					}
+				}
+				if apiErr := txLineRepo.SyncInvoiceLineQuantities(txCtx, params.SalesOrderLineID, old.QuantityValue, updated.QuantityValue, updated.QuantityUnitID); apiErr != nil {
+					return apiErr
+				}
+				if apiErr := txLineRepo.SyncShipmentLineQuantities(txCtx, params.SalesOrderLineID, old.QuantityValue, updated.QuantityValue, updated.QuantityUnitID); apiErr != nil {
+					return apiErr
+				}
+			}
+
 			// Reconcile pick lines with the new quantity when the order has a pick — but
 			// only for sale product lines. Freight/credit (system) lines are never picked,
 			// so updating one must not touch pick lines (matches legacy order-line.repo.ts,
@@ -484,19 +511,6 @@ func (s *salesOrderLineSvcImpl) UpdateSalesOrderLine(ctx context.Context, params
 			isSaleLine := old.ProductTypeCode != nil && *old.ProductTypeCode == string(constants.ProductTypeCodeSale)
 			if pickID != nil && isSaleLine {
 				if apiErr := reconcilePickForOrderLine(txCtx, txLineRepo, txPickLineRepo, txSvc.repos.NewPickRepo(), params.AccountID, params.SalesOrderLineID, *pickID); apiErr != nil {
-					return apiErr
-				}
-			}
-
-			// Invoice lines snapshot the order line's quantity into their own quantity row
-			// when created and are never touched again, so a quantity or unit edit here
-			// would leave any existing invoice stale. Push the new quantity into the
-			// invoice lines that were mirroring the order line (their value still equals
-			// the pre-update value); partial-shipment snapshots keep their own quantity,
-			// matching legacy billing semantics. Unit price needs no sync — invoice reads
-			// resolve it live from the order line's rate.
-			if params.QuantityValue != nil || params.QuantityUnitID != nil {
-				if apiErr := txLineRepo.SyncInvoiceLineQuantities(txCtx, params.SalesOrderLineID, old.QuantityValue, updated.QuantityValue, updated.QuantityUnitID); apiErr != nil {
 					return apiErr
 				}
 			}

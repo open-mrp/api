@@ -680,8 +680,8 @@ func (suite *SalesOrderLineSvcTestSuite) TestUpdateSalesOrderLine_SkipsPickLineF
 }
 
 // Editing an order line's quantity must push the new value + unit into the invoice
-// lines referencing it — invoice lines snapshot quantity at creation and would
-// otherwise go stale.
+// and shipment lines referencing it, and relabel pick line units — all three snapshot
+// quantity at creation and would otherwise go stale.
 func (suite *SalesOrderLineSvcTestSuite) TestUpdateSalesOrderLine_SyncsInvoiceLineQuantities() {
 	ctx := salesOrderLineIdempotencyCtx(
 		salesOrderLineCtx("ac_test"),
@@ -708,10 +708,19 @@ func (suite *SalesOrderLineSvcTestSuite) TestUpdateSalesOrderLine_SyncsInvoiceLi
 
 	suite.orderRepo.EXPECT().GetPickID(gomock.Any(), "or_test").Return(nil, nil).Times(1)
 
-	// The sync must carry the pre-update value (the mirror guard) and the
-	// *updated* line's quantity value and unit.
+	// The syncs must carry the pre-update value (the mirror guard) and the
+	// *updated* line's quantity value and unit; the unit change also relabels
+	// pick line quantities (value handled by pick reconciliation, not sync).
+	suite.lineRepo.EXPECT().
+		SyncPickLineQuantityUnits(gomock.Any(), "orl_test", "un_cs").
+		Return(nil).
+		Times(1)
 	suite.lineRepo.EXPECT().
 		SyncInvoiceLineQuantities(gomock.Any(), "orl_test", "10", "12", "un_cs").
+		Return(nil).
+		Times(1)
+	suite.lineRepo.EXPECT().
+		SyncShipmentLineQuantities(gomock.Any(), "orl_test", "10", "12", "un_cs").
 		Return(nil).
 		Times(1)
 
@@ -748,9 +757,59 @@ func (suite *SalesOrderLineSvcTestSuite) TestUpdateSalesOrderLine_SyncsInvoiceLi
 	suite.orderRepo.EXPECT().GetPickID(gomock.Any(), "or_test").Return(nil, nil).Times(1)
 
 	suite.lineRepo.EXPECT().
+		SyncPickLineQuantityUnits(gomock.Any(), "orl_test", "un_cs").
+		Return(nil).
+		Times(1)
+	suite.lineRepo.EXPECT().
 		SyncInvoiceLineQuantities(gomock.Any(), "orl_test", "10", "10", "un_cs").
 		Return(nil).
 		Times(1)
+	suite.lineRepo.EXPECT().
+		SyncShipmentLineQuantities(gomock.Any(), "orl_test", "10", "10", "un_cs").
+		Return(nil).
+		Times(1)
+
+	suite.expectCacheSuccess()
+
+	_, apiErr := suite.svc.UpdateSalesOrderLine(ctx, params)
+	suite.Nil(apiErr)
+}
+
+// A value-only change must not relabel pick line units — the pick relabel only runs
+// when the unit actually changed; value deltas are the pick reconciliation's job.
+// gomock's strict mode fails the test if SyncPickLineQuantityUnits is called.
+func (suite *SalesOrderLineSvcTestSuite) TestUpdateSalesOrderLine_ValueOnlyChangeSkipsPickUnitRelabel() {
+	ctx := salesOrderLineIdempotencyCtx(
+		salesOrderLineCtx("ac_test"),
+		"/core.CoreService/UpdateSalesOrderLine",
+	)
+
+	suite.expectIdempotencyStarted()
+
+	qty := "12"
+	params := domain.UpdateSalesOrderLineParams{
+		SalesOrderLineID: "orl_test",
+		SalesOrderID:     "or_test",
+		QuantityValue:    &qty,
+	}
+
+	suite.lineRepo.EXPECT().IsInOrder(gomock.Any(), "orl_test", "or_test", "ac_test").Return(true, nil).Times(1)
+	suite.lineRepo.EXPECT().Get(gomock.Any(), "orl_test").Return(&domain.SalesOrderLine{ID: "orl_test", QuantityValue: "10", QuantityUnitID: "un_ea"}, nil).Times(1)
+	suite.lineRepo.EXPECT().
+		Update(gomock.Any(), gomock.Any()).
+		Return(&domain.SalesOrderLine{ID: "orl_test", QuantityValue: "12", QuantityUnitID: "un_ea"}, nil).
+		Times(1)
+
+	suite.lineRepo.EXPECT().
+		SyncInvoiceLineQuantities(gomock.Any(), "orl_test", "10", "12", "un_ea").
+		Return(nil).
+		Times(1)
+	suite.lineRepo.EXPECT().
+		SyncShipmentLineQuantities(gomock.Any(), "orl_test", "10", "12", "un_ea").
+		Return(nil).
+		Times(1)
+
+	suite.orderRepo.EXPECT().GetPickID(gomock.Any(), "or_test").Return(nil, nil).Times(1)
 
 	suite.expectCacheSuccess()
 
@@ -782,8 +841,8 @@ func (suite *SalesOrderLineSvcTestSuite) TestUpdateSalesOrderLine_FailsWhenInvoi
 		Return(&domain.SalesOrderLine{ID: "orl_test", QuantityValue: "12", QuantityUnitID: "un_ea"}, nil).
 		Times(1)
 
-	suite.orderRepo.EXPECT().GetPickID(gomock.Any(), "or_test").Return(nil, nil).Times(1)
-
+	// The sync runs before pick reconciliation, so a failure short-circuits the tx:
+	// no GetPickID / SyncShipmentLineQuantities expectations — gomock fails if called.
 	suite.lineRepo.EXPECT().
 		SyncInvoiceLineQuantities(gomock.Any(), "orl_test", "10", "12", "un_ea").
 		Return(apierror.NewInternalError(nil, "boom")).

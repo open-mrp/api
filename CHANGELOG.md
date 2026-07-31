@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.41.18](https://github.com/Augno/api/compare/v0.41.17...v0.41.18) (2026-07-31)
+
+
+### Bug Fixes
+
+* stop invoice-line quantity sync from locking the quantity table ([#438](https://github.com/Augno/api/issues/438)) ([95cf0ad](https://github.com/Augno/api/commit/95cf0ad96d53327ab8f429de3405ffa8af4154df))
+
 ## [0.41.17](https://github.com/Augno/api/compare/v0.41.16...v0.41.17) (2026-07-31)
 
 

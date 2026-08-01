@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.42.3](https://github.com/Augno/api/compare/v0.42.2...v0.42.3) (2026-08-01)
+
+
+### Bug Fixes
+
+* update demand override logic and tests for clarity and accuracy ([d8bc95f](https://github.com/Augno/api/commit/d8bc95f3c4919068473b38dec9cfa03dc5c17f1a))
+
 ## [0.42.2](https://github.com/Augno/api/compare/v0.42.1...v0.42.2) (2026-08-01)
 
 

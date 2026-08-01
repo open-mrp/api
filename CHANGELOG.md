@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.42.4](https://github.com/Augno/api/compare/v0.42.3...v0.42.4) (2026-08-01)
+
+
+### Bug Fixes
+
+* schedule not pulling enough history ([f383a8d](https://github.com/Augno/api/commit/f383a8d50243acefe143869c8ccc870d0c43d292))
+
 ## [0.42.3](https://github.com/Augno/api/compare/v0.42.2...v0.42.3) (2026-08-01)
 
 

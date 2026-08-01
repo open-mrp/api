@@ -24,7 +24,7 @@ func (e *ListScheduleDeviationTypesEndpoint) Materialize() *apiendpoint.APIEndpo
 		ContentType:       "application/json",
 		Route:             "/v1/operations/schedule-deviation-types",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		AgentTool:         true,
 		ObjectType:        constants.ObjectTypeScheduleDeviationType,

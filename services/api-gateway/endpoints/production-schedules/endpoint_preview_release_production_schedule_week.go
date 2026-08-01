@@ -32,7 +32,7 @@ func (e *PreviewReleaseProductionScheduleWeekEndpoint) Materialize() *apiendpoin
 		Method:            http.MethodGet,
 		Route:             "/v1/operations/production-schedules/{id}/week-release-preview",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		AgentTool:         true,
 		ObjectType:        constants.ObjectTypeProductionScheduleWeekReleasePreview,

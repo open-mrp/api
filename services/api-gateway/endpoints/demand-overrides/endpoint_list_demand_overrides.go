@@ -40,7 +40,7 @@ func (e *ListDemandOverridesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Li
 		ContentType:       "application/json",
 		Route:             "/v1/operations/demand-overrides",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		AgentTool:         true,
 		ObjectType:        constants.ObjectTypeDemandOverride,

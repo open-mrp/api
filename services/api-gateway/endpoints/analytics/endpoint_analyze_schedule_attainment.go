@@ -43,7 +43,7 @@ func (e *AnalyzeScheduleAttainmentEndpoint) Materialize() *apiendpoint.APIEndpoi
 		Route:               "/v1/core/analytics/schedule-attainment",
 		ContentType:         "application/json",
 		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
+		Public:              true,
 		Preview:             true,
 		AgentTool:           true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProductionSchedules, Action: types.ActionRead}},

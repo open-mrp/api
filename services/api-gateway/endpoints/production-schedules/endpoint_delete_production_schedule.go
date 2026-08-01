@@ -29,7 +29,7 @@ func (e *DeleteProductionScheduleEndpoint) Materialize() *apiendpoint.APIEndpoin
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-schedules/{id}",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeProductionSchedule,
 		RequiredPermissions: []types.Permission{

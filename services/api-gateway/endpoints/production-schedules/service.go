@@ -8,8 +8,8 @@ import (
 
 	productionrunep "github.com/augno/api/services/api-gateway/endpoints/production-runs"
 	"github.com/augno/api/services/api-gateway/internal/domain"
-	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
@@ -977,15 +977,15 @@ func (m *productionScheduleSvcImpl) ListProductionScheduleFinishedPolicies(ctx c
 			GreigeItem:         entityRef(p.GreigeItemId, constants.ObjectTypeItem),
 			GreigeSKU:          p.GreigeSku,
 			ProductLine:        entityRefPtr(p.ProductLineId, constants.ObjectTypeProductLine),
-			AnnualDemand:         p.AnnualDemand,
-			WeeklyDemand:         p.WeeklyDemand,
-			SigmaWeekly:          p.SigmaWeekly,
-			SafetyStock:          p.SafetyStock,
-			ReorderPoint:         p.ReorderPoint,
-			OnHand:               p.OnHand,
-			WeeksOfCover:         p.WeeksOfCover,
-			CreatedAt:            grpcutil.TimestampToTime(p.CreatedAt),
-			UpdatedAt:            grpcutil.TimestampToTime(p.UpdatedAt),
+			AnnualDemand:       p.AnnualDemand,
+			WeeklyDemand:       p.WeeklyDemand,
+			SigmaWeekly:        p.SigmaWeekly,
+			SafetyStock:        p.SafetyStock,
+			ReorderPoint:       p.ReorderPoint,
+			OnHand:             p.OnHand,
+			WeeksOfCover:       p.WeeksOfCover,
+			CreatedAt:          grpcutil.TimestampToTime(p.CreatedAt),
+			UpdatedAt:          grpcutil.TimestampToTime(p.UpdatedAt),
 		}
 	}
 
@@ -1076,11 +1076,11 @@ func (m *productionScheduleSvcImpl) PreviewReleaseProductionScheduleWeek(ctx con
 	}
 
 	return &apiresource.ReleaseScheduleWeekPreview{
-		Object:                  constants.ObjectTypeProductionScheduleWeekReleasePreview,
-		WeekIndex:               resp.WeekIndex,
-		WeekStartDate:           grpcutil.TimestampToTime(resp.WeekStartDate),
-		LineCount:               resp.LineCount,
-		BatchCount:              resp.BatchCount,
+		Object:                constants.ObjectTypeProductionScheduleWeekReleasePreview,
+		WeekIndex:             resp.WeekIndex,
+		WeekStartDate:         grpcutil.TimestampToTime(resp.WeekStartDate),
+		LineCount:             resp.LineCount,
+		BatchCount:            resp.BatchCount,
 		TotalQuantity:         resp.TotalQuantity,
 		Lines:                 apiresource.NewList(releasedLinesFromProto(resp.Lines), apiresource.PageInfo{}),
 		IsReleasable:          resp.IsReleasable,

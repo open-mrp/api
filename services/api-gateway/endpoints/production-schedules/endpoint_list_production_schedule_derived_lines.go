@@ -35,7 +35,7 @@ func (e *ListProductionScheduleDerivedLinesEndpoint) Materialize() *apiendpoint.
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-schedules/{id}/derived-lines",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		AgentTool:         true,
 		ObjectType:        constants.ObjectTypeProductionScheduleDerivedLine,

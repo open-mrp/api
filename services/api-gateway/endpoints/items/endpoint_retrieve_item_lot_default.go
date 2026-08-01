@@ -33,7 +33,7 @@ func (e *RetrieveItemLotDefaultEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		ContentType:         "application/json",
 		Route:               "/v1/catalog/items/{id}/lot-default",
 		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
+		Public:              true,
 		AgentTool:           true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionRead}},
 		Preview:             true,

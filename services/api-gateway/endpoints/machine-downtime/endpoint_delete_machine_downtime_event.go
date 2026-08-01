@@ -27,7 +27,7 @@ func (e *DeleteMachineDowntimeEventEndpoint) Materialize() *apiendpoint.APIEndpo
 		ContentType:       "application/json",
 		Route:             "/v1/operations/machine-downtime-events/{id}",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeMachineDowntimeEvent,
 		RequiredPermissions: []types.Permission{

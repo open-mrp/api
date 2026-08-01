@@ -27,7 +27,7 @@ func (e *RetrieveMachineDowntimeEventEndpoint) Materialize() *apiendpoint.APIEnd
 		ContentType:       "application/json",
 		Route:             "/v1/operations/machine-downtime-events/{id}",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		AgentTool:         true,
 		ObjectType:        constants.ObjectTypeMachineDowntimeEvent,

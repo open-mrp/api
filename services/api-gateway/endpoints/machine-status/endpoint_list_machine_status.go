@@ -36,7 +36,7 @@ func (e *ListMachineStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		ContentType:         "application/json",
 		Route:               "/v1/operations/machine-status",
 		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
+		Public:              true,
 		Preview:             true,
 		AgentTool:           true,
 		ObjectType:          constants.ObjectTypeMachineStatus,

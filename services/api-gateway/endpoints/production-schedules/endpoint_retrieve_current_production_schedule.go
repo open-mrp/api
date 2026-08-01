@@ -26,7 +26,7 @@ func (e *RetrieveCurrentProductionScheduleEndpoint) Materialize() *apiendpoint.A
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-schedules/current",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		AgentTool:         true,
 		ObjectType:        constants.ObjectTypeProductionSchedule,

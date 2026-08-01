@@ -29,7 +29,7 @@ func (e *ArchiveProductionScheduleEndpoint) Materialize() *apiendpoint.APIEndpoi
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-schedules/{id}/actions/archive",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeProductionSchedule,
 		RequiredPermissions: []types.Permission{

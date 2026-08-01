@@ -29,7 +29,7 @@ func (e *ListProductionScheduleItemPoliciesEndpoint) Materialize() *apiendpoint.
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-schedules/{id}/item-policies",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		AgentTool:         true,
 		ObjectType:        constants.ObjectTypeProductionScheduleItemPolicy,

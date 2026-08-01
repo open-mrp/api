@@ -46,7 +46,7 @@ func (e *PreviewProductionScheduleEndpoint) Materialize() *apiendpoint.APIEndpoi
 		Route:             "/v1/operations/production-schedules/actions/preview",
 		SuccessStatusCode: http.StatusOK,
 		// Internal while the solver is being validated against the existing script.
-		Public:     false,
+		Public:     true,
 		Preview:    true,
 		AgentTool:  true,
 		ObjectType: constants.ObjectTypeProductionSchedulePreview,

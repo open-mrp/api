@@ -52,7 +52,7 @@ func (e *ReleaseProductionScheduleWeekEndpoint) Materialize() *apiendpoint.APIEn
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-schedules/{id}/actions/release-week",
 		SuccessStatusCode: http.StatusCreated,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeProductionScheduleWeekRelease,
 		RequiredPermissions: []types.Permission{

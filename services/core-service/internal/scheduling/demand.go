@@ -26,6 +26,7 @@ const (
 const (
 	OverrideScopeItem        = string(constants.DemandOverrideScopeItem)
 	OverrideScopeProductLine = string(constants.DemandOverrideScopeProductLine)
+	OverrideScopeAccount     = string(constants.DemandOverrideScopeAccount)
 )
 
 // MonthlyDemand is one month of demand for one item.
@@ -196,6 +197,11 @@ func indexOverrides(overrides []DemandOverride, itemsByLine map[string][]string,
 				if known[itemID] {
 					out[itemID] = append(out[itemID], o)
 				}
+			}
+		case OverrideScopeAccount:
+			// Account scope reaches every planned item — the "scale everything for growth" knob. Absolute values make no sense fanned out to the whole plan, so the service refuses them at write time.
+			for _, itemID := range knownItems {
+				out[itemID] = append(out[itemID], o)
 			}
 		}
 	}

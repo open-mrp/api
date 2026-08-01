@@ -36,7 +36,7 @@ func (s *productionScheduleSvcImpl) EnqueueScheduledGeneration(ctx context.Conte
 			return apiErr
 		}
 
-		horizonStart := weekStart(params.PlanningAsOf)
+		horizonStart := scheduleWeekStart(params.PlanningAsOf, settings.Settings.WeekStartDay)
 		horizonEnd := horizonStart.AddDate(0, 0, settings.Settings.HorizonWeeks*7-1)
 
 		if apiErr := repo.CreateGeneratingSchedule(txCtx, domain.CreateGeneratingScheduleParams{

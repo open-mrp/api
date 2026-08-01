@@ -40,6 +40,8 @@ type GetConstraintBatchMeasurementsParams struct {
 	WindowStart time.Time
 	WindowEnd   time.Time
 	MachineIDs  []string
+	// ConstraintDepartmentID scopes measurements to batches whose production step belongs to the constraint department, so scans from other stages recorded against a constraint machine do not enter the plan.
+	ConstraintDepartmentID string
 }
 
 // ConstraintBatchRow is one historical batch as read from the database: the measurement the solver consumes plus the raw scan metadata the input assembly needs alongside it.
@@ -47,6 +49,8 @@ type ConstraintBatchRow struct {
 	Measurement scheduling.BatchMeasurement
 	// QuantityUnitID is the unit the batch was scanned in; nil when the batch carries no quantity unit.
 	QuantityUnitID *string
+	// QuantityUnitRatio is the scan unit's ratio to its unit group's base unit (e.g. 2 for a pair counted in eaches); 0 when the batch carries no quantity unit.
+	QuantityUnitRatio float64
 	// ProductionStepID mirrors the raw column: nil when the batch has no step. Kept distinct from the mapped measurement so presence is not conflated with an empty string.
 	ProductionStepID *string
 }
@@ -111,6 +115,7 @@ type ItemProductLineRow struct {
 type ProductionScheduleSettingsRow struct {
 	PlanningHorizonWeeks           int
 	FrozenWeeks                    int
+	WeekStartDay                   int
 	ShiftsPerDay                   int
 	HoursPerShift                  float64
 	WorkDaysPerWeek                int

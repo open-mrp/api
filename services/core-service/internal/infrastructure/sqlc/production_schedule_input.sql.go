@@ -289,6 +289,7 @@ LEFT JOIN quantity q ON q.id = b.quantity_id
 LEFT JOIN unit u ON u.id = q.unit_id
 LEFT JOIN rate cost_rate ON cost_rate.id = i.unit_cost_id
 LEFT JOIN production_step ps ON ps.id = b.production_step_id
+LEFT JOIN scanning_station ss ON ss.id = ps.scanning_station_id
 LEFT JOIN rate labor_time ON labor_time.id = ps.labor_time_id
 LEFT JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit_id
 LEFT JOIN rate labor_rate ON labor_rate.id = ps.labor_rate_id
@@ -299,14 +300,17 @@ WHERE b.account_id = ?
   AND b.scanned_at >= ?
   AND b.scanned_at <= ?
   AND bm.B IN (/*SLICE:machine_ids*/?)
+  -- A constraint machine can carry scans from other stages (a sewing step recorded against a knitting machine). Only steps that belong to the constraint department are measurements of the constraint; a step names its department directly or through the scanning station it is scanned at.
+  AND COALESCE(ps.department_id, ss.department_id) = ?
 ORDER BY bm.B, b.scanned_at, b.id
 `
 
 type GetConstraintBatchMeasurementsParams struct {
-	AccountID   string
-	WindowStart sql.NullTime
-	WindowEnd   sql.NullTime
-	MachineIds  []string
+	AccountID              string
+	WindowStart            sql.NullTime
+	WindowEnd              sql.NullTime
+	MachineIds             []string
+	ConstraintDepartmentID sql.NullString
 }
 
 type GetConstraintBatchMeasurementsRow struct {
@@ -347,6 +351,7 @@ func (q *Queries) GetConstraintBatchMeasurements(ctx context.Context, arg GetCon
 	} else {
 		query = strings.Replace(query, "/*SLICE:machine_ids*/?", "NULL", 1)
 	}
+	queryParams = append(queryParams, arg.ConstraintDepartmentID)
 	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err

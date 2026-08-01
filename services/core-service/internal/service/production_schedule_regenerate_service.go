@@ -339,7 +339,7 @@ func (s *productionScheduleSvcImpl) RegenerateProductionSchedule(
 		return txSvc.writeSolvedPlan(txCtx, writeSolvedPlanParams{
 			AccountID:    accountID,
 			ScheduleID:   params.ScheduleID,
-			HorizonStart: weekStart(planningAsOf),
+			HorizonStart: scheduleWeekStart(planningAsOf, effective.Settings.WeekStartDay),
 			Output:       output,
 			Starved:      starved,
 			Capped:       capped,
@@ -378,7 +378,7 @@ func (s *productionScheduleSvcImpl) refreshRegeneratedHeader(
 		return apierror.NewInternalError(err, "Could not snapshot schedule diagnostics.")
 	}
 
-	horizonStart := weekStart(planningAsOf)
+	horizonStart := scheduleWeekStart(planningAsOf, effective.Settings.WeekStartDay)
 
 	return s.repos.NewProductionScheduleRepo().RefreshRegenerated(ctx, &domain.ProductionSchedule{
 		ID:               schedule.ID,

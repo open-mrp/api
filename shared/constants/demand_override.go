@@ -41,11 +41,13 @@ const (
 	DemandOverrideScopeItem DemandOverrideScope = "item"
 	// DemandOverrideScopeProductLine indicates the override targets a product line, distributed across its items.
 	DemandOverrideScopeProductLine DemandOverrideScope = "product_line"
+	// DemandOverrideScopeAccount indicates the override applies to every planned item, e.g. scaling all demand for growth planning.
+	DemandOverrideScopeAccount DemandOverrideScope = "account"
 )
 
 func (s DemandOverrideScope) IsValid() bool {
 	switch s {
-	case DemandOverrideScopeItem, DemandOverrideScopeProductLine:
+	case DemandOverrideScopeItem, DemandOverrideScopeProductLine, DemandOverrideScopeAccount:
 		return true
 	default:
 		return false
@@ -53,7 +55,7 @@ func (s DemandOverrideScope) IsValid() bool {
 }
 
 func (s DemandOverrideScope) EnumValues() []string {
-	return []string{string(DemandOverrideScopeItem), string(DemandOverrideScopeProductLine)}
+	return []string{string(DemandOverrideScopeItem), string(DemandOverrideScopeProductLine), string(DemandOverrideScopeAccount)}
 }
 
 // DemandOverrideAdjustment is how an override's value changes the forecast. When several land on the same month they apply in declaration order.

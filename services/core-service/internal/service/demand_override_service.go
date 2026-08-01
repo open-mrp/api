@@ -110,9 +110,15 @@ func validateOverrideValue(typeCode string, value float64) *apierror.APIError {
 	return nil
 }
 
-func validateOverrideScope(scopeCode string) *apierror.APIError {
+func validateOverrideScope(scopeCode, typeCode string) *apierror.APIError {
 	switch scopeCode {
 	case string(constants.DemandOverrideScopeItem), string(constants.DemandOverrideScopeProductLine):
+		return nil
+	case string(constants.DemandOverrideScopeAccount):
+		// An absolute value fanned out to every item would set the whole plan to one number; only relative adjustments make sense account-wide.
+		if typeCode == string(constants.DemandOverrideAdjustmentAbsolute) {
+			return apierror.NewValidationErrorWithParam("An account-wide override must be a delta, not an absolute value.", "override_type_code")
+		}
 		return nil
 	default:
 		return apierror.NewValidationErrorWithParam("Unknown override scope.", "scope_code")
@@ -225,7 +231,7 @@ func (s *demandOverrideSvcImpl) CreateDemandOverride(ctx context.Context, params
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	if apiErr := validateOverrideScope(params.ScopeCode); apiErr != nil {
+	if apiErr := validateOverrideScope(params.ScopeCode, params.OverrideTypeCode); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if apiErr := validateOverrideValue(params.OverrideTypeCode, params.Value); apiErr != nil {
@@ -244,6 +250,11 @@ func (s *demandOverrideSvcImpl) CreateDemandOverride(ctx context.Context, params
 	}
 
 	accountID := identity.Target.AccountID
+
+	// An account-wide override has nothing to point at, so the ref is stamped here rather than asked of the caller.
+	if params.ScopeCode == string(constants.DemandOverrideScopeAccount) && params.ScopeRefID == "" {
+		params.ScopeRefID = accountID
+	}
 
 	effectiveFrom := time.Now().UTC()
 	if params.EffectiveFrom != nil {
@@ -348,6 +359,11 @@ func (s *demandOverrideSvcImpl) validateScopeRef(ctx context.Context, accountID,
 			ProductLineID: scopeRefID,
 		}); apiErr != nil {
 			return apierror.NewValidationErrorWithParam("Unknown product line.", "scope_ref_id")
+		}
+	case string(constants.DemandOverrideScopeAccount):
+		// The account is its own referent; the ref is stamped server-side so nothing else needs pointing at.
+		if scopeRefID != accountID {
+			return apierror.NewValidationErrorWithParam("An account-wide override cannot reference anything.", "scope_ref_id")
 		}
 	}
 	return nil

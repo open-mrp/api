@@ -46,7 +46,7 @@ func (*DemandOverrideType) SchemaExample() any {
 //
 // Sales history cannot see a large customer that is about to order, a promotion, or a line that is being discontinued. An override is how management tells the planner about it. The period bounds the demand months the adjustment applies to; `effective_from` and `expires_at` bound when the override is consulted at all, which is a different question — an override for next quarter typically stops applying once the real orders arrive.
 //
-// A product-line override is distributed across the line's items in proportion to each item's baseline demand.
+// A product-line override applies to each of the line's items; an account-wide override applies to every planned item, which is how a global growth assumption (e.g. "plan for double demand") is expressed.
 type DemandOverride struct {
 	// Demand override ID.
 	ID string `json:"id" validate:"required"`
@@ -54,7 +54,7 @@ type DemandOverride struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=demand_override"`
 	// What kind of resource the override targets. Mirrors `scope.type`, which is only present when the scope is expanded.
 	ScopeType constants.DemandOverrideScope `json:"scope_type" validate:"required"`
-	// The item or product line the override targets. Expandable.
+	// The item or product line the override targets. Expandable. Null for an account-wide override, which targets everything.
 	//
 	// This is a single reference rather than one field per scope because a given override targets exactly one of them; `scope.type` names which.
 	Scope *Entity `json:"scope" expandable:"true"`

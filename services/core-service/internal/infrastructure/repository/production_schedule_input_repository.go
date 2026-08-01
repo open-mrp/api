@@ -73,10 +73,11 @@ func (r *productionScheduleInputRepoImpl) GetConstraintBatchMeasurements(
 	defer span.End()
 
 	rows, err := r.queries.GetConstraintBatchMeasurements(ctx, sqlc.GetConstraintBatchMeasurementsParams{
-		AccountID:   params.AccountID,
-		WindowStart: gosql.NullTime{Time: params.WindowStart, Valid: true},
-		WindowEnd:   gosql.NullTime{Time: params.WindowEnd, Valid: true},
-		MachineIds:  params.MachineIDs,
+		AccountID:              params.AccountID,
+		WindowStart:            gosql.NullTime{Time: params.WindowStart, Valid: true},
+		WindowEnd:              gosql.NullTime{Time: params.WindowEnd, Valid: true},
+		MachineIds:             params.MachineIDs,
+		ConstraintDepartmentID: gosql.NullString{String: params.ConstraintDepartmentID, Valid: true},
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -125,6 +126,7 @@ func (r *productionScheduleInputRepoImpl) GetConstraintBatchMeasurements(
 		if row.QuantityUnitID.Valid {
 			quantityUnitID := row.QuantityUnitID.String
 			batchRow.QuantityUnitID = &quantityUnitID
+			batchRow.QuantityUnitRatio = scheduleUnitRatio(row.RatioNumerator, row.RatioDenominator)
 		}
 		if row.ProductionStepID.Valid {
 			productionStepID := row.ProductionStepID.String
@@ -444,6 +446,7 @@ func (r *productionScheduleInputRepoImpl) GetAccountScheduleSettings(
 	settings := &domain.ProductionScheduleSettingsRow{
 		PlanningHorizonWeeks:           int(row.PlanningHorizonWeeks),
 		FrozenWeeks:                    int(row.FrozenWeeks),
+		WeekStartDay:                   int(row.WeekStartDay),
 		ShiftsPerDay:                   int(row.ShiftsPerDay),
 		HoursPerShift:                  decimalToFloat64(row.HoursPerShift),
 		WorkDaysPerWeek:                int(row.WorkDaysPerWeek),

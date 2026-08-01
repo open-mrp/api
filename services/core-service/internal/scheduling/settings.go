@@ -5,6 +5,8 @@ type Settings struct {
 	// Horizon
 	HorizonWeeks int `json:"horizon_weeks"` // HORIZON_WEEKS = 13
 	FrozenWeeks  int `json:"frozen_weeks"`
+	// WeekStartDay is the weekday a horizon week begins on, 0 = Sunday through 6 = Saturday.
+	WeekStartDay int `json:"week_start_day"`
 
 	// Capacity
 	ShiftsPerDay        int     `json:"shifts_per_day"`        // SHIFTS = 2
@@ -34,6 +36,7 @@ func DefaultSettings() Settings {
 	return Settings{
 		HorizonWeeks:                   13,
 		FrozenWeeks:                    1,
+		WeekStartDay:                   1,
 		ShiftsPerDay:                   2,
 		HoursPerShift:                  7,
 		WorkDaysPerWeek:                5,

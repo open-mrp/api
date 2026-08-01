@@ -18,8 +18,8 @@ import (
 type CreateDemandOverrideRequest struct {
 	// What the override targets.
 	ScopeType constants.DemandOverrideScope `json:"scope_type" validate:"required"`
-	// ID of the item or product line the override targets.
-	ScopeRefID string `json:"scope_ref_id" validate:"required"`
+	// ID of the item or product line the override targets. Omit for an `account`-wide override, which targets every planned item.
+	ScopeRefID string `json:"scope_ref_id,omitzero" validate:"omitempty"`
 	// First day of the demand period the override applies to.
 	PeriodStartsAt time.Time `json:"period_starts_at" validate:"required"`
 	// Last day of the demand period the override applies to.
@@ -57,7 +57,7 @@ func (*CreateDemandOverrideRequest) SchemaExample() any {
 
 // Creates a demand override.
 //
-// The scope reference is validated against the account's items or product lines, so an override can never silently match nothing. An `absolute` value replaces the forecast for the period, `delta_units` adds to it, and `delta_percent` scales it; a percent override cannot reduce demand by more than 100%.
+// The scope reference is validated against the account's items or product lines, so an override can never silently match nothing. An `account`-scoped override applies to every planned item and takes no scope reference; it must be a delta, not an absolute value. An `absolute` value replaces the forecast for the period, `delta_units` adds to it, and `delta_percent` scales it; a percent override cannot reduce demand by more than 100%.
 type CreateDemandOverrideEndpoint struct{}
 
 func (e *CreateDemandOverrideEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateDemandOverrideRequest, *apiresource.DemandOverride] {

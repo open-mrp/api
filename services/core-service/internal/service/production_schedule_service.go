@@ -220,6 +220,7 @@ func (s *productionScheduleSvcImpl) loadEffectiveSettings(
 
 	effective.Settings.HorizonWeeks = row.PlanningHorizonWeeks
 	effective.Settings.FrozenWeeks = row.FrozenWeeks
+	effective.Settings.WeekStartDay = row.WeekStartDay
 	effective.Settings.ShiftsPerDay = row.ShiftsPerDay
 	effective.Settings.HoursPerShift = row.HoursPerShift
 	effective.Settings.WorkDaysPerWeek = row.WorkDaysPerWeek
@@ -316,10 +317,11 @@ func (s *productionScheduleSvcImpl) loadSolverInput(
 	// 2. Batch history over the demand window: run rates, costs, affinity, lead times.
 	windowStart := params.PlanningAsOf.AddDate(0, -params.DemandWindowMonths, 0)
 	batchRows, apiErr := repo.GetConstraintBatchMeasurements(ctx, domain.GetConstraintBatchMeasurementsParams{
-		AccountID:   params.AccountID,
-		WindowStart: windowStart,
-		WindowEnd:   params.PlanningAsOf,
-		MachineIDs:  machineIDs,
+		AccountID:              params.AccountID,
+		WindowStart:            windowStart,
+		WindowEnd:              params.PlanningAsOf,
+		MachineIDs:             machineIDs,
+		ConstraintDepartmentID: params.ConstraintDepartmentID,
 	})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -329,15 +331,30 @@ func (s *productionScheduleSvcImpl) loadSolverInput(
 	stepIDs := map[string]bool{}
 	// The unit each item is actually scanned in, which is what the account-wide lot fallback counts in when no product line supplies one.
 	unitByItem := map[string]string{}
+	// The scan unit's ratio to its base unit. Every quantity the solver sees is expressed in the item's scan unit: run rates, lot sizes and costs are all denominated in it (a 60-unit doff is 60 pairs, labor time is per pair), so leaving demand or stock in base units would double every pair-counted number.
+	nativeRatioByItem := map[string]float64{}
 	for _, row := range batchRows {
 		if row.QuantityUnitID != nil && *row.QuantityUnitID != "" {
 			unitByItem[row.Measurement.ItemID] = *row.QuantityUnitID
+			if row.QuantityUnitRatio > 0 {
+				nativeRatioByItem[row.Measurement.ItemID] = row.QuantityUnitRatio
+			}
 		}
 		if row.ProductionStepID != nil {
 			stepIDs[*row.ProductionStepID] = true
 		}
 		in.Batches = append(in.Batches, row.Measurement)
 		constraintItemIDs[row.Measurement.ItemID] = true
+	}
+	nativeRatioOf := func(itemID string) float64 {
+		if ratio, ok := nativeRatioByItem[itemID]; ok && ratio > 0 {
+			return ratio
+		}
+		return 1
+	}
+	// Batch quantities arrive normalized to base units; bring each back into its item's scan unit so mixed-unit scan history still sums coherently.
+	for i := range in.Batches {
+		in.Batches[i].Quantity /= nativeRatioOf(in.Batches[i].ItemID)
 	}
 
 	if len(constraintItemIDs) == 0 {
@@ -382,17 +399,18 @@ func (s *productionScheduleSvcImpl) loadSolverInput(
 	}
 	for _, itemID := range itemIDs {
 		// The greige stage on its own is kept as well as rolled up. Once the echelon total is summed it cannot be decomposed back, and "how much greige is there" is exactly the question the pooled figure hides.
-		greige := onHandByItem[itemID]
+		// Stock arrives in base units; the whole echelon is expressed in the constraint item's scan unit (downstream eaches count as halves of a pair, not as whole pairs).
+		greige := onHandByItem[itemID] / nativeRatioOf(itemID)
 		total := greige
 		for _, descendantID := range descendantItemsByItem[itemID] {
-			total += onHandByItem[descendantID]
+			total += onHandByItem[descendantID] / nativeRatioOf(itemID)
 		}
 		in.GreigeOnHandByItem[itemID] = greige
 		in.OnHandByItem[itemID] = total
 	}
 
 	// 6. Pool finished-goods order demand back onto the constraint item.
-	if apiErr := s.loadDemand(ctx, repo, params, itemIDs, descendantItemsByItem, onHandByItem, in); apiErr != nil {
+	if apiErr := s.loadDemand(ctx, repo, params, itemIDs, descendantItemsByItem, onHandByItem, nativeRatioOf, in); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
@@ -584,6 +602,7 @@ func (s *productionScheduleSvcImpl) loadDemand(
 	itemIDs []string,
 	descendantItemsByItem map[string][]string,
 	onHandByItem map[string]float64,
+	nativeRatioOf func(itemID string) float64,
 	in *scheduling.SolverInput,
 ) *apierror.APIError {
 	// Only items with a product carry order demand.
@@ -645,6 +664,9 @@ func (s *productionScheduleSvcImpl) loadDemand(
 		// The constraint item's own demand plus every finished good it becomes. One unit of finished good consumes one unit of the constraint item, matching the script's assumption.
 		contributors := append([]string{constraintItemID}, descendantItemsByItem[constraintItemID]...)
 
+		// Sold quantities arrive normalized to base units; the whole family is expressed in the constraint item's scan unit so demand lines up with the run rates and lot sizes denominated in it.
+		ratio := nativeRatioOf(constraintItemID)
+
 		pooled := map[time.Time]float64{}
 		var downstream []scheduling.FinishedGood
 
@@ -654,7 +676,7 @@ func (s *productionScheduleSvcImpl) loadDemand(
 				continue
 			}
 			for monthStart, quantity := range months {
-				pooled[monthStart] += quantity
+				pooled[monthStart] += quantity / ratio
 			}
 			if contributorID != constraintItemID {
 				// Identity is kept alongside the series: once these are pooled into the greige buffer the family total cannot name which SKU it came from, and that is exactly what the finished targets have to report.
@@ -662,8 +684,8 @@ func (s *productionScheduleSvcImpl) loadDemand(
 					ItemID:        contributorID,
 					SKU:           skuByItem[contributorID],
 					ProductLineID: productLineByItem[contributorID],
-					Monthly:       toMonthlySeries(months),
-					OnHand:        onHandByItem[contributorID],
+					Monthly:       toMonthlySeriesScaled(months, ratio),
+					OnHand:        onHandByItem[contributorID] / ratio,
 				})
 			}
 		}
@@ -687,9 +709,14 @@ func (s *productionScheduleSvcImpl) loadDemand(
 
 // toMonthlySeries converts a month->quantity map to a chronologically sorted series.
 func toMonthlySeries(months map[time.Time]float64) []scheduling.MonthlyDemand {
+	return toMonthlySeriesScaled(months, 1)
+}
+
+// toMonthlySeriesScaled is toMonthlySeries with every quantity divided by the given unit ratio, which is how base-unit sold quantities become constraint-item scan units.
+func toMonthlySeriesScaled(months map[time.Time]float64, ratio float64) []scheduling.MonthlyDemand {
 	out := make([]scheduling.MonthlyDemand, 0, len(months))
 	for monthStart, quantity := range months {
-		out = append(out, scheduling.MonthlyDemand{MonthStart: monthStart, Quantity: quantity})
+		out = append(out, scheduling.MonthlyDemand{MonthStart: monthStart, Quantity: quantity / ratio})
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].MonthStart.Before(out[j].MonthStart) })
 	return out
@@ -704,10 +731,18 @@ func scheduleSortedKeys(set map[string]bool) []string {
 	return out
 }
 
-// weekStart returns the Monday on or before t, which is where a horizon week begins.
+// weekStart returns the Monday on or before t. Schedule horizons honor the account's configured week start via scheduleWeekStart; this fixed-Monday form is for surfaces like analytics that bucket by ISO-style weeks.
 func weekStart(t time.Time) time.Time {
+	return scheduleWeekStart(t, 1)
+}
+
+// scheduleWeekStart returns the most recent day on or before t that falls on the configured weekday (0 = Sunday through 6 = Saturday), which is where a horizon week begins.
+func scheduleWeekStart(t time.Time, weekStartDay int) time.Time {
+	if weekStartDay < 0 || weekStartDay > 6 {
+		weekStartDay = 1
+	}
 	day := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
-	offset := (int(day.Weekday()) + 6) % 7 // Monday = 0
+	offset := (int(day.Weekday()) - weekStartDay + 7) % 7
 	return day.AddDate(0, 0, -offset)
 }
 
@@ -1175,7 +1210,7 @@ func (s *productionScheduleSvcImpl) persistPlan(ctx context.Context, params pers
 		scheduleID = generated
 	}
 
-	horizonStart := weekStart(params.PlanningAsOf)
+	horizonStart := scheduleWeekStart(params.PlanningAsOf, effective.Settings.WeekStartDay)
 	horizonEnd := horizonStart.AddDate(0, 0, effective.Settings.HorizonWeeks*7-1)
 
 	// Snapshot the assumptions and the diagnostics so the plan stays explainable after settings, costs or demand move underneath it.

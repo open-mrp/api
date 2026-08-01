@@ -2,6 +2,7 @@ package resourceloaders
 
 import (
 	"context"
+	"time"
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
@@ -67,7 +68,26 @@ func departmentFromProto(d *pb.DepartmentInfo) *apiresource.Department {
 		Object:    constants.ObjectTypeDepartment,
 		Name:      d.Name,
 		Notes:     d.Notes,
+		LaborRate: departmentRateFromProto(d.LaborRate),
 		CreatedAt: grpcutil.TimestampToTime(d.CreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(d.UpdatedAt),
+	}
+}
+
+// embeddedDepartmentRateTimestamp marks a rate rendered inline by its parent, mirroring the production-step convention.
+var embeddedDepartmentRateTimestamp = time.Unix(1, 0).UTC()
+
+func departmentRateFromProto(r *pb.DepartmentRateInfo) *apiresource.Rate {
+	if r == nil {
+		return nil
+	}
+	return &apiresource.Rate{
+		ID:     r.Id,
+		Object: constants.ObjectTypeRate,
+		Value:  r.Value,
+		// numerator_unit / denominator_unit left nil: expandable, loaded with real data via ?include=; never fabricated. display_value carries the rate.
+		DisplayValue: apiresource.FormatRateDisplayValue(r.Value, r.NumeratorUnitAbbreviation, r.NumeratorUnitType, r.DenominatorUnitAbbreviation),
+		CreatedAt:    embeddedDepartmentRateTimestamp,
+		UpdatedAt:    embeddedDepartmentRateTimestamp,
 	}
 }

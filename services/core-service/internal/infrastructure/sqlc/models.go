@@ -670,13 +670,14 @@ type DemandOverrideType struct {
 }
 
 type Department struct {
-	ID         string
-	Name       string
-	Notes      sql.NullString
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-	LocationID sql.NullString
-	AccountID  string
+	ID          string
+	Name        string
+	Notes       sql.NullString
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	LocationID  sql.NullString
+	AccountID   string
+	LaborRateID sql.NullString
 }
 
 type DepartmentsPick struct {
@@ -1049,6 +1050,24 @@ type ItemType struct {
 	UpdatedAt time.Time
 	Name      sql.NullString
 	Code      string
+}
+
+type Job struct {
+	ID           int64
+	JobID        string
+	Type         string
+	JobItems     json.RawMessage
+	AccountID    sql.NullString
+	CreatedBy    sql.NullString
+	Results      json.RawMessage
+	Errors       json.RawMessage
+	ErrorSummary sql.NullString
+	UpdatedAt    time.Time
+	CreatedAt    time.Time
+	StartedAt    sql.NullTime
+	CancelledAt  sql.NullTime
+	CompletedAt  sql.NullTime
+	FailedAt     sql.NullTime
 }
 
 type JournalPosting struct {

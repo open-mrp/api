@@ -112,14 +112,16 @@ type MachineDowntimeEvent struct {
 var (
 	sampleDowntimeReasonName = "Breakdown"
 	sampleDowntimeOeeBucket  = constants.OeeBucketAvailability
-	sampleDowntimeDuration   = int32(3600)
+	sampleDowntimeDuration   = int32(1380)
+	sampleDowntimeShiftCode  = "A"
 	sampleDowntimeNote       = "Needle bar jam; replaced needle 42."
 )
 
 var SampleMachineDowntimeEvent = &MachineDowntimeEvent{
-	ID:      SampleMachineDowntimeEventID,
-	Object:  constants.ObjectTypeMachineDowntimeEvent,
-	Machine: SampleMachine,
+	ID:         SampleMachineDowntimeEventID,
+	Object:     constants.ObjectTypeMachineDowntimeEvent,
+	Machine:    SampleMachine,
+	Department: SampleDepartment,
 	Reason: &MachineDowntimeReasonSummary{
 		Object:    constants.ObjectTypeMachineDowntimeReason,
 		Code:      constants.MachineDowntimeReasonCodeBreakdown,
@@ -130,6 +132,11 @@ var SampleMachineDowntimeEvent = &MachineDowntimeEvent{
 	EndedAt:         timeutil.TimestampToTimePtr(sampleUpdatedAtTimestamp),
 	DurationSeconds: &sampleDowntimeDuration,
 	ShiftDate:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	ShiftCode:       &sampleDowntimeShiftCode,
+	Item:            SampleItem,
+	ProductionRun:   NewEntity(SampleProductionRunID, constants.ObjectTypeProductionRun, nil, nil),
+	Batch:           NewEntity(SampleBatchID, constants.ObjectTypeBatch, nil, nil),
+	ScheduleLine:    NewEntity(SampleProductionScheduleLineID, constants.ObjectTypeProductionScheduleLine, nil, nil),
 	Note:            &sampleDowntimeNote,
 	ReportedBy:      SampleActor,
 	Source:          constants.MachineDowntimeSourceManual,

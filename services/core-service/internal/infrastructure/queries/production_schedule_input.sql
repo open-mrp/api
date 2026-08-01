@@ -104,7 +104,7 @@ WHERE child.account_id = sqlc.arg('account_id')
   AND bf.B IN (sqlc.slice('parent_batch_ids'))
 ORDER BY bf.B, child.id;
 
--- GetSeedBatchesForItems returns the batches to start the genealogy walk from. Capped per item by the caller: a handful of recent batches is enough to discover which finished goods an item becomes.
+-- GetSeedBatchesForItems returns the batches to start the genealogy walk from: every scan of the item inside the demand window. Seeding from the whole window rather than a recent sample is what keeps the echelon complete — stock held as a finished good only an older batch flowed to still has to count against the decision to build more.
 -- name: GetSeedBatchesForItems :many
 SELECT
     b.id AS batch_id,
@@ -113,6 +113,8 @@ FROM batch b
 WHERE b.account_id = sqlc.arg('account_id')
   AND b.item_id IN (sqlc.slice('item_ids'))
   AND b.scanned_at IS NOT NULL
+  AND b.scanned_at >= sqlc.arg('window_start')
+  AND b.scanned_at <= sqlc.arg('window_end')
 ORDER BY b.item_id, b.scanned_at DESC, b.id DESC;
 
 -- GetProductsForItems returns the sellable products for a set of items, with the SKU and product line each one carries so a finished good can be reported by name rather than by ID. Only items with a product carry order demand.
@@ -250,3 +252,11 @@ SELECT
     s.lot_multiple_units
 FROM production_schedule_item_setting s
 WHERE s.account_id = sqlc.arg('account_id');
+
+-- GetConstraintDepartmentLaborRate returns the hourly labor rate configured on the constraint department, when it has one. The department's own rate prices its changeovers; the account-wide setting is only the fallback.
+-- name: GetConstraintDepartmentLaborRate :one
+SELECT r.value
+FROM department d
+JOIN rate r ON r.id = d.labor_rate_id
+WHERE d.account_id = sqlc.arg('account_id')
+  AND d.id = sqlc.arg('department_id');

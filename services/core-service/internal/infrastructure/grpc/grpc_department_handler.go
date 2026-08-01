@@ -29,6 +29,18 @@ func departmentToProto(d *domain.Department) *pb.DepartmentInfo {
 	if d.LocationTypeCode != nil {
 		info.LocationTypeCode = d.LocationTypeCode
 	}
+	if d.LaborRate != nil {
+		info.LaborRate = &pb.DepartmentRateInfo{
+			Id:                          d.LaborRate.ID,
+			Value:                       d.LaborRate.Value,
+			NumeratorUnitId:             d.LaborRate.NumeratorUnit.ID,
+			NumeratorUnitAbbreviation:   d.LaborRate.NumeratorUnit.Abbreviation,
+			NumeratorUnitType:           d.LaborRate.NumeratorUnit.Type,
+			DenominatorUnitId:           d.LaborRate.DenominatorUnit.ID,
+			DenominatorUnitAbbreviation: d.LaborRate.DenominatorUnit.Abbreviation,
+			DenominatorUnitType:         d.LaborRate.DenominatorUnit.Type,
+		}
+	}
 
 	stations := make([]*pb.LightScanningStationInfo, len(d.ScanningStations))
 	for i, s := range d.ScanningStations {
@@ -56,6 +68,17 @@ func departmentToProto(d *domain.Department) *pb.DepartmentInfo {
 	info.Machines = machines
 
 	return info
+}
+
+func departmentRateParamsFromProto(in *pb.DepartmentRateInput) *domain.CreateRateParams {
+	if in == nil {
+		return nil
+	}
+	return &domain.CreateRateParams{
+		Value:             in.Value,
+		NumeratorUnitID:   in.NumeratorUnitId,
+		DenominatorUnitID: in.DenominatorUnitId,
+	}
 }
 
 func (h *gRPCHandler) ListDepartments(ctx context.Context, req *pb.ListDepartmentsRequest) (*pb.ListDepartmentsResponse, error) {
@@ -117,6 +140,7 @@ func (h *gRPCHandler) CreateDepartment(ctx context.Context, req *pb.CreateDepart
 		Name:               req.Name,
 		Notes:              req.Notes,
 		LocationID:         req.LocationId,
+		LaborRate:          departmentRateParamsFromProto(req.LaborRate),
 		ScanningStationIDs: req.ScanningStationIds,
 		MachineIDs:         req.MachineIds,
 	}
@@ -144,6 +168,7 @@ func (h *gRPCHandler) UpdateDepartment(ctx context.Context, req *pb.UpdateDepart
 		Name:               req.Name,
 		Notes:              req.Notes,
 		LocationID:         req.LocationId,
+		LaborRate:          departmentRateParamsFromProto(req.LaborRate),
 		ScanningStationIDs: req.ScanningStationIds,
 		MachineIDs:         req.MachineIds,
 	}

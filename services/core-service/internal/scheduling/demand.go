@@ -369,4 +369,3 @@ func trailingTwelve(series []MonthlyDemand, asOf time.Time) float64 {
 	}
 	return total
 }
-

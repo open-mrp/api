@@ -60,6 +60,9 @@ func mapDepartmentForwardRow(row sqlc.ListDepartmentsForwardRow) *domain.Departm
 	if row.LocationTypeCode.Valid {
 		dept.LocationTypeCode = &row.LocationTypeCode.String
 	}
+	dept.LaborRate = mapRateFromRow(row.LaborRateID, row.LaborRateValue,
+		row.LaborRateNumUnitID, row.LaborRateNumUnitAbbr, row.LaborRateNumUnitType,
+		row.LaborRateDenUnitID, row.LaborRateDenUnitAbbr, row.LaborRateDenUnitType)
 	return dept
 }
 
@@ -83,6 +86,9 @@ func mapDepartmentBackwardRow(row sqlc.ListDepartmentsBackwardRow) *domain.Depar
 	if row.LocationTypeCode.Valid {
 		dept.LocationTypeCode = &row.LocationTypeCode.String
 	}
+	dept.LaborRate = mapRateFromRow(row.LaborRateID, row.LaborRateValue,
+		row.LaborRateNumUnitID, row.LaborRateNumUnitAbbr, row.LaborRateNumUnitType,
+		row.LaborRateDenUnitID, row.LaborRateDenUnitAbbr, row.LaborRateDenUnitType)
 	return dept
 }
 
@@ -106,6 +112,9 @@ func mapGetDepartmentRow(row sqlc.GetDepartmentRow) *domain.Department {
 	if row.LocationTypeCode.Valid {
 		dept.LocationTypeCode = &row.LocationTypeCode.String
 	}
+	dept.LaborRate = mapRateFromRow(row.LaborRateID, row.LaborRateValue,
+		row.LaborRateNumUnitID, row.LaborRateNumUnitAbbr, row.LaborRateNumUnitType,
+		row.LaborRateDenUnitID, row.LaborRateDenUnitAbbr, row.LaborRateDenUnitType)
 	return dept
 }
 
@@ -178,6 +187,9 @@ func (r *departmentRepoImpl) GetByIDs(ctx context.Context, accountID string, ids
 		if row.LocationID.Valid {
 			dept.LocationID = &row.LocationID.String
 		}
+		dept.LaborRate = mapRateFromRow(row.LaborRateID, row.LaborRateValue,
+			row.LaborRateNumUnitID, row.LaborRateNumUnitAbbr, row.LaborRateNumUnitType,
+			row.LaborRateDenUnitID, row.LaborRateDenUnitAbbr, row.LaborRateDenUnitType)
 		departments[i] = dept
 		deptIDs[i] = row.ID
 	}
@@ -343,11 +355,12 @@ func (r *departmentRepoImpl) Create(ctx context.Context, id string, params domai
 	defer span.End()
 
 	err := r.queries.InsertDepartment(ctx, sqlc.InsertDepartmentParams{
-		ID:         id,
-		Name:       params.Name,
-		Notes:      deptToNullString(params.Notes),
-		LocationID: deptToNullString(params.LocationID),
-		AccountID:  params.AccountID,
+		ID:          id,
+		Name:        params.Name,
+		Notes:       deptToNullString(params.Notes),
+		LocationID:  deptToNullString(params.LocationID),
+		LaborRateID: deptToNullString(params.LaborRateID),
+		AccountID:   params.AccountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -361,11 +374,12 @@ func (r *departmentRepoImpl) Update(ctx context.Context, params domain.UpdateDep
 	defer span.End()
 
 	result, err := r.queries.UpdateDepartment(ctx, sqlc.UpdateDepartmentParams{
-		ID:         params.DepartmentID,
-		AccountID:  params.AccountID,
-		Name:       deptToNullString(params.Name),
-		Notes:      stringToNullString(params.Notes),
-		LocationID: deptToNullString(params.LocationID),
+		ID:          params.DepartmentID,
+		AccountID:   params.AccountID,
+		Name:        deptToNullString(params.Name),
+		Notes:       stringToNullString(params.Notes),
+		LocationID:  deptToNullString(params.LocationID),
+		LaborRateID: deptToNullString(params.LaborRateID),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -456,5 +470,39 @@ func (r *departmentRepoImpl) SetScanningStationsDepartmentID(ctx context.Context
 		return tracing.Trace(span, apiErr)
 	}
 
+	return nil
+}
+
+// InsertLaborRate writes the rate row a department's labor rate points at.
+func (r *departmentRepoImpl) InsertLaborRate(ctx context.Context, rateID string, params domain.CreateRateParams) *apierror.APIError {
+	ctx, span := departmentRepoTracer.Start(ctx, "repository.department.insert_labor_rate")
+	defer span.End()
+
+	err := r.queries.InsertRateForDepartment(ctx, sqlc.InsertRateForDepartmentParams{
+		ID:                rateID,
+		Value:             params.Value,
+		NumeratorUnitID:   params.NumeratorUnitID,
+		DenominatorUnitID: params.DenominatorUnitID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
+}
+
+// UpdateLaborRate rewrites an existing labor rate row in place, which is how a department's rate changes without re-linking.
+func (r *departmentRepoImpl) UpdateLaborRate(ctx context.Context, rateID string, params domain.CreateRateParams) *apierror.APIError {
+	ctx, span := departmentRepoTracer.Start(ctx, "repository.department.update_labor_rate")
+	defer span.End()
+
+	_, err := r.queries.UpdateRateByID(ctx, sqlc.UpdateRateByIDParams{
+		ID:                rateID,
+		Value:             gosql.NullString{String: params.Value, Valid: true},
+		NumeratorUnitID:   gosql.NullString{String: params.NumeratorUnitID, Valid: true},
+		DenominatorUnitID: gosql.NullString{String: params.DenominatorUnitID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
 	return nil
 }

@@ -27,11 +27,13 @@ type DepartmentMachine struct {
 
 type Department struct {
 	ID               string
-	Name             string                      `audit:"name"`
-	Notes            *string                     `audit:"notes"`
-	LocationID       *string                     `audit:"location_id"`
-	LocationName     *string                     `audit:"location_name"`
-	LocationTypeCode *string                     `audit:"location_type_code"`
+	Name             string  `audit:"name"`
+	Notes            *string `audit:"notes"`
+	LocationID       *string `audit:"location_id"`
+	LocationName     *string `audit:"location_name"`
+	LocationTypeCode *string `audit:"location_type_code"`
+	// LaborRate is the hourly cost of work done in this department (e.g. a changeover tech), used by production scheduling to cost changeovers. Nil when the department has none.
+	LaborRate        *ProductionStepRate         `audit:"labor_rate"`
 	ScanningStations []DepartmentScanningStation `audit:"scanning_stations"`
 	Machines         []DepartmentMachine         `audit:"machines"`
 	AccountID        string
@@ -57,20 +59,27 @@ type GetDepartmentParams struct {
 }
 
 type CreateDepartmentParams struct {
-	AccountID          string
-	Name               string
-	Notes              *string
-	LocationID         *string
+	AccountID  string
+	Name       string
+	Notes      *string
+	LocationID *string
+	LaborRate  *CreateRateParams
+	// LaborRateID is the rate row the service created from LaborRate; the repo only links it.
+	LaborRateID        *string
 	ScanningStationIDs []string
 	MachineIDs         []string
 }
 
 type UpdateDepartmentParams struct {
-	AccountID          string
-	DepartmentID       string
-	Name               *string
-	Notes              *string
-	LocationID         *string
+	AccountID    string
+	DepartmentID string
+	Name         *string
+	Notes        *string
+	LocationID   *string
+	// LaborRate creates the department's rate when it has none, or rewrites the existing rate row in place.
+	LaborRate *CreateRateParams
+	// LaborRateID is the rate row the service created from LaborRate; the repo only links it.
+	LaborRateID        *string
 	ScanningStationIDs []string
 	MachineIDs         []string
 }

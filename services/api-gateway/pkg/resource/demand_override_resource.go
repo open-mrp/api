@@ -91,19 +91,29 @@ var (
 	sampleDemandOverrideNote   = "Northwind onboarding; first PO expected in September."
 )
 
+// The demand period the sample override adjusts: the September–November quarter the
+// new customer's orders are expected to land in.
+const sampleDemandOverridePeriodStart = "2026-09-01T00:00:00Z"
+const sampleDemandOverridePeriodEnd = "2026-11-30T00:00:00Z"
+
+// The override stops being consulted once the period it adjusts has passed.
+const sampleDemandOverrideExpiry = "2026-12-01T00:00:00Z"
+
 var SampleDemandOverride = &DemandOverride{
 	ID:             SampleDemandOverrideID,
 	Object:         constants.ObjectTypeDemandOverride,
 	ScopeType:      constants.DemandOverrideScopeItem,
-	Scope:          NewEntity(SampleItemID, constants.ObjectTypeItem, nil, nil),
-	PeriodStartsAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	PeriodEndsAt:   timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	Scope:          NewEntity(SampleItemID, constants.ObjectTypeItem, nil, new(SampleItemSKU)),
+	PeriodStartsAt: timeutil.TimestampToTime(sampleDemandOverridePeriodStart),
+	PeriodEndsAt:   timeutil.TimestampToTime(sampleDemandOverridePeriodEnd),
 	Adjustment:     constants.DemandOverrideAdjustmentDeltaUnits,
 	Value:          5000,
+	Unit:           newSampleUnit("Pair", "pr", constants.UnitTypeQuantity),
 	Reason:         &sampleDemandOverrideReason,
 	Note:           &sampleDemandOverrideNote,
 	CreatedBy:      SampleActor,
 	EffectiveAt:    timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	ExpiresAt:      timeutil.TimestampToTimePtr(sampleDemandOverrideExpiry),
 	Status:         constants.ActivationStatusActive,
 	CreatedAt:      timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:      timeutil.TimestampToTime(sampleUpdatedAtTimestamp),

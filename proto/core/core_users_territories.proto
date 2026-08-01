@@ -195,6 +195,25 @@ message RegisterCustomerRequest {
   optional RegisterCustomerAddressInput address = 9;
 }
 message RegisterCustomerResponse {}
+// DepartmentRateInfo mirrors ProductionStepRateInfo; defined locally because importing the step proto here would create an import cycle through core.proto.
+message DepartmentRateInfo {
+  string id = 1;
+  string value = 2;
+  string numerator_unit_id = 3;
+  string numerator_unit_abbreviation = 4;
+  string numerator_unit_type = 5;
+  string denominator_unit_id = 6;
+  string denominator_unit_abbreviation = 7;
+  string denominator_unit_type = 8;
+}
+
+// DepartmentRateInput mirrors CreateRateInput; defined locally for the same import-cycle reason.
+message DepartmentRateInput {
+  string value = 1;
+  string numerator_unit_id = 2;
+  string denominator_unit_id = 3;
+}
+
 message DepartmentInfo {
   string id = 1;
   string name = 2;
@@ -206,6 +225,8 @@ message DepartmentInfo {
   google.protobuf.Timestamp created_at = 8;
   google.protobuf.Timestamp updated_at = 9;
   optional string location_type_code = 10;
+  // Hourly labor rate for work done in this department; absent when none is set.
+  optional DepartmentRateInfo labor_rate = 11;
 }
 message ListDepartmentsRequest {
   optional string cursor = 1;
@@ -228,6 +249,7 @@ message CreateDepartmentRequest {
   optional string location_id = 3;
   repeated string scanning_station_ids = 4;
   repeated string machine_ids = 5;
+  optional DepartmentRateInput labor_rate = 6;
 }
 message CreateDepartmentResponse {
   DepartmentInfo department = 1;
@@ -239,6 +261,8 @@ message UpdateDepartmentRequest {
   optional string location_id = 4;
   repeated string scanning_station_ids = 5;
   repeated string machine_ids = 6;
+  // Sets the department's labor rate: creates it when absent, otherwise rewrites the existing rate in place.
+  optional DepartmentRateInput labor_rate = 7;
 }
 message UpdateDepartmentResponse {
   DepartmentInfo department = 1;

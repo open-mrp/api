@@ -393,6 +393,27 @@ func (q *Queries) GetConstraintBatchMeasurements(ctx context.Context, arg GetCon
 	return items, nil
 }
 
+const getConstraintDepartmentLaborRate = `-- name: GetConstraintDepartmentLaborRate :one
+SELECT r.value
+FROM department d
+JOIN rate r ON r.id = d.labor_rate_id
+WHERE d.account_id = ?
+  AND d.id = ?
+`
+
+type GetConstraintDepartmentLaborRateParams struct {
+	AccountID    string
+	DepartmentID string
+}
+
+// GetConstraintDepartmentLaborRate returns the hourly labor rate configured on the constraint department, when it has one. The department's own rate prices its changeovers; the account-wide setting is only the fallback.
+func (q *Queries) GetConstraintDepartmentLaborRate(ctx context.Context, arg GetConstraintDepartmentLaborRateParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, getConstraintDepartmentLaborRate, arg.AccountID, arg.DepartmentID)
+	var value string
+	err := row.Scan(&value)
+	return value, err
+}
+
 const getConstraintDepartmentStepCoverage = `-- name: GetConstraintDepartmentStepCoverage :one
 SELECT
     COUNT(*) AS machine_count,
@@ -800,12 +821,16 @@ FROM batch b
 WHERE b.account_id = ?
   AND b.item_id IN (/*SLICE:item_ids*/?)
   AND b.scanned_at IS NOT NULL
+  AND b.scanned_at >= ?
+  AND b.scanned_at <= ?
 ORDER BY b.item_id, b.scanned_at DESC, b.id DESC
 `
 
 type GetSeedBatchesForItemsParams struct {
-	AccountID string
-	ItemIds   []string
+	AccountID   string
+	ItemIds     []string
+	WindowStart sql.NullTime
+	WindowEnd   sql.NullTime
 }
 
 type GetSeedBatchesForItemsRow struct {
@@ -813,7 +838,7 @@ type GetSeedBatchesForItemsRow struct {
 	ItemID  string
 }
 
-// GetSeedBatchesForItems returns the batches to start the genealogy walk from. Capped per item by the caller: a handful of recent batches is enough to discover which finished goods an item becomes.
+// GetSeedBatchesForItems returns the batches to start the genealogy walk from: every scan of the item inside the demand window. Seeding from the whole window rather than a recent sample is what keeps the echelon complete — stock held as a finished good only an older batch flowed to still has to count against the decision to build more.
 func (q *Queries) GetSeedBatchesForItems(ctx context.Context, arg GetSeedBatchesForItemsParams) ([]GetSeedBatchesForItemsRow, error) {
 	query := getSeedBatchesForItems
 	var queryParams []interface{}
@@ -826,6 +851,8 @@ func (q *Queries) GetSeedBatchesForItems(ctx context.Context, arg GetSeedBatches
 	} else {
 		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
 	}
+	queryParams = append(queryParams, arg.WindowStart)
+	queryParams = append(queryParams, arg.WindowEnd)
 	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err

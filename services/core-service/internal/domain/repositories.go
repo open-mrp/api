@@ -897,14 +897,17 @@ type ProductionScheduleInputRepo interface {
 	// CountConstraintMachinesWithoutStep reports how many constraint machines cannot carry a plan downstream because they have no production step.
 	CountConstraintMachinesWithoutStep(ctx context.Context, accountID, departmentID string) (int, *apierror.APIError)
 
+	// GetConstraintDepartmentLaborRate returns the hourly labor rate configured on the constraint department, or nil when it has none.
+	GetConstraintDepartmentLaborRate(ctx context.Context, accountID, departmentID string) (*float64, *apierror.APIError)
+
 	// GetConstraintBatchMeasurements returns one row per historical batch produced on the given machines inside the window.
 	GetConstraintBatchMeasurements(ctx context.Context, params GetConstraintBatchMeasurementsParams) ([]ConstraintBatchRow, *apierror.APIError)
 
 	// GetStepConsumptionItems returns the input items each production step consumes.
 	GetStepConsumptionItems(ctx context.Context, stepIDs []string) ([]StepConsumptionRow, *apierror.APIError)
 
-	// GetSeedBatchesForItems returns scanned batches for the given items, most recent first per item, to start the genealogy walk from.
-	GetSeedBatchesForItems(ctx context.Context, accountID string, itemIDs []string) ([]SeedBatchRow, *apierror.APIError)
+	// GetSeedBatchesForItems returns every scanned batch for the given items inside the demand window, to start the genealogy walk from.
+	GetSeedBatchesForItems(ctx context.Context, params GetSeedBatchesParams) ([]SeedBatchRow, *apierror.APIError)
 
 	// GetBatchFlowChildren returns the immediate downstream batches of the given parent batches.
 	GetBatchFlowChildren(ctx context.Context, accountID string, parentBatchIDs []string) ([]BatchFlowChildRow, *apierror.APIError)
@@ -970,6 +973,8 @@ type DepartmentRepo interface {
 	ExistsByName(ctx context.Context, accountID, name string, excludeID *string) (bool, *apierror.APIError)
 	SetMachinesDepartmentID(ctx context.Context, departmentID string, machineIDs []string) *apierror.APIError
 	SetScanningStationsDepartmentID(ctx context.Context, departmentID, accountID string, scanningStationIDs []string) *apierror.APIError
+	InsertLaborRate(ctx context.Context, rateID string, params CreateRateParams) *apierror.APIError
+	UpdateLaborRate(ctx context.Context, rateID string, params CreateRateParams) *apierror.APIError
 }
 
 type DeliveryRepo interface {

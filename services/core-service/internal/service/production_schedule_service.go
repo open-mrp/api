@@ -182,8 +182,6 @@ func (s *productionScheduleSvcImpl) solveFor(
 	return &output, effective, nil
 }
 
-// seedBatchesPerItem caps how many recent batches start the genealogy walk. A handful is enough to discover which finished goods an item becomes; the script took 500 per item and spent most of its runtime there.
-const seedBatchesPerItem = 25
 
 // loadEffectiveSettings returns the account's planning assumptions, falling back to code defaults for an account that has never configured scheduling. Callers always get usable settings rather than having to handle "not configured".
 //
@@ -244,6 +242,17 @@ func (s *productionScheduleSvcImpl) loadEffectiveSettings(
 	effective.DemandBasisCode = row.DemandBasisCode
 	effective.ForecastZ = row.ForecastZ
 	effective.ConstraintDepartmentID = row.ConstraintDepartmentID
+
+	// The constraint department's own labor rate prices its changeovers; the account-wide setting above is only the fallback for departments that have none. Rates are conventionally $/hr, matching how the setting is expressed.
+	if effective.ConstraintDepartmentID != "" {
+		departmentRate, apiErr := repo.GetConstraintDepartmentLaborRate(ctx, accountID, effective.ConstraintDepartmentID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		if departmentRate != nil && *departmentRate > 0 {
+			effective.Settings.ChangeoverLaborRate = *departmentRate
+		}
+	}
 
 	itemRows, apiErr := repo.ListScheduleItemSettings(ctx, accountID)
 	if apiErr != nil {
@@ -378,7 +387,7 @@ func (s *productionScheduleSvcImpl) loadSolverInput(
 	itemIDs := scheduleSortedKeys(constraintItemIDs)
 
 	// 4. Walk the batch genealogy forward to the finished goods each item becomes.
-	descendantItemsByItem, apiErr := s.walkDescendants(ctx, repo, params.AccountID, itemIDs, params.Settings.MaxFlowDepthOrDefault())
+	descendantItemsByItem, apiErr := s.walkDescendants(ctx, repo, params.AccountID, itemIDs, windowStart, params.PlanningAsOf, params.Settings.MaxFlowDepthOrDefault())
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -527,26 +536,28 @@ func (s *productionScheduleSvcImpl) walkDescendants(
 	repo domain.ProductionScheduleInputRepo,
 	accountID string,
 	itemIDs []string,
+	windowStart, windowEnd time.Time,
 	maxDepth int,
 ) (map[string][]string, *apierror.APIError) {
-	seedRows, apiErr := repo.GetSeedBatchesForItems(ctx, accountID, itemIDs)
+	// Every scan in the demand window seeds the walk. Sampling recent batches misses finished goods that only older batches flowed to, and stock held that way still has to count against the decision to build more.
+	seedRows, apiErr := repo.GetSeedBatchesForItems(ctx, domain.GetSeedBatchesParams{
+		AccountID:   accountID,
+		ItemIDs:     itemIDs,
+		WindowStart: windowStart,
+		WindowEnd:   windowEnd,
+	})
 	if apiErr != nil {
 		return nil, apiErr
 	}
 
 	// Batch -> the constraint item it descends from. First writer wins.
 	rootByBatch := map[string]string{}
-	perItemCount := map[string]int{}
 	frontier := make([]string, 0, len(seedRows))
 
 	for _, row := range seedRows {
-		if perItemCount[row.ItemID] >= seedBatchesPerItem {
-			continue
-		}
 		if _, taken := rootByBatch[row.BatchID]; taken {
 			continue
 		}
-		perItemCount[row.ItemID]++
 		rootByBatch[row.BatchID] = row.ItemID
 		frontier = append(frontier, row.BatchID)
 	}

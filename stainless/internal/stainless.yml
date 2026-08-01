@@ -1672,6 +1672,7 @@ resources:
           delete: delete /v1/operations/departments/{id}
         models:
           create_department_request: '#/components/schemas/CreateDepartmentRequest'
+          department_rate_input: '#/components/schemas/DepartmentRateInput'
           update_department_request: '#/components/schemas/UpdateDepartmentRequest'
       production_steps:
         methods:

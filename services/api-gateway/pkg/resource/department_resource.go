@@ -33,6 +33,10 @@ type Department struct {
 	ScanningStations *List[ScanningStation] `json:"scanning_stations" expandable:"true"`
 	// Machines in this department.
 	Machines *List[Machine] `json:"machines" expandable:"true"`
+	// Hourly labor rate for work done in this department (e.g. a changeover technician). Null when none is set.
+	//
+	// Production scheduling costs changeovers with the constraint department's rate when one is set, falling back to the account-wide changeover labor rate setting.
+	LaborRate *Rate `json:"labor_rate"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last update timestamp.
@@ -47,6 +51,7 @@ var SampleDepartment = &Department{
 	Location:         SampleLocation,
 	ScanningStations: NewList([]ScanningStation{*SampleScanningStation}, PageInfo{}),
 	Machines:         NewList([]Machine{*SampleMachine}, PageInfo{}),
+	LaborRate:        nil,
 	CreatedAt:        timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:        timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

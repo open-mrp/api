@@ -88,17 +88,19 @@ type MachineStatus struct {
 
 var (
 	sampleMachineStatusUnit        = "pr"
-	sampleMachineStatusMachineName = "Merz 1"
+	sampleMachineStatusMachineName = "Knitter 3"
 	sampleMachineStatusSKU         = "MZ-GREIGE-CREW"
+	sampleMachineStatusNextSKU     = "MZ-GREIGE-QTR"
 )
 
 var SampleMachineStatus = &MachineStatus{
 	Object:              constants.ObjectTypeMachineStatus,
 	Machine:             NewEntity(SampleMachineID, constants.ObjectTypeMachine, &sampleMachineStatusMachineName, nil),
+	Department:          NewEntity(SampleDepartmentID, constants.ObjectTypeDepartment, new(SampleDepartmentName), nil),
 	Status:              constants.MachineWorkStatusRunning,
-	WeekPlannedQuantity: 360,
+	WeekPlannedQuantity: 600,
 	WeekScannedQuantity: 120,
-	WeekPlannedRunHours: 60,
+	WeekPlannedRunHours: 5,
 	Unit:                &sampleMachineStatusUnit,
 	Current: &MachineCampaign{
 		ScheduleLine:       NewEntity(SampleProductionScheduleLineID, constants.ObjectTypeProductionScheduleLine, nil, nil),
@@ -111,8 +113,21 @@ var SampleMachineStatus = &MachineStatus{
 		Unit:               &sampleMachineStatusUnit,
 		ReleasedBatchCount: 6,
 		ScannedBatchCount:  2,
-		PlannedRunHours:    60,
+		PlannedRunHours:    3,
 		Status:             constants.ProductionScheduleLineStatusReleased,
+		ProductionRun:      NewEntity(SampleProductionRunID, constants.ObjectTypeProductionRun, nil, nil),
+	},
+	Next: &MachineCampaign{
+		ScheduleLine:      NewEntity(SampleProductionScheduleLineID, constants.ObjectTypeProductionScheduleLine, nil, nil),
+		Item:              NewEntity(SampleItemID, constants.ObjectTypeItem, nil, &sampleMachineStatusNextSKU),
+		SKU:               sampleMachineStatusNextSKU,
+		WeekStartDate:     timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+		PlannedQuantity:   240,
+		ScannedQuantity:   0,
+		RemainingQuantity: 240,
+		Unit:              &sampleMachineStatusUnit,
+		PlannedRunHours:   2,
+		Status:            constants.ProductionScheduleLineStatusPlanned,
 	},
 }
 

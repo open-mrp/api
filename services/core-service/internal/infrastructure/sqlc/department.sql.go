@@ -60,10 +60,21 @@ SELECT
     sl.name AS location_name,
     sl.storage_location_type_code AS location_type_code,
     d.account_id,
+    d.labor_rate_id,
+    lr.value AS labor_rate_value,
+    lrnu.id AS labor_rate_num_unit_id,
+    lrnu.abbreviation AS labor_rate_num_unit_abbr,
+    lrnu.unit_dimension_code AS labor_rate_num_unit_type,
+    lrdu.id AS labor_rate_den_unit_id,
+    lrdu.abbreviation AS labor_rate_den_unit_abbr,
+    lrdu.unit_dimension_code AS labor_rate_den_unit_type,
     d.created_at,
     d.updated_at
 FROM department d
 LEFT JOIN storage_location sl ON sl.id = d.location_id
+LEFT JOIN rate lr ON d.labor_rate_id = lr.id
+LEFT JOIN unit lrnu ON lr.numerator_unit_id = lrnu.id
+LEFT JOIN unit lrdu ON lr.denominator_unit_id = lrdu.id
 WHERE d.id = ?
 AND d.account_id = ?
 `
@@ -74,15 +85,23 @@ type GetDepartmentParams struct {
 }
 
 type GetDepartmentRow struct {
-	ID               string
-	Name             string
-	Notes            sql.NullString
-	LocationID       sql.NullString
-	LocationName     sql.NullString
-	LocationTypeCode sql.NullString
-	AccountID        string
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID                   string
+	Name                 string
+	Notes                sql.NullString
+	LocationID           sql.NullString
+	LocationName         sql.NullString
+	LocationTypeCode     sql.NullString
+	AccountID            string
+	LaborRateID          sql.NullString
+	LaborRateValue       sql.NullString
+	LaborRateNumUnitID   sql.NullString
+	LaborRateNumUnitAbbr sql.NullString
+	LaborRateNumUnitType sql.NullString
+	LaborRateDenUnitID   sql.NullString
+	LaborRateDenUnitAbbr sql.NullString
+	LaborRateDenUnitType sql.NullString
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
 }
 
 func (q *Queries) GetDepartment(ctx context.Context, arg GetDepartmentParams) (GetDepartmentRow, error) {
@@ -96,6 +115,14 @@ func (q *Queries) GetDepartment(ctx context.Context, arg GetDepartmentParams) (G
 		&i.LocationName,
 		&i.LocationTypeCode,
 		&i.AccountID,
+		&i.LaborRateID,
+		&i.LaborRateValue,
+		&i.LaborRateNumUnitID,
+		&i.LaborRateNumUnitAbbr,
+		&i.LaborRateNumUnitType,
+		&i.LaborRateDenUnitID,
+		&i.LaborRateDenUnitAbbr,
+		&i.LaborRateDenUnitType,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -158,9 +185,20 @@ SELECT
     d.notes,
     d.location_id,
     d.account_id,
+    d.labor_rate_id,
+    lr.value AS labor_rate_value,
+    lrnu.id AS labor_rate_num_unit_id,
+    lrnu.abbreviation AS labor_rate_num_unit_abbr,
+    lrnu.unit_dimension_code AS labor_rate_num_unit_type,
+    lrdu.id AS labor_rate_den_unit_id,
+    lrdu.abbreviation AS labor_rate_den_unit_abbr,
+    lrdu.unit_dimension_code AS labor_rate_den_unit_type,
     d.created_at,
     d.updated_at
 FROM department d
+LEFT JOIN rate lr ON d.labor_rate_id = lr.id
+LEFT JOIN unit lrnu ON lr.numerator_unit_id = lrnu.id
+LEFT JOIN unit lrdu ON lr.denominator_unit_id = lrdu.id
 WHERE d.id IN (/*SLICE:ids*/?)
 AND d.account_id = ?
 `
@@ -171,13 +209,21 @@ type GetDepartmentsFullByIDsParams struct {
 }
 
 type GetDepartmentsFullByIDsRow struct {
-	ID         string
-	Name       string
-	Notes      sql.NullString
-	LocationID sql.NullString
-	AccountID  string
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	ID                   string
+	Name                 string
+	Notes                sql.NullString
+	LocationID           sql.NullString
+	AccountID            string
+	LaborRateID          sql.NullString
+	LaborRateValue       sql.NullString
+	LaborRateNumUnitID   sql.NullString
+	LaborRateNumUnitAbbr sql.NullString
+	LaborRateNumUnitType sql.NullString
+	LaborRateDenUnitID   sql.NullString
+	LaborRateDenUnitAbbr sql.NullString
+	LaborRateDenUnitType sql.NullString
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
 }
 
 func (q *Queries) GetDepartmentsFullByIDs(ctx context.Context, arg GetDepartmentsFullByIDsParams) ([]GetDepartmentsFullByIDsRow, error) {
@@ -206,6 +252,14 @@ func (q *Queries) GetDepartmentsFullByIDs(ctx context.Context, arg GetDepartment
 			&i.Notes,
 			&i.LocationID,
 			&i.AccountID,
+			&i.LaborRateID,
+			&i.LaborRateValue,
+			&i.LaborRateNumUnitID,
+			&i.LaborRateNumUnitAbbr,
+			&i.LaborRateNumUnitType,
+			&i.LaborRateDenUnitID,
+			&i.LaborRateDenUnitAbbr,
+			&i.LaborRateDenUnitType,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -228,10 +282,12 @@ INSERT INTO department (
     name,
     notes,
     location_id,
+    labor_rate_id,
     account_id,
     created_at,
     updated_at
 ) VALUES (
+    ?,
     ?,
     ?,
     ?,
@@ -243,11 +299,12 @@ INSERT INTO department (
 `
 
 type InsertDepartmentParams struct {
-	ID         string
-	Name       string
-	Notes      sql.NullString
-	LocationID sql.NullString
-	AccountID  string
+	ID          string
+	Name        string
+	Notes       sql.NullString
+	LocationID  sql.NullString
+	LaborRateID sql.NullString
+	AccountID   string
 }
 
 func (q *Queries) InsertDepartment(ctx context.Context, arg InsertDepartmentParams) error {
@@ -256,7 +313,43 @@ func (q *Queries) InsertDepartment(ctx context.Context, arg InsertDepartmentPara
 		arg.Name,
 		arg.Notes,
 		arg.LocationID,
+		arg.LaborRateID,
 		arg.AccountID,
+	)
+	return err
+}
+
+const insertRateForDepartment = `-- name: InsertRateForDepartment :exec
+INSERT INTO rate (
+    id,
+    value,
+    numerator_unit_id,
+    denominator_unit_id,
+    created_at,
+    updated_at
+) VALUES (
+    ?,
+    ?,
+    ?,
+    ?,
+    NOW(3),
+    NOW(3)
+)
+`
+
+type InsertRateForDepartmentParams struct {
+	ID                string
+	Value             string
+	NumeratorUnitID   string
+	DenominatorUnitID string
+}
+
+func (q *Queries) InsertRateForDepartment(ctx context.Context, arg InsertRateForDepartmentParams) error {
+	_, err := q.db.ExecContext(ctx, insertRateForDepartment,
+		arg.ID,
+		arg.Value,
+		arg.NumeratorUnitID,
+		arg.DenominatorUnitID,
 	)
 	return err
 }
@@ -270,10 +363,21 @@ SELECT
     sl.name AS location_name,
     sl.storage_location_type_code AS location_type_code,
     d.account_id,
+    d.labor_rate_id,
+    lr.value AS labor_rate_value,
+    lrnu.id AS labor_rate_num_unit_id,
+    lrnu.abbreviation AS labor_rate_num_unit_abbr,
+    lrnu.unit_dimension_code AS labor_rate_num_unit_type,
+    lrdu.id AS labor_rate_den_unit_id,
+    lrdu.abbreviation AS labor_rate_den_unit_abbr,
+    lrdu.unit_dimension_code AS labor_rate_den_unit_type,
     d.created_at,
     d.updated_at
 FROM department d
 LEFT JOIN storage_location sl ON sl.id = d.location_id
+LEFT JOIN rate lr ON d.labor_rate_id = lr.id
+LEFT JOIN unit lrnu ON lr.numerator_unit_id = lrnu.id
+LEFT JOIN unit lrdu ON lr.denominator_unit_id = lrdu.id
 WHERE d.account_id = ?
 AND (
     ? IS NULL
@@ -296,15 +400,23 @@ type ListDepartmentsBackwardParams struct {
 }
 
 type ListDepartmentsBackwardRow struct {
-	ID               string
-	Name             string
-	Notes            sql.NullString
-	LocationID       sql.NullString
-	LocationName     sql.NullString
-	LocationTypeCode sql.NullString
-	AccountID        string
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID                   string
+	Name                 string
+	Notes                sql.NullString
+	LocationID           sql.NullString
+	LocationName         sql.NullString
+	LocationTypeCode     sql.NullString
+	AccountID            string
+	LaborRateID          sql.NullString
+	LaborRateValue       sql.NullString
+	LaborRateNumUnitID   sql.NullString
+	LaborRateNumUnitAbbr sql.NullString
+	LaborRateNumUnitType sql.NullString
+	LaborRateDenUnitID   sql.NullString
+	LaborRateDenUnitAbbr sql.NullString
+	LaborRateDenUnitType sql.NullString
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
 }
 
 func (q *Queries) ListDepartmentsBackward(ctx context.Context, arg ListDepartmentsBackwardParams) ([]ListDepartmentsBackwardRow, error) {
@@ -332,6 +444,14 @@ func (q *Queries) ListDepartmentsBackward(ctx context.Context, arg ListDepartmen
 			&i.LocationName,
 			&i.LocationTypeCode,
 			&i.AccountID,
+			&i.LaborRateID,
+			&i.LaborRateValue,
+			&i.LaborRateNumUnitID,
+			&i.LaborRateNumUnitAbbr,
+			&i.LaborRateNumUnitType,
+			&i.LaborRateDenUnitID,
+			&i.LaborRateDenUnitAbbr,
+			&i.LaborRateDenUnitType,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -357,10 +477,21 @@ SELECT
     sl.name AS location_name,
     sl.storage_location_type_code AS location_type_code,
     d.account_id,
+    d.labor_rate_id,
+    lr.value AS labor_rate_value,
+    lrnu.id AS labor_rate_num_unit_id,
+    lrnu.abbreviation AS labor_rate_num_unit_abbr,
+    lrnu.unit_dimension_code AS labor_rate_num_unit_type,
+    lrdu.id AS labor_rate_den_unit_id,
+    lrdu.abbreviation AS labor_rate_den_unit_abbr,
+    lrdu.unit_dimension_code AS labor_rate_den_unit_type,
     d.created_at,
     d.updated_at
 FROM department d
 LEFT JOIN storage_location sl ON sl.id = d.location_id
+LEFT JOIN rate lr ON d.labor_rate_id = lr.id
+LEFT JOIN unit lrnu ON lr.numerator_unit_id = lrnu.id
+LEFT JOIN unit lrdu ON lr.denominator_unit_id = lrdu.id
 WHERE d.account_id = ?
 AND (
     ? IS NULL
@@ -384,15 +515,23 @@ type ListDepartmentsForwardParams struct {
 }
 
 type ListDepartmentsForwardRow struct {
-	ID               string
-	Name             string
-	Notes            sql.NullString
-	LocationID       sql.NullString
-	LocationName     sql.NullString
-	LocationTypeCode sql.NullString
-	AccountID        string
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID                   string
+	Name                 string
+	Notes                sql.NullString
+	LocationID           sql.NullString
+	LocationName         sql.NullString
+	LocationTypeCode     sql.NullString
+	AccountID            string
+	LaborRateID          sql.NullString
+	LaborRateValue       sql.NullString
+	LaborRateNumUnitID   sql.NullString
+	LaborRateNumUnitAbbr sql.NullString
+	LaborRateNumUnitType sql.NullString
+	LaborRateDenUnitID   sql.NullString
+	LaborRateDenUnitAbbr sql.NullString
+	LaborRateDenUnitType sql.NullString
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
 }
 
 func (q *Queries) ListDepartmentsForward(ctx context.Context, arg ListDepartmentsForwardParams) ([]ListDepartmentsForwardRow, error) {
@@ -421,6 +560,14 @@ func (q *Queries) ListDepartmentsForward(ctx context.Context, arg ListDepartment
 			&i.LocationName,
 			&i.LocationTypeCode,
 			&i.AccountID,
+			&i.LaborRateID,
+			&i.LaborRateValue,
+			&i.LaborRateNumUnitID,
+			&i.LaborRateNumUnitAbbr,
+			&i.LaborRateNumUnitType,
+			&i.LaborRateDenUnitID,
+			&i.LaborRateDenUnitAbbr,
+			&i.LaborRateDenUnitType,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -731,17 +878,19 @@ UPDATE department SET
     name = COALESCE(?, name),
     notes = ?,
     location_id = COALESCE(?, location_id),
+    labor_rate_id = COALESCE(?, labor_rate_id),
     updated_at = NOW(3)
 WHERE id = ?
 AND account_id = ?
 `
 
 type UpdateDepartmentParams struct {
-	Name       sql.NullString
-	Notes      sql.NullString
-	LocationID sql.NullString
-	ID         string
-	AccountID  string
+	Name        sql.NullString
+	Notes       sql.NullString
+	LocationID  sql.NullString
+	LaborRateID sql.NullString
+	ID          string
+	AccountID   string
 }
 
 func (q *Queries) UpdateDepartment(ctx context.Context, arg UpdateDepartmentParams) (sql.Result, error) {
@@ -749,6 +898,7 @@ func (q *Queries) UpdateDepartment(ctx context.Context, arg UpdateDepartmentPara
 		arg.Name,
 		arg.Notes,
 		arg.LocationID,
+		arg.LaborRateID,
 		arg.ID,
 		arg.AccountID,
 	)

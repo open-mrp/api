@@ -8,9 +8,20 @@ SELECT
     d.notes,
     d.location_id,
     d.account_id,
+    d.labor_rate_id,
+    lr.value AS labor_rate_value,
+    lrnu.id AS labor_rate_num_unit_id,
+    lrnu.abbreviation AS labor_rate_num_unit_abbr,
+    lrnu.unit_dimension_code AS labor_rate_num_unit_type,
+    lrdu.id AS labor_rate_den_unit_id,
+    lrdu.abbreviation AS labor_rate_den_unit_abbr,
+    lrdu.unit_dimension_code AS labor_rate_den_unit_type,
     d.created_at,
     d.updated_at
 FROM department d
+LEFT JOIN rate lr ON d.labor_rate_id = lr.id
+LEFT JOIN unit lrnu ON lr.numerator_unit_id = lrnu.id
+LEFT JOIN unit lrdu ON lr.denominator_unit_id = lrdu.id
 WHERE d.id IN (sqlc.slice('ids'))
 AND d.account_id = sqlc.arg('account_id');
 
@@ -38,10 +49,21 @@ SELECT
     sl.name AS location_name,
     sl.storage_location_type_code AS location_type_code,
     d.account_id,
+    d.labor_rate_id,
+    lr.value AS labor_rate_value,
+    lrnu.id AS labor_rate_num_unit_id,
+    lrnu.abbreviation AS labor_rate_num_unit_abbr,
+    lrnu.unit_dimension_code AS labor_rate_num_unit_type,
+    lrdu.id AS labor_rate_den_unit_id,
+    lrdu.abbreviation AS labor_rate_den_unit_abbr,
+    lrdu.unit_dimension_code AS labor_rate_den_unit_type,
     d.created_at,
     d.updated_at
 FROM department d
 LEFT JOIN storage_location sl ON sl.id = d.location_id
+LEFT JOIN rate lr ON d.labor_rate_id = lr.id
+LEFT JOIN unit lrnu ON lr.numerator_unit_id = lrnu.id
+LEFT JOIN unit lrdu ON lr.denominator_unit_id = lrdu.id
 WHERE d.account_id = sqlc.arg('account_id')
 AND (
     sqlc.narg('search_query') IS NULL
@@ -64,10 +86,21 @@ SELECT
     sl.name AS location_name,
     sl.storage_location_type_code AS location_type_code,
     d.account_id,
+    d.labor_rate_id,
+    lr.value AS labor_rate_value,
+    lrnu.id AS labor_rate_num_unit_id,
+    lrnu.abbreviation AS labor_rate_num_unit_abbr,
+    lrnu.unit_dimension_code AS labor_rate_num_unit_type,
+    lrdu.id AS labor_rate_den_unit_id,
+    lrdu.abbreviation AS labor_rate_den_unit_abbr,
+    lrdu.unit_dimension_code AS labor_rate_den_unit_type,
     d.created_at,
     d.updated_at
 FROM department d
 LEFT JOIN storage_location sl ON sl.id = d.location_id
+LEFT JOIN rate lr ON d.labor_rate_id = lr.id
+LEFT JOIN unit lrnu ON lr.numerator_unit_id = lrnu.id
+LEFT JOIN unit lrdu ON lr.denominator_unit_id = lrdu.id
 WHERE d.account_id = sqlc.arg('account_id')
 AND (
     sqlc.narg('search_query') IS NULL
@@ -89,10 +122,21 @@ SELECT
     sl.name AS location_name,
     sl.storage_location_type_code AS location_type_code,
     d.account_id,
+    d.labor_rate_id,
+    lr.value AS labor_rate_value,
+    lrnu.id AS labor_rate_num_unit_id,
+    lrnu.abbreviation AS labor_rate_num_unit_abbr,
+    lrnu.unit_dimension_code AS labor_rate_num_unit_type,
+    lrdu.id AS labor_rate_den_unit_id,
+    lrdu.abbreviation AS labor_rate_den_unit_abbr,
+    lrdu.unit_dimension_code AS labor_rate_den_unit_type,
     d.created_at,
     d.updated_at
 FROM department d
 LEFT JOIN storage_location sl ON sl.id = d.location_id
+LEFT JOIN rate lr ON d.labor_rate_id = lr.id
+LEFT JOIN unit lrnu ON lr.numerator_unit_id = lrnu.id
+LEFT JOIN unit lrdu ON lr.denominator_unit_id = lrdu.id
 WHERE d.id = sqlc.arg('id')
 AND d.account_id = sqlc.arg('account_id');
 
@@ -102,6 +146,7 @@ INSERT INTO department (
     name,
     notes,
     location_id,
+    labor_rate_id,
     account_id,
     created_at,
     updated_at
@@ -110,6 +155,7 @@ INSERT INTO department (
     sqlc.arg('name'),
     sqlc.narg('notes'),
     sqlc.narg('location_id'),
+    sqlc.narg('labor_rate_id'),
     sqlc.arg('account_id'),
     NOW(3),
     NOW(3)
@@ -120,6 +166,7 @@ UPDATE department SET
     name = COALESCE(sqlc.narg('name'), name),
     notes = sqlc.narg('notes'),
     location_id = COALESCE(sqlc.narg('location_id'), location_id),
+    labor_rate_id = COALESCE(sqlc.narg('labor_rate_id'), labor_rate_id),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
@@ -159,3 +206,20 @@ UPDATE scanning_station
 SET department_id = sqlc.arg('department_id')
 WHERE id IN (sqlc.slice('scanning_station_ids'))
 AND account_id = sqlc.arg('account_id');
+
+-- name: InsertRateForDepartment :exec
+INSERT INTO rate (
+    id,
+    value,
+    numerator_unit_id,
+    denominator_unit_id,
+    created_at,
+    updated_at
+) VALUES (
+    sqlc.arg('id'),
+    sqlc.arg('value'),
+    sqlc.arg('numerator_unit_id'),
+    sqlc.arg('denominator_unit_id'),
+    NOW(3),
+    NOW(3)
+);

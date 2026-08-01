@@ -29,7 +29,7 @@ type UpdateRateRequest struct {
 	ObjectID field.Optional[string] `json:"object_id,omitzero" validate:"omitempty"`
 	// Type of the resource that owns this rate.
 	//
-	// Determines the permission required for the update. Must be `item` or `production_step`.
+	// Determines the permission required for the update. Must be `item`, `production_step`, or `department`.
 	ObjectType field.Optional[string] `json:"object_type,omitzero" validate:"omitempty,max=255"`
 }
 

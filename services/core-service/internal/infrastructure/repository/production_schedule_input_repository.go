@@ -163,18 +163,19 @@ func (r *productionScheduleInputRepoImpl) GetStepConsumptionItems(
 	return out, nil
 }
 
-// GetSeedBatchesForItems returns scanned batches for the given items, most recent first per item, to start the genealogy walk from.
+// GetSeedBatchesForItems returns every scanned batch for the given items inside the window, most recent first per item, to start the genealogy walk from.
 func (r *productionScheduleInputRepoImpl) GetSeedBatchesForItems(
 	ctx context.Context,
-	accountID string,
-	itemIDs []string,
+	params domain.GetSeedBatchesParams,
 ) ([]domain.SeedBatchRow, *apierror.APIError) {
 	ctx, span := scheduleInputRepoTracer.Start(ctx, "repository.production_schedule_input.get_seed_batches")
 	defer span.End()
 
 	rows, err := r.queries.GetSeedBatchesForItems(ctx, sqlc.GetSeedBatchesForItemsParams{
-		AccountID: accountID,
-		ItemIds:   itemIDs,
+		AccountID:   params.AccountID,
+		ItemIds:     params.ItemIDs,
+		WindowStart: gosql.NullTime{Time: params.WindowStart, Valid: true},
+		WindowEnd:   gosql.NullTime{Time: params.WindowEnd, Valid: true},
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -473,6 +474,28 @@ func (r *productionScheduleInputRepoImpl) GetAccountScheduleSettings(
 		settings.ConstraintDepartmentID = row.ConstraintDepartmentID.String
 	}
 	return settings, nil
+}
+
+// GetConstraintDepartmentLaborRate returns the hourly labor rate configured on the constraint department, or nil when the department has none.
+func (r *productionScheduleInputRepoImpl) GetConstraintDepartmentLaborRate(
+	ctx context.Context,
+	accountID, departmentID string,
+) (*float64, *apierror.APIError) {
+	ctx, span := scheduleInputRepoTracer.Start(ctx, "repository.production_schedule_input.get_constraint_department_labor_rate")
+	defer span.End()
+
+	value, err := r.queries.GetConstraintDepartmentLaborRate(ctx, sqlc.GetConstraintDepartmentLaborRateParams{
+		AccountID:    accountID,
+		DepartmentID: departmentID,
+	})
+	if err == gosql.ErrNoRows {
+		return nil, nil
+	}
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	rate := decimalToFloat64(value)
+	return &rate, nil
 }
 
 // ListScheduleItemSettings returns the account's per-item planning overrides.

@@ -41,7 +41,7 @@ type ProductionScheduleSettings struct {
 	ChangeoverMinMinutes float64 `json:"changeover_min_minutes"`
 	// Longest plausible changeover.
 	ChangeoverMaxMinutes float64 `json:"changeover_max_minutes"`
-	// Hourly labour rate charged to a changeover.
+	// Hourly labor rate charged to a changeover.
 	ChangeoverLaborRate float64 `json:"changeover_labor_rate"`
 
 	// Annual cost of holding stock, as a share of item value.
@@ -90,8 +90,11 @@ type ProductionScheduleSettings struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
+var sampleGenerationCron = "0 6 * * 1"
+
 var SampleProductionScheduleSettings = &ProductionScheduleSettings{
 	Object:                         constants.ObjectTypeProductionScheduleSettings,
+	ConstraintDepartment:           NewEntity(SampleDepartmentID, constants.ObjectTypeDepartment, new(SampleDepartmentName), nil),
 	PlanningHorizonWeeks:           13,
 	FrozenWeeks:                    1,
 	WeekStartDay:                   1,
@@ -116,10 +119,12 @@ var SampleProductionScheduleSettings = &ProductionScheduleSettings{
 	WeeksPerYear:                   52,
 	CapacityHeadroomPct:            0.9,
 	DefaultLotUnits:                60,
-	CadenceStatus:                  constants.ActivationStatusInactive,
-	GenerationTimezone:             "UTC",
+	CadenceStatus:                  constants.ActivationStatusActive,
+	GenerationCron:                 &sampleGenerationCron,
+	GenerationTimezone:             "America/New_York",
 	AutoPublishStatus:              constants.ActivationStatusInactive,
-	SettingsStatus:                 constants.SettingsStatusDefault,
+	LastGeneratedAt:                timeutil.TimestampToTimePtr(sampleCreatedAtTimestamp),
+	SettingsStatus:                 constants.SettingsStatusStored,
 	CreatedAt:                      timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:                      timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
@@ -153,10 +158,11 @@ type ProductionScheduleResourceSetting struct {
 var SampleProductionScheduleResourceSetting = &ProductionScheduleResourceSetting{
 	ID:                  SampleProductionScheduleResourceSettingID,
 	Object:              constants.ObjectTypeProductionScheduleResourceSetting,
-	ScopeType:           constants.ScheduleResourceScopeMachine,
-	Scope:               NewEntity(SampleMachineID, constants.ObjectTypeMachine, nil, nil),
+	ScopeType:           constants.ScheduleResourceScopeDepartment,
+	Scope:               NewEntity(SampleDepartmentID, constants.ObjectTypeDepartment, new(SampleDepartmentName), nil),
 	ParticipationStatus: constants.ParticipationStatusIncluded,
-	LeadTimeOffsetWeeks: 0,
+	LeadTimeWeeks:       new(0.5),
+	LeadTimeOffsetWeeks: 1,
 }
 
 func (*ProductionScheduleResourceSetting) SchemaExample() any {

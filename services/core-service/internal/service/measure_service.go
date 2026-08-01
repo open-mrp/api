@@ -82,6 +82,8 @@ func (s *measureSvcImpl) checkObjectPermission(identity *types.Identity, objectT
 		return identity.CheckHasPermission(types.PermissionDomainItems, types.ActionUpdate)
 	case constants.ObjectTypeProductionStep:
 		return identity.CheckHasPermission(types.PermissionDomainProductionSteps, types.ActionUpdate)
+	case constants.ObjectTypeDepartment:
+		return identity.CheckHasPermission(types.PermissionDomainDepartments, types.ActionUpdate)
 	default:
 		return apierror.NewValidationErrorWithParam("Invalid object type.", "object_type")
 	}
@@ -97,6 +99,12 @@ func (s *measureSvcImpl) verifyObjectExists(ctx context.Context, accountID strin
 		return apiErr
 	case constants.ObjectTypeProductionStep:
 		_, apiErr := s.repos.NewProductionStepRepo().Get(ctx, accountID, objectID)
+		return apiErr
+	case constants.ObjectTypeDepartment:
+		_, apiErr := s.repos.NewDepartmentRepo().Get(ctx, domain.GetDepartmentParams{
+			AccountID:    accountID,
+			DepartmentID: objectID,
+		})
 		return apiErr
 	default:
 		return apierror.NewValidationErrorWithParam("Invalid object type.", "object_type")

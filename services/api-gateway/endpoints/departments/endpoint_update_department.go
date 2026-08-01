@@ -33,6 +33,10 @@ type UpdateDepartmentRequest struct {
 	//
 	// Assignment is additive: listed machines are moved into this department and machines already in the department are unaffected.
 	MachineIDs []string `json:"machine_ids,omitzero"`
+	// Hourly labor rate for work done in this department. Creates the department's rate when it has none, otherwise rewrites the existing rate in place.
+	//
+	// The numerator unit must be a currency and the denominator must not be.
+	LaborRate *DepartmentRateInput `json:"labor_rate,omitzero"`
 }
 
 var sampleUpdateDepartmentName = "Production"

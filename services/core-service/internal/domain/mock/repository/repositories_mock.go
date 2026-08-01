@@ -10128,6 +10128,21 @@ func (mr *MockProductionScheduleInputRepoMockRecorder) GetConstraintBatchMeasure
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConstraintBatchMeasurements", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).GetConstraintBatchMeasurements), ctx, params)
 }
 
+// GetConstraintDepartmentLaborRate mocks base method.
+func (m *MockProductionScheduleInputRepo) GetConstraintDepartmentLaborRate(ctx context.Context, accountID, departmentID string) (*float64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetConstraintDepartmentLaborRate", ctx, accountID, departmentID)
+	ret0, _ := ret[0].(*float64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetConstraintDepartmentLaborRate indicates an expected call of GetConstraintDepartmentLaborRate.
+func (mr *MockProductionScheduleInputRepoMockRecorder) GetConstraintDepartmentLaborRate(ctx, accountID, departmentID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConstraintDepartmentLaborRate", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).GetConstraintDepartmentLaborRate), ctx, accountID, departmentID)
+}
+
 // GetConstraintMachines mocks base method.
 func (m *MockProductionScheduleInputRepo) GetConstraintMachines(ctx context.Context, accountID, departmentID string) ([]scheduling.Machine, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -10204,18 +10219,18 @@ func (mr *MockProductionScheduleInputRepoMockRecorder) GetProductsForItems(ctx, 
 }
 
 // GetSeedBatchesForItems mocks base method.
-func (m *MockProductionScheduleInputRepo) GetSeedBatchesForItems(ctx context.Context, accountID string, itemIDs []string) ([]domain.SeedBatchRow, *apierror.APIError) {
+func (m *MockProductionScheduleInputRepo) GetSeedBatchesForItems(ctx context.Context, params domain.GetSeedBatchesParams) ([]domain.SeedBatchRow, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSeedBatchesForItems", ctx, accountID, itemIDs)
+	ret := m.ctrl.Call(m, "GetSeedBatchesForItems", ctx, params)
 	ret0, _ := ret[0].([]domain.SeedBatchRow)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // GetSeedBatchesForItems indicates an expected call of GetSeedBatchesForItems.
-func (mr *MockProductionScheduleInputRepoMockRecorder) GetSeedBatchesForItems(ctx, accountID, itemIDs any) *gomock.Call {
+func (mr *MockProductionScheduleInputRepoMockRecorder) GetSeedBatchesForItems(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSeedBatchesForItems", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).GetSeedBatchesForItems), ctx, accountID, itemIDs)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSeedBatchesForItems", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).GetSeedBatchesForItems), ctx, params)
 }
 
 // GetStepConsumptionItems mocks base method.
@@ -10662,6 +10677,20 @@ func (mr *MockDepartmentRepoMockRecorder) GetByIDs(ctx, accountID, ids any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByIDs", reflect.TypeOf((*MockDepartmentRepo)(nil).GetByIDs), ctx, accountID, ids)
 }
 
+// InsertLaborRate mocks base method.
+func (m *MockDepartmentRepo) InsertLaborRate(ctx context.Context, rateID string, params domain.CreateRateParams) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InsertLaborRate", ctx, rateID, params)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// InsertLaborRate indicates an expected call of InsertLaborRate.
+func (mr *MockDepartmentRepoMockRecorder) InsertLaborRate(ctx, rateID, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertLaborRate", reflect.TypeOf((*MockDepartmentRepo)(nil).InsertLaborRate), ctx, rateID, params)
+}
+
 // List mocks base method.
 func (m *MockDepartmentRepo) List(ctx context.Context, params domain.ListDepartmentsParams) (*domain.ListDepartmentsResult, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -10718,6 +10747,20 @@ func (m *MockDepartmentRepo) Update(ctx context.Context, params domain.UpdateDep
 func (mr *MockDepartmentRepoMockRecorder) Update(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockDepartmentRepo)(nil).Update), ctx, params)
+}
+
+// UpdateLaborRate mocks base method.
+func (m *MockDepartmentRepo) UpdateLaborRate(ctx context.Context, rateID string, params domain.CreateRateParams) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateLaborRate", ctx, rateID, params)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// UpdateLaborRate indicates an expected call of UpdateLaborRate.
+func (mr *MockDepartmentRepoMockRecorder) UpdateLaborRate(ctx, rateID, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateLaborRate", reflect.TypeOf((*MockDepartmentRepo)(nil).UpdateLaborRate), ctx, rateID, params)
 }
 
 // MockDeliveryRepo is a mock of DeliveryRepo interface.

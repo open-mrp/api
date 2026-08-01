@@ -172,6 +172,20 @@ func (s *departmentSvcImpl) CreateDepartment(ctx context.Context, params domain.
 				return apierror.NewConflictErrorWithParam("A department with this name already exists.", "name")
 			}
 
+			if params.LaborRate != nil {
+				if apiErr := ValidateCostRateUnits(txCtx, txSvc.repos.NewUnitRepo(), params.LaborRate.NumeratorUnitID, params.LaborRate.DenominatorUnitID, "labor_rate"); apiErr != nil {
+					return apiErr
+				}
+				rateID, apiErr := id.GenID(id.RateIDPrefix, nil)
+				if apiErr != nil {
+					return apiErr
+				}
+				if apiErr := txRepo.InsertLaborRate(txCtx, rateID, *params.LaborRate); apiErr != nil {
+					return apiErr
+				}
+				params.LaborRateID = &rateID
+			}
+
 			if _, apiErr := txRepo.Create(txCtx, departmentID, params); apiErr != nil {
 				return apiErr
 			}
@@ -283,6 +297,27 @@ func (s *departmentSvcImpl) UpdateDepartment(ctx context.Context, params domain.
 			// Backfill unchanged nullable fields with existing values. Since the SQL uses direct assignment (no COALESCE) for notes, we must provide the existing value when the field was not sent.
 			if params.Notes == nil {
 				params.Notes = old.Notes
+			}
+
+			if params.LaborRate != nil {
+				if apiErr := ValidateCostRateUnits(txCtx, txSvc.repos.NewUnitRepo(), params.LaborRate.NumeratorUnitID, params.LaborRate.DenominatorUnitID, "labor_rate"); apiErr != nil {
+					return apiErr
+				}
+				if old.LaborRate != nil {
+					// The department already owns a rate row; rewrite it in place so everything pointing at it sees the new value.
+					if apiErr := txRepo.UpdateLaborRate(txCtx, old.LaborRate.ID, *params.LaborRate); apiErr != nil {
+						return apiErr
+					}
+				} else {
+					rateID, apiErr := id.GenID(id.RateIDPrefix, nil)
+					if apiErr != nil {
+						return apiErr
+					}
+					if apiErr := txRepo.InsertLaborRate(txCtx, rateID, *params.LaborRate); apiErr != nil {
+						return apiErr
+					}
+					params.LaborRateID = &rateID
+				}
 			}
 
 			updated, apiErr := txRepo.Update(txCtx, params)

@@ -39,7 +39,7 @@ type UpdateProductionScheduleSettingsRequest struct {
 	ChangeoverMinMinutes float64 `json:"changeover_min_minutes" validate:"gte=0"`
 	// Longest plausible changeover.
 	ChangeoverMaxMinutes float64 `json:"changeover_max_minutes" validate:"gte=0"`
-	// Hourly labour rate charged to a changeover.
+	// Hourly labor rate charged to a changeover.
 	ChangeoverLaborRate float64 `json:"changeover_labor_rate" validate:"gte=0"`
 	// Annual cost of holding stock, as a share of item value.
 	HoldingRatePct float64 `json:"holding_rate_pct" validate:"gte=0"`

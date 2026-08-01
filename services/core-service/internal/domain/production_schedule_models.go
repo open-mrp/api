@@ -61,6 +61,14 @@ type StepConsumptionRow struct {
 	ItemID           string
 }
 
+// GetSeedBatchesParams bounds the genealogy seeds to the demand window, matching the batch-measurement window.
+type GetSeedBatchesParams struct {
+	AccountID   string
+	ItemIDs     []string
+	WindowStart time.Time
+	WindowEnd   time.Time
+}
+
 // SeedBatchRow is one scanned batch a genealogy walk can start from.
 type SeedBatchRow struct {
 	BatchID string

@@ -33,12 +33,16 @@ type Machine struct {
 const SampleMachineName = "CNC Router"
 const SampleMachineSerialNumber = "SN-2024-0001"
 
+var sampleMachineNotes = "Spindle rebuilt March 2026; torque calibration due quarterly."
+
+// Department is left nil here because SampleDepartment embeds SampleMachine in its
+// machines list, and a back-reference would be an initialization cycle.
 var SampleMachine = &Machine{
 	ID:           SampleMachineID,
 	Object:       constants.ObjectTypeMachine,
 	Name:         SampleMachineName,
 	SerialNumber: SampleMachineSerialNumber,
-	Notes:        nil,
+	Notes:        &sampleMachineNotes,
 	Department:   nil,
 	CreatedAt:    timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:    timeutil.TimestampToTime(sampleUpdatedAtTimestamp),

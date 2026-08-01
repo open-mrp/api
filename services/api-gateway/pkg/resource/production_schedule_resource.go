@@ -148,29 +148,81 @@ type ProductionSchedulePreview struct {
 	Diagnostics ScheduleDiagnostics `json:"diagnostics"`
 }
 
+var (
+	sampleScheduleSKU      = "MZ-GREIGE-CREW"
+	sampleScheduleStepName = "Knitting"
+	samplePlannedUnitName  = "Pair"
+	// The echelon position at each horizon week end: the week-0 campaign lands, stock
+	// drains at 100/week until it crosses the reorder point, then a second campaign lands.
+	sampleScheduleProjectedOnHand = []float64{2070, 1970, 1870, 1770, 1670, 1570, 1470, 1370, 1270, 1170, 1070, 970, 1590}
+)
+
+var sampleAppliedOverride = ScheduleAppliedOverride{
+	Override:   NewEntity(SampleDemandOverrideID, constants.ObjectTypeDemandOverride, nil, nil),
+	Item:       NewEntity(SampleItemID, constants.ObjectTypeItem, nil, &sampleScheduleSKU),
+	MonthStart: timeutil.TimestampToTime("2026-09-01T00:00:00Z"),
+	Before:     2000,
+	After:      3667,
+	Adjustment: constants.DemandOverrideAdjustmentDeltaUnits,
+	Reason:     &sampleDemandOverrideReason,
+}
+
+var sampleScheduleDiagnostics = ScheduleDiagnostics{
+	EOQCappedSKUs:          []string{"MZ-GREIGE-QTR"},
+	UnschedulableSKUs:      []string{},
+	CapacityStarvedSKUs:    []string{"MZ-GREIGE-KNEE"},
+	ItemsWithoutRunRate:    []string{"MZ-GREIGE-ANKLE"},
+	ExcludedItemCount:      4,
+	ConstraintMachineCount: 6,
+	MeasuredBatchCount:     1240,
+	MachinesWithoutStep:    1,
+	ChangeoverSlopeMinutes: 2.5,
+	AverageInputsAdded:     3.2,
+	AppliedOverrides:       NewList([]ScheduleAppliedOverride{sampleAppliedOverride}, PageInfo{}),
+}
+
 var SampleProductionSchedulePreview = &ProductionSchedulePreview{
 	Object:        constants.ObjectTypeProductionSchedulePreview,
 	SolverVersion: "v1",
 	PlanningAsOf:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	Policies: NewList([]SchedulePolicy{{
-		Item: NewEntity(SampleItemID, constants.ObjectTypeItem, nil, nil), SKU: "GREIGE-001", AnnualDemand: 5200, WeeklyDemand: 100,
-		SecondsPerUnit: 30, UnitCost: 4, EOQUnits: 720, ReorderPoint: 900, ABCClass: &sampleABCClassA,
+		Item:                    NewEntity(SampleItemID, constants.ObjectTypeItem, nil, &sampleScheduleSKU),
+		SKU:                     sampleScheduleSKU,
+		AnnualDemand:            5200,
+		WeeklyDemand:            100,
+		SecondsPerUnit:          30,
+		UnitCost:                4,
+		SetupCost:               50,
+		HoldingCost:             1,
+		EOQUnits:                720,
+		ConstraintLeadTimeWeeks: 1.3,
+		FinishLeadTimeWeeks:     6,
+		SafetyStockPrimary:      244,
+		SafetyStockDownstream:   524,
+		ReorderPoint:            974,
+		OrderUpTo:               1694,
+		OnHandEchelon:           1450,
+		OnHandGreige:            320,
+		AverageGreigeInventory:  604,
+		MaxGreigeInventory:      964,
+		WeeksOfCover:            14.5,
+		ABCClass:                &sampleABCClassA,
+		AnnualRunHours:          43.3,
 	}}, PageInfo{}),
 	Campaigns: NewList([]ScheduleCampaign{{
-		Item: NewEntity(SampleItemID, constants.ObjectTypeItem, nil, nil), SKU: "GREIGE-001",
-		Machine:   NewEntity(SampleMachineID, constants.ObjectTypeMachine, nil, nil),
-		WeekIndex: 0, Units: 720, Lots: 12, RunHours: 6,
+		Item:      NewEntity(SampleItemID, constants.ObjectTypeItem, nil, &sampleScheduleSKU),
+		SKU:       sampleScheduleSKU,
+		Machine:   NewEntity(SampleMachineID, constants.ObjectTypeMachine, &sampleReleasedMachineName, nil),
+		WeekIndex: 0,
+		Units:     720,
+		Lots:      12,
+		RunHours:  6,
 	}}, PageInfo{}),
 	Projections: NewList([]ScheduleProjection{{
-		Item: NewEntity(SampleItemID, constants.ObjectTypeItem, nil, nil), OnHandByWeek: []float64{620, 520},
+		Item:         NewEntity(SampleItemID, constants.ObjectTypeItem, nil, &sampleScheduleSKU),
+		OnHandByWeek: sampleScheduleProjectedOnHand,
 	}}, PageInfo{}),
-	Diagnostics: ScheduleDiagnostics{
-		EOQCappedSKUs:       []string{},
-		UnschedulableSKUs:   []string{},
-		CapacityStarvedSKUs: []string{},
-		ItemsWithoutRunRate: []string{},
-		AppliedOverrides:    NewList([]ScheduleAppliedOverride{}, PageInfo{}),
-	},
+	Diagnostics: sampleScheduleDiagnostics,
 }
 
 func (*ProductionSchedulePreview) SchemaExample() any {
@@ -233,30 +285,42 @@ type ProductionSchedule struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
+// First instant of the last day of a 13-week horizon starting on the sample created-at date.
+const sampleHorizonEndTimestamp = "2026-08-08T00:00:00Z"
+
+// End of the one-week frozen window that starts with the horizon.
+const sampleFrozenThroughTimestamp = "2026-05-17T00:00:00Z"
+
 var SampleProductionSchedule = &ProductionSchedule{
-	ID:               SampleProductionScheduleID,
-	Object:           constants.ObjectTypeProductionSchedule,
-	Version:          3,
-	Status:           constants.ProductionScheduleStatusDraft,
-	PlanningAsOf:     timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	HorizonStartDate: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	HorizonEndDate:   timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
-	HorizonWeeks:     13,
-	FrozenWeeks:      1,
-	DemandBasis:      constants.ScheduleDemandBasisTrailing12,
-	GenerationSource: constants.ScheduleGenerationSourceManual,
-	SolverVersion:    "v1",
-	SettingsSnapshot: map[string]any{},
-	Diagnostics: ScheduleDiagnostics{
-		EOQCappedSKUs:       []string{},
-		UnschedulableSKUs:   []string{},
-		CapacityStarvedSKUs: []string{},
-		ItemsWithoutRunRate: []string{},
-		AppliedOverrides:    NewList([]ScheduleAppliedOverride{}, PageInfo{}),
+	ID:                SampleProductionScheduleID,
+	Object:            constants.ObjectTypeProductionSchedule,
+	Version:           3,
+	Status:            constants.ProductionScheduleStatusPublished,
+	Name:              new("May planning cycle"),
+	PlanningAsOf:      timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	HorizonStartDate:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	HorizonEndDate:    timeutil.TimestampToTime(sampleHorizonEndTimestamp),
+	HorizonWeeks:      13,
+	FrozenWeeks:       1,
+	FrozenThroughDate: timeutil.TimestampToTimePtr(sampleFrozenThroughTimestamp),
+	DemandBasis:       constants.ScheduleDemandBasisTrailing12,
+	GenerationSource:  constants.ScheduleGenerationSourceManual,
+	SolverVersion:     "v1",
+	SettingsSnapshot: map[string]any{
+		"planning_horizon_weeks": 13,
+		"frozen_weeks":           1,
+		"capacity_headroom_pct":  0.9,
+		"shifts_per_day":         2,
+		"hours_per_shift":        7,
 	},
-	GeneratedBy: SampleActor,
-	CreatedAt:   timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:   timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	Diagnostics:           sampleScheduleDiagnostics,
+	FrozenLineCount:       6,
+	FrozenPlannedQuantity: 4320,
+	GeneratedBy:           SampleActor,
+	PublishedBy:           SampleActor,
+	PublishedAt:           timeutil.TimestampToTimePtr(sampleUpdatedAtTimestamp),
+	CreatedAt:             timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:             timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*ProductionSchedule) SchemaExample() any {
@@ -334,22 +398,34 @@ type ProductionScheduleLine struct {
 var samplePlannedUnitAbbreviation = "pr"
 
 var SampleProductionScheduleLine = &ProductionScheduleLine{
-	ID:                      SampleProductionScheduleLineID,
-	Object:                  constants.ObjectTypeProductionScheduleLine,
-	ProductionSchedule:      NewEntity(SampleProductionScheduleID, constants.ObjectTypeProductionSchedule, nil, nil),
-	WeekIndex:               0,
-	WeekStartDate:           timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	Machine:                 NewEntity(SampleMachineID, constants.ObjectTypeMachine, nil, nil),
-	Item:                    NewEntity(SampleItemID, constants.ObjectTypeItem, nil, nil),
-	PlannedQuantity:         720,
-	PlannedLots:             12,
-	PlannedLotUnits:         60,
-	PlannedUnitAbbreviation: &samplePlannedUnitAbbreviation,
-	PlannedRunHours:         6,
-	Status:                  constants.ProductionScheduleLineStatusPlanned,
-	Source:                  constants.ScheduleLineSourceSolver,
-	CreatedAt:               timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:               timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:                       SampleProductionScheduleLineID,
+	Object:                   constants.ObjectTypeProductionScheduleLine,
+	ProductionSchedule:       NewEntity(SampleProductionScheduleID, constants.ObjectTypeProductionSchedule, nil, nil),
+	WeekIndex:                0,
+	WeekStartDate:            timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	Machine:                  NewEntity(SampleMachineID, constants.ObjectTypeMachine, &sampleReleasedMachineName, nil),
+	ProductionStep:           NewEntity(SampleProductionStepID, constants.ObjectTypeProductionStep, &sampleScheduleStepName, nil),
+	Department:               NewEntity(SampleDepartmentID, constants.ObjectTypeDepartment, new(SampleDepartmentName), nil),
+	Item:                     NewEntity(SampleItemID, constants.ObjectTypeItem, nil, &sampleScheduleSKU),
+	PlannedQuantity:          720,
+	PlannedUnit:              NewEntity(SampleUnitID, constants.ObjectTypeUnit, &samplePlannedUnitName, nil),
+	PlannedUnitAbbreviation:  &samplePlannedUnitAbbreviation,
+	PlannedLots:              12,
+	PlannedLotUnits:          60,
+	PlannedRunHours:          6,
+	PlannedChangeoverMinutes: 25,
+	SequenceIndex:            0,
+	ProjectedOnHandBefore:    1450,
+	ProjectedOnHandAfter:     2070,
+	Status:                   constants.ProductionScheduleLineStatusReleased,
+	Source:                   constants.ScheduleLineSourceSolver,
+	FreezeStatus:             constants.ScheduleFreezeStatusFrozen,
+	ProductionRun:            NewEntity(SampleProductionRunID, constants.ObjectTypeProductionRun, nil, nil),
+	ReleasedBatchCount:       12,
+	ScannedBatchCount:        4,
+	ScannedQuantity:          240,
+	CreatedAt:                timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:                timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*ProductionScheduleLine) SchemaExample() any {
@@ -435,20 +511,41 @@ type ProductionScheduleItemPolicy struct {
 }
 
 var SampleProductionScheduleItemPolicy = &ProductionScheduleItemPolicy{
-	ID:                 SampleProductionScheduleItemPolicyID,
-	Object:             constants.ObjectTypeProductionScheduleItemPolicy,
-	ProductionSchedule: NewEntity(SampleProductionScheduleID, constants.ObjectTypeProductionSchedule, nil, nil),
-	Item:               NewEntity(SampleItemID, constants.ObjectTypeItem, nil, nil),
-	SKU:                "GREIGE-001",
-	AnnualDemand:       5200,
-	WeeklyDemand:       100,
-	SecondsPerUnit:     30,
-	UnitCost:           4,
-	EOQUnits:           720,
-	ReorderPoint:       900,
-	AnnualRunHours:     43.3,
-	CreatedAt:          timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:          timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:                      SampleProductionScheduleItemPolicyID,
+	Object:                  constants.ObjectTypeProductionScheduleItemPolicy,
+	ProductionSchedule:      NewEntity(SampleProductionScheduleID, constants.ObjectTypeProductionSchedule, nil, nil),
+	Item:                    NewEntity(SampleItemID, constants.ObjectTypeItem, nil, &sampleScheduleSKU),
+	SKU:                     sampleScheduleSKU,
+	Unit:                    NewEntity(SampleUnitID, constants.ObjectTypeUnit, &samplePlannedUnitName, nil),
+	UnitAbbreviation:        &samplePlannedUnitAbbreviation,
+	ProductionStep:          NewEntity(SampleProductionStepID, constants.ObjectTypeProductionStep, &sampleScheduleStepName, nil),
+	PrimaryMachine:          NewEntity(SampleMachineID, constants.ObjectTypeMachine, &sampleReleasedMachineName, nil),
+	AnnualDemand:            5200,
+	WeeklyDemand:            100,
+	SecondsPerUnit:          30,
+	UnitCost:                4,
+	SetupCost:               50,
+	HoldingCost:             1,
+	EOQUnits:                720,
+	ConstraintLeadTimeWeeks: 1.3,
+	FinishLeadTimeWeeks:     6,
+	SigmaWeeklyPooled:       130,
+	SigmaDownstreamSum:      180,
+	SafetyStockPrimary:      244,
+	SafetyStockDownstream:   524,
+	ReorderPoint:            974,
+	OrderUpTo:               1694,
+	OnHandEchelon:           1450,
+	OnHandGreige:            320,
+	AverageGreigeInventory:  604,
+	MaxGreigeInventory:      964,
+	WeeksOfCover:            14.5,
+	ProjectedOnHand:         sampleScheduleProjectedOnHand,
+	AnnualRunHours:          43.3,
+	ABCClass:                &sampleABCClassA,
+	Constraints:             []constants.SchedulePolicyConstraint{},
+	CreatedAt:               timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:               timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*ProductionScheduleItemPolicy) SchemaExample() any {
@@ -545,12 +642,12 @@ var SampleProductionScheduleDeviation = &ProductionScheduleDeviation{
 	DeviationType:      constants.ScheduleDeviationTypeQuantityChanged,
 	FreezeStatus:       constants.ScheduleFreezeStatusFrozen,
 	WeekIndex:          &sampleDeviationWeekIndex,
-	Machine:            NewEntity(SampleMachineID, constants.ObjectTypeMachine, nil, nil),
-	Item:               NewEntity(SampleItemID, constants.ObjectTypeItem, nil, nil),
-	Before:             map[string]any{"planned_quantity": 600},
-	After:              map[string]any{"planned_quantity": 900},
+	Machine:            NewEntity(SampleMachineID, constants.ObjectTypeMachine, &sampleReleasedMachineName, nil),
+	Item:               NewEntity(SampleItemID, constants.ObjectTypeItem, nil, &sampleScheduleSKU),
+	Before:             map[string]any{"planned_quantity": 600, "planned_lots": 10, "planned_run_hours": 5},
+	After:              map[string]any{"planned_quantity": 900, "planned_lots": 15, "planned_run_hours": 7.5},
 	DeltaQuantity:      300,
-	DeltaRunHours:      5,
+	DeltaRunHours:      2.5,
 	Reason:             &sampleDeviationReasonCode,
 	ReasonNote:         &sampleDeviationReasonNote,
 	Actor:              SampleActor,
@@ -603,17 +700,21 @@ type ProductionScheduleDerivedLine struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
+// First instant of the second horizon week, where the sample derived work falls.
+const sampleWeekTwoStartTimestamp = "2026-05-17T00:00:00Z"
+
 var SampleProductionScheduleDerivedLine = &ProductionScheduleDerivedLine{
 	ID:                 SampleProductionScheduleDerivedLineID,
 	Object:             constants.ObjectTypeProductionScheduleDerivedLine,
 	ProductionSchedule: NewEntity(SampleProductionScheduleID, constants.ObjectTypeProductionSchedule, nil, nil),
 	SourceLine:         NewEntity(SampleProductionScheduleLineID, constants.ObjectTypeProductionScheduleLine, nil, nil),
-	ProductionStep:     NewEntity(SampleProductionStepID, constants.ObjectTypeProductionStep, nil, nil),
-	Department:         NewEntity(SampleDepartmentID, constants.ObjectTypeDepartment, nil, nil),
-	Item:               NewEntity(SampleItemID, constants.ObjectTypeItem, nil, nil),
+	ProductionStep:     NewEntity(SampleProductionStepID, constants.ObjectTypeProductionStep, new("Final Assembly"), nil),
+	Department:         NewEntity(SampleDepartmentID, constants.ObjectTypeDepartment, new(SampleDepartmentName), nil),
+	Item:               NewEntity(SampleItemID, constants.ObjectTypeItem, nil, &sampleScheduleSKU),
 	WeekIndex:          1,
-	WeekStartDate:      timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	WeekStartDate:      timeutil.TimestampToTime(sampleWeekTwoStartTimestamp),
 	Quantity:           600,
+	PlannedUnit:        NewEntity(SampleUnitID, constants.ObjectTypeUnit, &samplePlannedUnitName, nil),
 	ExplosionDepth:     1,
 	OffsetWeeks:        1,
 	Status:             constants.ProductionScheduleLineStatusPlanned,
@@ -674,19 +775,43 @@ type ProductionScheduleRegeneratePreview struct {
 var SampleProductionScheduleRegeneratePreview = &ProductionScheduleRegeneratePreview{
 	Object:             constants.ObjectTypeProductionScheduleRegeneratePreview,
 	ProductionSchedule: NewEntity(SampleProductionScheduleID, constants.ObjectTypeProductionSchedule, nil, nil),
-	SolverVersion:      "1.0.0",
+	SolverVersion:      "v1",
 	PlanningAsOf:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	Lines: NewList([]ScheduleDiffLine{{
-		Change:           constants.ScheduleDiffChangeChanged,
-		Item:             NewEntity(SampleItemID, constants.ObjectTypeItem, nil, nil),
-		SKU:              "MZ-CREW-BLK-L",
-		Machine:          NewEntity(SampleMachineID, constants.ObjectTypeMachine, nil, nil),
-		WeekIndex:        2,
-		CurrentQuantity:  600,
-		ProposedQuantity: 720,
-	}}, PageInfo{}),
-	AddedCount:   1,
-	ChangedCount: 1,
+	Lines: NewList([]ScheduleDiffLine{
+		{
+			Change:           constants.ScheduleDiffChangeChanged,
+			Item:             NewEntity(SampleItemID, constants.ObjectTypeItem, nil, &sampleScheduleSKU),
+			SKU:              sampleScheduleSKU,
+			Machine:          NewEntity(SampleMachineID, constants.ObjectTypeMachine, &sampleReleasedMachineName, nil),
+			WeekIndex:        2,
+			CurrentQuantity:  600,
+			ProposedQuantity: 720,
+		},
+		{
+			Change:           constants.ScheduleDiffChangeAdded,
+			Item:             NewEntity(SampleItemID, constants.ObjectTypeItem, nil, &sampleScheduleSKU),
+			SKU:              sampleScheduleSKU,
+			Machine:          NewEntity(SampleMachineID, constants.ObjectTypeMachine, &sampleReleasedMachineName, nil),
+			WeekIndex:        7,
+			CurrentQuantity:  0,
+			ProposedQuantity: 720,
+		},
+		{
+			Change:           constants.ScheduleDiffChangeRemoved,
+			Item:             NewEntity(SampleItemID, constants.ObjectTypeItem, nil, &sampleScheduleSKU),
+			SKU:              sampleScheduleSKU,
+			Machine:          NewEntity(SampleMachineID, constants.ObjectTypeMachine, &sampleReleasedMachineName, nil),
+			WeekIndex:        5,
+			CurrentQuantity:  300,
+			ProposedQuantity: 0,
+			CurrentIsManual:  true,
+		},
+	}, PageInfo{}),
+	AddedCount:           1,
+	RemovedCount:         1,
+	ChangedCount:         1,
+	ManualLineCount:      1,
+	DiscardedManualCount: 1,
 }
 
 func (*ProductionScheduleRegeneratePreview) SchemaExample() any {
@@ -831,14 +956,19 @@ var SampleReleaseScheduleWeekResult = &ReleaseScheduleWeekResult{
 	Lines: NewList([]ReleasedScheduleLine{
 		{
 			Line:            NewEntity(SampleProductionScheduleLineID, constants.ObjectTypeProductionScheduleLine, nil, nil),
-			Item:            NewEntity(SampleItemID, constants.ObjectTypeItem, nil, nil),
-			SKU:             "MZ-GREIGE-CREW",
+			Item:            NewEntity(SampleItemID, constants.ObjectTypeItem, nil, &sampleScheduleSKU),
+			SKU:             sampleScheduleSKU,
 			Machine:         NewEntity(SampleMachineID, constants.ObjectTypeMachine, &sampleReleasedMachineName, nil),
 			PlannedQuantity: 360,
 			LotUnits:        60,
 			BatchCount:      6,
 			Batches: NewList([]ReleaseScheduleBatch{
-				{Item: NewEntity(SampleItemID, constants.ObjectTypeItem, nil, nil), SKU: "MZ-GREIGE-CREW", Quantity: 60},
+				{
+					Item:     NewEntity(SampleItemID, constants.ObjectTypeItem, nil, &sampleScheduleSKU),
+					SKU:      sampleScheduleSKU,
+					Quantity: 60,
+					Batch:    NewEntity(SampleBatchID, constants.ObjectTypeBatch, nil, nil),
+				},
 			}, PageInfo{}),
 		},
 	}, PageInfo{}),
@@ -885,14 +1015,14 @@ var SampleReleaseScheduleWeekPreview = &ReleaseScheduleWeekPreview{
 	Lines: NewList([]ReleasedScheduleLine{
 		{
 			Line:            NewEntity(SampleProductionScheduleLineID, constants.ObjectTypeProductionScheduleLine, nil, nil),
-			Item:            NewEntity(SampleItemID, constants.ObjectTypeItem, nil, nil),
-			SKU:             "MZ-GREIGE-CREW",
+			Item:            NewEntity(SampleItemID, constants.ObjectTypeItem, nil, &sampleScheduleSKU),
+			SKU:             sampleScheduleSKU,
 			Machine:         NewEntity(SampleMachineID, constants.ObjectTypeMachine, &sampleReleasedMachineName, nil),
 			PlannedQuantity: 360,
 			LotUnits:        60,
 			BatchCount:      6,
 			Batches: NewList([]ReleaseScheduleBatch{
-				{Item: NewEntity(SampleItemID, constants.ObjectTypeItem, nil, nil), SKU: "MZ-GREIGE-CREW", Quantity: 60},
+				{Item: NewEntity(SampleItemID, constants.ObjectTypeItem, nil, &sampleScheduleSKU), SKU: sampleScheduleSKU, Quantity: 60},
 			}, PageInfo{}),
 		},
 	}, PageInfo{}),

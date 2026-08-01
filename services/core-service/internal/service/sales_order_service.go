@@ -615,8 +615,8 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 			changes := audit.ComputeChanges(nil, result)
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionCreate,
+				ServiceName:      domain.ServiceName,
+				Action:           constants.AuditActionCreate,
 				ResourceType:     constants.ObjectTypeSalesOrder,
 				ResourceID:       result.ID,
 				RootResourceType: constants.ObjectTypeSalesOrder,
@@ -790,8 +790,8 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 			changes := audit.ComputeChanges(existing, updated)
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
+				ServiceName:      domain.ServiceName,
+				Action:           constants.AuditActionUpdate,
 				ResourceType:     constants.ObjectTypeSalesOrder,
 				ResourceID:       updated.ID,
 				RootResourceType: constants.ObjectTypeSalesOrder,
@@ -884,8 +884,8 @@ func (s *salesOrderSvcImpl) DeleteSalesOrder(ctx context.Context, params domain.
 		changes := audit.ComputeChanges(order, (*domain.SalesOrder)(nil))
 
 		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-			ServiceName:  domain.ServiceName,
-			Action:       constants.AuditActionDelete,
+			ServiceName:      domain.ServiceName,
+			Action:           constants.AuditActionDelete,
 			ResourceType:     constants.ObjectTypeSalesOrder,
 			ResourceID:       order.ID,
 			RootResourceType: constants.ObjectTypeSalesOrder,
@@ -953,8 +953,8 @@ func (s *salesOrderSvcImpl) BulkDeleteSalesOrders(ctx context.Context, params do
 				changes := audit.ComputeChanges(order, (*domain.SalesOrder)(nil))
 
 				if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-					ServiceName:  domain.ServiceName,
-					Action:       constants.AuditActionDelete,
+					ServiceName:      domain.ServiceName,
+					Action:           constants.AuditActionDelete,
 					ResourceType:     constants.ObjectTypeSalesOrder,
 					ResourceID:       order.ID,
 					RootResourceType: constants.ObjectTypeSalesOrder,
@@ -1090,8 +1090,8 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 			}, "SalesOrderStatusCode", "IssuedAt")
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
+				ServiceName:      domain.ServiceName,
+				Action:           constants.AuditActionUpdate,
 				ResourceType:     constants.ObjectTypeSalesOrder,
 				ResourceID:       order.ID,
 				RootResourceType: constants.ObjectTypeSalesOrder,
@@ -1141,8 +1141,8 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 			}, "SalesOrderStatusCode", "IssuedAt")
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
+				ServiceName:      domain.ServiceName,
+				Action:           constants.AuditActionUpdate,
 				ResourceType:     constants.ObjectTypeSalesOrder,
 				ResourceID:       order.ID,
 				RootResourceType: constants.ObjectTypeSalesOrder,
@@ -1185,8 +1185,8 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 			}, "SalesOrderStatusCode", "CompletedAt")
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
+				ServiceName:      domain.ServiceName,
+				Action:           constants.AuditActionUpdate,
 				ResourceType:     constants.ObjectTypeSalesOrder,
 				ResourceID:       order.ID,
 				RootResourceType: constants.ObjectTypeSalesOrder,
@@ -1231,8 +1231,8 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 			}, "SalesOrderStatusCode", "CompletedAt")
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
+				ServiceName:      domain.ServiceName,
+				Action:           constants.AuditActionUpdate,
 				ResourceType:     constants.ObjectTypeSalesOrder,
 				ResourceID:       order.ID,
 				RootResourceType: constants.ObjectTypeSalesOrder,
@@ -2918,8 +2918,8 @@ func (s *salesOrderSvcImpl) CreateSalesOrderProductionRun(ctx context.Context, p
 			changes := audit.ComputeChanges(order, updatedOrder)
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
+				ServiceName:      domain.ServiceName,
+				Action:           constants.AuditActionUpdate,
 				ResourceType:     constants.ObjectTypeSalesOrder,
 				ResourceID:       order.ID,
 				RootResourceType: constants.ObjectTypeSalesOrder,

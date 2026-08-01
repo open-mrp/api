@@ -531,6 +531,20 @@ message GetItemRequest {
 message GetItemResponse {
   ItemInfo item = 1;
 }
+message GetItemLotDefaultRequest {
+  string item_id = 1;
+}
+
+// GetItemLotDefaultResponse is the lot an item is made in. quantity is 0 when nothing in
+// the chain supplies one, so a caller defaults to empty rather than to a guessed size.
+message GetItemLotDefaultResponse {
+  string item_id = 1;
+  double quantity = 2;
+  optional string unit_id = 3;
+  string source = 4;
+  optional string product_line_id = 5;
+}
+
 message GetItemInventoryRequest {
   string id = 1;
 }

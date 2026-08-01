@@ -166,6 +166,32 @@ func TestTransform_NestedAccountUserInContactMatch_Downgrade(t *testing.T) {
 	}
 }
 
+func TestTransform_NestedAccountUserInWeekRelease_Downgrade(t *testing.T) {
+	t.Parallel()
+	tr := &accountUserForgePreview2To1{}
+
+	payload := map[string]any{
+		"object": "production_schedule_week_release",
+		"production_run": map[string]any{
+			"id":               "pnrn_123",
+			"object":           "production_run",
+			"responsible_user": accountUserPreview2Payload(),
+		},
+	}
+
+	result := tr.Transform(constants.ObjectTypeProductionScheduleWeekRelease, payload)
+
+	run := result["production_run"].(map[string]any)
+	ru := run["responsible_user"].(map[string]any)
+	if ru["name"] != "Jane Doe" {
+		t.Errorf("Expected nested account user name hoisted, got %v", ru["name"])
+	}
+	user := ru["user"].(map[string]any)
+	if user["object"] != "entity" {
+		t.Errorf("Expected nested user demoted to entity, got %v", user["object"])
+	}
+}
+
 func TestTransformRequest_IsIdentity(t *testing.T) {
 	t.Parallel()
 	tr := &accountUserForgePreview2To1{}

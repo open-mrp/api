@@ -105,6 +105,8 @@ INSERT IGNORE INTO sys_property_type (id, code, name, created_at, updated_at) VA
     ('sypptp_01seedtxnumber0', 'transaction_number', 'Transaction Number', NOW(), NOW()),
     ('sypptp_01seedslnumber0', 'settlement_number', 'Settlement Number', NOW(), NOW()),
     ('sypptp_01seedsonumber0', 'sales_order_number', 'Sales Order Number', NOW(), NOW()),
+    ('sypptp_01seedpnscver0', 'production_schedule_version', 'Production Schedule Version', NOW(), NOW()),
+    ('sypptp_01seedprrunnum', 'production_run_number', 'Production Run Number', NOW(), NOW()),
     ('sypptp_01seedponumber0', 'purchase_order_number', 'Purchase Order Number', NOW(), NOW()),
     ('sypptp_01seedsupnumber', 'supplier_number', 'Supplier Number', NOW(), NOW()),
     ('sypptp_01seedcustnumbr', 'customer_number', 'Customer Number', NOW(), NOW()),
@@ -232,3 +234,50 @@ INSERT IGNORE INTO shipping_term (id, name, is_freight_exempt, is_carrier_rate, 
     ('prepaid', 'Free Shipping', 0, 1, NOW(), NOW()),
     ('prepaid_billed', 'Freight Charged', 0, 1, NOW(), NOW()),
     ('freight_collect', 'Freight Collect', 0, 1, NOW(), NOW());
+
+-- machine_downtime_reason (prefix: mcdttp)
+-- oee_bucket decides which OEE term a stoppage charges. 'not_scheduled' is excluded
+-- from the Availability denominator entirely: an idle machine nobody planned to run
+-- has no OEE, rather than 0% OEE. sort_order drives the reason tiles in the logging UI.
+INSERT IGNORE INTO machine_downtime_reason (id, code, name, oee_bucket, is_planned, sort_order, created_at, updated_at) VALUES
+    ('mcdttp_01seedbreakdown', 'breakdown', 'Breakdown', 'availability', 0, 10, NOW(), NOW()),
+    ('mcdttp_01seedchangeovr', 'changeover', 'Changeover', 'availability', 1, 20, NOW(), NOW()),
+    ('mcdttp_01seedmatshort0', 'material_shortage', 'Material Shortage', 'availability', 0, 30, NOW(), NOW()),
+    ('mcdttp_01seednooperato', 'no_operator', 'No Operator', 'availability', 0, 40, NOW(), NOW()),
+    ('mcdttp_01seedplannedpm', 'planned_maintenance', 'Preventive Maintenance', 'availability', 1, 50, NOW(), NOW()),
+    ('mcdttp_01seedminorstop', 'minor_stop', 'Minor Stop', 'performance', 0, 60, NOW(), NOW()),
+    ('mcdttp_01seedqualhold0', 'quality_hold', 'Quality Hold', 'quality', 0, 70, NOW(), NOW()),
+    ('mcdttp_01seednoschedul', 'no_schedule', 'Not Scheduled', 'not_scheduled', 1, 80, NOW(), NOW());
+
+-- production_schedule_status (prefix: pnscss)
+INSERT IGNORE INTO production_schedule_status (id, code, name, created_at, updated_at) VALUES
+    ('pnscss_01seeddraft0000', 'draft', 'Draft', NOW(), NOW()),
+    ('pnscss_01seedgenerati0', 'generating', 'Generating', NOW(), NOW()),
+    ('pnscss_01seedpublished', 'published', 'Published', NOW(), NOW()),
+    ('pnscss_01seedsupersede', 'superseded', 'Superseded', NOW(), NOW()),
+    ('pnscss_01seedarchived0', 'archived', 'Archived', NOW(), NOW()),
+    ('pnscss_01seedfailed000', 'failed', 'Failed', NOW(), NOW());
+
+-- production_schedule_line_status (prefix: pnsclnss)
+INSERT IGNORE INTO production_schedule_line_status (id, code, name, created_at, updated_at) VALUES
+    ('pnsclnss_01seedplann', 'planned', 'Planned', NOW(), NOW()),
+    ('pnsclnss_01seedrelea', 'released', 'Released', NOW(), NOW()),
+    ('pnsclnss_01seedinprg', 'in_progress', 'In Progress', NOW(), NOW()),
+    ('pnsclnss_01seedcompl', 'complete', 'Complete', NOW(), NOW()),
+    ('pnsclnss_01seedcancl', 'cancelled', 'Cancelled', NOW(), NOW());
+
+-- demand_override_type (prefix: deovtp)
+-- Deviation types name what changed about a line, not why. The reason code on the
+-- deviation carries the why, and only frozen-week edits are required to supply one.
+INSERT IGNORE INTO schedule_deviation_type (id, code, name, created_at, updated_at) VALUES
+    ('pnscdwtp_01seedadded00', 'line_added', 'Line Added', NOW(), NOW()),
+    ('pnscdwtp_01seedremoved', 'line_removed', 'Line Removed', NOW(), NOW()),
+    ('pnscdwtp_01seedqtychg0', 'quantity_changed', 'Quantity Changed', NOW(), NOW()),
+    ('pnscdwtp_01seedmchchg0', 'machine_changed', 'Machine Changed', NOW(), NOW()),
+    ('pnscdwtp_01seedreseq00', 'resequenced', 'Resequenced', NOW(), NOW()),
+    ('pnscdwtp_01seedwkmoved', 'week_moved', 'Week Moved', NOW(), NOW());
+
+INSERT IGNORE INTO demand_override_type (id, code, name, created_at, updated_at) VALUES
+    ('deovtp_01seedabsolute0', 'absolute', 'Absolute', NOW(), NOW()),
+    ('deovtp_01seeddeltaunit', 'delta_units', 'Delta Units', NOW(), NOW()),
+    ('deovtp_01seeddeltapct0', 'delta_percent', 'Delta Percent', NOW(), NOW());

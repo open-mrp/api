@@ -6,10 +6,12 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 // Request to create a product line.
@@ -27,6 +29,10 @@ type CreateProductLineRequest struct {
 	// - `commission_exempt`: no commission applies to these products.
 	// - `commission_applied`: commission applies to these products, unless overridden elsewhere.
 	CommissionPolicy constants.CommissionPolicy `json:"commission_policy" validate:"required"`
+	// The lot products in this line are made in — a doff, a pallet.
+	//
+	// Sizes the campaigns a production schedule plans, and defaults the quantity when a batch is added to a production run. The unit is part of the value, since 60 pairs and 60 eaches are different lots, and it must belong to this product line's unit group.
+	DefaultLot field.Optional[apirequest.QuantityInput] `json:"default_lot,omitzero"`
 	// Default freight policy for products in this product line.
 	//
 	// - `free_freight`: these products do not incur a freight charge.
@@ -68,7 +74,7 @@ func (e *CreateProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeProductLine,
-			Fields:     []string{"owner", "owner.account", "unit_group"},
+			Fields:     []string{"owner", "owner.account", "unit_group", "default_lot", "default_lot.unit"},
 		}),
 	})
 }

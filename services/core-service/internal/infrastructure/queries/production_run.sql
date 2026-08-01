@@ -219,6 +219,32 @@ AND status_code = 'reserved';
 SELECT COALESCE(MAX(CAST(number AS UNSIGNED)), 0) + 1 AS next_number
 FROM production_run WHERE account_id = sqlc.arg('account_id');
 
+-- AllocateNextProductionRunNumber atomically reserves the next run number for the account
+-- and returns it via LAST_INSERT_ID.
+--
+-- The single upsert holds a row lock on the per-account counter, so concurrent creates
+-- serialize instead of colliding. The old read-MAX-then-write pattern raced, which two
+-- releases issued at once would hit routinely. Mirrors AllocateNextOrderNumber.
+-- name: AllocateNextProductionRunNumber :execresult
+INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created_at, updated_at)
+VALUES (sqlc.arg('id'), sqlc.arg('account_id'), 'production_run_number', LAST_INSERT_ID(1), NOW(3), NOW(3))
+ON DUPLICATE KEY UPDATE value = LAST_INSERT_ID(value + 1), updated_at = NOW(3);
+
+-- SeedProductionRunNumberCounter primes the counter from existing rows the first time an
+-- account allocates, so a database that already has runs does not restart numbering at 1.
+--
+-- Only all-digit numbers count toward the series. Runs imported with a prefixed number
+-- ('PR-FC-001') are not part of it, and casting them would fail the whole statement under
+-- strict mode rather than being ignored the way a bare SELECT's warning is.
+-- name: SeedProductionRunNumberCounter :exec
+INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created_at, updated_at)
+SELECT sqlc.arg('id'), sqlc.arg('account_id'), 'production_run_number',
+       COALESCE(MAX(CAST(pr.number AS UNSIGNED)), 0), NOW(3), NOW(3)
+FROM production_run pr
+WHERE pr.account_id = sqlc.arg('account_id')
+AND pr.number REGEXP '^[0-9]+$'
+ON DUPLICATE KEY UPDATE id = id;
+
 -- name: SetBatchProductionRunID :exec
 UPDATE batch SET production_run_id = sqlc.arg('production_run_id'), updated_at = NOW(3)
 WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id');

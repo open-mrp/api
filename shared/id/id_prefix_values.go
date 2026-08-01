@@ -142,6 +142,16 @@ const (
 	VocAnnouncement = "an"
 	VocBlock        = "bk"
 	VocReport       = "ro"
+	VocDemand       = "de"
+	VocDeviation    = "dw"
+	VocDerived      = "dl"
+	VocDowntime     = "dt"
+	VocOverride     = "ov"
+	VocResource     = "rr"
+	VocSetting      = "sd"
+	VocShift        = "sf"
+	VocPolicy       = "pc"
+	VocFinished     = "fi"
 )
 
 // composePrefix concatenates vocabulary words to form a prefix. This ensures consistency and makes prefix construction explicit.
@@ -284,7 +294,13 @@ var (
 	LabelTypeIDPrefix = composePrefix(VocLabel, VocType)
 
 	// Machine-related prefix values
-	MachineIDPrefix = composePrefix(VocMachine)
+	MachineIDPrefix               = composePrefix(VocMachine)
+	MachineDowntimeEventIDPrefix  = composePrefix(VocMachine, VocDowntime)
+	MachineDowntimeReasonIDPrefix = composePrefix(VocMachine, VocDowntime, VocType)
+
+	// Demand-override prefix values
+	DemandOverrideIDPrefix     = composePrefix(VocDemand, VocOverride)
+	DemandOverrideTypeIDPrefix = composePrefix(VocDemand, VocOverride, VocType)
 
 	// Material-related prefix values
 	MaterialIDPrefix         = composePrefix(VocMaterial)
@@ -331,6 +347,19 @@ var (
 	ProductionRunIDPrefix                 = composePrefix(VocProduction, VocRun)
 	ProductionStepIDPrefix                = composePrefix(VocProduction, VocStep)
 	ProductionStepTransformIDPrefix       = composePrefix(VocProduction, VocStep, VocTransform)
+	ProductionShiftIDPrefix               = composePrefix(VocProduction, VocShift)
+
+	// Production-schedule prefix values
+	ProductionScheduleIDPrefix                = composePrefix(VocProduction, VocSchedule)
+	ProductionScheduleLineIDPrefix            = composePrefix(VocProduction, VocSchedule, VocLine)
+	ProductionScheduleItemPolicyIDPrefix      = composePrefix(VocProduction, VocSchedule, VocItem, VocPolicy)
+	ProductionScheduleFinishedPolicyIDPrefix  = composePrefix(VocProduction, VocSchedule, VocFinished, VocPolicy)
+	ProductionScheduleDeviationIDPrefix       = composePrefix(VocProduction, VocSchedule, VocDeviation)
+	ScheduleDeviationTypeIDPrefix             = composePrefix(VocProduction, VocSchedule, VocDeviation, VocType)
+	ProductionScheduleDerivedLineIDPrefix     = composePrefix(VocProduction, VocSchedule, VocDerived)
+	AccountProductionScheduleSettingIDPrefix  = composePrefix(VocAccount, VocProduction, VocSchedule, VocSetting)
+	ProductionScheduleResourceSettingIDPrefix = composePrefix(VocProduction, VocSchedule, VocResource, VocSetting)
+	ProductionScheduleItemSettingIDPrefix     = composePrefix(VocProduction, VocSchedule, VocItem, VocSetting)
 
 	// Property-related prefix values
 	PropertyIDPrefix        = composePrefix(VocProperty)

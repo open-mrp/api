@@ -361,6 +361,7 @@ resources:
           update_new_customers: put /v1/core/analytics/new-customers
           update_demand_forecast: put /v1/core/analytics/demand-forecast
           update_oee: put /v1/core/analytics/oee
+          update_schedule_attainment: put /v1/core/analytics/schedule-attainment
           retrieve_weeks_of_sales: get /v1/core/analytics/weeks-of-sales
         models:
           analytics_item: '#/components/schemas/AnalyticsItem'
@@ -394,7 +395,10 @@ resources:
           analyze_quarterly_orders_response: '#/components/schemas/AnalyzeQuarterlyOrdersResponse'
           analyze_sales_request: '#/components/schemas/AnalyzeSalesRequest'
           analyze_sales_response: '#/components/schemas/AnalyzeSalesResponse'
+          analyze_schedule_attainment_request: '#/components/schemas/AnalyzeScheduleAttainmentRequest'
+          analyze_schedule_attainment_response: '#/components/schemas/AnalyzeScheduleAttainmentResponse'
           analyze_weeks_of_sales_response: '#/components/schemas/AnalyzeWeeksOfSalesResponse'
+          attainment_bucket: '#/components/schemas/AttainmentBucket'
           chart_data: '#/components/schemas/ChartData'
           coordinate: '#/components/schemas/Coordinate'
           cost_breakdown: '#/components/schemas/CostBreakdown'
@@ -404,11 +408,19 @@ resources:
           demand_forecast_forecast_point: '#/components/schemas/DemandForecastForecastPoint'
           demand_forecast_point: '#/components/schemas/DemandForecastPoint'
           demand_forecast_row: '#/components/schemas/DemandForecastRow'
+          frozen_adherence: '#/components/schemas/FrozenAdherence'
           inventory_receipt_summary_entry: '#/components/schemas/InventoryReceiptSummaryEntry'
+          list_attainment_bucket: '#/components/schemas/List_AttainmentBucket'
+          list_demand_forecast_row: '#/components/schemas/List_DemandForecastRow'
+          list_frozen_adherence: '#/components/schemas/List_FrozenAdherence'
+          list_oee_department: '#/components/schemas/List_OeeDepartment'
+          list_oee_downtime_reason: '#/components/schemas/List_OeeDowntimeReason'
           manufacturing_metrics: '#/components/schemas/ManufacturingMetrics'
           material_analytics_entry: '#/components/schemas/MaterialAnalyticsEntry'
           new_customers_data: '#/components/schemas/NewCustomersData'
           oee_department: '#/components/schemas/OeeDepartment'
+          oee_department_planned_time: '#/components/schemas/OeeDepartmentPlannedTime'
+          oee_downtime_reason: '#/components/schemas/OeeDowntimeReason'
           open_batch_summary: '#/components/schemas/OpenBatchSummary'
           order_entry: '#/components/schemas/OrderEntry'
           production_cost_item: '#/components/schemas/ProductionCostItem'
@@ -946,6 +958,7 @@ resources:
         methods:
           list: get /v1/catalog/items
           retrieve: get /v1/catalog/items/{id}
+          retrieve_lot_default: get /v1/catalog/items/{id}/lot-default
           retrieve_costs: get /v1/catalog/items/{id}/costs
           retrieve_trends: get /v1/catalog/items/{id}/trends
           change_category: put /v1/catalog/items/{id}/category/{category_id}
@@ -983,6 +996,7 @@ resources:
               delete: delete /v1/catalog/items/{id}/attributes/{attribute_id}
         models:
           item_costs: '#/components/schemas/ItemCosts'
+          item_lot_default: '#/components/schemas/ItemLotDefault'
           item_trend_point: '#/components/schemas/ItemTrendPoint'
           item_trends: '#/components/schemas/ItemTrends'
           list_item: '#/components/schemas/List_Item'
@@ -1510,6 +1524,10 @@ resources:
   operations:
     methods:
       retrieve_inventories: get /v1/operations/inventories
+      retrieve_machine_downtime_reasons: get /v1/operations/machine-downtime-reasons
+      retrieve_machine_status: get /v1/operations/machine-status
+      retrieve_demand_override_types: get /v1/operations/demand-override-types
+      retrieve_schedule_deviation_types: get /v1/operations/schedule-deviation-types
       update_quantities: patch /v1/operations/quantities/{id}
       update_rates: patch /v1/operations/rates/{id}
     subresources:
@@ -1795,6 +1813,115 @@ resources:
           create_production_run_request: '#/components/schemas/CreateProductionRunRequest'
           list_production_run: '#/components/schemas/List_ProductionRun'
           update_production_run_request: '#/components/schemas/UpdateProductionRunRequest'
+      machine_downtime_events:
+        methods:
+          list: get /v1/operations/machine-downtime-events
+          retrieve: get /v1/operations/machine-downtime-events/{id}
+          create: post /v1/operations/machine-downtime-events
+          update: patch /v1/operations/machine-downtime-events/{id}
+          delete: delete /v1/operations/machine-downtime-events/{id}
+        models:
+          create_machine_downtime_event_request: '#/components/schemas/CreateMachineDowntimeEventRequest'
+          list_machine_downtime_event: '#/components/schemas/List_MachineDowntimeEvent'
+          machine_downtime_event: '#/components/schemas/MachineDowntimeEvent'
+          update_machine_downtime_event_request: '#/components/schemas/UpdateMachineDowntimeEventRequest'
+      demand_overrides:
+        methods:
+          list: get /v1/operations/demand-overrides
+          retrieve: get /v1/operations/demand-overrides/{id}
+          create: post /v1/operations/demand-overrides
+          update: patch /v1/operations/demand-overrides/{id}
+          delete: delete /v1/operations/demand-overrides/{id}
+        models:
+          create_demand_override_request: '#/components/schemas/CreateDemandOverrideRequest'
+          demand_override: '#/components/schemas/DemandOverride'
+          list_demand_override: '#/components/schemas/List_DemandOverride'
+          update_demand_override_request: '#/components/schemas/UpdateDemandOverrideRequest'
+      production_schedules:
+        methods:
+          list: get /v1/operations/production-schedules
+          create: post /v1/operations/production-schedules
+          retrieve_current: get /v1/operations/production-schedules/current
+          retrieve: get /v1/operations/production-schedules/{id}
+          retrieve_item_policies: get /v1/operations/production-schedules/{id}/item-policies
+          retrieve_finished_policies: get /v1/operations/production-schedules/{id}/finished-policies
+          retrieve_derived_lines: get /v1/operations/production-schedules/{id}/derived-lines
+          retrieve_deviations: get /v1/operations/production-schedules/{id}/deviations
+          retrieve_week_release_preview: get /v1/operations/production-schedules/{id}/week-release-preview
+          delete: delete /v1/operations/production-schedules/{id}
+        subresources:
+          lines:
+            methods:
+              list: get /v1/operations/production-schedules/{id}/lines
+              create: post /v1/operations/production-schedules/{id}/lines
+              update: patch /v1/operations/production-schedules/{id}/lines/{line_id}
+              delete: delete /v1/operations/production-schedules/{id}/lines/{line_id}
+            models:
+              create_production_schedule_line_request: '#/components/schemas/CreateProductionScheduleLineRequest'
+              list_production_schedule_line: '#/components/schemas/List_ProductionScheduleLine'
+              production_schedule_line: '#/components/schemas/ProductionScheduleLine'
+              update_production_schedule_line_request: '#/components/schemas/UpdateProductionScheduleLineRequest'
+          actions:
+            methods:
+              preview: put /v1/operations/production-schedules/actions/preview
+              preview_regenerate: put /v1/operations/production-schedules/{id}/actions/preview-regenerate
+              regenerate: put /v1/operations/production-schedules/{id}/actions/regenerate
+              publish: put /v1/operations/production-schedules/{id}/actions/publish
+              release_week: post /v1/operations/production-schedules/{id}/actions/release-week
+              archive: put /v1/operations/production-schedules/{id}/actions/archive
+            models:
+              list_schedule_campaign: '#/components/schemas/List_ScheduleCampaign'
+              list_schedule_diff_line: '#/components/schemas/List_ScheduleDiffLine'
+              list_schedule_policy: '#/components/schemas/List_SchedulePolicy'
+              list_schedule_projection: '#/components/schemas/List_ScheduleProjection'
+              preview_production_schedule_request: '#/components/schemas/PreviewProductionScheduleRequest'
+              preview_regenerate_production_schedule_request: '#/components/schemas/PreviewRegenerateProductionScheduleRequest'
+              production_schedule_preview: '#/components/schemas/ProductionSchedulePreview'
+              production_schedule_regenerate_preview: '#/components/schemas/ProductionScheduleRegeneratePreview'
+              regenerate_production_schedule_request: '#/components/schemas/RegenerateProductionScheduleRequest'
+              release_production_schedule_week_request: '#/components/schemas/ReleaseProductionScheduleWeekRequest'
+              release_schedule_week_result: '#/components/schemas/ReleaseScheduleWeekResult'
+              schedule_campaign: '#/components/schemas/ScheduleCampaign'
+              schedule_diff_line: '#/components/schemas/ScheduleDiffLine'
+              schedule_policy: '#/components/schemas/SchedulePolicy'
+              schedule_projection: '#/components/schemas/ScheduleProjection'
+        models:
+          generate_production_schedule_request: '#/components/schemas/GenerateProductionScheduleRequest'
+          list_production_schedule: '#/components/schemas/List_ProductionSchedule'
+          list_production_schedule_derived_line: '#/components/schemas/List_ProductionScheduleDerivedLine'
+          list_production_schedule_deviation: '#/components/schemas/List_ProductionScheduleDeviation'
+          list_production_schedule_finished_policy: '#/components/schemas/List_ProductionScheduleFinishedPolicy'
+          list_production_schedule_item_policy: '#/components/schemas/List_ProductionScheduleItemPolicy'
+          list_release_schedule_batch: '#/components/schemas/List_ReleaseScheduleBatch'
+          list_released_schedule_line: '#/components/schemas/List_ReleasedScheduleLine'
+          list_schedule_applied_override: '#/components/schemas/List_ScheduleAppliedOverride'
+          production_schedule: '#/components/schemas/ProductionSchedule'
+          production_schedule_derived_line: '#/components/schemas/ProductionScheduleDerivedLine'
+          production_schedule_deviation: '#/components/schemas/ProductionScheduleDeviation'
+          production_schedule_finished_policy: '#/components/schemas/ProductionScheduleFinishedPolicy'
+          production_schedule_item_policy: '#/components/schemas/ProductionScheduleItemPolicy'
+          release_schedule_batch: '#/components/schemas/ReleaseScheduleBatch'
+          release_schedule_week_preview: '#/components/schemas/ReleaseScheduleWeekPreview'
+          released_schedule_line: '#/components/schemas/ReleasedScheduleLine'
+          schedule_applied_override: '#/components/schemas/ScheduleAppliedOverride'
+          schedule_diagnostics: '#/components/schemas/ScheduleDiagnostics'
+      production_schedule_settings:
+        methods:
+          list: get /v1/operations/production-schedule-settings
+          update: put /v1/operations/production-schedule-settings
+        subresources:
+          resources:
+            methods:
+              list: get /v1/operations/production-schedule-settings/resources
+              update: put /v1/operations/production-schedule-settings/resources
+              delete: delete /v1/operations/production-schedule-settings/resources/{id}
+            models:
+              list_production_schedule_resource_setting: '#/components/schemas/List_ProductionScheduleResourceSetting'
+              production_schedule_resource_setting: '#/components/schemas/ProductionScheduleResourceSetting'
+              upsert_resource_setting_request: '#/components/schemas/UpsertResourceSettingRequest'
+        models:
+          production_schedule_settings: '#/components/schemas/ProductionScheduleSettings'
+          update_production_schedule_settings_request: '#/components/schemas/UpdateProductionScheduleSettingsRequest'
       purchase_orders:
         methods:
           list: get /v1/operations/purchase-orders
@@ -1945,7 +2072,18 @@ resources:
           edi_run: '#/components/schemas/EDIRun'
           list_edi_run: '#/components/schemas/List_EDIRun'
     models:
+      demand_override_type: '#/components/schemas/DemandOverrideType'
       inventory_item: '#/components/schemas/InventoryItem'
+      list_demand_override_type: '#/components/schemas/List_DemandOverrideType'
       list_inventory_item: '#/components/schemas/List_InventoryItem'
+      list_machine_downtime_reason: '#/components/schemas/List_MachineDowntimeReason'
+      list_machine_status: '#/components/schemas/List_MachineStatus'
+      list_schedule_deviation_type: '#/components/schemas/List_ScheduleDeviationType'
+      machine_campaign: '#/components/schemas/MachineCampaign'
+      machine_downtime_reason: '#/components/schemas/MachineDowntimeReason'
+      machine_downtime_reason_summary: '#/components/schemas/MachineDowntimeReasonSummary'
+      machine_downtime_summary: '#/components/schemas/MachineDowntimeSummary'
+      machine_status: '#/components/schemas/MachineStatus'
+      schedule_deviation_type: '#/components/schemas/ScheduleDeviationType'
       update_quantity_request: '#/components/schemas/UpdateQuantityRequest'
       update_rate_request: '#/components/schemas/UpdateRateRequest'

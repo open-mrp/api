@@ -1,0 +1,680 @@
+syntax = "proto3";
+
+// Package core defines additional gRPC services for the core-service.
+// CoreProductionScheduleService exposes the production scheduling solver.
+package core;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "core/core.proto";
+import "core/core_patch.proto";
+import "core/core_production_run.proto";
+
+option go_package = "shared/proto/core;core";
+
+service CoreProductionScheduleService {
+  // PreviewProductionSchedule runs the solver and returns the plan without persisting it.
+  rpc PreviewProductionSchedule(PreviewProductionScheduleRequest) returns (PreviewProductionScheduleResponse);
+
+  // GenerateProductionSchedule solves and persists a new draft version.
+  rpc GenerateProductionSchedule(GenerateProductionScheduleRequest) returns (GenerateProductionScheduleResponse);
+
+  // PreviewRegenerateProductionSchedule says what a re-solve would change about a draft,
+  // without changing it.
+  rpc PreviewRegenerateProductionSchedule(RegenerateProductionScheduleRequest) returns (PreviewRegenerateProductionScheduleResponse);
+
+  // RegenerateProductionSchedule re-solves a draft in place, keeping its version number.
+  rpc RegenerateProductionSchedule(RegenerateProductionScheduleRequest) returns (RegenerateProductionScheduleResponse);
+
+  // GetProductionSchedule returns one version by ID.
+  rpc GetProductionSchedule(GetProductionScheduleRequest) returns (GetProductionScheduleResponse);
+
+  // GetCurrentProductionSchedule returns the published version covering today.
+  rpc GetCurrentProductionSchedule(GetCurrentProductionScheduleRequest) returns (GetProductionScheduleResponse);
+
+  // ListProductionSchedules returns a paginated list of versions.
+  rpc ListProductionSchedules(ListProductionSchedulesRequest) returns (ListProductionSchedulesResponse);
+
+  // ListProductionScheduleLines returns the planned campaigns for a version.
+  rpc ListProductionScheduleLines(ListProductionScheduleLinesRequest) returns (ListProductionScheduleLinesResponse);
+
+  // ListProductionScheduleItemPolicies returns the per-item policy snapshot for a version.
+  rpc ListProductionScheduleItemPolicies(ListProductionScheduleItemPoliciesRequest) returns (ListProductionScheduleItemPoliciesResponse);
+
+  // ListProductionScheduleFinishedPolicies returns the per-finished-SKU decomposition of
+  // the pooled constraint buffers.
+  rpc ListProductionScheduleFinishedPolicies(ListProductionScheduleFinishedPoliciesRequest) returns (ListProductionScheduleFinishedPoliciesResponse);
+
+  // GetProductionScheduleSettings returns the merchant's planning assumptions.
+  rpc GetProductionScheduleSettings(GetProductionScheduleSettingsRequest) returns (GetProductionScheduleSettingsResponse);
+
+  // UpdateProductionScheduleSettings replaces the merchant's planning assumptions.
+  rpc UpdateProductionScheduleSettings(UpdateProductionScheduleSettingsRequest) returns (GetProductionScheduleSettingsResponse);
+
+  // ListProductionScheduleResourceSettings returns per-resource overrides.
+  rpc ListProductionScheduleResourceSettings(ListProductionScheduleResourceSettingsRequest) returns (ListProductionScheduleResourceSettingsResponse);
+
+  // UpsertProductionScheduleResourceSetting writes one per-resource override.
+  rpc UpsertProductionScheduleResourceSetting(UpsertProductionScheduleResourceSettingRequest) returns (UpsertProductionScheduleResourceSettingResponse);
+
+  // DeleteProductionScheduleResourceSetting removes one per-resource override.
+  rpc DeleteProductionScheduleResourceSetting(DeleteProductionScheduleResourceSettingRequest) returns (google.protobuf.Empty);
+
+  // ListProductionScheduleDerivedLines returns derived downstream department work.
+  rpc ListProductionScheduleDerivedLines(ListProductionScheduleDerivedLinesRequest) returns (ListProductionScheduleDerivedLinesResponse);
+
+  // ListScheduleDeviationTypes returns the global deviation taxonomy.
+  rpc ListScheduleDeviationTypes(ListScheduleDeviationTypesRequest) returns (ListScheduleDeviationTypesResponse);
+
+  // ListProductionScheduleDeviations returns the append-only log of hand changes.
+  rpc ListProductionScheduleDeviations(ListProductionScheduleDeviationsRequest) returns (ListProductionScheduleDeviationsResponse);
+
+  // CreateProductionScheduleLine adds a campaign by hand.
+  rpc CreateProductionScheduleLine(CreateProductionScheduleLineRequest) returns (CreateProductionScheduleLineResponse);
+
+  // UpdateProductionScheduleLine edits a campaign.
+  rpc UpdateProductionScheduleLine(UpdateProductionScheduleLineRequest) returns (UpdateProductionScheduleLineResponse);
+
+  // DeleteProductionScheduleLine removes a campaign.
+  rpc DeleteProductionScheduleLine(DeleteProductionScheduleLineRequest) returns (google.protobuf.Empty);
+
+  // PublishProductionSchedule freezes the first weeks and supersedes what it replaces.
+  rpc PublishProductionSchedule(PublishProductionScheduleRequest) returns (PublishProductionScheduleResponse);
+
+  // ReleaseProductionScheduleWeek turns one planned week into a production run.
+  rpc ReleaseProductionScheduleWeek(ReleaseProductionScheduleWeekRequest) returns (ReleaseProductionScheduleWeekResponse);
+
+  // PreviewReleaseProductionScheduleWeek says what releasing a week would create.
+  rpc PreviewReleaseProductionScheduleWeek(PreviewReleaseProductionScheduleWeekRequest) returns (ReleaseProductionScheduleWeekPreviewResponse);
+
+  // ArchiveProductionSchedule retires a version.
+  rpc ArchiveProductionSchedule(ArchiveProductionScheduleRequest) returns (ArchiveProductionScheduleResponse);
+
+  // DeleteProductionSchedule removes a draft version.
+  rpc DeleteProductionSchedule(DeleteProductionScheduleRequest) returns (google.protobuf.Empty);
+}
+
+// ProductionScheduleInfo is one persisted version of the plan.
+message ProductionScheduleInfo {
+  string id = 1;
+  int32 version = 2;
+  string status_code = 3;
+  optional string name = 4;
+  google.protobuf.Timestamp planning_as_of = 5;
+  google.protobuf.Timestamp horizon_start_date = 6;
+  google.protobuf.Timestamp horizon_end_date = 7;
+  int32 horizon_weeks = 8;
+  int32 frozen_weeks = 9;
+  optional google.protobuf.Timestamp frozen_through_date = 10;
+  string demand_basis_code = 11;
+  string generation_source_code = 12;
+  string solver_version = 13;
+  // JSON blobs frozen at write time so the plan stays explainable later.
+  string settings_snapshot = 14;
+  string diagnostics = 15;
+  optional string error_message = 16;
+  int32 frozen_line_count = 17;
+  double frozen_planned_quantity = 18;
+  optional string generated_by_id = 19;
+  optional string published_by_id = 20;
+  optional google.protobuf.Timestamp published_at = 21;
+  optional string superseded_by_id = 22;
+  google.protobuf.Timestamp created_at = 23;
+  google.protobuf.Timestamp updated_at = 24;
+}
+
+message ProductionScheduleLineInfo {
+  string id = 1;
+  string production_schedule_id = 2;
+  int32 week_index = 3;
+  google.protobuf.Timestamp week_start_date = 4;
+  string machine_id = 5;
+  optional string production_step_id = 6;
+  optional string department_id = 7;
+  string item_id = 8;
+  double planned_quantity = 9;
+  optional string planned_unit_id = 10;
+  int32 planned_lots = 11;
+  double planned_run_hours = 12;
+  double planned_changeover_minutes = 13;
+  int32 sequence_index = 14;
+  double projected_on_hand_before = 15;
+  double projected_on_hand_after = 16;
+  string status_code = 17;
+  string source_code = 18;
+  optional string reason_code = 19;
+  bool is_frozen = 20;
+  optional string production_run_id = 21;
+  google.protobuf.Timestamp created_at = 22;
+  google.protobuf.Timestamp updated_at = 23;
+  double planned_lot_units = 24;
+  optional string planned_unit_abbreviation = 25;
+  int64 released_batch_count = 26;
+  int64 scanned_batch_count = 27;
+  double scanned_quantity = 28;
+}
+
+message ProductionScheduleItemPolicyInfo {
+  string id = 1;
+  string production_schedule_id = 2;
+  string item_id = 3;
+  string sku = 4;
+  optional string unit_id = 34;
+  optional string unit_abbreviation = 35;
+  optional string production_step_id = 5;
+  optional string primary_machine_id = 6;
+  double annual_demand = 7;
+  double weekly_demand = 8;
+  double seconds_per_unit = 9;
+  double unit_cost = 10;
+  double setup_cost = 11;
+  double holding_cost = 12;
+  double eoq_units = 13;
+  double constraint_lead_time_weeks = 14;
+  double finish_lead_time_weeks = 15;
+  double sigma_weekly_pooled = 16;
+  double sigma_downstream_sum = 17;
+  double safety_stock_primary = 18;
+  double safety_stock_downstream = 19;
+  double reorder_point = 20;
+  double order_up_to = 21;
+  double on_hand_echelon = 22;
+  double weeks_of_cover = 23;
+  double annual_run_hours = 24;
+  optional string abc_class = 25;
+  bool was_eoq_capped = 26;
+  bool was_capacity_starved = 27;
+  google.protobuf.Timestamp created_at = 28;
+  google.protobuf.Timestamp updated_at = 29;
+  // The constraint stage on its own, split out of the echelon figure above.
+  double on_hand_greige = 30;
+  double average_greige_inventory = 31;
+  double max_greige_inventory = 32;
+  // The echelon position at the end of each horizon week. Weeks with no campaign are
+  // what this explains: stock draining toward the reorder point.
+  repeated double projected_on_hand = 33;
+}
+
+// ProductionScheduleFinishedPolicyInfo is one finished SKU's own inventory target — the
+// decomposition of the pooled buffer the item policy reports.
+message ProductionScheduleFinishedPolicyInfo {
+  string id = 1;
+  string production_schedule_id = 2;
+  string item_id = 3;
+  string sku = 4;
+  string greige_item_id = 5;
+  string greige_sku = 6;
+  optional string product_line_id = 7;
+  double annual_demand = 8;
+  double weekly_demand = 9;
+  double sigma_weekly = 10;
+  double safety_stock = 11;
+  double reorder_point = 12;
+  double on_hand = 13;
+  double weeks_of_cover = 14;
+  google.protobuf.Timestamp created_at = 15;
+  google.protobuf.Timestamp updated_at = 16;
+}
+
+message ListProductionScheduleFinishedPoliciesRequest {
+  string production_schedule_id = 1;
+}
+
+message ListProductionScheduleFinishedPoliciesResponse {
+  repeated ProductionScheduleFinishedPolicyInfo policies = 1;
+}
+
+message GenerateProductionScheduleRequest {
+  optional google.protobuf.Timestamp planning_as_of = 1;
+  optional int32 horizon_weeks = 2;
+  optional string demand_basis = 3;
+  optional string name = 4;
+}
+
+message GenerateProductionScheduleResponse {
+  ProductionScheduleInfo schedule = 1;
+}
+
+message RegenerateProductionScheduleRequest {
+  string id = 1;
+  // merge_mode decides what happens to hand-edited campaigns. Empty preserves them.
+  optional string merge_mode = 2;
+  // Planning inputs default to the ones the version was generated with, so a plain
+  // regenerate answers "what would the solver say now" rather than a different question.
+  optional google.protobuf.Timestamp planning_as_of = 3;
+  optional int32 horizon_weeks = 4;
+  optional string demand_basis = 5;
+}
+
+message ScheduleDiffLineProto {
+  string change_code = 1;
+  string item_id = 2;
+  string sku = 3;
+  string machine_id = 4;
+  int32 week_index = 5;
+  double current_quantity = 6;
+  double proposed_quantity = 7;
+  bool current_is_manual = 8;
+}
+
+message PreviewRegenerateProductionScheduleResponse {
+  string schedule_id = 1;
+  string solver_version = 2;
+  google.protobuf.Timestamp planning_as_of = 3;
+  repeated ScheduleDiffLineProto lines = 4;
+  int32 added_count = 5;
+  int32 removed_count = 6;
+  int32 changed_count = 7;
+  int32 manual_line_count = 8;
+  int32 discarded_manual_count = 9;
+}
+
+message RegenerateProductionScheduleResponse {
+  ProductionScheduleInfo schedule = 1;
+}
+
+message GetProductionScheduleRequest {
+  string id = 1;
+}
+
+message GetCurrentProductionScheduleRequest {}
+
+message GetProductionScheduleResponse {
+  // Absent when no published version covers today, which is a normal state.
+  optional ProductionScheduleInfo schedule = 1;
+}
+
+message ListProductionSchedulesRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  repeated string status_codes = 3;
+  optional string query = 4;
+}
+
+message ListProductionSchedulesResponse {
+  repeated ProductionScheduleInfo schedules = 1;
+  PageInfo page_info = 2;
+}
+
+message ListProductionScheduleLinesRequest {
+  string production_schedule_id = 1;
+  repeated string machine_ids = 2;
+  optional int32 week_index = 3;
+}
+
+message ListProductionScheduleLinesResponse {
+  repeated ProductionScheduleLineInfo lines = 1;
+}
+
+message ListProductionScheduleItemPoliciesRequest {
+  string production_schedule_id = 1;
+}
+
+message ListProductionScheduleItemPoliciesResponse {
+  repeated ProductionScheduleItemPolicyInfo policies = 1;
+}
+
+message PreviewProductionScheduleRequest {
+  optional google.protobuf.Timestamp planning_as_of = 1;
+  // Overrides the saved settings for this preview only.
+  optional int32 horizon_weeks = 2;
+  optional string demand_basis = 3;
+}
+
+// SchedulePolicyProto is the computed inventory policy for one item.
+message SchedulePolicyProto {
+  string item_id = 1;
+  string sku = 2;
+  double annual_demand = 3;
+  double weekly_demand = 4;
+  double seconds_per_unit = 5;
+  double unit_cost = 6;
+  double setup_cost = 7;
+  double holding_cost = 8;
+  double eoq_units = 9;
+  double constraint_lead_time_weeks = 10;
+  double finish_lead_time_weeks = 11;
+  double safety_stock_primary = 12;
+  double safety_stock_downstream = 13;
+  double reorder_point = 14;
+  double order_up_to = 15;
+  double on_hand_echelon = 16;
+  double weeks_of_cover = 17;
+  string abc_class = 18;
+  double annual_run_hours = 19;
+  // The constraint stage on its own, split out of the echelon figure above.
+  double on_hand_greige = 20;
+  double average_greige_inventory = 21;
+  double max_greige_inventory = 22;
+}
+
+// ScheduleCampaignProto is one planned production block.
+message ScheduleCampaignProto {
+  string item_id = 1;
+  string sku = 2;
+  string machine_id = 3;
+  int32 week_index = 4;
+  double units = 5;
+  int32 lots = 6;
+  double run_hours = 7;
+}
+
+// ScheduleProjectionProto is an item's projected stock position across the horizon.
+message ScheduleProjectionProto {
+  string item_id = 1;
+  repeated double on_hand_by_week = 2;
+}
+
+// ScheduleAppliedOverrideProto records an override that actually moved a number, so
+// the plan can explain why it differs from history.
+message ScheduleAppliedOverrideProto {
+  string override_id = 1;
+  string item_id = 2;
+  google.protobuf.Timestamp month_start = 3;
+  double before = 4;
+  double after = 5;
+  string type_code = 6;
+  string reason_code = 7;
+}
+
+// ScheduleDiagnosticsProto is the honest account of what the solver could not do.
+message ScheduleDiagnosticsProto {
+  repeated string eoq_capped_skus = 1;
+  repeated string unschedulable_skus = 2;
+  repeated string capacity_starved_skus = 3;
+  repeated string items_without_run_rate = 4;
+  int32 excluded_item_count = 5;
+  double changeover_slope_minutes = 6;
+  double average_inputs_added = 7;
+  repeated ScheduleAppliedOverrideProto applied_overrides = 8;
+  // Why an empty plan is empty: the machines the department contributed, and how much
+  // production history was found on them.
+  int32 constraint_machine_count = 9;
+  int32 measured_batch_count = 10;
+  int32 machines_without_step = 11;
+}
+
+message PreviewProductionScheduleResponse {
+  string solver_version = 1;
+  google.protobuf.Timestamp planning_as_of = 2;
+  repeated SchedulePolicyProto policies = 3;
+  repeated ScheduleCampaignProto campaigns = 4;
+  repeated ScheduleProjectionProto projections = 5;
+  ScheduleDiagnosticsProto diagnostics = 6;
+}
+
+// ScheduleDeviationTypeInfo is one entry in the deviation taxonomy.
+message ScheduleDeviationTypeInfo {
+  string id = 1;
+  string code = 2;
+  string name = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+
+// ProductionScheduleDeviationInfo is one append-only record of a hand change.
+message ProductionScheduleDeviationInfo {
+  string id = 1;
+  string production_schedule_id = 2;
+  optional string production_schedule_line_id = 3;
+  string deviation_type_code = 4;
+  // Materialized at write time, never derived on read.
+  bool is_frozen_week = 5;
+  optional int32 week_index = 6;
+  optional string machine_id = 7;
+  optional string item_id = 8;
+  optional string before_json = 9;
+  optional string after_json = 10;
+  double delta_quantity = 11;
+  double delta_run_hours = 12;
+  optional string reason_code = 13;
+  optional string reason_note = 14;
+  string actor_id = 15;
+  google.protobuf.Timestamp created_at = 16;
+}
+
+message ListScheduleDeviationTypesRequest {}
+
+message ListScheduleDeviationTypesResponse {
+  repeated ScheduleDeviationTypeInfo types = 1;
+}
+
+message ListProductionScheduleDeviationsRequest {
+  string schedule_id = 1;
+  optional string cursor = 2;
+  int32 limit = 3;
+  optional bool frozen_only = 4;
+  optional string query = 5;
+}
+
+message ListProductionScheduleDeviationsResponse {
+  repeated ProductionScheduleDeviationInfo deviations = 1;
+  PageInfo page_info = 2;
+}
+
+message CreateProductionScheduleLineRequest {
+  string schedule_id = 1;
+  int32 week_index = 2;
+  string machine_id = 3;
+  string item_id = 4;
+  double quantity = 5;
+  optional int32 lots = 6;
+  optional double run_hours = 7;
+  optional string reason_code = 8;
+  optional string reason_note = 9;
+}
+
+message CreateProductionScheduleLineResponse {
+  ProductionScheduleLineInfo line = 1;
+}
+
+message UpdateProductionScheduleLineRequest {
+  string schedule_id = 1;
+  string line_id = 2;
+  optional int32 week_index = 3;
+  optional string machine_id = 4;
+  optional double quantity = 5;
+  optional int32 lots = 6;
+  optional double run_hours = 7;
+  optional int32 sequence_index = 8;
+  optional string status_code = 9;
+  StringPatch reason_code = 10;
+  optional string reason_note = 12;
+}
+
+message UpdateProductionScheduleLineResponse {
+  ProductionScheduleLineInfo line = 1;
+}
+
+message DeleteProductionScheduleLineRequest {
+  string schedule_id = 1;
+  string line_id = 2;
+  optional string reason_code = 3;
+  optional string reason_note = 4;
+}
+
+message PublishProductionScheduleRequest {
+  string id = 1;
+}
+
+message PublishProductionScheduleResponse {
+  ProductionScheduleInfo schedule = 1;
+}
+
+message ReleaseProductionScheduleWeekRequest {
+  string id = 1;
+  int32 week_index = 2;
+  string responsible_user_id = 3;
+  optional string scanning_station_id = 4;
+}
+
+// ReleaseScheduleLineBatchInfo is one batch the release would create, or did.
+message ReleaseScheduleLineBatchInfo {
+  string item_id = 1;
+  string sku = 2;
+  double quantity = 3;
+  optional string batch_id = 4;
+}
+
+// ReleasedScheduleLineInfo is one campaign and the lots it broke into.
+message ReleasedScheduleLineInfo {
+  string production_schedule_line_id = 1;
+  string item_id = 2;
+  string sku = 3;
+  string machine_id = 4;
+  optional string machine_name = 5;
+  double planned_quantity = 6;
+  double lot_units = 7;
+  int32 batch_count = 8;
+  repeated ReleaseScheduleLineBatchInfo batches = 9;
+  optional string unit = 10;
+}
+
+message ReleaseProductionScheduleWeekResponse {
+  ProductionRunInfo production_run = 1;
+  int32 week_index = 2;
+  google.protobuf.Timestamp week_start_date = 3;
+  int32 released_line_count = 4;
+  int32 batch_count = 5;
+  double total_quantity = 6;
+  repeated ReleasedScheduleLineInfo lines = 7;
+}
+
+message PreviewReleaseProductionScheduleWeekRequest {
+  string id = 1;
+  int32 week_index = 2;
+}
+
+// ReleaseProductionScheduleWeekPreviewResponse is what a release would do, with nothing
+// written. is_releasable is false when the week is empty or already released.
+message ReleaseProductionScheduleWeekPreviewResponse {
+  int32 week_index = 1;
+  google.protobuf.Timestamp week_start_date = 2;
+  int32 line_count = 3;
+  int32 batch_count = 4;
+  double total_quantity = 5;
+  repeated ReleasedScheduleLineInfo lines = 6;
+  bool is_releasable = 7;
+  optional string blocked_reason = 8;
+  optional string existing_production_run_id = 9;
+}
+
+message ArchiveProductionScheduleRequest {
+  string id = 1;
+}
+
+message ArchiveProductionScheduleResponse {
+  ProductionScheduleInfo schedule = 1;
+}
+
+message DeleteProductionScheduleRequest {
+  string id = 1;
+}
+
+// ProductionScheduleDerivedLineInfo is downstream work implied by a constraint campaign.
+message ProductionScheduleDerivedLineInfo {
+  string id = 1;
+  string production_schedule_id = 2;
+  string source_line_id = 3;
+  string production_step_id = 4;
+  optional string department_id = 5;
+  string item_id = 6;
+  int32 week_index = 7;
+  google.protobuf.Timestamp week_start_date = 8;
+  double quantity = 9;
+  optional string planned_unit_id = 10;
+  int32 explosion_depth = 11;
+  int32 offset_weeks = 12;
+  string status_code = 13;
+  google.protobuf.Timestamp created_at = 14;
+  google.protobuf.Timestamp updated_at = 15;
+}
+
+message ListProductionScheduleDerivedLinesRequest {
+  string schedule_id = 1;
+  repeated string department_ids = 2;
+  optional int32 week_index = 3;
+}
+
+message ListProductionScheduleDerivedLinesResponse {
+  repeated ProductionScheduleDerivedLineInfo lines = 1;
+}
+
+// ProductionScheduleSettingsInfo is the merchant's planning assumptions. Always fully
+// populated: an account with nothing saved gets the solver's own defaults.
+message ProductionScheduleSettingsInfo {
+  optional string constraint_department_id = 1;
+  int32 planning_horizon_weeks = 2;
+  int32 frozen_weeks = 3;
+  int32 week_start_day = 4;
+  int32 demand_window_months = 5;
+  int32 forecast_history_months = 6;
+  int32 forecast_months = 7;
+  string demand_basis_code = 8;
+  double forecast_z = 9;
+  double changeover_avg_minutes = 10;
+  double changeover_min_minutes = 11;
+  double changeover_max_minutes = 12;
+  double changeover_labor_rate = 13;
+  double holding_rate_pct = 14;
+  double service_level_z = 15;
+  double finish_lead_time_weeks = 16;
+  double default_constraint_lead_time_weeks = 17;
+  double max_weeks_supply = 18;
+  int32 max_flow_depth = 19;
+  int32 shifts_per_day = 20;
+  double hours_per_shift = 21;
+  int32 work_days_per_week = 22;
+  int32 weeks_per_year = 23;
+  double capacity_headroom_pct = 24;
+  double default_lot_units = 25;
+  bool is_enabled = 26;
+  optional string generation_cron = 27;
+  string generation_timezone = 28;
+  bool auto_publish = 29;
+  optional google.protobuf.Timestamp last_generated_at = 30;
+  bool has_stored_settings = 31;
+  google.protobuf.Timestamp created_at = 32;
+  google.protobuf.Timestamp updated_at = 33;
+}
+
+message GetProductionScheduleSettingsRequest {}
+
+message GetProductionScheduleSettingsResponse {
+  ProductionScheduleSettingsInfo settings = 1;
+}
+
+message UpdateProductionScheduleSettingsRequest {
+  ProductionScheduleSettingsInfo settings = 1;
+}
+
+message ProductionScheduleResourceSettingInfo {
+  string id = 1;
+  string scope_code = 2;
+  string scope_ref_id = 3;
+  bool is_excluded = 4;
+  optional double lead_time_weeks = 5;
+  double lead_time_offset_weeks = 6;
+}
+
+message ListProductionScheduleResourceSettingsRequest {}
+
+message ListProductionScheduleResourceSettingsResponse {
+  repeated ProductionScheduleResourceSettingInfo settings = 1;
+}
+
+message UpsertProductionScheduleResourceSettingRequest {
+  string scope_code = 1;
+  string scope_ref_id = 2;
+  bool is_excluded = 3;
+  optional double lead_time_weeks = 4;
+  double lead_time_offset_weeks = 5;
+}
+
+message UpsertProductionScheduleResourceSettingResponse {
+  ProductionScheduleResourceSettingInfo setting = 1;
+}
+
+message DeleteProductionScheduleResourceSettingRequest {
+  string id = 1;
+}

@@ -1240,7 +1240,7 @@ func (s *ProductSvcTestSuite) TestListProductsFull_AttachesAttributesAndUnitGrou
 		Return(&domain.Item{ID: "it_1", Attributes: attrs}, nil).
 		Times(1)
 	s.productLineRepo.EXPECT().
-		GetUnitGroup(gomock.Any(), "ug_1", gomock.Any()).
+		GetUnitGroup(gomock.Any(), gomock.Any(), "ug_1", gomock.Any()).
 		Return(&domain.ProductLineUnitGroup{ID: "ug_1", Name: "Mass"}, nil).
 		Times(1)
 

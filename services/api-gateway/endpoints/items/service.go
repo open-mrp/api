@@ -10,6 +10,7 @@ import (
 	httptransport "github.com/augno/api/services/api-gateway/internal/http"
 	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -22,6 +23,7 @@ type ItemSvc interface {
 	ListItems(ctx context.Context, req *ListItemsRequest) (*apiresource.List[apiresource.Item], *apierror.APIError)
 	GetItem(ctx context.Context, req *RetrieveItemRequest) (*apiresource.Item, *apierror.APIError)
 	GetItemInventory(ctx context.Context, req *RetrieveItemInventoryRequest) (*apiresource.ItemInventory, *apierror.APIError)
+	GetItemLotDefault(ctx context.Context, req *RetrieveItemLotDefaultRequest) (*apiresource.ItemLotDefault, *apierror.APIError)
 	GetItemCosts(ctx context.Context, req *GetItemCostsRequest) (*apiresource.ItemCosts, *apierror.APIError)
 	GetItemTrends(ctx context.Context, req *GetItemTrendsRequest) (*apiresource.ItemTrends, *apierror.APIError)
 	ExportItems(ctx context.Context, req *ExportItemsRequest) (*httptransport.FileDownload, *apierror.APIError)
@@ -131,6 +133,34 @@ func (m *itemSvcImpl) GetItemInventory(ctx context.Context, req *RetrieveItemInv
 	}
 
 	return ItemInventoryPresenter(ctx, resp), nil
+}
+
+func (m *itemSvcImpl) GetItemLotDefault(ctx context.Context, req *RetrieveItemLotDefaultRequest) (*apiresource.ItemLotDefault, *apierror.APIError) {
+	pbReq := &pb.GetItemLotDefaultRequest{ItemId: req.ItemID}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.get_lot_default", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetItemLotDefaultResponse, error) {
+			return m.coreClient.GetItemLotDefault(ctx, pbReq, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	lot := &apiresource.ItemLotDefault{
+		Object:   constants.ObjectTypeItemLotDefault,
+		Item:     apiresource.NewEntity(resp.ItemId, constants.ObjectTypeItem, nil, nil),
+		Quantity: resp.Quantity,
+		Source:   constants.ItemLotSource(resp.Source),
+	}
+	if resp.ProductLineId != nil && *resp.ProductLineId != "" {
+		lot.ProductLine = apiresource.NewEntity(*resp.ProductLineId, constants.ObjectTypeProductLine, nil, nil)
+	}
+	// The unit id is loader-side metadata rather than a public field: the `unit` include
+	// resolves it into the nested sub-resource, keyed by the item the lot was resolved for.
+	if resp.UnitId != nil && *resp.UnitId != "" {
+		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeItemLotDefault, resp.ItemId, "unit_id", *resp.UnitId)
+	}
+	return lot, nil
 }
 
 func (m *itemSvcImpl) GetItemCosts(ctx context.Context, req *GetItemCostsRequest) (*apiresource.ItemCosts, *apierror.APIError) {

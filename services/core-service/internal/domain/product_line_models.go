@@ -34,6 +34,10 @@ type ProductLineFull struct {
 	CommissionPolicy constants.CommissionPolicy `audit:"commission_policy"`
 	FreightPolicy    constants.FreightPolicy    `audit:"freight_policy"`
 	UnitGroupID      string                     `audit:"unit_group_id"`
+	// The lot products in this line are made in, carried as a quantity so the number and its unit stay one value: 60 pairs and 60 eaches are different lots, and a size on its own cannot say which. Flattened here the way credit_limit is on a customer.
+	DefaultLotID     *string `audit:"default_lot_id"`
+	DefaultLotValue  *string `audit:"default_lot_value"`
+	DefaultLotUnitID *string `audit:"default_lot_unit_id"`
 	AccountID        *string
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
@@ -82,6 +86,7 @@ type CreateProductLineParams struct {
 	UnitGroupID      string
 	CommissionPolicy constants.CommissionPolicy
 	FreightPolicy    constants.FreightPolicy
+	DefaultLot       *LotQuantityInput
 	Includes         []string
 }
 
@@ -92,10 +97,41 @@ type UpdateProductLineParams struct {
 	CommissionPolicy *constants.CommissionPolicy
 	FreightPolicy    *constants.FreightPolicy
 	UnitGroupID      *string
-	Includes         []string
+	DefaultLot       *LotQuantityInput
+	// ClearDefaultLot removes the line's lot convention entirely.
+	ClearDefaultLot bool
+	Includes        []string
 }
 
 type DeleteProductLineParams struct {
 	AccountID     string
 	ProductLineID string
+}
+
+// ItemLotDefault is the lot one item is made in, resolved through the whole chain.
+//
+// Quantity is zero when nothing anywhere supplies a lot: the caller gets a unit and no number, so a form defaults to empty rather than to a size nobody chose.
+type ItemLotDefault struct {
+	ItemID   string
+	Quantity float64
+	UnitID   string
+	// Source names the rule that produced this lot: item_override, product_line, downstream_product_line or account_default.
+	Source string
+	// ProductLineID is the line the convention came from, empty for the account default.
+	ProductLineID string
+}
+
+// ProductLineLotDefault is one line's configured lot convention.
+type ProductLineLotDefault struct {
+	ProductLineID string
+	Quantity      float64
+	UnitID        string
+}
+
+// LotQuantityInput is a lot on its way in: a decimal string and the unit it counts.
+//
+// Both are required together. A size with no unit cannot say whether 60 means pairs or eaches, which is the distinction the whole setting exists to draw.
+type LotQuantityInput struct {
+	Value  string
+	UnitID string
 }

@@ -380,9 +380,10 @@ func (q *Queries) GetBatchBase(ctx context.Context, arg GetBatchBaseParams) (Get
 }
 
 const getBatchFlowIncoming = `-- name: GetBatchFlowIncoming :many
-SELECT A AS batch_id FROM _batch_flow WHERE B = ?
+SELECT B AS batch_id FROM _batch_flow WHERE A = ?
 `
 
+// GetBatchFlowIncoming returns the upstream batches that feed the given batch.
 func (q *Queries) GetBatchFlowIncoming(ctx context.Context, batchID string) ([]string, error) {
 	rows, err := q.db.QueryContext(ctx, getBatchFlowIncoming, batchID)
 	if err != nil {
@@ -407,9 +408,15 @@ func (q *Queries) GetBatchFlowIncoming(ctx context.Context, batchID string) ([]s
 }
 
 const getBatchFlowOutgoing = `-- name: GetBatchFlowOutgoing :many
-SELECT B AS batch_id FROM _batch_flow WHERE A = ?
+SELECT A AS batch_id FROM _batch_flow WHERE B = ?
 `
 
+// GetBatchFlowOutgoing returns the downstream batches the given batch feeds.
+//
+// _batch_flow follows the Prisma implicit self-m2m mapping (same rule as
+// _parent_child_production_steps, see docs/patterns/production-step-graph-patterns.md):
+// row (A, B) means B is in A's `in` relation and A is in B's `out` relation, so A = the
+// downstream (consuming) batch and B = the upstream (source) batch.
 func (q *Queries) GetBatchFlowOutgoing(ctx context.Context, batchID string) ([]string, error) {
 	rows, err := q.db.QueryContext(ctx, getBatchFlowOutgoing, batchID)
 	if err != nil {
@@ -553,12 +560,12 @@ INSERT INTO batch (
     id, account_id, item_id, quantity_id,
     seconds_quantity_id, waste_quantity_id,
     production_step_id, scanning_station_id, production_run_id,
-    scanned_at, created_at, updated_at
+    created_at, updated_at
 ) VALUES (
     ?, ?, ?, ?,
     ?, ?,
     ?, ?, ?,
-    NOW(3), NOW(3), NOW(3)
+    NOW(3), NOW(3)
 )
 `
 
@@ -574,6 +581,9 @@ type InsertBatchParams struct {
 	ProductionRunID   sql.NullString
 }
 
+// InsertBatch creates a batch as unscanned work.
+//
+// scanned_at stays NULL: a batch added to a production run is a ticket the floor has yet to run, and stamping it as scanned on creation both fakes production that never happened and closes the run immediately, since a run completes once every batch is scanned. The legacy create does not set it either.
 func (q *Queries) InsertBatch(ctx context.Context, arg InsertBatchParams) error {
 	_, err := q.db.ExecContext(ctx, insertBatch,
 		arg.ID,
@@ -594,12 +604,13 @@ INSERT INTO _batch_flow (A, B) VALUES (?, ?)
 `
 
 type InsertBatchFlowParams struct {
-	SourceBatchID string
 	TargetBatchID string
+	SourceBatchID string
 }
 
+// InsertBatchFlow records that the source batch feeds the target batch. Per the Prisma orientation of _batch_flow, the downstream (target) batch is column A and the upstream (source) batch is column B.
 func (q *Queries) InsertBatchFlow(ctx context.Context, arg InsertBatchFlowParams) error {
-	_, err := q.db.ExecContext(ctx, insertBatchFlow, arg.SourceBatchID, arg.TargetBatchID)
+	_, err := q.db.ExecContext(ctx, insertBatchFlow, arg.TargetBatchID, arg.SourceBatchID)
 	return err
 }
 
@@ -633,6 +644,23 @@ func (q *Queries) IsBatchInAccount(ctx context.Context, arg IsBatchInAccountPara
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const linkBatchMachine = `-- name: LinkBatchMachine :exec
+INSERT IGNORE INTO _batches_machines (A, B) VALUES (?, ?)
+`
+
+type LinkBatchMachineParams struct {
+	BatchID   string
+	MachineID string
+}
+
+// LinkBatchMachine attaches a batch to the machine that will run it.
+//
+// Attainment reads the machine through this table, so a batch with no link is production nobody can attribute. The legacy create connects machines; this is the same edge.
+func (q *Queries) LinkBatchMachine(ctx context.Context, arg LinkBatchMachineParams) error {
+	_, err := q.db.ExecContext(ctx, linkBatchMachine, arg.BatchID, arg.MachineID)
+	return err
 }
 
 const listBatchesByScanningStationBackward = `-- name: ListBatchesByScanningStationBackward :many
@@ -978,11 +1006,12 @@ JOIN unit qu ON q.unit_id = qu.id
 LEFT JOIN scanning_station ss ON b.scanning_station_id = ss.id
 LEFT JOIN department d ON ss.department_id = d.id
 LEFT JOIN (
-    SELECT bf.A AS batch_id, SUM(oq.value) AS out_sum
+    -- A batch's outputs are the downstream (A) side of _batch_flow rows where it is the upstream (B) batch, per the Prisma orientation of the table.
+    SELECT bf.B AS batch_id, SUM(oq.value) AS out_sum
     FROM _batch_flow bf
-    JOIN batch ob ON bf.B = ob.id
+    JOIN batch ob ON bf.A = ob.id
     JOIN quantity oq ON ob.quantity_id = oq.id
-    GROUP BY bf.A
+    GROUP BY bf.B
 ) out_totals ON out_totals.batch_id = b.id
 WHERE b.account_id = ?
 AND b.closed_at IS NULL
@@ -992,13 +1021,23 @@ AND (
     ? = false
     OR b.item_id IN (/*SLICE:item_ids*/?)
 )
+AND (
+    ? = false
+    OR EXISTS (
+        SELECT 1 FROM product p
+        WHERE p.item_id = i.id
+          AND p.product_line_id IN (/*SLICE:product_line_ids*/?)
+    )
+)
 GROUP BY d.name, i.sku, i.id, b.scanning_station_id, qu.abbreviation
 `
 
 type ListOpenBatchesParams struct {
-	AccountID         string
-	IncludeItemFilter interface{}
-	ItemIds           []string
+	AccountID                string
+	IncludeItemFilter        interface{}
+	ItemIds                  []string
+	IncludeProductLineFilter interface{}
+	ProductLineIds           []sql.NullString
 }
 
 type ListOpenBatchesRow struct {
@@ -1010,7 +1049,7 @@ type ListOpenBatchesRow struct {
 	UnitAbbreviation  string
 }
 
-// TODO: Restore product_line_ids filter once product_line table exists in schema.
+// The product-line filter matches via EXISTS rather than a join so an item with several products on matching lines is not double-counted by the SUM.
 func (q *Queries) ListOpenBatches(ctx context.Context, arg ListOpenBatchesParams) ([]ListOpenBatchesRow, error) {
 	query := listOpenBatches
 	var queryParams []interface{}
@@ -1023,6 +1062,15 @@ func (q *Queries) ListOpenBatches(ctx context.Context, arg ListOpenBatchesParams
 		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
 	} else {
 		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeProductLineFilter)
+	if len(arg.ProductLineIds) > 0 {
+		for _, v := range arg.ProductLineIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", strings.Repeat(",?", len(arg.ProductLineIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", "NULL", 1)
 	}
 	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {

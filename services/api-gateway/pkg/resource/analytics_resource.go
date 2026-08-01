@@ -505,19 +505,19 @@ type DateTimeCoordinate struct {
 // AnalyzeDemandForecastResponse represents the response from the demand forecast endpoint.
 type AnalyzeDemandForecastResponse struct {
 	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=list"`
+	Object constants.ObjectType `json:"object" validate:"required,enum=analyze_demand_forecast_response"`
 	// The demand forecast rows.
-	Data []DemandForecastRow `json:"data" validate:"required"`
+	Data *List[DemandForecastRow] `json:"data" validate:"required"`
 	// The fraction of the current month elapsed.
 	CurrentMonthFraction float64 `json:"current_month_fraction" validate:"required"`
 }
 
 // DemandForecastRow represents a single item's demand forecast data.
 type DemandForecastRow struct {
-	// The item ID.
-	ItemID string `json:"item_id" validate:"required"`
-	// The product line ID.
-	ProductLineID *string `json:"product_line_id"`
+	// The item.
+	Item *Entity `json:"item" validate:"required"`
+	// The product line.
+	ProductLine *Entity `json:"product_line"`
 	// The product SKU.
 	ProductSku string `json:"product_sku" validate:"required"`
 	// The product description.
@@ -549,7 +549,7 @@ type DemandForecastRow struct {
 // DemandForecastPoint represents a historical demand data point.
 type DemandForecastPoint struct {
 	// The date.
-	Date time.Time `json:"date" validate:"required"`
+	Date time.Time `json:"at" validate:"required"`
 	// The demand value.
 	Demand float64 `json:"demand" validate:"required"`
 }
@@ -557,7 +557,7 @@ type DemandForecastPoint struct {
 // DemandForecastForecastPoint represents a forecasted data point with confidence bounds.
 type DemandForecastForecastPoint struct {
 	// The date.
-	Date time.Time `json:"date" validate:"required"`
+	Date time.Time `json:"at" validate:"required"`
 	// The forecast value.
 	Forecast float64 `json:"forecast" validate:"required"`
 	// The lower confidence bound.
@@ -569,7 +569,7 @@ type DemandForecastForecastPoint struct {
 // RevenueForecastPoint represents a historical revenue data point.
 type RevenueForecastPoint struct {
 	// The date.
-	Date time.Time `json:"date" validate:"required"`
+	Date time.Time `json:"at" validate:"required"`
 	// The revenue value.
 	Revenue float64 `json:"revenue" validate:"required"`
 }
@@ -579,23 +579,73 @@ type AnalyzeOeeResponse struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=analyze_oee_response"`
 	// The OEE data by department.
-	Departments []OeeDepartment `json:"departments" validate:"required"`
+	Departments *List[OeeDepartment] `json:"departments" validate:"required"`
 }
 
 // OeeDepartment represents OEE metrics for a single department.
 type OeeDepartment struct {
-	// The department ID.
-	DepartmentID string `json:"department_id" validate:"required"`
-	// The department name.
-	DepartmentName string `json:"department_name" validate:"required"`
+	// The department.
+	Department *Entity `json:"department" validate:"required"`
 	// The number of good units produced.
 	GoodUnits float64 `json:"good_units" validate:"required"`
 	// The number of waste units.
 	WasteUnits float64 `json:"waste_units" validate:"required"`
 	// The number of seconds units.
 	SecondsUnits float64 `json:"seconds_units" validate:"required"`
+	// The time this output should have taken at each production step's own labor rate. This is the numerator of Performance.
+	StandardSecondsEarned float64 `json:"standard_seconds_earned" validate:"required"`
 	// The estimated runtime in hours.
 	EstimatedRuntimeHours float64 `json:"estimated_runtime_hours" validate:"required"`
+	// Logged downtime charged against availability, in seconds.
+	AvailabilityLossSeconds float64 `json:"availability_loss_seconds"`
+	// Logged downtime charged against performance, in seconds.
+	PerformanceLossSeconds float64 `json:"performance_loss_seconds"`
+	// Logged downtime charged against quality, in seconds.
+	QualityLossSeconds float64 `json:"quality_loss_seconds"`
+	// Time nobody planned to run, removed from the OEE denominator rather than counted as a loss.
+	NotScheduledSeconds float64 `json:"not_scheduled_seconds"`
+	// Time spent changing over between products, in seconds.
+	ChangeoverSeconds float64 `json:"changeover_seconds"`
+	// Number of downtime events logged in the period.
+	DowntimeEventCount int64 `json:"downtime_event_count"`
+	// Downtime split by reason, largest first.
+	DowntimeBreakdown *List[OeeDowntimeReason] `json:"downtime_breakdown"`
+	// Planned time net of not-scheduled downtime, in seconds.
+	ScheduledSeconds float64 `json:"scheduled_seconds"`
+	// Scheduled time net of availability losses, in seconds.
+	RunTimeSeconds float64 `json:"run_time_seconds"`
+	// The ideal time of the batch tickets in the performance sample, in seconds: what their output should have taken at each production step's ideal cycle time.
+	MeasuredIdealSeconds float64 `json:"measured_ideal_seconds"`
+	// The actual time the sampled tickets took, in seconds, measured from the gaps between consecutive batch-ticket scans per machine, net of downtime already charged elsewhere.
+	MeasuredRunSeconds float64 `json:"measured_run_seconds"`
+	// The number of batch tickets in the performance sample.
+	PerformanceTicketCount int64 `json:"performance_ticket_count"`
+	// How performance_pct was obtained: measured from scan intervals, or fallen back to the shift-pattern run-time estimate. Null when performance_pct is null.
+	PerformanceBasis *constants.OeePerformanceBasis `json:"performance_basis"`
+	// Run time divided by scheduled time.
+	AvailabilityPct *float64 `json:"availability_pct"`
+	// Ideal time over actual time for the sampled batch tickets (measured), or standard seconds earned divided by run time (estimated fallback).
+	PerformancePct *float64 `json:"performance_pct"`
+	// Good units divided by total units produced.
+	QualityPct *float64 `json:"quality_pct"`
+	// Availability multiplied by performance multiplied by quality.
+	OeePct *float64 `json:"oee_pct"`
+	// Whether availability was measured from logged downtime or estimated from runtime. A department with no logged downtime computes as perfectly available, so an estimate is labelled rather than presented as a measurement.
+	MeasurementStatus constants.OeeMeasurementStatus `json:"measurement_status" validate:"required"`
+	// Data-quality warnings for this grouping. Empty when the numbers can be taken at face value.
+	Anomalies []constants.OeeAnomaly `json:"anomalies"`
+}
+
+// OeeDowntimeReason represents one reason's contribution to a department's downtime.
+type OeeDowntimeReason struct {
+	// Why the machine stopped.
+	Reason constants.MachineDowntimeReasonCode `json:"reason" validate:"required"`
+	// Which OEE term this reason charges.
+	OeeBucket constants.OeeBucket `json:"oee_bucket" validate:"required"`
+	// Downtime attributed to this reason, in seconds.
+	DowntimeSeconds float64 `json:"downtime_seconds" validate:"required"`
+	// Number of events logged against this reason.
+	EventCount int64 `json:"event_count" validate:"required"`
 }
 
 // AnalyzeWeeksOfSalesResponse represents the response from the weeks-of-sales analytics endpoint.
@@ -618,4 +668,84 @@ type WeeksOfSalesItem struct {
 	AverageSalesQuantity *Quantity `json:"average_sales_quantity" validate:"required"`
 	// The number of weeks of inventory on hand.
 	WeeksOfSales float64 `json:"weeks_of_sales" validate:"required"`
+}
+
+// One row of a schedule-attainment breakdown.
+//
+// Both ratios are reported because either alone misleads. `attainment_pct` caps each SKU at what was asked for, so over-building one easy item cannot paper over a total miss on another; `output_ratio_pct` does not cap, so it is the only one that reveals over-production.
+type AttainmentBucket struct {
+	// Identifies the bucket within the chosen grouping — a week start, machine ID, department ID or item ID.
+	Key string `json:"key" validate:"required"`
+	// Display label for the bucket.
+	Label string `json:"label" validate:"required"`
+	// First day of the week, when grouping by week.
+	WeekStartDate *time.Time `json:"week_starts_at"`
+	// Units the live plan called for.
+	PlannedQuantity float64 `json:"planned_quantity"`
+	// Units actually produced.
+	ActualQuantity float64 `json:"actual_quantity"`
+	// Units produced that were planned for, capped per campaign at what was asked.
+	MatchedQuantity float64 `json:"matched_quantity"`
+	// Units scrapped.
+	WasteQuantity float64 `json:"waste_quantity"`
+	// Units produced with no matching planned campaign.
+	UnplannedQuantity float64 `json:"unplanned_quantity"`
+	// Machine hours the plan called for.
+	PlannedRunHours float64 `json:"planned_run_hours"`
+	// Planned campaigns in this bucket.
+	PlannedLines int64 `json:"planned_lines"`
+	// Batches scanned in this bucket.
+	BatchCount int64 `json:"batch_count"`
+	// Share of the plan that was met. Null when nothing was planned.
+	AttainmentPct *float64 `json:"attainment_pct"`
+	// Output as a share of plan, uncapped. Null when nothing was planned.
+	OutputRatioPct *float64 `json:"output_ratio_pct"`
+}
+
+// How well a published commitment survived the week it covered.
+type FrozenAdherence struct {
+	// The published version this measures.
+	Schedule *Entity `json:"schedule" validate:"required"`
+	// Version number of that schedule.
+	Version int32 `json:"version"`
+	// Campaigns frozen at publish.
+	FrozenLineCount int64 `json:"frozen_line_count"`
+	// Units frozen at publish.
+	FrozenPlannedQuantity float64 `json:"frozen_planned_quantity"`
+	// Frozen campaigns that were changed after publish.
+	DeviatedLines int64 `json:"deviated_lines"`
+	// Campaigns added into the frozen window after publish.
+	AddedLines int64 `json:"added_lines"`
+	// Total absolute unit change across frozen-week deviations.
+	AbsDeltaUnits float64 `json:"abs_delta_units"`
+	// Share of frozen campaigns that survived untouched. Null when nothing was frozen.
+	LineAdherencePct *float64 `json:"line_adherence_pct"`
+	// Share of frozen units that survived untouched. Null when nothing was frozen.
+	UnitsAdherencePct *float64 `json:"units_adherence_pct"`
+	// Last day of the frozen window.
+	FrozenThroughDate *time.Time `json:"frozen_through_at"`
+}
+
+// Actual production measured against the plan that was live at the time.
+//
+// The baseline for each week is the version that was published on or before that week began, so republishing mid-horizon cannot rewrite a week the floor has already worked. `baseline_schedules` names the versions used, so any number here can be traced back to the plan that produced it.
+type AnalyzeScheduleAttainmentResponse struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=analyze_schedule_attainment_response"`
+	// Start of the measured period.
+	StartDate time.Time `json:"starts_at" validate:"required"`
+	// End of the measured period.
+	EndDate time.Time `json:"ends_at" validate:"required"`
+	// The dimension the breakdown is grouped by.
+	GroupBy constants.AttainmentGroupBy `json:"group_by" validate:"required"`
+	// The published versions the measurement was taken against.
+	BaselineSchedules *List[Entity] `json:"baseline_schedules"`
+	// The breakdown.
+	Buckets *List[AttainmentBucket] `json:"buckets"`
+	// Every bucket combined.
+	Totals AttainmentBucket `json:"totals"`
+	// Frozen-week adherence per baseline version.
+	FrozenAdherence *List[FrozenAdherence] `json:"frozen_adherence"`
+	// Whether the period had a plan to measure against. When `no_baseline`, every ratio is null and the period has no plan rather than a missed one.
+	BaselineStatus constants.AttainmentBaselineStatus `json:"baseline_status" validate:"required"`
 }

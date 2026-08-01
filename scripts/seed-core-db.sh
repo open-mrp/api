@@ -154,7 +154,11 @@ if [ ! -d "$SEED_DIR" ]; then
     exit 1
 fi
 
-for seed_file in "$SEED_DIR"/*.sql; do
+# The dev/ files come last and are dev-only: they are exploration data for a human
+# poking at the product, not fixtures anything asserts against. The e2e seeder
+# deliberately does not load them — its own fixtures are tuned to its tests, and
+# production history layered on top would move the numbers they check.
+for seed_file in "$SEED_DIR"/*.sql "$SEED_DIR"/dev/*.sql; do
     if [ ! -f "$seed_file" ]; then
         continue
     fi

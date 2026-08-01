@@ -298,50 +298,52 @@ func (*AnalyzeNewCustomersResponse) SchemaExample() any {
 	})
 }
 
-func (*AnalyzeDemandForecastResponse) SchemaExample() any {
-	d := analyticsExampleTime()
-	pt := DemandForecastPoint{Date: d, Demand: 48}
-	fp := DemandForecastForecastPoint{Date: d, Forecast: 50, LowerBound: 45, UpperBound: 55}
-	rv := RevenueForecastPoint{Date: d, Revenue: 960}
-	pl := SampleProductLineID
-	return apiexample.ValidateAndMarshalToMap(&AnalyzeDemandForecastResponse{
-		Object: constants.ObjectTypeList,
-		Data: []DemandForecastRow{
-			{
-				ItemID:              SampleItemID,
-				ProductLineID:       &pl,
-				ProductSku:          SampleItemSKU,
-				Unit:                SampleUnitAbbreviation,
-				Currency:            "USD",
-				History:             []DemandForecastPoint{pt},
-				Forecast:            []DemandForecastForecastPoint{fp},
-				RevenueHistory:      []RevenueForecastPoint{rv},
-				RevenueForecast:     []DemandForecastForecastPoint{fp},
-				SalesHistory:        []RevenueForecastPoint{rv},
-				SalesForecast:       []DemandForecastForecastPoint{fp},
-				CurrentMonthDemand:  120,
-				CurrentMonthRevenue: 2400,
-				CurrentMonthSales:   120,
-			},
+var sampleDemandForecastHistoryPoint = DemandForecastPoint{Date: analyticsExampleTime(), Demand: 48}
+var sampleDemandForecastForecastPoint = DemandForecastForecastPoint{Date: analyticsExampleTime(), Forecast: 50, LowerBound: 45, UpperBound: 55}
+var sampleRevenueForecastPoint = RevenueForecastPoint{Date: analyticsExampleTime(), Revenue: 960}
+
+var SampleAnalyzeDemandForecastResponse = &AnalyzeDemandForecastResponse{
+	Object: constants.ObjectTypeAnalyzeDemandForecastResponse,
+	Data: NewList([]DemandForecastRow{
+		{
+			Item:                NewEntity(SampleItemID, constants.ObjectTypeItem, nil, nil),
+			ProductLine:         NewEntity(SampleProductLineID, constants.ObjectTypeProductLine, nil, nil),
+			ProductSku:          SampleItemSKU,
+			Unit:                SampleUnitAbbreviation,
+			Currency:            "USD",
+			History:             []DemandForecastPoint{sampleDemandForecastHistoryPoint},
+			Forecast:            []DemandForecastForecastPoint{sampleDemandForecastForecastPoint},
+			RevenueHistory:      []RevenueForecastPoint{sampleRevenueForecastPoint},
+			RevenueForecast:     []DemandForecastForecastPoint{sampleDemandForecastForecastPoint},
+			SalesHistory:        []RevenueForecastPoint{sampleRevenueForecastPoint},
+			SalesForecast:       []DemandForecastForecastPoint{sampleDemandForecastForecastPoint},
+			CurrentMonthDemand:  120,
+			CurrentMonthRevenue: 2400,
+			CurrentMonthSales:   120,
 		},
-		CurrentMonthFraction: 0.35,
-	})
+	}, PageInfo{}),
+	CurrentMonthFraction: 0.35,
+}
+
+func (*AnalyzeDemandForecastResponse) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleAnalyzeDemandForecastResponse)
+}
+
+var SampleAnalyzeOeeResponse = &AnalyzeOeeResponse{
+	Object: constants.ObjectTypeAnalyzeOeeResponse,
+	Departments: NewList([]OeeDepartment{
+		{
+			Department:            NewEntity(SampleDepartmentID, constants.ObjectTypeDepartment, new(SampleDepartmentName), nil),
+			GoodUnits:             980,
+			WasteUnits:            20,
+			SecondsUnits:          5,
+			EstimatedRuntimeHours: 40,
+		},
+	}, PageInfo{}),
 }
 
 func (*AnalyzeOeeResponse) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(&AnalyzeOeeResponse{
-		Object: constants.ObjectTypeAnalyzeOeeResponse,
-		Departments: []OeeDepartment{
-			{
-				DepartmentID:          SampleDepartmentID,
-				DepartmentName:        SampleDepartmentName,
-				GoodUnits:             980,
-				WasteUnits:            20,
-				SecondsUnits:          5,
-				EstimatedRuntimeHours: 40,
-			},
-		},
-	})
+	return apiexample.ValidateAndMarshalToMap(SampleAnalyzeOeeResponse)
 }
 
 func (*AnalyzeWeeksOfSalesResponse) SchemaExample() any {
@@ -359,4 +361,67 @@ func (*AnalyzeWeeksOfSalesResponse) SchemaExample() any {
 		},
 		Count: 1,
 	})
+}
+
+var sampleAttainmentPct = 92.5
+var sampleOutputRatioPct = 96.0
+var sampleLineAdherencePct = 87.5
+var sampleUnitsAdherencePct = 94.0
+
+var SampleAnalyzeScheduleAttainmentResponse = &AnalyzeScheduleAttainmentResponse{
+	Object:    constants.ObjectTypeAnalyzeScheduleAttainmentResponse,
+	StartDate: SampleAnalyticsPeriodStart,
+	EndDate:   SampleAnalyticsPeriodEnd,
+	GroupBy:   constants.AttainmentGroupByWeek,
+	BaselineSchedules: NewList([]Entity{
+		*NewEntity(SampleProductionScheduleID, constants.ObjectTypeProductionSchedule, nil, nil),
+	}, PageInfo{}),
+	Buckets: NewList([]AttainmentBucket{
+		{
+			Key:               "2026-07-27T00:00:00Z",
+			Label:             "2026-07-27T00:00:00Z",
+			PlannedQuantity:   4200,
+			ActualQuantity:    4032,
+			MatchedQuantity:   3885,
+			WasteQuantity:     48,
+			UnplannedQuantity: 147,
+			PlannedRunHours:   63,
+			PlannedLines:      7,
+			BatchCount:        58,
+			AttainmentPct:     &sampleAttainmentPct,
+			OutputRatioPct:    &sampleOutputRatioPct,
+		},
+	}, PageInfo{}),
+	Totals: AttainmentBucket{
+		Key:               "total",
+		Label:             "Total",
+		PlannedQuantity:   4200,
+		ActualQuantity:    4032,
+		MatchedQuantity:   3885,
+		WasteQuantity:     48,
+		UnplannedQuantity: 147,
+		PlannedRunHours:   63,
+		PlannedLines:      7,
+		BatchCount:        58,
+		AttainmentPct:     &sampleAttainmentPct,
+		OutputRatioPct:    &sampleOutputRatioPct,
+	},
+	FrozenAdherence: NewList([]FrozenAdherence{
+		{
+			Schedule:              NewEntity(SampleProductionScheduleID, constants.ObjectTypeProductionSchedule, nil, nil),
+			Version:               1,
+			FrozenLineCount:       8,
+			FrozenPlannedQuantity: 4200,
+			DeviatedLines:         1,
+			AddedLines:            0,
+			AbsDeltaUnits:         252,
+			LineAdherencePct:      &sampleLineAdherencePct,
+			UnitsAdherencePct:     &sampleUnitsAdherencePct,
+		},
+	}, PageInfo{}),
+	BaselineStatus: constants.AttainmentBaselineStatusMeasured,
+}
+
+func (*AnalyzeScheduleAttainmentResponse) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleAnalyzeScheduleAttainmentResponse)
 }

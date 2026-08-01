@@ -142,6 +142,8 @@ type CreateBatchParams struct {
 	ProductionStepID  string
 	ScanningStationID string
 	ProductionRunID   string
+	// MachineIDs are the machines the batch runs on. Attainment attributes production through this link, so a batch created without it is work no machine gets credit for.
+	MachineIDs []string
 }
 
 // CreateQuantityParams holds the parameters for creating a quantity record.

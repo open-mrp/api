@@ -241,6 +241,10 @@ var noGETPatchBodies = map[string]map[string]any{
 	"update-sales-order-line":       {"product_description": "Schema validation update"},
 	"update-receiving-order-line":   {"quantity_value": "1"},
 	"update-transaction-allocation": {"amount": "1"},
+	// A schedule line has no single-item GET — it is read through the schedule's line
+	// list — so the shape comes from a minimal PATCH. Sequence index is the safest
+	// field: it changes no quantity and so logs a resequence rather than a plan change.
+	"update-production-schedule-line": {"sequence_index": 0},
 }
 
 // Update endpoint schema validation

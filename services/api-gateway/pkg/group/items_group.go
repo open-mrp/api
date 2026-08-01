@@ -43,6 +43,7 @@ func (*ItemsEndpointGroup) Materialize(config *ItemsEndpointGroupConfig) *ItemsE
 	listItemsEndpoint := apiendpoint.From(&itemep.ListItemsEndpoint{}).WithService(inner, itemSvc)
 	getItemEndpoint := apiendpoint.From(&itemep.RetrieveItemEndpoint{}).WithService(inner, itemSvc)
 	getItemInventoryEndpoint := apiendpoint.From(&itemep.RetrieveItemInventoryEndpoint{}).WithService(inner, itemSvc)
+	getItemLotDefaultEndpoint := apiendpoint.From(&itemep.RetrieveItemLotDefaultEndpoint{}).WithService(inner, itemSvc)
 	getItemCostsEndpoint := apiendpoint.From(&itemep.GetItemCostsEndpoint{}).WithService(inner, itemSvc)
 	getItemTrendsEndpoint := apiendpoint.From(&itemep.GetItemTrendsEndpoint{}).WithService(inner, itemSvc)
 	exportItemsEndpoint := apiendpoint.From(&itemep.ExportItemsEndpoint{}).WithService(inner, itemSvc)
@@ -57,6 +58,7 @@ func (*ItemsEndpointGroup) Materialize(config *ItemsEndpointGroupConfig) *ItemsE
 		listItemsEndpoint,
 		getItemEndpoint,
 		getItemInventoryEndpoint,
+		getItemLotDefaultEndpoint,
 		getItemCostsEndpoint,
 		getItemTrendsEndpoint,
 		exportItemsEndpoint,

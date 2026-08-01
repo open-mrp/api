@@ -19,16 +19,11 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/infrastructure/sqlc"
 	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 
-	// resourceregistry's init() registers the resourcekit Definitions for
-	// every resource the include resolver handles. Blank-imported so the
-	// init runs at startup; the loaders rely on SetCoreClient being called
-	// (a few lines below).
+	// resourceregistry's init() registers the resourcekit Definitions for every resource the include resolver handles. Blank-imported so the init runs at startup; the loaders rely on SetCoreClient being called (a few lines below).
 	_ "github.com/augno/api/services/api-gateway/internal/resourceregistry"
 	"github.com/augno/api/services/api-gateway/internal/router"
 
-	// versiontransforms's init() registers the version.Transformer chain that
-	// downgrades responses (and upgrades requests) for callers on older API
-	// versions. Blank-imported so the init runs at startup.
+	// versiontransforms's init() registers the version.Transformer chain that downgrades responses (and upgrades requests) for callers on older API versions. Blank-imported so the init runs at startup.
 	_ "github.com/augno/api/services/api-gateway/internal/versiontransforms"
 	"github.com/augno/api/services/api-gateway/internal/ws"
 	"github.com/augno/api/shared/db"
@@ -44,9 +39,7 @@ const (
 	httpShutdownTimeout = 10 * time.Second
 )
 
-// Run is the entry point for the API gateway. It initializes the necessary
-// components and starts the HTTP server. We separate this out from `main` to
-// make it easier to test.
+// Run is the entry point for the API gateway. It initializes the necessary components and starts the HTTP server. We separate this out from `main` to make it easier to test.
 func Run(
 	ctx context.Context,
 	getenv func(string) string,
@@ -132,15 +125,14 @@ func Run(
 		return err
 	}
 
-	// Hand the core client to the resourcekit loaders. The
-	// resourceregistry package is blank-imported below to fire its init()
-	// definitions; the loaders rely on this client being set before any
-	// HTTP request runs.
+	// Hand the core client to the resourcekit loaders. The resourceregistry package is blank-imported below to fire its init() definitions; the loaders rely on this client being set before any HTTP request runs.
 	resourceloaders.SetCoreClient(coreClient.Client)
 	resourceloaders.SetCoreSalesClient(coreClient.Sales)
 	resourceloaders.SetCorePurchaseClient(coreClient.Purchase)
 	resourceloaders.SetFulfillmentClient(coreClient.Fulfillment)
 	resourceloaders.SetCorePickingClient(coreClient.Picking)
+	resourceloaders.SetMachineDowntimeClient(coreClient.MachineDowntime)
+	resourceloaders.SetDemandOverrideClient(coreClient.DemandOverride)
 	resourceloaders.SetPortalDomainClient(coreClient.PortalDomain)
 	resourceloaders.SetCoreShippingClient(coreClient.Shipping)
 	resourceloaders.SetCoreReceivingClient(coreClient.Receiving)
@@ -254,8 +246,7 @@ func Run(
 		ErrorLog:     slog.NewLogLogger(logger.Handler(), slog.LevelError),
 	}
 
-	// Initialize the trusted internal listener (agent traffic). Only started when a
-	// service token is configured. It must never be exposed behind the public ALB.
+	// Initialize the trusted internal listener (agent traffic). Only started when a service token is configured. It must never be exposed behind the public ALB.
 	var internalServer *http.Server
 	if cfg.InternalServiceToken != "" {
 		internalBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "internal ", authClient, coreClient, billingClient, platformClient, agentClient, notificationClient, reqLogPublisher, stdout, cfg.TrustedProxyHops)

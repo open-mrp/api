@@ -10,19 +10,22 @@ import (
 const coreServiceName = "core-service"
 
 type CoreServiceClient struct {
-	Client         pb.CoreServiceClient
-	Sales          pb.CoreSalesServiceClient
-	Purchase       pb.CorePurchaseServiceClient
-	Fulfillment    pb.CoreFulfillmentServiceClient
-	Picking        pb.CorePickingServiceClient
-	ProductionRun  pb.CoreProductionRunServiceClient
-	ProductionStep pb.CoreProductionStepServiceClient
-	Receiving      pb.CoreReceivingServiceClient
-	Shipping       pb.CoreShippingServiceClient
-	ShippingCase   pb.CoreShippingCaseServiceClient
-	HubspotSync    pb.CoreHubspotSyncServiceClient
-	PortalDomain   pb.CorePortalDomainServiceClient
-	grpcConn       *contracts.GRPCClientConn
+	Client             pb.CoreServiceClient
+	Sales              pb.CoreSalesServiceClient
+	Purchase           pb.CorePurchaseServiceClient
+	Fulfillment        pb.CoreFulfillmentServiceClient
+	Picking            pb.CorePickingServiceClient
+	ProductionRun      pb.CoreProductionRunServiceClient
+	ProductionStep     pb.CoreProductionStepServiceClient
+	MachineDowntime    pb.CoreMachineDowntimeServiceClient
+	DemandOverride     pb.CoreDemandOverrideServiceClient
+	ProductionSchedule pb.CoreProductionScheduleServiceClient
+	Receiving          pb.CoreReceivingServiceClient
+	Shipping           pb.CoreShippingServiceClient
+	ShippingCase       pb.CoreShippingCaseServiceClient
+	HubspotSync        pb.CoreHubspotSyncServiceClient
+	PortalDomain       pb.CorePortalDomainServiceClient
+	grpcConn           *contracts.GRPCClientConn
 }
 
 func NewCoreServiceClientWithURL(url string) (*CoreServiceClient, error) {
@@ -33,19 +36,22 @@ func NewCoreServiceClientWithURL(url string) (*CoreServiceClient, error) {
 
 	conn := grpcConn.Conn()
 	return &CoreServiceClient{
-		Client:         pb.NewCoreServiceClient(conn),
-		Sales:          pb.NewCoreSalesServiceClient(conn),
-		Purchase:       pb.NewCorePurchaseServiceClient(conn),
-		Fulfillment:    pb.NewCoreFulfillmentServiceClient(conn),
-		Picking:        pb.NewCorePickingServiceClient(conn),
-		ProductionRun:  pb.NewCoreProductionRunServiceClient(conn),
-		ProductionStep: pb.NewCoreProductionStepServiceClient(conn),
-		Receiving:      pb.NewCoreReceivingServiceClient(conn),
-		Shipping:       pb.NewCoreShippingServiceClient(conn),
-		ShippingCase:   pb.NewCoreShippingCaseServiceClient(conn),
-		HubspotSync:    pb.NewCoreHubspotSyncServiceClient(conn),
-		PortalDomain:   pb.NewCorePortalDomainServiceClient(conn),
-		grpcConn:       grpcConn,
+		Client:             pb.NewCoreServiceClient(conn),
+		Sales:              pb.NewCoreSalesServiceClient(conn),
+		Purchase:           pb.NewCorePurchaseServiceClient(conn),
+		Fulfillment:        pb.NewCoreFulfillmentServiceClient(conn),
+		Picking:            pb.NewCorePickingServiceClient(conn),
+		ProductionRun:      pb.NewCoreProductionRunServiceClient(conn),
+		ProductionStep:     pb.NewCoreProductionStepServiceClient(conn),
+		MachineDowntime:    pb.NewCoreMachineDowntimeServiceClient(conn),
+		DemandOverride:     pb.NewCoreDemandOverrideServiceClient(conn),
+		ProductionSchedule: pb.NewCoreProductionScheduleServiceClient(conn),
+		Receiving:          pb.NewCoreReceivingServiceClient(conn),
+		Shipping:           pb.NewCoreShippingServiceClient(conn),
+		ShippingCase:       pb.NewCoreShippingCaseServiceClient(conn),
+		HubspotSync:        pb.NewCoreHubspotSyncServiceClient(conn),
+		PortalDomain:       pb.NewCorePortalDomainServiceClient(conn),
+		grpcConn:           grpcConn,
 	}, nil
 }
 

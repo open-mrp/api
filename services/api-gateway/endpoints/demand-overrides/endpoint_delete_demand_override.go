@@ -1,0 +1,42 @@
+package demandoverridesep
+
+import (
+	"context"
+	"net/http"
+
+	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
+	"github.com/augno/api/shared/constants"
+	apierror "github.com/augno/api/shared/errors"
+)
+
+// Request to delete a demand override.
+type DeleteDemandOverrideRequest struct {
+	// ID of the demand override.
+	DemandOverrideID string `path:"id" validate:"required"`
+}
+
+// Deletes a demand override.
+//
+// Schedules already generated are unaffected: a version snapshots the overrides it applied, so deleting one changes future solves only.
+type DeleteDemandOverrideEndpoint struct{}
+
+func (e *DeleteDemandOverrideEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteDemandOverrideRequest, *apiresource.EmptyResource] {
+	return (&apiendpoint.APIEndpoint[*DeleteDemandOverrideRequest, *apiresource.EmptyResource]{
+		Title:             "Delete Demand Override",
+		Method:            http.MethodDelete,
+		ContentType:       "application/json",
+		Route:             "/v1/operations/demand-overrides/{id}",
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeDemandOverride,
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainDemandOverrides, Action: types.ActionDelete},
+		},
+		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteDemandOverrideRequest) (*apiresource.EmptyResource, *apierror.APIError) {
+			return svc.(DemandOverridesSvc).DeleteDemandOverride
+		},
+	})
+}

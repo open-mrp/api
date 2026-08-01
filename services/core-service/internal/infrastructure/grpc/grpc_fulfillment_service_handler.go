@@ -14,7 +14,8 @@ import (
 type fulfillmentGRPCHandler struct {
 	pb.UnimplementedCoreFulfillmentServiceServer
 
-	machineSvc domain.MachineSvc
+	machineSvc       domain.MachineSvc
+	machineStatusSvc domain.MachineStatusSvc
 }
 
 func machineToProto(m *domain.Machine) *pb.MachineInfo {
@@ -169,4 +170,88 @@ func (h *fulfillmentGRPCHandler) BatchGetMachinesByIDs(ctx context.Context, req 
 	return &pb.BatchGetMachinesByIDsResponse{
 		Machines: protos,
 	}, nil
+}
+
+func machineCampaignToProto(c *domain.MachineCampaign) *pb.MachineCampaignInfo {
+	if c == nil {
+		return nil
+	}
+	info := &pb.MachineCampaignInfo{
+		ProductionScheduleLineId: c.ProductionScheduleLineID,
+		ItemId:                   c.ItemID,
+		Sku:                      c.SKU,
+		WeekStartDate:            timestamppb.New(c.WeekStartDate),
+		WeekIndex:                c.WeekIndex,
+		PlannedQuantity:          c.PlannedQuantity,
+		ScannedQuantity:          c.ScannedQuantity,
+		RemainingQuantity:        c.RemainingQuantity,
+		ReleasedBatchCount:       c.ReleasedBatchCount,
+		ScannedBatchCount:        c.ScannedBatchCount,
+		PlannedRunHours:          c.PlannedRunHours,
+		StatusCode:               c.StatusCode,
+		ProductionRunId:          c.ProductionRunID,
+	}
+	if c.Unit != "" {
+		unit := c.Unit
+		info.Unit = &unit
+	}
+	return info
+}
+
+func (h *fulfillmentGRPCHandler) ListMachineStatus(ctx context.Context, req *pb.ListMachineStatusRequest) (*pb.ListMachineStatusResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	params := domain.ListMachineStatusParams{DepartmentIDs: req.DepartmentIds}
+	if req.AsOf != nil {
+		params.AsOf = req.AsOf.AsTime()
+	}
+
+	result, apiErr := h.machineStatusSvc.ListMachineStatus(ctx, params)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	machines := make([]*pb.MachineStatusInfo, 0, len(result.Machines))
+	for i := range result.Machines {
+		m := result.Machines[i]
+		info := &pb.MachineStatusInfo{
+			MachineId:           m.MachineID,
+			MachineName:         m.MachineName,
+			DepartmentId:        m.DepartmentID,
+			DepartmentName:      m.DepartmentName,
+			Status:              string(m.Status),
+			Current:             machineCampaignToProto(m.Current),
+			Next:                machineCampaignToProto(m.Next),
+			WeekPlannedQuantity: m.WeekPlannedQuantity,
+			WeekScannedQuantity: m.WeekScannedQuantity,
+			WeekPlannedRunHours: m.WeekPlannedRunHours,
+		}
+		if m.Unit != "" {
+			unit := m.Unit
+			info.Unit = &unit
+		}
+		if m.Downtime != nil {
+			info.Downtime = &pb.MachineDowntimeSummaryInfo{
+				EventId:    m.Downtime.EventID,
+				Reason:     m.Downtime.Reason,
+				ReasonName: m.Downtime.ReasonName,
+				OeeBucket:  m.Downtime.OEEBucket,
+				StartedAt:  timestamppb.New(m.Downtime.StartedAt),
+				Note:       m.Downtime.Note,
+			}
+		}
+		machines = append(machines, info)
+	}
+
+	resp := &pb.ListMachineStatusResponse{
+		WeekStartDate: timestamppb.New(result.WeekStartDate),
+		Machines:      machines,
+	}
+	if result.ProductionScheduleID != "" {
+		scheduleID := result.ProductionScheduleID
+		resp.ProductionScheduleId = &scheduleID
+	}
+	return resp, nil
 }

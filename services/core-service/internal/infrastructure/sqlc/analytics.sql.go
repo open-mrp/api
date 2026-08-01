@@ -12,6 +12,47 @@ import (
 	"time"
 )
 
+const countMachinesByDepartment = `-- name: CountMachinesByDepartment :many
+SELECT
+    m.department_id,
+    COUNT(*) AS machine_count
+FROM machine m
+WHERE m.account_id = ?
+AND m.department_id != ''
+GROUP BY m.department_id
+`
+
+type CountMachinesByDepartmentRow struct {
+	DepartmentID string
+	MachineCount int64
+}
+
+// CountMachinesByDepartment gives the scheduled-time denominator for OEE.
+//
+// Availability is machine-hours run over machine-hours scheduled, and downtime is logged per machine, so a department's scheduled time has to scale with how many machines it has or a three-machine room would be measured against one machine's shift.
+func (q *Queries) CountMachinesByDepartment(ctx context.Context, accountID string) ([]CountMachinesByDepartmentRow, error) {
+	rows, err := q.db.QueryContext(ctx, countMachinesByDepartment, accountID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CountMachinesByDepartmentRow
+	for rows.Next() {
+		var i CountMachinesByDepartmentRow
+		if err := rows.Scan(&i.DepartmentID, &i.MachineCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getDeliveryEntries = `-- name: GetDeliveryEntries :many
 SELECT
     inv.number AS invoice_number,
@@ -396,8 +437,7 @@ type GetManufacturingBatchBatchMetricsRow struct {
 	LaborSeconds  string
 }
 
-// Combined batch-table query for production, quality, and labor efficiency.
-// Uses scanned_at for date filtering to match legacy dashboard behavior.
+// Combined batch-table query for production, quality, and labor efficiency. Uses scanned_at for date filtering to match legacy dashboard behavior.
 func (q *Queries) GetManufacturingBatchBatchMetrics(ctx context.Context, arg GetManufacturingBatchBatchMetricsParams) (GetManufacturingBatchBatchMetricsRow, error) {
 	row := q.db.QueryRowContext(ctx, getManufacturingBatchBatchMetrics,
 		arg.OwnerAccountID,
@@ -509,8 +549,7 @@ type GetManufacturingBatchInvoiceMetricsRow struct {
 	TotalProfit   interface{}
 }
 
-// Combined invoice-table query for costs per unit and margin.
-// Uses unit conversion logic to normalize quantities, costs, and prices.
+// Combined invoice-table query for costs per unit and margin. Uses unit conversion logic to normalize quantities, costs, and prices.
 func (q *Queries) GetManufacturingBatchInvoiceMetrics(ctx context.Context, arg GetManufacturingBatchInvoiceMetricsParams) (GetManufacturingBatchInvoiceMetricsRow, error) {
 	row := q.db.QueryRowContext(ctx, getManufacturingBatchInvoiceMetrics, arg.OwnerAccountID, arg.StartDate, arg.EndDate)
 	var i GetManufacturingBatchInvoiceMetricsRow
@@ -1254,7 +1293,27 @@ SELECT
     COALESCE(d.name, 'Unassigned') AS department_name,
     CAST(COALESCE(SUM(COALESCE(qf.value * (u_qf.ratio_numerator / u_qf.ratio_denominator), 0)), 0) AS DECIMAL(65,30)) AS good_units,
     CAST(COALESCE(SUM(COALESCE(qw.value * (u_qw.ratio_numerator / u_qw.ratio_denominator), 0)), 0) AS DECIMAL(65,30)) AS waste_units,
-    CAST(COALESCE(SUM(COALESCE(qs.value * (u_qs.ratio_numerator / u_qs.ratio_denominator), 0)), 0) AS DECIMAL(65,30)) AS seconds_units
+    CAST(COALESCE(SUM(COALESCE(qs.value * (u_qs.ratio_numerator / u_qs.ratio_denominator), 0)), 0) AS DECIMAL(65,30)) AS seconds_units,
+    CAST(COALESCE(SUM(
+        (
+            COALESCE(qf.value * (u_qf.ratio_numerator / u_qf.ratio_denominator), 0)
+            + COALESCE(qw.value * (u_qw.ratio_numerator / u_qw.ratio_denominator), 0)
+            + COALESCE(qs.value * (u_qs.ratio_numerator / u_qs.ratio_denominator), 0)
+        ) * COALESCE(
+            labor_time.value * CASE LOWER(TRIM(COALESCE(labor_time_unit.abbreviation, '')))
+                WHEN 'min' THEN 60
+                WHEN 'mins' THEN 60
+                WHEN 'minute' THEN 60
+                WHEN 'minutes' THEN 60
+                WHEN 'hr' THEN 3600
+                WHEN 'h' THEN 3600
+                WHEN 'hour' THEN 3600
+                WHEN 'hours' THEN 3600
+                ELSE 1
+            END,
+            0
+        )
+    ), 0) AS DECIMAL(65,30)) AS standard_seconds_earned
 FROM batch b
 LEFT JOIN quantity qf ON qf.id = b.quantity_id
 LEFT JOIN unit u_qf ON u_qf.id = qf.unit_id
@@ -1264,6 +1323,9 @@ LEFT JOIN quantity qs ON qs.id = b.seconds_quantity_id
 LEFT JOIN unit u_qs ON u_qs.id = qs.unit_id
 LEFT JOIN scanning_station ss ON ss.id = b.scanning_station_id
 LEFT JOIN department d ON d.id = ss.department_id
+LEFT JOIN production_step ps ON ps.id = b.production_step_id
+LEFT JOIN rate labor_time ON labor_time.id = ps.labor_time_id
+LEFT JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit_id
 WHERE b.account_id = ?
   AND b.scanned_at >= ?
   AND b.scanned_at <= ?
@@ -1277,13 +1339,19 @@ type GetOeeDepartmentDataParams struct {
 }
 
 type GetOeeDepartmentDataRow struct {
-	DepartmentID   string
-	DepartmentName string
-	GoodUnits      string
-	WasteUnits     string
-	SecondsUnits   string
+	DepartmentID          string
+	DepartmentName        string
+	GoodUnits             string
+	WasteUnits            string
+	SecondsUnits          string
+	StandardSecondsEarned string
 }
 
+// GetOeeDepartmentData returns the unit counts and the standard time earned per department.
+//
+// standard_seconds_earned is the numerator of OEE Performance: the time the work *should* have taken at the production step's own labor rate. The rate is a Rate whose numerator unit decides its scale, so it is converted to seconds here rather than in Go — the same conversion the solver applies in SecondsPerUnitFromLaborTime. An unrecognized unit is treated as seconds, matching the solver, so the two never disagree about what a run rate means.
+//
+// Seconds-grade units count toward output but not toward good: they are sellable, but they are not first-pass quality, and leaving them out of the denominator would report a plant that produces nothing but irregulars as 100% quality.
 func (q *Queries) GetOeeDepartmentData(ctx context.Context, arg GetOeeDepartmentDataParams) ([]GetOeeDepartmentDataRow, error) {
 	rows, err := q.db.QueryContext(ctx, getOeeDepartmentData, arg.OwnerAccountID, arg.StartDate, arg.EndDate)
 	if err != nil {
@@ -1299,6 +1367,79 @@ func (q *Queries) GetOeeDepartmentData(ctx context.Context, arg GetOeeDepartment
 			&i.GoodUnits,
 			&i.WasteUnits,
 			&i.SecondsUnits,
+			&i.StandardSecondsEarned,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getOeeDowntimeByDepartment = `-- name: GetOeeDowntimeByDepartment :many
+SELECT
+    COALESCE(e.department_id, 'unassigned') AS department_id,
+    e.reason_code,
+    r.oee_bucket,
+    CAST(COALESCE(SUM(
+        TIMESTAMPDIFF(
+            SECOND,
+            GREATEST(e.started_at, ?),
+            LEAST(COALESCE(e.ended_at, NOW(3)), ?)
+        )
+    ), 0) AS SIGNED) AS downtime_seconds,
+    COUNT(*) AS event_count
+FROM machine_downtime_event e
+JOIN machine_downtime_reason r ON r.code = e.reason_code
+WHERE e.account_id = ?
+  -- Overlap test rather than containment: an event that started before the window and is still running must still contribute its in-window seconds.
+  AND e.started_at <= ?
+  AND COALESCE(e.ended_at, NOW(3)) >= ?
+GROUP BY COALESCE(e.department_id, 'unassigned'), e.reason_code, r.oee_bucket
+`
+
+type GetOeeDowntimeByDepartmentParams struct {
+	StartDate sql.NullTime
+	EndDate   time.Time
+	AccountID string
+}
+
+type GetOeeDowntimeByDepartmentRow struct {
+	DepartmentID    string
+	ReasonCode      string
+	OeeBucket       string
+	DowntimeSeconds int64
+	EventCount      int64
+}
+
+// GetOeeDowntimeByDepartment aggregates logged downtime for the OEE calculation, clipped to the reporting window so an event that straddles the boundary only contributes the overlapping part. Open events (ended_at IS NULL) clip at now. Grouped by reason so the caller can roll up to OEE buckets and still render a reason Pareto without a second query.
+func (q *Queries) GetOeeDowntimeByDepartment(ctx context.Context, arg GetOeeDowntimeByDepartmentParams) ([]GetOeeDowntimeByDepartmentRow, error) {
+	rows, err := q.db.QueryContext(ctx, getOeeDowntimeByDepartment,
+		arg.StartDate,
+		arg.EndDate,
+		arg.AccountID,
+		arg.EndDate,
+		arg.StartDate,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetOeeDowntimeByDepartmentRow
+	for rows.Next() {
+		var i GetOeeDowntimeByDepartmentRow
+		if err := rows.Scan(
+			&i.DepartmentID,
+			&i.ReasonCode,
+			&i.OeeBucket,
+			&i.DowntimeSeconds,
+			&i.EventCount,
 		); err != nil {
 			return nil, err
 		}
@@ -1354,6 +1495,155 @@ func (q *Queries) GetOeeEstimatedRuntime(ctx context.Context, arg GetOeeEstimate
 	for rows.Next() {
 		var i GetOeeEstimatedRuntimeRow
 		if err := rows.Scan(&i.DepartmentID, &i.RuntimeSeconds); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getOeeMachineDowntimeIntervals = `-- name: GetOeeMachineDowntimeIntervals :many
+SELECT
+    e.machine_id,
+    r.oee_bucket,
+    e.started_at,
+    COALESCE(e.ended_at, NOW(3)) AS ended_at
+FROM machine_downtime_event e
+JOIN machine_downtime_reason r ON r.code = e.reason_code
+WHERE e.account_id = ?
+  -- Overlap test rather than containment, matching GetOeeDowntimeByDepartment.
+  AND e.started_at <= ?
+  AND COALESCE(e.ended_at, NOW(3)) >= ?
+ORDER BY e.machine_id, e.started_at
+`
+
+type GetOeeMachineDowntimeIntervalsParams struct {
+	AccountID string
+	EndDate   time.Time
+	StartDate sql.NullTime
+}
+
+type GetOeeMachineDowntimeIntervalsRow struct {
+	MachineID string
+	OeeBucket string
+	StartedAt time.Time
+	EndedAt   sql.NullTime
+}
+
+// GetOeeMachineDowntimeIntervals lists raw downtime intervals per machine so the scan gap between two tickets can be reduced by the downtime logged inside it. Intervals are returned unclipped (open events coalesce to now) and clipped against each gap in Go, because the clip target is the gap, not the reporting window.
+func (q *Queries) GetOeeMachineDowntimeIntervals(ctx context.Context, arg GetOeeMachineDowntimeIntervalsParams) ([]GetOeeMachineDowntimeIntervalsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getOeeMachineDowntimeIntervals, arg.AccountID, arg.EndDate, arg.StartDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetOeeMachineDowntimeIntervalsRow
+	for rows.Next() {
+		var i GetOeeMachineDowntimeIntervalsRow
+		if err := rows.Scan(
+			&i.MachineID,
+			&i.OeeBucket,
+			&i.StartedAt,
+			&i.EndedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getOeeScanIntervals = `-- name: GetOeeScanIntervals :many
+SELECT
+    bm.B AS machine_id,
+    COALESCE(ss.department_id, 'unassigned') AS department_id,
+    b.scanned_at,
+    CAST(COALESCE(
+        COALESCE(qf.value * (u_qf.ratio_numerator / u_qf.ratio_denominator), 0)
+        + COALESCE(qw.value * (u_qw.ratio_numerator / u_qw.ratio_denominator), 0)
+        + COALESCE(qs.value * (u_qs.ratio_numerator / u_qs.ratio_denominator), 0)
+    , 0) AS DECIMAL(65,30)) AS total_units,
+    CAST(COALESCE(
+        (
+            COALESCE(qf.value * (u_qf.ratio_numerator / u_qf.ratio_denominator), 0)
+            + COALESCE(qw.value * (u_qw.ratio_numerator / u_qw.ratio_denominator), 0)
+            + COALESCE(qs.value * (u_qs.ratio_numerator / u_qs.ratio_denominator), 0)
+        ) * COALESCE(
+            labor_time.value * CASE LOWER(TRIM(COALESCE(labor_time_unit.abbreviation, '')))
+                WHEN 'min' THEN 60
+                WHEN 'mins' THEN 60
+                WHEN 'minute' THEN 60
+                WHEN 'minutes' THEN 60
+                WHEN 'hr' THEN 3600
+                WHEN 'h' THEN 3600
+                WHEN 'hour' THEN 3600
+                WHEN 'hours' THEN 3600
+                ELSE 1
+            END,
+            0
+        )
+    , 0) AS DECIMAL(65,30)) AS ideal_seconds
+FROM batch b
+JOIN _batches_machines bm ON bm.A = b.id
+LEFT JOIN quantity qf ON qf.id = b.quantity_id
+LEFT JOIN unit u_qf ON u_qf.id = qf.unit_id
+LEFT JOIN quantity qw ON qw.id = b.waste_quantity_id
+LEFT JOIN unit u_qw ON u_qw.id = qw.unit_id
+LEFT JOIN quantity qs ON qs.id = b.seconds_quantity_id
+LEFT JOIN unit u_qs ON u_qs.id = qs.unit_id
+LEFT JOIN scanning_station ss ON ss.id = b.scanning_station_id
+LEFT JOIN production_step ps ON ps.id = b.production_step_id
+LEFT JOIN rate labor_time ON labor_time.id = ps.labor_time_id
+LEFT JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit_id
+WHERE b.account_id = ?
+  AND b.scanned_at >= ?
+  AND b.scanned_at <= ?
+ORDER BY bm.B, b.scanned_at, b.id
+`
+
+type GetOeeScanIntervalsParams struct {
+	OwnerAccountID string
+	StartDate      sql.NullTime
+	EndDate        sql.NullTime
+}
+
+type GetOeeScanIntervalsRow struct {
+	MachineID    string
+	DepartmentID string
+	ScannedAt    sql.NullTime
+	TotalUnits   string
+	IdealSeconds string
+}
+
+// GetOeeScanIntervals feeds the measured Performance calculation: one row per scanned batch ticket with the machine it came off, so consecutive scans on the same machine can be diffed into the actual time the ticket took to produce. ideal_seconds is the time the ticket's output should have taken at its production step's own labor rate, using the same unit-scale CASE as GetOeeDepartmentData so the two never disagree. Batches with no machine link are excluded: production nobody can attribute to a machine has no scan interval.
+func (q *Queries) GetOeeScanIntervals(ctx context.Context, arg GetOeeScanIntervalsParams) ([]GetOeeScanIntervalsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getOeeScanIntervals, arg.OwnerAccountID, arg.StartDate, arg.EndDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetOeeScanIntervalsRow
+	for rows.Next() {
+		var i GetOeeScanIntervalsRow
+		if err := rows.Scan(
+			&i.MachineID,
+			&i.DepartmentID,
+			&i.ScannedAt,
+			&i.TotalUnits,
+			&i.IdealSeconds,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

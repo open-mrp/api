@@ -36,6 +36,27 @@ func (q *Queries) CountUnitGroupsByName(ctx context.Context, arg CountUnitGroups
 	return count, err
 }
 
+const countUnitInGroup = `-- name: CountUnitInGroup :one
+SELECT COUNT(*) FROM unit_group ug
+LEFT JOIN unit_group_unit ugu ON ugu.unit_group_id = ug.id AND ugu.unit_id = ?
+WHERE ug.id = ?
+AND (ug.base_unit_id = ? OR ugu.id IS NOT NULL)
+`
+
+type CountUnitInGroupParams struct {
+	UnitID      string
+	UnitGroupID string
+}
+
+// CountUnitInGroup reports whether a unit belongs to a unit group, counting the group's
+// base unit as a member: the base unit is implicit rather than a unit_group_unit row.
+func (q *Queries) CountUnitInGroup(ctx context.Context, arg CountUnitInGroupParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countUnitInGroup, arg.UnitID, arg.UnitGroupID, arg.UnitID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const deleteAllUnitGroupUnits = `-- name: DeleteAllUnitGroupUnits :exec
 DELETE FROM unit_group_unit
 WHERE unit_group_id = ?

@@ -1,0 +1,151 @@
+syntax = "proto3";
+
+// Package core defines additional gRPC services for the core-service.
+// CoreMachineDowntimeService handles machine downtime capture, which is what makes
+// OEE Availability a measurement rather than an inference from scan-timestamp gaps.
+package core;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "core/core.proto";
+import "core/core_patch.proto";
+
+option go_package = "shared/proto/core;core";
+
+service CoreMachineDowntimeService {
+  // ListMachineDowntimeReasons returns the global downtime reason taxonomy.
+  rpc ListMachineDowntimeReasons(ListMachineDowntimeReasonsRequest) returns (ListMachineDowntimeReasonsResponse);
+
+  // ListMachineDowntimeEvents returns a paginated list of downtime events.
+  rpc ListMachineDowntimeEvents(ListMachineDowntimeEventsRequest) returns (ListMachineDowntimeEventsResponse);
+
+  // GetMachineDowntimeEvent returns a single downtime event by its ID.
+  rpc GetMachineDowntimeEvent(GetMachineDowntimeEventRequest) returns (GetMachineDowntimeEventResponse);
+
+  // CreateMachineDowntimeEvent logs a stoppage.
+  rpc CreateMachineDowntimeEvent(CreateMachineDowntimeEventRequest) returns (CreateMachineDowntimeEventResponse);
+
+  // UpdateMachineDowntimeEvent closes or reclassifies an event.
+  rpc UpdateMachineDowntimeEvent(UpdateMachineDowntimeEventRequest) returns (UpdateMachineDowntimeEventResponse);
+
+  // DeleteMachineDowntimeEvent removes a mis-logged event.
+  rpc DeleteMachineDowntimeEvent(DeleteMachineDowntimeEventRequest) returns (google.protobuf.Empty);
+
+  // BatchGetMachineDowntimeEventsByIDs resolves events by ID for gateway include expansion.
+  rpc BatchGetMachineDowntimeEventsByIDs(BatchGetMachineDowntimeEventsByIDsRequest) returns (BatchGetMachineDowntimeEventsByIDsResponse);
+}
+
+// MachineDowntimeReasonInfo is one entry in the downtime taxonomy. oee_bucket is the
+// load-bearing field: it decides which OEE term a stoppage charges.
+message MachineDowntimeReasonInfo {
+  string id = 1;
+  string code = 2;
+  string name = 3;
+  string oee_bucket = 4;
+  bool is_planned = 5;
+  int32 sort_order = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+// MachineDowntimeEventInfo represents a full downtime event resource. An absent
+// ended_at means the machine is still down.
+message MachineDowntimeEventInfo {
+  string id = 1;
+  string machine_id = 2;
+  optional string department_id = 3;
+  optional string production_step_id = 4;
+  string reason_code = 5;
+  optional string reason_name = 6;
+  optional string reason_oee_bucket = 7;
+  optional bool reason_is_planned = 8;
+  google.protobuf.Timestamp started_at = 9;
+  optional google.protobuf.Timestamp ended_at = 10;
+  optional int32 duration_seconds = 11;
+  google.protobuf.Timestamp shift_date = 12;
+  optional string shift_code = 13;
+  optional string item_id = 14;
+  optional string production_run_id = 15;
+  optional string batch_id = 16;
+  optional string schedule_line_id = 17;
+  optional string note = 18;
+  string reported_by_id = 19;
+  string source_code = 20;
+  google.protobuf.Timestamp created_at = 21;
+  google.protobuf.Timestamp updated_at = 22;
+}
+
+message ListMachineDowntimeReasonsRequest {}
+
+message ListMachineDowntimeReasonsResponse {
+  repeated MachineDowntimeReasonInfo reasons = 1;
+}
+
+message ListMachineDowntimeEventsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  repeated string machine_ids = 3;
+  repeated string department_ids = 4;
+  repeated string reason_codes = 5;
+  bool open_only = 6;
+  optional string start_date = 7;
+  optional string end_date = 8;
+  optional string query = 9;
+}
+
+message ListMachineDowntimeEventsResponse {
+  repeated MachineDowntimeEventInfo events = 1;
+  PageInfo page_info = 2;
+}
+
+message GetMachineDowntimeEventRequest {
+  string id = 1;
+}
+
+message GetMachineDowntimeEventResponse {
+  MachineDowntimeEventInfo event = 1;
+}
+
+message CreateMachineDowntimeEventRequest {
+  string machine_id = 1;
+  string reason_code = 2;
+  google.protobuf.Timestamp started_at = 3;
+  optional google.protobuf.Timestamp ended_at = 4;
+  optional string item_id = 5;
+  optional string production_run_id = 6;
+  optional string batch_id = 7;
+  optional string note = 8;
+  optional string source_code = 9;
+}
+
+message CreateMachineDowntimeEventResponse {
+  MachineDowntimeEventInfo event = 1;
+}
+
+message UpdateMachineDowntimeEventRequest {
+  string id = 1;
+  optional string reason_code = 2;
+  optional google.protobuf.Timestamp started_at = 3;
+  // Clearing ended_at reopens an event closed by mistake.
+  TimestampPatch ended_at = 4;
+  StringPatch item_id = 6;
+  StringPatch production_run_id = 7;
+  StringPatch batch_id = 8;
+  StringPatch note = 9;
+}
+
+message UpdateMachineDowntimeEventResponse {
+  MachineDowntimeEventInfo event = 1;
+}
+
+message DeleteMachineDowntimeEventRequest {
+  string id = 1;
+}
+
+message BatchGetMachineDowntimeEventsByIDsRequest {
+  repeated string ids = 1;
+}
+
+message BatchGetMachineDowntimeEventsByIDsResponse {
+  repeated MachineDowntimeEventInfo events = 1;
+}

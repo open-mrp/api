@@ -12,6 +12,14 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+// lotInputFromPatch reads a lot off a QuantityPatch. A clear carries no value, and a patch missing either half is not a lot the service can act on, so both cases yield nil and the clear flag is read separately.
+func lotInputFromPatch(patch *pb.QuantityPatch) *domain.LotQuantityInput {
+	if patch == nil || patch.Clear || patch.Value == nil || patch.UnitId == nil {
+		return nil
+	}
+	return &domain.LotQuantityInput{Value: *patch.Value, UnitID: *patch.UnitId}
+}
+
 func productLineFullToProto(pl *domain.ProductLineFull) *pb.ProductLineInfo {
 	if pl == nil {
 		return nil
@@ -37,6 +45,15 @@ func productLineFullToProto(pl *domain.ProductLineFull) *pb.ProductLineInfo {
 
 	if pl.AccountID != nil {
 		info.AccountId = pl.AccountID
+	}
+
+	// All three or none: a value without a unit cannot say whether 60 means pairs or eaches, so a half-joined lot is not serialized at all.
+	if pl.DefaultLotID != nil && pl.DefaultLotValue != nil && pl.DefaultLotUnitID != nil {
+		info.DefaultLot = &pb.ProductLineDefaultLotInfo{
+			Id:     *pl.DefaultLotID,
+			Value:  *pl.DefaultLotValue,
+			UnitId: *pl.DefaultLotUnitID,
+		}
 	}
 
 	if pl.UnitGroup != nil {
@@ -128,6 +145,8 @@ func (h *gRPCHandler) CreateProductLine(ctx context.Context, req *pb.CreateProdu
 		CommissionPolicy: constants.CommissionPolicy(req.CommissionPolicy),
 		FreightPolicy:    constants.FreightPolicy(req.FreightPolicy),
 		Includes:         req.Includes,
+
+		DefaultLot: lotInputFromPatch(req.DefaultLot),
 	}
 
 	productLine, apiErr := h.productLineSvc.CreateProductLine(ctx, params)
@@ -153,6 +172,9 @@ func (h *gRPCHandler) UpdateProductLine(ctx context.Context, req *pb.UpdateProdu
 		Name:          req.Name,
 		UnitGroupID:   req.UnitGroupId,
 		Includes:      req.Includes,
+
+		DefaultLot:      lotInputFromPatch(req.DefaultLot),
+		ClearDefaultLot: req.DefaultLot != nil && req.DefaultLot.Clear,
 	}
 	if req.CommissionPolicy != nil {
 		cp := constants.CommissionPolicy(*req.CommissionPolicy)

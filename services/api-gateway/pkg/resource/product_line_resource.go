@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleProductLineID = "pl_01996357326a0d3f7b129542ea"
+const SampleProductLineID = "pdln_01996357326a0d3f7b129542ea"
 const SampleProductLineName = "Industrial Fasteners"
 
 var sampleProductLineDescription = "Bolts, screws, and anchors for heavy industrial assembly."
@@ -46,6 +46,10 @@ type ProductLine struct {
 	//
 	// The unit group determines the set of units available to products in this product line.
 	UnitGroup *UnitGroup `json:"unit_group" expandable:"true"`
+	// The lot products in this line are made in — a doff, a pallet.
+	//
+	// Sizes the campaigns a production schedule plans, and defaults the quantity when a batch is added to a production run. The unit is part of the value: 60 counted in pairs and 60 counted in eaches are different lots. Null when the line has no lot convention, in which case planning falls back to the account default. The unit always belongs to this product line's unit group.
+	DefaultLot *Quantity `json:"default_lot" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last-updated timestamp.
@@ -62,6 +66,7 @@ var SampleProductLine = &ProductLine{
 	FreightPolicy:    constants.FreightPolicyBilled,
 	Owner:            SampleOwnerSystem,
 	UnitGroup:        SampleUnitGroup,
+	DefaultLot:       SampleQuantity,
 	CreatedAt:        timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:        timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

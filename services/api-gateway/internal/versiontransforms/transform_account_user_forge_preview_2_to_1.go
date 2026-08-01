@@ -35,6 +35,7 @@ func (t *accountUserForgePreview2To1) ObjectTypes() []constants.ObjectType {
 		constants.ObjectTypeSettlement,
 		constants.ObjectTypePurchaseOrder,
 		constants.ObjectTypeContactMatch,
+		constants.ObjectTypeProductionScheduleWeekRelease,
 	}
 }
 

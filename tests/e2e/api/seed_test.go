@@ -2,6 +2,8 @@
 
 package api_test
 
+import "strings"
+
 // Seed data constants from shared/db/seed/ and tools/apidocs/httpie_seed_data.go.
 // These are IDs and values known to exist after seeding.
 const (
@@ -81,11 +83,16 @@ const (
 	SeedQuantityID = "qu_01seediss_ln1_qty00"
 
 	// Infrastructure
-	SeedDepartmentID      = "dp_01k0a5r01yfx3sj1vy9qgv3dc0"
-	SeedMachineID         = "mc_01k0a52fb6eqhtbx9hdxj3vvnh"
-	SeedLocationID        = "sglc_01seedbuilding0000"
-	SeedLocationParentID  = "sglc_01seedcampus00000" // parent of SeedLocationID (type=campus); for ?include=parent on the stable fixture
-	SeedScanningStationID = "sgsn_01k0a8201zegarjfsjaw5n7yfv"
+	SeedDepartmentID = "dp_01k0a5r01yfx3sj1vy9qgv3dc0"
+	SeedMachineID    = "mc_01k0a52fb6eqhtbx9hdxj3vvnh"
+	// Closed, dated ~60 days back so it never collides with the OEE window tests.
+	SeedMachineDowntimeEventID   = "mcdt_01seede2edowntime01"
+	SeedDemandOverrideID         = "deov_01seede2eoverride1"
+	SeedProductionScheduleID     = "pnsc_01seede2eschedule"
+	SeedProductionScheduleLineID = "pnscln_01seede2eline01" // generated in real use; seeded only so nested {id} paths resolve
+	SeedLocationID               = "sglc_01seedbuilding0000"
+	SeedLocationParentID         = "sglc_01seedcampus00000" // parent of SeedLocationID (type=campus); for ?include=parent on the stable fixture
+	SeedScanningStationID        = "sgsn_01k0a8201zegarjfsjaw5n7yfv"
 
 	// Operations
 	SeedProductionRunID  = "pnrn_01seedprod_run0000"
@@ -453,12 +460,39 @@ var pathParamSeeds = map[string]string{
 
 // pathSpecificIDSeeds resolves the generic {id} param based on the path prefix.
 // The generic "id" param means different things depending on the endpoint.
+var pathSpecificParamSeeds = map[string]map[string]string{
+	"/v1/operations/production-schedules/": {
+		"line_id": SeedProductionScheduleLineID,
+	},
+}
+
+// pathSpecificParamSeed returns the longest-prefix match for a named path param that
+// means different things on different routes — {line_id} is a sales-order line on one
+// route and a schedule line on another.
+func pathSpecificParamSeed(path, param string) (string, bool) {
+	best := ""
+	bestLen := 0
+	for prefix, params := range pathSpecificParamSeeds {
+		if !strings.HasPrefix(path, prefix) || len(prefix) <= bestLen {
+			continue
+		}
+		if val, ok := params[param]; ok {
+			best = val
+			bestLen = len(prefix)
+		}
+	}
+	return best, bestLen > 0
+}
+
 var pathSpecificIDSeeds = map[string]string{
-	"/v1/catalog/catalog/product-lines/": SeedProductLineID,
-	"/v1/operations/production-runs/":    SeedProductionRunID,
-	"/v1/operations/scanning-stations/":  SeedScanningStationID,
-	"/v1/sales/account-users/":           SeedAccountUserID,
-	"/v1/sales/priorities/":              SeedPriorityID,
+	"/v1/catalog/catalog/product-lines/":      SeedProductLineID,
+	"/v1/operations/production-runs/":         SeedProductionRunID,
+	"/v1/operations/scanning-stations/":       SeedScanningStationID,
+	"/v1/operations/machine-downtime-events/": SeedMachineDowntimeEventID,
+	"/v1/operations/production-schedules/":    SeedProductionScheduleID,
+	"/v1/operations/demand-overrides/":        SeedDemandOverrideID,
+	"/v1/sales/account-users/":                SeedAccountUserID,
+	"/v1/sales/priorities/":                   SeedPriorityID,
 
 	// PATCH endpoint seeds
 	"/v1/catalog/item-categories/":                                       SeedItemCategoryID,

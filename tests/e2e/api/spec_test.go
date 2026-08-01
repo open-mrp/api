@@ -54,7 +54,13 @@ func (e *ListEndpointSpec) ResolvePath() (string, bool) {
 				return "", false
 			}
 		} else {
-			val, ok := pathParamSeeds[param]
+			// A named param can mean different things per endpoint — {line_id} is a
+			// sales-order line on one route and a schedule line on another — so a
+			// path-specific seed wins over the global one.
+			val, ok := pathSpecificParamSeed(e.Path, param)
+			if !ok {
+				val, ok = pathParamSeeds[param]
+			}
 			if !ok {
 				return "", false
 			}
@@ -507,7 +513,13 @@ func resolveEndpointPath(path string, pathParams []string) (string, bool) {
 				return "", false
 			}
 		} else {
-			val, ok := pathParamSeeds[param]
+			// A named param can mean different things per endpoint — {line_id} is a
+			// sales-order line on one route and a schedule line on another — so a
+			// path-specific seed wins over the global one.
+			val, ok := pathSpecificParamSeed(path, param)
+			if !ok {
+				val, ok = pathParamSeeds[param]
+			}
 			if !ok {
 				return "", false
 			}

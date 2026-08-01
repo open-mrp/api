@@ -10,6 +10,7 @@ import (
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/safeconv"
 	"github.com/augno/api/shared/tracing"
@@ -31,10 +32,12 @@ type AnalyticsSvc interface {
 	AnalyzeNewCustomers(ctx context.Context, req *AnalyzeNewCustomersRequest) (*apiresource.AnalyzeNewCustomersResponse, *apierror.APIError)
 	AnalyzeDemandForecast(ctx context.Context, req *AnalyzeDemandForecastRequest) (*apiresource.AnalyzeDemandForecastResponse, *apierror.APIError)
 	AnalyzeOee(ctx context.Context, req *AnalyzeOeeRequest) (*apiresource.AnalyzeOeeResponse, *apierror.APIError)
+	AnalyzeScheduleAttainment(ctx context.Context, req *AnalyzeScheduleAttainmentRequest) (*apiresource.AnalyzeScheduleAttainmentResponse, *apierror.APIError)
 	AnalyzeWeeksOfSales(ctx context.Context, req *AnalyzeWeeksOfSalesRequest) (*apiresource.AnalyzeWeeksOfSalesResponse, *apierror.APIError)
 }
 
 type AnalyticsSvcConfig struct {
+	// CoreClient (required) is the core-service gRPC client.
 	CoreClient pb.CoreServiceClient
 }
 
@@ -334,10 +337,19 @@ func (m *analyticsSvcImpl) AnalyzeDemandForecast(ctx context.Context, req *Analy
 }
 
 func (m *analyticsSvcImpl) AnalyzeOee(ctx context.Context, req *AnalyzeOeeRequest) (*apiresource.AnalyzeOeeResponse, *apierror.APIError) {
+	plannedTime := make([]*pb.OeeDepartmentPlannedTimeProto, len(req.PlannedTime))
+	for i, pt := range req.PlannedTime {
+		plannedTime[i] = &pb.OeeDepartmentPlannedTimeProto{
+			DepartmentId: pt.DepartmentID,
+			PlannedHours: pt.PlannedHours,
+		}
+	}
+
 	pbReq := &pb.AnalyzeOeeRequest{
 		StartDate:     timestamppb.New(req.StartDate),
 		EndDate:       timestamppb.New(req.EndDate),
 		DepartmentIds: req.DepartmentIDs,
+		PlannedTime:   plannedTime,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, analyticsSvcTracer, "service.analytics.analyze_oee", domain.ServiceName,
@@ -368,4 +380,101 @@ func (m *analyticsSvcImpl) AnalyzeWeeksOfSales(ctx context.Context, req *Analyze
 	}
 
 	return AnalyzeWeeksOfSalesPresenter(resp), nil
+}
+
+func (m *analyticsSvcImpl) AnalyzeScheduleAttainment(ctx context.Context, req *AnalyzeScheduleAttainmentRequest) (*apiresource.AnalyzeScheduleAttainmentResponse, *apierror.APIError) {
+	pbReq := &pb.AnalyzeScheduleAttainmentRequest{
+		StartDate:     timestamppb.New(req.StartDate),
+		EndDate:       timestamppb.New(req.EndDate),
+		GroupBy:       groupByOrDefault(req.GroupBy),
+		MachineIds:    req.MachineIDs,
+		DepartmentIds: req.DepartmentIDs,
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, analyticsSvcTracer, "service.analytics.analyze_schedule_attainment", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.AnalyzeScheduleAttainmentResponse, error) {
+			return m.coreClient.AnalyzeScheduleAttainment(ctx, pbReq, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return scheduleAttainmentFromProto(resp), nil
+}
+
+func attainmentBucketFromProto(b *pb.AttainmentBucketInfo) apiresource.AttainmentBucket {
+	if b == nil {
+		return apiresource.AttainmentBucket{}
+	}
+	bucket := apiresource.AttainmentBucket{
+		Key:               b.Key,
+		Label:             b.Label,
+		PlannedQuantity:   b.PlannedQuantity,
+		ActualQuantity:    b.ActualQuantity,
+		MatchedQuantity:   b.MatchedQuantity,
+		WasteQuantity:     b.WasteQuantity,
+		UnplannedQuantity: b.UnplannedQuantity,
+		PlannedRunHours:   b.PlannedRunHours,
+		PlannedLines:      b.PlannedLines,
+		BatchCount:        b.BatchCount,
+		// Carried through as pointers so "nothing was planned" stays distinguishable from "nothing was achieved" all the way to the client.
+		AttainmentPct:  b.AttainmentPct,
+		OutputRatioPct: b.OutputRatioPct,
+	}
+	bucket.WeekStartDate = grpcutil.TimestampToTimePtr(b.WeekStartDate)
+	return bucket
+}
+
+func scheduleAttainmentFromProto(resp *pb.AnalyzeScheduleAttainmentResponse) *apiresource.AnalyzeScheduleAttainmentResponse {
+	buckets := make([]apiresource.AttainmentBucket, len(resp.Buckets))
+	for i, b := range resp.Buckets {
+		buckets[i] = attainmentBucketFromProto(b)
+	}
+
+	adherence := make([]apiresource.FrozenAdherence, len(resp.FrozenAdherence))
+	for i, a := range resp.FrozenAdherence {
+		entry := apiresource.FrozenAdherence{
+			Schedule:              apiresource.NewEntity(a.ScheduleId, constants.ObjectTypeProductionSchedule, nil, nil),
+			Version:               a.Version,
+			FrozenLineCount:       a.FrozenLineCount,
+			FrozenPlannedQuantity: a.FrozenPlannedQuantity,
+			DeviatedLines:         a.DeviatedLines,
+			AddedLines:            a.AddedLines,
+			AbsDeltaUnits:         a.AbsDeltaUnits,
+			LineAdherencePct:      a.LineAdherencePct,
+			UnitsAdherencePct:     a.UnitsAdherencePct,
+		}
+		entry.FrozenThroughDate = grpcutil.TimestampToTimePtr(a.FrozenThroughDate)
+		adherence[i] = entry
+	}
+
+	baselineSchedules := make([]apiresource.Entity, len(resp.BaselineScheduleIds))
+	for i, scheduleID := range resp.BaselineScheduleIds {
+		baselineSchedules[i] = *apiresource.NewEntity(scheduleID, constants.ObjectTypeProductionSchedule, nil, nil)
+	}
+
+	baselineStatus := constants.AttainmentBaselineStatusNoBaseline
+	if resp.HasBaseline {
+		baselineStatus = constants.AttainmentBaselineStatusMeasured
+	}
+
+	return &apiresource.AnalyzeScheduleAttainmentResponse{
+		Object:            constants.ObjectTypeAnalyzeScheduleAttainmentResponse,
+		StartDate:         grpcutil.TimestampToTime(resp.StartDate),
+		EndDate:           grpcutil.TimestampToTime(resp.EndDate),
+		GroupBy:           constants.AttainmentGroupBy(resp.GroupBy),
+		BaselineSchedules: apiresource.NewList(baselineSchedules, apiresource.PageInfo{}),
+		Buckets:           apiresource.NewList(buckets, apiresource.PageInfo{}),
+		Totals:            attainmentBucketFromProto(resp.Totals),
+		FrozenAdherence:   apiresource.NewList(adherence, apiresource.PageInfo{}),
+		BaselineStatus:    baselineStatus,
+	}
+}
+
+// groupByOrDefault resolves the optional grouping. The default is documented on the endpoint, so an omitted value must not read as an invalid one.
+func groupByOrDefault(groupBy field.Optional[constants.AttainmentGroupBy]) string {
+	if value, ok := groupBy.Value(); ok {
+		return string(value)
+	}
+	return string(constants.AttainmentGroupByWeek)
 }

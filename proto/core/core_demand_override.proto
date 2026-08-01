@@ -1,0 +1,150 @@
+syntax = "proto3";
+
+// Package core defines additional gRPC services for the core-service.
+// CoreDemandOverrideService handles demand overrides, which are the only mechanism for
+// moving the plan away from what sales history implies — there is no growth multiplier.
+package core;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "core/core.proto";
+import "core/core_patch.proto";
+
+option go_package = "shared/proto/core;core";
+
+service CoreDemandOverrideService {
+  // ListDemandOverrideTypes returns the global override type taxonomy.
+  rpc ListDemandOverrideTypes(ListDemandOverrideTypesRequest) returns (ListDemandOverrideTypesResponse);
+
+  // ListDemandOverrides returns a paginated list of demand overrides.
+  rpc ListDemandOverrides(ListDemandOverridesRequest) returns (ListDemandOverridesResponse);
+
+  // GetDemandOverride returns a single demand override by its ID.
+  rpc GetDemandOverride(GetDemandOverrideRequest) returns (GetDemandOverrideResponse);
+
+  // CreateDemandOverride records demand the forecast cannot see.
+  rpc CreateDemandOverride(CreateDemandOverrideRequest) returns (CreateDemandOverrideResponse);
+
+  // UpdateDemandOverride partially updates an override.
+  rpc UpdateDemandOverride(UpdateDemandOverrideRequest) returns (UpdateDemandOverrideResponse);
+
+  // DeleteDemandOverride removes an override.
+  rpc DeleteDemandOverride(DeleteDemandOverrideRequest) returns (google.protobuf.Empty);
+
+  // BatchGetDemandOverridesByIDs resolves overrides by ID for gateway include expansion.
+  rpc BatchGetDemandOverridesByIDs(BatchGetDemandOverridesByIDsRequest) returns (BatchGetDemandOverridesByIDsResponse);
+}
+
+// DemandOverrideTypeInfo is one entry in the override type taxonomy.
+message DemandOverrideTypeInfo {
+  string id = 1;
+  string code = 2;
+  string name = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+
+// DemandOverrideInfo represents a full demand override resource. The period bounds the
+// demand months the override applies to; effective_from and expires_at bound when it is
+// consulted, which is a different axis entirely.
+message DemandOverrideInfo {
+  string id = 1;
+  string scope_code = 2;
+  string scope_ref_id = 3;
+  google.protobuf.Timestamp period_start_date = 4;
+  google.protobuf.Timestamp period_end_date = 5;
+  string override_type_code = 6;
+  double value = 7;
+  optional string unit_id = 8;
+  optional string reason_code = 9;
+  optional string note = 10;
+  string created_by_id = 11;
+  google.protobuf.Timestamp effective_from = 12;
+  optional google.protobuf.Timestamp expires_at = 13;
+  bool is_active = 14;
+  google.protobuf.Timestamp created_at = 15;
+  google.protobuf.Timestamp updated_at = 16;
+  // Label for whatever scope_ref_id points at, resolved on read.
+  optional string scope_name = 17;
+  optional string scope_handle = 18;
+}
+
+message ListDemandOverrideTypesRequest {}
+
+message ListDemandOverrideTypesResponse {
+  repeated DemandOverrideTypeInfo types = 1;
+}
+
+message ListDemandOverridesRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  repeated string scope_codes = 3;
+  repeated string scope_ref_ids = 4;
+  repeated string override_type_codes = 5;
+  optional bool is_active = 6;
+  optional string period_start = 7;
+  optional string period_end = 8;
+  optional string query = 9;
+}
+
+message ListDemandOverridesResponse {
+  repeated DemandOverrideInfo overrides = 1;
+  PageInfo page_info = 2;
+}
+
+message GetDemandOverrideRequest {
+  string id = 1;
+}
+
+message GetDemandOverrideResponse {
+  DemandOverrideInfo override = 1;
+}
+
+message CreateDemandOverrideRequest {
+  string scope_code = 1;
+  string scope_ref_id = 2;
+  google.protobuf.Timestamp period_start_date = 3;
+  google.protobuf.Timestamp period_end_date = 4;
+  string override_type_code = 5;
+  double value = 6;
+  optional string unit_id = 7;
+  optional string reason_code = 8;
+  optional string note = 9;
+  optional google.protobuf.Timestamp effective_from = 10;
+  optional google.protobuf.Timestamp expires_at = 11;
+  optional bool is_active = 12;
+}
+
+message CreateDemandOverrideResponse {
+  DemandOverrideInfo override = 1;
+}
+
+message UpdateDemandOverrideRequest {
+  string id = 1;
+  optional google.protobuf.Timestamp period_start_date = 2;
+  optional google.protobuf.Timestamp period_end_date = 3;
+  optional string override_type_code = 4;
+  optional double value = 5;
+  StringPatch unit_id = 6;
+  StringPatch reason_code = 8;
+  StringPatch note = 10;
+  // Clearing expires_at makes an override permanent again.
+  TimestampPatch expires_at = 12;
+  optional bool is_active = 14;
+}
+
+message UpdateDemandOverrideResponse {
+  DemandOverrideInfo override = 1;
+}
+
+message DeleteDemandOverrideRequest {
+  string id = 1;
+}
+
+message BatchGetDemandOverridesByIDsRequest {
+  repeated string ids = 1;
+}
+
+message BatchGetDemandOverridesByIDsResponse {
+  repeated DemandOverrideInfo overrides = 1;
+}

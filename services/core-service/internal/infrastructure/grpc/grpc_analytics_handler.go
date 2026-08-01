@@ -20,8 +20,7 @@ func derefString(s *string) string {
 	return *s
 }
 
-// chartDataPointsToProto converts a slice of domain ChartDataPoints into a single
-// ChartDataPointProto with CoordinateProto data points.
+// chartDataPointsToProto converts a slice of domain ChartDataPoints into a single ChartDataPointProto with CoordinateProto data points.
 func chartDataPointsToProto(name string, chartType string, points []domain.ChartDataPoint) *pb.ChartDataPointProto {
 	coords := make([]*pb.CoordinateProto, len(points))
 	for i, p := range points {
@@ -719,7 +718,8 @@ func (h *gRPCHandler) AnalyzeOee(ctx context.Context, req *pb.AnalyzeOeeRequest)
 	}
 
 	params := domain.AnalyzeOeeParams{
-		DepartmentIDs: req.DepartmentIds,
+		DepartmentIDs:    req.DepartmentIds,
+		PlannedTimeHours: make(map[string]float64, len(req.PlannedTime)),
 	}
 
 	if req.StartDate != nil {
@@ -727,6 +727,9 @@ func (h *gRPCHandler) AnalyzeOee(ctx context.Context, req *pb.AnalyzeOeeRequest)
 	}
 	if req.EndDate != nil {
 		params.EndDate = req.EndDate.AsTime()
+	}
+	for _, pt := range req.PlannedTime {
+		params.PlannedTimeHours[pt.DepartmentId] = pt.PlannedHours
 	}
 
 	departments, apiErr := h.analyticsSvc.AnalyzeOee(ctx, params)
@@ -736,13 +739,43 @@ func (h *gRPCHandler) AnalyzeOee(ctx context.Context, req *pb.AnalyzeOeeRequest)
 
 	pbDepartments := make([]*pb.OeeDepartmentProto, len(departments))
 	for i, d := range departments {
+		breakdown := make([]*pb.OeeDowntimeReasonProto, len(d.DowntimeBreakdown))
+		for j, r := range d.DowntimeBreakdown {
+			breakdown[j] = &pb.OeeDowntimeReasonProto{
+				ReasonCode:      r.ReasonCode,
+				OeeBucket:       r.OeeBucket,
+				DowntimeSeconds: r.DowntimeSeconds,
+				EventCount:      r.EventCount,
+			}
+		}
+
 		pbDepartments[i] = &pb.OeeDepartmentProto{
-			DepartmentId:          d.DepartmentID,
-			DepartmentName:        d.DepartmentName,
-			GoodUnits:             d.GoodUnits,
-			WasteUnits:            d.WasteUnits,
-			SecondsUnits:          d.SecondsUnits,
-			EstimatedRuntimeHours: d.EstimatedRuntimeHours,
+			DepartmentId:            d.DepartmentID,
+			DepartmentName:          d.DepartmentName,
+			GoodUnits:               d.GoodUnits,
+			WasteUnits:              d.WasteUnits,
+			SecondsUnits:            d.SecondsUnits,
+			StandardSecondsEarned:   d.StandardSecondsEarned,
+			EstimatedRuntimeHours:   d.EstimatedRuntimeHours,
+			AvailabilityLossSeconds: d.AvailabilityLossSeconds,
+			PerformanceLossSeconds:  d.PerformanceLossSeconds,
+			QualityLossSeconds:      d.QualityLossSeconds,
+			NotScheduledSeconds:     d.NotScheduledSeconds,
+			ChangeoverSeconds:       d.ChangeoverSeconds,
+			DowntimeEventCount:      d.DowntimeEventCount,
+			DowntimeBreakdown:       breakdown,
+			ScheduledSeconds:        d.ScheduledSeconds,
+			RunTimeSeconds:          d.RunTimeSeconds,
+			AvailabilityPct:         d.AvailabilityPct,
+			PerformancePct:          d.PerformancePct,
+			QualityPct:              d.QualityPct,
+			OeePct:                  d.OeePct,
+			HasDowntimeData:         d.HasDowntimeData,
+			HasPerformanceAnomaly:   d.HasPerformanceAnomaly,
+			MeasuredIdealSeconds:    d.MeasuredIdealSeconds,
+			MeasuredRunSeconds:      d.MeasuredRunSeconds,
+			PerformanceTicketCount:  d.PerformanceTicketCount,
+			PerformanceBasis:        d.PerformanceBasis,
 		}
 	}
 
@@ -786,5 +819,85 @@ func (h *gRPCHandler) AnalyzeWeeksOfSales(ctx context.Context, req *pb.AnalyzeWe
 	return &pb.AnalyzeWeeksOfSalesResponse{
 		Items: pbItems,
 		Count: result.Count,
+	}, nil
+}
+
+func attainmentBucketToProto(b domain.AttainmentBucket) *pb.AttainmentBucketInfo {
+	info := &pb.AttainmentBucketInfo{
+		Key:               b.Key,
+		Label:             b.Label,
+		PlannedQuantity:   b.PlannedQuantity,
+		ActualQuantity:    b.ActualQuantity,
+		MatchedQuantity:   b.MatchedQuantity,
+		WasteQuantity:     b.WasteQuantity,
+		UnplannedQuantity: b.UnplannedQuantity,
+		PlannedRunHours:   b.PlannedRunHours,
+		PlannedLines:      b.PlannedLines,
+		BatchCount:        b.BatchCount,
+		// Left nil when there was nothing planned: a bucket with no plan has no attainment, and 0% would read as a total miss.
+		AttainmentPct:  b.AttainmentPct,
+		OutputRatioPct: b.OutputRatioPct,
+	}
+	if b.WeekStartDate != nil {
+		info.WeekStartDate = timestamppb.New(*b.WeekStartDate)
+	}
+	return info
+}
+
+func (h *gRPCHandler) AnalyzeScheduleAttainment(ctx context.Context, req *pb.AnalyzeScheduleAttainmentRequest) (*pb.AnalyzeScheduleAttainmentResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	params := domain.AnalyzeScheduleAttainmentParams{
+		GroupBy:       req.GroupBy,
+		MachineIDs:    req.MachineIds,
+		DepartmentIDs: req.DepartmentIds,
+	}
+	if req.StartDate != nil {
+		params.StartDate = req.StartDate.AsTime()
+	}
+	if req.EndDate != nil {
+		params.EndDate = req.EndDate.AsTime()
+	}
+
+	result, apiErr := h.analyticsSvc.AnalyzeScheduleAttainment(ctx, params)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	buckets := make([]*pb.AttainmentBucketInfo, len(result.Buckets))
+	for i, b := range result.Buckets {
+		buckets[i] = attainmentBucketToProto(b)
+	}
+
+	adherence := make([]*pb.FrozenAdherenceInfo, len(result.FrozenAdherence))
+	for i, a := range result.FrozenAdherence {
+		entry := &pb.FrozenAdherenceInfo{
+			ScheduleId:            a.ScheduleID,
+			Version:               a.Version,
+			FrozenLineCount:       a.FrozenLineCount,
+			FrozenPlannedQuantity: a.FrozenPlannedQuantity,
+			DeviatedLines:         a.DeviatedLines,
+			AddedLines:            a.AddedLines,
+			AbsDeltaUnits:         a.AbsDeltaUnits,
+			LineAdherencePct:      a.LineAdherence,
+			UnitsAdherencePct:     a.UnitsAdherence,
+		}
+		if a.FrozenThroughAt != nil {
+			entry.FrozenThroughDate = timestamppb.New(*a.FrozenThroughAt)
+		}
+		adherence[i] = entry
+	}
+
+	return &pb.AnalyzeScheduleAttainmentResponse{
+		StartDate:           timestamppb.New(result.StartDate),
+		EndDate:             timestamppb.New(result.EndDate),
+		GroupBy:             result.GroupBy,
+		BaselineScheduleIds: result.BaselineScheduleIDs,
+		Buckets:             buckets,
+		Totals:              attainmentBucketToProto(result.Totals),
+		FrozenAdherence:     adherence,
+		HasBaseline:         result.HasBaseline,
 	}, nil
 }

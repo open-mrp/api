@@ -12,6 +12,27 @@ import (
 	"time"
 )
 
+const allocateNextProductionRunNumber = `-- name: AllocateNextProductionRunNumber :execresult
+INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created_at, updated_at)
+VALUES (?, ?, 'production_run_number', LAST_INSERT_ID(1), NOW(3), NOW(3))
+ON DUPLICATE KEY UPDATE value = LAST_INSERT_ID(value + 1), updated_at = NOW(3)
+`
+
+type AllocateNextProductionRunNumberParams struct {
+	ID        string
+	AccountID string
+}
+
+// AllocateNextProductionRunNumber atomically reserves the next run number for the account
+// and returns it via LAST_INSERT_ID.
+//
+// The single upsert holds a row lock on the per-account counter, so concurrent creates
+// serialize instead of colliding. The old read-MAX-then-write pattern raced, which two
+// releases issued at once would hit routinely. Mirrors AllocateNextOrderNumber.
+func (q *Queries) AllocateNextProductionRunNumber(ctx context.Context, arg AllocateNextProductionRunNumberParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, allocateNextProductionRunNumber, arg.ID, arg.AccountID)
+}
+
 const countProductionRunsByNumber = `-- name: CountProductionRunsByNumber :one
 SELECT COUNT(*) FROM production_run
 WHERE account_id = ?
@@ -658,6 +679,32 @@ func (q *Queries) ListProductionRunsForward(ctx context.Context, arg ListProduct
 		return nil, err
 	}
 	return items, nil
+}
+
+const seedProductionRunNumberCounter = `-- name: SeedProductionRunNumberCounter :exec
+INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created_at, updated_at)
+SELECT ?, ?, 'production_run_number',
+       COALESCE(MAX(CAST(pr.number AS UNSIGNED)), 0), NOW(3), NOW(3)
+FROM production_run pr
+WHERE pr.account_id = ?
+AND pr.number REGEXP '^[0-9]+$'
+ON DUPLICATE KEY UPDATE id = id
+`
+
+type SeedProductionRunNumberCounterParams struct {
+	ID        string
+	AccountID string
+}
+
+// SeedProductionRunNumberCounter primes the counter from existing rows the first time an
+// account allocates, so a database that already has runs does not restart numbering at 1.
+//
+// Only all-digit numbers count toward the series. Runs imported with a prefixed number
+// ('PR-FC-001') are not part of it, and casting them would fail the whole statement under
+// strict mode rather than being ignored the way a bare SELECT's warning is.
+func (q *Queries) SeedProductionRunNumberCounter(ctx context.Context, arg SeedProductionRunNumberCounterParams) error {
+	_, err := q.db.ExecContext(ctx, seedProductionRunNumberCounter, arg.ID, arg.AccountID, arg.AccountID)
+	return err
 }
 
 const setBatchProductionRunID = `-- name: SetBatchProductionRunID :exec

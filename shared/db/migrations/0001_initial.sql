@@ -1,10 +1,10 @@
 -- +goose Up
 
--- MySQL dump 10.13  Distrib 9.7.1, for macos26.4 (arm64)
+-- MySQL dump 10.13  Distrib 9.6.0, for macos26.2 (arm64)
 --
 -- Host: 127.0.0.1    Database: augno
 -- ------------------------------------------------------
--- Server version	8.4.10
+-- Server version	8.4.11
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -463,7 +463,7 @@ CREATE TABLE `account_plan` (
   KEY `account_plan_plan_type_code_effective_at_idx` (`plan_type_code`,`effective_at`),
   KEY `account_plan_is_publicly_visible_created_at_id_idx` (`is_publicly_visible`,`created_at` DESC,`id` DESC),
   FULLTEXT KEY `account_plan_name_idx` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=43 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=85 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -482,7 +482,7 @@ CREATE TABLE `account_plan_feature` (
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_plan_feature_account_plan_id_key_key` (`account_plan_id`,`key`)
-) ENGINE=InnoDB AUTO_INCREMENT=127 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=253 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -501,7 +501,7 @@ CREATE TABLE `account_plan_limit` (
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_plan_limit_account_plan_id_key_key` (`account_plan_id`,`key`)
-) ENGINE=InnoDB AUTO_INCREMENT=169 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=337 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -582,6 +582,54 @@ CREATE TABLE `account_price_item_category` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_price_item_category_account_price_id_item_category_i_key` (`account_price_id`,`item_category_id`),
   KEY `account_price_item_category_item_category_id_idx` (`item_category_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `account_production_schedule_setting`
+--
+
+DROP TABLE IF EXISTS `account_production_schedule_setting`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `account_production_schedule_setting` (
+  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `constraint_department_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `planning_horizon_weeks` int NOT NULL DEFAULT '13',
+  `frozen_weeks` int NOT NULL DEFAULT '1',
+  `week_start_day` int NOT NULL DEFAULT '1',
+  `demand_window_months` int NOT NULL DEFAULT '12',
+  `forecast_history_months` int NOT NULL DEFAULT '24',
+  `forecast_months` int NOT NULL DEFAULT '12',
+  `demand_basis_code` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'trailing_12',
+  `forecast_z` decimal(6,4) NOT NULL DEFAULT '1.0000',
+  `changeover_avg_minutes` decimal(10,4) NOT NULL DEFAULT '30.0000',
+  `changeover_min_minutes` decimal(10,4) NOT NULL DEFAULT '15.0000',
+  `changeover_max_minutes` decimal(10,4) NOT NULL DEFAULT '90.0000',
+  `changeover_labor_rate` decimal(18,6) NOT NULL DEFAULT '20.000000',
+  `holding_rate_pct` decimal(9,6) NOT NULL DEFAULT '0.250000',
+  `service_level_z` decimal(6,4) NOT NULL DEFAULT '1.6450',
+  `finish_lead_time_weeks` decimal(8,3) NOT NULL DEFAULT '6.000',
+  `default_constraint_lead_time_weeks` decimal(8,3) NOT NULL DEFAULT '1.300',
+  `max_weeks_supply` decimal(8,3) NOT NULL DEFAULT '12.000',
+  `max_flow_depth` int NOT NULL DEFAULT '10',
+  `shifts_per_day` int NOT NULL DEFAULT '2',
+  `hours_per_shift` decimal(6,3) NOT NULL DEFAULT '7.000',
+  `work_days_per_week` int NOT NULL DEFAULT '5',
+  `weeks_per_year` int NOT NULL DEFAULT '52',
+  `capacity_headroom_pct` decimal(5,4) NOT NULL DEFAULT '0.9000',
+  `default_lot_units` decimal(18,6) NOT NULL DEFAULT '60.000000',
+  `is_enabled` tinyint(1) NOT NULL DEFAULT '0',
+  `generation_cron` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `generation_timezone` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'UTC',
+  `auto_publish` tinyint(1) NOT NULL DEFAULT '0',
+  `last_generated_at` datetime(3) DEFAULT NULL,
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `account_production_schedule_setting_account_id_key` (`account_id`),
+  KEY `acct_prod_sched_setting_enabled_cron_idx` (`is_enabled`,`generation_cron`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -940,7 +988,7 @@ CREATE TABLE `api_key` (
   KEY `api_key_owner_account_id_expires_at_created_at_id_idx` (`owner_account_id`,`expires_at`,`created_at` DESC,`id` DESC),
   KEY `api_key_owner_account_id_created_at_id_idx` (`owner_account_id`,`created_at` DESC,`id` DESC),
   FULLTEXT KEY `api_key_name_idx` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=48 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -994,8 +1042,8 @@ CREATE TABLE `audit_event` (
   `source_ip` varchar(46) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `occurred_at` datetime(3) NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-  `root_resource_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `root_resource_type` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `root_resource_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `root_resource_type` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `audit_event_type_id_key` (`type_id`),
   KEY `audit_event_resource_idx` (`resource_type`,`resource_id`,`occurred_at`),
@@ -1009,7 +1057,7 @@ CREATE TABLE `audit_event` (
   KEY `audit_event_account_id_resource_type_occurred_at_type_id_idx` (`account_id`,`resource_type`,`occurred_at` DESC,`type_id` DESC),
   KEY `audit_event_account_id_actor_id_occurred_at_type_id_idx` (`account_id`,`actor_id`,`occurred_at` DESC,`type_id` DESC),
   KEY `audit_event_root_idx` (`account_id`,`root_resource_type`,`root_resource_id`,`occurred_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=219 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=228 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1045,7 +1093,8 @@ CREATE TABLE `batch` (
   KEY `batch_account_id_scanned_at_idx` (`account_id`,`scanned_at`),
   KEY `batch_created_at_idx` (`created_at`),
   KEY `batch_production_run_id_idx` (`production_run_id`),
-  KEY `batch_account_id_scanning_station_id_scanned_at_id_idx` (`account_id`,`scanning_station_id`,`scanned_at` DESC,`id` DESC)
+  KEY `batch_account_id_scanning_station_id_scanned_at_id_idx` (`account_id`,`scanning_station_id`,`scanned_at` DESC,`id` DESC),
+  KEY `batch_account_run_item_idx` (`account_id`,`production_run_id`,`item_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -1398,6 +1447,56 @@ CREATE TABLE `delivery_status` (
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
   UNIQUE KEY `delivery_status_code_key` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `demand_override`
+--
+
+DROP TABLE IF EXISTS `demand_override`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `demand_override` (
+  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `scope_code` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `scope_ref_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `period_start_date` date NOT NULL,
+  `period_end_date` date NOT NULL,
+  `override_type_code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `value` decimal(20,6) NOT NULL,
+  `unit_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `reason_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `note` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `created_by_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `effective_from` datetime(3) NOT NULL,
+  `expires_at` datetime(3) DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT '1',
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  KEY `demand_override_account_created_idx` (`account_id`,`created_at` DESC,`id` DESC),
+  KEY `demand_override_account_scope_period_idx` (`account_id`,`scope_code`,`scope_ref_id`,`period_start_date`),
+  KEY `demand_override_account_active_period_idx` (`account_id`,`is_active`,`period_start_date`,`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `demand_override_type`
+--
+
+DROP TABLE IF EXISTS `demand_override_type`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `demand_override_type` (
+  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `demand_override_type_code_key` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -1787,7 +1886,7 @@ CREATE TABLE `idempotency_key` (
   KEY `idempotency_key_target_account_id_idx` (`target_account_id`),
   KEY `idempotency_key_lock_expires_at_idx` (`lock_expires_at`),
   KEY `idempotency_key_expires_at_idx` (`expires_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=472 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=529 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2240,6 +2339,65 @@ CREATE TABLE `machine` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `machine_downtime_event`
+--
+
+DROP TABLE IF EXISTS `machine_downtime_event`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `machine_downtime_event` (
+  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `machine_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `department_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `production_step_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `reason_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `started_at` datetime(3) NOT NULL,
+  `ended_at` datetime(3) DEFAULT NULL,
+  `duration_seconds` int DEFAULT NULL,
+  `shift_date` date NOT NULL,
+  `shift_code` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `item_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `production_run_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `batch_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `schedule_line_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `note` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `reported_by_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `source_code` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'manual',
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  KEY `machine_downtime_account_started_idx` (`account_id`,`started_at` DESC,`id` DESC),
+  KEY `machine_downtime_account_machine_started_idx` (`account_id`,`machine_id`,`started_at` DESC,`id` DESC),
+  KEY `machine_downtime_account_dept_started_idx` (`account_id`,`department_id`,`started_at` DESC,`id` DESC),
+  KEY `machine_downtime_account_reason_started_idx` (`account_id`,`reason_code`,`started_at` DESC,`id` DESC),
+  KEY `machine_downtime_open_idx` (`account_id`,`machine_id`,`ended_at`),
+  KEY `machine_downtime_account_ended_started_idx` (`account_id`,`ended_at`,`started_at` DESC,`id` DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `machine_downtime_reason`
+--
+
+DROP TABLE IF EXISTS `machine_downtime_reason`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `machine_downtime_reason` (
+  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `oee_bucket` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `is_planned` tinyint(1) NOT NULL DEFAULT '0',
+  `sort_order` int NOT NULL DEFAULT '0',
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `machine_downtime_reason_code_key` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `material`
 --
 
@@ -2372,7 +2530,7 @@ CREATE TABLE `message_inbox` (
   KEY `message_inbox_processed_at_idx` (`processed_at`),
   KEY `message_inbox_request_id_idx` (`request_id`),
   KEY `message_inbox_parent_message_id_idx` (`parent_message_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=148606 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=150196 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2411,7 +2569,7 @@ CREATE TABLE `message_outbox` (
   KEY `message_outbox_lock_expires_at_idx` (`lock_expires_at`),
   KEY `message_outbox_request_id_idx` (`request_id`),
   KEY `message_outbox_parent_message_id_idx` (`parent_message_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=148890 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=151037 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2899,9 +3057,12 @@ CREATE TABLE `product_line` (
   `unit_group_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `is_commission_exempt` tinyint(1) NOT NULL DEFAULT '0',
   `is_freight_exempt` tinyint(1) NOT NULL DEFAULT '0',
+  `default_lot_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
+  UNIQUE KEY `product_line_default_lot_id_key` (`default_lot_id`),
   UNIQUE KEY `product_line_account_id_name_key` (`account_id`,`name`),
   KEY `product_line_unit_group_id_idx` (`unit_group_id`),
+  KEY `product_line_account_created_idx` (`account_id`,`created_at` DESC,`id` DESC),
   FULLTEXT KEY `product_line_name_idx` (`name`),
   FULLTEXT KEY `product_line_description_idx` (`description`),
   FULLTEXT KEY `product_line_name_description_idx` (`name`,`description`)
@@ -2994,6 +3155,364 @@ CREATE TABLE `production_run` (
   KEY `production_run_responsible_user_id_idx` (`responsible_user_id`),
   KEY `production_run_account_id_idx` (`account_id`),
   FULLTEXT KEY `production_run_number_idx` (`number`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `production_schedule`
+--
+
+DROP TABLE IF EXISTS `production_schedule`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `production_schedule` (
+  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `version` int NOT NULL,
+  `status_code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `planning_as_of` datetime(3) NOT NULL,
+  `horizon_start_date` date NOT NULL,
+  `horizon_end_date` date NOT NULL,
+  `horizon_weeks` int NOT NULL,
+  `frozen_weeks` int NOT NULL,
+  `frozen_through_date` date DEFAULT NULL,
+  `demand_basis_code` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `generation_source_code` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `solver_version` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `settings_snapshot` json NOT NULL,
+  `diagnostics` json NOT NULL,
+  `error_message` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `frozen_line_count` int NOT NULL DEFAULT '0',
+  `frozen_planned_quantity` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
+  `generated_by_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `published_by_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `published_at` datetime(3) DEFAULT NULL,
+  `superseded_by_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `production_schedule_account_version_key` (`account_id`,`version`),
+  KEY `production_schedule_account_created_idx` (`account_id`,`created_at` DESC,`id` DESC),
+  KEY `production_schedule_account_status_created_idx` (`account_id`,`status_code`,`created_at` DESC,`id` DESC),
+  KEY `production_schedule_account_status_horizon_idx` (`account_id`,`status_code`,`horizon_start_date` DESC,`id` DESC),
+  KEY `production_schedule_account_published_idx` (`account_id`,`published_at` DESC,`id` DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `production_schedule_derived_line`
+--
+
+DROP TABLE IF EXISTS `production_schedule_derived_line`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `production_schedule_derived_line` (
+  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `production_schedule_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `source_line_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `production_step_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `department_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `item_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `week_index` int NOT NULL,
+  `week_start_date` date NOT NULL,
+  `quantity` decimal(65,30) NOT NULL,
+  `planned_unit_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `explosion_depth` int NOT NULL,
+  `offset_weeks` int NOT NULL,
+  `status_code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  KEY `prod_sched_derived_sched_dept_week_idx` (`production_schedule_id`,`department_id`,`week_start_date`,`id`),
+  KEY `prod_sched_derived_sched_week_step_idx` (`production_schedule_id`,`week_start_date`,`production_step_id`,`id`),
+  KEY `prod_sched_derived_account_dept_week_idx` (`account_id`,`department_id`,`week_start_date`,`id`),
+  KEY `prod_sched_derived_source_line_idx` (`source_line_id`),
+  KEY `prod_sched_derived_sched_week_depth_idx` (`production_schedule_id`,`week_start_date`,`explosion_depth`,`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `production_schedule_deviation`
+--
+
+DROP TABLE IF EXISTS `production_schedule_deviation`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `production_schedule_deviation` (
+  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `production_schedule_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `production_schedule_line_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `deviation_type_code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `is_frozen_week` tinyint(1) NOT NULL DEFAULT '0',
+  `week_index` int DEFAULT NULL,
+  `machine_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `item_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `before_json` json DEFAULT NULL,
+  `after_json` json DEFAULT NULL,
+  `delta_quantity` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
+  `delta_run_hours` decimal(14,4) NOT NULL DEFAULT '0.0000',
+  `reason_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `reason_note` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `actor_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  KEY `prod_sched_dev_sched_created_idx` (`production_schedule_id`,`created_at` DESC,`id` DESC),
+  KEY `prod_sched_dev_account_created_idx` (`account_id`,`created_at` DESC,`id` DESC),
+  KEY `prod_sched_dev_line_idx` (`production_schedule_line_id`),
+  KEY `prod_sched_dev_sched_frozen_idx` (`production_schedule_id`,`is_frozen_week`,`created_at` DESC,`id` DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `production_schedule_finished_policy`
+--
+
+DROP TABLE IF EXISTS `production_schedule_finished_policy`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `production_schedule_finished_policy` (
+  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `production_schedule_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `item_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `sku` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `greige_item_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `greige_sku` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `product_line_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `annual_demand` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
+  `weekly_demand` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
+  `sigma_weekly` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
+  `safety_stock` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
+  `reorder_point` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
+  `on_hand` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
+  `weeks_of_cover` decimal(14,4) NOT NULL DEFAULT '0.0000',
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `prod_sched_fin_policy_sched_item_key` (`production_schedule_id`,`item_id`),
+  KEY `prod_sched_fin_policy_sched_greige_idx` (`production_schedule_id`,`greige_item_id`,`sku`),
+  KEY `prod_sched_fin_policy_account_item_idx` (`account_id`,`item_id`,`created_at` DESC,`id` DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `production_schedule_item_policy`
+--
+
+DROP TABLE IF EXISTS `production_schedule_item_policy`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `production_schedule_item_policy` (
+  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `production_schedule_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `item_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `sku` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `production_step_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `primary_machine_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `annual_demand` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
+  `weekly_demand` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
+  `seconds_per_unit` decimal(14,6) NOT NULL DEFAULT '0.000000',
+  `unit_cost` decimal(18,6) NOT NULL DEFAULT '0.000000',
+  `setup_cost` decimal(18,6) NOT NULL DEFAULT '0.000000',
+  `holding_cost` decimal(18,6) NOT NULL DEFAULT '0.000000',
+  `eoq_units` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
+  `constraint_lead_time_weeks` decimal(8,3) NOT NULL DEFAULT '0.000',
+  `finish_lead_time_weeks` decimal(8,3) NOT NULL DEFAULT '0.000',
+  `sigma_weekly_pooled` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
+  `sigma_downstream_sum` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
+  `safety_stock_primary` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
+  `safety_stock_downstream` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
+  `reorder_point` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
+  `order_up_to` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
+  `on_hand_echelon` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
+  `on_hand_greige` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
+  `average_greige_inventory` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
+  `max_greige_inventory` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
+  `weeks_of_cover` decimal(14,4) NOT NULL DEFAULT '0.0000',
+  `projected_on_hand` json DEFAULT NULL,
+  `annual_run_hours` decimal(14,4) NOT NULL DEFAULT '0.0000',
+  `abc_class` char(1) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `was_eoq_capped` tinyint(1) NOT NULL DEFAULT '0',
+  `was_capacity_starved` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `unit_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `prod_sched_item_policy_sched_item_key` (`production_schedule_id`,`item_id`),
+  KEY `prod_sched_item_policy_sched_hours_idx` (`production_schedule_id`,`annual_run_hours` DESC,`id`),
+  KEY `prod_sched_item_policy_account_item_idx` (`account_id`,`item_id`,`created_at` DESC,`id` DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `production_schedule_item_setting`
+--
+
+DROP TABLE IF EXISTS `production_schedule_item_setting`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `production_schedule_item_setting` (
+  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `item_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `is_excluded` tinyint(1) NOT NULL DEFAULT '0',
+  `min_lot_units` decimal(18,6) DEFAULT NULL,
+  `max_lot_units` decimal(18,6) DEFAULT NULL,
+  `lot_multiple_units` decimal(18,6) DEFAULT NULL,
+  `fixed_lead_time_weeks` decimal(8,3) DEFAULT NULL,
+  `service_level_z` decimal(6,4) DEFAULT NULL,
+  `manual_eoq_units` decimal(18,6) DEFAULT NULL,
+  `abc_class_override` char(1) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `preferred_machine_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `prod_sched_item_setting_account_item_key` (`account_id`,`item_id`),
+  KEY `prod_sched_item_setting_excluded_idx` (`account_id`,`is_excluded`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `production_schedule_line`
+--
+
+DROP TABLE IF EXISTS `production_schedule_line`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `production_schedule_line` (
+  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `production_schedule_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `week_index` int NOT NULL,
+  `week_start_date` date NOT NULL,
+  `machine_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `production_step_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `department_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `item_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `planned_quantity` decimal(65,30) NOT NULL,
+  `planned_unit_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `planned_lots` int NOT NULL DEFAULT '0',
+  `planned_run_hours` decimal(14,4) NOT NULL DEFAULT '0.0000',
+  `planned_changeover_minutes` decimal(12,4) NOT NULL DEFAULT '0.0000',
+  `sequence_index` int NOT NULL DEFAULT '0',
+  `projected_on_hand_before` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
+  `projected_on_hand_after` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
+  `status_code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `source_code` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `reason_code` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `is_frozen` tinyint(1) NOT NULL DEFAULT '0',
+  `production_run_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `planned_lot_units` decimal(18,6) NOT NULL DEFAULT '0.000000',
+  PRIMARY KEY (`id`),
+  KEY `prod_sched_line_sched_week_idx` (`production_schedule_id`,`week_start_date`,`sequence_index`,`id`),
+  KEY `prod_sched_line_sched_machine_week_idx` (`production_schedule_id`,`machine_id`,`week_start_date`,`id`),
+  KEY `prod_sched_line_sched_item_week_idx` (`production_schedule_id`,`item_id`,`week_start_date`,`id`),
+  KEY `prod_sched_line_account_week_machine_idx` (`account_id`,`week_start_date`,`machine_id`,`id`),
+  KEY `prod_sched_line_account_dept_week_idx` (`account_id`,`department_id`,`week_start_date`,`id`),
+  KEY `prod_sched_line_account_item_week_idx` (`account_id`,`item_id`,`week_start_date`,`id`),
+  KEY `prod_sched_line_production_run_idx` (`production_run_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `production_schedule_line_status`
+--
+
+DROP TABLE IF EXISTS `production_schedule_line_status`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `production_schedule_line_status` (
+  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `production_schedule_line_status_code_key` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `production_schedule_resource_setting`
+--
+
+DROP TABLE IF EXISTS `production_schedule_resource_setting`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `production_schedule_resource_setting` (
+  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `scope_code` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `scope_ref_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `is_excluded` tinyint(1) NOT NULL DEFAULT '0',
+  `is_enabled` tinyint(1) NOT NULL DEFAULT '1',
+  `shifts_per_day` int DEFAULT NULL,
+  `hours_per_shift` decimal(6,3) DEFAULT NULL,
+  `work_days_per_week` int DEFAULT NULL,
+  `capacity_headroom_pct` decimal(5,4) DEFAULT NULL,
+  `efficiency_pct` decimal(5,4) DEFAULT NULL,
+  `lead_time_weeks` decimal(8,3) DEFAULT NULL,
+  `lead_time_offset_weeks` decimal(8,3) NOT NULL DEFAULT '0.000',
+  `changeover_avg_minutes` decimal(10,4) DEFAULT NULL,
+  `changeover_min_minutes` decimal(10,4) DEFAULT NULL,
+  `changeover_max_minutes` decimal(10,4) DEFAULT NULL,
+  `sort_order` int NOT NULL DEFAULT '0',
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `prod_sched_resource_scope_key` (`account_id`,`scope_code`,`scope_ref_id`),
+  KEY `prod_sched_resource_excluded_idx` (`account_id`,`is_excluded`,`scope_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `production_schedule_status`
+--
+
+DROP TABLE IF EXISTS `production_schedule_status`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `production_schedule_status` (
+  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `production_schedule_status_code_key` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `production_shift`
+--
+
+DROP TABLE IF EXISTS `production_shift`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `production_shift` (
+  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `department_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `code` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `start_time` varchar(8) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `end_time` varchar(8) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `crosses_midnight` tinyint(1) NOT NULL DEFAULT '0',
+  `days_of_week` varchar(7) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '1111100',
+  `is_active` tinyint(1) NOT NULL DEFAULT '1',
+  `sort_order` int NOT NULL DEFAULT '0',
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  KEY `production_shift_account_active_code_idx` (`account_id`,`is_active`,`code`),
+  KEY `production_shift_account_dept_idx` (`account_id`,`department_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -3432,7 +3951,7 @@ CREATE TABLE `sales_order` (
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
-  UNIQUE KEY `sales_order_owner_account_id_number_key` (`owner_account_id`,`number`),
+  UNIQUE KEY `sales_order_owner_account_id_sales_order_type_code_number_key` (`owner_account_id`,`sales_order_type_code`,`number`),
   KEY `sales_order_owner_account_id_idx` (`owner_account_id`),
   KEY `sales_order_owner_account_id_seller_account_id_sales_order_t_idx` (`owner_account_id`,`seller_account_id`,`sales_order_type_code`),
   KEY `sales_order_seller_account_id_idx` (`seller_account_id`),
@@ -3556,7 +4075,7 @@ CREATE TABLE `sandbox_account` (
   UNIQUE KEY `sandbox_account_type_id_key` (`type_id`),
   UNIQUE KEY `sandbox_account_account_id_key` (`account_id`),
   KEY `sandbox_account_owner_account_id_idx` (`owner_account_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -3608,6 +4127,24 @@ CREATE TABLE `scanning_station_type` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `schedule_deviation_type`
+--
+
+DROP TABLE IF EXISTS `schedule_deviation_type`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `schedule_deviation_type` (
+  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `schedule_deviation_type_code_key` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `service_idempotency_key`
 --
 
@@ -3639,7 +4176,7 @@ CREATE TABLE `service_idempotency_key` (
   KEY `service_idempotency_key_idempotency_key_idx` (`idempotency_key`),
   KEY `service_idempotency_key_lock_expires_at_idx` (`lock_expires_at`),
   KEY `service_idempotency_key_expires_at_idx` (`expires_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=191 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=199 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -4323,7 +4860,7 @@ CREATE TABLE `user` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-07-28 11:30:28
+-- Dump completed on 2026-08-01  8:52:35
 
 -- +goose Down
 
@@ -4357,6 +4894,7 @@ DROP TABLE IF EXISTS `shipment_line`;
 DROP TABLE IF EXISTS `shipment`;
 DROP TABLE IF EXISTS `settlement`;
 DROP TABLE IF EXISTS `service_idempotency_key`;
+DROP TABLE IF EXISTS `schedule_deviation_type`;
 DROP TABLE IF EXISTS `scanning_station_type`;
 DROP TABLE IF EXISTS `scanning_station`;
 DROP TABLE IF EXISTS `sandbox_account`;
@@ -4380,6 +4918,17 @@ DROP TABLE IF EXISTS `quantity_discount`;
 DROP TABLE IF EXISTS `quantity`;
 DROP TABLE IF EXISTS `property`;
 DROP TABLE IF EXISTS `production_step`;
+DROP TABLE IF EXISTS `production_shift`;
+DROP TABLE IF EXISTS `production_schedule_status`;
+DROP TABLE IF EXISTS `production_schedule_resource_setting`;
+DROP TABLE IF EXISTS `production_schedule_line_status`;
+DROP TABLE IF EXISTS `production_schedule_line`;
+DROP TABLE IF EXISTS `production_schedule_item_setting`;
+DROP TABLE IF EXISTS `production_schedule_item_policy`;
+DROP TABLE IF EXISTS `production_schedule_finished_policy`;
+DROP TABLE IF EXISTS `production_schedule_deviation`;
+DROP TABLE IF EXISTS `production_schedule_derived_line`;
+DROP TABLE IF EXISTS `production_schedule`;
 DROP TABLE IF EXISTS `production_run`;
 DROP TABLE IF EXISTS `production`;
 DROP TABLE IF EXISTS `product_type`;
@@ -4411,6 +4960,8 @@ DROP TABLE IF EXISTS `message_inbox`;
 DROP TABLE IF EXISTS `message_attachment`;
 DROP TABLE IF EXISTS `message`;
 DROP TABLE IF EXISTS `material`;
+DROP TABLE IF EXISTS `machine_downtime_reason`;
+DROP TABLE IF EXISTS `machine_downtime_event`;
 DROP TABLE IF EXISTS `machine`;
 DROP TABLE IF EXISTS `lot`;
 DROP TABLE IF EXISTS `label_type`;
@@ -4444,6 +4995,8 @@ DROP TABLE IF EXISTS `email_domain`;
 DROP TABLE IF EXISTS `edi_run`;
 DROP TABLE IF EXISTS `doc_api_key`;
 DROP TABLE IF EXISTS `department`;
+DROP TABLE IF EXISTS `demand_override_type`;
+DROP TABLE IF EXISTS `demand_override`;
 DROP TABLE IF EXISTS `delivery_status`;
 DROP TABLE IF EXISTS `delivery_line`;
 DROP TABLE IF EXISTS `delivery`;
@@ -4475,6 +5028,7 @@ DROP TABLE IF EXISTS `account_relation_price_group`;
 DROP TABLE IF EXISTS `account_relation_notification_type`;
 DROP TABLE IF EXISTS `account_relation_notification_preference`;
 DROP TABLE IF EXISTS `account_relation`;
+DROP TABLE IF EXISTS `account_production_schedule_setting`;
 DROP TABLE IF EXISTS `account_price_item_category`;
 DROP TABLE IF EXISTS `account_price_attribute`;
 DROP TABLE IF EXISTS `account_price`;

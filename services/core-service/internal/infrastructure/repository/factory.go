@@ -210,6 +210,30 @@ func (r *repoFactoryImpl) NewMachineRepo() domain.MachineRepo {
 	return NewMachineRepo(r.queries)
 }
 
+func (r *repoFactoryImpl) NewMachineStatusRepo() domain.MachineStatusRepo {
+	return NewMachineStatusRepo(r.queries)
+}
+
+func (r *repoFactoryImpl) NewMachineDowntimeRepo() domain.MachineDowntimeRepo {
+	return NewMachineDowntimeRepo(r.queries)
+}
+
+func (r *repoFactoryImpl) NewDemandOverrideRepo() domain.DemandOverrideRepo {
+	return NewDemandOverrideRepo(r.queries)
+}
+
+func (r *repoFactoryImpl) NewScheduleAttainmentRepo() domain.ScheduleAttainmentRepo {
+	return NewScheduleAttainmentRepo(r.queries)
+}
+
+func (r *repoFactoryImpl) NewProductionScheduleInputRepo() domain.ProductionScheduleInputRepo {
+	return NewProductionScheduleInputRepo(r.queries)
+}
+
+func (r *repoFactoryImpl) NewProductionScheduleRepo() domain.ProductionScheduleRepo {
+	return NewProductionScheduleRepo(r.queries)
+}
+
 func (r *repoFactoryImpl) NewDepartmentRepo() domain.DepartmentRepo {
 	return NewDepartmentRepo(r.queries)
 }

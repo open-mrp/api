@@ -528,16 +528,21 @@ func AnalyzeNewCustomersPresenter(resp *pb.AnalyzeNewCustomersResponse) *apireso
 func AnalyzeDemandForecastPresenter(resp *pb.AnalyzeDemandForecastResponse) *apiresource.AnalyzeDemandForecastResponse {
 	if resp == nil {
 		return &apiresource.AnalyzeDemandForecastResponse{
-			Object: constants.ObjectTypeList,
-			Data:   []apiresource.DemandForecastRow{},
+			Object: constants.ObjectTypeAnalyzeDemandForecastResponse,
+			Data:   apiresource.NewList([]apiresource.DemandForecastRow{}, apiresource.PageInfo{}),
 		}
 	}
 
 	rows := make([]apiresource.DemandForecastRow, len(resp.Rows))
 	for i, r := range resp.Rows {
+		var productLine *apiresource.Entity
+		if r.ProductLineId != "" {
+			productLine = apiresource.NewEntity(r.ProductLineId, constants.ObjectTypeProductLine, nil, nil)
+		}
+
 		rows[i] = apiresource.DemandForecastRow{
-			ItemID:              r.ItemId,
-			ProductLineID:       ptrStringOrNil(r.ProductLineId),
+			Item:                apiresource.NewEntity(r.ItemId, constants.ObjectTypeItem, nil, nil),
+			ProductLine:         productLine,
 			ProductSku:          r.ProductSku,
 			ProductDescription:  ptrStringOrNil(r.ProductDescription),
 			Unit:                r.Unit,
@@ -555,8 +560,8 @@ func AnalyzeDemandForecastPresenter(resp *pb.AnalyzeDemandForecastResponse) *api
 	}
 
 	return &apiresource.AnalyzeDemandForecastResponse{
-		Object:               constants.ObjectTypeList,
-		Data:                 rows,
+		Object:               constants.ObjectTypeAnalyzeDemandForecastResponse,
+		Data:                 apiresource.NewList(rows, apiresource.PageInfo{}),
 		CurrentMonthFraction: resp.CurrentMonthFraction,
 	}
 }
@@ -600,25 +605,54 @@ func AnalyzeOeePresenter(resp *pb.AnalyzeOeeResponse) *apiresource.AnalyzeOeeRes
 	if resp == nil {
 		return &apiresource.AnalyzeOeeResponse{
 			Object:      constants.ObjectTypeAnalyzeOeeResponse,
-			Departments: []apiresource.OeeDepartment{},
+			Departments: apiresource.NewList([]apiresource.OeeDepartment{}, apiresource.PageInfo{}),
 		}
 	}
 
 	depts := make([]apiresource.OeeDepartment, len(resp.Departments))
 	for i, d := range resp.Departments {
+		breakdown := make([]apiresource.OeeDowntimeReason, len(d.DowntimeBreakdown))
+		for j, r := range d.DowntimeBreakdown {
+			breakdown[j] = apiresource.OeeDowntimeReason{
+				Reason:          constants.MachineDowntimeReasonCode(r.ReasonCode),
+				OeeBucket:       constants.OeeBucket(r.OeeBucket),
+				DowntimeSeconds: r.DowntimeSeconds,
+				EventCount:      r.EventCount,
+			}
+		}
+
 		depts[i] = apiresource.OeeDepartment{
-			DepartmentID:          d.DepartmentId,
-			DepartmentName:        d.DepartmentName,
-			GoodUnits:             d.GoodUnits,
-			WasteUnits:            d.WasteUnits,
-			SecondsUnits:          d.SecondsUnits,
-			EstimatedRuntimeHours: d.EstimatedRuntimeHours,
+			Department:              apiresource.NewEntity(d.DepartmentId, constants.ObjectTypeDepartment, &d.DepartmentName, nil),
+			GoodUnits:               d.GoodUnits,
+			WasteUnits:              d.WasteUnits,
+			SecondsUnits:            d.SecondsUnits,
+			StandardSecondsEarned:   d.StandardSecondsEarned,
+			EstimatedRuntimeHours:   d.EstimatedRuntimeHours,
+			AvailabilityLossSeconds: d.AvailabilityLossSeconds,
+			PerformanceLossSeconds:  d.PerformanceLossSeconds,
+			QualityLossSeconds:      d.QualityLossSeconds,
+			NotScheduledSeconds:     d.NotScheduledSeconds,
+			ChangeoverSeconds:       d.ChangeoverSeconds,
+			DowntimeEventCount:      d.DowntimeEventCount,
+			DowntimeBreakdown:       apiresource.NewList(breakdown, apiresource.PageInfo{}),
+			ScheduledSeconds:        d.ScheduledSeconds,
+			RunTimeSeconds:          d.RunTimeSeconds,
+			MeasuredIdealSeconds:    d.MeasuredIdealSeconds,
+			MeasuredRunSeconds:      d.MeasuredRunSeconds,
+			PerformanceTicketCount:  d.PerformanceTicketCount,
+			PerformanceBasis:        oeePerformanceBasis(d.PerformanceBasis),
+			AvailabilityPct:         d.AvailabilityPct,
+			PerformancePct:          d.PerformancePct,
+			QualityPct:              d.QualityPct,
+			OeePct:                  d.OeePct,
+			MeasurementStatus:       oeeMeasurementStatus(d.HasDowntimeData),
+			Anomalies:               oeeAnomalies(d.HasPerformanceAnomaly),
 		}
 	}
 
 	return &apiresource.AnalyzeOeeResponse{
 		Object:      constants.ObjectTypeAnalyzeOeeResponse,
-		Departments: depts,
+		Departments: apiresource.NewList(depts, apiresource.PageInfo{}),
 	}
 }
 
@@ -689,4 +723,29 @@ func ptrStringOrNil(s string) *string {
 		return nil
 	}
 	return &s
+}
+
+// oeeMeasurementStatus labels an estimate as an estimate. A department with no logged downtime computes as perfectly available, so presenting that as a measurement would make OEE jump for the worst possible reason.
+func oeeMeasurementStatus(hasDowntimeData bool) constants.OeeMeasurementStatus {
+	if hasDowntimeData {
+		return constants.OeeMeasurementStatusMeasured
+	}
+	return constants.OeeMeasurementStatusEstimated
+}
+
+// oeePerformanceBasis maps the wire basis onto the typed constant, null when performance was not computed at all.
+func oeePerformanceBasis(basis string) *constants.OeePerformanceBasis {
+	if basis == "" {
+		return nil
+	}
+	b := constants.OeePerformanceBasis(basis)
+	return &b
+}
+
+func oeeAnomalies(performanceAboveCapacity bool) []constants.OeeAnomaly {
+	out := []constants.OeeAnomaly{}
+	if performanceAboveCapacity {
+		out = append(out, constants.OeeAnomalyPerformanceAboveCapacity)
+	}
+	return out
 }

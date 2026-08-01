@@ -8,9 +8,11 @@ import (
 	"github.com/augno/api/shared/contracts"
 )
 
-// routeSegmentToSampleID maps the route path segment immediately before a generic
-// {id} parameter to a documentation sample ID from apiresource.
+// routeSegmentToSampleID maps the route path segment immediately before a generic {id} parameter to a documentation sample ID from apiresource.
 var routeSegmentToSampleID = map[string]string{
+	"machine-downtime-events":      apiresource.SampleMachineDowntimeEventID,
+	"demand-overrides":             apiresource.SampleDemandOverrideID,
+	"production-schedules":         apiresource.SampleProductionScheduleID,
 	"announcements":                apiresource.SampleAnnouncementID,
 	"notifications":                apiresource.SampleNotificationID,
 	"units":                        apiresource.SampleUnitID,
@@ -114,8 +116,7 @@ var pathParamToSampleID = map[string]string{
 	"member_id":          apiresource.SampleMessagingGroupMemberID,
 }
 
-// fieldNameSampleIDs maps request struct field names to sample IDs when they do
-// not follow the Sample{FieldName} constant naming convention.
+// fieldNameSampleIDs maps request struct field names to sample IDs when they do not follow the Sample{FieldName} constant naming convention.
 var fieldNameSampleIDs = map[string]string{
 	"APIKeyID":             apiresource.SampleAPIKeyID,
 	"UserID":               apiresource.SampleUserID,
@@ -264,9 +265,7 @@ func sampleIDFromPathParam(pathParamName, route string) string {
 	if pathParamName != "id" {
 		return ""
 	}
-	// System properties (/v1/settings/properties/{id}) collide on the "properties"
-	// segment with item-category properties (/v1/catalog/item-categories/{id}/properties/{id}),
-	// which a single-segment map can't distinguish — disambiguate by full route.
+	// System properties (/v1/settings/properties/{id}) collide on the "properties" segment with item-category properties (/v1/catalog/item-categories/{id}/properties/{id}), which a single-segment map can't distinguish — disambiguate by full route.
 	if strings.HasPrefix(route, "/v1/settings/properties/") {
 		return apiresource.SampleSysPropertyID
 	}

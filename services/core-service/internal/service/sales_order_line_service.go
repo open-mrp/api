@@ -164,8 +164,8 @@ func (s *salesOrderLineSvcImpl) CreateSalesOrderLine(ctx context.Context, params
 			changes := audit.ComputeChanges(nil, created)
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionCreate,
+				ServiceName:      domain.ServiceName,
+				Action:           constants.AuditActionCreate,
 				ResourceType:     constants.ObjectTypeSalesOrderLine,
 				ResourceID:       created.ID,
 				RootResourceType: constants.ObjectTypeSalesOrder,
@@ -238,8 +238,8 @@ func resequenceOrderLines(ctx context.Context, repos domain.RepoFactory, salesOr
 			return apiErr
 		}
 		if apiErr := audit.NewPublisher().Publish(ctx, repos.NewOutboxRepo(), audit.EventData{
-			ServiceName:  domain.ServiceName,
-			Action:       constants.AuditActionUpdate,
+			ServiceName:      domain.ServiceName,
+			Action:           constants.AuditActionUpdate,
 			ResourceType:     constants.ObjectTypeSalesOrderLine,
 			ResourceID:       p.ID,
 			RootResourceType: constants.ObjectTypeSalesOrder,
@@ -462,8 +462,8 @@ func (s *salesOrderLineSvcImpl) UpdateSalesOrderLine(ctx context.Context, params
 			changes := audit.ComputeChanges(old, updated)
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
+				ServiceName:      domain.ServiceName,
+				Action:           constants.AuditActionUpdate,
 				ResourceType:     constants.ObjectTypeSalesOrderLine,
 				ResourceID:       updated.ID,
 				RootResourceType: constants.ObjectTypeSalesOrder,
@@ -632,8 +632,8 @@ func (s *salesOrderLineSvcImpl) DeleteSalesOrderLine(ctx context.Context, params
 		changes := audit.ComputeChanges(salesOrderLine, (*domain.SalesOrderLine)(nil))
 
 		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-			ServiceName:  domain.ServiceName,
-			Action:       constants.AuditActionDelete,
+			ServiceName:      domain.ServiceName,
+			Action:           constants.AuditActionDelete,
 			ResourceType:     constants.ObjectTypeSalesOrderLine,
 			ResourceID:       salesOrderLine.ID,
 			RootResourceType: constants.ObjectTypeSalesOrder,
@@ -678,8 +678,8 @@ func (s *salesOrderLineSvcImpl) DeleteSalesOrderLine(ctx context.Context, params
 					return apiErr
 				}
 				if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-					ServiceName:  domain.ServiceName,
-					Action:       constants.AuditActionUpdate,
+					ServiceName:      domain.ServiceName,
+					Action:           constants.AuditActionUpdate,
 					ResourceType:     constants.ObjectTypeSalesOrder,
 					ResourceID:       order.ID,
 					RootResourceType: constants.ObjectTypeSalesOrder,
@@ -792,8 +792,8 @@ func (s *salesOrderLineSvcImpl) ReorderSalesOrderLines(ctx context.Context, para
 				return apiErr
 			}
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
+				ServiceName:      domain.ServiceName,
+				Action:           constants.AuditActionUpdate,
 				ResourceType:     constants.ObjectTypeSalesOrderLine,
 				ResourceID:       lineID,
 				RootResourceType: constants.ObjectTypeSalesOrder,

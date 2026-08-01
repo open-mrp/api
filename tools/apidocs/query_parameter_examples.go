@@ -27,11 +27,7 @@ func queryParameterExample(reqType reflect.Type, field reflect.StructField, para
 	return parameterExample(paramSchema)
 }
 
-// queryExampleSatisfiesEnum reports whether v is consistent with paramSchema's
-// enum constraint, if it has one. A generic documented/hard-coded sample that is
-// not a member of the parameter's enum (e.g. a `type` sample of "payment" applied
-// to an endpoint whose `type` enum is [material_category, product_category]) must
-// be rejected so the enum-aware fallback can substitute a valid value.
+// queryExampleSatisfiesEnum reports whether v is consistent with paramSchema's enum constraint, if it has one. A generic documented/hard-coded sample that is not a member of the parameter's enum (e.g. a `type` sample of "payment" applied to an endpoint whose `type` enum is [material_category, product_category]) must be rejected so the enum-aware fallback can substitute a valid value.
 func queryExampleSatisfiesEnum(v any, paramSchema Schema) bool {
 	if paramSchema.Type == "array" && paramSchema.Items != nil && len(paramSchema.Items.Enum) > 0 {
 		arr, ok := v.([]any)
@@ -141,6 +137,8 @@ func sampleQueryExampleForOpenAPIName(openAPIParam string) any {
 		return apiresource.SampleFilterEndDateRFC3339
 	case "cutoff_date":
 		return apiresource.SampleFilterEndDateRFC3339
+	case "as_of":
+		return apiresource.SampleFilterEndDateRFC3339
 	case "category":
 		return "preference"
 	case "entity_type":
@@ -189,6 +187,20 @@ func sampleQueryExampleForOpenAPIName(openAPIParam string) any {
 		return []any{float64(200)}
 	case "status_code_classes":
 		return []any{float64(5)}
+	case "period_start":
+		return apiresource.SampleFilterStartDateRFC3339
+	case "period_end":
+		return apiresource.SampleFilterEndDateRFC3339
+	case "scope_codes":
+		return []any{"item"}
+	case "override_type_codes":
+		return []any{"delta_units"}
+	case "reasons":
+		return []any{"breakdown"}
+	case "reason":
+		return "rush_order"
+	case "reason_note":
+		return "Pulled forward for the Northwind rush order."
 	}
 
 	idSamples := map[string]string{
@@ -215,6 +227,8 @@ func sampleQueryExampleForOpenAPIName(openAPIParam string) any {
 		"invoice_ids":          apiresource.SampleInvoiceID,
 		"item_ids":             apiresource.SampleItemID,
 		"machine_ids":          apiresource.SampleMachineID,
+		"scope_ref_ids":        apiresource.SampleItemID,
+		"root_resource_id":     apiresource.SampleAuditEventResourceID,
 		"scanning_station_ids": apiresource.SampleScanningStationID,
 		"sender_ids":           apiresource.SampleAccountUserID,
 		"input_step_ids":       apiresource.SampleProductionStepID,

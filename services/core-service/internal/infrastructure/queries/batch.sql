@@ -96,11 +96,18 @@ LEFT JOIN production_run pr ON b.production_run_id = pr.id
 WHERE b.id = sqlc.arg('id')
 AND b.account_id = sqlc.arg('account_id');
 
+-- GetBatchFlowOutgoing returns the downstream batches the given batch feeds.
+--
+-- _batch_flow follows the Prisma implicit self-m2m mapping (same rule as
+-- _parent_child_production_steps, see docs/patterns/production-step-graph-patterns.md):
+-- row (A, B) means B is in A's `in` relation and A is in B's `out` relation, so A = the
+-- downstream (consuming) batch and B = the upstream (source) batch.
 -- name: GetBatchFlowOutgoing :many
-SELECT B AS batch_id FROM _batch_flow WHERE A = sqlc.arg('batch_id');
-
--- name: GetBatchFlowIncoming :many
 SELECT A AS batch_id FROM _batch_flow WHERE B = sqlc.arg('batch_id');
+
+-- GetBatchFlowIncoming returns the upstream batches that feed the given batch.
+-- name: GetBatchFlowIncoming :many
+SELECT B AS batch_id FROM _batch_flow WHERE A = sqlc.arg('batch_id');
 
 -- name: GetBatchFlowTraversalInfo :one
 SELECT id, closed_at, scanned_at, production_step_id
@@ -233,7 +240,7 @@ AND (
 );
 
 -- name: ListOpenBatches :many
--- TODO: Restore product_line_ids filter once product_line table exists in schema.
+-- The product-line filter matches via EXISTS rather than a join so an item with several products on matching lines is not double-counted by the SUM.
 SELECT
     d.name AS department_name,
     i.sku AS item_name,
@@ -248,11 +255,12 @@ JOIN unit qu ON q.unit_id = qu.id
 LEFT JOIN scanning_station ss ON b.scanning_station_id = ss.id
 LEFT JOIN department d ON ss.department_id = d.id
 LEFT JOIN (
-    SELECT bf.A AS batch_id, SUM(oq.value) AS out_sum
+    -- A batch's outputs are the downstream (A) side of _batch_flow rows where it is the upstream (B) batch, per the Prisma orientation of the table.
+    SELECT bf.B AS batch_id, SUM(oq.value) AS out_sum
     FROM _batch_flow bf
-    JOIN batch ob ON bf.B = ob.id
+    JOIN batch ob ON bf.A = ob.id
     JOIN quantity oq ON ob.quantity_id = oq.id
-    GROUP BY bf.A
+    GROUP BY bf.B
 ) out_totals ON out_totals.batch_id = b.id
 WHERE b.account_id = sqlc.arg('account_id')
 AND b.closed_at IS NULL
@@ -262,27 +270,45 @@ AND (
     sqlc.arg('include_item_filter') = false
     OR b.item_id IN (sqlc.slice('item_ids'))
 )
+AND (
+    sqlc.arg('include_product_line_filter') = false
+    OR EXISTS (
+        SELECT 1 FROM product p
+        WHERE p.item_id = i.id
+          AND p.product_line_id IN (sqlc.slice('product_line_ids'))
+    )
+)
 GROUP BY d.name, i.sku, i.id, b.scanning_station_id, qu.abbreviation;
 
 -- name: InsertBatchQuantity :exec
 INSERT INTO quantity (id, value, unit_id, created_at, updated_at)
 VALUES (sqlc.arg('id'), sqlc.arg('value'), sqlc.arg('unit_id'), NOW(3), NOW(3));
 
+-- InsertBatch creates a batch as unscanned work.
+--
+-- scanned_at stays NULL: a batch added to a production run is a ticket the floor has yet to run, and stamping it as scanned on creation both fakes production that never happened and closes the run immediately, since a run completes once every batch is scanned. The legacy create does not set it either.
 -- name: InsertBatch :exec
 INSERT INTO batch (
     id, account_id, item_id, quantity_id,
     seconds_quantity_id, waste_quantity_id,
     production_step_id, scanning_station_id, production_run_id,
-    scanned_at, created_at, updated_at
+    created_at, updated_at
 ) VALUES (
     sqlc.arg('id'), sqlc.arg('account_id'), sqlc.arg('item_id'), sqlc.arg('quantity_id'),
     sqlc.narg('seconds_quantity_id'), sqlc.narg('waste_quantity_id'),
     sqlc.narg('production_step_id'), sqlc.narg('scanning_station_id'), sqlc.narg('production_run_id'),
-    NOW(3), NOW(3), NOW(3)
+    NOW(3), NOW(3)
 );
 
+-- LinkBatchMachine attaches a batch to the machine that will run it.
+--
+-- Attainment reads the machine through this table, so a batch with no link is production nobody can attribute. The legacy create connects machines; this is the same edge.
+-- name: LinkBatchMachine :exec
+INSERT IGNORE INTO _batches_machines (A, B) VALUES (sqlc.arg('batch_id'), sqlc.arg('machine_id'));
+
+-- InsertBatchFlow records that the source batch feeds the target batch. Per the Prisma orientation of _batch_flow, the downstream (target) batch is column A and the upstream (source) batch is column B.
 -- name: InsertBatchFlow :exec
-INSERT INTO _batch_flow (A, B) VALUES (sqlc.arg('source_batch_id'), sqlc.arg('target_batch_id'));
+INSERT INTO _batch_flow (A, B) VALUES (sqlc.arg('target_batch_id'), sqlc.arg('source_batch_id'));
 
 -- name: UpdateBatchScannedAt :exec
 UPDATE batch SET scanned_at = NOW(3), updated_at = NOW(3)

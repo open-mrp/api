@@ -281,3 +281,40 @@ var SampleBulkReconcileItemsResponse = &BulkReconcileItemsResponse{
 func (*BulkReconcileItemsResponse) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleBulkReconcileItemsResponse)
 }
+
+// The lot an item is made in — how many, counted in what.
+//
+// A lot is the quantity production is issued in: a doff, a pallet, a batch. The unit is what makes it meaningful, since 60 pairs and 60 eaches are different lots.
+type ItemLotDefault struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=item_lot_default"`
+	// The item the lot was resolved for.
+	Item *Entity `json:"item" validate:"required"`
+	// Units in one lot.
+	//
+	// `0` means the item has no lot convention, not that its lot is zero.
+	Quantity float64 `json:"quantity"`
+	// The unit the lot is counted in. Expandable.
+	Unit *Unit `json:"unit" expandable:"true"`
+	// Which rule in the chain produced this lot.
+	//
+	// - `item_override`: a lot size set on the item itself.
+	// - `product_line`: the convention of the line the item sells under.
+	// - `downstream_product_line`: inherited from the finished goods this item becomes, for intermediates that are not themselves sold.
+	// - `account_default`: the account-wide fallback.
+	Source constants.ItemLotSource `json:"source" validate:"required"`
+	// The product line the convention came from.
+	ProductLine *Entity `json:"product_line"`
+}
+
+var SampleItemLotDefault = &ItemLotDefault{
+	Object:      constants.ObjectTypeItemLotDefault,
+	Item:        NewEntity(SampleItemID, constants.ObjectTypeItem, nil, nil),
+	Quantity:    60,
+	Source:      constants.ItemLotSourceDownstreamProductLine,
+	ProductLine: NewEntity(SampleProductLineID, constants.ObjectTypeProductLine, nil, nil),
+}
+
+func (*ItemLotDefault) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleItemLotDefault)
+}

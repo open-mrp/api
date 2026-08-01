@@ -365,6 +365,13 @@ func (s *productionRunSvcImpl) DeleteProductionRun(ctx context.Context, params d
 			return apiErr
 		}
 
+		// A schedule week released as this run goes back to planned, so it can be issued
+		// again rather than being stuck looking released with no run behind it.
+		if apiErr := txSvc.repos.NewProductionScheduleRepo().
+			UnreleaseLinesForRun(txCtx, params.AccountID, params.ProductionRunID); apiErr != nil {
+			return apiErr
+		}
+
 		// Find linked order IDs before deleting the run.
 		orderIDs, apiErr := txRepo.FindOrderIDsByRun(txCtx, params.AccountID, params.ProductionRunID)
 		if apiErr != nil {

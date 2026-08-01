@@ -74,6 +74,12 @@ const (
 	// CoreCmdHubspotSyncExecute is a command to run the write phase of a reviewed HubSpot backfill job.
 	CoreCmdHubspotSyncExecute AmqpRoutingKey = "core.cmd.hubspot_sync_execute"
 
+	// CoreCmdGenerateProductionSchedule asks the core-service to solve and persist one production schedule version. Published by the generation cadence, which only enqueues: a solve takes minutes, and running it inside the scheduler lease would block every other account behind whichever one is solving.
+	CoreCmdGenerateProductionSchedule AmqpRoutingKey = "core.cmd.generate_production_schedule"
+
+	// CoreEventProductionSchedulePublished is an event indicating a schedule version was published and its first weeks frozen. Consumers notify the departments that now have a committed plan to work to.
+	CoreEventProductionSchedulePublished AmqpRoutingKey = "core.event.production_schedule_published"
+
 	// CoreEventSalesOrderCreated is an event indicating a sales order was created. Consumers use it to run out-of-band side effects (e.g. syncing the order to a third-party CRM such as HubSpot) without blocking the create response.
 	CoreEventSalesOrderCreated AmqpRoutingKey = "core.event.sales_order_created"
 

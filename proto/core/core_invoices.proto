@@ -471,6 +471,15 @@ message ProductLineInfo {
   google.protobuf.Timestamp created_at = 9;
   google.protobuf.Timestamp updated_at = 10;
   optional ItemCategoryUnitGroupInfo unit_group = 11;
+  // The lot products in this line are made in, as a quantity: the number and its unit are
+  // one value, since 60 pairs and 60 eaches are different lots.
+  optional ProductLineDefaultLotInfo default_lot = 12;
+}
+
+message ProductLineDefaultLotInfo {
+  string id = 1;
+  string value = 2;
+  string unit_id = 3;
 }
 message ListProductLinesRequest {
   optional string cursor = 1;
@@ -495,6 +504,7 @@ message CreateProductLineRequest {
   string commission_policy = 3;
   string freight_policy = 4;
   repeated string includes = 5;
+  optional QuantityPatch default_lot = 6;
 }
 message CreateProductLineResponse {
   ProductLineInfo product_line = 1;
@@ -506,6 +516,7 @@ message UpdateProductLineRequest {
   optional string freight_policy = 4;
   optional string unit_group_id = 5;
   repeated string includes = 6;
+  optional QuantityPatch default_lot = 7;
 }
 message UpdateProductLineResponse {
   ProductLineInfo product_line = 1;

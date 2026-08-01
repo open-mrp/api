@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/augno/api/services/core-service/internal/scheduling"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -463,6 +464,9 @@ type ProductSvc interface {
 }
 
 type ItemSvc interface {
+	// GetItemLotDefault resolves the lot an item is made in — how many, counted in what.
+	GetItemLotDefault(ctx context.Context, itemID string) (*ItemLotDefault, *apierror.APIError)
+
 	// ListItems returns a paginated list of items for the caller's account. Supports filtering by type, category, attribute, supplier, date range, and full-text search.
 	ListItems(ctx context.Context, params ListItemsParams) (*ListItemsResult, *apierror.APIError)
 
@@ -784,9 +788,20 @@ type AnalyticsSvc interface {
 	AnalyzeMaterials(ctx context.Context, params AnalyzeMaterialsParams) ([]MaterialAnalyticsEntry, *apierror.APIError)
 	AnalyzeInventoryReceipts(ctx context.Context, params AnalyzeInventoryReceiptsParams) ([]InventoryReceiptEntry, *apierror.APIError)
 	GetNewCustomersAnalytics(ctx context.Context, params GetNewCustomersAnalyticsParams) ([]NewCustomerEntry, *apierror.APIError)
+	// GetDemandForecast returns per-item demand, revenue and sales history with seasonal-EMA forecasts and confidence bands.
 	GetDemandForecast(ctx context.Context, params GetDemandForecastParams) (*DemandForecastResult, *apierror.APIError)
+	// AnalyzeOee computes Availability x Performance x Quality per department from planned time, logged downtime and batch-ticket scan intervals.
 	AnalyzeOee(ctx context.Context, params AnalyzeOeeParams) ([]OeeDepartment, *apierror.APIError)
+
+	// AnalyzeScheduleAttainment measures actual production against the plan that was live at the time.
+	AnalyzeScheduleAttainment(ctx context.Context, params AnalyzeScheduleAttainmentParams) (*ScheduleAttainmentResult, *apierror.APIError)
+	// AnalyzeWeeksOfSales returns on-hand inventory expressed as weeks of average sales per product line.
 	AnalyzeWeeksOfSales(ctx context.Context, params AnalyzeWeeksOfSalesParams) (*WeeksOfSalesResult, *apierror.APIError)
+}
+
+// MachineStatusSvc answers "what is the floor doing right now".
+type MachineStatusSvc interface {
+	ListMachineStatus(ctx context.Context, params ListMachineStatusParams) (*MachineStatusResult, *apierror.APIError)
 }
 
 type MachineSvc interface {
@@ -807,6 +822,135 @@ type MachineSvc interface {
 
 	// BatchGetMachinesByIDs returns machines by their IDs for include resolution.
 	BatchGetMachinesByIDs(ctx context.Context, ids []string) ([]*Machine, *apierror.APIError)
+}
+
+type ProductionScheduleSvc interface {
+	// PreviewRegenerateProductionSchedule says what a re-solve would change about a draft, without changing it.
+	PreviewRegenerateProductionSchedule(ctx context.Context, params RegenerateProductionScheduleParams) (*ScheduleRegeneratePreview, *apierror.APIError)
+	// RegenerateProductionSchedule re-solves a draft in place, keeping its version number.
+	RegenerateProductionSchedule(ctx context.Context, params RegenerateProductionScheduleParams) (*ProductionSchedule, *apierror.APIError)
+	// PreviewProductionSchedule runs the solver and returns the plan without persisting it.
+	PreviewProductionSchedule(ctx context.Context, params PreviewProductionScheduleParams) (*scheduling.SolverOutput, *apierror.APIError)
+
+	// GenerateProductionSchedule solves and persists a new draft version.
+	GenerateProductionSchedule(ctx context.Context, params GenerateProductionScheduleParams) (*ProductionSchedule, *apierror.APIError)
+
+	// GetProductionSchedule returns one version by ID.
+	GetProductionSchedule(ctx context.Context, scheduleID string) (*ProductionSchedule, *apierror.APIError)
+
+	// GetCurrentProductionSchedule returns the published version covering today, or nil when there is none.
+	GetCurrentProductionSchedule(ctx context.Context) (*ProductionSchedule, *apierror.APIError)
+
+	// ListProductionSchedules returns a paginated list of versions.
+	ListProductionSchedules(ctx context.Context, params ListProductionSchedulesParams) (*ListProductionSchedulesResult, *apierror.APIError)
+
+	// ListProductionScheduleLines returns the planned campaigns for a version.
+	ListProductionScheduleLines(ctx context.Context, params ListProductionScheduleLinesParams) ([]*ProductionScheduleLine, *apierror.APIError)
+
+	// ListProductionScheduleItemPolicies returns the per-item policy snapshot behind a version.
+	ListProductionScheduleItemPolicies(ctx context.Context, scheduleID string) ([]*ProductionScheduleItemPolicy, *apierror.APIError)
+	// ListProductionScheduleFinishedPolicies returns the per-finished-SKU decomposition of a version's pooled constraint buffers.
+	ListProductionScheduleFinishedPolicies(ctx context.Context, scheduleID string) ([]*ProductionScheduleFinishedPolicy, *apierror.APIError)
+
+	// GetProductionScheduleSettings returns the merchant's planning assumptions, falling back to code defaults when nothing has been saved.
+	GetProductionScheduleSettings(ctx context.Context) (*ProductionScheduleSettings, *apierror.APIError)
+
+	// UpdateProductionScheduleSettings replaces the merchant's planning assumptions.
+	UpdateProductionScheduleSettings(ctx context.Context, params UpdateProductionScheduleSettingsParams) (*ProductionScheduleSettings, *apierror.APIError)
+
+	// ListResourceSettings returns per-machine, per-department and per-step overrides.
+	ListResourceSettings(ctx context.Context) ([]*ProductionScheduleResourceSetting, *apierror.APIError)
+
+	// UpsertResourceSetting writes one per-resource override.
+	UpsertResourceSetting(ctx context.Context, params UpsertResourceSettingParams) (*ProductionScheduleResourceSetting, *apierror.APIError)
+
+	// DeleteResourceSetting removes one per-resource override.
+	DeleteResourceSetting(ctx context.Context, settingID string) *apierror.APIError
+
+	// EnqueueScheduledGeneration reserves a version and queues its solve, in one transaction. Used by the generation cadence.
+	EnqueueScheduledGeneration(ctx context.Context, params EnqueueGenerationParams) *apierror.APIError
+
+	// RunScheduledGeneration solves into a row already created in `generating`. Used by the generate-command consumer.
+	RunScheduledGeneration(ctx context.Context, params RunScheduledGenerationParams) *apierror.APIError
+
+	// ListProductionScheduleDerivedLines returns derived downstream department work.
+	ListProductionScheduleDerivedLines(ctx context.Context, params ListDerivedLinesParams) ([]*ProductionScheduleDerivedLine, *apierror.APIError)
+
+	// ListScheduleDeviationTypes returns the global taxonomy of what a hand change can be.
+	ListScheduleDeviationTypes(ctx context.Context) ([]*ScheduleDeviationType, *apierror.APIError)
+
+	// ListProductionScheduleDeviations returns the append-only log of hand changes.
+	ListProductionScheduleDeviations(ctx context.Context, params ListProductionScheduleDeviationsParams) (*ListProductionScheduleDeviationsResult, *apierror.APIError)
+
+	// CreateProductionScheduleLine adds a campaign by hand and logs a deviation.
+	CreateProductionScheduleLine(ctx context.Context, params CreateProductionScheduleLineParams) (*ProductionScheduleLine, *apierror.APIError)
+
+	// UpdateProductionScheduleLine edits a campaign and logs a deviation.
+	UpdateProductionScheduleLine(ctx context.Context, params UpdateProductionScheduleLineParams) (*ProductionScheduleLine, *apierror.APIError)
+
+	// DeleteProductionScheduleLine removes a campaign and logs a deviation.
+	DeleteProductionScheduleLine(ctx context.Context, params DeleteProductionScheduleLineParams) *apierror.APIError
+
+	// PublishProductionSchedule freezes the first weeks, snapshots the frozen counts, and supersedes whatever it replaces.
+	PublishProductionSchedule(ctx context.Context, scheduleID string) (*ProductionSchedule, *apierror.APIError)
+
+	// ReleaseProductionScheduleWeek turns one planned week into a production run, with one batch per planned lot.
+	ReleaseProductionScheduleWeek(ctx context.Context, params ReleaseScheduleWeekParams) (*ReleaseScheduleWeekResult, *apierror.APIError)
+
+	// PreviewReleaseProductionScheduleWeek says what releasing a week would create, without creating it.
+	PreviewReleaseProductionScheduleWeek(ctx context.Context, scheduleID string, weekIndex int32) (*ReleaseScheduleWeekPreview, *apierror.APIError)
+
+	// ArchiveProductionSchedule retires a version without deleting its history.
+	ArchiveProductionSchedule(ctx context.Context, scheduleID string) (*ProductionSchedule, *apierror.APIError)
+
+	// DeleteProductionSchedule removes a draft. Published versions must be archived.
+	DeleteProductionSchedule(ctx context.Context, scheduleID string) *apierror.APIError
+}
+
+type MachineDowntimeSvc interface {
+	// ListDowntimeReasons returns the global downtime reason taxonomy, ordered for display.
+	ListDowntimeReasons(ctx context.Context) ([]*MachineDowntimeReason, *apierror.APIError)
+
+	// ListDowntimeEvents returns a paginated list of downtime events for the caller's account.
+	ListDowntimeEvents(ctx context.Context, params ListMachineDowntimeEventsParams) (*ListMachineDowntimeEventsResult, *apierror.APIError)
+
+	// GetDowntimeEvent returns a single downtime event by ID.
+	GetDowntimeEvent(ctx context.Context, eventID string) (*MachineDowntimeEvent, *apierror.APIError)
+
+	// CreateDowntimeEvent logs a stoppage. Department and production step are resolved from the machine; an open event (no end) records that the machine is still down.
+	CreateDowntimeEvent(ctx context.Context, params CreateMachineDowntimeEventParams) (*MachineDowntimeEvent, *apierror.APIError)
+
+	// UpdateDowntimeEvent closes or reclassifies an event.
+	UpdateDowntimeEvent(ctx context.Context, params UpdateMachineDowntimeEventParams) (*MachineDowntimeEvent, *apierror.APIError)
+
+	// DeleteDowntimeEvent removes a mis-logged event.
+	DeleteDowntimeEvent(ctx context.Context, eventID string) *apierror.APIError
+
+	// BatchGetDowntimeEventsByIDs returns downtime events by their IDs for include resolution.
+	BatchGetDowntimeEventsByIDs(ctx context.Context, ids []string) ([]*MachineDowntimeEvent, *apierror.APIError)
+}
+
+type DemandOverrideSvc interface {
+	// ListDemandOverrideTypes returns the global override type taxonomy.
+	ListDemandOverrideTypes(ctx context.Context) ([]*DemandOverrideType, *apierror.APIError)
+
+	// ListDemandOverrides returns a paginated list of demand overrides for the caller's account.
+	ListDemandOverrides(ctx context.Context, params ListDemandOverridesParams) (*ListDemandOverridesResult, *apierror.APIError)
+
+	// GetDemandOverride returns a single demand override by ID.
+	GetDemandOverride(ctx context.Context, overrideID string) (*DemandOverride, *apierror.APIError)
+
+	// CreateDemandOverride records demand the forecast cannot see. The scope reference is validated so an override can never silently match nothing.
+	CreateDemandOverride(ctx context.Context, params CreateDemandOverrideParams) (*DemandOverride, *apierror.APIError)
+
+	// UpdateDemandOverride partially updates an override. Type and value are validated as a pair against the resulting row.
+	UpdateDemandOverride(ctx context.Context, params UpdateDemandOverrideParams) (*DemandOverride, *apierror.APIError)
+
+	// DeleteDemandOverride removes an override.
+	DeleteDemandOverride(ctx context.Context, overrideID string) *apierror.APIError
+
+	// BatchGetDemandOverridesByIDs returns demand overrides by their IDs for include resolution.
+	BatchGetDemandOverridesByIDs(ctx context.Context, ids []string) ([]*DemandOverride, *apierror.APIError)
 }
 
 type DepartmentSvc interface {

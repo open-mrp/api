@@ -17,6 +17,9 @@ service CoreFulfillmentService {
   // GetMachine returns a single machine by its ID.
   rpc GetMachine(GetMachineRequest) returns (GetMachineResponse);
 
+  // ListMachineStatus returns what every machine is running right now.
+  rpc ListMachineStatus(ListMachineStatusRequest) returns (ListMachineStatusResponse);
+
   // CreateMachine creates a new machine for the target account.
   rpc CreateMachine(CreateMachineRequest) returns (CreateMachineResponse);
 
@@ -99,4 +102,58 @@ message BatchGetMachinesByIDsRequest {
 
 message BatchGetMachinesByIDsResponse {
   repeated MachineInfo machines = 1;
+}
+
+
+message ListMachineStatusRequest {
+  optional google.protobuf.Timestamp as_of = 1;
+  repeated string department_ids = 2;
+}
+
+// MachineCampaignInfo is one campaign on a machine with how far through it the floor is.
+message MachineCampaignInfo {
+  string production_schedule_line_id = 1;
+  string item_id = 2;
+  string sku = 3;
+  google.protobuf.Timestamp week_start_date = 4;
+  int32 week_index = 5;
+  double planned_quantity = 6;
+  double scanned_quantity = 7;
+  double remaining_quantity = 8;
+  optional string unit = 9;
+  int64 released_batch_count = 10;
+  int64 scanned_batch_count = 11;
+  double planned_run_hours = 12;
+  string status_code = 13;
+  optional string production_run_id = 14;
+}
+
+message MachineDowntimeSummaryInfo {
+  string event_id = 1;
+  string reason = 2;
+  string reason_name = 3;
+  string oee_bucket = 4;
+  google.protobuf.Timestamp started_at = 5;
+  optional string note = 6;
+}
+
+message MachineStatusInfo {
+  string machine_id = 1;
+  string machine_name = 2;
+  optional string department_id = 3;
+  optional string department_name = 4;
+  string status = 5;
+  optional MachineDowntimeSummaryInfo downtime = 6;
+  optional MachineCampaignInfo current = 7;
+  optional MachineCampaignInfo next = 8;
+  double week_planned_quantity = 9;
+  double week_scanned_quantity = 10;
+  double week_planned_run_hours = 11;
+  optional string unit = 12;
+}
+
+message ListMachineStatusResponse {
+  optional string production_schedule_id = 1;
+  google.protobuf.Timestamp week_start_date = 2;
+  repeated MachineStatusInfo machines = 3;
 }

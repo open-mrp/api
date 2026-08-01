@@ -1189,3 +1189,277 @@ INSERT IGNORE INTO sales_order (id, number, sales_order_status_code, sales_order
 
 INSERT IGNORE INTO invoice (id, number, is_paid_in_full, sales_order_id, billing_address_id, account_id, created_at, updated_at) VALUES
     ('iv_01seedpaidnoalloc00', 'INV-PAIDNOALLOC', 1, 'or_01seedpaidnoalloc00', 'ad_01k09wnac0e1ar211e0sy0ba4g', 'ac_01k0a5smf9ekb8rqg12555zjqa', DATE_SUB(NOW(), INTERVAL 4 DAY), DATE_SUB(NOW(), INTERVAL 4 DAY));
+
+-- ============================================================
+-- MACHINE DOWNTIME EVENTS (for /v1/operations/machine-downtime-events)
+-- ============================================================
+-- Three CLOSED events so the generic list/pagination/include conformance suites have
+-- fixtures. They are dated ~60 days back on purpose: the OEE analytics e2e tests
+-- measure short recent windows, and seeding anything recent would move their numbers.
+-- All are closed, so they never occupy the one-open-event-per-machine slot the
+-- downtime tests rely on.
+INSERT IGNORE INTO machine_downtime_event (
+    id, account_id, machine_id, department_id, production_step_id, reason_code,
+    started_at, ended_at, duration_seconds, shift_date, shift_code,
+    item_id, production_run_id, batch_id, schedule_line_id, note,
+    reported_by_id, source_code, created_at, updated_at
+) VALUES
+    ('mcdt_01seede2edowntime01', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'mc_01k0a52fb6eqhtbx9hdxj3vvnh',
+     'dp_01k0a5r01yfx3sj1vy9qgv3dc0', NULL, 'breakdown',
+     DATE_SUB(NOW(3), INTERVAL 60 DAY), DATE_SUB(NOW(3), INTERVAL 60 DAY) + INTERVAL 45 MINUTE, 2700,
+     DATE(DATE_SUB(NOW(3), INTERVAL 60 DAY)), NULL,
+     'it_01k0a7100aeysrs9vxpeq14yxj', NULL, NULL, NULL, 'Seeded: needle bar jam',
+     'acus_s83fjhyfmqen', 'manual', NOW(3), NOW(3)),
+    ('mcdt_01seede2edowntime02', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'mc_01k0a52fb6eqhtbx9hdxj3vvnh',
+     'dp_01k0a5r01yfx3sj1vy9qgv3dc0', NULL, 'changeover',
+     DATE_SUB(NOW(3), INTERVAL 59 DAY), DATE_SUB(NOW(3), INTERVAL 59 DAY) + INTERVAL 30 MINUTE, 1800,
+     DATE(DATE_SUB(NOW(3), INTERVAL 59 DAY)), NULL,
+     'it_01k0a7100aeysrs9vxpeq14yxj', NULL, NULL, NULL, 'Seeded: yarn changeover',
+     'acus_s83fjhyfmqen', 'manual', NOW(3), NOW(3)),
+    ('mcdt_01seede2edowntime03', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'mc_01k0a52fb6eqhtbx9hdxj3vvnh',
+     'dp_01k0a5r01yfx3sj1vy9qgv3dc0', NULL, 'material_shortage',
+     DATE_SUB(NOW(3), INTERVAL 58 DAY), DATE_SUB(NOW(3), INTERVAL 58 DAY) + INTERVAL 90 MINUTE, 5400,
+     DATE(DATE_SUB(NOW(3), INTERVAL 58 DAY)), NULL,
+     'it_01k0a7100aeysrs9vxpeq14yxj', NULL, NULL, NULL, 'Seeded: waiting on yarn delivery',
+     'acus_s83fjhyfmqen', 'manual', NOW(3), NOW(3));
+
+-- ============================================================
+-- PRODUCTION SCHEDULE CONSTRAINT (for /v1/operations/production-schedules)
+-- ============================================================
+-- Names the knitting department as the planning constraint so the solver has something
+-- to schedule. Without one the preview endpoint correctly refuses to plan, which would
+-- leave the solve path untested. Selection is by department, so every machine in it is
+-- planned and no per-machine row is needed.
+INSERT INTO account_production_schedule_setting (
+    id, account_id, constraint_department_id, created_at, updated_at
+) VALUES
+    ('acpnscst_01seede2esetting', 'ac_01k0a5smf9ekb8rqg12555zjqa',
+     'dp_01k0a5r01yfx3sj1vy9qgv3dc0', NOW(3), NOW(3))
+ON DUPLICATE KEY UPDATE constraint_department_id = VALUES(constraint_department_id);
+
+-- ============================================================
+-- BATCH -> MACHINE LINKS (for the production scheduling solver)
+-- ============================================================
+-- The solver measures run rates by joining batch -> _batches_machines -> machine, so
+-- without these links it finds no items and every generated plan is empty. That made
+-- the schedule e2e tests pass vacuously.
+-- A = batch, B = machine.
+INSERT IGNORE INTO _batches_machines (A, B) VALUES
+    ('bt_01seedbatch1_0000000', 'mc_01k0a52fb6eqhtbx9hdxj3vvnh'),
+    ('bt_01seedbatch2_0000000', 'mc_01k0a52fb6eqhtbx9hdxj3vvnh');
+
+-- ============================================================
+-- BATCH GENEALOGY (so knit demand can be pooled from finished goods)
+-- ============================================================
+-- The solver pools a constraint item's demand from the finished goods it becomes,
+-- walking batch -> _batch_flow -> child batch. Without a descendant that carries order
+-- demand, every knit item plans to zero and no campaigns are generated — which made
+-- the schedule line assertions pass vacuously.
+--
+-- This links the seeded knit batch to a batch of SCK-001, which does have order lines.
+INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
+    ('qu_01seedschedfg_qty00', 10, 'un_01seedpair000000000', NOW(), NOW());
+
+INSERT IGNORE INTO batch (id, account_id, item_id, quantity_id, scanning_station_id, production_step_id, production_run_id, scanned_at, created_at, updated_at) VALUES
+    ('bt_01seedschedfg000000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'it_01k0a7100aeysrs9vxpeq14yxj', 'qu_01seedschedfg_qty00', 'sgsn_01k0a8201zegarjfsjaw5n7yfv', 'prs_01k0a56yc1e8wag6wexn4pp8t9', 'pnrn_01seedprod_run0000', NOW(), NOW(), NOW());
+
+-- A = downstream (target), B = upstream (source), per the Prisma orientation of _batch_flow.
+INSERT IGNORE INTO _batch_flow (A, B) VALUES
+    ('bt_01seedschedfg000000', 'bt_01seedbatch1_0000000');
+
+-- Backdated demand for the scheduling solver.
+--
+-- Trailing-12 demand deliberately excludes the current partial month, so an order
+-- issued today contributes nothing. Without demand in a COMPLETED month every knit
+-- item plans to zero and no campaigns are generated, which left the schedule-line
+-- write path untested. This order is issued three months back for the same SCK-001
+-- product the knit batch feeds, on a separate order so no existing fixture moves.
+INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
+    ('qu_01seedscheddem_qty0', 400, 'un_01seedpair000000000', NOW(), NOW());
+
+INSERT IGNORE INTO rate (id, value, numerator_unit_id, denominator_unit_id, created_at, updated_at)
+SELECT 'rt_01seedscheddem_prc', value, numerator_unit_id, denominator_unit_id, NOW(), NOW()
+FROM rate WHERE id = 'rt_01seediss_ln1_price';
+
+INSERT IGNORE INTO sales_order (
+    id, number, sales_order_status_code, sales_order_type_code, priority_code,
+    carrier_id, carrier_option_id, billing_address_id, shipping_address_id,
+    buyer_account_id, seller_account_id, owner_account_id,
+    payment_term_id, shipping_term_id, issued_at, created_at, updated_at
+) VALUES (
+    'or_01seedscheddemand00', 'E2E-SCHED-DEMAND', 'issued', 'sales_order', 'normal',
+    'delivery', 'crop_01seedground000000', 'ad_01k09wnac0e1ar211e0sy0ba4g', 'ad_01k09wnpvrea0awz7vem2j8j7g',
+    'ac_01k09wm2fgevdsc344gpbcj30f', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa',
+    'pytm_01seednet3000000', 'prepaid_billed',
+    DATE_SUB(NOW(3), INTERVAL 3 MONTH), DATE_SUB(NOW(3), INTERVAL 3 MONTH), NOW(3)
+);
+
+INSERT IGNORE INTO sales_order_line (
+    id, product_sku, product_id, item_id, sales_order_id, quantity_id, unit_price_id, created_at, updated_at
+) VALUES (
+    'orln_01seedscheddemand', 'SCK-001', 'pd_01k0a65nx2e2crfxrvryyxnmdh', 'it_01k0a7100aeysrs9vxpeq14yxj',
+    'or_01seedscheddemand00', 'qu_01seedscheddem_qty0', 'rt_01seedscheddem_prc', NOW(3), NOW(3)
+);
+
+-- ============================================================
+-- PRODUCTION SCHEDULE (for /v1/operations/production-schedules)
+-- ============================================================
+-- Schedules are normally *generated*, never seeded, but the generic spec-driven
+-- conformance suites need a stable {id} to resolve nested paths ({id}/lines,
+-- {id}/item-policies) against. This is version 1 so generation still allocates
+-- upward from it, and it stays 'draft' so it can never be picked as the current
+-- published schedule.
+INSERT IGNORE INTO production_schedule (
+    id, account_id, version, status_code, name,
+    planning_as_of, horizon_start_date, horizon_end_date, horizon_weeks, frozen_weeks,
+    demand_basis_code, generation_source_code, solver_version,
+    settings_snapshot, diagnostics, generated_by_id, created_at, updated_at
+) VALUES (
+    'pnsc_01seede2eschedule', 'ac_01k0a5smf9ekb8rqg12555zjqa', 1, 'draft', 'Seeded e2e schedule',
+    NOW(3), DATE(NOW(3) - INTERVAL WEEKDAY(NOW(3)) DAY), DATE(NOW(3) - INTERVAL WEEKDAY(NOW(3)) DAY) + INTERVAL 13 WEEK, 13, 1,
+    'trailing_12', 'manual', 'v1',
+    JSON_OBJECT('horizon_weeks', 13, 'frozen_weeks', 1, 'shifts_per_day', 2, 'hours_per_shift', 7,
+                'work_days_per_week', 5, 'capacity_headroom_pct', 0.9, 'default_lot_units', 60),
+    JSON_OBJECT('seeded', true),
+    NULL, NOW(3), NOW(3)
+);
+
+INSERT IGNORE INTO production_schedule_line (
+    id, account_id, production_schedule_id,
+    week_index, week_start_date, machine_id, production_step_id, department_id, item_id,
+    planned_quantity, planned_lots, planned_run_hours, planned_changeover_minutes,
+    sequence_index, projected_on_hand_before, projected_on_hand_after,
+    status_code, source_code, is_frozen, created_at, updated_at
+) VALUES (
+    'pnscln_01seede2eline01', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'pnsc_01seede2eschedule',
+    1, DATE(NOW(3) - INTERVAL WEEKDAY(NOW(3)) DAY) + INTERVAL 1 WEEK, 'mc_01k0a52fb6eqhtbx9hdxj3vvnh', NULL, 'dp_01k0a5r01yfx3sj1vy9qgv3dc0',
+    'it_01k0a7100aeysrs9vxpeq14yxj',
+    120.000000000000000000000000000000, 2, 4.5000, 30.0000,
+    0, 40.000000000000000000000000000000, 160.000000000000000000000000000000,
+    'planned', 'solver', 0, NOW(3), NOW(3)
+);
+
+INSERT IGNORE INTO production_schedule_item_policy (
+    id, account_id, production_schedule_id, item_id, sku, primary_machine_id,
+    annual_demand, weekly_demand, seconds_per_unit, unit_cost,
+    setup_cost, holding_cost, eoq_units,
+    constraint_lead_time_weeks, finish_lead_time_weeks,
+    sigma_weekly_pooled, sigma_downstream_sum,
+    safety_stock_primary, safety_stock_downstream,
+    reorder_point, order_up_to, on_hand_echelon,
+    on_hand_greige, average_greige_inventory, max_greige_inventory,
+    weeks_of_cover, annual_run_hours,
+    abc_class, created_at, updated_at
+) VALUES (
+    'pnscpl_01seede2epolicy', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'pnsc_01seede2eschedule',
+    'it_01k0a7100aeysrs9vxpeq14yxj', 'E2E-SEED-SKU', 'mc_01k0a52fb6eqhtbx9hdxj3vvnh',
+    5200.000000000000000000000000000000, 100.000000000000000000000000000000, 135.000000, 4.250000,
+    10.000000, 1.062500, 240.000000000000000000000000000000,
+    1.300, 6.000,
+    18.000000000000000000000000000000, 12.000000000000000000000000000000,
+    34.000000000000000000000000000000, 20.000000000000000000000000000000,
+    164.000000000000000000000000000000, 404.000000000000000000000000000000,
+    200.000000000000000000000000000000,
+    80.000000000000000000000000000000, 154.000000000000000000000000000000, 274.000000000000000000000000000000,
+    2.0000, 195.0000,
+    'A', NOW(3), NOW(3)
+);
+
+-- The finished-goods decomposition of that pooled buffer. Seeded so the endpoint has
+-- rows to validate against; without it the shape test passes vacuously.
+INSERT IGNORE INTO production_schedule_finished_policy (
+    id, account_id, production_schedule_id,
+    item_id, sku, greige_item_id, greige_sku,
+    annual_demand, weekly_demand, sigma_weekly,
+    safety_stock, reorder_point, on_hand, weeks_of_cover,
+    created_at, updated_at
+) VALUES (
+    'pnscfipc_01seede2efinished', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'pnsc_01seede2eschedule',
+    'it_01k0a7100aeysrs9vxpeq14yxj', 'E2E-SEED-FG-SKU',
+    'it_01k0a7100aeysrs9vxpeq14yxj', 'E2E-SEED-SKU',
+    2600.000000000000000000000000000000, 50.000000000000000000000000000000, 12.000000000000000000000000000000,
+    20.000000000000000000000000000000, 320.000000000000000000000000000000, 120.000000000000000000000000000000, 2.4000,
+    NOW(3), NOW(3)
+);
+
+-- A per-resource planning override. Machines are selected by department now, so this is
+-- a lead-time offset on a downstream step rather than a constraint opt-in.
+INSERT IGNORE INTO production_schedule_resource_setting (
+    id, account_id, scope_code, scope_ref_id, is_excluded, is_enabled,
+    lead_time_offset_weeks, sort_order, created_at, updated_at
+) VALUES
+    ('pnscrrsd_01seede2eoffset', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'production_step',
+     'prs_01k0a56yc1e8wag6wexn4pp8t9', 0, 1, 1, 0, NOW(3), NOW(3));
+
+-- ============================================================
+-- DEMAND OVERRIDES (for /v1/operations/demand-overrides)
+-- ============================================================
+-- Three rows so the generic list/pagination/include conformance suites have fixtures
+-- and both scopes are represented. They are dated in the past on purpose: an override
+-- overlapping the current planning window would shift the numbers every production
+-- schedule e2e test asserts on.
+INSERT IGNORE INTO demand_override (
+    id, account_id, scope_code, scope_ref_id,
+    period_start_date, period_end_date, override_type_code, value, unit_id,
+    reason_code, note, created_by_id, effective_from, expires_at, is_active,
+    created_at, updated_at
+) VALUES
+    ('deov_01seede2eoverride1', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'item', 'it_01k0a7100aeysrs9vxpeq14yxj',
+     DATE(NOW(3)) - INTERVAL 18 MONTH, DATE(NOW(3)) - INTERVAL 15 MONTH, 'delta_units', 5000.000000, NULL,
+     'new_customer', 'Seeded: Northwind onboarding', 'acus_s83fjhyfmqen',
+     DATE_SUB(NOW(3), INTERVAL 18 MONTH), NULL, 1, NOW(3), NOW(3)),
+    ('deov_01seede2eoverride2', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'product_line', 'pdln_01k0a735ype5e8nrhv1n5dhq1q',
+     DATE(NOW(3)) - INTERVAL 17 MONTH, DATE(NOW(3)) - INTERVAL 14 MONTH, 'delta_percent', 10.000000, NULL,
+     'promotion', 'Seeded: spring promotion lift', 'acus_s83fjhyfmqen',
+     DATE_SUB(NOW(3), INTERVAL 17 MONTH), NULL, 1, NOW(3), NOW(3)),
+    ('deov_01seede2eoverride3', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'item', 'it_01k0a7100aeysrs9vxpeq14yxj',
+     DATE(NOW(3)) - INTERVAL 16 MONTH, DATE(NOW(3)) - INTERVAL 13 MONTH, 'absolute', 12000.000000, NULL,
+     'discontinued', 'Seeded: inactive historical override', 'acus_s83fjhyfmqen',
+     DATE_SUB(NOW(3), INTERVAL 16 MONTH), NULL, 0, NOW(3), NOW(3));
+
+-- ============================================================
+-- PRODUCTION SCHEDULE DEVIATIONS (for {id}/deviations)
+-- ============================================================
+-- Two rows so the generic list AND pagination suites have fixtures, one frozen and one
+-- not so the `frozen` filter has both sides to choose between. Both reference the
+-- seeded schedule line; the removed-line row deliberately has no after snapshot, which
+-- is what a NULL JSON column has to survive being read back as.
+INSERT IGNORE INTO production_schedule_deviation (
+    id, account_id, production_schedule_id, production_schedule_line_id,
+    deviation_type_code, is_frozen_week, week_index, machine_id, item_id,
+    before_json, after_json, delta_quantity, delta_run_hours,
+    reason_code, reason_note, actor_id, created_at
+) VALUES
+    ('pnscdw_01seede2edev01', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'pnsc_01seede2eschedule', 'pnscln_01seede2eline01',
+     'quantity_changed', 0, 1, 'mc_01k0a52fb6eqhtbx9hdxj3vvnh', 'it_01k0a7100aeysrs9vxpeq14yxj',
+     JSON_OBJECT('id', 'pnscln_01seede2eline01', 'planned_quantity', 100, 'planned_run_hours', 4.0),
+     JSON_OBJECT('id', 'pnscln_01seede2eline01', 'planned_quantity', 120, 'planned_run_hours', 4.5),
+     20.000000000000000000000000000000, 0.5000,
+     'demand_change', 'Seeded: pulled forward', 'acus_s83fjhyfmqen', NOW(3) - INTERVAL 2 HOUR),
+    ('pnscdw_01seede2edev02', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'pnsc_01seede2eschedule', NULL,
+     'line_removed', 1, 0, 'mc_01k0a52fb6eqhtbx9hdxj3vvnh', 'it_01k0a7100aeysrs9vxpeq14yxj',
+     JSON_OBJECT('id', 'pnscln_01seedremoved0', 'planned_quantity', 60, 'planned_run_hours', 2.0),
+     NULL,
+     -60.000000000000000000000000000000, -2.0000,
+     'material_shortage', 'Seeded: yarn shortage', 'acus_s83fjhyfmqen', NOW(3) - INTERVAL 1 HOUR);
+
+-- ============================================================
+-- DERIVED DEPARTMENT WORK (for {id}/derived-lines)
+-- ============================================================
+-- Two rows at different depths so the generic list suite has fixtures and the
+-- department filter has more than one answer. Derived work is normally regenerated with
+-- its schedule; these exist only because the seeded schedule is inserted directly.
+INSERT IGNORE INTO production_schedule_derived_line (
+    id, account_id, production_schedule_id, source_line_id,
+    production_step_id, department_id, item_id,
+    week_index, week_start_date, quantity, planned_unit_id,
+    explosion_depth, offset_weeks, status_code, created_at, updated_at
+) VALUES
+    ('pnscdl_01seede2ederiv1', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'pnsc_01seede2eschedule', 'pnscln_01seede2eline01',
+     'prs_01k0a56yc1e8wag6wexn4pp8t9', 'dp_01k0a5r01yfx3sj1vy9qgv3dc0', 'it_01k0a7100aeysrs9vxpeq14yxj',
+     2, DATE(NOW(3) - INTERVAL WEEKDAY(NOW(3)) DAY) + INTERVAL 2 WEEK, 120.000000000000000000000000000000, NULL,
+     1, 1, 'planned', NOW(3), NOW(3)),
+    ('pnscdl_01seede2ederiv2', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'pnsc_01seede2eschedule', 'pnscln_01seede2eline01',
+     'prs_01k0a57f3dfsmtzc8txbq43eth', 'dp_01k0a5r01yfx3sj1vy9qgv3dc0', 'it_01k0a7100aeysrs9vxpeq14yxj',
+     3, DATE(NOW(3) - INTERVAL WEEKDAY(NOW(3)) DAY) + INTERVAL 3 WEEK, 120.000000000000000000000000000000, NULL,
+     2, 2, 'planned', NOW(3), NOW(3));

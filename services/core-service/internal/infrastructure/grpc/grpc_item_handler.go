@@ -576,3 +576,27 @@ func (h *gRPCHandler) BulkReconcileItems(ctx context.Context, req *pb.BulkReconc
 
 	return resp, nil
 }
+
+func (h *gRPCHandler) GetItemLotDefault(ctx context.Context, req *pb.GetItemLotDefaultRequest) (*pb.GetItemLotDefaultResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	lot, apiErr := h.itemSvc.GetItemLotDefault(ctx, req.ItemId)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	resp := &pb.GetItemLotDefaultResponse{
+		ItemId:   lot.ItemID,
+		Quantity: lot.Quantity,
+		Source:   lot.Source,
+	}
+	if lot.UnitID != "" {
+		resp.UnitId = &lot.UnitID
+	}
+	if lot.ProductLineID != "" {
+		resp.ProductLineId = &lot.ProductLineID
+	}
+	return resp, nil
+}

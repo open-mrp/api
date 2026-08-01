@@ -53,6 +53,12 @@ type RepoFactory interface {
 	NewUnitConversionRepo() UnitConversionRepo
 	NewCustomerRepo() CustomerRepo
 	NewMachineRepo() MachineRepo
+	NewMachineStatusRepo() MachineStatusRepo
+	NewMachineDowntimeRepo() MachineDowntimeRepo
+	NewDemandOverrideRepo() DemandOverrideRepo
+	NewScheduleAttainmentRepo() ScheduleAttainmentRepo
+	NewProductionScheduleInputRepo() ProductionScheduleInputRepo
+	NewProductionScheduleRepo() ProductionScheduleRepo
 	NewDepartmentRepo() DepartmentRepo
 	NewDeliveryRepo() DeliveryRepo
 	NewEmailLogRepo() EmailLogRepo

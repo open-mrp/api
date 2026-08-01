@@ -451,6 +451,46 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 		registry.RegisterGroup(productionRunsGroup.APIEndpointGroup)
 	}
 
+	// Machine Downtime
+	machineDowntimeGroup := (&httpgroup.MachineDowntimeEndpointGroup{}).Materialize(&httpgroup.MachineDowntimeEndpointGroupConfig{
+		CoreClient: config.CoreClient,
+	})
+	if machineDowntimeGroup != nil {
+		registry.RegisterGroup(machineDowntimeGroup.APIEndpointGroup)
+	}
+
+	// Machine Status
+	machineStatusGroup := (&httpgroup.MachineStatusEndpointGroup{}).Materialize(&httpgroup.MachineStatusEndpointGroupConfig{
+		CoreClient: config.CoreClient,
+	})
+	if machineStatusGroup != nil {
+		registry.RegisterGroup(machineStatusGroup.APIEndpointGroup)
+	}
+
+	// Production Schedules
+	productionSchedulesGroup := (&httpgroup.ProductionSchedulesEndpointGroup{}).Materialize(&httpgroup.ProductionSchedulesEndpointGroupConfig{
+		CoreClient: config.CoreClient,
+	})
+	if productionSchedulesGroup != nil {
+		registry.RegisterGroup(productionSchedulesGroup.APIEndpointGroup)
+	}
+
+	// Production Schedule Settings
+	scheduleSettingsGroup := (&httpgroup.ProductionScheduleSettingsEndpointGroup{}).Materialize(&httpgroup.ProductionScheduleSettingsEndpointGroupConfig{
+		CoreClient: config.CoreClient,
+	})
+	if scheduleSettingsGroup != nil {
+		registry.RegisterGroup(scheduleSettingsGroup.APIEndpointGroup)
+	}
+
+	// Demand Overrides
+	demandOverridesGroup := (&httpgroup.DemandOverridesEndpointGroup{}).Materialize(&httpgroup.DemandOverridesEndpointGroupConfig{
+		CoreClient: config.CoreClient,
+	})
+	if demandOverridesGroup != nil {
+		registry.RegisterGroup(demandOverridesGroup.APIEndpointGroup)
+	}
+
 	// Volume Discounts
 	volumeDiscountsGroup := (&httpgroup.VolumeDiscountsEndpointGroup{}).Materialize(&httpgroup.VolumeDiscountsEndpointGroupConfig{
 		CoreClient: config.CoreClient,

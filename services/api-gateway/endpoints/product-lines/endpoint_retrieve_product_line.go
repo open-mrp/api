@@ -29,11 +29,6 @@ func (e *RetrieveProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		// Reads gate on the relation helper (checkProductLineReadPermission), which
-		// requires product_lines:read on the own account but customers:read /
-		// suppliers:read when an internal actor reads a customer's or supplier's
-		// product lines. Declare the full OR-set so the gateway gate doesn't
-		// false-reject those relation-scoped reads.
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainProductLines, Action: types.ActionRead},
 			{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},
@@ -46,7 +41,7 @@ func (e *RetrieveProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeProductLine,
-			Fields:     []string{"owner", "owner.account", "unit_group"},
+			Fields:     []string{"owner", "owner.account", "unit_group", "default_lot", "default_lot.unit"},
 		}),
 	})
 }

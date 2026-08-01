@@ -12,8 +12,7 @@ import (
 	platformpb "github.com/augno/api/shared/proto/platform"
 )
 
-// openAPIEndpointGroups returns the same endpoint groups used to generate OpenAPI specs,
-// with dummy gRPC clients suitable for static reflection only.
+// openAPIEndpointGroups returns the same endpoint groups used to generate OpenAPI specs, with dummy gRPC clients suitable for static reflection only.
 func openAPIEndpointGroups() []apiendpoint.APIEndpointGroup {
 	authClient := &grpcclient.AuthServiceClient{
 		Client: struct{ authpb.AuthServiceClient }{},
@@ -36,6 +35,15 @@ func openAPIEndpointGroups() []apiendpoint.APIEndpointGroup {
 		}{},
 		ProductionStep: struct {
 			pbgrpc.CoreProductionStepServiceClient
+		}{},
+		MachineDowntime: struct {
+			pbgrpc.CoreMachineDowntimeServiceClient
+		}{},
+		DemandOverride: struct {
+			pbgrpc.CoreDemandOverrideServiceClient
+		}{},
+		ProductionSchedule: struct {
+			pbgrpc.CoreProductionScheduleServiceClient
 		}{},
 		Receiving: struct {
 			pbgrpc.CoreReceivingServiceClient
@@ -337,6 +345,21 @@ func openAPIEndpointGroups() []apiendpoint.APIEndpointGroup {
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.ProductionRunsEndpointGroup{}).Materialize(&httpgroup.ProductionRunsEndpointGroupConfig{
+			CoreClient: coreClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.MachineDowntimeEndpointGroup{}).Materialize(&httpgroup.MachineDowntimeEndpointGroupConfig{
+			CoreClient: coreClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.MachineStatusEndpointGroup{}).Materialize(&httpgroup.MachineStatusEndpointGroupConfig{
+			CoreClient: coreClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.DemandOverridesEndpointGroup{}).Materialize(&httpgroup.DemandOverridesEndpointGroupConfig{
+			CoreClient: coreClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.ProductionSchedulesEndpointGroup{}).Materialize(&httpgroup.ProductionSchedulesEndpointGroupConfig{
+			CoreClient: coreClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.ProductionScheduleSettingsEndpointGroup{}).Materialize(&httpgroup.ProductionScheduleSettingsEndpointGroupConfig{
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.VolumeDiscountsEndpointGroup{}).Materialize(&httpgroup.VolumeDiscountsEndpointGroupConfig{

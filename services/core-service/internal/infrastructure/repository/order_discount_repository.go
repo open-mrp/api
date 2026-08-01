@@ -28,6 +28,11 @@ func NewOrderDiscountRepo(queries *sqlc.Queries) domain.OrderDiscountRepo {
 func orderDiscountCreatedAt(d *domain.OrderDiscount) time.Time { return d.CreatedAt }
 func orderDiscountID(d *domain.OrderDiscount) string           { return d.ID }
 
+// floatToDecimalString renders a float for a DECIMAL column.
+//
+// Never use fmt.Sprintf("%v") for this: it switches to scientific notation at large
+// and small magnitudes, which MySQL rejects or silently truncates on a DECIMAL column.
+// 'f' with -1 precision keeps full round-trippable precision in plain notation.
 func floatToDecimalString(f float64) string {
 	return strconv.FormatFloat(f, 'f', -1, 64)
 }

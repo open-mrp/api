@@ -292,8 +292,8 @@ func (s *shipmentSvcImpl) UpdateShipment(ctx context.Context, params domain.Upda
 			changes := audit.ComputeChanges(old, updated)
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
+				ServiceName:      domain.ServiceName,
+				Action:           constants.AuditActionUpdate,
 				ResourceType:     constants.ObjectTypeShipment,
 				ResourceID:       updated.ID,
 				RootResourceType: constants.ObjectTypeSalesOrder,
@@ -393,8 +393,8 @@ func (s *shipmentSvcImpl) DeleteShipment(ctx context.Context, params domain.Dele
 		changes := audit.ComputeChanges(shipment, (*domain.Shipment)(nil))
 
 		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-			ServiceName:  domain.ServiceName,
-			Action:       constants.AuditActionDelete,
+			ServiceName:      domain.ServiceName,
+			Action:           constants.AuditActionDelete,
 			ResourceType:     constants.ObjectTypeShipment,
 			ResourceID:       shipment.ID,
 			RootResourceType: constants.ObjectTypeSalesOrder,
@@ -530,8 +530,8 @@ func (s *shipmentSvcImpl) ShipShipment(ctx context.Context, params domain.ShipSh
 			changes := audit.ComputeChanges(shipment, updated)
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
+				ServiceName:      domain.ServiceName,
+				Action:           constants.AuditActionUpdate,
 				ResourceType:     constants.ObjectTypeShipment,
 				ResourceID:       updated.ID,
 				RootResourceType: constants.ObjectTypeSalesOrder,
@@ -622,8 +622,8 @@ func (s *shipmentSvcImpl) ShipShipment(ctx context.Context, params domain.ShipSh
 			changes := audit.ComputeChanges(old, updated)
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
+				ServiceName:      domain.ServiceName,
+				Action:           constants.AuditActionUpdate,
 				ResourceType:     constants.ObjectTypeShipment,
 				ResourceID:       updated.ID,
 				RootResourceType: constants.ObjectTypeSalesOrder,
@@ -774,8 +774,8 @@ func (s *shipmentSvcImpl) VoidShipment(ctx context.Context, params domain.VoidSh
 			changes := audit.ComputeChanges(shipment, updated)
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
+				ServiceName:      domain.ServiceName,
+				Action:           constants.AuditActionUpdate,
 				ResourceType:     constants.ObjectTypeShipment,
 				ResourceID:       updated.ID,
 				RootResourceType: constants.ObjectTypeSalesOrder,

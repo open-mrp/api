@@ -115,6 +115,15 @@ func buildAllGroups() []apiendpoint.APIEndpointGroup {
 		ProductionStep: struct {
 			pbgrpc.CoreProductionStepServiceClient
 		}{},
+		MachineDowntime: struct {
+			pbgrpc.CoreMachineDowntimeServiceClient
+		}{},
+		DemandOverride: struct {
+			pbgrpc.CoreDemandOverrideServiceClient
+		}{},
+		ProductionSchedule: struct {
+			pbgrpc.CoreProductionScheduleServiceClient
+		}{},
 		Receiving: struct {
 			pbgrpc.CoreReceivingServiceClient
 		}{},
@@ -335,6 +344,18 @@ func buildAllGroups() []apiendpoint.APIEndpointGroup {
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.ProductionRunsEndpointGroup{}).Materialize(&httpgroup.ProductionRunsEndpointGroupConfig{
+			CoreClient: coreClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.MachineDowntimeEndpointGroup{}).Materialize(&httpgroup.MachineDowntimeEndpointGroupConfig{
+			CoreClient: coreClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.DemandOverridesEndpointGroup{}).Materialize(&httpgroup.DemandOverridesEndpointGroupConfig{
+			CoreClient: coreClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.ProductionSchedulesEndpointGroup{}).Materialize(&httpgroup.ProductionSchedulesEndpointGroupConfig{
+			CoreClient: coreClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.ProductionScheduleSettingsEndpointGroup{}).Materialize(&httpgroup.ProductionScheduleSettingsEndpointGroupConfig{
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.VolumeDiscountsEndpointGroup{}).Materialize(&httpgroup.VolumeDiscountsEndpointGroupConfig{

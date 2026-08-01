@@ -85,6 +85,18 @@ var purgeTargets = []tableColumn{
 	{"notification", "account_id"},
 	{"notification_preference", "account_id"},
 	{"scheduled_message", "account_id"},
+	// Production scheduling. The lookup tables (machine_downtime_reason, demand_override_type) are global, not account-scoped, so they are deliberately absent.
+	{"account_production_schedule_setting", "account_id"},
+	{"production_schedule_resource_setting", "account_id"},
+	{"production_schedule_item_setting", "account_id"},
+	{"production_shift", "account_id"},
+	{"demand_override", "account_id"},
+	{"machine_downtime_event", "account_id"},
+	{"production_schedule", "account_id"},
+	{"production_schedule_line", "account_id"},
+	{"production_schedule_item_policy", "account_id"},
+	{"production_schedule_deviation", "account_id"},
+	{"production_schedule_derived_line", "account_id"},
 }
 
 type PurgeRepo struct {

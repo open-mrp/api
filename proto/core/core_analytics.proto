@@ -142,6 +142,12 @@ message AnalyzeDemandForecastResponse {
   repeated DemandForecastRowProto rows = 1;
   double current_month_fraction = 2;
 }
+message OeeDowntimeReasonProto {
+  string reason_code = 1;
+  string oee_bucket = 2;
+  double downtime_seconds = 3;
+  int64 event_count = 4;
+}
 message OeeDepartmentProto {
   string department_id = 1;
   string department_name = 2;
@@ -149,11 +155,47 @@ message OeeDepartmentProto {
   double waste_units = 4;
   double seconds_units = 5;
   double estimated_runtime_hours = 6;
+  double availability_loss_seconds = 7;
+  double performance_loss_seconds = 8;
+  double quality_loss_seconds = 9;
+  double not_scheduled_seconds = 10;
+  double changeover_seconds = 11;
+  int64 downtime_event_count = 12;
+  repeated OeeDowntimeReasonProto downtime_breakdown = 13;
+  double scheduled_seconds = 14;
+  double run_time_seconds = 15;
+  // Ratios are absent when their denominator is unknown, which is not the same as zero.
+  optional double availability_pct = 16;
+  optional double performance_pct = 17;
+  optional double quality_pct = 18;
+  optional double oee_pct = 19;
+  bool has_downtime_data = 20;
+  bool has_performance_anomaly = 21;
+  // standard_seconds_earned is the numerator of the fallback Performance estimate:
+  // the time the period's output should have taken at each production step's own
+  // labor rate.
+  double standard_seconds_earned = 22;
+  // The measured Performance sample: ideal time of the tickets whose machine scan
+  // gap qualified, the actual time those gaps took, and how many tickets sampled.
+  double measured_ideal_seconds = 23;
+  double measured_run_seconds = 24;
+  int64 performance_ticket_count = 25;
+  // performance_basis says how performance_pct was obtained: "scan_intervals" when
+  // measured from batch-ticket scan gaps, "run_time_estimate" when it fell back to
+  // the shift-pattern estimate, empty when performance_pct is absent.
+  string performance_basis = 26;
+}
+// OeeDepartmentPlannedTimeProto supplies the scheduled production time Availability
+// is measured against. Without it the OEE ratios cannot be computed.
+message OeeDepartmentPlannedTimeProto {
+  string department_id = 1;
+  double planned_hours = 2;
 }
 message AnalyzeOeeRequest {
   google.protobuf.Timestamp start_date = 1;
   google.protobuf.Timestamp end_date = 2;
   repeated string department_ids = 3;
+  repeated OeeDepartmentPlannedTimeProto planned_time = 4;
 }
 message AnalyzeOeeResponse {
   repeated OeeDepartmentProto departments = 1;
@@ -436,4 +478,54 @@ message BatchGetAccountStatusesByIDsRequest {
 }
 message BatchGetAccountStatusesByIDsResponse {
   repeated AccountStatusInfo account_statuses = 1;
+}
+
+message AnalyzeScheduleAttainmentRequest {
+  google.protobuf.Timestamp start_date = 1;
+  google.protobuf.Timestamp end_date = 2;
+  string group_by = 3;
+  repeated string machine_ids = 4;
+  repeated string department_ids = 5;
+}
+
+// AttainmentBucketInfo is one row of the breakdown. The ratios are optional because a
+// bucket with nothing planned has no attainment, which is not the same as zero.
+message AttainmentBucketInfo {
+  string key = 1;
+  string label = 2;
+  optional google.protobuf.Timestamp week_start_date = 3;
+  double planned_quantity = 4;
+  double actual_quantity = 5;
+  double matched_quantity = 6;
+  double waste_quantity = 7;
+  double unplanned_quantity = 8;
+  double planned_run_hours = 9;
+  int64 planned_lines = 10;
+  int64 batch_count = 11;
+  optional double attainment_pct = 12;
+  optional double output_ratio_pct = 13;
+}
+
+message FrozenAdherenceInfo {
+  string schedule_id = 1;
+  int32 version = 2;
+  int64 frozen_line_count = 3;
+  double frozen_planned_quantity = 4;
+  int64 deviated_lines = 5;
+  int64 added_lines = 6;
+  double abs_delta_units = 7;
+  optional double line_adherence_pct = 8;
+  optional double units_adherence_pct = 9;
+  optional google.protobuf.Timestamp frozen_through_date = 10;
+}
+
+message AnalyzeScheduleAttainmentResponse {
+  google.protobuf.Timestamp start_date = 1;
+  google.protobuf.Timestamp end_date = 2;
+  string group_by = 3;
+  repeated string baseline_schedule_ids = 4;
+  repeated AttainmentBucketInfo buckets = 5;
+  AttainmentBucketInfo totals = 6;
+  repeated FrozenAdherenceInfo frozen_adherence = 7;
+  bool has_baseline = 8;
 }

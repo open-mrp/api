@@ -49,6 +49,7 @@ func Run(
 	pagination.Init(cfg.CursorHMACKey)
 
 	logger := slog.New(slog.NewTextHandler(stdout, nil))
+	slog.SetDefault(logger)
 
 	tracerShutdown, err := tracing.InitProvider(ctx, domain.ServiceName, getenv)
 	if err != nil {
@@ -393,6 +394,8 @@ func Run(
 		TxManager:       txManager,
 	})
 
+	machineStatusSvc := service.NewMachineStatusSvc(&service.MachineStatusSvcConfig{Repos: repoFactory})
+
 	departmentSvc := service.NewDepartmentSvc(&service.DepartmentSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
@@ -535,6 +538,25 @@ func Run(
 		TxManager:       txManager,
 	})
 
+	productionScheduleSvc := service.NewProductionScheduleSvc(&service.ProductionScheduleSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+		Enqueuer:        event.NewOutboxProductionScheduleEnqueuer(),
+	})
+
+	machineDowntimeSvc := service.NewMachineDowntimeSvc(&service.MachineDowntimeSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	demandOverrideSvc := service.NewDemandOverrideSvc(&service.DemandOverrideSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
 	measureSvc := service.NewMeasureSvc(&service.MeasureSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
@@ -643,6 +665,22 @@ func Run(
 		return err
 	}
 
+	// Drains the queue the generation cadence publishes to. Registered unconditionally: a declared queue that nothing consumes accumulates messages forever.
+	generateScheduleConsumer := event.NewGenerateProductionScheduleConsumer(rabbitmq, inboxRepo, productionScheduleSvc, repoFactory)
+	if err := generateScheduleConsumer.Listen(ctx); err != nil {
+		return err
+	}
+
+	scheduleCadence := service.NewProductionScheduleScheduler(&service.ProductionScheduleSchedulerConfig{
+		Repos: repoFactory,
+		Lease: leaseSvc,
+		Svc:   productionScheduleSvc,
+	})
+	if err := scheduleCadence.Start(ctx); err != nil {
+		return err
+	}
+	defer scheduleCadence.Stop()
+
 	salesOrderShippingUpdatedConsumer := event.NewSalesOrderShippingUpdatedConsumer(rabbitmq, inboxRepo, repoFactory)
 	if err := salesOrderShippingUpdatedConsumer.Listen(ctx); err != nil {
 		return err
@@ -672,7 +710,7 @@ func Run(
 	grpc.RegisterGroupService(srv, accountGroupSvc, accountGroupProductLineAccessSvc)
 	grpc.RegisterSalesService(srv, accountPriceSvc, salesTargetSvc, productSvc, invoiceSvc, salesOrderStatusSvc, orderDiscountSvc, volumeDiscountSvc, salesOrderSvc, salesOrderLineSvc, receivableSvc, settlementSvc, transactionAllocationSvc, transactionSvc)
 	grpc.RegisterPurchaseService(srv, purchaseOrderSvc, purchaseOrderLineSvc)
-	grpc.RegisterFulfillmentService(srv, batchSvc, consumptionSvc, deliverySvc, departmentSvc, machineSvc, productionFlowSvc)
+	grpc.RegisterFulfillmentService(srv, batchSvc, consumptionSvc, deliverySvc, departmentSvc, machineSvc, machineStatusSvc, productionFlowSvc)
 	grpc.RegisterItemService(srv, unitSvc, unitGroupSvc, itemSvc, itemCategorySvc, propertySvc, attributeSvc, paymentTermSvc, shippingTermSvc, partSvc, productLineSvc, productTypeSvc)
 	grpc.RegisterMaterialService(srv, materialSvc, supplierMaterialSvc)
 	grpc.RegisterPermissionGroupService(srv, permissionGroupSvc)
@@ -680,6 +718,9 @@ func Run(
 	grpc.RegisterReceivingService(srv, receivingOrderSvc, receivingOrderLineSvc)
 	grpc.RegisterProductionRunService(srv, productionRunSvc)
 	grpc.RegisterProductionStepService(srv, productionStepSvc, productionSvc)
+	grpc.RegisterMachineDowntimeService(srv, machineDowntimeSvc)
+	grpc.RegisterDemandOverrideService(srv, demandOverrideSvc)
+	grpc.RegisterProductionScheduleService(srv, productionScheduleSvc)
 	grpc.RegisterHubspotSyncService(srv, hubspotSyncSvc)
 	grpc.RegisterMeasureService(srv, measureSvc)
 	grpc.RegisterUtilsService(srv, utilsSvc)

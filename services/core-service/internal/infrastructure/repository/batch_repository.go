@@ -678,7 +678,7 @@ func (r *batchRepoImpl) FindPossibleNextSteps(ctx context.Context, accountID, sc
 	return results, nil
 }
 
-func (r *batchRepoImpl) FindOpenBatches(ctx context.Context, accountID string, itemIDs, _ []string) ([]domain.OpenBatchSummary, *apierror.APIError) {
+func (r *batchRepoImpl) FindOpenBatches(ctx context.Context, accountID string, itemIDs, productLineIDs []string) ([]domain.OpenBatchSummary, *apierror.APIError) {
 	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.find_open_batches")
 	defer span.End()
 
@@ -686,11 +686,19 @@ func (r *batchRepoImpl) FindOpenBatches(ctx context.Context, accountID string, i
 	if itemIDs == nil {
 		itemIDs = []string{}
 	}
+	includeProductLineFilter := len(productLineIDs) > 0
+	// The product_line_id column is nullable, so sqlc types the filter slice as NullString.
+	productLineFilter := make([]gosql.NullString, len(productLineIDs))
+	for i, id := range productLineIDs {
+		productLineFilter[i] = gosql.NullString{String: id, Valid: true}
+	}
 
 	rows, err := r.queries.ListOpenBatches(ctx, sqlc.ListOpenBatchesParams{
-		AccountID:         accountID,
-		IncludeItemFilter: includeItemFilter,
-		ItemIds:           itemIDs,
+		AccountID:                accountID,
+		IncludeItemFilter:        includeItemFilter,
+		ItemIds:                  itemIDs,
+		IncludeProductLineFilter: includeProductLineFilter,
+		ProductLineIds:           productLineFilter,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -972,6 +980,19 @@ func (r *batchRepoImpl) Create(ctx context.Context, batchID string, params domai
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
+	}
+
+	for _, machineID := range params.MachineIDs {
+		if machineID == "" {
+			continue
+		}
+		err = r.queries.LinkBatchMachine(ctx, sqlc.LinkBatchMachineParams{
+			BatchID:   batchID,
+			MachineID: machineID,
+		})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 	}
 
 	// Fetch and return the created batch.

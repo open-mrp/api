@@ -344,6 +344,7 @@ resources:
           create_product_line_request: '#/components/schemas/CreateProductLineRequest'
           list_product_line: '#/components/schemas/List_ProductLine'
           product_line: '#/components/schemas/ProductLine'
+          quantity_input: '#/components/schemas/QuantityInput'
           update_product_line_request: '#/components/schemas/UpdateProductLineRequest'
       products:
         methods:
@@ -644,7 +645,6 @@ resources:
           list_customer: '#/components/schemas/List_Customer'
           list_service_level: '#/components/schemas/List_ServiceLevel'
           payment_term: '#/components/schemas/PaymentTerm'
-          quantity_input: '#/components/schemas/QuantityInput'
           service_level: '#/components/schemas/ServiceLevel'
           shipping_term: '#/components/schemas/ShippingTerm'
           update_customer_request: '#/components/schemas/UpdateCustomerRequest'

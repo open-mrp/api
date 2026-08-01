@@ -115,7 +115,7 @@ func TestIncludesFor_PanicsOnEmptyFields(t *testing.T) {
 
 // TestIncludesFor_PanicsOnKeyDeeperThanResolver pins that a key the resolver would reject at request time is caught at startup instead. The chain is synthetic because no real resource graph is currently this deep.
 func TestIncludesFor_PanicsOnKeyDeeperThanResolver(t *testing.T) {
-	t.Parallel()
+	// Deliberately not parallel: this is the only test that writes to the package-global registry, which every other test reads. Go runs serial tests to completion before resuming parallel ones, so staying serial is what keeps the write off the same clock as those reads.
 
 	// A chain of distinct types deep enough to overshoot the resolver cap by one: link0 -> link1 -> ... The cycle-breaking in walkFields means a self-referencing type would not expand far enough.
 	depth := resourcekit.DefaultMaxIncludeDepth + 1
@@ -128,6 +128,8 @@ func TestIncludesFor_PanicsOnKeyDeeperThanResolver(t *testing.T) {
 			oi.Fields = []IncludeFieldDef{{Key: "next", ObjectType: linkType(i + 1)}}
 		}
 		RegisterIncludes(oi)
+		// The synthetic types exist only for this test, so they are removed again rather than left in a package-global other tests walk. Without this, a second run in the same process panics on duplicate registration.
+		t.Cleanup(func() { delete(registry, oi.ObjectType) })
 	}
 
 	segments := make([]string, depth)

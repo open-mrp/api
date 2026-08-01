@@ -400,3 +400,11 @@ AND unit_group_id = sqlc.arg('unit_group_id');
 -- name: DeleteAllUnitGroupUnits :exec
 DELETE FROM unit_group_unit
 WHERE unit_group_id = sqlc.arg('unit_group_id');
+
+-- CountUnitInGroup reports whether a unit belongs to a unit group, counting the group's
+-- base unit as a member: the base unit is implicit rather than a unit_group_unit row.
+-- name: CountUnitInGroup :one
+SELECT COUNT(*) FROM unit_group ug
+LEFT JOIN unit_group_unit ugu ON ugu.unit_group_id = ug.id AND ugu.unit_id = sqlc.arg('unit_id')
+WHERE ug.id = sqlc.arg('unit_group_id')
+AND (ug.base_unit_id = sqlc.arg('unit_id') OR ugu.id IS NOT NULL);

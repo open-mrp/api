@@ -449,6 +449,9 @@ service CoreService {
   // Returns inventory quantities (on-hand, reserved, ATP, short) for an item.
   rpc GetItemInventory(GetItemInventoryRequest) returns (GetItemInventoryResponse);
 
+  // GetItemLotDefault resolves the lot an item is made in.
+  rpc GetItemLotDefault(GetItemLotDefaultRequest) returns (GetItemLotDefaultResponse);
+
   // Returns production cost breakdown for an item.
   rpc GetItemCosts(GetItemCostsRequest) returns (GetItemCostsResponse);
 
@@ -590,6 +593,9 @@ service CoreService {
   rpc AnalyzeDemandForecast(AnalyzeDemandForecastRequest) returns (AnalyzeDemandForecastResponse);
   // Returns OEE analytics by department.
   rpc AnalyzeOee(AnalyzeOeeRequest) returns (AnalyzeOeeResponse);
+
+  // AnalyzeScheduleAttainment measures actual production against the plan that was live.
+  rpc AnalyzeScheduleAttainment(AnalyzeScheduleAttainmentRequest) returns (AnalyzeScheduleAttainmentResponse);
 
   rpc ListDeliveries(ListDeliveriesRequest) returns (ListDeliveriesResponse);
   rpc GetDelivery(GetDeliveryRequest) returns (GetDeliveryResponse);

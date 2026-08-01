@@ -7,6 +7,7 @@ import (
 
 	"github.com/shopspring/decimal"
 
+	"github.com/augno/api/services/core-service/internal/scheduling"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -558,8 +559,17 @@ type ProductLineRepo interface {
 	Update(ctx context.Context, params UpdateProductLineParams) (*ProductLineFull, *apierror.APIError)
 	Delete(ctx context.Context, params DeleteProductLineParams) *apierror.APIError
 	ExistsByName(ctx context.Context, accountID, name string, excludeID *string) (bool, *apierror.APIError)
-	GetUnitGroup(ctx context.Context, unitGroupID string, includes []string) (*ProductLineUnitGroup, *apierror.APIError)
+	GetUnitGroup(ctx context.Context, accountID, unitGroupID string, includes []string) (*ProductLineUnitGroup, *apierror.APIError)
 	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*ProductLineFull, *apierror.APIError)
+	// IsUnitInGroup reports whether a unit can be used by a line on this unit group. A lot counted in a unit the line cannot express is not a lot anybody can act on.
+	IsUnitInGroup(ctx context.Context, unitGroupID, unitID string) (bool, *apierror.APIError)
+
+	// Lot conventions. These back both the solver's resolution and the one-item lookup a person gets when adding a batch by hand.
+	GetItemLotOverride(ctx context.Context, accountID, itemID string) (float64, *apierror.APIError)
+	// GetProductLineLotForItem returns the convention of the line an item sells under, or nil for an intermediate item that is not itself sold.
+	GetProductLineLotForItem(ctx context.Context, accountID, itemID string) (*ProductLineLotDefault, *apierror.APIError)
+	// GetDownstreamProductLineLot returns the convention an intermediate item inherits from what it becomes, highest-demand line first.
+	GetDownstreamProductLineLot(ctx context.Context, accountID, itemID string) (*ProductLineLotDefault, *apierror.APIError)
 }
 
 type ItemCategoryRepo interface {
@@ -758,9 +768,27 @@ type AnalyticsRepo interface {
 	GetMaterialAnalytics(ctx context.Context, params AnalyzeMaterialsParams) ([]MaterialAnalyticsEntry, *apierror.APIError)
 	GetInventoryReceiptAnalytics(ctx context.Context, params AnalyzeInventoryReceiptsParams) ([]InventoryReceiptEntry, *apierror.APIError)
 	GetNewCustomerEntries(ctx context.Context, params GetNewCustomersAnalyticsParams) ([]NewCustomerEntry, *apierror.APIError)
-	GetDemandForecast(ctx context.Context, params GetDemandForecastParams) (*DemandForecastResult, *apierror.APIError)
-	GetOeeByDepartment(ctx context.Context, params AnalyzeOeeParams) ([]OeeDepartment, *apierror.APIError)
-	GetWeeksOfSales(ctx context.Context, params AnalyzeWeeksOfSalesParams) (*WeeksOfSalesResult, *apierror.APIError)
+	GetDemandForecastMonthlyDemand(ctx context.Context, params GetDemandForecastWindowParams) ([]DemandForecastMonthlyDemandRow, *apierror.APIError)
+	GetDemandForecastMonthlyRevenue(ctx context.Context, params GetDemandForecastWindowParams) ([]DemandForecastMonthlyRevenueRow, *apierror.APIError)
+	GetOeeDepartmentData(ctx context.Context, params GetOeeWindowParams) ([]OeeDepartmentDataRow, *apierror.APIError)
+	GetOeeEstimatedRuntime(ctx context.Context, params GetOeeWindowParams) ([]OeeEstimatedRuntimeRow, *apierror.APIError)
+	GetOeeDowntimeByDepartment(ctx context.Context, params GetOeeWindowParams) ([]OeeDowntimeRow, *apierror.APIError)
+	GetOeeScanIntervals(ctx context.Context, params GetOeeWindowParams) ([]OeeScanIntervalRow, *apierror.APIError)
+	GetOeeMachineDowntimeIntervals(ctx context.Context, params GetOeeWindowParams) ([]OeeMachineDowntimeIntervalRow, *apierror.APIError)
+	CountMachinesByDepartment(ctx context.Context, accountID string) ([]DepartmentMachineCountRow, *apierror.APIError)
+	GetSaleProductItemIDs(ctx context.Context, accountID string) ([]SaleProductItemRow, *apierror.APIError)
+	GetProductLineInfo(ctx context.Context, accountID string, productLineIDs []string) ([]ProductLineInfoRow, *apierror.APIError)
+	GetOrderQuantityByProductLine(ctx context.Context, params GetOrderQuantityByProductLineParams) (*OrderQuantityByProductLineRow, *apierror.APIError)
+}
+
+// MachineStatusRepo reads the raw pieces the floor-status view is assembled from.
+type MachineStatusRepo interface {
+	// ListMachinesForStatus returns every machine that can carry work, whether or not the plan has given it any, ordered by name then id.
+	ListMachinesForStatus(ctx context.Context, accountID string) ([]MachineForStatusRow, *apierror.APIError)
+	// ListOpenDowntimeForStatus returns the machines that are down right now — one row per machine, as the open-event guard enforces on write.
+	ListOpenDowntimeForStatus(ctx context.Context, accountID string) ([]OpenDowntimeForStatusRow, *apierror.APIError)
+	// ListScheduleLinesForStatus returns a published schedule's lines from the given week forward, with per-campaign scan progress, ordered by machine, week, sequence, id.
+	ListScheduleLinesForStatus(ctx context.Context, params ListScheduleLinesForStatusParams) ([]ScheduleLineForStatusRow, *apierror.APIError)
 }
 
 type MachineRepo interface {
@@ -771,6 +799,165 @@ type MachineRepo interface {
 	Update(ctx context.Context, params UpdateMachineParams) (*Machine, *apierror.APIError)
 	Delete(ctx context.Context, params DeleteMachineParams) *apierror.APIError
 	ExistsByName(ctx context.Context, accountID, name string, excludeID *string) (bool, *apierror.APIError)
+}
+
+type ProductionScheduleRepo interface {
+	NextVersion(ctx context.Context, accountID string) (int32, *apierror.APIError)
+	Create(ctx context.Context, schedule *ProductionSchedule) *apierror.APIError
+	CreateLines(ctx context.Context, accountID, scheduleID string, lines []*ProductionScheduleLine) *apierror.APIError
+	CreateItemPolicies(ctx context.Context, accountID, scheduleID string, policies []*ProductionScheduleItemPolicy) *apierror.APIError
+	// ReplaceFinishedPolicies rewrites a version's finished-goods targets — the per-SKU decomposition of the pooled greige buffers.
+	ReplaceFinishedPolicies(ctx context.Context, accountID, scheduleID string, policies []*ProductionScheduleFinishedPolicy) *apierror.APIError
+	ListFinishedPolicies(ctx context.Context, accountID, scheduleID string) ([]*ProductionScheduleFinishedPolicy, *apierror.APIError)
+	// DeleteItemPolicies clears a version's policy snapshot. A regenerate re-solves the same version, and the snapshot describes one solve rather than an accumulation.
+	DeleteItemPolicies(ctx context.Context, accountID, scheduleID string) *apierror.APIError
+	Get(ctx context.Context, params GetProductionScheduleParams) (*ProductionSchedule, *apierror.APIError)
+	// GetCurrent returns the published version covering the date, or nil when none does — an account with no live plan is a normal state, not an error.
+	GetCurrent(ctx context.Context, accountID string, asOf time.Time) (*ProductionSchedule, *apierror.APIError)
+	List(ctx context.Context, params ListProductionSchedulesParams) (*ListProductionSchedulesResult, *apierror.APIError)
+	ListLines(ctx context.Context, params ListProductionScheduleLinesParams) ([]*ProductionScheduleLine, *apierror.APIError)
+	ListItemPolicies(ctx context.Context, accountID, scheduleID string) ([]*ProductionScheduleItemPolicy, *apierror.APIError)
+	Delete(ctx context.Context, accountID, scheduleID string) *apierror.APIError
+
+	// Lifecycle: hand edits, the deviation log, and publish.
+	ListScheduleDeviationTypes(ctx context.Context) ([]*ScheduleDeviationType, *apierror.APIError)
+	GetLine(ctx context.Context, accountID, lineID string) (*ProductionScheduleLine, *apierror.APIError)
+	UpdateLine(ctx context.Context, params UpdateLineRepoParams) (*ProductionScheduleLine, *apierror.APIError)
+	DeleteLine(ctx context.Context, accountID, lineID string) *apierror.APIError
+	NextSequenceIndex(ctx context.Context, accountID, scheduleID string, weekIndex int32) (int32, *apierror.APIError)
+	CreateDeviation(ctx context.Context, id string, deviation *ProductionScheduleDeviation) *apierror.APIError
+	ListDeviations(ctx context.Context, params ListProductionScheduleDeviationsParams) (*ListProductionScheduleDeviationsResult, *apierror.APIError)
+	// SumFrozenLines returns the counts captured onto the version at publish. They are snapshotted rather than recomputed, so adherence keeps its original denominator.
+	SumFrozenLines(ctx context.Context, accountID, scheduleID string, frozenThrough time.Time) (*FrozenLineTotals, *apierror.APIError)
+	FreezeLines(ctx context.Context, accountID, scheduleID string, frozenThrough time.Time) *apierror.APIError
+	Publish(ctx context.Context, accountID, scheduleID string, frozenThrough time.Time, totals *FrozenLineTotals, publishedByID *string) *apierror.APIError
+	ListPublishedOverlapping(ctx context.Context, accountID, excludeID string, start, end time.Time) ([]string, *apierror.APIError)
+	Supersede(ctx context.Context, accountID, scheduleID, supersededByID string) *apierror.APIError
+	SetStatus(ctx context.Context, accountID, scheduleID, statusCode string) *apierror.APIError
+
+	// Releasing a week to the floor.
+	CountReleasedLinesForWeek(ctx context.Context, accountID, scheduleID string, weekIndex int32) (*WeekReleaseState, *apierror.APIError)
+	// UnreleaseLinesForRun returns a week to planned when the run holding its work is deleted, so it can be released again.
+	UnreleaseLinesForRun(ctx context.Context, accountID, productionRunID string) *apierror.APIError
+	// MarkLineReleased links a campaign to the run now carrying it. It is a no-op on a line that is already released, so a racing double release cannot re-point work.
+	MarkLineReleased(ctx context.Context, accountID, lineID, productionRunID string) *apierror.APIError
+
+	// Generation cadence.
+	ListGenerationCadences(ctx context.Context) ([]GenerationCadence, *apierror.APIError)
+	StampGenerationRun(ctx context.Context, accountID string, at time.Time) *apierror.APIError
+	ReapStalledGenerations(ctx context.Context, before time.Time) *apierror.APIError
+	CreateGeneratingSchedule(ctx context.Context, params CreateGeneratingScheduleParams) *apierror.APIError
+	FillGeneratedSchedule(ctx context.Context, schedule *ProductionSchedule) *apierror.APIError
+	// RefreshRegenerated re-stamps a draft with the metadata of the solve that just replaced its lines.
+	RefreshRegenerated(ctx context.Context, schedule *ProductionSchedule) *apierror.APIError
+	FailGeneration(ctx context.Context, accountID, scheduleID, reason string) *apierror.APIError
+
+	// Merchant-editable planning assumptions.
+	GetSettings(ctx context.Context, accountID string) (*ProductionScheduleSettings, *apierror.APIError)
+	UpsertSettings(ctx context.Context, settings *ProductionScheduleSettings) *apierror.APIError
+	ListResourceSettings(ctx context.Context, accountID string) ([]*ProductionScheduleResourceSetting, *apierror.APIError)
+	UpsertResourceSetting(ctx context.Context, id string, params UpsertResourceSettingParams) *apierror.APIError
+	DeleteResourceSetting(ctx context.Context, accountID, settingID string) *apierror.APIError
+
+	// Derived department work.
+	LoadStepGraph(ctx context.Context, accountID string) (*StepGraph, *apierror.APIError)
+	ReplaceDerivedLines(ctx context.Context, accountID, scheduleID string, lines []*ProductionScheduleDerivedLine) *apierror.APIError
+	ListDerivedLines(ctx context.Context, params ListDerivedLinesParams) ([]*ProductionScheduleDerivedLine, *apierror.APIError)
+}
+
+// ScheduleAttainmentRepo is the thin read surface behind schedule attainment. Each method is one query mapped to domain rows; choosing the baseline that was live for a week — and every ratio built on that choice — lives in the analytics service.
+type ScheduleAttainmentRepo interface {
+	// SelectAttainmentBaselines returns every published version whose horizon overlaps the window, newest publish first.
+	SelectAttainmentBaselines(ctx context.Context, params SelectAttainmentBaselinesParams) ([]AttainmentBaselineRow, *apierror.APIError)
+
+	// SumPlannedByWeek returns planned quantity and run hours per (week, machine, item) for one baseline version.
+	SumPlannedByWeek(ctx context.Context, params SumPlannedByWeekParams) ([]AttainmentPlannedRow, *apierror.APIError)
+
+	// SumActualsByWeek returns what was actually produced, bucketed to the Monday of the scan week so it lines up with a schedule line's week_start_date. An unscanned batch was never produced, so it is excluded.
+	SumActualsByWeek(ctx context.Context, params SumActualsByWeekParams) ([]AttainmentActualRow, *apierror.APIError)
+
+	// CountDeviationsForBaselines counts frozen-week changes per baseline version, which is the numerator of frozen adherence.
+	CountDeviationsForBaselines(ctx context.Context, accountID string, scheduleIDs []string) ([]AttainmentDeviationRow, *apierror.APIError)
+
+	// GetMachineLabels returns machine names for the given ids.
+	GetMachineLabels(ctx context.Context, accountID string, ids []string) ([]AttainmentLabelRow, *apierror.APIError)
+
+	// GetDepartmentLabels returns department names for the given ids.
+	GetDepartmentLabels(ctx context.Context, accountID string, ids []string) ([]AttainmentLabelRow, *apierror.APIError)
+
+	// GetItemLabels returns item SKUs for the given ids.
+	GetItemLabels(ctx context.Context, accountID string, ids []string) ([]AttainmentLabelRow, *apierror.APIError)
+}
+
+// ProductionScheduleInputRepo is the thin read surface behind solver-input assembly. Each method is one query mapped to domain or scheduling types; the assembly itself — genealogy attribution, demand pooling, settings defaulting — lives in the production schedule service.
+type ProductionScheduleInputRepo interface {
+	// GetConstraintMachines returns every planned machine in the constraint department, in name order.
+	GetConstraintMachines(ctx context.Context, accountID, departmentID string) ([]scheduling.Machine, *apierror.APIError)
+
+	// CountConstraintMachinesWithoutStep reports how many constraint machines cannot carry a plan downstream because they have no production step.
+	CountConstraintMachinesWithoutStep(ctx context.Context, accountID, departmentID string) (int, *apierror.APIError)
+
+	// GetConstraintBatchMeasurements returns one row per historical batch produced on the given machines inside the window.
+	GetConstraintBatchMeasurements(ctx context.Context, params GetConstraintBatchMeasurementsParams) ([]ConstraintBatchRow, *apierror.APIError)
+
+	// GetStepConsumptionItems returns the input items each production step consumes.
+	GetStepConsumptionItems(ctx context.Context, stepIDs []string) ([]StepConsumptionRow, *apierror.APIError)
+
+	// GetSeedBatchesForItems returns scanned batches for the given items, most recent first per item, to start the genealogy walk from.
+	GetSeedBatchesForItems(ctx context.Context, accountID string, itemIDs []string) ([]SeedBatchRow, *apierror.APIError)
+
+	// GetBatchFlowChildren returns the immediate downstream batches of the given parent batches.
+	GetBatchFlowChildren(ctx context.Context, accountID string, parentBatchIDs []string) ([]BatchFlowChildRow, *apierror.APIError)
+
+	// GetEchelonOnHand returns available inventory per item, net of allocations, normalized through the unit ratio.
+	GetEchelonOnHand(ctx context.Context, accountID string, itemIDs []string) (map[string]float64, *apierror.APIError)
+
+	// GetProductsForItems returns the sellable products carried by the given items.
+	GetProductsForItems(ctx context.Context, accountID string, itemIDs []string) ([]SellableProductRow, *apierror.APIError)
+
+	// GetPooledOrderDemandByProduct returns monthly sold quantity per product inside the window.
+	GetPooledOrderDemandByProduct(ctx context.Context, params GetPooledOrderDemandParams) ([]PooledMonthlyDemandRow, *apierror.APIError)
+
+	// GetActiveDemandOverrides returns the demand overrides in force at the planning date.
+	GetActiveDemandOverrides(ctx context.Context, accountID string, asOf time.Time) ([]scheduling.DemandOverride, *apierror.APIError)
+
+	// GetItemsForProductLines maps product lines to the items sold under them.
+	GetItemsForProductLines(ctx context.Context, accountID string, productLineIDs []string) ([]ProductLineItemRow, *apierror.APIError)
+
+	// ListProductLineLotDefaults returns every product line in the account that has a lot convention.
+	ListProductLineLotDefaults(ctx context.Context, accountID string) ([]scheduling.ProductLineLot, *apierror.APIError)
+
+	// ListItemProductLines maps items to the product line they sell under.
+	ListItemProductLines(ctx context.Context, accountID string, itemIDs []string) ([]ItemProductLineRow, *apierror.APIError)
+
+	// GetAccountScheduleSettings returns the account's stored planning assumptions as one raw row, or nil when the account has never configured scheduling.
+	GetAccountScheduleSettings(ctx context.Context, accountID string) (*ProductionScheduleSettingsRow, *apierror.APIError)
+
+	// ListScheduleItemSettings returns the account's per-item planning overrides.
+	ListScheduleItemSettings(ctx context.Context, accountID string) ([]ProductionScheduleItemSetting, *apierror.APIError)
+}
+
+type MachineDowntimeRepo interface {
+	ListReasons(ctx context.Context) ([]*MachineDowntimeReason, *apierror.APIError)
+	GetReason(ctx context.Context, code string) (*MachineDowntimeReason, *apierror.APIError)
+	List(ctx context.Context, params ListMachineDowntimeEventsParams) (*ListMachineDowntimeEventsResult, *apierror.APIError)
+	Get(ctx context.Context, params GetMachineDowntimeEventParams) (*MachineDowntimeEvent, *apierror.APIError)
+	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*MachineDowntimeEvent, *apierror.APIError)
+	// GetOpenForMachine returns the machine's currently-open event, or nil when the machine is running. Used to reject a second concurrent open event.
+	GetOpenForMachine(ctx context.Context, accountID, machineID string) (*MachineDowntimeEvent, *apierror.APIError)
+	Create(ctx context.Context, id string, event *MachineDowntimeEvent) (*MachineDowntimeEvent, *apierror.APIError)
+	Update(ctx context.Context, event *MachineDowntimeEvent) (*MachineDowntimeEvent, *apierror.APIError)
+	Delete(ctx context.Context, params DeleteMachineDowntimeEventParams) *apierror.APIError
+}
+
+type DemandOverrideRepo interface {
+	ListTypes(ctx context.Context) ([]*DemandOverrideType, *apierror.APIError)
+	List(ctx context.Context, params ListDemandOverridesParams) (*ListDemandOverridesResult, *apierror.APIError)
+	Get(ctx context.Context, params GetDemandOverrideParams) (*DemandOverride, *apierror.APIError)
+	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*DemandOverride, *apierror.APIError)
+	Create(ctx context.Context, id string, override *DemandOverride) (*DemandOverride, *apierror.APIError)
+	Update(ctx context.Context, params UpdateDemandOverrideParams) (*DemandOverride, *apierror.APIError)
+	Delete(ctx context.Context, params DeleteDemandOverrideParams) *apierror.APIError
 }
 
 type DepartmentRepo interface {

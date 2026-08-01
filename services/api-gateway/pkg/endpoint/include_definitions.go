@@ -212,6 +212,13 @@ func init() {
 	})
 
 	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeItemLotDefault,
+		Fields: []IncludeFieldDef{
+			{Key: "unit", ObjectType: constants.ObjectTypeUnit},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypeInventoryItem,
 		Fields: []IncludeFieldDef{
 			{Key: "quantity", ObjectType: constants.ObjectTypeQuantity},
@@ -450,6 +457,23 @@ func init() {
 	})
 
 	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeMachineDowntimeEvent,
+		Fields: []IncludeFieldDef{
+			{Key: "machine", ObjectType: constants.ObjectTypeMachine},
+			{Key: "department", ObjectType: constants.ObjectTypeDepartment},
+			{Key: "item", ObjectType: constants.ObjectTypeItem},
+			{Key: "reported_by", ObjectType: constants.ObjectTypeActor},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeDemandOverride,
+		Fields: []IncludeFieldDef{
+			{Key: "scope", ObjectType: constants.ObjectTypeEntity},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypePick,
 		Fields: []IncludeFieldDef{
 			{Key: "sales_order", ObjectType: constants.ObjectTypeSalesOrder},
@@ -478,6 +502,9 @@ func init() {
 		Fields: []IncludeFieldDef{
 			{Key: "owner", ObjectType: constants.ObjectTypeOwner},
 			{Key: "unit_group", ObjectType: constants.ObjectTypeUnitGroup},
+			{Key: "default_lot", ObjectType: constants.ObjectTypeQuantity, Children: []IncludeFieldDef{
+				{Key: "unit", ObjectType: constants.ObjectTypeUnit},
+			}},
 		},
 	})
 

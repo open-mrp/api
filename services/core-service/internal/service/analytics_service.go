@@ -3,10 +3,12 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/shared/appctx"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/tracing"
 )
@@ -19,7 +21,10 @@ type analyticsSvcImpl struct {
 }
 
 type AnalyticsSvcConfig struct {
-	Repos           domain.RepoFactory
+	// Repos (required) is the repository factory.
+	Repos domain.RepoFactory
+
+	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
 }
 
@@ -284,6 +289,20 @@ func (s *analyticsSvcImpl) AnalyzeMaterials(ctx context.Context, params domain.A
 	return s.repos.NewAnalyticsRepo().GetMaterialAnalytics(ctx, params)
 }
 
+// checkInventoryReceiptAnalyticsReadPermission checks the appropriate read permission based on the target context: internal actors targeting a customer or supplier account need the relationship's read permission rather than the resource domain's.
+func checkInventoryReceiptAnalyticsReadPermission(identity *types.Identity) *apierror.APIError {
+	if !identity.IsInternalActor() {
+		return nil
+	}
+	if identity.IsTargetCustomerAccount() {
+		return identity.CheckHasPermission(types.PermissionDomainCustomers, types.ActionRead)
+	}
+	if identity.IsTargetSupplierAccount() {
+		return identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionRead)
+	}
+	return identity.CheckHasPermission(types.PermissionDomainMaterials, types.ActionRead)
+}
+
 func (s *analyticsSvcImpl) AnalyzeInventoryReceipts(ctx context.Context, params domain.AnalyzeInventoryReceiptsParams) ([]domain.InventoryReceiptEntry, *apierror.APIError) {
 	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.analyze_inventory_receipts")
 	defer span.End()
@@ -298,7 +317,7 @@ func (s *analyticsSvcImpl) AnalyzeInventoryReceipts(ctx context.Context, params 
 	}
 
 	if identity.IsInternalActor() {
-		if apiErr := identity.CheckHasPermission(types.PermissionDomainMaterials, types.ActionRead); apiErr != nil {
+		if apiErr := checkInventoryReceiptAnalyticsReadPermission(identity); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 
@@ -348,6 +367,7 @@ func (s *analyticsSvcImpl) GetNewCustomersAnalytics(ctx context.Context, params 
 	return s.repos.NewAnalyticsRepo().GetNewCustomerEntries(ctx, params)
 }
 
+// GetDemandForecast returns per-item demand, revenue and sales history with seasonal-EMA forecasts and confidence bands.
 func (s *analyticsSvcImpl) GetDemandForecast(ctx context.Context, params domain.GetDemandForecastParams) (*domain.DemandForecastResult, *apierror.APIError) {
 	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.get_demand_forecast")
 	defer span.End()
@@ -366,9 +386,10 @@ func (s *analyticsSvcImpl) GetDemandForecast(ctx context.Context, params domain.
 
 	params.AccountID = identity.Target.AccountID
 
-	return s.repos.NewAnalyticsRepo().GetDemandForecast(ctx, params)
+	return s.buildDemandForecast(ctx, params)
 }
 
+// AnalyzeOee computes Availability x Performance x Quality per department from planned time, logged downtime and batch-ticket scan intervals.
 func (s *analyticsSvcImpl) AnalyzeOee(ctx context.Context, params domain.AnalyzeOeeParams) ([]domain.OeeDepartment, *apierror.APIError) {
 	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.analyze_oee")
 	defer span.End()
@@ -381,15 +402,16 @@ func (s *analyticsSvcImpl) AnalyzeOee(ctx context.Context, params domain.Analyze
 	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := identity.CheckHasPermission(types.PermissionDomainInvoices, types.ActionRead); apiErr != nil {
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainMachineDowntime, types.ActionRead); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
 	params.AccountID = identity.Target.AccountID
 
-	return s.repos.NewAnalyticsRepo().GetOeeByDepartment(ctx, params)
+	return s.buildOeeByDepartment(ctx, params)
 }
 
+// AnalyzeWeeksOfSales returns on-hand inventory expressed as weeks of average sales per product line.
 func (s *analyticsSvcImpl) AnalyzeWeeksOfSales(ctx context.Context, params domain.AnalyzeWeeksOfSalesParams) (*domain.WeeksOfSalesResult, *apierror.APIError) {
 	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.analyze_weeks_of_sales")
 	defer span.End()
@@ -408,5 +430,139 @@ func (s *analyticsSvcImpl) AnalyzeWeeksOfSales(ctx context.Context, params domai
 
 	params.AccountID = identity.Target.AccountID
 
-	return s.repos.NewAnalyticsRepo().GetWeeksOfSales(ctx, params)
+	repo := s.repos.NewAnalyticsRepo()
+
+	// 1. Get sale-type product item IDs and their product line IDs.
+	productItems, apiErr := repo.GetSaleProductItemIDs(ctx, params.AccountID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if len(productItems) == 0 {
+		return &domain.WeeksOfSalesResult{Items: nil, Count: 0}, nil
+	}
+
+	// 2. Build maps: productLine -> []itemID, collect unique product line IDs.
+	itemsByProductLine := make(map[string][]string)
+	uniquePLIDs := make(map[string]bool)
+	var allItemIDs []string
+	for _, pi := range productItems {
+		if pi.ProductLineID != nil {
+			plID := *pi.ProductLineID
+			itemsByProductLine[plID] = append(itemsByProductLine[plID], pi.ItemID)
+			uniquePLIDs[plID] = true
+		}
+		allItemIDs = append(allItemIDs, pi.ItemID)
+	}
+
+	plIDs := make([]string, 0, len(uniquePLIDs))
+	for plID := range uniquePLIDs {
+		plIDs = append(plIDs, plID)
+	}
+	if len(plIDs) == 0 {
+		return &domain.WeeksOfSalesResult{Items: nil, Count: 0}, nil
+	}
+
+	// 3. Get product line info (names).
+	plInfoRows, apiErr := repo.GetProductLineInfo(ctx, params.AccountID, plIDs)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	// 4. Get on-hand inventory for all items.
+	inventoryRows, apiErr := s.repos.NewInventoryQueryRepo().FetchOnHandInventoryBulk(ctx, allItemIDs, params.AccountID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	// Build inventory map: itemID -> onHandQuantity.
+	invMap := make(map[string]float64)
+	for _, row := range inventoryRows {
+		invMap[row.ItemID] = row.OnHandQuantity
+	}
+
+	// 5. For each product line, compute metrics.
+	weeks := params.PeriodInWeeks
+	if weeks < 1 {
+		weeks = 4
+	}
+	endDate := time.Now()
+	startDate := endDate.Add(-time.Duration(weeks) * 7 * 24 * time.Hour)
+
+	var items []domain.WeeksOfSalesItem
+	for _, plInfo := range plInfoRows {
+		// Get order quantity for this product line in the period.
+		orderRow, apiErr := repo.GetOrderQuantityByProductLine(ctx, domain.GetOrderQuantityByProductLineParams{
+			AccountID:     params.AccountID,
+			ProductLineID: plInfo.ID,
+			StartDate:     startDate,
+			EndDate:       endDate,
+		})
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+
+		totalDemand := orderRow.TotalQuantity
+		unitAbbrev := orderRow.UnitAbbreviation
+		unitType := orderRow.UnitType
+
+		// Sum on-hand for items in this product line.
+		itemIDsForLine := itemsByProductLine[plInfo.ID]
+		var onHand float64
+		for _, iid := range itemIDsForLine {
+			onHand += invMap[iid]
+		}
+
+		avgSales := totalDemand / float64(weeks)
+		var wos float64
+		if avgSales > 0 {
+			wos = onHand / avgSales
+		}
+
+		items = append(items, domain.WeeksOfSalesItem{
+			ProductLineID:                        plInfo.ID,
+			ProductLineName:                      plInfo.Name,
+			QuantityOnHand:                       onHand,
+			QuantityOnHandUnitAbbreviation:       unitAbbrev,
+			QuantityOnHandUnitType:               unitType,
+			AverageSalesQuantity:                 avgSales,
+			AverageSalesQuantityUnitAbbreviation: unitAbbrev,
+			AverageSalesQuantityUnitType:         unitType,
+			WeeksOfSales:                         wos,
+		})
+	}
+
+	return &domain.WeeksOfSalesResult{
+		Items: items,
+		Count: int64(len(items)),
+	}, nil
+}
+
+// AnalyzeScheduleAttainment measures actual production against the plan that was live at the time.
+func (s *analyticsSvcImpl) AnalyzeScheduleAttainment(ctx context.Context, params domain.AnalyzeScheduleAttainmentParams) (*domain.ScheduleAttainmentResult, *apierror.APIError) {
+	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.analyze_schedule_attainment")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	// Attainment is a property of the schedule, so it is gated on the schedule domain rather than on whatever analytics happens to use elsewhere.
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainProductionSchedules, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if params.EndDate.Before(params.StartDate) {
+		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("The period must end on or after it starts.", "end_date"))
+	}
+
+	params.AccountID = identity.Target.AccountID
+	if params.GroupBy == "" {
+		params.GroupBy = string(constants.AttainmentGroupByWeek)
+	}
+
+	return s.buildScheduleAttainment(ctx, params)
 }

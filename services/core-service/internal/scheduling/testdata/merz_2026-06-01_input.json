@@ -1,0 +1,695 @@
+{
+  "planningAsOf": "2026-06-01T00:00:00.000Z",
+  "settings": {
+    "horizonWeeks": 13,
+    "shiftsPerDay": 2,
+    "hoursPerShift": 7,
+    "workDaysPerWeek": 5,
+    "weeksPerYear": 52,
+    "capacityHeadroomPct": 0.9,
+    "defaultLotUnits": 60,
+    "changeoverAvgMinutes": 30,
+    "changeoverMinMinutes": 15,
+    "changeoverMaxMinutes": 90,
+    "changeoverLaborRate": 20,
+    "holdingRatePct": 0.25,
+    "serviceLevelZ": 1.645,
+    "finishLeadTimeWeeks": 6,
+    "defaultConstraintLeadTimeWeeks": 1.3,
+    "maxWeeksSupply": 12,
+    "growthMultiplier": 1,
+    "demandBasis": "trailing_12"
+  },
+  "machines": [
+    {
+      "id": "51",
+      "name": "51"
+    },
+    {
+      "id": "52",
+      "name": "52"
+    }
+  ],
+  "items": [
+    {
+      "itemId": "c6f195e9-8cb2-48f0-aeb5-31225e882cb7",
+      "sku": "Greige 09202",
+      "annualDemand": 3355,
+      "secondsPerUnit": 554,
+      "unitCost": 3.324450197222222,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 1.713953524611749,
+      "sigmaWeeklyPooled": 84.01223166854973,
+      "sigmaDownstreamSum": 118.33408141273372,
+      "onHandEchelon": 483,
+      "eligibleMachineIds": [
+        "52"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "063dba49-54f1-4a12-a4b1-3ea231dd5f85",
+      "sku": "Greige 09203",
+      "annualDemand": 3179,
+      "secondsPerUnit": 554,
+      "unitCost": 3.324450197222222,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 1.4700681721981723,
+      "sigmaWeeklyPooled": 87.38740507895612,
+      "sigmaDownstreamSum": 123.52429814666392,
+      "onHandEchelon": 816.5,
+      "eligibleMachineIds": [
+        "51"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "907583f4-4a4a-4c3b-802f-13de7fe74a2a",
+      "sku": "Greige 09204",
+      "annualDemand": 2302.5,
+      "secondsPerUnit": 554,
+      "unitCost": 3.324450197222222,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 1.4139182362180982,
+      "sigmaWeeklyPooled": 76.84126484199413,
+      "sigmaDownstreamSum": 108.61066900604881,
+      "onHandEchelon": 445.5,
+      "eligibleMachineIds": [
+        "51"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "28020b11-8339-47a9-9593-a750134bd08b",
+      "sku": "Greige 09201",
+      "annualDemand": 1939,
+      "secondsPerUnit": 554,
+      "unitCost": 3.324450197222222,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 1.8915729948507187,
+      "sigmaWeeklyPooled": 58.13051237114179,
+      "sigmaDownstreamSum": 82.36519341761282,
+      "onHandEchelon": 244,
+      "eligibleMachineIds": [
+        "52"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "515b2678-9e13-4a59-a44f-569c6e2d7c0b",
+      "sku": "Greige 9202",
+      "annualDemand": 938,
+      "secondsPerUnit": 554,
+      "unitCost": 3.478809622222223,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 1.6361483819638967,
+      "sigmaWeeklyPooled": 29.756764524474686,
+      "sigmaDownstreamSum": 39.9546688424169,
+      "onHandEchelon": 671,
+      "eligibleMachineIds": [
+        "52"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "4f39f04a-0dde-4d73-b4af-ff6f8e64b1f0",
+      "sku": "Greige 9203",
+      "annualDemand": 926,
+      "secondsPerUnit": 554,
+      "unitCost": 3.478809622222222,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 1.378625370094797,
+      "sigmaWeeklyPooled": 38.37863442619579,
+      "sigmaDownstreamSum": 52.398943704205706,
+      "onHandEchelon": 238,
+      "eligibleMachineIds": [
+        "51",
+        "52"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "f2d5d359-0bf9-4972-9a72-f9f2af0ab2f5",
+      "sku": "Greige 9201",
+      "annualDemand": 733,
+      "secondsPerUnit": 554,
+      "unitCost": 3.478809622222222,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 1.4950798392030422,
+      "sigmaWeeklyPooled": 25.731568867125773,
+      "sigmaDownstreamSum": 33.897033146177364,
+      "onHandEchelon": 211,
+      "eligibleMachineIds": [
+        "52"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "a7d54ce5-5d88-4636-b349-4d0c41f4f768",
+      "sku": "Greige 9102",
+      "annualDemand": 836,
+      "secondsPerUnit": 484,
+      "unitCost": 2.599759944444444,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 0.9921520216600529,
+      "sigmaWeeklyPooled": 20.83797384215063,
+      "sigmaDownstreamSum": 30.910164125660852,
+      "onHandEchelon": 268,
+      "eligibleMachineIds": [
+        "52"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "e192b3e8-979f-49be-a60f-0b2b881b8ff9",
+      "sku": "Greige 9204",
+      "annualDemand": 632,
+      "secondsPerUnit": 554,
+      "unitCost": 3.478809622222222,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 1.3397602988215487,
+      "sigmaWeeklyPooled": 26.486109303066506,
+      "sigmaDownstreamSum": 37.40616276839171,
+      "onHandEchelon": 387.5,
+      "eligibleMachineIds": [
+        "51"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "265e602b-81ff-420d-801a-86eebd1fee8e",
+      "sku": "Greige 09102",
+      "annualDemand": 782.5,
+      "secondsPerUnit": 416,
+      "unitCost": 2.299739430555555,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 2.506916727716728,
+      "sigmaWeeklyPooled": 22.182363608163023,
+      "sigmaDownstreamSum": 32.33523980396426,
+      "onHandEchelon": 216,
+      "eligibleMachineIds": [
+        "51",
+        "52"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "9988cdfc-6f4e-41d2-91cf-28bc3c67a09b",
+      "sku": "Greige 09103",
+      "annualDemand": 757,
+      "secondsPerUnit": 416,
+      "unitCost": 2.299739430555555,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 0.5215063673941799,
+      "sigmaWeeklyPooled": 22.815503562209685,
+      "sigmaDownstreamSum": 32.682829523869984,
+      "onHandEchelon": 205,
+      "eligibleMachineIds": [
+        "51",
+        "52"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "f215b8be-ceda-4e10-8ccb-b8754a4d3d08",
+      "sku": "Greige 09104",
+      "annualDemand": 650.5,
+      "secondsPerUnit": 416,
+      "unitCost": 2.299739430555555,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 2.202104400553151,
+      "sigmaWeeklyPooled": 23.932186756271623,
+      "sigmaDownstreamSum": 33.83276068758941,
+      "onHandEchelon": 329,
+      "eligibleMachineIds": [
+        "51"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "82dd3387-686b-4aca-ba86-067462ed908f",
+      "sku": "Greige 9103",
+      "annualDemand": 542,
+      "secondsPerUnit": 484,
+      "unitCost": 2.599759944444444,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 0.8233821189574313,
+      "sigmaWeeklyPooled": 17.245730190114013,
+      "sigmaDownstreamSum": 25.139573436550382,
+      "onHandEchelon": 274,
+      "eligibleMachineIds": [
+        "51"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "8d3f9d9a-f9be-4cfc-98f5-fdbdd54e9f2d",
+      "sku": "Greige 9104",
+      "annualDemand": 469,
+      "secondsPerUnit": 484,
+      "unitCost": 2.599759944444444,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 0.5590170245181406,
+      "sigmaWeeklyPooled": 15.413899140492868,
+      "sigmaDownstreamSum": 21.878528812520585,
+      "onHandEchelon": 303,
+      "eligibleMachineIds": [
+        "51"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "10983fc8-8d79-446d-bcc7-fb0b83033d35",
+      "sku": "Greige 9101",
+      "annualDemand": 397,
+      "secondsPerUnit": 484,
+      "unitCost": 2.599759944444444,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 1.5222013355278978,
+      "sigmaWeeklyPooled": 12.87164308875117,
+      "sigmaDownstreamSum": 18.786886689457678,
+      "onHandEchelon": 349,
+      "eligibleMachineIds": [
+        "52"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "b5bcf238-f930-46e5-bedf-ac133371f1f5",
+      "sku": "Greige 5503",
+      "annualDemand": 286,
+      "secondsPerUnit": 484,
+      "unitCost": 2.823988036111111,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 0.6392188695987656,
+      "sigmaWeeklyPooled": 4.039144131457222,
+      "sigmaDownstreamSum": 5.709526648886186,
+      "onHandEchelon": 91,
+      "eligibleMachineIds": [
+        "51"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "4c724492-93a9-48e5-bb67-011332fce121",
+      "sku": "Greige 5502",
+      "annualDemand": 285,
+      "secondsPerUnit": 484,
+      "unitCost": 2.823988036111111,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 1.6347757055224867,
+      "sigmaWeeklyPooled": 3.5555039574733134,
+      "sigmaDownstreamSum": 4.97360790892291,
+      "onHandEchelon": 54,
+      "eligibleMachineIds": [
+        "52"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "923bde4f-8966-47c9-a5e5-52e4cc5e15cf",
+      "sku": "Greige 09101",
+      "annualDemand": 307,
+      "secondsPerUnit": 416,
+      "unitCost": 2.299739430555555,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 2.2218877924933866,
+      "sigmaWeeklyPooled": 12.960334861425444,
+      "sigmaDownstreamSum": 14.46061732216861,
+      "onHandEchelon": 334,
+      "eligibleMachineIds": [
+        "52"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "4b2866bf-b3df-4d5a-b131-6ab378023720",
+      "sku": "Greige 6102",
+      "annualDemand": 249,
+      "secondsPerUnit": 498,
+      "unitCost": 2.603541066666666,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 1.3265750179811509,
+      "sigmaWeeklyPooled": 3.9336721042527456,
+      "sigmaDownstreamSum": 5.561371527265644,
+      "onHandEchelon": 135,
+      "eligibleMachineIds": [
+        "52"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "158ab458-9e27-48fa-a0fa-6108c5e71e74",
+      "sku": "Greige 6103",
+      "annualDemand": 105,
+      "secondsPerUnit": 498,
+      "unitCost": 2.603541066666667,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 0.6190810499338625,
+      "sigmaWeeklyPooled": 3.7386190936323973,
+      "sigmaDownstreamSum": 3.7386190936323973,
+      "onHandEchelon": 53,
+      "eligibleMachineIds": [
+        "51"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "eb5380b4-3e12-42da-b07e-277af7a9b7ce",
+      "sku": "Greige 6101",
+      "annualDemand": 98,
+      "secondsPerUnit": 498,
+      "unitCost": 2.603541066666667,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 1.757111829943783,
+      "sigmaWeeklyPooled": 1.9947483497977831,
+      "sigmaDownstreamSum": 2.713740517269029,
+      "onHandEchelon": 128,
+      "eligibleMachineIds": [
+        "52"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "191d8f12-88bc-4bf2-b3f9-9b2255f42623",
+      "sku": "Greige 05502",
+      "annualDemand": 78,
+      "secondsPerUnit": 456,
+      "unitCost": 2.560864583333333,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 3.138751304563492,
+      "sigmaWeeklyPooled": 1.6193756890782394,
+      "sigmaDownstreamSum": 1.6193756890782394,
+      "onHandEchelon": 56,
+      "eligibleMachineIds": [
+        "52"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "3f43901c-31da-44de-987f-218ff9ddc6e6",
+      "sku": "Greige 05503",
+      "annualDemand": 71,
+      "secondsPerUnit": 456,
+      "unitCost": 2.560864583333333,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 0.9490942022156084,
+      "sigmaWeeklyPooled": 1.9908005207169084,
+      "sigmaDownstreamSum": 1.9908005207169084,
+      "onHandEchelon": 9,
+      "eligibleMachineIds": [
+        "51"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "d441fae4-fb1c-4d76-8ef6-30672ac37da7",
+      "sku": "Greige 5602",
+      "annualDemand": 55,
+      "secondsPerUnit": 554,
+      "unitCost": 3.519756180555556,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 0.9699480663029101,
+      "sigmaWeeklyPooled": 2.2744399141496183,
+      "sigmaDownstreamSum": 3.09070515739693,
+      "onHandEchelon": 75,
+      "eligibleMachineIds": [
+        "52"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "d0de9873-1bc5-4ff0-bb58-42fb66e98b5d",
+      "sku": "Greige 06103",
+      "annualDemand": 60,
+      "secondsPerUnit": 474,
+      "unitCost": 2.488508541666667,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 5.474501994460979,
+      "sigmaWeeklyPooled": 2.2709783480567705,
+      "sigmaDownstreamSum": 2.8945040737009142,
+      "onHandEchelon": 130,
+      "eligibleMachineIds": [
+        "51"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "a073982e-258b-48a3-9355-fcc790f1b2ca",
+      "sku": "Greige 5504",
+      "annualDemand": 51,
+      "secondsPerUnit": 484,
+      "unitCost": 2.823988036111111,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 0.8467718661816578,
+      "sigmaWeeklyPooled": 1.4209964001470128,
+      "sigmaDownstreamSum": 1.4209964001470128,
+      "onHandEchelon": 6,
+      "eligibleMachineIds": [
+        "51"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "86f418d4-4c0c-4a7c-b41e-0583f4468ec6",
+      "sku": "Greige 06102",
+      "annualDemand": 49,
+      "secondsPerUnit": 474,
+      "unitCost": 2.488508541666667,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 1.0428237797619047,
+      "sigmaWeeklyPooled": 1.3503431317359946,
+      "sigmaDownstreamSum": 1.3503431317359946,
+      "onHandEchelon": 47,
+      "eligibleMachineIds": [
+        "52"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "02a7cf71-b6ce-4494-aeb1-109d93930f02",
+      "sku": "Greige 8102",
+      "annualDemand": 47,
+      "secondsPerUnit": 484,
+      "unitCost": 3.017537152777777,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 2.566318366815476,
+      "sigmaWeeklyPooled": 0.9264942570742727,
+      "sigmaDownstreamSum": 0.9264942570742727,
+      "onHandEchelon": 118,
+      "eligibleMachineIds": [
+        "51",
+        "52"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "6e4b5757-cfc3-41f8-ad3e-ef7c6d6d9498",
+      "sku": "Greige 6104",
+      "annualDemand": 43,
+      "secondsPerUnit": 498,
+      "unitCost": 2.603541066666667,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 0.6889217410714286,
+      "sigmaWeeklyPooled": 1.4405467105147356,
+      "sigmaDownstreamSum": 1.4405467105147356,
+      "onHandEchelon": 22,
+      "eligibleMachineIds": [
+        "51"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "5c24a731-f3c4-4c90-97b3-d56c2e81d223",
+      "sku": "Greige 6202",
+      "annualDemand": 40,
+      "secondsPerUnit": 532,
+      "unitCost": 3.498331844444445,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 1.8803285491071426,
+      "sigmaWeeklyPooled": 1.5509978741424522,
+      "sigmaDownstreamSum": 1.5509978741424522,
+      "onHandEchelon": 28,
+      "eligibleMachineIds": [
+        "52"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "1c37659c-a8b2-46a9-9f7d-0ce02d1e72ed",
+      "sku": "Greige 6203",
+      "annualDemand": 40,
+      "secondsPerUnit": 532,
+      "unitCost": 3.498331844444445,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 0.910494925595238,
+      "sigmaWeeklyPooled": 1.3008872711759818,
+      "sigmaDownstreamSum": 1.3008872711759818,
+      "onHandEchelon": 24,
+      "eligibleMachineIds": [
+        "51"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "7bff2d2a-646d-485d-84b4-b046f25c6502",
+      "sku": "Greige 8101",
+      "annualDemand": 38,
+      "secondsPerUnit": 484,
+      "unitCost": 3.017537152777778,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 0.0004889318783068782,
+      "sigmaWeeklyPooled": 1.243163121016122,
+      "sigmaDownstreamSum": 1.243163121016122,
+      "onHandEchelon": 50,
+      "eligibleMachineIds": [
+        "52"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "6d0808a4-fc66-4457-825a-d34e86ec12a6",
+      "sku": "Greige 8112",
+      "annualDemand": 23,
+      "secondsPerUnit": 484,
+      "unitCost": 3.017537152777777,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 0.0010081068121693122,
+      "sigmaWeeklyPooled": 1.1488820957478927,
+      "sigmaDownstreamSum": 1.1488820957478927,
+      "onHandEchelon": 53,
+      "eligibleMachineIds": [
+        "52"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "08013d9b-8693-4a4b-b182-98643722f35b",
+      "sku": "Greige 08102",
+      "annualDemand": 24,
+      "secondsPerUnit": 456,
+      "unitCost": 2.958192708333333,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 6.847422477678571,
+      "sigmaWeeklyPooled": 0.7664284620319025,
+      "sigmaDownstreamSum": 0.7664284620319025,
+      "onHandEchelon": 127,
+      "eligibleMachineIds": [
+        "52"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "6922c3a3-cde0-4211-b0d4-a901f69c7e0f",
+      "sku": "Greige 08101",
+      "annualDemand": 18,
+      "secondsPerUnit": 456,
+      "unitCost": 2.958192708333334,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 6.847430663855819,
+      "sigmaWeeklyPooled": 0.5222329678670935,
+      "sigmaDownstreamSum": 0.5222329678670935,
+      "onHandEchelon": 127,
+      "eligibleMachineIds": [
+        "52"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "7f8c7d64-5776-49c2-87e2-e1c07387ab00",
+      "sku": "Greige 08104",
+      "annualDemand": 2,
+      "secondsPerUnit": 456,
+      "unitCost": 2.958192708333333,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 6.847405531580688,
+      "sigmaWeeklyPooled": 0.18698939800169143,
+      "sigmaDownstreamSum": 0.18698939800169143,
+      "onHandEchelon": 152,
+      "eligibleMachineIds": [
+        "52"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "a82facd0-7bf6-4960-830a-b0a7d54f648c",
+      "sku": "Greige 08114",
+      "annualDemand": 0,
+      "secondsPerUnit": 456,
+      "unitCost": 2.958192708333333,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 6.847367853835978,
+      "sigmaWeeklyPooled": 0,
+      "sigmaDownstreamSum": 0,
+      "onHandEchelon": 120,
+      "eligibleMachineIds": [
+        "52"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "11e5d4dd-60d9-49ce-b181-5d95969fbb2b",
+      "sku": "Greige 08113",
+      "annualDemand": 0,
+      "secondsPerUnit": 456,
+      "unitCost": 2.958192708333333,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 6.8473799239418,
+      "sigmaWeeklyPooled": 0,
+      "sigmaDownstreamSum": 0,
+      "onHandEchelon": 120,
+      "eligibleMachineIds": [
+        "52"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "acf7d509-8a03-48b0-9b38-b070b6822967",
+      "sku": "Greige 08112",
+      "annualDemand": 0,
+      "secondsPerUnit": 456,
+      "unitCost": 2.958192708333333,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 6.8473883953373,
+      "sigmaWeeklyPooled": 0,
+      "sigmaDownstreamSum": 0,
+      "onHandEchelon": 120,
+      "eligibleMachineIds": [
+        "52"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "3b5ace39-0689-4fbe-8bad-26d4f84d0e4a",
+      "sku": "Greige 08111",
+      "annualDemand": 0,
+      "secondsPerUnit": 456,
+      "unitCost": 2.958192708333333,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 6.847397411541006,
+      "sigmaWeeklyPooled": 0,
+      "sigmaDownstreamSum": 0,
+      "onHandEchelon": 120,
+      "eligibleMachineIds": [
+        "52"
+      ],
+      "lotUnits": 60
+    },
+    {
+      "itemId": "1ba2843e-4bdd-4cb2-9294-84f4dc76dc4e",
+      "sku": "Greige 08103",
+      "annualDemand": 0,
+      "secondsPerUnit": 456,
+      "unitCost": 2.958192708333333,
+      "changeoverRate": 25.12,
+      "measuredLeadTimeWeeks": 6.847413677248677,
+      "sigmaWeeklyPooled": 0,
+      "sigmaDownstreamSum": 0,
+      "onHandEchelon": 120,
+      "eligibleMachineIds": [
+        "52"
+      ],
+      "lotUnits": 60
+    }
+  ]
+}

@@ -1,0 +1,624 @@
+{
+  "policies": [
+    {
+      "sku": "Greige 09202",
+      "weeklyDemand": 64.51923076923077,
+      "eoqUnits": 318.438932824722,
+      "setupCost": 12.56,
+      "holdingCost": 0.8311125493055554,
+      "constraintLeadTimeWeeks": 1.713953524611749,
+      "safetyStockPrimary": 180.9289006280407,
+      "safetyStockDownstream": 476.81660516635446,
+      "reorderPoint": 1155.4438533919417,
+      "abcClass": "A"
+    },
+    {
+      "sku": "Greige 09203",
+      "weeklyDemand": 61.13461538461539,
+      "eoqUnits": 309.9739242774067,
+      "setupCost": 12.56,
+      "holdingCost": 0.8311125493055554,
+      "constraintLeadTimeWeeks": 1.4700681721981723,
+      "safetyStockPrimary": 174.29441987492217,
+      "safetyStockDownstream": 497.7301196298545,
+      "reorderPoint": 1128.7042841089687,
+      "abcClass": "A"
+    },
+    {
+      "sku": "Greige 09204",
+      "weeklyDemand": 44.27884615384615,
+      "eoqUnits": 263.8029920453394,
+      "setupCost": 12.56,
+      "holdingCost": 0.8311125493055554,
+      "constraintLeadTimeWeeks": 1.4139182362180982,
+      "safetyStockPrimary": 150.304697943352,
+      "safetyStockDownstream": 437.63698388533766,
+      "reorderPoint": 916.2214268073853,
+      "abcClass": "A"
+    },
+    {
+      "sku": "Greige 09201",
+      "weeklyDemand": 37.28846153846154,
+      "eoqUnits": 242.08551363644463,
+      "setupCost": 12.56,
+      "holdingCost": 0.8311125493055554,
+      "constraintLeadTimeWeeks": 1.8915729948507187,
+      "safetyStockPrimary": 131.5169127988051,
+      "safetyStockDownstream": 331.883185641818,
+      "reorderPoint": 757.664714537076,
+      "abcClass": "A"
+    },
+    {
+      "sku": "Greige 9202",
+      "weeklyDemand": 18.03846153846154,
+      "eoqUnits": 164.59851058663338,
+      "setupCost": 12.56,
+      "holdingCost": 0.8697024055555558,
+      "constraintLeadTimeWeeks": 1.6361483819638967,
+      "safetyStockPrimary": 62.61277528881719,
+      "safetyStockDownstream": 160.99376722703906,
+      "reorderPoint": 361.35091140589736,
+      "abcClass": "A"
+    },
+    {
+      "sku": "Greige 9203",
+      "weeklyDemand": 17.807692307692307,
+      "eoqUnits": 163.54225255075949,
+      "setupCost": 12.56,
+      "holdingCost": 0.8697024055555554,
+      "constraintLeadTimeWeeks": 1.378625370094797,
+      "safetyStockPrimary": 74.12736340544093,
+      "safetyStockDownstream": 211.13686059892572,
+      "reorderPoint": 416.66051424874706,
+      "abcClass": "A"
+    },
+    {
+      "sku": "Greige 9201",
+      "weeklyDemand": 14.096153846153847,
+      "eoqUnits": 145.5045148400077,
+      "setupCost": 12.56,
+      "holdingCost": 0.8697024055555554,
+      "constraintLeadTimeWeeks": 1.4950798392030422,
+      "safetyStockPrimary": 51.756435798672534,
+      "safetyStockDownstream": 136.58506557885397,
+      "reorderPoint": 293.9932998801386,
+      "abcClass": "A"
+    },
+    {
+      "sku": "Greige 9102",
+      "weeklyDemand": 16.076923076923077,
+      "eoqUnits": 179.75307473068858,
+      "setupCost": 12.56,
+      "holdingCost": 0.649939986111111,
+      "constraintLeadTimeWeeks": 0.9921520216600529,
+      "safetyStockPrimary": 34.14369369189526,
+      "safetyStockDownstream": 124.5497438064911,
+      "reorderPoint": 271.10572769276723,
+      "abcClass": "A"
+    },
+    {
+      "sku": "Greige 9204",
+      "weeklyDemand": 12.153846153846153,
+      "eoqUnits": 135.1086084574747,
+      "setupCost": 12.56,
+      "holdingCost": 0.8697024055555554,
+      "constraintLeadTimeWeeks": 1.3397602988215487,
+      "safetyStockPrimary": 50.43100481221615,
+      "safetyStockDownstream": 150.724789769698,
+      "reorderPoint": 290.3621120598991,
+      "abcClass": "A"
+    },
+    {
+      "sku": "Greige 09102",
+      "weeklyDemand": 15.048076923076923,
+      "eoqUnits": 184.9024520577772,
+      "setupCost": 12.56,
+      "holdingCost": 0.5749348576388887,
+      "constraintLeadTimeWeeks": 2.506916727716728,
+      "safetyStockPrimary": 57.775495162752534,
+      "safetyStockDownstream": 130.29195888875267,
+      "reorderPoint": 316.08019134839634,
+      "abcClass": "A"
+    },
+    {
+      "sku": "Greige 09103",
+      "weeklyDemand": 14.557692307692308,
+      "eoqUnits": 181.86471115408872,
+      "setupCost": 12.56,
+      "holdingCost": 0.5749348576388887,
+      "constraintLeadTimeWeeks": 0.5215063673941799,
+      "safetyStockPrimary": 27.103524437409764,
+      "safetyStockDownstream": 131.69254059993446,
+      "reorderPoint": 253.73414811652486,
+      "abcClass": "B"
+    },
+    {
+      "sku": "Greige 09104",
+      "weeklyDemand": 12.509615384615385,
+      "eoqUnits": 168.58702538741554,
+      "setupCost": 12.56,
+      "holdingCost": 0.5749348576388887,
+      "constraintLeadTimeWeeks": 2.202104400553151,
+      "safetyStockPrimary": 58.4207647702792,
+      "safetyStockDownstream": 136.3260854512041,
+      "reorderPoint": 297.35202161686453,
+      "abcClass": "B"
+    },
+    {
+      "sku": "Greige 9103",
+      "weeklyDemand": 10.423076923076923,
+      "eoqUnits": 144.73475570008947,
+      "setupCost": 12.56,
+      "holdingCost": 0.649939986111111,
+      "constraintLeadTimeWeeks": 0.8233821189574313,
+      "safetyStockPrimary": 25.74235085613882,
+      "safetyStockDownstream": 101.29766436042422,
+      "reorderPoint": 198.16065191800396,
+      "abcClass": "B"
+    },
+    {
+      "sku": "Greige 9104",
+      "weeklyDemand": 9.01923076923077,
+      "eoqUnits": 134.63550711770256,
+      "setupCost": 12.56,
+      "holdingCost": 0.649939986111111,
+      "constraintLeadTimeWeeks": 0.5590170245181406,
+      "safetyStockPrimary": 18.95793074011102,
+      "safetyStockDownstream": 88.15757649763414,
+      "reorderPoint": 166.27279540118764,
+      "abcClass": "B"
+    },
+    {
+      "sku": "Greige 9101",
+      "weeklyDemand": 7.634615384615385,
+      "eoqUnits": 123.87065741512788,
+      "setupCost": 12.56,
+      "holdingCost": 0.649939986111111,
+      "constraintLeadTimeWeeks": 1.5222013355278978,
+      "safetyStockPrimary": 26.123775357255816,
+      "safetyStockDownstream": 75.70008087245976,
+      "reorderPoint": 159.25297027211127,
+      "abcClass": "B"
+    },
+    {
+      "sku": "Greige 5503",
+      "weeklyDemand": 5.5,
+      "eoqUnits": 100.87682470614945,
+      "setupCost": 12.56,
+      "holdingCost": 0.7059970090277777,
+      "constraintLeadTimeWeeks": 0.6392188695987656,
+      "safetyStockPrimary": 5.312268851189694,
+      "safetyStockDownstream": 23.006027353467005,
+      "reorderPoint": 64.83399998744991,
+      "abcClass": "B"
+    },
+    {
+      "sku": "Greige 5502",
+      "weeklyDemand": 5.480769230769231,
+      "eoqUnits": 100.70031219173407,
+      "setupCost": 12.56,
+      "holdingCost": 0.7059970090277777,
+      "constraintLeadTimeWeeks": 1.6347757055224867,
+      "safetyStockPrimary": 7.478184162570051,
+      "safetyStockDownstream": 20.040708562140072,
+      "reorderPoint": 69.36333649536222,
+      "abcClass": "B"
+    },
+    {
+      "sku": "Greige 09101",
+      "weeklyDemand": 5.903846153846154,
+      "eoqUnits": 115.81629968292854,
+      "setupCost": 12.56,
+      "holdingCost": 0.5749348576388887,
+      "constraintLeadTimeWeeks": 2.2218877924933866,
+      "safetyStockPrimary": 31.779216554138547,
+      "safetyStockDownstream": 58.267765109167016,
+      "reorderPoint": 138.5877422843723,
+      "abcClass": "B"
+    },
+    {
+      "sku": "Greige 6102",
+      "weeklyDemand": 4.788461538461538,
+      "eoqUnits": 98.0296090327724,
+      "setupCost": 12.56,
+      "holdingCost": 0.6508852666666665,
+      "constraintLeadTimeWeeks": 1.3265750179811509,
+      "safetyStockPrimary": 7.452980165889826,
+      "safetyStockDownstream": 22.40904953198274,
+      "reorderPoint": 64.94505238012846,
+      "abcClass": "C"
+    },
+    {
+      "sku": "Greige 6103",
+      "weeklyDemand": 2.019230769230769,
+      "eoqUnits": 63.6578910439097,
+      "setupCost": 12.56,
+      "holdingCost": 0.6508852666666668,
+      "constraintLeadTimeWeeks": 0.6190810499338625,
+      "safetyStockPrimary": 4.838947131116478,
+      "safetyStockDownstream": 15.064431505732603,
+      "reorderPoint": 33.268830756907846,
+      "abcClass": "C"
+    },
+    {
+      "sku": "Greige 6101",
+      "weeklyDemand": 1.8846153846153846,
+      "eoqUnits": 61.499365465678274,
+      "setupCost": 12.56,
+      "holdingCost": 0.6508852666666668,
+      "constraintLeadTimeWeeks": 1.757111829943783,
+      "safetyStockPrimary": 4.349644048651674,
+      "safetyStockDownstream": 10.934774878874116,
+      "reorderPoint": 29.90359122241984,
+      "abcClass": "C"
+    },
+    {
+      "sku": "Greige 05502",
+      "weeklyDemand": 1.5,
+      "eoqUnits": 55.32148222182513,
+      "setupCost": 12.56,
+      "holdingCost": 0.6402161458333333,
+      "constraintLeadTimeWeeks": 3.138751304563492,
+      "safetyStockPrimary": 4.71945631580357,
+      "safetyStockDownstream": 6.525129610480272,
+      "reorderPoint": 24.95271288312908,
+      "abcClass": "C"
+    },
+    {
+      "sku": "Greige 05503",
+      "weeklyDemand": 1.3653846153846154,
+      "eoqUnits": 52.78076500604242,
+      "setupCost": 12.56,
+      "holdingCost": 0.6402161458333333,
+      "constraintLeadTimeWeeks": 0.9490942022156084,
+      "safetyStockPrimary": 3.190423298633737,
+      "safetyStockDownstream": 8.021752774171619,
+      "reorderPoint": 20.700362387368976,
+      "abcClass": "C"
+    },
+    {
+      "sku": "Greige 5602",
+      "weeklyDemand": 1.0576923076923077,
+      "eoqUnits": 39.62459787236712,
+      "setupCost": 12.56,
+      "holdingCost": 0.879939045138889,
+      "constraintLeadTimeWeeks": 0.9699480663029101,
+      "safetyStockPrimary": 3.68480585971104,
+      "safetyStockDownstream": 12.453720205762846,
+      "reorderPoint": 23.51058652021735,
+      "abcClass": "C"
+    },
+    {
+      "sku": "Greige 06103",
+      "weeklyDemand": 1.1538461538461537,
+      "eoqUnits": 49.22048293054242,
+      "setupCost": 12.56,
+      "holdingCost": 0.6221271354166668,
+      "constraintLeadTimeWeeks": 5.474501994460979,
+      "safetyStockPrimary": 8.740800440185666,
+      "safetyStockDownstream": 11.663145474113074,
+      "reorderPoint": 33.64375590790756,
+      "abcClass": "C"
+    },
+    {
+      "sku": "Greige 5504",
+      "weeklyDemand": 0.9807692307692307,
+      "eoqUnits": 42.598418414391126,
+      "setupCost": 12.56,
+      "holdingCost": 0.7059970090277777,
+      "constraintLeadTimeWeeks": 0.8467718661816578,
+      "safetyStockPrimary": 2.1510083195237635,
+      "safetyStockDownstream": 5.7257779955082215,
+      "reorderPoint": 14.591889491479378,
+      "abcClass": "C"
+    },
+    {
+      "sku": "Greige 06102",
+      "weeklyDemand": 0.9423076923076923,
+      "eoqUnits": 44.480359159198024,
+      "setupCost": 12.56,
+      "holdingCost": 0.6221271354166668,
+      "constraintLeadTimeWeeks": 1.0428237797619047,
+      "safetyStockPrimary": 2.268378409832582,
+      "safetyStockDownstream": 5.441086964949178,
+      "reorderPoint": 14.34597239801894,
+      "abcClass": "C"
+    },
+    {
+      "sku": "Greige 8102",
+      "weeklyDemand": 0.9038461538461539,
+      "eoqUnits": 39.56055986836542,
+      "setupCost": 12.56,
+      "holdingCost": 0.7543842881944443,
+      "constraintLeadTimeWeeks": 2.566318366815476,
+      "safetyStockPrimary": 2.4415403162764413,
+      "safetyStockDownstream": 3.7332258051968155,
+      "reorderPoint": 13.91740002994109,
+      "abcClass": "C"
+    },
+    {
+      "sku": "Greige 6104",
+      "weeklyDemand": 0.8269230769230769,
+      "eoqUnits": 40.73726093169741,
+      "setupCost": 12.56,
+      "holdingCost": 0.6508852666666668,
+      "constraintLeadTimeWeeks": 0.6889217410714286,
+      "safetyStockPrimary": 1.966881486982087,
+      "safetyStockDownstream": 5.804554223862694,
+      "reorderPoint": 13.302659458269233,
+      "abcClass": "C"
+    },
+    {
+      "sku": "Greige 6202",
+      "weeklyDemand": 0.7692307692307693,
+      "eoqUnits": 33.89528634723829,
+      "setupCost": 12.56,
+      "holdingCost": 0.8745829611111112,
+      "constraintLeadTimeWeeks": 1.8803285491071426,
+      "safetyStockPrimary": 3.498597446611673,
+      "safetyStockDownstream": 6.249607316335292,
+      "reorderPoint": 15.809995954567846,
+      "abcClass": "C"
+    },
+    {
+      "sku": "Greige 6203",
+      "weeklyDemand": 0.7692307692307693,
+      "eoqUnits": 33.89528634723829,
+      "setupCost": 12.56,
+      "holdingCost": 0.8745829611111112,
+      "constraintLeadTimeWeeks": 0.910494925595238,
+      "safetyStockPrimary": 2.0419463694220163,
+      "safetyStockDownstream": 5.24180899484725,
+      "reorderPoint": 12.59952069165022,
+      "abcClass": "C"
+    },
+    {
+      "sku": "Greige 8101",
+      "weeklyDemand": 0.7307692307692307,
+      "eoqUnits": 35.57175549707221,
+      "setupCost": 12.56,
+      "holdingCost": 0.7543842881944445,
+      "constraintLeadTimeWeeks": 0.0004889318783068782,
+      "safetyStockPrimary": 0.045218713002795737,
+      "safetyStockDownstream": 5.009214690765591,
+      "reorderPoint": 9.43940608475638,
+      "abcClass": "C"
+    },
+    {
+      "sku": "Greige 8112",
+      "weeklyDemand": 0.4423076923076923,
+      "eoqUnits": 27.674349300722984,
+      "setupCost": 12.56,
+      "holdingCost": 0.7543842881944443,
+      "constraintLeadTimeWeeks": 0.0010081068121693122,
+      "safetyStockPrimary": 0.06000599457936393,
+      "safetyStockDownstream": 4.6293177256368025,
+      "reorderPoint": 7.343615767460011,
+      "abcClass": "C"
+    },
+    {
+      "sku": "Greige 08102",
+      "weeklyDemand": 0.46153846153846156,
+      "eoqUnits": 28.55171520007208,
+      "setupCost": 12.56,
+      "holdingCost": 0.7395481770833332,
+      "constraintLeadTimeWeeks": 6.847422477678571,
+      "safetyStockPrimary": 3.2991426078948063,
+      "safetyStockDownstream": 3.0882549896533606,
+      "reorderPoint": 12.316977202630586,
+      "abcClass": "C"
+    },
+    {
+      "sku": "Greige 08101",
+      "weeklyDemand": 0.34615384615384615,
+      "eoqUnits": 24.726510684880715,
+      "setupCost": 12.56,
+      "holdingCost": 0.7395481770833335,
+      "constraintLeadTimeWeeks": 6.847430663855819,
+      "safetyStockPrimary": 2.247988104272985,
+      "safetyStockDownstream": 2.1042910704298747,
+      "reorderPoint": 8.799466712191412,
+      "abcClass": "C"
+    },
+    {
+      "sku": "Greige 08104",
+      "weeklyDemand": 0.038461538461538464,
+      "eoqUnits": 8.242170228293574,
+      "setupCost": 12.56,
+      "holdingCost": 0.7395481770833332,
+      "constraintLeadTimeWeeks": 6.847405531580688,
+      "safetyStockPrimary": 0.8049073819281103,
+      "safetyStockDownstream": 0.7534570674215966,
+      "reorderPoint": 2.0524954313335795,
+      "abcClass": "C"
+    },
+    {
+      "sku": "Greige 08114",
+      "weeklyDemand": 0,
+      "eoqUnits": 0,
+      "setupCost": 12.56,
+      "holdingCost": 0.7395481770833332,
+      "constraintLeadTimeWeeks": 6.847367853835978,
+      "safetyStockPrimary": 0,
+      "safetyStockDownstream": 0,
+      "reorderPoint": 0,
+      "abcClass": "C"
+    },
+    {
+      "sku": "Greige 08113",
+      "weeklyDemand": 0,
+      "eoqUnits": 0,
+      "setupCost": 12.56,
+      "holdingCost": 0.7395481770833332,
+      "constraintLeadTimeWeeks": 6.8473799239418,
+      "safetyStockPrimary": 0,
+      "safetyStockDownstream": 0,
+      "reorderPoint": 0,
+      "abcClass": "C"
+    },
+    {
+      "sku": "Greige 08112",
+      "weeklyDemand": 0,
+      "eoqUnits": 0,
+      "setupCost": 12.56,
+      "holdingCost": 0.7395481770833332,
+      "constraintLeadTimeWeeks": 6.8473883953373,
+      "safetyStockPrimary": 0,
+      "safetyStockDownstream": 0,
+      "reorderPoint": 0,
+      "abcClass": "C"
+    },
+    {
+      "sku": "Greige 08111",
+      "weeklyDemand": 0,
+      "eoqUnits": 0,
+      "setupCost": 12.56,
+      "holdingCost": 0.7395481770833332,
+      "constraintLeadTimeWeeks": 6.847397411541006,
+      "safetyStockPrimary": 0,
+      "safetyStockDownstream": 0,
+      "reorderPoint": 0,
+      "abcClass": "C"
+    },
+    {
+      "sku": "Greige 08103",
+      "weeklyDemand": 0,
+      "eoqUnits": 0,
+      "setupCost": 12.56,
+      "holdingCost": 0.7395481770833332,
+      "constraintLeadTimeWeeks": 6.847413677248677,
+      "safetyStockPrimary": 0,
+      "safetyStockDownstream": 0,
+      "reorderPoint": 0,
+      "abcClass": "C"
+    }
+  ],
+  "campaigns": [
+    {
+      "sku": "Greige 09202",
+      "weekIndex": 0,
+      "units": 360,
+      "machineId": "52"
+    },
+    {
+      "sku": "Greige 09202",
+      "weekIndex": 2,
+      "units": 360,
+      "machineId": "52"
+    },
+    {
+      "sku": "Greige 09202",
+      "weekIndex": 7,
+      "units": 360,
+      "machineId": "52"
+    },
+    {
+      "sku": "Greige 09203",
+      "weekIndex": 2,
+      "units": 360,
+      "machineId": "51"
+    },
+    {
+      "sku": "Greige 09203",
+      "weekIndex": 8,
+      "units": 360,
+      "machineId": "51"
+    },
+    {
+      "sku": "Greige 09204",
+      "weekIndex": 0,
+      "units": 300,
+      "machineId": "51"
+    },
+    {
+      "sku": "Greige 09204",
+      "weekIndex": 5,
+      "units": 300,
+      "machineId": "51"
+    },
+    {
+      "sku": "Greige 09204",
+      "weekIndex": 12,
+      "units": 300,
+      "machineId": "51"
+    },
+    {
+      "sku": "Greige 09201",
+      "weekIndex": 1,
+      "units": 300,
+      "machineId": "52"
+    },
+    {
+      "sku": "Greige 09201",
+      "weekIndex": 3,
+      "units": 300,
+      "machineId": "52"
+    },
+    {
+      "sku": "Greige 09201",
+      "weekIndex": 11,
+      "units": 300,
+      "machineId": "52"
+    },
+    {
+      "sku": "Greige 9203",
+      "weekIndex": 3,
+      "units": 180,
+      "machineId": "51"
+    },
+    {
+      "sku": "Greige 9203",
+      "weekIndex": 12,
+      "units": 180,
+      "machineId": "52"
+    },
+    {
+      "sku": "Greige 9201",
+      "weekIndex": 4,
+      "units": 180,
+      "machineId": "52"
+    },
+    {
+      "sku": "Greige 9102",
+      "weekIndex": 5,
+      "units": 180,
+      "machineId": "52"
+    },
+    {
+      "sku": "Greige 09102",
+      "weekIndex": 3,
+      "units": 240,
+      "machineId": "51"
+    },
+    {
+      "sku": "Greige 09103",
+      "weekIndex": 4,
+      "units": 240,
+      "machineId": "51"
+    },
+    {
+      "sku": "Greige 5503",
+      "weekIndex": 5,
+      "units": 120,
+      "machineId": "51"
+    },
+    {
+      "sku": "Greige 5502",
+      "weekIndex": 1,
+      "units": 120,
+      "machineId": "52"
+    },
+    {
+      "sku": "Greige 05503",
+      "weekIndex": 0,
+      "units": 60,
+      "machineId": "51"
+    },
+    {
+      "sku": "Greige 5504",
+      "weekIndex": 0,
+      "units": 60,
+      "machineId": "51"
+    }
+  ]
+}

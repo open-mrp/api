@@ -377,6 +377,21 @@ func TestIDPrefixes_NoDuplicates(t *testing.T) {
 		{"InventoryIssueIDPrefix", InventoryIssueIDPrefix},
 		{"FreeShippingRuleIDPrefix", FreeShippingRuleIDPrefix},
 		{"PricingPlanIDPrefix", PricingPlanIDPrefix},
+		{"MachineDowntimeEventIDPrefix", MachineDowntimeEventIDPrefix},
+		{"MachineDowntimeReasonIDPrefix", MachineDowntimeReasonIDPrefix},
+		{"DemandOverrideIDPrefix", DemandOverrideIDPrefix},
+		{"DemandOverrideTypeIDPrefix", DemandOverrideTypeIDPrefix},
+		{"ProductionShiftIDPrefix", ProductionShiftIDPrefix},
+		{"ProductionScheduleIDPrefix", ProductionScheduleIDPrefix},
+		{"ProductionScheduleLineIDPrefix", ProductionScheduleLineIDPrefix},
+		{"ProductionScheduleItemPolicyIDPrefix", ProductionScheduleItemPolicyIDPrefix},
+		{"ProductionScheduleFinishedPolicyIDPrefix", ProductionScheduleFinishedPolicyIDPrefix},
+		{"ProductionScheduleDeviationIDPrefix", ProductionScheduleDeviationIDPrefix},
+		{"ScheduleDeviationTypeIDPrefix", ScheduleDeviationTypeIDPrefix},
+		{"ProductionScheduleDerivedLineIDPrefix", ProductionScheduleDerivedLineIDPrefix},
+		{"AccountProductionScheduleSettingIDPrefix", AccountProductionScheduleSettingIDPrefix},
+		{"ProductionScheduleResourceSettingIDPrefix", ProductionScheduleResourceSettingIDPrefix},
+		{"ProductionScheduleItemSettingIDPrefix", ProductionScheduleItemSettingIDPrefix},
 	}
 
 	seen := make(map[IDPrefix]string, len(prefixes))
@@ -442,6 +457,16 @@ func TestIDPrefixes_ValidVocabularyComposition(t *testing.T) {
 		VocReply:        true,
 		VocDraft:        true,
 		VocLink:         true,
+		VocDemand:       true,
+		VocDeviation:    true,
+		VocDerived:      true,
+		VocDowntime:     true,
+		VocOverride:     true,
+		VocResource:     true,
+		VocSetting:      true,
+		VocShift:        true,
+		VocPolicy:       true,
+		VocFinished:     true,
 	}
 
 	prefixes := []struct {
@@ -634,6 +659,21 @@ func TestIDPrefixes_ValidVocabularyComposition(t *testing.T) {
 		{"InventoryIssueIDPrefix", InventoryIssueIDPrefix},
 		{"FreeShippingRuleIDPrefix", FreeShippingRuleIDPrefix},
 		{"PricingPlanIDPrefix", PricingPlanIDPrefix},
+		{"MachineDowntimeEventIDPrefix", MachineDowntimeEventIDPrefix},
+		{"MachineDowntimeReasonIDPrefix", MachineDowntimeReasonIDPrefix},
+		{"DemandOverrideIDPrefix", DemandOverrideIDPrefix},
+		{"DemandOverrideTypeIDPrefix", DemandOverrideTypeIDPrefix},
+		{"ProductionShiftIDPrefix", ProductionShiftIDPrefix},
+		{"ProductionScheduleIDPrefix", ProductionScheduleIDPrefix},
+		{"ProductionScheduleLineIDPrefix", ProductionScheduleLineIDPrefix},
+		{"ProductionScheduleItemPolicyIDPrefix", ProductionScheduleItemPolicyIDPrefix},
+		{"ProductionScheduleFinishedPolicyIDPrefix", ProductionScheduleFinishedPolicyIDPrefix},
+		{"ProductionScheduleDeviationIDPrefix", ProductionScheduleDeviationIDPrefix},
+		{"ScheduleDeviationTypeIDPrefix", ScheduleDeviationTypeIDPrefix},
+		{"ProductionScheduleDerivedLineIDPrefix", ProductionScheduleDerivedLineIDPrefix},
+		{"AccountProductionScheduleSettingIDPrefix", AccountProductionScheduleSettingIDPrefix},
+		{"ProductionScheduleResourceSettingIDPrefix", ProductionScheduleResourceSettingIDPrefix},
+		{"ProductionScheduleItemSettingIDPrefix", ProductionScheduleItemSettingIDPrefix},
 	}
 
 	for _, p := range prefixes {
@@ -826,6 +866,16 @@ func TestVocabulary_NoDuplicates(t *testing.T) {
 		{"VocReview", VocReview},
 		{"VocRoute", VocRoute},
 		{"VocSupport", VocSupport},
+		{"VocDemand", VocDemand},
+		{"VocDeviation", VocDeviation},
+		{"VocDerived", VocDerived},
+		{"VocDowntime", VocDowntime},
+		{"VocOverride", VocOverride},
+		{"VocResource", VocResource},
+		{"VocSetting", VocSetting},
+		{"VocShift", VocShift},
+		{"VocPolicy", VocPolicy},
+		{"VocFinished", VocFinished},
 	}
 
 	seen := make(map[string]string, len(vocabs))

@@ -157,8 +157,8 @@ func (s *pickLineSvcImpl) UpdatePickLine(ctx context.Context, params domain.Upda
 			changes := audit.ComputeChanges(old, result)
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
+				ServiceName:      domain.ServiceName,
+				Action:           constants.AuditActionUpdate,
 				ResourceType:     constants.ObjectTypePickLine,
 				ResourceID:       result.ID,
 				RootResourceType: constants.ObjectTypeSalesOrder,
@@ -265,8 +265,8 @@ func (s *pickLineSvcImpl) PickPickLine(ctx context.Context, pickID, pickLineID s
 			changes := audit.ComputeChanges(old, result)
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
+				ServiceName:      domain.ServiceName,
+				Action:           constants.AuditActionUpdate,
 				ResourceType:     constants.ObjectTypePickLine,
 				ResourceID:       result.ID,
 				RootResourceType: constants.ObjectTypeSalesOrder,
@@ -377,8 +377,8 @@ func (s *pickLineSvcImpl) VoidPickLine(ctx context.Context, pickID, pickLineID s
 			changes := audit.ComputeChanges(old, result)
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
+				ServiceName:      domain.ServiceName,
+				Action:           constants.AuditActionUpdate,
 				ResourceType:     constants.ObjectTypePickLine,
 				ResourceID:       result.ID,
 				RootResourceType: constants.ObjectTypeSalesOrder,

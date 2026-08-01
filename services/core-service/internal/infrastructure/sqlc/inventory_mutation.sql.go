@@ -51,9 +51,9 @@ func (q *Queries) FetchPhysicalInventoryForItem(ctx context.Context, arg FetchPh
 
 const findBatchProductionRunIDAncestry = `-- name: FindBatchProductionRunIDAncestry :many
 SELECT b.id, b.production_run_id,
-       bf.A as parent_id
+       bf.B as parent_id
 FROM batch b
-LEFT JOIN _batch_flow bf ON bf.B = b.id
+LEFT JOIN _batch_flow bf ON bf.A = b.id
 WHERE b.id IN (/*SLICE:batch_ids*/?)
 `
 

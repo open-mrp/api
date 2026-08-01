@@ -7,6 +7,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -95,6 +96,9 @@ func (m *productLineSvcImpl) CreateProductLine(ctx context.Context, req *CreateP
 		CommissionPolicy: string(req.CommissionPolicy),
 		FreightPolicy:    string(req.FreightPolicy),
 	}
+	if lot, ok := req.DefaultLot.Value(); ok {
+		pbReq.DefaultLot = &pb.QuantityPatch{Value: &lot.Value, UnitId: &lot.UnitID}
+	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productLineSvcTracer, "service.product-lines.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateProductLineResponse, error) {
@@ -122,6 +126,7 @@ func (m *productLineSvcImpl) UpdateProductLine(ctx context.Context, req *UpdateP
 		s := string(v)
 		pbReq.FreightPolicy = &s
 	}
+	pbReq.DefaultLot = apirequest.QuantityFieldToProto(req.DefaultLot)
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productLineSvcTracer, "service.product-lines.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateProductLineResponse, error) {
@@ -152,8 +157,7 @@ func (m *productLineSvcImpl) DeleteProductLine(ctx context.Context, req *DeleteP
 	return &apiresource.EmptyResource{}, nil
 }
 
-// loadProductLineByID wraps the single-ID load pattern used after every
-// mutation and for the retrieve endpoint.
+// loadProductLineByID wraps the single-ID load pattern used after every mutation and for the retrieve endpoint.
 func loadProductLineByID(ctx context.Context, id string) (*apiresource.ProductLine, *apierror.APIError) {
 	loaded, apiErr := resourceloaders.LoadProductLines(ctx, []string{id})
 	if apiErr != nil {

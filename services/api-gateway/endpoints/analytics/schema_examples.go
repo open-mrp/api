@@ -3,6 +3,8 @@ package analyticsep
 import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
+	"github.com/augno/api/shared/field"
 )
 
 func (*AnalyzeSalesRequest) SchemaExample() any {
@@ -140,4 +142,12 @@ func (*AnalyzeQuarterlyOrdersRequest) SchemaExample() any {
 
 func (*AnalyzeWeeksOfSalesRequest) SchemaExample() any {
 	return map[string]any{"period_in_weeks": int64(4)}
+}
+
+func (*AnalyzeScheduleAttainmentRequest) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(&AnalyzeScheduleAttainmentRequest{
+		StartDate: apiresource.SampleAnalyticsPeriodStart,
+		EndDate:   apiresource.SampleAnalyticsPeriodEnd,
+		GroupBy:   field.Some(constants.AttainmentGroupByWeek),
+	})
 }

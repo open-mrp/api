@@ -249,8 +249,8 @@ func (s *pickSvcImpl) UpdatePick(ctx context.Context, params domain.UpdatePickPa
 			changes := audit.ComputeChanges(old, result)
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
+				ServiceName:      domain.ServiceName,
+				Action:           constants.AuditActionUpdate,
 				ResourceType:     constants.ObjectTypePick,
 				ResourceID:       result.ID,
 				RootResourceType: constants.ObjectTypeSalesOrder,
@@ -327,8 +327,8 @@ func (s *pickSvcImpl) PickAllLines(ctx context.Context, pickID string) (*domain.
 		changes := audit.ComputeChanges(old, result)
 
 		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-			ServiceName:  domain.ServiceName,
-			Action:       constants.AuditActionUpdate,
+			ServiceName:      domain.ServiceName,
+			Action:           constants.AuditActionUpdate,
 			ResourceType:     constants.ObjectTypePick,
 			ResourceID:       result.ID,
 			RootResourceType: constants.ObjectTypeSalesOrder,
@@ -413,8 +413,8 @@ func (s *pickSvcImpl) VoidPick(ctx context.Context, pickID string) (*domain.Pick
 		changes := audit.ComputeChanges(old, result)
 
 		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-			ServiceName:  domain.ServiceName,
-			Action:       constants.AuditActionUpdate,
+			ServiceName:      domain.ServiceName,
+			Action:           constants.AuditActionUpdate,
 			ResourceType:     constants.ObjectTypePick,
 			ResourceID:       result.ID,
 			RootResourceType: constants.ObjectTypeSalesOrder,
@@ -651,8 +651,8 @@ func (s *pickSvcImpl) PackPick(ctx context.Context, pickID string, shipmentCaseC
 			}
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
+				ServiceName:      domain.ServiceName,
+				Action:           constants.AuditActionUpdate,
 				ResourceType:     constants.ObjectTypePick,
 				ResourceID:       pick.ID,
 				RootResourceType: constants.ObjectTypeSalesOrder,

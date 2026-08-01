@@ -314,7 +314,7 @@ func (s *productSvcImpl) attachProductIncludes(ctx context.Context, product *dom
 	}
 
 	if product.ProductLine != nil && product.ProductLine.UnitGroupID != "" {
-		unitGroup, apiErr := s.repos.NewProductLineRepo().GetUnitGroup(ctx, product.ProductLine.UnitGroupID, includes)
+		unitGroup, apiErr := s.repos.NewProductLineRepo().GetUnitGroup(ctx, accountID, product.ProductLine.UnitGroupID, includes)
 		if apiErr != nil {
 			return apiErr
 		}

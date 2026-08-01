@@ -49,6 +49,7 @@ type gRPCHandler struct {
 	consumptionSvc                   domain.ConsumptionSvc
 	customerSvc                      domain.CustomerSvc
 	machineSvc                       domain.MachineSvc
+	machineStatusSvc                 domain.MachineStatusSvc
 	departmentSvc                    domain.DepartmentSvc
 	deliverySvc                      domain.DeliverySvc
 	emailLogSvc                      domain.EmailLogSvc
@@ -176,7 +177,7 @@ func RegisterPurchaseService(server *grpc.Server, purchaseOrderSvc domain.Purcha
 	pb.RegisterCorePurchaseServiceServer(server, purchaseHandler)
 }
 
-func RegisterFulfillmentService(server *grpc.Server, batchSvc domain.BatchSvc, consumptionSvc domain.ConsumptionSvc, deliverySvc domain.DeliverySvc, departmentSvc domain.DepartmentSvc, machineSvc domain.MachineSvc, productionFlowSvc domain.ProductionFlowSvc) {
+func RegisterFulfillmentService(server *grpc.Server, batchSvc domain.BatchSvc, consumptionSvc domain.ConsumptionSvc, deliverySvc domain.DeliverySvc, departmentSvc domain.DepartmentSvc, machineSvc domain.MachineSvc, machineStatusSvc domain.MachineStatusSvc, productionFlowSvc domain.ProductionFlowSvc) {
 	handler.batchSvc = batchSvc
 	handler.consumptionSvc = consumptionSvc
 	handler.deliverySvc = deliverySvc
@@ -184,8 +185,11 @@ func RegisterFulfillmentService(server *grpc.Server, batchSvc domain.BatchSvc, c
 	handler.machineSvc = machineSvc
 	handler.productionFlowSvc = productionFlowSvc
 
+	handler.machineStatusSvc = machineStatusSvc
+
 	fulfillmentHandler := &fulfillmentGRPCHandler{
-		machineSvc: machineSvc,
+		machineSvc:       machineSvc,
+		machineStatusSvc: machineStatusSvc,
 	}
 	pb.RegisterCoreFulfillmentServiceServer(server, fulfillmentHandler)
 }
@@ -234,6 +238,27 @@ func RegisterProductionRunService(server *grpc.Server, productionRunSvc domain.P
 		productionRunSvc: productionRunSvc,
 	}
 	pb.RegisterCoreProductionRunServiceServer(server, productionRunHandler)
+}
+
+func RegisterProductionScheduleService(server *grpc.Server, productionScheduleSvc domain.ProductionScheduleSvc) {
+	handler := &productionScheduleGRPCHandler{
+		productionScheduleSvc: productionScheduleSvc,
+	}
+	pb.RegisterCoreProductionScheduleServiceServer(server, handler)
+}
+
+func RegisterMachineDowntimeService(server *grpc.Server, machineDowntimeSvc domain.MachineDowntimeSvc) {
+	machineDowntimeHandler := &machineDowntimeGRPCHandler{
+		machineDowntimeSvc: machineDowntimeSvc,
+	}
+	pb.RegisterCoreMachineDowntimeServiceServer(server, machineDowntimeHandler)
+}
+
+func RegisterDemandOverrideService(server *grpc.Server, demandOverrideSvc domain.DemandOverrideSvc) {
+	demandOverrideHandler := &demandOverrideGRPCHandler{
+		demandOverrideSvc: demandOverrideSvc,
+	}
+	pb.RegisterCoreDemandOverrideServiceServer(server, demandOverrideHandler)
 }
 
 func RegisterUserService(server *grpc.Server, userSvc domain.UserSvc) {

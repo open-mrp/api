@@ -53,6 +53,22 @@ func SetFulfillmentClient(c pb.CoreFulfillmentServiceClient) {
 	fulfillmentClient = c
 }
 
+// machineDowntimeClient is the CoreMachineDowntimeService client used by LoadMachineDowntimeEvents. Set at startup.
+var machineDowntimeClient pb.CoreMachineDowntimeServiceClient
+
+// SetMachineDowntimeClient is called once at startup with the CoreMachineDowntimeService client.
+func SetMachineDowntimeClient(c pb.CoreMachineDowntimeServiceClient) {
+	machineDowntimeClient = c
+}
+
+// demandOverrideClient is the CoreDemandOverrideService client used by LoadDemandOverrides. Set at startup.
+var demandOverrideClient pb.CoreDemandOverrideServiceClient
+
+// SetDemandOverrideClient is called once at startup with the CoreDemandOverrideService client.
+func SetDemandOverrideClient(c pb.CoreDemandOverrideServiceClient) {
+	demandOverrideClient = c
+}
+
 // corePickingClient is the CorePickingService client used by LoadPicks (pick include resolution). Set at startup.
 var corePickingClient pb.CorePickingServiceClient
 
@@ -133,8 +149,7 @@ func SetEmailBridgeClient(c notifpb.EmailBridgeServiceClient) {
 	emailBridgeClient = c
 }
 
-// orEmptyStrSlice normalizes a nil slice to a non-nil empty slice so required
-// array fields serialize as `[]` rather than `null`.
+// orEmptyStrSlice normalizes a nil slice to a non-nil empty slice so required array fields serialize as `[]` rather than `null`.
 func orEmptyStrSlice(s []string) []string {
 	if s == nil {
 		return []string{}

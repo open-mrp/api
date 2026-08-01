@@ -2,6 +2,7 @@ package messaging
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/augno/api/shared/constants"
 )
@@ -33,6 +34,9 @@ const (
 
 	// CoreCmdExecuteProductionStepQueue carries execute-production-step commands to the core-service. Messages on this queue trigger inventory updates and reservation management after batch mutations (initialize, move, merge, split).
 	CoreCmdExecuteProductionStepQueue = "core_cmd_execute_production_step"
+
+	// CoreCmdGenerateProductionScheduleQueue carries a request to solve and persist one production schedule version. The cadence tick only enqueues onto this queue: a solve takes minutes on a real tenant, and doing it inside the scheduler lease would block every other account behind whichever one is currently solving.
+	CoreCmdGenerateProductionScheduleQueue = "core_cmd_generate_production_schedule"
 
 	// CoreEventSalesOrderCreatedQueue carries sales-order-created events back to the core-service for out-of-band processing (e.g. CRM sync). Messages on this queue contain a SalesOrderCreatedData payload.
 	CoreEventSalesOrderCreatedQueue = "core_event_sales_order_created"
@@ -222,6 +226,16 @@ type SeatSyncData struct {
 type SeatChangeReportData struct {
 	// AccountID is the account whose seat count changed.
 	AccountID string `json:"account_id"`
+}
+
+// GenerateProductionScheduleData is the payload for CoreCmdGenerateProductionScheduleQueue messages. The schedule row already exists in `generating` status when the message is published, so the consumer solves into a row that is already visible rather than creating one — a tick that enqueued and then died would otherwise leave no trace.
+type GenerateProductionScheduleData struct {
+	AccountID  string `json:"account_id"`
+	ScheduleID string `json:"schedule_id"`
+	// PlanningAsOf is stamped by the tick, not read at consume time, so a message that sits in the queue still plans against the moment the cadence fired.
+	PlanningAsOf time.Time `json:"planning_as_of"`
+	// AutoPublish publishes the version as soon as it solves, for merchants who want the cadence to be the whole workflow.
+	AutoPublish bool `json:"auto_publish"`
 }
 
 // SalesOrderCreatedData is the payload for CoreEventSalesOrderCreatedQueue messages. It identifies a newly created sales order so consumers can run out-of-band side effects (e.g. CRM sync). Consumers re-fetch the full order by ID when they need more than these identifiers.

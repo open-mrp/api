@@ -49,11 +49,15 @@ mkdir -p "$MIGRATIONS_DIR"
 
 # Create the schema dump (schema only, include triggers; exclude routines to avoid DELIMITER issues)
 print_status "Dumping schema (no data) to temporary file..."
+# goose_db_version is goose's own bookkeeping table. Goose creates it itself before
+# running anything, so a migration that also creates it is at best redundant and at
+# worst conflicts on a fresh database.
 if ! mysqldump "${MYSQL_AUTH[@]}" \
     "$DATABASE" \
     --no-data \
     --triggers \
     --single-transaction \
+    --ignore-table="$DATABASE.goose_db_version" \
     > "$TEMP_SCHEMA_FILE" 2>/dev/null; then
     print_error "Error creating schema dump"
     rm -f "$TEMP_SCHEMA_FILE"
@@ -62,7 +66,7 @@ fi
 
 # Generate DROP TABLE statements for Down migration (reverse order)
 print_status "Generating DROP TABLE statements for down migration..."
-TABLES=$(mysql "${MYSQL_AUTH[@]}" -D "$DATABASE" -e "SHOW TABLES;" -s --skip-column-names)
+TABLES=$(mysql "${MYSQL_AUTH[@]}" -D "$DATABASE" -e "SHOW TABLES;" -s --skip-column-names | grep -v '^goose_db_version$')
 if [ -n "$TABLES" ]; then
     echo "$TABLES" | while read -r table; do
         if [ -n "$table" ]; then

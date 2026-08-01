@@ -250,8 +250,8 @@ func (s *invoiceSvcImpl) UpdateInvoice(ctx context.Context, params domain.Update
 			changes := audit.ComputeChanges(old, updated, "Note", "HasBeenSent", "IsEdiSent", "IsPaidInFull")
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
+				ServiceName:      domain.ServiceName,
+				Action:           constants.AuditActionUpdate,
 				ResourceType:     constants.ObjectTypeInvoice,
 				ResourceID:       updated.ID,
 				RootResourceType: constants.ObjectTypeSalesOrder,

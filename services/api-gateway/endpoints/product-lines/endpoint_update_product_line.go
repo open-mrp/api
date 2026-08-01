@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
@@ -31,6 +32,10 @@ type UpdateProductLineRequest struct {
 	// - `free_freight`: these products do not incur a freight charge.
 	// - `billed_freight`: freight is billed for these products, unless overridden elsewhere.
 	FreightPolicy field.Optional[constants.FreightPolicy] `json:"freight_policy,omitzero"`
+	// The lot products in this line are made in — a doff, a pallet.
+	//
+	// Sizes the campaigns a production schedule plans, and defaults the quantity when a batch is added to a production run. The unit is part of the value, since 60 pairs and 60 eaches are different lots, and it must belong to this product line's unit group. Send `null` to remove the line's lot convention.
+	DefaultLot field.Clearable[apirequest.QuantityInput] `json:"default_lot,omitzero"`
 	// ID of the unit group to associate with this product line.
 	//
 	// The unit group determines the set of units available to products in this product line.
@@ -72,7 +77,7 @@ func (e *UpdateProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeProductLine,
-			Fields:     []string{"owner", "owner.account", "unit_group"},
+			Fields:     []string{"owner", "owner.account", "unit_group", "default_lot", "default_lot.unit"},
 		}),
 	})
 }

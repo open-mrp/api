@@ -18,10 +18,22 @@ type AnalyzeOeeRequest struct {
 	// The end date for the analysis period.
 	EndDate time.Time `json:"end_date" validate:"required"`
 	// Optional department IDs to filter by.
-	DepartmentIDs []string `json:"department_ids,omitempty"`
+	DepartmentIDs []string `json:"department_ids,omitzero"`
+	// Scheduled production time per department for the period. Availability, performance and OEE are only returned for departments this covers.
+	PlannedTime []OeeDepartmentPlannedTime `json:"planned_time,omitzero"`
 }
 
-// Returns Overall Equipment Effectiveness (OEE) metrics by department, including good units, waste units, and estimated runtime hours.
+// OeeDepartmentPlannedTime supplies the scheduled production time for one department.
+type OeeDepartmentPlannedTime struct {
+	// The department ID.
+	DepartmentID string `json:"department_id" validate:"required"`
+	// Scheduled production hours for the period.
+	PlannedHours float64 `json:"planned_hours" validate:"required"`
+}
+
+// Returns Overall Equipment Effectiveness (OEE) metrics by department.
+//
+// Availability is measured from logged machine downtime rather than inferred, so it requires both `planned_time` for the department and downtime events in the period. Departments with `has_downtime_data` false have no availability measurement, and their ratios are returned as null rather than as 100%.
 type AnalyzeOeeEndpoint struct{}
 
 func (e *AnalyzeOeeEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeOeeRequest, *apiresource.AnalyzeOeeResponse] {
@@ -33,7 +45,7 @@ func (e *AnalyzeOeeEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeOeeR
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
 		Preview:             true,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainInvoices, Action: types.ActionRead}},
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMachineDowntime, Action: types.ActionRead}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeOeeRequest) (*apiresource.AnalyzeOeeResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeOee
 		},

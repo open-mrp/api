@@ -28,6 +28,13 @@ func init() {
 				ExtractRefs: extractUnitGroupRefsFromProductLine,
 				Populate:    populateUnitGroupOnProductLine,
 			},
+			// default_lot is a Quantity built inline by the loader; declaring its Target lets the resolver recurse into default_lot.unit, whose id is stashed under ObjectTypeQuantity. Same shape as a customer's credit_limit.
+			{
+				Key:         "default_lot",
+				Target:      constants.ObjectTypeQuantity,
+				ExtractRefs: extractDefaultLotRefFromProductLine,
+				Populate:    populateDefaultLotOnProductLine,
+			},
 		},
 	})
 }
@@ -80,4 +87,23 @@ func populateUnitGroupOnProductLine(ctx context.Context, parent any, _ map[strin
 		return
 	}
 	pl.UnitGroup = v.(*apiresource.UnitGroup)
+}
+
+func populateDefaultLotOnProductLine(ctx context.Context, parent any, _ map[string]any) {
+	pl := parent.(*apiresource.ProductLine)
+	v, ok := resourcekit.GetLoadMeta(ctx).
+		Get(constants.ObjectTypeProductLine, pl.ID, "default_lot")
+	if !ok || v == nil {
+		return
+	}
+	pl.DefaultLot = v.(*apiresource.Quantity)
+}
+
+// extractDefaultLotRefFromProductLine returns the inline lot Quantity so the resolver can recurse into default_lot.unit.
+func extractDefaultLotRefFromProductLine(_ context.Context, parent any) []any {
+	pl := parent.(*apiresource.ProductLine)
+	if pl.DefaultLot == nil {
+		return nil
+	}
+	return []any{pl.DefaultLot}
 }

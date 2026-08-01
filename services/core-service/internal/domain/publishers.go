@@ -36,3 +36,10 @@ type BillingPublisher interface {
 	// PublishReportSeatChange writes a report-seat-change command to the outbox for usage metering with the billing provider.
 	PublishReportSeatChange(ctx context.Context, accountID string) *apierror.APIError
 }
+
+// ProductionScheduleEnqueuer publishes a generate command. The cadence tick uses it so
+// the solve happens out of band rather than inside the scheduler lease.
+type ProductionScheduleEnqueuer interface {
+	// EnqueueGeneration writes a generate-production-schedule command to the outbox for the given placeholder schedule.
+	EnqueueGeneration(ctx context.Context, params EnqueueGenerationParams) *apierror.APIError
+}

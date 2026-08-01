@@ -132,8 +132,7 @@ func (r *analyticsRepoImpl) GetSalesEntries(ctx context.Context, params domain.A
 }
 
 func (r *analyticsRepoImpl) GetOpenBatchEntries(ctx context.Context, params domain.AnalyzeOpenBatchesParams) ([]domain.OpenBatchEntry, *apierror.APIError) {
-	// Open batches are already handled by the existing batch infrastructure.
-	// This is a placeholder that returns empty results.
+	// Open batches are already handled by the existing batch infrastructure. This is a placeholder that returns empty results.
 	return nil, nil
 }
 
@@ -1092,183 +1091,70 @@ func (r *analyticsRepoImpl) GetNewCustomerEntries(ctx context.Context, params do
 	return entries, nil
 }
 
-func (r *analyticsRepoImpl) GetDemandForecast(ctx context.Context, params domain.GetDemandForecastParams) (*domain.DemandForecastResult, *apierror.APIError) {
-	return r.getDemandForecastImpl(ctx, params)
-}
-
-func (r *analyticsRepoImpl) GetOeeByDepartment(ctx context.Context, params domain.AnalyzeOeeParams) ([]domain.OeeDepartment, *apierror.APIError) {
-	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_oee_by_department")
+// GetSaleProductItemIDs returns sale-type product item IDs and their product line IDs.
+func (r *analyticsRepoImpl) GetSaleProductItemIDs(ctx context.Context, accountID string) ([]domain.SaleProductItemRow, *apierror.APIError) {
+	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_sale_product_item_ids")
 	defer span.End()
 
-	dateParams := sqlc.GetOeeDepartmentDataParams{
-		OwnerAccountID: params.AccountID,
-		StartDate:      toRequiredNullTime(params.StartDate),
-		EndDate:        toRequiredNullTime(params.EndDate),
-	}
-
-	rows, err := r.queries.GetOeeDepartmentData(ctx, dateParams)
+	rows, err := r.queries.GetSaleProductItemIDs(ctx, accountID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	runtimeRows, err := r.queries.GetOeeEstimatedRuntime(ctx, sqlc.GetOeeEstimatedRuntimeParams{
-		OwnerAccountID: params.AccountID,
-		StartDate:      toRequiredNullTime(params.StartDate),
-		EndDate:        toRequiredNullTime(params.EndDate),
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	// Build runtime map: departmentID -> runtimeSeconds.
-	runtimeMap := make(map[string]float64, len(runtimeRows))
-	for _, row := range runtimeRows {
-		runtimeMap[row.DepartmentID] = decimalToFloat64(row.RuntimeSeconds)
-	}
-
-	// Build department filter set for optional filtering.
-	deptFilter := make(map[string]bool, len(params.DepartmentIDs))
-	for _, id := range params.DepartmentIDs {
-		deptFilter[id] = true
-	}
-
-	var departments []domain.OeeDepartment
-	for _, row := range rows {
-		if len(deptFilter) > 0 && !deptFilter[row.DepartmentID] {
-			continue
+	result := make([]domain.SaleProductItemRow, len(rows))
+	for i, row := range rows {
+		result[i] = domain.SaleProductItemRow{
+			ItemID:        row.ItemID,
+			ProductLineID: nullStringPtr(row.ProductLineID),
 		}
-
-		runtimeSeconds := runtimeMap[row.DepartmentID]
-
-		departments = append(departments, domain.OeeDepartment{
-			DepartmentID:          row.DepartmentID,
-			DepartmentName:        row.DepartmentName,
-			GoodUnits:             decimalToFloat64(row.GoodUnits),
-			WasteUnits:            decimalToFloat64(row.WasteUnits),
-			SecondsUnits:          decimalToFloat64(row.SecondsUnits),
-			EstimatedRuntimeHours: runtimeSeconds / 3600,
-		})
 	}
 
-	if departments == nil {
-		departments = []domain.OeeDepartment{}
-	}
-
-	return departments, nil
+	return result, nil
 }
 
-func (r *analyticsRepoImpl) GetWeeksOfSales(ctx context.Context, params domain.AnalyzeWeeksOfSalesParams) (*domain.WeeksOfSalesResult, *apierror.APIError) {
-	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_weeks_of_sales")
+// GetProductLineInfo returns id and name for the given product lines.
+func (r *analyticsRepoImpl) GetProductLineInfo(ctx context.Context, accountID string, productLineIDs []string) ([]domain.ProductLineInfoRow, *apierror.APIError) {
+	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_product_line_info")
 	defer span.End()
 
-	// 1. Get sale-type product item IDs and their product line IDs.
-	productItems, err := r.queries.GetSaleProductItemIDs(ctx, params.AccountID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	if len(productItems) == 0 {
-		return &domain.WeeksOfSalesResult{Items: nil, Count: 0}, nil
-	}
-
-	// 2. Build maps: productLine -> []itemID, collect unique product line IDs.
-	itemsByProductLine := make(map[string][]string)
-	uniquePLIDs := make(map[string]bool)
-	var allItemIDs []string
-	for _, pi := range productItems {
-		if pi.ProductLineID.Valid {
-			plID := pi.ProductLineID.String
-			itemsByProductLine[plID] = append(itemsByProductLine[plID], pi.ItemID)
-			uniquePLIDs[plID] = true
-		}
-		allItemIDs = append(allItemIDs, pi.ItemID)
-	}
-
-	plIDs := make([]string, 0, len(uniquePLIDs))
-	for plID := range uniquePLIDs {
-		plIDs = append(plIDs, plID)
-	}
-	if len(plIDs) == 0 {
-		return &domain.WeeksOfSalesResult{Items: nil, Count: 0}, nil
-	}
-
-	// 3. Get product line info (names).
-	plInfoRows, err := r.queries.GetProductLineInfo(ctx, sqlc.GetProductLineInfoParams{
-		ProductLineIds: plIDs,
-		OwnerAccountID: sql.NullString{String: params.AccountID, Valid: true},
+	rows, err := r.queries.GetProductLineInfo(ctx, sqlc.GetProductLineInfoParams{
+		ProductLineIds: productLineIDs,
+		OwnerAccountID: sql.NullString{String: accountID, Valid: true},
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// 4. Get on-hand inventory for all items.
-	inventoryRows, err := r.queries.FetchOnHandInventoryBulk(ctx, sqlc.FetchOnHandInventoryBulkParams{
-		ItemIds:        allItemIDs,
-		OwnerAccountID: params.AccountID,
+	result := make([]domain.ProductLineInfoRow, len(rows))
+	for i, row := range rows {
+		result[i] = domain.ProductLineInfoRow{
+			ID:   row.ID,
+			Name: row.Name,
+		}
+	}
+
+	return result, nil
+}
+
+// GetOrderQuantityByProductLine returns the aggregate ordered quantity for one product line in a window.
+func (r *analyticsRepoImpl) GetOrderQuantityByProductLine(ctx context.Context, params domain.GetOrderQuantityByProductLineParams) (*domain.OrderQuantityByProductLineRow, *apierror.APIError) {
+	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_order_quantity_by_product_line")
+	defer span.End()
+
+	row, err := r.queries.GetOrderQuantityByProductLine(ctx, sqlc.GetOrderQuantityByProductLineParams{
+		TargetProductLineID: params.ProductLineID,
+		OwnerAccountID:      params.AccountID,
+		StartDate:           sql.NullTime{Time: params.StartDate, Valid: true},
+		EndDate:             sql.NullTime{Time: params.EndDate, Valid: true},
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Build inventory map: itemID -> onHandQuantity.
-	invMap := make(map[string]float64)
-	for _, row := range inventoryRows {
-		invMap[row.ItemID] = float64(row.OnHandQuantity)
-	}
-
-	// 5. For each product line, compute metrics.
-	weeks := params.PeriodInWeeks
-	if weeks < 1 {
-		weeks = 4
-	}
-	endDate := time.Now()
-	startDate := endDate.Add(-time.Duration(weeks) * 7 * 24 * time.Hour)
-
-	var items []domain.WeeksOfSalesItem
-	for _, plInfo := range plInfoRows {
-		// Get order quantity for this product line in the period.
-		orderRow, err := r.queries.GetOrderQuantityByProductLine(ctx, sqlc.GetOrderQuantityByProductLineParams{
-			TargetProductLineID: plInfo.ID,
-			OwnerAccountID:      params.AccountID,
-			StartDate:           sql.NullTime{Time: startDate, Valid: true},
-			EndDate:             sql.NullTime{Time: endDate, Valid: true},
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-
-		totalDemand := decimalToFloat64(orderRow.TotalQuantity)
-		unitAbbrev := fmt.Sprintf("%v", orderRow.UnitAbbreviation)
-		unitType := fmt.Sprintf("%v", orderRow.UnitType)
-
-		// Sum on-hand for items in this product line.
-		itemIDsForLine := itemsByProductLine[plInfo.ID]
-		var onHand float64
-		for _, iid := range itemIDsForLine {
-			onHand += invMap[iid]
-		}
-
-		avgSales := totalDemand / float64(weeks)
-		var wos float64
-		if avgSales > 0 {
-			wos = onHand / avgSales
-		}
-
-		items = append(items, domain.WeeksOfSalesItem{
-			ProductLineID:                        plInfo.ID,
-			ProductLineName:                      plInfo.Name,
-			QuantityOnHand:                       onHand,
-			QuantityOnHandUnitAbbreviation:       unitAbbrev,
-			QuantityOnHandUnitType:               unitType,
-			AverageSalesQuantity:                 avgSales,
-			AverageSalesQuantityUnitAbbreviation: unitAbbrev,
-			AverageSalesQuantityUnitType:         unitType,
-			WeeksOfSales:                         wos,
-		})
-	}
-
-	return &domain.WeeksOfSalesResult{
-		Items: items,
-		Count: int64(len(items)),
+	return &domain.OrderQuantityByProductLineRow{
+		TotalQuantity:    decimalToFloat64(row.TotalQuantity),
+		UnitAbbreviation: fmt.Sprintf("%v", row.UnitAbbreviation),
+		UnitType:         fmt.Sprintf("%v", row.UnitType),
 	}, nil
 }
 

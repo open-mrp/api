@@ -47,9 +47,18 @@ INSERT IGNORE INTO _item_categories_properties (A, B) VALUES
     ('itcg_01seedlabel000000', 'pp_01k0a7ntn1ez6aw8x850femxeh');
 
 -- Product lines
-INSERT IGNORE INTO product_line (id, name, unit_group_id, account_id, created_at, updated_at) VALUES
-    ('pdln_01k0a735ype5e8nrhv1n5dhq1q', 'Socks', 'ungp_1gf7a8200f8x8jjpq5a9kdrhd', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
-    ('shipping', 'Shipping', 'each_group', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
-    ('credit', 'Credit', 'each_group', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
-    ('pdln_01k0a735ypfjva933tg57wfx0t', 'eBad', 'each_group', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
-    ('pdln_01gf7a8200ef99y3gj77z4q25z', 'Pace', 'ungp_1gf7a8200f8x8jjpq5a9kdrhd', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+--
+-- Socks and Pace carry a lot convention: a doff is 60 PAIRS, not 60 eaches. The unit is
+-- the point — an armsleeve line would be 60 eaches off the same number — and it is what
+-- sizes both the schedule's campaigns and the default quantity on a new batch.
+-- The lot is a quantity row, so it is written before the lines that point at it.
+INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
+    ('qty_01seedsockslot00', 60, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qty_01seedpacelot000', 60, 'un_01seedpair000000000', NOW(), NOW());
+
+INSERT IGNORE INTO product_line (id, name, unit_group_id, default_lot_id, account_id, created_at, updated_at) VALUES
+    ('pdln_01k0a735ype5e8nrhv1n5dhq1q', 'Socks', 'ungp_1gf7a8200f8x8jjpq5a9kdrhd', 'qty_01seedsockslot00', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
+    ('shipping', 'Shipping', 'each_group', NULL, 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
+    ('credit', 'Credit', 'each_group', NULL, 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
+    ('pdln_01k0a735ypfjva933tg57wfx0t', 'eBad', 'each_group', NULL, 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
+    ('pdln_01gf7a8200ef99y3gj77z4q25z', 'Pace', 'ungp_1gf7a8200f8x8jjpq5a9kdrhd', 'qty_01seedpacelot000', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());

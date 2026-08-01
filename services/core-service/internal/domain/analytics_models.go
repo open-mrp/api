@@ -416,11 +416,67 @@ type DemandForecastResult struct {
 	CurrentMonthFraction float64
 }
 
+// GetDemandForecastWindowParams bounds the raw monthly demand/revenue reads used to build the demand forecast.
+type GetDemandForecastWindowParams struct {
+	AccountID string
+	StartDate time.Time
+	EndDate   time.Time
+}
+
+// DemandForecastMonthlyDemandRow is one item-month of order-based demand and revenue.
+type DemandForecastMonthlyDemandRow struct {
+	ItemID             string
+	ProductSku         string
+	ProductDescription *string
+	ProductLineID      *string
+	Unit               string
+	Currency           string
+	DemandYear         int32
+	DemandMonth        int32
+	MonthlyDemand      float64
+	MonthlyRevenue     float64
+}
+
+// DemandForecastMonthlyRevenueRow is one item-month of invoice-based revenue.
+type DemandForecastMonthlyRevenueRow struct {
+	ItemID         string
+	RevenueYear    int32
+	RevenueMonth   int32
+	MonthlyRevenue float64
+}
+
 // --- Weeks of Sales Analytics ---
 
 type AnalyzeWeeksOfSalesParams struct {
 	AccountID     string
 	PeriodInWeeks int32
+}
+
+// SaleProductItemRow links a sale-type product's item to its product line.
+type SaleProductItemRow struct {
+	ItemID        string
+	ProductLineID *string
+}
+
+// ProductLineInfoRow is a product line's identifier and display name.
+type ProductLineInfoRow struct {
+	ID   string
+	Name string
+}
+
+// GetOrderQuantityByProductLineParams scopes ordered-quantity aggregation to one product line and time window.
+type GetOrderQuantityByProductLineParams struct {
+	AccountID     string
+	ProductLineID string
+	StartDate     time.Time
+	EndDate       time.Time
+}
+
+// OrderQuantityByProductLineRow is the aggregate ordered quantity for a product line within a window.
+type OrderQuantityByProductLineRow struct {
+	TotalQuantity    float64
+	UnitAbbreviation string
+	UnitType         string
 }
 
 type WeeksOfSalesItem struct {
@@ -447,6 +503,16 @@ type AnalyzeOeeParams struct {
 	StartDate     time.Time
 	EndDate       time.Time
 	DepartmentIDs []string
+	// PlannedTimeHours is the scheduled production time per department for the window. Without it Availability has no denominator, so the OEE ratios are returned nil rather than guessed. Keyed by department ID.
+	PlannedTimeHours map[string]float64
+}
+
+// OeeDowntimeReason is one reason's contribution to a department's downtime.
+type OeeDowntimeReason struct {
+	ReasonCode      string
+	OeeBucket       string
+	DowntimeSeconds float64
+	EventCount      int64
 }
 
 type OeeDepartment struct {
@@ -456,4 +522,93 @@ type OeeDepartment struct {
 	WasteUnits            float64
 	SecondsUnits          float64
 	EstimatedRuntimeHours float64
+
+	// StandardSecondsEarned is the time the period's output should have taken at each production step's own labor rate. It is the numerator of the fallback Performance estimate.
+	StandardSecondsEarned float64
+
+	// The measured Performance sample: MeasuredIdealSeconds is the ideal time of the tickets whose machine scan gap qualified, MeasuredRunSeconds is the actual time those gaps took (net of downtime already charged elsewhere), and PerformanceTicketCount is how many tickets are in the sample.
+	MeasuredIdealSeconds   float64
+	MeasuredRunSeconds     float64
+	PerformanceTicketCount int64
+	// PerformanceBasis says how PerformancePct was obtained: "scan_intervals" when measured, "run_time_estimate" when it fell back, empty when nil.
+	PerformanceBasis string
+
+	// Measured downtime, split by the OEE term each reason charges. NotScheduled is removed from the denominator rather than counted as a loss.
+	AvailabilityLossSeconds float64
+	PerformanceLossSeconds  float64
+	QualityLossSeconds      float64
+	NotScheduledSeconds     float64
+	ChangeoverSeconds       float64
+	DowntimeEventCount      int64
+	DowntimeBreakdown       []OeeDowntimeReason
+
+	// ScheduledSeconds is planned time net of not-scheduled downtime; RunTimeSeconds is scheduled time net of availability losses.
+	ScheduledSeconds float64
+	RunTimeSeconds   float64
+
+	// Ratios are nil when their denominator is zero or planned time is unknown. A department with no scheduled time has no OEE, which is not the same as 0% OEE.
+	AvailabilityPct *float64
+	PerformancePct  *float64
+	QualityPct      *float64
+	OeePct          *float64
+
+	// HasDowntimeData is false when nothing was logged for this department in the window. Callers must surface that: a department that logs no downtime computes 100% Availability, which reads as an improvement rather than missing data.
+	HasDowntimeData bool
+	// HasPerformanceAnomaly flags Performance > 1, which always means a stale ideal cycle time. The raw value is still reported rather than clamped, so the data-quality problem stays visible.
+	HasPerformanceAnomaly bool
+}
+
+// GetOeeWindowParams bounds the raw OEE reads for one account and reporting window.
+type GetOeeWindowParams struct {
+	AccountID string
+	StartDate time.Time
+	EndDate   time.Time
+}
+
+// OeeDepartmentDataRow is one department's unit counts and standard time earned in the window.
+type OeeDepartmentDataRow struct {
+	DepartmentID          string
+	DepartmentName        string
+	GoodUnits             float64
+	WasteUnits            float64
+	SecondsUnits          float64
+	StandardSecondsEarned float64
+}
+
+// OeeEstimatedRuntimeRow is one department's estimated runtime in the window.
+type OeeEstimatedRuntimeRow struct {
+	DepartmentID   string
+	RuntimeSeconds float64
+}
+
+// OeeDowntimeRow is one department-reason aggregate of logged downtime, clipped to the reporting window.
+type OeeDowntimeRow struct {
+	DepartmentID    string
+	ReasonCode      string
+	OeeBucket       string
+	DowntimeSeconds int64
+	EventCount      int64
+}
+
+// OeeScanIntervalRow is one scanned batch ticket with the machine it came off, ordered so consecutive scans on the same machine can be diffed into the actual time the ticket took. ScannedAt is nil when the ticket was never scanned.
+type OeeScanIntervalRow struct {
+	MachineID    string
+	DepartmentID string
+	ScannedAt    *time.Time
+	// IdealSeconds is the time the ticket's output should have taken at its production step's own labor rate.
+	IdealSeconds float64
+}
+
+// OeeMachineDowntimeIntervalRow is one machine's logged downtime window, unclipped. EndedAt is nil while the event is still open.
+type OeeMachineDowntimeIntervalRow struct {
+	MachineID string
+	OeeBucket string
+	StartedAt time.Time
+	EndedAt   *time.Time
+}
+
+// DepartmentMachineCountRow is the number of machines in one department, the scheduled-time denominator for OEE.
+type DepartmentMachineCountRow struct {
+	DepartmentID string
+	MachineCount int64
 }

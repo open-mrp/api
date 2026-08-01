@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.42.0](https://github.com/Augno/api/compare/v0.41.18...v0.42.0) (2026-08-01)
+
+
+### Features
+
+* production schedules, machine downtime, and manufacturing analytics ([#440](https://github.com/Augno/api/issues/440)) ([64eb57d](https://github.com/Augno/api/commit/64eb57d5013afae115ff6f9a64e275484f92d91a))
+
 ## [0.41.18](https://github.com/Augno/api/compare/v0.41.17...v0.41.18) (2026-07-31)
 
 

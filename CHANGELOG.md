@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.42.2](https://github.com/Augno/api/compare/v0.42.1...v0.42.2) (2026-08-01)
+
+
+### Bug Fixes
+
+* schedule issues ([#444](https://github.com/Augno/api/issues/444)) ([8877a83](https://github.com/Augno/api/commit/8877a833f798d6696dd275c6aaf5bca8bc524215))
+
 ## [0.42.1](https://github.com/Augno/api/compare/v0.42.0...v0.42.1) (2026-08-01)
 
 

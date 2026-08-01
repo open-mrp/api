@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.42.1](https://github.com/Augno/api/compare/v0.42.0...v0.42.1) (2026-08-01)
+
+
+### Bug Fixes
+
+* mark production scheduling endpoints public; one endpoint per file ([#442](https://github.com/Augno/api/issues/442)) ([d527b44](https://github.com/Augno/api/commit/d527b44acaa397d9c5fa35df22b532397d5cf355))
+
 ## [0.42.0](https://github.com/Augno/api/compare/v0.41.18...v0.42.0) (2026-08-01)
 
 

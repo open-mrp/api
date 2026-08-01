@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.42.5](https://github.com/Augno/api/compare/v0.42.4...v0.42.5) (2026-08-01)
+
+
+### Bug Fixes
+
+* introduce pinned campaigns to production scheduling ([25e1368](https://github.com/Augno/api/commit/25e1368a911d589c16c53307855925c5d1caeb37))
+
 ## [0.42.4](https://github.com/Augno/api/compare/v0.42.3...v0.42.4) (2026-08-01)
 
 

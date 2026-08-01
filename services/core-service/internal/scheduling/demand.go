@@ -118,23 +118,27 @@ func ResolveDemand(in DemandInput) ([]ItemDemand, []AppliedOverride) {
 	for _, itemID := range itemIDs {
 		series := sortedSeries(in.MonthlyByItem[itemID])
 
-		// Overrides land on the monthly series BEFORE any forecasting, so a forecast basis projects the adjusted history rather than ignoring the adjustment.
-		adjusted, itemApplied := applyOverrides(itemID, series, overridesByItem[itemID])
+		demand := ItemDemand{ItemID: itemID}
+		demand.TrailingAnnual = trailingTwelve(series, in.AsOf)
+
+		// Overrides land on the FORWARD planning year, not the history: an override is "demand the order book cannot see yet", and its period names the months the demand will occur in. The basis projects history into a monthly baseline for the coming year; overrides then adjust those months, and the plan is solved against the sum.
+		forward := forwardBaseline(series, in.AsOf, in.BasisCode, in.ForecastMonths, in.ForecastZ)
+		adjustedForward, itemApplied := applyOverrides(itemID, forward, overridesByItem[itemID])
 		applied = append(applied, itemApplied...)
 
-		demand := ItemDemand{ItemID: itemID}
-		demand.TrailingAnnual = trailingTwelve(adjusted, in.AsOf)
-
-		switch in.BasisCode {
-		case DemandBasisSeasonalEMA:
-			demand.AnnualDemand = forecastAnnual(adjusted, in.AsOf, in.ForecastMonths, in.ForecastZ)
-		default:
-			demand.AnnualDemand = demand.TrailingAnnual
+		var forwardTotal float64
+		for _, m := range adjustedForward {
+			forwardTotal += m.Quantity
 		}
+		// A shorter forecast horizon is scaled up to a full year so the policy always reasons about an annual rate.
+		if len(adjustedForward) > 0 && len(adjustedForward) != 12 {
+			forwardTotal = forwardTotal * 12 / float64(len(adjustedForward))
+		}
+		demand.AnnualDemand = forwardTotal
 
-		// Weekly sigma from monthly sigma: a month is roughly 52/12 weeks, and variance scales with time, so the weekly figure divides by its square root.
-		monthlyValues := make([]float64, 0, len(adjusted))
-		for _, m := range adjusted {
+		// Weekly sigma from monthly sigma: a month is roughly 52/12 weeks, and variance scales with time, so the weekly figure divides by its square root. Variability is measured from what actually happened, so the history stays unadjusted here.
+		monthlyValues := make([]float64, 0, len(series))
+		for _, m := range series {
 			monthlyValues = append(monthlyValues, m.Quantity)
 		}
 		weeksPerMonth := weeksPerYear / 12
@@ -224,9 +228,50 @@ func indexOverrides(overrides []DemandOverride, itemsByLine map[string][]string,
 	return out
 }
 
-// applyOverrides layers overrides onto a monthly series, returning the adjusted series and a record of every change that actually moved a number.
+// forwardBaseline projects the demand basis into a monthly series for the coming planning year, starting with the current month.
 //
-// An override covering a month with no history inserts that month, so "a big customer is about to order" works for an item that has never sold.
+// This is the series overrides adjust: a flat twelfth of the trailing year per month for the trailing basis, or the seasonal-EMA forecast months for the forecast basis. Every month is present even when its baseline is zero, so an override on an item that has never sold still lands.
+func forwardBaseline(series []MonthlyDemand, asOf time.Time, basisCode string, forecastMonths int, zScore float64) []MonthlyDemand {
+	lastComplete := monthStartOf(asOf).AddDate(0, -1, 0)
+
+	if basisCode == DemandBasisSeasonalEMA {
+		if forecastMonths <= 0 {
+			forecastMonths = 12
+		}
+
+		observations := make([]forecast.Observation, 0, len(series))
+		for _, m := range series {
+			if m.MonthStart.After(lastComplete) {
+				continue // never forecast from a partial month
+			}
+			observations = append(observations, forecast.Observation{MonthStart: m.MonthStart, Value: m.Quantity})
+		}
+
+		if len(observations) > 0 {
+			points := forecast.SeasonalEMA(observations, lastComplete, forecastMonths, zScore)
+			out := make([]MonthlyDemand, 0, len(points))
+			for k, p := range points {
+				// Point k covers the month k+1 past the last complete one; its Date field is stamped end-of-period, so the covered month is derived rather than read.
+				out = append(out, MonthlyDemand{MonthStart: lastComplete.AddDate(0, k+1, 0), Quantity: p.Forecast})
+			}
+			if len(out) > 0 {
+				return out
+			}
+		}
+		// No history to forecast from: fall through to the flat baseline so the months still exist for overrides to land on.
+	}
+
+	monthly := trailingTwelve(series, asOf) / 12
+	out := make([]MonthlyDemand, 0, 12)
+	for k := range 12 {
+		out = append(out, MonthlyDemand{MonthStart: lastComplete.AddDate(0, k+1, 0), Quantity: monthly})
+	}
+	return out
+}
+
+// applyOverrides layers overrides onto the forward monthly baseline, returning the adjusted series and a record of every change that actually moved a number.
+//
+// Only months inside the baseline window move: the planning year is the demand being solved for, and an override month beyond it belongs to a future plan.
 func applyOverrides(itemID string, series []MonthlyDemand, overrides []DemandOverride) ([]MonthlyDemand, []AppliedOverride) {
 	if len(overrides) == 0 {
 		return series, nil
@@ -241,7 +286,10 @@ func applyOverrides(itemID string, series []MonthlyDemand, overrides []DemandOve
 
 	for _, o := range overrides {
 		for _, monthStart := range monthsBetween(o.PeriodStart, o.PeriodEnd) {
-			before := byMonth[monthStart]
+			before, inWindow := byMonth[monthStart]
+			if !inWindow {
+				continue
+			}
 
 			var after float64
 			switch o.TypeCode {
@@ -322,33 +370,3 @@ func trailingTwelve(series []MonthlyDemand, asOf time.Time) float64 {
 	return total
 }
 
-// forecastAnnual projects forward with the shared seasonal-EMA engine and sums the horizon into an annual run rate.
-func forecastAnnual(series []MonthlyDemand, asOf time.Time, forecastMonths int, zScore float64) float64 {
-	if forecastMonths <= 0 {
-		forecastMonths = 12
-	}
-
-	lastComplete := monthStartOf(asOf).AddDate(0, -1, 0)
-
-	observations := make([]forecast.Observation, 0, len(series))
-	for _, m := range series {
-		if m.MonthStart.After(lastComplete) {
-			continue // never forecast from a partial month
-		}
-		observations = append(observations, forecast.Observation{MonthStart: m.MonthStart, Value: m.Quantity})
-	}
-	if len(observations) == 0 {
-		return 0
-	}
-
-	var total float64
-	for _, p := range forecast.SeasonalEMA(observations, lastComplete, forecastMonths, zScore) {
-		total += p.Forecast
-	}
-
-	// Scale a shorter horizon up to a full year so the policy always reasons about an annual rate.
-	if forecastMonths != 12 {
-		total = total * 12 / float64(forecastMonths)
-	}
-	return total
-}

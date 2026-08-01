@@ -46,16 +46,16 @@ func (s *productionScheduleSvcImpl) loadRegenerateTarget(
 	return schedule, nil
 }
 
-// solveForRegenerate re-solves using the version's own planning inputs unless the caller overrides them.
+// solveForRegenerate re-solves using the version's own horizon and basis unless the caller overrides them.
 //
-// Reusing the stored values is what makes a plain regenerate answer "what would the solver say now", rather than quietly answering a different question with a different horizon.
+// The planning instant is NOT reused: a regenerate answers "what would the solver say now", and replaying the draft's original instant would silently answer a different question — demand overrides created since then would be filtered out as not-yet-effective, and the horizon would stay anchored to the day the draft was first generated no matter how stale that is.
 func (s *productionScheduleSvcImpl) solveForRegenerate(
 	ctx context.Context,
 	accountID string,
 	schedule *domain.ProductionSchedule,
 	params domain.RegenerateProductionScheduleParams,
 ) (*scheduling.SolverOutput, *domain.EffectiveScheduleSettings, time.Time, *apierror.APIError) {
-	planningAsOf := schedule.PlanningAsOf
+	planningAsOf := time.Now().UTC()
 	if params.PlanningAsOf != nil && !params.PlanningAsOf.IsZero() {
 		planningAsOf = *params.PlanningAsOf
 	}

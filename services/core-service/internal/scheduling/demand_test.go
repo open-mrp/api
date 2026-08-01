@@ -81,9 +81,12 @@ func TestResolveDemand_SeasonalEMABasisUsesForecast(t *testing.T) {
 	}
 }
 
-func TestResolveDemand_AbsoluteOverrideReplacesMonth(t *testing.T) {
+func TestResolveDemand_AbsoluteOverrideReplacesForwardMonth(t *testing.T) {
 	t.Parallel()
 
+	// Overrides adjust the FORWARD planning year: the period names the months the
+	// demand will occur in, and the baseline each month starts from is a twelfth of
+	// the trailing year.
 	got, applied := ResolveDemand(DemandInput{
 		AsOf:          time.Date(2026, time.June, 15, 0, 0, 0, 0, time.UTC),
 		BasisCode:     DemandBasisTrailing12,
@@ -91,14 +94,18 @@ func TestResolveDemand_AbsoluteOverrideReplacesMonth(t *testing.T) {
 		MonthlyByItem: map[string][]MonthlyDemand{"it_A": series(2026, time.May, 12, 100)},
 		Overrides: []DemandOverride{{
 			ID: "ov_1", ScopeCode: OverrideScopeItem, ScopeRefID: "it_A",
-			PeriodStart: mo(2026, time.May), PeriodEnd: mo(2026, time.May),
+			PeriodStart: mo(2026, time.July), PeriodEnd: mo(2026, time.July),
 			TypeCode: OverrideTypeAbsolute, Value: 500, ReasonCode: "new_customer",
 		}},
 	})
 
-	// 11 months at 100 plus the overridden month at 500.
-	if got[0].TrailingAnnual != 1600 {
-		t.Errorf("trailing annual = %v, want 1600 (1100 + 500)", got[0].TrailingAnnual)
+	// Eleven forward months at the baseline 100 plus the overridden month at 500.
+	if got[0].AnnualDemand != 1600 {
+		t.Errorf("annual demand = %v, want 1600 (1100 + 500)", got[0].AnnualDemand)
+	}
+	// The history itself is untouched.
+	if got[0].TrailingAnnual != 1200 {
+		t.Errorf("trailing annual = %v, want 1200; overrides must not rewrite history", got[0].TrailingAnnual)
 	}
 	if len(applied) != 1 {
 		t.Fatalf("applied = %d, want 1; an override that moves a number must be recorded", len(applied))
@@ -108,6 +115,63 @@ func TestResolveDemand_AbsoluteOverrideReplacesMonth(t *testing.T) {
 	}
 	if applied[0].ReasonCode != "new_customer" {
 		t.Errorf("reason = %q, want new_customer; the plan must be able to explain itself", applied[0].ReasonCode)
+	}
+}
+
+// An override dated entirely in the past adjusts nothing: the plan is solved for the
+// coming year, and months that have already happened are history, not demand.
+func TestResolveDemand_PastDatedOverrideIsANoOp(t *testing.T) {
+	t.Parallel()
+
+	got, applied := ResolveDemand(DemandInput{
+		AsOf:          time.Date(2026, time.June, 15, 0, 0, 0, 0, time.UTC),
+		BasisCode:     DemandBasisTrailing12,
+		WeeksPerYear:  52,
+		MonthlyByItem: map[string][]MonthlyDemand{"it_A": series(2026, time.May, 12, 100)},
+		Overrides: []DemandOverride{{
+			ID: "ov_1", ScopeCode: OverrideScopeItem, ScopeRefID: "it_A",
+			PeriodStart: mo(2026, time.March), PeriodEnd: mo(2026, time.May),
+			TypeCode: OverrideTypeDeltaPercent, Value: 100,
+		}},
+	})
+
+	if got[0].AnnualDemand != 1200 {
+		t.Errorf("annual demand = %v, want 1200; a past-dated override must not move the plan", got[0].AnnualDemand)
+	}
+	if len(applied) != 0 {
+		t.Errorf("applied = %d, want 0", len(applied))
+	}
+}
+
+// One account-wide percent override scales every planned item — the "plan for double
+// demand" knob that used to be the script's hardcoded growth multiplier.
+func TestResolveDemand_AccountOverrideScalesEveryItem(t *testing.T) {
+	t.Parallel()
+
+	got, _ := ResolveDemand(DemandInput{
+		AsOf:         time.Date(2026, time.June, 15, 0, 0, 0, 0, time.UTC),
+		BasisCode:    DemandBasisTrailing12,
+		WeeksPerYear: 52,
+		MonthlyByItem: map[string][]MonthlyDemand{
+			"it_A": series(2026, time.May, 12, 100),
+			"it_B": series(2026, time.May, 12, 50),
+		},
+		Overrides: []DemandOverride{{
+			ID: "ov_1", ScopeCode: OverrideScopeAccount, ScopeRefID: "ac_1",
+			PeriodStart: mo(2026, time.June), PeriodEnd: mo(2027, time.May),
+			TypeCode: OverrideTypeDeltaPercent, Value: 100,
+		}},
+	})
+
+	byItem := map[string]ItemDemand{}
+	for _, d := range got {
+		byItem[d.ItemID] = d
+	}
+	if byItem["it_A"].AnnualDemand != 2400 {
+		t.Errorf("it_A = %v, want 2400 (doubled)", byItem["it_A"].AnnualDemand)
+	}
+	if byItem["it_B"].AnnualDemand != 1200 {
+		t.Errorf("it_B = %v, want 1200 (doubled)", byItem["it_B"].AnnualDemand)
 	}
 }
 
@@ -122,25 +186,25 @@ func TestResolveDemand_DeltaOverridesStack(t *testing.T) {
 		Overrides: []DemandOverride{
 			// Deliberately supplied percent-first to prove ordering is enforced.
 			{ID: "ov_pct", ScopeCode: OverrideScopeItem, ScopeRefID: "it_A",
-				PeriodStart: mo(2026, time.May), PeriodEnd: mo(2026, time.May),
+				PeriodStart: mo(2026, time.July), PeriodEnd: mo(2026, time.July),
 				TypeCode: OverrideTypeDeltaPercent, Value: 100},
 			{ID: "ov_units", ScopeCode: OverrideScopeItem, ScopeRefID: "it_A",
-				PeriodStart: mo(2026, time.May), PeriodEnd: mo(2026, time.May),
+				PeriodStart: mo(2026, time.July), PeriodEnd: mo(2026, time.July),
 				TypeCode: OverrideTypeDeltaUnits, Value: 50},
 		},
 	})
 
 	// units first (100 + 50 = 150), then percent (150 * 2 = 300).
 	// Applying percent first would give (100*2)+50 = 250.
-	if got[0].TrailingAnnual != 1100+300 {
-		t.Errorf("trailing annual = %v, want %v; units must apply before percent",
-			got[0].TrailingAnnual, 1100+300)
+	if got[0].AnnualDemand != 1100+300 {
+		t.Errorf("annual demand = %v, want %v; units must apply before percent",
+			got[0].AnnualDemand, 1100+300)
 	}
 }
 
 // "A large new customer is about to order" has to work for an item with no sales
-// history, which means an override must be able to create a month.
-func TestResolveDemand_OverrideCreatesMonthWithNoHistory(t *testing.T) {
+// history: every forward month exists at a zero baseline, so the override still lands.
+func TestResolveDemand_OverrideWorksWithNoHistory(t *testing.T) {
 	t.Parallel()
 
 	got, applied := ResolveDemand(DemandInput{
@@ -150,13 +214,13 @@ func TestResolveDemand_OverrideCreatesMonthWithNoHistory(t *testing.T) {
 		MonthlyByItem: map[string][]MonthlyDemand{"it_A": {}},
 		Overrides: []DemandOverride{{
 			ID: "ov_1", ScopeCode: OverrideScopeItem, ScopeRefID: "it_A",
-			PeriodStart: mo(2026, time.April), PeriodEnd: mo(2026, time.May),
+			PeriodStart: mo(2026, time.July), PeriodEnd: mo(2026, time.August),
 			TypeCode: OverrideTypeAbsolute, Value: 400,
 		}},
 	})
 
-	if got[0].TrailingAnnual != 800 {
-		t.Errorf("trailing annual = %v, want 800 (two created months at 400)", got[0].TrailingAnnual)
+	if got[0].AnnualDemand != 800 {
+		t.Errorf("annual demand = %v, want 800 (two overridden months at 400)", got[0].AnnualDemand)
 	}
 	if len(applied) != 2 {
 		t.Errorf("applied = %d, want 2 (one per month in the period)", len(applied))
@@ -177,7 +241,7 @@ func TestResolveDemand_ProductLineOverrideReachesItems(t *testing.T) {
 		ItemsByProductLine: map[string][]string{"pdln_1": {"it_A"}},
 		Overrides: []DemandOverride{{
 			ID: "ov_1", ScopeCode: OverrideScopeProductLine, ScopeRefID: "pdln_1",
-			PeriodStart: mo(2026, time.May), PeriodEnd: mo(2026, time.May),
+			PeriodStart: mo(2026, time.July), PeriodEnd: mo(2026, time.July),
 			TypeCode: OverrideTypeDeltaPercent, Value: 100,
 		}},
 	})
@@ -186,11 +250,11 @@ func TestResolveDemand_ProductLineOverrideReachesItems(t *testing.T) {
 	for _, d := range got {
 		byItem[d.ItemID] = d
 	}
-	if byItem["it_A"].TrailingAnnual != 1300 {
-		t.Errorf("it_A = %v, want 1300 (its May doubled)", byItem["it_A"].TrailingAnnual)
+	if byItem["it_A"].AnnualDemand != 1300 {
+		t.Errorf("it_A = %v, want 1300 (its July doubled)", byItem["it_A"].AnnualDemand)
 	}
-	if byItem["it_B"].TrailingAnnual != 1200 {
-		t.Errorf("it_B = %v, want 1200; an item outside the line must be untouched", byItem["it_B"].TrailingAnnual)
+	if byItem["it_B"].AnnualDemand != 1200 {
+		t.Errorf("it_B = %v, want 1200; an item outside the line must be untouched", byItem["it_B"].AnnualDemand)
 	}
 }
 
@@ -204,13 +268,13 @@ func TestResolveDemand_OverrideCannotDriveDemandNegative(t *testing.T) {
 		MonthlyByItem: map[string][]MonthlyDemand{"it_A": series(2026, time.May, 12, 100)},
 		Overrides: []DemandOverride{{
 			ID: "ov_1", ScopeCode: OverrideScopeItem, ScopeRefID: "it_A",
-			PeriodStart: mo(2026, time.May), PeriodEnd: mo(2026, time.May),
+			PeriodStart: mo(2026, time.July), PeriodEnd: mo(2026, time.July),
 			TypeCode: OverrideTypeDeltaUnits, Value: -5000,
 		}},
 	})
 
-	if got[0].TrailingAnnual != 1100 {
-		t.Errorf("trailing annual = %v, want 1100; the month must floor at zero", got[0].TrailingAnnual)
+	if got[0].AnnualDemand != 1100 {
+		t.Errorf("annual demand = %v, want 1100; the month must floor at zero", got[0].AnnualDemand)
 	}
 }
 

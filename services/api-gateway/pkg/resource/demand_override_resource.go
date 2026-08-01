@@ -44,7 +44,7 @@ func (*DemandOverrideType) SchemaExample() any {
 
 // An adjustment to the demand a production schedule plans against.
 //
-// Sales history cannot see a large customer that is about to order, a promotion, or a line that is being discontinued. An override is how management tells the planner about it. The period bounds the demand months the adjustment applies to; `effective_from` and `expires_at` bound when the override is consulted at all, which is a different question — an override for next quarter typically stops applying once the real orders arrive.
+// Sales history cannot see a large customer that is about to order, a promotion, or a line that is being discontinued. An override is how management tells the planner about it. The period names the months the demand will occur in — months of the coming planning year; a period entirely in the past adjusts nothing, because the plan is solved for the year ahead. `effective_from` and `expires_at` bound when the override is consulted at all, which is a different question — an override for next quarter typically stops applying once the real orders arrive.
 //
 // A product-line override applies to each of the line's items; an account-wide override applies to every planned item, which is how a global growth assumption (e.g. "plan for double demand") is expressed.
 type DemandOverride struct {

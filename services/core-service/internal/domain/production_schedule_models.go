@@ -32,6 +32,9 @@ type LoadSolverInputParams struct {
 	ConstraintDepartmentID string
 
 	ItemSettings map[string]ProductionScheduleItemSetting
+
+	// PinnedCampaigns are hand-edited campaigns already on the plan a regenerate is keeping; the solver plans around them.
+	PinnedCampaigns []scheduling.PinnedCampaign
 }
 
 // GetConstraintBatchMeasurementsParams scopes the batch-history read to one account, one demand window and the constraint machines.

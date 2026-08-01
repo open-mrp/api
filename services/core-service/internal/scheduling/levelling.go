@@ -44,6 +44,21 @@ type LevellingResult struct {
 	ProjectedOnHand map[string][]float64
 }
 
+// PinnedCampaign is a hand-edited campaign the sweep must plan around rather than re-derive. Its units raise the item's projected position in its week and its run time consumes that machine's capacity, so the rest of the plan responds to the hand edit: build something sooner and the solver builds less of it later; trim a campaign and the solver replenishes earlier.
+type PinnedCampaign struct {
+	ItemID    string
+	MachineID string
+	WeekIndex int
+	Units     float64
+}
+
+// pinnedSlotKey identifies the machine-week slot a pinned campaign occupies, so the sweep does not double-book it with a solver campaign for the same item.
+type pinnedSlotKey struct {
+	ItemID    string
+	MachineID string
+	WeekIndex int
+}
+
 // itemEligibility restricts an item to the machines that have historically run it. Empty means any machine.
 type LevellingItem struct {
 	Policy            ItemPolicy
@@ -75,8 +90,10 @@ func maxLotsInCapacity(capacityHours, secondsPerUnit, lotUnits float64) float64 
 //
 // Each week, every item whose projected position has fallen below its trigger is a candidate. Candidates are served most-depleted-first and placed on the least-loaded eligible machine that still has room. Anything that does not fit waits for the next week.
 //
+// Pinned campaigns are applied to each week before its candidates are chosen: their inflow and capacity use are facts of the plan, not proposals, so everything the sweep derives already accounts for them. Pins are not re-emitted as campaigns — they exist as lines already.
+//
 // Determinism: items are sorted by SKU and machines by name before any iteration, and the due-set sort breaks ties by SKU. Iterating the maps directly would produce a different plan on every run.
-func Level(items []LevellingItem, machines []Machine, s Settings) LevellingResult {
+func Level(items []LevellingItem, machines []Machine, s Settings, pinned []PinnedCampaign) LevellingResult {
 	result := LevellingResult{ProjectedOnHand: make(map[string][]float64, len(items))}
 
 	// Stable ordering up front. Machine names sort numerically so "9" precedes "10" and "51" precedes "52" — plain lexical order would interleave them wrongly.
@@ -141,8 +158,35 @@ func Level(items []LevellingItem, machines []Machine, s Settings) LevellingResul
 		}
 	}
 
+	// Pins indexed for the sweep: what lands each week, and which slots are already taken. An item the solver has no measurements for cannot be positioned or costed, so its pins are ignored rather than guessed at.
+	secondsPerUnit := make(map[string]float64, len(sortedItems))
+	skuByItem := make(map[string]string, len(sortedItems))
+	for _, item := range sortedItems {
+		secondsPerUnit[item.Policy.ItemID] = item.Policy.SecondsPerUnit
+		skuByItem[item.Policy.ItemID] = item.Policy.SKU
+	}
+	pinsByWeek := make(map[int][]PinnedCampaign, len(pinned))
+	pinnedSlot := make(map[pinnedSlotKey]bool, len(pinned))
+	for _, pin := range pinned {
+		if pin.WeekIndex < 0 || pin.WeekIndex >= s.HorizonWeeks {
+			continue
+		}
+		if _, known := secondsPerUnit[pin.ItemID]; !known {
+			continue
+		}
+		pinsByWeek[pin.WeekIndex] = append(pinsByWeek[pin.WeekIndex], pin)
+		pinnedSlot[pinnedSlotKey{ItemID: pin.ItemID, MachineID: pin.MachineID, WeekIndex: pin.WeekIndex}] = true
+	}
+
 	for week := range s.HorizonWeeks {
 		machineHours := make(map[string]float64, len(sortedMachines))
+
+		// Hand-pinned campaigns land first: their stock arrives and their machine time is spent before the sweep decides what else the week can hold.
+		for _, pin := range pinsByWeek[week] {
+			position[pin.ItemID] += pin.Units
+			machineHours[pin.MachineID] += pin.Units * secondsPerUnit[pin.ItemID] / 3600
+			delete(starved, skuByItem[pin.ItemID])
+		}
 
 		due := make([]LevellingItem, 0, len(active))
 		for _, item := range active {
@@ -169,6 +213,10 @@ func Level(items []LevellingItem, machines []Machine, s Settings) LevellingResul
 			for i := range sortedMachines {
 				machine := &sortedMachines[i]
 				if len(item.EligibleMachineID) > 0 && !item.EligibleMachineID[machine.ID] {
+					continue
+				}
+				// A slot a hand edit already occupies is not re-proposed; the pinned line IS this item's campaign there.
+				if pinnedSlot[pinnedSlotKey{ItemID: id, MachineID: machine.ID, WeekIndex: week}] {
 					continue
 				}
 				if machineHours[machine.ID]+hours > capacityPerMachine {

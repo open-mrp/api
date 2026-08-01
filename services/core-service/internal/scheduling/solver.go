@@ -38,6 +38,9 @@ type SolverInput struct {
 	// ExcludedItemIDs are items the merchant has taken out of planning.
 	ExcludedItemIDs map[string]bool
 
+	// PinnedCampaigns are hand-edited campaigns already on the plan; the sweep plans around them rather than re-deriving them.
+	PinnedCampaigns []PinnedCampaign
+
 	DemandBasisCode string
 	ForecastZ       float64
 	ForecastMonths  int
@@ -187,7 +190,7 @@ func Solve(in SolverInput) SolverOutput {
 	}
 	out.Policies = classified
 
-	levelled := Level(levellingItems, in.Machines, in.Settings)
+	levelled := Level(levellingItems, in.Machines, in.Settings, in.PinnedCampaigns)
 	out.Campaigns = levelled.Campaigns
 	out.ProjectedOnHand = levelled.ProjectedOnHand
 	out.Diagnostics.LevellingDiagnostics = levelled.Diagnostics

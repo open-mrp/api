@@ -70,11 +70,83 @@ func (s *productionScheduleSvcImpl) solveForRegenerate(
 		demandBasis = params.DemandBasis
 	}
 
-	output, effective, apiErr := s.solveFor(ctx, accountID, planningAsOf, horizonWeeks, demandBasis)
+	// When hand edits are being kept, the solver plans AROUND them: a hand-added campaign's stock and machine time are facts the rest of the plan responds to, and a trimmed one leaves a gap the solver refills. Without pinning, the fresh solve would quietly re-plan as if the edits did not exist.
+	var pinned []scheduling.PinnedCampaign
+	if resolveMergeMode(params.MergeMode) == domain.ScheduleMergeModePreserveManual {
+		var apiErr *apierror.APIError
+		pinned, apiErr = s.loadManualPins(ctx, accountID, schedule.ID, planningAsOf, horizonWeeks)
+		if apiErr != nil {
+			return nil, nil, time.Time{}, apiErr
+		}
+	}
+
+	output, effective, apiErr := s.solveFor(ctx, accountID, planningAsOf, horizonWeeks, demandBasis, pinned)
 	if apiErr != nil {
 		return nil, nil, time.Time{}, apiErr
 	}
 	return output, effective, planningAsOf, nil
+}
+
+// resolveMergeMode applies the default: hand edits are preserved unless the caller explicitly asks to replace them.
+func resolveMergeMode(mode string) string {
+	if mode == "" {
+		return domain.ScheduleMergeModePreserveManual
+	}
+	return mode
+}
+
+// scheduleLineWeekIndex places a stored line on the CURRENT horizon grid by its absolute week date. The stored week_index is relative to the horizon the line was written under, which a re-anchored regenerate may have moved.
+func scheduleLineWeekIndex(weekStartDate, horizonStart time.Time) int {
+	return int(weekStartDate.Sub(horizonStart).Hours() / (24 * 7))
+}
+
+// loadManualPins turns the draft's kept hand edits into solver pins on the fresh horizon grid.
+//
+// Completed and cancelled lines are not pinned: a completed campaign's output is already counted in on-hand stock, and a cancelled one will never arrive. Lines whose week falls outside the new horizon cannot constrain it.
+func (s *productionScheduleSvcImpl) loadManualPins(
+	ctx context.Context,
+	accountID, scheduleID string,
+	planningAsOf time.Time,
+	horizonWeeks int,
+) ([]scheduling.PinnedCampaign, *apierror.APIError) {
+	weekStartDay := 1
+	settingsRow, apiErr := s.repos.NewProductionScheduleInputRepo().GetAccountScheduleSettings(ctx, accountID)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	if settingsRow != nil {
+		weekStartDay = settingsRow.WeekStartDay
+	}
+	horizonStart := scheduleWeekStart(planningAsOf, weekStartDay)
+
+	lines, apiErr := s.repos.NewProductionScheduleRepo().ListLines(ctx, domain.ListProductionScheduleLinesParams{
+		AccountID:  accountID,
+		ScheduleID: scheduleID,
+	})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	var pinned []scheduling.PinnedCampaign
+	for _, line := range lines {
+		if line.SourceCode != domain.ScheduleLineSourceManual {
+			continue
+		}
+		if line.StatusCode == domain.ScheduleLineStatusComplete || line.StatusCode == domain.ScheduleLineStatusCancelled {
+			continue
+		}
+		weekIndex := scheduleLineWeekIndex(line.WeekStartDate, horizonStart)
+		if weekIndex < 0 || weekIndex >= horizonWeeks {
+			continue
+		}
+		pinned = append(pinned, scheduling.PinnedCampaign{
+			ItemID:    line.ItemID,
+			MachineID: line.MachineID,
+			WeekIndex: weekIndex,
+			Units:     line.PlannedQuantity,
+		})
+	}
+	return pinned, nil
 }
 
 // diffCampaigns compares the stored lines against a fresh solve.
@@ -82,10 +154,13 @@ func diffCampaigns(
 	existing []*domain.ProductionScheduleLine,
 	campaigns []scheduling.Campaign,
 	skuByItemID map[string]string,
+	horizonStart time.Time,
+	preserveManual bool,
 ) []domain.ScheduleDiffLine {
 	currentByKey := make(map[campaignKey]*domain.ProductionScheduleLine, len(existing))
 	for _, line := range existing {
-		currentByKey[campaignKey{ItemID: line.ItemID, MachineID: line.MachineID, WeekIndex: line.WeekIndex}] = line
+		// Stored lines are placed on the fresh solve's grid by absolute date, since a re-anchored regenerate may have moved the horizon their week_index was relative to.
+		currentByKey[campaignKey{ItemID: line.ItemID, MachineID: line.MachineID, WeekIndex: safeconv.IntToInt32(scheduleLineWeekIndex(line.WeekStartDate, horizonStart))}] = line
 	}
 
 	proposedByKey := make(map[campaignKey]float64, len(campaigns))
@@ -93,6 +168,15 @@ func diffCampaigns(
 		key := campaignKey{ItemID: c.ItemID, MachineID: c.MachineID, WeekIndex: safeconv.IntToInt32(c.WeekIndex)}
 		// A solve can place two campaigns for the same item, machine and week; they are one campaign as far as the diff is concerned.
 		proposedByKey[key] += c.Units
+	}
+
+	// Kept hand edits are pinned during the solve, so the solver never re-proposes them; without this they would read as "removed" when they are in fact staying exactly as they are.
+	if preserveManual {
+		for key, line := range currentByKey {
+			if line.SourceCode == domain.ScheduleLineSourceManual {
+				proposedByKey[key] = line.PlannedQuantity
+			}
+		}
 	}
 
 	seen := make(map[campaignKey]bool, len(currentByKey)+len(proposedByKey))
@@ -211,7 +295,7 @@ func (s *productionScheduleSvcImpl) PreviewRegenerateProductionSchedule(
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	output, _, planningAsOf, apiErr := s.solveForRegenerate(ctx, accountID, schedule, params)
+	output, effective, planningAsOf, apiErr := s.solveForRegenerate(ctx, accountID, schedule, params)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -229,7 +313,9 @@ func (s *productionScheduleSvcImpl) PreviewRegenerateProductionSchedule(
 		skuByItemID[policy.ItemID] = policy.SKU
 	}
 
-	preview := summarizePreview(diffCampaigns(existing, output.Campaigns, skuByItemID))
+	horizonStart := scheduleWeekStart(planningAsOf, effective.Settings.WeekStartDay)
+	preserveManual := resolveMergeMode(params.MergeMode) == domain.ScheduleMergeModePreserveManual
+	preview := summarizePreview(diffCampaigns(existing, output.Campaigns, skuByItemID, horizonStart, preserveManual))
 	preview.ScheduleID = params.ScheduleID
 	preview.SolverVersion = output.SolverVersion
 	preview.PlanningAsOf = planningAsOf
@@ -295,13 +381,27 @@ func (s *productionScheduleSvcImpl) RegenerateProductionSchedule(
 			return apiErr
 		}
 
+		// A re-anchored regenerate can move the horizon start, so every kept line is placed on the NEW grid by its absolute week date — both for the skip keys the fresh solve honors and for the stored week_index, which release-by-week reads.
+		horizonStart := scheduleWeekStart(planningAsOf, effective.Settings.WeekStartDay)
+
 		keptManual := map[campaignKey]bool{}
 		for _, line := range existing {
 			isManual := line.SourceCode == domain.ScheduleLineSourceManual
-			key := campaignKey{ItemID: line.ItemID, MachineID: line.MachineID, WeekIndex: line.WeekIndex}
+			newWeekIndex := safeconv.IntToInt32(scheduleLineWeekIndex(line.WeekStartDate, horizonStart))
+			key := campaignKey{ItemID: line.ItemID, MachineID: line.MachineID, WeekIndex: newWeekIndex}
 
 			if isManual && mergeMode == domain.ScheduleMergeModePreserveManual {
 				keptManual[key] = true
+				if newWeekIndex != line.WeekIndex {
+					reindexed := newWeekIndex
+					if _, apiErr := repo.UpdateLine(txCtx, domain.UpdateLineRepoParams{
+						AccountID: accountID,
+						LineID:    line.ID,
+						WeekIndex: &reindexed,
+					}); apiErr != nil {
+						return apiErr
+					}
+				}
 				continue
 			}
 

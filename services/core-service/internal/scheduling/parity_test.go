@@ -250,7 +250,7 @@ func TestParity_PlanMatchesScript(t *testing.T) {
 		machines[i] = Machine{ID: m.ID, Name: m.Name}
 	}
 
-	got := Level(items, machines, s)
+	got := Level(items, machines, s, nil)
 
 	type key struct {
 		sku  string

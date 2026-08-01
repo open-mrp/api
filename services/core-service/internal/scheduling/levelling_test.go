@@ -71,7 +71,7 @@ func TestLevel_DemandDrawnDownAfterPlacement(t *testing.T) {
 	items := []LevellingItem{item("A", 100, 10, 0, 600)}
 	machines := []Machine{{ID: "mc_1", Name: "1"}}
 
-	got := Level(items, machines, s)
+	got := Level(items, machines, s, nil)
 	if len(got.Campaigns) != 1 {
 		t.Fatalf("campaigns = %d, want 1", len(got.Campaigns))
 	}
@@ -97,7 +97,7 @@ func TestLevel_RespectsMachineCapacity(t *testing.T) {
 	}
 	machines := []Machine{{ID: "mc_1", Name: "1"}}
 
-	got := Level(items, machines, s)
+	got := Level(items, machines, s, nil)
 	if len(got.Campaigns) != 2 {
 		t.Fatalf("campaigns = %d, want 2 (third exceeds %vh capacity)", len(got.Campaigns), capacity)
 	}
@@ -122,7 +122,7 @@ func TestLevel_BalancesAcrossMachinesLeastLoadedFirst(t *testing.T) {
 	}
 	machines := []Machine{{ID: "mc_1", Name: "1"}, {ID: "mc_2", Name: "2"}}
 
-	got := Level(items, machines, s)
+	got := Level(items, machines, s, nil)
 	if len(got.Campaigns) != 2 {
 		t.Fatalf("campaigns = %d, want 2", len(got.Campaigns))
 	}
@@ -139,7 +139,7 @@ func TestLevel_HonoursMachineEligibility(t *testing.T) {
 	restricted := item("A", 100, 1800, 0, 60)
 	restricted.EligibleMachineID = map[string]bool{"mc_2": true}
 
-	got := Level([]LevellingItem{restricted}, []Machine{{ID: "mc_1", Name: "1"}, {ID: "mc_2", Name: "2"}}, s)
+	got := Level([]LevellingItem{restricted}, []Machine{{ID: "mc_1", Name: "1"}, {ID: "mc_2", Name: "2"}}, s, nil)
 	if len(got.Campaigns) != 1 {
 		t.Fatalf("campaigns = %d, want 1", len(got.Campaigns))
 	}
@@ -156,7 +156,7 @@ func TestLevel_SkipsItemsAboveTrigger(t *testing.T) {
 	s := testSettings()
 	s.HorizonWeeks = 1
 	// On hand 10,000 against weekly demand of 100 is far above any trigger.
-	got := Level([]LevellingItem{item("A", 100, 1800, 10_000, 60)}, []Machine{{ID: "mc_1", Name: "1"}}, s)
+	got := Level([]LevellingItem{item("A", 100, 1800, 10_000, 60)}, []Machine{{ID: "mc_1", Name: "1"}}, s, nil)
 
 	if len(got.Campaigns) != 0 {
 		t.Errorf("campaigns = %d, want 0; a fully stocked item must not consume capacity", len(got.Campaigns))
@@ -173,7 +173,7 @@ func TestLevel_ReportsCapacityStarvation(t *testing.T) {
 		item("A", 100, 3600, 0, 60),
 		item("B", 100, 3600, 0, 60),
 	}
-	got := Level(items, []Machine{{ID: "mc_1", Name: "1"}}, s)
+	got := Level(items, []Machine{{ID: "mc_1", Name: "1"}}, s, nil)
 
 	if len(got.Diagnostics.CapacityStarvedSKUs) == 0 {
 		t.Error("expected a capacity-starved SKU to be reported rather than silently dropped")
@@ -186,7 +186,7 @@ func TestLevel_FlagsUnschedulableWhenOneLotExceedsCapacity(t *testing.T) {
 	s := testSettings()
 	s.HorizonWeeks = 1
 	// 60 units at 7200 s/unit = 120h, well past the 63h machine-week.
-	got := Level([]LevellingItem{item("A", 100, 7200, 0, 60)}, []Machine{{ID: "mc_1", Name: "1"}}, s)
+	got := Level([]LevellingItem{item("A", 100, 7200, 0, 60)}, []Machine{{ID: "mc_1", Name: "1"}}, s, nil)
 
 	if len(got.Diagnostics.UnschedulableSKUs) != 1 {
 		t.Errorf("unschedulable = %v, want [A]; a lot that cannot fit must be surfaced", got.Diagnostics.UnschedulableSKUs)
@@ -207,9 +207,9 @@ func TestLevel_Deterministic(t *testing.T) {
 	}
 	machines := []Machine{{ID: "mc_2", Name: "2"}, {ID: "mc_1", Name: "1"}, {ID: "mc_10", Name: "10"}}
 
-	first := Level(items, machines, s)
+	first := Level(items, machines, s, nil)
 	for run := range 50 {
-		got := Level(items, machines, s)
+		got := Level(items, machines, s, nil)
 		if !reflect.DeepEqual(first.Campaigns, got.Campaigns) {
 			t.Fatalf("run %d produced a different plan; the solver must be deterministic", run)
 		}
@@ -392,5 +392,49 @@ func TestSetupCost_FallsBackWhenRateMissing(t *testing.T) {
 	// Zero rates would make setup cost zero and collapse EOQ toward a lot size of one.
 	if got := SetupCost(30, 0, 0); got != 4 {
 		t.Errorf("SetupCost = %v, want 4 (0.5h at the 8/hr fallback)", got)
+	}
+}
+
+// A pinned hand edit is a fact of the plan: its stock arrives, so the solver must not
+// rebuild the item the sweep would otherwise find due.
+func TestLevel_PinnedCampaignRaisesPositionSoSolverBuildsLess(t *testing.T) {
+	t.Parallel()
+
+	s := testSettings()
+	// Weekly demand 10, ROP 40, on hand 0: due immediately, and without help the sweep
+	// would build in week 0.
+	unpinned := Level([]LevellingItem{item("A", 10, 600, 0, 600)}, []Machine{{ID: "mc_1", Name: "1"}}, s, nil)
+	if len(unpinned.Campaigns) == 0 || unpinned.Campaigns[0].WeekIndex != 0 {
+		t.Fatalf("control run should build in week 0, got %+v", unpinned.Campaigns)
+	}
+
+	// A hand-pinned 600-unit build in week 0 covers the horizon; the solver adds nothing.
+	pinned := Level([]LevellingItem{item("A", 10, 600, 0, 600)}, []Machine{{ID: "mc_1", Name: "1"}}, s,
+		[]PinnedCampaign{{ItemID: "it_A", MachineID: "mc_1", WeekIndex: 0, Units: 600}})
+	if len(pinned.Campaigns) != 0 {
+		t.Errorf("solver re-built despite the pinned inflow: %+v", pinned.Campaigns)
+	}
+	// The projection includes the pinned inflow: 600 in, 10 demanded in week 0.
+	if got := pinned.ProjectedOnHand["it_A"][0]; got != 590 {
+		t.Errorf("projected on hand = %v, want 590 (pinned units minus one week of demand)", got)
+	}
+}
+
+// A pinned campaign's run time occupies its machine, so another item that needs the
+// same week must go elsewhere — or wait.
+func TestLevel_PinnedCampaignConsumesCapacity(t *testing.T) {
+	t.Parallel()
+
+	s := testSettings()
+	// One machine-week is 63 hours at default settings. The pin burns 60 of them
+	// (360 units x 600 s), leaving too little for B's 30-hour campaign.
+	itemB := item("B", 10, 600, 0, 180)
+	pins := []PinnedCampaign{{ItemID: "it_A", MachineID: "mc_1", WeekIndex: 0, Units: 360}}
+	got := Level([]LevellingItem{item("A", 10, 600, 900, 600), itemB}, []Machine{{ID: "mc_1", Name: "1"}}, s, pins)
+
+	for _, c := range got.Campaigns {
+		if c.SKU == "B" && c.WeekIndex == 0 {
+			t.Errorf("B was placed in week 0 despite the pinned campaign filling the machine: %+v", c)
+		}
 	}
 }

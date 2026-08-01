@@ -150,6 +150,7 @@ func (s *productionScheduleSvcImpl) solveFor(
 	planningAsOf time.Time,
 	horizonWeeks int,
 	demandBasis string,
+	pinnedCampaigns []scheduling.PinnedCampaign,
 ) (*scheduling.SolverOutput, *domain.EffectiveScheduleSettings, *apierror.APIError) {
 	effective, apiErr := s.loadEffectiveSettings(ctx, accountID)
 	if apiErr != nil {
@@ -173,6 +174,7 @@ func (s *productionScheduleSvcImpl) solveFor(
 		ForecastZ:              effective.ForecastZ,
 		ConstraintDepartmentID: effective.ConstraintDepartmentID,
 		ItemSettings:           effective.ItemSettings,
+		PinnedCampaigns:        pinnedCampaigns,
 	})
 	if apiErr != nil {
 		return nil, nil, apiErr
@@ -293,6 +295,7 @@ func (s *productionScheduleSvcImpl) loadSolverInput(
 		ItemLotUnits:       map[string]float64{},
 		LotDefaultByItem:   map[string]scheduling.LotDefault{},
 		ExcludedItemIDs:    map[string]bool{},
+		PinnedCampaigns:    params.PinnedCampaigns,
 	}
 
 	// 1. The machines that constitute the constraint. The constraint is a department, not a list of machines: the knitting room sets the pace of the factory, and every machine in it is planned without anyone having to remember to opt one in.
@@ -1207,7 +1210,7 @@ func (s *productionScheduleSvcImpl) persistPlan(ctx context.Context, params pers
 	ctx, span := productionScheduleSvcTracer.Start(ctx, "service.production_schedule.persist_plan")
 	defer span.End()
 
-	output, effective, apiErr := s.solveFor(ctx, params.AccountID, params.PlanningAsOf, params.HorizonWeeks, params.DemandBasis)
+	output, effective, apiErr := s.solveFor(ctx, params.AccountID, params.PlanningAsOf, params.HorizonWeeks, params.DemandBasis, nil)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}

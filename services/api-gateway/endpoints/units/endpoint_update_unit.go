@@ -25,15 +25,17 @@ type UpdateUnitRequest struct {
 	//
 	// Must be unique within the account.
 	Abbreviation field.Optional[string] `json:"abbreviation,omitzero" validate:"omitempty"`
-	// Conversion ratio numerator relative to the base unit.
+	// Numerator of the ratio that converts a quantity in this unit into the dimension's base unit.
+	//
+	// A quantity is converted with `value × (ratio_numerator / ratio_denominator) + (offset_numerator / offset_denominator)`.
 	RatioNumerator field.Optional[string] `json:"ratio_numerator,omitzero" validate:"omitempty,decimal" format:"decimal"`
-	// Conversion ratio denominator relative to the base unit.
+	// Denominator of the ratio that converts a quantity in this unit into the dimension's base unit.
 	//
 	// Must not be zero.
 	RatioDenominator field.Optional[string] `json:"ratio_denominator,omitzero" validate:"omitempty,nonzero_decimal" format:"decimal"`
-	// Conversion offset numerator, used for temperature-like conversions.
+	// Numerator of the conversion offset, applied after the ratio for scales that do not share a zero point, such as temperature.
 	OffsetNumerator field.Optional[string] `json:"offset_numerator,omitzero" validate:"omitempty,decimal" format:"decimal"`
-	// Conversion offset denominator.
+	// Denominator of the conversion offset.
 	//
 	// Must not be zero.
 	OffsetDenominator field.Optional[string] `json:"offset_denominator,omitzero" validate:"omitempty,nonzero_decimal" format:"decimal"`
@@ -52,7 +54,9 @@ func (*UpdateUnitRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateUnitRequest)
 }
 
-// Partially updates an account-owned unit; system units cannot be updated.
+// Partially updates a unit owned by your account.
+//
+// System units cannot be modified, and a unit's dimension is fixed once it is created.
 type UpdateUnitEndpoint struct{}
 
 func (e *UpdateUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateUnitRequest, *apiresource.Unit] {

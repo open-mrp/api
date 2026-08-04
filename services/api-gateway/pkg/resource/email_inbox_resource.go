@@ -8,20 +8,20 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleEmailInboxID = "eminb_018e88072d1320808dc9bbb02"
+const SampleEmailInboxID = "eminb_2s9kobr9s7tp"
 
 // A routable email inbox on a verified domain.
 //
-// Inbound mail to this address is threaded into a chat conversation, and outbound replies may be sent from this identity. The optional agent trigger config controls whether the bound agent runs automatically on incoming mail.
+// Mail sent to this address is threaded into a conversation: the first message of a thread opens a new customer case, and later messages in the same thread join the conversation it already created. Replies to the customer go back out from this address, and the bound agent — if there is one — can draft or send them.
 type EmailInbox struct {
 	// Email inbox ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=email_inbox"`
-	// Whether the inbox is currently routing mail.
+	// Whether the inbox is currently accepting mail.
 	//
-	// - `active`: inbound mail is threaded and outbound replies are allowed.
-	// - `disabled`: the inbox is provisioned but drops inbound mail and does not send replies.
+	// - `active`: inbound mail is threaded into a conversation.
+	// - `disabled`: the inbox stays provisioned and keeps its history, but inbound mail is dropped without being threaded.
 	Status string `json:"status" validate:"required"`
 	// The domain this inbox belongs to.
 	EmailDomain *EmailDomain `json:"email_domain" validate:"required" expandable:"true"`
@@ -29,25 +29,29 @@ type EmailInbox struct {
 	Address string `json:"address" validate:"required"`
 	// A forwarding address on an Augno-owned domain that also routes to this inbox.
 	//
-	// Use this when your domain's mail is hosted elsewhere (e.g. Google Workspace, Microsoft 365) and you cannot point its MX records at Augno: forward mail from `address` to this address instead, and it will still be threaded into a conversation. `null` when domain forwarding is not configured.
+	// Use this when your domain's mail is hosted elsewhere (e.g. Google Workspace, Microsoft 365) and you cannot point its MX records at Augno: forward mail from `address` to this address instead, and it will still be threaded into a conversation.
 	ForwardingAddress *string `json:"forwarding_address"`
 	// The display name used in the `From` header of outbound mail.
 	FromName *string `json:"from_name"`
-	// The agent that handles mail for this inbox, when one is bound.
+	// The agent that handles mail for this inbox.
 	//
-	// `null` when no agent is bound.
+	// The agent is seated on every conversation this inbox opens, so it can read the thread and draft or send replies.
 	AgentConfig *AgentDefinition `json:"agent_config" expandable:"true"`
 	// When the bound agent runs on incoming mail.
 	//
 	// - `mention`: only when the agent is @mentioned, matched against its trigger keywords.
 	// - `keyword`: when the mail contains any of the configured trigger keywords.
 	// - `always`: on every incoming message.
+	//
+	// When no policy is set the agent runs on every incoming message, since email has no reliable @mention convention.
 	AgentTriggerPolicy *string `json:"agent_trigger_policy"`
-	// Keywords that fire the agent when `agent_trigger_policy` is `keyword`.
+	// The keywords that decide whether the agent runs on an incoming message.
+	//
+	// Under the `keyword` policy a keyword matches anywhere in the message; under `mention` it only counts where it is prefixed with `@`.
 	AgentTriggerKeywords []string `json:"agent_trigger_keywords"`
 	// The messaging group (roster) whose members are added to every conversation this inbox opens.
 	//
-	// Everyone in the group — the human team plus any agents — is seated on each new email thread so they can read, edit, and approve replies alongside the bound agent. `null` when no group is set.
+	// Its members join each new email thread so the team can read, edit, and approve replies alongside the bound agent. Membership is captured when the thread opens, so later edits to the group only affect conversations opened after the change.
 	GroupID *string `json:"group_id"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

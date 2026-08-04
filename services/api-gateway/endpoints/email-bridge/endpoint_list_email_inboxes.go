@@ -14,7 +14,9 @@ import (
 // Request to list the account's email inboxes.
 type ListEmailInboxesRequest struct{}
 
-// Returns the account's email inboxes.
+// Returns the account's email inboxes across every registered domain.
+//
+// Every inbox is returned in a single response; this list is not paginated.
 type ListEmailInboxesEndpoint struct{}
 
 func (e *ListEmailInboxesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListEmailInboxesRequest, *apiresource.List[apiresource.EmailInbox]] {

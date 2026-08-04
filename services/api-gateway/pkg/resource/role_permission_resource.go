@@ -32,7 +32,7 @@ type RolePermission struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-const SampleRolePermissionID = "rlpm_010497787b78b93e595cd90dab"
+const SampleRolePermissionID = "rlpm_5wfzi61dig0c"
 
 var SampleRolePermission = &RolePermission{
 	ID:             SampleRolePermissionID,

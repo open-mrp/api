@@ -18,9 +18,9 @@ type RemoveItemCategoryPropertyRequest struct {
 	PropertyID string `path:"property_id" validate:"required"`
 }
 
-// Removes a property from an item category.
+// Detaches a property from an item category.
 //
-// Default system categories cannot be modified.
+// Only the link between the property and the category is removed; the property itself and its attributes are left intact and stay available to other categories. The property must belong to your account.
 type RemoveItemCategoryPropertyEndpoint struct{}
 
 func (e *RemoveItemCategoryPropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RemoveItemCategoryPropertyRequest, *apiresource.EmptyResource] {

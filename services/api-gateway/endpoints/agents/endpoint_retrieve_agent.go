@@ -17,7 +17,9 @@ type RetrieveAgentRequest struct {
 	AgentDefinitionID string `path:"id" validate:"required"`
 }
 
-// Returns an agent definition by ID.
+// Retrieves a single agent by ID.
+//
+// Resolves both the `system` agents Augno provides and the `custom` agents in your account; the `status` reflects whether the agent is enabled for your account specifically.
 type RetrieveAgentEndpoint struct{}
 
 func (e *RetrieveAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAgentRequest, *apiresource.AgentDefinition] {

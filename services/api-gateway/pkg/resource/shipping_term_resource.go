@@ -8,10 +8,12 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleShippingTermID = "shtm_014341ab4bb5bf94d5b6936f86"
+const SampleShippingTermID = "shtm_c5gxy05whw6r"
 const SampleShippingTermName = "Prepaid"
 
-// A shipping term defining how freight charges are calculated for an order.
+// A named freight pricing rule that decides what a buyer pays for shipping.
+//
+// A customer's default shipping term is evaluated whenever freight is quoted for one of their orders. Freight exemptions on the customer, its type group, or any of its price groups are checked first and zero the freight charge before the shipping term is considered.
 type ShippingTerm struct {
 	// Shipping term ID.
 	ID string `json:"id" validate:"required"`
@@ -21,9 +23,9 @@ type ShippingTerm struct {
 	Name string `json:"name" validate:"required"`
 	// Freight pricing model applied by this shipping term.
 	//
-	// - `free_freight`: no shipping cost to the buyer.
-	// - `flat_rate_freight`: a fixed shipping cost regardless of order details (see `flat_rate`).
-	// - `carrier_rate_freight`: shipping cost is determined by the carrier's quoted rate.
+	// - `free_freight`: the buyer is never charged for shipping.
+	// - `flat_rate_freight`: the buyer is charged the fixed amount in `flat_rate`, regardless of what the carrier would have charged.
+	// - `carrier_rate_freight`: the buyer is charged the rate the carrier quotes for the order's carrier and service level.
 	Type constants.ShippingTermType `json:"type" validate:"required"`
 	// Provenance of this shipping term.
 	//
@@ -31,11 +33,15 @@ type ShippingTerm struct {
 	Owner *Owner `json:"owner" expandable:"true"`
 	// Fixed shipping charge applied to the order.
 	//
-	// Applied only when `type` is `flat_rate_freight`; ignored for other freight pricing models.
+	// Used only when `type` is `flat_rate_freight`; ignored for other freight pricing models. A `flat_rate_freight` term with no flat rate falls through to the carrier's quoted rate.
 	FlatRate *Quantity `json:"flat_rate"`
-	// Order subtotal a buyer must reach before this term's free-shipping rules apply.
+	// Order total a buyer must exceed for this term's free-shipping rules to apply.
+	//
+	// Above this total, freight is free for the service levels in `free_shipping_service_levels`.
 	MinimumOrderValue *Quantity `json:"minimum_order_value"`
-	// Service levels that ship for free under this term (typically once `minimum_order_value` is met).
+	// Service levels that ship for free once an order exceeds `minimum_order_value`.
+	//
+	// When this list is empty, every service level ships free above the threshold. When it is not empty, an order that picks a service level outside the list is not shipped free even above the threshold.
 	FreeShippingServiceLevels *List[ServiceLevel] `json:"free_shipping_service_levels" expandable:"true"`
 	// When this shipping term was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

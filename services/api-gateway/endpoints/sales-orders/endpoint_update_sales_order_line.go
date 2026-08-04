@@ -20,15 +20,19 @@ type UpdateSalesOrderLineRequest struct {
 	SalesOrderID string `path:"id" validate:"required"`
 	// Sales order line ID.
 	SalesOrderLineID string `path:"line_id" validate:"required"`
-	// Product SKU.
+	// SKU recorded on the line.
 	ProductSKU field.Optional[string] `json:"product_sku,omitzero" validate:"omitempty,max=255"`
-	// Product description.
+	// Description recorded on the line.
 	ProductDescription field.Optional[string] `json:"product_description,omitzero"`
-	// Quantity ordered.
+	// New quantity ordered on the line.
 	Quantity field.Optional[apirequest.QuantityInput] `json:"quantity,omitzero" validate:"omitempty"`
-	// Unit price.
+	// Price charged per unit.
+	//
+	// Rounded to the nearest cent.
 	UnitPrice field.Optional[apirequest.RateInput] `json:"unit_price,omitzero" validate:"omitempty"`
-	// Unit cost.
+	// Internal cost per unit, used to derive line profitability.
+	//
+	// Rounded to the nearest cent.
 	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero" validate:"omitempty"`
 }
 
@@ -49,6 +53,8 @@ func (*UpdateSalesOrderLineRequest) SchemaExample() any {
 }
 
 // Partially updates a sales order line item.
+//
+// Changing the quantity flows through to fulfillment: the order's pick is reconciled against what is still outstanding — reopening it when the new quantity leaves work to do, or dropping the surplus pick line and finishing it when everything ordered is already packed. Shipment and invoice lines that still carry the full previously ordered quantity follow the new value, while partial ones keep the amount that actually moved.
 type UpdateSalesOrderLineEndpoint struct{}
 
 func (e *UpdateSalesOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateSalesOrderLineRequest, *apiresource.SalesOrderLine] {

@@ -38,15 +38,15 @@ type CreateMaterialRequest struct {
 	CategoryID string `json:"category_id" validate:"required"`
 	// Reorder threshold: when on-hand stock falls to this quantity, the material should be reordered.
 	//
-	// When omitted, the order point is initialized to a zero quantity in the category's base unit.
+	// When omitted, the material is created without a reorder threshold.
 	OrderPoint field.Optional[QuantityInputRequest] `json:"order_point,omitzero"`
 	// Expected time between placing an order for this material and receiving it, expressed as a quantity in a time unit (e.g. days).
 	//
-	// When omitted, the lead time is initialized to a zero quantity in the category's base unit.
+	// When omitted, the material is created without a lead time.
 	LeadTime field.Optional[QuantityInputRequest] `json:"lead_time,omitzero"`
 	// Initial selling price per unit.
 	//
-	// `numerator_unit_id` must reference a currency unit and `denominator_unit_id` must reference a non-currency unit (e.g. `$5` per `ea`). When omitted, the price is initialized to a zero rate in the category's base unit.
+	// `numerator_unit_id` must reference a currency unit and `denominator_unit_id` must reference a non-currency unit (e.g. `$5` per `ea`). When omitted, the price is initialized to a zero rate in the category's base unit. It becomes the `unit_value` rate on the material's item; the material update endpoint cannot change it afterwards.
 	UnitPrice field.Optional[apirequest.RateInput] `json:"unit_price,omitzero"`
 	// Initial cost per unit.
 	//
@@ -74,9 +74,9 @@ func (*CreateMaterialRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateMaterialRequest)
 }
 
-// Creates a material with the specified SKU and category.
+// Creates a material together with the catalog item that carries its SKU, description, category, pricing, and attributes.
 //
-// Inventory tracking for the new material starts at a zero on-hand quantity in the category's base unit.
+// Inventory tracking for the new material starts at a zero on-hand quantity in the category's base unit. The item's consumption rate (`burn_rate`) also starts at zero and cannot be supplied here — it is derived from recorded consumption as production happens.
 type CreateMaterialEndpoint struct{}
 
 func (e *CreateMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateMaterialRequest, *apiresource.Material] {

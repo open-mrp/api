@@ -17,7 +17,9 @@ type ListOrderDiscountsRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of order discounts for the current account.
+// Returns a paginated list of the order discounts defined for the current account, newest first.
+//
+// Pass `q` to narrow the list to discounts whose name or code contains the search text.
 type ListOrderDiscountsEndpoint struct{}
 
 func (e *ListOrderDiscountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListOrderDiscountsRequest, *apiresource.List[apiresource.OrderDiscount]] {

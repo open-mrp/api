@@ -26,12 +26,14 @@ type ScanningStation struct {
 	Name string `json:"name" validate:"required"`
 	// Free-form notes about the scanning station.
 	Notes *string `json:"notes"`
-	// Scanning station type, determining which batch operation the station performs.
+	// Scanning station type, determining which batch operation an operator performs when they scan here.
 	//
-	// - `init_batch`: initializes a new batch.
-	// - `merge_batch`: merges multiple batches into one.
-	// - `move_batch`: moves a batch to another location or step.
-	// - `split_batch`: splits a batch into multiple batches.
+	// - `init_batch`: starts a new batch at the beginning of a production flow.
+	// - `merge_batch`: combines several scanned batches into one.
+	// - `move_batch`: advances a batch through a production step connected to this station.
+	// - `split_batch`: divides a batch into several batches.
+	//
+	// Fixed when the station is created.
 	Type constants.ScanningStationType `json:"type" validate:"required"`
 	// Size of the labels printed at this station, given as width-by-height (for example, `1x1`).
 	LabelSizeCode *constants.LabelSizeCode `json:"label_size"`
@@ -46,10 +48,12 @@ type ScanningStation struct {
 	// - `material_check`: a material check is expected before the operation.
 	OperatorRequirement constants.OperatorRequirement `json:"operator_requirement"`
 	// The department this scanning station belongs to.
+	//
+	// Assigned when the station is created and cannot be reassigned afterward.
 	Department *Department `json:"department" expandable:"true"`
 	// Production steps connected to this station.
 	//
-	// A production step can be connected to at most one scanning station.
+	// A production step can be connected to at most one scanning station, so connecting a step here disconnects it from any other station. Manage the connections with Connect Production Steps to Scanning Station.
 	ProductionSteps *List[ProductionStep] `json:"production_steps" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

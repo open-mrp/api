@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleDepartmentID = "dp_01791c25ab59da4704cba61874"
+const SampleDepartmentID = "dp_m0jayebxnkos"
 const SampleDepartmentName = "Fabrication"
 
 // ---------------------------------------------------------------------------
@@ -33,7 +33,7 @@ type Department struct {
 	ScanningStations *List[ScanningStation] `json:"scanning_stations" expandable:"true"`
 	// Machines in this department.
 	Machines *List[Machine] `json:"machines" expandable:"true"`
-	// Hourly labor rate for work done in this department (e.g. a changeover technician). Null when none is set.
+	// Hourly labor rate for work done in this department, such as a changeover technician.
 	//
 	// Production scheduling costs changeovers with the constraint department's rate when one is set, falling back to the account-wide changeover labor rate setting.
 	LaborRate *Rate `json:"labor_rate"`

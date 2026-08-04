@@ -11,7 +11,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// PickPickLineRequest is the request to mark a pick line as picked.
+// Request to mark a pick line as picked.
 type PickPickLineRequest struct {
 	// Pick ID.
 	PickID string `path:"pick_id" validate:"required"`
@@ -19,9 +19,9 @@ type PickPickLineRequest struct {
 	PickLineID string `path:"id" validate:"required"`
 }
 
-// Marks a pick line as picked.
+// Marks a pick line as fully picked.
 //
-// Sets the line's picked quantity to the quantity still outstanding on its sales order line. Has no effect on a line that has already been packed.
+// Sets the line's picked quantity to its sales order line's ordered quantity less everything already picked for that order line, including whatever this line had picked before the call. To record a short pick instead, set the quantity yourself with Update Pick Line. Has no effect on a line that has already been packed.
 type PickPickLineEndpoint struct{}
 
 func (e *PickPickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*PickPickLineRequest, *apiresource.PickLine] {

@@ -16,9 +16,9 @@ type DeletePurchaseOrderRequest struct {
 	PurchaseOrderID string `path:"id" validate:"required"`
 }
 
-// Deletes a purchase order and all its related records.
+// Deletes a purchase order along with its lines, email contacts, and receiving order.
 //
-// Orders in `fulfilled` status cannot be deleted.
+// Orders in `fulfilled` status cannot be deleted; re-open the order first. Deleting is permanent, and a later request for the same order reports that it has already been deleted rather than that it was never found.
 type DeletePurchaseOrderEndpoint struct{}
 
 func (e *DeletePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeletePurchaseOrderRequest, *apiresource.EmptyResource] {

@@ -36,7 +36,7 @@ func (*TriggerRunRequest) SchemaExample() any {
 
 // Starts a new run of the specified agent.
 //
-// The run is created in the `pending` status and executed asynchronously; poll Retrieve Agent Run to follow its progress.
+// The run is created in the `pending` status and executed asynchronously; poll Retrieve Agent Run to follow its progress. Any agent can be started this way regardless of how it is normally triggered, and the resulting run is always recorded with `trigger_type` `manual`.
 type TriggerRunEndpoint struct{}
 
 func (e *TriggerRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*TriggerRunRequest, *apiresource.AgentRun] {

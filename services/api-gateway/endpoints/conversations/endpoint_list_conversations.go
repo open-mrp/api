@@ -18,26 +18,41 @@ type ListConversationsRequest struct {
 	apiresource.PaginationRequest
 	// Filter by conversation type.
 	Type *constants.ConversationType `query:"type"`
-	// Filter by conversation audience direction.
+	// Filter by whether the conversation is team-only or customer-facing.
+	//
+	// - `internal`: threads the customer never sees — direct messages, group threads, and record discussions.
+	// - `customer`: external customer-service cases the customer takes part in, from the portal or a bridged email thread.
 	Audience *constants.ConversationAudience `query:"audience"`
-	// Filter by conversation visibility.
+	// Filter by whether the caller has hidden the conversation from their own list.
 	Status *constants.ConversationListStatus `query:"status" default:"active"`
-	// Restrict to conversations anchored to a business record of this type (with `topic_resource_id`).
+	// Restrict to conversations attached to a business record of this type, together with `topic_resource_id`.
+	//
+	// Matches both conversations anchored to the record and conversations that merely link it, which is what powers the "discussions on this record" view.
 	TopicResourceType *constants.ObjectType `query:"topic_resource_type"`
-	// The id of the anchoring business record (with `topic_resource_type`).
+	// The id of the business record, together with `topic_resource_type`.
 	TopicResourceID *string `query:"topic_resource_id"`
-	// Support inbox: filter external cases to a single triage lane.
+	// Filter the support inbox to a single triage lane.
+	//
+	// - `new`: opened but nobody has triaged it yet.
+	// - `open`: actively being worked.
+	// - `waiting_internal`: blocked on the internal team.
+	// - `waiting_external`: blocked on a reply from the customer.
+	// - `needs_approval`: a drafted reply is waiting for a human to approve it.
+	// - `resolved`: closed out.
+	//
+	// The working inbox hides resolved cases unless you ask for this lane explicitly.
 	WorkflowStatus *constants.ConversationWorkflowStatus `query:"workflow_status"`
-	// Support inbox: filter to cases owned by this assignee (a user or a team), matched by id.
+	// Filter the support inbox to cases owned by this assignee, an account user or an account group.
 	AssigneeResourceID *string `query:"assignee_resource_id"`
-	// Support inbox: restrict to cases with no assignee.
+	// Restrict the support inbox to cases nobody has been assigned yet.
 	Unassigned bool `query:"unassigned"`
-	// Support inbox: include archived (resolved-and-closed) cases.
+	// Return the archived support inbox instead of the working one.
+	//
+	// This swaps the view rather than widening it: archived cases are returned and unarchived ones are left out.
 	IncludeArchived bool `query:"include_archived"`
 }
 
-// isInboxQuery reports whether any support-inbox filter is set (or audience is customer),
-// selecting the external-case inbox branch of the list.
+// isInboxQuery reports whether any support-inbox filter is set (or audience is customer), selecting the external-case inbox branch of the list.
 func (r *ListConversationsRequest) isInboxQuery() bool {
 	if r.WorkflowStatus != nil || r.AssigneeResourceID != nil || r.Unassigned || r.IncludeArchived {
 		return true
@@ -50,7 +65,9 @@ func (r *ListConversationsRequest) isByRecordQuery() bool {
 	return r.TopicResourceType != nil && r.TopicResourceID != nil && *r.TopicResourceID != ""
 }
 
-// Returns the caller's conversations, most-recently-active first.
+// Returns the caller's conversations, most recently active first.
+//
+// A customer portal user sees only their own support case with the vendor, and an empty list until they have contacted support.
 type ListConversationsEndpoint struct{}
 
 func (e *ListConversationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListConversationsRequest, *apiresource.List[apiresource.Conversation]] {

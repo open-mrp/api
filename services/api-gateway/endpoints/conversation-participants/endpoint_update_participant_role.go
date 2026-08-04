@@ -12,11 +12,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Request to change a participant's role (owner only).
+// Request to change a participant's role in a conversation.
 type UpdateParticipantRoleRequest struct {
 	// Conversation ID.
 	ConversationID string `path:"id" validate:"required"`
-	// Participant ID.
+	// The participant whose role is changing (its `id` from the conversation's participants, not the account user's id).
 	ParticipantID string `path:"pid" validate:"required"`
 	// The role to assign to the participant.
 	//
@@ -37,7 +37,11 @@ func (*UpdateParticipantRoleRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateParticipantRoleRequest)
 }
 
-// Changes a participant's role within a group conversation.
+// Changes a participant's role in a conversation and returns the updated conversation.
+//
+// Only the conversation's owner can change roles, and agent and system participants are rejected — they hold no role that can be changed. This is also the only way to grant `owner`: the promoted member gains full control while the caller keeps their own owner role, so a conversation can have more than one owner.
+//
+// A change of role posts a system event to the thread; setting a participant to the role they already hold is a no-op.
 type UpdateParticipantRoleEndpoint struct{}
 
 func (e *UpdateParticipantRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateParticipantRoleRequest, *apiresource.Conversation] {

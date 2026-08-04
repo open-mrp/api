@@ -11,7 +11,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Request to read the support route for a scope.
+// Request to read the support route configured for one scope.
 type GetSupportRouteRequest struct {
 	// The customer account whose override to read.
 	//
@@ -19,7 +19,9 @@ type GetSupportRouteRequest struct {
 	RelationAccountID *string `query:"relation_account_id"`
 }
 
-// Returns the support route for an exact scope in the caller's account.
+// Retrieves the support route configured for one scope in your account.
+//
+// This reads the exact scope you ask for and does not fall back: asking for a customer that has no override of its own returns a not-found error even when an account-level default is configured, so a caller checking which route will actually be used for a customer must also read the default.
 type GetSupportRouteEndpoint struct{}
 
 func (e *GetSupportRouteEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetSupportRouteRequest, *apiresource.SupportRoute] {

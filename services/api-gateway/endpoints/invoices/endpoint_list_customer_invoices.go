@@ -11,10 +11,10 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Request to list invoices for a customer account.
+// Request to list the open invoices of a customer account for payment.
 type ListCustomerInvoicesRequest struct {
 	apiresource.PaginationRequest
-	// Customer account ID.
+	// ID of the customer account whose invoices are listed.
 	CustomerAccountID string `path:"account_id" validate:"required"`
 	// Whether to also include invoices billed to the customer's child accounts.
 	//
@@ -22,7 +22,9 @@ type ListCustomerInvoicesRequest struct {
 	IncludeChildAccounts bool `query:"include_child_accounts"`
 }
 
-// Returns a paginated list of payment-oriented invoices for a specific customer account, including invoices billed to its child accounts.
+// Returns a paginated list of a customer's open invoices, newest first, in the shape used to apply a payment.
+//
+// Only invoices that still owe a balance are returned; invoices marked paid in full or overpaid are omitted. Invoices billed to the customer's child accounts are included alongside its own. Each invoice carries the payments already allocated to it, so the remaining balance can be worked out client-side.
 type ListCustomerInvoicesEndpoint struct{}
 
 func (e *ListCustomerInvoicesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCustomerInvoicesRequest, *apiresource.List[apiresource.InvoiceForPayment]] {

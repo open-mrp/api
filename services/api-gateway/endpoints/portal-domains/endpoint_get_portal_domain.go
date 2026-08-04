@@ -17,12 +17,14 @@ type GetPortalDomainRequest struct {
 	ID string `path:"id" validate:"required"`
 }
 
-// Returns a single portal domain, including the DNS records the customer must publish.
+// Returns a single portal domain, including its current status and the DNS records that must be published for it.
+//
+// Reading a domain never re-checks it with the serving provider — the status is the one recorded when the domain was connected or last verified — so run the verify action to move a `pending` or `securing` domain forward.
 type GetPortalDomainEndpoint struct{}
 
 func (e *GetPortalDomainEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetPortalDomainRequest, *apiresource.PortalDomain] {
 	return (&apiendpoint.APIEndpoint[*GetPortalDomainRequest, *apiresource.PortalDomain]{
-		Title:               "Get Portal Domain",
+		Title:               "Retrieve Portal Domain",
 		Method:              http.MethodGet,
 		ContentType:         "application/json",
 		Route:               "/v1/settings/portal-domains/{id}",

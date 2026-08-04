@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleMaterialID = "ml_014613b8f7959a091d8cc0cef4"
+const SampleMaterialID = "ml_ow202v78slbl"
 
 // A material in the account's catalog: a raw material or component consumed in production.
 //
@@ -22,11 +22,11 @@ type Material struct {
 	Item *Item `json:"item" expandable:"true"`
 	// Reorder threshold: when on-hand stock falls to this quantity, the material should be reordered.
 	//
-	// Initialized to a zero quantity in the category's base unit when not provided at creation.
+	// A threshold of zero is reported as no order point at all. Moving the underlying item to a different category re-expresses the order point in the new category's base unit, keeping the same numeric value rather than converting it.
 	OrderPoint *Quantity `json:"order_point"`
 	// Expected time between placing an order for this material and receiving it, expressed as a quantity in a time unit (e.g. days).
 	//
-	// Initialized to a zero quantity in the category's base unit when not provided at creation.
+	// A lead time of zero is reported as no lead time at all.
 	LeadTime *Quantity `json:"lead_time"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

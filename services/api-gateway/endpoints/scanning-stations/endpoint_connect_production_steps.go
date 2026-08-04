@@ -17,7 +17,7 @@ type ConnectProductionStepsRequest struct {
 	ScanningStationID string `path:"id" validate:"required"`
 	// Full or partial production step name to match.
 	//
-	// Every production step in your account whose name contains this value is connected to the station.
+	// Matching is a case-insensitive substring match, so a broad value such as a single letter can capture far more steps than intended.
 	Name string `json:"name" validate:"required"`
 }
 
@@ -31,7 +31,9 @@ func (*ConnectProductionStepsRequest) SchemaExample() any {
 
 // Connects production steps to a scanning station by name.
 //
-// Every production step whose name contains the provided value is connected. A production step can be connected to at most one scanning station, so matching steps are moved from any station they were previously connected to.
+// Every production step in your account whose name contains the provided value is connected. A production step can be connected to at most one scanning station, so matching steps are moved off any station they were previously connected to. Steps already connected to this station that do not match are left connected, so this adds to the station's steps rather than replacing them.
+//
+// Nothing about the station is returned, so retrieve the scanning station afterward to confirm which steps are now connected.
 type ConnectProductionStepsEndpoint struct{}
 
 func (e *ConnectProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ConnectProductionStepsRequest, *apiresource.EmptyResource] {

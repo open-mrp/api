@@ -14,11 +14,13 @@ import (
 // Request to list addresses.
 type ListAddressesRequest struct {
 	apiresource.PaginationRequest
-	// Filter results to a single address type.
+	// Filters results to addresses of the given type.
 	Type *constants.AddressType `query:"type"`
 }
 
 // Returns a paginated list of addresses.
+//
+// Addresses belonging to the account you are acting in are returned newest first. The `q` search term matches the address name, street lines, city, state, postal code, and country.
 type ListAddressesEndpoint struct{}
 
 func (e *ListAddressesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAddressesRequest, *apiresource.List[apiresource.Address]] {

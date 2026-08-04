@@ -10,7 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetItemTrendsRequest is the request to get trend data for an item.
+// Request to retrieve trend data for an item.
 type GetItemTrendsRequest struct {
 	// Item ID.
 	ItemID string `path:"id" validate:"required"`
@@ -20,7 +20,9 @@ type GetItemTrendsRequest struct {
 	TrendType string `query:"trend_type" validate:"required"`
 }
 
-// Returns historical trend data for an item as a time-ordered series of data points.
+// Returns how an item's stock level has moved over the last 30 days, as a series of point-in-time measurements.
+//
+// Days on which nothing was logged produce no point, and days with several entries contribute only the first, so the series is sparse rather than one point per calendar day.
 type GetItemTrendsEndpoint struct{}
 
 func (e *GetItemTrendsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetItemTrendsRequest, *apiresource.ItemTrends] {

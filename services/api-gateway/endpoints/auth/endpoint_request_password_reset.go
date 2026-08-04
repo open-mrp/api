@@ -14,8 +14,12 @@ import (
 // Request for a password reset.
 type RequestPasswordResetRequest struct {
 	// Username or email of the user whose password should be reset.
+	//
+	// The reset link is always sent to the email address on file for the matched user, and no email is sent if that user has no address on file.
 	Identifier string `json:"identifier" validate:"required,identifier"`
-	// Account slug for redirecting to the original login portal after password reset.
+	// Slug of the customer portal the request came from.
+	//
+	// Scopes the emailed reset link to that portal so the user sets their new password there instead of on the generic dashboard. Accounts with a verified custom portal domain use that domain in the link instead of the slug.
 	AccountSlug field.Optional[string] `json:"account_slug,omitzero"`
 }
 

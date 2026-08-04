@@ -11,13 +11,17 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Request to retrieve a user by ID.
+// Request to retrieve a user.
 type RetrieveUserRequest struct {
-	// User ID.
+	// Identifier for the user.
+	//
+	// Accepts the user's ID, email address, or username, tried in that order.
 	UserID string `path:"id" validate:"required"`
 }
 
-// Returns a user by ID.
+// Retrieves a user's global profile.
+//
+// The profile is shared across every account the user belongs to; account-specific details such as their status, role, and department live on the account user record instead.
 type RetrieveUserEndpoint struct{}
 
 func (e *RetrieveUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveUserRequest, *apiresource.User] {

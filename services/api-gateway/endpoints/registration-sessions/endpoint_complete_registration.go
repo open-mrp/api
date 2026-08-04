@@ -15,9 +15,9 @@ type CompleteRegistrationRequest struct {
 	SessionID string `json:"-" path:"session_id" validate:"required"`
 }
 
-// Completes a registration session by provisioning the new account with its roles and permissions.
+// Completes a registration session by creating the account the registrant signed up for.
 //
-// Requires a user to have been created for the session, and, for paid plans, payment to be confirmed first. Returns the ID of the newly created account.
+// The registering user becomes an administrator of the new account, and a paired sandbox account is provisioned alongside it. Requires a user to have been created for the session and an account name to have been supplied; paid plans additionally require confirmed payment, and their subscription starts here. If the selected plan has reached its signup capacity the request fails and the registration is added to a waiting list. Returns the ID of the new account.
 type CompleteRegistrationEndpoint struct{}
 
 func (e *CompleteRegistrationEndpoint) Materialize() *apiendpoint.APIEndpoint[*CompleteRegistrationRequest, *apiresource.CompleteRegistrationResponse] {

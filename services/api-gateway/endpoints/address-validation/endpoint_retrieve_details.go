@@ -14,11 +14,15 @@ import (
 type RetrieveAddressDetailsRequest struct {
 	// The place ID to look up, as returned in the `id` field of an address suggestion.
 	PlaceID string `path:"id" validate:"required"`
-	// Session token for grouping with a previous autocomplete request.
+	// Opaque token that ties this lookup to the autocomplete requests the suggestion came from.
+	//
+	// Pass the same token used for those autocomplete requests so the whole address entry is treated as one lookup.
 	SessionToken *string `query:"session_token"` // #nosec G117 -- not a secret, Google Maps session correlation token
 }
 
-// Returns the full parsed address for a place returned by address autocomplete.
+// Returns the full parsed address for a suggestion returned by address autocomplete.
+//
+// Use this after the user picks a suggestion to get the street, city, state, postal code, and country to prefill an address form. Nothing is saved by this lookup; create an address separately to keep it.
 type RetrieveAddressDetailsEndpoint struct{}
 
 func (e *RetrieveAddressDetailsEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAddressDetailsRequest, *apiresource.AddressDetailsResult] {

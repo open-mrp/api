@@ -16,14 +16,14 @@ type GetShippingCaseLabelRequest struct {
 	ShippingCaseID string `path:"id" validate:"required"`
 }
 
-// Returns a presigned URL for the shipping case's label image.
+// Returns a temporary download link for the shipping case's label image.
 //
-// The returned URL expires one hour after it is issued, and is null when no label has been generated for the case.
+// The link expires one hour after it is issued, so fetch it when the label is about to be printed rather than storing it. No link is returned until a label has been generated for the case.
 type GetShippingCaseLabelEndpoint struct{}
 
 func (e *GetShippingCaseLabelEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetShippingCaseLabelRequest, *apiresource.ShippingCaseLabelURL] {
 	return (&apiendpoint.APIEndpoint[*GetShippingCaseLabelRequest, *apiresource.ShippingCaseLabelURL]{
-		Title:             "Get Shipping Case Label",
+		Title:             "Get Shipping Case Label URL",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/shipping-cases/{id}/label",

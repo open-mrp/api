@@ -8,11 +8,11 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleUserID = "us_0151164dcaea4cbded27b50aae"
+const SampleUserID = "us_43irtlt2ajz6"
 const SampleUserUsername = "jdoe"
 const SampleUserEmail = "jdoe@augno.com"
 const SampleUserName = "John Doe"
-const SampleUserImageUrl = "https://cdn.augno.com/avatars/us_0151164dcaea4cbded27b50aae.jpg"
+const SampleUserImageUrl = "https://cdn.augno.com/avatars/us_43irtlt2ajz6.jpg"
 const SampleUserPassword = "QgS7Z8Hhj3&1"     // #nosec G101 -- sample data for API docs
 const SampleNewUserPassword = "50iR2X0r@bvIH" // #nosec G101 -- sample data for API docs
 
@@ -24,15 +24,19 @@ type User struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=user"`
-	// Email address.
+	// Email address the user signs in with and receives platform email at.
 	Email *string `json:"email"`
 	// User's full display name.
 	Name *string `json:"name"`
-	// Username.
+	// Username the user can sign in with instead of their email address.
+	//
+	// Usernames are unique across the whole platform, not just within your account.
 	Username *string `json:"username"`
 	// When the user verified their email address.
 	EmailVerifiedAt *time.Time `json:"email_verified_at"`
-	// URL of the user's profile image.
+	// Location of the user's profile image.
+	//
+	// For photos uploaded through the API this holds an internal path rather than a fetchable image URL; call Get User Photo URL to obtain a temporary link to the image itself.
 	ImageUrl *string `json:"image_url"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -85,7 +89,7 @@ type UserPhotoURL struct {
 
 var SampleUserPhotoURL = &UserPhotoURL{
 	Object: constants.ObjectTypeUserPhotoURL,
-	URL:    new("https://cdn.augno.com/avatars/us_0151164dcaea4cbded27b50aae.jpg?X-Amz-Expires=3600&X-Amz-Signature=example"),
+	URL:    new("https://cdn.augno.com/avatars/us_43irtlt2ajz6.jpg?X-Amz-Expires=3600&X-Amz-Signature=example"),
 }
 
 func (*UserPhotoURL) SchemaExample() any {

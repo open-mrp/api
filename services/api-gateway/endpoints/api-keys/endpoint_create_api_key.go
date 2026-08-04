@@ -17,13 +17,15 @@ import (
 type CreateAPIKeyRequest struct {
 	// ID of the role to assign to the API key.
 	//
-	// The role determines the permissions of requests authenticated with the key.
+	// The role determines what requests authenticated with the key are allowed to do. A key keeps its role for life — including through rotation — so issue a new key to use a different one, while changes to the role's own permissions take effect for existing keys immediately.
 	RoleID string `json:"role_id" validate:"required"`
 	// Human-readable name for the API key.
+	//
+	// Shown when listing keys and used to match keys when searching, so prefer something that identifies the integration using it.
 	Name string `json:"name" validate:"required,max=255"`
 	// When the key expires and stops authenticating requests.
 	//
-	// If omitted, the key never expires.
+	// If omitted, the key keeps working until it is revoked or rotated.
 	ExpiresAt field.Optional[time.Time] `json:"expires_at,omitzero"`
 }
 
@@ -39,6 +41,8 @@ func (*CreateAPIKeyRequest) SchemaExample() any {
 }
 
 // Creates an [API key](https://docs.augno.com/api/api-keys) to authenticate API requests.
+//
+// The key belongs to the account it was created under and only ever acts on behalf of that account. Keys created under a sandbox account carry an `aug_sk_test_` prefix; keys created under a production account carry an `aug_sk_prod_` prefix.
 //
 // The secret key is returned once and cannot be retrieved later, so you should store it securely. We provide some [recommendations](https://docs.augno.com/api/managing-api-keys) on how you can manage your API keys.
 type CreateAPIKeyEndpoint struct{}

@@ -16,7 +16,7 @@ type ListMachineDowntimeReasonsRequest struct{}
 
 // Returns the downtime reasons available when logging a stoppage.
 //
-// The list is the same for every account and is ordered for display.
+// The list is the same for every account and is ordered for display, so it can be rendered straight into a reason picker. Each reason carries the OEE term its stoppages charge, which is what makes the choice of reason matter beyond labeling.
 type ListMachineDowntimeReasonsEndpoint struct{}
 
 func (e *ListMachineDowntimeReasonsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMachineDowntimeReasonsRequest, *apiresource.List[apiresource.MachineDowntimeReason]] {

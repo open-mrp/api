@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SamplePaymentTermID = "pytm_018694d6601ea771cd1b52e890"
+const SamplePaymentTermID = "pytm_skssmsy21lem"
 const SamplePaymentTermName = "Net 30"
 
 // A payment term describing when payment is due (e.g. `Net 30`), assignable to customers, sales orders, purchase orders, and invoices.
@@ -17,11 +17,15 @@ type PaymentTerm struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=payment_term"`
-	// Display name (e.g. `Net 30`).
+	// Display name (e.g. `Net 30`), unique among the payment terms visible to your account.
 	Name string `json:"name" validate:"required"`
-	// Lifecycle status of the payment term.
+	// Whether this payment term is still in active use.
+	//
+	// Payment terms created through the API are always `active`, and no endpoint changes a term's status. List Payment Terms returns inactive terms alongside active ones, so filter them out yourself if you only want the ones still on offer.
 	Status constants.PaymentTermStatus `json:"status" validate:"required"`
-	// Owner of this resource, indicating whether it is an Augno-provided system default or was created by your account.
+	// Provenance of this payment term.
+	//
+	// System-owned payment terms are platform-provided defaults shared across all accounts and cannot be updated or deleted; account-owned payment terms are custom to your account.
 	Owner *Owner `json:"owner" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

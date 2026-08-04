@@ -8,9 +8,11 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleNotificationID = "nf_01h9z8q1w2e3r4t5y6u7i8o9"
+const SampleNotificationID = "nf_yvw2bfj2guyn"
 
-// An in-app notification in the user's bell feed.
+// An in-app notification addressed to a single user, shown in their notification (bell) feed.
+//
+// A notification belongs to one user in one account, so the feed you read is always that of the authenticated caller in the account they are acting in. Announcements broadcast to a whole account are a separate resource.
 type Notification struct {
 	// Notification ID.
 	ID string `json:"id" validate:"required"`
@@ -27,27 +29,32 @@ type Notification struct {
 	// - `agent.run_completed`: an agent run the user triggered finished.
 	// - `agent.alert`: an agent raised an alert during a run.
 	// - `system.broadcast`: a targeted system message.
+	// - `customer.registered`: a buyer completed registration on your customer portal.
 	Category constants.NotificationCategory `json:"category" validate:"required"`
-	// Human-readable title.
+	// Short headline shown in the feed.
 	Title string `json:"title" validate:"required"`
-	// Preview/body text.
+	// Supporting detail shown beneath the title, such as a preview of the message that triggered the notification.
 	Body *string `json:"body"`
 	// Where the notification is in its lifecycle.
 	//
-	// - `unseen`: not yet surfaced in the notification dropdown.
-	// - `seen`: surfaced in the dropdown but not yet opened.
+	// - `unseen`: delivered but not yet surfaced to the user.
+	// - `seen`: surfaced in the feed but not yet opened.
 	// - `read`: explicitly opened by the user.
 	// - `dismissed`: removed from the active feed.
-	Status constants.NotificationStatus `json:"status" validate:"required"`
-	// Delivery priority.
-	Priority constants.NotificationPriority `json:"priority" validate:"required"`
-	// The actor that generated this notification — a user, group, agent, or API key.
 	//
-	// System-generated notifications have no sender.
+	// The status is derived from the seen, read, and dismissed timestamps, and only ever moves forward — a notification can never become unseen again.
+	Status constants.NotificationStatus `json:"status" validate:"required"`
+	// How prominently the notification should be surfaced, from `low` through `urgent`.
+	Priority constants.NotificationPriority `json:"priority" validate:"required"`
+	// The actor that generated this notification.
+	//
+	// Notifications raised by the platform itself, rather than by a person, agent, or API key, have no sender.
 	Sender *Actor `json:"sender" expandable:"true"`
-	// The app resource this notification links to, if any.
+	// The resource this notification is about, which the client can link to.
+	//
+	// Chat notifications point at the conversation the message was posted in — or at the support case, for customer-facing threads — so opening the notification opens the thread.
 	Resource *Entity `json:"resource" expandable:"true"`
-	// When the notification first appeared in the dropdown.
+	// When the notification was first surfaced to the user.
 	SeenAt *time.Time `json:"seen_at"`
 	// When the notification was explicitly opened.
 	ReadAt *time.Time `json:"read_at"`
@@ -77,15 +84,21 @@ func (*Notification) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleNotification)
 }
 
-// NotificationUnreadCount summarizes a user's unread tallies across surfaces.
+// The caller's unread tallies in one account, used to drive the notification bell badge.
 type NotificationUnreadCount struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=notification_unread_count"`
-	// Number of unseen bell notifications.
+	// Number of the caller's notifications that have not been seen yet.
+	//
+	// Dismissed notifications are never counted, and marking all notifications seen drops this to zero.
 	Notifications int64 `json:"notifications"`
-	// Number of conversations with unread messages (0 until chat ships).
+	// Number of conversations with unread messages.
+	//
+	// Always `0` today — conversation unread counts are not yet folded into the bell.
 	Conversations int64 `json:"conversations"`
-	// Combined unread total.
+	// Combined unread total for the bell badge.
+	//
+	// This is the unseen notification count plus any account announcements the caller has not seen, so it can exceed `notifications`. Announcements are cleared individually rather than by marking all notifications seen.
 	Total int64 `json:"total"`
 }
 
@@ -100,23 +113,25 @@ func (*NotificationUnreadCount) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleNotificationUnreadCount)
 }
 
-// NotificationUnreadSummaryAccount is one account's unread tally in the cross-account summary.
+// One account's unread tally within the caller's cross-account summary.
 type NotificationUnreadSummaryAccount struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=notification_unread_summary_account"`
 	// The account this tally is for.
 	Account *Entity `json:"account" validate:"required"`
-	// Number of unread items (notifications + announcements) in this account.
+	// Number of unseen notifications and account announcements the caller has in this account.
 	Unread int64 `json:"unread"`
 }
 
-// NotificationUnreadSummary is the caller's unread totals across every account they belong to.
+// The caller's unread totals across every account they belong to, used to show unread activity waiting in accounts they are not currently working in.
 type NotificationUnreadSummary struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=notification_unread_summary"`
 	// Combined unread total across all of the caller's accounts.
 	Total int64 `json:"total"`
 	// Per-account unread tallies.
+	//
+	// Every account the caller belongs to is listed, including accounts with nothing unread.
 	Accounts *List[NotificationUnreadSummaryAccount] `json:"accounts"`
 }
 
@@ -132,11 +147,13 @@ func (*NotificationUnreadSummary) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleNotificationUnreadSummary)
 }
 
-// NotificationSendResult acknowledges a notification send/fan-out request.
+// The acknowledgement returned when a notification is accepted for delivery.
 type NotificationSendResult struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=notification_send_result"`
-	// Number of recipients the notification was enqueued for.
+	// Number of deliveries accepted for the notification.
+	//
+	// An account broadcast is stored once as a single announcement that serves everyone in the account, so it reports `1` rather than a per-user count. Acceptance is not delivery: recipients who cannot be resolved are skipped when the notification is fanned out.
 	Enqueued int64 `json:"enqueued"`
 }
 

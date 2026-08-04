@@ -25,11 +25,13 @@ type UpdateTransactionRequest struct {
 	Note field.Optional[string] `json:"note,omitzero"`
 	// New transaction amount as a decimal string, in US dollars.
 	Amount field.Optional[string] `json:"amount,omitzero"`
-	// Payment method code: one of `cash`, `check`, `credit_card`, `gift_card`, or `ach`.
+	// How the money moved: one of `cash`, `check`, `credit_card`, `gift_card`, or `ach`.
 	TransactionMethodCode field.Optional[string] `json:"method,omitzero" validate:"omitempty,max=255"`
-	// Adjustment type code (see List Adjustment Types for available values).
+	// The kind of correction this transaction represents (see List Adjustment Types for available values).
 	AdjustmentTypeCode field.Optional[string] `json:"adjustment_type,omitzero" validate:"omitempty,max=255"`
 	// ID of the account user responsible for the transaction.
+	//
+	// A user ID is also accepted; the value is resolved to an account user in the current account.
 	ResponsibleUserID field.Optional[string] `json:"responsible_user_id,omitzero" validate:"omitempty"`
 	// Set to true to clear the responsible user.
 	//
@@ -43,9 +45,9 @@ type UpdateTransactionRequest struct {
 	//
 	// Takes precedence over `adjustment_type` if both are provided.
 	ClearAdjustmentType bool `json:"clear_adjustment_type"`
-	// Whether the full transaction amount has been allocated against invoices.
+	// Whether the full transaction amount has been applied to invoices.
 	//
-	// This flag is set explicitly here; it is not recomputed automatically when allocations change.
+	// Set this to correct the flag by hand: editing or deleting individual allocations never recomputes it. While it is `false`, the transaction is returned by List Open Credits.
 	IsFullyAllocated field.Optional[bool] `json:"is_fully_allocated,omitzero"`
 }
 
@@ -62,7 +64,9 @@ func (*UpdateTransactionRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateTransactionRequest)
 }
 
-// Partially updates a transaction.
+// Updates a transaction, changing only the fields present in the request body.
+//
+// Changing the amount does not re-apply the transaction to invoices: existing allocations keep their amounts, and neither the transaction's `is_fully_allocated` flag nor the paid-in-full status of any settled invoice is recomputed.
 type UpdateTransactionEndpoint struct{}
 
 func (e *UpdateTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateTransactionRequest, *apiresource.TransactionDetail] {

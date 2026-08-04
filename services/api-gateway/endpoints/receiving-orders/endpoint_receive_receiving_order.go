@@ -19,7 +19,7 @@ type ReceiveReceivingOrderRequest struct {
 
 // Records the full outstanding quantity as received on every unstocked line of a receiving order.
 //
-// Each unstocked line's quantity is set to the quantity still outstanding on its purchase order line (ordered minus previously received); lines with nothing outstanding are left unchanged. This does not add inventory — use Stock Receiving Order to put the received quantities away.
+// Each unstocked line's quantity is set to what is still outstanding on its purchase order line — the ordered quantity less everything already stocked against that line — and lines with nothing outstanding are left as they are. Nothing enters inventory and no delivery is recorded; use Stock Receiving Order to put the received quantities away.
 type ReceiveReceivingOrderEndpoint struct{}
 
 func (e *ReceiveReceivingOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*ReceiveReceivingOrderRequest, *apiresource.ReceivingOrder] {

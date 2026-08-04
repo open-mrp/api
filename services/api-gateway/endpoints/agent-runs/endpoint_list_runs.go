@@ -14,13 +14,17 @@ import (
 // Request to list agent runs.
 type ListRunsRequest struct {
 	apiresource.PaginationRequest
-	// Filter to runs with this status (e.g. `running`, `completed`, `failed`).
+	// Restricts results to runs in this status.
+	//
+	// One of `pending`, `running`, `awaiting_input`, `awaiting_approval`, `completed`, `failed`, or `cancelled`.
 	StatusCode *string `query:"status"`
-	// Filter to runs of a specific agent definition.
+	// Restricts results to runs of a single agent.
 	AgentDefinitionID *string `query:"agent_definition_id"`
 }
 
-// Returns a paginated list of agent runs for the current account.
+// Lists agent runs for your account, newest first.
+//
+// The `q` parameter matches a run's ID, its status, or the ID of the agent that produced it.
 type ListRunsEndpoint struct{}
 
 func (e *ListRunsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRunsRequest, *apiresource.List[apiresource.AgentRun]] {

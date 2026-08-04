@@ -26,7 +26,7 @@ func (*CloseSalesOrderRequest) SchemaExample() any {
 
 // Closes a sales order, transitioning it from `issued` to `fulfilled`.
 //
-// Sets the order's completion timestamp and marks its pick as finished.
+// Stamps the order's completion timestamp and closes its pick, packing every pick line that is still open so the pick reads as complete alongside the order. Only an order in `issued` can be closed, and once it is fulfilled it can no longer be deleted, nor can its lines be removed, until it is reopened.
 type CloseSalesOrderEndpoint struct{}
 
 func (e *CloseSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*CloseSalesOrderRequest, *apiresource.SalesOrder] {
@@ -43,8 +43,6 @@ func (e *CloseSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*CloseS
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CloseSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError) {
 			return svc.(SalesOrderSvc).CloseSalesOrder
 		},
-		// Status-action endpoints are commands: they return the updated sales
-		// order without `?include=` expansion. Clients that need expanded
-		// sub-resources re-fetch via GET /sales-orders/{id}?include=...
+		// Status-action endpoints are commands: they return the updated sales order without `?include=` expansion. Clients that need expanded sub-resources re-fetch via GET /sales-orders/{id}?include=...
 	})
 }

@@ -11,13 +11,15 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Request to get a sandbox.
+// Request to retrieve a sandbox.
 type RetrieveSandboxRequest struct {
-	// Sandbox ID.
+	// ID of the sandbox to retrieve.
 	SandboxID string `path:"id" validate:"required"`
 }
 
-// Returns a sandbox by ID.
+// Returns a single sandbox by ID.
+//
+// Only sandboxes owned by your production account are visible; any other sandbox is reported as not found. Sandboxes cannot be retrieved while acting in a sandbox.
 type RetrieveSandboxEndpoint struct{}
 
 func (e *RetrieveSandboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveSandboxRequest, *apiresource.Sandbox] {

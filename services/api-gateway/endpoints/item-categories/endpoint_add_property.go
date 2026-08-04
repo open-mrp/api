@@ -18,9 +18,9 @@ type AddItemCategoryPropertyRequest struct {
 	PropertyID string `path:"property_id" validate:"required"`
 }
 
-// Adds a property to an item category, making the property available to items in that category.
+// Attaches one of your account's properties to an item category.
 //
-// Each property name can appear only once per category; adding a property whose name duplicates one already in the category returns a conflict error. Default system categories cannot be modified.
+// The property then appears among the category's properties, including in the customer-facing catalog, describing a dimension along which the category's items vary. Each property name can appear only once per category, so attaching a property whose name duplicates one already there returns a conflict error.
 type AddItemCategoryPropertyEndpoint struct{}
 
 func (e *AddItemCategoryPropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddItemCategoryPropertyRequest, *apiresource.EmptyResource] {

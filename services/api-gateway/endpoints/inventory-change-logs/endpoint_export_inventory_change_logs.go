@@ -11,13 +11,15 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ExportInventoryChangeLogsRequest is the request to export inventory change logs.
+// Request to export inventory change logs.
 type ExportInventoryChangeLogsRequest struct {
-	// Filter by item IDs.
+	// Restricts results to changes affecting these items.
 	ItemIDs []string `query:"item_ids"`
-	// Filter by the action that produced the change.
+	// Restricts results to these action types (`scan`, `user_action`, `system_action`, `user_correction`).
 	ActionTypeCodes []string `query:"action_type_codes"`
-	// Filter by the user responsible for the change.
+	// Restricts results to changes made by these users.
+	//
+	// Changes that were recorded without a responsible user are excluded whenever this filter is set.
 	ChangedByUserIDs []string `query:"changed_by_user_ids"`
 	// Restricts results to change logs created on or after this timestamp.
 	StartDate *time.Time `query:"start_date"`
@@ -27,7 +29,7 @@ type ExportInventoryChangeLogsRequest struct {
 
 // Exports inventory change logs matching the provided filters as an Excel file.
 //
-// Unlike the list endpoint, results are not paginated — every matching change log is included in the download.
+// Unlike the list endpoint, results are not paginated — every matching change log is included in the download, newest first. The download is named for the date range you requested, using `all` in place of a bound you left open.
 type ExportInventoryChangeLogsEndpoint struct{}
 
 func (e *ExportInventoryChangeLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportInventoryChangeLogsRequest, *httptransport.FileDownload] {

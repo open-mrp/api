@@ -53,7 +53,7 @@ func (*UpdateMaterialRequest) SchemaExample() any {
 
 // Partially updates a material.
 //
-// Fields not provided retain their current values.
+// Fields not provided retain their current values. Only the cost side of pricing can be changed here; the selling price set at creation is not editable through this endpoint. Use the Change Item Category endpoint to move the material to a different category.
 type UpdateMaterialEndpoint struct{}
 
 func (e *UpdateMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateMaterialRequest, *apiresource.Material] {

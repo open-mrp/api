@@ -13,11 +13,13 @@ import (
 
 // Request to delete a machine downtime event.
 type DeleteMachineDowntimeEventRequest struct {
-	// ID of the downtime event.
+	// ID of the downtime event to delete.
 	MachineDowntimeEventID string `path:"id" validate:"required"`
 }
 
 // Deletes a machine downtime event.
+//
+// Meant for a stoppage that was logged by mistake: the event is removed permanently and stops counting against the machine's availability. To correct a real stoppage, update it instead so the record of the downtime survives.
 type DeleteMachineDowntimeEventEndpoint struct{}
 
 func (e *DeleteMachineDowntimeEventEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteMachineDowntimeEventRequest, *apiresource.EmptyResource] {

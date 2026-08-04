@@ -15,11 +15,13 @@ import (
 
 // Request to create or update a sales target.
 type UpsertSalesTargetRequest struct {
-	// ID of the account user (sales rep) the target is for.
-	SalesRepID string `path:"id" validate:"required"`
-	// ID of the sales target to create or update.
+	// The account user (sales rep) the target is for.
 	//
-	// If no target with this ID exists, a new one is created with this ID.
+	// Must be an active account user in your account. Only applied when creating a new target; the rep on an existing target is not changed.
+	SalesRepID string `path:"id" validate:"required"`
+	// The sales target to create or update.
+	//
+	// If no target with this ID exists, a new one is created and keeps the ID you supplied, which lets you retry the same request safely.
 	TargetID string `path:"target_id" validate:"required"`
 	// Start of the period the target applies to (inclusive).
 	//
@@ -29,9 +31,11 @@ type UpsertSalesTargetRequest struct {
 	//
 	// Only applied when creating a new target; the dates on an existing target are not changed.
 	EndDate time.Time `json:"end_date"`
-	// Goal amount for the period, as a decimal string (e.g. `75000.00`).
+	// The revenue goal for the period, as a decimal string (e.g. `75000.00`).
+	//
+	// This is the only value an existing target accepts; everything else on it stays as it was.
 	AmountValue string `json:"amount_value"`
-	// ID of the unit the amount is denominated in (typically a currency unit).
+	// The unit the goal is denominated in, typically a currency unit.
 	//
 	// Only applied when creating a new target; the unit on an existing target is not changed.
 	AmountUnitID string `json:"amount_unit_id"`
@@ -48,9 +52,9 @@ func (*UpsertSalesTargetRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpsertSalesTargetRequest)
 }
 
-// Creates or updates a sales target by ID.
+// Creates or updates a sales rep's revenue goal at an ID you choose.
 //
-// If no target with the given ID exists, one is created with the supplied dates, amount, and unit. If it already exists, only the amount value is updated — the dates and unit are left unchanged.
+// If no target with the given ID exists, one is created with the supplied dates, amount, and unit. If it already exists, only the amount value is updated — the dates and unit are left unchanged, so raising or lowering a goal mid-period is the intended use. The sales rep must be an active account user in your account, and the target ID must belong to that account, otherwise the request returns a not-found error.
 type UpsertSalesTargetEndpoint struct{}
 
 func (e *UpsertSalesTargetEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpsertSalesTargetRequest, *apiresource.SalesTarget] {

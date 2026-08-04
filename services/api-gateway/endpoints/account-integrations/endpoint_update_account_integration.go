@@ -20,7 +20,7 @@ type UpdateAccountIntegrationRequest struct {
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// Lifecycle status of the integration.
 	//
-	// Set to `inactive` to deactivate the integration without deleting its stored credentials.
+	// Set to `inactive` to stop the provider being used while keeping its stored credentials, and back to `active` to resume without re-entering them.
 	Status field.Optional[constants.AccountIntegrationStatus] `json:"status,omitzero"`
 }
 
@@ -33,9 +33,9 @@ func (*UpdateAccountIntegrationRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateAccountIntegrationRequest)
 }
 
-// Updates an account integration's name and active status.
+// Renames an account integration, or activates or deactivates it.
 //
-// Omitted fields are left unchanged. Credentials cannot be changed with this endpoint; to rotate credentials, call Create Account Integration again with the same integration code.
+// Omitted fields are left unchanged. Credentials cannot be changed here; to rotate them, call Create Account Integration again with the same `provider`.
 type UpdateAccountIntegrationEndpoint struct{}
 
 func (e *UpdateAccountIntegrationEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAccountIntegrationRequest, *apiresource.AccountIntegration] {

@@ -15,7 +15,9 @@ type ListAdjustmentTypesRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of adjustment types.
+// Returns a paginated list of the adjustment categories that can be recorded on an adjustment transaction, such as discounts, fees, and write-offs.
+//
+// Adjustment types are platform-provided and identical for every account. Free-text search matches the display name.
 type ListAdjustmentTypesEndpoint struct{}
 
 func (e *ListAdjustmentTypesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAdjustmentTypesRequest, *apiresource.List[apiresource.AdjustmentType]] {

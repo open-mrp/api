@@ -10,13 +10,15 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// RetrieveAccountStatusRequest is the request to get an account status.
+// Request to retrieve an account status.
 type RetrieveAccountStatusRequest struct {
 	// Account status ID or code.
+	//
+	// A code such as `hold_shipment` resolves to the same status as that status's ID.
 	AccountStatusID string `path:"id" validate:"required"`
 }
 
-// Returns an account status by ID or code.
+// Returns a single account status, looked up by either its ID or its code.
 type RetrieveAccountStatusEndpoint struct{}
 
 func (e *RetrieveAccountStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAccountStatusRequest, *apiresource.AccountStatus] {

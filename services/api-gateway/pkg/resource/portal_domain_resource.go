@@ -8,21 +8,26 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SamplePortalDomainID = "podn_018e88072d1320808dc9aab42"
+const SamplePortalDomainID = "podn_ml44z5ggf169"
 
-// A DNS record the customer must publish for their portal domain.
+// A DNS record that must be published at your DNS provider before a portal domain can be verified and serve traffic.
 type DNSRecord struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=dns_record"`
-	// Record type.
+	// The kind of DNS record to publish.
+	//
+	// - `CNAME`: points a subdomain at the portal's serving infrastructure.
+	// - `A`: points an apex domain at the portal's serving infrastructure.
+	// - `TXT`: carries an ownership-verification challenge.
 	Type constants.DNSRecordType `json:"type" validate:"required"`
 	// Record name (host) to publish.
 	Name string `json:"name" validate:"required"`
 	// Record value to publish.
 	Value string `json:"value" validate:"required"`
-	// Why the record is needed.
+	// Why the record must be published.
 	//
-	// Routing records point traffic at the portal's serving infrastructure; ownership records prove control of a domain that is claimed elsewhere.
+	// - `routing`: the record points traffic at the portal's serving infrastructure.
+	// - `ownership`: the record proves control of a domain that is already claimed elsewhere.
 	Reason constants.DNSRecordReason `json:"reason" validate:"required"`
 }
 
@@ -36,16 +41,18 @@ type PortalDomain struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=portal_domain"`
 	// The fully-qualified domain name (e.g. `shop.acme.com`).
 	Domain string `json:"domain" validate:"required"`
-	// Verification status.
+	// How far the domain has progressed towards serving the portal.
 	//
-	// - pending domains await DNS configuration
-	// - securing domains have correct DNS and are waiting on TLS certificate issuance; the portal is not yet reachable over HTTPS
-	// - verified domains serve the portal over HTTPS
-	// - failed domains were rejected and cannot be used
+	// - `pending`: the domain is waiting on DNS. Publish the listed records, then run the verify action.
+	// - `securing`: DNS is correct and the TLS certificate is being issued. The portal is not yet reachable over HTTPS.
+	// - `verified`: the certificate is live and the portal is served on the domain.
+	// - `failed`: the domain was rejected and cannot be used.
 	Status constants.PortalDomainStatus `json:"status" validate:"required"`
-	// The DNS records the customer must publish for the domain to route and verify.
+	// The DNS records that must be published for the domain to route to the portal and verify.
+	//
+	// The list is refreshed from the serving provider every time the domain is created or verified. It always contains the routing record; ownership records appear only while a verification challenge is outstanding.
 	DNSRecords *List[DNSRecord] `json:"dns_records" validate:"required"`
-	// When the domain's DNS configuration was confirmed.
+	// When the domain became fully verified — its TLS certificate live and the portal serving on it.
 	VerifiedAt *time.Time `json:"verified_at"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

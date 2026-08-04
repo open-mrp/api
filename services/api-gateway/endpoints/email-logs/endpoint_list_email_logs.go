@@ -16,7 +16,9 @@ type ListEmailLogsRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of email logs for the current account.
+// Returns a paginated list of email logs for the current account, most recently created first.
+//
+// The `q` search term matches the subject line or any recipient address.
 type ListEmailLogsEndpoint struct{}
 
 func (e *ListEmailLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListEmailLogsRequest, *apiresource.List[apiresource.EmailLog]] {

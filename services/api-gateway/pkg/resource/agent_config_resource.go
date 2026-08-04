@@ -11,18 +11,23 @@ import (
 type AgentDefinitionConfig struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=agent_definition_config"`
-	// System prompt / instructions for the agent.
+	// Standing instructions that define the agent's role and how it should behave on every run.
 	SystemPrompt *string `json:"system_prompt"`
 	// Intelligence and cost tier for the agent's reasoning.
 	//
-	// Selects how capable and expensive a model the agent uses without pinning a specific model; higher tiers reason better but cost more. Leaving it unset uses the default tier.
+	// Selects how capable and expensive a model the agent uses without pinning a specific model; higher tiers reason better but cost more. Each tier resolves to an ordered chain of equivalent models, so a run automatically fails over to another provider's model if the preferred one is unavailable.
 	//
 	// - `frontier`: the most capable tier, for multi-step planning, ambiguous agent work, and hard coding or architecture tasks.
-	// - `high`: the default tier, for normal planning, code edits, synthesis, and customer-facing reasoning.
+	// - `high`: for normal planning, code edits, synthesis, and customer-facing reasoning.
 	// - `balanced`: for research, summarization, classification, structured extraction, and light tool use.
 	// - `cheap`: for simple transforms, validation, formatting, and routing.
+	// - `legacy`: older-generation models kept for compatibility and regression comparison; avoid unless you specifically need them.
+	//
+	// Leaving the tier unset picks one from how the agent is triggered: chat and manual runs use `high`, while scheduled and event-driven runs use `balanced` so background work stays cheap.
 	Tier *constants.ModelTier `json:"tier"`
 	// LLM sampling temperature between 0 and 1.
+	//
+	// Lower values make the agent's output more repeatable and literal; higher values make it more varied.
 	Temperature *float64 `json:"temperature"`
 	// Trigger-specific configuration.
 	//

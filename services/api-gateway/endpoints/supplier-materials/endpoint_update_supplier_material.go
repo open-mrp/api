@@ -24,7 +24,7 @@ type UpdateSupplierMaterialRequest struct {
 	SupplierPartNumber field.Optional[string] `json:"supplier_part_number,omitzero" validate:"omitempty,max=255"`
 	// New supplier description of this material.
 	SupplierDescription field.Optional[string] `json:"supplier_description,omitzero" validate:"omitempty,max=255"`
-	// Whether the supplier is available to source this material.
+	// Whether this supplier is currently one you would source the material from.
 	IsActive field.Optional[bool] `json:"is_active,omitzero"`
 }
 

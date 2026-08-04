@@ -11,7 +11,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ConnectStepsRequest is the request to connect two steps in the production flow DAG.
+// Request to connect two production steps.
 type ConnectStepsRequest struct {
 	// Source (upstream) production step ID.
 	SourceProductionStepID string `json:"source_production_step_id" validate:"required"`
@@ -28,9 +28,11 @@ func (*ConnectStepsRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleConnectStepsRequest)
 }
 
-// Connects two production steps in the production flow DAG.
+// Connects two production steps so that work flows from the source step into the target step.
 //
-// The source step becomes an upstream dependency of the target step; connecting an already-connected pair has no effect. Connections are also maintained automatically from item relationships, so manual connections may be rebuilt when a step's produced or consumed items change.
+// The source step becomes an upstream dependency of the target step, and connecting a pair that is already connected has no effect.
+//
+// Connections are otherwise derived from item relationships: changing which items a step produces or consumes recomputes every connection on that step, which discards connections made here.
 type ConnectStepsEndpoint struct{}
 
 func (e *ConnectStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ConnectStepsRequest, *apiresource.EmptyResource] {

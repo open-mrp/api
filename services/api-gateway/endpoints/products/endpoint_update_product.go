@@ -14,7 +14,7 @@ import (
 	"github.com/augno/api/shared/field"
 )
 
-// UpdateProductRequest is the request to partially update a product.
+// Request to partially update a product.
 type UpdateProductRequest struct {
 	// Product ID.
 	ProductID string `path:"id" validate:"required"`
@@ -37,7 +37,7 @@ type UpdateProductRequest struct {
 	PortalVisibility field.Optional[constants.CustomerPortalVisibility] `json:"portal_visibility,omitzero"`
 	// New selling price per unit.
 	//
-	// The numerator unit must be a currency unit and the denominator unit must not be.
+	// The numerator unit must be a currency unit and the denominator unit must not be. The new rate replaces the price on the product's backing item.
 	UnitPrice field.Optional[apirequest.RateInput] `json:"unit_price,omitzero"`
 }
 
@@ -58,6 +58,8 @@ func (*UpdateProductRequest) SchemaExample() any {
 }
 
 // Partially updates a product.
+//
+// `sku`, `description`, `notes`, and `unit_price` all live on the product's backing item and are written there, so the change is visible on the item as well. The product line is reassigned through its own endpoint, and the product type cannot be changed after creation.
 type UpdateProductEndpoint struct{}
 
 func (e *UpdateProductEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateProductRequest, *apiresource.Product] {

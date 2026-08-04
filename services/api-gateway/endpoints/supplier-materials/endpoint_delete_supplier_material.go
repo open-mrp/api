@@ -22,7 +22,7 @@ type DeleteSupplierMaterialRequest struct {
 
 // Deletes a supplier material link.
 //
-// Removing the link does not affect the underlying material or supplier.
+// Returns the link as it looked immediately before deletion. Removing the link does not affect the underlying material or supplier.
 type DeleteSupplierMaterialEndpoint struct{}
 
 func (e *DeleteSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSupplierMaterialRequest, *apiresource.SupplierMaterial] {

@@ -12,14 +12,16 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListInventoryChangeLogsRequest is the request to list inventory change logs.
+// Request to list inventory change logs.
 type ListInventoryChangeLogsRequest struct {
 	apiresource.PaginationRequest
-	// Filter by item IDs.
+	// Restricts results to changes affecting these items.
 	ItemIDs []string `query:"item_ids"`
-	// Filter by the action that produced the change.
+	// Restricts results to these action types (`scan`, `user_action`, `system_action`, `user_correction`).
 	ActionTypeCodes []string `query:"action_type_codes"`
-	// Filter by the user responsible for the change.
+	// Restricts results to changes made by these users.
+	//
+	// Changes that were recorded without a responsible user are excluded whenever this filter is set.
 	ChangedByUserIDs []string `query:"changed_by_user_ids"`
 	// Restricts results to change logs created on or after this timestamp.
 	StartDate *time.Time `query:"start_date"`
@@ -28,6 +30,8 @@ type ListInventoryChangeLogsRequest struct {
 }
 
 // Returns a paginated list of inventory change logs, newest first.
+//
+// Filters combine with AND, while the values within a single filter combine with OR. The `q` search term matches on item SKU, responsible user name, and scanning station name.
 type ListInventoryChangeLogsEndpoint struct{}
 
 func (e *ListInventoryChangeLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListInventoryChangeLogsRequest, *apiresource.List[apiresource.InventoryChangeLog]] {

@@ -12,24 +12,21 @@ import (
 // LocationType — location type resource
 // ---------------------------------------------------------------------------
 
-const SampleLocationTypeID = "lc_01e69cd3745a1bc0dd485986c0"
+const SampleLocationTypeID = "lc_ra08sngd0fxr"
 const SampleLocationTypeCode = constants.LocationTypeCodeBuilding
 const SampleLocationTypeName = "Building"
 
 // A level in the storage location hierarchy, such as a building or a bin.
+//
+// Location types are platform-defined and identical for every account: you choose one when creating a location, but you cannot add or modify the types themselves.
 type LocationType struct {
 	// Location type ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=location_type"`
-	// Location type code, identifying the level of the storage hierarchy this type represents.
+	// The level of the storage hierarchy this type represents.
 	//
-	// - `building`: a building-level location.
-	// - `section`: a section within a building.
-	// - `aisle`: an aisle within a section.
-	// - `rack`: a rack within an aisle.
-	// - `shelf`: a shelf within a rack.
-	// - `bin`: a bin within a shelf.
+	// The levels run from largest to smallest: `building`, `section`, `aisle`, `rack`, `shelf`, `bin`.
 	Code constants.LocationTypeCode `json:"code" validate:"required"`
 	// Display name of the location type.
 	Name string `json:"name" validate:"required"`
@@ -56,8 +53,8 @@ func (*LocationType) SchemaExample() any {
 // Location — location resource
 // ---------------------------------------------------------------------------
 
-const SampleLocationID = "lc_014d187d99b31926f0c74af9d8"
-const SampleLocationChildID = "lc_0132c4db1e220da9bc596cc4c9"
+const SampleLocationID = "lc_yonnys0hx3ju"
+const SampleLocationChildID = "lc_huci6mict6ys"
 const SampleLocationName = "Warehouse A"
 
 // A physical storage location, such as a warehouse, aisle, or bin, arranged in a parent-child hierarchy.
@@ -68,14 +65,9 @@ type Location struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=location"`
 	// Display name of the location.
 	Name string `json:"name" validate:"required"`
-	// Location type code, identifying this location's level in the storage hierarchy.
+	// This location's level in the storage hierarchy.
 	//
-	// - `building`: a building-level location.
-	// - `section`: a section within a building.
-	// - `aisle`: an aisle within a section.
-	// - `rack`: a rack within an aisle.
-	// - `shelf`: a shelf within a rack.
-	// - `bin`: a bin within a shelf.
+	// The levels run from largest to smallest: `building`, `section`, `aisle`, `rack`, `shelf`, `bin`. They are descriptive labels rather than a rule — a location's parent is not required to be the next level up.
 	TypeCode constants.LocationTypeCode `json:"type" validate:"required"`
 	// The location directly above this one in the storage hierarchy.
 	//

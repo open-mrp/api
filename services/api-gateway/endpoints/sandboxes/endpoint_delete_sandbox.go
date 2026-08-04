@@ -12,13 +12,13 @@ import (
 
 // Request to delete a sandbox.
 type DeleteSandboxRequest struct {
-	// Sandbox ID.
+	// ID of the sandbox to delete.
 	SandboxID string `path:"id" validate:"required"`
 }
 
-// Deletes a sandbox account.
+// Deletes a sandbox account and everything inside it.
 //
-// The sandbox's data is purged asynchronously, so it may persist briefly after this call returns.
+// The sandbox becomes inaccessible as soon as this call returns, but its data is purged asynchronously and may persist briefly. Deletion is permanent: the sandbox cannot be restored, and deleting it again reports that it has already been deleted. Sandboxes cannot be deleted while acting in a sandbox.
 type DeleteSandboxEndpoint struct{}
 
 func (e *DeleteSandboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSandboxRequest, *apiresource.EmptyResource] {

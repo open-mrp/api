@@ -150,7 +150,7 @@ Every resource must have a `SchemaExample()` method and a package-level `Sample<
 
 ```go
 var SampleMyResource = &MyResource{
-    ID:     "mr_01c5620523e2beec24813bed34",
+    ID:     "mr_1rfuhzztjqaj",
     Object: constants.ObjectTypeMyResource,
     // ... populate all required fields
 }
@@ -165,6 +165,8 @@ Shared documentation fixtures live under `services/api-gateway/pkg/resource/` as
 Request types that submit JSON bodies should implement `contracts.DocumentedType` with `SchemaExample()` built from `apiexample.ValidateAndMarshalToMap`. Prefer required JSON fields only; omit optional filters unless they clarify the docs example. Do not introduce ad hoc type IDs in samples—always reference `apiresource.Sample*` IDs—so examples stay consistent with the response graph for that resource family.
 
 When adding a new resource, add `Sample*ID` and `Sample*` in `pkg/resource` first, wire endpoint request samples to those constants, then rely on the OpenAPI generator (`tools/apidocs`) for path/query examples where applicable.
+
+Sample IDs must be real generator output, never hand-typed—`go run ./tools/apidocs/gensampleids.go` mints one through `id.GenID` for every `Sample*ID` const and prints `name old new`; add `-apply` to rewrite them in place. Readable filler like `pnscdwtp_01seedqtychg0` reads as fake in published docs and SDK snippets.
 
 ## List Responses
 

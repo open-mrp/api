@@ -10,7 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Returns a paginated list of available pricing plans with their limits and features.
+// Returns the pricing plans an account can sign up for, with their limits and marketing copy.
+//
+// Only publicly listed plans that are currently in effect are returned, so privately negotiated and retired plans never appear here.
 type GetPricingPlansEndpoint struct{}
 
 func (e *GetPricingPlansEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.PaginationRequest, *apiresource.List[apiresource.PricingPlan]] {

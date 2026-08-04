@@ -8,10 +8,12 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleAccountGroupID = "acgp_018e88072d1320808dc979cfac"
+const SampleAccountGroupID = "acgp_6p4z57e9alaf"
 const SampleAccountGroupName = "Wholesale Customers"
 
 // A named grouping of customer accounts, used for pricing rules or to categorize accounts.
+//
+// A customer carries at most one group of type `type_group` as its customer type, plus any number of groups of type `pricing_group`. Membership of either kind can scope a volume discount to the customer and open up product lines for it to order from.
 type AccountGroup struct {
 	// Account group ID.
 	ID string `json:"id" validate:"required"`
@@ -21,6 +23,8 @@ type AccountGroup struct {
 	//
 	// - `pricing_group`: used for pricing rules, such as a "Preferred" group that receives a special discount.
 	// - `type_group`: used to categorize accounts, such as "Consumers" or "Distributors".
+	//
+	// A group's type is fixed when it is created and cannot be changed afterwards.
 	Type constants.AccountGroupType `json:"type" validate:"required"`
 	// Display name of the account group.
 	//

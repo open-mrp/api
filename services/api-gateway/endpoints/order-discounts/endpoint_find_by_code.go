@@ -15,11 +15,13 @@ import (
 
 // Request to find an order discount by code.
 type FindOrderDiscountByCodeRequest struct {
-	// The discount code to look up.
-	Code string `json:"code" validate:"required"`
-	// Buyer account ID to check for prior usage.
+	// The discount code to look up, as the buyer typed it.
 	//
-	// When set, the lookup returns a not-found error if this buyer has already used the discount on another order.
+	// Matching ignores letter case, so `save10` finds a discount stored as `SAVE10`.
+	Code string `json:"code" validate:"required"`
+	// The buyer account to check for prior use of this code.
+	//
+	// When set, the lookup returns a not-found error if that buyer has already redeemed the discount on another order, so a one-use-per-customer code can be rejected before it is attached to a new one. Customer callers cannot set this — their own account is always used.
 	BuyerAccountID field.Optional[string] `json:"buyer_account_id,omitzero"`
 	// Sales order ID to exclude from the prior-usage check.
 	//
@@ -35,9 +37,9 @@ func (*FindOrderDiscountByCodeRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleFindOrderDiscountByCodeRequest)
 }
 
-// Looks up an order discount by its code.
+// Validates a discount code and returns the matching order discount, so a code a buyer typed can be attached to an order.
 //
-// When `buyer_account_id` is provided (or the caller is a customer user), the lookup also verifies the buyer has not already used the discount on another order, returning a not-found error if they have. Pass `sales_order_id` to exclude an existing order from that check.
+// When `buyer_account_id` is provided, or the caller is a customer user, the lookup also verifies that the buyer has not already redeemed the discount on another order, and reports an already-redeemed code as not found. Pass `sales_order_id` to exclude an order the buyer is currently editing from that check.
 type FindOrderDiscountByCodeEndpoint struct{}
 
 func (e *FindOrderDiscountByCodeEndpoint) Materialize() *apiendpoint.APIEndpoint[*FindOrderDiscountByCodeRequest, *apiresource.OrderDiscount] {

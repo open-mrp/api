@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-// Production run resource.
+// A production run: the group of shop-floor batches that are executed together, tracked from the first batch scan through to completion.
 type ProductionRun struct {
 	// Production run ID.
 	ID string `json:"id" validate:"required"`
@@ -24,11 +24,11 @@ type ProductionRun struct {
 	BatchCount int32 `json:"batch_count" validate:"required"`
 	// Time the run started production.
 	//
-	// Set automatically when the first batch in the run is scanned, and unset until then.
+	// Set automatically the first time a batch in the run is scanned at a station.
 	StartedAt *time.Time `json:"started_at"`
-	// Time the run was marked complete.
+	// Time the run finished production.
 	//
-	// Set automatically once every batch in the run has been scanned or deleted, and unset while the run is still in progress. Once set, the run can no longer be updated and new batches can no longer be added.
+	// Set automatically once every batch in the run has been scanned or deleted. From that point the run can no longer be updated and no further batches can be added to it.
 	CompletedAt *time.Time `json:"completed_at"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

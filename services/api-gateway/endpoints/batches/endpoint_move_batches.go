@@ -15,7 +15,7 @@ import (
 type MoveBatchesRequest struct {
 	// Batch IDs to move.
 	//
-	// Pass a single ID to advance one batch, or multiple IDs (one per part) when the target step combines multiple parts.
+	// Pass a single ID to advance one batch, or multiple IDs (one per part) when the target step combines multiple parts. Each ID is resolved forward through its production flow to the batch that is actually available at the step, so an operator can scan an earlier batch in the chain.
 	BatchIDs []string `json:"batch_ids" validate:"required"`
 	// Target production step ID.
 	ProductionStepID string `json:"production_step_id" validate:"required"`
@@ -35,7 +35,7 @@ func (*MoveBatchesRequest) SchemaExample() any {
 
 // Advances batches to a production step by creating a new batch at that step.
 //
-// A new batch is created with its item and quantity calculated from the target step's configuration, the source batches are linked as inputs and closed, and the step's material consumption is executed asynchronously. Returns the newly created batch.
+// The new batch carries the item the target step produces, and its quantity is scaled from the source quantities against the step's configured input-to-output ratio; when several parts are supplied, each must work out to the same output quantity or the move is rejected. The source batches are linked as inputs and closed, the step's material consumption runs asynchronously afterwards, and the new batch is closed immediately if the target step is the last one in the flow. Returns the newly created batch.
 type MoveBatchesEndpoint struct{}
 
 func (e *MoveBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*MoveBatchesRequest, *apiresource.Batch] {

@@ -26,7 +26,7 @@ func (*OpenSalesOrderRequest) SchemaExample() any {
 
 // Reopens a sales order, transitioning it from `fulfilled` back to `issued`.
 //
-// Clears the order's completion timestamp and marks its pick as unfinished.
+// Clears the order's completion timestamp and reopens its pick, unpacking every pick line that is not yet fully picked so the outstanding work can be resumed; lines already picked in full stay packed. Only an order in `fulfilled` can be reopened.
 type OpenSalesOrderEndpoint struct{}
 
 func (e *OpenSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*OpenSalesOrderRequest, *apiresource.SalesOrder] {
@@ -43,8 +43,6 @@ func (e *OpenSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*OpenSal
 		ServiceHandler: func(svc any) func(ctx context.Context, req *OpenSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError) {
 			return svc.(SalesOrderSvc).OpenSalesOrder
 		},
-		// Status-action endpoints are commands: they return the updated sales
-		// order without `?include=` expansion. Clients that need expanded
-		// sub-resources re-fetch via GET /sales-orders/{id}?include=...
+		// Status-action endpoints are commands: they return the updated sales order without `?include=` expansion. Clients that need expanded sub-resources re-fetch via GET /sales-orders/{id}?include=...
 	})
 }

@@ -20,6 +20,8 @@ type CancelRunRequest struct {
 // Cancels an in-progress agent run.
 //
 // A run can be cancelled while it is working or paused waiting on the user — `pending`, `running`, `awaiting_input`, or `awaiting_approval`. Cancelling a run in a terminal status (`completed`, `failed`, `cancelled`) returns a validation error.
+//
+// Cancelling a run that is `awaiting_approval` counts as denying the review: every action still pending review is recorded as rejected, attributed to the caller. Work the agent already completed is not undone.
 type CancelRunEndpoint struct{}
 
 func (e *CancelRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*CancelRunRequest, *apiresource.AgentRun] {

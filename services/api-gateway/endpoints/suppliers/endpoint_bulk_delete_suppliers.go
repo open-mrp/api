@@ -12,7 +12,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// BulkDeleteSuppliersRequest is the request to bulk delete suppliers.
+// Request to delete multiple suppliers.
 type BulkDeleteSuppliersRequest struct {
 	// Supplier IDs to delete.
 	SupplierIDs []string `json:"supplier_ids" validate:"required"`

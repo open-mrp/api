@@ -31,13 +31,13 @@ type CreateDepartmentRequest struct {
 	//
 	// A machine belongs to one department at a time, so listed machines are moved out of their current department.
 	MachineIDs []string `json:"machine_ids,omitzero"`
-	// Hourly labor rate for work done in this department (e.g. a changeover technician). Production scheduling costs changeovers with the constraint department's rate when one is set.
+	// Hourly labor rate for work done in this department, such as a changeover technician.
 	//
-	// The numerator unit must be a currency and the denominator must not be.
+	// Production scheduling costs changeovers with the constraint department's rate when one is set, falling back to the account-wide changeover labor rate setting. The numerator unit must be a currency and the denominator must not be.
 	LaborRate *DepartmentRateInput `json:"labor_rate,omitzero"`
 }
 
-// DepartmentRateInput is a rate supplied inline when creating or updating a department.
+// A rate, expressed as a value together with the units of its numerator and denominator (for example, `25.00` `$` per `hr`).
 type DepartmentRateInput struct {
 	// Decimal value of the rate.
 	Value string `json:"value" validate:"required"`

@@ -26,12 +26,12 @@ type UpdateCustomerRequest struct {
 	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
 	// Free-form note about the customer.
 	Note field.Clearable[string] `json:"note,omitzero"`
-	// Account status code, controlling whether the customer can transact.
+	// The customer's account standing.
 	//
-	// - `normal`: standard active account with no restrictions.
-	// - `preferred`: active account flagged as preferred.
-	// - `hold_shipment`: orders can be placed, but shipments are held.
-	// - `hold_all`: all activity is on hold.
+	// - `normal`: standard account with no restrictions.
+	// - `preferred`: account flagged for prioritized handling.
+	// - `hold_shipment`: the customer's shipments should be held, typically over a credit problem, while orders can still be placed.
+	// - `hold_all`: all activity for the customer should be held.
 	StatusCode field.Optional[constants.AccountStatusCode] `json:"status,omitzero"`
 	// Email address.
 	Email field.Clearable[string] `json:"email,omitzero" validate:"omitempty,max=255"`
@@ -49,23 +49,31 @@ type UpdateCustomerRequest struct {
 	// Whether this customer is billed for freight on their orders.
 	//
 	// - `free_freight`: the customer is not billed for freight.
-	// - `billed_freight`: freight is billed to the customer, unless overridden on the order.
+	// - `billed_freight`: freight is billed to the customer.
+	//
+	// Freight is also waived when the customer's type group, one of its price groups, or a product line the ordered products belong to is `free_freight`.
 	FreightPolicy field.Optional[constants.FreightPolicy] `json:"freight_policy,omitzero"`
-	// ID of the default carrier for this customer's shipments.
+	// ID of the carrier used on this customer's orders when the order does not specify one.
 	DefaultCarrierID field.Optional[string] `json:"default_carrier_id,omitzero" validate:"omitempty"`
-	// ID of the default carrier service level.
+	// ID of the carrier service level used when an order takes its carrier from this customer's default.
 	DefaultServiceLevelID field.Clearable[string] `json:"default_service_level_id,omitzero" validate:"omitempty"`
-	// Default payment term ID.
+	// ID of the payment term used on this customer's orders when the order does not specify one.
 	DefaultPaymentTermID field.Optional[string] `json:"default_payment_term_id,omitzero" validate:"omitempty"`
-	// Default shipping term ID.
+	// ID of the shipping term used on this customer's orders when the order does not specify one.
 	DefaultShippingTermID field.Optional[string] `json:"default_shipping_term_id,omitzero" validate:"omitempty"`
-	// Priority applied to new orders for this customer.
+	// Priority used to pre-fill new orders for this customer.
 	DefaultPriorityCode field.Optional[constants.PriorityCode] `json:"default_priority,omitzero"`
-	// The ID of the account user to assign as the default sales rep.
+	// The ID of the account user to credit as the sales rep on this customer's orders.
+	//
+	// Must be an account user on your own account.
 	DefaultSalesRepID field.Clearable[string] `json:"default_sales_rep_id,omitzero" validate:"omitempty"`
 	// ID of an existing address to use as the default billing address.
+	//
+	// The address is linked to the customer's account if it is not already.
 	BillToAddressID field.Clearable[string] `json:"bill_to_address_id,omitzero" validate:"omitempty"`
 	// ID of an existing address to use as the default shipping address.
+	//
+	// The address is linked to the customer's account if it is not already.
 	ShipToAddressID field.Clearable[string] `json:"ship_to_address_id,omitzero" validate:"omitempty"`
 	// IDs of the account groups of type `pricing_group` to assign to this customer, used to apply pricing rules.
 	//

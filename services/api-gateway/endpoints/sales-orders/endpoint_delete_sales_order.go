@@ -18,7 +18,7 @@ type DeleteSalesOrderRequest struct {
 
 // Deletes a sales order and all its related records.
 //
-// Fulfilled orders cannot be deleted.
+// Removes the order's lines, pick, shipment and invoice lines, and email contacts, and releases any inventory it had reserved. Fulfilled orders cannot be deleted.
 type DeleteSalesOrderEndpoint struct{}
 
 func (e *DeleteSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSalesOrderRequest, *apiresource.EmptyResource] {

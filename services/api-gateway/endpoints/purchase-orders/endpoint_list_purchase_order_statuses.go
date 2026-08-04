@@ -14,7 +14,9 @@ type ListPurchaseOrderStatusesRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of available purchase order status values.
+// Returns a paginated list of purchase order statuses.
+//
+// These are the same platform-provided status records that sales orders use, so they are identical for every account. An order's own status is changed through the change-status endpoint rather than by referencing one of these records.
 type ListPurchaseOrderStatusesEndpoint struct{}
 
 func (e *ListPurchaseOrderStatusesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPurchaseOrderStatusesRequest, *apiresource.List[apiresource.SalesOrderStatus]] {

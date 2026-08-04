@@ -17,7 +17,7 @@ import (
 type AddMessagingGroupMemberRequest struct {
 	// Messaging group ID.
 	GroupID string `path:"id" validate:"required"`
-	// The kind of member being added.
+	// The kind of member being added, which decides whether `account_user_id` or `agent_config_id` is expected.
 	MemberType constants.MessagingGroupMemberType `json:"member_type" validate:"required"`
 	// The account user to add (required when `member_type` is `user`).
 	AccountUserID field.Optional[string] `json:"account_user_id,omitzero"`
@@ -36,7 +36,9 @@ func (*AddMessagingGroupMemberRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleAddMessagingGroupMemberRequest)
 }
 
-// Adds a member (a user or an agent) to a reusable roster.
+// Adds a member (a user or an agent) to a reusable roster and returns the updated roster.
+//
+// Adding someone who is already on the roster does not create a second entry for them. The new member is picked up only by conversations started from the roster afterwards; conversations already created from it keep the members they were seeded with.
 type AddMessagingGroupMemberEndpoint struct{}
 
 func (e *AddMessagingGroupMemberEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddMessagingGroupMemberRequest, *apiresource.MessagingGroup] {

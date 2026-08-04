@@ -19,9 +19,9 @@ type VoidReceivingOrderLineRequest struct {
 	LineID string `path:"id" validate:"required"`
 }
 
-// Voids a receiving order line.
+// Voids a single receiving order line, resetting its receiving progress.
 //
-// The line's received quantity is reset to `0` and its stocked state is cleared. The line itself is not deleted.
+// The line's received quantity is reset to `0` and its stocked state is cleared, leaving the rest of the order untouched. The line itself is not deleted, and any inventory already stocked from it is not reversed.
 type VoidReceivingOrderLineEndpoint struct{}
 
 func (e *VoidReceivingOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*VoidReceivingOrderLineRequest, *apiresource.ReceivingOrderLine] {

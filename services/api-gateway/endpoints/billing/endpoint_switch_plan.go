@@ -12,13 +12,13 @@ import (
 
 // Request to switch pricing plans.
 type SwitchPlanRequest struct {
-	// Target pricing plan ID.
+	// ID of the plan to move the account onto.
 	PlanID string `path:"id" validate:"required"`
 }
 
-// Switches the account to a different pricing plan.
+// Switches the account to a different pricing plan, effective immediately.
 //
-// Handles free-to-paid, paid-to-free, and paid-to-paid changes. Switches that owe a prorated amount are charged immediately; use Preview Plan Change to see the cost first.
+// Free-to-paid, paid-to-free, and paid-to-paid changes are all handled: moving to the free plan cancels the current subscription, while moving to a paid plan subscribes the account at no fewer seats than that plan's seat minimum. A change that owes a prorated amount is charged straight away to the account's payment method on file, so use Preview Plan Change first to see the cost. Moving to a paid plan requires the account to already have a Stripe customer and billing profile.
 type SwitchPlanEndpoint struct{}
 
 func (e *SwitchPlanEndpoint) Materialize() *apiendpoint.APIEndpoint[*SwitchPlanRequest, *apiresource.SwitchPlanResponse] {

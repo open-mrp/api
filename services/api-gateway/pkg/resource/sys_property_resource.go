@@ -8,13 +8,15 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleSysPropertyID = "sypp_01d8fd3a8b1a8e4c41be55ab5a"
-const SampleSysPropertyTypeID = "sypptp_0197d530307d69870d9b6fc97f"
+const SampleSysPropertyID = "sypp_1czynnv1b8kc"
+const SampleSysPropertyTypeID = "sypptp_qxmnkeq1ig5c"
 const SampleSysPropertyTypeName = "Transaction Number"
 const SampleSysPropertyTypeCode = "transaction_number"
 const SampleSysPropertyValueInt int32 = 42
 
-// Monotonic counter maintained by the system, such as the next transaction or document number to assign.
+// A counter maintained by the system for a numbered series, such as transaction or sales order numbers.
+//
+// Each account keeps at most one counter per counter type, created the first time that number series is used.
 type SysProperty struct {
 	// System property ID.
 	ID string `json:"id" validate:"required"`
@@ -22,7 +24,9 @@ type SysProperty struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=sys_property"`
 	// The kind of counter this property tracks.
 	Type *SysPropertyType `json:"type" validate:"required"`
-	// Current counter value.
+	// The counter's current position in its number series.
+	//
+	// The system advances the counter as it hands out numbers, so this normally matches the most recent number assigned in the series rather than the next one to be issued.
 	Value int32 `json:"value" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -56,15 +60,24 @@ type SysPropertyType struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=sys_property_type"`
 	// Human-readable name of the counter, such as `Transaction Number`.
 	Name string `json:"name" validate:"required"`
-	// Machine-readable code identifying which counter this is, such as `transaction_number` or `purchase_order_number`.
+	// Machine-readable code identifying which number series this counter feeds.
+	//
+	// - `transaction_number`: numbering for financial transactions such as payments, credit memos, adjustments, and rebates.
+	// - `settlement_number`: numbering for settlements that apply transactions to invoices.
+	// - `sales_order_number`: numbering for sales orders.
+	// - `purchase_order_number`: numbering for purchase orders.
+	// - `customer_number`: identifiers assigned to new customers.
+	// - `supplier_number`: identifiers assigned to new suppliers.
+	// - `production_run_number`: numbering for production runs.
+	// - `sscc_count`: serial component of the GS1 SSCC-18 codes assigned to shipping cases.
 	Code string `json:"code" validate:"required"`
 }
 
-// The current value of a system property counter.
+// The value read from a system property counter.
 type SysPropertyValue struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sys_property_value"`
-	// Counter value as a string.
+	// The number the counter holds after this read.
 	Value string `json:"value" validate:"required"`
 }
 

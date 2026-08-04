@@ -11,13 +11,15 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Request to transition the caller's receipt for a single announcement.
+// Request to advance the calling user's state for a single announcement.
 type MarkAnnouncementRequest struct {
 	// Announcement ID.
 	AnnouncementID string `path:"id" validate:"required"`
 }
 
-// Marks an announcement as seen for the calling actor.
+// Marks an announcement as seen for the calling user, as when it is surfaced to them without being opened.
+//
+// Seeing an announcement clears it from the caller's unread bell total but leaves it in the feed, and only affects the caller: everyone else in the account keeps their own state. Repeating the call keeps the original seen time. A caller with no user of their own in the account, such as an API key, has no state to record and gets a not-found error.
 type MarkAnnouncementSeenEndpoint struct{}
 
 func (e *MarkAnnouncementSeenEndpoint) Materialize() *apiendpoint.APIEndpoint[*MarkAnnouncementRequest, *apiresource.Announcement] {

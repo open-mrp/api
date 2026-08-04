@@ -17,6 +17,8 @@ type DeleteScanningStationRequest struct {
 }
 
 // Deletes a scanning station.
+//
+// Production steps connected to the station are not deleted, but they are left without a station to scan at until you connect them to another one. Deleting a station that was already deleted returns an already-deleted error rather than a not-found error.
 type DeleteScanningStationEndpoint struct{}
 
 func (e *DeleteScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteScanningStationRequest, *apiresource.EmptyResource] {

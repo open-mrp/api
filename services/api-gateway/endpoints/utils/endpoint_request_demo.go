@@ -11,17 +11,17 @@ import (
 	"github.com/augno/api/shared/field"
 )
 
-// Request to submit a demo request.
+// Request to be contacted for a product demo.
 type RequestDemoRequest struct {
-	// Name of the requester.
+	// Full name of the person requesting the demo.
 	Name string `json:"name" validate:"required"`
-	// Email address of the requester.
+	// Email address to reach the requester at.
 	Email string `json:"email" validate:"required,custom_email"`
-	// Company name.
+	// Name of the company the requester represents.
 	Company string `json:"company" validate:"required"`
-	// Phone number.
+	// Phone number to reach the requester at.
 	PhoneNumber field.Optional[string] `json:"phone_number,omitzero"`
-	// Message from the requester.
+	// Free-form note from the requester about what they would like to see.
 	Message field.Optional[string] `json:"message,omitzero"`
 }
 
@@ -35,7 +35,9 @@ func (*RequestDemoRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleRequestDemoRequest)
 }
 
-// Submits a demo request from a prospective customer.
+// Submits a demo request from a prospective customer for the Augno team to follow up on.
+//
+// The request creates no account, user, or other resource, and there is no endpoint to read it back. The response carries a confirmation message suitable for display.
 type RequestDemoEndpoint struct{}
 
 func (e *RequestDemoEndpoint) Materialize() *apiendpoint.APIEndpoint[*RequestDemoRequest, *apiresource.MessageResource] {

@@ -18,11 +18,17 @@ import (
 type UpdateMemoryRequest struct {
 	// Memory ID.
 	ID string `path:"id" validate:"required"`
-	// Category used to group related memories.
+	// The kind of information this memory holds, used to group related memories.
+	//
+	// - `preference`: how someone likes things done, such as a customer who always wants express shipping.
+	// - `fact`: a durable detail worth remembering about the account or one of its records, such as a customer's typical order size.
+	// - `instruction`: standing guidance for agents to follow, such as always confirming freight before issuing an order.
 	Category field.Optional[string] `json:"category,omitzero" validate:"omitempty,oneof=preference fact instruction"`
-	// Text content.
+	// The information to remember, written as plain text for an agent to read.
 	Content field.Optional[string] `json:"content,omitzero"`
 	// Arbitrary metadata as JSON.
+	//
+	// Replaces the stored metadata outright rather than merging into it.
 	Metadata json.RawMessage `json:"metadata,omitzero"`
 	// Type of platform record this memory is scoped to (e.g. `customer`, `product`).
 	//
@@ -34,11 +40,11 @@ type UpdateMemoryRequest struct {
 	EntityID field.Clearable[string] `json:"entity_id,omitzero" validate:"omitempty"`
 	// Relative importance from `0` to `1` in increments of `0.1`, used to prioritize which memories the agent recalls.
 	//
-	// Higher is more important.
+	// An agent takes in only a limited number of memories per run and recalls the highest-importance ones first.
 	Importance field.Optional[float64] `json:"importance,omitzero" validate:"omitempty,min=0,max=1,multiple_of=0.1"`
-	// Expiration timestamp in ISO 8601 format (e.g. `2026-01-02T15:04:05Z`).
+	// When this memory should stop being used, as an ISO 8601 timestamp (e.g. `2026-01-02T15:04:05Z`).
 	//
-	// Expired memories are excluded from list results and are no longer recalled by agents. Send `null` to make the memory permanent (never expires).
+	// Past this time the memory is no longer recalled by agents and is omitted from list results, but it is not deleted. Send `null` so the memory is used indefinitely.
 	ExpiresAt field.Clearable[string] `json:"expires_at,omitzero"`
 }
 
@@ -51,7 +57,9 @@ func (*UpdateMemoryRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateMemoryRequest)
 }
 
-// Partially updates an agent memory.
+// Updates an agent memory.
+//
+// Only the fields included in the request are changed; everything else keeps its current value.
 type UpdateMemoryEndpoint struct{}
 
 func (e *UpdateMemoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateMemoryRequest, *apiresource.AgentMemory] {

@@ -24,12 +24,14 @@ func (*RefreshTokenRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleRefreshTokenRequest)
 }
 
-// Refreshes an access token using a refresh token, setting a new access token in a cookie.
+// Issues a new access token from the caller's refresh token, setting it in a cookie.
+//
+// The refresh token itself is not rotated and keeps its original expiration, so the same cookie can be exchanged repeatedly until it expires or is revoked. A refresh token that has been revoked or has expired fails here and the user must sign in again.
 type RefreshTokenEndpoint struct{}
 
 func (e *RefreshTokenEndpoint) Materialize() *apiendpoint.APIEndpoint[*RefreshTokenRequest, *apiresource.EmptyResource] {
 	return (&apiendpoint.APIEndpoint[*RefreshTokenRequest, *apiresource.EmptyResource]{
-		Title:             "Refresh Token",
+		Title:             "Refresh Access Token",
 		Method:            http.MethodPut,
 		Route:             "/v1/auth/access-tokens",
 		ContentType:       "application/json",

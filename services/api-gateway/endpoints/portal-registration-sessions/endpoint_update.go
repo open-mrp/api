@@ -11,7 +11,9 @@ import (
 	"github.com/augno/api/shared/field"
 )
 
-// PortalRegistrationSessionDataInput is the scratch form data saved on a registration session as the buyer advances.
+// The form data to save on a registration session as the buyer advances.
+//
+// These values are what the registration is completed from, so send everything collected so far on each update — the stored data is replaced outright rather than merged.
 type PortalRegistrationSessionDataInput struct {
 	CustomerName      string `json:"customer_name,omitzero"`
 	CustomerNumber    string `json:"customer_number,omitzero"`
@@ -28,19 +30,27 @@ type PortalRegistrationSessionDataInput struct {
 	AddressCountry    string `json:"address_country,omitzero"`
 }
 
-// Request to advance a portal registration session to the next step.
+// Request to save a buyer's progress on a portal registration session.
 type UpdatePortalRegistrationSessionRequest struct {
 	// Portal registration session ID.
 	ID string `path:"id" validate:"required"`
-	// The step to advance to. Steps are forward-only.
+	// The step the buyer has reached.
+	//
+	// Steps only move forward: sending an earlier step than the session has already reached is rejected, while re-sending the current step saves data without advancing.
 	Step constants.PortalRegistrationStep `json:"step" validate:"required"`
-	// The accumulated form data to save on the session.
+	// The form data collected so far.
+	//
+	// This replaces the session's saved data rather than merging into it, so anything left out is cleared.
 	SessionData *PortalRegistrationSessionDataInput `json:"session_data,omitzero"`
-	// Whether the buyer is linking an existing customer vs. creating a new one.
+	// Whether the buyer is joining a customer the seller already has, rather than creating a new one.
+	//
+	// This decides what completing the registration does: joining an existing customer links the buyer to the customer matching `customer_number`, while a new customer is built from the rest of the session data. Like the session data it is stored as sent, so re-send it on every update to keep the choice.
 	IsExistingCustomer field.Optional[bool] `json:"is_existing_customer,omitzero"`
 }
 
-// Advances the buyer's registration session to the given step and saves the accumulated form data. Steps are forward-only; a completed or abandoned session cannot be updated.
+// Advances the buyer's registration session and saves the data entered so far.
+//
+// Each update writes the session's step, form data, and existing-customer choice as sent, so send the full picture every time rather than just the newly-entered fields. Steps only move forward, and a session that has already been completed or abandoned can no longer be updated.
 type UpdatePortalRegistrationSessionEndpoint struct{}
 
 func (e *UpdatePortalRegistrationSessionEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePortalRegistrationSessionRequest, *apiresource.PortalRegistrationSession] {

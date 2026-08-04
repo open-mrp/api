@@ -14,7 +14,9 @@ import (
 // Request to list the caller's notification preferences.
 type ListNotificationPreferencesRequest struct{}
 
-// Lists the caller's notification channel preferences (global default + per-category overrides).
+// Lists the current user's notification preferences for the account they are acting in: their global default plus any per-category overrides.
+//
+// Only preferences the user has explicitly set are returned, so an empty list means everything falls back to the standard behavior — in-app notifications on, email and push off.
 type ListNotificationPreferencesEndpoint struct{}
 
 func (e *ListNotificationPreferencesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListNotificationPreferencesRequest, *apiresource.List[apiresource.NotificationPreference]] {

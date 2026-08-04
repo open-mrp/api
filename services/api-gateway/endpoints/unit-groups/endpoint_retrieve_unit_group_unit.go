@@ -15,11 +15,11 @@ import (
 type RetrieveUnitGroupUnitRequest struct {
 	// Unit group ID.
 	UnitGroupID string `path:"unit_group_id" validate:"required"`
-	// Unit group unit ID.
+	// ID of the unit's association with the group, not the ID of the unit itself.
 	UnitGroupUnitID string `path:"id" validate:"required"`
 }
 
-// Returns an associated unit within a unit group by ID.
+// Returns a single unit association within a unit group, including the discount and customer portal visibility applied to it.
 type RetrieveUnitGroupUnitEndpoint struct{}
 
 func (e *RetrieveUnitGroupUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveUnitGroupUnitRequest, *apiresource.UnitGroupUnit] {

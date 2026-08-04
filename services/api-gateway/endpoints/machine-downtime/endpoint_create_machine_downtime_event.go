@@ -19,10 +19,16 @@ type CreateMachineDowntimeEventRequest struct {
 	// ID of the machine that stopped.
 	MachineID string `json:"machine_id" validate:"required"`
 	// Why the machine stopped.
+	//
+	// The reason decides which OEE term the stoppage charges, so it does more than label the event. Retrieve the available reasons and the term each one charges from the downtime reasons list.
 	Reason constants.MachineDowntimeReasonCode `json:"reason" validate:"required"`
 	// When the machine stopped.
+	//
+	// Cannot be in the future beyond a few minutes of clock skew, which is allowed so a shop-floor tablet running fast can still log "just now". The business day the stoppage counts against is taken from this timestamp.
 	StartedAt time.Time `json:"started_at" validate:"required"`
-	// When the machine started running again. Omit while the machine is still down.
+	// When the machine started running again.
+	//
+	// Omit it while the machine is still down; that leaves the event open, and the duration is filled in once the event is closed. It must be later than `started_at`.
 	EndedAt field.Optional[time.Time] `json:"ended_at,omitzero"`
 	// ID of the item the machine was running when it stopped.
 	ItemID field.Optional[string] `json:"item_id,omitzero"`
@@ -31,8 +37,12 @@ type CreateMachineDowntimeEventRequest struct {
 	// ID of the batch in progress when the machine stopped.
 	BatchID field.Optional[string] `json:"batch_id,omitzero"`
 	// Free-form notes about the stoppage.
+	//
+	// Searchable from the downtime events list. Maximum 2000 characters.
 	Note field.Optional[string] `json:"note,omitzero" validate:"omitempty,max=2000"`
 	// How the event was recorded.
+	//
+	// Records the stoppage as manually logged unless you say otherwise, so an integration or shop-floor station should send its own source to keep hand-entered downtime distinguishable.
 	Source field.Optional[constants.MachineDowntimeSource] `json:"source,omitzero"`
 }
 
@@ -48,7 +58,9 @@ func (*CreateMachineDowntimeEventRequest) SchemaExample() any {
 
 // Logs a machine downtime event.
 //
-// Omit `ended_at` while the machine is still down; a machine can only have one open event at a time. The department and production step are resolved from the machine, and the duration is calculated when the event is closed.
+// Omit `ended_at` while the machine is still down. A machine can only have one open event at a time, so logging a second open stoppage against a machine that is already down is rejected until the first is closed.
+//
+// The department is taken from the machine, the business day is taken from `started_at`, the event is attributed to the credentials that made the request, and the duration is calculated when the event is closed.
 type CreateMachineDowntimeEventEndpoint struct{}
 
 func (e *CreateMachineDowntimeEventEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateMachineDowntimeEventRequest, *apiresource.MachineDowntimeEvent] {

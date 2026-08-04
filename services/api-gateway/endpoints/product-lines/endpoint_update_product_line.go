@@ -18,9 +18,9 @@ import (
 type UpdateProductLineRequest struct {
 	// Product line ID.
 	ProductLineID string `path:"id" validate:"required"`
-	// Display name.
+	// Display name of the product line.
 	//
-	// Must be unique among the account's product lines; a duplicate name returns a conflict error.
+	// Must be unique among the product lines visible to your account, including the shared system lines; a duplicate name returns a conflict error.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// Default commission policy for products in this product line.
 	//
@@ -34,11 +34,11 @@ type UpdateProductLineRequest struct {
 	FreightPolicy field.Optional[constants.FreightPolicy] `json:"freight_policy,omitzero"`
 	// The lot products in this line are made in — a doff, a pallet.
 	//
-	// Sizes the campaigns a production schedule plans, and defaults the quantity when a batch is added to a production run. The unit is part of the value, since 60 pairs and 60 eaches are different lots, and it must belong to this product line's unit group. Send `null` to remove the line's lot convention.
+	// Sizes the campaigns a production schedule plans, and defaults the quantity when a batch is added to a production run. The unit is part of the value, since 60 pairs and 60 eaches are different lots, and it must belong to the line's unit group — the new one when `unit_group_id` changes in the same request. Send `null` to remove the line's lot convention, after which planning falls back to the lot of the line an item feeds into, and then to the account-wide default lot size.
 	DefaultLot field.Clearable[apirequest.QuantityInput] `json:"default_lot,omitzero"`
 	// ID of the unit group to associate with this product line.
 	//
-	// The unit group determines the set of units available to products in this product line.
+	// The unit group determines the set of units available to products in this product line. It must be a unit group your account owns or one of the shared system unit groups. A lot already stored on the line is not rechecked when the group changes, so send `default_lot` alongside to keep the two consistent.
 	UnitGroupID field.Optional[string] `json:"unit_group_id,omitzero" validate:"omitempty"`
 }
 
@@ -55,9 +55,9 @@ func (*UpdateProductLineRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateProductLineRequest)
 }
 
-// Partially updates an account-owned product line.
+// Partially updates a product line your account owns.
 //
-// Only the provided fields are changed. The reserved default product lines (shipping, service, credit, tax) cannot be updated.
+// Only the provided fields are changed. The reserved `shipping`, `service`, `credit`, and `tax` lines cannot be updated, and neither can the shared system lines, which belong to no single account.
 type UpdateProductLineEndpoint struct{}
 
 func (e *UpdateProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateProductLineRequest, *apiresource.ProductLine] {

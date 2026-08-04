@@ -19,22 +19,40 @@ type UpdateDemandOverrideRequest struct {
 	// ID of the demand override.
 	DemandOverrideID string `path:"id" validate:"required"`
 	// First day of the demand period the override applies to.
+	//
+	// Overrides are applied month by month, so every calendar month the period touches is adjusted and any time of day is ignored.
 	PeriodStartsAt field.Optional[time.Time] `json:"period_starts_at,omitzero"`
 	// Last day of the demand period the override applies to.
+	//
+	// Must fall on or after the override's start, whether that is sent here or already stored.
 	PeriodEndsAt field.Optional[time.Time] `json:"period_ends_at,omitzero"`
 	// How the value adjusts the forecast.
+	//
+	// - `absolute`: replaces the forecast for each month in the period.
+	// - `delta_units`: adds the value to each month in the period.
+	// - `delta_percent`: scales each month in the period by the value as a percentage.
 	Adjustment field.Optional[constants.DemandOverrideAdjustment] `json:"adjustment,omitzero"`
-	// The adjustment, interpreted according to `adjustment`.
+	// The amount of the adjustment, interpreted according to `adjustment`.
+	//
+	// It is validated against the adjustment the override ends up with, so switching a stored unit delta to `delta_percent` without sending a new value requires the existing value to be a legal percentage.
 	Value field.Optional[float64] `json:"value,omitzero"`
 	// ID of the unit the value is expressed in.
+	//
+	// Recorded for context only: the value is applied to the planned demand without unit conversion.
 	UnitID field.Clearable[string] `json:"unit_id,omitzero"`
 	// Why the adjustment was made.
+	//
+	// The reason is carried into each schedule the override changes, so a plan can explain why a month departs from history.
 	Reason field.Clearable[constants.DemandOverrideReason] `json:"reason,omitzero"`
 	// Free-form notes about the adjustment.
 	Note field.Clearable[string] `json:"note,omitzero" validate:"omitempty,max=2000"`
-	// When the override stops being applied to solves. Clear it to make the override permanent.
+	// When the override stops being applied to newly generated schedules.
+	//
+	// Clear it to keep the override applying until it is deactivated or deleted.
 	ExpiresAt field.Clearable[time.Time] `json:"expires_at,omitzero"`
-	// Whether the override is applied to solves at all.
+	// Whether the override is taken into account when a schedule is generated.
+	//
+	// Deactivating parks the override without losing it; it is skipped whatever its effective window says, and can be reactivated later.
 	Active field.Optional[bool] `json:"active,omitzero"`
 }
 
@@ -49,7 +67,9 @@ func (*UpdateDemandOverrideRequest) SchemaExample() any {
 
 // Updates a demand override.
 //
-// The type and value are validated as a pair against the resulting override, so switching an existing units adjustment to `delta_percent` is checked as a percent even when only the type is sent.
+// Only the fields sent are changed. The adjustment and value are validated as a pair against the resulting override, so switching a stored unit adjustment to `delta_percent` is checked as a percentage even when only the adjustment is sent; the period is checked the same way.
+//
+// What an override targets cannot be changed — create a new override to adjust a different item, product line, or the account as a whole. Schedules that have already been generated are unaffected; the change is picked up by the next one.
 type UpdateDemandOverrideEndpoint struct{}
 
 func (e *UpdateDemandOverrideEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateDemandOverrideRequest, *apiresource.DemandOverride] {

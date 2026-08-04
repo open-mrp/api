@@ -20,11 +20,17 @@ type SupplierDetail struct {
 	Number string `json:"number" validate:"required"`
 	// Free-form notes about the supplier.
 	Note *string `json:"note"`
-	// Default billing address.
+	// The supplier's default billing address.
+	//
+	// A new address can be created inline when the supplier is created; afterwards this default is changed by passing `bill_to_address_id` to the update endpoint.
 	BillToAddress *Address `json:"bill_to_address" expandable:"true"`
-	// Default shipping address.
+	// The supplier's default shipping address.
+	//
+	// When a supplier is created with only a bill-to address, that same address also becomes the default shipping address.
 	ShipToAddress *Address `json:"ship_to_address" expandable:"true"`
 	// Number of materials sourced from this supplier.
+	//
+	// Counts every material linked to the supplier, including links whose status is `inactive`.
 	MaterialCount int64 `json:"material_count"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -49,7 +55,9 @@ func (*SupplierDetail) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleSupplierDetail)
 }
 
-// A condensed supplier representation returned by list endpoints.
+// A condensed supplier returned by the supplier list endpoint.
+//
+// The supplier's note and its default bill-to and ship-to addresses are only available when a single supplier is retrieved.
 type SupplierSummary struct {
 	// Supplier ID.
 	ID string `json:"id" validate:"required"`
@@ -60,6 +68,8 @@ type SupplierSummary struct {
 	// Human-facing supplier code, unique per account (e.g. `SUP-001`).
 	Number string `json:"number" validate:"required"`
 	// Number of materials sourced from this supplier.
+	//
+	// Counts every material linked to the supplier, including links whose status is `inactive`.
 	MaterialCount int64 `json:"material_count"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

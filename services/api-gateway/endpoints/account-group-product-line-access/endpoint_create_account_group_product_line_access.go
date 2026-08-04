@@ -18,7 +18,7 @@ type CreateAccountGroupProductLineAccessRequest struct {
 	AccountGroupID string `json:"account_group_id" validate:"required"`
 	// IDs of the product lines the account group is granted access to.
 	//
-	// Must contain at least one product line ID; every ID must belong to your account.
+	// Must contain at least one ID, and each one must be a product line your account owns; the shared system product lines cannot be granted.
 	ProductLineIDs []string `json:"product_line_ids" validate:"required"`
 }
 
@@ -31,9 +31,11 @@ func (*CreateAccountGroupProductLineAccessRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateAccountGroupProductLineAccessRequest)
 }
 
-// Creates a product line access record for an account group.
+// Grants an account group access to a set of product lines.
 //
-// Each account group can have at most one access record; creating one for an account group that already has one returns a conflict error.
+// Every customer that has this group as its type group or as one of its pricing groups can then browse and order those product lines, on top of anything granted to the customer directly.
+//
+// Each account group can have at most one access record; creating one for an account group that already has one returns a conflict error. Use Update Account Group Product Line Access to change an existing record.
 type CreateAccountGroupProductLineAccessEndpoint struct{}
 
 func (e *CreateAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAccountGroupProductLineAccessRequest, *apiresource.AccountGroupProductLineAccess] {

@@ -16,6 +16,8 @@ type ResendEmailRequest struct {
 }
 
 // Resends the verification email for a registration session, generating a new token and invalidating the previous one.
+//
+// Rejected once the email has been verified or the registration has completed.
 type ResendEmailEndpoint struct{}
 
 func (e *ResendEmailEndpoint) Materialize() *apiendpoint.APIEndpoint[*ResendEmailRequest, *apiresource.EmptyResource] {

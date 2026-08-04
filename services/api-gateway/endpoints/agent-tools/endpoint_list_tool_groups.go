@@ -16,7 +16,9 @@ type ListToolGroupsRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of tool groups.
+// Returns a paginated list of the groups the agent tool catalog is organized into.
+//
+// The catalog is platform-defined and identical for every account. Pagination applies to the groups themselves, so a group requested with `include=tools` always carries its complete tool list regardless of the page limit. The `q` search term matches against group names.
 type ListToolGroupsEndpoint struct{}
 
 func (e *ListToolGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListToolGroupsRequest, *apiresource.List[apiresource.ToolGroup]] {

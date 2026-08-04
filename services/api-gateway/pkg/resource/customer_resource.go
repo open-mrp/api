@@ -8,10 +8,10 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleCustomerID = "ac_0170df1ac58e4d24c66fc89f5f"
+const SampleCustomerID = "ac_opnlh43ymyee"
 const SampleCustomerName = "Acme Inc."
 const SampleCustomerNumber = "100042"
-const SampleCustomerRelationID = "acre_0153f41078e241b7487172c749"
+const SampleCustomerRelationID = "acre_f9nhgnzecfjm"
 
 // A business you sell to, with its contact details, default fulfillment settings, and order policies.
 type Customer struct {
@@ -22,13 +22,17 @@ type Customer struct {
 	// The customer's business name, as shown throughout the app and on documents.
 	Name string `json:"name" validate:"required"`
 	// Human-readable customer number used to identify the account, distinct from the `id`.
-	Number string `json:"number" validate:"required"`
-	// Account status code, controlling whether the customer can transact.
 	//
-	// - `normal`: standard active account with no restrictions.
-	// - `preferred`: active account flagged as preferred.
-	// - `hold_shipment`: orders can be placed, but shipments are held.
-	// - `hold_all`: all activity is on hold.
+	// Unique within your account.
+	Number string `json:"number" validate:"required"`
+	// The customer's account standing.
+	//
+	// - `normal`: standard account with no restrictions.
+	// - `preferred`: account flagged for prioritized handling.
+	// - `hold_shipment`: the customer's shipments should be held, typically over a credit problem, while orders can still be placed.
+	// - `hold_all`: all activity for the customer should be held.
+	//
+	// The hold statuses are advisory: Augno flags the customer's orders as being on credit hold, but requests to create orders or shipments for the customer are not rejected.
 	Status constants.AccountStatusCode `json:"status" validate:"required"`
 	// Whether EDI (Electronic Data Interchange) is enabled for exchanging orders and documents with this customer.
 	EDIStatus constants.EDIStatus `json:"edi_status" validate:"required"`
@@ -42,18 +46,22 @@ type Customer struct {
 	//
 	// - `commission_exempt`: this customer's orders are exempt from sales commission.
 	// - `commission_applied`: sales commission is calculated on this customer's orders.
+	//
+	// The customer counts as exempt if this field, its `type` group, or any of its `price_groups` is `commission_exempt`. Exempt customers never have a sales rep assigned automatically when an order is created without one.
 	CommissionPolicy constants.CommissionPolicy `json:"commission_policy" validate:"required"`
 	// Free-form note about the customer.
 	Note *string `json:"note"`
 	// Maximum credit extended to this customer.
+	//
+	// Used to flag orders once the customer's outstanding balance approaches or passes the limit; orders that exceed it are not rejected.
 	CreditLimit *Quantity `json:"credit_limit" expandable:"true"`
-	// Contact information.
+	// General contact details for the customer's business.
 	ContactInfo *CustomerContactInfo `json:"contact_info" expandable:"true"`
 	// Freight and carrier preferences applied to this customer's shipments.
 	FreightPreferences *CustomerFreightPreferences `json:"freight_preferences" expandable:"true"`
 	// Default settings applied to new orders for this customer.
 	Defaults *CustomerDefaults `json:"defaults" expandable:"true"`
-	// Notification preferences.
+	// Which document emails this customer is set up to receive.
 	NotificationPreferences *CustomerNotificationPreferences `json:"notification_preferences" expandable:"true"`
 	// Default billing address.
 	BillToAddress *Address `json:"bill_to_address" expandable:"true"`
@@ -63,13 +71,9 @@ type Customer struct {
 	Type *AccountGroup `json:"type" expandable:"true"`
 	// Account groups of type `pricing_group` that this customer belongs to, used to apply pricing rules.
 	PriceGroups *List[AccountGroup] `json:"price_groups" expandable:"true"`
-	// Parent account.
-	//
-	// Present if this is a child account.
+	// The customer this account belongs to, when it is a child account.
 	ParentAccount *Customer `json:"parent_account" expandable:"true"`
-	// Child accounts.
-	//
-	// Present if this is a parent account.
+	// The customers belonging to this account, when it is a parent account.
 	ChildAccounts *List[Customer] `json:"child_accounts" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -96,11 +100,13 @@ type CustomerFreightPreferences struct {
 	// Freight policy applied to this customer's orders.
 	//
 	// - `free_freight`: the customer is not billed for freight.
-	// - `billed_freight`: freight is billed to the customer, unless overridden elsewhere.
+	// - `billed_freight`: freight is billed to the customer.
+	//
+	// Freight is waived when this field, the customer's `type` group, any of its `price_groups`, or any product line the ordered products belong to is `free_freight`, so a shipment can come back freight-exempt even while this field is `billed_freight`.
 	Status constants.FreightPolicy `json:"status" validate:"required"`
-	// Default carrier.
+	// Carrier used on this customer's orders when the order does not specify one.
 	Carrier *Carrier `json:"carrier" expandable:"true"`
-	// Default service level.
+	// Service level used when an order takes its carrier from this customer's default carrier.
 	ServiceLevel *ServiceLevel `json:"service_level" expandable:"true"`
 	// Who pays the carrier for shipments.
 	//
@@ -111,17 +117,19 @@ type CustomerFreightPreferences struct {
 	BillingAccount *string `json:"billing_account"`
 }
 
-// Customer default configuration.
+// Values used to fill in a new sales order for this customer when the order does not supply its own.
 type CustomerDefaults struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=customer_defaults"`
-	// Default payment term.
+	// Payment term used on this customer's orders when the order does not specify one.
 	PaymentTerm *PaymentTerm `json:"payment_term" expandable:"true"`
-	// Default shipping term.
+	// Shipping term used on this customer's orders when the order does not specify one.
 	ShippingTerm *ShippingTerm `json:"shipping_term" expandable:"true"`
-	// Default priority.
+	// Priority used to pre-fill new orders for this customer.
 	Priority *Priority `json:"priority" expandable:"true"`
-	// Default sales rep.
+	// Account user credited as the sales rep on this customer's orders.
+	//
+	// Used when an order is created without a sales rep, unless the customer is commission-exempt. With no default set, the rep is resolved from the sales territory matching the order's ship-to postal code or state.
 	SalesRep *AccountUser `json:"sales_rep" expandable:"true"`
 }
 
@@ -129,7 +137,9 @@ type CustomerDefaults struct {
 type CustomerNotificationPreferences struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=customer_notification_preferences"`
-	// Whether invoice emails are accepted.
+	// Whether anyone is set up to receive invoice emails for this customer.
+	//
+	// Derived from the customer's notification recipients: true when at least one of them is configured for invoice notifications.
 	AcceptsInvoiceEmails bool `json:"accepts_invoice_emails"`
 }
 
@@ -192,15 +202,15 @@ func (*Customer) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleCustomer)
 }
 
-// Product frequently ordered by a customer.
+// An item a customer orders regularly, derived from their sales order history.
 type FrequentlyOrderedProduct struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=frequently_ordered_product"`
-	// Associated item.
+	// The item the customer ordered.
 	Item *Item `json:"item" validate:"required"`
-	// Most commonly ordered unit.
+	// The unit of measure this customer orders the item in most often.
 	Unit *Unit `json:"unit"`
-	// Number of times the customer has ordered this item in the `unit` shown.
+	// Number of sales order lines on which this customer ordered the item in the unit shown.
 	OrderCount int32 `json:"order_count" validate:"required"`
 }
 

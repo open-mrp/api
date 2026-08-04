@@ -17,6 +17,8 @@ type ListAccountGroupProductLineAccessRequest struct {
 }
 
 // Returns a paginated list of product line access records, one per account group.
+//
+// Only account groups that have been granted at least one product line appear. The `q` search term is matched against the account group name.
 type ListAccountGroupProductLineAccessEndpoint struct{}
 
 func (e *ListAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAccountGroupProductLineAccessRequest, *apiresource.List[apiresource.AccountGroupProductLineAccess]] {

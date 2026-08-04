@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-// ProductionFlow is the production flow graph for an item.
+// The production flow graph for an item.
 //
 // Contains the step(s) that produce the item, every upstream step that feeds them, and any connected downstream steps.
 type ProductionFlow struct {
@@ -18,13 +18,13 @@ type ProductionFlow struct {
 	Steps *List[ProductionFlowStep] `json:"steps" expandable:"true"`
 }
 
-// ProductionFlowStep is a step in the production flow.
+// A stage of work within an item's production flow, with its output, material inputs, cost rates, and links to the steps around it.
 type ProductionFlowStep struct {
 	// Production step ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=production_step"`
-	// Production step name.
+	// Display name of the step.
 	Name string `json:"name" validate:"required"`
 	// Free-form notes about this step.
 	Notes *string `json:"notes"`
@@ -33,8 +33,12 @@ type ProductionFlowStep struct {
 	// Materials this step consumes as inputs, with their quantities and expected waste.
 	Consumptions *List[ProductionFlowConsumption] `json:"consumptions" expandable:"true"`
 	// Steps that feed into this step.
+	//
+	// Restricted to steps that are themselves part of this flow.
 	InSteps *List[ProductionStep] `json:"in_steps" expandable:"true"`
 	// Steps that this step feeds into.
+	//
+	// Restricted to steps that are themselves part of this flow.
 	OutSteps *List[ProductionStep] `json:"out_steps" expandable:"true"`
 	// Machines assigned to this step.
 	Machines *List[Machine] `json:"machines" expandable:"true"`
@@ -62,7 +66,7 @@ type ProductionFlowStep struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-// ProductionFlowProduction is the production output of a flow step.
+// The item and quantity produced by a step in the production flow.
 type ProductionFlowProduction struct {
 	// Production record ID.
 	ID string `json:"id" validate:"required"`
@@ -78,7 +82,7 @@ type ProductionFlowProduction struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-// ProductionFlowConsumption is a consumption input of a flow step.
+// A material consumed by a step in the production flow, with its quantity and expected waste.
 type ProductionFlowConsumption struct {
 	// Consumption record ID.
 	ID string `json:"id" validate:"required"`

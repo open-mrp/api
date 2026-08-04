@@ -18,7 +18,9 @@ type ListAccountGroupsRequest struct {
 	Type *constants.AccountGroupType `query:"type"`
 }
 
-// Returns a paginated list of account groups.
+// Returns a paginated list of account groups, newest first.
+//
+// The `q` search term matches the group's name and description.
 type ListAccountGroupsEndpoint struct{}
 
 func (e *ListAccountGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAccountGroupsRequest, *apiresource.List[apiresource.AccountGroup]] {

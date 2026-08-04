@@ -21,6 +21,8 @@ type ListMachineDowntimeEventsRequest struct {
 	// Only return events logged against these reasons.
 	Reasons []constants.MachineDowntimeReasonCode `query:"reasons"`
 	// Only return events that are still open, meaning the machine is down right now.
+	//
+	// Sending `false` is the same as leaving it out: both open and closed events come back.
 	Open bool `query:"open"`
 	// Only return events that started on or after this timestamp, formatted as RFC3339.
 	StartDate *string `query:"start_date"`
@@ -28,7 +30,9 @@ type ListMachineDowntimeEventsRequest struct {
 	EndDate *string `query:"end_date"`
 }
 
-// Returns a paginated list of machine downtime events, most recent first.
+// Returns a paginated list of machine downtime events, most recently started first.
+//
+// The search term matches text in the event note. Filters combine, so a machine, a reason and a date range narrow the list together.
 type ListMachineDowntimeEventsEndpoint struct{}
 
 func (e *ListMachineDowntimeEventsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMachineDowntimeEventsRequest, *apiresource.List[apiresource.MachineDowntimeEvent]] {

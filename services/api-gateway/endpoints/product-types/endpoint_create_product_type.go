@@ -14,13 +14,13 @@ import (
 
 // Request to create a product type.
 type CreateProductTypeRequest struct {
-	// Human-readable name of the product type.
+	// Display name of the product type.
 	//
-	// Must be unique across product types.
+	// Must be unique across all product types.
 	Name string `json:"name" validate:"required,max=255"`
 	// Stable machine-readable code for the product type.
 	//
-	// Must be unique across product types. Products reference their product type by this code, and the code can be used in place of the ID when retrieving a product type.
+	// Must be unique across all product types. Products reference their product type by this code rather than by ID, and the code can be used in place of the ID when retrieving a product type.
 	Code string `json:"code" validate:"required,max=255"`
 }
 
@@ -34,6 +34,8 @@ func (*CreateProductTypeRequest) SchemaExample() any {
 }
 
 // Creates a product type.
+//
+// Product types are shared across all accounts, so a new type is immediately available everywhere and its name and code must not collide with any existing type; either collision returns a conflict error.
 type CreateProductTypeEndpoint struct{}
 
 func (e *CreateProductTypeEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductTypeRequest, *apiresource.ProductType] {

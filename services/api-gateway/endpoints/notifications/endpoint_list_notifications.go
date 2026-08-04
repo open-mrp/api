@@ -14,19 +14,25 @@ import (
 // Request to list the caller's notifications.
 type ListNotificationsRequest struct {
 	apiresource.PaginationRequest
-	// Filter by category.
+	// Return only notifications of this category, such as `chat.mention` or `order.updated`.
 	Category *constants.NotificationCategory `query:"category"`
-	// Filter by lifecycle status.
+	// Return only notifications in this lifecycle state.
 	//
-	// When omitted, the feed returns the full active feed — every non-dismissed notification (seen and unseen alike), newest first.
+	// When omitted, the response is the active feed: every notification that has not been dismissed, whatever its seen or read state. Pass `dismissed` to review notifications that were cleared out of the feed.
 	Status *constants.NotificationStatus `query:"status"`
-	// Filter by sender id(s).
+	// Return only notifications sent by these actors.
+	//
+	// A notification sent by a person is attributed to their account user id, not their user id.
 	SenderIDs []string `query:"sender_ids"`
-	// Filter by sender type(s).
+	// Return only notifications sent by these kinds of actor.
+	//
+	// Notifications raised by the platform itself are attributed to the `system` sender type but are returned without a sender.
 	SenderTypes []constants.NotificationSenderType `query:"sender_types"`
 }
 
-// Returns the current user's notifications, most recent first.
+// Lists the notifications addressed to the current user, newest first.
+//
+// The feed is personal and scoped to the account being acted in, so it never includes another user's notifications. Callers with no user membership in that account, such as an API key, get an empty list rather than an error.
 type ListNotificationsEndpoint struct{}
 
 func (e *ListNotificationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListNotificationsRequest, *apiresource.List[apiresource.Notification]] {

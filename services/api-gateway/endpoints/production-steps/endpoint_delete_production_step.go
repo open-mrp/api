@@ -16,9 +16,9 @@ type DeleteProductionStepRequest struct {
 	ProductionStepID string `path:"id" validate:"required"`
 }
 
-// Deletes a production step and its associated data.
+// Deletes a production step.
 //
-// The step's connections in the production flow graph are removed as part of the deletion.
+// The step's connections to its upstream and downstream steps are removed as part of the deletion, so the neighboring steps are left unconnected to each other. Deleting a step that was already deleted returns an already-deleted error rather than a not-found error.
 type DeleteProductionStepEndpoint struct{}
 
 func (e *DeleteProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteProductionStepRequest, *apiresource.EmptyResource] {

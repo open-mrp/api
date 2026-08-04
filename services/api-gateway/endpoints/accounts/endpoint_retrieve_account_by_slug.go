@@ -12,13 +12,13 @@ import (
 
 // Request to look up an account by portal slug.
 type RetrieveAccountBySlugRequest struct {
-	// Portal slug.
+	// Portal slug of the account to look up.
 	Slug string `path:"slug" validate:"required"`
 }
 
 // Returns a minimal public profile for the account that owns the given portal slug.
 //
-// This endpoint does not require authentication; it is intended for customer portal branding lookups.
+// This endpoint does not require authentication; it is intended for customer portal branding lookups. The logo and favicon are returned as download URLs that stay valid for one hour.
 type RetrieveAccountBySlugEndpoint struct{}
 
 func (e *RetrieveAccountBySlugEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAccountBySlugRequest, *apiresource.PublicAccount] {

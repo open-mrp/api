@@ -17,6 +17,8 @@ type ListSysPropertiesRequest struct {
 }
 
 // Returns a paginated list of system properties for the current account.
+//
+// A counter appears here only once its number series has been used at least once, so an account may have fewer counters than there are counter types. The `q` search term is matched against the counter type name.
 type ListSysPropertiesEndpoint struct{}
 
 func (e *ListSysPropertiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSysPropertiesRequest, *apiresource.List[apiresource.SysProperty]] {

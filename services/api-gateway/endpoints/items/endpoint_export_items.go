@@ -10,10 +10,12 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ExportItemsRequest is the request to export items with inventory.
+// Request to export items.
 type ExportItemsRequest struct{}
 
-// Exports all items, with their on-hand inventory quantities, as an Excel file (`items.xlsx`).
+// Downloads every item in your account, with its category and on-hand inventory, as an Excel workbook named `items.xlsx`.
+//
+// The export takes no filters and is not paginated: it always covers the whole catalog, one row per item, ordered by SKU.
 type ExportItemsEndpoint struct{}
 
 func (e *ExportItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportItemsRequest, *httptransport.FileDownload] {

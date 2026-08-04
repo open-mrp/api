@@ -16,11 +16,11 @@ import (
 type AddBatchInputRequest struct {
 	// ID of the item the batch produces.
 	ItemID string `json:"item_id" validate:"required"`
-	// Good quantity produced by the batch, as a decimal string.
+	// Good (first-quality) quantity for the batch, as a decimal string.
 	QuantityValue string `json:"quantity_value" validate:"required"`
 	// Unit ID for `quantity_value`.
 	QuantityUnitID string `json:"quantity_unit_id" validate:"required"`
-	// Run time spent on the batch, as a decimal string.
+	// Seconds-quality (B-grade) output recorded for the batch, as a decimal string.
 	//
 	// Ignored unless `seconds_unit_id` is also provided.
 	SecondsValue field.Optional[string] `json:"seconds_value,omitzero"`
@@ -34,7 +34,7 @@ type AddBatchInputRequest struct {
 	WasteUnitID field.Optional[string] `json:"waste_unit_id,omitzero"`
 	// ID of the production step the batch is recorded against.
 	ProductionStepID field.Optional[string] `json:"production_step_id,omitzero"`
-	// ID of the scanning station where the batch will be scanned.
+	// ID of the scanning station where the batch is expected to be scanned.
 	ScanningStationID field.Optional[string] `json:"scanning_station_id,omitzero"`
 }
 
@@ -42,9 +42,7 @@ type AddBatchInputRequest struct {
 type AddBatchesToProductionRunRequest struct {
 	// Production run ID.
 	ProductionRunID string `path:"id" validate:"required"`
-	// Batches to add.
-	//
-	// At least one batch is required.
+	// The batches of work to record against the run.
 	Batches []AddBatchInputRequest `json:"batches" validate:"required,min=1"`
 }
 
@@ -65,7 +63,7 @@ func (*AddBatchesToProductionRunRequest) SchemaExample() any {
 
 // Adds batches to a production run.
 //
-// Fails if the run has been completed.
+// Each batch is created as unscanned work: it belongs to the run immediately but does not count as produced until it is scanned at a station. Scanning the first of them starts the run, and the run completes once none are left unscanned. Batches cannot be added to a run that has already completed.
 type AddBatchesToProductionRunEndpoint struct{}
 
 func (e *AddBatchesToProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddBatchesToProductionRunRequest, *apiresource.List[apiresource.Batch]] {

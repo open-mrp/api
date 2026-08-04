@@ -18,7 +18,7 @@ type GetBatchFlowRequest struct {
 
 // Returns the full production flow graph containing a batch.
 //
-// The flow is every batch connected to the given batch through input/output relationships, in both directions, returned as nodes with their input and output edges.
+// The flow is every batch connected to the given batch through input/output relationships, in both directions, including the batch itself. Nodes come back in no particular order; rebuild the graph from each node's input and output edges rather than from their position in the list.
 type GetBatchFlowEndpoint struct{}
 
 func (e *GetBatchFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetBatchFlowRequest, *apiresource.List[apiresource.BatchFlowNode]] {

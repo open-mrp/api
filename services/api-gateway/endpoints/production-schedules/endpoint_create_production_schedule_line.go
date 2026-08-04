@@ -18,18 +18,28 @@ type CreateProductionScheduleLineRequest struct {
 	// ID of the production schedule.
 	ProductionScheduleID string `path:"id" validate:"required"`
 	// Horizon week to plan the campaign in, zero-based.
+	//
+	// Week 0 is the week the schedule's horizon starts in. The week must fall inside the horizon this version was planned over.
 	WeekIndex int32 `json:"week_index" validate:"gte=0"`
-	// ID of the machine that will run it.
+	// ID of the machine that will run the campaign.
+	//
+	// The machine's production step and department are copied onto the campaign, which is what department-level attainment rolls it up by. The schedule's derived department work is not re-exploded for a hand-added campaign; it is rebuilt the next time the version is regenerated.
 	MachineID string `json:"machine_id" validate:"required"`
 	// ID of the item to build.
 	ItemID string `json:"item_id" validate:"required"`
-	// Units to build.
+	// Units to build over the campaign.
 	Quantity float64 `json:"quantity" validate:"required,gt=0"`
-	// Lots the quantity represents.
+	// How many lots the quantity is built in.
+	//
+	// Left unset, it is derived from the quantity and the account's default lot size. The lot size itself is taken from that account default and is not settable per campaign, so this is a record of the lot count rather than what a release splits batches by.
 	Lots field.Optional[int32] `json:"lots,omitzero" validate:"omitempty,gte=0"`
 	// Machine hours the campaign will take.
+	//
+	// Left unset, it is estimated from the rate this version was solved with for this item, so the week's utilisation still reflects the added work. An item the version holds no policy for estimates to zero.
 	RunHours field.Optional[float64] `json:"run_hours,omitzero" validate:"omitempty,gte=0"`
-	// Why the campaign was added. Required when it lands inside a frozen week.
+	// Why the campaign was added.
+	//
+	// Required when the campaign lands inside a frozen week, since that is a commitment being changed.
 	Reason field.Optional[constants.ScheduleChangeReason] `json:"reason,omitzero"`
 	// Free-form explanation of the change.
 	ReasonNote field.Optional[string] `json:"reason_note,omitzero" validate:"omitempty,max=2000"`
@@ -50,6 +60,8 @@ func (*CreateProductionScheduleLineRequest) SchemaExample() any {
 // Adds a campaign to a schedule by hand.
 //
 // The line is recorded as manual, so a later regenerate can tell it apart from what the solver produced, and the change is written to the deviation log. Adding into a frozen week requires a `reason`.
+//
+// Only a draft or a published version can be edited; a superseded or archived version is history. The campaign is appended to the end of its week's run order.
 type CreateProductionScheduleLineEndpoint struct{}
 
 func (e *CreateProductionScheduleLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductionScheduleLineRequest, *apiresource.ProductionScheduleLine] {

@@ -41,6 +41,8 @@ func (*UpdateSettlementRequest) SchemaExample() any {
 }
 
 // Partially updates a settlement's number, note, or responsible user.
+//
+// The allocations a settlement contains cannot be changed here; use the transaction allocation endpoints to amend or remove an individual allocation.
 type UpdateSettlementEndpoint struct{}
 
 func (e *UpdateSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateSettlementRequest, *apiresource.Settlement] {

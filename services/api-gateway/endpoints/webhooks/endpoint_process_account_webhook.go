@@ -19,7 +19,9 @@ type AccountStripeWebhookRequest struct {
 	AccountID string `path:"account_id" validate:"required"`
 }
 
-// Processes a Stripe webhook event from an account's connected Stripe account, verifying the signature against the account's stored webhook secret before recording order payments.
+// Processes a Stripe webhook event delivered by an account's own connected Stripe account.
+//
+// The payload is verified against the webhook secret stored on that account's Stripe integration. A succeeded payment is linked to the sales order it references and recorded as a customer payment; failed and canceled payments undo that link, and a completed payout marks the payments it covers as having reached the account's bank. Other event types, and payments that reference an order the account does not own, are acknowledged without action. Processing is idempotent, so Stripe's retries are safe.
 type ProcessAccountWebhookEndpoint struct{}
 
 func (e *ProcessAccountWebhookEndpoint) Materialize() *apiendpoint.APIEndpoint[*AccountStripeWebhookRequest, *apiresource.WebhookResponse] {

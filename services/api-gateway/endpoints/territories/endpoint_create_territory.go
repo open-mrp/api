@@ -15,21 +15,25 @@ import (
 
 // Request to create a territory.
 type CreateTerritoryRequest struct {
-	// Account ID.
+	// ID of your account, which owns the territory.
 	AccountID string `path:"account_id" validate:"required"`
 	// State this territory covers (e.g. `NY`).
+	//
+	// A territory created without a ZIP code range is matched by comparing this value exactly against the ship-to address's state, so use the same format your addresses use.
 	State string `json:"state" validate:"required,max=255"`
 	// Inclusive start of the ZIP code range this territory covers (`501`-`99999`).
 	//
 	// Omit both ZIP code fields to cover the entire state.
 	StartZipcode field.Optional[int32] `json:"start_zipcode,omitzero"`
 	// Inclusive end of the ZIP code range this territory covers (`501`-`99999`).
-	EndZipcode field.Optional[int32] `json:"end_zipcode,omitzero"`
-	// ID of the account user (sales rep) to assign to this territory.
-	SalesRepID string `json:"sales_rep_id" validate:"required"`
-	// ID of the product line to scope this territory to.
 	//
-	// Omit to have the territory apply regardless of product line.
+	// Dropped when no start ZIP code is supplied. Supplying a start without an end creates a territory that matches that single ZIP code.
+	EndZipcode field.Optional[int32] `json:"end_zipcode,omitzero"`
+	// ID of the account user to credit as the sales rep on orders matching this territory.
+	SalesRepID string `json:"sales_rep_id" validate:"required"`
+	// ID of the product line this territory is associated with.
+	//
+	// Sales rep auto-assignment matches on ZIP code and state only, so this records what the territory covers rather than narrowing which orders it matches.
 	ProductLineID field.Optional[string] `json:"product_line_id,omitzero" validate:"omitempty"`
 }
 
@@ -48,6 +52,8 @@ func (*CreateTerritoryRequest) SchemaExample() any {
 }
 
 // Creates a territory that assigns a sales rep to a state or ZIP code range.
+//
+// The territory takes effect for sales orders created afterwards that do not name a sales rep explicitly and whose customer has no default sales rep.
 type CreateTerritoryEndpoint struct{}
 
 func (e *CreateTerritoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateTerritoryRequest, *apiresource.Territory] {

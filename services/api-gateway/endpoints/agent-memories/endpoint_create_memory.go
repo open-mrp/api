@@ -16,15 +16,19 @@ import (
 
 // Request to create an agent memory.
 type CreateMemoryRequest struct {
-	// Category used to group related memories.
+	// The kind of information this memory holds, used to group related memories.
+	//
+	// - `preference`: how someone likes things done, such as a customer who always wants express shipping.
+	// - `fact`: a durable detail worth remembering about the account or one of its records, such as a customer's typical order size.
+	// - `instruction`: standing guidance for agents to follow, such as always confirming freight before issuing an order.
 	Category string `json:"category" validate:"required,oneof=preference fact instruction"`
-	// Text content.
+	// The information to remember, written as plain text for an agent to read.
 	Content string `json:"content" validate:"required"`
 	// Arbitrary metadata as JSON.
 	Metadata json.RawMessage `json:"metadata,omitzero"`
 	// Type of platform record this memory is scoped to (e.g. `customer`, `product`).
 	//
-	// Provide together with `entity_id` to scope the memory to a specific record; omit both for an account-wide memory.
+	// Provide together with `entity_id` to scope the memory to a specific record; omit both for a memory that is not tied to any particular record.
 	EntityType field.Optional[string] `json:"entity_type,omitzero" validate:"omitempty,max=255"`
 	// ID of the platform record this memory is scoped to.
 	//
@@ -32,11 +36,11 @@ type CreateMemoryRequest struct {
 	EntityID field.Optional[string] `json:"entity_id,omitzero" validate:"omitempty"`
 	// Relative importance from `0` to `1` in increments of `0.1`, used to prioritize which memories the agent recalls.
 	//
-	// Higher is more important. When omitted, the memory is stored at the lowest priority (`0`).
+	// An agent takes in only a limited number of memories per run and recalls the highest-importance ones first, so a memory created without an importance is stored at `0` and is the first to be left out.
 	Importance field.Optional[float64] `json:"importance,omitzero" validate:"omitempty,min=0,max=1,multiple_of=0.1"`
-	// Expiration timestamp in ISO 8601 format (e.g. `2026-01-02T15:04:05Z`).
+	// When this memory should stop being used, as an ISO 8601 timestamp (e.g. `2026-01-02T15:04:05Z`).
 	//
-	// Omit for a memory that never expires. Expired memories are excluded from list results and are no longer recalled by agents.
+	// Past this time the memory is no longer recalled by agents and is omitted from list results, but it is not deleted. Omit it for a memory that should be used indefinitely.
 	ExpiresAt field.Optional[string] `json:"expires_at,omitzero"`
 }
 
@@ -51,7 +55,7 @@ func (*CreateMemoryRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateMemoryRequest)
 }
 
-// Creates an agent memory.
+// Saves a piece of information for agents to recall on future runs.
 type CreateMemoryEndpoint struct{}
 
 func (e *CreateMemoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateMemoryRequest, *apiresource.AgentMemory] {

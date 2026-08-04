@@ -17,9 +17,9 @@ type ListNotificationRecipientsRequest struct {
 	CustomerID string `path:"id" validate:"required"`
 }
 
-// Returns the account users configured to receive order acknowledgement and invoice emails on this customer's orders, with the notification types each receives.
+// Returns the account users configured to receive email notifications on this customer's orders, with the notification types each receives.
 //
-// These are the defaults used to pre-populate notification recipients when a new order is placed for the customer.
+// These are defaults for order-entry clients to pre-fill on a new order; creating a sales order does not apply them automatically. Recipients whose account user has since been removed from the customer's account are omitted.
 type ListNotificationRecipientsEndpoint struct{}
 
 func (e *ListNotificationRecipientsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListNotificationRecipientsRequest, *apiresource.List[apiresource.OrderNotificationRecipient]] {

@@ -6,7 +6,9 @@ import (
 	"github.com/augno/api/shared/field"
 )
 
-// Address details used to create an address, either directly or inline on another resource.
+// Address details supplied when creating an address, either on its own or inline on another resource.
+//
+// A few requests, such as shipping rate estimates, take these same fields for a one-off address that is never saved to the account.
 type AddressInput struct {
 	// Display name of the address.
 	Name string `json:"name" validate:"required,min=1,max=255"`
@@ -29,7 +31,7 @@ type AddressInput struct {
 	State field.Optional[string] `json:"state,omitzero" validate:"omitempty,max=255"`
 	// Postal or ZIP code.
 	PostalCode field.Optional[string] `json:"postal_code,omitzero" validate:"omitempty,max=255"`
-	// Two-letter country code.
+	// Two-letter ISO 3166-1 country code, such as `US`.
 	Country string `json:"country" validate:"required,max=2"`
 }
 

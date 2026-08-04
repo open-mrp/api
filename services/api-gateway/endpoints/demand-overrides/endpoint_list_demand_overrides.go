@@ -14,7 +14,7 @@ import (
 // Request to list demand overrides.
 type ListDemandOverridesRequest struct {
 	apiresource.PaginationRequest
-	// Only return overrides targeting these kinds of resource.
+	// Only return overrides with these kinds of target.
 	ScopeTypes []constants.DemandOverrideScope `query:"scope_types"`
 	// Only return overrides targeting these items or product lines.
 	ScopeRefIDs []string `query:"scope_ref_ids"`
@@ -30,7 +30,7 @@ type ListDemandOverridesRequest struct {
 
 // Returns a paginated list of demand overrides, most recently created first.
 //
-// The period filters match on overlap rather than containment, so an override spanning a quarter is returned when querying a single month inside it.
+// The period filters match on overlap rather than containment, so an override spanning a quarter is returned when querying a single month inside it. The `q` search term matches the override's note.
 type ListDemandOverridesEndpoint struct{}
 
 func (e *ListDemandOverridesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListDemandOverridesRequest, *apiresource.List[apiresource.DemandOverride]] {

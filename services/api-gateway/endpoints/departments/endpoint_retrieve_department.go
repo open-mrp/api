@@ -13,7 +13,7 @@ import (
 
 // Request to get a department.
 type RetrieveDepartmentRequest struct {
-	// Department ID.
+	// ID of the department to retrieve.
 	DepartmentID string `path:"id" validate:"required"`
 }
 

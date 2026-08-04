@@ -30,7 +30,7 @@ func (*CreateProductionRunRequest) SchemaExample() any {
 
 // Creates a production run.
 //
-// The run number is assigned automatically as the next sequential number for the account.
+// The run number is assigned automatically as the next sequential number for the account. The new run starts empty and neither started nor completed; add the work to be run with the add-batches endpoint.
 type CreateProductionRunEndpoint struct{}
 
 func (e *CreateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductionRunRequest, *apiresource.ProductionRun] {

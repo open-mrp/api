@@ -20,7 +20,9 @@ type CreatePurchaseOrderLineRequest struct {
 
 // Creates a line item on a purchase order.
 //
-// If the order has already been issued, a matching receiving order line is created as well.
+// The line number is assigned automatically as the next number on the order. If the order has already been issued, a matching receiving order line is created as well, so the added quantity can be received.
+//
+// A line that references an inventory item also links that item's material to the supplier, if it is not linked already, so the material shows up as sourced from them.
 type CreatePurchaseOrderLineEndpoint struct{}
 
 func (e *CreatePurchaseOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePurchaseOrderLineRequest, *apiresource.PurchaseOrderLine] {

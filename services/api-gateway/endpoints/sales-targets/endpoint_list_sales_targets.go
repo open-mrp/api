@@ -13,14 +13,18 @@ import (
 
 // Request to list sales targets for an account user.
 type ListSalesTargetsRequest struct {
-	// ID of the account user (sales rep) whose targets to list.
+	// The account user (sales rep) whose targets to list.
+	//
+	// Must be an active account user in your account.
 	SalesRepID string `path:"id" validate:"required"`
 	apiresource.PaginationRequest
 }
 
-// Returns the sales targets for an account user.
+// Returns the revenue goals set for one sales rep, most recent period first.
 //
-// This endpoint does not support cursor pagination; passing a `cursor` returns a validation error.
+// This endpoint does not support cursor pagination; passing a `cursor` returns a validation error, and the response carries no page cursors. Requesting targets for someone who is not an active account user in your account returns a not-found error.
+//
+// Pass `q` to narrow the list to targets whose ID or goal amount contains the search text.
 type ListSalesTargetsEndpoint struct{}
 
 func (e *ListSalesTargetsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSalesTargetsRequest, *apiresource.List[apiresource.SalesTarget]] {

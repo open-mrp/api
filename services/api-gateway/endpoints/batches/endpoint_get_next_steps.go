@@ -29,7 +29,7 @@ func (*GetPossibleNextStepsRequest) SchemaExample() any {
 
 // Returns the production steps a batch can be advanced to from a given scanning station.
 //
-// The batch's flow is traversed forward and the child steps of each reachable batch's current step are collected; only steps assigned to the given scanning station are returned.
+// Use this to drive the step picker on a scanning terminal after an operator scans a batch. Traversal starts at the batch: an open batch that has already been scanned offers the steps that come after its current step, while a closed batch is followed downstream to the batches it produced and the search continues from there. Only steps assigned to the given scanning station are returned, so a batch with nothing left to do at that station comes back with an empty list.
 type GetPossibleNextStepsEndpoint struct{}
 
 func (e *GetPossibleNextStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetPossibleNextStepsRequest, *apiresource.List[apiresource.ScanningProductionStepInfo]] {

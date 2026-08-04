@@ -11,17 +11,21 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ExportProductsRequest is the request to export products as an Excel file.
+// Request to export products as an Excel file.
 type ExportProductsRequest struct {
-	// Free-text query matched against products before exporting.
+	// Free-text search matched against the SKU and description of each product's item.
 	Query *string `query:"q"`
-	// Filter by category IDs.
+	// Filter by the item category the product's item belongs to.
 	CategoryIDs []string `query:"category_ids"`
-	// Filter by attribute IDs.
+	// Filter to products whose item carries at least one of these attributes.
 	AttributeIDs []string `query:"attribute_ids"`
 	// Filter by product line IDs.
+	//
+	// Combined with `customer_ids`, products matching either filter are exported.
 	ProductLineIDs []string `query:"product_line_ids"`
-	// Filter by customer IDs.
+	// Restrict the export to products these customer accounts are entitled to buy.
+	//
+	// A product matches when its product line has been granted to the customer directly, through the customer's account group, or through the account group used for the customer's pricing.
 	CustomerIDs []string `query:"customer_ids"`
 	// Start of creation date range.
 	StartDate *time.Time `query:"start_date"`
@@ -29,7 +33,9 @@ type ExportProductsRequest struct {
 	EndDate *time.Time `query:"end_date"`
 }
 
-// Exports all matching products as an Excel file.
+// Exports matching products as an Excel workbook.
+//
+// The response is a file download, not JSON, and it is not paginated: every product matching the filters is written to a single sheet, one row per product, with columns for the product ID, SKU, description, category, product line, and unit price and cost with their units, plus one column for each category property in use. As with the product list, only products of type `sale` are exported.
 type ExportProductsEndpoint struct{}
 
 func (e *ExportProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportProductsRequest, *httptransport.FileDownload] {

@@ -19,7 +19,10 @@ import (
 type AssignConversationRequest struct {
 	// Conversation ID.
 	ConversationID string `path:"id" validate:"required"`
-	// The owner's resource type: `account_user` (a teammate) or `account_group` (a team).
+	// What kind of owner the case is being assigned to.
+	//
+	// - `account_user`: an individual teammate takes the case.
+	// - `account_group`: a team takes the case, so anyone on it can pick it up.
 	AssigneeResourceType field.Optional[string] `json:"assignee_resource_type,omitzero"`
 	// The owner's id, an `account_user` or `account_group` matching `assignee_resource_type`.
 	//
@@ -38,6 +41,8 @@ func (*AssignConversationRequest) SchemaExample() any {
 }
 
 // Assigns an external customer-service case to an owner — a user or a team — or clears the assignment.
+//
+// Only customer-facing cases can be assigned; assigning an internal conversation is rejected. The support inbox can then be filtered to a single assignee, or to the cases nobody owns yet.
 type AssignConversationEndpoint struct{}
 
 func (e *AssignConversationEndpoint) Materialize() *apiendpoint.APIEndpoint[*AssignConversationRequest, *apiresource.Conversation] {

@@ -15,7 +15,7 @@ import (
 type MergeBatchesRequest struct {
 	// Batch IDs to merge.
 	//
-	// Duplicates are rejected. For single-part production steps all batches must be of the same item; for multi-part steps supply at least one batch per part the step consumes.
+	// Duplicates are rejected. For single-part production steps all batches must be of the same item; for multi-part steps supply at least one batch per part the step consumes. Each ID is resolved forward through its production flow to the batch that is actually available at the step, so an operator can scan an earlier batch in the chain.
 	BatchIDs []string `json:"batch_ids" validate:"required"`
 	// Scanning station ID performing the merge.
 	ScanningStationID string `json:"scanning_station_id" validate:"required"`
@@ -35,7 +35,7 @@ func (*MergeBatchesRequest) SchemaExample() any {
 
 // Merges multiple batches into a single new batch at a production step.
 //
-// A new batch is created at the target step with its quantity calculated from the step's configuration, the source batches are linked as inputs and closed, and the step's material consumption is executed asynchronously. Returns the newly created batch.
+// The new batch is created at the target step and its quantity is scaled from how much input was supplied against the step's configured input-to-output ratio: for a single-part step the source quantities are summed, and for a multi-part step every part must work out to the same output quantity or the merge is rejected. The source batches are linked as inputs and closed, the step's material consumption runs asynchronously afterwards, and the new batch is closed immediately if the target step is the last one in the flow. Returns the newly created batch.
 type MergeBatchesEndpoint struct{}
 
 func (e *MergeBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*MergeBatchesRequest, *apiresource.Batch] {

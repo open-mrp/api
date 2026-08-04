@@ -17,7 +17,7 @@ import (
 type CreateAccountGroupRequest struct {
 	// Display name of the account group.
 	//
-	// Must be unique within your account; maximum 255 characters.
+	// Must be unique within your account.
 	Name string `json:"name" validate:"required,max=255"`
 	// How this account group will be used.
 	//
@@ -30,6 +30,8 @@ type CreateAccountGroupRequest struct {
 	//
 	// - `commission_applied`: sales commission is calculated on orders from accounts in this group.
 	// - `commission_exempt`: orders from accounts in this group are exempt from commission.
+	//
+	// Leave this out and the group is created commission-exempt, so orders from its accounts earn no sales commission until you change it.
 	CommissionPolicy field.Optional[constants.CommissionPolicy] `json:"commission_policy,omitzero" default:"commission_exempt"`
 	// How freight charges apply to orders from accounts in this group.
 	//

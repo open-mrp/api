@@ -16,11 +16,16 @@ import (
 
 // Request to preview a production schedule.
 type PreviewProductionScheduleRequest struct {
-	// The instant to plan against. Defaults to now.
+	// The instant to plan against, which is what stock, demand history and active demand overrides are read as of.
+	//
+	// Left unset, the preview is solved against the moment the request arrives. The horizon starts on the account's configured week-start day on or before this instant, so backdating this shifts the whole week grid.
 	PlanningAsOf field.Optional[time.Time] `json:"planning_as_of,omitzero"`
-	// Overrides the configured horizon for this preview only.
+	// Number of weeks the plan should cover, overriding the account's configured horizon for this preview only.
 	HorizonWeeks field.Optional[int32] `json:"horizon_weeks,omitzero" validate:"omitempty,min=1,max=104"`
-	// Overrides the configured demand basis for this preview only.
+	// How future demand is derived, overriding the account's configured basis for this preview only.
+	//
+	// - `trailing_12`: demand is the trailing twelve months of orders.
+	// - `seasonal_ema`: demand is a seasonal exponential moving average, which follows a season arriving early or late rather than flattening it.
 	DemandBasis field.Optional[constants.ScheduleDemandBasis] `json:"demand_basis,omitzero"`
 }
 
@@ -35,7 +40,9 @@ func (*PreviewProductionScheduleRequest) SchemaExample() any {
 
 // Runs the production scheduling solver and returns the plan without saving it.
 //
-// This is the inspection surface for the scheduler: it takes the same path a generated schedule will take, minus the write, so a plan can be reviewed and compared before anything depends on it. Machines must be marked as the planning constraint in production schedule settings, otherwise there is nothing to schedule.
+// This is the inspection surface for the scheduler: it takes the same path a generated schedule will take, minus the write, so a plan can be reviewed and compared before anything depends on it. No version is created and nothing is numbered, so this can be called as often as needed.
+//
+// The solver plans the constraint department — the room that sets the pace of the factory — so production schedule settings must name one and it must have machines that are included in planning. Without that there is nothing to schedule and the request is rejected rather than returning an empty plan.
 type PreviewProductionScheduleEndpoint struct{}
 
 func (e *PreviewProductionScheduleEndpoint) Materialize() *apiendpoint.APIEndpoint[*PreviewProductionScheduleRequest, *apiresource.ProductionSchedulePreview] {
@@ -45,7 +52,7 @@ func (e *PreviewProductionScheduleEndpoint) Materialize() *apiendpoint.APIEndpoi
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-schedules/actions/preview",
 		SuccessStatusCode: http.StatusOK,
-		// Internal while the solver is being validated against the existing script.
+		// A preview writes nothing, so it asks for read rather than the create a generate needs.
 		Public:     true,
 		Preview:    true,
 		AgentTool:  true,

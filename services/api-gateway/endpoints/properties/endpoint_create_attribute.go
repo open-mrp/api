@@ -15,7 +15,7 @@ import (
 
 // Request to create an attribute.
 type CreateAttributeRequest struct {
-	// Property ID.
+	// The property to add this attribute to.
 	PropertyID string `path:"property_id" validate:"required"`
 	// The selectable value this attribute represents, such as `Red`.
 	//
@@ -47,6 +47,8 @@ func (*CreateAttributeRequest) SchemaExample() any {
 }
 
 // Creates an attribute under a property.
+//
+// An attribute is one selectable value of the property, such as `Red` under `Color`, and can then be assigned to items. Returns a conflict error if another attribute in the account already uses the same value.
 type CreateAttributeEndpoint struct{}
 
 func (e *CreateAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAttributeRequest, *apiresource.Attribute] {

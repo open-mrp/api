@@ -14,9 +14,9 @@ import (
 
 // Request to set or remove the monthly spending cap.
 type SetSpendingCapRequest struct {
-	// Monthly agent spending cap in cents.
+	// Ceiling in cents on estimated agent spending per billing month.
 	//
-	// Set to `null` to remove the cap; omit the field to leave the current cap unchanged.
+	// Send `null` to remove the cap entirely; omit the field to leave the current cap unchanged.
 	CapCents field.Clearable[int64] `json:"cap_cents,omitzero"`
 }
 

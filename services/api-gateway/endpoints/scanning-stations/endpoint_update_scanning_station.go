@@ -14,6 +14,8 @@ import (
 )
 
 // Request to partially update a scanning station.
+//
+// The station's type and department are set at creation and cannot be changed here.
 type UpdateScanningStationRequest struct {
 	// Scanning station ID.
 	ScanningStationID string `path:"id" validate:"required"`

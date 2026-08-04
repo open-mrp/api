@@ -8,13 +8,15 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleAccountStatusID = "acss_01004f532c58d60514b685cb27"
+const SampleAccountStatusID = "acss_st5zyjmzm30k"
 
 var SampleAccountStatusCode = constants.AccountStatusCodeNormal
 
 const SampleAccountStatusName = "Normal"
 
-// AccountStatus is a lookup value describing the standing of a customer account, such as whether shipments or all activity should be held.
+// A lookup value describing the standing of a customer account, such as whether shipments or all activity should be held.
+//
+// The set of statuses is fixed by Augno and cannot be added to or edited; you apply one to a customer by setting the customer's `status`.
 type AccountStatus struct {
 	// Account status ID.
 	ID string `json:"id" validate:"required"`
@@ -22,18 +24,18 @@ type AccountStatus struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_status"`
 	// Machine-readable status code.
 	//
-	// This is the value used as a customer's `status`.
-	//
 	// - `normal`: standard account with no restrictions.
-	// - `preferred`: account flagged as preferred (e.g. for prioritized handling).
-	// - `hold_shipment`: shipments to this account are held; orders may still be placed.
-	// - `hold_all`: all activity for this account is held.
+	// - `preferred`: account flagged for prioritized handling.
+	// - `hold_shipment`: the account's shipments should be held, typically over a credit problem, while orders can still be placed.
+	// - `hold_all`: all activity for the account should be held.
+	//
+	// The hold statuses are advisory: they are surfaced as credit-hold warnings on the customer's orders, but they do not by themselves cause order or shipment requests to be rejected.
 	Code constants.AccountStatusCode `json:"code" validate:"required"`
 	// Human-readable label for the status.
 	Name string `json:"name" validate:"required"`
 	// Owner of this resource.
 	//
-	// Account statuses are system-owned platform defaults shared across all accounts.
+	// Account statuses are platform-provided and shared across all accounts, so the owner is always the Augno system owner.
 	Owner *Owner `json:"owner" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

@@ -19,7 +19,7 @@ type CreateProductionRunRequest struct {
 
 // Creates a production run from a sales order.
 //
-// Creates a batch for each of the order's item-backed lines, reserves the material inventory required to produce them, and links the run to the order. An order can have at most one production run.
+// Walks the production flow behind each item-backed line to work out what actually has to be made, then creates one batch for each item that is produced directly from raw materials, sized to cover every line that needs it. Reserves the material inventory those batches consume and links the run to the order. The caller becomes the run's responsible user. An order can have at most one production run, and a line whose item has no production flow contributes no batches.
 type CreateProductionRunEndpoint struct{}
 
 func (e *CreateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductionRunRequest, *apiresource.ProductionRun] {

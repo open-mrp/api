@@ -12,13 +12,15 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateRoleRequest is a request to create a role.
+// Request to create a role.
 type CreateRoleRequest struct {
-	// Display name for the role, unique within the account.
-	Name string `json:"name" validate:"required,max=255"`
-	// Permissions to grant, in `{domain}:{action}` format, such as `customers:read`.
+	// Display name for the role, such as "Warehouse Manager".
 	//
-	// The action must be one of `create`, `read`, `update`, or `delete`. Omit to create a role with no permissions.
+	// Must be unique within your account.
+	Name string `json:"name" validate:"required,max=255"`
+	// Permissions to grant, in `{permission}:{action}` format, such as `customers:read`.
+	//
+	// The first half is a permission code such as `customers` or `sales_orders`, and the action must be one of `create`, `read`, `update`, or `delete`. List each action separately to grant more than one action on the same permission. A role created without any permissions grants no access until permissions are added.
 	Permissions []string `json:"permissions,omitzero"`
 }
 
@@ -34,9 +36,9 @@ func (*CreateRoleRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateRoleRequest)
 }
 
-// Creates a custom role with the specified permissions.
+// Creates a custom role that can then be assigned to users in your account.
 //
-// Roles created through the API always have type `user`.
+// Roles created through the API are always owned by your account and have the type `user`. Returns a conflict error if a role with the same name already exists.
 type CreateRoleEndpoint struct{}
 
 func (e *CreateRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateRoleRequest, *apiresource.Role] {

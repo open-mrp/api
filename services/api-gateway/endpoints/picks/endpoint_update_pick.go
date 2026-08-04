@@ -13,15 +13,17 @@ import (
 	"github.com/augno/api/shared/field"
 )
 
-// UpdatePickRequest is the request to partially update a pick's metadata.
+// Request to partially update a pick's metadata.
 type UpdatePickRequest struct {
 	// Pick ID.
 	PickID string `path:"id" validate:"required"`
 	// New number to assign to the pick.
+	//
+	// Maximum 255 characters. Renaming a pick does not rename the sales order it was created from.
 	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
 	// Timestamp when the pick was finished, in RFC 3339 format.
 	//
-	// Pass an empty string to clear the value and reopen the pick.
+	// Setting it closes the pick out even if lines are still unpacked; pass an empty string to clear it and reopen the pick.
 	FinishedAt field.Optional[string] `json:"finished_at,omitzero"`
 }
 
@@ -35,6 +37,8 @@ func (*UpdatePickRequest) SchemaExample() any {
 }
 
 // Partially updates a pick's metadata.
+//
+// Only the fields provided in the request are changed. This endpoint edits the pick record itself; use the pick and pack actions to change what has actually been picked.
 type UpdatePickEndpoint struct{}
 
 func (e *UpdatePickEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePickRequest, *apiresource.Pick] {

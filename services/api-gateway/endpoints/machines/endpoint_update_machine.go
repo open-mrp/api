@@ -15,7 +15,7 @@ import (
 
 // Request to partially update a machine.
 type UpdateMachineRequest struct {
-	// Machine ID.
+	// ID of the machine to update.
 	MachineID string `path:"id" validate:"required"`
 	// Display name of the machine.
 	//
@@ -40,7 +40,7 @@ func (*UpdateMachineRequest) SchemaExample() any {
 
 // Partially updates a machine.
 //
-// Only the fields provided in the request are changed. Returns a conflict error if the new name is already in use by another machine.
+// Only the fields provided in the request are changed. Returns a conflict error if the new name is already in use by another machine in your account. A machine cannot be moved to a different department.
 type UpdateMachineEndpoint struct{}
 
 func (e *UpdateMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateMachineRequest, *apiresource.Machine] {

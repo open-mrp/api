@@ -12,7 +12,7 @@ import (
 
 // Request to upload a customer-portal favicon.
 type UploadAccountFaviconRequest struct {
-	// Account ID.
+	// ID of the account the favicon belongs to.
 	AccountID string `path:"id" validate:"required"`
 	// Raw image bytes.
 	RawBody []byte `rawbody:"true"`

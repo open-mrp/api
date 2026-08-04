@@ -17,7 +17,9 @@ type ArchiveConversationRequest struct {
 	ConversationID string `path:"id" validate:"required"`
 }
 
-// Archives a conversation at the account level so it drops out of active lists for everyone until it is unarchived.
+// Archives a conversation for the whole account rather than just for the caller.
+//
+// Only an owner or admin of the conversation can archive it, and direct messages cannot be archived. An archived customer-facing case leaves the working support inbox and is returned only by the archived view.
 type ArchiveConversationEndpoint struct{}
 
 func (e *ArchiveConversationEndpoint) Materialize() *apiendpoint.APIEndpoint[*ArchiveConversationRequest, *apiresource.Conversation] {

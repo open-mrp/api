@@ -11,7 +11,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetProductionFlowRequest is the request to retrieve the production flow graph for an item.
+// Request to retrieve the production flow graph for an item.
 type GetProductionFlowRequest struct {
 	// ID of the item whose production flow to retrieve.
 	ItemID string `path:"item_id" validate:"required"`

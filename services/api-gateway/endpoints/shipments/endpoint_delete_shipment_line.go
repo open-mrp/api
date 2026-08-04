@@ -18,7 +18,9 @@ type DeleteShipmentLineRequest struct {
 	ShipmentLineID string `path:"id" validate:"required"`
 }
 
-// Deletes a line from a shipment.
+// Removes a line from a shipment.
+//
+// Unlike deleting the whole shipment, removing a single line leaves the pick for the order untouched, so the pick's lines keep their existing packed state.
 type DeleteShipmentLineEndpoint struct{}
 
 func (e *DeleteShipmentLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteShipmentLineRequest, *apiresource.EmptyResource] {

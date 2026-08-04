@@ -30,6 +30,8 @@ func (*UpdateMessagingGroupRequest) SchemaExample() any {
 }
 
 // Renames a reusable roster.
+//
+// Members are managed through the add-member and remove-member endpoints, not here.
 type UpdateMessagingGroupEndpoint struct{}
 
 func (e *UpdateMessagingGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateMessagingGroupRequest, *apiresource.MessagingGroup] {

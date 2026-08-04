@@ -12,7 +12,16 @@ import (
 
 // Request to get the latest value for a system property type.
 type GetLatestSysPropertyValueRequest struct {
-	// System property type code identifying which counter to read, such as `transaction_number` or `purchase_order_number`.
+	// Code identifying which number series to read.
+	//
+	// - `transaction_number`: numbering for financial transactions such as payments, credit memos, adjustments, and rebates.
+	// - `settlement_number`: numbering for settlements that apply transactions to invoices.
+	// - `sales_order_number`: numbering for sales orders.
+	// - `purchase_order_number`: numbering for purchase orders.
+	// - `customer_number`: identifiers assigned to new customers.
+	// - `supplier_number`: identifiers assigned to new suppliers.
+	// - `production_run_number`: numbering for production runs.
+	// - `sscc_count`: serial component of the GS1 SSCC-18 codes assigned to shipping cases.
 	TypeCode string `path:"type_code" validate:"required"`
 }
 

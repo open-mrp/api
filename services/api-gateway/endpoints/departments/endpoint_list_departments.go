@@ -16,7 +16,9 @@ type ListDepartmentsRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of departments in your account.
+// Returns a paginated list of departments in your account, most recently created first.
+//
+// The `q` search term matches the department name.
 type ListDepartmentsEndpoint struct{}
 
 func (e *ListDepartmentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListDepartmentsRequest, *apiresource.List[apiresource.Department]] {

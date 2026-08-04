@@ -15,23 +15,25 @@ import (
 
 // Request to send an in-app notification.
 //
-// The target determines whether it is delivered to a single user or broadcast to every user in an account. This endpoint is internal/admin only.
+// The target decides whether the notification goes to one member of the account or to everyone in it.
 type SendNotificationRequest struct {
-	// Category of the notification.
-	Category constants.NotificationCategory `json:"category" validate:"required"`
-	// Who to send to: an `account_user` for a per-user notification, or an `account` to broadcast an announcement to every user in it.
-	Target apiresource.NotificationTargetInput `json:"target" validate:"required"`
-	// Human-readable title.
-	Title string `json:"title" validate:"required"`
-	// Preview/body text.
-	Body field.Optional[string] `json:"body,omitzero"`
-	// Delivery priority.
-	Priority field.Optional[constants.NotificationPriority] `json:"priority,omitzero" default:"normal"`
-	// Object type of the resource this notification should link to.
+	// The kind of event the notification represents, such as `order.updated`.
 	//
-	// Set together with `link_resource_id` to point the notification at something the recipient can open.
+	// Categories are how clients group and filter the feed, so reuse an existing one where it fits.
+	Category constants.NotificationCategory `json:"category" validate:"required"`
+	// Who to send to: an `account_user` for a personal notification, or an `account` to announce to everyone in it.
+	Target apiresource.NotificationTargetInput `json:"target" validate:"required"`
+	// Short headline shown in the recipient's feed.
+	Title string `json:"title" validate:"required"`
+	// Supporting detail shown beneath the title.
+	Body field.Optional[string] `json:"body,omitzero"`
+	// How prominently the notification should be surfaced, from `low` through `urgent`.
+	Priority field.Optional[constants.NotificationPriority] `json:"priority,omitzero" default:"normal"`
+	// Type of the resource the notification should link to, such as `sales_order`.
+	//
+	// Set it together with `link_resource_id` to point the notification at something the recipient can open; supplying only one of the two produces a notification with no link.
 	LinkResourceType field.Optional[constants.ObjectType] `json:"link_resource_type,omitzero"`
-	// ID of the resource this notification should link to.
+	// ID of the resource the notification should link to.
 	LinkResourceID field.Optional[string] `json:"link_resource_id,omitzero"`
 }
 
@@ -54,9 +56,11 @@ func (*SendNotificationRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleSendNotificationRequest)
 }
 
-// Sends an in-app notification to a single user or broadcasts it to every user in an account.
+// Sends an in-app notification to a single member of an account, or announces it to everyone in the account.
 //
-// Delivery is asynchronous: the notification is fanned out to its recipients and pushed to connected clients in real time.
+// A send to one member is attributed to the authenticated caller, so the recipient sees who sent it. It is accepted and then fanned out, so it reaches the recipient's feed and their connected clients shortly after the response.
+//
+// An announcement to the whole account is stored as the request is accepted, carries no sender, and may only target the account you are currently acting in.
 type SendNotificationEndpoint struct{}
 
 func (e *SendNotificationEndpoint) Materialize() *apiendpoint.APIEndpoint[*SendNotificationRequest, *apiresource.NotificationSendResult] {

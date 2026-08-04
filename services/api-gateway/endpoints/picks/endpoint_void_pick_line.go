@@ -11,7 +11,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// VoidPickLineRequest is the request to void a pick line.
+// Request to void a pick line.
 type VoidPickLineRequest struct {
 	// Pick ID.
 	PickID string `path:"pick_id" validate:"required"`
@@ -19,9 +19,9 @@ type VoidPickLineRequest struct {
 	PickLineID string `path:"id" validate:"required"`
 }
 
-// Voids a pick line.
+// Voids a pick line, undoing the picking work recorded on it.
 //
-// Resets the line's picked quantity to zero. Fails if the line has already been packed.
+// Resets the line's picked quantity to zero without deleting the line, so the quantity can be picked again. Returns a validation error if the line has already been packed.
 type VoidPickLineEndpoint struct{}
 
 func (e *VoidPickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*VoidPickLineRequest, *apiresource.PickLine] {

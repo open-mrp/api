@@ -24,12 +24,13 @@ type ListAccountUsersRequest struct {
 	RoleType *constants.RoleType `query:"role_type"`
 	// Controls whether removed (soft-deleted) account users appear in the list.
 	//
-	// - `excluded`: only active and disabled users (default).
-	// - `included`: removed users are listed as well.
+	// Removed users are left out unless you pass `included`, so a user removed with the remove action disappears from the default listing.
 	RemovedScope *constants.RemovedResourceScope `query:"removed_scope"`
 }
 
-// Returns a paginated list of account users for the current account.
+// Returns a paginated list of the users who belong to the account you are acting in.
+//
+// When the account you are acting in is a customer or supplier account you manage, this lists that account's users rather than your own team.
 type ListAccountUsersEndpoint struct{}
 
 func (e *ListAccountUsersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAccountUsersRequest, *apiresource.List[apiresource.AccountUser]] {

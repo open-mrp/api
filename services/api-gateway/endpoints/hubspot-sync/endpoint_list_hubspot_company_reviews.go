@@ -20,6 +20,8 @@ type ListHubspotCompanyReviewsRequest struct {
 }
 
 // Lists the company-match review queue for a sync job — the customers that could not be confidently matched to a HubSpot company and need a human decision before the sync executes.
+//
+// The whole queue is returned in a single response, without pagination.
 type ListHubspotCompanyReviewsEndpoint struct{}
 
 func (e *ListHubspotCompanyReviewsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListHubspotCompanyReviewsRequest, *apiresource.List[apiresource.HubspotCompanyReview]] {

@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleDCLocationID = "dclo_0191ce9223b21dc31c9ee09b3e"
+const SampleDCLocationID = "dclo_qucvv7xm6trv"
 
 // Identifying details of the customer a DC location belongs to.
 type DCLocationCustomer struct {
@@ -57,7 +57,7 @@ func (*DCLocation) SchemaExample() any {
 // EDI Run
 // ---------------------------------------------------------------------------
 
-const SampleEDIRunID = "edru_016aa43a99df34b744f6e2b878"
+const SampleEDIRunID = "edru_bpgd8fix7eeh"
 
 // A record of a single EDI processing run.
 //
@@ -67,13 +67,13 @@ type EDIRun struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=edi_run"`
-	// Timestamp when the EDI run completed.
+	// Timestamp when the EDI run finished processing.
 	CompletedAt time.Time `json:"completed_at" validate:"required"`
-	// Whether the EDI run succeeded.
+	// Whether the run finished its EDI exchange without errors.
 	HasSucceeded bool `json:"has_succeeded" validate:"required"`
-	// Timestamp when the EDI run was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// Timestamp when the EDI run was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

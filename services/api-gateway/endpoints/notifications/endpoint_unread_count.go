@@ -14,7 +14,9 @@ import (
 // Request for the caller's unread notification tallies.
 type UnreadCountRequest struct{}
 
-// Returns the current user's unread notification counts.
+// Returns the current user's unread tallies for the account they are acting in, for driving a notification badge.
+//
+// The total also counts account announcements the user has not seen, so it can be higher than the notification count alone.
 type UnreadCountEndpoint struct{}
 
 func (e *UnreadCountEndpoint) Materialize() *apiendpoint.APIEndpoint[*UnreadCountRequest, *apiresource.NotificationUnreadCount] {

@@ -15,17 +15,15 @@ import (
 
 // Request to create a service level.
 type CreateServiceLevelRequest struct {
-	// Carrier ID.
+	// The carrier that will offer this service level.
 	CarrierID string `path:"carrier_id" validate:"required"`
 	// Human-readable name for the service level, shown to customers at checkout when the service level is visible.
 	Name string `json:"name" validate:"required,max=255"`
 	// Carrier-specific code identifying this service level (e.g. `fedex_ground`).
 	//
-	// Must be unique among the carrier's service levels.
+	// Must be unique among the carrier's service levels, and is returned as the service level's `service_level_token`.
 	Code string `json:"code" validate:"required,max=255"`
-	// Service level visibility in the customer portal.
-	//
-	// A `visible` service level can be selected by your customers at checkout; a `hidden` one is not offered there. New service levels are visible unless set to `hidden`.
+	// Whether customers can see and select this service level at checkout in the customer portal.
 	CustomerPortalVisibility field.Optional[constants.CustomerPortalVisibility] `json:"customer_portal_visibility,omitzero" default:"visible"`
 	// Whether this becomes the carrier's default service level, pre-selected when the carrier is chosen.
 	//
@@ -44,7 +42,9 @@ func (*CreateServiceLevelRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateServiceLevelRequest)
 }
 
-// Creates a service level for a carrier.
+// Adds a shipping service level to a carrier.
+//
+// Use this for self-managed carriers, or to add a service a connected carrier does not publish. Service levels created here are never removed by a later sync of the carrier's services.
 type CreateServiceLevelEndpoint struct{}
 
 func (e *CreateServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateServiceLevelRequest, *apiresource.ServiceLevel] {

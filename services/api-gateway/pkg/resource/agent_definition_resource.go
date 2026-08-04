@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleAgentDefinitionID = "agdf_01b9ef28feb99e6954201aca63"
+const SampleAgentDefinitionID = "agdf_ah7tkyfxk8jl"
 
 // An AI agent available to the account.
 //
@@ -35,18 +35,22 @@ type AgentDefinition struct {
 	// Human-readable name of the agent.
 	Name string `json:"name" validate:"required"`
 	// URL-friendly identifier for the agent.
+	//
+	// Unique within the account.
 	Slug string `json:"slug" validate:"required"`
 	// Description of what the agent does.
 	Description *string `json:"description"`
-	// Whether the current user can edit this agent definition.
+	// Whether this agent definition can be edited.
 	//
 	// Always `read_only` for `system` definitions.
 	Editability constants.Editability `json:"editability" validate:"required"`
 	// Whether this agent is enabled for the current account.
 	//
-	// Activation is per-account: a `system` agent shared across accounts can be `active` for one account and `inactive` for another. An `inactive` agent does not run.
+	// Activation is per-account: a `system` agent shared across accounts can be `active` for one account and `inactive` for another. An `inactive` agent cannot be triggered.
 	AccountStatus constants.AgentAccountStatus `json:"status" validate:"required"`
 	// Role defining the permissions the agent operates with.
+	//
+	// The agent acts as its own actor, and everything it does is authorized against this role — it can never reach data or actions the role does not grant. An agent with no role cannot execute: its runs fail immediately.
 	Role *Role `json:"role" expandable:"true"`
 	// Agent-level configuration controlling LLM behavior and trigger settings.
 	Config *AgentDefinitionConfig `json:"config" expandable:"true"`

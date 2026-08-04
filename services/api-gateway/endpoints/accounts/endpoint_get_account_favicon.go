@@ -11,13 +11,13 @@ import (
 
 // Request to get a presigned favicon URL.
 type GetAccountFaviconURLRequest struct {
-	// Account ID.
+	// ID of the account whose favicon is being fetched.
 	AccountID string `path:"id" validate:"required"`
 }
 
 // Returns a presigned download URL for the account's customer-portal favicon.
 //
-// The URL expires one hour after it is generated, so fetch the favicon promptly rather than caching it.
+// The URL expires one hour after it is generated, so fetch the favicon promptly rather than caching it. The response carries no URL when the account has never uploaded a favicon or the stored image is no longer available.
 type GetAccountFaviconURLEndpoint struct{}
 
 func (e *GetAccountFaviconURLEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetAccountFaviconURLRequest, *apiresource.AccountFaviconURL] {

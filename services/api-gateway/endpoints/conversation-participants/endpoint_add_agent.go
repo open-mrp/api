@@ -25,7 +25,9 @@ type AddAgentParticipantRequest struct {
 	// - `keyword`: responds whenever a message contains one of its trigger keywords.
 	// - `always`: responds to every human message in the conversation.
 	TriggerPolicy field.Optional[constants.AgentTriggerPolicy] `json:"trigger_policy,omitzero" default:"mention"`
-	// For keyword/mention policies, the keywords (or mention handles) that trigger the agent.
+	// For the keyword and mention policies, the keywords (or mention handles) that trigger the agent.
+	//
+	// Matching is case-insensitive and looks anywhere in the message body: under `keyword` the bare word is matched, under `mention` it must appear as `@keyword`. Replying directly to one of the agent's own messages always reaches it, so an agent left without keywords still answers replies but nothing else.
 	TriggerKeywords []string `json:"trigger_keywords,omitzero"`
 }
 
@@ -40,7 +42,11 @@ func (*AddAgentParticipantRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleAddAgentParticipantRequest)
 }
 
-// Adds (or re-activates) an agent participant in a conversation with a trigger policy.
+// Adds an AI agent to a conversation so it can respond to messages there.
+//
+// Adding an agent that is already a participant is not an error: its trigger policy and keywords are replaced with the ones supplied here, and an agent that had been removed is put back. That makes this endpoint the way to change when an existing agent responds, without removing and re-adding it.
+//
+// In an internal group conversation only an owner or admin can add an agent; in a direct message or a customer-facing case any active participant can.
 type AddAgentParticipantEndpoint struct{}
 
 func (e *AddAgentParticipantEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddAgentParticipantRequest, *apiresource.ConversationParticipant] {

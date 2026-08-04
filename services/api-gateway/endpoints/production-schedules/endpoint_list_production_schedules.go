@@ -15,6 +15,13 @@ import (
 type ListProductionSchedulesRequest struct {
 	apiresource.PaginationRequest
 	// Only return versions in these lifecycle states.
+	//
+	// - `draft`: still editable and committed to nothing.
+	// - `generating`: the solver is still building the version.
+	// - `published`: live, with its first weeks frozen as a commitment to the floor.
+	// - `superseded`: a later version was published over the same horizon and replaced this one.
+	// - `archived`: retired without being replaced.
+	// - `failed`: the solver could not produce a plan.
 	Statuses []constants.ProductionScheduleStatus `query:"statuses"`
 }
 

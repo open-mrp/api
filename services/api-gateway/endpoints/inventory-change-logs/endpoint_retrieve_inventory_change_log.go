@@ -11,7 +11,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// RetrieveInventoryChangeLogRequest is the request to retrieve an inventory change log by ID.
+// Request to retrieve an inventory change log.
 type RetrieveInventoryChangeLogRequest struct {
 	// Inventory change log ID.
 	InventoryChangeLogID string `path:"id" validate:"required"`

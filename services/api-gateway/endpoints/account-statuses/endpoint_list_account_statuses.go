@@ -10,14 +10,14 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListAccountStatusesRequest is the request to list account statuses.
+// Request to list account statuses.
 type ListAccountStatusesRequest struct {
 	apiresource.PaginationRequest
 }
 
 // Returns a paginated list of account statuses.
 //
-// Account statuses are system-provided lookup values shared across all accounts, used to set a customer's status (for example, placing a customer on a credit hold).
+// Account statuses are system-provided lookup values shared across all accounts, used to set a customer's status (for example, placing a customer on a credit hold). The list is fixed — statuses cannot be created, edited, or deleted — so use it to populate a status picker or to resolve a code to its display name.
 type ListAccountStatusesEndpoint struct{}
 
 func (e *ListAccountStatusesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAccountStatusesRequest, *apiresource.List[apiresource.AccountStatus]] {

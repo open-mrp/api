@@ -19,7 +19,7 @@ type UpdateAccountGroupRequest struct {
 	AccountGroupID string `path:"id" validate:"required"`
 	// Display name of the account group.
 	//
-	// Must be unique within your account; maximum 255 characters.
+	// Must be unique within your account.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// Free-form description of the account group.
 	Description field.Clearable[string] `json:"description,omitzero"`
@@ -49,7 +49,9 @@ func (*UpdateAccountGroupRequest) SchemaExample() any {
 
 // Partially updates an account group.
 //
-// Only the provided fields are changed. The account group's `type` cannot be changed after creation.
+// Only the provided fields are changed. The account group's `type` cannot be changed after creation, and renaming the group to a name another group in your account already uses returns a conflict error.
+//
+// A new commission or freight policy takes effect for every account already in the group, not just accounts added afterwards.
 type UpdateAccountGroupEndpoint struct{}
 
 func (e *UpdateAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAccountGroupRequest, *apiresource.AccountGroup] {

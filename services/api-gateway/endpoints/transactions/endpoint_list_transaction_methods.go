@@ -14,7 +14,9 @@ type ListTransactionMethodsRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of transaction methods.
+// Returns the payment methods that can be recorded on a transaction, such as cash, check, and ACH.
+//
+// The set is fixed by the platform and identical for every account, so the results come back in one page; supplying a pagination cursor returns a validation error. Free-text search matches the display name.
 type ListTransactionMethodsEndpoint struct{}
 
 func (e *ListTransactionMethodsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListTransactionMethodsRequest, *apiresource.List[apiresource.TransactionMethod]] {

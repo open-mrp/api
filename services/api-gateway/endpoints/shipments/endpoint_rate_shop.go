@@ -21,17 +21,19 @@ type RateShopRequest struct {
 	ProductLineIDs []string `json:"product_line_ids,omitzero"`
 	// ID of the customer the shipment is for, used to apply the customer's freight policy and default shipping term.
 	//
-	// A freight-exempt customer or a free-freight shipping term returns no options with `exemption_type` set to `freight_exempt`; a flat-rate shipping term replaces carrier rates with the flat rate.
+	// A customer that is freight exempt through its own policy or through one of its groups, or whose shipping term is free freight, returns no options with `exemption_type` set to `freight_exempt`; a flat-rate shipping term replaces carrier rates with the flat rate. Omitting the customer skips all of these rules and returns plain carrier rates.
 	CustomerID field.Optional[string] `json:"customer_id,omitzero"`
 	// Origin address.
 	//
-	// When omitted, the account's configured ship-from origin is used.
+	// When omitted, the account's configured ship-from origin is used, which is how customer portal callers rate shop without knowing the seller's address.
 	FromAddress field.Optional[apirequest.AddressInput] `json:"from_address,omitzero"`
 	// Destination address.
 	ToAddress apirequest.AddressInput `json:"to_address" validate:"required"`
 	// Parcels to rate shop.
 	Parcels []ParcelInput `json:"parcels" validate:"required,min=1"`
 	// Total value of the order, used to evaluate the free-shipping minimum order value on the customer's shipping term.
+	//
+	// Free shipping applies only when the total is strictly above the threshold, and only for the service levels the shipping term allows.
 	OrderTotal field.Optional[float64] `json:"order_total,omitzero"`
 }
 
@@ -79,7 +81,9 @@ func (*RateShopRequest) SchemaExample() any {
 
 // Compares shipping rates across all of the account's carriers and service levels for the given addresses and parcels.
 //
-// Returns options sorted by rate ascending, after applying the account's freight rules: freight-exempt product lines or customers and free-freight shipping terms return no options, a flat-rate shipping term replaces carrier rates with the flat rate, and a met free-shipping minimum order value zeroes the rate on eligible options. Live carrier rates require the Shippo integration; carriers without live rating configured are returned with a rate of `0`.
+// Returns options sorted by rate ascending, after applying the account's freight rules: freight-exempt product lines or customers and free-freight shipping terms return no options, a flat-rate shipping term replaces carrier rates with the flat rate, and a met free-shipping minimum order value zeroes the rate on eligible options.
+//
+// Live carrier rates require the Shippo integration. Carriers that are not linked to a live-rating account are returned at a rate of `0`, while carriers that are linked but whose rates cannot be fetched are left out of the results entirely. Customer portal callers only see carriers and service levels that have been enabled for the portal.
 type RateShopEndpoint struct{}
 
 func (e *RateShopEndpoint) Materialize() *apiendpoint.APIEndpoint[*RateShopRequest, *apiresource.RateShopResult] {

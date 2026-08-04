@@ -13,9 +13,13 @@ import (
 
 // Request to initialize a batch at a scanning station.
 type InitializeBatchRequest struct {
-	// ID of the batch to initialize; the batch must be open and not yet scanned.
+	// ID of the batch to initialize.
+	//
+	// The batch must belong to a production run, still be open, and not have been scanned before.
 	BatchID string `json:"batch_id" validate:"required"`
-	// Scanning station ID.
+	// ID of the scanning station the batch is being scanned at.
+	//
+	// The station must have a production step that produces the batch's item, since that step is what the batch is attached to.
 	ScanningStationID string `json:"scanning_station_id" validate:"required"`
 }
 

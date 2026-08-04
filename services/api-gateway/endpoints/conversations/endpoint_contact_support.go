@@ -16,7 +16,9 @@ import (
 // The customer is derived from the authenticated relation actor.
 type ContactSupportRequest struct{}
 
-// Returns the calling customer's portal support case (`audience=customer`), creating it on first contact.
+// Returns the calling customer's support case with the vendor, opening it on first contact.
+//
+// A customer has exactly one support case, so repeat calls return the same thread rather than opening another. Opening the first case is refused when the vendor has not configured a support route with at least one recipient — check Support Availability before offering the feature. Once the case exists, the vendor's designated support staff are seated in it so the customer's first message reaches someone.
 type ContactSupportEndpoint struct{}
 
 func (e *ContactSupportEndpoint) Materialize() *apiendpoint.APIEndpoint[*ContactSupportRequest, *apiresource.Conversation] {

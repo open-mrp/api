@@ -19,17 +19,21 @@ type ListCustomersRequest struct {
 	CustomerGroupIDs []string `query:"customer_group_ids"`
 	// Filter to customers that belong to any of these pricing groups.
 	PricingGroupIDs []string `query:"pricing_group_ids"`
-	// Filter by default sales rep IDs.
+	// Filter to customers whose default sales rep is one of these account users.
 	SalesRepIDs []string `query:"sales_rep_ids"`
-	// Filter by account status codes.
+	// Filter by the customer's account standing.
 	StatusCodes []constants.AccountStatusCode `query:"status_codes"`
 	// Filter by default shipping term IDs.
 	ShippingTermIDs []string `query:"shipping_term_ids"`
 	// Filter by default payment term IDs.
 	PaymentTermIDs []string `query:"payment_term_ids"`
-	// Filter by commission policy.
+	// Filter by the commission policy set on the customer itself.
+	//
+	// Policies inherited from the customer's type group or price groups are not considered here.
 	CommissionPolicyCodes []constants.CommissionPolicy `query:"commission_status_codes"`
-	// Filter by freight policy.
+	// Filter by the freight policy set on the customer itself.
+	//
+	// Policies inherited from the customer's type group or price groups are not considered here.
 	FreightPolicyCodes []constants.FreightPolicy `query:"freight_status_codes"`
 	// Filter by default carrier IDs.
 	CarrierIDs []string `query:"carrier_ids"`

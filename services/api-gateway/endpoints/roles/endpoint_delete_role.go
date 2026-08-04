@@ -10,15 +10,15 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteRoleRequest is a request to delete a role.
+// Request to delete a role.
 type DeleteRoleRequest struct {
 	// Role ID.
 	RoleID string `path:"id" validate:"required"`
 }
 
-// Deletes a role and its associated permissions.
+// Deletes a role along with the permissions granted through it.
 //
-// Global roles and roles currently assigned to one or more users cannot be deleted.
+// Only roles owned by your account can be deleted; the system-owned roles shared across all accounts cannot. A role that is still assigned to at least one user is rejected, so move those users to another role first.
 type DeleteRoleEndpoint struct{}
 
 func (e *DeleteRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteRoleRequest, *apiresource.EmptyResource] {

@@ -9,15 +9,15 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Request for a user's presigned photo URL.
+// Request for a temporary link to a user's profile photo.
 type GetUserPhotoURLRequest struct {
 	// User ID.
 	UserID string `path:"id" validate:"required"`
 }
 
-// Returns a presigned URL for the user's profile photo.
+// Returns a temporary link that can be used to fetch the user's profile photo image.
 //
-// The URL expires one hour after it is issued.
+// The link expires one hour after it is issued, and no link is returned for a user who has never uploaded a photo. Users may always fetch their own photo; fetching another user's photo requires read access to team users.
 type GetUserPhotoURLEndpoint struct{}
 
 func (e *GetUserPhotoURLEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetUserPhotoURLRequest, *apiresource.UserPhotoURL] {

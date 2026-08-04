@@ -17,6 +17,8 @@ type ListPropertiesRequest struct {
 }
 
 // Returns a paginated list of properties for the target account.
+//
+// Properties come back newest first. The `q` search term is matched against the property name.
 type ListPropertiesEndpoint struct{}
 
 func (e *ListPropertiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPropertiesRequest, *apiresource.List[apiresource.Property]] {

@@ -8,10 +8,12 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleSandboxID = "sbac_01ebd87c707b138806f060b9ae"
+const SampleSandboxID = "sbac_d8ci32xggml9"
 const SampleSandboxName = "Integration Testing"
 
-// Sandbox account for isolated testing.
+// An isolated test account owned by a production account.
+//
+// A sandbox is a full account with its own data, so anything created or changed inside it leaves your production data untouched.
 type Sandbox struct {
 	// Sandbox ID.
 	ID string `json:"id" validate:"required"`

@@ -14,8 +14,12 @@ import (
 // Request to get the remaining quantity available to split from batches.
 type GetRemainingQuantityToSplitRequest struct {
 	// Batch IDs to check remaining quantities for.
+	//
+	// Pass a single ID for a single-part step, or one ID per part for a multi-part step. Each ID is resolved forward through its production flow to the batch that is actually available at the step, so an operator can scan an earlier batch in the chain.
 	BatchIDs []string `json:"batch_ids" validate:"required"`
-	// The production step the split would be performed at; its configuration determines the expected output quantity and unit.
+	// The production step the split would be performed at.
+	//
+	// Its configuration determines the expected output quantity and the unit the remainder is expressed in.
 	ProductionStepID string `json:"production_step_id" validate:"required"`
 }
 
@@ -30,7 +34,7 @@ func (*GetRemainingQuantityToSplitRequest) SchemaExample() any {
 
 // Returns the remaining quantity available to split from the specified batches at a given production step.
 //
-// The remaining quantity is the step's expected output for the source batches minus the quantities already split off into output batches, expressed in the step's produced unit.
+// Use this to cap how much an operator can record on the next split. The remaining quantity is the step's expected output for the source batches minus the quantities already split off into output batches, expressed in the step's produced unit. When a single batch ID is supplied, output already recorded as seconds and waste also counts against the remainder; when several are supplied, only first-quality output does.
 type GetRemainingQuantityToSplitEndpoint struct{}
 
 func (e *GetRemainingQuantityToSplitEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetRemainingQuantityToSplitRequest, *apiresource.Quantity] {

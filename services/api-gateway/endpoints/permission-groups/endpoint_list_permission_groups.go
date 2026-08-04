@@ -17,7 +17,9 @@ type ListPermissionGroupsRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of permission groups with their nested permissions.
+// Lists the permission catalog, organized into groups of related permissions.
+//
+// Each group carries the individual permissions it covers; pair a permission's code with an action (`create`, `read`, `update`, or `delete`) to build the permission strings accepted when creating or updating a role. The catalog is platform-defined and identical for every account.
 type ListPermissionGroupsEndpoint struct{}
 
 func (e *ListPermissionGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPermissionGroupsRequest, *apiresource.List[apiresource.PermissionGroup]] {

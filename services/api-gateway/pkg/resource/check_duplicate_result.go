@@ -5,11 +5,13 @@ import (
 	"github.com/augno/api/shared/constants"
 )
 
-// Result of a duplicate check.
+// The outcome of checking whether a record number is already in use.
 type CheckDuplicateResult struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=check_duplicate_result"`
-	// Whether a record with the given number already exists on the account.
+	// Whether a record with the submitted number already exists.
+	//
+	// Invoice and sales order numbers are matched across the whole account; a customer PO number is matched only against the orders of the customer given in the request, so the same PO number may exist on another customer's orders without being reported here.
 	IsDuplicate bool `json:"is_duplicate" validate:"required"`
 	// Human-readable message describing the duplicate.
 	//

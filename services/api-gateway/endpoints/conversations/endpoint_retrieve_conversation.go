@@ -17,7 +17,9 @@ type RetrieveConversationRequest struct {
 	ConversationID string `path:"id" validate:"required"`
 }
 
-// Returns one conversation (with participants) the caller belongs to.
+// Returns a single conversation the caller participates in.
+//
+// Someone who has left the conversation can still read it back; it comes back marked hidden for them. A team member who opens a customer-facing case they are not yet part of is seated in it as a participant.
 type RetrieveConversationEndpoint struct{}
 
 func (e *RetrieveConversationEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveConversationRequest, *apiresource.Conversation] {

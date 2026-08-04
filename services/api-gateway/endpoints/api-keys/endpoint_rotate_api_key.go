@@ -14,15 +14,17 @@ import (
 
 // Request to rotate an API key.
 type RotateAPIKeyRequest struct {
-	// API key ID to rotate.
+	// ID of the API key to rotate.
+	//
+	// The key must not already be revoked.
 	APIKeyID string `path:"id" validate:"required"`
-	// Expiration timestamp override for the new key.
+	// When the replacement key should expire.
 	//
-	// If omitted, the previous key's expiration is used.
+	// If omitted, the replacement inherits the expiration of the key being rotated.
 	ExpiresAt field.Optional[time.Time] `json:"expires_at,omitzero"`
-	// When to revoke the old key.
+	// When the old key should stop authenticating requests.
 	//
-	// If omitted, the old key is revoked immediately. A future timestamp schedules revocation (keeping the old key valid until then) up to a maximum of 30 days out.
+	// If omitted, the old key is revoked immediately. Set a future timestamp — up to 30 days out — to keep the old key working during a migration window; a timestamp in the past revokes it immediately.
 	RevokeAt field.Optional[time.Time] `json:"revoke_at,omitzero" validate:"omitempty,max_days_ahead=30"`
 }
 
@@ -34,6 +36,8 @@ func (*RotateAPIKeyRequest) SchemaExample() any {
 }
 
 // Rotates an [API key](https://docs.augno.com/api/api-keys) by revoking the existing key and issuing a replacement with the same name, role, and expiration (unless overridden).
+//
+// The replacement is a new key with its own ID; the rotated key keeps its ID and stays in the list, moving to a `revoked` status once its revocation takes effect. Use `revoke_at` to keep the old key working while you roll the new secret out.
 //
 // The secret key is returned once and cannot be retrieved later, so you should store it securely. We provide some [recommendations](https://docs.augno.com/api/managing-api-keys) on how you can manage your API keys.
 type RotateAPIKeyEndpoint struct{}

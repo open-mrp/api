@@ -18,11 +18,16 @@ import (
 type PreviewRegenerateProductionScheduleRequest struct {
 	// ID of the production schedule.
 	ProductionScheduleID string `path:"id" validate:"required"`
-	// Date to plan from. Defaults to the date the version was generated for.
+	// The instant to plan against, which is what stock, demand history and active demand overrides are read as of.
+	//
+	// Defaults to now rather than to the instant the version was first generated, so a plain call answers "what would the solver say today". Because the horizon re-anchors to the week containing this instant, a campaign can appear under a different `week_index` than the one stored on the draft.
 	PlanningAsOf field.Optional[time.Time] `json:"planning_as_of,omitzero"`
-	// Weeks the plan should cover. Defaults to the version's own horizon.
+	// Number of weeks the re-solve should cover, defaulting to the horizon this version already has.
 	HorizonWeeks field.Optional[int32] `json:"horizon_weeks,omitzero" validate:"omitempty,gte=1,lte=104"`
-	// How demand is derived. Defaults to the version's own basis.
+	// How future demand is derived, defaulting to the basis this version was solved with.
+	//
+	// - `trailing_12`: demand is the trailing twelve months of orders.
+	// - `seasonal_ema`: demand is a seasonal exponential moving average, which follows a season arriving early or late rather than flattening it.
 	DemandBasis field.Optional[constants.ScheduleDemandBasis] `json:"demand_basis,omitzero"`
 }
 
@@ -37,9 +42,11 @@ func (*PreviewRegenerateProductionScheduleRequest) SchemaExample() any {
 
 // Returns what regenerating this draft would change, without changing it.
 //
-// Every campaign either plan holds is listed, including the ones both agree on, so the caller can render a full side-by-side rather than a list of surprises. `discarded_manual_count` is what `replace_all` would destroy — a regenerate that silently eats hand-work is abandoned within two cycles, so the destructive mode has to be able to state its cost before it runs.
+// Every campaign either plan holds is listed, including the ones both agree on, so the caller can render a full side-by-side rather than a list of surprises. Only a draft can be previewed, for the same reason only a draft can be regenerated.
 //
-// Planning inputs default to the ones the version was generated with, so a plain preview answers "what would the solver say now" rather than answering a different question with a different horizon.
+// The comparison is run the way a regenerate runs by default — hand-edited campaigns are kept, and the fresh solve plans around them — so they read as unchanged rather than as work the solver wants to take away. `manual_line_count` is how many campaigns on the draft were placed or edited by hand, which is the work a `replace_all` regenerate is putting at risk.
+//
+// The horizon and demand basis default to the ones this version already has, so a plain call changes only how current the plan is, not what question is being asked.
 type PreviewRegenerateProductionScheduleEndpoint struct{}
 
 func (e *PreviewRegenerateProductionScheduleEndpoint) Materialize() *apiendpoint.APIEndpoint[*PreviewRegenerateProductionScheduleRequest, *apiresource.ProductionScheduleRegeneratePreview] {

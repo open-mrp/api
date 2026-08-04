@@ -16,11 +16,13 @@ import (
 type ContinueRunRequest struct {
 	// Agent run ID.
 	AgentRunID string `path:"id" validate:"required"`
-	// User message to send to the agent.
+	// Message to send to the agent as the next turn of the run.
+	//
+	// It accompanies any approval or denial in the same request, so use it to tell the agent how to proceed with what you just allowed or blocked.
 	Message string `json:"message" validate:"required"`
 	// Slugs of tools whose pending calls should be approved.
 	//
-	// When empty, all pending tool calls are approved. Approvals are always one-time: a later call to the same tool pauses for review again.
+	// Approves every call currently pending review for each named tool. Approval is one-time — the next call to the same tool pauses for review again. Tools you do not name are left pending, and the run resumes without them.
 	ApprovedToolSlugs []string `json:"approved_tool_slugs,omitzero"`
 	// Slugs of tools whose pending calls should be denied.
 	//
@@ -44,9 +46,9 @@ func (*ContinueRunRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleContinueRunRequest)
 }
 
-// Resumes a paused agent run with a user message and any tool approvals.
+// Resumes a paused agent run with a user message and any tool review decisions.
 //
-// The run must be in the `awaiting_input` or `awaiting_approval` status.
+// The run must be `awaiting_input` or `awaiting_approval`; resuming it from any other status returns a validation error. It moves back to `running` and continues asynchronously, so poll Retrieve Agent Run to follow it. Each approval and denial is recorded on the matching action and attributed to the caller.
 type ContinueRunEndpoint struct{}
 
 func (e *ContinueRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*ContinueRunRequest, *apiresource.AgentRun] {

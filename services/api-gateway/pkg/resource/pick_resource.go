@@ -8,16 +8,20 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SamplePickID = "pk_016452192feb7952d8393f0105"
+const SamplePickID = "pk_6eilj488bq8d"
 const SamplePickNumber = "PK-001"
 
 // A warehouse picking task for a sales order, tracking the quantities to pull from inventory and pack for shipment.
+//
+// A pick is created automatically when a sales order is issued, with one line for each order line whose product is of type `sale` — service, shipping, tax, credit and return lines are skipped — and nothing picked yet. There is no endpoint that creates a pick directly.
 type Pick struct {
 	// Pick ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=pick"`
 	// Human-readable number that identifies the pick, distinct from the `id`.
+	//
+	// Copied from the sales order's number when the pick is created, and can be renamed with Update Pick.
 	Number string `json:"number" validate:"required"`
 	// The sales order this pick fulfills.
 	SalesOrder *SalesOrder `json:"sales_order" expandable:"true"`
@@ -31,7 +35,7 @@ type Pick struct {
 	Departments *List[Department] `json:"departments" expandable:"true"`
 	// Timestamp when the pick was finished.
 	//
-	// Unset while the pick is still in progress. Set automatically when packing leaves no unpacked lines with a remaining quantity to pick, and cleared when the pick is voided; it can also be set or cleared directly via Update Pick.
+	// Set automatically once every line on the pick has been packed, and cleared whenever picking work reopens — when the pick is voided, when a shipment for the order is deleted, or when the order is reopened or its lines change so quantity is outstanding again. It can also be set or cleared directly with Update Pick.
 	FinishedAt *time.Time `json:"finished_at"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -56,7 +60,7 @@ func (*Pick) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SamplePick)
 }
 
-// PackPickResponse is the result of packing a pick.
+// The result of packing a pick: the pick as it stands after packing, plus the number of the shipment that packing created.
 type PackPickResponse struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=pack_pick_response"`
@@ -78,11 +82,11 @@ func (*PackPickResponse) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SamplePackPickResponse)
 }
 
-// PickShipmentsResponse is the result of getting shipments for a pick.
+// The shipment numbers for the sales order a pick belongs to.
 type PickShipmentsResponse struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=pick_shipments_response"`
-	// Shipment numbers associated with the pick.
+	// Shipment numbers associated with the pick, oldest first.
 	ShipmentNumbers []string `json:"shipment_numbers" validate:"required"`
 	// Total number of matching shipments, ignoring `limit` and `offset`.
 	Count int32 `json:"count" validate:"required"`

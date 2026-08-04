@@ -19,7 +19,9 @@ type ArchiveProductionScheduleRequest struct {
 
 // Archives a schedule version, retiring it without discarding its history.
 //
-// This is how a published version is taken out of use: it stays readable and still backs any attainment already measured against it.
+// Any version that is not already archived can be archived, including a draft that was never published. The version stays readable — its campaigns, policy snapshot and deviation log are kept — and it still backs any attainment already measured against it.
+//
+// Archiving does not supersede anything or promote another version in its place. To take a published version out of use by replacing it, generate and publish a newer one instead.
 type ArchiveProductionScheduleEndpoint struct{}
 
 func (e *ArchiveProductionScheduleEndpoint) Materialize() *apiendpoint.APIEndpoint[*ArchiveProductionScheduleRequest, *apiresource.ProductionSchedule] {

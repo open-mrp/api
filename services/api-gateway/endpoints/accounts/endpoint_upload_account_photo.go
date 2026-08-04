@@ -12,7 +12,7 @@ import (
 
 // Request to upload an account logo.
 type UploadAccountPhotoRequest struct {
-	// Account ID.
+	// ID of the account the logo belongs to.
 	AccountID string `path:"id" validate:"required"`
 	// Raw image bytes.
 	RawBody []byte `rawbody:"true"`

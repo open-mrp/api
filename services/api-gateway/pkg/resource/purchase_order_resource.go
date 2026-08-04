@@ -8,10 +8,10 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SamplePurchaseOrderID = "po_0169aa3a722b081b117ac0e44f"
-const SampleEmailContactID = "ec_01758010d10f5629ce3880a4ab"
+const SamplePurchaseOrderID = "po_3ov2ym1pca8m"
+const SampleEmailContactID = "ec_dmyas2bqcm95"
 const SamplePurchaseOrderNumber = "PO-001"
-const SampleSupplierID = "ac_0177902104bccac5fbb173cd96"
+const SampleSupplierID = "ac_gwy8tfbc074f"
 const SampleSupplierName = "Acme Supplies Inc."
 const SampleSupplierNumber = "SUP-001"
 
@@ -38,7 +38,7 @@ func (*Supplier) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleSupplier)
 }
 
-// A contact that receives email communications for an order.
+// A contact that receives the purchase order email when an order is issued with the `send_email` option.
 type EmailContact struct {
 	// Email contact ID.
 	ID string `json:"id" validate:"required"`
@@ -63,7 +63,7 @@ func (*EmailContact) SchemaExample() any {
 
 // An order placed with a supplier to purchase materials or products.
 //
-// The list endpoint returns this same type as the retrieve endpoint, with the same fields available.
+// The list endpoint returns this same resource as the retrieve endpoint, except that list rows never carry the note or the scheduled date and can only expand the supplier and the lines.
 type PurchaseOrder struct {
 	// Purchase order ID.
 	ID string `json:"id" validate:"required"`
@@ -73,7 +73,7 @@ type PurchaseOrder struct {
 	//
 	// Assigned automatically from a per-account sequence at creation; can be changed via update but must stay unique within the account.
 	Number string `json:"number" validate:"required"`
-	// Order note.
+	// Free-form note recorded on the order.
 	Note *string `json:"note"`
 	// Lifecycle status of the order.
 	//
@@ -89,9 +89,9 @@ type PurchaseOrder struct {
 	AcknowledgmentStatus constants.AcknowledgmentStatus `json:"acknowledgment_status" validate:"required"`
 	// Supplier the order is placed with.
 	Supplier *Supplier `json:"supplier" expandable:"true"`
-	// Billing address.
+	// Address the supplier bills this order to.
 	BillToAddress *Address `json:"bill_to_address" expandable:"true"`
-	// Shipping address.
+	// Address the supplier ships the ordered goods to.
 	ShipToAddress *Address `json:"ship_to_address" expandable:"true"`
 	// Carrier selection and freight billing for this order.
 	Freight *Freight `json:"freight" expandable:"true"`
@@ -101,25 +101,25 @@ type PurchaseOrder struct {
 	ShippingTerm *ShippingTerm `json:"shipping_term" expandable:"true"`
 	// Receiving order used to receive inventory against this purchase order.
 	//
-	// Created automatically when the order is issued; null while the order is an estimate.
+	// Created automatically, with a line per order line, when the order is issued, and deleted again if the order is unissued.
 	ReceivingOrder *ReceivingOrder `json:"receiving_order" expandable:"true"`
 	// Line items on the order.
 	Lines *List[PurchaseOrderLine] `json:"lines" expandable:"true"`
 	// Total number of lines on the order.
 	LineCount int32 `json:"line_count"`
-	// Supplier-side contacts that order communications are sent to.
+	// Contacts that receive the purchase order email when the order is issued with the `send_email` option.
 	Contacts *List[EmailContact] `json:"contacts" expandable:"true"`
 	// When the order was issued to the supplier.
 	//
-	// Null until status reaches `issued`.
+	// Cleared again if the order is unissued back to `estimate`.
 	IssuedAt *time.Time `json:"issued_at"`
-	// When the order was completed.
+	// When the order was closed as fulfilled.
 	//
-	// Null until status reaches `fulfilled`.
+	// Cleared again if the order is re-opened.
 	CompletedAt *time.Time `json:"completed_at"`
-	// Promised or scheduled date for the order, if one has been set.
+	// Date the supplier promised delivery for.
 	//
-	// Set via the `promised_at` request field.
+	// Set through the `promised_at` field on create and update.
 	ScheduledAt *time.Time `json:"scheduled_at"`
 	// Created timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

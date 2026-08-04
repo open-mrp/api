@@ -17,11 +17,11 @@ import (
 type UpdatePurchaseOrderRequest struct {
 	// Purchase order ID.
 	PurchaseOrderID string `path:"id" validate:"required"`
-	// Order note.
+	// Free-form note to record on the order.
 	Note field.Optional[string] `json:"note,omitzero"`
-	// New purchase order number.
+	// New purchase order number, replacing the one assigned at creation.
 	//
-	// Must be unique within the account.
+	// Must be unique within the account; a number already used by another order is rejected.
 	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
 	// Priority level for fulfilling the order (`low`, `normal`, or `high`).
 	PriorityCode field.Optional[string] `json:"priority_code,omitzero" validate:"omitempty,max=255"`
@@ -55,6 +55,8 @@ func (*UpdatePurchaseOrderRequest) SchemaExample() any {
 }
 
 // Partially updates a purchase order.
+//
+// Only the fields sent are changed. Addresses are repointed at existing address records here, unlike create, which builds new addresses from inline fields; the order's lifecycle status is changed through the change-status endpoint instead.
 type UpdatePurchaseOrderEndpoint struct{}
 
 func (e *UpdatePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePurchaseOrderRequest, *apiresource.PurchaseOrder] {

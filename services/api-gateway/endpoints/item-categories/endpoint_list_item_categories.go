@@ -18,7 +18,9 @@ type ListItemCategoriesRequest struct {
 	Type *constants.ItemCategoryType `query:"type"`
 }
 
-// Returns a paginated list of item categories for the current account, including account-specific and global system categories.
+// Returns a paginated list of the item categories available to the current account, newest first.
+//
+// Both the account's own categories and the platform-provided system categories are included. The `q` search term is matched against the category name.
 type ListItemCategoriesEndpoint struct{}
 
 func (e *ListItemCategoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListItemCategoriesRequest, *apiresource.List[apiresource.ItemCategory]] {

@@ -11,12 +11,14 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Request to list product line access records grouped by customer.
+// Request to list product line access records, one per customer.
 type ListCustomerProductLineAccessRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of product line access records grouped by customer.
+// Returns a paginated list of direct product line access records, one per customer.
+//
+// Only customers granted at least one product line directly appear; access inherited through a type group or pricing group is not listed here. The `q` search term is matched against the customer name and customer number.
 type ListCustomerProductLineAccessEndpoint struct{}
 
 func (e *ListCustomerProductLineAccessEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCustomerProductLineAccessRequest, *apiresource.List[apiresource.CustomerProductLineAccess]] {

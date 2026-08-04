@@ -31,7 +31,7 @@ type ListRequestLogsRequest struct {
 	ErrorCodes []apierror.ErrorCode `query:"error_codes"`
 	// Exclude request logs whose API error code is in this set.
 	//
-	// Applied as a negative filter after all other filters. Successful requests (which have no error code) are always kept. The dashboard uses this to hide routine `expired_token` 401s — the noise from short-lived access tokens expiring and clients silently refreshing — while still surfacing genuine auth failures like `invalid_credentials`.
+	// Applied as a negative filter after all other filters. Successful requests (which have no error code) are always kept. The Augno dashboard uses this to hide routine `expired_token` 401s — the noise from short-lived access tokens expiring and clients silently refreshing — while still surfacing genuine auth failures like `invalid_credentials`.
 	ExcludeErrorCodes []apierror.ErrorCode `query:"exclude_error_codes"`
 	// Filter by the _acting_ account: the account the actor belongs to (the log's `account.id`).
 	//
@@ -43,9 +43,11 @@ type ListRequestLogsRequest struct {
 	TargetAccountIDs []string `query:"target_account_ids"`
 	// Filter by the actor identifier.
 	//
-	// Matches the log's `actor.id`: a user ID for `user` actors or an API key ID for `api_key` actors.
+	// Matches the log's `actor.id`: a user ID for `user` actors, an API key ID for `api_key` actors, or an agent ID for `agent` actors.
 	ActorIDs []string `query:"actor_ids"`
 	// Filter by the actor type.
+	//
+	// Requests are recorded for actors of type `user`, `api_key`, and `agent` — the last covering calls an Augno agent made on your account's behalf.
 	ActorTypes []constants.ActorType `query:"actor_types"`
 	// Filter by the _normalized_ route template.
 	//
@@ -61,7 +63,11 @@ type ListRequestLogsRequest struct {
 	IdempotencyKey *string `query:"idempotency_key"`
 }
 
-// Returns a paginated list of request logs for the current account.
+// Returns a paginated list of API request logs, newest first.
+//
+// Results cover every request where your account is either the acting account or the account that was acted upon, so requests a customer or supplier made against your data appear alongside your own. The `q` parameter matches a log ID exactly and otherwise searches the request path, the normalized route, and the error message.
+//
+// Requests to a number of high-traffic endpoints — including these logging endpoints themselves — are recorded but withheld from this listing so they do not drown out the rest of your traffic. They can still be fetched individually by ID.
 type ListRequestLogsEndpoint struct{}
 
 func (e *ListRequestLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRequestLogsRequest, *apiresource.List[apiresource.RequestLog]] {

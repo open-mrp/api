@@ -21,12 +21,12 @@ type CreateScanningStationRequest struct {
 	Name string `json:"name" validate:"required,max=255"`
 	// Free-form notes about the scanning station.
 	Notes field.Optional[string] `json:"notes,omitzero"`
-	// Scanning station type, determining which batch operation the station performs.
+	// Scanning station type, determining which batch operation an operator performs when they scan here.
 	//
-	// - `init_batch`: initializes a new batch.
-	// - `merge_batch`: merges multiple batches into one.
-	// - `move_batch`: moves a batch to another location or step.
-	// - `split_batch`: splits a batch into multiple batches.
+	// - `init_batch`: starts a new batch at the beginning of a production flow.
+	// - `merge_batch`: combines several scanned batches into one.
+	// - `move_batch`: advances a batch through a production step connected to this station.
+	// - `split_batch`: divides a batch into several batches.
 	//
 	// The type cannot be changed after creation.
 	Type constants.ScanningStationType `json:"type" validate:"required"`
@@ -36,6 +36,8 @@ type CreateScanningStationRequest struct {
 	// - `material_check`: a material check is expected before the operation.
 	OperatorRequirement constants.OperatorRequirement `json:"operator_requirement" validate:"required"`
 	// ID of the department this station belongs to.
+	//
+	// Must be a department in your account, and cannot be changed after creation.
 	DepartmentID string `json:"department_id" validate:"required"`
 	// Size of the labels printed at this station, given as width-by-height (for example, `1x1`).
 	LabelSizeCode field.Optional[constants.LabelSizeCode] `json:"label_size,omitzero"`
@@ -66,7 +68,9 @@ func (*CreateScanningStationRequest) SchemaExample() any {
 
 // Creates a scanning station and assigns it to a department.
 //
-// Returns a conflict error if a scanning station with the same name already exists.
+// The new station has no production steps connected to it; use Connect Production Steps to Scanning Station to attach them.
+//
+// Returns a conflict error if a scanning station with the same name already exists, and a not-found error if the department does not exist in your account.
 type CreateScanningStationEndpoint struct{}
 
 func (e *CreateScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateScanningStationRequest, *apiresource.ScanningStation] {

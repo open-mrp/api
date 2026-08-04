@@ -15,11 +15,13 @@ import (
 type RetrievePriorityRequest struct {
 	// Priority ID or code.
 	//
-	// Accepts either a priority ID or one of the codes `low`, `normal`, `high`.
+	// Passing the code, such as `normal`, resolves the same priority as passing its generated ID.
 	PriorityID string `path:"id" validate:"required"`
 }
 
-// Returns a priority by ID or code.
+// Retrieves a single priority level by ID or by code.
+//
+// Looking one up by code is usually more convenient, because other resources refer to a priority by code rather than by ID.
 type RetrievePriorityEndpoint struct{}
 
 func (e *RetrievePriorityEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrievePriorityRequest, *apiresource.Priority] {

@@ -14,11 +14,13 @@ import (
 type RemoveAgentParticipantRequest struct {
 	// Conversation ID.
 	ConversationID string `path:"id" validate:"required"`
-	// The agent participant ID to remove.
+	// The agent's participant record in the conversation (its `id` from the conversation's participants, not the agent's own id).
 	ParticipantID string `path:"pid" validate:"required"`
 }
 
-// Removes an agent participant from a conversation.
+// Removes an AI agent from a conversation so it stops responding there.
+//
+// In an internal group conversation only an owner or admin can remove an agent; in a direct message or a customer-facing case any active participant can. The agent's earlier messages stay in the thread, and it can be added back later.
 type RemoveAgentParticipantEndpoint struct{}
 
 func (e *RemoveAgentParticipantEndpoint) Materialize() *apiendpoint.APIEndpoint[*RemoveAgentParticipantRequest, *apiresource.EmptyResource] {

@@ -21,22 +21,17 @@ type UpdateLocationRequest struct {
 	//
 	// Maximum 255 characters.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Location type code, identifying this location's level in the storage hierarchy.
+	// This location's level in the storage hierarchy.
 	//
-	// - `building`: a building-level location.
-	// - `section`: a section within a building.
-	// - `aisle`: an aisle within a section.
-	// - `rack`: a rack within an aisle.
-	// - `shelf`: a shelf within a rack.
-	// - `bin`: a bin within a shelf.
+	// The levels run from largest to smallest: `building`, `section`, `aisle`, `rack`, `shelf`, `bin`. They are descriptive labels rather than a rule — the parent is not required to be the next level up.
 	TypeCode field.Optional[constants.LocationTypeCode] `json:"type,omitzero"`
-	// ID of the parent location.
+	// The location this one sits under in the storage hierarchy.
 	//
-	// Send `null` to clear the parent and make this a top-level location.
+	// Must be an existing location in your account, and cannot be the location being updated. Send `null` to detach it from its parent and make it a top-level location.
 	ParentID field.Clearable[string] `json:"parent_id,omitzero" validate:"omitempty"`
-	// IDs of locations to set as this location's children.
+	// The locations that sit directly beneath this one.
 	//
-	// When provided, replaces the full set of children: current children not listed are detached, and listed locations are moved from their current parent. Send `null` to detach all children.
+	// This replaces the full set of children: current children that are not listed are detached and become top-level locations, and listed locations are reparented onto this location. Send `null` to detach every child. Omit the field to leave the existing children untouched.
 	ChildIDs field.Clearable[[]string] `json:"child_ids,omitzero"`
 }
 

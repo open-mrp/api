@@ -33,7 +33,9 @@ func (*CreateShipmentLineRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateShipmentLineRequest)
 }
 
-// Creates a line on a shipment.
+// Adds a line to a shipment, recording how much of a sales order line the shipment carries.
+//
+// The line only records what the shipment carries: it does not touch the pick for the order, so the pick's lines keep their existing packed state.
 type CreateShipmentLineEndpoint struct{}
 
 func (e *CreateShipmentLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateShipmentLineRequest, *apiresource.ShipmentLine] {

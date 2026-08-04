@@ -15,7 +15,9 @@ type ListAccountIntegrationsRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of account integrations for the target account.
+// Returns a paginated list of the third-party providers connected to the target account.
+//
+// Stored credentials are never included in the response.
 type ListAccountIntegrationsEndpoint struct{}
 
 func (e *ListAccountIntegrationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAccountIntegrationsRequest, *apiresource.List[apiresource.AccountIntegration]] {

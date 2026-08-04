@@ -61,7 +61,9 @@ func (*UpdatePurchaseOrderLineRequest) SchemaExample() any {
 
 // Partially updates a purchase order line item.
 //
-// If the order has already been issued, the receiving order is updated to reflect the remaining quantity to receive.
+// If the order has already been issued and the line has no open receiving order line, a new one is added for the quantity still outstanding, so an increased order quantity can be received.
+//
+// A line that references an inventory item also links that item's material to the supplier, if it is not linked already, so the material shows up as sourced from them.
 type UpdatePurchaseOrderLineEndpoint struct{}
 
 func (e *UpdatePurchaseOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePurchaseOrderLineRequest, *apiresource.PurchaseOrderLine] {

@@ -12,7 +12,9 @@ import (
 
 // Returns the sandbox API key used to try requests from the API documentation.
 //
-// Reuses the existing documentation key if it is still valid, rotates it if it has expired, and creates one if none exists. If the key was explicitly revoked, returns an error instead of regenerating it.
+// Reuses the existing documentation key if it is still valid, rotates it if it has expired, and creates one if none exists. If the key was explicitly revoked, returns an error instead of regenerating it, on the assumption that the revocation was deliberate.
+//
+// The caller must be signed in as a member of the account they are targeting, and that account must be in sandbox mode; API-key authentication and production accounts are rejected.
 type GetDocAPIKeyEndpoint struct{}
 
 func (e *GetDocAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.CreatedAPIKey] {

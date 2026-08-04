@@ -17,9 +17,9 @@ type DeleteEmailDomainRequest struct {
 	ID string `path:"id" validate:"required"`
 }
 
-// Deregisters a customer-owned domain from the email bridge.
+// Deregisters a domain from the email bridge and removes its sending identity from the mail provider.
 //
-// The domain's SES identity is removed. The domain must have no inboxes bound to it.
+// Delete the domain's inboxes first: while any inbox still exists on it, this returns a conflict error.
 type DeleteEmailDomainEndpoint struct{}
 
 func (e *DeleteEmailDomainEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteEmailDomainRequest, *apiresource.EmptyResource] {

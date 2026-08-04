@@ -16,7 +16,9 @@ type GetPortalRegistrationSessionRequest struct {
 	ID string `path:"id" validate:"required"`
 }
 
-// Returns the authenticated buyer's portal registration session, so the wizard can restore its saved step and form data. Expired or unknown sessions return a 404.
+// Returns a portal registration session with its saved step and form data, so a partially-completed registration can be restored.
+//
+// Only the buyer who started the session can read it. A session that was never finished and has passed its seven-day resume window reads as not found, as does an unknown ID.
 type GetPortalRegistrationSessionEndpoint struct{}
 
 func (e *GetPortalRegistrationSessionEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetPortalRegistrationSessionRequest, *apiresource.PortalRegistrationSession] {

@@ -13,11 +13,13 @@ import (
 
 // Request to remove a per-resource planning override.
 type DeleteResourceSettingRequest struct {
-	// ID of the resource setting.
+	// ID of the resource setting to remove.
 	SettingID string `path:"id" validate:"required"`
 }
 
-// Removes a per-resource planning override, returning that resource to the account defaults.
+// Removes a planning override, returning that resource to the account's own settings.
+//
+// Deleting a machine's override puts it back into the plan alongside the rest of its department; deleting a production step's removes the lead-time offset its work was shifted by. The change takes effect on the next generated version.
 type DeleteResourceSettingEndpoint struct{}
 
 func (e *DeleteResourceSettingEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteResourceSettingRequest, *apiresource.EmptyResource] {

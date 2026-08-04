@@ -2,16 +2,15 @@ package apiresource
 
 import "github.com/augno/api/shared/constants"
 
-// NotificationTargetInput selects what a notification send is aimed at.
-//
-// The target is a polymorphic reference carrying a `type` and the `id` it refers to. Modeling it this way, rather than a single id or a broadcast flag, lets new target kinds be added without a breaking change to the send API.
-//
-// Supported types:
-//   - `account_user`: `id` is an account_user id; delivers a per-user notification.
-//   - `account`: `id` is an account id; broadcasts an announcement to every user in the account.
+// Who a notification is aimed at.
 type NotificationTargetInput struct {
-	// The kind of target.
+	// The kind of recipient being addressed.
+	//
+	// - `account_user`: one member of the account, who receives a personal notification in their feed.
+	// - `account`: every member of the account, who all receive a single shared announcement.
 	Type constants.NotificationTargetType `json:"type" validate:"required"`
-	// The id of the target (an account_user id or an account id, matching `type`).
+	// The id of the recipient, matching `type`: an account user id, or an account id.
+	//
+	// An account target must be the account you are currently acting in — you cannot broadcast into another account.
 	ID string `json:"id" validate:"required"`
 }

@@ -18,7 +18,9 @@ type ListSupplierMaterialsRequest struct {
 	SupplierID string `path:"supplier_id" validate:"required"`
 }
 
-// Returns a paginated list of materials linked to the given supplier.
+// Returns a paginated list of materials linked to the given supplier, newest first.
+//
+// Both active and inactive links are returned. The `q` search term matches the supplier part number and description as well as the underlying item's SKU and description.
 type ListSupplierMaterialsEndpoint struct{}
 
 func (e *ListSupplierMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSupplierMaterialsRequest, *apiresource.List[apiresource.SupplierMaterial]] {

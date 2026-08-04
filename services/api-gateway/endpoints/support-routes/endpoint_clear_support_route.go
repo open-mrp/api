@@ -29,9 +29,11 @@ func (*ClearSupportRouteRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleClearSupportRouteRequest)
 }
 
-// Removes the support route for a scope in the caller's account.
+// Removes the support route configured for one scope in your account.
 //
-// Inbound support then falls back to the account default, or to open lazy-join if no default is configured.
+// Clearing a customer's override sends that customer back to the account-level default. Clearing the default leaves every customer without an override of their own unable to open a new support thread until a route is set again — threads that are already open keep working, and the people seated on them stay seated.
+//
+// Only the exact scope you name is cleared, and clearing a scope that has no route returns a not-found error.
 type ClearSupportRouteEndpoint struct{}
 
 func (e *ClearSupportRouteEndpoint) Materialize() *apiendpoint.APIEndpoint[*ClearSupportRouteRequest, *apiresource.EmptyResource] {

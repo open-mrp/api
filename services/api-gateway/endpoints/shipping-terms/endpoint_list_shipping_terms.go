@@ -16,7 +16,9 @@ type ListShippingTermsRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of shipping terms for the account, including default system shipping terms.
+// Returns a paginated list of shipping terms, newest first.
+//
+// Both the terms your account has created and the system-provided default terms are returned. The `q` parameter matches on the shipping term name.
 type ListShippingTermsEndpoint struct{}
 
 func (e *ListShippingTermsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListShippingTermsRequest, *apiresource.List[apiresource.ShippingTerm]] {

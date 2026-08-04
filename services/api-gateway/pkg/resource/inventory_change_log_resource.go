@@ -8,9 +8,9 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleInventoryChangeLogID = "icl_01424a802cb48a96f94196f4f1"
+const SampleInventoryChangeLogID = "icl_kb4dlhqx4voe"
 
-// InventoryChangeLog is a record of a single change to an item's on-hand inventory.
+// A record of a single change to an item's on-hand inventory.
 //
 // Every inventory movement — production scans, manual user adjustments, and automatic system actions — produces one entry, forming an audit trail of how on-hand quantities changed over time.
 type InventoryChangeLog struct {
@@ -31,11 +31,11 @@ type InventoryChangeLog struct {
 	Quantity *Quantity `json:"quantity" expandable:"true"`
 	// Item affected by this change.
 	Item *Item `json:"item" expandable:"true"`
-	// User who initiated this change, if any.
-	//
-	// Absent for system-driven changes.
+	// The user who made this change.
 	ResponsibleUser *User `json:"responsible_user" expandable:"true"`
-	// Scanning station where this change occurred, if it originated from a scan.
+	// The scanning station this change came from.
+	//
+	// Present only for changes recorded on the production floor, which have an action type of `scan`.
 	ResponsibleScanningStation *ScanningStation `json:"responsible_scanning_station" expandable:"true"`
 	// Timestamp when this change was recorded.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -59,7 +59,7 @@ func (*InventoryChangeLog) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleInventoryChangeLog)
 }
 
-// ExportInventoryChangeLogsResponse is the JSON shape of an inventory change log export.
+// The JSON shape of an inventory change log export.
 //
 // The export endpoint itself returns an Excel file; this structure documents the equivalent JSON payload.
 type ExportInventoryChangeLogsResponse struct {

@@ -17,7 +17,9 @@ type ListBatchesByScanningStationRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of batches for a given scanning station.
+// Returns a paginated list of the batches scanned at a given scanning station, most recently scanned first.
+//
+// Only batches that have actually been scanned at the station appear. Batches created there by a move, merge, or split are attached to the station but never marked as scanned, so they are not listed. The search term matches on item SKU.
 type ListBatchesByScanningStationEndpoint struct{}
 
 func (e *ListBatchesByScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListBatchesByScanningStationRequest, *apiresource.List[apiresource.Batch]] {

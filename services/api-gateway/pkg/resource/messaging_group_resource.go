@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	SampleMessagingGroupID       = "cvgp_018e88072d1320808dc97abc"
-	SampleMessagingGroupMemberID = "cvgppt_018e88072d1320808dc9def"
+	SampleMessagingGroupID       = "cvgp_wjlypugna7s4"
+	SampleMessagingGroupMemberID = "cvgppt_obu4df48t1xx"
 )
 
 // A reusable roster: a named set of members (users and/or agents) that seeds new conversations.
@@ -33,7 +33,9 @@ type MessagingGroup struct {
 
 // A member of a reusable roster: either a user or an agent, represented by its actor.
 type MessagingGroupMember struct {
-	// Membership ID (used to remove the member from the roster).
+	// Membership ID.
+	//
+	// This identifies the member's place on the roster, not the user or agent themselves; it is the id to pass when removing them from the roster.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=messaging_group_member"`

@@ -17,11 +17,17 @@ import (
 type CreateVolumeDiscountTierInput struct {
 	// Display name of the tier.
 	Name string `json:"name" validate:"required,max=255"`
-	// Percentage taken off the price once the threshold is met, as a decimal string (e.g. `5` for 5%).
+	// Fraction of the price taken off once the threshold is met, as a decimal string.
+	//
+	// This is a multiplier, not a whole percent: `0.05` takes 5% off. When an order meets several tiers of the same discount, their reductions compound.
 	DiscountPercentage string `json:"discount_percentage" validate:"required" format:"decimal"`
 	// Minimum ordered quantity at which this tier's discount begins to apply, as a decimal string.
+	//
+	// The quantity compared against the threshold is the total across every line on the order that falls within the discount's scope, converted into one of the discount's units.
 	Threshold string `json:"threshold" validate:"required" format:"decimal"`
-	// Parent tier ID for tier chaining.
+	// ID of another tier that this tier follows.
+	//
+	// Tier IDs are assigned when the discount is created, so a tier created in this same request cannot be referenced here. The link is stored with the tier but does not affect pricing: every tier whose threshold is met applies, regardless of any parent.
 	ParentTierID field.Optional[string] `json:"parent_tier_id,omitzero" validate:"omitempty"`
 }
 
@@ -35,7 +41,7 @@ type CreateVolumeDiscountRequest struct {
 	Tiers []CreateVolumeDiscountTierInput `json:"tiers" validate:"required"`
 	// Account group IDs to scope the discount to specific customer groups.
 	//
-	// When empty, all customers qualify.
+	// When empty, all customers qualify. A discount scoped to a group the buyer belongs to is preferred over an unscoped one when both could apply to the same order line.
 	CustomerGroupIDs []string `json:"customer_group_ids,omitzero"`
 	// Product line IDs to scope the discount to.
 	//
@@ -50,6 +56,8 @@ type CreateVolumeDiscountRequest struct {
 	// When set, an item qualifies only if it has every listed attribute.
 	AttributeIDs []string `json:"attribute_ids,omitzero"`
 	// IDs of the units that ordered quantities are measured in when evaluating tier thresholds.
+	//
+	// Quantities ordered in other units are converted into one of these before being compared against a threshold. Leaving this empty makes the discount inert: the quantity always evaluates to zero, so no threshold above zero is ever reached.
 	UnitIDs []string `json:"unit_ids,omitzero"`
 }
 
@@ -71,6 +79,8 @@ func (*CreateVolumeDiscountRequest) SchemaExample() any {
 // Creates a volume discount with its tiers and scoping associations.
 //
 // The discount name must be unique within the account; creating a discount with an existing name returns a conflict error.
+//
+// Each scoping list narrows the order lines the discount applies to, and an empty list places no restriction on that dimension. Because tier thresholds are compared against quantities converted into `unit_ids`, a discount created without any units never reaches a threshold above zero.
 type CreateVolumeDiscountEndpoint struct{}
 
 func (e *CreateVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateVolumeDiscountRequest, *apiresource.VolumeDiscount] {

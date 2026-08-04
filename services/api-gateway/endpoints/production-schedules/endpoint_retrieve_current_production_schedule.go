@@ -16,7 +16,9 @@ type RetrieveCurrentProductionScheduleRequest struct{}
 
 // Returns the published schedule covering today.
 //
-// Responds 404 when no published version covers today, which is the normal state before the first schedule is published.
+// Responds 404 when no published version covers today, which is the normal state before the first schedule is published. Drafts are never returned here — a plan nobody has committed to is not the current plan.
+//
+// At most one version is ever current: publishing a new one supersedes every published version its horizon overlaps, so republishing mid-horizon takes over immediately.
 type RetrieveCurrentProductionScheduleEndpoint struct{}
 
 func (e *RetrieveCurrentProductionScheduleEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveCurrentProductionScheduleRequest, *apiresource.ProductionSchedule] {

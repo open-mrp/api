@@ -12,7 +12,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// RetrieveSupplierRequest is the request to get a supplier by ID.
+// Request to retrieve a supplier by ID.
 type RetrieveSupplierRequest struct {
 	// Supplier ID.
 	SupplierID string `path:"id" validate:"required"`

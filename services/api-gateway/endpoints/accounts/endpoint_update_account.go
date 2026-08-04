@@ -15,19 +15,19 @@ import (
 
 // Request to partially update an account.
 type UpdateAccountRequest struct {
-	// Account ID.
+	// ID of the account to update.
 	AccountID string `path:"id" validate:"required"`
 	// The account's display name.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Support email address.
+	// The email address customers are directed to for support.
 	SupportEmail field.Optional[string] `json:"support_email,omitzero" validate:"omitempty,custom_email,max=255"`
-	// Support phone number.
+	// The account's public contact phone number.
 	PhoneNumber field.Optional[string] `json:"phone_number,omitzero" validate:"omitempty,max=255"`
 	// URL slug for the account's customer portal.
 	//
-	// The slug is unique across all accounts; updating to one that is already taken returns a conflict error.
+	// The slug is unique across all accounts; updating to one that is already taken returns a conflict error. Changing it changes the portal address customers use, so existing portal links stop resolving.
 	Slug field.Optional[string] `json:"slug,omitzero" validate:"omitempty,min=3,max=255"`
-	// Website URL.
+	// The account's public website.
 	WebsiteURL field.Optional[string] `json:"website_url,omitzero" validate:"omitempty,url,max=2083"`
 	// Facebook handle.
 	FacebookHandle field.Optional[string] `json:"facebook_handle,omitzero" validate:"omitempty,max=255"`
@@ -49,7 +49,7 @@ func (*UpdateAccountRequest) SchemaExample() any {
 
 // Partially updates an account's name, branding, and portal settings.
 //
-// Only the fields provided in the request are changed. You can only update the account you are acting in.
+// Only the fields provided in the request are changed. You can only update the account you are acting in. The logo and favicon are not set here; upload them through their own endpoints.
 type UpdateAccountEndpoint struct{}
 
 func (e *UpdateAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAccountRequest, *apiresource.Account] {

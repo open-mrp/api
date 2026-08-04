@@ -41,6 +41,8 @@ type UpdateSessionDataRequest struct {
 	// Display name for the user.
 	UserName field.Optional[string] `json:"user_name,omitzero" validate:"omitempty,max=255"`
 	// Display name for the account.
+	//
+	// Becomes the name of the account created when the registration completes, and must be set before Complete Registration will succeed.
 	AccountName field.Optional[string] `json:"account_name,omitzero" validate:"omitempty,max=255"`
 	// Billing address line 1.
 	BillingAddressLine1 field.Optional[string] `json:"billing_address_line1,omitzero" validate:"omitempty,max=255"`
@@ -56,7 +58,9 @@ type UpdateSessionDataRequest struct {
 	BillingAddressCountry field.Optional[string] `json:"billing_address_country,omitzero" validate:"omitempty,max=2"`
 }
 
-// Partially updates a registration session's step and form data; omitted fields are left unchanged.
+// Partially updates a registration session's step and form data.
+//
+// Omitted fields are left unchanged, and a session that has already completed can no longer be updated.
 type UpdateSessionEndpoint struct{}
 
 func (e *UpdateSessionEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateSessionRequest, *apiresource.RegistrationSession] {

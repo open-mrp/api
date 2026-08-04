@@ -33,7 +33,9 @@ func (*MuteConversationRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleMuteConversationRequest)
 }
 
-// Mutes a conversation for the calling actor.
+// Mutes a conversation's notifications for the caller only, leaving the other participants unaffected.
+//
+// While muted the caller gets no notification or email for new messages, though the conversation still accumulates an unread count. A direct @mention pierces the mute and still raises a notification.
 type MuteConversationEndpoint struct{}
 
 func (e *MuteConversationEndpoint) Materialize() *apiendpoint.APIEndpoint[*MuteConversationRequest, *apiresource.Conversation] {

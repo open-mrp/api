@@ -24,7 +24,9 @@ type ValidateAddressRequest struct {
 	State string `json:"state" validate:"required"`
 	// Postal or ZIP code.
 	PostalCode string `json:"postal_code" validate:"required"`
-	// Country name or two-letter country code (for example `United States` or `US`).
+	// Two-letter country code, such as `US`.
+	//
+	// A full country name such as `United States` is recognized for a handful of common countries; send the two-letter code for anywhere else.
 	Country string `json:"country" validate:"required"`
 }
 
@@ -42,7 +44,9 @@ func (*ValidateAddressRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleValidateAddressRequest)
 }
 
-// Validates an address and returns whether it is valid, a formatted version, and any validation messages.
+// Checks an address against an address validation service and returns a standardized version of it.
+//
+// Nothing is created or modified. Use this before creating or updating an address to confirm it is complete and to pick up corrected values. When the service can standardize the address, `formatted_address` and `components` carry the corrected values, and `validation_messages` explains anything that was inferred, replaced, or could not be confirmed.
 type ValidateAddressEndpoint struct{}
 
 func (e *ValidateAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*ValidateAddressRequest, *apiresource.ValidatedAddress] {

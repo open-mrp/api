@@ -14,9 +14,13 @@ import (
 
 // A notification recipient to configure for a customer.
 type NotificationRecipientInput struct {
-	// ID of the account user to receive the notifications. Must belong to the customer's account.
+	// ID of the account user to receive the notifications.
+	//
+	// Must be an account user on the customer's own account.
 	AccountUserID string `json:"account_user_id" validate:"required"`
 	// Order notification types this recipient should receive.
+	//
+	// Only `order_acknowledgement` and `invoice` can be set here; any other type is rejected.
 	NotificationTypes []constants.AccountRelationNotificationType `json:"notification_types" validate:"required,min=1"`
 }
 
@@ -24,7 +28,9 @@ type NotificationRecipientInput struct {
 type UpdateNotificationRecipientsRequest struct {
 	// Customer ID.
 	CustomerID string `path:"id" validate:"required"`
-	// The complete desired set of default notification recipients. Any recipient not included is removed.
+	// The complete desired set of default notification recipients.
+	//
+	// Any recipient not included is removed; send an empty list to remove them all.
 	Recipients []NotificationRecipientInput `json:"recipients" validate:"dive"`
 }
 
@@ -46,7 +52,7 @@ func (*UpdateNotificationRecipientsRequest) SchemaExample() any {
 
 // Replaces the account users configured to receive order acknowledgement and invoice emails on this customer's orders.
 //
-// The provided list is the complete set of recipients; any recipient not included is removed. Notification types must be order acknowledgement or invoice.
+// The provided list is the complete set of recipients; any recipient not included is removed. Only the order acknowledgement and invoice notification types can be managed here — purchase-order submission preferences on the same relationship are left untouched, and still appear in the returned recipients.
 type UpdateNotificationRecipientsEndpoint struct{}
 
 func (e *UpdateNotificationRecipientsEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateNotificationRecipientsRequest, *apiresource.List[apiresource.OrderNotificationRecipient]] {

@@ -16,7 +16,9 @@ type AbandonPortalRegistrationSessionRequest struct {
 	ID string `path:"id" validate:"required"`
 }
 
-// Abandons the buyer's in-progress registration session, so it is no longer resumed. A completed session cannot be abandoned.
+// Abandons the buyer's in-progress registration session.
+//
+// The session moves to `abandoned` and is never resumed, so starting a registration with the same seller afterwards begins a fresh one. A registration that has already completed cannot be abandoned.
 type AbandonPortalRegistrationSessionEndpoint struct{}
 
 func (e *AbandonPortalRegistrationSessionEndpoint) Materialize() *apiendpoint.APIEndpoint[*AbandonPortalRegistrationSessionRequest, *apiresource.PortalRegistrationSession] {

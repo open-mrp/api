@@ -12,11 +12,13 @@ import (
 
 // Request to preview the cost of a plan change.
 type GetPlanProrationRequest struct {
-	// Target pricing plan ID.
+	// ID of the plan the account would switch to.
 	PlanID string `path:"id" validate:"required"`
 }
 
-// Returns a proration preview for switching the account to a different pricing plan.
+// Returns what it would cost to switch the account to a different pricing plan.
+//
+// The preview covers the prorated amount due now and the estimated recurring monthly bill afterwards. Nothing is charged and the subscription is left unchanged. Amounts are quoted by Stripe where possible; when Stripe cannot quote the change, Augno estimates them and flags the result with `is_estimate`. A switch to the free plan always previews as zero.
 type GetPlanChangePreviewEndpoint struct{}
 
 func (e *GetPlanChangePreviewEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetPlanProrationRequest, *apiresource.PlanChangeProration] {

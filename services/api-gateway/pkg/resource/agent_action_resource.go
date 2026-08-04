@@ -46,13 +46,15 @@ type AgentAction struct {
 	Input json.RawMessage `json:"input"`
 	// Result returned by the tool, as JSON.
 	//
-	// Recorded when the tool runs, so it is present even while the action is still `pending_review` or `auto_approved`; the shape depends on `tool`, and it is `{}` when the tool returned no output.
+	// The shape depends on `tool`. An action that has not executed — because it is still waiting on a review decision, or was rejected — carries `{}`.
 	Output json.RawMessage `json:"output"`
 	// Error message if the action failed.
 	ErrorMessage *string `json:"error_message"`
 	// The resource this action operated on, when the tool targets a specific entity such as a customer or product.
 	Entity *Entity `json:"entity"`
-	// Whether this action must be reviewed by a human before it can execute.
+	// Whether a person must approve this action before it takes effect.
+	//
+	// Fixed when the action is recorded, from the agent's review setting for that tool; tools that take an externally visible action, such as `send_email`, always require review and cannot be exempted. When review is required the action starts in `pending_review` and stays there until someone approves or rejects it; otherwise it is `auto_approved`.
 	ReviewRequirement constants.ReviewRequirement `json:"review_requirement" validate:"required"`
 	// When a human review decision was recorded for the action.
 	ReviewedAt *time.Time `json:"reviewed_at"`

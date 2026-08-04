@@ -11,7 +11,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Request to get a product type.
+// Request to retrieve a product type.
 type RetrieveProductTypeRequest struct {
 	// Product type ID or code.
 	ProductTypeID string `path:"id" validate:"required"`

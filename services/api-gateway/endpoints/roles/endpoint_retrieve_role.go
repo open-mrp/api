@@ -11,13 +11,15 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// RetrieveRoleRequest is a request to retrieve a role by ID.
+// Request to retrieve a role.
 type RetrieveRoleRequest struct {
 	// Role ID.
 	RoleID string `path:"id" validate:"required"`
 }
 
-// Returns a role by ID, including its permissions.
+// Retrieves a single role by ID.
+//
+// Both the roles your account owns and the system-owned roles shared by every account can be retrieved.
 type RetrieveRoleEndpoint struct{}
 
 func (e *RetrieveRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveRoleRequest, *apiresource.Role] {

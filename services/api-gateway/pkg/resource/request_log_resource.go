@@ -9,7 +9,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleRequestLogID = "rq_01304bffe90e8cce9690cbefd4"
+const SampleRequestLogID = "rq_0lhl3kkhme40"
 const SampleRequestLogHost = "https://api.augno.com"
 const SampleRequestLogPath = "/v1/core/sandboxes"
 const SampleRequestLogQueryJSON = `{"limit":10}`
@@ -19,6 +19,8 @@ const SampleRequestLogUserAgent = "Mozilla/5.0"
 const SampleRequestLogResponseBody = `{"object":"list","page_info":{"next_page_url":null,"previous_page_url":null,"has_next_page":false,"has_prev_page":false},"data":[]}`
 
 // A log of a single API request, capturing its route, outcome, latency, and actor.
+//
+// Logs are written after the response has been sent, so a new entry may take a moment to become readable.
 type RequestLog struct {
 	// Request log ID.
 	ID string `json:"id" validate:"required"`
@@ -36,15 +38,21 @@ type RequestLog struct {
 	//
 	// For example `/v1/sales/customers/{id}` is the normalized route for the request path `/v1/sales/customers/ac_...`. Falls back to the raw path when the request did not match a registered route.
 	NormalizedRoute string `json:"normalized_route" validate:"required"`
-	// Query parameters.
+	// Query-string parameters the request was made with, as a JSON object.
 	QueryJSON json.RawMessage `json:"query_params" expandable:"true"`
 	// HTTP response status code (e.g. `200`, `404`).
 	StatusCode int32 `json:"status_code" validate:"required"`
 	// Request latency in microseconds.
+	//
+	// Measured at the API edge, from the moment the request was received until the response was written, so it excludes network time between your client and Augno.
 	LatencyUs int64 `json:"latency_us" validate:"required"`
-	// API version used.
+	// The API version the request was served with.
+	//
+	// Taken from the `Augno-Version` header the caller sent; requests rejected for omitting that header record no version.
 	APIVersion *string `json:"api_version"`
-	// Client IP address.
+	// Client IP address the request came from.
+	//
+	// Not recorded for requests an Augno agent made on your behalf, since those originate inside Augno's own network.
 	ClientIP *string `json:"client_ip"`
 	// User agent.
 	UserAgent *string `json:"user_agent"`
@@ -52,15 +60,17 @@ type RequestLog struct {
 	Referrer *string `json:"referrer"`
 	// Machine-readable API error code.
 	//
-	// Populated only for failed requests.
+	// Matches the `code` of the error response the caller received. Populated only for failed requests.
 	ErrorCode *string `json:"error_code"`
 	// Human-readable error message.
 	//
-	// Populated only for failed requests.
+	// The same message the caller received. Populated only for failed requests.
 	ErrorMessage *string `json:"error_message"`
-	// When the request occurred.
+	// When the request was received.
+	//
+	// Request logs are ordered and date-filtered by this timestamp rather than by `created_at`.
 	OccurredAt time.Time `json:"occurred_at" validate:"required"`
-	// When the log entry was created.
+	// When the log entry was written.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Account _targeted_ by the request: the account the request acted upon.
 	//
@@ -70,9 +80,13 @@ type RequestLog struct {
 	Actor *Actor `json:"actor" expandable:"true"`
 	// User-provided idempotency key.
 	IdempotencyKey *string `json:"idempotency_key"`
-	// Request body.
+	// The JSON body the request was sent with.
+	//
+	// Sensitive values such as passwords, tokens, and secrets are redacted before the body is stored. Bodies larger than 256 KB are not stored in full; a small marker object with `_truncated` set to `true` is stored in their place.
 	RequestBodyJSON json.RawMessage `json:"request_body" expandable:"true"`
-	// Response body.
+	// The JSON body Augno responded with.
+	//
+	// Sensitive values such as generated API key secrets are redacted before the body is stored. Bodies larger than 256 KB are not stored in full; a small marker object with `_truncated` set to `true` is stored in their place.
 	ResponseBodyJSON json.RawMessage `json:"response_body" expandable:"true"`
 }
 

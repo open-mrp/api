@@ -15,17 +15,19 @@ import (
 // Request to list parts.
 type ListPartsRequest struct {
 	apiresource.PaginationRequest
-	// Filter by category IDs.
+	// Only return parts belonging to any of these item categories.
 	CategoryIDs []string `query:"category_ids"`
-	// Filter by attribute IDs.
+	// Only return parts carrying at least one of these attributes.
 	AttributeIDs []string `query:"attribute_ids"`
-	// Filter parts created on or after this date.
+	// Only return parts created at or after this time.
 	StartDate *time.Time `query:"start_date"`
-	// Filter parts created on or before this date.
+	// Only return parts created at or before this time.
 	EndDate *time.Time `query:"end_date"`
 }
 
-// Returns a paginated list of parts for the current account.
+// Returns a paginated list of parts for the current account, most recently created first.
+//
+// The `q` search term matches the part's SKU or description. When it is supplied, the parts whose SKU matches it most closely are returned first, ordered by creation time within each level of match.
 type ListPartsEndpoint struct{}
 
 func (e *ListPartsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPartsRequest, *apiresource.List[apiresource.Part]] {

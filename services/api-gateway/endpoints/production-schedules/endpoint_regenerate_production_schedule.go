@@ -18,13 +18,23 @@ import (
 type RegenerateProductionScheduleRequest struct {
 	// ID of the production schedule.
 	ProductionScheduleID string `path:"id" validate:"required"`
-	// What happens to hand-edited campaigns. Defaults to keeping them.
+	// What happens to the campaigns someone placed or edited by hand.
+	//
+	// - `preserve_manual`: hand-edited campaigns are kept, and the fresh solve plans around them — their stock and machine time are facts the rest of the plan responds to.
+	// - `replace_all`: hand edits are discarded and the fresh solve is taken whole.
+	//
+	// Omitting this keeps hand edits, because the alternative destroys work silently.
 	MergeMode field.Optional[constants.ScheduleMergeMode] `json:"merge_mode,omitzero"`
-	// Date to plan from. Defaults to the date the version was generated for.
+	// The instant to plan against, which is what stock, demand history and active demand overrides are read as of.
+	//
+	// Defaults to now rather than to the instant the version was first generated, so a plain call answers "what would the solver say today". Because the horizon re-anchors to the week containing this instant, a kept campaign keeps the calendar week it was planned in but can end up under a different `week_index`.
 	PlanningAsOf field.Optional[time.Time] `json:"planning_as_of,omitzero"`
-	// Weeks the plan should cover. Defaults to the version's own horizon.
+	// Number of weeks the re-solve should cover, defaulting to the horizon this version already has.
 	HorizonWeeks field.Optional[int32] `json:"horizon_weeks,omitzero" validate:"omitempty,gte=1,lte=104"`
-	// How demand is derived. Defaults to the version's own basis.
+	// How future demand is derived, defaulting to the basis this version was solved with.
+	//
+	// - `trailing_12`: demand is the trailing twelve months of orders.
+	// - `seasonal_ema`: demand is a seasonal exponential moving average, which follows a season arriving early or late rather than flattening it.
 	DemandBasis field.Optional[constants.ScheduleDemandBasis] `json:"demand_basis,omitzero"`
 }
 
@@ -43,7 +53,9 @@ func (*RegenerateProductionScheduleRequest) SchemaExample() any {
 //
 // The version number is kept deliberately: minting a new version for every re-solve would fill the list with drafts nobody asked for and make the version number meaningless as a count of the plans actually considered.
 //
-// `preserve_manual` keeps every hand-edited campaign and replaces the rest. `replace_all` takes the fresh solve whole, and each hand edit it destroys is written to the deviation log first — "where did my change go" has to stay answerable. Call `preview-regenerate` first to see the cost as a number.
+// Every hand edit a `replace_all` destroys is written to the deviation log before it goes, so "where did my change go" stays answerable. Call `preview-regenerate` first to see what a re-solve would change.
+//
+// Aside from the hand edits a `preserve_manual` run keeps, the version's campaigns, policy snapshot, derived department work, solver diagnostics and settings snapshot are all replaced with the fresh solve's, so the plan can still explain itself afterwards.
 type RegenerateProductionScheduleEndpoint struct{}
 
 func (e *RegenerateProductionScheduleEndpoint) Materialize() *apiendpoint.APIEndpoint[*RegenerateProductionScheduleRequest, *apiresource.ProductionSchedule] {

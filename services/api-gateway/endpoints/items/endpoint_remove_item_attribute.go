@@ -11,15 +11,17 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// RemoveItemAttributeRequest is the request to remove an attribute from an item.
+// Request to remove an attribute from an item.
 type RemoveItemAttributeRequest struct {
 	// Item ID.
 	ItemID string `path:"id" validate:"required"`
-	// Attribute ID.
+	// ID of the attribute to unassign from the item.
 	AttributeID string `path:"attribute_id" validate:"required"`
 }
 
-// Removes an attribute from an item.
+// Unassigns an attribute from an item and returns the updated item.
+//
+// Returns a not-found error if the attribute is not currently assigned to the item, so unlike adding an attribute, this call is not safe to repeat blindly. The attribute itself is not deleted and stays available for other items.
 type RemoveItemAttributeEndpoint struct{}
 
 func (e *RemoveItemAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*RemoveItemAttributeRequest, *apiresource.Item] {

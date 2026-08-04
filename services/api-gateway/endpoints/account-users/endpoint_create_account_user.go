@@ -19,7 +19,7 @@ type CreateAccountUserRequest struct {
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 	// User email address.
 	//
-	// Either `email` or `username` must be provided. If a user with this email already exists, that user is added to the account instead of a new user being created.
+	// Either `email` or `username` must be provided. If a user with this email already exists, that user is added to the account instead of a new user being created, and the request fails with a conflict if they are already an active member of it.
 	Email field.Optional[string] `json:"email,omitzero" validate:"omitempty,custom_email,max=255"`
 	// Unique username.
 	//
@@ -31,9 +31,11 @@ type CreateAccountUserRequest struct {
 	Password field.Optional[string] `json:"password,omitzero" validate:"omitempty,password" sensitive:"true"` // #nosec G117 -- API request field for user password input
 	// ID of the role to assign to the user.
 	//
-	// Ignored for scanning station users, which are always assigned the scanner role.
+	// The role you supply can be overridden: users added to a customer account always receive the shared customer role so their portal capabilities stay permission-driven, and scanning station users in any other account receive the scanner role. Supplying a role whose type is `sales_rep` normalizes to the account's canonical sales-rep role.
 	RoleID field.Optional[string] `json:"role_id,omitzero"`
 	// ID of the department to assign to the user.
+	//
+	// The department must already exist in the account you are acting in.
 	DepartmentID field.Optional[string] `json:"department_id,omitzero"`
 	// Notification preference toggles for the new user.
 	//
@@ -63,9 +65,11 @@ func (*CreateAccountUserRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateAccountUserRequest)
 }
 
-// Adds a user to the target account.
+// Adds a user to the account you are acting in.
 //
-// If no user with the given email or username exists, a new user is created and sent a welcome email containing a generated password. If a matching user already exists, that user is added to the account instead.
+// If no user with the given email or username exists, a new user is created; a user created with an email address is sent a welcome email containing a generated password, unless they are being added to a supplier account, since suppliers have no portal to sign in to. If a matching user already exists, that user is added to the account instead, and a user you previously removed is restored rather than duplicated. Adding a user to your own account consumes a seat and is rejected once your plan's seat limit is reached.
+//
+// When you add a user to a customer or supplier account that has its own Augno subscription, the membership is created disabled and has to be activated before that user can sign in.
 type CreateAccountUserEndpoint struct{}
 
 func (e *CreateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAccountUserRequest, *apiresource.AccountUser] {

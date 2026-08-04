@@ -16,7 +16,7 @@ type ListAccountTransactionsRequest struct {
 	apiresource.PaginationRequest
 	// Customer account ID.
 	CustomerAccountID string `path:"account_id" validate:"required"`
-	// Filter by allocation status: `allocated` (fully allocated against invoices) or `unallocated` (has an open balance).
+	// Filter by allocation status: `allocated` (marked fully applied to invoices) or `unallocated` (still counted as an open credit).
 	Status *string `query:"status"`
 	// Filter by transaction type code (`payment`, `credit_memo`, `adjustment`, or `rebate`).
 	Type *string `query:"type"`
@@ -26,7 +26,9 @@ type ListAccountTransactionsRequest struct {
 	IncludeChildAccounts *bool `query:"include_child_accounts"`
 }
 
-// Returns a paginated list of transactions for a customer account, optionally including child account transactions.
+// Returns a paginated list of the transactions recorded against one customer account, newest first.
+//
+// Transactions recorded against that customer's child accounts are included by default. Free-text search matches the transaction number and note.
 type ListAccountTransactionsEndpoint struct{}
 
 func (e *ListAccountTransactionsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAccountTransactionsRequest, *apiresource.List[apiresource.TransactionDetail]] {

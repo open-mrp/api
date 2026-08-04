@@ -12,6 +12,8 @@ import (
 )
 
 // Dismisses a notification, removing it from the active feed.
+//
+// The notification is not deleted: it can still be retrieved by ID and listed with the `dismissed` status filter. Dismissing an already-dismissed notification keeps the original dismissal time.
 type MarkDismissedEndpoint struct{}
 
 func (e *MarkDismissedEndpoint) Materialize() *apiendpoint.APIEndpoint[*MarkNotificationRequest, *apiresource.Notification] {

@@ -31,7 +31,7 @@ type Actor struct {
 	//
 	// Only populated for `user` actors.
 	AvatarURL *string `json:"avatar_url"`
-	// Assigned role.
+	// The role the actor holds in the account, which determines what it is permitted to do.
 	Role *Role `json:"role" expandable:"true"`
 }
 

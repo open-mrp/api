@@ -8,10 +8,12 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleAccountIntegrationID = "acig_0177772eae113431f64d473124"
+const SampleAccountIntegrationID = "acig_5ilahyezrs63"
 const SampleAccountIntegrationName = "My Stripe Integration"
 
 // Third-party integration connected to an account.
+//
+// An account can have at most one integration per provider. The credentials supplied when the integration was connected are encrypted at rest and are never returned by the API.
 type AccountIntegration struct {
 	// Account integration ID.
 	ID string `json:"id" validate:"required"`
@@ -72,7 +74,7 @@ type StripeStatus struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=stripe_status"`
 	// Whether a Stripe integration is configured.
 	//
-	// `connected` if the account has a Stripe integration on file, regardless of whether the integration is currently active.
+	// `connected` if the account has a Stripe integration on file, regardless of whether the integration is currently active. The stored keys are not checked against Stripe, so `connected` does not guarantee that payments will succeed.
 	Status constants.StripeConnectionStatus `json:"status" validate:"required"`
 }
 

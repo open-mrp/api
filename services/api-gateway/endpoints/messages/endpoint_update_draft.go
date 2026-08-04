@@ -15,11 +15,13 @@ import (
 
 // Request to edit a still-open customer-reply draft message.
 type UpdateDraftRequest struct {
-	// Message ID.
+	// The id of the draft to edit.
 	MessageID string `path:"id" validate:"required"`
-	// The revised reply body.
+	// The revised reply body, replacing what the draft said before.
 	Body string `json:"body" validate:"required"`
-	// The revised email subject, for the email channel.
+	// The revised subject line for a draft that will be sent by email.
+	//
+	// Leaving it out keeps the draft's current subject.
 	Subject field.Optional[string] `json:"subject,omitzero"`
 }
 
@@ -35,7 +37,9 @@ func (*UpdateDraftRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateDraftRequest)
 }
 
-// Edits a still-open customer-reply draft.
+// Revises a reply draft before it is sent to the customer.
+//
+// Only a draft that is still awaiting approval can be edited; once it has been approved, rejected, or superseded the request fails. Nothing reaches the customer until the draft is approved.
 type UpdateDraftEndpoint struct{}
 
 func (e *UpdateDraftEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateDraftRequest, *apiresource.Message] {

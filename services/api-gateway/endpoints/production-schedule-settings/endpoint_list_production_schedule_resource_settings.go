@@ -14,9 +14,11 @@ import (
 // Request to list per-resource planning overrides.
 type ListResourceSettingsRequest struct{}
 
-// Returns the per-machine, per-department and per-step planning overrides.
+// Returns every per-machine, per-department and per-step override of the account's planning assumptions.
 //
-// This is where machines are marked as the planning constraint, and where a department or step declares how many weeks after the constraint its work starts.
+// An override exists only for a resource that has been given one: this is where a machine is taken out of the plan, and where a production step declares how many weeks its work starts after the step that feeds it. Anything absent from this list is planned on the account settings alone.
+//
+// The account's full set of overrides is returned at once — there are no filters and nothing to page through.
 type ListResourceSettingsEndpoint struct{}
 
 func (e *ListResourceSettingsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListResourceSettingsRequest, *apiresource.List[apiresource.ProductionScheduleResourceSetting]] {

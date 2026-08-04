@@ -24,7 +24,9 @@ func (*RevokeRefreshTokenRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleRevokeRefreshTokenRequest)
 }
 
-// Revokes a refresh token.
+// Signs the current session out by revoking its refresh token.
+//
+// The auth cookies are cleared and the refresh token can no longer be exchanged for access tokens. Other sessions belonging to the user are unaffected, and any access token already issued stays valid until it expires.
 type RevokeRefreshTokenEndpoint struct{}
 
 func (e *RevokeRefreshTokenEndpoint) Materialize() *apiendpoint.APIEndpoint[*RevokeRefreshTokenRequest, *apiresource.EmptyResource] {

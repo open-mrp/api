@@ -32,9 +32,11 @@ func (*CreateRegistrationSessionRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateRegistrationSessionRequest)
 }
 
-// Starts a self-serve registration session and sends a verification email.
+// Starts a self-serve registration session and emails a verification link to the registrant.
 //
-// If an active session already exists for the email, the existing session's ID is returned instead of creating a new one.
+// If a session started for the same email within the last seven days is still in progress, its ID is returned instead of a new one, its plan is switched to `plan_code`, and the verification email is sent again.
+//
+// If the email already belongs to a user, the message sent directs them to sign in rather than carrying a verification link, since an existing account cannot be registered again.
 type CreateSessionEndpoint struct{}
 
 func (e *CreateSessionEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateRegistrationSessionRequest, *apiresource.CreateSessionResponse] {

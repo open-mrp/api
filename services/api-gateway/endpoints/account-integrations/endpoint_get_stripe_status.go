@@ -12,7 +12,9 @@ import (
 // Request to check Stripe integration status.
 type GetStripeStatusRequest struct{}
 
-// Returns whether the target account has a Stripe integration configured.
+// Reports whether the target account has a Stripe integration configured, so a checkout flow can tell up front whether card payments are available.
+//
+// The account is reported as connected whenever Stripe credentials are on file, even if the integration has been deactivated, and the stored keys are not verified against Stripe.
 type GetStripeStatusEndpoint struct{}
 
 func (e *GetStripeStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetStripeStatusRequest, *apiresource.StripeStatus] {

@@ -36,7 +36,7 @@ func (*UpdateReceivingOrderLineRequest) SchemaExample() any {
 
 // Updates the received quantity on a receiving order line.
 //
-// Use this to record the quantity actually received — for example a partial delivery — before stocking the order.
+// Use this to record the quantity that actually arrived — a partial delivery, for example — before stocking the order. Nothing enters inventory until the order is stocked.
 type UpdateReceivingOrderLineEndpoint struct{}
 
 func (e *UpdateReceivingOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateReceivingOrderLineRequest, *apiresource.ReceivingOrderLine] {

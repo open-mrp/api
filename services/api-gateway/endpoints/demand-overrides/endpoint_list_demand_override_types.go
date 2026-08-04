@@ -15,6 +15,8 @@ import (
 type ListDemandOverrideTypesRequest struct{}
 
 // Returns the demand override types, which describe how an override's value adjusts the forecast.
+//
+// The taxonomy is platform-provided and identical for every account; each type's `code` is a value accepted as an override's `adjustment`.
 type ListDemandOverrideTypesEndpoint struct{}
 
 func (e *ListDemandOverrideTypesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListDemandOverrideTypesRequest, *apiresource.List[apiresource.DemandOverrideType]] {

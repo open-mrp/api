@@ -17,6 +17,8 @@ type ListDCLocationsRequest struct {
 }
 
 // Returns a paginated list of DC locations for the target account.
+//
+// Locations are ordered by creation time, newest first. The `q` search term matches the location text and the name of the customer the location belongs to.
 type ListDCLocationsEndpoint struct{}
 
 func (e *ListDCLocationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListDCLocationsRequest, *apiresource.List[apiresource.DCLocation]] {

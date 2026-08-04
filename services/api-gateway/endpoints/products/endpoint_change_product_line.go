@@ -11,7 +11,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ChangeProductProductLineRequest is the request to change a product's product line.
+// Request to move a product to a different product line.
 type ChangeProductProductLineRequest struct {
 	// Product ID.
 	ProductID string `path:"id" validate:"required"`
@@ -19,7 +19,9 @@ type ChangeProductProductLineRequest struct {
 	ProductLineID string `path:"product_line_id" validate:"required"`
 }
 
-// Changes the product line assignment for a product.
+// Moves a product to a different product line.
+//
+// The target product line must be one your account owns or a shared system line; anything else fails as not found. Because customer accounts are granted access to whole product lines, moving a product changes which buyers can see and order it in the customer portal, and which default commission and freight policies apply to it.
 type ChangeProductProductLineEndpoint struct{}
 
 func (e *ChangeProductProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*ChangeProductProductLineRequest, *apiresource.Product] {

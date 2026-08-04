@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SamplePurchaseOrderLineID = "poln_01466ec5a2737c7b871e2a756f"
+const SamplePurchaseOrderLineID = "poln_lechc7ak8sp9"
 
 // A single line item on a purchase order.
 type PurchaseOrderLine struct {
@@ -16,7 +16,9 @@ type PurchaseOrderLine struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=purchase_order_line"`
-	// Position of this line within the order, starting at 1.
+	// Sequence number of this line within the order, starting at 1.
+	//
+	// Assigned automatically as one past the highest number currently on the order, so deleting a line can leave a gap in the numbering.
 	LineItemNumber int32 `json:"line_item_number" validate:"required"`
 	// SKU of the ordered product, copied onto the line at order time.
 	ProductSKU string `json:"product_sku" validate:"required"`
@@ -26,7 +28,9 @@ type PurchaseOrderLine struct {
 	Item *Item `json:"item"`
 	// Quantity ordered from the supplier.
 	QuantityOrdered *Quantity `json:"quantity_ordered" validate:"required"`
-	// Quantity received against this line so far.
+	// Quantity booked against this line on the order's receiving order.
+	//
+	// Rolled up from the receiving order lines linked to this line, so it stays at zero until the order is issued and receiving lines are created for it.
 	QuantityReceived *Quantity `json:"quantity_received"`
 	// Agreed purchase price per unit for this line.
 	UnitPrice *Rate `json:"unit_price" validate:"required"`

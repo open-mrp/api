@@ -19,7 +19,7 @@ type DeletePortalDomainRequest struct {
 
 // Disconnects the custom domain from the account's customer portal.
 //
-// The domain is detached from the serving infrastructure and immediately stops serving the portal.
+// The domain is detached from the serving infrastructure and immediately stops serving the portal; buyers must go back to the account's default slug-based portal address. Because an account may only hold one custom domain, this is how you free it up to connect a different one. The DNS records you published can then be removed.
 type DeletePortalDomainEndpoint struct{}
 
 func (e *DeletePortalDomainEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeletePortalDomainRequest, *apiresource.EmptyResource] {

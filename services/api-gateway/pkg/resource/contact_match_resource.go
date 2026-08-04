@@ -7,9 +7,11 @@ import (
 
 // A contact found by email on an account you have a relationship with — one of your customers, your suppliers, or your own account.
 //
-// The same email can be a contact on many accounts across the platform; only accounts you relate to are returned. The matched person is available through `account_user` (and the shared profile through `account_user.user`), and the account they belong to through `account`.
+// The same email can be a contact on many accounts across the platform; only accounts you relate to are returned.
+//
+// Only active people are matched — someone who has been disabled or removed on an account never produces a match for that account.
 type ContactMatch struct {
-	// Resource ID.
+	// Contact match ID.
 	//
 	// This is the matched account user's ID, so the same value also appears as `account_user.id`.
 	ID string `json:"id" validate:"required"`
@@ -17,9 +19,9 @@ type ContactMatch struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=contact_match"`
 	// How you relate to the account this contact belongs to.
 	//
-	// - `customer` — the account is one of your customers.
-	// - `supplier` — the account is one of your suppliers.
-	// - `self` — the account is your own.
+	// - `customer`: the account is one of your customers.
+	// - `supplier`: the account is one of your suppliers.
+	// - `self`: the account is your own.
 	Relationship constants.ContactRelationship `json:"relationship" validate:"required"`
 	// The email address that was matched.
 	Email string `json:"email" validate:"required"`

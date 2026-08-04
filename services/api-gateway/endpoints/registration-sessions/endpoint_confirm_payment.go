@@ -16,7 +16,7 @@ type ConfirmPaymentRequest struct {
 	SessionID string `json:"-" path:"session_id" validate:"required"`
 	// ID of the Stripe Setup Intent to verify.
 	//
-	// Must be the Setup Intent created for this session by **Setup Registration Billing**, and its status must be `succeeded`.
+	// Must be the Setup Intent most recently created for this session by Setup Registration Billing, and its status must be `succeeded`.
 	SetupIntentID string `json:"setup_intent_id" validate:"required"`
 }
 
@@ -29,6 +29,8 @@ func (*ConfirmPaymentRequest) SchemaExample() any {
 }
 
 // Verifies that a Stripe Setup Intent succeeded and marks the registration session's payment as completed.
+//
+// A registration on a paid plan cannot be completed until this succeeds. Confirming a session whose payment is already recorded returns success without re-checking Stripe.
 type ConfirmPaymentEndpoint struct{}
 
 func (e *ConfirmPaymentEndpoint) Materialize() *apiendpoint.APIEndpoint[*ConfirmPaymentRequest, *apiresource.ConfirmPaymentResponse] {

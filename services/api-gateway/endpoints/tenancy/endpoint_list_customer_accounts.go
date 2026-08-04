@@ -10,16 +10,18 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Request to list customer accounts accessible to the authenticated user under a vendor account.
+// Request to list customer accounts accessible to the authenticated user under a seller account.
 type ListCustomerAccountsRequest struct {
-	// ID of the vendor account whose customer accounts to list.
+	// ID of the seller account whose customers to list.
 	VendorAccountID string `path:"vendor_account_id" validate:"required"`
 	apiresource.PaginationRequest
 }
 
 // TODO: stop returning CustomerAccountSummary; return the full CustomerAccount apiresource and use proper includes values to control expansion.
 
-// Returns a paginated list of customer accounts accessible to the authenticated user under the specified vendor account.
+// Returns the customer accounts of the given seller account that the authenticated user belongs to.
+//
+// This is how a buyer with access to more than one of a seller's customer accounts chooses which one to act as. Only accounts where the user's membership is still active are returned. The paging and search parameters are ignored: every match comes back in a single page.
 type ListCustomerAccountsEndpoint struct{}
 
 func (e *ListCustomerAccountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCustomerAccountsRequest, *apiresource.List[apiresource.CustomerAccountSummary]] {

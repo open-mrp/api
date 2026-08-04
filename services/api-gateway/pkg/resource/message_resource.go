@@ -9,7 +9,9 @@ import (
 type MessageResource struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=message"`
-	// Human-readable message.
+	// Plain-language summary of what the operation did.
+	//
+	// This text is meant for display only. Its wording can change at any time, so do not parse it or branch on its contents.
 	Message string `json:"message" validate:"required"`
 }
 

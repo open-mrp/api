@@ -19,7 +19,9 @@ type PublishProductionScheduleRequest struct {
 
 // Publishes a draft schedule, freezing its first weeks.
 //
-// Publishing is what makes a plan a commitment: the frozen weeks' lines are marked frozen, the frozen line count and quantity are captured onto the version, and any published version covering the same horizon is superseded rather than rewritten. After this, changes inside the frozen window require a reason and are recorded as deviations.
+// Publishing is what makes a plan a commitment: the frozen weeks' lines are marked frozen, the frozen line count and quantity are captured onto the version, and any published version whose horizon overlaps this one's is superseded rather than rewritten. After this, a change inside the frozen window has to state a reason.
+//
+// Only a draft can be published. How many weeks freeze comes from the account's frozen-weeks setting as it stood when the version was generated, and a version generated with zero frozen weeks publishes without committing to anything.
 //
 // The frozen counts are snapshotted here and never recomputed, so adherence keeps the denominator it was committed to.
 type PublishProductionScheduleEndpoint struct{}

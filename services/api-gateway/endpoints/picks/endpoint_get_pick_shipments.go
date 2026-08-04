@@ -10,7 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetPickShipmentsRequest is the request to get shipments for a pick.
+// Request to list the shipment numbers for a pick.
 type GetPickShipmentsRequest struct {
 	// Pick ID.
 	PickID string `path:"id" validate:"required"`
@@ -22,9 +22,9 @@ type GetPickShipmentsRequest struct {
 	Offset *int32 `query:"offset"`
 }
 
-// Returns the shipment numbers associated with a pick.
+// Returns the shipment numbers associated with a pick, oldest first.
 //
-// Shipments are matched through the pick's sales order, so the list covers every shipment created for that order.
+// Shipments are matched through the pick's sales order, so the list covers every shipment created for that order — each partial pack of the pick adds another one. Only the numbers are returned; retrieve the shipment to get its full detail.
 type GetPickShipmentsEndpoint struct{}
 
 func (e *GetPickShipmentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetPickShipmentsRequest, *apiresource.PickShipmentsResponse] {

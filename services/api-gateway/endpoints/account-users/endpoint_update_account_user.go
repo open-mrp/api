@@ -15,7 +15,7 @@ import (
 
 // Request to partially update an account user.
 type UpdateAccountUserRequest struct {
-	// Account user ID.
+	// ID of the account user to update.
 	AccountUserID string `path:"id" validate:"required"`
 	// User display name.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
@@ -33,7 +33,7 @@ type UpdateAccountUserRequest struct {
 	RoleID field.Clearable[string] `json:"role_id,omitzero" validate:"omitempty"`
 	// ID of the department to assign to the user.
 	//
-	// Set to `null` to clear the department.
+	// Set to `null` to clear the department. The department must already exist in the account.
 	DepartmentID field.Clearable[string] `json:"department_id,omitzero" validate:"omitempty"`
 	// Notification preference toggles to apply.
 	//
@@ -63,7 +63,7 @@ func (*UpdateAccountUserRequest) SchemaExample() any {
 
 // Partially updates an account user.
 //
-// Omitted fields are left unchanged. Profile fields (`name`, `email`, `username`) update the underlying user, which is shared across every account the user belongs to.
+// Omitted fields are left unchanged. Profile fields (`name`, `email`, `username`) update the underlying user, which is shared across every account the user belongs to, so the change is visible everywhere that person works.
 type UpdateAccountUserEndpoint struct{}
 
 func (e *UpdateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAccountUserRequest, *apiresource.AccountUser] {

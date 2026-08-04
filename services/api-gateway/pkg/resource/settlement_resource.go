@@ -8,8 +8,8 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleSettlementID = "sl_014f3f9af18ff1c8ded3205149"
-const SampleSettlementSummaryID = "sl_01b853556dc1a635122ebbb761"
+const SampleSettlementID = "sl_2k5juz0yf5a7"
+const SampleSettlementSummaryID = "sl_a21jaxz7ehs1"
 
 // A batch of transaction allocations applying customer payments and credits to invoices.
 //
@@ -23,7 +23,7 @@ type Settlement struct {
 	//
 	// Generated automatically from a per-account sequence at creation; it can be changed later but must remain unique within the account.
 	Number string `json:"number" validate:"required"`
-	// Note attached to this settlement.
+	// Free-form note attached to this settlement.
 	Note *string `json:"note"`
 	// The account user responsible for this settlement.
 	ResponsibleUser *AccountUser `json:"responsible_user" expandable:"true"`
@@ -58,6 +58,8 @@ func (*Settlement) SchemaExample() any {
 // A condensed settlement shape returned by List Settlements.
 //
 // Replaces the full allocation list with aggregate totals per transaction type, plus the invoice numbers and customer names the allocations touch.
+//
+// When the list is filtered by transaction or invoice, every aggregate here — the allocation count, the totals, the invoice numbers, and the customer names — covers only the allocations that matched the filter, not every allocation in the settlement.
 type SettlementSummary struct {
 	// Settlement ID.
 	ID string `json:"id" validate:"required"`
@@ -75,9 +77,9 @@ type SettlementSummary struct {
 	TotalAdjustments *string `json:"total_adjustments"`
 	// Total amount allocated from `credit_memo` transactions, as a decimal string.
 	TotalCredits *string `json:"total_credits"`
-	// Invoice numbers included in this settlement.
+	// Numbers of the invoices this settlement's allocations were applied to, without duplicates.
 	InvoiceNumbers []string `json:"invoice_numbers"`
-	// Customer names included in this settlement.
+	// Names of the customers billed by those invoices, without duplicates.
 	CustomerNames []string `json:"customer_names"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -110,9 +112,9 @@ type TransactionAllocation struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=transaction_allocation"`
-	// Allocated amount.
+	// The part of the transaction's amount applied to the invoice, in US dollars.
 	Amount *Quantity `json:"amount" validate:"required"`
-	// Note attached to this allocation.
+	// Free-form note attached to this allocation, separate from any note on the underlying transaction.
 	Note *string `json:"note"`
 	// Transaction whose amount is being applied to the invoice.
 	Transaction *TransactionDetail `json:"transaction" expandable:"true"`

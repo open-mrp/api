@@ -8,9 +8,9 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleProductionScheduleID = "pnsc_0192a4c17b3e4f8a91c2d0"
-const SampleProductionScheduleLineID = "pnscln_0192a4c17b3e4f8a91c2"
-const SampleProductionScheduleItemPolicyID = "pnscitpc_0192a4c17b3e4f8a"
+const SampleProductionScheduleID = "pnsc_m4zt3z8g8src"
+const SampleProductionScheduleLineID = "pnscln_l28dutdpl81r"
+const SampleProductionScheduleItemPolicyID = "pnscitpc_xbmyu4qgfew5"
 
 // The inventory policy computed for one item.
 type SchedulePolicy struct {
@@ -30,7 +30,7 @@ type SchedulePolicy struct {
 	SetupCost float64 `json:"setup_cost"`
 	// Annual cost of holding one unit.
 	HoldingCost float64 `json:"holding_cost"`
-	// Economic order quantity.
+	// Economic order quantity: the campaign size that balances the cost of a changeover against the cost of holding what it produces.
 	EOQUnits float64 `json:"eoq_units"`
 	// Observed or default lead time at the constraint.
 	ConstraintLeadTimeWeeks float64 `json:"constraint_lead_time_weeks"`
@@ -55,6 +55,10 @@ type SchedulePolicy struct {
 	// Weeks of demand the current stock covers.
 	WeeksOfCover float64 `json:"weeks_of_cover"`
 	// ABC class by share of constraint run hours.
+	//
+	// - `a`: consumes the largest share of constraint capacity.
+	// - `b`: moderate constraint consumption.
+	// - `c`: consumes little constraint capacity.
 	ABCClass *constants.ABCClass `json:"abc_class"`
 	// Constraint hours this item's annual demand consumes.
 	AnnualRunHours float64 `json:"annual_run_hours"`
@@ -80,7 +84,7 @@ type ScheduleCampaign struct {
 
 // An item's projected stock position across the horizon.
 type ScheduleProjection struct {
-	// The item.
+	// The item the projection is for.
 	Item *Entity `json:"item" validate:"required"`
 	// Projected stock at the end of each week of the horizon.
 	OnHandByWeek []float64 `json:"on_hand_by_week"`
@@ -99,6 +103,10 @@ type ScheduleAppliedOverride struct {
 	// Demand after the override.
 	After float64 `json:"after"`
 	// How the override was expressed.
+	//
+	// - `absolute`: the override replaced the forecast for the month outright.
+	// - `delta_units`: the override was added to the forecast.
+	// - `delta_percent`: the override scaled the forecast.
 	Adjustment constants.DemandOverrideAdjustment `json:"adjustment"`
 	// Why the override exists.
 	Reason *constants.DemandOverrideReason `json:"reason"`
@@ -110,7 +118,9 @@ type ScheduleDiagnostics struct {
 	EOQCappedSKUs []string `json:"eoq_capped_skus"`
 	// Items that cannot fit even a single lot into a machine-week and are therefore never scheduled.
 	UnschedulableSKUs []string `json:"unschedulable_skus"`
-	// Items below their reorder point that never won a slot in the horizon. This is the signal that the plant is short of capacity.
+	// Items below their reorder point that never won a slot in the horizon.
+	//
+	// This is the signal that the plant is short of capacity.
 	CapacityStarvedSKUs []string `json:"capacity_starved_skus"`
 	// Items with no measured run rate, which cannot be scheduled because their machine time is unknown.
 	ItemsWithoutRunRate []string `json:"items_without_run_rate"`
@@ -118,11 +128,17 @@ type ScheduleDiagnostics struct {
 	ExcludedItemCount int32 `json:"excluded_item_count"`
 	// Machines the constraint department contributed to this solve.
 	ConstraintMachineCount int32 `json:"constraint_machine_count"`
-	// Batches found on those machines in the demand window. Zero means nothing has been scanned there, which is why a plan can be empty even with machines configured.
+	// Batches found on those machines in the demand window.
+	//
+	// Zero means nothing has been scanned there, which is why a plan can be empty even with machines configured.
 	MeasuredBatchCount int32 `json:"measured_batch_count"`
-	// Machines in the constraint department with no production step. Their campaigns derive no downstream department work.
+	// Machines in the constraint department with no production step.
+	//
+	// Their campaigns derive no downstream department work.
 	MachinesWithoutStep int32 `json:"machines_without_step"`
-	// Calibrated changeover minutes per additional input.
+	// Minutes of changeover the model adds for each new input a product transition introduces.
+	//
+	// Calibrated from measured production against `average_inputs_added`, so the modelled changeover lands on the time the floor actually reports rather than on a fixed allowance.
 	ChangeoverSlopeMinutes float64 `json:"changeover_slope_minutes"`
 	// Average inputs a product transition introduces, measured from history.
 	AverageInputsAdded float64 `json:"average_inputs_added"`
@@ -152,8 +168,7 @@ var (
 	sampleScheduleSKU      = "MZ-GREIGE-CREW"
 	sampleScheduleStepName = "Knitting"
 	samplePlannedUnitName  = "Pair"
-	// The echelon position at each horizon week end: the week-0 campaign lands, stock
-	// drains at 100/week until it crosses the reorder point, then a second campaign lands.
+	// The echelon position at each horizon week end: the week-0 campaign lands, stock drains at 100/week until it crosses the reorder point, then a second campaign lands.
 	sampleScheduleProjectedOnHand = []float64{2070, 1970, 1870, 1770, 1670, 1570, 1470, 1370, 1270, 1170, 1070, 970, 1590}
 )
 
@@ -231,17 +246,26 @@ func (*ProductionSchedulePreview) SchemaExample() any {
 
 // A saved production schedule.
 //
-// Versions are immutable history: generating again creates a new version, and publishing supersedes the previous one rather than editing it, because attainment is measured against whichever version was live at the time.
+// A published version is a record rather than a document that keeps being edited: generating again creates a new version, and publishing supersedes the previous one rather than changing it, because attainment is measured against whichever version was live at the time.
 type ProductionSchedule struct {
 	// Schedule ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=production_schedule"`
 	// Sequential version number within the account.
+	//
+	// Regenerating a draft re-solves it in place and keeps its number; only generating a new plan takes the next one.
 	Version int32 `json:"version" validate:"required"`
 	// Where this version is in its lifecycle.
+	//
+	// - `draft`: still editable and commits to nothing.
+	// - `generating`: a scheduled solve is still building this version.
+	// - `published`: live, with its leading weeks frozen as a commitment to the floor.
+	// - `superseded`: a later version was published over an overlapping horizon.
+	// - `archived`: retired without being replaced.
+	// - `failed`: the solver could not produce a plan; `error_message` says why.
 	Status constants.ProductionScheduleStatus `json:"status" validate:"required"`
-	// Optional label for the version.
+	// Label for the version, such as the planning cycle it was generated for.
 	Name *string `json:"name"`
 	// The instant the plan was calculated against.
 	PlanningAsOf time.Time `json:"planning_as_of_at" validate:"required"`
@@ -252,12 +276,20 @@ type ProductionSchedule struct {
 	// Length of the horizon in weeks.
 	HorizonWeeks int32 `json:"horizon_weeks" validate:"required"`
 	// How many leading weeks freeze on publish.
+	//
+	// Publishing freezes every campaign that starts inside the window; changing one afterwards requires a reason and is recorded in the deviation log.
 	FrozenWeeks int32 `json:"frozen_weeks"`
-	// Last instant covered by the frozen window, set when the version is published.
+	// The last day the frozen window covers, set when the version is published.
 	FrozenThroughDate *time.Time `json:"frozen_through_at"`
 	// Which demand basis produced the plan.
+	//
+	// - `trailing_12`: demand is taken from the trailing twelve months of orders.
+	// - `seasonal_ema`: demand is a seasonal exponential moving average, which follows a season arriving earlier or later than usual.
 	DemandBasis constants.ScheduleDemandBasis `json:"demand_basis" validate:"required"`
 	// What triggered the generation.
+	//
+	// - `manual`: someone asked for this version.
+	// - `scheduled`: the account's generation cadence produced it on its own.
 	GenerationSource constants.ScheduleGenerationSource `json:"generation_source" validate:"required"`
 	// Version of the solver that produced the plan.
 	SolverVersion string `json:"solver_version" validate:"required"`
@@ -267,7 +299,9 @@ type ProductionSchedule struct {
 	Diagnostics ScheduleDiagnostics `json:"diagnostics"`
 	// Why generation failed, when it did.
 	ErrorMessage *string `json:"error_message"`
-	// Number of lines that were frozen at publish. Captured once and never recomputed, because frozen-week adherence measures against what was committed to.
+	// Number of lines that were frozen at publish.
+	//
+	// Captured once and never recomputed, because frozen-week adherence measures against what was committed to.
 	FrozenLineCount int32 `json:"frozen_line_count"`
 	// Total quantity frozen at publish.
 	FrozenPlannedQuantity float64 `json:"frozen_planned_quantity"`
@@ -278,6 +312,8 @@ type ProductionSchedule struct {
 	// When this version was published.
 	PublishedAt *time.Time `json:"published_at"`
 	// The version that replaced this one.
+	//
+	// Set automatically when a later version is published over an overlapping horizon.
 	SupersededBy *Entity `json:"superseded_by"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -370,18 +406,24 @@ type ProductionScheduleLine struct {
 	// Projected stock after the campaign lands and the week's demand is drawn down.
 	ProjectedOnHandAfter float64 `json:"projected_on_hand_after"`
 	// Where the line is in its lifecycle.
+	//
+	// A campaign becomes `released` when its week is issued to the floor as a production run, and goes back to `planned` if that run is deleted.
 	Status constants.ProductionScheduleLineStatus `json:"status" validate:"required"`
 	// Whether the solver or a person created the line.
+	//
+	// Editing a solver-placed campaign turns it `manual`, and a regenerate that preserves hand work keeps exactly the campaigns marked that way.
 	Source constants.ScheduleLineSource `json:"source" validate:"required"`
-	// Why the campaign was scheduled.
+	// Why the campaign was placed or last changed by hand.
+	//
+	// Only hand changes record a reason, and a change that touches a frozen week has to supply one.
 	Reason *constants.ScheduleChangeReason `json:"reason"`
-	// Whether the line is inside the frozen window and can no longer be changed without recording a deviation.
+	// Whether the line is inside the frozen window, where changing it requires a reason for the deviation log.
 	FreezeStatus constants.ScheduleFreezeStatus `json:"freeze_status" validate:"required"`
-	// The production run created from this line.
+	// The production run this campaign's week was released as.
+	//
+	// One run carries the whole week, so every campaign released alongside this one points at the same run.
 	ProductionRun *Entity `json:"production_run"`
 	// Batches this campaign issued to the floor when its week was released.
-	//
-	// Zero until the week is released.
 	ReleasedBatchCount int64 `json:"released_batch_count"`
 	// Batches of this campaign the floor has scanned.
 	ScannedBatchCount int64 `json:"scanned_batch_count"`
@@ -468,7 +510,7 @@ type ProductionScheduleItemPolicy struct {
 	SetupCost float64 `json:"setup_cost"`
 	// Annual cost of holding one unit.
 	HoldingCost float64 `json:"holding_cost"`
-	// Economic order quantity.
+	// Economic order quantity: the campaign size that balances the cost of a changeover against the cost of holding what it produces.
 	EOQUnits float64 `json:"eoq_units"`
 	// Observed or default lead time at the constraint.
 	ConstraintLeadTimeWeeks float64 `json:"constraint_lead_time_weeks"`
@@ -486,9 +528,13 @@ type ProductionScheduleItemPolicy struct {
 	ReorderPoint float64 `json:"reorder_point"`
 	// Ceiling on how far ahead this item is built.
 	OrderUpTo float64 `json:"order_up_to"`
-	// Stock at the constraint plus everything downstream of it. This is what the build decision is made against — stock already finished still counts against building more.
+	// Stock at the constraint plus everything downstream of it.
+	//
+	// This is what the build decision is made against — stock already finished still counts against building more.
 	OnHandEchelon float64 `json:"on_hand_echelon"`
-	// Stock sitting at the constraint stage on its own, which the echelon figure cannot be decomposed back into once summed.
+	// Stock sitting at the constraint stage on its own.
+	//
+	// Kept alongside the echelon total because that total cannot be decomposed back into its stages once summed.
 	OnHandGreige float64 `json:"on_hand_greige"`
 	// What the constraint stage holds on average: its buffer, plus half a campaign as one lands and drains.
 	AverageGreigeInventory float64 `json:"average_greige_inventory"`
@@ -496,13 +542,22 @@ type ProductionScheduleItemPolicy struct {
 	MaxGreigeInventory float64 `json:"max_greige_inventory"`
 	// Weeks of demand the current stock covers.
 	WeeksOfCover float64 `json:"weeks_of_cover"`
-	// The echelon position at the end of each horizon week, after that week's campaigns land and its demand is drawn down. A run of weeks with no campaign is stock draining toward `reorder_point`; this is what makes that visible rather than looking like the solver did nothing.
+	// The echelon position at the end of each horizon week, after that week's campaigns land and its demand is drawn down.
+	//
+	// A run of weeks with no campaign is stock draining toward `reorder_point`; this is what makes that visible rather than looking like the solver did nothing.
 	ProjectedOnHand []float64 `json:"projected_on_hand"`
 	// Constraint hours this item's annual demand consumes.
 	AnnualRunHours float64 `json:"annual_run_hours"`
 	// ABC class by share of constraint run hours.
+	//
+	// - `a`: consumes the largest share of constraint capacity.
+	// - `b`: moderate constraint consumption.
+	// - `c`: consumes little constraint capacity.
 	ABCClass *constants.ABCClass `json:"abc_class"`
-	// Limits the solver hit while sizing this item's campaigns. Empty when the policy was applied as calculated.
+	// Limits the solver hit while sizing this item's campaigns, empty when the policy was applied as calculated.
+	//
+	// - `eoq_capped`: the economic lot size did not fit one machine-week and was cut back to what does, so campaigns run shorter and more often than the cost calculation alone would ask for.
+	// - `capacity_starved`: the item was already below its trigger point and never won a slot in the horizon, so the plan does not replenish it.
 	Constraints []constants.SchedulePolicyConstraint `json:"constraints"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -554,8 +609,8 @@ func (*ProductionScheduleItemPolicy) SchemaExample() any {
 
 var sampleABCClassA = constants.ABCClassA
 
-const SampleProductionScheduleDeviationID = "pnscdw_0192c8e49d5a6b0c13e4"
-const SampleScheduleDeviationTypeID = "pnscdwtp_01seedqtychg0"
+const SampleProductionScheduleDeviationID = "pnscdw_i8t5f51qxket"
+const SampleScheduleDeviationTypeID = "pnscdwtp_rn4exnxfywn5"
 
 // A kind of hand change to a plan.
 type ScheduleDeviationType struct {
@@ -590,7 +645,7 @@ func (*ScheduleDeviationType) SchemaExample() any {
 //
 // The log is append-only: it is what frozen-week adherence is measured from, and a plan edited back into shape has to stay distinguishable from one that was right the first time. `before` and `after` are full snapshots of the line, so a deviation stays readable after the line it describes is deleted.
 //
-// `is_frozen_week` is recorded when the change is made, from the freeze window as it stood at that moment. It is never re-derived, so a later publish cannot retroactively reclassify a past edit.
+// `freeze_status` is recorded when the change is made, from the freeze window as it stood at that moment. It is never re-derived, so a later publish cannot retroactively reclassify a past edit.
 type ProductionScheduleDeviation struct {
 	// Deviation ID.
 	ID string `json:"id" validate:"required"`
@@ -598,9 +653,13 @@ type ProductionScheduleDeviation struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=production_schedule_deviation"`
 	// The schedule version the change was made to.
 	ProductionSchedule *Entity `json:"production_schedule" validate:"required"`
-	// The line that was changed. Null for a line that was removed.
+	// The line that was changed.
+	//
+	// A removal leaves no line to point at, so `before` is the only record of what was there.
 	Line *Entity `json:"line"`
 	// What kind of change this was.
+	//
+	// Derived from the change itself rather than supplied by the person making it. An edit that both moves a campaign to another machine and changes its quantity is recorded as the machine change, because that is what a planner has to react to first.
 	DeviationType constants.ScheduleDeviationType `json:"deviation_type" validate:"required"`
 	// Whether the change fell inside the frozen window when it was made.
 	FreezeStatus constants.ScheduleFreezeStatus `json:"freeze_status" validate:"required"`
@@ -618,7 +677,18 @@ type ProductionScheduleDeviation struct {
 	DeltaQuantity float64 `json:"delta_quantity"`
 	// Signed change in planned run hours.
 	DeltaRunHours float64 `json:"delta_run_hours"`
-	// Why the change was made. Required for changes inside a frozen week.
+	// Why the change was made.
+	//
+	// A change inside a frozen week has to supply one; outside it a reason is left to the planner.
+	//
+	// - `machine_down`: the machine the campaign was on stopped running.
+	// - `material_shortage`: the material the campaign needs did not arrive.
+	// - `rush_order`: demand that could not wait for the next plan.
+	// - `quality_hold`: the work was stopped over a quality problem.
+	// - `over_run`: the floor produced more than the plan asked for.
+	// - `under_run`: the floor produced less than the plan asked for.
+	// - `capacity_change`: the available machine time changed, such as a shutdown or an added shift.
+	// - `other`: something outside the list, which should be spelled out in `reason_note`.
 	Reason *constants.ScheduleChangeReason `json:"reason"`
 	// Free-form explanation of the change.
 	ReasonNote *string `json:"reason_note"`
@@ -658,7 +728,7 @@ func (*ProductionScheduleDeviation) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleProductionScheduleDeviation)
 }
 
-const SampleProductionScheduleDerivedLineID = "pnscdl_0192d7f5ae6b7c1d24f5"
+const SampleProductionScheduleDerivedLineID = "pnscdl_z9ri1nidq75s"
 
 // Downstream department work implied by a constraint campaign.
 //
@@ -692,7 +762,9 @@ type ProductionScheduleDerivedLine struct {
 	ExplosionDepth int32 `json:"explosion_depth"`
 	// Weeks after the constraint campaign this work starts.
 	OffsetWeeks int32 `json:"offset_weeks"`
-	// Progress of the derived work.
+	// State of the derived work.
+	//
+	// Derived rows are discarded and rebuilt from the constraint plan every time the version is solved, and are only ever written as `planned`, so they report what the plan implies rather than what the floor has done.
 	Status constants.ProductionScheduleLineStatus `json:"status" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -729,6 +801,11 @@ func (*ProductionScheduleDerivedLine) SchemaExample() any {
 // One campaign as the current plan and a fresh solve each see it.
 type ScheduleDiffLine struct {
 	// What the regenerate would do to this campaign.
+	//
+	// - `added`: the fresh solve wants a campaign the current plan does not have.
+	// - `removed`: the current plan holds a campaign the fresh solve does not want.
+	// - `changed`: both hold the campaign, in different quantities.
+	// - `unchanged`: both agree on it.
 	Change constants.ScheduleDiffChange `json:"change" validate:"required"`
 	// The item the campaign produces.
 	Item *Entity `json:"item" validate:"required"`
@@ -738,9 +815,13 @@ type ScheduleDiffLine struct {
 	Machine *Entity `json:"machine"`
 	// Zero-based horizon week.
 	WeekIndex int32 `json:"week_index"`
-	// Units the current plan asks for. Zero when the campaign is being added.
+	// Units the current plan asks for.
+	//
+	// Zero when the campaign is being added.
 	CurrentQuantity float64 `json:"current_quantity"`
-	// Units the fresh solve asks for. Zero when the campaign is being removed.
+	// Units the fresh solve asks for.
+	//
+	// Zero when the campaign is being removed.
 	ProposedQuantity float64 `json:"proposed_quantity"`
 	// Whether the current campaign was created or edited by a person.
 	CurrentIsManual bool `json:"current_is_manual"`
@@ -757,6 +838,8 @@ type ProductionScheduleRegeneratePreview struct {
 	// Which solver produced the proposal.
 	SolverVersion string `json:"solver_version" validate:"required"`
 	// The instant the fresh solve planned from.
+	//
+	// Unless the caller names an instant, a regenerate plans from now rather than replaying the one the draft was first generated against, so demand overrides added since then are taken into account and the horizon re-anchors to today.
 	PlanningAsOf time.Time `json:"planning_as_of_at" validate:"required"`
 	// Every campaign either plan holds, including the ones both agree on.
 	Lines *List[ScheduleDiffLine] `json:"lines"`
@@ -818,7 +901,7 @@ func (*ProductionScheduleRegeneratePreview) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleProductionScheduleRegeneratePreview)
 }
 
-const SampleProductionScheduleFinishedPolicyID = "pnscfipc_0192e8a6c14d70b3"
+const SampleProductionScheduleFinishedPolicyID = "pnscfipc_zqj2r338xv68"
 
 // One finished SKU's own inventory target, snapshotted onto a schedule version.
 //
@@ -846,7 +929,9 @@ type ProductionScheduleFinishedPolicy struct {
 	AnnualDemand float64 `json:"annual_demand"`
 	// This SKU's own weekly demand.
 	WeeklyDemand float64 `json:"weekly_demand"`
-	// This SKU's own weekly demand variability. The constraint buffer pools these as the root of the sum of squares; these targets use them one at a time.
+	// This SKU's own weekly demand variability.
+	//
+	// The constraint buffer pools these as the root of the sum of squares; these targets use them one at a time.
 	SigmaWeekly float64 `json:"sigma_weekly"`
 	// Buffer held as this finished good, covering the finishing lead time.
 	SafetyStock float64 `json:"safety_stock"`
@@ -891,9 +976,13 @@ type ReleaseScheduleBatch struct {
 	Item *Entity `json:"item" validate:"required"`
 	// The item's SKU, as it stood when the plan was generated.
 	SKU string `json:"sku" validate:"required"`
-	// Units in this lot. The last lot of a campaign is short when the planned quantity is not a whole number of lots.
+	// Units in this lot.
+	//
+	// The last lot of a campaign is short when the planned quantity is not a whole number of lots.
 	Quantity float64 `json:"quantity"`
-	// The batch that was created. Null on a preview, where nothing has been written.
+	// The batch this lot was created as.
+	//
+	// A preview writes nothing, so it names no batch.
 	Batch *Entity `json:"batch"`
 }
 
@@ -998,7 +1087,9 @@ type ReleaseScheduleWeekPreview struct {
 	Lines *List[ReleasedScheduleLine] `json:"lines"`
 	// Whether the week can be released.
 	IsReleasable bool `json:"is_releasable"`
-	// Why the week cannot be released.
+	// Why the week cannot be released, phrased for display.
+	//
+	// A week is blocked when it has already been released to the floor, or when it holds nothing to release.
 	BlockedReason *string `json:"blocked_reason"`
 	// The run the week was already released as.
 	ExistingProductionRun *Entity `json:"existing_production_run"`

@@ -13,7 +13,7 @@ import (
 
 // Request to get a machine.
 type RetrieveMachineRequest struct {
-	// Machine ID.
+	// ID of the machine to retrieve.
 	MachineID string `path:"id" validate:"required"`
 }
 

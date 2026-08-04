@@ -11,13 +11,15 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// RetrieveItemInventoryRequest is the request to get an item's inventory.
+// Request to retrieve an item's inventory position.
 type RetrieveItemInventoryRequest struct {
 	// Item ID.
 	ItemID string `path:"id" validate:"required"`
 }
 
-// Returns inventory quantities for an item, including on-hand, reserved, available-to-promise, and short amounts.
+// Returns the stock position for an item: what is on hand, what is reserved against existing orders, what is free to promise, and what is short.
+//
+// Stock your account either owns or holds counts toward the on-hand figure, so customer-supplied material sitting in your facility is included. All four quantities are reported in the base unit of the item's category.
 type RetrieveItemInventoryEndpoint struct{}
 
 func (e *RetrieveItemInventoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveItemInventoryRequest, *apiresource.ItemInventory] {

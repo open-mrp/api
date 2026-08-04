@@ -20,10 +20,12 @@ type CreateItemCategoryRequest struct {
 	//
 	// - `material_category`: groups raw materials and components (items of type `material`).
 	// - `product_category`: groups finished products and parts (items of type `product` or `part`).
+	//
+	// The type is fixed once the category is created.
 	Type constants.ItemCategoryType `json:"type" validate:"required"`
 	// ID of the unit group that determines the units of measure available to items in this category.
 	//
-	// After creation, the unit group can only be replaced by another unit group of the same unit type via the Change Item Category Unit Group endpoint.
+	// Must be one of your account's unit groups or a platform-provided one. After creation the unit group can only be replaced by another unit group of the same unit type, through the Change Item Category Unit Group endpoint.
 	UnitGroupID string `json:"unit_group_id" validate:"required"`
 }
 
@@ -37,7 +39,9 @@ func (*CreateItemCategoryRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateItemCategoryRequest)
 }
 
-// Creates an account-owned item category.
+// Creates an item category owned by your account.
+//
+// The new category starts with no properties; attach them afterwards with the Add Item Category Property endpoint.
 type CreateItemCategoryEndpoint struct{}
 
 func (e *CreateItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateItemCategoryRequest, *apiresource.ItemCategory] {

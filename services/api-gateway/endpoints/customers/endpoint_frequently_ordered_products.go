@@ -18,7 +18,7 @@ type GetFrequentlyOrderedProductsRequest struct {
 
 // Returns the products a customer orders most often, based on historical sales order data.
 //
-// Returns up to 12 products ranked by order count, each with the unit the customer most commonly orders it in.
+// Returns up to 12 items, each paired with the unit the customer orders it in most often and ranked by the number of order lines placed in that unit. Only products of type `sale` that are visible in the customer portal are counted, so lines for services, shipping, tax, credits, and returns are ignored, and hiding a product from the portal removes its lines from the ranking.
 type GetFrequentlyOrderedProductsEndpoint struct{}
 
 func (e *GetFrequentlyOrderedProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetFrequentlyOrderedProductsRequest, *apiresource.List[apiresource.FrequentlyOrderedProduct]] {

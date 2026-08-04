@@ -16,7 +16,9 @@ type ListAnnouncementsRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns the broadcast announcements currently active for the caller, most recent first.
+// Lists the announcements currently active for the caller, newest first.
+//
+// The feed covers announcements broadcast to the account being acted in together with platform-wide announcements from Augno. Announcements the caller has dismissed are left out, as are any that are scheduled for later or have already expired.
 type ListAnnouncementsEndpoint struct{}
 
 func (e *ListAnnouncementsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAnnouncementsRequest, *apiresource.List[apiresource.Announcement]] {

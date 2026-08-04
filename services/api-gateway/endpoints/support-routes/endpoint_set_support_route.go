@@ -19,7 +19,9 @@ type SetSupportRouteRequest struct {
 	//
 	// Omit to set the account-level default applied to any customer.
 	RelationAccountID field.Optional[string] `json:"relation_account_id,omitzero"`
-	// The group conversation whose participants receive this relationship's support.
+	// The group conversation whose participants handle this relationship's support.
+	//
+	// It must be an existing group conversation in your account; a direct message, a system channel, or a conversation belonging to another account is rejected.
 	GroupConversationID string `json:"group_conversation_id" validate:"required"`
 }
 
@@ -31,9 +33,11 @@ func (*SetSupportRouteRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleSetSupportRouteRequest)
 }
 
-// Designates (or re-points) the group conversation that handles a relationship's inbound support.
+// Designates the group conversation that handles a relationship's inbound support.
 //
-// Its participants become the deterministic recipients seated on the customer's support thread. The target must be an existing group conversation in the caller's account.
+// The group's active people become the recipients seated on a customer's support thread when that customer opens one. A scope holds a single route, so setting one where a route already exists re-points it rather than adding a second.
+//
+// Configuring a route is what makes support reachable: until a customer's scope resolves to a route with at least one person in its group, that customer cannot open a new support thread. Re-pointing or clearing a route afterwards only affects threads opened from then on — people already seated on an open thread stay on it.
 type SetSupportRouteEndpoint struct{}
 
 func (e *SetSupportRouteEndpoint) Materialize() *apiendpoint.APIEndpoint[*SetSupportRouteRequest, *apiresource.SupportRoute] {

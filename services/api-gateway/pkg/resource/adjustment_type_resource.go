@@ -8,13 +8,13 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleAdjustmentTypeID = "adjt_01200338b135dc51aba62d4bf8"
+const SampleAdjustmentTypeID = "adjt_e2t6ruyqik5q"
 const SampleAdjustmentTypeName = "Discount"
 const SampleAdjustmentTypeCode = string(constants.AdjustmentTypeDiscount)
 
 // A category of financial adjustment, such as a discount, fee, or write-off.
 //
-// Adjustment types classify adjustment transactions recorded against customer invoices.
+// Adjustment types classify the `adjustment` transactions recorded against a customer.
 type AdjustmentType struct {
 	// Adjustment type ID.
 	ID string `json:"id" validate:"required"`
@@ -31,9 +31,9 @@ type AdjustmentType struct {
 	// - `fee`: an additional charge.
 	// - `refund`: returns money to the customer.
 	Code constants.AdjustmentType `json:"code" validate:"required"`
-	// Provenance of this adjustment type.
+	// Owner of this resource.
 	//
-	// System-owned types are platform-provided defaults shared across all accounts; account-owned types are custom to one account.
+	// Adjustment types are platform-provided and shared across all accounts, so the owner is always the Augno system owner.
 	Owner *Owner `json:"owner" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

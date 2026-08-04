@@ -15,12 +15,20 @@ import (
 // Request to create a customer checkout session.
 type CreateCheckoutSessionRequest struct {
 	// ID of the sales order to collect payment for.
+	//
+	// It is recorded on the Stripe session so that the resulting payment is linked back to this order once Stripe reports it as succeeded.
 	OrderID string `json:"order_id" validate:"required"`
 	// Human-readable order number shown to the customer during checkout.
+	//
+	// Appears in the name of the single line item on the Stripe payment form, prefixed with `SO #`.
 	OrderNumber string `json:"order_number" validate:"required,max=255"`
-	// Order total in cents; the amount the customer is charged.
+	// Amount to charge the customer, in cents.
+	//
+	// Billed in US dollars as one line item covering the whole order.
 	OrderTotalCents int64 `json:"order_total_cents" validate:"required"`
 	// Customer purchase order (PO) number to associate with the payment.
+	//
+	// Appears as the description of the checkout line item, prefixed with `PO #`.
 	CustomerPO field.Optional[string] `json:"customer_po,omitzero" validate:"omitempty,max=255"`
 }
 
@@ -56,7 +64,7 @@ func (*CheckoutSessionResponse) SchemaExample() any {
 
 // Creates an embedded Stripe checkout session for paying a sales order and returns a client secret for use with Stripe.js.
 //
-// The session is created on the target account's own Stripe integration, so the caller must be a customer user of that account.
+// The session is created on the target account's own Stripe integration, so the caller must be a customer user of that account and the account's Stripe integration must be connected and active. On a customer's first checkout, a Stripe customer record is created for them on that integration and reused afterwards. Payment is confirmed asynchronously: Stripe reports the completed payment back through the account's webhook, which links it to the order.
 type CreateCheckoutSessionEndpoint struct{}
 
 func (e *CreateCheckoutSessionEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateCheckoutSessionRequest, *CheckoutSessionResponse] {

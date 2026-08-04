@@ -17,7 +17,7 @@ type DeleteProductionScheduleRequest struct {
 	ProductionScheduleID string `path:"id" validate:"required"`
 }
 
-// Deletes a draft schedule and everything derived from it.
+// Deletes a draft schedule along with its planned campaigns and its item policy snapshot.
 //
 // Only drafts can be deleted. A published version is the baseline attainment is measured against, so removing it would erase the record of what was promised — archive those instead.
 type DeleteProductionScheduleEndpoint struct{}

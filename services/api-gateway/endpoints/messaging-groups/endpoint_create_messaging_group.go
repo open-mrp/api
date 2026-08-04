@@ -33,6 +33,8 @@ func (*CreateMessagingGroupRequest) SchemaExample() any {
 }
 
 // Creates a reusable roster of members (users and/or agents) that can seed many conversations.
+//
+// Every account user listed must exist; repeated ids are ignored. The caller is recorded as the creator but is not added to the roster automatically — include their own account user id to be a member.
 type CreateMessagingGroupEndpoint struct{}
 
 func (e *CreateMessagingGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateMessagingGroupRequest, *apiresource.MessagingGroup] {

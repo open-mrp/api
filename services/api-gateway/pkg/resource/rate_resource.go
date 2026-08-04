@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleRateID = "ra_015aa0a9522cf222024fd21d1a"
+const SampleRateID = "ra_jhgtyileng4s"
 const SampleRateValue = "25.50"
 
 // Value expressed as a ratio of two units, such as a price per kilogram or a throughput per hour.

@@ -13,19 +13,21 @@ import (
 
 // Request to export parts as an Excel file.
 type ExportPartsRequest struct {
-	// Free-text search query matched against parts.
+	// Free-text search term matched against the part's SKU or description.
 	Query *string `query:"q"`
-	// Filter by category IDs.
+	// Only return parts belonging to any of these item categories.
 	CategoryIDs []string `query:"category_ids"`
-	// Filter by attribute IDs.
+	// Only return parts carrying at least one of these attributes.
 	AttributeIDs []string `query:"attribute_ids"`
-	// Start of creation date range.
+	// Only return parts created at or after this time.
 	StartDate *time.Time `query:"start_date"`
-	// End of creation date range.
+	// Only return parts created at or before this time.
 	EndDate *time.Time `query:"end_date"`
 }
 
-// Exports all matching parts as an Excel file.
+// Exports the parts matching the given filters as an Excel workbook.
+//
+// The workbook holds one row per part with its ID, SKU, description, category, and unit price and unit cost alongside the units they are quoted in, followed by one column for each property defined on the exported parts' categories. Every match is exported in a single file, so this endpoint is not paginated.
 type ExportPartsEndpoint struct{}
 
 func (e *ExportPartsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportPartsRequest, *httptransport.FileDownload] {

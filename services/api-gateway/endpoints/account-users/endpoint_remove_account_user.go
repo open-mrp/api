@@ -12,13 +12,13 @@ import (
 
 // Request to remove an account user.
 type RemoveAccountUserRequest struct {
-	// Account user ID.
+	// ID of the account user to remove.
 	AccountUserID string `path:"id" validate:"required"`
 }
 
-// Removes a user from the target account.
+// Removes a user from the account you are acting in.
 //
-// Removal is a soft delete: removed users are excluded from listings unless requested via `removed_scope`, and can be restored with the activate action.
+// Removal is a soft delete: removed users are excluded from listings unless requested via `removed_scope`, they free the seat they occupied, and they can be restored with the activate action. Removing an already-removed user is a no-op. The user's profile itself is untouched, so their access to any other account they belong to is unaffected.
 type RemoveAccountUserEndpoint struct{}
 
 func (e *RemoveAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*RemoveAccountUserRequest, *apiresource.EmptyResource] {

@@ -12,16 +12,20 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListProductsRequest is the request to list products.
+// Request to list products.
 type ListProductsRequest struct {
 	apiresource.PaginationRequest
-	// Filter by customer IDs.
+	// Restrict results to products these customer accounts are entitled to buy.
+	//
+	// A product matches when its product line has been granted to the customer directly, through the customer's account group, or through the account group used for the customer's pricing. Combined with `product_line_ids` this widens the results rather than narrowing them: products matching either filter are returned.
 	CustomerIDs []string `query:"customer_ids"`
 	// Filter by product line IDs.
+	//
+	// Combined with `customer_ids`, products matching either filter are returned.
 	ProductLineIDs []string `query:"product_line_ids"`
-	// Filter by category IDs.
+	// Filter by the item category the product's item belongs to.
 	CategoryIDs []string `query:"category_ids"`
-	// Filter by attribute IDs.
+	// Filter to products whose item carries at least one of these attributes.
 	AttributeIDs []string `query:"attribute_ids"`
 	// Start of creation date range.
 	StartDate *time.Time `query:"start_date"`
@@ -31,7 +35,11 @@ type ListProductsRequest struct {
 	PortalVisibility *constants.CustomerPortalVisibility `query:"portal_visibility"`
 }
 
-// Returns a paginated list of products for the target account.
+// Returns a paginated list of products for the target account, newest first.
+//
+// Only products of type `sale` are listed — service, shipping, credit, return, and tax products are excluded and must be retrieved by ID. A request made by a customer-portal buyer always returns portal-visible products only, and its `customer_ids` filter is replaced with the buyer's own account, so the results reflect what that account is entitled to buy.
+//
+// The `q` search term is matched against the SKU and description of each product's item; when it is supplied, products whose SKU matches are returned ahead of the rest.
 type ListProductsEndpoint struct{}
 
 func (e *ListProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListProductsRequest, *apiresource.List[apiresource.Product]] {

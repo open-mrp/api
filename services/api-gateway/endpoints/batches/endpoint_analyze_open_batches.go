@@ -28,7 +28,9 @@ func (*AnalyzeOpenBatchesRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleAnalyzeOpenBatchesRequest)
 }
 
-// Returns aggregated quantities of open (unclosed) batches, grouped by department, item, and scanning station.
+// Returns the work in progress currently sitting on the production floor, grouped by department, item, and scanning station.
+//
+// Only batches that have been scanned at a scanning station and are not yet closed are counted, and each batch contributes its quantity less whatever has already moved downstream, so the totals show what is still left to work on. Each result covers one item at one scanning station.
 type AnalyzeOpenBatchesEndpoint struct{}
 
 func (e *AnalyzeOpenBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeOpenBatchesRequest, *apiresource.List[apiresource.OpenBatchSummary]] {

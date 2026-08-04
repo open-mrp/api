@@ -15,6 +15,8 @@ import (
 // Request to block another account user from messaging the caller.
 type BlockRequest struct {
 	// The account user to block.
+	//
+	// It must be someone else in your account; you cannot block yourself.
 	BlockedAccountUserID string `json:"blocked_account_user_id" validate:"required"`
 }
 
@@ -26,7 +28,9 @@ func (*BlockRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleBlockRequest)
 }
 
-// Blocks an account user (prevents DMs in both directions).
+// Blocks another user in your account from exchanging direct messages with you.
+//
+// While the block stands neither of you can start a direct message with the other or post in one you already share; group conversations and customer cases are unaffected. Blocking someone you have already blocked returns the original block instead of creating a second one.
 type BlockEndpoint struct{}
 
 func (e *BlockEndpoint) Materialize() *apiendpoint.APIEndpoint[*BlockRequest, *apiresource.MessagingBlock] {

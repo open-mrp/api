@@ -30,6 +30,8 @@ type CatalogCategory struct {
 	// These are the dimensions along which the category's products vary; each product's specific values appear under its `attributes`.
 	Properties *List[CatalogProperty] `json:"properties" validate:"required"`
 	// Products belonging to this category.
+	//
+	// Every product the category contributes to the requested product line is returned here — pagination applies to categories, not to the products inside them.
 	Products *List[CatalogProduct] `json:"products" validate:"required"`
 }
 

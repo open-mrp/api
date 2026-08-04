@@ -11,7 +11,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// RetrieveItemLotDefaultRequest is the request to resolve an item's lot.
+// Request to resolve an item's lot.
 type RetrieveItemLotDefaultRequest struct {
 	// Item ID.
 	ItemID string `path:"id" validate:"required"`

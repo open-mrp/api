@@ -17,13 +17,13 @@ import (
 type UpdateProductTypeRequest struct {
 	// Product type ID.
 	ProductTypeID string `path:"id" validate:"required"`
-	// New human-readable name.
+	// New display name for the product type.
 	//
-	// Must be unique across product types.
+	// Must be unique across all product types.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// New machine-readable code.
+	// New machine-readable code for the product type.
 	//
-	// Must be unique across product types.
+	// Must be unique across all product types. Existing products point at their product type by code, so changing it leaves them referencing a code that no longer exists; only rename a code no product uses.
 	Code field.Optional[string] `json:"code,omitzero" validate:"omitempty,max=255"`
 }
 
@@ -37,6 +37,8 @@ func (*UpdateProductTypeRequest) SchemaExample() any {
 }
 
 // Partially updates a product type.
+//
+// Product types are shared across all accounts, so a change here applies everywhere.
 type UpdateProductTypeEndpoint struct{}
 
 func (e *UpdateProductTypeEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateProductTypeRequest, *apiresource.ProductType] {

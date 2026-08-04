@@ -17,7 +17,7 @@ type GetMessagingGroupRequest struct {
 	GroupID string `path:"id" validate:"required"`
 }
 
-// Retrieves a reusable roster (with its members).
+// Retrieves a reusable roster together with its current members.
 type GetMessagingGroupEndpoint struct{}
 
 func (e *GetMessagingGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetMessagingGroupRequest, *apiresource.MessagingGroup] {

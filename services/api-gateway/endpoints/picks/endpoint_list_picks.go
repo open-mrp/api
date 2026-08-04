@@ -11,13 +11,12 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListPicksRequest is the request to list picks.
+// Request to list picks.
 type ListPicksRequest struct {
 	apiresource.PaginationRequest
 	// Filter by pick status.
 	//
-	// - `open`: picks still in progress (not yet finished).
-	// - `closed`: picks that have been finished.
+	// Pass `open` for picks that have not been finished, or `closed` for picks that have.
 	Status *string `query:"status"`
 	// Filter by customer IDs.
 	CustomerIDs []string `query:"customer_ids"`
@@ -25,9 +24,13 @@ type ListPicksRequest struct {
 	//
 	// Matches picks that contain at least one line for a product in any of the given product lines.
 	ProductLineIDs []string `query:"product_line_ids"`
-	// Filter by customer group IDs.
+	// Filter by customer type group IDs.
+	//
+	// Matches picks whose customer's type group — the account group returned in the customer's `type` field — is one of the given groups.
 	CustomerGroupIDs []string `query:"customer_group_ids"`
 	// Filter by department IDs.
+	//
+	// Matches picks assigned to any of the given departments.
 	DepartmentIDs []string `query:"department_ids"`
 	// Only return picks created on or after this date (`YYYY-MM-DD`).
 	StartDate *string `query:"start_date"`
@@ -35,7 +38,9 @@ type ListPicksRequest struct {
 	EndDate *string `query:"end_date"`
 }
 
-// Returns a paginated list of picks.
+// Returns a paginated list of picks, newest first.
+//
+// The `q` search term matches the pick number, the sales order number, the customer PO number, and the customer's name or number.
 type ListPicksEndpoint struct{}
 
 func (e *ListPicksEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPicksRequest, *apiresource.List[apiresource.Pick]] {

@@ -16,6 +16,8 @@ type ListLocationTypesRequest struct {
 }
 
 // Returns a paginated list of location types.
+//
+// Location types are platform-defined and the same for every account, so this list is the complete set of levels you can assign when creating a location. The `q` search term matches on location type name.
 type ListLocationTypesEndpoint struct{}
 
 func (e *ListLocationTypesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListLocationTypesRequest, *apiresource.List[apiresource.LocationType]] {

@@ -17,7 +17,9 @@ type RetrieveAuditEventRequest struct {
 	ID string `path:"id" validate:"required"`
 }
 
-// Returns an audit event by ID.
+// Returns a single audit event by ID.
+//
+// The event is readable when your account is either the acting account or the account that was acted upon.
 type RetrieveAuditEventEndpoint struct{}
 
 func (e *RetrieveAuditEventEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAuditEventRequest, *apiresource.AuditEvent] {

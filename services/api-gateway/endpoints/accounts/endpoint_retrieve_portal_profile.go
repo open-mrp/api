@@ -12,7 +12,7 @@ import (
 
 // Request to retrieve a seller's portal profile by slug.
 type RetrievePortalProfileRequest struct {
-	// Portal slug.
+	// Portal slug of the seller whose profile is being retrieved.
 	Slug string `path:"slug" validate:"required"`
 }
 

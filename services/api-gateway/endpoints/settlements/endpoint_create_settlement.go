@@ -19,9 +19,11 @@ type CreateSettlementAllocationRequest struct {
 	TransactionID string `json:"transaction_id" validate:"required"`
 	// ID of the invoice the amount is applied to.
 	InvoiceID string `json:"invoice_id" validate:"required"`
-	// Amount to allocate as a decimal string.
+	// The part of the transaction's amount to apply to this invoice, as a decimal string in US dollars.
+	//
+	// This is not checked against the transaction's unallocated balance or the invoice's outstanding total; applying more than an invoice owes leaves that invoice `overpaid`.
 	Amount string `json:"amount" validate:"required"`
-	// Note about this allocation.
+	// Free-form note about this allocation.
 	Note field.Optional[string] `json:"note,omitzero"`
 }
 
@@ -52,7 +54,9 @@ func (*CreateSettlementRequest) SchemaExample() any {
 
 // Creates a settlement that applies transaction amounts to invoices.
 //
-// The settlement number is generated automatically from a per-account sequence, and the allocated transactions are marked as fully allocated.
+// The settlement number is generated automatically from a per-account sequence.
+//
+// Once the settlement is recorded, every transaction it drew from is marked fully allocated even if only part of its amount was applied, which drops it out of List Open Credits. Each invoice it touched has its paid-in-full and overpaid flags — and therefore its `payment_status` — recomputed from every allocation recorded against that invoice, including allocations made by other settlements.
 type CreateSettlementEndpoint struct{}
 
 func (e *CreateSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSettlementRequest, *apiresource.Settlement] {

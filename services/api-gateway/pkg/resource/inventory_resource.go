@@ -12,6 +12,8 @@ type InventoryItem struct {
 	// The item this inventory entry reports on.
 	Item Item `json:"item" validate:"required"`
 	// Current on-hand quantity of the item.
+	//
+	// On-hand is the stock from available receipts less anything already allocated, measured in the base unit of the item's category. Items with no recorded inventory report zero.
 	Quantity *Quantity `json:"quantity" validate:"required"`
 }
 

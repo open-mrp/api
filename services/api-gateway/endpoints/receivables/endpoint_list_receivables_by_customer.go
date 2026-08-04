@@ -15,7 +15,7 @@ import (
 // Request to list receivable entries for a specific customer.
 type ListReceivablesByCustomerRequest struct {
 	apiresource.PaginationRequest
-	// Customer account ID.
+	// ID of the customer account whose outstanding balances are listed.
 	AccountID string `json:"-" path:"account_id" validate:"required"`
 	// Compute receivable balances as of this timestamp.
 	//
@@ -23,7 +23,9 @@ type ListReceivablesByCustomerRequest struct {
 	CutoffDate *time.Time `query:"cutoff_date"`
 }
 
-// Returns a paginated list of outstanding receivable entries for a specific customer account.
+// Returns a paginated list of outstanding receivable entries for a single customer account, newest invoice first.
+//
+// One entry is returned per invoice billed to that customer that is not marked paid in full. Invoices billed to the customer's child accounts are not included.
 type ListReceivablesByCustomerEndpoint struct{}
 
 func (e *ListReceivablesByCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListReceivablesByCustomerRequest, *apiresource.List[apiresource.ReceivableEntry]] {

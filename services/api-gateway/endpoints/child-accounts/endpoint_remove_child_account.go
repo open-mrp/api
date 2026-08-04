@@ -18,7 +18,7 @@ type RemoveChildAccountRequest struct {
 
 // Unlinks a child account from the target account.
 //
-// Only the parent-child relationship is removed; the child account itself is not deleted. This call is idempotent: removing an account that is not currently a child succeeds without changes.
+// Only the parent-child relationship is removed; the child account itself, and your customer record for it, are left untouched. This call is idempotent: removing an account that is not currently a child of the target account succeeds without changes.
 type RemoveChildAccountEndpoint struct{}
 
 func (e *RemoveChildAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*RemoveChildAccountRequest, *apiresource.EmptyResource] {

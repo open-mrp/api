@@ -20,7 +20,7 @@ type DeletePurchaseOrderLineRequest struct {
 
 // Deletes a purchase order line item and its related records.
 //
-// Any receiving order lines created for this line are deleted as well.
+// Any receiving order lines created for this line are deleted as well, so the quantity can no longer be received. Line numbers on the remaining lines are left as they are.
 type DeletePurchaseOrderLineEndpoint struct{}
 
 func (e *DeletePurchaseOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeletePurchaseOrderLineRequest, *apiresource.EmptyResource] {

@@ -7,10 +7,10 @@ import (
 	"github.com/augno/api/shared/constants"
 )
 
-const SampleAgentDefinitionToolID = "agdftl_0108b30efc261d3d47bf1b43a1"
+const SampleAgentDefinitionToolID = "agdftl_iyc1asmsg1pu"
 const SampleAvailableToolSlug = constants.ToolReadDoc
 
-// Logical grouping of platform tools.
+// A named grouping of the tools that can be granted to an agent, used to organize the tool catalog.
 type ToolGroup struct {
 	// Group ID.
 	ID string `json:"id" validate:"required"`
@@ -20,53 +20,46 @@ type ToolGroup struct {
 	Name string `json:"name" validate:"required"`
 	// Description of what the tools in this group do.
 	Description *string `json:"description"`
-	// URL-friendly slug.
+	// Machine-readable name for the group (e.g. `customer_tools`).
 	Slug string `json:"slug" validate:"required"`
 	// Icon identifier (e.g. a Material Icon name).
 	Icon string `json:"icon"`
-	// Display sort order.
+	// Display sort order, lowest first.
 	SortOrder int32 `json:"sort_order"`
 	// Tools belonging to this group.
 	Tools *List[AvailableTool] `json:"tools" expandable:"true"`
 }
 
-// Platform tool that can be attached to agents.
+// A capability an agent can be granted, allowing it to take that action during a run.
+//
+// The catalog of available tools is the same for every account; granting one to an agent is what makes it callable.
 type AvailableTool struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=available_tool"`
 	// A stable identifier used when attaching the tool to an agent.
 	Slug string `json:"slug" validate:"required"`
-	// Category grouping for the tool (e.g. `built_in`).
+	// Where the tool's behavior comes from.
+	//
+	// - `built_in`: a capability implemented by the agent runtime itself, such as fetching a web page or drafting a reply for a teammate to approve.
+	// - `api_endpoint`: an operation of this API exposed as a tool, letting the agent perform it on the account's behalf.
 	Category string `json:"category" validate:"required"`
-	// Tool name.
+	// Human-readable name for the tool.
 	Name string `json:"name" validate:"required"`
-	// Tool description.
+	// Explanation of what the tool does.
+	//
+	// This is also the description the agent's model reads when deciding whether to call the tool.
 	Description *string `json:"description"`
 	// JSON schema describing the configuration options this tool accepts.
 	//
-	// Defines the shape of the `config` field on AgentDefinitionTool.
-	//
-	// For example:
-	//
-	// ```json
-	// {
-	//   "type": "object",
-	//   "properties": {
-	//     "max_results": {
-	//       "type": "integer",
-	//       "default": 10
-	//     }
-	//   }
-	// }
-	// ```
+	// Defines the shape of the `config` field on AgentDefinitionTool: a schema declaring a `max_results` integer property means that tool's `config` may set `max_results`.
 	ConfigSchema json.RawMessage `json:"config_schema"`
 	// Permission scopes the agent's role must hold for this tool to be usable (e.g. `products:read`).
 	RequiredPermissions []string `json:"required_permissions"`
 	// Role type the caller must have for this tool, when the operation is gated by role rather than a permission (e.g. `admin`).
 	RequiredRoleType *string `json:"required_role_type"`
-	// Whether invoking this tool changes server state.
+	// Whether invoking this tool takes an action rather than only reading data.
 	//
-	// True for any `api_endpoint` tool whose underlying operation is not a read (non-GET); always false for `built_in` tools. The agent-configuration UI uses this to default such tools to requiring human review.
+	// True for any `api_endpoint` tool whose underlying operation is not a read, and for `built_in` tools that do something externally visible or hard to undo, such as sending an email. A mutating `built_in` tool always pauses its run for human approval and that gate cannot be turned off for an individual agent; for `api_endpoint` tools the flag is advisory and review stays configurable per agent.
 	Mutating bool `json:"mutating"`
 }
 
@@ -82,7 +75,7 @@ type AgentDefinitionTool struct {
 	Tool AvailableTool `json:"tool" validate:"required"`
 	// Whether calls to this tool must be approved by a user before they execute.
 	//
-	// When `required`, the run pauses in the `awaiting_approval` status each time the agent invokes this tool; approve or allow the tool via the Continue Agent Run endpoint to proceed.
+	// When `required`, the run pauses in the `awaiting_approval` status each time the agent invokes this tool; approve or allow the tool via the Continue Agent Run endpoint to proceed. A tool whose `mutating` flag is true still pauses for approval even when this is `not_required`.
 	ReviewRequirement constants.ReviewRequirement `json:"review_requirement" validate:"required"`
 	// Instance-specific configuration for this tool.
 	//
@@ -92,7 +85,7 @@ type AgentDefinitionTool struct {
 	SortOrder int32 `json:"sort_order"`
 }
 
-const SampleToolGroupID = "tgrp_01556abdc283b09ccd1f97dcb5"
+const SampleToolGroupID = "tgrp_imjaqprzuqv5"
 
 var SampleToolGroup = &ToolGroup{
 	ID:          SampleToolGroupID,

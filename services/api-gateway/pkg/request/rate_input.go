@@ -1,6 +1,8 @@
 package apirequest
 
-// A rate value with its numerator and denominator units, used in create and update requests.
+// A value expressed as a ratio of two units, supplied on create and update requests.
+//
+// A unit price, for example, has a currency as its numerator unit and the unit the product is bought or sold by as its denominator.
 type RateInput struct {
 	// Decimal value of the rate, expressed as the amount of the numerator unit per one denominator unit.
 	Value string `json:"value" validate:"required" format:"decimal"`

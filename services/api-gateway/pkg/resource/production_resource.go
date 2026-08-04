@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleProductionID = "pn_019136e48e8a24e64a131e3a23"
+const SampleProductionID = "pn_1owzkrw3c81l"
 
 // The output of a production step: the item it produces and the quantity produced.
 type ProductionOutput struct {

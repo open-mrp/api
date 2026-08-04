@@ -16,9 +16,9 @@ import (
 
 // Tool to attach to an agent definition.
 type ToolInput struct {
-	// The tool to attach.
+	// The built-in tool to attach.
 	//
-	// Available tools can be discovered with the List Tools endpoint (`GET /v1/ai/tools`).
+	// Only Augno's built-in tools are attached here. Access to API-endpoint tools (creating a customer, listing orders, and so on) is granted separately through `config.endpoint_tool_slugs`. The List Tools endpoint (`GET /v1/ai/tools`) returns both kinds, with API-endpoint tools in the `api_endpoint` category.
 	Tool constants.Tool `json:"tool" validate:"required"`
 	// JSON-encoded configuration for this tool instance.
 	//
@@ -27,6 +27,8 @@ type ToolInput struct {
 	// Display order among the agent's tools (lower values appear first).
 	SortOrder field.Optional[int32] `json:"sort_order,omitzero"`
 	// Whether actions from this tool require human review before they execute.
+	//
+	// When review is required, a call to this tool pauses the run in `awaiting_approval` and records an action in `pending_review` until someone approves or rejects it through the Continue Agent Run endpoint. Approvals are one-time, so a later call to the same tool pauses again.
 	RequireReview field.Optional[bool] `json:"require_review,omitzero"`
 }
 
@@ -46,7 +48,7 @@ func (*ToolInput) SchemaExample() any {
 //
 // - `scheduled`: `cron_schedule` is required.
 // - `event`: at least one entry in `event_filters` is required.
-// - `manual`: no trigger configuration is needed.
+// - `manual` and `chat`: no trigger configuration is needed.
 type TriggerConfigInput struct {
 	// Cron expression for scheduled triggers (e.g. `0 9 * * *`).
 	CronSchedule field.Optional[string] `json:"cron_schedule,omitzero" validate:"omitempty,max=255"`
@@ -66,17 +68,23 @@ func (*TriggerConfigInput) SchemaExample() any {
 
 // Agent-level configuration for creation/update requests.
 type ConfigInput struct {
-	// System prompt / instructions for the agent.
-	SystemPrompt field.Optional[string] `json:"system_prompt,omitzero"`
-	// Intelligence/cost tier for the agent's reasoning.
+	// Instructions that define the agent's role and how it should behave.
 	//
-	// Selects how capable (and how expensive) a model the agent uses, without pinning a specific model:
-	// - `frontier`: the most capable and most expensive.
-	// - `high`: for normal planning, synthesis, customer-facing reasoning.
-	// - `balanced`: for research, summarization, classification, structured extraction, and light tool use.
-	// - `cheap`: for simple transforms, validation, formatting, keyword lookup, and routing.
+	// Sent to the model on every turn of a run, alongside the platform guidance Augno adds automatically.
+	SystemPrompt field.Optional[string] `json:"system_prompt,omitzero"`
+	// Intelligence and cost tier for the agent's reasoning.
+	//
+	// Selects how capable (and how expensive) a model the agent uses without pinning a specific model, so the agent keeps working as the underlying model catalog changes.
+	//
+	// - `frontier`: the most capable and most expensive; multi-step planning, ambiguous work, tool-heavy workflows.
+	// - `high`: normal planning, synthesis, and customer-facing reasoning.
+	// - `balanced`: research, summarization, classification, structured extraction, and light tool use.
+	// - `cheap`: simple transforms, validation, formatting, keyword lookup, and routing.
+	// - `legacy`: older models kept for compatibility and regression comparison; avoid unless you specifically need them.
 	Tier field.Optional[constants.ModelTier] `json:"tier,omitzero" default:"high"`
-	// LLM sampling temperature between 0 and 1.
+	// How much randomness the model uses when generating text.
+	//
+	// Lower values make the agent's output more repeatable; higher values make it more varied.
 	Temperature field.Optional[float64] `json:"temperature,omitzero" validate:"omitempty,min=0,max=1"`
 	// Trigger-specific configuration.
 	//
@@ -123,6 +131,8 @@ type CreateAgentRequest struct {
 	// Human-readable name of the agent.
 	Name string `json:"name" validate:"required,max=255"`
 	// URL-friendly identifier for the agent.
+	//
+	// Must be unique within your account.
 	Slug string `json:"slug" validate:"required,max=255"`
 	// Description of what the agent does.
 	Description field.Optional[string] `json:"description,omitzero"`
@@ -133,12 +143,17 @@ type CreateAgentRequest struct {
 	// - `scheduled`: runs on a cron schedule; `config.trigger_config.cron_schedule` is required.
 	// - `event`: runs in response to platform events; at least one `config.trigger_config.event_filters` entry is required.
 	// - `manual`: runs only when explicitly invoked.
+	// - `chat`: runs when a user messages the agent in a conversation, and the agent's reply is posted back into that conversation.
+	//
+	// Whatever the trigger type, a run can always be started by hand with the Trigger Agent Run endpoint.
 	TriggerType constants.AgentTriggerType `json:"trigger_type" validate:"required"`
 	// Agent-level configuration controlling LLM behavior and trigger settings.
 	Config ConfigInput `json:"config"`
-	// Tools to attach to the agent.
+	// Built-in tools to attach to the agent.
 	Tools []ToolInput `json:"tools,omitzero"`
 	// ID of the role that defines the permissions the agent operates with.
+	//
+	// Every API call the agent makes is authorized against this role, so it bounds what the agent can see and change. An agent created without a role cannot execute — its runs fail immediately — so attach one before triggering it.
 	RoleID field.Optional[string] `json:"role_id,omitzero" validate:"omitempty,max=191"`
 }
 
@@ -157,9 +172,9 @@ func (*CreateAgentRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateAgentRequest)
 }
 
-// Creates a custom agent definition with optional tool configuration.
+// Creates a custom agent for your account.
 //
-// The new agent has `definition_type` `custom` and is immediately `active` for the account.
+// The new agent is a `custom` definition and is immediately `active`, so it can start running as soon as it has a role.
 type CreateAgentEndpoint struct{}
 
 func (e *CreateAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAgentRequest, *apiresource.AgentDefinition] {

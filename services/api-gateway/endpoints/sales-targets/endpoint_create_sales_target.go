@@ -15,15 +15,17 @@ import (
 
 // Request to create a sales target.
 type CreateSalesTargetRequest struct {
-	// ID of the account user (sales rep) the target is for.
+	// The account user (sales rep) the target is for.
+	//
+	// Must be an active account user in your account.
 	SalesRepID string `path:"id" validate:"required"`
 	// Start of the period the target applies to (inclusive).
 	StartDate time.Time `json:"start_date"`
 	// End of the period the target applies to.
 	EndDate time.Time `json:"end_date"`
-	// Goal amount for the period, as a decimal string (e.g. `50000.00`).
+	// The revenue goal for the period, as a decimal string (e.g. `50000.00`).
 	AmountValue string `json:"amount_value"`
-	// ID of the unit the amount is denominated in (typically a currency unit).
+	// The unit the goal is denominated in, typically a currency unit.
 	AmountUnitID string `json:"amount_unit_id" validate:"max=191"`
 }
 
@@ -38,7 +40,9 @@ func (*CreateSalesTargetRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateSalesTargetRequest)
 }
 
-// Creates a sales target for an account user.
+// Creates a revenue goal for a sales rep covering a given period.
+//
+// The sales rep must be an active account user in your account, otherwise the request returns a not-found error. Periods are not checked for overlap, so a rep can hold several targets covering the same dates; use the upsert endpoint to change an existing target rather than adding another.
 type CreateSalesTargetEndpoint struct{}
 
 func (e *CreateSalesTargetEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSalesTargetRequest, *apiresource.SalesTarget] {

@@ -13,17 +13,17 @@ import (
 	"github.com/augno/api/shared/field"
 )
 
-// UpdateRoleRequest is a request to update a role.
+// Request to update a role.
 type UpdateRoleRequest struct {
 	// Role ID.
 	RoleID string `path:"id" validate:"required"`
-	// New display name for the role, unique within the account.
+	// New display name for the role.
 	//
-	// Omit to leave unchanged.
+	// Returns a conflict error if another role in your account already uses this name.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Full replacement set of permissions, in `{domain}:{action}` format, such as `customers:read`.
+	// Full replacement set of permissions, in `{permission}:{action}` format, such as `customers:read`.
 	//
-	// Replaces all existing permissions on the role. Pass an empty array to remove all permissions, or omit to leave them unchanged.
+	// The role's existing permissions are discarded and replaced with exactly what you send, so include every permission the role should keep. Sending an empty array strips the role of all access, while leaving the field out keeps the current permissions untouched.
 	Permissions field.Optional[[]string] `json:"permissions,omitzero"`
 }
 
@@ -38,9 +38,9 @@ func (*UpdateRoleRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateRoleRequest)
 }
 
-// Partially updates a custom role's name or permissions.
+// Updates a role's name or the set of permissions it grants.
 //
-// Provided permissions replace all existing ones; global roles cannot be modified.
+// Only roles owned by your account can be updated; the system-owned roles shared across all accounts are rejected. Permission changes apply to every user already assigned the role, starting with their next request.
 type UpdateRoleEndpoint struct{}
 
 func (e *UpdateRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateRoleRequest, *apiresource.Role] {

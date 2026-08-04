@@ -8,28 +8,30 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleEmailLogID = "eml_017b80707ada92dddff8a2c3a0"
+const SampleEmailLogID = "eml_h2j1q1nfibwb"
 
-// A record of an email sent on the account's behalf, such as an invoice or a user invitation.
+// A record of an email the platform sent on the account's behalf, such as an order acknowledgement or a user invitation.
+//
+// An email that never reached the delivery provider is recorded here too, rather than disappearing.
 type EmailLog struct {
 	// Email log ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=email_log"`
-	// Email send status.
+	// Whether the email was handed off to the delivery provider.
 	//
-	// - `pending`: the email is queued and has not been sent yet.
-	// - `sent`: the email has been handed off for delivery.
+	// - `sent`: the provider accepted the email for delivery. It does not confirm that the recipient's mail server accepted it.
+	// - `pending`: the email was never handed off — the send attempt failed, or it was suppressed because the account is in sandbox mode.
 	SendStatus constants.EmailSendStatus `json:"send_status" validate:"required"`
 	// Recipient email addresses.
 	Recipients []string `json:"recipients" validate:"required"`
 	// Email subject line.
 	Subject *string `json:"subject"`
-	// Filename of the attached document.
+	// Filename of the document attached to the email.
 	Filename *string `json:"filename"`
-	// The user who sent the email.
+	// The user or API key that sent the email.
 	//
-	// Absent for emails the platform sends automatically (for example system notifications), which are not attributed to a user.
+	// Emails the platform sends automatically, such as system notifications, are not attributed to an actor.
 	SentBy *Actor `json:"sent_by" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

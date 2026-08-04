@@ -16,11 +16,13 @@ type AutocompleteAddressRequest struct {
 	Input string `query:"input" validate:"required"`
 	// Opaque token that groups a series of related autocomplete requests into a single session.
 	//
-	// Reuse the same token for each keystroke of one address entry.
+	// Reuse the same token for each keystroke of one address entry, and again when you retrieve the details of the suggestion the user picks, so the whole entry is treated as one lookup.
 	SessionToken *string `query:"session_token"` // #nosec G117 -- not a secret, Google Maps session correlation token
 }
 
-// Returns address suggestions based on input text.
+// Returns address suggestions for partial address text, for use in type-ahead address entry.
+//
+// Only street addresses are suggested; cities, regions, and business listings are not returned. Suggestions are lookup results, not saved addresses in your account. Pass a suggestion's `id` to the address details endpoint to get the full parsed address.
 type AutocompleteAddressEndpoint struct{}
 
 func (e *AutocompleteAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*AutocompleteAddressRequest, *apiresource.List[apiresource.AddressSuggestion]] {

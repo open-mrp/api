@@ -14,9 +14,9 @@ import (
 // Request to list the valid audit event resource types.
 type ListAuditEventResourceTypesRequest struct{}
 
-// Returns the full set of resource types that may appear on audit events.
+// Returns every resource type an audit event can refer to, as plain strings.
 //
-// Values are plain strings, suitable for the `resource_types` filter when listing audit events.
+// This is the accepted vocabulary for the `resource_types` filter when listing audit events. It is the API's complete resource-type list rather than a list derived from your account's data, so it includes types you may never have recorded events for.
 type ListAuditEventResourceTypesEndpoint struct{}
 
 func (e *ListAuditEventResourceTypesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAuditEventResourceTypesRequest, *apiresource.List[constants.ObjectType]] {

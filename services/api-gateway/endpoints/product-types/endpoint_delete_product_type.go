@@ -17,6 +17,8 @@ type DeleteProductTypeRequest struct {
 }
 
 // Deletes a product type.
+//
+// Products point at their product type by code, and nothing blocks the delete, so removing a type that products still use leaves those products referencing a code that no longer resolves. Reassign or delete those products first. Product types are shared across all accounts, so the deletion affects every account.
 type DeleteProductTypeEndpoint struct{}
 
 func (e *DeleteProductTypeEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteProductTypeRequest, *apiresource.EmptyResource] {

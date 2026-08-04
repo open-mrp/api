@@ -16,13 +16,13 @@ import (
 
 // Request to create a product line.
 type CreateProductLineRequest struct {
-	// Display name.
+	// Display name of the product line.
 	//
-	// Must be unique among the account's product lines; a duplicate name returns a conflict error.
+	// Must be unique among the product lines visible to your account, including the shared system lines; a duplicate name returns a conflict error.
 	Name string `json:"name" validate:"required,max=255"`
 	// ID of the unit group to associate with this product line.
 	//
-	// The unit group determines the set of units available to products in this product line.
+	// The unit group determines the set of units available to products in this product line. It must be a unit group your account owns or one of the shared system unit groups.
 	UnitGroupID string `json:"unit_group_id" validate:"required"`
 	// Default commission policy for products in this product line.
 	//
@@ -31,7 +31,7 @@ type CreateProductLineRequest struct {
 	CommissionPolicy constants.CommissionPolicy `json:"commission_policy" validate:"required"`
 	// The lot products in this line are made in — a doff, a pallet.
 	//
-	// Sizes the campaigns a production schedule plans, and defaults the quantity when a batch is added to a production run. The unit is part of the value, since 60 pairs and 60 eaches are different lots, and it must belong to this product line's unit group.
+	// Sizes the campaigns a production schedule plans, and defaults the quantity when a batch is added to a production run. The unit is part of the value, since 60 pairs and 60 eaches are different lots, and it must belong to the unit group given by `unit_group_id`. The value must be greater than zero. Leave this out for a line with no lot convention, and planning falls back to the lot of the line an item feeds into, and then to the account-wide default lot size.
 	DefaultLot field.Optional[apirequest.QuantityInput] `json:"default_lot,omitzero"`
 	// Default freight policy for products in this product line.
 	//
@@ -51,7 +51,9 @@ func (*CreateProductLineRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateProductLineRequest)
 }
 
-// Creates an account-owned product line.
+// Creates a product line owned by your account.
+//
+// The new line starts with no products; assign products to it by setting their product line. Customers and account groups can only be granted access to lines your account owns, so this is the starting point for scoping a customer's catalog.
 type CreateProductLineEndpoint struct{}
 
 func (e *CreateProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductLineRequest, *apiresource.ProductLine] {

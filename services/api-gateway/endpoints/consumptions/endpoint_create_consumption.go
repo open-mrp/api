@@ -20,10 +20,14 @@ type CreateConsumptionRequest struct {
 	// ID of the item to consume.
 	ItemID string `json:"item_id" validate:"required"`
 	// Amount of the item consumed, as a decimal string.
+	//
+	// Stated against the step's own output rather than a single unit, so a step producing 100 pairs that consumes 5 kg of yarn takes `5`. Material requirements for an order scale it from there.
 	QuantityValue string `json:"quantity_value" validate:"required"`
 	// ID of the unit of measure for `quantity_value`.
 	QuantityUnitID string `json:"quantity_unit_id" validate:"required"`
-	// Amount of the item lost as waste, as a decimal string, tracked separately from the consumed quantity.
+	// Amount of the item expected to be lost as waste, as a decimal string.
+	//
+	// Tracked separately from the consumed quantity, but added to it when material requirements are worked out, since the waste has to be bought as well.
 	WasteQuantityValue string `json:"waste_quantity_value" validate:"required"`
 	// ID of the unit of measure for `waste_quantity_value`.
 	WasteQuantityUnitID string `json:"waste_quantity_unit_id" validate:"required"`
@@ -44,7 +48,7 @@ func (*CreateConsumptionRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateConsumptionRequest)
 }
 
-// Creates a consumption within a production step.
+// Adds a material input to a production step.
 //
 // Adding a consumption recomputes the production flow: if another production step produces the consumed item, the two steps are linked upstream/downstream automatically.
 type CreateConsumptionEndpoint struct{}

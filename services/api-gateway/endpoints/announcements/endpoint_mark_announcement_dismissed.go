@@ -11,7 +11,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Marks an announcement as dismissed for the calling actor.
+// Dismisses an announcement for the calling user, removing it from their feed.
+//
+// The announcement itself is not deleted: it stays retrievable by ID and remains in every other user's feed until they dismiss it too. Dismissing an already-dismissed announcement keeps the original dismissal time. A caller with no user of their own in the account, such as an API key, has no state to record and gets a not-found error.
 type MarkAnnouncementDismissedEndpoint struct{}
 
 func (e *MarkAnnouncementDismissedEndpoint) Materialize() *apiendpoint.APIEndpoint[*MarkAnnouncementRequest, *apiresource.Announcement] {

@@ -13,7 +13,7 @@ import (
 
 // Request to retrieve a machine downtime event.
 type RetrieveMachineDowntimeEventRequest struct {
-	// ID of the downtime event.
+	// ID of the downtime event to retrieve.
 	MachineDowntimeEventID string `path:"id" validate:"required"`
 }
 

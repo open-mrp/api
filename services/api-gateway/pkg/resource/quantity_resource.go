@@ -9,9 +9,11 @@ import (
 	"github.com/augno/api/shared/constants"
 )
 
-const SampleQuantityID = "qty_015a85becc1a6afdfb1afc27ff"
+const SampleQuantityID = "qty_8hnxbigf0bod"
 
-// Value with an associated unit.
+// A measured amount: a numeric value together with the unit it is expressed in.
+//
+// Quantities are shared building blocks rather than standalone records — other resources point at them to report stock levels, ordered and packed amounts, money, weights, and durations.
 type Quantity struct {
 	// Quantity ID.
 	ID string `json:"id" validate:"required"`

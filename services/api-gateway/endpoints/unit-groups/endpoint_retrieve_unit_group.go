@@ -17,7 +17,7 @@ type RetrieveUnitGroupRequest struct {
 	UnitGroupID string `path:"id" validate:"required"`
 }
 
-// Returns a unit group by ID.
+// Returns a unit group by ID, including the system unit groups shared across all accounts.
 type RetrieveUnitGroupEndpoint struct{}
 
 func (e *RetrieveUnitGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveUnitGroupRequest, *apiresource.UnitGroup] {

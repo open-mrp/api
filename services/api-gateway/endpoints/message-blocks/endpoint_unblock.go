@@ -18,7 +18,9 @@ type UnblockRequest struct {
 	BlockedAccountUserID string `path:"id" validate:"required"`
 }
 
-// Removes a block.
+// Lifts a block you placed on another user, letting the two of you message each other again.
+//
+// Only your own block is removed: if the other person has also blocked you, direct messages between you stay blocked. Unblocking someone you have not blocked succeeds and changes nothing.
 type UnblockEndpoint struct{}
 
 func (e *UnblockEndpoint) Materialize() *apiendpoint.APIEndpoint[*UnblockRequest, *apiresource.EmptyResource] {

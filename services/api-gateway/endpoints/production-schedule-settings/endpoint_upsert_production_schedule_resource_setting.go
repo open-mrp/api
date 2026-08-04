@@ -15,15 +15,21 @@ import (
 
 // Request to write a per-resource planning override.
 type UpsertResourceSettingRequest struct {
-	// What kind of resource this overrides.
+	// What kind of resource this override applies to.
+	//
+	// Together with the resource ID it identifies the override, so writing the same pair again updates the existing entry in place and keeps its ID.
 	ScopeType constants.ScheduleResourceScope `json:"scope_type" validate:"required"`
-	// ID of the machine, department or production step.
+	// ID of the machine, department or production step being overridden, matching the scope type.
 	ScopeRefID string `json:"scope_ref_id" validate:"required"`
-	// Whether this resource takes part in planning. Machines are selected by department, so this excludes one rather than opting one in.
+	// Whether this resource takes part in planning.
+	//
+	// Machines are chosen by naming the constraint department, so this is how one is taken out — a machine down for a rebuild — rather than how one is opted in.
 	ParticipationStatus constants.ParticipationStatus `json:"participation_status" validate:"required"`
 	// Weeks of lead time at this resource.
 	LeadTimeWeeks field.Optional[float64] `json:"lead_time_weeks,omitzero" validate:"omitempty,gte=0"`
-	// Weeks after the constraint campaign this resource's work starts.
+	// How many weeks after the step feeding it this resource's work starts.
+	//
+	// Read when downstream department work is derived from the constraint plan, so it is the production-step override that shifts a plan: without an offset every step lands in the same week as the step feeding it, and the offsets along a chain of steps add up. A schedule is planned in whole weeks, so a fractional offset is truncated.
 	LeadTimeOffsetWeeks float64 `json:"lead_time_offset_weeks" validate:"gte=0"`
 }
 
@@ -37,9 +43,11 @@ func (*UpsertResourceSettingRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpsertResourceSettingRequest)
 }
 
-// Writes a per-resource planning override.
+// Writes a planning override for one machine, department or production step.
 //
-// One override exists per resource, so this replaces any existing entry for the same scope rather than adding a second. Machines are selected by the constraint department, so this is where one is taken *out* of planning — a machine down for a rebuild — and where a department or step declares how many weeks after the constraint its work starts.
+// A resource has at most one override, so this replaces the existing entry for the same scope rather than adding a second, and the entry keeps the ID it already had. Machines are chosen by naming the constraint department, so this is where one is taken *out* of planning — a machine down for a rebuild — and where a production step declares how many weeks its work starts after the step that feeds it.
+//
+// Overrides are read when a plan is generated, so a change takes effect on the next generated version and leaves existing ones untouched.
 type UpsertResourceSettingEndpoint struct{}
 
 func (e *UpsertResourceSettingEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpsertResourceSettingRequest, *apiresource.ProductionScheduleResourceSetting] {

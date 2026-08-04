@@ -10,7 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Creates a Stripe billing portal session and returns a redirect URL for managing subscriptions.
+// Creates a Stripe billing portal session for the account and returns the URL to send an admin to.
+//
+// The portal is where the account manages payment methods, invoices, and its subscription directly in Stripe. The account must already have a Stripe customer; create one with Ensure Billing Customer first.
 type CreateBillingPortalSessionEndpoint struct{}
 
 func (e *CreateBillingPortalSessionEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.BillingPortalSessionResponse] {

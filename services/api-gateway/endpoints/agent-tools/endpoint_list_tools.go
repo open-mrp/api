@@ -16,7 +16,9 @@ type ListToolsRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of tools that can be assigned to agents.
+// Returns a paginated list of every capability that can be granted to an agent.
+//
+// The catalog is platform-defined and identical for every account, and covers both built-in runtime capabilities and the API operations agents are allowed to perform. The `q` search term matches against tool names and the name of the group a tool belongs to.
 type ListToolsEndpoint struct{}
 
 func (e *ListToolsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListToolsRequest, *apiresource.List[apiresource.AvailableTool]] {

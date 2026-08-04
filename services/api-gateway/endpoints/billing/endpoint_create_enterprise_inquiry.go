@@ -10,7 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Submits an enterprise plan inquiry to the sales team.
+// Asks the Augno sales team to get in touch about an enterprise plan.
+//
+// The account, its current plan, and the requesting user's name and email are sent to sales for follow-up. Nothing about the account's plan, subscription, or billing changes.
 type CreateEnterpriseInquiryEndpoint struct{}
 
 func (e *CreateEnterpriseInquiryEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.EnterpriseInquiry] {

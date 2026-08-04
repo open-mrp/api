@@ -20,13 +20,17 @@ type ListPurchaseOrdersRequest struct {
 	ItemIDs []string `query:"item_ids"`
 	// Filter to orders placed with any of these suppliers.
 	SupplierIDs []string `query:"supplier_ids"`
-	// Filter to orders created on or after this date (inclusive).
+	// Filter to orders created on or after this date, in `YYYY-MM-DD` format.
 	StartDate *string `query:"start_date"`
-	// Filter to orders created on or before this date (inclusive).
+	// Filter to orders created up to this date, in `YYYY-MM-DD` format.
+	//
+	// Compared against the start of the given day, so orders created later that same day are excluded.
 	EndDate *string `query:"end_date"`
 }
 
-// Returns a paginated list of purchase orders for the current account.
+// Returns a paginated list of purchase orders for the current account, newest first.
+//
+// Filters combine with AND, while the values within a single filter combine with OR. The `q` search term matches on order number and supplier name.
 type ListPurchaseOrdersEndpoint struct{}
 
 func (e *ListPurchaseOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPurchaseOrdersRequest, *apiresource.List[apiresource.PurchaseOrder]] {
@@ -45,8 +49,7 @@ func (e *ListPurchaseOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*Lis
 			return svc.(PurchaseOrderSvc).ListPurchaseOrders
 		},
 		ObjectType: constants.ObjectTypePurchaseOrder,
-		// The list summary stashes the supplier inline (cross-account, like the
-		// receiving-order supplier); expose it so list rows can request it.
+		// The list summary stashes the supplier inline (cross-account, like the receiving-order supplier); expose it so list rows can request it.
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypePurchaseOrder,
 			Fields:     []string{"supplier", "lines"},

@@ -15,9 +15,9 @@ import (
 // Request to list materials.
 type ListMaterialsRequest struct {
 	apiresource.PaginationRequest
-	// Filter by category IDs.
+	// Filter to materials in any of these categories.
 	CategoryIDs []string `query:"category_ids"`
-	// Filter by attribute IDs.
+	// Filter to materials carrying any of these attributes.
 	AttributeIDs []string `query:"attribute_ids"`
 	// Filter to materials created on or after this date.
 	StartDate *time.Time `query:"start_date"`
@@ -25,7 +25,9 @@ type ListMaterialsRequest struct {
 	EndDate *time.Time `query:"end_date"`
 }
 
-// Returns a paginated list of materials.
+// Returns a paginated list of materials, newest first.
+//
+// `q` matches against SKU and description, with closer SKU matches ranked first.
 type ListMaterialsEndpoint struct{}
 
 func (e *ListMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMaterialsRequest, *apiresource.List[apiresource.Material]] {

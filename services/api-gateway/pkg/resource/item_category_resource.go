@@ -8,9 +8,9 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleItemCategoryID = "ic_01ae7bd7bfd21ca0ab81e1357e"
+const SampleItemCategoryID = "ic_d06g9c6yc9ck"
 const SampleItemCategoryName = "Electronics"
-const SampleUnitGroupID = "ug_01aad07abb8e41fd392d2d7013"
+const SampleUnitGroupID = "ug_andst6m79n41"
 const SampleUnitGroupName = "Weight"
 
 // A grouping of related catalog items that defines the unit group and properties available to the items within it.
@@ -25,20 +25,22 @@ type ItemCategory struct {
 	Notes *string `json:"notes"`
 	// What kind of items this category groups.
 	//
-	// An item can only be assigned to a category whose type matches the item's `type`.
-	//
 	// - `material_category`: groups raw materials and components (items of type `material`).
 	// - `product_category`: groups finished products and parts (items of type `product` or `part`).
-	Type constants.ItemCategoryType `json:"type" validate:"required"`
-	// Owner of the item category.
 	//
-	// System-owned categories are platform defaults (the `owner.type` is `system` and `owner.account` is `null`); account-owned categories were created by your organization.
+	// An item can only be assigned to a category whose type matches the item's `type`, and the category's type is fixed at creation.
+	Type constants.ItemCategoryType `json:"type" validate:"required"`
+	// Provenance of the item category.
+	//
+	// System-owned categories are platform-provided defaults shared across all accounts and cannot be updated or deleted; account-owned categories are custom to your account.
 	Owner *Owner `json:"owner" expandable:"true"`
-	// Properties associated with this item category.
+	// Properties associated with this item category, such as `Color` or `Size`.
+	//
+	// These describe the dimensions along which items in the category vary, and are also what the customer-facing catalog shows for the category. Attach and detach them with the Add Item Category Property and Remove Item Category Property endpoints.
 	Properties *List[Property] `json:"properties" expandable:"true"`
 	// Unit group associated with this item category.
 	//
-	// This unit group determines the units of measure available to items in this category throughout your production process.
+	// Items in this category are measured in units belonging to this group, and can only be ordered in those units unless the item's product line defines its own unit group, which takes precedence.
 	UnitGroup *UnitGroup `json:"unit_group" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

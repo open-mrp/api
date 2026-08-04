@@ -14,7 +14,9 @@ import (
 // Request to list the account's reusable rosters.
 type ListMessagingGroupsRequest struct{}
 
-// Lists the reusable rosters in the caller's account (most-recently-updated first).
+// Lists the reusable rosters in the caller's account, each with its members.
+//
+// Rosters come back most-recently-updated first, and adding or removing a member counts as an update. The whole account's rosters are returned in one page.
 type ListMessagingGroupsEndpoint struct{}
 
 func (e *ListMessagingGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMessagingGroupsRequest, *apiresource.List[apiresource.MessagingGroup]] {

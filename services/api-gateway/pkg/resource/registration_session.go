@@ -8,9 +8,9 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleRegistrationSessionID = "rgfw_01011dbade766ab524553afb10"
+const SampleRegistrationSessionID = "rgfw_6xab8u2fun46"
 const SampleCheckoutSessionID = "cs_test_a1VnbGQ4ZTFRdGRqUWpYR3h6OG"
-const SampleAddressID = "ad_012c2e4aeeb20f56c1a3d06cc7"
+const SampleAddressID = "ad_npqa5y43q26z"
 const SampleAddressLine1 = "123 Main Street"
 const SampleAddressLine2 = "Suite 100"
 const SampleAddressCity = "San Francisco"
@@ -32,9 +32,9 @@ type RegistrationSessionUser struct {
 	//
 	// Provided by the registrant during the `user_details` step.
 	Name *string `json:"name"`
-	// Timestamp when the user's email address was verified.
+	// When the user's email address was verified.
 	//
-	// Set once the `verification` step completes; until then the email is still pending verification.
+	// Set once the registrant follows the link in the verification email. It mirrors the session's `updated_at` timestamp rather than recording the moment of verification, so it moves forward as the rest of the registration is filled in.
 	EmailVerifiedAt *time.Time `json:"email_verified_at"`
 }
 
@@ -48,15 +48,15 @@ type RegistrationSessionAccount struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=account"`
 	// Display name of the account being created.
 	Name string `json:"name" validate:"required"`
-	// Billing address.
+	// Address the account will be billed at.
+	//
+	// Also becomes the new account's business address when the registration completes.
 	BillingAddress RegistrationSessionAddress `json:"billing_address" validate:"required"`
 }
 
 // Address within a registration session.
 type RegistrationSessionAddress struct {
 	// ID of the address record.
-	//
-	// Populated only after the registration completes and the address is persisted; while the session is in progress the address fields hold the entered values without an ID.
 	ID *string `json:"id"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=address"`
@@ -97,15 +97,15 @@ type RegistrationSession struct {
 	Step constants.RegistrationStep `json:"step" validate:"required"`
 	// ID of the Stripe customer created for this registration.
 	//
-	// Populated when **Setup Registration Billing** runs; absent for free plans, which never set up billing.
+	// Populated when Setup Registration Billing runs; absent for free plans, which never set up billing.
 	StripeCustomerID *string `json:"stripe_customer_id"`
 	// ID of the Stripe Setup Intent created to collect the payment method.
 	//
-	// Despite the field name, this holds the Setup Intent ID created by **Setup Registration Billing**, which **Confirm Registration Payment** verifies against its `setup_intent_id`. It is populated once billing setup runs.
+	// Despite the field name, this holds the Setup Intent ID created by Setup Registration Billing, and Confirm Registration Payment only accepts a `setup_intent_id` matching it.
 	StripeCheckoutSessionID *string `json:"stripe_checkout_session_id"`
 	// Whether payment has been completed for this registration.
 	//
-	// Set to `true` once the `payment` step succeeds; `false` for free plans that require no payment.
+	// Set to `true` once Confirm Registration Payment verifies the Setup Intent. Free plans never collect payment, so this stays `false` and the registration can still be completed.
 	PaymentCompleted bool `json:"payment_completed"`
 	// Account being registered.
 	//
@@ -143,7 +143,7 @@ type CompleteRegistrationResponse struct {
 type CreateUserResponse struct {
 	// ID of the user associated with the session.
 	//
-	// This is either the newly created user or, if the session's email matched an existing user, that existing user.
+	// Repeating the call on a session that already has a user returns that same user rather than creating another.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=user"`

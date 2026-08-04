@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SamplePartID = "pt_018d7bab53e864351f4c693a21"
+const SamplePartID = "pt_coba9fgvd84c"
 const SamplePartSKU = "BRG-6204-2RS"
 
 // A part in the account's catalog: a component used in production.

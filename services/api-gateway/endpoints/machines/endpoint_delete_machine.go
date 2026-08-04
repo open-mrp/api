@@ -12,11 +12,13 @@ import (
 
 // Request to delete a machine.
 type DeleteMachineRequest struct {
-	// Machine ID.
+	// ID of the machine to delete.
 	MachineID string `path:"id" validate:"required"`
 }
 
 // Deletes a machine.
+//
+// Deletion is permanent, and repeating the call reports that the machine has already been deleted. Downtime events and schedule lines already logged against the machine are kept rather than removed with it.
 type DeleteMachineEndpoint struct{}
 
 func (e *DeleteMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteMachineRequest, *apiresource.EmptyResource] {

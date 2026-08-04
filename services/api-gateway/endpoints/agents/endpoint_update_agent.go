@@ -32,14 +32,16 @@ type UpdateAgentRequest struct {
 	// When changing the trigger type, also provide a `config` with a `trigger_config` appropriate for the new type (a cron schedule for `scheduled`, at least one event filter for `event`).
 	TriggerType field.Optional[constants.AgentTriggerType] `json:"trigger_type,omitzero"`
 	// Agent-level configuration controlling LLM behavior and trigger settings.
+	//
+	// Replaces the stored configuration in full rather than merging into it, so send every setting you want to keep — anything you leave out is cleared.
 	Config field.Optional[ConfigInput] `json:"config,omitzero"`
-	// Tools to attach to the agent.
+	// Built-in tools to attach to the agent.
 	//
 	// Replaces the existing tool set when provided.
 	Tools field.Optional[[]ToolInput] `json:"tools,omitzero"`
 	// ID of the role that defines the permissions the agent operates with.
 	//
-	// Send `null` to detach the role; omit to leave it unchanged.
+	// Send `null` to detach the role; omit to leave it unchanged. An agent with no role cannot execute, so detaching the role makes its runs fail immediately.
 	RoleID field.Clearable[string] `json:"role_id,omitzero" validate:"omitempty"`
 }
 
@@ -51,9 +53,9 @@ func (*UpdateAgentRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateAgentRequest)
 }
 
-// Partially updates a custom agent definition.
+// Updates a custom agent.
 //
-// Only the fields provided in the request are changed. System agents cannot be modified.
+// Only the fields provided in the request are changed. Augno's `system` agents cannot be edited — the only thing you can change about them is whether they are enabled for your account, with the Update Agent Status endpoint.
 type UpdateAgentEndpoint struct{}
 
 func (e *UpdateAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAgentRequest, *apiresource.AgentDefinition] {

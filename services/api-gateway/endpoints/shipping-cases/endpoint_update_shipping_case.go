@@ -17,15 +17,19 @@ import (
 type UpdateShippingCaseRequest struct {
 	// Shipping case ID.
 	ShippingCaseID string `path:"id" validate:"required"`
-	// Carrier tracking number to set on the case.
+	// Carrier tracking number to set on the case, replacing any number already recorded.
 	TrackingNumber field.Optional[string] `json:"tracking_number,omitzero" validate:"omitempty,max=255"`
 	// New value for the case's freight cost, as a decimal string.
 	FreightAmountValue field.Optional[string] `json:"freight_amount_value,omitzero"`
-	// ID of the unit for the case's freight cost.
+	// ID of the currency unit the case's freight cost is expressed in.
+	//
+	// Changing the unit relabels the stored freight cost; the number itself is never converted, so send `freight_amount_value` alongside it when the amount should change too.
 	FreightAmountUnitID field.Optional[string] `json:"freight_amount_unit_id,omitzero" validate:"omitempty"`
 	// New value for the case's freight weight, as a decimal string.
 	FreightWeightValue field.Optional[string] `json:"freight_weight_value,omitzero"`
-	// ID of the unit for the case's freight weight.
+	// ID of the unit the case's freight weight is expressed in.
+	//
+	// Changing the unit relabels the stored weight; the number itself is never converted, so send `freight_weight_value` alongside it when the weight should change too.
 	FreightWeightUnitID field.Optional[string] `json:"freight_weight_unit_id,omitzero" validate:"omitempty"`
 }
 
@@ -39,6 +43,8 @@ func (*UpdateShippingCaseRequest) SchemaExample() any {
 }
 
 // Partially updates a shipping case's tracking number and freight quantities.
+//
+// Fields left out of the request keep their current values. The freight cost and weight recorded here are the case's own actual charge and weight; they do not change the freight billed on the sales order.
 type UpdateShippingCaseEndpoint struct{}
 
 func (e *UpdateShippingCaseEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateShippingCaseRequest, *apiresource.ShippingCase] {

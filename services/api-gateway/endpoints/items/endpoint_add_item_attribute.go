@@ -11,17 +11,17 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// AddItemAttributeRequest is the request to add an attribute to an item.
+// Request to add an attribute to an item.
 type AddItemAttributeRequest struct {
 	// Item ID.
 	ItemID string `path:"id" validate:"required"`
-	// Attribute ID.
+	// ID of the attribute to assign to the item.
 	AttributeID string `path:"attribute_id" validate:"required"`
 }
 
-// Adds an attribute to an item and returns the updated item.
+// Assigns an attribute to an item and returns the updated item.
 //
-// If the attribute is already associated with the item, this is a no-op.
+// Adding an attribute the item already carries succeeds and changes nothing, so the call is safe to repeat.
 type AddItemAttributeEndpoint struct{}
 
 func (e *AddItemAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddItemAttributeRequest, *apiresource.Item] {

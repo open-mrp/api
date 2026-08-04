@@ -19,7 +19,9 @@ type RemoveMessagingGroupMemberRequest struct {
 	MemberID string `path:"member_id" validate:"required"`
 }
 
-// Removes a member from a reusable roster.
+// Removes a member from a reusable roster and returns the updated roster.
+//
+// Only conversations started from the roster afterwards are affected; the member stays in every conversation that was already seeded from it.
 type RemoveMessagingGroupMemberEndpoint struct{}
 
 func (e *RemoveMessagingGroupMemberEndpoint) Materialize() *apiendpoint.APIEndpoint[*RemoveMessagingGroupMemberRequest, *apiresource.MessagingGroup] {

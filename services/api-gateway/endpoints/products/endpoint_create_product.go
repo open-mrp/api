@@ -14,7 +14,7 @@ import (
 	"github.com/augno/api/shared/field"
 )
 
-// CreateProductRequest is the request to create a product.
+// Request to create a product.
 type CreateProductRequest struct {
 	// Stock keeping unit code for the product's item.
 	//
@@ -34,6 +34,8 @@ type CreateProductRequest struct {
 	// - `tax`: a tax line.
 	ProductTypeCode constants.ProductTypeCode `json:"type" validate:"required"`
 	// ID of the product line to assign the product to.
+	//
+	// The product line must be one your account owns or a shared system line; anything else fails as not found. Buyers are granted access to whole product lines, so a product created without one never appears in the customer portal, whatever its `portal_visibility`.
 	ProductLineID field.Optional[string] `json:"product_line_id,omitzero" validate:"omitempty"`
 	// ID of the item category for the product's item.
 	//
@@ -54,7 +56,9 @@ type CreateProductRequest struct {
 	//
 	// The same unit rule as `unit_price` applies: the numerator unit must be a currency unit and the denominator unit must not be. When omitted, the cost is initialized to a zero rate in the category's base unit.
 	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero"`
-	// Attribute IDs to connect to the product at creation time.
+	// Attribute IDs to link to the product's item at creation time.
+	//
+	// Every ID must already exist in your account; an unknown ID fails the whole request rather than being skipped.
 	AttributeIDs []string `json:"attribute_ids,omitzero"`
 }
 
@@ -80,6 +84,8 @@ func (*CreateProductRequest) SchemaExample() any {
 // Creates a product and its backing inventory item.
 //
 // The new item starts with zero on-hand inventory, and its pricing defaults to zero rates in the category's base unit unless `unit_price` or `unit_cost` is provided.
+//
+// Only products of type `sale` appear in the product list and export; products created with any other type are still usable on orders and invoices but must be retrieved by ID.
 type CreateProductEndpoint struct{}
 
 func (e *CreateProductEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductRequest, *apiresource.Product] {

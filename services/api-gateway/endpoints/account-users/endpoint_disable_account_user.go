@@ -12,13 +12,13 @@ import (
 
 // Request to disable an account user.
 type DisableAccountUserRequest struct {
-	// Account user ID.
+	// ID of the account user to disable.
 	AccountUserID string `path:"id" validate:"required"`
 }
 
 // Disables (locks) an account user.
 //
-// Disabled users cannot access the target account and their active sessions are revoked. Admin users cannot be disabled, you cannot disable yourself, and removed users must be activated before they can be disabled.
+// Disabled users cannot access the account and their active sessions are revoked, but the membership and its role assignment are kept so access can be restored with the activate action. Disabling frees the seat the user occupied. Admin users cannot be disabled, you cannot disable yourself, and removed users must be activated before they can be disabled. Disabling an already-disabled user is a no-op.
 type DisableAccountUserEndpoint struct{}
 
 func (e *DisableAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*DisableAccountUserRequest, *apiresource.EmptyResource] {

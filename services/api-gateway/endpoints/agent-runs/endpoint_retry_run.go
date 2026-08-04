@@ -19,7 +19,9 @@ type RetryRunRequest struct {
 
 // Retries a failed agent run by resuming its existing transcript.
 //
-// Only runs in the `failed` status can be retried; retrying a run in any other status returns a validation error. The run is re-attempted from where it left off — its prior reasoning and tool results are replayed, so the agent continues with full knowledge of what it already did rather than starting over. Each run can be retried a limited number of times.
+// Only runs in the `failed` status can be retried; retrying a run in any other status returns a validation error. The run is re-attempted from where it left off — its prior reasoning and tool results are replayed, so the agent continues with full knowledge of what it already did rather than starting over, which minimizes the chance of it repeating side effects it has already caused.
+//
+// A run can be retried at most five times in total, and any automatic retries the platform already performed for transient failures count against that budget.
 type RetryRunEndpoint struct{}
 
 func (e *RetryRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetryRunRequest, *apiresource.AgentRun] {

@@ -13,7 +13,7 @@ import (
 
 // Request to retrieve a service level.
 type RetrieveServiceLevelRequest struct {
-	// Carrier ID.
+	// The carrier that owns this service level.
 	CarrierID string `path:"carrier_id" validate:"required"`
 	// Service level ID.
 	ServiceLevelID string `path:"id" validate:"required"`
@@ -31,11 +31,7 @@ func (e *RetrieveServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
-		// Service-level reads reuse the carrier relation helper
-		// (checkCarrierReadPermission), which requires carriers:read on the own
-		// account but customers:read / suppliers:read when an internal actor reads a
-		// customer's or supplier's data. Declare the full OR-set so the gateway gate
-		// doesn't false-reject those relation-scoped reads.
+		// Service-level reads reuse the carrier relation helper (checkCarrierReadPermission), which requires carriers:read on the own account but customers:read / suppliers:read when an internal actor reads a customer's or supplier's data. Declare the full OR-set so the gateway gate doesn't false-reject those relation-scoped reads.
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainCarriers, Action: types.ActionRead},
 			{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},

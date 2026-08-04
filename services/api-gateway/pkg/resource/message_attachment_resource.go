@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleMessageAttachmentID = "mgah_01h9z8q1w2e3r4t5y6u7mgah"
+const SampleMessageAttachmentID = "mgah_v17axle2mcff"
 
 // A file, image, link, or resource attached to a message.
 type MessageAttachment struct {
@@ -23,25 +23,23 @@ type MessageAttachment struct {
 	// - `link`: an external URL reference, with no stored file.
 	// - `resource`: a reference to an in-app resource, such as an order.
 	Kind constants.MessageAttachmentKind `json:"kind" validate:"required"`
-	// The original filename for uploaded attachments.
+	// The filename the attachment was uploaded under.
 	//
-	// `null` for link/resource attachments.
+	// Carried only by `file` and `image` attachments.
 	Filename *string `json:"filename"`
-	// The MIME content type for uploaded attachments.
+	// The MIME type of the uploaded content.
 	//
-	// `null` for link/resource attachments.
+	// Carried only by `file` and `image` attachments.
 	ContentType *string `json:"content_type"`
-	// The size in bytes for uploaded attachments.
+	// The size of the uploaded content in bytes.
 	//
-	// `null` when unknown or for link/resource attachments.
+	// Carried only by `file` and `image` attachments, and only when the sender supplied it with the message.
 	SizeBytes *int64 `json:"size_bytes"`
-	// A time-limited download URL for uploaded (file/image) attachments, or the link URL.
+	// Where to fetch the attachment: a signed download URL for `file` and `image` attachments, or the target address for `link` attachments.
 	//
-	// `null` for resource attachments.
+	// Download URLs are signed for one hour and regenerated each time the message is read, so follow the URL promptly instead of persisting it. `resource` attachments have no URL — use `resource` to resolve them.
 	URL *string `json:"url"`
-	// The linked in-app resource for `resource` attachments.
-	//
-	// `null` for file/image/link attachments.
+	// The in-app record a `resource` attachment points to, such as a sales order.
 	Resource *Entity `json:"resource" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

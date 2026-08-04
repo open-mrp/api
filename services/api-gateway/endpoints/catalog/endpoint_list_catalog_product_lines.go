@@ -16,9 +16,9 @@ type ListCatalogProductLinesRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of product lines available in the catalog.
+// Returns the product lines available in the catalog, ordered by name.
 //
-// Customers only see product lines they have access to.
+// A product line only appears once it holds at least one product whose `portal_visibility` is `visible`. When the caller is a customer user, the list is narrowed further to the product lines that customer has been granted access to, either directly, through an account group, or through the account group used as their price group. The `q` search term is matched against the product line name.
 type ListCatalogProductLinesEndpoint struct{}
 
 func (e *ListCatalogProductLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCatalogProductLinesRequest, *apiresource.List[apiresource.CatalogProductLine]] {

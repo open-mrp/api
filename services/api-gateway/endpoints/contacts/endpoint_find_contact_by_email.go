@@ -16,7 +16,9 @@ import (
 type FindContactByEmailRequest struct {
 	// The email address to look up.
 	Email string `json:"email" validate:"required,email"`
-	// Filter to contacts whose relationship to you is one of these.
+	// Restricts the results to matches whose relationship to your account is one of these.
+	//
+	// Leaving it out returns matches of every relationship.
 	Relationships []constants.ContactRelationship `query:"relationships"`
 }
 
@@ -30,7 +32,7 @@ func (*FindContactByEmailRequest) SchemaExample() any {
 
 // Finds the contacts that match an email address.
 //
-// Only people on accounts you have a relationship with are returned — your customers, your suppliers, or your own account. A match's `relationship` says how you relate to the account it belongs to. Several accounts can share an email, so this can return more than one match.
+// Only active people on accounts you have a relationship with are returned — your customers, your suppliers, or your own account. A match's `relationship` says how you relate to the account it belongs to. The same person can be set up on several accounts under one email, so this can return more than one match, and an email that belongs to no one you deal with simply returns no matches rather than an error.
 type FindContactByEmailEndpoint struct{}
 
 func (e *FindContactByEmailEndpoint) Materialize() *apiendpoint.APIEndpoint[*FindContactByEmailRequest, *apiresource.List[apiresource.ContactMatch]] {

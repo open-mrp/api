@@ -22,7 +22,9 @@ type ListOpenCreditsRequest struct {
 	CustomerIDs []string `query:"customer_ids"`
 }
 
-// Returns a paginated list of transactions that are not fully allocated against invoices, with the remaining balance available to apply.
+// Returns a paginated list of customer transactions that still have money left to apply to invoices, newest first.
+//
+// Membership is driven by each transaction's `is_fully_allocated` flag rather than by a recomputed balance, so a transaction remains listed until that flag is set. Free-text search matches the transaction ID, transaction number, customer name, and note.
 type ListOpenCreditsEndpoint struct{}
 
 func (e *ListOpenCreditsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListOpenCreditsRequest, *apiresource.List[apiresource.OpenCreditEntry]] {

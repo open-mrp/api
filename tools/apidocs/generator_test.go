@@ -707,7 +707,7 @@ func TestGenerateSchema_ListAndPageInfoUseDocComments(t *testing.T) {
 	listType := reflect.TypeOf(apiresource.List[listDocCommentItem]{})
 	listSchema := generateSchema(listType, components, reader)
 
-	if want := "List represents a paginated list of resources."; listSchema.Description != want {
+	if want := "A single page of resources, together with the metadata needed to page through the rest of the result set."; listSchema.Description != want {
 		t.Errorf("List schema description = %q; want %q", listSchema.Description, want)
 	}
 
@@ -729,13 +729,15 @@ func TestGenerateSchema_ListAndPageInfoUseDocComments(t *testing.T) {
 	if !ok {
 		t.Fatal("expected PageInfo in components.Schemas")
 	}
-	if want := "PageInfo contains URL-based pagination metadata."; pageInfoSchema.Description != want {
+	wantPageInfo := "PageInfo describes where the current page sits within a paginated result set and how to move to the adjacent pages.\n\n" +
+		"Page a list by following the URLs below rather than assembling cursors yourself. For a top-level list endpoint the URL repeats the original request's query string with only the cursor swapped, so following it preserves the same filters, search term, and page size."
+	if want := wantPageInfo; pageInfoSchema.Description != want {
 		t.Errorf("PageInfo schema description = %q; want %q", pageInfoSchema.Description, want)
 	}
-	if got := pageInfoSchema.Properties["next_page_url"].Description; got != "Relative URL that fetches the next page of results.\n\n`null` when the last page has been reached." {
+	if got := pageInfoSchema.Properties["next_page_url"].Description; got != "Relative URL that fetches the next page of results." {
 		t.Errorf("next_page_url description = %q", got)
 	}
-	if got := pageInfoSchema.Properties["previous_page_url"].Description; got != "Relative URL that fetches the previous page of results.\n\n`null` while on the first page." {
+	if got := pageInfoSchema.Properties["previous_page_url"].Description; got != "Relative URL that fetches the previous page of results." {
 		t.Errorf("previous_page_url description = %q", got)
 	}
 	if got := pageInfoSchema.Properties["has_next_page"].Description; got != "Whether more results exist after this page." {

@@ -18,6 +18,8 @@ type ListConversationLinksRequest struct {
 }
 
 // Returns the business records linked to a conversation.
+//
+// Every link is returned in one page. The conversation's primary `topic` anchor is not a link and is not listed here.
 type ListConversationLinksEndpoint struct{}
 
 func (e *ListConversationLinksEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListConversationLinksRequest, *apiresource.List[apiresource.ConversationLink]] {

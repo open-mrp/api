@@ -14,11 +14,18 @@ import (
 // Request to list the account's portal registration sessions.
 type ListPortalRegistrationSessionsRequest struct {
 	apiresource.PaginationRequest
-	// Restrict the results to a single lifecycle status.
+	// Restrict the results to a single registration state.
+	//
+	// - `in_progress`: still incomplete and inside the seven-day resume window.
+	// - `completed`: the buyer finished registering.
+	// - `abandoned`: the buyer explicitly gave the session up.
+	// - `expired`: still incomplete, but past the resume window, so the buyer can no longer pick it back up.
 	Status *string `query:"status"`
 }
 
-// Returns the account's buyer customer-portal registration sessions, newest first, so customer service can follow up on registrations that stalled or expired before completing. Includes in-progress, completed, abandoned, and expired sessions; filter with `status`.
+// Returns the account's buyer registrations into its customer portal, newest first.
+//
+// Registrations in every state are returned — in progress, completed, abandoned, and expired — so customer service can follow up on the ones that stalled before completing; narrow them with `status`. The search term matches the session ID and the customer name or number the buyer entered.
 type ListPortalRegistrationSessionsEndpoint struct{}
 
 func (e *ListPortalRegistrationSessionsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPortalRegistrationSessionsRequest, *apiresource.List[apiresource.PortalRegistrationSession]] {

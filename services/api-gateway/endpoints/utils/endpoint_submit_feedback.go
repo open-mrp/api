@@ -13,11 +13,11 @@ import (
 
 // Request to submit user feedback.
 type SubmitFeedbackRequest struct {
-	// Question presented to the user.
+	// The question the user was prompted with.
 	Question string `json:"question" validate:"required"`
-	// Answer to the question.
+	// The user's response to the question.
 	Answer string `json:"answer" validate:"required"`
-	// URL of the page where feedback was submitted.
+	// URL of the page the user was on when they answered, recorded so the feedback can be read in context.
 	PageURL field.Optional[string] `json:"page_url,omitzero"`
 }
 
@@ -30,7 +30,9 @@ func (*SubmitFeedbackRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleSubmitFeedbackRequest)
 }
 
-// Submits user feedback for a given question and page.
+// Submits an answer to an in-product feedback prompt for the Augno team to review.
+//
+// The submission creates no resource and cannot be read back through the API. The response carries a confirmation message suitable for display.
 type SubmitFeedbackEndpoint struct{}
 
 func (e *SubmitFeedbackEndpoint) Materialize() *apiendpoint.APIEndpoint[*SubmitFeedbackRequest, *apiresource.MessageResource] {

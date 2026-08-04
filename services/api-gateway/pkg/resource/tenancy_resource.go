@@ -16,10 +16,16 @@ type Tenancy struct {
 	// Absent when the user has no active account selected, such as partway through registration.
 	CurrentAccount *TenancyCurrentAccount `json:"current_account"`
 	// Sandbox accounts the user can switch into.
+	//
+	// Only administrators of a production account see its sandboxes; the list is empty for every other role, and while already acting inside a sandbox.
 	Sandboxes *List[TenancySandboxAccount] `json:"sandboxes" validate:"required"`
-	// The user's own production account, the account they signed up to create.
+	// The production account that the current account belongs to.
+	//
+	// This is the current account itself when acting in a production account, and its parent account when acting inside a sandbox.
 	OwnerAccount *TenancyOwnerAccount `json:"owner_account"`
 	// Accounts the user has been granted access to beyond their current and owner accounts, such as other vendors' accounts.
+	//
+	// Only accounts that have finished onboarding appear here, and the current account's own sandboxes are listed under `sandboxes` instead of being duplicated into this list.
 	OtherAccounts *List[TenancyOtherAccount] `json:"other_accounts" validate:"required"`
 	// In-progress registration session, populated only partway through signup before the account exists.
 	PendingRegistration *TenancyPendingRegistration `json:"pending_registration"`
@@ -38,15 +44,23 @@ type TenancyCurrentAccount struct {
 	// - `company`: a standard production account.
 	// - `sandbox`: an isolated testing account.
 	Type string `json:"type" validate:"required"`
-	// Onboarding status.
+	// How far the account has progressed through onboarding.
+	//
+	// The account is fully set up and usable once this is `active`.
 	OnboardingStatus string `json:"onboarding_status" validate:"required"`
 	// Code of the account's subscription plan (for example `free`, `starter`, or `pro`).
+	//
+	// The same code appears as `account_plan.plan_type_code`, alongside the plan's resolved limits and features.
 	Plan string `json:"plan" validate:"required"`
-	// The account's customer portal slug.
+	// The slug this account's customer portal is addressed by.
+	//
+	// Absent until the account enables its customer portal.
 	Slug *string `json:"slug"`
 	// The authenticated user's role in this account.
 	Role *Role `json:"role"`
-	// Internal Stripe customer ID for this account.
+	// The Stripe customer that Augno bills this account's own subscription and usage against.
+	//
+	// This is not the account's own Stripe customer for charging their customers.
 	InternalStripeCustomerID *string `json:"internal_stripe_customer_id"`
 	// Full plan details for this account, including limits and features.
 	AccountPlan *TenancyAccountPlan `json:"account_plan"`
@@ -56,25 +70,31 @@ type TenancyCurrentAccount struct {
 
 // The resolved subscription plan for the current account, including its limits and features.
 type TenancyAccountPlan struct {
-	// Plan ID.
+	// Identifier of the plan definition the account is subscribed to.
 	TypeID string `json:"type_id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_plan"`
-	// Display name.
+	// Display name of the plan, as shown in billing.
 	Name string `json:"name" validate:"required"`
-	// Plan type code.
+	// Stable code for the plan tier (for example `free`, `starter`, or `pro`).
 	PlanTypeCode string `json:"plan_type_code" validate:"required"`
-	// Plan version.
+	// Revision of the plan definition the account is on.
+	//
+	// Plans are versioned so existing subscribers keep the pricing, limits, and features they signed up under when a newer version of the same plan is published.
 	Version int32 `json:"version"`
-	// Price per seat per month.
+	// Price per seat per month in dollars.
 	PricePerSeat float64 `json:"price_per_seat"`
-	// Flat monthly price, if applicable.
+	// Per-seat price override in dollars used in place of `price_per_seat` when set.
+	//
+	// The monthly bill multiplies this by the number of seats (at least `seat_minimum`). `null` or `0` falls back to `price_per_seat`.
 	PricePerMonth *float64 `json:"price_per_month"`
-	// Minimum seats required for this plan.
+	// Fewest seats the account is billed for, regardless of how many users it actually has.
 	SeatMinimum *int32 `json:"seat_minimum"`
-	// Resource limits, keyed by limit code; a `null` value means unlimited.
+	// Ceilings this plan imposes, keyed by limit code (for example `seats_maximum`).
+	//
+	// A `null` value means that resource is unlimited on this plan.
 	Limits map[string]*int32 `json:"limits"`
-	// Feature availability for this plan, keyed by feature code.
+	// Which capabilities this plan unlocks, keyed by feature code (for example `customer_portal`).
 	Features map[string]bool `json:"features"`
 }
 
@@ -86,7 +106,9 @@ type TenancyPendingRegistration struct {
 	SessionID string `json:"session_id" validate:"required"`
 	// Plan code selected during registration.
 	PlanCode string `json:"plan_code" validate:"required"`
-	// Current step in the registration flow.
+	// How far the signup has progressed, so the flow can be resumed where the user left off.
+	//
+	// Steps run `verification`, `user_details`, `account_details`, `review`, `payment`, then `completed`.
 	Step string `json:"step" validate:"required"`
 	// Session creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -102,7 +124,7 @@ type TenancySandboxAccount struct {
 	Name string `json:"name" validate:"required"`
 }
 
-// Owner account for the user's tenancy.
+// The production account that the current account belongs to.
 type TenancyOwnerAccount struct {
 	// Account ID.
 	ID string `json:"id" validate:"required"`
@@ -172,7 +194,7 @@ func (*Tenancy) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleTenancy)
 }
 
-// Minimal customer account summary.
+// A customer account under a vendor that the authenticated user is able to act on behalf of in that vendor's customer portal.
 type CustomerAccountSummary struct {
 	// Account ID.
 	ID string `json:"id" validate:"required"`

@@ -17,6 +17,8 @@ type CreateCustomerProductLineAccessRequest struct {
 	// ID of the customer to grant product line access to.
 	CustomerID string `json:"customer_id" validate:"required"`
 	// IDs of the product lines the customer can access.
+	//
+	// Must contain at least one ID, and each one must be a product line your account owns; the shared system product lines cannot be granted.
 	ProductLineIDs []string `json:"product_line_ids" validate:"required"`
 }
 
@@ -31,7 +33,9 @@ func (*CreateCustomerProductLineAccessRequest) SchemaExample() any {
 
 // Grants a customer direct access to a set of product lines.
 //
-// Each customer can have at most one access record; fails with a conflict error if one already exists. Use Update Customer Product Line Access to change an existing record.
+// The customer can then browse and order those product lines, on top of anything it already reaches through its type group or pricing groups.
+//
+// Each customer can have at most one access record; creating one for a customer that already has one returns a conflict error. Use Update Customer Product Line Access to change an existing record.
 type CreateCustomerProductLineAccessEndpoint struct{}
 
 func (e *CreateCustomerProductLineAccessEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateCustomerProductLineAccessRequest, *apiresource.CustomerProductLineAccess] {

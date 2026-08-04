@@ -33,9 +33,9 @@ func (*UpdateItemCategoryRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateItemCategoryRequest)
 }
 
-// Partially updates an account-owned item category.
+// Updates the name or notes of an item category owned by your account.
 //
-// Only the fields provided in the request body are changed. Default system categories cannot be updated.
+// Only the fields present in the request body are changed. A category's type is fixed at creation, and its unit group is changed through the Change Item Category Unit Group endpoint. System-owned categories cannot be updated.
 type UpdateItemCategoryEndpoint struct{}
 
 func (e *UpdateItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateItemCategoryRequest, *apiresource.ItemCategory] {

@@ -18,6 +18,8 @@ type UpdatePropertyRequest struct {
 	// Property ID.
 	PropertyID string `path:"id" validate:"required"`
 	// Display name of the property, such as `Color` or `Size`.
+	//
+	// Must be unique within your account.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 }
 

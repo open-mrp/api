@@ -11,13 +11,13 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// RetrieveItemRequest is the request to get an item by ID.
+// Request to retrieve an item by ID.
 type RetrieveItemRequest struct {
 	// Item ID.
 	ItemID string `path:"id" validate:"required"`
 }
 
-// Returns an item by ID.
+// Returns a single item by ID.
 type RetrieveItemEndpoint struct{}
 
 func (e *RetrieveItemEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveItemRequest, *apiresource.Item] {

@@ -12,15 +12,15 @@ import (
 
 // Request to delete a service level.
 type DeleteServiceLevelRequest struct {
-	// Carrier ID.
+	// The carrier that owns this service level.
 	CarrierID string `path:"carrier_id" validate:"required"`
 	// Service level ID.
 	ServiceLevelID string `path:"id" validate:"required"`
 }
 
-// Permanently deletes a service level.
+// Permanently deletes a service level so it can no longer be selected on shipments.
 //
-// System-owned service levels and the carrier's default service level cannot be deleted; unset `is_default` first to delete a default.
+// System-owned service levels and the carrier's default service level cannot be deleted; to remove a default, first clear its `is_default` flag or promote another service level in its place.
 type DeleteServiceLevelEndpoint struct{}
 
 func (e *DeleteServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteServiceLevelRequest, *apiresource.EmptyResource] {

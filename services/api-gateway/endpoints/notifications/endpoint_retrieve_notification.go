@@ -11,13 +11,15 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Request to retrieve a single notification owned by the caller.
+// Request to retrieve a single notification addressed to the caller.
 type RetrieveNotificationRequest struct {
 	// Notification ID.
 	NotificationID string `path:"id" validate:"required"`
 }
 
-// Returns one of the caller's notifications by ID.
+// Retrieves a single notification by ID.
+//
+// Only notifications addressed to the current user are visible; another user's notification is reported as not found. Dismissed notifications remain retrievable.
 type RetrieveNotificationEndpoint struct{}
 
 func (e *RetrieveNotificationEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveNotificationRequest, *apiresource.Notification] {

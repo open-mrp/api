@@ -14,7 +14,7 @@ import (
 	"github.com/augno/api/shared/field"
 )
 
-// CreateSupplierRequest is the request to create a supplier.
+// Request to create a supplier.
 type CreateSupplierRequest struct {
 	// The supplier's name, as shown in the dashboard and on documents.
 	Name string `json:"name" validate:"required,max=255"`
@@ -25,6 +25,8 @@ type CreateSupplierRequest struct {
 	// Free-form notes about the supplier.
 	Note field.Optional[string] `json:"note,omitzero"`
 	// Default billing address to create for the supplier.
+	//
+	// A new address record is created from these values and saved to the supplier; existing addresses cannot be reused here.
 	BillToAddress field.Optional[apirequest.AddressInput] `json:"bill_to_address,omitzero"`
 	// Default shipping address to create for the supplier.
 	//
@@ -56,6 +58,8 @@ func (*CreateSupplierRequest) SchemaExample() any {
 }
 
 // Creates a supplier, optionally with inline bill-to and ship-to addresses.
+//
+// Returns a conflict error if another supplier in the account already uses the given number.
 type CreateSupplierEndpoint struct{}
 
 func (e *CreateSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSupplierRequest, *apiresource.SupplierDetail] {

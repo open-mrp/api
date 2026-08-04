@@ -19,7 +19,11 @@ type DeleteSettlementRequest struct {
 
 // Deletes a settlement and all of its allocations.
 //
-// Affected invoices revert to an `unpaid` payment status, affected transactions are no longer marked fully allocated, and adjustment transactions referenced only by this settlement are removed.
+// Every transaction the settlement drew from is marked not fully allocated, so it reappears in List Open Credits even when allocations from other settlements already cover its full amount.
+//
+// Every invoice the settlement touched has its paid-in-full and overpaid flags cleared rather than recomputed, so its `payment_status` returns to `unpaid` even when other settlements still pay it off; those flags are only recomputed the next time a settlement allocates to that invoice.
+//
+// Adjustment transactions referenced only by this settlement are deleted along with it.
 type DeleteSettlementEndpoint struct{}
 
 func (e *DeleteSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSettlementRequest, *apiresource.Settlement] {

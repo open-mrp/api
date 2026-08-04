@@ -8,9 +8,9 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleTransactionDetailID = "tx_01fc4d4f2b2ee1fa6b6d87257a"
-const SampleTransactionMethodID = "txmd_011b68c574f7c84504fc256ca7"
-const SampleTransactionTypeID = "txtp_01552974c3952ed8178ad671b8"
+const SampleTransactionDetailID = "tx_hvh9thtzaezn"
+const SampleTransactionMethodID = "txmd_hvm86tao3zbx"
+const SampleTransactionTypeID = "txtp_vnml00fjmorb"
 
 // The category of a financial transaction, such as a payment or credit memo.
 type TransactionType struct {
@@ -85,25 +85,27 @@ type TransactionDetail struct {
 	Note *string `json:"note"`
 	// The transaction's type (payment, credit memo, adjustment, or rebate).
 	TransactionType *TransactionType `json:"transaction_type" validate:"required"`
-	// Payment method used.
+	// How the money moved, such as a check or an ACH transfer.
 	//
-	// Typically present only on payment transactions and null for credit memos, adjustments, and rebates.
+	// Typically set only on payment transactions.
 	TransactionMethod *TransactionMethod `json:"transaction_method"`
-	// Adjustment category.
+	// The kind of correction this transaction represents, such as a discount or a write-off.
 	//
-	// Typically populated for `adjustment` transactions; null for other types.
+	// Typically set only on `adjustment` transactions.
 	AdjustmentType *AdjustmentType `json:"adjustment_type"`
-	// Whether the full transaction amount has been allocated against invoices.
+	// Whether the full transaction amount has been applied to invoices.
 	//
-	// When `false`, some of the amount remains as an open (unapplied) balance and the transaction appears in the open credits list. This flag is set explicitly (see Update Transaction); it is not recomputed automatically when allocations change.
+	// Recording a settlement that uses this transaction sets the flag to `true`, and deleting that settlement resets it to `false`. Editing or deleting an individual allocation does not recompute it, so it can also be set directly with Update Transaction.
+	//
+	// While it is `false`, the transaction is treated as an open credit and is returned by List Open Credits.
 	IsFullyAllocated bool `json:"is_fully_allocated" validate:"required"`
-	// Stripe payment ID.
-	//
-	// Set only for transactions collected through Stripe; null for transactions recorded outside Stripe.
+	// Identifier of the Stripe payment that produced this transaction.
 	StripePaymentID *string `json:"stripe_payment_id"`
 	// Number of allocations against invoices for this transaction.
 	AllocationCount int32 `json:"allocation_count" validate:"required"`
-	// Allocations of this transaction against invoices.
+	// The portions of this transaction that have been applied to individual invoices.
+	//
+	// Allocations are created by recording a settlement; there is no endpoint that creates one directly.
 	Allocations *List[TransactionAllocation] `json:"allocations" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -175,17 +177,19 @@ type TransactionSummary struct {
 	Customer *Customer `json:"customer" expandable:"true"`
 	// The transaction's type (payment, credit memo, adjustment, or rebate).
 	TransactionType *TransactionType `json:"transaction_type" validate:"required"`
-	// Payment method used.
+	// How the money moved, such as a check or an ACH transfer.
 	//
-	// Typically present only on payment transactions and null for credit memos, adjustments, and rebates.
+	// Typically set only on payment transactions.
 	TransactionMethod *TransactionMethod `json:"transaction_method"`
-	// Adjustment category.
+	// The kind of correction this transaction represents, such as a discount or a write-off.
 	//
-	// Typically populated for `adjustment` transactions; null for other types.
+	// Typically set only on `adjustment` transactions.
 	AdjustmentType *AdjustmentType `json:"adjustment_type"`
-	// Whether the full transaction amount has been allocated against invoices.
+	// Whether the full transaction amount has been applied to invoices.
 	//
-	// When `false`, some of the amount remains as an open (unapplied) balance and the transaction appears in the open credits list. This flag is set explicitly (see Update Transaction); it is not recomputed automatically when allocations change.
+	// Recording a settlement that uses this transaction sets the flag to `true`, and deleting that settlement resets it to `false`. Editing or deleting an individual allocation does not recompute it, so it can also be set directly with Update Transaction.
+	//
+	// While it is `false`, the transaction is treated as an open credit and is returned by List Open Credits.
 	IsFullyAllocated bool `json:"is_fully_allocated" validate:"required"`
 	// Number of allocations against invoices for this transaction.
 	AllocationCount int32 `json:"allocation_count" validate:"required"`

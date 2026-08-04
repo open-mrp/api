@@ -19,13 +19,17 @@ type UpdateInvoiceRequest struct {
 	InvoiceID string `path:"id" validate:"required"`
 	// Note to attach to the invoice.
 	Note field.Optional[string] `json:"note,omitzero"`
-	// Whether the invoice has been sent to the customer.
+	// Records whether the invoice has been sent to the customer.
+	//
+	// Emailing the invoice through Email Record sets this on its own, so it only needs to be set here when the invoice was delivered outside the platform.
 	HasBeenSent field.Optional[bool] `json:"has_been_sent,omitzero"`
-	// Whether the invoice has been sent via EDI.
+	// Records whether the invoice has been transmitted to the customer via EDI.
+	//
+	// A tracking flag only; setting it does not transmit anything.
 	IsEdiSent field.Optional[bool] `json:"is_edi_sent,omitzero"`
 	// Whether the invoice has been paid in full.
 	//
-	// Setting this to `true` marks the invoice as paid regardless of recorded allocations, which updates the invoice's `payment_status` and removes it from receivables listings.
+	// Setting this to `true` marks the invoice as paid regardless of the payments recorded against it, which updates the invoice's `payment_status` and drops it from receivables listings. Recording a settlement against the invoice later recalculates the flag from its allocations and can overwrite the value set here.
 	IsPaidInFull field.Optional[bool] `json:"is_paid_in_full,omitzero"`
 }
 
@@ -40,7 +44,9 @@ func (*UpdateInvoiceRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateInvoiceRequest)
 }
 
-// Partially updates an invoice.
+// Updates an invoice's note and its sent and paid tracking flags.
+//
+// Only the fields supplied in the request are changed. The invoice's lines, its customer, and the amounts it bills follow the sales order behind the invoice and cannot be changed here.
 type UpdateInvoiceEndpoint struct{}
 
 func (e *UpdateInvoiceEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateInvoiceRequest, *apiresource.Invoice] {

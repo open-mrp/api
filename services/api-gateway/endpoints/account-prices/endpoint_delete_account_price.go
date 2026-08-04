@@ -18,7 +18,9 @@ type DeleteAccountPriceRequest struct {
 
 // Deletes an account price.
 //
-// Associated category constraints, attribute constraints, and the rate record are also removed. Deletion is permanent; further requests against the deleted ID return an error.
+// The price's category and attribute associations and its rate record are removed with it. Deletion is permanent; further requests against the deleted ID return an error.
+//
+// Order lines that have already been priced keep the unit price they were given; only lines priced after the deletion revert to standard pricing.
 type DeleteAccountPriceEndpoint struct{}
 
 func (e *DeleteAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAccountPriceRequest, *apiresource.EmptyResource] {

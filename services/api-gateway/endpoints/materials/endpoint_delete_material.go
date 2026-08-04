@@ -18,7 +18,7 @@ type DeleteMaterialRequest struct {
 
 // Deletes a material.
 //
-// This is a soft delete: the material is marked deleted and no longer returned by other endpoints, but the record is retained. Deleting an already-deleted material returns an error.
+// This is a soft delete: the material and the catalog item behind it stop being returned by other endpoints, but the records are retained. The response is the material as it stood immediately before deletion, and deleting an already-deleted material returns an error.
 type DeleteMaterialEndpoint struct{}
 
 func (e *DeleteMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteMaterialRequest, *apiresource.Material] {

@@ -30,6 +30,8 @@ func (*CreateDCLocationRequest) SchemaExample() any {
 }
 
 // Creates a distribution-center (DC) location for a customer.
+//
+// The location text is not checked for uniqueness, so one customer can hold several locations with identical text.
 type CreateDCLocationEndpoint struct{}
 
 func (e *CreateDCLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateDCLocationRequest, *apiresource.DCLocation] {

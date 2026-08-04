@@ -11,9 +11,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Returns the monthly agent spending cap for the account.
+// Returns the monthly cap on agent spending for the account.
 //
-// A null `cap_cents` means no cap is set.
+// The cap limits estimated agent LLM spend within a billing month; Get Account Usage reports how much of it has been spent so far.
 type GetSpendingCapEndpoint struct{}
 
 func (e *GetSpendingCapEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.SpendingCapResponse] {

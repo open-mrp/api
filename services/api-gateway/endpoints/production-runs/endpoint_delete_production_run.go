@@ -18,7 +18,7 @@ type DeleteProductionRunRequest struct {
 
 // Deletes a production run.
 //
-// All batches recorded against the run are deleted, linked orders are detached from the run, and reserved inventory for those orders is released.
+// All batches recorded against the run are deleted, linked orders are detached from the run, and the inventory those orders had reserved is released. Any production schedule lines that were released as this run revert to planned so the same work can be released again.
 type DeleteProductionRunEndpoint struct{}
 
 func (e *DeleteProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteProductionRunRequest, *apiresource.EmptyResource] {

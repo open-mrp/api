@@ -18,7 +18,7 @@ type IssueSalesOrderRequest struct {
 	SalesOrderID string `path:"id" validate:"required"`
 	// Whether to notify the customer.
 	//
-	// When `true`, the order acknowledgement email is sent to the contacts configured on the order and the order's `acknowledgment_status` is set to `sent`.
+	// When `true`, an order acknowledgement email with a PDF of the order is sent to the acknowledgement contacts on the order and the order's `acknowledgment_status` becomes `sent`. An order with no acknowledgement contacts sends nothing and leaves its `acknowledgment_status` unchanged.
 	NotifyCustomer bool `json:"notify_customer"`
 }
 
@@ -30,7 +30,7 @@ func (*IssueSalesOrderRequest) SchemaExample() any {
 
 // Issues a sales order, transitioning it from `estimate` to `issued`.
 //
-// Issuing commits the order for fulfillment: a pick is created for the order's sale lines and inventory is reserved for each line tied to an inventory item.
+// Issuing commits the order for fulfillment: a pick is created for the order's sale lines and inventory is reserved for each line tied to an inventory item. Only an order still in `estimate` can be issued.
 type IssueSalesOrderEndpoint struct{}
 
 func (e *IssueSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*IssueSalesOrderRequest, *apiresource.SalesOrder] {
@@ -47,8 +47,6 @@ func (e *IssueSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*IssueS
 		ServiceHandler: func(svc any) func(ctx context.Context, req *IssueSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError) {
 			return svc.(SalesOrderSvc).IssueSalesOrder
 		},
-		// Status-action endpoints are commands: they return the updated sales
-		// order without `?include=` expansion. Clients that need expanded
-		// sub-resources re-fetch via GET /sales-orders/{id}?include=...
+		// Status-action endpoints are commands: they return the updated sales order without `?include=` expansion. Clients that need expanded sub-resources re-fetch via GET /sales-orders/{id}?include=...
 	})
 }

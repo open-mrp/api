@@ -38,9 +38,9 @@ func (*ListMemoriesRequest) SchemaExample() any {
 	return m
 }
 
-// Returns a paginated list of agent memories for the current account.
+// Returns a paginated list of agent memories for the current account, newest first.
 //
-// Memories whose `expires_at` has passed are excluded.
+// Memories whose `expires_at` has passed are excluded. The `q` search term matches against a memory's ID, category, content, and the ID of the record it is scoped to.
 type ListMemoriesEndpoint struct{}
 
 func (e *ListMemoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMemoriesRequest, *apiresource.List[apiresource.AgentMemory]] {

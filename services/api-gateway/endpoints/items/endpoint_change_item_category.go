@@ -11,19 +11,21 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ChangeItemCategoryRequest is the request to change an item's category.
+// Request to change an item's category.
 type ChangeItemCategoryRequest struct {
 	// Item ID.
 	ItemID string `path:"id" validate:"required"`
 	// ID of the category to move the item to.
 	//
-	// The category's type must be compatible with the item's type; otherwise the request fails validation.
+	// The category's type has to suit the item: a material can only move to a material category, and a product or part can only move to a product category. Anything else fails validation.
 	CategoryID string `path:"category_id" validate:"required"`
 }
 
-// Moves an item to a different category.
+// Moves an item to a different category and returns the updated item.
 //
-// The item's rate units (unit value, unit cost, burn rate) and any related order-point, consumption, and production quantity units are updated to the new category's base unit. Re-assigning the item's current category is a no-op.
+// The item's rate units (unit value, unit cost, burn rate) and any related order-point, consumption, and production quantity units are switched to the new category's base unit. Only the units change — the numbers attached to them are carried over as they were, so review any figure whose meaning depends on the unit after moving between categories that count differently.
+//
+// Re-assigning the item's current category succeeds and changes nothing.
 type ChangeItemCategoryEndpoint struct{}
 
 func (e *ChangeItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*ChangeItemCategoryRequest, *apiresource.Item] {

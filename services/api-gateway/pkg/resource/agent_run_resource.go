@@ -9,9 +9,9 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleAgentRunID = "agrn_01502aa6da9bbdbaa595915fa4"
-const SampleAgentActionID = "agax_018eddea543007633706d37109"
-const SampleAgentRunStepID = "agrnev_01148232974cd53b3ef1b6d437"
+const SampleAgentRunID = "agrn_l6ob5relrd7t"
+const SampleAgentActionID = "agax_5ycfhxhjc74z"
+const SampleAgentRunStepID = "agrnev_8582tkfekiua"
 
 // A single execution of an agent, from trigger through completion.
 type AgentRun struct {
@@ -36,29 +36,35 @@ type AgentRun struct {
 	// - `failed`: stopped after an error; see `error_message`.
 	// - `cancelled`: stopped before completion by a user.
 	Status constants.AgentRunStatus `json:"status" validate:"required"`
-	// Full agent definition for this run.
+	// The agent definition this run executes.
 	Definition *AgentDefinition `json:"definition" expandable:"true"`
-	// Input provided to the agent at the start of the run, as JSON.
-	Input json.RawMessage `json:"input"`
-	// Final output produced by the agent, as JSON.
+	// Input provided to the agent at the start of the run.
 	//
-	// Populated only once the run has completed successfully.
+	// The shape depends on what started the run; a manually triggered run records `{"message": "<your input>"}`.
+	Input json.RawMessage `json:"input"`
+	// Final output produced by the agent.
+	//
+	// Present once the agent has produced a result, including on a run that paused for more input or was cancelled part-way through. A run that has not produced one yet carries an empty object.
 	Output json.RawMessage `json:"output"`
 	// Error message if the run failed.
 	ErrorMessage *string `json:"error_message"`
 	// Actor that triggered this run.
 	//
-	// Null for scheduled or event-triggered runs.
+	// Set only for runs started through the Trigger Agent Run endpoint; runs started by a schedule, a platform event, or a chat message have no triggering actor.
 	TriggeredBy *Actor `json:"triggered_by" expandable:"true"`
 	// When the run started executing.
 	StartedAt *time.Time `json:"started_at"`
 	// When the run completed.
 	CompletedAt *time.Time `json:"completed_at"`
-	// Duration in milliseconds.
+	// How long the run took, in milliseconds.
 	DurationMs *int32 `json:"duration_ms"`
-	// Actions performed during this run.
+	// Tool invocations the agent made during this run.
+	//
+	// Includes calls that were held for human review and never executed, so an entry here does not by itself mean the tool ran.
 	Actions *List[AgentAction] `json:"actions" expandable:"true"`
-	// Timeline steps for this run.
+	// Step-by-step timeline of what happened during the run.
+	//
+	// Ordered by `sequence`, oldest first.
 	Steps *List[AgentRunStep] `json:"steps" expandable:"true"`
 	// When this run was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -72,7 +78,9 @@ type AgentRunStep struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=agent_run_step"`
-	// The kind of timeline event (e.g. `trigger_received`, `user_message`, `assistant_message`, `tool_call`, `tool_result`, `awaiting_approval`, `completion`, `error`).
+	// The kind of timeline event.
+	//
+	// Common values are `trigger_received`, `user_message`, `thinking`, `assistant_message`, `tool_call`, `tool_result`, `tool_blocked`, `awaiting_approval`, `completion`, and `error`. This is an open set — new step types are added as the agent runtime evolves, so treat unrecognized values as informational rather than failing on them.
 	StepType string `json:"step_type" validate:"required"`
 	// Short title for the step.
 	Title string `json:"title" validate:"required"`
@@ -82,9 +90,11 @@ type AgentRunStep struct {
 	Sequence int32 `json:"sequence"`
 	// Actor who produced this step.
 	Actor *Actor `json:"actor"`
-	// Duration in milliseconds.
+	// How long this step took, in milliseconds.
 	DurationMs *int32 `json:"duration_ms"`
-	// Additional structured data for the step, as JSON.
+	// Additional structured data for the step.
+	//
+	// The shape depends on `step_type` — for example a `tool_call` step carries the tool's arguments.
 	Metadata json.RawMessage `json:"metadata"`
 	// When this step was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

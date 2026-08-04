@@ -11,7 +11,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Request for the Typing action: broadcast an ephemeral typing indicator to the conversation.
+// Request for the Send Typing Indicator action.
 type TypingRequest struct {
 	// Conversation ID.
 	ConversationID string `path:"id" validate:"required"`

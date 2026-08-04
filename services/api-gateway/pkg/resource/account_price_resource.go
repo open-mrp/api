@@ -8,27 +8,31 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleAccountPriceID = "acpr_01dfc47cc46b1e0b66ca8eec0a"
+const SampleAccountPriceID = "acpr_7l4j483kf32p"
 
 // A customer-specific price for a product line.
 //
-// When an order line matches an account price's product line and constraints, the account price replaces the standard product line pricing for the recipient customer.
+// When a sales order line matches an account price, that price replaces the unit price the line would otherwise be given — including the effect of any volume discount — rather than discounting it. If more than one account price matches a line, the most recently created one wins.
 type AccountPrice struct {
 	// Account price ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_price"`
-	// Customer account this price applies to.
+	// The customer this price is offered to.
+	//
+	// A price recorded against a parent customer account also applies to orders placed by its child accounts.
 	RecipientAccount *Customer `json:"recipient_account" expandable:"true"`
-	// Product line this price applies to.
+	// The product line whose products this price applies to.
+	//
+	// A product that is not assigned to a product line never matches an account price.
 	ProductLine *ProductLine `json:"product_line" expandable:"true"`
 	// The price, expressed as a rate.
 	//
-	// The rate's numerator unit is typically a currency and its denominator unit is the quantity unit being priced (e.g. `$25.50 / kg`).
+	// The rate's numerator unit is typically a currency and its denominator unit is the quantity unit being priced (e.g. `$25.50 / kg`). A matching order line takes both its unit price and its price units from this rate, exactly as entered.
 	Rate *Rate `json:"rate" validate:"required"`
-	// Item categories this price is constrained to.
+	// Item categories recorded on this price.
 	//
-	// When empty, the price is not restricted by item category.
+	// Order pricing matches an account price on its product line and attributes only, so categories recorded here do not narrow which products the price applies to.
 	Categories *List[ItemCategory] `json:"categories" validate:"required" expandable:"true"`
 	// Attributes this price is constrained to.
 	//

@@ -16,7 +16,9 @@ type ListProductionScheduleDeviationsRequest struct {
 	apiresource.PaginationRequest
 	// ID of the production schedule.
 	ProductionScheduleID string `path:"id" validate:"required"`
-	// Only return changes that fell inside the frozen window.
+	// Whether the change fell inside the frozen window.
+	//
+	// Judged against the freeze as it stood when the change was made, not as it stands now, so a later publish cannot reclassify history.
 	Frozen *bool `query:"frozen"`
 }
 

@@ -11,21 +11,21 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// BulkReconcileItemInput is the input for a single item in a bulk reconcile operation.
+// One item to reconcile in a bulk reconcile request.
 type BulkReconcileItemInput struct {
 	// SKU of the item to reconcile.
 	//
 	// Items whose SKU does not match an existing item are reported in the response's `skipped_items` rather than failing the request.
 	SKU string `json:"sku" validate:"required"`
-	// Abbreviation of the unit the quantity is expressed in (e.g. `kg`).
+	// Abbreviation of a unit available to your account (e.g. `kg`).
 	//
-	// Must match a unit defined on the account; items with an unknown unit are reported in the response's `errors`.
+	// The unit is checked for existence only: the quantity is always recorded in the item's own base unit, so send figures already expressed in that unit. Rows naming an abbreviation that matches no built-in or account-defined unit are reported in the response's `errors`.
 	Unit string `json:"unit" validate:"required"`
 	// Quantity to apply, interpreted according to the request's `reconcile_type`.
 	Quantity float64 `json:"quantity" validate:"required"`
 }
 
-// BulkReconcileItemsRequest is the request to bulk reconcile item inventory.
+// Request to reconcile inventory for many items at once.
 type BulkReconcileItemsRequest struct {
 	// Items to reconcile.
 	Data []BulkReconcileItemInput `json:"data" validate:"required"`
@@ -51,9 +51,11 @@ func (*BulkReconcileItemsRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleBulkReconcileItemsRequest)
 }
 
-// Reconciles on-hand inventory for multiple items by SKU in one call.
+// Reconciles on-hand inventory for multiple items by SKU in one call, the bulk equivalent of counting stock and correcting the books.
 //
 // `reconcile_type` controls whether each quantity is added to the item's current on-hand quantity (`addition`) or replaces it (`force`). The response reports each item as reconciled, skipped (e.g. unknown SKU), or errored (e.g. unknown unit), so a problem with one item does not fail the rest of the batch.
+//
+// Each correction is written to the item's inventory audit trail as a user correction, attributed to the caller.
 type BulkReconcileItemsEndpoint struct{}
 
 func (e *BulkReconcileItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkReconcileItemsRequest, *apiresource.BulkReconcileItemsResponse] {

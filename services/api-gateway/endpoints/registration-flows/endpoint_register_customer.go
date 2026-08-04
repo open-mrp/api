@@ -77,7 +77,7 @@ func (*RegisterCustomerRequest) SchemaExample() any {
 
 // Registers the authenticated user as a customer of a seller account.
 //
-// Either links the user to an existing customer account by customer number, or creates a new customer account with the provided details and links the user to it.
+// Either links the user to an existing customer account by customer number, or creates a new customer account with the provided details and links the user to it. A new customer account takes the authenticated user's email address as its contact email, and either way the seller's customer-service contacts are notified that a buyer has registered.
 type RegisterCustomerEndpoint struct{}
 
 func (e *RegisterCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*RegisterCustomerRequest, *apiresource.EmptyResource] {

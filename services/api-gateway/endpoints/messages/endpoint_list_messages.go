@@ -16,17 +16,19 @@ type ListMessagesRequest struct {
 	apiresource.PaginationRequest
 	// Conversation ID.
 	ConversationID string `path:"id" validate:"required"`
-	// Filter by lifecycle state.
+	// Which set of the conversation's messages to return.
 	//
-	// Defaults to `sent` (the conversation timeline); pass `draft` to list the case's open customer-reply drafts, or `scheduled` to list your not-yet-sent scheduled messages in this conversation.
+	// Left unset, you get the delivered timeline. Pass `draft` for the case's reply drafts awaiting approval, or `scheduled` for the messages you yourself have queued for a future send, soonest first. Those two ignore paging and come back in a single response.
 	Status *constants.MessageStatus `query:"status"`
-	// Catch-up bound.
+	// Return only messages that come after this position in the timeline.
 	//
-	// Only return messages with a sequence greater than this (reconnect sync).
+	// Use it to catch up after a dropped realtime connection: pass the sequence of the last message you already have to fetch everything since.
 	AfterSequence *int64 `query:"after_sequence"`
 }
 
-// Returns a conversation's messages, newest first, keyset-paginated by sequence.
+// Returns the messages in a conversation, newest first.
+//
+// You must be an active participant. A customer reading their own case receives only the messages meant for them — internal team notes are never included.
 type ListMessagesEndpoint struct{}
 
 func (e *ListMessagesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMessagesRequest, *apiresource.List[apiresource.Message]] {

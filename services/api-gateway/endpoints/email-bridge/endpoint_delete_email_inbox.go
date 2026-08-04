@@ -19,7 +19,7 @@ type DeleteEmailInboxRequest struct {
 
 // Removes an email inbox.
 //
-// Inbound mail to its address is no longer routed.
+// Mail sent to its address is no longer routed. Conversations the inbox already opened are kept, but replies can no longer be sent on them, so disable the inbox instead of deleting it if you still need to answer open threads.
 type DeleteEmailInboxEndpoint struct{}
 
 func (e *DeleteEmailInboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteEmailInboxRequest, *apiresource.EmptyResource] {

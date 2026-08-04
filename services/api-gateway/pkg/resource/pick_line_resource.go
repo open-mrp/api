@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SamplePickLineID = "pkln_0170b1525f1c9843b22d914426"
+const SamplePickLineID = "pkln_z86fsg001g4d"
 
 // A single line on a pick, tracking the quantity picked against one sales order line.
 type PickLine struct {
@@ -26,7 +26,7 @@ type PickLine struct {
 	SalesOrderLine *SalesOrderLine `json:"sales_order_line" expandable:"true"`
 	// Timestamp when the line was packed.
 	//
-	// Unset until the line has been packed. Once packed, a line can no longer be picked or voided.
+	// Once packed, a line can no longer be picked or voided. If the sales order line still has quantity outstanding, packing adds a fresh zero-quantity pick line for the remainder rather than reopening this one.
 	PackedAt *time.Time `json:"packed_at"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

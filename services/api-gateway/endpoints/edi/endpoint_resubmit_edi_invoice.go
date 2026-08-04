@@ -25,9 +25,9 @@ func (*ResubmitEDIInvoiceRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleResubmitEDIInvoiceRequest)
 }
 
-// Triggers an EDI resubmission request for an invoice.
+// Resubmits an invoice over EDI.
 //
-// Returns a confirmation message.
+// Use this to send an invoice again when its earlier EDI submission did not reach the customer.
 type ResubmitEDIInvoiceEndpoint struct{}
 
 func (e *ResubmitEDIInvoiceEndpoint) Materialize() *apiendpoint.APIEndpoint[*ResubmitEDIInvoiceRequest, *apiresource.MessageResource] {

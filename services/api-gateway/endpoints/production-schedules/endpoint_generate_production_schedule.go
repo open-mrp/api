@@ -16,13 +16,20 @@ import (
 
 // Request to generate a production schedule.
 type GenerateProductionScheduleRequest struct {
-	// The instant to plan against. Defaults to now.
+	// The instant to plan against, which is what stock, demand history and active demand overrides are read as of.
+	//
+	// Left unset, the plan is solved against the moment the request arrives. The horizon starts on the account's configured week-start day on or before this instant, so backdating this shifts the whole week grid.
 	PlanningAsOf field.Optional[time.Time] `json:"planning_as_of,omitzero"`
-	// Overrides the configured horizon for this version only.
+	// Number of weeks the plan should cover, overriding the account's configured horizon for this version only.
 	HorizonWeeks field.Optional[int32] `json:"horizon_weeks,omitzero" validate:"omitempty,min=1,max=104"`
-	// Overrides the configured demand basis for this version only.
+	// How future demand is derived, overriding the account's configured basis for this version only.
+	//
+	// - `trailing_12`: demand is the trailing twelve months of orders.
+	// - `seasonal_ema`: demand is a seasonal exponential moving average, which follows a season arriving early or late rather than flattening it.
 	DemandBasis field.Optional[constants.ScheduleDemandBasis] `json:"demand_basis,omitzero"`
-	// Label for the version.
+	// Human-readable label for the version, such as the week it was cut for.
+	//
+	// Purely for recognising the version in a list; versions are numbered automatically and the number is what identifies them.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 }
 
@@ -36,7 +43,11 @@ func (*GenerateProductionScheduleRequest) SchemaExample() any {
 
 // Generates and saves a new production schedule.
 //
-// The plan is saved as a draft: nothing is frozen and every line is editable until the version is published. Generating again creates a new version rather than replacing this one, because attainment is measured against whichever version was live at the time.
+// The plan is saved as a draft: nothing is frozen yet, so campaigns can be added, changed and removed without having to give a reason. Generating again creates a new version rather than replacing this one, because attainment is measured against whichever version was live at the time.
+//
+// The solver plans the constraint department — the room that sets the pace of the factory — so production schedule settings must name one and it must have machines that are included in planning. Without that there is nothing to schedule and the request is rejected rather than returning an empty plan.
+//
+// Alongside the campaigns, the version stores the assumptions it was solved with, the per-item policies behind each campaign, and the downstream department work implied by the plan.
 type GenerateProductionScheduleEndpoint struct{}
 
 func (e *GenerateProductionScheduleEndpoint) Materialize() *apiendpoint.APIEndpoint[*GenerateProductionScheduleRequest, *apiresource.ProductionSchedule] {

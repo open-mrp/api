@@ -21,9 +21,13 @@ type CreateUnitGroupUnitRequest struct {
 	//
 	// The unit's dimension must match the group's `type`.
 	UnitID string `json:"unit_id" validate:"required"`
-	// Percentage discount applied to the unit's price when an order is placed in this unit (e.g. `10` is a 10% discount).
+	// Share of the unit's price removed when an order is placed in this unit.
+	//
+	// Expressed as a decimal fraction rather than a whole number, so `0.1` is a 10% discount. Send `0` explicitly for no discount — omitting the field stores a discount of `1`, which removes the entire price.
 	DiscountPercentage field.Optional[float64] `json:"discount_percentage,omitzero" default:"1"`
 	// Flat amount subtracted from the unit's price when an order is placed in this unit.
+	//
+	// Subtracted before `discount_percentage` is applied.
 	DiscountFixed field.Optional[float64] `json:"discount_fixed,omitzero" default:"0"`
 	// Whether the unit is shown to customers in the customer portal.
 	CustomerPortalVisibility field.Optional[constants.CustomerPortalVisibility] `json:"customer_portal_visibility,omitzero" default:"visible"`
@@ -43,7 +47,9 @@ func (*CreateUnitGroupUnitRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateUnitGroupUnitRequest)
 }
 
-// Adds a unit to a unit group. If the unit is already in the group, its existing association is updated with the provided settings instead.
+// Adds a unit to a unit group so that products using the group can be ordered in it.
+//
+// A unit can appear in a group only once, so use the update endpoint to change the discount or visibility of a unit that is already associated. Units cannot be added to system unit groups.
 type CreateUnitGroupUnitEndpoint struct{}
 
 func (e *CreateUnitGroupUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateUnitGroupUnitRequest, *apiresource.UnitGroupUnit] {

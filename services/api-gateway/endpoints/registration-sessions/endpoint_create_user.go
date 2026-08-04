@@ -31,9 +31,9 @@ func (*CreateUserRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateUserRequest)
 }
 
-// Creates the user for a registration session.
+// Creates the user for a registration session and signs the registrant in.
 //
-// If the session's email matches an existing user, that user is associated with the session instead of creating a new one. Advances the session to the `account_details` step.
+// The session's email must already be verified, and no user may exist for that email yet; someone who already has an account must sign in instead of registering again. On success the session advances to the `account_details` step and the response sets authentication cookies, so the remaining registration calls are made as the new user. Repeating the call on a session that already has a user re-issues cookies for that user instead of creating another.
 type CreateUserEndpoint struct{}
 
 func (e *CreateUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateUserRequest, *apiresource.CreateUserResponse] {

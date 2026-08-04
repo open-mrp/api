@@ -11,7 +11,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Request to trigger an EDI pull-orders operation.
+// Request to pull EDI orders for the target account.
 type PullEDIOrdersRequest struct{}
 
 var samplePullEDIOrdersRequest = &PullEDIOrdersRequest{}
@@ -20,9 +20,7 @@ func (*PullEDIOrdersRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(samplePullEDIOrdersRequest)
 }
 
-// Triggers the target account's EDI pull-orders operation.
-//
-// Returns a confirmation message.
+// Triggers EDI order intake for the target account.
 type PullEDIOrdersEndpoint struct{}
 
 func (e *PullEDIOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*PullEDIOrdersRequest, *apiresource.MessageResource] {

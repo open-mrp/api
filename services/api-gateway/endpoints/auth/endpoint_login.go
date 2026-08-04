@@ -29,6 +29,8 @@ func (*LoginRequest) SchemaExample() any {
 }
 
 // Authenticates a user and returns the user object, setting access and refresh tokens in cookies.
+//
+// Failed attempts are throttled per identifier: after 10 failures within 5 minutes, further attempts for that identifier are rejected with a rate-limit error until the window passes. Invalid credentials always return the same generic error, whether or not the identifier exists.
 type LoginEndpoint struct{}
 
 func (e *LoginEndpoint) Materialize() *apiendpoint.APIEndpoint[*LoginRequest, *apiresource.User] {

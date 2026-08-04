@@ -21,13 +21,9 @@ type UpdatePartRequest struct {
 	//
 	// Must remain unique within the account; a conflict error is returned if another item already uses it.
 	SKU field.Optional[string] `json:"sku,omitzero" validate:"omitempty,max=255"`
-	// New description for the part.
-	//
-	// Set to a string to replace the current description, or `null` to clear it.
+	// New free-form description of the part.
 	Description field.Clearable[string] `json:"description,omitzero"`
-	// New notes for the part.
-	//
-	// Set to a string to replace the current notes, or `null` to clear them.
+	// New free-form notes about the part.
 	Notes field.Clearable[string] `json:"notes,omitzero"`
 }
 
@@ -46,7 +42,7 @@ func (*UpdatePartRequest) SchemaExample() any {
 
 // Partially updates a part.
 //
-// Fields not provided retain their current values.
+// Fields not provided retain their current values. Only the SKU, description, and notes are editable here; the part's category and attributes are changed through the item endpoints.
 type UpdatePartEndpoint struct{}
 
 func (e *UpdatePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePartRequest, *apiresource.Part] {

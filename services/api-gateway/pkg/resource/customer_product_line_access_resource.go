@@ -19,10 +19,12 @@ type CustomerProductLineAccess struct {
 	// There is at most one access record per customer, so this also identifies the record.
 	Customer *Customer `json:"customer" validate:"required"`
 	// Product lines this customer has been granted direct access to.
+	//
+	// Only product lines your account owns can be granted; the shared system product lines never appear here.
 	ProductLines *List[ProductLine] `json:"product_lines" validate:"required"`
-	// When this record was created.
+	// When the relationship with this customer was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When this record was last updated.
+	// When the relationship with this customer was last updated.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

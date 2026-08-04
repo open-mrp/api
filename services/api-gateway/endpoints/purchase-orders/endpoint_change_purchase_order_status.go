@@ -25,7 +25,7 @@ type ChangePurchaseOrderStatusRequest struct {
 	StatusChange string `json:"status_change" validate:"required"`
 	// Whether to email the purchase order to the order's contacts.
 	//
-	// Only applies to the `issue` action. When `true`, the purchase order submission email is sent to the order's email contacts and `acknowledgment_status` is set to `sent`.
+	// Only applies to the `issue` action. When `true`, the purchase order submission email is sent to the order's email contacts and `acknowledgment_status` is set to `sent`. An order with no email contacts still moves to `sent` even though no email goes out.
 	SendEmail bool `json:"send_email"`
 }
 

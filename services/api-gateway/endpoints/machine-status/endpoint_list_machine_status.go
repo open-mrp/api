@@ -16,11 +16,15 @@ import (
 type ListMachineStatusRequest struct {
 	// Only include machines in these departments.
 	DepartmentIDs []string `query:"department_ids"`
-	// The moment to read the floor at. Defaults to now.
+	// The moment to read the floor at.
+	//
+	// Chooses the week the campaigns are read for, and the published schedule whose horizon covers that moment; open downtime and scan progress are always read as they stand now. Omit it to read the floor as it is at this instant.
 	AsOf *time.Time `query:"as_of"`
 }
 
 // Returns what every machine is running right now, how much is left on it, and what is queued behind that.
+//
+// The whole floor comes back in one response rather than a page at a time, so a wall display can render it in a single call.
 //
 // Assembled from the published schedule, the batches the floor has scanned against each campaign, and any open downtime. A campaign is `current` once its week is released and while it still has batches to scan; when the last one is scanned it hands over to the next, so this advances on its own as a shift progresses.
 //

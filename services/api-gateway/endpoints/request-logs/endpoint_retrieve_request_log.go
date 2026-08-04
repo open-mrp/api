@@ -17,7 +17,9 @@ type RetrieveRequestLogRequest struct {
 	ID string `path:"id" validate:"required"`
 }
 
-// Returns a request log by ID.
+// Returns a single API request log by ID.
+//
+// The log is readable when your account is either the acting account or the account that was acted upon. This is also the only endpoint that can return the captured query parameters and request and response bodies, and the only way to read the high-traffic-endpoint logs that are withheld from the list endpoint.
 type RetrieveRequestLogEndpoint struct{}
 
 func (e *RetrieveRequestLogEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveRequestLogRequest, *apiresource.RequestLog] {

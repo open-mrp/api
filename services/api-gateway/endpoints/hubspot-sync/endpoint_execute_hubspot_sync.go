@@ -19,7 +19,7 @@ type ExecuteHubspotSyncRequest struct {
 
 // Executes a reviewed HubSpot sync job, writing companies, contacts, and Closed-Won deals to HubSpot.
 //
-// Every company review must be resolved first. A failed run can be re-executed to resume where it stopped.
+// Every company review must be resolved or skipped first, and the job's preview pass must have finished — a sync that failed mid-preview has incomplete matches and cannot be executed, so start a new one instead. Writing happens in the background: this returns as soon as the job is claimed, and the job moves to `executing`. Calling it again while the sync is running is rejected, but a run that failed part-way can be executed again to resume where it stopped.
 type ExecuteHubspotSyncEndpoint struct{}
 
 func (e *ExecuteHubspotSyncEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExecuteHubspotSyncRequest, *apiresource.HubspotSyncJob] {

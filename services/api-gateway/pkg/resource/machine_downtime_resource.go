@@ -8,8 +8,8 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleMachineDowntimeEventID = "mcdt_0192a4c17b3e4f8a91c2d05e77"
-const SampleMachineDowntimeReasonID = "mcdttp_01seedbreakdown"
+const SampleMachineDowntimeEventID = "mcdt_ff5te1hqttco"
+const SampleMachineDowntimeReasonID = "mcdttp_3i7rols6wxyq"
 
 // A reason a machine stopped running.
 //
@@ -20,6 +20,8 @@ type MachineDowntimeReason struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=machine_downtime_reason"`
 	// Stable code used when logging downtime.
+	//
+	// This is the value to send as `reason` when creating or updating a downtime event.
 	Code constants.MachineDowntimeReasonCode `json:"code" validate:"required"`
 	// Display name of the reason.
 	Name string `json:"name" validate:"required"`
@@ -84,8 +86,12 @@ type MachineDowntimeEvent struct {
 	// When the machine started running again.
 	EndedAt *time.Time `json:"ended_at"`
 	// How long the machine was down, in seconds.
+	//
+	// Calculated when the event is closed, and recalculated whenever its start or end time changes.
 	DurationSeconds *int32 `json:"duration_seconds"`
 	// The business day the stoppage is counted against.
+	//
+	// Taken from the calendar date of `started_at`, so correcting the start time can move the stoppage onto a different day's totals.
 	ShiftDate time.Time `json:"shift_at" validate:"required"`
 	// The shift the stoppage is counted against.
 	ShiftCode *string `json:"shift_code"`
@@ -99,9 +105,16 @@ type MachineDowntimeEvent struct {
 	ScheduleLine *Entity `json:"schedule_line"`
 	// Free-form notes about the stoppage.
 	Note *string `json:"note"`
-	// The actor that logged the event — a user, API key, or agent. Expandable.
+	// The actor that logged the event — a user, API key, or agent.
+	//
+	// Recorded from the credentials that created the event and not settable by the caller.
 	ReportedBy *Actor `json:"reported_by" expandable:"true"`
 	// How the event was recorded.
+	//
+	// - `manual`: a person logged the stoppage.
+	// - `scanner`: a shop-floor station logged it.
+	// - `inferred`: the system derived it from a gap in activity.
+	// - `api`: an integration reported it.
 	Source constants.MachineDowntimeSource `json:"source" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

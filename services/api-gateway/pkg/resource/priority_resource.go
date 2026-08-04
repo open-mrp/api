@@ -8,11 +8,13 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SamplePriorityID = "pi_01fc435701244bb3978bfb77ff"
+const SamplePriorityID = "pi_dubkbqpnz45f"
 const SamplePriorityCode = constants.PriorityCodeNormal
 const SamplePriorityName = "Normal"
 
 // Priority level used to order work on sales orders, purchase orders, and picks.
+//
+// The levels are platform-provided and the same for every account, so they cannot be created, renamed, or removed. A customer can carry a default priority that pre-fills new orders for them.
 type Priority struct {
 	// Priority ID.
 	ID string `json:"id"`
@@ -20,9 +22,7 @@ type Priority struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=priority"`
 	// Machine-readable code identifying the priority level.
 	//
-	// - `low`: lowest urgency; worked after normal and high.
-	// - `normal`: default urgency for most orders and picks.
-	// - `high`: highest urgency; worked ahead of normal and low.
+	// Other resources refer to a priority by this code rather than by its ID, such as a sales order's `priority`, and it can be used in place of the ID when retrieving a priority.
 	Code constants.PriorityCode `json:"code" validate:"required"`
 	// Display name of the priority level.
 	Name string `json:"name" validate:"required"`

@@ -19,7 +19,7 @@ type CancelHubspotSyncRequest struct {
 
 // Cancels a HubSpot sync job that is still in progress, releasing the account to start a new one.
 //
-// Use this when a sync is stuck — for example when the worker running it stopped without recording an outcome. The job is marked failed. Anything already written to HubSpot stays there; cancelling only stops the run.
+// Use this when a sync is stuck — for example when the worker running it stopped without recording an outcome. The job is marked failed, with the cancelling user recorded in `last_error`. Anything already written to HubSpot stays there; cancelling only stops the run. A sync that has already completed or failed cannot be cancelled.
 type CancelHubspotSyncEndpoint struct{}
 
 func (e *CancelHubspotSyncEndpoint) Materialize() *apiendpoint.APIEndpoint[*CancelHubspotSyncRequest, *apiresource.HubspotSyncJob] {

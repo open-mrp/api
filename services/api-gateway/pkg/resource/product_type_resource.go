@@ -8,17 +8,21 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleProductTypeID = "prty_01ddca85eedfb6b101a3c2f379"
+const SampleProductTypeID = "prty_bdu6hiasyjl4"
 const SampleProductTypeName = "Sale"
 const SampleProductTypeCode = "sale"
 
-// ProductType classifies how a product behaves on orders and invoices.
+// The classification that decides how a product behaves on orders and invoices — a sellable good, a service, a shipping charge, and so on.
+//
+// Product types are shared across all accounts rather than owned by one.
 type ProductType struct {
 	// Product type ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=product_type"`
-	// Human-readable name of the product type, unique across product types.
+	// Display name of the product type.
+	//
+	// Unique across all product types.
 	Name string `json:"name" validate:"required"`
 	// Stable machine-readable code identifying the kind of product type.
 	//
@@ -29,7 +33,7 @@ type ProductType struct {
 	// - `return`: a returned product (RMA).
 	// - `tax`: a tax line.
 	//
-	// Products reference their product type by this code, and the code can be used in place of the ID when retrieving a product type.
+	// Products reference their product type by this code rather than by ID, and the code can be used in place of the ID when retrieving a product type.
 	Code constants.ProductTypeCode `json:"code" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

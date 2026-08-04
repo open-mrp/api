@@ -26,6 +26,8 @@ func (*CloseBatchRequest) SchemaExample() any {
 }
 
 // Closes a batch so it can no longer be scanned or advanced through production.
+//
+// Use this to finish a batch whose remaining quantity will not be produced, for example when the floor stops short of the planned output. Batches also close on their own when they reach the last production step, when they are moved or merged into a downstream batch, and when everything split off them accounts for their whole quantity. A closed batch cannot be reopened.
 type CloseBatchEndpoint struct{}
 
 func (e *CloseBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*CloseBatchRequest, *apiresource.Batch] {

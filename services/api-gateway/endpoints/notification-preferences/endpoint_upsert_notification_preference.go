@@ -13,26 +13,36 @@ import (
 	"github.com/augno/api/shared/field"
 )
 
-// Request to create or replace a notification preference for the caller.
+// Request to create or replace one of the caller's notification preferences.
 //
-// The preference is keyed by (caller, category), so repeating the request with the same category replaces the existing preference.
+// A user has at most one preference per category, so sending the same category again replaces the previous settings outright — every channel is written from this request, not merged with what was there before.
+//
+// Chat notifications are the only ones these settings currently govern: notifications in every other category reach the in-app feed and are never emailed, whatever is stored here.
 type UpsertNotificationPreferenceRequest struct {
-	// The notification category this preference applies to.
+	// The notification category these settings apply to, such as `chat.message`.
 	//
-	// Omit (or `null`) to set the caller's global default.
+	// Leave it out to set the global default used for every category without its own preference.
 	Category field.Clearable[string] `json:"category,omitzero"`
-	// Whether in-app (bell) notifications are delivered for this category.
+	// Whether notifications in this category appear in the user's in-app feed.
+	//
+	// A direct @mention is always delivered in-app, even when this is off.
 	InAppEnabled bool `json:"in_app_enabled"`
-	// Whether email notifications are delivered for this category.
+	// Whether notifications in this category are also emailed to the user.
+	//
+	// Email is additionally suppressed for a conversation the user has muted, and only sent on the cadence set by `digest`.
 	EmailEnabled bool `json:"email_enabled"`
-	// Whether push notifications are delivered for this category.
+	// Whether notifications in this category are also sent as push notifications.
+	//
+	// Push delivery is not available yet; the choice is stored for when it is.
 	PushEnabled bool `json:"push_enabled"`
-	// How email delivery for this category is batched.
+	// How often email for this category is sent.
 	//
 	// - `instant`: send an email as soon as an eligible notification occurs.
-	// - `hourly`: batch eligible notifications into a single hourly email.
-	// - `daily`: batch eligible notifications into a single daily email.
-	// - `off`: never send email for this category, even when email delivery is otherwise enabled.
+	// - `hourly`: collect eligible notifications into a single hourly email.
+	// - `daily`: collect eligible notifications into a single daily email.
+	// - `off`: never send email for this category, even when email is otherwise enabled.
+	//
+	// This governs email only; in-app delivery is unaffected. Batched sending is not running yet, so `hourly` and `daily` currently hold email back in the same way as `off`.
 	Digest field.Optional[constants.NotificationDigest] `json:"digest,omitzero" default:"instant"`
 }
 
@@ -48,7 +58,9 @@ func (*UpsertNotificationPreferenceRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpsertNotificationPreferenceRequest)
 }
 
-// Creates or replaces a notification channel preference for the caller.
+// Creates or replaces one of the current user's notification preferences, either their global default or the override for a single category.
+//
+// The preference applies only to the account being acted in, and the category must be one the platform recognizes. Callers without a user membership in that account cannot hold preferences and are refused.
 type UpsertNotificationPreferenceEndpoint struct{}
 
 func (e *UpsertNotificationPreferenceEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpsertNotificationPreferenceRequest, *apiresource.NotificationPreference] {

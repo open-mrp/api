@@ -5,7 +5,9 @@ import (
 	"github.com/augno/api/shared/constants"
 )
 
-// Cost preview for a plan change.
+// Cost preview for switching to a different pricing plan.
+//
+// Producing a preview neither changes the subscription nor charges anything.
 type PlanChangeProration struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=plan_change_proration"`
@@ -15,15 +17,17 @@ type PlanChangeProration struct {
 	NetAmount int64 `json:"net_amount"`
 	// Formatted net amount for display (e.g., "$49.00").
 	FormattedNetAmount string `json:"formatted_net_amount" validate:"required"`
-	// Estimated monthly bill amount in cents after the change.
+	// Estimated recurring monthly bill in cents once the change takes effect.
+	//
+	// Calculated from the target plan's price and the number of users on the account, billed at no fewer seats than the plan's seat minimum.
 	MonthlyBillAmount int64 `json:"monthly_bill_amount"`
 	// Formatted monthly bill amount for display.
 	FormattedMonthlyBillAmount string `json:"formatted_monthly_bill_amount" validate:"required"`
 	// Detailed line items from the cost preview.
 	LineItems *List[PlanChangeLineItem] `json:"line_items"`
-	// Whether the amounts are locally estimated rather than calculated by Stripe.
+	// Whether the amounts are locally estimated rather than quoted by Stripe.
 	//
-	// When `true`, the amounts are approximations and the final charge may differ.
+	// Augno falls back to its own calculation when Stripe cannot quote the change, usually because another billing change is still in flight. The amounts are then approximations and the final charge may differ.
 	IsEstimate bool `json:"is_estimate"`
 }
 
@@ -33,7 +37,9 @@ type PlanChangeLineItem struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=plan_change_line_item"`
 	// Description of the line item.
 	Description string `json:"description" validate:"required"`
-	// Amount in cents (negative for credits).
+	// Amount in cents this line contributes to the net total.
+	//
+	// Negative amounts are credits, such as unused time already paid for on the current plan.
 	Amount int64 `json:"amount"`
 }
 

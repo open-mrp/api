@@ -8,11 +8,13 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleConsumptionID = "cp_0152c5d4330f178ebe1158f910"
+const SampleConsumptionID = "cp_blst8ze24dy3"
 
 // Material consumed by a production step.
 //
 // Each consumption records one input item and how much of it the step uses. Consumptions also determine the production flow: when another step produces the consumed item, the two steps are linked upstream/downstream automatically.
+//
+// The quantities are stated against the step's own output, so a step producing 100 pairs and consuming 5 kg of yarn needs 5 kg per 100 pairs. Material requirements for an order scale every consumption in the flow by how much of the finished item is wanted.
 type Consumption struct {
 	// Consumption ID.
 	ID string `json:"id" validate:"required"`
@@ -20,7 +22,9 @@ type Consumption struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=consumption"`
 	// Quantity of the material consumed by the production step.
 	Quantity *Quantity `json:"quantity" expandable:"true"`
-	// Quantity of the material accounted for as waste, separate from the consumed quantity.
+	// Quantity of the material expected to be lost as waste.
+	//
+	// Tracked separately from the consumed quantity, but added to it when material requirements are worked out, since the waste has to be bought as well.
 	WasteQuantity *Quantity `json:"waste_quantity" expandable:"true"`
 	// The item consumed by the production step.
 	ConsumedItem *Item `json:"consumed_item" expandable:"true"`

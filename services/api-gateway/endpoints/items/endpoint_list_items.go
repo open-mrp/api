@@ -14,29 +14,33 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListItemsRequest is the request to list items.
+// Request to list items.
 type ListItemsRequest struct {
 	apiresource.PaginationRequest
 	// Filter to items of these types (`product`, `material`, `part`).
 	Types []string `query:"types"`
-	// Filter by category IDs.
+	// Filter to items in any of these categories.
 	CategoryIDs []string `query:"category_ids"`
-	// Filter by attribute IDs.
+	// Filter to items carrying any of these attributes.
 	AttributeIDs []string `query:"attribute_ids"`
-	// Filter by supplier ID.
+	// Filter to materials this supplier account supplies to you.
+	//
+	// Only materials can have suppliers, so combining this with a `types` filter that excludes `material` returns nothing.
 	SupplierID *string `query:"supplier_id"`
-	// Filter items created on or after this date.
+	// Filter to items created on or after this date.
 	StartDate *time.Time `query:"start_date"`
-	// Filter items created on or before this date.
+	// Filter to items created on or before this date.
 	EndDate *time.Time `query:"end_date"`
 	// Restricts results based on where the item is produced in its production flow.
 	//
 	// - `all`: no restriction.
 	// - `initial_only`: only items produced by an initial production step, i.e. a step with no upstream steps feeding into it.
 	SubassemblyFilter *constants.SubassemblyFilter `query:"subassembly_filter" default:"all"`
-	// Filter by product line IDs (only items whose product belongs to one of these lines).
+	// Filter to items whose product belongs to any of these product lines.
 	ProductLineIDs []string `query:"product_line_ids"`
-	// Filter by customer account IDs (only items whose product line is accessible to any of these customers).
+	// Filter to items any of these customers are allowed to order.
+	//
+	// A customer qualifies when its relationship, its account group, or its price group grants access to the product line the item's product sits in. Items with no product line, including materials and parts, never match.
 	CustomerIDs []string `query:"customer_ids"`
 }
 
@@ -50,7 +54,9 @@ func (*ListItemsRequest) SchemaExample() any {
 	return out
 }
 
-// Returns a paginated list of items.
+// Returns a paginated list of items, newest first.
+//
+// Items backed by a non-sale product — the service, shipping, tax, credit, and return products that carry charges on orders — are left out, so this reflects the catalog you sell and stock rather than every item row. `q` matches against SKU and description, with closer SKU matches ranked first.
 type ListItemsEndpoint struct{}
 
 func (e *ListItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListItemsRequest, *apiresource.List[apiresource.Item]] {

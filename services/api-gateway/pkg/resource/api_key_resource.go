@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleAPIKeyID = "apke_01fba3a7db3996e3b3b1a07e00"     // #nosec G101 - sample data for API docs
+const SampleAPIKeyID = "apke_eiylmwr6q7oz"                   // #nosec G101 - sample data for API docs
 const SampleAPIKeyName = "Production API Key"                // #nosec G101 - sample data for API docs
 const SampleTestAPIKeyRedactedValue = "aug_sk_test_****kuIb" // #nosec G101 - sample data for API docs
 const SampleProdAPIKeyRedactedValue = "aug_sk_prod_****hjt4" // #nosec G101 - sample data for API docs
@@ -20,6 +20,8 @@ const SampleTestAPIKeyValue = "aug_sk_test_RhxFDvTdDnb0bgtcoA5P79_60EmH4h9j9Zlds
 const SampleProdAPIKeyValue = "aug_sk_prod_RhxFDvTdDnb0bgtcoA5P79_60EmH4h9j9ZldsuU9XyngXlpu8NqdIlGTQw8OM8cGeCadyhjtr"
 
 // An API key used to authenticate requests to the Augno API.
+//
+// A key always acts on behalf of the account it was created under, with the permissions of the role assigned to it.
 type APIKey struct {
 	// API key ID.
 	ID string `json:"id" validate:"required"`
@@ -35,15 +37,15 @@ type APIKey struct {
 	Role *Role `json:"role" expandable:"true"`
 	// When the key was last used to authenticate a request.
 	//
-	// Updated at most once every 24 hours, so it may lag the key's most recent use. `null` if the key has never been used.
+	// Recorded at most once every 24 hours, so it can lag the key's most recent use by up to a day.
 	LastUsedAt *time.Time `json:"last_used_at"`
-	// When the key expires and stops authenticating.
+	// When the key expires and stops authenticating requests.
 	//
-	// `null` if the key never expires.
+	// A key with no expiration keeps working until it is revoked or rotated.
 	ExpiresAt *time.Time `json:"expires_at"`
 	// When the key's revocation takes effect.
 	//
-	// A future timestamp means revocation was scheduled (for example, during rotation) and the key continues to authenticate requests until that time. `null` if the key has not been revoked.
+	// A future timestamp means revocation was scheduled (for example, by a rotation) and the key continues to authenticate requests until that time.
 	RevokedAt *time.Time `json:"revoked_at"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -51,15 +53,15 @@ type APIKey struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-// Result of creating an API key, with the full secret value.
+// A newly issued API key together with its secret value, returned when a key is created or rotated.
 type CreatedAPIKey struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=created_api_key"`
-	// Full secret value.
+	// The secret used to authenticate requests, sent as a bearer token in the `Authorization` header.
 	//
-	// Returned once and cannot be retrieved later. Learn more about [managing your API keys](https://docs.augno.com/api/managing-api-keys).
+	// This is the only response that ever contains the secret; if it is lost, rotate the key to issue a new one. Learn more about [managing your API keys](https://docs.augno.com/api/managing-api-keys).
 	APIKeySecret string `json:"api_key_secret" validate:"required" sensitive:"true"`
-	// API key metadata.
+	// The key's non-secret details, such as its ID, name, role, and expiration.
 	APIKeyInfo APIKey `json:"api_key_info" validate:"required"`
 }
 

@@ -17,11 +17,13 @@ import (
 type UpdateCarrierRequest struct {
 	// Carrier ID.
 	CarrierID string `path:"id" validate:"required"`
-	// Human-readable name for the carrier, unique among your account's carriers.
-	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Carrier visibility in the customer portal.
+	// Human-readable name for the carrier.
 	//
-	// A `visible` carrier can be selected by your customers at checkout; a `hidden` carrier is not offered there.
+	// Must not match another carrier already visible to your account, including the system-provided ones.
+	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
+	// Whether customers can see and select this carrier at checkout in the customer portal.
+	//
+	// Each of the carrier's service levels carries its own customer portal visibility, which this does not change.
 	CustomerPortalVisibility field.Optional[constants.CustomerPortalVisibility] `json:"customer_portal_visibility,omitzero"`
 }
 
@@ -35,7 +37,9 @@ func (*UpdateCarrierRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateCarrierRequest)
 }
 
-// Partially updates a carrier's name and portal visibility.
+// Updates a carrier's name and customer portal visibility.
+//
+// Only these two attributes can change: a carrier's code and account number are fixed at creation, and system-owned carriers cannot be updated at all.
 type UpdateCarrierEndpoint struct{}
 
 func (e *UpdateCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateCarrierRequest, *apiresource.Carrier] {

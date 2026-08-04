@@ -17,7 +17,9 @@ type RetrieveProductLineRequest struct {
 	ProductLineID string `path:"id" validate:"required"`
 }
 
-// Returns a product line by ID, including system-owned product lines accessible to the account.
+// Returns a single product line by ID.
+//
+// Both the product lines your account owns and the shared system lines can be retrieved.
 type RetrieveProductLineEndpoint struct{}
 
 func (e *RetrieveProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveProductLineRequest, *apiresource.ProductLine] {

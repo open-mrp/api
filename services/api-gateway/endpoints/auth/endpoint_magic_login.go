@@ -13,7 +13,9 @@ import (
 
 // Request to exchange a magic login token for a session.
 type MagicLoginRequest struct {
-	// Magic login token from the "already registered" email.
+	// Magic login token taken from the `t` query parameter of the link in the "already registered" email.
+	//
+	// The token expires 15 minutes after the email is sent.
 	Token string `json:"token" validate:"required" sensitive:"true"` // #nosec G117 - Struct field, not a hardcoded credential
 }
 
@@ -26,6 +28,8 @@ func (*MagicLoginRequest) SchemaExample() any {
 }
 
 // Exchanges a magic login token for a session, setting access and refresh tokens in cookies.
+//
+// Signs the user in without a password. The token is short-lived, so once it expires the link no longer signs the user in.
 type MagicLoginEndpoint struct{}
 
 func (e *MagicLoginEndpoint) Materialize() *apiendpoint.APIEndpoint[*MagicLoginRequest, *apiresource.User] {

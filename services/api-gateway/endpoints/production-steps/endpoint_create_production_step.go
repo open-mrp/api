@@ -16,16 +16,22 @@ import (
 // Request to create a production step.
 type CreateProductionStepRequest struct {
 	// Display name of the step.
+	//
+	// Must be unique within the account.
 	Name string `json:"name" validate:"required,max=255"`
 	// Free-form notes about the step.
 	Notes field.Optional[string] `json:"notes,omitzero"`
 	// Leveling correction factor applied to labor time in cost calculations, as a decimal string.
+	//
+	// Effective labor time per unit is `labor_time × (1 + leveling_factor) × (1 + allowances)`, so `0` applies no leveling correction.
 	LevelingFactor string `json:"leveling_factor" validate:"required"`
 	// Allowance correction factor applied to labor time in cost calculations, as a decimal string.
+	//
+	// Effective labor time per unit is `labor_time × (1 + leveling_factor) × (1 + allowances)`, so `0` applies no allowance.
 	Allowances string `json:"allowances" validate:"required"`
-	// Scanning station ID.
+	// Scanning station where batches at this step are scanned.
 	ScanningStationID field.Optional[string] `json:"scanning_station_id,omitzero" validate:"omitempty"`
-	// Department ID.
+	// Department responsible for this step.
 	DepartmentID field.Optional[string] `json:"department_id,omitzero" validate:"omitempty"`
 	// Cost of labor for this step, expressed as a rate of currency per unit of time (e.g. `$` per `hr`).
 	//
@@ -43,37 +49,37 @@ type CreateProductionStepRequest struct {
 	Consumptions []CreateConsumptionInput `json:"consumptions,omitzero"`
 }
 
-// Rate configuration input.
+// A rate, expressed as a value together with the units of its numerator and denominator (for example, `25.00` `$` per `hr`).
 type CreateRateInput struct {
 	// Value as a decimal string.
 	Value string `json:"value" validate:"required"`
-	// Numerator unit ID.
+	// Unit of the rate's numerator.
 	NumeratorUnitID string `json:"numerator_unit_id" validate:"required"`
-	// Denominator unit ID.
+	// Unit of the rate's denominator.
 	DenominatorUnitID string `json:"denominator_unit_id" validate:"required"`
 }
 
-// Production output input.
+// The item and quantity a production step produces.
 type CreateProductionInput struct {
-	// Item ID.
+	// Item the step produces.
 	ItemID string `json:"item_id" validate:"required"`
 	// Quantity value as a decimal string.
 	QuantityValue string `json:"quantity_value" validate:"required"`
-	// Quantity unit ID.
+	// Unit for `quantity_value`.
 	QuantityUnitID string `json:"quantity_unit_id" validate:"required"`
 }
 
-// Consumption input for a production step.
+// A material a production step consumes, with its quantity and expected waste.
 type CreateConsumptionInput struct {
-	// Item ID.
+	// Material the step consumes.
 	ItemID string `json:"item_id" validate:"required"`
 	// Quantity value as a decimal string.
 	QuantityValue string `json:"quantity_value" validate:"required"`
-	// Quantity unit ID.
+	// Unit for `quantity_value`.
 	QuantityUnitID string `json:"quantity_unit_id" validate:"required"`
 	// Quantity expected to be lost as scrap or waste, as a decimal string.
 	WasteQuantityValue string `json:"waste_quantity_value" validate:"required"`
-	// Unit ID for `waste_quantity_value`.
+	// Unit for `waste_quantity_value`.
 	WasteQuantityUnitID string `json:"waste_quantity_unit_id" validate:"required"`
 	// Instructions for how this material is consumed.
 	Instructions field.Optional[string] `json:"instructions,omitzero"`
@@ -123,6 +129,8 @@ func (*CreateProductionStepRequest) SchemaExample() any {
 // Creates a production step with its production output, cost rates, and consumptions.
 //
 // The step is automatically connected into the production flow graph based on the items it produces and consumes.
+//
+// Returns a conflict error if a production step with the same name already exists in the account.
 type CreateProductionStepEndpoint struct{}
 
 func (e *CreateProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductionStepRequest, *apiresource.ProductionStep] {

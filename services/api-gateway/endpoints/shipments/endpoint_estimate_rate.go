@@ -37,15 +37,19 @@ type EstimateRateRequest struct {
 	ProductLineIDs []string `json:"product_line_ids,omitzero"`
 	// ID of the customer the shipment is for, used to apply the customer's freight policy and default shipping term.
 	//
-	// A freight-exempt customer or a free-freight shipping term yields a rate of `0`; a flat-rate shipping term returns the flat rate.
+	// A customer that is freight exempt through its own policy or through one of its groups, or whose shipping term is free freight, yields a rate of `0`; a flat-rate shipping term returns the flat rate. Omitting the customer skips all of these rules and quotes the plain carrier rate.
 	CustomerID field.Optional[string] `json:"customer_id,omitzero"`
 	// Origin address.
+	//
+	// A live carrier rate requires a postal code and country here; without them the request fails rather than returning a meaningless estimate.
 	FromAddress apirequest.AddressInput `json:"from_address" validate:"required"`
 	// Destination address.
 	ToAddress apirequest.AddressInput `json:"to_address" validate:"required"`
 	// Parcels to estimate rates for.
 	Parcels []ParcelInput `json:"parcels" validate:"required,min=1"`
 	// Total value of the order, used to evaluate the free-shipping minimum order value on the customer's shipping term.
+	//
+	// Free shipping applies only when the total is strictly above the threshold, and only for the service levels the shipping term allows.
 	OrderTotal field.Optional[float64] `json:"order_total,omitzero"`
 }
 
@@ -93,9 +97,11 @@ func (*EstimateRateRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleEstimateRateRequest)
 }
 
-// Estimates the shipping rate for a specific carrier and service level.
+// Estimates the shipping rate for one specific carrier and service level.
 //
-// Freight rules are applied before live rating: freight-exempt product lines or customers, free-freight shipping terms, and a met free-shipping minimum order value all return `0`, and a flat-rate shipping term returns its flat rate. Live rates require the Shippo integration; carriers without live rating configured return `0`.
+// Freight rules are applied before live rating, in order: freight-exempt product lines, a freight-exempt customer or customer group, then the customer's default shipping term. A free-freight term and a met free-shipping minimum order value both return `0`, and a flat-rate term returns its flat rate without contacting the carrier. Live rates require the Shippo integration; without it, or for a carrier that is not linked to a live-rating account, the estimate is `0`.
+//
+// Use rate shop instead to compare every carrier and service level at once.
 type EstimateRateEndpoint struct{}
 
 func (e *EstimateRateEndpoint) Materialize() *apiendpoint.APIEndpoint[*EstimateRateRequest, *apiresource.EstimateRateResult] {

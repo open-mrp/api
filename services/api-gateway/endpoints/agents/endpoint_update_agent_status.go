@@ -16,9 +16,9 @@ import (
 type UpdateAgentStatusRequest struct {
 	// Agent definition ID.
 	AgentDefinitionID string `path:"id" validate:"required"`
-	// Account-level status to set: `active` to enable the agent for this account, `inactive` to disable it.
+	// Account-level status to set for the agent.
 	//
-	// This only affects activation for the current account and leaves the shared agent definition unchanged.
+	// Either `active` or `inactive`.
 	Status string `json:"status" validate:"required,max=255"`
 }
 
@@ -30,9 +30,9 @@ func (*UpdateAgentStatusRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateAgentStatusRequest)
 }
 
-// Enables or disables an agent for the current account.
+// Enables or disables an agent for your account.
 //
-// Sets the account-level status without modifying the underlying agent definition, so it works for both `system` and `custom` agents. Returns the updated agent definition.
+// Activation is per-account, so this works for the `system` agents Augno shares across accounts as well as your own `custom` agents: disabling one here leaves the underlying agent untouched for everyone else. Triggering an inactive agent returns a validation error.
 type UpdateAgentStatusEndpoint struct{}
 
 func (e *UpdateAgentStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAgentStatusRequest, *apiresource.AgentDefinition] {

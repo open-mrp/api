@@ -17,19 +17,19 @@ import (
 type UpdateAccountPriceRequest struct {
 	// Account price ID.
 	AccountPriceID string `path:"id" validate:"required"`
-	// Recipient customer account ID.
+	// ID of the customer this price is offered to.
 	RecipientAccountID field.Optional[string] `json:"recipient_account_id,omitzero" validate:"omitempty"`
-	// Product line ID.
+	// ID of the product line whose products this price applies to.
 	ProductLineID field.Optional[string] `json:"product_line_id,omitzero" validate:"omitempty"`
-	// Rate value as a decimal string.
+	// The price the recipient pays, as a decimal string.
 	RateValue field.Optional[string] `json:"rate_value,omitzero"`
 	// ID of the unit for the rate's numerator, typically a currency unit.
 	RateNumeratorUnitID field.Optional[string] `json:"rate_numerator_unit_id,omitzero" validate:"omitempty"`
 	// ID of the unit for the rate's denominator — the quantity unit being priced.
 	RateDenominatorUnitID field.Optional[string] `json:"rate_denominator_unit_id,omitzero" validate:"omitempty"`
-	// Item category IDs to constrain this price to.
+	// Item category IDs to record on this price.
 	//
-	// When provided, replaces the existing set of categories entirely; an empty list removes all category constraints.
+	// When provided, replaces the existing set of categories entirely; an empty list removes them all. Categories are recorded only — they do not narrow which products the price applies to.
 	CategoryIDs field.Optional[[]string] `json:"category_ids,omitzero"`
 	// Attribute IDs to constrain this price to.
 	//
@@ -48,6 +48,8 @@ func (*UpdateAccountPriceRequest) SchemaExample() any {
 // Partially updates an account price.
 //
 // Only the provided fields are changed. If `category_ids` or `attribute_ids` are provided, they replace the existing set entirely.
+//
+// Order lines that have already been priced keep the unit price they were given; the new price applies to lines priced after the change.
 type UpdateAccountPriceEndpoint struct{}
 
 func (e *UpdateAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAccountPriceRequest, *apiresource.AccountPrice] {

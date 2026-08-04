@@ -14,17 +14,17 @@ import (
 // Request to list transactions.
 type ListTransactionsRequest struct {
 	apiresource.PaginationRequest
-	// Filter by allocation status: `allocated` (fully allocated against invoices) or `unallocated` (has an open balance).
+	// Filter by allocation status: `allocated` (marked fully applied to invoices) or `unallocated` (still counted as an open credit).
 	Status *string `query:"status"`
 	// Filter by transaction type codes (`payment`, `credit_memo`, `adjustment`, `rebate`).
 	TypeCodes []string `query:"types"`
-	// Filter by adjustment type codes.
+	// Filter by adjustment type codes (see List Adjustment Types for available values).
 	AdjustmentTypeCodes []string `query:"adjustment_types"`
 	// Filter by payment method codes (`cash`, `check`, `credit_card`, `gift_card`, `ach`).
 	MethodCodes []string `query:"methods"`
 	// Filter by customer IDs.
 	CustomerIDs []string `query:"customer_ids"`
-	// Filter by customer group IDs.
+	// Filter by the account group each customer belongs to.
 	CustomerGroupIDs []string `query:"customer_group_ids"`
 	// Only include transactions created on or after this date (`YYYY-MM-DD`).
 	StartDate *string `query:"start_date"`
@@ -34,7 +34,9 @@ type ListTransactionsRequest struct {
 
 // TODO: stop returning TransactionSummary; return the full Transaction apiresource and use proper includes values to control expansion.
 
-// Returns a paginated list of transactions for the current account.
+// Returns a paginated list of transactions for the current account, newest first.
+//
+// Free-text search matches the transaction number and note.
 type ListTransactionsEndpoint struct{}
 
 func (e *ListTransactionsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListTransactionsRequest, *apiresource.List[apiresource.TransactionSummary]] {

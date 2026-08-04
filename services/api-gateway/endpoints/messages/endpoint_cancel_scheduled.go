@@ -13,11 +13,13 @@ import (
 
 // Request to cancel a pending scheduled message.
 type CancelScheduledRequest struct {
-	// Message ID (the scheduled message).
+	// The id of the scheduled message to cancel.
 	MessageID string `path:"id" validate:"required"`
 }
 
-// Cancels a scheduled message the caller created (status becomes `canceled`).
+// Cancels a message that was scheduled for a future send, so it is never delivered.
+//
+// You can only cancel a message you scheduled yourself, and only while it is still waiting to go out — once it has been delivered or has otherwise left the scheduled state, the request fails. The canceled message is kept as a record and never appears in the conversation.
 type CancelScheduledEndpoint struct{}
 
 func (e *CancelScheduledEndpoint) Materialize() *apiendpoint.APIEndpoint[*CancelScheduledRequest, *apiresource.Message] {

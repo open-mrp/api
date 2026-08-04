@@ -16,9 +16,9 @@ type GetOAuthStatusRequest struct {
 	CarrierID string `path:"id" validate:"required"`
 }
 
-// Returns the OAuth connection status for a carrier.
+// Reports whether a carrier's account has been authorized for live rating and label purchase.
 //
-// The status is one of `connected`, `authorization_pending`, or `disconnected`. Sandbox accounts always return `disconnected`.
+// Only carriers connected through Shippo have an account to authorize; every other carrier reports `disconnected`, as do sandbox accounts and carriers whose account cannot be reached.
 type GetOAuthStatusEndpoint struct{}
 
 func (e *GetOAuthStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetOAuthStatusRequest, *apiresource.OAuthStatusResponse] {

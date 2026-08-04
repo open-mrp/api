@@ -16,9 +16,9 @@ type DeleteUnitRequest struct {
 	UnitID string `path:"id" validate:"required"`
 }
 
-// Deletes an account-owned unit.
+// Deletes a unit owned by your account.
 //
-// Associated unit group memberships are also removed, and system units cannot be deleted.
+// The unit is also removed from every unit group it belongs to. System units, which are shared across all accounts, cannot be deleted.
 type DeleteUnitEndpoint struct{}
 
 func (e *DeleteUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteUnitRequest, *apiresource.EmptyResource] {

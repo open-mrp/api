@@ -17,9 +17,9 @@ import (
 type UpdateTransactionAllocationRequest struct {
 	// Transaction allocation ID.
 	AllocationID string `path:"id" validate:"required"`
-	// New allocated amount as a decimal string, in US dollars.
+	// New amount of the transaction to apply to this invoice, as a decimal string in US dollars.
 	//
-	// Changing the amount does not recompute the parent transaction's `is_fully_allocated` flag; update the transaction separately if needed.
+	// The new amount is not checked against the transaction's total or the invoice's balance.
 	Amount field.Optional[string] `json:"amount,omitzero"`
 }
 
@@ -32,7 +32,9 @@ func (*UpdateTransactionAllocationRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateTransactionAllocationRequest)
 }
 
-// Updates the amount of a transaction allocation applied to its invoice.
+// Changes how much of a transaction is applied to the invoice it was allocated to.
+//
+// Only the amount can be changed; the transaction and invoice the allocation links are fixed. Payment roll-ups are left alone, so the transaction's `is_fully_allocated` flag and the invoice's paid-in-full status keep their previous values.
 type UpdateTransactionAllocationEndpoint struct{}
 
 func (e *UpdateTransactionAllocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateTransactionAllocationRequest, *apiresource.TransactionAllocation] {

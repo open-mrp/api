@@ -14,7 +14,9 @@ import (
 // Request for the caller's cross-account unread summary.
 type UnreadSummaryRequest struct{}
 
-// Returns the caller's unread totals across every account they belong to.
+// Returns the caller's unread totals broken down by account, covering every account they belong to and not just the one they are acting in.
+//
+// Use it to show a user that activity is waiting for them elsewhere before they switch accounts. Each tally counts unseen notifications and unseen account announcements together.
 type UnreadSummaryEndpoint struct{}
 
 func (e *UnreadSummaryEndpoint) Materialize() *apiendpoint.APIEndpoint[*UnreadSummaryRequest, *apiresource.NotificationUnreadSummary] {

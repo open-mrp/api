@@ -17,7 +17,11 @@ type ListBatchesByProductionRunRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of batches associated with a production run.
+// Returns a paginated list of the batches that make up a production run, most recently created first.
+//
+// The result is not limited to the batches recorded directly against the run. Starting from those batches, the batch flow is followed downstream to the batches they feed and upstream to the batches that feed them while that branch is still open, so the whole in-progress flow around the run is returned.
+//
+// The `q` search term matches a batch ID, item SKU, scanning station name, department name, production step name, run number, lot number, or machine name.
 type ListBatchesByProductionRunEndpoint struct{}
 
 func (e *ListBatchesByProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListBatchesByProductionRunRequest, *apiresource.List[apiresource.Batch]] {

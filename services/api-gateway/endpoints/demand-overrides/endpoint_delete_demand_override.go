@@ -17,9 +17,9 @@ type DeleteDemandOverrideRequest struct {
 	DemandOverrideID string `path:"id" validate:"required"`
 }
 
-// Deletes a demand override.
+// Deletes a demand override permanently.
 //
-// Schedules already generated are unaffected: a version snapshots the overrides it applied, so deleting one changes future solves only.
+// Schedules that have already been generated are unaffected: each one records the overrides it applied, so deleting an override changes only schedules generated from now on. To stop an override applying while keeping it on file, deactivate it instead.
 type DeleteDemandOverrideEndpoint struct{}
 
 func (e *DeleteDemandOverrideEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteDemandOverrideRequest, *apiresource.EmptyResource] {

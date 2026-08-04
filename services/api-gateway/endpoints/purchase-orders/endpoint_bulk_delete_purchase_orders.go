@@ -25,9 +25,9 @@ func (*BulkDeletePurchaseOrdersRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleBulkDeletePurchaseOrdersRequest)
 }
 
-// Deletes multiple purchase orders in a single request.
+// Deletes multiple purchase orders, each along with its lines, email contacts, and receiving order.
 //
-// If any of the orders is in `fulfilled` status the request fails and no orders are deleted.
+// The whole request is all-or-nothing: if any ID cannot be found in your account or refers to an order in `fulfilled` status, nothing is deleted.
 type BulkDeletePurchaseOrdersEndpoint struct{}
 
 func (e *BulkDeletePurchaseOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkDeletePurchaseOrdersRequest, *apiresource.EmptyResource] {

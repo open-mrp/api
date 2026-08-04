@@ -7,7 +7,7 @@ import (
 
 // Record is a lightweight reference to a business record — a sales order, purchase order, pick, shipment, production run, invoice, etc.
 //
-// Like Actor and Entity, it carries just enough to identify and label the referenced record without embedding its full resource. The optional status and metadata fields hold type-specific detail that varies by the kind of record referenced.
+// Like the `actor` and `entity` references, it carries just enough to identify and label the referenced record without embedding its full resource. The `status` and `metadata` fields hold type-specific detail that varies by the kind of record referenced.
 type Record struct {
 	// Unique identifier for the record.
 	ID string `json:"id" validate:"required"`
@@ -50,7 +50,7 @@ func NewRecord(id string, recordType constants.RecordType) *Record {
 var sampleRecordNumber = "SHIP-001"
 
 var SampleRecord = &Record{
-	ID:     "shp_01h2xcejqtf2nbrexx3vqjhp41",
+	ID:     SampleShipmentID,
 	Object: constants.ObjectTypeRecord,
 	Type:   constants.RecordTypeShipment,
 	Number: &sampleRecordNumber,

@@ -13,7 +13,7 @@ import (
 
 // Request to start or resume a customer-portal registration session.
 type CreateOrResumePortalRegistrationSessionRequest struct {
-	// The seller's portal slug to register into.
+	// The portal slug of the seller the buyer is registering with.
 	SellerSlug string `json:"seller_slug" validate:"required"`
 }
 
@@ -25,9 +25,9 @@ func (*CreateOrResumePortalRegistrationSessionRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateOrResumePortalRegistrationSessionRequest)
 }
 
-// Starts a new customer-portal registration session for the authenticated buyer, or resumes the buyer's existing in-progress session for the same seller.
+// Starts a customer-portal registration for the authenticated buyer, or resumes the one they already have with this seller.
 //
-// Registering into a seller's portal is a multi-step flow; the session tracks progress so a half-finished registration can be resumed instead of leaving the buyer stuck.
+// Registering into a seller's portal is a multi-step flow, and the session carries the progress so a half-finished registration is never lost. If the buyer has an unfinished session with this seller that is still inside its seven-day resume window, that session comes back with its saved step and form data; otherwise a new one starts at the `customer_details` step. Completed, abandoned, and expired sessions are never resumed.
 type CreateOrResumePortalRegistrationSessionEndpoint struct{}
 
 func (e *CreateOrResumePortalRegistrationSessionEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateOrResumePortalRegistrationSessionRequest, *apiresource.PortalRegistrationSession] {

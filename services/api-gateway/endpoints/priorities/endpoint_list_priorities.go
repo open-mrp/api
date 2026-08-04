@@ -16,7 +16,9 @@ type ListPrioritiesRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of priorities.
+// Lists the priority levels that can be set on a sales order or purchase order.
+//
+// The levels are platform-provided and the same for every account, so the result is small and stable enough to cache. Results are ordered newest first rather than by urgency.
 type ListPrioritiesEndpoint struct{}
 
 func (e *ListPrioritiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPrioritiesRequest, *apiresource.List[apiresource.Priority]] {

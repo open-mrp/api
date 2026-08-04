@@ -12,8 +12,6 @@ package main
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"go/ast"
@@ -26,10 +24,12 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/augno/api/shared/id"
 )
 
-// Nano segment after prefix: 01 or 02 followed by 22+ lowercase alnum (matches IDLength12 tails).
-var augNanoSuffix = regexp.MustCompile(`^(.+)_(0[12][0-9a-z]{22,})$`)
+// augnoID matches a type id literal: lowercase type prefix, underscore, nano segment. The nano segment must be at least 10 characters and carry a digit so snake_case enum codes ("prepaid_billed") are never mistaken for ids.
+var augnoID = regexp.MustCompile(`^([a-z]{2,10})_([0-9a-z]{10,})$`)
 
 var skipNames = map[string]struct{}{
 	"SampleCheckoutSessionID": {},
@@ -125,30 +125,7 @@ func collectReplacementPairs(stderr io.Writer) ([]replPair, error) {
 
 	sort.Strings(names)
 
-	usedNanos := map[string]string{}
-	nameToNano := map[string]string{}
-
-	for attempt := 0; ; attempt++ {
-		nameToNano = map[string]string{}
-		usedNanos = map[string]string{}
-		collision := false
-		for _, name := range names {
-			nano := newNano(name, attempt)
-			if prev, ok := usedNanos[nano]; ok && prev != name {
-				collision = true
-				break
-			}
-			usedNanos[nano] = name
-			nameToNano[name] = nano
-		}
-		if !collision {
-			break
-		}
-		if attempt > 10000 {
-			return nil, errors.New("could not resolve nano collisions")
-		}
-	}
-
+	used := map[string]struct{}{}
 	var pairs []replPair
 	for _, n := range names {
 		old := oldByName[n]
@@ -156,10 +133,11 @@ func collectReplacementPairs(stderr io.Writer) ([]replPair, error) {
 		if !ok {
 			return nil, errors.New("split failed: " + n)
 		}
-		newVal := prefix + "_" + nameToNano[n]
-		if old == newVal {
-			fmt.Fprintf(stderr, "warning: %s unchanged\n", n)
+		newVal, err := newSampleID(prefix, used)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", n, err)
 		}
+		used[newVal] = struct{}{}
 		pairs = append(pairs, replPair{name: n, old: old, new: newVal})
 	}
 
@@ -177,35 +155,35 @@ func collectReplacementPairs(stderr io.Writer) ([]replPair, error) {
 	return pairs, nil
 }
 
+// includeConstName reports whether a const is a docs sample id. "ID" may be followed by a qualifier or an ordinal (SamplePlanTypeIDPro, SampleSalesOrderLineID2); the literal's own shape is what ultimately decides, so this only has to reject names that are clearly not ids.
 func includeConstName(name string) bool {
-	if !strings.HasPrefix(name, "Sample") {
-		return false
-	}
-	if strings.HasSuffix(name, "ID") {
-		return true
-	}
-	return strings.HasPrefix(name, "SamplePlanTypeID")
+	return strings.HasPrefix(name, "Sample") && strings.Contains(name, "ID")
 }
 
-func newNano(name string, attempt int) string {
-	salt := fmt.Sprintf("augno:sample-id:%s", name)
-	if attempt > 0 {
-		salt = fmt.Sprintf("%s:%d", salt, attempt)
+// newSampleID mints a docs sample id with the production generator so examples are indistinguishable from real ids. The nano segment must contain a digit — isAugnoLikeDocID keys the docs completeness check off that — and must not repeat an id already handed out this run.
+func newSampleID(prefix string, used map[string]struct{}) (string, error) {
+	for range 100 {
+		candidate, apiErr := id.GenID(id.IDPrefix(prefix), nil)
+		if apiErr != nil {
+			return "", apiErr
+		}
+		if _, taken := used[candidate]; taken {
+			continue
+		}
+		if !strings.ContainsAny(candidate[len(prefix)+1:], "0123456789") {
+			continue
+		}
+		return candidate, nil
 	}
-	h := sha256.Sum256([]byte(salt))
-	s := hex.EncodeToString(h[:])
-	out := make([]byte, 26)
-	out[0] = '0'
-	out[1] = '1'
-	for i := range 24 {
-		out[i+2] = s[i]
-	}
-	return string(out)
+	return "", errors.New("could not mint a usable sample id")
 }
 
 func splitPrefixNano(s string) (string, bool) {
-	m := augNanoSuffix.FindStringSubmatch(s)
+	m := augnoID.FindStringSubmatch(s)
 	if m == nil {
+		return "", false
+	}
+	if !strings.ContainsAny(m[2], "0123456789") {
 		return "", false
 	}
 	return m[1], true

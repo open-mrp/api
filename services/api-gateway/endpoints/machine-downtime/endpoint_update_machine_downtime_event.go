@@ -16,21 +16,35 @@ import (
 
 // Request to update a machine downtime event.
 type UpdateMachineDowntimeEventRequest struct {
-	// ID of the downtime event.
+	// ID of the downtime event to update.
 	MachineDowntimeEventID string `path:"id" validate:"required"`
 	// Why the machine stopped.
+	//
+	// Reclassifying a stoppage moves it to the OEE term the new reason charges, so past availability figures change with it.
 	Reason field.Optional[constants.MachineDowntimeReasonCode] `json:"reason,omitzero"`
 	// When the machine stopped.
+	//
+	// Correcting it recalculates the duration and can move the stoppage onto a different business day.
 	StartedAt field.Optional[time.Time] `json:"started_at,omitzero"`
-	// When the machine started running again. Send null to reopen an event that was closed by mistake.
+	// When the machine started running again.
+	//
+	// Setting it closes the event and records the duration. Send null to reopen an event that was closed by mistake, which is rejected if the machine has since had another stoppage logged that is still open.
 	EndedAt field.Clearable[time.Time] `json:"ended_at,omitzero"`
-	// ID of the item the machine was running when it stopped. Send null to detach the item.
+	// ID of the item the machine was running when it stopped.
+	//
+	// Send null to detach the item.
 	ItemID field.Clearable[string] `json:"item_id,omitzero"`
-	// ID of the production run in progress when the machine stopped. Send null to detach the run.
+	// ID of the production run in progress when the machine stopped.
+	//
+	// Send null to detach the run.
 	ProductionRunID field.Clearable[string] `json:"production_run_id,omitzero"`
-	// ID of the batch in progress when the machine stopped. Send null to detach the batch.
+	// ID of the batch in progress when the machine stopped.
+	//
+	// Send null to detach the batch.
 	BatchID field.Clearable[string] `json:"batch_id,omitzero"`
-	// Free-form notes about the stoppage. Send null to remove the note.
+	// Free-form notes about the stoppage.
+	//
+	// Send null to remove the note. Maximum 2000 characters.
 	Note field.Clearable[string] `json:"note,omitzero" validate:"omitempty,max=2000"`
 }
 
@@ -43,9 +57,9 @@ func (*UpdateMachineDowntimeEventRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateMachineDowntimeEventRequest)
 }
 
-// Updates a machine downtime event.
+// Closes or corrects a machine downtime event.
 //
-// Setting `ended_at` closes the event and calculates its duration.
+// Only the fields provided in the request are changed. Setting `ended_at` closes the event and calculates its duration; sending it as null reopens an event closed by mistake, which is rejected when the machine already has another open stoppage. The machine an event belongs to cannot be changed.
 type UpdateMachineDowntimeEventEndpoint struct{}
 
 func (e *UpdateMachineDowntimeEventEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateMachineDowntimeEventRequest, *apiresource.MachineDowntimeEvent] {

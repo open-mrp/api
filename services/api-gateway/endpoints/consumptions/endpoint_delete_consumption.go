@@ -19,9 +19,9 @@ type DeleteConsumptionRequest struct {
 	ConsumptionID string `path:"id" validate:"required"`
 }
 
-// Deletes a consumption from a production step.
+// Removes a material input from a production step.
 //
-// Any production-flow connections established through this consumption are disconnected. Returns the deleted consumption.
+// Any production-flow connections established through this consumption are disconnected, and the remaining consumptions are re-linked. The deleted consumption is returned; deleting it again reports that it has already been deleted.
 type DeleteConsumptionEndpoint struct{}
 
 func (e *DeleteConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteConsumptionRequest, *apiresource.Consumption] {

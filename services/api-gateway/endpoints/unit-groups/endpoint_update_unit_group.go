@@ -25,11 +25,13 @@ type UpdateUnitGroupRequest struct {
 	//
 	// Set to `null` to clear.
 	Notes field.Clearable[string] `json:"notes,omitzero"`
-	// ID of the group's base unit.
-	BaseUnitID field.Optional[string] `json:"base_unit_id,omitzero" validate:"omitempty"`
-	// Associated units to add or update in the group.
+	// ID of the unit to designate as the group's reference unit.
 	//
-	// Upserted by unit: a listed unit already in the group has its association updated, otherwise it is added. Existing units not in the list are preserved.
+	// Must be a unit of the group's dimension, which cannot itself be changed.
+	BaseUnitID field.Optional[string] `json:"base_unit_id,omitzero" validate:"omitempty"`
+	// Units to add to the group.
+	//
+	// Only units that are not already in the group can be listed here; use the associated-unit update and delete endpoints to change or remove an existing association. Associations left out of the list are untouched.
 	AssociatedUnits field.Optional[[]CreateUnitGroupUnitParam] `json:"associated_units,omitzero"`
 }
 
@@ -57,7 +59,9 @@ func (*UpdateUnitGroupRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateUnitGroupRequest)
 }
 
-// Partially updates a unit group. System unit groups cannot be updated.
+// Partially updates a unit group.
+//
+// System unit groups cannot be modified, and a group's dimension is fixed once it is created.
 type UpdateUnitGroupEndpoint struct{}
 
 func (e *UpdateUnitGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateUnitGroupRequest, *apiresource.UnitGroup] {

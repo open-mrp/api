@@ -43,7 +43,7 @@ func (*CreateMachineRequest) SchemaExample() any {
 
 // Creates a machine and assigns it to a department.
 //
-// Returns a conflict error if a machine with the same name already exists.
+// Returns a conflict error if another machine in your account already uses the same name, and a not-found error if the department does not belong to your account. The department cannot be changed once the machine exists.
 type CreateMachineEndpoint struct{}
 
 func (e *CreateMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateMachineRequest, *apiresource.Machine] {

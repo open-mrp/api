@@ -11,9 +11,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Marks a notification as read.
+// Marks a notification as read, as when the user opens it.
 //
-// Reading also marks the notification seen if it was not already.
+// Reading also marks the notification seen if it was not already, and leaves it in the feed until it is dismissed. Repeating the call keeps the original read time.
 type MarkReadEndpoint struct{}
 
 func (e *MarkReadEndpoint) Materialize() *apiendpoint.APIEndpoint[*MarkNotificationRequest, *apiresource.Notification] {

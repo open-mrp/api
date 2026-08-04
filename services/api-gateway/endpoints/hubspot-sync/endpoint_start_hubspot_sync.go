@@ -18,7 +18,7 @@ import (
 type StartHubspotSyncRequest struct {
 	// Orders placed on or after this date are backfilled as Closed-Won deals during the sync.
 	//
-	// Omit to sync companies and contacts only, with no historical deals.
+	// Only the UTC date is used, so the whole of that day is included regardless of the time of day given. Omit to sync companies and contacts only, with no historical deals.
 	GoLiveCutoffAt field.Optional[time.Time] `json:"go_live_cutoff_at,omitzero"`
 }
 
@@ -32,7 +32,9 @@ func (*StartHubspotSyncRequest) SchemaExample() any {
 
 // Starts a one-time HubSpot backfill for the account and kicks off the read-only preview pass.
 //
-// The job matches existing customers to HubSpot companies and produces a dry-run report; it writes nothing to HubSpot until the review queue is resolved and the sync is executed.
+// The job matches existing customers to HubSpot companies and produces a dry-run report; it writes nothing to HubSpot until the review queue is resolved and the sync is executed. Poll the returned job to know when the preview has finished.
+//
+// Only one sync can be underway at a time: starting another while a sync is previewing, awaiting review, or executing is rejected. If the account has no active HubSpot integration, the job is still created but its preview pass fails immediately.
 type StartHubspotSyncEndpoint struct{}
 
 func (e *StartHubspotSyncEndpoint) Materialize() *apiendpoint.APIEndpoint[*StartHubspotSyncRequest, *apiresource.HubspotSyncJob] {

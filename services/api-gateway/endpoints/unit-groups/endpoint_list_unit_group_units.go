@@ -17,7 +17,9 @@ type ListUnitGroupUnitsRequest struct {
 	UnitGroupID string `path:"unit_group_id" validate:"required"`
 }
 
-// Returns a list of associated units within a unit group.
+// Returns the units associated with a unit group, along with the discount and customer portal visibility applied to each.
+//
+// Every association in the group is returned in a single response; this list is not paginated.
 type ListUnitGroupUnitsEndpoint struct{}
 
 func (e *ListUnitGroupUnitsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListUnitGroupUnitsRequest, *apiresource.List[apiresource.UnitGroupUnit]] {

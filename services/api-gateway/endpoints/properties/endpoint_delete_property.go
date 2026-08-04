@@ -16,7 +16,9 @@ type DeletePropertyRequest struct {
 	PropertyID string `path:"id" validate:"required"`
 }
 
-// Deletes a property and all associated attributes.
+// Deletes a property and every attribute defined under it.
+//
+// Items previously classified by those attributes lose that classification.
 type DeletePropertyEndpoint struct{}
 
 func (e *DeletePropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeletePropertyRequest, *apiresource.EmptyResource] {

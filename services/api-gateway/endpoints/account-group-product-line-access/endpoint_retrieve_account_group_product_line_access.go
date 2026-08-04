@@ -17,7 +17,9 @@ type RetrieveAccountGroupProductLineAccessRequest struct {
 	AccountGroupID string `path:"account_group_id" validate:"required"`
 }
 
-// Returns product line access for an account group.
+// Returns the set of product lines an account group has been granted access to.
+//
+// An account group that has never been granted anything returns an empty product line list rather than a not-found error.
 type RetrieveAccountGroupProductLineAccessEndpoint struct{}
 
 func (e *RetrieveAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAccountGroupProductLineAccessRequest, *apiresource.AccountGroupProductLineAccess] {

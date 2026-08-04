@@ -8,10 +8,10 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleItemID = "it_0131e386ac683e8c29a71f6f1f"
+const SampleItemID = "it_pej07ckhvu62"
 const SampleItemSKU = "ALM-2024-1001"
 
-// Item is an inventory item (product, material, or part).
+// An entry in your catalog: something you sell, consume, or build with.
 type Item struct {
 	// Item ID.
 	ID string `json:"id" validate:"required"`
@@ -36,6 +36,8 @@ type Item struct {
 	// Selling value per unit, expressed as a rate (e.g. `$25.50 / kg`).
 	UnitValue *Rate `json:"unit_value" expandable:"true"`
 	// Cost per unit, expressed as a rate (e.g. `$10.00 / kg`).
+	//
+	// For items a production flow produces, retrieving the item's costs recomputes this from the flow and stores the result here, so it can change without the item having been edited.
 	UnitCost *Rate `json:"unit_cost" expandable:"true"`
 	// Rate at which this item is consumed in production, expressed as a quantity over time (e.g. `100 kg / hr`).
 	BurnRate *Rate `json:"burn_rate" expandable:"true"`
@@ -69,7 +71,9 @@ func (*Item) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleItem)
 }
 
-// ItemInventory contains inventory quantities for an item.
+// The stock position for an item: what is in stock, what is already committed, and what is still free to sell.
+//
+// All four quantities are reported in the same unit — the base unit of the item's category.
 type ItemInventory struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=item_inventory"`
@@ -95,15 +99,21 @@ func (*ItemInventory) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleItemInventory)
 }
 
-// ItemCosts is the per-unit production cost breakdown for an item, computed from the production flow that produces it.
+// The per-unit production cost breakdown for an item, computed from the production flow that produces it.
 type ItemCosts struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=item"`
-	// Cost of materials consumed to produce one unit of the item.
+	// Cost of materials consumed to produce one unit of the item, including the portion consumed as waste.
+	//
+	// Counts raw materials only. Parts and sub-products consumed along the way are not priced here; their labor, overhead, and material costs are already included through the steps that produce them.
 	DirectMaterialCost string `json:"direct_material_cost" validate:"required" format:"decimal"`
 	// Labor cost to produce one unit of the item.
+	//
+	// Based on each step's labor time after its leveling factor and allowances are applied, priced at that step's labor rate.
 	DirectLaborCost string `json:"direct_labor_cost" validate:"required" format:"decimal"`
 	// Overhead cost allocated to one unit of the item.
+	//
+	// Applied over the same corrected labor time as `direct_labor_cost`, priced at each step's overhead rate.
 	OverheadCost string `json:"overhead_cost" validate:"required" format:"decimal"`
 	// Total cost to produce one unit of the item (material + labor + overhead).
 	TotalCost string `json:"total_cost" validate:"required" format:"decimal"`
@@ -124,7 +134,7 @@ func (*ItemCosts) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleItemCosts)
 }
 
-// ItemTrendPoint is a single trend data point.
+// A single measurement in an item's trend series.
 type ItemTrendPoint struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=item_trend_point"`
@@ -134,7 +144,7 @@ type ItemTrendPoint struct {
 	Value string `json:"value" validate:"required" format:"decimal"`
 }
 
-// ItemTrends is the historical trend data for an item.
+// Historical trend data for an item, as a time-ordered series of measurements.
 type ItemTrends struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=item"`
@@ -142,7 +152,9 @@ type ItemTrends struct {
 	//
 	// Currently the only supported value is `inventory`.
 	TrendType string `json:"trend_type" validate:"required"`
-	// Trend data points, ordered by time.
+	// Trend data points, oldest first.
+	//
+	// At most one point is returned per calendar day: when several measurements were recorded on the same day, the earliest one is kept.
 	Points *List[ItemTrendPoint] `json:"points" validate:"required"`
 }
 
@@ -162,7 +174,7 @@ func (*ItemTrends) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleItemTrends)
 }
 
-// ExportItem is an item with inventory for export.
+// A single row of the items export: an item together with its on-hand inventory.
 type ExportItem struct {
 	// Item ID.
 	ID string `json:"id" validate:"required"`
@@ -206,9 +218,9 @@ var SampleExportItem = &ExportItem{
 	UpdatedAt:      timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
-// ExportItemsResponse is the export items response in JSON format.
+// The JSON shape of the items export.
 //
-// Export endpoints typically return an Excel file instead.
+// The export endpoint itself responds with an Excel file; this documents the equivalent structured payload.
 type ExportItemsResponse struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=list"`
@@ -224,7 +236,7 @@ var SampleExportItemsResponse = &ExportItemsResponse{
 	Count:  1,
 }
 
-// BulkReconcileItemsResponse is the response from bulk reconciling items.
+// The outcome of a bulk inventory reconciliation, reported as three separate lists.
 type BulkReconcileItemsResponse struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=bulk_reconcile_items_response"`
@@ -236,7 +248,9 @@ type BulkReconcileItemsResponse struct {
 	Errors *List[ReconcileErrorResult] `json:"errors" validate:"required"`
 }
 
-// ReconciledItemResult is a successfully reconciled item.
+// An item whose on-hand quantity was successfully reconciled.
+//
+// Both quantities are expressed in the item's own base unit, not in the unit submitted with the request.
 type ReconciledItemResult struct {
 	// Item ID.
 	ItemID string `json:"item_id" validate:"required"`
@@ -248,7 +262,7 @@ type ReconciledItemResult struct {
 	NewQuantity float64 `json:"new_quantity" validate:"required"`
 }
 
-// SkippedItemResult is a skipped item during reconciliation.
+// A submitted row that was skipped rather than reconciled.
 type SkippedItemResult struct {
 	// Item SKU.
 	SKU string `json:"sku" validate:"required"`
@@ -256,7 +270,7 @@ type SkippedItemResult struct {
 	Reason string `json:"reason" validate:"required"`
 }
 
-// ReconcileErrorResult is an error during reconciliation.
+// A submitted row that could not be reconciled.
 type ReconcileErrorResult struct {
 	// Item SKU.
 	SKU string `json:"sku" validate:"required"`
@@ -294,7 +308,9 @@ type ItemLotDefault struct {
 	//
 	// `0` means the item has no lot convention, not that its lot is zero.
 	Quantity float64 `json:"quantity"`
-	// The unit the lot is counted in. Expandable.
+	// The unit the lot is counted in.
+	//
+	// A lot that came from a product line is counted in that line's unit; otherwise the item's own base unit is used. The unit is returned even when no rule supplies a lot size, so a form can show what is being counted with the quantity left blank.
 	Unit *Unit `json:"unit" expandable:"true"`
 	// Which rule in the chain produced this lot.
 	//
@@ -302,8 +318,12 @@ type ItemLotDefault struct {
 	// - `product_line`: the convention of the line the item sells under.
 	// - `downstream_product_line`: inherited from the finished goods this item becomes, for intermediates that are not themselves sold.
 	// - `account_default`: the account-wide fallback.
+	//
+	// Empty when no rule in the chain supplies a lot, which is the same case `quantity` reports as `0`.
 	Source constants.ItemLotSource `json:"source" validate:"required"`
 	// The product line the convention came from.
+	//
+	// Present only when `source` is `product_line` or `downstream_product_line`; an item override and the account default do not come from a line.
 	ProductLine *Entity `json:"product_line"`
 }
 

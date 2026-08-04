@@ -16,10 +16,14 @@ import (
 // Request to mint a presigned upload target for a chat attachment.
 type CreateAttachmentUploadURLRequest struct {
 	// Conversation ID the attachment will be sent in.
+	//
+	// The upload can only be attached to a message in this conversation.
 	ConversationID string `path:"id" validate:"required"`
 	// The original filename of the file to upload.
 	Filename string `json:"filename" validate:"required"`
-	// The MIME content type of the file (sent as the Content-Type on the upload).
+	// The MIME content type of the file.
+	//
+	// The file must then be uploaded with this same content type, or object storage rejects it. It also decides how the attachment preview returned here is classified: `image/…` becomes an inline image, anything else a file.
 	ContentType field.Optional[string] `json:"content_type,omitzero"`
 }
 
@@ -33,7 +37,9 @@ func (*CreateAttachmentUploadURLRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateAttachmentUploadURLRequest)
 }
 
-// Mints a presigned URL for uploading a chat attachment directly to object storage.
+// Creates a short-lived URL for uploading a chat attachment straight to object storage.
+//
+// Upload the file to the returned URL, then send a message in the same conversation carrying the returned key as an attachment — the file only becomes part of the conversation at that point, and an upload that is never sent is discarded automatically. You must be an active participant of the conversation to stage an upload for it.
 type CreateAttachmentUploadURLEndpoint struct{}
 
 func (e *CreateAttachmentUploadURLEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAttachmentUploadURLRequest, *apiresource.AttachmentUploadTarget] {

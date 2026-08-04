@@ -33,7 +33,9 @@ func (*UpdateShipmentLineRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateShipmentLineRequest)
 }
 
-// Partially updates a shipment line.
+// Changes the shipped quantity on a shipment line.
+//
+// The line stays attached to the sales order line it was created against, and changing the quantity does not touch the pick for the order.
 type UpdateShipmentLineEndpoint struct{}
 
 func (e *UpdateShipmentLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateShipmentLineRequest, *apiresource.ShipmentLine] {

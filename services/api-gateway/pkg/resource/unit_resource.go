@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleUnitID = "un_01966263f74a5a0cae356000a1"
+const SampleUnitID = "un_82bd37dae5po"
 const SampleUnitName = "Kilogram"
 const SampleUnitAbbreviation = "kg"
 
@@ -22,27 +22,29 @@ type Unit struct {
 	Name string `json:"name" validate:"required"`
 	// Short abbreviation for the unit (e.g. "g", "kg").
 	Abbreviation string `json:"abbreviation" validate:"required"`
-	// Physical dimension the unit measures, such as mass, volume, or currency.
+	// The dimension this unit measures, such as mass, volume, or currency.
 	//
 	// A unit can only be converted to another unit of the same dimension. The `quantity` dimension is for discrete countable items rather than a physical measure.
 	Type constants.UnitType `json:"type" validate:"required"`
-	// Conversion ratio numerator relative to the base unit in the same dimension.
+	// Numerator of the ratio that converts a quantity in this unit into the dimension's base unit.
+	//
+	// A quantity is converted with `value × (ratio_numerator / ratio_denominator) + (offset_numerator / offset_denominator)`, so a kilogram in a gram-based dimension has a numerator of `1000` and a denominator of `1`.
 	RatioNumerator string `json:"ratio_numerator" validate:"required" format:"decimal"`
-	// Conversion ratio denominator relative to the base unit in the same dimension.
+	// Denominator of the ratio that converts a quantity in this unit into the dimension's base unit.
 	//
 	// Cannot be zero.
 	RatioDenominator string `json:"ratio_denominator" validate:"required" format:"decimal"`
-	// Conversion offset numerator, used for temperature-like conversions.
+	// Numerator of the conversion offset, applied after the ratio for scales that do not share a zero point, such as temperature.
 	//
-	// Zero for most unit types.
+	// Zero for units that convert by ratio alone.
 	OffsetNumerator string `json:"offset_numerator" validate:"required" format:"decimal"`
-	// Conversion offset denominator.
+	// Denominator of the conversion offset applied after the ratio.
 	//
-	// Typically 1. Cannot be zero.
+	// Never zero; a unit with no offset carries a numerator of `0` over a denominator of `1`.
 	OffsetDenominator string `json:"offset_denominator" validate:"required" format:"decimal"`
 	// Whether this is the base unit for its dimension.
 	//
-	// Conversion ratios are relative to this unit. Base units are platform-defined; account-created units always have this set to `false`.
+	// Every other unit's conversion ratio is expressed relative to the base unit. Base units are platform-defined; units created through the API are never base units.
 	IsBaseUnit bool `json:"is_base_unit"`
 	// Owner of this resource.
 	Owner *Owner `json:"owner" expandable:"true"`

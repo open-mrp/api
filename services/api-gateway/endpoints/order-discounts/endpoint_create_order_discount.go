@@ -18,22 +18,22 @@ import (
 type CreateOrderDiscountRequest struct {
 	// Display name of the discount.
 	Name string `json:"name" validate:"required,max=255"`
-	// The code entered to apply this discount to an order.
+	// The code a buyer enters to apply this discount to an order.
 	//
-	// Must be unique within the account.
+	// Codes are unique within your account and are compared without regard to letter case, so `SAVE10` collides with `save10`.
 	Code string `json:"code" validate:"required,max=255"`
-	// Percent off as a decimal string (e.g. `10` for 10%).
+	// The fraction of the order total to take off, as a decimal string.
 	//
-	// Used when `discount_type` is `percentage`; otherwise `0`.
+	// This is a multiplier, not a whole percent: send `0.1` to take 10% off. Only read when `discount_type` is `percentage`. Leaving it out stores `0`, which produces a discount that takes nothing off.
 	Percentage field.Optional[string] `json:"percentage,omitzero" format:"decimal"`
-	// Fixed amount off as a decimal string.
+	// The flat amount to take off the order total, as a decimal string.
 	//
-	// Used when `discount_type` is `amount`; otherwise `0`.
+	// Only read when `discount_type` is `amount`. Leaving it out stores `0`, which produces a discount that takes nothing off.
 	Amount field.Optional[string] `json:"amount,omitzero" format:"decimal"`
 	// How the discount is calculated.
 	//
-	// - `percentage`: the discount is a percent off, taken from `percentage`.
-	// - `amount`: the discount is a fixed amount off, taken from `amount`.
+	// - `percentage`: the order total is reduced by the fraction in `percentage`.
+	// - `amount`: the order total is reduced by the flat amount in `amount`.
 	DiscountType string `json:"discount_type" validate:"required,max=255"`
 }
 
@@ -48,9 +48,9 @@ func (*CreateOrderDiscountRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateOrderDiscountRequest)
 }
 
-// Creates an order discount.
+// Creates an order discount that buyers can then redeem on a sales order by its code.
 //
-// The discount code must be unique within the account; creating a discount with an existing code returns a conflict error.
+// The code must be unique within your account; reusing a code that another discount already holds returns a conflict error. Creating the discount does not apply it to anything — a discount only affects an order once that order references it.
 type CreateOrderDiscountEndpoint struct{}
 
 func (e *CreateOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateOrderDiscountRequest, *apiresource.OrderDiscount] {

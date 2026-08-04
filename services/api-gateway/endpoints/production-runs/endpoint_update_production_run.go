@@ -19,7 +19,7 @@ type UpdateProductionRunRequest struct {
 	ProductionRunID string `path:"id" validate:"required"`
 	// New production run number.
 	//
-	// Must be unique within the account.
+	// Must be unique within the account; reusing another run's number returns a conflict error.
 	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
 	// ID of the account user accountable for executing the run.
 	//
@@ -40,7 +40,7 @@ func (*UpdateProductionRunRequest) SchemaExample() any {
 
 // Partially updates a production run.
 //
-// Fails if the run has been completed.
+// Fields not provided retain their current values. A run that has already completed can no longer be updated.
 type UpdateProductionRunEndpoint struct{}
 
 func (e *UpdateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateProductionRunRequest, *apiresource.ProductionRun] {

@@ -17,7 +17,9 @@ type DeleteTransactionRequest struct {
 	TransactionID string `path:"id" validate:"required"`
 }
 
-// Deletes a transaction along with all of its invoice allocations, and returns the deleted transaction.
+// Deletes a transaction along with every allocation that applied it to an invoice, and returns the deleted transaction.
+//
+// Invoice payment status is not recomputed, so an invoice this transaction had paid off stays marked paid in full until the next settlement against it recalculates the flag. Deleting a transaction that was already deleted returns an already-deleted error rather than a not-found error.
 type DeleteTransactionEndpoint struct{}
 
 func (e *DeleteTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteTransactionRequest, *apiresource.TransactionDetail] {

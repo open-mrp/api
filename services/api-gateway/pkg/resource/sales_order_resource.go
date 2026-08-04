@@ -8,12 +8,12 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleSalesOrderID = "or_01d5034136c3ccc048abecc312"
+const SampleSalesOrderID = "or_9lqo07quiwyb"
 const SampleSalesOrderNumber = "SO-001"
 
 // Sales order type sub-resource.
 //
-// NOTE: retained for purchase orders, which still embed the full status/type sub-resources. Sales orders now expose status/priority as plain codes.
+// NOTE: currently unreferenced — sales orders and purchase orders both expose status, type, and priority as plain codes.
 type SalesOrderType struct {
 	// Type code.
 	Code string `json:"code" validate:"required"`
@@ -31,7 +31,7 @@ var SampleSalesOrderType = &SalesOrderType{
 
 // Sales order status sub-resource.
 //
-// NOTE: retained for purchase orders (see SalesOrderType note).
+// NOTE: currently unreferenced (see the SalesOrderType note).
 type SalesOrderStatusDetail struct {
 	// Status code.
 	Code string `json:"code" validate:"required"`
@@ -47,21 +47,27 @@ var SampleSalesOrderStatusDetail = &SalesOrderStatusDetail{
 	Name:   "Estimate",
 }
 
-// SalesOrderStageTotal pairs a fulfillment stage's monetary amount with its completion progress.
+// The monetary amount that has reached one fulfillment stage, together with how far that stage has progressed.
 type SalesOrderStageTotal struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order_stage_total"`
-	// Amount for this stage as a decimal string (unit price x quantity at this stage).
+	// Amount that has reached this stage, as a decimal string (unit price times the quantity at this stage).
 	Amount string `json:"amount" validate:"required" format:"decimal"`
-	// Progress to completion for this stage, as a fraction between 0 and 1: quantity at this stage divided by quantity ordered. `0` when nothing has reached this stage yet.
+	// Progress through this stage, as a fraction between 0 and 1.
+	//
+	// Calculated as the quantity that has reached this stage divided by the quantity ordered, so `1` means the whole order has cleared the stage and `0` means nothing has reached it yet.
 	Completion float64 `json:"completion"`
 }
 
-// SalesOrderTotals holds the derived monetary totals for a sales order or one of its lines, following the lifecycle ordered -> picked -> packed -> invoiced. Each downstream stage carries both its monetary amount and its completion progress against the ordered baseline.
+// Derived monetary totals for a sales order or one of its lines.
+//
+// Fulfillment runs ordered -> picked -> packed -> invoiced, and each downstream stage reports both the money that has reached it and its progress against the ordered baseline.
 type SalesOrderTotals struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order_totals"`
-	// Total ordered amount as a decimal string (unit price x quantity ordered). This is the baseline the stage completions are measured against.
+	// Total ordered amount as a decimal string (unit price times quantity ordered).
+	//
+	// This is the baseline the stage completions are measured against.
 	Ordered string `json:"ordered" validate:"required" format:"decimal"`
 	// Picked amount and completion.
 	Picked SalesOrderStageTotal `json:"picked"`
@@ -71,7 +77,7 @@ type SalesOrderTotals struct {
 	Invoiced SalesOrderStageTotal `json:"invoiced"`
 }
 
-// OrderContact groups a sales order's email recipients by notification purpose.
+// A sales order's email recipients, grouped by the notification they receive.
 type OrderContact struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=order_contact"`
@@ -81,23 +87,23 @@ type OrderContact struct {
 	Acknowledgement []string `json:"acknowledgement"`
 }
 
-// SalesOrderRelated groups the records related to a sales order.
+// The fulfillment records produced from a sales order.
 //
-// The members are individually expandable (e.g. include[]=related.pick). The group is null unless at least one of its members is expanded.
+// The group itself is returned only when at least one of its members has been expanded.
 type SalesOrderRelated struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order_related"`
-	// Associated pick.
+	// The pick created when the order was issued.
 	Pick *Record `json:"pick" expandable:"true"`
-	// Associated production run.
+	// The production run created for this order, if one was started.
 	ProductionRun *Record `json:"production_run" expandable:"true"`
-	// Associated shipments.
+	// Shipments made against this order.
 	Shipments *List[Record] `json:"shipments" expandable:"true"`
-	// Associated invoices.
+	// Invoices raised against this order.
 	Invoices *List[Record] `json:"invoices" expandable:"true"`
 }
 
-// Full sales order resource.
+// An order placed by a customer, tracked from estimate through fulfillment.
 type SalesOrder struct {
 	// Sales order ID.
 	ID string `json:"id" validate:"required"`
@@ -111,7 +117,7 @@ type SalesOrder struct {
 	//
 	// Unique among this customer's orders.
 	CustomerPurchaseOrderNumber *string `json:"customer_purchase_order_number"`
-	// Order note.
+	// Free-form note about the order.
 	Note *string `json:"note"`
 	// Order lifecycle status.
 	//
@@ -128,32 +134,40 @@ type SalesOrder struct {
 	// Stripe payment intent IDs recorded against this order.
 	PaymentIntentIDs []string `json:"payment_intent_ids"`
 	// Whether an order acknowledgment has been sent to the customer.
+	//
+	// Becomes `sent` when the order is issued with customer notification requested and the order has acknowledgement contacts to send to. It can also be set directly when an acknowledgement was sent outside Augno.
 	AcknowledgmentStatus constants.AcknowledgmentStatus `json:"acknowledgment_status" validate:"required"`
-	// Associated customer.
+	// The customer this order is for.
 	Customer *Customer `json:"customer" expandable:"true"`
-	// Sales representative.
+	// The sales representative credited with the order.
+	//
+	// Chosen automatically at creation when none is supplied, from the customer's default rep or the sales territory covering the ship-to address.
 	SalesRep *Actor `json:"sales_rep" expandable:"true"`
 	// Who created this order, and their relation (internal/customer/system).
 	CreatedBy *CreatedBy `json:"created_by" expandable:"true"`
-	// Billing address.
+	// Address the order is billed to.
 	BillToAddress *Address `json:"bill_to_address" expandable:"true"`
-	// Shipping address.
+	// Address the order ships to.
 	ShipToAddress *Address `json:"ship_to_address" expandable:"true"`
 	// Carrier selection and freight billing for this order.
+	//
+	// The freight charge itself is carried as a line on the order, not on this object.
 	Freight *Freight `json:"freight" expandable:"true"`
-	// Payment term.
+	// Payment terms agreed for this order.
 	PaymentTerm *PaymentTerm `json:"payment_term" expandable:"true"`
-	// Shipping term.
+	// Shipping terms agreed for this order.
 	ShippingTerm *ShippingTerm `json:"shipping_term" expandable:"true"`
-	// Order discount.
+	// Order-level discount applied to this order.
+	//
+	// The discount is charged through a negative-priced line on the order, so it is already reflected in the order totals.
 	OrderDiscount *OrderDiscount `json:"order_discount" expandable:"true"`
-	// Order lines.
+	// The order's lines, including the automatically generated freight and discount lines.
 	Lines *List[SalesOrderLine] `json:"lines" expandable:"true"`
-	// Number of order lines on this order, returned even when the `lines` list itself is not expanded.
+	// Number of lines on this order.
 	LineCount int32 `json:"line_count"`
 	// Derived monetary totals and per-stage fulfillment progress.
 	Totals *SalesOrderTotals `json:"totals" expandable:"true"`
-	// Records related to this order (pick, production run, shipments).
+	// Fulfillment records produced from this order.
 	Related *SalesOrderRelated `json:"related"`
 	// Email recipients grouped by notification purpose.
 	Contacts *OrderContact `json:"contacts" expandable:"true"`

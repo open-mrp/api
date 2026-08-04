@@ -5,9 +5,13 @@ import (
 	"github.com/augno/api/shared/constants"
 )
 
-// Autocomplete address suggestion.
+// A candidate address returned by address autocomplete.
+//
+// A suggestion is a lookup result from the address provider, not a saved address in your account. Creating an address from one is a separate step.
 type AddressSuggestion struct {
-	// Address suggestion ID.
+	// Identifier of the suggested place.
+	//
+	// Pass this value as the `id` path parameter of the address details endpoint to retrieve the full parsed address. It is issued by the underlying address provider rather than by Augno, so it is not a durable Augno resource ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=address_suggestion"`
@@ -51,7 +55,7 @@ type AddressComponents struct {
 	CountryCode string `json:"country_code" validate:"required"`
 }
 
-// Result of a place details lookup.
+// The full address behind an autocomplete suggestion.
 type AddressDetailsResult struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=address_details_result"`
@@ -61,11 +65,16 @@ type AddressDetailsResult struct {
 	FormattedAddress string `json:"formatted_address" validate:"required"`
 }
 
-// Result of address validation.
+// The outcome of checking a submitted address against an address validation service.
 type ValidatedAddress struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=validated_address"`
-	// Whether the address could be validated.
+	// Whether the address was confirmed as complete and specific enough to ship to.
+	//
+	// - `valid`: nothing required was missing and the address resolved to a specific building or block.
+	// - `invalid`: required components were missing, or the address only resolved to a street or a wider area.
+	//
+	// When the status is `invalid`, read `validation_messages` and compare `components` against what you submitted to see what to correct.
 	Status constants.AddressValidationStatus `json:"status" validate:"required"`
 	// Formatted, single-line address as standardized by the validation service.
 	//

@@ -25,7 +25,7 @@ type UpdateProductionStepRequest struct {
 	LevelingFactor field.Optional[string] `json:"leveling_factor,omitzero"`
 	// Allowance correction factor applied to labor time in cost calculations, as a decimal string.
 	Allowances field.Optional[string] `json:"allowances,omitzero"`
-	// Scanning station ID.
+	// Scanning station where batches at this step are scanned.
 	ScanningStationID field.Optional[string] `json:"scanning_station_id,omitzero" validate:"omitempty"`
 }
 
@@ -43,6 +43,8 @@ func (*UpdateProductionStepRequest) SchemaExample() any {
 }
 
 // Partially updates a production step.
+//
+// Returns a conflict error if another production step in the account already uses the requested name.
 type UpdateProductionStepEndpoint struct{}
 
 func (e *UpdateProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateProductionStepRequest, *apiresource.ProductionStep] {

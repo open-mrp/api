@@ -15,6 +15,8 @@ import (
 type ListEmailDomainsRequest struct{}
 
 // Returns the account's registered email domains.
+//
+// Every domain is returned in a single response; this list is not paginated.
 type ListEmailDomainsEndpoint struct{}
 
 func (e *ListEmailDomainsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListEmailDomainsRequest, *apiresource.List[apiresource.EmailDomain]] {

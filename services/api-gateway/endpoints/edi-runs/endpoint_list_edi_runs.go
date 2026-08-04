@@ -21,6 +21,8 @@ type ListEDIRunsRequest struct {
 }
 
 // Returns a paginated list of EDI runs for the target account.
+//
+// Runs are ordered by completion time, most recent first. The `q` search term matches the EDI run ID.
 type ListEDIRunsEndpoint struct{}
 
 func (e *ListEDIRunsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListEDIRunsRequest, *apiresource.List[apiresource.EDIRun]] {

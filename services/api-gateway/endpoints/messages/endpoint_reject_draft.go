@@ -13,11 +13,13 @@ import (
 
 // Request to discard an open customer-reply draft without sending it.
 type RejectDraftRequest struct {
-	// Message ID (the draft).
+	// The id of the draft to reject.
 	MessageID string `path:"id" validate:"required"`
 }
 
-// Discards an open customer-reply draft without sending it (status becomes `rejected`).
+// Discards a reply draft without sending it to the customer.
+//
+// The draft is kept as a rejected record for history and can no longer be edited or approved. Because the customer is still owed an answer, the case moves back to waiting on your team.
 type RejectDraftEndpoint struct{}
 
 func (e *RejectDraftEndpoint) Materialize() *apiendpoint.APIEndpoint[*RejectDraftRequest, *apiresource.Message] {

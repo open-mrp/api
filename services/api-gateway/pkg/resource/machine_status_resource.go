@@ -9,6 +9,8 @@ import (
 )
 
 // One campaign on a machine, with how far through it the floor is.
+//
+// A campaign is one item scheduled to run on one machine for one week. Progress is taken from the batches the floor has scanned against it rather than reported by hand, so it advances on its own as a shift runs.
 type MachineCampaign struct {
 	// The schedule line this campaign came from.
 	ScheduleLine *Entity `json:"schedule_line" validate:"required"`
@@ -34,9 +36,15 @@ type MachineCampaign struct {
 	ReleasedBatchCount int64 `json:"released_batch_count"`
 	// Batches of this campaign the floor has scanned.
 	ScannedBatchCount int64 `json:"scanned_batch_count"`
-	// Constraint hours the campaign consumes.
+	// Machine hours the plan allocates to the campaign.
 	PlannedRunHours float64 `json:"planned_run_hours"`
 	// Where the campaign is in its lifecycle.
+	//
+	// - `planned`: scheduled, but not yet released to the floor.
+	// - `released`: issued to the floor as a production run, so batches can be scanned against it.
+	// - `in_progress`: being run.
+	// - `complete`: finished.
+	// - `cancelled`: will not be run.
 	Status constants.ProductionScheduleLineStatus `json:"status" validate:"required"`
 	// The run carrying this campaign's work, once its week has been released.
 	ProductionRun *Entity `json:"production_run"`
@@ -72,15 +80,21 @@ type MachineStatus struct {
 	Status constants.MachineWorkStatus `json:"status" validate:"required"`
 	// The open stoppage, when the machine is down.
 	Downtime *MachineDowntimeSummary `json:"downtime"`
-	// The campaign being worked: the earliest released one with batches still to scan.
+	// The campaign the machine is working on now.
+	//
+	// The earliest released campaign that still has batches left to scan. Once its last batch is scanned it stops being current and the queue moves on, which is what makes a floor display advance by itself.
 	Current *MachineCampaign `json:"current"`
-	// What follows, so an operator can set up for it.
+	// What the machine takes on next, so an operator can set up for it.
+	//
+	// When the machine has no current campaign it is between jobs, and this is the earliest campaign still ahead of it.
 	Next *MachineCampaign `json:"next"`
-	// Planned for this machine this week.
+	// Quantity planned on this machine for the current week.
+	//
+	// Summed across every campaign scheduled on the machine that week, not just the current one.
 	WeekPlannedQuantity float64 `json:"week_planned_quantity"`
-	// Scanned on this machine this week.
+	// Quantity scanned on this machine so far in the current week.
 	WeekScannedQuantity float64 `json:"week_scanned_quantity"`
-	// Constraint hours planned on this machine this week.
+	// Machine hours the plan allocates on this machine for the current week.
 	WeekPlannedRunHours float64 `json:"week_planned_run_hours"`
 	// Unit the week's quantities are counted in.
 	Unit *string `json:"unit"`

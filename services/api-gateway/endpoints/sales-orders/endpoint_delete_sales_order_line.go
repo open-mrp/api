@@ -18,7 +18,9 @@ type DeleteSalesOrderLineRequest struct {
 	SalesOrderLineID string `path:"line_id" validate:"required"`
 }
 
-// Deletes a sales order line and related records.
+// Deletes a sales order line and its pick lines.
+//
+// A line cannot be removed once it has been packed onto a shipment, or once the order is fulfilled, and removing one from an order that is already completed or has a shipped shipment requires an admin. The remaining lines are renumbered so the sequence stays contiguous, and if this was the last line left to pick, the order's pick is deleted and the order falls back to `estimate` with its reserved inventory released.
 type DeleteSalesOrderLineEndpoint struct{}
 
 func (e *DeleteSalesOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSalesOrderLineRequest, *apiresource.EmptyResource] {

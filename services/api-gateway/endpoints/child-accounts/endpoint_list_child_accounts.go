@@ -16,7 +16,9 @@ type ListChildAccountsRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of child accounts for the target account.
+// Returns a paginated list of the accounts linked directly beneath the target account.
+//
+// Only direct children are returned, not children of those children. Results are ordered by when your customer record for each child was created, newest first, and the `q` search term matches the child account's name.
 type ListChildAccountsEndpoint struct{}
 
 func (e *ListChildAccountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListChildAccountsRequest, *apiresource.List[apiresource.ChildAccount]] {

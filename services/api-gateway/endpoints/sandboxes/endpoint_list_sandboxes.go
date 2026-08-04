@@ -11,7 +11,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Returns a paginated list of sandboxes.
+// Returns a paginated list of the sandboxes owned by your production account, newest first.
+//
+// The `q` search term matches the sandbox name. Sandboxes cannot be listed while acting in a sandbox.
 type ListSandboxesEndpoint struct{}
 
 func (e *ListSandboxesEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.PaginationRequest, *apiresource.List[apiresource.Sandbox]] {

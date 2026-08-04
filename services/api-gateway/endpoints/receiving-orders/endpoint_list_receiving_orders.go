@@ -16,21 +16,21 @@ type ListReceivingOrdersRequest struct {
 	apiresource.PaginationRequest
 	// Filter by completion status.
 	//
-	// Only open orders are returned when this is omitted.
-	//
-	// An order is `open` while any line is still unstocked and `completed` once every line is stocked; `all` returns both.
+	// Accepts `open`, `completed`, or `all`. Completed orders are hidden when this is omitted.
 	Status *string `query:"status"`
 	// Filter to orders that have at least one line for any of the given item IDs.
 	ItemIDs []string `query:"item_ids"`
 	// Filter to orders whose originating purchase order was placed with any of the given supplier account IDs.
 	SupplierIDs []string `query:"supplier_ids"`
-	// Only return orders created on or after this date (`YYYY-MM-DD`, inclusive).
+	// Only return orders created on or after this date (`YYYY-MM-DD`).
 	StartDate *string `query:"start_date"`
-	// Only return orders created on or before this date (`YYYY-MM-DD`, inclusive).
+	// Only return orders created up to this date (`YYYY-MM-DD`).
+	//
+	// Compared against the start of the given day, so orders created later that same day are excluded.
 	EndDate *string `query:"end_date"`
 }
 
-// Returns a paginated list of receiving orders for the current account.
+// Returns a paginated list of receiving orders for the current account, newest first.
 //
 // Only open (incomplete) orders are returned by default; pass `status` to change this.
 type ListReceivingOrdersEndpoint struct{}

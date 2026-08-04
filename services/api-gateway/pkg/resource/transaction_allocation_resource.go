@@ -8,8 +8,8 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleAllocationEntryID = "txal_016cc92c2d9c0b12801e3160e0"
-const SampleOpenCreditEntryID = "txn_0102a8419c19035a1062bfd5b1" // #nosec G101 -- sample ID, not a credential
+const SampleAllocationEntryID = "txal_2o8lu50zvphn"
+const SampleOpenCreditEntryID = "txn_wq90iimtw6ct" // #nosec G101 -- sample ID, not a credential
 
 // An application of part of a transaction's amount against a specific invoice, as returned in list views.
 type AllocationEntry struct {
@@ -17,25 +17,25 @@ type AllocationEntry struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=allocation_entry"`
-	// Allocated amount as a decimal string.
+	// The part of the transaction's amount applied to this invoice, as a decimal string in US dollars.
 	Amount string `json:"amount" validate:"required"`
 	// Human-readable formatted amount (e.g. "$500.00").
 	DisplayAmount string `json:"display_amount" validate:"required"`
-	// Customer associated with this allocation.
+	// The customer whose transaction was applied.
 	Customer *AllocationCustomer `json:"customer" validate:"required"`
-	// Transaction associated with this allocation.
+	// The transaction the money came from.
 	Transaction *AllocationTransaction `json:"transaction" validate:"required"`
-	// Invoice associated with this allocation.
+	// The invoice the money was applied to.
 	Invoice *AllocationInvoice `json:"invoice" validate:"required"`
-	// Note about this allocation.
+	// Free-form note carried by the underlying transaction, not a note specific to this allocation.
 	Note *string `json:"note"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 }
 
-// Minimal customer sub-resource for allocation entries and open-credit entries.
+// Minimal customer reference carried by allocation entries and open-credit entries.
 //
-// It carries its own allocation_customer discriminator (not customer) because the customer id is not always present (allocation list entries omit it), so it is not a guaranteed-resolvable customer reference.
+// Open-credit entries identify the customer by `id`; allocation entries carry only the customer's name and number.
 type AllocationCustomer struct {
 	// Customer account ID.
 	ID *string `json:"id"`
@@ -43,7 +43,7 @@ type AllocationCustomer struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=allocation_customer"`
 	// Customer display name.
 	Name string `json:"name" validate:"required"`
-	// Customer number.
+	// The customer number for this customer, matching the `number` on your customer record for it.
 	Number *string `json:"number"`
 }
 
@@ -53,15 +53,17 @@ type AllocationTransaction struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=transaction"`
-	// Transaction type code: one of `payment`, `credit_memo`, `adjustment`, or `rebate`.
+	// Type code of the transaction the money came from.
+	//
+	// One of `payment`, `credit_memo`, `adjustment`, or `rebate`.
 	Type string `json:"type" validate:"required"`
 	// Payment method code (e.g. `check`, `ach`).
 	//
-	// Typically present only on payment transactions and null for credit memos, adjustments, and rebates.
+	// Typically set only when `type` is `payment`.
 	Method *string `json:"method"`
-	// Adjustment category code.
+	// Adjustment category code (e.g. `discount`, `write_off`).
 	//
-	// Typically populated when `type` is `adjustment`; null for other types.
+	// Typically set only when `type` is `adjustment`.
 	AdjustmentType *string `json:"adjustment_type"`
 }
 
@@ -102,7 +104,9 @@ func (*AllocationEntry) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleAllocationEntry)
 }
 
-// Open (not fully allocated) credit transaction.
+// A transaction that still has credit available to apply to invoices.
+//
+// Whether a transaction counts as an open credit is driven by its `is_fully_allocated` flag rather than by a recomputed balance, so a transaction keeps appearing here until that flag is set — even if its allocations already cover the full amount.
 type OpenCreditEntry struct {
 	// Transaction ID.
 	ID string `json:"id" validate:"required"`
@@ -114,31 +118,27 @@ type OpenCreditEntry struct {
 	OriginalAmount string `json:"original_amount" validate:"required"`
 	// Total amount already allocated against invoices as a decimal string.
 	AllocatedAmount string `json:"allocated_amount" validate:"required"`
-	// Remaining unallocated credit as a decimal string (`original_amount` minus `allocated_amount`).
-	//
-	// This is the balance still available to apply.
+	// Credit still available to apply, as a decimal string (`original_amount` minus `allocated_amount`).
 	LeftoverAmount string `json:"leftover_amount" validate:"required"`
-	// Customer associated with this transaction.
+	// The customer this credit belongs to.
 	Customer *AllocationCustomer `json:"customer" validate:"required"`
-	// Type of the underlying transaction.
-	//
-	// Corresponds to one of the standard transaction types: payment, credit memo, adjustment, or rebate.
+	// Display name of the transaction's type, such as "Payment" or "Credit Memo".
 	TransactionType string `json:"transaction_type" validate:"required"`
-	// Payment method of the underlying transaction.
+	// Display name of the payment method, such as "Check" or "Credit Card".
 	//
-	// Typically present only on payment transactions and null for credit memos, adjustments, and rebates.
+	// Typically set only on payment transactions.
 	TransactionMethod *string `json:"transaction_method"`
-	// Adjustment category of the underlying transaction.
+	// Display name of the adjustment category, such as "Discount" or "Write Off".
 	//
-	// Typically populated for adjustment transactions; null for other types.
+	// Typically set only on adjustment transactions.
 	AdjustmentType *string `json:"adjustment_type"`
-	// Responsible user's name.
+	// Username of the account user recorded as responsible for the transaction.
 	ResponsibleUserName *string `json:"responsible_user_name"`
-	// Note about this transaction.
+	// Free-form note attached to the transaction.
 	Note *string `json:"note"`
-	// Stripe payment ID, if applicable.
+	// Identifier of the Stripe payment that produced this transaction.
 	StripePaymentID *string `json:"stripe_payment_id"`
-	// Allocations against invoices for this transaction.
+	// The invoices this transaction has already been applied to, and how much went to each.
 	InvoiceAllocations *List[InvoiceAllocationEntry] `json:"invoice_allocations"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

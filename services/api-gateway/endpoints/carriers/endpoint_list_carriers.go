@@ -16,7 +16,9 @@ type ListCarriersRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of carriers for the current account.
+// Returns a paginated list of the carriers available to the current account.
+//
+// This covers the carriers you have created plus the platform-provided system carriers that every account shares.
 type ListCarriersEndpoint struct{}
 
 func (e *ListCarriersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCarriersRequest, *apiresource.List[apiresource.Carrier]] {

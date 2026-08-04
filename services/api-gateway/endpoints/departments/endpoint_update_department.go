@@ -15,7 +15,7 @@ import (
 
 // Request to partially update a department.
 type UpdateDepartmentRequest struct {
-	// Department ID.
+	// ID of the department to update.
 	DepartmentID string `path:"id" validate:"required"`
 	// Display name of the department.
 	//
@@ -33,9 +33,9 @@ type UpdateDepartmentRequest struct {
 	//
 	// Assignment is additive: listed machines are moved into this department and machines already in the department are unaffected.
 	MachineIDs []string `json:"machine_ids,omitzero"`
-	// Hourly labor rate for work done in this department. Creates the department's rate when it has none, otherwise rewrites the existing rate in place.
+	// Hourly labor rate for work done in this department, such as a changeover technician.
 	//
-	// The numerator unit must be a currency and the denominator must not be.
+	// Creates the department's rate when it has none, otherwise rewrites the existing rate in place. The numerator unit must be a currency and the denominator must not be.
 	LaborRate *DepartmentRateInput `json:"labor_rate,omitzero"`
 }
 

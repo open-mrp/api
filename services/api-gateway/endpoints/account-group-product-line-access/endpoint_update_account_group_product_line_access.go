@@ -19,7 +19,9 @@ type UpdateAccountGroupProductLineAccessRequest struct {
 	AccountGroupID string `path:"account_group_id" validate:"required"`
 	// IDs of the product lines the account group should have access to.
 	//
-	// The provided list replaces the account group's existing set of product lines; every ID must belong to your account.
+	// The provided list replaces the account group's existing set of product lines, and each ID must be a product line your account owns.
+	//
+	// Sending an empty list, or omitting the field, revokes every product line from the group. The record then has nothing left to update, so granting access again goes through Create Account Group Product Line Access.
 	ProductLineIDs field.Optional[[]string] `json:"product_line_ids,omitzero"`
 }
 
@@ -33,7 +35,7 @@ func (*UpdateAccountGroupProductLineAccessRequest) SchemaExample() any {
 
 // Replaces the set of product lines accessible to an account group.
 //
-// This is a full replacement, not a merge: product lines omitted from the request lose access.
+// This is a full replacement, not a merge: product lines omitted from the request lose access. The account group must already have at least one product line granted, otherwise the request returns a not-found error and the grant has to be made with Create Account Group Product Line Access.
 type UpdateAccountGroupProductLineAccessEndpoint struct{}
 
 func (e *UpdateAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAccountGroupProductLineAccessRequest, *apiresource.AccountGroupProductLineAccess] {

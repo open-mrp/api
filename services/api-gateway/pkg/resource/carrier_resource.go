@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleCarrierID = "cr_01784fd54c9ba197bb4e42f0e6"
+const SampleCarrierID = "cr_tv5vfjtgu1n3"
 const SampleCarrierName = "FedEx"
 
 // A shipping carrier configured for fulfilling orders.
@@ -19,7 +19,7 @@ type Carrier struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=carrier"`
-	// Human-readable name for the carrier, unique among your account's carriers.
+	// Human-readable name for the carrier, unique among the carriers visible to your account.
 	Name string `json:"name" validate:"required"`
 	// Well-known carrier identifier, set only for recognized carriers and absent for custom ones.
 	//
@@ -29,15 +29,19 @@ type Carrier struct {
 	// - `ltl`, `ltl1`: less-than-truckload freight carriers.
 	// - `freight_collect`: freight billed to and arranged by the receiver.
 	Code *constants.CarrierCode `json:"code"`
-	// Your account number with this carrier, used to connect UPS and USPS accounts.
+	// Your account number with this carrier.
+	//
+	// UPS and USPS carrier accounts are connected to Shippo using this number; FedEx carriers authorize through OAuth instead, so their account number is not used to connect them.
 	AccountNumber *string `json:"account_number"`
 	// Whether customers can see and select this carrier at checkout in the customer portal.
 	CustomerPortalVisibility constants.CustomerPortalVisibility `json:"customer_portal_visibility" validate:"required"`
 	// Provenance of this carrier.
 	//
-	// System-owned carriers are platform-provided defaults shared across all accounts and cannot be deleted; account-owned carriers are custom to your account.
+	// System-owned carriers are platform-provided defaults shared across all accounts and cannot be updated or deleted; account-owned carriers are custom to your account.
 	Owner *Owner `json:"owner" expandable:"true"`
 	// Shipping service levels offered by this carrier (e.g. ground, overnight).
+	//
+	// At most 10 service levels are returned inline; use the carrier's service levels endpoint to page through the full set.
 	ServiceLevels *List[ServiceLevel] `json:"service_levels" expandable:"true"`
 	// Soft-delete timestamp.
 	DeletedAt *time.Time `json:"deleted_at"`
@@ -72,7 +76,9 @@ func (*Carrier) SchemaExample() any {
 type OAuthResponse struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=oauth_response"`
-	// OAuth URL to redirect the user to.
+	// URL to send the user to so they can authorize their carrier account.
+	//
+	// Once the user finishes authorizing, the carrier returns them to the `redirect_uri` supplied when the flow was initiated.
 	OAuthURL string `json:"oauth_url" validate:"required"`
 }
 
@@ -91,9 +97,9 @@ type OAuthStatusResponse struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=oauth_status_response"`
 	// OAuth connection status.
 	//
-	// - `connected`: the carrier account is authorized and ready for live rating and labels.
-	// - `authorization_pending`: the carrier account exists but OAuth authorization has not been completed.
-	// - `disconnected`: no carrier account is connected. Sandbox accounts always report this status.
+	// - `connected`: your own carrier account is authorized and ready for live rating and label purchase.
+	// - `authorization_pending`: a carrier account exists but is still Shippo's shared default account, so authorization of your own carrier account has not been completed.
+	// - `disconnected`: the carrier has no carrier account to authorize, or the carrier account could not be reached. Sandbox accounts always report this status.
 	Status string `json:"status" validate:"required"`
 }
 

@@ -16,9 +16,11 @@ import (
 type InitiateOAuthRequest struct {
 	// Carrier ID.
 	CarrierID string `path:"id" validate:"required"`
-	// Redirect URI after OAuth completes.
+	// URL the carrier sends the user back to once they finish authorizing.
 	RedirectURI string `json:"redirect_uri" validate:"required"`
-	// Opaque state value passed through the OAuth flow.
+	// Opaque value passed through the OAuth flow and handed back on the redirect.
+	//
+	// Use it to correlate the callback with the request that started it, or to carry the page the user should return to.
 	State field.Optional[string] `json:"state,omitzero"`
 }
 
@@ -30,9 +32,9 @@ func (*InitiateOAuthRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleInitiateOAuthRequest)
 }
 
-// Initiates the OAuth authorization flow for a Shippo-managed carrier and returns the URL to redirect the user to.
+// Starts the OAuth flow that authorizes your own account with the carrier, returning the URL to send the user to.
 //
-// Not available in sandbox mode.
+// The carrier must already have a Shippo carrier account, which is created when the carrier is created with a Shippo-supported code. Not available in sandbox mode.
 type InitiateOAuthEndpoint struct{}
 
 func (e *InitiateOAuthEndpoint) Materialize() *apiendpoint.APIEndpoint[*InitiateOAuthRequest, *apiresource.OAuthResponse] {

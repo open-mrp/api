@@ -17,7 +17,9 @@ type LeaveConversationRequest struct {
 	ConversationID string `path:"id" validate:"required"`
 }
 
-// Removes the caller from a conversation, marking their membership as left.
+// Removes the caller from a conversation.
+//
+// An owner cannot leave — hand ownership to someone else first. Leaving posts a "left the conversation" note to the thread and hides the conversation for the caller, who can still read it back but can no longer post.
 type LeaveConversationEndpoint struct{}
 
 func (e *LeaveConversationEndpoint) Materialize() *apiendpoint.APIEndpoint[*LeaveConversationRequest, *apiresource.Conversation] {

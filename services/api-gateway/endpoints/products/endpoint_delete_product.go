@@ -11,13 +11,15 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteProductRequest is the request to delete a product.
+// Request to delete a product.
 type DeleteProductRequest struct {
 	// Product ID.
 	ProductID string `path:"id" validate:"required"`
 }
 
-// Soft-deletes a product and returns the deleted product.
+// Soft-deletes a product and returns it as it stood at deletion.
+//
+// Deletion marks the product's backing item as deleted, so the item and its inventory drop out of catalog and inventory listings too. Deleting the same product again returns an error saying it has already been deleted.
 type DeleteProductEndpoint struct{}
 
 func (e *DeleteProductEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteProductRequest, *apiresource.Product] {

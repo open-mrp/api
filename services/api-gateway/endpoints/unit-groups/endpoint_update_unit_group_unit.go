@@ -17,15 +17,19 @@ import (
 type UpdateUnitGroupUnitRequest struct {
 	// Unit group ID.
 	UnitGroupID string `path:"unit_group_id" validate:"required"`
-	// Unit group unit ID.
+	// ID of the unit's association with the group, not the ID of the unit itself.
 	AssociatedUnitID string `path:"id" validate:"required"`
 	// ID of the unit this association refers to.
 	//
-	// The unit's dimension must match the group's `type`.
+	// Sending a different unit does not repoint the association; remove the association and add a new one instead. A unit sent here must still match the group's `type`.
 	UnitID field.Optional[string] `json:"unit_id,omitzero" validate:"omitempty"`
-	// Percentage discount applied to the unit's price when an order is placed in this unit (e.g. `10` is a 10% discount).
+	// Share of the unit's price removed when an order is placed in this unit.
+	//
+	// Expressed as a decimal fraction rather than a whole number, so `0.1` is a 10% discount and `0` is no discount.
 	DiscountPercentage field.Optional[float64] `json:"discount_percentage,omitzero"`
 	// Flat amount subtracted from the unit's price when an order is placed in this unit.
+	//
+	// Subtracted before `discount_percentage` is applied.
 	DiscountFixed field.Optional[float64] `json:"discount_fixed,omitzero"`
 	// Whether the unit is shown to customers in the customer portal.
 	CustomerPortalVisibility field.Optional[constants.CustomerPortalVisibility] `json:"customer_portal_visibility,omitzero"`
@@ -46,7 +50,9 @@ func (*UpdateUnitGroupUnitRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateUnitGroupUnitRequest)
 }
 
-// Partially updates an associated unit within a unit group.
+// Partially updates a unit's association with a unit group, changing the discount or customer portal visibility applied when ordering in that unit.
+//
+// Associations within system unit groups cannot be modified.
 type UpdateUnitGroupUnitEndpoint struct{}
 
 func (e *UpdateUnitGroupUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateUnitGroupUnitRequest, *apiresource.UnitGroupUnit] {

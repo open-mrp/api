@@ -17,6 +17,8 @@ type ListScanningStationsRequest struct {
 }
 
 // Returns a paginated list of scanning stations in your account.
+//
+// The `q` search term matches the station name.
 type ListScanningStationsEndpoint struct{}
 
 func (e *ListScanningStationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListScanningStationsRequest, *apiresource.List[apiresource.ScanningStation]] {

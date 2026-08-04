@@ -9,6 +9,8 @@ import (
 )
 
 // The set of product lines that accounts in an account group are allowed to order from.
+//
+// A customer reaches these product lines when the group is its type group or one of its pricing groups. Group access is additive with the customer's own direct access — a customer can order anything granted by either route.
 type AccountGroupProductLineAccess struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_group_product_line_access"`
@@ -17,10 +19,12 @@ type AccountGroupProductLineAccess struct {
 	// There is at most one access record per account group, so this also identifies the record.
 	AccountGroup *AccountGroup `json:"account_group" validate:"required"`
 	// Product lines accessible to this account group.
+	//
+	// Only product lines your account owns can be granted; the shared system product lines never appear here.
 	ProductLines *List[ProductLine] `json:"product_lines" validate:"required"`
-	// Creation timestamp.
+	// When the account group was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// Last updated timestamp.
+	// When the account group was last updated.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

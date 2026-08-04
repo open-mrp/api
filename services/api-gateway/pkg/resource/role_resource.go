@@ -14,23 +14,25 @@ type Role struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=role"`
-	// Display name, unique within the account.
+	// Display name of the role.
+	//
+	// Unique within the account.
 	Name string `json:"name" validate:"required"`
 	// The kind of role.
 	//
-	// The role's type is sometimes used to gate special behaviors and to restrict some actions to only certain types of roles. For example, only roles with the type `admin` can create and manage API keys.
+	// The type gates behavior that individual permissions do not cover, and some actions are reserved for a single role type.
 	//
-	// - `admin`: full administrative access, including managing API keys.
-	// - `user`: a custom role tailored to a specific need (its permissions are defined explicitly). Roles created through the API always have this type.
-	// - `scanner`: a role for scanning-station operators.
-	// - `sales_rep`: a role for sales representatives.
+	// - `admin`: full administrative access. Sensitive areas such as API keys, billing, and third-party integrations are restricted to admins no matter what permissions another role holds.
+	// - `user`: a custom role tailored to a specific need, with its permissions defined explicitly. Roles created through the API always have this type.
+	// - `scanner`: the role used by shop-floor scanning stations, assigned automatically when a scanning-station user is created.
+	// - `sales_rep`: a role for sales representatives. Order analytics are scoped to the rep's own orders.
 	// - `agent`: a role assigned to an automated agent rather than a person.
 	TypeCode constants.RoleType `json:"type" validate:"required"`
 	// Provenance of this role.
 	//
-	// System-owned roles are global defaults shared across all accounts and cannot be modified or deleted; account-owned roles are custom roles created by that account.
+	// System-owned roles are platform-provided defaults shared across all accounts and cannot be updated or deleted; account-owned roles are custom to your account.
 	Owner *Owner `json:"owner" expandable:"true"`
-	// Permissions granted by this role, in `{domain}:{action}` format, such as `customers:read`.
+	// Permissions granted by this role, in `{permission}:{action}` format, such as `customers:read`.
 	Permissions *[]string `json:"permissions" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at"`
@@ -38,7 +40,7 @@ type Role struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-const SampleRoleID = "rl_01c16d2eb637c0d1f3a372937c"
+const SampleRoleID = "rl_3xknmfqflhvb"
 const SampleRoleName = "Admin"
 
 var SampleRolePermissions = []string{"customers:create", "customers:read", "customers:update", "customers:delete"}

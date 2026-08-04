@@ -17,7 +17,9 @@ type RetrieveAnnouncementRequest struct {
 	AnnouncementID string `path:"id" validate:"required"`
 }
 
-// Returns one active announcement by ID.
+// Retrieves a single announcement by ID, with the calling user's own read state.
+//
+// Only announcements the caller can see are returned: one published to another account, one that has not reached its publish time, or one that has expired is reported as not found. An announcement the caller has dismissed stays retrievable even though it no longer appears in their feed.
 type RetrieveAnnouncementEndpoint struct{}
 
 func (e *RetrieveAnnouncementEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAnnouncementRequest, *apiresource.Announcement] {

@@ -8,15 +8,21 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SamplePortalRegistrationSessionID = "porgse_017513382536fd23a343e958ef"
+const SamplePortalRegistrationSessionID = "porgse_q1hs0mapqh6x"
 
-// PortalRegistrationSessionData is the scratch form data accumulated across a buyer's registration steps, echoed back so a resumed session restores the form.
+// The form data a buyer has entered so far in a customer-portal registration.
+//
+// It is saved on the session as the buyer advances and echoed back on every read, so a resumed registration can restore the form exactly where the buyer left off. The values are used to create or link the customer when the registration is completed.
 type PortalRegistrationSessionData struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=portal_registration_session_data"`
-	// The customer's name.
+	// The name the buyer entered for the customer.
+	//
+	// Only used when the registration creates a new customer; joining an existing customer keeps that customer's own name.
 	CustomerName string `json:"customer_name"`
-	// An existing customer number to link.
+	// The seller-assigned customer number the buyer is claiming.
+	//
+	// Only used when the buyer is joining an existing customer, where it must match a customer already on the seller's books. New customers are assigned a number automatically when the registration completes.
 	CustomerNumber string `json:"customer_number"`
 	// The chosen customer group ID.
 	CustomerGroupID string `json:"customer_group_id"`
@@ -42,31 +48,44 @@ type PortalRegistrationSessionData struct {
 	AddressCountry string `json:"address_country"`
 }
 
-// PortalRegistrationSession is a buyer's session-based registration into a seller's customer portal. The buyer creates or resumes a session, advances it step by step, and completes it — so a half-finished registration can be resumed rather than leaving the buyer stuck.
+// A buyer's registration into a seller's customer portal.
+//
+// The buyer starts a session, advances it step by step, and completes it — so a half-finished registration can be resumed rather than leaving the buyer stuck. Sellers use the same record to see which registrations stalled before completing.
 type PortalRegistrationSession struct {
 	// Portal registration session ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=portal_registration_session"`
-	// The seller account this registration is for.
+	// The seller account whose portal the buyer is registering into.
 	SellerAccountID string `json:"seller_account_id" validate:"required"`
-	// The seller's portal slug.
+	// The portal slug the registration was started from.
 	SellerSlug string `json:"seller_slug" validate:"required"`
-	// The user who registered.
+	// The buyer this session belongs to.
+	//
+	// Only this user can retrieve, update, complete, or abandon the session.
 	UserID string `json:"user_id" validate:"required"`
-	// Whether the buyer is linking an existing customer record vs. creating a new one.
+	// Whether the buyer is joining a customer the seller already has, rather than creating a new one.
+	//
+	// When true, completing the registration links the buyer to the seller's existing customer identified by `customer_number`; otherwise it creates a new customer from the rest of the session data.
 	IsExistingCustomer *bool `json:"is_existing_customer"`
-	// The current registration step.
+	// The step the buyer has reached.
+	//
+	// Steps run `customer_details` → `billing_address` → `contact` → `completed`, and only ever move forward.
 	Step constants.PortalRegistrationStep `json:"step" validate:"required"`
-	// Derived lifecycle status, so customer service can spot registrations that stalled.
+	// Where the registration stands, derived from its completion and abandonment timestamps and the seven-day resume window.
+	//
+	// - `in_progress`: still incomplete and inside the resume window.
+	// - `completed`: the buyer finished registering.
+	// - `abandoned`: the buyer explicitly gave the session up.
+	// - `expired`: still incomplete, but past the resume window, so the buyer can no longer pick it back up.
 	Status constants.PortalRegistrationStatus `json:"status" validate:"required"`
-	// The customer account created/linked on completion.
+	// The customer the registration created or joined.
 	CustomerID *string `json:"customer_id"`
-	// Scratch form data accumulated across steps.
+	// The form data the buyer has entered so far.
 	SessionData *PortalRegistrationSessionData `json:"session_data"`
-	// When the registration completed, or null while in progress.
+	// When the buyer completed the registration.
 	CompletedAt *time.Time `json:"completed_at"`
-	// When the session was abandoned, or null.
+	// When the buyer abandoned the session.
 	AbandonedAt *time.Time `json:"abandoned_at"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

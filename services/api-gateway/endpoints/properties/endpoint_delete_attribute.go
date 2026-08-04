@@ -12,7 +12,7 @@ import (
 
 // Request to delete an attribute.
 type DeleteAttributeRequest struct {
-	// Property ID.
+	// The property the attribute belongs to.
 	PropertyID string `path:"property_id" validate:"required"`
 	// Attribute ID.
 	AttributeID string `path:"id" validate:"required"`

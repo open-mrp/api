@@ -29,7 +29,7 @@ type CreateAccountIntegrationRequest struct {
 	// - `shippo`: `api_key` (`shippo_live_...` or `shippo_test_...`).
 	// - `hubspot`: `access_token` (`pat-...`).
 	//
-	// Sandbox accounts must use test keys and production accounts must use live keys; credentials that do not match are rejected.
+	// For Stripe and Shippo, sandbox accounts must supply test keys and production accounts must supply live keys; credentials that do not match are rejected. HubSpot tokens make no such distinction.
 	Credentials string `json:"credentials" validate:"required" sensitive:"true"`
 }
 
@@ -43,9 +43,9 @@ func (*CreateAccountIntegrationRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateAccountIntegrationRequest)
 }
 
-// Creates an account integration, or updates the name and credentials of an existing one with the same integration code.
+// Connects a third-party provider to the account, or replaces the name and credentials of the provider's existing connection.
 //
-// Credentials are validated for the provider, encrypted at rest, and never returned in API responses. An account can have at most one integration per integration code.
+// An account can have at most one integration per `provider`, so calling this again for a provider that is already connected rotates its credentials in place and returns the same integration rather than creating a second one. Credentials are checked for the provider's expected key format, encrypted at rest, and never returned in API responses.
 type CreateAccountIntegrationEndpoint struct{}
 
 func (e *CreateAccountIntegrationEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAccountIntegrationRequest, *apiresource.AccountIntegration] {

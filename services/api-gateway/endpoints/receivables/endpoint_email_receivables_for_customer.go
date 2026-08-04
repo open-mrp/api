@@ -13,9 +13,11 @@ import (
 
 // Request to email a statement of account for a specific customer.
 type EmailReceivablesForCustomerRequest struct {
-	// Customer account ID.
+	// ID of the customer account the statement is prepared for.
 	AccountID string `json:"-" path:"account_id" validate:"required"`
 	// Email addresses to send the statement of account to.
+	//
+	// The statement goes only to these addresses; the customer's own notification contacts are not added.
 	RecipientEmails []string `json:"recipient_emails" validate:"required,min=1"`
 }
 
@@ -29,7 +31,7 @@ func (*EmailReceivablesForCustomerRequest) SchemaExample() any {
 
 // Emails a statement of account for a specific customer to the provided recipients.
 //
-// The email carries an Excel attachment listing the customer's outstanding receivables and open credits.
+// The email carries an Excel attachment listing the customer's outstanding receivables and its open credits, which are transactions such as payments and credit memos that still have an unapplied balance. The statement always reflects current balances; there is no cutoff date. Delivery is asynchronous: the endpoint returns `202 Accepted` once the email is queued.
 type EmailReceivablesForCustomerEndpoint struct{}
 
 func (e *EmailReceivablesForCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*EmailReceivablesForCustomerRequest, *apiresource.EmptyResource] {

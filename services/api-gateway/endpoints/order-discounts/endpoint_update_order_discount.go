@@ -20,22 +20,24 @@ type UpdateOrderDiscountRequest struct {
 	OrderDiscountID string `path:"id" validate:"required"`
 	// Display name of the discount.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// The code entered to apply this discount to an order.
+	// The code a buyer enters to apply this discount to an order.
 	//
-	// Must be unique within the account.
+	// Codes are unique within your account and are compared without regard to letter case.
 	Code field.Optional[string] `json:"code,omitzero" validate:"omitempty,max=255"`
-	// Percent off as a decimal string (e.g. `10` for 10%).
+	// The fraction of the order total to take off, as a decimal string.
 	//
-	// Used when `discount_type` is `percentage`.
+	// This is a multiplier, not a whole percent: send `0.1` to take 10% off. Only read when `discount_type` is `percentage`.
 	Percentage field.Optional[string] `json:"percentage,omitzero" format:"decimal"`
-	// Fixed amount off as a decimal string.
+	// The flat amount to take off the order total, as a decimal string.
 	//
-	// Used when `discount_type` is `amount`.
+	// Only read when `discount_type` is `amount`.
 	Amount field.Optional[string] `json:"amount,omitzero" format:"decimal"`
 	// How the discount is calculated.
 	//
-	// - `percentage`: the discount is a percent off, taken from `percentage`.
-	// - `amount`: the discount is a fixed amount off, taken from `amount`.
+	// - `percentage`: the order total is reduced by the fraction in `percentage`.
+	// - `amount`: the order total is reduced by the flat amount in `amount`.
+	//
+	// Switching the type does not move the stored figure across, so send the matching `percentage` or `amount` in the same request or the discount will take nothing off.
 	DiscountType field.Optional[string] `json:"discount_type,omitzero" validate:"omitempty,max=255"`
 }
 
@@ -50,7 +52,7 @@ func (*UpdateOrderDiscountRequest) SchemaExample() any {
 
 // Partially updates an order discount.
 //
-// Only the provided fields are changed. Changing `code` to one already used by another discount returns a conflict error.
+// Only the fields you send are changed; the rest keep their current values. Changing `code` to one another discount already holds returns a conflict error. Edits apply to future orders only — orders that already used this discount keep the reduction they were given.
 type UpdateOrderDiscountEndpoint struct{}
 
 func (e *UpdateOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateOrderDiscountRequest, *apiresource.OrderDiscount] {

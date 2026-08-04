@@ -18,7 +18,9 @@ type ListAccountPricesRequest struct {
 	RecipientAccountID *string `query:"recipient_account_id"`
 }
 
-// Returns a paginated list of account prices for the current account.
+// Returns a paginated list of account prices, newest first.
+//
+// The search term matches the recipient customer's name or their customer number. Customer portal users always see only the prices where their own account is the recipient, whatever `recipient_account_id` is set to.
 type ListAccountPricesEndpoint struct{}
 
 func (e *ListAccountPricesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAccountPricesRequest, *apiresource.List[apiresource.AccountPrice]] {

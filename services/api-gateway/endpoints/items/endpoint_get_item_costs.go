@@ -10,15 +10,17 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetItemCostsRequest is the request to get an item's cost breakdown.
+// Request to retrieve an item's cost breakdown.
 type GetItemCostsRequest struct {
 	// Item ID.
 	ItemID string `path:"id" validate:"required"`
 }
 
-// Returns the per-unit production cost breakdown for an item, including direct material, direct labor, overhead, and total costs.
+// Returns what it costs to make one unit of an item, split into direct material, direct labor, and overhead.
 //
-// Costs are computed from the production flow that produces the item; items not produced by any production flow return a not-found error. As a side effect, the item's `unit_cost` rate is refreshed to the computed total.
+// The figures are recomputed on each call by walking back through every production step that feeds the step producing this item, so the answer reflects the current recipe and the current cost of everything consumed along the way. Items that no production flow produces — purchased materials, for instance — return a not-found error rather than a zero breakdown.
+//
+// Calling this also writes the computed total back to the item's `unit_cost`, so it is how a stale unit cost gets refreshed.
 type GetItemCostsEndpoint struct{}
 
 func (e *GetItemCostsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetItemCostsRequest, *apiresource.ItemCosts] {

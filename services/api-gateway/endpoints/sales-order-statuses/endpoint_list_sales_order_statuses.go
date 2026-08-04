@@ -15,7 +15,9 @@ type ListSalesOrderStatusesRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of sales order statuses.
+// Lists the statuses a sales order can be in.
+//
+// The statuses are platform-provided and the same for every account, so the result is small and stable enough to cache. Use it to label orders in your own interface; an order moves between statuses through its issue, unissue, close, and reopen actions rather than by being assigned a status.
 type ListSalesOrderStatusesEndpoint struct{}
 
 func (e *ListSalesOrderStatusesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSalesOrderStatusesRequest, *apiresource.List[apiresource.SalesOrderStatus]] {

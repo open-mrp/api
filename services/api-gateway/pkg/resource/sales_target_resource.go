@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleSalesTargetID = "ta_0139fc283170d6e226c81719af"
+const SampleSalesTargetID = "ta_n5b6sbefrmii"
 
 // A revenue goal assigned to a sales rep for a specific time period.
 type SalesTarget struct {
@@ -20,11 +20,11 @@ type SalesTarget struct {
 	StartAt time.Time `json:"start_at" validate:"required"`
 	// End of the period this target applies to (e.g. the close of a quarter).
 	EndAt time.Time `json:"end_at" validate:"required"`
-	// Sales rep (account user) this target is assigned to.
+	// The sales rep this target is assigned to.
 	//
-	// Returned as a reference with only the `id` populated.
+	// This is the rep's account-user record, identified by the same ID the `/v1/identity/account-users` endpoints return. Only the `id` is populated.
 	SalesRep *User `json:"sales_rep" expandable:"true"`
-	// Goal amount the representative is expected to reach over the period, expressed as a monetary quantity.
+	// The revenue goal for the period, as a monetary quantity.
 	Amount *Quantity `json:"amount" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

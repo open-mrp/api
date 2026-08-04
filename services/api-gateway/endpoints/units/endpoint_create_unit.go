@@ -22,21 +22,25 @@ type CreateUnitRequest struct {
 	//
 	// Must be unique within the account.
 	Abbreviation string `json:"abbreviation" validate:"required"`
-	// Unit dimension.
+	// The dimension this unit measures, such as mass, volume, or currency.
 	//
-	// Units can only be converted to other units of the same dimension.
+	// Units can only be converted to other units of the same dimension, and the dimension cannot be changed after the unit is created.
 	Type constants.UnitType `json:"type" validate:"required"`
-	// Conversion ratio numerator relative to the base unit.
+	// Numerator of the ratio that converts a quantity in this unit into the dimension's base unit.
+	//
+	// A quantity is converted with `value × (ratio_numerator / ratio_denominator) + (offset_numerator / offset_denominator)`, so a kilogram in a gram-based dimension has a numerator of `1000` and a denominator of `1`.
 	RatioNumerator string `json:"ratio_numerator" validate:"required,decimal" format:"decimal"`
-	// Conversion ratio denominator relative to the base unit.
+	// Denominator of the ratio that converts a quantity in this unit into the dimension's base unit.
 	//
 	// Must not be zero.
 	RatioDenominator string `json:"ratio_denominator" validate:"required,nonzero_decimal" format:"decimal"`
-	// Conversion offset numerator, used for temperature-like conversions.
-	OffsetNumerator string `json:"offset_numerator" validate:"required,decimal" format:"decimal"`
-	// Conversion offset denominator.
+	// Numerator of the conversion offset, applied after the ratio for scales that do not share a zero point, such as temperature.
 	//
-	// Must not be zero.
+	// Send `0` for units that convert by ratio alone.
+	OffsetNumerator string `json:"offset_numerator" validate:"required,decimal" format:"decimal"`
+	// Denominator of the conversion offset.
+	//
+	// Must not be zero, so send `1` when the unit has no offset.
 	OffsetDenominator string `json:"offset_denominator" validate:"required,nonzero_decimal" format:"decimal"`
 }
 
@@ -54,7 +58,9 @@ func (*CreateUnitRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateUnitRequest)
 }
 
-// Creates an account-owned unit.
+// Creates a unit of measurement owned by your account, in addition to the system units the platform already provides.
+//
+// The name and abbreviation must each be unique within the account. A unit created here is never a base unit, so its conversion ratio is interpreted relative to the base unit of the chosen dimension.
 type CreateUnitEndpoint struct{}
 
 func (e *CreateUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateUnitRequest, *apiresource.Unit] {

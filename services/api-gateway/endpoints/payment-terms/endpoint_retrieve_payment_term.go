@@ -18,6 +18,8 @@ type RetrievePaymentTermRequest struct {
 }
 
 // Returns a payment term by ID.
+//
+// Both payment terms created by your account and Augno-provided system defaults can be retrieved.
 type RetrievePaymentTermEndpoint struct{}
 
 func (e *RetrievePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrievePaymentTermRequest, *apiresource.PaymentTerm] {

@@ -21,6 +21,8 @@ type UpdateQuantityRequest struct {
 	// New decimal value for the quantity, as a string to preserve precision.
 	Value field.Optional[string] `json:"value,omitzero"`
 	// ID of the new unit of measure for the quantity.
+	//
+	// The stored value is kept as-is and is not converted into the new unit, so send `value` alongside this when the amount should change too.
 	UnitID field.Optional[string] `json:"unit_id,omitzero" validate:"omitempty"`
 	// ID of the resource that owns this quantity.
 	//
@@ -28,7 +30,7 @@ type UpdateQuantityRequest struct {
 	ObjectID field.Optional[string] `json:"object_id,omitzero" validate:"omitempty"`
 	// Type of the resource that owns this quantity.
 	//
-	// Determines the permission required for the update. Must be `item` or `production_step`.
+	// Determines the permission required for the update. Must be `item`, `production_step`, or `department`.
 	ObjectType field.Optional[string] `json:"object_type,omitzero" validate:"omitempty,max=255"`
 }
 
@@ -43,7 +45,9 @@ func (*UpdateQuantityRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateQuantityRequest)
 }
 
-// Partially updates a quantity.
+// Updates the value or unit of a quantity in place.
+//
+// A quantity belongs to the resource that reports it — a material's order point, the amount a production step consumes, and so on — so this changes that resource's stored measure directly.
 type UpdateQuantityEndpoint struct{}
 
 func (e *UpdateQuantityEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateQuantityRequest, *apiresource.Quantity] {

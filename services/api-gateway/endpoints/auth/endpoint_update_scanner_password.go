@@ -13,9 +13,11 @@ import (
 
 // Request to update a scanner-role account user's password.
 type UpdateScannerPasswordRequest struct {
-	// Target scanner account user ID.
+	// ID of the account user whose password is being changed.
+	//
+	// Must belong to the caller's account and hold a scanner role; requests targeting any other user are rejected.
 	AccountUserID string `json:"account_user_id" validate:"required"`
-	// Requester's current password (the caller's own password, for verification).
+	// The caller's own current password, used to confirm the caller's identity before the scanner password is changed.
 	RequesterPassword string `json:"requester_password" validate:"required,password,max=255" sensitive:"true"`
 	// New password to set for the scanner user.
 	NewPassword string `json:"new_password" validate:"required,password,max=255" sensitive:"true"`
@@ -31,9 +33,9 @@ func (*UpdateScannerPasswordRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateScannerPasswordRequest)
 }
 
-// Rotates the password for a scanner-role account user backing a scanning station.
+// Sets a new password for a scanner-role account user, the login used by a scanning station.
 //
-// Requires the caller's current password for verification.
+// The caller must be signed in as a user with permission to manage team users and must supply their own current password; API keys cannot perform this operation because they have no password to verify. Only scanner-role users in the caller's account can be changed this way — use the password reset flow for everyone else.
 type UpdateScannerPasswordEndpoint struct{}
 
 func (e *UpdateScannerPasswordEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateScannerPasswordRequest, *apiresource.EmptyResource] {

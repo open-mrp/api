@@ -8,8 +8,8 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleInvoiceID = "iv_018b5949ada8abca36358bbea9"
-const SampleInvoiceLineID = "ivln_01999b9fa867e396ec797aab95"
+const SampleInvoiceID = "iv_m982ezb0fgp7"
+const SampleInvoiceLineID = "ivln_q6k84g39xlnk"
 
 // Same allocation row as SampleAllocationEntryID (invoice example embeds that entry).
 const SampleInvoiceAllocationID = SampleAllocationEntryID
@@ -40,18 +40,28 @@ type Invoice struct {
 	PaymentTerm *PaymentTerm `json:"payment_term" expandable:"true"`
 	// Payment status of the invoice.
 	//
-	// Derived from the invoice's paid-in-full and overpaid flags rather than computed directly from its allocations.
+	// Reported from the invoice's stored paid-in-full and overpaid flags, so marking an invoice paid through Update Invoice changes this value even when no payment has been allocated.
 	//
-	// - `overpaid`: the applied allocations exceed the invoiced amount.
-	// - `partially_paid`: reserved for a future signal and not currently emitted.
+	// - `unpaid`: the invoice is not marked paid in full, which includes invoices carrying partial payments.
+	// - `paid`: the invoice is marked paid in full.
+	// - `overpaid`: the payments applied to the invoice exceed the invoiced amount. List Invoices and Update Invoice report such an invoice as `paid`.
+	// - `partially_paid`: not currently returned; an invoice carrying a partial payment reports `unpaid`.
 	PaymentStatus constants.InvoicePaymentStatus `json:"payment_status" validate:"required"`
 	// Whether the invoice has been transmitted to the customer via EDI.
+	//
+	// Nothing in the platform sets this flag; it is recorded through Update Invoice once the invoice has been transmitted elsewhere.
 	IsEdiSent bool `json:"is_edi_sent"`
 	// Whether the invoice has been sent to the customer.
+	//
+	// Set automatically when the invoice is emailed through Email Record, and can also be set directly through Update Invoice.
 	HasBeenSent bool `json:"has_been_sent"`
-	// Total invoiced amount as a decimal string.
+	// Total amount billed by this invoice.
+	//
+	// The sum across the invoice's lines of the billed quantity multiplied by the unit price on the sales order line.
 	TotalInvoiced string `json:"total_invoiced" validate:"required" format:"decimal"`
-	// Whether the billed customer is configured to receive invoices by email.
+	// Whether the sales order behind this invoice has at least one contact set to receive invoice emails.
+	//
+	// These contacts are the recipients used by Email Record. When no contact is configured, emailing the invoice marks it sent without delivering anything.
 	AcceptsInvoiceEmails bool `json:"accepts_invoice_emails"`
 	// Whether the billed customer is configured to exchange documents via EDI.
 	CustomerIsEdiEnabled bool `json:"customer_is_edi_enabled"`
@@ -59,7 +69,7 @@ type Invoice struct {
 	Lines *List[InvoiceLine] `json:"lines" expandable:"true"`
 	// Transaction allocations applied against this invoice.
 	//
-	// The invoice's paid-in-full / overpaid state (and thus `payment_status`) is tracked separately and is not recomputed from these allocations.
+	// These are the payments and credits recorded against the invoice; recording a settlement refreshes `payment_status` from them, while Update Invoice can set that status directly.
 	Allocations *List[InvoiceAllocation] `json:"allocations" expandable:"true"`
 	// Timestamp when the invoice was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -110,15 +120,15 @@ type InvoiceLine struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=invoice_line"`
-	// Quantity for this line.
+	// Quantity billed on this line.
 	Quantity *Quantity `json:"quantity" validate:"required"`
-	// Unit price for this line.
+	// Price per unit billed on this line, carried over from the sales order line.
 	UnitPrice *Rate `json:"unit_price" validate:"required"`
 	// Sales order line this invoice line bills against.
 	OrderLine *SalesOrderLine `json:"order_line" expandable:"true"`
 	// The item being invoiced, taken from the order line's item.
 	//
-	// Populated inline whenever invoice lines are included; it is not separately expandable.
+	// Only the item's `id` and `sku` are populated, and only when the invoice's lines are included.
 	Item *Item `json:"item"`
 	// Timestamp when the line was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -149,7 +159,7 @@ func (*InvoiceLine) SchemaExample() any {
 
 // A portion of a transaction applied against an invoice.
 //
-// Allocations connect transactions (payments, rebates, adjustments, and credit memos) to the invoices they pay down. The invoice's paid-in-full / overpaid state (and thus `payment_status`) is tracked separately and is not recomputed from these allocations.
+// Allocations connect transactions (payments, rebates, adjustments, and credit memos) to the invoices they pay down. Recording a settlement refreshes the invoice's paid-in-full and overpaid state — and so its `payment_status` — from every allocation against it, but that state can also be set directly through Update Invoice.
 type InvoiceAllocation struct {
 	// Allocation ID.
 	ID string `json:"id" validate:"required"`
@@ -191,7 +201,7 @@ func (*InvoiceAllocation) SchemaExample() any {
 
 // A payment-oriented view of an invoice, as returned by List Customer Invoices.
 //
-// Carries the fields needed to apply customer payments: the invoice total, paid-in-full state, and the allocations already applied.
+// Carries the fields needed to apply a customer payment: the invoice total, the allocations already applied, and the billing relationship of the customer being charged. Only invoices that still owe a balance are represented.
 type InvoiceForPayment struct {
 	// Invoice ID.
 	ID string `json:"id" validate:"required"`
@@ -213,9 +223,11 @@ type InvoiceForPayment struct {
 	IsPrepaid bool `json:"is_prepaid"`
 	// Address the invoice is billed to.
 	BillingAddress *Address `json:"billing_address" expandable:"true"`
-	// Total invoiced amount as a decimal string.
+	// Total amount billed by this invoice.
 	InvoiceTotal string `json:"invoice_total" validate:"required" format:"decimal"`
 	// Whether the invoice has been paid in full.
+	//
+	// Always `false` here, because only invoices that still owe a balance are listed.
 	IsPaidInFull bool `json:"is_paid_in_full"`
 	// Transaction allocations already applied against this invoice.
 	Allocations *List[InvoiceAllocation] `json:"allocations" expandable:"true"`

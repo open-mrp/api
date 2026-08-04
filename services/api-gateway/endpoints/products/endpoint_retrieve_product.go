@@ -11,7 +11,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// RetrieveProductRequest is the request to retrieve a product.
+// Request to retrieve a product.
 type RetrieveProductRequest struct {
 	// Product ID.
 	ProductID string `path:"id" validate:"required"`

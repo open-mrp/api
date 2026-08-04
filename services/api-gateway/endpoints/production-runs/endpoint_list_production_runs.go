@@ -16,20 +16,23 @@ type ListProductionRunsRequest struct {
 	apiresource.PaginationRequest
 	// Filter by run status.
 	//
-	// - `open`: runs that have not been completed.
-	// - `closed`: runs that have been completed.
+	// A run is `open` until every batch in it has been scanned or deleted, at which point it completes and becomes `closed`. Only open runs are returned when this filter is omitted, so ask for `closed` explicitly to see finished runs.
 	Status *string `query:"status"`
 	// Only return runs containing at least one batch that produces any of these items.
 	ItemIDs []string `query:"item_ids"`
 	// Only return runs containing at least one batch that used any of these machines.
 	MachineIDs []string `query:"machine_ids"`
-	// Only return runs created on or after this date (inclusive), formatted as `YYYY-MM-DD`.
+	// Only return runs created on or after this date, formatted as `YYYY-MM-DD`.
 	StartDate *string `query:"start_date"`
-	// Only return runs created on or before this date (inclusive), formatted as `YYYY-MM-DD`.
+	// Only return runs created before this date, formatted as `YYYY-MM-DD`.
+	//
+	// The cutoff is the start of the given day, so runs created during that day are not returned; pass the following day to include them.
 	EndDate *string `query:"end_date"`
 }
 
-// Returns a paginated list of production runs.
+// Returns a paginated list of production runs, most recently created first.
+//
+// The `q` search term matches the run number.
 type ListProductionRunsEndpoint struct{}
 
 func (e *ListProductionRunsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListProductionRunsRequest, *apiresource.List[apiresource.ProductionRun]] {

@@ -18,6 +18,8 @@ type RetrieveCustomerProductLineAccessRequest struct {
 }
 
 // Returns a customer's direct product line access record.
+//
+// A customer with no direct grants has no record and returns a not-found error; product lines the customer reaches through its type group or pricing groups are not reported here.
 type RetrieveCustomerProductLineAccessEndpoint struct{}
 
 func (e *RetrieveCustomerProductLineAccessEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveCustomerProductLineAccessRequest, *apiresource.CustomerProductLineAccess] {

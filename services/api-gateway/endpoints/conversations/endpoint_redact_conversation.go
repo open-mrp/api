@@ -11,15 +11,15 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Request to redact a conversation.
-//
-// Strips the body and attachments from every message while keeping the message rows as an audit shell. Refused while the conversation is under legal hold.
+// Request for the Redact Conversation action.
 type RedactConversationRequest struct {
 	// Conversation ID.
 	ConversationID string `path:"id" validate:"required"`
 }
 
-// Permanently redacts the content of every message in a conversation (GDPR right-to-erasure).
+// Permanently erases the content of every message in a conversation, for right-to-erasure requests.
+//
+// Message bodies are cleared and attachments are deleted from storage, leaving the messages behind as an empty audit shell. This cannot be undone, and it is refused while the conversation is under legal hold.
 type RedactConversationEndpoint struct{}
 
 func (e *RedactConversationEndpoint) Materialize() *apiendpoint.APIEndpoint[*RedactConversationRequest, *apiresource.Conversation] {

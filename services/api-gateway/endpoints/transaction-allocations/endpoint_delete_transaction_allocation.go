@@ -16,9 +16,9 @@ type DeleteTransactionAllocationRequest struct {
 	AllocationID string `path:"id" validate:"required"`
 }
 
-// Deletes a transaction allocation, making the allocated amount available again as open credit.
+// Removes the application of a transaction's money to one invoice, leaving both the transaction and the invoice in place.
 //
-// The parent transaction's `is_fully_allocated` flag is not recomputed automatically; update the transaction separately if needed.
+// Payment roll-ups are left alone: the transaction's `is_fully_allocated` flag and the invoice's paid-in-full status keep their previous values, so set `is_fully_allocated` to `false` with Update Transaction to return the freed amount to the open credits list.
 type DeleteTransactionAllocationEndpoint struct{}
 
 func (e *DeleteTransactionAllocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteTransactionAllocationRequest, *apiresource.EmptyResource] {

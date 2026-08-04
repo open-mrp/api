@@ -24,9 +24,9 @@ type CreateSupplierMaterialRequest struct {
 	SupplierPartNumber string `json:"supplier_part_number" validate:"required,max=255"`
 	// The supplier's own description of this material.
 	SupplierDescription field.Optional[string] `json:"supplier_description,omitzero" validate:"omitempty,max=255"`
-	// Whether the supplier is available to source this material.
+	// Whether this supplier is currently one you would source the material from.
 	//
-	// When omitted, the link is created active so the supplier is immediately usable as a source.
+	// Links are created active unless this is explicitly set to `false`.
 	IsActive field.Optional[bool] `json:"is_active,omitzero"`
 }
 

@@ -21,7 +21,9 @@ type ListReceivablesRequest struct {
 	CutoffDate *time.Time `query:"cutoff_date"`
 }
 
-// Returns a paginated list of outstanding receivable entries for the current account.
+// Returns a paginated list of outstanding receivable entries for the current account, newest invoice first.
+//
+// One entry is returned per invoice that is not marked paid in full, across every customer. A free-text search term (`q`) is matched against the invoice number and the customer name.
 type ListReceivablesEndpoint struct{}
 
 func (e *ListReceivablesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListReceivablesRequest, *apiresource.List[apiresource.ReceivableEntry]] {

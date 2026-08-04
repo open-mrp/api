@@ -23,6 +23,8 @@ type Machine struct {
 	// Free-form notes about the machine.
 	Notes *string `json:"notes"`
 	// The department this machine belongs to.
+	//
+	// Set when the machine is created; a machine cannot be moved to another department afterwards.
 	Department *Department `json:"department" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -35,8 +37,7 @@ const SampleMachineSerialNumber = "SN-2024-0001"
 
 var sampleMachineNotes = "Spindle rebuilt March 2026; torque calibration due quarterly."
 
-// Department is left nil here because SampleDepartment embeds SampleMachine in its
-// machines list, and a back-reference would be an initialization cycle.
+// Department is left nil here because SampleDepartment embeds SampleMachine in its machines list, and a back-reference would be an initialization cycle.
 var SampleMachine = &Machine{
 	ID:           SampleMachineID,
 	Object:       constants.ObjectTypeMachine,

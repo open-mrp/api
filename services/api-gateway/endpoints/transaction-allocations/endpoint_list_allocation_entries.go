@@ -22,7 +22,9 @@ type ListAllocationEntriesRequest struct {
 	EndDate *string `query:"end_date"`
 }
 
-// Returns a paginated list of transaction allocation entries for the current account.
+// Returns a paginated list of the individual applications of transaction money to invoices, newest first.
+//
+// Each entry pairs one transaction with one invoice and the amount applied. Entries are created by recording a settlement; there is no endpoint that creates one directly. Free-text search matches the invoice number and the transaction number.
 type ListAllocationEntriesEndpoint struct{}
 
 func (e *ListAllocationEntriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAllocationEntriesRequest, *apiresource.List[apiresource.AllocationEntry]] {

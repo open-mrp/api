@@ -8,22 +8,26 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SamplePermissionID = "perm_012ef15fedb7ecb0b8fbc034c2"
-const SamplePermissionGroupID = "pg_01d4698b58ad018c0c72681e46"
+const SamplePermissionID = "perm_gum1nfdm75ro"
+const SamplePermissionGroupID = "pg_584hkihly2mh"
 
-// An individual permission that can be granted to a role, identified by a code in `{domain}:{action}` format.
+// One area of the product that access can be granted for, such as customers, invoices, or production runs.
+//
+// A role never grants a permission outright; it grants specific actions on it, written as `{code}:{action}` — for example `customers:read`.
 type Permission struct {
 	// Permission ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=permission"`
-	// Permission code in `{domain}:{action}` format, such as `customers:read`.
+	// Stable code identifying the area this permission controls, such as `customers` or `sales_orders`.
+	//
+	// Pair the code with an action (`create`, `read`, `update`, or `delete`) to form the permission strings used when creating or updating a role.
 	Code string `json:"code" validate:"required"`
 	// Human-readable name for the permission.
 	Name string `json:"name" validate:"required"`
 	// Human-readable description of what this permission controls.
 	Description *string `json:"description"`
-	// Code of the permission group this permission belongs to, such as `customers`.
+	// Code of the permission group this permission is listed under, such as `inventory`.
 	PermissionGroupCode string `json:"group" validate:"required"`
 	// When the permission was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -46,7 +50,9 @@ func (*Permission) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SamplePermission)
 }
 
-// Grouping of related permissions.
+// A category of the permission catalog that collects related permissions, such as inventory or invoices.
+//
+// Groups exist to organize the catalog for display; access is always granted by the individual permissions inside a group, never by the group itself.
 type PermissionGroup struct {
 	// Permission group ID.
 	ID string `json:"id" validate:"required"`
@@ -58,7 +64,7 @@ type PermissionGroup struct {
 	Name string `json:"name" validate:"required"`
 	// Free-form description of the permission group.
 	Description *string `json:"description"`
-	// Permissions in this group.
+	// The individual permissions collected under this group.
 	Permissions *List[Permission] `json:"permissions"`
 	// Provenance of this permission group.
 	//

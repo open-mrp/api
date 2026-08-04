@@ -14,7 +14,9 @@ import (
 
 // Request to connect a custom domain to the account's customer portal.
 type CreatePortalDomainRequest struct {
-	// The fully-qualified domain name to connect (e.g. `shop.acme.com`). Subdomains are recommended; apex domains are supported via an A record.
+	// The fully-qualified domain name to connect (e.g. `shop.acme.com`).
+	//
+	// A subdomain such as `shop.acme.com` is routed with a CNAME record and an apex domain such as `acme.com` with an A record; either way the records to publish come back on the response. The value is lowercased and any trailing dot is stripped before it is stored, and Augno-owned hostnames are rejected.
 	Domain string `json:"domain" validate:"required"`
 }
 
@@ -28,7 +30,7 @@ func (*CreatePortalDomainRequest) SchemaExample() any {
 
 // Connects a custom domain to the account's customer portal and returns the DNS records to publish.
 //
-// Each account can have one custom domain. The domain starts in `pending` until its DNS is verified.
+// An account can only have one custom domain at a time: adding a second one — or claiming a domain another account already uses — returns a conflict error. The new domain starts in `pending`; publish the returned records at your DNS provider, then run the verify action to move it towards serving.
 type CreatePortalDomainEndpoint struct{}
 
 func (e *CreatePortalDomainEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePortalDomainRequest, *apiresource.PortalDomain] {

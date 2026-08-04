@@ -23,34 +23,42 @@ type CreateSalesOrderRequest struct {
 	//
 	// Must be unique among your orders for this customer.
 	CustomerPurchaseOrderNumber field.Optional[string] `json:"customer_purchase_order_number,omitzero" validate:"omitempty,max=255"`
-	// Order note.
+	// Free-form note about the order.
 	Note field.Optional[string] `json:"note,omitzero"`
-	// Carrier ID.
+	// ID of the carrier that will ship the order.
+	//
+	// Falls back to the customer's default carrier; the order is rejected when neither is available.
 	CarrierID field.Optional[string] `json:"carrier_id,omitzero" validate:"omitempty"`
-	// Service level ID.
+	// ID of the carrier service level the order ships on.
+	//
+	// Falls back to the customer's default service level, but only when `carrier_id` is also omitted — supplying a carrier without a service level leaves the service level unset.
 	ServiceLevelID field.Optional[string] `json:"service_level_id,omitzero" validate:"omitempty"`
 	// Who is billed for freight.
 	//
 	// - `sender`: the sender pays for shipping.
 	// - `third_party`: a third party pays for shipping, using the carrier billing account number.
 	CarrierBillingType field.Optional[constants.CarrierBillingType] `json:"carrier_billing_type,omitzero" validate:"omitempty"`
-	// Carrier billing account number.
+	// Carrier billing account number charged when `carrier_billing_type` is `third_party`.
 	CarrierBillingAccountNumber field.Optional[string] `json:"carrier_billing_account_number,omitzero" validate:"omitempty,max=255"`
 	// Fulfillment priority used to rank the order on the shop floor.
 	PriorityCode string `json:"priority_code" validate:"required,max=255"`
-	// Sales rep ID.
+	// ID of the account user to credit as the order's sales rep.
 	//
-	// When omitted, a rep is assigned automatically: the customer's default sales rep first, then the sales territory matching the ship-to postal code, then the ship-to state.
+	// When omitted, a rep is assigned automatically: the customer's default sales rep first, then the sales territory matching the ship-to postal code, then the ship-to state. No rep is assigned when the customer is commission-exempt or every ordered product belongs to a commission-exempt product line.
 	SalesRepID field.Optional[string] `json:"sales_rep_id,omitzero" validate:"omitempty"`
-	// Shipping term ID.
-	ShippingTermID field.Optional[string] `json:"shipping_term_id,omitzero" validate:"omitempty"`
-	// Payment term ID.
-	PaymentTermID field.Optional[string] `json:"payment_term_id,omitzero" validate:"omitempty"`
-	// Order discount ID.
+	// ID of the shipping terms for the order.
 	//
-	// When supplied, a discount line is added to the order automatically.
+	// Falls back to the customer's default shipping term; the order is rejected when neither is available.
+	ShippingTermID field.Optional[string] `json:"shipping_term_id,omitzero" validate:"omitempty"`
+	// ID of the payment terms for the order.
+	//
+	// Falls back to the customer's default payment term; the order is rejected when neither is available.
+	PaymentTermID field.Optional[string] `json:"payment_term_id,omitzero" validate:"omitempty"`
+	// The order-level discount to apply, given as either its ID or its unique code.
+	//
+	// The discount is realized as an extra negative-priced line on the order rather than as a separate total.
 	OrderDiscountID field.Optional[string] `json:"order_discount_id,omitzero" validate:"omitempty"`
-	// Promised delivery date.
+	// Date delivery is promised to the customer.
 	PromisedAt field.Optional[time.Time] `json:"promised_at,omitzero"`
 	// Bill-to address ID.
 	//
@@ -60,11 +68,17 @@ type CreateSalesOrderRequest struct {
 	//
 	// Must reference an existing address on the order's owner or buyer account.
 	ShipToAddressID string `json:"ship_to_address_id" validate:"required"`
-	// Order lines to create.
+	// The line items to put on the order.
+	//
+	// The freight line, and the discount line when `order_discount_id` is supplied, are added on top of these automatically.
 	Lines []CreateSalesOrderLineInput `json:"lines" validate:"required,min=1,dive"`
-	// Account users who should receive order acknowledgement emails.
+	// Users who should receive order acknowledgement emails for this order.
+	//
+	// Each must be a user on the customer's account.
 	AcknowledgementEmailContacts []SalesOrderEmailContactInput `json:"acknowledgement_email_contacts,omitzero"`
-	// Account users who should receive invoice emails.
+	// Users who should receive invoice emails for this order.
+	//
+	// Each must be a user on the customer's account.
 	InvoiceEmailContacts []SalesOrderEmailContactInput `json:"invoice_email_contacts,omitzero"`
 }
 
@@ -90,9 +104,9 @@ type CreateSalesOrderLineInput struct {
 	UnitPrice field.Optional[apirequest.RateInput] `json:"unit_price,omitzero"`
 }
 
-// SalesOrderEmailContactInput represents an account user subscribed to a sales-order email notification type.
+// A user subscribed to one of a sales order's email notifications.
 type SalesOrderEmailContactInput struct {
-	// Account user ID to receive the notification.
+	// ID of the account user who should receive the notification.
 	AccountUserID string `json:"account_user_id" validate:"required"`
 }
 
@@ -140,7 +154,7 @@ func (*CreateSalesOrderRequest) SchemaExample() any {
 
 // Creates a sales order in `estimate` status.
 //
-// The order number is assigned automatically, and a sales rep is auto-assigned when none is provided. A shipping line is always added to the order, plus a discount line when an order discount is supplied.
+// The order number is assigned automatically, and a sales rep is auto-assigned when none is provided. Line prices and costs are resolved server-side from each product. A shipping line carrying the estimated freight charge is added to the order, plus a negative-priced discount line when an order discount is supplied. The order is not committed for fulfillment until it is issued.
 type CreateSalesOrderEndpoint struct{}
 
 func (e *CreateSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSalesOrderRequest, *apiresource.SalesOrder] {

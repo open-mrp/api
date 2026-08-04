@@ -12,13 +12,13 @@ import (
 
 // Request to delete a department.
 type DeleteDepartmentRequest struct {
-	// Department ID.
+	// ID of the department to delete.
 	DepartmentID string `path:"id" validate:"required"`
 }
 
 // Deletes a department.
 //
-// Scanning stations and machines assigned to the department are not deleted.
+// Scanning stations and machines assigned to the department are not deleted, but they keep pointing at it, and a machine whose department is gone can no longer be read, updated, or deleted through the machines endpoints. Reassign both to another department before deleting this one. Deleting a department that was already deleted returns an already-deleted error rather than a not-found error.
 type DeleteDepartmentEndpoint struct{}
 
 func (e *DeleteDepartmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteDepartmentRequest, *apiresource.EmptyResource] {

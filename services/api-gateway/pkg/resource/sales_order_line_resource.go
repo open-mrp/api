@@ -8,10 +8,10 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleSalesOrderLineID = "orln_0142f9b74268973450b3a76ce3"
-const SampleSalesOrderLineID2 = "orln_0142f9b74268973450b3a76ce4"
+const SampleSalesOrderLineID = "orln_la01fxgrwcnr"
+const SampleSalesOrderLineID2 = "orln_vwp43e1rq2zb"
 
-// Full sales order line resource.
+// A single line item on a sales order.
 type SalesOrderLine struct {
 	// Sales order line ID.
 	ID string `json:"id" validate:"required"`
@@ -19,13 +19,17 @@ type SalesOrderLine struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order_line"`
 	// Position of the line on the order.
 	//
-	// Assigned automatically in sequence, starting at `1`.
+	// Assigned automatically in sequence, starting at `1`. Product lines are numbered first and the automatically generated freight and discount lines always sit at the bottom; removing a line renumbers the rest so the sequence stays contiguous.
 	LineItemNumber int32 `json:"line_item_number" validate:"required"`
-	// Product SKU.
+	// SKU recorded on this line.
+	//
+	// Taken from the product unless the line supplies its own, and editable afterwards, so it preserves what was sold even if the product's SKU later changes.
 	ProductSKU string `json:"product_sku" validate:"required"`
-	// Product description.
+	// Description recorded on this line, taken from the product unless the line supplies its own.
 	ProductDescription *string `json:"product_description"`
-	// Associated product.
+	// The product being sold on this line.
+	//
+	// The product's `type` tells you what kind of line this is: the freight and discount lines an order generates for itself reference the account's built-in shipping and credit products, so their type is `shipping` or `credit` rather than `sale`.
 	Product *Product `json:"product" expandable:"true"`
 	// Quantity ordered.
 	QuantityOrdered *Quantity `json:"quantity_ordered" expandable:"true"`

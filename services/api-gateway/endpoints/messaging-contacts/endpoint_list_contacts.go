@@ -12,11 +12,19 @@ import (
 )
 
 // Request to list the caller's messageable contacts (the messaging directory).
+//
+// `q` matches contact names as a case-insensitive substring.
 type ListContactsRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Lists the caller's messageable contacts.
+// Lists the people the caller can start a conversation with.
+//
+// For a member of the account, this is everyone active in that account, including themselves — messaging yourself is allowed. A customer signed in to the portal instead gets one shared "Customer Service" contact rather than the individual staff of the account they are dealing with; messages to it are routed by the account's support routes.
+//
+// Blocking is not applied to the directory: someone you have blocked, or who has blocked you, is still listed even though a direct message with them cannot be opened.
+//
+// The directory is returned as a single unpaginated page capped at 100 names, so narrow it with `q` in an account with many people.
 type ListContactsEndpoint struct{}
 
 func (e *ListContactsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListContactsRequest, *apiresource.List[apiresource.Actor]] {

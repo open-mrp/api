@@ -18,7 +18,7 @@ type DeleteBatchRequest struct {
 
 // Deletes a batch by ID and returns the deleted batch.
 //
-// After deletion, the batch's production run (if any) is closed automatically once all of its batches are scanned or deleted.
+// Deleting a batch also removes its links to the batches feeding into and out of it, breaking the production flow at that point, and detaches it from any machines. After deletion, the batch's production run is closed automatically once all of its batches are scanned or deleted. Deleting the same batch twice reports that it has already been deleted.
 type DeleteBatchEndpoint struct{}
 
 func (e *DeleteBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteBatchRequest, *apiresource.Batch] {

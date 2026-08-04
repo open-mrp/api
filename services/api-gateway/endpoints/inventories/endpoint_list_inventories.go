@@ -19,7 +19,7 @@ type ListInventoriesRequest struct {
 
 // Returns a paginated list of items with on-hand inventory quantities for the account.
 //
-// Every item in the account appears once; items with no recorded inventory report a zero quantity.
+// Items are listed whether or not they have ever held stock; an item with no recorded inventory reports a zero quantity. Items backed by a non-sale product — the service, shipping, tax, credit, and return products that carry charges on orders — are left out. The `q` search term matches on item SKU and description.
 type ListInventoriesEndpoint struct{}
 
 func (e *ListInventoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListInventoriesRequest, *apiresource.List[apiresource.InventoryItem]] {

@@ -13,7 +13,7 @@ import (
 	"github.com/augno/api/shared/field"
 )
 
-// UpdateSupplierRequest is the request to update a supplier.
+// Request to update a supplier.
 type UpdateSupplierRequest struct {
 	// Supplier ID.
 	SupplierID string `path:"id" validate:"required"`
@@ -29,7 +29,7 @@ type UpdateSupplierRequest struct {
 	Note field.Optional[string] `json:"note,omitzero"`
 	// Whether to apply the `note` field.
 	//
-	// When `true`, the note is set to the provided `note` value, or cleared to null if `note` is omitted. When `false` (the default), the note is left unchanged.
+	// When `true`, the note is set to the provided `note` value, or cleared if `note` is omitted. When `false`, the note is left unchanged.
 	UpdateNote bool `json:"update_note"`
 	// ID of an existing address to set as the supplier's default billing address.
 	BillToAddressID field.Optional[string] `json:"bill_to_address_id,omitzero" validate:"omitempty"`

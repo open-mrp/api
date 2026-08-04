@@ -15,7 +15,7 @@ import (
 
 // Request to update an attribute.
 type UpdateAttributeRequest struct {
-	// Property ID.
+	// The property the attribute belongs to.
 	PropertyID string `path:"property_id" validate:"required"`
 	// Attribute ID.
 	AttributeID string `path:"id" validate:"required"`
@@ -42,6 +42,8 @@ func (*UpdateAttributeRequest) SchemaExample() any {
 }
 
 // Partially updates an attribute.
+//
+// Items reference attributes by ID, so changing the value renames the attribute everywhere it is already assigned.
 type UpdateAttributeEndpoint struct{}
 
 func (e *UpdateAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAttributeRequest, *apiresource.Attribute] {

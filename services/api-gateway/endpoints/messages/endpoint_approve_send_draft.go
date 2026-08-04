@@ -14,9 +14,9 @@ import (
 
 // Request to approve a customer-reply draft and send it to the customer.
 type ApproveSendDraftRequest struct {
-	// Message ID (the draft).
+	// The id of the draft to approve.
 	MessageID string `path:"id" validate:"required"`
-	// Client-supplied dedupe key for the resulting customer-visible message.
+	// A unique client-generated key for this approval, such as a UUID.
 	ClientMessageID string `json:"client_message_id" validate:"required"`
 }
 
@@ -29,9 +29,11 @@ func (*ApproveSendDraftRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleApproveSendDraftRequest)
 }
 
-// Approves a customer-reply draft and sends it to the customer, promoting the draft to a sent customer-visible message in place.
+// Approves a reply draft and sends it to the customer.
 //
-// Idempotent on `client_message_id`.
+// The draft becomes the sent message rather than spawning a copy: it takes its place in the case timeline, and the customer sees it as coming from "Customer Service". A draft on the email channel goes out as a reply on the case's email thread; otherwise it appears in the customer's conversation. Sending also moves the case to waiting on the customer.
+//
+// Only the first approval of a draft sends it — approving one that is no longer open fails, so a concurrent double-approve cannot reach the customer twice. Customer accounts cannot approve drafts.
 type ApproveSendDraftEndpoint struct{}
 
 func (e *ApproveSendDraftEndpoint) Materialize() *apiendpoint.APIEndpoint[*ApproveSendDraftRequest, *apiresource.Message] {

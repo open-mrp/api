@@ -21,6 +21,8 @@ type UsageItem struct {
 }
 
 // Account usage metrics across all resource types.
+//
+// Per-period counts are measured from the start of the account's current billing period, which falls back to the start of the calendar month when the account has no active subscription.
 type AccountUsageResponse struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_usage_response"`
@@ -32,11 +34,9 @@ type AccountUsageResponse struct {
 	Batches UsageItem `json:"batches" validate:"required"`
 	// Sandbox usage: sandbox environments on the account counted against the plan's sandbox limit.
 	Sandboxes UsageItem `json:"sandboxes" validate:"required"`
-	// Subscription status information.
-	//
-	// Null if the account has no recorded subscription.
+	// Status of the account's billing subscription.
 	Subscription *SubscriptionInfo `json:"subscription"`
-	// Estimated agent LLM spending for the current month.
+	// Estimated agent LLM spending for the current billing month, and the cap it is measured against.
 	AgentSpend *AgentSpendInfo `json:"agent_spend"`
 	// Display name of the plan the account is actually billed on, resolved live from Stripe (e.g. `Founder`).
 	//
@@ -72,23 +72,25 @@ type SubscriptionInfo struct {
 	CollectionStatus string `json:"collection_status" validate:"required"`
 }
 
-// Stripe billing portal session.
+// A short-lived link into the Stripe billing portal, where an account admin can manage payment methods, invoices, and the subscription.
 type BillingPortalSessionResponse struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=billing_portal_session_response"`
-	// Redirect URL for the Stripe billing portal.
+	// URL to send the admin to.
+	//
+	// The link is issued by Stripe for a single visit and expires; generate a new session each time. On leaving the portal the admin is returned to the dashboard's billing page.
 	URL string `json:"url" validate:"required"`
 }
 
-// Result of initiating a plan switch.
+// Result of a plan switch.
 type SwitchPlanResponse struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=switch_plan_response"`
-	// Whether the plan switch was initiated successfully.
+	// Whether the plan switch was applied successfully.
 	Success bool `json:"success"`
-	// ID of the billing intent committed for the switch.
+	// ID of the Stripe billing intent that was committed to apply the change.
 	//
-	// Present for paid plan changes; null when switching to the free plan, which commits no billing intent.
+	// Returned when switching to a paid plan; absent when switching to the free plan.
 	IntentID *string `json:"intent_id"`
 }
 
@@ -102,7 +104,9 @@ type EnsureBillingCustomerResponse struct {
 	//
 	// `false` means the account already had a Stripe customer, which was returned instead.
 	Created bool `json:"created"`
-	// Billing profile ID, if one was created.
+	// ID of the account's Stripe billing profile.
+	//
+	// The billing profile and its billing cadence are set up when the account is first prepared for paid billing, not by creating the Stripe customer.
 	BillingProfileID *string `json:"billing_profile_id"`
 }
 
@@ -110,9 +114,9 @@ type EnsureBillingCustomerResponse struct {
 type SpendingCapResponse struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=spending_cap_response"`
-	// Monthly spending cap in cents.
+	// Ceiling in cents on estimated agent spending per billing month.
 	//
-	// Null means no cap.
+	// Null means agent spending is uncapped.
 	CapCents *int64 `json:"cap_cents"`
 }
 
@@ -121,18 +125,22 @@ type AgentSpendInfo struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=agent_spend_info"`
 	// Estimated spend in cents for the current billing month.
-	EstimatedSpendCents int64 `json:"estimated_spend_cents"`
-	// Monthly spending cap in cents.
 	//
-	// Null means no cap.
+	// Priced at the same token rates the account is billed at, and cached briefly, so it can trail live usage by a short interval.
+	EstimatedSpendCents int64 `json:"estimated_spend_cents"`
+	// Ceiling in cents on estimated agent spending per billing month.
+	//
+	// Null means agent spending is uncapped.
 	CapCents *int64 `json:"cap_cents"`
 }
 
-// Result of processing a webhook.
+// Acknowledgement that a webhook event was accepted.
 type WebhookResponse struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=webhook_response"`
-	// Whether the webhook was received and processed.
+	// Whether the event was accepted for processing.
+	//
+	// Acceptance means the signature was verified and the event was handled or queued. Event types Augno takes no action on are acknowledged the same way, so this is not a signal that anything changed.
 	Received bool `json:"received"`
 }
 

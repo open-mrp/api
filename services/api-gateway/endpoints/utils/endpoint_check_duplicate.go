@@ -21,6 +21,8 @@ type CheckDuplicateRequest struct {
 	// - `customer_po_number`: checks customer PO numbers on sales orders; requires `customer_id`.
 	Type string `json:"type" validate:"required"`
 	// The record number to check for an existing match.
+	//
+	// Surrounding whitespace is trimmed before the number is compared against existing records.
 	RecordNumber string `json:"record_number" validate:"required"`
 	// ID of the customer to scope the check to.
 	//
@@ -37,7 +39,9 @@ func (*CheckDuplicateRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCheckDuplicateRequest)
 }
 
-// Checks whether a record number already exists on the account for the given type (invoice number, sales order number, or customer PO number).
+// Checks whether a record number is already in use for the given type (invoice number, sales order number, or customer PO number).
+//
+// Use this to warn a user before they submit a number that would collide with an existing record. The check is read-only: it reports the state at the moment of the call and does not reserve the number, so a number reported as free can still be taken by the time you create the record.
 type CheckDuplicateEndpoint struct{}
 
 func (e *CheckDuplicateEndpoint) Materialize() *apiendpoint.APIEndpoint[*CheckDuplicateRequest, *apiresource.CheckDuplicateResult] {

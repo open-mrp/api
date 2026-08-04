@@ -10,6 +10,8 @@ import (
 )
 
 // Returns the current health status of the API.
+//
+// The check is shallow: a successful response confirms the API is running and serving requests, and does not probe the database or any downstream service. It is intended for uptime monitors and load-balancer probes, and is not recorded in the request log.
 type HealthEndpoint struct{}
 
 func (e *HealthEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.Healthcheck] {

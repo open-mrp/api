@@ -14,7 +14,7 @@ import (
 // Request to list shipments.
 type ListShipmentsRequest struct {
 	apiresource.PaginationRequest
-	// Filter by shipment status (`packed` or `shipped`).
+	// Only include shipments with this status, either `packed` or `shipped`.
 	Status *string `query:"status"`
 	// Only include shipments containing at least one line for any of these items.
 	ItemIDs []string `query:"item_ids"`
@@ -27,12 +27,18 @@ type ListShipmentsRequest struct {
 	// Only include shipments whose customer is assigned to any of these sales reps.
 	SalesRepIDs []string `query:"sales_rep_ids"`
 	// Only include shipments created on or after this date (`YYYY-MM-DD`).
+	//
+	// Filters on when the shipment was created, not on when it was shipped.
 	StartDate *string `query:"start_date"`
 	// Only include shipments created on or before this date (`YYYY-MM-DD`).
+	//
+	// Filters on when the shipment was created, not on when it was shipped.
 	EndDate *string `query:"end_date"`
 }
 
-// Returns a paginated list of shipments.
+// Returns a paginated list of shipments, newest first.
+//
+// Filters combine with AND, while the values within a single list filter combine with OR. The `q` search term matches the shipment number, note, bill of lading and master tracking number, as well as the sales order number, customer name and customer PO number.
 type ListShipmentsEndpoint struct{}
 
 func (e *ListShipmentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListShipmentsRequest, *apiresource.List[apiresource.Shipment]] {

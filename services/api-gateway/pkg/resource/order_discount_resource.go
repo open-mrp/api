@@ -8,11 +8,11 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleOrderDiscountID = "ords_01121c5e2f6937a6b896daad3a"
+const SampleOrderDiscountID = "ords_qnbrjvq5ih2q"
 
 // A discount code that can be applied to a sales order.
 //
-// An order discount reduces the order total by either a percentage or a fixed amount, depending on `discount_type`.
+// An order discount reduces the order total by either a percentage or a fixed amount, depending on `discount_type`. The reduction is capped at the order total and rounded to the nearest cent.
 type OrderDiscount struct {
 	// Order discount ID.
 	ID string `json:"id" validate:"required"`
@@ -20,24 +20,24 @@ type OrderDiscount struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=order_discount"`
 	// Display name of the discount.
 	Name string `json:"name" validate:"required"`
-	// The code entered to apply this discount to an order.
+	// The code a buyer enters to apply this discount to an order.
 	//
-	// Must be unique within the account.
+	// Codes are unique within your account and are matched without regard to letter case.
 	Code string `json:"code" validate:"required"`
-	// Percent off as a decimal string (e.g. `10` for 10%).
+	// The fraction of the order total taken off, as a decimal string.
 	//
-	// Applies when `discount_type` is `percentage`; otherwise `0`.
+	// This is a multiplier, not a whole percent: `0.1` takes 10% off. Only read when `discount_type` is `percentage`.
 	Percentage string `json:"percentage" validate:"required" format:"decimal"`
-	// Fixed amount off as a decimal string.
+	// The flat amount taken off the order total, as a decimal string.
 	//
-	// Applies when `discount_type` is `amount`; otherwise `0`.
+	// Only read when `discount_type` is `amount`.
 	Amount string `json:"amount" validate:"required" format:"decimal"`
-	// How the discount is calculated, determining whether `percentage` or `amount` is used.
+	// How the discount is calculated.
 	//
-	// - `percentage`: the discount is a percent off, taken from `percentage`.
-	// - `amount`: the discount is a fixed amount off, taken from `amount`.
+	// - `percentage`: the order total is reduced by the fraction in `percentage`.
+	// - `amount`: the order total is reduced by the flat amount in `amount`.
 	DiscountType constants.OrderDiscountType `json:"discount_type" validate:"required"`
-	// Number of orders currently using this discount.
+	// How many sales orders this discount has been applied to, across all buyers.
 	OrderCount int32 `json:"order_count" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

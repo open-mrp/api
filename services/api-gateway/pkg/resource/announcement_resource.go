@@ -8,45 +8,55 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleAnnouncementID = "an_01c4d5e6f7a8b9c0d1e2f3a4"
+const SampleAnnouncementID = "an_m4vwgn2t8cqs"
 
-// A broadcast announcement shown in the bell feed, with the caller's per-user read state.
+// A broadcast announcement shown in the notification (bell) feed, carrying the calling user's own read state.
+//
+// A single announcement is published to everyone in an account, or to every user on the platform, and each user keeps their own seen, read, and dismissed state for it. The status and timestamps you read are therefore always the caller's, and never reflect what anyone else has done with the same announcement. Notifications addressed to one user are a separate resource.
 type Announcement struct {
 	// Announcement ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=announcement"`
-	// Reach of the announcement.
+	// Who the announcement reaches.
 	//
-	// - `account`: shown only to users within this account.
-	// - `platform`: shown to every user across all accounts.
+	// - `account`: published to a single account and shown only to that account's users.
+	// - `platform`: published by Augno and shown to every user across all accounts.
 	Scope constants.AnnouncementScope `json:"scope" validate:"required"`
-	// Category of the announcement.
-	Category constants.NotificationCategory `json:"category" validate:"required"`
-	// Human-readable title.
-	Title string `json:"title" validate:"required"`
-	// Preview/body text.
-	Body *string `json:"body"`
-	// Lifecycle status of the announcement for the calling actor, derived from their seen/read/dismissed receipt.
+	// The kind of event the announcement is about.
 	//
-	// - `unseen`: not yet surfaced in the caller's feed.
-	// - `seen`: surfaced in the feed but not yet opened.
-	// - `read`: opened by the caller.
-	// - `dismissed`: dismissed by the caller.
+	// Announcements draw on the same categories as notifications, such as `system.broadcast` or `order.updated`, and the category is chosen by whoever publishes the announcement. The set is open-ended and may grow over time, so clients should tolerate values they do not recognize.
+	Category constants.NotificationCategory `json:"category" validate:"required"`
+	// Short headline shown in the feed.
+	Title string `json:"title" validate:"required"`
+	// Supporting detail shown beneath the title.
+	Body *string `json:"body"`
+	// Where the announcement is in its lifecycle for the calling user.
+	//
+	// - `unseen`: not yet surfaced to the caller.
+	// - `seen`: surfaced in the caller's feed but not opened.
+	// - `read`: explicitly opened by the caller.
+	// - `dismissed`: removed from the caller's feed.
+	//
+	// The status is derived from the caller's own seen, read, and dismissed timestamps and only ever moves forward, so the same announcement can show a different status for each user in the account.
 	Status constants.NotificationStatus `json:"status" validate:"required"`
-	// Delivery priority.
+	// How prominently the announcement should be surfaced, from `low` through `urgent`.
 	Priority constants.NotificationPriority `json:"priority" validate:"required"`
-	// The app resource this announcement links to.
+	// The resource the announcement is about, which the client can link to.
 	Resource *Entity `json:"resource" expandable:"true"`
 	// When the announcement becomes visible in the feed.
+	//
+	// An announcement scheduled for the future is not returned by the announcement endpoints until this time passes.
 	PublishAt time.Time `json:"publish_at" validate:"required"`
 	// When the announcement stops being shown.
+	//
+	// Once it expires the announcement leaves every user's feed and can no longer be retrieved; an announcement with no expiry stays until each user dismisses it.
 	ExpiresAt *time.Time `json:"expires_at"`
-	// When the calling actor first saw the announcement.
+	// When the calling user first saw the announcement.
 	SeenAt *time.Time `json:"seen_at"`
-	// When the calling actor opened the announcement.
+	// When the calling user opened the announcement.
 	ReadAt *time.Time `json:"read_at"`
-	// When the calling actor dismissed the announcement.
+	// When the calling user dismissed the announcement.
 	DismissedAt *time.Time `json:"dismissed_at"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

@@ -24,6 +24,8 @@ type PreviewReleaseProductionScheduleWeekRequest struct {
 // The lots are resolved exactly as the release itself resolves them, so what a planner is shown and what the floor receives cannot drift apart.
 //
 // `is_releasable` is false when the week is empty or already released, with `blocked_reason` saying which; `existing_production_run_id` names the run a released week is already tied to.
+//
+// Cancelled campaigns and campaigns planned at zero are excluded here exactly as the release excludes them, so a week holding nothing but those previews as empty.
 type PreviewReleaseProductionScheduleWeekEndpoint struct{}
 
 func (e *PreviewReleaseProductionScheduleWeekEndpoint) Materialize() *apiendpoint.APIEndpoint[*PreviewReleaseProductionScheduleWeekRequest, *apiresource.ReleaseScheduleWeekPreview] {

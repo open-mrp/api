@@ -11,7 +11,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Marks an announcement as read for the calling actor.
+// Marks an announcement as read for the calling user, as when they open it.
+//
+// Reading also marks the announcement seen if it was not already, and leaves it in the feed until it is dismissed. Repeating the call keeps the original read time. A caller with no user of their own in the account, such as an API key, has no state to record and gets a not-found error.
 type MarkAnnouncementReadEndpoint struct{}
 
 func (e *MarkAnnouncementReadEndpoint) Materialize() *apiendpoint.APIEndpoint[*MarkAnnouncementRequest, *apiresource.Announcement] {

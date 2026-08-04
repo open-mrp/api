@@ -8,9 +8,11 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleProductID = "pd_013c29ab3f1518d0004094c316"
+const SampleProductID = "pd_07oe0r7adh2w"
 
-// Product pairs an inventory item with how it is sold: its product type, optional product line, and customer portal visibility.
+// A catalog entry as it is sold: an inventory item together with its product type, product line, and customer portal visibility.
+//
+// Every product is backed by exactly one item, which carries the SKU, description, pricing, attributes, and inventory position. Creating a product creates that item; deleting the product deletes it.
 type Product struct {
 	// Product ID.
 	ID string `json:"id" validate:"required"`
@@ -29,8 +31,12 @@ type Product struct {
 	//
 	// - `visible`: buyers can see and order the product in the portal.
 	// - `hidden`: the product is concealed from the portal but remains usable internally.
+	//
+	// Visibility alone is not enough to expose a product: a buyer only sees it if their account has also been granted access to the product's product line.
 	PortalVisibility constants.CustomerPortalVisibility `json:"portal_visibility" validate:"required"`
 	// The product line this product is assigned to, if any.
+	//
+	// Customer accounts are granted access to whole product lines, so this assignment is what decides which buyers can see and order the product. A product with no product line is never visible in the customer portal. The line also supplies the default commission and freight policies for the product.
 	ProductLine *ProductLine `json:"product_line" expandable:"true"`
 	// The inventory item backing this product, which holds its SKU, description, pricing, and attributes.
 	Item *Item `json:"item" expandable:"true"`
@@ -55,7 +61,7 @@ func (*Product) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleProduct)
 }
 
-// ValidateProductsResponse is the response for the validate products endpoint.
+// The outcome of a SKU lookup: the products that matched, addressed by the caller's own keys.
 type ValidateProductsResponse struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=map"`

@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleEmailDomainID = "emdom_018e88072d1320808dc9aaa01"
+const SampleEmailDomainID = "emdom_2rk3omr8vshb"
 
 // A domain registered with the email bridge for sending and receiving mail.
 //
@@ -23,10 +23,14 @@ type EmailDomain struct {
 	// Verification status.
 	//
 	// - `pending`: registered and awaiting DKIM confirmation.
-	// - `verified`: DKIM confirmed; the domain can send and receive mail.
+	// - `verified`: DKIM confirmed; the domain can send mail.
 	// - `failed`: verification could not be completed.
+	//
+	// Inboxes can only be created on a `verified` domain.
 	Status string `json:"status" validate:"required"`
-	// The DKIM CNAME tokens the customer must publish in DNS to verify the domain.
+	// The DKIM tokens that must be published in your DNS before the domain can be verified.
+	//
+	// Publish each token as a CNAME record on the domain, then call the verify action to confirm them.
 	DkimTokens []string `json:"dkim_tokens"`
 	// When the domain's DKIM verification was confirmed.
 	VerifiedAt *time.Time `json:"verified_at"`

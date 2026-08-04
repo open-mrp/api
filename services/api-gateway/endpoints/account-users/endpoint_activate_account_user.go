@@ -12,11 +12,11 @@ import (
 
 // Request to activate an account user.
 type ActivateAccountUserRequest struct {
-	// Account user ID.
+	// ID of the account user to activate.
 	AccountUserID string `path:"id" validate:"required"`
 }
 
-// Activates a disabled or removed account user, restoring their access to the target account.
+// Activates a disabled or removed account user, restoring their access to the account you are acting in.
 //
 // Reactivation consumes a seat, so the request fails if the account is at its seat limit. Activating an already-active user is a no-op.
 type ActivateAccountUserEndpoint struct{}

@@ -14,11 +14,13 @@ import (
 // Request to list attributes for a property.
 type ListAttributesRequest struct {
 	apiresource.PaginationRequest
-	// Property ID.
+	// The property whose attributes are listed.
 	PropertyID string `path:"property_id" validate:"required"`
 }
 
 // Returns a paginated list of attributes for a property.
+//
+// Attributes come back in the order they are arranged within the property, first to last. The `q` search term is matched against the attribute value.
 type ListAttributesEndpoint struct{}
 
 func (e *ListAttributesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAttributesRequest, *apiresource.List[apiresource.Attribute]] {

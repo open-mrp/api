@@ -16,7 +16,9 @@ import (
 type MarkConversationReadRequest struct {
 	// Conversation ID.
 	ConversationID string `path:"id" validate:"required"`
-	// Mark all messages up to and including this sequence as read.
+	// Mark every message up to and including this sequence number as read.
+	//
+	// A sequence past the conversation's latest message is clamped to it, and the read position never moves backwards, so replaying an older value is harmless.
 	UpToSequence int64 `json:"up_to_sequence" validate:"required"`
 }
 
@@ -29,7 +31,9 @@ func (*MarkConversationReadRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleMarkConversationReadRequest)
 }
 
-// Advances the caller's read cursor and returns the refreshed conversation (with new unread count).
+// Advances the caller's read position in a conversation and returns it with the recalculated unread count.
+//
+// Reading also dismisses the caller's outstanding notifications for this conversation, and updates the read receipt the other participants see.
 type MarkConversationReadEndpoint struct{}
 
 func (e *MarkConversationReadEndpoint) Materialize() *apiendpoint.APIEndpoint[*MarkConversationReadRequest, *apiresource.Conversation] {

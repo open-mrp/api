@@ -14,7 +14,9 @@ import (
 
 // Quantity input for a split operation.
 type SplitQuantityInput struct {
-	// Identifier for this split quantity.
+	// Client-side identifier for this quantity.
+	//
+	// Useful for correlating quantities in your own UI; it is not stored and has no effect on the result.
 	ID string `json:"id"`
 	// Quantity to split off, as a decimal measure expressed in `unit_id`.
 	Measure string `json:"measure" validate:"required"`
@@ -26,7 +28,7 @@ type SplitQuantityInput struct {
 type SplitBatchRequest struct {
 	// Batch IDs to split from.
 	//
-	// Pass a single ID for single-part production steps, or multiple IDs (one per part) for multi-part steps.
+	// Pass a single ID for single-part production steps, or multiple IDs (one per part) for multi-part steps. Each ID is resolved forward through its production flow to the batch that is actually available at the step, so an operator can scan an earlier batch in the chain.
 	BatchIDs []string `json:"batch_ids" validate:"required"`
 	// Scanning station ID performing the split.
 	ScanningStationID string `json:"scanning_station_id" validate:"required"`
@@ -41,10 +43,12 @@ type SplitBatchRequest struct {
 	// Seconds consume input materials but are not added to inventory.
 	Seconds field.Optional[SplitQuantityInput] `json:"seconds,omitzero"`
 	// Scrap quantity recorded on the new batch.
+	//
+	// Like seconds, scrap consumes input materials but is not added to inventory.
 	Waste field.Optional[SplitQuantityInput] `json:"waste,omitzero"`
 	// Whether to close the source batches after splitting.
 	//
-	// When the source batches are left open, each is still closed automatically once its quantity is fully used by splits.
+	// Set this when the operator is done with the source batch even though quantity is left over. When left open, a source batch is still closed automatically once everything split off it (firsts, seconds, and waste together) accounts for its full quantity.
 	CloseBatch bool `json:"close_batch"`
 }
 
@@ -66,7 +70,7 @@ func (*SplitBatchRequest) SchemaExample() any {
 
 // Splits a quantity off one or more batches into a new batch, grading the output as firsts, seconds, and waste.
 //
-// A new batch carrying the firsts quantity is created at the production step, with any seconds and waste recorded on it; the source batches are linked as inputs. Returns the newly created batch.
+// Unlike a move, the operator states how much was produced rather than letting the step's ratio decide, which is how partial output and quality grading are recorded. A new batch carrying the firsts quantity is created at the production step, with any seconds and waste recorded on it, and the source batches are linked as inputs. Only the firsts quantity is added to inventory; seconds and waste still consume input materials. The step's material consumption runs asynchronously afterwards, and the new batch is closed immediately if the step is the last one in the flow. Returns the newly created batch.
 type SplitBatchEndpoint struct{}
 
 func (e *SplitBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*SplitBatchRequest, *apiresource.Batch] {

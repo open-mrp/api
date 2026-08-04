@@ -8,14 +8,12 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleReceivingOrderID = "rcor_016911ec6c634a298b3dc1798e"
-const SampleReceivingOrderLineID = "rcorln_01f2aca124f3f5add7c94d5e4f"
+const SampleReceivingOrderID = "rcor_iy0usuxcrjj8"
+const SampleReceivingOrderLineID = "rcorln_7f39n28j00fr"
 
 // A receiving order tracks inbound inventory against an issued purchase order.
 //
-// One receiving order is created automatically when a purchase order is issued, with one line per purchase order line. As goods arrive, line quantities are received and then stocked into inventory; the order is marked complete once every line is stocked.
-//
-// The list endpoint returns this same type as the retrieve endpoint, with the same fields available.
+// One receiving order is created automatically when a purchase order is issued, with one line per purchase order line. As goods arrive, line quantities are received and then stocked into inventory; the order is marked complete once every line is stocked. Unissuing the purchase order deletes the receiving order and its lines.
 type ReceivingOrder struct {
 	// Receiving order ID.
 	ID string `json:"id" validate:"required"`
@@ -27,9 +25,9 @@ type ReceivingOrder struct {
 	Number string `json:"number" validate:"required"`
 	// Free-text note carried over from the originating purchase order.
 	//
-	// Present only on the retrieve response; it is not returned in list results.
+	// Not returned in list results.
 	Note *string `json:"note"`
-	// Purchase order associated with this receiving order.
+	// The purchase order whose issuance created this receiving order.
 	PurchaseOrder *PurchaseOrder `json:"purchase_order" expandable:"true"`
 	// The supplier (seller) account the originating purchase order was placed with.
 	Supplier *Supplier `json:"supplier" expandable:"true"`
@@ -41,9 +39,11 @@ type ReceivingOrder struct {
 	LineCount int32 `json:"line_count"`
 	// Percentage of lines that have been stocked, from `0` to `100`, rounded to two decimal places.
 	//
-	// A line counts toward completion once its `stocked_at` is set. Reaches `100` when every line is stocked, at which point the order is marked complete.
+	// A line counts toward completion once its `stocked_at` is set, and the order is marked complete when the figure reaches `100`. It is calculated for list results only; on responses that return a single receiving order it is `0`, and progress is best read from the lines' `stocked_at` values.
 	CompletionPercentage float64 `json:"completion_percentage"`
-	// Timestamp when the receiving order was completed, set automatically once all of its lines have been stocked.
+	// Timestamp when the receiving order was completed.
+	//
+	// Set automatically once every line has been stocked, and also when the originating purchase order is closed. It is cleared again when the receiving order is voided or that purchase order is re-opened.
 	CompletedAt *time.Time `json:"completed_at"`
 	// Timestamp when the receiving order was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -83,7 +83,9 @@ type ReceivingOrderLine struct {
 	//
 	// Initialized to the originating order line's full ordered quantity. Adjust it with Update Receiving Order Line, or use the receive actions to set it to the quantity still outstanding on the order line. Voiding the line resets it to `0`.
 	Quantity *Quantity `json:"quantity" validate:"required"`
-	// Quantity rejected on inspection and not stocked into inventory, recorded when the line is stocked.
+	// Quantity refused on inspection and never taken into inventory.
+	//
+	// Accumulated from the rejected quantities recorded against this line each time the order is stocked.
 	RejectedQuantity *Quantity `json:"rejected_quantity"`
 	// The purchase order line this receiving line was created from.
 	OrderLine *SalesOrderLine `json:"order_line" expandable:"true"`
@@ -91,7 +93,7 @@ type ReceivingOrderLine struct {
 	Item *Item `json:"item"`
 	// Timestamp when the received quantity was stocked into inventory.
 	//
-	// Once set, the line counts toward the order's `completion_percentage`.
+	// Once set, the line counts toward the order's `completion_percentage`. Voiding the line or the whole order clears it, but does not reverse the inventory that was already received.
 	StockedAt *time.Time `json:"stocked_at"`
 	// Timestamp when the line was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

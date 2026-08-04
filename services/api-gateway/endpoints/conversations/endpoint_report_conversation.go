@@ -17,7 +17,7 @@ import (
 type ReportConversationRequest struct {
 	// Conversation ID.
 	ConversationID string `path:"id" validate:"required"`
-	// The reason the conversation/message is being reported.
+	// Why the conversation or message is being reported, in free-form text.
 	Reason string `json:"reason" validate:"required"`
 	// The specific message being reported.
 	//
@@ -35,7 +35,9 @@ func (*ReportConversationRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleReportConversationRequest)
 }
 
-// Files an abuse report against a conversation (optionally a specific message) and returns the conversation.
+// Files an abuse report against a conversation, or against one message within it, and returns the conversation.
+//
+// Only an active participant can report a conversation. The report is recorded for review and changes nothing about the conversation itself — it is not hidden, muted, or removed.
 type ReportConversationEndpoint struct{}
 
 func (e *ReportConversationEndpoint) Materialize() *apiendpoint.APIEndpoint[*ReportConversationRequest, *apiresource.Conversation] {

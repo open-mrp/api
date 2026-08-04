@@ -13,7 +13,7 @@ import (
 
 // Request to export receivable entries for a specific customer as CSV.
 type ExportReceivablesByCustomerRequest struct {
-	// Customer account ID.
+	// ID of the customer account whose outstanding balances are exported.
 	AccountID string `json:"-" path:"account_id" validate:"required"`
 	// Compute receivable balances as of this timestamp.
 	//
@@ -21,7 +21,9 @@ type ExportReceivablesByCustomerRequest struct {
 	CutoffDate *time.Time `query:"cutoff_date"`
 }
 
-// Exports all outstanding receivable entries for a specific customer account as a CSV file.
+// Exports a single customer's outstanding receivable entries as a downloadable CSV file.
+//
+// The response is the file itself rather than a JSON resource, and it covers every open invoice for the customer instead of one page of results. When a cutoff date is supplied, it is included in the generated file name.
 type ExportReceivablesByCustomerEndpoint struct{}
 
 func (e *ExportReceivablesByCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportReceivablesByCustomerRequest, *httptransport.FileDownload] {

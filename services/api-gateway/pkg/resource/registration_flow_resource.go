@@ -8,9 +8,9 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleRegistrationFlowID = "rgfw_015273c2a7354d6c3e5ae4e90e"
+const SampleRegistrationFlowID = "rgfw_5jo86wzvfpgn"
 const SampleRegistrationFlowName = "Default Registration Flow"
-const SampleRegistrationFlowOptionID = "rgfwo_014b7340b1680a49221ef1d6b1"
+const SampleRegistrationFlowOptionID = "rgfwo_y0bcxsctjq8x"
 const SampleRegistrationFlowOptionName = "Standard Option"
 
 // Selectable option within a registration flow.

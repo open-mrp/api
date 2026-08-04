@@ -16,7 +16,9 @@ type DeleteUnitGroupRequest struct {
 	UnitGroupID string `path:"id" validate:"required"`
 }
 
-// Deletes a unit group and all of its associated units. System unit groups cannot be deleted.
+// Deletes a unit group along with every unit association it contains.
+//
+// The units themselves are not deleted and remain available to other groups. System unit groups, which are shared across all accounts, cannot be deleted.
 type DeleteUnitGroupEndpoint struct{}
 
 func (e *DeleteUnitGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteUnitGroupRequest, *apiresource.EmptyResource] {

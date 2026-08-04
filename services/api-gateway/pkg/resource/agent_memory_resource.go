@@ -9,7 +9,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleAgentMemoryID = "agmm_018731bdaf4ab04bd5bff1b65c"
+const SampleAgentMemoryID = "agmm_o7tjkr16gfmh"
 
 // A piece of information an agent has saved for recall in future runs.
 type AgentMemory struct {
@@ -17,23 +17,25 @@ type AgentMemory struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=agent_memory"`
-	// Free-form category used to group related memories (e.g. `preference`).
+	// The kind of information this memory holds, used to group related memories.
+	//
+	// - `preference`: how someone likes things done, such as a customer who always wants express shipping.
+	// - `fact`: a durable detail worth remembering about the account or one of its records, such as a customer's typical order size.
+	// - `instruction`: standing guidance for agents to follow, such as always confirming freight before issuing an order.
 	Category string `json:"category" validate:"required"`
-	// Memory content.
+	// The information itself, written as plain text for an agent to read.
 	Content string `json:"content" validate:"required"`
 	// Arbitrary metadata as JSON.
 	Metadata json.RawMessage `json:"metadata"`
 	// The platform record this memory is about (e.g. a specific customer or product).
-	//
-	// `null` for memories that are not tied to a specific record.
 	Entity *Entity `json:"entity"`
 	// Relative importance from `0` to `1`, used to prioritize which memories the agent recalls.
 	//
-	// Higher is more important.
+	// An agent takes in only a limited number of memories per run, and the highest-importance ones are recalled first.
 	Importance float64 `json:"importance"`
-	// When this memory expires.
+	// When this memory stops being used.
 	//
-	// `null` means it never expires. Expired memories are excluded from list results and are no longer recalled by agents.
+	// Past this time the memory is no longer recalled by agents and is omitted from list results, but it is not deleted and can still be retrieved by ID. A memory with no expiration is used indefinitely.
 	ExpiresAt *time.Time `json:"expires_at"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

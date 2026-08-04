@@ -20,9 +20,13 @@ type UpdateUserRequest struct {
 	UserID string `path:"id" validate:"required"`
 	// The user's full display name.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// URL of the user's profile image.
+	// Location of the user's profile image.
+	//
+	// Uploading a photo through Upload User Photo overwrites whatever is set here.
 	ImageUrl field.Optional[string] `json:"image_url,omitzero" validate:"omitempty,max=2083"`
-	// Timestamp recording when the user's email address was verified.
+	// When the user's email address was verified.
+	//
+	// Setting this marks the address as verified outright; no verification email is sent and no verification link is checked.
 	EmailVerified field.Optional[time.Time] `json:"email_verified,omitzero"`
 }
 
@@ -37,7 +41,9 @@ func (*UpdateUserRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateUserRequest)
 }
 
-// Partially updates a user's profile.
+// Updates a user's global profile.
+//
+// Changes apply everywhere the user appears, in every account they belong to. Account-specific details such as their status, role, and department are changed on the account user record instead.
 type UpdateUserEndpoint struct{}
 
 func (e *UpdateUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateUserRequest, *apiresource.User] {

@@ -13,19 +13,21 @@ import (
 
 // Request to export materials as an Excel file.
 type ExportMaterialsRequest struct {
-	// Free-text search query matched against materials.
+	// Free-text search term matched against material SKU and description.
 	Query *string `query:"q"`
-	// Filter by category IDs.
+	// Filter to materials in any of these categories.
 	CategoryIDs []string `query:"category_ids"`
-	// Filter by attribute IDs.
+	// Filter to materials carrying any of these attributes.
 	AttributeIDs []string `query:"attribute_ids"`
-	// Start of creation date range.
+	// Filter to materials created on or after this date.
 	StartDate *time.Time `query:"start_date"`
-	// End of creation date range.
+	// Filter to materials created on or before this date.
 	EndDate *time.Time `query:"end_date"`
 }
 
-// Exports all matching materials as an Excel file.
+// Downloads the materials matching the given filters as an Excel workbook named `materials.xlsx`.
+//
+// The filters and ordering work the same way as on the material list endpoint, but the export is not paginated: every match lands in a single `Materials` sheet, one row per material. Columns cover the ID, SKU, description, category, and the unit price and unit cost with their units, plus one column for each property defined on the exported materials' categories, filled in from their attributes.
 type ExportMaterialsEndpoint struct{}
 
 func (e *ExportMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportMaterialsRequest, *httptransport.FileDownload] {

@@ -13,12 +13,14 @@ import (
 
 // Request to list territories.
 type ListTerritoriesRequest struct {
-	// Account ID.
+	// ID of your account, which owns the territories.
 	AccountID string `path:"account_id" validate:"required"`
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of territories.
+// Returns a paginated list of territories in your account, most recently created first.
+//
+// The `q` search term matches the state, the sales rep's name or email address, and the product line name.
 type ListTerritoriesEndpoint struct{}
 
 func (e *ListTerritoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListTerritoriesRequest, *apiresource.List[apiresource.Territory]] {

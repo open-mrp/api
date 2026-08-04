@@ -5,7 +5,9 @@ import (
 	"github.com/augno/api/shared/constants"
 )
 
-// PortalProfile is the authenticated seller portal profile served to logged-in customer-portal pages: the seller's identity plus its public letterhead address. Unlike PublicAccount (public, minimal, for pre-login pages), this requires authentication and includes the address inline as a plain field.
+// The seller's identity as presented inside a signed-in customer portal: display name, branding, and letterhead address.
+//
+// This is the counterpart to the public branding profile used on pre-login pages, and it additionally carries the seller's letterhead address for rendering order documents.
 type PortalProfile struct {
 	// Account ID.
 	ID string `json:"id" validate:"required"`
@@ -13,15 +15,17 @@ type PortalProfile struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=portal_profile"`
 	// The seller's display name.
 	Name string `json:"name" validate:"required"`
-	// Portal slug.
+	// The URL slug that identifies the seller's customer portal.
 	Slug string `json:"slug" validate:"required"`
-	// Logo URL.
+	// Download URL for the seller's logo, valid for one hour after the response is generated.
 	LogoURL *string `json:"logo_url"`
-	// Customer-portal favicon URL.
+	// Download URL for the seller's customer-portal favicon, valid for one hour after the response is generated.
 	FaviconURL *string `json:"favicon_url"`
-	// Support email address.
+	// The email address customers are directed to for support.
 	SupportEmail *string `json:"support_email"`
-	// The seller's letterhead address (its default billing address), or null when the account has none.
+	// The seller's letterhead address, shown on customer-facing documents.
+	//
+	// This is the seller account's own default billing address.
 	Address *Address `json:"address"`
 }
 

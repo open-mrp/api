@@ -14,7 +14,9 @@ type ListTransactionTypesRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of transaction types.
+// Returns the transaction types that can be recorded against a customer: payments, credit memos, adjustments, and rebates.
+//
+// The set is fixed by the platform and identical for every account, so the results come back in one page; supplying a pagination cursor returns a validation error. Free-text search matches the display name.
 type ListTransactionTypesEndpoint struct{}
 
 func (e *ListTransactionTypesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListTransactionTypesRequest, *apiresource.List[apiresource.TransactionType]] {

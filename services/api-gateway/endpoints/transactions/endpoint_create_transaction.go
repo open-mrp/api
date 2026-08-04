@@ -26,11 +26,11 @@ type CreateTransactionRequest struct {
 	TransactionTypeCode string `json:"type" validate:"required,max=255"`
 	// Transaction amount as a decimal string, in US dollars.
 	Amount string `json:"amount" validate:"required"`
-	// Payment method code: one of `cash`, `check`, `credit_card`, `gift_card`, or `ach`.
+	// How the money moved: one of `cash`, `check`, `credit_card`, `gift_card`, or `ach`.
 	//
 	// Typically provided for payment transactions.
 	TransactionMethodCode field.Optional[string] `json:"method,omitzero" validate:"omitempty,max=255"`
-	// Adjustment type code (see List Adjustment Types for available values).
+	// The kind of correction this transaction represents (see List Adjustment Types for available values).
 	//
 	// Typically provided when `type` is `adjustment`.
 	AdjustmentTypeCode field.Optional[string] `json:"adjustment_type,omitzero" validate:"omitempty,max=255"`
@@ -56,7 +56,9 @@ func (*CreateTransactionRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateTransactionRequest)
 }
 
-// Creates a transaction with an automatically generated transaction number.
+// Records a financial transaction against a customer, such as a payment received, a credit memo, an adjustment, or a rebate.
+//
+// The transaction number is assigned automatically from the account's transaction sequence. The new transaction starts out unapplied, so it shows up as an open credit until it is applied to invoices by recording a settlement.
 type CreateTransactionEndpoint struct{}
 
 func (e *CreateTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateTransactionRequest, *apiresource.TransactionDetail] {

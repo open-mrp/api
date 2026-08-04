@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SamplePropertyID = "pp_01e21344878064372f69e67093"
+const SamplePropertyID = "pp_fhnnvtt3q3ov"
 const SamplePropertyName = "Color"
 
 // A named characteristic used to classify items, such as `Color` or `Size`.
@@ -20,8 +20,12 @@ type Property struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=property"`
 	// Display name of the property, such as `Color` or `Size`.
+	//
+	// Unique within the account.
 	Name string `json:"name" validate:"required"`
-	// Attributes belonging to this property.
+	// The selectable values defined under this property.
+	//
+	// Listed in the order the attributes are arranged within the property, first to last.
 	Attributes *List[Attribute] `json:"attributes" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

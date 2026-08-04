@@ -17,9 +17,9 @@ import (
 type StockReceivingOrderRequest struct {
 	// Receiving order ID.
 	ReceivingOrderID string `path:"id" validate:"required"`
-	// Per-line stocking details: storage allocations, optional lot number, and any rejected quantity.
+	// Per-line stocking details: where to put the goods away, which lot to record them under, and how much was refused on inspection.
 	//
-	// Lines not listed here are still marked as stocked, but produce no inventory receipts.
+	// Unstocked lines left out of this list are still marked as stocked, but nothing is added to inventory for them and they contribute no delivery lines.
 	LineItems []StockLineItemRequest `json:"line_items,omitzero"`
 }
 
@@ -27,17 +27,17 @@ type StockReceivingOrderRequest struct {
 type StockLineItemRequest struct {
 	// ID of the receiving order line being stocked.
 	ReceivingOrderLineID string `json:"receiving_order_line_id"`
-	// Lot number to record for the received inventory.
+	// Lot number to record for the received goods.
 	//
-	// A lot is created for the line's item if one with this number does not already exist. Applies to every allocation and any rejected quantity on this line item.
+	// A lot is created for the line's item if one with this number does not already exist for it. The lot applies to every allocation and to any rejected quantity on this line item.
 	LotNumber field.Optional[string] `json:"lot_number,omitzero"`
-	// Quantity rejected on inspection, as a decimal string.
+	// Quantity refused on inspection, as a decimal string.
 	//
-	// Rejected quantity is recorded on the delivery but is not stocked into inventory.
+	// The refused quantity is recorded on the delivery and on the receiving order line's `rejected_quantity`, but never enters inventory.
 	RejectedQuantity field.Optional[string] `json:"rejected_quantity,omitzero"`
-	// Storage allocations for the accepted quantity.
+	// Storage allocations for the quantity being accepted.
 	//
-	// Each allocation creates an inventory receipt for the given quantity at the given location.
+	// Each allocation creates an inventory receipt for the given quantity at the given location, so a single line can be split across several locations.
 	Allocations []AllocationRequest `json:"allocations,omitzero"`
 }
 
@@ -72,9 +72,13 @@ func (*StockReceivingOrderRequest) SchemaExample() any {
 
 // Stocks the received quantities on a receiving order into inventory.
 //
-// Every unstocked line with a non-zero quantity is marked as stocked. For each entry in `line_items`, the accepted allocations create inventory receipts at the given storage locations (and lot, if provided), and any `rejected_quantity` is recorded as rejected without entering inventory. A delivery record is created for the stocking event.
+// Every unstocked line with a non-zero quantity is marked as stocked. For each entry in `line_items`, the allocations create inventory receipts at the given storage locations (and lot, if one was given), and any `rejected_quantity` is recorded as refused without entering inventory. One delivery is recorded for the whole stocking event, with a line per allocation and a line per refused quantity.
+//
+// The newly received stock is then applied to any open inventory issues for the same item, oldest first, so demand already waiting on the item is satisfied automatically.
 //
 // If a line was received short of its ordered quantity, a new unstocked line is created automatically for the remainder. Once every line is stocked, the order is marked complete and the originating purchase order is marked fulfilled.
+//
+// A receiving order with no unstocked, non-zero lines is returned untouched: no delivery is recorded and no inventory is created.
 type StockReceivingOrderEndpoint struct{}
 
 func (e *StockReceivingOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*StockReceivingOrderRequest, *apiresource.ReceivingOrder] {

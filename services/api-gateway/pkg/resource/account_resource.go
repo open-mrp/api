@@ -8,13 +8,15 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleAccountID = "ac_01148680966698341a9c0976db"
+const SampleAccountID = "ac_ykxoradjoeb3"
 const SampleAccountName = "Acme Inc."
-const SampleAccountBrandingID = "abr_01fa710842028837ac3ca9d590"
-const SampleAccountPortalID = "apo_0167f0d01165cbb56b55bc01fa"
+const SampleAccountBrandingID = "abr_2rygb4fof28b"
+const SampleAccountPortalID = "apo_u2esi5el78uv"
 const SampleAccountPortalSlug = "acme"
 
-// A customer account, including its branding and customer portal sub-resources.
+// An organization on Augno, including its branding and customer portal sub-resources.
+//
+// Your own account and any customer or supplier account you trade with are both represented by this object.
 type Account struct {
 	// Account ID.
 	ID string `json:"id" validate:"required"`
@@ -22,9 +24,9 @@ type Account struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=account"`
 	// The account's display name.
 	Name string `json:"name" validate:"required"`
-	// Default billing address.
+	// The address billed by default on orders for this account.
 	DefaultBillingAddress *Address `json:"default_billing_address" expandable:"true"`
-	// Default shipping address.
+	// The address shipped to by default on orders for this account.
 	DefaultShippingAddress *Address `json:"default_shipping_address" expandable:"true"`
 	// Customer-facing branding for the account, such as the logo, support contacts, and social links.
 	Branding *AccountBranding `json:"branding" expandable:"true"`
@@ -52,19 +54,23 @@ func (*Account) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleAccount)
 }
 
-// Branding metadata for an account.
+// The customer-facing branding an account presents on its portal, emails, and documents.
 type AccountBranding struct {
 	// Branding ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_branding"`
-	// Support email address.
+	// The email address customers are directed to for support.
 	SupportEmail *string `json:"support_email"`
-	// Support phone number.
+	// The account's public contact phone number.
 	PhoneNumber *string `json:"phone_number"`
-	// Logo URL.
+	// Stored location of the account's logo image.
+	//
+	// Logos uploaded through the API are stored as an object key rather than a fetchable link, so use the Get Account Logo URL endpoint to obtain a short-lived download URL.
 	LogoURL *string `json:"logo_url"`
-	// Customer-portal favicon URL.
+	// Stored location of the account's customer-portal favicon.
+	//
+	// Favicons uploaded through the API are stored as an object key rather than a fetchable link, so use the Get Account Favicon URL endpoint to obtain a short-lived download URL.
 	FaviconURL *string `json:"favicon_url"`
 	// Facebook handle.
 	FacebookHandle *string `json:"facebook_handle"`
@@ -74,7 +80,7 @@ type AccountBranding struct {
 	LinkedInHandle *string `json:"linkedin_handle"`
 	// Twitter handle.
 	TwitterHandle *string `json:"twitter_handle"`
-	// Website URL.
+	// The account's public website.
 	WebsiteURL *string `json:"website_url"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -87,8 +93,8 @@ var SampleAccountBranding = &AccountBranding{
 	Object:          constants.ObjectTypeAccountBranding,
 	SupportEmail:    new("support@acme.example.com"),
 	PhoneNumber:     new("+1-614-555-0100"),
-	LogoURL:         new("https://cdn.augno.com/branding/abr_01fa710842028837ac3ca9d590/logo.png"),
-	FaviconURL:      new("https://cdn.augno.com/branding/abr_01fa710842028837ac3ca9d590/favicon.png"),
+	LogoURL:         new("https://cdn.augno.com/branding/abr_2rygb4fof28b/logo.png"),
+	FaviconURL:      new("https://cdn.augno.com/branding/abr_2rygb4fof28b/favicon.png"),
 	FacebookHandle:  new("acmeinc"),
 	InstagramHandle: new("acmeinc"),
 	LinkedInHandle:  new("acme-inc"),
@@ -102,7 +108,7 @@ func (*AccountBranding) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleAccountBranding)
 }
 
-// Portal metadata for an account.
+// The customer portal an account publishes for its customers to sign in to.
 type AccountPortal struct {
 	// Portal ID.
 	ID string `json:"id" validate:"required"`
@@ -130,7 +136,7 @@ func (*AccountPortal) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleAccountPortal)
 }
 
-// Minimal account representation for unauthenticated slug lookups.
+// The publicly readable branding profile of an account, used to render customer portal pages before anyone signs in.
 type PublicAccount struct {
 	// Account ID.
 	ID string `json:"id" validate:"required"`
@@ -138,17 +144,19 @@ type PublicAccount struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=public_account"`
 	// The account's display name.
 	Name string `json:"name" validate:"required"`
-	// Portal slug.
+	// The URL slug that identifies the account's customer portal.
 	Slug string `json:"slug" validate:"required"`
-	// Default billing address.
+	// The address billed by default on orders for this account.
 	DefaultBillingAddress *Address `json:"default_billing_address" expandable:"true"`
-	// Support email address.
+	// The email address customers are directed to for support.
 	SupportEmail *string `json:"support_email"`
-	// Logo URL.
+	// Download URL for the account's logo, valid for one hour after the response is generated.
 	LogoURL *string `json:"logo_url"`
-	// The account's verified custom portal domain (e.g. shop.acme.com), when one is connected and verified.
+	// The account's custom portal domain (e.g. shop.acme.com).
+	//
+	// A custom domain only appears here once it has passed verification; until then the portal is served from its slug URL.
 	PortalDomain *string `json:"portal_domain"`
-	// Customer-portal favicon URL.
+	// Download URL for the account's customer-portal favicon, valid for one hour after the response is generated.
 	FaviconURL *string `json:"favicon_url"`
 }
 
@@ -159,9 +167,9 @@ var SamplePublicAccount = &PublicAccount{
 	Slug:                  SampleAccountPortalSlug,
 	DefaultBillingAddress: SampleAddress,
 	SupportEmail:          new("support@acme.example.com"),
-	LogoURL:               new("https://cdn.augno.com/branding/abr_01fa710842028837ac3ca9d590/logo.png"),
+	LogoURL:               new("https://cdn.augno.com/branding/abr_2rygb4fof28b/logo.png"),
 	PortalDomain:          new("shop.acme.com"),
-	FaviconURL:            new("https://cdn.augno.com/branding/abr_01fa710842028837ac3ca9d590/favicon.png"),
+	FaviconURL:            new("https://cdn.augno.com/branding/abr_2rygb4fof28b/favicon.png"),
 }
 
 func (*PublicAccount) SchemaExample() any {
@@ -174,20 +182,20 @@ type AccountLogoURL struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_logo_url"`
 	// Presigned URL for downloading the account's logo.
 	//
-	// The URL expires one hour after it is generated, so fetch the logo promptly rather than caching this URL.
+	// The URL expires one hour after it is generated, so fetch the logo promptly rather than caching this URL. No URL is returned when the account has never uploaded a logo or the stored image is no longer available.
 	URL *string `json:"url"`
 }
 
 var SampleAccountLogoURL = &AccountLogoURL{
 	Object: constants.ObjectTypeAccountLogoURL,
-	URL:    new("https://augno-logos.s3.amazonaws.com/ac_01148680966698341a9c0976db/logo.png?X-Amz-Expires=3600&X-Amz-Signature=example"),
+	URL:    new("https://augno-logos.s3.amazonaws.com/ac_ykxoradjoeb3/logo.png?X-Amz-Expires=3600&X-Amz-Signature=example"),
 }
 
 func (*AccountLogoURL) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleAccountLogoURL)
 }
 
-// Result of an account photo upload.
+// Result of an account logo upload.
 type AccountPhotoUploadResult struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_photo_upload_result"`
@@ -210,13 +218,13 @@ type AccountFaviconURL struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_favicon_url"`
 	// Presigned URL for downloading the account's favicon.
 	//
-	// The URL expires one hour after it is generated, so fetch the favicon promptly rather than caching this URL.
+	// The URL expires one hour after it is generated, so fetch the favicon promptly rather than caching this URL. No URL is returned when the account has never uploaded a favicon or the stored image is no longer available.
 	URL *string `json:"url"`
 }
 
 var SampleAccountFaviconURL = &AccountFaviconURL{
 	Object: constants.ObjectTypeAccountFaviconURL,
-	URL:    new("https://augno-logos.s3.amazonaws.com/ac_01148680966698341a9c0976db/favicon.png?X-Amz-Expires=3600&X-Amz-Signature=example"),
+	URL:    new("https://augno-logos.s3.amazonaws.com/ac_ykxoradjoeb3/favicon.png?X-Amz-Expires=3600&X-Amz-Signature=example"),
 }
 
 func (*AccountFaviconURL) SchemaExample() any {

@@ -11,7 +11,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Request to get a supplier material.
+// Request to retrieve a supplier material.
 type RetrieveSupplierMaterialRequest struct {
 	// ID of the supplier the material is linked to.
 	SupplierID string `path:"supplier_id" validate:"required"`

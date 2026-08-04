@@ -17,9 +17,11 @@ type AddChildAccountRequest struct {
 	ChildAccountID string `path:"child_account_id" validate:"required"`
 }
 
-// Links an existing account as a child of the target account.
+// Links an existing account as a child of the target account, so the two sit in a customer hierarchy such as a store location under its head office.
 //
-// This call is idempotent: linking an account that is already a child of the target account succeeds without changes. Circular relationships (making an account a child of its own child) are rejected with a conflict error.
+// Both the parent and the child must already be accounts you have a customer relationship with, and the child must be one you manage on its behalf — an account that runs its own Augno subscription, or that also trades with other sellers, is rejected with an authorization error.
+//
+// This call is idempotent: linking an account that is already a child of the target account succeeds without changes. Circular relationships (making an account a child of its own child) are rejected with a conflict error. An account has at most one parent, so linking a child that already sits under a different parent moves it.
 type AddChildAccountEndpoint struct{}
 
 func (e *AddChildAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddChildAccountRequest, *apiresource.ChildAccount] {

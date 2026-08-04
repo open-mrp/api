@@ -12,13 +12,15 @@ import (
 
 // Request to delete a territory.
 type DeleteTerritoryRequest struct {
-	// Account ID.
+	// ID of your account, which owns the territory.
 	AccountID string `path:"account_id" validate:"required"`
-	// Territory ID.
+	// ID of the territory to delete.
 	TerritoryID string `path:"id" validate:"required"`
 }
 
 // Deletes a territory.
+//
+// Sales orders that were already assigned a sales rep through this territory keep that rep; only later auto-assignment is affected. Deleting a territory that was already deleted returns an already-deleted error rather than a not-found error.
 type DeleteTerritoryEndpoint struct{}
 
 func (e *DeleteTerritoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteTerritoryRequest, *apiresource.EmptyResource] {

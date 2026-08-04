@@ -18,6 +18,8 @@ type RetrieveMemoryRequest struct {
 }
 
 // Returns an agent memory by ID.
+//
+// An expired memory is still returned here, even though it is excluded from list results and no longer recalled by agents.
 type RetrieveMemoryEndpoint struct{}
 
 func (e *RetrieveMemoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveMemoryRequest, *apiresource.AgentMemory] {

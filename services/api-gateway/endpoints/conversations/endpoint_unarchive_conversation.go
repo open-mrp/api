@@ -17,7 +17,9 @@ type UnarchiveConversationRequest struct {
 	ConversationID string `path:"id" validate:"required"`
 }
 
-// Returns an archived conversation to the active state so it appears in active lists again.
+// Returns an archived conversation to the active state for the whole account.
+//
+// Only an owner or admin of the conversation can unarchive it. An unarchived customer-facing case comes back to the working support inbox, and participants who had separately hidden the conversation still see it hidden until they unhide it themselves.
 type UnarchiveConversationEndpoint struct{}
 
 func (e *UnarchiveConversationEndpoint) Materialize() *apiendpoint.APIEndpoint[*UnarchiveConversationRequest, *apiresource.Conversation] {

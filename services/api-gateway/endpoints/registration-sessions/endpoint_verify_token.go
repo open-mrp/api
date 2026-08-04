@@ -15,7 +15,9 @@ type VerifyTokenRequest struct {
 	Token string `json:"-" path:"token" validate:"required"`
 }
 
-// Verifies the email token sent during registration, marking the session as email-verified and advancing to the next step.
+// Verifies the token from the registration email, marking the session as email-verified and advancing it to the `user_details` step.
+//
+// A token is only accepted within 24 hours of the session's last update; Resend Verification Email issues a fresh one. Verifying a session that is already verified returns it unchanged.
 type VerifyTokenEndpoint struct{}
 
 func (e *VerifyTokenEndpoint) Materialize() *apiendpoint.APIEndpoint[*VerifyTokenRequest, *apiresource.RegistrationSession] {

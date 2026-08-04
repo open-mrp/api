@@ -8,8 +8,8 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleCRUDAddressID = "ad_012100950cfaa34aa0e0ad7258"
-const SampleGeolocationID = "gl_013e4c26412103c6757ba71806"
+const SampleCRUDAddressID = "ad_j8cz0b79pwdb"
+const SampleGeolocationID = "gl_betrf3v346k5"
 
 // The street-level location details of an address.
 type Geolocation struct {
@@ -48,7 +48,7 @@ type Address struct {
 	// - `standard`: a normal shipping or billing address.
 	// - `drop_ship`: an address an order is shipped to directly, typically a third party or end customer rather than the account itself.
 	Type constants.AddressType `json:"type" validate:"required"`
-	// Geolocation details for the address.
+	// Street-level location details for the address.
 	Geolocation *Geolocation `json:"geolocation" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

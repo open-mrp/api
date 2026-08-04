@@ -12,7 +12,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ValidateProductsRequest is the request to validate products by SKU.
+// Request to look up products by SKU.
 type ValidateProductsRequest struct {
 	// Map of caller-chosen keys to SKU values to look up.
 	//
@@ -28,7 +28,9 @@ func (*ValidateProductsRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleValidateProductsRequest)
 }
 
-// Validates SKUs and returns matching products keyed by the original map keys.
+// Resolves a batch of SKUs to products in one call, keyed by the keys you supplied.
+//
+// Useful before importing order lines from a spreadsheet or a customer document: send each row's SKU under its row key and check which keys come back. Unmatched SKUs are simply left out of the response rather than reported as errors, and unlike the product list this covers products of every type, not just `sale`.
 type ValidateProductsEndpoint struct{}
 
 func (e *ValidateProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ValidateProductsRequest, *apiresource.ValidateProductsResponse] {

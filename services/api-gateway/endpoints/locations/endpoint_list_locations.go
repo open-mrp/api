@@ -16,7 +16,9 @@ type ListLocationsRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of locations in your account.
+// Returns a paginated list of locations in your account, newest first.
+//
+// Every location is returned regardless of its depth in the hierarchy, so top-level locations and their descendants appear side by side. The `q` search term matches on location name.
 type ListLocationsEndpoint struct{}
 
 func (e *ListLocationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListLocationsRequest, *apiresource.List[apiresource.Location]] {

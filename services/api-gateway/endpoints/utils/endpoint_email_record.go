@@ -17,7 +17,7 @@ type EmailRecordRequest struct {
 	ID string `json:"id" validate:"required"`
 	// The type of record to email.
 	//
-	// - `invoice`: emails the invoice to the invoice's email recipients.
+	// - `invoice`: emails the invoice to the contacts on its sales order that are set to receive invoice emails.
 	// - `sales_order`: sends an order acknowledgement to the order's acknowledgement recipients.
 	// - `purchase_order`: sends the purchase order submission to the order's submission recipients.
 	Type string `json:"type" validate:"required"`
@@ -34,7 +34,7 @@ func (*EmailRecordRequest) SchemaExample() any {
 
 // Emails a record (invoice, sales order, or purchase order) to its configured recipients and marks the record as sent.
 //
-// Delivery is asynchronous: the endpoint returns `202 Accepted` once the email is queued. If the record has no configured recipients, the request succeeds without sending an email.
+// Delivery is asynchronous: the endpoint returns `202 Accepted` once the email is queued, so a `202` means the send was accepted, not that it reached the recipients. If the record has no configured recipients the request still succeeds and nothing is sent; in that case a sales order or purchase order is also left unmarked, while an invoice is still marked as sent.
 type EmailRecordEndpoint struct{}
 
 func (e *EmailRecordEndpoint) Materialize() *apiendpoint.APIEndpoint[*EmailRecordRequest, *apiresource.EmptyResource] {

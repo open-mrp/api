@@ -12,12 +12,12 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListSuppliersRequest is the request to list suppliers.
+// Request to list suppliers.
 type ListSuppliersRequest struct {
 	apiresource.PaginationRequest
-	// Filter by item IDs.
+	// Filter to suppliers that can source any of these items.
 	//
-	// Returns only suppliers that provide at least one material linked to any of the given items.
+	// A supplier matches when it provides a material for one of the items, whether or not that material link is active.
 	ItemIDs []string `query:"item_ids"`
 	// Only return suppliers created at or after this timestamp.
 	StartDate *time.Time `query:"start_date"`
@@ -27,7 +27,9 @@ type ListSuppliersRequest struct {
 
 // TODO: stop returning SupplierSummary; return the full Supplier apiresource and use proper includes values to control expansion.
 
-// Returns a paginated list of suppliers for the current account.
+// Returns a paginated list of suppliers for the current account, newest first.
+//
+// Filters combine with AND, so an item filter and a date range narrow the list together. The `q` search term matches the supplier name and number.
 type ListSuppliersEndpoint struct{}
 
 func (e *ListSuppliersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSuppliersRequest, *apiresource.List[apiresource.SupplierSummary]] {

@@ -10,23 +10,23 @@ import (
 
 // A user's membership in an account, carrying the account-specific status, role, and department.
 //
-// Profile fields (name, email, username, image URL) live on the expandable `user` sub-resource, which is shared across every account the user belongs to.
+// Profile fields (name, email, username, image URL) live on the `user` sub-resource, which is shared across every account the user belongs to.
 type AccountUser struct {
 	// Account user ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_user"`
-	// Account user status.
+	// The current state of this user's membership in the account.
 	//
-	// - `active`: the user can access the account.
-	// - `disabled`: the user is locked out of the account.
-	// - `removed`: the user has been removed (soft-deleted) from the account.
+	// - `active`: the user can sign in to the account and occupies one of the plan's seats.
+	// - `disabled`: the user is locked out of the account and their sessions have been revoked, but the membership is retained.
+	// - `removed`: the membership has been soft-deleted; it is hidden from listings by default and can be restored with the activate action.
 	Status constants.AccountUserStatus `json:"status" validate:"required"`
-	// Assigned role.
+	// The role that determines what this user is permitted to do in the account.
 	Role *Role `json:"role" expandable:"true"`
-	// Assigned department.
+	// The department this user belongs to within the account.
 	Department *Department `json:"department" expandable:"true"`
-	// Underlying user.
+	// The underlying user profile, shared across every account this person belongs to.
 	User *User `json:"user" expandable:"true"`
 	// When the user last accessed this account.
 	LastUsedAt *time.Time `json:"last_used_at"`
@@ -36,7 +36,7 @@ type AccountUser struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-const SampleAccountUserID = "acus_01ea9983ddb41dacc44ecf997c"
+const SampleAccountUserID = "acus_e5zu8bde0z3h"
 
 var SampleAccountUser = &AccountUser{
 	ID:         SampleAccountUserID,

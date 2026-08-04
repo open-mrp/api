@@ -22,15 +22,17 @@ type ReceivableEntry struct {
 	//
 	// Only the customer's identifying fields (`id`, `name`, `number`) are populated.
 	Customer *Customer `json:"customer"`
-	// Customer's purchase order number from the underlying sales order, if any.
+	// Purchase order number the customer supplied on the underlying sales order.
 	PONumber *string `json:"po_number"`
-	// Invoice creation date.
+	// Date the invoice was created.
 	InvoicedAt time.Time `json:"invoiced_at" validate:"required"`
-	// Remaining unpaid balance on the invoice, as a decimal string.
+	// Remaining unpaid balance on the invoice.
 	//
 	// Calculated as the invoiced total minus all transaction allocations applied to the invoice. When a `cutoff_date` is supplied to the listing endpoint, only allocations made before that date are subtracted.
 	RemainingBalance string `json:"remaining_balance" validate:"required"`
 	// Whether the invoice has been paid in full.
+	//
+	// Always `false` here, because only invoices that still owe a balance produce a receivable entry.
 	IsPaidInFull bool `json:"is_paid_in_full"`
 }
 

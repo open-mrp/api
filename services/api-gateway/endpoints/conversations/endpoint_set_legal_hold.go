@@ -13,12 +13,13 @@ import (
 )
 
 // Request to place a conversation under legal hold or release it.
-//
-// While held, the conversation is exempt from automatic retention purging and from GDPR redaction.
 type SetLegalHoldRequest struct {
 	// Conversation ID.
 	ConversationID string `path:"id" validate:"required"`
-	// The legal-hold status to set.
+	// Whether to place the conversation under legal hold or release it.
+	//
+	// - `held`: the conversation is preserved — exempt from automatic retention purging and from redaction.
+	// - `released`: normal retention and redaction apply again.
 	LegalHold constants.LegalHoldStatus `json:"legal_hold" validate:"required"`
 }
 
@@ -32,6 +33,8 @@ func (*SetLegalHoldRequest) SchemaExample() any {
 }
 
 // Places a conversation under legal hold or releases it.
+//
+// Holding it exempts the conversation from automatic retention purging, and any attempt to redact it is refused until the hold is released.
 type SetLegalHoldEndpoint struct{}
 
 func (e *SetLegalHoldEndpoint) Materialize() *apiendpoint.APIEndpoint[*SetLegalHoldRequest, *apiresource.Conversation] {

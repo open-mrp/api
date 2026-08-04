@@ -15,15 +15,17 @@ type ListAPIKeysRequest struct {
 	apiresource.PaginationRequest
 	// API key statuses to filter by.
 	//
-	// - `active`: the key can be used to authenticate requests.
-	// - `expired`: the key passed its expiration time and can no longer authenticate requests.
-	// - `revoked`: the key was revoked and can no longer authenticate requests.
+	// - `active`: the key still authenticates requests. A key whose revocation is scheduled for a future time is still active until that time arrives.
+	// - `expired`: the key passed its expiration time without having been revoked.
+	// - `revoked`: the key was revoked, which takes precedence over expiration.
 	//
 	// When omitted, keys of every status are returned.
 	Statuses []constants.APIKeyStatus `query:"statuses" default:"active,expired,revoked"`
 }
 
-// Returns a paginated list of [API keys](https://docs.augno.com/api/api-keys).
+// Returns a paginated list of [API keys](https://docs.augno.com/api/api-keys), newest first.
+//
+// Only keys belonging to the account making the request are returned. The search term matches against the key name.
 type ListAPIKeysEndpoint struct{}
 
 func (e *ListAPIKeysEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAPIKeysRequest, *apiresource.List[apiresource.APIKey]] {

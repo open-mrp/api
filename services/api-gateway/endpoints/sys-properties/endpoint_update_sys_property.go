@@ -17,7 +17,7 @@ import (
 type UpdateSysPropertyRequest struct {
 	// System property ID.
 	SysPropertyID string `path:"id" validate:"required"`
-	// The new counter value, such as the next transaction or document number to assign.
+	// The number to move the counter to, so the series carries on from there.
 	Value field.Optional[int32] `json:"value,omitzero"`
 }
 
@@ -30,7 +30,9 @@ func (*UpdateSysPropertyRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateSysPropertyRequest)
 }
 
-// Partially updates the value of a system property.
+// Overrides the value of a system property counter.
+//
+// Use this to restart or realign a number series, for example to continue the numbering used in a previous system. Records that already carry a number keep it; only the numbers handed out from now on are affected.
 type UpdateSysPropertyEndpoint struct{}
 
 func (e *UpdateSysPropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateSysPropertyRequest, *apiresource.SysProperty] {

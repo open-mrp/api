@@ -11,7 +11,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteSupplierRequest is the request to delete a supplier.
+// Request to delete a supplier.
 type DeleteSupplierRequest struct {
 	// Supplier ID.
 	SupplierID string `path:"id" validate:"required"`
@@ -19,7 +19,7 @@ type DeleteSupplierRequest struct {
 
 // Deletes a supplier.
 //
-// The supplier's saved addresses and any users belonging to the supplier are deleted along with it. Returns the deleted supplier.
+// The supplier's saved addresses and any users belonging to the supplier are deleted along with it. Returns the supplier as it looked immediately before deletion. Deleting a supplier that has already been deleted returns an error rather than succeeding again.
 type DeleteSupplierEndpoint struct{}
 
 func (e *DeleteSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSupplierRequest, *apiresource.SupplierDetail] {

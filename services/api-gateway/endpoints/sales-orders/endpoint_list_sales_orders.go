@@ -14,25 +14,31 @@ import (
 // Request to list sales orders.
 type ListSalesOrdersRequest struct {
 	apiresource.PaginationRequest
-	// Filter by status codes.
+	// Restricts results to orders in any of these lifecycle statuses (`estimate`, `issued`, `fulfilled`).
 	StatusCodes []string `query:"status_codes"`
-	// Filter by item IDs.
+	// Restricts results to orders that have at least one line for any of these inventory items.
 	ItemIDs []string `query:"item_ids"`
-	// Filter by product line IDs.
+	// Restricts results to orders that have at least one line whose product belongs to any of these product lines.
 	ProductLineIDs []string `query:"product_line_ids"`
-	// Filter by customer IDs.
+	// Restricts results to orders placed by any of these customers.
 	CustomerIDs []string `query:"customer_ids"`
-	// Filter by customer group IDs.
+	// Restricts results to orders placed by customers belonging to any of these account groups.
 	CustomerGroupIDs []string `query:"customer_group_ids"`
-	// Filter by sales rep IDs.
+	// Restricts results to orders credited to any of these sales reps.
+	//
+	// These are account user IDs, matching the `sales_rep` on the order.
 	SalesRepIDs []string `query:"sales_rep_ids"`
-	// Earliest order creation date to include, in `YYYY-MM-DD` format (inclusive).
+	// Earliest order creation date to include, in `YYYY-MM-DD` format.
 	StartDate *string `query:"start_date"`
-	// Latest order creation date to include, in `YYYY-MM-DD` format (inclusive).
+	// Latest order creation date to include, in `YYYY-MM-DD` format.
+	//
+	// Compared against the creation timestamp at the start of that day, so orders created later on the end date itself are excluded; pass the following day to include them.
 	EndDate *string `query:"end_date"`
 }
 
-// Returns a paginated list of sales orders for the current account.
+// Returns a paginated list of sales orders for the current account, newest first.
+//
+// A free-text search term (`q`) is matched as an exact value against the order number and the customer purchase order number, and still respects the other filters. Customer accounts calling this endpoint only ever see their own orders.
 type ListSalesOrdersEndpoint struct{}
 
 func (e *ListSalesOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSalesOrdersRequest, *apiresource.List[apiresource.SalesOrder]] {

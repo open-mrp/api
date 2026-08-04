@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleSupplierMaterialID = "suml_01e05d8a2821bf791bd30d537f"
+const SampleSupplierMaterialID = "suml_gegrad0aqkhj"
 
 // Links a material to a supplier that provides it, carrying the supplier's own part number and description for the material.
 //
@@ -24,7 +24,9 @@ type SupplierMaterial struct {
 	SupplierPartNumber string `json:"supplier_part_number" validate:"required"`
 	// The supplier's own description of this material.
 	SupplierDescription *string `json:"supplier_description"`
-	// Whether this supplier is currently available as a source for the material.
+	// Whether this supplier is currently one you would source the material from.
+	//
+	// Inactive links are kept for reference and are still returned when listing or retrieving supplier materials; the status is a record-keeping flag and does not by itself prevent purchasing the material from this supplier.
 	Status constants.SupplierMaterialStatus `json:"status" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

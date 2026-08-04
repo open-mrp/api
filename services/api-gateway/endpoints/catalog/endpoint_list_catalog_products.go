@@ -20,7 +20,9 @@ type ListCatalogProductsRequest struct {
 
 // Returns the products in a product line, grouped by item category.
 //
-// Each category lists the properties its products vary along and the products themselves. Customers only see products they have access to. Pagination applies to categories, not to the products within them.
+// Each category lists the properties its products vary along and the products themselves, with categories ordered by name and products ordered by SKU. Only products whose `portal_visibility` is `visible` are included, and a customer user additionally only sees product lines they have been granted access to.
+//
+// Pagination and the `q` search term apply to the categories — `q` is matched against the category name, and a page returns whole categories with all of their products.
 type ListCatalogProductsEndpoint struct{}
 
 func (e *ListCatalogProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCatalogProductsRequest, *apiresource.List[apiresource.CatalogCategory]] {

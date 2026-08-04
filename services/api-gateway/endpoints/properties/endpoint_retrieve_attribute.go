@@ -13,7 +13,7 @@ import (
 
 // Request to retrieve an attribute.
 type RetrieveAttributeRequest struct {
-	// Property ID.
+	// The property the attribute belongs to.
 	PropertyID string `path:"property_id" validate:"required"`
 	// Attribute ID.
 	AttributeID string `path:"id" validate:"required"`

@@ -17,6 +17,8 @@ type ShipShipmentRequest struct {
 	// ID of the shipment to ship.
 	ShipmentID string `path:"id" validate:"required"`
 	// Whether to email the customer a shipping notification.
+	//
+	// Shipping notification emails are not dispatched yet, so this flag has no effect today.
 	EmailCustomer bool `json:"email_customer"`
 }
 
@@ -28,9 +30,9 @@ func (*ShipShipmentRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleShipShipmentRequest)
 }
 
-// Marks a shipment as shipped.
+// Dispatches a packed shipment, marking it and its cases as shipped.
 //
-// Sets the shipment status to `shipped`, records `shipped_at` and the acting user as `shipped_by`, marks all shipping cases as shipped, and assigns an SSCC to any case that does not already have one. Fails with a conflict error if the shipment has already been shipped.
+// Sets the shipment status to `shipped`, records `shipped_at` and the acting user as `shipped_by`, marks all shipping cases as shipped, and assigns an SSCC to any case that does not already have one. Fails with a conflict error if the shipment has already been shipped, so shipping is a one-way move that can only be reversed with the void action.
 type ShipShipmentEndpoint struct{}
 
 func (e *ShipShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*ShipShipmentRequest, *apiresource.Shipment] {

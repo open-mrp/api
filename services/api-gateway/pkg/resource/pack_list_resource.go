@@ -8,13 +8,17 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-// A pack-list document assembled for a shipment: the shipment's packed line items and shipping cases, the parent order's header, parties, and terms, and any order lines still back-ordered. It is generated on demand for printing and is a point-in-time snapshot; it is not persisted.
+// A pack-list document assembled for a shipment: the shipment's packed line items and shipping cases, the parent order's header, parties, and terms, and any order lines still back-ordered.
+//
+// The document is generated on demand for printing and is a point-in-time snapshot of the shipment and its order; it is not persisted and cannot be retrieved again by ID.
 type PackList struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=pack_list"`
 	// Selling account's display name.
 	AccountName string `json:"account_name" validate:"required"`
-	// Presigned download URL for the selling account's logo. Expires one hour after it is generated, so render it promptly rather than caching it.
+	// Presigned download URL for the selling account's logo.
+	//
+	// The URL expires one hour after it is generated, so render it promptly rather than caching it. Logo lookup is best effort: if the account has no logo or it cannot be resolved, the rest of the document is still returned.
 	AccountLogoURL *string `json:"account_logo_url"`
 	// Parent sales order number.
 	SalesOrderNumber string `json:"sales_order_number" validate:"required"`
@@ -24,27 +28,29 @@ type PackList struct {
 	ShipmentNumber string `json:"shipment_number" validate:"required"`
 	// When the shipment was dispatched.
 	ShippedAt *time.Time `json:"shipped_at"`
-	// Billing party.
+	// The party the order is billed to, as recorded on the parent sales order.
 	BillTo *PackListParty `json:"bill_to"`
-	// Shipping party.
+	// The party the goods are shipped to, as recorded on the parent sales order.
 	ShipTo *PackListParty `json:"ship_to"`
-	// Additional contact lines shown under the billing party: the order's email recipients followed by the billing contact phone.
+	// Additional contact lines shown under the billing party: the sales order contacts set to receive invoice emails, followed by the billing contact phone.
 	ContactInformation []string `json:"contact_information"`
-	// Carrier name.
+	// Name of the carrier moving the shipment.
 	Carrier *string `json:"carrier"`
-	// Service level name.
+	// Name of the carrier service level used for the shipment, such as `Ground`.
 	CarrierOption *string `json:"carrier_option"`
-	// Order priority name.
+	// Name of the parent order's priority.
 	Priority *string `json:"priority"`
-	// Payment term name.
+	// Name of the parent order's payment term.
 	PaymentTerm *string `json:"payment_term"`
-	// Sales representative name.
+	// Name of the sales representative on the parent order.
 	SalesRep *string `json:"sales_rep"`
-	// Shipping cases on the shipment.
+	// Shipping cases on the shipment, ordered by case number.
 	ShippingCases *List[PackListCase] `json:"shipping_cases" validate:"required"`
-	// Packed line items on the shipment.
+	// Line items packed into this shipment, ordered by the order line's line number.
 	LineItems *List[PackListLineItem] `json:"line_items" validate:"required"`
-	// Order lines with quantity still back-ordered.
+	// Order lines that still have quantity outstanding once everything packed so far is accounted for.
+	//
+	// Only physical sale lines appear here; charge and adjustment lines such as freight, tax, and credits are excluded. The quantities span the whole order, not just this shipment.
 	BackOrders *List[PackListBackOrder] `json:"back_orders" validate:"required"`
 }
 
@@ -76,7 +82,7 @@ type PackListParty struct {
 type PackListLineItem struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=pack_list_line_item"`
-	// The order line's line number.
+	// Line number of the sales order line this shipment line was packed from.
 	LineItemNumber *int32 `json:"line_item_number"`
 	// Product SKU.
 	SKU string `json:"sku"`
@@ -84,27 +90,27 @@ type PackListLineItem struct {
 	Description string `json:"description"`
 	// Quantity packed into this shipment.
 	Quantity string `json:"quantity" format:"decimal"`
-	// Unit name.
+	// Name of the unit the quantity is measured in.
 	Unit string `json:"unit"`
 }
 
-// An order line with quantity still back-ordered after this shipment.
+// An order line that still has quantity outstanding once everything packed so far is accounted for.
 type PackListBackOrder struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=pack_list_back_order"`
-	// The order line's line number.
+	// The sales order line's line number.
 	LineItemNumber *int32 `json:"line_item_number"`
 	// Product SKU.
 	SKU string `json:"sku"`
 	// Product description.
 	Description string `json:"description"`
-	// Quantity ordered.
+	// Quantity ordered on the line.
 	QuantityOrdered string `json:"quantity_ordered" format:"decimal"`
-	// Quantity shipped so far.
+	// Quantity packed for the line across every shipment on the order, not just this one.
 	QuantityShipped string `json:"quantity_shipped" format:"decimal"`
-	// Quantity still back-ordered.
+	// Quantity still outstanding: the quantity ordered less the quantity already packed.
 	QuantityBackOrdered string `json:"quantity_back_ordered" format:"decimal"`
-	// Unit name.
+	// Name of the unit the quantities are measured in.
 	Unit string `json:"unit"`
 }
 

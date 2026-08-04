@@ -17,7 +17,7 @@ type SetupBillingRequest struct {
 
 // Creates a Stripe customer and Setup Intent for collecting the registration's payment method.
 //
-// Returns the Setup Intent client secret and publishable key needed to collect a payment method with Stripe.js. Safe to retry; an existing Stripe customer is reused.
+// Returns the Setup Intent client secret and publishable key needed to collect a payment method with Stripe.js. The Stripe customer is created once and reused on later calls, but every call issues a new Setup Intent and replaces the one recorded on the session, so confirm payment with the Setup Intent from the most recent call. Rejected once the registration has completed.
 type SetupBillingEndpoint struct{}
 
 func (e *SetupBillingEndpoint) Materialize() *apiendpoint.APIEndpoint[*SetupBillingRequest, *apiresource.SetupBillingResponse] {

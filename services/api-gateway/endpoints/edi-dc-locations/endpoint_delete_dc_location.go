@@ -17,6 +17,8 @@ type DeleteDCLocationRequest struct {
 }
 
 // Deletes a DC location.
+//
+// Deletion is permanent. Deleting the same location again reports that it has already been deleted rather than succeeding silently.
 type DeleteDCLocationEndpoint struct{}
 
 func (e *DeleteDCLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteDCLocationRequest, *apiresource.EmptyResource] {

@@ -16,15 +16,17 @@ import (
 type GetScanningStationConsumptionRequest struct {
 	// Scanning station ID.
 	ScanningStationID string `path:"id" validate:"required"`
-	// Batch IDs to calculate consumption for.
+	// Batch IDs the scanning operation would be performed on.
+	//
+	// At an `init_batch` station only the first ID is used, since demand comes from that batch's own item and quantity. At the other station types each ID is resolved forward through its production flow to the batch that is actually available at the step, and the demand of all of them is added together.
 	BatchIDs []string `json:"batch_ids" validate:"required"`
 	// Production step ID to scope the consumption calculation.
 	//
-	// Required when the scanning station is a move, split, or merge station. Ignored for initialize stations, where the step is derived from the station and the batch's item.
+	// Required for `move_batch`, `split_batch`, and `merge_batch` stations. Ignored for `init_batch` stations, where the step is derived from the station and the batch's item.
 	ProductionStepID field.Optional[string] `json:"production_step_id,omitzero"`
 	// Proposed split quantity to factor into the consumption calculation.
 	//
-	// Required when the scanning station is a split station; for a single-batch split, material demand is scaled to this quantity instead of the full batch quantity.
+	// Required for `split_batch` stations. It is applied only when splitting a single batch at a single-part step, where material demand is scaled to this quantity instead of the batch's full expected output; splits covering several batches or several parts ignore it.
 	SplitQuantity field.Optional[SplitQuantityInput] `json:"split_quantity,omitzero"`
 }
 
@@ -44,7 +46,7 @@ func (*GetScanningStationConsumptionRequest) SchemaExample() any {
 
 // Returns the material demand and current inventory for the operation a scanning station would perform on the given batches.
 //
-// Demand is calculated from the production step's configured consumptions, scaled to the batch quantities (or the proposed split quantity). How the step is determined depends on the station's type: initialize stations derive it from the station and the batch's item, while move, split, and merge stations use `production_step_id`.
+// Use this to preview what a scan will draw from stock, and to compare that against what is on hand, before committing the operation. Demand is each of the step's configured material quantities scaled by how much output the operation produces relative to the step's standard run size, so it grows with the batch quantities (or the proposed split quantity). How the step is determined depends on the station's type: `init_batch` stations derive it from the station and the batch's item, while `move_batch`, `split_batch`, and `merge_batch` stations use `production_step_id`. Nothing is consumed by this call.
 type GetScanningStationConsumptionEndpoint struct{}
 
 func (e *GetScanningStationConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetScanningStationConsumptionRequest, *apiresource.List[apiresource.ScanningConsumption]] {

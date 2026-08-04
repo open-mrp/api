@@ -11,7 +11,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// PickAllLinesRequest is the request to mark all lines on a pick as picked.
+// Request to mark all lines on a pick as picked.
 type PickAllLinesRequest struct {
 	// Pick ID.
 	PickID string `path:"id" validate:"required"`
@@ -19,7 +19,7 @@ type PickAllLinesRequest struct {
 
 // Marks all lines on a pick as picked.
 //
-// Sets each unpacked line's picked quantity to the quantity still outstanding on its sales order line. Lines that have already been packed are unaffected.
+// Sets each unpacked line's picked quantity to the quantity still outstanding on its sales order line, after accounting for what other pick lines for that order line have already picked. Lines that have already been packed are unaffected. Use this to fill in a full pick in one call instead of picking each line individually; nothing is shipped until the pick is packed.
 type PickAllLinesEndpoint struct{}
 
 func (e *PickAllLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*PickAllLinesRequest, *apiresource.Pick] {

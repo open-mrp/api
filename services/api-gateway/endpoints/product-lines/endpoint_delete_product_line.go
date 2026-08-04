@@ -16,9 +16,9 @@ type DeleteProductLineRequest struct {
 	ProductLineID string `path:"id" validate:"required"`
 }
 
-// Permanently deletes an account-owned product line.
+// Permanently deletes a product line your account owns.
 //
-// The reserved default product lines (shipping, service, credit, tax) cannot be deleted.
+// The reserved `shipping`, `service`, `credit`, and `tax` lines cannot be deleted, and neither can the shared system lines, which belong to no single account. Deleting a line that was already deleted returns an already-deleted error rather than succeeding silently.
 type DeleteProductLineEndpoint struct{}
 
 func (e *DeleteProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteProductLineRequest, *apiresource.EmptyResource] {

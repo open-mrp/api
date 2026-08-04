@@ -16,7 +16,9 @@ type DeleteAccountGroupProductLineAccessRequest struct {
 	AccountGroupID string `path:"account_group_id" validate:"required"`
 }
 
-// Removes all product line access for an account group.
+// Removes an account group's product line access record.
+//
+// Customers in the group keep any product lines granted to them directly or through another of their groups. Removing access from a group that has none returns a not-found error rather than succeeding silently.
 type DeleteAccountGroupProductLineAccessEndpoint struct{}
 
 func (e *DeleteAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAccountGroupProductLineAccessRequest, *apiresource.EmptyResource] {

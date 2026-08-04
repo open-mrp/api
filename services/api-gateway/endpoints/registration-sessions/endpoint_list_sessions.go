@@ -9,7 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Returns a paginated list of open registration sessions for the authenticated user.
+// Returns a paginated list of the authenticated user's registration sessions that are still in progress, newest first.
+//
+// The list is empty once the user has finished registering.
 type ListSessionsEndpoint struct{}
 
 func (e *ListSessionsEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.PaginationRequest, *apiresource.List[apiresource.RegistrationSession]] {

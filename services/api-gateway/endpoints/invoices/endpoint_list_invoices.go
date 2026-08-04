@@ -14,30 +14,36 @@ import (
 // Request to list invoices.
 type ListInvoicesRequest struct {
 	apiresource.PaginationRequest
-	// Filter invoices by payment status.
+	// Restricts results to invoices in this payment state.
 	//
-	// - `all`: no payment-status filtering (same as omitting the parameter).
-	// - `paid`: only invoices paid in full.
-	// - `unpaid`: only invoices that are neither paid in full nor overpaid.
-	// - `overpaid`: only invoices whose allocations exceed the invoiced amount.
+	// - `all`: no payment-state filtering, the same as omitting the parameter.
+	// - `paid`: only invoices marked paid in full.
+	// - `unpaid`: only invoices that are neither paid in full nor overpaid, including invoices carrying partial payments.
+	// - `overpaid`: only invoices whose applied payments exceed the invoiced amount.
 	Status *string `query:"status" validate:"omitempty,oneof=all paid unpaid overpaid"`
-	// Filter by item IDs present in invoice lines.
+	// Restricts results to invoices with at least one line billing any of these items.
 	ItemIDs []string `query:"item_ids"`
-	// Filter by customer account IDs.
+	// Restricts results to invoices billed to any of these customers.
 	CustomerIDs []string `query:"customer_ids"`
-	// Filter by product line IDs.
+	// Restricts results to invoices with at least one line whose product belongs to any of these product lines.
 	ProductLineIDs []string `query:"product_line_ids"`
-	// Filter by customer group IDs.
+	// Restricts results to invoices billed to customers belonging to any of these account groups.
 	CustomerGroupIDs []string `query:"customer_group_ids"`
-	// Filter by sales rep user IDs.
+	// Restricts results to invoices whose sales order is credited to any of these sales reps.
+	//
+	// These are account user IDs, matching the `sales_rep` on the order.
 	SalesRepIDs []string `query:"sales_rep_ids"`
-	// Only return invoices created on or after this date (`YYYY-MM-DD`).
+	// Earliest invoice creation date to include, in `YYYY-MM-DD` format.
 	StartDate *string `query:"start_date"`
-	// Only return invoices created before this date (`YYYY-MM-DD`).
+	// Latest invoice creation date to include, in `YYYY-MM-DD` format.
+	//
+	// Compared against the creation timestamp at the start of that day, so invoices created later on the end date itself are excluded; pass the following day to include them.
 	EndDate *string `query:"end_date"`
 }
 
-// Returns a paginated list of invoices for the current account.
+// Returns a paginated list of invoices for the current account, newest first.
+//
+// A free-text search term (`q`) is matched against the invoice number, the invoice note, and the customer name, and still respects the other filters.
 type ListInvoicesEndpoint struct{}
 
 func (e *ListInvoicesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListInvoicesRequest, *apiresource.List[apiresource.Invoice]] {

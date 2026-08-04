@@ -8,33 +8,43 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleShippingCaseID = "shcs_01207a101ea1475c687a39cf76"
+const SampleShippingCaseID = "shcs_fgqy1eu256af"
 
 // A physical case packed within a shipment.
 //
-// Each case carries its own SSCC, carrier tracking number, shipping label, and freight cost and weight.
+// Cases are created when a pick is packed, one for each case counted on the pack, and each carries its own SSCC, carrier tracking number, shipping label, freight cost and shipping weight.
 type ShippingCase struct {
 	// Shipping case ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=shipping_case"`
 	// Human-readable case number.
-	Number string `json:"number" validate:"required"`
-	// Serial Shipping Container Code.
 	//
-	// A GS1 SSCC-18 identifier assigned automatically when the shipment ships.
+	// Built from the shipment's number and the case's position within that shipment when the case is created.
+	Number string `json:"number" validate:"required"`
+	// Serial Shipping Container Code (SSCC) identifying this case.
+	//
+	// An 18-digit code assigned automatically when the shipment ships, if the case does not already have one. It is kept when the shipment is voided, so a case that ships again keeps the same code.
 	SSCC *string `json:"sscc"`
 	// Carrier tracking number.
+	//
+	// Recorded when a label is purchased for the case, can be overwritten manually, and is cleared if the shipment is voided.
 	TrackingNumber *string `json:"tracking_number"`
 	// When the case shipped.
+	//
+	// Stamped on every case in the shipment when the shipment ships, and cleared if the shipment is voided.
 	ShippedAt *time.Time `json:"shipped_at"`
 	// Freight cost charged for this case.
+	//
+	// Starts at zero when the case is created, and is reset to zero if the shipment is voided.
 	FreightAmount *Quantity `json:"freight_amount" expandable:"true"`
 	// Shipping weight of this case.
 	FreightWeight *Quantity `json:"freight_weight" expandable:"true"`
 	// The shipment this case belongs to.
 	Shipment *Shipment `json:"shipment" expandable:"true"`
 	// The carrier transporting this case.
+	//
+	// Copied from the sales order's carrier when the case is created.
 	Carrier *Carrier `json:"carrier" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -42,13 +52,13 @@ type ShippingCase struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-// Presigned link to a shipping case's label image.
+// A temporary download link for a shipping case's label image.
 type ShippingCaseLabelURL struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=shipping_case_label_url"`
 	// Presigned link to the shipping case's label image.
 	//
-	// The URL expires one hour after it is issued.
+	// The link expires one hour after it is issued, and is absent until a label has been generated for the case.
 	URL *string `json:"url"`
 }
 

@@ -19,22 +19,17 @@ type CreateLocationRequest struct {
 	//
 	// Maximum 255 characters.
 	Name string `json:"name" validate:"required,max=255"`
-	// Location type code, identifying this location's level in the storage hierarchy.
+	// This location's level in the storage hierarchy.
 	//
-	// - `building`: a building-level location.
-	// - `section`: a section within a building.
-	// - `aisle`: an aisle within a section.
-	// - `rack`: a rack within an aisle.
-	// - `shelf`: a shelf within a rack.
-	// - `bin`: a bin within a shelf.
+	// The levels run from largest to smallest: `building`, `section`, `aisle`, `rack`, `shelf`, `bin`. They are descriptive labels rather than a rule — the parent you choose is not required to be the next level up.
 	TypeCode constants.LocationTypeCode `json:"type" validate:"required"`
-	// ID of the parent location.
+	// The location this one sits under in the storage hierarchy.
 	//
-	// Omit for top-level locations.
+	// Must be an existing location in your account. Omit to create a top-level location.
 	ParentID field.Optional[string] `json:"parent_id,omitzero"`
-	// IDs of existing locations to attach as children of the new location.
+	// Existing locations to attach beneath the new location.
 	//
-	// Listed locations are moved from their current parent, if any.
+	// Each listed location is reparented onto the new location, detaching it from its current parent. Every ID must belong to your account.
 	ChildIDs field.Optional[[]string] `json:"child_ids,omitzero"`
 }
 

@@ -11,15 +11,17 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// VoidPickRequest is the request to void a pick.
+// Request to void a pick.
 type VoidPickRequest struct {
 	// Pick ID.
 	PickID string `path:"id" validate:"required"`
 }
 
-// Voids a pick, cancelling all lines.
+// Voids a pick, undoing all picking work recorded on it.
 //
-// Resets the picked quantity on every unpacked line to zero and clears the pick's `finished_at` timestamp. Fails if a shipment has already been created for the pick's sales order.
+// Resets the picked quantity on every unpacked line to zero and clears the pick's `finished_at` timestamp, so the pick starts over as open with nothing picked. The pick itself is not deleted, and the sales order is unaffected.
+//
+// Returns a validation error if any shipment exists for the pick's sales order. Voiding those shipments is not enough — they must be deleted, since a voided shipment still exists.
 type VoidPickEndpoint struct{}
 
 func (e *VoidPickEndpoint) Materialize() *apiendpoint.APIEndpoint[*VoidPickRequest, *apiresource.Pick] {

@@ -20,8 +20,12 @@ type UpdateRateRequest struct {
 	// New decimal value for the rate, expressed as the amount of the numerator unit per one denominator unit.
 	Value field.Optional[string] `json:"value,omitzero"`
 	// ID of the new unit for the rate's numerator (e.g. the currency of a price).
+	//
+	// The stored value is kept as-is and is not converted into the new unit, so send `value` alongside this when the amount should change too.
 	NumeratorUnitID field.Optional[string] `json:"numerator_unit_id,omitzero" validate:"omitempty"`
 	// ID of the new unit for the rate's denominator (the per-unit basis).
+	//
+	// As with the numerator, the value is not re-scaled when the unit changes.
 	DenominatorUnitID field.Optional[string] `json:"denominator_unit_id,omitzero" validate:"omitempty"`
 	// ID of the resource that owns this rate.
 	//
@@ -44,7 +48,9 @@ func (*UpdateRateRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateRateRequest)
 }
 
-// Partially updates a rate.
+// Updates the value or units of a rate in place.
+//
+// A rate belongs to the resource that reports it — an item's unit price or cost, a department's labor rate, and so on — so this changes that resource's stored rate directly.
 type UpdateRateEndpoint struct{}
 
 func (e *UpdateRateEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateRateRequest, *apiresource.Rate] {

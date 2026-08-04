@@ -18,9 +18,11 @@ type DeleteOrderDiscountRequest struct {
 	OrderDiscountID string `path:"id" validate:"required"`
 }
 
-// Deletes an order discount and returns the deleted resource.
+// Deletes an order discount and returns it as it was just before deletion.
 //
 // Deletion is permanent; further requests against the deleted ID return an error.
+//
+// The code can no longer be redeemed, but sales orders that already used the discount keep the reduction that was applied to them; their totals are not recalculated.
 type DeleteOrderDiscountEndpoint struct{}
 
 func (e *DeleteOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteOrderDiscountRequest, *apiresource.OrderDiscount] {

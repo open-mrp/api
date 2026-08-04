@@ -13,6 +13,8 @@ import (
 )
 
 // Creates an address.
+//
+// The address is saved to the account you are acting in, which may be your own account or a customer or supplier account you manage, and can then be used as a billing or shipping address on sales orders, invoices, and shipments.
 type CreateAddressEndpoint struct{}
 
 func (e *CreateAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*apirequest.AddressInput, *apiresource.Address] {

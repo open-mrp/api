@@ -8,11 +8,13 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleEnterpriseInquiryID = "enir_01ec571c64ecd75aaf4662fcd4"
+const SampleEnterpriseInquiryID = "enir_w61ojhgj9sna"
 
 // A submitted request to upgrade to an enterprise plan, routed to the sales team for follow-up.
 type EnterpriseInquiry struct {
 	// Enterprise inquiry ID.
+	//
+	// Inquiries are handed off to the sales team rather than stored as a queryable resource, so this identifier is only a reference to the submission you just made.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=enterprise_inquiry"`

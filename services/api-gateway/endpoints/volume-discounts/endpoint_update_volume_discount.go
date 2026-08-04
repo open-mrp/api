@@ -14,6 +14,8 @@ import (
 )
 
 // Volume discount tier to upsert.
+//
+// Each entry is written as a whole: send every value you want the tier to keep, since values left out are not carried over from the existing tier.
 type UpdateVolumeDiscountTierInput struct {
 	// ID of an existing tier to update.
 	//
@@ -21,11 +23,17 @@ type UpdateVolumeDiscountTierInput struct {
 	ID field.Optional[string] `json:"id,omitzero" validate:"omitempty"`
 	// Display name of the tier.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
-	// Percentage taken off the price once the threshold is met, as a decimal string (e.g. `5` for 5%).
+	// Fraction of the price taken off once the threshold is met, as a decimal string.
+	//
+	// This is a multiplier, not a whole percent: `0.05` takes 5% off. When an order meets several tiers of the same discount, their reductions compound.
 	DiscountPercentage field.Optional[string] `json:"discount_percentage,omitzero" format:"decimal"`
 	// Minimum ordered quantity at which this tier's discount begins to apply, as a decimal string.
+	//
+	// The quantity compared against the threshold is the total across every line on the order that falls within the discount's scope, converted into one of the discount's units.
 	Threshold field.Optional[string] `json:"threshold,omitzero" format:"decimal"`
-	// Parent tier ID for tier chaining.
+	// ID of another tier in this discount that this tier follows.
+	//
+	// The link is stored with the tier but does not affect pricing. Omitting it when updating an existing tier clears the link.
 	ParentTierID field.Optional[string] `json:"parent_tier_id,omitzero" validate:"omitempty"`
 }
 
@@ -59,7 +67,7 @@ type UpdateVolumeDiscountRequest struct {
 	AttributeIDs []string `json:"attribute_ids,omitzero"`
 	// IDs of the units to set as acceptable units.
 	//
-	// Only applied when `has_units` is `true`, in which case they replace the existing set entirely.
+	// Only applied when `has_units` is `true`, in which case they replace the existing set entirely. Clearing every unit makes the discount inert, since ordered quantity then always evaluates to zero.
 	UnitIDs []string `json:"unit_ids,omitzero"`
 	// Whether to apply the `tiers` field.
 	//
@@ -96,6 +104,8 @@ func (*UpdateVolumeDiscountRequest) SchemaExample() any {
 // Partially updates a volume discount.
 //
 // The tier and association lists are only applied when their corresponding `has_*` flag is `true`, in which case they replace the existing set entirely. Tiers use upsert semantics: tiers with an `id` are updated, tiers without one are created, and existing tiers omitted from the list are deleted.
+//
+// The name must remain unique within the account; reusing another discount's name returns a conflict error. Order lines that have already been priced keep the unit price they were given; the revised discount applies to lines priced after the change.
 type UpdateVolumeDiscountEndpoint struct{}
 
 func (e *UpdateVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateVolumeDiscountRequest, *apiresource.VolumeDiscount] {

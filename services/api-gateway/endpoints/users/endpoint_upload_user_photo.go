@@ -14,7 +14,7 @@ import (
 type UploadUserPhotoRequest struct {
 	// User ID.
 	UserID string `path:"id" validate:"required"`
-	// Raw image bytes.
+	// The image itself, sent as the raw request body rather than as JSON or a multipart form.
 	RawBody []byte `rawbody:"true"`
 	// MIME type of the image (e.g. `image/png`).
 	ContentType string `header:"Content-Type"`
@@ -22,7 +22,7 @@ type UploadUserPhotoRequest struct {
 
 // Uploads a profile photo for a user.
 //
-// The photo replaces any existing one, and the user's `image_url` is updated to serve the new photo.
+// The photo replaces any existing one, and the user's `image_url` is repointed at an internal path rather than a fetchable image URL. Because the stored image is not publicly readable, use Get User Photo URL to obtain a temporary link for displaying it.
 type UploadUserPhotoEndpoint struct{}
 
 func (e *UploadUserPhotoEndpoint) Materialize() *apiendpoint.APIEndpoint[*UploadUserPhotoRequest, *apiresource.UserPhotoUploadResult] {

@@ -12,9 +12,9 @@ import (
 // Request to retrieve the Stripe publishable key.
 type GetStripePublishableKeyRequest struct{}
 
-// Returns the Stripe publishable key for the target account.
+// Returns the Stripe publishable key for the target account, for initializing Stripe in a client-side checkout.
 //
-// Fails if the account has no Stripe integration or the Stripe integration is inactive.
+// Only the publishable key is exposed; the account's secret key and webhook secret never leave the platform. Fails if the account has no Stripe integration or the Stripe integration is inactive.
 type GetStripePublishableKeyEndpoint struct{}
 
 func (e *GetStripePublishableKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetStripePublishableKeyRequest, *apiresource.StripePublishableKey] {

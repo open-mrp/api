@@ -24,8 +24,12 @@ type UpdateShipmentRequest struct {
 	// Carrier master tracking number covering the shipment as a whole.
 	MasterTrackingNumber field.Optional[string] `json:"master_tracking_number,omitzero" validate:"omitempty,max=255"`
 	// ID of the carrier to set on the shipment's freight.
+	//
+	// Changing the carrier records the new selection only; it does not re-rate the shipment, so the freight charges already recorded on the shipping cases are left as they are.
 	CarrierID field.Optional[string] `json:"carrier_id,omitzero" validate:"omitempty"`
 	// ID of the carrier service level to set on the shipment's freight.
+	//
+	// Sending this without `carrier_id` keeps the existing carrier, so the service level should belong to that carrier.
 	ServiceLevelID field.Optional[string] `json:"service_level_id,omitzero" validate:"omitempty"`
 }
 
@@ -37,7 +41,9 @@ func (*UpdateShipmentRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateShipmentRequest)
 }
 
-// Partially updates a shipment.
+// Updates a shipment's paperwork details and carrier selection.
+//
+// Only the fields sent are changed. A shipment's status is not editable here: use the ship and void actions to move a shipment between `packed` and `shipped`.
 type UpdateShipmentEndpoint struct{}
 
 func (e *UpdateShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateShipmentRequest, *apiresource.Shipment] {

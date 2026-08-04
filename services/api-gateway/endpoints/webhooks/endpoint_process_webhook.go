@@ -9,7 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Processes a Stripe webhook event, verifying the signature before dispatching.
+// Processes a Stripe webhook event delivered to Augno's own Stripe account.
+//
+// The payload's signature is verified, then the events Augno acts on — subscription servicing and collection changes, billing cadence outcomes, customer deletions, and completed checkouts — are queued for asynchronous handling; every other event type is acknowledged and dropped. A success response means the event was accepted, not that it has already been applied to the account.
 type ProcessWebhookEndpoint struct{}
 
 func (e *ProcessWebhookEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.StripeWebhookRequest, *apiresource.WebhookResponse] {

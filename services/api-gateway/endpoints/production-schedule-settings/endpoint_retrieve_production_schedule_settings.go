@@ -16,7 +16,9 @@ type RetrieveProductionScheduleSettingsRequest struct{}
 
 // Returns the planning assumptions production schedules are solved against.
 //
-// Always fully populated: an account that has never saved settings gets the solver's own defaults rather than nulls, so a caller never has to know which values would otherwise be assumed. `settings_status` distinguishes the two.
+// The whole set is always returned. An account that has never saved settings reads back the values the solver would apply anyway, so a caller never has to know which assumptions are in play; `settings_status` says whether the values were saved on the account or are those defaults.
+//
+// Per-machine, per-department and per-step overrides of these assumptions are read separately.
 type RetrieveProductionScheduleSettingsEndpoint struct{}
 
 func (e *RetrieveProductionScheduleSettingsEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveProductionScheduleSettingsRequest, *apiresource.ProductionScheduleSettings] {

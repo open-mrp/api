@@ -18,7 +18,7 @@ type DeleteCustomerProductLineAccessRequest struct {
 
 // Removes a customer's direct product line access record.
 //
-// Access the customer inherits through its type group or pricing groups is not affected.
+// Access the customer inherits through its type group or pricing groups is not affected. Deleting a record that was already deleted returns an already-deleted error rather than succeeding silently.
 type DeleteCustomerProductLineAccessEndpoint struct{}
 
 func (e *DeleteCustomerProductLineAccessEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteCustomerProductLineAccessRequest, *apiresource.EmptyResource] {

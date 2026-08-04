@@ -16,7 +16,7 @@ type ListPortalDomainsRequest struct{}
 
 // Lists the account's portal domains.
 //
-// Accounts currently have at most one custom portal domain.
+// An account can only hold one custom portal domain, so this returns either zero or one entry. Reading it is the usual way to discover whether a domain is connected and what state it is in.
 type ListPortalDomainsEndpoint struct{}
 
 func (e *ListPortalDomainsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPortalDomainsRequest, *apiresource.List[apiresource.PortalDomain]] {

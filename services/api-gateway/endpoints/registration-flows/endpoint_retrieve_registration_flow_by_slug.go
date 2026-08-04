@@ -17,6 +17,8 @@ type RetrieveRegistrationFlowBySlugRequest struct {
 }
 
 // Returns the registration flow of the account with the given slug.
+//
+// This is how a customer-facing registration page discovers which customer groups, payment terms, and shipping terms a seller offers, without needing the seller's registration flow ID. If the account has several flows only one of them is returned, and an account with no flow is reported as not found.
 type RetrieveRegistrationFlowBySlugEndpoint struct{}
 
 func (e *RetrieveRegistrationFlowBySlugEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveRegistrationFlowBySlugRequest, *apiresource.RegistrationFlow] {

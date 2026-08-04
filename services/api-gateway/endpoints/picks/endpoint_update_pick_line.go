@@ -13,7 +13,7 @@ import (
 	"github.com/augno/api/shared/field"
 )
 
-// UpdatePickLineRequest is the request to update a pick line's quantity.
+// Request to update a pick line's picked quantity.
 type UpdatePickLineRequest struct {
 	// Pick ID.
 	PickID string `path:"pick_id" validate:"required"`
@@ -21,7 +21,7 @@ type UpdatePickLineRequest struct {
 	PickLineID string `path:"id" validate:"required"`
 	// New picked quantity for the line, as a decimal string.
 	//
-	// Interpreted in the line's existing quantity unit.
+	// Interpreted in the line's existing quantity unit, which this endpoint cannot change. The value is stored as given and is not capped at the ordered quantity.
 	QuantityValue field.Optional[string] `json:"quantity_value,omitzero"`
 }
 
@@ -35,6 +35,8 @@ func (*UpdatePickLineRequest) SchemaExample() any {
 }
 
 // Updates a pick line's picked quantity.
+//
+// Use this to record a short or partial pick; Pick Pick Line fills in the full outstanding quantity instead.
 type UpdatePickLineEndpoint struct{}
 
 func (e *UpdatePickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePickLineRequest, *apiresource.PickLine] {

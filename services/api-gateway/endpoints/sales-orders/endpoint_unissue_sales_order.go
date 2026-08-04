@@ -26,7 +26,7 @@ func (*UnissueSalesOrderRequest) SchemaExample() any {
 
 // Unissues a sales order, transitioning it from `issued` back to `estimate`.
 //
-// Deletes the order's pick and releases any inventory reserved when the order was issued.
+// Deletes the order's pick, discarding any picking progress recorded against it, and releases the inventory reserved when the order was issued. Only an order in `issued` can be unissued.
 type UnissueSalesOrderEndpoint struct{}
 
 func (e *UnissueSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*UnissueSalesOrderRequest, *apiresource.SalesOrder] {
@@ -43,8 +43,6 @@ func (e *UnissueSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Unis
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UnissueSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError) {
 			return svc.(SalesOrderSvc).UnissueSalesOrder
 		},
-		// Status-action endpoints are commands: they return the updated sales
-		// order without `?include=` expansion. Clients that need expanded
-		// sub-resources re-fetch via GET /sales-orders/{id}?include=...
+		// Status-action endpoints are commands: they return the updated sales order without `?include=` expansion. Clients that need expanded sub-resources re-fetch via GET /sales-orders/{id}?include=...
 	})
 }

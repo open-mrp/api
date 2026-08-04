@@ -11,13 +11,15 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Request to transition a single notification owned by the caller.
+// Request to advance the state of a single notification addressed to the caller.
 type MarkNotificationRequest struct {
 	// Notification ID.
 	NotificationID string `path:"id" validate:"required"`
 }
 
-// Marks a notification as seen.
+// Marks a notification as seen, as when it is surfaced to the user without being opened.
+//
+// Seeing a notification removes it from the unread count but leaves it in the feed. Repeating the call keeps the original seen time.
 type MarkSeenEndpoint struct{}
 
 func (e *MarkSeenEndpoint) Materialize() *apiendpoint.APIEndpoint[*MarkNotificationRequest, *apiresource.Notification] {

@@ -8,12 +8,14 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleVolumeDiscountID = "quds_01b64658b647f3c5266b8f6ae1"
-const SampleVolumeDiscountTierID = "qudstr_01576d26526ad625c3dd0725a9"
+const SampleVolumeDiscountID = "quds_bn7hto9s10pp"
+const SampleVolumeDiscountTierID = "qudstr_iylnkrlr3uhm"
 
 // A quantity-based discount with tiered percentage rates.
 //
-// A volume discount reduces the price once the ordered quantity reaches a tier's threshold. The customer group, product line, category, attribute, and acceptable unit associations scope which orders qualify; an empty association list means no restriction on that dimension.
+// A volume discount reduces the price once the ordered quantity reaches a tier's threshold. The customer group associations scope which customers qualify, and the product line, category, and attribute associations scope which order lines qualify; an empty list on any of them means no restriction on that dimension. Acceptable units are not a scope: they are the units the ordered quantity is measured in, and a discount with none of them never reaches a threshold above zero.
+//
+// At most one volume discount is applied to a given order line: among the discounts whose scope the line matches and whose thresholds are met, those scoped to a customer group the buyer belongs to take precedence. An account price for the same line overrides the discounted price entirely.
 type VolumeDiscount struct {
 	// Volume discount ID.
 	ID string `json:"id" validate:"required"`
@@ -25,11 +27,11 @@ type VolumeDiscount struct {
 	Name string `json:"name" validate:"required"`
 	// Quantity tiers that define the discount.
 	//
-	// Each tier sets a discount percentage that applies once the ordered quantity reaches its threshold.
+	// Every tier whose threshold the ordered quantity reaches is applied, and their reductions compound. A discount with no tiers never changes a price.
 	Tiers *List[VolumeDiscountTier] `json:"tiers" validate:"required"`
 	// Customer groups this discount is scoped to.
 	//
-	// When set, only customers belonging to at least one of these groups qualify; when empty, all customers qualify.
+	// When set, only customers belonging to at least one of these groups qualify; when empty, all customers qualify. A customer belongs to a group either by being assigned to it directly or through the price groups on their customer relationship.
 	CustomerGroups *List[AccountGroup] `json:"customer_groups" expandable:"true"`
 	// Product lines this discount is scoped to.
 	//
@@ -45,7 +47,7 @@ type VolumeDiscount struct {
 	Attributes *List[Attribute] `json:"attributes" expandable:"true"`
 	// Units that ordered quantities are measured in when evaluating tier thresholds.
 	//
-	// Quantities ordered in other units are converted to an acceptable unit before being compared against tier thresholds.
+	// Quantities ordered in other units are converted to an acceptable unit before being compared against tier thresholds; a quantity that cannot be converted contributes nothing. A discount with no acceptable units always evaluates to a quantity of zero, so it never reaches a threshold above zero.
 	AcceptableUnits *List[Unit] `json:"acceptable_units" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -53,7 +55,7 @@ type VolumeDiscount struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-// Tier within a volume discount.
+// A quantity threshold within a volume discount, and the reduction that applies at or above it.
 type VolumeDiscountTier struct {
 	// Volume discount tier ID.
 	ID string `json:"id" validate:"required"`
@@ -61,11 +63,13 @@ type VolumeDiscountTier struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=volume_discount_tier"`
 	// Display name of the tier.
 	Name string `json:"name" validate:"required"`
-	// Percentage taken off the price once the threshold is met, as a decimal string.
+	// Fraction of the price taken off once the threshold is met, as a decimal string.
 	//
-	// For example, `5` means a 5% discount.
+	// This is a multiplier, not a whole percent: `0.05` takes 5% off. When an order meets several tiers of the same discount, their reductions compound: meeting a `0.1` tier and a `0.2` tier multiplies the price by `0.9 × 0.8`, a 28% reduction overall.
 	DiscountPercentage string `json:"discount_percentage" validate:"required" format:"decimal"`
 	// Minimum ordered quantity at which this tier's discount begins to apply, as a decimal string.
+	//
+	// The quantity compared against the threshold is the total across every line on the order that falls within the discount's scope, converted into one of the discount's acceptable units — not the quantity of a single line.
 	Threshold string `json:"threshold" validate:"required" format:"decimal"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

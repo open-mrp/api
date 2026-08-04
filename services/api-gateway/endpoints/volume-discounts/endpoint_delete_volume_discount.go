@@ -19,6 +19,8 @@ type DeleteVolumeDiscountRequest struct {
 // Deletes a volume discount along with its tiers and scoping associations.
 //
 // Deletion is permanent; further requests against the deleted ID return an error.
+//
+// Order lines that have already been priced keep the unit price they were given; only lines priced after the deletion lose the discount.
 type DeleteVolumeDiscountEndpoint struct{}
 
 func (e *DeleteVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteVolumeDiscountRequest, *apiresource.EmptyResource] {

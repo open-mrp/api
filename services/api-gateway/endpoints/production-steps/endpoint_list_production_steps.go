@@ -31,7 +31,9 @@ type ListProductionStepsRequest struct {
 	EndDate *time.Time `query:"end_date"`
 }
 
-// Returns a paginated list of production steps for the current account.
+// Returns a paginated list of production steps for the current account, newest first.
+//
+// The `q` search term matches against the step name. Filters combine with AND, while the values within a single filter combine with OR.
 type ListProductionStepsEndpoint struct{}
 
 func (e *ListProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListProductionStepsRequest, *apiresource.List[apiresource.ProductionStep]] {

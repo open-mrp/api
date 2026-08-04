@@ -15,7 +15,9 @@ import (
 
 // Request to list the account's HubSpot sync records.
 type ListHubspotSyncRecordsRequest struct {
-	// Restrict the results to records of this Augno type.
+	// The kind of mapping to list.
+	//
+	// One request returns one kind of mapping; omit this to list the customer-to-company mappings.
 	AugnoType constants.HubspotSyncRecordAugnoType `query:"augno_type" default:"customer"`
 	// Opaque cursor token identifying where the page of results starts.
 	//
@@ -36,9 +38,9 @@ func (*ListHubspotSyncRecordsRequest) SchemaExample() any {
 	}
 }
 
-// Lists what the HubSpot sync has written — each Augno record and the HubSpot object it maps to.
+// Lists the mappings the HubSpot sync has recorded for the account — each Augno record and the HubSpot object it maps to.
 //
-// Use this to see which customers reached HubSpot, when each was last pushed, and why any of them failed. Results are ordered by Augno record id.
+// A mapping is recorded as soon as the sync resolves a record's HubSpot object, which for a confidently matched customer happens during the read-only preview, before anything has been written to HubSpot. Results are ordered by Augno record id.
 type ListHubspotSyncRecordsEndpoint struct{}
 
 func (e *ListHubspotSyncRecordsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListHubspotSyncRecordsRequest, *apiresource.List[apiresource.HubspotSyncRecord]] {

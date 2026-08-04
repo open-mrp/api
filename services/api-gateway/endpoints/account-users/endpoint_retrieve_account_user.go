@@ -13,11 +13,13 @@ import (
 
 // Request to retrieve an account user.
 type RetrieveAccountUserRequest struct {
-	// Account user ID.
+	// ID of the account user to retrieve.
 	AccountUserID string `path:"id" validate:"required"`
 }
 
 // Returns an account user by ID.
+//
+// The lookup is scoped to the account you are acting in, so an ID belonging to another account is reported as not found.
 type RetrieveAccountUserEndpoint struct{}
 
 func (e *RetrieveAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAccountUserRequest, *apiresource.AccountUser] {

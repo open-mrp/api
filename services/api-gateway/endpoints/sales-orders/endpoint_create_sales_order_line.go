@@ -15,8 +15,6 @@ import (
 )
 
 // Request to create a line on a sales order.
-//
-// This mirrors the create-order line shape (not the shared purchase-order OrderLineInput): the unit price is optional and, when omitted, the line is priced server-side from the product. The unit cost is always resolved server-side from the product.
 type CreateSalesOrderLineRequest struct {
 	// Sales order ID.
 	SalesOrderID string `path:"id" validate:"required"`
@@ -27,8 +25,12 @@ type CreateSalesOrderLineRequest struct {
 	// The product description recorded on the line.
 	ProductDescription field.Optional[string] `json:"product_description,omitzero"`
 	// Quantity ordered.
+	//
+	// The unit must belong to the product's unit group.
 	Quantity apirequest.QuantityInput `json:"quantity" validate:"required"`
-	// Unit price override. When omitted, the line is priced server-side from the product's pricing rules (customer price, unit-conversion and volume discounts, account-price overrides) — the same pricing applied when the order is created. An explicit value is honored only for internal users.
+	// Unit price override.
+	//
+	// When omitted, the line is priced server-side from the product's pricing rules (customer price, unit-conversion and volume discounts, account-price overrides) — the same pricing applied when the order is created. An explicit value is honored only for internal users. The unit cost is always resolved from the product and never taken from the request.
 	UnitPrice field.Optional[apirequest.RateInput] `json:"unit_price,omitzero"`
 }
 
@@ -42,7 +44,9 @@ func (*CreateSalesOrderLineRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateSalesOrderLineRequest)
 }
 
-// Creates a line item on a sales order.
+// Adds a line item to a sales order.
+//
+// The new line is appended below the existing product lines, keeping the order's freight and discount lines at the bottom. When the order has already been issued, the line is added to its pick as outstanding work and the pick is reopened if it had been finished.
 type CreateSalesOrderLineEndpoint struct{}
 
 func (e *CreateSalesOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSalesOrderLineRequest, *apiresource.SalesOrderLine] {

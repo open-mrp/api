@@ -8,9 +8,11 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleConversationLinkID = "cvlk_01h9z8q1w2e3r4t5y6u7cvlk"
+const SampleConversationLinkID = "cvlk_cjaz69kz9dvn"
 
-// A business-record link on a conversation: the record the conversation is about (an order, invoice, shipment, customer, …), shown prominently and usable as agent context.
+// A reference from a conversation to a business record it concerns, such as an order, invoice, shipment, or customer.
+//
+// Links sit alongside the conversation's primary `topic` anchor, so one thread can reference several records. Listing conversations by business record matches the topic anchor and these links alike, which is what surfaces a conversation on the record's own page.
 type ConversationLink struct {
 	// Conversation link ID.
 	ID string `json:"id" validate:"required"`

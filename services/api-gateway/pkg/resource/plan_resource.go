@@ -5,25 +5,32 @@ import (
 	"github.com/augno/api/shared/constants"
 )
 
-const SamplePlanTypeIDFree = "pl_01a37c6fc1b84e2050c2518509"
-const SamplePlanTypeIDStarter = "pl_01870ed11cf9334f89ad9a4c15"
-const SamplePlanTypeIDPro = "pl_01963a15f27a743b231dd9479b"
+const SamplePlanTypeIDFree = "pl_1nz4huuc8n5n"
+const SamplePlanTypeIDStarter = "pl_ktxa0uvfgxe9"
+const SamplePlanTypeIDPro = "pl_ahxp2c58ykmk"
 
 // Resource limit for a pricing plan.
 type PlanLimit struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=plan_limit"`
-	// Resource key this limit applies to (e.g., `seats_maximum`, `sandboxes_maximum`, `invoices_maximum`, `batches_maximum`).
+	// Resource this limit applies to.
+	//
+	// - `seats_maximum`: users that can belong to the account.
+	// - `sandboxes_maximum`: sandbox environments the account can have.
+	// - `invoices_maximum`: invoices the account can issue per billing period.
+	// - `batches_maximum`: production batches the account can create per billing period.
 	Key string `json:"key" validate:"required"`
 	// Maximum allowed value.
 	//
-	// Null means unlimited.
+	// Null means the plan places no limit on this resource.
 	Value *int `json:"value"`
 }
 
-// Pricing plan available for purchase.
+// A subscription plan an account can be billed on.
 type PricingPlan struct {
 	// Plan ID.
+	//
+	// Pass this value when previewing or performing a plan switch.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=pricing_plan"`

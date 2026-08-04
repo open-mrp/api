@@ -14,7 +14,9 @@ import (
 // Request to list the account users the caller has blocked.
 type ListBlocksRequest struct{}
 
-// Lists the caller's messaging blocks.
+// Lists the users you have blocked, most recently blocked first.
+//
+// Only blocks you created are returned — you are never told who has blocked you.
 type ListBlocksEndpoint struct{}
 
 func (e *ListBlocksEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListBlocksRequest, *apiresource.List[apiresource.MessagingBlock]] {

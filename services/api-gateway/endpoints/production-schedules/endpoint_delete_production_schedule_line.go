@@ -17,7 +17,9 @@ type DeleteProductionScheduleLineRequest struct {
 	ProductionScheduleID string `path:"id" validate:"required"`
 	// ID of the schedule line.
 	LineID string `path:"line_id" validate:"required"`
-	// Why the campaign was removed. Required when it sits in a frozen week.
+	// Why the campaign was removed.
+	//
+	// Required when the campaign sits in a frozen week, since that is a commitment being broken.
 	Reason *constants.ScheduleChangeReason `query:"reason"`
 	// Free-form explanation of the change.
 	ReasonNote *string `query:"reason_note"`
@@ -26,6 +28,8 @@ type DeleteProductionScheduleLineRequest struct {
 // Removes a campaign from a schedule.
 //
 // The deviation log keeps a full snapshot of the removed line, so the change stays readable after the line itself is gone. Removing from a frozen week requires a `reason`.
+//
+// Only a draft or a published version can be edited; a superseded or archived version is history. Removing a campaign whose week has already been released does not remove the batches it created; those live on the production run and have to be dealt with there.
 type DeleteProductionScheduleLineEndpoint struct{}
 
 func (e *DeleteProductionScheduleLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteProductionScheduleLineRequest, *apiresource.EmptyResource] {

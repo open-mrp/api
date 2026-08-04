@@ -16,9 +16,9 @@ type DeleteAgentRequest struct {
 	AgentDefinitionID string `path:"id" validate:"required"`
 }
 
-// Deletes a custom agent definition.
+// Deletes a custom agent.
 //
-// The agent is soft-deleted and can no longer be run or modified. System agents cannot be deleted.
+// The agent is withdrawn from the API: it stops appearing in listings, no longer resolves by ID, and can no longer be run or modified. Runs it already produced are kept. Augno's `system` agents cannot be deleted — disable one for your account with the Update Agent Status endpoint instead.
 type DeleteAgentEndpoint struct{}
 
 func (e *DeleteAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAgentRequest, *apiresource.EmptyResource] {

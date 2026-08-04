@@ -32,7 +32,9 @@ func (*MergeCustomersRequest) SchemaExample() any {
 
 // Merges one or more source customers into a target customer.
 //
-// Sales orders, invoices, shipments, deliveries, and other transaction records from the source customers are reassigned to the target; price groups, product line access, addresses, and users are consolidated without duplicates; the source customers are then deleted.
+// Sales orders, invoices, shipments, deliveries, and other transaction records from the source customers are reassigned to the target; price groups, product line access, addresses, and users are consolidated without duplicates; child accounts of the sources are re-parented to the target; the source customers are then deleted.
+//
+// The target keeps its own name, number, default addresses, and default settings — none of those are copied over from the sources, and the sources' notification recipients are discarded rather than transferred.
 type MergeCustomersEndpoint struct{}
 
 func (e *MergeCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*MergeCustomersRequest, *apiresource.Customer] {

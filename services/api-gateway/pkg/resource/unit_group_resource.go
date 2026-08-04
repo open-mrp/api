@@ -8,7 +8,9 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-// Named collection of units sharing one dimension, defining which units products can be ordered in along with per-unit discounts and customer portal visibility.
+// A named collection of units that share one dimension, defining which units a product can be ordered in.
+//
+// Each associated unit carries its own discount and customer portal visibility, applied when an order line is priced in that unit. A product takes its unit group from its product line, falling back to its item category.
 type UnitGroup struct {
 	// Unit group ID.
 	ID string `json:"id" validate:"required"`
@@ -20,9 +22,9 @@ type UnitGroup struct {
 	Name string `json:"name" validate:"required"`
 	// Free-form notes about the unit group.
 	Notes *string `json:"notes"`
-	// Physical dimension shared by every unit in this group, such as mass, volume, or currency.
+	// The dimension shared by every unit in this group, such as mass, volume, or currency.
 	//
-	// Only units of this dimension can belong to the group.
+	// Only units of this dimension can belong to the group, and the dimension is fixed once the group is created.
 	Type constants.UnitType `json:"type" validate:"required"`
 	// The reference unit designated for this group.
 	BaseUnit *Unit `json:"base_unit" expandable:"true"`
@@ -44,9 +46,13 @@ type UnitGroupUnit struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=unit_group_unit"`
 	// The unit this association refers to.
 	Unit *Unit `json:"unit" expandable:"true"`
-	// Percentage discount applied to the unit's price when an order is placed in this unit (e.g. `10` is a 10% discount).
+	// Share of the unit's price removed when an order is placed in this unit.
+	//
+	// Expressed as a decimal fraction rather than a whole number, so `0.1` is a 10% discount and `0` is no discount.
 	DiscountPercentage float64 `json:"discount_percentage"`
 	// Flat amount subtracted from the unit's price when an order is placed in this unit.
+	//
+	// Subtracted before `discount_percentage` is applied.
 	DiscountFixed float64 `json:"discount_fixed"`
 	// Whether this unit is shown to customers in the customer portal.
 	CustomerPortalVisibility constants.CustomerPortalVisibility `json:"customer_portal_visibility" validate:"required"`
@@ -56,7 +62,7 @@ type UnitGroupUnit struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-const SampleUnitGroupUnitID = "ugu_01d75e0598ed09be56fd39fab5"
+const SampleUnitGroupUnitID = "ugu_sfrqqziz49dw"
 
 var SampleUnitGroupUnit = &UnitGroupUnit{
 	ID:                       SampleUnitGroupUnitID,

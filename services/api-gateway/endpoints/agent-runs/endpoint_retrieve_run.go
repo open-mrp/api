@@ -17,7 +17,9 @@ type RetrieveRunRequest struct {
 	AgentRunID string `path:"id" validate:"required"`
 }
 
-// Returns an agent run by ID.
+// Retrieves a single agent run by ID.
+//
+// A run records one execution of an agent: its current status, the input it started from, the output it produced, the tools it invoked, and the step-by-step timeline of how it got there.
 type RetrieveRunEndpoint struct{}
 
 func (e *RetrieveRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveRunRequest, *apiresource.AgentRun] {

@@ -18,30 +18,32 @@ import (
 type UpdateSalesOrderRequest struct {
 	// Sales order ID.
 	SalesOrderID string `path:"id" validate:"required"`
-	// Customer's purchase order number. Send `null` to clear.
+	// The customer's own purchase order number, for cross-referencing.
 	CustomerPurchaseOrderNumber field.Clearable[string] `json:"customer_purchase_order_number,omitzero" validate:"omitempty,max=255"`
-	// Order note. Send `null` to clear.
+	// Free-form note about the order.
 	Note field.Clearable[string] `json:"note,omitzero"`
-	// Carrier ID.
+	// ID of the carrier that will ship the order.
 	CarrierID field.Optional[string] `json:"carrier_id,omitzero" validate:"omitempty"`
-	// Service level ID. Send `null` to clear.
+	// ID of the carrier service level the order ships on.
 	ServiceLevelID field.Clearable[string] `json:"service_level_id,omitzero" validate:"omitempty"`
-	// Who is billed for freight. Send `null` to clear.
+	// Who is billed for freight.
 	//
 	// - `sender`: the sender pays for shipping.
 	// - `third_party`: a third party pays for shipping, using the carrier billing account number.
 	CarrierBillingType field.Clearable[constants.CarrierBillingType] `json:"carrier_billing_type,omitzero" validate:"omitempty"`
-	// Carrier billing account number. Send `null` to clear.
+	// Carrier billing account number charged when `carrier_billing_type` is `third_party`.
 	CarrierBillingAccountNumber field.Clearable[string] `json:"carrier_billing_account_number,omitzero" validate:"omitempty,max=255"`
 	// New fulfillment priority for the order.
 	PriorityCode field.Optional[string] `json:"priority_code,omitzero" validate:"omitempty,max=255"`
-	// Sales rep ID. Send `null` to clear.
+	// ID of the account user to credit as the order's sales rep.
 	SalesRepID field.Clearable[string] `json:"sales_rep_id,omitzero" validate:"omitempty"`
-	// Shipping term ID.
+	// ID of the shipping terms for the order.
 	ShippingTermID field.Optional[string] `json:"shipping_term_id,omitzero" validate:"omitempty"`
-	// Payment term ID.
+	// ID of the payment terms for the order.
 	PaymentTermID field.Optional[string] `json:"payment_term_id,omitzero" validate:"omitempty"`
-	// Order discount ID. Send `null` to clear.
+	// ID of the order-level discount recorded on the order.
+	//
+	// Changing this does not add, reprice, or remove the order's discount line; adjust that line directly.
 	OrderDiscountID field.Clearable[string] `json:"order_discount_id,omitzero" validate:"omitempty"`
 	// Billing address ID.
 	//
@@ -55,9 +57,11 @@ type UpdateSalesOrderRequest struct {
 	//
 	// Set to `sent` to mark the acknowledgement as sent without emailing the customer, or `not_sent` to reset it.
 	AcknowledgmentStatus field.Optional[constants.AcknowledgmentStatus] `json:"acknowledgment_status,omitzero" validate:"omitempty"`
-	// Promised delivery date. Send `null` to clear.
+	// Date delivery is promised to the customer.
 	PromisedAt field.Clearable[time.Time] `json:"promised_at,omitzero"`
-	// Customer ID.
+	// Moves the order to a different customer account.
+	//
+	// Existing lines keep the prices they were created with; they are not re-priced against the new customer.
 	CustomerID field.Optional[string] `json:"customer_id,omitzero" validate:"omitempty"`
 	// Replaces the acknowledgement email contacts on the order.
 	//
@@ -85,6 +89,8 @@ func (*UpdateSalesOrderRequest) SchemaExample() any {
 }
 
 // Partially updates a sales order.
+//
+// Changing the carrier, service level, or ship-to address propagates to the order's existing shipments, but never re-prices the freight line: request a fresh estimate from the quote-freight endpoint and apply it to the shipping line yourself. Order status is changed through the issue, unissue, close, and reopen actions instead of this endpoint.
 type UpdateSalesOrderEndpoint struct{}
 
 func (e *UpdateSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateSalesOrderRequest, *apiresource.SalesOrder] {

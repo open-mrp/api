@@ -17,6 +17,13 @@ type SetWorkflowStatusRequest struct {
 	// Conversation ID.
 	ConversationID string `path:"id" validate:"required"`
 	// The triage lane to move the case to.
+	//
+	// - `new`: opened but nobody has triaged it yet.
+	// - `open`: actively being worked.
+	// - `waiting_internal`: blocked on the internal team.
+	// - `waiting_external`: blocked on a reply from the customer.
+	// - `needs_approval`: a drafted reply is waiting for a human to approve it.
+	// - `resolved`: closed out.
 	WorkflowStatus constants.ConversationWorkflowStatus `json:"workflow_status" validate:"required"`
 }
 
@@ -29,7 +36,9 @@ func (*SetWorkflowStatusRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleSetWorkflowStatusRequest)
 }
 
-// Sets the triage lane of an external customer-service case.
+// Moves a customer-service case to a triage lane in the support inbox.
+//
+// Only customer-facing cases have a triage lane; an internal conversation is rejected. The lane also advances on its own as the case progresses — an inbound customer message moves it to `waiting_internal`, a drafted reply to `needs_approval`, and an approved reply to `waiting_external` — so a lane set by hand can be overtaken by later activity.
 type SetWorkflowStatusEndpoint struct{}
 
 func (e *SetWorkflowStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*SetWorkflowStatusRequest, *apiresource.Conversation] {

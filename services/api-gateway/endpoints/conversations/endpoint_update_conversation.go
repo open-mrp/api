@@ -13,13 +13,13 @@ import (
 	"github.com/augno/api/shared/field"
 )
 
-// Request to rename a conversation (owner/admin; groups only).
+// Request to rename a conversation.
 type UpdateConversationRequest struct {
 	// Conversation ID.
 	ConversationID string `path:"id" validate:"required"`
-	// New group title.
+	// The group conversation's new display title.
 	//
-	// Send `null` to clear the title; omit to leave it unchanged.
+	// Send `null` to clear the title and leave the conversation unnamed.
 	Title field.Clearable[string] `json:"title,omitzero"`
 }
 
@@ -32,7 +32,9 @@ func (*UpdateConversationRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateConversationRequest)
 }
 
-// Renames a conversation.
+// Renames a group conversation.
+//
+// Only an owner or admin of the conversation can rename it, and direct messages cannot be renamed.
 type UpdateConversationEndpoint struct{}
 
 func (e *UpdateConversationEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateConversationRequest, *apiresource.Conversation] {

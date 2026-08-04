@@ -11,6 +11,8 @@ import (
 )
 
 // Ensures a Stripe billing customer exists for the account, creating one if necessary.
+//
+// A new customer is created from the account's name and the email address of one of its admin users. Calling this repeatedly is safe: an account that already has a Stripe customer gets that customer back untouched.
 type EnsureBillingCustomerEndpoint struct{}
 
 func (e *EnsureBillingCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.EnsureBillingCustomerResponse] {

@@ -32,7 +32,9 @@ func (*AddConversationLinkRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleAddConversationLinkRequest)
 }
 
-// Links a business record to a conversation.
+// Links a business record to a conversation, in addition to whatever topic the conversation is anchored to.
+//
+// A conversation can link any number of records, and each linked record surfaces the conversation when conversations are listed for that record.
 type AddConversationLinkEndpoint struct{}
 
 func (e *AddConversationLinkEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddConversationLinkRequest, *apiresource.ConversationLink] {

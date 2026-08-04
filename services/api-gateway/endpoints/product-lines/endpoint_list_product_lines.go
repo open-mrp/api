@@ -16,7 +16,9 @@ type ListProductLinesRequest struct {
 	apiresource.PaginationRequest
 }
 
-// Returns a paginated list of product lines, including account-owned and system product lines.
+// Returns a paginated list of product lines, newest first.
+//
+// Covers both the product lines your account owns and the shared system lines. The `q` search term is matched against the product line name.
 type ListProductLinesEndpoint struct{}
 
 func (e *ListProductLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListProductLinesRequest, *apiresource.List[apiresource.ProductLine]] {

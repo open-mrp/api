@@ -14,11 +14,13 @@ import (
 type DeleteUnitGroupUnitRequest struct {
 	// Unit group ID.
 	UnitGroupID string `path:"unit_group_id" validate:"required"`
-	// Unit group unit ID.
+	// ID of the unit's association with the group, not the ID of the unit itself.
 	AssociatedUnitID string `path:"id" validate:"required"`
 }
 
-// Removes a unit from a unit group. The unit itself is not deleted.
+// Removes a unit from a unit group so that products using the group can no longer be ordered in it.
+//
+// Only the association is deleted; the unit itself remains available. Associations cannot be removed from system unit groups.
 type DeleteUnitGroupUnitEndpoint struct{}
 
 func (e *DeleteUnitGroupUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteUnitGroupUnitRequest, *apiresource.EmptyResource] {

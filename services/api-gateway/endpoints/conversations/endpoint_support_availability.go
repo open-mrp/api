@@ -32,8 +32,7 @@ func (e *SupportAvailabilityEndpoint) Materialize() *apiendpoint.APIEndpoint[*Su
 		Preview:           true,
 		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		ObjectType:        constants.ObjectTypeSupportAvailability,
-		// Parity with Contact Support: this probes the same create-a-support-thread capability, so the
-		// same relation actors who can open support can check availability first.
+		// Parity with Contact Support: this probes the same create-a-support-thread capability, so the same relation actors who can open support can check availability first.
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionCreate}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *SupportAvailabilityRequest) (*apiresource.SupportAvailability, *apierror.APIError) {
 			return svc.(ConversationSvc).SupportAvailability

@@ -16,7 +16,9 @@ type DeleteAccountIntegrationRequest struct {
 	AccountIntegrationID string `path:"id" validate:"required"`
 }
 
-// Deletes an account integration and returns the deleted resource.
+// Disconnects a third-party provider from the account and returns the deleted integration.
+//
+// The stored credentials go with it, so any feature that relies on the provider stops working until the integration is created again. Deleting an integration that is already deleted returns an error rather than succeeding silently. To pause a provider without discarding its credentials, set the integration's status to `inactive` instead.
 type DeleteAccountIntegrationEndpoint struct{}
 
 func (e *DeleteAccountIntegrationEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAccountIntegrationRequest, *apiresource.AccountIntegration] {

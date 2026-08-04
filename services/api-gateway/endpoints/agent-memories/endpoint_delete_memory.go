@@ -16,7 +16,9 @@ type DeleteMemoryRequest struct {
 	ID string `path:"id" validate:"required"`
 }
 
-// Deletes an agent memory.
+// Permanently deletes an agent memory so it is no longer recalled.
+//
+// Deleting a memory that has already been deleted succeeds rather than returning an error.
 type DeleteMemoryEndpoint struct{}
 
 func (e *DeleteMemoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteMemoryRequest, *apiresource.EmptyResource] {

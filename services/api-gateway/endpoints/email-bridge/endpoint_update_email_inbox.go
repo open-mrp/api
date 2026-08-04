@@ -13,14 +13,14 @@ import (
 	"github.com/augno/api/shared/field"
 )
 
-// Request to edit an email inbox's from-name, status, and default agent trigger config.
+// Request to edit an email inbox's from-name, status, agent configuration, and roster.
 type UpdateEmailInboxRequest struct {
 	// Email inbox ID.
 	ID string `path:"id" validate:"required"`
-	// Whether the inbox routes mail.
+	// Whether the inbox accepts mail.
 	//
-	// - `active`: inbound mail is threaded and outbound replies are allowed.
-	// - `disabled`: the inbox stays provisioned but does not route mail.
+	// - `active`: inbound mail is threaded into a conversation.
+	// - `disabled`: the inbox stays provisioned and keeps its history, but inbound mail is dropped without being threaded.
 	Status string `json:"status" validate:"required"`
 	// Display name for the `From` header of outbound mail.
 	FromName field.Optional[string] `json:"from_name,omitzero"`
@@ -28,13 +28,19 @@ type UpdateEmailInboxRequest struct {
 	AgentConfigID field.Optional[string] `json:"agent_config_id,omitzero"`
 	// How the bound agent decides whether to run on incoming mail.
 	//
-	// - `mention`: runs only when the agent is @mentioned in the message.
+	// - `mention`: runs only when the agent is @mentioned, matched against the trigger keywords below.
 	// - `keyword`: runs when the message contains any of the trigger keywords.
 	// - `always`: runs on every incoming message.
+	//
+	// While no policy has been set, the agent runs on every incoming message, since email has no reliable @mention convention.
 	AgentTriggerPolicy field.Optional[string] `json:"agent_trigger_policy,omitzero"`
-	// Keywords that fire the agent when the trigger policy is `keyword`.
+	// The keywords that decide whether the agent runs on an incoming message.
+	//
+	// Under the `keyword` policy a keyword matches anywhere in the message; under `mention` it only counts where it is prefixed with `@`.
 	AgentTriggerKeywords []string `json:"agent_trigger_keywords,omitzero"`
 	// The messaging group (roster) whose members are seated on every conversation this inbox opens.
+	//
+	// Must name a group in your own account. Changing it only affects conversations opened afterwards.
 	GroupID field.Optional[string] `json:"group_id,omitzero"`
 }
 
@@ -52,7 +58,9 @@ func (*UpdateEmailInboxRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateEmailInboxRequest)
 }
 
-// Edits an email inbox's from-name, status, and default agent trigger config.
+// Edits an email inbox's from-name, status, agent configuration, and roster.
+//
+// Every field except `status` is merged into the inbox's current settings: a field you omit — and an empty array you send — keeps the value it already has, so this endpoint can change a setting but cannot clear one back to unset. The inbox's address and domain are fixed at creation and cannot be changed here.
 type UpdateEmailInboxEndpoint struct{}
 
 func (e *UpdateEmailInboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateEmailInboxRequest, *apiresource.EmailInbox] {

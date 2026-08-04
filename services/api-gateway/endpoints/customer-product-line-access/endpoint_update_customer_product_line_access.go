@@ -17,9 +17,11 @@ import (
 type UpdateCustomerProductLineAccessRequest struct {
 	// Customer ID.
 	CustomerID string `path:"customer_id" validate:"required"`
-	// The full set of product line IDs the customer can access.
+	// The full set of product line IDs the customer has direct access to.
 	//
-	// Replaces all existing direct product line access. Omitting this field or sending an empty list removes all direct access.
+	// Replaces the customer's existing direct grants, and each ID must be a product line your account owns.
+	//
+	// The list has to name at least one product line: omitting the field or sending an empty list leaves the customer with no record at all, which the request rejects as not found without changing anything. Use Delete Customer Product Line Access to revoke direct access entirely.
 	ProductLineIDs field.Optional[[]string] `json:"product_line_ids,omitzero"`
 }
 
@@ -32,6 +34,8 @@ func (*UpdateCustomerProductLineAccessRequest) SchemaExample() any {
 }
 
 // Replaces a customer's direct product line access with the provided set.
+//
+// This is a full replacement, not a merge: product lines omitted from the request lose access. The customer must already have a direct access record; create one with Create Customer Product Line Access first.
 type UpdateCustomerProductLineAccessEndpoint struct{}
 
 func (e *UpdateCustomerProductLineAccessEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateCustomerProductLineAccessRequest, *apiresource.CustomerProductLineAccess] {

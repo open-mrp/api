@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.42.6](https://github.com/Augno/api/compare/v0.42.5...v0.42.6) (2026-08-04)
+
+
+### Bug Fixes
+
+* update API endpoints to make them public ([#451](https://github.com/Augno/api/issues/451)) ([0996bea](https://github.com/Augno/api/commit/0996beafb08d877459a0ffd4ce3e76c3c79fc785))
+
+
+### Documentation
+
+* improve public API doc comments across resources, requests, and endpoints ([#449](https://github.com/Augno/api/issues/449)) ([75296e0](https://github.com/Augno/api/commit/75296e00c6570712c964b9b9604382731f20f869))
+
 ## [0.42.5](https://github.com/Augno/api/compare/v0.42.4...v0.42.5) (2026-08-01)
 
 

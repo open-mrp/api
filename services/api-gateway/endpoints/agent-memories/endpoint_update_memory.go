@@ -69,7 +69,7 @@ func (e *UpdateMemoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateMem
 		Route:               "/v1/ai/memories/{id}",
 		ContentType:         "application/json",
 		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
+		Public:              true,
 		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeAgentMemory,

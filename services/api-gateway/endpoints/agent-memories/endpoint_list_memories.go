@@ -50,7 +50,7 @@ func (e *ListMemoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMemor
 		ContentType:         "application/json",
 		Route:               "/v1/ai/memories",
 		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
+		Public:              true,
 		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeAgentMemory,

@@ -28,7 +28,7 @@ func (e *ListToolGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListToo
 		ContentType:       "application/json",
 		Route:             "/v1/ai/tool-groups",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeToolGroup,

@@ -46,7 +46,7 @@ func (e *TriggerRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*TriggerRunR
 		Route:               "/v1/ai/runs",
 		ContentType:         "application/json",
 		SuccessStatusCode:   http.StatusCreated,
-		Public:              false,
+		Public:              true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeAgentRun,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAgentRuns, Action: types.ActionCreate}},

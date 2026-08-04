@@ -36,7 +36,7 @@ func (e *ListAgentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAgentsR
 		ContentType:         "application/json",
 		Route:               "/v1/ai/agents",
 		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
+		Public:              true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeAgentDefinition,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAgents, Action: types.ActionRead}},

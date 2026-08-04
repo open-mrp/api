@@ -29,7 +29,7 @@ func (e *RetrieveAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrieve
 		ContentType:         "application/json",
 		Route:               "/v1/ai/agents/{id}",
 		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
+		Public:              true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeAgentDefinition,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAgents, Action: types.ActionRead}},

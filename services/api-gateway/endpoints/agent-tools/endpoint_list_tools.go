@@ -28,7 +28,7 @@ func (e *ListToolsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListToolsReq
 		ContentType:       "application/json",
 		Route:             "/v1/ai/tools",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeAvailableTool,

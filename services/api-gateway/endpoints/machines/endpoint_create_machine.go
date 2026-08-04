@@ -53,7 +53,7 @@ func (e *CreateMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateMa
 		ContentType:       "application/json",
 		Route:             "/v1/operations/machines",
 		SuccessStatusCode: http.StatusCreated,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeMachine,
 		RequiredPermissions: []types.Permission{

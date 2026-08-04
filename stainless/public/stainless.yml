@@ -379,6 +379,70 @@ resources:
           list_product: '#/components/schemas/List_Product'
           product: '#/components/schemas/Product'
           update_product_request: '#/components/schemas/UpdateProductRequest'
+  ai:
+    methods:
+      retrieve_tools: get /v1/ai/tools
+      retrieve_tool_groups: get /v1/ai/tool-groups
+    subresources:
+      agents:
+        methods:
+          create: post /v1/ai/agents
+          list: get /v1/ai/agents
+          retrieve: get /v1/ai/agents/{id}
+          update: patch /v1/ai/agents/{id}
+          delete: delete /v1/ai/agents/{id}
+          update_status: put /v1/ai/agents/{id}/status
+        models:
+          agent_definition: '#/components/schemas/AgentDefinition'
+          agent_definition_config: '#/components/schemas/AgentDefinitionConfig'
+          agent_definition_tool: '#/components/schemas/AgentDefinitionTool'
+          config_input: '#/components/schemas/ConfigInput'
+          create_agent_request: '#/components/schemas/CreateAgentRequest'
+          list_agent_definition: '#/components/schemas/List_AgentDefinition'
+          list_agent_definition_tool: '#/components/schemas/List_AgentDefinitionTool'
+          tool_input: '#/components/schemas/ToolInput'
+          trigger_config: '#/components/schemas/TriggerConfig'
+          trigger_config_input: '#/components/schemas/TriggerConfigInput'
+          update_agent_request: '#/components/schemas/UpdateAgentRequest'
+          update_agent_status_request: '#/components/schemas/UpdateAgentStatusRequest'
+      runs:
+        methods:
+          list: get /v1/ai/runs
+          retrieve: get /v1/ai/runs/{id}
+          create: post /v1/ai/runs
+        subresources:
+          actions:
+            methods:
+              cancel: post /v1/ai/runs/{id}/actions/cancel
+              continue: post /v1/ai/runs/{id}/actions/continue
+              retry: post /v1/ai/runs/{id}/actions/retry
+            models:
+              continue_run_request: '#/components/schemas/ContinueRunRequest'
+        models:
+          agent_action: '#/components/schemas/AgentAction'
+          agent_run: '#/components/schemas/AgentRun'
+          agent_run_step: '#/components/schemas/AgentRunStep'
+          list_agent_action: '#/components/schemas/List_AgentAction'
+          list_agent_run: '#/components/schemas/List_AgentRun'
+          list_agent_run_step: '#/components/schemas/List_AgentRunStep'
+          trigger_run_request: '#/components/schemas/TriggerRunRequest'
+      memories:
+        methods:
+          list: get /v1/ai/memories
+          retrieve: get /v1/ai/memories/{id}
+          create: post /v1/ai/memories
+          update: patch /v1/ai/memories/{id}
+          delete: delete /v1/ai/memories/{id}
+        models:
+          agent_memory: '#/components/schemas/AgentMemory'
+          create_memory_request: '#/components/schemas/CreateMemoryRequest'
+          list_agent_memory: '#/components/schemas/List_AgentMemory'
+          update_memory_request: '#/components/schemas/UpdateMemoryRequest'
+    models:
+      available_tool: '#/components/schemas/AvailableTool'
+      list_available_tool: '#/components/schemas/List_AvailableTool'
+      list_tool_group: '#/components/schemas/List_ToolGroup'
+      tool_group: '#/components/schemas/ToolGroup'
   messaging:
     methods:
       retrieve_contacts: get /v1/messaging/contacts
@@ -487,19 +551,9 @@ resources:
                   attachment_upload_target: '#/components/schemas/AttachmentUploadTarget'
                   create_attachment_upload_url_request: '#/components/schemas/CreateAttachmentUploadURLRequest'
         models:
-          agent_action: '#/components/schemas/AgentAction'
-          agent_definition: '#/components/schemas/AgentDefinition'
-          agent_definition_config: '#/components/schemas/AgentDefinitionConfig'
-          agent_definition_tool: '#/components/schemas/AgentDefinitionTool'
-          agent_run: '#/components/schemas/AgentRun'
-          agent_run_step: '#/components/schemas/AgentRunStep'
-          available_tool: '#/components/schemas/AvailableTool'
           conversation: '#/components/schemas/Conversation'
           conversation_participant: '#/components/schemas/ConversationParticipant'
           create_conversation_request: '#/components/schemas/CreateConversationRequest'
-          list_agent_action: '#/components/schemas/List_AgentAction'
-          list_agent_definition_tool: '#/components/schemas/List_AgentDefinitionTool'
-          list_agent_run_step: '#/components/schemas/List_AgentRunStep'
           list_conversation: '#/components/schemas/List_Conversation'
           list_conversation_participant: '#/components/schemas/List_ConversationParticipant'
           list_message_attachment: '#/components/schemas/List_MessageAttachment'
@@ -509,7 +563,6 @@ resources:
           messaging_group: '#/components/schemas/MessagingGroup'
           messaging_group_member: '#/components/schemas/MessagingGroupMember'
           read_cursor: '#/components/schemas/ReadCursor'
-          trigger_config: '#/components/schemas/TriggerConfig'
           update_conversation_request: '#/components/schemas/UpdateConversationRequest'
       messages:
         methods:
@@ -634,6 +687,18 @@ resources:
         models:
           account_status: '#/components/schemas/AccountStatus'
           list_account_status: '#/components/schemas/List_AccountStatus'
+      account_users:
+        subresources:
+          sales_targets:
+            methods:
+              list: get /v1/sales/account-users/{id}/sales-targets
+              create: post /v1/sales/account-users/{id}/sales-targets
+              update: put /v1/sales/account-users/{id}/sales-targets/{target_id}
+            models:
+              create_sales_target_request: '#/components/schemas/CreateSalesTargetRequest'
+              list_sales_target: '#/components/schemas/List_SalesTarget'
+              sales_target: '#/components/schemas/SalesTarget'
+              upsert_sales_target_request: '#/components/schemas/UpsertSalesTargetRequest'
       priorities:
         methods:
           list: get /v1/sales/priorities
@@ -808,6 +873,28 @@ resources:
           create_carrier_request: '#/components/schemas/CreateCarrierRequest'
           list_carrier: '#/components/schemas/List_Carrier'
           update_carrier_request: '#/components/schemas/UpdateCarrierRequest'
+      departments:
+        methods:
+          list: get /v1/operations/departments
+          retrieve: get /v1/operations/departments/{id}
+          create: post /v1/operations/departments
+          update: patch /v1/operations/departments/{id}
+          delete: delete /v1/operations/departments/{id}
+        models:
+          create_department_request: '#/components/schemas/CreateDepartmentRequest'
+          department_rate_input: '#/components/schemas/DepartmentRateInput'
+          list_department: '#/components/schemas/List_Department'
+          update_department_request: '#/components/schemas/UpdateDepartmentRequest'
+      machines:
+        methods:
+          list: get /v1/operations/machines
+          retrieve: get /v1/operations/machines/{id}
+          create: post /v1/operations/machines
+          update: patch /v1/operations/machines/{id}
+          delete: delete /v1/operations/machines/{id}
+        models:
+          create_machine_request: '#/components/schemas/CreateMachineRequest'
+          update_machine_request: '#/components/schemas/UpdateMachineRequest'
       machine_downtime_events:
         methods:
           list: get /v1/operations/machine-downtime-events
@@ -934,6 +1021,17 @@ resources:
         models:
           list_location_type: '#/components/schemas/List_LocationType'
           location_type: '#/components/schemas/LocationType'
+      shipments:
+        subresources:
+          actions:
+            methods:
+              rate_shop: post /v1/operations/shipments/actions/rate-shop
+            models:
+              list_rate_shop_option: '#/components/schemas/List_RateShopOption'
+              parcel_input: '#/components/schemas/ParcelInput'
+              rate_shop_option: '#/components/schemas/RateShopOption'
+              rate_shop_request: '#/components/schemas/RateShopRequest'
+              rate_shop_result: '#/components/schemas/RateShopResult'
       scanning_stations:
         methods:
           list: get /v1/operations/scanning-stations
@@ -957,6 +1055,8 @@ resources:
       machine_status: '#/components/schemas/MachineStatus'
       schedule_deviation_type: '#/components/schemas/ScheduleDeviationType'
   identity:
+    methods:
+      retrieve_permission_groups: get /v1/identity/permission-groups
     subresources:
       account_users:
         methods:
@@ -989,6 +1089,11 @@ resources:
           create_role_request: '#/components/schemas/CreateRoleRequest'
           list_role: '#/components/schemas/List_Role'
           update_role_request: '#/components/schemas/UpdateRoleRequest'
+    models:
+      list_permission: '#/components/schemas/List_Permission'
+      list_permission_group: '#/components/schemas/List_PermissionGroup'
+      permission: '#/components/schemas/Permission'
+      permission_group: '#/components/schemas/PermissionGroup'
   settings:
     subresources:
       portal_domains:

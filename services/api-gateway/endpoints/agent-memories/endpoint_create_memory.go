@@ -65,7 +65,7 @@ func (e *CreateMemoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateMem
 		Route:               "/v1/ai/memories",
 		ContentType:         "application/json",
 		SuccessStatusCode:   http.StatusCreated,
-		Public:              false,
+		Public:              true,
 		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeAgentMemory,

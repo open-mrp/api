@@ -42,7 +42,7 @@ func (e *UpdateAgentStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		Route:               "/v1/ai/agents/{id}/status",
 		ContentType:         "application/json",
 		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
+		Public:              true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeAgentDefinition,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAgents, Action: types.ActionUpdate}},

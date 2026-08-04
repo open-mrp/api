@@ -29,7 +29,7 @@ func (e *RetrieveMemoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retriev
 		ContentType:         "application/json",
 		Route:               "/v1/ai/memories/{id}",
 		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
+		Public:              true,
 		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeAgentMemory,

@@ -60,7 +60,7 @@ func (e *UpdateDepartmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Updat
 		ContentType:       "application/json",
 		Route:             "/v1/operations/departments/{id}",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateDepartmentRequest) (*apiresource.Department, *apierror.APIError) {
 			return svc.(DepartmentSvc).UpdateDepartment

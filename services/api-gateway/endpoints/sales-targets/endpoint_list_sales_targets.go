@@ -34,7 +34,7 @@ func (e *ListSalesTargetsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListS
 		ContentType:       "application/json",
 		Route:             "/v1/sales/account-users/{id}/sales-targets",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeSalesTarget,
 		RequiredPermissions: []types.Permission{

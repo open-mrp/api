@@ -93,7 +93,7 @@ func (e *RateShopEndpoint) Materialize() *apiendpoint.APIEndpoint[*RateShopReque
 		Route:               "/v1/operations/shipments/actions/rate-shop",
 		ContentType:         "application/json",
 		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
+		Public:              true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainShipments, Action: types.ActionRead}, {Domain: types.PermissionDomainCustomers, Action: types.ActionRead}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionRead}},
 		Extras:              apiendpoint.APIEndpointExtras{HideFromRequestLog: true},

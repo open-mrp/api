@@ -29,7 +29,7 @@ func (e *ListPermissionGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*L
 		ContentType:       "application/json",
 		Route:             "/v1/identity/permission-groups",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainPermissions, Action: types.ActionRead},

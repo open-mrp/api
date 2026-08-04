@@ -64,7 +64,7 @@ func (e *UpsertSalesTargetEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upse
 		ContentType:       "application/json",
 		Route:             "/v1/sales/account-users/{id}/sales-targets/{target_id}",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeSalesTarget,
 		RequiredPermissions: []types.Permission{

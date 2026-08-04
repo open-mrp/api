@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.42.7](https://github.com/Augno/api/compare/v0.42.6...v0.42.7) (2026-08-04)
+
+
+### Bug Fixes
+
+* remove measured performance fields and update related comments ([2d7a377](https://github.com/Augno/api/commit/2d7a3773a2497bf756ef59b7a9b57f93d851d966))
+
 ## [0.42.6](https://github.com/Augno/api/compare/v0.42.5...v0.42.6) (2026-08-04)
 
 

@@ -5,13 +5,8 @@ import (
 	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/constants"
 	"github.com/stretchr/testify/assert"
 )
-
-func oeeTimePtr(t time.Time) *time.Time {
-	return &t
-}
 
 func TestAggregateOeeDowntime_SplitsByBucket(t *testing.T) {
 	t.Parallel()
@@ -256,184 +251,74 @@ func TestDerivePlannedHours_DepartmentWithNoMachines(t *testing.T) {
 	assert.Empty(t, got, "a department with no machines has no scheduled time")
 }
 
-func scanRow(machineID, departmentID string, scannedAt time.Time, idealSeconds float64) domain.OeeScanIntervalRow {
-	return domain.OeeScanIntervalRow{
-		MachineID:    machineID,
-		DepartmentID: departmentID,
-		ScannedAt:    oeeTimePtr(scannedAt),
-		IdealSeconds: idealSeconds,
-	}
-}
-
-// The canonical example: one ticket comes off machine 1 at 6:00, the next at 7:10. The second ticket's 60 units should have taken 60 minutes, so it ran at 60/70.
-func TestComputeMeasuredPerformance_DiffsConsecutiveScansPerMachine(t *testing.T) {
+// The canonical OEE example: an ideal cycle time of one minute a unit, 320 units produced, 400 minutes of run time. The department ran at 80% of its designed speed.
+func TestComputeOeeRatios_PerformanceIsIdealTimeOverRunTime(t *testing.T) {
 	t.Parallel()
 
-	base := time.Date(2026, 7, 27, 6, 0, 0, 0, time.UTC)
-	rows := []domain.OeeScanIntervalRow{
-		scanRow("mc_1", "dp_knit", base, 3000),
-		scanRow("mc_1", "dp_knit", base.Add(70*time.Minute), 3600),
+	dept := &domain.OeeDepartment{
+		GoodUnits:               320,
+		StandardSecondsEarned:   320 * 60,
+		AvailabilityLossSeconds: 200 * 60,
 	}
+	// 10 planned hours less 200 minutes of availability loss leaves 400 minutes running.
+	computeOeeRatios(dept, 10)
 
-	got := computeMeasuredPerformance(rows, nil)
-	sample := got["dp_knit"]
-	if sample == nil {
-		t.Fatal("expected a sample for dp_knit")
-	}
-	assert.InDelta(t, 3600, sample.idealSeconds, 0.001)
-	assert.InDelta(t, 4200, sample.actualSeconds, 0.001)
-	assert.Equal(t, int64(1), sample.tickets, "the first scan has no predecessor, so only one ticket samples")
-
-	dept := &domain.OeeDepartment{}
-	applyMeasuredPerformance(dept, sample)
-	computeOeeRatios(dept, 0)
+	assert.InDelta(t, 400*60.0, dept.RunTimeSeconds, 0.001)
 	if dept.PerformancePct == nil {
-		t.Fatal("performance = nil, want 3600/4200; measured P needs no planned time")
+		t.Fatal("performance = nil, want 0.8")
 	}
-	assert.InDelta(t, 0.857, *dept.PerformancePct, 0.001)
-	assert.Equal(t, string(constants.OeePerformanceBasisScanIntervals), dept.PerformanceBasis)
+	assert.InDelta(t, 0.8, *dept.PerformancePct, 0.0001)
+	assert.False(t, dept.HasPerformanceAnomaly)
 }
 
-// A gap between machines is meaningless: the last scan on machine A must not become the predecessor of the first scan on machine B.
-func TestComputeMeasuredPerformance_ResetsAtMachineBoundary(t *testing.T) {
+// Minor stops and reduced speed are speed losses, not downtime. They stay inside run time so they show up in Performance, which is the only OEE term they belong to; subtracting them the way availability losses are subtracted would make them invisible.
+func TestComputeOeeRatios_PerformanceLossStaysInRunTime(t *testing.T) {
 	t.Parallel()
 
-	base := time.Date(2026, 7, 27, 6, 0, 0, 0, time.UTC)
-	rows := []domain.OeeScanIntervalRow{
-		scanRow("mc_1", "dp_knit", base, 600),
-		scanRow("mc_2", "dp_knit", base.Add(10*time.Minute), 600),
+	dept := &domain.OeeDepartment{
+		GoodUnits:              100,
+		StandardSecondsEarned:  1800,
+		PerformanceLossSeconds: 1800,
 	}
+	computeOeeRatios(dept, 1)
 
-	got := computeMeasuredPerformance(rows, nil)
-	assert.Empty(t, got, "each machine's first scan has no predecessor")
+	assert.InDelta(t, 3600, dept.RunTimeSeconds, 0.001, "performance-bucket downtime must not leave run time")
+	if dept.PerformancePct == nil {
+		t.Fatal("performance = nil, want 0.5")
+	}
+	assert.InDelta(t, 0.5, *dept.PerformancePct, 0.0001, "the half hour of minor stops has to land somewhere, and Performance is where")
+	if dept.AvailabilityPct == nil || *dept.AvailabilityPct != 1 {
+		t.Errorf("availability = %v, want 1; minor stops are not an availability loss", dept.AvailabilityPct)
+	}
 }
 
-// Downtime already charged to Availability must come out of the gap, or the same stoppage would drag both A and P down. Performance-bucket downtime stays in: minor stops are exactly the loss measured P exists to capture.
-func TestComputeMeasuredPerformance_SubtractsNonPerformanceDowntime(t *testing.T) {
+// Performance divides by run time, so a department with no scheduled time has no Performance for the same reason it has no Availability. Reporting one anyway would mean two departments in the same table answering different questions.
+func TestComputeOeeRatios_PerformanceNilWithoutRunTime(t *testing.T) {
 	t.Parallel()
 
-	base := time.Date(2026, 7, 27, 6, 0, 0, 0, time.UTC)
-	rows := []domain.OeeScanIntervalRow{
-		scanRow("mc_1", "dp_knit", base, 600),
-		scanRow("mc_1", "dp_knit", base.Add(70*time.Minute), 3600),
-	}
-	downtime := buildMachineDowntime([]domain.OeeMachineDowntimeIntervalRow{
-		{
-			MachineID: "mc_1",
-			OeeBucket: domain.OeeBucketAvailability,
-			StartedAt: base.Add(10 * time.Minute),
-			EndedAt:   oeeTimePtr(base.Add(20 * time.Minute)),
-		},
-		{
-			MachineID: "mc_1",
-			OeeBucket: domain.OeeBucketPerformance,
-			StartedAt: base.Add(30 * time.Minute),
-			EndedAt:   oeeTimePtr(base.Add(40 * time.Minute)),
-		},
-	})
-
-	sample := computeMeasuredPerformance(rows, downtime)["dp_knit"]
-	if sample == nil {
-		t.Fatal("expected a sample for dp_knit")
-	}
-	// 70 min gap minus the 10 min availability stoppage; the performance-bucket stop stays.
-	assert.InDelta(t, 3600, sample.actualSeconds, 0.001)
-}
-
-// Two overlapping events describing the same stoppage must not subtract the same seconds twice.
-func TestBuildMachineDowntime_MergesOverlappingIntervals(t *testing.T) {
-	t.Parallel()
-
-	base := time.Date(2026, 7, 27, 6, 0, 0, 0, time.UTC)
-	intervals := buildMachineDowntime([]domain.OeeMachineDowntimeIntervalRow{
-		{MachineID: "mc_1", OeeBucket: domain.OeeBucketAvailability, StartedAt: base, EndedAt: oeeTimePtr(base.Add(20 * time.Minute))},
-		{MachineID: "mc_1", OeeBucket: domain.OeeBucketQuality, StartedAt: base.Add(10 * time.Minute), EndedAt: oeeTimePtr(base.Add(30 * time.Minute))},
-	})["mc_1"]
-
-	if len(intervals) != 1 {
-		t.Fatalf("intervals = %d, want 1 merged interval", len(intervals))
-	}
-	assert.InDelta(t, 30*60, downtimeWithinGap(intervals, base.Add(-time.Hour), base.Add(time.Hour)), 0.001)
-}
-
-// An overnight gap is a break in production, not slow running. Charging it to P would make the first ticket of every shift catastrophic.
-func TestComputeMeasuredPerformance_ExcludesOutlierGaps(t *testing.T) {
-	t.Parallel()
-
-	base := time.Date(2026, 7, 27, 15, 0, 0, 0, time.UTC)
-	rows := []domain.OeeScanIntervalRow{
-		scanRow("mc_1", "dp_knit", base, 600),
-		// 16 hours later: overnight. Ideal 1h, cap = max(4x3600, 2h) = 4h < 16h.
-		scanRow("mc_1", "dp_knit", base.Add(16*time.Hour), 3600),
-		// 30 minutes after that: a normal gap, sampled.
-		scanRow("mc_1", "dp_knit", base.Add(16*time.Hour+30*time.Minute), 1500),
-	}
-
-	sample := computeMeasuredPerformance(rows, nil)["dp_knit"]
-	if sample == nil {
-		t.Fatal("expected a sample for dp_knit")
-	}
-	assert.Equal(t, int64(1), sample.tickets, "the overnight gap must be excluded")
-	assert.InDelta(t, 1500, sample.idealSeconds, 0.001)
-	assert.InDelta(t, 1800, sample.actualSeconds, 0.001)
-}
-
-// A ticket with no ideal cycle time configured cannot be judged, but its scan is still real: it must anchor the next ticket's gap, not vanish from the timeline.
-func TestComputeMeasuredPerformance_NoIdealTimeStillAnchorsNextGap(t *testing.T) {
-	t.Parallel()
-
-	base := time.Date(2026, 7, 27, 6, 0, 0, 0, time.UTC)
-	rows := []domain.OeeScanIntervalRow{
-		scanRow("mc_1", "dp_knit", base, 600),
-		scanRow("mc_1", "dp_knit", base.Add(10*time.Minute), 0),
-		scanRow("mc_1", "dp_knit", base.Add(40*time.Minute), 1500),
-	}
-
-	sample := computeMeasuredPerformance(rows, nil)["dp_knit"]
-	if sample == nil {
-		t.Fatal("expected a sample for dp_knit")
-	}
-	assert.Equal(t, int64(1), sample.tickets)
-	assert.InDelta(t, 1800, sample.actualSeconds, 0.001, "the gap runs from the unjudgeable ticket's scan, not before it")
-}
-
-// Measured performance wins over the shift-pattern fallback, and the fallback is labelled as such when it is all there is.
-func TestComputeOeeRatios_MeasuredPerformanceBeatsFallback(t *testing.T) {
-	t.Parallel()
-
-	measured := &domain.OeeDepartment{
-		GoodUnits:             100,
-		StandardSecondsEarned: 7200,
-		MeasuredIdealSeconds:  3600,
-		MeasuredRunSeconds:    4200,
-	}
-	computeOeeRatios(measured, 1)
-	if measured.PerformancePct == nil {
-		t.Fatal("performance = nil, want measured value")
-	}
-	assert.InDelta(t, 3600.0/4200.0, *measured.PerformancePct, 0.0001)
-	assert.Equal(t, string(constants.OeePerformanceBasisScanIntervals), measured.PerformanceBasis)
-	assert.False(t, measured.HasPerformanceAnomaly)
-
-	fallback := &domain.OeeDepartment{GoodUnits: 100, StandardSecondsEarned: 1800}
-	computeOeeRatios(fallback, 1)
-	if fallback.PerformancePct == nil {
-		t.Fatal("performance = nil, want fallback estimate")
-	}
-	assert.InDelta(t, 0.5, *fallback.PerformancePct, 0.0001)
-	assert.Equal(t, string(constants.OeePerformanceBasisRunTimeEstimate), fallback.PerformanceBasis)
-}
-
-// Measured P > 1 is possible when a scan was missed and two tickets share one gap, or when the ideal cycle time is stale. Same rule as before: report raw, flag it.
-func TestComputeOeeRatios_MeasuredPerformanceAnomalyFlagged(t *testing.T) {
-	t.Parallel()
-
-	dept := &domain.OeeDepartment{GoodUnits: 100, MeasuredIdealSeconds: 4200, MeasuredRunSeconds: 3600}
+	dept := &domain.OeeDepartment{GoodUnits: 100, StandardSecondsEarned: 3600}
 	computeOeeRatios(dept, 0)
 
-	if dept.PerformancePct == nil {
-		t.Fatal("performance = nil, want raw over-100% value")
+	if dept.PerformancePct != nil {
+		t.Errorf("performance = %v, want nil when run time is unknown", *dept.PerformancePct)
 	}
-	assert.InDelta(t, 4200.0/3600.0, *dept.PerformancePct, 0.0001)
-	assert.True(t, dept.HasPerformanceAnomaly)
+}
+
+// All the run time was lost to breakdowns, so nothing could have run at any speed. Zero over zero is not 0% performance.
+func TestComputeOeeRatios_PerformanceNilWhenAllRunTimeLost(t *testing.T) {
+	t.Parallel()
+
+	dept := &domain.OeeDepartment{
+		GoodUnits:               100,
+		StandardSecondsEarned:   1800,
+		AvailabilityLossSeconds: 3600,
+	}
+	computeOeeRatios(dept, 1)
+
+	if dept.AvailabilityPct == nil || *dept.AvailabilityPct != 0 {
+		t.Errorf("availability = %v, want 0", dept.AvailabilityPct)
+	}
+	if dept.PerformancePct != nil {
+		t.Errorf("performance = %v, want nil; there was no run time to be fast or slow in", *dept.PerformancePct)
+	}
 }

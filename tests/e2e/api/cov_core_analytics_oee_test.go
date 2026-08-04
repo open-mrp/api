@@ -105,8 +105,8 @@ func TestAnalyticsOee_ExposesDowntimeFields(t *testing.T) {
 	}
 }
 
-// Performance is measured from the gaps between consecutive batch-ticket scans per machine whenever the window contains a qualifying gap; otherwise it falls back to the shift-pattern estimate. The basis field is what tells a caller which methodology produced the number.
-func TestAnalyticsOee_ExposesMeasuredPerformanceFields(t *testing.T) {
+// Performance is the ideal cycle time of the period's output over the time the department was running. Both terms are on the response, so a caller can check the ratio rather than trust it.
+func TestAnalyticsOee_PerformanceIsStandardTimeOverRunTime(t *testing.T) {
 	t.Parallel()
 
 	start, end := oeeWindow()
@@ -119,18 +119,20 @@ func TestAnalyticsOee_ExposesMeasuredPerformanceFields(t *testing.T) {
 		dept, ok := raw.(map[string]any)
 		require.True(t, ok)
 
-		for _, field := range []string{"measured_ideal_seconds", "measured_run_seconds", "performance_ticket_count"} {
-			_, ok := dept[field].(float64)
-			assert.True(t, ok, "performance sample field %q must be a number", field)
+		earned, ok := dept["standard_seconds_earned"].(float64)
+		require.True(t, ok, "standard_seconds_earned must be a number")
+		runTime, ok := dept["run_time_seconds"].(float64)
+		require.True(t, ok, "run_time_seconds must be a number")
+
+		performance := dept["performance_pct"]
+		if runTime <= 0 || earned <= 0 {
+			assert.Nil(t, performance, "performance_pct must be null without a run time to be fast or slow in")
+			continue
 		}
 
-		basis := dept["performance_basis"]
-		if dept["performance_pct"] == nil {
-			assert.Nil(t, basis, "performance_basis must be null when performance_pct is null")
-		} else {
-			assert.Contains(t, []any{"scan_intervals", "run_time_estimate"}, basis,
-				"performance_basis must say how performance_pct was obtained")
-		}
+		require.NotNil(t, performance, "performance_pct must be present when the department ran and earned standard time")
+		assert.InDelta(t, earned/runTime, performance.(float64), 0.0001,
+			"performance_pct must equal standard_seconds_earned / run_time_seconds")
 	}
 }
 

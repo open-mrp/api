@@ -773,8 +773,6 @@ type AnalyticsRepo interface {
 	GetOeeDepartmentData(ctx context.Context, params GetOeeWindowParams) ([]OeeDepartmentDataRow, *apierror.APIError)
 	GetOeeEstimatedRuntime(ctx context.Context, params GetOeeWindowParams) ([]OeeEstimatedRuntimeRow, *apierror.APIError)
 	GetOeeDowntimeByDepartment(ctx context.Context, params GetOeeWindowParams) ([]OeeDowntimeRow, *apierror.APIError)
-	GetOeeScanIntervals(ctx context.Context, params GetOeeWindowParams) ([]OeeScanIntervalRow, *apierror.APIError)
-	GetOeeMachineDowntimeIntervals(ctx context.Context, params GetOeeWindowParams) ([]OeeMachineDowntimeIntervalRow, *apierror.APIError)
 	CountMachinesByDepartment(ctx context.Context, accountID string) ([]DepartmentMachineCountRow, *apierror.APIError)
 	GetSaleProductItemIDs(ctx context.Context, accountID string) ([]SaleProductItemRow, *apierror.APIError)
 	GetProductLineInfo(ctx context.Context, accountID string, productLineIDs []string) ([]ProductLineInfoRow, *apierror.APIError)

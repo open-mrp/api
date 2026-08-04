@@ -523,15 +523,8 @@ type OeeDepartment struct {
 	SecondsUnits          float64
 	EstimatedRuntimeHours float64
 
-	// StandardSecondsEarned is the time the period's output should have taken at each production step's own labor rate. It is the numerator of the fallback Performance estimate.
+	// StandardSecondsEarned is the time the period's output should have taken at each production step's own labor rate: ideal cycle time multiplied by units produced. It is the numerator of Performance.
 	StandardSecondsEarned float64
-
-	// The measured Performance sample: MeasuredIdealSeconds is the ideal time of the tickets whose machine scan gap qualified, MeasuredRunSeconds is the actual time those gaps took (net of downtime already charged elsewhere), and PerformanceTicketCount is how many tickets are in the sample.
-	MeasuredIdealSeconds   float64
-	MeasuredRunSeconds     float64
-	PerformanceTicketCount int64
-	// PerformanceBasis says how PerformancePct was obtained: "scan_intervals" when measured, "run_time_estimate" when it fell back, empty when nil.
-	PerformanceBasis string
 
 	// Measured downtime, split by the OEE term each reason charges. NotScheduled is removed from the denominator rather than counted as a loss.
 	AvailabilityLossSeconds float64
@@ -554,7 +547,7 @@ type OeeDepartment struct {
 
 	// HasDowntimeData is false when nothing was logged for this department in the window. Callers must surface that: a department that logs no downtime computes 100% Availability, which reads as an improvement rather than missing data.
 	HasDowntimeData bool
-	// HasPerformanceAnomaly flags Performance > 1, which always means a stale ideal cycle time. The raw value is still reported rather than clamped, so the data-quality problem stays visible.
+	// HasPerformanceAnomaly flags Performance > 1, which always means a stale run rate. The raw value is still reported rather than clamped, so the data-quality problem stays visible.
 	HasPerformanceAnomaly bool
 }
 
@@ -588,23 +581,6 @@ type OeeDowntimeRow struct {
 	OeeBucket       string
 	DowntimeSeconds int64
 	EventCount      int64
-}
-
-// OeeScanIntervalRow is one scanned batch ticket with the machine it came off, ordered so consecutive scans on the same machine can be diffed into the actual time the ticket took. ScannedAt is nil when the ticket was never scanned.
-type OeeScanIntervalRow struct {
-	MachineID    string
-	DepartmentID string
-	ScannedAt    *time.Time
-	// IdealSeconds is the time the ticket's output should have taken at its production step's own labor rate.
-	IdealSeconds float64
-}
-
-// OeeMachineDowntimeIntervalRow is one machine's logged downtime window, unclipped. EndedAt is nil while the event is still open.
-type OeeMachineDowntimeIntervalRow struct {
-	MachineID string
-	OeeBucket string
-	StartedAt time.Time
-	EndedAt   *time.Time
 }
 
 // DepartmentMachineCountRow is the number of machines in one department, the scheduled-time denominator for OEE.

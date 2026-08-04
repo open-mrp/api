@@ -772,10 +772,6 @@ func (h *gRPCHandler) AnalyzeOee(ctx context.Context, req *pb.AnalyzeOeeRequest)
 			OeePct:                  d.OeePct,
 			HasDowntimeData:         d.HasDowntimeData,
 			HasPerformanceAnomaly:   d.HasPerformanceAnomaly,
-			MeasuredIdealSeconds:    d.MeasuredIdealSeconds,
-			MeasuredRunSeconds:      d.MeasuredRunSeconds,
-			PerformanceTicketCount:  d.PerformanceTicketCount,
-			PerformanceBasis:        d.PerformanceBasis,
 		}
 	}
 

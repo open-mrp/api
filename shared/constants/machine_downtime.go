@@ -186,39 +186,6 @@ func (s *OeeMeasurementStatus) StringPtr() *string {
 	return &str
 }
 
-// OeePerformanceBasis says how a grouping's Performance ratio was obtained.
-//
-// Measured performance diffs consecutive batch-ticket scans per machine, so it needs tickets with machine links and at least two scans in the window. When no scan gap qualifies, Performance falls back to the shift-pattern estimate, and the basis makes the difference visible instead of blending two methodologies silently.
-type OeePerformanceBasis string
-
-const (
-	// OeePerformanceBasisScanIntervals indicates performance was measured from the gaps between consecutive batch-ticket scans per machine.
-	OeePerformanceBasisScanIntervals OeePerformanceBasis = "scan_intervals"
-	// OeePerformanceBasisRunTimeEstimate indicates no scan gap qualified in the window, so performance fell back to standard seconds earned over the shift-pattern run-time estimate.
-	OeePerformanceBasisRunTimeEstimate OeePerformanceBasis = "run_time_estimate"
-)
-
-func (b OeePerformanceBasis) IsValid() bool {
-	switch b {
-	case OeePerformanceBasisScanIntervals, OeePerformanceBasisRunTimeEstimate:
-		return true
-	default:
-		return false
-	}
-}
-
-func (b OeePerformanceBasis) EnumValues() []string {
-	return []string{string(OeePerformanceBasisScanIntervals), string(OeePerformanceBasisRunTimeEstimate)}
-}
-
-func (b *OeePerformanceBasis) StringPtr() *string {
-	if b == nil {
-		return nil
-	}
-	str := string(*b)
-	return &str
-}
-
 // OeeAnomaly is a data-quality warning attached to an OEE result.
 //
 // Modelled as a list of named anomalies rather than one boolean per condition so a new warning does not add another flag to every department in every response.

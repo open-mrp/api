@@ -1641,21 +1641,12 @@ type OeeDepartmentProto struct {
 	OeePct                *float64 `protobuf:"fixed64,19,opt,name=oee_pct,json=oeePct,proto3,oneof" json:"oee_pct,omitempty"`
 	HasDowntimeData       bool     `protobuf:"varint,20,opt,name=has_downtime_data,json=hasDowntimeData,proto3" json:"has_downtime_data,omitempty"`
 	HasPerformanceAnomaly bool     `protobuf:"varint,21,opt,name=has_performance_anomaly,json=hasPerformanceAnomaly,proto3" json:"has_performance_anomaly,omitempty"`
-	// standard_seconds_earned is the numerator of the fallback Performance estimate:
-	// the time the period's output should have taken at each production step's own
-	// labor rate.
+	// standard_seconds_earned is the numerator of Performance: the ideal cycle time of
+	// every production step multiplied by the units it produced, which is the time the
+	// period's output should have taken at the designed speed.
 	StandardSecondsEarned float64 `protobuf:"fixed64,22,opt,name=standard_seconds_earned,json=standardSecondsEarned,proto3" json:"standard_seconds_earned,omitempty"`
-	// The measured Performance sample: ideal time of the tickets whose machine scan
-	// gap qualified, the actual time those gaps took, and how many tickets sampled.
-	MeasuredIdealSeconds   float64 `protobuf:"fixed64,23,opt,name=measured_ideal_seconds,json=measuredIdealSeconds,proto3" json:"measured_ideal_seconds,omitempty"`
-	MeasuredRunSeconds     float64 `protobuf:"fixed64,24,opt,name=measured_run_seconds,json=measuredRunSeconds,proto3" json:"measured_run_seconds,omitempty"`
-	PerformanceTicketCount int64   `protobuf:"varint,25,opt,name=performance_ticket_count,json=performanceTicketCount,proto3" json:"performance_ticket_count,omitempty"`
-	// performance_basis says how performance_pct was obtained: "scan_intervals" when
-	// measured from batch-ticket scan gaps, "run_time_estimate" when it fell back to
-	// the shift-pattern estimate, empty when performance_pct is absent.
-	PerformanceBasis string `protobuf:"bytes,26,opt,name=performance_basis,json=performanceBasis,proto3" json:"performance_basis,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *OeeDepartmentProto) Reset() {
@@ -1840,34 +1831,6 @@ func (x *OeeDepartmentProto) GetStandardSecondsEarned() float64 {
 		return x.StandardSecondsEarned
 	}
 	return 0
-}
-
-func (x *OeeDepartmentProto) GetMeasuredIdealSeconds() float64 {
-	if x != nil {
-		return x.MeasuredIdealSeconds
-	}
-	return 0
-}
-
-func (x *OeeDepartmentProto) GetMeasuredRunSeconds() float64 {
-	if x != nil {
-		return x.MeasuredRunSeconds
-	}
-	return 0
-}
-
-func (x *OeeDepartmentProto) GetPerformanceTicketCount() int64 {
-	if x != nil {
-		return x.PerformanceTicketCount
-	}
-	return 0
-}
-
-func (x *OeeDepartmentProto) GetPerformanceBasis() string {
-	if x != nil {
-		return x.PerformanceBasis
-	}
-	return ""
 }
 
 // OeeDepartmentPlannedTimeProto supplies the scheduled production time Availability
@@ -5911,8 +5874,7 @@ const file_core_core_analytics_proto_rawDesc = "" +
 	"oee_bucket\x18\x02 \x01(\tR\toeeBucket\x12)\n" +
 	"\x10downtime_seconds\x18\x03 \x01(\x01R\x0fdowntimeSeconds\x12\x1f\n" +
 	"\vevent_count\x18\x04 \x01(\x03R\n" +
-	"eventCount\"\xb2\n" +
-	"\n" +
+	"eventCount\"\xd6\t\n" +
 	"\x12OeeDepartmentProto\x12#\n" +
 	"\rdepartment_id\x18\x01 \x01(\tR\fdepartmentId\x12'\n" +
 	"\x0fdepartment_name\x18\x02 \x01(\tR\x0edepartmentName\x12\x1d\n" +
@@ -5939,16 +5901,12 @@ const file_core_core_analytics_proto_rawDesc = "" +
 	"\aoee_pct\x18\x13 \x01(\x01H\x03R\x06oeePct\x88\x01\x01\x12*\n" +
 	"\x11has_downtime_data\x18\x14 \x01(\bR\x0fhasDowntimeData\x126\n" +
 	"\x17has_performance_anomaly\x18\x15 \x01(\bR\x15hasPerformanceAnomaly\x126\n" +
-	"\x17standard_seconds_earned\x18\x16 \x01(\x01R\x15standardSecondsEarned\x124\n" +
-	"\x16measured_ideal_seconds\x18\x17 \x01(\x01R\x14measuredIdealSeconds\x120\n" +
-	"\x14measured_run_seconds\x18\x18 \x01(\x01R\x12measuredRunSeconds\x128\n" +
-	"\x18performance_ticket_count\x18\x19 \x01(\x03R\x16performanceTicketCount\x12+\n" +
-	"\x11performance_basis\x18\x1a \x01(\tR\x10performanceBasisB\x13\n" +
+	"\x17standard_seconds_earned\x18\x16 \x01(\x01R\x15standardSecondsEarnedB\x13\n" +
 	"\x11_availability_pctB\x12\n" +
 	"\x10_performance_pctB\x0e\n" +
 	"\f_quality_pctB\n" +
 	"\n" +
-	"\b_oee_pct\"i\n" +
+	"\b_oee_pctJ\x04\b\x17\x10\x18J\x04\b\x18\x10\x19J\x04\b\x19\x10\x1aJ\x04\b\x1a\x10\x1bR\x16measured_ideal_secondsR\x14measured_run_secondsR\x18performance_ticket_countR\x11performance_basis\"i\n" +
 	"\x1dOeeDepartmentPlannedTimeProto\x12#\n" +
 	"\rdepartment_id\x18\x01 \x01(\tR\fdepartmentId\x12#\n" +
 	"\rplanned_hours\x18\x02 \x01(\x01R\fplannedHours\"\xf4\x01\n" +

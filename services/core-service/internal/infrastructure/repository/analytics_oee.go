@@ -90,64 +90,6 @@ func (r *analyticsRepoImpl) GetOeeDowntimeByDepartment(ctx context.Context, para
 	return out, nil
 }
 
-// GetOeeScanIntervals returns one row per scanned batch ticket with the machine it came off, ordered so consecutive scans on the same machine can be diffed.
-func (r *analyticsRepoImpl) GetOeeScanIntervals(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeScanIntervalRow, *apierror.APIError) {
-	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_oee_scan_intervals")
-	defer span.End()
-
-	rows, err := r.queries.GetOeeScanIntervals(ctx, sqlc.GetOeeScanIntervalsParams{
-		OwnerAccountID: params.AccountID,
-		StartDate:      toRequiredNullTime(params.StartDate),
-		EndDate:        toRequiredNullTime(params.EndDate),
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	out := make([]domain.OeeScanIntervalRow, len(rows))
-	for i, row := range rows {
-		out[i] = domain.OeeScanIntervalRow{
-			MachineID:    row.MachineID,
-			DepartmentID: row.DepartmentID,
-			IdealSeconds: decimalToFloat64(row.IdealSeconds),
-		}
-		if row.ScannedAt.Valid {
-			scannedAt := row.ScannedAt.Time
-			out[i].ScannedAt = &scannedAt
-		}
-	}
-	return out, nil
-}
-
-// GetOeeMachineDowntimeIntervals lists raw downtime intervals per machine, unclipped (open events coalesce to now), so the caller can clip them against each scan gap.
-func (r *analyticsRepoImpl) GetOeeMachineDowntimeIntervals(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeMachineDowntimeIntervalRow, *apierror.APIError) {
-	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_oee_machine_downtime_intervals")
-	defer span.End()
-
-	rows, err := r.queries.GetOeeMachineDowntimeIntervals(ctx, sqlc.GetOeeMachineDowntimeIntervalsParams{
-		AccountID: params.AccountID,
-		StartDate: toRequiredNullTime(params.StartDate),
-		EndDate:   params.EndDate,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	out := make([]domain.OeeMachineDowntimeIntervalRow, len(rows))
-	for i, row := range rows {
-		out[i] = domain.OeeMachineDowntimeIntervalRow{
-			MachineID: row.MachineID,
-			OeeBucket: row.OeeBucket,
-			StartedAt: row.StartedAt,
-		}
-		if row.EndedAt.Valid {
-			endedAt := row.EndedAt.Time
-			out[i].EndedAt = &endedAt
-		}
-	}
-	return out, nil
-}
-
 // CountMachinesByDepartment returns the number of machines per department for the account.
 func (r *analyticsRepoImpl) CountMachinesByDepartment(ctx context.Context, accountID string) ([]domain.DepartmentMachineCountRow, *apierror.APIError) {
 	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.count_machines_by_department")

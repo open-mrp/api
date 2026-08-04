@@ -171,19 +171,14 @@ message OeeDepartmentProto {
   optional double oee_pct = 19;
   bool has_downtime_data = 20;
   bool has_performance_anomaly = 21;
-  // standard_seconds_earned is the numerator of the fallback Performance estimate:
-  // the time the period's output should have taken at each production step's own
-  // labor rate.
+  // standard_seconds_earned is the numerator of Performance: the ideal cycle time of
+  // every production step multiplied by the units it produced, which is the time the
+  // period's output should have taken at the designed speed.
   double standard_seconds_earned = 22;
-  // The measured Performance sample: ideal time of the tickets whose machine scan
-  // gap qualified, the actual time those gaps took, and how many tickets sampled.
-  double measured_ideal_seconds = 23;
-  double measured_run_seconds = 24;
-  int64 performance_ticket_count = 25;
-  // performance_basis says how performance_pct was obtained: "scan_intervals" when
-  // measured from batch-ticket scan gaps, "run_time_estimate" when it fell back to
-  // the shift-pattern estimate, empty when performance_pct is absent.
-  string performance_basis = 26;
+  // 23-26 held the batch-ticket scan-interval Performance sample, dropped when
+  // Performance became ideal-time-over-run-time.
+  reserved 23, 24, 25, 26;
+  reserved "measured_ideal_seconds", "measured_run_seconds", "performance_ticket_count", "performance_basis";
 }
 // OeeDepartmentPlannedTimeProto supplies the scheduled production time Availability
 // is measured against. Without it the OEE ratios cannot be computed.

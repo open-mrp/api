@@ -592,7 +592,7 @@ type OeeDepartment struct {
 	WasteUnits float64 `json:"waste_units" validate:"required"`
 	// The number of seconds units.
 	SecondsUnits float64 `json:"seconds_units" validate:"required"`
-	// The time this output should have taken at each production step's own labor rate. This is the numerator of Performance.
+	// The time this output should have taken at each production step's own labor rate: ideal cycle time multiplied by the units produced. This is the numerator of Performance.
 	StandardSecondsEarned float64 `json:"standard_seconds_earned" validate:"required"`
 	// The estimated runtime in hours.
 	EstimatedRuntimeHours float64 `json:"estimated_runtime_hours" validate:"required"`
@@ -614,17 +614,9 @@ type OeeDepartment struct {
 	ScheduledSeconds float64 `json:"scheduled_seconds"`
 	// Scheduled time net of availability losses, in seconds.
 	RunTimeSeconds float64 `json:"run_time_seconds"`
-	// The ideal time of the batch tickets in the performance sample, in seconds: what their output should have taken at each production step's ideal cycle time.
-	MeasuredIdealSeconds float64 `json:"measured_ideal_seconds"`
-	// The actual time the sampled tickets took, in seconds, measured from the gaps between consecutive batch-ticket scans per machine, net of downtime already charged elsewhere.
-	MeasuredRunSeconds float64 `json:"measured_run_seconds"`
-	// The number of batch tickets in the performance sample.
-	PerformanceTicketCount int64 `json:"performance_ticket_count"`
-	// How performance_pct was obtained: measured from scan intervals, or fallen back to the shift-pattern run-time estimate. Null when performance_pct is null.
-	PerformanceBasis *constants.OeePerformanceBasis `json:"performance_basis"`
 	// Run time divided by scheduled time.
 	AvailabilityPct *float64 `json:"availability_pct"`
-	// Ideal time over actual time for the sampled batch tickets (measured), or standard seconds earned divided by run time (estimated fallback).
+	// Standard seconds earned divided by run time: how fast the department ran against the designed speed of its production steps.
 	PerformancePct *float64 `json:"performance_pct"`
 	// Good units divided by total units produced.
 	QualityPct *float64 `json:"quality_pct"`

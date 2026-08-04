@@ -134,7 +134,6 @@ var typeRegistry = map[string]any{
 	"DowntimePlanningStatus":       DowntimePlanningStatus(""),
 	"DowntimeStatus":               DowntimeStatus(""),
 	"OeeMeasurementStatus":         OeeMeasurementStatus(""),
-	"OeePerformanceBasis":          OeePerformanceBasis(""),
 	"OeeAnomaly":                   OeeAnomaly(""),
 
 	"ActorType":                       ActorType(""),

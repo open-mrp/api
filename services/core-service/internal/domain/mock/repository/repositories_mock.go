@@ -8893,36 +8893,6 @@ func (mr *MockAnalyticsRepoMockRecorder) GetOeeEstimatedRuntime(ctx, params any)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOeeEstimatedRuntime", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetOeeEstimatedRuntime), ctx, params)
 }
 
-// GetOeeMachineDowntimeIntervals mocks base method.
-func (m *MockAnalyticsRepo) GetOeeMachineDowntimeIntervals(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeMachineDowntimeIntervalRow, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetOeeMachineDowntimeIntervals", ctx, params)
-	ret0, _ := ret[0].([]domain.OeeMachineDowntimeIntervalRow)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetOeeMachineDowntimeIntervals indicates an expected call of GetOeeMachineDowntimeIntervals.
-func (mr *MockAnalyticsRepoMockRecorder) GetOeeMachineDowntimeIntervals(ctx, params any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOeeMachineDowntimeIntervals", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetOeeMachineDowntimeIntervals), ctx, params)
-}
-
-// GetOeeScanIntervals mocks base method.
-func (m *MockAnalyticsRepo) GetOeeScanIntervals(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeScanIntervalRow, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetOeeScanIntervals", ctx, params)
-	ret0, _ := ret[0].([]domain.OeeScanIntervalRow)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetOeeScanIntervals indicates an expected call of GetOeeScanIntervals.
-func (mr *MockAnalyticsRepoMockRecorder) GetOeeScanIntervals(ctx, params any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOeeScanIntervals", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetOeeScanIntervals), ctx, params)
-}
-
 // GetOpenBatchEntries mocks base method.
 func (m *MockAnalyticsRepo) GetOpenBatchEntries(ctx context.Context, params domain.AnalyzeOpenBatchesParams) ([]domain.OpenBatchEntry, *apierror.APIError) {
 	m.ctrl.T.Helper()

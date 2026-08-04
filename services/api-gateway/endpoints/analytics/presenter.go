@@ -637,10 +637,6 @@ func AnalyzeOeePresenter(resp *pb.AnalyzeOeeResponse) *apiresource.AnalyzeOeeRes
 			DowntimeBreakdown:       apiresource.NewList(breakdown, apiresource.PageInfo{}),
 			ScheduledSeconds:        d.ScheduledSeconds,
 			RunTimeSeconds:          d.RunTimeSeconds,
-			MeasuredIdealSeconds:    d.MeasuredIdealSeconds,
-			MeasuredRunSeconds:      d.MeasuredRunSeconds,
-			PerformanceTicketCount:  d.PerformanceTicketCount,
-			PerformanceBasis:        oeePerformanceBasis(d.PerformanceBasis),
 			AvailabilityPct:         d.AvailabilityPct,
 			PerformancePct:          d.PerformancePct,
 			QualityPct:              d.QualityPct,
@@ -731,15 +727,6 @@ func oeeMeasurementStatus(hasDowntimeData bool) constants.OeeMeasurementStatus {
 		return constants.OeeMeasurementStatusMeasured
 	}
 	return constants.OeeMeasurementStatusEstimated
-}
-
-// oeePerformanceBasis maps the wire basis onto the typed constant, null when performance was not computed at all.
-func oeePerformanceBasis(basis string) *constants.OeePerformanceBasis {
-	if basis == "" {
-		return nil
-	}
-	b := constants.OeePerformanceBasis(basis)
-	return &b
 }
 
 func oeeAnomalies(performanceAboveCapacity bool) []constants.OeeAnomaly {
